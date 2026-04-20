@@ -38,11 +38,11 @@ logs/
 *.log
 *.log.*
 
-# Evidencias de IA
+# Evidencias de processo auxiliar
 Task_Final/
 IMPORTANT.md
-*.claude.md
 *_AI_*.md
+*_agent_*.md
 
 # Secrets
 .env
