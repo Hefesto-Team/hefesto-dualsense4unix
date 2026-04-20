@@ -1,0 +1,19 @@
+{
+  "name": "bow",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_title_regex": "(Horizon|Tomb Raider|Ghost of Tsushima|Elden Ring|Skyrim)",
+    "process_name": []
+  },
+  "priority": 10,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Bow", "params": [1, 7, 8, 8]}
+  },
+  "leds": {
+    "lightbar": [0, 180, 100],
+    "player_leds": [false, true, false, true, false]
+  },
+  "rumble": {"passthrough": true}
+}

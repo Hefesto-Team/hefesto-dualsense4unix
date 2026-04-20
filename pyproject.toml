@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling>=1.20"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hefesto"
+version = "0.1.0"
+description = "Linux adaptive trigger daemon for DualSense controllers"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pydualsense>=0.7.5",
+    "textual>=0.47",
+    "typer>=0.9",
+    "pydantic>=2.0",
+    "python-xlib>=0.33",
+    "evdev>=1.6",
+    "structlog>=23.0",
+    "rich>=13.0",
+    "platformdirs>=4.0",
+    "filelock>=3.13",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "ruff>=0.1",
+    "mypy>=1.7",
+    "types-python-xlib",
+]
+emulation = [
+    "python-uinput>=0.11",
+]
+tray = [
+    "PyGObject>=3.44",
+]
+
+[project.scripts]
+hefesto = "hefesto.cli.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hefesto"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = ["tests/fixtures/**"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pydualsense",
+    "pydualsense.*",
+    "textual",
+    "textual.*",
+    "evdev",
+    "Xlib",
+    "Xlib.*",
+    "uinput",
+    "gi",
+    "gi.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

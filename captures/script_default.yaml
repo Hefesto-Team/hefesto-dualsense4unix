@@ -1,0 +1,40 @@
+version: 1
+transport_assert: usb
+description: "Sequência canônica para gravação de HID captures determinísticos (V3-8)."
+steps:
+  - wait: 0.5
+  - battery_read: true
+  - press:   [r2]
+  - hold:    1.0
+  - release: [r2]
+  - wait:    0.2
+  - press:   [l2]
+  - hold:    1.0
+  - release: [l2]
+  - wait:    0.2
+  - stick:   {side: left,  x:  0.5, y:  0.0}
+  - wait:    0.3
+  - stick:   {side: left,  x: -0.5, y:  0.0}
+  - wait:    0.3
+  - stick:   {side: left,  x:  0.0, y:  0.0}
+  - stick:   {side: right, x:  0.0, y:  0.5}
+  - wait:    0.3
+  - stick:   {side: right, x:  0.0, y: -0.5}
+  - wait:    0.3
+  - stick:   {side: right, x:  0.0, y:  0.0}
+  - press:   [cross]
+  - release: [cross]
+  - press:   [circle]
+  - release: [circle]
+  - press:   [square]
+  - release: [square]
+  - press:   [triangle]
+  - release: [triangle]
+  - press:   [dpad_up]
+  - release: [dpad_up]
+  - press:   [dpad_down]
+  - release: [dpad_down]
+  - press:   [ps, dpad_up]
+  - release: [ps, dpad_up]
+  - battery_read: true
+  - wait: 0.5

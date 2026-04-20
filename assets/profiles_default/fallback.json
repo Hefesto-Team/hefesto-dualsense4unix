@@ -1,0 +1,15 @@
+{
+  "name": "fallback",
+  "version": 1,
+  "match": {"type": "any"},
+  "priority": 0,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [40, 40, 40],
+    "player_leds": [false, false, true, false, false]
+  },
+  "rumble": {"passthrough": true}
+}
