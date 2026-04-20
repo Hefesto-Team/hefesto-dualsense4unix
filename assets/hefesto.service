@@ -1,0 +1,15 @@
+[Unit]
+Description=Hefesto DualSense adaptive trigger daemon
+After=graphical-session.target
+PartOf=graphical-session.target
+Conflicts=hefesto-headless.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/hefesto daemon start --foreground
+Restart=on-failure
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=graphical-session.target

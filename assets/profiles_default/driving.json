@@ -1,0 +1,19 @@
+{
+  "name": "driving",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_title_regex": "(Forza|Assetto|BeamNG|Dirt|F1 2[0-9])",
+    "process_name": []
+  },
+  "priority": 10,
+  "triggers": {
+    "left":  {"mode": "Resistance", "params": [3, 5]},
+    "right": {"mode": "Rigid",      "params": [5, 200]}
+  },
+  "leds": {
+    "lightbar": [255, 80, 0],
+    "player_leds": [false, true, true, true, false]
+  },
+  "rumble": {"passthrough": true}
+}

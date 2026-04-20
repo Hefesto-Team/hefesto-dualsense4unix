@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  anonymity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check_anonymity.sh
+
+  lint-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Instalar deps do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+      - name: Instalar Hefesto em modo dev
+        run: pip install -e ".[dev]"
+      - name: Verificar tamanho de HID captures
+        run: |
+          OVERSIZE=$(find tests/fixtures -name "*.bin" -size +5M 2>/dev/null)
+          if [[ -n "$OVERSIZE" ]]; then
+            echo "ERRO: captures excedem 5MB:"
+            echo "$OVERSIZE"
+            exit 1
+          fi
+      - name: Ruff
+        run: ruff check src/ tests/
+      - name: Mypy
+        run: mypy src/hefesto
+      - name: Pytest unit
+        run: pytest tests/unit -v --cov=hefesto
