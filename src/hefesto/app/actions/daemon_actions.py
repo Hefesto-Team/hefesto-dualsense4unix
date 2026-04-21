@@ -25,11 +25,101 @@ class DaemonActionsMixin(WidgetAccessMixin):
     """Controla a aba Daemon."""
 
     _daemon_autostart_guard: bool
+    # Contador anti-loop de tentativas de autostart por sessão da GUI.
+    # Máximo 2 tentativas: após a segunda falha, o helper vira no-op até
+    # a próxima reabertura do processo (BUG-DAEMON-AUTOSTART-01).
+    _daemon_autostart_attempts: int = 0
 
     def install_daemon_tab(self) -> None:
         self._daemon_autostart_guard = False
+        # Inicializa contador anti-loop por instância (bootstrap da GUI).
+        self._daemon_autostart_attempts = 0
         self._refresh_daemon_view()
         self._sync_restart_daemon_button_sensitivity()
+
+    def ensure_daemon_running(self) -> None:
+        """Garante daemon ativo no bootstrap da GUI (BUG-DAEMON-AUTOSTART-01).
+
+        Executado em thread worker via `_get_executor()` — nunca bloqueia
+        a thread GTK. Fluxo:
+
+          1. Se `detect_installed_unit()` retorna `None`, no-op (usuário
+             sem unit instalada, provavelmente nunca rodou `install.sh`).
+          2. Se `systemctl --user is-active hefesto.service` já retorna
+             `active`, no-op (daemon já está rodando).
+          3. Caso contrário, dispara `systemctl --user start hefesto.service`
+             com timeout de 5s. Falha silenciosa via `logger.warning`.
+
+        Anti-loop: limite de 2 tentativas por sessão (`_daemon_autostart_attempts`).
+        Após a segunda falha, o helper vira no-op até a próxima abertura
+        do processo da GUI.
+        """
+        if self._daemon_autostart_attempts >= 2:
+            return
+
+        def _worker() -> None:
+            try:
+                installed = ServiceInstaller().detect_installed_unit()
+            except Exception as exc:
+                logger.warning("autostart_detect_falhou", erro=str(exc))
+                return
+            if installed is None:
+                logger.debug("autostart_sem_unit_instalada")
+                return
+
+            active = self._is_service_active()
+            if active == "active":
+                logger.debug("autostart_daemon_ja_ativo")
+                return
+
+            self._daemon_autostart_attempts += 1
+            logger.info(
+                "autostart_disparando",
+                tentativa=self._daemon_autostart_attempts,
+                estado_anterior=active,
+            )
+            rc = self._start_service_blocking()
+            if rc == 0:
+                logger.info("autostart_ok", unit=SERVICE_NORMAL)
+            else:
+                logger.warning(
+                    "autostart_falhou",
+                    unit=SERVICE_NORMAL,
+                    rc=rc,
+                    tentativa=self._daemon_autostart_attempts,
+                )
+
+        _get_executor().submit(_worker)
+
+    def _is_service_active(self) -> str:
+        """Retorna saída de `systemctl --user is-active hefesto.service`.
+
+        Retorna string vazia se systemctl indisponível.
+        """
+        result = self._invoke_systemctl(
+            ["is-active", SERVICE_NORMAL], capture=True, check=False
+        )
+        if result is None:
+            return ""
+        return (result.stdout or "").strip()
+
+    def _start_service_blocking(self) -> int:
+        """Dispara `systemctl --user start hefesto.service` com timeout 5s.
+
+        Retorna o returncode (ou -1 em caso de FileNotFoundError / timeout).
+        Bloqueia — chamar apenas de thread worker.
+        """
+        try:
+            result = subprocess.run(
+                ["systemctl", "--user", "start", SERVICE_NORMAL],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=5,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            return -1
+        return result.returncode
 
     def _sync_restart_daemon_button_sensitivity(self) -> None:
         """Habilita/desabilita o botão 'Reiniciar daemon' conforme unit presente.

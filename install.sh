@@ -183,6 +183,7 @@ if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     log "[6/6] unit systemd pulada (--no-systemd)"
 else
     log "[6/6] unit systemd --user (daemon em background)"
+    # install-service cadeia: daemon-reload + systemctl --user enable hefesto.service
     if "${VENV_DIR}/bin/hefesto" daemon install-service >/dev/null 2>&1; then
         if systemctl --user restart hefesto.service >/dev/null 2>&1; then
             log "daemon ativo (systemctl --user status hefesto.service para detalhes)"
