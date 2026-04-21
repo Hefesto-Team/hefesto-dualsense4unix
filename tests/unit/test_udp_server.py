@@ -8,6 +8,7 @@ import pytest
 
 from hefesto.daemon.state_store import StateStore
 from hefesto.daemon.udp_server import (
+    DsxProtocol,
     RateLimiter,
     UdpHandler,
     UdpServer,
@@ -174,6 +175,29 @@ def test_rate_limit_drop_conta_em_store():
         handler.handle_datagram(payload, ("127.0.0.1", 1))
     # 2 aceitos + 3 dropados
     assert store.counter("udp.rate_limited") == 3
+
+
+# ---------------------------------------------------------------------------
+# DsxProtocol.connection_made — BUG-UDP-01 (A-02)
+# ---------------------------------------------------------------------------
+
+
+def test_connection_made_nao_levanta_assertion_com_mock_transport():
+    """Regressão BUG-UDP-01: em Python 3.10 o objeto real é
+    `_SelectorDatagramTransport`, que falhava no `isinstance` contra
+    `asyncio.DatagramTransport`. A atribuição direta deve aceitar qualquer
+    `BaseTransport` sem levantar AssertionError.
+    """
+    handler, _, _ = _mk_handler()
+    proto = DsxProtocol(handler)
+
+    class _FakeTransport(asyncio.BaseTransport):
+        pass
+
+    fake = _FakeTransport()
+    # Não deve levantar AssertionError nem qualquer outra exceção.
+    proto.connection_made(fake)
+    assert proto.transport is fake
 
 
 # ---------------------------------------------------------------------------
