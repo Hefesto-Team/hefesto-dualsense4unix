@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+
+  <object class="GtkWindow" id="main_window">
+    <property name="title">Hefesto</property>
+    <property name="default-width">940</property>
+    <property name="default-height">620</property>
+    <signal name="destroy" handler="on_window_destroy"/>
+    <child>
+      <object class="GtkBox" id="root_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">0</property>
+
+        <!-- Header bar custom -->
+        <child>
+          <object class="GtkBox" id="header_bar">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">12</property>
+            <property name="margin">8</property>
+            <child>
+              <object class="GtkLabel" id="header_title">
+                <property name="label">&lt;span size="x-large" weight="bold"&gt;Hefesto&lt;/span&gt;  &lt;span size="small" foreground="#888"&gt;v0.1.0&lt;/span&gt;</property>
+                <property name="use-markup">True</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing><property name="expand">False</property></packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="header_subtitle">
+                <property name="label">daemon de gatilhos adaptativos para DualSense</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing><property name="expand">True</property></packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="header_connection">
+                <property name="label">&lt;span foreground="#d33"&gt;○ desconectado&lt;/span&gt;</property>
+                <property name="use-markup">True</property>
+              </object>
+              <packing><property name="expand">False</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkSeparator"/>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+        <!-- Notebook com abas -->
+        <child>
+          <object class="GtkNotebook" id="main_notebook">
+            <property name="scrollable">True</property>
+            <property name="margin">8</property>
+
+            <!-- ABA STATUS -->
+            <child>
+              <object class="GtkBox" id="tab_status_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Estado</property>
+                    <child>
+                      <object class="GtkGrid" id="status_grid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Conexão:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_connection">
+                            <property name="label">desconhecido</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Transporte:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_transport">
+                            <property name="label">—</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Bateria:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="status_battery_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">— %</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Perfil ativo:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_active_profile">
+                            <property name="label">nenhum</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Daemon:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_daemon">
+                            <property name="label">offline</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Gatilhos (ao vivo)</property>
+                    <child>
+                      <object class="GtkGrid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">L2</property>
+                            <property name="xalign">1</property>
+                            <property name="width-chars">3</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="live_l2_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">0 / 255</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">R2</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="live_r2_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">0 / 255</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Sticks e botões</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">12</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkGrid">
+                            <property name="row-spacing">2</property>
+                            <property name="column-spacing">8</property>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">LX</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_lx_label">
+                                <property name="label">128</property>
+                                <property name="width-chars">4</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">LY</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_ly_label">
+                                <property name="label">128</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">RX</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_rx_label">
+                                <property name="label">128</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">RY</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_ry_label">
+                                <property name="label">128</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkSeparator">
+                            <property name="orientation">vertical</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Botões pressionados:</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_buttons_label">
+                                <property name="label">&lt;i&gt;nenhum&lt;/i&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">True</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Status</property></object>
+            </child>
+
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <!-- Rodape -->
+        <child>
+          <object class="GtkStatusbar" id="status_bar"/>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

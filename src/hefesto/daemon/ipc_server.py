@@ -66,7 +66,9 @@ class IpcServer:
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
+            "rumble.set": self._handle_rumble_set,
             "daemon.status": self._handle_daemon_status,
+            "daemon.state_full": self._handle_daemon_state_full,
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
         }
@@ -211,6 +213,46 @@ class IpcServer:
             "active_profile": snap.active_profile,
             "battery_pct": controller.battery_pct if controller else None,
         }
+
+    async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Estado completo pra GUI consumir a 20Hz."""
+        snap = self.store.snapshot()
+        controller = snap.controller
+
+        # Tenta ler buttons do evdev reader do backend, se acessivel
+        buttons: list[str] = []
+        try:
+            evdev_reader = getattr(self.controller, "_evdev", None)
+            if evdev_reader is not None and evdev_reader.is_available():
+                ev_snap = evdev_reader.snapshot()
+                buttons = sorted(ev_snap.buttons_pressed)
+        except Exception:
+            buttons = []
+
+        return {
+            "connected": bool(controller and controller.connected),
+            "transport": controller.transport if controller else None,
+            "active_profile": snap.active_profile,
+            "battery_pct": controller.battery_pct if controller else None,
+            "l2_raw": controller.l2_raw if controller else 0,
+            "r2_raw": controller.r2_raw if controller else 0,
+            "lx": controller.raw_lx if controller else 128,
+            "ly": controller.raw_ly if controller else 128,
+            "rx": controller.raw_rx if controller else 128,
+            "ry": controller.raw_ry if controller else 128,
+            "buttons": buttons,
+            "counters": snap.counters,
+        }
+
+    async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        weak = params.get("weak")
+        strong = params.get("strong")
+        if not isinstance(weak, int) or not isinstance(strong, int):
+            raise ValueError("rumble.set exige 'weak' e 'strong' inteiros 0-255")
+        weak = max(0, min(255, weak))
+        strong = max(0, min(255, strong))
+        self.controller.set_rumble(weak=weak, strong=strong)
+        return {"status": "ok", "weak": weak, "strong": strong}
 
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
         return {
