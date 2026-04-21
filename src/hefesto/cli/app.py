@@ -27,8 +27,36 @@ daemon_app = typer.Typer(
 app.add_typer(daemon_app, name="daemon")
 
 from hefesto.cli.cmd_profile import app as profile_app  # noqa: E402
+from hefesto.cli.cmd_test import app as test_app  # noqa: E402
 
 app.add_typer(profile_app, name="profile")
+app.add_typer(test_app, name="test")
+
+
+@app.command()
+def status() -> None:
+    """Mostra status do daemon e do controle."""
+    from hefesto.cli.cmd_status import status_cmd
+
+    status_cmd()
+
+
+@app.command()
+def battery() -> None:
+    """Percentual de bateria do controle."""
+    from hefesto.cli.cmd_status import battery_cmd
+
+    battery_cmd()
+
+
+@app.command()
+def led(
+    color: str = typer.Option(..., help="Hex (#RRGGBB) ou CSV R,G,B."),
+) -> None:
+    """Define a cor da lightbar direto no controle."""
+    from hefesto.cli.cmd_test import cmd_led
+
+    cmd_led(color=color)
 
 
 @app.command()
