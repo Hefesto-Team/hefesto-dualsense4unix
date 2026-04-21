@@ -14,7 +14,6 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gtk
 
-from hefesto import __version__
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
