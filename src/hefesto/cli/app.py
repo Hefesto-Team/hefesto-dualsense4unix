@@ -26,11 +26,13 @@ daemon_app = typer.Typer(
 )
 app.add_typer(daemon_app, name="daemon")
 
+from hefesto.cli.cmd_emulate import app as emulate_app  # noqa: E402
 from hefesto.cli.cmd_profile import app as profile_app  # noqa: E402
 from hefesto.cli.cmd_test import app as test_app  # noqa: E402
 
 app.add_typer(profile_app, name="profile")
 app.add_typer(test_app, name="test")
+app.add_typer(emulate_app, name="emulate")
 
 
 @app.command()
