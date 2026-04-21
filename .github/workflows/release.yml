@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Instalar build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+      - name: Verificar anonimato
+        run: bash scripts/check_anonymity.sh
+      - name: Instalar e testar
+        run: |
+          pip install -e ".[dev]"
+          ruff check src/ tests/
+          mypy src/hefesto
+          pytest tests/unit -v
+      - name: Build wheel + sdist
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+      - name: Ler versao
+        id: info
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ steps.info.outputs.version }}
+          path: dist/
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist/
+      - name: Criar release no GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" \
+            --title "Hefesto v${VERSION}" \
+            --notes-file CHANGELOG.md \
+            dist/*
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    if: ${{ vars.PYPI_PUBLISH == 'true' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ needs.build.outputs.version }}
+          path: dist/
+      - name: Publicar no PyPI (OIDC trusted publisher)
+        uses: pypa/gh-action-pypi-publish@release/v1
