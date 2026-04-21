@@ -27,7 +27,7 @@
   </object>
 
   <object class="GtkWindow" id="main_window">
-    <property name="title">Hefesto</property>
+    <property name="title">Hefesto - DSX para Unix</property>
     <property name="default-width">1100</property>
     <property name="default-height">680</property>
     <signal name="delete-event" handler="on_window_delete_event"/>
@@ -77,7 +77,7 @@
             </child>
             <child>
               <object class="GtkLabel" id="header_connection">
-                <property name="label">&lt;span foreground="#d33"&gt;○ desconectado&lt;/span&gt;</property>
+                <property name="label">&lt;span foreground="#d33"&gt;○ Controle Desconectado&lt;/span&gt;</property>
                 <property name="use-markup">True</property>
                 <property name="valign">center</property>
               </object>
@@ -123,7 +123,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_connection">
-                            <property name="label">desconhecido</property>
+                            <property name="label">Desconhecido</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
@@ -169,7 +169,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_active_profile">
-                            <property name="label">nenhum</property>
+                            <property name="label">Nenhum</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
@@ -184,7 +184,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_daemon">
-                            <property name="label">offline</property>
+                            <property name="label">Offline</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
@@ -340,7 +340,7 @@
                             </child>
                             <child>
                               <object class="GtkLabel" id="live_buttons_label">
-                                <property name="label">&lt;i&gt;nenhum&lt;/i&gt;</property>
+                                <property name="label">&lt;i&gt;Nenhum&lt;/i&gt;</property>
                                 <property name="use-markup">True</property>
                                 <property name="xalign">0</property>
                                 <property name="wrap">True</property>
@@ -1062,19 +1062,19 @@
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
-                        <property name="label">Start</property>
+                        <property name="label">Iniciar</property>
                         <signal name="clicked" handler="on_daemon_start"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
-                        <property name="label">Stop</property>
+                        <property name="label">Parar</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_restart_button">
-                        <property name="label">Restart</property>
+                        <property name="label">Reiniciar</property>
                         <signal name="clicked" handler="on_daemon_restart"/>
                       </object>
                     </child>
@@ -1086,7 +1086,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_logs_button">
-                        <property name="label">Ver logs</property>
+                        <property name="label">Ver Logs</property>
                         <signal name="clicked" handler="on_daemon_view_logs"/>
                       </object>
                     </child>
@@ -1246,7 +1246,7 @@
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_passthrough_label">
-                        <property name="label">não</property>
+                        <property name="label">Não</property>
                         <property name="xalign">0</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>

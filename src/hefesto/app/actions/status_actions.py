@@ -136,9 +136,9 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _render_offline(self) -> None:
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d33">○ daemon offline</span>'
+            '<span foreground="#d33">○ Daemon Offline</span>'
         )
-        self._set_label("status_daemon", "offline")
+        self._set_label("status_daemon", "Offline")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_label("status_active_profile", "—")
@@ -151,17 +151,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
         # Só pintamos o header aqui se estamos em estado ONLINE; isso evita
-        # que o tick rápido (20Hz) sobrescreva "tentando reconectar..."
-        # durante a janela de 6s em que a máquina de reconnect ainda está
-        # tentando recuperar o IPC.
+        # que o tick rápido sobrescreva "Tentando Reconectar..." durante a
+        # janela em que a máquina de reconnect ainda está tentando recuperar
+        # o IPC (UX-RECONNECT-01 + POLISH-CAPS-01).
         if getattr(self, "_reconnect_state", "online") == "online":
             if connected:
                 header.set_markup(
-                    f'<span foreground="#2d8">● conectado via {transport}</span>'
+                    f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
                 )
             else:
                 header.set_markup(
-                    '<span foreground="#d33">○ controle desconectado</span>'
+                    '<span foreground="#d33">○ Controle Desconectado</span>'
                 )
 
         l2 = int(state.get("l2_raw", 0))
@@ -182,7 +182,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         buttons_markup = (
             ", ".join(f"<b>{b}</b>" for b in buttons)
             if buttons
-            else "<i>nenhum</i>"
+            else "<i>Nenhum</i>"
         )
         self._get("live_buttons_label").set_markup(buttons_markup)
 
@@ -190,14 +190,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")
-        active_profile = state.get("active_profile") or "nenhum"
+        active_profile = state.get("active_profile") or "Nenhum"
 
         self._set_label(
-            "status_connection", "conectado" if connected else "desconectado"
+            "status_connection", "Conectado" if connected else "Desconectado"
         )
-        self._set_label("status_transport", transport)
+        self._set_label("status_transport", transport.upper() if transport != "—" else "—")
         self._set_label("status_active_profile", active_profile)
-        self._set_label("status_daemon", "online")
+        self._set_label("status_daemon", "Online")
 
         battery_bar = self._get("status_battery_bar")
         if battery is None:
@@ -215,4 +215,4 @@ class StatusActionsMixin(WidgetAccessMixin):
         for wid in ("live_lx_label", "live_ly_label",
                     "live_rx_label", "live_ry_label"):
             self._set_label(wid, "128")
-        self._get("live_buttons_label").set_markup("<i>nenhum</i>")
+        self._get("live_buttons_label").set_markup("<i>Nenhum</i>")

@@ -51,7 +51,7 @@ class HefestoApp(
         if self.window is None:
             raise RuntimeError("main_window não encontrada em main.glade")
 
-        self.window.set_title(f"Hefesto v{__version__}")
+        self.window.set_title("Hefesto - DSX para Unix")
         self.window.set_wmclass("hefesto", "Hefesto")
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
