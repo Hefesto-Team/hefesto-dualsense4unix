@@ -145,6 +145,7 @@ class TestPyDualSenseController:
     def test_read_state_usa_analog_trigger_values(self) -> None:
         """HOTFIX-1: trigger analog vem de L2_value/R2_value, nao L2/R2."""
         from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto.core.evdev_reader import EvdevReader
 
         class FakeState:
             L2 = False
@@ -164,7 +165,10 @@ class TestPyDualSenseController:
             battery = FakeBattery()
             connected = True
 
-        inst = PyDualSenseController()
+        # Força fallback pro caminho pydualsense usando reader sem device
+        null_reader = EvdevReader(device_path=None)
+        null_reader._device_path = None  # força is_available=False
+        inst = PyDualSenseController(evdev_reader=null_reader)
         inst._ds = FakeDs()  # type: ignore[assignment]
         inst._transport = "usb"
 
@@ -178,6 +182,7 @@ class TestPyDualSenseController:
     def test_read_state_battery_zerado_quando_ausente(self) -> None:
         """Se ds.battery ausente ou Level None, retorna 0 sem explodir."""
         from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto.core.evdev_reader import EvdevReader
 
         class FakeState:
             L2_value = 0
@@ -192,7 +197,9 @@ class TestPyDualSenseController:
             battery = None
             connected = True
 
-        inst = PyDualSenseController()
+        null_reader = EvdevReader(device_path=None)
+        null_reader._device_path = None
+        inst = PyDualSenseController(evdev_reader=null_reader)
         inst._ds = FakeDs()  # type: ignore[assignment]
         inst._transport = "bt"
 
@@ -219,3 +226,53 @@ class TestPyDualSenseController:
         inst = PyDualSenseController()
         inst._ds = FakeDs()  # type: ignore[assignment]
         assert inst.is_connected() is True
+
+    def test_read_state_usa_evdev_quando_disponivel(self) -> None:
+        """HOTFIX-2: se evdev tem device, backend le dele (nao do pydualsense)."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+
+        class FakeState:
+            # Valores pydualsense — NAO devem aparecer no resultado
+            L2_value = 0
+            R2_value = 0
+            LX = 128
+            LY = 128
+            RX = 128
+            RY = 128
+
+        class FakeBattery:
+            Level = 50
+
+        class FakeDs:
+            state = FakeState()
+            battery = FakeBattery()
+            connected = True
+
+        # Reader com snapshot customizado (simula evdev reportando pressão)
+        class FakeReader(EvdevReader):
+            def __init__(self) -> None:
+                super().__init__(device_path=None)
+                self._fake_snap = EvdevSnapshot(
+                    l2_raw=210, r2_raw=255, lx=30, ly=200, rx=128, ry=128
+                )
+
+            def is_available(self) -> bool:
+                return True
+
+            def snapshot(self) -> EvdevSnapshot:
+                return self._fake_snap
+
+        reader = FakeReader()
+        inst = PyDualSenseController(evdev_reader=reader)
+        inst._ds = FakeDs()  # type: ignore[assignment]
+        inst._transport = "usb"
+
+        state = inst.read_state()
+        # Triggers e sticks vêm do evdev, não do pydualsense
+        assert state.l2_raw == 210
+        assert state.r2_raw == 255
+        assert state.raw_lx == 30
+        assert state.raw_ly == 200
+        # Battery continua vindo do pydualsense (evdev não expõe)
+        assert state.battery_pct == 50
