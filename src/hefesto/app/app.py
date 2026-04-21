@@ -14,6 +14,7 @@ from gi.repository import Gtk
 
 from hefesto import __version__
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
+from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto.app.actions.status_actions import StatusActionsMixin
 from hefesto.app.actions.triggers_actions import TriggersActionsMixin
@@ -25,6 +26,7 @@ class HefestoApp(
     TriggersActionsMixin,
     LightbarActionsMixin,
     RumbleActionsMixin,
+    ProfilesActionsMixin,
 ):
     """Aplicação GTK do Hefesto."""
 
@@ -67,6 +69,15 @@ class HefestoApp(
             "on_rumble_apply": self.on_rumble_apply,
             "on_rumble_test_500ms": self.on_rumble_test_500ms,
             "on_rumble_stop": self.on_rumble_stop,
+            # Perfis
+            "on_profile_row_activated": self.on_profile_row_activated,
+            "on_profile_new": self.on_profile_new,
+            "on_profile_duplicate": self.on_profile_duplicate,
+            "on_profile_remove": self.on_profile_remove,
+            "on_profile_activate": self.on_profile_activate,
+            "on_profile_reload": self.on_profile_reload,
+            "on_profile_match_type_changed": self.on_profile_match_type_changed,
+            "on_profile_save": self.on_profile_save,
         }
 
     # --- handlers ---
@@ -82,6 +93,7 @@ class HefestoApp(
         self.install_triggers_tab()
         self.install_lightbar_tab()
         self.install_rumble_tab()
+        self.install_profiles_tab()
 
     def run(self) -> None:
         self.show()
