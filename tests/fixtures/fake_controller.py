@@ -5,12 +5,16 @@ Implementa `IController` com comportamento determinístico:
 - `read_state()` avança entre snapshots pré-definidos (ou um padrão único).
 - `set_trigger/set_led/set_rumble` gravam em listas internas pra inspeção.
 
-Replay de captures binários (V2-13, V3-8) fica no mesmo módulo — quando o
-formato `.bin` for definido em W1.3, a classe ganha `from_capture(path)`.
+Replay de captures binários (V2-13, V3-8, INFRA.2): formato é JSONL
+comprimido com gzip; `FakeController.from_capture(path)` carrega e
+cada `read_state()` avança pela trilha temporal.
 """
 from __future__ import annotations
 
+import gzip
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import ClassVar
 
 from hefesto.core.controller import (
@@ -106,6 +110,52 @@ class FakeController(IController):
 
     def get_transport(self) -> Transport:
         return self._transport
+
+    @classmethod
+    def from_capture(cls, path: Path | str) -> FakeController:
+        """Carrega capture .bin gerado por record_hid_capture.py.
+
+        Lê header (transport, version, sample_hz), converte cada sample em
+        `ControllerState` e devolve `FakeController` pronto com a sequência
+        cronológica. Testes chamam `connect()` e depois `read_state()` em
+        loop pra iterar pelos snapshots.
+        """
+        p = Path(path)
+        with gzip.open(p, "rb") as f:
+            raw = f.read().decode("utf-8")
+
+        lines = [line for line in raw.splitlines() if line.strip()]
+        if not lines:
+            raise ValueError(f"capture vazio: {p}")
+
+        header = json.loads(lines[0])
+        if header.get("type") != "header":
+            raise ValueError(f"primeiro registro de {p} nao e header")
+        if header.get("version") != 1:
+            raise ValueError(f"capture version {header.get('version')} nao suportado")
+
+        transport_raw = header.get("transport", "usb")
+        if transport_raw not in ("usb", "bt"):
+            raise ValueError(f"transport invalido no capture: {transport_raw}")
+        transport: Transport = transport_raw
+
+        states: list[ControllerState] = []
+        for raw_line in lines[1:]:
+            sample = json.loads(raw_line)
+            state = ControllerState(
+                battery_pct=int(sample.get("battery", 0)),
+                l2_raw=int(sample.get("l2", 0)),
+                r2_raw=int(sample.get("r2", 0)),
+                connected=bool(sample.get("connected", True)),
+                transport=transport,
+                raw_lx=int(sample.get("lx", 128)),
+                raw_ly=int(sample.get("ly", 128)),
+                raw_rx=int(sample.get("rx", 128)),
+                raw_ry=int(sample.get("ry", 128)),
+            )
+            states.append(state)
+
+        return cls(transport=transport, states=states)
 
 
 __all__ = ["FakeController", "FakeControllerCommand"]
