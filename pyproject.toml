@@ -52,9 +52,11 @@ tray = [
 
 [project.scripts]
 hefesto = "hefesto.cli.app:main"
+hefesto-gui = "hefesto.app.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto"]
+include = ["src/hefesto/gui/*.glade"]
 
 [tool.ruff]
 line-length = 100
