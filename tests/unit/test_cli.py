@@ -39,9 +39,11 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 
 def test_version_command():
+    from hefesto import __version__
+
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
-    assert result.stdout.strip() == "0.1.0"
+    assert result.stdout.strip() == __version__
 
 
 def test_profile_list_vazio(isolated_profiles_dir: Path):
