@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import contextlib
 import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
@@ -139,30 +140,73 @@ class EvdevReader:
             )
 
     def _run(self) -> None:
+        """Loop principal com auto-reconnect (HOTFIX-3).
+
+        Se o device evdev sumir (USB re-enumera, sleep transient,
+        driver unbind), detectamos via OSError no read_loop, zeramos o
+        snapshot dos botões pra não ficar com 'botão preso', e tentamos
+        reabrir. Retry com backoff exponencial (0.5s -> 5s).
+        """
         try:
             from evdev import InputDevice, ecodes
         except ImportError:
             logger.warning("evdev_module_missing")
             return
 
-        assert self._device_path is not None
-        try:
-            dev = InputDevice(str(self._device_path))
-        except Exception as exc:
-            logger.warning("evdev_open_failed", err=str(exc), path=str(self._device_path))
-            return
-
-        logger.info("evdev_reader_started", path=str(self._device_path), name=dev.name)
-        try:
-            for event in dev.read_loop():
-                if self._stop_flag.is_set():
+        backoff = 0.5
+        while not self._stop_flag.is_set():
+            path = self._device_path or find_dualsense_evdev()
+            if path is None:
+                logger.debug("evdev_device_not_found_retry", backoff=backoff)
+                if self._stop_flag.wait(backoff):
                     break
-                self._handle_event(event, ecodes)
-        except Exception as exc:
-            logger.warning("evdev_read_loop_error", err=str(exc))
-        finally:
-            with contextlib.suppress(Exception):
-                dev.close()
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+            try:
+                dev = InputDevice(str(path))
+            except Exception as exc:
+                logger.warning("evdev_open_failed", err=str(exc), path=str(path))
+                self._device_path = None
+                if self._stop_flag.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+            logger.info("evdev_reader_started", path=str(path), name=dev.name)
+            backoff = 0.5
+            self._device_path = path
+
+            try:
+                for event in dev.read_loop():
+                    if self._stop_flag.is_set():
+                        break
+                    self._handle_event(event, ecodes)
+            except OSError as exc:
+                logger.warning("evdev_read_lost", err=str(exc), path=str(path))
+                self._reset_buttons_on_disconnect()
+                self._device_path = None
+            except Exception as exc:
+                logger.warning("evdev_read_loop_error", err=str(exc))
+                self._reset_buttons_on_disconnect()
+            finally:
+                with contextlib.suppress(Exception):
+                    dev.close()
+
+            if not self._stop_flag.is_set():
+                time.sleep(0.1)  # grace period antes de tentar reabrir
+
+    def _reset_buttons_on_disconnect(self) -> None:
+        """Limpa botões 'travados' quando o device caiu.
+
+        Sem isso, se o controle some com um botão fisicamente pressionado,
+        o snapshot fica com ele indefinidamente até o reader voltar.
+        """
+        with self._lock:
+            self._pressed.clear()
+            self._dpad_x = 0
+            self._dpad_y = 0
+            self._snapshot = self._with(buttons_pressed=frozenset())
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type == ecodes.EV_ABS:
