@@ -318,6 +318,185 @@
               <object class="GtkLabel"><property name="label">Status</property></object>
             </child>
 
+            <!-- ABA TRIGGERS -->
+            <child>
+              <object class="GtkBox" id="tab_triggers_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <!-- Coluna L2 -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">L2 (gatilho esquerdo)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Modo:</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_left_mode">
+                                <property name="hexpand">True</property>
+                                <signal name="changed" handler="on_trigger_left_mode_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="trigger_left_desc">
+                            <property name="label"></property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-bottom">4</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
+                            <property name="vscrollbar-policy">automatic</property>
+                            <property name="min-content-height">220</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object class="GtkBox" id="trigger_left_params_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">4</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="trigger_left_apply">
+                                <property name="label">Aplicar em L2</property>
+                                <signal name="clicked" handler="on_trigger_left_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="trigger_left_reset">
+                                <property name="label">Desligar (Off)</property>
+                                <signal name="clicked" handler="on_trigger_left_reset"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+                <!-- Coluna R2 -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">R2 (gatilho direito)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Modo:</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_right_mode">
+                                <property name="hexpand">True</property>
+                                <signal name="changed" handler="on_trigger_right_mode_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="trigger_right_desc">
+                            <property name="label"></property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-bottom">4</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
+                            <property name="vscrollbar-policy">automatic</property>
+                            <property name="min-content-height">220</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object class="GtkBox" id="trigger_right_params_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">4</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="trigger_right_apply">
+                                <property name="label">Aplicar em R2</property>
+                                <signal name="clicked" handler="on_trigger_right_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="trigger_right_reset">
+                                <property name="label">Desligar (Off)</property>
+                                <signal name="clicked" handler="on_trigger_right_reset"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Gatilhos</property></object>
+            </child>
+
           </object>
           <packing>
             <property name="expand">True</property>

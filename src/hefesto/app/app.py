@@ -14,10 +14,11 @@ from gi.repository import Gtk
 
 from hefesto import __version__
 from hefesto.app.actions.status_actions import StatusActionsMixin
+from hefesto.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto.app.constants import ICON_PATH, MAIN_GLADE
 
 
-class HefestoApp(StatusActionsMixin):
+class HefestoApp(StatusActionsMixin, TriggersActionsMixin):
     """Aplicação GTK do Hefesto."""
 
     def __init__(self) -> None:
@@ -40,6 +41,12 @@ class HefestoApp(StatusActionsMixin):
     def _signal_handlers(self) -> dict[str, object]:
         return {
             "on_window_destroy": self.on_window_destroy,
+            "on_trigger_left_mode_changed": self.on_trigger_left_mode_changed,
+            "on_trigger_right_mode_changed": self.on_trigger_right_mode_changed,
+            "on_trigger_left_apply": self.on_trigger_left_apply,
+            "on_trigger_right_apply": self.on_trigger_right_apply,
+            "on_trigger_left_reset": self.on_trigger_left_reset,
+            "on_trigger_right_reset": self.on_trigger_right_reset,
         }
 
     # --- handlers ---
@@ -52,6 +59,7 @@ class HefestoApp(StatusActionsMixin):
     def show(self) -> None:
         self.window.show_all()
         self.install_status_polling()
+        self.install_triggers_tab()
 
     def run(self) -> None:
         self.show()
