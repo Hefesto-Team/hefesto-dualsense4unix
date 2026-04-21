@@ -11,7 +11,8 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import GdkPixbuf, Gtk
 
 from hefesto import __version__
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin
@@ -54,6 +55,8 @@ class HefestoApp(
         self.window.set_wmclass("hefesto", "Hefesto")
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
+
+        self._install_banner_logo()
 
         self.tray: AppTray | None = None
         self._quitting = False
@@ -105,6 +108,29 @@ class HefestoApp(
             "on_emulation_test_device": self.on_emulation_test_device,
             "on_emulation_open_toml": self.on_emulation_open_toml,
         }
+
+    # --- banner ---
+
+    def _install_banner_logo(self) -> None:
+        """Carrega o PNG do logo escalado para 64x64 e aplica no GtkImage do banner."""
+        logo_widget = self.builder.get_object("app_logo")
+        if logo_widget is None:
+            logger.warning("banner_logo_widget_ausente")
+            return
+        if not ICON_PATH.exists():
+            logger.warning("banner_logo_png_ausente", path=str(ICON_PATH))
+            return
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                str(ICON_PATH),
+                width=64,
+                height=64,
+                preserve_aspect_ratio=True,
+            )
+        except Exception as exc:  # GLib.Error ou OSError
+            logger.warning("banner_logo_falha_pixbuf", error=str(exc))
+            return
+        logo_widget.set_from_pixbuf(pixbuf)
 
     # --- handlers ---
 

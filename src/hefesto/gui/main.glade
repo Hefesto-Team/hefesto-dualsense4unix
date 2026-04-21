@@ -36,33 +36,52 @@
         <property name="orientation">vertical</property>
         <property name="spacing">0</property>
 
-        <!-- Header bar custom -->
+        <!-- Banner: logo + wordmark + subtitle, status de conexao no canto direito -->
         <child>
           <object class="GtkBox" id="header_bar">
             <property name="orientation">horizontal</property>
-            <property name="spacing">12</property>
-            <property name="margin">8</property>
+            <property name="spacing">14</property>
+            <property name="margin-top">10</property>
+            <property name="margin-bottom">8</property>
+            <property name="margin-start">14</property>
+            <property name="margin-end">14</property>
             <child>
-              <object class="GtkLabel" id="header_title">
-                <property name="label">&lt;span size="x-large" weight="bold"&gt;Hefesto&lt;/span&gt;  &lt;span size="small" foreground="#888"&gt;v0.1.0&lt;/span&gt;</property>
-                <property name="use-markup">True</property>
-                <property name="xalign">0</property>
+              <object class="GtkImage" id="app_logo">
+                <property name="valign">center</property>
               </object>
               <packing><property name="expand">False</property></packing>
             </child>
             <child>
-              <object class="GtkLabel" id="header_subtitle">
-                <property name="label">daemon de gatilhos adaptativos para DualSense</property>
-                <property name="xalign">0</property>
+              <object class="GtkBox" id="header_text_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+                <property name="valign">center</property>
+                <child>
+                  <object class="GtkLabel" id="app_wordmark">
+                    <property name="label">&lt;span size="xx-large" weight="bold"&gt;Hefesto&lt;/span&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="app_subtitle">
+                    <property name="label">&lt;span size="small" foreground="#888"&gt;daemon de gatilhos adaptativos para DualSense&lt;/span&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
               </object>
-              <packing><property name="expand">True</property></packing>
+              <packing><property name="expand">True</property><property name="fill">True</property></packing>
             </child>
             <child>
               <object class="GtkLabel" id="header_connection">
                 <property name="label">&lt;span foreground="#d33"&gt;○ desconectado&lt;/span&gt;</property>
                 <property name="use-markup">True</property>
+                <property name="valign">center</property>
               </object>
-              <packing><property name="expand">False</property></packing>
+              <packing><property name="expand">False</property><property name="pack-type">end</property></packing>
             </child>
           </object>
           <packing><property name="expand">False</property></packing>
