@@ -40,6 +40,9 @@ class DaemonConfig:
     auto_reconnect: bool = True
     reconnect_backoff_sec: float = 2.0
     ipc_enabled: bool = True
+    udp_enabled: bool = True
+    udp_host: str = "127.0.0.1"
+    udp_port: int = 6969
 
 
 class BatteryDebouncer:
@@ -82,6 +85,7 @@ class Daemon:
     _executor: ThreadPoolExecutor | None = None
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
     _ipc_server: Any = None
+    _udp_server: Any = None
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -97,6 +101,8 @@ class Daemon:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
                 await self._start_ipc()
+            if self.config.udp_enabled:
+                await self._start_udp()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -174,12 +180,31 @@ class Daemon:
         )
         await self._ipc_server.start()
 
+    async def _start_udp(self) -> None:
+        from hefesto.daemon.udp_server import UdpServer
+
+        self._udp_server = UdpServer(
+            controller=self.controller,
+            store=self.store,
+            host=self.config.udp_host,
+            port=self.config.udp_port,
+        )
+        try:
+            await self._udp_server.start()
+        except OSError as exc:
+            logger.warning("udp_server_bind_failed", err=str(exc))
+            self._udp_server = None
+
     async def _shutdown(self) -> None:
         logger.info("daemon_shutting_down")
         if self._ipc_server is not None:
             with contextlib.suppress(Exception):
                 await self._ipc_server.stop()
             self._ipc_server = None
+        if self._udp_server is not None:
+            with contextlib.suppress(Exception):
+                await self._udp_server.stop()
+            self._udp_server = None
         for task in self._tasks:
             task.cancel()
         for task in self._tasks:
