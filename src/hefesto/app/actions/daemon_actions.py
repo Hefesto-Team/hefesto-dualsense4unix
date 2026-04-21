@@ -1,4 +1,7 @@
-"""Aba Daemon: status systemd --user + controles."""
+"""Aba Daemon: status systemd --user + controles.
+
+SIMPLIFY-UNIT-01: unit única `hefesto.service`. Sem dropdown de seleção.
+"""
 # ruff: noqa: E402
 from __future__ import annotations
 
@@ -11,17 +14,10 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
-from hefesto.daemon.service_install import (
-    SERVICE_HEADLESS,
-    SERVICE_NORMAL,
-    ServiceInstaller,
-    user_unit_dir,
-)
+from hefesto.daemon.service_install import SERVICE_NORMAL, ServiceInstaller, user_unit_dir
 from hefesto.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-UNITS = (SERVICE_NORMAL, SERVICE_HEADLESS)
 
 
 class DaemonActionsMixin(WidgetAccessMixin):
@@ -30,11 +26,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
     _daemon_autostart_guard: bool
 
     def install_daemon_tab(self) -> None:
-        combo: Gtk.ComboBoxText = self._get("daemon_unit_combo")
-        combo.remove_all()
-        for unit in UNITS:
-            combo.append(unit, unit)
-        combo.set_active_id(SERVICE_NORMAL)
         self._daemon_autostart_guard = False
         self._refresh_daemon_view()
         self._sync_restart_daemon_button_sensitivity()
@@ -61,9 +52,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
             )
 
     # --- handlers ---
-
-    def on_daemon_unit_changed(self, _combo: Gtk.ComboBoxText) -> None:
-        self._refresh_daemon_view()
 
     def on_daemon_start(self, _btn: Gtk.Button) -> None:
         self._run_systemctl("start")
@@ -139,8 +127,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         dialog.destroy()
 
     def on_daemon_view_logs(self, _btn: Gtk.Button) -> None:
-        unit = self._selected_unit()
-        logs = self._journalctl_tail(unit, lines=80)
+        logs = self._journalctl_tail(SERVICE_NORMAL, lines=80)
         self._set_daemon_text(logs or "(sem saída)")
 
     def on_daemon_autostart_toggled(
@@ -154,14 +141,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
     # --- helpers ---
 
-    def _selected_unit(self) -> str:
-        return self._get("daemon_unit_combo").get_active_id() or SERVICE_NORMAL
-
     def _refresh_daemon_view(self) -> None:
-        unit = self._selected_unit()
-        installed = (user_unit_dir() / unit).exists()
-        active = self._systemctl_oneline(["is-active", unit]) or "unknown"
-        enabled = self._systemctl_oneline(["is-enabled", unit]) or "unknown"
+        installed = (user_unit_dir() / SERVICE_NORMAL).exists()
+        active = self._systemctl_oneline(["is-active", SERVICE_NORMAL]) or "unknown"
+        enabled = self._systemctl_oneline(["is-enabled", SERVICE_NORMAL]) or "unknown"
         self._set_daemon_status_markup(installed, active, enabled)
 
         self._daemon_autostart_guard = True
@@ -170,7 +153,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         finally:
             self._daemon_autostart_guard = False
 
-        text = self._systemctl_status_text(unit)
+        text = self._systemctl_status_text(SERVICE_NORMAL)
         self._set_daemon_text(text)
 
     def _set_daemon_status_markup(
@@ -199,10 +182,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
         buf.delete_mark(mark)
 
     def _run_systemctl(self, action: str) -> None:
-        unit = self._selected_unit()
-        result = self._invoke_systemctl([action, unit], capture=True)
+        result = self._invoke_systemctl([action, SERVICE_NORMAL], capture=True)
         rc = result.returncode if result is not None else -1
-        self._toast_daemon(f"systemctl {action} {unit} → rc={rc}")
+        self._toast_daemon(f"systemctl {action} {SERVICE_NORMAL} → rc={rc}")
         self._refresh_daemon_view()
 
     def _systemctl_oneline(self, args: list[str]) -> str:

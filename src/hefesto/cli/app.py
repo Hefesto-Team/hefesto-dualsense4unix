@@ -3,6 +3,10 @@
 Subcomandos implementados em W1.3:
   - `hefesto version`
   - `hefesto daemon start [--poll-hz N] [--foreground] [--headless] [--no-reconnect]`
+  - `hefesto daemon {install-service,uninstall-service,start,stop,restart,status}`
+
+A flag `--headless` de `daemon start` apenas seta `HEFESTO_NO_WINDOW_DETECT=1`
+(desativa auto-switch X11). Não existe mais unit separada (SIMPLIFY-UNIT-01).
 
 Demais subcomandos (profile, test, led, battery, status) chegam em W5.3.
 """
@@ -108,20 +112,18 @@ def daemon_start(
 
 
 @daemon_app.command("install-service")
-def daemon_install_service(
-    headless: bool = typer.Option(False, "--headless", help="Instala unit headless."),
-) -> None:
-    """Copia a unit systemd --user e habilita, respeitando Conflicts mutuo."""
+def daemon_install_service() -> None:
+    """Copia a unit systemd --user `hefesto.service` e habilita."""
     from hefesto.daemon.service_install import ServiceInstaller
 
     installer = ServiceInstaller()
-    dst = installer.install(headless=headless)
+    dst = installer.install()
     typer.echo(f"unit instalada: {dst}")
 
 
 @daemon_app.command("uninstall-service")
 def daemon_uninstall_service() -> None:
-    """Remove todas as unidades do Hefesto de ~/.config/systemd/user/."""
+    """Remove a unidade `hefesto.service` de ~/.config/systemd/user/."""
     from hefesto.daemon.service_install import ServiceInstaller
 
     installer = ServiceInstaller()
@@ -134,33 +136,27 @@ def daemon_uninstall_service() -> None:
 
 
 @daemon_app.command("stop")
-def daemon_stop(
-    headless: bool = typer.Option(False, "--headless"),
-) -> None:
+def daemon_stop() -> None:
     """Para o daemon gerenciado pelo systemd --user."""
     from hefesto.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().stop(headless=headless)
+    ServiceInstaller().stop()
 
 
 @daemon_app.command("restart")
-def daemon_restart(
-    headless: bool = typer.Option(False, "--headless"),
-) -> None:
+def daemon_restart() -> None:
     """Reinicia o daemon gerenciado pelo systemd --user."""
     from hefesto.daemon.service_install import ServiceInstaller
 
-    ServiceInstaller().restart(headless=headless)
+    ServiceInstaller().restart()
 
 
 @daemon_app.command("status")
-def daemon_status(
-    headless: bool = typer.Option(False, "--headless"),
-) -> None:
+def daemon_status() -> None:
     """Mostra status do daemon via systemctl."""
     from hefesto.daemon.service_install import ServiceInstaller
 
-    text = ServiceInstaller().status_text(headless=headless)
+    text = ServiceInstaller().status_text()
     typer.echo(text)
 
 

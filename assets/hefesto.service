@@ -2,7 +2,6 @@
 Description=Hefesto DualSense adaptive trigger daemon
 After=graphical-session.target
 PartOf=graphical-session.target
-Conflicts=hefesto-headless.service
 
 [Service]
 Type=simple

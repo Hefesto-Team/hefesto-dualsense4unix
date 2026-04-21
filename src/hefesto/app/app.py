@@ -95,7 +95,6 @@ class HefestoApp(
             "on_profile_match_type_changed": self.on_profile_match_type_changed,
             "on_profile_save": self.on_profile_save,
             # Daemon
-            "on_daemon_unit_changed": self.on_daemon_unit_changed,
             "on_daemon_start": self.on_daemon_start,
             "on_daemon_stop": self.on_daemon_stop,
             "on_daemon_restart": self.on_daemon_restart,
