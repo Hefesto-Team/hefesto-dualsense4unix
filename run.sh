@@ -52,7 +52,11 @@ export HEFESTO_FAKE_TRANSPORT="$TRANSPORT"
 if [[ "$MODE" == "smoke" ]]; then
     export HEFESTO_FAKE=1
     export HEFESTO_LOG_FORMAT="${HEFESTO_LOG_FORMAT:-console}"
+    # Isola o socket IPC do smoke para não colidir com o daemon de produção
+    # (systemd). Ver docs/process/sprints/BUG-IPC-01.md e VALIDATOR_BRIEF A-03.
+    export HEFESTO_IPC_SOCKET_NAME="${HEFESTO_IPC_SOCKET_NAME:-hefesto-smoke.sock}"
     echo "[smoke] iniciando daemon com FakeController transport=$TRANSPORT por ${SMOKE_DURATION}s..."
+    echo "[smoke] socket IPC isolado: $HEFESTO_IPC_SOCKET_NAME"
     python3 - <<PY
 import asyncio
 from hefesto.daemon.lifecycle import Daemon, DaemonConfig

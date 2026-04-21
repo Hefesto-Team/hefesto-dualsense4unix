@@ -5,11 +5,15 @@ cria o diretório se não existir.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from platformdirs import PlatformDirs
 
 _DIRS = PlatformDirs("hefesto")
+
+IPC_SOCKET_DEFAULT_NAME = "hefesto.sock"
+IPC_SOCKET_ENV_VAR = "HEFESTO_IPC_SOCKET_NAME"
 
 
 def config_dir(ensure: bool = False) -> Path:
@@ -50,10 +54,22 @@ def profiles_dir(ensure: bool = False) -> Path:
 
 
 def ipc_socket_path() -> Path:
-    return runtime_dir(ensure=True) / "hefesto.sock"
+    """Resolve o path do socket IPC.
+
+    Respeita a env var `HEFESTO_IPC_SOCKET_NAME` (default `hefesto.sock`) para
+    permitir isolamento entre daemon de produção e sessões efêmeras (ex.: smoke
+    runs). Somente o nome-base é parametrizável; o diretório permanece sob
+    `$XDG_RUNTIME_DIR/hefesto/` para manter invariantes de permissão e limpeza.
+    """
+    name = os.environ.get(IPC_SOCKET_ENV_VAR, IPC_SOCKET_DEFAULT_NAME).strip()
+    if not name or "/" in name or name in ("..", "."):
+        name = IPC_SOCKET_DEFAULT_NAME
+    return runtime_dir(ensure=True) / name
 
 
 __all__ = [
+    "IPC_SOCKET_DEFAULT_NAME",
+    "IPC_SOCKET_ENV_VAR",
     "cache_dir",
     "config_dir",
     "data_dir",
