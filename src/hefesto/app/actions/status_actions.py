@@ -9,6 +9,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib
 
+from hefesto.app.actions.base import WidgetAccessMixin
 from hefesto.app.constants import (
     LIVE_POLL_INTERVAL_MS,
     STATE_POLL_INTERVAL_MS,
@@ -16,7 +17,7 @@ from hefesto.app.constants import (
 from hefesto.app.ipc_bridge import daemon_state_full
 
 
-class StatusActionsMixin:
+class StatusActionsMixin(WidgetAccessMixin):
     """Atualiza a aba Status em tempo real.
 
     Assume que `self.builder` contém os widgets do `main.glade`:
@@ -128,11 +129,3 @@ class StatusActionsMixin:
                     "live_rx_label", "live_ry_label"):
             self._set_label(wid, "128")
         self._get("live_buttons_label").set_markup("<i>nenhum</i>")
-
-    def _get(self, widget_id: str) -> Any:
-        return self.builder.get_object(widget_id)  # type: ignore[attr-defined]
-
-    def _set_label(self, widget_id: str, text: str) -> None:
-        w = self._get(widget_id)
-        if w is not None:
-            w.set_text(text)
