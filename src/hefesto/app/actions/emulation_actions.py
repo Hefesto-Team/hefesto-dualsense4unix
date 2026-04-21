@@ -43,7 +43,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             " + ".join(DEFAULT_COMBO_PREV)
         )
         self._get("emulation_combo_buffer_label").set_text(str(DEFAULT_BUFFER_MS))
-        self._get("emulation_passthrough_label").set_text("não")
+        self._get("emulation_passthrough_label").set_text("Não")
         self._refresh_emulation_view()
 
     # --- handlers ---
@@ -118,15 +118,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
         if module_ok and dev_writable:
             uinput_label.set_markup(
-                '<span foreground="#2d8">● disponível</span>'
+                '<span foreground="#2d8">● Disponível</span>'
             )
         elif module_ok and dev_exists:
             uinput_label.set_markup(
-                f'<span foreground="#c90">módulo ok, sem permissão em {UINPUT_DEV}</span>'
+                f'<span foreground="#c90">Módulo ok, sem permissão em {UINPUT_DEV}</span>'
             )
         elif module_ok:
             uinput_label.set_markup(
-                f'<span foreground="#c90">módulo ok, {UINPUT_DEV} ausente '
+                f'<span foreground="#c90">Módulo ok, {UINPUT_DEV} ausente '
                 '(modprobe uinput)</span>'
             )
         else:
@@ -139,7 +139,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._get("emulation_js_label").set_text(", ".join(js_nodes))
         else:
             self._get("emulation_js_label").set_markup(
-                '<i>nenhum /dev/input/js* detectado</i>'
+                '<i>Nenhum /dev/input/js* detectado</i>'
             )
 
     def _toast_emulation(self, msg: str) -> None:

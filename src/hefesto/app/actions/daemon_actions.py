@@ -162,7 +162,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label = self._get("daemon_status_label")
         if not installed:
             label.set_markup(
-                '<span foreground="#d33">unit não instalada em '
+                '<span foreground="#d33">Unit não instalada em '
                 '~/.config/systemd/user/</span>'
             )
             return
