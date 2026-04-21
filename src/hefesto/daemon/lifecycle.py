@@ -1,0 +1,200 @@
+"""Ciclo de vida do daemon: conectar controle, rodar poll loop, desligar limpo.
+
+O daemon é composto por:
+  - 1 `IController` (real ou fake) conectado ao dispositivo.
+  - 1 `EventBus` global.
+  - 1 `StateStore` global.
+  - Tasks async: poll_loop, e futuramente ipc_server, udp_server, autoswitch.
+
+`Daemon.run()` orquestra start -> run_until_stopped -> shutdown. Captura SIGINT
+e SIGTERM para desligar limpo. Poll roda em `ThreadPoolExecutor` dedicado
+porque `IController` é síncrono (V2-7).
+"""
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import signal
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from typing import Any
+
+from hefesto.core.controller import IController
+from hefesto.core.events import EventBus, EventTopic
+from hefesto.daemon.state_store import StateStore
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+DEFAULT_POLL_HZ = 60
+BATTERY_DEBOUNCE_SEC = 5.0
+BATTERY_MIN_INTERVAL_SEC = 0.1
+BATTERY_DELTA_THRESHOLD_PCT = 1
+
+
+@dataclass
+class DaemonConfig:
+    poll_hz: int = DEFAULT_POLL_HZ
+    auto_reconnect: bool = True
+    reconnect_backoff_sec: float = 2.0
+
+
+class BatteryDebouncer:
+    """Debounce de eventos de bateria (V2-17 + ADR-008).
+
+    Dispara se:
+      - nunca disparou (primeiro valor); ou
+      - `abs(delta_pct) >= BATTERY_DELTA_THRESHOLD_PCT` (e respeita min interval); ou
+      - `elapsed_since_last_emit >= BATTERY_DEBOUNCE_SEC`.
+
+    Sempre respeita `BATTERY_MIN_INTERVAL_SEC` entre disparos consecutivos.
+    """
+
+    def __init__(self) -> None:
+        self.last_emitted_value: int | None = None
+        self.last_emit_at: float = 0.0
+
+    def should_emit(self, value: int, now: float) -> bool:
+        if self.last_emitted_value is None:
+            return True
+        interval = now - self.last_emit_at
+        if interval < BATTERY_MIN_INTERVAL_SEC:
+            return False
+        delta = abs(value - self.last_emitted_value)
+        return delta >= BATTERY_DELTA_THRESHOLD_PCT or interval >= BATTERY_DEBOUNCE_SEC
+
+    def mark_emitted(self, value: int, now: float) -> None:
+        self.last_emitted_value = value
+        self.last_emit_at = now
+
+
+@dataclass
+class Daemon:
+    controller: IController
+    bus: EventBus = field(default_factory=EventBus)
+    store: StateStore = field(default_factory=StateStore)
+    config: DaemonConfig = field(default_factory=DaemonConfig)
+
+    _stop_event: asyncio.Event | None = None
+    _executor: ThreadPoolExecutor | None = None
+    _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
+
+    async def run(self) -> None:
+        """Entry point: start tasks, wait until stop, shutdown."""
+        loop = asyncio.get_running_loop()
+        self.bus.bind_loop(loop)
+        self._stop_event = asyncio.Event()
+        self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="hefesto-hid")
+        self._install_signal_handlers(loop)
+
+        logger.info("daemon_starting", poll_hz=self.config.poll_hz)
+        try:
+            await self._connect_with_retry()
+            self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
+            await self._stop_event.wait()
+        finally:
+            await self._shutdown()
+
+    def stop(self) -> None:
+        """Sinaliza parada; idempotente."""
+        if self._stop_event is not None and not self._stop_event.is_set():
+            logger.info("daemon_stop_requested")
+            self._stop_event.set()
+
+    async def _connect_with_retry(self) -> None:
+        backoff = self.config.reconnect_backoff_sec
+        while True:
+            try:
+                await self._run_blocking(self.controller.connect)
+                transport = self.controller.get_transport()
+                self.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
+                logger.info("controller_connected", transport=transport)
+                return
+            except Exception as exc:
+                logger.warning("controller_connect_failed", err=str(exc))
+                if not self.config.auto_reconnect:
+                    raise
+                await asyncio.sleep(backoff)
+
+    async def _poll_loop(self) -> None:
+        period = 1.0 / max(1, self.config.poll_hz)
+        battery = BatteryDebouncer()
+        loop = asyncio.get_running_loop()
+
+        while not self._is_stopping():
+            tick_started = loop.time()
+            try:
+                state = await self._run_blocking(self.controller.read_state)
+            except Exception as exc:
+                logger.warning("poll_read_failed", err=str(exc))
+                self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
+                if self.config.auto_reconnect:
+                    await self._reconnect()
+                    continue
+                break
+
+            self.store.update_controller_state(state)
+            self.bus.publish(EventTopic.STATE_UPDATE, state)
+            self.store.bump("poll.tick")
+
+            if battery.should_emit(state.battery_pct, tick_started):
+                self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
+                battery.mark_emitted(state.battery_pct, tick_started)
+                self.store.bump("battery.change.emitted")
+
+            elapsed = loop.time() - tick_started
+            sleep_for = period - elapsed
+            if sleep_for > 0:
+                stop_event = self._stop_event
+                assert stop_event is not None
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(stop_event.wait(), timeout=sleep_for)
+                    break
+
+    async def _reconnect(self) -> None:
+        with contextlib.suppress(Exception):
+            await self._run_blocking(self.controller.disconnect)
+        await asyncio.sleep(self.config.reconnect_backoff_sec)
+        await self._connect_with_retry()
+
+    async def _shutdown(self) -> None:
+        logger.info("daemon_shutting_down")
+        for task in self._tasks:
+            task.cancel()
+        for task in self._tasks:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+        try:
+            await self._run_blocking(self.controller.disconnect)
+        except Exception as exc:
+            logger.warning("controller_disconnect_failed", err=str(exc))
+        if self._executor is not None:
+            self._executor.shutdown(wait=False, cancel_futures=True)
+            self._executor = None
+        self._tasks.clear()
+        logger.info("daemon_stopped")
+
+    def _install_signal_handlers(self, loop: asyncio.AbstractEventLoop) -> None:
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            with contextlib.suppress(NotImplementedError):
+                loop.add_signal_handler(sig, self.stop)
+
+    async def _run_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
+        assert self._executor is not None, "executor não inicializado"
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._executor, fn, *args)
+
+    def _is_stopping(self) -> bool:
+        return self._stop_event is not None and self._stop_event.is_set()
+
+
+__all__ = [
+    "BATTERY_DEBOUNCE_SEC",
+    "BATTERY_DELTA_THRESHOLD_PCT",
+    "BATTERY_MIN_INTERVAL_SEC",
+    "DEFAULT_POLL_HZ",
+    "BatteryDebouncer",
+    "Daemon",
+    "DaemonConfig",
+]
