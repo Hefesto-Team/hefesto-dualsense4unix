@@ -138,3 +138,91 @@ def test_pids_contemplam_edge():
     assert 0x0CE6 in DUALSENSE_PIDS  # DualSense
     assert 0x0DF2 in DUALSENSE_PIDS  # DualSense Edge
     assert DUALSENSE_VENDOR == 0x054C
+
+
+def test_reset_buttons_on_disconnect_limpa_pressed():
+    """HOTFIX-3: botoes pressionados somem quando device cai."""
+    reader = EvdevReader(device_path=None)
+    reader._pressed = {"cross", "dpad_up", "r2_btn"}
+    reader._dpad_x = 1
+    reader._dpad_y = -1
+    reader._snapshot = EvdevSnapshot(buttons_pressed=frozenset(reader._pressed))
+    reader._reset_buttons_on_disconnect()
+    snap = reader.snapshot()
+    assert snap.buttons_pressed == frozenset()
+    assert reader._dpad_x == 0
+    assert reader._dpad_y == 0
+    assert reader._pressed == set()
+
+
+def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """HOTFIX-3: se read_loop levanta OSError, reader tenta reabrir.
+
+    1a tentativa levanta OSError (device sumiu); 2a entrega eventos.
+    Após tempo suficiente, snapshot reflete evento da segunda conexao.
+    """
+    device_path = tmp_path / "fake_event"
+    device_path.touch()
+
+    reader = EvdevReader(device_path=device_path)
+
+    fake_ecodes = MagicMock()
+    fake_ecodes.EV_KEY = 1
+    fake_ecodes.EV_ABS = 3
+    fake_ecodes.ABS_Z = 2
+    fake_ecodes.ABS_X = 0
+    fake_ecodes.ABS_Y = 1
+    fake_ecodes.ABS_RX = 3
+    fake_ecodes.ABS_RY = 4
+    fake_ecodes.ABS_RZ = 5
+    fake_ecodes.ABS_HAT0X = 16
+    fake_ecodes.ABS_HAT0Y = 17
+
+    def fake_event(typ: int, code: int, value: int):
+        ev = MagicMock()
+        ev.type = typ
+        ev.code = code
+        ev.value = value
+        return ev
+
+    first_device = MagicMock()
+    first_device.name = "first"
+    first_device.read_loop.side_effect = OSError(19, "No such device")
+
+    second_device = MagicMock()
+    second_device.name = "second"
+    second_device.read_loop.return_value = iter([
+        fake_event(3, fake_ecodes.ABS_Z, 200),
+    ])
+
+    devices = [first_device, second_device]
+
+    def device_factory(*_a, **_kw):
+        if devices:
+            return devices.pop(0)
+        later = MagicMock()
+        later.read_loop.return_value = iter([])
+        return later
+
+    import sys
+
+    fake_mod = MagicMock()
+    fake_mod.InputDevice = device_factory
+    fake_mod.ecodes = fake_ecodes
+
+    monkeypatch.setitem(sys.modules, "evdev", fake_mod)
+
+    # Mock find_dualsense_evdev pra re-probe funcionar apos OSError
+    from hefesto.core import evdev_reader as er_mod
+    monkeypatch.setattr(er_mod, "find_dualsense_evdev", lambda: device_path)
+
+    reader.start()
+    import time
+
+    time.sleep(0.8)
+
+    snap = reader.snapshot()
+    reader.stop()
+
+    # Após reconnect, o evento ABS_Z=200 deve ter sido processado
+    assert snap.l2_raw == 200
