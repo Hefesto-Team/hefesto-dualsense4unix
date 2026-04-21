@@ -10,7 +10,7 @@ MAIN_GLADE = GUI_DIR / "main.glade"
 ICON_PATH = ROOT_DIR / "assets" / "appimage" / "Hefesto.png"
 
 # Polling da GUI contra o daemon (IPC).
-LIVE_POLL_INTERVAL_MS = 50   # 20 Hz
+LIVE_POLL_INTERVAL_MS = 100  # 10 Hz
 STATE_POLL_INTERVAL_MS = 500  # 2 Hz, info pouco mutável (perfil ativo)
 
 # Máquina de estado de reconnect do header (UX-RECONNECT-01).

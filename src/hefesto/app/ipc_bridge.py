@@ -1,24 +1,94 @@
-"""Cliente IPC síncrono para a GUI GTK.
+"""Cliente IPC síncrono/assíncrono para a GUI GTK.
 
-A GUI roda em loop GTK síncrono; asyncio vive embutido em chamadas curtas
-por `asyncio.run()`. Para operações muito rápidas (get_status, set_rumble)
-isso é aceitável. Poll contínuo usa `GLib.timeout_add` + asyncio.run por
-tick.
+`_run_call` é síncrono e bloqueante — NÃO chamar da thread principal GTK.
+`call_async` despacha para um ThreadPoolExecutor (1 worker) e re-posta os
+callbacks via `GLib.idle_add`, mantendo a thread GTK livre durante I/O.
 """
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
+from collections.abc import Callable
 from typing import Any
 
 from hefesto.cli.ipc_client import IpcClient, IpcError
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+# Executor lazy-init — criado na primeira chamada de call_async.
+_EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
 
 
-def _run_call(method: str, params: dict[str, Any] | None = None) -> Any:
+def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
+    """Retorna (criando se necessário) o executor IPC compartilhado."""
+    global _EXECUTOR  # necessário: lazy singleton
+    if _EXECUTOR is None:
+        _EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="hefesto-ipc",
+        )
+    return _EXECUTOR
+
+
+def _run_call(
+    method: str,
+    params: dict[str, Any] | None = None,
+    timeout: float | None = 0.25,
+) -> Any:
+    """Executa RPC de forma síncrona com timeout.
+
+    ATENÇÃO: função bloqueante. Não deve ser chamada da thread principal GTK.
+    Indicada para uso em CLI, TUI ou dentro do worker do executor.
+    """
     async def _do() -> Any:
-        async with IpcClient.connect() as client:
+        async with IpcClient.connect(timeout=timeout) as client:
             return await client.call(method, params or {})
 
     return asyncio.run(_do())
+
+
+def call_async(
+    method: str,
+    params: dict[str, Any] | None,
+    on_success: Callable[[Any], None],
+    on_failure: Callable[[Exception], None] | None = None,
+    timeout_s: float = 0.25,
+) -> None:
+    """Despacha RPC para thread worker; callbacks re-postados via GLib.idle_add.
+
+    - `on_success(result)` é chamado na thread principal GTK após conclusão.
+    - `on_failure(exc)` é chamado na thread principal GTK em caso de erro.
+    - Ambos os callbacks DEVEM retornar `False` para não serem repetidos
+      pelo GLib.
+
+    A função não bloqueia a thread GTK em nenhuma circunstância.
+    """
+    # Import adiado para permitir testes sem GTK instalado.
+    from gi.repository import GLib  # type: ignore[import]
+
+    def _worker() -> None:
+        try:
+            result = _run_call(method, params, timeout=timeout_s)
+        except Exception as exc:
+            if on_failure is not None:
+                GLib.idle_add(on_failure, exc)
+            else:
+                logger.warning(
+                    "ipc_bridge.call_async falhou sem handler de erro",
+                    method=method,
+                    erro=str(exc),
+                )
+            return
+        GLib.idle_add(on_success, result)
+
+    _get_executor().submit(_worker)
+
+
+# ---------------------------------------------------------------------------
+# Helpers síncronos de alto nível (usados por CLI e código legado da GUI que
+# já está em thread worker ou contexto de teste).
+# ---------------------------------------------------------------------------
 
 
 def daemon_state_full() -> dict[str, Any] | None:
@@ -102,6 +172,7 @@ def rumble_set(weak: int, strong: int) -> bool:
 
 
 __all__ = [
+    "call_async",
     "daemon_state_full",
     "daemon_status_basic",
     "led_set",
@@ -110,3 +181,5 @@ __all__ = [
     "rumble_set",
     "trigger_set",
 ]
+
+# "O segredo de ter sucesso é saber o que descartar." — Charlie Munger
