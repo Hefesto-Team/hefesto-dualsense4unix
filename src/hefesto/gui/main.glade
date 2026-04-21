@@ -2,6 +2,22 @@
 <interface>
   <requires lib="gtk+" version="3.24"/>
 
+  <object class="GtkAdjustment" id="rumble_weak_adj">
+    <property name="lower">0</property>
+    <property name="upper">255</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
+  <object class="GtkAdjustment" id="rumble_strong_adj">
+    <property name="lower">0</property>
+    <property name="upper">255</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
   <object class="GtkWindow" id="main_window">
     <property name="title">Hefesto</property>
     <property name="default-width">940</property>
@@ -495,6 +511,283 @@
             </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label">Gatilhos</property></object>
+            </child>
+
+            <!-- ABA LIGHTBAR + PLAYER LEDS -->
+            <child>
+              <object class="GtkBox" id="tab_lightbar_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Lightbar (barra de LED)</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">12</property>
+                        <property name="margin">16</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Escolha a cor da barra de LED do DualSense.</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">16</property>
+
+                            <child>
+                              <object class="GtkColorButton" id="lightbar_color_button">
+                                <property name="title">Selecione a cor</property>
+                                <property name="use-alpha">False</property>
+                                <signal name="color-set" handler="on_lightbar_color_set"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkFrame">
+                                <property name="label">Prévia</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                  <object class="GtkDrawingArea" id="lightbar_preview">
+                                    <property name="width-request">180</property>
+                                    <property name="height-request">60</property>
+                                  </object>
+                                </child>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="lightbar_apply">
+                                <property name="label">Aplicar no controle</property>
+                                <signal name="clicked" handler="on_lightbar_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="lightbar_off">
+                                <property name="label">Apagar</property>
+                                <signal name="clicked" handler="on_lightbar_off"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">LEDs de Jogador</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">16</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">5 indicadores inferiores do controle.</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label">LED 1</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label">LED 2</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label">LED 3</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label">LED 4</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label">LED 5</property></object></child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Presets rápidos:&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_all">
+                                <property name="label">Todos</property>
+                                <signal name="clicked" handler="on_player_leds_preset_all"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_p1">
+                                <property name="label">Player 1</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p1"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_p2">
+                                <property name="label">Player 2</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p2"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_none">
+                                <property name="label">Nenhum</property>
+                                <signal name="clicked" handler="on_player_leds_preset_none"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="player_leds_note">
+                            <property name="label">&lt;i&gt;Seleção fica registrada para salvar no perfil ativo; envio direto ao hardware chega em extensão futura do backend.&lt;/i&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Lightbar</property></object>
+            </child>
+
+            <!-- ABA RUMBLE -->
+            <child>
+              <object class="GtkBox" id="tab_rumble_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">16</property>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Motores de vibração</property>
+                    <child>
+                      <object class="GtkGrid">
+                        <property name="row-spacing">12</property>
+                        <property name="column-spacing">12</property>
+                        <property name="margin">16</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Motor fraco (weak)</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkScale" id="rumble_weak_scale">
+                            <property name="draw-value">True</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">right</property>
+                            <property name="hexpand">True</property>
+                            <property name="adjustment">rumble_weak_adj</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Motor forte (strong)</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkScale" id="rumble_strong_scale">
+                            <property name="draw-value">True</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">right</property>
+                            <property name="hexpand">True</property>
+                            <property name="adjustment">rumble_strong_adj</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkButton" id="rumble_apply">
+                        <property name="label">Aplicar rumble</property>
+                        <signal name="clicked" handler="on_rumble_apply"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="rumble_test_500ms">
+                        <property name="label">Testar por 500 ms</property>
+                        <signal name="clicked" handler="on_rumble_test_500ms"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="rumble_stop">
+                        <property name="label">Parar</property>
+                        <signal name="clicked" handler="on_rumble_stop"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="rumble_info">
+                    <property name="label">&lt;i&gt;Os motores do DualSense têm janela mínima de 20 ms entre comandos (throttle do daemon). Pressione &quot;Testar por 500 ms&quot; para sentir um pulso curto.&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Rumble</property></object>
             </child>
 
           </object>
