@@ -4,6 +4,8 @@
 # runtime-real) para sprints que tocam o daemon.
 #
 # Uso:
+#   ./run.sh                   abre a GUI GTK3 (hefesto-gui)
+#   ./run.sh --gui             idem
 #   ./run.sh --smoke           boot curto com FakeController USB (2s)
 #   ./run.sh --smoke --bt      boot curto com FakeController BT  (2s)
 #   ./run.sh --daemon          roda daemon em primeiro plano (hardware real)
@@ -20,13 +22,18 @@ fi
 # shellcheck disable=SC1091
 . .venv/bin/activate
 
-MODE="daemon"
+MODE="gui"
 TRANSPORT="usb"
 FAKE=0
 SMOKE_DURATION="${HEFESTO_SMOKE_DURATION:-2.0}"
 
+if [[ $# -eq 0 ]]; then
+    MODE="gui"
+fi
+
 for arg in "$@"; do
     case "$arg" in
+        --gui)    MODE="gui" ;;
         --smoke)  MODE="smoke" ;;
         --daemon) MODE="daemon" ;;
         --fake)   MODE="daemon"; FAKE=1 ;;
@@ -35,6 +42,10 @@ for arg in "$@"; do
         *) echo "aviso: argumento desconhecido: $arg" ;;
     esac
 done
+
+if [[ "$MODE" == "gui" ]]; then
+    exec python3 -m hefesto.app.main
+fi
 
 export HEFESTO_FAKE_TRANSPORT="$TRANSPORT"
 
