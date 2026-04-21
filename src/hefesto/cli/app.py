@@ -62,6 +62,14 @@ def led(
 
 
 @app.command()
+def tui() -> None:
+    """Abre a TUI Textual do Hefesto."""
+    from hefesto.tui.app import run_tui
+
+    run_tui()
+
+
+@app.command()
 def version() -> None:
     """Mostra a versão instalada."""
     from hefesto import __version__
