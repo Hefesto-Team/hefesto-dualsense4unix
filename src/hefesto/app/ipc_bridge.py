@@ -43,13 +43,30 @@ def daemon_status_basic() -> dict[str, Any] | None:
 
 
 def profile_list() -> list[dict[str, Any]]:
+    """Lista perfis. Preferência: daemon (traz 'active'); fallback: disco."""
     try:
         result = _run_call("profile.list")
         if isinstance(result, dict):
-            return list(result.get("profiles", []))
+            profiles = list(result.get("profiles", []))
+            if profiles:
+                return profiles
     except (FileNotFoundError, ConnectionError, IpcError, OSError):
         pass
-    return []
+
+    try:
+        from hefesto.profiles.loader import load_all_profiles
+
+        return [
+            {
+                "name": p.name,
+                "priority": p.priority,
+                "match_type": p.match.type,
+                "active": False,
+            }
+            for p in load_all_profiles()
+        ]
+    except Exception:
+        return []
 
 
 def profile_switch(name: str) -> bool:

@@ -160,14 +160,18 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         store.clear()
         profiles = load_all_profiles()
         select_iter = None
+        first_iter = None
         for profile in profiles:
             row_iter = store.append(
                 [profile.name, profile.priority, profile.match.type]
             )
+            if first_iter is None:
+                first_iter = row_iter
             if profile.name == select_name:
                 select_iter = row_iter
-        if select_iter is not None:
-            self._get("profiles_tree").get_selection().select_iter(select_iter)
+        target = select_iter if select_iter is not None else first_iter
+        if target is not None:
+            self._get("profiles_tree").get_selection().select_iter(target)
 
     def _populate_editor(self, profile: Profile) -> None:
         self._get("profile_name_entry").set_text(profile.name)
