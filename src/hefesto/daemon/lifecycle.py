@@ -43,6 +43,7 @@ class DaemonConfig:
     udp_enabled: bool = True
     udp_host: str = "127.0.0.1"
     udp_port: int = 6969
+    autoswitch_enabled: bool = True
 
 
 class BatteryDebouncer:
@@ -86,6 +87,7 @@ class Daemon:
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
     _ipc_server: Any = None
     _udp_server: Any = None
+    _autoswitch: Any = None
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -103,6 +105,8 @@ class Daemon:
                 await self._start_ipc()
             if self.config.udp_enabled:
                 await self._start_udp()
+            if self.config.autoswitch_enabled:
+                await self._start_autoswitch()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -180,6 +184,17 @@ class Daemon:
         )
         await self._ipc_server.start()
 
+    async def _start_autoswitch(self) -> None:
+        from hefesto.integrations.xlib_window import get_active_window_info
+        from hefesto.profiles.autoswitch import AutoSwitcher
+
+        manager = ProfileManager(controller=self.controller, store=self.store)
+        self._autoswitch = AutoSwitcher(
+            manager=manager, window_reader=get_active_window_info
+        )
+        if not self._autoswitch.disabled():
+            self._autoswitch.start()
+
     async def _start_udp(self) -> None:
         from hefesto.daemon.udp_server import UdpServer
 
@@ -205,6 +220,10 @@ class Daemon:
             with contextlib.suppress(Exception):
                 await self._udp_server.stop()
             self._udp_server = None
+        if self._autoswitch is not None:
+            with contextlib.suppress(Exception):
+                self._autoswitch.stop()
+            self._autoswitch = None
         for task in self._tasks:
             task.cancel()
         for task in self._tasks:
