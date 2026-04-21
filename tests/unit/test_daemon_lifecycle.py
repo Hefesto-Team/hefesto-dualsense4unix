@@ -38,7 +38,10 @@ async def test_poll_loop_gera_state_update_e_para_no_stop():
         controller=fc,
         bus=bus,
         store=store,
-        config=DaemonConfig(poll_hz=120, auto_reconnect=False),
+        config=DaemonConfig(
+            poll_hz=120, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
     )
 
     run_task = asyncio.create_task(daemon.run())
@@ -56,7 +59,13 @@ async def test_poll_loop_gera_state_update_e_para_no_stop():
 async def test_connected_event_publicado_no_start():
     fc = FakeController(transport="bt", states=_mk_states(3, "bt"))
     bus = EventBus()
-    daemon = Daemon(controller=fc, bus=bus, config=DaemonConfig(poll_hz=60, auto_reconnect=False))
+    daemon = Daemon(
+        controller=fc, bus=bus,
+        config=DaemonConfig(
+            poll_hz=60, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
+    )
 
     queue = bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
     run_task = asyncio.create_task(daemon.run())
@@ -79,7 +88,10 @@ async def test_battery_debounce_dispara_no_primeiro_read():
     )
     bus = EventBus()
     store = StateStore()
-    cfg = DaemonConfig(poll_hz=120, auto_reconnect=False)
+    cfg = DaemonConfig(
+        poll_hz=120, auto_reconnect=False,
+        ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+    )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
 
     queue = bus.subscribe(EventTopic.BATTERY_CHANGE)
@@ -108,7 +120,10 @@ async def test_battery_dispara_quando_delta_pct():
     fc = FakeController(transport="usb", states=states)
     bus = EventBus()
     store = StateStore()
-    cfg = DaemonConfig(poll_hz=60, auto_reconnect=False)
+    cfg = DaemonConfig(
+        poll_hz=60, auto_reconnect=False,
+        ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+    )
     daemon = Daemon(controller=fc, bus=bus, store=store, config=cfg)
 
     queue = bus.subscribe(EventTopic.BATTERY_CHANGE)
@@ -127,7 +142,13 @@ async def test_battery_dispara_quando_delta_pct():
 @pytest.mark.asyncio
 async def test_stop_idempotente():
     fc = FakeController(transport="usb", states=_mk_states(5))
-    daemon = Daemon(controller=fc, config=DaemonConfig(poll_hz=60, auto_reconnect=False))
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=60, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
+    )
     run_task = asyncio.create_task(daemon.run())
     await asyncio.sleep(0.03)
     daemon.stop()
@@ -138,7 +159,13 @@ async def test_stop_idempotente():
 @pytest.mark.asyncio
 async def test_daemon_desconecta_no_shutdown():
     fc = FakeController(transport="usb", states=_mk_states(5))
-    daemon = Daemon(controller=fc, config=DaemonConfig(poll_hz=60, auto_reconnect=False))
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=60, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
+    )
     run_task = asyncio.create_task(daemon.run())
     await asyncio.sleep(0.03)
     assert fc.is_connected() is True
