@@ -23,6 +23,7 @@ from typing import Any
 from hefesto.core.controller import IController
 from hefesto.core.events import EventBus, EventTopic
 from hefesto.daemon.state_store import StateStore
+from hefesto.profiles.manager import ProfileManager
 from hefesto.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -38,6 +39,7 @@ class DaemonConfig:
     poll_hz: int = DEFAULT_POLL_HZ
     auto_reconnect: bool = True
     reconnect_backoff_sec: float = 2.0
+    ipc_enabled: bool = True
 
 
 class BatteryDebouncer:
@@ -79,6 +81,7 @@ class Daemon:
     _stop_event: asyncio.Event | None = None
     _executor: ThreadPoolExecutor | None = None
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
+    _ipc_server: Any = None
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -92,6 +95,8 @@ class Daemon:
         try:
             await self._connect_with_retry()
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
+            if self.config.ipc_enabled:
+                await self._start_ipc()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -158,8 +163,23 @@ class Daemon:
         await asyncio.sleep(self.config.reconnect_backoff_sec)
         await self._connect_with_retry()
 
+    async def _start_ipc(self) -> None:
+        from hefesto.daemon.ipc_server import IpcServer
+
+        manager = ProfileManager(controller=self.controller, store=self.store)
+        self._ipc_server = IpcServer(
+            controller=self.controller,
+            store=self.store,
+            profile_manager=manager,
+        )
+        await self._ipc_server.start()
+
     async def _shutdown(self) -> None:
         logger.info("daemon_shutting_down")
+        if self._ipc_server is not None:
+            with contextlib.suppress(Exception):
+                await self._ipc_server.stop()
+            self._ipc_server = None
         for task in self._tasks:
             task.cancel()
         for task in self._tasks:
