@@ -11,9 +11,10 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
+from hefesto.app.ipc_bridge import _get_executor
 from hefesto.daemon.service_install import SERVICE_NORMAL, ServiceInstaller, user_unit_dir
 from hefesto.utils.logging_config import get_logger
 
@@ -54,13 +55,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # --- handlers ---
 
     def on_daemon_start(self, _btn: Gtk.Button) -> None:
-        self._run_systemctl("start")
+        self._run_systemctl_async("start")
 
     def on_daemon_stop(self, _btn: Gtk.Button) -> None:
-        self._run_systemctl("stop")
+        self._run_systemctl_async("stop")
 
     def on_daemon_restart(self, _btn: Gtk.Button) -> None:
-        self._run_systemctl("restart")
+        self._run_systemctl_async("restart")
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
         self._refresh_daemon_view()
@@ -136,7 +137,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         if self._daemon_autostart_guard:
             return False
         action = "enable" if state else "disable"
-        self._run_systemctl(action)
+        self._run_systemctl_async(action)
         return False
 
     # --- helpers ---
@@ -155,6 +156,23 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
         text = self._systemctl_status_text(SERVICE_NORMAL)
         self._set_daemon_text(text)
+
+    def _run_systemctl_async(self, action: str) -> None:
+        """Executa systemctl em thread worker para não bloquear a thread GTK."""
+        unit = self._selected_unit()
+
+        def _worker() -> None:
+            result = self._invoke_systemctl([action, unit], capture=True)
+            rc = result.returncode if result is not None else -1
+            GLib.idle_add(self._on_systemctl_done, action, unit, rc)
+
+        _get_executor().submit(_worker)
+
+    def _on_systemctl_done(self, action: str, unit: str, rc: int) -> bool:
+        """Callback pós-systemctl — executa na thread principal GTK."""
+        self._toast_daemon(f"systemctl {action} {unit} → rc={rc}")
+        self._refresh_daemon_view()
+        return False  # não repetir via GLib
 
     def _set_daemon_status_markup(
         self, installed: bool, active: str, enabled: str
@@ -180,12 +198,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         mark = buf.create_mark(None, end_iter, False)
         view.scroll_to_mark(mark, 0.0, False, 0.0, 0.0)
         buf.delete_mark(mark)
-
-    def _run_systemctl(self, action: str) -> None:
-        result = self._invoke_systemctl([action, SERVICE_NORMAL], capture=True)
-        rc = result.returncode if result is not None else -1
-        self._toast_daemon(f"systemctl {action} {SERVICE_NORMAL} → rc={rc}")
-        self._refresh_daemon_view()
 
     def _systemctl_oneline(self, args: list[str]) -> str:
         result = self._invoke_systemctl(args, capture=True, check=False)

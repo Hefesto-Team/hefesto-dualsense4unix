@@ -22,7 +22,7 @@ from hefesto.app.constants import (
     RECONNECT_POLL_INTERVAL_S,
     STATE_POLL_INTERVAL_MS,
 )
-from hefesto.app.ipc_bridge import daemon_state_full
+from hefesto.app.ipc_bridge import call_async
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -55,21 +55,43 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
 
     def _tick_live_state(self) -> bool:
-        """Roda a ~20 Hz: atualiza gatilhos, sticks, botões."""
-        state = daemon_state_full()
-        if state is None:
-            return True  # mantém o timer vivo; header é gerido pelo reconnect
+        """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
+        call_async(
+            "daemon.state_full",
+            None,
+            on_success=self._on_live_state_result,
+            on_failure=self._on_live_state_failure,
+        )
+        return True  # mantém o timer vivo
 
-        self._render_live_state(state)
-        return True
+    def _on_live_state_result(self, state: Any) -> bool:
+        """Callback de sucesso — executa na thread principal via GLib.idle_add."""
+        if isinstance(state, dict):
+            self._render_live_state(state)
+        else:
+            self._render_offline()
+        return False  # não repetir via GLib
+
+    def _on_live_state_failure(self, _exc: Exception) -> bool:
+        """Callback de falha — executa na thread principal via GLib.idle_add."""
+        self._render_offline()
+        return False  # não repetir via GLib
 
     def _tick_profile_state(self) -> bool:
         """Roda a 2 Hz: perfil ativo + metadata que muda devagar."""
-        state = daemon_state_full()
-        if state is None:
-            return True
-        self._render_slow_state(state)
-        return True
+        call_async(
+            "daemon.state_full",
+            None,
+            on_success=self._on_profile_state_result,
+            on_failure=lambda _exc: False,
+        )
+        return True  # mantém o timer vivo
+
+    def _on_profile_state_result(self, state: Any) -> bool:
+        """Callback de sucesso para o tick lento — executa na thread GTK."""
+        if isinstance(state, dict):
+            self._render_slow_state(state)
+        return False  # não repetir via GLib
 
     def _tick_reconnect_state(self) -> bool:
         """Roda a 0.5 Hz: coordena a máquina de estado do header."""
