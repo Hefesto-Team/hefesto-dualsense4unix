@@ -14,11 +14,13 @@ ENV/
 
 # Build
 build/
-dist/
 *.egg-info/
 .eggs/
 wheels/
 pip-wheel-metadata/
+
+# dist/ nao commitado por padrao; release workflow gera.
+dist/
 
 # Testing
 .pytest_cache/
