@@ -18,6 +18,7 @@ build/
 .eggs/
 wheels/
 pip-wheel-metadata/
+squashfs-root/
 
 # dist/ nao commitado por padrao; release workflow gera.
 dist/
