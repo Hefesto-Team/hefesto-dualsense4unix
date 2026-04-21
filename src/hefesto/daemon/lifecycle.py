@@ -44,6 +44,11 @@ class DaemonConfig:
     udp_host: str = "127.0.0.1"
     udp_port: int = 6969
     autoswitch_enabled: bool = True
+    # FEAT-MOUSE-01: opt-in, default OFF. Device virtual só nasce se o
+    # usuário ligar o toggle na aba Mouse da GUI (via IPC mouse.emulation.set).
+    mouse_emulation_enabled: bool = False
+    mouse_speed: int = 6
+    mouse_scroll_speed: int = 1
 
 
 class BatteryDebouncer:
@@ -88,6 +93,7 @@ class Daemon:
     _ipc_server: Any = None
     _udp_server: Any = None
     _autoswitch: Any = None
+    _mouse_device: Any = None
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -107,6 +113,8 @@ class Daemon:
                 await self._start_udp()
             if self.config.autoswitch_enabled:
                 await self._start_autoswitch()
+            if self.config.mouse_emulation_enabled:
+                self._start_mouse_emulation()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -153,6 +161,9 @@ class Daemon:
             self.bus.publish(EventTopic.STATE_UPDATE, state)
             self.store.bump("poll.tick")
 
+            if self._mouse_device is not None:
+                self._dispatch_mouse_emulation(state)
+
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
                 battery.mark_emitted(state.battery_pct, tick_started)
@@ -181,6 +192,7 @@ class Daemon:
             controller=self.controller,
             store=self.store,
             profile_manager=manager,
+            daemon=self,
         )
         await self._ipc_server.start()
 
@@ -210,8 +222,90 @@ class Daemon:
             logger.warning("udp_server_bind_failed", err=str(exc))
             self._udp_server = None
 
+    def _start_mouse_emulation(self) -> bool:
+        """Cria device virtual de mouse+teclado (FEAT-MOUSE-01). Idempotente."""
+        if self._mouse_device is not None:
+            return True
+        try:
+            from hefesto.integrations.uinput_mouse import UinputMouseDevice
+
+            device = UinputMouseDevice(
+                mouse_speed=self.config.mouse_speed,
+                scroll_speed=self.config.mouse_scroll_speed,
+            )
+        except Exception as exc:
+            logger.warning("mouse_emulation_import_failed", err=str(exc))
+            return False
+        if not device.start():
+            logger.warning("mouse_emulation_start_failed")
+            return False
+        self._mouse_device = device
+        self.config.mouse_emulation_enabled = True
+        logger.info("mouse_emulation_started",
+                    speed=self.config.mouse_speed,
+                    scroll_speed=self.config.mouse_scroll_speed)
+        return True
+
+    def _stop_mouse_emulation(self) -> None:
+        if self._mouse_device is None:
+            return
+        with contextlib.suppress(Exception):
+            self._mouse_device.stop()
+        self._mouse_device = None
+        self.config.mouse_emulation_enabled = False
+        logger.info("mouse_emulation_stopped")
+
+    def set_mouse_emulation(
+        self,
+        enabled: bool,
+        speed: int | None = None,
+        scroll_speed: int | None = None,
+    ) -> bool:
+        """Liga/desliga emulação e atualiza velocidades. Usado pelo IPC."""
+        if speed is not None:
+            self.config.mouse_speed = max(1, min(12, int(speed)))
+        if scroll_speed is not None:
+            self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
+
+        if enabled:
+            ok = self._start_mouse_emulation()
+            if ok and self._mouse_device is not None:
+                self._mouse_device.set_speed(
+                    mouse_speed=self.config.mouse_speed,
+                    scroll_speed=self.config.mouse_scroll_speed,
+                )
+            return ok
+        self._stop_mouse_emulation()
+        return True
+
+    def _dispatch_mouse_emulation(self, state: Any) -> None:
+        """Traduz o estado do poll em eventos de mouse+teclado virtual."""
+        if self._mouse_device is None:
+            return
+        buttons: frozenset[str] = frozenset()
+        evdev_reader = getattr(self.controller, "_evdev", None)
+        if evdev_reader is not None and evdev_reader.is_available():
+            with contextlib.suppress(Exception):
+                buttons = frozenset(evdev_reader.snapshot().buttons_pressed)
+        try:
+            self._mouse_device.dispatch(
+                lx=state.raw_lx,
+                ly=state.raw_ly,
+                rx=state.raw_rx,
+                ry=state.raw_ry,
+                l2=state.l2_raw,
+                r2=state.r2_raw,
+                buttons=buttons,
+            )
+        except Exception as exc:
+            logger.warning("mouse_dispatch_failed", err=str(exc))
+
     async def _shutdown(self) -> None:
         logger.info("daemon_shutting_down")
+        if self._mouse_device is not None:
+            with contextlib.suppress(Exception):
+                self._mouse_device.stop()
+            self._mouse_device = None
         if self._ipc_server is not None:
             with contextlib.suppress(Exception):
                 await self._ipc_server.stop()

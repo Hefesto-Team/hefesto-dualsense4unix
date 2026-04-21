@@ -18,6 +18,7 @@ from hefesto import __version__
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
+from hefesto.app.actions.mouse_actions import MouseActionsMixin
 from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto.app.actions.status_actions import StatusActionsMixin
@@ -38,6 +39,7 @@ class HefestoApp(
     ProfilesActionsMixin,
     DaemonActionsMixin,
     EmulationActionsMixin,
+    MouseActionsMixin,
 ):
     """Aplicação GTK do Hefesto."""
 
@@ -106,6 +108,10 @@ class HefestoApp(
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
             "on_emulation_open_toml": self.on_emulation_open_toml,
+            # Mouse
+            "on_mouse_toggle_set": self.on_mouse_toggle_set,
+            "on_mouse_speed_changed": self.on_mouse_speed_changed,
+            "on_mouse_scroll_speed_changed": self.on_mouse_scroll_speed_changed,
         }
 
     # --- banner ---
@@ -167,6 +173,7 @@ class HefestoApp(
         self.install_profiles_tab()
         self.install_daemon_tab()
         self.install_emulation_tab()
+        self.install_mouse_tab()
 
     def run(self, *, start_hidden: bool = False) -> None:
         self.tray = AppTray(
@@ -184,6 +191,7 @@ class HefestoApp(
             self.install_profiles_tab()
             self.install_daemon_tab()
             self.install_emulation_tab()
+            self.install_mouse_tab()
             logger.info("hefesto_start_hidden")
         else:
             self.show()
