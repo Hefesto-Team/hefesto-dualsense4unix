@@ -1,0 +1,15 @@
+# Hefesto — desabilita autosuspend USB para DualSense e DualSense Edge.
+# Motivação: o kernel Linux, com CONFIG_USB_RUNTIME_PM habilitado (default em
+# Pop!_OS, Ubuntu, Fedora), suspende dispositivos USB inativos após ~2 s. Para
+# um gamepad em polling 60-120 Hz isso causa desconexão transiente imprevisível
+# (hidraw devolve ENODEV, daemon entra em reconnect loop). Essa regra força o
+# device a permanecer ligado enquanto estiver conectado.
+#
+# Aprendido em projeto irmão (desbloqueador Nintendo Switch), mesma gotcha no
+# Pop!_OS. Aplicar a regra não altera o anonimato — não há referência externa.
+#
+# Regra aplicada no nível do device USB (subsystem=usb), não no hidraw — o
+# atributo power/control fica no nó-pai do barramento USB, não no hidraw child.
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="054c", ATTR{idProduct}=="0ce6", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="054c", ATTR{idProduct}=="0df2", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
