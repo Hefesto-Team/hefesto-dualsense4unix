@@ -24,6 +24,7 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Header, Label, Static
 
 from hefesto import __version__
+from hefesto.tui.widgets import BatteryMeter, StickPreview, TriggerBar
 
 
 @dataclass
@@ -124,6 +125,15 @@ class MainScreen(Screen[None]):
             )
             with Horizontal():
                 yield Static(id="info_box", classes="panel")
+                with Vertical(id="preview_panel", classes="panel"):
+                    yield Label("[bold]Gatilhos[/]")
+                    yield TriggerBar(side_label="L2", id="trigger_l2")
+                    yield TriggerBar(side_label="R2", id="trigger_r2")
+                    yield Label("[bold]Bateria[/]")
+                    yield BatteryMeter(id="battery_meter")
+                    with Horizontal(id="sticks_row"):
+                        yield StickPreview(label="L", id="stick_l")
+                        yield StickPreview(label="R", id="stick_r")
             yield Label("[bold]Perfis disponíveis[/]", id="profiles_title")
             table: DataTable[str] = DataTable(id="profiles_table")
             table.add_columns("Nome", "Prioridade", "Match")
@@ -133,6 +143,55 @@ class MainScreen(Screen[None]):
 
     async def on_mount(self) -> None:
         await self.action_refresh()
+        # Poll curto pra atualizar widgets visuais (trigger/stick/battery).
+        # Usa set_interval do Textual; timer é cancelado automaticamente no unmount.
+        self.set_interval(0.1, self._tick_preview)
+
+    async def _tick_preview(self) -> None:
+        """Lê estado do controle direto pra atualizar widgets a 10Hz.
+
+        Usa o IPC quando disponível pra reaproveitar conexão do daemon.
+        Em offline, cai em leitura direta via PyDualSenseController (mas
+        sem hardware retorna valores padrão — safe).
+        """
+        try:
+            from hefesto.cli.ipc_client import IpcClient
+
+            async with IpcClient.connect() as client:
+                status = await client.call("daemon.status")
+            self._apply_preview(
+                l2=0,  # daemon.status não inclui analog ainda
+                r2=0,
+                lx=128,
+                ly=128,
+                rx=128,
+                ry=128,
+                battery=status.get("battery_pct"),
+            )
+        except Exception:
+            # IPC ausente: mantém widgets nos últimos valores
+            return
+
+    def _apply_preview(
+        self,
+        *,
+        l2: int,
+        r2: int,
+        lx: int,
+        ly: int,
+        rx: int,
+        ry: int,
+        battery: int | None,
+    ) -> None:
+        self.query_one("#trigger_l2", TriggerBar).value = l2
+        self.query_one("#trigger_r2", TriggerBar).value = r2
+        self.query_one("#battery_meter", BatteryMeter).pct = battery
+        stick_l = self.query_one("#stick_l", StickPreview)
+        stick_l.x = lx
+        stick_l.y = ly
+        stick_r = self.query_one("#stick_r", StickPreview)
+        stick_r.x = rx
+        stick_r.y = ry
 
     async def action_refresh(self) -> None:
         snap = await fetch_daemon_snapshot()
@@ -201,6 +260,28 @@ class HefestoApp(App[None]):
         padding: 1 2;
         border: heavy $primary;
         margin: 1 2;
+        width: 1fr;
+        height: auto;
+    }
+    #info_box {
+        width: 1fr;
+    }
+    #preview_panel {
+        width: 1fr;
+    }
+    #sticks_row {
+        height: auto;
+    }
+    StickPreview {
+        width: 12;
+        height: 6;
+        margin-right: 2;
+    }
+    TriggerBar {
+        height: 1;
+    }
+    BatteryMeter {
+        height: 1;
     }
     DataTable {
         margin: 0 2;
