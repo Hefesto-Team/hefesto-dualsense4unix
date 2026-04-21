@@ -28,6 +28,7 @@ class StoreSnapshot:
     active_profile: str | None
     last_battery_pct: int | None
     counters: dict[str, int]
+    manual_trigger_active: bool = False
 
 
 class StateStore:
@@ -44,6 +45,14 @@ class StateStore:
         self._active_profile: str | None = None
         self._last_battery_pct: int | None = None
         self._counters: dict[str, int] = {}
+        # BUG-MOUSE-TRIGGERS-01: quando o usuário aplica um efeito de gatilho
+        # manualmente (via aba Gatilhos ou IPC trigger.set), marcamos override
+        # ativo. Enquanto estiver ativo, o AutoSwitcher NÃO reaplica perfis
+        # por mudança de janela — evita que o fallback pise no trigger manual
+        # ao ligar o mouse (cursor move → foco muda → autoswitch reavalia).
+        # Flag só zera em: trigger.reset, profile.switch explícito, ou
+        # clear_manual_trigger_active() programático.
+        self._manual_trigger_active: bool = False
 
     # --- escritas ------------------------------------------------------
 
@@ -67,6 +76,25 @@ class StateStore:
         with self._lock:
             self._counters.clear()
 
+    def mark_manual_trigger_active(self) -> None:
+        """Sinaliza que o usuário aplicou um trigger manualmente.
+
+        Usado pelo `IpcServer` quando processa `trigger.set`. Enquanto este
+        flag estiver ligado, o `AutoSwitcher` NÃO reaplica perfil por mudança
+        de janela (respeita override do usuário).
+        """
+        with self._lock:
+            self._manual_trigger_active = True
+
+    def clear_manual_trigger_active(self) -> None:
+        """Limpa o override manual de trigger.
+
+        Chamado em `trigger.reset` e `profile.switch` (usuário escolheu um
+        perfil explícito, recuperando controle ao autoswitch).
+        """
+        with self._lock:
+            self._manual_trigger_active = False
+
     # --- leituras ------------------------------------------------------
 
     @property
@@ -84,6 +112,11 @@ class StateStore:
         with self._lock:
             return self._last_battery_pct
 
+    @property
+    def manual_trigger_active(self) -> bool:
+        with self._lock:
+            return self._manual_trigger_active
+
     def counter(self, name: str) -> int:
         with self._lock:
             return self._counters.get(name, 0)
@@ -95,6 +128,7 @@ class StateStore:
                 active_profile=self._active_profile,
                 last_battery_pct=self._last_battery_pct,
                 counters=dict(self._counters),
+                manual_trigger_active=self._manual_trigger_active,
             )
 
 
