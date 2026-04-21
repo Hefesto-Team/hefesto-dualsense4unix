@@ -1,12 +1,11 @@
-"""Instalação e gestão das unidades systemd --user.
+"""Instalação e gestão da unidade systemd --user `hefesto.service`.
 
-Respeita a decisão V2-12 (Conflicts= mútuo entre `hefesto.service` e
-`hefesto-headless.service`). Ao habilitar uma, desabilita a outra.
+Unidade única (SIMPLIFY-UNIT-01). A dualidade histórica normal/headless foi
+eliminada porque o Hefesto é inerentemente um daemon desktop com DualSense.
 
-Path canônico: `~/.config/systemd/user/`. Para descobrir os `.service`
-originais, lemos o diretório `assets/` do repo (desenvolvimento) ou
-`/usr/share/hefesto/assets/` (pacote instalado). Em modo de desenvolvimento,
-descobrimos via `importlib.resources` se empacotado como wheel.
+Path canônico: `~/.config/systemd/user/`. Para descobrir o `.service`
+original, lemos o diretório `assets/` do repo (desenvolvimento) ou
+`/usr/share/hefesto/assets/` (pacote instalado).
 """
 from __future__ import annotations
 
@@ -21,7 +20,6 @@ from hefesto.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 SERVICE_NORMAL = "hefesto.service"
-SERVICE_HEADLESS = "hefesto-headless.service"
 
 
 def user_unit_dir() -> Path:
@@ -33,7 +31,7 @@ def user_unit_dir() -> Path:
 
 
 def find_assets_dir() -> Path:
-    """Localiza `assets/` contendo as unidades `.service`.
+    """Localiza `assets/` contendo a unidade `.service`.
 
     Ordem:
       1. `HEFESTO_ASSETS_DIR` env (sobrescreve tudo, útil pra testes).
@@ -54,68 +52,65 @@ def find_assets_dir() -> Path:
     if (system_path / SERVICE_NORMAL).exists():
         return system_path
 
-    raise FileNotFoundError("assets/ nao encontrado (nem via HEFESTO_ASSETS_DIR)")
+    raise FileNotFoundError("assets/ não encontrado (nem via HEFESTO_ASSETS_DIR)")
 
 
 @dataclass
 class ServiceInstaller:
-    """Instala/remove unidades e coordena mutual exclusion."""
+    """Instala/remove a unidade `hefesto.service`."""
 
     dry_run: bool = False
 
-    def install(self, *, headless: bool) -> Path:
+    def install(self) -> Path:
         assets = find_assets_dir()
-        target_name = SERVICE_HEADLESS if headless else SERVICE_NORMAL
-        opposite_name = SERVICE_NORMAL if headless else SERVICE_HEADLESS
-
-        src = assets / target_name
+        src = assets / SERVICE_NORMAL
         if not src.exists():
-            raise FileNotFoundError(f"unit source nao existe: {src}")
+            raise FileNotFoundError(f"unit source não existe: {src}")
 
-        dst = user_unit_dir() / target_name
+        dst = user_unit_dir() / SERVICE_NORMAL
         if not self.dry_run:
             shutil.copy2(src, dst)
         logger.info("service_copied", src=str(src), dst=str(dst))
 
         self._systemctl("daemon-reload")
-        self._disable_if_installed(opposite_name)
-        self._systemctl("enable", target_name)
+        self._systemctl("enable", SERVICE_NORMAL)
 
         return dst
 
     def uninstall(self) -> list[Path]:
         removed: list[Path] = []
-        for name in (SERVICE_NORMAL, SERVICE_HEADLESS):
-            self._disable_if_installed(name)
-            dst = user_unit_dir() / name
-            if dst.exists():
-                if not self.dry_run:
-                    dst.unlink()
-                removed.append(dst)
+        self._disable_if_installed(SERVICE_NORMAL)
+        dst = user_unit_dir() / SERVICE_NORMAL
+        if dst.exists():
+            if not self.dry_run:
+                dst.unlink()
+            removed.append(dst)
         self._systemctl("daemon-reload")
         return removed
 
-    def start(self, *, headless: bool) -> None:
-        name = SERVICE_HEADLESS if headless else SERVICE_NORMAL
-        self._systemctl("start", name)
+    def start(self) -> None:
+        self._systemctl("start", SERVICE_NORMAL)
 
-    def stop(self, *, headless: bool) -> None:
-        name = SERVICE_HEADLESS if headless else SERVICE_NORMAL
-        self._systemctl("stop", name)
+    def stop(self) -> None:
+        self._systemctl("stop", SERVICE_NORMAL)
 
-    def restart(self, *, headless: bool) -> None:
-        name = SERVICE_HEADLESS if headless else SERVICE_NORMAL
-        self._systemctl("restart", name)
+    def restart(self) -> None:
+        self._systemctl("restart", SERVICE_NORMAL)
 
-    def status_text(self, *, headless: bool) -> str:
-        name = SERVICE_HEADLESS if headless else SERVICE_NORMAL
-        result = self._systemctl("status", name, capture=True, check=False)
+    def status_text(self) -> str:
+        result = self._systemctl(
+            "status", SERVICE_NORMAL, capture=True, check=False
+        )
         return result.stdout if result is not None else ""
 
-    def detect_installed_units(self) -> list[str]:
-        """Retorna nomes das units (.service) presentes em `user_unit_dir()`."""
+    def detect_installed_unit(self) -> str | None:
+        """Retorna `"hefesto"` se a unit está presente em `user_unit_dir()`,
+        senão `None`.
+        """
         base = user_unit_dir()
-        return [n for n in (SERVICE_NORMAL, SERVICE_HEADLESS) if (base / n).exists()]
+        if (base / SERVICE_NORMAL).exists():
+            return "hefesto"
+        return None
 
     def _disable_if_installed(self, name: str) -> None:
         if (user_unit_dir() / name).exists():
@@ -140,14 +135,15 @@ class ServiceInstaller:
             )
         except FileNotFoundError as exc:
             raise RuntimeError(
-                "systemctl nao encontrado — distro sem systemd (ver ADR-009)"
+                "systemctl não encontrado — distro sem systemd (ver ADR-009)"
             ) from exc
 
 
 __all__ = [
-    "SERVICE_HEADLESS",
     "SERVICE_NORMAL",
     "ServiceInstaller",
     "find_assets_dir",
     "user_unit_dir",
 ]
+
+# "A simplicidade é a sofisticação máxima." — Leonardo da Vinci

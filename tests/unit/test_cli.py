@@ -97,9 +97,10 @@ def test_status_roda_sem_daemon():
 
 def test_daemon_install_service_dry_command_help():
     # Apenas valida que subcomando existe e aceita --help.
+    # SIMPLIFY-UNIT-01: unit única, sem flag --headless aqui.
     result = runner.invoke(app, ["daemon", "install-service", "--help"])
     assert result.exit_code == 0
-    assert "headless" in result.stdout
+    assert "install-service" in result.stdout
 
 
 def test_test_trigger_sem_hardware_nao_explode():

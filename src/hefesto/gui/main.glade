@@ -1022,8 +1022,10 @@
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
-                      <object class="GtkComboBoxText" id="daemon_unit_combo">
-                        <signal name="changed" handler="on_daemon_unit_changed"/>
+                      <object class="GtkLabel" id="daemon_unit_label">
+                        <property name="label">hefesto.service</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                     </child>
