@@ -40,7 +40,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         btn = self._get("btn_restart_daemon")
         if btn is None:
             return
-        installed = ServiceInstaller().detect_installed_units()
+        installed = ServiceInstaller().detect_installed_unit()
         if installed:
             btn.set_sensitive(True)
             btn.set_tooltip_text(

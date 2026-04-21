@@ -14,6 +14,7 @@ EXCLUDE_PATHSPECS=(
     ':!NOTICE'
     ':!CHANGELOG.md'
     ':!VALIDATOR_BRIEF.md'
+    ':!.gitignore'
     ':!docs/process/**'
     ':!docs/history/**'
     ':!tests/fixtures/**'
@@ -37,7 +38,7 @@ else
         --exclude-dir=".git" --exclude-dir="process" \
         --exclude-dir="history" --exclude-dir="fixtures" \
         --exclude="LICENSE" --exclude="NOTICE" --exclude="CHANGELOG.md" \
-        --exclude="VALIDATOR_BRIEF.md" \
+        --exclude="VALIDATOR_BRIEF.md" --exclude=".gitignore" \
         --exclude="check_anonymity.sh" --exclude="test_check_anonymity.py" \
         2>/dev/null || true)
 fi
