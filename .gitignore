@@ -68,3 +68,4 @@ Thumbs.db
 daemon.toml.local
 *.sock
 .hefesto_runtime/
+.claude/

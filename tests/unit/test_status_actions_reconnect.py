@@ -127,7 +127,7 @@ def test_ipc_success_keeps_online_and_zeroes_counter(host: _Host) -> None:
     assert host._consecutive_failures == 0
     header = host.builder.get_object("header_connection")
     assert header.markup is not None
-    assert "conectado via usb" in header.markup
+    assert "Conectado Via" in header.markup
     assert "#2d8" in header.markup  # verde canônico
 
 
@@ -136,7 +136,7 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
     assert host._reconnect_state == "reconnecting"
     assert host._consecutive_failures == 1
     header = host.builder.get_object("header_connection")
-    assert "tentando reconectar" in header.markup
+    assert "Tentando Reconectar" in header.markup
     assert "◐" in header.markup  # U+25D0, não emoji
     assert "#d90" in header.markup  # laranja canônico
 
@@ -147,7 +147,7 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert host._reconnect_state == "offline"
     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
     header = host.builder.get_object("header_connection")
-    assert "daemon offline" in header.markup
+    assert "Daemon Offline" in header.markup
     assert "○" in header.markup  # U+25CB
     assert "#d33" in header.markup  # vermelho canônico
 
@@ -161,7 +161,7 @@ def test_reconnecting_to_online_recovers(host: _Host) -> None:
     assert host._reconnect_state == "online"
     assert host._consecutive_failures == 0
     header = host.builder.get_object("header_connection")
-    assert "conectado via bt" in header.markup
+    assert "Conectado Via BT" in header.markup
 
 
 def test_offline_to_online_recovers(host: _Host) -> None:

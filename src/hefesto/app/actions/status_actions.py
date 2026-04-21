@@ -94,10 +94,22 @@ class StatusActionsMixin(WidgetAccessMixin):
         return False  # não repetir via GLib
 
     def _tick_reconnect_state(self) -> bool:
-        """Roda a 0.5 Hz: coordena a máquina de estado do header."""
-        state = daemon_state_full()
-        self._update_reconnect_state(state)
+        """Roda a 0.5 Hz: coordena a máquina de estado do header via thread worker."""
+        call_async(
+            "daemon.state_full",
+            None,
+            on_success=self._on_reconnect_state_result,
+            on_failure=self._on_reconnect_state_failure,
+        )
         return True
+
+    def _on_reconnect_state_result(self, state: Any) -> bool:
+        self._update_reconnect_state(state if isinstance(state, dict) else None)
+        return False  # não repetir via GLib
+
+    def _on_reconnect_state_failure(self, _exc: Exception) -> bool:
+        self._update_reconnect_state(None)
+        return False
 
     def _update_reconnect_state(self, state_full: dict[str, Any] | None) -> None:
         """Avança a máquina de estado de reconnect e repinta o header.
@@ -136,13 +148,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if connected:
             header.set_markup(
-                f'<span foreground="#2d8">● conectado via {transport}</span>'
+                f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
             )
         else:
             header.set_markup(
-                '<span foreground="#d33">○ controle desconectado</span>'
+                '<span foreground="#d33">○ Controle Desconectado</span>'
             )
-        self._set_label("status_daemon", "online")
+        self._set_label("status_daemon", "Online")
 
     def _render_reconnecting(self) -> None:
         """Header intermediário — ◐ laranja + "tentando reconectar...".
@@ -151,9 +163,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d90">◐ tentando reconectar...</span>'
+            '<span foreground="#d90">◐ Tentando Reconectar...</span>'
         )
-        self._set_label("status_daemon", "reconectando")
+        self._set_label("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
         header = self._get("header_connection")
