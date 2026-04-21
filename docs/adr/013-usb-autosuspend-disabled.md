@@ -4,7 +4,7 @@
 
 O kernel Linux com `CONFIG_USB_RUNTIME_PM=y` (default em Pop!_OS, Ubuntu, Fedora) suspende automaticamente dispositivos USB inativos após ~2 s. Para um gamepad em polling HID a 60–120 Hz o comportamento é patológico: o kernel suspende o device, o próximo `read()` do hidraw devolve `ENODEV`, o daemon entra em reconnect loop, a GUI exibe "daemon offline" ou "tentando reconectar" com o controle fisicamente ligado. Logs de `systemd-udev` mostram `power/runtime_status` alternando entre `active` e `suspended`.
 
-Causa-raiz foi descoberta em projeto irmão (desbloqueador Nintendo Switch) onde o mesmo sintoma aparecia durante transferências USB de payload RCM. A solução lá foi em três camadas: udev rule + fallback programático em `/sys/bus/usb/devices/*/power/` + error handling distinguindo `ENODEV` de `EPERM`/`EACCES`.
+Causa-raiz foi descoberta em projeto irmão (desbloqueador Nintendo Switch) onde o mesmo sintoma aparecia durante transferências USB de payload RCM. A solução lá foi em três camadas: udev rule + fallback programático em `/sys/bus/usb/devices/*/power/` + error handling distinguindo `ENODEV` de `EPERM`/`EACCES`. A udev rule canônica do projeto irmão já aplica no `SUBSYSTEM=="usb"` — forma semanticamente correta (o atributo `power/` fica no nó-pai USB, não em children como `hidraw`). Esse ADR preserva a mesma forma.
 
 Para o Hefesto a camada udev basta — não há injeção privilegiada, apenas polling contínuo.
 
