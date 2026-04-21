@@ -18,6 +18,7 @@ from hefesto.core.controller import (
     Transport,
     TriggerEffect,
 )
+from hefesto.core.evdev_reader import EvdevReader
 
 if TYPE_CHECKING:
     pass
@@ -28,9 +29,13 @@ logger = logging.getLogger(__name__)
 class PyDualSenseController(IController):
     """Implementação de `IController` baseada em `pydualsense`."""
 
-    def __init__(self) -> None:
+    def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         self._ds: pydualsense | None = None
         self._transport: Transport = "usb"
+        # HOTFIX-2: evdev como fonte primária de input (contorna conflito
+        # com kernel hid_playstation). pydualsense segue como caminho de
+        # output (triggers, LED, rumble).
+        self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
 
     def connect(self) -> None:
         if self._ds is not None:
@@ -40,11 +45,23 @@ class PyDualSenseController(IController):
         ds.init()
         self._ds = ds
         self._transport = self._detect_transport(ds)
-        logger.info("controle conectado via %s", self._transport)
+        # Inicia leitor evdev em paralelo; sem device evdev, cai no fallback
+        # pydualsense pra input (pode ficar zerado se kernel hid_playstation
+        # estiver capturando — ver HOTFIX-2).
+        if self._evdev.is_available():
+            self._evdev.start()
+            logger.info("controle conectado via %s + evdev", self._transport)
+        else:
+            logger.info("controle conectado via %s (sem evdev, input pode ficar zerado)",
+                        self._transport)
 
     def disconnect(self) -> None:
         if self._ds is None:
             return
+        try:
+            self._evdev.stop()
+        except Exception as exc:
+            logger.warning("falha ao parar evdev reader: %s", exc)
         try:
             self._ds.close()
         finally:
@@ -59,10 +76,24 @@ class PyDualSenseController(IController):
 
     def read_state(self) -> ControllerState:
         ds = self._require()
-        state = ds.state
         battery = self._read_battery_raw(ds)
-        # HOTFIX-1: triggers analógicos vivem em L2_value/R2_value (0-255).
-        # state.L2 / state.R2 são bool "botão pressionado", truncam analog.
+        # HOTFIX-2: evdev é fonte primária de input quando disponível.
+        if self._evdev.is_available():
+            snap = self._evdev.snapshot()
+            return ControllerState(
+                battery_pct=battery,
+                l2_raw=snap.l2_raw,
+                r2_raw=snap.r2_raw,
+                connected=self.is_connected(),
+                transport=self._transport,
+                raw_lx=snap.lx,
+                raw_ly=snap.ly,
+                raw_rx=snap.rx,
+                raw_ry=snap.ry,
+            )
+        # Fallback pydualsense: HOTFIX-1 corrigiu os atributos, mas em
+        # runtime com hid_playstation ativo os valores não atualizam.
+        state = ds.state
         l2_raw = int(getattr(state, "L2_value", 0)) & 0xFF
         r2_raw = int(getattr(state, "R2_value", 0)) & 0xFF
         return ControllerState(
