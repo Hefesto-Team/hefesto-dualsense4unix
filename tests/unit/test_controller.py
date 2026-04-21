@@ -141,3 +141,81 @@ class TestPyDualSenseController:
 
         coerced = PyDualSenseController._coerce_mode(0x99)
         assert coerced == 0x99
+
+    def test_read_state_usa_analog_trigger_values(self) -> None:
+        """HOTFIX-1: trigger analog vem de L2_value/R2_value, nao L2/R2."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+
+        class FakeState:
+            L2 = False
+            R2 = True
+            L2_value = 180  # meio-pressionado
+            R2_value = 255  # totalmente pressionado
+            LX = 128
+            LY = 128
+            RX = 128
+            RY = 128
+
+        class FakeBattery:
+            Level = 73
+
+        class FakeDs:
+            state = FakeState()
+            battery = FakeBattery()
+            connected = True
+
+        inst = PyDualSenseController()
+        inst._ds = FakeDs()  # type: ignore[assignment]
+        inst._transport = "usb"
+
+        state = inst.read_state()
+        assert state.l2_raw == 180
+        assert state.r2_raw == 255
+        assert state.battery_pct == 73
+        assert state.connected is True
+        assert state.transport == "usb"
+
+    def test_read_state_battery_zerado_quando_ausente(self) -> None:
+        """Se ds.battery ausente ou Level None, retorna 0 sem explodir."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+
+        class FakeState:
+            L2_value = 0
+            R2_value = 0
+            LX = 128
+            LY = 128
+            RX = 128
+            RY = 128
+
+        class FakeDs:
+            state = FakeState()
+            battery = None
+            connected = True
+
+        inst = PyDualSenseController()
+        inst._ds = FakeDs()  # type: ignore[assignment]
+        inst._transport = "bt"
+
+        state = inst.read_state()
+        assert state.battery_pct == 0
+
+    def test_is_connected_false_quando_disconnected_prop(self) -> None:
+        """HOTFIX-1: is_connected usa ds.connected, nao conType."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+
+        class FakeDs:
+            connected = False
+
+        inst = PyDualSenseController()
+        inst._ds = FakeDs()  # type: ignore[assignment]
+        assert inst.is_connected() is False
+
+    def test_is_connected_true_quando_connected_prop(self) -> None:
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+
+        class FakeDs:
+            connected = True
+
+        inst = PyDualSenseController()
+        inst._ds = FakeDs()  # type: ignore[assignment]
+        assert inst.is_connected() is True

@@ -51,16 +51,24 @@ class PyDualSenseController(IController):
             self._ds = None
 
     def is_connected(self) -> bool:
-        return self._ds is not None and self._ds.conType is not None
+        if self._ds is None:
+            return False
+        # `ds.connected` é o canônico do pydualsense (bool); conType existe
+        # mas pode estar setado mesmo depois de close.
+        return bool(getattr(self._ds, "connected", True))
 
     def read_state(self) -> ControllerState:
         ds = self._require()
         state = ds.state
         battery = self._read_battery_raw(ds)
+        # HOTFIX-1: triggers analógicos vivem em L2_value/R2_value (0-255).
+        # state.L2 / state.R2 são bool "botão pressionado", truncam analog.
+        l2_raw = int(getattr(state, "L2_value", 0)) & 0xFF
+        r2_raw = int(getattr(state, "R2_value", 0)) & 0xFF
         return ControllerState(
             battery_pct=battery,
-            l2_raw=int(state.L2),
-            r2_raw=int(state.R2),
+            l2_raw=l2_raw,
+            r2_raw=r2_raw,
             connected=self.is_connected(),
             transport=self._transport,
             raw_lx=int(state.LX) & 0xFF,
@@ -107,10 +115,14 @@ class PyDualSenseController(IController):
 
     @staticmethod
     def _read_battery_raw(ds: pydualsense) -> int:
-        battery = getattr(ds.state, "battery", None)
+        # HOTFIX-1: battery vive em `ds.battery` (top-level), não em ds.state.
+        # DSBattery expõe `Level` (0-100) e `State` (enum BatteryState).
+        battery = getattr(ds, "battery", None)
         if battery is None:
             return 0
-        level = getattr(battery, "Level", battery)
+        level = getattr(battery, "Level", None)
+        if level is None:
+            return 0
         try:
             value = int(level)
         except (TypeError, ValueError):
