@@ -14,8 +14,12 @@ from hefesto.app.actions.base import WidgetAccessMixin
 from hefesto.daemon.service_install import (
     SERVICE_HEADLESS,
     SERVICE_NORMAL,
+    ServiceInstaller,
     user_unit_dir,
 )
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 UNITS = (SERVICE_NORMAL, SERVICE_HEADLESS)
 
@@ -33,6 +37,28 @@ class DaemonActionsMixin(WidgetAccessMixin):
         combo.set_active_id(SERVICE_NORMAL)
         self._daemon_autostart_guard = False
         self._refresh_daemon_view()
+        self._sync_restart_daemon_button_sensitivity()
+
+    def _sync_restart_daemon_button_sensitivity(self) -> None:
+        """Habilita/desabilita o botão 'Reiniciar daemon' conforme unit presente.
+
+        Se nenhum unit foi instalado, o botão vira cinza com tooltip guiando
+        o usuário para `install.sh`. Idempotente e seguro em bootstrap.
+        """
+        btn = self._get("btn_restart_daemon")
+        if btn is None:
+            return
+        installed = ServiceInstaller().detect_installed_units()
+        if installed:
+            btn.set_sensitive(True)
+            btn.set_tooltip_text(
+                "Executa systemctl --user restart hefesto.service"
+            )
+        else:
+            btn.set_sensitive(False)
+            btn.set_tooltip_text(
+                "serviço hefesto.service não instalado — rode install.sh"
+            )
 
     # --- handlers ---
 
@@ -50,6 +76,67 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
         self._refresh_daemon_view()
+        self._sync_restart_daemon_button_sensitivity()
+
+    def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:
+        """Handler do botão 'Reiniciar daemon' (UX-RECONNECT-01).
+
+        Executa `systemctl --user restart hefesto.service` com timeout=10s.
+        Cobre ausência de systemd (FileNotFoundError) e falha do unit
+        (CalledProcessError) exibindo MessageDialog informativo. Nunca
+        usa shell=True.
+        """
+        try:
+            result = subprocess.run(
+                ["systemctl", "--user", "restart", SERVICE_NORMAL],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except FileNotFoundError:
+            logger.error("systemctl_missing", unit=SERVICE_NORMAL)
+            self._show_restart_error(
+                "systemctl não encontrado — sistema sem systemd --user."
+            )
+            return
+        except subprocess.SubprocessError as exc:
+            logger.error("systemctl_subprocess_error", err=str(exc))
+            self._show_restart_error(f"Falha ao executar systemctl: {exc}")
+            return
+
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip() or "(sem stderr)"
+            logger.error(
+                "daemon_restart_failed",
+                unit=SERVICE_NORMAL,
+                rc=result.returncode,
+                stderr=stderr,
+            )
+            self._show_restart_error(
+                f"systemctl restart {SERVICE_NORMAL} falhou "
+                f"(rc={result.returncode}):\n{stderr}"
+            )
+            return
+
+        logger.info("daemon_restart_ok", unit=SERVICE_NORMAL)
+        self._toast_daemon(
+            f"systemctl --user restart {SERVICE_NORMAL} → ok"
+        )
+        self._refresh_daemon_view()
+
+    def _show_restart_error(self, message: str) -> None:
+        window: Gtk.Window | None = getattr(self, "window", None)
+        dialog = Gtk.MessageDialog(
+            transient_for=window,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.CLOSE,
+            text="Não foi possível reiniciar o daemon",
+        )
+        dialog.format_secondary_text(message)
+        dialog.run()
+        dialog.destroy()
 
     def on_daemon_view_logs(self, _btn: Gtk.Button) -> None:
         unit = self._selected_unit()

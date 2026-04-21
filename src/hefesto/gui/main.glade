@@ -1069,6 +1069,13 @@
                         <signal name="clicked" handler="on_daemon_view_logs"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkButton" id="btn_restart_daemon">
+                        <property name="label">Reiniciar daemon</property>
+                        <property name="tooltip-text">Executa systemctl --user restart hefesto.service</property>
+                        <signal name="clicked" handler="on_daemon_service_restart"/>
+                      </object>
+                    </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
