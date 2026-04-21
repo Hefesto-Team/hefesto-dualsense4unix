@@ -35,8 +35,8 @@ class TriggersActionsMixin(WidgetAccessMixin):
             combo.remove_all()
             for spec in PRESETS:
                 combo.append(spec.name, spec.label)
-            combo.set_active_id("Rigid")
-            self._rebuild_params(side, "Rigid")
+            combo.set_active_id("Off")
+            self._rebuild_params(side, "Off")
 
     # --- signals ---
 

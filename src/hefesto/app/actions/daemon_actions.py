@@ -106,6 +106,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
         view: Gtk.TextView = self._get("daemon_status_text")
         buf: Gtk.TextBuffer = view.get_buffer()
         buf.set_text(text)
+        end_iter = buf.get_end_iter()
+        mark = buf.create_mark(None, end_iter, False)
+        view.scroll_to_mark(mark, 0.0, False, 0.0, 0.0)
+        buf.delete_mark(mark)
 
     def _run_systemctl(self, action: str) -> None:
         unit = self._selected_unit()

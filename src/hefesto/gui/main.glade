@@ -30,7 +30,7 @@
     <property name="title">Hefesto</property>
     <property name="default-width">1100</property>
     <property name="default-height">680</property>
-    <signal name="destroy" handler="on_window_destroy"/>
+    <signal name="delete-event" handler="on_window_delete_event"/>
     <child>
       <object class="GtkBox" id="root_box">
         <property name="orientation">vertical</property>

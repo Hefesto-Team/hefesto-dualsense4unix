@@ -1,11 +1,12 @@
-"""HefestoApp GTK: janela principal + Notebook de abas.
+"""HefestoApp GTK: janela principal + Notebook de abas + tray icon.
 
-Começa com a aba Status 100% funcional; abas futuras (Triggers, Lightbar,
-Rumble, Player LEDs, Perfis, Daemon, Emulação) serão adicionadas em fases
-seguintes do HEFESTO-GUI.
+A janela fecha pro tray (close-to-tray); daemon segue rodando.
+'Sair' no menu do tray encerra o processo de verdade.
 """
 # ruff: noqa: E402
 from __future__ import annotations
+
+from typing import Any
 
 import gi
 
@@ -21,6 +22,11 @@ from hefesto.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto.app.actions.status_actions import StatusActionsMixin
 from hefesto.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto.app.constants import ICON_PATH, MAIN_GLADE
+from hefesto.app.ipc_bridge import profile_list, profile_switch
+from hefesto.app.tray import AppTray
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class HefestoApp(
@@ -49,11 +55,14 @@ class HefestoApp(
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
 
+        self.tray: AppTray | None = None
+        self._quitting = False
+
         self.builder.connect_signals(self._signal_handlers())
 
     def _signal_handlers(self) -> dict[str, object]:
         return {
-            "on_window_destroy": self.on_window_destroy,
+            "on_window_delete_event": self.on_window_delete_event,
             # Triggers
             "on_trigger_left_mode_changed": self.on_trigger_left_mode_changed,
             "on_trigger_right_mode_changed": self.on_trigger_right_mode_changed,
@@ -98,8 +107,28 @@ class HefestoApp(
 
     # --- handlers ---
 
-    def on_window_destroy(self, _widget: object) -> None:
+    def on_window_delete_event(self, _widget: Any, _event: Any) -> bool:
+        """Intercepta fechamento da janela: esconde pro tray em vez de encerrar.
+
+        Retorna True pra cancelar o destroy default do GTK.
+        """
+        if self._quitting:
+            return False
+        if self.tray is not None and self.tray.is_available():
+            self.window.hide()
+            return True
         Gtk.main_quit()
+        return False
+
+    def quit_app(self) -> None:
+        self._quitting = True
+        if self.tray is not None:
+            self.tray.stop()
+        Gtk.main_quit()
+
+    def show_window(self) -> None:
+        self.window.show_all()
+        self.window.present()
 
     # --- run ---
 
@@ -113,8 +142,25 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
 
-    def run(self) -> None:
-        self.show()
+    def run(self, *, start_hidden: bool = False) -> None:
+        self.tray = AppTray(
+            on_show_window=self.show_window,
+            on_quit=self.quit_app,
+            on_list_profiles=profile_list,
+            on_switch_profile=profile_switch,
+        )
+        self.tray.start()
+        if start_hidden and self.tray.is_available():
+            self.install_status_polling()
+            self.install_triggers_tab()
+            self.install_lightbar_tab()
+            self.install_rumble_tab()
+            self.install_profiles_tab()
+            self.install_daemon_tab()
+            self.install_emulation_tab()
+            logger.info("hefesto_start_hidden")
+        else:
+            self.show()
         Gtk.main()
 
 

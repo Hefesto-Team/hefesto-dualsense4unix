@@ -87,8 +87,27 @@ mkdir -p "${BIN_DIR}"
 log "criando launcher em ${LAUNCHER}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
-exec "${ROOT_DIR}/run.sh" "\$@"
+# Launcher desanexado: roda em background, fecha handles do terminal.
+# Assim "Sair" do tray é o único caminho para encerrar o processo.
+setsid nohup "${ROOT_DIR}/run.sh" "\$@" </dev/null >/dev/null 2>&1 &
+disown 2>/dev/null || true
 LAUNCH
 chmod +x "${LAUNCHER}"
 
-log "OK. Acesse o menu de aplicativos ou rode: hefesto-gui"
+log "criando symlink ~/.local/bin/hefesto (consumido pela unit systemd)"
+ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
+
+log "instalando unit systemd --user (daemon em background)"
+if "${VENV_DIR}/bin/hefesto" daemon install-service >/dev/null 2>&1; then
+    log "unit instalada; iniciando via systemctl --user"
+    if systemctl --user start hefesto.service >/dev/null 2>&1; then
+        log "daemon iniciado"
+    else
+        log "aviso: falha ao iniciar hefesto.service (systemctl --user status hefesto.service)"
+    fi
+else
+    log "aviso: falha ao instalar unit systemd (sem systemd ou assets/ ausente)"
+fi
+
+log "OK. Abra o painel: hefesto-gui (ou pelo menu de aplicativos)"
+log "O daemon segue rodando em background; feche a janela e use o tray."
