@@ -70,6 +70,14 @@ def tui() -> None:
 
 
 @app.command()
+def tray() -> None:
+    """Abre o tray icon GTK3 (requer extra [tray])."""
+    from hefesto.cli.cmd_tray import tray_cmd
+
+    tray_cmd()
+
+
+@app.command()
 def version() -> None:
     """Mostra a versão instalada."""
     from hefesto import __version__
