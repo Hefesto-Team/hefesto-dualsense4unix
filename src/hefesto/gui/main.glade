@@ -18,10 +18,18 @@
     <property name="value">0</property>
   </object>
 
+  <object class="GtkAdjustment" id="profile_priority_adj">
+    <property name="lower">-1000</property>
+    <property name="upper">1000</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
   <object class="GtkWindow" id="main_window">
     <property name="title">Hefesto</property>
-    <property name="default-width">940</property>
-    <property name="default-height">620</property>
+    <property name="default-width">1100</property>
+    <property name="default-height">680</property>
     <signal name="destroy" handler="on_window_destroy"/>
     <child>
       <object class="GtkBox" id="root_box">
@@ -788,6 +796,196 @@
             </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label">Rumble</property></object>
+            </child>
+
+            <!-- Aba Perfis -->
+            <child>
+              <object class="GtkBox" id="profiles_paned">
+                <property name="orientation">horizontal</property>
+                <property name="margin">10</property>
+                <property name="spacing">16</property>
+                <child>
+                  <object class="GtkBox" id="profiles_left_box">
+                    <property name="width-request">360</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Perfis salvos&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="hscrollbar-policy">never</property>
+                        <property name="vscrollbar-policy">automatic</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <child>
+                          <object class="GtkTreeView" id="profiles_tree">
+                            <property name="headers-visible">True</property>
+                            <signal name="row-activated" handler="on_profile_row_activated"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="profiles_btnbox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="profile_new_button">
+                            <property name="label">Novo</property>
+                            <signal name="clicked" handler="on_profile_new"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_duplicate_button">
+                            <property name="label">Duplicar</property>
+                            <signal name="clicked" handler="on_profile_duplicate"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_remove_button">
+                            <property name="label">Remover</property>
+                            <signal name="clicked" handler="on_profile_remove"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_activate_button">
+                            <property name="label">Ativar</property>
+                            <signal name="clicked" handler="on_profile_activate"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_reload_button">
+                            <property name="label">Recarregar</property>
+                            <signal name="clicked" handler="on_profile_reload"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="profiles_right_box">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkGrid" id="profiles_grid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">10</property>
+                        <child>
+                          <object class="GtkLabel"><property name="label">Nome:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="profile_name_entry">
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel"><property name="label">Prioridade:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkSpinButton" id="profile_priority_spin">
+                            <property name="adjustment">profile_priority_adj</property>
+                            <property name="numeric">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel"><property name="label">Tipo de match:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkComboBoxText" id="profile_match_type_combo">
+                            <signal name="changed" handler="on_profile_match_type_changed"/>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel"><property name="label">window_class:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="profile_window_class_entry">
+                            <property name="placeholder-text">CSV: Steam,firefox</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel"><property name="label">title_regex:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="profile_title_regex_entry">
+                            <property name="placeholder-text">regex (re.search)</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel"><property name="label">process_name:</property><property name="xalign">1</property></object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">5</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="profile_process_name_entry">
+                            <property name="placeholder-text">CSV: doom.x86_64,celeste</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">5</property></packing>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="profile_editor_hint">
+                        <property name="label">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                        <property name="wrap">True</property>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButtonBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="layout-style">end</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkButton" id="profile_save_button">
+                            <property name="label">Salvar</property>
+                            <signal name="clicked" handler="on_profile_save"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Perfis</property></object>
             </child>
 
           </object>
