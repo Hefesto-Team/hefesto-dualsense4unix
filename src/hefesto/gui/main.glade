@@ -988,6 +988,284 @@
               <object class="GtkLabel"><property name="label">Perfis</property></object>
             </child>
 
+            <!-- Aba Daemon -->
+            <child>
+              <object class="GtkBox" id="daemon_box">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkGrid" id="daemon_status_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">10</property>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Unit:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="daemon_unit_combo">
+                        <signal name="changed" handler="on_daemon_unit_changed"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Status:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="daemon_status_label">
+                        <property name="label">—</property>
+                        <property name="xalign">0</property>
+                        <property name="use-markup">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Auto-start:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="daemon_autostart_switch">
+                        <property name="halign">start</property>
+                        <signal name="state-set" handler="on_daemon_autostart_toggled"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="daemon_btns">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkButton" id="daemon_start_button">
+                        <property name="label">Start</property>
+                        <signal name="clicked" handler="on_daemon_start"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_stop_button">
+                        <property name="label">Stop</property>
+                        <signal name="clicked" handler="on_daemon_stop"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_restart_button">
+                        <property name="label">Restart</property>
+                        <signal name="clicked" handler="on_daemon_restart"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_refresh_button">
+                        <property name="label">Atualizar</property>
+                        <signal name="clicked" handler="on_daemon_refresh"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_logs_button">
+                        <property name="label">Ver logs</property>
+                        <signal name="clicked" handler="on_daemon_view_logs"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="hscrollbar-policy">automatic</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <child>
+                      <object class="GtkTextView" id="daemon_status_text">
+                        <property name="editable">False</property>
+                        <property name="monospace">True</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="wrap-mode">none</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Daemon</property></object>
+            </child>
+
+            <!-- Aba Emulação -->
+            <child>
+              <object class="GtkBox" id="emulation_box">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkGrid" id="emulation_info_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">10</property>
+                    <child>
+                      <object class="GtkLabel"><property name="label">uinput:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_uinput_label">
+                        <property name="label">—</property>
+                        <property name="xalign">0</property>
+                        <property name="use-markup">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Device virtual:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_device_name_label">
+                        <property name="label">Microsoft X-Box 360 pad (Hefesto virtual)</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">VID:PID:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_vidpid_label">
+                        <property name="label">045E:028E (Xbox 360)</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">/dev/input/js*:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_js_label">
+                        <property name="label">—</property>
+                        <property name="xalign">0</property>
+                        <property name="use-markup">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkGrid" id="emulation_combo_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">10</property>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Próximo perfil:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_next_label">
+                        <property name="label">ps + dpad_up</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Anterior:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_prev_label">
+                        <property name="label">ps + dpad_down</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Buffer (ms):</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_buffer_label">
+                        <property name="label">150</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Passthrough em emulação:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_passthrough_label">
+                        <property name="label">não</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="emulation_btns">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkButton" id="emulation_test_button">
+                        <property name="label">Testar criação de device virtual</property>
+                        <signal name="clicked" handler="on_emulation_test_device"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_refresh_button">
+                        <property name="label">Atualizar</property>
+                        <signal name="clicked" handler="on_emulation_refresh"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_open_toml_button">
+                        <property name="label">Editar daemon.toml</property>
+                        <signal name="clicked" handler="on_emulation_open_toml"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="emulation_hint">
+                    <property name="label">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Emulação</property></object>
+            </child>
+
           </object>
           <packing>
             <property name="expand">True</property>

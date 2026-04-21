@@ -13,6 +13,8 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto import __version__
+from hefesto.app.actions.daemon_actions import DaemonActionsMixin
+from hefesto.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto.app.actions.rumble_actions import RumbleActionsMixin
@@ -27,6 +29,8 @@ class HefestoApp(
     LightbarActionsMixin,
     RumbleActionsMixin,
     ProfilesActionsMixin,
+    DaemonActionsMixin,
+    EmulationActionsMixin,
 ):
     """Aplicação GTK do Hefesto."""
 
@@ -78,6 +82,18 @@ class HefestoApp(
             "on_profile_reload": self.on_profile_reload,
             "on_profile_match_type_changed": self.on_profile_match_type_changed,
             "on_profile_save": self.on_profile_save,
+            # Daemon
+            "on_daemon_unit_changed": self.on_daemon_unit_changed,
+            "on_daemon_start": self.on_daemon_start,
+            "on_daemon_stop": self.on_daemon_stop,
+            "on_daemon_restart": self.on_daemon_restart,
+            "on_daemon_refresh": self.on_daemon_refresh,
+            "on_daemon_view_logs": self.on_daemon_view_logs,
+            "on_daemon_autostart_toggled": self.on_daemon_autostart_toggled,
+            # Emulação
+            "on_emulation_refresh": self.on_emulation_refresh,
+            "on_emulation_test_device": self.on_emulation_test_device,
+            "on_emulation_open_toml": self.on_emulation_open_toml,
         }
 
     # --- handlers ---
@@ -94,6 +110,8 @@ class HefestoApp(
         self.install_lightbar_tab()
         self.install_rumble_tab()
         self.install_profiles_tab()
+        self.install_daemon_tab()
+        self.install_emulation_tab()
 
     def run(self) -> None:
         self.show()
