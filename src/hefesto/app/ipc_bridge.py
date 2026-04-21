@@ -171,11 +171,30 @@ def rumble_set(weak: int, strong: int) -> bool:
         return False
 
 
+def mouse_emulation_set(
+    enabled: bool,
+    speed: int | None = None,
+    scroll_speed: int | None = None,
+) -> bool:
+    """Liga/desliga emulação de mouse e atualiza velocidades via IPC."""
+    params: dict[str, Any] = {"enabled": bool(enabled)}
+    if speed is not None:
+        params["speed"] = int(speed)
+    if scroll_speed is not None:
+        params["scroll_speed"] = int(scroll_speed)
+    try:
+        _run_call("mouse.emulation.set", params)
+        return True
+    except Exception:
+        return False
+
+
 __all__ = [
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",
     "led_set",
+    "mouse_emulation_set",
     "profile_list",
     "profile_switch",
     "rumble_set",

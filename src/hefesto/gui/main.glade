@@ -26,6 +26,22 @@
     <property name="value">0</property>
   </object>
 
+  <object class="GtkAdjustment" id="mouse_speed_adj">
+    <property name="lower">1</property>
+    <property name="upper">12</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">2</property>
+    <property name="value">6</property>
+  </object>
+
+  <object class="GtkAdjustment" id="mouse_scroll_speed_adj">
+    <property name="lower">1</property>
+    <property name="upper">5</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">1</property>
+    <property name="value">1</property>
+  </object>
+
   <object class="GtkWindow" id="main_window">
     <property name="title">Hefesto - DSX para Unix</property>
     <property name="default-width">1100</property>
@@ -1292,6 +1308,124 @@
             </child>
             <child type="tab">
               <object class="GtkLabel"><property name="label">Emulação</property></object>
+            </child>
+
+            <!-- Aba Mouse -->
+            <child>
+              <object class="GtkBox" id="tab_mouse">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Emular mouse+teclado&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">True</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="mouse_emulation_toggle">
+                        <property name="active">False</property>
+                        <signal name="state-set" handler="on_mouse_toggle_set"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="mouse_uinput_status_label">
+                    <property name="label">—</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkGrid" id="mouse_speed_grid">
+                    <property name="row-spacing">8</property>
+                    <property name="column-spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Velocidade do cursor:</property>
+                        <property name="xalign">1</property>
+                      </object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScale" id="mouse_speed_scale">
+                        <property name="adjustment">mouse_speed_adj</property>
+                        <property name="digits">0</property>
+                        <property name="draw-value">True</property>
+                        <property name="value-pos">right</property>
+                        <property name="hexpand">True</property>
+                        <signal name="value-changed" handler="on_mouse_speed_changed"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Velocidade da rolagem:</property>
+                        <property name="xalign">1</property>
+                      </object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScale" id="mouse_scroll_speed_scale">
+                        <property name="adjustment">mouse_scroll_speed_adj</property>
+                        <property name="digits">0</property>
+                        <property name="draw-value">True</property>
+                        <property name="value-pos">right</property>
+                        <property name="hexpand">True</property>
+                        <signal name="value-changed" handler="on_mouse_scroll_speed_changed"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="mouse_legend_label">
+                    <property name="label">—</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Mouse</property></object>
             </child>
 
           </object>

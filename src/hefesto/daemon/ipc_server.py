@@ -1,15 +1,18 @@
 """IPC Unix socket JSON-RPC 2.0 (V2-3, ADR-005, `docs/protocol/ipc-unix-socket.md`).
 
-NDJSON UTF-8, uma mensagem por linha. Suporta 8 métodos v1:
+NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
 
-    profile.switch    {name: str} -> {active_profile: str}
-    profile.list      {}          -> {profiles: [{name, priority, match_type}]}
-    trigger.set       {side, mode, params} -> {status}
-    trigger.reset     {side?}               -> {status}
-    led.set           {rgb}                 -> {status}
-    daemon.status     {}          -> {connected, transport, active_profile, battery_pct}
-    controller.list   {}          -> {controllers: [{connected, transport}]}
-    daemon.reload     {}          -> {status}
+    profile.switch       {name: str} -> {active_profile: str}
+    profile.list         {}          -> {profiles: [{name, priority, match_type}]}
+    trigger.set          {side, mode, params} -> {status}
+    trigger.reset        {side?}               -> {status}
+    led.set              {rgb}                 -> {status}
+    rumble.set           {weak, strong}        -> {status, weak, strong}
+    daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
+    daemon.state_full    {}          -> {... estado completo pra GUI 20 Hz}
+    controller.list      {}          -> {controllers: [{connected, transport}]}
+    daemon.reload        {}          -> {status}
+    mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 """
@@ -56,6 +59,10 @@ class IpcServer:
     store: StateStore
     profile_manager: ProfileManager
     socket_path: Path = field(default_factory=ipc_socket_path)
+    # FEAT-MOUSE-01: ref opcional ao Daemon dono para habilitar/desabilitar
+    # subsistemas dinamicamente (mouse emulation). Mantida como Any pra evitar
+    # import circular; o Daemon faz o binding em _start_ipc.
+    daemon: Any = None
 
     _handlers: dict[str, Handler] = field(default_factory=dict)
     _server: asyncio.base_events.Server | None = None
@@ -73,6 +80,7 @@ class IpcServer:
             "daemon.state_full": self._handle_daemon_state_full,
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
+            "mouse.emulation.set": self._handle_mouse_emulation_set,
         }
 
     async def start(self) -> None:
@@ -350,6 +358,34 @@ class IpcServer:
     async def _handle_daemon_reload(self, params: dict[str, Any]) -> dict[str, Any]:
         # Placeholder: reload de config chega em W4.1+ quando tivermos daemon.toml real.
         return {"status": "ok", "reloaded": True}
+
+    async def _handle_mouse_emulation_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01).
+
+        Params:
+            enabled: bool (obrigatório)
+            speed: int 1-12 (opcional)
+            scroll_speed: int 1-5 (opcional)
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("mouse.emulation.set exige 'enabled' boolean")
+        speed = params.get("speed")
+        scroll_speed = params.get("scroll_speed")
+        if speed is not None and not isinstance(speed, int):
+            raise ValueError("mouse.emulation.set: 'speed' precisa ser int")
+        if scroll_speed is not None and not isinstance(scroll_speed, int):
+            raise ValueError("mouse.emulation.set: 'scroll_speed' precisa ser int")
+
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar emulação de mouse")
+
+        ok = self.daemon.set_mouse_emulation(
+            enabled=enabled, speed=speed, scroll_speed=scroll_speed
+        )
+        return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
 
 
 def _json_rpc_result(req_id: Any, result: Any) -> bytes:
