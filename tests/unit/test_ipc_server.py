@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import socket as _socket
 from pathlib import Path
 
 import pytest
@@ -214,3 +215,123 @@ async def test_socket_permissao_0600(running_server):
 
     mode = stat.S_IMODE(socket_path.stat().st_mode)
     assert mode == 0o600
+
+
+# --- BUG-IPC-01: detecção de socket vivo vs. resto-morto -----------------
+
+
+def _make_server(tmp_path: Path, socket_name: str = "hefesto.sock") -> IpcServer:
+    """Fabrica IpcServer mínimo para testes de ciclo start/stop."""
+    fc = FakeController(transport="usb")
+    fc.connect()
+    store = StateStore()
+    store.update_controller_state(
+        ControllerState(
+            battery_pct=50, l2_raw=0, r2_raw=0, connected=True, transport="usb"
+        )
+    )
+    manager = ProfileManager(controller=fc, store=store)
+    return IpcServer(
+        controller=fc,
+        store=store,
+        profile_manager=manager,
+        socket_path=tmp_path / socket_name,
+    )
+
+
+@pytest.mark.asyncio
+async def test_start_em_path_livre_cria_listener(
+    tmp_path: Path, isolated_profiles_dir: Path
+):
+    """Caso (a): path livre -> start cria o socket normalmente."""
+    server = _make_server(tmp_path, "livre.sock")
+    assert not server.socket_path.exists()
+    try:
+        await server.start()
+        assert server.socket_path.exists()
+        assert server._socket_inode is not None
+    finally:
+        await server.stop()
+    assert not server.socket_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_start_falha_quando_outro_daemon_escuta(
+    tmp_path: Path, isolated_profiles_dir: Path
+):
+    """Caso (b): socket vivo -> RuntimeError e o path não é tocado."""
+    server_a = _make_server(tmp_path, "ocupado.sock")
+    server_b = _make_server(tmp_path, "ocupado.sock")
+    await server_a.start()
+    inode_original = server_a.socket_path.stat().st_ino
+    try:
+        with pytest.raises(RuntimeError, match="socket ocupado"):
+            await server_b.start()
+        # Socket do primeiro permanece intacto (mesmo inode).
+        assert server_a.socket_path.exists()
+        assert server_a.socket_path.stat().st_ino == inode_original
+    finally:
+        await server_a.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_remove_socket_resto_morto(
+    tmp_path: Path, isolated_profiles_dir: Path
+):
+    """Caso (c): arquivo-resto sem listener -> unlink e recria."""
+    stale = tmp_path / "resto.sock"
+    # Cria socket AF_UNIX sem listen() -> connect recebe ConnectionRefusedError.
+    sck = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+    sck.bind(str(stale))
+    sck.close()  # deixa o nó no filesystem, mas não há listener
+    assert stale.exists()
+
+    server = _make_server(tmp_path, "resto.sock")
+    try:
+        await server.start()
+        assert server.socket_path.exists()
+        # Prova empírica de que o listener está ativo agora (antes não estava):
+        # um connect síncrono deve ter sucesso. O ext4 pode reusar o inode do
+        # arquivo órfão, por isso comparar inode é frágil — connect é o teste
+        # canônico de "socket vivo".
+        probe = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+        probe.settimeout(0.5)
+        try:
+            probe.connect(str(server.socket_path))
+        finally:
+            probe.close()
+        assert server._socket_inode == server.socket_path.stat().st_ino
+    finally:
+        await server.stop()
+
+
+@pytest.mark.asyncio
+async def test_stop_remove_proprio_socket(
+    tmp_path: Path, isolated_profiles_dir: Path
+):
+    """Caso (d): stop() remove o socket quando ainda somos o owner."""
+    server = _make_server(tmp_path, "dono.sock")
+    await server.start()
+    assert server.socket_path.exists()
+    await server.stop()
+    assert not server.socket_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_stop_preserva_socket_recriado_por_outro(
+    tmp_path: Path, isolated_profiles_dir: Path
+):
+    """Se inode divergir (outro daemon recriou o socket), stop() NÃO apaga."""
+    server = _make_server(tmp_path, "compartilhado.sock")
+    await server.start()
+
+    # Simula outro daemon recriando o socket: apaga o atual e recria novo nó.
+    server.socket_path.unlink()
+    server.socket_path.touch()
+    novo_inode = server.socket_path.stat().st_ino
+
+    await server.stop()
+    # Como o inode atual diverge do registrado, stop não apagou.
+    assert server.socket_path.exists()
+    assert server.socket_path.stat().st_ino == novo_inode
+    server.socket_path.unlink()
