@@ -26,6 +26,10 @@ daemon_app = typer.Typer(
 )
 app.add_typer(daemon_app, name="daemon")
 
+from hefesto.cli.cmd_profile import app as profile_app  # noqa: E402
+
+app.add_typer(profile_app, name="profile")
+
 
 @app.command()
 def version() -> None:
