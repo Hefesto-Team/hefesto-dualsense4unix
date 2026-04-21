@@ -61,6 +61,63 @@ def daemon_start(
     raise typer.Exit(code=exit_code)
 
 
+@daemon_app.command("install-service")
+def daemon_install_service(
+    headless: bool = typer.Option(False, "--headless", help="Instala unit headless."),
+) -> None:
+    """Copia a unit systemd --user e habilita, respeitando Conflicts mutuo."""
+    from hefesto.daemon.service_install import ServiceInstaller
+
+    installer = ServiceInstaller()
+    dst = installer.install(headless=headless)
+    typer.echo(f"unit instalada: {dst}")
+
+
+@daemon_app.command("uninstall-service")
+def daemon_uninstall_service() -> None:
+    """Remove todas as unidades do Hefesto de ~/.config/systemd/user/."""
+    from hefesto.daemon.service_install import ServiceInstaller
+
+    installer = ServiceInstaller()
+    removed = installer.uninstall()
+    if not removed:
+        typer.echo("nenhuma unit instalada.")
+        return
+    for p in removed:
+        typer.echo(f"removido: {p}")
+
+
+@daemon_app.command("stop")
+def daemon_stop(
+    headless: bool = typer.Option(False, "--headless"),
+) -> None:
+    """Para o daemon gerenciado pelo systemd --user."""
+    from hefesto.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().stop(headless=headless)
+
+
+@daemon_app.command("restart")
+def daemon_restart(
+    headless: bool = typer.Option(False, "--headless"),
+) -> None:
+    """Reinicia o daemon gerenciado pelo systemd --user."""
+    from hefesto.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().restart(headless=headless)
+
+
+@daemon_app.command("status")
+def daemon_status(
+    headless: bool = typer.Option(False, "--headless"),
+) -> None:
+    """Mostra status do daemon via systemctl."""
+    from hefesto.daemon.service_install import ServiceInstaller
+
+    text = ServiceInstaller().status_text(headless=headless)
+    typer.echo(text)
+
+
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
     app()
