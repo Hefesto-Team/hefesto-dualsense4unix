@@ -103,8 +103,13 @@ class DsxProtocol(asyncio.DatagramProtocol):
         self.transport: asyncio.DatagramTransport | None = None
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        assert isinstance(transport, asyncio.DatagramTransport)
-        self.transport = transport
+        # Em Python 3.10 o objeto real é `_SelectorDatagramTransport`, que
+        # formalmente herda de `asyncio.DatagramTransport` mas falha no
+        # `isinstance` contra a classe pública exposta no namespace. O
+        # contrato do asyncio já garante o tipo via API de
+        # `create_datagram_endpoint`; atribuição direta evita o ruído de
+        # AssertionError no journal a cada startup (BUG-UDP-01 / A-02).
+        self.transport = transport  # type: ignore[assignment]
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         self.handler.handle_datagram(data, addr)
@@ -210,7 +215,7 @@ class UdpHandler:
         self.controller.set_led((int(r), int(g), int(b)))
 
     def _do_player_led(self, params: list[Any]) -> None:
-        # Placeholder: backend ainda nao expoe player LED API.
+        # Placeholder: backend ainda não expõe player LED API.
         # Gravamos no store para a TUI/perfis refletirem.
         if len(params) < 2:
             raise ValueError("PlayerLED precisa [idx, bitmask]")
