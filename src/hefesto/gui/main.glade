@@ -130,13 +130,14 @@
                 <property name="margin">12</property>
 
                 <child>
-                  <object class="GtkFrame">
+                  <object class="GtkFrame" id="frame_status_estado">
                     <property name="label">Estado</property>
                     <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">12</property>
                         <property name="margin">12</property>
+                        <style><class name="hefesto-card"/></style>
 
                         <child>
                           <object class="GtkLabel">
@@ -220,13 +221,14 @@
                 </child>
 
                 <child>
-                  <object class="GtkFrame">
+                  <object class="GtkFrame" id="frame_status_gatilhos_live">
                     <property name="label">Gatilhos (ao vivo)</property>
                     <child>
-                      <object class="GtkGrid">
+                      <object class="GtkGrid" id="live_triggers_grid">
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">12</property>
                         <property name="margin">12</property>
+                        <style><class name="hefesto-card"/></style>
 
                         <child>
                           <object class="GtkLabel">
@@ -267,13 +269,14 @@
                 </child>
 
                 <child>
-                  <object class="GtkFrame">
+                  <object class="GtkFrame" id="frame_status_sticks">
                     <property name="label">Sticks e botões</property>
                     <child>
-                      <object class="GtkBox">
+                      <object class="GtkBox" id="sticks_buttons_box">
                         <property name="orientation">horizontal</property>
                         <property name="spacing">12</property>
                         <property name="margin">12</property>
+                        <style><class name="hefesto-card"/></style>
 
                         <child>
                           <object class="GtkGrid">
@@ -1162,11 +1165,12 @@
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
-                  <object class="GtkScrolledWindow">
+                  <object class="GtkScrolledWindow" id="daemon_log_scroll">
                     <property name="hscrollbar-policy">automatic</property>
                     <property name="vscrollbar-policy">automatic</property>
                     <property name="hexpand">True</property>
                     <property name="vexpand">True</property>
+                    <style><class name="hefesto-card"/><class name="hefesto-log"/></style>
                     <child>
                       <object class="GtkTextView" id="daemon_status_text">
                         <property name="editable">False</property>
@@ -1395,6 +1399,7 @@
                   <object class="GtkGrid" id="mouse_speed_grid">
                     <property name="row-spacing">8</property>
                     <property name="column-spacing">10</property>
+                    <style><class name="hefesto-card"/></style>
                     <child>
                       <object class="GtkLabel">
                         <property name="label">Velocidade do cursor:</property>

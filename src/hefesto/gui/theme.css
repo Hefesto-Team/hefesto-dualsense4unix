@@ -1,0 +1,86 @@
+/* Drácula palette aplicada ao Hefesto */
+/* Prioridade: GTK_STYLE_PROVIDER_PRIORITY_APPLICATION — sobrepõe tema do sistema. */
+
+.hefesto-window {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+
+.hefesto-window button {
+    background-color: transparent;
+    border: 1px solid #bd93f9;
+    border-radius: 4px;
+    color: #f8f8f2;
+    padding: 6px 12px;
+}
+.hefesto-window button:hover {
+    border: 2px solid #ff79c6;
+    padding: 5px 11px; /* compensa o 1px a mais */
+}
+.hefesto-window button:active {
+    background-color: rgba(189, 147, 249, 0.15);
+    border-color: #bd93f9;
+}
+.hefesto-window button:disabled {
+    border-color: #44475a;
+    color: #6272a4;
+}
+
+.hefesto-window combobox,
+.hefesto-window entry,
+.hefesto-window spinbutton {
+    background-color: #282a36;
+    border: 1px solid #bd93f9;
+    border-radius: 4px;
+    color: #f8f8f2;
+    padding: 4px 8px;
+}
+
+.hefesto-window combobox:focus,
+.hefesto-window entry:focus {
+    border: 2px solid #8be9fd;
+    padding: 3px 7px;
+}
+
+.hefesto-window scale trough {
+    background-color: #44475a;
+    border: 1px solid #6272a4;
+    border-radius: 4px;
+}
+.hefesto-window scale slider {
+    background-color: #bd93f9;
+    border: 1px solid #bd93f9;
+    border-radius: 50%;
+}
+
+.hefesto-window notebook > header > tabs > tab {
+    background: transparent;
+    border: none;
+    color: #6272a4;
+    padding: 8px 14px;
+}
+.hefesto-window notebook > header > tabs > tab:checked {
+    color: #f8f8f2;
+    border-bottom: 2px solid #bd93f9;
+}
+
+/* Cards internos (ex.: log systemctl, mapeamento mouse) */
+.hefesto-card {
+    background-color: #21222c;
+    border: 1px solid #44475a;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.hefesto-log textview {
+    background-color: #21222c;
+    color: #f8f8f2;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 11px;
+}
+
+.hefesto-status-ok     { color: #50fa7b; }
+.hefesto-status-warn   { color: #f1fa8c; }
+.hefesto-status-err    { color: #ff5555; }
+.hefesto-accent-purple { color: #bd93f9; }
+.hefesto-accent-pink   { color: #ff79c6; }
