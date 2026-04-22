@@ -19,6 +19,11 @@ class LightbarActionsMixin(WidgetAccessMixin):
     _current_rgb: tuple[int, int, int] = (255, 128, 0)
     # Luminosidade em [0.0, 1.0]; 1.0 = máximo (FEAT-LED-BRIGHTNESS-01).
     _current_brightness: float = 1.0
+    # Valor pendente de brightness a persistir no próximo save de perfil.
+    # Usado enquanto FEAT-PROFILE-STATE-01 (DraftConfig) não está disponível.
+    _pending_brightness: float = 1.0
+    # Guard para bloquear o handler durante refresh programático do slider.
+    _refresh_guard: bool = False
 
     def install_lightbar_tab(self) -> None:
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
@@ -63,11 +68,16 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
         Não aplica no hardware automaticamente; o usuário confirma via botão
         "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
+        Guard _refresh_guard previne loop quando _refresh_lightbar_from_state
+        atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).
         """
+        if self._refresh_guard:
+            return
         raw = float(scale.get_value())
         # Clamp defensivo: GtkAdjustment já limita, mas nunca confie cego.
         pct = max(0.0, min(100.0, raw))
         self._current_brightness = pct / 100.0
+        self._pending_brightness = self._current_brightness
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -87,6 +97,34 @@ class LightbarActionsMixin(WidgetAccessMixin):
             preview.queue_draw()
         ok = led_set((0, 0, 0))
         self._toast_light("Lightbar apagada" if ok else "Falha (daemon offline?)")
+
+    # --- refresh de estado ---
+
+    def _refresh_lightbar_from_state(self, state_full: dict) -> None:  # type: ignore[type-arg]
+        """Atualiza o slider de brightness a partir do state_full do daemon.
+
+        Lê ``state_full['leds']['lightbar_brightness']`` (float 0.0-1.0).
+        Se ausente ou perfil antigo sem o campo, usa default 1.0 (sem dimming).
+        Guard _refresh_guard ativo durante a atualização programática do slider
+        para evitar que on_lightbar_brightness_changed dispare IPC loop.
+        """
+        leds = state_full.get("leds") or {}
+        raw = leds.get("lightbar_brightness", 1.0)
+        try:
+            level = float(raw)
+        except (TypeError, ValueError):
+            level = 1.0
+        level = max(0.0, min(1.0, level))
+        pct = level * 100.0
+        self._current_brightness = level
+        self._pending_brightness = level
+        scale: Gtk.Scale = self._get("lightbar_brightness_scale")
+        if scale is not None:
+            self._refresh_guard = True
+            try:
+                scale.set_value(pct)
+            finally:
+                self._refresh_guard = False
 
     # --- signals player leds ---
 

@@ -223,6 +223,17 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         base: dict[str, Any] = (
             existing.model_dump(mode="python") if existing else {}
         )
+
+        # Lê brightness pendente do slider (FEAT-LED-BRIGHTNESS-03).
+        # _pending_brightness vive em LightbarActionsMixin — acessado via
+        # getattr para não criar dependência circular entre mixins.
+        pending_brightness: float = getattr(self, "_pending_brightness", 1.0)
+
+        # Garante que o sub-dict leds existe e inclui o brightness atual.
+        leds_base: dict[str, Any] = dict(base.get("leds") or {})
+        leds_base["lightbar_brightness"] = pending_brightness
+        base["leds"] = leds_base
+
         base.update(
             {
                 "name": name,

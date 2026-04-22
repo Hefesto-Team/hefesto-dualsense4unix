@@ -34,6 +34,19 @@ class FakeControllerCommand:
     payload: object
 
 
+@dataclass
+class FakeLedState:
+    """Último estado de LED aplicado via set_led — inspecionado em testes.
+
+    - `color`: RGB (r, g, b) enviado ao hardware (ja com brightness escalado).
+    - `brightness`: valor float [0.0, 1.0] do último set_led_with_brightness.
+      Fica em None se set_led foi chamado sem brightness (compatibilidade).
+    """
+
+    color: tuple[int, int, int]
+    brightness: float | None = None
+
+
 class FakeController(IController):
     """Controle fake para testes unit e integration.
 
@@ -62,6 +75,8 @@ class FakeController(IController):
         self._connected: bool = False
         self.commands: list[FakeControllerCommand] = []
         self.last_player_leds: tuple[bool, bool, bool, bool, bool] | None = None
+        # Último estado de LED gravado — inspecionado em testes de brightness.
+        self.last_led: FakeLedState | None = None
 
     def connect(self) -> None:
         self._connected = True
@@ -98,6 +113,7 @@ class FakeController(IController):
         self.commands.append(FakeControllerCommand("set_trigger", (side, effect)))
 
     def set_led(self, color: tuple[int, int, int]) -> None:
+        self.last_led = FakeLedState(color=color)
         self.commands.append(FakeControllerCommand("set_led", color))
 
     def set_rumble(self, weak: int, strong: int) -> None:
@@ -164,4 +180,4 @@ class FakeController(IController):
         return cls(transport=transport, states=states)
 
 
-__all__ = ["FakeController", "FakeControllerCommand"]
+__all__ = ["FakeController", "FakeControllerCommand", "FakeLedState"]

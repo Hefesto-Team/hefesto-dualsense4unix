@@ -145,3 +145,41 @@ def test_create_persiste_no_disco(isolated_profiles_dir: Path):
     profile = _mk_profile("new_one")
     manager.create(profile)
     assert (isolated_profiles_dir / "new_one.json").exists()
+
+
+def test_apply_propaga_brightness(isolated_profiles_dir: Path):
+    """FEAT-LED-BRIGHTNESS-02: brightness do perfil chega ao hardware via FakeController.
+
+    Cria perfil com lightbar_brightness=0.25 (25%) e lightbar=(200, 100, 50).
+    Apos apply(), verifica que o set_led recebeu valores escalados a 25%.
+    """
+    profile = _mk_profile(
+        "dim_test",
+        leds=LedsConfig(lightbar=(200, 100, 50), lightbar_brightness=0.25),
+    )
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    manager.apply(profile)
+
+    assert fc.last_led is not None, "set_led não foi chamado"
+    # RGB escalado: 200*0.25=50, 100*0.25=25, 50*0.25=12
+    r, g, b = fc.last_led.color
+    assert r == 50, f"canal R esperado 50, recebeu {r}"
+    assert g == 25, f"canal G esperado 25, recebeu {g}"
+    assert b == 12, f"canal B esperado 12, recebeu {b}"
+
+
+def test_apply_brightness_maximo_nao_escala(isolated_profiles_dir: Path):
+    """Brightness 1.0 (padrao) não altera os valores RGB."""
+    profile = _mk_profile(
+        "full_test",
+        leds=LedsConfig(lightbar=(200, 100, 50), lightbar_brightness=1.0),
+    )
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    manager.apply(profile)
+
+    assert fc.last_led is not None
+    assert fc.last_led.color == (200, 100, 50)
