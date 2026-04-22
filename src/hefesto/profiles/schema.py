@@ -78,6 +78,7 @@ class LedsConfig(BaseModel):
 
     lightbar: tuple[int, int, int] = (0, 0, 0)
     player_leds: list[bool] = Field(default_factory=lambda: [False] * 5)
+    lightbar_brightness: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @field_validator("lightbar")
     @classmethod
@@ -120,7 +121,7 @@ class Profile(BaseModel):
     @classmethod
     def _name_nonempty(cls, value: str) -> str:
         if not value or not value.strip():
-            raise ValueError("name nao pode ser vazio")
+            raise ValueError("name não pode ser vazio")
         if "/" in value or ".." in value or os.sep in value:
             raise ValueError(f"name contem caractere invalido: {value!r}")
         return value
