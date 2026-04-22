@@ -78,6 +78,7 @@ class HefestoApp(
             "on_lightbar_color_set": self.on_lightbar_color_set,
             "on_lightbar_apply": self.on_lightbar_apply,
             "on_lightbar_off": self.on_lightbar_off,
+            "on_lightbar_brightness_changed": self.on_lightbar_brightness_changed,
             "on_player_leds_preset_all": self.on_player_leds_preset_all,
             "on_player_leds_preset_p1": self.on_player_leds_preset_p1,
             "on_player_leds_preset_p2": self.on_player_leds_preset_p2,
