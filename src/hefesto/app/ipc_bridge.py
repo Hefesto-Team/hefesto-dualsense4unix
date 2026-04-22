@@ -206,6 +206,19 @@ def rumble_passthrough(enabled: bool = True) -> bool:
         return False
 
 
+def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
+    """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01).
+
+    ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
+    Retorna True se o daemon confirmou; False se offline ou erro.
+    """
+    try:
+        _run_call("led.player_set", {"bits": list(bits)})
+        return True
+    except Exception:
+        return False
+
+
 def mouse_emulation_set(
     enabled: bool,
     speed: int | None = None,
@@ -230,6 +243,7 @@ __all__ = [
     "daemon_status_basic",
     "led_set",
     "mouse_emulation_set",
+    "player_leds_set",
     "profile_list",
     "profile_switch",
     "rumble_passthrough",

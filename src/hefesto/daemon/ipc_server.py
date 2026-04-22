@@ -7,6 +7,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     trigger.set          {side, mode, params} -> {status}
     trigger.reset        {side?}               -> {status}
     led.set              {rgb}                 -> {status}
+    led.player_set       {bits: [bool]*5}      -> {status, bits}
     rumble.set           {weak, strong}        -> {status, weak, strong}
     rumble.stop          {}                    -> {status}
     rumble.passthrough   {enabled: bool}       -> {status}
@@ -85,6 +86,7 @@ class IpcServer:
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
+            "led.player_set": self._handle_led_player_set,
         }
 
     async def start(self) -> None:
@@ -319,6 +321,24 @@ class IpcServer:
         b = max(0, min(255, int(rgb[2] * brightness)))
         self.controller.set_led((r, g, b))
         return {"status": "ok"}
+
+    async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Aplica bitmask de 5 LEDs de player no controle.
+
+        Params:
+            bits: lista de 5 booleanos (LED1..LED5).
+        """
+        bits_raw = params.get("bits")
+        if not isinstance(bits_raw, list) or len(bits_raw) != 5:
+            raise ValueError("led.player_set: 'bits' precisa ser lista com exatamente 5 booleanos")
+        for idx, v in enumerate(bits_raw):
+            if not isinstance(v, bool):
+                raise ValueError(f"led.player_set: bits[{idx}] precisa ser booleano")
+        bits: tuple[bool, bool, bool, bool, bool] = (
+            bits_raw[0], bits_raw[1], bits_raw[2], bits_raw[3], bits_raw[4]
+        )
+        self.controller.set_player_leds(bits)
+        return {"status": "ok", "bits": list(bits)}
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
         snap = self.store.snapshot()

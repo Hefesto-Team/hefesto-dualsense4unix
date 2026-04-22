@@ -10,7 +10,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
-from hefesto.app.ipc_bridge import led_set
+from hefesto.app.ipc_bridge import led_set, player_leds_set
 
 
 class LightbarActionsMixin(WidgetAccessMixin):
@@ -102,15 +102,46 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_player_leds_preset_none(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False] * 5)
 
+    def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
+        """Sinal de toggle de qualquer checkbox de player LED.
+
+        Recalcula o bitmask completo dos 5 checkboxes e envia ao hardware via IPC.
+        Pula silenciosamente quando `_player_leds_batch_guard` está ativo (preset
+        em andamento faz o envio final ele mesmo, evitando 5 IPCs redundantes).
+        """
+        if getattr(self, "_player_leds_batch_guard", False):
+            return
+        bits = self.get_current_player_leds()
+        ok = player_leds_set(bits)
+        label = " ".join("x" if b else "-" for b in bits)
+        self._toast_light(
+            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
+        )
+
     # --- helpers ---
 
     def _set_player_leds(self, pattern: list[bool]) -> None:
-        for i, state in enumerate(pattern, start=1):
-            checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
-            if checkbox is not None:
-                checkbox.set_active(state)
+        """Atualiza checkboxes e envia bitmask ao hardware via IPC (1 chamada).
+
+        Aplica `_player_leds_batch_guard` enquanto atualiza os 5 checkboxes para
+        evitar que `on_player_led_toggled` dispare IPCs redundantes — só envia
+        o bitmask final ao fim, em uma chamada única.
+        """
+        self._player_leds_batch_guard = True
+        try:
+            for i, state in enumerate(pattern, start=1):
+                checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
+                if checkbox is not None:
+                    checkbox.set_active(state)
+        finally:
+            self._player_leds_batch_guard = False
+        bits: tuple[bool, bool, bool, bool, bool] = (
+            pattern[0], pattern[1], pattern[2], pattern[3], pattern[4]
+        )
+        ok = player_leds_set(bits)
+        label = " ".join("x" if s else "-" for s in pattern)
         self._toast_light(
-            "Player LEDs: " + " ".join("x" if s else "-" for s in pattern)
+            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
         )
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:

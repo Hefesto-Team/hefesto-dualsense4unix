@@ -61,6 +61,7 @@ class FakeController(IController):
         self._idx: int = 0
         self._connected: bool = False
         self.commands: list[FakeControllerCommand] = []
+        self.last_player_leds: tuple[bool, bool, bool, bool, bool] | None = None
 
     def connect(self) -> None:
         self._connected = True
@@ -101,6 +102,11 @@ class FakeController(IController):
 
     def set_rumble(self, weak: int, strong: int) -> None:
         self.commands.append(FakeControllerCommand("set_rumble", (weak, strong)))
+
+    def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
+        """Grava bitmask de player LEDs para inspeção em testes."""
+        self.last_player_leds = bits
+        self.commands.append(FakeControllerCommand("set_player_leds", bits))
 
     def get_battery(self) -> int:
         if not self._states:

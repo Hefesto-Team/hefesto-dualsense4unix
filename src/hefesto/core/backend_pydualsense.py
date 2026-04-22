@@ -125,6 +125,34 @@ class PyDualSenseController(IController):
         ds.setLeftMotor(strong)
         ds.setRightMotor(weak)
 
+    def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
+        """Aplica bitmask de 5 LEDs de player no hardware.
+
+        `pydualsense.DSLight.playerNumber` é do tipo `PlayerID` (`IntFlag`), que
+        aceita qualquer valor inteiro — não apenas os 4 canônicos (4, 10, 21, 27).
+        Isso permite combinações arbitrárias de LEDs sem acesso HID bruto.
+
+        O bitmask é montado como:
+          bit0 = bits[0] (LED 1, extremo esquerdo)
+          bit1 = bits[1] (LED 2)
+          bit2 = bits[2] (LED 3, central — o LED do Player 1 canônico)
+          bit3 = bits[3] (LED 4)
+          bit4 = bits[4] (LED 5, extremo direito)
+
+        Referência: outReport[44] (USB) / outReport[45] (BT) em
+        pydualsense/pydualsense.py:572/636 — recebe `self.light.playerNumber.value`.
+        """
+        from pydualsense.enums import PlayerID
+
+        ds = self._require()
+        bitmask = sum(1 << i for i, b in enumerate(bits) if b)
+        ds.light.playerNumber = PlayerID(bitmask)
+        logger.debug(
+            "player_leds_aplicados",
+            bits=list(bits),
+            bitmask=bitmask,
+        )
+
     def get_battery(self) -> int:
         return self._read_battery_raw(self._require())
 
@@ -133,7 +161,7 @@ class PyDualSenseController(IController):
 
     def _require(self) -> pydualsense:
         if self._ds is None:
-            raise RuntimeError("pydualsense nao inicializado — chamar connect() antes")
+            raise RuntimeError("pydualsense não inicializado — chamar connect() antes")
         return self._ds
 
     @staticmethod
