@@ -1,17 +1,20 @@
-"""Emulação de mouse+teclado via python-uinput a partir do DualSense (FEAT-MOUSE-01).
+"""Emulação de mouse+teclado via python-uinput a partir do DualSense (FEAT-MOUSE-01/02).
 
 Cria um device virtual uinput expondo:
   - BTN_LEFT, BTN_RIGHT, BTN_MIDDLE
   - REL_X, REL_Y (movimento) e REL_WHEEL, REL_HWHEEL (rolagem)
   - KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT (D-pad → setas)
+  - KEY_ENTER, KEY_ESC (Circle → Enter, Square → Esc — FEAT-MOUSE-02)
 
-Mapeamento canônico (FEAT-MOUSE-01, decidido pelo usuário):
+Mapeamento canônico (FEAT-MOUSE-01/02, decidido pelo usuário):
 
 | DualSense                | Saída emulada          | evdev code    |
 |--------------------------|------------------------|---------------|
 | Cross (X) ou L2          | Botão esquerdo         | BTN_LEFT      |
 | Triangle (△) ou R2       | Botão direito          | BTN_RIGHT     |
 | R3                       | Botão do meio          | BTN_MIDDLE    |
+| Circle (○)               | Enter                  | KEY_ENTER     |
+| Square (□)               | Esc                    | KEY_ESC       |
 | D-pad up/down/left/right | Setas do teclado       | KEY_*         |
 | Analógico esquerdo       | Movimento              | REL_X/REL_Y   |
 | Analógico direito        | Rolagem                | REL_WHEEL/REL_HWHEEL |
@@ -61,6 +64,14 @@ DPAD_TO_KEY: dict[str, str] = {
     "dpad_right": "KEY_RIGHT",
 }
 
+# Botões edge-triggered que emitem press+release imediatos (FEAT-MOUSE-02).
+# Circle e Square funcionam como "tecla pressionada e soltada" em cada transição
+# False→True — hold não repete. Ideal para Enter/Esc em diálogos.
+EDGE_KEY_MAP: dict[str, str] = {
+    "circle": "KEY_ENTER",
+    "square": "KEY_ESC",
+}
+
 
 def _build_capabilities() -> list[tuple[Any, ...]]:
     """Lista de eventos que o uinput device expõe. Import lazy."""
@@ -82,6 +93,8 @@ def _build_capabilities() -> list[tuple[Any, ...]]:
         uinput.KEY_DOWN,
         uinput.KEY_LEFT,
         uinput.KEY_RIGHT,
+        uinput.KEY_ENTER,
+        uinput.KEY_ESC,
     ]
     return [*rels, *buttons, *keys]
 
@@ -117,6 +130,9 @@ class UinputMouseDevice:
     _uinput_mod: Any = None
     _last_buttons_emulated: frozenset[str] = field(default_factory=frozenset)
     _last_scroll_at: float = -math.inf
+    # Estado por botão "tap" (FEAT-MOUSE-02): circle/square emitem press+release
+    # em cada transição False→True. Guarda previous_state para detectar o delta.
+    _prev_edge_keys: frozenset[str] = field(default_factory=frozenset)
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -146,6 +162,7 @@ class UinputMouseDevice:
         self._uinput_mod = None
         self._last_buttons_emulated = frozenset()
         self._last_scroll_at = -math.inf
+        self._prev_edge_keys = frozenset()
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -189,9 +206,11 @@ class UinputMouseDevice:
         emulated = self._resolve_emulated_set(buttons, l2, r2)
         self._emit_buttons(emulated)
         self._emit_dpad(buttons)
+        self._emit_edge_keys(buttons)
         self._emit_move(lx, ly)
         self._emit_scroll(rx, ry, now)
         self._last_buttons_emulated = emulated
+        self._prev_edge_keys = frozenset(b for b in buttons if b in EDGE_KEY_MAP)
 
     def _resolve_emulated_set(
         self, buttons: frozenset[str], l2: int, r2: int
@@ -252,6 +271,28 @@ class UinputMouseDevice:
         if newly_pressed or newly_released:
             self._device.syn()
 
+    def _emit_edge_keys(self, buttons: frozenset[str]) -> None:
+        """Circle/Square como tap edge-triggered (FEAT-MOUSE-02).
+
+        Em cada transição False→True emite press+release imediatos da tecla
+        mapeada (KEY_ENTER/KEY_ESC). Hold do botão NÃO repete — só uma borda
+        de subida gera nova emissão.
+        """
+        u = self._uinput_mod
+        edge_now = {b for b in buttons if b in EDGE_KEY_MAP}
+        newly_pressed = edge_now - self._prev_edge_keys
+
+        if not newly_pressed:
+            return
+
+        for name in newly_pressed:
+            ev = getattr(u, EDGE_KEY_MAP[name], None)
+            if ev is None:
+                continue
+            self._device.emit(ev, 1, syn=False)
+            self._device.emit(ev, 0, syn=False)
+        self._device.syn()
+
     def _emit_move(self, lx: int, ly: int) -> None:
         """Stick esquerdo → REL_X/REL_Y com deadzone e escala."""
         dx = _compute_move(lx, self.mouse_speed)
@@ -292,6 +333,7 @@ __all__ = [
     "DEFAULT_SCROLL_SPEED",
     "DEVICE_NAME",
     "DPAD_TO_KEY",
+    "EDGE_KEY_MAP",
     "MOVE_DEADZONE",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
