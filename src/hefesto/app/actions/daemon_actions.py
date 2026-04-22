@@ -9,6 +9,7 @@ BUG-DAEMON-STATUS-MISMATCH-01: `_daemon_status()` cruza 3 fontes (systemd
 from __future__ import annotations
 
 import os
+import re
 import signal
 import subprocess
 from typing import Any, Literal
@@ -475,6 +476,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def _set_daemon_text(self, text: str) -> None:
         view: Gtk.TextView = self._get("daemon_status_text")
         buf: Gtk.TextBuffer = view.get_buffer()
+        text = re.sub(r"\x1b\[[0-9;]*m", "", text)
         buf.set_text(text)
         end_iter = buf.get_end_iter()
         mark = buf.create_mark(None, end_iter, False)

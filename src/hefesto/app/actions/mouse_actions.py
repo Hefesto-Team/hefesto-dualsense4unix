@@ -20,12 +20,12 @@ from hefesto.integrations.uinput_mouse import (
 UINPUT_DEV = "/dev/uinput"
 
 MAPPING_LEGEND = (
-    "<b>Mapeamento (fixo nesta versão):</b>\n"
-    "Cross (X) ou L2 → botão esquerdo\n"
-    "Triangle (△) ou R2 → botão direito\n"
+    "<b>Mapeamento:</b>\n"
+    "Cruz (X) ou L2 → botão esquerdo\n"
+    "Triângulo (△) ou R2 → botão direito\n"
     "R3 (clique no analógico direito) → botão do meio\n"
-    "Circle (○) → Enter\n"
-    "Square (□) → Esc\n"
+    "Círculo (○) → Enter\n"
+    "Quadrado (□) → Esc\n"
     "D-pad (↑↓←→) → setas do teclado\n"
     "Analógico esquerdo → movimento do cursor\n"
     "Analógico direito → rolagem vertical e horizontal"
@@ -36,6 +36,8 @@ class MouseActionsMixin(WidgetAccessMixin):
     """Controla a aba Mouse."""
 
     def install_mouse_tab(self) -> None:
+        # mouse_legend_label foi substituído por GtkFrame estático (UI-MOUSE-CLEANUP-01).
+        # Mantém compatibilidade caso o widget ainda exista em alguma versão do GLADE.
         legend = self._get("mouse_legend_label")
         if legend is not None:
             legend.set_markup(MAPPING_LEGEND)
