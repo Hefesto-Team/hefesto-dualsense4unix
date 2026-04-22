@@ -33,6 +33,7 @@ from hefesto.app.actions.status_actions import StatusActionsMixin
 from hefesto.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto.app.constants import ICON_PATH, MAIN_GLADE
 from hefesto.app.ipc_bridge import profile_list, profile_switch
+from hefesto.app.theme import apply_theme
 from hefesto.app.tray import AppTray
 from hefesto.utils.logging_config import get_logger
 
@@ -119,6 +120,8 @@ class HefestoApp(
         self.window = self.builder.get_object("main_window")
         if self.window is None:
             raise RuntimeError("main_window não encontrada em main.glade")
+
+        apply_theme(self.window)
 
         self.window.set_title("Hefesto - DSX para Unix")
         self.window.set_wmclass("hefesto", "Hefesto")
