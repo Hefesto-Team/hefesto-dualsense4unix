@@ -8,7 +8,7 @@ from hefesto.core.controller import (
     IController,
     TriggerEffect,
 )
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 class TestTriggerEffect:
@@ -57,7 +57,7 @@ class TestFakeController:
 
     def test_read_before_connect_fails(self) -> None:
         fc = FakeController()
-        with pytest.raises(RuntimeError, match="nao conectado"):
+        with pytest.raises(RuntimeError, match="não conectado"):
             fc.read_state()
 
     def test_default_state_after_connect(self) -> None:
@@ -143,7 +143,7 @@ class TestPyDualSenseController:
         assert coerced == 0x99
 
     def test_read_state_usa_analog_trigger_values(self) -> None:
-        """HOTFIX-1: trigger analog vem de L2_value/R2_value, nao L2/R2."""
+        """HOTFIX-1: trigger analog vem de L2_value/R2_value, não L2/R2."""
         from hefesto.core.backend_pydualsense import PyDualSenseController
         from hefesto.core.evdev_reader import EvdevReader
 
@@ -207,7 +207,7 @@ class TestPyDualSenseController:
         assert state.battery_pct == 0
 
     def test_is_connected_false_quando_disconnected_prop(self) -> None:
-        """HOTFIX-1: is_connected usa ds.connected, nao conType."""
+        """HOTFIX-1: is_connected usa ds.connected, não conType."""
         from hefesto.core.backend_pydualsense import PyDualSenseController
 
         class FakeDs:
@@ -228,12 +228,12 @@ class TestPyDualSenseController:
         assert inst.is_connected() is True
 
     def test_read_state_usa_evdev_quando_disponivel(self) -> None:
-        """HOTFIX-2: se evdev tem device, backend le dele (nao do pydualsense)."""
+        """HOTFIX-2: se evdev tem device, backend le dele (não do pydualsense)."""
         from hefesto.core.backend_pydualsense import PyDualSenseController
         from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
 
         class FakeState:
-            # Valores pydualsense — NAO devem aparecer no resultado
+            # Valores pydualsense — Não devem aparecer no resultado
             L2_value = 0
             R2_value = 0
             LX = 128

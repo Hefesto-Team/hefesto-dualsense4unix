@@ -74,8 +74,8 @@ class IController(ABC):
 
     Implementações conhecidas:
       - `hefesto.core.backend_pydualsense.PyDualSenseController` (hardware real).
-      - `tests.fixtures.fake_controller.FakeController` (replay de capture
-        ou comportamento determinístico para testes).
+      - `hefesto.testing.fake_controller.FakeController` (replay de capture
+        ou comportamento determinístico para testes e smoke).
     """
 
     @abstractmethod

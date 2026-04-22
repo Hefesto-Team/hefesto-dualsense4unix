@@ -28,7 +28,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 @pytest.fixture
@@ -189,7 +189,7 @@ async def test_metodo_desconhecido_retorna_erro(running_server):
     _server, socket_path, _ = running_server
     async with IpcClient.connect(socket_path) as client:
         with pytest.raises(IpcError) as exc:
-            await client.call("nao.existe")
+            await client.call("não.existe")
     assert exc.value.code == CODE_METHOD_NOT_FOUND
 
 

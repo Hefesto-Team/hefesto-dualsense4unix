@@ -16,7 +16,7 @@ from hefesto.utils.logging_config import configure_logging, get_logger
 
 def build_controller() -> IController:
     if os.getenv("HEFESTO_FAKE") == "1":
-        from tests.fixtures.fake_controller import FakeController
+        from hefesto.testing import FakeController
 
         transport = os.getenv("HEFESTO_FAKE_TRANSPORT", "usb")
         if transport not in ("usb", "bt"):
