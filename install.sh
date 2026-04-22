@@ -69,17 +69,36 @@ fi
 
 if ! "${VENV_DIR}/bin/python" -c \
         "import gi; gi.require_version('Gtk','3.0')" >/dev/null 2>&1; then
-    cat >&2 <<'MSG'
-[install] bindings GTK3 ausentes no sistema. Instale:
-  sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
-                   gir1.2-ayatanaappindicator3-0.1 libgirepository1.0-dev \
-                   libcairo2-dev desktop-file-utils imagemagick
+    cat <<'MSG'
+
+Bindings GTK3 não encontrados — obrigatórios para a interface gráfica.
+
+Pacotes necessários:
+  python3-gi  python3-gi-cairo  gir1.2-gtk-3.0
+  gir1.2-ayatanaappindicator3-0.1  libgirepository1.0-dev
+  libcairo2-dev  desktop-file-utils  imagemagick
+
 MSG
-    exit 1
+    if [[ "${AUTO_YES}" -eq 0 ]]; then
+        read -r -p "[install] instalar dependências GTK3 agora com sudo? [Y/n] " _gtk_resp
+        _gtk_resp="${_gtk_resp:-Y}"
+    else
+        _gtk_resp="Y"
+    fi
+
+    if [[ "${_gtk_resp,,}" =~ ^y(es|es)?$ ]]; then
+        sudo apt-get install -y \
+            python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
+            gir1.2-ayatanaappindicator3-0.1 libgirepository1.0-dev \
+            libcairo2-dev desktop-file-utils imagemagick \
+            || die "falha ao instalar dependências GTK3 — verifique a conexão e tente novamente"
+    else
+        die "GTK3 obrigatório. Instale manualmente e reexecute ./install.sh"
+    fi
 fi
 
 "${VENV_DIR}/bin/python" -m pip install --quiet --upgrade pip packaging
-"${VENV_DIR}/bin/pip" install --quiet -e "${ROOT_DIR}"
+"${VENV_DIR}/bin/pip" install --quiet -e "${ROOT_DIR}[emulation]"
 
 ###############################################################################
 # 3. udev rules (requer sudo)
