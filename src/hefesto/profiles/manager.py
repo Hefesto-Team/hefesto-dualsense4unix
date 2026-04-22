@@ -57,6 +57,8 @@ class ProfileManager:
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
         logger.info("profile_activated", name=profile.name, priority=profile.priority)
+        from hefesto.utils.session import save_last_profile
+        save_last_profile(profile.name)
         return profile
 
     def apply(self, profile: Profile) -> None:

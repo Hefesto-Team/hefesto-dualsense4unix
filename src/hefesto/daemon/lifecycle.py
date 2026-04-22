@@ -113,6 +113,7 @@ class Daemon:
         logger.info("daemon_starting", poll_hz=self.config.poll_hz)
         try:
             await self._connect_with_retry()
+            await self._restore_last_profile()
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
                 await self._start_ipc()
@@ -147,6 +148,21 @@ class Daemon:
                 if not self.config.auto_reconnect:
                     raise
                 await asyncio.sleep(backoff)
+
+    async def _restore_last_profile(self) -> None:
+        """Reativa o último perfil salvo pelo usuário (FEAT-PERSIST-SESSION-01)."""
+        from hefesto.profiles.manager import ProfileManager
+        from hefesto.utils.session import load_last_profile
+
+        name = load_last_profile()
+        if not name:
+            return
+        try:
+            manager = ProfileManager(controller=self.controller, store=self.store)
+            await self._run_blocking(manager.activate, name)
+            logger.info("last_profile_restored", name=name)
+        except Exception as exc:
+            logger.warning("last_profile_restore_failed", name=name, err=str(exc))
 
     async def _poll_loop(self) -> None:
         period = 1.0 / max(1, self.config.poll_hz)

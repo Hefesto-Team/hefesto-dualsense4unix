@@ -258,7 +258,7 @@ def test_start_hotkey_manager_instancia_e_chama_steam(monkeypatch):
     """Daemon._start_hotkey_manager() cria HotkeyManager; on_ps_solo chama steam."""
     from hefesto.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto.integrations import steam_launcher as _sl
-    from tests.fixtures.fake_controller import FakeController
+    from hefesto.testing import FakeController
 
     called: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: called.append("steam") or True)
@@ -279,7 +279,7 @@ def test_start_hotkey_manager_none_nao_chama_steam(monkeypatch):
     """ps_button_action='none' → on_ps_solo não chama nenhum launcher."""
     from hefesto.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto.integrations import steam_launcher as _sl
-    from tests.fixtures.fake_controller import FakeController
+    from hefesto.testing import FakeController
 
     called: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: called.append("steam") or True)
