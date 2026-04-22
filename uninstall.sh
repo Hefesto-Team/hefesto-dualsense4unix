@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # uninstall.sh - remove os artefatos criados pelo install.sh.
-# Nao toca no .venv/ (o usuario pode querer manter o ambiente dev).
+# Não toca no .venv/ (o usuário pode querer manter o ambiente dev).
 # Para wipe completo: `rm -rf .venv` manualmente.
 #
 # Flags:
@@ -14,6 +14,7 @@ readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
 readonly ICON_TARGET="${HOME}/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
 readonly LAUNCHER="${HOME}/.local/bin/hefesto-gui"
 readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto"
+readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-gui-hotplug.service"
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto"
@@ -34,6 +35,17 @@ if [[ -x "${VENV_HEFESTO}" ]]; then
     log "desinstalando unit systemd --user (se existir)"
     "${VENV_HEFESTO}" daemon stop >/dev/null 2>&1 || true
     "${VENV_HEFESTO}" daemon uninstall-service >/dev/null 2>&1 || true
+fi
+
+# Unit user de hotplug-gui (se existir)
+if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
+    log "desabilitando hefesto-gui-hotplug.service"
+    systemctl --user disable hefesto-gui-hotplug.service >/dev/null 2>&1 || true
+    log "removendo ${HOTPLUG_UNIT_TARGET}"
+    rm -f "${HOTPLUG_UNIT_TARGET}"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+else
+    log "ausente: ${HOTPLUG_UNIT_TARGET}"
 fi
 
 for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}"; do
@@ -65,6 +77,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules \
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
+                   /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
                    /etc/modules-load.d/hefesto.conf 2>/dev/null || true
         sudo udevadm control --reload-rules 2>/dev/null || true
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true

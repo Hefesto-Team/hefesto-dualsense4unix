@@ -6,9 +6,10 @@
 # launcher desanexado, symlink bin, unit systemd --user, start do daemon.
 #
 # Flags:
-#   --no-udev    pula a instalação de udev rules (sudo) — útil em CI.
-#   --yes, -y    responde 'sim' ao prompt de sudo das udev rules.
-#   --no-systemd pula install + start da unit systemd.
+#   --no-udev        pula a instalação de udev rules (sudo) — útil em CI.
+#   --yes, -y        responde 'sim' ao prompt de sudo das udev rules.
+#   --no-systemd     pula install + start da unit systemd do daemon.
+#   --no-hotplug-gui pula a unit user que abre a GUI ao plugar o controle.
 #
 # Reexecutável (idempotente).
 
@@ -26,15 +27,17 @@ readonly LAUNCHER="${BIN_DIR}/hefesto-gui"
 
 SKIP_UDEV=0
 SKIP_SYSTEMD=0
+SKIP_HOTPLUG_GUI=0
 AUTO_YES=0
 
 for arg in "$@"; do
     case "$arg" in
-        --no-udev)    SKIP_UDEV=1 ;;
-        --no-systemd) SKIP_SYSTEMD=1 ;;
-        --yes|-y)     AUTO_YES=1 ;;
+        --no-udev)        SKIP_UDEV=1 ;;
+        --no-systemd)     SKIP_SYSTEMD=1 ;;
+        --no-hotplug-gui) SKIP_HOTPLUG_GUI=1 ;;
+        --yes|-y)         AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf '[install] aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -51,14 +54,14 @@ require() {
 ###############################################################################
 # 1. Dependências do sistema
 ###############################################################################
-log "[1/6] checando dependencias do sistema"
+log "[1/7] checando dependencias do sistema"
 require python3
 require pkg-config || true
 
 ###############################################################################
 # 2. venv + pacote editável
 ###############################################################################
-log "[2/6] preparando venv e instalando o pacote"
+log "[2/7] preparando venv e instalando o pacote"
 if [[ ! -d "${VENV_DIR}" ]]; then
     log "criando venv em ${VENV_DIR}"
     python3 -m venv --system-site-packages "${VENV_DIR}"
@@ -82,14 +85,15 @@ fi
 # 3. udev rules (requer sudo)
 ###############################################################################
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-    log "[3/6] udev rules puladas (--no-udev)"
+    log "[3/7] udev rules puladas (--no-udev)"
 else
-    log "[3/6] udev rules: hidraw + uinput + USB autosuspend DualSense"
+    log "[3/7] udev rules: hidraw + uinput + USB autosuspend + hotplug GUI"
     need_udev=1
-    # Se as três regras já estão em /etc/udev/rules.d/, pula com aviso
+    # Se as quatro regras já estão em /etc/udev/rules.d/, pula com aviso
     if [[ -f /etc/udev/rules.d/70-ps5-controller.rules ]] \
        && [[ -f /etc/udev/rules.d/71-uinput.rules ]] \
-       && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]]; then
+       && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]] \
+       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]]; then
         log "udev rules ja instaladas, pulando (use uninstall.sh para remover)"
         need_udev=0
     fi
@@ -98,14 +102,16 @@ else
         if [[ "${AUTO_YES}" -eq 0 ]]; then
             cat <<'MSG'
 
-As udev rules dao permissao ao usuario para abrir hidraw, /dev/uinput e
-desabilitam autosuspend USB do DualSense (evita desconexao intermitente).
+As udev rules dao permissao ao usuario para abrir hidraw, /dev/uinput,
+desabilitam autosuspend USB do DualSense (evita desconexao intermitente)
+e marcam o device para que o systemd --user abra a GUI no hotplug.
 Requer sudo uma unica vez.
 
 Arquivos instalados em /etc/udev/rules.d/:
-  - 70-ps5-controller.rules            (permissao hidraw)
-  - 71-uinput.rules                    (emulacao Xbox360 via uinput)
+  - 70-ps5-controller.rules             (permissao hidraw)
+  - 71-uinput.rules                     (emulacao Xbox360 via uinput)
   - 72-ps5-controller-autosuspend.rules (power/control=on — ADR-013)
+  - 73-ps5-controller-hotplug.rules     (SYSTEMD_USER_WANTS=GUI)
 
 MSG
             read -r -p "[install] instalar udev rules agora? [Y/n] " resp
@@ -130,7 +136,7 @@ fi
 ###############################################################################
 # 4. Ícone + .desktop + launcher desanexado
 ###############################################################################
-log "[4/6] atalho de aplicativo (.desktop + icone + launcher)"
+log "[4/7] atalho de aplicativo (.desktop + icone + launcher)"
 mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
 
@@ -151,7 +157,7 @@ DESKTOP
 
 if command -v desktop-file-validate >/dev/null 2>&1; then
     desktop-file-validate "${DESKTOP_TARGET}" || \
-        log "aviso: desktop-file-validate retornou warnings (nao fatal)"
+        log "aviso: desktop-file-validate retornou warnings (não fatal)"
 fi
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -q -f "${HOME}/.local/share/icons/hicolor" || true
@@ -173,16 +179,16 @@ chmod +x "${LAUNCHER}"
 ###############################################################################
 # 5. Symlink ~/.local/bin/hefesto (consumido pela unit systemd)
 ###############################################################################
-log "[5/6] symlink ${BIN_DIR}/hefesto"
+log "[5/7] symlink ${BIN_DIR}/hefesto"
 ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
 
 ###############################################################################
 # 6. Unit systemd --user + start
 ###############################################################################
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
-    log "[6/6] unit systemd pulada (--no-systemd)"
+    log "[6/7] unit systemd pulada (--no-systemd)"
 else
-    log "[6/6] unit systemd --user (daemon em background)"
+    log "[6/7] unit systemd --user (daemon em background)"
     if "${VENV_DIR}/bin/hefesto" daemon install-service >/dev/null 2>&1; then
         if systemctl --user restart hefesto.service >/dev/null 2>&1; then
             log "daemon ativo (systemctl --user status hefesto.service para detalhes)"
@@ -194,14 +200,47 @@ else
     fi
 fi
 
+###############################################################################
+# 7. Unit user de hotplug-gui (abre a GUI ao plugar o DualSense)
+###############################################################################
+if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
+    log "[7/7] unit hotplug-gui pulada (--no-hotplug-gui)"
+else
+    log "[7/7] unit user hefesto-gui-hotplug.service (hotplug USB -> GUI)"
+    readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
+    readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
+    readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
+
+    if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
+        log "aviso: ${HOTPLUG_UNIT_SRC} ausente — pule ou reinstale o repo"
+    else
+        mkdir -p "${USER_UNIT_DIR}"
+        cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user daemon-reload >/dev/null 2>&1 || \
+                log "aviso: systemctl --user daemon-reload falhou"
+            if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
+                log "hotplug-gui habilitado (será disparado pelo udev no próximo plug USB)"
+            else
+                log "aviso: enable hefesto-gui-hotplug.service falhou — habilite manualmente"
+            fi
+        else
+            log "aviso: systemctl ausente — unit copiada mas não habilitada"
+        fi
+    fi
+fi
+
 cat <<'FIM'
 
-Instalacao concluida.
+Instalação concluída.
   - Abra o painel: hefesto-gui (ou pelo menu de aplicativos).
   - Tray continua ativo; fechar a janela some para o tray.
-  - Daemon em background via systemd --user (restart automatico).
+  - Daemon em background via systemd --user (restart automático).
+  - Plugar o DualSense via USB abre a GUI automaticamente (hotplug).
+    Pule com --no-hotplug-gui. Desabilite depois via:
+      systemctl --user disable hefesto-gui-hotplug.service
   - Se o DualSense desconectar intermitente, confirme que a regra
-    72-ps5-controller-autosuspend.rules esta em /etc/udev/rules.d/.
+    72-ps5-controller-autosuspend.rules está em /etc/udev/rules.d/.
 
 Para desinstalar: ./uninstall.sh
 FIM
