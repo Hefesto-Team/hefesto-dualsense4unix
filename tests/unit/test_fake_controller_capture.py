@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 def _write_capture(path: Path, transport: str, samples: list[dict]) -> None:
@@ -89,7 +89,7 @@ def test_from_capture_sem_header_rejeita(tmp_path: Path):
     path = tmp_path / "noheader.bin"
     with gzip.open(path, "wb") as f:
         f.write(b'{"ts": 0.0, "l2": 0}\n')
-    with pytest.raises(ValueError, match="nao e header"):
+    with pytest.raises(ValueError, match="não é header"):
         FakeController.from_capture(path)
 
 
@@ -115,7 +115,7 @@ def test_from_capture_real_do_repo_se_existir():
     """Se o capture real existe no repo, valida que carrega sem erro."""
     real_path = Path("tests/fixtures/hid_capture_usb.bin")
     if not real_path.exists():
-        pytest.skip(f"{real_path} nao existe (ok — capture real e opt-in)")
+        pytest.skip(f"{real_path} não existe (ok — capture real e opt-in)")
     fc = FakeController.from_capture(real_path)
     fc.connect()
     # Lê pelo menos os 5 primeiros states sem explodir

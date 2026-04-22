@@ -13,7 +13,7 @@ from hefesto.daemon.lifecycle import (
     DaemonConfig,
 )
 from hefesto.daemon.state_store import StateStore
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 def _mk_states(n: int, transport: str = "usb") -> list[ControllerState]:

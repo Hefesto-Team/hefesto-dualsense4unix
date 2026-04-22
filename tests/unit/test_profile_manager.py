@@ -17,7 +17,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 @pytest.fixture

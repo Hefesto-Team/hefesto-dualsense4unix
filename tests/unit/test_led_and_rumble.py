@@ -15,7 +15,7 @@ from hefesto.core.rumble import (
     RumbleCommand,
     RumbleEngine,
 )
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 
 class TestLedSettings:

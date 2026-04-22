@@ -13,7 +13,7 @@ from hefesto.daemon.udp_server import (
     UdpHandler,
     UdpServer,
 )
-from tests.fixtures.fake_controller import FakeController
+from hefesto.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # RateLimiter

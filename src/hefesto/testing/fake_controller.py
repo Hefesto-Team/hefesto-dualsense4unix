@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import gzip
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
@@ -85,7 +85,7 @@ class FakeController(IController):
 
     def read_state(self) -> ControllerState:
         if not self._connected:
-            raise RuntimeError("FakeController nao conectado — chamar connect() antes")
+            raise RuntimeError("FakeController não conectado — chamar connect() antes")
         if self._idx < len(self._states):
             state = self._states[self._idx]
             self._idx += 1
@@ -130,9 +130,9 @@ class FakeController(IController):
 
         header = json.loads(lines[0])
         if header.get("type") != "header":
-            raise ValueError(f"primeiro registro de {p} nao e header")
+            raise ValueError(f"primeiro registro de {p} não é header")
         if header.get("version") != 1:
-            raise ValueError(f"capture version {header.get('version')} nao suportado")
+            raise ValueError(f"capture version {header.get('version')} não suportado")
 
         transport_raw = header.get("transport", "usb")
         if transport_raw not in ("usb", "bt"):
