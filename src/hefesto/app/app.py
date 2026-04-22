@@ -154,6 +154,7 @@ class HefestoApp(
             "on_player_leds_preset_p1": self.on_player_leds_preset_p1,
             "on_player_leds_preset_p2": self.on_player_leds_preset_p2,
             "on_player_leds_preset_none": self.on_player_leds_preset_none,
+            "on_player_led_toggled": self.on_player_led_toggled,
             # Rumble
             "on_rumble_apply": self.on_rumble_apply,
             "on_rumble_test_500ms": self.on_rumble_test_500ms,
@@ -165,7 +166,7 @@ class HefestoApp(
             "on_profile_remove": self.on_profile_remove,
             "on_profile_activate": self.on_profile_activate,
             "on_profile_reload": self.on_profile_reload,
-            "on_profile_match_type_changed": self.on_profile_match_type_changed,
+            "on_profile_advanced_toggle": self.on_profile_advanced_toggle,
             "on_profile_save": self.on_profile_save,
             # Daemon
             "on_daemon_start": self.on_daemon_start,

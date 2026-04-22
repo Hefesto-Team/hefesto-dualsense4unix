@@ -27,9 +27,9 @@
   </object>
 
   <object class="GtkAdjustment" id="profile_priority_adj">
-    <property name="lower">-1000</property>
-    <property name="upper">1000</property>
-    <property name="step-increment">1</property>
+    <property name="lower">0</property>
+    <property name="upper">100</property>
+    <property name="step-increment">5</property>
     <property name="page-increment">10</property>
     <property name="value">0</property>
   </object>
@@ -873,6 +873,7 @@
                 <property name="margin">10</property>
                 <property name="spacing">16</property>
                 <child>
+                  <!-- Painel esquerdo: lista de perfis + botões de ação -->
                   <object class="GtkBox" id="profiles_left_box">
                     <property name="width-request">360</property>
                     <property name="orientation">vertical</property>
@@ -941,24 +942,57 @@
                   </object>
                   <packing><property name="expand">False</property><property name="fill">True</property></packing>
                 </child>
+
+                <!-- Painel direito: editor do perfil com toggle Modo avançado -->
                 <child>
                   <object class="GtkBox" id="profiles_right_box">
                     <property name="orientation">vertical</property>
                     <property name="spacing">8</property>
+
+                    <!-- Cabeçalho: título + toggle Modo avançado -->
                     <child>
-                      <object class="GtkLabel">
-                        <property name="label">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
-                        <property name="use-markup">True</property>
-                        <property name="xalign">0</property>
+                      <object class="GtkBox" id="profiles_editor_header">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="profile_advanced_toggle_label">
+                            <property name="label">Modo avançado</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="profile_advanced_switch">
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <property name="active">False</property>
+                            <property name="tooltip-text">Ativa campos técnicos (window_class, title_regex, process_name)</property>
+                            <signal name="state-set" handler="on_profile_advanced_toggle"/>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
+
+                    <!-- Campos comuns: Nome + Prioridade (sempre visíveis) -->
                     <child>
-                      <object class="GtkGrid" id="profiles_grid">
+                      <object class="GtkGrid" id="profiles_common_grid">
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">10</property>
                         <child>
-                          <object class="GtkLabel"><property name="label">Nome:</property><property name="xalign">1</property></object>
+                          <object class="GtkLabel">
+                            <property name="label">Nome:</property>
+                            <property name="xalign">1</property>
+                          </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                         </child>
                         <child>
@@ -968,71 +1002,215 @@
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                         </child>
                         <child>
-                          <object class="GtkLabel"><property name="label">Prioridade:</property><property name="xalign">1</property></object>
+                          <object class="GtkLabel">
+                            <property name="label">Prioridade:</property>
+                            <property name="xalign">1</property>
+                          </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
-                          <object class="GtkSpinButton" id="profile_priority_spin">
+                          <!-- GtkScale substitui SpinButton — range 0-100, step 5 -->
+                          <object class="GtkScale" id="profile_priority_scale">
                             <property name="adjustment">profile_priority_adj</property>
-                            <property name="numeric">True</property>
+                            <property name="draw-value">True</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">right</property>
+                            <property name="hexpand">True</property>
+                            <property name="tooltip-text">Quanto maior, mais prioritário que outros perfis (0-100)</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                         </child>
-                        <child>
-                          <object class="GtkLabel"><property name="label">Tipo de match:</property><property name="xalign">1</property></object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkComboBoxText" id="profile_match_type_combo">
-                            <signal name="changed" handler="on_profile_match_type_changed"/>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel"><property name="label">window_class:</property><property name="xalign">1</property></object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkEntry" id="profile_window_class_entry">
-                            <property name="placeholder-text">CSV: Steam,firefox</property>
-                            <property name="hexpand">True</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel"><property name="label">title_regex:</property><property name="xalign">1</property></object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkEntry" id="profile_title_regex_entry">
-                            <property name="placeholder-text">regex (re.search)</property>
-                            <property name="hexpand">True</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel"><property name="label">process_name:</property><property name="xalign">1</property></object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">5</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkEntry" id="profile_process_name_entry">
-                            <property name="placeholder-text">CSV: doom.x86_64,celeste</property>
-                            <property name="hexpand">True</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">5</property></packing>
-                        </child>
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
+
+                    <!-- GtkStack: alterna entre modo simples e avançado -->
                     <child>
-                      <object class="GtkLabel" id="profile_editor_hint">
-                        <property name="label">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
-                        <property name="use-markup">True</property>
-                        <property name="xalign">0</property>
-                        <property name="wrap">True</property>
+                      <object class="GtkStack" id="profile_editor_stack">
+                        <property name="transition-type">slide-left-right</property>
+                        <property name="transition-duration">200</property>
+
+                        <!-- Página simples -->
+                        <child>
+                          <object class="GtkBox" id="profile_stack_simples">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">10</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">&lt;b&gt;Aplica a:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Qualquer janela -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_any">
+                                <property name="label">Qualquer janela</property>
+                                <property name="tooltip-text">Aplica sempre, independente da janela em foco</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Jogos da Steam -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_steam">
+                                <property name="label">Jogos da Steam</property>
+                                <property name="group">profile_radio_any</property>
+                                <property name="tooltip-text">Qualquer processo filho do steam.exe</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Navegador -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_browser">
+                                <property name="label">Navegador</property>
+                                <property name="group">profile_radio_any</property>
+                                <property name="tooltip-text">Firefox, Chromium, Brave ou Google Chrome</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Terminal -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_terminal">
+                                <property name="label">Terminal</property>
+                                <property name="group">profile_radio_any</property>
+                                <property name="tooltip-text">GNOME Terminal, Alacritty, Kitty ou Konsole</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Editor de código -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_editor">
+                                <property name="label">Editor de código</property>
+                                <property name="group">profile_radio_any</property>
+                                <property name="tooltip-text">VS Code, Zed ou Neovide</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Radio: Jogo específico -->
+                            <child>
+                              <object class="GtkRadioButton" id="profile_radio_game">
+                                <property name="label">Jogo específico</property>
+                                <property name="group">profile_radio_any</property>
+                                <property name="tooltip-text">Digite o nome do executável (ex.: eldenring)</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Entry "Jogo específico" — visível só quando radio_game ativo -->
+                            <child>
+                              <object class="GtkBox" id="profile_game_entry_box">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">6</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Nome do jogo:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_simple_custom_name">
+                                    <property name="hexpand">True</property>
+                                    <property name="placeholder-text">ex.: eldenring</property>
+                                    <property name="tooltip-text">Nome do executável do jogo (sem extensão no Linux)</property>
+                                  </object>
+                                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                          </object>
+                          <packing>
+                            <property name="name">simples</property>
+                            <property name="title">Simples</property>
+                          </packing>
+                        </child>
+
+                        <!-- Página avançada -->
+                        <child>
+                          <object class="GtkBox" id="profile_stack_avancado">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkGrid" id="profiles_advanced_grid">
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">10</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">window_class:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_window_class_entry">
+                                    <property name="placeholder-text">CSV: Steam,firefox</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">title_regex:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_title_regex_entry">
+                                    <property name="placeholder-text">regex (re.search)</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">process_name:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_process_name_entry">
+                                    <property name="placeholder-text">CSV: doom.x86_64,celeste</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="profile_editor_hint">
+                                <property name="label">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="name">avancado</property>
+                            <property name="title">Avancado</property>
+                          </packing>
+                        </child>
+
                       </object>
-                      <packing><property name="expand">False</property></packing>
+                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
                     </child>
+
+                    <!-- Rodapé: botão Salvar -->
                     <child>
                       <object class="GtkButtonBox">
                         <property name="orientation">horizontal</property>
@@ -1047,6 +1225,7 @@
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
+
                   </object>
                   <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
