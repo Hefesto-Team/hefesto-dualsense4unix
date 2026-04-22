@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- dpad_left.svg — seta para esquerda com haste -->
+  <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="#bd93f9"/>
+</svg>

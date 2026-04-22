@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- share.svg — Create button: sinal de menor-que abstrato -->
+  <polyline points="22,7 10,16 22,25" fill="none" stroke="#f8f8f2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

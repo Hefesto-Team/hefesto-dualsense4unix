@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- l2.svg — retangulo mais alto com texto L2 e seta de curso -->
+  <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="#bd93f9" stroke-width="2"/>
+  <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="#bd93f9">L2</text>
+  <line x1="16" y1="24" x2="16" y2="30" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+  <polyline points="12,27 16,31 20,27" fill="none" stroke="#bd93f9" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
