@@ -31,11 +31,11 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
-if [[ -x "${VENV_HEFESTO}" ]]; then
-    log "desinstalando unit systemd --user (se existir)"
-    "${VENV_HEFESTO}" daemon stop >/dev/null 2>&1 || true
-    "${VENV_HEFESTO}" daemon uninstall-service >/dev/null 2>&1 || true
-fi
+log "parando daemon hefesto (se ativo)"
+timeout 5 systemctl --user stop hefesto.service >/dev/null 2>&1 || true
+systemctl --user disable hefesto.service >/dev/null 2>&1 || true
+rm -f "${HOME}/.config/systemd/user/hefesto.service"
+systemctl --user daemon-reload >/dev/null 2>&1 || true
 
 # Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
@@ -67,7 +67,8 @@ fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     if [[ "${AUTO_YES}" -eq 0 ]]; then
-        read -r -p "[uninstall] remover udev rules de /etc/udev/rules.d/? [y/N] " resp
+        read -r -n 1 -p "      remover udev rules de /etc/udev/rules.d/? [y/N] " resp
+        echo
         resp="${resp:-N}"
     else
         resp="Y"
@@ -86,4 +87,11 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     fi
 fi
 
-log "OK. Para remover o venv local: rm -rf .venv"
+if [[ -d "${ROOT_DIR}/.venv" ]]; then
+    log "removendo .venv"
+    rm -rf "${ROOT_DIR}/.venv"
+fi
+
+printf '\n─────────────────────────────────────────\n'
+printf ' Hefesto desinstalado\n'
+printf '─────────────────────────────────────────\n\n'
