@@ -208,7 +208,7 @@ class IpcServer:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             return _json_rpc_error(None, CODE_PARSE_ERROR, f"parse: {exc}")
         if not isinstance(payload, dict):
-            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload nao eh objeto")
+            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload não é objeto")
 
         req_id = payload.get("id")
         method = payload.get("method")
@@ -217,7 +217,7 @@ class IpcServer:
         if not isinstance(method, str):
             return _json_rpc_error(req_id, CODE_PARSE_ERROR, "method ausente")
         if not isinstance(params, dict):
-            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params nao eh objeto")
+            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params não é objeto")
 
         handler = self._handlers.get(method)
         if handler is None:
@@ -244,6 +244,9 @@ class IpcServer:
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
         profile = self.profile_manager.activate(name)
+        # Usuário escolheu perfil explícito: libera autoswitch de novo
+        # (BUG-MOUSE-TRIGGERS-01).
+        self.store.clear_manual_trigger_active()
         return {"active_profile": profile.name}
 
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -271,6 +274,10 @@ class IpcServer:
             raise ValueError("trigger.set: params precisa ser lista")
         effect = build_from_name(mode, trigger_params)
         self.controller.set_trigger(side, effect)
+        # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
+        # Marca override para o autoswitch não sobrescrever (especialmente
+        # ao ligar emulação de mouse, cujo movimento muda foco de janela).
+        self.store.mark_manual_trigger_active()
         return {"status": "ok"}
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -281,6 +288,8 @@ class IpcServer:
             self.controller.set_trigger("left", trigger_off())
         if target in ("right", "both"):
             self.controller.set_trigger("right", trigger_off())
+        # Reset explícito libera autoswitch de volta (BUG-MOUSE-TRIGGERS-01).
+        self.store.clear_manual_trigger_active()
         return {"status": "ok"}
 
     async def _handle_led_set(self, params: dict[str, Any]) -> dict[str, Any]:
