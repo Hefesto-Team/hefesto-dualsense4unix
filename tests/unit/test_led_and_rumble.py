@@ -68,7 +68,7 @@ class TestHexToRgb:
     def test_invalido(self):
         with pytest.raises(ValueError, match="RRGGBB"):
             hex_to_rgb("#F80")
-        with pytest.raises(ValueError, match="nao numerico"):
+        with pytest.raises(ValueError, match="não numérico"):
             hex_to_rgb("#ZZZZZZ")
 
 

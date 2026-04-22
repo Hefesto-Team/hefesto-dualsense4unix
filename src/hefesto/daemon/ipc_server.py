@@ -208,7 +208,7 @@ class IpcServer:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             return _json_rpc_error(None, CODE_PARSE_ERROR, f"parse: {exc}")
         if not isinstance(payload, dict):
-            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload nao eh objeto")
+            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload não é objeto")
 
         req_id = payload.get("id")
         method = payload.get("method")
@@ -217,7 +217,7 @@ class IpcServer:
         if not isinstance(method, str):
             return _json_rpc_error(req_id, CODE_PARSE_ERROR, "method ausente")
         if not isinstance(params, dict):
-            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params nao eh objeto")
+            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params não é objeto")
 
         handler = self._handlers.get(method)
         if handler is None:
@@ -290,7 +290,21 @@ class IpcServer:
         for idx, v in enumerate(rgb):
             if not isinstance(v, int) or not (0 <= v <= 255):
                 raise ValueError(f"led.set: rgb[{idx}] fora de byte")
-        self.controller.set_led((rgb[0], rgb[1], rgb[2]))
+        # brightness opcional (FEAT-LED-BRIGHTNESS-01): multiplicador 0.0-1.0.
+        # Ausente ou inválido -> assume 1.0 (retrocompatível com chamadas v1).
+        brightness_raw = params.get("brightness", 1.0)
+        try:
+            brightness = float(brightness_raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("led.set: brightness precisa ser numerico") from exc
+        if not (0.0 <= brightness <= 1.0):
+            raise ValueError(
+                f"led.set: brightness fora de [0.0, 1.0]: {brightness}"
+            )
+        r = max(0, min(255, int(rgb[0] * brightness)))
+        g = max(0, min(255, int(rgb[1] * brightness)))
+        b = max(0, min(255, int(rgb[2] * brightness)))
+        self.controller.set_led((r, g, b))
         return {"status": "ok"}
 
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
