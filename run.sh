@@ -89,4 +89,4 @@ fi
 
 exec hefesto daemon start --foreground
 
-# "Faça o pequeno bem que está próximo." — Tolstoi
+# "Faça o pequeno bem que está próximo." — Tolstói
