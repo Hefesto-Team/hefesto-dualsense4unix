@@ -155,9 +155,20 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
         return False
 
 
-def led_set(rgb: tuple[int, int, int]) -> bool:
+def led_set(
+    rgb: tuple[int, int, int],
+    brightness: float | None = None,
+) -> bool:
+    """Aplica cor RGB (opcionalmente escalada) no lightbar via IPC.
+
+    ``brightness`` (0.0-1.0) é repassado ao daemon quando fornecido; omitido
+    preserva o contrato v1 (sem multiplicador). Ver FEAT-LED-BRIGHTNESS-01.
+    """
+    payload: dict[str, Any] = {"rgb": list(rgb)}
+    if brightness is not None:
+        payload["brightness"] = float(brightness)
     try:
-        _run_call("led.set", {"rgb": list(rgb)})
+        _run_call("led.set", payload)
         return True
     except Exception:
         return False

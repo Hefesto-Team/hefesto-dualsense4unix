@@ -40,6 +40,25 @@ class LedSettings:
             if not (0 <= v <= 255):
                 raise ValueError(f"lightbar[{idx}] fora de byte: {v}")
 
+    def apply_brightness(self, level: float) -> LedSettings:
+        """Devolve cópia com canais RGB escalados por ``level`` (clamp 0-255).
+
+        ``level`` é multiplicador linear. Valores fora de [0.0, 1.0] são
+        tolerados e acabam truncados pelo clamp por canal; isso cobre
+        futura curva de resposta não-linear sem quebrar o contrato atual.
+        """
+        r, g, b = self.lightbar
+        scaled: RGB = (
+            max(0, min(255, int(r * level))),
+            max(0, min(255, int(g * level))),
+            max(0, min(255, int(b * level))),
+        )
+        return LedSettings(
+            lightbar=scaled,
+            player_leds=self.player_leds,
+            mic_led=self.mic_led,
+        )
+
 
 def player_bitmask(leds: tuple[bool, bool, bool, bool, bool]) -> int:
     """Converte 5 flags em bitmask 0-31 (mesmo layout usado pelo protocolo DSX)."""
@@ -73,7 +92,7 @@ def hex_to_rgb(hex_str: str) -> RGB:
         g = int(s[2:4], 16)
         b = int(s[4:6], 16)
     except ValueError as exc:
-        raise ValueError(f"hex_to_rgb: componente nao numerico em {hex_str!r}") from exc
+        raise ValueError(f"hex_to_rgb: componente não numérico em {hex_str!r}") from exc
     return (r, g, b)
 
 

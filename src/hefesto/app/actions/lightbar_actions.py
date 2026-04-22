@@ -17,6 +17,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
     """Controla a aba Lightbar + Player LEDs."""
 
     _current_rgb: tuple[int, int, int] = (255, 128, 0)
+    # Luminosidade em [0.0, 1.0]; 1.0 = máximo (FEAT-LED-BRIGHTNESS-01).
+    _current_brightness: float = 1.0
 
     def install_lightbar_tab(self) -> None:
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
@@ -48,10 +50,27 @@ class LightbarActionsMixin(WidgetAccessMixin):
             preview.queue_draw()
 
     def on_lightbar_apply(self, _btn: Gtk.Button) -> None:
-        ok = led_set(self._current_rgb)
+        ok = led_set(self._current_rgb, brightness=self._current_brightness)
+        pct = round(self._current_brightness * 100)
         self._toast_light(
-            f"Cor RGB {self._current_rgb} aplicada" if ok else "Falha (daemon offline?)"
+            f"Cor RGB {self._current_rgb} a {pct}% aplicada"
+            if ok
+            else "Falha (daemon offline?)"
         )
+
+    def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
+        """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
+
+        Não aplica no hardware automaticamente; o usuário confirma via botão
+        "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
+        """
+        raw = float(scale.get_value())
+        # Clamp defensivo: GtkAdjustment já limita, mas nunca confie cego.
+        pct = max(0.0, min(100.0, raw))
+        self._current_brightness = pct / 100.0
+        preview: Gtk.DrawingArea = self._get("lightbar_preview")
+        if preview is not None:
+            preview.queue_draw()
 
     def on_lightbar_off(self, _btn: Gtk.Button) -> None:
         self._current_rgb = (0, 0, 0)
@@ -106,7 +125,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
     ) -> bool:
         alloc = widget.get_allocation()
         r, g, b = self._current_rgb
-        cairo_ctx.set_source_rgb(r / 255, g / 255, b / 255)
+        # Pré-visualização respeita a luminosidade corrente para dar feedback
+        # imediato do slider antes de aplicar no hardware.
+        level = max(0.0, min(1.0, self._current_brightness))
+        cairo_ctx.set_source_rgb(
+            (r / 255) * level,
+            (g / 255) * level,
+            (b / 255) * level,
+        )
         cairo_ctx.rectangle(0, 0, alloc.width, alloc.height)
         cairo_ctx.fill()
         return False
