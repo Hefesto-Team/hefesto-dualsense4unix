@@ -223,16 +223,17 @@ class Daemon:
                 self._reassert_rumble(tick_started)
                 next_rumble_assert_at = tick_started + 0.200
 
+            # Snapshot evdev único por tick — reusado por todos os consumidores.
+            # Extraído antes dos consumidores para evitar snapshots duplicados
+            # (armadilha A-09). Skew de até 1 frame entre read_state e o snapshot
+            # evdev é aceitável — os dois canais são independentes por design.
+            buttons_pressed = self._evdev_buttons_once()
+
             if self._mouse_device is not None:
-                self._dispatch_mouse_emulation(state)
+                self._dispatch_mouse_emulation(state, buttons_pressed)
 
             if self._hotkey_manager is not None:
-                _evdev = getattr(self.controller, "_evdev", None)
-                _btn: frozenset[str] = frozenset()
-                if _evdev is not None and _evdev.is_available():
-                    with contextlib.suppress(Exception):
-                        _btn = frozenset(_evdev.snapshot().buttons_pressed)
-                self._hotkey_manager.observe(_btn, now=tick_started)
+                self._hotkey_manager.observe(buttons_pressed, now=tick_started)
 
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
@@ -382,15 +383,29 @@ class Daemon:
         self._stop_mouse_emulation()
         return True
 
-    def _dispatch_mouse_emulation(self, state: Any) -> None:
-        """Traduz o estado do poll em eventos de mouse+teclado virtual."""
+    def _evdev_buttons_once(self) -> frozenset[str]:
+        """Snapshot dos botões físicos via evdev — chamado 1x por tick em _poll_loop.
+
+        Retorna frozenset vazio se evdev não está disponível ou falha.
+        Exceções são logadas em debug para não poluir logs de produção.
+        """
+        evdev = getattr(self.controller, "_evdev", None)
+        if evdev is None or not evdev.is_available():
+            return frozenset()
+        try:
+            return frozenset(evdev.snapshot().buttons_pressed)
+        except Exception as exc:
+            logger.debug("evdev_snapshot_falhou", err=str(exc))
+            return frozenset()
+
+    def _dispatch_mouse_emulation(self, state: Any, buttons_pressed: frozenset[str]) -> None:
+        """Traduz o estado do poll em eventos de mouse+teclado virtual.
+
+        Recebe `buttons_pressed` do _poll_loop (snapshot único por tick,
+        obtido via _evdev_buttons_once). Não relê o evdev internamente.
+        """
         if self._mouse_device is None:
             return
-        buttons: frozenset[str] = frozenset()
-        evdev_reader = getattr(self.controller, "_evdev", None)
-        if evdev_reader is not None and evdev_reader.is_available():
-            with contextlib.suppress(Exception):
-                buttons = frozenset(evdev_reader.snapshot().buttons_pressed)
         try:
             self._mouse_device.dispatch(
                 lx=state.raw_lx,
@@ -399,7 +414,7 @@ class Daemon:
                 ry=state.raw_ry,
                 l2=state.l2_raw,
                 r2=state.r2_raw,
-                buttons=buttons,
+                buttons=buttons_pressed,
             )
         except Exception as exc:
             logger.warning("mouse_dispatch_failed", err=str(exc))
