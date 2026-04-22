@@ -1,0 +1,13 @@
+[Unit]
+Description=Abre a GUI do Hefesto ao conectar o DualSense (hotplug USB)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+# Idempotência: pgrep detecta GUI já em execução e aborta o spawn.
+# %h expande para o HOME do usuário dono da sessão systemd --user.
+ExecStart=/bin/sh -c "pgrep -f 'hefesto.app.main' >/dev/null || %h/.local/bin/hefesto-gui"
+
+[Install]
+WantedBy=graphical-session.target
