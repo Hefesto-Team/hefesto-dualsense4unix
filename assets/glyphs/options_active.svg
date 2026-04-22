@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- options.svg — tres linhas horizontais (hamburguer) -->
+  <line x1="7" y1="10" x2="25" y2="10" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="16" x2="25" y2="16" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+  <line x1="7" y1="22" x2="25" y2="22" stroke="#bd93f9" stroke-width="2" stroke-linecap="round"/>
+</svg>

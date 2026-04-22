@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- r1.svg — retangulo arredondado com texto R1 -->
+  <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="#f8f8f2">R1</text>
+</svg>

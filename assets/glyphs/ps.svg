@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- ps.svg — lettering minimalista neutro: P e S em dois circulos pequenos -->
+  <circle cx="10" cy="16" r="7" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <text x="7" y="20" font-family="monospace" font-size="9" font-weight="bold" fill="#f8f8f2">P</text>
+  <circle cx="22" cy="16" r="7" fill="none" stroke="#f8f8f2" stroke-width="2"/>
+  <text x="19" y="20" font-family="monospace" font-size="9" font-weight="bold" fill="#f8f8f2">S</text>
+</svg>

@@ -229,6 +229,17 @@ chmod +x "${LAUNCHER}"
 ok
 
 # ---------------------------------------------------------------------------
+# 4b. Glyphs SVG dos botoes do DualSense
+# ---------------------------------------------------------------------------
+readonly GLYPHS_SRC="${ROOT_DIR}/assets/glyphs"
+readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto/glyphs"
+
+if [[ -d "${GLYPHS_SRC}" ]]; then
+    mkdir -p "${GLYPHS_TARGET}"
+    cp -f "${GLYPHS_SRC}"/*.svg "${GLYPHS_TARGET}/"
+fi
+
+# ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto
 # ---------------------------------------------------------------------------
 step "5/7" "symlink ${BIN_DIR}/hefesto"

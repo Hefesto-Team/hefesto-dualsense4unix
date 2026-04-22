@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- triangle.svg — triangulo equilatero vazado 2px -->
+  <polygon points="16,6 27,25 5,25" fill="none" stroke="#bd93f9" stroke-width="2" stroke-linejoin="round"/>
+</svg>
