@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 # install.sh — instala Hefesto completo no ambiente do usuário.
 #
-# Orquestra, em ordem: dependências do sistema, venv + pacote editável,
-# udev rules (hidraw + uinput + USB autosuspend), atalho .desktop + ícone,
-# launcher desanexado, symlink bin, unit systemd --user, start do daemon.
-#
 # Flags:
-#   --no-udev        pula a instalação de udev rules (sudo) — útil em CI.
-#   --yes, -y        responde 'sim' ao prompt de sudo das udev rules.
-#   --no-systemd     pula install + start da unit systemd do daemon.
-#   --no-hotplug-gui pula a unit user que abre a GUI ao plugar o controle.
+#   --no-udev        pula udev rules (sudo) — útil em CI.
+#   --yes, -y        responde sim a todos os prompts sudo.
+#   --no-systemd     pula install + start da unit do daemon.
+#   --no-hotplug-gui pula a unit que abre a GUI ao plugar o controle.
 #
 # Reexecutável (idempotente).
 
@@ -37,131 +33,143 @@ for arg in "$@"; do
         --no-hotplug-gui) SKIP_HOTPLUG_GUI=1 ;;
         --yes|-y)         AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
-        *) printf '[install] aviso: argumento desconhecido: %s\n' "$arg" ;;
+        *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
 
-log() { printf '[install] %s\n' "$*"; }
-die() { printf '[install] ERRO: %s\n' "$*" >&2; exit 1; }
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-require() {
-    command -v "$1" >/dev/null 2>&1 || die "dependencia ausente: $1"
+step()  { printf '\n[%s] %s\n' "$1" "$2"; }
+ok()    { printf '      ok\n'; }
+warn()  { printf '      aviso: %s\n' "$*"; }
+die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
+
+ask_yn() {
+    # ask_yn "pergunta" auto_yes_var → seta $REPLY como "y" ou "n"
+    local prompt="$1" auto="$2"
+    if [[ "$auto" -eq 1 ]]; then
+        REPLY="y"; return
+    fi
+    read -r -n 1 -p "      $prompt [Y/n] " REPLY
+    echo
+    REPLY="${REPLY:-y}"
 }
 
-###############################################################################
-# 1. Dependências do sistema
-###############################################################################
-log "[1/7] checando dependencias do sistema"
-require python3
-require pkg-config || true
+run_apt() {
+    # Roda apt-get quieto; só mostra saída se falhar.
+    local _tmp
+    _tmp="$(mktemp)"
+    if ! sudo apt-get install -y -qq "$@" > "$_tmp" 2>&1; then
+        cat "$_tmp" >&2
+        rm -f "$_tmp"
+        return 1
+    fi
+    rm -f "$_tmp"
+}
 
-###############################################################################
-# 2. venv + pacote editável
-###############################################################################
-log "[2/7] preparando venv e instalando o pacote"
+require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
+
+# ---------------------------------------------------------------------------
+# 1. Verificar Python
+# ---------------------------------------------------------------------------
+step "1/7" "verificando dependências do sistema"
+require python3
+ok
+
+# ---------------------------------------------------------------------------
+# 2. venv + GTK3 + pacote Python
+# ---------------------------------------------------------------------------
+step "2/7" "preparando ambiente Python"
+
 if [[ ! -d "${VENV_DIR}" ]]; then
-    log "criando venv em ${VENV_DIR}"
-    python3 -m venv --system-site-packages "${VENV_DIR}"
+    printf '      criando venv...\n'
+    python3 -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null
 fi
 
 if ! "${VENV_DIR}/bin/python" -c \
         "import gi; gi.require_version('Gtk','3.0')" >/dev/null 2>&1; then
-    cat <<'MSG'
 
-Bindings GTK3 não encontrados — obrigatórios para a interface gráfica.
+    printf '\n      Bindings GTK3 não encontrados — obrigatórios para a GUI.\n'
+    printf '      Pacotes: python3-gi  python3-gi-cairo  gir1.2-gtk-3.0\n'
+    printf '               gir1.2-ayatanaappindicator3-0.1  libgirepository1.0-dev\n'
+    printf '               libcairo2-dev  desktop-file-utils  imagemagick\n\n'
 
-Pacotes necessários:
-  python3-gi  python3-gi-cairo  gir1.2-gtk-3.0
-  gir1.2-ayatanaappindicator3-0.1  libgirepository1.0-dev
-  libcairo2-dev  desktop-file-utils  imagemagick
-
-MSG
-    if [[ "${AUTO_YES}" -eq 0 ]]; then
-        read -r -n 1 -p "[install] instalar dependências GTK3 agora com sudo? [Y/n] " _gtk_resp
-        echo
-        _gtk_resp="${_gtk_resp:-Y}"
-    else
-        _gtk_resp="Y"
-    fi
-
-    if [[ "${_gtk_resp,,}" =~ ^y(es|es)?$ ]]; then
-        sudo apt-get install -y \
+    ask_yn "instalar agora com sudo?" "${AUTO_YES}"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        printf '      instalando...\n'
+        run_apt \
             python3-gi python3-gi-cairo gir1.2-gtk-3.0 \
             gir1.2-ayatanaappindicator3-0.1 libgirepository1.0-dev \
             libcairo2-dev desktop-file-utils imagemagick \
-            || die "falha ao instalar dependências GTK3 — verifique a conexão e tente novamente"
+            || die "falha ao instalar GTK3 — verifique a conexão e tente novamente"
+        printf '      GTK3 instalado\n'
     else
         die "GTK3 obrigatório. Instale manualmente e reexecute ./install.sh"
     fi
 fi
 
-"${VENV_DIR}/bin/python" -m pip install --quiet --upgrade pip packaging
-"${VENV_DIR}/bin/pip" install --quiet -e "${ROOT_DIR}[emulation]"
+printf '      instalando pacote Python...\n'
+"${VENV_DIR}/bin/python" -m pip install \
+    --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
+"${VENV_DIR}/bin/pip" install \
+    --quiet --disable-pip-version-check -e "${ROOT_DIR}[emulation]" 2>/dev/null
+ok
 
-###############################################################################
+# ---------------------------------------------------------------------------
 # 3. udev rules (requer sudo)
-###############################################################################
+# ---------------------------------------------------------------------------
+step "3/7" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-    log "[3/7] udev rules puladas (--no-udev)"
+    printf '      pulado (--no-udev)\n'
 else
-    log "[3/7] udev rules: hidraw + uinput + USB autosuspend + hotplug GUI"
     need_udev=1
-    # Se as quatro regras já estão em /etc/udev/rules.d/, pula com aviso
     if [[ -f /etc/udev/rules.d/70-ps5-controller.rules ]] \
        && [[ -f /etc/udev/rules.d/71-uinput.rules ]] \
        && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]] \
        && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]]; then
-        log "udev rules ja instaladas, pulando (use uninstall.sh para remover)"
+        printf '      já instaladas\n'
         need_udev=0
     fi
 
     if [[ "${need_udev}" -eq 1 ]]; then
-        if [[ "${AUTO_YES}" -eq 0 ]]; then
-            cat <<'MSG'
+        printf '\n'
+        printf '      Quatro regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
+        printf '        70-ps5-controller.rules             permissão hidraw\n'
+        printf '        71-uinput.rules                     emulação Xbox360 via uinput\n'
+        printf '        72-ps5-controller-autosuspend.rules evita desconexão intermitente\n'
+        printf '        73-ps5-controller-hotplug.rules     abre a GUI ao plugar o controle\n\n'
 
-As udev rules dao permissao ao usuario para abrir hidraw, /dev/uinput,
-desabilitam autosuspend USB do DualSense (evita desconexao intermitente)
-e marcam o device para que o systemd --user abra a GUI no hotplug.
-Requer sudo uma unica vez.
-
-Arquivos instalados em /etc/udev/rules.d/:
-  - 70-ps5-controller.rules             (permissao hidraw)
-  - 71-uinput.rules                     (emulacao Xbox360 via uinput)
-  - 72-ps5-controller-autosuspend.rules (power/control=on — ADR-013)
-  - 73-ps5-controller-hotplug.rules     (SYSTEMD_USER_WANTS=GUI)
-
-MSG
-            read -r -n 1 -p "[install] instalar udev rules agora? [Y/n] " resp
-            echo
-            resp="${resp:-Y}"
-        else
-            resp="Y"
-        fi
-
-        if [[ "${resp,,}" =~ ^y(es)?$ ]]; then
+        ask_yn "instalar agora com sudo?" "${AUTO_YES}"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
             if ! command -v sudo >/dev/null 2>&1; then
-                log "aviso: sudo ausente; pule com --no-udev e instale manualmente"
+                warn "sudo ausente — instale com --no-udev e rode scripts/install_udev.sh depois"
             else
-                bash "${ROOT_DIR}/scripts/install_udev.sh" || \
-                    log "aviso: install_udev.sh falhou — rode manualmente mais tarde"
+                printf '      instalando...\n'
+                bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null \
+                    || warn "install_udev.sh falhou — rode manualmente depois"
+                ok
             fi
         else
-            log "udev rules puladas a pedido. Rode ./scripts/install_udev.sh depois"
+            printf '      pulado a pedido — rode ./scripts/install_udev.sh depois\n'
         fi
     fi
 fi
 
-###############################################################################
-# 4. Ícone + .desktop + launcher desanexado
-###############################################################################
-log "[4/7] atalho de aplicativo (.desktop + icone + launcher)"
+# ---------------------------------------------------------------------------
+# 4. Ícone + .desktop + launcher
+# ---------------------------------------------------------------------------
+step "4/7" "atalho de aplicativo e launcher"
+
 mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
-
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
+
 cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
@@ -176,95 +184,88 @@ StartupNotify=true
 StartupWMClass=hefesto
 DESKTOP
 
-if command -v desktop-file-validate >/dev/null 2>&1; then
-    desktop-file-validate "${DESKTOP_TARGET}" || \
-        log "aviso: desktop-file-validate retornou warnings (não fatal)"
-fi
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-    gtk-update-icon-cache -q -f "${HOME}/.local/share/icons/hicolor" || true
-fi
-if command -v update-desktop-database >/dev/null 2>&1; then
-    update-desktop-database -q "$(dirname "${DESKTOP_TARGET}")" || true
-fi
+command -v desktop-file-validate >/dev/null 2>&1 \
+    && desktop-file-validate "${DESKTOP_TARGET}" >/dev/null 2>&1 || true
+command -v gtk-update-icon-cache >/dev/null 2>&1 \
+    && gtk-update-icon-cache -q -f "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+command -v update-desktop-database >/dev/null 2>&1 \
+    && update-desktop-database -q "$(dirname "${DESKTOP_TARGET}")" 2>/dev/null || true
 
 mkdir -p "${BIN_DIR}"
 cat > "${LAUNCHER}" <<LAUNCH
 #!/usr/bin/env bash
-# Launcher desanexado: roda em background, fecha handles do terminal.
-# Assim "Sair" do tray é o único caminho para encerrar o processo.
 setsid nohup "${ROOT_DIR}/run.sh" "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 LAUNCH
 chmod +x "${LAUNCHER}"
+ok
 
-###############################################################################
-# 5. Symlink ~/.local/bin/hefesto (consumido pela unit systemd)
-###############################################################################
-log "[5/7] symlink ${BIN_DIR}/hefesto"
+# ---------------------------------------------------------------------------
+# 5. Symlink ~/.local/bin/hefesto
+# ---------------------------------------------------------------------------
+step "5/7" "symlink ${BIN_DIR}/hefesto"
 ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
+ok
 
-###############################################################################
-# 6. Unit systemd --user + start
-###############################################################################
+# ---------------------------------------------------------------------------
+# 6. Daemon systemd --user
+# ---------------------------------------------------------------------------
+step "6/7" "daemon systemd --user"
+
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
-    log "[6/7] unit systemd pulada (--no-systemd)"
+    printf '      pulado (--no-systemd)\n'
 else
-    log "[6/7] unit systemd --user (daemon em background)"
-    # install-service cadeia: daemon-reload + systemctl --user enable hefesto.service
     if "${VENV_DIR}/bin/hefesto" daemon install-service >/dev/null 2>&1; then
         if systemctl --user restart hefesto.service >/dev/null 2>&1; then
-            log "daemon ativo (systemctl --user status hefesto.service para detalhes)"
+            printf '      daemon ativo\n'
         else
-            log "aviso: systemctl --user restart falhou — rode manualmente"
+            warn "restart falhou — rode: systemctl --user start hefesto.service"
         fi
     else
-        log "aviso: falha ao instalar unit systemd (sem systemd ou assets ausente)"
+        warn "falha ao instalar unit (sem systemd ou assets ausente)"
     fi
 fi
 
-###############################################################################
-# 7. Unit user de hotplug-gui (abre a GUI ao plugar o DualSense)
-###############################################################################
+# ---------------------------------------------------------------------------
+# 7. Hotplug-gui unit
+# ---------------------------------------------------------------------------
+step "7/7" "hotplug USB → abre a GUI automaticamente"
+
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
-    log "[7/7] unit hotplug-gui pulada (--no-hotplug-gui)"
+    printf '      pulado (--no-hotplug-gui)\n'
 else
-    log "[7/7] unit user hefesto-gui-hotplug.service (hotplug USB -> GUI)"
     readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
     readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
     readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
 
     if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
-        log "aviso: ${HOTPLUG_UNIT_SRC} ausente — pule ou reinstale o repo"
+        warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
     else
         mkdir -p "${USER_UNIT_DIR}"
         cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
         if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user daemon-reload >/dev/null 2>&1 || \
-                log "aviso: systemctl --user daemon-reload falhou"
+            systemctl --user daemon-reload >/dev/null 2>&1 || true
             if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
-                log "hotplug-gui habilitado (será disparado pelo udev no próximo plug USB)"
+                printf '      habilitado\n'
             else
-                log "aviso: enable hefesto-gui-hotplug.service falhou — habilite manualmente"
+                warn "enable falhou — habilite manualmente"
             fi
         else
-            log "aviso: systemctl ausente — unit copiada mas não habilitada"
+            warn "systemctl ausente — unit copiada mas não habilitada"
         fi
     fi
 fi
 
-cat <<'FIM'
+# ---------------------------------------------------------------------------
+# Pronto
+# ---------------------------------------------------------------------------
+printf '\n'
+printf '─────────────────────────────────────────\n'
+printf ' Hefesto instalado\n'
+printf '─────────────────────────────────────────\n'
+printf ' Abrir:       hefesto-gui\n'
+printf ' Desinstalar: ./uninstall.sh\n'
+printf '─────────────────────────────────────────\n'
+printf '\n'
 
-Instalação concluída.
-  - Abra o painel: hefesto-gui (ou pelo menu de aplicativos).
-  - Tray continua ativo; fechar a janela some para o tray.
-  - Daemon em background via systemd --user (restart automático).
-  - Plugar o DualSense via USB abre a GUI automaticamente (hotplug).
-    Pule com --no-hotplug-gui. Desabilite depois via:
-      systemctl --user disable hefesto-gui-hotplug.service
-  - Se o DualSense desconectar intermitente, confirme que a regra
-    72-ps5-controller-autosuspend.rules está em /etc/udev/rules.d/.
-
-Para desinstalar: ./uninstall.sh
-FIM
-
-# "O que fazes com paz de espirito, isso sim dura." — Marco Aurelio
+# "O que fazes com paz de espírito, isso sim dura." — Marco Aurélio
