@@ -8,6 +8,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     trigger.reset        {side?}               -> {status}
     led.set              {rgb}                 -> {status}
     rumble.set           {weak, strong}        -> {status, weak, strong}
+    rumble.stop          {}                    -> {status}
+    rumble.passthrough   {enabled: bool}       -> {status}
     daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
     daemon.state_full    {}          -> {... estado + mouse_emulation se daemon expõe}
     controller.list      {}          -> {controllers: [{connected, transport}]}
@@ -76,6 +78,8 @@ class IpcServer:
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
             "rumble.set": self._handle_rumble_set,
+            "rumble.stop": self._handle_rumble_stop,
+            "rumble.passthrough": self._handle_rumble_passthrough,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
             "controller.list": self._handle_controller_list,
@@ -375,14 +379,58 @@ class IpcServer:
         return result
 
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Aplica rumble e persiste estado para re-asserção contínua (BUG-RUMBLE-APPLY-IGNORED-01).
+
+        Atualiza daemon.config.rumble_active para que o poll loop re-afirme
+        os valores a cada 200ms, garantindo vibração contínua mesmo com outros
+        writes HID de LED/trigger que possam zerar os motores.
+        """
         weak = params.get("weak")
         strong = params.get("strong")
         if not isinstance(weak, int) or not isinstance(strong, int):
             raise ValueError("rumble.set exige 'weak' e 'strong' inteiros 0-255")
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
+        # Persiste estado antes de aplicar para o poll loop continuar re-afirmando.
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if daemon_cfg is not None:
+            daemon_cfg.rumble_active = (weak, strong)
         self.controller.set_rumble(weak=weak, strong=strong)
         return {"status": "ok", "weak": weak, "strong": strong}
+
+    async def _handle_rumble_stop(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Para rumble e persiste estado (0, 0) (BUG-RUMBLE-APPLY-IGNORED-01).
+
+        Zera os motores imediatamente e atualiza daemon.config.rumble_active para
+        (0, 0) de forma que o poll loop re-afirme o silêncio, evitando que outro
+        write HID re-ative motores inadvertidamente. Use rumble.passthrough para
+        liberar controle completo ao jogo.
+        """
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if daemon_cfg is not None:
+            daemon_cfg.rumble_active = (0, 0)
+        self.controller.set_rumble(weak=0, strong=0)
+        return {"status": "ok"}
+
+    async def _handle_rumble_passthrough(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Libera controle de rumble para jogo/UDP (BUG-RUMBLE-APPLY-IGNORED-01).
+
+        Zera daemon.config.rumble_active, desativando a re-asserção do poll loop.
+        O jogo retoma controle via UDP ou emulação Xbox360. Use rumble.set para
+        retomar controle manual.
+
+        Params:
+            enabled: bool — True = habilitar passthrough (zerar rumble_active).
+                            False = sem efeito; para fixar valores use rumble.set.
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("rumble.passthrough exige 'enabled' boolean")
+        if enabled:
+            daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+            if daemon_cfg is not None:
+                daemon_cfg.rumble_active = None
+        return {"status": "ok", "passthrough": enabled}
 
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
         return {

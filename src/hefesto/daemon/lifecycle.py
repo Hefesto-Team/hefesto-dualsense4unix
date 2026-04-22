@@ -55,6 +55,14 @@ class DaemonConfig:
     # "custom" -> dispara `ps_button_command` (ex.: ["xdg-open", "steam://open/bigpicture"]).
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
     ps_button_command: list[str] = field(default_factory=list)
+    # BUG-RUMBLE-APPLY-IGNORED-01: estado persistente de rumble ativo.
+    # None = passthrough (jogo controla via UDP/emulação ou motores parados).
+    # (weak, strong) = valor fixado pelo usuário via IPC rumble.set.
+    # Poll loop re-afirma a cada 200ms para sobrepor writes HID que zeram motores.
+    # Se emulation_enabled=True E rumble_active is None, re-asserção é pulada
+    # para não conflitar com o jogo. Usuário pode forçar mesmo em modo emulação
+    # fixando rumble_active != None — seu valor vence.
+    rumble_active: tuple[int, int] | None = None
 
 
 class BatteryDebouncer:
@@ -164,10 +172,35 @@ class Daemon:
         except Exception as exc:
             logger.warning("last_profile_restore_failed", name=name, err=str(exc))
 
+    def _reassert_rumble(self, now: float) -> None:
+        """Re-aplica rumble_active no hardware a cada ~200ms.
+
+        Idempotente. Necessário porque writes HID de LED/trigger podem zerar os
+        motores de vibração involuntariamente. A re-asserção a 5Hz (200ms) garante
+        que o valor fixado pelo usuário persista mesmo com outras escritas HID.
+
+        Pula silenciosamente se:
+        - rumble_active is None (passthrough — jogo/UDP controla).
+        - Controle não está conectado.
+        - emulation_enabled=True E rumble_active is None (não conflitar com jogo).
+          Mas se o usuário fixou rumble_active != None em modo emulação, seu valor
+          vence (intenção explícita supera o passthrough do jogo).
+        """
+        cfg = self.config
+        active = cfg.rumble_active
+        if active is None:
+            return
+        weak, strong = active
+        try:
+            self.controller.set_rumble(weak=weak, strong=strong)
+        except Exception as exc:
+            logger.warning("rumble_reassert_failed", err=str(exc))
+
     async def _poll_loop(self) -> None:
         period = 1.0 / max(1, self.config.poll_hz)
         battery = BatteryDebouncer()
         loop = asyncio.get_running_loop()
+        next_rumble_assert_at: float = 0.0  # deadline para próxima re-asserção de rumble
 
         while not self._is_stopping():
             tick_started = loop.time()
@@ -184,6 +217,11 @@ class Daemon:
             self.store.update_controller_state(state)
             self.bus.publish(EventTopic.STATE_UPDATE, state)
             self.store.bump("poll.tick")
+
+            # Re-afirmar rumble a cada 200ms (BUG-RUMBLE-APPLY-IGNORED-01).
+            if tick_started >= next_rumble_assert_at:
+                self._reassert_rumble(tick_started)
+                next_rumble_assert_at = tick_started + 0.200
 
             if self._mouse_device is not None:
                 self._dispatch_mouse_emulation(state)
