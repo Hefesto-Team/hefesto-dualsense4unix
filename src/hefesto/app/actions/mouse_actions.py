@@ -24,6 +24,8 @@ MAPPING_LEGEND = (
     "Cross (X) ou L2 → botão esquerdo\n"
     "Triangle (△) ou R2 → botão direito\n"
     "R3 (clique no analógico direito) → botão do meio\n"
+    "Circle (○) → Enter\n"
+    "Square (□) → Esc\n"
     "D-pad (↑↓←→) → setas do teclado\n"
     "Analógico esquerdo → movimento do cursor\n"
     "Analógico direito → rolagem vertical e horizontal"
