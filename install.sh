@@ -86,9 +86,26 @@ ok
 # ---------------------------------------------------------------------------
 step "2/7" "preparando ambiente Python"
 
+# Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
+# inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
+# isolada cujos site-packages não contêm pacotes apt.
+_VENV_PYTHON="python3"
+if [[ -x /usr/bin/python3 ]]; then
+    _VENV_PYTHON="/usr/bin/python3"
+fi
+
+# Se venv existe mas foi criado com Python não-sistema (pyenv), recriar.
+if [[ -d "${VENV_DIR}" ]]; then
+    _venv_home=$(grep "^home = " "${VENV_DIR}/pyvenv.cfg" 2>/dev/null | awk '{print $3}')
+    if [[ -n "${_venv_home}" ]] && [[ "${_venv_home}" != "/usr/bin" ]] && [[ -x /usr/bin/python3 ]]; then
+        printf '      venv criado com Python não-sistema (%s) — recriando...\n' "${_venv_home}"
+        rm -rf "${VENV_DIR}"
+    fi
+fi
+
 if [[ ! -d "${VENV_DIR}" ]]; then
     printf '      criando venv...\n'
-    python3 -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null
+    "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null
 fi
 
 if ! "${VENV_DIR}/bin/python" -c \
