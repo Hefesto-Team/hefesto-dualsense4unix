@@ -80,7 +80,8 @@ Pacotes necessários:
 
 MSG
     if [[ "${AUTO_YES}" -eq 0 ]]; then
-        read -r -p "[install] instalar dependências GTK3 agora com sudo? [Y/n] " _gtk_resp
+        read -r -n 1 -p "[install] instalar dependências GTK3 agora com sudo? [Y/n] " _gtk_resp
+        echo
         _gtk_resp="${_gtk_resp:-Y}"
     else
         _gtk_resp="Y"
@@ -133,7 +134,8 @@ Arquivos instalados em /etc/udev/rules.d/:
   - 73-ps5-controller-hotplug.rules     (SYSTEMD_USER_WANTS=GUI)
 
 MSG
-            read -r -p "[install] instalar udev rules agora? [Y/n] " resp
+            read -r -n 1 -p "[install] instalar udev rules agora? [Y/n] " resp
+            echo
             resp="${resp:-Y}"
         else
             resp="Y"
