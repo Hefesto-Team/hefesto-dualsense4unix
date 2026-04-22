@@ -14,6 +14,7 @@ from hefesto.integrations.uinput_mouse import (
     DEFAULT_SCROLL_SPEED,
     DEVICE_NAME,
     DPAD_TO_KEY,
+    EDGE_KEY_MAP,
     MOVE_DEADZONE,
     SCROLL_DEADZONE,
     SCROLL_RATE_LIMIT_SEC,
@@ -31,6 +32,7 @@ def _fake_uinput_module() -> MagicMock:
         "REL_X", "REL_Y", "REL_WHEEL", "REL_HWHEEL",
         "BTN_LEFT", "BTN_RIGHT", "BTN_MIDDLE",
         "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
+        "KEY_ENTER", "KEY_ESC",
     ):
         setattr(mod, name, (1, hash(name) & 0xFFFF))
     return mod
@@ -402,6 +404,95 @@ def test_dpad_cobre_quatro_direcoes(monkeypatch: pytest.MonkeyPatch):
             buttons=frozenset(), now=t,
         )
         t += 0.2
+
+
+# --- Circle/Square edge-triggered → Enter/Esc (FEAT-MOUSE-02) ---------------
+
+def test_edge_key_map_canonico():
+    assert EDGE_KEY_MAP == {
+        "circle": "KEY_ENTER",
+        "square": "KEY_ESC",
+    }
+
+
+def test_circle_edge_trigger_enter(monkeypatch: pytest.MonkeyPatch):
+    """Circle False→True emite KEY_ENTER press+release; hold não re-emite."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+
+    # Primeiro tick: circle=True → press+release
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"circle"}), now=0.0,
+    )
+    enter = _emits_for(fake_device, fake_mod.KEY_ENTER)
+    # Emite valor 1 (press) e 0 (release) no mesmo dispatch
+    assert len(enter) == 2
+    assert enter[0][1][1] == 1
+    assert enter[1][1][1] == 0
+
+    fake_device.reset_mock()
+
+    # Segundo tick com circle=True ainda pressionado: NÃO re-emite
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"circle"}), now=0.05,
+    )
+    held = _emits_for(fake_device, fake_mod.KEY_ENTER)
+    assert held == []
+
+
+def test_square_edge_trigger_esc(monkeypatch: pytest.MonkeyPatch):
+    """Square False→True emite KEY_ESC press+release; hold não re-emite."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"square"}), now=0.0,
+    )
+    esc = _emits_for(fake_device, fake_mod.KEY_ESC)
+    assert len(esc) == 2
+    assert esc[0][1][1] == 1
+    assert esc[1][1][1] == 0
+
+    fake_device.reset_mock()
+
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"square"}), now=0.05,
+    )
+    held = _emits_for(fake_device, fake_mod.KEY_ESC)
+    assert held == []
+
+
+def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
+    """Após circle=False, próxima pressão re-emite KEY_ENTER."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+
+    # Press inicial
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"circle"}), now=0.0,
+    )
+    first = _emits_for(fake_device, fake_mod.KEY_ENTER)
+    assert len(first) == 2
+
+    # Release
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset(), now=0.05,
+    )
+
+    fake_device.reset_mock()
+
+    # Nova pressão: re-emite
+    dev.dispatch(
+        lx=128, ly=128, rx=128, ry=128, l2=0, r2=0,
+        buttons=frozenset({"circle"}), now=0.10,
+    )
+    second = _emits_for(fake_device, fake_mod.KEY_ENTER)
+    assert len(second) == 2
+    assert second[0][1][1] == 1
+    assert second[1][1][1] == 0
 
 
 # "A liberdade é nada mais que uma chance de ser melhor." — Albert Camus
