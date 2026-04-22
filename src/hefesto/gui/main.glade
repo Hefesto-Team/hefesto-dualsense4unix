@@ -1141,6 +1141,15 @@
                         <signal name="clicked" handler="on_daemon_service_restart"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkButton" id="btn_migrate_to_systemd">
+                        <property name="label">Migrar para systemd</property>
+                        <property name="tooltip-text">Para o processo avulso e inicia o daemon via systemctl --user start hefesto.service</property>
+                        <property name="visible">False</property>
+                        <property name="no-show-all">True</property>
+                        <signal name="clicked" handler="on_daemon_migrate_to_systemd"/>
+                      </object>
+                    </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>

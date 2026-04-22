@@ -172,6 +172,7 @@ class HefestoApp(
             "on_daemon_view_logs": self.on_daemon_view_logs,
             "on_daemon_autostart_toggled": self.on_daemon_autostart_toggled,
             "on_daemon_service_restart": self.on_daemon_service_restart,
+            "on_daemon_migrate_to_systemd": self.on_daemon_migrate_to_systemd,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,

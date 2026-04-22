@@ -1,12 +1,17 @@
 """Aba Daemon: status systemd --user + controles.
 
 SIMPLIFY-UNIT-01: unit única `hefesto.service`. Sem dropdown de seleção.
+BUG-DAEMON-STATUS-MISMATCH-01: `_daemon_status()` cruza 3 fontes (systemd
+  is-active, is-enabled, pid file) para apresentar label PT-BR fiel ao estado
+  real. Evita mostrar "failed" quando o daemon está vivo fora do systemd.
 """
 # ruff: noqa: E402
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
-from typing import Any
+from typing import Any, Literal
 
 import gi
 
@@ -15,10 +20,13 @@ from gi.repository import GLib, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
 from hefesto.app.ipc_bridge import _get_executor
-from hefesto.daemon.service_install import SERVICE_NORMAL, ServiceInstaller, user_unit_dir
+from hefesto.daemon.service_install import SERVICE_NORMAL, ServiceInstaller
 from hefesto.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Tipo canônico para o estado do daemon (BUG-DAEMON-STATUS-MISMATCH-01).
+DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "offline"]
 
 
 class DaemonActionsMixin(WidgetAccessMixin):
@@ -257,26 +265,151 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._run_systemctl_async(action)
         return False
 
+    # --- handlers do botão "Migrar para systemd" ---
+
+    def on_daemon_migrate_to_systemd(self, _btn: Gtk.Button) -> None:
+        """Handler do botão 'Migrar para systemd' (BUG-DAEMON-STATUS-MISMATCH-01).
+
+        Visível apenas quando o daemon está no estado `online_avulso`.
+        Sequência:
+          1. Lê pid do arquivo do daemon.
+          2. Envia SIGTERM ao processo avulso (grace via single_instance).
+          3. Dispara `systemctl --user start hefesto.service`.
+          4. Atualiza a view.
+        Executado em thread worker para não bloquear a thread GTK.
+        """
+        def _worker() -> None:
+            pid = self._read_daemon_pid()
+            if pid is not None:
+                try:
+                    from hefesto.utils.single_instance import is_alive
+                    if is_alive(pid):
+                        logger.info(
+                            "daemon_migrate_sigterm",
+                            pid=pid,
+                        )
+                        try:
+                            os.kill(pid, signal.SIGTERM)
+                        except (ProcessLookupError, PermissionError) as exc:
+                            logger.warning(
+                                "daemon_migrate_sigterm_falhou",
+                                pid=pid,
+                                err=str(exc),
+                            )
+                except Exception as exc:
+                    logger.warning("daemon_migrate_import_falhou", err=str(exc))
+
+            rc = self._start_service_blocking()
+            if rc == 0:
+                logger.info("daemon_migrate_start_ok", unit=SERVICE_NORMAL)
+            else:
+                logger.warning(
+                    "daemon_migrate_start_falhou",
+                    unit=SERVICE_NORMAL,
+                    rc=rc,
+                )
+            GLib.idle_add(self._on_migrate_done, rc)
+
+        _get_executor().submit(_worker)
+
+    def _on_migrate_done(self, rc: int) -> bool:
+        """Callback pós-migração — executa na thread principal GTK."""
+        if rc == 0:
+            self._toast_daemon(
+                "Daemon migrado para systemd com sucesso."
+            )
+        else:
+            self._toast_daemon(
+                f"Falha ao iniciar hefesto.service via systemd (rc={rc})."
+            )
+        self._refresh_daemon_view()
+        return False
+
     # --- helpers ---
 
+    def _read_daemon_pid(self) -> int | None:
+        """Lê o PID do arquivo de pid do daemon; retorna None se ausente/inválido."""
+        try:
+            from hefesto.utils.xdg_paths import runtime_dir
+        except Exception:
+            return None
+        pid_file = runtime_dir() / "daemon.pid"
+        try:
+            raw = pid_file.read_text(encoding="ascii").strip()
+        except (FileNotFoundError, OSError):
+            return None
+        if not raw.isdigit():
+            return None
+        pid = int(raw)
+        return pid if pid > 0 else None
+
+    def _daemon_status(self) -> DaemonStatus:
+        """Determina o estado canônico do daemon cruzando 3 fontes.
+
+        Fontes consultadas:
+          1. `systemctl --user is-active hefesto.service` → systemd_active.
+          2. `systemctl --user is-enabled hefesto.service` → systemd_enabled.
+          3. `is_alive(pid)` via pid file → process_alive.
+
+        Matriz de decisão (BUG-DAEMON-STATUS-MISMATCH-01):
+          systemd active + process_alive + enabled  → online_systemd
+          systemd active + process_alive            → online_systemd
+          systemd inactive/failed + process_alive   → online_avulso
+          systemd active + not process_alive        → iniciando
+          systemd inactive/failed + not process_alive → offline
+        """
+        systemd_active = (
+            self._systemctl_oneline(["is-active", SERVICE_NORMAL]) == "active"
+        )
+        pid = self._read_daemon_pid()
+        process_alive: bool
+        if pid is not None:
+            try:
+                from hefesto.utils.single_instance import is_alive
+                process_alive = is_alive(pid)
+            except Exception:
+                process_alive = False
+        else:
+            process_alive = False
+
+        if systemd_active and process_alive:
+            return "online_systemd"
+        if not systemd_active and process_alive:
+            return "online_avulso"
+        if systemd_active and not process_alive:
+            return "iniciando"
+        return "offline"
+
     def _refresh_daemon_view(self) -> None:
-        installed = (user_unit_dir() / SERVICE_NORMAL).exists()
-        active = self._systemctl_oneline(["is-active", SERVICE_NORMAL]) or "unknown"
-        enabled = self._systemctl_oneline(["is-enabled", SERVICE_NORMAL]) or "unknown"
-        self._set_daemon_status_markup(installed, active, enabled)
+        """Atualiza a aba Daemon com base no estado canônico do daemon.
+
+        Consulta `_daemon_status()` (3 fontes) e pinta o label com cor e
+        tooltip PT-BR amigável. Também atualiza o switch auto-start e o
+        botão "Migrar para systemd" (visível apenas em `online_avulso`).
+        """
+        status = self._daemon_status()
+        enabled = self._systemctl_oneline(["is-enabled", SERVICE_NORMAL])
+        self._set_daemon_status_markup(status, enabled)
 
         self._daemon_autostart_guard = True
         try:
-            self._get("daemon_autostart_switch").set_active(enabled == "enabled")
+            sw = self._get("daemon_autostart_switch")
+            if sw is not None:
+                sw.set_active(enabled == "enabled")
         finally:
             self._daemon_autostart_guard = False
+
+        # Botão "Migrar para systemd" visível apenas em estado online_avulso.
+        btn_migrate = self._get("btn_migrate_to_systemd")
+        if btn_migrate is not None:
+            btn_migrate.set_visible(status == "online_avulso")
 
         text = self._systemctl_status_text(SERVICE_NORMAL)
         self._set_daemon_text(text)
 
     def _run_systemctl_async(self, action: str) -> None:
         """Executa systemctl em thread worker para não bloquear a thread GTK."""
-        unit = self._selected_unit()
+        unit = SERVICE_NORMAL
 
         def _worker() -> None:
             result = self._invoke_systemctl([action, unit], capture=True)
@@ -292,20 +425,52 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return False  # não repetir via GLib
 
     def _set_daemon_status_markup(
-        self, installed: bool, active: str, enabled: str
+        self, status: DaemonStatus, enabled: str
     ) -> None:
+        """Pinta o label de status com cor e tooltip PT-BR conforme estado canônico.
+
+        Cores:
+          verde (#2d8)  — online_systemd
+          amarelo (#ca0) — online_avulso, iniciando
+          vermelho (#d33) — offline
+        """
         label = self._get("daemon_status_label")
-        if not installed:
-            label.set_markup(
-                '<span foreground="#d33">Unit não instalada em '
-                '~/.config/systemd/user/</span>'
-            )
+        if label is None:
             return
-        color = "#2d8" if active == "active" else "#d33"
-        label.set_markup(
-            f'<span foreground="{color}">● {active}</span>'
-            f' <span foreground="#888">(auto-start: {enabled})</span>'
-        )
+
+        status_map: dict[DaemonStatus, tuple[str, str, str]] = {
+            "online_systemd": (
+                "#2d8",
+                "● Online (systemd + auto-start)"
+                if enabled == "enabled"
+                else "● Online (gerenciado pelo systemd)",
+                "Daemon em execução sob controle do systemd. "
+                "Reinício automático habilitado caso o processo falhe.",
+            ),
+            "online_avulso": (
+                "#ca0",
+                "● Online (processo avulso, sem systemd)",
+                "Daemon em execução fora do systemd. "
+                "Não há reinício automático. "
+                "Use 'Migrar para systemd' para ativar gerenciamento completo.",
+            ),
+            "iniciando": (
+                "#ca0",
+                "● Iniciando...",
+                "systemd reporta unit ativa mas o processo ainda não escreveu "
+                "o pid file. Aguarde alguns segundos.",
+            ),
+            "offline": (
+                "#d33",
+                "○ Offline",
+                "Daemon não está em execução. "
+                "Use 'Iniciar' para subir via systemd ou "
+                "'hefesto daemon start' na linha de comando.",
+            ),
+        }
+        color, text, tooltip = status_map[status]
+        label.set_markup(f'<span foreground="{color}">{text}</span>')
+        label.set_tooltip_text(tooltip)
 
     def _set_daemon_text(self, text: str) -> None:
         view: Gtk.TextView = self._get("daemon_status_text")
