@@ -3,6 +3,35 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased — rumo a 1.1.0]
+
+### Adicionado (2026-04-22)
+- **Módulo `single_instance`**: `acquire_or_takeover(name)` via `fcntl.flock` + SIGTERM(2s)→SIGKILL. Daemon e GUI passam a ser mutuamente exclusivos (modelo "última vence" no daemon). Previne 2+ instâncias criando `UinputMouseDevice` concorrentes (causa do bug "cursor voando" reportado pelo usuário).
+- `install.sh`: flags `--enable-autostart` e `--enable-hotplug-gui`. Prompts interativos com default **NÃO** para ambos. Opt-in explícito elimina comportamento invasivo padrão.
+- `uninstall.sh`: `pkill -TERM` → `pkill -KILL` residual após `systemctl stop` — zero processo órfão.
+- `assets/hefesto.service`: `SuccessExitStatus=143 SIGTERM` (takeover não dispara respawn), `StartLimitIntervalSec=30 StartLimitBurst=3` (teto anti-loop).
+- `HefestoApp.quit_app`: menu "Sair" do tray agora encerra daemon junto (`systemctl --user stop hefesto.service`).
+
+### Corrigido (2026-04-22)
+- **Cursor "voando" ao ativar aba Mouse**: causado por 2 daemons concorrentes criando 2 `UinputMouseDevice` separados que disputavam stick do DualSense via evdev e emitiam REL_X/REL_Y em paralelo. Fix via single-instance takeover.
+- **PIDs renascendo ao matar processo**: cadeia de 5 fontes de spawn sem mutex (install.sh restart + hotplug unit + udev ADD + launcher GUI + ensure_daemon_running da GUI). Takeover + StartLimit corrige.
+- `ensure_daemon_running` consulta pid file via `is_alive()` — não duplica `systemctl start` se o daemon já está vivo fora do systemd.
+- Memória Claude (não faz parte do repo) atualizada refletindo HEAD real.
+
+### Adicionado em docs (2026-04-22)
+- **23 novas specs de sprint** em `docs/process/sprints/`, incluindo: BUG-TRAY-SINGLE-FLASH-01, BUG-DAEMON-STATUS-MISMATCH-01, BUG-RUMBLE-APPLY-IGNORED-01, FEAT-PLAYER-LEDS-APPLY-01, FEAT-BUTTON-SVG-01, UI-STATUS-STICKS-REDESIGN-01, UI-THEME-BORDERS-PURPLE-01, UI-PROFILES-EDITOR-SIMPLE-01, UI-GLOBAL-FOOTER-ACTIONS-01, UI-DAEMON-LOG-WRAP-01, UI-EMULATION-ALIGN-01, UI-MOUSE-CLEANUP-01, FEAT-TRIGGER-PRESETS-POSITION-01, FEAT-RUMBLE-POLICY-01, FEAT-DEB-PACKAGE-01, FEAT-FIRMWARE-UPDATE-01 (experimental, 3 fases), REFACTOR-HOTKEY-EVDEV-01, REFACTOR-DAEMON-RELOAD-01, FEAT-LED-BRIGHTNESS-02, FEAT-LED-BRIGHTNESS-03, DOCS-VERSION-SYNC-01. Especificações com critérios de aceite executáveis por dev jr.
+- `docs/process/SPRINT_ORDER.md`: roadmap atualizado com 42 sprints em 3 waves + ordem paralelizável.
+- `docs/process/HISTORICO_V1.md`: apêndice da onda pós-v1.0.0.
+- `VALIDATOR_BRIEF.md`: armadilhas A-10 (múltiplas instâncias) e A-11 (race de udev ADD).
+
+### Testes (2026-04-22)
+- `test_single_instance.py` (6 testes): acquire, is_alive, pid órfão, takeover via fork com SIGTERM, release.
+- `test_quit_app_stops_daemon.py` (4 testes): mock systemctl, FileNotFoundError, TimeoutExpired, tray.stop().
+- `test_service_install.py`: atualizado para default `enable=False`, novo `test_install_enable_opt_in`.
+- Total da suíte: **412 passed, 4 skipped** (skipped = quit_app no venv sem GdkPixbuf).
+
+---
+
 ## [1.0.0] — 2026-04-21
 
 Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com DualSense real via HID híbrido (pydualsense + evdev). 10 sprints de endurecimento e polimento sobre a 0.1.0.
