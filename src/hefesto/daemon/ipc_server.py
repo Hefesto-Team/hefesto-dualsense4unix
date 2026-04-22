@@ -208,7 +208,7 @@ class IpcServer:
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             return _json_rpc_error(None, CODE_PARSE_ERROR, f"parse: {exc}")
         if not isinstance(payload, dict):
-            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload nao eh objeto")
+            return _json_rpc_error(None, CODE_PARSE_ERROR, "payload não é objeto")
 
         req_id = payload.get("id")
         method = payload.get("method")
@@ -217,7 +217,7 @@ class IpcServer:
         if not isinstance(method, str):
             return _json_rpc_error(req_id, CODE_PARSE_ERROR, "method ausente")
         if not isinstance(params, dict):
-            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params nao eh objeto")
+            return _json_rpc_error(req_id, CODE_INVALID_PARAMS, "params não é objeto")
 
         handler = self._handlers.get(method)
         if handler is None:

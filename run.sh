@@ -16,7 +16,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
 if [[ ! -d .venv ]]; then
-    echo "erro: .venv/ nao encontrado. Rode ./scripts/dev_bootstrap.sh primeiro."
+    echo "erro: .venv/ não encontrado. Rode ./scripts/dev_bootstrap.sh primeiro."
     exit 1
 fi
 # shellcheck disable=SC1091
@@ -87,4 +87,4 @@ fi
 
 exec hefesto daemon start --foreground
 
-# "Faca o pequeno bem que esta proximo." — Tolstoi
+# "Faça o pequeno bem que está próximo." — Tolstói
