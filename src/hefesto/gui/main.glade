@@ -689,11 +689,11 @@
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
                             <property name="homogeneous">True</property>
-                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label">LED 1</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label">LED 2</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label">LED 3</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label">LED 4</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label">LED 5</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label">LED 4</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label">LED 5</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -743,7 +743,7 @@
 
                         <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label">&lt;i&gt;Seleção fica registrada para salvar no perfil ativo; envio direto ao hardware chega em extensão futura do backend.&lt;/i&gt;</property>
+                            <property name="label">&lt;i&gt;Presets e checkboxes enviam imediatamente ao hardware via daemon. Alterações também ficam salvas no perfil ativo.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>

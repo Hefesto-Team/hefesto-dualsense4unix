@@ -100,6 +100,17 @@ class IController(ABC):
     def set_rumble(self, weak: int, strong: int) -> None: ...
 
     @abstractmethod
+    def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
+        """Define os 5 LEDs de player (indicadores abaixo do touchpad).
+
+        ``bits[0]`` corresponde ao LED 1 (extremo esquerdo), ``bits[4]`` ao LED 5
+        (extremo direito). O bitmask resultante é enviado diretamente ao hardware
+        via `pydualsense.light.playerNumber` (atributo `IntFlag` aceitando qualquer
+        valor de 5 bits), sem exigir PlayerID canônico.
+        """
+        ...
+
+    @abstractmethod
     def get_battery(self) -> int: ...
 
     @abstractmethod

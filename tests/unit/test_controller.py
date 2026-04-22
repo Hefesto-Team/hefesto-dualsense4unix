@@ -125,7 +125,7 @@ class TestPyDualSenseController:
     def test_require_sem_connect_falha(self) -> None:
         from hefesto.core.backend_pydualsense import PyDualSenseController
         inst = PyDualSenseController()
-        with pytest.raises(RuntimeError, match="nao inicializado"):
+        with pytest.raises(RuntimeError, match="não inicializado"):
             inst.read_state()
 
     def test_coerce_mode_conhecido(self) -> None:
