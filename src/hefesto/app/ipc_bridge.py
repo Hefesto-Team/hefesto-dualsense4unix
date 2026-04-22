@@ -175,8 +175,32 @@ def led_set(
 
 
 def rumble_set(weak: int, strong: int) -> bool:
+    """Aplica rumble persistente via IPC (BUG-RUMBLE-APPLY-IGNORED-01).
+
+    O daemon persiste (weak, strong) em daemon.config.rumble_active e
+    re-afirma a cada 200ms — vibração contínua até rumble_stop() ou
+    rumble_passthrough().
+    """
     try:
         _run_call("rumble.set", {"weak": weak, "strong": strong})
+        return True
+    except Exception:
+        return False
+
+
+def rumble_stop() -> bool:
+    """Para rumble e fixa estado (0, 0) para re-asserção (BUG-RUMBLE-APPLY-IGNORED-01)."""
+    try:
+        _run_call("rumble.stop", {})
+        return True
+    except Exception:
+        return False
+
+
+def rumble_passthrough(enabled: bool = True) -> bool:
+    """Libera controle de rumble para o jogo (BUG-RUMBLE-APPLY-IGNORED-01)."""
+    try:
+        _run_call("rumble.passthrough", {"enabled": bool(enabled)})
         return True
     except Exception:
         return False
@@ -208,7 +232,9 @@ __all__ = [
     "mouse_emulation_set",
     "profile_list",
     "profile_switch",
+    "rumble_passthrough",
     "rumble_set",
+    "rumble_stop",
     "trigger_set",
 ]
 

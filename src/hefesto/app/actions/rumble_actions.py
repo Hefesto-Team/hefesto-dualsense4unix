@@ -10,7 +10,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
-from hefesto.app.ipc_bridge import rumble_set
+from hefesto.app.ipc_bridge import rumble_set, rumble_stop
 
 
 class RumbleActionsMixin(WidgetAccessMixin):
@@ -43,8 +43,14 @@ class RumbleActionsMixin(WidgetAccessMixin):
         GLib.timeout_add(500, self._rumble_test_stop)
 
     def on_rumble_stop(self, _btn: Gtk.Button) -> None:
+        """Para rumble via rumble.stop (BUG-RUMBLE-APPLY-IGNORED-01).
+
+        Usa rumble_stop() em vez de rumble_set(0, 0) para que o daemon
+        persista (0, 0) e o poll loop re-afirme silêncio continuamente,
+        evitando que write HID residual reative os motores.
+        """
         self._set_scales(0, 0)
-        rumble_set(0, 0)
+        rumble_stop()
         self._toast_rumble("Rumble parado")
 
     # --- helpers ---
@@ -59,7 +65,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._get("rumble_strong_scale").set_value(strong)
 
     def _rumble_test_stop(self) -> bool:
-        rumble_set(0, 0)
+        # Teste de 500ms encerrado: para via rumble_stop para garantir persistência do zero.
+        rumble_stop()
         self._set_scales(0, 0)
         self._toast_rumble("Teste encerrado (motores zerados)")
         return False
