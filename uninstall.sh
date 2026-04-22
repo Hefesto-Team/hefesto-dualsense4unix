@@ -37,6 +37,15 @@ systemctl --user disable hefesto.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
+# BUG-MULTI-INSTANCE-01: garantia extra — mata GUIs e daemons órfãos que
+# possam ter escapado do systemctl stop (ex.: processo lançado fora do
+# systemd, ou residual de sessão anterior).
+pkill -TERM -f 'hefesto\.app\.main' 2>/dev/null || true
+pkill -TERM -f 'hefesto daemon start' 2>/dev/null || true
+sleep 2
+pkill -KILL -f 'hefesto\.app\.main' 2>/dev/null || true
+pkill -KILL -f 'hefesto daemon start' 2>/dev/null || true
+
 # Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
     log "desabilitando hefesto-gui-hotplug.service"

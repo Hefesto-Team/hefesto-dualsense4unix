@@ -72,6 +72,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 logger.debug("autostart_daemon_ja_ativo")
                 return
 
+            # BUG-MULTI-INSTANCE-01: se o pid file do daemon aponta para um
+            # processo vivo (ex.: daemon rodando fora do systemd via CLI),
+            # não disparar systemctl start — evita spawn duplicado.
+            if self._daemon_pid_alive():
+                logger.debug("autostart_daemon_vivo_via_pid_file")
+                return
+
             self._daemon_autostart_attempts += 1
             logger.info(
                 "autostart_disparando",
@@ -90,6 +97,26 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 )
 
         _get_executor().submit(_worker)
+
+    def _daemon_pid_alive(self) -> bool:
+        """Retorna True se o pid file do daemon aponta para processo vivo.
+
+        Usado pelo `ensure_daemon_running` para não duplicar spawn quando
+        o daemon foi lançado fora do systemd (BUG-MULTI-INSTANCE-01).
+        """
+        try:
+            from hefesto.utils.single_instance import is_alive
+            from hefesto.utils.xdg_paths import runtime_dir
+        except Exception:
+            return False
+        pid_file = runtime_dir() / "daemon.pid"
+        try:
+            raw = pid_file.read_text(encoding="ascii").strip()
+        except (FileNotFoundError, OSError):
+            return False
+        if not raw.isdigit():
+            return False
+        return is_alive(int(raw))
 
     def _is_service_active(self) -> str:
         """Retorna saída de `systemctl --user is-active hefesto.service`.

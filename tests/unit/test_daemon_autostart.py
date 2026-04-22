@@ -91,6 +91,15 @@ class _Host(DaemonActionsMixin):
         self._daemon_autostart_guard = False
         self._daemon_autostart_attempts = 0
 
+    def _daemon_pid_alive(self) -> bool:
+        """Isola o teste do pid file do sistema host (BUG-MULTI-INSTANCE-01).
+
+        Teste só exercita o fluxo systemd; cenário do pid file tem sua
+        própria suíte. Default False garante que os testes antigos continuem
+        cobrindo o caso 'systemd inactive + nenhum processo avulso'.
+        """
+        return False
+
 
 @pytest.fixture
 def sync_executor(monkeypatch: pytest.MonkeyPatch) -> _SyncExecutor:

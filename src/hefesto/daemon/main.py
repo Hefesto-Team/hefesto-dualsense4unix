@@ -33,6 +33,13 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
 
+    # BUG-MULTI-INSTANCE-01: "última vence" — encerra daemon predecessor
+    # (SIGTERM grace 2s, depois SIGKILL) antes de subir. Evita dois daemons
+    # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
+    from hefesto.utils.single_instance import acquire_or_takeover
+
+    acquire_or_takeover("daemon")
+
     controller = build_controller()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_POLL_HZ", "60")),

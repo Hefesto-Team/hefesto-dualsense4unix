@@ -1,11 +1,12 @@
 """HefestoApp GTK: janela principal + Notebook de abas + tray icon.
 
 A janela fecha pro tray (close-to-tray); daemon segue rodando.
-'Sair' no menu do tray encerra o processo de verdade.
+'Sair' no menu do tray encerra GUI + daemon (BUG-MULTI-INSTANCE-01).
 """
 # ruff: noqa: E402
 from __future__ import annotations
 
+import subprocess
 from typing import Any
 
 import gi
@@ -43,6 +44,11 @@ class HefestoApp(
     """Aplicação GTK do Hefesto."""
 
     def __init__(self) -> None:
+        # BUG-MULTI-INSTANCE-01: takeover — derruba GUI anterior antes de subir.
+        from hefesto.utils.single_instance import acquire_or_takeover
+
+        acquire_or_takeover("gui")
+
         self.builder = Gtk.Builder()
         if not MAIN_GLADE.exists():
             raise FileNotFoundError(f"main.glade não encontrado em {MAIN_GLADE}")
@@ -153,9 +159,23 @@ class HefestoApp(
         return False
 
     def quit_app(self) -> None:
+        """Encerra GUI e daemon (BUG-MULTI-INSTANCE-01).
+
+        'Sair' do menu do tray encerra tudo. 'Fechar janela' (X no header)
+        continua só escondendo pro tray via `on_window_delete_event`.
+        """
         self._quitting = True
         if self.tray is not None:
             self.tray.stop()
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "stop", "hefesto.service"],
+                capture_output=True,
+                timeout=5,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError) as exc:
+            logger.warning("quit_app_systemctl_falhou", erro=str(exc))
         Gtk.main_quit()
 
     def show_window(self) -> None:
