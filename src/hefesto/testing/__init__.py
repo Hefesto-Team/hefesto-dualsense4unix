@@ -9,6 +9,6 @@ fora do wrapper `run.sh` (ver sprint CHORE-FAKEPATH-01).
 
 from __future__ import annotations
 
-from hefesto.testing.fake_controller import FakeController, FakeControllerCommand
+from hefesto.testing.fake_controller import FakeController, FakeControllerCommand, FakeLedState
 
-__all__ = ["FakeController", "FakeControllerCommand"]
+__all__ = ["FakeController", "FakeControllerCommand", "FakeLedState"]

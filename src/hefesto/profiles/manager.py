@@ -85,6 +85,11 @@ class ProfileManager:
 
 
 def _to_led_settings(leds: LedsConfig) -> LedSettings:
+    """Converte `LedsConfig` (schema de perfil) em `LedSettings` (camada de hardware).
+
+    Propaga todos os campos relevantes: lightbar RGB, brightness_level
+    e player_leds. Armadilha A-06 resolvida para brightness (FEAT-LED-BRIGHTNESS-02).
+    """
     player_leds_tuple: tuple[bool, bool, bool, bool, bool] = (
         leds.player_leds[0],
         leds.player_leds[1],
@@ -92,7 +97,11 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
         leds.player_leds[3],
         leds.player_leds[4],
     )
-    return LedSettings(lightbar=leds.lightbar, player_leds=player_leds_tuple)
+    return LedSettings(
+        lightbar=leds.lightbar,
+        brightness_level=float(leds.lightbar_brightness),
+        player_leds=player_leds_tuple,
+    )
 
 
 __all__ = ["ProfileManager"]
