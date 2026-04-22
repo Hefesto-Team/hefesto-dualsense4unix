@@ -72,10 +72,68 @@ def cmd_trigger(
 @app.command("led")
 def cmd_led(
     color: str = typer.Option(..., help="Cor em hex (#FF0080) ou nome r,g,b."),
+    brightness: int | None = typer.Option(
+        None, "--brightness", min=0, max=100,
+        help="Luminosidade 0-100%% (depende de FEAT-LED-BRIGHTNESS-01 no daemon).",
+    ),
 ) -> None:
+    """Aplica cor (e luminosidade opcional) na lightbar.
+
+    FEAT-CLI-PARITY-01: tenta IPC `led.set` com brightness; fallback para
+    hardware direto aplicando escala linear no RGB (aproximação usada
+    enquanto FEAT-LED-BRIGHTNESS-01 não está mergeada).
+    """
     rgb = hex_to_rgb(color) if color.startswith("#") or len(color) == 6 else _parse_rgb_csv(color)
-    _apply_on_hardware(lambda c: c.set_led(rgb))
-    console.print(f"[green]lightbar: rgb={rgb}[/green]")
+
+    if _apply_via_ipc(rgb, brightness):
+        extra = f" brightness={brightness}%" if brightness is not None else ""
+        console.print(f"[green]lightbar (via daemon):[/green] rgb={rgb}{extra}")
+        return
+
+    # Fallback: aplica direto no hardware, escalando RGB quando brightness!=None.
+    final_rgb = _scale_rgb(rgb, brightness) if brightness is not None else rgb
+    _apply_on_hardware(lambda c: c.set_led(final_rgb))
+    if brightness is not None:
+        console.print(
+            f"[green]lightbar (hardware):[/green] rgb={rgb} brightness={brightness}%% "
+            f"-> rgb_aplicado={final_rgb}"
+        )
+    else:
+        console.print(f"[green]lightbar:[/green] rgb={rgb}")
+
+
+def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
+    """Tenta enviar `led.set` via IPC; retorna True em sucesso, False em falha.
+
+    O daemon atual ignora o parâmetro `brightness` (params extras são
+    descartados pelo handler). FEAT-LED-BRIGHTNESS-01 ligará a fiação.
+    """
+    from hefesto.app.ipc_bridge import _run_call
+    from hefesto.cli.ipc_client import IpcError
+
+    params: dict[str, object] = {"rgb": list(rgb)}
+    if brightness is not None:
+        params["brightness"] = int(brightness)
+    try:
+        _run_call("led.set", params, timeout=0.5)
+    except (IpcError, FileNotFoundError, ConnectionError, OSError):
+        return False
+    return True
+
+
+def _scale_rgb(rgb: tuple[int, int, int], brightness: int) -> tuple[int, int, int]:
+    """Escala linear do RGB pela luminosidade (0-100%%).
+
+    Aproximação usada quando o daemon não está rodando. Quando
+    FEAT-LED-BRIGHTNESS-01 estiver ativa, o caminho IPC cuida disso
+    sem distorcer a matiz.
+    """
+    factor = max(0, min(100, brightness)) / 100.0
+    return (
+        round(rgb[0] * factor),
+        round(rgb[1] * factor),
+        round(rgb[2] * factor),
+    )
 
 
 @app.command("rumble")

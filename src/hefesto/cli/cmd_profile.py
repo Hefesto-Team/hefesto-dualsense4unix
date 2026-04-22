@@ -5,13 +5,22 @@ em execução. Para "ativar" via daemon rodando, W4.2 adicionará uma
 implementação que envia `profile.switch` via IPC; por enquanto, o
 comando `activate` grava a marca de perfil ativo em um arquivo-estado
 local e, se houver hardware/daemon acessível, aplica direto.
+
+FEAT-CLI-PARITY-01: adiciona `apply --file <json>` (carrega JSON, valida
+via pydantic, salva e ativa via IPC/hardware) e `save <nome>
+--from-active` (clona o perfil marcado como ativo para um novo nome).
 """
 from __future__ import annotations
 
+import json as _json
+from pathlib import Path
+
 import typer
+from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
+from hefesto.cli.ipc_client import IpcError
 from hefesto.profiles.loader import (
     delete_profile,
     load_all_profiles,
@@ -145,6 +154,127 @@ def cmd_delete(
     except FileNotFoundError:
         console.print(f"[red]perfil nao encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
+
+
+@app.command("apply")
+def cmd_apply(
+    file: Path = typer.Option(  # noqa: B008
+        ..., "--file", "-f", exists=True, readable=True, dir_okay=False,
+        help="Caminho para um JSON de perfil (mesmo schema de `profile show`).",
+    ),
+    save: bool = typer.Option(
+        True, "--save/--no-save",
+        help="Se gravar o perfil no diretório XDG antes de ativar (default: sim).",
+    ),
+) -> None:
+    """Valida um JSON de perfil, salva no disco e ativa via daemon (se online).
+
+    Útil para aplicar drafts exportados pela GUI ou gerados por scripts.
+    Em `--no-save`, o perfil é validado mas NÃO persistido — apenas o
+    JSON de origem é usado, e a ativação requer que o perfil JÁ exista
+    no XDG com o mesmo `name` (caso contrário, exit 1).
+    """
+    try:
+        raw = _json.loads(file.read_text(encoding="utf-8"))
+    except (OSError, _json.JSONDecodeError) as exc:
+        console.print(f"[red]falha ao ler JSON:[/red] {exc}")
+        raise typer.Exit(code=1) from None
+
+    try:
+        profile = Profile.model_validate(raw)
+    except ValidationError as exc:
+        console.print(f"[red]JSON nao valida contra schema do perfil:[/red]\n{exc}")
+        raise typer.Exit(code=1) from None
+
+    if save:
+        path = save_profile(profile)
+        console.print(f"[green]perfil salvo:[/green] {path}")
+    else:
+        # Sem gravar: só garante que existe no XDG para o profile.switch pegar.
+        try:
+            load_profile(profile.name)
+        except FileNotFoundError:
+            console.print(
+                f"[red]--no-save exige perfil ja presente no XDG:[/red] "
+                f"{profile.name!r} nao encontrado."
+            )
+            raise typer.Exit(code=1) from None
+
+    _activate_via_ipc_or_fallback(profile.name)
+
+
+@app.command("save")
+def cmd_save(
+    name: str = typer.Argument(..., help="Nome do novo perfil a criar."),
+    from_active: bool = typer.Option(
+        False, "--from-active",
+        help="Clona o perfil ativo (marker XDG) com o novo nome.",
+    ),
+) -> None:
+    """Cria um perfil clonando o ativo (snapshot do que está em uso)."""
+    if not from_active:
+        console.print(
+            "[red]profile save requer --from-active[/red] "
+            "(clone de outro perfil pelo nome chega em sprint futura)."
+        )
+        raise typer.Exit(code=2)
+
+    active_name = read_active_marker()
+    if active_name is None:
+        console.print(
+            "[red]nenhum perfil ativo marcado.[/red] "
+            "Rode `hefesto profile activate <nome>` antes."
+        )
+        raise typer.Exit(code=1)
+
+    try:
+        source = load_profile(active_name)
+    except FileNotFoundError:
+        console.print(
+            f"[red]perfil ativo ausente no disco:[/red] {active_name}"
+        )
+        raise typer.Exit(code=1) from None
+
+    # Clone imutável via pydantic: serializa, troca o nome, revalida.
+    payload = source.model_dump(mode="json")
+    payload["name"] = name
+    try:
+        clone = Profile.model_validate(payload)
+    except ValidationError as exc:
+        console.print(f"[red]falha ao clonar perfil:[/red] {exc}")
+        raise typer.Exit(code=1) from None
+
+    path = save_profile(clone)
+    console.print(
+        f"[green]perfil clonado:[/green] {active_name} -> {name} ({path})"
+    )
+
+
+def _activate_via_ipc_or_fallback(name: str) -> None:
+    """Tenta `profile.switch` no daemon; em falha, grava marker e avisa.
+
+    Mantido em função isolada para reuso em `apply`. Mensagens claras
+    (sem traceback) para todos os modos de falha.
+    """
+    # Import adiado para não pagar custo de asyncio/socket em `profile list`.
+    from hefesto.app.ipc_bridge import _run_call
+
+    try:
+        _run_call("profile.switch", {"name": name}, timeout=1.0)
+        console.print(f"[green]perfil ativado via daemon:[/green] {name}")
+        _write_active_marker(name)
+        return
+    except IpcError as exc:
+        console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
+    except (FileNotFoundError, ConnectionError, OSError):
+        console.print(
+            "[yellow]daemon offline — gravando marker local apenas.[/yellow]"
+        )
+
+    _write_active_marker(name)
+    console.print(
+        f"[dim]marker local atualizado: proxima inicializacao do daemon usara '{name}'[/dim]"
+    )
 
 
 def _describe_match(profile: Profile) -> str:
