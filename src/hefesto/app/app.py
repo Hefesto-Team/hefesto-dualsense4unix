@@ -2,11 +2,19 @@
 
 A janela fecha pro tray (close-to-tray); daemon segue rodando.
 'Sair' no menu do tray encerra GUI + daemon (BUG-MULTI-INSTANCE-01).
+
+Single-instance (BUG-TRAY-SINGLE-FLASH-01): modelo "primeira vence". Se uma
+GUI já está rodando, a nova invocação traz a existente ao foco (xdotool ou
+SIGUSR1) e sai com exit 0 — evita o efeito "abre e fecha" causado pela race
+de dois eventos udev ADD em <200ms.
 """
 # ruff: noqa: E402
 from __future__ import annotations
 
+import os
+import signal
 import subprocess
+import sys
 from typing import Any
 
 import gi
@@ -31,6 +39,50 @@ from hefesto.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _activate_window_by_pid(predecessor_pid: int) -> None:
+    """Traz a janela do predecessor ao foco via xdotool; fallback via SIGUSR1.
+
+    Tenta localizar o WID da janela com título contendo "Hefesto" associado ao
+    `predecessor_pid`. Se encontrado, usa `xdotool windowactivate`. Caso xdotool
+    não esteja disponível ou não retorne WID, envia SIGUSR1 ao predecessor — a
+    GUI instala um handler que chama `GLib.idle_add(self.show_window)`.
+    """
+    wid: str | None = None
+    try:
+        result = subprocess.run(
+            ["xdotool", "search", "--pid", str(predecessor_pid), "--name", "Hefesto"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            wids = result.stdout.strip().splitlines()
+            if wids:
+                wid = wids[0]
+    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+        logger.warning("activate_window_xdotool_search_falhou", err=str(exc))
+
+    if wid:
+        try:
+            subprocess.run(
+                ["xdotool", "windowactivate", "--sync", wid],
+                capture_output=True,
+                timeout=2,
+                check=False,
+            )
+            logger.info("activate_window_xdotool_ok", wid=wid, pid=predecessor_pid)
+            return
+        except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired) as exc:
+            logger.warning("activate_window_xdotool_activate_falhou", err=str(exc))
+
+    # Fallback: SIGUSR1 — a GUI escuta e faz show_window via GLib.idle_add.
+    try:
+        os.kill(predecessor_pid, signal.SIGUSR1)
+        logger.info("activate_window_sigusr1_enviado", pid=predecessor_pid)
+    except (ProcessLookupError, PermissionError) as exc:
+        logger.warning("activate_window_sigusr1_falhou", pid=predecessor_pid, err=str(exc))
+
+
 class HefestoApp(
     StatusActionsMixin,
     TriggersActionsMixin,
@@ -44,10 +96,20 @@ class HefestoApp(
     """Aplicação GTK do Hefesto."""
 
     def __init__(self) -> None:
-        # BUG-MULTI-INSTANCE-01: takeover — derruba GUI anterior antes de subir.
-        from hefesto.utils.single_instance import acquire_or_takeover
+        # BUG-TRAY-SINGLE-FLASH-01: "primeira vence" — traz predecessor ao foco
+        # e sai limpo em vez de matá-lo (evita efeito "abre e fecha" no tray).
+        from hefesto.utils.single_instance import acquire_or_bring_to_front
 
-        acquire_or_takeover("gui")
+        pid = acquire_or_bring_to_front("gui", bring_to_front_cb=_activate_window_by_pid)
+        if pid is None:
+            # Predecessor vivo encontrado e trazido ao foco — sair limpo.
+            sys.exit(0)
+
+        # Instala handler SIGUSR1: pedido externo de "mostrar janela".
+        # Usa GLib.idle_add para garantir execução na thread GTK principal.
+        from gi.repository import GLib
+
+        signal.signal(signal.SIGUSR1, lambda _sig, _frame: GLib.idle_add(self.show_window))
 
         self.builder = Gtk.Builder()
         if not MAIN_GLADE.exists():
