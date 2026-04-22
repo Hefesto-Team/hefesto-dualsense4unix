@@ -140,6 +140,8 @@ def _make_profiles_instance(pending_brightness: float = 1.0) -> ProfilesActionsM
     instance = ProfilesActionsMixin.__new__(ProfilesActionsMixin)
     instance._pending_brightness = pending_brightness  # type: ignore[attr-defined]
     instance._profiles_store = MagicMock()  # type: ignore[attr-defined]
+    # modo simples por padrão nos testes
+    instance._mode_advanced = False  # type: ignore[attr-defined]
     return instance
 
 
@@ -182,10 +184,12 @@ def test_build_profile_inclui_pending_brightness(isolated_profiles_dir: Path) ->
         m = MagicMock()
         if widget_id == "profile_name_entry":
             m.get_text.return_value = "meu_perfil"
-        elif widget_id == "profile_priority_spin":
+        elif widget_id == "profile_priority_scale":
             m.get_value.return_value = 5.0
-        elif widget_id == "profile_match_type_combo":
-            m.get_active_id.return_value = "any"
+        elif widget_id == "profile_radio_any":
+            m.get_active.return_value = True
+        elif widget_id == "profile_simple_custom_name":
+            m.get_text.return_value = ""
         return m
 
     instance._get = fake_get  # type: ignore[attr-defined]
@@ -202,10 +206,12 @@ def test_build_profile_sem_existente_usa_pending(isolated_profiles_dir: Path) ->
         m = MagicMock()
         if widget_id == "profile_name_entry":
             m.get_text.return_value = "perfil_novo"
-        elif widget_id == "profile_priority_spin":
+        elif widget_id == "profile_priority_scale":
             m.get_value.return_value = 0.0
-        elif widget_id == "profile_match_type_combo":
-            m.get_active_id.return_value = "any"
+        elif widget_id == "profile_radio_any":
+            m.get_active.return_value = True
+        elif widget_id == "profile_simple_custom_name":
+            m.get_text.return_value = ""
         return m
 
     instance._get = fake_get  # type: ignore[attr-defined]
