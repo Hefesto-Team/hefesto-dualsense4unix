@@ -31,12 +31,14 @@ daemon_app = typer.Typer(
 app.add_typer(daemon_app, name="daemon")
 
 from hefesto.cli.cmd_emulate import app as emulate_app  # noqa: E402
+from hefesto.cli.cmd_mouse import app as mouse_app  # noqa: E402
 from hefesto.cli.cmd_profile import app as profile_app  # noqa: E402
 from hefesto.cli.cmd_test import app as test_app  # noqa: E402
 
 app.add_typer(profile_app, name="profile")
 app.add_typer(test_app, name="test")
 app.add_typer(emulate_app, name="emulate")
+app.add_typer(mouse_app, name="mouse")
 
 
 @app.command()
@@ -58,11 +60,22 @@ def battery() -> None:
 @app.command()
 def led(
     color: str = typer.Option(..., help="Hex (#RRGGBB) ou CSV R,G,B."),
+    brightness: int | None = typer.Option(
+        None, "--brightness", min=0, max=100,
+        help="Luminosidade 0-100%% (depende de FEAT-LED-BRIGHTNESS-01 no daemon).",
+    ),
 ) -> None:
-    """Define a cor da lightbar direto no controle."""
+    """Define a cor (e, opcionalmente, luminosidade) da lightbar.
+
+    - Sem daemon rodando: aplica direto no hardware (brightness escala
+      linearmente o RGB como aproximação — 100%% = cor pura, 0%% = apagado).
+    - Com daemon rodando: envia `led.set` via IPC. Quando FEAT-LED-BRIGHTNESS-01
+      estiver mergeada, o daemon honrará o parâmetro `brightness` sem
+      distorcer o RGB.
+    """
     from hefesto.cli.cmd_test import cmd_led
 
-    cmd_led(color=color)
+    cmd_led(color=color, brightness=brightness)
 
 
 @app.command()

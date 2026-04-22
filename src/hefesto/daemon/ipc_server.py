@@ -9,7 +9,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     led.set              {rgb}                 -> {status}
     rumble.set           {weak, strong}        -> {status, weak, strong}
     daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
-    daemon.state_full    {}          -> {... estado completo pra GUI 20 Hz}
+    daemon.state_full    {}          -> {... estado + mouse_emulation se daemon expõe}
     controller.list      {}          -> {controllers: [{connected, transport}]}
     daemon.reload        {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
@@ -304,7 +304,13 @@ class IpcServer:
         }
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Estado completo pra GUI consumir a 20Hz."""
+        """Estado completo pra GUI consumir a 20Hz.
+
+        FEAT-CLI-PARITY-01: inclui bloco `mouse_emulation` com enabled/speed/
+        scroll_speed para o subcomando `hefesto mouse status` consultar via IPC.
+        Quando `self.daemon` for None (contextos de teste ou modos legados),
+        o bloco é omitido e o cliente trata como "estado indisponível".
+        """
         snap = self.store.snapshot()
         controller = snap.controller
 
@@ -318,7 +324,7 @@ class IpcServer:
         except Exception:
             buttons = []
 
-        return {
+        result: dict[str, Any] = {
             "connected": bool(controller and controller.connected),
             "transport": controller.transport if controller else None,
             "active_profile": snap.active_profile,
@@ -332,6 +338,18 @@ class IpcServer:
             "buttons": buttons,
             "counters": snap.counters,
         }
+
+        # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
+        # dono da IPC tiver config acessível (FEAT-CLI-PARITY-01).
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if daemon_cfg is not None:
+            result["mouse_emulation"] = {
+                "enabled": bool(getattr(daemon_cfg, "mouse_emulation_enabled", False)),
+                "speed": int(getattr(daemon_cfg, "mouse_speed", 6)),
+                "scroll_speed": int(getattr(daemon_cfg, "mouse_scroll_speed", 1)),
+            }
+
+        return result
 
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
         weak = params.get("weak")
