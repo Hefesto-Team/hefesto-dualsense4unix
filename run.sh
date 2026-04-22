@@ -16,7 +16,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
 if [[ ! -d .venv ]]; then
-    echo "erro: .venv/ nao encontrado. Rode ./scripts/dev_bootstrap.sh primeiro."
+    echo "erro: .venv/ não encontrado. Rode ./scripts/dev_bootstrap.sh primeiro."
     exit 1
 fi
 # shellcheck disable=SC1091
@@ -55,9 +55,11 @@ if [[ "$MODE" == "smoke" ]]; then
     # Isola o socket IPC do smoke para não colidir com o daemon de produção
     # (systemd). Ver docs/process/sprints/BUG-IPC-01.md e VALIDATOR_BRIEF A-03.
     export HEFESTO_IPC_SOCKET_NAME="${HEFESTO_IPC_SOCKET_NAME:-hefesto-smoke.sock}"
-    echo "[smoke] iniciando daemon com FakeController transport=$TRANSPORT por ${SMOKE_DURATION}s..."
-    echo "[smoke] socket IPC isolado: $HEFESTO_IPC_SOCKET_NAME"
-    python3 - <<PY
+    SMOKE_LOG="/tmp/hefesto_smoke_${TRANSPORT}.log"
+    echo "[smoke] iniciando daemon com FakeController transport=$TRANSPORT por ${SMOKE_DURATION}s..." | tee "$SMOKE_LOG"
+    echo "[smoke] socket IPC isolado: $HEFESTO_IPC_SOCKET_NAME" | tee -a "$SMOKE_LOG"
+    echo "[smoke] log em: $SMOKE_LOG" | tee -a "$SMOKE_LOG"
+    python3 - <<PY 2>&1 | tee -a "$SMOKE_LOG"
 import asyncio
 from hefesto.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto.daemon.main import build_controller
@@ -77,7 +79,7 @@ async def main():
 
 asyncio.run(main())
 PY
-    echo "[smoke] concluido."
+    echo "[smoke] concluido." | tee -a "$SMOKE_LOG"
     exit 0
 fi
 
@@ -87,4 +89,4 @@ fi
 
 exec hefesto daemon start --foreground
 
-# "Faca o pequeno bem que esta proximo." — Tolstoi
+# "Faça o pequeno bem que está próximo." — Tolstoi
