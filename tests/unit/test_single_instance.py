@@ -1,10 +1,12 @@
-"""Testes de single_instance (BUG-MULTI-INSTANCE-01).
+"""Testes de single_instance (BUG-MULTI-INSTANCE-01 e BUG-TRAY-SINGLE-FLASH-01).
 
 Cobre:
   - `acquire_or_takeover` cria pid file e adquire flock.
   - `is_alive` reporta ESRCH como morto.
   - Takeover envia SIGTERM ao predecessor (via fork) e vence o lock.
   - Pid órfão (processo já morto) é sobrescrito sem SIGTERM.
+  - `acquire_or_bring_to_front` chama callback com PID do predecessor, não envia
+    SIGTERM e retorna None quando predecessor permanece vivo.
 """
 from __future__ import annotations
 
@@ -103,3 +105,62 @@ def test_takeover_mata_predecessor(isolated_runtime: Path) -> None:
 def test_release_sem_acquire_e_noop(isolated_runtime: Path) -> None:
     # Não deve levantar.
     single_instance.release("nao_adquirido")
+
+
+def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
+    """Filho adquire lock; pai detecta predecessor vivo, chama callback e retorna None.
+
+    Verifica:
+      - O callback é invocado com o PID correto do filho (predecessor).
+      - O filho NÃO recebe SIGTERM (permanece vivo após acquire_or_bring_to_front).
+      - O retorno do pai é None (indica que o predecessor foi preservado).
+    """
+    # Pipe para o filho sinalizar que adquiriu o lock.
+    pipe_r, pipe_w = os.pipe()
+
+    child_pid = os.fork()
+    if child_pid == 0:
+        # Filho: adquire o lock, sinaliza via pipe e aguarda ser morto pelo pai.
+        os.close(pipe_r)
+        try:
+            single_instance.acquire_or_takeover("gui-btf")
+            # Sinaliza que o lock foi adquirido.
+            os.write(pipe_w, b"ok")
+            os.close(pipe_w)
+            # Reinstala SIGTERM default e aguarda — pai deve NÃO matar via bring-to-front.
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            time.sleep(30)
+        finally:
+            os._exit(0)
+
+    # Pai: aguarda sinal do filho.
+    os.close(pipe_w)
+    ready = os.read(pipe_r, 2)
+    os.close(pipe_r)
+    assert ready == b"ok", "filho não sinalizou prontidão"
+
+    callback_pids: list[int] = []
+
+    def _callback(pid: int) -> None:
+        callback_pids.append(pid)
+        # Não faz nada além de registrar — simula xdotool ausente.
+
+    result = single_instance.acquire_or_bring_to_front(
+        "gui-btf",
+        bring_to_front_cb=_callback,
+        fallback_takeover_after_sec=0.5,  # prazo curto para o teste ser rápido
+    )
+
+    # O filho deve ainda estar vivo (não recebeu SIGTERM).
+    assert single_instance.is_alive(child_pid), "predecessor morreu — bring-to-front errou"
+
+    # Callback deve ter sido chamado com o PID do filho.
+    assert callback_pids == [child_pid], f"callback não chamado corretamente: {callback_pids}"
+
+    # Retorno deve ser None — indica que o predecessor foi preservado.
+    assert result is None, f"esperado None, obtido {result}"
+
+    # Encerra o filho limpo após o teste.
+    os.kill(child_pid, signal.SIGKILL)
+    os.waitpid(child_pid, 0)
+    single_instance.release("gui-btf")

@@ -1,19 +1,30 @@
-"""Lock de instância única com modelo "última vence" (BUG-MULTI-INSTANCE-01).
+"""Lock de instância única — dois modelos disponíveis.
 
-Uma nova invocação de daemon ou GUI detecta o PID registrado no pid file,
-envia `SIGTERM` ao predecessor (grace 2s, poll 50ms), escala para `SIGKILL`
-se ainda vivo, e então adquire `fcntl.flock(LOCK_EX | LOCK_NB)` escrevendo
-o próprio PID. O file descriptor é mantido aberto pelo processo — quando o
-processo morre, o kernel libera o flock automaticamente.
+BUG-MULTI-INSTANCE-01: modelo "última vence" (`acquire_or_takeover`).
+  Nova invocação detecta o PID registrado no pid file, envia `SIGTERM` ao
+  predecessor (grace 2s, poll 50ms), escala para `SIGKILL` se ainda vivo, e
+  então adquire `fcntl.flock(LOCK_EX | LOCK_NB)` escrevendo o próprio PID.
+  Usado pelo daemon — ali "última vence" é desejado porque corrige disputas
+  de hardware (cursor errático, dois uinput simultâneos).
 
-Motivação: múltiplos daemons concorrentes criam devices `uinput` duplicados
-e disputam `/dev/hidraw*`, causando cursor errático quando o toggle Mouse é
-ligado. Múltiplas GUIs chamam `ensure_daemon_running()` em paralelo disparando
-N `systemctl start` simultâneos. Ver armadilha A-10 em VALIDATOR_BRIEF.md.
+BUG-TRAY-SINGLE-FLASH-01: modelo "primeira vence" (`acquire_or_bring_to_front`).
+  Novo processo detecta predecessor vivo, chama `bring_to_front_cb(pid)` para
+  trazer a janela ao foco e retorna None — o caller deve chamar `sys.exit(0)`.
+  Se o predecessor não responder dentro de `fallback_takeover_after_sec`, aplica
+  takeover como fallback (evita GUI zumbi travada). Usado pela GUI GTK.
+
+Motivação: udev ADD dispara `hefesto-gui-hotplug.service` duas vezes em <200ms
+(subsystem usb + hidraw/filhos). Com o modelo "última vence" a GUI2 matava a
+GUI1, causando o efeito "abre e fecha" no tray. Ver armadilha A-11 em
+VALIDATOR_BRIEF.md.
+
+O fd permanece aberto em `_HELD_LOCKS[name]` enquanto o processo vive. Em crash,
+o kernel libera o flock automaticamente.
 
 API:
-    pid = acquire_or_takeover("daemon")   # retorna PID do vencedor (os.getpid)
-    alive = is_alive(pid)                 # predicado leve
+    pid = acquire_or_takeover("daemon")                     # daemon — última vence
+    pid = acquire_or_bring_to_front("gui", cb)              # gui — primeira vence
+    alive = is_alive(pid)                                   # predicado leve
 """
 from __future__ import annotations
 
@@ -23,6 +34,7 @@ import fcntl
 import os
 import signal
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from hefesto.utils.logging_config import get_logger
@@ -157,6 +169,114 @@ def acquire_or_takeover(name: str) -> int:
     return own_pid
 
 
+def acquire_or_bring_to_front(
+    name: str,
+    bring_to_front_cb: Callable[[int], None],
+    fallback_takeover_after_sec: float = 2.0,
+) -> int | None:
+    """Adquire o lock para `name` com modelo "primeira vence".
+
+    Se há predecessor vivo:
+      1. Chama `bring_to_front_cb(predecessor_pid)` para trazer a janela ao foco.
+      2. Aguarda até `fallback_takeover_after_sec` para confirmar que o predecessor
+         respondeu (ainda vivo). Se ainda vivo após esse prazo, considera que o
+         callback cumpriu seu papel — retorna None.
+      3. Se o predecessor morreu durante a espera (zumbi/crash), aplica takeover
+         como fallback, adquire o lock e retorna `os.getpid()`.
+
+    Se não há predecessor vivo (ou pid file ausente/órfão):
+      Adquire o lock normalmente e retorna `os.getpid()`.
+
+    Retorna:
+        `os.getpid()` se este processo se tornou o detentor do lock.
+        `None` se um predecessor vivo foi encontrado e trazido ao foco —
+        o caller deve chamar `sys.exit(0)`.
+
+    Motivação (armadilha A-11): udev ADD dispara a unit `hefesto-gui-hotplug`
+    duas vezes em <200ms. Com "última vence" a GUI2 matava a GUI1 causando
+    efeito visual de "abre e fecha" no tray. Ver BUG-TRAY-SINGLE-FLASH-01.
+    """
+    path = _pid_file(name)
+    predecessor = _read_existing_pid(path)
+
+    if predecessor is not None and predecessor != os.getpid():
+        if is_alive(predecessor):
+            logger.info(
+                "single_instance_bring_to_front",
+                name=name,
+                predecessor_pid=predecessor,
+            )
+            try:
+                bring_to_front_cb(predecessor)
+            except Exception as exc:  # callback não deve travar o fluxo
+                logger.warning(
+                    "single_instance_bring_to_front_cb_falhou",
+                    pid=predecessor,
+                    err=str(exc),
+                )
+
+            # Aguarda `fallback_takeover_after_sec` verificando se predecessor
+            # ainda responde. Se ainda vivo, retorna None (callback cumpriu papel).
+            deadline = time.monotonic() + fallback_takeover_after_sec
+            while time.monotonic() < deadline:
+                if not is_alive(predecessor):
+                    logger.warning(
+                        "single_instance_predecessor_morreu_durante_bring_to_front",
+                        pid=predecessor,
+                    )
+                    break
+                time.sleep(SIGTERM_POLL_INTERVAL_SEC)
+            else:
+                # Predecessor ainda vivo após prazo — callback funcionou.
+                logger.info(
+                    "single_instance_predecessor_vivo_saindo_limpo",
+                    name=name,
+                    predecessor_pid=predecessor,
+                )
+                return None
+
+            # Fallback: predecessor morreu — adquire o lock abaixo.
+            logger.info("single_instance_fallback_takeover", name=name, pid=predecessor)
+        else:
+            logger.debug("single_instance_pid_orfao", name=name, pid_antigo=predecessor)
+
+    # Sem predecessor vivo: adquire o lock normalmente.
+    fd = os.open(str(path), os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno in (errno.EWOULDBLOCK, errno.EAGAIN):
+                deadline = time.monotonic() + SIGTERM_GRACE_SEC
+                while time.monotonic() < deadline:
+                    time.sleep(SIGTERM_POLL_INTERVAL_SEC)
+                    try:
+                        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        break
+                    except OSError:
+                        continue
+                else:
+                    os.close(fd)
+                    raise RuntimeError(
+                        f"Não foi possível adquirir lock {name} (bring-to-front fallback)"
+                    ) from exc
+            else:
+                os.close(fd)
+                raise
+
+        own_pid = os.getpid()
+        os.ftruncate(fd, 0)
+        os.write(fd, f"{own_pid}\n".encode("ascii"))
+        os.fsync(fd)
+    except Exception:
+        os.close(fd)
+        raise
+
+    _HELD_LOCKS[name] = fd
+    logger.info("single_instance_adquirido", name=name, pid=own_pid)
+    return own_pid
+
+
 def release(name: str) -> None:
     """Libera o lock explicitamente (útil para testes). No-op se ausente."""
     fd = _HELD_LOCKS.pop(name, None)
@@ -169,6 +289,7 @@ def release(name: str) -> None:
 
 __all__ = [
     "SIGTERM_GRACE_SEC",
+    "acquire_or_bring_to_front",
     "acquire_or_takeover",
     "is_alive",
     "release",
