@@ -2,10 +2,15 @@
 # install.sh — instala Hefesto completo no ambiente do usuário.
 #
 # Flags:
-#   --no-udev        pula udev rules (sudo) — útil em CI.
-#   --yes, -y        responde sim a todos os prompts sudo.
-#   --no-systemd     pula install + start da unit do daemon.
-#   --no-hotplug-gui pula a unit que abre a GUI ao plugar o controle.
+#   --no-udev             pula udev rules (sudo) — útil em CI.
+#   --yes, -y             responde sim a todos os prompts sudo.
+#   --no-systemd          pula a cópia da unit do daemon.
+#   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
+#   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
+#   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
+#
+# Default: unit do daemon é COPIADA mas NÃO habilitada. Hotplug-GUI idem.
+# Opt-in via prompt interativo ou flags acima (ver BUG-MULTI-INSTANCE-01).
 #
 # Reexecutável (idempotente).
 
@@ -24,16 +29,20 @@ readonly LAUNCHER="${BIN_DIR}/hefesto-gui"
 SKIP_UDEV=0
 SKIP_SYSTEMD=0
 SKIP_HOTPLUG_GUI=0
+ENABLE_AUTOSTART=0
+ENABLE_HOTPLUG_GUI=0
 AUTO_YES=0
 
 for arg in "$@"; do
     case "$arg" in
-        --no-udev)        SKIP_UDEV=1 ;;
-        --no-systemd)     SKIP_SYSTEMD=1 ;;
-        --no-hotplug-gui) SKIP_HOTPLUG_GUI=1 ;;
-        --yes|-y)         AUTO_YES=1 ;;
+        --no-udev)            SKIP_UDEV=1 ;;
+        --no-systemd)         SKIP_SYSTEMD=1 ;;
+        --no-hotplug-gui)     SKIP_HOTPLUG_GUI=1 ;;
+        --enable-autostart)   ENABLE_AUTOSTART=1 ;;
+        --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
+        --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -50,14 +59,16 @@ warn()  { printf '      aviso: %s\n' "$*"; }
 die()   { printf '\nERRO: %s\n' "$*" >&2; exit 1; }
 
 ask_yn() {
-    # ask_yn "pergunta" auto_yes_var → seta $REPLY como "y" ou "n"
-    local prompt="$1" auto="$2"
+    # ask_yn "pergunta" auto_yes_var [default=y] → seta $REPLY como "y" ou "n"
+    local prompt="$1" auto="$2" default="${3:-y}"
     if [[ "$auto" -eq 1 ]]; then
-        REPLY="y"; return
+        REPLY="$default"; return
     fi
-    read -r -n 1 -p "      $prompt [Y/n] " REPLY
+    local indicator
+    if [[ "$default" == "y" ]]; then indicator="[Y/n]"; else indicator="[y/N]"; fi
+    read -r -n 1 -p "      $prompt $indicator " REPLY
     echo
-    REPLY="${REPLY:-y}"
+    REPLY="${REPLY:-$default}"
 }
 
 run_apt() {
@@ -225,18 +236,30 @@ ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
 ok
 
 # ---------------------------------------------------------------------------
-# 6. Daemon systemd --user
+# 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
 step "6/7" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
 else
-    if "${VENV_DIR}/bin/hefesto" daemon install-service >/dev/null 2>&1; then
-        if systemctl --user restart hefesto.service >/dev/null 2>&1; then
-            printf '      daemon ativo\n'
+    # Decide se habilita auto-start ANTES de chamar o CLI.
+    enable_daemon=0
+    if [[ "${ENABLE_AUTOSTART}" -eq 1 ]]; then
+        enable_daemon=1
+    else
+        ask_yn "habilitar auto-start do daemon no boot?" "${AUTO_YES}" "n"
+        [[ "${REPLY,,}" =~ ^y ]] && enable_daemon=1
+    fi
+
+    cli_args=("install-service")
+    [[ "${enable_daemon}" -eq 1 ]] && cli_args+=("--enable")
+
+    if "${VENV_DIR}/bin/hefesto" daemon "${cli_args[@]}" >/dev/null 2>&1; then
+        if [[ "${enable_daemon}" -eq 1 ]]; then
+            printf '      unit instalada + auto-start habilitado\n'
         else
-            warn "restart falhou — rode: systemctl --user start hefesto.service"
+            printf '      unit instalada (auto-start desativado — subir só quando abrir a GUI)\n'
         fi
     else
         warn "falha ao instalar unit (sem systemd ou assets ausente)"
@@ -244,31 +267,43 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Hotplug-gui unit
+# 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
 step "7/7" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
 else
-    readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
-    readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
-    readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
-
-    if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
-        warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
+    enable_hotplug=0
+    if [[ "${ENABLE_HOTPLUG_GUI}" -eq 1 ]]; then
+        enable_hotplug=1
     else
-        mkdir -p "${USER_UNIT_DIR}"
-        cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
-        if command -v systemctl >/dev/null 2>&1; then
-            systemctl --user daemon-reload >/dev/null 2>&1 || true
-            if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
-                printf '      habilitado\n'
-            else
-                warn "enable falhou — habilite manualmente"
-            fi
+        ask_yn "abrir GUI automaticamente ao plugar DualSense?" "${AUTO_YES}" "n"
+        [[ "${REPLY,,}" =~ ^y ]] && enable_hotplug=1
+    fi
+
+    if [[ "${enable_hotplug}" -eq 0 ]]; then
+        printf '      desativado (abrir GUI manualmente pelo menu de aplicativos)\n'
+    else
+        readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
+        readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
+        readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
+
+        if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
+            warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
         else
-            warn "systemctl ausente — unit copiada mas não habilitada"
+            mkdir -p "${USER_UNIT_DIR}"
+            cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
+            if command -v systemctl >/dev/null 2>&1; then
+                systemctl --user daemon-reload >/dev/null 2>&1 || true
+                if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
+                    printf '      habilitado\n'
+                else
+                    warn "enable falhou — habilite manualmente"
+                fi
+            else
+                warn "systemctl ausente — unit copiada mas não habilitada"
+            fi
         fi
     fi
 fi

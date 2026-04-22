@@ -48,7 +48,10 @@ def test_find_assets_dir_retorna_path_existente():
     assert (assets / SERVICE_NORMAL).exists()
 
 
-def test_install_copia_unit(isolated_systemd_user: Path, dummy_systemctl: list):
+def test_install_copia_unit_sem_enable_por_default(
+    isolated_systemd_user: Path, dummy_systemctl: list
+):
+    """BUG-MULTI-INSTANCE-01: auto-start é opt-in (enable=False por padrão)."""
     installer = ServiceInstaller()
     dst = installer.install()
     assert dst.name == SERVICE_NORMAL
@@ -57,6 +60,17 @@ def test_install_copia_unit(isolated_systemd_user: Path, dummy_systemctl: list):
 
     cmds = [" ".join(c) for c in dummy_systemctl]
     assert any("daemon-reload" in c for c in cmds)
+    assert not any(f"enable {SERVICE_NORMAL}" in c for c in cmds)
+
+
+def test_install_enable_opt_in(
+    isolated_systemd_user: Path, dummy_systemctl: list
+):
+    """enable=True habilita auto-start no boot."""
+    installer = ServiceInstaller()
+    installer.install(enable=True)
+
+    cmds = [" ".join(c) for c in dummy_systemctl]
     assert any(f"enable {SERVICE_NORMAL}" in c for c in cmds)
 
 

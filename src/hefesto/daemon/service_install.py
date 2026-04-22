@@ -61,7 +61,13 @@ class ServiceInstaller:
 
     dry_run: bool = False
 
-    def install(self) -> Path:
+    def install(self, *, enable: bool = False) -> Path:
+        """Copia a unit para o diretório do usuário.
+
+        `enable=True` habilita auto-start no boot (BUG-MULTI-INSTANCE-01: opt-in).
+        Default é só copiar e fazer daemon-reload — o usuário decide explicitamente
+        se quer que o daemon suba no login.
+        """
         assets = find_assets_dir()
         src = assets / SERVICE_NORMAL
         if not src.exists():
@@ -73,7 +79,9 @@ class ServiceInstaller:
         logger.info("service_copied", src=str(src), dst=str(dst))
 
         self._systemctl("daemon-reload")
-        self._systemctl("enable", SERVICE_NORMAL)
+        if enable:
+            self._systemctl("enable", SERVICE_NORMAL)
+            logger.info("service_enabled", unit=SERVICE_NORMAL)
 
         return dst
 

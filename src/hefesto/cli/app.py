@@ -125,13 +125,30 @@ def daemon_start(
 
 
 @daemon_app.command("install-service")
-def daemon_install_service() -> None:
-    """Copia a unit systemd --user `hefesto.service` e habilita."""
+def daemon_install_service(
+    enable: bool = typer.Option(
+        False,
+        "--enable",
+        help="Habilitar auto-start no boot (WantedBy=graphical-session.target).",
+    ),
+) -> None:
+    """Copia a unit systemd --user `hefesto.service`.
+
+    Por padrão NÃO habilita auto-start (opt-in explícito via `--enable`).
+    Ver BUG-MULTI-INSTANCE-01.
+    """
     from hefesto.daemon.service_install import ServiceInstaller
 
     installer = ServiceInstaller()
-    dst = installer.install()
+    dst = installer.install(enable=enable)
     typer.echo(f"unit instalada: {dst}")
+    if enable:
+        typer.echo("auto-start habilitado (systemctl --user enable hefesto.service)")
+    else:
+        typer.echo(
+            "auto-start NÃO habilitado — use "
+            "'systemctl --user enable hefesto.service' se desejar"
+        )
 
 
 @daemon_app.command("uninstall-service")
