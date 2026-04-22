@@ -124,15 +124,17 @@ class StatusActionsMixin(WidgetAccessMixin):
             return
 
         grid = Gtk.Grid()
-        grid.set_row_spacing(4)
-        grid.set_column_spacing(4)
+        grid.set_row_spacing(8)
+        grid.set_column_spacing(8)
         grid.set_halign(Gtk.Align.CENTER)
         grid.set_valign(Gtk.Align.CENTER)
 
         for row, linha in enumerate(GRID_BOTOES):
             for col, nome in enumerate(linha):
                 tooltip = BUTTON_GLYPH_LABELS.get(nome, nome)
-                glyph = ButtonGlyph(nome, size=28, tooltip_pt_br=tooltip)
+                # Tamanho 40px equilibra a grade com os sticks 120x120
+                # (layout de 3 colunas homogêneas).
+                glyph = ButtonGlyph(nome, size=40, tooltip_pt_br=tooltip)
                 self._button_glyphs[nome] = glyph
                 grid.attach(glyph, col, row, 1, 1)
 
