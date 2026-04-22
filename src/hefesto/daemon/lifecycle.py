@@ -18,7 +18,7 @@ import signal
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from hefesto.core.controller import IController
 from hefesto.core.events import EventBus, EventTopic
@@ -49,6 +49,12 @@ class DaemonConfig:
     mouse_emulation_enabled: bool = False
     mouse_speed: int = 6
     mouse_scroll_speed: int = 1
+    # FEAT-HOTKEY-STEAM-01: comportamento do PS solo (sem combo em 150ms).
+    # "steam"  -> abre/foca a Steam via steam_launcher.open_or_focus_steam.
+    # "none"   -> não faz nada (PS solo e ignorado pelo hotkey_manager).
+    # "custom" -> dispara `ps_button_command` (ex.: ["xdg-open", "steam://open/bigpicture"]).
+    ps_button_action: Literal["steam", "none", "custom"] = "steam"
+    ps_button_command: list[str] = field(default_factory=list)
 
 
 class BatteryDebouncer:
@@ -94,6 +100,7 @@ class Daemon:
     _udp_server: Any = None
     _autoswitch: Any = None
     _mouse_device: Any = None
+    _hotkey_manager: Any = None
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -115,6 +122,7 @@ class Daemon:
                 await self._start_autoswitch()
             if self.config.mouse_emulation_enabled:
                 self._start_mouse_emulation()
+            self._start_hotkey_manager()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -163,6 +171,14 @@ class Daemon:
 
             if self._mouse_device is not None:
                 self._dispatch_mouse_emulation(state)
+
+            if self._hotkey_manager is not None:
+                _evdev = getattr(self.controller, "_evdev", None)
+                _btn: frozenset[str] = frozenset()
+                if _evdev is not None and _evdev.is_available():
+                    with contextlib.suppress(Exception):
+                        _btn = frozenset(_evdev.snapshot().buttons_pressed)
+                self._hotkey_manager.observe(_btn, now=tick_started)
 
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
@@ -250,6 +266,36 @@ class Daemon:
                     scroll_speed=self.config.mouse_scroll_speed)
         return True
 
+    def _start_hotkey_manager(self) -> None:
+        """Instancia HotkeyManager com on_ps_solo conforme config (FEAT-HOTKEY-STEAM-01)."""
+        from hefesto.integrations.hotkey_daemon import HotkeyManager
+
+        action = self.config.ps_button_action
+        command = self.config.ps_button_command
+
+        def _on_ps_solo() -> None:
+            if action == "none":
+                return
+            if action == "steam":
+                from hefesto.integrations.steam_launcher import open_or_focus_steam
+                open_or_focus_steam()
+            elif action == "custom":
+                if not command:
+                    logger.warning("hotkey_ps_solo_custom_sem_comando")
+                    return
+                import subprocess as _sp
+                with contextlib.suppress(Exception):
+                    _sp.Popen(
+                        command,
+                        stdin=_sp.DEVNULL,
+                        stdout=_sp.DEVNULL,
+                        stderr=_sp.DEVNULL,
+                        start_new_session=True,
+                    )
+
+        self._hotkey_manager = HotkeyManager(on_ps_solo=_on_ps_solo)
+        logger.info("hotkey_manager_started", ps_button_action=action)
+
     def _stop_mouse_emulation(self) -> None:
         if self._mouse_device is None:
             return
@@ -306,6 +352,7 @@ class Daemon:
 
     async def _shutdown(self) -> None:
         logger.info("daemon_shutting_down")
+        self._hotkey_manager = None
         if self._mouse_device is not None:
             with contextlib.suppress(Exception):
                 self._mouse_device.stop()
