@@ -173,6 +173,10 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_mouse_tab()
+        # BUG-DAEMON-AUTOSTART-01: dispara start do daemon em thread worker
+        # se a unit está instalada mas o service não está ativo. Jamais
+        # bloqueia a thread GTK; falha silenciosa via logger.warning.
+        self.ensure_daemon_running()
 
     def run(self, *, start_hidden: bool = False) -> None:
         self.tray = AppTray(
@@ -191,6 +195,8 @@ class HefestoApp(
             self.install_daemon_tab()
             self.install_emulation_tab()
             self.install_mouse_tab()
+            # BUG-DAEMON-AUTOSTART-01: mesmo no modo oculto, garantir daemon.
+            self.ensure_daemon_running()
             logger.info("hefesto_start_hidden")
         else:
             self.show()
