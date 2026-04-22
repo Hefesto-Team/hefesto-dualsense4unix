@@ -1336,17 +1336,18 @@
                 </child>
                 <child>
                   <object class="GtkScrolledWindow" id="daemon_log_scroll">
-                    <property name="hscrollbar-policy">automatic</property>
+                    <property name="hscrollbar-policy">never</property>
                     <property name="vscrollbar-policy">automatic</property>
                     <property name="hexpand">True</property>
                     <property name="vexpand">True</property>
-                    <style><class name="hefesto-card"/><class name="hefesto-log"/></style>
+                    <style><class name="hefesto-card"/></style>
                     <child>
                       <object class="GtkTextView" id="daemon_status_text">
                         <property name="editable">False</property>
                         <property name="monospace">True</property>
                         <property name="cursor-visible">False</property>
-                        <property name="wrap-mode">none</property>
+                        <property name="wrap-mode">word-char</property>
+                        <style><class name="hefesto-log"/></style>
                       </object>
                     </child>
                   </object>
@@ -1367,49 +1368,51 @@
                 <child>
                   <object class="GtkGrid" id="emulation_info_grid">
                     <property name="row-spacing">6</property>
-                    <property name="column-spacing">10</property>
+                    <property name="column-spacing">12</property>
+                    <property name="margin">10</property>
+                    <style><class name="hefesto-card"/></style>
                     <child>
-                      <object class="GtkLabel"><property name="label">uinput:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">uinput:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_uinput_label">
                         <property name="label">—</property>
-                        <property name="xalign">0</property>
+                        <property name="halign">start</property>
                         <property name="use-markup">True</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Device virtual:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">Device:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_device_name_label">
                         <property name="label">Microsoft X-Box 360 pad (Hefesto virtual)</property>
-                        <property name="xalign">0</property>
+                        <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">VID:PID:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">VID:PID:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_vidpid_label">
                         <property name="label">045E:028E (Xbox 360)</property>
-                        <property name="xalign">0</property>
+                        <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">/dev/input/js*:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">Gamepads:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_js_label">
                         <property name="label">—</property>
-                        <property name="xalign">0</property>
+                        <property name="halign">start</property>
                         <property name="use-markup">True</property>
                         <property name="selectable">True</property>
                       </object>
@@ -1419,64 +1422,62 @@
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
-                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
-                <child>
-                  <object class="GtkLabel">
-                    <property name="label">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
-                    <property name="use-markup">True</property>
-                    <property name="xalign">0</property>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
-                <child>
                   <object class="GtkGrid" id="emulation_combo_grid">
                     <property name="row-spacing">6</property>
-                    <property name="column-spacing">10</property>
+                    <property name="column-spacing">12</property>
+                    <property name="margin">10</property>
+                    <style><class name="hefesto-card"/></style>
                     <child>
-                      <object class="GtkLabel"><property name="label">Próximo perfil:</property><property name="xalign">1</property></object>
-                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="emulation_combo_next_label">
-                        <property name="label">ps + dpad_up</property>
-                        <property name="xalign">0</property>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="halign">start</property>
                       </object>
-                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property><property name="width">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Anterior:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">Próximo:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="emulation_combo_prev_label">
-                        <property name="label">ps + dpad_down</property>
-                        <property name="xalign">0</property>
+                      <object class="GtkLabel" id="emulation_combo_next_label">
+                        <property name="label">PS + D-pad Cima</property>
+                        <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Buffer (ms):</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">Anterior:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="emulation_combo_buffer_label">
-                        <property name="label">150</property>
-                        <property name="xalign">0</property>
+                      <object class="GtkLabel" id="emulation_combo_prev_label">
+                        <property name="label">PS + D-pad Baixo</property>
+                        <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Passthrough em emulação:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label">Buffer:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_buffer_label">
+                        <property name="label">150</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Passthrough em emulação:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_passthrough_label">
                         <property name="label">Não</property>
-                        <property name="xalign">0</property>
+                        <property name="halign">start</property>
                       </object>
-                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                      <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
                     </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
@@ -1616,11 +1617,126 @@
                 </child>
 
                 <child>
-                  <object class="GtkLabel" id="mouse_legend_label">
-                    <property name="label">—</property>
-                    <property name="use-markup">True</property>
-                    <property name="xalign">0</property>
-                    <property name="wrap">True</property>
+                  <object class="GtkFrame" id="mouse_mapping_frame">
+                    <style><class name="hefesto-card"/></style>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin">10</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Mapeamento&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkGrid" id="mouse_mapping_grid">
+                            <property name="row-spacing">4</property>
+                            <property name="column-spacing">8</property>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Cruz (X) ou L2</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão esquerdo</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Triângulo (△) ou R2</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão direito</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">R3 (clique no analógico direito)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão do meio</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Círculo (○)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Enter</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Quadrado (□)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Esc</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">D-pad (↑↓←→)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Setas do teclado</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Analógico esquerdo</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Movimento do cursor</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Analógico direito</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">7</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">7</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Rolagem vertical e horizontal</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">7</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>

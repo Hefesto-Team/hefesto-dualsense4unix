@@ -13,6 +13,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
+from hefesto.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
 from hefesto.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
     DEFAULT_COMBO_NEXT,
@@ -31,16 +32,21 @@ UINPUT_DEV = "/dev/uinput"
 class EmulationActionsMixin(WidgetAccessMixin):
     """Controla a aba Emulação."""
 
+    @staticmethod
+    def _traduzir_combo(partes: tuple[str, ...]) -> str:
+        """Traduz nomes técnicos do combo para PT-BR usando BUTTON_GLYPH_LABELS."""
+        return " + ".join(BUTTON_GLYPH_LABELS.get(p, p.upper()) for p in partes)
+
     def install_emulation_tab(self) -> None:
         self._get("emulation_device_name_label").set_text(DEVICE_NAME)
         self._get("emulation_vidpid_label").set_text(
             f"{XBOX360_VENDOR:04X}:{XBOX360_PRODUCT:04X} (Xbox 360)"
         )
         self._get("emulation_combo_next_label").set_text(
-            " + ".join(DEFAULT_COMBO_NEXT)
+            self._traduzir_combo(DEFAULT_COMBO_NEXT)
         )
         self._get("emulation_combo_prev_label").set_text(
-            " + ".join(DEFAULT_COMBO_PREV)
+            self._traduzir_combo(DEFAULT_COMBO_PREV)
         )
         self._get("emulation_combo_buffer_label").set_text(str(DEFAULT_BUFFER_MS))
         self._get("emulation_passthrough_label").set_text("Não")
