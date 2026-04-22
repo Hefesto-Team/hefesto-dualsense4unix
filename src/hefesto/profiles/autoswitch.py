@@ -15,6 +15,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto.daemon.state_store import StateStore
 from hefesto.profiles.manager import ProfileManager
 from hefesto.utils.logging_config import get_logger
 
@@ -33,6 +34,10 @@ class AutoSwitcher:
     window_reader: WindowReader
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC
     debounce_sec: float = DEFAULT_DEBOUNCE_SEC
+    # BUG-MOUSE-TRIGGERS-01: opcional para permitir testes legados que
+    # instanciam AutoSwitcher sem store. Em produção, o Daemon injeta o
+    # store compartilhado para respeitar override de trigger manual.
+    store: StateStore | None = None
 
     _last_candidate: str | None = None
     _candidate_since: float = 0.0
@@ -84,6 +89,18 @@ class AutoSwitcher:
             self._stop_event.set()
 
     def _activate(self, name: str, info: dict[str, Any]) -> None:
+        # BUG-MOUSE-TRIGGERS-01: se o usuário tem um trigger manual aplicado
+        # via aba Gatilhos, autoswitch suspende até o override ser limpo por
+        # trigger.reset ou profile.switch explícito. Sem isso, ao ligar a aba
+        # Mouse (que move o cursor e muda o foco de janela), o autoswitch
+        # reaplicaria o fallback e zeraria o trigger recém-aplicado.
+        if self.store is not None and self.store.manual_trigger_active:
+            logger.info(
+                "autoswitch_suppressed_by_manual_override",
+                candidate=name,
+                wm_class=info.get("wm_class", ""),
+            )
+            return
         from_profile = self._current_profile
         try:
             self.manager.activate(name)

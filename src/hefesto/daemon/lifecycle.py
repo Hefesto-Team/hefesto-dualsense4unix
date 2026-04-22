@@ -201,8 +201,12 @@ class Daemon:
         from hefesto.profiles.autoswitch import AutoSwitcher
 
         manager = ProfileManager(controller=self.controller, store=self.store)
+        # BUG-MOUSE-TRIGGERS-01: store compartilhado permite ao autoswitch
+        # respeitar override de trigger manual (aba Gatilhos).
         self._autoswitch = AutoSwitcher(
-            manager=manager, window_reader=get_active_window_info
+            manager=manager,
+            window_reader=get_active_window_info,
+            store=self.store,
         )
         if not self._autoswitch.disabled():
             self._autoswitch.start()
