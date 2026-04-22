@@ -4,6 +4,13 @@ Inclui a máquina de estado de reconnect (UX-RECONNECT-01): um tick dedicado
 a cada 2s (`RECONNECT_POLL_INTERVAL_S`) observa o IPC e move o header entre
 três estados visuais — `online`, `reconnecting`, `offline`. O polling rápido
 dos widgets de live-state é independente e preserva a fluidez da aba Status.
+
+Redesign UI-STATUS-STICKS-REDESIGN-01:
+  - Bloco "Sticks e botões" virou Grid 2 colunas no GLADE.
+  - Coluna esquerda: 2 StickPreviewGtk (L3 e R3) inseridos por código.
+  - Coluna direita: Grid 4x4 de ButtonGlyph inserido por código.
+  - `_on_state_update` diffa `buttons_pressed` contra `_last_buttons` para
+    evitar queue_draw desnecessário a 10 Hz.
 """
 # ruff: noqa: E402
 from __future__ import annotations
@@ -13,7 +20,7 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib
+from gi.repository import GLib, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
 from hefesto.app.constants import (
@@ -23,6 +30,28 @@ from hefesto.app.constants import (
     STATE_POLL_INTERVAL_MS,
 )
 from hefesto.app.ipc_bridge import call_async
+from hefesto.gui.widgets import BUTTON_GLYPH_LABELS, ButtonGlyph, StickPreviewGtk
+
+# ---------------------------------------------------------------------------
+# Configuração do grid de glyphs (4x4)
+# ---------------------------------------------------------------------------
+
+# Ordem de leitura: linha 0..3, coluna 0..3
+GRID_BOTOES: list[list[str]] = [
+    ["cross",    "circle",   "square",   "triangle"],
+    ["dpad_up",  "dpad_down", "dpad_left", "dpad_right"],
+    ["l1",       "r1",       "l2",       "r2"],
+    ["share",    "options",  "ps",       "touchpad"],
+]
+
+# Todos os 16 botões do grid numa lista plana (para iteração)
+ALL_BUTTONS: list[str] = [b for linha in GRID_BOTOES for b in linha]
+
+# Threshold para L2/R2 analógicos
+L2_R2_THRESHOLD = 30
+
+# Roxo Drácula em markup Pango
+_ROXO_DRACULA = "#bd93f9"
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -31,8 +60,10 @@ class StatusActionsMixin(WidgetAccessMixin):
     Assume que `self.builder` contém os widgets do `main.glade`:
         status_connection, status_transport, status_battery_bar,
         status_active_profile, status_daemon,
-        live_l2_bar, live_r2_bar, live_lx_label, live_ly_label,
-        live_rx_label, live_ry_label, live_buttons_label,
+        live_l2_bar, live_r2_bar, live_lx_label, live_rx_label,
+        stick_left_preview_slot, stick_right_preview_slot,
+        buttons_glyphs_slot,
+        stick_left_title, stick_right_title,
         header_connection.
 
     Estados do reconnect (`_reconnect_state`):
@@ -45,14 +76,72 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     _reconnect_state: str = "online"
     _consecutive_failures: int = 0
+    _last_buttons: frozenset[str]
+    _button_glyphs: dict[str, ButtonGlyph]
+    _stick_left: StickPreviewGtk
+    _stick_right: StickPreviewGtk
 
     def install_status_polling(self) -> None:
-        """Liga os timers da aba Status. Chamado uma vez no on_mount."""
+        """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
+
+        Chamado uma vez no on_mount após o builder estar disponível.
+        """
+        self._last_buttons = frozenset()
+        self._button_glyphs = {}
+        self._init_stick_previews()
+        self._init_button_glyphs()
         GLib.timeout_add(LIVE_POLL_INTERVAL_MS, self._tick_live_state)
         GLib.timeout_add(STATE_POLL_INTERVAL_MS, self._tick_profile_state)
         GLib.timeout_add_seconds(
             RECONNECT_POLL_INTERVAL_S, self._tick_reconnect_state
         )
+
+    # ------------------------------------------------------------------
+    # Inicialização dos widgets dinâmicos
+    # ------------------------------------------------------------------
+
+    def _init_stick_previews(self) -> None:
+        """Cria e insere os dois StickPreviewGtk nos slots do GLADE."""
+        slot_esq = self._get("stick_left_preview_slot")
+        slot_dir = self._get("stick_right_preview_slot")
+        if slot_esq is None or slot_dir is None:
+            return
+
+        self._stick_left = StickPreviewGtk(label="L3")
+        self._stick_left.set_size_request(120, 120)
+        slot_esq.pack_start(self._stick_left, False, False, 0)
+        self._stick_left.show()
+
+        self._stick_right = StickPreviewGtk(label="R3")
+        self._stick_right.set_size_request(120, 120)
+        slot_dir.pack_start(self._stick_right, False, False, 0)
+        self._stick_right.show()
+
+    def _init_button_glyphs(self) -> None:
+        """Cria o Grid 4x4 de ButtonGlyph e insere no slot do GLADE."""
+        slot = self._get("buttons_glyphs_slot")
+        if slot is None:
+            return
+
+        grid = Gtk.Grid()
+        grid.set_row_spacing(4)
+        grid.set_column_spacing(4)
+        grid.set_halign(Gtk.Align.CENTER)
+        grid.set_valign(Gtk.Align.CENTER)
+
+        for row, linha in enumerate(GRID_BOTOES):
+            for col, nome in enumerate(linha):
+                tooltip = BUTTON_GLYPH_LABELS.get(nome, nome)
+                glyph = ButtonGlyph(nome, size=28, tooltip_pt_br=tooltip)
+                self._button_glyphs[nome] = glyph
+                grid.attach(glyph, col, row, 1, 1)
+
+        slot.pack_start(grid, False, False, 0)
+        grid.show_all()
+
+    # ------------------------------------------------------------------
+    # Timers
+    # ------------------------------------------------------------------
 
     def _tick_live_state(self) -> bool:
         """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
@@ -111,6 +200,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._update_reconnect_state(None)
         return False
 
+    # ------------------------------------------------------------------
+    # Máquina de estado do reconnect
+    # ------------------------------------------------------------------
+
     def _update_reconnect_state(self, state_full: dict[str, Any] | None) -> None:
         """Avança a máquina de estado de reconnect e repinta o header.
 
@@ -135,6 +228,10 @@ class StatusActionsMixin(WidgetAccessMixin):
             if self._reconnect_state != "reconnecting":
                 self._reconnect_state = "reconnecting"
             self._render_reconnecting()
+
+    # ------------------------------------------------------------------
+    # Renderers de estado
+    # ------------------------------------------------------------------
 
     def _render_online(self, state: dict[str, Any]) -> None:
         """Header canônico de estado ONLINE — ● verde + transport.
@@ -207,18 +304,87 @@ class StatusActionsMixin(WidgetAccessMixin):
         r2_bar.set_fraction(r2 / 255)
         r2_bar.set_text(f"{r2} / 255")
 
-        self._set_label("live_lx_label", str(state.get("lx", 128)))
-        self._set_label("live_ly_label", str(state.get("ly", 128)))
-        self._set_label("live_rx_label", str(state.get("rx", 128)))
-        self._set_label("live_ry_label", str(state.get("ry", 128)))
+        # Sticks — atualiza preview e labels numéricos
+        lx = int(state.get("lx", 128))
+        ly = int(state.get("ly", 128))
+        rx = int(state.get("rx", 128))
+        ry = int(state.get("ry", 128))
 
-        buttons = state.get("buttons", [])
-        buttons_markup = (
-            ", ".join(f"<b>{b}</b>" for b in buttons)
-            if buttons
-            else "<i>Nenhum</i>"
-        )
-        self._get("live_buttons_label").set_markup(buttons_markup)
+        if hasattr(self, "_stick_left"):
+            self._stick_left.update(lx, ly)
+        if hasattr(self, "_stick_right"):
+            self._stick_right.update(rx, ry)
+
+        lx_label = self._get("live_lx_label")
+        if lx_label is not None:
+            lx_label.set_markup(
+                f'<span font_family="monospace" size="small">X: {lx}  Y: {ly}</span>'
+            )
+        rx_label = self._get("live_rx_label")
+        if rx_label is not None:
+            rx_label.set_markup(
+                f'<span font_family="monospace" size="small">X: {rx}  Y: {ry}</span>'
+            )
+
+        # Botões pressionados — diff antes de redesenhar (performance 10 Hz)
+        buttons_raw: list[str] = state.get("buttons", []) or []
+        buttons_pressed = frozenset(buttons_raw)
+        self._refresh_glyphs(state, buttons_pressed)
+
+    def _refresh_glyphs(
+        self, state: dict[str, Any], buttons_pressed: frozenset[str]
+    ) -> None:
+        """Atualiza ButtonGlyphs e títulos de sticks quando o estado muda."""
+        last = getattr(self, "_last_buttons", frozenset())
+
+        l2_raw = int(state.get("l2_raw", 0))
+        r2_raw = int(state.get("r2_raw", 0))
+        l2_lit = l2_raw > L2_R2_THRESHOLD
+        r2_lit = r2_raw > L2_R2_THRESHOLD
+
+        # Compõe conjunto efetivo incluindo L2/R2 analógicos
+        efetivos: dict[str, bool] = {nome: (nome in buttons_pressed) for nome in ALL_BUTTONS}
+        efetivos["l2"] = l2_lit
+        efetivos["r2"] = r2_lit
+
+        # Verifica se algo mudou (diff)
+        last_l2 = getattr(self, "_last_l2_lit", False)
+        last_r2 = getattr(self, "_last_r2_lit", False)
+        if buttons_pressed == last and l2_lit == last_l2 and r2_lit == last_r2:
+            return
+
+        self._last_buttons = buttons_pressed
+        self._last_l2_lit = l2_lit  # type: ignore[attr-defined]
+        self._last_r2_lit = r2_lit  # type: ignore[attr-defined]
+
+        for nome, glyph in self._button_glyphs.items():
+            glyph.set_pressed(efetivos.get(nome, False))
+
+        # Títulos dos sticks: roxo Drácula se L3/R3 pressionados
+        l3_pressed = "l3" in buttons_pressed
+        r3_pressed = "r3" in buttons_pressed
+
+        if hasattr(self, "_stick_left"):
+            self._stick_left.set_l3_pressed(l3_pressed)
+        if hasattr(self, "_stick_right"):
+            self._stick_right.set_l3_pressed(r3_pressed)
+
+        titulo_esq = self._get("stick_left_title")
+        titulo_dir = self._get("stick_right_title")
+        if titulo_esq is not None:
+            if l3_pressed:
+                titulo_esq.set_markup(
+                    f'<span foreground="{_ROXO_DRACULA}">Analógico Esquerdo (L3)</span>'
+                )
+            else:
+                titulo_esq.set_markup("Analógico Esquerdo (L3)")
+        if titulo_dir is not None:
+            if r3_pressed:
+                titulo_dir.set_markup(
+                    f'<span foreground="{_ROXO_DRACULA}">Analógico Direito (R3)</span>'
+                )
+            else:
+                titulo_dir.set_markup("Analógico Direito (R3)")
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
         connected = bool(state.get("connected"))
@@ -246,7 +412,37 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._get("live_l2_bar").set_text("0 / 255")
         self._get("live_r2_bar").set_fraction(0.0)
         self._get("live_r2_bar").set_text("0 / 255")
-        for wid in ("live_lx_label", "live_ly_label",
-                    "live_rx_label", "live_ry_label"):
-            self._set_label(wid, "128")
-        self._get("live_buttons_label").set_markup("<i>Nenhum</i>")
+
+        lx_label = self._get("live_lx_label")
+        if lx_label is not None:
+            lx_label.set_markup(
+                '<span font_family="monospace" size="small">X: 128  Y: 128</span>'
+            )
+        rx_label = self._get("live_rx_label")
+        if rx_label is not None:
+            rx_label.set_markup(
+                '<span font_family="monospace" size="small">X: 128  Y: 128</span>'
+            )
+
+        # Sticks ao centro
+        if hasattr(self, "_stick_left"):
+            self._stick_left.update(128, 128)
+            self._stick_left.set_l3_pressed(False)
+        if hasattr(self, "_stick_right"):
+            self._stick_right.update(128, 128)
+            self._stick_right.set_l3_pressed(False)
+
+        # Glyphs todos apagados
+        for glyph in getattr(self, "_button_glyphs", {}).values():
+            glyph.set_pressed(False)
+        self._last_buttons = frozenset()
+        self._last_l2_lit = False  # type: ignore[attr-defined]
+        self._last_r2_lit = False  # type: ignore[attr-defined]
+
+        # Títulos sem markup colorido
+        titulo_esq = self._get("stick_left_title")
+        titulo_dir = self._get("stick_right_title")
+        if titulo_esq is not None:
+            titulo_esq.set_markup("Analógico Esquerdo (L3)")
+        if titulo_dir is not None:
+            titulo_dir.set_markup("Analógico Direito (R3)")

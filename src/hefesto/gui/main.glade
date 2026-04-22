@@ -272,111 +272,113 @@
                   <object class="GtkFrame" id="frame_status_sticks">
                     <property name="label">Sticks e botões</property>
                     <child>
-                      <object class="GtkBox" id="sticks_buttons_box">
-                        <property name="orientation">horizontal</property>
-                        <property name="spacing">12</property>
+                      <!-- Grid 2 colunas: esq=sticks, dir=glyphs de botões -->
+                      <object class="GtkGrid" id="sticks_buttons_grid">
+                        <property name="column-spacing">16</property>
+                        <property name="row-spacing">0</property>
                         <property name="margin">12</property>
                         <style><class name="hefesto-card"/></style>
 
+                        <!-- Coluna esquerda: sticks empilhados -->
                         <child>
-                          <object class="GtkGrid">
-                            <property name="row-spacing">2</property>
-                            <property name="column-spacing">8</property>
+                          <object class="GtkBox" id="sticks_col_box">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">8</property>
 
+                            <!-- Capsule stick esquerdo -->
                             <child>
-                              <object class="GtkLabel">
-                                <property name="label">LX</property>
-                                <property name="xalign">1</property>
+                              <object class="GtkBox" id="stick_left_capsule">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">2</property>
+                                <child>
+                                  <object class="GtkLabel" id="stick_left_title">
+                                    <property name="label">Analógico Esquerdo (L3)</property>
+                                    <property name="xalign">0</property>
+                                    <property name="use-markup">True</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <!-- StickPreviewGtk esquerdo inserido por código em id=stick_left_preview_slot -->
+                                <child>
+                                  <object class="GtkBox" id="stick_left_preview_slot">
+                                    <property name="orientation">vertical</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="live_lx_label">
+                                    <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                    <property name="use-markup">True</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
                               </object>
-                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_lx_label">
-                                <property name="label">128</property>
-                                <property name="width-chars">4</property>
-                                <property name="xalign">0</property>
-                              </object>
-                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
-                            </child>
-
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="label">LY</property>
-                                <property name="xalign">1</property>
-                              </object>
-                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_ly_label">
-                                <property name="label">128</property>
-                                <property name="xalign">0</property>
-                              </object>
-                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
-                            </child>
-
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="label">RX</property>
-                                <property name="xalign">1</property>
-                              </object>
-                              <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_rx_label">
-                                <property name="label">128</property>
-                                <property name="xalign">0</property>
-                              </object>
-                              <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                              <packing><property name="expand">False</property></packing>
                             </child>
 
+                            <!-- Capsule stick direito -->
                             <child>
-                              <object class="GtkLabel">
-                                <property name="label">RY</property>
-                                <property name="xalign">1</property>
+                              <object class="GtkBox" id="stick_right_capsule">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">2</property>
+                                <child>
+                                  <object class="GtkLabel" id="stick_right_title">
+                                    <property name="label">Analógico Direito (R3)</property>
+                                    <property name="xalign">0</property>
+                                    <property name="use-markup">True</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <!-- StickPreviewGtk direito inserido por código em id=stick_right_preview_slot -->
+                                <child>
+                                  <object class="GtkBox" id="stick_right_preview_slot">
+                                    <property name="orientation">vertical</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="live_rx_label">
+                                    <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                    <property name="use-markup">True</property>
+                                    <property name="xalign">0</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
                               </object>
-                              <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                              <packing><property name="expand">False</property></packing>
                             </child>
-                            <child>
-                              <object class="GtkLabel" id="live_ry_label">
-                                <property name="label">128</property>
-                                <property name="xalign">0</property>
-                              </object>
-                              <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
-                            </child>
+
                           </object>
-                          <packing><property name="expand">False</property></packing>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                          </packing>
                         </child>
 
+                        <!-- Separador vertical -->
                         <child>
                           <object class="GtkSeparator">
                             <property name="orientation">vertical</property>
                           </object>
-                          <packing><property name="expand">False</property></packing>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">0</property>
+                          </packing>
                         </child>
 
+                        <!-- Coluna direita: grid de glyphs inserido por código em id=buttons_glyphs_slot -->
                         <child>
-                          <object class="GtkBox">
+                          <object class="GtkBox" id="buttons_glyphs_slot">
                             <property name="orientation">vertical</property>
-                            <property name="spacing">4</property>
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="label">Botões pressionados:</property>
-                                <property name="xalign">0</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_buttons_label">
-                                <property name="label">&lt;i&gt;Nenhum&lt;/i&gt;</property>
-                                <property name="use-markup">True</property>
-                                <property name="xalign">0</property>
-                                <property name="wrap">True</property>
-                              </object>
-                              <packing><property name="expand">True</property></packing>
-                            </child>
+                            <property name="valign">center</property>
                           </object>
-                          <packing><property name="expand">True</property></packing>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">0</property>
+                          </packing>
                         </child>
+
                       </object>
                     </child>
                   </object>
