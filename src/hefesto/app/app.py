@@ -25,6 +25,7 @@ from gi.repository import GdkPixbuf, Gtk
 
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto.app.actions.emulation_actions import EmulationActionsMixin
+from hefesto.app.actions.firmware_actions import FirmwareActionsMixin
 from hefesto.app.actions.footer_actions import FooterActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto.app.actions.mouse_actions import MouseActionsMixin
@@ -95,6 +96,7 @@ class HefestoApp(
     DaemonActionsMixin,
     EmulationActionsMixin,
     MouseActionsMixin,
+    FirmwareActionsMixin,
     FooterActionsMixin,
 ):
     """Aplicação GTK do Hefesto."""
@@ -347,6 +349,7 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_mouse_tab()
+        self.install_firmware_tab()
         # Conecta switch-page do GtkNotebook para refresh de draft por aba.
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
