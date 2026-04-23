@@ -67,6 +67,10 @@ class DaemonConfig:
     mouse_emulation_enabled: bool = False
     mouse_speed: int = 6
     mouse_scroll_speed: int = 1
+    # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
+    # do DualSense. Default True: infraestrutura já sobe com os bindings
+    # default (Options/Share/L1/R1). Sub-sprints futuras expõem UI+persist.
+    keyboard_emulation_enabled: bool = True
     # FEAT-HOTKEY-STEAM-01
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
     ps_button_command: list[str] = field(default_factory=list)
@@ -110,6 +114,7 @@ class Daemon:
     _udp_server: Any = None
     _autoswitch: Any = None
     _mouse_device: Any = None
+    _keyboard_device: Any = None
     _hotkey_manager: Any = None
     _audio: Any = None
     _plugins_subsystem: Any = None
@@ -147,6 +152,8 @@ class Daemon:
                 await self._start_autoswitch()
             if self.config.mouse_emulation_enabled:
                 self._start_mouse_emulation()
+            if self.config.keyboard_emulation_enabled:
+                self._start_keyboard_emulation()
             start_hotkey_manager(self)
             if self.config.mic_button_toggles_system:
                 start_mic_hotkey(self)
@@ -175,6 +182,11 @@ class Daemon:
                 speed=new_config.mouse_speed,
                 scroll_speed=new_config.mouse_scroll_speed,
             )
+        if old.keyboard_emulation_enabled != new_config.keyboard_emulation_enabled:
+            if new_config.keyboard_emulation_enabled:
+                self._start_keyboard_emulation()
+            else:
+                self._stop_keyboard_emulation()
         keys_changed = [
             k for k in new_config.__dataclass_fields__
             if getattr(old, k, None) != getattr(new_config, k)
@@ -232,6 +244,24 @@ class Daemon:
         from hefesto.daemon.subsystems.mouse import stop_mouse_emulation
 
         stop_mouse_emulation(self)
+
+    def _start_keyboard_emulation(self) -> bool:
+        """Thin wrapper — wire-up A-07 para FEAT-KEYBOARD-EMULATOR-01."""
+        from hefesto.daemon.subsystems.keyboard import start_keyboard_emulation
+
+        return start_keyboard_emulation(self)
+
+    def _stop_keyboard_emulation(self) -> None:
+        """Thin wrapper — backcompat e cleanup."""
+        from hefesto.daemon.subsystems.keyboard import stop_keyboard_emulation
+
+        stop_keyboard_emulation(self)
+
+    def _dispatch_keyboard_emulation(self, buttons_pressed: frozenset[str]) -> None:
+        """Thin wrapper — chamado pelo poll loop a cada tick."""
+        from hefesto.daemon.subsystems.keyboard import dispatch_keyboard
+
+        dispatch_keyboard(self, buttons_pressed)
 
     def _reassert_rumble(self, now: float) -> None:
         """Thin wrapper — backcompat e chamado pelo poll loop."""
@@ -335,6 +365,9 @@ class Daemon:
 
             if self._mouse_device is not None:
                 self._dispatch_mouse_emulation(state, buttons_pressed)
+
+            if self._keyboard_device is not None:
+                self._dispatch_keyboard_emulation(buttons_pressed)
 
             if self._hotkey_manager is not None:
                 self._hotkey_manager.observe(buttons_pressed, now=tick_started)
