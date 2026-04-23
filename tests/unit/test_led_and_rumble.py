@@ -46,6 +46,20 @@ class TestApplyLedSettings:
         assert len(leds) == 1
         assert leds[0].payload == (100, 200, 50)
 
+    def test_apply_led_settings_propagates_mic_led(self):
+        """apply_led_settings invoca set_mic_led com o valor de mic_led (INFRA-SET-MIC-LED-01)."""
+        fc = FakeController()
+        fc.connect()
+        apply_led_settings(fc, LedSettings(lightbar=(0, 0, 0), mic_led=True))
+        assert fc.mic_led_history == [True]
+
+    def test_apply_led_settings_mic_led_false(self):
+        """apply_led_settings propaga mic_led=False corretamente."""
+        fc = FakeController()
+        fc.connect()
+        apply_led_settings(fc, LedSettings(lightbar=(255, 0, 0), mic_led=False))
+        assert fc.mic_led_history == [False]
+
 
 class TestPlayerBitmask:
     def test_todos_apagados(self):

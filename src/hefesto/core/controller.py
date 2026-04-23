@@ -9,7 +9,7 @@ com o event loop.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 Transport = Literal["usb", "bt"]
@@ -47,6 +47,13 @@ class ControllerState:
     """Snapshot imutável do controle num instante.
 
     Campos mínimos em W1.1; botões, sticks e touchpad entram em W1.2.
+
+    - `buttons_pressed`: conjunto de nomes canônicos dos botões fisicamente
+      pressionados neste tick (ex.: ``{"cross", "l1", "mic_btn"}``). Populado
+      pelo backend via evdev (ramo primário) ou HID-raw (`micBtn`). Nomes
+      seguem o vocabulário de `EvdevReader.BUTTON_MAP`; o botão Mic usa o nome
+      ``"mic_btn"`` pois não tem keycode evdev estável — vem por HID-raw via
+      `ds.state.micBtn` (byte misc2, bit 0x04). Ver `PyDualSenseController.read_state`.
     """
 
     battery_pct: int
@@ -59,6 +66,7 @@ class ControllerState:
     raw_ly: int = 128
     raw_rx: int = 128
     raw_ry: int = 128
+    buttons_pressed: frozenset[str] = field(default_factory=frozenset)
 
     def __post_init__(self) -> None:
         if not (0 <= self.battery_pct <= 100):
@@ -76,6 +84,9 @@ class IController(ABC):
       - `hefesto.core.backend_pydualsense.PyDualSenseController` (hardware real).
       - `hefesto.testing.fake_controller.FakeController` (replay de capture
         ou comportamento determinístico para testes e smoke).
+
+    Métodos de output: `set_trigger`, `set_led`, `set_rumble`, `set_player_leds`,
+    `set_mic_led`. Todos síncronos (ADR-001).
     """
 
     @abstractmethod
@@ -107,6 +118,18 @@ class IController(ABC):
         (extremo direito). O bitmask resultante é enviado diretamente ao hardware
         via `pydualsense.light.playerNumber` (atributo `IntFlag` aceitando qualquer
         valor de 5 bits), sem exigir PlayerID canônico.
+        """
+        ...
+
+    @abstractmethod
+    def set_mic_led(self, muted: bool) -> None:
+        """Acende (muted=True) ou apaga (muted=False) o LED do microfone.
+
+        Convenção de semântica: `muted=True` → LED aceso (vermelho, padrão do
+        firmware indicando "mic desligado"); `muted=False` → LED apagado.
+
+        Implementação real via `ds.audio.setMicrophoneLED(bool)` (INFRA-SET-MIC-LED-01).
+        Player LEDs ainda dependem de API complementar futura.
         """
         ...
 

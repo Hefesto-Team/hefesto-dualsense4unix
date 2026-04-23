@@ -289,6 +289,9 @@ class Daemon:
         battery = BatteryDebouncer()
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0  # deadline para próxima re-asserção de rumble
+        # Diff de botões entre ticks consecutivos (INFRA-BUTTON-EVENTS-01).
+        # Resetar em _reconnect() para evitar BUTTON_UP fantasma pós-reconexão.
+        previous_buttons: frozenset[str] = frozenset()
 
         while not self._is_stopping():
             tick_started = loop.time()
@@ -298,6 +301,7 @@ class Daemon:
                 logger.warning("poll_read_failed", err=str(exc))
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
+                    previous_buttons = frozenset()  # reseta para evitar BUTTON_UP fantasma
                     await self._reconnect()
                     continue
                 break
@@ -322,6 +326,21 @@ class Daemon:
 
             if self._hotkey_manager is not None:
                 self._hotkey_manager.observe(buttons_pressed, now=tick_started)
+
+            # Diff de botões: publica BUTTON_DOWN/UP por mudança de estado
+            # (INFRA-BUTTON-EVENTS-01). Usa state.buttons_pressed (populado pelo
+            # backend via evdev + HID-raw), não o snapshot evdev separado — mantém
+            # fonte única de verdade e cobre o botão Mic que não tem evdev estável.
+            current_buttons = state.buttons_pressed
+            pressed_now = current_buttons - previous_buttons
+            released_now = previous_buttons - current_buttons
+            for name in sorted(pressed_now):
+                self.bus.publish(EventTopic.BUTTON_DOWN, {"button": name, "pressed": True})
+                self.store.bump("button.down.emitted")
+            for name in sorted(released_now):
+                self.bus.publish(EventTopic.BUTTON_UP, {"button": name, "pressed": False})
+                self.store.bump("button.up.emitted")
+            previous_buttons = current_buttons
 
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)

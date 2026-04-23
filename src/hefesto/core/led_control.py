@@ -1,14 +1,17 @@
 """Controle de LEDs do DualSense.
 
 API de alto nível: lightbar RGB, 5 LEDs de jogador (bitmask) e LED do microfone.
-O backend (`IController.set_led`) só aceita a cor da lightbar hoje; os player
-LEDs e o mic LED dependem de API complementar no backend (a adicionar quando
-houver necessidade em W5.x). Aqui expomos dataclasses de configuração que a
-TUI e os perfis consomem.
+
+Cobertura atual:
+- Lightbar RGB: `IController.set_led` (implementado).
+- LED do microfone: `IController.set_mic_led` (implementado — INFRA-SET-MIC-LED-01).
+- Player LEDs: `IController.set_player_leds` (implementado — player bitmask).
+  Player LEDs continuam com API básica de bitmask; efeitos avançados (animação)
+  dependem de sprint futura.
 
 Uso:
     from hefesto.core.led_control import LedSettings, apply_led_settings
-    apply_led_settings(controller, LedSettings(lightbar=(255, 128, 0)))
+    apply_led_settings(controller, LedSettings(lightbar=(255, 128, 0), mic_led=True))
 """
 from __future__ import annotations
 
@@ -82,11 +85,13 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
 
     Escala o RGB pelo `brightness_level` antes de enviar — garante que perfis
     com brilho reduzido chegam ao hardware com a intensidade correta.
-    Player LEDs e mic LED são mantidos no `LedSettings` para serialização
-    de perfis; o backend completará quando expor API específica.
+
+    Propaga também o LED do microfone via `controller.set_mic_led(settings.mic_led)`
+    (INFRA-SET-MIC-LED-01). Player LEDs ainda usam API de bitmask simples.
     """
     effective = settings.apply_brightness(settings.brightness_level)
     controller.set_led(effective.lightbar)
+    controller.set_mic_led(settings.mic_led)
 
 
 def off() -> LedSettings:
