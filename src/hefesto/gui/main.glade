@@ -1763,9 +1763,75 @@
           </packing>
         </child>
 
-        <!-- Rodape -->
+        <!-- Rodape: statusbar + botoes de acao global -->
         <child>
-          <object class="GtkStatusbar" id="status_bar"/>
+          <object class="GtkBox" id="footer_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">6</property>
+            <property name="margin-start">4</property>
+            <property name="margin-end">6</property>
+            <property name="margin-top">2</property>
+            <property name="margin-bottom">2</property>
+
+            <!-- Statusbar ocupa espaco flexivel a esquerda -->
+            <child>
+              <object class="GtkStatusbar" id="status_bar">
+                <property name="hexpand">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+
+            <!-- Caixa de botoes alinhada a direita -->
+            <child>
+              <object class="GtkBox" id="footer_buttons_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <property name="valign">center</property>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_apply">
+                    <property name="label">Aplicar</property>
+                    <property name="tooltip-text">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                    <signal name="clicked" handler="on_apply_draft"/>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_save_profile">
+                    <property name="label">Salvar Perfil</property>
+                    <property name="tooltip-text">Salva o estado atual como um perfil nomeado</property>
+                    <signal name="clicked" handler="on_save_profile"/>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_import">
+                    <property name="label">Importar</property>
+                    <property name="tooltip-text">Carrega um perfil de arquivo .json</property>
+                    <signal name="clicked" handler="on_import_profile"/>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_restore_default">
+                    <property name="label">Restaurar Default</property>
+                    <property name="tooltip-text">Restaura o perfil 'Meu Perfil' ao estado original</property>
+                    <signal name="clicked" handler="on_restore_default"/>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+              </object>
+              <packing><property name="expand">False</property></packing>
+            </child>
+
+          </object>
           <packing><property name="expand">False</property></packing>
         </child>
 

@@ -25,6 +25,7 @@ from gi.repository import GdkPixbuf, Gtk
 
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto.app.actions.emulation_actions import EmulationActionsMixin
+from hefesto.app.actions.footer_actions import FooterActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto.app.actions.mouse_actions import MouseActionsMixin
 from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
@@ -94,6 +95,7 @@ class HefestoApp(
     DaemonActionsMixin,
     EmulationActionsMixin,
     MouseActionsMixin,
+    FooterActionsMixin,
 ):
     """Aplicação GTK do Hefesto."""
 
@@ -191,6 +193,11 @@ class HefestoApp(
             "on_mouse_toggle_set": self.on_mouse_toggle_set,
             "on_mouse_speed_changed": self.on_mouse_speed_changed,
             "on_mouse_scroll_speed_changed": self.on_mouse_scroll_speed_changed,
+            # Rodapé — ações globais (UI-GLOBAL-FOOTER-ACTIONS-01)
+            "on_apply_draft": self.on_apply_draft,
+            "on_save_profile": self.on_save_profile,
+            "on_import_profile": self.on_import_profile,
+            "on_restore_default": self.on_restore_default,
         }
 
     # --- banner ---
@@ -261,7 +268,7 @@ class HefestoApp(
         """Carrega DraftConfig a partir do perfil ativo via IPC.
 
         Tenta ``profile.get_active`` e depois ``daemon.state_full``. Se daemon
-        offline ou perfil nao encontrado, mantem o default seguro em self.draft.
+        offline ou perfil não encontrado, mantém o default seguro em self.draft.
         Executado em thread worker (chamado via ThreadPoolExecutor); nunca
         bloqueia a thread GTK.
         """
