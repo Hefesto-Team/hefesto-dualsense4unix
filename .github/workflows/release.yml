@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag para re-publicar (ex.: v2.1.0). Permite correr release.yml manualmente contra uma tag existente — útil após fixes de CI (CHORE-CI-REPUBLISH-TAGS-01)."
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -16,6 +22,10 @@ jobs:
       version: ${{ steps.info.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Quando disparado via workflow_dispatch, faz checkout da tag
+          # indicada no input em vez de main HEAD.
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -38,7 +48,9 @@ jobs:
       - name: Ler versão
         id: info
         env:
-          REF_NAME: ${{ github.ref_name }}
+          # Em workflow_dispatch, github.ref_name é o branch/ref do run (ex.: main);
+          # o input `tag` tem o valor real (ex.: v2.1.0). Prioriza o input.
+          REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
         run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -51,6 +63,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -82,6 +96,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -132,6 +148,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - name: Instalar dependências do sistema
         run: |
           sudo apt-get update -q
@@ -181,6 +199,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
       - uses: actions/download-artifact@v4
         with:
           name: dist-${{ needs.build.outputs.version }}
