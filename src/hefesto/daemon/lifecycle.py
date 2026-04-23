@@ -80,6 +80,10 @@ class DaemonConfig:
     # "custom"    -> usar rumble_policy_custom_mult
     rumble_policy: Literal["economia", "balanceado", "max", "auto", "custom"] = "balanceado"
     rumble_policy_custom_mult: float = 0.7
+    # FEAT-HOTKEY-MIC-01: botao Mic do DualSense controla microfone do sistema.
+    # True  -> subscreve BUTTON_DOWN e chama AudioControl.toggle_default_source_mute().
+    # False -> opt-out; botao Mic continua funcionando apenas no controle interno.
+    mic_button_toggles_system: bool = True
 
 
 class BatteryDebouncer:
@@ -173,6 +177,8 @@ class Daemon:
     _autoswitch: Any = None
     _mouse_device: Any = None
     _hotkey_manager: Any = None
+    # FEAT-HOTKEY-MIC-01: instancia de AudioControl criada se mic_button_toggles_system=True.
+    _audio: Any = None
     # FEAT-RUMBLE-POLICY-01: debounce de modo "auto" de política de rumble.
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
@@ -199,6 +205,8 @@ class Daemon:
             if self.config.mouse_emulation_enabled:
                 self._start_mouse_emulation()
             self._start_hotkey_manager()
+            if self.config.mic_button_toggles_system:
+                self._start_mic_hotkey()
             await self._stop_event.wait()
         finally:
             await self._shutdown()
@@ -462,6 +470,48 @@ class Daemon:
         self._hotkey_manager = HotkeyManager(on_ps_solo=_on_ps_solo)
         logger.info("hotkey_manager_started", ps_button_action=self.config.ps_button_action)
 
+    def _start_mic_hotkey(self) -> None:
+        """Cria AudioControl e inicia task de consumo de BUTTON_DOWN para mic_btn.
+
+        Chamado em run() quando mic_button_toggles_system=True. Idempotente:
+        se _audio ja existe, não recria.
+        """
+        from hefesto.integrations.audio_control import AudioControl
+
+        if self._audio is None:
+            self._audio = AudioControl()
+        task = asyncio.create_task(self._mic_button_loop(), name="mic_button_loop")
+        self._tasks.append(task)
+        logger.info("mic_hotkey_iniciado")
+
+    async def _mic_button_loop(self) -> None:
+        """Consome BUTTON_DOWN do bus e aciona mute/unmute do microfone do sistema.
+
+        Filtra apenas eventos com button='mic_btn'. Chama AudioControl (que ja
+        tem debounce interno de 200ms) e atualiza set_mic_led no controle.
+        Não relanca excecoes: falhas sao logadas como warning.
+        """
+        queue = self.bus.subscribe(EventTopic.BUTTON_DOWN)
+        try:
+            while not self._is_stopping():
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+                if payload.get("button") != "mic_btn":
+                    continue
+                audio = self._audio
+                if audio is None:
+                    continue
+                try:
+                    muted = audio.toggle_default_source_mute()
+                    self.controller.set_mic_led(muted)
+                    logger.info("mic_hotkey_toggle", muted=muted)
+                except Exception as exc:
+                    logger.warning("mic_hotkey_falhou", err=str(exc))
+        finally:
+            self.bus.unsubscribe(EventTopic.BUTTON_DOWN, queue)
+
     def _stop_hotkey_manager(self) -> None:
         """Para e descarta o HotkeyManager atual. Idempotente."""
         self._hotkey_manager = None
@@ -568,6 +618,7 @@ class Daemon:
     async def _shutdown(self) -> None:
         logger.info("daemon_shutting_down")
         self._hotkey_manager = None
+        self._audio = None
         if self._mouse_device is not None:
             with contextlib.suppress(Exception):
                 self._mouse_device.stop()
