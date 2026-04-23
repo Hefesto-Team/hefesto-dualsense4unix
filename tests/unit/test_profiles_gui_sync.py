@@ -19,6 +19,8 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
+from pydantic import ValidationError
+
 
 def _install_gi_stubs() -> None:
     """Instala stubs mínimos de ``gi.repository`` se o módulo real não estiver disponível.
@@ -427,3 +429,93 @@ class TestProfileSimpleCombo:
 
         ProfilesActionsMixin._on_aplica_a_changed(stub, combo)
         assert box.visible is False
+
+
+# ---------------------------------------------------------------------------
+# UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON
+# ---------------------------------------------------------------------------
+
+
+class _FakeLabel:
+    def __init__(self) -> None:
+        self.text = ""
+
+    def set_text(self, text: str) -> None:
+        self.text = text
+
+
+class TestProfilePreview:
+    def _stub_with_preview(self, build_result: Any) -> SimpleNamespace:
+        """Stub mínimo para exercitar _refresh_preview sem GTK."""
+        label = _FakeLabel()
+        stub = SimpleNamespace()
+        widgets: dict[str, Any] = {"profile_preview_label": label}
+        stub._get = lambda wid: widgets.get(wid)  # type: ignore[attr-defined]
+
+        if isinstance(build_result, Exception):
+            def raiser() -> Any:
+                raise build_result
+            stub._build_profile_from_editor = raiser  # type: ignore[attr-defined]
+        else:
+            stub._build_profile_from_editor = lambda: build_result  # type: ignore[attr-defined]
+
+        stub._preview_label = label  # type: ignore[attr-defined]
+        return stub
+
+    def test_preview_atualiza_com_perfil_valido(self):
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        fake_profile = MagicMock()
+        fake_profile.model_dump.return_value = {
+            "name": "meu_perfil",
+            "priority": 0,
+            "match": {"kind": "any"},
+        }
+        stub = self._stub_with_preview(fake_profile)
+
+        ProfilesActionsMixin._refresh_preview(stub)
+
+        text = stub._preview_label.text
+        assert '"name": "meu_perfil"' in text
+        assert '"priority": 0' in text
+        assert '"kind": "any"' in text
+
+    def test_preview_mostra_msg_quando_validation_error(self):
+        _install_gi_stubs()
+        # ValidationError de pydantic não aceita construção direta; disparamos
+        # via model_validate com payload inválido.
+        from pydantic import BaseModel, Field
+
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        class _Dummy(BaseModel):
+            name: str = Field(min_length=1)
+
+        try:
+            _Dummy.model_validate({"name": ""})
+            raise AssertionError("deveria ter falhado")
+        except ValidationError as real_err:
+            err = real_err
+
+        stub = self._stub_with_preview(err)
+
+        ProfilesActionsMixin._refresh_preview(stub)
+
+        text = stub._preview_label.text
+        assert "perfil inválido" in text
+
+    def test_preview_no_op_quando_label_ausente(self):
+        """Se glade não tem profile_preview_label, _refresh_preview é no-op."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        stub = SimpleNamespace()
+        stub._get = lambda _w: None  # type: ignore[attr-defined]
+        stub._build_profile_from_editor = MagicMock()  # type: ignore[attr-defined]
+
+        # Não levanta exceção
+        ProfilesActionsMixin._refresh_preview(stub)
+
+        # build_profile nem deveria ser chamado se label ausente
+        stub._build_profile_from_editor.assert_not_called()

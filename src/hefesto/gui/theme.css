@@ -128,3 +128,16 @@
 }
 .btn-restore:hover  { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.30), rgba(98, 114, 164, 0.18)); }
 .btn-restore:active { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.42), rgba(98, 114, 164, 0.28)); }
+
+/* UI-PROFILES-RIGHT-PANEL-REBALANCE-01 — preview JSON do perfil */
+.hefesto-profile-preview {
+    font-family: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace;
+    font-size: 11px;
+    color: #f8f8f2;
+    background-color: rgba(40, 42, 54, 0.55);
+}
+
+.hefesto-profile-preview-error {
+    color: #ff5555;
+    font-style: italic;
+}
