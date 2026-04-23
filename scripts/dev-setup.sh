@@ -50,4 +50,26 @@ if [[ -z "$count" ]]; then
 fi
 echo "[dev-setup] OK: $count."
 
+# INFRA-VENV-PYGOBJECT-01 (A-12): valida disponibilidade do PyGObject no venv.
+# Sem isto: `./run.sh --gui`, `.venv/bin/python -m hefesto.app.main` e o
+# teste tests/unit/test_status_actions_reconnect.py falham por ModuleNotFoundError.
+# Não bloqueia o fluxo (GUI é opt-in) — apenas instrui com mensagem acionável.
+echo "[dev-setup] validando PyGObject (GUI GTK3)..."
+if "$VENV_DIR/bin/python" -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk" >/dev/null 2>&1; then
+    echo "[dev-setup] OK: PyGObject disponível no venv (GUI pronta)."
+else
+    cat <<'HINT'
+[dev-setup] AVISO: PyGObject ausente ou incompleto no .venv.
+            Gates de teste passam, mas a GUI não sobe e o teste
+            tests/unit/test_status_actions_reconnect.py falha na coleta.
+            Para habilitar GUI (opt-in):
+
+              sudo apt install python3-gi libgirepository-1.0-dev \
+                               gir1.2-gtk-3.0 gir1.2-ayatanaappindicator3-0.1
+              bash scripts/dev_bootstrap.sh --with-tray
+
+            Armadilha A-12 — ver VALIDATOR_BRIEF.md.
+HINT
+fi
+
 # "Ama a sabedoria com perseverança, e ela te elevará." — Provérbios 4:8
