@@ -3,7 +3,7 @@
 > Daemon Linux para gatilhos adaptativos do controle DualSense. Porte espiritual do DualSenseX para Unix em Python.
 
 ```
-Versão:  2.0.0
+Versão:  2.1.0
 Estado:  runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 917 testes unit
 Alvo:    Linux com systemd-logind, Python 3.10+
 Licença: MIT
@@ -80,8 +80,8 @@ problemas comuns. O resto deste README é referência técnica.
 Baixe o pacote da página de releases e instale com apt:
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.0.0/hefesto_2.0.0_amd64.deb
-sudo apt install ./hefesto_2.0.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.1.0/hefesto_2.1.0_amd64.deb
+sudo apt install ./hefesto_2.1.0_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode usar só a GUI):
