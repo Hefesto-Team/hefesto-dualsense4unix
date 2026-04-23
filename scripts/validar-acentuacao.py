@@ -308,7 +308,8 @@ _PARES: list[tuple[str, str]] = [
     _par("m" + "usica", "m" + U + "sica"),
     _par("m" + "usicas", "m" + U + "sicas"),
     _par("f" + "acil", "f" + "á" + "cil"),
-    _par("f" + "acilmente", "f" + "á" + "cilmente"),
+    # nota: adverbios em -mente perdem o acento do radical ("facilmente" e nao
+    # "fácilmente"); par removido por ser falso-positivo universal.
     _par("dif" + "icil", "dif" + I_ + "cil"),
     _par("dif" + "iceis", "dif" + I_ + "ceis"),
     _par("impr" + "essao", "impr" + "ess" + AT + "o"),
