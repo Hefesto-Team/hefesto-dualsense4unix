@@ -177,11 +177,14 @@ async def test_controller_list(running_server):
 
 
 @pytest.mark.asyncio
-async def test_daemon_reload(running_server):
+async def test_daemon_reload_sem_daemon_retorna_erro(running_server):
+    """daemon.reload sem daemon configurado retorna IpcError limpo (sem daemon)."""
     _server, socket_path, _ = running_server
     async with IpcClient.connect(socket_path) as client:
-        result = await client.call("daemon.reload")
-    assert result["status"] == "ok"
+        with pytest.raises(IpcError) as exc:
+            await client.call("daemon.reload")
+    # Handler levanta ValueError("daemon não disponível...") -> CODE_INVALID_PARAMS.
+    assert exc.value.code == CODE_INVALID_PARAMS
 
 
 @pytest.mark.asyncio
