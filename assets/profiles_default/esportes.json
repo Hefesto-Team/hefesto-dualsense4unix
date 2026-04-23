@@ -1,0 +1,26 @@
+{
+  "name": "Esportes",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": ".*(FIFA|EA Sports FC|eFootball|NBA 2K|MLB|NHL|Madden|PGA Tour|UFC|TopSpin|Riders Republic).*",
+    "process_name": [
+      "FIFA24.exe", "FIFA23.exe", "EASPORTSFC25.exe",
+      "eFootball.exe", "NBA2K24.exe", "NBA2K23.exe",
+      "MLB23.exe", "NHL24.exe", "Madden24.exe",
+      "TopSpin2K25.exe", "UFC5.exe"
+    ]
+  },
+  "priority": 55,
+  "triggers": {
+    "left":  {"mode": "Vibration", "params": [3, 5, 10]},
+    "right": {"mode": "PulseA", "params": [0, 8, 5]}
+  },
+  "leds": {
+    "lightbar": [40, 200, 80],
+    "player_leds": [false, true, true, false, false],
+    "lightbar_brightness": 0.85
+  },
+  "rumble": {"passthrough": true}
+}

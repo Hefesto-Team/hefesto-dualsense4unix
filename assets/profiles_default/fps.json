@@ -1,0 +1,26 @@
+{
+  "name": "FPS",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": ".*(Counter-Strike|Valorant|Apex Legends|Call of Duty|Overwatch|Cyberpunk 2077|Halo|Rainbow Six|Battlefield|Warzone|Hunt: Showdown|Deathloop|Metro|Doom|Returnal|Control).*",
+    "process_name": [
+      "cs2", "cs2.exe", "VALORANT-Win64-Shipping.exe",
+      "r5apex.exe", "ModernWarfare.exe", "Overwatch.exe",
+      "Cyberpunk2077.exe", "HaloInfinite.exe", "RainbowSix.exe",
+      "bf2042.exe", "Warzone.exe", "Deathloop.exe"
+    ]
+  },
+  "priority": 60,
+  "triggers": {
+    "left":  {"mode": "Rigid", "params": [0, 255]},
+    "right": {"mode": "SemiAutoGun", "params": [2, 7, 7]}
+  },
+  "leds": {
+    "lightbar": [200, 20, 20],
+    "player_leds": [true, false, false, false, true],
+    "lightbar_brightness": 0.9
+  },
+  "rumble": {"passthrough": true}
+}

@@ -240,6 +240,13 @@ if [[ -d "${GLYPHS_SRC}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 4c. Perfis default (primeira instalação copia; reinstalação preserva)
+# ---------------------------------------------------------------------------
+if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
+    bash "${ROOT_DIR}/scripts/install_profiles.sh" "${ROOT_DIR}"
+fi
+
+# ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto
 # ---------------------------------------------------------------------------
 step "5/7" "symlink ${BIN_DIR}/hefesto"

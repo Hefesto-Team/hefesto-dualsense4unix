@@ -1,0 +1,25 @@
+{
+  "name": "Acao",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": ".*(Devil May Cry|Bayonetta|Hi-Fi Rush|NieR|Astral Chain|Metal Gear|Ghostrunner|Sifu|Jedi.*Survivor|Jedi.*Order|Stellar Blade).*",
+    "process_name": [
+      "DevilMayCry5.exe", "bayonetta3.exe", "HiFiRush.exe",
+      "NieR.exe", "NieRAutomata.exe", "ghostrunner.exe",
+      "Sifu.exe", "JediSurvivor.exe", "StarWarsJediFallenOrder.exe"
+    ]
+  },
+  "priority": 65,
+  "triggers": {
+    "left":  {"mode": "Rigid", "params": [0, 180]},
+    "right": {"mode": "Vibration", "params": [3, 8, 20]}
+  },
+  "leds": {
+    "lightbar": [255, 80, 0],
+    "player_leds": [true, true, false, false, false],
+    "lightbar_brightness": 1.0
+  },
+  "rumble": {"passthrough": true}
+}

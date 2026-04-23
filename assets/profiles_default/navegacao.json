@@ -1,0 +1,26 @@
+{
+  "name": "Navegacao",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [
+      "firefox", "Navigator", "brave-browser", "Brave-browser",
+      "chromium", "chromium-browser", "google-chrome", "Google-chrome",
+      "gnome-terminal", "gnome-terminal-server",
+      "steam", "Steam"
+    ],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 50,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [40, 80, 180],
+    "player_leds": [false, false, true, false, false],
+    "lightbar_brightness": 0.4
+  },
+  "rumble": {"passthrough": true}
+}
