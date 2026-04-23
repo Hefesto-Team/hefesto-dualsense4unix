@@ -98,10 +98,35 @@ jobs:
             br.andrefarias.Hefesto.flatpak \
             br.andrefarias.Hefesto
 
-      - name: Upload do artifact
+      - name: Install --user do bundle (smoke de instalação)
+        run: |
+          flatpak install --user --noninteractive --bundle \
+            br.andrefarias.Hefesto.flatpak
+          flatpak list --user --app | grep -i hefesto
+
+      - name: Validar registro do app
+        run: |
+          flatpak info --user br.andrefarias.Hefesto
+          # Execução real de GUI requer DISPLAY; em runner headless a execução
+          # via `flatpak run` pode falhar por falta de sessão X11/Wayland.
+          # Aqui o critério é o pacote estar corretamente instalado e
+          # registrado. `flatpak info` confirma metadata + runtime base.
+
+      - name: Upload do bundle .flatpak
         uses: actions/upload-artifact@v4
         with:
           name: hefesto-flatpak
           path: br.andrefarias.Hefesto.flatpak
           retention-days: 30
           if-no-files-found: error
+
+      - name: Upload do log de build (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-build-log
+          path: |
+            flatpak-build-dir/**/build.log
+            flatpak-build-dir/**/*.log
+          retention-days: 7
+          if-no-files-found: warn
