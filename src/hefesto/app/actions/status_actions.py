@@ -85,6 +85,18 @@ class StatusActionsMixin(WidgetAccessMixin):
         """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
 
         Chamado uma vez no on_mount após o builder estar disponível.
+
+        BUG-GUI-DAEMON-STATUS-INITIAL-01: o primeiro tick dos timers acontecia
+        somente após ``LIVE_POLL_INTERVAL_MS`` (100 ms) e
+        ``STATE_POLL_INTERVAL_MS`` (500 ms). Entre abrir a janela e o primeiro
+        poll de ``daemon.state_full``, o usuário via os valores default do
+        Glade — ``status_daemon = "Offline"`` — apesar do daemon estar ativo.
+        Fix: disparar um tick imediato de cada timer via ``GLib.idle_add`` logo
+        antes de entrar no loop do GTK. ``_tick_live_state`` e
+        ``_tick_profile_state`` são idempotentes e já usam thread worker para
+        o IPC — nunca bloqueiam a thread GTK. Se o IPC não responder rápido o
+        suficiente, os labels continuam mostrando "Consultando..." (novo
+        default do Glade) em vez do falso-negativo "Offline".
         """
         self._last_buttons = frozenset()
         self._button_glyphs = {}
@@ -95,6 +107,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         GLib.timeout_add_seconds(
             RECONNECT_POLL_INTERVAL_S, self._tick_reconnect_state
         )
+        # Primeira leitura imediata — resolve a janela de 100-500 ms em que
+        # o default do Glade ("Consultando...") ficava visível sem motivo.
+        GLib.idle_add(self._tick_live_state)
+        GLib.idle_add(self._tick_profile_state)
 
     # ------------------------------------------------------------------
     # Inicialização dos widgets dinâmicos

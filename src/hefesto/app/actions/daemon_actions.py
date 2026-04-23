@@ -43,8 +43,79 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._daemon_autostart_guard = False
         # Inicializa contador anti-loop por instância (bootstrap da GUI).
         self._daemon_autostart_attempts = 0
-        self._refresh_daemon_view()
+        # BUG-GUI-DAEMON-STATUS-INITIAL-01: o refresh da view chama
+        # `systemctl is-active/is-enabled/status` — cada um com timeout 5 s.
+        # Em bootstrap, rodar síncrono bloquearia a thread GTK por até 15 s
+        # em sistemas onde systemctl trava (ex.: usuário sem unit instalada
+        # combinado com journal lento). Descarregamos em thread worker e
+        # atualizamos a view via `GLib.idle_add` quando os dados chegam. O
+        # label default do Glade ("—" neutro) mostra o estado "Consultando"
+        # até o resultado pintar — em vez do falso-negativo "Offline".
+        self._set_daemon_status_consulting()
+        self._refresh_daemon_view_async()
         self._sync_restart_daemon_button_sensitivity()
+
+    def _set_daemon_status_consulting(self) -> None:
+        """Mostra o estado transitório "Consultando..." no label da aba Daemon.
+
+        Usado no bootstrap da aba, antes do primeiro `_refresh_daemon_view_async`
+        retornar. Evita falso-negativo "Offline" em cenário onde o daemon está
+        ativo mas `systemctl` ainda não respondeu (BUG-GUI-DAEMON-STATUS-INITIAL-01).
+        """
+        label = self._get("daemon_status_label")
+        if label is None:
+            return
+        label.set_markup('<span foreground="#888">● Consultando...</span>')
+        label.set_tooltip_text(
+            "Verificando estado do daemon via systemctl. Aguarde."
+        )
+
+    def _refresh_daemon_view_async(self) -> None:
+        """Dispara `_refresh_daemon_view` em thread worker, sem bloquear o GTK.
+
+        BUG-GUI-DAEMON-STATUS-INITIAL-01: a versão síncrona chama 3 subprocess
+        `systemctl ...` com timeout 5 s cada. No bootstrap da GUI isso pode
+        atrasar o primeiro frame visível — o usuário vê o label default antes
+        do refresh terminar. Em thread worker, a UI renderiza imediatamente e
+        o label é pintado quando `systemctl` retorna (tipicamente < 200 ms).
+        """
+        def _worker() -> None:
+            try:
+                status = self._daemon_status()
+                enabled = self._systemctl_oneline(["is-enabled", SERVICE_NORMAL])
+                text = self._systemctl_status_text(SERVICE_NORMAL)
+            except Exception as exc:
+                logger.warning("daemon_view_async_falhou", erro=str(exc))
+                return
+            GLib.idle_add(self._apply_daemon_view, status, enabled, text)
+
+        _get_executor().submit(_worker)
+
+    def _apply_daemon_view(
+        self, status: DaemonStatus, enabled: str, text: str
+    ) -> bool:
+        """Aplica o resultado do refresh assíncrono na thread GTK.
+
+        Espelha `_refresh_daemon_view` mas sem reexecutar subprocess — recebe
+        os valores já consultados em thread worker. Retorna `False` para que
+        `GLib.idle_add` não reagende.
+        """
+        self._set_daemon_status_markup(status, enabled)
+
+        self._daemon_autostart_guard = True
+        try:
+            sw = self._get("daemon_autostart_switch")
+            if sw is not None:
+                sw.set_active(enabled == "enabled")
+        finally:
+            self._daemon_autostart_guard = False
+
+        btn_migrate = self._get("btn_migrate_to_systemd")
+        if btn_migrate is not None:
+            btn_migrate.set_visible(status == "online_avulso")
+
+        self._set_daemon_text(text)
+        return False  # não repetir via GLib
 
     def ensure_daemon_running(self) -> None:
         """Garante daemon ativo no bootstrap da GUI (BUG-DAEMON-AUTOSTART-01).
