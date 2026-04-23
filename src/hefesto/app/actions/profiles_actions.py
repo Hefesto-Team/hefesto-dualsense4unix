@@ -20,7 +20,7 @@ from gi.repository import GObject, Gtk
 
 from hefesto.app.actions.base import WidgetAccessMixin
 from hefesto.app.gui_prefs import load_gui_prefs, set_pref
-from hefesto.app.ipc_bridge import profile_switch
+from hefesto.app.ipc_bridge import call_async, profile_switch
 from hefesto.profiles.loader import (
     delete_profile,
     load_all_profiles,
@@ -35,6 +35,9 @@ from hefesto.profiles.simple_match import (
     detect_simple_preset,
     from_simple_choice,
 )
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Mapeamento radio-id -> chave de preset
 _RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game")
@@ -79,6 +82,61 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._apply_editor_mode()
 
         self._reload_profiles_store()
+        self._sync_selection_with_active_profile()
+
+    def _sync_selection_with_active_profile(self) -> None:
+        """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
+
+        Reusa o handler IPC canônico ``daemon.status`` (que já retorna
+        ``active_profile``). Chama via ``call_async`` para não bloquear a thread
+        GTK. Se o daemon estiver offline, se ``active_profile`` for ``None`` ou
+        se o perfil citado não existir no store atual, a chamada é no-op e a
+        seleção fallback (primeiro da lista) feita por ``_reload_profiles_store``
+        é preservada.
+        """
+        call_async(
+            method="daemon.status",
+            params=None,
+            on_success=self._on_daemon_status_for_sync,
+            on_failure=self._on_daemon_status_sync_failed,
+            timeout_s=0.5,
+        )
+
+    def _on_daemon_status_for_sync(self, result: Any) -> bool:
+        """Callback GTK: recebe daemon.status e seleciona perfil ativo se casar."""
+        try:
+            if not isinstance(result, dict):
+                return False
+            active = result.get("active_profile")
+            if not isinstance(active, str) or not active:
+                return False
+            self._select_profile_by_name(active)
+        except Exception as exc:
+            logger.warning("profile_sync_callback_falhou", err=str(exc))
+        return False  # GLib.idle_add: não repetir
+
+    def _on_daemon_status_sync_failed(self, exc: Exception) -> bool:
+        """Callback GTK: falha silenciosa — mantém fallback (primeiro da lista)."""
+        logger.debug("profile_sync_daemon_offline", err=str(exc))
+        return False
+
+    def _select_profile_by_name(self, name: str) -> bool:
+        """Seleciona a linha do store cujo nome bate com ``name``.
+
+        Retorna True se encontrou e selecionou; False caso contrário (perfil não
+        existe no store — ex.: deletado entre refresh e resposta IPC).
+        """
+        store = self._profiles_store
+        tree: Gtk.TreeView = self._get("profiles_tree")
+        tree_iter = store.get_iter_first()
+        while tree_iter is not None:
+            if str(store.get_value(tree_iter, 0)) == name:
+                tree.get_selection().select_iter(tree_iter)
+                path = store.get_path(tree_iter)
+                tree.scroll_to_cell(path, None, False, 0.0, 0.0)
+                return True
+            tree_iter = store.iter_next(tree_iter)
+        return False
 
     # --- handlers de toggle e radio ---
 
