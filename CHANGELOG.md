@@ -5,6 +5,21 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased] — v2.2.1 em preparação
 
+### Segurança
+- **Blindagem contra remoção silenciosa de glyphs Unicode ADR-011**
+  (BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02): `scripts/validar-acentuacao.py`
+  agora reconhece whitelist explícita `UNICODE_ALLOWED_RANGES` cobrindo
+  Arrows, Box Drawing, Block Elements e Geometric Shapes. Em modo
+  `--fix`, qualquer substituição cuja faixa original contenha caractere
+  protegido é rejeitada e emite warning em stderr citando o glyph e a
+  linha. Mesmo que alguém adicione par errado em `_PARES` (ex:
+  `("●", "")`), o filtro bloqueia a remoção. 23 testes regressão
+  parametrizados em `tests/unit/test_validar_acentuacao_glyphs.py`
+  cobrem codepoints canônicos (U+25AE/AF/CB/CF/D0, U+2192, U+2500,
+  U+2588), boundaries dos ranges e cenário de par malicioso injetado.
+  Bloqueia formalmente a 3ª reprodução da regressão documentada em
+  `BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01` (reproduzida 2x em V2.1 e V2.2).
+
 ### Melhorado
 - **Developer experience — detecção de PyGObject no `.venv`** (INFRA-VENV-PYGOBJECT-01):
   `scripts/dev-setup.sh` agora valida `import gi; Gtk.require_version('3.0')`

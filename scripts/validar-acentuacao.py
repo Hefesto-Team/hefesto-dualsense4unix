@@ -492,6 +492,28 @@ def _compila_pattern(errada: str) -> re.Pattern[str]:
 _PATTERNS: dict[str, re.Pattern[str]] = {e: _compila_pattern(e) for e in _CORRECOES}
 
 
+# BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02: whitelist Unicode conforme ADR-011.
+# Qualquer substituição que removesse caractere dentro destes ranges é
+# rejeitada, mesmo que venha de par adicionado por engano em _PARES.
+# Defense-in-depth contra a regressão reproduzida 2x (V2.1 + V2.2 pós-release).
+UNICODE_ALLOWED_RANGES: tuple[tuple[int, int], ...] = (
+    (0x2190, 0x21FF),  # Arrows
+    (0x2500, 0x257F),  # Box Drawing
+    (0x2580, 0x259F),  # Block Elements
+    (0x25A0, 0x25FF),  # Geometric Shapes (inclui BLACK CIRCLE, WHITE CIRCLE)
+)
+
+
+def is_protected_codepoint(cp: int) -> bool:
+    """True se `cp` pertence a bloco Unicode protegido por ADR-011."""
+    return any(lo <= cp <= hi for lo, hi in UNICODE_ALLOWED_RANGES)
+
+
+def _contem_glyph_protegido(texto: str) -> bool:
+    """True se `texto` contém ao menos um caractere em UNICODE_ALLOWED_RANGES."""
+    return any(is_protected_codepoint(ord(c)) for c in texto)
+
+
 def _linhas_markdown_codigo(linhas: list[str]) -> set[int]:
     """Retorna índices (0-based) de linhas dentro de fenced code block ou indentado 4+.
 
@@ -665,6 +687,26 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
                     else correta
                 )
                 subs.append((m.start(), m.end(), rep))
+
+        # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02 camada 1: rejeita qualquer
+        # substituição cuja faixa original contém glyph protegido por ADR-011.
+        # Aplica em modo --fix estritamente — se um par mal-formado em _PARES
+        # colocasse "●" como "errada", este filtro impede remoção silenciosa.
+        if subs:
+            filtrados = [
+                (s, e, r) for s, e, r in subs
+                if not _contem_glyph_protegido(linha[s:e])
+            ]
+            if len(filtrados) != len(subs):
+                rejeitados = [linha[s:e] for s, e, _ in subs
+                              if _contem_glyph_protegido(linha[s:e])]
+                print(
+                    f"[ADR-011] {path}:{idx + 1} — "
+                    f"{len(subs) - len(filtrados)} substituição(ões) rejeitada(s) "
+                    f"por tocar glyph protegido: {rejeitados!r}",
+                    file=sys.stderr,
+                )
+            subs = filtrados
 
         if subs:
             # Ordena por start e rejeita sobreposições (primeira casada vence).
