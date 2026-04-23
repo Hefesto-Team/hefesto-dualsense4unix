@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove)
+        echo ""
+        echo "Hefesto removido."
+        echo ""
+        echo "Configuracoes do usuario em ~/.config/hefesto/ foram preservadas."
+        echo "Para remover tambem as configuracoes:"
+        echo "  rm -rf ~/.config/hefesto/"
+        echo ""
+        echo "Se o servico systemd ainda estiver habilitado para algum usuario:"
+        echo "  systemctl --user disable --now hefesto.service"
+        ;;
+    purge)
+        # Nenhum arquivo em /etc/. Configuracoes ficam em XDG do usuario.
+        ;;
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
+esac
+
+exit 0

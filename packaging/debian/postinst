@@ -1,0 +1,37 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        # Reload das regras udev para DualSense
+        if command -v udevadm >/dev/null 2>&1; then
+            udevadm control --reload-rules
+            udevadm trigger --action=change --subsystem-match=usb
+        fi
+
+        # Atualiza cache de icones GTK
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -q -f /usr/share/icons/hicolor || true
+        fi
+
+        # Atualiza base de dados de .desktop
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database -q /usr/share/applications || true
+        fi
+
+        # NÃO habilita o servico systemd automaticamente — opt-in.
+        echo ""
+        echo "Hefesto instalado com sucesso."
+        echo ""
+        echo "Para habilitar o inicio automatico do daemon:"
+        echo "  systemctl --user enable --now hefesto.service"
+        echo ""
+        echo "Dependencias Python extras (se necessario):"
+        echo "  pip install pydualsense python-uinput"
+        echo ""
+        echo "Ou abra 'Hefesto' no menu de aplicativos."
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure) ;;
+esac
+
+exit 0

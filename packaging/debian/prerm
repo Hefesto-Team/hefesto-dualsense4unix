@@ -1,0 +1,16 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        # Sinaliza processos da GUI e do daemon para encerrar graciosamente.
+        # Nota: systemd --user e por-usuario; nao e possivel fazer
+        # systemctl --user stop como root. O usuario deve executar
+        # systemctl --user disable --now hefesto.service antes de remover,
+        # ou o postrm emitira aviso.
+        pkill -TERM -f 'hefesto\.app\.main' 2>/dev/null || true
+        pkill -TERM -f 'hefesto daemon start' 2>/dev/null || true
+        ;;
+esac
+
+exit 0
