@@ -418,6 +418,31 @@
                         </child>
 
                         <child>
+                          <object class="GtkBox" id="trigger_left_preset_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Preset:</property>
+                                <property name="visible">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_left_preset_combo">
+                                <property name="hexpand">True</property>
+                                <property name="visible">True</property>
+                                <signal name="changed" handler="on_trigger_left_preset_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
                           <object class="GtkLabel" id="trigger_left_desc">
                             <property name="label"></property>
                             <property name="xalign">0</property>
@@ -493,6 +518,31 @@
                               <object class="GtkComboBoxText" id="trigger_right_mode">
                                 <property name="hexpand">True</property>
                                 <signal name="changed" handler="on_trigger_right_mode_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox" id="trigger_right_preset_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Preset:</property>
+                                <property name="visible">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_right_preset_combo">
+                                <property name="hexpand">True</property>
+                                <property name="visible">True</property>
+                                <signal name="changed" handler="on_trigger_right_preset_changed"/>
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
