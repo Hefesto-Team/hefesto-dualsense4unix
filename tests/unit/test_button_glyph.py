@@ -14,7 +14,7 @@ import xml.dom.minidom
 
 import pytest
 
-# Raiz do repositorio (tests/unit/ -> raiz)
+# Raiz do repositório (tests/unit/ -> raiz)
 REPO_ROOT = pathlib.Path(__file__).parent.parent.parent
 GLYPHS_DIR = REPO_ROOT / "assets" / "glyphs"
 
@@ -42,7 +42,7 @@ GLYPHS_ESPERADOS = [
 
 
 # ---------------------------------------------------------------------------
-# (a) Existencia dos 19 SVGs
+# (a) Existência dos 19 SVGs
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("nome", GLYPHS_ESPERADOS)
@@ -104,7 +104,7 @@ def test_button_glyph_set_pressed_altera_flag() -> None:
 def test_button_glyph_set_pressed_dispara_queue_draw() -> None:
     """set_pressed(True) aciona queue_draw quando o estado muda.
 
-    Usa patch no modulo para interceptar a chamada independentemente
+    Usa patch no módulo para interceptar a chamada independentemente
     de GTK estar ou não disponivel (GObject não suporta setattr em instancia).
     """
     from hefesto.gui.widgets import button_glyph as mod
@@ -124,7 +124,7 @@ def test_button_glyph_set_pressed_dispara_queue_draw() -> None:
     glyph.queue_draw = _qd_rastreado  # type: ignore[method-assign]
     glyph.set_pressed(True)
 
-    # Em ambientes GTK, queue_draw e metodo C e pode não aceitar monkey-patch
+    # Em ambientes GTK, queue_draw e método C e pode não aceitar monkey-patch
     # de instancia — neste caso verifica apenas que _pressed mudou.
     if not chamadas:
         assert glyph.is_pressed, (

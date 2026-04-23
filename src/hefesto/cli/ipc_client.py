@@ -51,7 +51,7 @@ class IpcClient:
         timeout:
             Tempo máximo (segundos) para estabelecer a conexão. `None`
             significa sem limite. Em caso de `TimeoutError`, levanta
-            `IpcError(-1, "conexao timeout")`.
+            `IpcError(-1, "conexão timeout")`.
         """
         path = socket_path or ipc_socket_path()
         try:
@@ -63,7 +63,7 @@ class IpcClient:
             else:
                 reader, writer = await asyncio.open_unix_connection(str(path))
         except (TimeoutError, asyncio.TimeoutError) as exc:
-            raise IpcError(-1, "conexao timeout") from exc
+            raise IpcError(-1, "conexão timeout") from exc
         client = cls(reader=reader, writer=writer)
         try:
             yield client
@@ -91,7 +91,7 @@ class IpcClient:
             Parâmetros da chamada (dicionário). `None` equivale a ``{}``.
         timeout:
             Tempo máximo (segundos) para receber a resposta. `None` sem
-            limite. `TimeoutError` vira `IpcError(-1, "conexao timeout")`.
+            limite. `TimeoutError` vira `IpcError(-1, "conexão timeout")`.
         """
         self._next_id += 1
         request = {
@@ -110,10 +110,10 @@ class IpcClient:
             else:
                 raw = await self.reader.readline()
         except (TimeoutError, asyncio.TimeoutError) as exc:
-            raise IpcError(-1, "conexao timeout") from exc
+            raise IpcError(-1, "conexão timeout") from exc
 
         if not raw:
-            raise IpcError(-1, "conexao fechada pelo servidor antes da resposta")
+            raise IpcError(-1, "conexão fechada pelo servidor antes da resposta")
 
         response = json.loads(raw.decode("utf-8"))
         if "error" in response:

@@ -41,8 +41,8 @@ class MouseActionsMixin(WidgetAccessMixin):
     def _refresh_mouse_from_draft(self) -> None:
         """Popula widgets da aba Mouse a partir de self.draft.mouse.
 
-        Protegido por _guard_refresh para nao disparar handlers de signal
-        durante a atualizacao programatica dos widgets.
+        Protegido por _guard_refresh para não disparar handlers de signal
+        durante a atualização programatica dos widgets.
         """
         if self._guard_refresh:
             return
@@ -83,7 +83,7 @@ class MouseActionsMixin(WidgetAccessMixin):
         ok = mouse_emulation_set(enabled, speed=speed, scroll_speed=scroll)
         if not ok:
             self._toast_mouse(
-                "Falha ao comunicar com o daemon. Mouse nao alterado."
+                "Falha ao comunicar com o daemon. Mouse não alterado."
             )
             switch.set_active(not enabled)
             return True
@@ -104,7 +104,7 @@ class MouseActionsMixin(WidgetAccessMixin):
         if self._guard_refresh:
             return
         speed = int(scale.get_value())
-        # Atualiza draft independente de estar habilitado (preserva preferencia)
+        # Atualiza draft independente de estar habilitado (preserva preferência)
         draft = getattr(self, "draft", None)
         if draft is not None:
 
@@ -118,7 +118,7 @@ class MouseActionsMixin(WidgetAccessMixin):
         if self._guard_refresh:
             return
         scroll = int(scale.get_value())
-        # Atualiza draft independente de estar habilitado (preserva preferencia)
+        # Atualiza draft independente de estar habilitado (preserva preferência)
         draft = getattr(self, "draft", None)
         if draft is not None:
 

@@ -2,9 +2,9 @@
 
 Exports canonicos:
   - Plugin: ABC base para todos os plugins.
-  - PluginContext: container de dependencias injetado em on_load().
+  - PluginContext: container de dependências injetado em on_load().
 
-Uso minimo em um plugin:
+Uso mínimo em um plugin:
 
     from hefesto.plugin_api import Plugin, PluginContext
 

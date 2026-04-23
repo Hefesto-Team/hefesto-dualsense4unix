@@ -233,7 +233,7 @@ class IpcServer:
 
         handler = self._handlers.get(method)
         if handler is None:
-            return _json_rpc_error(req_id, CODE_METHOD_NOT_FOUND, f"metodo desconhecido: {method}")
+            return _json_rpc_error(req_id, CODE_METHOD_NOT_FOUND, f"método desconhecido: {method}")
 
         try:
             result = await handler(params)

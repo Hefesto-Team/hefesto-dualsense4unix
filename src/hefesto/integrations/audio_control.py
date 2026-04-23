@@ -1,4 +1,4 @@
-"""Controle de mute do microfone padrao do sistema via wpctl ou pactl.
+"""Controle de mute do microfone padrão do sistema via wpctl ou pactl.
 
 Auto-detecta o backend disponivel (wpctl para PipeWire/WirePlumber,
 pactl para PulseAudio legado). Nunca levanta excecao: falhas de
@@ -27,9 +27,9 @@ Backend = Literal["wpctl", "pactl", "none"]
 
 
 class AudioControl:
-    """Controla mute do microfone padrao do sistema via wpctl ou pactl.
+    """Controla mute do microfone padrão do sistema via wpctl ou pactl.
 
-    Auto-detecta backend no primeiro uso. Nao levanta: falhas viram
+    Auto-detecta backend no primeiro uso. Não levanta: falhas viram
     warning + retorno do último estado conhecido.
 
     Args:
@@ -70,7 +70,7 @@ class AudioControl:
     # ------------------------------------------------------------------
 
     def toggle_default_source_mute(self) -> bool:
-        """Alterna mute do microfone padrao do sistema.
+        """Alterna mute do microfone padrão do sistema.
 
         Aplica debounce de 200ms: chamadas consecutivas dentro desse
         intervalo ignoram o subprocess e retornam o último estado.
@@ -103,7 +103,7 @@ class AudioControl:
         return self._last_known_muted
 
     # ------------------------------------------------------------------
-    # Metodos internos de subprocess
+    # Métodos internos de subprocess
     # ------------------------------------------------------------------
 
     def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
@@ -127,7 +127,7 @@ class AudioControl:
     def _query_pactl_muted(self) -> bool:
         """Consulta estado de mute via pactl get-source-mute.
 
-        A saida padrao e 'Mute: yes' ou 'Mute: no'.
+        A saida padrão e 'Mute: yes' ou 'Mute: no'.
         """
         result = self._run(["pactl", "get-source-mute", "@DEFAULT_SOURCE@"])
         return "yes" in (result.stdout or "").lower()

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Valida que tests/ nao contem dados pessoais reais.
+# Valida que tests/ não contem dados pessoais reais.
 # Permitido: test_user, player_1, test@example.com, /tmp/hefesto_test_*, VID/PID reais.
 # Proibido: nomes proprios hardcoded, emails pessoais, MAC addresses de usuario.
 set -euo pipefail
 
-# Nomes ou padroes proibidos especificos ao ambiente do autor.
-# Padrao generico: sequencia de 3+ letras capitalizadas que nao seja palavra tecnica conhecida.
+# Nomes ou padrões proibidos especificos ao ambiente do autor.
+# Padrão generico: sequencia de 3+ letras capitalizadas que não seja palavra técnica conhecida.
 FORBIDDEN_EMAILS='[a-zA-Z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud)\.(com|com\.br|net|org)'
 FORBIDDEN_MAC='([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}'
 ALLOWED_MAC='00:00:00:00:00:00|FF:FF:FF:FF:FF:FF|aa:bb:cc:dd:ee:ff'

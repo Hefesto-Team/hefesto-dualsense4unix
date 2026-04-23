@@ -171,7 +171,7 @@ def test_apply_propaga_brightness(isolated_profiles_dir: Path):
 
 
 def test_apply_brightness_maximo_nao_escala(isolated_profiles_dir: Path):
-    """Brightness 1.0 (padrao) não altera os valores RGB."""
+    """Brightness 1.0 (padrão) não altera os valores RGB."""
     profile = _mk_profile(
         "full_test",
         leds=LedsConfig(lightbar=(200, 100, 50), lightbar_brightness=1.0),

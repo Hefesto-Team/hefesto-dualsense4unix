@@ -251,7 +251,7 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
     ``draft_dict`` segue o contrato definido em ``DraftConfig.to_ipc_dict()``:
     chaves triggers/leds/rumble/mouse.
 
-    Retorna True se o daemon confirmou aplicacao (status ok). False se daemon
+    Retorna True se o daemon confirmou aplicação (status ok). False se daemon
     offline, erro de transporte ou resposta inesperada.
     """
     try:

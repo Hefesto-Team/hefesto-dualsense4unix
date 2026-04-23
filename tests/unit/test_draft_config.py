@@ -148,7 +148,7 @@ def test_from_profile_player_leds() -> None:
 
 
 def test_from_profile_rumble_default() -> None:
-    """Profile v1 nao tem weak/strong; draft deve usar defaults."""
+    """Profile v1 não tem weak/strong; draft deve usar defaults."""
     profile = _make_profile()
     draft = DraftConfig.from_profile(profile)
     assert draft.rumble.weak == 0
@@ -156,7 +156,7 @@ def test_from_profile_rumble_default() -> None:
 
 
 def test_from_profile_mouse_default() -> None:
-    """Profile v1 nao tem mouse; draft deve usar defaults."""
+    """Profile v1 não tem mouse; draft deve usar defaults."""
     profile = _make_profile()
     draft = DraftConfig.from_profile(profile)
     assert draft.mouse.enabled is False
@@ -239,7 +239,7 @@ def test_round_trip_from_profile_to_profile() -> None:
 
 
 def test_model_copy_leds_preserva_triggers() -> None:
-    """Alterar leds via model_copy nao deve modificar triggers."""
+    """Alterar leds via model_copy não deve modificar triggers."""
     draft = DraftConfig(
         triggers=TriggersDraft(
             left=TriggerDraft(mode="Rigid", params=(0, 100, 255)),
@@ -257,7 +257,7 @@ def test_model_copy_leds_preserva_triggers() -> None:
 
 
 def test_model_copy_triggers_preserva_mouse() -> None:
-    """Alterar triggers via model_copy nao deve modificar mouse."""
+    """Alterar triggers via model_copy não deve modificar mouse."""
     draft = DraftConfig(
         mouse=MouseDraft(enabled=True, speed=8, scroll_speed=3),
     )
@@ -274,7 +274,7 @@ def test_model_copy_triggers_preserva_mouse() -> None:
 
 
 def test_model_copy_rumble_preserva_emulation() -> None:
-    """Alterar rumble via model_copy nao deve modificar emulation."""
+    """Alterar rumble via model_copy não deve modificar emulation."""
     draft = DraftConfig(
         emulation=EmulationDraft(xbox360_enabled=True),
     )
@@ -325,7 +325,7 @@ def test_to_ipc_dict_brightness_normalizada() -> None:
 
 
 def test_to_ipc_dict_mic_led_ausente() -> None:
-    """mic_led e reservado V2 — nao deve aparecer no dict IPC."""
+    """mic_led e reservado V2 — não deve aparecer no dict IPC."""
     draft = DraftConfig.default()
     d = draft.to_ipc_dict()
     assert "mic_led" not in d.get("leds", {})

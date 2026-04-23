@@ -8,12 +8,12 @@ Convencoes:
   - `name` (str): identificador único do plugin (slug snake_case).
   - `profile_match` (list[str]): lista de slugs de perfis em que o plugin
     deve ser ativado. Lista vazia = ativo em todos os perfis.
-  - Todos os hooks tem implementacao no-op por padrao; o plugin soh
+  - Todos os hooks tem implementação no-op por padrão; o plugin soh
     precisa sobrescrever o que usar.
 
 Aviso de seguranca:
-    Plugins rodam com os mesmos privilegios do daemon (usuario comum).
-    Não ha sandbox forte. O usuario e responsavel pelo codigo que instalar
+    Plugins rodam com os mesmos privilegios do daemon (usuário comum).
+    Não ha sandbox forte. O usuário e responsavel pelo código que instalar
     em ~/.config/hefesto/plugins/. Ver ADR-017.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 class Plugin(ABC):
     """Classe base para plugins do Hefesto.
 
-    Atributos de classe obrigatorios:
+    Atributos de classe obrigatórios:
         name: slug único do plugin (snake_case, sem espacos).
 
     Atributos de classe opcionais:
@@ -47,7 +47,7 @@ class Plugin(ABC):
     def on_load(self, ctx: PluginContext) -> None:  # noqa: B027
         """Chamado uma vez quando o plugin e carregado pelo daemon.
 
-        Use para guardar referencia ao ctx e realizar inicializacoes.
+        Use para guardar referência ao ctx e realizar inicializacoes.
         """
 
     def on_unload(self) -> None:  # noqa: B027
@@ -62,9 +62,9 @@ class Plugin(ABC):
     # ------------------------------------------------------------------
 
     def on_tick(self, state: ControllerState) -> None:  # noqa: B027
-        """Chamado a cada tick do poll loop (~30-120 Hz por padrao).
+        """Chamado a cada tick do poll loop (~30-120 Hz por padrão).
 
-        IMPORTANTE: manter rapido (< 1 ms ideal, < 5 ms maximo).
+        IMPORTANTE: manter rapido (< 1 ms ideal, < 5 ms máximo).
         Hooks lentos sao logados como warning e o plugin pode ser
         desativado automaticamente pelo watchdog do PluginsSubsystem.
 

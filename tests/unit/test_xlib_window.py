@@ -76,7 +76,7 @@ def test_xlib_client_mockado_retorna_dados(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setenv("DISPLAY", ":0")
 
-    # Substitui _exe_basename_from_pid pra nao depender de /proc real
+    # Substitui _exe_basename_from_pid pra não depender de /proc real
     from hefesto.integrations import xlib_window
 
     monkeypatch.setattr(xlib_window, "_exe_basename_from_pid", lambda pid: "firefox-bin")

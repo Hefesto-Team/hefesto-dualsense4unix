@@ -203,7 +203,7 @@ def _mk_subsystem_with_plugin(plugin: Plugin) -> PluginsSubsystem:
 
 
 class _SimplePlugin(Plugin):
-    """Plugin concreto minimo para testes."""
+    """Plugin concreto mínimo para testes."""
 
     name = "simples"
     profile_match: ClassVar[list[str]] = []
@@ -299,7 +299,7 @@ def test_watchdog_desativa_plugin_apos_3_ticks_lentos() -> None:
         entry.call_on_tick(_mk_state())
 
     assert entry.disabled is True
-    # Tick adicional apos desativacao: não deve chamar on_tick.
+    # Tick adicional apos desativação: não deve chamar on_tick.
     PluginLento.chamadas_antes = PluginLento.chamadas
     entry.call_on_tick(_mk_state())
     assert PluginLento.chamadas == PluginLento.chamadas_antes
@@ -354,7 +354,7 @@ def test_plugin_desativado_nao_recebe_tick() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Testes de integracao via loader + subsystem
+# Testes de integração via loader + subsystem
 # ---------------------------------------------------------------------------
 
 

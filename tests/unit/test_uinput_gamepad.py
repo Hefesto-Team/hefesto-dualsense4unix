@@ -51,7 +51,7 @@ def test_start_sem_uinput_retorna_false(monkeypatch: pytest.MonkeyPatch):
 
     def broken_import(name, *args, **kwargs):
         if name == "uinput":
-            raise ImportError("uinput nao instalado (mock)")
+            raise ImportError("uinput não instalado (mock)")
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", broken_import)

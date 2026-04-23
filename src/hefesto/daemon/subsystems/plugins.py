@@ -8,7 +8,7 @@ Ciclo de vida:
     - load_plugins_from_dir() carrega todos os *.py do diretório.
     - on_load(ctx) e chamado em cada plugin com um PluginContext dedicado.
     - Subscreve BUTTON_DOWN e BATTERY_CHANGE para despacho síncrono via
-      metodo tick() chamado pelo poll loop.
+      método tick() chamado pelo poll loop.
 
   tick(state, active_profile):
     - Chamado pelo _poll_loop() em lifecycle.py a cada tick.
@@ -23,11 +23,11 @@ Ciclo de vida:
 Configuração:
   - plugins_enabled (DaemonConfig): False por padrao. Opt-in explícito.
   - HEFESTO_PLUGINS_DIR: env var sobrescreve o diretório padrao.
-  - HEFESTO_PLUGINS_ENABLED: "1" forca ativacao (util em smoke/dev).
+  - HEFESTO_PLUGINS_ENABLED: "1" forca ativação (util em smoke/dev).
 
 Aviso de seguranca:
-    Plugins rodam com os mesmos privilegios do daemon. O usuario e
-    responsavel pelo codigo instalado em ~/.config/hefesto/plugins/.
+    Plugins rodam com os mesmos privilegios do daemon. O usuário e
+    responsavel pelo código instalado em ~/.config/hefesto/plugins/.
     Ver ADR-017.
 """
 from __future__ import annotations
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Tempo maximo por hook antes de emitir warning (segundos).
+# Tempo máximo por hook antes de emitir warning (segundos).
 _HOOK_WARN_MS = 5.0 / 1000.0
 
 # Quantas vezes consecutivas acima do limite antes de desativar.
@@ -55,7 +55,7 @@ _HOOK_DISABLE_THRESH = 3
 
 
 def _default_plugins_dir() -> Path:
-    """Retorna o diretório padrao de plugins (~/.config/hefesto/plugins/)."""
+    """Retorna o diretório padrão de plugins (~/.config/hefesto/plugins/)."""
     xdg_config = os.environ.get("XDG_CONFIG_HOME", "")
     base = Path(xdg_config) if xdg_config else Path.home() / ".config"
     return base / "hefesto" / "plugins"
@@ -193,13 +193,13 @@ class PluginsSubsystem:
         return cfg_enabled or env_force
 
     # ------------------------------------------------------------------
-    # Metodo de tick (chamado pelo poll loop)
+    # Método de tick (chamado pelo poll loop)
     # ------------------------------------------------------------------
 
     def tick(self, state: ControllerState, active_profile: str | None = None) -> None:
         """Despacha on_tick() para plugins que correspondem ao perfil ativo.
 
-        Deve ser chamado uma vez por iteracao do poll loop, apos
+        Deve ser chamado uma vez por iteração do poll loop, apos
         read_state() bem-sucedido.
 
         Args:

@@ -21,7 +21,7 @@ WORK_DIR="$HERE/build/appimage"
 OUT_DIR="$HERE/dist/appimage"
 
 if ! command -v python-appimage >/dev/null 2>&1; then
-    echo "erro: python-appimage nao instalado. Execute:"
+    echo "erro: python-appimage não instalado. Execute:"
     echo "  pip install python-appimage"
     exit 2
 fi
@@ -81,7 +81,7 @@ if [[ -f "$OUT_FILE" ]]; then
     echo ""
     echo "Teste: $OUT_FILE version"
 else
-    echo "aviso: arquivo final nao encontrado; veja logs do python-appimage."
+    echo "aviso: arquivo final não encontrado; veja logs do python-appimage."
     exit 4
 fi
 

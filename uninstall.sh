@@ -4,7 +4,7 @@
 # Para wipe completo: `rm -rf .venv` manualmente.
 #
 # Flags:
-#   --udev   remove tambem as udev rules em /etc/udev/rules.d/ (requer sudo).
+#   --udev   remove também as udev rules em /etc/udev/rules.d/ (requer sudo).
 #   --yes,-y responde 'sim' para prompts.
 
 set -euo pipefail

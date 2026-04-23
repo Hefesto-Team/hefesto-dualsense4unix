@@ -2,7 +2,7 @@
 
 Contrato:
   - `open_or_focus_steam()` e idempotente e nunca levanta: loga falha e segue.
-  - Se o binario `steam` não existir no PATH, loga warning uma vez e retorna
+  - Se o binário `steam` não existir no PATH, loga warning uma vez e retorna
     imediatamente nas chamadas subsequentes ate que o processo do daemon
     seja reiniciado. Evita poluir log com tentativas repetidas.
   - Se `pgrep -x steam` localiza PID, usa `wmctrl -lx` para achar a janela
@@ -10,7 +10,7 @@ Contrato:
   - Se o processo não esta rodando, faz `Popen(["steam"], start_new_session=True,
     stdin/out/err=DEVNULL)` e desprende do daemon.
   - NUNCA usa `shell=True`.
-  - Execucao em thread worker e responsabilidade do chamador; a função em si
+  - Execução em thread worker e responsabilidade do chamador; a função em si
     faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl) e um
     Popen não-bloqueante para o launcher.
 """

@@ -47,8 +47,8 @@ class GuidedStep:
 
     name: str
     instruction: str
-    # check(state, snap) -> bool: retorna True quando a acao esperada aconteceu
-    check: "callable"
+    # check(state, snap) -> bool: retorna True quando a ação esperada aconteceu
+    check: callable
     hold_sec: float = 0.6
     cooldown_sec: float = 0.4
 
@@ -292,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
 
     if args.output.suffix != ".bin":
-        print("erro: --output deve ter extensao .bin", file=sys.stderr)
+        print("erro: --output deve ter extensão .bin", file=sys.stderr)
         return 2
 
     try:
@@ -335,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.guided:
         print("=== MODO GUIADO ===")
         print("Siga cada instrucao. Cada passo precisa ser segurado por ~0.6s")
-        print("pra confirmar; se nao confirmar em 12s, pulamos automaticamente.")
+        print("pra confirmar; se não confirmar em 12s, pulamos automaticamente.")
         print()
         print("Preparando... 3...")
         time.sleep(1)
@@ -355,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _free_form_loop(session, args.duration, args.sample_hz)
     except KeyboardInterrupt:
-        print("\nabortado pelo usuario — gravando o que foi coletado...")
+        print("\nabortado pelo usuário — gravando o que foi coletado...")
     finally:
         with contextlib.suppress(Exception):
             controller.disconnect()

@@ -1,7 +1,7 @@
 """Presets de posição para modos MultiPositionFeedback e MultiPositionVibration.
 
 Cada preset define um array de 10 intensidades (uma por posição do gatilho,
-0-8) que popula os sliders da aba Gatilhos instantaneamente. O usuario ainda
+0-8) que popula os sliders da aba Gatilhos instantaneamente. O usuário ainda
 pode ajustar fino depois de aplicar um preset.
 
 Range canônico: 0-8 (alinhado com `trigger_effects.multi_position_feedback`
@@ -58,7 +58,7 @@ FEEDBACK_POSITION_LABELS: dict[str, str] = {
     "plateau_central":   "Plateau central",
     "stop_hard":         "Stop hard",
     "stop_macio":        "Stop macio",
-    "linear_medio":      "Linear medio",
+    "linear_medio":      "Linear médio",
     "custom":            "Personalizar",
 }
 

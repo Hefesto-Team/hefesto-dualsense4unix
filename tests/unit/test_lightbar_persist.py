@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # ---------------------------------------------------------------------------
-# Stubs de gi — mesmo padrao de test_status_actions_reconnect.py
+# Stubs de gi — mesmo padrão de test_status_actions_reconnect.py
 # ---------------------------------------------------------------------------
 
 
@@ -24,8 +24,8 @@ def _install_gi_stubs() -> None:
     """Instala stubs minimos de gi.repository para rodar em CI sem display.
 
     Complementa stubs existentes: se gi ja esta em sys.modules (instalado
-    por outro modulo de teste), ainda garante que Gdk e GObject estao
-    disponiveis — necessarios para lightbar_actions (Gdk.RGBA) e
+    por outro módulo de teste), ainda garante que Gdk e GObject estao
+    disponiveis — necessários para lightbar_actions (Gdk.RGBA) e
     profiles_actions (GObject.TYPE_STRING).
     """
     try:
@@ -69,7 +69,7 @@ def _install_gi_stubs() -> None:
     if not hasattr(glib_mod, "timeout_add_seconds"):
         glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
 
-    # --- Gdk (necessario para Gdk.RGBA em lightbar_actions) ---
+    # --- Gdk (necessário para Gdk.RGBA em lightbar_actions) ---
     gdk_mod = sys.modules.get("gi.repository.Gdk") or types.ModuleType("gi.repository.Gdk")
 
     class _FakeRGBA:

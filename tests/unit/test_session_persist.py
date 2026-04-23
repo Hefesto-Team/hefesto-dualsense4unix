@@ -47,7 +47,7 @@ def test_load_retorna_none_sem_arquivo(tmp_session: Path) -> None:
 
 
 def test_load_retorna_none_com_json_invalido(tmp_session: Path) -> None:
-    tmp_session.write_text("isto nao e json{{{", encoding="utf-8")
+    tmp_session.write_text("isto não e json{{{", encoding="utf-8")
     assert load_last_profile() is None
 
 

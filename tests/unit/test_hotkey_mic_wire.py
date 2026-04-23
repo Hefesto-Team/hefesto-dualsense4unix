@@ -43,7 +43,7 @@ async def _run_daemon_ticks(
 ) -> None:
     """Executa o daemon por n_ticks de poll e para.
 
-    Substitui _poll_loop por versao limitada que publica BUTTON_DOWN
+    Substitui _poll_loop por versão limitada que publica BUTTON_DOWN
     e para apos n_ticks, permitindo que _mic_button_loop consuma eventos.
     """
     poll_count = 0

@@ -134,4 +134,4 @@ Dashboard Grafana preparado (JSON) sera adicionado em `docs/grafana/` em sprint 
 
 - Bind exclusivo em `127.0.0.1` — nunca em `0.0.0.0`.
 - Sem autenticação no endpoint. Acesso local apenas.
-- Não há informações sensíveis nas métricas (sem PID, paths ou dados de usuario).
+- Não há informações sensíveis nas métricas (sem PID, paths ou dados de usuário).

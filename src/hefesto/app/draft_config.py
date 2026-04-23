@@ -110,7 +110,7 @@ class DraftConfig(BaseModel):
         self.draft = self.draft.model_copy(update={"leds": novo_leds_draft})
 
     Nunca mute campos diretamente — pydantic v2 frozen bloqueia, mas
-    a convencao explicita e mais facil de rastrear em code review.
+    a convencao explicita e mais fácil de rastrear em code review.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -125,7 +125,7 @@ class DraftConfig(BaseModel):
 
     @classmethod
     def default(cls) -> DraftConfig:
-        """Instancia com valores padrao seguros (sem hardware aplicado)."""
+        """Instancia com valores padrão seguros (sem hardware aplicado)."""
         return cls()
 
     @classmethod
@@ -171,7 +171,7 @@ class DraftConfig(BaseModel):
         # Rumble — Profile.rumble so tem ``passthrough`` (sem weak/strong persistido)
         rumble = RumbleDraft()
 
-        # Mouse e Emulacao — nao presentes no Profile v1; defaults
+        # Mouse e Emulacao — não presentes no Profile v1; defaults
         mouse = MouseDraft()
         emulation = EmulationDraft()
 
@@ -188,7 +188,7 @@ class DraftConfig(BaseModel):
 
         Apenas os campos suportados pelo schema Profile v1 sao preenchidos.
         Campos extras do draft (mouse, emulation, rumble.policy) sao descartados —
-        o schema nao os suporta ainda.
+        o schema não os suporta ainda.
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
@@ -233,7 +233,7 @@ class DraftConfig(BaseModel):
 
         Retorna dicionario com secoes triggers/leds/rumble/mouse.
         Campos reservados (mic_led, emulation, rumble.policy) sao omitidos
-        para nao causar erros em versoes de daemon sem suporte.
+        para não causar erros em versões de daemon sem suporte.
         """
         rgb = self.leds.lightbar_rgb
         return {

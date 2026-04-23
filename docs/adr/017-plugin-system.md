@@ -10,24 +10,24 @@
 ## Contexto
 
 Perfis hoje sao JSON estaticos: `triggers`, `leds`, `rumble` declarados em tempo de edicao.
-Nao ha como escrever um perfil que reaja ao jogo em tempo real — por exemplo,
+Não ha como escrever um perfil que reaja ao jogo em tempo real — por exemplo,
 "mudar lightbar para vermelho quando HP < 30%" ou "vibracao forte ao recarregar".
 
 O UDP DSX (porta 6969) permite que jogos enviem comandos ao daemon, mas o caminho
-inverso (leitura de estado do jogo) exige que o proprio jogo mande pacotes. Um sistema
+inverso (leitura de estado do jogo) exige que o próprio jogo mande pacotes. Um sistema
 de plugins abre alternativa: scripts Python lidos do disco que rodam no daemon com
 acesso limitado ao `IController` + eventos + state.
 
 ---
 
-## Decisao
+## Decisão
 
 Carregar plugins Python de `~/.config/hefesto/plugins/*.py` (cada arquivo = 1 plugin).
 A API minima exposta e:
 
 - `Plugin` ABC: hooks `on_load`, `on_tick`, `on_button_down`, `on_battery_change`,
-  `on_profile_change`, `on_unload`. Todos com implementacao no-op por padrao.
-- `PluginContext`: container de dependencias injetado em `on_load`. Expoe somente
+  `on_profile_change`, `on_unload`. Todos com implementação no-op por padrao.
+- `PluginContext`: container de dependências injetado em `on_load`. Expoe somente
   proxies sobre `IController` (subset de output + estado read-only), `EventBus.subscribe`,
   `StateStore.counter` e um logger prefixado.
 - `load_plugins_from_dir(path)`: importa via `importlib.util`, instancia a primeira
@@ -57,7 +57,7 @@ class MeuPlugin(Plugin):
         ...
 ```
 
-### Diretorio de instalacao
+### Diretório de instalação
 
 ```
 ~/.config/hefesto/plugins/
@@ -65,40 +65,40 @@ class MeuPlugin(Plugin):
 
 Arquivos com prefixo `_` sao ignorados (uso interno/desabilitado).
 
-### Ativacao
+### Ativação
 
-Por padrao, plugins sao desativados (`plugins_enabled = False` em `DaemonConfig`).
+Por padrão, plugins sao desativados (`plugins_enabled = False` em `DaemonConfig`).
 Ativar via:
 
-- Configuracao em `~/.config/hefesto/config.toml`: `plugins_enabled = true`
+- Configuração em `~/.config/hefesto/config.toml`: `plugins_enabled = true`
 - Variavel de ambiente: `HEFESTO_PLUGINS_ENABLED=1`
 
 ---
 
-## Limitacoes e seguranca
+## Limitações e seguranca
 
 ### Sem sandbox forte
 
-Plugins rodam com os mesmos privilegios do processo daemon (usuario comum, sem root).
-Nao ha `RestrictedPython`, cgroups ou bubblewrap. O usuario e **inteiramente
-responsavel** pelo codigo instalado em `~/.config/hefesto/plugins/`.
+Plugins rodam com os mesmos privilegios do processo daemon (usuário comum, sem root).
+Não ha `RestrictedPython`, cgroups ou bubblewrap. O usuário e **inteiramente
+responsavel** pelo código instalado em `~/.config/hefesto/plugins/`.
 
-Mitigacao operacional: o diretorio `~/.config/hefesto/plugins/` deve ser `owned by user`
-(o proprio usuario quem instala os arquivos ali). Nao instale plugins de fontes
+Mitigacao operacional: o diretório `~/.config/hefesto/plugins/` deve ser `owned by user`
+(o próprio usuário quem instala os arquivos ali). Não instale plugins de fontes
 desconhecidas.
 
 Sandbox forte (bubblewrap, seccomp, Lua via `lupa`) e escopo de V3.
 
-### Nao versionar a API
+### Não versionar a API
 
 A API `Plugin` / `PluginContext` e considerada instavel ate o primeiro release publico
-de plugins. Mudancas breaking exigirao bump de versao da API e nota de migracao.
+de plugins. Mudancas breaking exigirao bump de versão da API e nota de migracao.
 
 ### Performance
 
 - Cada hook tem watchdog de `time.monotonic`: se demorar > 5 ms, emite log warning.
-- Tres avisos consecutivos desativam o plugin automaticamente (flag `_PluginEntry.disabled`).
-- `on_tick` e chamado no poll loop principal (~60 Hz por padrao). Plugins **nao** devem
+- Três avisos consecutivos desativam o plugin automaticamente (flag `_PluginEntry.disabled`).
+- `on_tick` e chamado no poll loop principal (~60 Hz por padrão). Plugins **não** devem
   fazer I/O bloqueante ou chamadas de rede diretamente em `on_tick`.
 
 ---
@@ -108,13 +108,13 @@ de plugins. Mudancas breaking exigirao bump de versao da API e nota de migracao.
 | Alternativa | Descartada por |
 |---|---|
 | Lua via `lupa` | Menos bibliotecas disponiveis; V3 conforme roadmap |
-| `RestrictedPython` | Falsa sensacao de seguranca; overhead de parse; sem vantagem real em relacao a doc+responsabilidade do usuario |
+| `RestrictedPython` | Falsa sensacao de seguranca; overhead de parse; sem vantagem real em relação a doc+responsabilidade do usuário |
 | Subprocess isolado | Complexidade de IPC; latencia inaceitavel no poll loop |
 | WASM/Wasmer | Ecossistema Python-WASM imaturo em 2026 |
 
 ---
 
-## Impacto no codigo
+## Impacto no código
 
 Arquivos novos:
 - `src/hefesto/plugin_api/__init__.py`
@@ -137,6 +137,6 @@ Arquivos modificados:
 
 ## Rodape
 
-Decisao tomada com base em: seguranca pratica (usuario responsavel), simplicidade de
-implementacao, maxima compatibilidade com ecossistema Python, alinhamento com o modelo
-de extensao do projeto DualSenseX original.
+Decisão tomada com base em: seguranca prática (usuário responsavel), simplicidade de
+implementação, maxima compatibilidade com ecossistema Python, alinhamento com o modelo
+de extensão do projeto DualSenseX original.

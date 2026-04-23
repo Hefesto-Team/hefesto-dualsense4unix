@@ -28,8 +28,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def _refresh_lightbar_from_draft(self) -> None:
         """Popula widgets da aba Lightbar a partir de self.draft.leds.
 
-        Protegido por _refresh_guard para nao disparar handlers de signal
-        durante a atualizacao programatica dos widgets.
+        Protegido por _refresh_guard para não disparar handlers de signal
+        durante a atualização programatica dos widgets.
         """
         if self._refresh_guard:
             return
@@ -75,7 +75,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if preview is not None:
             preview.connect("draw", self._on_lightbar_preview_draw)
         # Seta cor inicial programaticamente (Glade não suporta inline
-        # RGBA com syntax "rgb(...)" sem segfault em todas as versoes).
+        # RGBA com syntax "rgb(...)" sem segfault em todas as versões).
         button: Gtk.ColorButton = self._get("lightbar_color_button")
         if button is not None:
             rgba = Gdk.RGBA()
@@ -119,7 +119,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
         """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
 
-        Nao aplica no hardware automaticamente; o usuario confirma via botao
+        Não aplica no hardware automaticamente; o usuário confirma via botao
         "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
         Guard _refresh_guard previne loop quando _refresh_lightbar_from_state
         atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).

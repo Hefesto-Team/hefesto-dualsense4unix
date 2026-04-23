@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 class ControllerProxy:
     """Fachada sobre IController exposta aos plugins.
 
-    Expoe apenas os metodos de output necessarios e o estado read-only.
+    Expoe apenas os métodos de output necessários e o estado read-only.
     """
 
     def __init__(self, controller: IController) -> None:
@@ -133,7 +133,7 @@ class StoreProxy:
 
 @dataclass
 class PluginContext:
-    """Container de dependencias injetado em Plugin.on_load().
+    """Container de dependências injetado em Plugin.on_load().
 
     Atributos:
         controller: proxy sobre IController com subset de metodos.
