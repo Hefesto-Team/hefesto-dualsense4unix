@@ -122,7 +122,7 @@ class Daemon:
 
     async def run(self) -> None:
         """Entry point: connect → subsystems → poll → wait → shutdown."""
-        from hefesto.daemon.subsystems.connection import (
+        from hefesto.daemon.connection import (
             connect_with_retry,
             restore_last_profile,
             shutdown,
@@ -316,7 +316,7 @@ class Daemon:
                 logger.warning("poll_read_failed", err=str(exc))
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
-                    from hefesto.daemon.subsystems.connection import reconnect
+                    from hefesto.daemon.connection import reconnect
 
                     previous_buttons = frozenset()
                     await reconnect(self)
