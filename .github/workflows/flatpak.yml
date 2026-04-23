@@ -129,5 +129,8 @@ jobs:
           path: |
             flatpak-build-dir/**/build.log
             flatpak-build-dir/**/*.log
+            !flatpak-build-dir/**/var/run/**
+            !flatpak-build-dir/**/var/cache/**
           retention-days: 7
           if-no-files-found: warn
+        continue-on-error: true
