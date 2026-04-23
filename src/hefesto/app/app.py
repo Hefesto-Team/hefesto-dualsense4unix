@@ -165,7 +165,13 @@ class HefestoApp(
             "on_player_leds_preset_p2": self.on_player_leds_preset_p2,
             "on_player_leds_preset_none": self.on_player_leds_preset_none,
             "on_player_led_toggled": self.on_player_led_toggled,
-            # Rumble
+            # Rumble — política de intensidade (FEAT-RUMBLE-POLICY-01)
+            "on_rumble_policy_economia": self.on_rumble_policy_economia,
+            "on_rumble_policy_balanceado": self.on_rumble_policy_balanceado,
+            "on_rumble_policy_max": self.on_rumble_policy_max,
+            "on_rumble_policy_auto": self.on_rumble_policy_auto,
+            "on_rumble_policy_slider_changed": self.on_rumble_policy_slider_changed,
+            # Rumble — testar motores
             "on_rumble_apply": self.on_rumble_apply,
             "on_rumble_test_500ms": self.on_rumble_test_500ms,
             "on_rumble_stop": self.on_rumble_stop,

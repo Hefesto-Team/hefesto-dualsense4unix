@@ -26,6 +26,14 @@ from hefesto.daemon.state_store import StateStore
 from hefesto.profiles.manager import ProfileManager
 from hefesto.utils.logging_config import get_logger
 
+# FEAT-RUMBLE-POLICY-01: políticas de intensidade global de rumble.
+RUMBLE_POLICY_MULT: dict[str, float] = {
+    "economia": 0.3,
+    "balanceado": 0.7,
+    "max": 1.0,
+}
+AUTO_DEBOUNCE_SEC = 5.0
+
 logger = get_logger(__name__)
 
 DEFAULT_POLL_HZ = 60
@@ -63,6 +71,15 @@ class DaemonConfig:
     # para não conflitar com o jogo. Usuário pode forçar mesmo em modo emulação
     # fixando rumble_active != None — seu valor vence.
     rumble_active: tuple[int, int] | None = None
+    # FEAT-RUMBLE-POLICY-01: política de intensidade global de rumble.
+    # Multiplicador aplicado sobre todos os valores antes de enviar ao hardware.
+    # "economia"  -> 0.3 (vibração sutil, 70% menos energia)
+    # "balanceado"-> 0.7 (default)
+    # "max"       -> 1.0 (sem limite)
+    # "auto"      -> dinâmico por bateria (debounce 5s): >50%->1.0, 20-50%->0.7, <20%->0.3
+    # "custom"    -> usar rumble_policy_custom_mult
+    rumble_policy: Literal["economia", "balanceado", "max", "auto", "custom"] = "balanceado"
+    rumble_policy_custom_mult: float = 0.7
 
 
 class BatteryDebouncer:
@@ -94,6 +111,53 @@ class BatteryDebouncer:
         self.last_emit_at = now
 
 
+def _effective_mult_inline(
+    config: DaemonConfig,
+    battery_pct: int,
+    now: float,
+    last_auto_mult: float,
+    last_auto_change_at: float,
+) -> tuple[float, float, float]:
+    """Calcula multiplicador de política inline (sem importar rumble.py).
+
+    Retorna (mult, novo_last_auto_mult, novo_last_auto_change_at).
+    Chamado por _reassert_rumble no Daemon para aplicar política sem
+    importação circular.
+    """
+    policy = config.rumble_policy
+
+    if policy in RUMBLE_POLICY_MULT:
+        return RUMBLE_POLICY_MULT[policy], last_auto_mult, last_auto_change_at
+
+    if policy == "custom":
+        mult = float(config.rumble_policy_custom_mult)
+        return mult, last_auto_mult, last_auto_change_at
+
+    if policy == "auto":
+        if battery_pct > 50:
+            target = 1.0
+        elif battery_pct >= 20:
+            target = 0.7
+        else:
+            target = 0.3
+
+        if target != last_auto_mult:
+            elapsed = now - last_auto_change_at
+            if elapsed >= AUTO_DEBOUNCE_SEC or last_auto_change_at == 0.0:
+                logger.info(
+                    "rumble_auto_policy_change",
+                    mult=target,
+                    battery_pct=battery_pct,
+                )
+                return target, target, now
+            return last_auto_mult, last_auto_mult, last_auto_change_at
+
+        return last_auto_mult, last_auto_mult, last_auto_change_at
+
+    # Fallback: balanceado.
+    return 0.7, last_auto_mult, last_auto_change_at
+
+
 @dataclass
 class Daemon:
     controller: IController
@@ -109,6 +173,9 @@ class Daemon:
     _autoswitch: Any = None
     _mouse_device: Any = None
     _hotkey_manager: Any = None
+    # FEAT-RUMBLE-POLICY-01: debounce de modo "auto" de política de rumble.
+    _last_auto_mult: float = field(default=0.7)
+    _last_auto_change_at: float = field(default=0.0)
 
     async def run(self) -> None:
         """Entry point: start tasks, wait until stop, shutdown."""
@@ -173,24 +240,45 @@ class Daemon:
             logger.warning("last_profile_restore_failed", name=name, err=str(exc))
 
     def _reassert_rumble(self, now: float) -> None:
-        """Re-aplica rumble_active no hardware a cada ~200ms.
+        """Re-aplica rumble_active no hardware a cada ~200ms com política (FEAT-RUMBLE-POLICY-01).
 
         Idempotente. Necessário porque writes HID de LED/trigger podem zerar os
         motores de vibração involuntariamente. A re-asserção a 5Hz (200ms) garante
         que o valor fixado pelo usuário persista mesmo com outras escritas HID.
 
+        Aplica multiplicador de política (economia/balanceado/max/auto/custom) sobre
+        os valores brutos guardados em rumble_active antes de enviar ao hardware.
+
         Pula silenciosamente se:
         - rumble_active is None (passthrough — jogo/UDP controla).
         - Controle não está conectado.
-        - emulation_enabled=True E rumble_active is None (não conflitar com jogo).
-          Mas se o usuário fixou rumble_active != None em modo emulação, seu valor
-          vence (intenção explícita supera o passthrough do jogo).
         """
         cfg = self.config
         active = cfg.rumble_active
         if active is None:
             return
-        weak, strong = active
+        weak_raw, strong_raw = active
+
+        # Aplica política de intensidade (FEAT-RUMBLE-POLICY-01).
+        battery_pct = 50  # fallback neutro
+        try:
+            snap = self.store.snapshot()
+            ctrl = snap.controller
+            if ctrl is not None and ctrl.battery_pct is not None:
+                battery_pct = int(ctrl.battery_pct)
+        except Exception:
+            pass
+
+        mult, self._last_auto_mult, self._last_auto_change_at = _effective_mult_inline(
+            config=cfg,
+            battery_pct=battery_pct,
+            now=now,
+            last_auto_mult=self._last_auto_mult,
+            last_auto_change_at=self._last_auto_change_at,
+        )
+        weak = max(0, min(255, round(weak_raw * mult)))
+        strong = max(0, min(255, round(strong_raw * mult)))
+
         try:
             self.controller.set_rumble(weak=weak, strong=strong)
         except Exception as exc:
@@ -468,10 +556,12 @@ class Daemon:
 
 
 __all__ = [
+    "AUTO_DEBOUNCE_SEC",
     "BATTERY_DEBOUNCE_SEC",
     "BATTERY_DELTA_THRESHOLD_PCT",
     "BATTERY_MIN_INTERVAL_SEC",
     "DEFAULT_POLL_HZ",
+    "RUMBLE_POLICY_MULT",
     "BatteryDebouncer",
     "Daemon",
     "DaemonConfig",

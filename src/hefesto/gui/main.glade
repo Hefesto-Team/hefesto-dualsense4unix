@@ -10,6 +10,15 @@
     <property name="value">100</property>
   </object>
 
+  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global (0-100%) -->
+  <object class="GtkAdjustment" id="rumble_policy_adj">
+    <property name="lower">0</property>
+    <property name="upper">100</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">70</property>
+  </object>
+
   <object class="GtkAdjustment" id="rumble_weak_adj">
     <property name="lower">0</property>
     <property name="upper">255</property>
@@ -806,99 +815,206 @@
               <object class="GtkLabel"><property name="label">Lightbar</property></object>
             </child>
 
-            <!-- ABA RUMBLE -->
+            <!-- ABA RUMBLE — FEAT-RUMBLE-POLICY-01 -->
             <child>
               <object class="GtkBox" id="tab_rumble_box">
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
                 <property name="margin">16</property>
 
+                <!-- Card 1: Política de rumble -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Motores de vibração</property>
+                    <property name="label">Política de rumble</property>
                     <child>
-                      <object class="GtkGrid">
-                        <property name="row-spacing">12</property>
-                        <property name="column-spacing">12</property>
-                        <property name="margin">16</property>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">10</property>
+                        <property name="margin">14</property>
 
+                        <!-- Linha de toggles de política -->
                         <child>
-                          <object class="GtkLabel">
-                            <property name="label">Motor fraco (weak)</property>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="homogeneous">True</property>
+
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_economia">
+                                <property name="label">Economia</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_economia"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_balanceado">
+                                <property name="label">Balanceado</property>
+                                <property name="active">True</property>
+                                <signal name="toggled" handler="on_rumble_policy_balanceado"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_max">
+                                <property name="label">Máximo</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_max"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_auto">
+                                <property name="label">Auto</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_auto"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Slider de intensidade global -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Intensidade global:</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_policy_slider">
+                                <property name="hexpand">True</property>
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="adjustment">rumble_policy_adj</property>
+                                <signal name="value-changed" handler="on_rumble_policy_slider_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Label educativo do modo Auto (oculto por padrão) -->
+                        <child>
+                          <object class="GtkLabel" id="rumble_policy_auto_label">
+                            <property name="label">Modo Auto: ajusta intensidade conforme a bateria do controle.
+Bateria &gt;50%: 100% (Máximo).  20-50%: 70% (Balanceado).  &lt;20%: 30% (Economia).
+Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                          <packing><property name="expand">False</property></packing>
                         </child>
+
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Card 2: Testar motores -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Testar motores</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">10</property>
+                        <property name="margin">14</property>
+
                         <child>
-                          <object class="GtkScale" id="rumble_weak_scale">
-                            <property name="draw-value">True</property>
-                            <property name="digits">0</property>
-                            <property name="value-pos">right</property>
-                            <property name="hexpand">True</property>
-                            <property name="adjustment">rumble_weak_adj</property>
+                          <object class="GtkGrid">
+                            <property name="row-spacing">10</property>
+                            <property name="column-spacing">12</property>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Motor fraco (weak)</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_weak_scale">
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">rumble_weak_adj</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Motor forte (strong)</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_strong_scale">
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">rumble_strong_adj</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                            </child>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                          <packing><property name="expand">False</property></packing>
                         </child>
 
                         <child>
-                          <object class="GtkLabel">
-                            <property name="label">Motor forte (strong)</property>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="rumble_test_500ms">
+                                <property name="label">Testar por 500 ms</property>
+                                <signal name="clicked" handler="on_rumble_test_500ms"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rumble_apply">
+                                <property name="label">Aplicar</property>
+                                <signal name="clicked" handler="on_rumble_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rumble_stop">
+                                <property name="label">Parar</property>
+                                <signal name="clicked" handler="on_rumble_stop"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="rumble_info">
+                            <property name="label">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
+                            <property name="use-markup">True</property>
                             <property name="xalign">0</property>
+                            <property name="wrap">True</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                          <packing><property name="expand">False</property></packing>
                         </child>
-                        <child>
-                          <object class="GtkScale" id="rumble_strong_scale">
-                            <property name="draw-value">True</property>
-                            <property name="digits">0</property>
-                            <property name="value-pos">right</property>
-                            <property name="hexpand">True</property>
-                            <property name="adjustment">rumble_strong_adj</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
-                        </child>
+
                       </object>
                     </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
 
-                <child>
-                  <object class="GtkBox">
-                    <property name="orientation">horizontal</property>
-                    <property name="spacing">8</property>
-                    <property name="homogeneous">True</property>
-                    <child>
-                      <object class="GtkButton" id="rumble_apply">
-                        <property name="label">Aplicar rumble</property>
-                        <signal name="clicked" handler="on_rumble_apply"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton" id="rumble_test_500ms">
-                        <property name="label">Testar por 500 ms</property>
-                        <signal name="clicked" handler="on_rumble_test_500ms"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkButton" id="rumble_stop">
-                        <property name="label">Parar</property>
-                        <signal name="clicked" handler="on_rumble_stop"/>
-                      </object>
-                    </child>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
-
-                <child>
-                  <object class="GtkLabel" id="rumble_info">
-                    <property name="label">&lt;i&gt;Os motores do DualSense têm janela mínima de 20 ms entre comandos (throttle do daemon). Pressione &quot;Testar por 500 ms&quot; para sentir um pulso curto.&lt;/i&gt;</property>
-                    <property name="use-markup">True</property>
-                    <property name="xalign">0</property>
-                    <property name="wrap">True</property>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
               </object>
             </child>
             <child type="tab">

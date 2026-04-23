@@ -206,6 +206,32 @@ def rumble_passthrough(enabled: bool = True) -> bool:
         return False
 
 
+def rumble_policy_set(policy: str) -> bool:
+    """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
+
+    ``policy`` deve ser um de "economia", "balanceado", "max", "auto", "custom".
+    Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
+    """
+    try:
+        _run_call("rumble.policy_set", {"policy": policy})
+        return True
+    except Exception:
+        return False
+
+
+def rumble_policy_custom(mult: float) -> bool:
+    """Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01).
+
+    ``mult`` deve ser float em [0.0, 1.0].
+    Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
+    """
+    try:
+        _run_call("rumble.policy_custom", {"mult": float(mult)})
+        return True
+    except Exception:
+        return False
+
+
 def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
     """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01).
 
@@ -266,6 +292,8 @@ __all__ = [
     "profile_list",
     "profile_switch",
     "rumble_passthrough",
+    "rumble_policy_custom",
+    "rumble_policy_set",
     "rumble_set",
     "rumble_stop",
     "trigger_set",

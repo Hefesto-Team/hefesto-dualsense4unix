@@ -83,6 +83,8 @@ class IpcServer:
             "rumble.set": self._handle_rumble_set,
             "rumble.stop": self._handle_rumble_stop,
             "rumble.passthrough": self._handle_rumble_passthrough,
+            "rumble.policy_set": self._handle_rumble_policy_set,
+            "rumble.policy_custom": self._handle_rumble_policy_custom,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
             "controller.list": self._handle_controller_list,
@@ -397,15 +399,26 @@ class IpcServer:
                 "speed": int(getattr(daemon_cfg, "mouse_speed", 6)),
                 "scroll_speed": int(getattr(daemon_cfg, "mouse_scroll_speed", 1)),
             }
+            # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
+            rumble_mult_applied: float = 1.0
+            rumble_engine = getattr(self.daemon, "_rumble_engine", None)
+            if rumble_engine is not None:
+                rumble_mult_applied = float(rumble_engine.last_mult_applied)
+            result["rumble_policy"] = str(getattr(daemon_cfg, "rumble_policy", "balanceado"))
+            result["rumble_policy_custom_mult"] = float(
+                getattr(daemon_cfg, "rumble_policy_custom_mult", 0.7)
+            )
+            result["rumble_mult_applied"] = rumble_mult_applied
 
         return result
 
     async def _handle_rumble_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Aplica rumble e persiste estado para re-asserção contínua (BUG-RUMBLE-APPLY-IGNORED-01).
+        """Aplica rumble com política de intensidade (FEAT-RUMBLE-POLICY-01).
 
-        Atualiza daemon.config.rumble_active para que o poll loop re-afirme
-        os valores a cada 200ms, garantindo vibração contínua mesmo com outros
-        writes HID de LED/trigger que possam zerar os motores.
+        Persiste (weak, strong) brutos em daemon.config.rumble_active para que
+        o poll loop continue re-afirmando via _reassert_rumble. O multiplicador
+        de política é aplicado antes de enviar ao hardware — tanto aqui quanto
+        em _reassert_rumble.
         """
         weak = params.get("weak")
         strong = params.get("strong")
@@ -413,11 +426,13 @@ class IpcServer:
             raise ValueError("rumble.set exige 'weak' e 'strong' inteiros 0-255")
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
-        # Persiste estado antes de aplicar para o poll loop continuar re-afirmando.
+        # Persiste estado bruto antes de aplicar para o poll loop continuar re-afirmando.
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
-        self.controller.set_rumble(weak=weak, strong=strong)
+        # Aplica política antes de enviar ao hardware.
+        eff_weak, eff_strong = _apply_rumble_policy(self.daemon, weak, strong)
+        self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
         return {"status": "ok", "weak": weak, "strong": strong}
 
     async def _handle_rumble_stop(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -503,8 +518,8 @@ class IpcServer:
     ) -> dict[str, Any]:
         """Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse.
 
-        Cada setor e aplicado de forma best-effort: falha em um setor loga warning
-        mas nao bloqueia os demais. Retorna lista ``applied`` com setores que
+        Cada setor é aplicado de forma best-effort: falha em um setor loga warning
+        mas não bloqueia os demais. Retorna lista ``applied`` com setores que
         foram aplicados com sucesso (FEAT-PROFILE-STATE-01).
 
         Params:
@@ -608,7 +623,7 @@ class IpcServer:
                 speed = mouse_raw.get("speed")
                 scroll_speed = mouse_raw.get("scroll_speed")
                 if self.daemon is None:
-                    raise ValueError("daemon nao disponivel para alterar emulacao de mouse")
+                    raise ValueError("daemon não disponível para alterar emulação de mouse")
                 self.daemon.set_mouse_emulation(
                     enabled=enabled,
                     speed=speed,
@@ -619,6 +634,103 @@ class IpcServer:
                 logger.warning("apply_draft_mouse_falhou", erro=str(exc))
 
         return {"status": "ok", "applied": applied}
+
+
+    async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
+
+        Params:
+            policy: "economia" | "balanceado" | "max" | "auto" | "custom"
+        """
+        policy = params.get("policy")
+        valid_policies = ("economia", "balanceado", "max", "auto", "custom")
+        if policy not in valid_policies:
+            raise ValueError(
+                f"rumble.policy_set: policy deve ser um de {valid_policies}"
+            )
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if daemon_cfg is None:
+            raise ValueError("daemon não disponível para alterar política de rumble")
+        daemon_cfg.rumble_policy = policy  # type: ignore[assignment]
+        logger.info("rumble_policy_alterada", policy=policy)
+        return {"status": "ok", "policy": policy}
+
+    async def _handle_rumble_policy_custom(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01).
+
+        Params:
+            mult: float 0.0-1.0
+        """
+        mult_raw = params.get("mult")
+        try:
+            mult = float(mult_raw)  # type: ignore[arg-type]
+        except (TypeError, ValueError) as exc:
+            raise ValueError("rumble.policy_custom: 'mult' precisa ser float") from exc
+        if not (0.0 <= mult <= 1.0):
+            raise ValueError(
+                f"rumble.policy_custom: mult fora de [0.0, 1.0]: {mult}"
+            )
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        if daemon_cfg is None:
+            raise ValueError("daemon não disponível para alterar política de rumble")
+        daemon_cfg.rumble_policy = "custom"
+        daemon_cfg.rumble_policy_custom_mult = mult
+        logger.info("rumble_policy_custom_definida", mult=mult)
+        return {"status": "ok", "mult": mult}
+
+
+def _apply_rumble_policy(daemon: Any, weak: int, strong: int) -> tuple[int, int]:
+    """Aplica multiplicador de política de rumble sobre (weak, strong).
+
+    Consulta config do daemon e o RumbleEngine (para debounce do auto).
+    Se daemon ausente ou sem config, retorna valores sem alteração.
+    """
+    import time as _time
+
+    daemon_cfg = getattr(daemon, "config", None) if daemon else None
+    if daemon_cfg is None:
+        return weak, strong
+
+    from hefesto.core.rumble import _effective_mult
+    from hefesto.daemon.lifecycle import AUTO_DEBOUNCE_SEC
+
+    # Bateria do estado mais recente (via store se disponível).
+    battery_pct = 50
+    store = getattr(daemon, "store", None)
+    if store is not None:
+        try:
+            snap = store.snapshot()
+            ctrl = snap.controller
+            if ctrl is not None and ctrl.battery_pct is not None:
+                battery_pct = int(ctrl.battery_pct)
+        except Exception:
+            pass
+
+    # Debounce auto: lê do RumbleEngine se existir.
+    rumble_engine = getattr(daemon, "_rumble_engine", None)
+    last_auto_mult = getattr(rumble_engine, "_last_auto_mult", 0.7) if rumble_engine else 0.7
+    last_auto_change_at = (
+        getattr(rumble_engine, "_last_auto_change_at", 0.0) if rumble_engine else 0.0
+    )
+
+    mult, new_last_auto_mult, new_last_auto_change_at = _effective_mult(
+        config=daemon_cfg,
+        battery_pct=battery_pct,
+        now=_time.monotonic(),
+        last_auto_mult=last_auto_mult,
+        last_auto_change_at=last_auto_change_at,
+        auto_debounce_sec=AUTO_DEBOUNCE_SEC,
+    )
+
+    # Propaga debounce de volta ao engine se existir.
+    if rumble_engine is not None:
+        rumble_engine._last_auto_mult = new_last_auto_mult
+        rumble_engine._last_auto_change_at = new_last_auto_change_at
+        rumble_engine._last_mult_applied = mult
+
+    eff_weak = max(0, min(255, round(weak * mult)))
+    eff_strong = max(0, min(255, round(strong * mult)))
+    return eff_weak, eff_strong
 
 
 def _json_rpc_result(req_id: Any, result: Any) -> bytes:
