@@ -113,7 +113,10 @@ jobs:
 
   deb-install-smoke:
     name: Smoke install do .deb
-    runs-on: ubuntu-22.04
+    # ubuntu-24.04 por BUG-DEB-PYDANTIC-V2-UBUNTU-22-01:
+    # Ubuntu 22.04 entrega python3-pydantic 1.9.x; codigo usa ConfigDict (v2).
+    # .deb continua buildado em 22.04 (compat maxima); smoke valida em 24.04.
+    runs-on: ubuntu-24.04
     needs: [build, deb]
     env:
       VERSION: ${{ needs.build.outputs.version }}
