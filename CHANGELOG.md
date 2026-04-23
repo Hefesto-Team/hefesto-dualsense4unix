@@ -3,7 +3,81 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Unreleased — rumo a 1.1.0]
+## [1.1.0] — 2026-04-22
+
+Release de estabilidade + polish UX. 17 sprints integradas sobre a 1.0.0
+cobrindo correção de bugs P0 reportados pelo usuário, redesign da interface
+com tema Drácula e ButtonGlyphs originais, estado central de configuração
+(DraftConfig), 6 perfis pré-configurados + "Meu Perfil", presets de gatilho
+por posição e política global de rumble com modo Auto dinâmico por bateria.
+
+### Adicionado
+- **Tema Drácula global** via `Gtk.CssProvider` (UI-THEME-BORDERS-PURPLE-01):
+  bordas roxas `#bd93f9` nos widgets interativos, hover pink, focus cyan,
+  cards `.hefesto-card` com fundo `#21222c`.
+- **19 ButtonGlyph SVGs originais** (FEAT-BUTTON-SVG-01) em `assets/glyphs/`:
+  4 face + 4 dpad + 4 triggers + 4 system (sem logo Sony) + 2 sticks + mic.
+  Widget `ButtonGlyph(GtkDrawingArea)` + mapa `BUTTON_GLYPH_LABELS` PT-BR.
+- **Bloco Status redesenhado** (UI-STATUS-STICKS-REDESIGN-01) em 3 colunas
+  homogêneas: StickPreviewGtk + grid 4×4 de glyphs com feedback visual
+  ao vivo. L2/R2 iluminam quando raw > 30; L3/R3 muda cor do título.
+- **Player LEDs reais** (FEAT-PLAYER-LEDS-APPLY-01): bitmask arbitrário
+  via `ds.light.playerNumber = PlayerID(bitmask)`, handler IPC
+  `led.player_set`.
+- **Brightness end-to-end** (FEAT-LED-BRIGHTNESS-02/03): `_to_led_settings`
+  propaga → `LedSettings.brightness_level` → RGB escalado antes do
+  hardware. Persist no JSON via `_build_profile_from_editor`. Resolve A-06.
+- **Editor de perfil dual** (UI-PROFILES-EDITOR-SIMPLE-01): modo simples
+  (radios) + modo avançado. Preferência em `gui_preferences.json`.
+  `simple_match.py` com `SIMPLE_MATCH_PRESETS` + `detect_simple_preset`.
+- **DraftConfig central** (FEAT-PROFILE-STATE-01): pydantic v2 frozen
+  compartilhado. `switch-page` + `_refresh_widgets_from_draft` preserva
+  edições. Handler IPC `profile.apply_draft` (ordem leds→triggers→rumble→mouse).
+- **Rodapé global** (UI-GLOBAL-FOOTER-ACTIONS-01): Aplicar, Salvar Perfil,
+  Importar JSON validado, Restaurar Default. Helpers em `gui_dialogs.py`.
+- **6 perfis + Meu Perfil** (FEAT-PROFILES-PRESET-06): navegacao/fps/
+  aventura/acao/corrida/esportes com identidade cromática e mecânica
+  própria. `meu_perfil.json` como slot editável (MatchAny, priority 0).
+  `scripts/install_profiles.sh` copia defaults sem sobrescrever.
+- **Presets de trigger por posição** (FEAT-TRIGGER-PRESETS-POSITION-01):
+  6 presets Feedback + 5 Vibração + Custom em dropdown. Popula os 10
+  sliders em 1 clique.
+- **Política global de rumble** (FEAT-RUMBLE-POLICY-01): Economia (0.3×)/
+  Balanceado (0.7×)/Máximo (1.0×)/Auto. Auto dinâmico por bateria com
+  debounce 5s. Slider Custom 0-100%.
+- **Matriz 3-fontes do status do daemon** (BUG-DAEMON-STATUS-MISMATCH-01):
+  Literal `online_systemd/online_avulso/iniciando/offline` + label PT-BR
+  colorido + tooltip + botão "Migrar para systemd".
+- **Refactor evdev snapshot único** (REFACTOR-HOTKEY-EVDEV-01): resolve A-09.
+- **Script CI version-check** (DOCS-VERSION-SYNC-01).
+
+### Corrigido
+- **GUI abre e fecha ao plugar** (BUG-TRAY-SINGLE-FLASH-01): GUI vira
+  "primeira vence" via `acquire_or_bring_to_front`; daemon mantém "última
+  vence". Handler SIGUSR1 reabre janela. Guard `pgrep` removido da unit.
+- **Rumble "Aplicar" não persiste** (BUG-RUMBLE-APPLY-IGNORED-01):
+  `DaemonConfig.rumble_active` + `_reassert_rumble()` a 200ms no poll loop
+  re-aplica valores sobrepondo writes HID. Handlers `rumble.stop` e
+  `rumble.passthrough`.
+- **Layout Status** ajustado ao feedback 2026-04-22: sticks lado-a-lado
+  em 3 colunas homogêneas, glyphs 40px.
+- **Aba Daemon log em card com wrap** (UI-DAEMON-LOG-WRAP-01): filtro ANSI.
+- **Aba Emulação alinhada** (UI-EMULATION-ALIGN-01): Gtk.Grid 2-col,
+  BUTTON_GLYPH_LABELS PT-BR em "D-pad Cima/Baixo".
+- **Aba Mouse limpa** (UI-MOUSE-CLEANUP-01): removido "(fixo nesta versão)".
+- **Handler `on_player_led_toggled` conectado** em `app.py`.
+
+### Testes
+- Suíte cresceu de 412 (v1.0.0) para **772 passed, 5 skipped**. +360
+  testes novos cobrindo single-instance, rumble policy, draft config,
+  IPC apply_draft, footer actions, profile presets, trigger presets,
+  daemon status matrix, theme CSS, button glyphs, lightbar persist,
+  status buttons glyphs, poll loop evdev cache, profile editor roundtrip,
+  simple match, entre outros.
+
+---
+
+## [Pre-1.1.0 incremental — 2026-04-22]
 
 ### Adicionado (2026-04-22)
 - **Módulo `single_instance`**: `acquire_or_takeover(name)` via `fcntl.flock` + SIGTERM(2s)→SIGKILL. Daemon e GUI passam a ser mutuamente exclusivos (modelo "última vence" no daemon). Previne 2+ instâncias criando `UinputMouseDevice` concorrentes (causa do bug "cursor voando" reportado pelo usuário).

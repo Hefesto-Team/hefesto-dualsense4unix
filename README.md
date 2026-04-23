@@ -3,8 +3,8 @@
 > Daemon Linux para gatilhos adaptativos do controle DualSense. Porte espiritual do DualSenseX para Unix em Python.
 
 ```
-Versão:  1.0.0
-Estado:  runtime validado em Pop!_OS 22.04 com DualSense USB; v1.1 em preparação
+Versão:  1.1.0
+Estado:  runtime validado em Pop!_OS 22.04 com DualSense USB/BT; v1.2 em preparação
 Alvo:    Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
