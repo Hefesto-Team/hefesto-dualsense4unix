@@ -117,6 +117,8 @@ O rodapé global tem 4 botões que operam em **tudo** (gatilhos + LEDs + rumble 
 
 Perfis pré-instalados (aba Perfis):
 
+![Aba Perfis listando Ação, Aventura, Corrida, Esportes, fallback, FPS, meu_perfil e Navegação com editor de critérios à direita](assets/quickstart_07_perfis.png)
+
 - `navegacao` — mouse ON, triggers off, azul suave.
 - `fps` — R2 SemiAutoGun, L2 Rigid, vermelho.
 - `aventura` — R2 Galloping (pulsação de carga), dourado.
@@ -124,6 +126,8 @@ Perfis pré-instalados (aba Perfis):
 - `corrida` — R2 SlopeFeedback (pedal), ciano.
 - `esportes` — R2 PulseA, verde.
 - `meu_perfil` — slot editável seu.
+
+A coluna **Prio** mostra a prioridade do matcher (maior ganha em caso de empate) e **Match** indica se é `any` (fallback universal) ou `criteria` (bate por janela/processo). O editor à direita permite ajustar nome, prioridade e regras de autoswitch (`window_class`, `title_regex`, `process_name`).
 
 Autoswitch por janela ativa detecta automaticamente (ex.: abrir Firefox → `navegacao`; abrir Forza → `corrida`).
 
