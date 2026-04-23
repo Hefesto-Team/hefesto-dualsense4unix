@@ -124,6 +124,74 @@ def test_overwrite_preserva_integridade(isolated_profiles_dir: Path):
     assert restored.priority == 99
 
 
+def test_save_profile_usa_slug(isolated_profiles_dir: Path):
+    """PROFILE-SLUG-SEPARATION-01: Profile(name='Ação') grava acao.json."""
+    profile = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),
+        priority=5,
+    )
+    path = save_profile(profile)
+    assert path.name == "acao.json"
+    assert path.exists()
+    # Garante que não foi gravado com filename acentuado.
+    assert not (isolated_profiles_dir / "Ação.json").exists()
+
+
+def test_load_profile_por_slug(isolated_profiles_dir: Path):
+    """load_profile por slug literal ASCII retorna Profile com name acentuado."""
+    profile = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),  # slug literal ASCII (noqa-acento)
+        priority=5,
+    )
+    save_profile(profile)
+    restored = load_profile("acao")  # slug literal ASCII (noqa-acento)
+    assert restored.name == "Ação"
+
+
+def test_load_profile_por_display(isolated_profiles_dir: Path):
+    """load_profile('Ação') — display name — também encontra via slugify."""
+    profile = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),
+        priority=5,
+    )
+    save_profile(profile)
+    restored = load_profile("Ação")
+    assert restored.name == "Ação"
+
+
+def test_load_profile_fallback_scan(isolated_profiles_dir: Path):
+    """Arquivo com filename arbitrário e name='Ação' é achado via scan."""
+    # Grava manualmente com filename divergente do slug.
+    profile = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),
+        priority=5,
+    )
+    payload = profile.model_dump(mode="json")
+    arbitrario = isolated_profiles_dir / "qualquer-nome.json"
+    arbitrario.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    restored = load_profile("Ação")
+    assert restored.name == "Ação"
+
+
+def test_delete_profile_resolve_slug(isolated_profiles_dir: Path):
+    """delete_profile('Ação') remove acao.json via resolução por display."""
+    profile = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),
+        priority=5,
+    )
+    save_profile(profile)
+    assert (isolated_profiles_dir / "acao.json").exists()
+
+    delete_profile("Ação")
+    assert not (isolated_profiles_dir / "acao.json").exists()
+
+
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     """Mimetiza installer copiando perfis default para profiles_dir."""
     repo_root = Path(__file__).resolve().parents[2]
