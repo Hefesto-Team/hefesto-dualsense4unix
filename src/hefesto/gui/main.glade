@@ -157,7 +157,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_connection">
-                            <property name="label">Desconhecido</property>
+                            <property name="label">Consultando...</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
@@ -218,7 +218,7 @@
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_daemon">
-                            <property name="label">Offline</property>
+                            <property name="label">Consultando...</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
