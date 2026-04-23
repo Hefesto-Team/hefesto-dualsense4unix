@@ -5,6 +5,19 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased] — v2.2.1 em preparação
 
+### Corrigido
+- **Versão reportada errada em CLI/TUI/AppImage** (BUG-APPIMAGE-VERSION-NAME-01):
+  `src/hefesto/__init__.py` tinha `__version__ = "1.0.0"` hardcoded por
+  ~3 releases, afetando `hefesto version`, título/subtítulo da TUI,
+  nome do asset AppImage no GitHub Release (v2.2.0 saiu como
+  `Hefesto-1.0.0-x86_64.AppImage`) e validação do teste `test_cli`.
+  Fix: `__version__` passa a ser lido dinamicamente via
+  `importlib.metadata.version("hefesto")` com fallback hardcoded
+  sincronizado ao `pyproject.toml`. `scripts/build_appimage.sh`
+  alinhado ao padrão de `build_deb.sh` (lê `pyproject.toml` direto,
+  sem depender do pacote estar importável). Regressão futura coberta
+  por `CHORE-VERSION-SYNC-GATE-01` (enfileirada).
+
 ### Adicionado
 - **Aba Firmware na GUI** (FEAT-FIRMWARE-UPDATE-GUI-01):
   nova aba permite consultar versão atual do firmware do DualSense e

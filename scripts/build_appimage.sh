@@ -59,8 +59,21 @@ $WHEEL
 EOF
 
 mkdir -p "$OUT_DIR"
-VERSION=$(python3 -c "import hefesto; print(hefesto.__version__)")
+# Le versão do pyproject.toml (Python 3.11+ tem tomllib nativo; fallback tomli)
+# Mesmo padrão de build_deb.sh — zero dependência de `import hefesto` funcionar.
+VERSION=$(python3 - <<'EOF'
+import sys
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+with open("pyproject.toml", "rb") as f:
+    data = tomllib.load(f)
+print(data["project"]["version"])
+EOF
+)
 OUT_FILE="$OUT_DIR/Hefesto-${VERSION}-x86_64.AppImage"
+echo "Versão detectada: ${VERSION}"
 
 echo "[3/4] Gerando AppImage com Python ${PYTHON_VERSION}..."
 python-appimage build app \
