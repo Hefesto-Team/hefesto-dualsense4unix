@@ -175,7 +175,7 @@ def test_noop_quando_daemon_ja_ativo(
 
     # Apenas a chamada is-active deve ter ocorrido — nenhuma start.
     assert any("is-active" in " ".join(c) for c in calls)
-    # Nenhum cmd contém o argumento literal "start" (exceto "start" dentro de "is-active" — filtrado).
+    # Nenhum cmd contém o argumento literal "start" (exceto dentro de "is-active" — filtrado).
     started = [c for c in calls if "start" in c and "is-active" not in c]
     assert started == []
     assert host._daemon_autostart_attempts == 0
