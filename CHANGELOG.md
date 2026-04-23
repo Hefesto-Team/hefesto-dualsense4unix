@@ -3,6 +3,72 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [2.0.0] — 2026-04-23
+
+Release de infra + arquitetura + extensibilidade. 9 sprints V2.0
+consolidadas sobre v1.2.0: cadeia completa de botões (inclusive Mic
+físico muta o sistema), daemon refatorado em subsystems modulares,
+endpoint Prometheus opt-in, sistema de plugins Python.
+
+### Adicionado
+- **Cadeia MIC completa** (INFRA-BUTTON-EVENTS-01, INFRA-MIC-HID-01,
+  INFRA-SET-MIC-LED-01 + FEAT-AUDIO-CONTROL-01 + FEAT-HOTKEY-MIC-01):
+  - `ControllerState.buttons_pressed: frozenset[str]` propagado do evdev
+    snapshot pro poll loop; diff gera `EventTopic.BUTTON_DOWN/UP`.
+  - Botão Mic exposto via HID-raw (`ds.state.micBtn`) em ambos ramos
+    (evdev + fallback).
+  - `IController.set_mic_led(muted)` abstrato; backend usa
+    `ds.audio.setMicrophoneLED`. `apply_led_settings` propaga
+    `settings.mic_led` (resolve débito documentado em led_control.py).
+  - `src/hefesto/integrations/audio_control.py`: `AudioControl`
+    auto-detecta wpctl → pactl → none; debounce 200ms; nunca
+    `shell=True`; toggle retorna novo estado.
+  - `Daemon._start_mic_hotkey` subscribe em BUTTON_DOWN, filtra mic_btn,
+    chama `AudioControl.toggle` + `controller.set_mic_led(muted)`.
+    Dupla sincronização: LED do controle espelha mute do sistema.
+  - Opt-out via `DaemonConfig.mic_button_toggles_system: bool = True`.
+- **Daemon refatorado em subsystems modulares** (REFACTOR-LIFECYCLE-01):
+  - `src/hefesto/daemon/subsystems/`: 10 módulos temáticos
+    (poll, ipc, udp, autoswitch, mouse, rumble, hotkey, metrics,
+    plugins, connection).
+  - `src/hefesto/daemon/context.py`: `DaemonContext` dataclass
+    compartilhado (controller, bus, store, config, executor).
+  - `base.py`: Protocol `Subsystem(name, start, stop, is_enabled)`.
+  - `lifecycle.py`: 677L → 365L. Backcompat total — 820 testes antigos
+    passam sem modificação.
+  - ADR-015 documenta padrão e ordem canônica de start.
+  - 55 testes novos testando subsystems em isolamento.
+- **Endpoint de métricas Prometheus opt-in** (FEAT-METRICS-01):
+  - `MetricsSubsystem` expõe `/metrics` em text exposition format,
+    bind 127.0.0.1 only, porta 9090 default (configurável).
+  - 8 métricas canônicas: poll_ticks, controller_connected, battery_pct,
+    ipc_requests, udp_packets, events_dispatched, button_down/up.
+  - Sem dep obrigatória de `prometheus_client` — texto manual. Extra
+    `[metrics]` em pyproject.toml pra dashboards avançados.
+  - `DaemonConfig.metrics_enabled/port`. ADR-016 + `docs/usage/metrics.md`
+    com scrape config Prometheus + exemplo Grafana.
+- **Sistema de plugins Python** (FEAT-PLUGIN-01):
+  - `src/hefesto/plugin_api/`: ABC `Plugin` com hooks on_load/on_tick/
+    on_button_down/on_battery_change/on_profile_change/on_unload
+    (defaults no-op). `PluginContext` expõe controller + bus.subscribe
+    + store.counter + log prefixado.
+  - `load_plugins_from_dir` via `importlib.util` — skip ImportError.
+  - `PluginsSubsystem` carrega de `~/.config/hefesto/plugins/*.py`.
+  - Watchdog: hook >5ms loga warning; >3 violações seguidas desativa.
+  - CLI `hefesto plugin list/reload`. IPC handlers `plugin.list` e
+    `plugin.reload`.
+  - Opt-in via `DaemonConfig.plugins_enabled`. Plugins user-owned —
+    documentação deixa explícito que usuário é responsável (sem sandbox).
+  - Exemplo `examples/plugins/lightbar_rainbow.py` cicla HSV.
+  - ADR-017 documenta API, limitações, anti-patterns.
+
+### Testes
+- Suíte cresceu de 795 (v1.2.0) para **917 passed, 5 skipped**. +122
+  testes novos cobrindo cadeia MIC (10), subsystems (55), metrics (22),
+  plugin API (20), audio control (10) e wire hotkey mic (4).
+
+---
+
 ## [1.2.0] — 2026-04-22
 
 Release de plataforma: `.deb` nativo, bundle Flatpak para COSMIC,

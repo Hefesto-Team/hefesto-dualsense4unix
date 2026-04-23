@@ -3,8 +3,8 @@
 > Daemon Linux para gatilhos adaptativos do controle DualSense. Porte espiritual do DualSenseX para Unix em Python.
 
 ```
-Versão:  1.2.0
-Estado:  runtime validado em Pop!_OS 22.04 com DualSense USB/BT; v2.0 em preparação
+Versão:  2.0.0
+Estado:  runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 917 testes unit
 Alvo:    Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
@@ -22,23 +22,46 @@ problemas comuns. O resto deste README é referência técnica.
 
 ## O que faz
 
+### Núcleo (desde 1.0)
 - Comunicação híbrida: `evdev` para input (contorna `hid_playstation`), `pydualsense` para output HID.
 - 19 modos de gatilho adaptativo com factories validadas (`Rigid`, `Pulse`, `Galloping`, `Machine`, `Bow`, etc.).
 - UDP em `127.0.0.1:6969` compatível com mods DSX (Cyberpunk, Forza, Assetto Corsa).
 - IPC via Unix socket (NDJSON JSON-RPC 2.0) em `$XDG_RUNTIME_DIR/hefesto.sock`, permissão `0600`.
 - Emulação Xbox 360 via `uinput` para jogos que não reconhecem DualSense.
-- Auto-switch de perfil por janela ativa X11 (debounce 500 ms).
-- Hotkeys via combo sagrado (PS+D-pad) sem exigir grupo `input`.
 - Perfis JSON validados com pydantic v2 em `~/.config/hefesto/profiles/`.
-- Systemd `--user` service (unidade normal ou headless, `Conflicts=` mútuo).
-- TUI Textual com preview de gatilhos, bateria e sticks.
+- Auto-switch de perfil por janela ativa (X11 nativo, Wayland via portal XDG).
+- Hotkeys via combo sagrado (PS+D-pad) sem exigir grupo `input`.
+- Systemd `--user` service; TUI Textual com preview ao vivo.
+
+### UX + GUI (1.1)
+- GUI GTK3 com tema Drácula: bordas roxas, cards `.hefesto-card`, 19 SVGs originais dos botões do DualSense.
+- Aba Status redesenhada: sticks L3/R3 lado-a-lado + grid 4×4 de glyphs acendendo em roxo quando pressionados.
+- Rodapé global: Aplicar (envia config inteira), Salvar Perfil, Importar JSON, Restaurar Default — operando sobre `DraftConfig` central.
+- Editor de perfil dual: modo simples (radios Steam/Navegador/Terminal/Editor/Jogo específico) ou avançado (window_class/title_regex/process_name).
+- 7 perfis pré-configurados (navegacao/fps/aventura/acao/corrida/esportes/meu_perfil) com identidade cromática e mecânica própria.
+- Presets de trigger por posição: 6 Feedback + 5 Vibração + Custom.
+- Política global de rumble: Economia (0.3×), Balanceado (0.7×), Máximo (1.0×), Auto (dinâmico por bateria com debounce 5s).
+- Single-instance: daemon "última vence" (SIGTERM→SIGKILL), GUI "primeira vence" (traz ao foco). Resolve cursor voando + PIDs renascendo.
+
+### Plataforma (1.2)
+- `.deb` nativo para Debian/Ubuntu/Pop!_OS/Mint (179KB, `dpkg-deb` direto).
+- Bundle Flatpak `br.andrefarias.Hefesto` para COSMIC e Flathub-compatível.
+- Hotplug BT: GUI abre automaticamente ao parear via Bluetooth (regra udev 74).
+- Wayland via portal XDG (`org.freedesktop.portal.Window.GetActiveWindow`) — autoswitch funciona no COSMIC.
+- Hot-reload do daemon via IPC `daemon.reload {config_overrides}` sem restart.
+
+### Infra + extensibilidade (2.0)
+- Botão Mic físico muta/desmuta o microfone padrão do sistema (wpctl/pactl) e sincroniza com o LED vermelho do controle.
+- Daemon refatorado em 10 subsystems modulares (`poll`, `ipc`, `udp`, `autoswitch`, `mouse`, `rumble`, `hotkey`, `metrics`, `plugins`, `connection`) compartilhando `DaemonContext` único.
+- Endpoint Prometheus opt-in em `127.0.0.1:9090/metrics` (8 métricas canônicas).
+- Sistema de plugins Python: `~/.config/hefesto/plugins/*.py` com hooks `on_tick`/`on_button_down`/`on_battery_change`. Watchdog desativa plugin lento (>5ms/tick).
 
 ## O que não faz
 
 - Suporte a Windows ou macOS.
-- Wayland nativo (fallback para perfil `MatchAny`; ver `docs/adr/007-wayland-deferral.md`).
 - Bluetooth Audio do DualSense (protocolo fechado).
 - HidHide (não é necessário — backend híbrido resolve sem `unbind` do driver).
+- Sandbox forte de plugins (cgroups/bubblewrap) — plugins rodam com privilégios do daemon; usuário é responsável.
 
 ---
 
@@ -57,8 +80,8 @@ problemas comuns. O resto deste README é referência técnica.
 Baixe o pacote da pagina de releases e instale com apt:
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v1.1.0/hefesto_1.1.0_amd64.deb
-sudo apt install ./hefesto_1.1.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.0.0/hefesto_2.0.0_amd64.deb
+sudo apt install ./hefesto_2.0.0_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode usar so a GUI):
