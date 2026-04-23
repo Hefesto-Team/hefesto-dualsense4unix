@@ -1952,6 +1952,200 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label">Mouse</property></object>
             </child>
 
+            <!-- Aba Firmware -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+
+                <!-- Banner de risco -->
+                <child>
+                  <object class="GtkLabel" id="firmware_risk_banner_label">
+                    <property name="label">RISCO DE BRICK. USE APENAS BLOBS OFICIAIS SONY (fwupdater.dl.playstation.net). NÃO DESCONECTE DURANTE O UPDATE.</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                      <attribute name="foreground" value="#d33"/>
+                    </attributes>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Frame: versão atual do controle -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Versão atual do controle</property>
+                    <child>
+                      <object class="GtkGrid">
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Update version:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_current_version_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Hardware:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_hardware_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Build date:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_build_date_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkButton" id="firmware_check_btn">
+                            <property name="label">Verificar versão</property>
+                            <property name="tooltip-text">Consulta o controle via dualsensectl info</property>
+                            <signal name="clicked" handler="on_firmware_check"/>
+                            <property name="halign">start</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">3</property><property name="width">2</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Frame: aplicar firmware -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Aplicar firmware (.bin)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+
+                        <!-- Seletor de arquivo -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+
+                            <child>
+                              <object class="GtkEntry" id="firmware_file_entry">
+                                <property name="editable">False</property>
+                                <property name="placeholder-text">Nenhum arquivo selecionado</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkButton" id="firmware_browse_btn">
+                                <property name="label">Selecionar .bin…</property>
+                                <property name="tooltip-text">Escolher blob de firmware local (950272 bytes)</property>
+                                <signal name="clicked" handler="on_firmware_browse"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Botão aplicar -->
+                        <child>
+                          <object class="GtkButton" id="firmware_apply_btn">
+                            <property name="label">Aplicar firmware</property>
+                            <property name="tooltip-text">Envia o blob ao controle. Exige confirmação.</property>
+                            <property name="sensitive">False</property>
+                            <property name="halign">start</property>
+                            <signal name="clicked" handler="on_firmware_apply"/>
+                            <style><class name="destructive-action"/></style>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Progresso -->
+                        <child>
+                          <object class="GtkProgressBar" id="firmware_progress_bar">
+                            <property name="hexpand">True</property>
+                            <property name="show-text">False</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Status -->
+                <child>
+                  <object class="GtkLabel" id="firmware_status_label">
+                    <property name="label">Pronto.</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Dica de origem -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;i&gt;Backend: dualsensectl (MIT, nowrep/dualsensectl). Blobs oficiais: fwupdater.dl.playstation.net/fwupdater/info.json&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Firmware</property></object>
+            </child>
+
           </object>
           <packing>
             <property name="expand">True</property>
