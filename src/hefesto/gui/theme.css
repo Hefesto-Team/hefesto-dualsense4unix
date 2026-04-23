@@ -53,6 +53,14 @@
     border-radius: 50%;
 }
 
+/* H4 — headers do TreeView (aba Perfis e outras) em accent Drácula purple
+   para diferenciar das linhas. Sem accent, "Nome/Prio/Match" somem no branco. */
+.hefesto-window treeview header button,
+.hefesto-window treeview header button label {
+    color: #bd93f9;
+    font-weight: bold;
+}
+
 .hefesto-window notebook > header > tabs > tab {
     background: transparent;
     border: none;
