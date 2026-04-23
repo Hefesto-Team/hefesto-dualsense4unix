@@ -3,6 +3,99 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [2.1.0] — 2026-04-23
+
+Release de polish pós-v2.0.0. Oito sprints aditivas + auditoria manual.
+Sem quebras; tudo retrocompatível com v2.0.0.
+
+### Adicionado
+- **Hook strict de acentuação PT-BR** (CHORE-ACENTUACAO-STRICT-HOOK-01):
+  `scripts/validar-acentuacao.py` (809 linhas, 315 pares de palavras),
+  `.pre-commit-config.yaml` com framework pre-commit, job
+  `acentuacao` em `.github/workflows/ci.yml`. Whitelist robusta
+  preserva `docs/history`, `docs/research`, `LICENSE`, fixtures
+  ASCII intencionais. Bloqueia commits com PT-BR sem acento.
+- **Separação slug × display em perfis** (PROFILE-SLUG-SEPARATION-01):
+  novo módulo `src/hefesto/profiles/slug.py` com `slugify()`
+  (normalização NFKD). `save_profile` grava filename ASCII derivado
+  do `name` acentuado; `load_profile` faz busca adaptativa em 3
+  camadas (direto → slug → scan). Corrige bug latente onde perfis
+  acentuados (ex.: "Ação") criariam filenames acentuados colidindo
+  com defaults ASCII.
+- **Schema multi-position em triggers** (SCHEMA-MULTI-POSITION-PARAMS-01):
+  `TriggerConfig.params: list[int] | list[list[int]]` com validator
+  pydantic + property `is_nested`. Helper `_flatten_multi_position`
+  em `trigger_effects.py` suporta formatos 2, 5 e 10 posições.
+  Perfis `aventura` e `corrida` migrados para MultiPositionFeedback
+  e MultiPositionVibration (0-8 scale). Outros 6 perfis mantidos
+  sem mudança (fallback intocado por estabilidade).
+- **Smoke test de .deb no CI** (SMOKE-DEB-INSTALL-CI-01): job
+  `deb-install-smoke` em `release.yml` instala `.deb` real via
+  `apt install`, valida `hefesto --version` e `hefesto-gui --help`,
+  desinstala para validar postrm. Bloqueia release em tag push se
+  instalação falhar.
+- **Smoke test de Flatpak no CI** (SMOKE-FLATPAK-BUILD-CI-01):
+  3 steps no `build-flatpak` em `flatpak.yml`:
+  `flatpak install --user --noninteractive --bundle`,
+  `flatpak info --user` para validar registro, upload do log de
+  build como artifact (retention 7d, `if: always()`).
+- **Screenshot da aba Perfis no quickstart**
+  (QUICKSTART-PROFILES-SCREENSHOT-01):
+  `docs/usage/assets/quickstart_07_perfis.png`. Quickstart seção
+  "6. Trocar de perfil" referencia a imagem.
+- **Research de firmware update do DualSense**
+  (FEAT-FIRMWARE-UPDATE-PHASE1-01):
+  `docs/research/firmware-update-protocol.md` (292 linhas).
+  Estado da arte (dualsensectl, DS4Windows, pydualsense,
+  hid-playstation), mapa de HID reports, hipóteses de DFU
+  (feature report 0xA3 candidato), metodologia reprodutível
+  (usbmon + Wireshark + VM Win11), riscos (brick), base legal
+  (BR / UE / USA). Zero código executável; fase 1 é só research.
+- **Checklist reprodutível de validação em hardware**
+  (HARDWARE-VALIDATION-PROTOCOL-01):
+  `docs/process/CHECKLIST_HARDWARE_V2.md` com 21 itens cobrindo
+  features V1.1/V1.2/V2.0 que hoje só têm cobertura via
+  FakeController (Player LEDs, Rumble policies, Mic button,
+  Hotkey Steam, Hotplug USB/BT, Lightbar brightness,
+  Multi-position triggers, Autoswitch, `daemon.reload`,
+  Single-instance daemon+GUI, Plugins+watchdog, Metrics,
+  emulação de Mouse, UDP compat, USB autosuspend).
+- **Auditoria manual v1.0.0..HEAD** (AUDIT-V2-COMPLETE-01):
+  `docs/process/discoveries/2026-04-23-auditoria-v2.md`. 79
+  arquivos, +9286/-705 linhas. Zero P0/P1. Três P2
+  documentais/polish: débito de BRIEF fechado inline,
+  `connection.py` fora de convenção (candidato a
+  REFACTOR-CONNECTION-FUNCTIONS-01), `rumble.policy_custom`
+  sem limite de tamanho (candidato a HARDEN-IPC-RUMBLE-CUSTOM-01).
+
+### Corrigido
+- Armadilhas A-01 (IpcServer unlink cego), A-02 (udp_server assert
+  ruidoso) e A-03 (smoke compartilha socket path) estavam listadas
+  como abertas mas já RESOLVIDAS em código. `VALIDATOR_BRIEF.md`
+  atualizado para refletir estado real (débito documental fechado).
+
+### Notas de migração
+- **Perfis aventura e corrida migrados para multi-position**:
+  validação tátil pendente (exige hardware físico, impossível via
+  FakeController). Se a sensação regredir, reverter individualmente
+  via
+  `git checkout v2.0.0 -- assets/profiles_default/aventura.json assets/profiles_default/corrida.json`.
+- **Hook pre-commit obrigatório**: contribuições novas precisam
+  passar por `validar-acentuacao.py`, `check_anonymity.sh` e
+  `ruff`. Rodar `.venv/bin/pre-commit install` em clones novos.
+
+### Sprints consolidadas (9)
+CHORE-ACENTUACAO-STRICT-HOOK-01 · PROFILE-SLUG-SEPARATION-01 ·
+SCHEMA-MULTI-POSITION-PARAMS-01 · SMOKE-DEB-INSTALL-CI-01 ·
+SMOKE-FLATPAK-BUILD-CI-01 · QUICKSTART-PROFILES-SCREENSHOT-01 ·
+FEAT-FIRMWARE-UPDATE-PHASE1-01 · HARDWARE-VALIDATION-PROTOCOL-01 ·
+AUDIT-V2-COMPLETE-01.
+
+### Known issues
+Nenhum. Três P2 documentais/polish registrados em
+`docs/process/discoveries/2026-04-23-auditoria-v2.md` viram sprints
+futuras V2.2+.
+
 ## [2.0.0] — 2026-04-23
 
 Release de infra + arquitetura + extensibilidade. 9 sprints V2.0
