@@ -69,10 +69,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             "changed", self.on_profile_selection_changed
         )
 
-        # Conecta handler de toggle para todos os radios
-        for radio_id in _RADIO_IDS:
-            radio: Gtk.RadioButton = self._get(f"profile_radio_{radio_id}")
-            radio.connect("toggled", self._on_radio_toggled)
+        # UI-PROFILES-RADIO-GROUP-REDESIGN-01: 6 radios substituídos por combo.
+        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
+        if combo is not None:
+            combo.connect("changed", self._on_aplica_a_changed)
+            combo.set_active_id("any")
 
         # Estado inicial do toggle a partir das preferências persistidas
         prefs = load_gui_prefs()
@@ -151,11 +152,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         set_pref("advanced_editor", state)
         return False  # retorno False = deixa o GTK atualizar o estado visual
 
-    def _on_radio_toggled(self, radio: Gtk.RadioButton) -> None:
-        """Mostra entry "Jogo específico" só quando o radio game está ativo."""
-        game_active = self._get("profile_radio_game").get_active()
+    def _on_aplica_a_changed(self, combo: Gtk.ComboBoxText) -> None:
+        """Mostra entry "Jogo específico" só quando combo == "game"."""
+        active_id = combo.get_active_id() or "any"
         box: Gtk.Box = self._get("profile_game_entry_box")
-        if game_active:
+        if box is None:
+            return
+        if active_id == "game":
             box.show()
         else:
             box.hide()
@@ -183,7 +186,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
         self._get("profile_name_entry").set_text("novo_perfil")
         self._get("profile_priority_scale").set_value(0)
-        self._get("profile_radio_any").set_active(True)
+        self._select_radio("any")
         self._get("profile_window_class_entry").set_text("")
         self._get("profile_title_regex_entry").set_text("")
         self._get("profile_process_name_entry").set_text("")
@@ -249,17 +252,32 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         stack.set_visible_child_name(page)
 
     def _selected_simple_choice(self) -> str:
-        """Retorna a chave do radio ativo na página simples."""
-        for radio_id in _RADIO_IDS:
-            radio: Gtk.RadioButton = self._get(f"profile_radio_{radio_id}")
-            if radio.get_active():
-                return radio_id
+        """Retorna o id ativo do combo "Aplica a:".
+
+        UI-PROFILES-RADIO-GROUP-REDESIGN-01: antes iterava 6 GtkRadioButton.
+        Agora lê `get_active_id()` do `profile_aplica_a_combo`. Fallback "any"
+        preserva comportamento anterior quando combo ainda não foi populado.
+        """
+        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
+        if combo is None:
+            return "any"
+        active_id = combo.get_active_id()
+        if active_id in _RADIO_IDS:
+            return str(active_id)
         return "any"
 
     def _select_radio(self, choice: str) -> None:
-        """Seleciona o radio correspondente à chave fornecida."""
-        widget_id = f"profile_radio_{choice}" if choice in _RADIO_IDS else "profile_radio_any"
-        self._get(widget_id).set_active(True)
+        """Seleciona o id correspondente no combo "Aplica a:".
+
+        Nome histórico preservado para facilitar grep pelo contexto antigo;
+        a implementação usa `set_active_id()` do combo em vez de
+        `set_active(True)` num radio específico.
+        """
+        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
+        if combo is None:
+            return
+        target_id = choice if choice in _RADIO_IDS else "any"
+        combo.set_active_id(target_id)
 
     def _selected_profile_name(
         self,

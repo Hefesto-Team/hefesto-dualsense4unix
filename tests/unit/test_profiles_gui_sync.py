@@ -306,3 +306,124 @@ class TestSyncSelectionWithActiveProfile:
         assert captured["timeout_s"] == 0.5
         assert captured["on_success"] is not None
         assert captured["on_failure"] is not None
+
+
+# ---------------------------------------------------------------------------
+# UI-PROFILES-RADIO-GROUP-REDESIGN-01: combo "Aplica a:"
+# ---------------------------------------------------------------------------
+
+
+class _FakeCombo:
+    """Stub mínimo de GtkComboBoxText para testar helpers sem GTK."""
+
+    def __init__(self, initial_id: str = "any") -> None:
+        self._active_id = initial_id
+        self.connected: list[tuple[str, Any]] = []
+
+    def get_active_id(self) -> str:
+        return self._active_id
+
+    def set_active_id(self, new_id: str) -> bool:
+        self._active_id = new_id
+        return True
+
+    def connect(self, signal: str, handler: Any) -> None:
+        self.connected.append((signal, handler))
+
+
+class _FakeBox:
+    def __init__(self) -> None:
+        self.visible = True
+
+    def show(self) -> None:
+        self.visible = True
+
+    def hide(self) -> None:
+        self.visible = False
+
+
+def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNamespace:
+    """Stub com _get que expõe combo + entry_box, para testes sem GTK."""
+    stub = SimpleNamespace()
+    widgets: dict[str, Any] = {"profile_aplica_a_combo": combo}
+    if box is not None:
+        widgets["profile_game_entry_box"] = box
+
+    def _get(widget_id: str) -> Any:
+        return widgets.get(widget_id)
+
+    stub._get = _get  # type: ignore[attr-defined]
+    return stub
+
+
+class TestProfileSimpleCombo:
+    def test_combo_populates_default_any(self):
+        """Combo renderiza com `any` ativo após install_profiles_tab."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        combo = _FakeCombo(initial_id="editor")
+        stub = _stub_with_combo(combo)
+
+        # _selected_simple_choice lê get_active_id() do combo stub
+        choice = ProfilesActionsMixin._selected_simple_choice(stub)
+        assert choice == "editor"
+
+        # _select_radio escreve via set_active_id
+        ProfilesActionsMixin._select_radio(stub, "steam")
+        assert combo.get_active_id() == "steam"
+
+    def test_selected_simple_choice_fallback_para_any(self):
+        """Combo ausente/com id inválido → fallback 'any'."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        # Combo inexistente (caso raro — glade desatualizado)
+        stub = SimpleNamespace()
+        stub._get = lambda _w: None  # type: ignore[attr-defined]
+        assert ProfilesActionsMixin._selected_simple_choice(stub) == "any"
+
+        # Combo com id fora do enum _RADIO_IDS
+        combo = _FakeCombo(initial_id="outro_qualquer")
+        stub2 = _stub_with_combo(combo)
+        assert ProfilesActionsMixin._selected_simple_choice(stub2) == "any"
+
+    def test_select_radio_id_desconhecido_vira_any(self):
+        """`_select_radio("xyz")` deve fallback para `any`, não crashar."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        combo = _FakeCombo(initial_id="steam")
+        stub = _stub_with_combo(combo)
+
+        ProfilesActionsMixin._select_radio(stub, "xyz")
+        assert combo.get_active_id() == "any"
+
+    def test_combo_game_shows_entry(self):
+        """`_on_aplica_a_changed` com id="game" mostra o box do entry."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        combo = _FakeCombo(initial_id="game")
+        box = _FakeBox()
+        box.hide()  # estado inicial oculto
+        assert box.visible is False
+
+        stub = _stub_with_combo(combo, box)
+
+        ProfilesActionsMixin._on_aplica_a_changed(stub, combo)
+        assert box.visible is True
+
+    def test_combo_nao_game_esconde_entry(self):
+        """Qualquer id != "game" esconde o box."""
+        _install_gi_stubs()
+        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+
+        combo = _FakeCombo(initial_id="steam")
+        box = _FakeBox()
+        assert box.visible is True
+
+        stub = _stub_with_combo(combo, box)
+
+        ProfilesActionsMixin._on_aplica_a_changed(stub, combo)
+        assert box.visible is False
