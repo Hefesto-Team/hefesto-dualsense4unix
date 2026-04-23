@@ -1,0 +1,19 @@
+repos:
+  - repo: local
+    hooks:
+      - id: acentuacao-strict
+        name: Acentuação PT-BR estrita
+        entry: python3 scripts/validar-acentuacao.py --check-file
+        language: system
+        types: [text]
+        exclude: '^(tests/fixtures/|tests/unit/test_validar_acentuacao\.py$|docs/history/|docs/research/|LICENSE$|NOTICE$|CHANGELOG\.md$|VALIDATOR_BRIEF\.md$|AGENTS\.md$|scripts/validar-acentuacao\.py$|scripts/check_anonymity\.sh$)'
+      - id: anonimato
+        name: Anonimato (sem menção a IA)
+        entry: bash scripts/check_anonymity.sh
+        language: system
+        pass_filenames: false
+      - id: ruff-check
+        name: Ruff check
+        entry: ruff check
+        language: system
+        types: [python]

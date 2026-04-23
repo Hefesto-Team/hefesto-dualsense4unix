@@ -77,21 +77,21 @@ problemas comuns. O resto deste README é referência técnica.
 
 ## Instalação via .deb (Ubuntu / Pop!\_OS / Debian)
 
-Baixe o pacote da pagina de releases e instale com apt:
+Baixe o pacote da página de releases e instale com apt:
 
 ```bash
 curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.0.0/hefesto_2.0.0_amd64.deb
 sudo apt install ./hefesto_2.0.0_amd64.deb
 ```
 
-Depois habilite o daemon (opcional — pode usar so a GUI):
+Depois habilite o daemon (opcional — pode usar só a GUI):
 
 ```bash
 systemctl --user enable --now hefesto.service
 hefesto-gui
 ```
 
-Dependencias Python sem pacote Debian oficial (instale se precisar):
+Dependências Python sem pacote Debian oficial (instale se precisar):
 
 ```bash
 pip install pydualsense python-uinput
@@ -194,12 +194,20 @@ Leia `AGENTS.md` antes de abrir PR. Resumo:
 
 1. Pegue issue `status:ready` + `ai-task`.
 2. `gh issue develop N --checkout`.
-3. Implementar + testes (pytest), ruff, mypy strict, `scripts/check_anonymity.sh`.
-4. Se toca runtime, provar via smoke real (`run.sh --smoke` ou hardware).
-5. Se toca UI/TUI, screenshot + sha256 + descrição multimodal no PR.
-6. Descoberta não-óbvia vira registro em `docs/process/discoveries/`.
-7. Commit em PT-BR, sem menção a IA, zero emojis.
-8. Abrir PR com `Closes #N`, squash merge.
+3. Ative o gate local de qualidade na primeira clonagem:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+   O framework instala hooks que bloqueiam commit com acentuação PT-BR
+   faltando (`acao`, `funcao`, `descricao`, etc.), menção a IA ou falha
+   de `ruff check`. Script canônico: `scripts/validar-acentuacao.py`.
+4. Implementar + testes (pytest), ruff, mypy strict, `scripts/check_anonymity.sh`.
+5. Se toca runtime, provar via smoke real (`run.sh --smoke` ou hardware).
+6. Se toca UI/TUI, screenshot + sha256 + descrição multimodal no PR.
+7. Descoberta não-óbvia vira registro em `docs/process/discoveries/`.
+8. Commit em PT-BR, sem menção a IA, zero emojis.
+9. Abrir PR com `Closes #N`, squash merge.
 
 ---
 
