@@ -201,6 +201,31 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_player_leds_preset_none(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False] * 5)
 
+    def on_player_leds_apply(self, _btn: Gtk.Button) -> None:
+        """Reenvia o padrão atual dos 5 checkboxes ao hardware
+        (BUG-PLAYER-LEDS-APPLY-01).
+
+        Botão explícito para o fluxo pedido pelo usuário: marcar o padrão,
+        clicar em "Aplicar LEDs" e ver o controle refletir. Também útil para
+        reemitir o bitmask após reconectar o controle ou trocar de perfil
+        (quando o autoswitch já foi aplicado mas o usuário quer confirmar).
+        """
+        if self._refresh_guard:
+            return
+        bits = self.get_current_player_leds()
+        # Atualiza draft — mantém consistência com on_player_led_toggled.
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            new_leds = draft.leds.model_copy(update={"player_leds": bits})
+            self.draft = draft.model_copy(update={"leds": new_leds})
+        ok = player_leds_set(bits)
+        label = " ".join("x" if b else "-" for b in bits)
+        self._toast_light(
+            f"Player LEDs aplicados: {label}"
+            if ok
+            else f"Player LEDs: {label} (daemon offline?)"
+        )
+
     def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
         """Sinal de toggle de qualquer checkbox de player LED.
 

@@ -795,8 +795,25 @@
                         </child>
 
                         <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="margin-top">8</property>
+                            <child>
+                              <object class="GtkButton" id="player_leds_apply">
+                                <property name="label">Aplicar LEDs</property>
+                                <property name="tooltip-text">Reenvia o padrão atual dos 5 checkboxes ao controle via daemon.</property>
+                                <signal name="clicked" handler="on_player_leds_apply"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label">&lt;i&gt;Presets e checkboxes enviam imediatamente ao hardware via daemon. Alterações também ficam salvas no perfil ativo.&lt;/i&gt;</property>
+                            <property name="label">&lt;i&gt;Checkboxes e presets enviam imediatamente ao hardware. Use &quot;Aplicar LEDs&quot; para reenviar o padrão atual (útil após reconectar o controle ou trocar de perfil). As marcações ficam salvas no perfil ativo.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
