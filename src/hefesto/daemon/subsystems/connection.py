@@ -59,6 +59,11 @@ async def reconnect(daemon: Any) -> None:
 async def shutdown(daemon: Any) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
+    # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).
+    if daemon._plugins_subsystem is not None:
+        with contextlib.suppress(Exception):
+            await daemon._plugins_subsystem.stop()
+        daemon._plugins_subsystem = None
     daemon._hotkey_manager = None
     daemon._audio = None
     if daemon._mouse_device is not None:

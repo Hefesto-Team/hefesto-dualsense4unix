@@ -91,6 +91,8 @@ class IpcServer:
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "led.player_set": self._handle_led_player_set,
+            "plugin.list": self._handle_plugin_list,
+            "plugin.reload": self._handle_plugin_reload,
         }
 
     async def start(self) -> None:
@@ -666,6 +668,39 @@ class IpcServer:
 
         return {"status": "ok", "applied": applied}
 
+
+    async def _handle_plugin_list(self, params: dict[str, Any]) -> list[dict[str, Any]]:
+        """Lista plugins carregados no daemon (FEAT-PLUGIN-01).
+
+        Retorna lista de dicts com: name, profile_match, disabled, classe.
+        Requer plugins_enabled=True no daemon ou HEFESTO_PLUGINS_ENABLED=1.
+        """
+        ps = getattr(self.daemon, "_plugins_subsystem", None) if self.daemon else None
+        if ps is None:
+            return []
+        return ps.list_plugins()
+
+    async def _handle_plugin_reload(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Recarrega plugins do disco (FEAT-PLUGIN-01).
+
+        Descarrega todos os plugins atuais, recarrega do diretório configurado
+        e retorna o numero de plugins carregados.
+        """
+        from hefesto.daemon.context import DaemonContext
+
+        ps = getattr(self.daemon, "_plugins_subsystem", None) if self.daemon else None
+        if ps is None:
+            raise ValueError("plugins não habilitados neste daemon")
+
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=getattr(self.daemon, "bus", None),
+            store=self.store,
+            config=getattr(self.daemon, "config", None),
+            executor=getattr(self.daemon, "_executor", None),
+        )
+        total = ps.reload(ctx)
+        return {"status": "ok", "total": total}
 
     async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
