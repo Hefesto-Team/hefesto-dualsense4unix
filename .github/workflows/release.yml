@@ -126,8 +126,58 @@ jobs:
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto
 
+  flatpak:
+    name: Build Flatpak bundle
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar dependências do sistema
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q \
+            flatpak \
+            flatpak-builder \
+            python3-pip \
+            python3-build \
+            libhidapi-dev \
+            libudev-dev
+      - name: Adicionar remote Flathub
+        run: |
+          flatpak remote-add --user --if-not-exists \
+            flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Instalar runtime GNOME//45
+        run: |
+          flatpak install --user -y flathub \
+            org.gnome.Platform//45 \
+            org.gnome.Sdk//45
+      - name: Construir wheel Python
+        run: |
+          pip3 install build
+          python3 -m build --wheel --outdir dist/
+      - name: Construir Flatpak
+        run: |
+          flatpak-builder \
+            --user \
+            --force-clean \
+            --repo=flatpak-repo \
+            flatpak-build-dir \
+            flatpak/br.andrefarias.Hefesto.yml
+      - name: Exportar bundle .flatpak
+        run: |
+          flatpak build-bundle \
+            flatpak-repo \
+            br.andrefarias.Hefesto.flatpak \
+            br.andrefarias.Hefesto
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-${{ needs.build.outputs.version }}
+          path: br.andrefarias.Hefesto.flatpak
+          if-no-files-found: error
+
   github-release:
-    needs: [build, appimage, deb, deb-install-smoke]
+    needs: [build, appimage, deb, deb-install-smoke, flatpak]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -143,6 +193,10 @@ jobs:
         with:
           name: deb-${{ needs.build.outputs.version }}
           path: dist/deb/
+      - uses: actions/download-artifact@v4
+        with:
+          name: flatpak-${{ needs.build.outputs.version }}
+          path: dist/flatpak/
       - name: Criar release no GitHub
         env:
           GH_TOKEN: ${{ github.token }}
@@ -153,7 +207,8 @@ jobs:
             --notes-file CHANGELOG.md \
             dist/hefesto-*.whl dist/hefesto-*.tar.gz \
             dist/appimage/*.AppImage \
-            dist/deb/*.deb
+            dist/deb/*.deb \
+            dist/flatpak/*.flatpak
 
   pypi:
     needs: build
