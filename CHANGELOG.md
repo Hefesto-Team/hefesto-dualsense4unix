@@ -6,6 +6,19 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased] — v2.2.1 em preparação
 
 ### Corrigido
+- **`.deb` falhava ao instalar em Ubuntu 22.04** (BUG-DEB-PYDANTIC-V2-UBUNTU-22-01):
+  o `python3-pydantic` do apt em Jammy é versão **1.9.x**, incompatível
+  com o código do Hefesto (usa API pydantic v2 — `ConfigDict`). O
+  `apt install ./hefesto_*.deb` falhava silenciosamente em cadeia com
+  `ImportError: cannot import name 'ConfigDict' from 'pydantic'`.
+  Fix: `packaging/debian/control` declara `python3-pydantic (>= 2.0)`
+  (apt passa a rejeitar instalação com mensagem clara); CI smoke job
+  `deb-install-smoke` migrado de `ubuntu-22.04` para `ubuntu-24.04`
+  (valida no cenário que funciona out-of-the-box). README ganha seção
+  **Ubuntu 22.04 (Jammy) e derivados** explicando 3 workarounds
+  alternativos (migrar para 24.04, pip install manual, AppImage/Flatpak).
+  `.deb` continua buildado em `ubuntu-22.04` para compat máxima de libs.
+
 - **Versão reportada errada em CLI/TUI/AppImage** (BUG-APPIMAGE-VERSION-NAME-01):
   `src/hefesto/__init__.py` tinha `__version__ = "1.0.0"` hardcoded por
   ~3 releases, afetando `hefesto version`, título/subtítulo da TUI,

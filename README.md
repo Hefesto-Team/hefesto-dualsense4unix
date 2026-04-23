@@ -147,6 +147,12 @@ Dependências Python que não têm pacote Debian oficial:
 pip install pydualsense python-uinput
 ```
 
+> **Ubuntu 22.04 (Jammy) e derivados:** o `python3-pydantic` do repositório apt é versão **1.9** (incompatível com o código, que usa API da v2). O `.deb` v2.2.1+ declara `python3-pydantic (>= 2.0)`, então o `apt install` vai falhar com mensagem clara nesses sistemas. **Soluções:**
+>
+> - Migrar para **Ubuntu 24.04 (Noble)** ou **Pop!\_OS 24.04+** — pydantic v2 é nativo, instala direto.
+> - Em 22.04, instalar pydantic v2 via pip **antes** do `.deb`: `pip install --user 'pydantic>=2.0'`. Instalação via `apt install ./hefesto_*.deb` pode ainda reclamar da dep — use `sudo dpkg -i ./hefesto_*.deb` para forçar.
+> - Usar **AppImage** ou **Flatpak** (seção abaixo) — ambos trazem pydantic v2 empacotado.
+
 #### AppImage (universal)
 
 ```bash
