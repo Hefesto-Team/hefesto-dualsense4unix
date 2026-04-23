@@ -38,25 +38,26 @@ modules:
   # Instalado via pip pois não faz parte do runtime GNOME//45
   - name: python-uinput
     buildsystem: simple
+    # build-args: --share=network permite pip puxar o tarball do PyPI durante
+    # o build. Alternativa offline seria declarar "type: archive" com url+sha,
+    # mas isso adiciona 5 deps transitivas (cffi, pycparser etc.). Network
+    # opt-in no build é aceito pelo Flathub para casos pequenos como este.
+    build-options:
+      build-args:
+        - --share=network
     build-commands:
       - pip3 install --prefix=/app --no-build-isolation python-uinput
-    sources:
-      - type: shell
-        commands:
-          # pip baixa do PyPI durante o build; --no-network é o padrão no Flatpak
-          # Para build offline, gerar sources com flatpak-pip-generator:
-          #   flatpak-pip-generator python-uinput -o flatpak/python-uinput.json
-          - echo "python-uinput via pip (requer rede ou sources geradas)"
+    sources: []
 
   # Módulo 2: pydualsense (comunicação HID com DualSense)
   - name: pydualsense
     buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
     build-commands:
       - pip3 install --prefix=/app --no-build-isolation pydualsense
-    sources:
-      - type: shell
-        commands:
-          - echo "pydualsense via pip (requer rede ou sources geradas)"
+    sources: []
 
   # Módulo 3: Hefesto — instalação do wheel local
   - name: hefesto
