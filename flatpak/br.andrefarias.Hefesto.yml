@@ -1,0 +1,96 @@
+# Manifest Flatpak — Hefesto
+# App ID: br.andrefarias.Hefesto
+# Runtime: org.gnome.Platform//45 (inclui GTK3, PyGObject, python3, gi-repository)
+# Construção local: scripts/build_flatpak.sh
+# CI: .github/workflows/flatpak.yml
+
+app-id: br.andrefarias.Hefesto
+runtime: org.gnome.Platform
+runtime-version: "45"
+sdk: org.gnome.Sdk
+
+# Ponto de entrada principal — GUI GTK3
+command: hefesto-gui
+
+# Permissões de sandbox
+finish-args:
+  # Compartilhamento IPC entre processos (necessário para GTK X11)
+  - --share=ipc
+  # Suporte a X11 com fallback se Wayland não disponível
+  - --socket=fallback-x11
+  # Suporte a Wayland nativo (COSMIC, GNOME)
+  - --socket=wayland
+  # Acesso ao D-Bus de sessão (portals, notificações)
+  - --socket=session-bus
+  # Acesso a todos os dispositivos: hidraw (DualSense) + uinput (emulação de mouse/gamepad)
+  # Nota: --device=input não basta para /dev/hidraw*; usar --device=all
+  - --device=all
+  # Socket IPC do daemon Hefesto em $XDG_RUNTIME_DIR/hefesto/
+  - --filesystem=xdg-run/hefesto:create
+  # Perfis e configurações em ~/.config/hefesto/
+  # Dentro do sandbox: ~/.var/app/br.andrefarias.Hefesto/config/hefesto/
+  - --filesystem=xdg-config/hefesto:create
+  # Portals do freedesktop (notificações, tray, background)
+  - --talk-name=org.freedesktop.portal.*
+
+modules:
+  # Módulo 1: python-uinput (emulação de gamepad/mouse via uinput)
+  # Instalado via pip pois não faz parte do runtime GNOME//45
+  - name: python-uinput
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-build-isolation python-uinput
+    sources:
+      - type: shell
+        commands:
+          # pip baixa do PyPI durante o build; --no-network é o padrão no Flatpak
+          # Para build offline, gerar sources com flatpak-pip-generator:
+          #   flatpak-pip-generator python-uinput -o flatpak/python-uinput.json
+          - echo "python-uinput via pip (requer rede ou sources geradas)"
+
+  # Módulo 2: pydualsense (comunicação HID com DualSense)
+  - name: pydualsense
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-build-isolation pydualsense
+    sources:
+      - type: shell
+        commands:
+          - echo "pydualsense via pip (requer rede ou sources geradas)"
+
+  # Módulo 3: Hefesto — instalação do wheel local
+  - name: hefesto
+    buildsystem: simple
+    build-commands:
+      # Instalar o wheel pré-construído (gerado por 'python -m build' no script)
+      - pip3 install --prefix=/app --no-deps ./dist/*.whl
+
+      # Instalar ícone 256x256 para o lançador do sistema
+      - install -Dm644 assets/appimage/Hefesto.png
+          /app/share/icons/hicolor/256x256/apps/br.andrefarias.Hefesto.png
+
+      # Instalar arquivo .desktop adaptado para o App ID Flatpak
+      - install -Dm644 flatpak/br.andrefarias.Hefesto.desktop
+          /app/share/applications/br.andrefarias.Hefesto.desktop
+
+      # Instalar metadata AppStream
+      - install -Dm644 flatpak/br.andrefarias.Hefesto.metainfo.xml
+          /app/share/metainfo/br.andrefarias.Hefesto.metainfo.xml
+
+      # Copiar regras udev para dentro do bundle (leitura apenas)
+      # Instalação no host via scripts/install-host-udev.sh + pkexec
+      - install -Dm644 assets/70-ps5-controller.rules
+          /app/share/hefesto/udev-rules/70-ps5-controller.rules
+      - install -Dm644 assets/71-uinput.rules
+          /app/share/hefesto/udev-rules/71-uinput.rules
+      - install -Dm644 assets/72-ps5-controller-autosuspend.rules
+          /app/share/hefesto/udev-rules/72-ps5-controller-autosuspend.rules
+
+      # Instalar script de setup de udev (executado pelo usuário uma vez)
+      - install -Dm755 scripts/install-host-udev.sh
+          /app/bin/install-host-udev.sh
+
+    sources:
+      # Código-fonte local (usado pelo flatpak-builder com --force-clean)
+      - type: dir
+        path: ..
