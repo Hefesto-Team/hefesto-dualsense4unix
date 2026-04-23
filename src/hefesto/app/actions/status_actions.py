@@ -353,7 +353,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self, state: dict[str, Any], buttons_pressed: frozenset[str]
     ) -> None:
         """Atualiza ButtonGlyphs e títulos de sticks quando o estado muda."""
-        last = getattr(self, "_last_buttons", frozenset())
+        last: frozenset[str] = getattr(self, "_last_buttons", frozenset())
 
         l2_raw = int(state.get("l2_raw", 0))
         r2_raw = int(state.get("r2_raw", 0))
@@ -372,8 +372,8 @@ class StatusActionsMixin(WidgetAccessMixin):
             return
 
         self._last_buttons = buttons_pressed
-        self._last_l2_lit = l2_lit  # type: ignore[attr-defined]
-        self._last_r2_lit = r2_lit  # type: ignore[attr-defined]
+        self._last_l2_lit = l2_lit
+        self._last_r2_lit = r2_lit
 
         for nome, glyph in self._button_glyphs.items():
             glyph.set_pressed(efetivos.get(nome, False))
@@ -454,8 +454,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         for glyph in getattr(self, "_button_glyphs", {}).values():
             glyph.set_pressed(False)
         self._last_buttons = frozenset()
-        self._last_l2_lit = False  # type: ignore[attr-defined]
-        self._last_r2_lit = False  # type: ignore[attr-defined]
+        self._last_l2_lit = False
+        self._last_r2_lit = False
 
         # Títulos sem markup colorido
         titulo_esq = self._get("stick_left_title")

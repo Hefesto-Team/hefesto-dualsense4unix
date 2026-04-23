@@ -65,9 +65,8 @@ jobs:
         run: pytest tests/unit -v --cov=hefesto
 
   typecheck:
-    name: Mypy (informacional)
+    name: Mypy (gate rígido)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

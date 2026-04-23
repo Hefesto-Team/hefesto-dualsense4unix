@@ -5,6 +5,8 @@ uso na thread principal GTK. Nenhum acessa IPC diretamente.
 """
 from __future__ import annotations
 
+from typing import cast
+
 import gi
 
 gi.require_version("Gtk", "3.0")
@@ -52,7 +54,7 @@ def prompt_profile_name(
     dialog.destroy()
 
     if response == Gtk.ResponseType.OK and name:
-        return name
+        return cast(str, name)
     return None
 
 
@@ -79,7 +81,7 @@ def prompt_overwrite_existing(
 
     response = dialog.run()
     dialog.destroy()
-    return response == Gtk.ResponseType.OK
+    return bool(response == Gtk.ResponseType.OK)
 
 
 def prompt_import_conflict(
@@ -140,7 +142,7 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
 
     response = dialog.run()
     dialog.destroy()
-    return response == Gtk.ResponseType.OK
+    return bool(response == Gtk.ResponseType.OK)
 
 
 __all__ = [

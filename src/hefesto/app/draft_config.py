@@ -16,7 +16,7 @@ Persistência entre sessões NÃO é escopo desta sprint; o draft é in-memory o
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -136,16 +136,18 @@ class DraftConfig(BaseModel):
         Campos ausentes no perfil recebem defaults seguros.
         """
         # Triggers
+        # Nota: TriggerConfig.params é Union[list[int], list[list[int]]];
+        # TriggerDraft aceita ambos via tuple, mas mypy precisa cast.
         left_cfg = profile.triggers.left
         right_cfg = profile.triggers.right
         triggers = TriggersDraft(
             left=TriggerDraft(
                 mode=left_cfg.mode,
-                params=tuple(left_cfg.params),
+                params=tuple(cast("list[int]", left_cfg.params)),
             ),
             right=TriggerDraft(
                 mode=right_cfg.mode,
-                params=tuple(right_cfg.params),
+                params=tuple(cast("list[int]", right_cfg.params)),
             ),
         )
 

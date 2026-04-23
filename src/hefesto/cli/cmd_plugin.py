@@ -10,6 +10,9 @@ via IPC. Sem daemon, informa estado indisponivel.
 """
 from __future__ import annotations
 
+import asyncio
+from typing import Any
+
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -23,14 +26,21 @@ app = typer.Typer(
 console = Console()
 
 
+async def _ipc_call(method: str, params: dict[str, Any]) -> Any:
+    """Executa uma chamada IPC async conectando ao daemon."""
+    from hefesto.cli.ipc_client import IpcClient
+
+    async with IpcClient.connect() as client:
+        return await client.call(method, params)
+
+
 @app.command("list")
 def cmd_list() -> None:
     """Lista plugins carregados no daemon."""
-    from hefesto.cli.ipc_client import IpcClient, IpcError
+    from hefesto.cli.ipc_client import IpcError
 
     try:
-        client = IpcClient()
-        resultado = client.call("plugin.list", {})
+        resultado = asyncio.run(_ipc_call("plugin.list", {}))
     except IpcError as exc:
         console.print(f"[red]Erro IPC:[/red] {exc}")
         console.print("[dim]Daemon não acessivel ou plugins não habilitados.[/dim]")
@@ -61,11 +71,10 @@ def cmd_list() -> None:
 @app.command("reload")
 def cmd_reload() -> None:
     """Recarrega plugins do disco no daemon em execução."""
-    from hefesto.cli.ipc_client import IpcClient, IpcError
+    from hefesto.cli.ipc_client import IpcError
 
     try:
-        client = IpcClient()
-        resultado = client.call("plugin.reload", {})
+        resultado = asyncio.run(_ipc_call("plugin.reload", {}))
     except IpcError as exc:
         console.print(f"[red]Erro IPC:[/red] {exc}")
         console.print("[dim]Daemon não acessivel ou plugins não habilitados.[/dim]")
