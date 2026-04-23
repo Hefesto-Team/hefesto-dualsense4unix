@@ -694,7 +694,8 @@ class IpcServer:
         ps = getattr(self.daemon, "_plugins_subsystem", None) if self.daemon else None
         if ps is None:
             return []
-        return ps.list_plugins()
+        result: list[dict[str, Any]] = ps.list_plugins()
+        return result
 
     async def _handle_plugin_reload(self, params: dict[str, Any]) -> dict[str, Any]:
         """Recarrega plugins do disco (FEAT-PLUGIN-01).
@@ -710,7 +711,7 @@ class IpcServer:
 
         ctx = DaemonContext(
             controller=self.controller,
-            bus=getattr(self.daemon, "bus", None),
+            bus=getattr(self.daemon, "bus", None),  # type: ignore[arg-type]
             store=self.store,
             config=getattr(self.daemon, "config", None),
             executor=getattr(self.daemon, "_executor", None),
@@ -733,7 +734,7 @@ class IpcServer:
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is None:
             raise ValueError("daemon não disponível para alterar política de rumble")
-        daemon_cfg.rumble_policy = policy  # type: ignore[assignment]
+        daemon_cfg.rumble_policy = policy
         logger.info("rumble_policy_alterada", policy=policy)
         return {"status": "ok", "policy": policy}
 

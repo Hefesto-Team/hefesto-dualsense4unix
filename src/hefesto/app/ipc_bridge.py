@@ -51,8 +51,8 @@ def _run_call(
 def call_async(
     method: str,
     params: dict[str, Any] | None,
-    on_success: Callable[[Any], None],
-    on_failure: Callable[[Exception], None] | None = None,
+    on_success: Callable[[Any], bool],
+    on_failure: Callable[[Exception], bool] | None = None,
     timeout_s: float = 0.25,
 ) -> None:
     """Despacha RPC para thread worker; callbacks re-postados via GLib.idle_add.
@@ -60,12 +60,12 @@ def call_async(
     - `on_success(result)` é chamado na thread principal GTK após conclusão.
     - `on_failure(exc)` é chamado na thread principal GTK em caso de erro.
     - Ambos os callbacks DEVEM retornar `False` para não serem repetidos
-      pelo GLib.
+      pelo GLib (contrato de `GLib.idle_add`).
 
     A função não bloqueia a thread GTK em nenhuma circunstância.
     """
     # Import adiado para permitir testes sem GTK instalado.
-    from gi.repository import GLib  # type: ignore[import]
+    from gi.repository import GLib
 
     def _worker() -> None:
         try:

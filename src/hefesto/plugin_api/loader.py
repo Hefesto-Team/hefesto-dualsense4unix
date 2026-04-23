@@ -17,13 +17,17 @@ import importlib.util
 import inspect
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from hefesto.utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from hefesto.plugin_api.plugin import Plugin
 
 logger = get_logger(__name__)
 
 
-def load_plugins_from_dir(path: Path) -> list:
+def load_plugins_from_dir(path: Path) -> list[Plugin]:
     """Carrega plugins de todos os arquivos .py em `path`.
 
     Args:
@@ -33,8 +37,6 @@ def load_plugins_from_dir(path: Path) -> list:
         Lista de instancias de Plugin carregadas com sucesso.
         Arquivos invalidos sao ignorados (log warning).
     """
-    from hefesto.plugin_api.plugin import Plugin
-
     if not path.exists():
         logger.info("plugins_dir_nao_existe", path=str(path))
         return []
@@ -57,7 +59,7 @@ def load_plugins_from_dir(path: Path) -> list:
     return instancias
 
 
-def _carregar_arquivo(arquivo: Path) -> object | None:
+def _carregar_arquivo(arquivo: Path) -> Plugin | None:
     """Importa um arquivo .py e instancia a primeira subclasse de Plugin."""
     from hefesto.plugin_api.plugin import Plugin
 
@@ -71,7 +73,7 @@ def _carregar_arquivo(arquivo: Path) -> object | None:
 
         módulo = importlib.util.module_from_spec(spec)
         sys.modules[modulo_nome] = módulo
-        spec.loader.exec_module(módulo)  # type: ignore[union-attr]
+        spec.loader.exec_module(módulo)
     except Exception as exc:
         logger.warning(
             "plugin_import_falhou",

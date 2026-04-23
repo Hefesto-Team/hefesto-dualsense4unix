@@ -13,6 +13,7 @@ Caminho dos assets resolvido por ordem de preferência:
 from __future__ import annotations
 
 import pathlib
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Mapa PT-BR — consumido por UI-STATUS-STICKS-REDESIGN-01
@@ -77,7 +78,7 @@ try:
 
     gi.require_version("Gtk", "3.0")
     gi.require_version("GdkPixbuf", "2.0")
-    from gi.repository import Gdk, GdkPixbuf, Gtk  # type: ignore[import]
+    from gi.repository import Gdk, GdkPixbuf, Gtk
 
     _GTK_DISPONIVEL = True
 except (ImportError, ValueError):
@@ -86,7 +87,7 @@ except (ImportError, ValueError):
 
 if _GTK_DISPONIVEL:
 
-    class ButtonGlyph(Gtk.DrawingArea):
+    class ButtonGlyph(Gtk.DrawingArea):  # type: ignore[misc]
         """Exibe um glyph SVG de botao do DualSense com estado pressionado.
 
         Uso::
@@ -163,7 +164,7 @@ if _GTK_DISPONIVEL:
         def _on_draw(
             self,
             _widget: Gtk.DrawingArea,
-            ctx,  # cairo.Context
+            ctx: Any,  # cairo.Context — sem stubs oficiais
         ) -> bool:
             """Callback de desenho do widget."""
             pb = self._pb_active if self._pressed else self._pb_normal

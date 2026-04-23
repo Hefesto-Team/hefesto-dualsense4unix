@@ -180,9 +180,9 @@ class PyDualSenseController(IController):
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
         ds.light.playerNumber = PlayerID(bitmask)
         logger.debug(
-            "player_leds_aplicados",
-            bits=list(bits),
-            bitmask=bitmask,
+            "player_leds_aplicados bits=%s bitmask=%s",
+            list(bits),
+            bitmask,
         )
 
     def get_battery(self) -> int:

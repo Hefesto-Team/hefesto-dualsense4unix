@@ -17,7 +17,7 @@ try:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk  # type: ignore[import]
+    from gi.repository import Gtk
 
     _GTK_DISPONIVEL = True
 except (ImportError, ValueError):
@@ -33,7 +33,7 @@ PONTO_NORMAL = (0.973, 0.973, 0.898)  # branco Drácula #f8f8e5
 
 if _GTK_DISPONIVEL:
 
-    class StickPreviewGtk(Gtk.DrawingArea):
+    class StickPreviewGtk(Gtk.DrawingArea):  # type: ignore[misc]
         """Widget GTK3 de preview de stick analógico 120x120.
 
         Uso::

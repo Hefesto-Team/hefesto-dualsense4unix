@@ -29,8 +29,8 @@ _PORTAL_IFACE = "org.freedesktop.portal.Window"
 def _try_jeepney(handle_token: str) -> WindowInfo | None:
     """Tenta obter janela ativa via jeepney (síncrono, puro Python)."""
     try:
-        from jeepney import DBusAddress, new_method_call  # type: ignore[import]
-        from jeepney.io.blocking import open_dbus_connection  # type: ignore[import]
+        from jeepney import DBusAddress, new_method_call
+        from jeepney.io.blocking import open_dbus_connection
     except ImportError:
         return None
 
@@ -56,7 +56,7 @@ def _try_jeepney(handle_token: str) -> WindowInfo | None:
 def _try_dbus_fast(handle_token: str) -> WindowInfo | None:
     """Tenta obter janela ativa via dbus-fast (síncrono wrapper)."""
     try:
-        from dbus_fast.aio.message_bus import MessageBus  # type: ignore[import]
+        from dbus_fast.aio.message_bus import MessageBus
     except ImportError:
         return None
 

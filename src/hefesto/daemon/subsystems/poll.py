@@ -79,7 +79,7 @@ class PollSubsystem:
 
     name = "poll"
 
-    async def start(self, ctx: object) -> None:  # type: ignore[override]
+    async def start(self, ctx: object) -> None:
         """Noop: loop é criado como Task pelo Daemon."""
         logger.debug("poll_subsystem_start")
 
@@ -87,7 +87,7 @@ class PollSubsystem:
         """Noop: loop para via stop_event do Daemon."""
         logger.debug("poll_subsystem_stop")
 
-    def is_enabled(self, config: object) -> bool:  # type: ignore[override]
+    def is_enabled(self, config: object) -> bool:
         return True
 
 
