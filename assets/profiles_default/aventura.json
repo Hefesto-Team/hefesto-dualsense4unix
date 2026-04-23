@@ -1,0 +1,26 @@
+{
+  "name": "Aventura",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": ".*(Elden Ring|God of War|Witcher|Dark Souls|Sekiro|Horizon|Tomb Raider|Ghost of Tsushima|Zelda|Dragon Age|Baldur|Hollow Knight|Bloodborne|Demon.s Souls|Lies of P).*",
+    "process_name": [
+      "eldenring.exe", "HorizonZeroDawn.exe", "GodOfWar.exe",
+      "witcher3.exe", "DarkSoulsIII.exe", "Sekiro.exe",
+      "TombRaider.exe", "GhostOfTsushima.exe",
+      "bg3.exe", "LiesOfP.exe"
+    ]
+  },
+  "priority": 70,
+  "triggers": {
+    "left":  {"mode": "Resistance", "params": [2, 7]},
+    "right": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}
+  },
+  "leds": {
+    "lightbar": [220, 170, 30],
+    "player_leds": [false, true, false, true, false],
+    "lightbar_brightness": 0.7
+  },
+  "rumble": {"passthrough": true}
+}
