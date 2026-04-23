@@ -2,7 +2,7 @@
 
 Verifica que:
   (a) connect(timeout=...) em socket inexistente levanta IpcError em < 200ms;
-  (b) TimeoutError de asyncio.wait_for vira IpcError(-1, "conexao timeout");
+  (b) TimeoutError de asyncio.wait_for vira IpcError(-1, "conexão timeout");
   (c) call(timeout=...) que demora demais levanta IpcError de timeout.
 
 Usa unittest.mock.patch para isolar de socket real.

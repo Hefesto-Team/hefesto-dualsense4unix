@@ -19,8 +19,8 @@ from hefesto.profiles.schema import Profile
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "profiles_default"
 
 EXPECTED_PRESETS = {
-    "acao": {
-        "name": "Acao",
+    "acao": {  # noqa-acento — nome do arquivo acao.json
+        "name": "Ação",
         "priority": 65,
         "triggers_left_mode": "Rigid",
         "triggers_right_mode": "Vibration",
@@ -84,7 +84,7 @@ EXPECTED_PRESETS = {
         "lightbar_brightness": 0.4,
     },
     "navegacao": {
-        "name": "Navegacao",
+        "name": "Navegação",
         "priority": 50,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
@@ -255,6 +255,8 @@ class TestArquivosNaoExistem:
         assert not path.exists(), "driving.json deve ter sido deletado"
 
     def test_todos_novos_existem(self) -> None:
-        for nome in ["navegacao", "fps", "aventura", "acao", "corrida", "esportes"]:
+        # Lista contém nomes literais de arquivos JSON (acao.json, navegacao.json).
+        nomes = ["navegacao", "fps", "aventura", "acao", "corrida", "esportes"]  # noqa-acento
+        for nome in nomes:
             path = ASSETS_DIR / f"{nome}.json"
             assert path.exists(), f"{nome}.json deve existir"

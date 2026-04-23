@@ -92,7 +92,7 @@ class UinputGamepad:
         try:
             import uinput
         except ImportError:
-            logger.warning("python-uinput nao instalado — emulacao indisponivel")
+            logger.warning("python-uinput não instalado — emulacao indisponivel")
             return False
         try:
             caps = _build_capabilities()

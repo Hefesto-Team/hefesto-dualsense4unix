@@ -75,7 +75,7 @@ def test_profile_create_fallback(isolated_profiles_dir: Path):
 def test_profile_show_inexistente(isolated_profiles_dir: Path):
     result = runner.invoke(app, ["profile", "show", "ghost"])
     assert result.exit_code == 1
-    assert "nao encontrado" in result.stdout
+    assert "não encontrado" in result.stdout
 
 
 def test_profile_delete_com_yes(isolated_profiles_dir: Path):

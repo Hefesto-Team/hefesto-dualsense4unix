@@ -54,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Instalar dependencias do sistema
+      - name: Instalar dependências do sistema
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q \

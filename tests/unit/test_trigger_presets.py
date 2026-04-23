@@ -4,7 +4,7 @@ Valida:
 - Todos os presets resolvíveis têm exatamente 10 posicoes.
 - Todos os valores estão no range 0-8 (limite do firmware DualSense).
 - "custom" não está nos dicts de preset resolvível (só nos labels).
-- Funcoes de resolucao retornam None para "custom" e lista para chaves validas.
+- Funções de resolucao retornam None para "custom" e lista para chaves validas.
 """
 from __future__ import annotations
 
@@ -138,7 +138,7 @@ class TestVibrationPositionPresets:
         assert resolve_vibration_preset("nao_existe") is None
 
     def test_machine_gun_alterna(self) -> None:
-        """machine_gun deve ter padrao alternado de alta/baixa amplitude."""
+        """machine_gun deve ter padrão alternado de alta/baixa amplitude."""
         valores = VIBRATION_POSITION_PRESETS["machine_gun"]
         # Posicoes impares (1, 3, 5, 7, 9) devem ser maiores que as pares vizinhas
         for i in range(1, len(valores), 2):

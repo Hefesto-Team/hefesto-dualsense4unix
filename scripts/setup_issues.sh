@@ -4,7 +4,7 @@
 set -euo pipefail
 
 if ! command -v gh >/dev/null 2>&1; then
-    echo "erro: gh CLI nao encontrado."
+    echo "erro: gh CLI não encontrado."
     exit 1
 fi
 
@@ -12,7 +12,7 @@ fi
 issues=(
     "W1.1|Interface IController + backend pydualsense|P1-high,type:feature,ai-task,status:ready"
     "W1.2|Event bus + state store thread-safe|P1-high,type:feature,ai-task,status:ready"
-    "W1.3|Daemon loop asyncio basico|P1-high,type:feature,ai-task,status:ready,needs-device"
+    "W1.3|Daemon loop asyncio básico|P1-high,type:feature,ai-task,status:ready,needs-device"
     "W2.1|Trigger effects - 19 modos com factories|P1-high,type:feature,ai-task,status:ready"
     "W2.2|LED control + rumble com throttle|P2-medium,type:feature,ai-task,status:ready,needs-device"
     "W3.1|Schema de perfil + loader JSON|P1-high,type:feature,ai-task,status:ready"

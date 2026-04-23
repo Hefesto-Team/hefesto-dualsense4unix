@@ -121,7 +121,7 @@ def test_apply_schema_invalido_exit_1(
 
     result = runner.invoke(app, ["profile", "apply", "--file", str(path)])
     assert result.exit_code == 1
-    assert "nao valida" in result.output
+    assert "não valida" in result.output
 
 
 def test_apply_daemon_offline_grava_marker(
@@ -151,7 +151,7 @@ def test_apply_daemon_recusa_ipc_error(
     isolated_profiles_dir: Path,
     mock_ipc: dict[str, Any],
 ) -> None:
-    mock_ipc["raise"] = IpcError(-32002, "perfil nao existe")
+    mock_ipc["raise"] = IpcError(-32002, "perfil não existe")
 
     draft = tmp_path / "draft.json"
     draft.write_text(json.dumps(_draft_json_valido()), encoding="utf-8")

@@ -123,7 +123,7 @@ import hefesto.utils.single_instance as si_mod  # noqa: E402
 from hefesto.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Host minimo para exercitar _daemon_status sem Builder real
+# Host mínimo para exercitar _daemon_status sem Builder real
 # ---------------------------------------------------------------------------
 
 
@@ -175,7 +175,7 @@ class _FakeButtonObj:
 
 
 class _Host(DaemonActionsMixin):
-    """Host minimo que permite monkeypatch de _systemctl_oneline e _read_daemon_pid."""
+    """Host mínimo que permite monkeypatch de _systemctl_oneline e _read_daemon_pid."""
 
     def __init__(self) -> None:
         self._daemon_autostart_guard = False

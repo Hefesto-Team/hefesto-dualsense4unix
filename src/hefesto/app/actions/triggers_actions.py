@@ -35,7 +35,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
     _trigger_param_widgets: dict[str, dict[str, Gtk.Scale]]
     # Guard para evitar loop widget->draft->refresh->widget.
     _guard_refresh: bool = False
-    # Guard para evitar que a aplicacao de preset dispare o handler de slider
+    # Guard para evitar que a aplicação de preset dispare o handler de slider
     # e reverta o preset para "custom" imediatamente.
     _trigger_preset_applying: bool = False
 
@@ -60,7 +60,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         """Popula widgets da aba Triggers a partir de self.draft.triggers.
 
         Protegido por _guard_refresh para não disparar handlers de signal
-        durante a atualizacao programatica dos combos.
+        durante a atualização programatica dos combos.
         """
         if self._guard_refresh:
             return
@@ -121,7 +121,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         self._rebuild_params(side, preset_id)
         # Mostra/esconde a linha de preset conforme o modo selecionado.
         self._update_preset_row_visibility(side, preset_id)
-        # Atualiza draft com novo modo (params zerados ate usuario ajustar sliders)
+        # Atualiza draft com novo modo (params zerados ate usuário ajustar sliders)
         draft = getattr(self, "draft", None)
         if draft is not None:
             from hefesto.app.draft_config import TriggerDraft
@@ -157,7 +157,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         try:
             widgets = self._trigger_param_widgets.get(side, {})
             for _idx, (nome, scale) in enumerate(widgets.items()):
-                # Pula o slider de frequencia em MultiPositionVibration (primeiro param).
+                # Pula o slider de frequência em MultiPositionVibration (primeiro param).
                 if mode_id == "MultiPositionVibration" and nome == "frequency":
                     continue
                 # Mapeia nome "pos_N" para o indice N.
@@ -200,7 +200,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         combo.set_active_id("custom")
 
     def _update_preset_to_custom(self, side: str) -> None:
-        """Reverte o dropdown de preset para 'Personalizar' quando usuario move slider."""
+        """Reverte o dropdown de preset para 'Personalizar' quando usuário move slider."""
         if self._trigger_preset_applying:
             return
         combo: Gtk.ComboBoxText | None = self._get(f"trigger_{side}_preset_combo")

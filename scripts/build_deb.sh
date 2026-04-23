@@ -12,7 +12,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
 # ---------------------------------------------------------------------------
-# Le versao do pyproject.toml (Python 3.11+ tem tomllib nativo; fallback tomli)
+# Le versão do pyproject.toml (Python 3.11+ tem tomllib nativo; fallback tomli)
 # ---------------------------------------------------------------------------
 VERSION=$(python3 - <<'EOF'
 import sys
@@ -31,7 +31,7 @@ print(data["project"]["version"])
 EOF
 )
 
-echo "Versao detectada: ${VERSION}"
+echo "Versão detectada: ${VERSION}"
 
 # ---------------------------------------------------------------------------
 # Diretório de staging temporário
@@ -115,7 +115,7 @@ chmod 755 "${STAGING}/usr/bin/hefesto-gui"
 echo "Preparando metadados DEBIAN/ ..."
 cp packaging/debian/control "${STAGING}/DEBIAN/control"
 
-# Injeta versao correta no control (caso difira do hardcoded)
+# Injeta versão correta no control (caso difira do hardcoded)
 if command -v sed >/dev/null 2>&1; then
     sed -i "s/^Version: .*/Version: ${VERSION}/" "${STAGING}/DEBIAN/control"
 fi
@@ -162,5 +162,5 @@ echo ""
 echo "Para instalar localmente:"
 echo "  sudo apt install ./${OUTPUT_DEB}"
 echo ""
-echo "Para verificar conteudo:"
+echo "Para verificar conteúdo:"
 echo "  dpkg-deb -c ${OUTPUT_DEB}"

@@ -5,7 +5,7 @@ Cobre:
   - PS + D-pad (combo) suprime PS solo.
   - `steam_launcher.open_or_focus_steam` usa spawn quando pgrep falha.
   - Usa wmctrl quando pgrep acha processo.
-  - Binario ausente loga warning uma vez e retorna False.
+  - Binário ausente loga warning uma vez e retorna False.
   - Nunca chama `shell=True`.
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ def test_ps_solo_dispara_no_release_sem_combo():
 def test_ps_solo_dispara_mesmo_apos_hold_longo():
     """PS segurado sozinho por muito tempo e entao solto ainda conta como solo.
 
-    Semantica: o usuario não combinou com D-pad; pressionar PS e soltar sempre
+    Semantica: o usuário não combinou com D-pad; pressionar PS e soltar sempre
     vale como solo. O buffer de 150ms governa apenas o combo — não filtra solo.
     """
     fired: list[str] = []
@@ -225,7 +225,7 @@ def test_open_or_focus_steam_binario_ausente_loga_uma_vez(caplog):
     )
     assert ok1 is False
     assert ok2 is False
-    # Não tenta Popen quando binario não existe.
+    # Não tenta Popen quando binário não existe.
     assert fake_popen_called is False
 
 

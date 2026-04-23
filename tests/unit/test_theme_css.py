@@ -54,13 +54,13 @@ def test_theme_css_carrega_sem_erro() -> None:
 
 def test_theme_css_contem_selectors_esperados() -> None:
     """CSS deve conter todos os seletores canônicos da paleta Drácula."""
-    conteudo = CSS_PATH.read_text(encoding="utf-8")
-    faltando = [s for s in SELECTORS_ESPERADOS if s not in conteudo]
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    faltando = [s for s in SELECTORS_ESPERADOS if s not in conteúdo]
     assert not faltando, f"Seletores ausentes no theme.css: {faltando}"
 
 
 def test_theme_css_cor_roxa_presente() -> None:
     """CSS deve conter a cor roxa Drácula #bd93f9 ao menos uma vez."""
-    conteudo = CSS_PATH.read_text(encoding="utf-8")
-    matches = re.findall(r"#bd93f9", conteudo, re.IGNORECASE)
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    matches = re.findall(r"#bd93f9", conteúdo, re.IGNORECASE)
     assert len(matches) >= 1, "Cor #bd93f9 (roxo Drácula) não encontrada no CSS"

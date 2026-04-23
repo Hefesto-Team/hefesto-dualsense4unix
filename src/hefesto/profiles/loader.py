@@ -35,7 +35,7 @@ def _profile_path(name: str) -> Path:
 def load_profile(name: str) -> Profile:
     path = _profile_path(name)
     if not path.exists():
-        raise FileNotFoundError(f"perfil nao encontrado: {name}")
+        raise FileNotFoundError(f"perfil não encontrado: {name}")
     with FileLock(str(_lock_path(path))):
         raw = json.loads(path.read_text(encoding="utf-8"))
     return Profile.model_validate(raw)
@@ -62,7 +62,7 @@ def save_profile(profile: Profile) -> Path:
 def delete_profile(name: str) -> None:
     path = _profile_path(name)
     if not path.exists():
-        raise FileNotFoundError(f"perfil nao encontrado: {name}")
+        raise FileNotFoundError(f"perfil não encontrado: {name}")
     with FileLock(str(_lock_path(path))):
         path.unlink()
 

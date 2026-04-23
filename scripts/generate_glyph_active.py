@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""generate_glyph_active.py — gera versoes _active.svg substituindo fill/stroke
+"""generate_glyph_active.py — gera versões _active.svg substituindo fill/stroke
 de '#f8f8f2' (fg Dracula) por '#bd93f9' (roxo Dracula — estado pressionado).
 
 Uso:
@@ -19,8 +19,8 @@ GLYPHS_DIR = pathlib.Path(__file__).parent.parent / "assets" / "glyphs"
 
 
 def gerar(svg_path: pathlib.Path) -> pathlib.Path:
-    """Substitui a cor padrao pela cor ativa e salva como _active.svg."""
-    conteudo = svg_path.read_text(encoding="utf-8")
+    """Substitui a cor padrão pela cor ativa e salva como _active.svg."""
+    conteudo = svg_path.read_text(encoding="utf-8")  # noqa-acento
     conteudo_ativo = conteudo.replace(FG_PADRAO, FG_ATIVO)
     destino = svg_path.with_name(svg_path.stem + "_active.svg")
     destino.write_text(conteudo_ativo, encoding="utf-8")
@@ -30,7 +30,7 @@ def gerar(svg_path: pathlib.Path) -> pathlib.Path:
 def main() -> int:
     """Ponto de entrada principal."""
     candidatos = sorted(GLYPHS_DIR.glob("*.svg"))
-    # Excluir arquivos _active.svg existentes para não processar o proprio output.
+    # Excluir arquivos _active.svg existentes para não processar o próprio output.
     fontes = [p for p in candidatos if not p.stem.endswith("_active")]
 
     if not fontes:
@@ -43,7 +43,7 @@ def main() -> int:
         print(f"gerado: {destino.name}")
         gerados += 1
 
-    print(f"\n{gerados} versoes _active.svg geradas em {GLYPHS_DIR}")
+    print(f"\n{gerados} versões _active.svg geradas em {GLYPHS_DIR}")
     return 0
 
 

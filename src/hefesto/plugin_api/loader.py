@@ -1,6 +1,6 @@
 """Loader de plugins — importa arquivos .py arbitrarios de um diretório.
 
-Usa importlib.util para carregar cada arquivo como modulo independente,
+Usa importlib.util para carregar cada arquivo como módulo independente,
 sem adicionar o diretório ao sys.path de forma permanente. Cada arquivo
 deve conter exatamente uma subclasse de Plugin (a primeira encontrada
 e instanciada).
@@ -69,9 +69,9 @@ def _carregar_arquivo(arquivo: Path) -> object | None:
             logger.warning("plugin_spec_invalido", arquivo=str(arquivo))
             return None
 
-        modulo = importlib.util.module_from_spec(spec)
-        sys.modules[modulo_nome] = modulo
-        spec.loader.exec_module(modulo)  # type: ignore[union-attr]
+        módulo = importlib.util.module_from_spec(spec)
+        sys.modules[modulo_nome] = módulo
+        spec.loader.exec_module(módulo)  # type: ignore[union-attr]
     except Exception as exc:
         logger.warning(
             "plugin_import_falhou",
@@ -83,7 +83,7 @@ def _carregar_arquivo(arquivo: Path) -> object | None:
     # Encontrar a primeira subclasse concreta de Plugin no modulo.
     classes = [
         obj
-        for _, obj in inspect.getmembers(modulo, inspect.isclass)
+        for _, obj in inspect.getmembers(módulo, inspect.isclass)
         if issubclass(obj, Plugin) and obj is not Plugin and not inspect.isabstract(obj)
     ]
 

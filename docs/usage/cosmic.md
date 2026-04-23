@@ -6,16 +6,16 @@ Guia de uso do Hefesto no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
 
 ## Estado atual do suporte
 
-| Recurso | Estado | Observacao |
+| Recurso | Estado | Observação |
 |---|---|---|
 | Deteccao DualSense USB/BT | OK | evdev, independente de display |
 | Polling de botoes/eixos | OK | hidraw, independente de display |
 | Hotkeys globais | OK | /dev/input, independente de display |
 | Mouse emulado (uinput) | OK | nivel kernel |
 | Autoswitch de perfil | Parcial | ver secao abaixo |
-| GUI GTK3 | OK via XWayland | XWayland ativado por padrao no COSMIC |
+| GUI GTK3 | OK via XWayland | XWayland ativado por padrão no COSMIC |
 | Tray AppIndicator | OK via XWayland | Ayatana funciona em XWayland |
-| Applet nativo COSMIC panel | Nao implementado | V1.2, sprint futura |
+| Applet nativo COSMIC panel | Não implementado | V1.2, sprint futura |
 
 ---
 
@@ -24,10 +24,10 @@ Guia de uso do Hefesto no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
 O Hefesto detecta automaticamente o backend de janela ativa com base nas
 variaveis de ambiente do compositor:
 
-### Cenario 1 — XWayland ativo (padrao no COSMIC 1.0+)
+### Cenario 1 — XWayland ativo (padrão no COSMIC 1.0+)
 
 Quando `DISPLAY` e `WAYLAND_DISPLAY` estao presentes simultaneamente (XWayland
-em execucao), o Hefesto usa o backend X11 (`XlibBackend`). O autoswitch de
+em execução), o Hefesto usa o backend X11 (`XlibBackend`). O autoswitch de
 perfil funciona normalmente.
 
 Verificar:
@@ -58,11 +58,11 @@ Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso
 
 ### Cenario 3 — Sem display (servidor headless)
 
-O Hefesto inicia em modo silencioso. Daemon e polling funcionam; GUI nao abre.
+O Hefesto inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
 
 ---
 
-## Instalacao no COSMIC
+## Instalação no COSMIC
 
 ```bash
 git clone https://github.com/AndreBFarias/hefesto
@@ -71,7 +71,7 @@ cd hefesto
 ```
 
 O instalador detecta automaticamente se o sistema usa systemd user session e
-oferece instalar o servico de daemon.
+oferece instalar o serviço de daemon.
 
 ---
 
@@ -94,7 +94,7 @@ autoswitch_compositor_unsupported
 
 ## Captura de tela no COSMIC (Wayland)
 
-As ferramentas X11 (`scrot`, `import`) nao funcionam em Wayland puro. Use:
+As ferramentas X11 (`scrot`, `import`) não funcionam em Wayland puro. Use:
 
 ```bash
 # Captura de regiao (requer grim + slurp)
@@ -113,12 +113,12 @@ sudo apt install grim slurp
 
 ## Problemas conhecidos
 
-- **AppIndicator nao aparece no painel COSMIC nativo**: o COSMIC usa uma API de
-  applet propria (cosmic-panel). O tray Ayatana funciona via XWayland, mas pode
-  nao integrar ao painel nativo do COSMIC. Contorno: usar apenas a janela GTK3
-  ou a CLI (`hefesto status`). Integracao nativa esta planejada para V1.2.
+- **AppIndicator não aparece no painel COSMIC nativo**: o COSMIC usa uma API de
+  applet própria (cosmic-panel). O tray Ayatana funciona via XWayland, mas pode
+  não integrar ao painel nativo do COSMIC. Contorno: usar apenas a janela GTK3
+  ou a CLI (`hefesto status`). Integração nativa esta planejada para V1.2.
 
-- **Portal GetActiveWindow nao disponivel**: compositors Wayland que nao
+- **Portal GetActiveWindow não disponivel**: compositors Wayland que não
   implementam `org.freedesktop.portal.Window` (Sway, Hyprland, COSMIC < 1.0)
   resultam em autoswitch silencioso. Funcionalidade completa requer XWayland
   ativo ou portal disponivel.

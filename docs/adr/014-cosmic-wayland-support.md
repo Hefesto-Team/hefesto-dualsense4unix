@@ -21,7 +21,7 @@ o autoswitch de perfis:
   `org.freedesktop.portal.Window.GetActiveWindow`, que permite obter informações
   da janela ativa sem depender de X11.
 
-## Decisao
+## Decisão
 
 Adotar arquitetura de backends intercambiáveis para detecção de janela ativa,
 implementada em camadas:

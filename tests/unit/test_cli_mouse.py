@@ -112,7 +112,7 @@ def test_mouse_daemon_offline_mensagem_clara(mock_ipc: dict[str, Any]) -> None:
 
 
 def test_mouse_ipc_error_mensagem_clara(mock_ipc: dict[str, Any]) -> None:
-    mock_ipc["raise"] = IpcError(-32003, "enabled nao eh bool")
+    mock_ipc["raise"] = IpcError(-32003, "enabled não eh bool")
     result = runner.invoke(app, ["mouse", "on"])
     assert result.exit_code == 2
     assert "recusou" in result.output

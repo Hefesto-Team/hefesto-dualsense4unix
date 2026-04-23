@@ -23,7 +23,6 @@ import sys
 import time
 from pathlib import Path
 
-
 DEFAULT_FREQS = [30, 60, 120, 250, 500, 1000]
 
 

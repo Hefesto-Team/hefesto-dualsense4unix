@@ -129,7 +129,7 @@ def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     repo_root = Path(__file__).resolve().parents[2]
     defaults_dir = repo_root / "assets" / "profiles_default"
     if not defaults_dir.exists():
-        pytest.skip("assets/profiles_default/ nao encontrado")
+        pytest.skip("assets/profiles_default/ não encontrado")
 
     for src in defaults_dir.glob("*.json"):
         dst = isolated_profiles_dir / src.name

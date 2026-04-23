@@ -2,7 +2,7 @@
 
 Cobre:
   - Handler aplica cada setor (leds, triggers, rumble, mouse).
-  - Falha em um setor nao bloqueia os outros (best-effort).
+  - Falha em um setor não bloqueia os outros (best-effort).
   - Retorna lista ``applied`` correta com setores aplicados com sucesso.
   - Handler wireado corretamente no dict _handlers (armadilha A-07).
 """
@@ -121,7 +121,7 @@ def test_handler_wireado_no_dict(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Testes de aplicacao por setor
+# Testes de aplicação por setor
 # ---------------------------------------------------------------------------
 
 
@@ -238,7 +238,7 @@ async def test_apply_draft_completo_retorna_todos_aplicados(
 
 
 # ---------------------------------------------------------------------------
-# Testes de resiliencia: falha em um setor nao bloqueia os outros
+# Testes de resiliencia: falha em um setor não bloqueia os outros
 # ---------------------------------------------------------------------------
 
 

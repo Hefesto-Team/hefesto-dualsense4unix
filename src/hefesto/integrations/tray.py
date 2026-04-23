@@ -39,7 +39,7 @@ def probe_gi_availability() -> tuple[bool, str]:
         import gi
     except ImportError:
         return False, (
-            "PyGObject nao instalado. Rode: ./scripts/dev_bootstrap.sh --with-tray"
+            "PyGObject não instalado. Rode: ./scripts/dev_bootstrap.sh --with-tray"
         )
     try:
         gi.require_version("Gtk", "3.0")

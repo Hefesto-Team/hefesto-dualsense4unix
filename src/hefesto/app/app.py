@@ -320,7 +320,7 @@ class HefestoApp(
         A correspondencia entre page_num e o mixin e baseada na ordem das abas
         no GtkNotebook definida no Glade.
 
-        Paginas (indice zero, ordem do notebook):
+        Páginas (indice zero, ordem do notebook):
           0 = Status, 1 = Triggers, 2 = Lightbar, 3 = Rumble,
           4 = Perfis, 5 = Daemon, 6 = Emulacao, 7 = Mouse
         """

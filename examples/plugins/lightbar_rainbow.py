@@ -2,12 +2,12 @@
 
 Cicla as cores da lightbar ao longo do espectro HSV a cada tick.
 Util para verificar que o sistema de plugins esta funcionando e
-que os metodos de output do ControllerProxy operam corretamente.
+que os métodos de output do ControllerProxy operam corretamente.
 
 Instalação:
     cp examples/plugins/lightbar_rainbow.py ~/.config/hefesto/plugins/
 
-Ativacao (em ~/.config/hefesto/config.toml ou env var):
+Ativação (em ~/.config/hefesto/config.toml ou env var):
     HEFESTO_PLUGINS_ENABLED=1 HEFESTO_PLUGINS_DIR=examples/plugins
 """
 from __future__ import annotations
@@ -23,7 +23,7 @@ from hefesto.plugin_api import Plugin, PluginContext
 def _hsv_to_rgb(h: float, s: float, v: float) -> tuple[int, int, int]:
     """Converte HSV (0-1 cada) para RGB (0-255 cada).
 
-    Implementacao pura, sem dependencias externas.
+    Implementação pura, sem dependências externas.
     """
     if s == 0.0:
         c = int(v * 255)

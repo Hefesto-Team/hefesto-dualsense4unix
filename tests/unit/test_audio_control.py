@@ -258,7 +258,7 @@ def test_subprocess_nonzero_exit_is_graceful() -> None:
     def _which(cmd: str) -> str | None:
         return "/usr/bin/pactl" if cmd == "pactl" else None
 
-    # Simula saida com codigo != 0 mas stdout legivel.
+    # Simula saida com código != 0 mas stdout legivel.
     toggle_proc = _make_proc(stdout="", returncode=1)
     # A query retorna saida vazia (exit != 0 mas check=False).
     query_proc = _make_proc(stdout="Mute: no\n", returncode=1)
@@ -269,5 +269,5 @@ def test_subprocess_nonzero_exit_is_graceful() -> None:
         ctrl = AudioControl()
         result = ctrl.toggle_default_source_mute()
 
-    # Não levanta; retorna estado parseado da query (False = nao mutado).
+    # Não levanta; retorna estado parseado da query (False = não mutado).
     assert result is False

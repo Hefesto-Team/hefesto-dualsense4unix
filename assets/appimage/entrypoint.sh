@@ -14,5 +14,5 @@ for candidate in "$APPDIR"/opt/python*/bin/python3.*; do
     fi
 done
 
-echo "python embutido nao encontrado no AppImage" >&2
+echo "python embutido não encontrado no AppImage" >&2
 exit 1

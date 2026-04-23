@@ -219,4 +219,4 @@ def test_registry_tem_19_presets():
 
 def test_todos_os_presets_chave_retornam_callable():
     for name, factory in PRESET_FACTORIES.items():
-        assert callable(factory), f"{name} nao eh callable"
+        assert callable(factory), f"{name} não eh callable"

@@ -126,7 +126,7 @@ def test_call_async_callback_falha_ipc_error():
         erros.append(exc)
         return False
 
-    excecao_esperada = IpcError(-1, "conexao timeout")
+    excecao_esperada = IpcError(-1, "conexão timeout")
 
     with (
         patch("hefesto.app.ipc_bridge._run_call", side_effect=excecao_esperada),
@@ -189,7 +189,7 @@ def test_call_async_timeout_honrado():
     with (
         patch(
             "hefesto.app.ipc_bridge._run_call",
-            side_effect=IpcError(-1, "conexao timeout"),
+            side_effect=IpcError(-1, "conexão timeout"),
         ),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),
     ):

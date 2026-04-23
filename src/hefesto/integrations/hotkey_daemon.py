@@ -130,8 +130,8 @@ class HotkeyManager:
           - PS acabou de ser pressionado → armazena timestamp.
           - PS foi liberado → se nenhum combo disparou E o release veio
             depois do buffer, considera PS solo. Se veio antes do buffer,
-            tambem e' PS solo (toque curto). Se ocorreu com outros botoes
-            pressionados junto (que não formaram combo), tambem dispara
+            também e' PS solo (toque curto). Se ocorreu com outros botoes
+            pressionados junto (que não formaram combo), também dispara
             ao release — mantemos a semantica de "PS isolado terminado".
         """
         if ps_now:

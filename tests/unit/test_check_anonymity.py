@@ -208,7 +208,7 @@ def test_funciona_com_git_grep(fake_repo: Path) -> None:
         cwd=fake_repo, check=True, capture_output=True,
     )
 
-    (fake_repo / "src/hefesto/a.py").write_text("# codigo limpo\n")
+    (fake_repo / "src/hefesto/a.py").write_text("# código limpo\n")
     subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
 
     result = run_check(fake_repo)

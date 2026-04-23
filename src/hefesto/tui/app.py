@@ -235,7 +235,7 @@ class MainScreen(Screen[None]):
             await self.action_refresh()
         except Exception:
             self.notify(
-                f"nao foi possivel ativar '{name}' (daemon offline?)",
+                f"não foi possivel ativar '{name}' (daemon offline?)",
                 severity="warning",
             )
 

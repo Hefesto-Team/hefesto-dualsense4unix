@@ -69,7 +69,7 @@ def cmd_show(name: str) -> None:
     try:
         profile = load_profile(name)
     except FileNotFoundError:
-        console.print(f"[red]perfil nao encontrado: {name}[/red]")
+        console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
     console.print_json(data=profile.model_dump(mode="json"))
 
@@ -80,7 +80,7 @@ def cmd_activate(name: str) -> None:
     try:
         profile = load_profile(name)
     except FileNotFoundError:
-        console.print(f"[red]perfil nao encontrado: {name}[/red]")
+        console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
 
     try:
@@ -95,7 +95,7 @@ def cmd_activate(name: str) -> None:
         console.print(f"[green]perfil aplicado no controle: {name}[/green]")
     except Exception as exc:
         console.print(
-            f"[yellow]perfil nao aplicado (hardware nao detectado): {exc}[/yellow]"
+            f"[yellow]perfil não aplicado (hardware não detectado): {exc}[/yellow]"
         )
 
     _write_active_marker(name)
@@ -114,7 +114,7 @@ def cmd_create(
     ),
     fallback: bool = typer.Option(False, "--fallback", help="Perfil com MatchAny (prioridade 0)."),
 ) -> None:
-    """Cria um perfil minimo (triggers Off, leds apagados). Edite o JSON depois."""
+    """Cria um perfil mínimo (triggers Off, leds apagados). Edite o JSON depois."""
     match: Match
     if fallback:
         match = MatchAny()
@@ -152,7 +152,7 @@ def cmd_delete(
         delete_profile(name)
         console.print(f"[green]perfil deletado: {name}[/green]")
     except FileNotFoundError:
-        console.print(f"[red]perfil nao encontrado: {name}[/red]")
+        console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
 
 
@@ -183,7 +183,7 @@ def cmd_apply(
     try:
         profile = Profile.model_validate(raw)
     except ValidationError as exc:
-        console.print(f"[red]JSON nao valida contra schema do perfil:[/red]\n{exc}")
+        console.print(f"[red]JSON não valida contra schema do perfil:[/red]\n{exc}")
         raise typer.Exit(code=1) from None
 
     if save:
@@ -196,7 +196,7 @@ def cmd_apply(
         except FileNotFoundError:
             console.print(
                 f"[red]--no-save exige perfil ja presente no XDG:[/red] "
-                f"{profile.name!r} nao encontrado."
+                f"{profile.name!r} não encontrado."
             )
             raise typer.Exit(code=1) from None
 
@@ -273,7 +273,7 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
 
     _write_active_marker(name)
     console.print(
-        f"[dim]marker local atualizado: proxima inicializacao do daemon usara '{name}'[/dim]"
+        f"[dim]marker local atualizado: próxima inicialização do daemon usara '{name}'[/dim]"
     )
 
 

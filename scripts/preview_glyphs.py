@@ -2,7 +2,7 @@
 """preview_glyphs.py — janela GTK3 com grade de todos os glyphs SVG.
 
 Abre uma janela 5 colunas x 4 linhas exibindo os 19 glyphs normais e
-suas versoes ativas (pressionadas). Usado exclusivamente para proof-of-work
+suas versões ativas (pressionadas). Usado exclusivamente para proof-of-work
 visual da sprint FEAT-BUTTON-SVG-01.
 
 Uso:

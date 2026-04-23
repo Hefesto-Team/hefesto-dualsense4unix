@@ -1,12 +1,12 @@
 """button_glyph.py — widget GTK3 que exibe um glyph SVG de botao do DualSense.
 
-Cada glyph possui duas variantes carregadas em memoria na inicializacao:
-  - padrao:  assets/glyphs/<nome>.svg      (tracos brancos #f8f8f2)
+Cada glyph possui duas variantes carregadas em memoria na inicialização:
+  - padrão:  assets/glyphs/<nome>.svg      (tracos brancos #f8f8f2)
   - ativo:   assets/glyphs/<nome>_active.svg  (tracos roxos #bd93f9)
 
 O widget alterna entre elas via `set_pressed(bool)`, acionando `queue_draw`.
 
-Caminho dos assets resolvido por ordem de preferencia:
+Caminho dos assets resolvido por ordem de preferência:
   1. ~/.local/share/hefesto/glyphs/   (instalação via install.sh)
   2. assets/glyphs/                   (diretório do repo — ambiente dev)
 """
@@ -97,9 +97,9 @@ if _GTK_DISPONIVEL:
         Parametros
         ----------
         name:
-            Nome do glyph sem extensao (ex: "cross", "circle", "l1").
+            Nome do glyph sem extensão (ex: "cross", "circle", "l1").
         size:
-            Dimensao quadrada em pixels logicos. Default: 24.
+            Dimensão quadrada em pixels logicos. Default: 24.
         tooltip_pt_br:
             Texto do tooltip em PT-BR. Se None, usa BUTTON_GLYPH_LABELS.
         """
@@ -176,7 +176,7 @@ if _GTK_DISPONIVEL:
             return False
 
 else:
-    # Stub minimo para ambientes sem GTK (testes, CI sem display).
+    # Stub mínimo para ambientes sem GTK (testes, CI sem display).
     class ButtonGlyph:  # type: ignore[no-redef]
         """Stub de ButtonGlyph para ambientes sem GTK3."""
 
