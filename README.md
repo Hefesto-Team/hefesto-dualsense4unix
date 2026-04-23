@@ -3,9 +3,10 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-2.1.0-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-1003%20unit-brightgreen.svg)](tests/unit/)
-[![CI](https://img.shields.io/badge/CI-ruff%20%7C%20mypy%20%7C%20pytest-success.svg)](.github/workflows/)
+[![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto/releases)
+[![Testes](https://img.shields.io/badge/testes-1036%20unit-brightgreen.svg)](tests/unit/)
+[![CI](https://github.com/AndreBFarias/hefesto/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto/actions)
 
 <div align="center">
 <div style="text-align: center;">
