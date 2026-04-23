@@ -3,6 +3,59 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [1.2.0] — 2026-04-22
+
+Release de plataforma: `.deb` nativo, bundle Flatpak para COSMIC,
+hotplug Bluetooth, suporte a Wayland via portal XDG, hot-reload do
+daemon sem restart, quickstart visual com screenshots. 6 sprints
+consolidadas sobre v1.1.0.
+
+### Adicionado
+- **Pacote .deb** (FEAT-DEB-PACKAGE-01): `scripts/build_deb.sh` usa
+  `dpkg-deb --build` direto (sem dh_python3/debhelper). Dependências
+  declaradas: python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1,
+  libhidapi-hidraw0 + libs pydantic/structlog/typer/platformdirs.
+  pydualsense/python-uinput via pip (documentado). Job CI `deb` em
+  `release.yml`. Validado local: 179KB, estrutura conferida com
+  `dpkg-deb -I/c`.
+- **Bundle Flatpak** (FEAT-FLATPAK-BUNDLE-01): `br.andrefarias.Hefesto`
+  com runtime org.gnome.Platform//45, finish-args para hidraw+uinput+
+  XDG portal. Manifest YAML + AppStream validado. Scripts
+  `build_flatpak.sh` + `install-host-udev.sh` (pkexec copia rules).
+  Doc `docs/usage/flatpak.md` com arquitetura do sandbox e caminhos
+  isolados (`~/.var/app/br.andrefarias.Hefesto/config/`).
+- **Auto-abertura da GUI ao parear via Bluetooth**
+  (FEAT-HOTPLUG-BT-01): regra udev `74-ps5-controller-hotplug-bt.rules`
+  observa `SUBSYSTEM=="hidraw" KERNELS=="0005:054C:0CE6.*"` (BUS_BLUETOOTH
+  + DualSense/Edge). Reusa `hefesto-gui-hotplug.service` — idempotência
+  garantida pelo single-instance da GUI.
+- **Backends de detecção de janela** (FEAT-COSMIC-WAYLAND-01):
+  `window_backends/xlib.py`, `wayland_portal.py` (D-Bus
+  org.freedesktop.portal.Window.GetActiveWindow, lazy import jeepney/
+  dbus-fast), `null.py`. Factory `window_detect.py` escolhe conforme
+  env (DISPLAY → Xlib, WAYLAND_DISPLAY puro → Portal, nenhum → Null).
+  `xlib_window.py` mantido como shim. ADR-014 complementa ADR-007.
+  `docs/usage/cosmic.md` novo. 13 testes de factory.
+- **Quickstart visual** (DOCS-QUICKSTART-01): `docs/usage/quickstart.md`
+  reescrito com 6 screenshots passo-a-passo cobrindo Status, Daemon,
+  Mouse, Rodapé, Trigger presets, Rumble policy + solução de problemas.
+  README.md com pointer "Começar em 2 minutos".
+
+### Corrigido / Refatorado
+- **Hot-reload do daemon** (REFACTOR-DAEMON-RELOAD-01, resolve A-08):
+  `_on_ps_solo` lê `self.config.ps_button_action` em runtime, não em
+  closure — imune a troca de config via reload. Método
+  `Daemon.reload_config(new_config)` rebuilda hotkey manager e
+  reage a mudanças de `mouse_emulation_enabled`. Handler IPC
+  `daemon.reload` com `dataclasses.replace(**overrides)`, rejeita
+  keys inválidas. 10 testes novos.
+
+### Testes
+- Suíte cresceu para **795 passed, 5 skipped** (+13 do factory Wayland,
+  +10 do daemon reload).
+
+---
+
 ## [1.1.0] — 2026-04-22
 
 Release de estabilidade + polish UX. 17 sprints integradas sobre a 1.0.0
