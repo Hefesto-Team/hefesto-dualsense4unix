@@ -77,6 +77,9 @@ class DaemonConfig:
     rumble_policy_custom_mult: float = 0.7
     # FEAT-HOTKEY-MIC-01
     mic_button_toggles_system: bool = True
+    # FEAT-METRICS-01
+    metrics_enabled: bool = False
+    metrics_port: int = 9090
 
 
 # ---------------------------------------------------------------------------

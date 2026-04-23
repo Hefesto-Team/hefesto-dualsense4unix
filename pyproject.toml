@@ -49,6 +49,11 @@ emulation = [
 tray = [
     "PyGObject>=3.44",
 ]
+# FEAT-METRICS-01 — opcional; text exposition manual não precisa desta dep.
+# Instalar se quiser usar prometheus_client diretamente (ex: dashboards avançados).
+metrics = [
+    "prometheus-client>=0.19",
+]
 
 [project.scripts]
 hefesto = "hefesto.cli.app:main"
