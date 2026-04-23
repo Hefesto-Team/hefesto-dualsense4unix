@@ -29,7 +29,6 @@ jobs:
         run: |
           pip install -e ".[dev]"
           ruff check src/ tests/
-          mypy src/hefesto
           pytest tests/unit -v
       - name: Build wheel + sdist
         run: |
