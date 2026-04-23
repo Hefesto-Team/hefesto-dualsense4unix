@@ -63,7 +63,50 @@ class TriggerConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     mode: str
-    params: list[int] = Field(default_factory=list)
+    params: list[int] | list[list[int]] = Field(default_factory=list)
+
+    @field_validator("params", mode="after")
+    @classmethod
+    def _validate_params(
+        cls, value: list[int] | list[list[int]]
+    ) -> list[int] | list[list[int]]:
+        """Aceita dois formatos canônicos, rejeita mistura.
+
+        - Simples: `list[int]` — todos os elementos inteiros.
+        - Aninhado: `list[list[int]]` — todos os elementos são sublistas de int.
+
+        Mistura (`[[1, 2], 3]`) é erro semântico: sinaliza JSON corrompido
+        ou migração pela metade. Schema rejeita cedo, com mensagem clara.
+        """
+        if not value:
+            return value
+        first = value[0]
+        if isinstance(first, list):
+            for idx, item in enumerate(value):
+                if not isinstance(item, list):
+                    raise ValueError(
+                        "params aninhado exige todos os elementos como list[int]; "
+                        f"índice {idx} tem tipo {type(item).__name__}"
+                    )
+                for jdx, num in enumerate(item):
+                    if not isinstance(num, int) or isinstance(num, bool):
+                        raise ValueError(
+                            f"params aninhado: elemento [{idx}][{jdx}] deve ser int, "
+                            f"recebeu {type(num).__name__}"
+                        )
+        else:
+            for idx, item in enumerate(value):
+                if not isinstance(item, int) or isinstance(item, bool):
+                    raise ValueError(
+                        f"params simples: elemento [{idx}] deve ser int, "
+                        f"recebeu {type(item).__name__}"
+                    )
+        return value
+
+    @property
+    def is_nested(self) -> bool:
+        """True quando `params` está no formato aninhado `list[list[int]]`."""
+        return bool(self.params) and isinstance(self.params[0], list)
 
 
 class TriggersConfig(BaseModel):

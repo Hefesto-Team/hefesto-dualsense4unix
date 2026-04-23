@@ -282,6 +282,59 @@ def _check_start_end(start: int, end: int) -> None:
         raise ValueError(f"end ({end}) deve ser > start ({start})")
 
 
+def _flatten_multi_position(nested: list[list[int]]) -> list[int]:
+    """Achata params aninhado em lista de 10 strengths para multi_position_*.
+
+    Aceita três dimensões canônicas:
+
+    - **10 sublistas** (1:1): cada `[v]` vira uma posição — se a sublista tem
+      mais de um valor, usa o primeiro e descarta o restante. Uso típico:
+      `[[0],[1],[2],[3],[4],[5],[6],[7],[8],[8]]`.
+    - **5 sublistas** (2 posições por zona): cada `[a, b]` expande para
+      duas posições consecutivas (a, b). Espera `len(item) == 2` em cada
+      sublista; erro se diferente.
+    - **2 sublistas** (5 posições por zona): primeira sublista define 5
+      posições iniciais, segunda define 5 finais. Espera `len(item) == 5`.
+
+    Qualquer outra dimensão levanta `ValueError`. Os valores finais devem
+    caber em 0-8 (range canônico do DualSense para multi-position).
+    """
+    n = len(nested)
+    if n == 10:
+        flat: list[int] = []
+        for idx, sub in enumerate(nested):
+            if not sub:
+                raise ValueError(
+                    f"_flatten_multi_position(10): sublista [{idx}] vazia"
+                )
+            flat.append(int(sub[0]))
+        return flat
+    if n == 5:
+        flat = []
+        for idx, sub in enumerate(nested):
+            if len(sub) != 2:
+                raise ValueError(
+                    f"_flatten_multi_position(5): sublista [{idx}] "
+                    f"precisa exatamente 2 valores, recebeu {len(sub)}"
+                )
+            flat.extend(int(v) for v in sub)
+        return flat
+    if n == 2:
+        flat = []
+        for idx, sub in enumerate(nested):
+            if len(sub) != 5:
+                raise ValueError(
+                    f"_flatten_multi_position(2): sublista [{idx}] "
+                    f"precisa exatamente 5 valores, recebeu {len(sub)}"
+                )
+            flat.extend(int(v) for v in sub)
+        return flat
+    raise ValueError(
+        f"_flatten_multi_position: dimensão {n} não suportada "
+        "(esperado 2, 5 ou 10 sublistas)"
+    )
+
+
 def _pack_strengths_bits(
     strengths: list[int],
 ) -> tuple[int, int, int, int, int, int, int]:
@@ -328,13 +381,48 @@ PRESET_FACTORIES = {
 }
 
 
-def build_from_name(name: str, params: list[int] | dict[str, int]) -> TriggerEffect:
-    """Resolve preset por nome + params. Aceita posicional (list) ou nomeado (dict)."""
+def build_from_name(
+    name: str,
+    params: list[int] | list[list[int]] | dict[str, int],
+) -> TriggerEffect:
+    """Resolve preset por nome + params. Aceita posicional (list), nomeado (dict) ou aninhado.
+
+    Formato aninhado (`list[list[int]]`) é canônico para os modos
+    `MultiPositionFeedback` e `MultiPositionVibration`: permite expressar
+    os 10 strengths em JSON com agrupamento por zona (2/5/10 sublistas).
+    Ver `_flatten_multi_position` para a expansão.
+
+    Para `MultiPositionVibration`, `frequency` é implicitamente 0 quando
+    o formato aninhado é usado — ajuste fino de frequency exige formato
+    dict (`{"frequency": N, "strengths": [...]}`) ou posicional.
+    """
     from typing import Any, cast
     factory = cast("Any", PRESET_FACTORIES.get(name))
     if factory is None:
         raise ValueError(f"preset desconhecido: {name}")
-    result = factory(**params) if isinstance(params, dict) else factory(*params)
+
+    # Detecta formato aninhado e expande para a assinatura correta da factory.
+    if (
+        isinstance(params, list)
+        and params
+        and isinstance(params[0], list)
+    ):
+        nested = cast("list[list[int]]", params)
+        if name == "MultiPositionFeedback":
+            strengths = _flatten_multi_position(nested)
+            result = factory(strengths)
+        elif name == "MultiPositionVibration":
+            strengths = _flatten_multi_position(nested)
+            result = factory(0, strengths)
+        else:
+            raise ValueError(
+                f"params aninhado só é aceito para MultiPositionFeedback "
+                f"ou MultiPositionVibration; recebido: {name}"
+            )
+    elif isinstance(params, dict):
+        result = factory(**params)
+    else:
+        result = factory(*params)
     assert isinstance(result, TriggerEffect)
     return result
 

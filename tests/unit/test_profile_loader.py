@@ -192,6 +192,50 @@ def test_delete_profile_resolve_slug(isolated_profiles_dir: Path):
     assert not (isolated_profiles_dir / "acao.json").exists()
 
 
+def test_loader_aventura_nested_params(isolated_profiles_dir: Path):
+    """SCHEMA-MULTI-POSITION-PARAMS-01: aventura.json carrega com params aninhado.
+
+    Após migração, `left` e `right` são MultiPositionFeedback com params
+    na forma `list[list[int]]` de 10 sublistas. Loader não levanta.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    src = repo_root / "assets" / "profiles_default" / "aventura.json"
+    if not src.exists():
+        pytest.skip("aventura.json não encontrado em assets/profiles_default/")
+    dst = isolated_profiles_dir / "aventura.json"
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    profile = load_profile("aventura")
+    assert profile.name == "Aventura"
+    assert profile.triggers.left.mode == "MultiPositionFeedback"
+    assert profile.triggers.right.mode == "MultiPositionFeedback"
+    assert profile.triggers.left.is_nested is True
+    assert profile.triggers.right.is_nested is True
+    # 10 sublistas expected (matriz de decisão do spec)
+    assert len(profile.triggers.left.params) == 10
+    assert len(profile.triggers.right.params) == 10
+
+
+def test_loader_corrida_nested_params(isolated_profiles_dir: Path):
+    """SCHEMA-MULTI-POSITION-PARAMS-01: corrida.json migra apenas `right`."""
+    repo_root = Path(__file__).resolve().parents[2]
+    src = repo_root / "assets" / "profiles_default" / "corrida.json"
+    if not src.exists():
+        pytest.skip("corrida.json não encontrado em assets/profiles_default/")
+    dst = isolated_profiles_dir / "corrida.json"
+    dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+
+    profile = load_profile("corrida")
+    assert profile.name == "Corrida"
+    # left permanece Resistance (decisão explícita da matriz)
+    assert profile.triggers.left.mode == "Resistance"
+    assert profile.triggers.left.is_nested is False
+    # right migrou para MultiPositionVibration com aninhado
+    assert profile.triggers.right.mode == "MultiPositionVibration"
+    assert profile.triggers.right.is_nested is True
+    assert len(profile.triggers.right.params) == 10
+
+
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     """Mimetiza installer copiando perfis default para profiles_dir."""
     repo_root = Path(__file__).resolve().parents[2]
