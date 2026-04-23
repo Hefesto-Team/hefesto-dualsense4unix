@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata — Hefesto -->
+<!-- Valide com: appstreamcli validate (opcao no-net) flatpak/br.andrefarias.Hefesto.metainfo.xml -->
+<component type="desktop-application">
+  <id>br.andrefarias.Hefesto</id>
+
+  <name>Hefesto</name>
+  <summary>Daemon de gatilhos adaptativos para controle DualSense no Linux</summary>
+
+  <!-- Metadados de lançamento -->
+  <launchable type="desktop-id">br.andrefarias.Hefesto.desktop</launchable>
+
+  <!-- Versão atual -->
+  <releases>
+    <release version="1.1.0" date="2024-04-22">
+      <description>
+        <p>Primeira versão Flatpak. Daemon + GUI GTK3 empacotados com suporte a
+           emulação de mouse, troca de perfis e gatilhos adaptativos via DualSense.</p>
+      </description>
+    </release>
+  </releases>
+
+  <!-- Descrição PT-BR (principal) -->
+  <description>
+    <p>O Hefesto é um daemon Linux para configuração avançada do controle DualSense (PS5).
+       Permite ajustar gatilhos adaptativos, vibração, barra de luz e emulação de mouse
+       diretamente no Linux, sem necessidade de Wine ou emuladores.</p>
+    <p>Funcionalidades principais:</p>
+    <ul>
+      <li>Gatilhos adaptativos com múltiplos modos (resistência, disparo, arco)</li>
+      <li>Perfis de configuração por jogo ou aplicação</li>
+      <li>Emulação de mouse com o analógico direito</li>
+      <li>Barra de luz configurável (cor e brilho)</li>
+      <li>Troca automática de perfil ao detectar janela ativa</li>
+      <li>Interface TUI para terminal e GUI GTK3</li>
+      <li>Suporte a USB e Bluetooth</li>
+    </ul>
+    <!-- Descrição EN (para lojas internacionais) -->
+    <p xml:lang="en">Hefesto is a Linux daemon for advanced DualSense (PS5) controller
+       configuration. It lets you adjust adaptive triggers, rumble, lightbar and mouse
+       emulation natively on Linux.</p>
+    <p xml:lang="en">Main features:</p>
+    <ul xml:lang="en">
+      <li>Adaptive triggers with multiple modes (resistance, trigger, bow)</li>
+      <li>Per-game/app profile switching</li>
+      <li>Mouse emulation via right analog stick</li>
+      <li>Configurable lightbar (color and brightness)</li>
+      <li>Automatic profile switching by active window</li>
+      <li>TUI and GTK3 GUI interfaces</li>
+      <li>USB and Bluetooth support</li>
+    </ul>
+  </description>
+
+  <!-- Categoria AppStream -->
+  <categories>
+    <category>Utility</category>
+    <category>Game</category>
+  </categories>
+
+  <!-- Palavras-chave para busca -->
+  <keywords>
+    <keyword>DualSense</keyword>
+    <keyword>PS5</keyword>
+    <keyword>controle</keyword>
+    <keyword>gamepad</keyword>
+    <keyword>trigger</keyword>
+    <keyword>haptic</keyword>
+    <keyword>daemon</keyword>
+    <keyword>linux</keyword>
+  </keywords>
+
+  <!-- Capturas de tela (URLs placeholder — substituir por URLs reais ao publicar) -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Interface principal — painel de gatilhos adaptativos</caption>
+      <image type="source">
+        https://raw.githubusercontent.com/AndreBFarias/hefesto/main/docs/screenshots/gui-triggers.png
+      </image>
+    </screenshot>
+    <screenshot>
+      <caption>Gerenciamento de perfis por aplicação</caption>
+      <image type="source">
+        https://raw.githubusercontent.com/AndreBFarias/hefesto/main/docs/screenshots/gui-profiles.png
+      </image>
+    </screenshot>
+  </screenshots>
+
+  <!-- Licença da aplicação (SPDX) -->
+  <project_license>MIT</project_license>
+
+  <!-- Licença dos metadados AppStream (obrigatório) -->
+  <metadata_license>CC0-1.0</metadata_license>
+
+  <!-- Desenvolvedor -->
+  <developer_name>Andre B. Farias</developer_name>
+
+  <!-- Classificação de conteúdo OARS (nenhum conteúdo sensível) -->
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="violence-desecration">none</content_attribute>
+    <content_attribute id="violence-slavery">none</content_attribute>
+    <content_attribute id="violence-worship">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-narcotics">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="sex-homosexuality">none</content_attribute>
+    <content_attribute id="sex-prostitution">none</content_attribute>
+    <content_attribute id="sex-adultery">none</content_attribute>
+    <content_attribute id="sex-appearance">none</content_attribute>
+    <content_attribute id="language-profanity">none</content_attribute>
+    <content_attribute id="language-humor">none</content_attribute>
+    <content_attribute id="language-discrimination">none</content_attribute>
+    <content_attribute id="social-chat">none</content_attribute>
+    <content_attribute id="social-info">none</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-location">none</content_attribute>
+    <content_attribute id="social-contacts">none</content_attribute>
+    <content_attribute id="money-purchasing">none</content_attribute>
+    <content_attribute id="money-gambling">none</content_attribute>
+  </content_rating>
+
+  <!-- Suporte (links opcionais) -->
+  <url type="homepage">https://github.com/AndreBFarias/hefesto</url>
+  <url type="bugtracker">https://github.com/AndreBFarias/hefesto/issues</url>
+</component>
