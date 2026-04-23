@@ -170,6 +170,51 @@ def test_apply_propaga_brightness(isolated_profiles_dir: Path):
     assert b == 12, f"canal B esperado 12, recebeu {b}"
 
 
+def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
+    """SCHEMA-MULTI-POSITION-PARAMS-01 / A-06: params aninhado chega ao controller.
+
+    Cria perfil com `left` = MultiPositionFeedback (params aninhado de 10)
+    e `right` = MultiPositionVibration (params aninhado de 10). Após apply(),
+    verifica que `set_trigger` foi chamado para ambos os lados com o
+    `TriggerEffect` idêntico ao que a factory canônica produz.
+    """
+    from hefesto.core.trigger_effects import (
+        TriggerMode,
+        multi_position_feedback,
+        multi_position_vibration,
+    )
+
+    left_nested = [[0], [1], [2], [3], [4], [5], [6], [7], [8], [8]]
+    right_nested = [[0], [0], [2], [2], [4], [5], [6], [7], [8], [8]]
+    profile = _mk_profile(
+        "multi_pos",
+        triggers=TriggersConfig(
+            left=TriggerConfig(mode="MultiPositionFeedback", params=left_nested),
+            right=TriggerConfig(mode="MultiPositionVibration", params=right_nested),
+        ),
+    )
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    manager.apply(profile)
+
+    triggers = [c for c in fc.commands if c.kind == "set_trigger"]
+    assert len(triggers) == 2
+
+    # Left: feedback — compara byte a byte com a factory direta.
+    left_call = next(c for c in triggers if c.payload[0] == "left")
+    expected_left = multi_position_feedback([0, 1, 2, 3, 4, 5, 6, 7, 8, 8])
+    assert left_call.payload[1].mode == TriggerMode.RIGID_AB
+    assert left_call.payload[1].forces == expected_left.forces
+
+    # Right: vibration com frequency=0 (default do formato aninhado).
+    right_call = next(c for c in triggers if c.payload[0] == "right")
+    expected_right = multi_position_vibration(0, [0, 0, 2, 2, 4, 5, 6, 7, 8, 8])
+    assert right_call.payload[1].mode == TriggerMode.PULSE_A
+    assert right_call.payload[1].forces == expected_right.forces
+
+
 def test_apply_brightness_maximo_nao_escala(isolated_profiles_dir: Path):
     """Brightness 1.0 (padrão) não altera os valores RGB."""
     profile = _mk_profile(

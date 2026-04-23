@@ -14,8 +14,8 @@
   },
   "priority": 70,
   "triggers": {
-    "left":  {"mode": "Resistance", "params": [2, 7]},
-    "right": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}
+    "left":  {"mode": "MultiPositionFeedback", "params": [[1], [2], [3], [4], [5], [6], [7], [8], [8], [8]]},
+    "right": {"mode": "MultiPositionFeedback", "params": [[1], [2], [3], [4], [5], [6], [7], [8], [8], [8]]}
   },
   "leds": {
     "lightbar": [220, 170, 30],
