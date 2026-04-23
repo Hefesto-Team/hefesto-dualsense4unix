@@ -1,0 +1,16 @@
+{
+  "name": "meu_perfil",
+  "version": 1,
+  "match": {"type": "any"},
+  "priority": 5,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [97, 53, 131],
+    "player_leds": [true, false, false, false, false],
+    "lightbar_brightness": 1.0
+  },
+  "rumble": {"passthrough": true}
+}
