@@ -52,6 +52,13 @@ CODE_CONTROLLER_LOST = -32004
 CODE_INTERNAL = -32603
 CODE_METHOD_NOT_FOUND = -32601
 CODE_PARSE_ERROR = -32700
+CODE_INVALID_REQUEST = -32600
+
+# Limite explícito de bytes por request JSON-RPC no dispatch. Cobre handler
+# atuais (payloads tipicamente ~1-2 KiB) com folga generosa e protege contra
+# payload gigante de cliente local malicioso (socket Unix restrito ao user).
+# Ajuste defensivo — HARDEN-IPC-PAYLOAD-LIMIT-01.
+MAX_PAYLOAD_BYTES = 32_768
 
 
 Handler = Callable[[dict[str, Any]], Awaitable[Any]]
@@ -215,6 +222,15 @@ class IpcServer:
                 await writer.wait_closed()
 
     async def _dispatch(self, raw: bytes) -> bytes | None:
+        if len(raw) > MAX_PAYLOAD_BYTES:
+            logger.warning(
+                "ipc_payload_excede_limite", size=len(raw), limit=MAX_PAYLOAD_BYTES
+            )
+            return _json_rpc_error(
+                None,
+                CODE_INVALID_REQUEST,
+                f"request excede limite de {MAX_PAYLOAD_BYTES} bytes",
+            )
         try:
             payload = json.loads(raw.decode("utf-8").strip() or "null")
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
