@@ -10,6 +10,7 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 # ruff: noqa: E402
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import gi
@@ -73,7 +74,24 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
         if combo is not None:
             combo.connect("changed", self._on_aplica_a_changed)
+            combo.connect("changed", lambda _c: self._refresh_preview())
             combo.set_active_id("any")
+
+        # UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON atualiza em tempo real
+        # conforme inputs do editor. Reutiliza _build_profile_from_editor.
+        for entry_id, signal in (
+            ("profile_name_entry", "changed"),
+            ("profile_simple_custom_name", "changed"),
+            ("profile_window_class_entry", "changed"),
+            ("profile_title_regex_entry", "changed"),
+            ("profile_process_name_entry", "changed"),
+        ):
+            widget = self._get(entry_id)
+            if widget is not None:
+                widget.connect(signal, lambda _w: self._refresh_preview())
+        scale = self._get("profile_priority_scale")
+        if scale is not None:
+            scale.connect("value-changed", lambda _w: self._refresh_preview())
 
         # Estado inicial do toggle a partir das preferências persistidas
         prefs = load_gui_prefs()
@@ -278,6 +296,38 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         target_id = choice if choice in _RADIO_IDS else "any"
         combo.set_active_id(target_id)
+
+    def _refresh_preview(self) -> None:
+        """Atualiza o preview JSON do perfil em tempo real.
+
+        UI-PROFILES-RIGHT-PANEL-REBALANCE-01. Reutiliza
+        `_build_profile_from_editor` como fonte de verdade. Falha graciosa:
+        se o editor estiver parcialmente preenchido e `_build_profile_from_editor`
+        levantar `ValidationError`, mostra mensagem em vez de crashar.
+        """
+        label = self._get("profile_preview_label")
+        if label is None:
+            return
+        try:
+            profile = self._build_profile_from_editor()
+        except ValidationError as exc:
+            # Resume primeira violação para evitar diálogo enorme.
+            first = exc.errors()[0] if exc.errors() else {"msg": str(exc)}
+            msg = first.get("msg", str(exc))
+            label.set_text(f"<perfil inválido: {msg}>")
+            return
+        except Exception as exc:  # preview não pode crashar GUI
+            logger.debug("preview_build_falhou", err=str(exc))
+            label.set_text(f"<preview indisponível: {exc}>")
+            return
+
+        try:
+            payload = profile.model_dump(mode="json", exclude_none=True)
+            pretty = json.dumps(payload, indent=2, ensure_ascii=False)
+        except Exception as exc:
+            label.set_text(f"<erro serializando perfil: {exc}>")
+            return
+        label.set_text(pretty)
 
     def _selected_profile_name(
         self,

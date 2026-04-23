@@ -6,6 +6,15 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased] — v2.2.1 em preparação
 
 ### Alterado
+- **Aba Perfis — preview JSON ao vivo** (UI-PROFILES-RIGHT-PANEL-REBALANCE-01):
+  a coluna direita do editor ganha um frame "Preview do perfil (JSON)"
+  com `GtkScrolledWindow` e label monoespaçada (tema Drácula) que mostra
+  o objeto `Profile` resultante em tempo real. Atualiza a cada mudança
+  em nome/prioridade/combo "Aplica a:"/nomes customizados/critérios
+  avançados. Reutiliza `_build_profile_from_editor` como fonte única de
+  verdade; falha graciosamente com `<perfil inválido: msg>` em caso de
+  `ValidationError`. Ocupa o espaço vazio antes desbalanceado
+  (~450 px → ~280 px) que resultou da sprint 77.
 - **Aba Perfis, grupo "Aplica a:" — 6 radios substituídos por combo**
   (UI-PROFILES-RADIO-GROUP-REDESIGN-01): o campo "Aplica a:" no modo
   simples do editor de perfil trocou 6 `GtkRadioButton` empilhados
