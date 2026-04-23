@@ -115,6 +115,8 @@ async def test_poll_loop_reafirma_rumble() -> None:
     daemon = Daemon(controller=fc, store=store, config=cfg)
     # Fixar rumble_active antes de run para re-asserção começar imediatamente.
     daemon.config.rumble_active = (80, 150)
+    # FEAT-RUMBLE-POLICY-01: política "max" para receber valores sem escala neste teste.
+    daemon.config.rumble_policy = "max"  # type: ignore[assignment]
 
     task = asyncio.create_task(daemon.run())
     # Aguardar ~300ms (cobre pelo menos 1 janela de 200ms de re-asserção).
