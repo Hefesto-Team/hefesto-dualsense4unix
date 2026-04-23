@@ -123,7 +123,14 @@ class Profile(BaseModel):
         if not value or not value.strip():
             raise ValueError("name não pode ser vazio")
         if "/" in value or ".." in value or os.sep in value:
-            raise ValueError(f"name contem caractere invalido: {value!r}")
+            raise ValueError(f"name contém caractere inválido: {value!r}")
+        # Garante que slugify() produz slug válido — rejeita nomes exóticos
+        # (só símbolos, só emoji, etc.) que virariam filename vazio.
+        from hefesto.profiles.slug import slugify
+        try:
+            slugify(value)
+        except ValueError as exc:
+            raise ValueError(f"name não produz slug válido: {value!r}") from exc
         return value
 
     def matches(self, window_info: dict[str, Any]) -> bool:

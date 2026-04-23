@@ -2,12 +2,16 @@
 
 Padrão:
     profiles = load_all_profiles()               # lista Profile
-    save_profile(profile)                        # grava <name>.json
+    save_profile(profile)                        # grava <slug(name)>.json
     delete_profile("shooter")                    # remove arquivo
     profile = load_profile("shooter")            # lê um específico
 
 Paths via `hefesto.utils.xdg_paths.profiles_dir()`. Escritas fazem write
 atômico (tmpfile + rename) para evitar arquivos truncados em crash.
+
+PROFILE-SLUG-SEPARATION-01: filename é derivado de `slugify(profile.name)`.
+`load_profile` aceita tanto slug direto (literal ASCII) quanto display name
+acentuado via busca adaptativa em três camadas.
 """
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ from pathlib import Path
 from filelock import FileLock
 
 from hefesto.profiles.schema import Profile
+from hefesto.profiles.slug import slugify
 from hefesto.utils.xdg_paths import profiles_dir
 
 LOCK_SUFFIX = ".lock"
@@ -28,17 +33,59 @@ def _lock_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + LOCK_SUFFIX)
 
 
-def _profile_path(name: str) -> Path:
-    return profiles_dir(ensure=True) / f"{name}.json"
+def _profile_path(identifier: str | Profile) -> Path:
+    """Resolve filename a partir de slug direto ou de Profile.
+
+    - Se `identifier` é `Profile`, deriva slug de `profile.name`.
+    - Se `identifier` é `str`, assume que já é slug (ou filename ASCII).
+    """
+    if isinstance(identifier, Profile):
+        return profiles_dir(ensure=True) / f"{slugify(identifier.name)}.json"
+    return profiles_dir(ensure=True) / f"{identifier}.json"
 
 
-def load_profile(name: str) -> Profile:
-    path = _profile_path(name)
-    if not path.exists():
-        raise FileNotFoundError(f"perfil não encontrado: {name}")
+def _read_profile(path: Path) -> Profile:
     with FileLock(str(_lock_path(path))):
         raw = json.loads(path.read_text(encoding="utf-8"))
     return Profile.model_validate(raw)
+
+
+def load_profile(identifier: str) -> Profile:
+    """Carrega perfil por slug direto ou por display name.
+
+    Ordem de busca:
+    1. `<identifier>.json` direto (assume que `identifier` já é slug/filename).
+    2. `<slugify(identifier)>.json` (se `identifier` era display name acentuado).
+    3. Varredura fallback: itera o diretório buscando `profile.name` cujo
+       slug bata com `slugify(identifier)`. Cobre arquivos cujo filename
+       não acompanhou o slug atual (ex.: `meu-perfil.json` com name "Meu Perfil").
+    """
+    directory = profiles_dir(ensure=True)
+    direct = directory / f"{identifier}.json"
+    if direct.exists():
+        return _read_profile(direct)
+
+    try:
+        slug = slugify(identifier)
+    except ValueError:
+        raise FileNotFoundError(f"perfil não encontrado: {identifier}") from None
+
+    slugged = directory / f"{slug}.json"
+    if slugged.exists():
+        return _read_profile(slugged)
+
+    for path in directory.glob("*.json"):
+        try:
+            profile = _read_profile(path)
+        except Exception:
+            continue
+        try:
+            if slugify(profile.name) == slug:
+                return profile
+        except ValueError:
+            continue
+
+    raise FileNotFoundError(f"perfil não encontrado: {identifier}")
 
 
 def load_all_profiles() -> list[Profile]:
@@ -52,19 +99,45 @@ def load_all_profiles() -> list[Profile]:
 
 
 def save_profile(profile: Profile) -> Path:
-    path = _profile_path(profile.name)
+    """Grava perfil em `<slugify(profile.name)>.json` de forma atômica."""
+    path = _profile_path(profile)
     payload = profile.model_dump(mode="json")
     with FileLock(str(_lock_path(path))):
         _atomic_write_json(path, payload)
     return path
 
 
-def delete_profile(name: str) -> None:
-    path = _profile_path(name)
-    if not path.exists():
-        raise FileNotFoundError(f"perfil não encontrado: {name}")
-    with FileLock(str(_lock_path(path))):
-        path.unlink()
+def delete_profile(identifier: str) -> None:
+    """Remove o arquivo do perfil. Aceita slug ou display name.
+
+    Resolve o path via `load_profile` para garantir que o filename correto
+    seja alvo do unlink — importante para perfis cujo filename não casa
+    com o slug do `name` atual.
+    """
+    try:
+        profile = load_profile(identifier)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"perfil não encontrado: {identifier}") from None
+
+    directory = profiles_dir(ensure=True)
+    slug = slugify(profile.name)
+    candidate = directory / f"{slug}.json"
+    if not candidate.exists():
+        direct = directory / f"{identifier}.json"
+        if direct.exists():
+            candidate = direct
+        else:
+            for path in directory.glob("*.json"):
+                try:
+                    other = _read_profile(path)
+                except Exception:
+                    continue
+                if other.name == profile.name:
+                    candidate = path
+                    break
+
+    with FileLock(str(_lock_path(candidate))):
+        candidate.unlink()
 
 
 def _atomic_write_json(target: Path, payload: object) -> None:
