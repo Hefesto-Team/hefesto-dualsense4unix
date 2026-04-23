@@ -8,6 +8,8 @@
 
 ## Sumário executivo
 
+- **ACHADO GAME-CHANGER (2026-02-19):** `nowrep/dualsensectl` **merged PR #53** com firmware update funcional. Código em `main.c` expõe protocolo completo: feature reports `0xF4` (data) e `0xF5` (status), struct de info em report `0x20`, tamanho canônico do blob `950272 bytes`. Implicação massiva: **PHASE2 (captura hardware) é obsoleta** — protocolo está documentado em código MIT open. PHASE3 vira decisão arquitetural (reusar vs reimplementar vs wrapper).
+- **ACHADO:** CDN Sony para blob binário é **diferente** do documentado em PHASE1. Oficial: `https://fwupdater.dl.playstation.net/fwupdater/fwupdate0004/{version}/FWUPDATE0004.bin` (DualSense) e `/fwupdate0044/` (Edge). `info.json` na mesma base expõe versão mais recente. Isto permite automatizar download sem VM Win.
 - **Confirmação:** o blob de firmware do DualSense **é criptografado**. Dumps publicados desde 2021 permanecem sem chave pública. Isto muda o escopo de PHASE3: não-objetivo "rodar blob modificado" ganha reforço — nem há como; só aplicar a imagem da Sony.
 - **Confirmação:** URL canônica Sony (`controller.dl.playstation.net/controller/lang/en/DualSenseUpdater.exe`) permanece ativa e é o único caminho oficial. Existe também uma variante por app Windows Store (`winget install PlayStation.DualSenseFWUpdater`) — mesmo binário empacotado.
 - **Achado novo:** `nondebug/dualsense` (GitHub) publica **report descriptor completo** de 280 bytes, sample de input report 0x01 USB com 64 bytes de payload, tabelas de reports USB e BT. PHASE1 cita o repo superficialmente; este survey detalha.
@@ -15,6 +17,130 @@
 - **Achado novo:** precedente DS4 — chave AES-128-CBC pública `9B03D4FB5FEC1A2373462C45E4BC72A6` (IV zerado) decifra firmware DS4. DualSense provavelmente usa esquema similar porém com chave nova (ainda secreta). Sugere que **reverse do bootloader DualSense** deve esperar scene — fora de escopo Hefesto (que não visa derivar custom FW).
 - **Achado novo:** CachyOS forum e PCGamingWiki têm threads recentes (2024-2025) sobre atualização em Linux. Todos os métodos publicados dependem de **Wine/Proton/Bottles** para rodar o updater Windows oficial. Nenhum é nativo puro.
 - **Achado legal:** 9ª rodada triennial DMCA §1201 (out/2024) renovou exemption de interoperabilidade de dispositivos por mais 3 anos (até out/2027). Base legal para PHASE2/3 permanece sólida.
+
+## 0. ACHADO CRÍTICO — upstream implementou firmware update (2026-02-19)
+
+### 0.1 Timeline
+
+| Data | Evento |
+|---|---|
+| 2024-10-02 | Issue #38 aberta em dualsensectl: "Feature Request: Firmware Updates via dualsensectl" |
+| 2025-11-23 | Issue #52 aberta: "Request: Firmware flash/update functionality" |
+| 2025-12-17 | `deadYokai` (contributor) anuncia PR #53 com implementação funcional |
+| 2025-12-17 | Gist com script de download dos blobs Sony publicado |
+| 2026-02-19 | PR #53 **merged** pelo owner `nowrep`. Issue #52 fechada como COMPLETED |
+| 2026-02-19 | Owner comenta: "updating firmware would be better handled by fwupd (https://fwupd.org/)" — sugere LVFS como caminho canônico futuro |
+| 2026-04-23 | Hefesto descobre nesta sessão |
+
+### 0.2 Interface de usuário do dualsensectl atual
+
+```
+$ dualsensectl update firmware.bin
+```
+
+Exige o arquivo `.bin` local (baixado separado). Testado em:
+- **DualSense:** 0x0458 → 0x0520 → 0x0630 (3 upgrades sucessivos).
+
+Output do `dualsensectl info` atual mostra:
+```
+Hardware: 617
+Build date: Jul  4 2025 10:10:32
+Firmware: 110002a (type 3)
+Fw version: 65596 131082 6
+Sw series: 4
+Update version: 0630
+```
+
+### 0.3 Protocolo descoberto (extraído do `main.c` — MIT)
+
+**Feature reports usados:**
+
+| Report ID | Constante C | Direção | Função |
+|---|---|---|---|
+| `0x20` | `DS_FEATURE_REPORT_FIRMWARE_INFO` | GET | Metadata do firmware atual (64 bytes) |
+| `0xF4` | `DS_FEATURE_REPORT_FW` | SET | Transfer de chunk do blob |
+| `0xF5` | `DS_FEATURE_REPORT_FW_STATUS` | GET | Status do processo DFU |
+
+**CORREÇÃO AO PHASE1 (§3.1 dualsensectl):** o doc diz "Não implementa atualização de firmware" — foi verdade até 2026-02-18. A partir de 2026-02-19 (commit/merge do PR #53) a afirmação está **obsoleta**. Atualizar PHASE1 ao fechar PHASE2.
+
+**Constantes do protocolo:**
+
+```c
+#define DS_FEATURE_REPORT_FIRMWARE_INFO 0x20
+#define DS_FEATURE_REPORT_FIRMWARE_INFO_SIZE 64
+#define DS_FEATURE_REPORT_FW      0xF4
+#define DS_FEATURE_REPORT_FW_STATUS 0xF5
+#define DS_FIRMWARE_SIZE 950272   /* exato; valida integridade antes de enviar */
+```
+
+**Estrutura do report 0x20 (metadata do firmware atual no controle):**
+
+```c
+struct dualsense_feature_report_firmware {
+    uint8_t  report_id;           // 0x20
+    char     build_date[11];      // string: "Jul  4 2025"
+    char     build_time[8];       // string: "10:10:32"
+    /* ... */
+    uint32_t firmware_version;    // 0xAABBCCCC = AA.BB.CCCC
+    char     device_info[12];
+    uint16_t update_version;      // 0x0630 na versão atual
+    uint32_t fw_version_1, fw_version_2, fw_version_3;
+    uint32_t hardware_info;       // 0x617 na unidade testada
+    uint8_t  sw_series;
+    uint8_t  fw_type;
+    /* ... */
+};
+_Static_assert(sizeof(struct dualsense_feature_report_firmware) == 64);
+```
+
+**Códigos de erro observados no status (report 0xF5):**
+
+| Código | Significado |
+|---|---|
+| `0x02` | Invalid firmware size |
+| `0x03` | Invalid firmware binary |
+| `0x04` | Invalid firmware binary |
+| `0x10` | Wait / transitional (dorme 50ms e tenta de novo) |
+| `0x11` | Invalid firmware binary |
+| `0xFF` | Internal firmware error |
+| outros | Unknown firmware error |
+
+**Fluxo simplificado:**
+
+1. GET feature 0x20 → lê versão atual.
+2. Carrega arquivo binário — valida exatamente `950272 bytes`.
+3. Check header (primeiros bytes do blob; dualsensectl loga "Checking firmware header...").
+4. Loop: SET feature 0xF4 com chunks sequenciais, GET feature 0xF5 entre chunks.
+5. Progresso impresso por percentual de bytes enviados ("Writing firmware: NN%").
+6. Pós-upload: verify / commit implícito; controle reboota.
+7. GET feature 0x20 novamente para confirmar `update_version` avançou.
+
+### 0.4 CDN Sony para baixar o blob (descoberto no gist)
+
+**URL base:** `https://fwupdater.dl.playstation.net/fwupdater/`
+
+- `info.json` — metadata com versão mais recente (DualSense + Edge).
+- `fwupdate0004/{version}/FWUPDATE0004.bin` — blob DualSense normal.
+- `fwupdate0044/{version}/FWUPDATE0044.bin` — blob DualSense Edge.
+
+Script shell original (MIT, deadYokai) em <https://gist.github.com/deadYokai/3f1253ffdff60b4f9bd811119994bb3a> usa `curl -sL` sem headers custom. Valida arquivo por tamanho (`950272` bytes). Detecta controle via `lsusb` (VID 054c PID 0ce6 ou 0df2).
+
+**Ética:** o CDN é público. Baixar blob é ato do usuário final, não distribuição; aplica-se interoperabilidade. Hefesto pode prover helper para download mas **jamais** empacotar o blob ou cachear em repo/package.
+
+### 0.5 Opções para o Hefesto — revisão de PHASE2/PHASE3
+
+A descoberta **obsoleta PHASE2** (captura de protocolo). PHASE3 (tooling CLI) agora é **decisão arquitetural**:
+
+| Opção | Descrição | Prós | Contras |
+|---|---|---|---|
+| **A** | Wrapper subprocess `hefesto firmware apply` invoca `dualsensectl update` | Mínimo código em Hefesto; zero duplicação; herda bugfixes upstream | Dep externa; usuário precisa de dualsensectl instalado |
+| **B** | Porte Python em `src/hefesto/firmware/` via `libhidapi`/`hidraw` | Autônomo; integra ao daemon; pode rodar sem instalar outra CLI | Duplica código já feito; exige manutenção paralela |
+| **C** | Caminho fwupd/LVFS (sugestão `nowrep`) | Padrão Linux; GUI nativa via gnome-firmware/KDE | Depende Sony publicar no LVFS — sem prazo definido |
+| **D** | Não implementar; apontar usuários para dualsensectl | Zero trabalho; respeita subsidiariedade | Hefesto não ganha paridade de feature |
+
+**Recomendação provisória (aguarda decisão do dono do projeto):** Opção A para MVP. Opção C como visão de longo prazo. Issue #38 upstream ainda OPEN pedindo LVFS — Hefesto pode co-assinar.
+
+---
 
 ## 1. Projetos upstream — novos e atualizados em 2024-2026
 
@@ -349,4 +475,18 @@ Este survey é **incremental**. Cada commit novo deve:
 
 ## Apêndice C — Correções ao PHASE1 encontradas nesta sessão
 
-*(Nenhuma até agora — PHASE1 permanece factualmente consistente. Se aparecerem correções nos próximos commits, serão listadas aqui para facilitar reconciliação.)*
+1. **§3.1 dualsensectl:** PHASE1 afirma "não implementa atualização de firmware". **Obsoleto** — desde 2026-02-19 implementa via `dualsensectl update firmware.bin`. Vide seção §0 deste survey para protocolo completo.
+2. **§3.6 "DualSenseUpdater.exe":** PHASE1 documenta CDN como `controller.dl.playstation.net`. **Complementação**: CDN de blobs puros é distinto: `fwupdater.dl.playstation.net/fwupdater/` (expõe `info.json`, `fwupdate0004/`, `fwupdate0044/`). Isto permite automação sem Wine.
+3. **Escopo PHASE2:** PHASE1 dimensiona PHASE2 como "3-5 iterações com hardware". **Reescopar para 0.5 iteração documental** — consolidar achados deste survey + `main.c` upstream em doc final; fechar a sprint como COMPLETED-BY-UPSTREAM.
+4. **Escopo PHASE3:** PHASE1 dimensiona como "5-10 iterações com alto risco". **Reescopar conforme opção arquitetural** (A/B/C/D na §0.5 deste survey) — opção A (wrapper) cai para 1-2 iterações.
+
+## Apêndice D — Decisões arquiteturais pendentes de dono
+
+Ao fechar PHASE2 como COMPLETED-BY-UPSTREAM, o próximo passo depende de escolha do dono do projeto entre as 4 opções da §0.5. Recomendação: abrir sprint nova `FEAT-FIRMWARE-UPDATE-PHASE3-DECISION-01` que não implementa código — apenas documenta a escolha e lista decisões subordinadas:
+
+- Se opção A: Dep externa no pacote `.deb`/`.flatpak` (`dualsensectl >= v0.8` ou análogo).
+- Se opção B: estrutura Python que replica `main.c` (~500 linhas); usar `libhidapi-python` ou raw hidraw.
+- Se opção C: issue/discussão no LVFS + coordenação com Sony (fora da capacidade do projeto isolado).
+- Se opção D: simplesmente atualizar README apontando `dualsensectl`.
+
+Quando decisão for tomada, reescrever PHASE3 conforme escopo efetivo.
