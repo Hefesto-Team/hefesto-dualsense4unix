@@ -1,23 +1,26 @@
-"""Detecção da janela ativa no X11 via `python-xlib`.
+"""Módulo de compatibilidade — re-exporta de `window_detect`.
 
-`get_active_window_info()` retorna `{wm_class, wm_name, pid, exe_basename}`.
-Apps em Wayland ou sem DISPLAY recebem `{wm_class: "unknown"}` (ver ADR-007).
+Este arquivo é um shim de transição. Código legado que importa de
+`hefesto.integrations.xlib_window` continua funcionando sem alteração.
 
-`wm_class` é o segundo elemento da tupla retornada por Xlib (V3-6).
-`exe_basename` vem de `os.readlink(/proc/PID/exe)` (V2-9).
+Novos módulos devem importar de `hefesto.integrations.window_detect`.
 """
 from __future__ import annotations
 
+# XlibClient e UNKNOWN_WINDOW: mantidos para testes que os referenciam
+# diretamente (test_xlib_window.py). Importar do backend xlib.
 import contextlib
 import os
 from dataclasses import dataclass
 from typing import Any
 
+# Re-exportações para compatibilidade com imports legados.
+from hefesto.integrations.window_detect import get_active_window_info
 from hefesto.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-UNKNOWN_WINDOW = {
+UNKNOWN_WINDOW: dict[str, Any] = {
     "wm_class": "unknown",
     "wm_name": "",
     "pid": 0,
@@ -27,7 +30,7 @@ UNKNOWN_WINDOW = {
 
 @dataclass
 class XlibClient:
-    """Encapsula conexão com X11. Lazy-loads `Xlib.display` pra testes."""
+    """Compatibilidade legada. Use `XlibBackend` (window_backends/xlib.py) em código novo."""
 
     display: Any = None
 
@@ -103,11 +106,6 @@ def _exe_basename_from_pid(pid: int) -> str:
         return os.path.basename(target)
     except (OSError, FileNotFoundError):
         return ""
-
-
-def get_active_window_info() -> dict[str, Any]:
-    client = XlibClient()
-    return client.active_window_info()
 
 
 __all__ = ["UNKNOWN_WINDOW", "XlibClient", "get_active_window_info"]
