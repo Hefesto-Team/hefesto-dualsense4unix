@@ -4,6 +4,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
 
     profile.switch       {name: str} -> {active_profile: str}
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
+    profile.apply_draft  {triggers?, leds?, rumble?, mouse?} -> {status, applied: [str]}
     trigger.set          {side, mode, params} -> {status}
     trigger.reset        {side?}               -> {status}
     led.set              {rgb}                 -> {status}
@@ -75,6 +76,7 @@ class IpcServer:
         self._handlers = {
             "profile.switch": self._handle_profile_switch,
             "profile.list": self._handle_profile_list,
+            "profile.apply_draft": self._handle_profile_apply_draft,
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
@@ -495,6 +497,128 @@ class IpcServer:
             enabled=enabled, speed=speed, scroll_speed=scroll_speed
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+
+    async def _handle_profile_apply_draft(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse.
+
+        Cada setor e aplicado de forma best-effort: falha em um setor loga warning
+        mas nao bloqueia os demais. Retorna lista ``applied`` com setores que
+        foram aplicados com sucesso (FEAT-PROFILE-STATE-01).
+
+        Params:
+            triggers: {left: {mode, params}, right: {mode, params}} (opcional)
+            leds: {lightbar_rgb, lightbar_brightness, player_leds} (opcional)
+            rumble: {weak, strong} (opcional)
+            mouse: {enabled, speed, scroll_speed} (opcional)
+        """
+        applied: list[str] = []
+
+        # --- leds (primeiro: menos transiente visual) ---
+        leds_raw = params.get("leds")
+        if leds_raw is not None:
+            try:
+                if not isinstance(leds_raw, dict):
+                    raise ValueError("leds deve ser objeto")
+                rgb_raw = leds_raw.get("lightbar_rgb")
+                brightness_raw = leds_raw.get("lightbar_brightness", 1.0)
+                try:
+                    brightness = float(brightness_raw)
+                except (TypeError, ValueError):
+                    brightness = 1.0
+                brightness = max(0.0, min(1.0, brightness))
+                if rgb_raw is not None:
+                    if not isinstance(rgb_raw, list) or len(rgb_raw) != 3:
+                        raise ValueError("leds.lightbar_rgb deve ser lista de 3 inteiros")
+                    r = max(0, min(255, int(rgb_raw[0] * brightness)))
+                    g = max(0, min(255, int(rgb_raw[1] * brightness)))
+                    b = max(0, min(255, int(rgb_raw[2] * brightness)))
+                    self.controller.set_led((r, g, b))
+                player_leds_raw = leds_raw.get("player_leds")
+                if player_leds_raw is not None:
+                    if not isinstance(player_leds_raw, list) or len(player_leds_raw) != 5:
+                        raise ValueError("leds.player_leds deve ser lista de 5 booleanos")
+                    bits: tuple[bool, bool, bool, bool, bool] = (
+                        bool(player_leds_raw[0]),
+                        bool(player_leds_raw[1]),
+                        bool(player_leds_raw[2]),
+                        bool(player_leds_raw[3]),
+                        bool(player_leds_raw[4]),
+                    )
+                    self.controller.set_player_leds(bits)
+                applied.append("leds")
+            except Exception as exc:
+                logger.warning("apply_draft_leds_falhou", erro=str(exc))
+
+        # --- triggers ---
+        triggers_raw = params.get("triggers")
+        if triggers_raw is not None:
+            try:
+                if not isinstance(triggers_raw, dict):
+                    raise ValueError("triggers deve ser objeto")
+                for side in ("left", "right"):
+                    side_raw = triggers_raw.get(side)
+                    if side_raw is None:
+                        continue
+                    if not isinstance(side_raw, dict):
+                        raise ValueError(f"triggers.{side} deve ser objeto")
+                    mode = side_raw.get("mode")
+                    trigger_params = side_raw.get("params", [])
+                    if not isinstance(mode, str):
+                        raise ValueError(f"triggers.{side}.mode deve ser string")
+                    if not isinstance(trigger_params, list):
+                        raise ValueError(f"triggers.{side}.params deve ser lista")
+                    effect = build_from_name(mode, trigger_params)
+                    self.controller.set_trigger(side, effect)
+                self.store.mark_manual_trigger_active()
+                applied.append("triggers")
+            except Exception as exc:
+                logger.warning("apply_draft_triggers_falhou", erro=str(exc))
+
+        # --- rumble ---
+        rumble_raw = params.get("rumble")
+        if rumble_raw is not None:
+            try:
+                if not isinstance(rumble_raw, dict):
+                    raise ValueError("rumble deve ser objeto")
+                weak = rumble_raw.get("weak", 0)
+                strong = rumble_raw.get("strong", 0)
+                if not isinstance(weak, int) or not isinstance(strong, int):
+                    raise ValueError("rumble.weak e rumble.strong devem ser inteiros")
+                weak = max(0, min(255, weak))
+                strong = max(0, min(255, strong))
+                daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+                if daemon_cfg is not None:
+                    daemon_cfg.rumble_active = (weak, strong)
+                self.controller.set_rumble(weak=weak, strong=strong)
+                applied.append("rumble")
+            except Exception as exc:
+                logger.warning("apply_draft_rumble_falhou", erro=str(exc))
+
+        # --- mouse ---
+        mouse_raw = params.get("mouse")
+        if mouse_raw is not None:
+            try:
+                if not isinstance(mouse_raw, dict):
+                    raise ValueError("mouse deve ser objeto")
+                enabled = mouse_raw.get("enabled")
+                if not isinstance(enabled, bool):
+                    raise ValueError("mouse.enabled deve ser booleano")
+                speed = mouse_raw.get("speed")
+                scroll_speed = mouse_raw.get("scroll_speed")
+                if self.daemon is None:
+                    raise ValueError("daemon nao disponivel para alterar emulacao de mouse")
+                self.daemon.set_mouse_emulation(
+                    enabled=enabled,
+                    speed=speed,
+                    scroll_speed=scroll_speed,
+                )
+                applied.append("mouse")
+            except Exception as exc:
+                logger.warning("apply_draft_mouse_falhou", erro=str(exc))
+
+        return {"status": "ok", "applied": applied}
 
 
 def _json_rpc_result(req_id: Any, result: Any) -> bytes:

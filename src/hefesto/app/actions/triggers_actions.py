@@ -27,6 +27,8 @@ class TriggersActionsMixin(WidgetAccessMixin):
     """
 
     _trigger_param_widgets: dict[str, dict[str, Gtk.Scale]]
+    # Guard para evitar loop widget->draft->refresh->widget.
+    _guard_refresh: bool = False
 
     def install_triggers_tab(self) -> None:
         self._trigger_param_widgets = {"left": {}, "right": {}}
@@ -37,6 +39,36 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 combo.append(spec.name, spec.label)
             combo.set_active_id("Off")
             self._rebuild_params(side, "Off")
+
+    # --- draft integration ---
+
+    def _refresh_triggers_from_draft(self) -> None:
+        """Popula widgets da aba Triggers a partir de self.draft.triggers.
+
+        Protegido por _guard_refresh para nao disparar handlers de signal
+        durante a atualizacao programatica dos combos.
+        """
+        if self._guard_refresh:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        self._guard_refresh = True
+        try:
+            for side in ("left", "right"):
+                trigger_draft = getattr(draft.triggers, side)
+                combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
+                if combo is None:
+                    continue
+                combo.set_active_id(trigger_draft.mode)
+                self._rebuild_params(side, trigger_draft.mode)
+                # Restaura valores dos parametros
+                widgets = self._trigger_param_widgets.get(side, {})
+                for i, name in enumerate(widgets):
+                    if i < len(trigger_draft.params):
+                        widgets[name].set_value(trigger_draft.params[i])
+        finally:
+            self._guard_refresh = False
 
     # --- signals ---
 
@@ -61,10 +93,20 @@ class TriggersActionsMixin(WidgetAccessMixin):
     # --- helpers ---
 
     def _on_mode_changed(self, side: str, combo: Gtk.ComboBoxText) -> None:
+        if self._guard_refresh:
+            return
         preset_id = combo.get_active_id()
         if preset_id is None:
             return
         self._rebuild_params(side, preset_id)
+        # Atualiza draft com novo modo (params zerados ate usuario ajustar sliders)
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            from hefesto.app.draft_config import TriggerDraft
+
+            new_trigger = TriggerDraft(mode=preset_id, params=())
+            new_triggers = draft.triggers.model_copy(update={side: new_trigger})
+            self.draft = draft.model_copy(update={"triggers": new_triggers})
 
     def _rebuild_params(self, side: str, preset_id: str) -> None:
         spec = get_spec(preset_id)
@@ -128,6 +170,16 @@ class TriggersActionsMixin(WidgetAccessMixin):
 
         values = self._collect_values(side)
         args = preset_to_factory_args(spec, values)
+
+        # Persiste params posicionais no draft antes de enviar via IPC.
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            from hefesto.app.draft_config import TriggerDraft
+
+            params_list: list[int] = args if isinstance(args, list) else []
+            new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
+            new_triggers = draft.triggers.model_copy(update={side: new_trigger})
+            self.draft = draft.model_copy(update={"triggers": new_triggers})
 
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional

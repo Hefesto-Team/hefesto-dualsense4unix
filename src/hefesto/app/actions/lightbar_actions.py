@@ -25,6 +25,51 @@ class LightbarActionsMixin(WidgetAccessMixin):
     # Guard para bloquear o handler durante refresh programático do slider.
     _refresh_guard: bool = False
 
+    def _refresh_lightbar_from_draft(self) -> None:
+        """Popula widgets da aba Lightbar a partir de self.draft.leds.
+
+        Protegido por _refresh_guard para nao disparar handlers de signal
+        durante a atualizacao programatica dos widgets.
+        """
+        if self._refresh_guard:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        self._refresh_guard = True
+        try:
+            leds = draft.leds
+            # Cor RGB
+            if leds.lightbar_rgb is not None:
+                r, g, b = leds.lightbar_rgb
+                self._current_rgb = (r, g, b)
+                button: Gtk.ColorButton = self._get("lightbar_color_button")
+                if button is not None:
+                    rgba = Gdk.RGBA()
+                    rgba.red = r / 255.0
+                    rgba.green = g / 255.0
+                    rgba.blue = b / 255.0
+                    rgba.alpha = 1.0
+                    button.set_rgba(rgba)
+            # Brightness
+            pct = float(leds.lightbar_brightness)
+            self._current_brightness = pct / 100.0
+            self._pending_brightness = self._current_brightness
+            scale: Gtk.Scale = self._get("lightbar_brightness_scale")
+            if scale is not None:
+                scale.set_value(pct)
+            # Player LEDs
+            for i, state in enumerate(leds.player_leds, start=1):
+                checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
+                if checkbox is not None:
+                    checkbox.set_active(bool(state))
+            # Repinta preview
+            preview: Gtk.DrawingArea = self._get("lightbar_preview")
+            if preview is not None:
+                preview.queue_draw()
+        finally:
+            self._refresh_guard = False
+
     def install_lightbar_tab(self) -> None:
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
@@ -44,12 +89,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
     # --- signals lightbar ---
 
     def on_lightbar_color_set(self, button: Gtk.ColorButton) -> None:
+        if self._refresh_guard:
+            return
         rgba = button.get_rgba()
         self._current_rgb = (
             int(rgba.red * 255),
             int(rgba.green * 255),
             int(rgba.blue * 255),
         )
+        # Atualiza draft
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_leds = draft.leds.model_copy(update={"lightbar_rgb": self._current_rgb})
+            self.draft = draft.model_copy(update={"leds": new_leds})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -66,7 +119,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
         """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
 
-        Não aplica no hardware automaticamente; o usuário confirma via botão
+        Nao aplica no hardware automaticamente; o usuario confirma via botao
         "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
         Guard _refresh_guard previne loop quando _refresh_lightbar_from_state
         atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).
@@ -74,10 +127,18 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if self._refresh_guard:
             return
         raw = float(scale.get_value())
-        # Clamp defensivo: GtkAdjustment já limita, mas nunca confie cego.
+        # Clamp defensivo: GtkAdjustment ja limita, mas nunca confie cego.
         pct = max(0.0, min(100.0, raw))
         self._current_brightness = pct / 100.0
         self._pending_brightness = self._current_brightness
+        # Atualiza draft com novo valor de brightness.
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_leds = draft.leds.model_copy(
+                update={"lightbar_brightness": round(pct)}
+            )
+            self.draft = draft.model_copy(update={"leds": new_leds})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -144,12 +205,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
         """Sinal de toggle de qualquer checkbox de player LED.
 
         Recalcula o bitmask completo dos 5 checkboxes e envia ao hardware via IPC.
-        Pula silenciosamente quando `_player_leds_batch_guard` está ativo (preset
+        Pula silenciosamente quando `_player_leds_batch_guard` esta ativo (preset
         em andamento faz o envio final ele mesmo, evitando 5 IPCs redundantes).
         """
+        if self._refresh_guard:
+            return
         if getattr(self, "_player_leds_batch_guard", False):
             return
         bits = self.get_current_player_leds()
+        # Atualiza draft
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_leds = draft.leds.model_copy(update={"player_leds": bits})
+            self.draft = draft.model_copy(update={"leds": new_leds})
         ok = player_leds_set(bits)
         label = " ".join("x" if b else "-" for b in bits)
         self._toast_light(
@@ -162,8 +231,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         """Atualiza checkboxes e envia bitmask ao hardware via IPC (1 chamada).
 
         Aplica `_player_leds_batch_guard` enquanto atualiza os 5 checkboxes para
-        evitar que `on_player_led_toggled` dispare IPCs redundantes — só envia
-        o bitmask final ao fim, em uma chamada única.
+        evitar que `on_player_led_toggled` dispare IPCs redundantes -- so envia
+        o bitmask final ao fim, em uma chamada unica.
         """
         self._player_leds_batch_guard = True
         try:
@@ -176,6 +245,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         bits: tuple[bool, bool, bool, bool, bool] = (
             pattern[0], pattern[1], pattern[2], pattern[3], pattern[4]
         )
+        # Atualiza draft
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_leds = draft.leds.model_copy(update={"player_leds": bits})
+            self.draft = draft.model_copy(update={"leds": new_leds})
         ok = player_leds_set(bits)
         label = " ".join("x" if s else "-" for s in pattern)
         self._toast_light(
