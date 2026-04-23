@@ -28,7 +28,7 @@ import json
 import os
 import socket as _socket
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -482,8 +482,39 @@ class IpcServer:
         }
 
     async def _handle_daemon_reload(self, params: dict[str, Any]) -> dict[str, Any]:
-        # Placeholder: reload de config chega em W4.1+ quando tivermos daemon.toml real.
-        return {"status": "ok", "reloaded": True}
+        """Aplica overrides parciais de config em runtime (REFACTOR-DAEMON-RELOAD-01).
+
+        Params:
+            config_overrides: dict com subset de campos de DaemonConfig.
+                              Chaves inexistentes em DaemonConfig sao rejeitadas.
+
+        Retorna:
+            {status: "ok", config: <novo DaemonConfig como dict>}
+
+        Erros:
+            ValueError se daemon não disponível, ou se override contém chave
+            desconhecida em DaemonConfig.
+        """
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para reload")
+
+        from hefesto.daemon.lifecycle import DaemonConfig
+
+        overrides = params.get("config_overrides", {})
+        if not isinstance(overrides, dict):
+            raise ValueError("daemon.reload: 'config_overrides' deve ser objeto")
+
+        # Validação antecipada: rejeita chaves que não existem em DaemonConfig.
+        known_fields = set(DaemonConfig.__dataclass_fields__)
+        unknown = set(overrides) - known_fields
+        if unknown:
+            raise ValueError(
+                f"daemon.reload: campos desconhecidos em config_overrides: {sorted(unknown)}"
+            )
+
+        new_cfg = replace(self.daemon.config, **overrides)
+        self.daemon.reload_config(new_cfg)
+        return {"status": "ok", "config": asdict(new_cfg)}
 
     async def _handle_mouse_emulation_set(
         self, params: dict[str, Any]

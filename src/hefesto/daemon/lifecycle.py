@@ -410,19 +410,23 @@ class Daemon:
         return True
 
     def _start_hotkey_manager(self) -> None:
-        """Instancia HotkeyManager com on_ps_solo conforme config (FEAT-HOTKEY-STEAM-01)."""
+        """Instancia HotkeyManager com on_ps_solo conforme config (FEAT-HOTKEY-STEAM-01).
+
+        REFACTOR-DAEMON-RELOAD-01: `_on_ps_solo` le `self.config` em runtime para
+        que `reload_config` possa substituir `self.config` sem recriar closures.
+        """
         from hefesto.integrations.hotkey_daemon import HotkeyManager
 
-        action = self.config.ps_button_action
-        command = self.config.ps_button_command
-
         def _on_ps_solo() -> None:
-            if action == "none":
+            # Leitura em runtime — não em closure — para que reload_config funcione.
+            cfg = self.config
+            if cfg.ps_button_action == "none":
                 return
-            if action == "steam":
+            if cfg.ps_button_action == "steam":
                 from hefesto.integrations.steam_launcher import open_or_focus_steam
                 open_or_focus_steam()
-            elif action == "custom":
+            elif cfg.ps_button_action == "custom":
+                command = cfg.ps_button_command
                 if not command:
                     logger.warning("hotkey_ps_solo_custom_sem_comando")
                     return
@@ -437,7 +441,42 @@ class Daemon:
                     )
 
         self._hotkey_manager = HotkeyManager(on_ps_solo=_on_ps_solo)
-        logger.info("hotkey_manager_started", ps_button_action=action)
+        logger.info("hotkey_manager_started", ps_button_action=self.config.ps_button_action)
+
+    def _stop_hotkey_manager(self) -> None:
+        """Para e descarta o HotkeyManager atual. Idempotente."""
+        self._hotkey_manager = None
+
+    def reload_config(self, new_config: DaemonConfig) -> None:
+        """Aplica nova configuração em runtime sem reiniciar o daemon.
+
+        Substitui `self.config`, rebuilda o HotkeyManager (closures frescas via
+        runtime-read de `self.config`) e reage a mudanças de mouse_emulation_enabled.
+
+        Nota: se o usuário estiver com PS+combo pressionado no momento do reload,
+        o novo HotkeyManager perde o estado de hold — soltar e pressionar novamente
+        é necessário para retomar a detecção de combo.
+        """
+        old = self.config
+        self.config = new_config
+
+        # Rebuild do HotkeyManager garante closures apontando para self.config novo.
+        self._stop_hotkey_manager()
+        self._start_hotkey_manager()
+
+        # Mouse: reage só se o estado mudou.
+        if old.mouse_emulation_enabled != new_config.mouse_emulation_enabled:
+            self.set_mouse_emulation(
+                new_config.mouse_emulation_enabled,
+                speed=new_config.mouse_speed,
+                scroll_speed=new_config.mouse_scroll_speed,
+            )
+
+        keys_changed = [
+            k for k in new_config.__dataclass_fields__
+            if getattr(old, k, None) != getattr(new_config, k)
+        ]
+        logger.info("daemon_config_reloaded", keys_changed=keys_changed)
 
     def _stop_mouse_emulation(self) -> None:
         if self._mouse_device is None:
