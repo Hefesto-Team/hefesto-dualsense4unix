@@ -23,7 +23,9 @@ def mock_ipc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """
     registry: dict[str, Any] = {"calls": [], "response": {"status": "ok"}, "raise": None}
 
-    def fake_run_call(method: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
+    def fake_run_call(
+        method: str, params: dict[str, Any] | None = None, timeout: float | None = None
+    ) -> Any:
         registry["calls"].append((method, dict(params or {})))
         if registry["raise"] is not None:
             raise registry["raise"]

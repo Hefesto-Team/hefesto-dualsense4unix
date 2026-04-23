@@ -16,7 +16,6 @@ import pytest
 
 from hefesto.utils.session import load_last_profile, save_last_profile
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -82,9 +81,9 @@ def test_activate_chama_save_last_profile() -> None:
     """ProfileManager.activate() deve persistir o perfil via save_last_profile."""
     saved: list[str] = []
 
-    from hefesto.profiles.schema import LedsConfig, MatchCriteria, Profile, TriggersConfig
     from hefesto.daemon.state_store import StateStore
     from hefesto.profiles.manager import ProfileManager
+    from hefesto.profiles.schema import LedsConfig, MatchCriteria, Profile, TriggersConfig
 
     fake_profile = Profile(
         name="shooter",
@@ -97,9 +96,11 @@ def test_activate_chama_save_last_profile() -> None:
     store = StateStore()
     mgr = ProfileManager(controller=ctrl, store=store)
 
-    with patch("hefesto.profiles.manager.load_profile", return_value=fake_profile):
-        with patch("hefesto.profiles.manager.apply_led_settings"):
-            with patch("hefesto.utils.session.save_last_profile", side_effect=saved.append):
-                mgr.activate("shooter")
+    with (
+        patch("hefesto.profiles.manager.load_profile", return_value=fake_profile),
+        patch("hefesto.profiles.manager.apply_led_settings"),
+        patch("hefesto.utils.session.save_last_profile", side_effect=saved.append),
+    ):
+        mgr.activate("shooter")
 
     assert saved == ["shooter"]

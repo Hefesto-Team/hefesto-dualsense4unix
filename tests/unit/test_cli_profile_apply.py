@@ -50,7 +50,9 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 def mock_ipc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     registry: dict[str, Any] = {"calls": [], "response": {"active_profile": "draft"}, "raise": None}
 
-    def fake_run_call(method: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
+    def fake_run_call(
+        method: str, params: dict[str, Any] | None = None, timeout: float | None = None
+    ) -> Any:
         registry["calls"].append((method, dict(params or {})))
         if registry["raise"] is not None:
             raise registry["raise"]
