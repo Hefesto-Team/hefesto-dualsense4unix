@@ -149,6 +149,8 @@ class HefestoApp(
             # Triggers
             "on_trigger_left_mode_changed": self.on_trigger_left_mode_changed,
             "on_trigger_right_mode_changed": self.on_trigger_right_mode_changed,
+            "on_trigger_left_preset_changed": self.on_trigger_left_preset_changed,
+            "on_trigger_right_preset_changed": self.on_trigger_right_preset_changed,
             "on_trigger_left_apply": self.on_trigger_left_apply,
             "on_trigger_right_apply": self.on_trigger_right_apply,
             "on_trigger_left_reset": self.on_trigger_left_reset,
