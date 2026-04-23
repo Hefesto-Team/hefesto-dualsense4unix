@@ -80,6 +80,17 @@ class PyDualSenseController(IController):
         # HOTFIX-2: evdev é fonte primária de input quando disponível.
         if self._evdev.is_available():
             snap = self._evdev.snapshot()
+            # Consolida botões: evdev (ramo primário) + HID-raw do Mic (INFRA-MIC-HID-01).
+            # O botão Mic não tem keycode evdev estável — vem por `ds.state.micBtn`
+            # (byte misc2, bit 0x04). Tratamento defensivo: primeiro tick pode
+            # ter state cru antes do firmware enviar o primeiro report completo.
+            buttons = set(snap.buttons_pressed)
+            try:
+                if bool(getattr(ds.state, "micBtn", False)):
+                    buttons.add("mic_btn")
+            except Exception:  # defensivo: state pode estar cru no primeiro tick
+                pass
+            buttons_pressed = frozenset(buttons)
             return ControllerState(
                 battery_pct=battery,
                 l2_raw=snap.l2_raw,
@@ -90,12 +101,21 @@ class PyDualSenseController(IController):
                 raw_ly=snap.ly,
                 raw_rx=snap.rx,
                 raw_ry=snap.ry,
+                buttons_pressed=buttons_pressed,
             )
         # Fallback pydualsense: HOTFIX-1 corrigiu os atributos, mas em
         # runtime com hid_playstation ativo os valores não atualizam.
+        # Sem evdev, botões evdev ficam vazios; apenas `micBtn` (HID-raw) é
+        # garantido pelo pydualsense mesmo neste ramo.
         state = ds.state
         l2_raw = int(getattr(state, "L2_value", 0)) & 0xFF
         r2_raw = int(getattr(state, "R2_value", 0)) & 0xFF
+        buttons_fallback: frozenset[str] = frozenset()
+        try:
+            if bool(getattr(state, "micBtn", False)):
+                buttons_fallback = frozenset({"mic_btn"})
+        except Exception:
+            pass
         return ControllerState(
             battery_pct=battery,
             l2_raw=l2_raw,
@@ -106,6 +126,7 @@ class PyDualSenseController(IController):
             raw_ly=int(state.LY) & 0xFF,
             raw_rx=int(state.RX) & 0xFF,
             raw_ry=int(state.RY) & 0xFF,
+            buttons_pressed=buttons_fallback,
         )
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
@@ -124,6 +145,17 @@ class PyDualSenseController(IController):
         ds = self._require()
         ds.setLeftMotor(strong)
         ds.setRightMotor(weak)
+
+    def set_mic_led(self, muted: bool) -> None:
+        """Acende/apaga o LED do microfone do DualSense (INFRA-SET-MIC-LED-01).
+
+        Delega para `ds.audio.setMicrophoneLED(bool)`. A pydualsense cuida da
+        diferença USB/BT em `prepareReport` (outReport[9] USB / outReport[10] BT).
+        `ds.audio` é garantido pelo `pydualsense.__init__` — não pode ser None
+        após `_require()` retornar com sucesso.
+        """
+        ds = self._require()
+        ds.audio.setMicrophoneLED(bool(muted))
 
     def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
         """Aplica bitmask de 5 LEDs de player no hardware.

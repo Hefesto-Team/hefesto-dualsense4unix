@@ -76,7 +76,17 @@ class EvdevReader:
     atual (thread-safe). `stop()` encerra limpo.
     """
 
-    # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto
+    # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto.
+    #
+    # Botões com keycode evdev estável no kernel hid_playstation:
+    # cross, circle, triangle, square, l1, r1, l2_btn, r2_btn,
+    # create, options, ps, l3, r3.
+    #
+    # Botões sem keycode evdev estável (não estão aqui — injetados por outros caminhos):
+    # - "mic_btn": vem por HID-raw via `ds.state.micBtn` (byte misc2, bit 0x04).
+    #   Injetado em `PyDualSenseController.read_state()`. Ver INFRA-MIC-HID-01.
+    # - dpad (up/down/left/right): vem via `_refresh_dpad_buttons` (ABS_HAT0X/Y).
+    # - touchpad_press: possível via BTN_TOUCH, mas keycode inconsistente — pendente.
     BUTTON_MAP: ClassVar[dict[str, str]] = {
         "BTN_SOUTH": "cross",
         "BTN_EAST": "circle",

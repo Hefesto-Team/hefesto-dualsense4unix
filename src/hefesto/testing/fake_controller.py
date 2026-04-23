@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import gzip
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
@@ -77,6 +78,20 @@ class FakeController(IController):
         self.last_player_leds: tuple[bool, bool, bool, bool, bool] | None = None
         # Último estado de LED gravado — inspecionado em testes de brightness.
         self.last_led: FakeLedState | None = None
+        # Histórico de chamadas set_mic_led (INFRA-SET-MIC-LED-01).
+        self.mic_led_history: list[bool] = []
+        # Conjunto de botões a injetar no próximo read_state (INFRA-BUTTON-EVENTS-01).
+        self._next_buttons: frozenset[str] = frozenset()
+        # Simular botão Mic via mic_btn_pressed (INFRA-MIC-HID-01).
+        self.mic_btn_pressed: bool = False
+
+    def set_buttons(self, names: Iterable[str]) -> None:
+        """Define o conjunto de botões pressionados injetado no próximo read_state.
+
+        Útil em testes para simular botões sem precisar construir ControllerState
+        manualmente. Acumula com `mic_btn_pressed` se este for True.
+        """
+        self._next_buttons = frozenset(names)
 
     def connect(self) -> None:
         self._connected = True
@@ -100,6 +115,12 @@ class FakeController(IController):
         return self._connected
 
     def read_state(self) -> ControllerState:
+        """Retorna próximo estado da lista (ou repete o último).
+
+        Se o estado já tiver `buttons_pressed` populado (via construtor), usa
+        esse valor. Caso contrário, injeta os botões definidos via `set_buttons`
+        e acrescenta ``"mic_btn"`` se `mic_btn_pressed` for True.
+        """
         if not self._connected:
             raise RuntimeError("FakeController não conectado — chamar connect() antes")
         if self._idx < len(self._states):
@@ -107,6 +128,15 @@ class FakeController(IController):
             self._idx += 1
         else:
             state = self._states[-1]
+        # Propagar botões simulados se o estado não tiver buttons_pressed explícito.
+        if not state.buttons_pressed:
+            extra: frozenset[str] = frozenset()
+            if self.mic_btn_pressed:
+                extra = frozenset({"mic_btn"})
+            combined = self._next_buttons | extra
+            if combined:
+                import dataclasses
+                state = dataclasses.replace(state, buttons_pressed=combined)
         return state
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
@@ -123,6 +153,11 @@ class FakeController(IController):
         """Grava bitmask de player LEDs para inspeção em testes."""
         self.last_player_leds = bits
         self.commands.append(FakeControllerCommand("set_player_leds", bits))
+
+    def set_mic_led(self, muted: bool) -> None:
+        """Grava histórico de chamadas para inspeção em testes (INFRA-SET-MIC-LED-01)."""
+        self.mic_led_history.append(bool(muted))
+        self.commands.append(FakeControllerCommand("set_mic_led", bool(muted)))
 
     def get_battery(self) -> int:
         if not self._states:

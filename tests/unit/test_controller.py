@@ -276,3 +276,128 @@ class TestPyDualSenseController:
         assert state.raw_ly == 200
         # Battery continua vindo do pydualsense (evdev não expõe)
         assert state.battery_pct == 50
+
+    def test_read_state_includes_mic_btn_when_hid_bit_set(self) -> None:
+        """Quando ds.state.micBtn=True, 'mic_btn' aparece em buttons_pressed (INFRA-MIC-HID-01)."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+
+        class FakeStateMic:
+            L2_value = 0
+            R2_value = 0
+            LX = 128
+            LY = 128
+            RX = 128
+            RY = 128
+            micBtn = True  # noqa: N815 — simula atributo pydualsense (HID-raw bit 2)
+
+        class FakeBattery:
+            Level = 80
+
+        class FakeDsMic:
+            state = FakeStateMic()
+            battery = FakeBattery()
+            connected = True
+
+        class FakeReaderWithButtons(EvdevReader):
+            def __init__(self) -> None:
+                super().__init__(device_path=None)
+                self._fake_snap = EvdevSnapshot(
+                    l2_raw=0, r2_raw=0,
+                    buttons_pressed=frozenset({"cross"}),
+                )
+
+            def is_available(self) -> bool:
+                return True
+
+            def snapshot(self) -> EvdevSnapshot:
+                return self._fake_snap
+
+        reader = FakeReaderWithButtons()
+        inst = PyDualSenseController(evdev_reader=reader)
+        inst._ds = FakeDsMic()  # type: ignore[assignment]
+        inst._transport = "usb"
+
+        state = inst.read_state()
+        assert "mic_btn" in state.buttons_pressed, (
+            "mic_btn deve estar em buttons_pressed quando ds.state.micBtn=True"
+        )
+        # Botão evdev também deve estar preservado
+        assert "cross" in state.buttons_pressed
+
+    def test_read_state_mic_btn_false_when_hid_bit_clear(self) -> None:
+        """Quando ds.state.micBtn=False, 'mic_btn' NÃO aparece em buttons_pressed."""
+        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+
+        class FakeStateNoMic:
+            L2_value = 0
+            R2_value = 0
+            LX = 128
+            LY = 128
+            RX = 128
+            RY = 128
+            micBtn = False  # noqa: N815 — simula atributo pydualsense
+
+        class FakeBattery:
+            Level = 80
+
+        class FakeDsNoMic:
+            state = FakeStateNoMic()
+            battery = FakeBattery()
+            connected = True
+
+        class FakeReaderEmpty(EvdevReader):
+            def __init__(self) -> None:
+                super().__init__(device_path=None)
+                self._fake_snap = EvdevSnapshot()
+
+            def is_available(self) -> bool:
+                return True
+
+            def snapshot(self) -> EvdevSnapshot:
+                return self._fake_snap
+
+        reader = FakeReaderEmpty()
+        inst = PyDualSenseController(evdev_reader=reader)
+        inst._ds = FakeDsNoMic()  # type: ignore[assignment]
+        inst._transport = "usb"
+
+        state = inst.read_state()
+        assert "mic_btn" not in state.buttons_pressed
+
+    def test_controller_state_buttons_pressed_default_vazio(self) -> None:
+        """ControllerState.buttons_pressed default é frozenset vazio (INFRA-BUTTON-EVENTS-01)."""
+        s = ControllerState(
+            battery_pct=50, l2_raw=0, r2_raw=0, connected=True, transport="usb"
+        )
+        assert s.buttons_pressed == frozenset()
+        assert isinstance(s.buttons_pressed, frozenset)
+
+    def test_controller_state_buttons_pressed_imutavel(self) -> None:
+        """ControllerState é frozen — buttons_pressed não pode ser substituído."""
+        s = ControllerState(
+            battery_pct=50, l2_raw=0, r2_raw=0, connected=True, transport="usb",
+            buttons_pressed=frozenset({"l1", "r1"}),
+        )
+        assert "l1" in s.buttons_pressed
+        assert "r1" in s.buttons_pressed
+        with pytest.raises((AttributeError, TypeError)):
+            s.buttons_pressed = frozenset()  # type: ignore[misc]
+
+    def test_fake_controller_set_mic_led_grava_historico(self) -> None:
+        """FakeController.set_mic_led registra em mic_led_history (INFRA-SET-MIC-LED-01)."""
+        fc = FakeController()
+        fc.connect()
+        fc.set_mic_led(True)
+        fc.set_mic_led(False)
+        fc.set_mic_led(True)
+        assert fc.mic_led_history == [True, False, True]
+
+    def test_fake_controller_mic_btn_pressed_propaga(self) -> None:
+        """mic_btn_pressed=True injeta 'mic_btn' em buttons_pressed (INFRA-MIC-HID-01)."""
+        fc = FakeController(transport="usb")
+        fc.mic_btn_pressed = True
+        fc.connect()
+        state = fc.read_state()
+        assert "mic_btn" in state.buttons_pressed
