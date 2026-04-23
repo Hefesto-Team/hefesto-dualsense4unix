@@ -96,8 +96,39 @@ jobs:
           name: deb-${{ needs.build.outputs.version }}
           path: dist/*.deb
 
+  deb-install-smoke:
+    name: Smoke install do .deb
+    runs-on: ubuntu-22.04
+    needs: [build, deb]
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Baixar artifact do .deb
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-${{ needs.build.outputs.version }}
+          path: ./dist
+      - name: Listar artifact
+        run: ls -lah ./dist
+      - name: Instalar .deb via apt (resolve deps)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./dist/hefesto_*_amd64.deb
+      - name: Validar binário hefesto
+        run: |
+          which hefesto
+          hefesto --version
+      - name: Validar binário hefesto-gui
+        run: |
+          which hefesto-gui
+          # --help em runner headless pode falhar por falta de DISPLAY/GTK;
+          # o critério é localizar o binário. Exit não-zero aqui é aceitável.
+          hefesto-gui --help || echo "hefesto-gui --help retornou não-zero em headless (esperado)"
+      - name: Desinstalar (valida postrm)
+        run: sudo apt-get remove -y hefesto
+
   github-release:
-    needs: [build, appimage, deb]
+    needs: [build, appimage, deb, deb-install-smoke]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
