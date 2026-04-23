@@ -80,6 +80,8 @@ class DaemonConfig:
     # FEAT-METRICS-01
     metrics_enabled: bool = False
     metrics_port: int = 9090
+    # FEAT-PLUGIN-01 — opt-in: codigo de usuario arbitrario, desativado por padrao.
+    plugins_enabled: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +112,7 @@ class Daemon:
     _mouse_device: Any = None
     _hotkey_manager: Any = None
     _audio: Any = None
+    _plugins_subsystem: Any = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
 
@@ -147,6 +150,7 @@ class Daemon:
             start_hotkey_manager(self)
             if self.config.mic_button_toggles_system:
                 start_mic_hotkey(self)
+            await self._start_plugins()
             await self._stop_event.wait()
         finally:
             await shutdown(self)
@@ -256,6 +260,31 @@ class Daemon:
 
         start_mic_hotkey(self)
 
+    async def _start_plugins(self) -> None:
+        """Inicializa o PluginsSubsystem se plugins_enabled ou env var ativo."""
+        from hefesto.daemon.context import DaemonContext
+        from hefesto.daemon.subsystems.plugins import PluginsSubsystem
+
+        ps = PluginsSubsystem()
+        if not ps.is_enabled(self.config):
+            return
+
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=self.bus,
+            store=self.store,
+            config=self.config,
+            executor=self._executor,
+        )
+        await ps.start(ctx)
+        self._plugins_subsystem = ps
+
+    async def _stop_plugins(self) -> None:
+        """Para o PluginsSubsystem de forma limpa."""
+        if self._plugins_subsystem is not None:
+            await self._plugins_subsystem.stop()
+            self._plugins_subsystem = None
+
     def _evdev_buttons_once(self) -> frozenset[str]:
         """Thin wrapper — backcompat para testes que acessam o método diretamente."""
         from hefesto.daemon.subsystems.poll import evdev_buttons_once
@@ -310,12 +339,18 @@ class Daemon:
             if self._hotkey_manager is not None:
                 self._hotkey_manager.observe(buttons_pressed, now=tick_started)
 
+            if self._plugins_subsystem is not None:
+                active_profile = self.store.active_profile
+                self._plugins_subsystem.tick(state, active_profile)
+
             current_buttons = state.buttons_pressed
             pressed_now = current_buttons - previous_buttons
             released_now = previous_buttons - current_buttons
             for name in sorted(pressed_now):
                 self.bus.publish(EventTopic.BUTTON_DOWN, {"button": name, "pressed": True})
                 self.store.bump("button.down.emitted")
+                if self._plugins_subsystem is not None:
+                    self._plugins_subsystem.dispatch_button_down(name)
             for name in sorted(released_now):
                 self.bus.publish(EventTopic.BUTTON_UP, {"button": name, "pressed": False})
                 self.store.bump("button.up.emitted")
@@ -325,6 +360,8 @@ class Daemon:
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
                 battery.mark_emitted(state.battery_pct, tick_started)
                 self.store.bump("battery.change.emitted")
+                if self._plugins_subsystem is not None:
+                    self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
 
             elapsed = loop.time() - tick_started
             sleep_for = period - elapsed

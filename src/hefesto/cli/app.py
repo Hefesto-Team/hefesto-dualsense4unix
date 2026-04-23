@@ -32,6 +32,7 @@ app.add_typer(daemon_app, name="daemon")
 
 from hefesto.cli.cmd_emulate import app as emulate_app  # noqa: E402
 from hefesto.cli.cmd_mouse import app as mouse_app  # noqa: E402
+from hefesto.cli.cmd_plugin import app as plugin_app  # noqa: E402
 from hefesto.cli.cmd_profile import app as profile_app  # noqa: E402
 from hefesto.cli.cmd_test import app as test_app  # noqa: E402
 
@@ -39,6 +40,7 @@ app.add_typer(profile_app, name="profile")
 app.add_typer(test_app, name="test")
 app.add_typer(emulate_app, name="emulate")
 app.add_typer(mouse_app, name="mouse")
+app.add_typer(plugin_app, name="plugin")
 
 
 @app.command()
