@@ -173,13 +173,15 @@ flatpak run br.andrefarias.Hefesto
 ```bash
 git clone git@github.com:AndreBFarias/hefesto.git
 cd hefesto
-./scripts/dev-setup.sh                  # idempotente: garante .venv viva + pytest --collect-only
+./scripts/dev-setup.sh                  # idempotente: garante .venv viva + pytest --collect-only + valida PyGObject
 ./scripts/dev_bootstrap.sh              # apt + venv + pip install -e (primeira vez)
-./scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject + libs GTK
+./scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject + libs GTK (obrigatório pra GUI e para tests/unit/test_status_actions_reconnect.py)
 ./scripts/install_udev.sh               # regras udev + módulo uinput (pede sudo)
 ```
 
-Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou está quebrada, invoca o bootstrap automaticamente; caso contrário valida rápido com `pytest --collect-only`.
+Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou está quebrada, invoca o bootstrap automaticamente; caso contrário valida rápido com `pytest --collect-only` e avisa se PyGObject está ausente (A-12).
+
+**Para rodar a GUI localmente (`./run.sh --gui`):** o `PyGObject` precisa estar no `.venv`. Rode `./scripts/dev_bootstrap.sh --with-tray` pelo menos uma vez — sem a flag `--with-tray`, o bootstrap não instala o pacote (evita falha pesada em máquinas sem `libgirepository-1.0-dev`). O `dev-setup.sh` detecta ausência e imprime instrução acionável. Armadilha A-12 documentada em `VALIDATOR_BRIEF.md`.
 
 Reconecte o DualSense depois de instalar as regras udev. Confira o acesso:
 

@@ -5,6 +5,17 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased] — v2.2.1 em preparação
 
+### Melhorado
+- **Developer experience — detecção de PyGObject no `.venv`** (INFRA-VENV-PYGOBJECT-01):
+  `scripts/dev-setup.sh` agora valida `import gi; Gtk.require_version('3.0')`
+  pelo `.venv/bin/python` após o collect-only do pytest. Quando ausente,
+  imprime instrução acionável em 2 linhas (apt install + `dev_bootstrap.sh
+  --with-tray`). Não bloqueia o fluxo (GUI é opt-in); apenas avisa para
+  evitar a armadilha A-12 (`ModuleNotFoundError: No module named 'gi'`
+  ao invocar `./run.sh --gui` ou coletar `tests/unit/test_status_actions_reconnect.py`).
+  README marca `--with-tray` como pré-req de GUI. VALIDATOR_BRIEF.md
+  armadilha A-12 promovida de "conhecida" para "PARCIALMENTE RESOLVIDA".
+
 ### Corrigido
 - **`.deb` falhava ao instalar em Ubuntu 22.04** (BUG-DEB-PYDANTIC-V2-UBUNTU-22-01):
   o `python3-pydantic` do apt em Jammy é versão **1.9.x**, incompatível
