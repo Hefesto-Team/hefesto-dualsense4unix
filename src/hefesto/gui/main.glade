@@ -231,7 +231,7 @@
 
                 <child>
                   <object class="GtkFrame" id="frame_status_gatilhos_live">
-                    <property name="label">Gatilhos (ao vivo)</property>
+                    <property name="label">Gatilhos</property>
                     <child>
                       <object class="GtkGrid" id="live_triggers_grid">
                         <property name="row-spacing">6</property>
@@ -1536,9 +1536,10 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="row-spacing">6</property>
                     <property name="column-spacing">12</property>
                     <property name="margin">10</property>
+                    <property name="halign">start</property>
                     <style><class name="hefesto-card"/></style>
                     <child>
-                      <object class="GtkLabel"><property name="label">uinput:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label">UINPUT:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
@@ -1592,6 +1593,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="row-spacing">6</property>
                     <property name="column-spacing">12</property>
                     <property name="margin">10</property>
+                    <property name="halign">start</property>
                     <style><class name="hefesto-card"/></style>
                     <child>
                       <object class="GtkLabel">
@@ -1652,6 +1654,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <object class="GtkBox" id="emulation_btns">
                     <property name="orientation">horizontal</property>
                     <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
                     <child>
                       <object class="GtkButton" id="emulation_test_button">
                         <property name="label">Testar criação de device virtual</property>
@@ -1679,6 +1683,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
