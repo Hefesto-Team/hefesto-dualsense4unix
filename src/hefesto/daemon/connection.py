@@ -70,6 +70,10 @@ async def shutdown(daemon: Any) -> None:
         with contextlib.suppress(Exception):
             daemon._mouse_device.stop()
         daemon._mouse_device = None
+    if getattr(daemon, "_keyboard_device", None) is not None:
+        with contextlib.suppress(Exception):
+            daemon._keyboard_device.stop()
+        daemon._keyboard_device = None
     if daemon._ipc_server is not None:
         with contextlib.suppress(Exception):
             await daemon._ipc_server.stop()
