@@ -228,3 +228,70 @@ def test_apply_brightness_maximo_nao_escala(isolated_profiles_dir: Path):
 
     assert fc.last_led is not None
     assert fc.last_led.color == (200, 100, 50)
+
+
+def test_apply_propaga_player_leds_ao_controller(isolated_profiles_dir: Path):
+    """BUG-PLAYER-LEDS-APPLY-01 / A-06: player_leds do perfil chega ao hardware
+    via ProfileManager.apply → apply_led_settings → controller.set_player_leds.
+
+    Cenário alvo: usuário marca padrão `0b10101` no editor, salva perfil, troca
+    de janela e o autoswitch reaplica o perfil — os 5 LEDs do controle devem
+    refletir exatamente o bitmask salvo. Sem a propagação em `apply_led_settings`,
+    o perfil aparece correto na GUI mas o hardware mantém a configuração antiga.
+    """
+    profile = _mk_profile(
+        "player_leds_test",
+        leds=LedsConfig(
+            lightbar=(10, 20, 30),
+            player_leds=[True, False, True, False, True],  # 0b10101
+        ),
+    )
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    manager.apply(profile)
+
+    assert fc.last_player_leds == (True, False, True, False, True)
+    pl_cmds = [c for c in fc.commands if c.kind == "set_player_leds"]
+    assert len(pl_cmds) == 1, "apply() deve chamar set_player_leds exatamente 1x"
+
+
+def test_apply_propaga_player_leds_todos_apagados(isolated_profiles_dir: Path):
+    """Perfil com player_leds=[False]*5 propaga ao controller (apaga os 5 LEDs)."""
+    profile = _mk_profile(
+        "player_leds_off",
+        leds=LedsConfig(
+            lightbar=(0, 0, 0),
+            player_leds=[False, False, False, False, False],
+        ),
+    )
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    manager.apply(profile)
+
+    assert fc.last_player_leds == (False, False, False, False, False)
+
+
+def test_activate_propaga_player_leds(isolated_profiles_dir: Path):
+    """`activate()` (caminho de profile.switch) também chega ao controller.
+
+    `activate` delega a `apply`; o teste garante que o caminho comum do
+    trocar-de-perfil-pela-GUI reenvia os 5 LEDs ao hardware em vez de deixar
+    o controle com o padrão antigo.
+    """
+    save_profile(
+        _mk_profile(
+            "p2_canonico",
+            leds=LedsConfig(
+                lightbar=(100, 100, 100),
+                player_leds=[False, True, False, True, False],  # 0b01010 = Player 2
+            ),
+        )
+    )
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    manager = ProfileManager(controller=fc, store=store)
+    manager.activate("p2_canonico")
+    assert fc.last_player_leds == (False, True, False, True, False)

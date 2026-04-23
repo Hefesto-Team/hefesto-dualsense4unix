@@ -165,6 +165,7 @@ class HefestoApp(
             "on_player_leds_preset_p2": self.on_player_leds_preset_p2,
             "on_player_leds_preset_none": self.on_player_leds_preset_none,
             "on_player_led_toggled": self.on_player_led_toggled,
+            "on_player_leds_apply": self.on_player_leds_apply,
             # Rumble — política de intensidade (FEAT-RUMBLE-POLICY-01)
             "on_rumble_policy_economia": self.on_rumble_policy_economia,
             "on_rumble_policy_balanceado": self.on_rumble_policy_balanceado,

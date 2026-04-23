@@ -60,6 +60,48 @@ class TestApplyLedSettings:
         apply_led_settings(fc, LedSettings(lightbar=(255, 0, 0), mic_led=False))
         assert fc.mic_led_history == [False]
 
+    def test_apply_led_settings_propaga_player_leds_todos_acesos(self):
+        """apply_led_settings invoca set_player_leds com o bitmask 'todos acesos'
+        (BUG-PLAYER-LEDS-APPLY-01 — fecha A-06 para player_leds).
+
+        Sem esta propagação, perfis que definem player_leds=True* ficam inertes
+        no hardware apesar de aparecerem marcados na GUI.
+        """
+        fc = FakeController()
+        fc.connect()
+        bits = (True, True, True, True, True)
+        apply_led_settings(fc, LedSettings(lightbar=(0, 0, 0), player_leds=bits))
+        assert fc.last_player_leds == bits
+        pl_cmds = [c for c in fc.commands if c.kind == "set_player_leds"]
+        assert len(pl_cmds) == 1
+        assert pl_cmds[0].payload == bits
+
+    def test_apply_led_settings_propaga_player_leds_todos_apagados(self):
+        """Preset 'Nenhum' (bitmask 0b00000) chega ao controle."""
+        fc = FakeController()
+        fc.connect()
+        bits = (False, False, False, False, False)
+        apply_led_settings(fc, LedSettings(lightbar=(50, 60, 70), player_leds=bits))
+        assert fc.last_player_leds == bits
+
+    def test_apply_led_settings_propaga_player_leds_padrao_alternado(self):
+        """Bitmask arbitrário 0b10101 (Player 3 canônico) propagado fielmente."""
+        fc = FakeController()
+        fc.connect()
+        bits = (True, False, True, False, True)
+        apply_led_settings(fc, LedSettings(lightbar=(10, 20, 30), player_leds=bits))
+        assert fc.last_player_leds == bits
+
+    def test_apply_led_settings_default_propaga_player_leds_zerado(self):
+        """Default de LedSettings (sem passar player_leds) ainda chama set_player_leds
+        com o zerado — mantém o hardware consistente com o perfil recém-carregado
+        em vez de preservar a configuração do último toggle manual.
+        """
+        fc = FakeController()
+        fc.connect()
+        apply_led_settings(fc, LedSettings(lightbar=(255, 255, 255)))
+        assert fc.last_player_leds == (False, False, False, False, False)
+
 
 class TestPlayerBitmask:
     def test_todos_apagados(self):

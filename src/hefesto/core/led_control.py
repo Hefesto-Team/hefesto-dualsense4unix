@@ -87,11 +87,19 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
     com brilho reduzido chegam ao hardware com a intensidade correta.
 
     Propaga também o LED do microfone via `controller.set_mic_led(settings.mic_led)`
-    (INFRA-SET-MIC-LED-01). Player LEDs ainda usam API de bitmask simples.
+    (INFRA-SET-MIC-LED-01) e os 5 Player LEDs via
+    `controller.set_player_leds(settings.player_leds)`
+    (BUG-PLAYER-LEDS-APPLY-01; armadilha A-06 fechada para player_leds).
+
+    Sem esta propagação, perfis que definem `player_leds` no JSON são carregados
+    pelo ProfileManager e salvos no draft, mas os bits nunca chegam ao controle:
+    o autoswitch e `profile.switch` exibem a marcação correta na GUI enquanto o
+    hardware segue com a configuração antiga do boot ou do último toggle manual.
     """
     effective = settings.apply_brightness(settings.brightness_level)
     controller.set_led(effective.lightbar)
     controller.set_mic_led(settings.mic_led)
+    controller.set_player_leds(settings.player_leds)
 
 
 def off() -> LedSettings:
