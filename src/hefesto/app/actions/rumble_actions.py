@@ -16,12 +16,44 @@ from hefesto.app.ipc_bridge import rumble_set, rumble_stop
 class RumbleActionsMixin(WidgetAccessMixin):
     """Controla a aba Rumble."""
 
+    # Guard para evitar loop widget->draft->refresh->widget.
+    _guard_refresh: bool = False
+
     def install_rumble_tab(self) -> None:
-        # Nada a inicializar além dos adjustments já definidos no Glade.
+        # Nada a inicializar alem dos adjustments ja definidos no Glade.
         pass
+
+    def _refresh_rumble_from_draft(self) -> None:
+        """Popula widgets da aba Rumble a partir de self.draft.rumble.
+
+        Protegido por _guard_refresh para nao disparar handlers de signal
+        durante a atualizacao programatica dos sliders.
+        """
+        if self._guard_refresh:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        self._guard_refresh = True
+        try:
+            rumble = draft.rumble
+            weak_scale: Gtk.Scale = self._get("rumble_weak_scale")
+            strong_scale: Gtk.Scale = self._get("rumble_strong_scale")
+            if weak_scale is not None:
+                weak_scale.set_value(float(rumble.weak))
+            if strong_scale is not None:
+                strong_scale.set_value(float(rumble.strong))
+        finally:
+            self._guard_refresh = False
 
     def on_rumble_apply(self, _btn: Gtk.Button) -> None:
         weak, strong = self._read_scales()
+        # Persiste no draft antes de enviar via IPC.
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_rumble = draft.rumble.model_copy(update={"weak": weak, "strong": strong})
+            self.draft = draft.model_copy(update={"rumble": new_rumble})
         ok = rumble_set(weak, strong)
         self._toast_rumble(
             f"Rumble aplicado: weak={weak}, strong={strong}"

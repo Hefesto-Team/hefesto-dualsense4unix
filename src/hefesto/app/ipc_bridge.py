@@ -219,6 +219,24 @@ def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
         return False
 
 
+def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
+    """Envia ``profile.apply_draft`` ao daemon via IPC (FEAT-PROFILE-STATE-01).
+
+    ``draft_dict`` segue o contrato definido em ``DraftConfig.to_ipc_dict()``:
+    chaves triggers/leds/rumble/mouse.
+
+    Retorna True se o daemon confirmou aplicacao (status ok). False se daemon
+    offline, erro de transporte ou resposta inesperada.
+    """
+    try:
+        result = _run_call("profile.apply_draft", draft_dict, timeout=1.0)
+        if isinstance(result, dict):
+            return result.get("status") == "ok"
+        return False
+    except Exception:
+        return False
+
+
 def mouse_emulation_set(
     enabled: bool,
     speed: int | None = None,
@@ -238,6 +256,7 @@ def mouse_emulation_set(
 
 
 __all__ = [
+    "apply_draft",
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",

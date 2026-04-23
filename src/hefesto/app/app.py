@@ -32,6 +32,7 @@ from hefesto.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto.app.actions.status_actions import StatusActionsMixin
 from hefesto.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto.app.constants import ICON_PATH, MAIN_GLADE
+from hefesto.app.draft_config import DraftConfig
 from hefesto.app.ipc_bridge import profile_list, profile_switch
 from hefesto.app.theme import apply_theme
 from hefesto.app.tray import AppTray
@@ -132,6 +133,11 @@ class HefestoApp(
 
         self.tray: AppTray | None = None
         self._quitting = False
+
+        # FEAT-PROFILE-STATE-01: draft central imutavel compartilhado por todos os mixins.
+        # Populado com defaults seguros agora; sobrescrito por _load_draft_from_active_profile
+        # apos daemon conectar (em show() e run()).
+        self.draft: DraftConfig = DraftConfig.default()
 
         self.builder.connect_signals(self._signal_handlers())
 
@@ -249,6 +255,70 @@ class HefestoApp(
         self.window.show_all()
         self.window.present()
 
+    # --- draft ---
+
+    def _load_draft_from_active_profile(self) -> None:
+        """Carrega DraftConfig a partir do perfil ativo via IPC.
+
+        Tenta ``profile.get_active`` e depois ``daemon.state_full``. Se daemon
+        offline ou perfil nao encontrado, mantem o default seguro em self.draft.
+        Executado em thread worker (chamado via ThreadPoolExecutor); nunca
+        bloqueia a thread GTK.
+        """
+        from hefesto.app.ipc_bridge import daemon_state_full
+        from hefesto.profiles.loader import load_all_profiles
+
+        try:
+            state = daemon_state_full()
+            active_name: str | None = None
+            if state is not None:
+                active_name = state.get("active_profile")
+
+            if active_name:
+                try:
+                    profile = next(
+                        p for p in load_all_profiles() if p.name == active_name
+                    )
+                    self.draft = DraftConfig.from_profile(profile)
+                    logger.info(
+                        "draft_carregado_do_perfil_ativo",
+                        perfil=active_name,
+                    )
+                    return
+                except StopIteration:
+                    logger.warning(
+                        "draft_perfil_ativo_nao_encontrado_em_disco",
+                        perfil=active_name,
+                    )
+        except Exception as exc:
+            logger.warning("draft_load_falhou", erro=str(exc))
+
+        logger.info("draft_usando_defaults_seguros")
+
+    def _on_notebook_switch_page(
+        self, _notebook: object, _page: object, page_num: int
+    ) -> None:
+        """Dispara refresh de widgets da aba destino ao trocar de aba.
+
+        Cada mixin implementa ``_refresh_widgets_from_draft()``; a chamada e
+        protegida por ``_guard_refresh`` internamente para evitar loop.
+        A correspondencia entre page_num e o mixin e baseada na ordem das abas
+        no GtkNotebook definida no Glade.
+
+        Paginas (indice zero, ordem do notebook):
+          0 = Status, 1 = Triggers, 2 = Lightbar, 3 = Rumble,
+          4 = Perfis, 5 = Daemon, 6 = Emulacao, 7 = Mouse
+        """
+        refresh_map = {
+            1: getattr(self, "_refresh_triggers_from_draft", None),
+            2: getattr(self, "_refresh_lightbar_from_draft", None),
+            3: getattr(self, "_refresh_rumble_from_draft", None),
+            7: getattr(self, "_refresh_mouse_from_draft", None),
+        }
+        fn = refresh_map.get(page_num)
+        if fn is not None:
+            fn()
+
     # --- run ---
 
     def show(self) -> None:
@@ -261,6 +331,10 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_mouse_tab()
+        # Conecta switch-page do GtkNotebook para refresh de draft por aba.
+        notebook = self.builder.get_object("main_notebook")
+        if notebook is not None:
+            notebook.connect("switch-page", self._on_notebook_switch_page)
         # BUG-DAEMON-AUTOSTART-01: dispara start do daemon em thread worker
         # se a unit está instalada mas o service não está ativo. Jamais
         # bloqueia a thread GTK; falha silenciosa via logger.warning.
@@ -283,6 +357,10 @@ class HefestoApp(
             self.install_daemon_tab()
             self.install_emulation_tab()
             self.install_mouse_tab()
+            # Conecta switch-page do GtkNotebook para refresh de draft por aba.
+            notebook = self.builder.get_object("main_notebook")
+            if notebook is not None:
+                notebook.connect("switch-page", self._on_notebook_switch_page)
             # BUG-DAEMON-AUTOSTART-01: mesmo no modo oculto, garantir daemon.
             self.ensure_daemon_running()
             logger.info("hefesto_start_hidden")

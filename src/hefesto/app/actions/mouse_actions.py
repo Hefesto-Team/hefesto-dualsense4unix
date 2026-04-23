@@ -35,6 +35,35 @@ MAPPING_LEGEND = (
 class MouseActionsMixin(WidgetAccessMixin):
     """Controla a aba Mouse."""
 
+    # Guard para evitar loop widget->draft->refresh->widget.
+    _guard_refresh: bool = False
+
+    def _refresh_mouse_from_draft(self) -> None:
+        """Popula widgets da aba Mouse a partir de self.draft.mouse.
+
+        Protegido por _guard_refresh para nao disparar handlers de signal
+        durante a atualizacao programatica dos widgets.
+        """
+        if self._guard_refresh:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        self._guard_refresh = True
+        try:
+            mouse = draft.mouse
+            toggle: Gtk.Switch = self._get("mouse_emulation_toggle")
+            if toggle is not None:
+                toggle.set_active(mouse.enabled)
+            speed_scale: Gtk.Scale = self._get("mouse_speed_scale")
+            if speed_scale is not None:
+                speed_scale.set_value(float(mouse.speed))
+            scroll_scale: Gtk.Scale = self._get("mouse_scroll_speed_scale")
+            if scroll_scale is not None:
+                scroll_scale.set_value(float(mouse.scroll_speed))
+        finally:
+            self._guard_refresh = False
+
     def install_mouse_tab(self) -> None:
         # mouse_legend_label foi substituído por GtkFrame estático (UI-MOUSE-CLEANUP-01).
         # Mantém compatibilidade caso o widget ainda exista em alguma versão do GLADE.
@@ -46,29 +75,55 @@ class MouseActionsMixin(WidgetAccessMixin):
     # --- handlers de UI ---
 
     def on_mouse_toggle_set(self, switch: Gtk.Switch, _state: Any) -> bool:
+        if self._guard_refresh:
+            return False
         enabled = bool(switch.get_active())
         speed = self._read_speed("mouse_speed_scale", DEFAULT_MOUSE_SPEED)
         scroll = self._read_speed("mouse_scroll_speed_scale", DEFAULT_SCROLL_SPEED)
         ok = mouse_emulation_set(enabled, speed=speed, scroll_speed=scroll)
         if not ok:
             self._toast_mouse(
-                "Falha ao comunicar com o daemon. Mouse não alterado."
+                "Falha ao comunicar com o daemon. Mouse nao alterado."
             )
             switch.set_active(not enabled)
             return True
+        # Atualiza draft
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_mouse = draft.mouse.model_copy(
+                update={"enabled": enabled, "speed": speed, "scroll_speed": scroll}
+            )
+            self.draft = draft.model_copy(update={"mouse": new_mouse})
         status = "ligado" if enabled else "desligado"
         self._toast_mouse(f"Mouse emulado {status}")
         self._refresh_mouse_view()
         return False  # default handler aplica o estado no switch
 
     def on_mouse_speed_changed(self, scale: Gtk.Scale) -> None:
+        if self._guard_refresh:
+            return
         speed = int(scale.get_value())
+        # Atualiza draft independente de estar habilitado (preserva preferencia)
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_mouse = draft.mouse.model_copy(update={"speed": speed})
+            self.draft = draft.model_copy(update={"mouse": new_mouse})
         if not self._mouse_is_enabled():
             return
         mouse_emulation_set(True, speed=speed)
 
     def on_mouse_scroll_speed_changed(self, scale: Gtk.Scale) -> None:
+        if self._guard_refresh:
+            return
         scroll = int(scale.get_value())
+        # Atualiza draft independente de estar habilitado (preserva preferencia)
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+
+            new_mouse = draft.mouse.model_copy(update={"scroll_speed": scroll})
+            self.draft = draft.model_copy(update={"mouse": new_mouse})
         if not self._mouse_is_enabled():
             return
         mouse_emulation_set(True, scroll_speed=scroll)
