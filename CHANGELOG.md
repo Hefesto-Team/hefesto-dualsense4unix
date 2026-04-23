@@ -3,6 +3,24 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased] — v2.2.1 em preparação
+
+### Adicionado
+- **Aba Firmware na GUI** (FEAT-FIRMWARE-UPDATE-GUI-01):
+  nova aba permite consultar versão atual do firmware do DualSense e
+  aplicar blob oficial da Sony via wrapper `dualsensectl`. Backend em
+  `src/hefesto/integrations/firmware_updater.py` invoca `dualsensectl
+  info`/`update` em thread worker com callbacks `GLib.idle_add`; UI
+  mostra banner de risco, versão atual, seletor de `.bin`, barra de
+  progresso e diálogo de confirmação modal. 17 testes unit com mocks
+  cobrem os fluxos (is_available, parse, get_info, apply + erros).
+  Requer `dualsensectl` >= branch main 2026-02-19 instalado no sistema.
+  Desbloqueio viabilizado por achado upstream em 2026-04-23: PR#53 do
+  `nowrep/dualsensectl` expôs o protocolo DFU (feature reports
+  0x20/0xF4/0xF5, blob 950272 bytes, CDN
+  `fwupdater.dl.playstation.net`). Research completo em
+  `docs/research/firmware-dualsense-2026-04-survey.md`.
+
 ## [2.2.0] — 2026-04-23
 
 Release de polish pós-v2.1.0. Foco em destravar CI (`mypy` gate rígido
