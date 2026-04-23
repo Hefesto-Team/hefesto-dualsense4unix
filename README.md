@@ -104,10 +104,13 @@ pip install pydualsense python-uinput
 ```bash
 git clone git@github.com:AndreBFarias/hefesto.git
 cd hefesto
-./scripts/dev_bootstrap.sh              # apt + venv + pip install -e
+./scripts/dev-setup.sh                  # idempotente: garante .venv viva + pytest --collect-only
+./scripts/dev_bootstrap.sh              # apt + venv + pip install -e (primeira vez)
 ./scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject + libs GTK
 ./scripts/install_udev.sh               # udev rules + modprobe uinput (pede sudo)
 ```
+
+Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou está quebrada, invoca o bootstrap automaticamente; caso contrário valida rápido com `pytest --collect-only`.
 
 Reconectar o DualSense depois de instalar as udev rules. Conferir acesso:
 
