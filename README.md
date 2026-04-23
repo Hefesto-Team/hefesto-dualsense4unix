@@ -205,7 +205,9 @@ Leia `AGENTS.md` antes de abrir PR. Resumo:
    O framework instala hooks que bloqueiam commit com acentuação PT-BR
    faltando (`acao`, `funcao`, `descricao`, etc.), menção a IA ou falha
    de `ruff check`. Script canônico: `scripts/validar-acentuacao.py`.
-4. Implementar + testes (pytest), ruff, mypy strict, `scripts/check_anonymity.sh`.
+4. Implementar + testes (pytest), ruff, mypy strict (gate rígido no CI
+   desde V2.2 — `mypy src/hefesto` tem que fechar com zero errors),
+   `scripts/check_anonymity.sh`.
 5. Se toca runtime, provar via smoke real (`run.sh --smoke` ou hardware).
 6. Se toca UI/TUI, screenshot + sha256 + descrição multimodal no PR.
 7. Descoberta não-óbvia vira registro em `docs/process/discoveries/`.
