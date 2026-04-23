@@ -45,6 +45,30 @@ Roadmap em andamento: ver `docs/process/SPRINT_ORDER.md` (22 sprints pendentes a
 
 ---
 
+## Instalação via .deb (Ubuntu / Pop!\_OS / Debian)
+
+Baixe o pacote da pagina de releases e instale com apt:
+
+```bash
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v1.1.0/hefesto_1.1.0_amd64.deb
+sudo apt install ./hefesto_1.1.0_amd64.deb
+```
+
+Depois habilite o daemon (opcional — pode usar so a GUI):
+
+```bash
+systemctl --user enable --now hefesto.service
+hefesto-gui
+```
+
+Dependencias Python sem pacote Debian oficial (instale se precisar):
+
+```bash
+pip install pydualsense python-uinput
+```
+
+---
+
 ## Instalação (dev)
 
 ```bash
