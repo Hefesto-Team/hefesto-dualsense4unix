@@ -9,7 +9,14 @@ Alvo:    Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
 
-Roadmap em andamento: ver `docs/process/SPRINT_ORDER.md` (22 sprints pendentes agrupadas em V1.1 fases 5-8 e V1.2).
+Roadmap em andamento: ver `docs/process/SPRINT_ORDER.md`.
+
+## Começar em 2 minutos
+
+Se você só quer plugar o DualSense e fazer funcionar, pule direto para
+**`docs/usage/quickstart.md`** — guia visual com screenshots cobrindo
+instalação, GUI, presets de trigger, política de rumble e solução de
+problemas comuns. O resto deste README é referência técnica.
 
 ---
 
