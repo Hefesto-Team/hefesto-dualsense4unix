@@ -5,6 +5,31 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased] — v2.2.1 em preparação
 
+### Alterado
+- **Aba Perfis, grupo "Aplica a:" — 6 radios substituídos por combo**
+  (UI-PROFILES-RADIO-GROUP-REDESIGN-01): o campo "Aplica a:" no modo
+  simples do editor de perfil trocou 6 `GtkRadioButton` empilhados
+  verticalmente (~180 px de altura) por um único `GtkComboBoxText`
+  (~40 px). Entries permanecem: Qualquer janela / Jogos da Steam /
+  Navegador / Terminal / Editor de código / Jogo específico. Helpers
+  `_selected_simple_choice` e `_select_radio` refatorados para
+  `get_active_id`/`set_active_id`; handler novo `_on_aplica_a_changed`
+  mostra/esconde o entry "Nome do jogo" quando id == "game".
+  Liberação de ~140 px verticais na coluna direita — premissa para
+  UI-PROFILES-RIGHT-PANEL-REBALANCE-01.
+
+### Corrigido
+- **Handlers da aba Firmware não respondiam a clicks**
+  (BUG-FIRMWARE-SIGNAL-HANDLERS-01, colateral descoberto durante
+  validação visual da UI-PROFILES-RADIO-GROUP-REDESIGN-01): os 3
+  botões da aba Firmware (Verificar versão / Selecionar .bin /
+  Aplicar firmware) estavam definidos no glade e no mixin, mas
+  nunca conectados — o método `_signal_handlers()` em
+  `src/hefesto/app/app.py` é declarativo e não foi estendido junto
+  com a 70.2. Ao rodar `./run.sh --gui`, `Gtk.Builder` emitia
+  `AttributeError: Handler on_firmware_* not found` e os botões
+  ficavam mortos. Entradas adicionadas ao dict.
+
 ### Segurança
 - **Blindagem contra remoção silenciosa de glyphs Unicode ADR-011**
   (BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02): `scripts/validar-acentuacao.py`

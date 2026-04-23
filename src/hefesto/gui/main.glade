@@ -1223,66 +1223,26 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="expand">False</property></packing>
                             </child>
 
-                            <!-- Radio: Qualquer janela -->
+                            <!-- ComboBoxText "Aplica a:" — UI-PROFILES-RADIO-GROUP-REDESIGN-01
+                                 Substitui 6 GtkRadioButton (~180px verticais) por
+                                 um único combo (~40px). Liberação de ~140px para
+                                 o preview JSON (UI-PROFILES-RIGHT-PANEL-REBALANCE-01). -->
                             <child>
-                              <object class="GtkRadioButton" id="profile_radio_any">
-                                <property name="label">Qualquer janela</property>
-                                <property name="tooltip-text">Aplica sempre, independente da janela em foco</property>
+                              <object class="GtkComboBoxText" id="profile_aplica_a_combo">
+                                <property name="tooltip-text">Contexto em que este perfil será aplicado</property>
+                                <items>
+                                  <item id="any" translatable="yes">Qualquer janela</item>
+                                  <item id="steam" translatable="yes">Jogos da Steam</item>
+                                  <item id="browser" translatable="yes">Navegador</item>
+                                  <item id="terminal" translatable="yes">Terminal</item>
+                                  <item id="editor" translatable="yes">Editor de código</item>
+                                  <item id="game" translatable="yes">Jogo específico</item>
+                                </items>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
 
-                            <!-- Radio: Jogos da Steam -->
-                            <child>
-                              <object class="GtkRadioButton" id="profile_radio_steam">
-                                <property name="label">Jogos da Steam</property>
-                                <property name="group">profile_radio_any</property>
-                                <property name="tooltip-text">Qualquer processo filho do steam.exe</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-
-                            <!-- Radio: Navegador -->
-                            <child>
-                              <object class="GtkRadioButton" id="profile_radio_browser">
-                                <property name="label">Navegador</property>
-                                <property name="group">profile_radio_any</property>
-                                <property name="tooltip-text">Firefox, Chromium, Brave ou Google Chrome</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-
-                            <!-- Radio: Terminal -->
-                            <child>
-                              <object class="GtkRadioButton" id="profile_radio_terminal">
-                                <property name="label">Terminal</property>
-                                <property name="group">profile_radio_any</property>
-                                <property name="tooltip-text">GNOME Terminal, Alacritty, Kitty ou Konsole</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-
-                            <!-- Radio: Editor de código -->
-                            <child>
-                              <object class="GtkRadioButton" id="profile_radio_editor">
-                                <property name="label">Editor de código</property>
-                                <property name="group">profile_radio_any</property>
-                                <property name="tooltip-text">VS Code, Zed ou Neovide</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-
-                            <!-- Radio: Jogo específico -->
-                            <child>
-                              <object class="GtkRadioButton" id="profile_radio_game">
-                                <property name="label">Jogo específico</property>
-                                <property name="group">profile_radio_any</property>
-                                <property name="tooltip-text">Digite o nome do executável (ex.: eldenring)</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-
-                            <!-- Entry "Jogo específico" — visível só quando radio_game ativo -->
+                            <!-- Entry "Jogo específico" — visível só quando combo == "game" -->
                             <child>
                               <object class="GtkBox" id="profile_game_entry_box">
                                 <property name="orientation">horizontal</property>

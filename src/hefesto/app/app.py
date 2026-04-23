@@ -204,6 +204,10 @@ class HefestoApp(
             "on_mouse_toggle_set": self.on_mouse_toggle_set,
             "on_mouse_speed_changed": self.on_mouse_speed_changed,
             "on_mouse_scroll_speed_changed": self.on_mouse_scroll_speed_changed,
+            # Firmware (FEAT-FIRMWARE-UPDATE-GUI-01)
+            "on_firmware_check": self.on_firmware_check,
+            "on_firmware_browse": self.on_firmware_browse,
+            "on_firmware_apply": self.on_firmware_apply,
             # Rodapé — ações globais (UI-GLOBAL-FOOTER-ACTIONS-01)
             "on_apply_draft": self.on_apply_draft,
             "on_save_profile": self.on_save_profile,
