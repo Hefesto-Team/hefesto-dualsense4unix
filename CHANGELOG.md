@@ -3,6 +3,148 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [2.2.0] — 2026-04-23
+
+Release de polish pós-v2.1.0. Foco em destravar CI (`mypy` gate rígido
+volta a valer), fechar débito técnico da auditoria V2 e polir a GUI
+com prints reais + 5 bugs reportados pelo usuário após v2.1.0. Primeira
+tag que publica `.deb`, `.AppImage` e `.flatpak` no GitHub Release
+(dispatch v2.0.0/v2.1.0 falhou por incompatibilidade com commits antigos).
+
+### Destravado
+- **CI release gate** (BUG-CI-RELEASE-MYPY-GATE-01 + CHORE-MYPY-CLEANUP-V22-01):
+  `release.yml` deixou de abortar em `mypy`; 41 errors pré-existentes
+  fechados; `ci.yml` ganha job `typecheck` como gate rígido. A partir
+  desta versão, qualquer PR/push que regride `mypy src/hefesto` quebra
+  o workflow.
+- **Flatpak bundle no GitHub release** (FEAT-CI-RELEASE-FLATPAK-ATTACH-01):
+  `release.yml` ganha job `flatpak` e `github-release` passa a anexar
+  `.whl`, `.tar.gz`, `.AppImage`, `.deb` e `.flatpak` a cada tag.
+- **Re-publicação de tags via dispatch** (CHORE-CI-REPUBLISH-TAGS-01,
+  PROTOCOL_READY): `release.yml` ganha `workflow_dispatch` com input
+  `tag` — dono executa `gh workflow run release.yml -f tag=v2.1.0`
+  para re-publicar releases que haviam abortado.
+
+### Adicionado
+- **dev-setup.sh idempotente** (CHORE-VENV-BOOTSTRAP-CHECK-01):
+  wrapper que detecta `.venv` ausente ou pytest quebrado e invoca
+  `dev_bootstrap.sh`; sempre termina com `pytest --collect-only`.
+  Operacionaliza lição L-21-4 (sessão nova precisa de `.venv` viva).
+- **Status PROTOCOL_READY** (DOCS-STATUS-PROTOCOL-READY-01):
+  sprints só-doc (checklist/research) não podem mais virar MERGED
+  sem ≥1 execução humana registrada em "Execuções registradas".
+- **Seleção do perfil ativo ao abrir GUI** (FEAT-GUI-LOAD-LAST-PROFILE-01):
+  aba Perfis sincroniza com `daemon.status` e destaca o perfil em
+  execução (antes abria sempre no primeiro da lista ordenada).
+- **Aba Emulação + Daemon + Status polidas**
+  (UI-POLISH-EMULACAO-DAEMON-STATUS-01): `halign=start` nos cards,
+  `uinput` → `UINPUT`, padding uniforme, fundo do log systemctl mais
+  claro, título "Gatilhos (ao vivo)" → "Gatilhos".
+- **Cores diferenciadas no footer** (UI-FOOTER-BUTTON-COLORS-01):
+  Aplicar/Salvar/Importar/Restaurar ganham bordas coloridas (verde,
+  ciano, laranja, cinza Drácula) sem poluir — gradientes com alpha
+  baixo respondem a hover/active.
+- **Botão Aplicar LEDs de jogador** (BUG-PLAYER-LEDS-APPLY-01):
+  aba Lightbar ganha botão dedicado; `apply_led_settings` agora
+  propaga `player_leds` ao controller (armadilha A-06 fechada para
+  este campo — perfil JSON agora reaplica LEDs ao dar `profile.switch`).
+- **Polish aba Perfis** (UI-PROFILES-LAYOUT-POLISH-01): headers
+  TreeView em Drácula purple bold, slider de Prioridade ganha marks
+  visuais (0/50/100). Achados H1 e H5 viraram sprints-filhas.
+- **Infraestrutura de emulação de teclado** (FEAT-KEYBOARD-EMULATOR-01):
+  `UinputKeyboardDevice`, bindings default hardcoded (Options→Super,
+  Share→PrintScreen, L1→Alt+Shift+Tab, R1→Alt+Tab, touchpad
+  middle/left/right→Enter/Backspace/Delete), subsystem novo
+  `keyboard.py` com wire-up A-07 (4 pontos + teste dedicado) e
+  A-09 (snapshot evdev único por tick compartilhado com mouse e
+  hotkey). Persistência por perfil e UI editável ficam para
+  FEAT-KEYBOARD-PERSISTENCE-01 e FEAT-KEYBOARD-UI-01.
+- **Hardening do IPC** (HARDEN-IPC-PAYLOAD-LIMIT-01, reescopado de
+  HARDEN-IPC-RUMBLE-CUSTOM-01 após L-21-3): `MAX_PAYLOAD_BYTES =
+  32_768` no `_dispatch`; requests maiores rejeitados com JSON-RPC
+  `-32600`. Cobertura via 5 testes.
+- **Governança e descoberta open-source**
+  (FEAT-GITHUB-PROJECT-VISIBILITY-01, PROTOCOL_READY): `.github/`
+  ganha CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, PR
+  template e ISSUE_TEMPLATE/question.md (todos PT-BR). Social
+  preview 1280×640 em `docs/usage/assets/social-preview.png`.
+  Comandos `gh repo edit` para descrição + 20 topics documentados
+  em `docs/history/gh-repo-config.md` (execução humana pendente).
+- **README renovado** (DOCS-README-RENOVATE-01): layout espelha
+  `Conversor-Video-Para-ASCII`, 7 screenshots em
+  `docs/usage/assets/readme_*.png`, badges de release/downloads/
+  CI/license/Python, zero acentuação faltando.
+
+### Corrigido
+- **GUI abria com Daemon Offline apesar do daemon ativo**
+  (BUG-GUI-DAEMON-STATUS-INITIAL-01): primeira leitura de
+  `daemon.status` dispara via `GLib.idle_add` antes do primeiro
+  frame; placeholder "Consultando..." substitui o "Offline" falso
+  anterior; refresh do painel Daemon em thread worker para não
+  bloquear GTK.
+- **Ruff false-positives em specs novos**
+  (BUG-VALIDAR-ACENTUACAO-FALSE-POS-01): par `facilmente →
+  fácilmente` removido (sufixo `-mente` perde acento do radical);
+  spec PHASE3 reescrito para evitar ambiguidade verbo/substantivo
+  com "referencia".
+- **`.deb` sem rich/evdev/xlib/filelock**
+  (BUG-DEB-MISSING-DEPS-01): `packaging/debian/control` ganha 4
+  deps Python que faltavam; `apt install ./hefesto_*.deb`
+  agora produz CLI funcional no primeiro comando.
+- **Flatpak build quebrado offline**
+  (BUG-FLATPAK-PIP-OFFLINE-01): módulos `python-uinput` e
+  `pydualsense` ganham `build-options.build-args: --share=network`
+  para pip acessar PyPI durante o build.
+- **`connection.py` fora de convenção**
+  (REFACTOR-CONNECTION-FUNCTIONS-01, P2-02): movido de
+  `daemon/subsystems/` para `daemon/` (eram funções soltas, não
+  classe com start/stop).
+
+### Governança do processo
+- **6 lições V2.1 no BRIEF** (META-LESSONS-V21-BRIEF-01): seção
+  `[PROCESS] Lições acumuladas por ciclo` com L-21-1..L-21-6.
+  Planejador/executor/validador leem como trilho permanente.
+- **Armadilha A-12** (do ciclo BUG-GUI-DAEMON-STATUS-INITIAL-01):
+  `.venv` sem PyGObject sem `--with-tray` quebra validação visual
+  via `.venv/bin/python`. Fix canônico: sprint
+  `INFRA-VENV-PYGOBJECT-01` (PENDING).
+- **Script `scripts/mark-sprint-merged.sh`**: automação de
+  atualização de status em `SPRINT_ORDER.md` (evita edit manual
+  propenso a erro; usa awk cirúrgico no campo Status da linha do ID).
+
+### Sprints consolidadas (V2.2 — 17 MERGED + 2 PROTOCOL_READY + 1 SUPERSEDED)
+
+**MERGED** (código/config executado):
+BUG-CI-RELEASE-MYPY-GATE-01 · BUG-VALIDAR-ACENTUACAO-FALSE-POS-01 ·
+META-LESSONS-V21-BRIEF-01 · CHORE-VENV-BOOTSTRAP-CHECK-01 ·
+DOCS-STATUS-PROTOCOL-READY-01 · UI-POLISH-EMULACAO-DAEMON-STATUS-01 ·
+BUG-GUI-DAEMON-STATUS-INITIAL-01 · FEAT-GUI-LOAD-LAST-PROFILE-01 ·
+UI-FOOTER-BUTTON-COLORS-01 · BUG-PLAYER-LEDS-APPLY-01 ·
+REFACTOR-CONNECTION-FUNCTIONS-01 · HARDEN-IPC-PAYLOAD-LIMIT-01 ·
+FEAT-CI-RELEASE-FLATPAK-ATTACH-01 · CHORE-MYPY-CLEANUP-V22-01 ·
+UI-PROFILES-LAYOUT-POLISH-01 · DOCS-README-RENOVATE-01 ·
+FEAT-KEYBOARD-EMULATOR-01 · BUG-DEB-MISSING-DEPS-01 ·
+BUG-FLATPAK-PIP-OFFLINE-01.
+
+**PROTOCOL_READY** (infra pronta, execução humana do dono pendente):
+CHORE-CI-REPUBLISH-TAGS-01 · FEAT-GITHUB-PROJECT-VISIBILITY-01.
+
+**SUPERSEDED** (spec invalidado após leitura do código):
+HARDEN-IPC-RUMBLE-CUSTOM-01 (→ HARDEN-IPC-PAYLOAD-LIMIT-01,
+reescopado via L-21-3).
+
+**PENDING para próximo ciclo**: INFRA-VENV-PYGOBJECT-01 ·
+UI-PROFILES-RADIO-GROUP-REDESIGN-01 ·
+UI-PROFILES-RIGHT-PANEL-REBALANCE-01 · FEAT-KEYBOARD-PERSISTENCE-01 ·
+FEAT-KEYBOARD-UI-01 · FEAT-FIRMWARE-UPDATE-PHASE2-01 ·
+FEAT-FIRMWARE-UPDATE-PHASE3-01.
+
+### Known issues
+- `gh workflow run release.yml -f tag=v2.0.0` falha em `ruff check`
+  porque o código da tag v2.0.0 tem 6 violações ruff corrigidas
+  depois. Re-publicar v2.0.0 exigiria re-tag (destrutivo). Decisão:
+  v2.0.0 fica sem release no GitHub; v2.1.0 e v2.2.0+ ganham pacotes.
+
 ## [2.1.0] — 2026-04-23
 
 Release de polish pós-v2.0.0. Oito sprints aditivas + auditoria manual.
