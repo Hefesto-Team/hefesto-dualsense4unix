@@ -11,6 +11,7 @@ sudo cp -v "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/
 sudo cp -v "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/
 sudo cp -v "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/
 sudo cp -v "$ASSETS/73-ps5-controller-hotplug.rules"     /etc/udev/rules.d/
+sudo cp -v "$ASSETS/74-ps5-controller-hotplug-bt.rules"  /etc/udev/rules.d/
 
 echo "[2/3] copiando modules-load config..."
 sudo cp -v "$ASSETS/hefesto.conf" /etc/modules-load.d/hefesto.conf

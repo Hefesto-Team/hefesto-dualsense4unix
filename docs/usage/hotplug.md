@@ -64,11 +64,35 @@ sudo udevadm control --reload-rules
 
 O `uninstall.sh` já faz as duas remoções (`--udev` remove a regra).
 
-## Limitações e escopo
+## Limitações## Bluetooth (FEAT-HOTPLUG-BT-01)
 
-- **Somente USB.** Hotplug Bluetooth não dispara `ACTION=="add"` em
-  `SUBSYSTEM=="usb"`; precisa de regra separada em `hidraw` ou bluez e
-  será tratado por sprint irmã futura.
+Parear o DualSense via Bluetooth também dispara a GUI automaticamente.
+A regra complementar `74-ps5-controller-hotplug-bt.rules` observa
+`ACTION=="add" SUBSYSTEM=="hidraw" KERNELS=="0005:054C:0CE6.*"` (0005
+= BUS_BLUETOOTH, 054C = Sony, 0CE6/0DF2 = DualSense/Edge).
+
+Pareamento inicial continua manual — use `bluetoothctl` ou o painel
+Bluetooth do GNOME/COSMIC:
+
+```bash
+bluetoothctl
+# [bluetooth]# scan on
+# segure Create+PS no controle até a lightbar piscar
+# [bluetooth]# pair AA:BB:CC:DD:EE:FF
+# [bluetooth]# trust AA:BB:CC:DD:EE:FF
+```
+
+Uma vez pareado, reconectar (plugar e desplugar o USB, ou `connect`
+no bluetoothctl) aciona a GUI. Se o `KERNELS` real no seu kernel
+divergir dos wildcards, confirme com:
+
+```bash
+udevadm info -a /dev/hidrawN | grep KERNELS
+```
+
+E adicione a variante em `74-ps5-controller-hotplug-bt.rules` localmente.
+
+## Limitações e escopo remanescentes
 - **Sessões GNOME/Pop!_OS modernas** herdam `DISPLAY`/`WAYLAND_DISPLAY`
   automaticamente para o systemd `--user`. Em sessões mais antigas, pode
   ser necessário exportar as variáveis manualmente no `ExecStart`.
