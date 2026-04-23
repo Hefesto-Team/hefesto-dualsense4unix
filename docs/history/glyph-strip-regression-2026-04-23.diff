@@ -1,0 +1,711 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 56dafea..8218f87 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -485,7 +485,7 @@ Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com D
+ - **AssertionError ruidoso em `udp_server.connection_made`**: assert gratuito contra `asyncio.DatagramTransport` removido (Python 3.10 entrega `_SelectorDatagramTransport` que não passa isinstance público). Journal limpo em cada startup.
+ - **GUI congelava com daemon lento ou offline**: `asyncio.run()` síncrono a 20 Hz na thread GTK bloqueava a janela. Migração para `ThreadPoolExecutor` com callbacks via `GLib.idle_add`; `LIVE_POLL_INTERVAL_MS = 100` (10 Hz); timeout de 250ms no `open_unix_connection`. Janela permanece responsiva mesmo com IPC morto.
+ - **Dualidade `hefesto.service` / `hefesto-headless.service` removida**: unit única. Dropdown da aba Daemon virou label estática `Unit: hefesto.service`. API singular `detect_installed_unit()`.
+-- **Glyphs Unicode de estado preservados**: `●` (U+25CF), `○` (U+25CB), `▮`/`▯` (U+25AE/U+25AF), `◐` (U+25D0) são UI textual funcional, não emojis. Distinção formalizada em ADR-011.
++- **Glyphs Unicode de estado preservados**: `` (U+25CF), `` (U+25CB), ``/`` (U+25AE/U+25AF), `` (U+25D0) são UI textual funcional, não emojis. Distinção formalizada em ADR-011.
+ 
+ ### Modificado
+ - **Novo ícone canônico** (`assets/appimage/Hefesto.png`): martelo + placa de circuito, gradiente teal→magenta. Cache GTK `hicolor` populado em 9 tamanhos (16 a 512 px) pelo `install.sh`.
+diff --git a/README.md b/README.md
+index 0e55502..1a3fb65 100644
+--- a/README.md
++++ b/README.md
+@@ -391,7 +391,7 @@ Leia [`AGENTS.md`](AGENTS.md) antes de abrir PR. Resumo:
+ 5. Se toca runtime, provar via smoke real (`run.sh --smoke`) ou com hardware conectado.
+ 6. Se toca UI / TUI, screenshot + sha256 + descrição multimodal no PR.
+ 7. Descoberta não-óbvia vira registro em [`docs/process/discoveries/`](docs/process/discoveries/).
+-8. Commit em PT-BR, sem menção a IA, zero emojis gráficos (glyphs Unicode de estado — `○`, `●`, box drawing — são permitidos).
++8. Commit em PT-BR, sem menção a IA, zero emojis gráficos (glyphs Unicode de estado — ``, ``, box drawing — são permitidos).
+ 9. Abrir PR com `Closes #N`, squash merge.
+ 
+ Testes manuais com hardware físico têm checklist em [`CHECKLIST_MANUAL.md`](CHECKLIST_MANUAL.md). Revisor com controle marca antes de cada release.
+diff --git a/docs/adr/012-gui-reconnect-state-machine.md b/docs/adr/012-gui-reconnect-state-machine.md
+index d4d8c41..a1ccbce 100644
+--- a/docs/adr/012-gui-reconnect-state-machine.md
++++ b/docs/adr/012-gui-reconnect-state-machine.md
+@@ -20,9 +20,9 @@ OFFLINE -----(IPC ok)------> ONLINE
+ - Polling a **2 s** via `GLib.timeout_add_seconds(2, _tick_reconnect_state)`.
+ - **Threshold de 3** falhas consecutivas (6 s de indisponibilidade) antes de transicionar para OFFLINE. Absorve restart curto do systemd sem flicker.
+ - **Três renderers visuais** no header da GUI:
+-  - ONLINE: `● conectado via <transport>` (verde `#2d8`, U+25CF).
+-  - RECONNECTING: `◐ tentando reconectar...` (laranja `#d90`, U+25D0 — semântico intermediário).
+-  - OFFLINE: `○ daemon offline` (vermelho `#d33`, U+25CB).
++  - ONLINE: ` conectado via <transport>` (verde `#2d8`, U+25CF).
++  - RECONNECTING: ` tentando reconectar...` (laranja `#d90`, U+25D0 — semântico intermediário).
++  - OFFLINE: ` daemon offline` (vermelho `#d33`, U+25CB).
+ - **Botão "Reiniciar daemon"** na aba Daemon — atalho humano quando o usuário quer intervir sem esperar, roda `systemctl --user restart hefesto.service` via subprocess. Fica desabilitado se `detect_installed_units()` retornar `None`.
+ 
+ ## Consequências
+diff --git a/docs/process/CHECKLIST_HARDWARE_V2.md b/docs/process/CHECKLIST_HARDWARE_V2.md
+index 7857363..2e9be25 100644
+--- a/docs/process/CHECKLIST_HARDWARE_V2.md
++++ b/docs/process/CHECKLIST_HARDWARE_V2.md
+@@ -98,8 +98,8 @@ Adicionar nota em linha nova indentada (4 espaços) se o resultado exigir explic
+ - [ ] Com daemon rodando, desplugar o cabo USB, aguardar 5 s, replugar.
+ - [ ] Repetir 5 vezes consecutivas.
+     - Observação esperada:
+-      - GUI detecta desconexão em ≤ 2 s (`header` vira vermelho `○ Daemon Offline` ou equivalente).
+-      - Ao replugar, GUI volta a `● Conectado Via USB` em ≤ 2 s.
++      - GUI detecta desconexão em ≤ 2 s (`header` vira vermelho ` Daemon Offline` ou equivalente).
++      - Ao replugar, GUI volta a ` Conectado Via USB` em ≤ 2 s.
+       - **Nenhum flash de janela** ao replugar (a janela existente volta ao foco, não abre uma nova).
+     - Critério de falha: GUI abre e fecha (regressão A-11); tray mostra 2 ícones temporários; daemon nunca reconhece replug.
+ 
+diff --git a/docs/process/sprints/BUG-DAEMON-AUTOSTART-01.md b/docs/process/sprints/BUG-DAEMON-AUTOSTART-01.md
+index 031d909..8a5cc4d 100644
+--- a/docs/process/sprints/BUG-DAEMON-AUTOSTART-01.md
++++ b/docs/process/sprints/BUG-DAEMON-AUTOSTART-01.md
+@@ -11,7 +11,7 @@
+ 
+ ## Sintoma
+ 
+-Usuário abre a GUI (via launcher ou menu de aplicativos) — header mostra "○ Daemon Offline". Precisa clicar manualmente no botão "Reiniciar Daemon" na aba Daemon para subir. Espera razoável: daemon deve estar ativo antes mesmo da janela aparecer (ou subir no ato).
++Usuário abre a GUI (via launcher ou menu de aplicativos) — header mostra " Daemon Offline". Precisa clicar manualmente no botão "Reiniciar Daemon" na aba Daemon para subir. Espera razoável: daemon deve estar ativo antes mesmo da janela aparecer (ou subir no ato).
+ 
+ ## Diagnóstico provável
+ 
+@@ -41,7 +41,7 @@ systemctl --user stop hefesto.service
+ .venv/bin/python -m hefesto.app.main &
+ sleep 6
+ systemctl --user is-active hefesto.service   # esperado: active
+-# Header da GUI deve estar verde (● Conectado Via USB)
++# Header da GUI deve estar verde ( Conectado Via USB)
+ ```
+ 
+ ## Arquivos tocados (previsão)
+diff --git a/docs/process/sprints/BUG-DAEMON-STATUS-MISMATCH-01.md b/docs/process/sprints/BUG-DAEMON-STATUS-MISMATCH-01.md
+index 0ab5f01..a8b2e80 100644
+--- a/docs/process/sprints/BUG-DAEMON-STATUS-MISMATCH-01.md
++++ b/docs/process/sprints/BUG-DAEMON-STATUS-MISMATCH-01.md
+@@ -14,8 +14,8 @@
+ > fala que não iniciou o autostart ou daemon tá confuso. Fora isso na aba de status fala que o daemon tá online
+ 
+ Captura evidencia:
+-- Header do topo: `● Conectado Via USB` (verde) — IPC respondeu, daemon vivo.
+-- Aba Daemon: `Status: ● failed (auto-start: enabled)` — systemd diz que a unit falhou.
++- Header do topo: ` Conectado Via USB` (verde) — IPC respondeu, daemon vivo.
++- Aba Daemon: `Status:  failed (auto-start: enabled)` — systemd diz que a unit falhou.
+ 
+ A aba Daemon mostra o estado **da unit systemd** (`systemctl --user is-active`), que pode estar em `failed` porque o daemon foi iniciado **fora do systemd** (ex.: via CLI `hefesto daemon start --foreground`, ou via takeover por outra GUI). Não há mentira — os dois estados são verdadeiros, mas a apresentação é confusa.
+ 
+@@ -27,11 +27,11 @@ O bug **é cosmético** (não quebra funcionalidade), mas mina confiança. Preci
+ 
+ | systemd | IPC/pid | Apresentação correta |
+ |---|---|---|
+-| `active` | vivo | `● Online (gerenciado pelo systemd)` verde |
+-| `inactive` ou `failed` | vivo | `● Online (processo avulso, sem systemd)` amarelo — indica que o daemon está rodando mas fora do auto-restart |
+-| `active` | morto | `● Iniciando...` amarelo — transitório |
+-| `inactive` ou `failed` | morto | `○ Offline` vermelho |
+-| `active` | vivo E unit auto-start habilitado | `● Online (systemd + auto-start)` verde |
++| `active` | vivo | ` Online (gerenciado pelo systemd)` verde |
++| `inactive` ou `failed` | vivo | ` Online (processo avulso, sem systemd)` amarelo — indica que o daemon está rodando mas fora do auto-restart |
++| `active` | morto | ` Iniciando...` amarelo — transitório |
++| `inactive` ou `failed` | morto | ` Offline` vermelho |
++| `active` | vivo E unit auto-start habilitado | ` Online (systemd + auto-start)` verde |
+ 
+ ## Decisão
+ 
+@@ -51,7 +51,7 @@ E pintar o label com a matriz acima. Mensagem explícita em PT-BR, sem jargão `
+   - Cores: verde (online_systemd), amarelo (online_avulso, iniciando), vermelho (offline).
+   - Tooltip no label explica o que cada estado significa (hover).
+ - [ ] Switch `Auto-start` (daemon_autostart_switch) reflete `systemd_enabled` sempre (independente de vivo/morto). Continua funcionando: toggle chama `systemctl --user enable|disable` em thread worker.
+-- [ ] `Status: ● Online (processo avulso)` oferece botão secundário "Migrar para systemd" que roda `systemctl --user start hefesto.service` **após** enviar SIGTERM ao processo avulso via pid file (reutiliza takeover).
++- [ ] `Status:  Online (processo avulso)` oferece botão secundário "Migrar para systemd" que roda `systemctl --user start hefesto.service` **após** enviar SIGTERM ao processo avulso via pid file (reutiliza takeover).
+ - [ ] Teste `tests/unit/test_daemon_status_matrix.py`: monkeypatch `_systemctl_oneline` + `is_alive` + `pid_file.read_text` cobre as 4 combinações principais.
+ - [ ] Proof-of-work runtime:
+   ```bash
+@@ -79,6 +79,6 @@ E pintar o label com a matriz acima. Mensagem explícita em PT-BR, sem jargão `
+ ## Notas para o executor
+ 
+ - `_daemon_status()` consulta IPC via `daemon.status` com timeout 1s. Se IPC timeout, assume `process_alive=False`.
+-- Label no header do topo (`●/○ Conectado Via USB`) é **outra coisa**: reflete `ControllerState.connected` (hardware), não estado do daemon. Não confundir.
++- Label no header do topo (`/ Conectado Via USB`) é **outra coisa**: reflete `ControllerState.connected` (hardware), não estado do daemon. Não confundir.
+ - "Migrar para systemd" só aparece se `online_avulso`. Se já é `online_systemd`, oculto.
+ - Pid file path: `runtime_dir() / "daemon.pid"`. Usar helpers de `single_instance.is_alive`.
+diff --git a/docs/process/sprints/BUG-FREEZE-01.md b/docs/process/sprints/BUG-FREEZE-01.md
+index 0997a1c..ed33975 100644
+--- a/docs/process/sprints/BUG-FREEZE-01.md
++++ b/docs/process/sprints/BUG-FREEZE-01.md
+@@ -71,8 +71,8 @@ Expor helper `IpcClient.connect_with_timeout(timeout)` que envolve `asyncio.wait
+ - [ ] Teste novo `tests/unit/test_ipc_bridge_async.py`: (a) `call_async` não bloqueia; (b) callback de sucesso é invocado; (c) callback de falha invocado em `IpcError`/`FileNotFoundError`; (d) timeout honrado.
+ - [ ] Teste novo `tests/unit/test_ipc_client_timeout.py`: `connect(timeout=0.1)` em socket inexistente levanta `IpcError` em <200ms.
+ - [ ] Proof-of-work runtime:
+-  - GUI aberta com daemon rodando → header "● Conectado Via USB", zero jank.
+-  - `systemctl --user stop hefesto.service` enquanto GUI aberta → GUI permanece responsiva (arrastar janela, trocar aba) mesmo com daemon morto. Header migra para "◐ Tentando Reconectar..." em ≤ 2s.
++  - GUI aberta com daemon rodando → header " Conectado Via USB", zero jank.
++  - `systemctl --user stop hefesto.service` enquanto GUI aberta → GUI permanece responsiva (arrastar janela, trocar aba) mesmo com daemon morto. Header migra para " Tentando Reconectar..." em ≤ 2s.
+   - Botão "Reiniciar Daemon" dispara subprocess e GUI não trava durante os 10s de timeout do subprocess.
+   - Capturas: online, reconnecting, pós-restart.
+ - [ ] `.venv/bin/pytest tests/unit -q` verde.
+diff --git a/docs/process/sprints/BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01.md b/docs/process/sprints/BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01.md
+index c8b01e3..2fb528e 100644
+--- a/docs/process/sprints/BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01.md
++++ b/docs/process/sprints/BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01.md
+@@ -1,6 +1,6 @@
+ # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-01 — Anomalia de working tree durante execução paralela (INVESTIGAÇÃO)
+ 
+-> **Atualização 2026-04-23**: hipótese original ("`--fix` apaga glyphs") **não reproduz** em execução controlada — rodar `scripts/validar-acentuacao.py --all --fix` em HEAD `7aea630` com working tree limpa resulta em zero modificações. Os glyphs Unicode de estado (`▮▯●○◐`) continuam sãos em HEAD. Sprint reclassificada como **investigativa** — causa raiz real não identificada. Delegada à sprint 9 (AUDIT-V2-COMPLETE-01) como item específico de auditoria.
++> **Atualização 2026-04-23**: hipótese original ("`--fix` apaga glyphs") **não reproduz** em execução controlada — rodar `scripts/validar-acentuacao.py --all --fix` em HEAD `7aea630` com working tree limpa resulta em zero modificações. Os glyphs Unicode de estado (``) continuam sãos em HEAD. Sprint reclassificada como **investigativa** — causa raiz real não identificada. Delegada à sprint 9 (AUDIT-V2-COMPLETE-01) como item específico de auditoria.
+ >
+ > Spec original preservado abaixo por contexto histórico da hipótese inicial.
+ 
+@@ -19,27 +19,27 @@
+ 
+ Durante execução paralela de SMOKE-DEB-INSTALL-CI-01 e SMOKE-FLATPAK-BUILD-CI-01 em 2026-04-23, um dos agents rodou `pre-commit run --all-files` ou `scripts/validar-acentuacao.py --all --fix` como gate de validação pré-commit. O modo `--fix` **apagou** (não substituiu — removeu completamente) glyphs Unicode de estado em 22 arquivos:
+ 
+-- `▮` (U+25AE BLACK VERTICAL RECTANGLE)
+-- `▯` (U+25AF WHITE VERTICAL RECTANGLE)
+-- `●` (U+25CF BLACK CIRCLE)
+-- `○` (U+25CB WHITE CIRCLE)
+-- `◐` (U+25D0 CIRCLE WITH LEFT HALF BLACK)
++- `` (U+25AE BLACK VERTICAL RECTANGLE)
++- `` (U+25AF WHITE VERTICAL RECTANGLE)
++- `` (U+25CF BLACK CIRCLE)
++- `` (U+25CB WHITE CIRCLE)
++- `` (U+25D0 CIRCLE WITH LEFT HALF BLACK)
+ 
+ Exemplo de corrupção em `src/hefesto/tui/widgets/__init__.py`:
+ 
+ ```diff
+--            return "▮▮▮▮"
++-            return ""
+ +            return ""
+--            return "▮▮▮▯"
++-            return ""
+ +            return ""
+--            return "▮▮▯▯"
++-            return ""
+ +            return ""
+ ```
+ 
+ Exemplo em `src/hefesto/app/actions/status_actions.py`:
+ 
+ ```diff
+--'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
++-'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+ +'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+ ```
+ 
+@@ -82,11 +82,11 @@ Corrigir o `scripts/validar-acentuacao.py` para que:
+ 
+ 1. O **dicionário de substituições** nunca contenha palavra-alvo que seja caractere Unicode solto ou token que inclua blocos Unicode de estado. Revisar todas as 315 entradas procurando por entradas exóticas.
+ 2. O modo `--fix` **nunca** toque um caractere fora do par `(sem_acento, com_acento)` registrado no dicionário. Se houver código de fallback "limpa caracteres estranhos", remover.
+-3. O regex de match deve usar `\b` ou `(?<![\w])` para boundary em **apenas** caracteres ASCII letra/dígito/underscore. Caracteres Unicode de bloco geométrico (`▮▯●○◐`) nunca podem ser considerados parte de "palavra" no sentido do match.
++3. O regex de match deve usar `\b` ou `(?<![\w])` para boundary em **apenas** caracteres ASCII letra/dígito/underscore. Caracteres Unicode de bloco geométrico (``) nunca podem ser considerados parte de "palavra" no sentido do match.
+ 4. Adicionar **teste de regressão A-04** bloqueando o bug:
+-   - `test_fix_preserva_glyph_black_circle`: input contém `"● Conectado"`, após `--fix` continua contendo `"● Conectado"`.
+-   - `test_fix_preserva_glyph_block_elements`: input com `"▮▮▮▯"`, após `--fix` preservado.
+-   - `test_fix_preserva_glyph_half_circle`: input com `"◐ Tentando"`, preservado.
++   - `test_fix_preserva_glyph_black_circle`: input contém `" Conectado"`, após `--fix` continua contendo `" Conectado"`.
++   - `test_fix_preserva_glyph_block_elements`: input com `""`, após `--fix` preservado.
++   - `test_fix_preserva_glyph_half_circle`: input com `" Tentando"`, preservado.
+    - `test_fix_preserva_caixa_batery`: teste exato do `BatteryMeter._icon_for_level`.
+ 
+ ## Critérios de aceite
+diff --git a/docs/process/sprints/FEAT-MOUSE-01.md b/docs/process/sprints/FEAT-MOUSE-01.md
+index a03a819..e360522 100644
+--- a/docs/process/sprints/FEAT-MOUSE-01.md
++++ b/docs/process/sprints/FEAT-MOUSE-01.md
+@@ -16,7 +16,7 @@ Mapeamento canônico (decidido pelo usuário):
+ | DualSense | Saída emulada                          | evdev code           |
+ |---|---|---|
+ | **Cross** (X) ou **L2** | Botão esquerdo do mouse | `BTN_LEFT`           |
+-| **Triangle** (△) ou **R2** | Botão direito do mouse | `BTN_RIGHT`          |
++| **Triangle** () ou **R2** | Botão direito do mouse | `BTN_RIGHT`          |
+ | **D-pad up / down / left / right** | Setas de teclado | `KEY_UP`/`KEY_DOWN`/`KEY_LEFT`/`KEY_RIGHT` |
+ | **Analógico esquerdo** | Movimento do mouse (X, Y) | `REL_X` / `REL_Y`    |
+ | **Analógico direito** | Rolagem | `REL_WHEEL` (vertical), `REL_HWHEEL` (horizontal) |
+@@ -42,7 +42,7 @@ Método `dispatch(state: ControllerState)` traduz o estado do controle em evento
+ - `GtkSwitch id="mouse_emulation_toggle"` — liga/desliga modo mouse (default OFF).
+ - `GtkScale id="mouse_speed_scale"` — speed do movimento (1-12, default 6).
+ - `GtkScale id="mouse_scroll_speed_scale"` — speed da rolagem (1-5, default 1).
+-- `GtkLabel` resumindo o mapeamento fixo (X/L2=esq, △/R2=dir, etc.) para o usuário entender sem abrir docs.
++- `GtkLabel` resumindo o mapeamento fixo (X/L2=esq, /R2=dir, etc.) para o usuário entender sem abrir docs.
+ - Se `/dev/uinput` não está writable, mostrar aviso vermelho com link "rode ./scripts/install_udev.sh".
+ 
+ ### Hook no daemon
+diff --git a/docs/process/sprints/FEAT-MOUSE-02.md b/docs/process/sprints/FEAT-MOUSE-02.md
+index 89a5ed4..49bbcc0 100644
+--- a/docs/process/sprints/FEAT-MOUSE-02.md
++++ b/docs/process/sprints/FEAT-MOUSE-02.md
+@@ -14,13 +14,13 @@
+ FEAT-MOUSE-01 estabeleceu o modo mouse com mapeamento:
+ 
+ - Cross (X) / L2 → `BTN_LEFT`
+-- Triangle (△) / R2 → `BTN_RIGHT`
++- Triangle () / R2 → `BTN_RIGHT`
+ - D-pad → `KEY_UP/DOWN/LEFT/RIGHT`
+ - Analógico esquerdo → `REL_X`/`REL_Y`
+ - Analógico direito → `REL_WHEEL`/`REL_HWHEEL`
+ - R3 → `BTN_MIDDLE`
+ 
+-Circle (○) e Square (□) ficaram sem função no modo mouse. O usuário quer:
++Circle () e Square (□) ficaram sem função no modo mouse. O usuário quer:
+ 
+ - **Circle → `KEY_ENTER`** (confirmar / OK em diálogos, enviar em formulários).
+ - **Square → `KEY_ESC`** (cancelar / fechar menu / voltar).
+diff --git a/docs/process/sprints/POLISH-CAPS-01.md b/docs/process/sprints/POLISH-CAPS-01.md
+index 3ad83f7..37348d9 100644
+--- a/docs/process/sprints/POLISH-CAPS-01.md
++++ b/docs/process/sprints/POLISH-CAPS-01.md
+@@ -17,11 +17,11 @@ Auditoria visual da GUI em 2026-04-21 achou strings visíveis ao usuário em cai
+ 2. **Primeira letra maiúscula** em valores exibidos como status humano: `online`/`offline`/`active`/`disabled`/`enabled`/`reconectando` → `Online`, `Offline`, `Ativo`, `Desativado`, `Ativado`, `Reconectando`. Idem `conectado`/`desconectado` → `Conectado` / `Desconectado`.
+ 3. **Siglas em maiúsculas**: `usb` → `USB`, `bt` → `BT`, `ipc` → `IPC`, `udp` → `UDP`, `cli` → `CLI`, `tui` → `TUI`, `gui` → `GUI`.
+ 4. **Markup Pango do header de conexão** em Title Case curto:
+-   - `● conectado via usb` → `● Conectado Via USB`
+-   - `● conectado via bt` → `● Conectado Via BT`
+-   - `◐ tentando reconectar...` → `◐ Tentando Reconectar...`
+-   - `○ daemon offline` → `○ Daemon Offline`
+-   - `○ controle desconectado` → `○ Controle Desconectado`
++   - ` conectado via usb` → ` Conectado Via USB`
++   - ` conectado via bt` → ` Conectado Via BT`
++   - ` tentando reconectar...` → ` Tentando Reconectar...`
++   - ` daemon offline` → ` Daemon Offline`
++   - ` controle desconectado` → ` Controle Desconectado`
+ 5. **Rótulos de botões em Title Case**: `Ver logs` → `Ver Logs`, `Reiniciar daemon` → `Reiniciar Daemon`, `Start`/`Stop`/`Restart`/`Atualizar` permanecem (ou traduzir para `Iniciar`/`Parar`/`Reiniciar`/`Atualizar` — decidir consistente, **preferir português em todos**).
+ 6. **Nome do perfil** NÃO é capitalizado (é identificador, preservar caixa original: `fallback`, `shooter`, `driving`, `cyberpunk_driving`).
+ 7. **Label fixo "Unit: hefesto.service"** (da SIMPLIFY-UNIT-01) — mantém caixa baixa do nome do service (é identificador systemd).
+@@ -52,7 +52,7 @@ NÃO alterar:
+ - [ ] `grep -niE "\bnao\b|funcao|validacao|configuracao|descricao|proximo|simbolo|botao|sao" src/hefesto/app/` vazio (acentuação completa).
+ - [ ] `grep -niE "conectado via (usb|bt)\b" src/hefesto/app/` com matches apenas em Title Case.
+ - [ ] Captura antes/depois na aba Status mostrando o header em Title Case.
+-- [ ] Captura na aba Daemon mostrando `Status: ● Ativo` (se decidir traduzir) e botões em PT-BR.
++- [ ] Captura na aba Daemon mostrando `Status:  Ativo` (se decidir traduzir) e botões em PT-BR.
+ - [ ] `.venv/bin/pytest tests/unit -q` verde.
+ - [ ] `./scripts/check_anonymity.sh` OK.
+ - [ ] `.venv/bin/ruff check src/ tests/` OK.
+@@ -92,6 +92,6 @@ grep -iE "offline|online|reconectando|reconectar" src/hefesto/app/actions/*.py
+ ## Notas
+ 
+ - Se o hook `guardian.py` reclamar de algum caractere funcional (U+25CF, U+25CB, U+25D0, etc.), é falso positivo — preservar.
+-- Algumas strings são construídas em runtime via f-string (ex.: `f'● conectado via {transport}'`). Nesse caso, aplicar `.upper()` no transport e capitalizar literal: `f'● Conectado Via {transport.upper()}'`.
++- Algumas strings são construídas em runtime via f-string (ex.: `f' conectado via {transport}'`). Nesse caso, aplicar `.upper()` no transport e capitalizar literal: `f' Conectado Via {transport.upper()}'`.
+ - Se encontrar string que não cabe em Title Case (ex.: frase longa descritiva), preservar sentence case (primeira letra maiúscula, resto natural).
+ - Commit final: `polish: POLISH-CAPS-01 acentuação PT-BR e capitalização consistente na GUI`.
+diff --git a/docs/process/sprints/UI-EMULATION-ALIGN-01.md b/docs/process/sprints/UI-EMULATION-ALIGN-01.md
+index 3654c4a..a179375 100644
+--- a/docs/process/sprints/UI-EMULATION-ALIGN-01.md
++++ b/docs/process/sprints/UI-EMULATION-ALIGN-01.md
+@@ -15,7 +15,7 @@
+ 
+ Captura Image 8 mostra:
+ ```
+-        uinput: ● Disponível
++        uinput:  Disponível
+ Device virtual: Microsoft X-Box 360 pad (Hefesto virtual)
+     VID:PID: 045E:028E (Xbox 360)
+     /dev/input/js*: /dev/input/js0, /dev/input/js1
+@@ -29,7 +29,7 @@ Reestruturar com `Gtk.Grid` 2 colunas (label à direita, value à esquerda). Cla
+ 
+ ```
+ +---- Device virtual ---------------------------+
+-|     uinput:  [● Disponível]                  |
++|     uinput:  [ Disponível]                  |
+ |     Device:  Microsoft X-Box 360 pad          |
+ |              (Hefesto virtual)                |
+ |    VID:PID:  045E:028E (Xbox 360)             |
+diff --git a/docs/process/sprints/UI-PROFILES-EDITOR-SIMPLE-01.md b/docs/process/sprints/UI-PROFILES-EDITOR-SIMPLE-01.md
+index 27d0003..78ace15 100644
+--- a/docs/process/sprints/UI-PROFILES-EDITOR-SIMPLE-01.md
++++ b/docs/process/sprints/UI-PROFILES-EDITOR-SIMPLE-01.md
+@@ -26,12 +26,12 @@ Dois modos no editor, alternados por toggle `Modo avançado`:
+ ### Modo simples (default)
+ Pré-preencher listas humanamente. Campo **"Aplica a:"** com opções radio ou checkboxes em categorias:
+ 
+-- ○ **Qualquer janela** (mapeia pra `MatchAny`)
+-- ○ **Jogos da Steam** (mapeia pra `process_name: ["steam"]` + `title_regex: ".*"`)
+-- ○ **Navegador** (mapeia pra `window_class: ["firefox", "chromium", "brave", "google-chrome"]`)
+-- ○ **Terminal** (mapeia pra `window_class: ["gnome-terminal", "alacritty", "kitty", "konsole"]`)
+-- ○ **Editor de código** (mapeia pra `window_class: ["code", "zed", "neovide"]`)
+-- ○ **Jogo específico** → abre campo livre "Nome do jogo" que traduz internamente pra `process_name: [nome]`.
++-  **Qualquer janela** (mapeia pra `MatchAny`)
++-  **Jogos da Steam** (mapeia pra `process_name: ["steam"]` + `title_regex: ".*"`)
++-  **Navegador** (mapeia pra `window_class: ["firefox", "chromium", "brave", "google-chrome"]`)
++-  **Terminal** (mapeia pra `window_class: ["gnome-terminal", "alacritty", "kitty", "konsole"]`)
++-  **Editor de código** (mapeia pra `window_class: ["code", "zed", "neovide"]`)
++-  **Jogo específico** → abre campo livre "Nome do jogo" que traduz internamente pra `process_name: [nome]`.
+ 
+ Campos sempre visíveis: `Nome`, `Prioridade` (slider 0-100 em vez de `-` `+`), `Aplica a`.
+ 
+diff --git a/docs/process/sprints/UX-BANNER-01.md b/docs/process/sprints/UX-BANNER-01.md
+index fef2a4d..edd5908 100644
+--- a/docs/process/sprints/UX-BANNER-01.md
++++ b/docs/process/sprints/UX-BANNER-01.md
+@@ -30,7 +30,7 @@ GtkBox (horizontal, margin-top/bottom 12, margin-left 14)
+   └─ GtkLabel id="app_subtitle" (pequeno, cinza: "daemon de gatilhos adaptativos para DualSense")
+ ```
+ 
+-O status global "● conectado via usb / ◐ tentando reconectar / ○ daemon offline" (UX-RECONNECT-01) continua no canto superior-direito — não colide.
++O status global " conectado via usb /  tentando reconectar /  daemon offline" (UX-RECONNECT-01) continua no canto superior-direito — não colide.
+ 
+ ## Critérios de aceite
+ 
+diff --git a/docs/process/sprints/UX-RECONNECT-01.md b/docs/process/sprints/UX-RECONNECT-01.md
+index 5bde520..9fef2b1 100644
+--- a/docs/process/sprints/UX-RECONNECT-01.md
++++ b/docs/process/sprints/UX-RECONNECT-01.md
+@@ -16,9 +16,9 @@ O objetivo da sprint é transformar a GUI em **cliente IPC resiliente**:
+ 1. Polling IPC em background a cada **2s**. Se `daemon.state_full` responde, header mostra "conectado"; se falha, mostra "tentando reconectar…" durante 6s antes de desistir e mostrar "daemon offline".
+ 2. Botão **"reiniciar daemon"** na aba Daemon, executando `systemctl --user restart hefesto.service` via subprocess. Útil quando o socket morreu e o systemd ainda não detectou.
+ 3. Estado visual do header — três fases:
+-   - **Conectado:** `● conectado via <transport>` (verde, U+25CF).
+-   - **Tentando reconectar:** `◐ tentando reconectar...` (amarelo/laranja, U+25D0 CIRCLE WITH LEFT HALF BLACK — intermediário semântico).
+-   - **Offline persistente:** `○ daemon offline` (vermelho, U+25CB).
++   - **Conectado:** ` conectado via <transport>` (verde, U+25CF).
++   - **Tentando reconectar:** ` tentando reconectar...` (amarelo/laranja, U+25D0 CIRCLE WITH LEFT HALF BLACK — intermediário semântico).
++   - **Offline persistente:** ` daemon offline` (vermelho, U+25CB).
+ 
+ ---
+ 
+@@ -45,7 +45,7 @@ RECONNECTING → (IPC ok) → ONLINE
+ - [ ] `src/hefesto/app/actions/status_actions.py` — adicionar `_reconnect_state: str` (um de `"online"`, `"reconnecting"`, `"offline"`) e `_consecutive_failures: int`. Método novo `_update_reconnect_state(state_full: dict | None)` muda o estado e chama o renderer apropriado.
+ - [ ] Três renderers:
+   - `_render_online(state)` — já existe (restaurado pela UX-HEADER-01), mantido.
+-  - `_render_reconnecting()` — novo: `'<span foreground="#d90">◐ tentando reconectar...</span>'`.
++  - `_render_reconnecting()` — novo: `'<span foreground="#d90"> tentando reconectar...</span>'`.
+   - `_render_offline()` — já existe, chamado somente após `_consecutive_failures >= 3`.
+ - [ ] `src/hefesto/app/app.py` ou `main.py` — registrar `GLib.timeout_add_seconds(2, self._poll_daemon_tick)` no `_on_activate` / `__init__`. O tick chama `ipc_bridge.daemon_state_full()` e delega para `StatusActionsMixin._update_reconnect_state`.
+ - [ ] `src/hefesto/app/actions/daemon_actions.py` — adicionar botão **"reiniciar daemon"** na aba Daemon. Handler roda `subprocess.run(["systemctl", "--user", "restart", "hefesto.service"], timeout=10)`. Trata `CalledProcessError` (service não instalado) e `FileNotFoundError` (systemd ausente) com `logger.error` + `Gtk.MessageDialog` informativo. O botão fica **desabilitado** se `detect_installed_unit()` retornar `None`.
+@@ -60,7 +60,7 @@ RECONNECTING → (IPC ok) → ONLINE
+ ## Proof-of-work esperado
+ 
+ ```bash
+-# 1. Daemon ON → GUI abre mostrando "● conectado via <transport>"
++# 1. Daemon ON → GUI abre mostrando " conectado via <transport>"
+ systemctl --user start hefesto.service
+ sleep 2
+ .venv/bin/python -m hefesto.app.main &
+@@ -70,14 +70,14 @@ TS=$(date +%Y%m%dT%H%M%S)
+ import -window "$WID" "/tmp/hefesto_ux_reconnect_online_${TS}.png"
+ sha256sum "/tmp/hefesto_ux_reconnect_online_${TS}.png"
+ 
+-# 2. Daemon para → GUI mostra "◐ tentando reconectar..."
++# 2. Daemon para → GUI mostra " tentando reconectar..."
+ systemctl --user stop hefesto.service
+ sleep 3   # dentro do threshold (3 ticks x 2s = 6s)
+ TS=$(date +%Y%m%dT%H%M%S)
+ import -window "$WID" "/tmp/hefesto_ux_reconnect_tentando_${TS}.png"
+ sha256sum "/tmp/hefesto_ux_reconnect_tentando_${TS}.png"
+ 
+-# 3. Após threshold → GUI mostra "○ daemon offline"
++# 3. Após threshold → GUI mostra " daemon offline"
+ sleep 6
+ TS=$(date +%Y%m%dT%H%M%S)
+ import -window "$WID" "/tmp/hefesto_ux_reconnect_offline_${TS}.png"
+@@ -101,7 +101,7 @@ pkill -f hefesto.app.main
+ 
+ **Aritmética esperada:**
+ - 4 PNGs `online`, `tentando`, `offline`, `restored` com sha256 distintos.
+-- Máquina de estado: ao desligar daemon, 1ª a 3ª tick (0-6s) mostram `◐ tentando reconectar...`. Na 4ª tick (~8s), troca para `○ daemon offline`. Ao religar daemon (via botão ou externo), primeira tick pós-restart volta para `● conectado via <transport>`.
++- Máquina de estado: ao desligar daemon, 1ª a 3ª tick (0-6s) mostram ` tentando reconectar...`. Na 4ª tick (~8s), troca para ` daemon offline`. Ao religar daemon (via botão ou externo), primeira tick pós-restart volta para ` conectado via <transport>`.
+ - Testes: 289+ (BUG-IPC-01) + 1 novo = ≥292 passing.
+ 
+ ---
+@@ -128,6 +128,6 @@ pkill -f hefesto.app.main
+ ## Notas para o executor
+ 
+ - Se `detect_installed_unit()` em `src/hefesto/daemon/lifecycle.py` (ou onde vive hoje) retornar `None`, o botão fica desabilitado com tooltip "serviço hefesto.service não instalado — rode install.sh".
+-- O caractere `◐` (U+25D0) é Geometric Shape (não emoji) — preservável via `VALIDATOR_BRIEF.md` A-04.
++- O caractere `` (U+25D0) é Geometric Shape (não emoji) — preservável via `VALIDATOR_BRIEF.md` A-04.
+ - `subprocess.run([...], timeout=10)` — passar args como lista, nunca `shell=True`.
+ - Se descobrir que `GLib.timeout_add_seconds` já está sendo usado para outro poll, reaproveitar a timer e compor o tick, não criar segunda timer.
+diff --git a/src/hefesto/app/actions/daemon_actions.py b/src/hefesto/app/actions/daemon_actions.py
+index 9996ee6..527025c 100644
+--- a/src/hefesto/app/actions/daemon_actions.py
++++ b/src/hefesto/app/actions/daemon_actions.py
+@@ -65,7 +65,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
+         label = self._get("daemon_status_label")
+         if label is None:
+             return
+-        label.set_markup('<span foreground="#888">● Consultando...</span>')
++        label.set_markup('<span foreground="#888"> Consultando...</span>')
+         label.set_tooltip_text(
+             "Verificando estado do daemon via systemctl. Aguarde."
+         )
+@@ -513,28 +513,28 @@ class DaemonActionsMixin(WidgetAccessMixin):
+         status_map: dict[DaemonStatus, tuple[str, str, str]] = {
+             "online_systemd": (
+                 "#2d8",
+-                "● Online (systemd + auto-start)"
++                " Online (systemd + auto-start)"
+                 if enabled == "enabled"
+-                else "● Online (gerenciado pelo systemd)",
++                else " Online (gerenciado pelo systemd)",
+                 "Daemon em execução sob controle do systemd. "
+                 "Reinício automático habilitado caso o processo falhe.",
+             ),
+             "online_avulso": (
+                 "#ca0",
+-                "● Online (processo avulso, sem systemd)",
++                " Online (processo avulso, sem systemd)",
+                 "Daemon em execução fora do systemd. "
+                 "Não há reinício automático. "
+                 "Use 'Migrar para systemd' para ativar gerenciamento completo.",
+             ),
+             "iniciando": (
+                 "#ca0",
+-                "● Iniciando...",
++                " Iniciando...",
+                 "systemd reporta unit ativa mas o processo ainda não escreveu "
+                 "o pid file. Aguarde alguns segundos.",
+             ),
+             "offline": (
+                 "#d33",
+-                "○ Offline",
++                " Offline",
+                 "Daemon não está em execução. "
+                 "Use 'Iniciar' para subir via systemd ou "
+                 "'hefesto daemon start' na linha de comando.",
+diff --git a/src/hefesto/app/actions/emulation_actions.py b/src/hefesto/app/actions/emulation_actions.py
+index 506093c..a113f72 100644
+--- a/src/hefesto/app/actions/emulation_actions.py
++++ b/src/hefesto/app/actions/emulation_actions.py
+@@ -124,7 +124,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
+ 
+         if module_ok and dev_writable:
+             uinput_label.set_markup(
+-                '<span foreground="#2d8">● Disponível</span>'
++                '<span foreground="#2d8"> Disponível</span>'
+             )
+         elif module_ok and dev_exists:
+             uinput_label.set_markup(
+diff --git a/src/hefesto/app/actions/mouse_actions.py b/src/hefesto/app/actions/mouse_actions.py
+index 5f24de4..0723928 100644
+--- a/src/hefesto/app/actions/mouse_actions.py
++++ b/src/hefesto/app/actions/mouse_actions.py
+@@ -22,9 +22,9 @@ UINPUT_DEV = "/dev/uinput"
+ MAPPING_LEGEND = (
+     "<b>Mapeamento:</b>\n"
+     "Cruz (X) ou L2 → botão esquerdo\n"
+-    "Triângulo (△) ou R2 → botão direito\n"
++    "Triângulo () ou R2 → botão direito\n"
+     "R3 (clique no analógico direito) → botão do meio\n"
+-    "Círculo (○) → Enter\n"
++    "Círculo () → Enter\n"
+     "Quadrado (□) → Esc\n"
+     "D-pad (↑↓←→) → setas do teclado\n"
+     "Analógico esquerdo → movimento do cursor\n"
+diff --git a/src/hefesto/app/actions/status_actions.py b/src/hefesto/app/actions/status_actions.py
+index 8a229b0..ceda7f1 100644
+--- a/src/hefesto/app/actions/status_actions.py
++++ b/src/hefesto/app/actions/status_actions.py
+@@ -67,11 +67,11 @@ class StatusActionsMixin(WidgetAccessMixin):
+         header_connection.
+ 
+     Estados do reconnect (`_reconnect_state`):
+-        - ``"online"``: último poll retornou dict; header mostra ● verde.
++        - ``"online"``: último poll retornou dict; header mostra  verde.
+         - ``"reconnecting"``: IPC falhou 1..N-1 vezes consecutivas; header
+-          mostra ◐ laranja com texto "tentando reconectar...".
++          mostra  laranja com texto "tentando reconectar...".
+         - ``"offline"``: N falhas consecutivas (N=RECONNECT_FAIL_THRESHOLD);
+-          header mostra ○ vermelho "daemon offline".
++          header mostra  vermelho "daemon offline".
+     """
+ 
+     _reconnect_state: str = "online"
+@@ -252,7 +252,7 @@ class StatusActionsMixin(WidgetAccessMixin):
+     # ------------------------------------------------------------------
+ 
+     def _render_online(self, state: dict[str, Any]) -> None:
+-        """Header canônico de estado ONLINE — ● verde + transport.
++        """Header canônico de estado ONLINE —  verde + transport.
+ 
+         Delega o pinta-completo-da-aba a `_render_live_state` e
+         `_render_slow_state` (já chamados pelos ticks rápidos). Aqui só
+@@ -263,29 +263,29 @@ class StatusActionsMixin(WidgetAccessMixin):
+         header = self._get("header_connection")
+         if connected:
+             header.set_markup(
+-                f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
++                f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+             )
+         else:
+             header.set_markup(
+-                '<span foreground="#d33">○ Controle Desconectado</span>'
++                '<span foreground="#d33"> Controle Desconectado</span>'
+             )
+         self._set_label("status_daemon", "Online")
+ 
+     def _render_reconnecting(self) -> None:
+-        """Header intermediário — ◐ laranja + "tentando reconectar...".
++        """Header intermediário —  laranja + "tentando reconectar...".
+ 
+         U+25D0 CIRCLE WITH LEFT HALF BLACK é Geometric Shape, não emoji.
+         """
+         header = self._get("header_connection")
+         header.set_markup(
+-            '<span foreground="#d90">◐ Tentando Reconectar...</span>'
++            '<span foreground="#d90"> Tentando Reconectar...</span>'
+         )
+         self._set_label("status_daemon", "Reconectando")
+ 
+     def _render_offline(self) -> None:
+         header = self._get("header_connection")
+         header.set_markup(
+-            '<span foreground="#d33">○ Daemon Offline</span>'
++            '<span foreground="#d33"> Daemon Offline</span>'
+         )
+         self._set_label("status_daemon", "Offline")
+         self._set_label("status_connection", "—")
+@@ -306,11 +306,11 @@ class StatusActionsMixin(WidgetAccessMixin):
+         if getattr(self, "_reconnect_state", "online") == "online":
+             if connected:
+                 header.set_markup(
+-                    f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
++                    f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+                 )
+             else:
+                 header.set_markup(
+-                    '<span foreground="#d33">○ Controle Desconectado</span>'
++                    '<span foreground="#d33"> Controle Desconectado</span>'
+                 )
+ 
+         l2 = int(state.get("l2_raw", 0))
+diff --git a/src/hefesto/integrations/uinput_mouse.py b/src/hefesto/integrations/uinput_mouse.py
+index 8976f5b..be0ef20 100644
+--- a/src/hefesto/integrations/uinput_mouse.py
++++ b/src/hefesto/integrations/uinput_mouse.py
+@@ -11,9 +11,9 @@ Mapeamento canônico (FEAT-MOUSE-01/02, decidido pelo usuário):
+ | DualSense                | Saída emulada          | evdev code    |
+ |--------------------------|------------------------|---------------|
+ | Cross (X) ou L2          | Botão esquerdo         | BTN_LEFT      |
+-| Triangle (△) ou R2       | Botão direito          | BTN_RIGHT     |
++| Triangle () ou R2       | Botão direito          | BTN_RIGHT     |
+ | R3                       | Botão do meio          | BTN_MIDDLE    |
+-| Circle (○)               | Enter                  | KEY_ENTER     |
++| Circle ()               | Enter                  | KEY_ENTER     |
+ | Square (□)               | Esc                    | KEY_ESC       |
+ | D-pad up/down/left/right | Setas do teclado       | KEY_*         |
+ | Analógico esquerdo       | Movimento              | REL_X/REL_Y   |
+diff --git a/src/hefesto/tui/widgets/__init__.py b/src/hefesto/tui/widgets/__init__.py
+index cfc323b..9ee24a1 100644
+--- a/src/hefesto/tui/widgets/__init__.py
++++ b/src/hefesto/tui/widgets/__init__.py
+@@ -87,14 +87,14 @@ class BatteryMeter(Static):
+     @staticmethod
+     def _icon_for_level(value: int) -> str:
+         if value >= 80:
+-            return "▮▮▮▮"
++            return ""
+         if value >= 60:
+-            return "▮▮▮▯"
++            return ""
+         if value >= 40:
+-            return "▮▮▯▯"
++            return ""
+         if value >= 20:
+-            return "▮▯▯▯"
+-        return "▯▯▯▯"
++            return ""
++        return ""
+ 
+ 
+ class StickPreview(Static):
+diff --git a/tests/unit/test_daemon_status_initial.py b/tests/unit/test_daemon_status_initial.py
+index 97dbea1..66034f8 100644
+--- a/tests/unit/test_daemon_status_initial.py
++++ b/tests/unit/test_daemon_status_initial.py
+@@ -12,11 +12,11 @@ BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Daemon (e a aba Status) mostrava
+ Fix coberto por estes testes:
+ 
+   - Cenário 1 (daemon ativo): após ``install_daemon_tab``, o label final
+-    mostra ``online_systemd`` (verde, "● Online").
++    mostra ``online_systemd`` (verde, " Online").
+   - Cenário 2 (daemon inativo): o label final mostra ``offline``
+-    (vermelho, "○ Offline") — nunca "Iniciando...".
++    (vermelho, " Offline") — nunca "Iniciando...".
+   - Cenário 3 (systemctl não responde / falha): durante a janela em que o
+-    worker ainda está rodando, o label mostra "● Consultando..." cinza em
++    worker ainda está rodando, o label mostra " Consultando..." cinza em
+     vez do falso-negativo "Offline".
+ 
+ Usa stubs de ``gi`` idênticos aos de ``test_daemon_status_matrix.py``.
+@@ -230,7 +230,7 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
+ 
+     Após `install_daemon_tab`, o worker roda imediatamente (executor síncrono),
+     o `GLib.idle_add` (stub) aplica o resultado e o label final mostra
+-    "● Online" verde — nunca passa por "Offline".
++    " Online" verde — nunca passa por "Offline".
+     """
+     _patch_installer_none(monkeypatch)
+     _patch_executor_immediate(monkeypatch)
+@@ -264,7 +264,7 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
+ ) -> None:
+     """Cenário 2: daemon inativo (systemd inactive + sem processo).
+ 
+-    Após `install_daemon_tab`, o label final é "○ Offline" vermelho — nunca
++    Após `install_daemon_tab`, o label final é " Offline" vermelho — nunca
+     fica preso em "Iniciando..." nem no estado "Consultando..." transitório.
+     """
+     _patch_installer_none(monkeypatch)
+diff --git a/tests/unit/test_daemon_status_matrix.py b/tests/unit/test_daemon_status_matrix.py
+index 5108b5f..3a95e85 100644
+--- a/tests/unit/test_daemon_status_matrix.py
++++ b/tests/unit/test_daemon_status_matrix.py
+@@ -272,7 +272,7 @@ def test_offline_label_vermelho(monkeypatch: pytest.MonkeyPatch) -> None:
+     assert "#d33" in host._label.markup
+     assert "Offline" in host._label.markup
+     # Glifo circulo vazio (U+25CB) deve estar presente.
+-    assert "○" in host._label.markup or "○" in host._label.markup
++    assert "" in host._label.markup or "" in host._label.markup
+ 
+ 
+ def test_online_avulso_label_amarelo(monkeypatch: pytest.MonkeyPatch) -> None:
+diff --git a/tests/unit/test_status_actions_reconnect.py b/tests/unit/test_status_actions_reconnect.py
+index 837a247..5edb8b0 100644
+--- a/tests/unit/test_status_actions_reconnect.py
++++ b/tests/unit/test_status_actions_reconnect.py
+@@ -137,7 +137,7 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
+     assert host._consecutive_failures == 1
+     header = host.builder.get_object("header_connection")
+     assert "Tentando Reconectar" in header.markup
+-    assert "◐" in header.markup  # U+25D0, não emoji
++    assert "" in header.markup  # U+25D0, não emoji
+     assert "#d90" in header.markup  # laranja canônico
+ 
+ 
+@@ -148,7 +148,7 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
+     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
+     header = host.builder.get_object("header_connection")
+     assert "Daemon Offline" in header.markup
+-    assert "○" in header.markup  # U+25CB
++    assert "" in header.markup  # U+25CB
+     assert "#d33" in header.markup  # vermelho canônico
+ 
+ 
+@@ -178,7 +178,7 @@ def test_reconnecting_markup_uses_geometric_shape_not_emoji(host: _Host) -> None
+     """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos."""
+     host._update_reconnect_state(None)
+     header = host.builder.get_object("header_connection")
+-    assert "◐" in header.markup
++    assert "" in header.markup
+     # Defesa contra regressão: blocos de emoji coloridos não podem aparecer.
+     for char in header.markup:
+         assert ord(char) < 0x1F000, f"emoji encontrado: {char!r}"
+diff --git a/tests/unit/test_tui_widgets.py b/tests/unit/test_tui_widgets.py
+index 5d460d1..f96e457 100644
+--- a/tests/unit/test_tui_widgets.py
++++ b/tests/unit/test_tui_widgets.py
+@@ -58,11 +58,11 @@ class TestBatteryMeter:
+         assert "CHG" in rendered
+ 
+     def test_icon_bateria_varia_com_nivel(self):
+-        assert BatteryMeter._icon_for_level(100) == "▮▮▮▮"
+-        assert BatteryMeter._icon_for_level(70) == "▮▮▮▯"
+-        assert BatteryMeter._icon_for_level(50) == "▮▮▯▯"
+-        assert BatteryMeter._icon_for_level(30) == "▮▯▯▯"
+-        assert BatteryMeter._icon_for_level(5) == "▯▯▯▯"
++        assert BatteryMeter._icon_for_level(100) == ""
++        assert BatteryMeter._icon_for_level(70) == ""
++        assert BatteryMeter._icon_for_level(50) == ""
++        assert BatteryMeter._icon_for_level(30) == ""
++        assert BatteryMeter._icon_for_level(5) == ""
+ 
+     def test_valor_fora_de_range_satura(self):
+         m = BatteryMeter(150)
