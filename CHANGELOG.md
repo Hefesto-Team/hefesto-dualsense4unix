@@ -84,12 +84,19 @@ Sem quebras; tudo retrocompatível com v2.0.0.
   passar por `validar-acentuacao.py`, `check_anonymity.sh` e
   `ruff`. Rodar `.venv/bin/pre-commit install` em clones novos.
 
-### Sprints consolidadas (9)
+### Sprints consolidadas (7 MERGED + 2 PROTOCOL_READY)
+
+**MERGED** (código/config executado e validado):
 CHORE-ACENTUACAO-STRICT-HOOK-01 · PROFILE-SLUG-SEPARATION-01 ·
 SCHEMA-MULTI-POSITION-PARAMS-01 · SMOKE-DEB-INSTALL-CI-01 ·
 SMOKE-FLATPAK-BUILD-CI-01 · QUICKSTART-PROFILES-SCREENSHOT-01 ·
-FEAT-FIRMWARE-UPDATE-PHASE1-01 · HARDWARE-VALIDATION-PROTOCOL-01 ·
 AUDIT-V2-COMPLETE-01.
+
+**PROTOCOL_READY** (documento entregue, execução humana pendente — lição L-21-6):
+FEAT-FIRMWARE-UPDATE-PHASE1-01 (pesquisa de DFU) ·
+HARDWARE-VALIDATION-PROTOCOL-01 (checklist de 21 itens).
+
+Os 2 docs ganham seção `## Execuções registradas` (vazia) em `docs/research/firmware-update-protocol.md` e `docs/process/CHECKLIST_HARDWARE_V2.md`. Virar MERGED requer ≥1 execução humana registrada nessas tabelas.
 
 ### Known issues
 Nenhum. Três P2 documentais/polish registrados em

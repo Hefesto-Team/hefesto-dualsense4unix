@@ -289,4 +289,16 @@ Se durante a captura for descoberto que algum projeto upstream obscuro (fork de 
 
 ---
 
+## Execuções registradas
+
+Esta seção recebe registros cada vez que um humano com hardware físico executar parte da metodologia descrita acima (captura usbmon, comparação de reports, validação de hipóteses). Enquanto estiver vazia, a sprint `FEAT-FIRMWARE-UPDATE-PHASE1-01` permanece em `PROTOCOL_READY` — pesquisa entregue, dívida de execução em aberto (lição L-21-6).
+
+Formato: `| data | quem | etapa | resultado | artefatos |`.
+
+| Data | Quem | Etapa | Resultado | Artefatos (capturas, diffs, etc.) |
+|---|---|---|---|---|
+| _(nenhum ainda)_ | — | — | — | — |
+
+---
+
 *"A forja não revela o ferreiro. Só a espada."*
