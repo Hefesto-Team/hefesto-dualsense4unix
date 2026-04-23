@@ -339,11 +339,31 @@ Updates melhoram compatibilidade com Android/iOS/Switch 2. Hefesto em Linux perm
 - **Fonte oficial:** https://play.google.com/store/apps/details?id=com.playstation.remoteplay
 - Requer DualSense com **firmware >= 0x0203** (mencionado em várias release notes 2023-2024).
 
-### 8.3 Casos concretos encontrados
+### 8.3 Histórico Android compat — achado adicional
 
-**WIP — pesquisa adicional pendente.** Próximas queries:
-- Reddit /r/DualSense "android compatibility firmware version"
-- XDA developers dualsense android
+| Data | Evento |
+|---|---|
+| Nov/2021 | PS Remote Play app 4.6.0 adiciona suporte a DualSense em Android 12 |
+| Nov/2021 | iPhone suporta DualSense desde iOS 14.5 (antes do Android) |
+| 2023-2024 | Android Police e TechRadar cobrem limitações: **adaptive triggers e haptic NÃO funcionam em mobile**; só input básico + rumble simples |
+| Jul/2025 | PS5 system update permite **pareamento de até 4 dispositivos** simultâneos; switch via combo de botões do controle |
+
+**Implicação concreta para o usuário do Hefesto:** o usuário quer firmware update para Android. Mesmo após update mais recente (0x0630+), adaptive triggers **permanecem desabilitados em Android por limitação da plataforma, não do controle**. Firmware update ajuda em:
+
+- Estabilidade Bluetooth em sessão longa (Android firmware antigo desconecta).
+- Compatibilidade com app novo (ex: Remote Play 4.6+ requer firmware >= XX).
+- Multi-device switching (feature 2025 pode exigir firmware recente).
+
+Não ajuda em:
+- Adaptive triggers em Android (limitação do Android, não do controle).
+- Haptic feedback em mobile (mesma razão).
+
+**Fontes:**
+- https://android.gadgethacks.com/news/playstations-remote-play-app-now-compatible-with-dualsense-controllers-android-12-0384914/
+- https://www.playstation.com/en-us/support/hardware/pair-dualsense-controller-bluetooth/
+- https://blog.playstation.com/2025/07/23/new-ps5-system-update-beta-previews-dualsense-wireless-controller-pairing-across-multiple-devices/
+- https://www.gamespot.com/articles/ps5-dualsense-controllers-now-support-remote-play-on-android/1100-6498142/
+- https://www.engadget.com/playstation-remote-play-app-android-12-ps5-dualsense-dualshock-4-145559843.html
 
 ## 9. Lacunas de conhecimento (só hardware resolve)
 
