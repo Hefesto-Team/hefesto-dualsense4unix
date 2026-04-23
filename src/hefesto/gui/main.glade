@@ -1181,7 +1181,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
-                          <!-- GtkScale substitui SpinButton — range 0-100, step 5 -->
+                          <!-- GtkScale substitui SpinButton — range 0-100, step 5.
+                               H6 (UI-PROFILES-LAYOUT-POLISH-01): marks 0/50/100 no
+                               bottom dão referência visual dos extremos. -->
                           <object class="GtkScale" id="profile_priority_scale">
                             <property name="adjustment">profile_priority_adj</property>
                             <property name="draw-value">True</property>
@@ -1189,6 +1191,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="value-pos">right</property>
                             <property name="hexpand">True</property>
                             <property name="tooltip-text">Quanto maior, mais prioritário que outros perfis (0-100)</property>
+                            <marks>
+                              <mark value="0" position="bottom">0</mark>
+                              <mark value="50" position="bottom">50</mark>
+                              <mark value="100" position="bottom">100</mark>
+                            </marks>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                         </child>
