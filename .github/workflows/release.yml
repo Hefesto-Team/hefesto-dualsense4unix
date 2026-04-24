@@ -113,7 +113,7 @@ jobs:
 
   deb-install-smoke:
     name: Smoke install do .deb
-    # Historico de iteracoes:
+    # Histórico de iterações:
     # - Sprint 74: runs-on ubuntu-24.04, presumiu pydantic v2 no apt. FALHOU.
     # - Sprint 79.1: runs-on ubuntu-22.04 + pip install pydantic>=2. FALHOU
     #   em v2.2.2 por structlog/typer/platformdirs TAMBEM velhos no Jammy apt.

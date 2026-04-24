@@ -5,6 +5,22 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Corrigido
+- **Job `acentuacao` do `ci.yml` vermelho em `main` desde v2.2.1**
+  (BUG-CI-ACENTUACAO-REGRESSION-01): 6 violações pré-existentes
+  travavam o gate de acentuação PT-BR. 2 em comentário do
+  `release.yml:116` (`Historico`/`iteracoes` → `Histórico`/`iterações`),
+  2 em string literals de `tests/unit/test_firmware_updater.py:66,119`
+  (`tambem` → `também`, `generico`/`binario` → `genérico`/`binário`),
+  2 em identifier Python `conteudo` em
+  `tests/unit/test_validar_acentuacao_glyphs.py:145-146` (renomeado
+  para `texto_final` para evitar falso positivo — o validador não
+  ignora identifiers, o que seria over-engineering para 2
+  ocorrências). `python3 scripts/validar-acentuacao.py --all` passa
+  com exit 0. Nota: a spec original dizia 10 violações, mas o
+  release.yml foi parcialmente reescrito pelos fixes da v2.2.2 e a
+  contagem real baixou para 6 — spec atualizada.
+
 ## [2.2.2] — 2026-04-24
 
 Patch release pós-v2.2.1. Corrige o bug que obrigou upload manual na
