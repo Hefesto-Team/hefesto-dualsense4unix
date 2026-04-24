@@ -225,7 +225,7 @@ class IpcServer(IpcHandlersMixin):
                     writer.write(response + b"\n")
                     await writer.drain()
         except Exception as exc:
-            logger.warning("ipc_client_error", err=str(exc))
+            logger.warning("ipc_client_error", err=str(exc), exc_info=True)
         finally:
             with contextlib.suppress(Exception):
                 writer.close()

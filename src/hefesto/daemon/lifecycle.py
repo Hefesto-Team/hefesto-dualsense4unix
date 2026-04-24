@@ -342,7 +342,7 @@ class Daemon:
             try:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:
-                logger.warning("poll_read_failed", err=str(exc))
+                logger.warning("poll_read_failed", err=str(exc), exc_info=True)
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
                     from hefesto.daemon.connection import reconnect
