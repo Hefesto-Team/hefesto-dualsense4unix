@@ -134,13 +134,14 @@ jobs:
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
-      - name: Instalar pydantic v2 via pip (Noble apt tem v1.10)
-        # Noble 24.04 apt: typer 0.9, structlog 24.1, platformdirs 4 modernos,
-        # so pydantic continua 1.10.14 — seguir padrao da 79.1 injetando
-        # via pip --user. --break-system-packages necessario em Noble
-        # (PEP 668: Python system-managed, exige flag para permitir pip).
+      - name: Instalar pydantic v2 + typer moderno via pip
+        # Noble 24.04 apt: pydantic 1.10.14 (precisa v2), typer 0.9.0
+        # (precisa 0.12+ para PEP 604 'int | None' em cli/app.py).
+        # Empirico 2026-04-24 (docker ubuntu:24.04): pydantic>=2 + typer>=0.12
+        # + deps apt = hefesto CLI carrega, 'hefesto version' imprime 2.2.2.
+        # --break-system-packages: Noble e PEP 668.
         run: |
-          python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0'
+          python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0' 'typer>=0.12'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
@@ -148,12 +149,14 @@ jobs:
       - name: Validar binário hefesto
         run: |
           which hefesto
-          # Expor pydantic v2 do pip --user para o hefesto (instalado em
-          # /usr/lib/python3/dist-packages). PYTHONPATH coloca o user site
-          # ANTES do dist-packages para o import encontrar a v2 primeiro.
+          # Expor pydantic v2 + typer 0.12+ do pip --user para o hefesto
+          # (instalado em /usr/lib/python3/dist-packages). PYTHONPATH coloca o
+          # user site ANTES do dist-packages para os imports resolverem as
+          # versões modernas primeiro. Subcomando correto e 'hefesto version',
+          # não '--version' (não existe como top-level option).
           USER_SITE="$(python3 -m site --user-site)"
           echo "USER_SITE=$USER_SITE"
-          PYTHONPATH="$USER_SITE" hefesto --version
+          PYTHONPATH="$USER_SITE" hefesto version
       - name: Validar binário hefesto-gui
         run: |
           which hefesto-gui
