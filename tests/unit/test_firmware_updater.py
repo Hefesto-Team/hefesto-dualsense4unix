@@ -63,7 +63,7 @@ class TestParseInfoOutput:
         assert info.update_version == ""
 
     def test_output_com_linhas_extra(self) -> None:
-        output = SAMPLE_INFO_OUTPUT + "Extra info: ignorada\nOutra coisa: tambem\n"
+        output = SAMPLE_INFO_OUTPUT + "Extra info: ignorada\nOutra coisa: também\n"
         info = _parse_info_output(output)
         assert info.update_version == "0630"
 
@@ -116,7 +116,7 @@ class TestGetInfo:
         updater = FirmwareUpdater()
         with patch.object(updater, "is_available", return_value=True), patch(
             "hefesto.integrations.firmware_updater.subprocess.run",
-            return_value=self._proc(2, "", "Erro generico do binario"),
+            return_value=self._proc(2, "", "Erro genérico do binário"),
         ), pytest.raises(FirmwareError):
             updater.get_info()
 

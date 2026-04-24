@@ -142,8 +142,8 @@ class TestCorrigirArquivoNaoTocaGlyph:
 
             validator.corrigir_arquivo(arq, tmp_path)
 
-            conteudo = arq.read_text(encoding="utf-8")
-            assert glyph in conteudo, (
+            texto_final = arq.read_text(encoding="utf-8")
+            assert glyph in texto_final, (
                 "Whitelist ADR-011 deveria bloquear remoção mesmo com "
                 "par malicioso em _CORRECOES"
             )
