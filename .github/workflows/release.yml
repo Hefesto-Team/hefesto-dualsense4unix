@@ -113,10 +113,15 @@ jobs:
 
   deb-install-smoke:
     name: Smoke install do .deb
-    # ubuntu-24.04 por BUG-DEB-PYDANTIC-V2-UBUNTU-22-01:
-    # Ubuntu 22.04 entrega python3-pydantic 1.9.x; codigo usa ConfigDict (v2).
-    # .deb continua buildado em 22.04 (compat maxima); smoke valida em 24.04.
-    runs-on: ubuntu-24.04
+    # BUG-DEB-SMOKE-PYDANTIC-V2-NOBLE-01: validacao empirica 2026-04-24
+    # confirmou que Noble (24.04) tambem entrega python3-pydantic 1.10.x,
+    # nao v2 como a sprint 74 assumiu. Ubuntu plucky (25.04) tem v2 no apt
+    # mas nao esta disponivel como runner padrao. Solucao: continuar em
+    # 22.04 (mesma release do build) e injetar pydantic>=2 via pip ANTES
+    # do apt install. control nao declara mais (>= 2.0) para que apt
+    # resolva o dep com o python3-pydantic 1.x do sistema; runtime do
+    # Hefesto detecta v1 e avisa (ver src/hefesto/__init__.py).
+    runs-on: ubuntu-22.04
     needs: [build, deb]
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -128,6 +133,9 @@ jobs:
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
+      - name: Instalar pydantic v2 via pip (necessario em 22.04/24.04)
+        run: |
+          python3 -m pip install --user --upgrade 'pydantic>=2.0'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
@@ -135,13 +143,19 @@ jobs:
       - name: Validar binário hefesto
         run: |
           which hefesto
-          hefesto --version
+          # Expor pydantic v2 do pip --user para o hefesto (instalado em
+          # /usr/lib/python3/dist-packages). PYTHONPATH coloca o user site
+          # ANTES do dist-packages para o import encontrar a v2 primeiro.
+          USER_SITE="$(python3 -m site --user-site)"
+          echo "USER_SITE=$USER_SITE"
+          PYTHONPATH="$USER_SITE" hefesto --version
       - name: Validar binário hefesto-gui
         run: |
           which hefesto-gui
           # --help em runner headless pode falhar por falta de DISPLAY/GTK;
           # o critério é localizar o binário. Exit não-zero aqui é aceitável.
-          hefesto-gui --help || echo "hefesto-gui --help retornou não-zero em headless (esperado)"
+          USER_SITE="$(python3 -m site --user-site)"
+          PYTHONPATH="$USER_SITE" hefesto-gui --help || echo "hefesto-gui --help retornou não-zero em headless (esperado)"
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto
 
