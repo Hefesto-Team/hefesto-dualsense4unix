@@ -8,6 +8,11 @@
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
+#   --force-xwayland      grava GDK_BACKEND=x11 no .desktop (recomendado
+#                         para COSMIC alpha, onde o portal Wayland ainda
+#                         não implementa GetActiveWindow). Ativada
+#                         automaticamente se XDG_CURRENT_DESKTOP casa
+#                         COSMIC e o usuário confirma via prompt.
 #
 # Default: unit do daemon é COPIADA mas NÃO habilitada. Hotplug-GUI idem.
 # Opt-in via prompt interativo ou flags acima (ver BUG-MULTI-INSTANCE-01).
@@ -31,6 +36,7 @@ SKIP_SYSTEMD=0
 SKIP_HOTPLUG_GUI=0
 ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
+FORCE_XWAYLAND=0
 AUTO_YES=0
 
 for arg in "$@"; do
@@ -40,14 +46,25 @@ for arg in "$@"; do
         --no-hotplug-gui)     SKIP_HOTPLUG_GUI=1 ;;
         --enable-autostart)   ENABLE_AUTOSTART=1 ;;
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
+        --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
+
+# Detecta COSMIC alpha: XDG_CURRENT_DESKTOP contém "COSMIC" (case-insensitive).
+# Se detectado e usuário não passou --force-xwayland explícito, pergunta
+# interativamente se quer ativar (opt-in). O fallback XWayland faz a GUI
+# rodar sob XlibBackend em vez de depender do portal Wayland — até COSMIC
+# 1.0 implementar org.freedesktop.portal.Window::GetActiveWindow.
+DESKTOP_IS_COSMIC=0
+if [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
+    DESKTOP_IS_COSMIC=1
+fi
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -198,19 +215,54 @@ mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 
+# Detecção COSMIC → prompt de XWayland (opt-in). Usuário pode pré-aprovar
+# via --force-xwayland. Se não é COSMIC e a flag não foi passada, segue
+# sem override (comportamento histórico).
+if [[ "${DESKTOP_IS_COSMIC}" -eq 1 && "${FORCE_XWAYLAND}" -eq 0 ]]; then
+    printf '\n'
+    printf '      COSMIC detectado (XDG_CURRENT_DESKTOP=%s).\n' \
+        "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
+    printf '      COSMIC alpha ainda não implementa o portal Wayland\n'
+    printf '      org.freedesktop.portal.Window::GetActiveWindow — autoswitch\n'
+    printf '      de perfil por janela ativa não funciona nativamente.\n'
+    printf '\n'
+    printf '      Recomendação: forçar GTK a rodar sob XWayland via\n'
+    printf '      GDK_BACKEND=x11 no atalho. Autoswitch passa a funcionar\n'
+    printf '      para janelas XWayland (Steam, jogos Proton).\n\n'
+    ask_yn "rodar a GUI sob XWayland (GDK_BACKEND=x11)?" "${AUTO_YES}" "y"
+    [[ "${REPLY,,}" =~ ^y ]] && FORCE_XWAYLAND=1
+fi
+
+if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
+    _EXEC_LINE="env GDK_BACKEND=x11 ${ROOT_DIR}/run.sh"
+    printf '      .desktop com GDK_BACKEND=x11 (fallback XWayland)\n'
+else
+    _EXEC_LINE="${ROOT_DIR}/run.sh"
+fi
+
 cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Hefesto
 GenericName=DualSense Controller
 Comment=Daemon de gatilhos adaptativos para DualSense no Linux
-Exec=${ROOT_DIR}/run.sh
+Exec=${_EXEC_LINE}
 Icon=${APP_ID}
 Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=true
 StartupWMClass=hefesto
 DESKTOP
+
+# Dica de wlrctl para quem está em compositor Wayland puro:
+# o backend WlrctlBackend (v2.4.1+) usa esse CLI como fallback do portal.
+if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]] && ! command -v wlrctl >/dev/null 2>&1; then
+    printf '      dica: instalar '\''wlrctl'\'' habilita autoswitch mesmo\n'
+    printf '            sem XWayland via wlr-foreign-toplevel-management.\n'
+    printf '            Ubuntu 24.04+: sudo apt install wlrctl\n'
+    printf '            Arch:          sudo pacman -S wlrctl\n'
+    printf '            Fedora:        sudo dnf install wlrctl\n'
+fi
 
 command -v desktop-file-validate >/dev/null 2>&1 \
     && desktop-file-validate "${DESKTOP_TARGET}" >/dev/null 2>&1 || true
