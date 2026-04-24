@@ -3,7 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Unreleased] — v2.2.2 em preparação
+## [Unreleased]
+
+## [2.2.2] — 2026-04-24
+
+Patch release pós-v2.2.1. Corrige o bug que obrigou upload manual na
+release anterior (`deb-install-smoke` falhando por pydantic v1 no apt
+de Jammy/Noble) e blinda o pipeline com um gate que detecta drift
+entre o fallback hardcoded de `src/hefesto/__init__.py` e a versão
+canônica em `pyproject.toml`. Objetivo substantivo: v2.2.2 é o
+**primeiro release totalmente automático desde v0.1.0** — zero
+intervenção humana após `git push --tags`.
 
 ### Corrigido
 - **Smoke install do `.deb` passa em Ubuntu 22.04 e 24.04**
@@ -25,6 +35,19 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
     site primeiro, garantindo que `import pydantic` resolva a v2.
   README atualizado com o novo caminho canônico (2 comandos:
   `pip install --user pydantic>=2` + `apt install ./hefesto_*.deb`).
+
+### Infraestrutura
+- **Gate `version-sync` no CI** (CHORE-VERSION-SYNC-GATE-01): novo job
+  em `.github/workflows/ci.yml` que falha se o fallback `__version__`
+  de `src/hefesto/__init__.py` divergir de `pyproject.toml
+  [project].version`. Regex inline (tomllib + re.search) — YAGNI parser
+  AST. Motivação: BUG-APPIMAGE-VERSION-NAME-01 revelou que o fallback
+  ficou hardcoded em "1.0.0" por 3 releases enquanto `pyproject`
+  avançava até 2.2.0; como o `.deb` via `cp -r` não tem METADATA
+  importlib, o fallback é a última linha de defesa — se divergir,
+  usuários vêem versão errada silenciosamente. Proof-of-work validou
+  baseline (2.2.2 == 2.2.2 passa) e drift simulado (9.9.9 != 2.2.2
+  detectado e rejeitado).
 
 ### Processo
 - **L-21-7 consolidada no VALIDATOR_BRIEF.md** (seção `[PROCESS]
