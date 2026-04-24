@@ -59,7 +59,11 @@ async def start_autoswitch(daemon: Any) -> None:
     from hefesto.profiles.autoswitch import AutoSwitcher
     from hefesto.profiles.manager import ProfileManager
 
-    manager = ProfileManager(controller=daemon.controller, store=daemon.store)
+    manager = ProfileManager(
+        controller=daemon.controller,
+        store=daemon.store,
+        keyboard_device=getattr(daemon, "_keyboard_device", None),
+    )
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
         window_reader=get_active_window_info,

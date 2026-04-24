@@ -41,7 +41,11 @@ async def restore_last_profile(daemon: Any) -> None:
     if not name:
         return
     try:
-        manager = ProfileManager(controller=daemon.controller, store=daemon.store)
+        manager = ProfileManager(
+            controller=daemon.controller,
+            store=daemon.store,
+            keyboard_device=getattr(daemon, "_keyboard_device", None),
+        )
         await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)
     except Exception as exc:
