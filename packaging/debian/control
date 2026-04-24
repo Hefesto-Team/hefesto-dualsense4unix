@@ -8,7 +8,7 @@ Depends: python3 (>= 3.10), python3-gi, python3-gi-cairo, gir1.2-gtk-3.0,
          python3-pydantic, python3-structlog, python3-typer,
          python3-platformdirs, python3-rich, python3-evdev, python3-xlib,
          python3-filelock
-Recommends: python3-uinput
+Recommends: python3-uinput, wlrctl
 Maintainer: Hefesto Project <noreply@example.com>
 Description: Daemon Linux para gatilhos adaptativos do controle DualSense
  Hefesto e um daemon user-level que habilita os gatilhos adaptativos do
@@ -25,6 +25,13 @@ Description: Daemon Linux para gatilhos adaptativos do controle DualSense
  Em Ubuntu 25.04 (Plucky) ou derivadas com python3-pydantic 2.x
  no apt, nenhuma acao adicional e necessaria. Runtime imprime aviso
  via warnings.warn se pydantic 1.x for detectado.
+ .
+ Em compositores Wayland puros que ainda nao implementam o portal
+ org.freedesktop.portal.Window::GetActiveWindow (ex: Pop!_OS COSMIC
+ alpha), o pacote wlrctl (Recommends) habilita autoswitch de perfil
+ via protocolo wlr-foreign-toplevel-management. Cobre tambem Sway,
+ Hyprland, niri e river. Se wlrctl nao estiver disponivel no apt,
+ o fallback e rodar a GUI sob XWayland via GDK_BACKEND=x11.
  .
  Apos instalacao, habilite o daemon com:
    systemctl --user enable --now hefesto.service

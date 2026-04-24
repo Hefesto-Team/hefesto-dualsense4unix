@@ -215,22 +215,62 @@ mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 
-# Detecção COSMIC → prompt de XWayland (opt-in). Usuário pode pré-aprovar
-# via --force-xwayland. Se não é COSMIC e a flag não foi passada, segue
-# sem override (comportamento histórico).
-if [[ "${DESKTOP_IS_COSMIC}" -eq 1 && "${FORCE_XWAYLAND}" -eq 0 ]]; then
+# Detecção COSMIC → dois caminhos complementares para autoswitch funcionar:
+#
+#   1. wlrctl (recomendado): cobre TODOS os apps via protocolo
+#      wlr-foreign-toplevel-management. WlrctlBackend detecta automaticamente
+#      se o binário está no PATH (src/hefesto/integrations/window_backends/wlr_toplevel.py).
+#
+#   2. XWayland (fallback): força GTK a rodar sob XWayland via GDK_BACKEND=x11.
+#      XlibBackend passa a ver janelas XWayland (Steam, Proton).
+#      Limitação: apps Wayland nativos ficam invisíveis.
+#
+# Os dois são compatíveis — o cascade Wayland (src/hefesto/integrations/window_detect.py)
+# tenta portal → wlrctl → None, e XWayland roda paralelo via XlibBackend.
+#
+# Auto-aplicação: sob --yes/-y, instala wlrctl (se disponível no apt) + ativa
+# XWayland. Sem --yes, pergunta separadamente cada um.
+if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     printf '\n'
     printf '      COSMIC detectado (XDG_CURRENT_DESKTOP=%s).\n' \
         "${XDG_CURRENT_DESKTOP:-$XDG_SESSION_DESKTOP}"
     printf '      COSMIC alpha ainda não implementa o portal Wayland\n'
-    printf '      org.freedesktop.portal.Window::GetActiveWindow — autoswitch\n'
-    printf '      de perfil por janela ativa não funciona nativamente.\n'
-    printf '\n'
-    printf '      Recomendação: forçar GTK a rodar sob XWayland via\n'
-    printf '      GDK_BACKEND=x11 no atalho. Autoswitch passa a funcionar\n'
-    printf '      para janelas XWayland (Steam, jogos Proton).\n\n'
-    ask_yn "rodar a GUI sob XWayland (GDK_BACKEND=x11)?" "${AUTO_YES}" "y"
-    [[ "${REPLY,,}" =~ ^y ]] && FORCE_XWAYLAND=1
+    printf '      org.freedesktop.portal.Window::GetActiveWindow.\n\n'
+
+    # Caminho 1: wlrctl via apt (se não estiver no PATH já).
+    if ! command -v wlrctl >/dev/null 2>&1; then
+        printf '      Caminho recomendado: instalar wlrctl (apt) — cobre qualquer\n'
+        printf '      app Wayland (não só XWayland). Pacote no Ubuntu 24.04+.\n\n'
+        ask_yn "instalar wlrctl via apt agora?" "${AUTO_YES}" "y"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            if command -v sudo >/dev/null 2>&1; then
+                if run_apt wlrctl 2>/dev/null; then
+                    printf '      wlrctl instalado (%s)\n' "$(command -v wlrctl)"
+                else
+                    warn "wlrctl não está nos repos deste sistema (Ubuntu <24.04?)"
+                    printf '      alternativas:\n'
+                    printf '        - Arch:   sudo pacman -S wlrctl\n'
+                    printf '        - Fedora: sudo dnf install wlrctl\n'
+                    printf '        - fonte:  https://git.sr.ht/~brocellous/wlrctl\n'
+                fi
+            else
+                warn "sudo ausente — rode manualmente: sudo apt install wlrctl"
+            fi
+        fi
+    else
+        printf '      wlrctl já instalado (%s) — WlrctlBackend vai detectar.\n' \
+            "$(command -v wlrctl)"
+    fi
+
+    # Caminho 2: XWayland (fallback, complementar). Se usuário passou
+    # --force-xwayland via CLI, pula o prompt.
+    if [[ "${FORCE_XWAYLAND}" -eq 0 ]]; then
+        printf '\n      Caminho alternativo: rodar a GUI sob XWayland. Cobre só\n'
+        printf '      janelas XWayland (Steam, Proton), mas não precisa wlrctl.\n\n'
+        ask_yn "ativar GDK_BACKEND=x11 no atalho (recomendado como complemento)?" \
+            "${AUTO_YES}" "y"
+        [[ "${REPLY,,}" =~ ^y ]] && FORCE_XWAYLAND=1
+    fi
 fi
 
 if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
@@ -254,15 +294,6 @@ StartupNotify=true
 StartupWMClass=hefesto
 DESKTOP
 
-# Dica de wlrctl para quem está em compositor Wayland puro:
-# o backend WlrctlBackend (v2.4.1+) usa esse CLI como fallback do portal.
-if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]] && ! command -v wlrctl >/dev/null 2>&1; then
-    printf '      dica: instalar '\''wlrctl'\'' habilita autoswitch mesmo\n'
-    printf '            sem XWayland via wlr-foreign-toplevel-management.\n'
-    printf '            Ubuntu 24.04+: sudo apt install wlrctl\n'
-    printf '            Arch:          sudo pacman -S wlrctl\n'
-    printf '            Fedora:        sudo dnf install wlrctl\n'
-fi
 
 command -v desktop-file-validate >/dev/null 2>&1 \
     && desktop-file-validate "${DESKTOP_TARGET}" >/dev/null 2>&1 || true
