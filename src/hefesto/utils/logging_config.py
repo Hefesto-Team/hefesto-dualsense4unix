@@ -17,10 +17,20 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
-from structlog.typing import Processor
+
+if TYPE_CHECKING:
+    from structlog.typing import Processor
+else:
+    # structlog 22.1+ expõe .typing; Ubuntu 22.04 apt empacota 21.x com só
+    # .types (BUG-DEB-SMOKE-STRUCTLOG-TYPING-02). Fallback runtime preserva
+    # compatibilidade sem exigir pip install user.
+    try:
+        from structlog.typing import Processor
+    except ImportError:
+        from structlog.types import Processor
 
 _configured = False
 

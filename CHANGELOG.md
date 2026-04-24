@@ -16,6 +16,20 @@ canônica em `pyproject.toml`. Objetivo substantivo: v2.2.2 é o
 intervenção humana após `git push --tags`.
 
 ### Corrigido
+- **`structlog.typing` ausente no Jammy apt quebrava `deb-install-smoke`**
+  (BUG-DEB-SMOKE-STRUCTLOG-TYPING-02): o fix 79.1 (pydantic) passou, mas
+  o workflow run `24866299294` sobre a tag `v2.2.2` expôs um segundo
+  modo de falha — `structlog.typing` só existe em `structlog >= 22.1`,
+  enquanto Ubuntu 22.04 apt entrega `python3-structlog 21.x` (só
+  `structlog.types`). Fix em 2 camadas: compat layer `try: from
+  structlog.typing import Processor / except ImportError: from
+  structlog.types import Processor` em `src/hefesto/utils/logging_config.py`
+  (usa `TYPE_CHECKING` para satisfazer mypy) e version constraint
+  `python3-structlog (>= 21.5)` em `packaging/debian/control`. Teste
+  novo `tests/unit/test_logging_compat_import.py` cobre os dois
+  caminhos via `monkeypatch.setitem(sys.modules, ...)`. L-21-7 reforçada:
+  toda dep Python do `.deb` precisa `apt-cache policy` empírico
+  individual — já saiu uma sub-diretriz para o BRIEF.
 - **Smoke install do `.deb` passa em Ubuntu 22.04 e 24.04**
   (BUG-DEB-SMOKE-PYDANTIC-V2-NOBLE-01): validação empírica em
   2026-04-24 confirmou que Noble (24.04) entrega `python3-pydantic
