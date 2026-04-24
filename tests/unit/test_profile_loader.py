@@ -236,6 +236,49 @@ def test_loader_corrida_nested_params(isolated_profiles_dir: Path):
     assert len(profile.triggers.right.params) == 10
 
 
+# ---------------------------------------------------------------------------
+# AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — sanitização de identifier
+# ---------------------------------------------------------------------------
+
+
+def test_load_profile_rejeita_path_absoluto(isolated_profiles_dir: Path):
+    """Identifier com `/` no início escaparia via Path('/dir') / '/etc/passwd'."""
+    with pytest.raises(ValueError, match="caractere proibido"):
+        load_profile("/etc/passwd")
+
+
+def test_load_profile_rejeita_parent_dir(isolated_profiles_dir: Path):
+    """Identifier com `..` escaparia via resolve() do pathlib."""
+    with pytest.raises(ValueError, match=r"caractere proibido|'\.\.'"):
+        load_profile("../../etc/passwd")
+
+
+def test_load_profile_rejeita_backslash(isolated_profiles_dir: Path):
+    """Backslash não é separador em Linux mas é reservado para defesa cross-plat."""
+    with pytest.raises(ValueError, match="caractere proibido"):
+        load_profile("..\\etc\\passwd")
+
+
+def test_load_profile_rejeita_null_byte(isolated_profiles_dir: Path):
+    """Null byte quebra syscalls e confunde parsers — sempre rejeita."""
+    with pytest.raises(ValueError, match="caractere proibido"):
+        load_profile("foo\x00bar")
+
+
+def test_load_profile_rejeita_parent_dir_puro(isolated_profiles_dir: Path):
+    """Identifier `..` puro (sem separador) também escaparia via directory / '..'."""
+    with pytest.raises(ValueError, match=r"'\.\.'"):
+        load_profile("..")
+
+
+def test_load_profile_aceita_slug_legitimo(isolated_profiles_dir: Path):
+    """Display name acentuado continua funcionando via fallback de slugify."""
+    profile = _mk_profile("shooter_pro")
+    save_profile(profile)
+    loaded = load_profile("shooter_pro")
+    assert loaded.name == "shooter_pro"
+
+
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     """Mimetiza installer copiando perfis default para profiles_dir."""
     repo_root = Path(__file__).resolve().parents[2]

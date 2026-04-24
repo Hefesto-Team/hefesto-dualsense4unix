@@ -395,3 +395,39 @@ async def test_apply_draft_rumble_aplica_policy(
     controller.set_rumble.assert_called_once_with(weak=60, strong=60)
     # Valores brutos persistidos para re-asserção do poll loop.
     assert fake_daemon.config.rumble_active == (200, 200)
+
+
+# ---------------------------------------------------------------------------
+# AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — boundary do handler profile.switch
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_profile_switch_rejeita_path_traversal_sem_leak(running_server):
+    """`profile.switch` com identifier malicioso retorna CODE_INVALID_PARAMS
+    e a mensagem de erro não revela path absoluto do sistema de arquivos.
+    """
+    _server, socket_path, _ = running_server
+    async with IpcClient.connect(socket_path) as client:
+        with pytest.raises(IpcError) as exc_info:
+            await client.call("profile.switch", {"name": "../../etc/passwd"})
+    assert exc_info.value.code == CODE_INVALID_PARAMS
+    msg = str(exc_info.value)
+    # Não pode vazar path absoluto do sistema (home, etc, tmp_path, root).
+    assert "/etc/passwd" not in msg
+    assert "/home/" not in msg
+    assert "/tmp/" not in msg
+    # Deve indicar que é problema de identifier/caractere proibido.
+    assert "proibido" in msg or "identifier" in msg or ".." in msg
+
+
+@pytest.mark.asyncio
+async def test_profile_switch_rejeita_path_absoluto_sem_leak(running_server):
+    """Identifier absoluto (começa com '/') também deve ser rejeitado limpo."""
+    _server, socket_path, _ = running_server
+    async with IpcClient.connect(socket_path) as client:
+        with pytest.raises(IpcError) as exc_info:
+            await client.call("profile.switch", {"name": "/etc/passwd"})
+    assert exc_info.value.code == CODE_INVALID_PARAMS
+    msg = str(exc_info.value)
+    assert "/etc/passwd" not in msg
