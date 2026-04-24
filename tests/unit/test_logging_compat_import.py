@@ -60,3 +60,39 @@ def test_structlog_types_tem_processor() -> None:
     from structlog.types import Processor  # type: ignore[attr-defined]
 
     assert Processor is not None
+
+
+def test_cascata_tripla_fallback_callable_quando_nem_typing_nem_types(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """structlog 20.x (Jammy apt default) não tem typing NEM types.
+
+    Valida que o 3º nível da cascata (Callable alias) é acionado quando
+    ambos os submódulos de tipo estão ausentes. Simula o cenário bloqueando
+    ambos os imports via sys.modules=None.
+    """
+    original_typing = sys.modules.pop("structlog.typing", None)
+    original_types = sys.modules.pop("structlog.types", None)
+    original_logging_config = sys.modules.pop("hefesto.utils.logging_config", None)
+
+    try:
+        monkeypatch.setitem(sys.modules, "structlog.typing", None)
+        monkeypatch.setitem(sys.modules, "structlog.types", None)
+
+        import hefesto.utils.logging_config as mod
+
+        assert hasattr(mod, "Processor"), (
+            "Cascata deveria cair no Callable alias quando typing E types faltam"
+        )
+    finally:
+        sys.modules.pop("structlog.typing", None)
+        sys.modules.pop("structlog.types", None)
+        sys.modules.pop("hefesto.utils.logging_config", None)
+        if original_typing is not None:
+            sys.modules["structlog.typing"] = original_typing
+        if original_types is not None:
+            sys.modules["structlog.types"] = original_types
+        if original_logging_config is not None:
+            sys.modules["hefesto.utils.logging_config"] = original_logging_config
+        else:
+            importlib.import_module("hefesto.utils.logging_config")
