@@ -11,6 +11,10 @@ from __future__ import annotations
 import time as _time
 from typing import Any
 
+from hefesto.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 def apply_rumble_policy(daemon: Any, weak: int, strong: int) -> tuple[int, int]:
     """Aplica multiplicador de política de rumble sobre (weak, strong).
@@ -35,7 +39,7 @@ def apply_rumble_policy(daemon: Any, weak: int, strong: int) -> tuple[int, int]:
             if ctrl is not None and ctrl.battery_pct is not None:
                 battery_pct = int(ctrl.battery_pct)
         except Exception:
-            pass
+            logger.debug("rumble_policy_state_read_fallback", exc_info=True)
 
     # Debounce auto: lê do RumbleEngine se existir.
     rumble_engine = getattr(daemon, "_rumble_engine", None)

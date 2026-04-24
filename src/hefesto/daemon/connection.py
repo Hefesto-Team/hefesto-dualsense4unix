@@ -15,8 +15,23 @@ from hefesto.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+#: Teto do backoff exponencial em segundos. Evita espera unbounded entre tentativas.
+BACKOFF_MAX_SEC: float = 30.0
+
+
 async def connect_with_retry(daemon: Any) -> None:
-    """Tenta conectar o controller com backoff. Publica CONTROLLER_CONNECTED."""
+    """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED.
+
+    AUDIT-FINDING-LOG-EXC-INFO-01:
+      - `logger.warning("controller_connect_failed", ..., exc_info=True)` preserva
+        traceback completo no log para debug. Só executa no ramo de falha.
+      - Backoff dobra após cada falha (`backoff = min(backoff * 2, BACKOFF_MAX_SEC)`).
+        Evita hot-loop consumindo CPU se hardware indisponível por período longo.
+      - Sleep interrompível via `asyncio.wait_for(stop_event.wait(), ...)`: shutdown
+        não precisa esperar o backoff atual terminar. Só ativa se há stop_event
+        configurado (via Daemon.run) e no ramo de falha — caminho feliz preserva
+        exato comportamento anterior para testes com FakeController.
+    """
     backoff = daemon.config.reconnect_backoff_sec
     while True:
         try:
@@ -26,10 +41,20 @@ async def connect_with_retry(daemon: Any) -> None:
             logger.info("controller_connected", transport=transport)
             return
         except Exception as exc:
-            logger.warning("controller_connect_failed", err=str(exc))
+            logger.warning("controller_connect_failed", err=str(exc), exc_info=True)
             if not daemon.config.auto_reconnect:
                 raise
-            await asyncio.sleep(backoff)
+            stop_event = getattr(daemon, "_stop_event", None)
+            if stop_event is not None:
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=backoff)
+                    return  # stop_event sinalizou durante o backoff — aborta.
+                except asyncio.TimeoutError:
+                    pass
+            else:
+                await asyncio.sleep(backoff)
+            # Backoff exponencial com teto.
+            backoff = min(backoff * 2, BACKOFF_MAX_SEC)
 
 
 async def restore_last_profile(daemon: Any) -> None:
@@ -49,6 +74,9 @@ async def restore_last_profile(daemon: Any) -> None:
         await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)
     except Exception as exc:
+        # Sem `exc_info=True`: este warning dispara normalmente quando o perfil
+        # persistido na sessão foi deletado/renomeado — err=str(exc) já dá o
+        # diagnóstico; traceback completo seria ruído e atrasaria o boot.
         logger.warning("last_profile_restore_failed", name=name, err=str(exc))
 
 
@@ -106,4 +134,4 @@ async def shutdown(daemon: Any) -> None:
     logger.info("daemon_stopped")
 
 
-__all__ = ["connect_with_retry", "reconnect", "restore_last_profile", "shutdown"]
+__all__ = ["BACKOFF_MAX_SEC", "connect_with_retry", "reconnect", "restore_last_profile", "shutdown"]

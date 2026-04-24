@@ -61,7 +61,7 @@ class PyDualSenseController(IController):
         try:
             self._evdev.stop()
         except Exception as exc:
-            logger.warning("falha ao parar evdev reader: %s", exc)
+            logger.warning("falha ao parar evdev reader: %s", exc, exc_info=True)
         try:
             self._ds.close()
         finally:
@@ -72,7 +72,9 @@ class PyDualSenseController(IController):
             return False
         # `ds.connected` é o canônico do pydualsense (bool); conType existe
         # mas pode estar setado mesmo depois de close.
-        return bool(getattr(self._ds, "connected", True))
+        # AUDIT-FINDING-LOG-EXC-INFO-01: default conservador `False` quando attr
+        # ausente — atributo indefinido significa estado desconhecido, não conectado.
+        return bool(getattr(self._ds, "connected", False))
 
     def read_state(self) -> ControllerState:
         ds = self._require()
@@ -88,8 +90,8 @@ class PyDualSenseController(IController):
             try:
                 if bool(getattr(ds.state, "micBtn", False)):
                     buttons.add("mic_btn")
-            except Exception:  # defensivo: state pode estar cru no primeiro tick
-                pass
+            except AttributeError:  # state cru no primeiro tick — ds.state pode faltar atributos
+                logger.debug("ds_state_mic_btn_indisponivel_evdev_path", exc_info=True)
             buttons_pressed = frozenset(buttons)
             return ControllerState(
                 battery_pct=battery,
@@ -114,8 +116,8 @@ class PyDualSenseController(IController):
         try:
             if bool(getattr(state, "micBtn", False)):
                 buttons_fallback = frozenset({"mic_btn"})
-        except Exception:
-            pass
+        except AttributeError:
+            logger.debug("ds_state_mic_btn_indisponivel_fallback_path", exc_info=True)
         return ControllerState(
             battery_pct=battery,
             l2_raw=l2_raw,

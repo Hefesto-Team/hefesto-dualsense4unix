@@ -56,7 +56,7 @@ def reassert_rumble(daemon: Any, now: float) -> None:
         if ctrl is not None and ctrl.battery_pct is not None:
             battery_pct = int(ctrl.battery_pct)
     except Exception:
-        pass
+        logger.debug("rumble_state_read_fallback", exc_info=True)
 
     mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult(
         config=cfg,
@@ -72,7 +72,7 @@ def reassert_rumble(daemon: Any, now: float) -> None:
     try:
         daemon.controller.set_rumble(weak=weak, strong=strong)
     except Exception as exc:
-        logger.warning("rumble_reassert_failed", err=str(exc))
+        logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
 
 
 class RumbleSubsystem:

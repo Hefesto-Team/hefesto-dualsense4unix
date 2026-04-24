@@ -85,6 +85,7 @@ class _PluginEntry:
                 plugin=self.plugin.name,
                 hook=hook_name,
                 erro=str(exc),
+                exc_info=True,
             )
         elapsed = time.monotonic() - t0
         if elapsed > _HOOK_WARN_MS:
@@ -175,6 +176,7 @@ class PluginsSubsystem:
                     "plugin_on_load_falhou",
                     plugin=plugin.name,
                     erro=str(exc),
+                    exc_info=True,
                 )
 
         logger.info("plugins_subsystem_started", total=len(self._entries))
