@@ -5,13 +5,17 @@ API de alto nível: lightbar RGB, 5 LEDs de jogador (bitmask) e LED do microfone
 Cobertura atual:
 - Lightbar RGB: `IController.set_led` (implementado).
 - LED do microfone: `IController.set_mic_led` (implementado — INFRA-SET-MIC-LED-01).
+  **Não é aplicado por `apply_led_settings`**: mic_led é tratado como estado
+  runtime puro (ver AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 e armadilha A-06).
+  Transições de mic_led vêm do botão físico ou de handlers IPC dedicados
+  (`udp_server` MicLED, `HotkeyManager` mic_btn), nunca de profile switch.
 - Player LEDs: `IController.set_player_leds` (implementado — player bitmask).
   Player LEDs continuam com API básica de bitmask; efeitos avançados (animação)
   dependem de sprint futura.
 
 Uso:
     from hefesto.core.led_control import LedSettings, apply_led_settings
-    apply_led_settings(controller, LedSettings(lightbar=(255, 128, 0), mic_led=True))
+    apply_led_settings(controller, LedSettings(lightbar=(255, 128, 0)))
 """
 from __future__ import annotations
 
@@ -31,7 +35,12 @@ class LedSettings:
       sobre o RGB antes de enviar ao hardware. 1.0 = sem dimming.
     - `player_leds`: lista de 5 booleanos para os indicadores inferiores
       (esquerda para direita). Padrão: todos apagados.
-    - `mic_led`: estado do LED do microfone (True=ligado).
+    - `mic_led`: **reservado / no-op em `apply_led_settings`**. Preservado no
+      dataclass por compatibilidade de API (callers antigos que instanciavam
+      `LedSettings(lightbar=..., mic_led=...)` seguem válidos), mas o valor
+      NÃO é propagado ao hardware pelo apply. Mic LED é estado runtime puro:
+      muda via botão físico ou IPC `led.mic_set` / `udp MicLED`, nunca via
+      profile switch (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01; A-06).
     """
 
     lightbar: RGB
@@ -86,19 +95,23 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
     Escala o RGB pelo `brightness_level` antes de enviar — garante que perfis
     com brilho reduzido chegam ao hardware com a intensidade correta.
 
-    Propaga também o LED do microfone via `controller.set_mic_led(settings.mic_led)`
-    (INFRA-SET-MIC-LED-01) e os 5 Player LEDs via
-    `controller.set_player_leds(settings.player_leds)`
+    Propaga os 5 Player LEDs via `controller.set_player_leds(settings.player_leds)`
     (BUG-PLAYER-LEDS-APPLY-01; armadilha A-06 fechada para player_leds).
 
     Sem esta propagação, perfis que definem `player_leds` no JSON são carregados
     pelo ProfileManager e salvos no draft, mas os bits nunca chegam ao controle:
     o autoswitch e `profile.switch` exibem a marcação correta na GUI enquanto o
     hardware segue com a configuração antiga do boot ou do último toggle manual.
+
+    **Mic LED é intencionalmente preservado**: `settings.mic_led` NÃO é aplicado
+    (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01; A-06 variante "campo ausente em
+    LedsConfig mas aplicado com default regride estado runtime"). Transições do
+    LED do microfone seguem caminho explícito — botão físico via HotkeyManager,
+    IPC dedicado via UDP MicLED / `led.mic_set` futuro — e jamais colateral de
+    profile switch.
     """
     effective = settings.apply_brightness(settings.brightness_level)
     controller.set_led(effective.lightbar)
-    controller.set_mic_led(settings.mic_led)
     controller.set_player_leds(settings.player_leds)
 
 

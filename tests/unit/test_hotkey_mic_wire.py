@@ -121,9 +121,10 @@ async def test_mic_btn_down_dispara_toggle_e_set_mic_led() -> None:
 async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
     """Com mic_button_toggles_system=False, o subscriber não é criado e toggle não é chamado.
 
-    Nota: mic_led_history pode conter entradas originadas de apply_led_settings
-    (ativação do perfil fallback). O invariante real é que toggle não foi chamado
-    e que _audio permanece None.
+    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: `apply_led_settings` não toca
+    mic_led; portanto mic_led_history fica vazio se nenhum wire-up de hotkey
+    mic disparar. O invariante deste teste é que toggle não foi chamado e que
+    _audio permanece None.
     """
     states = [
         _make_state(frozenset({"mic_btn"})),
@@ -149,8 +150,9 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
 async def test_outros_botoes_nao_disparam_toggle() -> None:
     """Eventos de outros botoes (cross, circle) não chamam toggle do microfone.
 
-    Nota: mic_led_history pode ter False proveniente de apply_led_settings do perfil
-    fallback. O invariante real é que toggle não foi chamado e mic nunca ficou mutado.
+    Pós-AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: `apply_led_settings` não toca
+    mic_led. O invariante deste teste é que toggle não foi chamado e mic_led
+    nunca ficou True (mutado) pelo wire-up.
     """
     states = [
         _make_state(frozenset({"cross"})),

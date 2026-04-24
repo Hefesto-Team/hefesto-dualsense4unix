@@ -46,19 +46,52 @@ class TestApplyLedSettings:
         assert len(leds) == 1
         assert leds[0].payload == (100, 200, 50)
 
-    def test_apply_led_settings_propagates_mic_led(self):
-        """apply_led_settings invoca set_mic_led com o valor de mic_led (INFRA-SET-MIC-LED-01)."""
+    def test_apply_led_settings_nao_toca_mic_led(self):
+        """apply_led_settings NÃO chama set_mic_led — mic é estado runtime puro.
+
+        Regressão original: `apply_led_settings` propagava `settings.mic_led`
+        ao controller. Como `LedsConfig` não tem campo `mic_led`,
+        `_to_led_settings` deixava `LedSettings.mic_led=False` (default);
+        cada profile switch apagava o LED do mic mesmo quando o usuário o
+        havia mutado via botão físico ou IPC
+        (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01; A-06).
+
+        Fix opção (c): chamada `controller.set_mic_led(...)` removida de
+        `apply_led_settings`. Mic LED só muda por caminho explícito.
+        """
         fc = FakeController()
         fc.connect()
-        apply_led_settings(fc, LedSettings(lightbar=(0, 0, 0), mic_led=True))
+        # Simular usuário mutou o mic previamente (botão físico / IPC).
+        fc.set_mic_led(True)
         assert fc.mic_led_history == [True]
 
-    def test_apply_led_settings_mic_led_false(self):
-        """apply_led_settings propaga mic_led=False corretamente."""
+        # Aplicar settings sem mic_led explícito — default False.
+        apply_led_settings(fc, LedSettings(lightbar=(0, 0, 0)))
+
+        # Histórico inalterado: o apply NÃO tocou o mic LED.
+        assert fc.mic_led_history == [True]
+        mic_cmds = [c for c in fc.commands if c.kind == "set_mic_led"]
+        assert len(mic_cmds) == 1, (
+            "apply_led_settings emitiu set_mic_led — regrediu A-06"
+        )
+
+    def test_apply_led_settings_ignora_mic_led_do_settings(self):
+        """Mesmo quando caller passa mic_led=True explícito, o apply ignora.
+
+        Garante que `LedSettings.mic_led` virou campo no-op (documentado no
+        módulo). Callers antigos que passavam `mic_led=...` não regridem o
+        estado runtime.
+        """
         fc = FakeController()
         fc.connect()
+        fc.set_mic_led(True)
+
+        # Caller antigo instancia com mic_led=False — comportamento anterior
+        # apagaria o LED. Pós-fix: ignorado.
         apply_led_settings(fc, LedSettings(lightbar=(255, 0, 0), mic_led=False))
-        assert fc.mic_led_history == [False]
+
+        # Nenhuma chamada adicional de set_mic_led.
+        assert fc.mic_led_history == [True]
 
     def test_apply_led_settings_propaga_player_leds_todos_acesos(self):
         """apply_led_settings invoca set_player_leds com o bitmask 'todos acesos'
