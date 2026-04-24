@@ -1,15 +1,12 @@
 """Subsystem Rumble — re-asserção periódica de vibração com política de intensidade.
 
 Responsabilidades:
-  - Calcular o multiplicador de política (economia/balanceado/max/auto/custom).
   - Re-aplicar rumble_active no hardware a cada ~200ms.
-  - Expor _effective_mult_inline para uso pelo Daemon e por testes.
+  - Delegar cálculo de multiplicador para `hefesto.core.rumble._effective_mult`
+    (fonte canônica única — AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01).
 
 O estado de debounce da política "auto" (_last_auto_mult, _last_auto_change_at)
 é mantido diretamente no objeto Daemon por compatibilidade com testes existentes.
-
-ATENÇÃO: _effective_mult_inline é reexportada por lifecycle.py para
-preservar backcompat com test_rumble_policy.py que importa diretamente de lá.
 """
 from __future__ import annotations
 
@@ -31,53 +28,6 @@ RUMBLE_POLICY_MULT: dict[str, float] = {
 }
 
 
-def _effective_mult_inline(
-    config: Any,
-    battery_pct: int,
-    now: float,
-    last_auto_mult: float,
-    last_auto_change_at: float,
-) -> tuple[float, float, float]:
-    """Calcula multiplicador de política inline (sem importar core/rumble.py).
-
-    Retorna (mult, novo_last_auto_mult, novo_last_auto_change_at).
-    Chamado por _reassert_rumble no Daemon para aplicar política sem
-    importação circular.
-    """
-    policy = config.rumble_policy
-
-    if policy in RUMBLE_POLICY_MULT:
-        return RUMBLE_POLICY_MULT[policy], last_auto_mult, last_auto_change_at
-
-    if policy == "custom":
-        mult = float(config.rumble_policy_custom_mult)
-        return mult, last_auto_mult, last_auto_change_at
-
-    if policy == "auto":
-        if battery_pct > 50:
-            target = 1.0
-        elif battery_pct >= 20:
-            target = 0.7
-        else:
-            target = 0.3
-
-        if target != last_auto_mult:
-            elapsed = now - last_auto_change_at
-            if elapsed >= AUTO_DEBOUNCE_SEC or last_auto_change_at == 0.0:
-                logger.info(
-                    "rumble_auto_policy_change",
-                    mult=target,
-                    battery_pct=battery_pct,
-                )
-                return target, target, now
-            return last_auto_mult, last_auto_mult, last_auto_change_at
-
-        return last_auto_mult, last_auto_mult, last_auto_change_at
-
-    # Fallback: balanceado.
-    return 0.7, last_auto_mult, last_auto_change_at
-
-
 def reassert_rumble(daemon: Any, now: float) -> None:
     """Re-aplica rumble_active no hardware a cada ~200ms com política.
 
@@ -89,6 +39,10 @@ def reassert_rumble(daemon: Any, now: float) -> None:
     - rumble_active is None (passthrough — jogo/UDP controla).
     - Controle não está conectado.
     """
+    # Import local: core/rumble.py -> daemon/lifecycle.py (TYPE_CHECKING) ->
+    # daemon/subsystems/rumble.py. Import no topo criaria ciclo em runtime.
+    from hefesto.core.rumble import _effective_mult
+
     cfg = daemon.config
     active = cfg.rumble_active
     if active is None:
@@ -104,12 +58,13 @@ def reassert_rumble(daemon: Any, now: float) -> None:
     except Exception:
         pass
 
-    mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult_inline(
+    mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult(
         config=cfg,
         battery_pct=battery_pct,
         now=now,
         last_auto_mult=daemon._last_auto_mult,
         last_auto_change_at=daemon._last_auto_change_at,
+        auto_debounce_sec=AUTO_DEBOUNCE_SEC,
     )
     weak = max(0, min(255, round(weak_raw * mult)))
     strong = max(0, min(255, round(strong_raw * mult)))
@@ -147,6 +102,5 @@ __all__ = [
     "AUTO_DEBOUNCE_SEC",
     "RUMBLE_POLICY_MULT",
     "RumbleSubsystem",
-    "_effective_mult_inline",
     "reassert_rumble",
 ]

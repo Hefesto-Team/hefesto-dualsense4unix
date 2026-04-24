@@ -819,11 +819,15 @@ def _apply_rumble_policy(daemon: Any, weak: int, strong: int) -> tuple[int, int]
         auto_debounce_sec=AUTO_DEBOUNCE_SEC,
     )
 
-    # Propaga debounce de volta ao engine se existir.
+    # Propaga debounce de volta ao engine via método público (encapsulamento).
+    # AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: writeback antes tocava campos
+    # privados diretamente; agora via RumbleEngine.update_auto_state().
     if rumble_engine is not None:
-        rumble_engine._last_auto_mult = new_last_auto_mult
-        rumble_engine._last_auto_change_at = new_last_auto_change_at
-        rumble_engine._last_mult_applied = mult
+        rumble_engine.update_auto_state(
+            new_last_auto_mult,
+            new_last_auto_change_at,
+            mult_applied=mult,
+        )
 
     eff_weak = max(0, min(255, round(weak * mult)))
     eff_strong = max(0, min(255, round(strong * mult)))

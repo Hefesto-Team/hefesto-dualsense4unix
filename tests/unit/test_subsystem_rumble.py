@@ -13,11 +13,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto.core.rumble import _effective_mult
 from hefesto.daemon.subsystems.rumble import (
     RumbleSubsystem,
-    _effective_mult_inline,
     reassert_rumble,
 )
+
+# AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline deletado;
+# alias local para preservar leitura dos asserts sem mudar semântica.
+_effective_mult_inline = _effective_mult
 
 
 def _cfg(policy: str, custom_mult: float = 0.7) -> MagicMock:

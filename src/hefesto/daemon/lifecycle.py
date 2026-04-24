@@ -39,7 +39,6 @@ from hefesto.daemon.subsystems.poll import (
 from hefesto.daemon.subsystems.rumble import (
     AUTO_DEBOUNCE_SEC,
     RUMBLE_POLICY_MULT,
-    _effective_mult_inline,
 )
 from hefesto.utils.logging_config import get_logger
 
@@ -434,5 +433,4 @@ __all__ = [
     "BatteryDebouncer",
     "Daemon",
     "DaemonConfig",
-    "_effective_mult_inline",
 ]
