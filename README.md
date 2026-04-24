@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto/releases)
-[![Testes](https://img.shields.io/badge/testes-1290%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-1306%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto/actions)
 
 <div align="center">
@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 2.4.0
+Versão: 2.4.1
 Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1138 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
@@ -130,8 +130,8 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.4.0/hefesto_2.4.0_amd64.deb
-sudo apt install ./hefesto_2.4.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.4.1/hefesto_2.4.1_amd64.deb
+sudo apt install ./hefesto_2.4.1_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -147,7 +147,7 @@ Dependências Python que não têm pacote Debian oficial:
 pip install pydualsense python-uinput
 ```
 
-> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.4.0+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
+> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.4.1+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
 >
 > ```bash
 > pip install --user 'pydantic>=2'
@@ -164,9 +164,9 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.4.0/Hefesto-2.4.0-x86_64.AppImage
-chmod +x Hefesto-2.4.0-x86_64.AppImage
-./Hefesto-2.4.0-x86_64.AppImage
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.4.1/Hefesto-2.4.1-x86_64.AppImage
+chmod +x Hefesto-2.4.1-x86_64.AppImage
+./Hefesto-2.4.1-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)
@@ -338,6 +338,30 @@ Factories canônicas em `src/hefesto/profiles/trigger_modes.py`.
 **Cursor "voando" ao ativar Mouse:**
 
 - Sintoma de múltiplas instâncias de daemon rodando em paralelo. Desde v2.0.0 existe `single_instance` com `flock` — se o bug aparecer, rode `pkill -TERM -f hefesto.app.main && pkill -TERM -f 'hefesto daemon'` e reinicie via `systemctl --user restart hefesto.service`. Reporte em issue.
+
+**Autoswitch de perfil não muda sob Pop!_OS COSMIC (Wayland puro):**
+
+Pop!_OS COSMIC (alpha) ainda não implementa `org.freedesktop.portal.Window::GetActiveWindow`, o caminho canônico para detectar janela ativa em Wayland. O Hefesto tenta alternativas automaticamente (desde v2.4.1), escolha a que couber:
+
+1. **Instalar `wlrctl`** (recomendado — cobre também Sway, Hyprland, niri, river):
+
+   ```bash
+   # Ubuntu 24.04+: sudo apt install wlrctl
+   # Fedora:        sudo dnf install wlrctl
+   # Arch:          sudo pacman -S wlrctl
+   ```
+   O Hefesto detecta automaticamente e passa a usar o protocolo `wlr-foreign-toplevel-management-unstable-v1` via esse CLI.
+
+2. **Reinstalar com `--force-xwayland`** (fallback para quem só precisa autoswitch em Steam/Proton):
+
+   ```bash
+   ./install.sh --force-xwayland
+   ```
+   Grava `Exec=env GDK_BACKEND=x11 …` no atalho — a GUI passa a rodar sob XWayland e o backend X11 (`XlibBackend`) consulta diretamente. Limitação: apps Wayland nativos (Firefox nativo, etc.) não aparecem; use `wlrctl` para eles.
+
+3. **Silenciar o autoswitch**: `HEFESTO_NO_WINDOW_DETECT=1` no seu shell ou na unit do daemon. Os perfis manuais via GUI/CLI continuam funcionando.
+
+O install.sh detecta `XDG_CURRENT_DESKTOP=COSMIC` e pergunta durante a instalação se quer ativar o modo XWayland (default `y`). Se preferir só a opção 1 (`wlrctl`), responda `n`.
 
 Mais detalhes em [`docs/usage/quickstart.md`](docs/usage/quickstart.md) e [`docs/usage/troubleshooting.md`](docs/usage/troubleshooting.md) (quando existir).
 

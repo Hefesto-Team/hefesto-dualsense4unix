@@ -5,6 +5,42 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.4.1] — 2026-04-24
+
+Patch release com dois caminhos novos para autoswitch funcionar em
+Pop!_OS COSMIC alpha (e qualquer compositor wlroots-like).
+
+### Adicionado
+- **Backend `WlrctlBackend`** (BUG-COSMIC-WLR-BACKEND-01):
+  `src/hefesto/integrations/window_backends/wlr_toplevel.py`. Usa o CLI
+  `wlrctl` (protocolo `wlr-foreign-toplevel-management-unstable-v1`)
+  para detectar a janela ativa. Funciona em COSMIC, Sway, Hyprland,
+  niri, river — o mesmo backend cobre 5 compositors. Se o binário
+  `wlrctl` não está no PATH, retorna `None` silenciosamente e o caller
+  degrada.
+- **`window_detect.py` com cascade Wayland**: nova classe interna
+  `_WaylandCascadeBackend` compõe `WaylandPortalBackend` (canônico) +
+  `WlrctlBackend` (fallback) em um backend único. Portal é tentado
+  primeiro; se retorna `None` (inclui o caso "COSMIC alpha sem
+  `GetActiveWindow`"), cai pro wlrctl. Se ambos falham, `None`.
+- **`install.sh --force-xwayland`**: grava `Exec=env GDK_BACKEND=x11 …`
+  no atalho `.desktop`. Detecta automaticamente
+  `XDG_CURRENT_DESKTOP=*COSMIC*` e pergunta no prompt (default `y`). A
+  GUI GTK passa a rodar sob XWayland; `XlibBackend` consulta X11 e
+  detecta janelas XWayland (Steam, Proton). Limitação: apps Wayland
+  nativos (Firefox nativo) não são detectados por esse caminho — use
+  `wlrctl` para eles.
+
+### Ferramental
+- 16 testes novos (`test_wlr_toplevel.py` 13 + `test_window_detect_factory.py`
+  5): cobrem binário ausente, JSON inválido, retcode != 0, timeout,
+  `FileNotFoundError` em runtime, variante `appId` camelCase, cascade
+  portal→wlrctl, cascade None quando ambos falham.
+- `install.sh` detecta COSMIC via
+  `XDG_CURRENT_DESKTOP${XDG_SESSION_DESKTOP}` (case-insensitive) e
+  imprime dica de `apt install wlrctl` / `pacman -S wlrctl` /
+  `dnf install wlrctl` se o binário não estiver presente.
+
 ## [2.4.0] — 2026-04-24
 
 Release majoritariamente de **higiene de código** decorrente da auditoria
