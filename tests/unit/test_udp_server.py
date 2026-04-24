@@ -178,6 +178,58 @@ def test_rate_limit_drop_conta_em_store():
 
 
 # ---------------------------------------------------------------------------
+# Handlers UDP propagam ao hardware — AUDIT-FINDING-UDP-PLACEHOLDER-HANDLERS-01
+# ---------------------------------------------------------------------------
+
+
+def test_player_led_propaga_bitmask_ao_controller():
+    """PlayerLED decodifica bitmask em tuple[bool x5] e chama set_player_leds."""
+    handler, fc, store = _mk_handler()
+    # 0b10101 = 21 decimal: bits 0, 2, 4 acesos; 1 e 3 apagados.
+    payload = {
+        "version": 1,
+        "instructions": [{"type": "PlayerLED", "parameters": [0, 21]}],
+    }
+    handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
+    pl_cmds = [c for c in fc.commands if c.kind == "set_player_leds"]
+    assert len(pl_cmds) == 1, "set_player_leds deve ser chamado exatamente 1x"
+    assert pl_cmds[0].payload == (True, False, True, False, True)
+    assert fc.last_player_leds == (True, False, True, False, True)
+    assert store.counter("udp.applied.PlayerLED") == 1
+    assert store.counter("udp.player_led.21") == 1
+
+
+def test_mic_led_propaga_estado_ao_controller():
+    """MicLED decodifica bool e chama set_mic_led."""
+    handler, fc, store = _mk_handler()
+    payload = {
+        "version": 1,
+        "instructions": [{"type": "MicLED", "parameters": [1]}],
+    }
+    handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
+    mic_cmds = [c for c in fc.commands if c.kind == "set_mic_led"]
+    assert len(mic_cmds) == 1, "set_mic_led deve ser chamado exatamente 1x"
+    assert mic_cmds[0].payload is True
+    assert fc.mic_led_history == [True]
+    assert store.counter("udp.applied.MicLED") == 1
+    assert store.counter("udp.mic_led.1") == 1
+
+
+def test_rgb_update_clampa_valores_fora_de_range():
+    """RGBUpdate faz clamp silencioso em [0, 255] (achado 19 auditoria V23)."""
+    handler, fc, _ = _mk_handler()
+    payload = {
+        "version": 1,
+        # -10 abaixo de 0, 300 acima de 255, 128 ok, 999 acima.
+        "instructions": [{"type": "RGBUpdate", "parameters": [0, -10, 300, 128]}],
+    }
+    handler.handle_datagram(_datagram(payload), ("127.0.0.1", 12345))
+    leds = [c for c in fc.commands if c.kind == "set_led"]
+    assert len(leds) == 1
+    assert leds[-1].payload == (0, 255, 128)
+
+
+# ---------------------------------------------------------------------------
 # DsxProtocol.connection_made — BUG-UDP-01 (A-02)
 # ---------------------------------------------------------------------------
 
