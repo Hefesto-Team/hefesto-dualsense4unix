@@ -24,13 +24,22 @@ import structlog
 if TYPE_CHECKING:
     from structlog.typing import Processor
 else:
-    # structlog 22.1+ expõe .typing; Ubuntu 22.04 apt empacota 21.x com só
-    # .types (BUG-DEB-SMOKE-STRUCTLOG-TYPING-02). Fallback runtime preserva
-    # compatibilidade sem exigir pip install user.
+    # Cascata empírica (L-21-7 — apt-cache policy confirmado 2026-04-24):
+    #   structlog 22.1+  → expõe .typing
+    #   structlog 21.x   → só .types
+    #   structlog 20.x (Ubuntu 22.04 Jammy apt default) → nenhum dos dois.
+    # BUG-DEB-SMOKE-STRUCTLOG-TYPING-02. Processor é Callable no core, então
+    # o último fallback aliases Processor como Callable[..., Any] para que
+    # o restante do módulo funcione sem quebrar em versões antigas.
     try:
         from structlog.typing import Processor
     except ImportError:
-        from structlog.types import Processor
+        try:
+            from structlog.types import Processor
+        except ImportError:
+            from collections.abc import Callable
+
+            Processor = Callable[..., Any]  # type: ignore[misc,assignment]
 
 _configured = False
 
