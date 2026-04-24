@@ -5,6 +5,17 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-04-24
+
+Minor release com o marco **keyboard feature** completo para DualSense no
+Linux. 3 sprints entregues em sequência (80 + 59.2 + 59.3) fechando o
+tripé planejado desde a v2.2.0: persistência por perfil, UI de edição,
+tokens virtuais para teclado virtual do sistema, consumo do touchpad
+como botões (left/middle/right → backspace/enter/delete) e correção do
+CI `acentuacao` travado desde v2.2.1. Pipeline de release 100% automático
+(herdado da v2.2.2) gera .deb Noble + .AppImage + .flatpak + .whl + sdist
+via workflow `release.yml` no push da tag.
+
 ### Adicionado
 - **Aba "Mouse e Teclado" com editor de key bindings**
   (FEAT-KEYBOARD-UI-01, sprint 59.3): nova classe `InputActionsMixin`
