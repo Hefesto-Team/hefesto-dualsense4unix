@@ -1,17 +1,24 @@
 """Backend Wayland via portal XDG D-Bus `org.freedesktop.portal.Window`.
 
-Tenta usar (em ordem de preferência):
-  1. `jeepney` — puro Python, sem dep nativa.
-  2. `dbus-fast` — assíncrono, mais completo.
-
-Se nenhuma biblioteca estiver disponível, `get_active_window_info()` retorna
-`None` imediatamente (degradação silenciosa).
+Usa `jeepney` (puro Python, síncrono). Se a biblioteca não estiver
+disponível no ambiente, `get_active_window_info()` retorna `None`
+imediatamente (degradação silenciosa).
 
 A interface `GetActiveWindow` foi introduzida no portal v1 (COSMIC 1.0+,
 GNOME 46+). Compositors mais antigos podem não expor o método.
+
+Nota de performance (AUDIT-FINDING-WAYLAND-PORTAL-PERF-01):
+    Versões anteriores criavam `ThreadPoolExecutor(max_workers=1)` +
+    `asyncio.run()` a cada chamada para envolver `dbus-fast`. Como o
+    `AutoSwitcher` chama este backend a 2 Hz em Wayland puro, o overhead
+    de spawn/tear-down de thread e loop asyncio era desnecessário.
+    A implementação foi simplificada para usar apenas `jeepney` síncrono
+    direto na thread do autoswitch (que já é bloqueante), com timeout
+    nativo do próprio jeepney. Zero threads novas por chamada.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import Any
 
@@ -25,21 +32,30 @@ _PORTAL_BUS = "org.freedesktop.portal.Desktop"
 _PORTAL_PATH = "/org/freedesktop/portal/desktop"
 _PORTAL_IFACE = "org.freedesktop.portal.Window"
 
+# Timeout máximo por chamada ao portal (segundos). Se o compositor não
+# responder neste prazo, `_try_jeepney` retorna None e o caller degrada.
+_PORTAL_TIMEOUT_SECONDS = 2.0
+
 
 def _try_jeepney(handle_token: str) -> WindowInfo | None:
-    """Tenta obter janela ativa via jeepney (síncrono, puro Python)."""
+    """Tenta obter janela ativa via jeepney (síncrono, puro Python).
+
+    Aplica timeout explícito de `_PORTAL_TIMEOUT_SECONDS` via kwarg nativo
+    do `send_and_get_reply`. Retorna None em qualquer falha (ImportError,
+    timeout, erro do portal, resposta inesperada).
+    """
     try:
         from jeepney import DBusAddress, new_method_call
         from jeepney.io.blocking import open_dbus_connection
     except ImportError:
         return None
 
+    conn = None
     try:
         conn = open_dbus_connection(bus="SESSION")
         addr = DBusAddress(_PORTAL_PATH, bus_name=_PORTAL_BUS, interface=_PORTAL_IFACE)
         msg = new_method_call(addr, "GetActiveWindow", "sa{sv}", (handle_token, {}))
-        reply = conn.send_and_get_reply(msg)
-        conn.close()
+        reply = conn.send_and_get_reply(msg, timeout=_PORTAL_TIMEOUT_SECONDS)
 
         # reply.body[0] é o handle; info real chega via sinal, mas alguns
         # compositors retornam diretamente no reply.body[1].
@@ -51,42 +67,10 @@ def _try_jeepney(handle_token: str) -> WindowInfo | None:
     except Exception as exc:
         logger.debug("wayland_portal_jeepney_failed", err=str(exc))
         return None
-
-
-def _try_dbus_fast(handle_token: str) -> WindowInfo | None:
-    """Tenta obter janela ativa via dbus-fast (síncrono wrapper)."""
-    try:
-        from dbus_fast.aio.message_bus import MessageBus
-    except ImportError:
-        return None
-
-    # dbus-fast é assíncrono; em contexto síncrono usamos thread-isolado.
-    import asyncio
-    import concurrent.futures
-
-    def _run() -> WindowInfo | None:
-        async def _async() -> WindowInfo | None:
-            try:
-                bus = await MessageBus().connect()
-                introspection = await bus.introspect(_PORTAL_BUS, _PORTAL_PATH)
-                proxy = bus.get_proxy_object(_PORTAL_BUS, _PORTAL_PATH, introspection)
-                iface = proxy.get_interface(_PORTAL_IFACE)
-                result = await iface.call_get_active_window(handle_token, {})
-                bus.disconnect()
-                return _parse_portal_result(result if isinstance(result, dict) else {})
-            except Exception as exc:
-                logger.debug("wayland_portal_dbus_fast_failed", err=str(exc))
-                return None
-
-        return asyncio.run(_async())
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-        future = pool.submit(_run)
-        try:
-            return future.result(timeout=2.0)
-        except Exception as exc:
-            logger.debug("wayland_portal_dbus_fast_timeout", err=str(exc))
-            return None
+    finally:
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.close()
 
 
 def _parse_portal_result(result: dict[str, Any]) -> WindowInfo | None:
@@ -117,8 +101,12 @@ class WaylandPortalBackend:
     Usado em ambientes Wayland puro (sem XWayland). Requer COSMIC 1.0+ ou
     GNOME 46+ para suporte à interface `org.freedesktop.portal.Window`.
 
-    Se `jeepney` ou `dbus-fast` não estiver disponível no ambiente, ou se o
-    portal não responder, `get_active_window_info()` retorna `None`.
+    Se `jeepney` não estiver disponível no ambiente, ou se o portal não
+    responder, `get_active_window_info()` retorna `None`.
+
+    Nenhuma thread ou loop asyncio é criada por chamada — `jeepney` roda
+    sincronamente na thread do caller (o `AutoSwitcher` já bloqueia a
+    500ms, então o acoplamento direto é seguro).
     """
 
     def __init__(self) -> None:
@@ -133,16 +121,9 @@ class WaylandPortalBackend:
         """Retorna WindowInfo via portal D-Bus, ou None se indisponível."""
         handle = self._next_handle()
 
-        # Tenta jeepney primeiro (sem deps nativas).
         result = _try_jeepney(handle)
         if result is not None:
             logger.debug("wayland_portal_ok", via="jeepney", app_id=result.app_id)
-            return result
-
-        # Fallback para dbus-fast.
-        result = _try_dbus_fast(handle)
-        if result is not None:
-            logger.debug("wayland_portal_ok", via="dbus-fast", app_id=result.app_id)
             return result
 
         logger.debug("wayland_portal_unavailable")
