@@ -5,6 +5,134 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-04-24
+
+Release majoritariamente de **higiene de código** decorrente da auditoria
+externa `AUDIT-V23-FORENSIC-01` (relatório em `docs/process/audits/2026-04-24-audit-v23-forensic.md`)
+mais dois fixes de packaging/ambiente reportados pelo usuário
+(flatpak `gi` ausente, Pop!_OS COSMIC sem autoswitch). 14 sprints-filhas
+`AUDIT-FINDING-*` executadas em sequência em ~2h30.
+
+### Segurança
+- **`profile.switch` IPC**: sanitização de `identifier` em `load_profile`
+  contra path traversal (`/`, `\`, `..`, null byte) + validação
+  `is_relative_to(profiles_dir().resolve())` após concat. Normaliza
+  response CODE_INTERNAL para não vazar `str(exc)` completo — só
+  `type(exc).__name__` + mensagem genérica. (AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01)
+- **`single_instance`**: verificação de `/proc/<pid>/comm` + `/proc/<pid>/cmdline`
+  antes de SIGTERM no predecessor. Defesa em profundidade contra PID
+  reciclado — se kernel recicla o PID para processo alheio do mesmo
+  UID, o takeover emite warning `single_instance_pid_reciclado` e trata
+  pid file como órfão em vez de matar processo errado.
+  (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01)
+
+### Corrigido
+- **UDP PlayerLED / MicLED propagam ao hardware** (BUG-UDP-PLACEHOLDER-01):
+  `_do_player_led` e `_do_mic_led` em `udp_server.py` eram no-op —
+  apenas incrementavam o counter em `store.bump`, ignorando o backend
+  `PyDualSenseController.set_player_leds` e `set_mic_led` já disponíveis.
+  Jogos DSX-compatíveis (Cyberpunk, Forza) agora veem efeito real ao
+  enviar esses comandos via UDP. Também adiciona clamp
+  `max(0, min(255, int(v)))` em `_do_rgb_update` para paridade com IPC.
+  (AUDIT-FINDING-UDP-PLACEHOLDER-HANDLERS-01)
+- **`profile.apply_draft` respeita política de rumble**: GUI → aba Rumble
+  → "Aplicar perfil" enviava (weak, strong) brutos via
+  `self.controller.set_rumble` sem passar por `_apply_rumble_policy`.
+  Política `economia`/`balanceado`/`max`/`auto`/`custom` é aplicada
+  antes do hardware. (AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01)
+- **mic_led não é mais resetado em cada `profile.switch`**: como
+  `LedsConfig` não tem campo `mic_led`, `_to_led_settings` recai no
+  default `False` e `apply_led_settings` chamava
+  `controller.set_mic_led(False)` incondicionalmente — apagava o LED
+  mesmo quando o usuário havia mutado o mic via botão físico. Chamada
+  removida; `mic_led` agora é estado runtime puro, não persistido em
+  perfil. Armadilha `A-06` ampliada no `VALIDATOR_BRIEF.md`.
+  (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01)
+- **Flatpak: deps Python completas no bundle** (BUG-FLATPAK-DEPS-01,
+  relatado pelo usuário): manifesto antigo declarava apenas `pydualsense`
+  e `python-uinput` como módulos, mas `pip install --no-deps` do wheel
+  `hefesto` deixava `pydantic`, `structlog`, `typer`, `evdev`, `rich`,
+  `platformdirs`, `filelock`, `jeepney`, `python-xlib`, `textual` fora
+  do sandbox. App falhava no primeiro import (tipicamente `gi` ou
+  `pydantic`). Novo módulo `hefesto-deps` consolida as 12 deps num
+  único `pip3 install`. Runtime bumped de `GNOME//45` para `GNOME//47`
+  (GTK3, PyGObject, python 3.12 embutidos).
+
+### Degradação graceful
+- **Pop!_OS COSMIC alpha sem autoswitch** (BUG-COSMIC-PORTAL-UNSUPPORTED-01,
+  relatado pelo usuário): `WaylandPortalBackend.get_active_window_info`
+  tentava `org.freedesktop.portal.Window::GetActiveWindow` a cada 500ms
+  via D-Bus mesmo quando o compositor não implementa o método (COSMIC
+  ainda em alpha). Agora, após 3 falhas consecutivas, loga warning
+  único com hint sobre `HEFESTO_NO_WINDOW_DETECT=1` ou XWayland, e
+  para de consultar o portal — economiza 2s de timeout a cada 500ms.
+  Se o compositor voltar a responder (ex: update do COSMIC que
+  implementa o método), contador reseta automaticamente.
+
+### Refatorado
+- **`ipc_server.py` 843 → 316 LOC**: split em 4 módulos limpos ≤500 LOC
+  cada (`ipc_server.py`, `ipc_handlers.py`, `ipc_draft_applier.py`,
+  `ipc_rumble_policy.py`). `_handle_profile_apply_draft` 120 LOC → 17
+  LOC via classe `DraftApplier`. Contratos públicos preservados via
+  reexport do `__all__`. (AUDIT-FINDING-IPC-SERVER-SPLIT-01)
+- **Lógica de `_effective_mult` unificada**: 3 cópias (`core/rumble.py`,
+  `daemon/subsystems/rumble.py::_effective_mult_inline`,
+  `daemon/ipc_server.py::_apply_rumble_policy`) convergiram na versão
+  canônica de `core/rumble.py`. `RumbleEngine.update_auto_state`
+  encapsula writeback dos campos privados `_last_auto_*`, antes
+  acessados direto de fora. (AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01)
+- **`EvdevReader` e `TouchpadReader` compartilham `_EvdevReconnectLoop` base**
+  (core/evdev_reader.py 479 → 424 LOC, cov 67% → 82%).
+  (AUDIT-FINDING-EVDEV-READER-BASE-CLASS-01)
+- **`ipc_bridge.py` 13 wrappers consolidados em `_safe_call` helper**
+  (cov 29% → 92%; +49 testes). Cada wrapper agora distingue erros
+  de transporte (log debug + False) de bugs reais (propagam para o
+  caller). (AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01)
+- **`WaylandPortalBackend` sem ThreadPoolExecutor por chamada**
+  (cov 21% → 97%): removido `_try_dbus_fast` + `asyncio.run` por call.
+  `jeepney` síncrono direto com timeout nativo 2s.
+  (AUDIT-FINDING-WAYLAND-PORTAL-PERF-01)
+- **`KeyboardSubsystem` classe paralela deletada**: nunca foi cabeada
+  no `Daemon` — wire-up real usava só as funções top-level
+  `start_keyboard_emulation`/`stop_keyboard_emulation`.
+  (AUDIT-FINDING-KEYBOARD-SUBSYSTEM-DEAD-01)
+- **`profiles/autoswitch.py::start_autoswitch` + `_noop` removidos**:
+  dead code nunca importado. Wire-up real vai por
+  `daemon/subsystems/autoswitch.py`. (AUDIT-FINDING-DEAD-CODE-01)
+
+### Observabilidade
+- **13 handlers críticos ganharam `exc_info=True`** (poll loop, connect
+  retry, IPC dispatch, plugin hooks, rumble reassert, ds state reads).
+  Antes: stacktrace perdido, debug cego. Agora: `structlog` emite
+  traceback completo onde importa. (AUDIT-FINDING-LOG-EXC-INFO-01)
+- **`connect_with_retry` com backoff exponencial**: antes, backoff fixo
+  em `reconnect_backoff_sec` ignorava stop signal durante sleep. Agora
+  `backoff = min(backoff * 2, 30.0)` com teto, sleep interrompível via
+  `asyncio.wait_for(stop_event.wait(), timeout=backoff)`.
+- **`is_connected` default `False`**: antes, `getattr(ds, "connected", True)`
+  retornava `True` se o pydualsense removesse o atributo em versão
+  futura — conservador é reportar `False`.
+
+### Testes
+- **Cobertura total: 63% → 71%** (meta 70% atingida).
+- **Pytest: 1143 → 1290 passed** (+147 testes novos).
+- `app/actions/rumble_actions.py`, `triggers_actions.py`,
+  `firmware_actions.py`: 0% → 68-86% via padrão `_FakeMixin` com
+  descriptor protocol. (AUDIT-FINDING-COVERAGE-ACTIONS-ZERO-01)
+- `utils/single_instance.py`: 55% → 72%.
+- `app/ipc_bridge.py`: 29% → 92%.
+- `integrations/window_backends/wayland_portal.py`: 21% → 97%.
+- `daemon/udp_server.py`: 78% → 83%.
+- `daemon/subsystems/keyboard.py`: 60% → 68%.
+
+### Ferramental
+- **Runtime Flatpak bumped**: `GNOME Platform//45` → `//47` nos
+  manifestos e workflows CI. Python 3.11 → 3.12; melhor suporte
+  Wayland / COSMIC Alpha.
+- **Armadilhas do BRIEF**: `A-06` ampliada com variante "campo ausente
+  em `*Config` mas aplicado pelo apply com default pode regredir estado
+  runtime".
+
 ## [2.3.0] — 2026-04-24
 
 Minor release com o marco **keyboard feature** completo para DualSense no

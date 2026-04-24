@@ -12,6 +12,15 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="2.4.0" date="2026-04-24">
+      <description>
+        <p>Release de higiene de código (14 sprints follow-up da auditoria
+           forense V2.3) + dois fixes reportados por usuário: manifesto Flatpak
+           com todas as dependências Python + runtime GNOME Platform 47, e
+           degradação graceful em compositor Wayland COSMIC alpha que ainda
+           não implementa `org.freedesktop.portal.Window::GetActiveWindow`.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2024-04-22">
       <description>
         <p>Primeira versão Flatpak. Daemon + GUI GTK3 empacotados com suporte a
