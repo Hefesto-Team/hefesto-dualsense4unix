@@ -6,6 +6,39 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Adicionado
+- **Aba "Mouse e Teclado" com editor de key bindings**
+  (FEAT-KEYBOARD-UI-01, sprint 59.3): nova classe `InputActionsMixin`
+  (subclasse de `MouseActionsMixin`) em `src/hefesto/app/actions/input_actions.py`
+  entrega TreeView CRUD (Adicionar/Remover/Restaurar defaults) para
+  `key_bindings` do perfil ativo, com legenda documentando formato
+  `KEY_*` e tokens virtuais `__*__`. Tab no `main.glade` renomeada de
+  "Mouse" para "Mouse e Teclado"; handlers `on_key_binding_*`
+  registrados em `_signal_handlers()` (lição 77.1). `DraftConfig` ganha
+  campo `key_bindings` com round-trip via `from_profile`/`to_profile`.
+  Decisão documentada em
+  `docs/process/discoveries/2026-04-24-r2-l2-inversion-decision.md`:
+  inversão R2/L2 **não** aplicada (quebraria simetria com X/Triângulo
+  + convenção de mouse destro); usuário pode customizar via UI por
+  perfil. Validação visual em
+  `docs/process/screenshots/FEAT-KEYBOARD-UI-01-depois.png`.
+
+- **Tokens virtuais OSK + touchpad regions como bindings**
+  (FEAT-KEYBOARD-UI-01 Fase B+D): `UinputKeyboardDevice` aceita tokens
+  `__OPEN_OSK__` / `__CLOSE_OSK__` (em `core/keyboard_mappings.py`) e
+  delega ao `virtual_token_callback` em vez de emitir via uinput;
+  binding misto `KEY_*+__*__` é rejeitado com warning. `_OSKController`
+  (em `daemon/subsystems/keyboard.py`) resolve `onboard`/`wvkbd-mobintl`
+  via `shutil.which` com cache 1x + warning único se ausente, e faz
+  subprocess.Popen idempotente em open/close. `DEFAULT_BUTTON_BINDINGS`
+  ganha 5 entradas novas: L3→`__OPEN_OSK__`, R3→`__CLOSE_OSK__`, e as 3
+  regiões `touchpad_{left,middle,right}_press` → `KEY_BACKSPACE/ENTER/DELETE`.
+  `dispatch_keyboard` mescla `TouchpadReader.regions_pressed()` (infra
+  da sprint 83) ao frozenset de botões antes do device dispatch.
+  `_start_touchpad_reader` pula em `HEFESTO_FAKE=1` (evita probing lento
+  de evdev em testes); conftest autouse garante flag nos unit tests.
+  17 testes novos cobrem: tokens + OSK spawn + fallback wvkbd + touchpad
+  merge + exception safety.
+
 - **Persistência de key bindings por perfil**
   (FEAT-KEYBOARD-PERSISTENCE-01, sprint 59.2): novo campo
   `Profile.key_bindings: dict[str, list[str]] | None = None` com validator

@@ -244,8 +244,20 @@ def test_construtor_usa_default_bindings() -> None:
 # --- cobertura de SUPPORTED_KEYS ---------------------------------------------
 
 def test_supported_keys_cobre_todas_as_defaults() -> None:
-    """Todas as teclas usadas pelos defaults devem estar em SUPPORTED_KEYS."""
-    default_keys = {k for seq in DEFAULT_BUTTON_BINDINGS.values() for k in seq}
+    """Todas as teclas KEY_* usadas pelos defaults devem estar em SUPPORTED_KEYS.
+
+    Tokens virtuais `__*__` (FEAT-KEYBOARD-UI-01, ex: __OPEN_OSK__) são
+    delegados ao `virtual_token_callback` e não precisam estar em
+    SUPPORTED_KEYS — filtramos antes de comparar.
+    """
+    from hefesto.core.keyboard_mappings import is_virtual_token
+
+    default_keys = {
+        k
+        for seq in DEFAULT_BUTTON_BINDINGS.values()
+        for k in seq
+        if not is_virtual_token(k)
+    }
     faltantes = default_keys - set(SUPPORTED_KEYS)
     assert not faltantes, f"faltam em SUPPORTED_KEYS: {faltantes}"
 

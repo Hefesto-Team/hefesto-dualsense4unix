@@ -120,6 +120,10 @@ class DraftConfig(BaseModel):
     rumble: RumbleDraft = Field(default_factory=RumbleDraft)
     mouse: MouseDraft = Field(default_factory=MouseDraft)
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
+    # FEAT-KEYBOARD-UI-01: bindings de teclado do perfil em edição.
+    # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
+    # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
+    key_bindings: dict[str, list[str]] | None = None
 
     # --- construtores ---
 
@@ -183,6 +187,7 @@ class DraftConfig(BaseModel):
             rumble=rumble,
             mouse=mouse,
             emulation=emulation,
+            key_bindings=profile.key_bindings,
         )
 
     def to_profile(self, name: str, priority: int = 5) -> Profile:
@@ -226,6 +231,7 @@ class DraftConfig(BaseModel):
                 lightbar_brightness=brightness_float,
             ),
             rumble=RumbleConfig(),
+            key_bindings=self.key_bindings,
         )
         # Revalida para garantir round-trip (captura regressoes de schema)
         return Profile.model_validate(profile.model_dump(mode="python"))
