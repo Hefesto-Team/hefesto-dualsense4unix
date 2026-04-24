@@ -22,5 +22,6 @@
     "player_leds": [false, true, true, false, false],
     "lightbar_brightness": 0.85
   },
-  "rumble": {"passthrough": true}
+  "rumble": {"passthrough": true},
+  "key_bindings": null
 }

@@ -28,9 +28,13 @@ class IpcSubsystem:
         from hefesto.daemon.ipc_server import IpcServer
         from hefesto.profiles.manager import ProfileManager
 
-        manager = ProfileManager(controller=ctx.controller, store=ctx.store)
         # Daemon é o próprio ctx se tiver atributo daemon; fallback é None.
         daemon = getattr(ctx, "daemon", None)
+        manager = ProfileManager(
+            controller=ctx.controller,
+            store=ctx.store,
+            keyboard_device=getattr(daemon, "_keyboard_device", None),
+        )
         self._server = IpcServer(
             controller=ctx.controller,
             store=ctx.store,

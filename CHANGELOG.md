@@ -5,6 +5,27 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- **Persistência de key bindings por perfil**
+  (FEAT-KEYBOARD-PERSISTENCE-01, sprint 59.2): novo campo
+  `Profile.key_bindings: dict[str, list[str]] | None = None` com validator
+  que aceita tokens `KEY_*` (verificados contra `evdev.ecodes` quando
+  disponível) e tokens virtuais `__*__` reservados para a sub-sprint UI
+  (59.3). Semântica: `None` herda `DEFAULT_BUTTON_BINDINGS`; `{}` desativa
+  todos os bindings; dict parcial é override explícito sem merge. Helper
+  puro `_to_key_bindings(profile)` converte schema em `tuple[str, ...]`
+  (KeyBinding). Método novo `ProfileManager.apply_keyboard(profile)`
+  propaga ao `UinputKeyboardDevice` via `set_bindings` (armadilha A-06
+  resolvida). `ProfileManager` ganha campo opcional `keyboard_device`;
+  3 callsites do daemon (`connection.restore_last_profile`,
+  `subsystems/ipc`, `subsystems/autoswitch`) passam
+  `daemon._keyboard_device` no constructor, propagando o override a cada
+  `activate()`. 9 perfis default em `assets/profiles_default/*.json`
+  ganharam `"key_bindings": null` explícito. 10 testes novos em
+  `tests/unit/test_profile_key_bindings.py` e
+  `tests/unit/test_ipc_profile_switch_propaga_teclado.py` cobrindo
+  helper + validator + mapper A-06 + caminho IPC real.
+
 ### Corrigido
 - **Job `acentuacao` do `ci.yml` vermelho em `main` desde v2.2.1**
   (BUG-CI-ACENTUACAO-REGRESSION-01): 6 violações pré-existentes

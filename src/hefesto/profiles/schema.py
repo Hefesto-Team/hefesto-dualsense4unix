@@ -147,6 +147,14 @@ class RumbleConfig(BaseModel):
     passthrough: bool = True
 
 
+# Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
+# - `KEY_*` é validado contra `evdev.ecodes` (via lookup lazy em `_validate_key_bindings`).
+# - `__*__` são tokens virtuais reservados para a sub-sprint UI (59.3): o dispatcher
+#   delega ao subsystem de OSK em vez de emitir evento de tecla. Aqui aceitamos
+#   pelo regex mas não validamos contra ecodes — o schema não conhece a lista fechada.
+_KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
+
+
 class Profile(BaseModel):
     """Perfil v1 (ADR-005)."""
 
@@ -159,6 +167,11 @@ class Profile(BaseModel):
     triggers: TriggersConfig = Field(default_factory=TriggersConfig)
     leds: LedsConfig = Field(default_factory=LedsConfig)
     rumble: RumbleConfig = Field(default_factory=RumbleConfig)
+    # FEAT-KEYBOARD-PERSISTENCE-01: override de bindings por perfil.
+    # - None = herda DEFAULT_BUTTON_BINDINGS do core.
+    # - {} = desativa todos os bindings do perfil (teclado silencioso).
+    # - {"triangle": ["KEY_C"]} = override apenas desse botão; demais seguem default.
+    key_bindings: dict[str, list[str]] | None = None
 
     @field_validator("name")
     @classmethod
@@ -174,6 +187,56 @@ class Profile(BaseModel):
             slugify(value)
         except ValueError as exc:
             raise ValueError(f"name não produz slug válido: {value!r}") from exc
+        return value
+
+    @field_validator("key_bindings")
+    @classmethod
+    def _validate_key_bindings(
+        cls, value: dict[str, list[str]] | None
+    ) -> dict[str, list[str]] | None:
+        """Rejeita tokens fora do padrão ou KEY_* inexistentes em evdev.ecodes.
+
+        - `None` passa direto (default = herdar).
+        - Values são listas de tokens; cada token casa
+          `^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$`.
+        - Tokens `KEY_*` são verificados contra `evdev.ecodes` via lookup lazy;
+          se evdev não estiver disponível no ambiente (fallback CLI sem deps),
+          aceita qualquer KEY_* bem-formado (validação completa fica para runtime).
+        """
+        if value is None:
+            return value
+        ecodes_ns: Any | None = None
+        try:
+            from evdev import ecodes as _ec
+            ecodes_ns = _ec
+        except Exception:
+            ecodes_ns = None
+        for button, tokens in value.items():
+            if not isinstance(tokens, list):
+                raise ValueError(
+                    f"key_bindings[{button!r}] precisa ser lista, recebeu "
+                    f"{type(tokens).__name__}"
+                )
+            for idx, tok in enumerate(tokens):
+                if not isinstance(tok, str):
+                    raise ValueError(
+                        f"key_bindings[{button!r}][{idx}] precisa ser str, "
+                        f"recebeu {type(tok).__name__}"
+                    )
+                if not _KEY_BINDING_TOKEN_RE.match(tok):
+                    raise ValueError(
+                        f"key_bindings[{button!r}][{idx}]={tok!r} não casa "
+                        f"padrão 'KEY_*' ou '__TOKEN__'"
+                    )
+                if (
+                    tok.startswith("KEY_")
+                    and ecodes_ns is not None
+                    and not hasattr(ecodes_ns, tok)
+                ):
+                    raise ValueError(
+                        f"key_bindings[{button!r}][{idx}]={tok!r} não existe "
+                        f"em evdev.ecodes"
+                    )
         return value
 
     def matches(self, window_info: dict[str, Any]) -> bool:
