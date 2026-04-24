@@ -113,15 +113,16 @@ jobs:
 
   deb-install-smoke:
     name: Smoke install do .deb
-    # BUG-DEB-SMOKE-PYDANTIC-V2-NOBLE-01: validacao empirica 2026-04-24
-    # confirmou que Noble (24.04) tambem entrega python3-pydantic 1.10.x,
-    # nao v2 como a sprint 74 assumiu. Ubuntu plucky (25.04) tem v2 no apt
-    # mas nao esta disponivel como runner padrao. Solucao: continuar em
-    # 22.04 (mesma release do build) e injetar pydantic>=2 via pip ANTES
-    # do apt install. control nao declara mais (>= 2.0) para que apt
-    # resolva o dep com o python3-pydantic 1.x do sistema; runtime do
-    # Hefesto detecta v1 e avisa (ver src/hefesto/__init__.py).
-    runs-on: ubuntu-22.04
+    # Historico de iteracoes:
+    # - Sprint 74: runs-on ubuntu-24.04, presumiu pydantic v2 no apt. FALHOU.
+    # - Sprint 79.1: runs-on ubuntu-22.04 + pip install pydantic>=2. FALHOU
+    #   em v2.2.2 por structlog/typer/platformdirs TAMBEM velhos no Jammy apt.
+    # - Sprint 82 (2026-04-24): MIGRACAO para ubuntu-24.04 (Noble). Empirico
+    #   confirmou typer 0.9, structlog 24.1, platformdirs 4 modernos; so
+    #   pydantic 1.10 do apt exige pip install --user (fix 79.1 preservado).
+    #   Noble e runner alvo preferido: LTS mais recente, dep stack moderna
+    #   exceto pydantic, zero compat layers arriscadas.
+    runs-on: ubuntu-24.04
     needs: [build, deb]
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -133,13 +134,13 @@ jobs:
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
-      - name: Instalar pydantic v2 + structlog moderno via pip (L-21-7 expandida)
-        # Jammy apt: python3-pydantic 1.10, python3-structlog 20.1 — ambos
-        # antigos demais para Hefesto. BUG-DEB-SMOKE-STRUCTLOG-TYPING-02
-        # (sprint 82) expandiu a injeção pip do pydantic para cobrir
-        # structlog também; PYTHONPATH user-site traz as versões modernas.
+      - name: Instalar pydantic v2 via pip (Noble apt tem v1.10)
+        # Noble 24.04 apt: typer 0.9, structlog 24.1, platformdirs 4 modernos,
+        # so pydantic continua 1.10.14 — seguir padrao da 79.1 injetando
+        # via pip --user. --break-system-packages necessario em Noble
+        # (PEP 668: Python system-managed, exige flag para permitir pip).
         run: |
-          python3 -m pip install --user --upgrade 'pydantic>=2.0' 'structlog>=22.1'
+          python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
