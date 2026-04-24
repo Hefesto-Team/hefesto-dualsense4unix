@@ -45,6 +45,14 @@ logger = get_logger(__name__)
 SIGTERM_GRACE_SEC = 2.0
 SIGTERM_POLL_INTERVAL_SEC = 0.05
 
+# Defesa em profundidade contra reciclagem de PID: antes de enviar SIGTERM ao
+# predecessor declarado no pid file, confirmamos que o processo correspondente
+# ainda pertence ao Hefesto (daemon ou GUI). Cobrimos dois padrões canônicos:
+#   - daemon: `comm` == "hefesto" (entry point instalado).
+#   - GUI:    `comm` == "python3" e cmdline contém "hefesto.app.main" / "hefesto".
+# Limite de `/proc/<pid>/comm` é 16 chars; "hefesto" cabe.
+_HEFESTO_PROC_MARKERS: tuple[str, ...] = ("hefesto",)
+
 # Mantém referência global ao fd para impedir GC (que fecharia o flock).
 _HELD_LOCKS: dict[str, int] = {}
 
@@ -70,6 +78,60 @@ def is_alive(pid: int) -> bool:
     return True
 
 
+def _read_proc_comm(pid: int) -> str | None:
+    """Lê `/proc/<pid>/comm` (nome curto de até 16 chars). Retorna None em falha."""
+    try:
+        raw = Path(f"/proc/{pid}/comm").read_text(encoding="utf-8", errors="replace")
+    except (FileNotFoundError, ProcessLookupError, PermissionError, OSError):
+        return None
+    return raw.strip()
+
+
+def _read_proc_cmdline(pid: int) -> str | None:
+    """Lê `/proc/<pid>/cmdline` (args NUL-separados). Retorna None em falha."""
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except (FileNotFoundError, ProcessLookupError, PermissionError, OSError):
+        return None
+    # Argumentos são separados por NUL; trocamos por espaço para busca textual.
+    return raw.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+
+
+def _is_hefesto_process(pid: int) -> bool:
+    """Confirma se o PID corresponde a um processo do Hefesto.
+
+    Defesa contra reciclagem de PID: o kernel pode reatribuir o PID a outro
+    processo do mesmo usuário (firefox, script pessoal) após crash do daemon.
+    Antes de enviar SIGTERM ao suposto predecessor, confirmamos via `/proc`.
+
+    Heurística (inclusiva; qualquer match basta):
+      1. `comm` contém "hefesto" (daemon rodando como entry point `hefesto`).
+      2. `cmdline` contém "hefesto" (GUI rodando como `python3 -m hefesto.app.main`
+         ou daemon rodando como `python3 -m hefesto daemon start`).
+
+    Falhas de leitura (processo sumiu, EPERM, ausência de `/proc`) retornam
+    False — conservador: na dúvida, NÃO mata.
+    """
+    if pid <= 0:
+        return False
+
+    comm = _read_proc_comm(pid)
+    if comm is not None:
+        comm_lower = comm.lower()
+        for marker in _HEFESTO_PROC_MARKERS:
+            if marker in comm_lower:
+                return True
+
+    cmdline = _read_proc_cmdline(pid)
+    if cmdline is not None:
+        cmdline_lower = cmdline.lower()
+        for marker in _HEFESTO_PROC_MARKERS:
+            if marker in cmdline_lower:
+                return True
+
+    return False
+
+
 def _read_existing_pid(path: Path) -> int | None:
     try:
         raw = path.read_text(encoding="ascii").strip()
@@ -85,8 +147,23 @@ def _read_existing_pid(path: Path) -> int | None:
 
 
 def _terminate_predecessor(pid: int) -> None:
-    """SIGTERM com grace 2s, depois SIGKILL. No-op se já morreu."""
+    """SIGTERM com grace 2s, depois SIGKILL. No-op se já morreu.
+
+    Defesa em profundidade (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01):
+    antes de sinalizar, confirma via `/proc/<pid>/comm` e `/proc/<pid>/cmdline`
+    que o processo ainda é do Hefesto. Se o PID foi reciclado pelo kernel para
+    outro processo do mesmo usuário, trata o pid file como órfão e retorna sem
+    enviar nenhum sinal.
+    """
     if not is_alive(pid):
+        return
+    if not _is_hefesto_process(pid):
+        logger.warning(
+            "single_instance_pid_reciclado",
+            pid=pid,
+            actual_comm=_read_proc_comm(pid),
+            expected_marker=_HEFESTO_PROC_MARKERS[0],
+        )
         return
     try:
         os.kill(pid, signal.SIGTERM)
@@ -127,6 +204,9 @@ def acquire_or_takeover(name: str) -> int:
         if is_alive(predecessor):
             logger.info("single_instance_takeover_iniciado",
                         name=name, predecessor_pid=predecessor)
+            # `_terminate_predecessor` valida internamente se o PID é realmente
+            # do Hefesto via `_is_hefesto_process`; PIDs reciclados viram no-op
+            # (pid file tratado como órfão, sem SIGTERM ao alheio).
             _terminate_predecessor(predecessor)
         else:
             logger.debug("single_instance_pid_orfao", name=name, pid_antigo=predecessor)
@@ -200,7 +280,17 @@ def acquire_or_bring_to_front(
     predecessor = _read_existing_pid(path)
 
     if predecessor is not None and predecessor != os.getpid():
-        if is_alive(predecessor):
+        if is_alive(predecessor) and not _is_hefesto_process(predecessor):
+            # PID reciclado para processo alheio: trata como órfão.
+            logger.warning(
+                "single_instance_pid_reciclado",
+                name=name,
+                pid=predecessor,
+                actual_comm=_read_proc_comm(predecessor),
+                expected_marker=_HEFESTO_PROC_MARKERS[0],
+            )
+            predecessor = None
+        if predecessor is not None and is_alive(predecessor):
             logger.info(
                 "single_instance_bring_to_front",
                 name=name,
@@ -289,6 +379,7 @@ def release(name: str) -> None:
 
 __all__ = [
     "SIGTERM_GRACE_SEC",
+    "_is_hefesto_process",
     "acquire_or_bring_to_front",
     "acquire_or_takeover",
     "is_alive",
