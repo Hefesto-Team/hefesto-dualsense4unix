@@ -1,6 +1,7 @@
-"""Wire-up do KeyboardSubsystem no Daemon (armadilha A-07).
+"""Wire-up da emulação de teclado no Daemon (armadilha A-07).
 
-Valida os 4 pontos canônicos:
+Valida os 4 pontos canônicos das funções top-level
+`start_keyboard_emulation`/`stop_keyboard_emulation`:
   1. Slot `_keyboard_device` existe em `Daemon`.
   2. `run()` chama `_start_keyboard_emulation()` quando
      `config.keyboard_emulation_enabled` é True.

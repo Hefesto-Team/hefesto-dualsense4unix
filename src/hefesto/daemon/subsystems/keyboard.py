@@ -22,14 +22,10 @@ import contextlib
 import os
 import shutil
 import subprocess
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from hefesto.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
 from hefesto.utils.logging_config import get_logger
-
-if TYPE_CHECKING:
-    from hefesto.daemon.context import DaemonContext
-    from hefesto.daemon.lifecycle import DaemonConfig
 
 logger = get_logger(__name__)
 
@@ -124,44 +120,6 @@ class _OSKController:
             self.close()
         else:
             logger.warning("osk_token_desconhecido", token=token)
-
-
-class KeyboardSubsystem:
-    """Subsystem que gerencia a emulação de teclado virtual."""
-
-    name = "keyboard"
-    _device: Any = None
-
-    async def start(self, ctx: DaemonContext) -> None:
-        """Cria o dispositivo uinput se keyboard_emulation_enabled=True."""
-        cfg = ctx.config
-        if not cfg.keyboard_emulation_enabled:
-            return
-        if self._device is not None:
-            return
-        try:
-            from hefesto.integrations.uinput_keyboard import UinputKeyboardDevice
-
-            device = UinputKeyboardDevice()
-        except Exception as exc:
-            logger.warning("keyboard_subsystem_import_failed", err=str(exc))
-            return
-        if not device.start():
-            logger.warning("keyboard_subsystem_start_failed")
-            return
-        self._device = device
-        logger.info("keyboard_subsystem_started")
-
-    async def stop(self) -> None:
-        """Para e descarta o dispositivo virtual. Idempotente."""
-        if self._device is not None:
-            with contextlib.suppress(Exception):
-                self._device.stop()
-            self._device = None
-            logger.info("keyboard_subsystem_stopped")
-
-    def is_enabled(self, config: DaemonConfig) -> bool:
-        return config.keyboard_emulation_enabled
 
 
 def start_keyboard_emulation(daemon: Any) -> bool:
@@ -276,7 +234,6 @@ def dispatch_keyboard(daemon: Any, buttons_pressed: frozenset[str]) -> None:
 
 
 __all__ = [
-    "KeyboardSubsystem",
     "_OSKController",
     "dispatch_keyboard",
     "start_keyboard_emulation",
