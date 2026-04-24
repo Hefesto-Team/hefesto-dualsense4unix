@@ -82,11 +82,12 @@ class EvdevReader:
     # cross, circle, triangle, square, l1, r1, l2_btn, r2_btn,
     # create, options, ps, l3, r3.
     #
-    # Botões sem keycode evdev estável (não estão aqui — injetados por outros caminhos):
+    # Botões sem keycode evdev estável no device principal (injetados por outros caminhos):
     # - "mic_btn": vem por HID-raw via `ds.state.micBtn` (byte misc2, bit 0x04).
     #   Injetado em `PyDualSenseController.read_state()`. Ver INFRA-MIC-HID-01.
     # - dpad (up/down/left/right): vem via `_refresh_dpad_buttons` (ABS_HAT0X/Y).
-    # - touchpad_press: possível via BTN_TOUCH, mas keycode inconsistente — pendente.
+    # - touchpad_*_press: device separado (name contém "Touchpad"); lido por
+    #   `TouchpadReader` abaixo (INFRA-EVDEV-TOUCHPAD-01).
     BUTTON_MAP: ClassVar[dict[str, str]] = {
         "BTN_SOUTH": "cross",
         "BTN_EAST": "circle",
@@ -293,10 +294,186 @@ class EvdevReader:
         )
 
 
+def find_dualsense_touchpad_evdev() -> Path | None:
+    """Retorna path do evdev do touchpad do DualSense; None se ausente.
+
+    O touchpad é exposto pelo kernel `hid_playstation` como um event
+    device separado do gamepad principal: mesmo vendor/product Sony
+    DualSense, mas nome contendo "Touchpad" (ex: "Sony Interactive
+    Entertainment DualSense Wireless Controller Touchpad").
+
+    INFRA-EVDEV-TOUCHPAD-01 — validação empírica 2026-04-24.
+    """
+    try:
+        from evdev import InputDevice, list_devices
+    except ImportError:
+        return None
+    for path in list_devices():
+        try:
+            dev = InputDevice(path)
+            try:
+                if (
+                    dev.info.vendor == DUALSENSE_VENDOR
+                    and dev.info.product in DUALSENSE_PIDS
+                    and "Touchpad" in dev.name
+                ):
+                    return Path(path)
+            finally:
+                dev.close()
+        except Exception:
+            continue
+    return None
+
+
+class TouchpadReader:
+    """Lê click físico do touchpad do DualSense regionalizado.
+
+    O touchpad emite `BTN_LEFT` (click firme mecânico, não toque leve) +
+    `ABS_X` (0 a 1919) no device separado descoberto por
+    `find_dualsense_touchpad_evdev`. Correlacionamos o último `ABS_X`
+    observado com o press para discriminar três regiões: esquerda,
+    meio, direita (limites 640 e 1280 sobre largura 1920).
+
+    Threadsafe via RLock. Consultar o estado via `regions_pressed()`.
+    """
+
+    # Largura do touchpad em unidades absolutas do kernel hid_playstation
+    # (empírico, DualSense USB 054c:0ce6 com kernel 6.x):
+    _TOUCHPAD_WIDTH: ClassVar[int] = 1920
+    # Limites de região (terços): [0, 640) esquerda; [640, 1280) meio;
+    # [1280, 1920) direita.
+    _REGION_LEFT_LIMIT: ClassVar[int] = 640
+    _REGION_RIGHT_LIMIT: ClassVar[int] = 1280
+
+    def __init__(self, device_path: Path | None = None) -> None:
+        self._device_path = device_path or find_dualsense_touchpad_evdev()
+        self._lock = threading.RLock()
+        self._thread: threading.Thread | None = None
+        self._stop_flag = threading.Event()
+        self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2  # centro por default
+        self._regions: frozenset[str] = frozenset()
+
+    def is_available(self) -> bool:
+        return self._device_path is not None
+
+    def start(self) -> bool:
+        if not self.is_available():
+            logger.debug("touchpad_reader_unavailable")
+            return False
+        if self._thread is not None and self._thread.is_alive():
+            return True
+        self._stop_flag.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name="hefesto-touchpad",
+            daemon=True,
+        )
+        self._thread.start()
+        return True
+
+    def stop(self) -> None:
+        self._stop_flag.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def regions_pressed(self) -> frozenset[str]:
+        with self._lock:
+            return self._regions
+
+    @classmethod
+    def _region_from_x(cls, x: int) -> str:
+        if x < cls._REGION_LEFT_LIMIT:
+            return "touchpad_left_press"
+        if x >= cls._REGION_RIGHT_LIMIT:
+            return "touchpad_right_press"
+        return "touchpad_middle_press"
+
+    def _run(self) -> None:
+        """Loop com auto-reconnect análogo ao EvdevReader."""
+        try:
+            from evdev import InputDevice, ecodes
+        except ImportError:
+            logger.warning("evdev_module_missing")
+            return
+
+        backoff = 0.5
+        while not self._stop_flag.is_set():
+            path = self._device_path or find_dualsense_touchpad_evdev()
+            if path is None:
+                if self._stop_flag.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+            try:
+                dev = InputDevice(str(path))
+            except Exception as exc:
+                logger.warning(
+                    "touchpad_reader_open_failed",
+                    err=str(exc),
+                    path=str(path),
+                )
+                self._device_path = None
+                if self._stop_flag.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+            logger.info(
+                "touchpad_reader_started", path=str(path), name=dev.name
+            )
+            backoff = 0.5
+            self._device_path = path
+
+            try:
+                for event in dev.read_loop():
+                    if self._stop_flag.is_set():
+                        break
+                    self._handle_event(event, ecodes)
+            except OSError as exc:
+                logger.warning(
+                    "touchpad_reader_read_lost",
+                    err=str(exc),
+                    path=str(path),
+                )
+                self._reset_on_disconnect()
+                self._device_path = None
+            except Exception as exc:
+                logger.warning("touchpad_reader_loop_error", err=str(exc))
+                self._reset_on_disconnect()
+            finally:
+                with contextlib.suppress(Exception):
+                    dev.close()
+
+            if not self._stop_flag.is_set():
+                time.sleep(0.1)
+
+    def _handle_event(self, event: Any, ecodes: Any) -> None:
+        if event.type == ecodes.EV_ABS and event.code == ecodes.ABS_X:
+            # Atualiza snapshot de X para correlacionar no próximo BTN_LEFT.
+            with self._lock:
+                self._last_abs_x = int(event.value)
+        elif event.type == ecodes.EV_KEY and event.code == ecodes.BTN_LEFT:
+            with self._lock:
+                if event.value == 1:
+                    self._regions = frozenset(
+                        {self._region_from_x(self._last_abs_x)}
+                    )
+                elif event.value == 0:
+                    self._regions = frozenset()
+
+    def _reset_on_disconnect(self) -> None:
+        with self._lock:
+            self._regions = frozenset()
+
+
 __all__ = [
     "DUALSENSE_PIDS",
     "DUALSENSE_VENDOR",
     "EvdevReader",
     "EvdevSnapshot",
+    "TouchpadReader",
     "find_dualsense_evdev",
+    "find_dualsense_touchpad_evdev",
 ]
