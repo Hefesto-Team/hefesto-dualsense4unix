@@ -60,11 +60,19 @@ async def server_and_controller(
     manager = ProfileManager(controller=fc, store=store)
     socket_path = tmp_path / "hefesto_draft.sock"
 
-    # Daemon mock para set_mouse_emulation
+    # Daemon mock para set_mouse_emulation. Usa DaemonConfig real para que
+    # rumble_policy tenha valor válido (balanceado, mult 0.7 por padrão)
+    # — necessário após AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01, que faz
+    # apply_draft escalar rumble via _apply_rumble_policy.
+    from hefesto.daemon.lifecycle import DaemonConfig
+
     fake_daemon = MagicMock()
     fake_daemon.set_mouse_emulation.return_value = True
-    fake_daemon.config = MagicMock()
-    fake_daemon.config.rumble_active = None
+    fake_daemon.config = DaemonConfig()
+    # Política "max" garante passthrough 1:1 dos valores brutos nos testes
+    # que comparam set_rumble contra o payload declarado.
+    fake_daemon.config.rumble_policy = "max"  # type: ignore[assignment]
+    fake_daemon._rumble_engine = None
 
     server = IpcServer(
         controller=fc,

@@ -652,10 +652,16 @@ class IpcServer:
                     raise ValueError("rumble.weak e rumble.strong devem ser inteiros")
                 weak = max(0, min(255, weak))
                 strong = max(0, min(255, strong))
+                # AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01:
+                # Persiste valores brutos para que o poll loop (_reassert_rumble)
+                # continue reaplicando a política a cada tick. Antes de enviar ao
+                # hardware, escala via _apply_rumble_policy — mesmo comportamento
+                # canônico de _handle_rumble_set.
                 daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
                 if daemon_cfg is not None:
                     daemon_cfg.rumble_active = (weak, strong)
-                self.controller.set_rumble(weak=weak, strong=strong)
+                eff_weak, eff_strong = _apply_rumble_policy(self.daemon, weak, strong)
+                self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
                 applied.append("rumble")
             except Exception as exc:
                 logger.warning("apply_draft_rumble_falhou", erro=str(exc))
