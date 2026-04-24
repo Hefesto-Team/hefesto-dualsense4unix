@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -117,35 +117,9 @@ class AutoSwitcher:
         )
 
 
-async def start_autoswitch(
-    manager: ProfileManager,
-    window_reader: WindowReader | None = None,
-) -> AutoSwitcher:
-    """Helper: cria e inicia AutoSwitcher.
-
-    `window_reader` default usa `get_active_window_info` do módulo X11.
-    """
-    if window_reader is None:
-        from hefesto.integrations.xlib_window import get_active_window_info
-
-        window_reader = get_active_window_info
-
-    switcher = AutoSwitcher(manager=manager, window_reader=window_reader)
-    switcher.start()
-    return switcher
-
-
-def _noop() -> Awaitable[None]:
-    async def _run() -> None:
-        return
-
-    return _run()
-
-
 __all__ = [
     "DEFAULT_DEBOUNCE_SEC",
     "DEFAULT_POLL_INTERVAL_SEC",
     "AutoSwitcher",
     "WindowReader",
-    "start_autoswitch",
 ]

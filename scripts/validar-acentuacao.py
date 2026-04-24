@@ -316,7 +316,6 @@ _PARES: list[tuple[str, str]] = [
     # outras comuns
     _par("conte" + "udo", "conte" + U + "do"),
     _par("conte" + "udos", "conte" + U + "dos"),
-    _par("m" + "enor", "menor"),  # sentinel — menor já é correto, não adicionar
     _par("depend" + "encia", "depend" + EC + "ncia"),
     _par("depend" + "encias", "depend" + EC + "ncias"),
     _par("frequ" + "encia", "frequ" + EC + "ncia"),
@@ -373,12 +372,12 @@ _PARES: list[tuple[str, str]] = [
     _par("tr" + "es", "tr" + EC + "s"),
     _par("m" + "es", "m" + EC + "s"),
     _par("voc" + "e", "voc" + EC),
-    _par("depo" + "is", "depois"),  # já correto; não altera
     _par("gr" + "afico", "gr" + "á" + "fico"),
     _par("gr" + "aficos", "gr" + "á" + "ficos"),
     _par("est" + "rategia", "est" + "rat" + E + "gia"),
-    _par("categor" + "ia", "categoria"),  # correta em minúscula; mantém
-    _par("prior" + "idade", "prioridade"),  # já correta sem acento
+    # Palavras já corretas sem acento — não adicionar a _PARES: menor, depois,
+    # categoria, prioridade. O dedup da linha 389 rejeita pares com
+    # errada == correta, então entradas sentinel apenas poluem _PARES.
 ]
 
 # Dedup preservando ordem
