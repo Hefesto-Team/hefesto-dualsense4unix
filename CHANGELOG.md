@@ -3,7 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Unreleased] — v2.2.1 em preparação
+## [2.2.1] — 2026-04-23
+
+Patch release pós-v2.2.0. Corrige bugs críticos de packaging
+descobertos durante a própria release v2.2.0 (nome do AppImage e
+.deb incompatível com Ubuntu 22.04), introduz aba Firmware na GUI
+(destravada pelo merge upstream de `dualsensectl` PR#53), blinda o
+validador de acentuação contra remoção silenciosa de glyphs Unicode
+(bug reproduzido 2x), melhora o layout da aba Perfis com combo +
+preview JSON ao vivo, e aprimora o dev-setup com detecção de
+PyGObject. 9 commits desde v2.2.0, 6 sprints principais + 3
+colaterais, zero regressão.
 
 ### Alterado
 - **Aba Perfis — preview JSON ao vivo** (UI-PROFILES-RIGHT-PANEL-REBALANCE-01):

@@ -9,4 +9,4 @@ except PackageNotFoundError:
     # (.deb via build_deb.sh faz cp -r, não pip install — METADATA ausente).
     # Mantenha sincronizado com pyproject.toml [project].version a cada bump.
     # Regressão coberta por CHORE-VERSION-SYNC-GATE-01 (enfileirada).
-    __version__ = "2.2.0"
+    __version__ = "2.2.1"
