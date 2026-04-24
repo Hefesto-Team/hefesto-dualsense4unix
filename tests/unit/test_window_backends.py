@@ -274,3 +274,82 @@ def test_parse_portal_result_app_id_alternativo() -> None:
 
 def test_parse_portal_result_vazio() -> None:
     assert wayland_portal._parse_portal_result({}) is None
+
+
+# ---------------------------------------------------------------------------
+# BUG-COSMIC-PORTAL-UNSUPPORTED-01 — threshold + recovery
+# ---------------------------------------------------------------------------
+
+
+def test_portal_unsupported_apos_threshold_falhas(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Após N falhas consecutivas, backend loga warning único e para de
+    consultar o portal. Previne ruído em COSMIC alpha que ainda não
+    implementa GetActiveWindow."""
+    import logging
+
+    _install_fake_jeepney(
+        monkeypatch,
+        raise_on_send=RuntimeError("no such method"),
+    )
+    backend = wayland_portal.WaylandPortalBackend()
+
+    # Primeiras N chamadas ainda tocam o portal — todas falham → None.
+    for _ in range(backend._UNSUPPORTED_THRESHOLD):
+        assert backend.get_active_window_info() is None
+
+    baseline_calls = len(_FakeConn.instances)
+
+    caplog.set_level(logging.WARNING, logger="hefesto.integrations.window_backends.wayland_portal")
+
+    # A próxima chamada deve retornar None IMEDIATAMENTE sem abrir conexão.
+    assert backend.get_active_window_info() is None
+    assert len(_FakeConn.instances) == baseline_calls
+
+    # Chamadas subsequentes idem — warning é emitido só uma vez.
+    for _ in range(10):
+        backend.get_active_window_info()
+    assert len(_FakeConn.instances) == baseline_calls
+
+
+def test_portal_recupera_se_volta_a_responder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Se portal volta a responder dentro do threshold, contador reseta e
+    backend volta ao normal."""
+    backend = wayland_portal.WaylandPortalBackend()
+
+    # 2 falhas consecutivas (< threshold=3)
+    _install_fake_jeepney(monkeypatch, raise_on_send=RuntimeError("fail"))
+    for _ in range(2):
+        assert backend.get_active_window_info() is None
+    assert backend._consecutive_failures == 2
+
+    # Próxima chamada responde com sucesso → contador reseta.
+    _install_fake_jeepney(
+        monkeypatch,
+        reply_body=("h", {"app-id": "foo", "title": "bar", "pid": 1}),
+    )
+    info = backend.get_active_window_info()
+    assert info is not None
+    assert info.app_id == "foo"
+    assert backend._consecutive_failures == 0
+    assert backend._unsupported_warned is False
+
+
+def test_compositor_hint_usa_xdg_current_desktop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC:GNOME")
+    backend = wayland_portal.WaylandPortalBackend()
+    assert backend._compositor_hint() == "COSMIC:GNOME"
+
+
+def test_compositor_hint_fallback_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+    backend = wayland_portal.WaylandPortalBackend()
+    assert backend._compositor_hint() == "unknown"
