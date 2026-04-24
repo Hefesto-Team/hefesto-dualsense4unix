@@ -192,6 +192,39 @@ class RumbleEngine:
         """Último multiplicador efetivo usado (para daemon.state_full)."""
         return self._last_mult_applied
 
+    def update_auto_state(
+        self,
+        auto_mult: float,
+        change_at: float,
+        *,
+        mult_applied: float | None = None,
+    ) -> None:
+        """Atualiza o estado de debounce do modo "auto" e o mult efetivo aplicado.
+
+        Encapsula a escrita dos campos privados `_last_auto_mult`,
+        `_last_auto_change_at` e `_last_mult_applied`. Usado por chamadores
+        externos (ex.: `_apply_rumble_policy` em `ipc_server.py`) que precisam
+        propagar o resultado de `_effective_mult` de volta ao engine sem
+        tocar atributos privados diretamente.
+
+        Args:
+            auto_mult: novo valor do debounce state de auto (último mult alvo
+                confirmado pelo debounce). Para policies fixas, é o mesmo
+                valor que entrou.
+            change_at: timestamp da última mudança de debounce.
+            mult_applied: (opcional) mult efetivo aplicado no hardware nesse
+                ciclo. Para policy "auto", normalmente == auto_mult. Para
+                policies fixas (economia/balanceado/max/custom), difere —
+                nesse caso o chamador passa o mult efetivo aqui; se None,
+                assume `auto_mult`.
+
+        AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: substitui writeback direto em
+        `rumble_engine._last_auto_*` / `._last_mult_applied` por método público.
+        """
+        self._last_auto_mult = auto_mult
+        self._last_auto_change_at = change_at
+        self._last_mult_applied = mult_applied if mult_applied is not None else auto_mult
+
     def _compute_mult(self, now: float) -> float:
         """Calcula multiplicador atual conforme política do config."""
         if self._config is None:

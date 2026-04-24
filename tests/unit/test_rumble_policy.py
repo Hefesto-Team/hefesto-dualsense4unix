@@ -16,10 +16,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from hefesto.core.rumble import RumbleEngine, _effective_mult
-from hefesto.daemon.lifecycle import (
-    DaemonConfig,
-    _effective_mult_inline,
-)
+from hefesto.daemon.lifecycle import DaemonConfig
+
+# AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline foi deletado;
+# testes usam a função canônica _effective_mult. Alias local mantém os
+# call sites curtos e legíveis sem alterar semântica dos asserts.
+_effective_mult_inline = _effective_mult
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -335,3 +337,50 @@ class TestIpcHandlers:
         assert result["rumble_policy"] == "balanceado"
         assert "rumble_policy_custom_mult" in result
         assert "rumble_mult_applied" in result
+
+
+# ---------------------------------------------------------------------------
+# Encapsulamento: RumbleEngine.update_auto_state
+# ---------------------------------------------------------------------------
+
+class TestUpdateAutoState:
+    """AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01 — método público substitui
+    writeback direto de campos privados por chamadores externos.
+    """
+
+    def test_atualiza_campos_auto_e_mult_applied_default(self) -> None:
+        """Sem mult_applied explícito, usa auto_mult nos três campos."""
+        controller = MagicMock()
+        engine = RumbleEngine(controller)
+        engine.update_auto_state(0.3, 123.0)
+        assert engine._last_auto_mult == pytest.approx(0.3)
+        assert engine._last_auto_change_at == pytest.approx(123.0)
+        assert engine.last_mult_applied == pytest.approx(0.3)
+
+    def test_mult_applied_explicito_difere_de_auto_mult(self) -> None:
+        """Policies fixas: mult efetivo aplicado difere do auto debounce state."""
+        controller = MagicMock()
+        engine = RumbleEngine(controller)
+        # Simula auto debounce em 0.7 mas policy fixa 'economia' aplicando 0.3.
+        engine.update_auto_state(0.7, 200.0, mult_applied=0.3)
+        assert engine._last_auto_mult == pytest.approx(0.7)
+        assert engine._last_auto_change_at == pytest.approx(200.0)
+        assert engine.last_mult_applied == pytest.approx(0.3)
+
+    def test_substitui_writeback_direto(self) -> None:
+        """Prova funcional: mesmo efeito que o writeback direto antigo."""
+        controller = MagicMock()
+        engine_a = RumbleEngine(controller)
+        engine_b = RumbleEngine(controller)
+
+        # Método público (novo).
+        engine_a.update_auto_state(1.0, 42.5, mult_applied=0.55)
+
+        # Writeback direto (antigo — agora proibido fora de core/rumble.py).
+        engine_b._last_auto_mult = 1.0
+        engine_b._last_auto_change_at = 42.5
+        engine_b._last_mult_applied = 0.55
+
+        assert engine_a._last_auto_mult == engine_b._last_auto_mult
+        assert engine_a._last_auto_change_at == engine_b._last_auto_change_at
+        assert engine_a.last_mult_applied == engine_b.last_mult_applied
