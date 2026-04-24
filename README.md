@@ -20,7 +20,7 @@
 
 ```
 Versão: 2.3.0
-Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1036 testes unit, ruff clean, mypy zero
+Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1138 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
