@@ -8,8 +8,9 @@ except PackageNotFoundError:
     # Fallback para instalações sem metadata registrada
     # (.deb via build_deb.sh faz cp -r, não pip install — METADATA ausente).
     # Mantenha sincronizado com pyproject.toml [project].version a cada bump.
-    # Regressão coberta por CHORE-VERSION-SYNC-GATE-01 (enfileirada).
-    __version__ = "2.2.1"
+    # Regressão coberta pelo gate version-sync em .github/workflows/ci.yml
+    # (CHORE-VERSION-SYNC-GATE-01, MERGED).
+    __version__ = "2.2.2"
 
 
 def _check_pydantic_v2() -> None:
