@@ -69,7 +69,105 @@ def find_dualsense_evdev() -> Path | None:
     return None
 
 
-class EvdevReader:
+class _EvdevReconnectLoop:
+    """Loop base de leitura evdev com auto-reconnect e backoff exponencial.
+
+    Encapsula o padrão duplicado entre `EvdevReader` e `TouchpadReader`.
+    Subclasses implementam hooks: `_find_device`, `_handle_event`,
+    `_reset_on_disconnect`, `_log_prefix` (prefixo para log events).
+    """
+
+    _device_path: Path | None
+    _stop_flag: threading.Event
+    _thread: threading.Thread | None
+    _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
+
+    def _find_device(self) -> Path | None:  # pragma: no cover - abstract
+        raise NotImplementedError
+
+    def _handle_event(self, event: Any, ecodes: Any) -> None:  # pragma: no cover
+        raise NotImplementedError
+
+    def _reset_on_disconnect(self) -> None:  # pragma: no cover - abstract
+        raise NotImplementedError
+
+    def _log_prefix(self) -> str:  # pragma: no cover - abstract
+        raise NotImplementedError
+
+    def is_available(self) -> bool:
+        return self._device_path is not None
+
+    def start(self) -> bool:
+        if not self.is_available():
+            prefix = self._log_prefix()
+            key = "evdev_reader_unavailable" if prefix == "evdev" else f"{prefix}_unavailable"
+            logger.debug(key)
+            return False
+        if self._thread is not None and self._thread.is_alive():
+            return True
+        self._stop_flag.clear()
+        self._thread = threading.Thread(target=self._run, name=self._THREAD_NAME, daemon=True)
+        self._thread.start()
+        return True
+
+    def stop(self) -> None:
+        self._stop_flag.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def _run(self) -> None:
+        """Loop com auto-reconnect; OSError no read_loop dispara reset + reabrir."""
+        try:
+            from evdev import InputDevice, ecodes
+        except ImportError:
+            logger.warning("evdev_module_missing")
+            return
+
+        prefix = self._log_prefix()
+        backoff = 0.5
+        while not self._stop_flag.is_set():
+            path = self._device_path or self._find_device()
+            if path is None:
+                if prefix == "evdev":
+                    logger.debug("evdev_device_not_found_retry", backoff=backoff)
+                if self._stop_flag.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 5.0)
+                continue
+            try:
+                dev = InputDevice(str(path))
+            except Exception as exc:
+                logger.warning(f"{prefix}_open_failed", err=str(exc), path=str(path))
+                self._device_path = None
+                if self._stop_flag.wait(backoff):
+                    break
+                backoff = min(backoff * 2, 5.0)
+                continue
+
+            logger.info(f"{prefix}_started", path=str(path), name=dev.name)
+            backoff = 0.5
+            self._device_path = path
+            try:
+                for event in dev.read_loop():
+                    if self._stop_flag.is_set():
+                        break
+                    self._handle_event(event, ecodes)
+            except OSError as exc:
+                logger.warning(f"{prefix}_read_lost", err=str(exc), path=str(path))
+                self._reset_on_disconnect()
+                self._device_path = None
+            except Exception as exc:
+                logger.warning(f"{prefix}_loop_error", err=str(exc))
+                self._reset_on_disconnect()
+            finally:
+                with contextlib.suppress(Exception):
+                    dev.close()
+            if not self._stop_flag.is_set():
+                time.sleep(0.1)  # grace period antes de tentar reabrir
+
+
+class EvdevReader(_EvdevReconnectLoop):
     """Lê input do DualSense via evdev em thread dedicada.
 
     `start()` abre o device e inicia o loop. `snapshot()` retorna o estado
@@ -104,6 +202,8 @@ class EvdevReader:
         "BTN_THUMBR": "r3",
     }
 
+    _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
+
     def __init__(self, device_path: Path | None = None) -> None:
         self._device_path = device_path or find_dualsense_evdev()
         self._lock = threading.RLock()
@@ -113,30 +213,6 @@ class EvdevReader:
         self._dpad_x = 0
         self._dpad_y = 0
         self._pressed: set[str] = set()
-
-    def is_available(self) -> bool:
-        return self._device_path is not None
-
-    def start(self) -> bool:
-        if not self.is_available():
-            logger.debug("evdev_reader_unavailable")
-            return False
-        if self._thread is not None and self._thread.is_alive():
-            return True
-        self._stop_flag.clear()
-        self._thread = threading.Thread(
-            target=self._run,
-            name="hefesto-evdev",
-            daemon=True,
-        )
-        self._thread.start()
-        return True
-
-    def stop(self) -> None:
-        self._stop_flag.set()
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
-            self._thread = None
 
     def snapshot(self) -> EvdevSnapshot:
         with self._lock:
@@ -150,74 +226,24 @@ class EvdevReader:
                 buttons_pressed=self._snapshot.buttons_pressed,
             )
 
-    def _run(self) -> None:
-        """Loop principal com auto-reconnect (HOTFIX-3).
+    # Hooks do loop base ------------------------------------------------
 
-        Se o device evdev sumir (USB re-enumera, sleep transient,
-        driver unbind), detectamos via OSError no read_loop, zeramos o
-        snapshot dos botões pra não ficar com 'botão preso', e tentamos
-        reabrir. Retry com backoff exponencial (0.5s -> 5s).
-        """
-        try:
-            from evdev import InputDevice, ecodes
-        except ImportError:
-            logger.warning("evdev_module_missing")
-            return
+    def _find_device(self) -> Path | None:
+        return find_dualsense_evdev()
 
-        backoff = 0.5
-        while not self._stop_flag.is_set():
-            path = self._device_path or find_dualsense_evdev()
-            if path is None:
-                logger.debug("evdev_device_not_found_retry", backoff=backoff)
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, 5.0)
-                continue
+    def _log_prefix(self) -> str:
+        return "evdev"
 
-            try:
-                dev = InputDevice(str(path))
-            except Exception as exc:
-                logger.warning("evdev_open_failed", err=str(exc), path=str(path))
-                self._device_path = None
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, 5.0)
-                continue
-
-            logger.info("evdev_reader_started", path=str(path), name=dev.name)
-            backoff = 0.5
-            self._device_path = path
-
-            try:
-                for event in dev.read_loop():
-                    if self._stop_flag.is_set():
-                        break
-                    self._handle_event(event, ecodes)
-            except OSError as exc:
-                logger.warning("evdev_read_lost", err=str(exc), path=str(path))
-                self._reset_buttons_on_disconnect()
-                self._device_path = None
-            except Exception as exc:
-                logger.warning("evdev_read_loop_error", err=str(exc))
-                self._reset_buttons_on_disconnect()
-            finally:
-                with contextlib.suppress(Exception):
-                    dev.close()
-
-            if not self._stop_flag.is_set():
-                time.sleep(0.1)  # grace period antes de tentar reabrir
-
-    def _reset_buttons_on_disconnect(self) -> None:
-        """Limpa botões 'travados' quando o device caiu.
-
-        Sem isso, se o controle some com um botão fisicamente pressionado,
-        o snapshot fica com ele indefinidamente até o reader voltar.
-        """
+    def _reset_on_disconnect(self) -> None:
+        """Limpa botões 'travados' quando o device caiu."""
         with self._lock:
             self._pressed.clear()
             self._dpad_x = 0
             self._dpad_y = 0
             self._snapshot = self._with(buttons_pressed=frozenset())
+
+    # Alias retrocompatível para testes legados (HOTFIX-3).
+    _reset_buttons_on_disconnect = _reset_on_disconnect
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type == ecodes.EV_ABS:
@@ -283,15 +309,9 @@ class EvdevReader:
 
     def _with(self, **changes: Any) -> EvdevSnapshot:
         current = self._snapshot
-        return EvdevSnapshot(
-            l2_raw=changes.get("l2_raw", current.l2_raw),
-            r2_raw=changes.get("r2_raw", current.r2_raw),
-            lx=changes.get("lx", current.lx),
-            ly=changes.get("ly", current.ly),
-            rx=changes.get("rx", current.rx),
-            ry=changes.get("ry", current.ry),
-            buttons_pressed=changes.get("buttons_pressed", current.buttons_pressed),
-        )
+        fields = ("l2_raw", "r2_raw", "lx", "ly", "rx", "ry", "buttons_pressed")
+        values = {f: changes.get(f, getattr(current, f)) for f in fields}
+        return EvdevSnapshot(**values)
 
 
 def find_dualsense_touchpad_evdev() -> Path | None:
@@ -325,7 +345,7 @@ def find_dualsense_touchpad_evdev() -> Path | None:
     return None
 
 
-class TouchpadReader:
+class TouchpadReader(_EvdevReconnectLoop):
     """Lê click físico do touchpad do DualSense regionalizado.
 
     O touchpad emite `BTN_LEFT` (click firme mecânico, não toque leve) +
@@ -344,6 +364,7 @@ class TouchpadReader:
     # [1280, 1920) direita.
     _REGION_LEFT_LIMIT: ClassVar[int] = 640
     _REGION_RIGHT_LIMIT: ClassVar[int] = 1280
+    _THREAD_NAME: ClassVar[str] = "hefesto-touchpad"
 
     def __init__(self, device_path: Path | None = None) -> None:
         self._device_path = device_path or find_dualsense_touchpad_evdev()
@@ -352,30 +373,6 @@ class TouchpadReader:
         self._stop_flag = threading.Event()
         self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2  # centro por default
         self._regions: frozenset[str] = frozenset()
-
-    def is_available(self) -> bool:
-        return self._device_path is not None
-
-    def start(self) -> bool:
-        if not self.is_available():
-            logger.debug("touchpad_reader_unavailable")
-            return False
-        if self._thread is not None and self._thread.is_alive():
-            return True
-        self._stop_flag.clear()
-        self._thread = threading.Thread(
-            target=self._run,
-            name="hefesto-touchpad",
-            daemon=True,
-        )
-        self._thread.start()
-        return True
-
-    def stop(self) -> None:
-        self._stop_flag.set()
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
-            self._thread = None
 
     def regions_pressed(self) -> frozenset[str]:
         with self._lock:
@@ -389,65 +386,13 @@ class TouchpadReader:
             return "touchpad_right_press"
         return "touchpad_middle_press"
 
-    def _run(self) -> None:
-        """Loop com auto-reconnect análogo ao EvdevReader."""
-        try:
-            from evdev import InputDevice, ecodes
-        except ImportError:
-            logger.warning("evdev_module_missing")
-            return
+    # Hooks do loop base ------------------------------------------------
 
-        backoff = 0.5
-        while not self._stop_flag.is_set():
-            path = self._device_path or find_dualsense_touchpad_evdev()
-            if path is None:
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, 5.0)
-                continue
+    def _find_device(self) -> Path | None:
+        return find_dualsense_touchpad_evdev()
 
-            try:
-                dev = InputDevice(str(path))
-            except Exception as exc:
-                logger.warning(
-                    "touchpad_reader_open_failed",
-                    err=str(exc),
-                    path=str(path),
-                )
-                self._device_path = None
-                if self._stop_flag.wait(backoff):
-                    break
-                backoff = min(backoff * 2, 5.0)
-                continue
-
-            logger.info(
-                "touchpad_reader_started", path=str(path), name=dev.name
-            )
-            backoff = 0.5
-            self._device_path = path
-
-            try:
-                for event in dev.read_loop():
-                    if self._stop_flag.is_set():
-                        break
-                    self._handle_event(event, ecodes)
-            except OSError as exc:
-                logger.warning(
-                    "touchpad_reader_read_lost",
-                    err=str(exc),
-                    path=str(path),
-                )
-                self._reset_on_disconnect()
-                self._device_path = None
-            except Exception as exc:
-                logger.warning("touchpad_reader_loop_error", err=str(exc))
-                self._reset_on_disconnect()
-            finally:
-                with contextlib.suppress(Exception):
-                    dev.close()
-
-            if not self._stop_flag.is_set():
-                time.sleep(0.1)
+    def _log_prefix(self) -> str:
+        return "touchpad_reader"
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
         if event.type == ecodes.EV_ABS and event.code == ecodes.ABS_X:
