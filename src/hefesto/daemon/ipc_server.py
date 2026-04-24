@@ -258,8 +258,16 @@ class IpcServer:
         except ValueError as exc:
             return _json_rpc_error(req_id, CODE_INVALID_PARAMS, str(exc))
         except Exception as exc:
+            # AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01: `str(exc)` podia vazar
+            # path absoluto, valores internos e payload reconstituído via
+            # ValidationError/OSError. Mensagem genérica com nome da classe;
+            # detalhe integral fica nos logs (logger.exception abaixo).
             logger.exception("ipc_handler_error", method=method)
-            return _json_rpc_error(req_id, CODE_INTERNAL, str(exc))
+            return _json_rpc_error(
+                req_id,
+                CODE_INTERNAL,
+                f"erro interno ({type(exc).__name__})",
+            )
 
         if req_id is None:
             return None

@@ -28,6 +28,32 @@ from hefesto.utils.xdg_paths import profiles_dir
 
 LOCK_SUFFIX = ".lock"
 
+# AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01: tokens proibidos em identifier.
+# Path('/dir') / '/etc/passwd' devolve '/etc/passwd' (escape absoluto);
+# '..' escapa relativo após resolve(). Null byte quebra syscalls de fs.
+_FORBIDDEN_IDENTIFIER_TOKENS = ("/", "\\", "\x00")
+
+
+def _reject_traversal(identifier: str) -> None:
+    """Rejeita identifier que tente path traversal no diretório de perfis.
+
+    Display names acentuados (ex.: "Ação Rápida") são permitidos — o pipeline
+    do loader normaliza via `slugify()`. O que NÃO é permitido: separadores
+    de path, componentes `..`, null bytes. Defesa em boundary antes de qualquer
+    `directory / identifier`.
+    """
+    if not isinstance(identifier, str) or not identifier:
+        raise ValueError("identifier de perfil vazio ou inválido")
+    for token in _FORBIDDEN_IDENTIFIER_TOKENS:
+        if token in identifier:
+            raise ValueError(
+                f"identifier de perfil contém caractere proibido: {token!r}"
+            )
+    # '..' em qualquer posição (ex.: '../x', 'x/..', '..', '..bar', 'foo..bar').
+    # Display names legítimos nunca contêm '..'; separadores já foram rejeitados.
+    if ".." in identifier:
+        raise ValueError("identifier de perfil contém sequência '..'")
+
 
 def _lock_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + LOCK_SUFFIX)
@@ -41,6 +67,7 @@ def _profile_path(identifier: str | Profile) -> Path:
     """
     if isinstance(identifier, Profile):
         return profiles_dir(ensure=True) / f"{slugify(identifier.name)}.json"
+    _reject_traversal(identifier)
     return profiles_dir(ensure=True) / f"{identifier}.json"
 
 
@@ -60,8 +87,14 @@ def load_profile(identifier: str) -> Profile:
        slug bata com `slugify(identifier)`. Cobre arquivos cujo filename
        não acompanhou o slug atual (ex.: `meu-perfil.json` com name "Meu Perfil").
     """
+    _reject_traversal(identifier)
     directory = profiles_dir(ensure=True)
     direct = directory / f"{identifier}.json"
+    # Defesa em profundidade: mesmo após rejeição de tokens, confirmar que o
+    # path resolvido não escapa do diretório de perfis (ex.: symlink hostil).
+    directory_resolved = directory.resolve()
+    if not direct.resolve().is_relative_to(directory_resolved):
+        raise ValueError("identifier de perfil escapa do diretório de perfis")
     if direct.exists():
         return _read_profile(direct)
 
