@@ -1,12 +1,18 @@
 # Manifest Flatpak — Hefesto
 # App ID: br.andrefarias.Hefesto
-# Runtime: org.gnome.Platform//45 (inclui GTK3, PyGObject, python3, gi-repository)
+# Runtime: org.gnome.Platform//47 (GTK3, PyGObject, python3 3.12, gi-repository)
 # Construção local: scripts/build_flatpak.sh
 # CI: .github/workflows/flatpak.yml
+#
+# Histórico de runtime:
+#   - v2.3.x: GNOME Platform//45 — deps Python quase todas ausentes (bug).
+#   - v2.4.0 (2026-04-24): GNOME Platform//47 + deps Python completas como
+#     módulo `hefesto-deps`. Fix para BUG-FLATPAK-DEPS-01 (gi/pydantic
+#     ausentes ao abrir hefesto-gui em instalação recém-feita).
 
 app-id: br.andrefarias.Hefesto
 runtime: org.gnome.Platform
-runtime-version: "45"
+runtime-version: "47"
 sdk: org.gnome.Sdk
 
 # Ponto de entrada principal — GUI GTK3
@@ -30,40 +36,50 @@ finish-args:
   # Perfis e configurações em ~/.config/hefesto/
   # Dentro do sandbox: ~/.var/app/br.andrefarias.Hefesto/config/hefesto/
   - --filesystem=xdg-config/hefesto:create
-  # Portals do freedesktop (notificações, tray, background)
+  # Portals do freedesktop (notificações, tray, background, window tracking)
   - --talk-name=org.freedesktop.portal.*
 
 modules:
-  # Módulo 1: python-uinput (emulação de gamepad/mouse via uinput)
-  # Instalado via pip pois não faz parte do runtime GNOME//45
-  - name: python-uinput
-    buildsystem: simple
-    # build-args: --share=network permite pip puxar o tarball do PyPI durante
-    # o build. Alternativa offline seria declarar "type: archive" com url+sha,
-    # mas isso adiciona 5 deps transitivas (cffi, pycparser etc.). Network
-    # opt-in no build é aceito pelo Flathub para casos pequenos como este.
-    build-options:
-      build-args:
-        - --share=network
-    build-commands:
-      - pip3 install --prefix=/app --no-build-isolation python-uinput
-    sources: []
-
-  # Módulo 2: pydualsense (comunicação HID com DualSense)
-  - name: pydualsense
+  # Módulo 1: todas as dependências Python do Hefesto num único pip install.
+  #
+  # Por que consolidado: o wheel `hefesto` é instalado com `--no-deps` no
+  # módulo 2 (para evitar recursão de resolver do pip sobre deps já dentro
+  # do runtime). Portanto as deps declaradas em `pyproject.toml` precisam
+  # ser empurradas explicitamente aqui. Inclui `python-uinput` e
+  # `pydualsense` que antes estavam em módulos separados.
+  #
+  # `--share=network` é necessário porque o Flathub build farm baixa os
+  # wheels do PyPI. Alternativa offline seria cravar `type: file` + sha256
+  # para cada wheel (~15 arquivos, 4 MiB), mas o overhead de atualização
+  # das hashes a cada bump não compensa o benefício marginal de
+  # reprodutibilidade.
+  - name: hefesto-deps
     buildsystem: simple
     build-options:
       build-args:
         - --share=network
     build-commands:
-      - pip3 install --prefix=/app --no-build-isolation pydualsense
+      - pip3 install --prefix=/app --no-build-isolation
+          "pydualsense>=0.7.5"
+          "python-uinput"
+          "textual>=0.47"
+          "typer>=0.9"
+          "pydantic>=2.0"
+          "python-xlib>=0.33"
+          "evdev>=1.6"
+          "structlog>=23.0"
+          "rich>=13.0"
+          "platformdirs>=4.0"
+          "filelock>=3.13"
+          "jeepney>=0.8"
     sources: []
 
-  # Módulo 3: Hefesto — instalação do wheel local
+  # Módulo 2: Hefesto — instalação do wheel local com --no-deps
   - name: hefesto
     buildsystem: simple
     build-commands:
-      # Instalar o wheel pré-construído (gerado por 'python -m build' no script)
+      # Instalar o wheel pré-construído (gerado por 'python -m build' no script).
+      # --no-deps porque o módulo `hefesto-deps` acima já empurrou tudo.
       - pip3 install --prefix=/app --no-deps ./dist/*.whl
 
       # Instalar ícone 256x256 para o lançador do sistema
