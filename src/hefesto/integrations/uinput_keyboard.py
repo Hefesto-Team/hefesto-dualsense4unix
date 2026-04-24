@@ -27,12 +27,14 @@ Política para sprints futuras:
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from hefesto.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     KeyBinding,
+    is_virtual_token,
 )
 from hefesto.utils.logging_config import get_logger
 
@@ -99,11 +101,17 @@ class UinputKeyboardDevice:
     bindings: dict[str, KeyBinding] = field(
         default_factory=lambda: dict(DEFAULT_BUTTON_BINDINGS)
     )
+    # Callback para tokens virtuais `__*__` (FEAT-KEYBOARD-UI-01). Recebe
+    # `(token, phase)` onde phase é "press" ou "release". Quando None, tokens
+    # virtuais são ignorados (log warning uma vez). Ver keyboard subsystem
+    # para o binding típico: `__OPEN_OSK__` → abrir onboard/wvkbd.
+    virtual_token_callback: Callable[[str, str], None] | None = None
 
     _device: Any = None
     _uinput_mod: Any = None
     # Botões canônicos (do DualSense) atualmente pressionados e já emitidos.
     _pressed_buttons: frozenset[str] = field(default_factory=frozenset)
+    _virtual_token_warned: bool = False
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível."""
@@ -182,6 +190,8 @@ class UinputKeyboardDevice:
         seq = self.bindings.get(button)
         if not seq:
             return
+        if self._delegate_virtual_tokens(button, seq, phase="press"):
+            return
         u = self._uinput_mod
         any_emitted = False
         for key_name in seq:
@@ -206,6 +216,8 @@ class UinputKeyboardDevice:
         seq = self.bindings.get(button)
         if not seq:
             return
+        if self._delegate_virtual_tokens(button, seq, phase="release"):
+            return
         u = self._uinput_mod
         any_emitted = False
         # Libera em ordem reversa ao press (modificadores por último saem).
@@ -223,6 +235,55 @@ class UinputKeyboardDevice:
                 keys=list(seq),
                 phase="release",
             )
+
+    def _delegate_virtual_tokens(
+        self, button: str, seq: KeyBinding, phase: str
+    ) -> bool:
+        """Se `seq` for inteiramente tokens virtuais `__*__`, delega ao callback.
+
+        Retorna True quando o binding foi tratado como virtual (caller deve
+        sair sem emitir pelo uinput). False quando é um binding normal com
+        `KEY_*`. Binding misto (`__OPEN_OSK__` + `KEY_TAB`) é rejeitado com
+        warning — semântica mista seria confusa e a UI futura impede.
+        """
+        virtual = [tok for tok in seq if is_virtual_token(tok)]
+        if not virtual:
+            return False
+        if len(virtual) != len(seq):
+            logger.warning(
+                "keyboard_binding_misto_rejeitado",
+                button=button,
+                keys=list(seq),
+            )
+            return True
+        cb = self.virtual_token_callback
+        if cb is None:
+            if not self._virtual_token_warned:
+                logger.warning(
+                    "keyboard_virtual_token_sem_callback",
+                    button=button,
+                    keys=list(seq),
+                )
+                self._virtual_token_warned = True
+            return True
+        for tok in seq:
+            try:
+                cb(tok, phase)
+            except Exception as exc:
+                logger.warning(
+                    "keyboard_virtual_token_callback_failed",
+                    button=button,
+                    token=tok,
+                    phase=phase,
+                    err=str(exc),
+                )
+        logger.info(
+            "key_binding_virtual_emit",
+            button=button,
+            tokens=list(seq),
+            phase=phase,
+        )
+        return True
 
     def _release_all(self) -> None:
         """Libera todas as teclas ainda pressionadas sob os bindings atuais."""

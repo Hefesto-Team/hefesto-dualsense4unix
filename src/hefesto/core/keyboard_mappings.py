@@ -31,17 +31,41 @@ from __future__ import annotations
 
 KeyBinding = tuple[str, ...]
 
+# Tokens virtuais reservados (FEAT-KEYBOARD-UI-01). Não são teclas reais:
+# o `UinputKeyboardDevice` reconhece o prefixo `__`/sufixo `__` e delega ao
+# callback do subsystem em vez de emitir via uinput. Mantê-los em constantes
+# evita literais mágicos espalhados pelo código.
+TOKEN_OPEN_OSK = "__OPEN_OSK__"
+TOKEN_CLOSE_OSK = "__CLOSE_OSK__"
+
 DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
     "options": ("KEY_LEFTMETA",),
     "create": ("KEY_SYSRQ",),
     "l1": ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"),
     "r1": ("KEY_LEFTALT", "KEY_TAB"),
+    # L3/R3 abrem/fecham teclado virtual do sistema (onboard/wvkbd-mobintl).
+    # O token virtual é interceptado pelo UinputKeyboardDevice e delegado ao
+    # keyboard subsystem — não emite evento real de tecla. Previne colisão
+    # com R3=BTN_MIDDLE do mouse porque este último só atua quando
+    # `mouse_emulation_enabled=True`. Quem habilita mouse+teclado juntos
+    # pode sobrescrever l3/r3 via UI (FEAT-KEYBOARD-UI-01) removendo o
+    # conflito explicitamente.
+    "l3": (TOKEN_OPEN_OSK,),
+    "r3": (TOKEN_CLOSE_OSK,),
+    # Regiões do touchpad (click firme, não toque leve) — emitidas pelo
+    # `TouchpadReader` no device separado expose pelo kernel hid_playstation.
+    # O dispatcher (`dispatch_keyboard`) mescla `regions_pressed()` ao
+    # frozenset de botões antes de passar ao device, permitindo que as 3
+    # regiões sejam tratadas como "botões" virtuais aqui — API uniforme.
+    "touchpad_left_press": ("KEY_BACKSPACE",),
+    "touchpad_middle_press": ("KEY_ENTER",),
+    "touchpad_right_press": ("KEY_DELETE",),
 }
 
-# L3/R3 ficam reservados para o subsystem de onboard/wvkbd-mobintl que entrará
-# na sub-sprint FEAT-KEYBOARD-UI-01 junto com a UI de edição. Mantê-los de
-# fora evita colisão com R3 = BTN_MIDDLE do mouse enquanto a UI não permite
-# ao usuário desligar o mouse antes de reatribuir L3/R3.
+
+def is_virtual_token(token: str) -> bool:
+    """True se `token` é um marcador `__XXX__` (delegado ao callback)."""
+    return len(token) >= 4 and token.startswith("__") and token.endswith("__")
 
 
 def parse_binding(spec: str) -> KeyBinding:
@@ -74,8 +98,11 @@ def format_binding(binding: KeyBinding) -> str:
 
 __all__ = [
     "DEFAULT_BUTTON_BINDINGS",
+    "TOKEN_CLOSE_OSK",
+    "TOKEN_OPEN_OSK",
     "KeyBinding",
     "format_binding",
+    "is_virtual_token",
     "parse_binding",
 ]
 
