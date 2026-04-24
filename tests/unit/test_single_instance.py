@@ -7,6 +7,8 @@ Cobre:
   - Pid órfão (processo já morto) é sobrescrito sem SIGTERM.
   - `acquire_or_bring_to_front` chama callback com PID do predecessor, não envia
     SIGTERM e retorna None quando predecessor permanece vivo.
+  - `_is_hefesto_process` distingue daemon/GUI legítimos de PIDs reciclados
+    (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01).
 """
 from __future__ import annotations
 
@@ -164,3 +166,314 @@ def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
     os.kill(child_pid, signal.SIGKILL)
     os.waitpid(child_pid, 0)
     single_instance.release("gui-btf")
+
+
+# -----------------------------------------------------------------------------
+# AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01
+# Defesa em profundidade contra reciclagem de PID.
+# -----------------------------------------------------------------------------
+
+
+def test_is_hefesto_process_comm_ok(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_read_proc_comm` com 'hefesto\\n' faz `_is_hefesto_process` retornar True."""
+    def fake_read_comm(pid: int) -> str | None:
+        return "hefesto"
+
+    def fake_read_cmdline(pid: int) -> str | None:
+        return None
+
+    monkeypatch.setattr(single_instance, "_read_proc_comm", fake_read_comm)
+    monkeypatch.setattr(single_instance, "_read_proc_cmdline", fake_read_cmdline)
+
+    assert single_instance._is_hefesto_process(12345) is True
+
+
+def test_is_hefesto_process_cmdline_gui_python3_module(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GUI roda como `python3 -m hefesto.app.main` — comm=python3, cmdline tem hefesto."""
+    monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "python3")
+    monkeypatch.setattr(
+        single_instance,
+        "_read_proc_cmdline",
+        lambda pid: "/usr/bin/python3 -m hefesto.app.main",
+    )
+    assert single_instance._is_hefesto_process(12345) is True
+
+
+def test_is_hefesto_process_alheio_firefox(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PID reciclado para firefox — comm e cmdline sem marcador 'hefesto'."""
+    monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "firefox")
+    monkeypatch.setattr(
+        single_instance,
+        "_read_proc_cmdline",
+        lambda pid: "/usr/lib/firefox/firefox --profile=default",
+    )
+    assert single_instance._is_hefesto_process(12345) is False
+
+
+def test_is_hefesto_process_noent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PID inválido — `/proc/<pid>/*` inexistente, retorna False (conservador)."""
+    monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: None)
+    monkeypatch.setattr(single_instance, "_read_proc_cmdline", lambda pid: None)
+    assert single_instance._is_hefesto_process(999_999_999) is False
+
+
+def test_is_hefesto_process_pid_zero_ou_negativo() -> None:
+    """PIDs inválidos na entrada retornam False sem ler /proc."""
+    assert single_instance._is_hefesto_process(0) is False
+    assert single_instance._is_hefesto_process(-1) is False
+
+
+def test_read_proc_comm_pid_invalido_retorna_none() -> None:
+    """PID gigantesco inexistente — leitura real de /proc retorna None."""
+    assert single_instance._read_proc_comm(999_999_999) is None
+
+
+def test_read_proc_cmdline_pid_invalido_retorna_none() -> None:
+    """PID gigantesco inexistente — leitura real de /proc/cmdline retorna None."""
+    assert single_instance._read_proc_cmdline(999_999_999) is None
+
+
+def test_read_proc_comm_do_proprio_processo() -> None:
+    """PID do próprio processo deve retornar comm não-vazio."""
+    comm = single_instance._read_proc_comm(os.getpid())
+    assert comm is not None
+    assert len(comm) > 0
+
+
+def test_takeover_ignora_pid_reciclado(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pid file aponta para PID vivo NÃO-hefesto — `_terminate_predecessor` não envia SIGTERM."""
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "daemon.pid"
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Usa o PID do próprio pytest (vivo, mas comm='pytest' ou 'python3' sem hefesto).
+    fake_pid = os.getpid()
+    pid_file.write_text(f"{fake_pid}\n")
+
+    # Força `_is_hefesto_process` a reportar False (simula PID reciclado).
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+
+    kills: list[tuple[int, int]] = []
+    orig_kill = os.kill
+
+    def spy_kill(pid: int, sig: int) -> None:
+        # Deixa passar `os.kill(pid, 0)` (probe is_alive) — só vigia sinais letais.
+        if sig in (signal.SIGTERM, signal.SIGKILL):
+            kills.append((pid, sig))
+            return
+        orig_kill(pid, sig)
+
+    monkeypatch.setattr(os, "kill", spy_kill)
+
+    # Takeover em nome próprio — predecessor é o próprio PID; como 'fake_pid == os.getpid()'
+    # o fluxo oficial pula (branch `predecessor != os.getpid()`). Precisamos testar com PID
+    # diferente mas ainda vivo. Solução: fork curto.
+    monkeypatch.setattr(os, "kill", orig_kill)  # restaura
+
+    # Fork um filho que fica vivo por alguns segundos.
+    child_pid = os.fork()
+    if child_pid == 0:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        time.sleep(10)
+        os._exit(0)
+
+    try:
+        # Escreve PID do filho no pid file.
+        pid_file.write_text(f"{child_pid}\n")
+
+        # Mock: o filho NÃO é hefesto (simula reciclagem).
+        monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+
+        # Spy em os.kill SOMENTE para capturar sinais letais.
+        kills_real: list[tuple[int, int]] = []
+        real_kill = os.kill
+
+        def spy(pid: int, sig: int) -> None:
+            if sig in (signal.SIGTERM, signal.SIGKILL):
+                kills_real.append((pid, sig))
+                return
+            real_kill(pid, sig)
+
+        monkeypatch.setattr(os, "kill", spy)
+
+        own = single_instance.acquire_or_takeover("daemon")
+        assert own == os.getpid()
+
+        # Nenhum SIGTERM/SIGKILL deve ter sido enviado ao filho.
+        assert not any(pid == child_pid for pid, _ in kills_real), \
+            f"SIGTERM enviado a PID reciclado: {kills_real}"
+
+        # Pid file sobrescrito com PID atual.
+        assert pid_file.read_text().strip() == str(own)
+    finally:
+        monkeypatch.setattr(os, "kill", orig_kill)
+        # Mata o filho real com os.kill original.
+        try:
+            orig_kill(child_pid, signal.SIGKILL)
+            os.waitpid(child_pid, 0)
+        except (ProcessLookupError, ChildProcessError):
+            pass
+        single_instance.release("daemon")
+
+
+def test_takeover_mata_predecessor_hefesto(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pid file aponta para PID vivo hefesto — SIGTERM enviado normalmente."""
+    child_pid = os.fork()
+    if child_pid == 0:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        try:
+            single_instance.acquire_or_takeover("gui-hef")
+            time.sleep(30)
+        finally:
+            os._exit(0)
+
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "gui-hef.pid"
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        if pid_file.exists() and pid_file.read_text().strip() == str(child_pid):
+            break
+        time.sleep(0.05)
+    else:
+        os.kill(child_pid, signal.SIGKILL)
+        os.waitpid(child_pid, 0)
+        pytest.fail("filho não escreveu pid file")
+
+    # Força `_is_hefesto_process` a reportar True (simula predecessor legítimo).
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: True)
+
+    own = single_instance.acquire_or_takeover("gui-hef")
+    assert own == os.getpid()
+
+    waited_pid, _ = os.waitpid(child_pid, 0)
+    assert waited_pid == child_pid
+    assert not single_instance.is_alive(child_pid)
+
+    single_instance.release("gui-hef")
+
+
+def test_terminate_predecessor_pid_reciclado_nao_sinaliza(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_terminate_predecessor` com PID vivo não-hefesto: early-return sem SIGTERM/SIGKILL."""
+    # PID existe (probe) mas não é hefesto.
+    monkeypatch.setattr(single_instance, "is_alive", lambda pid: True)
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+    monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "firefox")
+
+    sinais: list[tuple[int, int]] = []
+
+    def spy_kill(pid: int, sig: int) -> None:
+        sinais.append((pid, sig))
+
+    monkeypatch.setattr(os, "kill", spy_kill)
+
+    single_instance._terminate_predecessor(12345)
+
+    # Nenhum kill foi chamado (nem SIGTERM, nem probe — usamos mock de is_alive).
+    assert sinais == [], f"_terminate_predecessor sinalizou PID reciclado: {sinais}"
+
+
+def test_terminate_predecessor_pid_morto_early_return(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_terminate_predecessor` com PID morto: early-return sem chamar `_is_hefesto_process`."""
+    monkeypatch.setattr(single_instance, "is_alive", lambda pid: False)
+
+    chamadas_isproc: list[int] = []
+
+    def _tracker(pid: int) -> bool:
+        chamadas_isproc.append(pid)
+        return False
+
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", _tracker)
+
+    single_instance._terminate_predecessor(12345)
+
+    assert chamadas_isproc == [], "is_alive(False) deve evitar call a _is_hefesto_process"
+
+
+def test_read_existing_pid_oserror_retorna_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`_read_existing_pid` tratamento de OSError não-FileNotFound (ex: ENOTDIR)."""
+    # Path que aponta pra algo não-legível: cria arquivo sem permissão.
+    pid_file = tmp_path / "bloqueado.pid"
+    pid_file.write_text("1234\n")
+    pid_file.chmod(0o000)
+    try:
+        result = single_instance._read_existing_pid(pid_file)
+        # Em usuário root a leitura pode passar (retorna 1234); em user comum retorna None.
+        assert result in (None, 1234)
+    finally:
+        pid_file.chmod(0o644)
+
+
+def test_read_existing_pid_nao_numerico_retorna_none(tmp_path: Path) -> None:
+    """Pid file com conteúdo não-numérico retorna None (sem crash)."""
+    pid_file = tmp_path / "bad.pid"
+    pid_file.write_text("not-a-pid\n")
+    assert single_instance._read_existing_pid(pid_file) is None
+
+
+def test_read_existing_pid_zero_retorna_none(tmp_path: Path) -> None:
+    """Pid file com 0 retorna None (PID inválido)."""
+    pid_file = tmp_path / "zero.pid"
+    pid_file.write_text("0\n")
+    assert single_instance._read_existing_pid(pid_file) is None
+
+
+def test_bring_to_front_ignora_pid_reciclado(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pid file aponta para PID vivo NÃO-hefesto — callback NÃO é chamado, novo lock adquirido."""
+    child_pid = os.fork()
+    if child_pid == 0:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        time.sleep(10)
+        os._exit(0)
+
+    try:
+        pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "gui-rec.pid"
+        pid_file.parent.mkdir(parents=True, exist_ok=True)
+        pid_file.write_text(f"{child_pid}\n")
+
+        # Simula reciclagem.
+        monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+
+        callback_pids: list[int] = []
+
+        def _cb(pid: int) -> None:
+            callback_pids.append(pid)
+
+        result = single_instance.acquire_or_bring_to_front(
+            "gui-rec",
+            bring_to_front_cb=_cb,
+            fallback_takeover_after_sec=0.5,
+        )
+
+        # Callback NÃO deve ter sido invocado (predecessor não é hefesto).
+        assert callback_pids == [], f"callback invocado para PID reciclado: {callback_pids}"
+
+        # Resultado: adquire lock normalmente (getpid).
+        assert result == os.getpid()
+
+        # Pid file sobrescrito.
+        assert pid_file.read_text().strip() == str(os.getpid())
+    finally:
+        try:
+            os.kill(child_pid, signal.SIGKILL)
+            os.waitpid(child_pid, 0)
+        except (ProcessLookupError, ChildProcessError):
+            pass
+        single_instance.release("gui-rec")
