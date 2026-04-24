@@ -19,6 +19,17 @@ logger = get_logger(__name__)
 # Executor lazy-init — criado na primeira chamada de call_async.
 _EXECUTOR: concurrent.futures.ThreadPoolExecutor | None = None
 
+# Exceções esperadas de transporte/disponibilidade do daemon. Capturar apenas
+# essas nos wrappers públicos mantém a trilha visível quando o daemon está
+# offline (resultado False legítimo) e deixa bugs reais (ValueError, TypeError,
+# RuntimeError inesperados) propagarem — AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01.
+_IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
+    FileNotFoundError,
+    ConnectionError,
+    IpcError,
+    OSError,
+)
+
 
 def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
     """Retorna (criando se necessário) o executor IPC compartilhado."""
@@ -46,6 +57,37 @@ def _run_call(
             return await client.call(method, params or {})
 
     return asyncio.run(_do())
+
+
+def _safe_call(
+    method: str,
+    params: dict[str, Any] | None = None,
+    timeout: float | None = 0.25,
+) -> tuple[bool, Any]:
+    """Executa RPC capturando apenas erros de transporte/disponibilidade.
+
+    Retorna ``(True, resultado)`` quando o daemon confirma a chamada;
+    ``(False, None)`` quando a falha é esperada (daemon offline, socket ausente,
+    timeout de conexão, erro JSON-RPC do servidor). Exceções inesperadas
+    (``ValueError``, ``TypeError``, ``RuntimeError``, bugs internos) **propagam**
+    — o chamador precisa saber que há um defeito para reportar.
+
+    Loga em nível ``debug`` porque daemon offline é cenário esperado em
+    muitos pontos da GUI; ``warning`` causaria poluição de log.
+
+    AUDIT-FINDING-IPC-BRIDGE-BARE-EXCEPT-01.
+    """
+    try:
+        result = _run_call(method, params, timeout=timeout)
+    except _IPC_TRANSPORT_ERRORS as exc:
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method=method,
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None
+    return True, result
 
 
 def call_async(
@@ -93,35 +135,27 @@ def call_async(
 
 def daemon_state_full() -> dict[str, Any] | None:
     """Retorna estado completo via IPC; None se daemon offline."""
-    try:
-        result = _run_call("daemon.state_full")
-        if isinstance(result, dict):
-            return result
-        return None
-    except (FileNotFoundError, ConnectionError, IpcError, OSError):
-        return None
+    ok, result = _safe_call("daemon.state_full")
+    if ok and isinstance(result, dict):
+        return result
+    return None
 
 
 def daemon_status_basic() -> dict[str, Any] | None:
-    try:
-        result = _run_call("daemon.status")
-        if isinstance(result, dict):
-            return result
-        return None
-    except (FileNotFoundError, ConnectionError, IpcError, OSError):
-        return None
+    """Retorna status básico via IPC; None se daemon offline."""
+    ok, result = _safe_call("daemon.status")
+    if ok and isinstance(result, dict):
+        return result
+    return None
 
 
 def profile_list() -> list[dict[str, Any]]:
     """Lista perfis. Preferência: daemon (traz 'active'); fallback: disco."""
-    try:
-        result = _run_call("profile.list")
-        if isinstance(result, dict):
-            profiles = list(result.get("profiles", []))
-            if profiles:
-                return profiles
-    except (FileNotFoundError, ConnectionError, IpcError, OSError):
-        pass
+    ok, result = _safe_call("profile.list")
+    if ok and isinstance(result, dict):
+        profiles = list(result.get("profiles", []))
+        if profiles:
+            return profiles
 
     try:
         from hefesto.profiles.loader import load_all_profiles
@@ -140,19 +174,13 @@ def profile_list() -> list[dict[str, Any]]:
 
 
 def profile_switch(name: str) -> bool:
-    try:
-        _run_call("profile.switch", {"name": name})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("profile.switch", {"name": name})
+    return ok
 
 
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
-    try:
-        _run_call("trigger.set", {"side": side, "mode": mode, "params": params})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("trigger.set", {"side": side, "mode": mode, "params": params})
+    return ok
 
 
 def led_set(
@@ -167,11 +195,8 @@ def led_set(
     payload: dict[str, Any] = {"rgb": list(rgb)}
     if brightness is not None:
         payload["brightness"] = float(brightness)
-    try:
-        _run_call("led.set", payload)
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("led.set", payload)
+    return ok
 
 
 def rumble_set(weak: int, strong: int) -> bool:
@@ -181,29 +206,20 @@ def rumble_set(weak: int, strong: int) -> bool:
     re-afirma a cada 200ms — vibração contínua até rumble_stop() ou
     rumble_passthrough().
     """
-    try:
-        _run_call("rumble.set", {"weak": weak, "strong": strong})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("rumble.set", {"weak": weak, "strong": strong})
+    return ok
 
 
 def rumble_stop() -> bool:
     """Para rumble e fixa estado (0, 0) para re-asserção (BUG-RUMBLE-APPLY-IGNORED-01)."""
-    try:
-        _run_call("rumble.stop", {})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("rumble.stop", {})
+    return ok
 
 
 def rumble_passthrough(enabled: bool = True) -> bool:
     """Libera controle de rumble para o jogo (BUG-RUMBLE-APPLY-IGNORED-01)."""
-    try:
-        _run_call("rumble.passthrough", {"enabled": bool(enabled)})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("rumble.passthrough", {"enabled": bool(enabled)})
+    return ok
 
 
 def rumble_policy_set(policy: str) -> bool:
@@ -212,11 +228,8 @@ def rumble_policy_set(policy: str) -> bool:
     ``policy`` deve ser um de "economia", "balanceado", "max", "auto", "custom".
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
     """
-    try:
-        _run_call("rumble.policy_set", {"policy": policy})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("rumble.policy_set", {"policy": policy})
+    return ok
 
 
 def rumble_policy_custom(mult: float) -> bool:
@@ -225,11 +238,8 @@ def rumble_policy_custom(mult: float) -> bool:
     ``mult`` deve ser float em [0.0, 1.0].
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
     """
-    try:
-        _run_call("rumble.policy_custom", {"mult": float(mult)})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("rumble.policy_custom", {"mult": float(mult)})
+    return ok
 
 
 def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
@@ -238,11 +248,8 @@ def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
     ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
     Retorna True se o daemon confirmou; False se offline ou erro.
     """
-    try:
-        _run_call("led.player_set", {"bits": list(bits)})
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("led.player_set", {"bits": list(bits)})
+    return ok
 
 
 def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
@@ -254,13 +261,10 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
     Retorna True se o daemon confirmou aplicação (status ok). False se daemon
     offline, erro de transporte ou resposta inesperada.
     """
-    try:
-        result = _run_call("profile.apply_draft", draft_dict, timeout=1.0)
-        if isinstance(result, dict):
-            return result.get("status") == "ok"
-        return False
-    except Exception:
-        return False
+    ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
+    if ok and isinstance(result, dict):
+        return result.get("status") == "ok"
+    return False
 
 
 def mouse_emulation_set(
@@ -274,11 +278,8 @@ def mouse_emulation_set(
         params["speed"] = int(speed)
     if scroll_speed is not None:
         params["scroll_speed"] = int(scroll_speed)
-    try:
-        _run_call("mouse.emulation.set", params)
-        return True
-    except Exception:
-        return False
+    ok, _ = _safe_call("mouse.emulation.set", params)
+    return ok
 
 
 __all__ = [
