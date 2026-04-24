@@ -228,12 +228,10 @@ def acquire_or_takeover(name: str) -> int:
                     except OSError:
                         continue
                 else:
-                    os.close(fd)
                     raise RuntimeError(
                         f"Não foi possível adquirir lock {name} após takeover"
                     ) from exc
             else:
-                os.close(fd)
                 raise
 
         own_pid = os.getpid()
@@ -241,7 +239,10 @@ def acquire_or_takeover(name: str) -> int:
         os.write(fd, f"{own_pid}\n".encode("ascii"))
         os.fsync(fd)
     except Exception:
-        os.close(fd)
+        # Garante close único mesmo se o except interno já não fechou —
+        # suprime EBADF caso o fd tenha sido liberado em outro ponto.
+        with contextlib.suppress(OSError):
+            os.close(fd)
         raise
 
     _HELD_LOCKS[name] = fd
@@ -346,12 +347,10 @@ def acquire_or_bring_to_front(
                     except OSError:
                         continue
                 else:
-                    os.close(fd)
                     raise RuntimeError(
                         f"Não foi possível adquirir lock {name} (bring-to-front fallback)"
                     ) from exc
             else:
-                os.close(fd)
                 raise
 
         own_pid = os.getpid()
@@ -359,7 +358,9 @@ def acquire_or_bring_to_front(
         os.write(fd, f"{own_pid}\n".encode("ascii"))
         os.fsync(fd)
     except Exception:
-        os.close(fd)
+        # Close único garantido; suprime EBADF defensivamente.
+        with contextlib.suppress(OSError):
+            os.close(fd)
         raise
 
     _HELD_LOCKS[name] = fd

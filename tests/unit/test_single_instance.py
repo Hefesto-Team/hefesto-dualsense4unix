@@ -65,8 +65,20 @@ def test_pid_orfao_sem_sigterm(isolated_runtime: Path) -> None:
     single_instance.release("daemon")
 
 
-def test_takeover_mata_predecessor(isolated_runtime: Path) -> None:
-    """Filho adquire lock, pai faz takeover; filho recebe SIGTERM e sai."""
+def test_takeover_mata_predecessor(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Filho adquire lock, pai faz takeover; filho recebe SIGTERM e sai.
+
+    Mocka `_is_hefesto_process` para True porque o fork herda o cmdline
+    do pytest, que em CI puro (`pytest tests/unit -v`) não contém o
+    marker "hefesto" — em local passa por acidente porque o cmdline
+    inclui o path absoluto do projeto. Aqui o foco do teste é o fluxo
+    de takeover, não o guard do PID reciclado (coberto separadamente
+    por `test_takeover_ignora_pid_reciclado`).
+    """
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda _pid: True)
+
     child_pid = os.fork()
     if child_pid == 0:
         # Dentro do filho: adquire o lock e dorme até ser morto.
@@ -109,14 +121,22 @@ def test_release_sem_acquire_e_noop(isolated_runtime: Path) -> None:
     single_instance.release("nao_adquirido")
 
 
-def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
+def test_bring_to_front_chama_callback(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Filho adquire lock; pai detecta predecessor vivo, chama callback e retorna None.
 
     Verifica:
       - O callback é invocado com o PID correto do filho (predecessor).
       - O filho NÃO recebe SIGTERM (permanece vivo após acquire_or_bring_to_front).
       - O retorno do pai é None (indica que o predecessor foi preservado).
+
+    Mocka `_is_hefesto_process` para True (o fork herda cmdline do pytest;
+    em CI sem path absoluto isso falha o guard. O guard tem cobertura
+    dedicada em `test_bring_to_front_ignora_pid_reciclado`).
     """
+    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda _pid: True)
+
     # Pipe para o filho sinalizar que adquiriu o lock.
     pipe_r, pipe_w = os.pipe()
 
