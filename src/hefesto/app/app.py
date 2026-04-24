@@ -27,8 +27,8 @@ from hefesto.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto.app.actions.firmware_actions import FirmwareActionsMixin
 from hefesto.app.actions.footer_actions import FooterActionsMixin
+from hefesto.app.actions.input_actions import InputActionsMixin
 from hefesto.app.actions.lightbar_actions import LightbarActionsMixin
-from hefesto.app.actions.mouse_actions import MouseActionsMixin
 from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto.app.actions.status_actions import StatusActionsMixin
@@ -95,7 +95,7 @@ class HefestoApp(
     ProfilesActionsMixin,
     DaemonActionsMixin,
     EmulationActionsMixin,
-    MouseActionsMixin,
+    InputActionsMixin,
     FirmwareActionsMixin,
     FooterActionsMixin,
 ):
@@ -200,10 +200,14 @@ class HefestoApp(
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
             "on_emulation_open_toml": self.on_emulation_open_toml,
-            # Mouse
+            # Mouse (aba "Mouse e Teclado")
             "on_mouse_toggle_set": self.on_mouse_toggle_set,
             "on_mouse_speed_changed": self.on_mouse_speed_changed,
             "on_mouse_scroll_speed_changed": self.on_mouse_scroll_speed_changed,
+            # Teclado — key_bindings CRUD (FEAT-KEYBOARD-UI-01, lição 77.1)
+            "on_key_binding_add": self.on_key_binding_add,
+            "on_key_binding_remove": self.on_key_binding_remove,
+            "on_key_binding_restore_defaults": self.on_key_binding_restore_defaults,
             # Firmware (FEAT-FIRMWARE-UPDATE-GUI-01)
             "on_firmware_check": self.on_firmware_check,
             "on_firmware_browse": self.on_firmware_browse,
@@ -352,7 +356,7 @@ class HefestoApp(
         self.install_profiles_tab()
         self.install_daemon_tab()
         self.install_emulation_tab()
-        self.install_mouse_tab()
+        self.install_input_tab()
         self.install_firmware_tab()
         # Conecta switch-page do GtkNotebook para refresh de draft por aba.
         notebook = self.builder.get_object("main_notebook")
@@ -379,7 +383,7 @@ class HefestoApp(
             self.install_profiles_tab()
             self.install_daemon_tab()
             self.install_emulation_tab()
-            self.install_mouse_tab()
+            self.install_input_tab()
             # Conecta switch-page do GtkNotebook para refresh de draft por aba.
             notebook = self.builder.get_object("main_notebook")
             if notebook is not None:

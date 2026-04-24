@@ -1940,10 +1940,81 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
+
+                <!-- FEAT-KEYBOARD-UI-01: seção de Teclado (bindings por perfil) -->
+                <child>
+                  <object class="GtkSeparator">
+                    <property name="orientation">horizontal</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;b&gt;Teclado (bindings do perfil ativo)&lt;/b&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="key_bindings_legend">
+                    <property name="label">Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__. Combos com '+' (ex: KEY_LEFTALT+KEY_TAB).</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="shadow-type">in</property>
+                    <property name="min-content-height">200</property>
+                    <child>
+                      <object class="GtkTreeView" id="key_bindings_treeview">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="headers-visible">True</property>
+                        <property name="rules-hint">True</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="key_bindings_button_row">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="homogeneous">False</property>
+                    <child>
+                      <object class="GtkButton" id="key_binding_add_btn">
+                        <property name="label">Adicionar</property>
+                        <signal name="clicked" handler="on_key_binding_add"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="key_binding_remove_btn">
+                        <property name="label">Remover</property>
+                        <signal name="clicked" handler="on_key_binding_remove"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="key_binding_restore_btn">
+                        <property name="label">Restaurar defaults</property>
+                        <signal name="clicked" handler="on_key_binding_restore_defaults"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Mouse</property></object>
+              <object class="GtkLabel"><property name="label">Mouse e Teclado</property></object>
             </child>
 
             <!-- Aba Firmware -->

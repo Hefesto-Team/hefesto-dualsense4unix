@@ -10,15 +10,18 @@ from hefesto.core.keyboard_mappings import (
 )
 
 
-def test_default_bindings_cobertura_sprint_1() -> None:
-    """Sub-sprint 1 entrega os 4 bindings conservadores.
+def test_default_bindings_cobertura_sprint_3() -> None:
+    """Sub-sprint 3 (FEAT-KEYBOARD-UI-01) expande os defaults.
 
-    L3/R3 ficam fora (entram com UI+onboard em sub-sprint 3).
-    Touchpad-press fica fora (evdev_reader ainda não expõe).
-    L2/R2 inversão fica fora (depende de persistência).
+    - 4 originais (sub-sprint 1): options/create/l1/r1.
+    - L3/R3 mapeiam para tokens virtuais __OPEN_OSK__/__CLOSE_OSK__.
+    - 3 regiões de touchpad viram KEY_BACKSPACE/ENTER/DELETE
+      (INFRA-EVDEV-TOUCHPAD-01 destravou o caminho).
     """
     assert set(DEFAULT_BUTTON_BINDINGS.keys()) == {
         "options", "create", "l1", "r1",
+        "l3", "r3",
+        "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
     }
 
 
@@ -33,7 +36,15 @@ def test_default_bindings_valores_canonicos() -> None:
 
 def test_default_bindings_nao_colide_com_mouse() -> None:
     """Botões usados pelo mouse (BUTTON_TO_UINPUT + DPAD_TO_KEY + EDGE_KEY_MAP)
-    não podem ter binding no teclado — evitaria dupla emissão."""
+    não podem ter binding no teclado — evitaria dupla emissão.
+
+    Exceção deliberada (FEAT-KEYBOARD-UI-01): `r3` está em BUTTON_TO_UINPUT
+    (BTN_MIDDLE do mouse) E em DEFAULT_BUTTON_BINDINGS (token __CLOSE_OSK__).
+    A colisão é segura porque o mouse só despacha r3 quando
+    `mouse_emulation_enabled=True`, e nesse modo o usuário pode via UI
+    desativar o binding de teclado para r3. Quem habilitar ambos sem UI
+    sobreescrita terá BTN_MIDDLE + fechar OSK — comportamento documentado.
+    """
     from hefesto.integrations.uinput_mouse import (
         BUTTON_TO_UINPUT,
         DPAD_TO_KEY,
@@ -45,9 +56,11 @@ def test_default_bindings_nao_colide_com_mouse() -> None:
         | set(DPAD_TO_KEY.keys())
         | set(EDGE_KEY_MAP.keys())
     )
-    colisoes = set(DEFAULT_BUTTON_BINDINGS.keys()) & mouse_buttons
-    assert not colisoes, (
-        f"botões {colisoes} mapeiam ao mesmo tempo para mouse e teclado"
+    colisoes_inesperadas = (
+        set(DEFAULT_BUTTON_BINDINGS.keys()) & mouse_buttons
+    ) - {"r3"}  # r3 documentada como exceção aceita
+    assert not colisoes_inesperadas, (
+        f"botões {colisoes_inesperadas} colidem inesperadamente com mouse"
     )
 
 
