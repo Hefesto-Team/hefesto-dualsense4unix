@@ -3,6 +3,37 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased] — v2.2.2 em preparação
+
+### Corrigido
+- **Smoke install do `.deb` passa em Ubuntu 22.04 e 24.04**
+  (BUG-DEB-SMOKE-PYDANTIC-V2-NOBLE-01): validação empírica em
+  2026-04-24 confirmou que Noble (24.04) entrega `python3-pydantic
+  1.10.14`, não v2 como a sprint 74 havia assumido. O `.deb` da v2.2.1
+  declarava `python3-pydantic (>= 2.0)` e rejeitava instalação em
+  ambos releases LTS atuais, bloqueando o job `deb-install-smoke` e
+  exigindo upload manual do release. Fix em 3 camadas:
+  - `packaging/debian/control` declara `python3-pydantic` sem constraint
+    de versão (apt resolve com a 1.x do sistema, sem erro).
+  - `src/hefesto/__init__.py` detecta pydantic < 2 no import e emite
+    `ImportWarning` com instrução acionável (`pip install --user
+    'pydantic>=2'`).
+  - `.github/workflows/release.yml` `deb-install-smoke` volta para
+    `ubuntu-22.04` (mesmo runner do build) e adiciona passo `pip
+    install --user 'pydantic>=2.0'` antes do `apt install`; o
+    `hefesto --version` roda com `PYTHONPATH` apontando para o user
+    site primeiro, garantindo que `import pydantic` resolva a v2.
+  README atualizado com o novo caminho canônico (2 comandos:
+  `pip install --user pydantic>=2` + `apt install ./hefesto_*.deb`).
+
+### Processo
+- **L-21-7 consolidada no VALIDATOR_BRIEF.md** (seção `[PROCESS]
+  Lições`): toda premissa sobre ambiente externo — "distro X tem lib
+  Y versão N", "runner Z tem binário W" — exige validação empírica
+  (`apt-cache policy`, `docker run`, consulta a `packages.ubuntu.com`)
+  antes de virar spec. Sprint 74 violou essa regra e custou 1 release
+  manual; agora é regra explícita no BRIEF.
+
 ## [2.2.1] — 2026-04-23
 
 Patch release pós-v2.2.0. Corrige bugs críticos de packaging

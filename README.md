@@ -147,11 +147,19 @@ Dependências Python que não têm pacote Debian oficial:
 pip install pydualsense python-uinput
 ```
 
-> **Ubuntu 22.04 (Jammy) e derivados:** o `python3-pydantic` do repositório apt é versão **1.9** (incompatível com o código, que usa API da v2). O `.deb` v2.2.1+ declara `python3-pydantic (>= 2.0)`, então o `apt install` vai falhar com mensagem clara nesses sistemas. **Soluções:**
+> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.2.2+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
 >
-> - Migrar para **Ubuntu 24.04 (Noble)** ou **Pop!\_OS 24.04+** — pydantic v2 é nativo, instala direto.
-> - Em 22.04, instalar pydantic v2 via pip **antes** do `.deb`: `pip install --user 'pydantic>=2.0'`. Instalação via `apt install ./hefesto_*.deb` pode ainda reclamar da dep — use `sudo dpkg -i ./hefesto_*.deb` para forçar.
-> - Usar **AppImage** ou **Flatpak** (seção abaixo) — ambos trazem pydantic v2 empacotado.
+> ```bash
+> pip install --user 'pydantic>=2'
+> sudo apt install ./hefesto_*.deb
+> ```
+>
+> O Python resolve `import pydantic` preferindo `~/.local/lib/python3.X/site-packages` (pydantic v2) antes de `/usr/lib/python3/dist-packages` (pydantic v1 do apt). Zero conflito.
+>
+> **Alternativas:**
+>
+> - Migrar para **Ubuntu 25.04 (Plucky)** ou superior — `python3-pydantic 2.10+` nativo.
+> - Usar **AppImage** ou **Flatpak** (seções abaixo) — ambos trazem pydantic v2 empacotado.
 
 #### AppImage (universal)
 

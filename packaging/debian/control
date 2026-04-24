@@ -5,7 +5,7 @@ Priority: optional
 Architecture: amd64
 Depends: python3 (>= 3.10), python3-gi, python3-gi-cairo, gir1.2-gtk-3.0,
          gir1.2-ayatanaappindicator3-0.1, libhidapi-hidraw0,
-         python3-pydantic (>= 2.0), python3-structlog, python3-typer,
+         python3-pydantic, python3-structlog, python3-typer,
          python3-platformdirs, python3-rich, python3-evdev, python3-xlib,
          python3-filelock
 Recommends: python3-uinput
@@ -18,6 +18,13 @@ Description: Daemon Linux para gatilhos adaptativos do controle DualSense
  Dependencias Python nao empacotadas no Debian (pydualsense, python-uinput)
  devem ser instaladas separadamente via pip:
    pip install pydualsense python-uinput
+ .
+ Em Ubuntu 22.04 (Jammy) e 24.04 (Noble) o python3-pydantic do apt
+ e versao 1.x; o Hefesto usa API v2. Instale v2 via pip antes de usar:
+   pip install --user 'pydantic>=2'
+ Em Ubuntu 25.04 (Plucky) ou derivadas com python3-pydantic 2.x
+ no apt, nenhuma acao adicional e necessaria. Runtime imprime aviso
+ via warnings.warn se pydantic 1.x for detectado.
  .
  Apos instalacao, habilite o daemon com:
    systemctl --user enable --now hefesto.service
