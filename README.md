@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 2.2.0
+Versão: 2.2.1
 Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1036 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
@@ -130,8 +130,8 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.0/hefesto_2.2.0_amd64.deb
-sudo apt install ./hefesto_2.2.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.1/hefesto_2.2.1_amd64.deb
+sudo apt install ./hefesto_2.2.1_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -156,9 +156,9 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.0/Hefesto-2.2.0-x86_64.AppImage
-chmod +x Hefesto-2.2.0-x86_64.AppImage
-./Hefesto-2.2.0-x86_64.AppImage
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.1/Hefesto-2.2.1-x86_64.AppImage
+chmod +x Hefesto-2.2.1-x86_64.AppImage
+./Hefesto-2.2.1-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)
