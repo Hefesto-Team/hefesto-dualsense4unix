@@ -212,20 +212,36 @@ class UdpHandler:
         if len(params) < 4:
             raise ValueError("RGBUpdate precisa [idx, r, g, b]")
         _idx, r, g, b = params[:4]
-        self.controller.set_led((int(r), int(g), int(b)))
+        # Clamp silencioso em [0, 255] para compatibilidade com clients DSX
+        # imprecisos. Alinha comportamento ao handler IPC `led.set` que valida
+        # range (achado 19 da auditoria forense V23).
+        r_c = max(0, min(255, int(r)))
+        g_c = max(0, min(255, int(g)))
+        b_c = max(0, min(255, int(b)))
+        self.controller.set_led((r_c, g_c, b_c))
 
     def _do_player_led(self, params: list[Any]) -> None:
-        # Placeholder: backend ainda não expõe player LED API.
-        # Gravamos no store para a TUI/perfis refletirem.
+        # Decodifica bitmask em tuple[bool, bool, bool, bool, bool] e propaga
+        # ao controller. Bit i do inteiro mapeia para bits[i] (bit 0 = LED 0).
         if len(params) < 2:
             raise ValueError("PlayerLED precisa [idx, bitmask]")
         _idx, bitmask = params[:2]
-        self.store.bump(f"udp.player_led.{int(bitmask)}")
+        mask = int(bitmask)
+        bits: tuple[bool, bool, bool, bool, bool] = (
+            bool(mask & 0b00001),
+            bool(mask & 0b00010),
+            bool(mask & 0b00100),
+            bool(mask & 0b01000),
+            bool(mask & 0b10000),
+        )
+        self.controller.set_player_leds(bits)
+        self.store.bump(f"udp.player_led.{mask}")
 
     def _do_mic_led(self, params: list[Any]) -> None:
         if not params:
             raise ValueError("MicLED precisa [state]")
         state = bool(params[0])
+        self.controller.set_mic_led(state)
         self.store.bump(f"udp.mic_led.{int(state)}")
 
     def _do_trigger_threshold(self, params: list[Any]) -> None:
