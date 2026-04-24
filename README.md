@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 2.2.2
+Versão: 2.3.0
 Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1036 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
@@ -130,8 +130,8 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.2/hefesto_2.2.2_amd64.deb
-sudo apt install ./hefesto_2.2.2_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.3.0/hefesto_2.3.0_amd64.deb
+sudo apt install ./hefesto_2.3.0_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -147,7 +147,7 @@ Dependências Python que não têm pacote Debian oficial:
 pip install pydualsense python-uinput
 ```
 
-> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.2.2+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
+> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.3.0+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
 >
 > ```bash
 > pip install --user 'pydantic>=2'
@@ -164,9 +164,9 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.2.2/Hefesto-2.2.2-x86_64.AppImage
-chmod +x Hefesto-2.2.2-x86_64.AppImage
-./Hefesto-2.2.2-x86_64.AppImage
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.3.0/Hefesto-2.3.0-x86_64.AppImage
+chmod +x Hefesto-2.3.0-x86_64.AppImage
+./Hefesto-2.3.0-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)
