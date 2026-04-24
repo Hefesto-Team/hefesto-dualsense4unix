@@ -133,9 +133,13 @@ jobs:
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
-      - name: Instalar pydantic v2 via pip (necessario em 22.04/24.04)
+      - name: Instalar pydantic v2 + structlog moderno via pip (L-21-7 expandida)
+        # Jammy apt: python3-pydantic 1.10, python3-structlog 20.1 — ambos
+        # antigos demais para Hefesto. BUG-DEB-SMOKE-STRUCTLOG-TYPING-02
+        # (sprint 82) expandiu a injeção pip do pydantic para cobrir
+        # structlog também; PYTHONPATH user-site traz as versões modernas.
         run: |
-          python3 -m pip install --user --upgrade 'pydantic>=2.0'
+          python3 -m pip install --user --upgrade 'pydantic>=2.0' 'structlog>=22.1'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
