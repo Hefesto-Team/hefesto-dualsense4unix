@@ -15,6 +15,7 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 from typing import Any
 
 import gi
@@ -262,10 +263,27 @@ class HefestoApp(
 
         'Sair' do menu do tray encerra tudo. 'Fechar janela' (X no header)
         continua só escondendo pro tray via `on_window_delete_event`.
+
+        Ordem importa: chamamos `Gtk.main_quit()` ANTES do cleanup. O
+        `tray.stop()` faz uma call síncrona via D-Bus que pode travar
+        indefinidamente em ambientes sem StatusNotifierWatcher robusto
+        (Pop Shell sem TopIcons, COSMIC alpha etc). Se travasse antes do
+        `main_quit`, o loop GTK ficava preso e a GUI nunca encerrava. Ao
+        quitar o loop primeiro e jogar o cleanup numa thread daemon, o
+        processo sempre encerra mesmo se o cleanup nunca retornar.
         """
         self._quitting = True
-        if self.tray is not None:
-            self.tray.stop()
+        Gtk.main_quit()
+        threading.Thread(target=self._shutdown_backend, daemon=True).start()
+
+    def _shutdown_backend(self) -> None:
+        """Cleanup pós-quit (tray + daemon systemd). Pode travar sem
+        reter o processo porque a thread é daemon."""
+        try:
+            if self.tray is not None:
+                self.tray.stop()
+        except Exception as exc:
+            logger.warning("quit_app_tray_stop_falhou", erro=str(exc))
         try:
             subprocess.run(
                 ["systemctl", "--user", "stop", "hefesto.service"],
@@ -275,7 +293,6 @@ class HefestoApp(
             )
         except (FileNotFoundError, subprocess.SubprocessError) as exc:
             logger.warning("quit_app_systemctl_falhou", erro=str(exc))
-        Gtk.main_quit()
 
     def show_window(self) -> None:
         self.window.show_all()
