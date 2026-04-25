@@ -1712,7 +1712,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label">Emulação</property></object>
             </child>
 
-            <!-- Aba Mouse -->
+            <!-- Aba Mouse (somente emulação de mouse — Teclado é aba separada) -->
             <child>
               <object class="GtkBox" id="tab_mouse">
                 <property name="orientation">vertical</property>
@@ -1940,17 +1940,24 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Mouse</property></object>
+            </child>
 
-                <!-- FEAT-KEYBOARD-UI-01: seção de Teclado (bindings por perfil) -->
-                <child>
-                  <object class="GtkSeparator">
-                    <property name="orientation">horizontal</property>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
+            <!-- Aba Teclado (FEAT-KEYBOARD-UI-01 separada de Mouse para
+                 enxugar min-size do notebook — antes ambas viviam numa única
+                 aba "Mouse e Teclado" e a soma de mapeamento + treeview
+                 inflava a altura natural de todas as outras abas). -->
+            <child>
+              <object class="GtkBox" id="tab_keyboard">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label">&lt;b&gt;Teclado (bindings do perfil ativo)&lt;/b&gt;</property>
+                    <property name="label">&lt;b&gt;Bindings do perfil ativo&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -1970,7 +1977,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
                     <property name="shadow-type">in</property>
-                    <property name="min-content-height">200</property>
+                    <property name="min-content-height">160</property>
                     <child>
                       <object class="GtkTreeView" id="key_bindings_treeview">
                         <property name="visible">True</property>
@@ -2014,7 +2021,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Mouse e Teclado</property></object>
+              <object class="GtkLabel"><property name="label">Teclado</property></object>
             </child>
 
             <!-- Aba Firmware -->

@@ -23,6 +23,29 @@ def _load_app_module():
     return app_mod
 
 
+class _InstantThread:
+    """Stub de threading.Thread que executa target() síncrono em start().
+
+    Preserva a assinatura esperada (target, daemon kwarg) mas roda na
+    thread principal pra facilitar asserts nos testes. quit_app dispara
+    `_shutdown_backend` em thread daemon; usar este stub vira execução
+    in-line.
+    """
+
+    def __init__(self, target=None, daemon=False, **_kw):
+        self._target = target
+
+    def start(self) -> None:
+        if self._target is not None:
+            self._target()
+
+
+def _make_quit_stub(app_mod, tray=None):
+    stub = SimpleNamespace(_quitting=False, tray=tray)
+    stub._shutdown_backend = lambda: app_mod.HefestoApp._shutdown_backend(stub)
+    return stub
+
+
 def test_quit_app_chama_systemctl_stop(monkeypatch):
     app_mod = _load_app_module()
 
@@ -31,8 +54,9 @@ def test_quit_app_chama_systemctl_stop(monkeypatch):
 
     monkeypatch.setattr(app_mod.subprocess, "run", fake_run)
     monkeypatch.setattr(app_mod.Gtk, "main_quit", fake_main_quit)
+    monkeypatch.setattr(app_mod.threading, "Thread", _InstantThread)
 
-    stub = SimpleNamespace(_quitting=False, tray=None)
+    stub = _make_quit_stub(app_mod)
     app_mod.HefestoApp.quit_app(stub)
 
     fake_run.assert_called_once()
@@ -55,8 +79,9 @@ def test_quit_app_sobrevive_a_systemctl_ausente(monkeypatch):
 
     monkeypatch.setattr(app_mod.subprocess, "run", _raise)
     monkeypatch.setattr(app_mod.Gtk, "main_quit", fake_main_quit)
+    monkeypatch.setattr(app_mod.threading, "Thread", _InstantThread)
 
-    stub = SimpleNamespace(_quitting=False, tray=None)
+    stub = _make_quit_stub(app_mod)
     app_mod.HefestoApp.quit_app(stub)
     fake_main_quit.assert_called_once()
 
@@ -70,8 +95,9 @@ def test_quit_app_para_tray(monkeypatch):
 
     monkeypatch.setattr(app_mod.subprocess, "run", fake_run)
     monkeypatch.setattr(app_mod.Gtk, "main_quit", fake_main_quit)
+    monkeypatch.setattr(app_mod.threading, "Thread", _InstantThread)
 
-    stub = SimpleNamespace(_quitting=False, tray=fake_tray)
+    stub = _make_quit_stub(app_mod, tray=fake_tray)
     app_mod.HefestoApp.quit_app(stub)
 
     fake_tray.stop.assert_called_once()
@@ -87,7 +113,41 @@ def test_quit_app_sobrevive_a_timeout(monkeypatch):
 
     monkeypatch.setattr(app_mod.subprocess, "run", _timeout)
     monkeypatch.setattr(app_mod.Gtk, "main_quit", fake_main_quit)
+    monkeypatch.setattr(app_mod.threading, "Thread", _InstantThread)
 
-    stub = SimpleNamespace(_quitting=False, tray=None)
+    stub = _make_quit_stub(app_mod)
     app_mod.HefestoApp.quit_app(stub)
     fake_main_quit.assert_called_once()
+
+
+def test_quit_app_main_quit_antes_do_cleanup(monkeypatch):
+    """Invariante crítico: Gtk.main_quit é chamado ANTES de tray.stop /
+    systemctl pra que o processo encerre mesmo se o cleanup travar
+    (D-Bus sem StatusNotifierWatcher robusto)."""
+    app_mod = _load_app_module()
+
+    call_order: list[str] = []
+
+    def _record_quit() -> None:
+        call_order.append("main_quit")
+
+    fake_tray = MagicMock()
+    fake_tray.stop.side_effect = lambda: call_order.append("tray_stop")
+
+    fake_run = MagicMock(
+        side_effect=lambda *_a, **_kw: (
+            call_order.append("systemctl"),
+            SimpleNamespace(returncode=0),
+        )[1]
+    )
+
+    monkeypatch.setattr(app_mod.Gtk, "main_quit", _record_quit)
+    monkeypatch.setattr(app_mod.subprocess, "run", fake_run)
+    monkeypatch.setattr(app_mod.threading, "Thread", _InstantThread)
+
+    stub = _make_quit_stub(app_mod, tray=fake_tray)
+    app_mod.HefestoApp.quit_app(stub)
+
+    assert call_order[0] == "main_quit"
+    assert "tray_stop" in call_order
+    assert "systemctl" in call_order
