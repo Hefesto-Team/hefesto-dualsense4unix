@@ -255,7 +255,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 return 0
             cmd = [sys.executable, "-m", "hefesto_dualsense4unix",
                    "daemon", "start", "--foreground"]
-            popen = subprocess.Popen(  # noqa: S603
+            popen = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
