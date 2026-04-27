@@ -69,3 +69,9 @@ daemon.toml.local
 *.sock
 .hefesto_runtime/
 .claude/
+
+# Source tarballs baixados durante debug local (ex: apt source libdbusmenu)
+libdbusmenu-*/
+libdbusmenu_*.dsc
+libdbusmenu_*.diff.gz
+libdbusmenu_*.orig.tar.gz

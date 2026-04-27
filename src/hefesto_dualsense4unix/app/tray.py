@@ -80,9 +80,10 @@ class AppTray:
 
         self._profiles_item = Gtk.MenuItem(label="Perfis")
         self._profiles_submenu = Gtk.Menu()
-        empty = Gtk.MenuItem(label="(carregando)")
-        empty.set_sensitive(False)
-        self._profiles_submenu.append(empty)
+        # TRAY-LOADING-ZOMBIE-01: nascido vazio — `_render_profiles` é fonte
+        # única de verdade do submenu. Estado inicial "(nenhum perfil)" é
+        # produzido logo abaixo via `_render_profiles([])`, garantindo que
+        # 100% dos itens estejam em `_profile_menu_items`.
         self._profiles_item.set_submenu(self._profiles_submenu)
         self._menu.append(self._profiles_item)
 
@@ -91,6 +92,9 @@ class AppTray:
         quit_item = Gtk.MenuItem(label="Sair do Hefesto - Dualsense4Unix")
         quit_item.connect("activate", lambda _w: self.on_quit())
         self._menu.append(quit_item)
+
+        # Popula submenu Perfis via path canônico antes do show_all.
+        self._render_profiles([])
 
         self._menu.show_all()
         self._indicator.set_menu(self._menu)
@@ -124,7 +128,13 @@ class AppTray:
         self._profile_menu_items = []
 
         if not profiles:
-            item = Gtk.MenuItem(label="(nenhum perfil)")
+            # TRAY-UNDERSCORE-MNEMONIC-01: `new_with_label` cria com
+            # use_underline=False por default; reforço com setter para
+            # robustez frente a backports/forks. Sem isso, labels com `_`
+            # são interpretadas como mnemonics e ficam com `__` no rendering
+            # dbusmenu (StatusNotifierItem).
+            item = Gtk.MenuItem.new_with_label("(nenhum perfil)")
+            item.set_use_underline(False)
             item.set_sensitive(False)
             self._profiles_submenu.append(item)
             self._profile_menu_items.append(item)
@@ -134,7 +144,8 @@ class AppTray:
                 if not name:
                     continue
                 label = f"{ACTIVE_MARKER}{name}" if entry.get("active") else name
-                item = Gtk.MenuItem(label=label)
+                item = Gtk.MenuItem.new_with_label(label)
+                item.set_use_underline(False)
                 item.connect(
                     "activate", lambda _w, n=name: self.on_switch_profile(n)
                 )

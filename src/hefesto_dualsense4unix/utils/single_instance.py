@@ -367,6 +367,13 @@ def acquire_or_bring_to_front(
     return own_pid
 
 
+# Alias público (CLUSTER-TRAY-POLISH-01): callers externos ao módulo usam o
+# nome sem underscore. A função original (`_is_hefesto_dualsense4unix_process`)
+# permanece como nome canônico interno e é referenciada pelos testes existentes
+# em `tests/unit/test_single_instance.py`.
+is_hefesto_dualsense4unix_process = _is_hefesto_dualsense4unix_process
+
+
 def release(name: str) -> None:
     """Libera o lock explicitamente (útil para testes). No-op se ausente."""
     fd = _HELD_LOCKS.pop(name, None)
@@ -383,5 +390,6 @@ __all__ = [
     "acquire_or_bring_to_front",
     "acquire_or_takeover",
     "is_alive",
+    "is_hefesto_dualsense4unix_process",
     "release",
 ]

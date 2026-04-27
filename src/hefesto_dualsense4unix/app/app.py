@@ -16,6 +16,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from typing import Any
 
 import gi
@@ -277,8 +278,21 @@ class HefestoApp(
         threading.Thread(target=self._shutdown_backend, daemon=True).start()
 
     def _shutdown_backend(self) -> None:
-        """Cleanup pós-quit (tray + daemon systemd). Pode travar sem
-        reter o processo porque a thread é daemon."""
+        """Cleanup pós-quit (tray + daemon systemd + daemon avulso).
+
+        Pode travar sem reter o processo porque a thread é daemon.
+
+        Ordem das ações (TRAY-QUIT-CLEAN-01):
+          1. tray.stop() — remove ícone do painel.
+          2. systemctl --user stop — encerra daemon gerenciado por systemd.
+          3. Fallback: lê pid file canônico de `acquire_or_takeover("daemon")`
+             e envia SIGTERM ao daemon avulso (não-systemd) com grace 3s,
+             escalando para SIGKILL. Defesa anti-recycle via
+             `is_hefesto_dualsense4unix_process`.
+
+        Idempotência: se daemon já morreu pelo systemctl stop, `is_alive`
+        retorna False e nada mais é feito.
+        """
         try:
             if self.tray is not None:
                 self.tray.stop()
@@ -293,6 +307,59 @@ class HefestoApp(
             )
         except (FileNotFoundError, subprocess.SubprocessError) as exc:
             logger.warning("quit_app_systemctl_falhou", erro=str(exc))
+
+        # Fallback: daemon avulso (não-systemd) sobrevive ao stop acima.
+        # Lê pid canônico que `acquire_or_takeover("daemon")` escreve em
+        # daemon/main.py — existe mesmo quando o daemon não é systemd-managed.
+        from hefesto_dualsense4unix.utils.single_instance import (
+            is_alive,
+            is_hefesto_dualsense4unix_process,
+        )
+        from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+        try:
+            pid_path = runtime_dir() / "daemon.pid"
+        except Exception as exc:
+            logger.warning("quit_app_runtime_dir_falhou", erro=str(exc))
+            return
+
+        try:
+            raw = pid_path.read_text(encoding="ascii").strip()
+            pid = int(raw)
+        except (FileNotFoundError, OSError, ValueError):
+            return
+
+        if pid <= 0 or not is_alive(pid):
+            return
+
+        if not is_hefesto_dualsense4unix_process(pid):
+            logger.warning("quit_app_pid_recycle_detectado", pid=pid)
+            return
+
+        try:
+            os.kill(pid, signal.SIGTERM)
+            logger.info("quit_app_daemon_avulso_sigterm", pid=pid)
+        except ProcessLookupError:
+            return
+        except PermissionError as exc:
+            logger.warning("quit_app_sigterm_perm", pid=pid, erro=str(exc))
+            return
+
+        # Espera grace 3s polling 100ms.
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline:
+            if not is_alive(pid):
+                logger.info("quit_app_daemon_avulso_encerrado", pid=pid)
+                return
+            time.sleep(0.1)
+
+        try:
+            os.kill(pid, signal.SIGKILL)
+            logger.warning("quit_app_daemon_avulso_sigkill", pid=pid)
+        except ProcessLookupError:
+            pass
+        except PermissionError as exc:
+            logger.warning("quit_app_sigkill_perm", pid=pid, erro=str(exc))
 
     def show_window(self) -> None:
         self.window.show_all()
