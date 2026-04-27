@@ -1,12 +1,20 @@
 # Manifest Flatpak — Hefesto - Dualsense4Unix
-# App ID: br.andrefarias.Hefesto
-# Runtime: org.gnome.Platform//45 (inclui GTK3, PyGObject, python3, gi-repository)
+# App ID: br.andrefarias.Hefesto (preservado por design no rebrand v3.0.0)
+# Runtime: org.gnome.Platform//47 (GTK3, PyGObject, python3 3.12, gi-repository)
 # Construção local: scripts/build_flatpak.sh
 # CI: .github/workflows/flatpak.yml
+#
+# Histórico de runtime:
+#   - v2.3.x: GNOME Platform//45 — deps Python quase todas ausentes (bug).
+#   - v2.4.0 (2026-04-24): GNOME Platform//47 + deps Python completas como
+#     módulo `hefesto-deps`. Fix para BUG-FLATPAK-DEPS-01 (gi/pydantic
+#     ausentes ao abrir hefesto-gui em instalação recém-feita).
+#   - v3.0.0 rebrand (2026-04-27): paths internos hefesto -> hefesto-dualsense4unix;
+#     command -> hefesto-dualsense4unix-gui; runtime e deps mantidos.
 
 app-id: br.andrefarias.Hefesto
 runtime: org.gnome.Platform
-runtime-version: "45"
+runtime-version: "47"
 sdk: org.gnome.Sdk
 
 # Ponto de entrada principal — GUI GTK3
@@ -30,40 +38,76 @@ finish-args:
   # Perfis e configurações em ~/.config/hefesto-dualsense4unix/
   # Dentro do sandbox: ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/
   - --filesystem=xdg-config/hefesto-dualsense4unix:create
-  # Portals do freedesktop (notificações, tray, background)
+  # Portals do freedesktop (notificações, tray, background, window tracking)
   - --talk-name=org.freedesktop.portal.*
 
 modules:
-  # Módulo 1: python-uinput (emulação de gamepad/mouse via uinput)
-  # Instalado via pip pois não faz parte do runtime GNOME//45
-  - name: python-uinput
-    buildsystem: simple
-    # build-args: --share=network permite pip puxar o tarball do PyPI durante
-    # o build. Alternativa offline seria declarar "type: archive" com url+sha,
-    # mas isso adiciona 5 deps transitivas (cffi, pycparser etc.). Network
-    # opt-in no build é aceito pelo Flathub para casos pequenos como este.
-    build-options:
-      build-args:
-        - --share=network
-    build-commands:
-      - pip3 install --prefix=/app --no-build-isolation python-uinput
-    sources: []
-
-  # Módulo 2: pydualsense (comunicação HID com DualSense)
-  - name: pydualsense
+  # Módulo 1: todas as dependências Python do Hefesto - Dualsense4Unix num único pip install.
+  #
+  # Por que consolidado: o wheel `hefesto-dualsense4unix` é instalado com
+  # `--no-deps` no módulo 3 (para evitar recursão de resolver do pip sobre
+  # deps já dentro do runtime). Portanto as deps declaradas em
+  # `pyproject.toml` precisam ser empurradas explicitamente aqui. Inclui
+  # `python-uinput` e `pydualsense` que antes estavam em módulos separados.
+  #
+  # `--share=network` é necessário porque o Flathub build farm baixa os
+  # wheels do PyPI. Alternativa offline seria cravar `type: file` + sha256
+  # para cada wheel (~15 arquivos, 4 MiB), mas o overhead de atualização
+  # das hashes a cada bump não compensa o benefício marginal de
+  # reprodutibilidade.
+  - name: hefesto-deps
     buildsystem: simple
     build-options:
       build-args:
         - --share=network
     build-commands:
-      - pip3 install --prefix=/app --no-build-isolation pydualsense
+      - pip3 install --prefix=/app --no-build-isolation
+          "pydualsense>=0.7.5"
+          "python-uinput"
+          "textual>=0.47"
+          "typer>=0.9"
+          "pydantic>=2.0"
+          "python-xlib>=0.33"
+          "evdev>=1.6"
+          "structlog>=23.0"
+          "rich>=13.0"
+          "platformdirs>=4.0"
+          "filelock>=3.13"
+          "jeepney>=0.8"
     sources: []
 
-  # Módulo 3: Hefesto - Dualsense4Unix — instalação do wheel local
+  # Módulo 2: wlrctl — CLI wayland wlroots usado por WlrctlBackend
+  # (BUG-COSMIC-WLR-BACKEND-01). No fluxo .deb vem via Recommends do apt;
+  # no sandbox do Flatpak precisa ser bundlado para que
+  # shutil.which("wlrctl") retorne /app/bin/wlrctl dentro da sandbox.
+  #
+  # Upstream: https://git.sr.ht/~brocellous/wlrctl (tag v0.2.2).
+  # Deps (probadas empiricamente em org.gnome.Sdk//47): xkbcommon,
+  # wayland-client, wayland-scanner. Os XMLs de wayland-protocols ficam
+  # bundlados no próprio repositório do wlrctl, então não depende de
+  # wayland-protocols do sistema.
+  #
+  # -Dwerror=false defensivo: wlrctl compila com -Werror por padrão;
+  # uma versão de compilador mais nova no SDK pode introduzir warnings
+  # e quebrar o build. Desligar o werror blinda o bundling.
+  - name: wlrctl
+    buildsystem: meson
+    config-opts:
+      - --buildtype=release
+      - -Dwerror=false
+    sources:
+      - type: archive
+        url: https://git.sr.ht/~brocellous/wlrctl/archive/v0.2.2.tar.gz
+        sha256: b5b3836091c41de09a832df1e5eb4747841d7ae670367e413487d5be7a5f2849
+    cleanup:
+      - /share/man
+
+  # Módulo 3: Hefesto - Dualsense4Unix — instalação do wheel local com --no-deps
   - name: hefesto
     buildsystem: simple
     build-commands:
-      # Instalar o wheel pré-construído (gerado por 'python -m build' no script)
+      # Instalar o wheel pré-construído (gerado por 'python -m build' no script).
+      # --no-deps porque o módulo `hefesto-deps` acima já empurrou tudo.
       - pip3 install --prefix=/app --no-deps ./dist/*.whl
 
       # Instalar ícone 256x256 para o lançador do sistema
