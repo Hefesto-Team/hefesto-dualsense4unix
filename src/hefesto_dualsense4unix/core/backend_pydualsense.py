@@ -63,7 +63,10 @@ class PyDualSenseController(IController):
             # propagam para o chamador (`connect_with_retry` faz backoff).
             if "No device detected" in str(exc):
                 if not self._offline:
-                    logger.info("controller_offline_no_device", retry=True)
+                    logger.info(
+                        "controle offline (No device detected) — "
+                        "daemon segue, retentando em background"
+                    )
                 self._ds = None
                 self._offline = True
                 return
@@ -175,7 +178,7 @@ class PyDualSenseController(IController):
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
         if self._ds is None:
-            logger.debug("setter_no_op_offline", op="set_trigger", side=side)
+            logger.debug("set_trigger offline no-op (side=%s)", side)
             return
         ds = self._ds
         trigger = ds.triggerL if side == "left" else ds.triggerR
@@ -185,7 +188,7 @@ class PyDualSenseController(IController):
 
     def set_led(self, color: tuple[int, int, int]) -> None:
         if self._ds is None:
-            logger.debug("setter_no_op_offline", op="set_led")
+            logger.debug("set_led offline no-op")
             return
         ds = self._ds
         r, g, b = color
@@ -193,7 +196,7 @@ class PyDualSenseController(IController):
 
     def set_rumble(self, weak: int, strong: int) -> None:
         if self._ds is None:
-            logger.debug("setter_no_op_offline", op="set_rumble")
+            logger.debug("set_rumble offline no-op")
             return
         ds = self._ds
         ds.setLeftMotor(strong)
@@ -208,7 +211,7 @@ class PyDualSenseController(IController):
         após `_require()` retornar com sucesso.
         """
         if self._ds is None:
-            logger.debug("setter_no_op_offline", op="set_mic_led")
+            logger.debug("set_mic_led offline no-op")
             return
         ds = self._ds
         ds.audio.setMicrophoneLED(bool(muted))
@@ -233,7 +236,7 @@ class PyDualSenseController(IController):
         from pydualsense.enums import PlayerID
 
         if self._ds is None:
-            logger.debug("setter_no_op_offline", op="set_player_leds")
+            logger.debug("set_player_leds offline no-op")
             return
         ds = self._ds
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
