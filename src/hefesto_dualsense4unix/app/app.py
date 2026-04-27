@@ -361,6 +361,18 @@ class HefestoApp(
         except PermissionError as exc:
             logger.warning("quit_app_sigkill_perm", pid=pid, erro=str(exc))
 
+        # Garantia broad-stroke: mata tudo que ainda esteja com nome hefesto.
+        # Cobre child Popen (não-systemd), GUIs zumbi de fork antigo, daemons
+        # spawned por hotplug-gui, instâncias Flatpak. Idempotente — se já
+        # morreu, pkill retorna 1 silente.
+        for pat in ("hefesto_dualsense4unix", "hefesto-dualsense4unix daemon",
+                    "br.andrefarias.Hefesto"):
+            try:
+                subprocess.run(["pkill", "-KILL", "-f", pat],
+                               capture_output=True, timeout=2, check=False)
+            except (FileNotFoundError, subprocess.SubprocessError):
+                pass
+
     def show_window(self) -> None:
         self.window.show_all()
         self.window.present()

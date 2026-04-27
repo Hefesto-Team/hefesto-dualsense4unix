@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# uninstall.sh - remove os artefatos criados pelo install.sh.
-# Inclui .venv/ e caches Python (__pycache__, .mypy_cache, .pytest_cache,
-# .ruff_cache, flatpak-build-dir, .flatpak-builder, dist, build) — wipe
-# limpo para reinstalação ou desuso.
+# uninstall.sh - WIPE COMPLETO do Hefesto - Dualsense4Unix.
+# Remove TUDO: artefatos do install, .deb (apt remove), Flatpak, AppImage
+# em ~/Aplicativos, .venv, caches Python, configs, runtime, dados do user.
+# Após rodar, o sistema fica como se Hefesto nunca tivesse sido instalado.
 #
 # Flags:
-#   --udev   remove também as udev rules em /etc/udev/rules.d/ (requer sudo).
-#   --yes,-y responde 'sim' para prompts.
+#   --udev      remove também as udev rules em /etc/udev/rules.d/ (requer sudo).
+#   --keep-config preserva ~/.config/hefesto-dualsense4unix (perfis do user).
+#   --yes,-y    responde 'sim' para prompts.
 
 set -euo pipefail
 
@@ -21,11 +22,13 @@ readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
 REMOVE_UDEV=0
+KEEP_CONFIG=0
 AUTO_YES=0
 for arg in "$@"; do
     case "$arg" in
-        --udev)   REMOVE_UDEV=1 ;;
-        --yes|-y) AUTO_YES=1 ;;
+        --udev)         REMOVE_UDEV=1 ;;
+        --keep-config)  KEEP_CONFIG=1 ;;
+        --yes|-y)       AUTO_YES=1 ;;
         *) printf '[uninstall] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -38,14 +41,16 @@ systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
-# BUG-MULTI-INSTANCE-01: garantia extra — mata GUIs e daemons órfãos que
-# possam ter escapado do systemctl stop (ex.: processo lançado fora do
-# systemd, ou residual de sessão anterior).
-pkill -TERM -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
-pkill -TERM -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
+# Mata GUIs e daemons órfãos — qualquer processo do hefesto, mesmo se rodando
+# fora do systemd (CLI manual, hotplug-gui spawn, foreground dev).
+log "matando processos hefesto*"
+pkill -TERM -f 'hefesto_dualsense4unix' 2>/dev/null || true
+pkill -TERM -f 'hefesto-dualsense4unix' 2>/dev/null || true
+pkill -TERM -f 'br\.andrefarias\.Hefesto' 2>/dev/null || true
 sleep 2
-pkill -KILL -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
-pkill -KILL -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
+pkill -KILL -f 'hefesto_dualsense4unix' 2>/dev/null || true
+pkill -KILL -f 'hefesto-dualsense4unix' 2>/dev/null || true
+pkill -KILL -f 'br\.andrefarias\.Hefesto' 2>/dev/null || true
 
 # Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
@@ -113,13 +118,65 @@ done
 # Bytecode espalhado: __pycache__/ em src/ tests/ scripts/
 find "${ROOT_DIR}" -type d -name "__pycache__" \
     -not -path "*/\.git/*" \
-    -not -path "*/\.venv/*" \
     -exec rm -rf {} + 2>/dev/null || true
 find "${ROOT_DIR}" -type f -name "*.pyc" \
     -not -path "*/\.git/*" \
-    -not -path "*/\.venv/*" \
     -delete 2>/dev/null || true
 
+# .deb instalado via apt: sudo apt remove (idempotente — silencioso se ausente).
+if dpkg -l hefesto-dualsense4unix >/dev/null 2>&1; then
+    log "removendo pacote .deb hefesto-dualsense4unix (sudo)"
+    sudo apt-get remove -y hefesto-dualsense4unix >/dev/null 2>&1 || true
+fi
+
+# Flatpak: desinstalar app + cleanup runtime (mas não remove runtime GNOME
+# se outras apps usam — flatpak gerencia rc).
+if flatpak list --user --app 2>/dev/null | grep -q "br.andrefarias.Hefesto"; then
+    log "desinstalando Flatpak br.andrefarias.Hefesto"
+    flatpak uninstall --user -y br.andrefarias.Hefesto >/dev/null 2>&1 || true
+fi
+# Cache flatpak do app (logs, dados em runtime/sandbox)
+rm -rf "${HOME}/.var/app/br.andrefarias.Hefesto" 2>/dev/null || true
+
+# AppImage em locais convencionais
+for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Downloads"; do
+    [[ -d "$appimg_dir" ]] || continue
+    for f in "$appimg_dir"/Hefesto-Dualsense4Unix*.AppImage "$appimg_dir"/hefesto-dualsense4unix*.AppImage; do
+        if [[ -f "$f" ]]; then
+            log "removendo AppImage ${f}"
+            rm -f "$f"
+        fi
+    done
+done
+
+# Configs e dados do user (opt-out via --keep-config)
+if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+    for path in \
+        "${HOME}/.config/hefesto-dualsense4unix" \
+        "${HOME}/.local/share/hefesto-dualsense4unix" \
+        "${HOME}/.cache/hefesto-dualsense4unix"; do
+        if [[ -d "$path" ]]; then
+            log "removendo ${path}"
+            rm -rf "$path"
+        fi
+    done
+else
+    log "configs preservadas (--keep-config): ~/.config/hefesto-dualsense4unix"
+fi
+
+# Runtime dir do socket IPC e pid files (sempre limpa, é volátil)
+runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hefesto-dualsense4unix"
+if [[ -d "$runtime_dir" ]]; then
+    log "removendo ${runtime_dir}"
+    rm -rf "$runtime_dir"
+fi
+
+# Pip user packages (deps modernas que install.sh ou usuário possa ter colocado)
+# Não removidas por default — podem ser usadas por outros apps. Deixar como
+# nota informativa.
+log "(nota) deps Python via pip --user em ~/.local/lib/python*/site-packages preservadas"
+log "       — remova manualmente se quiser wipe absoluto do user-site"
+
 printf '\n─────────────────────────────────────────\n'
-printf ' Hefesto - Dualsense4Unix desinstalado\n'
+printf ' Hefesto - Dualsense4Unix desinstalado (wipe completo)\n'
 printf '─────────────────────────────────────────\n\n'

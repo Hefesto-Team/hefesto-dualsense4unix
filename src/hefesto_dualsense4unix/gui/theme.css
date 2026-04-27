@@ -36,6 +36,35 @@
     padding: 4px 8px;
 }
 
+/* Combobox internals — célula de display + popup precisam contraste explícito.
+   No GNOME 47 o renderer default herda cor cinza opaca, ficando mal-contrastado
+   contra o background Dracula (#282a36). Forçamos cor do foreground em todos
+   os filhos relevantes. */
+.hefesto-dualsense4unix-window combobox button,
+.hefesto-dualsense4unix-window combobox button label,
+.hefesto-dualsense4unix-window combobox cellview,
+.hefesto-dualsense4unix-window combobox box {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+.hefesto-dualsense4unix-window combobox arrow {
+    color: #bd93f9;
+}
+/* Labels gerais — herdam color via .hefesto-dualsense4unix-window mas em alguns
+   containers internos (Frame, Box) o GTK aplica cinza disabled-look. Forçar. */
+.hefesto-dualsense4unix-window label {
+    color: #f8f8f2;
+}
+.hefesto-dualsense4unix-window label:disabled {
+    color: #6272a4;
+}
+/* Frame headers (legend) — usar accent purple pra destacar do corpo */
+.hefesto-dualsense4unix-window frame > border + label,
+.hefesto-dualsense4unix-window frame > label {
+    color: #bd93f9;
+    font-weight: bold;
+}
+
 .hefesto-dualsense4unix-window combobox:focus,
 .hefesto-dualsense4unix-window entry:focus {
     border: 2px solid #8be9fd;

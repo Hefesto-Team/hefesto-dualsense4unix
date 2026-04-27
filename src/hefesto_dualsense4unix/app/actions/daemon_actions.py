@@ -211,22 +211,68 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return (result.stdout or "").strip()
 
     def _start_service_blocking(self) -> int:
-        """Dispara `systemctl --user start hefesto-dualsense4unix.service` com timeout 5s.
+        """Sobe o daemon. systemctl primeiro, fallback Popen em sandbox (Flatpak).
 
-        Retorna o returncode (ou -1 em caso de FileNotFoundError / timeout).
+        Retorna 0 se subiu com sucesso (systemctl OK ou Popen vivo após probe),
+        ou returncode != 0 / -1 em falha.
+
+        Em ambiente Flatpak (FLATPAK_ID definido) ou quando systemctl
+        retorna FileNotFoundError, o fallback usa subprocess.Popen do
+        binário do app, mantendo o daemon como child do processo da GUI.
         Bloqueia — chamar apenas de thread worker.
         """
+        import os
+        import sys
+        from pathlib import Path
+
+        is_sandbox = bool(os.environ.get("FLATPAK_ID")) or not Path("/run/systemd/system").exists()
+
+        if not is_sandbox:
+            try:
+                result = subprocess.run(
+                    ["systemctl", "--user", "start", SERVICE_NORMAL],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=5,
+                )
+                if result.returncode == 0:
+                    return 0
+                logger.warning(
+                    "systemctl_start_falhou_tentando_popen",
+                    rc=result.returncode,
+                    stderr=(result.stderr or "")[:200],
+                )
+            except (FileNotFoundError, subprocess.SubprocessError) as exc:
+                logger.info("systemctl_indisponivel_usando_popen", erro=str(exc))
+
+        # Fallback: spawn do daemon como child via Popen.
+        # Slot self._daemon_popen é cleanado em _shutdown_backend.
         try:
-            result = subprocess.run(
-                ["systemctl", "--user", "start", SERVICE_NORMAL],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=5,
+            existing = getattr(self, "_daemon_popen", None)
+            if existing is not None and existing.poll() is None:
+                logger.debug("daemon_popen_ja_ativo", pid=existing.pid)
+                return 0
+            cmd = [sys.executable, "-m", "hefesto_dualsense4unix",
+                   "daemon", "start", "--foreground"]
+            popen = subprocess.Popen(  # noqa: S603
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
             )
-        except (FileNotFoundError, subprocess.SubprocessError):
+            self._daemon_popen = popen
+            logger.info("daemon_popen_iniciado", pid=popen.pid, sandbox=is_sandbox)
+            # Probe rápido — daemon deve estar vivo após 500ms.
+            import time
+            time.sleep(0.5)
+            if popen.poll() is None:
+                return 0
+            logger.warning("daemon_popen_morreu_no_boot", rc=popen.returncode)
+            return popen.returncode if popen.returncode is not None else -1
+        except (FileNotFoundError, subprocess.SubprocessError) as exc:
+            logger.warning("daemon_popen_falhou", erro=str(exc))
             return -1
-        return result.returncode
 
     def _sync_restart_daemon_button_sensitivity(self) -> None:
         """Habilita/desabilita o botão 'Reiniciar daemon' conforme unit presente.
