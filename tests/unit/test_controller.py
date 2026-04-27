@@ -122,11 +122,18 @@ class TestPyDualSenseController:
         inst = PyDualSenseController()
         assert isinstance(inst, IController)
 
-    def test_require_sem_connect_falha(self) -> None:
+    def test_read_state_sem_connect_retorna_offline_defaults(self) -> None:
+        """BUG-DAEMON-NO-DEVICE-FATAL-01: read_state offline retorna snapshot
+        neutro com connected=False em vez de levantar RuntimeError. Permite
+        ao daemon rodar poll_loop sem hardware conectado."""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         inst = PyDualSenseController()
-        with pytest.raises(RuntimeError, match="não inicializado"):
-            inst.read_state()
+        state = inst.read_state()
+        assert state.connected is False
+        assert state.battery_pct == 0
+        assert state.l2_raw == 0
+        assert state.r2_raw == 0
+        assert state.buttons_pressed == frozenset()
 
     def test_coerce_mode_conhecido(self) -> None:
         from pydualsense.enums import TriggerModes

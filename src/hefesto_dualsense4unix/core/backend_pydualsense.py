@@ -32,18 +32,44 @@ class PyDualSenseController(IController):
     def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         self._ds: pydualsense | None = None
         self._transport: Transport = "usb"
+        # BUG-DAEMON-NO-DEVICE-FATAL-01: estado "offline-OK". Marcado quando
+        # `pydualsense.init()` levanta `Exception("No device detected")` —
+        # daemon segue vivo, IPC/UDP/CLI funcionais, e `connect()` é
+        # retentado periodicamente pelo `reconnect_loop` do daemon.
+        self._offline: bool = False
         # HOTFIX-2: evdev como fonte primária de input (contorna conflito
         # com kernel hid_playstation). pydualsense segue como caminho de
         # output (triggers, LED, rumble).
         self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
 
     def connect(self) -> None:
-        if self._ds is not None:
+        # Hot-reconnect probe: se já temos um `pydualsense` instanciado e
+        # ele está conectado, reutiliza. Senão, zera o estado e tenta
+        # `init()` novamente — fluxo compartilhado entre boot inicial e
+        # `reconnect_loop` periódico.
+        if self._ds is not None and self.is_connected():
             logger.debug("pydualsense ja conectado; reutilizando")
             return
+        # Estado anterior pode ter ficado parcial (offline ou ds morto).
+        # Zera antes de retentar para evitar `is_connected()` falso-positivo.
+        self._ds = None
         ds = pydualsense()
-        ds.init()
+        try:
+            ds.init()
+        except Exception as exc:
+            # `pydualsense.__find_device()` levanta `Exception("No device detected")`
+            # (string match — não é uma subclasse dedicada). Tratamos como
+            # offline-OK; demais exceções (permissão hidraw, USB transitório)
+            # propagam para o chamador (`connect_with_retry` faz backoff).
+            if "No device detected" in str(exc):
+                if not self._offline:
+                    logger.info("controller_offline_no_device", retry=True)
+                self._ds = None
+                self._offline = True
+                return
+            raise
         self._ds = ds
+        self._offline = False
         self._transport = self._detect_transport(ds)
         # Inicia leitor evdev em paralelo; sem device evdev, cai no fallback
         # pydualsense pra input (pode ficar zerado se kernel hid_playstation
@@ -77,7 +103,23 @@ class PyDualSenseController(IController):
         return bool(getattr(self._ds, "connected", False))
 
     def read_state(self) -> ControllerState:
-        ds = self._require()
+        # BUG-DAEMON-NO-DEVICE-FATAL-01: quando offline, devolve snapshot
+        # neutro em vez de levantar. Daemon segue rodando o poll_loop e
+        # publica estado vazio para CLI/GUI/IPC.
+        if self._ds is None:
+            return ControllerState(
+                battery_pct=0,
+                l2_raw=0,
+                r2_raw=0,
+                connected=False,
+                transport=self._transport,
+                raw_lx=128,
+                raw_ly=128,
+                raw_rx=128,
+                raw_ry=128,
+                buttons_pressed=frozenset(),
+            )
+        ds = self._ds
         battery = self._read_battery_raw(ds)
         # HOTFIX-2: evdev é fonte primária de input quando disponível.
         if self._evdev.is_available():
@@ -132,19 +174,28 @@ class PyDualSenseController(IController):
         )
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
-        ds = self._require()
+        if self._ds is None:
+            logger.debug("setter_no_op_offline", op="set_trigger", side=side)
+            return
+        ds = self._ds
         trigger = ds.triggerL if side == "left" else ds.triggerR
         trigger.mode = self._coerce_mode(effect.mode)
         for idx, value in enumerate(effect.forces):
             trigger.setForce(idx, value)
 
     def set_led(self, color: tuple[int, int, int]) -> None:
-        ds = self._require()
+        if self._ds is None:
+            logger.debug("setter_no_op_offline", op="set_led")
+            return
+        ds = self._ds
         r, g, b = color
         ds.light.setColorI(r, g, b)
 
     def set_rumble(self, weak: int, strong: int) -> None:
-        ds = self._require()
+        if self._ds is None:
+            logger.debug("setter_no_op_offline", op="set_rumble")
+            return
+        ds = self._ds
         ds.setLeftMotor(strong)
         ds.setRightMotor(weak)
 
@@ -156,7 +207,10 @@ class PyDualSenseController(IController):
         `ds.audio` é garantido pelo `pydualsense.__init__` — não pode ser None
         após `_require()` retornar com sucesso.
         """
-        ds = self._require()
+        if self._ds is None:
+            logger.debug("setter_no_op_offline", op="set_mic_led")
+            return
+        ds = self._ds
         ds.audio.setMicrophoneLED(bool(muted))
 
     def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
@@ -178,7 +232,10 @@ class PyDualSenseController(IController):
         """
         from pydualsense.enums import PlayerID
 
-        ds = self._require()
+        if self._ds is None:
+            logger.debug("setter_no_op_offline", op="set_player_leds")
+            return
+        ds = self._ds
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
         ds.light.playerNumber = PlayerID(bitmask)
         logger.debug(
@@ -188,7 +245,9 @@ class PyDualSenseController(IController):
         )
 
     def get_battery(self) -> int:
-        return self._read_battery_raw(self._require())
+        if self._ds is None:
+            return 0
+        return self._read_battery_raw(self._ds)
 
     def get_transport(self) -> Transport:
         return self._transport
