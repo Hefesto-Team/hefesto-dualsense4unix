@@ -665,6 +665,17 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
             novas_linhas.append(linha_com_sep)
             continue
 
+        # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03 pre-pass: linhas com glyph
+        # protegido nao sao corrigidas. Defense-in-depth — mesmo que o filtro
+        # camada 1 (`subs` filtrado abaixo) falhe (regex avancado, par ad-hoc,
+        # normalizacao Unicode externa), a linha sai intocada para
+        # `novas_linhas`. Custo de falso negativo (palavra sem acento na linha
+        # do glyph) e infinitamente menor que o custo da regressao reportada
+        # 3x: arquivos com strip silencioso de "●○◐△□↑↓←→".
+        if _contem_glyph_protegido(linha):
+            novas_linhas.append(linha_com_sep)
+            continue
+
         linha_busca = _mascara_inline_code_md(linha) if eh_markdown else linha
 
         # Coleta todas as substituições válidas (ordem reversa para preservar offsets).
@@ -720,6 +731,24 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
             nova = linha
             for s, e, r in reversed(aceitas):
                 nova = nova[:s] + r + nova[e:]
+            # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03 post-pass: paranoia.
+            # Mesmo apos pre-pass + filtro camada 1, se algum codepoint
+            # protegido sumiu apos a substituicao, reverte a linha e loga.
+            # Em condicoes normais o pre-pass ja teria pulado a linha; este
+            # ramo so dispara se par malicioso introduzir match que casa
+            # apos a edicao mas nao casava antes — caso teorico, cinto e
+            # suspensorio.
+            if _contem_glyph_protegido(linha) and not _contem_glyph_protegido(nova):
+                perdidos = sorted(
+                    {c for c in linha if is_protected_codepoint(ord(c))} - set(nova)
+                )
+                print(
+                    f"[ADR-011 POST] {path}:{idx + 1} — revertido "
+                    f"(glyph(s) perdido(s) apos substituicao: {perdidos!r})",
+                    file=sys.stderr,
+                )
+                novas_linhas.append(linha_com_sep)
+                continue
             total_subs += len(aceitas)
             novas_linhas.append(nova + sep)
         else:
