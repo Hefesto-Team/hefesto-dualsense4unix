@@ -7,7 +7,18 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [3.0.0] — 2026-04-27
 
-Major release de **rebrand**: o projeto deixa de se chamar `Hefesto` e passa a se chamar `Hefesto - Dualsense4Unix`. Mudança ampla cobrindo display brand (títulos, README, MD), identificadores de código (módulo Python, comando CLI, app-id, service systemd, env vars, paths runtime) e packaging.
+Major release de **rebrand + hardening**: rebrand `Hefesto` → `Hefesto - Dualsense4Unix` + 6 sprints de fix runtime real validadas no dia da release.
+
+### Sprints fechadas pós-rebrand (acumulam no v3.0.0)
+
+- **BUG-DAEMON-NO-DEVICE-FATAL-01**: daemon agora sobe mesmo sem DualSense conectado. `pydualsense.Exception("No device detected")` deixa de ser fatal — vira estado offline-OK com setters virando no-op silencioso. IPC/UDP/poll loop sobem antes de tentar conectar; reconnect_loop em background com probe a cada 5s detecta plug. systemd `StartLimitBurst=3` deixa de ser acionado (era consequência, não causa).
+- **CLUSTER-IPC-STATE-PROFILE-01**: `daemon.state_full` IPC agora reflete o tick atual do `_poll_loop` (era snapshot stale), com telemetria diagnóstica `state_full.stale_neutral` para detectar evdev_reader desconectado. `profile.switch` IPC ganhou paridade com CLI `profile activate` (escreve `active_profile.txt` além do canônico `session.json`). Novo `MANUAL_PROFILE_LOCK_SEC=30s` no StateStore: autoswitch faz no-op enquanto lock manual ativo, evitando que troca via tray seja sobrescrita em <1s.
+- **CLUSTER-INSTALL-DEPS-01**: `install.sh` ganhou passos 8/9 — detecta GNOME via `XDG_CURRENT_DESKTOP` e habilita `ubuntu-appindicators@ubuntu.com` automaticamente (Pop!_OS/Ubuntu vêm com extension instalada mas desabilitada). Detecta `dualsensectl` ausente e oferece flatpak install (`com.github.nowrep.dualsensectl`); install nunca bloqueia se opcional. Aba Firmware na GUI mostra mensagem clara com URL Flathub quando binário ausente.
+- **CLUSTER-TRAY-POLISH-01**: "Sair" do tray agora mata daemon avulso via PID file (defesa anti-recycle via `is_hefesto_dualsense4unix_process`), não só systemctl stop. Item `(carregando)` zumbi removido do submenu Perfis. Mnemonic GTK underscore corrigido (`use_underline=False` explícito).
+- **FEAT-BLUETOOTH-CONNECTION-01** (PROTOCOL_READY): código de runtime já era transport-agnostic (USB+BT). Sprint adicionou gate da regra udev `74-ps5-controller-hotplug-bt.rules` no `install.sh`, seção "Conexão via Bluetooth" no README com fluxo `bluetoothctl` em PT-BR, e CHECKLIST_HARDWARE_V2 item 8 expandido (5 sub-itens). Promoção a MERGED requer execução em hardware BT pareado.
+- **BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03**: `scripts/validar-acentuacao.py` ganhou defesa em profundidade (pre/post-pass) contra strip silencioso de glyphs ADR-011 (●○◐△□). Pre-pass: linha contendo glyph protegido não é corrigida (conservador). Post-pass: revert se algum codepoint sumiu após substituição.
+
+### Quebrando compatibilidade
 
 ### Quebrando compatibilidade
 

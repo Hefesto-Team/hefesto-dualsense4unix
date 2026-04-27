@@ -58,13 +58,15 @@ O `install.sh` pergunta se você quer auto-start do daemon no boot (default **N�
 
 ## 3. Primeira abertura
 
-Abra o Hefesto - Dualsense4Unix pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A janela abre com 8 abas e tema Drácula:
+Abra o Hefesto - Dualsense4Unix pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A janela abre com 10 abas e tema Drácula:
 
 ![Aba Status com sticks e grid de botões](assets/quickstart_01_status.png)
 
 **Aba Status**: conexão do controle, bateria, perfil ativo, estado do daemon. Sticks L3/R3 preview ao vivo + grid 4×4 dos botões que ilumina em roxo quando você pressiona.
 
 Plugue o DualSense (USB) ou pareie via Bluetooth. A GUI abre sozinha graças às regras udev do hotplug. A aba Status mostra **Conexão: USB** (ou BT), **Bateria: XX%** e **Daemon: Online**.
+
+> **Tray icon não aparece no GNOME?** No GNOME 42+ (Pop!_OS, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada. O `install.sh --yes` habilita automaticamente, mas pode exigir **logout/login** para o GNOME Shell carregar. Em outros DEs (KDE, COSMIC, XFCE), o tray funciona nativamente. Detalhes: passo 8/9 do `install.sh`.
 
 ---
 
@@ -179,6 +181,33 @@ Se a unit não existe:
 hefesto-dualsense4unix daemon install-service
 systemctl --user daemon-reload
 ```
+
+> **A partir da v3.0.0** o daemon é resiliente sem hardware: sobe mesmo sem DualSense plugado, expõe IPC, e detecta plug-and-play via probe interno a cada 5s. Se o daemon morrer especificamente porque o hardware está ausente, é regressão — abrir issue com `journalctl --user -u hefesto-dualsense4unix -n 50`.
+
+### Tray icon invisível no GNOME
+
+```bash
+gnome-extensions list --enabled | grep ubuntu-appindicator
+```
+
+Se vazio, habilitar:
+
+```bash
+gnome-extensions enable ubuntu-appindicators@ubuntu.com
+# precisa logout/login no GNOME para renderizar
+```
+
+O `install.sh` (passo 8/9 a partir da v3.0.0) faz isso automaticamente.
+
+### Aba Firmware sem reagir
+
+A aba Firmware depende do binário externo `dualsensectl`, opcional:
+
+```bash
+flatpak install -y --user flathub com.github.nowrep.dualsensectl
+```
+
+Ou via GitHub source: <https://github.com/nowrep/dualsensectl>.
 
 ### Gatilhos sem efeito
 
