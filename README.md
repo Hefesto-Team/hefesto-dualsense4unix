@@ -3,15 +3,15 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto/releases)
-[![Testes](https://img.shields.io/badge/testes-1036%20unit-brightgreen.svg)](tests/unit/)
-[![CI](https://github.com/AndreBFarias/hefesto/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto/actions)
+[![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
+[![Testes](https://img.shields.io/badge/testes-1332%20unit-brightgreen.svg)](tests/unit/)
+[![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
 <div style="text-align: center;">
-  <h1 style="font-size: 2.2em;">Hefesto</h1>
-  <img src="assets/appimage/Hefesto.png" width="120" alt="Logo Hefesto">
+  <h1 style="font-size: 2.2em;">Hefesto - Dualsense4Unix</h1>
+  <img src="assets/appimage/Hefesto-Dualsense4Unix.png" width="120" alt="Logo Hefesto - Dualsense4Unix">
 </div>
 </div>
 </div>
@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 2.3.0
+Versão: 3.0.0
 Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1138 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
@@ -41,9 +41,10 @@ Projetado para Pop!\_OS, Ubuntu, Fedora, Arch, Debian e Mint. Usa `evdev` para e
 |-----------|----------------|
 | **Gatilhos adaptativos** | 19 modos validados (Rigid, Pulse, Galloping, Machine, Bow, Automatic Gun, etc.) com fábricas pydantic |
 | **Compatibilidade DSX** | Servidor UDP em `127.0.0.1:6969` aceita pacotes JSON no schema Paliverse |
-| **IPC local** | Unix socket em `$XDG_RUNTIME_DIR/hefesto/hefesto.sock`, JSON-RPC 2.0 sobre NDJSON, 10 métodos canônicos |
-| **Perfis** | JSON validados com pydantic v2 em `~/.config/hefesto/profiles/`; 7 defaults (`navegacao`, `fps`, `aventura`, `acao`, `corrida`, `esportes`, `meu_perfil`) <!-- noqa: acentuacao --> |
-| **Auto-switch** | Troca de perfil automática por janela ativa (X11 nativo, Wayland via portal XDG) |
+| **IPC local** | Unix socket em `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock`, JSON-RPC 2.0 sobre NDJSON, 10 métodos canônicos |
+| **Perfis** | JSON validados com pydantic v2 em `~/.config/hefesto-dualsense4unix/profiles/`; 7 defaults (`navegacao`, `fps`, `aventura`, `acao`, `corrida`, `esportes`, `meu_perfil`) <!-- noqa: acentuacao --> |
+| **Auto-switch** | Troca de perfil automática por janela ativa (X11 nativo, Wayland via portal XDG) com lock de 30 s após escolha manual via tray/CLI |
+| **Resiliência** | Daemon sobe sem hardware presente; reconnect_loop probe 5 s; tolera plug/unplug em runtime sem morrer |
 | **Hotkeys** | Combos sagrados PS+D-pad sem exigir grupo `input`; botão Mic físico muta microfone do sistema |
 | **Lightbar e LEDs** | Barra RGB + luminosidade + 5 LEDs de jogador; presets rápidos (Todos, Player 1, Player 2, Nenhum) |
 | **Rumble** | Política global (Economia 0.3×, Balanceado 0.7×, Máximo 1.0×, Auto dinâmico por bateria) com debounce 5 s |
@@ -51,7 +52,7 @@ Projetado para Pop!\_OS, Ubuntu, Fedora, Arch, Debian e Mint. Usa `evdev` para e
 | **Interface** | GUI GTK3 tema Drácula, TUI Textual com preview ao vivo, CLI `typer` com cores |
 | **Plataforma** | `.deb` nativo (179 KB), bundle Flatpak `br.andrefarias.Hefesto`, AppImage, instalação via fonte |
 | **Observabilidade** | Endpoint Prometheus opt-in em `127.0.0.1:9090/metrics` com 8 métricas canônicas |
-| **Extensibilidade** | Plugins Python em `~/.config/hefesto/plugins/*.py` com hooks `on_tick` / `on_button_down` / `on_battery_change` |
+| **Extensibilidade** | Plugins Python em `~/.config/hefesto-dualsense4unix/plugins/*.py` com hooks `on_tick` / `on_button_down` / `on_battery_change` |
 
 ---
 
@@ -60,8 +61,29 @@ Projetado para Pop!\_OS, Ubuntu, Fedora, Arch, Debian e Mint. Usa `evdev` para e
 Status em tempo real com sticks L3/R3, barras de gatilho e grid 4×4 de glyphs acendendo em roxo quando pressionados.
 
 <div align="center">
-<img src="docs/usage/assets/readme_status.png" width="820" alt="Aba Status da GUI Hefesto com sticks, gatilhos e glyphs">
+<img src="docs/usage/assets/readme_status.png" width="820" alt="Aba Status da GUI Hefesto - Dualsense4Unix com sticks, gatilhos e glyphs">
 </div>
+
+---
+
+### Layout das abas (GUI GTK3)
+
+A GUI principal expõe 10 abas no `GtkNotebook` central, cada uma cobrindo um eixo do controle. Pra cada aba, o que ela faz e o que você ajusta lá:
+
+| Aba | Pra que serve | Controles principais |
+|-----|---------------|----------------------|
+| **Status** | Dashboard ao vivo do controle e do daemon. É a primeira aba e onde você confirma se conectou. | Conexão, Transporte (USB/BT), Bateria, Perfil ativo, Daemon (online/offline); barras L2/R2 0–255; sticks analógicos esquerdo (L3) e direito (R3) com X/Y; grid 4×4 de glyphs (X, O, □, △, D-pad, L1/R1/L2/R2, Share, Options, PS, Touchpad) que acende em roxo quando pressionado. |
+| **Gatilhos** | Configurar o efeito adaptativo de L2 e R2 separadamente. É a feature-flagship do projeto. | Por gatilho (L2 e R2): combobox **Modo** (19 modos: Off, Rigid, Pulse, Galloping, Machine, Bow, Automatic Gun, etc.), combobox **Preset** (intensidade leve/média/dura), botão **Aplicar**, botão **Desligar**. |
+| **Lightbar** | Cor da barra LED frontal e LEDs de jogador. | Color picker RGB com prévia ao vivo, slider de **Luminosidade (%)**, botões **Aplicar no controle** / **Apagar**; checkboxes **LED 1–5** (player LEDs) com presets rápidos **Todos**, **Player 1**, **Player 2**, **Nenhum** + botão **Aplicar LEDs**. |
+| **Rumble** | Política global de vibração e teste dos motores. | Radios de política: **Economia** (0,3×), **Balanceado** (0,7×), **Máximo** (1,0×), **Auto** (dinâmico por bateria); slider **Intensidade global**; testar **Motor fraco (weak)** / **Motor forte (strong)** com **Testar por 500 ms**, **Aplicar**, **Parar**. |
+| **Perfis** | Gerência de perfis JSON com auto-switch por janela. | Lista de perfis com prioridade; botões **Novo** / **Duplicar** / **Renomear** / **Excluir**; editor com modo **simples** (radios Steam / Navegador / Terminal / Editor / Jogo específico) e modo **avançado** (campos `window_class` / `title_regex` / `process_name`). |
+| **Daemon** | Controle do service systemd `--user` que roda em background. | Status do daemon (online/offline), botões **Start** / **Stop** / **Restart**, **Instalar service** / **Desinstalar**; toggle de auto-start no boot; visualizador de log curto. |
+| **Emulação** | Gamepad virtual Xbox 360 via `uinput`, pra jogos que só aceitam controles Microsoft. | Toggle **on/off** de `/dev/input/js*` virtual com forward 60 Hz; status do device emulado; mapeamento dos botões DualSense → Xbox360. |
+| **Mouse** | Emulação de mouse usando o stick direito ou touchpad do DualSense. | Toggle **on/off**; sliders de sensibilidade X/Y; deadzone; modo touchpad vs stick; integração com daemon. |
+| **Teclado** | Emulação de teclado/atalhos por botões (combos para hotkeys). | Mapeamento botão → keysym; persistência por perfil; testar combinação. |
+| **Firmware** | Atualização e info do firmware do DualSense (read-only no v3.0). | Versão atual; tipo de hardware; histórico de releases; instruções de update via PS5 (não há flash via Linux ainda). |
+
+> **Observação:** o footer global expõe **Aplicar**, **Salvar Perfil**, **Importar**, **Restaurar Default** — esses persistem o que está editado em qualquer aba ativa para o perfil corrente.
 
 ---
 
@@ -107,7 +129,7 @@ Escala a intensidade de todos os comandos de vibração antes de chegar ao hardw
 
 ### Daemon — systemd e logs
 
-Status da unidade `hefesto.service` (`--user`), toggle de auto-start e janela ao vivo de `systemctl status` com histórico de `profile_activated`, `ipc_server_listening`, `udp_server_listening` e `hotkey_manager_started`.
+Status da unidade `hefesto-dualsense4unix.service` (`--user`), toggle de auto-start e janela ao vivo de `systemctl status` com histórico de `profile_activated`, `ipc_server_listening`, `udp_server_listening` e `hotkey_manager_started`.
 
 <div align="center">
 <img src="docs/usage/assets/readme_daemon.png" width="820" alt="Aba Daemon com saída do systemctl status ao vivo">
@@ -130,15 +152,15 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.3.0/hefesto_2.3.0_amd64.deb
-sudo apt install ./hefesto_2.3.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.0.0/hefesto-dualsense4unix_3.0.0_amd64.deb
+sudo apt install ./hefesto-dualsense4unix_3.0.0_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
 
 ```bash
-systemctl --user enable --now hefesto.service
-hefesto-gui
+systemctl --user enable --now hefesto-dualsense4unix.service
+hefesto-dualsense4unix-gui
 ```
 
 Dependências Python que não têm pacote Debian oficial:
@@ -147,11 +169,11 @@ Dependências Python que não têm pacote Debian oficial:
 pip install pydualsense python-uinput
 ```
 
-> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto usa API pydantic v2 (`ConfigDict`). O `.deb` v2.3.0+ declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
+> **Ubuntu 22.04 (Jammy) e 24.04 (Noble):** o `python3-pydantic` do apt nesses releases é **versão 1.x** (Jammy 1.8.2, Noble 1.10.14 — confirmado empiricamente em 2026-04-24). O Hefesto - Dualsense4Unix usa API pydantic v2 (`ConfigDict`). O `.deb` declara `python3-pydantic` sem constraint de versão, então o `apt install` funciona; porém o Hefesto - Dualsense4Unix imprime `ImportWarning` em runtime e falha ao tocar schemas. **Solução recomendada (2 comandos):**
 >
 > ```bash
 > pip install --user 'pydantic>=2'
-> sudo apt install ./hefesto_*.deb
+> sudo apt install ./hefesto-dualsense4unix_*.deb
 > ```
 >
 > O Python resolve `import pydantic` preferindo `~/.local/lib/python3.X/site-packages` (pydantic v2) antes de `/usr/lib/python3/dist-packages` (pydantic v1 do apt). Zero conflito.
@@ -164,15 +186,15 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v2.3.0/Hefesto-2.3.0-x86_64.AppImage
-chmod +x Hefesto-2.3.0-x86_64.AppImage
-./Hefesto-2.3.0-x86_64.AppImage
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.0.0/Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
+chmod +x Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
+./Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)
 
 ```bash
-flatpak install hefesto.flatpak
+flatpak install hefesto-dualsense4unix.flatpak
 flatpak run br.andrefarias.Hefesto
 ```
 
@@ -190,6 +212,14 @@ cd hefesto
 Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou está quebrada, invoca o bootstrap automaticamente; caso contrário valida rápido com `pytest --collect-only` e avisa se PyGObject está ausente (A-12).
 
 **Para rodar a GUI localmente (`./run.sh --gui`):** o `PyGObject` precisa estar no `.venv`. Rode `./scripts/dev_bootstrap.sh --with-tray` pelo menos uma vez — sem a flag `--with-tray`, o bootstrap não instala o pacote (evita falha pesada em máquinas sem `libgirepository-1.0-dev`). O `dev-setup.sh` detecta ausência e imprime instrução acionável. Armadilha A-12 documentada em `VALIDATOR_BRIEF.md`.
+
+> **GNOME 42+:** o `install.sh` detecta a extension `ubuntu-appindicators@ubuntu.com`
+> e oferece habilitação automática (sem ela o ícone de bandeja não aparece). Em outras
+> DEs (KDE, COSMIC, XFCE, Cinnamon, MATE) o tray Ayatana funciona nativamente.
+
+> **Aba Firmware (opcional):** depende do binário externo `dualsensectl`. O `install.sh`
+> oferece instalação via Flathub (`com.github.nowrep.dualsensectl`). A GUI funciona normalmente
+> com a aba desabilitada se o binário ausente.
 
 Reconecte o DualSense depois de instalar as regras udev. Confira o acesso:
 
@@ -216,7 +246,7 @@ ls -l /dev/hidraw* /dev/uinput          # ACL via uaccess deve estar ativa (+)
 **Opcionais:**
 
 - `python-uinput` (emulação Xbox 360).
-- Endpoint Prometheus em `127.0.0.1:9090` (opt-in via `hefesto.conf`).
+- Endpoint Prometheus em `127.0.0.1:9090` (opt-in via `hefesto-dualsense4unix.conf`).
 
 **Fora de escopo:**
 
@@ -227,12 +257,12 @@ ls -l /dev/hidraw* /dev/uinput          # ACL via uaccess deve estar ativa (+)
 
 ### Uso
 
-**Via menu de aplicativos:** procure por "Hefesto" (ícone na bandeja do sistema).
+**Via menu de aplicativos:** procure por "Hefesto - Dualsense4Unix" (ícone na bandeja do sistema).
 
 **Via terminal (GUI):**
 
 ```bash
-hefesto-gui
+hefesto-dualsense4unix-gui
 ```
 
 **Via CLI (headless, sem display):**
@@ -240,36 +270,75 @@ hefesto-gui
 ```bash
 . .venv/bin/activate
 
-hefesto daemon start --foreground           # sobe daemon em primeiro plano
-hefesto status                              # estado do daemon e controle
-hefesto battery                             # percentual colorido
-hefesto profile list                        # perfis em ~/.config/hefesto/profiles/
-hefesto profile show shooter                # JSON do perfil
-hefesto profile activate shooter            # aplica direto no hardware
-hefesto test trigger --side right \
+hefesto-dualsense4unix daemon start --foreground           # sobe daemon em primeiro plano
+hefesto-dualsense4unix status                              # estado do daemon e controle
+hefesto-dualsense4unix battery                             # percentual colorido
+hefesto-dualsense4unix profile list                        # perfis em ~/.config/hefesto-dualsense4unix/profiles/
+hefesto-dualsense4unix profile show shooter                # JSON do perfil
+hefesto-dualsense4unix profile activate shooter            # aplica direto no hardware
+hefesto-dualsense4unix test trigger --side right \
     --mode Galloping --params 0,9,7,7,10    # testa efeito sem daemon
-hefesto led --color "#FF0080"               # lightbar
-hefesto tui                                 # interface Textual
+hefesto-dualsense4unix led --color "#FF0080"               # lightbar
+hefesto-dualsense4unix tui                                 # interface Textual
 ```
 
 **Service systemd `--user`:**
 
 ```bash
-hefesto daemon install-service              # modo gráfico (default)
-hefesto daemon install-service --headless   # modo headless (SSH/Big Picture remoto)
-systemctl --user enable --now hefesto.service
-journalctl --user -u hefesto -f
+hefesto-dualsense4unix daemon install-service              # modo gráfico (default)
+hefesto-dualsense4unix daemon install-service --headless   # modo headless (SSH/Big Picture remoto)
+systemctl --user enable --now hefesto-dualsense4unix.service
+journalctl --user -u hefesto-dualsense4unix -f
 ```
 
 **Emulação Xbox 360:**
 
 ```bash
-hefesto emulate xbox360 --on                # cria /dev/input/js*, forward 60 Hz
+hefesto-dualsense4unix emulate xbox360 --on                # cria /dev/input/js*, forward 60 Hz
 ```
 
 Steam e a maior parte dos jogos Proton reconhecem automaticamente o novo gamepad.
 
 Guia visual com capturas cobrindo instalação, GUI, presets e solução de problemas: **[docs/usage/quickstart.md](docs/usage/quickstart.md)**.
+
+---
+
+### Conexão via Bluetooth
+
+O Hefesto detecta o DualSense igual em USB e em Bluetooth — o backend é transport-agnóstico (ver `src/hefesto_dualsense4unix/core/backend_pydualsense.py`). Lightbar, gatilhos adaptativos, rumble, mic LED e LEDs de jogador funcionam em ambos os transportes; a única diferença é o pareamento inicial, que ainda é manual via `bluetoothctl` (não há UI dedicada na GUI).
+
+Passo a passo (Pop!_OS / Ubuntu / Fedora):
+
+```bash
+bluetoothctl
+# dentro do prompt interativo do bluetoothctl:
+power on
+agent on
+default-agent
+scan on
+# no controle: segurar PS + Create por ~3 s até a barra de luz piscar rápido
+# aguardar entrada "Wireless Controller" aparecer com o MAC
+pair  AA:BB:CC:DD:EE:FF      # substituir pelo MAC mostrado no scan
+trust AA:BB:CC:DD:EE:FF
+connect AA:BB:CC:DD:EE:FF
+exit
+```
+
+Após pareado, o daemon detecta automaticamente em ≤ 5 s; a GUI é trazida ao foco pela regra udev `74-ps5-controller-hotplug-bt.rules` (instalada por `./scripts/install_udev.sh`). Confirmar transporte ativo:
+
+```bash
+hefesto-dualsense4unix status
+# esperado:
+#   connected   = True
+#   transport   = bt
+#   battery_pct = <num>
+```
+
+Notas:
+
+- Para reconectar nas próximas sessões basta ligar o controle (botão PS curto). O `bluetoothd` reaproveita o `trust` salvo.
+- Se aparecer latência intermitente em adaptadores BT antigos (CSR / firmware desatualizado), é esperado — fora do escopo do projeto. Documentar como troubleshoot na issue própria.
+- Áudio do DualSense via BT permanece fora de escopo (protocolo proprietário, ver "Fora de escopo" abaixo).
 
 ---
 
@@ -279,7 +348,7 @@ Guia visual com capturas cobrindo instalação, GUI, presets e solução de prob
 |-------|------|
 | PS + D-pad Cima | Próximo perfil |
 | PS + D-pad Baixo | Perfil anterior |
-| PS (sozinho) | Steam Big Picture (ou comando custom via `hefesto.conf`) |
+| PS (sozinho) | Steam Big Picture (ou comando custom via `hefesto-dualsense4unix.conf`) |
 | Mic (botão físico) | Muta / desmuta microfone padrão do sistema |
 
 ---
@@ -298,7 +367,7 @@ Guia visual com capturas cobrindo instalação, GUI, presets e solução de prob
 | **Feedback** | 6 presets de resistência (Leve, Médio, Forte, Progressivo, Duro, Firme) |
 | **Vibration** | 5 presets de vibração (Curto, Médio, Longo, Rajada, Pulso) |
 
-Factories canônicas em `src/hefesto/profiles/trigger_modes.py`.
+Factories canônicas em `src/hefesto_dualsense4unix/profiles/trigger_modes.py`.
 
 ---
 
@@ -328,7 +397,7 @@ Factories canônicas em `src/hefesto/profiles/trigger_modes.py`.
 **Daemon diz "offline" mesmo com controle plugado:**
 
 - USB autosuspend pode estar derrubando o device. A regra `72-ps5-controller-autosuspend.rules` força `power/control=on` e `power/autosuspend_delay_ms=-1` para os VID/PID `054c:0ce6` e `054c:0df2`. Instalada automaticamente por `scripts/install_udev.sh` e pelo `.deb`.
-- Verifique logs: `journalctl --user -u hefesto -f`.
+- Verifique logs: `journalctl --user -u hefesto-dualsense4unix -f`.
 
 **Emulação Xbox 360 não cria `/dev/input/js*`:**
 
@@ -337,7 +406,20 @@ Factories canônicas em `src/hefesto/profiles/trigger_modes.py`.
 
 **Cursor "voando" ao ativar Mouse:**
 
-- Sintoma de múltiplas instâncias de daemon rodando em paralelo. Desde v2.0.0 existe `single_instance` com `flock` — se o bug aparecer, rode `pkill -TERM -f hefesto.app.main && pkill -TERM -f 'hefesto daemon'` e reinicie via `systemctl --user restart hefesto.service`. Reporte em issue.
+- Sintoma de múltiplas instâncias de daemon rodando em paralelo. Desde v2.0.0 existe `single_instance` com `flock` — se o bug aparecer, rode `pkill -TERM -f hefesto_dualsense4unix.app.main && pkill -TERM -f 'hefesto-dualsense4unix daemon'` e reinicie via `systemctl --user restart hefesto-dualsense4unix.service`. Reporte em issue.
+
+**Tray icon invisível no GNOME:**
+
+- A partir do GNOME 42 (Pop!_OS 22.04, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada para renderizar tray icons. O `install.sh --yes` (passo 8/9 a partir da v3.0.0) detecta e habilita automaticamente. Após habilitar, faça **logout/login** do GNOME para o Shell carregar.
+- Manualmente: `gnome-extensions enable ubuntu-appindicators@ubuntu.com`.
+
+**Aba Firmware silenciosamente não funciona:**
+
+- Depende do binário externo `dualsensectl` (opcional). Instale via Flathub: `flatpak install -y --user flathub com.github.nowrep.dualsensectl`. Ou compile do GitHub: <https://github.com/nowrep/dualsensectl>.
+
+**Sair do tray não encerra o daemon:**
+
+- A partir da v3.0.0, "Sair" mata via PID file também (não só via `systemctl stop`). Se você ainda observar daemon residual, anote o PID e abra issue com `journalctl --user -u hefesto-dualsense4unix -n 50`.
 
 Mais detalhes em [`docs/usage/quickstart.md`](docs/usage/quickstart.md) e [`docs/usage/troubleshooting.md`](docs/usage/troubleshooting.md) (quando existir).
 
@@ -347,7 +429,7 @@ Mais detalhes em [`docs/usage/quickstart.md`](docs/usage/quickstart.md) e [`docs
 
 ```
 Hefesto-DualSense_Unix/
-  src/hefesto/
+  src/hefesto_dualsense4unix/
     app/            # GUI GTK3 + apptray + handlers
     cli/            # entry point typer
     daemon/         # 10 subsystems (poll, ipc, udp, autoswitch, mouse, rumble, hotkey, metrics, plugins, connection)
@@ -361,7 +443,7 @@ Hefesto-DualSense_Unix/
     glyphs/         # SVGs originais dos botões do DualSense
     profiles_default/  # 7 perfis default
     *.rules         # udev (70..74)
-    hefesto.service, hefesto-gui-hotplug.service
+    hefesto-dualsense4unix.service, hefesto-dualsense4unix-gui-hotplug.service
   scripts/
     dev-setup.sh, dev_bootstrap.sh, install_udev.sh
     validar-acentuacao.py, check_anonymity.sh, check_version_consistency.py
@@ -403,7 +485,7 @@ Leia [`AGENTS.md`](AGENTS.md) antes de abrir PR. Resumo:
    pre-commit install
    ```
    O framework instala hooks que bloqueiam commit com acentuação PT-BR faltando (`acao`, `funcao`, `descricao`, etc.), menção a IA ou falha de `ruff check`. Script canônico: [`scripts/validar-acentuacao.py`](scripts/validar-acentuacao.py).
-4. Implementar + testes (pytest), `ruff`, `mypy` strict — gate rígido no CI desde V2.2: `mypy src/hefesto` tem que fechar com zero erros; [`scripts/check_anonymity.sh`](scripts/check_anonymity.sh).
+4. Implementar + testes (pytest), `ruff`, `mypy` strict — gate rígido no CI desde V2.2: `mypy src/hefesto_dualsense4unix` tem que fechar com zero erros; [`scripts/check_anonymity.sh`](scripts/check_anonymity.sh).
 5. Se toca runtime, provar via smoke real (`run.sh --smoke`) ou com hardware conectado.
 6. Se toca UI / TUI, screenshot + sha256 + descrição multimodal no PR.
 7. Descoberta não-óbvia vira registro em [`docs/process/discoveries/`](docs/process/discoveries/).

@@ -17,8 +17,8 @@ from unittest.mock import patch
 
 import pytest
 
-from hefesto.app import ipc_bridge
-from hefesto.cli.ipc_client import IpcError
+from hefesto_dualsense4unix.app import ipc_bridge
+from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
 # ---------------------------------------------------------------------------
 # _safe_call — contrato central
@@ -39,7 +39,7 @@ class TestSafeCallDaemonOffline:
         ],
     )
     def test_retorna_false_em_erro_de_transporte(self, exc, caplog):
-        caplog.set_level(logging.DEBUG, logger="hefesto.app.ipc_bridge")
+        caplog.set_level(logging.DEBUG, logger="hefesto_dualsense4unix.app.ipc_bridge")
 
         with patch.object(ipc_bridge, "_run_call", side_effect=exc):
             ok, result = ipc_bridge._safe_call("foo.bar")
@@ -48,7 +48,7 @@ class TestSafeCallDaemonOffline:
         assert result is None
 
     def test_loga_debug_nao_warning(self, caplog):
-        caplog.set_level(logging.DEBUG, logger="hefesto.app.ipc_bridge")
+        caplog.set_level(logging.DEBUG, logger="hefesto_dualsense4unix.app.ipc_bridge")
 
         with patch.object(
             ipc_bridge,

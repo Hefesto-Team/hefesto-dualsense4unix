@@ -1,6 +1,6 @@
 # Hotkeys do DualSense
 
-O Hefesto reconhece atalhos nativos do DualSense detectados pelo daemon via
+O Hefesto - Dualsense4Unix reconhece atalhos nativos do DualSense detectados pelo daemon via
 `HotkeyManager`. Todos os atalhos respeitam o buffer de 150 ms (V3-2) para
 distinguir combos de toques isolados.
 
@@ -72,4 +72,4 @@ custom_command = []
 - O release do PS após um combo não dispara PS solo (suprimido internamente
   pelo `HotkeyManager`).
 - Para desativar temporariamente, use `action = "none"` e recarregue o
-  daemon com `hefesto daemon reload` (V1.2+).
+  daemon com `hefesto-dualsense4unix daemon reload` (V1.2+).

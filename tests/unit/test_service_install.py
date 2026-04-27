@@ -1,4 +1,4 @@
-"""Testes do instalador da unit systemd --user `hefesto.service`.
+"""Testes do instalador da unit systemd --user `hefesto-dualsense4unix.service`.
 
 SIMPLIFY-UNIT-01: unit única. Não há mais variante headless.
 """
@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.daemon import service_install as si
-from hefesto.daemon.service_install import (
+from hefesto_dualsense4unix.daemon import service_install as si
+from hefesto_dualsense4unix.daemon.service_install import (
     SERVICE_NORMAL,
     ServiceInstaller,
     find_assets_dir,
@@ -110,7 +110,7 @@ def test_detect_installed_unit(isolated_systemd_user: Path, dummy_systemctl: lis
 
     isolated_systemd_user.mkdir(parents=True, exist_ok=True)
     (isolated_systemd_user / SERVICE_NORMAL).write_text("stub")
-    assert installer.detect_installed_unit() == "hefesto"
+    assert installer.detect_installed_unit() == "hefesto-dualsense4unix"
 
 
 def test_dry_run_nao_copia(isolated_systemd_user: Path, dummy_systemctl: list):
@@ -124,6 +124,6 @@ def test_find_assets_dir_respeita_env_override(tmp_path: Path, monkeypatch: pyte
     fake = tmp_path / "fake_assets"
     fake.mkdir()
     (fake / SERVICE_NORMAL).write_text("stub")
-    monkeypatch.setenv("HEFESTO_ASSETS_DIR", str(fake))
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_ASSETS_DIR", str(fake))
 
     assert find_assets_dir() == fake

@@ -296,7 +296,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
     except ImportError as exc:
         print(f"erro: import falhou — rode via venv do projeto. {exc}", file=sys.stderr)
         return 3

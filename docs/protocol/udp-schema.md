@@ -2,7 +2,7 @@
 
 ## Endpoint
 
-`127.0.0.1:6969` (UDP). Configurável em `~/.config/hefesto/daemon.toml`.
+`127.0.0.1:6969` (UDP). Configurável em `~/.config/hefesto-dualsense4unix/daemon.toml`.
 
 ## Envelope
 

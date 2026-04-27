@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from hefesto.cli.app import app
-from hefesto.profiles import loader as loader_module
+from hefesto_dualsense4unix.cli.app import app
+from hefesto_dualsense4unix.profiles import loader as loader_module
 
 runner = CliRunner()
 
@@ -24,7 +24,7 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
     # Também aponta config_dir para tmp para active_profile marker.
-    from hefesto.utils import xdg_paths
+    from hefesto_dualsense4unix.utils import xdg_paths
 
     fake_cfg = tmp_path / "config"
     fake_cfg.mkdir()
@@ -39,7 +39,7 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
 
 def test_version_command():
-    from hefesto import __version__
+    from hefesto_dualsense4unix import __version__
 
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
@@ -94,7 +94,7 @@ def test_battery_sem_hardware():
 def test_status_roda_sem_daemon():
     result = runner.invoke(app, ["status"])
     assert result.exit_code == 0
-    assert "Hefesto" in result.stdout or "Status" in result.stdout
+    assert "Hefesto - Dualsense4Unix" in result.stdout or "Status" in result.stdout
 
 
 def test_daemon_install_service_dry_command_help():

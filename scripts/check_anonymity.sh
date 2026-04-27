@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifica anonimato do repo Hefesto.
+# Verifica anonimato do repo Hefesto - Dualsense4Unix.
 # Exit 0 se limpo, exit 1 se houver violação.
 # Estratégia: regex completa + whitelist de arquivos (não de palavras).
 

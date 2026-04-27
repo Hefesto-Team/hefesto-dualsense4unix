@@ -1,4 +1,4 @@
-"""Testes para src/hefesto/gui/theme.css e src/hefesto/app/theme.py.
+"""Testes para src/hefesto_dualsense4unix/gui/theme.css e src/hefesto_dualsense4unix/app/theme.py.
 
 Checks:
   (a) arquivo theme.css existe no path esperado;
@@ -12,15 +12,15 @@ from pathlib import Path
 
 import pytest
 
-CSS_PATH = Path(__file__).resolve().parents[2] / "src" / "hefesto" / "gui" / "theme.css"
+CSS_PATH = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "gui" / "theme.css"  # noqa: E501
 
 SELECTORS_ESPERADOS = [
-    ".hefesto-window",
+    ".hefesto-dualsense4unix-window",
     "#bd93f9",
-    ".hefesto-card",
-    ".hefesto-log",
-    ".hefesto-status-ok",
-    ".hefesto-accent-purple",
+    ".hefesto-dualsense4unix-card",
+    ".hefesto-dualsense4unix-log",
+    ".hefesto-dualsense4unix-status-ok",
+    ".hefesto-dualsense4unix-accent-purple",
 ]
 
 

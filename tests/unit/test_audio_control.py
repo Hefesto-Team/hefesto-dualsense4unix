@@ -8,7 +8,7 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import MagicMock, patch
 
-from hefesto.integrations.audio_control import DEBOUNCE_SEC, AudioControl
+from hefesto_dualsense4unix.integrations.audio_control import DEBOUNCE_SEC, AudioControl
 
 # ---------------------------------------------------------------------------
 # Helpers

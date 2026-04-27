@@ -1,4 +1,4 @@
-"""Testes dos subcomandos `hefesto profile apply` e `profile save --from-active`
+"""Testes dos subcomandos `hefesto-dualsense4unix profile apply` e `profile save --from-active`
 (FEAT-CLI-PARITY-01).
 
 Mocka IPC e isola diretório de perfis via fixture semelhante ao
@@ -13,9 +13,9 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from hefesto.cli.app import app
-from hefesto.cli.ipc_client import IpcError
-from hefesto.profiles import loader as loader_module
+from hefesto_dualsense4unix.cli.app import app
+from hefesto_dualsense4unix.cli.ipc_client import IpcError
+from hefesto_dualsense4unix.profiles import loader as loader_module
 
 runner = CliRunner()
 
@@ -32,7 +32,7 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
 
-    from hefesto.utils import xdg_paths
+    from hefesto_dualsense4unix.utils import xdg_paths
 
     fake_cfg = tmp_path / "config"
     fake_cfg.mkdir()
@@ -58,7 +58,7 @@ def mock_ipc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             raise registry["raise"]
         return registry["response"]
 
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     monkeypatch.setattr(bridge, "_run_call", fake_run_call)
     return registry
@@ -139,7 +139,7 @@ def test_apply_daemon_offline_grava_marker(
     assert "offline" in result.output
 
     # Marker foi gravado
-    from hefesto.utils import xdg_paths
+    from hefesto_dualsense4unix.utils import xdg_paths
 
     marker = xdg_paths.config_dir() / "active_profile.txt"
     assert marker.exists()
@@ -188,7 +188,7 @@ def test_save_from_active_clona_perfil(
         json.dumps(original), encoding="utf-8"
     )
 
-    from hefesto.utils import xdg_paths
+    from hefesto_dualsense4unix.utils import xdg_paths
 
     marker = xdg_paths.config_dir(ensure=True) / "active_profile.txt"
     marker.write_text("shooter\n", encoding="utf-8")

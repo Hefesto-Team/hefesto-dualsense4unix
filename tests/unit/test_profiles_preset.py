@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.core.trigger_effects import build_from_name
-from hefesto.profiles.schema import Profile
+from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+from hefesto_dualsense4unix.profiles.schema import Profile
 
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "profiles_default"
 
@@ -175,7 +175,7 @@ class TestPresetValida:
 class TestPresetMeuPerfil:
     def test_match_any(self) -> None:
         """meu_perfil.json deve ter match type=any (slot universal)."""
-        from hefesto.profiles.schema import MatchAny
+        from hefesto_dualsense4unix.profiles.schema import MatchAny
         p = _load_preset("meu_perfil")
         assert isinstance(p.match, MatchAny), "meu_perfil deve ter MatchAny"
 
@@ -192,7 +192,7 @@ class TestPresetFallback:
         assert p.priority == 0
 
     def test_match_any(self) -> None:
-        from hefesto.profiles.schema import MatchAny
+        from hefesto_dualsense4unix.profiles.schema import MatchAny
         p = _load_preset("fallback")
         assert isinstance(p.match, MatchAny)
 
@@ -216,7 +216,7 @@ class TestPresetNavegacao:
         assert abs(p.leds.lightbar_brightness - 0.4) < 1e-6
 
     def test_match_criteria_com_browsers(self) -> None:
-        from hefesto.profiles.schema import MatchCriteria
+        from hefesto_dualsense4unix.profiles.schema import MatchCriteria
         p = _load_preset("navegacao")
         assert isinstance(p.match, MatchCriteria)
         wc = p.match.window_class

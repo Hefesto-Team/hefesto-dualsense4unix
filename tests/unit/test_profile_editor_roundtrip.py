@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.profiles.schema import MatchCriteria, Profile
-from hefesto.profiles.simple_match import detect_simple_preset, from_simple_choice
+from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset, from_simple_choice
 
 
 def _build_simple_profile(
@@ -99,14 +99,14 @@ class TestRoundtripCriterioComplexo:
     def test_dados_nao_perdidos_apos_roundtrip(self, tmp_dir: Path) -> None:
         match = MatchCriteria(
             window_class=["code"],
-            window_title_regex="hefesto",
+            window_title_regex="hefesto-dualsense4unix",
             process_name=["code"],
         )
         profile = Profile(name="dev_hefesto", priority=30, match=match)
         reloaded = _save_and_reload(profile, tmp_dir)
         assert isinstance(reloaded.match, MatchCriteria)
         assert reloaded.match.window_class == ["code"]
-        assert reloaded.match.window_title_regex == "hefesto"
+        assert reloaded.match.window_title_regex == "hefesto-dualsense4unix"
         assert reloaded.match.process_name == ["code"]
 
 

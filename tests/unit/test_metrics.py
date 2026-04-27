@@ -19,8 +19,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.daemon.state_store import StateStore
-from hefesto.daemon.subsystems.metrics import _BIND_HOST, MetricsCollector, MetricsSubsystem
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.daemon.subsystems.metrics import (
+    _BIND_HOST,
+    MetricsCollector,
+    MetricsSubsystem,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures auxiliares

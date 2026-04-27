@@ -1,6 +1,6 @@
-# Hefesto no COSMIC DE (Pop!_OS 24.04, Wayland)
+# Hefesto - Dualsense4Unix no COSMIC DE (Pop!_OS 24.04, Wayland)
 
-Guia de uso do Hefesto no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
+Guia de uso do Hefesto - Dualsense4Unix no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
 
 ---
 
@@ -21,13 +21,13 @@ Guia de uso do Hefesto no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
 
 ## Autoswitch de perfil no COSMIC
 
-O Hefesto detecta automaticamente o backend de janela ativa com base nas
+O Hefesto - Dualsense4Unix detecta automaticamente o backend de janela ativa com base nas
 variaveis de ambiente do compositor:
 
 ### Cenario 1 — XWayland ativo (padrão no COSMIC 1.0+)
 
 Quando `DISPLAY` e `WAYLAND_DISPLAY` estao presentes simultaneamente (XWayland
-em execução), o Hefesto usa o backend X11 (`XlibBackend`). O autoswitch de
+em execução), o Hefesto - Dualsense4Unix usa o backend X11 (`XlibBackend`). O autoswitch de
 perfil funciona normalmente.
 
 Verificar:
@@ -39,7 +39,7 @@ Esperado: ambas as variaveis preenchidas.
 
 ### Cenario 2 — Wayland puro (sem XWayland)
 
-Quando apenas `WAYLAND_DISPLAY` esta presente, o Hefesto tenta usar o portal
+Quando apenas `WAYLAND_DISPLAY` esta presente, o Hefesto - Dualsense4Unix tenta usar o portal
 XDG D-Bus `org.freedesktop.portal.Window.GetActiveWindow` (disponivel no
 COSMIC 1.0+ e GNOME 46+).
 
@@ -58,7 +58,7 @@ Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso
 
 ### Cenario 3 — Sem display (servidor headless)
 
-O Hefesto inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
+O Hefesto - Dualsense4Unix inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
 
 ---
 
@@ -116,7 +116,7 @@ sudo apt install grim slurp
 - **AppIndicator não aparece no painel COSMIC nativo**: o COSMIC usa uma API de
   applet própria (cosmic-panel). O tray Ayatana funciona via XWayland, mas pode
   não integrar ao painel nativo do COSMIC. Contorno: usar apenas a janela GTK3
-  ou a CLI (`hefesto status`). Integração nativa esta planejada para V1.2.
+  ou a CLI (`hefesto-dualsense4unix status`). Integração nativa esta planejada para V1.2.
 
 - **Portal GetActiveWindow não disponivel**: compositors Wayland que não
   implementam `org.freedesktop.portal.Window` (Sway, Hyprland, COSMIC < 1.0)

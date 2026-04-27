@@ -18,7 +18,7 @@ Descreva de forma clara e específica o que você quer entender.
 
 - Distribuição e versão:
 - Kernel: `uname -r`
-- Versão Hefesto: `hefesto --version`
+- Versão Hefesto - Dualsense4Unix: `hefesto-dualsense4unix --version`
 - Transporte (USB / BT):
 - Método de instalação (`.deb`, AppImage, Flatpak, fonte):
 

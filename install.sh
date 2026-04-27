@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — instala Hefesto completo no ambiente do usuário.
+# install.sh — instala Hefesto - Dualsense4Unix completo no ambiente do usuário.
 #
 # Flags:
 #   --no-udev             pula udev rules (sudo) — útil em CI.
@@ -18,13 +18,13 @@ set -euo pipefail
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_DIR="${ROOT_DIR}/.venv"
-readonly APP_ID="hefesto"
-readonly ICON_SRC="${ROOT_DIR}/assets/appimage/Hefesto.png"
+readonly APP_ID="hefesto-dualsense4unix"
+readonly ICON_SRC="${ROOT_DIR}/assets/appimage/Hefesto-Dualsense4Unix.png"
 readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
 readonly ICON_TARGET_DIR="${HOME}/.local/share/icons/hicolor/256x256/apps"
 readonly ICON_TARGET="${ICON_TARGET_DIR}/${APP_ID}.png"
 readonly BIN_DIR="${HOME}/.local/bin"
-readonly LAUNCHER="${BIN_DIR}/hefesto-gui"
+readonly LAUNCHER="${BIN_DIR}/hefesto-dualsense4unix-gui"
 
 SKIP_UDEV=0
 SKIP_SYSTEMD=0
@@ -88,14 +88,33 @@ require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 # ---------------------------------------------------------------------------
 # 1. Verificar Python
 # ---------------------------------------------------------------------------
-step "1/7" "verificando dependências do sistema"
+step "1/9" "verificando dependências do sistema"
 require python3
 ok
+
+# Limpeza de caches Python e build dirs.
+# Resíduos de instalação anterior (especialmente após module-rename ou
+# upgrade major) podem causar imports stale ou metadata divergente.
+# Always clean caches; venv é tratado dentro do passo 2/7 conforme o
+# Python que criou.
+for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
+    if [[ -d "${ROOT_DIR}/${cache}" ]]; then
+        rm -rf "${ROOT_DIR}/${cache}"
+    fi
+done
+find "${ROOT_DIR}" -type d -name "__pycache__" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -exec rm -rf {} + 2>/dev/null || true
+find "${ROOT_DIR}" -type f -name "*.pyc" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -delete 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
-step "2/7" "preparando ambiente Python"
+step "2/9" "preparando ambiente Python"
 
 # Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
 # inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
@@ -151,7 +170,7 @@ ok
 # ---------------------------------------------------------------------------
 # 3. udev rules (requer sudo)
 # ---------------------------------------------------------------------------
-step "3/7" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/9" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev)\n'
@@ -160,18 +179,20 @@ else
     if [[ -f /etc/udev/rules.d/70-ps5-controller.rules ]] \
        && [[ -f /etc/udev/rules.d/71-uinput.rules ]] \
        && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]] \
-       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]]; then
+       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]] \
+       && [[ -f /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules ]]; then
         printf '      já instaladas\n'
         need_udev=0
     fi
 
     if [[ "${need_udev}" -eq 1 ]]; then
         printf '\n'
-        printf '      Quatro regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
-        printf '        70-ps5-controller.rules             permissão hidraw\n'
-        printf '        71-uinput.rules                     emulação Xbox360 via uinput\n'
-        printf '        72-ps5-controller-autosuspend.rules evita desconexão intermitente\n'
-        printf '        73-ps5-controller-hotplug.rules     abre a GUI ao plugar o controle\n\n'
+        printf '      Cinco regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
+        printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
+        printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
+        printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
+        printf '        73-ps5-controller-hotplug.rules        abre a GUI ao plugar o controle (USB)\n'
+        printf '        74-ps5-controller-hotplug-bt.rules     abre a GUI ao parear o controle (BT)\n\n'
 
         ask_yn "instalar agora com sudo?" "${AUTO_YES}"
         if [[ "${REPLY,,}" =~ ^y ]]; then
@@ -192,7 +213,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
 # ---------------------------------------------------------------------------
-step "4/7" "atalho de aplicativo e launcher"
+step "4/9" "atalho de aplicativo e launcher"
 
 mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
@@ -201,7 +222,7 @@ mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Hefesto
+Name=Hefesto - Dualsense4Unix
 GenericName=DualSense Controller
 Comment=Daemon de gatilhos adaptativos para DualSense no Linux
 Exec=${ROOT_DIR}/run.sh
@@ -209,7 +230,7 @@ Icon=${APP_ID}
 Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=true
-StartupWMClass=hefesto
+StartupWMClass=Hefesto-Dualsense4Unix
 DESKTOP
 
 command -v desktop-file-validate >/dev/null 2>&1 \
@@ -232,7 +253,7 @@ ok
 # 4b. Glyphs SVG dos botoes do DualSense
 # ---------------------------------------------------------------------------
 readonly GLYPHS_SRC="${ROOT_DIR}/assets/glyphs"
-readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto/glyphs"
+readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
 
 if [[ -d "${GLYPHS_SRC}" ]]; then
     mkdir -p "${GLYPHS_TARGET}"
@@ -247,16 +268,16 @@ if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Symlink ~/.local/bin/hefesto
+# 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/7" "symlink ${BIN_DIR}/hefesto"
-ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
+step "5/9" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
 # 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
-step "6/7" "daemon systemd --user"
+step "6/9" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
@@ -273,7 +294,7 @@ else
     cli_args=("install-service")
     [[ "${enable_daemon}" -eq 1 ]] && cli_args+=("--enable")
 
-    if "${VENV_DIR}/bin/hefesto" daemon "${cli_args[@]}" >/dev/null 2>&1; then
+    if "${VENV_DIR}/bin/hefesto-dualsense4unix" daemon "${cli_args[@]}" >/dev/null 2>&1; then
         if [[ "${enable_daemon}" -eq 1 ]]; then
             printf '      unit instalada + auto-start habilitado\n'
         else
@@ -287,7 +308,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
-step "7/7" "hotplug USB → abre a GUI automaticamente"
+step "7/9" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
@@ -303,9 +324,9 @@ else
     if [[ "${enable_hotplug}" -eq 0 ]]; then
         printf '      desativado (abrir GUI manualmente pelo menu de aplicativos)\n'
     else
-        readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
+        readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-gui-hotplug.service"
         readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
-        readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
+        readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-dualsense4unix-gui-hotplug.service"
 
         if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
             warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
@@ -314,7 +335,7 @@ else
             cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
             if command -v systemctl >/dev/null 2>&1; then
                 systemctl --user daemon-reload >/dev/null 2>&1 || true
-                if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
+                if systemctl --user enable hefesto-dualsense4unix-gui-hotplug.service >/dev/null 2>&1; then
                     printf '      habilitado\n'
                 else
                     warn "enable falhou — habilite manualmente"
@@ -327,13 +348,81 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
+# ---------------------------------------------------------------------------
+step "8/9" "GNOME: extension AppIndicator (tray icon)"
+
+_desktop="${XDG_CURRENT_DESKTOP:-}"
+if [[ -z "${_desktop}" ]]; then
+    printf '      ambiente headless (sem XDG_CURRENT_DESKTOP) — pulado\n'
+elif [[ "${_desktop,,}" != *gnome* ]]; then
+    printf '      DE %s renderiza Ayatana nativamente — sem ação\n' "${_desktop}"
+elif ! command -v gnome-extensions >/dev/null 2>&1; then
+    warn "gnome-extensions CLI ausente — habilite manualmente a extension AppIndicator depois"
+else
+    _ext_id="ubuntu-appindicators@ubuntu.com"
+    if gnome-extensions list --enabled 2>/dev/null | grep -qx "${_ext_id}"; then
+        printf '      já habilitada\n'
+    elif ! gnome-extensions list 2>/dev/null | grep -qx "${_ext_id}"; then
+        warn "extension ${_ext_id} não instalada — instale via GNOME Extensions (https://extensions.gnome.org)"
+    else
+        printf '      extension %s está instalada mas desabilitada\n' "${_ext_id}"
+        printf '      sem ela o ícone do Hefesto não aparece na barra superior do GNOME\n'
+        ask_yn "habilitar agora?" "${AUTO_YES}"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            if gnome-extensions enable "${_ext_id}" 2>/dev/null; then
+                printf '      habilitada (pode exigir log out/in se for a primeira ativação)\n'
+            else
+                warn "falha ao habilitar — execute 'gnome-extensions enable ${_ext_id}' manualmente"
+            fi
+        else
+            printf '      pulado a pedido — habilite depois com: gnome-extensions enable %s\n' "${_ext_id}"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 9. dualsensectl (opcional — aba Firmware)
+# ---------------------------------------------------------------------------
+step "9/9" "dualsensectl (opcional — aba Firmware)"
+
+if command -v dualsensectl >/dev/null 2>&1; then
+    printf '      já presente em %s\n' "$(command -v dualsensectl)"
+elif ! command -v flatpak >/dev/null 2>&1; then
+    printf '      ausente — para habilitar a aba Firmware, instale manualmente:\n'
+    printf '        https://github.com/nowrep/dualsensectl  (build via cmake)\n'
+    printf '      a aba Firmware ficará desabilitada até instalar (não bloqueia uso geral)\n'
+elif ! { flatpak --user remotes 2>/dev/null; flatpak remotes 2>/dev/null; } \
+        | awk '{print $1}' | grep -qx "flathub"; then
+    printf '      flatpak presente mas remote flathub ausente. Configure com:\n'
+    printf '        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo\n'
+    printf '      e rode novamente este install.sh\n'
+else
+    printf '      dualsensectl ausente — necessário para a aba Firmware da GUI (opcional)\n'
+    printf '      Flathub: com.github.nowrep.dualsensectl\n'
+    ask_yn "instalar agora via flatpak?" "${AUTO_YES}" "n"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if flatpak install --user -y flathub com.github.nowrep.dualsensectl >/dev/null 2>&1; then
+            printf '      instalado via flatpak\n'
+            printf '      lembrete: para que a GUI encontre o binário no PATH, exponha um wrapper:\n'
+            printf '        echo -e "#!/bin/sh\\nflatpak run com.github.nowrep.dualsensectl \\"\\$@\\"" \\\n'
+            printf '          | sudo tee /usr/local/bin/dualsensectl >/dev/null && sudo chmod +x /usr/local/bin/dualsensectl\n'
+        else
+            warn "flatpak install falhou — instale manualmente: flatpak install flathub com.github.nowrep.dualsensectl"
+        fi
+    else
+        printf '      pulado a pedido — aba Firmware ficará desabilitada\n'
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # Pronto
 # ---------------------------------------------------------------------------
 printf '\n'
 printf '─────────────────────────────────────────\n'
-printf ' Hefesto instalado\n'
+printf ' Hefesto - Dualsense4Unix instalado\n'
 printf '─────────────────────────────────────────\n'
-printf ' Abrir:       hefesto-gui\n'
+printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'
 printf '─────────────────────────────────────────\n'
 printf '\n'

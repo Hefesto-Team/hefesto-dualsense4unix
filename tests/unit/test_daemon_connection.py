@@ -1,4 +1,4 @@
-"""Testes de `hefesto.daemon.connection` — AUDIT-FINDING-LOG-EXC-INFO-01.
+"""Testes de `hefesto_dualsense4unix.daemon.connection` — AUDIT-FINDING-LOG-EXC-INFO-01.
 
 Cobre:
 - `connect_with_retry` backoff exponencial (1s, 2s, 4s, ..., teto 30s).
@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from hefesto.daemon.connection import BACKOFF_MAX_SEC, connect_with_retry
+from hefesto_dualsense4unix.daemon.connection import BACKOFF_MAX_SEC, connect_with_retry
 
 
 @dataclass
@@ -95,7 +95,7 @@ async def test_connect_with_retry_backoff_exponencial(monkeypatch: pytest.Monkey
         _stop_event=asyncio.Event(),
     )
     recorder = _SleepRecorder()
-    monkeypatch.setattr("hefesto.daemon.connection.asyncio.wait_for", recorder.wait_for)
+    monkeypatch.setattr("hefesto_dualsense4unix.daemon.connection.asyncio.wait_for", recorder.wait_for)  # noqa: E501
 
     await connect_with_retry(daemon)
 
@@ -114,7 +114,7 @@ async def test_connect_with_retry_backoff_com_teto(monkeypatch: pytest.MonkeyPat
         _stop_event=asyncio.Event(),
     )
     recorder = _SleepRecorder()
-    monkeypatch.setattr("hefesto.daemon.connection.asyncio.wait_for", recorder.wait_for)
+    monkeypatch.setattr("hefesto_dualsense4unix.daemon.connection.asyncio.wait_for", recorder.wait_for)  # noqa: E501
 
     await connect_with_retry(daemon)
 
@@ -136,7 +136,7 @@ async def test_connect_with_retry_aborta_no_shutdown(monkeypatch: pytest.MonkeyP
             coro.close()
         return None  # stop_event.wait() retornou sem timeout — aborta.
 
-    monkeypatch.setattr("hefesto.daemon.connection.asyncio.wait_for", stop_triggered_wait_for)
+    monkeypatch.setattr("hefesto_dualsense4unix.daemon.connection.asyncio.wait_for", stop_triggered_wait_for)  # noqa: E501
 
     await connect_with_retry(daemon)
 
@@ -163,7 +163,7 @@ async def test_connect_with_retry_sem_auto_reconnect_propaga_erro() -> None:
 
 def test_is_connected_default_false_quando_attr_ausente() -> None:
     """`PyDualSenseController.is_connected()` retorna False quando `connected` ausente."""
-    from hefesto.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
     ctrl = PyDualSenseController()
 
@@ -176,7 +176,7 @@ def test_is_connected_default_false_quando_attr_ausente() -> None:
 
 
 def test_is_connected_true_quando_attr_true() -> None:
-    from hefesto.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
     ctrl = PyDualSenseController()
 
@@ -188,7 +188,7 @@ def test_is_connected_true_quando_attr_true() -> None:
 
 
 def test_is_connected_false_quando_attr_false() -> None:
-    from hefesto.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
     ctrl = PyDualSenseController()
 
@@ -200,7 +200,7 @@ def test_is_connected_false_quando_attr_false() -> None:
 
 
 def test_is_connected_false_sem_ds() -> None:
-    from hefesto.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
     ctrl = PyDualSenseController()
     assert ctrl.is_connected() is False

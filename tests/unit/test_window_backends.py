@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from hefesto.integrations.window_backends import wayland_portal
+from hefesto_dualsense4unix.integrations.window_backends import wayland_portal
 
 # ---------------------------------------------------------------------------
 # Helpers — stub do pacote `jeepney` injetado via sys.modules

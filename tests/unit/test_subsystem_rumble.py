@@ -13,8 +13,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.rumble import _effective_mult
-from hefesto.daemon.subsystems.rumble import (
+from hefesto_dualsense4unix.core.rumble import _effective_mult
+from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RumbleSubsystem,
     reassert_rumble,
 )

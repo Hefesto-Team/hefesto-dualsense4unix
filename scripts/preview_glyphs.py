@@ -24,7 +24,7 @@ GLYPHS = [
     "stick_l", "stick_r", "mic",
 ]
 
-TITULO = "Hefesto — Preview Glyphs SVG"
+TITULO = "Hefesto - Dualsense4Unix — Preview Glyphs SVG"
 COLUNAS = 5
 TAMANHO = 48  # pixels de cada glyph na grade
 

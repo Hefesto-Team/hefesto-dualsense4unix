@@ -1,4 +1,4 @@
-"""Testes da flag `--brightness` em `hefesto led` (FEAT-CLI-PARITY-01).
+"""Testes da flag `--brightness` em `hefesto-dualsense4unix led` (FEAT-CLI-PARITY-01).
 
 Mocka o IPC via monkeypatch de `_run_call` do `ipc_bridge`. Não toca
 hardware real nem daemon real.
@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from hefesto.cli.app import app
+from hefesto_dualsense4unix.cli.app import app
 
 runner = CliRunner()
 
@@ -28,7 +28,7 @@ def ipc_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]
         calls.append((method, dict(params or {})))
         return {"status": "ok"}
 
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     monkeypatch.setattr(bridge, "_run_call", fake_run_call)
     return calls
@@ -45,7 +45,7 @@ def ipc_offline(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> Any:
         raise FileNotFoundError("socket inexistente")
 
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     monkeypatch.setattr(bridge, "_run_call", fake_run_call)
 
@@ -91,7 +91,7 @@ def test_led_offline_fallback_escala_rgb(
 
         action(FakeController())
 
-    import hefesto.cli.cmd_test as cmd_test
+    import hefesto_dualsense4unix.cli.cmd_test as cmd_test
 
     monkeypatch.setattr(cmd_test, "_apply_on_hardware", fake_apply)
 
@@ -115,7 +115,7 @@ def test_led_offline_sem_brightness_preserva_rgb(
 
         action(FakeController())
 
-    import hefesto.cli.cmd_test as cmd_test
+    import hefesto_dualsense4unix.cli.cmd_test as cmd_test
 
     monkeypatch.setattr(cmd_test, "_apply_on_hardware", fake_apply)
 

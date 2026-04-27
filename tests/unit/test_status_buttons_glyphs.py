@@ -101,7 +101,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto.app.actions.status_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
     ALL_BUTTONS,
     L2_R2_THRESHOLD,
     StatusActionsMixin,

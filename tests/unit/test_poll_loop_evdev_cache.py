@@ -14,9 +14,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # Auxiliares
@@ -127,7 +127,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse()
 
     # Instancia HotkeyManager diretamente (sem _start_hotkey_manager para
     # evitar dependência de steam_launcher no ambiente de CI).
-    from hefesto.integrations.hotkey_daemon import HotkeyManager
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
     daemon._hotkey_manager = HotkeyManager()
 
@@ -241,7 +241,7 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
 
     hotkey_observes: list[frozenset[str]] = []
 
-    from hefesto.integrations.hotkey_daemon import HotkeyManager
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
     class _SpyHotkey(HotkeyManager):
         def observe(self, pressed: Any, *, now: Any = None) -> Any:  # type: ignore[override]

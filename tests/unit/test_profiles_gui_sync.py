@@ -86,7 +86,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Stubs de Gtk.ListStore / Gtk.TreeView para iteração de linhas.
@@ -281,7 +281,7 @@ class TestOnDaemonStatusForSync:
 
 class TestSyncSelectionWithActiveProfile:
     def test_sync_chama_call_async_com_daemon_status(self, monkeypatch):
-        import hefesto.app.actions.profiles_actions as mod
+        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
 
         captured: dict = {}
 
@@ -362,7 +362,7 @@ class TestProfileSimpleCombo:
     def test_combo_populates_default_any(self):
         """Combo renderiza com `any` ativo após install_profiles_tab."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         combo = _FakeCombo(initial_id="editor")
         stub = _stub_with_combo(combo)
@@ -378,7 +378,7 @@ class TestProfileSimpleCombo:
     def test_selected_simple_choice_fallback_para_any(self):
         """Combo ausente/com id inválido → fallback 'any'."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         # Combo inexistente (caso raro — glade desatualizado)
         stub = SimpleNamespace()
@@ -393,7 +393,7 @@ class TestProfileSimpleCombo:
     def test_select_radio_id_desconhecido_vira_any(self):
         """`_select_radio("xyz")` deve fallback para `any`, não crashar."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         combo = _FakeCombo(initial_id="steam")
         stub = _stub_with_combo(combo)
@@ -404,7 +404,7 @@ class TestProfileSimpleCombo:
     def test_combo_game_shows_entry(self):
         """`_on_aplica_a_changed` com id="game" mostra o box do entry."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         combo = _FakeCombo(initial_id="game")
         box = _FakeBox()
@@ -419,7 +419,7 @@ class TestProfileSimpleCombo:
     def test_combo_nao_game_esconde_entry(self):
         """Qualquer id != "game" esconde o box."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         combo = _FakeCombo(initial_id="steam")
         box = _FakeBox()
@@ -464,7 +464,7 @@ class TestProfilePreview:
 
     def test_preview_atualiza_com_perfil_valido(self):
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         fake_profile = MagicMock()
         fake_profile.model_dump.return_value = {
@@ -487,7 +487,7 @@ class TestProfilePreview:
         # via model_validate com payload inválido.
         from pydantic import BaseModel, Field
 
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         class _Dummy(BaseModel):
             name: str = Field(min_length=1)
@@ -508,7 +508,7 @@ class TestProfilePreview:
     def test_preview_no_op_quando_label_ausente(self):
         """Se glade não tem profile_preview_label, _refresh_preview é no-op."""
         _install_gi_stubs()
-        from hefesto.app.actions.profiles_actions import ProfilesActionsMixin
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
         stub = SimpleNamespace()
         stub._get = lambda _w: None  # type: ignore[attr-defined]
