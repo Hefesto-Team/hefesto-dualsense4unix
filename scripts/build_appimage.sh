@@ -76,10 +76,13 @@ OUT_FILE="$OUT_DIR/Hefesto-Dualsense4Unix-${VERSION}-x86_64.AppImage"
 echo "Versão detectada: ${VERSION}"
 
 echo "[3/4] Gerando AppImage com Python ${PYTHON_VERSION}..."
+# --name não pode ter espaços (vira posicionais separados sem aspas).
+# Forma ident sem espaços; display brand "Hefesto - Dualsense4Unix" fica
+# no .desktop e na janela GTK.
 python-appimage build app \
     --python-version "$PYTHON_VERSION" \
     --linux-tag "manylinux2014_x86_64" \
-    --name Hefesto - Dualsense4Unix \
+    --name "Hefesto-Dualsense4Unix" \
     "$WORK_DIR"
 
 # python-appimage cria no cwd com nome Hefesto-Dualsense4Unix-x86_64.AppImage
