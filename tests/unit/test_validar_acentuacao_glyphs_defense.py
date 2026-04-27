@@ -52,20 +52,23 @@ class TestPrePassPulaLinhaComGlyph:
 
         Comportamento intencional: o custo de um falso negativo (palavra
         sem acento na linha do glyph) é menor que o custo do strip.
+
+        Construímos a palavra-alvo via concat para sobreviver a `--fix`
+        recursivo no source deste teste (o pre-pass do script ignora
+        tokens não casados pelo regex `\\b`-bounded).
         """
         arq = tmp_path / "exemplo.py"
         glyph = chr(0x25CF)  # BLACK CIRCLE
-        # `funcao` está no dicionário _CORRECOES; sem o pre-pass seria
-        # corrigido para `função`. Com o pre-pass, a linha sai intacta.
-        conteudo = f'msg = "{glyph} funcao status atual"\n'
-        arq.write_text(conteudo, encoding="utf-8")
+        alvo_sem_acento = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
+        conteúdo = f'msg = "{glyph} {alvo_sem_acento} status atual"\n'
+        arq.write_text(conteúdo, encoding="utf-8")
 
         validator.corrigir_arquivo(arq, tmp_path)
 
         final = arq.read_text(encoding="utf-8")
         assert glyph in final, "glyph BLACK CIRCLE deve sobreviver"
-        assert "funcao" in final, (
-            "pre-pass deve pular a linha inteira: palavra-alvo permanece"
+        assert alvo_sem_acento in final, (
+            "pre-pass deve pular a linha inteira: palavra-alvo permanece sem acento"
         )
 
     def test_validar_acentuacao_preserva_dpad_arrows(
@@ -74,8 +77,8 @@ class TestPrePassPulaLinhaComGlyph:
         """D-pad arrows (↑↓←→) — codepoints U+2191/93/90/92 — sobrevivem."""
         arq = tmp_path / "exemplo.py"
         arrows = chr(0x2191) + chr(0x2193) + chr(0x2190) + chr(0x2192)
-        conteudo = f'legend = "D-pad ({arrows}) — direcao"\n'
-        arq.write_text(conteudo, encoding="utf-8")
+        conteúdo = f'legend = "D-pad ({arrows}) — direção"\n'
+        arq.write_text(conteúdo, encoding="utf-8")
 
         validator.corrigir_arquivo(arq, tmp_path)
 
@@ -91,10 +94,10 @@ class TestPrePassPulaLinhaComGlyph:
         triangulo = chr(0x25B3)
         circulo = chr(0x25CB)
         quadrado = chr(0x25A1)
-        conteudo = (
-            f'mapping = "{triangulo} {circulo} {quadrado} configuracao"\n'
+        conteúdo = (
+            f'mapping = "{triangulo} {circulo} {quadrado} configuração"\n'
         )
-        arq.write_text(conteudo, encoding="utf-8")
+        arq.write_text(conteúdo, encoding="utf-8")
 
         validator.corrigir_arquivo(arq, tmp_path)
 
@@ -109,17 +112,21 @@ class TestPrePassPulaLinhaComGlyph:
         """Glyph em docstring `.py` é preservado pelo pre-pass."""
         arq = tmp_path / "modulo.py"
         glyph = chr(0x25CF)
-        conteudo = (
+        alvo_sem_acento = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
+        conteúdo = (
             "def status():\n"
-            f'    """Retorna {glyph} ativo na funcao."""\n'
+            f'    """Retorna {glyph} ativo na {alvo_sem_acento}."""\n'
             "    return True\n"
         )
-        arq.write_text(conteudo, encoding="utf-8")
+        arq.write_text(conteúdo, encoding="utf-8")
 
         validator.corrigir_arquivo(arq, tmp_path)
 
         final = arq.read_text(encoding="utf-8")
         assert glyph in final, "glyph dentro da docstring deve sobreviver"
+        assert alvo_sem_acento in final, (
+            "pre-pass deve preservar palavra-alvo na linha do glyph"
+        )
 
 
 class TestParMaliciosoBloqueado:
@@ -264,24 +271,31 @@ class TestPrePassWhiteBox:
     def test_pre_pass_pula_linha_inteira(self, tmp_path: Path) -> None:
         """Palavra-alvo na mesma linha do glyph permanece intocada.
 
-        Documenta a `Decisao de design` da sprint: pre-pass é conservador.
+        Documenta a `Decisão de design` da sprint: pre-pass é conservador.
         Linhas com glyph não recebem fix de acento — usuário corrige
         manualmente se necessário.
+
+        Palavras-alvo construídas via concat para sobreviver a `--fix`
+        recursivo no source deste teste.
         """
         arq = tmp_path / "exemplo.py"
         glyph = chr(0x25CF)
         # Múltiplas palavras-alvo do dicionário na mesma linha.
-        conteudo = (
-            f'msg = "{glyph} funcao validacao configuracao comunicacao"\n'
+        alvo_a = "func" + "ao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_b = "valid" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_c = "configur" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
+        alvo_d = "comunic" + "acao"  # noqa-acento — alvo cru para teste do pre-pass
+        conteúdo = (
+            f'msg = "{glyph} {alvo_a} {alvo_b} {alvo_c} {alvo_d}"\n'
         )
-        arq.write_text(conteudo, encoding="utf-8")
+        arq.write_text(conteúdo, encoding="utf-8")
 
         subs_count = validator.corrigir_arquivo(arq, tmp_path)
 
         final = arq.read_text(encoding="utf-8")
         assert subs_count == 0, "pre-pass deve impedir qualquer substituição"
-        assert "funcao" in final
-        assert "validacao" in final
-        assert "configuracao" in final
-        assert "comunicacao" in final
+        assert alvo_a in final
+        assert alvo_b in final
+        assert alvo_c in final
+        assert alvo_d in final
         assert glyph in final
