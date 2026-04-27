@@ -11,6 +11,7 @@ de dois eventos udev ADD em <200ms.
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -367,11 +368,9 @@ class HefestoApp(
         # morreu, pkill retorna 1 silente.
         for pat in ("hefesto_dualsense4unix", "hefesto-dualsense4unix daemon",
                     "br.andrefarias.Hefesto"):
-            try:
+            with contextlib.suppress(FileNotFoundError, subprocess.SubprocessError):
                 subprocess.run(["pkill", "-KILL", "-f", pat],
                                capture_output=True, timeout=2, check=False)
-            except (FileNotFoundError, subprocess.SubprocessError):
-                pass
 
     def show_window(self) -> None:
         self.window.show_all()
