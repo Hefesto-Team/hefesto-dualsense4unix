@@ -302,6 +302,45 @@ Guia visual com capturas cobrindo instalação, GUI, presets e solução de prob
 
 ---
 
+### Conexão via Bluetooth
+
+O Hefesto detecta o DualSense igual em USB e em Bluetooth — o backend é transport-agnóstico (ver `src/hefesto_dualsense4unix/core/backend_pydualsense.py`). Lightbar, gatilhos adaptativos, rumble, mic LED e LEDs de jogador funcionam em ambos os transportes; a única diferença é o pareamento inicial, que ainda é manual via `bluetoothctl` (não há UI dedicada na GUI).
+
+Passo a passo (Pop!_OS / Ubuntu / Fedora):
+
+```bash
+bluetoothctl
+# dentro do prompt interativo do bluetoothctl:
+power on
+agent on
+default-agent
+scan on
+# no controle: segurar PS + Create por ~3 s até a barra de luz piscar rápido
+# aguardar entrada "Wireless Controller" aparecer com o MAC
+pair  AA:BB:CC:DD:EE:FF      # substituir pelo MAC mostrado no scan
+trust AA:BB:CC:DD:EE:FF
+connect AA:BB:CC:DD:EE:FF
+exit
+```
+
+Após pareado, o daemon detecta automaticamente em ≤ 5 s; a GUI é trazida ao foco pela regra udev `74-ps5-controller-hotplug-bt.rules` (instalada por `./scripts/install_udev.sh`). Confirmar transporte ativo:
+
+```bash
+hefesto-dualsense4unix status
+# esperado:
+#   connected   = True
+#   transport   = bt
+#   battery_pct = <num>
+```
+
+Notas:
+
+- Para reconectar nas próximas sessões basta ligar o controle (botão PS curto). O `bluetoothd` reaproveita o `trust` salvo.
+- Se aparecer latência intermitente em adaptadores BT antigos (CSR / firmware desatualizado), é esperado — fora do escopo do projeto. Documentar como troubleshoot na issue própria.
+- Áudio do DualSense via BT permanece fora de escopo (protocolo proprietário, ver "Fora de escopo" abaixo).
+
+---
+
 ### Combo sagrado (trocar perfil durante o jogo)
 
 | Tecla | Ação |
