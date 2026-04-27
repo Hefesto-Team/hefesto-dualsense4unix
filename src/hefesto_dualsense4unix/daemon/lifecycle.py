@@ -117,6 +117,9 @@ class Daemon:
     _hotkey_manager: Any = None
     _audio: Any = None
     _plugins_subsystem: Any = None
+    # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
+    # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
+    _reconnect_task: asyncio.Task[Any] | None = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
 
@@ -125,10 +128,16 @@ class Daemon:
     # ------------------------------------------------------------------
 
     async def run(self) -> None:
-        """Entry point: connect → subsystems → poll → wait → shutdown."""
+        """Entry point: subsystems → reconnect_loop em background → wait → shutdown.
+
+        BUG-DAEMON-NO-DEVICE-FATAL-01: a tentativa inicial de conexão deixou
+        de ser bloqueante. Subsystems (IPC, UDP, autoswitch, hotkey, plugins)
+        sobem ANTES do `reconnect_loop`, garantindo que o socket IPC exista
+        em ≤5s mesmo sem hardware plugado. Plug do controle posterior é
+        detectado pelo probe e dispara `restore_last_profile` uma única vez.
+        """
         from hefesto_dualsense4unix.daemon.connection import (
-            connect_with_retry,
-            restore_last_profile,
+            reconnect_loop,
             shutdown,
         )
         from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
@@ -143,8 +152,6 @@ class Daemon:
         self._install_signal_handlers(loop)
         logger.info("daemon_starting", poll_hz=self.config.poll_hz)
         try:
-            await connect_with_retry(self)
-            await restore_last_profile(self)
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
                 await self._start_ipc()
@@ -160,6 +167,38 @@ class Daemon:
             if self.config.mic_button_toggles_system:
                 start_mic_hotkey(self)
             await self._start_plugins()
+            # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
+            # No caminho real, se o controle estiver ausente, o backend
+            # PyDualSenseController.connect() trata "No device detected" em
+            # silencio (offline-OK). Outros erros (permissao hidraw, USB
+            # transitorio) sao logados aqui e o reconnect_loop reassume em
+            # background. No caminho FAKE, conecta imediatamente.
+            try:
+                await self._run_blocking(self.controller.connect)
+                if self.controller.is_connected():
+                    transport = self.controller.get_transport()
+                    self.bus.publish(
+                        EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
+                    )
+                    logger.info("controller_connected", transport=transport)
+                    from hefesto_dualsense4unix.daemon.connection import (
+                        restore_last_profile,
+                    )
+
+                    with contextlib.suppress(Exception):
+                        await restore_last_profile(self)
+            except Exception as exc:
+                logger.warning(
+                    "controller_initial_connect_failed",
+                    err=str(exc),
+                    exc_info=True,
+                )
+            # Reconnect probe em background — não bloqueia o boot e cobre
+            # transicoes online↔offline em runtime.
+            self._reconnect_task = asyncio.create_task(
+                reconnect_loop(self), name="reconnect_loop"
+            )
+            self._tasks.append(self._reconnect_task)
             await self._stop_event.wait()
         finally:
             await shutdown(self)
@@ -348,6 +387,17 @@ class Daemon:
 
         while not self._is_stopping():
             tick_started = loop.time()
+            # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
+            # conectado (boot sem hardware ou pós-unplug), pula o tick
+            # silenciosamente. O `reconnect_loop` cuida de retentar; quando
+            # conectar, o tick seguinte volta a ler estado normalmente.
+            if not self.controller.is_connected():
+                stop_event = self._stop_event
+                assert stop_event is not None
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(stop_event.wait(), timeout=period)
+                    break
+                continue
             try:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:

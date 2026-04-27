@@ -18,6 +18,16 @@ logger = get_logger(__name__)
 #: Teto do backoff exponencial em segundos. Evita espera unbounded entre tentativas.
 BACKOFF_MAX_SEC: float = 30.0
 
+#: Intervalo entre probes de hot-reconnect quando o controle está desconectado
+#: (BUG-DAEMON-NO-DEVICE-FATAL-01). 5s é compromisso entre latência percebida
+#: pelo usuário ao plugar o controle e custo (varredura libusb + log).
+RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
+
+#: Intervalo entre probes de "ainda conectado?" quando o controle está online.
+#: Múltiplo do probe offline para evitar overhead — o poll_loop já detecta
+#: desconexão via exceção em read_state e dispara reconnect a parte.
+RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
+
 
 async def connect_with_retry(daemon: Any) -> None:
     """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED.
@@ -88,6 +98,85 @@ async def reconnect(daemon: Any) -> None:
     await connect_with_retry(daemon)
 
 
+async def reconnect_loop(daemon: Any) -> None:
+    """Probe não-bloqueante de conexão com o DualSense (BUG-DAEMON-NO-DEVICE-FATAL-01).
+
+    Diferente de `connect_with_retry` (legado, bloqueante e reusado pela CLI):
+      - Nunca bloqueia o boot — `Daemon.run()` cria esta task em background.
+      - Respeita `daemon._stop_event` durante todos os waits.
+      - Loga transições offline→online e online→offline em INFO; tentativas
+        falhadas em DEBUG (evita inundar journal a cada 5s).
+      - Restaura último perfil exatamente uma vez na primeira conexão bem-sucedida.
+
+    O loop coopera com o poll_loop: quando `read_state` levanta após perda de
+    conexão, o poll loop dispara `reconnect()` (legado) e o probe deste loop
+    detectará a transição back-online no próximo tick.
+    """
+    from hefesto_dualsense4unix.daemon.connection import (
+        restore_last_profile as _restore_last_profile,
+    )
+
+    # Se o boot ja conectou e restaurou o perfil, nao re-publica
+    # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transicoes.
+    initial_connected = bool(daemon.controller.is_connected())
+    restored = initial_connected
+    was_connected = initial_connected
+    while not daemon._is_stopping():
+        try:
+            await daemon._run_blocking(daemon.controller.connect)
+        except Exception as exc:
+            # Backend real só levanta para erros não-"No device detected"
+            # (permissão hidraw, USB transitório). Loga em DEBUG para não
+            # poluir; próxima iteração tenta de novo.
+            logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
+            await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+            continue
+
+        is_connected = bool(daemon.controller.is_connected())
+        if is_connected and not was_connected:
+            transport = daemon.controller.get_transport()
+            daemon.bus.publish(
+                EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
+            )
+            logger.info("controller_connected", transport=transport)
+            if not restored:
+                with contextlib.suppress(Exception):
+                    await _restore_last_profile(daemon)
+                restored = True
+            was_connected = True
+        elif not is_connected and was_connected:
+            # Transição online→offline detectada pelo probe (poll_loop também
+            # pode detectar via exceção em read_state e disparar reconnect()
+            # legado; logamos aqui só se chegamos primeiro).
+            daemon.bus.publish(
+                EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
+            )
+            logger.info("controller_disconnected", reason="probe_offline")
+            was_connected = False
+
+        # Quando online, dorme intervalo maior; quando offline, dorme curto.
+        timeout = (
+            RECONNECT_ONLINE_CHECK_INTERVAL_SEC
+            if is_connected
+            else RECONNECT_PROBE_INTERVAL_SEC
+        )
+        await _wait_or_stop(daemon, timeout)
+
+
+async def _wait_or_stop(daemon: Any, timeout: float) -> None:
+    """Dorme `timeout` segundos respeitando `_stop_event`.
+
+    Retorna logo se o stop_event for sinalizado durante a espera. Não levanta
+    em timeout — só interrompe o sleep.
+    """
+    stop_event = getattr(daemon, "_stop_event", None)
+    if stop_event is None:
+        await asyncio.sleep(timeout)
+        return
+    with contextlib.suppress(asyncio.TimeoutError):
+        await asyncio.wait_for(stop_event.wait(), timeout=timeout)
+
+
 async def shutdown(daemon: Any) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
@@ -123,6 +212,9 @@ async def shutdown(daemon: Any) -> None:
     for task in daemon._tasks:
         with contextlib.suppress(asyncio.CancelledError, Exception):
             await task
+    # BUG-DAEMON-NO-DEVICE-FATAL-01: reconnect_task é parte de `_tasks`,
+    # já cancelada acima — só zera a referência nomeada.
+    daemon._reconnect_task = None
     try:
         await daemon._run_blocking(daemon.controller.disconnect)
     except Exception as exc:
@@ -134,4 +226,13 @@ async def shutdown(daemon: Any) -> None:
     logger.info("daemon_stopped")
 
 
-__all__ = ["BACKOFF_MAX_SEC", "connect_with_retry", "reconnect", "restore_last_profile", "shutdown"]
+__all__ = [
+    "BACKOFF_MAX_SEC",
+    "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
+    "RECONNECT_PROBE_INTERVAL_SEC",
+    "connect_with_retry",
+    "reconnect",
+    "reconnect_loop",
+    "restore_last_profile",
+    "shutdown",
+]
