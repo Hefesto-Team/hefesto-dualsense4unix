@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # uninstall.sh - remove os artefatos criados pelo install.sh.
-# Não toca no .venv/ (o usuário pode querer manter o ambiente dev).
-# Para wipe completo: `rm -rf .venv` manualmente.
+# Inclui .venv/ e caches Python (__pycache__, .mypy_cache, .pytest_cache,
+# .ruff_cache, flatpak-build-dir, .flatpak-builder, dist, build) — wipe
+# limpo para reinstalação ou desuso.
 #
 # Flags:
 #   --udev   remove também as udev rules em /etc/udev/rules.d/ (requer sudo).
@@ -100,6 +101,24 @@ if [[ -d "${ROOT_DIR}/.venv" ]]; then
     log "removendo .venv"
     rm -rf "${ROOT_DIR}/.venv"
 fi
+
+# Caches Python e build (deixar resíduos quebra reinstall com module-rename).
+for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
+    if [[ -d "${ROOT_DIR}/${cache}" ]]; then
+        log "removendo ${cache}"
+        rm -rf "${ROOT_DIR}/${cache}"
+    fi
+done
+
+# Bytecode espalhado: __pycache__/ em src/ tests/ scripts/
+find "${ROOT_DIR}" -type d -name "__pycache__" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -exec rm -rf {} + 2>/dev/null || true
+find "${ROOT_DIR}" -type f -name "*.pyc" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -delete 2>/dev/null || true
 
 printf '\n─────────────────────────────────────────\n'
 printf ' Hefesto - Dualsense4Unix desinstalado\n'

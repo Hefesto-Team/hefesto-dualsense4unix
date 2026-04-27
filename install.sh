@@ -92,6 +92,25 @@ step "1/7" "verificando dependências do sistema"
 require python3
 ok
 
+# Limpeza de caches Python e build dirs.
+# Resíduos de instalação anterior (especialmente após module-rename ou
+# upgrade major) podem causar imports stale ou metadata divergente.
+# Always clean caches; venv é tratado dentro do passo 2/7 conforme o
+# Python que criou.
+for cache in .pytest_cache .ruff_cache .mypy_cache flatpak-build-dir .flatpak-builder dist build; do
+    if [[ -d "${ROOT_DIR}/${cache}" ]]; then
+        rm -rf "${ROOT_DIR}/${cache}"
+    fi
+done
+find "${ROOT_DIR}" -type d -name "__pycache__" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -exec rm -rf {} + 2>/dev/null || true
+find "${ROOT_DIR}" -type f -name "*.pyc" \
+    -not -path "*/\.git/*" \
+    -not -path "*/\.venv/*" \
+    -delete 2>/dev/null || true
+
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
