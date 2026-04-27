@@ -66,8 +66,18 @@ def test_pid_orfao_sem_sigterm(isolated_runtime: Path) -> None:
     single_instance.release("daemon")
 
 
-def test_takeover_mata_predecessor(isolated_runtime: Path) -> None:
+def test_takeover_mata_predecessor(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Filho adquire lock, pai faz takeover; filho recebe SIGTERM e sai."""
+    # Em CI o cmdline do filho fork-ed (pytest puro) pode não conter o
+    # marker "hefesto" — depende do path do checkout. Forçar True aqui
+    # mantém o teste focado no flow de takeover, não na heurística de
+    # detecção (já coberta nos test_is_hefesto_dualsense4unix_process_*).
+    monkeypatch.setattr(
+        single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True
+    )
+
     child_pid = os.fork()
     if child_pid == 0:
         # Dentro do filho: adquire o lock e dorme até ser morto.
@@ -110,7 +120,9 @@ def test_release_sem_acquire_e_noop(isolated_runtime: Path) -> None:
     single_instance.release("nao_adquirido")
 
 
-def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
+def test_bring_to_front_chama_callback(
+    isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Filho adquire lock; pai detecta predecessor vivo, chama callback e retorna None.
 
     Verifica:
@@ -118,6 +130,12 @@ def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
       - O filho NÃO recebe SIGTERM (permanece vivo após acquire_or_bring_to_front).
       - O retorno do pai é None (indica que o predecessor foi preservado).
     """
+    # Mesmo fix do test_takeover_mata_predecessor: força detector positivo
+    # para o filho fork-ed cujo cmdline depende do path do checkout em CI.
+    monkeypatch.setattr(
+        single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True
+    )
+
     # Pipe para o filho sinalizar que adquiriu o lock.
     pipe_r, pipe_w = os.pipe()
 
