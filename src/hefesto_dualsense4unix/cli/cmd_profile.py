@@ -292,20 +292,24 @@ def _describe_match(profile: Profile) -> str:
 
 
 def _write_active_marker(name: str) -> None:
-    from hefesto_dualsense4unix.utils.xdg_paths import config_dir
+    """Wrapper compat — delega para `utils.session.save_active_marker`.
 
-    marker = config_dir(ensure=True) / "active_profile.txt"
-    marker.write_text(name + "\n", encoding="utf-8")
+    CLUSTER-IPC-STATE-PROFILE-01 (Bug B): centralizou a escrita do marker
+    em `utils.session` para que o handler IPC `profile.switch` possa usá-lo
+    sem importar `cli.*` (CLI deveria depender do daemon, não o contrário).
+    """
+    from hefesto_dualsense4unix.utils.session import save_active_marker
+
+    save_active_marker(name)
 
 
 def read_active_marker() -> str | None:
-    from hefesto_dualsense4unix.utils.xdg_paths import config_dir
+    """Wrapper compat — delega para `utils.session.read_active_marker`."""
+    from hefesto_dualsense4unix.utils.session import (
+        read_active_marker as _read,
+    )
 
-    marker = config_dir() / "active_profile.txt"
-    if not marker.exists():
-        return None
-    content = marker.read_text(encoding="utf-8").strip()
-    return content or None
+    return _read()
 
 
 __all__ = ["app", "read_active_marker"]

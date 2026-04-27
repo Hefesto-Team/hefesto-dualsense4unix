@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from hefesto_dualsense4unix.core.controller import IController
+from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
@@ -122,6 +122,12 @@ class Daemon:
     _reconnect_task: asyncio.Task[Any] | None = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
+    # CLUSTER-IPC-STATE-PROFILE-01 (Bug A) — cache do último estado lido pelo
+    # _poll_loop. Permite que `daemon.state_full` reflita o tick atual em vez
+    # de só o snapshot do StateStore (que pode estar estagnado em fallback HID
+    # se o evdev_reader não conectou). Atualizado 1x por tick em _poll_loop;
+    # zerado em shutdown.
+    _last_state: ControllerState | None = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -412,6 +418,10 @@ class Daemon:
                 break
 
             self.store.update_controller_state(state)
+            # CLUSTER-IPC-STATE-PROFILE-01 (Bug A): publica o último state
+            # no slot `_last_state` para `daemon.state_full` consumir
+            # (em paralelo ao store, que mantém snapshot consolidado).
+            self._last_state = state
             self.bus.publish(EventTopic.STATE_UPDATE, state)
             self.store.bump("poll.tick")
 

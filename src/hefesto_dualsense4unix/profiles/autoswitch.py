@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -97,6 +98,18 @@ class AutoSwitcher:
         if self.store is not None and self.store.manual_trigger_active:
             logger.info(
                 "autoswitch_suppressed_by_manual_override",
+                candidate=name,
+                wm_class=info.get("wm_class", ""),
+            )
+            return
+        # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): respeita lock manual armado
+        # por `profile.switch` IPC. Lock dura `MANUAL_PROFILE_LOCK_SEC` (30s)
+        # e expira sozinho — não exige reset.
+        if self.store is not None and self.store.manual_profile_lock_active(
+            time.monotonic()
+        ):
+            logger.info(
+                "autoswitch_suppressed_by_manual_profile_lock",
                 candidate=name,
                 wm_class=info.get("wm_class", ""),
             )
