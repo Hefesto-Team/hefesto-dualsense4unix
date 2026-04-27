@@ -116,8 +116,8 @@ async def reconnect_loop(daemon: Any) -> None:
         restore_last_profile as _restore_last_profile,
     )
 
-    # Se o boot ja conectou e restaurou o perfil, nao re-publica
-    # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transicoes.
+    # Se o boot já conectou e restaurou o perfil, não re-publica
+    # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
     initial_connected = bool(daemon.controller.is_connected())
     restored = initial_connected
     was_connected = initial_connected
