@@ -8,7 +8,7 @@ Cobertura:
 """
 from __future__ import annotations
 
-from hefesto.core.led_control import LedSettings
+from hefesto_dualsense4unix.core.led_control import LedSettings
 
 
 class TestApplyBrightness:

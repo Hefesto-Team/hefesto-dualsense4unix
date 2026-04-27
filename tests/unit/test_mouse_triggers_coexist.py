@@ -30,15 +30,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.controller import TriggerEffect
-from hefesto.core.trigger_effects import build_from_name
-from hefesto.daemon.state_store import StateStore
-from hefesto.integrations.uinput_mouse import UinputMouseDevice
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.autoswitch import AutoSwitcher
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.core.controller import TriggerEffect
+from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.integrations.uinput_mouse import UinputMouseDevice
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -46,7 +46,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from hefesto.testing import FakeController, FakeControllerCommand
+from hefesto_dualsense4unix.testing import FakeController, FakeControllerCommand
 
 # --- infra ---------------------------------------------------------------
 
@@ -282,7 +282,7 @@ async def test_ipc_trigger_set_marca_override(
     isolated_profiles_dir: Path,
 ) -> None:
     """`trigger.set` via IPC liga `manual_trigger_active`."""
-    from hefesto.daemon.ipc_server import IpcServer
+    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
     fc = FakeController()
     fc.connect()
@@ -306,7 +306,7 @@ async def test_ipc_trigger_reset_zera_override(
     isolated_profiles_dir: Path,
 ) -> None:
     """`trigger.reset` via IPC desliga `manual_trigger_active`."""
-    from hefesto.daemon.ipc_server import IpcServer
+    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
     fc = FakeController()
     fc.connect()
@@ -329,7 +329,7 @@ async def test_ipc_profile_switch_zera_override(
     isolated_profiles_dir: Path,
 ) -> None:
     """`profile.switch` via IPC desliga `manual_trigger_active`."""
-    from hefesto.daemon.ipc_server import IpcServer
+    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
     save_profile(_mk_profile_with_trigger("shooter"))
 

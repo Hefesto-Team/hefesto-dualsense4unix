@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.evdev_reader import (
+from hefesto_dualsense4unix.core.evdev_reader import (
     DUALSENSE_PIDS,
     DUALSENSE_VENDOR,
     EvdevReader,
@@ -213,7 +213,7 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setitem(sys.modules, "evdev", fake_mod)
 
     # Mock find_dualsense_evdev pra re-probe funcionar apos OSError
-    from hefesto.core import evdev_reader as er_mod
+    from hefesto_dualsense4unix.core import evdev_reader as er_mod
     monkeypatch.setattr(er_mod, "find_dualsense_evdev", lambda: device_path)
 
     reader.start()

@@ -1,0 +1,2307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+
+  <object class="GtkAdjustment" id="lightbar_brightness_adj">
+    <property name="lower">0</property>
+    <property name="upper">100</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">100</property>
+  </object>
+
+  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global (0-100%) -->
+  <object class="GtkAdjustment" id="rumble_policy_adj">
+    <property name="lower">0</property>
+    <property name="upper">100</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">70</property>
+  </object>
+
+  <object class="GtkAdjustment" id="rumble_weak_adj">
+    <property name="lower">0</property>
+    <property name="upper">255</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
+  <object class="GtkAdjustment" id="rumble_strong_adj">
+    <property name="lower">0</property>
+    <property name="upper">255</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
+  <object class="GtkAdjustment" id="profile_priority_adj">
+    <property name="lower">0</property>
+    <property name="upper">100</property>
+    <property name="step-increment">5</property>
+    <property name="page-increment">10</property>
+    <property name="value">0</property>
+  </object>
+
+  <object class="GtkAdjustment" id="mouse_speed_adj">
+    <property name="lower">1</property>
+    <property name="upper">12</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">2</property>
+    <property name="value">6</property>
+  </object>
+
+  <object class="GtkAdjustment" id="mouse_scroll_speed_adj">
+    <property name="lower">1</property>
+    <property name="upper">5</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">1</property>
+    <property name="value">1</property>
+  </object>
+
+  <object class="GtkWindow" id="main_window">
+    <property name="title">Hefesto - Dualsense4Unix</property>
+    <property name="default-width">1100</property>
+    <property name="default-height">680</property>
+    <signal name="delete-event" handler="on_window_delete_event"/>
+    <child>
+      <object class="GtkBox" id="root_box">
+        <property name="orientation">vertical</property>
+        <property name="spacing">0</property>
+
+        <!-- Banner: logo + wordmark + subtitle, status de conexao no canto direito -->
+        <child>
+          <object class="GtkBox" id="header_bar">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">14</property>
+            <property name="margin-top">10</property>
+            <property name="margin-bottom">8</property>
+            <property name="margin-start">14</property>
+            <property name="margin-end">14</property>
+            <child>
+              <object class="GtkImage" id="app_logo">
+                <property name="valign">center</property>
+              </object>
+              <packing><property name="expand">False</property></packing>
+            </child>
+            <child>
+              <object class="GtkBox" id="header_text_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+                <property name="valign">center</property>
+                <child>
+                  <object class="GtkLabel" id="app_wordmark">
+                    <property name="label">&lt;span size="xx-large" weight="bold"&gt;Hefesto - Dualsense4Unix&lt;/span&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="app_subtitle">
+                    <property name="label">&lt;span size="small" foreground="#888"&gt;daemon de gatilhos adaptativos para DualSense&lt;/span&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="header_connection">
+                <property name="label">&lt;span foreground="#d33"&gt;○ Controle Desconectado&lt;/span&gt;</property>
+                <property name="use-markup">True</property>
+                <property name="valign">center</property>
+              </object>
+              <packing><property name="expand">False</property><property name="pack-type">end</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkSeparator"/>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+        <!-- Notebook com abas -->
+        <child>
+          <object class="GtkNotebook" id="main_notebook">
+            <property name="scrollable">True</property>
+            <property name="margin">8</property>
+
+            <!-- ABA STATUS -->
+            <child>
+              <object class="GtkBox" id="tab_status_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <child>
+                  <object class="GtkFrame" id="frame_status_estado">
+                    <property name="label">Estado</property>
+                    <child>
+                      <object class="GtkGrid" id="status_grid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <property name="margin">12</property>
+                        <style><class name="hefesto-dualsense4unix-card"/></style>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Conexão:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_connection">
+                            <property name="label">Consultando...</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Transporte:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_transport">
+                            <property name="label">—</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Bateria:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="status_battery_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">— %</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Perfil ativo:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_active_profile">
+                            <property name="label">Nenhum</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Daemon:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="status_daemon">
+                            <property name="label">Consultando...</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame" id="frame_status_gatilhos_live">
+                    <property name="label">Gatilhos</property>
+                    <child>
+                      <object class="GtkGrid" id="live_triggers_grid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <property name="margin">12</property>
+                        <style><class name="hefesto-dualsense4unix-card"/></style>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">L2</property>
+                            <property name="xalign">1</property>
+                            <property name="width-chars">3</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="live_l2_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">0 / 255</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">R2</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkProgressBar" id="live_r2_bar">
+                            <property name="show-text">True</property>
+                            <property name="text">0 / 255</property>
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame" id="frame_status_sticks">
+                    <property name="label">Sticks e botões</property>
+                    <child>
+                      <!-- Grid 3 colunas homogêneas: stick esq | stick dir | grid glyphs.
+                           Mesma largura, alinhamento vertical topo — composição simétrica. -->
+                      <object class="GtkGrid" id="sticks_buttons_grid">
+                        <property name="column-spacing">16</property>
+                        <property name="row-spacing">0</property>
+                        <property name="margin">12</property>
+                        <property name="column-homogeneous">True</property>
+                        <style><class name="hefesto-dualsense4unix-card"/></style>
+
+                        <!-- Coluna 0: Stick esquerdo -->
+                        <child>
+                          <object class="GtkBox" id="stick_left_capsule">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">4</property>
+                            <property name="halign">center</property>
+                            <property name="valign">start</property>
+                            <child>
+                              <object class="GtkLabel" id="stick_left_title">
+                                <property name="label">Analógico Esquerdo (L3)</property>
+                                <property name="xalign">0.5</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="stick_left_preview_slot">
+                                <property name="orientation">vertical</property>
+                                <property name="halign">center</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_lx_label">
+                                <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0.5</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">0</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+
+                        <!-- Coluna 1: Stick direito -->
+                        <child>
+                          <object class="GtkBox" id="stick_right_capsule">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">4</property>
+                            <property name="halign">center</property>
+                            <property name="valign">start</property>
+                            <child>
+                              <object class="GtkLabel" id="stick_right_title">
+                                <property name="label">Analógico Direito (R3)</property>
+                                <property name="xalign">0.5</property>
+                                <property name="use-markup">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="stick_right_preview_slot">
+                                <property name="orientation">vertical</property>
+                                <property name="halign">center</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="live_rx_label">
+                                <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0.5</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="left-attach">1</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+
+                        <!-- Coluna 2: Grid de glyphs (inserido por status_actions._init_button_glyphs) -->
+                        <child>
+                          <object class="GtkBox" id="buttons_glyphs_slot">
+                            <property name="orientation">vertical</property>
+                            <property name="halign">center</property>
+                            <property name="valign">center</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">0</property>
+                          </packing>
+                        </child>
+
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Status</property></object>
+            </child>
+
+            <!-- ABA TRIGGERS -->
+            <child>
+              <object class="GtkBox" id="tab_triggers_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <!-- Coluna L2 -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">L2 (gatilho esquerdo)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Modo:</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_left_mode">
+                                <property name="hexpand">True</property>
+                                <signal name="changed" handler="on_trigger_left_mode_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox" id="trigger_left_preset_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Preset:</property>
+                                <property name="visible">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_left_preset_combo">
+                                <property name="hexpand">True</property>
+                                <property name="visible">True</property>
+                                <signal name="changed" handler="on_trigger_left_preset_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="trigger_left_desc">
+                            <property name="label"></property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-bottom">4</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
+                            <property name="vscrollbar-policy">automatic</property>
+                            <property name="min-content-height">220</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object class="GtkBox" id="trigger_left_params_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">4</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="trigger_left_apply">
+                                <property name="label">Aplicar em L2</property>
+                                <signal name="clicked" handler="on_trigger_left_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="trigger_left_reset">
+                                <property name="label">Desligar (Off)</property>
+                                <signal name="clicked" handler="on_trigger_left_reset"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+                <!-- Coluna R2 -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">R2 (gatilho direito)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">12</property>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Modo:</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_right_mode">
+                                <property name="hexpand">True</property>
+                                <signal name="changed" handler="on_trigger_right_mode_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox" id="trigger_right_preset_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Preset:</property>
+                                <property name="visible">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkComboBoxText" id="trigger_right_preset_combo">
+                                <property name="hexpand">True</property>
+                                <property name="visible">True</property>
+                                <signal name="changed" handler="on_trigger_right_preset_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="trigger_right_desc">
+                            <property name="label"></property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-bottom">4</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">never</property>
+                            <property name="vscrollbar-policy">automatic</property>
+                            <property name="min-content-height">220</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object class="GtkBox" id="trigger_right_params_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">4</property>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="trigger_right_apply">
+                                <property name="label">Aplicar em R2</property>
+                                <signal name="clicked" handler="on_trigger_right_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="trigger_right_reset">
+                                <property name="label">Desligar (Off)</property>
+                                <signal name="clicked" handler="on_trigger_right_reset"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Gatilhos</property></object>
+            </child>
+
+            <!-- ABA LIGHTBAR + PLAYER LEDS -->
+            <child>
+              <object class="GtkBox" id="tab_lightbar_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Lightbar (barra de LED)</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">12</property>
+                        <property name="margin">16</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Escolha a cor da barra de LED do DualSense.</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">16</property>
+
+                            <child>
+                              <object class="GtkColorButton" id="lightbar_color_button">
+                                <property name="title">Selecione a cor</property>
+                                <property name="use-alpha">False</property>
+                                <signal name="color-set" handler="on_lightbar_color_set"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkFrame">
+                                <property name="label">Prévia</property>
+                                <property name="hexpand">True</property>
+                                <child>
+                                  <object class="GtkDrawingArea" id="lightbar_preview">
+                                    <property name="width-request">180</property>
+                                    <property name="height-request">60</property>
+                                  </object>
+                                </child>
+                              </object>
+                              <packing><property name="expand">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="lightbar_apply">
+                                <property name="label">Aplicar no controle</property>
+                                <signal name="clicked" handler="on_lightbar_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="lightbar_off">
+                                <property name="label">Apagar</property>
+                                <signal name="clicked" handler="on_lightbar_off"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Luminosidade (%)</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkScale" id="lightbar_brightness_scale">
+                            <property name="draw-value">True</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">right</property>
+                            <property name="hexpand">True</property>
+                            <property name="adjustment">lightbar_brightness_adj</property>
+                            <signal name="value-changed" handler="on_lightbar_brightness_changed"/>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">LEDs de Jogador</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin">16</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">5 indicadores inferiores do controle.</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label">LED 4</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label">LED 5</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Presets rápidos:&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_all">
+                                <property name="label">Todos</property>
+                                <signal name="clicked" handler="on_player_leds_preset_all"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_p1">
+                                <property name="label">Player 1</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p1"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_p2">
+                                <property name="label">Player 2</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p2"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_none">
+                                <property name="label">Nenhum</property>
+                                <signal name="clicked" handler="on_player_leds_preset_none"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="margin-top">8</property>
+                            <child>
+                              <object class="GtkButton" id="player_leds_apply">
+                                <property name="label">Aplicar LEDs</property>
+                                <property name="tooltip-text">Reenvia o padrão atual dos 5 checkboxes ao controle via daemon.</property>
+                                <signal name="clicked" handler="on_player_leds_apply"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="player_leds_note">
+                            <property name="label">&lt;i&gt;Checkboxes e presets enviam imediatamente ao hardware. Use &quot;Aplicar LEDs&quot; para reenviar o padrão atual (útil após reconectar o controle ou trocar de perfil). As marcações ficam salvas no perfil ativo.&lt;/i&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Lightbar</property></object>
+            </child>
+
+            <!-- ABA RUMBLE — FEAT-RUMBLE-POLICY-01 -->
+            <child>
+              <object class="GtkBox" id="tab_rumble_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">16</property>
+
+                <!-- Card 1: Política de rumble -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Política de rumble</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">10</property>
+                        <property name="margin">14</property>
+
+                        <!-- Linha de toggles de política -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <property name="homogeneous">True</property>
+
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_economia">
+                                <property name="label">Economia</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_economia"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_balanceado">
+                                <property name="label">Balanceado</property>
+                                <property name="active">True</property>
+                                <signal name="toggled" handler="on_rumble_policy_balanceado"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_max">
+                                <property name="label">Máximo</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_max"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkToggleButton" id="rumble_policy_auto">
+                                <property name="label">Auto</property>
+                                <property name="active">False</property>
+                                <signal name="toggled" handler="on_rumble_policy_auto"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Slider de intensidade global -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Intensidade global:</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_policy_slider">
+                                <property name="hexpand">True</property>
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="adjustment">rumble_policy_adj</property>
+                                <signal name="value-changed" handler="on_rumble_policy_slider_changed"/>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Label educativo do modo Auto (oculto por padrão) -->
+                        <child>
+                          <object class="GtkLabel" id="rumble_policy_auto_label">
+                            <property name="label">Modo Auto: ajusta intensidade conforme a bateria do controle.
+Bateria &gt;50%: 100% (Máximo).  20-50%: 70% (Balanceado).  &lt;20%: 30% (Economia).
+Transições com debounce de 5 segundos para evitar oscilação.</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Card 2: Testar motores -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Testar motores</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">10</property>
+                        <property name="margin">14</property>
+
+                        <child>
+                          <object class="GtkGrid">
+                            <property name="row-spacing">10</property>
+                            <property name="column-spacing">12</property>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Motor fraco (weak)</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_weak_scale">
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">rumble_weak_adj</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">Motor forte (strong)</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkScale" id="rumble_strong_scale">
+                                <property name="draw-value">True</property>
+                                <property name="digits">0</property>
+                                <property name="value-pos">right</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">rumble_strong_adj</property>
+                              </object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="rumble_test_500ms">
+                                <property name="label">Testar por 500 ms</property>
+                                <signal name="clicked" handler="on_rumble_test_500ms"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rumble_apply">
+                                <property name="label">Aplicar</property>
+                                <signal name="clicked" handler="on_rumble_apply"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rumble_stop">
+                                <property name="label">Parar</property>
+                                <signal name="clicked" handler="on_rumble_stop"/>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel" id="rumble_info">
+                            <property name="label">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Rumble</property></object>
+            </child>
+
+            <!-- Aba Perfis -->
+            <child>
+              <object class="GtkBox" id="profiles_paned">
+                <property name="orientation">horizontal</property>
+                <property name="margin">10</property>
+                <property name="spacing">16</property>
+                <child>
+                  <!-- Painel esquerdo: lista de perfis + botões de ação -->
+                  <object class="GtkBox" id="profiles_left_box">
+                    <property name="width-request">360</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Perfis salvos&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="hscrollbar-policy">never</property>
+                        <property name="vscrollbar-policy">automatic</property>
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <child>
+                          <object class="GtkTreeView" id="profiles_tree">
+                            <property name="headers-visible">True</property>
+                            <signal name="row-activated" handler="on_profile_row_activated"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="profiles_btnbox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <property name="homogeneous">True</property>
+                        <child>
+                          <object class="GtkButton" id="profile_new_button">
+                            <property name="label">Novo</property>
+                            <signal name="clicked" handler="on_profile_new"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_duplicate_button">
+                            <property name="label">Duplicar</property>
+                            <signal name="clicked" handler="on_profile_duplicate"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_remove_button">
+                            <property name="label">Remover</property>
+                            <signal name="clicked" handler="on_profile_remove"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_activate_button">
+                            <property name="label">Ativar</property>
+                            <signal name="clicked" handler="on_profile_activate"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="profile_reload_button">
+                            <property name="label">Recarregar</property>
+                            <signal name="clicked" handler="on_profile_reload"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property></packing>
+                </child>
+
+                <!-- Painel direito: editor do perfil com toggle Modo avançado -->
+                <child>
+                  <object class="GtkBox" id="profiles_right_box">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">8</property>
+
+                    <!-- Cabeçalho: título + toggle Modo avançado -->
+                    <child>
+                      <object class="GtkBox" id="profiles_editor_header">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="profile_advanced_toggle_label">
+                            <property name="label">Modo avançado</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="profile_advanced_switch">
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <property name="active">False</property>
+                            <property name="tooltip-text">Ativa campos técnicos (window_class, title_regex, process_name)</property>
+                            <signal name="state-set" handler="on_profile_advanced_toggle"/>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+
+                    <!-- Campos comuns: Nome + Prioridade (sempre visíveis) -->
+                    <child>
+                      <object class="GtkGrid" id="profiles_common_grid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">10</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Nome:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="profile_name_entry">
+                            <property name="hexpand">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Prioridade:</property>
+                            <property name="xalign">1</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <!-- GtkScale substitui SpinButton — range 0-100, step 5.
+                               H6 (UI-PROFILES-LAYOUT-POLISH-01): marks 0/50/100 no
+                               bottom dão referência visual dos extremos. -->
+                          <object class="GtkScale" id="profile_priority_scale">
+                            <property name="adjustment">profile_priority_adj</property>
+                            <property name="draw-value">True</property>
+                            <property name="digits">0</property>
+                            <property name="value-pos">right</property>
+                            <property name="hexpand">True</property>
+                            <property name="tooltip-text">Quanto maior, mais prioritário que outros perfis (0-100)</property>
+                            <marks>
+                              <mark value="0" position="bottom">0</mark>
+                              <mark value="50" position="bottom">50</mark>
+                              <mark value="100" position="bottom">100</mark>
+                            </marks>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+
+                    <!-- GtkStack: alterna entre modo simples e avançado -->
+                    <child>
+                      <object class="GtkStack" id="profile_editor_stack">
+                        <property name="transition-type">slide-left-right</property>
+                        <property name="transition-duration">200</property>
+
+                        <!-- Página simples -->
+                        <child>
+                          <object class="GtkBox" id="profile_stack_simples">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">10</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="label">&lt;b&gt;Aplica a:&lt;/b&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- ComboBoxText "Aplica a:" — UI-PROFILES-RADIO-GROUP-REDESIGN-01
+                                 Substitui 6 GtkRadioButton (~180px verticais) por
+                                 um único combo (~40px). Liberação de ~140px para
+                                 o preview JSON (UI-PROFILES-RIGHT-PANEL-REBALANCE-01). -->
+                            <child>
+                              <object class="GtkComboBoxText" id="profile_aplica_a_combo">
+                                <property name="tooltip-text">Contexto em que este perfil será aplicado</property>
+                                <items>
+                                  <item id="any" translatable="yes">Qualquer janela</item>
+                                  <item id="steam" translatable="yes">Jogos da Steam</item>
+                                  <item id="browser" translatable="yes">Navegador</item>
+                                  <item id="terminal" translatable="yes">Terminal</item>
+                                  <item id="editor" translatable="yes">Editor de código</item>
+                                  <item id="game" translatable="yes">Jogo específico</item>
+                                </items>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                            <!-- Entry "Jogo específico" — visível só quando combo == "game" -->
+                            <child>
+                              <object class="GtkBox" id="profile_game_entry_box">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">6</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">Nome do jogo:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_simple_custom_name">
+                                    <property name="hexpand">True</property>
+                                    <property name="placeholder-text">ex.: eldenring</property>
+                                    <property name="tooltip-text">Nome do executável do jogo (sem extensão no Linux)</property>
+                                  </object>
+                                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
+                          </object>
+                          <packing>
+                            <property name="name">simples</property>
+                            <property name="title">Simples</property>
+                          </packing>
+                        </child>
+
+                        <!-- Página avançada -->
+                        <child>
+                          <object class="GtkBox" id="profile_stack_avancado">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkGrid" id="profiles_advanced_grid">
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">10</property>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">window_class:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_window_class_entry">
+                                    <property name="placeholder-text">CSV: Steam,firefox</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">title_regex:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_title_regex_entry">
+                                    <property name="placeholder-text">regex (re.search)</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label">process_name:</property>
+                                    <property name="xalign">1</property>
+                                  </object>
+                                  <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkEntry" id="profile_process_name_entry">
+                                    <property name="placeholder-text">CSV: doom.x86_64,celeste</property>
+                                    <property name="hexpand">True</property>
+                                  </object>
+                                  <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="profile_editor_hint">
+                                <property name="label">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="name">avancado</property>
+                            <property name="title">Avancado</property>
+                          </packing>
+                        </child>
+
+                      </object>
+                      <packing><property name="expand">False</property><property name="fill">True</property></packing>
+                    </child>
+
+                    <!-- Preview JSON — UI-PROFILES-RIGHT-PANEL-REBALANCE-01
+                         Mostra o Profile que seria salvo, em tempo real.
+                         Reutiliza o `_build_profile_from_editor` como fonte de
+                         verdade. Ocupa o espaço vazio criado após o combo da
+                         sprint 77 (~450px antes, ~280px agora com preview). -->
+                    <child>
+                      <object class="GtkFrame">
+                        <property name="label">Preview do perfil (JSON)</property>
+                        <property name="margin-top">8</property>
+                        <child>
+                          <object class="GtkScrolledWindow">
+                            <property name="hscrollbar-policy">automatic</property>
+                            <property name="vscrollbar-policy">automatic</property>
+                            <property name="min-content-height">180</property>
+                            <property name="propagate-natural-height">True</property>
+                            <child>
+                              <object class="GtkLabel" id="profile_preview_label">
+                                <property name="label">(selecione um perfil para ver o preview)</property>
+                                <property name="xalign">0</property>
+                                <property name="yalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="selectable">True</property>
+                                <property name="margin">8</property>
+                                <style>
+                                  <class name="hefesto-profile-preview"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                    </child>
+
+                    <!-- Rodapé: botão Salvar -->
+                    <child>
+                      <object class="GtkButtonBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="layout-style">end</property>
+                        <property name="spacing">6</property>
+                        <child>
+                          <object class="GtkButton" id="profile_save_button">
+                            <property name="label">Salvar</property>
+                            <signal name="clicked" handler="on_profile_save"/>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Perfis</property></object>
+            </child>
+
+            <!-- Aba Daemon -->
+            <child>
+              <object class="GtkBox" id="daemon_box">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkGrid" id="daemon_status_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">10</property>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Unit:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="daemon_unit_label">
+                        <property name="label">hefesto-dualsense4unix.service</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Status:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="daemon_status_label">
+                        <property name="label">—</property>
+                        <property name="xalign">0</property>
+                        <property name="use-markup">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Auto-start:</property><property name="xalign">1</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="daemon_autostart_switch">
+                        <property name="halign">start</property>
+                        <signal name="state-set" handler="on_daemon_autostart_toggled"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="daemon_btns">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkButton" id="daemon_start_button">
+                        <property name="label">Iniciar</property>
+                        <signal name="clicked" handler="on_daemon_start"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_stop_button">
+                        <property name="label">Parar</property>
+                        <signal name="clicked" handler="on_daemon_stop"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_restart_button">
+                        <property name="label">Reiniciar</property>
+                        <signal name="clicked" handler="on_daemon_restart"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_refresh_button">
+                        <property name="label">Atualizar</property>
+                        <signal name="clicked" handler="on_daemon_refresh"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="daemon_logs_button">
+                        <property name="label">Ver Logs</property>
+                        <signal name="clicked" handler="on_daemon_view_logs"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="btn_restart_daemon">
+                        <property name="label">Reiniciar daemon</property>
+                        <property name="tooltip-text">Executa systemctl --user restart hefesto-dualsense4unix.service</property>
+                        <signal name="clicked" handler="on_daemon_service_restart"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="btn_migrate_to_systemd">
+                        <property name="label">Migrar para systemd</property>
+                        <property name="tooltip-text">Para o processo avulso e inicia o daemon via systemctl --user start hefesto-dualsense4unix.service</property>
+                        <property name="visible">False</property>
+                        <property name="no-show-all">True</property>
+                        <signal name="clicked" handler="on_daemon_migrate_to_systemd"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="daemon_log_scroll">
+                    <property name="hscrollbar-policy">never</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkTextView" id="daemon_status_text">
+                        <property name="editable">False</property>
+                        <property name="monospace">True</property>
+                        <property name="cursor-visible">False</property>
+                        <property name="wrap-mode">word-char</property>
+                        <style><class name="hefesto-dualsense4unix-log"/></style>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Daemon</property></object>
+            </child>
+
+            <!-- Aba Emulação -->
+            <child>
+              <object class="GtkBox" id="emulation_box">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkGrid" id="emulation_info_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">12</property>
+                    <property name="margin">10</property>
+                    <property name="halign">start</property>
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkLabel"><property name="label">UINPUT:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_uinput_label">
+                        <property name="label">—</property>
+                        <property name="halign">start</property>
+                        <property name="use-markup">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Device:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_device_name_label">
+                        <property name="label">Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">VID:PID:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_vidpid_label">
+                        <property name="label">045E:028E (Xbox 360)</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Gamepads:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_js_label">
+                        <property name="label">—</property>
+                        <property name="halign">start</property>
+                        <property name="use-markup">True</property>
+                        <property name="selectable">True</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkGrid" id="emulation_combo_grid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">12</property>
+                    <property name="margin">10</property>
+                    <property name="halign">start</property>
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property><property name="width">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Próximo:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_next_label">
+                        <property name="label">PS + D-pad Cima</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Anterior:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_prev_label">
+                        <property name="label">PS + D-pad Baixo</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Buffer:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_combo_buffer_label">
+                        <property name="label">150</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel"><property name="label">Passthrough em emulação:</property><property name="halign">end</property></object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_passthrough_label">
+                        <property name="label">Não</property>
+                        <property name="halign">start</property>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="emulation_btns">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <child>
+                      <object class="GtkButton" id="emulation_test_button">
+                        <property name="label">Testar criação de device virtual</property>
+                        <signal name="clicked" handler="on_emulation_test_device"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_refresh_button">
+                        <property name="label">Atualizar</property>
+                        <signal name="clicked" handler="on_emulation_refresh"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_open_toml_button">
+                        <property name="label">Editar daemon.toml</property>
+                        <signal name="clicked" handler="on_emulation_open_toml"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="emulation_hint">
+                    <property name="label">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Emulação</property></object>
+            </child>
+
+            <!-- Aba Mouse (somente emulação de mouse — Teclado é aba separada) -->
+            <child>
+              <object class="GtkBox" id="tab_mouse">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">&lt;b&gt;Emular mouse+teclado&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">True</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="mouse_emulation_toggle">
+                        <property name="active">False</property>
+                        <signal name="state-set" handler="on_mouse_toggle_set"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel" id="mouse_uinput_status_label">
+                    <property name="label">—</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkGrid" id="mouse_speed_grid">
+                    <property name="row-spacing">8</property>
+                    <property name="column-spacing">10</property>
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Velocidade do cursor:</property>
+                        <property name="xalign">1</property>
+                      </object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScale" id="mouse_speed_scale">
+                        <property name="adjustment">mouse_speed_adj</property>
+                        <property name="digits">0</property>
+                        <property name="draw-value">True</property>
+                        <property name="value-pos">right</property>
+                        <property name="hexpand">True</property>
+                        <signal name="value-changed" handler="on_mouse_speed_changed"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Velocidade da rolagem:</property>
+                        <property name="xalign">1</property>
+                      </object>
+                      <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkScale" id="mouse_scroll_speed_scale">
+                        <property name="adjustment">mouse_scroll_speed_adj</property>
+                        <property name="digits">0</property>
+                        <property name="draw-value">True</property>
+                        <property name="value-pos">right</property>
+                        <property name="hexpand">True</property>
+                        <signal name="value-changed" handler="on_mouse_scroll_speed_changed"/>
+                      </object>
+                      <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkSeparator"><property name="orientation">horizontal</property></object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkFrame" id="mouse_mapping_frame">
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin">10</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Mapeamento&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkGrid" id="mouse_mapping_grid">
+                            <property name="row-spacing">4</property>
+                            <property name="column-spacing">8</property>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Cruz (X) ou L2</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão esquerdo</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Triângulo (△) ou R2</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão direito</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">1</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">R3 (clique no analógico direito)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Botão do meio</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">2</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Círculo (○)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Enter</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">3</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Quadrado (□)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Esc</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">4</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">D-pad (↑↓←→)</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Setas do teclado</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">5</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Analógico esquerdo</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Movimento do cursor</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">6</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Analógico direito</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">0</property><property name="top-attach">7</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">→</property><property name="xalign">0.5</property></object>
+                              <packing><property name="left-attach">1</property><property name="top-attach">7</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel"><property name="label">Rolagem vertical e horizontal</property><property name="xalign">0</property></object>
+                              <packing><property name="left-attach">2</property><property name="top-attach">7</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Mouse</property></object>
+            </child>
+
+            <!-- Aba Teclado (FEAT-KEYBOARD-UI-01 separada de Mouse para
+                 enxugar min-size do notebook — antes ambas viviam numa única
+                 aba "Mouse e Teclado" e a soma de mapeamento + treeview
+                 inflava a altura natural de todas as outras abas). -->
+            <child>
+              <object class="GtkBox" id="tab_keyboard">
+                <property name="orientation">vertical</property>
+                <property name="margin">12</property>
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;b&gt;Bindings do perfil ativo&lt;/b&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="key_bindings_legend">
+                    <property name="label">Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__. Combos com '+' (ex: KEY_LEFTALT+KEY_TAB).</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="shadow-type">in</property>
+                    <property name="min-content-height">160</property>
+                    <child>
+                      <object class="GtkTreeView" id="key_bindings_treeview">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="headers-visible">True</property>
+                        <property name="rules-hint">True</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="key_bindings_button_row">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="homogeneous">False</property>
+                    <child>
+                      <object class="GtkButton" id="key_binding_add_btn">
+                        <property name="label">Adicionar</property>
+                        <signal name="clicked" handler="on_key_binding_add"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="key_binding_remove_btn">
+                        <property name="label">Remover</property>
+                        <signal name="clicked" handler="on_key_binding_remove"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="key_binding_restore_btn">
+                        <property name="label">Restaurar defaults</property>
+                        <signal name="clicked" handler="on_key_binding_restore_defaults"/>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Teclado</property></object>
+            </child>
+
+            <!-- Aba Firmware -->
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin-start">12</property>
+                <property name="margin-end">12</property>
+                <property name="margin-top">12</property>
+                <property name="margin-bottom">12</property>
+
+                <!-- Banner de risco -->
+                <child>
+                  <object class="GtkLabel" id="firmware_risk_banner_label">
+                    <property name="label">RISCO DE BRICK. USE APENAS BLOBS OFICIAIS SONY (fwupdater.dl.playstation.net). NÃO DESCONECTE DURANTE O UPDATE.</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <attributes>
+                      <attribute name="weight" value="bold"/>
+                      <attribute name="foreground" value="#d33"/>
+                    </attributes>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Frame: versão atual do controle -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Versão atual do controle</property>
+                    <child>
+                      <object class="GtkGrid">
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Update version:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_current_version_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Hardware:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_hardware_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Build date:</property>
+                            <property name="halign">end</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="firmware_build_date_label">
+                            <property name="label">—</property>
+                            <property name="halign">start</property>
+                            <property name="selectable">True</property>
+                          </object>
+                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkButton" id="firmware_check_btn">
+                            <property name="label">Verificar versão</property>
+                            <property name="tooltip-text">Consulta o controle via dualsensectl info</property>
+                            <signal name="clicked" handler="on_firmware_check"/>
+                            <property name="halign">start</property>
+                          </object>
+                          <packing><property name="left-attach">0</property><property name="top-attach">3</property><property name="width">2</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Frame: aplicar firmware -->
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Aplicar firmware (.bin)</property>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">8</property>
+                        <property name="margin-start">12</property>
+                        <property name="margin-end">12</property>
+                        <property name="margin-top">8</property>
+                        <property name="margin-bottom">8</property>
+
+                        <!-- Seletor de arquivo -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+
+                            <child>
+                              <object class="GtkEntry" id="firmware_file_entry">
+                                <property name="editable">False</property>
+                                <property name="placeholder-text">Nenhum arquivo selecionado</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+
+                            <child>
+                              <object class="GtkButton" id="firmware_browse_btn">
+                                <property name="label">Selecionar .bin…</property>
+                                <property name="tooltip-text">Escolher blob de firmware local (950272 bytes)</property>
+                                <signal name="clicked" handler="on_firmware_browse"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Botão aplicar -->
+                        <child>
+                          <object class="GtkButton" id="firmware_apply_btn">
+                            <property name="label">Aplicar firmware</property>
+                            <property name="tooltip-text">Envia o blob ao controle. Exige confirmação.</property>
+                            <property name="sensitive">False</property>
+                            <property name="halign">start</property>
+                            <signal name="clicked" handler="on_firmware_apply"/>
+                            <style><class name="destructive-action"/></style>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- Progresso -->
+                        <child>
+                          <object class="GtkProgressBar" id="firmware_progress_bar">
+                            <property name="hexpand">True</property>
+                            <property name="show-text">False</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Status -->
+                <child>
+                  <object class="GtkLabel" id="firmware_status_label">
+                    <property name="label">Pronto.</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- Dica de origem -->
+                <child>
+                  <object class="GtkLabel">
+                    <property name="label">&lt;i&gt;Backend: dualsensectl (MIT, nowrep/dualsensectl). Blobs oficiais: fwupdater.dl.playstation.net/fwupdater/info.json&lt;/i&gt;</property>
+                    <property name="use-markup">True</property>
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel"><property name="label">Firmware</property></object>
+            </child>
+
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+          </packing>
+        </child>
+
+        <!-- Rodape: statusbar + botoes de acao global -->
+        <child>
+          <object class="GtkBox" id="footer_box">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">6</property>
+            <property name="margin-start">4</property>
+            <property name="margin-end">6</property>
+            <property name="margin-top">2</property>
+            <property name="margin-bottom">2</property>
+
+            <!-- Statusbar ocupa espaco flexivel a esquerda -->
+            <child>
+              <object class="GtkStatusbar" id="status_bar">
+                <property name="hexpand">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+              </packing>
+            </child>
+
+            <!-- Caixa de botoes alinhada a direita -->
+            <child>
+              <object class="GtkBox" id="footer_buttons_box">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">6</property>
+                <property name="valign">center</property>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_apply">
+                    <property name="label">Aplicar</property>
+                    <property name="tooltip-text">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                    <signal name="clicked" handler="on_apply_draft"/>
+                    <style><class name="btn-apply"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_save_profile">
+                    <property name="label">Salvar Perfil</property>
+                    <property name="tooltip-text">Salva o estado atual como um perfil nomeado</property>
+                    <signal name="clicked" handler="on_save_profile"/>
+                    <style><class name="btn-save"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_import">
+                    <property name="label">Importar</property>
+                    <property name="tooltip-text">Carrega um perfil de arquivo .json</property>
+                    <signal name="clicked" handler="on_import_profile"/>
+                    <style><class name="btn-import"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_footer_restore_default">
+                    <property name="label">Restaurar Default</property>
+                    <property name="tooltip-text">Restaura o perfil 'Meu Perfil' ao estado original</property>
+                    <signal name="clicked" handler="on_restore_default"/>
+                    <style><class name="btn-restore"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+              </object>
+              <packing><property name="expand">False</property></packing>
+            </child>
+
+          </object>
+          <packing><property name="expand">False</property></packing>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

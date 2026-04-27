@@ -19,13 +19,13 @@ Consulte `CHANGELOG.md` para o estado atual.
 **Não abra issue pública** para vulnerabilidades de segurança. Use disclosure responsável por e-mail:
 
 - **Contato:** `andre.dsbf@gmail.com`
-- **Assunto sugerido:** `[Hefesto SEC] <resumo curto>`
+- **Assunto sugerido:** `[Hefesto - Dualsense4Unix SEC] <resumo curto>`
 
 Inclua no relatório:
 
 1. Descrição da vulnerabilidade e impacto estimado.
 2. Passos para reproduzir em árvore limpa (`git checkout main && git pull`).
-3. Versão afetada (`hefesto --version`).
+3. Versão afetada (`hefesto-dualsense4unix --version`).
 4. Distribuição e kernel (`uname -a`).
 5. Prova de conceito mínima, se aplicável.
 6. Sugestão de mitigação, se houver.
@@ -36,11 +36,11 @@ Inclua no relatório:
 
 ### Dentro do escopo
 
-- Escape ou escalação via IPC Unix socket (`$XDG_RUNTIME_DIR/hefesto/hefesto.sock`).
+- Escape ou escalação via IPC Unix socket (`$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock`).
 - Injeção via UDP DSX (`127.0.0.1:6969`).
 - Abuso do endpoint Prometheus (`127.0.0.1:9090`) quando habilitado.
 - Race conditions em `single_instance` que permitam execução de código arbitrário.
-- Leitura ou escrita não autorizada de arquivos em `~/.config/hefesto/`.
+- Leitura ou escrita não autorizada de arquivos em `~/.config/hefesto-dualsense4unix/`.
 - Falhas de validação em schemas pydantic que permitam travessia de diretório.
 - Regras udev distribuídas (`assets/*.rules`) com permissões excessivas.
 - Emulação Xbox 360 via `uinput` com efeito fora do usuário corrente.

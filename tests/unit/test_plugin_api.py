@@ -21,13 +21,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.core.events import EventBus
-from hefesto.daemon.state_store import StateStore
-from hefesto.daemon.subsystems.plugins import PluginsSubsystem, _PluginEntry
-from hefesto.plugin_api import Plugin, PluginContext
-from hefesto.plugin_api.context import ControllerProxy, make_plugin_context
-from hefesto.plugin_api.loader import load_plugins_from_dir
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.events import EventBus
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.daemon.subsystems.plugins import PluginsSubsystem, _PluginEntry
+from hefesto_dualsense4unix.plugin_api import Plugin, PluginContext
+from hefesto_dualsense4unix.plugin_api.context import ControllerProxy, make_plugin_context
+from hefesto_dualsense4unix.plugin_api.loader import load_plugins_from_dir
 
 # ---------------------------------------------------------------------------
 # Auxiliares
@@ -55,7 +55,7 @@ def _mk_controller_mock() -> MagicMock:
 
 def _plugin_py_content(name: str = "plugin_teste", extra: str = "") -> str:
     return f"""
-from hefesto.plugin_api import Plugin, PluginContext
+from hefesto_dualsense4unix.plugin_api import Plugin, PluginContext
 
 class PluginTeste(Plugin):
     name = "{name}"
@@ -120,7 +120,7 @@ def test_load_plugins_arquivo_invalido_skipped(tmp_path: Path) -> None:
 def test_load_plugins_sem_name_skipped(tmp_path: Path) -> None:
     """Plugin sem atributo name eh ignorado."""
     (tmp_path / "sem_name.py").write_text("""
-from hefesto.plugin_api import Plugin
+from hefesto_dualsense4unix.plugin_api import Plugin
 
 class SemName(Plugin):
     name = ""
@@ -369,11 +369,11 @@ async def test_start_carrega_plugins_e_chama_on_load(tmp_path: Path) -> None:
     cfg = MagicMock()
     cfg.plugins_enabled = True
 
-    from hefesto.daemon.context import DaemonContext
+    from hefesto_dualsense4unix.daemon.context import DaemonContext
     ctx = DaemonContext(controller=ctrl, bus=bus, store=store, config=cfg)
 
     ps = PluginsSubsystem()
-    env_patch = {"HEFESTO_PLUGINS_DIR": str(tmp_path), "HEFESTO_PLUGINS_ENABLED": "1"}
+    env_patch = {"HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR": str(tmp_path), "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": "1"}  # noqa: E501
     with patch.dict("os.environ", env_patch):
         await ps.start(ctx)
 

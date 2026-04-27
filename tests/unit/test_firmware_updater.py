@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.integrations.firmware_updater import (
+from hefesto_dualsense4unix.integrations.firmware_updater import (
     FIRMWARE_BLOB_SIZE,
     ControllerNotConnectedError,
     DualsensectlNotAvailableError,
@@ -34,14 +34,14 @@ Update version: 0630
 class TestIsAvailable:
     def test_presente(self) -> None:
         with patch(
-            "hefesto.integrations.firmware_updater.shutil.which",
+            "hefesto_dualsense4unix.integrations.firmware_updater.shutil.which",
             return_value="/usr/bin/dualsensectl",
         ):
             updater = FirmwareUpdater()
             assert updater.is_available() is True
 
     def test_ausente(self) -> None:
-        with patch("hefesto.integrations.firmware_updater.shutil.which", return_value=None):
+        with patch("hefesto_dualsense4unix.integrations.firmware_updater.shutil.which", return_value=None):  # noqa: E501
             updater = FirmwareUpdater()
             assert updater.is_available() is False
 
@@ -89,7 +89,7 @@ class TestGetInfo:
     def test_sucesso_parseia_output(self) -> None:
         updater = FirmwareUpdater()
         with patch.object(updater, "is_available", return_value=True), patch(
-            "hefesto.integrations.firmware_updater.subprocess.run",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.run",
             return_value=self._proc(0, SAMPLE_INFO_OUTPUT, ""),
         ):
             info = updater.get_info()
@@ -99,7 +99,7 @@ class TestGetInfo:
     def test_sem_controle_levanta(self) -> None:
         updater = FirmwareUpdater()
         with patch.object(updater, "is_available", return_value=True), patch(
-            "hefesto.integrations.firmware_updater.subprocess.run",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.run",
             return_value=self._proc(1, "", "No device found"),
         ), pytest.raises(ControllerNotConnectedError):
             updater.get_info()
@@ -107,7 +107,7 @@ class TestGetInfo:
     def test_timeout_levanta(self) -> None:
         updater = FirmwareUpdater()
         with patch.object(updater, "is_available", return_value=True), patch(
-            "hefesto.integrations.firmware_updater.subprocess.run",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd="dualsensectl", timeout=5.0),
         ), pytest.raises(FirmwareUpdateTimeoutError):
             updater.get_info()
@@ -115,7 +115,7 @@ class TestGetInfo:
     def test_retorno_generico_levanta_firmware_error(self) -> None:
         updater = FirmwareUpdater()
         with patch.object(updater, "is_available", return_value=True), patch(
-            "hefesto.integrations.firmware_updater.subprocess.run",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.run",
             return_value=self._proc(2, "", "Erro genérico do binário"),
         ), pytest.raises(FirmwareError):
             updater.get_info()
@@ -183,7 +183,7 @@ class TestApplyFluxo:
                 MagicMock(update_version="0630"),
             ],
         ), patch(
-            "hefesto.integrations.firmware_updater.subprocess.Popen",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.Popen",
             return_value=fake_proc,
         ):
             result = updater.apply(blob, progress_callback=progress_values.append)
@@ -204,7 +204,7 @@ class TestApplyFluxo:
         with patch.object(updater, "is_available", return_value=True), patch.object(
             updater, "get_info", return_value=MagicMock(update_version="0630"),
         ), patch(
-            "hefesto.integrations.firmware_updater.subprocess.Popen",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.Popen",
             return_value=fake_proc,
         ), pytest.raises(FirmwareUpdateFailedError, match="código 3"):
             updater.apply(blob)
@@ -221,7 +221,7 @@ class TestApplyFluxo:
         with patch.object(updater, "is_available", return_value=True), patch.object(
             updater, "get_info", return_value=MagicMock(update_version="0458"),
         ), patch(
-            "hefesto.integrations.firmware_updater.subprocess.Popen",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.Popen",
             return_value=fake_proc,
         ), pytest.raises(FirmwareUpdateTimeoutError):
             updater.apply(blob)
@@ -242,7 +242,7 @@ class TestApplyFluxo:
         with patch.object(updater, "is_available", return_value=True), patch.object(
             updater, "get_info", return_value=MagicMock(update_version="0458"),
         ), patch(
-            "hefesto.integrations.firmware_updater.subprocess.Popen",
+            "hefesto_dualsense4unix.integrations.firmware_updater.subprocess.Popen",
             return_value=fake_proc,
         ):
             updater.apply(blob, progress_callback=progress_values.append)

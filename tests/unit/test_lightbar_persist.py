@@ -97,11 +97,11 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 # Imports dependentes de gi abaixo da instalação dos stubs.
-from hefesto.app.actions.lightbar_actions import LightbarActionsMixin  # noqa: E402
-from hefesto.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
-from hefesto.profiles import loader as loader_module  # noqa: E402
-from hefesto.profiles.loader import load_profile, save_profile  # noqa: E402
-from hefesto.profiles.schema import LedsConfig, MatchAny, Profile  # noqa: E402
+from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.profiles import loader as loader_module  # noqa: E402
+from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile  # noqa: E402
+from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixture: diretório isolado de perfis

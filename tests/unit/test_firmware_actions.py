@@ -81,8 +81,8 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto.app.actions import firmware_actions  # noqa: E402
-from hefesto.integrations.firmware_updater import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions import firmware_actions  # noqa: E402
+from hefesto_dualsense4unix.integrations.firmware_updater import (  # noqa: E402
     ControllerNotConnectedError,
     DualsensectlNotAvailableError,
     FirmwareApplyResult,
@@ -361,7 +361,7 @@ def test_on_firmware_apply_em_progresso_eh_noop(
 
 
 def test_on_firmware_info_ok_atualiza_labels() -> None:
-    from hefesto.app.actions.firmware_actions import FirmwareActionsMixin
+    from hefesto_dualsense4unix.app.actions.firmware_actions import FirmwareActionsMixin
 
     class _Bare:
         def __init__(self) -> None:

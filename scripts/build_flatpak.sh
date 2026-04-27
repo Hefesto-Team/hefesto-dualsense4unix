@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build_flatpak.sh — Constrói e empacota o Hefesto como Flatpak
+# build_flatpak.sh — Constrói e empacota o Hefesto - Dualsense4Unix como Flatpak
 #
 # Uso:
 #   ./scripts/build_flatpak.sh [--install] [--bundle]
@@ -95,9 +95,9 @@ if [[ "$INSTALAR" == "true" ]]; then
   echo ""
   echo "==> Instalando ${APP_ID} no repositório local do usuário..."
   flatpak --user remote-add --if-not-exists \
-    hefesto-local-repo "${REPO_DIR}" 2>/dev/null || true
+    hefesto-dualsense4unix-local-repo "${REPO_DIR}" 2>/dev/null || true
   flatpak --user install --reinstall -y \
-    hefesto-local-repo "${APP_ID}"
+    hefesto-dualsense4unix-local-repo "${APP_ID}"
   echo "  Instalado. Execute com: flatpak run ${APP_ID}"
 fi
 

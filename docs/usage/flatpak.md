@@ -1,6 +1,6 @@
-# Hefesto via Flatpak
+# Hefesto - Dualsense4Unix via Flatpak
 
-Este documento explica como instalar e usar o Hefesto empacotado como Flatpak,
+Este documento explica como instalar e usar o Hefesto - Dualsense4Unix empacotado como Flatpak,
 destinado principalmente a usuários do Pop!_OS COSMIC e outras distribuições que
 adotam o Flatpak como formato canônico de distribuição de aplicativos.
 
@@ -72,14 +72,14 @@ Após a instalação, desconecte e reconecte o controle DualSense.
 
 ---
 
-## Executar o Hefesto
+## Executar o Hefesto - Dualsense4Unix
 
 ```bash
 flatpak run br.andrefarias.Hefesto
 ```
 
 Ou pelo lançador de aplicativos do sistema (Menu de aplicativos / COSMIC Store
-exibe o Hefesto após instalação).
+exibe o Hefesto - Dualsense4Unix após instalação).
 
 ---
 
@@ -89,15 +89,15 @@ Dentro do sandbox Flatpak, os caminhos XDG são redirecionados:
 
 | Caminho original (nativo)    | Caminho dentro do Flatpak                                      |
 |------------------------------|----------------------------------------------------------------|
-| `~/.config/hefesto/`         | `~/.var/app/br.andrefarias.Hefesto/config/hefesto/`            |
-| `$XDG_RUNTIME_DIR/hefesto/`  | `$XDG_RUNTIME_DIR/app/br.andrefarias.Hefesto/hefesto/`         |
+| `~/.config/hefesto-dualsense4unix/`         | `~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/`            |
+| `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`  | `$XDG_RUNTIME_DIR/app/br.andrefarias.Hefesto/hefesto-dualsense4unix/`         |
 
 Para copiar perfis criados fora do Flatpak:
 
 ```bash
-mkdir -p ~/.var/app/br.andrefarias.Hefesto/config/hefesto/profiles/
-cp ~/.config/hefesto/profiles/*.json \
-   ~/.var/app/br.andrefarias.Hefesto/config/hefesto/profiles/
+mkdir -p ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/
+cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
+   ~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/
 ```
 
 ---
@@ -112,7 +112,7 @@ como processo filho da GUI** (sem `--install-service`). O ciclo de vida é:
 3. Ao fechar a janela principal, o daemon filho é encerrado junto.
 
 Para manter o daemon ativo com a janela fechada na área de notificação (tray),
-o Hefesto usa o portal `org.freedesktop.portal.Background` para solicitar
+o Hefesto - Dualsense4Unix usa o portal `org.freedesktop.portal.Background` para solicitar
 permissão de execução em segundo plano ao compositor.
 
 **Limitação conhecida**: o daemon Flatpak não é gerenciado pelo systemd do
@@ -132,8 +132,8 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 | `--socket=wayland`                         | Interface GTK3 nativa no COSMIC/GNOME Wayland       |
 | `--socket=fallback-x11`                    | Fallback para ambientes X11                         |
 | `--socket=session-bus`                     | D-Bus de sessão (portals, notificações)             |
-| `--filesystem=xdg-run/hefesto:create`      | Socket IPC entre GUI e daemon                       |
-| `--filesystem=xdg-config/hefesto:create`   | Leitura e escrita de perfis                         |
+| `--filesystem=xdg-run/hefesto-dualsense4unix:create`      | Socket IPC entre GUI e daemon                       |
+| `--filesystem=xdg-config/hefesto-dualsense4unix:create`   | Leitura e escrita de perfis                         |
 | `--talk-name=org.freedesktop.portal.*`     | Portals do freedesktop (tray, background)           |
 
 ---
@@ -150,7 +150,7 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
    via D-Bus (`--talk-name=org.bluez.*`). Se o DualSense via BT não for detectado,
    execute `flatpak override --user --talk-name=org.bluez.* br.andrefarias.Hefesto`.
 
-4. **Flathub**: o Hefesto não está publicado no Flathub ainda. A instalação é
+4. **Flathub**: o Hefesto - Dualsense4Unix não está publicado no Flathub ainda. A instalação é
    via bundle local ou build a partir do código-fonte.
 
 ---
@@ -167,7 +167,7 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 ### CI/CD
 
 O workflow `.github/workflows/flatpak.yml` constrói o Flatpak automaticamente
-em cada push para `main` e disponibiliza o artifact `hefesto-flatpak` por 30 dias.
+em cada push para `main` e disponibiliza o artifact `hefesto-dualsense4unix-flatpak` por 30 dias.
 
 ---
 

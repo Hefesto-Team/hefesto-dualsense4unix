@@ -3,7 +3,7 @@
 Verifica que 'Sair' no tray encerra o daemon via systemctl --user stop.
 
 Abordagem: importamos `HefestoApp` lazy dentro de cada teste pois o módulo
-`hefesto.app.app` puxa `gi.repository.GdkPixbuf`, que nem todo ambiente de
+`hefesto_dualsense4unix.app.app` puxa `gi.repository.GdkPixbuf`, que nem todo ambiente de
 CI tem. Quando ausente, o teste é pulado.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ import pytest
 
 def _load_app_module():
     try:
-        import hefesto.app.app as app_mod
+        import hefesto_dualsense4unix.app.app as app_mod
     except ImportError as exc:
         pytest.skip(f"gi/GdkPixbuf indisponível: {exc}")
     return app_mod
@@ -62,7 +62,7 @@ def test_quit_app_chama_systemctl_stop(monkeypatch):
     fake_run.assert_called_once()
     args, kwargs = fake_run.call_args
     cmd = args[0] if args else kwargs.get("args")
-    assert cmd == ["systemctl", "--user", "stop", "hefesto.service"]
+    assert cmd == ["systemctl", "--user", "stop", "hefesto-dualsense4unix.service"]
     assert kwargs.get("check") is False
     assert kwargs.get("timeout") == 5
     fake_main_quit.assert_called_once()

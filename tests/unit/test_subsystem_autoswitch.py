@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.daemon.subsystems.autoswitch import (
+from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
     AutoswitchSubsystem,
     stop_autoswitch,
 )

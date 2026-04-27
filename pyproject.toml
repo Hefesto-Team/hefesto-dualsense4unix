@@ -3,13 +3,13 @@ requires = ["hatchling>=1.20"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hefesto"
-version = "2.3.0"
-description = "Linux adaptive trigger daemon for DualSense controllers"
+name = "hefesto-dualsense4unix"
+version = "3.0.0"
+description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for DualSense controllers"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad"]
+keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad", "dualsense4unix"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -56,12 +56,12 @@ metrics = [
 ]
 
 [project.scripts]
-hefesto = "hefesto.cli.app:main"
-hefesto-gui = "hefesto.app.main:main"
+hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
+hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.app.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hefesto"]
-include = ["src/hefesto/gui/*.glade"]
+packages = ["src/hefesto_dualsense4unix"]
+include = ["src/hefesto_dualsense4unix/gui/*.glade"]
 
 [tool.ruff]
 line-length = 100

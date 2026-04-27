@@ -18,9 +18,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.testing import FakeController
 
 
 def _mk_states(n: int) -> list[ControllerState]:
@@ -77,12 +77,12 @@ async def test_run_inicia_keyboard_quando_habilitado(
         return None
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.start_keyboard_emulation",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.start_keyboard_emulation",
         fake_start,
     )
     # Evita perfis de sessão bloqueando a sequência de inicialização.
     monkeypatch.setattr(
-        "hefesto.daemon.connection.restore_last_profile",
+        "hefesto_dualsense4unix.daemon.connection.restore_last_profile",
         noop_restore,
     )
 
@@ -124,7 +124,7 @@ async def test_run_nao_inicia_keyboard_quando_desabilitado(
         return True
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.start_keyboard_emulation",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.start_keyboard_emulation",
         fake_start,
     )
 
@@ -204,7 +204,7 @@ async def test_poll_loop_chama_dispatch_keyboard_com_buttons_pressed() -> None:
 @pytest.mark.asyncio
 async def test_poll_loop_nao_chama_dispatch_sem_device() -> None:
     """Sem _keyboard_device, dispatch_keyboard NÃO é chamado — zero custo."""
-    from hefesto.daemon.subsystems import keyboard as kbd_mod
+    from hefesto_dualsense4unix.daemon.subsystems import keyboard as kbd_mod
 
     fc = FakeController(transport="usb", states=_mk_states(20))
     daemon = Daemon(
@@ -249,11 +249,11 @@ async def test_shutdown_para_keyboard_device(
         return None
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.start_keyboard_emulation",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.start_keyboard_emulation",
         fake_start,
     )
     monkeypatch.setattr(
-        "hefesto.daemon.connection.restore_last_profile",
+        "hefesto_dualsense4unix.daemon.connection.restore_last_profile",
         noop_restore,
     )
 
@@ -303,11 +303,11 @@ def test_reload_config_liga_keyboard(
         stopped.append(True)
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.start_keyboard_emulation",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.start_keyboard_emulation",
         fake_start,
     )
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.stop_keyboard_emulation",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.stop_keyboard_emulation",
         fake_stop,
     )
 

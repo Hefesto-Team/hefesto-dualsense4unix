@@ -15,10 +15,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.daemon.ipc_server import IpcServer
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.daemon.state_store import StateStore
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # Auxiliares
@@ -64,7 +64,7 @@ def _make_ipc(daemon: Daemon | None = None) -> IpcServer:
 
 def test_reload_config_none_nao_abre_steam(monkeypatch):
     """Após reload com ps_button_action='none', on_ps_solo não chama Steam."""
-    from hefesto.integrations import steam_launcher as _sl
+    from hefesto_dualsense4unix.integrations import steam_launcher as _sl
 
     chamadas: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: chamadas.append("steam") or True)
@@ -89,7 +89,7 @@ def test_reload_config_none_nao_abre_steam(monkeypatch):
 
 def test_reload_config_steam_chama_launcher(monkeypatch):
     """Apos reload com ps_button_action='steam', on_ps_solo chama Steam."""
-    from hefesto.integrations import steam_launcher as _sl
+    from hefesto_dualsense4unix.integrations import steam_launcher as _sl
 
     chamadas: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: chamadas.append("steam") or True)

@@ -9,7 +9,7 @@ case "$1" in
         # systemctl --user disable --now hefesto.service antes de remover,
         # ou o postrm emitira aviso.
         pkill -TERM -f 'hefesto\.app\.main' 2>/dev/null || true
-        pkill -TERM -f 'hefesto daemon start' 2>/dev/null || true
+        pkill -TERM -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
         ;;
 esac
 

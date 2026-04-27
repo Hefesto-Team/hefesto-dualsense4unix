@@ -15,8 +15,8 @@ from typing import Any
 
 import pytest
 
-from hefesto.integrations import steam_launcher
-from hefesto.integrations.hotkey_daemon import HotkeyManager
+from hefesto_dualsense4unix.integrations import steam_launcher
+from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
 # ---------------------------------------------------------------------------
 # HotkeyManager.on_ps_solo
@@ -247,7 +247,7 @@ def test_open_or_focus_steam_nunca_levanta():
 
 
 def test_daemon_config_ps_button_defaults():
-    from hefesto.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
     cfg = DaemonConfig()
     assert cfg.ps_button_action == "steam"
@@ -256,9 +256,9 @@ def test_daemon_config_ps_button_defaults():
 
 def test_start_hotkey_manager_instancia_e_chama_steam(monkeypatch):
     """Daemon._start_hotkey_manager() cria HotkeyManager; on_ps_solo chama steam."""
-    from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-    from hefesto.integrations import steam_launcher as _sl
-    from hefesto.testing import FakeController
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.integrations import steam_launcher as _sl
+    from hefesto_dualsense4unix.testing import FakeController
 
     called: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: called.append("steam") or True)
@@ -277,9 +277,9 @@ def test_start_hotkey_manager_instancia_e_chama_steam(monkeypatch):
 
 def test_start_hotkey_manager_none_nao_chama_steam(monkeypatch):
     """ps_button_action='none' → on_ps_solo não chama nenhum launcher."""
-    from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-    from hefesto.integrations import steam_launcher as _sl
-    from hefesto.testing import FakeController
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.integrations import steam_launcher as _sl
+    from hefesto_dualsense4unix.testing import FakeController
 
     called: list[str] = []
     monkeypatch.setattr(_sl, "open_or_focus_steam", lambda **_kw: called.append("steam") or True)

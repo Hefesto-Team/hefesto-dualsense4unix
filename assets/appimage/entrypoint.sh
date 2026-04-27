@@ -1,16 +1,16 @@
 #!/bin/bash
-# Entrypoint do AppImage Hefesto.
+# Entrypoint do AppImage Hefesto - Dualsense4Unix.
 # $APPDIR é definido pelo AppRun do python-appimage.
 #
-# Chamamos `python -m hefesto` porque o bin `hefesto` gerado pelo pip
+# Chamamos `python -m hefesto_dualsense4unix` porque o bin `hefesto` gerado pelo pip
 # tem shebang com path do build (/tmp/python-appimage-.../AppDir/AppRun)
-# que não existe em runtime. `-m hefesto` usa o Python embutido direto.
+# que não existe em runtime. `-m hefesto_dualsense4unix` usa o Python embutido direto.
 
 set -e
 
 for candidate in "$APPDIR"/opt/python*/bin/python3.*; do
     if [[ -x "$candidate" ]]; then
-        exec "$candidate" -m hefesto "$@"
+        exec "$candidate" -m hefesto_dualsense4unix "$@"
     fi
 done
 

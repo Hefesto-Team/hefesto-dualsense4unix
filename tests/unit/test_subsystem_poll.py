@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.daemon.subsystems.poll import (
+from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
     BatteryDebouncer,
     PollSubsystem,

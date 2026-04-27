@@ -5,15 +5,15 @@ import asyncio
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.core.events import EventBus, EventTopic
-from hefesto.daemon.lifecycle import (
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.daemon.lifecycle import (
     BATTERY_DEBOUNCE_SEC,
     Daemon,
     DaemonConfig,
 )
-from hefesto.daemon.state_store import StateStore
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.testing import FakeController
 
 
 def _mk_states(n: int, transport: str = "usb") -> list[ControllerState]:
@@ -176,7 +176,7 @@ async def test_daemon_desconecta_no_shutdown():
 
 def test_battery_debounce_constants_coerentes_com_adr008():
     # Sanidade cross-regra: ADR-008 + V2-17 exige 1%, 5s, min 100ms
-    from hefesto.daemon.lifecycle import (
+    from hefesto_dualsense4unix.daemon.lifecycle import (
         BATTERY_DELTA_THRESHOLD_PCT,
         BATTERY_MIN_INTERVAL_SEC,
     )

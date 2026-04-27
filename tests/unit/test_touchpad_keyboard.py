@@ -9,8 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from hefesto.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
-from hefesto.daemon.subsystems.keyboard import dispatch_keyboard
+from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+from hefesto_dualsense4unix.daemon.subsystems.keyboard import dispatch_keyboard
 
 
 @dataclass

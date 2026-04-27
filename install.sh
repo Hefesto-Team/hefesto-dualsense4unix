@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — instala Hefesto completo no ambiente do usuário.
+# install.sh — instala Hefesto - Dualsense4Unix completo no ambiente do usuário.
 #
 # Flags:
 #   --no-udev             pula udev rules (sudo) — útil em CI.
@@ -18,13 +18,13 @@ set -euo pipefail
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_DIR="${ROOT_DIR}/.venv"
-readonly APP_ID="hefesto"
-readonly ICON_SRC="${ROOT_DIR}/assets/appimage/Hefesto.png"
+readonly APP_ID="hefesto-dualsense4unix"
+readonly ICON_SRC="${ROOT_DIR}/assets/appimage/Hefesto-Dualsense4Unix.png"
 readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
 readonly ICON_TARGET_DIR="${HOME}/.local/share/icons/hicolor/256x256/apps"
 readonly ICON_TARGET="${ICON_TARGET_DIR}/${APP_ID}.png"
 readonly BIN_DIR="${HOME}/.local/bin"
-readonly LAUNCHER="${BIN_DIR}/hefesto-gui"
+readonly LAUNCHER="${BIN_DIR}/hefesto-dualsense4unix-gui"
 
 SKIP_UDEV=0
 SKIP_SYSTEMD=0
@@ -201,7 +201,7 @@ mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 cat > "${DESKTOP_TARGET}" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Hefesto
+Name=Hefesto - Dualsense4Unix
 GenericName=DualSense Controller
 Comment=Daemon de gatilhos adaptativos para DualSense no Linux
 Exec=${ROOT_DIR}/run.sh
@@ -209,7 +209,7 @@ Icon=${APP_ID}
 Categories=Settings;HardwareSettings;
 Terminal=false
 StartupNotify=true
-StartupWMClass=hefesto
+StartupWMClass=Hefesto-Dualsense4Unix
 DESKTOP
 
 command -v desktop-file-validate >/dev/null 2>&1 \
@@ -232,7 +232,7 @@ ok
 # 4b. Glyphs SVG dos botoes do DualSense
 # ---------------------------------------------------------------------------
 readonly GLYPHS_SRC="${ROOT_DIR}/assets/glyphs"
-readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto/glyphs"
+readonly GLYPHS_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
 
 if [[ -d "${GLYPHS_SRC}" ]]; then
     mkdir -p "${GLYPHS_TARGET}"
@@ -247,10 +247,10 @@ if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Symlink ~/.local/bin/hefesto
+# 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/7" "symlink ${BIN_DIR}/hefesto"
-ln -sf "${VENV_DIR}/bin/hefesto" "${BIN_DIR}/hefesto"
+step "5/7" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
@@ -273,7 +273,7 @@ else
     cli_args=("install-service")
     [[ "${enable_daemon}" -eq 1 ]] && cli_args+=("--enable")
 
-    if "${VENV_DIR}/bin/hefesto" daemon "${cli_args[@]}" >/dev/null 2>&1; then
+    if "${VENV_DIR}/bin/hefesto-dualsense4unix" daemon "${cli_args[@]}" >/dev/null 2>&1; then
         if [[ "${enable_daemon}" -eq 1 ]]; then
             printf '      unit instalada + auto-start habilitado\n'
         else
@@ -303,9 +303,9 @@ else
     if [[ "${enable_hotplug}" -eq 0 ]]; then
         printf '      desativado (abrir GUI manualmente pelo menu de aplicativos)\n'
     else
-        readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-gui-hotplug.service"
+        readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-gui-hotplug.service"
         readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
-        readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-gui-hotplug.service"
+        readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-dualsense4unix-gui-hotplug.service"
 
         if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
             warn "${HOTPLUG_UNIT_SRC} ausente — reinstale o repo"
@@ -314,7 +314,7 @@ else
             cp -f "${HOTPLUG_UNIT_SRC}" "${HOTPLUG_UNIT_TARGET}"
             if command -v systemctl >/dev/null 2>&1; then
                 systemctl --user daemon-reload >/dev/null 2>&1 || true
-                if systemctl --user enable hefesto-gui-hotplug.service >/dev/null 2>&1; then
+                if systemctl --user enable hefesto-dualsense4unix-gui-hotplug.service >/dev/null 2>&1; then
                     printf '      habilitado\n'
                 else
                     warn "enable falhou — habilite manualmente"
@@ -331,9 +331,9 @@ fi
 # ---------------------------------------------------------------------------
 printf '\n'
 printf '─────────────────────────────────────────\n'
-printf ' Hefesto instalado\n'
+printf ' Hefesto - Dualsense4Unix instalado\n'
 printf '─────────────────────────────────────────\n'
-printf ' Abrir:       hefesto-gui\n'
+printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'
 printf '─────────────────────────────────────────\n'
 printf '\n'

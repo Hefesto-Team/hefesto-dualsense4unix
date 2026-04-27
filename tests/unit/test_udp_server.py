@@ -6,14 +6,14 @@ import json
 
 import pytest
 
-from hefesto.daemon.state_store import StateStore
-from hefesto.daemon.udp_server import (
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.daemon.udp_server import (
     DsxProtocol,
     RateLimiter,
     UdpHandler,
     UdpServer,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # RateLimiter
@@ -267,8 +267,8 @@ async def test_udp_server_recebe_datagrama_real(tmp_path):
     loop = asyncio.get_running_loop()
 
     # Re-implementa start para capturar a porta
-    from hefesto.daemon.udp_server import DsxProtocol
-    from hefesto.daemon.udp_server import UdpHandler as UdpHandlerCls
+    from hefesto_dualsense4unix.daemon.udp_server import DsxProtocol
+    from hefesto_dualsense4unix.daemon.udp_server import UdpHandler as UdpHandlerCls
 
     handler = UdpHandlerCls(controller=fc, store=store, rate_limiter=RateLimiter())
     transport, _ = await loop.create_datagram_endpoint(

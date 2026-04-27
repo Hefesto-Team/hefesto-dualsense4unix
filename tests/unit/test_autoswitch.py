@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.autoswitch import AutoSwitcher
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -18,7 +18,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def _mk_profile(name: str, **kw) -> Profile:
 
 @pytest.mark.asyncio
 async def test_disabled_via_env(monkeypatch: pytest.MonkeyPatch, isolated_profiles_dir: Path):
-    monkeypatch.setenv("HEFESTO_NO_WINDOW_DETECT", "1")
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT", "1")
     save_profile(_mk_profile("shooter"))
 
     fc = FakeController()

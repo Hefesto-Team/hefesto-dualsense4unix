@@ -17,7 +17,7 @@ import pytest
 # seria exercitada; os 10 testes aqui são opt-in para dev com GUI instalada.
 pytest.importorskip("gi")
 
-from hefesto.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
 
 
 class _FakeListStore:
@@ -54,7 +54,7 @@ class _FakeMixin:
     """
 
     def __init__(self) -> None:
-        from hefesto.app.draft_config import DraftConfig
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
         self._key_bindings_store = _FakeListStore()
@@ -69,7 +69,7 @@ class _FakeMixin:
 
 def _build_mixin() -> Any:
     """Instancia o mixin via composição para evitar herança com GTK."""
-    from hefesto.app.actions.input_actions import InputActionsMixin
+    from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 
     instance = _FakeMixin()
     # Liga os métodos do mixin como bound methods do fake.

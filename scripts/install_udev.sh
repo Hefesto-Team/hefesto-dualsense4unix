@@ -14,7 +14,7 @@ sudo cp -v "$ASSETS/73-ps5-controller-hotplug.rules"     /etc/udev/rules.d/
 sudo cp -v "$ASSETS/74-ps5-controller-hotplug-bt.rules"  /etc/udev/rules.d/
 
 echo "[2/3] copiando modules-load config..."
-sudo cp -v "$ASSETS/hefesto.conf" /etc/modules-load.d/hefesto.conf
+sudo cp -v "$ASSETS/hefesto-dualsense4unix.conf" /etc/modules-load.d/hefesto-dualsense4unix.conf
 
 echo "[3/3] aplicando configuração..."
 sudo modprobe uinput

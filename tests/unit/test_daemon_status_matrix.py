@@ -119,8 +119,8 @@ _install_gi_stubs()
 
 import pytest  # noqa: E402
 
-import hefesto.utils.single_instance as si_mod  # noqa: E402
-from hefesto.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+import hefesto_dualsense4unix.utils.single_instance as si_mod  # noqa: E402
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Host mínimo para exercitar _daemon_status sem Builder real

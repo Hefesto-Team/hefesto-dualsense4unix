@@ -1,4 +1,4 @@
-"""Testes unitarios para hefesto.profiles.trigger_presets.
+"""Testes unitarios para hefesto_dualsense4unix.profiles.trigger_presets.
 
 Valida:
 - Todos os presets resolvíveis têm exatamente 10 posicoes.
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.profiles.trigger_presets import (
+from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
     FEEDBACK_POSITION_PRESETS,
     VIBRATION_POSITION_LABELS,

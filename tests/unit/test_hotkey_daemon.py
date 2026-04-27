@@ -1,7 +1,7 @@
 """Testes do HotkeyManager."""
 from __future__ import annotations
 
-from hefesto.integrations.hotkey_daemon import (
+from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
     HotkeyConfig,
     HotkeyManager,

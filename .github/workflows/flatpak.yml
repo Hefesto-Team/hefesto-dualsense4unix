@@ -31,7 +31,7 @@ jobs:
           with open('flatpak/br.andrefarias.Hefesto.yml') as f:
               doc = yaml.safe_load(f)
           assert doc['app-id'] == 'br.andrefarias.Hefesto'
-          assert doc['command'] == 'hefesto-gui'
+          assert doc['command'] == 'hefesto-dualsense4unix-gui'
           print('Manifest YAML valido.')
           print(f'  app-id: {doc[\"app-id\"]}')
           print(f'  runtime: {doc[\"runtime\"]}//{doc[\"runtime-version\"]}')
@@ -103,7 +103,7 @@ jobs:
         run: |
           flatpak install --user --noninteractive --bundle \
             br.andrefarias.Hefesto.flatpak
-          flatpak list --user --app | grep -i hefesto
+          flatpak list --user --app | grep -i hefesto-dualsense4unix
 
       - name: Validar registro do app
         run: |
@@ -116,7 +116,7 @@ jobs:
       - name: Upload do bundle .flatpak
         uses: actions/upload-artifact@v4
         with:
-          name: hefesto-flatpak
+          name: hefesto-dualsense4unix-flatpak
           path: br.andrefarias.Hefesto.flatpak
           retention-days: 30
           if-no-files-found: error

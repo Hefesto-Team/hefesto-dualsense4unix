@@ -9,15 +9,15 @@
 
 set -euo pipefail
 
-readonly APP_ID="hefesto"
+readonly APP_ID="hefesto-dualsense4unix"
 readonly DESKTOP_TARGET="${HOME}/.local/share/applications/${APP_ID}.desktop"
 readonly ICON_TARGET="${HOME}/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
-readonly LAUNCHER="${HOME}/.local/bin/hefesto-gui"
-readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto"
-readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-gui-hotplug.service"
+readonly LAUNCHER="${HOME}/.local/bin/hefesto-dualsense4unix-gui"
+readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto-dualsense4unix"
+readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto"
+readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
 REMOVE_UDEV=0
 AUTO_YES=0
@@ -31,25 +31,25 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
-log "parando daemon hefesto (se ativo)"
-timeout 5 systemctl --user stop hefesto.service >/dev/null 2>&1 || true
-systemctl --user disable hefesto.service >/dev/null 2>&1 || true
-rm -f "${HOME}/.config/systemd/user/hefesto.service"
+log "parando daemon hefesto-dualsense4unix (se ativo)"
+timeout 5 systemctl --user stop hefesto-dualsense4unix.service >/dev/null 2>&1 || true
+systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
+rm -f "${HOME}/.config/systemd/user/hefesto-dualsense4unix.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
 # BUG-MULTI-INSTANCE-01: garantia extra — mata GUIs e daemons órfãos que
 # possam ter escapado do systemctl stop (ex.: processo lançado fora do
 # systemd, ou residual de sessão anterior).
-pkill -TERM -f 'hefesto\.app\.main' 2>/dev/null || true
-pkill -TERM -f 'hefesto daemon start' 2>/dev/null || true
+pkill -TERM -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
+pkill -TERM -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
 sleep 2
-pkill -KILL -f 'hefesto\.app\.main' 2>/dev/null || true
-pkill -KILL -f 'hefesto daemon start' 2>/dev/null || true
+pkill -KILL -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
+pkill -KILL -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
 
 # Unit user de hotplug-gui (se existir)
 if [[ -f "${HOTPLUG_UNIT_TARGET}" ]]; then
-    log "desabilitando hefesto-gui-hotplug.service"
-    systemctl --user disable hefesto-gui-hotplug.service >/dev/null 2>&1 || true
+    log "desabilitando hefesto-dualsense4unix-gui-hotplug.service"
+    systemctl --user disable hefesto-dualsense4unix-gui-hotplug.service >/dev/null 2>&1 || true
     log "removendo ${HOTPLUG_UNIT_TARGET}"
     rm -f "${HOTPLUG_UNIT_TARGET}"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
@@ -88,7 +88,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
-                   /etc/modules-load.d/hefesto.conf 2>/dev/null || true
+                   /etc/modules-load.d/hefesto-dualsense4unix.conf 2>/dev/null || true
         sudo udevadm control --reload-rules 2>/dev/null || true
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
     else
@@ -102,5 +102,5 @@ if [[ -d "${ROOT_DIR}/.venv" ]]; then
 fi
 
 printf '\n─────────────────────────────────────────\n'
-printf ' Hefesto desinstalado\n'
+printf ' Hefesto - Dualsense4Unix desinstalado\n'
 printf '─────────────────────────────────────────\n\n'

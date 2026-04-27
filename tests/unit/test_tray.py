@@ -7,11 +7,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.integrations.tray import APP_ID, ICON_NAME, TrayController, probe_gi_availability
+from hefesto_dualsense4unix.integrations.tray import (
+    APP_ID,
+    ICON_NAME,
+    TrayController,
+    probe_gi_availability,
+)
 
 
 def test_constantes():
-    assert APP_ID == "hefesto-tray"
+    assert APP_ID == "hefesto-dualsense4unix-tray"
     assert ICON_NAME == "input-gaming"
 
 

@@ -1,4 +1,4 @@
-# Contribuindo com o Hefesto
+# Contribuindo com o Hefesto - Dualsense4Unix
 
 Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de desenvolvimento próprio, mas contribuições externas são bem-vindas desde que sigam os protocolos descritos aqui.
 
@@ -6,7 +6,7 @@ Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de d
 
 ## Natureza do projeto
 
-Hefesto é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas (ver `docs/process/SPRINT_ORDER.md`) com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
+Hefesto - Dualsense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas (ver `docs/process/SPRINT_ORDER.md`) com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
 
 **Contribuições externas de pessoas desconhecidas passam por revisão manual antes do merge.** Não há prazo garantido de resposta, mas toda PR bem documentada será lida.
 
@@ -59,7 +59,7 @@ Antes de qualquer commit:
 .venv/bin/ruff check src/ tests/
 
 # Tipagem (gate rígido)
-.venv/bin/mypy src/hefesto
+.venv/bin/mypy src/hefesto_dualsense4unix
 
 # Acentuação periférica
 python3 scripts/validar-acentuacao.py --all

@@ -1,9 +1,9 @@
-"""Testes de `hefesto.profiles.slug.slugify` — tabela canônica da sprint."""
+"""Testes de `hefesto_dualsense4unix.profiles.slug.slugify` — tabela canônica da sprint."""
 from __future__ import annotations
 
 import pytest
 
-from hefesto.profiles.slug import slugify
+from hefesto_dualsense4unix.profiles.slug import slugify
 
 
 def test_slug_acao_acentuado():  # slug literal ASCII (noqa-acento)

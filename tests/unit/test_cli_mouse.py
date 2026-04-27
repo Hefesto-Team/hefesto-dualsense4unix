@@ -1,4 +1,4 @@
-"""Testes dos subcomandos `hefesto mouse on/off/status` (FEAT-CLI-PARITY-01)."""
+"""Testes dos subcomandos `hefesto-dualsense4unix mouse on/off/status` (FEAT-CLI-PARITY-01)."""
 from __future__ import annotations
 
 import json
@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 from typer.testing import CliRunner
 
-from hefesto.cli.app import app
-from hefesto.cli.ipc_client import IpcError
+from hefesto_dualsense4unix.cli.app import app
+from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
 runner = CliRunner()
 
@@ -34,7 +34,7 @@ def mock_ipc(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
             return resp(method, params)
         return resp
 
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     monkeypatch.setattr(bridge, "_run_call", fake_run_call)
     return registry

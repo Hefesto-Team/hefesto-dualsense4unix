@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from hefesto.core.keyboard_mappings import (
+from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     TOKEN_CLOSE_OSK,
     TOKEN_OPEN_OSK,
     is_virtual_token,
 )
-from hefesto.integrations.uinput_keyboard import UinputKeyboardDevice
+from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
 
 
 class _FakeUinput:

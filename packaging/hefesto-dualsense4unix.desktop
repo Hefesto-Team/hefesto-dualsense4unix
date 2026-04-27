@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Hefesto - Dualsense4Unix
+Comment=Daemon de gatilhos adaptativos para DualSense
+Exec=/usr/bin/hefesto-dualsense4unix-gui
+Icon=hefesto
+Terminal=false
+Type=Application
+Categories=Game;Settings;HardwareSettings;
+Keywords=DualSense;PS5;controle;gamepad;trigger;haptic;
+StartupWMClass=Hefesto-Dualsense4Unix

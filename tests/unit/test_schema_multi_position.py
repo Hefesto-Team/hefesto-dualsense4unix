@@ -15,12 +15,12 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from hefesto.core.trigger_effects import (
+from hefesto_dualsense4unix.core.trigger_effects import (
     TriggerMode,
     _flatten_multi_position,
     build_from_name,
 )
-from hefesto.profiles.schema import TriggerConfig
+from hefesto_dualsense4unix.profiles.schema import TriggerConfig
 
 
 class TestValidatorParams:

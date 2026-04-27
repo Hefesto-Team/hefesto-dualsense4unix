@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from hefesto.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 
 # ---------------------------------------------------------------------------
 # Testes de connect com timeout
@@ -31,7 +31,7 @@ async def test_connect_timeout_levanta_ipc_error():
         pytest.raises(IpcError) as exc_info,
     ):
         async with IpcClient.connect(
-            socket_path=Path("/tmp/hefesto-test-ausente.sock"),
+            socket_path=Path("/tmp/hefesto-dualsense4unix-test-ausente.sock"),
             timeout=0.1,
         ):
             pass
@@ -48,7 +48,7 @@ async def test_connect_timeout_rapido():
         inicio = time.monotonic()
         with pytest.raises(IpcError):
             async with IpcClient.connect(
-                socket_path=Path("/tmp/hefesto-test-ausente.sock"),
+                socket_path=Path("/tmp/hefesto-dualsense4unix-test-ausente.sock"),
                 timeout=0.05,
             ):
                 pass
@@ -65,7 +65,7 @@ async def test_connect_sem_timeout_repassa_file_not_found():
         side_effect=FileNotFoundError("socket ausente"),
     ), pytest.raises(FileNotFoundError):
         async with IpcClient.connect(
-            socket_path=Path("/tmp/hefesto-test-ausente.sock"),
+            socket_path=Path("/tmp/hefesto-dualsense4unix-test-ausente.sock"),
         ):
             pass
 

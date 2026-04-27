@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# install-host-udev.sh — Instala regras udev do Hefesto no sistema hospedeiro
+# install-host-udev.sh — Instala regras udev do Hefesto - Dualsense4Unix no sistema hospedeiro
 #
 # Executado UMA vez pelo usuário após instalar o bundle Flatpak:
 #   flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 #
-# Também pode ser executado diretamente no host (fora do Flatpak) se o Hefesto
+# Também pode ser executado diretamente no host (fora do Flatpak) se o Hefesto - Dualsense4Unix
 # foi instalado via .deb ou pip:
 #   sudo bash scripts/install-host-udev.sh
 #
@@ -15,13 +15,13 @@
 
 set -euo pipefail
 
-# Dentro do Flatpak, as rules ficam em /app/share/hefesto/udev-rules/
+# Dentro do Flatpak, as rules ficam em /app/share/hefesto-dualsense4unix/udev-rules/
 # Fora do Flatpak (instalação nativa), ficam em assets/ relativo ao script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ -d "/app/share/hefesto/udev-rules" ]]; then
+if [[ -d "/app/share/hefesto-dualsense4unix/udev-rules" ]]; then
   # Executando dentro do bundle Flatpak
-  RULES_SRC="/app/share/hefesto/udev-rules"
+  RULES_SRC="/app/share/hefesto-dualsense4unix/udev-rules"
 else
   # Executando fora do Flatpak (repositório local ou .deb)
   RULES_SRC="${SCRIPT_DIR}/../assets"
@@ -37,7 +37,7 @@ RULES=(
 )
 
 # Verificar se as rules existem na origem
-echo "Hefesto — instalação de regras udev"
+echo "Hefesto - Dualsense4Unix — instalação de regras udev"
 echo ""
 echo "Origem: ${RULES_SRC}"
 echo "Destino: ${RULES_DEST}"

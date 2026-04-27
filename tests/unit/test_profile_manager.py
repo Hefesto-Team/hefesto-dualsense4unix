@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.daemon.state_store import StateStore
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -17,7 +17,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 @pytest.fixture
@@ -178,7 +178,7 @@ def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
     verifica que `set_trigger` foi chamado para ambos os lados com o
     `TriggerEffect` idêntico ao que a factory canônica produz.
     """
-    from hefesto.core.trigger_effects import (
+    from hefesto_dualsense4unix.core.trigger_effects import (
         TriggerMode,
         multi_position_feedback,
         multi_position_vibration,

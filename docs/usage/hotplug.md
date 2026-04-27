@@ -1,6 +1,6 @@
-# Hotplug da GUI — abrir o Hefesto ao conectar o DualSense
+# Hotplug da GUI — abrir o Hefesto - Dualsense4Unix ao conectar o DualSense
 
-Quando o controle é conectado via USB, a GUI do Hefesto pode aparecer
+Quando o controle é conectado via USB, a GUI do Hefesto - Dualsense4Unix pode aparecer
 automaticamente. Útil para quem pluga o DualSense e espera o painel já
 pronto, sem abrir pelo menu ou lembrar do tray.
 
@@ -11,13 +11,13 @@ Duas peças trabalham juntas:
 1. **udev rule** `73-ps5-controller-hotplug.rules` — o kernel detecta o
    `ACTION=="add"` do USB com `idVendor==054c` (DualSense ou DualSense
    Edge) e marca o device com `TAG+="systemd"`. A variável
-   `SYSTEMD_USER_WANTS=hefesto-gui-hotplug.service` instrui o systemd
+   `SYSTEMD_USER_WANTS=hefesto-dualsense4unix-gui-hotplug.service` instrui o systemd
    `--user` da sessão gráfica ativa a acionar a unit.
 
-2. **systemd user unit** `hefesto-gui-hotplug.service` — unidade
+2. **systemd user unit** `hefesto-dualsense4unix-gui-hotplug.service` — unidade
    `Type=oneshot`, disparada pelo udev. O `ExecStart` faz um `pgrep`
    para detectar se a GUI já está aberta; se já está, aborta. Caso
-   contrário, invoca `%h/.local/bin/hefesto-gui` (launcher desanexado
+   contrário, invoca `%h/.local/bin/hefesto-dualsense4unix-gui` (launcher desanexado
    criado pelo `install.sh`).
 
 Efeito líquido: **plugar com GUI fechada abre o painel em ~2 s;
@@ -36,9 +36,9 @@ Para habilitar manualmente depois:
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp assets/hefesto-gui-hotplug.service ~/.config/systemd/user/
+cp assets/hefesto-dualsense4unix-gui-hotplug.service ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable hefesto-gui-hotplug.service
+systemctl --user enable hefesto-dualsense4unix-gui-hotplug.service
 
 sudo cp assets/73-ps5-controller-hotplug.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
@@ -50,8 +50,8 @@ sudo udevadm trigger
 Desabilita a unit mas mantém as udev rules de permissão:
 
 ```bash
-systemctl --user disable hefesto-gui-hotplug.service
-rm ~/.config/systemd/user/hefesto-gui-hotplug.service
+systemctl --user disable hefesto-dualsense4unix-gui-hotplug.service
+rm ~/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service
 systemctl --user daemon-reload
 ```
 
@@ -106,14 +106,14 @@ E adicione a variante em `74-ps5-controller-hotplug-bt.rules` localmente.
 ## Verificar que está ativo
 
 ```bash
-systemctl --user status hefesto-gui-hotplug.service
+systemctl --user status hefesto-dualsense4unix-gui-hotplug.service
 ls -l /etc/udev/rules.d/73-ps5-controller-hotplug.rules
 ```
 
 Para testar sem plugar fisicamente:
 
 ```bash
-systemctl --user start hefesto-gui-hotplug.service
+systemctl --user start hefesto-dualsense4unix-gui-hotplug.service
 ```
 
 Deve abrir a GUI se ainda não estiver aberta.

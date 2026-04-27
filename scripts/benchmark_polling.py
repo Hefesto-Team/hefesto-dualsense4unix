@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> int:
     frequencies = [int(x) for x in args.frequencies.split(",") if x.strip()]
 
     try:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
     except ImportError as exc:
         print(f"erro: import falhou — rode via venv do projeto. {exc}", file=sys.stderr)
         return 2

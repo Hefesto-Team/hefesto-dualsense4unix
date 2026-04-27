@@ -1,9 +1,9 @@
-"""Testes de `hefesto.core.keyboard_mappings` (FEAT-KEYBOARD-EMULATOR-01)."""
+"""Testes de `hefesto_dualsense4unix.core.keyboard_mappings` (FEAT-KEYBOARD-EMULATOR-01)."""
 from __future__ import annotations
 
 import pytest
 
-from hefesto.core.keyboard_mappings import (
+from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
     format_binding,
     parse_binding,
@@ -45,7 +45,7 @@ def test_default_bindings_nao_colide_com_mouse() -> None:
     desativar o binding de teclado para r3. Quem habilitar ambos sem UI
     sobreescrita terá BTN_MIDDLE + fechar OSK — comportamento documentado.
     """
-    from hefesto.integrations.uinput_mouse import (
+    from hefesto_dualsense4unix.integrations.uinput_mouse import (
         BUTTON_TO_UINPUT,
         DPAD_TO_KEY,
         EDGE_KEY_MAP,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera AppImage do Hefesto via python-appimage (opcional).
+# Gera AppImage do Hefesto - Dualsense4Unix via python-appimage (opcional).
 #
 # Pré-requisitos:
 #   sudo apt install libfuse2 librsvg2-bin
@@ -9,7 +9,7 @@
 #   ./scripts/build_appimage.sh              # Python 3.12 por padrão
 #   PYTHON_VERSION=3.11 ./scripts/build_appimage.sh
 #
-# Saída: dist/appimage/Hefesto-<version>-x86_64.AppImage
+# Saída: dist/appimage/Hefesto-Dualsense4Unix-<version>-x86_64.AppImage
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,14 +27,14 @@ if ! command -v python-appimage >/dev/null 2>&1; then
 fi
 
 # Converte SVG -> PNG (AppImage exige PNG).
-if [[ ! -f "$APPDIR_SRC/Hefesto.png" ]]; then
-    echo "[1/4] Gerando Hefesto.png do SVG..."
+if [[ ! -f "$APPDIR_SRC/Hefesto-Dualsense4Unix.png" ]]; then
+    echo "[1/4] Gerando Hefesto-Dualsense4Unix.png do SVG..."
     if command -v rsvg-convert >/dev/null 2>&1; then
-        rsvg-convert -w 256 -h 256 "$APPDIR_SRC/Hefesto.svg" \
-            -o "$APPDIR_SRC/Hefesto.png"
+        rsvg-convert -w 256 -h 256 "$APPDIR_SRC/Hefesto-Dualsense4Unix.svg" \
+            -o "$APPDIR_SRC/Hefesto-Dualsense4Unix.png"
     elif command -v convert >/dev/null 2>&1; then
-        convert -background none -size 256x256 "$APPDIR_SRC/Hefesto.svg" \
-            "$APPDIR_SRC/Hefesto.png"
+        convert -background none -size 256x256 "$APPDIR_SRC/Hefesto-Dualsense4Unix.svg" \
+            "$APPDIR_SRC/Hefesto-Dualsense4Unix.png"
     else
         echo "erro: instale rsvg-convert (sudo apt install librsvg2-bin)"
         exit 3
@@ -42,7 +42,7 @@ if [[ ! -f "$APPDIR_SRC/Hefesto.png" ]]; then
 fi
 
 # Garante que há um wheel atualizado.
-if ! ls "$HERE/dist"/hefesto-*.whl >/dev/null 2>&1; then
+if ! ls "$HERE/dist"/hefesto_dualsense4unix-*.whl >/dev/null 2>&1; then
     echo "[2/4] Nenhum wheel em dist/. Buildando..."
     python -m build --wheel
 fi
@@ -53,14 +53,14 @@ mkdir -p "$WORK_DIR"
 cp -r "$APPDIR_SRC/." "$WORK_DIR/"
 chmod +x "$WORK_DIR/entrypoint.sh"
 
-WHEEL=$(ls -t "$HERE/dist"/hefesto-*.whl | head -1)
+WHEEL=$(ls -t "$HERE/dist"/hefesto_dualsense4unix-*.whl | head -1)
 cat > "$WORK_DIR/requirements.txt" <<EOF
 $WHEEL
 EOF
 
 mkdir -p "$OUT_DIR"
 # Le versão do pyproject.toml (Python 3.11+ tem tomllib nativo; fallback tomli)
-# Mesmo padrão de build_deb.sh — zero dependência de `import hefesto` funcionar.
+# Mesmo padrão de build_deb.sh — zero dependência de `import hefesto_dualsense4unix` funcionar.
 VERSION=$(python3 - <<'EOF'
 import sys
 try:
@@ -72,19 +72,19 @@ with open("pyproject.toml", "rb") as f:
 print(data["project"]["version"])
 EOF
 )
-OUT_FILE="$OUT_DIR/Hefesto-${VERSION}-x86_64.AppImage"
+OUT_FILE="$OUT_DIR/Hefesto-Dualsense4Unix-${VERSION}-x86_64.AppImage"
 echo "Versão detectada: ${VERSION}"
 
 echo "[3/4] Gerando AppImage com Python ${PYTHON_VERSION}..."
 python-appimage build app \
     --python-version "$PYTHON_VERSION" \
     --linux-tag "manylinux2014_x86_64" \
-    --name Hefesto \
+    --name Hefesto - Dualsense4Unix \
     "$WORK_DIR"
 
-# python-appimage cria no cwd com nome Hefesto-x86_64.AppImage
-if [[ -f "$HERE/Hefesto-x86_64.AppImage" ]]; then
-    mv "$HERE/Hefesto-x86_64.AppImage" "$OUT_FILE"
+# python-appimage cria no cwd com nome Hefesto-Dualsense4Unix-x86_64.AppImage
+if [[ -f "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" ]]; then
+    mv "$HERE/Hefesto-Dualsense4Unix-x86_64.AppImage" "$OUT_FILE"
 fi
 
 if [[ -f "$OUT_FILE" ]]; then

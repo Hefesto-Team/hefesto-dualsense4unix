@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Hefesto - Dualsense4Unix
+Comment=Daemon Linux de gatilhos adaptativos para DualSense
+Exec=hefesto
+Icon=Hefesto - Dualsense4Unix
+Categories=Utility;HardwareSettings;
+Terminal=true
