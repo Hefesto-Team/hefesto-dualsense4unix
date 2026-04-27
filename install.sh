@@ -179,18 +179,20 @@ else
     if [[ -f /etc/udev/rules.d/70-ps5-controller.rules ]] \
        && [[ -f /etc/udev/rules.d/71-uinput.rules ]] \
        && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]] \
-       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]]; then
+       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]] \
+       && [[ -f /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules ]]; then
         printf '      já instaladas\n'
         need_udev=0
     fi
 
     if [[ "${need_udev}" -eq 1 ]]; then
         printf '\n'
-        printf '      Quatro regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
-        printf '        70-ps5-controller.rules             permissão hidraw\n'
-        printf '        71-uinput.rules                     emulação Xbox360 via uinput\n'
-        printf '        72-ps5-controller-autosuspend.rules evita desconexão intermitente\n'
-        printf '        73-ps5-controller-hotplug.rules     abre a GUI ao plugar o controle\n\n'
+        printf '      Cinco regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
+        printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
+        printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
+        printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
+        printf '        73-ps5-controller-hotplug.rules        abre a GUI ao plugar o controle (USB)\n'
+        printf '        74-ps5-controller-hotplug-bt.rules     abre a GUI ao parear o controle (BT)\n\n'
 
         ask_yn "instalar agora com sudo?" "${AUTO_YES}"
         if [[ "${REPLY,,}" =~ ^y ]]; then
