@@ -29,7 +29,7 @@ def fake_repo(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
 
     # Estrutura mínima que o script espera
     (tmp_path / "scripts").mkdir()
-    (tmp_path / "src" / "hefesto").mkdir(parents=True)
+    (tmp_path / "src" / "hefesto_dualsense4unix").mkdir(parents=True)
     (tmp_path / "tests").mkdir()
     (tmp_path / "docs" / "process").mkdir(parents=True)
 
@@ -55,32 +55,32 @@ def run_check(repo: Path) -> subprocess.CompletedProcess[str]:
 # =============================================================================
 
 def test_detecta_termo_obvio_em_py(fake_repo: Path) -> None:
-    (fake_repo / "src/hefesto/modulo.py").write_text("# escrito por claude\n")
+    (fake_repo / "src/hefesto_dualsense4unix/modulo.py").write_text("# escrito por claude\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
     assert "ANONIMATO VIOLADO" in result.stdout
 
 
 def test_detecta_assinatura_pt(fake_repo: Path) -> None:
-    (fake_repo / "src/hefesto/a.py").write_text("# feito por fulano\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# feito por fulano\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
 
 
 def test_detecta_assinatura_en(fake_repo: Path) -> None:
-    (fake_repo / "src/hefesto/a.py").write_text("# written by someone\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# written by someone\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
 
 
 def test_detecta_gpt_com_versao(fake_repo: Path) -> None:
-    (fake_repo / "src/hefesto/a.py").write_text("# powered by gpt-4\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# powered by gpt-4\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
 
 
 def test_detecta_llama_com_versao(fake_repo: Path) -> None:
-    (fake_repo / "src/hefesto/a.py").write_text("# uses Llama 3\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# uses Llama 3\n")
     result = run_check(fake_repo)
     assert result.returncode == 1
 
@@ -142,7 +142,7 @@ def test_ignora_tests_fixtures(fake_repo: Path) -> None:
 
 def test_nao_falsa_em_palavra_model(fake_repo: Path) -> None:
     """'model' é palavra genérica — não deve casar com regex de modelos de IA."""
-    (fake_repo / "src/hefesto/a.py").write_text(
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
         "model_name = 'DualSense'\n"
         "def build_model(params): pass\n"
     )
@@ -152,7 +152,7 @@ def test_nao_falsa_em_palavra_model(fake_repo: Path) -> None:
 
 def test_nao_falsa_em_llama_cpp(fake_repo: Path) -> None:
     """Regex exige dígito após llama: 'llama-cpp' não casa, 'Llama 3' sim."""
-    (fake_repo / "src/hefesto/a.py").write_text(
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
         "# integra com llama-cpp-python se disponível\n"
     )
     result = run_check(fake_repo)
@@ -166,14 +166,14 @@ def test_nao_falsa_em_magnum_opus(fake_repo: Path) -> None:
     mover pra whitelist de arquivo ou reformular. Este teste documenta
     o comportamento atual: opus isolado disparar.
     """
-    (fake_repo / "src/hefesto/a.py").write_text("# opus\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# opus\n")
     result = run_check(fake_repo)
     assert result.returncode == 1  # comportamento esperado atual
 
 
 def test_nao_falsa_em_termos_tecnicos_en(fake_repo: Path) -> None:
     """Termos EN técnicos preservados pela convenção de idioma não disparam."""
-    (fake_repo / "src/hefesto/a.py").write_text(
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
         'logger.error("falha ao ler hidraw: Permission denied")\n'
         'logger.warn("pacote UDP descartado: version desconhecida")\n'
     )
@@ -208,7 +208,7 @@ def test_funciona_com_git_grep(fake_repo: Path) -> None:
         cwd=fake_repo, check=True, capture_output=True,
     )
 
-    (fake_repo / "src/hefesto/a.py").write_text("# código limpo\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# código limpo\n")
     subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
 
     result = run_check(fake_repo)
@@ -227,7 +227,7 @@ def test_git_grep_detecta_violacao_rastreada(fake_repo: Path) -> None:
         cwd=fake_repo, check=True, capture_output=True,
     )
 
-    (fake_repo / "src/hefesto/a.py").write_text("# by claude\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# by claude\n")
     subprocess.run(["git", "add", "."], cwd=fake_repo, check=True, capture_output=True)
 
     result = run_check(fake_repo)

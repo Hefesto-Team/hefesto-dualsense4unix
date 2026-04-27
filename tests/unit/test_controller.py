@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.core.controller import (
+from hefesto_dualsense4unix.core.controller import (
     ControllerState,
     IController,
     TriggerEffect,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 class TestTriggerEffect:
@@ -118,12 +118,12 @@ class TestPyDualSenseController:
     """
 
     def test_class_implements_interface(self) -> None:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         inst = PyDualSenseController()
         assert isinstance(inst, IController)
 
     def test_require_sem_connect_falha(self) -> None:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         inst = PyDualSenseController()
         with pytest.raises(RuntimeError, match="não inicializado"):
             inst.read_state()
@@ -131,21 +131,21 @@ class TestPyDualSenseController:
     def test_coerce_mode_conhecido(self) -> None:
         from pydualsense.enums import TriggerModes
 
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         coerced = PyDualSenseController._coerce_mode(TriggerModes.Rigid.value)
         assert coerced == TriggerModes.Rigid
 
     def test_coerce_mode_invalido_mantem_raw(self) -> None:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         coerced = PyDualSenseController._coerce_mode(0x99)
         assert coerced == 0x99
 
     def test_read_state_usa_analog_trigger_values(self) -> None:
         """HOTFIX-1: trigger analog vem de L2_value/R2_value, não L2/R2."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
-        from hefesto.core.evdev_reader import EvdevReader
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
         class FakeState:
             L2 = False
@@ -181,8 +181,8 @@ class TestPyDualSenseController:
 
     def test_read_state_battery_zerado_quando_ausente(self) -> None:
         """Se ds.battery ausente ou Level None, retorna 0 sem explodir."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
-        from hefesto.core.evdev_reader import EvdevReader
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
         class FakeState:
             L2_value = 0
@@ -208,7 +208,7 @@ class TestPyDualSenseController:
 
     def test_is_connected_false_quando_disconnected_prop(self) -> None:
         """HOTFIX-1: is_connected usa ds.connected, não conType."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         class FakeDs:
             connected = False
@@ -218,7 +218,7 @@ class TestPyDualSenseController:
         assert inst.is_connected() is False
 
     def test_is_connected_true_quando_connected_prop(self) -> None:
-        from hefesto.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
         class FakeDs:
             connected = True
@@ -229,8 +229,8 @@ class TestPyDualSenseController:
 
     def test_read_state_usa_evdev_quando_disponivel(self) -> None:
         """HOTFIX-2: se evdev tem device, backend le dele (não do pydualsense)."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
-        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
 
         class FakeState:
             # Valores pydualsense — Não devem aparecer no resultado
@@ -279,8 +279,8 @@ class TestPyDualSenseController:
 
     def test_read_state_includes_mic_btn_when_hid_bit_set(self) -> None:
         """Quando ds.state.micBtn=True, 'mic_btn' aparece em buttons_pressed (INFRA-MIC-HID-01)."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
-        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
 
         class FakeStateMic:
             L2_value = 0
@@ -327,8 +327,8 @@ class TestPyDualSenseController:
 
     def test_read_state_mic_btn_false_when_hid_bit_clear(self) -> None:
         """Quando ds.state.micBtn=False, 'mic_btn' NÃO aparece em buttons_pressed."""
-        from hefesto.core.backend_pydualsense import PyDualSenseController
-        from hefesto.core.evdev_reader import EvdevReader, EvdevSnapshot
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
 
         class FakeStateNoMic:
             L2_value = 0

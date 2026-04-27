@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from hefesto.daemon.subsystems.udp import UdpSubsystem, stop_udp
+from hefesto_dualsense4unix.daemon.subsystems.udp import UdpSubsystem, stop_udp
 
 
 class TestUdpSubsystem:

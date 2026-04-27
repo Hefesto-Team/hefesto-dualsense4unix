@@ -16,9 +16,9 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from hefesto.app.actions.footer_actions import FROZEN_WIDGET_IDS, FooterActionsMixin
-from hefesto.app.draft_config import DraftConfig
-from hefesto.profiles.schema import MatchAny, Profile
+from hefesto_dualsense4unix.app.actions.footer_actions import FROZEN_WIDGET_IDS, FooterActionsMixin
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -102,7 +102,7 @@ class TestOnApplyDraft:
             on_success(True)
 
         with patch(
-            "hefesto.app.actions.footer_actions.ipc_bridge"
+            "hefesto_dualsense4unix.app.actions.footer_actions.ipc_bridge"
         ) as mock_ipc:
             mock_ipc.call_async.side_effect = fake_call_async
             stub.on_apply_draft()
@@ -121,7 +121,7 @@ class TestOnApplyDraft:
         def fake_call_async(method, params, on_success, on_failure=None, timeout_s=1.5):
             on_success({"status": "ok"})
 
-        with patch("hefesto.app.actions.footer_actions.ipc_bridge") as mock_ipc:
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.ipc_bridge") as mock_ipc:
             mock_ipc.call_async.side_effect = fake_call_async
             stub.on_apply_draft()
 
@@ -139,7 +139,7 @@ class TestOnApplyDraft:
             if on_failure is not None:
                 on_failure(ConnectionError("daemon offline"))
 
-        with patch("hefesto.app.actions.footer_actions.ipc_bridge") as mock_ipc:
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.ipc_bridge") as mock_ipc:
             mock_ipc.call_async.side_effect = fake_call_async
             stub.on_apply_draft()
 
@@ -165,9 +165,9 @@ class TestOnSaveProfile:
         mock_dialogs.prompt_overwrite_existing.return_value = True
 
         with (
-            patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs),
-            patch("hefesto.app.actions.footer_actions.load_all_profiles", return_value=[]),
-            patch("hefesto.app.actions.footer_actions.save_profile", side_effect=fake_save),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles", return_value=[]),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 
@@ -181,8 +181,8 @@ class TestOnSaveProfile:
         mock_dialogs.prompt_profile_name.return_value = None
 
         with (
-            patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs),
-            patch("hefesto.app.actions.footer_actions.save_profile") as mock_save,
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
         ):
             stub.on_save_profile()
             assert not mock_save.called
@@ -196,12 +196,12 @@ class TestOnSaveProfile:
         mock_dialogs.prompt_overwrite_existing.return_value = False
 
         with (
-            patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
             patch(
-                "hefesto.app.actions.footer_actions.load_all_profiles",
+                "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
                 return_value=[perfil_existente],
             ),
-            patch("hefesto.app.actions.footer_actions.save_profile") as mock_save,
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
         ):
             stub.on_save_profile()
             assert not mock_save.called
@@ -217,9 +217,9 @@ class TestOnSaveProfile:
         mock_dialogs.prompt_overwrite_existing.return_value = True
 
         with (
-            patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs),
-            patch("hefesto.app.actions.footer_actions.load_all_profiles", return_value=[]),
-            patch("hefesto.app.actions.footer_actions.save_profile", side_effect=fake_save),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles", return_value=[]),  # noqa: E501
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
         ):
             stub.on_save_profile()
 

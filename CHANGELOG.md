@@ -5,6 +5,56 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-04-27
+
+Major release de **rebrand**: o projeto deixa de se chamar `Hefesto` e passa a se chamar `Hefesto - Dualsense4Unix`. Mudança ampla cobrindo display brand (títulos, README, MD), identificadores de código (módulo Python, comando CLI, app-id, service systemd, env vars, paths runtime) e packaging.
+
+### Quebrando compatibilidade
+
+- **Pacote PyPI:** `hefesto` → `hefesto-dualsense4unix`. Não há migração automática; usuários precisam reinstalar via `pip install hefesto-dualsense4unix` (ou rodar `./install.sh` no clone).
+- **Comando CLI:** `hefesto` → `hefesto-dualsense4unix` (e `hefesto-gui` → `hefesto-dualsense4unix-gui`). Quem rodava `./uninstall.sh && ./install.sh` re-instala o binário com nome novo.
+- **Módulo Python:** `import hefesto` → `import hefesto_dualsense4unix`. Plugins externos precisam atualizar imports.
+- **Service systemd:** `hefesto.service` → `hefesto-dualsense4unix.service`. `./uninstall.sh` (versão 2.x) seguido de `./install.sh` (versão 3.0) cuida da migração — ou manualmente `systemctl --user disable hefesto.service` antes do upgrade.
+- **Env vars:** `HEFESTO_FAKE`, `HEFESTO_LOG_FORMAT`, `HEFESTO_PLUGINS_DIR`, etc → `HEFESTO_DUALSENSE4UNIX_*` (mesmo sufixo, prefixo expandido).
+- **Paths runtime:** `~/.config/hefesto/` → `~/.config/hefesto-dualsense4unix/`; `~/.local/share/hefesto/glyphs/` → `~/.local/share/hefesto-dualsense4unix/glyphs/`; `$XDG_RUNTIME_DIR/hefesto/` → `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`. Configs e perfis pré-existentes precisam ser movidos manualmente (`mv ~/.config/hefesto ~/.config/hefesto-dualsense4unix`).
+- **Window class X11:** `Hefesto` → `Hefesto-Dualsense4Unix`. Perfis de auto-switch que matchavam `window_class="Hefesto"` precisam atualizar.
+- **Ícones e .desktop:** todos os assets `Hefesto.{png,svg,desktop}` viraram `Hefesto-Dualsense4Unix.{png,svg,desktop}`.
+
+### Preservado (sem mudança)
+
+- **App-id Flatpak:** `br.andrefarias.Hefesto` permanece (já é composite com qualificador `br.andrefarias.`); o Flatpak instalado continua sendo o mesmo, só o `command:` interno aponta pra `hefesto-dualsense4unix-gui`.
+- **Repositório GitHub:** `AndreBFarias/hefesto` mantém URL atual; `git clone` segue funcionando com o nome antigo.
+- **Documentação histórica:** sprints (`docs/process/sprints/`), ADRs (`docs/adr/`), audits, discoveries e o `HEFESTO_PROJECT.md` original (`docs/process/`) ficaram intactos — registro do que foi decidido quando ainda se chamava só "Hefesto".
+
+### Mudou
+
+- Display brand em todos os pontos vivos: título da janela GTK, banner da TUI Textual, headers do README, descrição em `pyproject.toml`, mensagens de instalação/desinstalação, comentários e docstrings em código novo.
+- Pasta de desenvolvimento: `Hefesto-DualSense_Unix` → `Hefesto-Dualsense4Unix` (sem espaços, hífen único).
+- Validação programática verde: 1286 unit tests pass, mypy strict zero, ruff zero issues.
+- Validação visual: GUI sobe com título correto `Hefesto - Dualsense4Unix`, screenshot capturado em `/tmp/hefesto-dualsense4unix_gui_main_*.png`.
+- README ganha seção **"Layout das abas (GUI GTK3)"** descrevendo cada uma das 10 abas (Status, Gatilhos, Lightbar, Rumble, Perfis, Daemon, Emulação, Mouse, Teclado, Firmware) e seus controles.
+
+### Como migrar (TL;DR)
+
+```bash
+# 1. parar e desinstalar a versão antiga
+cd ~/Desenvolvimento/Hefesto-DualSense_Unix  # nome antigo
+./uninstall.sh
+
+# 2. (se você usa essa estrutura local) renomeie a pasta
+cd ..
+mv Hefesto-DualSense_Unix Hefesto-Dualsense4Unix
+
+# 3. fazer pull e reinstalar
+cd Hefesto-Dualsense4Unix
+git pull origin main
+./install.sh
+
+# 4. mover config e dados (uma vez)
+mv ~/.config/hefesto ~/.config/hefesto-dualsense4unix 2>/dev/null || true
+mv ~/.local/share/hefesto ~/.local/share/hefesto-dualsense4unix 2>/dev/null || true
+```
+
 ## [2.3.0] — 2026-04-24
 
 Minor release com o marco **keyboard feature** completo para DualSense no
@@ -19,7 +69,7 @@ via workflow `release.yml` no push da tag.
 ### Adicionado
 - **Aba "Mouse e Teclado" com editor de key bindings**
   (FEAT-KEYBOARD-UI-01, sprint 59.3): nova classe `InputActionsMixin`
-  (subclasse de `MouseActionsMixin`) em `src/hefesto/app/actions/input_actions.py`
+  (subclasse de `MouseActionsMixin`) em `src/hefesto_dualsense4unix/app/actions/input_actions.py`
   entrega TreeView CRUD (Adicionar/Remover/Restaurar defaults) para
   `key_bindings` do perfil ativo, com legenda documentando formato
   `KEY_*` e tokens virtuais `__*__`. Tab no `main.glade` renomeada de
@@ -45,7 +95,7 @@ via workflow `release.yml` no push da tag.
   regiões `touchpad_{left,middle,right}_press` → `KEY_BACKSPACE/ENTER/DELETE`.
   `dispatch_keyboard` mescla `TouchpadReader.regions_pressed()` (infra
   da sprint 83) ao frozenset de botões antes do device dispatch.
-  `_start_touchpad_reader` pula em `HEFESTO_FAKE=1` (evita probing lento
+  `_start_touchpad_reader` pula em `HEFESTO_DUALSENSE4UNIX_FAKE=1` (evita probing lento
   de evdev em testes); conftest autouse garante flag nos unit tests.
   17 testes novos cobrem: tokens + OSK spawn + fallback wvkbd + touchpad
   merge + exception safety.
@@ -91,7 +141,7 @@ via workflow `release.yml` no push da tag.
 Patch release pós-v2.2.1. Corrige o bug que obrigou upload manual na
 release anterior (`deb-install-smoke` falhando por pydantic v1 no apt
 de Jammy/Noble) e blinda o pipeline com um gate que detecta drift
-entre o fallback hardcoded de `src/hefesto/__init__.py` e a versão
+entre o fallback hardcoded de `src/hefesto_dualsense4unix/__init__.py` e a versão
 canônica em `pyproject.toml`. Objetivo substantivo: v2.2.2 é o
 **primeiro release totalmente automático desde v0.1.0** — zero
 intervenção humana após `git push --tags`.
@@ -104,7 +154,7 @@ intervenção humana após `git push --tags`.
   enquanto Ubuntu 22.04 apt entrega `python3-structlog 21.x` (só
   `structlog.types`). Fix em 2 camadas: compat layer `try: from
   structlog.typing import Processor / except ImportError: from
-  structlog.types import Processor` em `src/hefesto/utils/logging_config.py`
+  structlog.types import Processor` em `src/hefesto_dualsense4unix/utils/logging_config.py`
   (usa `TYPE_CHECKING` para satisfazer mypy) e version constraint
   `python3-structlog (>= 21.5)` em `packaging/debian/control`. Teste
   novo `tests/unit/test_logging_compat_import.py` cobre os dois
@@ -120,13 +170,13 @@ intervenção humana após `git push --tags`.
   exigindo upload manual do release. Fix em 3 camadas:
   - `packaging/debian/control` declara `python3-pydantic` sem constraint
     de versão (apt resolve com a 1.x do sistema, sem erro).
-  - `src/hefesto/__init__.py` detecta pydantic < 2 no import e emite
+  - `src/hefesto_dualsense4unix/__init__.py` detecta pydantic < 2 no import e emite
     `ImportWarning` com instrução acionável (`pip install --user
     'pydantic>=2'`).
   - `.github/workflows/release.yml` `deb-install-smoke` volta para
     `ubuntu-22.04` (mesmo runner do build) e adiciona passo `pip
     install --user 'pydantic>=2.0'` antes do `apt install`; o
-    `hefesto --version` roda com `PYTHONPATH` apontando para o user
+    `hefesto-dualsense4unix --version` roda com `PYTHONPATH` apontando para o user
     site primeiro, garantindo que `import pydantic` resolva a v2.
   README atualizado com o novo caminho canônico (2 comandos:
   `pip install --user pydantic>=2` + `apt install ./hefesto_*.deb`).
@@ -134,7 +184,7 @@ intervenção humana após `git push --tags`.
 ### Infraestrutura
 - **Gate `version-sync` no CI** (CHORE-VERSION-SYNC-GATE-01): novo job
   em `.github/workflows/ci.yml` que falha se o fallback `__version__`
-  de `src/hefesto/__init__.py` divergir de `pyproject.toml
+  de `src/hefesto_dualsense4unix/__init__.py` divergir de `pyproject.toml
   [project].version`. Regex inline (tomllib + re.search) — YAGNI parser
   AST. Motivação: BUG-APPIMAGE-VERSION-NAME-01 revelou que o fallback
   ficou hardcoded em "1.0.0" por 3 releases enquanto `pyproject`
@@ -193,7 +243,7 @@ colaterais, zero regressão.
   botões da aba Firmware (Verificar versão / Selecionar .bin /
   Aplicar firmware) estavam definidos no glade e no mixin, mas
   nunca conectados — o método `_signal_handlers()` em
-  `src/hefesto/app/app.py` é declarativo e não foi estendido junto
+  `src/hefesto_dualsense4unix/app/app.py` é declarativo e não foi estendido junto
   com a 70.2. Ao rodar `./run.sh --gui`, `Gtk.Builder` emitia
   `AttributeError: Handler on_firmware_* not found` e os botões
   ficavam mortos. Entradas adicionadas ao dict.
@@ -227,7 +277,7 @@ colaterais, zero regressão.
 ### Corrigido
 - **`.deb` falhava ao instalar em Ubuntu 22.04** (BUG-DEB-PYDANTIC-V2-UBUNTU-22-01):
   o `python3-pydantic` do apt em Jammy é versão **1.9.x**, incompatível
-  com o código do Hefesto (usa API pydantic v2 — `ConfigDict`). O
+  com o código do Hefesto - Dualsense4Unix (usa API pydantic v2 — `ConfigDict`). O
   `apt install ./hefesto_*.deb` falhava silenciosamente em cadeia com
   `ImportError: cannot import name 'ConfigDict' from 'pydantic'`.
   Fix: `packaging/debian/control` declara `python3-pydantic (>= 2.0)`
@@ -239,12 +289,12 @@ colaterais, zero regressão.
   `.deb` continua buildado em `ubuntu-22.04` para compat máxima de libs.
 
 - **Versão reportada errada em CLI/TUI/AppImage** (BUG-APPIMAGE-VERSION-NAME-01):
-  `src/hefesto/__init__.py` tinha `__version__ = "1.0.0"` hardcoded por
-  ~3 releases, afetando `hefesto version`, título/subtítulo da TUI,
+  `src/hefesto_dualsense4unix/__init__.py` tinha `__version__ = "1.0.0"` hardcoded por
+  ~3 releases, afetando `hefesto-dualsense4unix version`, título/subtítulo da TUI,
   nome do asset AppImage no GitHub Release (v2.2.0 saiu como
-  `Hefesto-1.0.0-x86_64.AppImage`) e validação do teste `test_cli`.
+  `Hefesto-Dualsense4Unix-1.0.0-x86_64.AppImage`) e validação do teste `test_cli`.
   Fix: `__version__` passa a ser lido dinamicamente via
-  `importlib.metadata.version("hefesto")` com fallback hardcoded
+  `importlib.metadata.version("hefesto-dualsense4unix")` com fallback hardcoded
   sincronizado ao `pyproject.toml`. `scripts/build_appimage.sh`
   alinhado ao padrão de `build_deb.sh` (lê `pyproject.toml` direto,
   sem depender do pacote estar importável). Regressão futura coberta
@@ -254,7 +304,7 @@ colaterais, zero regressão.
 - **Aba Firmware na GUI** (FEAT-FIRMWARE-UPDATE-GUI-01):
   nova aba permite consultar versão atual do firmware do DualSense e
   aplicar blob oficial da Sony via wrapper `dualsensectl`. Backend em
-  `src/hefesto/integrations/firmware_updater.py` invoca `dualsensectl
+  `src/hefesto_dualsense4unix/integrations/firmware_updater.py` invoca `dualsensectl
   info`/`update` em thread worker com callbacks `GLib.idle_add`; UI
   mostra banner de risco, versão atual, seletor de `.bin`, barra de
   progresso e diálogo de confirmação modal. 17 testes unit com mocks
@@ -278,7 +328,7 @@ tag que publica `.deb`, `.AppImage` e `.flatpak` no GitHub Release
 - **CI release gate** (BUG-CI-RELEASE-MYPY-GATE-01 + CHORE-MYPY-CLEANUP-V22-01):
   `release.yml` deixou de abortar em `mypy`; 41 errors pré-existentes
   fechados; `ci.yml` ganha job `typecheck` como gate rígido. A partir
-  desta versão, qualquer PR/push que regride `mypy src/hefesto` quebra
+  desta versão, qualquer PR/push que regride `mypy src/hefesto_dualsense4unix` quebra
   o workflow.
 - **Flatpak bundle no GitHub release** (FEAT-CI-RELEASE-FLATPAK-ATTACH-01):
   `release.yml` ganha job `flatpak` e `github-release` passa a anexar
@@ -421,7 +471,7 @@ Sem quebras; tudo retrocompatível com v2.0.0.
   preserva `docs/history`, `docs/research`, `LICENSE`, fixtures
   ASCII intencionais. Bloqueia commits com PT-BR sem acento.
 - **Separação slug × display em perfis** (PROFILE-SLUG-SEPARATION-01):
-  novo módulo `src/hefesto/profiles/slug.py` com `slugify()`
+  novo módulo `src/hefesto_dualsense4unix/profiles/slug.py` com `slugify()`
   (normalização NFKD). `save_profile` grava filename ASCII derivado
   do `name` acentuado; `load_profile` faz busca adaptativa em 3
   camadas (direto → slug → scan). Corrige bug latente onde perfis
@@ -436,7 +486,7 @@ Sem quebras; tudo retrocompatível com v2.0.0.
   sem mudança (fallback intocado por estabilidade).
 - **Smoke test de .deb no CI** (SMOKE-DEB-INSTALL-CI-01): job
   `deb-install-smoke` em `release.yml` instala `.deb` real via
-  `apt install`, valida `hefesto --version` e `hefesto-gui --help`,
+  `apt install`, valida `hefesto-dualsense4unix --version` e `hefesto-dualsense4unix-gui --help`,
   desinstala para validar postrm. Bloqueia release em tag push se
   instalação falhar.
 - **Smoke test de Flatpak no CI** (SMOKE-FLATPAK-BUILD-CI-01):
@@ -525,7 +575,7 @@ endpoint Prometheus opt-in, sistema de plugins Python.
   - `IController.set_mic_led(muted)` abstrato; backend usa
     `ds.audio.setMicrophoneLED`. `apply_led_settings` propaga
     `settings.mic_led` (resolve débito documentado em led_control.py).
-  - `src/hefesto/integrations/audio_control.py`: `AudioControl`
+  - `src/hefesto_dualsense4unix/integrations/audio_control.py`: `AudioControl`
     auto-detecta wpctl → pactl → none; debounce 200ms; nunca
     `shell=True`; toggle retorna novo estado.
   - `Daemon._start_mic_hotkey` subscribe em BUTTON_DOWN, filtra mic_btn,
@@ -533,10 +583,10 @@ endpoint Prometheus opt-in, sistema de plugins Python.
     Dupla sincronização: LED do controle espelha mute do sistema.
   - Opt-out via `DaemonConfig.mic_button_toggles_system: bool = True`.
 - **Daemon refatorado em subsystems modulares** (REFACTOR-LIFECYCLE-01):
-  - `src/hefesto/daemon/subsystems/`: 10 módulos temáticos
+  - `src/hefesto_dualsense4unix/daemon/subsystems/`: 10 módulos temáticos
     (poll, ipc, udp, autoswitch, mouse, rumble, hotkey, metrics,
     plugins, connection).
-  - `src/hefesto/daemon/context.py`: `DaemonContext` dataclass
+  - `src/hefesto_dualsense4unix/daemon/context.py`: `DaemonContext` dataclass
     compartilhado (controller, bus, store, config, executor).
   - `base.py`: Protocol `Subsystem(name, start, stop, is_enabled)`.
   - `lifecycle.py`: 677L → 365L. Backcompat total — 820 testes antigos
@@ -553,14 +603,14 @@ endpoint Prometheus opt-in, sistema de plugins Python.
   - `DaemonConfig.metrics_enabled/port`. ADR-016 + `docs/usage/metrics.md`
     com scrape config Prometheus + exemplo Grafana.
 - **Sistema de plugins Python** (FEAT-PLUGIN-01):
-  - `src/hefesto/plugin_api/`: ABC `Plugin` com hooks on_load/on_tick/
+  - `src/hefesto_dualsense4unix/plugin_api/`: ABC `Plugin` com hooks on_load/on_tick/
     on_button_down/on_battery_change/on_profile_change/on_unload
     (defaults no-op). `PluginContext` expõe controller + bus.subscribe
     + store.counter + log prefixado.
   - `load_plugins_from_dir` via `importlib.util` — skip ImportError.
-  - `PluginsSubsystem` carrega de `~/.config/hefesto/plugins/*.py`.
+  - `PluginsSubsystem` carrega de `~/.config/hefesto-dualsense4unix/plugins/*.py`.
   - Watchdog: hook >5ms loga warning; >3 violações seguidas desativa.
-  - CLI `hefesto plugin list/reload`. IPC handlers `plugin.list` e
+  - CLI `hefesto-dualsense4unix plugin list/reload`. IPC handlers `plugin.list` e
     `plugin.reload`.
   - Opt-in via `DaemonConfig.plugins_enabled`. Plugins user-owned —
     documentação deixa explícito que usuário é responsável (sem sandbox).
@@ -598,7 +648,7 @@ consolidadas sobre v1.1.0.
 - **Auto-abertura da GUI ao parear via Bluetooth**
   (FEAT-HOTPLUG-BT-01): regra udev `74-ps5-controller-hotplug-bt.rules`
   observa `SUBSYSTEM=="hidraw" KERNELS=="0005:054C:0CE6.*"` (BUS_BLUETOOTH
-  + DualSense/Edge). Reusa `hefesto-gui-hotplug.service` — idempotência
+  + DualSense/Edge). Reusa `hefesto-dualsense4unix-gui-hotplug.service` — idempotência
   garantida pelo single-instance da GUI.
 - **Backends de detecção de janela** (FEAT-COSMIC-WAYLAND-01):
   `window_backends/xlib.py`, `wayland_portal.py` (D-Bus
@@ -638,7 +688,7 @@ por posição e política global de rumble com modo Auto dinâmico por bateria.
 ### Adicionado
 - **Tema Drácula global** via `Gtk.CssProvider` (UI-THEME-BORDERS-PURPLE-01):
   bordas roxas `#bd93f9` nos widgets interativos, hover pink, focus cyan,
-  cards `.hefesto-card` com fundo `#21222c`.
+  cards `.hefesto-dualsense4unix-card` com fundo `#21222c`.
 - **19 ButtonGlyph SVGs originais** (FEAT-BUTTON-SVG-01) em `assets/glyphs/`:
   4 face + 4 dpad + 4 triggers + 4 system (sem logo Sony) + 2 sticks + mic.
   Widget `ButtonGlyph(GtkDrawingArea)` + mapa `BUTTON_GLYPH_LABELS` PT-BR.
@@ -707,8 +757,8 @@ por posição e política global de rumble com modo Auto dinâmico por bateria.
 - **Módulo `single_instance`**: `acquire_or_takeover(name)` via `fcntl.flock` + SIGTERM(2s)→SIGKILL. Daemon e GUI passam a ser mutuamente exclusivos (modelo "última vence" no daemon). Previne 2+ instâncias criando `UinputMouseDevice` concorrentes (causa do bug "cursor voando" reportado pelo usuário).
 - `install.sh`: flags `--enable-autostart` e `--enable-hotplug-gui`. Prompts interativos com default **NÃO** para ambos. Opt-in explícito elimina comportamento invasivo padrão.
 - `uninstall.sh`: `pkill -TERM` → `pkill -KILL` residual após `systemctl stop` — zero processo órfão.
-- `assets/hefesto.service`: `SuccessExitStatus=143 SIGTERM` (takeover não dispara respawn), `StartLimitIntervalSec=30 StartLimitBurst=3` (teto anti-loop).
-- `HefestoApp.quit_app`: menu "Sair" do tray agora encerra daemon junto (`systemctl --user stop hefesto.service`).
+- `assets/hefesto-dualsense4unix.service`: `SuccessExitStatus=143 SIGTERM` (takeover não dispara respawn), `StartLimitIntervalSec=30 StartLimitBurst=3` (teto anti-loop).
+- `HefestoApp.quit_app`: menu "Sair" do tray agora encerra daemon junto (`systemctl --user stop hefesto-dualsense4unix.service`).
 
 ### Corrigido (2026-04-22)
 - **Cursor "voando" ao ativar aba Mouse**: causado por 2 daemons concorrentes criando 2 `UinputMouseDevice` separados que disputavam stick do DualSense via evdev e emitiam REL_X/REL_Y em paralelo. Fix via single-instance takeover.
@@ -735,23 +785,23 @@ por posição e política global de rumble com modo Auto dinâmico por bateria.
 Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com DualSense real via HID híbrido (pydualsense + evdev). 10 sprints de endurecimento e polimento sobre a 0.1.0.
 
 ### Adicionado
-- **GUI GTK3 com banner visual**: logo circular (martelo + circuito tech) no canto superior-esquerdo, wordmark "Hefesto" em xx-large bold, subtitle "daemon de gatilhos adaptativos para DualSense". Janela com título `Hefesto - DSX para Unix`.
-- **Reconnect automático na GUI**: máquina de 3 estados (`Online` / `Reconectando` / `Offline`) com polling IPC em thread worker, absorvendo restarts curtos do daemon sem flicker. Botão "Reiniciar Daemon" na aba Daemon dispara `systemctl --user restart hefesto.service` via subprocess assíncrono. Ver ADR-012.
+- **GUI GTK3 com banner visual**: logo circular (martelo + circuito tech) no canto superior-esquerdo, wordmark "Hefesto - Dualsense4Unix" em xx-large bold, subtitle "daemon de gatilhos adaptativos para DualSense". Janela com título `Hefesto - Dualsense4Unix`.
+- **Reconnect automático na GUI**: máquina de 3 estados (`Online` / `Reconectando` / `Offline`) com polling IPC em thread worker, absorvendo restarts curtos do daemon sem flicker. Botão "Reiniciar Daemon" na aba Daemon dispara `systemctl --user restart hefesto-dualsense4unix.service` via subprocess assíncrono. Ver ADR-012.
 - **Aba Mouse**: emulação mouse+teclado opt-in via `uinput` — Cross/L2 → BTN_LEFT, Triangle/R2 → BTN_RIGHT, D-pad → KEY_UP/DOWN/LEFT/RIGHT, analógico esquerdo → movimento com deadzone 20/128 e escala configurável, analógico direito → REL_WHEEL/REL_HWHEEL com rate-limit 50ms, R3 → BTN_MIDDLE. Toggle default OFF, sliders de velocidade na GUI.
 - **Regra udev USB autosuspend**: `assets/72-ps5-controller-autosuspend.rules` força `power/control=on` e `autosuspend_delay_ms=-1` para `054c:0ce6` e `054c:0df2`. Elimina desconexão transiente do DualSense no Pop!_OS / Ubuntu / Fedora. Ver ADR-013.
-- **`install.sh` orquestrado**: instalação completa em passada única — deps do sistema, venv, pacote editável, udev rules (com prompt interativo de sudo), `.desktop` + ícone + launcher desanexado, symlink `~/.local/bin/hefesto`, unit systemd `--user`, start automático do daemon. Flags `--no-udev`, `--no-systemd`, `--yes`, `--help`.
+- **`install.sh` orquestrado**: instalação completa em passada única — deps do sistema, venv, pacote editável, udev rules (com prompt interativo de sudo), `.desktop` + ícone + launcher desanexado, symlink `~/.local/bin/hefesto-dualsense4unix`, unit systemd `--user`, start automático do daemon. Flags `--no-udev`, `--no-systemd`, `--yes`, `--help`.
 - **4 ADRs novos** (010–013) cobrindo socket IPC liveness probe, distinção glyphs vs emojis, máquina de reconnect, USB autosuspend.
 - **Polish consistente de UI PT-BR**: Title Case em status (`Conectado Via USB`, `Tentando Reconectar...`, `Daemon Offline`, `Controle Desconectado`). Botões em português (`Iniciar`, `Parar`, `Reiniciar`, `Atualizar`, `Ver Logs`). Acentuação completa em labels visíveis. Siglas USB/BT/IPC/UDP preservadas em maiúsculas.
 
 ### Corrigido
-- **Socket IPC com unlink cego** (crítico): `IpcServer.start()` agora faz liveness probe com timeout 0.1s antes de deletar o socket; `stop()` respeita `st_ino` registrado no start (soberania de subsistema, meta-regra 9.3). Smoke isolado via env var `HEFESTO_IPC_SOCKET_NAME=hefesto-smoke.sock`. Ver ADR-010.
+- **Socket IPC com unlink cego** (crítico): `IpcServer.start()` agora faz liveness probe com timeout 0.1s antes de deletar o socket; `stop()` respeita `st_ino` registrado no start (soberania de subsistema, meta-regra 9.3). Smoke isolado via env var `HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME=hefesto-dualsense4unix-smoke.sock`. Ver ADR-010.
 - **AssertionError ruidoso em `udp_server.connection_made`**: assert gratuito contra `asyncio.DatagramTransport` removido (Python 3.10 entrega `_SelectorDatagramTransport` que não passa isinstance público). Journal limpo em cada startup.
 - **GUI congelava com daemon lento ou offline**: `asyncio.run()` síncrono a 20 Hz na thread GTK bloqueava a janela. Migração para `ThreadPoolExecutor` com callbacks via `GLib.idle_add`; `LIVE_POLL_INTERVAL_MS = 100` (10 Hz); timeout de 250ms no `open_unix_connection`. Janela permanece responsiva mesmo com IPC morto.
-- **Dualidade `hefesto.service` / `hefesto-headless.service` removida**: unit única. Dropdown da aba Daemon virou label estática `Unit: hefesto.service`. API singular `detect_installed_unit()`.
+- **Dualidade `hefesto-dualsense4unix.service` / `hefesto-dualsense4unix-headless.service` removida**: unit única. Dropdown da aba Daemon virou label estática `Unit: hefesto-dualsense4unix.service`. API singular `detect_installed_unit()`.
 - **Glyphs Unicode de estado preservados**: `●` (U+25CF), `○` (U+25CB), `▮`/`▯` (U+25AE/U+25AF), `◐` (U+25D0) são UI textual funcional, não emojis. Distinção formalizada em ADR-011.
 
 ### Modificado
-- **Novo ícone canônico** (`assets/appimage/Hefesto.png`): martelo + placa de circuito, gradiente teal→magenta. Cache GTK `hicolor` populado em 9 tamanhos (16 a 512 px) pelo `install.sh`.
+- **Novo ícone canônico** (`assets/appimage/Hefesto-Dualsense4Unix.png`): martelo + placa de circuito, gradiente teal→magenta. Cache GTK `hicolor` populado em 9 tamanhos (16 a 512 px) pelo `install.sh`.
 - **`VALIDATOR_BRIEF.md`** criado na raiz com invariantes, contratos de runtime e registro das armadilhas A-01 a A-06 descobertas durante esta onda.
 
 ### Diagnósticos
@@ -773,13 +823,13 @@ Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com D
 - **EventBus pubsub** com `asyncio.Queue` por subscriber, drop-oldest em overflow, thread-safe via `call_soon_threadsafe`.
 - **StateStore** thread-safe com `RLock`, snapshot imutável, contadores.
 - **Profile schema v1** com pydantic v2 (`MatchCriteria` AND/OR, `MatchAny` sentinel), loader atômico com `filelock`, `ProfileManager` com activate/apply/select_for_window.
-- **AutoSwitcher** com poll 2Hz e debounce 500ms, respeita `HEFESTO_NO_WINDOW_DETECT`.
+- **AutoSwitcher** com poll 2Hz e debounce 500ms, respeita `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT`.
 - **Window detection X11** via `python-xlib`, `wm_class` segundo elemento (V3-6), `exe_basename` via `/proc/PID/exe`.
 - **IPC JSON-RPC 2.0** sobre Unix socket 0600 com 8 métodos v1 e `IpcClient` async.
 - **UDP server compat DSX** em `127.0.0.1:6969` com `RateLimiter` global 2000/s + per-IP 1000/s + `_sweep` periódico (V3-1), 6 tipos de instrução.
 - **Gamepad virtual** Xbox 360 via `python-uinput` (VID `045e:028e`), forward analog + botões + d-pad com diff de estado.
 - **HotkeyManager** com combo sagrado (PS+D-pad) e buffer 150ms, passthrough bloqueado em modo emulação (V2-4).
-- **Systemd --user service** com unit única `hefesto.service` (SIMPLIFY-UNIT-01 revogou a dualidade normal/headless original da V2-12), `ServiceInstaller` com install/uninstall/start/stop/restart/status.
+- **Systemd --user service** com unit única `hefesto-dualsense4unix.service` (SIMPLIFY-UNIT-01 revogou a dualidade normal/headless original da V2-12), `ServiceInstaller` com install/uninstall/start/stop/restart/status.
 - **CLI completo**: `version`, `status`, `battery`, `led`, `tui`, `daemon start/install-service/uninstall-service/stop/restart/status`, `profile list/show/activate/create/delete`, `test trigger/led/rumble`, `emulate xbox360`.
 - **TUI Textual**: `HefestoApp` com `MainScreen` mostrando info do daemon, lista de perfis, preview widgets (`TriggerBar`, `BatteryMeter`, `StickPreview`) com poll 10Hz via IPC.
 - **Captures HID**: `record_hid_capture.py` grava estado em JSONL gzip (`.bin`), `FakeController.from_capture()` reproduz cronologicamente; gate de 5MB no CI.
@@ -805,4 +855,4 @@ Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com D
 - Windows, macOS, Wayland nativo, Bluetooth Audio.
 - HidHide — superado pelo backend híbrido evdev+pydualsense (jornada em `docs/process/discoveries/2026-04-20-hotfix-2-hid-playstation-kernel-conflict.md`).
 
-[0.1.0]: https://github.com/AndreBFarias/hefesto/releases/tag/v0.1.0
+[0.1.0]: https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/tag/v0.1.0

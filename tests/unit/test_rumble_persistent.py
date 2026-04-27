@@ -15,12 +15,12 @@ from typing import Any
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.ipc_server import IpcServer
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.daemon.state_store import StateStore
-from hefesto.profiles.manager import ProfileManager
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # Fixture de servidor IPC + daemon compartilhado

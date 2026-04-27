@@ -13,7 +13,7 @@ def repo_root():
 
 @pytest.fixture(autouse=True)
 def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Ativa HEFESTO_FAKE=1 em todo teste.
+    """Ativa HEFESTO_DUALSENSE4UNIX_FAKE=1 em todo teste.
 
     Garantia defensiva: subsystems que fazem probing de hardware real
     (TouchpadReader enumerando evdev, ex.) devem pular a inicialização
@@ -23,5 +23,5 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch) -> None:
     o padrão nas suítes; o env var apenas torna esse contrato explícito
     para outros módulos consumirem.
     """
-    if not os.environ.get("HEFESTO_FAKE"):
-        monkeypatch.setenv("HEFESTO_FAKE", "1")
+    if not os.environ.get("HEFESTO_DUALSENSE4UNIX_FAKE"):
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")

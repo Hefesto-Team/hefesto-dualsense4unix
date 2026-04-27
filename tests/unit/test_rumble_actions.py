@@ -56,7 +56,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto.app.actions import rumble_actions  # noqa: E402
+from hefesto_dualsense4unix.app.actions import rumble_actions  # noqa: E402
 
 # --- Fakes de widgets GTK ---------------------------------------------
 
@@ -118,7 +118,7 @@ class _FakeRumbleMixin:
     """Composição mínima pra rodar RumbleActionsMixin sem GTK real."""
 
     def __init__(self) -> None:
-        from hefesto.app.draft_config import DraftConfig
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
         self._guard_refresh = False

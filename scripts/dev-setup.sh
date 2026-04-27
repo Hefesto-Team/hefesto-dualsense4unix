@@ -7,7 +7,7 @@
 #   1. Se .venv/ não existe ou .venv/bin/pytest está ausente/quebrado,
 #      invoca scripts/dev_bootstrap.sh para (re)criar o ambiente.
 #   2. Sempre termina rodando `.venv/bin/pytest --collect-only` como smoke
-#      que confirma que hefesto é importável e a suite está visível.
+#      que confirma que hefesto_dualsense4unix é importável e a suite está visível.
 #   3. Reporta "Collected N tests" e sai com código 0 se tudo ok.
 #
 # Operacionaliza lição L-21-4: executor em sessão nova precisa do ambiente
@@ -51,7 +51,7 @@ fi
 echo "[dev-setup] OK: $count."
 
 # INFRA-VENV-PYGOBJECT-01 (A-12): valida disponibilidade do PyGObject no venv.
-# Sem isto: `./run.sh --gui`, `.venv/bin/python -m hefesto.app.main` e o
+# Sem isto: `./run.sh --gui`, `.venv/bin/python -m hefesto_dualsense4unix.app.main` e o
 # teste tests/unit/test_status_actions_reconnect.py falham por ModuleNotFoundError.
 # Não bloqueia o fluxo (GUI é opt-in) — apenas instrui com mensagem acionável.
 echo "[dev-setup] validando PyGObject (GUI GTK3)..."

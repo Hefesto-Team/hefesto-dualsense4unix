@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from hefesto.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 
 
 @pytest.mark.asyncio

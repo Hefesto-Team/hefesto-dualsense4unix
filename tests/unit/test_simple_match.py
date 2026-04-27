@@ -1,8 +1,8 @@
-"""Testes para src/hefesto/profiles/simple_match.py."""
+"""Testes para src/hefesto_dualsense4unix/profiles/simple_match.py."""
 from __future__ import annotations
 
-from hefesto.profiles.schema import MatchAny, MatchCriteria
-from hefesto.profiles.simple_match import (
+from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
+from hefesto_dualsense4unix.profiles.simple_match import (
     SIMPLE_MATCH_PRESETS,
     _criteria_equal,
     detect_simple_preset,

@@ -14,15 +14,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.cli.ipc_client import IpcClient
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.ipc_server import IpcServer
-from hefesto.daemon.state_store import StateStore
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import MatchAny, Profile
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -64,7 +64,7 @@ async def server_and_controller(
     # rumble_policy tenha valor válido (balanceado, mult 0.7 por padrão)
     # — necessário após AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01, que faz
     # apply_draft escalar rumble via _apply_rumble_policy.
-    from hefesto.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
     fake_daemon = MagicMock()
     fake_daemon.set_mouse_emulation.return_value = True

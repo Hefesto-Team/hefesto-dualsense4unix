@@ -3,7 +3,7 @@
 Cobre:
   - No-op quando `detect_installed_unit()` retorna None.
   - No-op quando o service já está `active`.
-  - Dispara `systemctl --user start hefesto.service` quando inativo.
+  - Dispara `systemctl --user start hefesto-dualsense4unix.service` quando inativo.
   - Respeita limite anti-loop de 2 tentativas por sessão.
   - Submete trabalho ao executor (não bloqueia a thread chamadora).
 
@@ -66,8 +66,8 @@ _install_gi_stubs()
 
 import pytest  # noqa: E402
 
-from hefesto.app.actions import daemon_actions as da  # noqa: E402
-from hefesto.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions import daemon_actions as da  # noqa: E402
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
 
 
 class _SyncExecutor:
@@ -166,7 +166,7 @@ def test_noop_quando_daemon_ja_ativo(
 ) -> None:
     """Se is-active retorna `active`, não dispara start."""
     monkeypatch.setattr(
-        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto"
+        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto-dualsense4unix"
     )
     calls, fake_run = _fake_run_factory(is_active_stdout="active\n")
     monkeypatch.setattr(da.subprocess, "run", fake_run)
@@ -188,7 +188,7 @@ def test_dispara_start_quando_inativo(
 ) -> None:
     """Se is-active != active, dispara systemctl start e incrementa contador."""
     monkeypatch.setattr(
-        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto"
+        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto-dualsense4unix"
     )
     calls, fake_run = _fake_run_factory(
         is_active_stdout="inactive\n", start_rc=0
@@ -199,7 +199,7 @@ def test_dispara_start_quando_inativo(
 
     started = [c for c in calls if "start" in c and "is-active" not in c]
     assert len(started) == 1
-    assert "hefesto.service" in started[0]
+    assert "hefesto-dualsense4unix.service" in started[0]
     assert host._daemon_autostart_attempts == 1
 
 
@@ -210,7 +210,7 @@ def test_limite_anti_loop_duas_tentativas(
 ) -> None:
     """Após 2 tentativas, helper vira no-op até próxima sessão."""
     monkeypatch.setattr(
-        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto"
+        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto-dualsense4unix"
     )
     calls, fake_run = _fake_run_factory(
         is_active_stdout="inactive\n", start_rc=1
@@ -234,7 +234,7 @@ def test_falha_silenciosa_em_timeout(
 ) -> None:
     """TimeoutExpired em `start` não propaga; contador ainda incrementa."""
     monkeypatch.setattr(
-        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto"
+        da.ServiceInstaller, "detect_installed_unit", lambda self: "hefesto-dualsense4unix"
     )
     _calls, fake_run = _fake_run_factory(
         is_active_stdout="inactive\n",

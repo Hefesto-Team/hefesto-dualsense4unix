@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
-from hefesto.integrations.uinput_keyboard import (
+from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+from hefesto_dualsense4unix.integrations.uinput_keyboard import (
     DEVICE_NAME,
     SUPPORTED_KEYS,
     UinputKeyboardDevice,
@@ -46,7 +46,7 @@ def _emits_for(fake_device: MagicMock, code: Any) -> list:
 # --- start / stop ------------------------------------------------------------
 
 def test_device_name_identifica_hefesto() -> None:
-    assert "Hefesto" in DEVICE_NAME
+    assert "Hefesto - Dualsense4Unix" in DEVICE_NAME
     assert "Keyboard" in DEVICE_NAME
 
 
@@ -250,7 +250,7 @@ def test_supported_keys_cobre_todas_as_defaults() -> None:
     delegados ao `virtual_token_callback` e não precisam estar em
     SUPPORTED_KEYS — filtramos antes de comparar.
     """
-    from hefesto.core.keyboard_mappings import is_virtual_token
+    from hefesto_dualsense4unix.core.keyboard_mappings import is_virtual_token
 
     default_keys = {
         k

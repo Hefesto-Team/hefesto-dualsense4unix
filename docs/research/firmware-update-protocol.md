@@ -41,7 +41,7 @@ Fonte: `https://github.com/nowrep/dualsensectl`.
 
 ### 3.2 `pydualsense` (flok/pydualsense)
 
-Biblioteca Python que serve de backend ao Hefesto. Cobre output/input reports de uso normal (feature reports para RGB, trigger effects, rumble, áudio do fone). **Não expõe API de DFU**. Código não sugere que o autor tenha investigado o tema.
+Biblioteca Python que serve de backend ao Hefesto - Dualsense4Unix. Cobre output/input reports de uso normal (feature reports para RGB, trigger effects, rumble, áudio do fone). **Não expõe API de DFU**. Código não sugere que o autor tenha investigado o tema.
 
 Fonte: `https://github.com/flok/pydualsense`.
 
@@ -195,7 +195,7 @@ Probabilidade não-nula durante fase 2 (protótipo CLI). Update interrompido no 
 
 ### 7.2 Chain of trust
 
-Se Sony exige assinatura criptográfica no blob e o updater oficial carrega a chave pública de verificação do controle, tudo bem — o Hefesto só aplica blobs oficiais. Se a Sony exige que o **host** assine cada transação (chave privada embutida no updater Windows), aí é **inviável** sem quebra de DRM — linha que este projeto não cruza.
+Se Sony exige assinatura criptográfica no blob e o updater oficial carrega a chave pública de verificação do controle, tudo bem — o Hefesto - Dualsense4Unix só aplica blobs oficiais. Se a Sony exige que o **host** assine cada transação (chave privada embutida no updater Windows), aí é **inviável** sem quebra de DRM — linha que este projeto não cruza.
 
 Análise da fase 1 precisa esclarecer qual modelo a Sony usa.
 
@@ -217,7 +217,7 @@ Engenharia reversa do **protocolo de aplicação** (não do firmware) para inter
 - **União Europeia** — Directiva 2009/24/EC do Parlamento Europeu, art. 6 (decompilação): reverse engineering para obter informação necessária à interoperabilidade é permitido desde que limitado a partes essenciais.
 - **Estados Unidos** — DMCA, 17 USC §1201(f): interoperabilidade de programa independentemente criado é exceção explícita ao bloqueio anti-circunvenção.
 
-O projeto Hefesto:
+O projeto Hefesto - Dualsense4Unix:
 
 - **não** redistribui blobs de firmware — usuário baixa diretamente do site oficial Sony;
 - **não** modifica firmware — só aplica blobs oficiais assinados pela Sony;
@@ -245,7 +245,7 @@ Se, após fase 1, qualquer uma for verdade:
 - protocolo exige hardware proprietário (cabo especial, chip companheiro, etc.);
 - captura não consegue isolar a transição para DFU em 3 tentativas independentes;
 
-a spec-mãe `FEAT-FIRMWARE-UPDATE-01` é **fechada como inviável no estado atual**. O documento de pesquisa permanece como artefato de aprendizado; o projeto Hefesto continua sem suportar update de firmware.
+a spec-mãe `FEAT-FIRMWARE-UPDATE-01` é **fechada como inviável no estado atual**. O documento de pesquisa permanece como artefato de aprendizado; o projeto Hefesto - Dualsense4Unix continua sem suportar update de firmware.
 
 ### 9.3 Se fase 2 viabilizar
 

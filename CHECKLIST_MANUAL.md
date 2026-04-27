@@ -6,21 +6,21 @@ Sprints cujos DoDs exigem DualSense conectado. Revisor com hardware marca `[x]` 
 
 ## W1.3 — Daemon loop básico
 
-- [ ] `hefesto daemon start --foreground` conecta ao DualSense USB, mostra bateria e stick L.
-- [ ] `hefesto daemon start --foreground` conecta ao DualSense BT, mostra bateria e stick L.
+- [ ] `hefesto-dualsense4unix daemon start --foreground` conecta ao DualSense USB, mostra bateria e stick L.
+- [ ] `hefesto-dualsense4unix daemon start --foreground` conecta ao DualSense BT, mostra bateria e stick L.
 - [ ] `Ctrl+C` desliga limpo (sem resetar LED ou travar o controle).
 - [ ] Desconectar cabo durante execução → daemon loga evento `disconnected` e volta a aceitar nova conexão.
 
 ## W2.2 — Trigger effects e rumble
 
-- [ ] Cada um dos 19 modos produz vibração correta em `L2` e `R2` via `hefesto test trigger --mode <X> --side <lado>`.
-- [ ] `hefesto led --color FF0080` acende lightbar na cor esperada.
+- [ ] Cada um dos 19 modos produz vibração correta em `L2` e `R2` via `hefesto-dualsense4unix test trigger --mode <X> --side <lado>`.
+- [ ] `hefesto-dualsense4unix led --color FF0080` acende lightbar na cor esperada.
 - [ ] Rumble weak/strong independentes; throttle anti-spam não bloqueia comandos legítimos.
 
 ## W3.2 — Perfis
 
-- [ ] `hefesto profile activate <nome>` muda efeito no controle em menos de 100ms.
-- [ ] `hefesto profile show <nome>` reflete o que está aplicado.
+- [ ] `hefesto-dualsense4unix profile activate <nome>` muda efeito no controle em menos de 100ms.
+- [ ] `hefesto-dualsense4unix profile show <nome>` reflete o que está aplicado.
 
 ## W4.3 — UDP compat DSX
 
@@ -30,7 +30,7 @@ Sprints cujos DoDs exigem DualSense conectado. Revisor com hardware marca `[x]` 
 
 ## W5.x — TUI
 
-Cada PR que toca `src/hefesto/tui/**` inclui no body:
+Cada PR que toca `src/hefesto_dualsense4unix/tui/**` inclui no body:
 
 - [ ] `scrot /tmp/hefesto_tui_<area>_<ts>.png` anexado.
 - [ ] `sha256sum` do PNG registrado.
@@ -45,16 +45,16 @@ Cada PR que toca `src/hefesto/tui/**` inclui no body:
 
 ## W6.1 — Window detection X11
 
-- [ ] `hefesto daemon logs` mostra mudança de `wm_class` ao trocar de janela ativa.
+- [ ] `hefesto-dualsense4unix daemon logs` mostra mudança de `wm_class` ao trocar de janela ativa.
 - [ ] Lançar Cyberpunk via Steam → log reporta `exe_basename=Cyberpunk2077.exe`.
 - [ ] Alt-tab rápido entre 3 janelas não dispara auto-switch (debounce 500ms).
 
 ## W6.3 — Gamepad virtual
 
-- [ ] `hefesto emulate xbox360 --on` cria `/dev/input/js*` visível para jogos.
+- [ ] `hefesto-dualsense4unix emulate xbox360 --on` cria `/dev/input/js*` visível para jogos.
 - [ ] Jogo que só reconhece Xbox360 recebe input correto.
 - [ ] Combo PS + D-pad troca perfil sem vazar para o uinput (buffer 150ms).
-- [ ] `hefesto emulate xbox360 --off` remove o device virtual sem crash.
+- [ ] `hefesto-dualsense4unix emulate xbox360 --off` remove o device virtual sem crash.
 
 ## W8.1 — Hotkeys
 

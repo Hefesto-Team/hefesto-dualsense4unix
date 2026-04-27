@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import (
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
     load_profile,
     save_profile,
 )
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,

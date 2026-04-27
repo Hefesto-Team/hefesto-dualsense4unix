@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install_profiles.sh — copia perfis default para ~/.config/hefesto/profiles/
+# install_profiles.sh — copia perfis default para ~/.config/hefesto-dualsense4unix/profiles/
 #
 # Regras:
 #   - Se o diretório de perfis estiver VAZIO (primeira instalação), copia
@@ -17,7 +17,7 @@ set -euo pipefail
 
 ROOT_DIR="${1:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}"
 readonly SRC_DIR="${ROOT_DIR}/assets/profiles_default"
-readonly DEST_DIR="${HOME}/.config/hefesto/profiles"
+readonly DEST_DIR="${HOME}/.config/hefesto-dualsense4unix/profiles"
 
 if [[ ! -d "${SRC_DIR}" ]]; then
     printf 'ERRO: diretório de perfis não encontrado: %s\n' "${SRC_DIR}" >&2

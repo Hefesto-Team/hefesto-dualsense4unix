@@ -1,6 +1,6 @@
 # Integrando mods DSX
 
-Mods do DSX Windows (Cyberpunk Immersive Triggers, Forza Horizon, Assetto Corsa Competizione, etc.) enviam comandos UDP para `127.0.0.1:6969`. Hefesto escuta a mesma porta e traduz para HID.
+Mods do DSX Windows (Cyberpunk Immersive Triggers, Forza Horizon, Assetto Corsa Competizione, etc.) enviam comandos UDP para `127.0.0.1:6969`. Hefesto - Dualsense4Unix escuta a mesma porta e traduz para HID.
 
 ## Protocolo
 
@@ -56,4 +56,4 @@ s.sendto(json.dumps(pkt).encode(), ("127.0.0.1", 6969))
 
 ## Protocolo v2 (futuro)
 
-Schema nomeado (campos por chave em vez de array posicional) está previsto para Hefesto v1.x. Até lá, mods seguem v1 posicional.
+Schema nomeado (campos por chave em vez de array posicional) está previsto para Hefesto - Dualsense4Unix v1.x. Até lá, mods seguem v1 posicional.

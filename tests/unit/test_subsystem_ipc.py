@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from hefesto.daemon.subsystems.ipc import IpcSubsystem, stop_ipc
+from hefesto_dualsense4unix.daemon.subsystems.ipc import IpcSubsystem, stop_ipc
 
 
 class TestIpcSubsystem:

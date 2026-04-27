@@ -49,8 +49,8 @@ def _build_mixin_with_real_store() -> Any:
     """Composição leve com `Gtk.ListStore` real (2 colunas: button, key_combo)."""
     from gi.repository import Gtk
 
-    from hefesto.app.actions.input_actions import InputActionsMixin
-    from hefesto.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     class _RealStoreMixin:
         def __init__(self) -> None:

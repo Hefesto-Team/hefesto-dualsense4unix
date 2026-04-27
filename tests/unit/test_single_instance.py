@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Testes de single_instance (BUG-MULTI-INSTANCE-01 e BUG-TRAY-SINGLE-FLASH-01).
 
 Cobre:
@@ -7,7 +8,7 @@ Cobre:
   - Pid órfão (processo já morto) é sobrescrito sem SIGTERM.
   - `acquire_or_bring_to_front` chama callback com PID do predecessor, não envia
     SIGTERM e retorna None quando predecessor permanece vivo.
-  - `_is_hefesto_process` distingue daemon/GUI legítimos de PIDs reciclados
+  - `_is_hefesto_dualsense4unix_process` distingue daemon/GUI legítimos de PIDs reciclados
     (AUDIT-FINDING-SINGLE-INSTANCE-PID-RECYCLE-01).
 """
 from __future__ import annotations
@@ -19,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.utils import single_instance
+from hefesto_dualsense4unix.utils import single_instance
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def isolated_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # platformdirs cacheia o valor em módulo — reimporta para pegar novo env.
     import importlib
 
-    from hefesto.utils import xdg_paths as xdg
+    from hefesto_dualsense4unix.utils import xdg_paths as xdg
     importlib.reload(xdg)
     importlib.reload(single_instance)
     return target
@@ -40,7 +41,7 @@ def isolated_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_acquire_retorna_pid_atual(isolated_runtime: Path) -> None:
     pid = single_instance.acquire_or_takeover("daemon")
     assert pid == os.getpid()
-    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "daemon.pid"
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "daemon.pid"
     assert pid_file.exists()
     assert pid_file.read_text().strip() == str(pid)
     single_instance.release("daemon")
@@ -56,7 +57,7 @@ def test_is_alive_processo_proprio(isolated_runtime: Path) -> None:
 
 def test_pid_orfao_sem_sigterm(isolated_runtime: Path) -> None:
     """Pid file com PID morto é sobrescrito sem tentar matar."""
-    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "daemon.pid"
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "daemon.pid"
     pid_file.parent.mkdir(parents=True, exist_ok=True)
     pid_file.write_text("999999999\n")
     pid = single_instance.acquire_or_takeover("daemon")
@@ -79,7 +80,7 @@ def test_takeover_mata_predecessor(isolated_runtime: Path) -> None:
             os._exit(0)
 
     # No pai: espera o filho escrever seu PID no arquivo.
-    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "gui.pid"
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "gui.pid"
     deadline = time.monotonic() + 2.0
     while time.monotonic() < deadline:
         if pid_file.exists() and pid_file.read_text().strip() == str(child_pid):
@@ -174,12 +175,12 @@ def test_bring_to_front_chama_callback(isolated_runtime: Path) -> None:
 # -----------------------------------------------------------------------------
 
 
-def test_is_hefesto_process_comm_ok(
+def test_is_hefesto_dualsense4unix_process_comm_ok(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """`_read_proc_comm` com 'hefesto\\n' faz `_is_hefesto_process` retornar True."""
+    """`_read_proc_comm` com \'hefesto-dualsense4unix\\n\' faz `_is_hefesto_dualsense4unix_process` retornar True."""
     def fake_read_comm(pid: int) -> str | None:
-        return "hefesto"
+        return "hefesto-dualsense4unix"
 
     def fake_read_cmdline(pid: int) -> str | None:
         return None
@@ -187,48 +188,48 @@ def test_is_hefesto_process_comm_ok(
     monkeypatch.setattr(single_instance, "_read_proc_comm", fake_read_comm)
     monkeypatch.setattr(single_instance, "_read_proc_cmdline", fake_read_cmdline)
 
-    assert single_instance._is_hefesto_process(12345) is True
+    assert single_instance._is_hefesto_dualsense4unix_process(12345) is True
 
 
-def test_is_hefesto_process_cmdline_gui_python3_module(
+def test_is_hefesto_dualsense4unix_process_cmdline_gui_python3_module(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """GUI roda como `python3 -m hefesto.app.main` — comm=python3, cmdline tem hefesto."""
+    """GUI roda como `python3 -m hefesto_dualsense4unix.app.main` — comm=python3, cmdline tem hefesto."""
     monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "python3")
     monkeypatch.setattr(
         single_instance,
         "_read_proc_cmdline",
-        lambda pid: "/usr/bin/python3 -m hefesto.app.main",
+        lambda pid: "/usr/bin/python3 -m hefesto_dualsense4unix.app.main",
     )
-    assert single_instance._is_hefesto_process(12345) is True
+    assert single_instance._is_hefesto_dualsense4unix_process(12345) is True
 
 
-def test_is_hefesto_process_alheio_firefox(
+def test_is_hefesto_dualsense4unix_process_alheio_firefox(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """PID reciclado para firefox — comm e cmdline sem marcador 'hefesto'."""
+    """PID reciclado para firefox — comm e cmdline sem marcador 'hefesto-dualsense4unix'."""
     monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "firefox")
     monkeypatch.setattr(
         single_instance,
         "_read_proc_cmdline",
         lambda pid: "/usr/lib/firefox/firefox --profile=default",
     )
-    assert single_instance._is_hefesto_process(12345) is False
+    assert single_instance._is_hefesto_dualsense4unix_process(12345) is False
 
 
-def test_is_hefesto_process_noent(
+def test_is_hefesto_dualsense4unix_process_noent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """PID inválido — `/proc/<pid>/*` inexistente, retorna False (conservador)."""
     monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: None)
     monkeypatch.setattr(single_instance, "_read_proc_cmdline", lambda pid: None)
-    assert single_instance._is_hefesto_process(999_999_999) is False
+    assert single_instance._is_hefesto_dualsense4unix_process(999_999_999) is False
 
 
-def test_is_hefesto_process_pid_zero_ou_negativo() -> None:
+def test_is_hefesto_dualsense4unix_process_pid_zero_ou_negativo() -> None:
     """PIDs inválidos na entrada retornam False sem ler /proc."""
-    assert single_instance._is_hefesto_process(0) is False
-    assert single_instance._is_hefesto_process(-1) is False
+    assert single_instance._is_hefesto_dualsense4unix_process(0) is False
+    assert single_instance._is_hefesto_dualsense4unix_process(-1) is False
 
 
 def test_read_proc_comm_pid_invalido_retorna_none() -> None:
@@ -251,16 +252,16 @@ def test_read_proc_comm_do_proprio_processo() -> None:
 def test_takeover_ignora_pid_reciclado(
     isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Pid file aponta para PID vivo NÃO-hefesto — `_terminate_predecessor` não envia SIGTERM."""
-    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "daemon.pid"
+    """Pid file aponta para PID vivo NÃO-hefesto-dualsense4unix — `_terminate_predecessor` não envia SIGTERM."""
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "daemon.pid"
     pid_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Usa o PID do próprio pytest (vivo, mas comm='pytest' ou 'python3' sem hefesto).
+    # Usa o PID do próprio pytest (vivo, mas comm='pytest' ou 'python3' sem hefesto-dualsense4unix).
     fake_pid = os.getpid()
     pid_file.write_text(f"{fake_pid}\n")
 
-    # Força `_is_hefesto_process` a reportar False (simula PID reciclado).
-    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+    # Força `_is_hefesto_dualsense4unix_process` a reportar False (simula PID reciclado).
+    monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
 
     kills: list[tuple[int, int]] = []
     orig_kill = os.kill
@@ -290,8 +291,8 @@ def test_takeover_ignora_pid_reciclado(
         # Escreve PID do filho no pid file.
         pid_file.write_text(f"{child_pid}\n")
 
-        # Mock: o filho NÃO é hefesto (simula reciclagem).
-        monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+        # Mock: o filho NÃO é hefesto-dualsense4unix (simula reciclagem).
+        monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
 
         # Spy em os.kill SOMENTE para capturar sinais letais.
         kills_real: list[tuple[int, int]] = []
@@ -328,7 +329,7 @@ def test_takeover_ignora_pid_reciclado(
 def test_takeover_mata_predecessor_hefesto(
     isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Pid file aponta para PID vivo hefesto — SIGTERM enviado normalmente."""
+    """Pid file aponta para PID vivo hefesto-dualsense4unix — SIGTERM enviado normalmente."""
     child_pid = os.fork()
     if child_pid == 0:
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
@@ -338,7 +339,7 @@ def test_takeover_mata_predecessor_hefesto(
         finally:
             os._exit(0)
 
-    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "gui-hef.pid"
+    pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "gui-hef.pid"
     deadline = time.monotonic() + 2.0
     while time.monotonic() < deadline:
         if pid_file.exists() and pid_file.read_text().strip() == str(child_pid):
@@ -349,8 +350,8 @@ def test_takeover_mata_predecessor_hefesto(
         os.waitpid(child_pid, 0)
         pytest.fail("filho não escreveu pid file")
 
-    # Força `_is_hefesto_process` a reportar True (simula predecessor legítimo).
-    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: True)
+    # Força `_is_hefesto_dualsense4unix_process` a reportar True (simula predecessor legítimo).
+    monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: True)
 
     own = single_instance.acquire_or_takeover("gui-hef")
     assert own == os.getpid()
@@ -365,10 +366,10 @@ def test_takeover_mata_predecessor_hefesto(
 def test_terminate_predecessor_pid_reciclado_nao_sinaliza(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`_terminate_predecessor` com PID vivo não-hefesto: early-return sem SIGTERM/SIGKILL."""
-    # PID existe (probe) mas não é hefesto.
+    """`_terminate_predecessor` com PID vivo não-hefesto-dualsense4unix: early-return sem SIGTERM/SIGKILL."""
+    # PID existe (probe) mas não é hefesto-dualsense4unix.
     monkeypatch.setattr(single_instance, "is_alive", lambda pid: True)
-    monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+    monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
     monkeypatch.setattr(single_instance, "_read_proc_comm", lambda pid: "firefox")
 
     sinais: list[tuple[int, int]] = []
@@ -387,7 +388,7 @@ def test_terminate_predecessor_pid_reciclado_nao_sinaliza(
 def test_terminate_predecessor_pid_morto_early_return(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`_terminate_predecessor` com PID morto: early-return sem chamar `_is_hefesto_process`."""
+    """`_terminate_predecessor` com PID morto: early-return sem chamar `_is_hefesto_dualsense4unix_process`."""
     monkeypatch.setattr(single_instance, "is_alive", lambda pid: False)
 
     chamadas_isproc: list[int] = []
@@ -396,11 +397,11 @@ def test_terminate_predecessor_pid_morto_early_return(
         chamadas_isproc.append(pid)
         return False
 
-    monkeypatch.setattr(single_instance, "_is_hefesto_process", _tracker)
+    monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", _tracker)
 
     single_instance._terminate_predecessor(12345)
 
-    assert chamadas_isproc == [], "is_alive(False) deve evitar call a _is_hefesto_process"
+    assert chamadas_isproc == [], "is_alive(False) deve evitar call a _is_hefesto_dualsense4unix_process"
 
 
 def test_read_existing_pid_oserror_retorna_none(
@@ -436,7 +437,7 @@ def test_read_existing_pid_zero_retorna_none(tmp_path: Path) -> None:
 def test_bring_to_front_ignora_pid_reciclado(
     isolated_runtime: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Pid file aponta para PID vivo NÃO-hefesto — callback NÃO é chamado, novo lock adquirido."""
+    """Pid file aponta para PID vivo NÃO-hefesto-dualsense4unix — callback NÃO é chamado, novo lock adquirido."""
     child_pid = os.fork()
     if child_pid == 0:
         signal.signal(signal.SIGTERM, signal.SIG_DFL)
@@ -444,12 +445,12 @@ def test_bring_to_front_ignora_pid_reciclado(
         os._exit(0)
 
     try:
-        pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto" / "gui-rec.pid"
+        pid_file = Path(os.environ["XDG_RUNTIME_DIR"]) / "hefesto-dualsense4unix" / "gui-rec.pid"
         pid_file.parent.mkdir(parents=True, exist_ok=True)
         pid_file.write_text(f"{child_pid}\n")
 
         # Simula reciclagem.
-        monkeypatch.setattr(single_instance, "_is_hefesto_process", lambda pid: False)
+        monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda pid: False)
 
         callback_pids: list[int] = []
 
@@ -462,7 +463,7 @@ def test_bring_to_front_ignora_pid_reciclado(
             fallback_takeover_after_sec=0.5,
         )
 
-        # Callback NÃO deve ter sido invocado (predecessor não é hefesto).
+        # Callback NÃO deve ter sido invocado (predecessor não é hefesto-dualsense4unix).
         assert callback_pids == [], f"callback invocado para PID reciclado: {callback_pids}"
 
         # Resultado: adquire lock normalmente (getpid).

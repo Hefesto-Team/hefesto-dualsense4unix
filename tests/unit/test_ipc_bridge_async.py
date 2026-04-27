@@ -56,7 +56,7 @@ def _make_fake_glib_module() -> types.ModuleType:
 def _reset_glib_and_executor():
     """Reseta estado compartilhado entre testes."""
     _FakeGLib.reset()
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
     bridge._EXECUTOR = None
     yield
     if bridge._EXECUTOR is not None:
@@ -66,7 +66,7 @@ def _reset_glib_and_executor():
 
 def test_call_async_nao_bloqueia():
     """call_async retorna imediatamente sem bloquear a thread chamadora."""
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     bloqueio = threading.Event()
 
@@ -77,7 +77,7 @@ def test_call_async_nao_bloqueia():
     on_success = MagicMock(return_value=False)
 
     with (
-        patch("hefesto.app.ipc_bridge._run_call", side_effect=_run_call_lento),
+        patch("hefesto_dualsense4unix.app.ipc_bridge._run_call", side_effect=_run_call_lento),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),
     ):
         inicio = time.monotonic()
@@ -91,7 +91,7 @@ def test_call_async_nao_bloqueia():
 
 def test_call_async_callback_sucesso():
     """on_success é chamado com o resultado do RPC."""
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     resultado_esperado = {"connected": True, "transport": "USB"}
     recebido: list = []
@@ -101,7 +101,7 @@ def test_call_async_callback_sucesso():
         return False
 
     with (
-        patch("hefesto.app.ipc_bridge._run_call", return_value=resultado_esperado),
+        patch("hefesto_dualsense4unix.app.ipc_bridge._run_call", return_value=resultado_esperado),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),
     ):
         bridge.call_async("daemon.state_full", None, on_success=on_success)
@@ -113,8 +113,8 @@ def test_call_async_callback_sucesso():
 
 def test_call_async_callback_falha_ipc_error():
     """on_failure é chamado quando _run_call levanta IpcError."""
-    import hefesto.app.ipc_bridge as bridge
-    from hefesto.cli.ipc_client import IpcError
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
+    from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     erros: list = []
 
@@ -129,7 +129,7 @@ def test_call_async_callback_falha_ipc_error():
     excecao_esperada = IpcError(-1, "conexão timeout")
 
     with (
-        patch("hefesto.app.ipc_bridge._run_call", side_effect=excecao_esperada),
+        patch("hefesto_dualsense4unix.app.ipc_bridge._run_call", side_effect=excecao_esperada),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),
     ):
         bridge.call_async(
@@ -147,7 +147,7 @@ def test_call_async_callback_falha_ipc_error():
 
 def test_call_async_callback_falha_file_not_found():
     """on_failure é chamado quando _run_call levanta FileNotFoundError."""
-    import hefesto.app.ipc_bridge as bridge
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
 
     erros: list = []
 
@@ -157,7 +157,7 @@ def test_call_async_callback_falha_file_not_found():
 
     with (
         patch(
-            "hefesto.app.ipc_bridge._run_call",
+            "hefesto_dualsense4unix.app.ipc_bridge._run_call",
             side_effect=FileNotFoundError("socket não encontrado"),
         ),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),
@@ -177,8 +177,8 @@ def test_call_async_callback_falha_file_not_found():
 
 def test_call_async_timeout_honrado():
     """Worker com timeout curto retorna rapidamente via on_failure."""
-    import hefesto.app.ipc_bridge as bridge
-    from hefesto.cli.ipc_client import IpcError
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
+    from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     falhas: list = []
 
@@ -188,7 +188,7 @@ def test_call_async_timeout_honrado():
 
     with (
         patch(
-            "hefesto.app.ipc_bridge._run_call",
+            "hefesto_dualsense4unix.app.ipc_bridge._run_call",
             side_effect=IpcError(-1, "conexão timeout"),
         ),
         patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}),

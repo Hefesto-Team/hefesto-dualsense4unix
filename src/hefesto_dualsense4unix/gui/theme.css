@@ -1,0 +1,143 @@
+/* Drácula palette aplicada ao Hefesto - Dualsense4Unix */
+/* Prioridade: GTK_STYLE_PROVIDER_PRIORITY_APPLICATION — sobrepõe tema do sistema. */
+
+.hefesto-dualsense4unix-window {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+
+.hefesto-dualsense4unix-window button {
+    background-color: transparent;
+    border: 1px solid #bd93f9;
+    border-radius: 4px;
+    color: #f8f8f2;
+    padding: 6px 12px;
+}
+.hefesto-dualsense4unix-window button:hover {
+    border: 2px solid #ff79c6;
+    padding: 5px 11px; /* compensa o 1px a mais */
+}
+.hefesto-dualsense4unix-window button:active {
+    background-color: rgba(189, 147, 249, 0.15);
+    border-color: #bd93f9;
+}
+.hefesto-dualsense4unix-window button:disabled {
+    border-color: #44475a;
+    color: #6272a4;
+}
+
+.hefesto-dualsense4unix-window combobox,
+.hefesto-dualsense4unix-window entry,
+.hefesto-dualsense4unix-window spinbutton {
+    background-color: #282a36;
+    border: 1px solid #bd93f9;
+    border-radius: 4px;
+    color: #f8f8f2;
+    padding: 4px 8px;
+}
+
+.hefesto-dualsense4unix-window combobox:focus,
+.hefesto-dualsense4unix-window entry:focus {
+    border: 2px solid #8be9fd;
+    padding: 3px 7px;
+}
+
+.hefesto-dualsense4unix-window scale trough {
+    background-color: #44475a;
+    border: 1px solid #6272a4;
+    border-radius: 4px;
+}
+.hefesto-dualsense4unix-window scale slider {
+    background-color: #bd93f9;
+    border: 1px solid #bd93f9;
+    border-radius: 50%;
+}
+
+/* H4 — headers do TreeView (aba Perfis e outras) em accent Drácula purple
+   para diferenciar das linhas. Sem accent, "Nome/Prio/Match" somem no branco. */
+.hefesto-dualsense4unix-window treeview header button,
+.hefesto-dualsense4unix-window treeview header button label {
+    color: #bd93f9;
+    font-weight: bold;
+}
+
+.hefesto-dualsense4unix-window notebook > header > tabs > tab {
+    background: transparent;
+    border: none;
+    color: #6272a4;
+    padding: 8px 14px;
+}
+.hefesto-dualsense4unix-window notebook > header > tabs > tab:checked {
+    color: #f8f8f2;
+    border-bottom: 2px solid #bd93f9;
+}
+
+/* Cards internos (ex.: log systemctl, mapeamento mouse) */
+.hefesto-dualsense4unix-card {
+    background-color: #21222c;
+    border: 1px solid #44475a;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.hefesto-dualsense4unix-log textview {
+    background-color: #2a2a2a;
+    color: #f8f8f2;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 11px;
+}
+.hefesto-dualsense4unix-log textview text {
+    background-color: #2a2a2a;
+}
+
+.hefesto-dualsense4unix-status-ok     { color: #50fa7b; }
+.hefesto-dualsense4unix-status-warn   { color: #f1fa8c; }
+.hefesto-dualsense4unix-status-err    { color: #ff5555; }
+.hefesto-dualsense4unix-accent-purple { color: #bd93f9; }
+.hefesto-dualsense4unix-accent-pink   { color: #ff79c6; }
+
+/* Footer action buttons — paleta Drácula aplicada para diferenciar a
+   responsabilidade de cada ação. Borda lateral colorida marca o botão
+   sem dominar; fundo tingido sutil (alpha baixo) mantém legibilidade.
+   Cores de https://draculatheme.com/contribute. */
+
+.btn-apply {                           /* Aplicar — verde (commit/ação positiva) */
+    border-left: 3px solid #50fa7b;
+    background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.12), rgba(80, 250, 123, 0.06));
+}
+.btn-apply:hover  { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.22), rgba(80, 250, 123, 0.12)); }
+.btn-apply:active { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.32), rgba(80, 250, 123, 0.18)); }
+
+.btn-save {                            /* Salvar Perfil — ciano (persistência) */
+    border-left: 3px solid #8be9fd;
+    background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.12), rgba(139, 233, 253, 0.06));
+}
+.btn-save:hover   { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.22), rgba(139, 233, 253, 0.12)); }
+.btn-save:active  { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.32), rgba(139, 233, 253, 0.18)); }
+
+.btn-import {                          /* Importar — laranja (cautela: conteúdo externo) */
+    border-left: 3px solid #ffb86c;
+    background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.12), rgba(255, 184, 108, 0.06));
+}
+.btn-import:hover  { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.22), rgba(255, 184, 108, 0.12)); }
+.btn-import:active { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.32), rgba(255, 184, 108, 0.18)); }
+
+.btn-restore {                         /* Restaurar Default — cinza (reset neutro) */
+    border-left: 3px solid #6272a4;
+    background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.18), rgba(98, 114, 164, 0.08));
+}
+.btn-restore:hover  { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.30), rgba(98, 114, 164, 0.18)); }
+.btn-restore:active { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.42), rgba(98, 114, 164, 0.28)); }
+
+/* UI-PROFILES-RIGHT-PANEL-REBALANCE-01 — preview JSON do perfil */
+.hefesto-dualsense4unix-profile-preview {
+    font-family: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace;
+    font-size: 11px;
+    color: #f8f8f2;
+    background-color: rgba(40, 42, 54, 0.55);
+}
+
+.hefesto-dualsense4unix-profile-preview-error {
+    color: #ff5555;
+    font-style: italic;
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build_deb.sh — Gera pacote .deb para o Hefesto usando dpkg-deb --build.
+# build_deb.sh — Gera pacote .deb para o Hefesto - Dualsense4Unix usando dpkg-deb --build.
 # Não usa dh_python3 nem dpkg-buildpackage; funciona em qualquer sistema
 # com dpkg-deb instalado (Ubuntu/Debian padrão).
 #
@@ -49,28 +49,28 @@ mkdir -p \
     "${STAGING}/usr/lib/udev/rules.d" \
     "${STAGING}/usr/lib/systemd/user" \
     "${STAGING}/usr/share/applications" \
-    "${STAGING}/usr/share/hefesto/assets" \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/assets" \
     "${STAGING}/usr/share/icons/hicolor/256x256/apps"
 
 # ---------------------------------------------------------------------------
 # Copiar pacote Python
 # ---------------------------------------------------------------------------
-echo "Copiando src/hefesto/ ..."
-cp -r src/hefesto "${STAGING}/usr/lib/python3/dist-packages/hefesto"
+echo "Copiando src/hefesto_dualsense4unix/ ..."
+cp -r src/hefesto_dualsense4unix "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix"
 
 # Remover __pycache__ do pacote
-find "${STAGING}/usr/lib/python3/dist-packages/hefesto" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
-find "${STAGING}/usr/lib/python3/dist-packages/hefesto" -name '*.pyc' -delete 2>/dev/null || true
+find "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+find "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix" -name '*.pyc' -delete 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # Copiar assets
 # ---------------------------------------------------------------------------
 echo "Copiando assets/ ..."
-cp -r assets/. "${STAGING}/usr/share/hefesto/assets/"
+cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
 
 # Icone principal (usa o da pasta appimage que e o mais completo)
-if [ -f "assets/appimage/Hefesto.png" ]; then
-    cp "assets/appimage/Hefesto.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
+if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
+    cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
 fi
 
 # ---------------------------------------------------------------------------
@@ -92,22 +92,22 @@ done
 # ---------------------------------------------------------------------------
 # Copiar .desktop
 # ---------------------------------------------------------------------------
-cp packaging/hefesto.desktop "${STAGING}/usr/share/applications/hefesto.desktop"
+cp packaging/hefesto-dualsense4unix.desktop "${STAGING}/usr/share/applications/hefesto-dualsense4unix.desktop"
 
 # ---------------------------------------------------------------------------
 # Criar wrappers /usr/bin/
 # ---------------------------------------------------------------------------
-cat > "${STAGING}/usr/bin/hefesto" <<'WRAPPER'
+cat > "${STAGING}/usr/bin/hefesto-dualsense4unix" <<'WRAPPER'
 #!/bin/sh
-exec python3 -m hefesto.cli.app "$@"
+exec python3 -m hefesto_dualsense4unix.cli.app "$@"
 WRAPPER
-chmod 755 "${STAGING}/usr/bin/hefesto"
+chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix"
 
-cat > "${STAGING}/usr/bin/hefesto-gui" <<'WRAPPER'
+cat > "${STAGING}/usr/bin/hefesto-dualsense4unix-gui" <<'WRAPPER'
 #!/bin/sh
-exec python3 -m hefesto.app.main "$@"
+exec python3 -m hefesto_dualsense4unix.app.main "$@"
 WRAPPER
-chmod 755 "${STAGING}/usr/bin/hefesto-gui"
+chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix-gui"
 
 # ---------------------------------------------------------------------------
 # Copiar e ajustar arquivos DEBIAN/

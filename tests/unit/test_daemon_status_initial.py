@@ -76,8 +76,8 @@ _install_gi_stubs()
 
 import pytest  # noqa: E402
 
-import hefesto.utils.single_instance as si_mod  # noqa: E402
-from hefesto.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+import hefesto_dualsense4unix.utils.single_instance as si_mod  # noqa: E402
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fakes mínimos (espelham test_daemon_status_matrix.py)
@@ -184,7 +184,7 @@ def _patch_installer_none(monkeypatch: pytest.MonkeyPatch) -> None:
     real durante os testes — o sensitivity ramifica em `installed = None`
     (botão desabilitado).
     """
-    from hefesto.daemon import service_install
+    from hefesto_dualsense4unix.daemon import service_install
 
     class _FakeInstaller:
         def detect_installed_unit(self) -> Any:
@@ -203,10 +203,10 @@ def _patch_executor_immediate(monkeypatch: pytest.MonkeyPatch) -> None:
     de `test_daemon_status_matrix.py` (instalado no carregamento do módulo)
     retorna 0 sem chamar a função, porque lá não precisava — aqui precisa.
     """
-    from hefesto.app import ipc_bridge
+    from hefesto_dualsense4unix.app import ipc_bridge
 
     monkeypatch.setattr(ipc_bridge, "_get_executor", lambda: _ImmediateExecutor())
-    from hefesto.app.actions import daemon_actions
+    from hefesto_dualsense4unix.app.actions import daemon_actions
 
     monkeypatch.setattr(daemon_actions, "_get_executor", lambda: _ImmediateExecutor())
 
@@ -316,7 +316,7 @@ def test_consulting_placeholder_aparece_antes_do_worker(
             captured["fn"] = fn
             captured["args"] = (args, kwargs)
 
-    from hefesto.app.actions import daemon_actions
+    from hefesto_dualsense4unix.app.actions import daemon_actions
 
     monkeypatch.setattr(
         daemon_actions, "_get_executor", lambda: _LazyExecutor()

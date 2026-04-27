@@ -1,6 +1,6 @@
 # Métricas Prometheus
 
-O daemon Hefesto expõe métricas no formato Prometheus text exposition via HTTP
+O daemon Hefesto - Dualsense4Unix expõe métricas no formato Prometheus text exposition via HTTP
 em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado**;
 é necessário habilitá-lo explicitamente.
 
@@ -10,7 +10,7 @@ em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado*
 
 ### Via arquivo de configuração do daemon
 
-Edite (ou crie) `~/.config/hefesto/daemon.toml`:
+Edite (ou crie) `~/.config/hefesto-dualsense4unix/daemon.toml`:
 
 ```toml
 [daemon]
@@ -21,16 +21,16 @@ metrics_port    = 9090   # padrão; altere se houver conflito
 Reinicie o daemon:
 
 ```bash
-systemctl --user restart hefesto.service
+systemctl --user restart hefesto-dualsense4unix.service
 ```
 
 ### Via variável de ambiente (temporário)
 
 ```bash
-HEFESTO_METRICS=1 hefesto daemon start
+HEFESTO_DUALSENSE4UNIX_METRICS=1 hefesto-dualsense4unix daemon start
 ```
 
-> A variável `HEFESTO_METRICS=1` equivale a `metrics_enabled=true` com porta padrão.
+> A variável `HEFESTO_DUALSENSE4UNIX_METRICS=1` equivale a `metrics_enabled=true` com porta padrão.
 
 ---
 
@@ -79,7 +79,7 @@ Adicione ao `prometheus.yml`:
 
 ```yaml
 scrape_configs:
-  - job_name: "hefesto"
+  - job_name: "hefesto-dualsense4unix"
     static_configs:
       - targets: ["127.0.0.1:9090"]
     scrape_interval: 15s

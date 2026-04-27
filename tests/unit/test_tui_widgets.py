@@ -1,7 +1,7 @@
 """Testes dos widgets de preview (W5.2)."""
 from __future__ import annotations
 
-from hefesto.tui.widgets import BatteryMeter, StickPreview, TriggerBar
+from hefesto_dualsense4unix.tui.widgets import BatteryMeter, StickPreview, TriggerBar
 
 
 class TestTriggerBar:
@@ -99,7 +99,7 @@ class TestStickPreview:
 
 
 def test_color_for_trigger_faixas():
-    from hefesto.tui.widgets import _color_for_trigger
+    from hefesto_dualsense4unix.tui.widgets import _color_for_trigger
 
     assert _color_for_trigger(0) == "green"
     assert _color_for_trigger(85) == "green"
@@ -110,7 +110,7 @@ def test_color_for_trigger_faixas():
 
 
 def test_color_for_battery_faixas():
-    from hefesto.tui.widgets import _color_for_battery
+    from hefesto_dualsense4unix.tui.widgets import _color_for_battery
 
     assert _color_for_battery(100) == "green"
     assert _color_for_battery(41) == "green"
@@ -121,7 +121,7 @@ def test_color_for_battery_faixas():
 
 
 def test_bar_progresso():
-    from hefesto.tui.widgets import _bar
+    from hefesto_dualsense4unix.tui.widgets import _bar
 
     assert _bar(0) == "░" * 30
     assert _bar(255) == "█" * 30

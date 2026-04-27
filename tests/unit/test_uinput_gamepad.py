@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.integrations.uinput_gamepad import (
+from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     BUTTON_TO_UINPUT,
     DEVICE_NAME,
     XBOX360_PRODUCT,
@@ -32,7 +32,7 @@ def _fake_uinput_module() -> MagicMock:
 def test_constantes_xbox360():
     assert XBOX360_VENDOR == 0x045E
     assert XBOX360_PRODUCT == 0x028E
-    assert "Hefesto" in DEVICE_NAME
+    assert "Hefesto - Dualsense4Unix" in DEVICE_NAME
 
 
 def test_button_map_cobre_face_buttons():

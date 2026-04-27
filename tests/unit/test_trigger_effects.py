@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.core import trigger_effects as tfx
-from hefesto.core.trigger_effects import (
+from hefesto_dualsense4unix.core import trigger_effects as tfx
+from hefesto_dualsense4unix.core.trigger_effects import (
     AMPLITUDE_SCALE,
     PRESET_FACTORIES,
     TriggerMode,

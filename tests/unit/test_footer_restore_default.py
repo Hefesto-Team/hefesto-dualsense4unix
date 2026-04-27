@@ -17,8 +17,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.app.actions.footer_actions import _MEU_PERFIL_ASSET, FooterActionsMixin
-from hefesto.app.draft_config import DraftConfig
+from hefesto_dualsense4unix.app.actions.footer_actions import _MEU_PERFIL_ASSET, FooterActionsMixin
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -98,7 +98,7 @@ class TestRestoreDefault:
         destino = profiles_dir_isolado / "meu_perfil.json"
         destino.write_text(json.dumps(_perfil_modificado()), encoding="utf-8")
 
-        import hefesto.profiles.loader as loader_mod
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
             loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
@@ -107,7 +107,7 @@ class TestRestoreDefault:
         mock_dialogs = MagicMock()
         mock_dialogs.confirm_restore_default.return_value = True
 
-        with patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
         resultado = json.loads(destino.read_text(encoding="utf-8"))
@@ -121,7 +121,7 @@ class TestRestoreDefault:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """self.draft deve ser substituído pelo perfil restaurado."""
-        import hefesto.profiles.loader as loader_mod
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
             loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
@@ -132,7 +132,7 @@ class TestRestoreDefault:
         mock_dialogs = MagicMock()
         mock_dialogs.confirm_restore_default.return_value = True
 
-        with patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
         assert stub_mixin.draft is not draft_antes
@@ -144,7 +144,7 @@ class TestRestoreDefault:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Statusbar deve receber mensagem mencionando meu_perfil."""
-        import hefesto.profiles.loader as loader_mod
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
             loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
@@ -153,7 +153,7 @@ class TestRestoreDefault:
         mock_dialogs = MagicMock()
         mock_dialogs.confirm_restore_default.return_value = True
 
-        with patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
         assert any("meu_perfil" in msg for msg in stub_mixin._toasted)
@@ -172,7 +172,7 @@ class TestRestoreDefaultCasosDeBorda:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Perfil não deve ser alterado se usuário cancelar o diálogo."""
-        import hefesto.profiles.loader as loader_mod
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
             loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
@@ -184,7 +184,7 @@ class TestRestoreDefaultCasosDeBorda:
         mock_dialogs = MagicMock()
         mock_dialogs.confirm_restore_default.return_value = False
 
-        with patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
         resultado = json.loads(destino.read_text(encoding="utf-8"))
@@ -197,7 +197,7 @@ class TestRestoreDefaultCasosDeBorda:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Quando asset não existe, exibe toast e não lança exceção."""
-        import hefesto.app.actions.footer_actions as footer_mod
+        import hefesto_dualsense4unix.app.actions.footer_actions as footer_mod
 
         monkeypatch.setattr(
             footer_mod,
@@ -219,7 +219,7 @@ class TestRestoreDefaultCasosDeBorda:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Deve exibir toast de cancelamento quando usuário recusa."""
-        import hefesto.profiles.loader as loader_mod
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
             loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
@@ -228,7 +228,7 @@ class TestRestoreDefaultCasosDeBorda:
         mock_dialogs = MagicMock()
         mock_dialogs.confirm_restore_default.return_value = False
 
-        with patch("hefesto.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
             stub_mixin.on_restore_default()
 
         assert any("cancelad" in msg.lower() for msg in stub_mixin._toasted)

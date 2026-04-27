@@ -4,10 +4,10 @@
 
 ## Arquitetura em dois níveis
 
-O DualSense aceita via HID apenas **10 modos low-level** + array de **7 forces** (bytes 0–255). Os "19 modos" documentados no DSX Paliverse são **presets de alto nível**: combinações específicas de `(mode, forces)` com semântica reconhecível (Galloping, Machine, Bow, etc.). Hefesto implementa os dois níveis:
+O DualSense aceita via HID apenas **10 modos low-level** + array de **7 forces** (bytes 0–255). Os "19 modos" documentados no DSX Paliverse são **presets de alto nível**: combinações específicas de `(mode, forces)` com semântica reconhecível (Galloping, Machine, Bow, etc.). Hefesto - Dualsense4Unix implementa os dois níveis:
 
-- `hefesto.core.controller.IController.set_trigger(side, mode, forces)` — low-level direto.
-- `hefesto.core.trigger_effects.TriggerEffect` + factories (`galloping(...)`, `machine(...)`, etc.) — high-level, traduzem para `(mode, forces)`.
+- `hefesto_dualsense4unix.core.controller.IController.set_trigger(side, mode, forces)` — low-level direto.
+- `hefesto_dualsense4unix.core.trigger_effects.TriggerEffect` + factories (`galloping(...)`, `machine(...)`, etc.) — high-level, traduzem para `(mode, forces)`.
 
 ---
 
@@ -35,7 +35,7 @@ O DualSense aceita via HID apenas **10 modos low-level** + array de **7 forces**
 
 ## Nível 2 — Presets de alto nível (DSX Paliverse)
 
-Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mode_low_level, forces_array)`. Factories vivem em `src/hefesto/core/trigger_effects.py`. Validação de ranges (via pydantic v2 ou `__post_init__`) protege o usuário de valores nocivos ao controle.
+Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mode_low_level, forces_array)`. Factories vivem em `src/hefesto_dualsense4unix/core/trigger_effects.py`. Validação de ranges (via pydantic v2 ou `__post_init__`) protege o usuário de valores nocivos ao controle.
 
 | Preset                         | Arity | Parâmetros nomeados                                                                                  | Mapeamento (exemplo)              |
 |--------------------------------|-------|------------------------------------------------------------------------------------------------------|-----------------------------------|
@@ -73,7 +73,7 @@ Os 19 efeitos nomeados do DSX são construídos por factories que produzem `(mod
 
 ## `CustomTriggerValue` no CLI
 
-Acesso raw via `hefesto test trigger --raw --mode Pulse_AB --forces 0,9,7,7,10,0,0`. Exposição secundária; usuário comum usa presets nomeados. Documentar no guia de criação de perfis como ferramenta de experimentação.
+Acesso raw via `hefesto-dualsense4unix test trigger --raw --mode Pulse_AB --forces 0,9,7,7,10,0,0`. Exposição secundária; usuário comum usa presets nomeados. Documentar no guia de criação de perfis como ferramenta de experimentação.
 
 ---
 
@@ -84,6 +84,6 @@ Acesso raw via `hefesto test trigger --raw --mode Pulse_AB --forces 0,9,7,7,10,0
 | 1    | Arity de `Machine` (6 vs 7)            | **6 params nomeados** no preset; HID sempre recebe 7 forces, última posição preenchida com 0 |
 | 2    | Ordem dos params de `PulseB`           | `start, end, force` (3 nomeados) → `forces = [start, end, force, 0, 0, 0, 0]`                |
 | 3    | Limite absoluto de `frequency`         | **0–255 aceitos**; saturação de firmware em ~150–160 Hz em modos `Pulse*`                    |
-| 4    | Exposição de `CustomTriggerValue` na CLI | **Exposto via `--raw`** em `hefesto test trigger`; presets nomeados continuam o default       |
+| 4    | Exposição de `CustomTriggerValue` na CLI | **Exposto via `--raw`** em `hefesto-dualsense4unix test trigger`; presets nomeados continuam o default       |
 
 W2.1 destravado.
