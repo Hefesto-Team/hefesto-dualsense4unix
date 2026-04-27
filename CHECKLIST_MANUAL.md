@@ -11,6 +11,36 @@ Sprints cujos DoDs exigem DualSense conectado. Revisor com hardware marca `[x]` 
 - [ ] `Ctrl+C` desliga limpo (sem resetar LED ou travar o controle).
 - [ ] Desconectar cabo durante execução → daemon loga evento `disconnected` e volta a aceitar nova conexão.
 
+## W3.0 — Resiliência sem hardware (BUG-DAEMON-NO-DEVICE-FATAL-01)
+
+- [ ] Sem DualSense conectado, `systemctl --user start hefesto-dualsense4unix.service && sleep 5 && systemctl --user is-active …` → `active`.
+- [ ] Socket `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock` existe sem hardware.
+- [ ] `hefesto-dualsense4unix status` sem hardware → `connected: False`, sem traceback.
+- [ ] Plug do DualSense (USB) com daemon offline → `connected: True` em ≤10s sem restart de unit.
+- [ ] Unplug com daemon online → `connected: False`, daemon segue `active`.
+
+## W3.0 — Tray runtime (CLUSTER-TRAY-POLISH-01 + IPC-STATE-PROFILE)
+
+- [ ] `gnome-extensions list --enabled | grep ubuntu-appindicators` → presente após `install.sh --yes` + logout/login.
+- [ ] Tray icon visível na barra superior do GNOME, clicável.
+- [ ] Submenu "Perfis" lista apenas perfis reais (sem "(carregando)" zombie).
+- [ ] Perfil `meu_perfil` aparece como `meu_perfil` (não `meu__perfil`).
+- [ ] Click em perfil X com firefox aberto: perfil X persiste por 30s (autoswitch suprimido), depois autoswitch volta a operar.
+- [ ] "Sair" do tray com daemon iniciado fora do systemd: `pgrep -af hefesto | grep -v grep` retorna vazio.
+
+## W3.0 — Firmware tab (FEAT-FIRMWARE-DUALSENSECTL-INSTALL-01)
+
+- [ ] Sem `dualsensectl` instalado: aba Firmware mostra mensagem "dualsensectl não instalado — instalar via Flathub" (não silencia).
+- [ ] Após `flatpak install -y --user flathub com.github.nowrep.dualsensectl`: `dualsensectl info` retorna firmware version do controle.
+
+## W3.0 — Bluetooth (FEAT-BLUETOOTH-CONNECTION-01)
+
+- [ ] Pareamento via `bluetoothctl pair/trust/connect <MAC>` funciona.
+- [ ] DualSense conectado **só** via BT (USB desplugado): `hefesto-dualsense4unix status` → `transport: bt`.
+- [ ] Lightbar via BT: `hefesto-dualsense4unix led --color "#FF00FF"` acende magenta.
+- [ ] Trigger via BT: `profile activate shooter` aplica Rigid em L2/R2.
+- [ ] Hotplug GUI BT (se `--enable-hotplug-gui`): desconectar BT + reconectar abre a GUI.
+
 ## W2.2 — Trigger effects e rumble
 
 - [ ] Cada um dos 19 modos produz vibração correta em `L2` e `R2` via `hefesto-dualsense4unix test trigger --mode <X> --side <lado>`.

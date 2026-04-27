@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-1036%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-1332%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -43,7 +43,8 @@ Projetado para Pop!\_OS, Ubuntu, Fedora, Arch, Debian e Mint. Usa `evdev` para e
 | **Compatibilidade DSX** | Servidor UDP em `127.0.0.1:6969` aceita pacotes JSON no schema Paliverse |
 | **IPC local** | Unix socket em `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock`, JSON-RPC 2.0 sobre NDJSON, 10 métodos canônicos |
 | **Perfis** | JSON validados com pydantic v2 em `~/.config/hefesto-dualsense4unix/profiles/`; 7 defaults (`navegacao`, `fps`, `aventura`, `acao`, `corrida`, `esportes`, `meu_perfil`) <!-- noqa: acentuacao --> |
-| **Auto-switch** | Troca de perfil automática por janela ativa (X11 nativo, Wayland via portal XDG) |
+| **Auto-switch** | Troca de perfil automática por janela ativa (X11 nativo, Wayland via portal XDG) com lock de 30 s após escolha manual via tray/CLI |
+| **Resiliência** | Daemon sobe sem hardware presente; reconnect_loop probe 5 s; tolera plug/unplug em runtime sem morrer |
 | **Hotkeys** | Combos sagrados PS+D-pad sem exigir grupo `input`; botão Mic físico muta microfone do sistema |
 | **Lightbar e LEDs** | Barra RGB + luminosidade + 5 LEDs de jogador; presets rápidos (Todos, Player 1, Player 2, Nenhum) |
 | **Rumble** | Política global (Economia 0.3×, Balanceado 0.7×, Máximo 1.0×, Auto dinâmico por bateria) com debounce 5 s |
@@ -406,6 +407,19 @@ Factories canônicas em `src/hefesto_dualsense4unix/profiles/trigger_modes.py`.
 **Cursor "voando" ao ativar Mouse:**
 
 - Sintoma de múltiplas instâncias de daemon rodando em paralelo. Desde v2.0.0 existe `single_instance` com `flock` — se o bug aparecer, rode `pkill -TERM -f hefesto_dualsense4unix.app.main && pkill -TERM -f 'hefesto-dualsense4unix daemon'` e reinicie via `systemctl --user restart hefesto-dualsense4unix.service`. Reporte em issue.
+
+**Tray icon invisível no GNOME:**
+
+- A partir do GNOME 42 (Pop!_OS 22.04, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada para renderizar tray icons. O `install.sh --yes` (passo 8/9 a partir da v3.0.0) detecta e habilita automaticamente. Após habilitar, faça **logout/login** do GNOME para o Shell carregar.
+- Manualmente: `gnome-extensions enable ubuntu-appindicators@ubuntu.com`.
+
+**Aba Firmware silenciosamente não funciona:**
+
+- Depende do binário externo `dualsensectl` (opcional). Instale via Flathub: `flatpak install -y --user flathub com.github.nowrep.dualsensectl`. Ou compile do GitHub: <https://github.com/nowrep/dualsensectl>.
+
+**Sair do tray não encerra o daemon:**
+
+- A partir da v3.0.0, "Sair" mata via PID file também (não só via `systemctl stop`). Se você ainda observar daemon residual, anote o PID e abra issue com `journalctl --user -u hefesto-dualsense4unix -n 50`.
 
 Mais detalhes em [`docs/usage/quickstart.md`](docs/usage/quickstart.md) e [`docs/usage/troubleshooting.md`](docs/usage/troubleshooting.md) (quando existir).
 

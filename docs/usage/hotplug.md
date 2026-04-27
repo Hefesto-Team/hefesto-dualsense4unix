@@ -64,7 +64,7 @@ sudo udevadm control --reload-rules
 
 O `uninstall.sh` já faz as duas remoções (`--udev` remove a regra).
 
-## Limitações## Bluetooth (FEAT-HOTPLUG-BT-01)
+## Bluetooth (FEAT-HOTPLUG-BT-01)
 
 Parear o DualSense via Bluetooth também dispara a GUI automaticamente.
 A regra complementar `74-ps5-controller-hotplug-bt.rules` observa
