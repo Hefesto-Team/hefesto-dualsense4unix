@@ -96,13 +96,13 @@ jobs:
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            br.andrefarias.Hefesto.flatpak \
+            Hefesto-Dualsense4Unix.flatpak \
             br.andrefarias.Hefesto
 
       - name: Install --user do bundle (smoke de instalação)
         run: |
           flatpak install --user --noninteractive --bundle \
-            br.andrefarias.Hefesto.flatpak
+            Hefesto-Dualsense4Unix.flatpak
           # App-id Flatpak preservado como br.andrefarias.Hefesto durante o
           # rebrand (composite com qualificador br.andrefarias., decisão do
           # v3.0.0 — não muda para evitar quebrar instalações existentes).
@@ -121,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hefesto-dualsense4unix-flatpak
-          path: br.andrefarias.Hefesto.flatpak
+          path: Hefesto-Dualsense4Unix.flatpak
           retention-days: 30
           if-no-files-found: error
 
