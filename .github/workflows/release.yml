@@ -242,6 +242,22 @@ jobs:
         with:
           name: flatpak-${{ needs.build.outputs.version }}
           path: dist/flatpak/
+      - name: Extrair seção da release do CHANGELOG
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          # Extrai do CHANGELOG só a seção desta versão: "## [VERSION]" até
+          # próxima "## [" (ou EOF). Padrão Keep a Changelog.
+          # Sem --notes-file CHANGELOG.md inteiro (~750 linhas, ridiculo).
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { p=1; print; next }
+            p && /^## \[/ { exit }
+            p { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+          echo "---NOTES PREVIEW---"
+          head -20 /tmp/release-notes.md
+          echo "..."
+          wc -l /tmp/release-notes.md
       - name: Criar release no GitHub
         env:
           GH_TOKEN: ${{ github.token }}
@@ -249,7 +265,7 @@ jobs:
         run: |
           gh release create "v${VERSION}" \
             --title "Hefesto - Dualsense4Unix v${VERSION}" \
-            --notes-file CHANGELOG.md \
+            --notes-file /tmp/release-notes.md \
             dist/hefesto_dualsense4unix-*.whl dist/hefesto_dualsense4unix-*.tar.gz \
             dist/appimage/*.AppImage \
             dist/deb/*.deb \
