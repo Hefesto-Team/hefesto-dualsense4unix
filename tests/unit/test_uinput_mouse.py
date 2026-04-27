@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.integrations.uinput_mouse import (
+from hefesto_dualsense4unix.integrations.uinput_mouse import (
     BUTTON_TO_UINPUT,
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
@@ -67,7 +67,7 @@ def test_constantes_default_coerentes():
     assert SCROLL_DEADZONE == 40
     assert SCROLL_RATE_LIMIT_SEC == 0.050
     assert TRIGGER_PRESS_THRESHOLD == 64
-    assert "Hefesto" in DEVICE_NAME
+    assert "Hefesto - Dualsense4Unix" in DEVICE_NAME
 
 
 def test_button_map_canonico():

@@ -84,7 +84,7 @@ jobs:
       - name: Gerar AppImage
         run: bash scripts/build_appimage.sh
       - name: Smoke AppImage
-        run: ./dist/appimage/Hefesto-*-x86_64.AppImage version
+        run: ./dist/appimage/Hefesto-Dualsense4Unix-*-x86_64.AppImage version
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
@@ -138,34 +138,34 @@ jobs:
         # Noble 24.04 apt: pydantic 1.10.14 (precisa v2), typer 0.9.0
         # (precisa 0.12+ para PEP 604 'int | None' em cli/app.py).
         # Empirico 2026-04-24 (docker ubuntu:24.04): pydantic>=2 + typer>=0.12
-        # + deps apt = hefesto CLI carrega, 'hefesto version' imprime 2.2.2.
+        # + deps apt = hefesto CLI carrega, 'hefesto-dualsense4unix version' imprime 2.2.2.
         # --break-system-packages: Noble e PEP 668.
         run: |
           python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0' 'typer>=0.12'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ./dist/hefesto_*_amd64.deb
-      - name: Validar binário hefesto
+          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64.deb
+      - name: Validar binário hefesto-dualsense4unix
         run: |
-          which hefesto
-          # Expor pydantic v2 + typer 0.12+ do pip --user para o hefesto
+          which hefesto-dualsense4unix
+          # Expor pydantic v2 + typer 0.12+ do pip --user para o hefesto-dualsense4unix
           # (instalado em /usr/lib/python3/dist-packages). PYTHONPATH coloca o
           # user site ANTES do dist-packages para os imports resolverem as
-          # versões modernas primeiro. Subcomando correto e 'hefesto version',
+          # versões modernas primeiro. Subcomando correto e 'hefesto-dualsense4unix version',
           # não '--version' (não existe como top-level option).
           USER_SITE="$(python3 -m site --user-site)"
           echo "USER_SITE=$USER_SITE"
-          PYTHONPATH="$USER_SITE" hefesto version
-      - name: Validar binário hefesto-gui
+          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix version
+      - name: Validar binário hefesto-dualsense4unix-gui
         run: |
-          which hefesto-gui
+          which hefesto-dualsense4unix-gui
           # --help em runner headless pode falhar por falta de DISPLAY/GTK;
           # o critério é localizar o binário. Exit não-zero aqui é aceitável.
           USER_SITE="$(python3 -m site --user-site)"
-          PYTHONPATH="$USER_SITE" hefesto-gui --help || echo "hefesto-gui --help retornou não-zero em headless (esperado)"
+          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix-gui --help || echo "hefesto-dualsense4unix-gui --help retornou não-zero em headless (esperado)"
       - name: Desinstalar (valida postrm)
-        run: sudo apt-get remove -y hefesto
+        run: sudo apt-get remove -y hefesto-dualsense4unix
 
   flatpak:
     name: Build Flatpak bundle
@@ -210,13 +210,13 @@ jobs:
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            br.andrefarias.Hefesto.flatpak \
+            Hefesto-Dualsense4Unix.flatpak \
             br.andrefarias.Hefesto
       - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}
-          path: br.andrefarias.Hefesto.flatpak
+          path: Hefesto-Dualsense4Unix.flatpak
           if-no-files-found: error
 
   github-release:
@@ -248,9 +248,9 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           gh release create "v${VERSION}" \
-            --title "Hefesto v${VERSION}" \
+            --title "Hefesto - Dualsense4Unix v${VERSION}" \
             --notes-file CHANGELOG.md \
-            dist/hefesto-*.whl dist/hefesto-*.tar.gz \
+            dist/hefesto_dualsense4unix-*.whl dist/hefesto_dualsense4unix-*.tar.gz \
             dist/appimage/*.AppImage \
             dist/deb/*.deb \
             dist/flatpak/*.flatpak

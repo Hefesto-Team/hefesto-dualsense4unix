@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.core.evdev_reader import (
+from hefesto_dualsense4unix.core.evdev_reader import (
     DUALSENSE_PIDS,
     DUALSENSE_VENDOR,
     TouchpadReader,
@@ -135,7 +135,7 @@ class TestTouchpadReaderBehavior:
     def test_is_available_false_quando_device_ausente(self) -> None:
         """Sem path descoberto e sem override, is_available = False."""
         with patch(
-            "hefesto.core.evdev_reader.find_dualsense_touchpad_evdev",
+            "hefesto_dualsense4unix.core.evdev_reader.find_dualsense_touchpad_evdev",
             return_value=None,
         ):
             reader = TouchpadReader()

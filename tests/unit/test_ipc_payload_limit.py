@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from hefesto.daemon.ipc_server import (
+from hefesto_dualsense4unix.daemon.ipc_server import (
     CODE_INVALID_REQUEST,
     MAX_PAYLOAD_BYTES,
     IpcServer,

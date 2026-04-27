@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 def _write_capture(path: Path, transport: str, samples: list[dict]) -> None:

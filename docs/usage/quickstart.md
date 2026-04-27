@@ -1,4 +1,4 @@
-# Quickstart — Hefesto em 2 minutos
+# Quickstart — Hefesto - Dualsense4Unix em 2 minutos
 
 Guia prático pro usuário que acabou de plugar o DualSense e quer fazer funcionar — sem ler protocolo nem ADR.
 
@@ -36,7 +36,7 @@ sudo pacman -S python-gobject gtk3 libappindicator-gtk3 hidapi \
 ### Via `.deb` (Debian/Ubuntu/Pop!_OS/Mint)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v1.1.0/hefesto_1.1.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/download/v1.1.0/hefesto_1.1.0_amd64.deb
 sudo apt install ./hefesto_1.1.0_amd64.deb
 ```
 
@@ -58,13 +58,15 @@ O `install.sh` pergunta se você quer auto-start do daemon no boot (default **N�
 
 ## 3. Primeira abertura
 
-Abra o Hefesto pelo menu de aplicativos (ou `hefesto-gui` no terminal). A janela abre com 8 abas e tema Drácula:
+Abra o Hefesto - Dualsense4Unix pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A janela abre com 10 abas e tema Drácula:
 
 ![Aba Status com sticks e grid de botões](assets/quickstart_01_status.png)
 
 **Aba Status**: conexão do controle, bateria, perfil ativo, estado do daemon. Sticks L3/R3 preview ao vivo + grid 4×4 dos botões que ilumina em roxo quando você pressiona.
 
 Plugue o DualSense (USB) ou pareie via Bluetooth. A GUI abre sozinha graças às regras udev do hotplug. A aba Status mostra **Conexão: USB** (ou BT), **Bateria: XX%** e **Daemon: Online**.
+
+> **Tray icon não aparece no GNOME?** No GNOME 42+ (Pop!_OS, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada. O `install.sh --yes` habilita automaticamente, mas pode exigir **logout/login** para o GNOME Shell carregar. Em outros DEs (KDE, COSMIC, XFCE), o tray funciona nativamente. Detalhes: passo 8/9 do `install.sh`.
 
 ---
 
@@ -75,7 +77,7 @@ Plugue o DualSense (USB) ou pareie via Bluetooth. A GUI abre sozinha graças às
 A aba Daemon mostra o estado real cruzando 3 fontes (systemd + pid file + IPC):
 
 - **Online (systemd + auto-start)** — gerenciado pelo systemd, reinicia sozinho se falhar.
-- **Online (processo avulso)** — rodando fora do systemd (ex.: `hefesto daemon start --foreground`). Use "Migrar para systemd" se quiser persistência.
+- **Online (processo avulso)** — rodando fora do systemd (ex.: `hefesto-dualsense4unix daemon start --foreground`). Use "Migrar para systemd" se quiser persistência.
 - **Iniciando...** — transitório, aguarde alguns segundos.
 - **Offline** — sem daemon. Clique "Iniciar".
 
@@ -111,7 +113,7 @@ Ajuste a velocidade nos sliders "Velocidade do cursor" e "Velocidade da rolagem"
 O rodapé global tem 4 botões que operam em **tudo** (gatilhos + LEDs + rumble + mouse):
 
 - **Aplicar** — envia o estado atual das abas pro hardware em uma transação.
-- **Salvar Perfil** — abre dialog, pergunta o nome, grava em `~/.config/hefesto/profiles/<nome>.json`.
+- **Salvar Perfil** — abre dialog, pergunta o nome, grava em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`.
 - **Importar** — lê um `.json` de qualquer lugar, valida, copia pro diretório de perfis.
 - **Restaurar Default** — volta o slot "Meu Perfil" à cópia de fábrica (navegacao).
 
@@ -168,17 +170,44 @@ Slider "Intensidade global" permite ajuste fino (0-100%) — vira modo "Custom".
 ### "Daemon Offline" e não sobe
 
 ```bash
-systemctl --user status hefesto.service
-systemctl --user start hefesto.service
-journalctl --user -u hefesto -f
+systemctl --user status hefesto-dualsense4unix.service
+systemctl --user start hefesto-dualsense4unix.service
+journalctl --user -u hefesto-dualsense4unix -f
 ```
 
 Se a unit não existe:
 
 ```bash
-hefesto daemon install-service
+hefesto-dualsense4unix daemon install-service
 systemctl --user daemon-reload
 ```
+
+> **A partir da v3.0.0** o daemon é resiliente sem hardware: sobe mesmo sem DualSense plugado, expõe IPC, e detecta plug-and-play via probe interno a cada 5s. Se o daemon morrer especificamente porque o hardware está ausente, é regressão — abrir issue com `journalctl --user -u hefesto-dualsense4unix -n 50`.
+
+### Tray icon invisível no GNOME
+
+```bash
+gnome-extensions list --enabled | grep ubuntu-appindicator
+```
+
+Se vazio, habilitar:
+
+```bash
+gnome-extensions enable ubuntu-appindicators@ubuntu.com
+# precisa logout/login no GNOME para renderizar
+```
+
+O `install.sh` (passo 8/9 a partir da v3.0.0) faz isso automaticamente.
+
+### Aba Firmware sem reagir
+
+A aba Firmware depende do binário externo `dualsensectl`, opcional:
+
+```bash
+flatpak install -y --user flathub com.github.nowrep.dualsensectl
+```
+
+Ou via GitHub source: <https://github.com/nowrep/dualsensectl>.
 
 ### Gatilhos sem efeito
 

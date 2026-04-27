@@ -7,7 +7,7 @@ labels: ["type:bug", "status:ready"]
 ## Ambiente
 - Distro + versão:
 - Kernel: `uname -r`
-- Versão Hefesto: `hefesto --version`
+- Versão Hefesto - Dualsense4Unix: `hefesto-dualsense4unix --version`
 - Transporte (USB/BT):
 - Controle (DualSense / DualSense Edge):
 
@@ -22,5 +22,5 @@ labels: ["type:bug", "status:ready"]
 
 ## Logs relevantes
 ```
-journalctl --user -u hefesto --since "10 min ago"
+journalctl --user -u hefesto-dualsense4unix --since "10 min ago"
 ```

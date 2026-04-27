@@ -158,7 +158,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto.app.actions import triggers_actions  # noqa: E402
+from hefesto_dualsense4unix.app.actions import triggers_actions  # noqa: E402
 
 # --- Fakes de widgets GTK ---------------------------------------------
 
@@ -220,7 +220,7 @@ class _FakeTriggersMixin:
     _MODES_COM_PRESET = triggers_actions.TriggersActionsMixin._MODES_COM_PRESET
 
     def __init__(self) -> None:
-        from hefesto.app.draft_config import DraftConfig
+        from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
         self._guard_refresh = False
@@ -284,7 +284,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
 def test_install_triggers_tab_popula_combo_de_modos(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from hefesto.app.actions.trigger_specs import PRESETS
+    from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
@@ -445,7 +445,7 @@ def test_refresh_triggers_from_draft_sincroniza_widgets(
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
 
-    from hefesto.app.draft_config import TriggerDraft, TriggersDraft
+    from hefesto_dualsense4unix.app.draft_config import TriggerDraft, TriggersDraft
     new_triggers = TriggersDraft(
         left=TriggerDraft(mode="Rigid", params=(4, 180)),
     )

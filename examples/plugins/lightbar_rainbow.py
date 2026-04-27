@@ -5,10 +5,10 @@ Util para verificar que o sistema de plugins esta funcionando e
 que os métodos de output do ControllerProxy operam corretamente.
 
 Instalação:
-    cp examples/plugins/lightbar_rainbow.py ~/.config/hefesto/plugins/
+    cp examples/plugins/lightbar_rainbow.py ~/.config/hefesto-dualsense4unix/plugins/
 
-Ativação (em ~/.config/hefesto/config.toml ou env var):
-    HEFESTO_PLUGINS_ENABLED=1 HEFESTO_PLUGINS_DIR=examples/plugins
+Ativação (em ~/.config/hefesto-dualsense4unix/config.toml ou env var):
+    HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1 HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR=examples/plugins
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import math
 import time
 from typing import ClassVar
 
-from hefesto.plugin_api import Plugin, PluginContext
+from hefesto_dualsense4unix.plugin_api import Plugin, PluginContext
 
 
 def _hsv_to_rgb(h: float, s: float, v: float) -> tuple[int, int, int]:

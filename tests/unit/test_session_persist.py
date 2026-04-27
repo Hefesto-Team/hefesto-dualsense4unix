@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.utils.session import load_last_profile, save_last_profile
+from hefesto_dualsense4unix.utils.session import load_last_profile, save_last_profile
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -25,7 +25,7 @@ from hefesto.utils.session import load_last_profile, save_last_profile
 def tmp_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redireciona config_dir para tmp_path durante o teste."""
     monkeypatch.setattr(
-        "hefesto.utils.session._session_path",
+        "hefesto_dualsense4unix.utils.session._session_path",
         lambda: tmp_path / "session.json",
     )
     return tmp_path / "session.json"
@@ -66,7 +66,7 @@ def test_save_nao_explode_em_diretorio_inexistente(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = tmp_path / "subdir" / "session.json"
-    monkeypatch.setattr("hefesto.utils.session._session_path", lambda: path)
+    monkeypatch.setattr("hefesto_dualsense4unix.utils.session._session_path", lambda: path)
     # Diretório pai não existe — save deve falhar silenciosamente.
     save_last_profile("shooter")
     # Sem exception: teste passou.
@@ -81,9 +81,14 @@ def test_activate_chama_save_last_profile() -> None:
     """ProfileManager.activate() deve persistir o perfil via save_last_profile."""
     saved: list[str] = []
 
-    from hefesto.daemon.state_store import StateStore
-    from hefesto.profiles.manager import ProfileManager
-    from hefesto.profiles.schema import LedsConfig, MatchCriteria, Profile, TriggersConfig
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.schema import (
+        LedsConfig,
+        MatchCriteria,
+        Profile,
+        TriggersConfig,
+    )
 
     fake_profile = Profile(
         name="shooter",
@@ -97,9 +102,9 @@ def test_activate_chama_save_last_profile() -> None:
     mgr = ProfileManager(controller=ctrl, store=store)
 
     with (
-        patch("hefesto.profiles.manager.load_profile", return_value=fake_profile),
-        patch("hefesto.profiles.manager.apply_led_settings"),
-        patch("hefesto.utils.session.save_last_profile", side_effect=saved.append),
+        patch("hefesto_dualsense4unix.profiles.manager.load_profile", return_value=fake_profile),
+        patch("hefesto_dualsense4unix.profiles.manager.apply_led_settings"),
+        patch("hefesto_dualsense4unix.utils.session.save_last_profile", side_effect=saved.append),
     ):
         mgr.activate("shooter")
 

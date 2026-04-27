@@ -2,7 +2,7 @@
 
 ## Estrutura
 
-Perfis ficam em `~/.config/hefesto/profiles/<nome>.json`. Schema v1:
+Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema v1:
 
 ```json
 {
@@ -47,12 +47,12 @@ xdotool getactivewindow getwindowname       # título atual
 xdotool getactivewindow getwindowpid        # pid → readlink /proc/<pid>/exe
 ```
 
-O segundo valor de `WM_CLASS` é o que o Hefesto usa. Apps Qt/GTK podem ter `instance` e `class` idênticos; outros divergem (Steam aparece como `Steam` no campo `class`).
+O segundo valor de `WM_CLASS` é o que o Hefesto - Dualsense4Unix usa. Apps Qt/GTK podem ter `instance` e `class` idênticos; outros divergem (Steam aparece como `Steam` no campo `class`).
 
 ## Criando via CLI
 
 ```bash
-hefesto profile create driving \
+hefesto-dualsense4unix profile create driving \
     --priority 10 \
     --match-class "steam_app_1091500" \
     --match-regex "Cyberpunk|Forza" \
@@ -64,10 +64,10 @@ Perfis criados via CLI abrem com triggers `Off`; edite o JSON para ajustar.
 ## Listando, ativando, removendo
 
 ```bash
-hefesto profile list                        # tabela rich
-hefesto profile show shooter                # JSON pretty
-hefesto profile activate shooter            # aplica direto (via IPC se daemon ativo)
-hefesto profile delete old_one --yes        # remove arquivo
+hefesto-dualsense4unix profile list                        # tabela rich
+hefesto-dualsense4unix profile show shooter                # JSON pretty
+hefesto-dualsense4unix profile activate shooter            # aplica direto (via IPC se daemon ativo)
+hefesto-dualsense4unix profile delete old_one --yes        # remove arquivo
 ```
 
 ## Fallback

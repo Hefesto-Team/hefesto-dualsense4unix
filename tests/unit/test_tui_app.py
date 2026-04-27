@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -15,7 +15,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from hefesto.tui.app import DaemonSnapshot, HefestoApp, MainScreen, StatusBar
+from hefesto_dualsense4unix.tui.app import DaemonSnapshot, HefestoApp, MainScreen, StatusBar
 
 
 @pytest.fixture

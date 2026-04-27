@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.integrations.window_backends.null import NullBackend
-from hefesto.integrations.window_backends.xlib import XlibBackend
-from hefesto.integrations.window_detect import detect_window_backend, get_active_window_info
+from hefesto_dualsense4unix.integrations.window_backends.null import NullBackend
+from hefesto_dualsense4unix.integrations.window_backends.xlib import XlibBackend
+from hefesto_dualsense4unix.integrations.window_detect import (
+    detect_window_backend,
+    get_active_window_info,
+)
 
 
 class TestDetectWindowBackendX11:
@@ -110,7 +113,7 @@ class TestWindowInfoAsDict:
     """WindowInfo.as_dict() mantém compatibilidade com API legada."""
 
     def test_as_dict_campos_completos(self) -> None:
-        from hefesto.integrations.window_backends.base import WindowInfo
+        from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
 
         info = WindowInfo(
             wm_class="Firefox",
@@ -126,7 +129,7 @@ class TestWindowInfoAsDict:
         assert d["exe_basename"] == "firefox-bin"
 
     def test_as_dict_defaults(self) -> None:
-        from hefesto.integrations.window_backends.base import WindowInfo
+        from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
 
         info = WindowInfo()
         d = info.as_dict()

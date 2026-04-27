@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- AppStream metadata — Hefesto -->
+<!-- AppStream metadata — Hefesto - Dualsense4Unix -->
 <!-- Valide com: appstreamcli validate (opcao no-net) flatpak/br.andrefarias.Hefesto.metainfo.xml -->
 <component type="desktop-application">
   <id>br.andrefarias.Hefesto</id>
 
-  <name>Hefesto</name>
+  <name>Hefesto - Dualsense4Unix</name>
   <summary>Daemon de gatilhos adaptativos para controle DualSense no Linux</summary>
 
   <!-- Metadados de lançamento -->
@@ -22,7 +22,7 @@
 
   <!-- Descrição PT-BR (principal) -->
   <description>
-    <p>O Hefesto é um daemon Linux para configuração avançada do controle DualSense (PS5).
+    <p>O Hefesto - Dualsense4Unix é um daemon Linux para configuração avançada do controle DualSense (PS5).
        Permite ajustar gatilhos adaptativos, vibração, barra de luz e emulação de mouse
        diretamente no Linux, sem necessidade de Wine ou emuladores.</p>
     <p>Funcionalidades principais:</p>
@@ -36,7 +36,7 @@
       <li>Suporte a USB e Bluetooth</li>
     </ul>
     <!-- Descrição EN (para lojas internacionais) -->
-    <p xml:lang="en">Hefesto is a Linux daemon for advanced DualSense (PS5) controller
+    <p xml:lang="en">Hefesto - Dualsense4Unix is a Linux daemon for advanced DualSense (PS5) controller
        configuration. It lets you adjust adaptive triggers, rumble, lightbar and mouse
        emulation natively on Linux.</p>
     <p xml:lang="en">Main features:</p>
@@ -74,13 +74,13 @@
     <screenshot type="default">
       <caption>Interface principal — painel de gatilhos adaptativos</caption>
       <image type="source">
-        https://raw.githubusercontent.com/AndreBFarias/hefesto/main/docs/screenshots/gui-triggers.png
+        https://raw.githubusercontent.com/AndreBFarias/hefesto-dualsense4unix/main/docs/screenshots/gui-triggers.png
       </image>
     </screenshot>
     <screenshot>
       <caption>Gerenciamento de perfis por aplicação</caption>
       <image type="source">
-        https://raw.githubusercontent.com/AndreBFarias/hefesto/main/docs/screenshots/gui-profiles.png
+        https://raw.githubusercontent.com/AndreBFarias/hefesto-dualsense4unix/main/docs/screenshots/gui-profiles.png
       </image>
     </screenshot>
   </screenshots>
@@ -127,5 +127,5 @@
 
   <!-- Suporte (links opcionais) -->
   <url type="homepage">https://github.com/AndreBFarias/hefesto</url>
-  <url type="bugtracker">https://github.com/AndreBFarias/hefesto/issues</url>
+  <url type="bugtracker">https://github.com/AndreBFarias/hefesto-dualsense4unix/issues</url>
 </component>

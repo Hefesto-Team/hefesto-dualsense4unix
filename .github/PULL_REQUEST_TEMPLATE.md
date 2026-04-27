@@ -28,7 +28,7 @@
 
 - [ ] `.venv/bin/pytest tests/unit -q` passa (sem regressões).
 - [ ] `.venv/bin/ruff check src/ tests/` sem violações.
-- [ ] `.venv/bin/mypy src/hefesto` fecha com zero erros.
+- [ ] `.venv/bin/mypy src/hefesto_dualsense4unix` fecha com zero erros.
 - [ ] `python3 scripts/validar-acentuacao.py --all` sem violações.
 - [ ] `bash scripts/check_anonymity.sh` limpo (zero menção a IA, modelo, assistente, autor).
 - [ ] Pre-commit rodou localmente sem bypass (`--no-verify` não usado).
@@ -39,7 +39,7 @@
 
 ```
 # smoke USB
-HEFESTO_FAKE=1 HEFESTO_FAKE_TRANSPORT=usb HEFESTO_SMOKE_DURATION=2.0 ./run.sh --smoke
+HEFESTO_DUALSENSE4UNIX_FAKE=1 HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT=usb HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION=2.0 ./run.sh --smoke
 
 # (cole últimas linhas aqui)
 ```

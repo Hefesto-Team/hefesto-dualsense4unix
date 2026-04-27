@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,

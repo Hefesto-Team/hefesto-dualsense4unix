@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.daemon.subsystems.mouse import (
+from hefesto_dualsense4unix.daemon.subsystems.mouse import (
     MouseSubsystem,
     dispatch_mouse,
     stop_mouse_emulation,

@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto.core.rumble import RumbleEngine, _effective_mult
-from hefesto.daemon.lifecycle import DaemonConfig
+from hefesto_dualsense4unix.core.rumble import RumbleEngine, _effective_mult
+from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
 # AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: _effective_mult_inline foi deletado;
 # testes usam a função canônica _effective_mult. Alias local mantém os
@@ -259,8 +259,8 @@ class TestIpcHandlers:
 
     def _make_server(self) -> object:
         """Cria IpcServer com config de daemon mockado."""
-        from hefesto.daemon.ipc_server import IpcServer
-        from hefesto.daemon.state_store import StateStore
+        from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+        from hefesto_dualsense4unix.daemon.state_store import StateStore
 
         ctrl = MagicMock()
         store = StateStore()

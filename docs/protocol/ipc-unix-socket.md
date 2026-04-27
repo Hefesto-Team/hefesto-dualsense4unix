@@ -2,7 +2,7 @@
 
 ## Endpoint
 
-`$XDG_RUNTIME_DIR/hefesto.sock` (Unix socket, stream). Permissão `0600` (só o dono).
+`$XDG_RUNTIME_DIR/hefesto-dualsense4unix.sock` (Unix socket, stream). Permissão `0600` (só o dono).
 
 ## Formato de fio
 
@@ -23,7 +23,7 @@ NDJSON UTF-8 (V2-3): uma requisição ou resposta por linha, terminada por `\n`.
 
 ## Erros
 
-Código padrão JSON-RPC 2.0. Convenções do Hefesto:
+Código padrão JSON-RPC 2.0. Convenções do Hefesto - Dualsense4Unix:
 
 - `-32001`: daemon não conectado ao controle.
 - `-32002`: perfil não encontrado.

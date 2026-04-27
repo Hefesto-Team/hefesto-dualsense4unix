@@ -3,19 +3,19 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.core.led_control import (
+from hefesto_dualsense4unix.core.led_control import (
     LedSettings,
     apply_led_settings,
     hex_to_rgb,
     off,
     player_bitmask,
 )
-from hefesto.core.rumble import (
+from hefesto_dualsense4unix.core.rumble import (
     DEFAULT_MIN_INTERVAL_SEC,
     RumbleCommand,
     RumbleEngine,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 class TestLedSettings:

@@ -12,15 +12,15 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.cli.ipc_client import IpcClient, IpcError
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.ipc_server import CODE_INVALID_PARAMS, IpcServer
-from hefesto.daemon.state_store import StateStore
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import MatchAny, Profile
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS, IpcServer
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+from hefesto_dualsense4unix.testing import FakeController
 
 # ---------------------------------------------------------------------------
 # Fixtures auxiliares

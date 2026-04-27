@@ -8,19 +8,19 @@ from pathlib import Path
 
 import pytest
 
-from hefesto.cli.ipc_client import IpcClient, IpcError
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.ipc_server import (
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.ipc_server import (
     CODE_INVALID_PARAMS,
     CODE_METHOD_NOT_FOUND,
     CODE_PROFILE_NOT_FOUND,
     IpcServer,
 )
-from hefesto.daemon.state_store import StateStore
-from hefesto.profiles import loader as loader_module
-from hefesto.profiles.loader import save_profile
-from hefesto.profiles.manager import ProfileManager
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -28,7 +28,7 @@ from hefesto.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
-from hefesto.testing import FakeController
+from hefesto_dualsense4unix.testing import FakeController
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ async def running_server(tmp_path: Path, isolated_profiles_dir: Path):
         )
     )
 
-    socket_path = tmp_path / "hefesto.sock"
+    socket_path = tmp_path / "hefesto-dualsense4unix.sock"
     server = IpcServer(
         controller=fc, store=store, profile_manager=manager, socket_path=socket_path
     )
@@ -223,7 +223,7 @@ async def test_socket_permissao_0600(running_server):
 # --- BUG-IPC-01: detecção de socket vivo vs. resto-morto -----------------
 
 
-def _make_server(tmp_path: Path, socket_name: str = "hefesto.sock") -> IpcServer:
+def _make_server(tmp_path: Path, socket_name: str = "hefesto-dualsense4unix.sock") -> IpcServer:
     """Fabrica IpcServer mínimo para testes de ciclo start/stop."""
     fc = FakeController(transport="usb")
     fc.connect()
@@ -358,7 +358,7 @@ async def test_apply_draft_rumble_aplica_policy(
     from dataclasses import dataclass, field
     from unittest.mock import MagicMock
 
-    from hefesto.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
     @dataclass
     class _FakeDaemon:

@@ -13,8 +13,8 @@
 - **Confirmação:** o blob de firmware do DualSense **é criptografado**. Dumps publicados desde 2021 permanecem sem chave pública. Isto muda o escopo de PHASE3: não-objetivo "rodar blob modificado" ganha reforço — nem há como; só aplicar a imagem da Sony.
 - **Confirmação:** URL canônica Sony (`controller.dl.playstation.net/controller/lang/en/DualSenseUpdater.exe`) permanece ativa e é o único caminho oficial. Existe também uma variante por app Windows Store (`winget install PlayStation.DualSenseFWUpdater`) — mesmo binário empacotado.
 - **Achado novo:** `nondebug/dualsense` (GitHub) publica **report descriptor completo** de 280 bytes, sample de input report 0x01 USB com 64 bytes de payload, tabelas de reports USB e BT. PHASE1 cita o repo superficialmente; este survey detalha.
-- **Achado novo:** `Paliverse/DualSense-List-of-Firmwares` — repo de terceiro que **redistribui blobs firmware extraídos do Updater Sony**. Status legal ambíguo. Projeto Hefesto **não** deve referenciar/linkar como método de distribuição; apenas reconhecer existência como fenômeno documental.
-- **Achado novo:** precedente DS4 — chave AES-128-CBC pública `9B03D4FB5FEC1A2373462C45E4BC72A6` (IV zerado) decifra firmware DS4. DualSense provavelmente usa esquema similar porém com chave nova (ainda secreta). Sugere que **reverse do bootloader DualSense** deve esperar scene — fora de escopo Hefesto (que não visa derivar custom FW).
+- **Achado novo:** `Paliverse/DualSense-List-of-Firmwares` — repo de terceiro que **redistribui blobs firmware extraídos do Updater Sony**. Status legal ambíguo. Projeto Hefesto - Dualsense4Unix **não** deve referenciar/linkar como método de distribuição; apenas reconhecer existência como fenômeno documental.
+- **Achado novo:** precedente DS4 — chave AES-128-CBC pública `9B03D4FB5FEC1A2373462C45E4BC72A6` (IV zerado) decifra firmware DS4. DualSense provavelmente usa esquema similar porém com chave nova (ainda secreta). Sugere que **reverse do bootloader DualSense** deve esperar scene — fora de escopo Hefesto - Dualsense4Unix (que não visa derivar custom FW).
 - **Achado novo:** CachyOS forum e PCGamingWiki têm threads recentes (2024-2025) sobre atualização em Linux. Todos os métodos publicados dependem de **Wine/Proton/Bottles** para rodar o updater Windows oficial. Nenhum é nativo puro.
 - **Achado legal:** 9ª rodada triennial DMCA §1201 (out/2024) renovou exemption de interoperabilidade de dispositivos por mais 3 anos (até out/2027). Base legal para PHASE2/3 permanece sólida.
 
@@ -30,7 +30,7 @@
 | 2025-12-17 | Gist com script de download dos blobs Sony publicado |
 | 2026-02-19 | PR #53 **merged** pelo owner `nowrep`. Issue #52 fechada como COMPLETED |
 | 2026-02-19 | Owner comenta: "updating firmware would be better handled by fwupd (https://fwupd.org/)" — sugere LVFS como caminho canônico futuro |
-| 2026-04-23 | Hefesto descobre nesta sessão |
+| 2026-04-23 | Hefesto - Dualsense4Unix descobre nesta sessão |
 
 ### 0.2 Interface de usuário do dualsensectl atual
 
@@ -125,20 +125,20 @@ _Static_assert(sizeof(struct dualsense_feature_report_firmware) == 64);
 
 Script shell original (MIT, deadYokai) em <https://gist.github.com/deadYokai/3f1253ffdff60b4f9bd811119994bb3a> usa `curl -sL` sem headers custom. Valida arquivo por tamanho (`950272` bytes). Detecta controle via `lsusb` (VID 054c PID 0ce6 ou 0df2).
 
-**Ética:** o CDN é público. Baixar blob é ato do usuário final, não distribuição; aplica-se interoperabilidade. Hefesto pode prover helper para download mas **jamais** empacotar o blob ou cachear em repo/package.
+**Ética:** o CDN é público. Baixar blob é ato do usuário final, não distribuição; aplica-se interoperabilidade. Hefesto - Dualsense4Unix pode prover helper para download mas **jamais** empacotar o blob ou cachear em repo/package.
 
-### 0.5 Opções para o Hefesto — revisão de PHASE2/PHASE3
+### 0.5 Opções para o Hefesto - Dualsense4Unix — revisão de PHASE2/PHASE3
 
 A descoberta **obsoleta PHASE2** (captura de protocolo). PHASE3 (tooling CLI) agora é **decisão arquitetural**:
 
 | Opção | Descrição | Prós | Contras |
 |---|---|---|---|
-| **A** | Wrapper subprocess `hefesto firmware apply` invoca `dualsensectl update` | Mínimo código em Hefesto; zero duplicação; herda bugfixes upstream | Dep externa; usuário precisa de dualsensectl instalado |
-| **B** | Porte Python em `src/hefesto/firmware/` via `libhidapi`/`hidraw` | Autônomo; integra ao daemon; pode rodar sem instalar outra CLI | Duplica código já feito; exige manutenção paralela |
+| **A** | Wrapper subprocess `hefesto firmware apply` invoca `dualsensectl update` | Mínimo código em Hefesto - Dualsense4Unix; zero duplicação; herda bugfixes upstream | Dep externa; usuário precisa de dualsensectl instalado |
+| **B** | Porte Python em `src/hefesto_dualsense4unix/firmware/` via `libhidapi`/`hidraw` | Autônomo; integra ao daemon; pode rodar sem instalar outra CLI | Duplica código já feito; exige manutenção paralela |
 | **C** | Caminho fwupd/LVFS (sugestão `nowrep`) | Padrão Linux; GUI nativa via gnome-firmware/KDE | Depende Sony publicar no LVFS — sem prazo definido |
-| **D** | Não implementar; apontar usuários para dualsensectl | Zero trabalho; respeita subsidiariedade | Hefesto não ganha paridade de feature |
+| **D** | Não implementar; apontar usuários para dualsensectl | Zero trabalho; respeita subsidiariedade | Hefesto - Dualsense4Unix não ganha paridade de feature |
 
-**Recomendação provisória (aguarda decisão do dono do projeto):** Opção A para MVP. Opção C como visão de longo prazo. Issue #38 upstream ainda OPEN pedindo LVFS — Hefesto pode co-assinar.
+**Recomendação provisória (aguarda decisão do dono do projeto):** Opção A para MVP. Opção C como visão de longo prazo. Issue #38 upstream ainda OPEN pedindo LVFS — Hefesto - Dualsense4Unix pode co-assinar.
 
 ---
 
@@ -155,8 +155,8 @@ A descoberta **obsoleta PHASE2** (captura de protocolo). PHASE3 (tooling CLI) ag
 
 - **URL:** https://github.com/Paliverse/DualSense-List-of-Firmwares
 - **Natureza:** repositório que **hospeda blobs de firmware** extraídos do updater Sony, indexados por versão. Versão mais recente citada: 0x0217 (DualSense Edge).
-- **Mantenedor:** "Paliverse" — **mesma organização por trás do DualSenseX original** (o app Windows que Hefesto porta para Linux). Fato relevante: sugere acesso privilegiado a firmware histórico.
-- **Risco legal:** redistribuição de blob proprietário sem autorização Sony é território cinzento (depende de jurisdição). Hefesto **não linka nem baixa** deste repo — apenas registra sua existência.
+- **Mantenedor:** "Paliverse" — **mesma organização por trás do DualSenseX original** (o app Windows que Hefesto - Dualsense4Unix porta para Linux). Fato relevante: sugere acesso privilegiado a firmware histórico.
+- **Risco legal:** redistribuição de blob proprietário sem autorização Sony é território cinzento (depende de jurisdição). Hefesto - Dualsense4Unix **não linka nem baixa** deste repo — apenas registra sua existência.
 - **Valor para PHASE2:** nenhum direto (blob continua cifrado). Poderia servir, em tese, para **diff de metadados entre versões** se algum dia a decriptação for pública.
 
 ### 1.3 `nowrep/dualsensectl` (revisão 2026-04)
@@ -169,7 +169,7 @@ A descoberta **obsoleta PHASE2** (captura de protocolo). PHASE3 (tooling CLI) ag
 
 - **URL:** https://dsremap.readthedocs.io/en/latest/reverse.html
 - **Escopo:** projeto de reverse engineering do DualShock 4, documentação de metodologia USB capture + análise.
-- **Valor para Hefesto:** metodologia aplicável ao DualSense por analogia. **Esta é fonte primária para aprender como DS4 foi engenharia-reversa** — precedente documental.
+- **Valor para Hefesto - Dualsense4Unix:** metodologia aplicável ao DualSense por analogia. **Esta é fonte primária para aprender como DS4 foi engenharia-reversa** — precedente documental.
 
 ### 1.5 `passinglink/passinglink`
 
@@ -210,7 +210,7 @@ A descoberta **obsoleta PHASE2** (captura de protocolo). PHASE3 (tooling CLI) ag
 
 - **URLs:** https://blog.the.al/2023/01/02/ds4-reverse-engineering-part-2.html, https://blog.the.al/2023/01/04/ds4-reverse-engineering-part-4.html
 - **Autor:** Al (Alessandro Stein).
-- **Valor para Hefesto:** série técnica completa sobre DS4. Metodologia de usbmon + Ghidra + análise de firmware aplicável por analogia. **Leitura obrigatória antes de PHASE2 real.**
+- **Valor para Hefesto - Dualsense4Unix:** série técnica completa sobre DS4. Metodologia de usbmon + Ghidra + análise de firmware aplicável por analogia. **Leitura obrigatória antes de PHASE2 real.**
 
 ### 2.4 SensePost — DualSense Reverse Engineering
 
@@ -305,20 +305,20 @@ Método: após plugar DualSense na VM Win e iniciar Updater, filtrar em Wireshar
 - **Fonte oficial:** https://www.copyright.gov/1201/2024/
 - **Período de vigência:** 28/10/2024 – outubro/2027.
 - **Exemption relevante:** interoperabilidade de dispositivos eletrônicos (jailbreaking/hacking) renovada. Embora o exemption principal seja voltado a celulares/routers, a **doutrina geral de interoperabilidade sob §1201(f)** permanece intacta.
-- **Aplicação a Hefesto:** PHASE2 (captura de protocolo) é clara atividade de interoperabilidade entre controle Sony e sistema Linux. PHASE3 (reimplementar aplicação do firmware oficial) é derivativa desse esforço.
+- **Aplicação a Hefesto - Dualsense4Unix:** PHASE2 (captura de protocolo) é clara atividade de interoperabilidade entre controle Sony e sistema Linux. PHASE3 (reimplementar aplicação do firmware oficial) é derivativa desse esforço.
 
 ### 7.2 Legislação brasileira (LDA art. 77)
 
 - Art. 77 da LDA (BR): descompilação permitida para interoperabilidade.
 - Escopo compatível com PHASE2/3 desde que:
-  - (a) não haja redistribuição do blob proprietário (Hefesto não redistribui);
+  - (a) não haja redistribuição do blob proprietário (Hefesto - Dualsense4Unix não redistribui);
   - (b) resultado sirva para interoperabilidade (permitir uso no Linux é interoperabilidade);
-  - (c) não haja alteração do firmware (Hefesto só aplica o blob oficial do usuário).
+  - (c) não haja alteração do firmware (Hefesto - Dualsense4Unix só aplica o blob oficial do usuário).
 
 ### 7.3 UE — Diretiva 2009/24/EC art. 6
 
 - Permite descompilação para interoperabilidade.
-- Usuários europeus de Hefesto cobertos.
+- Usuários europeus de Hefesto - Dualsense4Unix cobertos.
 
 ### 7.4 Precedente: Copyright Office 2024 rejections
 
@@ -329,10 +329,10 @@ Método: após plugar DualSense na VM Win e iniciar Updater, filtrar em Wireshar
 
 ### 8.1 Motivação do usuário
 
-O usuário do Hefesto relatou (PHASE1 §2):
+O usuário do Hefesto - Dualsense4Unix relatou (PHASE1 §2):
 > "Eu e meus amigos só queremos rodar o update deles para fazer esse controle funcionar no Android".
 
-Updates melhoram compatibilidade com Android/iOS/Switch 2. Hefesto em Linux permite acessar esse caminho sem Windows nem PS5.
+Updates melhoram compatibilidade com Android/iOS/Switch 2. Hefesto - Dualsense4Unix em Linux permite acessar esse caminho sem Windows nem PS5.
 
 ### 8.2 PlayStation Remote Play app Android
 
@@ -348,7 +348,7 @@ Updates melhoram compatibilidade com Android/iOS/Switch 2. Hefesto em Linux perm
 | 2023-2024 | Android Police e TechRadar cobrem limitações: **adaptive triggers e haptic NÃO funcionam em mobile**; só input básico + rumble simples |
 | Jul/2025 | PS5 system update permite **pareamento de até 4 dispositivos** simultâneos; switch via combo de botões do controle |
 
-**Implicação concreta para o usuário do Hefesto:** o usuário quer firmware update para Android. Mesmo após update mais recente (0x0630+), adaptive triggers **permanecem desabilitados em Android por limitação da plataforma, não do controle**. Firmware update ajuda em:
+**Implicação concreta para o usuário do Hefesto - Dualsense4Unix:** o usuário quer firmware update para Android. Mesmo após update mais recente (0x0630+), adaptive triggers **permanecem desabilitados em Android por limitação da plataforma, não do controle**. Firmware update ajuda em:
 
 - Estabilidade Bluetooth em sessão longa (Android firmware antigo desconecta).
 - Compatibilidade com app novo (ex: Remote Play 4.6+ requer firmware >= XX).

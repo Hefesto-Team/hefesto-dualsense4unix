@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from hefesto.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
-from hefesto.daemon.subsystems.keyboard import _OSKController
+from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
+from hefesto_dualsense4unix.daemon.subsystems.keyboard import _OSKController
 
 
 class _FakeProc:
@@ -28,11 +28,11 @@ def test_sem_binario_nao_duplica_warning(
 ) -> None:
     """3 chamadas a open() sem binário não criam Popen e marcam flag 1x."""
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.shutil.which", lambda _name: None
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which", lambda _name: None
     )
     spawned: list[Any] = []
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.subprocess.Popen",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.subprocess.Popen",
         lambda *a, **k: spawned.append(("Popen", a, k)),
     )
     ctrl = _OSKController()
@@ -45,7 +45,7 @@ def test_sem_binario_nao_duplica_warning(
 
 def test_onboard_spawn_e_fechamento(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.shutil.which",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which",
         lambda name: f"/usr/bin/{name}" if name == "onboard" else None,
     )
     spawned: list[list[str]] = []
@@ -56,7 +56,7 @@ def test_onboard_spawn_e_fechamento(monkeypatch: pytest.MonkeyPatch) -> None:
         return fake_proc
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.subprocess.Popen", _popen
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.subprocess.Popen", _popen
     )
 
     ctrl = _OSKController()
@@ -79,7 +79,7 @@ def test_wvkbd_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
         return "/usr/bin/wvkbd-mobintl" if name == "wvkbd-mobintl" else None
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.shutil.which", _which
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which", _which
     )
     spawned: list[list[str]] = []
 
@@ -88,7 +88,7 @@ def test_wvkbd_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
         return _FakeProc()
 
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.subprocess.Popen", _popen
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.subprocess.Popen", _popen
     )
     ctrl = _OSKController()
     ctrl.open()
@@ -97,13 +97,13 @@ def test_wvkbd_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_dispatch_token_open_close(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.shutil.which",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which",
         lambda name: f"/usr/bin/{name}" if name == "onboard" else None,
     )
     popens: list[list[str]] = []
     fake_proc = _FakeProc()
     monkeypatch.setattr(
-        "hefesto.daemon.subsystems.keyboard.subprocess.Popen",
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.subprocess.Popen",
         lambda argv, **_: (popens.append(argv) or fake_proc),  # type: ignore[func-returns-value]
     )
     ctrl = _OSKController()

@@ -87,14 +87,14 @@ def test_button_glyph_instancia() -> None:
     """ButtonGlyph('cross') instancia sem excecao."""
     if not _tem_gtk():
         pytest.skip("GTK3 não disponivel neste ambiente")
-    from hefesto.gui.widgets.button_glyph import ButtonGlyph
+    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
     glyph = ButtonGlyph("cross")
     assert glyph is not None
 
 
 def test_button_glyph_set_pressed_altera_flag() -> None:
     """set_pressed(True) altera is_pressed para True."""
-    from hefesto.gui.widgets.button_glyph import ButtonGlyph
+    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
     glyph = ButtonGlyph("cross")
     assert not glyph.is_pressed
     glyph.set_pressed(True)
@@ -107,7 +107,7 @@ def test_button_glyph_set_pressed_dispara_queue_draw() -> None:
     Usa patch no módulo para interceptar a chamada independentemente
     de GTK estar ou não disponivel (GObject não suporta setattr em instancia).
     """
-    from hefesto.gui.widgets import button_glyph as mod
+    from hefesto_dualsense4unix.gui.widgets import button_glyph as mod
     chamadas: list[object] = []
 
     glyph = mod.ButtonGlyph("circle")
@@ -136,7 +136,7 @@ def test_button_glyph_set_pressed_dispara_queue_draw() -> None:
 
 def test_button_glyph_set_pressed_idempotente() -> None:
     """set_pressed com mesmo valor não muda o estado."""
-    from hefesto.gui.widgets.button_glyph import ButtonGlyph
+    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
     glyph = ButtonGlyph("square")
     glyph.set_pressed(False)  # mesmo valor inicial
     glyph.set_pressed(False)
@@ -149,13 +149,13 @@ def test_button_glyph_set_pressed_idempotente() -> None:
 
 def test_button_glyph_labels_cobre_todos_os_glyphs() -> None:
     """BUTTON_GLYPH_LABELS contem entrada para cada glyph esperado."""
-    from hefesto.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
+    from hefesto_dualsense4unix.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
     ausentes = [g for g in GLYPHS_ESPERADOS if g not in BUTTON_GLYPH_LABELS]
     assert not ausentes, f"Glyphs sem label PT-BR: {ausentes}"
 
 
 def test_button_glyph_labels_valores_nao_vazios() -> None:
     """Nenhum label PT-BR e vazio."""
-    from hefesto.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
+    from hefesto_dualsense4unix.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
     vazios = [k for k, v in BUTTON_GLYPH_LABELS.items() if not v.strip()]
     assert not vazios, f"Labels vazios: {vazios}"

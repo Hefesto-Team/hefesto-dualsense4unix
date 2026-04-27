@@ -13,10 +13,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from hefesto.core.controller import ControllerState
-from hefesto.core.events import EventTopic
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.testing.fake_controller import FakeController
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -109,7 +109,7 @@ async def test_mic_btn_down_dispara_toggle_e_set_mic_led() -> None:
     mock_audio = MagicMock()
     mock_audio.toggle_default_source_mute.return_value = True  # mutado
 
-    with patch("hefesto.integrations.audio_control.AudioControl", return_value=mock_audio):
+    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
@@ -134,7 +134,7 @@ async def test_mic_button_toggles_system_false_nao_subscreve() -> None:
 
     mock_audio = MagicMock()
 
-    with patch("hefesto.integrations.audio_control.AudioControl", return_value=mock_audio):
+    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=False))
         await _run_daemon_ticks(daemon, n_ticks=2)
 
@@ -164,7 +164,7 @@ async def test_outros_botoes_nao_disparam_toggle() -> None:
     mock_audio = MagicMock()
     mock_audio.toggle_default_source_mute.return_value = False
 
-    with patch("hefesto.integrations.audio_control.AudioControl", return_value=mock_audio):
+    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 
@@ -187,7 +187,7 @@ async def test_toggle_retorna_false_set_mic_led_false() -> None:
     mock_audio = MagicMock()
     mock_audio.toggle_default_source_mute.return_value = False  # não mutado
 
-    with patch("hefesto.integrations.audio_control.AudioControl", return_value=mock_audio):
+    with patch("hefesto_dualsense4unix.integrations.audio_control.AudioControl", return_value=mock_audio):  # noqa: E501
         daemon = Daemon(controller=fc, config=_config_base(mic_button_toggles_system=True))
         await _run_daemon_ticks(daemon, n_ticks=3)
 

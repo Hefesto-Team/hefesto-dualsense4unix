@@ -4,7 +4,7 @@
 # runtime-real) para sprints que tocam o daemon.
 #
 # Uso:
-#   ./run.sh                   abre a GUI GTK3 (hefesto-gui)
+#   ./run.sh                   abre a GUI GTK3 (hefesto-dualsense4unix-gui)
 #   ./run.sh --gui             idem
 #   ./run.sh --smoke           boot curto com FakeController USB (2s)
 #   ./run.sh --smoke --bt      boot curto com FakeController BT  (2s)
@@ -25,7 +25,7 @@ fi
 MODE="gui"
 TRANSPORT="usb"
 FAKE=0
-SMOKE_DURATION="${HEFESTO_SMOKE_DURATION:-2.0}"
+SMOKE_DURATION="${HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION:-2.0}"
 
 if [[ $# -eq 0 ]]; then
     MODE="gui"
@@ -44,26 +44,26 @@ for arg in "$@"; do
 done
 
 if [[ "$MODE" == "gui" ]]; then
-    exec python3 -m hefesto.app.main
+    exec python3 -m hefesto_dualsense4unix.app.main
 fi
 
-export HEFESTO_FAKE_TRANSPORT="$TRANSPORT"
+export HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT="$TRANSPORT"
 
 if [[ "$MODE" == "smoke" ]]; then
-    export HEFESTO_FAKE=1
-    export HEFESTO_LOG_FORMAT="${HEFESTO_LOG_FORMAT:-console}"
+    export HEFESTO_DUALSENSE4UNIX_FAKE=1
+    export HEFESTO_DUALSENSE4UNIX_LOG_FORMAT="${HEFESTO_DUALSENSE4UNIX_LOG_FORMAT:-console}"
     # Isola o socket IPC do smoke para não colidir com o daemon de produção
     # (systemd). Ver docs/process/sprints/BUG-IPC-01.md e VALIDATOR_BRIEF A-03.
-    export HEFESTO_IPC_SOCKET_NAME="${HEFESTO_IPC_SOCKET_NAME:-hefesto-smoke.sock}"
-    SMOKE_LOG="/tmp/hefesto_smoke_${TRANSPORT}.log"
+    export HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME="${HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME:-hefesto-dualsense4unix-smoke.sock}"
+    SMOKE_LOG="/tmp/hefesto_dualsense4unix_smoke_${TRANSPORT}.log"
     echo "[smoke] iniciando daemon com FakeController transport=$TRANSPORT por ${SMOKE_DURATION}s..." | tee "$SMOKE_LOG"
-    echo "[smoke] socket IPC isolado: $HEFESTO_IPC_SOCKET_NAME" | tee -a "$SMOKE_LOG"
+    echo "[smoke] socket IPC isolado: $HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME" | tee -a "$SMOKE_LOG"
     echo "[smoke] log em: $SMOKE_LOG" | tee -a "$SMOKE_LOG"
     python3 - <<PY 2>&1 | tee -a "$SMOKE_LOG"
 import asyncio
-from hefesto.daemon.lifecycle import Daemon, DaemonConfig
-from hefesto.daemon.main import build_controller
-from hefesto.utils.logging_config import configure_logging
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+from hefesto_dualsense4unix.daemon.main import build_controller
+from hefesto_dualsense4unix.utils.logging_config import configure_logging
 
 
 async def main():
@@ -84,9 +84,9 @@ PY
 fi
 
 if [[ "$FAKE" == "1" ]]; then
-    export HEFESTO_FAKE=1
+    export HEFESTO_DUALSENSE4UNIX_FAKE=1
 fi
 
-exec hefesto daemon start --foreground
+exec hefesto-dualsense4unix daemon start --foreground
 
 # "Faça o pequeno bem que está próximo." — Tolstói

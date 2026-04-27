@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.app.draft_config import (
+from hefesto_dualsense4unix.app.draft_config import (
     DraftConfig,
     EmulationDraft,
     LedsDraft,
@@ -19,7 +19,7 @@ from hefesto.app.draft_config import (
     TriggerDraft,
     TriggersDraft,
 )
-from hefesto.profiles.schema import (
+from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
     Profile,

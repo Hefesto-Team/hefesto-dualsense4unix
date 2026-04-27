@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import threading
 
-from hefesto.core.controller import ControllerState
-from hefesto.daemon.state_store import StateStore
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 
 def _state(battery: int = 75) -> ControllerState:

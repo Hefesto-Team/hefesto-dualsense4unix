@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from hefesto.integrations.xlib_window import (
+from hefesto_dualsense4unix.integrations.xlib_window import (
     UNKNOWN_WINDOW,
     XlibClient,
     get_active_window_info,
@@ -23,7 +23,7 @@ def test_unknown_constante_tem_campos_esperados():
 
 
 def test_exe_basename_fallback_pid_invalido():
-    from hefesto.integrations.xlib_window import _exe_basename_from_pid
+    from hefesto_dualsense4unix.integrations.xlib_window import _exe_basename_from_pid
 
     assert _exe_basename_from_pid(0) == ""
     # PID 1 (init) existe mas pode negar leitura — esperamos string (vazia ou nome)
@@ -77,7 +77,7 @@ def test_xlib_client_mockado_retorna_dados(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("DISPLAY", ":0")
 
     # Substitui _exe_basename_from_pid pra não depender de /proc real
-    from hefesto.integrations import xlib_window
+    from hefesto_dualsense4unix.integrations import xlib_window
 
     monkeypatch.setattr(xlib_window, "_exe_basename_from_pid", lambda pid: "firefox-bin")
 

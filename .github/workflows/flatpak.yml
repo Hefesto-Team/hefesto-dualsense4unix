@@ -31,7 +31,7 @@ jobs:
           with open('flatpak/br.andrefarias.Hefesto.yml') as f:
               doc = yaml.safe_load(f)
           assert doc['app-id'] == 'br.andrefarias.Hefesto'
-          assert doc['command'] == 'hefesto-gui'
+          assert doc['command'] == 'hefesto-dualsense4unix-gui'
           print('Manifest YAML valido.')
           print(f'  app-id: {doc[\"app-id\"]}')
           print(f'  runtime: {doc[\"runtime\"]}//{doc[\"runtime-version\"]}')
@@ -96,14 +96,18 @@ jobs:
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            br.andrefarias.Hefesto.flatpak \
+            Hefesto-Dualsense4Unix.flatpak \
             br.andrefarias.Hefesto
 
       - name: Install --user do bundle (smoke de instalação)
         run: |
           flatpak install --user --noninteractive --bundle \
-            br.andrefarias.Hefesto.flatpak
-          flatpak list --user --app | grep -i hefesto
+            Hefesto-Dualsense4Unix.flatpak
+          # App-id Flatpak preservado como br.andrefarias.Hefesto durante o
+          # rebrand (composite com qualificador br.andrefarias., decisão do
+          # v3.0.0 — não muda para evitar quebrar instalações existentes).
+          # O grep casa o app-id, não o nome interno hefesto-dualsense4unix.
+          flatpak list --user --app | grep -i "br.andrefarias.Hefesto"
 
       - name: Validar registro do app
         run: |
@@ -116,8 +120,8 @@ jobs:
       - name: Upload do bundle .flatpak
         uses: actions/upload-artifact@v4
         with:
-          name: hefesto-flatpak
-          path: br.andrefarias.Hefesto.flatpak
+          name: hefesto-dualsense4unix-flatpak
+          path: Hefesto-Dualsense4Unix.flatpak
           retention-days: 30
           if-no-files-found: error
 
