@@ -21,7 +21,7 @@ def _null_evdev() -> EvdevReader:
 
 
 class _FakePydualsense:
-    """Stub minimo de pydualsense para hot-reconnect feliz."""
+    """Stub mínimo de pydualsense para hot-reconnect feliz."""
 
     def __init__(self) -> None:
         self.connected = True

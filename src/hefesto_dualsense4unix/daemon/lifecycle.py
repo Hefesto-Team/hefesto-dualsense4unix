@@ -176,8 +176,8 @@ class Daemon:
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
-            # silencio (offline-OK). Outros erros (permissao hidraw, USB
-            # transitorio) sao logados aqui e o reconnect_loop reassume em
+            # silencio (offline-OK). Outros erros (permissão hidraw, USB
+            # transitório) sao logados aqui e o reconnect_loop reassume em
             # background. No caminho FAKE, conecta imediatamente.
             try:
                 await self._run_blocking(self.controller.connect)
