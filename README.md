@@ -212,6 +212,14 @@ Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou est�
 
 **Para rodar a GUI localmente (`./run.sh --gui`):** o `PyGObject` precisa estar no `.venv`. Rode `./scripts/dev_bootstrap.sh --with-tray` pelo menos uma vez — sem a flag `--with-tray`, o bootstrap não instala o pacote (evita falha pesada em máquinas sem `libgirepository-1.0-dev`). O `dev-setup.sh` detecta ausência e imprime instrução acionável. Armadilha A-12 documentada em `VALIDATOR_BRIEF.md`.
 
+> **GNOME 42+:** o `install.sh` detecta a extension `ubuntu-appindicators@ubuntu.com`
+> e oferece habilitação automática (sem ela o ícone de bandeja não aparece). Em outras
+> DEs (KDE, COSMIC, XFCE, Cinnamon, MATE) o tray Ayatana funciona nativamente.
+
+> **Aba Firmware (opcional):** depende do binário externo `dualsensectl`. O `install.sh`
+> oferece instalação via Flathub (`com.github.nowrep.dualsensectl`). A GUI funciona normalmente
+> com a aba desabilitada se o binário ausente.
+
 Reconecte o DualSense depois de instalar as regras udev. Confira o acesso:
 
 ```bash

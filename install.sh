@@ -88,7 +88,7 @@ require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 # ---------------------------------------------------------------------------
 # 1. Verificar Python
 # ---------------------------------------------------------------------------
-step "1/7" "verificando dependências do sistema"
+step "1/9" "verificando dependências do sistema"
 require python3
 ok
 
@@ -114,7 +114,7 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
-step "2/7" "preparando ambiente Python"
+step "2/9" "preparando ambiente Python"
 
 # Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
 # inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
@@ -170,7 +170,7 @@ ok
 # ---------------------------------------------------------------------------
 # 3. udev rules (requer sudo)
 # ---------------------------------------------------------------------------
-step "3/7" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/9" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev)\n'
@@ -211,7 +211,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
 # ---------------------------------------------------------------------------
-step "4/7" "atalho de aplicativo e launcher"
+step "4/9" "atalho de aplicativo e launcher"
 
 mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
@@ -268,14 +268,14 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/7" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+step "5/9" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
 # 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
-step "6/7" "daemon systemd --user"
+step "6/9" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
@@ -306,7 +306,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
-step "7/7" "hotplug USB → abre a GUI automaticamente"
+step "7/9" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
@@ -342,6 +342,74 @@ else
                 warn "systemctl ausente — unit copiada mas não habilitada"
             fi
         fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
+# ---------------------------------------------------------------------------
+step "8/9" "GNOME: extension AppIndicator (tray icon)"
+
+_desktop="${XDG_CURRENT_DESKTOP:-}"
+if [[ -z "${_desktop}" ]]; then
+    printf '      ambiente headless (sem XDG_CURRENT_DESKTOP) — pulado\n'
+elif [[ "${_desktop,,}" != *gnome* ]]; then
+    printf '      DE %s renderiza Ayatana nativamente — sem ação\n' "${_desktop}"
+elif ! command -v gnome-extensions >/dev/null 2>&1; then
+    warn "gnome-extensions CLI ausente — habilite manualmente a extension AppIndicator depois"
+else
+    _ext_id="ubuntu-appindicators@ubuntu.com"
+    if gnome-extensions list --enabled 2>/dev/null | grep -qx "${_ext_id}"; then
+        printf '      já habilitada\n'
+    elif ! gnome-extensions list 2>/dev/null | grep -qx "${_ext_id}"; then
+        warn "extension ${_ext_id} não instalada — instale via GNOME Extensions (https://extensions.gnome.org)"
+    else
+        printf '      extension %s está instalada mas desabilitada\n' "${_ext_id}"
+        printf '      sem ela o ícone do Hefesto não aparece na barra superior do GNOME\n'
+        ask_yn "habilitar agora?" "${AUTO_YES}"
+        if [[ "${REPLY,,}" =~ ^y ]]; then
+            if gnome-extensions enable "${_ext_id}" 2>/dev/null; then
+                printf '      habilitada (pode exigir log out/in se for a primeira ativação)\n'
+            else
+                warn "falha ao habilitar — execute 'gnome-extensions enable ${_ext_id}' manualmente"
+            fi
+        else
+            printf '      pulado a pedido — habilite depois com: gnome-extensions enable %s\n' "${_ext_id}"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 9. dualsensectl (opcional — aba Firmware)
+# ---------------------------------------------------------------------------
+step "9/9" "dualsensectl (opcional — aba Firmware)"
+
+if command -v dualsensectl >/dev/null 2>&1; then
+    printf '      já presente em %s\n' "$(command -v dualsensectl)"
+elif ! command -v flatpak >/dev/null 2>&1; then
+    printf '      ausente — para habilitar a aba Firmware, instale manualmente:\n'
+    printf '        https://github.com/nowrep/dualsensectl  (build via cmake)\n'
+    printf '      a aba Firmware ficará desabilitada até instalar (não bloqueia uso geral)\n'
+elif ! { flatpak --user remotes 2>/dev/null; flatpak remotes 2>/dev/null; } \
+        | awk '{print $1}' | grep -qx "flathub"; then
+    printf '      flatpak presente mas remote flathub ausente. Configure com:\n'
+    printf '        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo\n'
+    printf '      e rode novamente este install.sh\n'
+else
+    printf '      dualsensectl ausente — necessário para a aba Firmware da GUI (opcional)\n'
+    printf '      Flathub: com.github.nowrep.dualsensectl\n'
+    ask_yn "instalar agora via flatpak?" "${AUTO_YES}" "n"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if flatpak install --user -y flathub com.github.nowrep.dualsensectl >/dev/null 2>&1; then
+            printf '      instalado via flatpak\n'
+            printf '      lembrete: para que a GUI encontre o binário no PATH, exponha um wrapper:\n'
+            printf '        echo -e "#!/bin/sh\\nflatpak run com.github.nowrep.dualsensectl \\"\\$@\\"" \\\n'
+            printf '          | sudo tee /usr/local/bin/dualsensectl >/dev/null && sudo chmod +x /usr/local/bin/dualsensectl\n'
+        else
+            warn "flatpak install falhou — instale manualmente: flatpak install flathub com.github.nowrep.dualsensectl"
+        fi
+    else
+        printf '      pulado a pedido — aba Firmware ficará desabilitada\n'
     fi
 fi
 

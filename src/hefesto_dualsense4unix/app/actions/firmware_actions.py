@@ -29,8 +29,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _INSTALL_HELP = (
-    "dualsensectl não encontrado. Instale via gerenciador de pacotes "
-    "(ex: AUR, brew, build do GitHub nowrep/dualsensectl) e reabra a aba."
+    "dualsensectl não encontrado. Instale via Flathub "
+    "(https://flathub.org/apps/com.github.nowrep.dualsensectl) "
+    "ou compile do fonte (https://github.com/nowrep/dualsensectl) "
+    "e reabra a aba."
 )
 
 _RISK_BANNER = (
