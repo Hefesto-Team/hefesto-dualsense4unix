@@ -19,6 +19,15 @@ from dataclasses import dataclass
 
 from hefesto_dualsense4unix.core.controller import ControllerState
 
+# CLUSTER-IPC-STATE-PROFILE-01 (Bug C): janela de supressão do autoswitch após
+# escolha manual via IPC `profile.switch`. Quando o usuário ativa um perfil
+# explicitamente (CLI/GUI/IPC), o autoswitch deve respeitar a escolha por
+# `MANUAL_PROFILE_LOCK_SEC` segundos antes de voltar a aplicar perfil pelo
+# wm_class da janela ativa. Valor canônico fixo: 30s — curto o bastante para
+# não frustrar troca legítima de janela, longo o bastante para a UX "ativei
+# manualmente, ele respeitou". Não-objetivo desta sprint torná-lo configurável.
+MANUAL_PROFILE_LOCK_SEC: float = 30.0
+
 
 @dataclass(frozen=True)
 class StoreSnapshot:
@@ -53,6 +62,11 @@ class StateStore:
         # Flag só zera em: trigger.reset, profile.switch explícito, ou
         # clear_manual_trigger_active() programático.
         self._manual_trigger_active: bool = False
+        # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): timestamp absoluto
+        # (`time.monotonic`) até quando o autoswitch deve suspender por
+        # escolha manual de perfil. 0.0 → lock inativo. Setado pelo handler
+        # IPC `profile.switch`; consultado em `AutoSwitcher._activate`.
+        self._manual_profile_lock_until: float = 0.0
 
     # --- escritas ------------------------------------------------------
 
@@ -95,6 +109,30 @@ class StateStore:
         with self._lock:
             self._manual_trigger_active = False
 
+    # --- lock manual de profile.switch (Bug C) ------------------------
+
+    def mark_manual_profile_lock(self, until: float) -> None:
+        """Arma o lock de supressão do autoswitch até `until` (monotonic).
+
+        Setado pelo handler IPC `profile.switch` com
+        `time.monotonic() + MANUAL_PROFILE_LOCK_SEC`. Renovado a cada chamada
+        (escolha mais recente vence; não acumula). NÃO é setado por
+        autoswitch interno (recursão evitada), `daemon.reload`, nem
+        `restore_last_profile` no boot — apenas entrada manual do usuário.
+        """
+        with self._lock:
+            self._manual_profile_lock_until = until
+
+    def manual_profile_lock_active(self, now: float) -> bool:
+        """Retorna True se o lock manual ainda está ativo em `now`.
+
+        `now` deve ser obtido via `time.monotonic()` (mesmo relógio usado em
+        `mark_manual_profile_lock`). Após o instante de expiração, o
+        autoswitch volta a operar normalmente sem precisar de reset.
+        """
+        with self._lock:
+            return now < self._manual_profile_lock_until
+
     # --- leituras ------------------------------------------------------
 
     @property
@@ -132,4 +170,8 @@ class StateStore:
             )
 
 
-__all__ = ["StateStore", "StoreSnapshot"]
+__all__ = [
+    "MANUAL_PROFILE_LOCK_SEC",
+    "StateStore",
+    "StoreSnapshot",
+]

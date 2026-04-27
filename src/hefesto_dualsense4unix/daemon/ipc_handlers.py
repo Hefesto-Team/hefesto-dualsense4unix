@@ -44,13 +44,42 @@ class IpcHandlersMixin:
     # --- perfis ----------------------------------------------------------
 
     async def _handle_profile_switch(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Aplica perfil escolhido pelo usuário (entrada manual via IPC).
+
+        Persistência (CLUSTER-IPC-STATE-PROFILE-01 Bug B):
+          - `manager.activate(name)` já grava `session.json` (canônico — usado
+            pelo daemon em `restore_last_profile` no boot/reconnect).
+          - Adicionalmente, escrevemos `active_profile.txt` para paridade com
+            a CLI legada (`hefesto-dualsense4unix profile current` ainda lê esse marker).
+          - Falha em escrever o marker é best-effort: loga warning mas não
+            falha o IPC. Atomicidade do conjunto: se `activate` levantar,
+            `active_profile.txt` NÃO é tocado.
+
+        Lock manual (Bug C): após persistir, ativa lock de
+        ``MANUAL_PROFILE_LOCK_SEC`` segundos no `StateStore` para suprimir
+        autoswitch enquanto o usuário "respira" — autoswitch volta ao normal
+        quando o lock expira.
+        """
         name = params.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
         profile = self.profile_manager.activate(name)
+        # Bug B: paridade do marker da CLI legada com session.json.
+        from hefesto_dualsense4unix.utils.session import save_active_marker
+        save_active_marker(profile.name)
         # Usuário escolheu perfil explícito: libera autoswitch de novo
         # (BUG-MOUSE-TRIGGERS-01).
         self.store.clear_manual_trigger_active()
+        # Bug C: arma lock manual; autoswitch suprime por
+        # MANUAL_PROFILE_LOCK_SEC segundos.
+        import time as _time
+
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+        self.store.mark_manual_profile_lock(
+            _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
+        )
         return {"active_profile": profile.name}
 
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -179,31 +208,60 @@ class IpcHandlersMixin:
         scroll_speed para o subcomando `hefesto-dualsense4unix mouse status` consultar via IPC.
         Quando `self.daemon` for None (contextos de teste ou modos legados),
         o bloco é omitido e o cliente trata como "estado indisponível".
+
+        CLUSTER-IPC-STATE-PROFILE-01 (Bug A): preferimos `daemon._last_state`
+        (último tick do poll loop) sobre `store.snapshot().controller` quando
+        ambos disponíveis. Buttons saem de `state.buttons_pressed` (já
+        consolidado em `backend_pydualsense.read_state` — armadilha A-09:
+        nada de novos snapshots evdev no async loop). Fallback gracioso:
+        se daemon ausente (testes legados), cai em store.controller_state;
+        se ambos None, devolve neutro como antes.
         """
         snap = self.store.snapshot()
-        controller = snap.controller
+        # Bug A: prioriza estado LIVE do poll loop (daemon._last_state) sobre
+        # snapshot do store. Em testes legados sem daemon injetado, cai no
+        # store. Em ambos cenários, evita ler `_evdev.snapshot()` aqui (já
+        # consolidado em buttons_pressed pelo poll loop).
+        state = (
+            getattr(self.daemon, "_last_state", None) if self.daemon else None
+        ) or snap.controller
 
-        # Tenta ler buttons do evdev reader do backend, se acessivel
-        buttons: list[str] = []
-        try:
-            evdev_reader = getattr(self.controller, "_evdev", None)
-            if evdev_reader is not None and evdev_reader.is_available():
-                ev_snap = evdev_reader.snapshot()
-                buttons = sorted(ev_snap.buttons_pressed)
-        except Exception:
-            buttons = []
+        # Bug A — diagnóstico de "state estagnado" quando hardware está
+        # conectado mas todos os campos chegam neutros (sticks=128, gatilhos=0,
+        # buttons vazio). Indica evdev_reader não inicializado ou backend HID
+        # estagnado. Threshold por chamadas IPC (não por ticks).
+        stale_warn_threshold = 3
+        if (
+            state is not None
+            and self.controller.is_connected()
+            and state.raw_lx == 128
+            and state.raw_ly == 128
+            and state.raw_rx == 128
+            and state.raw_ry == 128
+            and state.l2_raw == 0
+            and state.r2_raw == 0
+            and not state.buttons_pressed
+        ):
+            stale_count = self.store.bump("state_full.stale_neutral")
+            if stale_count == stale_warn_threshold:
+                logger.warning(
+                    "state_stale_neutral_warning",
+                    state_full_calls=stale_count,
+                    hint="evdev_reader pode não ter conectado; HID-raw fallback estagnado",
+                )
 
+        buttons: list[str] = sorted(state.buttons_pressed) if state else []
         result: dict[str, Any] = {
-            "connected": bool(controller and controller.connected),
-            "transport": controller.transport if controller else None,
+            "connected": bool(state and state.connected),
+            "transport": state.transport if state else None,
             "active_profile": snap.active_profile,
-            "battery_pct": controller.battery_pct if controller else None,
-            "l2_raw": controller.l2_raw if controller else 0,
-            "r2_raw": controller.r2_raw if controller else 0,
-            "lx": controller.raw_lx if controller else 128,
-            "ly": controller.raw_ly if controller else 128,
-            "rx": controller.raw_rx if controller else 128,
-            "ry": controller.raw_ry if controller else 128,
+            "battery_pct": state.battery_pct if state else None,
+            "l2_raw": state.l2_raw if state else 0,
+            "r2_raw": state.r2_raw if state else 0,
+            "lx": state.raw_lx if state else 128,
+            "ly": state.raw_ly if state else 128,
+            "rx": state.raw_rx if state else 128,
+            "ry": state.raw_ry if state else 128,
             "buttons": buttons,
             "counters": snap.counters,
         }

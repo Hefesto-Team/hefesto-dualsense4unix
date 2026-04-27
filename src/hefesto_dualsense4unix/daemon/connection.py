@@ -207,6 +207,8 @@ async def shutdown(daemon: Any) -> None:
         with contextlib.suppress(Exception):
             daemon._autoswitch.stop()
         daemon._autoswitch = None
+    # CLUSTER-IPC-STATE-PROFILE-01 (Bug A): limpa cache de último state.
+    daemon._last_state = None
     for task in daemon._tasks:
         task.cancel()
     for task in daemon._tasks:
