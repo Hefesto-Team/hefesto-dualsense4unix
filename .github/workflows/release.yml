@@ -145,7 +145,7 @@ jobs:
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ./dist/hefesto_*_amd64.deb
+          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64.deb
       - name: Validar binário hefesto-dualsense4unix
         run: |
           which hefesto-dualsense4unix
@@ -210,13 +210,13 @@ jobs:
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            br.andrefarias.Hefesto.flatpak \
+            Hefesto-Dualsense4Unix.flatpak \
             br.andrefarias.Hefesto
       - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}
-          path: br.andrefarias.Hefesto.flatpak
+          path: Hefesto-Dualsense4Unix.flatpak
           if-no-files-found: error
 
   github-release:

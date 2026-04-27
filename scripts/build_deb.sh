@@ -4,7 +4,7 @@
 # com dpkg-deb instalado (Ubuntu/Debian padrão).
 #
 # Uso: bash scripts/build_deb.sh [--output-dir <dir>]
-# Saida: dist/hefesto_<version>_amd64.deb
+# Saida: dist/hefesto-dualsense4unix_<version>_amd64.deb
 
 set -euo pipefail
 
@@ -142,7 +142,7 @@ fi
 # ---------------------------------------------------------------------------
 mkdir -p dist
 
-OUTPUT_DEB="dist/hefesto_${VERSION}_amd64.deb"
+OUTPUT_DEB="dist/hefesto-dualsense4unix_${VERSION}_amd64.deb"
 
 echo "Construindo ${OUTPUT_DEB} ..."
 dpkg-deb --build --root-owner-group "${STAGING}" "${OUTPUT_DEB}"
