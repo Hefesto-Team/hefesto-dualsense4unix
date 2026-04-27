@@ -103,7 +103,11 @@ jobs:
         run: |
           flatpak install --user --noninteractive --bundle \
             br.andrefarias.Hefesto.flatpak
-          flatpak list --user --app | grep -i hefesto-dualsense4unix
+          # App-id Flatpak preservado como br.andrefarias.Hefesto durante o
+          # rebrand (composite com qualificador br.andrefarias., decisão do
+          # v3.0.0 — não muda para evitar quebrar instalações existentes).
+          # O grep casa o app-id, não o nome interno hefesto-dualsense4unix.
+          flatpak list --user --app | grep -i "br.andrefarias.Hefesto"
 
       - name: Validar registro do app
         run: |
