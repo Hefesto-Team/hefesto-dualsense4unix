@@ -41,7 +41,7 @@ class _OfflineThenOnlineController(FakeController):
         if self._calls <= self._fail_until:
             # Mimetiza pydualsense quando hardware está ausente. Backend real
             # trataria isso como offline-OK; aqui o FakeController não tem
-            # essa logica, então testamos via asserções direto na task.
+            # essa lógica, então testamos via asserções direto na task.
             self._connected = False
             return
         super().connect()
