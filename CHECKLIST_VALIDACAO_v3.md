@@ -223,3 +223,57 @@ HEFESTO_DUALSENSE4UNIX_FAKE=1 HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT=bt ./run.sh 
 ---
 
 *Gerado automaticamente após sessão de fix de 14 sprints (commits `d534a60..d698159` em `rebrand/dualsense4unix`).*
+
+---
+
+## Anexo — Hardening pós-publicação v3.0.0 (2026-04-27)
+
+Aplicados runtime real após primeira instalação `.deb` no Pop!_OS 22.04 / GNOME 42 X11. Fixes incorporados sob a tag `v3.0.0` (re-tag) — sem bump de versão.
+
+### `.deb` runtime
+
+- [x] Wrappers `/usr/bin/hefesto-dualsense4unix*` usam `/usr/bin/python3` explícito (não `python3` ambíguo).
+- [x] `assets/*.service` instalados em `/usr/lib/systemd/user/` com `ExecStart=/usr/bin/...` (era `%h/.local/bin/...`).
+- [x] `service_install.detect_installed_unit` checa `/usr/lib/systemd/user/` + `/etc/systemd/user/` além de `~/.config/systemd/user/`. Botão "Reiniciar daemon" volta a ficar habilitado em instalação `.deb`.
+- [x] `gui/assets/logo.png` bundlado no wheel (resolve banner ausente no `.deb`/Flatpak).
+- [x] `constants.MAIN_GLADE` resolve relativo ao package (não hardcoded para layout source repo).
+- [ ] **Pendente**: instalação `.deb` em Pop!_OS 22.04 (Jammy) requer `pip install --user 'pydantic>=2' 'structlog>=23' 'typer>=0.12' rich pydualsense` — apt Jammy só tem versões antigas. Validar workaround documentado em README/CHECKLIST.
+- [ ] **Pendente**: switch "Auto-start" da aba Daemon persiste reboots no `.deb` (ainda não validado).
+
+### Daemon "Start request repeated too quickly" (StartLimitBurst-hit)
+
+- [x] `_kill_previous_instances` preserva daemon systemd-managed via `_is_systemd_managed(pid)` (PPid=1 OR PPid de `/usr/lib/systemd/systemd`).
+- [x] `_start_service_blocking` faz `systemctl reset-failed` antes de start/restart.
+- [x] Daemon avulso (sem systemd) ainda é matado por pattern `hefesto-dualsense4unix daemon start`.
+
+### Aba Firmware sem flash
+
+- [x] `_RISK_BANNER` removido do `firmware_actions.py`.
+- [x] Frame "Aplicar firmware (.bin)" inteiro escondido (`set_visible(False)` + `set_no_show_all(True)`).
+- [x] `_OFFICIAL_GUIDE` aponta para `https://www.playstation.com/pt-br/support/hardware/ps5-controller-update/` (Sony oficial PS5/PS4 + Firmware Updater).
+- [x] Botão "Verificar versão" continua funcional (read-only via `dualsensectl --info`).
+
+### Tema / contraste
+
+- [x] `theme.css` aplica palette Drácula em comboboxes (`combobox button`, `combobox button label`, `combobox cellview`, `combobox box`) e em frame headers.
+- [ ] **Pendente**: validação visual end-to-end de cada aba (Status confirmado bom; Gatilhos com comboboxes ainda exibe contraste questionável em screenshot anterior).
+
+### Uninstall total
+
+- [x] `uninstall.sh` wipea: `.deb` (`apt remove`), Flatpak (`flatpak uninstall` + `~/.var/app/br.andrefarias.Hefesto`), AppImage em `~/Aplicativos`/`~/Applications`/`~/Downloads`, configs/data/cache/runtime.
+- [x] `pkill -TERM -f` cobre `hefesto_dualsense4unix`, `hefesto-dualsense4unix`, `br.andrefarias.Hefesto`.
+- [x] Flag opcional `--keep-config` para preservar perfis.
+
+### AppImage
+
+- [x] AppImage v3.0.0 é CLI-only com banner explicativo no double-click sem args.
+- [ ] **#33 pendente**: refactor para `appimagetool` + GTK runtime portátil (GUI standalone).
+
+### Pendências runtime
+
+- [ ] **#32**: GUI trava em `futex` após `Gtk.main_quit()` em alguns casos (intermitente, não-bloqueante).
+- [ ] **Bluetooth runtime**: pareamento + gatilhos + lightbar via BT validado fim-a-fim com hardware real.
+- [ ] **Aba Mouse**: cursor/scroll com pad/giroscópio do DualSense funcional fim-a-fim.
+- [ ] **Aba Teclado**: macros e tokens virtuais validados em jogo real.
+- [ ] **state_full IPC**: verificar paridade campo a campo com snapshot canônico do daemon.
+

@@ -5,6 +5,34 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Hardening pós-publicação v3.0.0
+
+Correções aplicadas após bugs reportados em runtime real (instalação .deb / Flatpak no Pop!_OS 22.04 + GNOME 42 X11) entre tags `v3.0.0` retags. Sem bump de versão — todas re-tag sob v3.0.0 antes do anúncio.
+
+- **`.deb` wrappers usavam `python3` ambíguo**: Wrappers `/usr/bin/hefesto-dualsense4unix*` instalados pelo `.deb` agora usam shebang `/usr/bin/python3` explícito (antes pegava pyenv 3.12 sem o pacote instalado).
+- **Service path no `.deb` apontava para HOME do builder**: `assets/*.service` tinham `ExecStart=%h/.local/bin/...` (correto para `install.sh` nativo, errado para `.deb` system-wide). `scripts/build_deb.sh` agora aplica `sed` substituindo para `/usr/bin/...` durante build.
+- **Botão "Reiniciar daemon" cinza no `.deb`**: `service_install.detect_installed_unit` checava só `~/.config/systemd/user/`. Adicionado `SYSTEM_UNIT_DIRS` module-level (`/usr/lib/systemd/user`, `/etc/systemd/user`) — `.deb` instala no path system-wide.
+- **Logo banner ausente na GUI**: `ICON_PATH` resolvia para `parents[3]/assets/appimage/...png` (layout source repo, inexistente no `.deb`/Flatpak). Bundlado `gui/assets/logo.png` no package + `_resolve_icon_path()` com fallback.
+- **`main.glade` não encontrado no Flatpak**: `constants.MAIN_GLADE` assumia layout source repo. Refatorado para `PACKAGE_DIR / "gui" / "main.glade"` relativo ao próprio módulo Python.
+- **Daemon "Start request repeated too quickly"**: `_kill_previous_instances` matava o daemon systemd-managed antes do `systemctl start`, gerando StartLimitBurst-hit. Adicionado `_is_systemd_managed(pid)` via `/proc/<pid>/status` PPid → preserva daemon do systemd, mata só GUI antiga e daemon avulso. `_start_service_blocking` faz `systemctl reset-failed` antes de start/restart.
+- **Aba Firmware oferecia flash via `dualsensectl` (risco de brick)**: Removido `_RISK_BANNER` vermelho. Frame "Aplicar firmware (.bin)" inteiro escondido (`set_visible(False)` + `set_no_show_all(True)`). Novo `_OFFICIAL_GUIDE` aponta para `https://www.playstation.com/pt-br/support/hardware/ps5-controller-update/` (PS5/PS4 + Firmware Updater oficial Sony). Aba Firmware fica read-only (versão atual do controle via `dualsensectl --info`).
+- **Tema com baixo contraste em comboboxes/labels**: `theme.css` ganhou regras explícitas para `combobox button`, `combobox button label`, `combobox cellview`, `combobox box`, `frame > label` — todos forçados para palette Drácula (#282a36 bg, #f8f8f2 fg, #bd93f9 frame headers).
+- **Uninstall preservava resíduos**: `uninstall.sh` agora wipea `.deb` (apt remove), Flatpak + `~/.var/app/br.andrefarias.Hefesto`, AppImage em `~/Aplicativos`/`~/Applications`/`~/Downloads`, e configs/data/cache/runtime. Flag opcional `--keep-config` para preservar perfis.
+- **AppImage volta CLI-only com banner**: `python-appimage` não bundla GTK/PyGObject. Tentativa de GUI no AppImage falhava com `ImportError: gi`. Decisão: AppImage v3.0.0 fica CLI (`hefesto-dualsense4unix --help` no double-click); GUI fica no `.deb` e Flatpak. Sprint #33 aberta para refactor com `appimagetool` + GTK bundlado.
+- **Release notes infinitas**: `release.yml` mandava `CHANGELOG.md` inteiro (~750 linhas) como nota da release. `awk` agora extrai só a seção `[VERSION]` da tag corrente.
+- **Repo GitHub renomeado**: `AndreBFarias/hefesto` → `AndreBFarias/hefesto-dualsense4unix` para paridade com o brand. Pasta local também: `Hefesto-Dualsense4Unix` → `hefesto-dualsense4unix` (lowercase, paritário).
+
+### Pendente (não fechado em v3.0.0)
+
+Documentado em `CHECKLIST_VALIDACAO_v3.md` e tasks GitHub:
+
+- **#32 BUG-GUI-QUIT-RESIDUAL-01**: Python da GUI trava em `futex` após `Gtk.main_quit()` em alguns casos (intermitente).
+- **#33 FEAT-APPIMAGE-GUI-WITH-GTK-01**: AppImage standalone com GUI bundlada (refactor para `appimagetool` + GTK runtime portátil).
+- **Pop!_OS 22.04 (Jammy) deps Python antigas no apt**: pydantic 1.x e structlog 20.x do apt Jammy não satisfazem `>=2.0` / `>=23.0`. Workaround: `pip install --user 'pydantic>=2' 'structlog>=23' 'typer>=0.12' rich pydualsense` após instalar `.deb`.
+- **Bluetooth runtime end-to-end**: PROTOCOL_READY mas não validado em hardware BT pareado.
+- **Aba Mouse e Teclado**: end-to-end com hardware real ainda não validado fora do daemon CLI.
+- **state_full IPC**: alguns campos podem estar incompletos (verificar paridade com snapshot canônico).
+
 ## [3.0.0] — 2026-04-27
 
 Major release de **rebrand + hardening**: rebrand `Hefesto` → `Hefesto - Dualsense4Unix` + 6 sprints de fix runtime real validadas no dia da release.
