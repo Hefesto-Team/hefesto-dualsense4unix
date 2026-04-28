@@ -21,13 +21,14 @@ case "$1" in
 
         # NÃO habilita o servico systemd automaticamente — opt-in.
         echo ""
-        echo "Hefesto instalado com sucesso."
+        echo "Hefesto - Dualsense4Unix instalado com sucesso."
+        echo ""
+        echo "Todas as dependencias Python estao bundladas em"
+        echo "  /opt/hefesto-dualsense4unix/venv/"
+        echo "(nao requer pip install manual — funciona em qualquer Ubuntu/Pop! >= 22.04)."
         echo ""
         echo "Para habilitar o inicio automatico do daemon:"
-        echo "  systemctl --user enable --now hefesto.service"
-        echo ""
-        echo "Dependencias Python extras (se necessario):"
-        echo "  pip install pydualsense python-uinput"
+        echo "  systemctl --user enable --now hefesto-dualsense4unix.service"
         echo ""
         echo "Ou abra 'Hefesto' no menu de aplicativos."
         ;;

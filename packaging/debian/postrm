@@ -4,17 +4,19 @@ set -e
 case "$1" in
     remove)
         echo ""
-        echo "Hefesto removido."
+        echo "Hefesto - Dualsense4Unix removido."
         echo ""
-        echo "Configuracoes do usuario em ~/.config/hefesto/ foram preservadas."
-        echo "Para remover tambem as configuracoes:"
-        echo "  rm -rf ~/.config/hefesto/"
+        echo "Configuracoes do usuario em ~/.config/hefesto-dualsense4unix/"
+        echo "foram preservadas. Para remover tambem as configuracoes:"
+        echo "  rm -rf ~/.config/hefesto-dualsense4unix/"
         echo ""
         echo "Se o servico systemd ainda estiver habilitado para algum usuario:"
-        echo "  systemctl --user disable --now hefesto.service"
+        echo "  systemctl --user disable --now hefesto-dualsense4unix.service"
         ;;
     purge)
-        # Nenhum arquivo em /etc/. Configuracoes ficam em XDG do usuario.
+        # Limpeza do venv bundlado (apt remove apenas arquivos rastreados;
+        # o venv tem .pyc gerados em runtime que ficam orfaos sem isso).
+        rm -rf /opt/hefesto-dualsense4unix 2>/dev/null || true
         ;;
     upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
 esac
