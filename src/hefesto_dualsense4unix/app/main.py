@@ -1,6 +1,7 @@
 """Entry point da GUI Hefesto - Dualsense4Unix (GTK3)."""
 from __future__ import annotations
 
+import contextlib
 import os
 import signal
 import subprocess
@@ -11,54 +12,97 @@ from hefesto_dualsense4unix.app.app import HefestoApp
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
 
 
+def _is_systemd_managed(pid: int) -> bool:
+    """Retorna True se o processo é child do systemd user (PID 1 user-instance)
+    ou do systemd init (PID 1). Não mexer em daemons systemd-managed para
+    evitar StartLimitBurst-hit + auto-restart loops.
+    """
+    try:
+        with open(f"/proc/{pid}/status") as f:
+            for line in f:
+                if line.startswith("PPid:"):
+                    ppid = int(line.split()[1])
+                    break
+            else:
+                return False
+        # PPid=1 é systemd init OR user systemd. Suficiente para "não tocar".
+        if ppid == 1:
+            return True
+        # systemd user instance (--user) tem cmdline "/usr/lib/systemd/systemd --user"
+        with open(f"/proc/{ppid}/cmdline") as f:
+            cmd = f.read().replace("\0", " ")
+        return "/usr/lib/systemd/systemd" in cmd or "systemd --user" in cmd
+    except (FileNotFoundError, ProcessLookupError, PermissionError, OSError, ValueError):
+        return False
+
+
 def _kill_previous_instances(logger) -> None:
-    """Mata QUALQUER processo Hefesto - Dualsense4Unix anterior antes de subir.
+    """Mata processos GUI anteriores; preserva daemon managed por systemd.
 
     Cobre:
       - GUI antiga (python -m hefesto_dualsense4unix.app.main)
-      - Daemon avulso (hefesto-dualsense4unix daemon start)
-      - Daemon via Popen interno do GUI anterior
+      - Daemon avulso (hefesto-dualsense4unix daemon start) — APENAS se NÃO
+        managed por systemd. Daemons via systemctl ficam intactos para o
+        Restart=on-failure não bater em StartLimitBurst.
       - Flatpak runtime do app (br.andrefarias.Hefesto)
 
-    Garante isolamento absoluto: a nova instância sempre começa do zero, sem
-    socket/pid file órfão de execução anterior. Pula o próprio PID via
-    os.getpid() para não suicídio em pkill recursivo.
+    Pula próprio PID + PPID. Defesa anti-loop: daemons systemd-managed são
+    detectados via /proc/<pid>/status PPid e preservados.
     """
     own_pid = os.getpid()
     own_ppid = os.getppid()
 
     patterns = [
         r"hefesto_dualsense4unix\.app\.main",
-        r"hefesto-dualsense4unix daemon start",
         r"hefesto-dualsense4unix-gui",
         r"br\.andrefarias\.Hefesto",
     ]
+    # Daemon: pattern separado para checar systemd-managed antes de matar.
+    daemon_pattern = r"hefesto-dualsense4unix daemon start"
+
+    def _kill(pid: int, sig: int) -> None:
+        if pid in (own_pid, own_ppid):
+            return
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.kill(pid, sig)
 
     for sig in (signal.SIGTERM, signal.SIGKILL):
         for pat in patterns:
             try:
-                # pgrep retorna PIDs uma por linha; filtramos os nossos.
                 out = subprocess.run(
                     ["pgrep", "-f", pat],
-                    capture_output=True,
-                    text=True,
-                    timeout=2,
+                    capture_output=True, text=True, timeout=2,
                 ).stdout.strip()
                 for pid_str in out.split("\n"):
                     if not pid_str.strip():
                         continue
                     try:
-                        pid = int(pid_str)
+                        _kill(int(pid_str), sig)
                     except ValueError:
-                        continue
-                    if pid in (own_pid, own_ppid):
-                        continue
-                    try:
-                        os.kill(pid, sig)
-                    except (ProcessLookupError, PermissionError):
                         continue
             except (subprocess.TimeoutExpired, FileNotFoundError):
                 continue
+
+        # Daemon: matar APENAS se não-systemd-managed.
+        try:
+            out = subprocess.run(
+                ["pgrep", "-f", daemon_pattern],
+                capture_output=True, text=True, timeout=2,
+            ).stdout.strip()
+            for pid_str in out.split("\n"):
+                if not pid_str.strip():
+                    continue
+                try:
+                    pid = int(pid_str)
+                except ValueError:
+                    continue
+                if _is_systemd_managed(pid):
+                    logger.debug("daemon_systemd_managed_preservado", pid=pid)
+                    continue
+                _kill(pid, sig)
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+
         if sig == signal.SIGTERM:
             time.sleep(0.5)
 

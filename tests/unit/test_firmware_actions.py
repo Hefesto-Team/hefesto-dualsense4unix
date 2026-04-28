@@ -220,13 +220,18 @@ def _build_mixin(
 def test_install_firmware_tab_binario_disponivel_habilita_botoes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Aba Firmware redesenhada (2026-04-27): atualização Linux removida por
+    risco de brick. Apenas 'Verificar versão' (firmware_check_btn) fica
+    enabled quando binário presente; browse/apply SEMPRE desabilitados.
+    """
     mixin = _build_mixin(monkeypatch, binary_available=True)
     mixin.install_firmware_tab()
 
     assert mixin._widgets["firmware_check_btn"].sensitive is True
-    assert mixin._widgets["firmware_browse_btn"].sensitive is True
-    assert mixin._widgets["firmware_apply_btn"].sensitive is False  # sem blob
-    assert mixin._widgets["firmware_status_label"].text == "Pronto."
+    assert mixin._widgets["firmware_browse_btn"].sensitive is False
+    assert mixin._widgets["firmware_apply_btn"].sensitive is False
+    # Status label mostra _OFFICIAL_GUIDE (link Sony oficial) por default.
+    assert "playstation" in mixin._widgets["firmware_status_label"].text.lower()
     assert mixin._firmware_selected_blob is None
     assert mixin._firmware_in_progress is False
 

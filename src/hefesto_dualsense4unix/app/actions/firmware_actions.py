@@ -28,16 +28,19 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Aba Firmware exibe APENAS info read-only (versão atual do controle).
+# Atualização real de firmware via Linux foi removida da GUI por risco de
+# brick irreversível. O caminho recomendado é a Sony oficial.
 _INSTALL_HELP = (
-    "dualsensectl não encontrado. Instale via Flathub "
-    "(https://flathub.org/apps/com.github.nowrep.dualsensectl) "
-    "ou compile do fonte (https://github.com/nowrep/dualsensectl) "
-    "e reabra a aba."
+    "dualsensectl não está instalado — botão 'Verificar versão' fica "
+    "desabilitado. Esta aba mostra apenas informação read-only do firmware."
 )
 
-_RISK_BANNER = (
-    "RISCO DE BRICK. USE APENAS BLOBS OFICIAIS SONY "
-    "(fwupdater.dl.playstation.net). NÃO DESCONECTE DURANTE O UPDATE."
+_OFFICIAL_GUIDE = (
+    "Para atualizar com segurança o firmware do DualSense, use o caminho "
+    "oficial Sony: conecte o controle ao PS5/PS4 (atualização automática) "
+    "ou use o Firmware Updater oficial em "
+    "https://www.playstation.com/pt-br/support/hardware/ps5-controller-update/"
 )
 
 
@@ -57,13 +60,32 @@ class FirmwareActionsMixin(WidgetAccessMixin):
         self._set_firmware_label("firmware_hardware_label", "—")
         self._set_firmware_label("firmware_build_date_label", "—")
         self._set_firmware_label("firmware_file_entry", "")
-        self._set_firmware_label("firmware_status_label", "Pronto.")
-        self._set_firmware_label("firmware_risk_banner_label", _RISK_BANNER)
+        self._set_firmware_label("firmware_status_label", _OFFICIAL_GUIDE)
+        self._set_firmware_label("firmware_risk_banner_label", _OFFICIAL_GUIDE)
         self._set_progress(0, "")
+
+        # Esconder Frame "Aplicar firmware" inteiro — atualização via Linux
+        # é risco de brick irreversível. Usuário deve usar caminho Sony
+        # oficial. Quem precisar mesmo: dualsensectl CLI direto, fora da GUI.
+        # set_visible/set_no_show_all chamados defensivamente (mocks dos
+        # testes podem não implementar — getattr fallback).
+        for widget_id in ("firmware_apply_frame",
+                          "firmware_browse_btn", "firmware_apply_btn",
+                          "firmware_file_entry", "firmware_progress_bar"):
+            w = self._get(widget_id)
+            if w is None:
+                continue
+            set_vis = getattr(w, "set_visible", None)
+            if callable(set_vis):
+                set_vis(False)
+            set_nsa = getattr(w, "set_no_show_all", None)
+            if callable(set_nsa):
+                set_nsa(True)
 
         available = self._firmware_updater.is_available()
         self._set_button_enabled("firmware_check_btn", available)
-        self._set_button_enabled("firmware_browse_btn", available)
+        # apply_btn e browse_btn ficam desabilitados E ocultos.
+        self._set_button_enabled("firmware_browse_btn", False)
         self._set_button_enabled("firmware_apply_btn", False)
         if not available:
             self._set_firmware_label("firmware_status_label", _INSTALL_HELP)
@@ -286,7 +308,7 @@ class FirmwareActionsMixin(WidgetAccessMixin):
             modal=True,
             message_type=Gtk.MessageType.WARNING,
             buttons=Gtk.ButtonsType.OK_CANCEL,
-            text=_RISK_BANNER,
+            text=_OFFICIAL_GUIDE,
         )
         dialog.format_secondary_text(
             f"Aplicar firmware:\n\n{blob}\n\n"
