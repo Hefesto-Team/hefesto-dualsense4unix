@@ -131,7 +131,7 @@ def daemon_install_service(
     enable: bool = typer.Option(
         False,
         "--enable",
-        help="Habilitar auto-start no boot (WantedBy=graphical-session.target).",
+        help="Habilitar auto-start no boot (WantedBy=default.target).",
     ),
 ) -> None:
     """Copia a unit systemd --user `hefesto-dualsense4unix.service`.
