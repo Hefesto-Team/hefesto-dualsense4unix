@@ -81,32 +81,35 @@ _install_gi_stubs()
 from hefesto_dualsense4unix.app.actions import firmware_actions  # noqa: E402
 from hefesto_dualsense4unix.app.actions.firmware_actions import (  # noqa: E402
     _INSTALL_HELP,
+    _OFFICIAL_GUIDE,
 )
 
 # ---------------------------------------------------------------------------
 # Conteúdo da mensagem
 # ---------------------------------------------------------------------------
-
-
-def test_install_help_orienta_flathub_primeiro() -> None:
-    """A mensagem cita Flathub explicitamente (canônico do upstream)."""
-    assert "Flathub" in _INSTALL_HELP
-
-
-def test_install_help_traz_url_flathub() -> None:
-    """URL completa do Flathub deve estar presente para link clicável."""
-    assert "flathub.org/apps/com.github.nowrep.dualsensectl" in _INSTALL_HELP
-
-
-def test_install_help_traz_url_github_como_fallback() -> None:
-    """GitHub permanece como fallback de build manual."""
-    assert "github.com/nowrep/dualsensectl" in _INSTALL_HELP
+#
+# Aba Firmware foi redesenhada (2026-04-27): atualização via Linux é risco
+# de brick irreversível. UI agora aponta para o caminho Sony oficial.
+# _INSTALL_HELP fica como aviso curto quando dualsensectl ausente; o conteúdo
+# canônico para o usuário é _OFFICIAL_GUIDE.
 
 
 def test_install_help_em_pt_br() -> None:
     """Mantém PT-BR — não regredir para EN."""
-    assert "não encontrado" in _INSTALL_HELP
-    assert "Instale" in _INSTALL_HELP
+    assert "dualsensectl" in _INSTALL_HELP
+    assert "read-only" in _INSTALL_HELP
+
+
+def test_official_guide_aponta_sony() -> None:
+    """Guide canônico tem link Sony oficial (PS5/PS4 update)."""
+    assert "playstation.com" in _OFFICIAL_GUIDE
+    assert "PS5" in _OFFICIAL_GUIDE or "PS4" in _OFFICIAL_GUIDE
+
+
+def test_official_guide_em_pt_br() -> None:
+    """Guide canônico em PT-BR — não regredir para EN."""
+    assert "controle" in _OFFICIAL_GUIDE.lower() or "atualiz" in _OFFICIAL_GUIDE.lower()
+    assert "oficial" in _OFFICIAL_GUIDE.lower()
 
 
 def test_install_help_sem_termos_obsoletos() -> None:

@@ -229,6 +229,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
         if not is_sandbox:
             try:
+                # reset-failed limpa StartLimitBurst-hit se daemon morreu por
+                # kill anterior (ex.: _kill_previous_instances da GUI).
+                subprocess.run(
+                    ["systemctl", "--user", "reset-failed", SERVICE_NORMAL],
+                    capture_output=True, timeout=3, check=False,
+                )
                 result = subprocess.run(
                     ["systemctl", "--user", "start", SERVICE_NORMAL],
                     capture_output=True,
@@ -526,10 +532,18 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._set_daemon_text(text)
 
     def _run_systemctl_async(self, action: str) -> None:
-        """Executa systemctl em thread worker para não bloquear a thread GTK."""
+        """Executa systemctl em thread worker para não bloquear a thread GTK.
+
+        Para start/restart, primeiro faz reset-failed para limpar
+        StartLimitBurst-hit caso o usuário tenha clicado várias vezes ou o
+        kill rigoroso da GUI tenha disparado auto-restart no systemd. Sem
+        isso, restart imediato falha com 'start-limit-hit'.
+        """
         unit = SERVICE_NORMAL
 
         def _worker() -> None:
+            if action in ("start", "restart"):
+                self._invoke_systemctl(["reset-failed", unit], check=False)
             result = self._invoke_systemctl([action, unit], capture=True)
             rc = result.returncode if result is not None else -1
             GLib.idle_add(self._on_systemctl_done, action, unit, rc)
