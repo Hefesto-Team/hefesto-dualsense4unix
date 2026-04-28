@@ -6,9 +6,11 @@ Cada glyph possui duas variantes carregadas em memoria na inicialização:
 
 O widget alterna entre elas via `set_pressed(bool)`, acionando `queue_draw`.
 
-Caminho dos assets resolvido por ordem de preferência:
-  1. ~/.local/share/hefesto-dualsense4unix/glyphs/   (instalação via install.sh)
-  2. assets/glyphs/                   (diretório do repo — ambiente dev)
+Caminho dos assets resolvido por ordem de preferência (BUG-DEB-GLYPHS-
+PATH-RESOLVER-01: o .deb instala em /usr/share/, não em ~/.local/share/):
+  1. ~/.local/share/hefesto-dualsense4unix/glyphs/    (install.sh nativo)
+  2. /usr/share/hefesto-dualsense4unix/assets/glyphs/ (.deb / system-wide)
+  3. assets/glyphs/                                   (diretório do repo)
 """
 from __future__ import annotations
 
@@ -48,17 +50,26 @@ BUTTON_GLYPH_LABELS: dict[str, str] = {
 
 
 def _resolver_dir_glyphs() -> pathlib.Path:
-    """Retorna o diretório de glyphs disponivel."""
-    instalado = pathlib.Path.home() / ".local" / "share" / "hefesto-dualsense4unix" / "glyphs"
-    if instalado.is_dir():
-        return instalado
-    # Dev: caminho relativo ao pacote (src/hefesto_dualsense4unix/gui/widgets/ -> raiz/assets/glyphs/)  # noqa: E501
-    repo_root = pathlib.Path(__file__).parent.parent.parent.parent.parent
-    dev = repo_root / "assets" / "glyphs"
-    if dev.is_dir():
-        return dev
+    """Retorna o diretório de glyphs disponivel.
+
+    Cobre 3 cenários de instalação. A ordem reflete preferência: usuário
+    ganha de sistema (override pessoal); sistema ganha de dev fallback.
+    """
+    candidatos: list[pathlib.Path] = [
+        # 1) install.sh nativo copia para ~/.local/share/
+        pathlib.Path.home() / ".local" / "share" / "hefesto-dualsense4unix" / "glyphs",
+        # 2) .deb instala assets em /usr/share/hefesto-dualsense4unix/assets/
+        pathlib.Path("/usr/share/hefesto-dualsense4unix/assets/glyphs"),
+        # 3) Dev: caminho relativo ao pacote
+        # (src/hefesto_dualsense4unix/gui/widgets/ -> raiz/assets/glyphs/)
+        pathlib.Path(__file__).parent.parent.parent.parent.parent / "assets" / "glyphs",
+    ]
+    for cand in candidatos:
+        if cand.is_dir():
+            return cand
     raise FileNotFoundError(
-        f"Diretório de glyphs não encontrado em '{instalado}' nem em '{dev}'."
+        "Diretório de glyphs não encontrado em nenhum dos paths: "
+        + ", ".join(str(p) for p in candidatos)
     )
 
 
