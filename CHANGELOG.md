@@ -5,6 +5,31 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Hardening pós-publicação v3.0.0 — round 2 (2026-04-27 noite)
+
+Quatro sprints fechadas em sessão única atacando os 3 sintomas mais ofensivos reportados pelo usuário (Pop!_OS 22.04 Jammy + GNOME 42 X11 + DualSense USB) + 1 achado colateral.
+
+- **BUG-DEB-DEPS-VENV-BUNDLED-01** (PR #106): em Jammy, `apt install ./hefesto-dualsense4unix_3.0.0_amd64.deb` aceitava mas `hefesto-dualsense4unix --help` falhava — apt do Jammy entrega `pydantic 1.10.x`, `structlog 20.1`, `typer 0.3` (todas incompatíveis) e não tem `python3-pydualsense`. Fix: `scripts/build_deb.sh` agora cria venv pinado em `/opt/hefesto-dualsense4unix/venv/` durante o build (`python3.10 -m venv --copies` + `pip install --no-cache-dir .`). Wrappers `/usr/bin/` apontam para o venv. PyGObject continua sendo `python3-gi` do apt — herdado via `.pth` shim que injeta `/usr/lib/python3/dist-packages` no `sys.path` do venv. `Depends:` enxuto: `python3 (>=3.10), python3-venv, python3-gi, gir1.2-gtk-3.0, gir1.2-ayatanaappindicator3-0.1, libhidapi-hidraw0, libnotify-bin`. `Recommends: ydotool | wlrctl`. Validação empírica em `docker run ubuntu:22.04`: instalação limpa + `--help` + `version` + todos imports OK. `.deb` foi de 228K para 8.3MB.
+
+- **BUG-DEB-AUTOSTART-WANTEDBY-DEFAULT-01** (PR #105): switch "Iniciar com o sistema" voltava DESLIGADO após reboot quando instalado via `.deb`. Hipótese inicial — `.deb` não copiava o unit — falsificada empiricamente (fix do path estava em `848660c`). Causa real: `WantedBy=graphical-session.target`. O symlink criado por `systemctl --user enable` ia para `~/.config/systemd/user/graphical-session.target.wants/` — esse target depende do DE ativá-lo e tem race com login. Fix: `WantedBy=default.target` em `assets/hefesto-dualsense4unix.service`. `default.target` user é ativada incondicionalmente pelo `systemd-user` no startup. `PartOf=graphical-session.target` removido (daemon usa `/dev/hidraw` + evdev, não DISPLAY). `After=graphical-session.target default.target` preservado para ordem. `gui-hotplug.service` mantém `graphical-session.target` (esse SIM precisa de sessão gráfica). Validação empírica: `enable` cria symlink em `default.target.wants/`, `daemon-reexec` (simula respawn do user manager) preserva `is-enabled=enabled`.
+
+- **BUG-GUI-COMBOBOX-POPUP-CONTRAST-01** (PR #104): aba Gatilhos (e demais com `GtkComboBoxText`) tinha popup com texto cinza sobre fundo cinza ao abrir o dropdown. Causa: o popup é uma `GtkWindow` separada (filha do screen, override-redirect) que não herda o escopo `.hefesto-dualsense4unix-window` do `theme.css`. As regras existentes só cobriam o botão visível. Fix: `src/hefesto_dualsense4unix/gui/theme.css` ganhou regras para `combobox window.popup`, `combobox window menuitem`, `combobox window treeview` e estados `:hover`/`:selected`, com paleta Drácula (`#282a36` bg, `#f8f8f2` fg, `#44475a` selected, `#6272a4` border). Cobre ambas variantes `appears-as-list=true|false`. Validação programática: `Gtk.CssProvider.load_from_data` parseia limpo. Validação visual do popup ABERTO **bloqueada** pelo Mutter/GNOME 42 (descarta XTEST mouse events em `GtkNotebook` tabs e popups) — pendente confirmação visual humana.
+
+- **BUG-DEB-GLYPHS-PATH-RESOLVER-01** (PR #107, achado colateral): após reinstalar o `.deb` integrado, os 16 glyphs físicos do painel "Sticks e botões" (cross, circle, square, triangle, dpad cima/baixo/esquerda/direita, L1, R1, L2, R2, share, options, PS, touchpad) sumiram da aba Status. Suspeita inicial recaiu sobre as regras CSS do popup combobox — falsa. Causa real: `_resolver_dir_glyphs()` em `src/hefesto_dualsense4unix/gui/widgets/button_glyph.py` só checava `~/.local/share/hefesto-dualsense4unix/glyphs/` (install.sh) e dev fallback. O `.deb` instala em `/usr/share/hefesto-dualsense4unix/assets/glyphs/` — esse path não existia na lista. Fix: lista de candidatos atualizada (usuário > sistema > dev). Após fix, `GLYPHS_DIR` resolve corretamente para `/usr/share/...` no `.deb` e os glyphs voltam. Bug pré-existia em qualquer instalação `.deb` sem `~/.local/share/` populado por install.sh prévio.
+
+#### Validação cross-fix (host Pop!_OS 22.04 do mantenedor)
+
+- `hefesto-dualsense4unix version` retorna `3.0.0` (via wrapper `/usr/bin/` para venv `/opt/`).
+- Imports do venv carregam `pydantic 2.13.3`, `structlog 25.5.0`, `typer 0.25.0`, `pydualsense 0.7.5`, `Gtk 3.0`.
+- `systemctl --user enable hefesto-dualsense4unix.service` cria symlink em `~/.config/systemd/user/default.target.wants/`.
+- `systemctl --user daemon-reexec` preserva `is-enabled=enabled`.
+- GUI maximizada na aba Status mostra os 16 glyphs do controle (PNG capturado pelo mantenedor confirmando a regressão e o fix).
+
+#### Pendente
+
+- **Reboot real do host**: validação final do switch autostart só fecha após reinício efetivo. Comportamento esperado: switch volta ligado pós-login.
+- **Popup combobox aberto**: confirmação visual humana do contraste Drácula nos itens dos dropdowns da aba Gatilhos. Validação automática indisponível (Mutter/GNOME 42 descarta XTEST events para popups). Esperado: bg `#282a36`, fg `#f8f8f2`, hover `#44475a`.
+
 ### Hardening pós-publicação v3.0.0
 
 Correções aplicadas após bugs reportados em runtime real (instalação .deb / Flatpak no Pop!_OS 22.04 + GNOME 42 X11) entre tags `v3.0.0` retags. Sem bump de versão — todas re-tag sob v3.0.0 antes do anúncio.

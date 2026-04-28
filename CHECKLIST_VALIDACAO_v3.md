@@ -237,8 +237,8 @@ Aplicados runtime real após primeira instalação `.deb` no Pop!_OS 22.04 / GNO
 - [x] `service_install.detect_installed_unit` checa `/usr/lib/systemd/user/` + `/etc/systemd/user/` além de `~/.config/systemd/user/`. Botão "Reiniciar daemon" volta a ficar habilitado em instalação `.deb`.
 - [x] `gui/assets/logo.png` bundlado no wheel (resolve banner ausente no `.deb`/Flatpak).
 - [x] `constants.MAIN_GLADE` resolve relativo ao package (não hardcoded para layout source repo).
-- [ ] **Pendente**: instalação `.deb` em Pop!_OS 22.04 (Jammy) requer `pip install --user 'pydantic>=2' 'structlog>=23' 'typer>=0.12' rich pydualsense` — apt Jammy só tem versões antigas. Validar workaround documentado em README/CHECKLIST.
-- [ ] **Pendente**: switch "Auto-start" da aba Daemon persiste reboots no `.deb` (ainda não validado).
+- [x] Instalação `.deb` em Pop!_OS 22.04 (Jammy) funciona sem `pip install` manual — `BUG-DEB-DEPS-VENV-BUNDLED-01` (PR #106) bundla venv pinado em `/opt/hefesto-dualsense4unix/venv/`. Validado em `docker run ubuntu:22.04` puro: `apt install ./hefesto-dualsense4unix_3.0.0_amd64.deb && hefesto-dualsense4unix --help && hefesto-dualsense4unix version` retorna `3.0.0` sem erro.
+- [x] Switch "Auto-start" da aba Daemon persiste reboots no `.deb` — `BUG-DEB-AUTOSTART-WANTEDBY-DEFAULT-01` (PR #105) trocou `WantedBy=graphical-session.target` por `WantedBy=default.target` em `assets/hefesto-dualsense4unix.service`. Validado: `enable` cria symlink em `~/.config/systemd/user/default.target.wants/`, `daemon-reexec` preserva `is-enabled=enabled`. Reboot real do host mantém pendente para confirmação última.
 
 ### Daemon "Start request repeated too quickly" (StartLimitBurst-hit)
 
@@ -256,7 +256,12 @@ Aplicados runtime real após primeira instalação `.deb` no Pop!_OS 22.04 / GNO
 ### Tema / contraste
 
 - [x] `theme.css` aplica palette Drácula em comboboxes (`combobox button`, `combobox button label`, `combobox cellview`, `combobox box`) e em frame headers.
-- [ ] **Pendente**: validação visual end-to-end de cada aba (Status confirmado bom; Gatilhos com comboboxes ainda exibe contraste questionável em screenshot anterior).
+- [x] Popup interno do `GtkComboBoxText` (window separada override-redirect) — `BUG-GUI-COMBOBOX-POPUP-CONTRAST-01` (PR #104) adiciona regras para `combobox window.popup`, `combobox window menuitem`, `combobox window treeview` e estados `:hover`/`:selected`. CSS parseia limpo via `Gtk.CssProvider.load_from_data`.
+- [ ] **Pendente humano**: confirmar visualmente o popup ABERTO da aba Gatilhos — Mutter/GNOME 42 descarta XTEST mouse events em `GtkNotebook` tabs e popups de combobox, automação não consegue abrir o popup. Esperado: bg `#282a36`, fg `#f8f8f2`, hover `#44475a`.
+
+### Glyphs do controle (botões físicos da aba Status)
+
+- [x] `_resolver_dir_glyphs()` aprende path do `.deb` — `BUG-DEB-GLYPHS-PATH-RESOLVER-01` (PR #107). Antes só checava `~/.local/share/` e dev fallback; `.deb` instala em `/usr/share/hefesto-dualsense4unix/assets/glyphs/`. Validado: `GLYPHS_DIR` resolve corretamente após reinstall do `.deb`, painel "Sticks e botões" exibe os 16 glyphs (cross/circle/square/triangle, dpad, L1/R1/L2/R2, share/options/PS/touchpad).
 
 ### Uninstall total
 
