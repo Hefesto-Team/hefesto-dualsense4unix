@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
-# build_deb.sh — Gera pacote .deb para o Hefesto - Dualsense4Unix usando dpkg-deb --build.
-# Não usa dh_python3 nem dpkg-buildpackage; funciona em qualquer sistema
-# com dpkg-deb instalado (Ubuntu/Debian padrão).
+# build_deb.sh — Gera pacote .deb para o Hefesto - Dualsense4Unix com venv bundlado.
 #
-# Uso: bash scripts/build_deb.sh [--output-dir <dir>]
+# BUG-DEB-DEPS-VENV-BUNDLED-01: a estratégia anterior dependia de pacotes
+# python3-* do apt que em Ubuntu 22.04 (Jammy) entregam versões antigas
+# (pydantic 1.x, structlog 20.1, typer 0.3) e não tem `python3-pydualsense`.
+# Resultado: `apt install` aceitava o .deb mas `hefesto-dualsense4unix --help`
+# falhava por incompatibilidade. Solução: criar um venv pinado em
+# `/opt/hefesto-dualsense4unix/venv/` com pip dentro do build, bundlar no
+# .deb. Wrappers `/usr/bin/` apontam para o python desse venv. PyGObject
+# (python3-gi) continua sendo herdado do sistema via --system-site-packages
+# porque é caro recompilar com pip.
+#
+# Uso: bash scripts/build_deb.sh
 # Saida: dist/hefesto-dualsense4unix_<version>_amd64.deb
 
 set -euo pipefail
@@ -18,11 +26,9 @@ VERSION=$(python3 - <<'EOF'
 import sys
 try:
     import tomllib
-    open_mode = "rb"
 except ImportError:
     try:
         import tomli as tomllib
-        open_mode = "rb"
     except ImportError:
         sys.exit("Erro: tomllib (Python 3.11+) ou tomli não encontrado. Instale: pip install tomli")
 with open("pyproject.toml", "rb") as f:
@@ -45,22 +51,82 @@ echo "Staging: ${STAGING}"
 mkdir -p \
     "${STAGING}/DEBIAN" \
     "${STAGING}/usr/bin" \
-    "${STAGING}/usr/lib/python3/dist-packages" \
     "${STAGING}/usr/lib/udev/rules.d" \
     "${STAGING}/usr/lib/systemd/user" \
     "${STAGING}/usr/share/applications" \
     "${STAGING}/usr/share/hefesto-dualsense4unix/assets" \
-    "${STAGING}/usr/share/icons/hicolor/256x256/apps"
+    "${STAGING}/usr/share/icons/hicolor/256x256/apps" \
+    "${STAGING}/opt/hefesto-dualsense4unix"
 
 # ---------------------------------------------------------------------------
-# Copiar pacote Python
+# Criar venv bundlado em /opt/hefesto-dualsense4unix/venv/
 # ---------------------------------------------------------------------------
-echo "Copiando src/hefesto_dualsense4unix/ ..."
-cp -r src/hefesto_dualsense4unix "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix"
+VENV_DIR="${STAGING}/opt/hefesto-dualsense4unix/venv"
 
-# Remover __pycache__ do pacote
-find "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
-find "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix" -name '*.pyc' -delete 2>/dev/null || true
+# Pegar Python target compatível com Ubuntu/Pop! >= 22.04. python3.10 é a
+# versão padrão do Jammy (libpython3.10.so.1.0 vem com python3-minimal).
+# `python3` default em distros newer pode ser 3.11/3.12 — venv ficaria
+# embarcando libpython mais nova que Jammy não tem (BUG diagnosticado em
+# build local com Pop!_OS 22.04 + pyenv 3.12 → libpython3.12.so missing
+# em ubuntu:22.04). Preferir 3.10 via fallback explícito.
+TARGET_PYTHON=""
+for cand in /usr/bin/python3.10 /usr/bin/python3.11 /usr/bin/python3.12 /usr/bin/python3; do
+    if [ -x "$cand" ]; then
+        TARGET_PYTHON="$cand"
+        break
+    fi
+done
+if [ -z "$TARGET_PYTHON" ]; then
+    echo "Erro: nenhum Python 3 do sistema (/usr/bin/python3*) encontrado." >&2
+    exit 1
+fi
+echo "Python target: ${TARGET_PYTHON} ($(${TARGET_PYTHON} --version 2>&1))"
+
+echo "Criando venv em ${VENV_DIR} ..."
+# --copies (não symlink — venv autocontido sobrevive entre máquinas).
+# NÃO usar --system-site-packages aqui: durante o build, o host pode ter
+# python3-typer/python3-pydantic/etc. instalados e o pip "veria" como
+# satisfeitas, pulando-as do venv. No target Jammy puro, faltariam.
+# PyGObject (gi) é resolvido depois via .pth (abaixo).
+"${TARGET_PYTHON}" -m venv --copies "${VENV_DIR}"
+
+VENV_PY="${VENV_DIR}/bin/python"
+VENV_PIP="${VENV_DIR}/bin/pip"
+
+echo "Atualizando pip dentro do venv ..."
+"${VENV_PY}" -m pip install --quiet --upgrade pip setuptools wheel
+
+echo "Instalando hefesto-dualsense4unix + deps no venv (off-line para o usuário final) ..."
+"${VENV_PIP}" install --quiet --no-cache-dir .
+
+# PyGObject é resolvido a partir de python3-gi do sistema (apt). Compilá-lo
+# via pip exige libgirepository-1.0-dev e cairo, o que infla muito o build.
+# Em vez disso, adicionar um .pth que injeta /usr/lib/python3/dist-packages
+# no sys.path do venv quando ele é executado. python3-gi do apt do target
+# (Jammy ou superior) coloca os módulos `gi`, `gi/repository`, `cairo` lá.
+echo "Adicionando shim PyGObject -> dist-packages do sistema ..."
+PY_SITE_DIR=$(find "${VENV_DIR}/lib" -mindepth 1 -maxdepth 1 -type d -name 'python*' | head -1)/site-packages
+mkdir -p "${PY_SITE_DIR}"
+cat > "${PY_SITE_DIR}/hefesto_pygobject_shim.pth" <<'PTH'
+import sys; sys.path.append('/usr/lib/python3/dist-packages')
+PTH
+
+# Limpeza pós-install — encolher o venv removendo arquivos que não rodam.
+echo "Limpando .pyc / __pycache__ / dist-info docs do venv ..."
+find "${VENV_DIR}" -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+find "${VENV_DIR}" -type f -name '*.pyc' -delete 2>/dev/null || true
+find "${VENV_DIR}" -type d -path '*/dist-info' -name 'tests' -exec rm -rf {} + 2>/dev/null || true
+
+# Reescrever shebangs para apontar para o caminho FINAL (/opt/...) — durante
+# a criação o venv embarcou shebangs com o path do staging.
+FINAL_VENV="/opt/hefesto-dualsense4unix/venv"
+echo "Reescrevendo shebangs do venv: ${VENV_DIR} -> ${FINAL_VENV} ..."
+grep -rIl --include='*' "${VENV_DIR}/bin/python" "${VENV_DIR}/bin" 2>/dev/null \
+    | xargs -r sed -i "s|${VENV_DIR}|${FINAL_VENV}|g" || true
+# Patch também o pyvenv.cfg — armazena o home original do interpretador.
+if [ -f "${VENV_DIR}/pyvenv.cfg" ]; then
+    sed -i "s|${VENV_DIR}|${FINAL_VENV}|g" "${VENV_DIR}/pyvenv.cfg" || true
+fi
 
 # ---------------------------------------------------------------------------
 # Copiar assets
@@ -68,7 +134,7 @@ find "${STAGING}/usr/lib/python3/dist-packages/hefesto_dualsense4unix" -name '*.
 echo "Copiando assets/ ..."
 cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
 
-# Icone principal (usa o da pasta appimage que e o mais completo)
+# Icone principal (usa o da pasta appimage que é o mais completo)
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
 fi
@@ -104,20 +170,20 @@ done
 cp packaging/hefesto-dualsense4unix.desktop "${STAGING}/usr/share/applications/hefesto-dualsense4unix.desktop"
 
 # ---------------------------------------------------------------------------
-# Criar wrappers /usr/bin/
+# Criar wrappers /usr/bin/ apontando para o venv bundlado
 # ---------------------------------------------------------------------------
-# Wrappers usam /usr/bin/python3 explícito — evita pyenv/virtualenv ativo no
-# PATH do user pegar Python que não conhece o pacote (instalado em
-# /usr/lib/python3/dist-packages/ é visto apenas pelo Python do sistema).
-cat > "${STAGING}/usr/bin/hefesto-dualsense4unix" <<'WRAPPER'
+# O venv carrega todas as deps Python pinadas no build; PyGObject vem do
+# sistema (python3-gi) via --system-site-packages do venv. Os wrappers
+# usam o python do venv explicitamente.
+cat > "${STAGING}/usr/bin/hefesto-dualsense4unix" <<WRAPPER
 #!/bin/sh
-exec /usr/bin/python3 -m hefesto_dualsense4unix.cli.app "$@"
+exec ${FINAL_VENV}/bin/hefesto-dualsense4unix "\$@"
 WRAPPER
 chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix"
 
-cat > "${STAGING}/usr/bin/hefesto-dualsense4unix-gui" <<'WRAPPER'
+cat > "${STAGING}/usr/bin/hefesto-dualsense4unix-gui" <<WRAPPER
 #!/bin/sh
-exec /usr/bin/python3 -m hefesto_dualsense4unix.app.main "$@"
+exec ${FINAL_VENV}/bin/hefesto-dualsense4unix-gui "\$@"
 WRAPPER
 chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix-gui"
 
