@@ -20,10 +20,12 @@
 
 ```
 Versão: 3.0.0
-Estado: runtime validado em Pop!_OS 22.04 com DualSense USB/BT; 1138 testes unit, ruff clean, mypy zero
+Estado: runtime validado em Pop!_OS 22.04 com DualSense USB; 1332 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
+
+> **Nota de release v3.0.0** — esta release é o rebrand `Hefesto` → `Hefesto - Dualsense4Unix` + 6 sprints de hardening fechadas no dia da publicação. Pacotes `.deb`, Flatpak e AppImage publicados em [Releases v3.0.0](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/tag/v3.0.0). A aba **Firmware** foi redesenhada para read-only (sem flash via Linux — atualização oficial é Sony, via PS5/PS4). A AppImage v3.0.0 é **CLI-only** (banner explicativo no double-click); para GUI use `.deb` ou Flatpak. Pendências conhecidas e itens de validação manual estão em `CHECKLIST_VALIDACAO_v3.md` e na seção *Hardening pós-publicação* do `CHANGELOG.md`.
 
 ---
 
