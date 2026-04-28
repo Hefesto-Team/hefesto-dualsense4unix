@@ -50,6 +50,36 @@
 .hefesto-dualsense4unix-window combobox arrow {
     color: #bd93f9;
 }
+
+/* Popup interno do GtkComboBoxText. O popup é uma window separada (filha do
+   screen) que não herda escopo do .hefesto-dualsense4unix-window — precisa
+   selector próprio. Cobre ambas variantes: appears-as-list=true (treeview)
+   e false (menuitem). Sem isso, o popup herda o tema GTK do sistema (claro
+   em Pop!_OS GNOME) e o texto fica ilegível sobre o fundo Drácula.
+   BUG-GUI-COMBOBOX-POPUP-CONTRAST-01. */
+combobox window.popup,
+combobox window.popup decoration,
+combobox > window {
+    background-color: #282a36;
+    border: 1px solid #6272a4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+combobox window menuitem,
+combobox window menuitem label,
+combobox window cellview,
+combobox window treeview,
+combobox window treeview.view {
+    background-color: #282a36;
+    color: #f8f8f2;
+    padding: 4px 8px;
+}
+combobox window menuitem:hover,
+combobox window menuitem:hover label,
+combobox window treeview:selected,
+combobox window treeview.view:selected {
+    background-color: #44475a;
+    color: #f8f8f2;
+}
 /* Labels gerais — herdam color via .hefesto-dualsense4unix-window mas em alguns
    containers internos (Frame, Box) o GTK aplica cinza disabled-look. Forçar. */
 .hefesto-dualsense4unix-window label {
