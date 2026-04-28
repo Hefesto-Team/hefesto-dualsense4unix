@@ -104,7 +104,19 @@ def test_start_stop_restart_status(isolated_systemd_user: Path, dummy_systemctl:
     assert any(f"restart {SERVICE_NORMAL}" in c for c in cmds)
 
 
-def test_detect_installed_unit(isolated_systemd_user: Path, dummy_systemctl: list):
+def test_detect_installed_unit(
+    isolated_systemd_user: Path,
+    dummy_systemctl: list,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+):
+    # Detect agora checa também SYSTEM_UNIT_DIRS (/usr/lib/systemd/user etc)
+    # para suporte a .deb. Para isolar do ambiente real do CI/dev, monkeypatch
+    # SYSTEM_UNIT_DIRS para paths inexistentes em tmp.
+    from hefesto_dualsense4unix.daemon import service_install as si_mod
+    fake_dirs = [tmp_path / "fake-usr-lib", tmp_path / "fake-etc"]
+    monkeypatch.setattr(si_mod, "SYSTEM_UNIT_DIRS", fake_dirs)
+
     installer = ServiceInstaller()
     assert installer.detect_installed_unit() is None
 

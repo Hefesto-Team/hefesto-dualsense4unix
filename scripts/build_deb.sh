@@ -86,7 +86,16 @@ done
 # ---------------------------------------------------------------------------
 echo "Copiando units systemd ..."
 for service_file in assets/*.service; do
-    [ -f "$service_file" ] && cp "$service_file" "${STAGING}/usr/lib/systemd/user/"
+    [ -f "$service_file" ] || continue
+    base=$(basename "$service_file")
+    cp "$service_file" "${STAGING}/usr/lib/systemd/user/${base}"
+    # ExecStart no source usa %h/.local/bin/... (path do install.sh nativo
+    # que cria symlink). No .deb o binário fica em /usr/bin/. Substituir
+    # in-place pra unit apontar pro wrapper correto.
+    sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
+        "${STAGING}/usr/lib/systemd/user/${base}"
+    sed -i 's|%h/\.local/bin/hefesto-dualsense4unix-gui|/usr/bin/hefesto-dualsense4unix-gui|g' \
+        "${STAGING}/usr/lib/systemd/user/${base}"
 done
 
 # ---------------------------------------------------------------------------
@@ -97,15 +106,18 @@ cp packaging/hefesto-dualsense4unix.desktop "${STAGING}/usr/share/applications/h
 # ---------------------------------------------------------------------------
 # Criar wrappers /usr/bin/
 # ---------------------------------------------------------------------------
+# Wrappers usam /usr/bin/python3 explícito — evita pyenv/virtualenv ativo no
+# PATH do user pegar Python que não conhece o pacote (instalado em
+# /usr/lib/python3/dist-packages/ é visto apenas pelo Python do sistema).
 cat > "${STAGING}/usr/bin/hefesto-dualsense4unix" <<'WRAPPER'
 #!/bin/sh
-exec python3 -m hefesto_dualsense4unix.cli.app "$@"
+exec /usr/bin/python3 -m hefesto_dualsense4unix.cli.app "$@"
 WRAPPER
 chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix"
 
 cat > "${STAGING}/usr/bin/hefesto-dualsense4unix-gui" <<'WRAPPER'
 #!/bin/sh
-exec python3 -m hefesto_dualsense4unix.app.main "$@"
+exec /usr/bin/python3 -m hefesto_dualsense4unix.app.main "$@"
 WRAPPER
 chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix-gui"
 

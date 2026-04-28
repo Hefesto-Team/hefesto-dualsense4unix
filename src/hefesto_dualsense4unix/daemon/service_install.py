@@ -21,6 +21,14 @@ logger = get_logger(__name__)
 
 SERVICE_NORMAL = "hefesto-dualsense4unix.service"
 
+# Diretórios system-wide onde .deb e empacotamentos Debian-likes instalam
+# units de user systemd. detect_installed_unit() checa esses paths além
+# do user dir. Lista mutável para facilitar monkeypatch em testes.
+SYSTEM_UNIT_DIRS: list[Path] = [
+    Path("/usr/lib/systemd/user"),
+    Path("/etc/systemd/user"),
+]
+
 
 def user_unit_dir() -> Path:
     """`~/.config/systemd/user/` (cria se não existe)."""
@@ -112,12 +120,18 @@ class ServiceInstaller:
         return result.stdout if result is not None else ""
 
     def detect_installed_unit(self) -> str | None:
-        """Retorna `"hefesto-dualsense4unix"` se a unit está presente em `user_unit_dir()`,
-        senão `None`.
+        """Retorna `"hefesto-dualsense4unix"` se a unit está em algum path
+        conhecido — user dir (install.sh) OU system dirs (.deb), senão `None`.
+
+        Caminhos checados em ordem:
+          1. `~/.config/systemd/user/` — install.sh.
+          2. `SYSTEM_UNIT_DIRS` (module-level) — paths de instalação Debian.
         """
-        base = user_unit_dir()
-        if (base / SERVICE_NORMAL).exists():
-            return "hefesto-dualsense4unix"
+        candidates = [user_unit_dir() / SERVICE_NORMAL]
+        candidates.extend(d / SERVICE_NORMAL for d in SYSTEM_UNIT_DIRS)
+        for path in candidates:
+            if path.exists():
+                return "hefesto-dualsense4unix"
         return None
 
     def _disable_if_installed(self, name: str) -> None:

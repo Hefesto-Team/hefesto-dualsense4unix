@@ -61,7 +61,10 @@ hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.app.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]
-include = ["src/hefesto_dualsense4unix/gui/*.glade"]
+include = [
+    "src/hefesto_dualsense4unix/gui/*.glade",
+    "src/hefesto_dualsense4unix/gui/assets/*.png",
+]
 
 [tool.ruff]
 line-length = 100
