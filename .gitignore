@@ -75,3 +75,20 @@ libdbusmenu-*/
 libdbusmenu_*.dsc
 libdbusmenu_*.diff.gz
 libdbusmenu_*.orig.tar.gz
+
+# --- anti-IA (anonimato local) ---
+GUIA.md
+AGENTS.md
+ferramenta.md
+ferramenta.md
+HANDOFF-PROMPT.md
+HANDOFF.md
+HOW_TO_RESUME.md
+VALIDATOR_BRIEF.md
+STATE.md
+.ferramenta
+.windsurfrules
+.cursor/
+.aider*
+.continue/
+.github/ferramenta-instructions.md
