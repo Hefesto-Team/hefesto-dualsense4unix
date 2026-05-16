@@ -16,6 +16,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -28,7 +29,7 @@ RUMBLE_POLICY_MULT: dict[str, float] = {
 }
 
 
-def reassert_rumble(daemon: Any, now: float) -> None:
+def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     """Re-aplica rumble_active no hardware a cada ~200ms com política.
 
     Idempotente. Necessário porque writes HID de LED/trigger podem zerar os

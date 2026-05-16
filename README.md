@@ -19,13 +19,13 @@
 ---
 
 ```
-Versão: 3.1.1
-Estado: runtime validado em Pop!_OS 22.04 com DualSense USB; 1332 testes unit, ruff clean, mypy zero
+Versão: 3.2.0
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1400+ testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
 
-> **Nota de release v3.0.0** — esta release é o rebrand `Hefesto` → `Hefesto - Dualsense4Unix` + 6 sprints de hardening fechadas no dia da publicação. Pacotes `.deb`, Flatpak e AppImage publicados em [Releases v3.0.0](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/tag/v3.0.0). A aba **Firmware** foi redesenhada para read-only (sem flash via Linux — atualização oficial é Sony, via PS5/PS4). A AppImage v3.0.0 é **CLI-only** (banner explicativo no double-click); para GUI use `.deb` ou Flatpak. Pendências conhecidas e itens de validação manual estão em `CHECKLIST_VALIDACAO_v3.md` e na seção *Hardening pós-publicação* do `CHANGELOG.md`.
+> **Nota de release v3.2.0** — consolida a wave de auditoria + polish sobre v3.1.1: profile loader com mensagens de erro acionáveis (JSON inválido/schema), `DaemonProtocol` substituindo `daemon: Any` em handlers críticos, autoscroll do log da aba Daemon, fallback offline da aba Status (5 s) e live preview de gatilhos no combobox. Acompanha checklist de validação atualizado (`CHECKLIST_VALIDACAO_v3.2.0.md`) e re-cobertura do shutdown isolado. Pacotes `.deb`, AppImage CLI e AppImage GUI publicados em [Releases v3.2.0](https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/tag/v3.2.0). Para histórico anterior (v3.0.0 rebrand, v3.1.x hardening COSMIC + BT), veja `CHANGELOG.md`.
 
 ---
 
@@ -154,8 +154,8 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.0.0/hefesto-dualsense4unix_3.0.0_amd64.deb
-sudo apt install ./hefesto-dualsense4unix_3.0.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.2.0/hefesto-dualsense4unix_3.2.0_amd64.deb
+sudo apt install ./hefesto-dualsense4unix_3.2.0_amd64.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -188,9 +188,9 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.0.0/Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
-chmod +x Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
-./Hefesto-Dualsense4Unix-3.0.0-x86_64.AppImage
+curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.2.0/Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
+chmod +x Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
+./Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)

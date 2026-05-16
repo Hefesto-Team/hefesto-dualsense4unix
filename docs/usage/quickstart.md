@@ -36,8 +36,8 @@ sudo pacman -S python-gobject gtk3 libappindicator-gtk3 hidapi \
 ### Via `.deb` (Debian/Ubuntu/Pop!_OS/Mint)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/download/v1.1.0/hefesto_1.1.0_amd64.deb
-sudo apt install ./hefesto_1.1.0_amd64.deb
+curl -LO https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/download/v3.2.0/hefesto-dualsense4unix_3.2.0_amd64.deb
+sudo apt install ./hefesto-dualsense4unix_3.2.0_amd64.deb
 ```
 
 ### Via Flatpak (COSMIC/qualquer distro)

@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -67,7 +68,7 @@ class MouseSubsystem:
         return config.mouse_emulation_enabled
 
 
-def start_mouse_emulation(daemon: Any) -> bool:
+def start_mouse_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de mouse+teclado (FEAT-MOUSE-01). Idempotente.
 
     Retorna True se ativo ao final; False se falhou ao iniciar.
@@ -97,7 +98,7 @@ def start_mouse_emulation(daemon: Any) -> bool:
     return True
 
 
-def stop_mouse_emulation(daemon: Any) -> None:
+def stop_mouse_emulation(daemon: DaemonProtocol) -> None:
     """Para e descarta o dispositivo virtual. Idempotente."""
     if daemon._mouse_device is None:
         return
@@ -108,7 +109,7 @@ def stop_mouse_emulation(daemon: Any) -> None:
     logger.info("mouse_emulation_stopped")
 
 
-def dispatch_mouse(daemon: Any, state: Any, buttons_pressed: frozenset[str]) -> None:
+def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]) -> None:
     """Traduz o estado do controle em eventos de mouse+teclado virtual.
 
     Chamado pelo poll loop a cada tick se _mouse_device não for None.

@@ -1,5 +1,7 @@
 # ADR-005: Schema de perfil v1
 
+**Status:** aceito
+
 ## Contexto
 Perfis precisam: identificar-se (nome), declarar contra qual janela casam (match), e configurar triggers + LEDs + rumble. Opções de matcher: AND total, OR total, híbrido. DSX Windows não serve de referência (UI-driven, não serializado).
 

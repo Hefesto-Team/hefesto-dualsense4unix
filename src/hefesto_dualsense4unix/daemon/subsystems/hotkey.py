@@ -16,11 +16,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
 
-def build_ps_solo_callback(daemon: Any) -> Any:
+def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
 
     Leitura em runtime — não em closure — para que reload_config funcione sem
@@ -52,7 +53,7 @@ def build_ps_solo_callback(daemon: Any) -> Any:
     return _on_ps_solo
 
 
-def start_hotkey_manager(daemon: Any) -> None:
+def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
@@ -60,12 +61,12 @@ def start_hotkey_manager(daemon: Any) -> None:
     logger.info("hotkey_manager_started", ps_button_action=daemon.config.ps_button_action)
 
 
-def stop_hotkey_manager(daemon: Any) -> None:
+def stop_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Descarta o HotkeyManager. Idempotente."""
     daemon._hotkey_manager = None
 
 
-def start_mic_hotkey(daemon: Any) -> None:
+def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     """Cria AudioControl e inicia task de consumo de BUTTON_DOWN para mic_btn."""
     from hefesto_dualsense4unix.integrations.audio_control import AudioControl
 
@@ -76,7 +77,7 @@ def start_mic_hotkey(daemon: Any) -> None:
     logger.info("mic_hotkey_iniciado")
 
 
-async def mic_button_loop(daemon: Any) -> None:
+async def mic_button_loop(daemon: DaemonProtocol) -> None:
     """Consome BUTTON_DOWN do bus e aciona mute/unmute do microfone do sistema.
 
     Filtra apenas eventos com button='mic_btn'. Chama AudioControl (que já

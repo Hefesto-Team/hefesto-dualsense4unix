@@ -128,6 +128,11 @@ class Daemon:
     # se o evdev_reader não conectou). Atualizado 1x por tick em _poll_loop;
     # zerado em shutdown.
     _last_state: ControllerState | None = None
+    # FEAT-KEYBOARD-EMULATOR-01: criados em runtime por start_keyboard_emulation
+    # (OSK helper + touchpad reader). Declarados aqui para satisfazer mypy
+    # strict via DaemonProtocol (PYDANTIC-PROTOCOL-DAEMON-01).
+    _osk_controller: Any = None
+    _touchpad_reader: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público

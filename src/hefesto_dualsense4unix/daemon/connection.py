@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import Any
 
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -29,7 +29,7 @@ RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
 
 
-async def connect_with_retry(daemon: Any) -> None:
+async def connect_with_retry(daemon: DaemonProtocol) -> None:
     """Tenta conectar o controller com backoff exponencial. Publica CONTROLLER_CONNECTED.
 
     AUDIT-FINDING-LOG-EXC-INFO-01:
@@ -67,7 +67,7 @@ async def connect_with_retry(daemon: Any) -> None:
             backoff = min(backoff * 2, BACKOFF_MAX_SEC)
 
 
-async def restore_last_profile(daemon: Any) -> None:
+async def restore_last_profile(daemon: DaemonProtocol) -> None:
     """Reativa o último perfil salvo pelo usuário (FEAT-PERSIST-SESSION-01)."""
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.utils.session import load_last_profile
@@ -90,7 +90,7 @@ async def restore_last_profile(daemon: Any) -> None:
         logger.warning("last_profile_restore_failed", name=name, err=str(exc))
 
 
-async def reconnect(daemon: Any) -> None:
+async def reconnect(daemon: DaemonProtocol) -> None:
     """Desconecta e tenta reconectar com backoff."""
     with contextlib.suppress(Exception):
         await daemon._run_blocking(daemon.controller.disconnect)
@@ -98,7 +98,7 @@ async def reconnect(daemon: Any) -> None:
     await connect_with_retry(daemon)
 
 
-async def reconnect_loop(daemon: Any) -> None:
+async def reconnect_loop(daemon: DaemonProtocol) -> None:
     """Probe não-bloqueante de conexão com o DualSense (BUG-DAEMON-NO-DEVICE-FATAL-01).
 
     Diferente de `connect_with_retry` (legado, bloqueante e reusado pela CLI):
@@ -174,7 +174,7 @@ async def reconnect_loop(daemon: Any) -> None:
         await _wait_or_stop(daemon, timeout)
 
 
-async def _wait_or_stop(daemon: Any, timeout: float) -> None:
+async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
     """Dorme `timeout` segundos respeitando `_stop_event`.
 
     Retorna logo se o stop_event for sinalizado durante a espera. Não levanta
@@ -188,7 +188,7 @@ async def _wait_or_stop(daemon: Any, timeout: float) -> None:
         await asyncio.wait_for(stop_event.wait(), timeout=timeout)
 
 
-async def shutdown(daemon: Any) -> None:
+async def shutdown(daemon: DaemonProtocol) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
     # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).

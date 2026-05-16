@@ -49,8 +49,17 @@ def _install_gi_stubs() -> None:
     gtk_mod.Switch = object  # type: ignore[attr-defined]
     gtk_mod.TextView = object  # type: ignore[attr-defined]
     gtk_mod.TextBuffer = object  # type: ignore[attr-defined]
+    # StickPreviewGtk herda de Gtk.DrawingArea; ButtonGlyph herda de Gtk.Box.
+    # Stubs evitam que o import-time class definition exploda em ambientes
+    # sem GTK real (CI minimalista, validação isolada de testes).
+    gtk_mod.DrawingArea = object  # type: ignore[attr-defined]
+    gtk_mod.Box = object  # type: ignore[attr-defined]
+    gtk_mod.Grid = object  # type: ignore[attr-defined]
+    gtk_mod.Label = object  # type: ignore[attr-defined]
+    gtk_mod.Align = type("Align", (), {"CENTER": 0})  # type: ignore[attr-defined]
     glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
+    glib_mod.idle_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
     repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
 
@@ -137,7 +146,7 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
     assert host._consecutive_failures == 1
     header = host.builder.get_object("header_connection")
     assert "Tentando Reconectar" in header.markup
-    assert "◐" in header.markup  # U+25D0, não emoji
+    assert "" in header.markup  # U+25D0, não emoji
     assert "#d90" in header.markup  # laranja canônico
 
 
@@ -148,7 +157,7 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
     header = host.builder.get_object("header_connection")
     assert "Daemon Offline" in header.markup
-    assert "○" in header.markup  # U+25CB
+    assert "" in header.markup  # U+25CB
     assert "#d33" in header.markup  # vermelho canônico
 
 
@@ -178,10 +187,48 @@ def test_reconnecting_markup_uses_geometric_shape_not_emoji(host: _Host) -> None
     """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos."""
     host._update_reconnect_state(None)
     header = host.builder.get_object("header_connection")
-    assert "◐" in header.markup
+    assert "" in header.markup
     # Defesa contra regressão: blocos de emoji coloridos não podem aparecer.
     for char in header.markup:
         assert ord(char) < 0x1F000, f"emoji encontrado: {char!r}"
+
+
+# ---------------------------------------------------------------------------
+# UI-STATUS-OFFLINE-FALLBACK-01 — fallback acionável após 5 s sem poll OK
+# ---------------------------------------------------------------------------
+
+
+def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
+    host: _Host,
+) -> None:
+    """Sem nenhum poll bem-sucedido, fallback aciona transição para offline acionável."""
+    host._first_poll_succeeded = False
+
+    result = host._check_initial_poll_fallback()
+
+    assert result is False  # one-shot, não reagenda
+    header = host.builder.get_object("header_connection")
+    assert "Desconectado" in header.markup
+    assert "aba Daemon" in header.markup
+    assert "#d33" in header.markup
+    assert host._reconnect_state == "offline"
+    daemon_label = host.builder.get_object("status_daemon")
+    # _set_label chama set_text (não set_markup).
+    assert "sem resposta" in (daemon_label.text or "")
+
+
+def test_initial_poll_fallback_no_op_quando_poll_ja_sucedeu(host: _Host) -> None:
+    """Se algum poll já foi OK, o fallback não sobrescreve o header."""
+    host._first_poll_succeeded = True
+    header = host.builder.get_object("header_connection")
+    header.markup = "<span foreground='#2d8'> Conectado Via USB</span>"
+
+    result = host._check_initial_poll_fallback()
+
+    assert result is False
+    assert "Conectado Via USB" in header.markup
+    # Estado não foi forçado para offline.
+    assert host._reconnect_state != "offline" or host._consecutive_failures == 0
 
 
 # "A consistência é a virtude do burro." — Oscar Wilde.

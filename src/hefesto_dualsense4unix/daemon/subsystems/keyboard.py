@@ -22,10 +22,13 @@ import contextlib
 import os
 import shutil
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.core.keyboard_mappings import TOKEN_CLOSE_OSK, TOKEN_OPEN_OSK
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -122,7 +125,7 @@ class _OSKController:
             logger.warning("osk_token_desconhecido", token=token)
 
 
-def start_keyboard_emulation(daemon: Any) -> bool:
+def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     """Cria device virtual de teclado + touchpad reader. Idempotente.
 
     Retorna True se ativo ao final; False se falhou ao iniciar o device
@@ -157,7 +160,7 @@ def start_keyboard_emulation(daemon: Any) -> bool:
     return True
 
 
-def _start_touchpad_reader(daemon: Any) -> None:
+def _start_touchpad_reader(daemon: DaemonProtocol) -> None:
     """Inicia TouchpadReader se device evdev disponível; no-op caso contrário.
 
     Em modo FAKE (testes, CI, smoke runs) o reader é pulado pois
@@ -184,7 +187,7 @@ def _start_touchpad_reader(daemon: Any) -> None:
         logger.info("touchpad_reader_iniciado")
 
 
-def stop_keyboard_emulation(daemon: Any) -> None:
+def stop_keyboard_emulation(daemon: DaemonProtocol) -> None:
     """Para device + reader + OSK. Idempotente."""
     device = getattr(daemon, "_keyboard_device", None)
     if device is not None:
@@ -204,7 +207,7 @@ def stop_keyboard_emulation(daemon: Any) -> None:
     logger.info("keyboard_emulation_stopped")
 
 
-def dispatch_keyboard(daemon: Any, buttons_pressed: frozenset[str]) -> None:
+def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -> None:
     """Traduz o set de botões pressionados em eventos de teclado virtual.
 
     Chamado pelo poll loop a cada tick. Reusa `buttons_pressed` já obtido

@@ -1,5 +1,10 @@
 # Checklist de validação — pós-rebrand v3.0.0 + 6 sprints (2026-04-27)
 
+> **Nota (2026-05-16):** este checklist cobre as releases v3.0.0 → v3.1.1.
+> Para a Wave V3.2 (auditoria + polish, v3.2.0), use
+> `CHECKLIST_VALIDACAO_v3.2.0.md`. Itens marcados `[x]` aqui permanecem como
+> proof-of-work histórico.
+
 Itens que precisam **execução manual com hardware ou ambiente real do usuário**.
 Marcar `[x]` quando passar; logar evidência quando falhar.
 

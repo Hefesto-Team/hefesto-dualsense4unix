@@ -7,7 +7,7 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.trigger_specs import (
@@ -38,6 +38,10 @@ class TriggersActionsMixin(WidgetAccessMixin):
     # Guard para evitar que a aplicação de preset dispare o handler de slider
     # e reverta o preset para "custom" imediatamente.
     _trigger_preset_applying: bool = False
+    # UI-TRIGGERS-LIVE-PREVIEW-01: handle GLib.timeout pendente por side,
+    # debounce de 300 ms para não inundar o hardware quando o usuário troca
+    # o combobox repetidamente.
+    _trigger_live_preview_timer: dict[str, int]
 
     # Modos que ativam o dropdown de preset por posicao.
     _MODES_COM_PRESET = frozenset({"MultiPositionFeedback", "MultiPositionVibration"})
@@ -45,6 +49,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def install_triggers_tab(self) -> None:
         self._trigger_param_widgets = {"left": {}, "right": {}}
         self._trigger_preset_applying = False
+        self._trigger_live_preview_timer = {"left": 0, "right": 0}
         for side in ("left", "right"):
             combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
             combo.remove_all()
@@ -129,6 +134,31 @@ class TriggersActionsMixin(WidgetAccessMixin):
             new_trigger = TriggerDraft(mode=preset_id, params=())
             new_triggers = draft.triggers.model_copy(update={side: new_trigger})
             self.draft = draft.model_copy(update={"triggers": new_triggers})
+        # UI-TRIGGERS-LIVE-PREVIEW-01: aplica o modo no hardware em 300 ms
+        # para o usuário sentir o efeito sem precisar clicar "Aplicar". O
+        # debounce evita inundar o IPC quando o combobox dispara mudanças
+        # rapidamente (autocompletar/scroll do usuário).
+        self._schedule_live_preview(side)
+
+    def _schedule_live_preview(self, side: str) -> None:
+        """Agenda `_apply_trigger(side)` em 300 ms, cancelando handle pendente."""
+        timers = getattr(self, "_trigger_live_preview_timer", None)
+        if timers is None:
+            return
+        previous = timers.get(side, 0)
+        if previous:
+            GLib.source_remove(previous)
+        timers[side] = GLib.timeout_add(300, self._fire_live_preview, side)
+
+    def _fire_live_preview(self, side: str) -> bool:
+        import contextlib
+
+        self._trigger_live_preview_timer[side] = 0
+        # _apply_trigger já chama _toast_trigger com ok=False em paths de IPC
+        # ausente; aqui suprimimos para não derrubar o loop GTK em corner cases.
+        with contextlib.suppress(Exception):
+            self._apply_trigger(side)
+        return False  # one-shot
 
     def _on_preset_changed(self, side: str, combo: Gtk.ComboBoxText) -> None:
         """Aplica o preset selecionado populando os sliders de posicao."""

@@ -23,6 +23,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import IController
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 logger = get_logger(__name__)
@@ -39,7 +40,7 @@ class IpcHandlersMixin:
     controller: IController
     store: StateStore
     profile_manager: Any
-    daemon: Any
+    daemon: DaemonProtocol
 
     # --- perfis ----------------------------------------------------------
 

@@ -1,5 +1,7 @@
 # ADR-004: Daemon como `systemd --user` service
 
+**Status:** aceito
+
 ## Contexto
 Rodar o daemon como serviço do sistema (`system`) exigiria root e criaria um vetor de privilégio. Rodar manualmente a cada login é frágil. `systemd --user` resolve: auto-start na sessão, acesso ao `DISPLAY` do usuário, sem privilégios elevados.
 

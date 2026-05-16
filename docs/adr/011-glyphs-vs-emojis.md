@@ -1,5 +1,7 @@
 # ADR-011: Glyphs Unicode de estado são preservados; emojis gráficos são proibidos
 
+**Status:** aceito
+
 ## Contexto
 
 A regra universal do projeto proíbe emojis em código, commits e docs. A regra existe para manter tom técnico e evitar assinatura cultural. Em 2026-04-21 um diff interpretou "zero emojis" como "zero caracteres não-ASCII" e strippou BLACK CIRCLE (U+25CF), WHITE CIRCLE (U+25CB), BLACK VERTICAL RECTANGLE (U+25AE) e WHITE VERTICAL RECTANGLE (U+25AF) de markups Pango e do `BatteryMeter` da TUI, quebrando indicadores de status visuais da GUI e zerando a barra de bateria textual. O teste correspondente foi adaptado para a regressão (`assert == ""`), escondendo o bug.

@@ -1,5 +1,7 @@
 # ADR-003: UDP na porta 6969 para compatibilidade com DSX
 
+**Status:** aceito
+
 ## Contexto
 Mods existentes para Cyberpunk, Forza, Assetto Corsa escrevem em `127.0.0.1:6969` usando o schema JSON do DSX Windows. Rodando esses jogos via Proton, o mod envia pacotes do lado host-shared. Abandonar a porta quebra compatibilidade; reaproveitá-la mantém os mods funcionando sem modificação.
 
