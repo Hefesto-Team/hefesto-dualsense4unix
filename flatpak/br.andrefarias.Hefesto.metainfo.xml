@@ -12,6 +12,18 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.3.0" date="2026-05-16">
+      <description>
+        <p>Janela compacta 320x90 sempre-on-top como surrogate de tray em
+           Pop!_OS COSMIC (cosmic-comp 1.0.x sem StatusNotifierWatcher).
+           Auto + opt-out via HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0.
+           Notificações D-Bus com botão "Abrir Hefesto" (controle
+           desconectado, bateria baixa). Documentação production-ready:
+           novo docs/usage/troubleshooting.md, docs/process/ROADMAP.md
+           público, matriz DE empírica honesta no README. Listener
+           ActionInvoked via jeepney sync em thread daemon.</p>
+      </description>
+    </release>
     <release version="3.2.0" date="2026-05-16">
       <description>
         <p>Wave V3.2 (auditoria + polish): mensagens acionáveis no profile

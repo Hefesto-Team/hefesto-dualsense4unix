@@ -137,6 +137,32 @@ class TestNotify:
         _install_fake_jeepney(monkeypatch, raise_on_open=OSError("dbus down"))
         assert desktop_notifications.notify("x") is False
 
+    def test_actions_kwarg_flatten_para_as_signature(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """FEAT-NOTIFY-ACTION-OPEN-01: actions=[(key, label)] vira list[str]
+        alternada `[key, label, key2, label2, ...]` no argumento `as`."""
+        _install_fake_jeepney(monkeypatch, reply_body=(7,))
+        desktop_notifications.notify(
+            "titulo",
+            "corpo",
+            actions=[("open", "Abrir Hefesto"), ("dismiss", "Ignorar")],
+        )
+        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
+        notify_args = captured[-1]["args"][3]
+        # Posição 5 = actions (after summary/body)
+        assert notify_args[5] == ["open", "Abrir Hefesto", "dismiss", "Ignorar"]
+
+    def test_actions_default_lista_vazia(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem actions kwarg, mantém [] (não quebra callers v3.2.x)."""
+        _install_fake_jeepney(monkeypatch, reply_body=(8,))
+        desktop_notifications.notify("a")
+        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
+        notify_args = captured[-1]["args"][3]
+        assert notify_args[5] == []
+
     def test_conexao_sempre_fechada(self, monkeypatch: pytest.MonkeyPatch) -> None:
         conns = _install_fake_jeepney(monkeypatch, raise_on_send=RuntimeError("y"))
         desktop_notifications.notify("titulo")

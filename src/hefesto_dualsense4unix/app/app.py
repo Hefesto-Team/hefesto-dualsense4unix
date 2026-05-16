@@ -36,11 +36,13 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsM
 from hefesto_dualsense4unix.app.actions.rumble_actions import RumbleActionsMixin
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsMixin
+from hefesto_dualsense4unix.app.compact_window import CompactWindow
+from hefesto_dualsense4unix.app.compact_window import is_enabled as compact_window_enabled
 from hefesto_dualsense4unix.app.constants import ICON_PATH, MAIN_GLADE
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import profile_list, profile_switch
 from hefesto_dualsense4unix.app.theme import apply_theme
-from hefesto_dualsense4unix.app.tray import AppTray
+from hefesto_dualsense4unix.app.tray import AppTray, _desktop_is_cosmic
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -144,6 +146,9 @@ class HefestoApp(
         self._install_banner_logo()
 
         self.tray: AppTray | None = None
+        # FEAT-COMPACT-WINDOW-FALLBACK-01 (v3.3.0): surrogate de tray
+        # quando AppIndicator/StatusNotifierWatcher ausente (COSMIC).
+        self.compact_window: CompactWindow | None = None
         self._quitting = False
 
         # FEAT-PROFILE-STATE-01: draft central imutavel compartilhado por todos os mixins.
@@ -381,6 +386,74 @@ class HefestoApp(
         self.window.show_all()
         self.window.present()
 
+    def _start_notification_action_listener(self) -> None:
+        """Listener D-Bus para ActionInvoked das notificações (v3.3.0).
+
+        FEAT-NOTIFY-ACTION-OPEN-01: quando o usuário clica em "Abrir
+        Hefesto" no botão de uma notificação (controlador desconectado,
+        bateria baixa), restaura a janela principal via GLib.idle_add.
+
+        Implementação: thread daemon que consome sinais
+        `org.freedesktop.Notifications::ActionInvoked` via jeepney sync.
+        Silenciosa em falhas (jeepney ausente, D-Bus indisponível) —
+        notificações continuam funcionando sem o listener.
+        """
+
+        def _worker() -> None:
+            try:
+                from jeepney import MatchRule
+                from jeepney.bus_messages import message_bus
+                from jeepney.io.blocking import open_dbus_connection
+            except ImportError:
+                logger.debug("notify_action_listener_jeepney_missing")
+                return
+
+            try:
+                conn = open_dbus_connection(bus="SESSION")
+            except Exception as exc:
+                logger.debug("notify_action_listener_connect_failed", err=str(exc))
+                return
+
+            try:
+                rule = MatchRule(
+                    type="signal",
+                    interface="org.freedesktop.Notifications",
+                    member="ActionInvoked",
+                    path="/org/freedesktop/Notifications",
+                )
+                conn.send_and_get_reply(message_bus.AddMatch(rule))
+                logger.info("notify_action_listener_started")
+                while not self._quitting:
+                    try:
+                        msg = conn.receive(timeout=1.0)
+                    except Exception:
+                        continue
+                    if msg is None or msg.header.message_type.name != "signal":
+                        continue
+                    if msg.header.fields.get(3) != "ActionInvoked":  # MEMBER
+                        continue
+                    body: Any = msg.body or ()
+                    # body = (notification_id: u, action_key: s)
+                    if not isinstance(body, tuple) or len(body) < 2:
+                        continue
+                    if body[1] == "open":
+                        logger.info("notify_action_open_invoked")
+                        GLib.idle_add(self.show_window)
+            except Exception as exc:
+                logger.debug("notify_action_listener_loop_failed", err=str(exc))
+            finally:
+                with contextlib.suppress(Exception):
+                    conn.close()
+
+        # GLib import só aqui — listener é opt-in via runtime.
+        from gi.repository import GLib
+
+        threading.Thread(
+            target=_worker,
+            daemon=True,
+            name="hefesto-notify-action-listener",
+        ).start()
+
     # --- draft ---
 
     def _load_draft_from_active_profile(self) -> None:
@@ -467,6 +540,21 @@ class HefestoApp(
         # bloqueia a thread GTK; falha silenciosa via logger.warning.
         self.ensure_daemon_running()
 
+    def _compact_state_snapshot(self) -> dict[str, Any] | None:
+        """Snapshot síncrono de `daemon.state_full` para a CompactWindow.
+
+        FEAT-COMPACT-WINDOW-FALLBACK-01: chamada do tick periódico da
+        janela compacta. Reusa `ipc_bridge.daemon_state_full()` que já
+        timeout-protege a chamada IPC. None se daemon offline.
+        """
+        from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
+
+        try:
+            return daemon_state_full()
+        except Exception as exc:
+            logger.debug("compact_state_fetch_failed", err=str(exc))
+            return None
+
     def run(self, *, start_hidden: bool = False) -> None:
         self.tray = AppTray(
             on_show_window=self.show_window,
@@ -474,7 +562,29 @@ class HefestoApp(
             on_list_profiles=profile_list,
             on_switch_profile=profile_switch,
         )
-        self.tray.start()
+        tray_ok = self.tray.start()
+        # FEAT-COMPACT-WINDOW-FALLBACK-01 (v3.3.0): se AppIndicator
+        # indisponível (sem ayatana/probe falhou) OU sessão COSMIC sem
+        # cosmic-applet-status-area, oferece janela compacta como surrogate.
+        # Opt-out via HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0.
+        if compact_window_enabled() and (not tray_ok or _desktop_is_cosmic()):
+            self.compact_window = CompactWindow(
+                on_show_window=self.show_window,
+                on_quit=self.quit_app,
+                on_list_profiles=profile_list,
+                on_switch_profile=profile_switch,
+                on_state=self._compact_state_snapshot,
+            )
+            if self.compact_window.start():
+                logger.info(
+                    "compact_window_fallback_active",
+                    reason="tray_unavailable" if not tray_ok else "cosmic_session",
+                )
+
+        # FEAT-NOTIFY-ACTION-OPEN-01 (v3.3.0): listener para botões
+        # "Abrir Hefesto" das notificações D-Bus (controlador desconectado,
+        # bateria baixa). Best-effort: silencioso se jeepney/D-Bus offline.
+        self._start_notification_action_listener()
         if start_hidden and self.tray.is_available():
             self.install_status_polling()
             self.install_triggers_tab()
