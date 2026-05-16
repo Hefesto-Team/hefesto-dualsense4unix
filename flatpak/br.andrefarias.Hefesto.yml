@@ -61,7 +61,18 @@ modules:
       build-args:
         - --share=network
     build-commands:
+      # BUG-FLATPAK-PYGMENTS-MISSING-01 (v3.2.0): `rich.markdown.Markdown`
+      # importa `pygments.lexer` para syntax highlighting; sem pygments
+      # no sandbox, qualquer `hefesto-dualsense4unix --help` quebra com
+      # ModuleNotFoundError via except_hook do Typer.
+      #
+      # Detalhe sutil: pygments existe no `org.gnome.Sdk//47` (build time)
+      # mas NÃO no `org.gnome.Platform//47` (runtime). Sem `--ignore-installed`,
+      # o pip detecta pygments no /usr/lib do SDK e pula a instalação em
+      # /app/, deixando o runtime do usuário órfão. `--ignore-installed`
+      # força o bundling em /app para sobreviver à troca SDK->Platform.
       - pip3 install --prefix=/app --no-build-isolation
+          --ignore-installed
           "pydualsense>=0.7.5"
           "python-uinput"
           "textual>=0.47"
@@ -71,10 +82,40 @@ modules:
           "evdev>=1.6"
           "structlog>=23.0"
           "rich>=13.0"
+          "pygments>=2.17"
           "platformdirs>=4.0"
           "filelock>=3.13"
           "jeepney>=0.8"
     sources: []
+
+  # Módulo intermediário: libhidapi — biblioteca nativa que o wrapper Python
+  # `hidapi-usb` carrega via `ctypes.CDLL("libhidapi-hidraw.so")`.
+  # BUG-FLATPAK-HIDAPI-MISSING-01 (v3.2.0): `org.gnome.Platform//47` NÃO inclui
+  # libhidapi. Sem este módulo, `import pydualsense` falha com
+  # `OSError: Could not find any hidapi library` antes do controle aparecer
+  # para o daemon. Build upstream do github (cmake + libusb-1.0 + udev — todos
+  # presentes no Sdk).
+  - name: hidapi
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DHIDAPI_BUILD_HIDTEST=OFF
+      # libusb-1.0 NÃO está no GNOME Sdk//47 (built-in só udev/hidraw stack).
+      # DualSense USB+BT funciona 100% via hidraw, então OFF é safe.
+      - -DHIDAPI_WITH_LIBUSB=OFF
+      - -DHIDAPI_WITH_HIDRAW=ON
+      # CMake default em x86_64 instala em /app/lib64; o wrapper Python
+      # `hidapi.py` (ctypes) procura em /app/lib via `LD_LIBRARY_PATH`
+      # padrão do Flatpak. Forçar `lib` evita symlink manual no build-commands.
+      - -DCMAKE_INSTALL_LIBDIR=lib
+    sources:
+      - type: archive
+        url: https://github.com/libusb/hidapi/archive/refs/tags/hidapi-0.14.0.tar.gz
+        sha256: a5714234abe6e1f53647dd8cba7d69f65f71c558b7896ed218864ffcf405bcbd
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - /lib/cmake
 
   # Módulo 2: wlrctl — CLI wayland wlroots usado por WlrctlBackend
   # (BUG-COSMIC-WLR-BACKEND-01). No fluxo .deb vem via Recommends do apt;

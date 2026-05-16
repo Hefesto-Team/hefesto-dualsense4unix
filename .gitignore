@@ -23,6 +23,11 @@ squashfs-root/
 # dist/ nao commitado por padrao; release workflow gera.
 dist/
 
+# flatpak-builder gera caches e repos locais
+.flatpak-builder/
+flatpak-build-dir/
+flatpak-repo/
+
 # Testing
 .pytest_cache/
 .coverage
