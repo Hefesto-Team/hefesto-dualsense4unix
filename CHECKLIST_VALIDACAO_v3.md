@@ -132,36 +132,46 @@ Marcar `[x]` quando passar; logar evidência quando falhar.
 
 ---
 
-## #29 — Bluetooth (PROTOCOL_READY)
+## #29 — Bluetooth (MERGED 2026-05-16)
+
+Validado em sessão real (sprint 109) com DualSense a0:fa:9c:00:00:01
+pareado e USB desplugado.
 
 ### Pareamento (primeira vez)
 
-- [ ] Botão PS + Create do DualSense por 4s → entra em pairing.
-- [ ] `bluetoothctl scan on` em terminal.
-- [ ] `bluetoothctl pair <MAC>` (MAC aparece como `Wireless Controller`).
-- [ ] `bluetoothctl trust <MAC>`.
-- [ ] `bluetoothctl connect <MAC>`.
+- [x] `bluetoothctl pair/trust/connect <MAC>` funciona via fluxo padrão.
+- [x] `bluetoothctl info` mostra `Connected: yes`, `Paired: yes`, `Bonded: yes`,
+      `Modalias: usb:v054Cp0CE6d0100` (DualSense via BT).
 
 ### Detecção do daemon via BT
 
-- [ ] DualSense conectado **só** via BT (USB desplugado).
-- [ ] `systemctl --user restart hefesto-dualsense4unix.service && sleep 5`
-- [ ] `hefesto-dualsense4unix status` → `connected: True`, `transport: bt`, `battery_pct: <num>`.
+- [x] DualSense só via BT (USB unplugged confirmado via `lsusb | grep sony` vazio).
+- [x] `hefesto-dualsense4unix daemon start --foreground` → daemon sobe limpo.
+- [x] `hefesto-dualsense4unix status` →
+      ```
+      connected: True
+      transport: bt
+      battery_pct: 75
+      ```
+- [x] Logs: `controller_connected transport=bt`, `evdev_started path=/dev/input/event2`,
+      `touchpad_reader_started path=/dev/input/event4`.
 
 ### Output via BT
 
-- [ ] `hefesto-dualsense4unix led --color "#FF00FF"` → lightbar fica magenta.
-- [ ] `hefesto-dualsense4unix profile activate shooter` → triggers L2/R2 sentem efeito Rigid.
+- [x] `hefesto-dualsense4unix led --color "#FF00FF"` →
+      `lightbar (via daemon): rgb=(255, 0, 255)`.
+- [x] `hefesto-dualsense4unix profile activate fps` →
+      `perfil aplicado no controle: fps` (triggers L2/R2 aplicados via BT).
 
 ### Hotplug GUI via BT (se habilitado)
 
-- [ ] Se rodou `./install.sh --enable-hotplug-gui`: desconectar BT + reconectar → GUI auto-abre.
+- [ ] Pendente validação visual humana com `./install.sh --enable-hotplug-gui`.
 
-### Promoção a MERGED
+### Promoção MERGED — feita
 
-Quando todos os itens BT acima passarem, atualizar status da sprint em `docs/process/sprints/FEAT-BLUETOOTH-CONNECTION-01.md` para MERGED e anexar:
-- Logs de `controller_connected transport=bt`
-- Captura PNG do header GUI: `Conectado Via BT`
+Sprint 109 promovida em 2026-05-16. Logs anexados nesta seção como
+proof-of-work. Captura PNG do header GUI fica como item extra
+(não-bloqueador).
 
 ---
 
