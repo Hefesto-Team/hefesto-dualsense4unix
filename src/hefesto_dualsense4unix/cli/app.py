@@ -23,6 +23,27 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
+def _version_callback(value: bool) -> None:
+    """Callback de `--version`: imprime versão e sai."""
+    if value:
+        from hefesto_dualsense4unix import __version__
+        typer.echo(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def main_callback(
+    _version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Mostra a versão e sai.",
+    ),
+) -> None:
+    """Callback global para flags root (`--version`)."""
+
 daemon_app = typer.Typer(
     name="daemon",
     help="Controle do daemon de background.",
@@ -90,7 +111,7 @@ def tui() -> None:
 
 @app.command()
 def tray() -> None:
-    """Abre o tray icon GTK3 (requer extra [tray])."""
+    """Abre o tray icon GTK3 (requer pip install com extra tray)."""
     from hefesto_dualsense4unix.cli.cmd_tray import tray_cmd
 
     tray_cmd()
