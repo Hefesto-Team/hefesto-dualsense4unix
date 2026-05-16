@@ -164,13 +164,22 @@ modules:
           /app/share/metainfo/br.andrefarias.Hefesto.metainfo.xml
 
       # Copiar regras udev para dentro do bundle (leitura apenas)
-      # Instalação no host via scripts/install-host-udev.sh + pkexec
+      # Instalação no host via scripts/install-host-udev.sh + pkexec.
+      # Conjunto canônico (v3.3.1+): TODAS as 5 regras + modules-load para
+      # uinput. Sincronizado com scripts/install_udev.sh do source-install
+      # (assets/ é fonte única de verdade).
       - install -Dm644 assets/70-ps5-controller.rules
           /app/share/hefesto-dualsense4unix/udev-rules/70-ps5-controller.rules
       - install -Dm644 assets/71-uinput.rules
           /app/share/hefesto-dualsense4unix/udev-rules/71-uinput.rules
       - install -Dm644 assets/72-ps5-controller-autosuspend.rules
           /app/share/hefesto-dualsense4unix/udev-rules/72-ps5-controller-autosuspend.rules
+      - install -Dm644 assets/73-ps5-controller-hotplug.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/73-ps5-controller-hotplug.rules
+      - install -Dm644 assets/74-ps5-controller-hotplug-bt.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/74-ps5-controller-hotplug-bt.rules
+      - install -Dm644 assets/hefesto-dualsense4unix.conf
+          /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh

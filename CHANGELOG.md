@@ -5,6 +5,45 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.3.1] — 2026-05-16
+
+Patch focado em deixar o **install perfeito**: aplica todas as regras
+udev de cara, sem prompt, em qualquer caminho (source / .deb / Flatpak).
+Sem mudanças runtime; apenas distribuição.
+
+### Fixes
+
+- **`INSTALL-UDEV-INCONDICIONAL-01`**: `install.sh` step 3/9 deixa de
+  ser opt-in via prompt e passa a aplicar as **5 regras + modules-load
+  uinput** sempre que `sudo` está disponível. Re-cópia é idempotente
+  (~100 ms). Para CI sem sudo, mantém `--no-udev`. Antes, usuários
+  pulavam o prompt e depois o controle não funcionava.
+- **`INSTALL-HOST-UDEV-COMPLETO-01`**:
+  `scripts/install-host-udev.sh` (caminho Flatpak/bundled) reescrito —
+  era hardcoded em **3 regras**, agora cobre todas as **5** + a
+  `modules-load.d/hefesto-dualsense4unix.conf` para uinput. Resolve
+  origem em 3 contextos: `/app/share/` (Flatpak), `/usr/share/`
+  (`.deb`), `../assets/` (source). Idempotente.
+- **`FLATPAK-MANIFEST-UDEV-COMPLETO-01`**: manifest
+  `flatpak/br.andrefarias.Hefesto.yml` bundla agora as 5 regras
+  (faltavam `73-ps5-controller-hotplug.rules` e
+  `74-ps5-controller-hotplug-bt.rules`) + `modules-load/` com
+  `hefesto-dualsense4unix.conf`. Sincronizado com `assets/` como fonte
+  única de verdade.
+- **`INSTALL-SH-PROPAGA-FLATPAK-01`**: se Flatpak Hefesto está
+  instalado no host, `install.sh` step 3 também invoca
+  `flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto`
+  para garantir simetria explícita.
+- **`INSTALL-UDEV-SH-DEFENSIVO-01`**: `scripts/install_udev.sh`
+  valida presença dos 6 assets antes de começar (falha cedo com
+  mensagem clara), troca `cp` por `install -Dm644`, adiciona triggers
+  específicos por vendor (`054c`) para reaplicar permissões em
+  controles já conectados sem reboot.
+
+### Compatibilidade
+
+Sem mudanças breaking. Suite continua 1415 passed; nenhum teste mudou.
+
 ## [3.3.0] — 2026-05-16
 
 Release production-ready: resolve o caveat do tray COSMIC sem esperar v3.4

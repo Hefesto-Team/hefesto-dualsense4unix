@@ -2,8 +2,12 @@
 # install.sh — instala Hefesto - Dualsense4Unix completo no ambiente do usuário.
 #
 # Flags:
-#   --no-udev             pula udev rules (sudo) — útil em CI.
-#   --yes, -y             responde sim a todos os prompts sudo.
+#   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
+#                         POR DEFAULT, as 5 regras + modules-load uinput são
+#                         aplicadas automaticamente (re-cópia é idempotente).
+#                         Se Flatpak Hefesto está instalado, também propaga.
+#   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
+#                         COSMIC XWayland, AppIndicator extension, etc).
 #   --no-systemd          pula a cópia da unit do daemon.
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
@@ -15,7 +19,8 @@
 #                         COSMIC e o usuário confirma via prompt.
 #
 # Default: unit do daemon é COPIADA mas NÃO habilitada. Hotplug-GUI idem.
-# Opt-in via prompt interativo ou flags acima (ver BUG-MULTI-INSTANCE-01).
+# udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem elas o controle
+# não funciona em nenhum formato).
 #
 # Reexecutável (idempotente).
 
@@ -192,45 +197,43 @@ printf '      instalando pacote Python...\n'
 ok
 
 # ---------------------------------------------------------------------------
-# 3. udev rules (requer sudo)
+# 3. udev rules — SEMPRE aplicado por default (requer sudo)
 # ---------------------------------------------------------------------------
+# v3.3.1: udev agora é incondicional (era opt-in via prompt). Motivação: sem
+# essas regras o controle não funciona, e o prompt levava usuários a "pular"
+# sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
+# reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
 step "3/9" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
-    printf '      pulado (--no-udev)\n'
+    printf '      pulado (--no-udev) — IMPORTANTE: o controle precisa das regras\n'
+    printf '      para funcionar. Rode depois: sudo bash scripts/install_udev.sh\n'
+elif ! command -v sudo >/dev/null 2>&1; then
+    warn "sudo ausente — pulando (rode scripts/install_udev.sh manualmente como root)"
 else
-    need_udev=1
-    if [[ -f /etc/udev/rules.d/70-ps5-controller.rules ]] \
-       && [[ -f /etc/udev/rules.d/71-uinput.rules ]] \
-       && [[ -f /etc/udev/rules.d/72-ps5-controller-autosuspend.rules ]] \
-       && [[ -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules ]] \
-       && [[ -f /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules ]]; then
-        printf '      já instaladas\n'
-        need_udev=0
+    printf '      copiando 5 regras + modules-load uinput (sudo)\n'
+    printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
+    printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
+    printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
+    printf '        73-ps5-controller-hotplug.rules        hotplug-GUI ao plugar (USB)\n'
+    printf '        74-ps5-controller-hotplug-bt.rules     hotplug-GUI ao parear (BT)\n'
+
+    if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
+        printf '      regras aplicadas + udev recarregado + uinput carregado\n'
+    else
+        warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
     fi
 
-    if [[ "${need_udev}" -eq 1 ]]; then
-        printf '\n'
-        printf '      Cinco regras serão copiadas para /etc/udev/rules.d/ (requer sudo):\n'
-        printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
-        printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
-        printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
-        printf '        73-ps5-controller-hotplug.rules        abre a GUI ao plugar o controle (USB)\n'
-        printf '        74-ps5-controller-hotplug-bt.rules     abre a GUI ao parear o controle (BT)\n\n'
-
-        ask_yn "instalar agora com sudo?" "${AUTO_YES}"
-        if [[ "${REPLY,,}" =~ ^y ]]; then
-            if ! command -v sudo >/dev/null 2>&1; then
-                warn "sudo ausente — instale com --no-udev e rode scripts/install_udev.sh depois"
-            else
-                printf '      instalando...\n'
-                bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null \
-                    || warn "install_udev.sh falhou — rode manualmente depois"
-                ok
-            fi
-        else
-            printf '      pulado a pedido — rode ./scripts/install_udev.sh depois\n'
-        fi
+    # v3.3.1: se Flatpak Hefesto está instalado, propagar as regras pelo
+    # caminho oficial do bundle também (defensive — install_udev.sh já cobriu
+    # o host, mas o usuário pode esperar simetria explícita "tudo pro
+    # Flatpak". A chamada é no-op se as regras já estão lá).
+    if command -v flatpak >/dev/null 2>&1 \
+       && flatpak info br.andrefarias.Hefesto >/dev/null 2>&1; then
+        printf '      Flatpak Hefesto detectado — sincronizando regras via bundle\n'
+        flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto \
+            >/dev/null 2>&1 \
+            || warn "flatpak install-host-udev.sh falhou (regras já vieram via install_udev.sh)"
     fi
 fi
 
