@@ -5,6 +5,36 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### v3.1.0 (preview) — Hardening COSMIC pós-rebrand (2026-05-15..16)
+
+Cinco sprints corrigem regressões introduzidas no rebrand `Hefesto → Hefesto - Dualsense4Unix` (commits 7f4687a/08e92b8) e formalizam compatibilidade explícita com Pop!_OS 24.04 COSMIC. Validação primária em hardware real do mantenedor (Pop!_OS 24.04 + COSMIC 1.0.0 + DualSense USB 054c:0ce6 conectado).
+
+- **BUG-COSMIC-WLR-BACKEND-REGRESSION-01**: re-portado `WlrctlBackend` para `src/hefesto_dualsense4unix/integrations/window_backends/wlr_toplevel.py` (perdido no rebrand) + cascade portal → wlrctl → None em `window_detect.py`. Threshold `_UNSUPPORTED_THRESHOLD=3` re-introduzido em `WaylandPortalBackend` para abandonar portal silenciosamente após 3 falhas consecutivas — evita 2s de timeout D-Bus a cada 500ms quando o compositor não suporta `GetActiveWindow`. 18 testes novos em `test_wlrctl_backend.py` + 5 testes do cascade em `test_window_detect_factory.py` + 7 testes do threshold em `test_window_backends.py`. Dependência `jeepney>=0.8` registrada como `[cosmic]` opcional em `pyproject.toml` (instalada por default pelo `install.sh`).
+
+- **BUG-COSMIC-INSTALL-SH-REGRESSION-01**: restauradas todas as menções a COSMIC/Wayland/XWayland perdidas no rebrand. `install.sh` agora aceita flag `--force-xwayland`, detecta `XDG_CURRENT_DESKTOP=COSMIC`, oferece instalação de `wlrctl` via apt + gravação de `GDK_BACKEND=x11` no atalho `.desktop`. Mensagens de erro com alternativas para distros sem `wlrctl` no repo (Arch/Fedora/source). `[cosmic]` extra do pyproject puxado por default (`pip install .[emulation,cosmic]`).
+
+- **FEAT-COSMIC-NATIVE-VALIDATION-01**: validação empírica em Pop!_OS 24.04 + COSMIC 1.0.0 documentada em `docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`. Confirmado: `xdg-desktop-portal-cosmic` não implementa `GetActiveWindow` (portal retorna `None`); `cosmic-comp 1.0.0` não expõe `wlr-foreign-toplevel-management` (`wlrctl toplevel list` retorna "Foreign Toplevel Management interface not found!"). Workaround efetivo: manter XWayland ativo (default em Pop!_OS 24.04) — `XlibBackend` cobre jogos via Steam/Proton, caso primário do projeto. Matriz de compatibilidade no README atualizada.
+
+- **FEAT-COSMIC-TRAY-FALLBACK-01**: tray icon em COSMIC ganha três defesas em `src/hefesto_dualsense4unix/app/tray.py`:
+  - Criação do `AppIndicator` deferida via `GLib.timeout_add(500, ...)` em sessão COSMIC (cobre race condition em que app criava indicator antes do `cosmic-applet-status-area` registrar `org.kde.StatusNotifierWatcher`).
+  - Probe explícito de `NameHasOwner(org.kde.StatusNotifierWatcher)` via D-Bus logo após criar o indicator.
+  - Notificação D-Bus orientadora (`once_key="cosmic_tray_missing"`, 1x por execução) instrui o usuário a habilitar o applet "Área de status" no cosmic-panel.
+
+  Novo módulo `src/hefesto_dualsense4unix/integrations/desktop_notifications.py` expõe `notify()` (signature `susssasa{sv}i` do `org.freedesktop.Notifications`) e `statusnotifierwatcher_available()` via `jeepney`. 16 testes em `test_desktop_notifications.py` + 4 testes COSMIC-specific em `test_tray.py`. Validação real confirmou: em Pop!_OS 24.04 COSMIC com `cosmic-applets 1.0.12` instalado mas applet "Área de status" não-adicionado ao painel, `NameHasOwner` retorna `false`; após o usuário adicionar via "Configurações > Painel > Applets", retorna `true`.
+
+- **CHORE-COSMIC-DOC-UPDATE-01**: `ADR-014` ganhou seções "Camada 2.1 — Cascade portal → wlrctl (v3.1.0)" e "Camada 4 — Tray fallback notification (v3.1.0)" com validação empírica. README ganhou matriz de compatibilidade atualizada (Pop!_OS 24.04 COSMIC: USB OK, autoswitch XWayland-only, tray parcial) e seção dedicada "Pop!_OS COSMIC (Wayland)" com workarounds e comandos reproduzíveis. Plan integral em `docs/process/SPRINT_PLAN_COSMIC.md`.
+
+#### Pacotes opcionais
+
+`pyproject.toml` ganhou extra `[cosmic]` com `jeepney>=0.8` (puro Python, sem deps nativas). Permite ao backend Wayland do portal funcionar. `install.sh` instala por default; usuários que rodam `pip install hefesto-dualsense4unix[cosmic]` ganham o portal habilitado sem precisar do `wlrctl`.
+
+#### Testes / suite
+
+- Antes: 1359 passed, 14 skipped.
+- Depois: 1379 passed, 14 skipped (+20 testes — wlrctl 18, portal threshold 7, cascade 5, desktop_notifications 16, tray COSMIC 4 — alguns refactors compensaram).
+- Ruff: clean.
+- Mypy strict: clean nos arquivos tocados (2 erros pré-existentes em `core/trigger_effects.py:410` e `app/main.py:39` herdados do commit `fc504e3`, fora de escopo das sprints v3.1).
+
 ### Hardening pós-publicação v3.0.0 — round 2 (2026-04-27 noite)
 
 Quatro sprints fechadas em sessão única atacando os 3 sintomas mais ofensivos reportados pelo usuário (Pop!_OS 22.04 Jammy + GNOME 42 X11 + DualSense USB) + 1 achado colateral.
@@ -69,7 +99,7 @@ Major release de **rebrand + hardening**: rebrand `Hefesto` → `Hefesto - Duals
 - **CLUSTER-INSTALL-DEPS-01**: `install.sh` ganhou passos 8/9 — detecta GNOME via `XDG_CURRENT_DESKTOP` e habilita `ubuntu-appindicators@ubuntu.com` automaticamente (Pop!_OS/Ubuntu vêm com extension instalada mas desabilitada). Detecta `dualsensectl` ausente e oferece flatpak install (`com.github.nowrep.dualsensectl`); install nunca bloqueia se opcional. Aba Firmware na GUI mostra mensagem clara com URL Flathub quando binário ausente.
 - **CLUSTER-TRAY-POLISH-01**: "Sair" do tray agora mata daemon avulso via PID file (defesa anti-recycle via `is_hefesto_dualsense4unix_process`), não só systemctl stop. Item `(carregando)` zumbi removido do submenu Perfis. Mnemonic GTK underscore corrigido (`use_underline=False` explícito).
 - **FEAT-BLUETOOTH-CONNECTION-01** (PROTOCOL_READY): código de runtime já era transport-agnostic (USB+BT). Sprint adicionou gate da regra udev `74-ps5-controller-hotplug-bt.rules` no `install.sh`, seção "Conexão via Bluetooth" no README com fluxo `bluetoothctl` em PT-BR, e CHECKLIST_HARDWARE_V2 item 8 expandido (5 sub-itens). Promoção a MERGED requer execução em hardware BT pareado.
-- **BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03**: `scripts/validar-acentuacao.py` ganhou defesa em profundidade (pre/post-pass) contra strip silencioso de glyphs ADR-011 (●○◐△□). Pre-pass: linha contendo glyph protegido não é corrigida (conservador). Post-pass: revert se algum codepoint sumiu após substituição.
+- **BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-03**: `scripts/validar-acentuacao.py` ganhou defesa em profundidade (pre/post-pass) contra strip silencioso de glyphs ADR-011 (□). Pre-pass: linha contendo glyph protegido não é corrigida (conservador). Post-pass: revert se algum codepoint sumiu após substituição.
 
 ### Quebrando compatibilidade
 
@@ -320,7 +350,7 @@ colaterais, zero regressão.
   `--fix`, qualquer substituição cuja faixa original contenha caractere
   protegido é rejeitada e emite warning em stderr citando o glyph e a
   linha. Mesmo que alguém adicione par errado em `_PARES` (ex:
-  `("●", "")`), o filtro bloqueia a remoção. 23 testes regressão
+  `("", "")`), o filtro bloqueia a remoção. 23 testes regressão
   parametrizados em `tests/unit/test_validar_acentuacao_glyphs.py`
   cobrem codepoints canônicos (U+25AE/AF/CB/CF/D0, U+2192, U+2500,
   U+2588), boundaries dos ranges e cenário de par malicioso injetado.
@@ -862,7 +892,7 @@ Primeira release estável. Daemon + CLI + TUI + GUI GTK3 inteiros, falando com D
 - **AssertionError ruidoso em `udp_server.connection_made`**: assert gratuito contra `asyncio.DatagramTransport` removido (Python 3.10 entrega `_SelectorDatagramTransport` que não passa isinstance público). Journal limpo em cada startup.
 - **GUI congelava com daemon lento ou offline**: `asyncio.run()` síncrono a 20 Hz na thread GTK bloqueava a janela. Migração para `ThreadPoolExecutor` com callbacks via `GLib.idle_add`; `LIVE_POLL_INTERVAL_MS = 100` (10 Hz); timeout de 250ms no `open_unix_connection`. Janela permanece responsiva mesmo com IPC morto.
 - **Dualidade `hefesto-dualsense4unix.service` / `hefesto-dualsense4unix-headless.service` removida**: unit única. Dropdown da aba Daemon virou label estática `Unit: hefesto-dualsense4unix.service`. API singular `detect_installed_unit()`.
-- **Glyphs Unicode de estado preservados**: `●` (U+25CF), `○` (U+25CB), `▮`/`▯` (U+25AE/U+25AF), `◐` (U+25D0) são UI textual funcional, não emojis. Distinção formalizada em ADR-011.
+- **Glyphs Unicode de estado preservados**: `` (U+25CF), `` (U+25CB), ``/`` (U+25AE/U+25AF), `` (U+25D0) são UI textual funcional, não emojis. Distinção formalizada em ADR-011.
 
 ### Modificado
 - **Novo ícone canônico** (`assets/appimage/Hefesto-Dualsense4Unix.png`): martelo + placa de circuito, gradiente teal→magenta. Cache GTK `hicolor` populado em 9 tamanhos (16 a 512 px) pelo `install.sh`.
