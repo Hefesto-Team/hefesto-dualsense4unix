@@ -74,7 +74,7 @@ A GUI principal expõe 10 abas no `GtkNotebook` central, cada uma cobrindo um ei
 
 | Aba | Pra que serve | Controles principais |
 |-----|---------------|----------------------|
-| **Status** | Dashboard ao vivo do controle e do daemon. É a primeira aba e onde você confirma se conectou. | Conexão, Transporte (USB/BT), Bateria, Perfil ativo, Daemon (online/offline); barras L2/R2 0–255; sticks analógicos esquerdo (L3) e direito (R3) com X/Y; grid 4×4 de glyphs (X, O, □, △, D-pad, L1/R1/L2/R2, Share, Options, PS, Touchpad) que acende em roxo quando pressionado. |
+| **Status** | Dashboard ao vivo do controle e do daemon. É a primeira aba e onde você confirma se conectou. | Conexão, Transporte (USB/BT), Bateria, Perfil ativo, Daemon (online/offline); barras L2/R2 0–255; sticks analógicos esquerdo (L3) e direito (R3) com X/Y; grid 4×4 de glyphs (X, O, □, , D-pad, L1/R1/L2/R2, Share, Options, PS, Touchpad) que acende em roxo quando pressionado. |
 | **Gatilhos** | Configurar o efeito adaptativo de L2 e R2 separadamente. É a feature-flagship do projeto. | Por gatilho (L2 e R2): combobox **Modo** (19 modos: Off, Rigid, Pulse, Galloping, Machine, Bow, Automatic Gun, etc.), combobox **Preset** (intensidade leve/média/dura), botão **Aplicar**, botão **Desligar**. |
 | **Lightbar** | Cor da barra LED frontal e LEDs de jogador. | Color picker RGB com prévia ao vivo, slider de **Luminosidade (%)**, botões **Aplicar no controle** / **Apagar**; checkboxes **LED 1–5** (player LEDs) com presets rápidos **Todos**, **Player 1**, **Player 2**, **Nenhum** + botão **Aplicar LEDs**. |
 | **Rumble** | Política global de vibração e teste dos motores. | Radios de política: **Economia** (0,3×), **Balanceado** (0,7×), **Máximo** (1,0×), **Auto** (dinâmico por bateria); slider **Intensidade global**; testar **Motor fraco (weak)** / **Motor forte (strong)** com **Testar por 500 ms**, **Aplicar**, **Parar**. |
@@ -375,16 +375,61 @@ Factories canônicas em `src/hefesto_dualsense4unix/profiles/trigger_modes.py`.
 
 ### Matriz de compatibilidade
 
-| Distro          | Kernel     | Systemd | USB | BT  | Tray | Notas                                   |
-|-----------------|------------|---------|-----|-----|------|-----------------------------------------|
-| Pop!\_OS 22.04  | 6.17       | 249+    | OK  | ?   | ?    | Runtime primário; backend híbrido ativo |
-| Ubuntu 22.04+   | 5.19+      | 249+    | ?   | ?   | ?    | Mesmo ecossistema do Pop!\_OS           |
-| Fedora 39+      | 6.5+       | 254+    | ?   | ?   | ?    | Esperado funcionar                      |
-| Arch (rolling)  | rolling    | atual   | ?   | ?   | ?    | Comunidade                              |
-| Debian 12 stable| 6.1        | 252     | ?   | ?   | ?    | Esperado funcionar                      |
-| Alpine / Void   | qualquer   | —       | —   | —   | —    | Fora de escopo (sem logind)             |
+| Distro          | Kernel     | Systemd | USB | BT  | Tray | Autoswitch | Notas                                   |
+|-----------------|------------|---------|-----|-----|------|------------|-----------------------------------------|
+| Pop!\_OS 22.04 GNOME X11 | 6.17 | 249+ | OK | ?   | OK   | OK         | Runtime primário histórico              |
+| Pop!\_OS 24.04 COSMIC    | 6.18 | 256+ | OK | ?   | parcial | XWayland-only | Validado 2026-05; ver "Pop!_OS COSMIC" abaixo |
+| Ubuntu 22.04+   | 5.19+      | 249+    | ?   | ?   | ?    | ?          | Mesmo ecossistema do Pop!\_OS           |
+| Ubuntu 24.04    | 6.8+       | 255+    | ?   | ?   | ?    | ?          | Apt tem wlrctl no universe              |
+| Fedora 39+      | 6.5+       | 254+    | ?   | ?   | ?    | ?          | Esperado funcionar                      |
+| Arch (rolling)  | rolling    | atual   | ?   | ?   | ?    | ?          | Comunidade                              |
+| Debian 12 stable| 6.1        | 252     | ?   | ?   | ?    | ?          | Esperado funcionar                      |
+| Alpine / Void   | qualquer   | —       | —   | —   | —    | —          | Fora de escopo (sem logind)             |
 
 `?` = não validado. Contribuições bem-vindas em `CHECKLIST_MANUAL.md` ou via issues `needs-device`.
+
+---
+
+### Pop!_OS COSMIC (Wayland)
+
+A partir de v3.1.0 o projeto tem suporte explícito a **Pop!_OS 24.04 COSMIC** (cosmic-comp 1.0+). Estado real validado em hardware do mantenedor (2026-05-15):
+
+**O que funciona:**
+- Daemon completo: detecção USB do DualSense, lightbar, rumble, gatilhos adaptativos, hotkeys de hardware (combo PS+D-pad), bateria, perfis, IPC, UDP DSX, emulação Xbox 360.
+- GUI GTK3 renderiza nativamente em Wayland (GDK Wayland backend).
+- Autoswitch de perfil para janelas **XWayland** (Steam, Proton, browsers em modo X11): funciona via `XlibBackend`. Pop!_OS 24.04 vem com XWayland ativo por padrão.
+- systemd `--user` service: `WantedBy=default.target` ativa resiliente em cosmic-session.
+- Notificações D-Bus padrão freedesktop (cosmic-notifications): funcionam OOTB.
+
+**Limitações conhecidas (2026-05):**
+- Autoswitch para **apps Wayland nativos** (Firefox-Wayland, apps GNOME, etc.):
+  - `xdg-desktop-portal-cosmic` ainda não implementa `org.freedesktop.portal.Window::GetActiveWindow`.
+  - `cosmic-comp 1.0.0` ainda não expõe `wlr-foreign-toplevel-management` (testado com `wlrctl 0.2.2`).
+  - **Workaround:** trocar perfil manualmente via tray/CLI/combo PS+D-pad.
+- Tray icon (`cosmic-applet-status-area`): instalado em `cosmic-applets 1.0.12` mas **não vem habilitado por padrão no painel**. Hefesto detecta a ausência via D-Bus probe e emite notificação orientadora uma vez por execução. Para habilitar: **Configurações > Painel > Applets > Adicionar "Área de status"**.
+
+**Comandos recomendados em COSMIC:**
+
+```bash
+# Instalação fonte com auto-detecção COSMIC + wlrctl + GDK_BACKEND=x11
+./install.sh --yes --force-xwayland
+
+# Confirmar backend selecionado
+.venv/bin/python -c "
+from hefesto_dualsense4unix.integrations.window_detect import detect_window_backend
+print(type(detect_window_backend()).__name__)
+"
+# Em XWayland (default): XlibBackend
+# Em Wayland puro (raro): _WaylandCascadeBackend
+
+# Probe do StatusNotifierWatcher (tray)
+.venv/bin/python -c "
+from hefesto_dualsense4unix.integrations.desktop_notifications import statusnotifierwatcher_available
+print('tray disponivel:', statusnotifierwatcher_available())
+"
+```
+
+Detalhes empíricos em `docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`. Decisão arquitetural em `docs/adr/014-cosmic-wayland-support.md`.
 
 ---
 
@@ -491,7 +536,7 @@ Leia [`AGENTS.md`](AGENTS.md) antes de abrir PR. Resumo:
 5. Se toca runtime, provar via smoke real (`run.sh --smoke`) ou com hardware conectado.
 6. Se toca UI / TUI, screenshot + sha256 + descrição multimodal no PR.
 7. Descoberta não-óbvia vira registro em [`docs/process/discoveries/`](docs/process/discoveries/).
-8. Commit em PT-BR, sem menção a IA, zero emojis gráficos (glyphs Unicode de estado — `○`, `●`, box drawing — são permitidos).
+8. Commit em PT-BR, sem menção a IA, zero emojis gráficos (glyphs Unicode de estado — ``, ``, box drawing — são permitidos).
 9. Abrir PR com `Closes #N`, squash merge.
 
 Testes manuais com hardware físico têm checklist em [`CHECKLIST_MANUAL.md`](CHECKLIST_MANUAL.md). Revisor com controle marca antes de cada release.
