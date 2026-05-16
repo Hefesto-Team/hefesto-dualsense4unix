@@ -18,6 +18,7 @@ feedback ao usuário em sessões COSMIC onde o tray icon não renderiza
 from __future__ import annotations
 
 import contextlib
+import os
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -152,8 +153,97 @@ def statusnotifierwatcher_available() -> bool:
                 conn.close()
 
 
+# ---------------------------------------------------------------------------
+# FEAT-COSMIC-NOTIFICATIONS-01 — helpers de evento canonico (opt-in)
+#
+# Notifications de eventos sao opt-in via env var
+# `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, as funcoes
+# `notify_*` retornam False imediatamente (zero overhead, zero ruido).
+#
+# Eventos cobertos:
+#   notify_controller_connected(transport)
+#   notify_controller_disconnected(reason)
+#   notify_battery_low(pct)
+#   notify_profile_activated(name)
+# ---------------------------------------------------------------------------
+
+_ENV_NOTIFICATIONS_ENABLED = "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS"
+
+
+def _notifications_enabled() -> bool:
+    """Lê env var no momento da chamada (re-avalia a cada notify).
+
+    Permite ao usuario habilitar/desabilitar sem reiniciar o daemon — embora,
+    na pratica, a env e fixada antes do daemon subir.
+    """
+    return os.environ.get(_ENV_NOTIFICATIONS_ENABLED, "").strip() in ("1", "true", "yes")
+
+
+def notify_controller_connected(transport: str) -> bool:
+    if not _notifications_enabled():
+        return False
+    tr_label = {"usb": "USB", "bt": "Bluetooth"}.get(transport.lower(), transport)
+    return notify(
+        summary="Controle conectado",
+        body=f"DualSense detectado via {tr_label}.",
+        icon="input-gaming",
+        timeout_ms=3000,
+    )
+
+
+def notify_controller_disconnected(reason: str = "") -> bool:
+    if not _notifications_enabled():
+        return False
+    body = "DualSense desconectado." if not reason else f"DualSense desconectado ({reason})."
+    return notify(
+        summary="Controle desconectado",
+        body=body,
+        icon="input-gaming",
+        timeout_ms=3000,
+    )
+
+
+def notify_battery_low(pct: int, threshold: int = 15) -> bool:
+    """Emite uma vez por queda abaixo do threshold (dedup via once_key dinamica)."""
+    if not _notifications_enabled():
+        return False
+    if pct > threshold:
+        return False
+    return notify(
+        summary="Bateria baixa do DualSense",
+        body=f"Bateria em {pct}%. Conecte via USB para carregar.",
+        icon="battery-caution",
+        timeout_ms=8000,
+        once_key=f"battery_low_below_{threshold}",
+    )
+
+
+def notify_battery_recovered(pct: int, threshold: int = 30) -> None:
+    """Reseta o cache de battery_low quando bateria volta a subir acima do
+    threshold de recuperacao — permite emitir notify de novo na proxima queda."""
+    if pct >= threshold:
+        _announced_once.discard(f"battery_low_below_{threshold - 15}")
+        _announced_once.discard("battery_low_below_15")
+
+
+def notify_profile_activated(name: str) -> bool:
+    if not _notifications_enabled():
+        return False
+    return notify(
+        summary="Perfil ativado",
+        body=f"Hefesto trocou para o perfil: {name}.",
+        icon="input-gaming",
+        timeout_ms=2000,
+    )
+
+
 __all__ = [
     "notify",
+    "notify_battery_low",
+    "notify_battery_recovered",
+    "notify_controller_connected",
+    "notify_controller_disconnected",
+    "notify_profile_activated",
     "reset_once_cache",
     "statusnotifierwatcher_available",
 ]

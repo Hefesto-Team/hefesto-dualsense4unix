@@ -216,3 +216,97 @@ class TestStatusNotifierWatcherAvailable:
         assert last["args"][1] == "NameHasOwner"
         assert last["args"][2] == "s"
         assert last["args"][3] == ("org.kde.StatusNotifierWatcher",)
+
+
+# ---------------------------------------------------------------------------
+# FEAT-COSMIC-NOTIFICATIONS-01 — helpers opt-in via env var.
+# ---------------------------------------------------------------------------
+
+
+class TestEventNotifications:
+    """Helpers notify_controller_*, notify_battery_low, notify_profile_activated."""
+
+    def test_disabled_por_default_sem_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(
+            "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", raising=False
+        )
+        # Mesmo com jeepney disponivel, nao emite.
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        assert desktop_notifications.notify_controller_connected("usb") is False
+        assert desktop_notifications.notify_controller_disconnected() is False
+        assert desktop_notifications.notify_battery_low(10) is False
+        assert desktop_notifications.notify_profile_activated("fps") is False
+
+    def test_habilitado_via_env_var(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        assert desktop_notifications.notify_controller_connected("bt") is True
+
+    @pytest.mark.parametrize("env_value", ["1", "true", "yes"])
+    def test_env_var_aceita_variantes(
+        self, monkeypatch: pytest.MonkeyPatch, env_value: str
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", env_value)
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        assert desktop_notifications.notify_controller_connected("usb") is True
+
+    @pytest.mark.parametrize("env_value", ["0", "false", "no", ""])
+    def test_env_var_recusa_variantes_falsy(
+        self, monkeypatch: pytest.MonkeyPatch, env_value: str
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", env_value)
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        assert desktop_notifications.notify_controller_connected("usb") is False
+
+    def test_battery_low_threshold(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        # 50% > threshold 15 -> nao emite
+        assert desktop_notifications.notify_battery_low(50) is False
+        # 10% < threshold -> emite
+        assert desktop_notifications.notify_battery_low(10) is True
+
+    def test_battery_low_dedup_via_once_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        desktop_notifications.notify_battery_low(10)
+        # Segunda chamada com pct ainda baixo: deduped
+        assert desktop_notifications.notify_battery_low(8) is False
+
+    def test_battery_recovered_reseta_dedup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        desktop_notifications.notify_battery_low(10)
+        # Bateria recupera acima do threshold de recuperacao (30)
+        desktop_notifications.notify_battery_recovered(50)
+        # Agora emite de novo se cair
+        assert desktop_notifications.notify_battery_low(8) is True
+
+    def test_controller_connected_traduz_transport(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        desktop_notifications.notify_controller_connected("bt")
+        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
+        notify_args = captured[-1]["args"][3]
+        # Body deve conter "Bluetooth" (traducao do "bt")
+        assert "Bluetooth" in notify_args[4]
+
+    def test_controller_connected_usb_label(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
+        _install_fake_jeepney(monkeypatch, reply_body=(1,))
+        desktop_notifications.notify_controller_connected("usb")
+        captured = sys.modules["jeepney"]._captured_calls  # type: ignore[attr-defined]
+        notify_args = captured[-1]["args"][3]
+        assert "USB" in notify_args[4]

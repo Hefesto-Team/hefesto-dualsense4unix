@@ -65,6 +65,15 @@ class ProfileManager:
         logger.info("profile_activated", name=profile.name, priority=profile.priority)
         from hefesto_dualsense4unix.utils.session import save_last_profile
         save_last_profile(profile.name)
+        # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
+        # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
+        try:
+            from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                notify_profile_activated,
+            )
+            notify_profile_activated(profile.name)
+        except Exception:
+            pass
         return profile
 
     def apply(self, profile: Profile) -> None:
