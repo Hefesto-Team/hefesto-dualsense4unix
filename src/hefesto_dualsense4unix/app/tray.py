@@ -1,7 +1,16 @@
-"""Tray icon do HefestoApp: close-to-tray + atalhos rápidos."""
+"""Tray icon do HefestoApp: close-to-tray + atalhos rápidos.
+
+FEAT-COSMIC-TRAY-FALLBACK-01 (v3.1.0): em COSMIC 1.0+, a criação do
+`AppIndicator` precisa ser deferred via `GLib.timeout_add(500, ...)` para
+dar tempo do `cosmic-applet-status-area` registrar `org.kde.StatusNotifierWatcher`
+no D-Bus. Se mesmo assim o watcher não estiver presente, emitimos uma
+notification D-Bus orientadora (`cosmic-applet-status-area` desabilitado)
+e seguimos sem tray. A janela principal segue funcional como entrypoint.
+"""
 # ruff: noqa: E402
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -11,6 +20,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
+from hefesto_dualsense4unix.integrations.desktop_notifications import (
+    notify,
+    statusnotifierwatcher_available,
+)
 from hefesto_dualsense4unix.integrations.tray import probe_gi_availability
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -21,6 +34,21 @@ TRAY_ICON_NAME = "hefesto-dualsense4unix"
 TRAY_ICON_FALLBACK = "input-gaming"
 PROFILE_REFRESH_SEC = 3
 ACTIVE_MARKER = "> "
+
+# FEAT-COSMIC-TRAY-FALLBACK-01: delay para registrar o indicator depois que o
+# cosmic-applet-status-area subir o watcher. Empírico: 500ms cobre os casos
+# de race em COSMIC 1.0.6+; tempo maior é gratuito (usuário não percebe).
+_INDICATOR_DEFERRED_MS = 500
+
+
+def _desktop_is_cosmic() -> bool:
+    """True se XDG_CURRENT_DESKTOP/XDG_SESSION_DESKTOP indicam COSMIC."""
+    desktops = (
+        os.environ.get("XDG_CURRENT_DESKTOP", "")
+        + ":"
+        + os.environ.get("XDG_SESSION_DESKTOP", "")
+    ).lower()
+    return "cosmic" in desktops
 
 ShowFn = Callable[[], None]
 QuitFn = Callable[[], None]
@@ -55,6 +83,33 @@ class AppTray:
             logger.warning("apptray_unavailable", msg=msg)
             return False
 
+        # FEAT-COSMIC-TRAY-FALLBACK-01: em COSMIC, defere a criação do
+        # indicator para depois do mainloop subir, garantindo que o
+        # cosmic-applet-status-area já reivindicou o watcher do D-Bus. Não
+        # bloqueia o startup da GUI — janela principal abre normal e o
+        # indicator surge ~500ms depois.
+        if _desktop_is_cosmic():
+            logger.info(
+                "apptray_deferred_for_cosmic",
+                delay_ms=_INDICATOR_DEFERRED_MS,
+                hint=(
+                    "cosmic-applet-status-area registra o watcher D-Bus "
+                    "alguns ms apos o login; criar o Indicator imediato "
+                    "perde a primeira fase."
+                ),
+            )
+            # GLib espera retorno bool: False = não repetir o timer.
+            GLib.timeout_add(
+                _INDICATOR_DEFERRED_MS,
+                lambda: (self._start_deferred(), False)[1],
+            )
+            return True
+
+        return self._start_deferred()
+
+    def _start_deferred(self) -> bool:
+        """Cria o indicator de fato. Roda imediatamente em GNOME/KDE/etc
+        e via GLib.timeout em COSMIC."""
         import gi as _gi
 
         indicator_cls, category = self._resolve_indicator(_gi)
@@ -103,6 +158,32 @@ class AppTray:
         self._tick_refresh()
 
         logger.info("apptray_started", icon=icon)
+
+        # FEAT-COSMIC-TRAY-FALLBACK-01: probe imediato do StatusNotifierWatcher.
+        # Se ausente em sessão COSMIC, avisa via D-Bus notification (uma vez)
+        # e segue. Não tenta workaround — o usuário precisa instalar/habilitar
+        # cosmic-applet-status-area no painel.
+        if _desktop_is_cosmic() and not statusnotifierwatcher_available():
+            logger.warning(
+                "statusnotifierwatcher_ausente",
+                hint=(
+                    "cosmic-applet-status-area pode estar desabilitado no "
+                    "cosmic-panel. Habilite em Configurações > Painel > "
+                    "Applets para o tray aparecer."
+                ),
+            )
+            notify(
+                summary="Hefesto - Dualsense4Unix",
+                body=(
+                    "Tray icon indisponivel no COSMIC. "
+                    "Habilite o applet 'Area de status' no cosmic-panel "
+                    "(Configurações > Painel) ou use a janela principal."
+                ),
+                icon="input-gaming",
+                timeout_ms=10000,
+                once_key="cosmic_tray_missing",
+            )
+
         return True
 
     def stop(self) -> None:
