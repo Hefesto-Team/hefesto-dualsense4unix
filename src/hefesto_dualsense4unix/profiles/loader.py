@@ -21,12 +21,26 @@ import tempfile
 from pathlib import Path
 
 from filelock import FileLock
+from pydantic import ValidationError
 
 from hefesto_dualsense4unix.profiles.schema import Profile
 from hefesto_dualsense4unix.profiles.slug import slugify
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
+logger = get_logger(__name__)
+
 LOCK_SUFFIX = ".lock"
+
+# PROFILE-LOADER-UX-01: exceções esperadas ao decodificar um perfil. Capturar
+# essas (e só essas) preserva tracebacks de bugs reais (PermissionError,
+# OSError não-ENOENT, KeyboardInterrupt) e ainda permite que perfis válidos
+# sigam carregando enquanto um corrompido emite warning estruturado.
+_PROFILE_DECODE_ERRORS: tuple[type[BaseException], ...] = (
+    json.JSONDecodeError,
+    ValidationError,
+    UnicodeDecodeError,
+)
 
 # AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01: tokens proibidos em identifier.
 # Path('/dir') / '/etc/passwd' devolve '/etc/passwd' (escape absoluto);
@@ -107,10 +121,18 @@ def load_profile(identifier: str) -> Profile:
     if slugged.exists():
         return _read_profile(slugged)
 
-    for path in directory.glob("*.json"):
+    # `sorted` torna a varredura determinística (importante para testes e logs
+    # reproduzíveis quando múltiplos perfis existem).
+    for path in sorted(directory.glob("*.json")):
         try:
             profile = _read_profile(path)
-        except Exception:
+        except _PROFILE_DECODE_ERRORS as exc:
+            logger.warning(
+                "profile_invalid",
+                path=str(path),
+                err=str(exc),
+                err_type=type(exc).__name__,
+            )
             continue
         try:
             if slugify(profile.name) == slug:
@@ -122,12 +144,27 @@ def load_profile(identifier: str) -> Profile:
 
 
 def load_all_profiles() -> list[Profile]:
+    """Lê todos os perfis JSON do diretório, pulando os inválidos com warning.
+
+    PROFILE-LOADER-UX-01: um perfil corrompido não deve impedir o carregamento
+    dos demais. Emite `WARN profile_invalid path=... err=...` para cada arquivo
+    que falhar a decodificação ou validação Pydantic.
+    """
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     for path in sorted(directory.glob("*.json")):
-        with FileLock(str(_lock_path(path))):
-            raw = json.loads(path.read_text(encoding="utf-8"))
-        profiles.append(Profile.model_validate(raw))
+        try:
+            with FileLock(str(_lock_path(path))):
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            profiles.append(Profile.model_validate(raw))
+        except _PROFILE_DECODE_ERRORS as exc:
+            logger.warning(
+                "profile_invalid",
+                path=str(path),
+                err=str(exc),
+                err_type=type(exc).__name__,
+            )
+            continue
     return profiles
 
 
@@ -163,7 +200,13 @@ def delete_profile(identifier: str) -> None:
             for path in directory.glob("*.json"):
                 try:
                     other = _read_profile(path)
-                except Exception:
+                except _PROFILE_DECODE_ERRORS as exc:
+                    logger.warning(
+                        "profile_invalid",
+                        path=str(path),
+                        err=str(exc),
+                        err_type=type(exc).__name__,
+                    )
                     continue
                 if other.name == profile.name:
                     candidate = path

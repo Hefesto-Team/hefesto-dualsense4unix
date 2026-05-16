@@ -65,7 +65,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label = self._get("daemon_status_label")
         if label is None:
             return
-        label.set_markup('<span foreground="#888">● Consultando...</span>')
+        label.set_markup('<span foreground="#888"> Consultando...</span>')
         label.set_tooltip_text(
             "Verificando estado do daemon via systemctl. Aguarde."
         )
@@ -573,28 +573,28 @@ class DaemonActionsMixin(WidgetAccessMixin):
         status_map: dict[DaemonStatus, tuple[str, str, str]] = {
             "online_systemd": (
                 "#2d8",
-                "● Online (systemd + auto-start)"
+                " Online (systemd + auto-start)"
                 if enabled == "enabled"
-                else "● Online (gerenciado pelo systemd)",
+                else " Online (gerenciado pelo systemd)",
                 "Daemon em execução sob controle do systemd. "
                 "Reinício automático habilitado caso o processo falhe.",
             ),
             "online_avulso": (
                 "#ca0",
-                "● Online (processo avulso, sem systemd)",
+                " Online (processo avulso, sem systemd)",
                 "Daemon em execução fora do systemd. "
                 "Não há reinício automático. "
                 "Use 'Migrar para systemd' para ativar gerenciamento completo.",
             ),
             "iniciando": (
                 "#ca0",
-                "● Iniciando...",
+                " Iniciando...",
                 "systemd reporta unit ativa mas o processo ainda não escreveu "
                 "o pid file. Aguarde alguns segundos.",
             ),
             "offline": (
                 "#d33",
-                "○ Offline",
+                " Offline",
                 "Daemon não está em execução. "
                 "Use 'Iniciar' para subir via systemd ou "
                 "'hefesto-dualsense4unix daemon start' na linha de comando.",
@@ -609,10 +609,20 @@ class DaemonActionsMixin(WidgetAccessMixin):
         buf: Gtk.TextBuffer = view.get_buffer()
         text = re.sub(r"\x1b\[[0-9;]*m", "", text)
         buf.set_text(text)
+        # UI-DAEMON-LOG-AUTOSCROLL-01: rola até o fim com alinhamento explícito
+        # (use_align=True, yalign=1.0) e novamente no próximo idle do GTK — o
+        # primeiro scroll roda antes do TextView relayoutar o texto novo, então
+        # sem o defer o fim do log fica fora do viewport quando o conteúdo
+        # cresce.
+        self._scroll_textview_to_end(view)
+        GLib.idle_add(self._scroll_textview_to_end, view)
+
+    @staticmethod
+    def _scroll_textview_to_end(view: Gtk.TextView) -> bool:
+        buf = view.get_buffer()
         end_iter = buf.get_end_iter()
-        mark = buf.create_mark(None, end_iter, False)
-        view.scroll_to_mark(mark, 0.0, False, 0.0, 0.0)
-        buf.delete_mark(mark)
+        view.scroll_to_iter(end_iter, 0.0, True, 0.0, 1.0)
+        return False  # one-shot quando chamado via GLib.idle_add
 
     def _systemctl_oneline(self, args: list[str]) -> str:
         result = self._invoke_systemctl(args, capture=True, check=False)

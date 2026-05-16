@@ -12,11 +12,11 @@ BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Daemon (e a aba Status) mostrava
 Fix coberto por estes testes:
 
   - Cenário 1 (daemon ativo): após ``install_daemon_tab``, o label final
-    mostra ``online_systemd`` (verde, "● Online").
+    mostra ``online_systemd`` (verde, " Online").
   - Cenário 2 (daemon inativo): o label final mostra ``offline``
-    (vermelho, "○ Offline") — nunca "Iniciando...".
+    (vermelho, " Offline") — nunca "Iniciando...".
   - Cenário 3 (systemctl não responde / falha): durante a janela em que o
-    worker ainda está rodando, o label mostra "● Consultando..." cinza em
+    worker ainda está rodando, o label mostra " Consultando..." cinza em
     vez do falso-negativo "Offline".
 
 Usa stubs de ``gi`` idênticos aos de ``test_daemon_status_matrix.py``.
@@ -103,6 +103,10 @@ class _FakeTextViewObj:
         return _FakeBufferObj()
 
     def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
+        pass
+
+    # UI-DAEMON-LOG-AUTOSCROLL-01: autoscroll do log usa scroll_to_iter.
+    def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
         pass
 
 
@@ -230,7 +234,7 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
 
     Após `install_daemon_tab`, o worker roda imediatamente (executor síncrono),
     o `GLib.idle_add` (stub) aplica o resultado e o label final mostra
-    "● Online" verde — nunca passa por "Offline".
+    " Online" verde — nunca passa por "Offline".
     """
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
@@ -264,7 +268,7 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 ) -> None:
     """Cenário 2: daemon inativo (systemd inactive + sem processo).
 
-    Após `install_daemon_tab`, o label final é "○ Offline" vermelho — nunca
+    Após `install_daemon_tab`, o label final é " Offline" vermelho — nunca
     fica preso em "Iniciando..." nem no estado "Consultando..." transitório.
     """
     _patch_installer_none(monkeypatch)

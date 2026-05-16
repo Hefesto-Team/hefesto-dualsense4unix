@@ -1,5 +1,7 @@
 # ADR-012: GUI reconnecta ao daemon automaticamente com máquina de 3 estados
 
+**Status:** aceito
+
 ## Contexto
 
 Até 2026-04-21, a GUI abria uma vez, consultava o daemon via IPC e renderizava o resultado. Se o daemon estivesse offline ou ficasse offline depois (socket morreu, service reiniciou, controle desconectou), o header mostrava "daemon offline" em vermelho e ficava assim — usuário não sabia se precisava esperar, reiniciar o service manualmente ou fechar a GUI. Pedido explícito do usuário: "o daemon sempre deve ficar online ao abrir o app".
@@ -20,9 +22,9 @@ OFFLINE -----(IPC ok)------> ONLINE
 - Polling a **2 s** via `GLib.timeout_add_seconds(2, _tick_reconnect_state)`.
 - **Threshold de 3** falhas consecutivas (6 s de indisponibilidade) antes de transicionar para OFFLINE. Absorve restart curto do systemd sem flicker.
 - **Três renderers visuais** no header da GUI:
-  - ONLINE: `● conectado via <transport>` (verde `#2d8`, U+25CF).
-  - RECONNECTING: `◐ tentando reconectar...` (laranja `#d90`, U+25D0 — semântico intermediário).
-  - OFFLINE: `○ daemon offline` (vermelho `#d33`, U+25CB).
+  - ONLINE: ` conectado via <transport>` (verde `#2d8`, U+25CF).
+  - RECONNECTING: ` tentando reconectar...` (laranja `#d90`, U+25D0 — semântico intermediário).
+  - OFFLINE: ` daemon offline` (vermelho `#d33`, U+25CB).
 - **Botão "Reiniciar daemon"** na aba Daemon — atalho humano quando o usuário quer intervir sem esperar, roda `systemctl --user restart hefesto.service` via subprocess. Fica desabilitado se `detect_installed_units()` retornar `None`.
 
 ## Consequências

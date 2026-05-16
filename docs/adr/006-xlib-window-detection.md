@@ -1,5 +1,7 @@
 # ADR-006: Detecção de janela ativa via `python-xlib`
 
+**Status:** aceito (continua válido para X11; complementado pelo ADR-014 para Wayland)
+
 ## Contexto
 Duas alternativas: chamar `xdotool` via `subprocess` ou usar `python-xlib` direto. `subprocess` adiciona overhead e shell-out; `python-xlib` fala com o servidor X nativo, mais rápido e sem risco de command injection.
 

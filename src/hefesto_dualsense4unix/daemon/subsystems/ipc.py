@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -56,7 +57,7 @@ class IpcSubsystem:
         return config.ipc_enabled
 
 
-async def start_ipc(daemon: Any) -> None:
+async def start_ipc(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o IpcServer usando o Daemon diretamente.
 
     Mantida para compatibilidade com código que chame start_ipc(daemon)
@@ -75,7 +76,7 @@ async def start_ipc(daemon: Any) -> None:
     await daemon._ipc_server.start()
 
 
-async def stop_ipc(daemon: Any) -> None:
+async def stop_ipc(daemon: DaemonProtocol) -> None:
     """Função utilitária: para o IpcServer do Daemon."""
     if daemon._ipc_server is not None:
         with contextlib.suppress(Exception):

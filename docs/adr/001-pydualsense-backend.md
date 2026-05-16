@@ -1,5 +1,7 @@
 # ADR-001: `pydualsense` como backend HID
 
+**Status:** aceito
+
 ## Contexto
 Três caminhos possíveis: implementar protocolo HID do zero, portar `trigger-control` C++, ou usar a biblioteca Python `pydualsense` (MIT, 115+ commits). Implementar do zero custa duas sprints inteiras; FFI do C++ adiciona complexidade de build; `pydualsense` resolve 100% do protocolo HID com licença compatível.
 

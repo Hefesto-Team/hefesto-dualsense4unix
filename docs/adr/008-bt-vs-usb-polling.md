@@ -1,5 +1,7 @@
 # ADR-008: Bluetooth vs USB no polling
 
+**Status:** aceito
+
 ## Contexto
 `pydualsense` expõe HID sem diferenciar transporte. Na prática:
 - USB: 1000Hz possível, battery report a cada pacote.

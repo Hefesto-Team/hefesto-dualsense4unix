@@ -5,6 +5,85 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.2.0] — 2026-05-16
+
+Wave V3.2 (auditoria + polish) sobre v3.1.1. Três auditorias em paralelo
+(qualidade de código, documentação, UI/UX) consolidam a base estável
+v3.2.0. Sprints forward-looking (116/118/119 — COSMIC applet Rust, global
+shortcuts, panel widget) seguem PLANNED para V3.4.
+
+### Bloco A — qualidade de código
+
+- **`PROFILE-LOADER-UX-01` (Bloco A1)**: `profiles/loader.py` deixou de
+  engolir exceções genéricas em três sites de glob (`load_profile` scan,
+  `delete_profile` scan, `load_all_profiles`). Agora captura apenas
+  `(JSONDecodeError, ValidationError, UnicodeDecodeError)` e emite
+  `WARN profile_invalid path=... err=... err_type=...` via structlog —
+  perfis válidos continuam carregando ao lado de um corrompido. O fallback
+  CLI em `app/ipc_bridge.py` ganhou `exc_info=True` e filtra
+  `(FileNotFoundError, PermissionError, OSError)`. `directory.glob` virou
+  `sorted(directory.glob)` em `load_profile` para tornar a varredura
+  determinística. 3 novos testes em `tests/unit/test_profile_loader.py`
+  (JSON malformado, schema inválido, scan misto).
+- **`DAEMON-SHUTDOWN-TEST-01` (Bloco A2)**: novo
+  `tests/unit/test_daemon_shutdown.py` cobre o `shutdown(daemon)` isolado
+  (antes só implícito via `test_daemon_reconnect_loop.py`). 3 casos:
+  zera todos os subsystems + executor + tasks após boot real (FakeController
+  + IPC habilitado), tolera subsystem que levanta no `.stop()`, e é
+  idempotente em chamada repetida.
+- **`PYDANTIC-PROTOCOL-DAEMON-01` (Bloco A3)**: novo
+  `daemon/protocols.py` define `DaemonProtocol` (PEP 544 Protocol) com a
+  superfície real do `Daemon` consumida pelos handlers/subsystems. 26
+  ocorrências de `daemon: Any` substituídas por `daemon: DaemonProtocol`
+  em `connection.py`, `ipc_handlers.py` e `subsystems/{rumble, mouse,
+  hotkey, autoswitch, ipc, udp, keyboard}.py`. mypy `--strict` continua
+  zero, agora com validação real. Sem mudança de runtime.
+
+### Bloco B — documentação
+
+- **`README-URL-BUMP-V3-2-0` (B1)**: comandos `curl -LO` do README e do
+  `docs/usage/quickstart.md` apontam para `v3.2.0`. Headline do README
+  reflete `Versão: 3.2.0` + estado validado em Pop!_OS 22.04 e 24.04 COSMIC
+  USB+BT. Nota de release substituída por entry v3.2.0.
+- **`ADR-STATUS-FIELD-01` (B2)**: ADRs 001-013 ganharam campo
+  `**Status:**` no header (alinhamento com 014-017). ADR-007 marcado
+  explicitamente `superseded por ADR-014`. ADR-006 anota que continua
+  válido para X11, complementado pelo ADR-014 para Wayland.
+- **`CHECKLIST-V3-2-0-REFRESH-01` (B3)**: novo
+  `CHECKLIST_VALIDACAO_v3.2.0.md` substitui v3 como gate de release atual,
+  com seções dedicadas às sprints da Wave V3.2 + re-validação COSMIC +
+  re-validação BT pós-release. v3 ganhou nota apontando para o sucessor
+  e itens `[x]` permanecem como proof-of-work histórico.
+
+### Bloco C — UI/UX
+
+- **`UI-DAEMON-LOG-AUTOSCROLL-01` (C1)**: aba Daemon — log viewer agora
+  rola automaticamente até o fim quando novo conteúdo chega. Trocou
+  `scroll_to_mark(use_align=False)` por `scroll_to_iter(yalign=1.0)`
+  + reagendamento via `GLib.idle_add` para esperar relayout do TextView.
+- **`UI-STATUS-OFFLINE-FALLBACK-01` (C2)**: aba Status — após 5 s sem
+  nenhum poll IPC bem-sucedido, header passa de "Consultando..." para
+  " Desconectado — abra a aba Daemon e clique em Iniciar". Resolve a
+  janela em que o daemon nunca subiu no boot e o usuário ficava sem
+  saber o próximo passo. Novo `_first_poll_succeeded` é marcado por
+  qualquer um dos 3 ticks (live, profile, reconnect).
+- **`UI-TRIGGERS-LIVE-PREVIEW-01` (C3)**: aba Gatilhos — trocar modo no
+  combobox aplica o trigger no hardware em 300 ms (debounced) sem
+  precisar clicar "Aplicar". Novo `_trigger_live_preview_timer` por side
+  cancela handle anterior em troca rápida de combobox.
+
+### Suíte de testes
+
+`1395 → 1406 passed (+11)`, 14 skipped, ruff clean, mypy `--strict` zero
+em 114 source files.
+
+### Backlog explícito (não entram v3.2.0)
+
+- P2 da Wave V3.2 não-feitos: C4 (lightbar presets), C5 (rumble scale
+  labels), C6 (mnemonics), C7 (firmware tooltip).
+- P3 forward-looking sprints 116/118/119 (Rust applet, global shortcuts,
+  panel widget) continuam PLANNED para V3.4.
+
 ## [3.1.1] — 2026-05-16
 
 Patch release fechando 5 sprints adicionais na mesma sessão da V3.1.0.

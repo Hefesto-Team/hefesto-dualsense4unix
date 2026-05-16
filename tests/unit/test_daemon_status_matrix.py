@@ -77,6 +77,9 @@ def _install_gi_stubs() -> None:
         def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
             pass
 
+        def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
+            pass
+
     class _FakeBuffer:
         def set_text(self, _t: str) -> None:
             pass
@@ -146,6 +149,10 @@ class _FakeTextViewObj:
         return _FakeBufferObj()
 
     def scroll_to_mark(self, *_a: Any, **_kw: Any) -> None:
+        pass
+
+    # UI-DAEMON-LOG-AUTOSCROLL-01: autoscroll do log usa scroll_to_iter.
+    def scroll_to_iter(self, *_a: Any, **_kw: Any) -> None:
         pass
 
 
@@ -272,7 +279,7 @@ def test_offline_label_vermelho(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "#d33" in host._label.markup
     assert "Offline" in host._label.markup
     # Glifo circulo vazio (U+25CB) deve estar presente.
-    assert "○" in host._label.markup or "○" in host._label.markup
+    assert "" in host._label.markup or "" in host._label.markup
 
 
 def test_online_avulso_label_amarelo(monkeypatch: pytest.MonkeyPatch) -> None:

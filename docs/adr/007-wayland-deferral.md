@@ -1,5 +1,7 @@
 # ADR-007: Wayland diferido para v1.x
 
+**Status:** superseded por ADR-014 (Suporte ao COSMIC DE / Wayland no Pop!_OS, 2026-04-22)
+
 ## Contexto
 Wayland não expõe janela ativa via API universal. Cada compositor tem seu próprio método: GNOME usa D-Bus extension, KDE usa KWin script, Sway usa IPC próprio. Implementar os três fura escopo da v0.x.
 

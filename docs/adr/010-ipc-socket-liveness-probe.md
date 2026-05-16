@@ -1,5 +1,7 @@
 # ADR-010: Socket IPC com probe de vivacidade e isolamento do smoke
 
+**Status:** aceito
+
 ## Contexto
 
 O daemon expõe IPC via Unix socket em `$XDG_RUNTIME_DIR/hefesto/hefesto.sock`. A versão original fazia `unlink()` cego no `start()` e no `stop()`: se dois processos daemon rodassem simultaneamente com o mesmo path (tipicamente o service systemd + um `./run.sh --smoke` ad-hoc), o segundo apagava o socket do primeiro e ninguém mais conseguia conectar via filesystem. Sintoma observado em 2026-04-21: `systemctl --user is-active hefesto.service` retornava `active` enquanto a GUI mostrava "daemon offline" por horas. Viola meta-regra 9.3 (soberania de subsistema).

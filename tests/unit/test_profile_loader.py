@@ -279,6 +279,80 @@ def test_load_profile_aceita_slug_legitimo(isolated_profiles_dir: Path):
     assert loaded.name == "shooter_pro"
 
 
+# ---------------------------------------------------------------------------
+# PROFILE-LOADER-UX-01 — mensagens de erro acionáveis para perfis inválidos
+# ---------------------------------------------------------------------------
+
+
+def test_load_all_profiles_pula_json_malformado_e_loga_warning(
+    isolated_profiles_dir: Path,
+) -> None:
+    """JSON quebrado emite warning estruturado e não derruba carregamento dos válidos."""
+    import structlog
+
+    save_profile(_mk_profile("valido"))
+    quebrado = isolated_profiles_dir / "quebrado.json"
+    quebrado.write_text("{ broken json", encoding="utf-8")
+
+    with structlog.testing.capture_logs() as captured:
+        profiles = load_all_profiles()
+
+    nomes = [p.name for p in profiles]
+    assert "valido" in nomes
+    assert "quebrado" not in nomes
+    eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
+    assert any("quebrado.json" in str(rec.get("path", "")) for rec in eventos)
+
+
+def test_load_all_profiles_pula_schema_invalido_e_loga(
+    isolated_profiles_dir: Path,
+) -> None:
+    """Perfil com payload JSON válido porém schema Pydantic inválido vira warning."""
+    import structlog
+
+    save_profile(_mk_profile("ok"))
+    schema_invalido = isolated_profiles_dir / "schema_invalido.json"
+    # Sem campo obrigatório `name`; Pydantic levanta ValidationError.
+    schema_invalido.write_text(
+        json.dumps({"priority": 5, "match": {"type": "any"}}),
+        encoding="utf-8",
+    )
+
+    with structlog.testing.capture_logs() as captured:
+        profiles = load_all_profiles()
+
+    nomes = [p.name for p in profiles]
+    assert "ok" in nomes
+    assert len(nomes) == 1
+    eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
+    assert any("schema_invalido.json" in str(rec.get("path", "")) for rec in eventos)
+
+
+def test_load_profile_scan_pula_invalido_e_acha_o_valido(
+    isolated_profiles_dir: Path,
+) -> None:
+    """Fallback scan em load_profile pula JSON corrompido e segue procurando."""
+    import structlog
+
+    quebrado = isolated_profiles_dir / "aaa-quebrado.json"
+    quebrado.write_text("{[}", encoding="utf-8")
+    # Filename arbitrário com name='Ação' que precisa scan para ser achado.
+    payload = Profile(
+        name="Ação",
+        match=MatchCriteria(window_class=["acao_class"]),
+        priority=5,
+    ).model_dump(mode="json")
+    arbitrario = isolated_profiles_dir / "zzz-qualquer.json"
+    arbitrario.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    with structlog.testing.capture_logs() as captured:
+        restored = load_profile("Ação")
+
+    assert restored.name == "Ação"
+    eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
+    assert any("aaa-quebrado.json" in str(rec.get("path", "")) for rec in eventos)
+
+
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):
     """Mimetiza installer copiando perfis default para profiles_dir."""
     repo_root = Path(__file__).resolve().parents[2]

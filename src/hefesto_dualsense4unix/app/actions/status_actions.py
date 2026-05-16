@@ -67,15 +67,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         header_connection.
 
     Estados do reconnect (`_reconnect_state`):
-        - ``"online"``: último poll retornou dict; header mostra ● verde.
+        - ``"online"``: último poll retornou dict; header mostra  verde.
         - ``"reconnecting"``: IPC falhou 1..N-1 vezes consecutivas; header
-          mostra ◐ laranja com texto "tentando reconectar...".
+          mostra  laranja com texto "tentando reconectar...".
         - ``"offline"``: N falhas consecutivas (N=RECONNECT_FAIL_THRESHOLD);
-          header mostra ○ vermelho "daemon offline".
+          header mostra  vermelho "daemon offline".
     """
 
     _reconnect_state: str = "online"
     _consecutive_failures: int = 0
+    # UI-STATUS-OFFLINE-FALLBACK-01: marca True na primeira resposta IPC
+    # bem-sucedida (qualquer tick). Permite que o fallback dedicado pinte
+    # uma mensagem clara em até 5 s caso o daemon nunca responda.
+    _first_poll_succeeded: bool = False
     _last_buttons: frozenset[str]
     _button_glyphs: dict[str, ButtonGlyph]
     _stick_left: StickPreviewGtk
@@ -111,6 +115,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         # o default do Glade ("Consultando...") ficava visível sem motivo.
         GLib.idle_add(self._tick_live_state)
         GLib.idle_add(self._tick_profile_state)
+        # UI-STATUS-OFFLINE-FALLBACK-01: se 5 s passarem sem nenhum poll
+        # bem-sucedido, pinta header com mensagem acionável em vez de manter
+        # "Consultando..." indefinidamente (acontece quando o daemon nunca
+        # subiu no boot — usuário precisa do passo de Daemon > Start).
+        self._first_poll_succeeded = False
+        GLib.timeout_add_seconds(5, self._check_initial_poll_fallback)
 
     # ------------------------------------------------------------------
     # Inicialização dos widgets dinâmicos
@@ -174,6 +184,8 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _on_live_state_result(self, state: Any) -> bool:
         """Callback de sucesso — executa na thread principal via GLib.idle_add."""
         if isinstance(state, dict):
+            # UI-STATUS-OFFLINE-FALLBACK-01: marca pelo menos um poll OK.
+            self._first_poll_succeeded = True
             self._render_live_state(state)
         else:
             self._render_offline()
@@ -197,6 +209,7 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _on_profile_state_result(self, state: Any) -> bool:
         """Callback de sucesso para o tick lento — executa na thread GTK."""
         if isinstance(state, dict):
+            self._first_poll_succeeded = True
             self._render_slow_state(state)
         return False  # não repetir via GLib
 
@@ -211,8 +224,42 @@ class StatusActionsMixin(WidgetAccessMixin):
         return True
 
     def _on_reconnect_state_result(self, state: Any) -> bool:
+        if isinstance(state, dict):
+            self._first_poll_succeeded = True
         self._update_reconnect_state(state if isinstance(state, dict) else None)
         return False  # não repetir via GLib
+
+    def _check_initial_poll_fallback(self) -> bool:
+        """Pinta fallback acionável se 5 s passaram sem nenhum poll OK.
+
+        UI-STATUS-OFFLINE-FALLBACK-01: o default do Glade é "Consultando..."
+        em todos os labels. Se o daemon nunca subiu, os 3 timers continuam
+        rodando mas o usuário fica olhando "Consultando..." sem entender que
+        precisa abrir a aba Daemon e clicar em Iniciar.
+        """
+        if self._first_poll_succeeded:
+            return False  # one-shot, não reagendar
+        header = self._get("header_connection")
+        if header is not None:
+            header.set_markup(
+                '<span foreground="#d33">'
+                " Desconectado — abra a aba Daemon e clique em Iniciar"
+                "</span>"
+            )
+        self._set_label("status_daemon", "Offline (sem resposta do daemon)")
+        self._set_label("status_connection", "—")
+        self._set_label("status_transport", "—")
+        self._set_label("status_active_profile", "—")
+        battery = self._get("status_battery_bar")
+        if battery is not None:
+            battery.set_fraction(0.0)
+            battery.set_text("— %")
+        # Mantém máquina de reconnect coerente.
+        self._reconnect_state = "offline"
+        self._consecutive_failures = max(
+            self._consecutive_failures, RECONNECT_FAIL_THRESHOLD
+        )
+        return False  # one-shot
 
     def _on_reconnect_state_failure(self, _exc: Exception) -> bool:
         self._update_reconnect_state(None)
@@ -252,7 +299,7 @@ class StatusActionsMixin(WidgetAccessMixin):
     # ------------------------------------------------------------------
 
     def _render_online(self, state: dict[str, Any]) -> None:
-        """Header canônico de estado ONLINE — ● verde + transport.
+        """Header canônico de estado ONLINE —  verde + transport.
 
         Delega o pinta-completo-da-aba a `_render_live_state` e
         `_render_slow_state` (já chamados pelos ticks rápidos). Aqui só
@@ -263,29 +310,29 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if connected:
             header.set_markup(
-                f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
+                f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
             )
         else:
             header.set_markup(
-                '<span foreground="#d33">○ Controle Desconectado</span>'
+                '<span foreground="#d33"> Controle Desconectado</span>'
             )
         self._set_label("status_daemon", "Online")
 
     def _render_reconnecting(self) -> None:
-        """Header intermediário — ◐ laranja + "tentando reconectar...".
+        """Header intermediário —  laranja + "tentando reconectar...".
 
         U+25D0 CIRCLE WITH LEFT HALF BLACK é Geometric Shape, não emoji.
         """
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d90">◐ Tentando Reconectar...</span>'
+            '<span foreground="#d90"> Tentando Reconectar...</span>'
         )
         self._set_label("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d33">○ Daemon Offline</span>'
+            '<span foreground="#d33"> Daemon Offline</span>'
         )
         self._set_label("status_daemon", "Offline")
         self._set_label("status_connection", "—")
@@ -306,11 +353,11 @@ class StatusActionsMixin(WidgetAccessMixin):
         if getattr(self, "_reconnect_state", "online") == "online":
             if connected:
                 header.set_markup(
-                    f'<span foreground="#2d8">● Conectado Via {transport.upper()}</span>'
+                    f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
                 )
             else:
                 header.set_markup(
-                    '<span foreground="#d33">○ Controle Desconectado</span>'
+                    '<span foreground="#d33"> Controle Desconectado</span>'
                 )
 
         l2 = int(state.get("l2_raw", 0))

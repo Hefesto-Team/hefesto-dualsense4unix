@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
 
@@ -53,7 +54,7 @@ class AutoswitchSubsystem:
         return config.autoswitch_enabled
 
 
-async def start_autoswitch(daemon: Any) -> None:
+async def start_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o AutoSwitcher usando o Daemon diretamente."""
     from hefesto_dualsense4unix.integrations.xlib_window import get_active_window_info
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
@@ -73,7 +74,7 @@ async def start_autoswitch(daemon: Any) -> None:
         daemon._autoswitch.start()
 
 
-async def stop_autoswitch(daemon: Any) -> None:
+async def stop_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: para o AutoSwitcher do Daemon."""
     if daemon._autoswitch is not None:
         with contextlib.suppress(Exception):

@@ -146,6 +146,7 @@ def _install_gi_stubs() -> None:
 
     glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.idle_add = lambda fn, *a, **kw: fn(*a, **kw)  # type: ignore[attr-defined]
+    glib_mod.source_remove = lambda *_a, **_kw: None  # type: ignore[attr-defined]
 
     repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
     repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
@@ -267,6 +268,8 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         "_send_trigger_named",
         "_reset_trigger",
         "_toast_trigger",
+        "_schedule_live_preview",
+        "_fire_live_preview",
     ):
         setattr(
             inst,
@@ -482,3 +485,82 @@ def test_apply_trigger_custom_envia_mode_e_forces(
     assert mode == "Custom"
     # [mode, force_0..force_6] = [2, 10, 11, 12, 13, 14, 15, 16]
     assert params == [2, 10, 11, 12, 13, 14, 15, 16]
+
+
+# ---------------------------------------------------------------------------
+# UI-TRIGGERS-LIVE-PREVIEW-01 — debounce + apply imediato no combobox change
+# ---------------------------------------------------------------------------
+
+
+def test_on_mode_changed_agenda_live_preview(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trocar o combobox de modo agenda `_apply_trigger` via debounce 300ms."""
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    agendados: list[tuple[int, Any, str]] = []
+
+    def fake_timeout_add(
+        interval: int, fn: Any, *args: Any, **_kw: Any
+    ) -> int:
+        agendados.append((interval, fn, args[0] if args else ""))
+        return 42  # handle fictício
+
+    monkeypatch.setattr(triggers_actions.GLib, "timeout_add", fake_timeout_add)
+
+    combo = mixin._widgets["trigger_left_mode"]
+    combo.set_active_id("Pulse")
+    mixin.on_trigger_left_mode_changed(combo)
+
+    assert agendados, "live preview não agendou GLib.timeout_add"
+    interval, fn, side = agendados[0]
+    assert interval == 300
+    assert side == "left"
+    assert callable(fn)
+
+
+def test_schedule_live_preview_cancela_pendente(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trocas rápidas devem cancelar o timer anterior antes de agendar novo."""
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    removidos: list[int] = []
+
+    def fake_remove(handle: int) -> None:
+        removidos.append(handle)
+
+    monkeypatch.setattr(triggers_actions.GLib, "source_remove", fake_remove)
+    monkeypatch.setattr(
+        triggers_actions.GLib,
+        "timeout_add",
+        lambda *_a, **_kw: 99,
+    )
+
+    # Primeira agendagem grava handle 99.
+    mixin._schedule_live_preview("left")
+    assert mixin._trigger_live_preview_timer["left"] == 99
+    # Segunda agendagem deve cancelar o handle anterior (99).
+    mixin._schedule_live_preview("left")
+    assert 99 in removidos
+
+
+def test_fire_live_preview_aplica_e_zera_timer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_fire_live_preview` chama `_apply_trigger` e zera o handle."""
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    mixin._trigger_live_preview_timer["right"] = 77
+
+    combo = mixin._widgets["trigger_right_mode"]
+    combo.set_active_id("Rigid")
+    mixin.on_trigger_right_mode_changed(combo)
+    # _on_mode_changed dispara _schedule_live_preview que zera handle local
+    # ao agendar; o teste foca o _fire_live_preview standalone.
+    mixin._trigger_live_preview_timer["right"] = 77
+    mixin._fire_live_preview("right")
+
+    assert mixin._trigger_live_preview_timer["right"] == 0
+    assert any(call[0] == "right" for call in mixin._trigger_set_calls)

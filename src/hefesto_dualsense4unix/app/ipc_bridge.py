@@ -169,7 +169,17 @@ def profile_list() -> list[dict[str, Any]]:
             }
             for p in load_all_profiles()
         ]
-    except Exception:
+    except (FileNotFoundError, PermissionError, OSError) as exc:
+        # PROFILE-LOADER-UX-01: load_all_profiles agora pula perfis corrompidos
+        # internamente; aqui só sobram falhas de I/O do diretório de perfis
+        # (permissão negada, FS desmontado etc.). Logar com exc_info para a
+        # GUI mostrar diretório vazio + investigador ter trilha.
+        logger.warning(
+            "profile_load_fallback_failed",
+            err=str(exc),
+            err_type=type(exc).__name__,
+            exc_info=True,
+        )
         return []
 
 

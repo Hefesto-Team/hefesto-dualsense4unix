@@ -1,5 +1,7 @@
 # ADR-013: USB autosuspend desabilitado per-device para DualSense
 
+**Status:** aceito
+
 ## Contexto
 
 O kernel Linux com `CONFIG_USB_RUNTIME_PM=y` (default em Pop!_OS, Ubuntu, Fedora) suspende automaticamente dispositivos USB inativos após ~2 s. Para um gamepad em polling HID a 60–120 Hz o comportamento é patológico: o kernel suspende o device, o próximo `read()` do hidraw devolve `ENODEV`, o daemon entra em reconnect loop, a GUI exibe "daemon offline" ou "tentando reconectar" com o controle fisicamente ligado. Logs de `systemd-udev` mostram `power/runtime_status` alternando entre `active` e `suspended`.
