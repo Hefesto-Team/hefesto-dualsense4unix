@@ -175,9 +175,9 @@ Quando todos os itens BT acima passarem, atualizar status da sprint em `docs/pro
 
 ### Defesa preventiva
 
-- [ ] Em cópia de teste em `/tmp/`, criar arquivo com ` Online` + `funcao` (ASCII faltando ç/ã).
-- [ ] Rodar `python3 scripts/validar-acentuacao.py --paths /tmp/teste.py --fix`.
-- [ ] Conferir que `` foi **preservado** mesmo com a correção de `funcao→função` aplicada na mesma linha.
+- [ ] Em cópia de teste em `/tmp/`, criar arquivo com `[bullet] Online` + `funcao` (ASCII faltando ç/ã); use `python3 -c "open('/tmp/teste.py','w').write('\\u25cf Online + funcao')"` para gerar o codepoint U+25CF (ADR-011 glyph). Sanitizers globais podem remover glyphs Unicode de DE/git hooks; criar via Python evita perda no editor.
+- [ ] Rodar `python3 scripts/validar-acentuacao.py /tmp/teste.py --fix`.
+- [ ] Conferir que o codepoint U+25CF foi preservado: `python3 -c "import sys; d=open('/tmp/teste.py').read(); sys.exit(0 if '\\u25cf' in d else 1)"`. Se exit 0, glyph preservado.
 
 ---
 

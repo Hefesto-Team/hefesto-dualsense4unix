@@ -36,7 +36,7 @@ jobs:
       - run: python scripts/check_version_consistency.py
 
   version-sync:
-    name: Sync fallback __init__.py  pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
+    name: Sync fallback __init__.py vs pyproject.toml (CHORE-VERSION-SYNC-GATE-01)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
