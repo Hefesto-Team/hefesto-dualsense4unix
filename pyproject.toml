@@ -54,6 +54,13 @@ tray = [
 metrics = [
     "prometheus-client>=0.19",
 ]
+# BUG-COSMIC-WLR-BACKEND-REGRESSION-01 — backend Wayland via portal D-Bus
+# usa jeepney (puro Python, sem deps nativas). Sem essa dep, o portal
+# fica indisponível e o cascade cai direto em wlrctl. Recomendada para
+# qualquer compositor Wayland (COSMIC, GNOME, Sway, etc.).
+cosmic = [
+    "jeepney>=0.8",
+]
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"

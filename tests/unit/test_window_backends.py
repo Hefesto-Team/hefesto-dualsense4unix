@@ -274,3 +274,89 @@ def test_parse_portal_result_app_id_alternativo() -> None:
 
 def test_parse_portal_result_vazio() -> None:
     assert wayland_portal._parse_portal_result({}) is None
+
+
+# ---------------------------------------------------------------------------
+# BUG-COSMIC-PORTAL-UNSUPPORTED-01 (v2.4.0, re-portado v3.1.0)
+# Threshold de 3 falhas → portal entra em modo "unsupported" silencioso.
+# ---------------------------------------------------------------------------
+
+
+def test_threshold_para_de_chamar_dbus_apos_3_falhas(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Após 3 falhas consecutivas, backend para de consultar D-Bus."""
+    conns = _install_fake_jeepney(monkeypatch, raise_on_send=RuntimeError("no method"))
+    backend = wayland_portal.WaylandPortalBackend()
+
+    for _ in range(3):
+        assert backend.get_active_window_info() is None
+    assert len(conns) == 3
+    assert backend._consecutive_failures == 3
+
+    for _ in range(5):
+        assert backend.get_active_window_info() is None
+    assert len(conns) == 3
+
+
+def test_threshold_warning_emitido_uma_vez(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Warning de unsupported deve ser logado apenas 1x na transição."""
+    _install_fake_jeepney(monkeypatch, raise_on_send=RuntimeError("no method"))
+    backend = wayland_portal.WaylandPortalBackend()
+
+    warnings: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        wayland_portal.logger,
+        "warning",
+        lambda evt, **kw: warnings.append({"evt": evt, **kw}),
+    )
+
+    for _ in range(10):
+        backend.get_active_window_info()
+
+    unsupported = [w for w in warnings if w["evt"] == "wayland_portal_unsupported"]
+    assert len(unsupported) == 1
+    assert backend._unsupported_warned is True
+
+
+def test_threshold_reset_apos_resposta_ok(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Resposta válida reseta o contador e o flag de warning."""
+    backend = wayland_portal.WaylandPortalBackend()
+    backend._consecutive_failures = 2
+    backend._unsupported_warned = True
+
+    _install_fake_jeepney(
+        monkeypatch,
+        reply_body=("handle", {"app-id": "alpha", "title": "Alpha", "pid": 5}),
+    )
+
+    info = backend.get_active_window_info()
+    assert info is not None
+    assert backend._consecutive_failures == 0
+    assert backend._unsupported_warned is False
+
+
+def test_compositor_hint_usa_xdg_current_desktop(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+    backend = wayland_portal.WaylandPortalBackend()
+    assert backend._compositor_hint() == "COSMIC"
+
+
+def test_compositor_hint_fallback_session_desktop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
+    monkeypatch.setenv("XDG_SESSION_DESKTOP", "sway")
+    backend = wayland_portal.WaylandPortalBackend()
+    assert backend._compositor_hint() == "sway"
+
+
+def test_compositor_hint_unknown_sem_envs(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+    backend = wayland_portal.WaylandPortalBackend()
+    assert backend._compositor_hint() == "unknown"

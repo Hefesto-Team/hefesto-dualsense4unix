@@ -2,7 +2,8 @@
 
 Cobre os 4 cenários de seleção de backend conforme variáveis de ambiente:
   1. X11 puro (DISPLAY sem WAYLAND_DISPLAY) → XlibBackend.
-  2. Wayland puro (WAYLAND_DISPLAY sem DISPLAY) → WaylandPortalBackend.
+  2. Wayland puro (WAYLAND_DISPLAY sem DISPLAY) → _WaylandCascadeBackend
+     (BUG-COSMIC-WLR-BACKEND-REGRESSION-01, v3.1.0).
   3. XWayland (ambas presentes) → XlibBackend (preferido).
   4. Nenhum display → NullBackend.
 """
@@ -35,13 +36,22 @@ class TestDetectWindowBackendX11:
 
 
 class TestDetectWindowBackendWayland:
-    """WAYLAND_DISPLAY presente, sem DISPLAY → WaylandPortalBackend."""
+    """WAYLAND_DISPLAY presente, sem DISPLAY → _WaylandCascadeBackend
+    (cascade portal XDG → wlrctl → None). A partir de v3.1.0
+    (BUG-COSMIC-WLR-BACKEND-REGRESSION-01)."""
 
-    def test_retorna_wayland_portal_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_retorna_wayland_cascade_backend(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
-        assert type(backend).__name__ == "WaylandPortalBackend"
+        assert type(backend).__name__ == "_WaylandCascadeBackend"
+
+    def test_cascade_compoe_portal_e_wlrctl(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        backend = detect_window_backend()
+        assert type(backend._portal).__name__ == "WaylandPortalBackend"  # type: ignore[attr-defined]
+        assert type(backend._wlrctl).__name__ == "WlrctlBackend"  # type: ignore[attr-defined]
 
     def test_nao_e_xlib(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("DISPLAY", raising=False)
@@ -54,6 +64,60 @@ class TestDetectWindowBackendWayland:
         monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
         backend = detect_window_backend()
         assert not isinstance(backend, NullBackend)
+
+    def test_cascade_usa_portal_se_respondeu(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Portal retorna WindowInfo → cascade devolve sem consultar wlrctl."""
+        from unittest.mock import MagicMock
+
+        from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
+
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        backend = detect_window_backend()
+
+        portal_info = WindowInfo(wm_class="from_portal", app_id="from_portal")
+        backend._portal.get_active_window_info = MagicMock(return_value=portal_info)  # type: ignore[attr-defined]
+        wlrctl_spy = MagicMock()
+        backend._wlrctl.get_active_window_info = wlrctl_spy  # type: ignore[attr-defined]
+
+        info = backend.get_active_window_info()
+        assert info is portal_info
+        wlrctl_spy.assert_not_called()
+
+    def test_cascade_cai_para_wlrctl_se_portal_falha(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Portal retorna None → cascade tenta wlrctl."""
+        from unittest.mock import MagicMock
+
+        from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
+
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        backend = detect_window_backend()
+
+        wlr_info = WindowInfo(wm_class="from_wlrctl", app_id="from_wlrctl")
+        backend._portal.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
+        backend._wlrctl.get_active_window_info = MagicMock(return_value=wlr_info)  # type: ignore[attr-defined]
+
+        info = backend.get_active_window_info()
+        assert info is wlr_info
+
+    def test_cascade_retorna_none_se_ambos_falham(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ambos portal e wlrctl retornam None → cascade retorna None."""
+        from unittest.mock import MagicMock
+
+        monkeypatch.delenv("DISPLAY", raising=False)
+        monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+        backend = detect_window_backend()
+
+        backend._portal.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
+        backend._wlrctl.get_active_window_info = MagicMock(return_value=None)  # type: ignore[attr-defined]
+
+        info = backend.get_active_window_info()
+        assert info is None
 
 
 class TestDetectWindowBackendXWayland:

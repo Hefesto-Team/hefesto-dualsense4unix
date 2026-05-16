@@ -107,26 +107,81 @@ class WaylandPortalBackend:
     Nenhuma thread ou loop asyncio é criada por chamada — `jeepney` roda
     sincronamente na thread do caller (o `AutoSwitcher` já bloqueia a
     500ms, então o acoplamento direto é seguro).
+
+    BUG-COSMIC-PORTAL-UNSUPPORTED-01 (v2.4.0, re-portado em v3.1.0): após
+    `_UNSUPPORTED_THRESHOLD` falhas consecutivas, o backend loga um
+    warning único com instrução para o usuário (ex: Pop!_OS COSMIC ainda
+    não implementa o método `GetActiveWindow` no `xdg-desktop-portal-cosmic`)
+    e passa a retornar None sem consultar o portal — economiza D-Bus
+    traffic e ruído no log. Reset do estado ao menos uma resposta OK
+    volta o backend a probar normalmente. Essencial para o cascade
+    portal → wlrctl não ficar pendurado 2s por chamada quando o portal
+    é definitivamente inacessível.
     """
+
+    _UNSUPPORTED_THRESHOLD: int = 3
 
     def __init__(self) -> None:
         self._handle_counter: int = 0
+        self._consecutive_failures: int = 0
+        self._unsupported_warned: bool = False
 
     def _next_handle(self) -> str:
         self._handle_counter += 1
         pid = os.getpid()
         return f"hefesto_{pid}_{self._handle_counter}"
 
-    def get_active_window_info(self) -> WindowInfo | None:
-        """Retorna WindowInfo via portal D-Bus, ou None se indisponível."""
-        handle = self._next_handle()
+    def _compositor_hint(self) -> str:
+        """Retorna uma string de pista sobre o compositor para o log."""
+        desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
+        session = os.environ.get("XDG_SESSION_DESKTOP", "")
+        return desktop or session or "unknown"
 
+    def get_active_window_info(self) -> WindowInfo | None:
+        """Retorna WindowInfo via portal D-Bus, ou None se indisponível.
+
+        Quando o portal falha `_UNSUPPORTED_THRESHOLD` vezes seguidas, para
+        de chamar o D-Bus e retorna None diretamente — poupa o event loop
+        de 2s de timeout a cada 500ms em compositors que não implementam o
+        método (ex: Pop!_OS COSMIC sem `xdg-desktop-portal-cosmic` com
+        suporte a `GetActiveWindow`).
+        """
+        if self._consecutive_failures >= self._UNSUPPORTED_THRESHOLD:
+            return None
+
+        handle = self._next_handle()
         result = _try_jeepney(handle)
         if result is not None:
+            if self._consecutive_failures > 0:
+                logger.info(
+                    "wayland_portal_recovered",
+                    after_failures=self._consecutive_failures,
+                )
+            self._consecutive_failures = 0
+            self._unsupported_warned = False
             logger.debug("wayland_portal_ok", via="jeepney", app_id=result.app_id)
             return result
 
-        logger.debug("wayland_portal_unavailable")
+        self._consecutive_failures += 1
+        if (
+            self._consecutive_failures >= self._UNSUPPORTED_THRESHOLD
+            and not self._unsupported_warned
+        ):
+            self._unsupported_warned = True
+            logger.warning(
+                "wayland_portal_unsupported",
+                compositor=self._compositor_hint(),
+                failures=self._consecutive_failures,
+                hint=(
+                    "Compositor Wayland não implementa "
+                    "'org.freedesktop.portal.Window::GetActiveWindow' "
+                    "(COSMIC 1.0+ com xdg-desktop-portal-cosmic atualizado "
+                    "ou GNOME 46+ necessário). Cascade tentara wlrctl em "
+                    "seguida; se ausente, autoswitch fica inativo."
+                ),
+            )
+        else:
+            logger.debug("wayland_portal_unavailable")
         return None
 
 
