@@ -6,7 +6,6 @@ sem lógica de negócio — facilita troca do backend no futuro (ADR-001).
 """
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 from pydualsense import pydualsense
@@ -23,7 +22,9 @@ from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 if TYPE_CHECKING:
     pass
 
-logger = logging.getLogger(__name__)
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class PyDualSenseController(IController):
@@ -79,10 +80,16 @@ class PyDualSenseController(IController):
         # estiver capturando — ver HOTFIX-2).
         if self._evdev.is_available():
             self._evdev.start()
-            logger.info("controle conectado via %s + evdev", self._transport)
+            logger.info(
+                "controller_connected_with_evdev",
+                transport=self._transport,
+            )
         else:
-            logger.info("controle conectado via %s (sem evdev, input pode ficar zerado)",
-                        self._transport)
+            logger.info(
+                "controller_connected_without_evdev",
+                transport=self._transport,
+                hint="input pode ficar zerado se kernel hid_playstation capturar evdev",
+            )
 
     def disconnect(self) -> None:
         if self._ds is None:
@@ -90,7 +97,7 @@ class PyDualSenseController(IController):
         try:
             self._evdev.stop()
         except Exception as exc:
-            logger.warning("falha ao parar evdev reader: %s", exc, exc_info=True)
+            logger.warning("evdev_reader_stop_failed", err=str(exc), exc_info=True)
         try:
             self._ds.close()
         finally:
@@ -178,7 +185,7 @@ class PyDualSenseController(IController):
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
         if self._ds is None:
-            logger.debug("set_trigger offline no-op (side=%s)", side)
+            logger.debug("set_trigger_offline_noop", side=side)
             return
         ds = self._ds
         trigger = ds.triggerL if side == "left" else ds.triggerR
@@ -290,7 +297,7 @@ class PyDualSenseController(IController):
         try:
             return TriggerModes(mode)
         except ValueError:
-            logger.warning("mode fora do enum TriggerModes: %s — mantendo raw", mode)
+            logger.warning("trigger_mode_fora_do_enum_mantendo_raw", mode=mode)
             return mode
 
 
