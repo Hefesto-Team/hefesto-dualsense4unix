@@ -19,8 +19,8 @@
 ---
 
 ```
-Versão: 3.3.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1415+ testes unit, ruff clean, mypy zero; tray fallback via janela compacta em DEs sem StatusNotifierWatcher
+Versão: 3.3.1
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1415+ testes unit, ruff clean, mypy zero; tray fallback via janela compacta em DEs sem StatusNotifierWatcher; install.sh aplica todas as 5 regras udev + uinput de cara (sem prompt)
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```

@@ -12,6 +12,18 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.3.1" date="2026-05-16">
+      <description>
+        <p>Install perfeito: install.sh aplica TODAS as 5 regras udev
+           + modules-load uinput sem prompt (era opt-in; agora default).
+           install-host-udev.sh do bundle Flatpak sincronizado com o
+           caminho source (era só 3 regras; agora 5 + conf). Manifest
+           Flatpak bundla 73-hotplug.rules + 74-hotplug-bt.rules +
+           hefesto-dualsense4unix.conf. install.sh propaga regras para
+           Flatpak instalado se detectado. Idempotente em todos os
+           caminhos: source/.deb/Flatpak.</p>
+      </description>
+    </release>
     <release version="3.3.0" date="2026-05-16">
       <description>
         <p>Janela compacta 320x90 sempre-on-top como surrogate de tray em
