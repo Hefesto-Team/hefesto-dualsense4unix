@@ -53,7 +53,7 @@ Marcar `[x]` quando passar; logar evidência quando falhar.
   import asyncio
   from hefesto_dualsense4unix.cli.ipc_client import IpcClient
   async def main():
-      async with IpcClient.connect(timeout=2) as c:
+      async with IpcClient.connect(timeout=2) as c:  # NOTE: sem `await` na frente; IpcClient.connect já é asynccontextmanager.
           st = await c.call('daemon.state_full')
           print('lx:', st.get('lx'))
           print('buttons:', st.get('buttons'))
@@ -72,7 +72,7 @@ Marcar `[x]` quando passar; logar evidência quando falhar.
   import asyncio
   from hefesto_dualsense4unix.cli.ipc_client import IpcClient
   async def main():
-      async with IpcClient.connect(timeout=2) as c:
+      async with IpcClient.connect(timeout=2) as c:  # NOTE: sem `await` na frente; IpcClient.connect já é asynccontextmanager.
           await c.call('profile.switch', {'name': 'shooter'})
   asyncio.run(main())
   "
