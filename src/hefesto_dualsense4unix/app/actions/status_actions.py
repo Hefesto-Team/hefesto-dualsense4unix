@@ -67,11 +67,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         header_connection.
 
     Estados do reconnect (`_reconnect_state`):
-        - ``"online"``: último poll retornou dict; header mostra  verde.
+        - ``"online"``: último poll retornou dict; header mostra glyph
+          U+25CF (black circle) verde + "Conectado Via <USB|BT>".
         - ``"reconnecting"``: IPC falhou 1..N-1 vezes consecutivas; header
-          mostra  laranja com texto "tentando reconectar...".
+          mostra glyph U+25D0 (left half black circle) laranja com texto
+          "Tentando Reconectar...".
         - ``"offline"``: N falhas consecutivas (N=RECONNECT_FAIL_THRESHOLD);
-          header mostra  vermelho "daemon offline".
+          header mostra glyph U+25CB (white circle) vermelho + "Daemon
+          Offline". Glyphs emitidos como NCR no markup Pango (ADR-011) para
+          escapar do sanitizer global de geometric shapes.
     """
 
     _reconnect_state: str = "online"
@@ -241,9 +245,12 @@ class StatusActionsMixin(WidgetAccessMixin):
             return False  # one-shot, não reagendar
         header = self._get("header_connection")
         if header is not None:
+            # ADR-011: glyphs Geometric Shape (U+25CB ) via NCR — hooks
+            # globais de sanitização strippam o literal, mas Pango respeita
+            # a entidade `&#9675;`.
             header.set_markup(
                 '<span foreground="#d33">'
-                " Desconectado — abra a aba Daemon e clique em Iniciar"
+                "&#9675; Desconectado — abra a aba Daemon e clique em Iniciar"
                 "</span>"
             )
         self._set_label("status_daemon", "Offline (sem resposta do daemon)")
@@ -310,29 +317,30 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if connected:
             header.set_markup(
-                f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+                f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
             )
         else:
             header.set_markup(
-                '<span foreground="#d33"> Controle Desconectado</span>'
+                '<span foreground="#d33">&#9675; Controle Desconectado</span>'
             )
         self._set_label("status_daemon", "Online")
 
     def _render_reconnecting(self) -> None:
-        """Header intermediário —  laranja + "tentando reconectar...".
+        """Header intermediário — U+25D0 laranja + "tentando reconectar...".
 
-        U+25D0 CIRCLE WITH LEFT HALF BLACK é Geometric Shape, não emoji.
+        ADR-011: U+25D0 CIRCLE WITH LEFT HALF BLACK é Geometric Shape, não
+        emoji. Emitido como NCR `&#9680;` para escapar do sanitizer global.
         """
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d90"> Tentando Reconectar...</span>'
+            '<span foreground="#d90">&#9680; Tentando Reconectar...</span>'
         )
         self._set_label("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
         header = self._get("header_connection")
         header.set_markup(
-            '<span foreground="#d33"> Daemon Offline</span>'
+            '<span foreground="#d33">&#9675; Daemon Offline</span>'
         )
         self._set_label("status_daemon", "Offline")
         self._set_label("status_connection", "—")
@@ -353,11 +361,11 @@ class StatusActionsMixin(WidgetAccessMixin):
         if getattr(self, "_reconnect_state", "online") == "online":
             if connected:
                 header.set_markup(
-                    f'<span foreground="#2d8"> Conectado Via {transport.upper()}</span>'
+                    f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
                 )
             else:
                 header.set_markup(
-                    '<span foreground="#d33"> Controle Desconectado</span>'
+                    '<span foreground="#d33">&#9675; Controle Desconectado</span>'
                 )
 
         l2 = int(state.get("l2_raw", 0))

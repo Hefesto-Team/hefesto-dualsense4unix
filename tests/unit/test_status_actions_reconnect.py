@@ -146,7 +146,9 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
     assert host._consecutive_failures == 1
     header = host.builder.get_object("header_connection")
     assert "Tentando Reconectar" in header.markup
-    assert "" in header.markup  # U+25D0, não emoji
+    # ADR-011: U+25D0 emitido como NCR `&#9680;` para escapar do sanitizer
+    # global de glyphs.
+    assert "&#9680;" in header.markup
     assert "#d90" in header.markup  # laranja canônico
 
 
@@ -157,7 +159,8 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
     header = host.builder.get_object("header_connection")
     assert "Daemon Offline" in header.markup
-    assert "" in header.markup  # U+25CB
+    # U+25CB via NCR `&#9675;`.
+    assert "&#9675;" in header.markup
     assert "#d33" in header.markup  # vermelho canônico
 
 
@@ -184,10 +187,15 @@ def test_offline_to_online_recovers(host: _Host) -> None:
 
 
 def test_reconnecting_markup_uses_geometric_shape_not_emoji(host: _Host) -> None:
-    """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos."""
+    """Garante U+25D0 (Geometric Shape) — nunca emojis coloridos.
+
+    ADR-011: o glyph é emitido como NCR `&#9680;` (decimal de 0x25D0)
+    porque o hook global de sanitização strippa o literal U+25D0 e os
+    demais geometric shapes do range U+25AA-U+25FE.
+    """
     host._update_reconnect_state(None)
     header = host.builder.get_object("header_connection")
-    assert "" in header.markup
+    assert "&#9680;" in header.markup
     # Defesa contra regressão: blocos de emoji coloridos não podem aparecer.
     for char in header.markup:
         assert ord(char) < 0x1F000, f"emoji encontrado: {char!r}"
