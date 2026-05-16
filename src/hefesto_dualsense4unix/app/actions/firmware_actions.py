@@ -2,7 +2,6 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,11 +21,12 @@ from hefesto_dualsense4unix.integrations.firmware_updater import (
     FirmwareInfo,
     FirmwareUpdater,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.integrations.firmware_updater import FirmwareApplyResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Aba Firmware exibe APENAS info read-only (versão atual do controle).
 # Atualização real de firmware via Linux foi removida da GUI por risco de
@@ -232,7 +232,7 @@ class FirmwareActionsMixin(WidgetAccessMixin):
         return False
 
     def _on_firmware_info_fail(self, short: str, detail: str) -> bool:
-        logger.info("firmware_info_falhou detail=%s", detail)
+        logger.info("firmware_info_falhou", detail=detail)
         self._set_firmware_label("firmware_status_label", short)
         return False
 
@@ -263,7 +263,7 @@ class FirmwareActionsMixin(WidgetAccessMixin):
         self._set_button_enabled(
             "firmware_apply_btn", self._firmware_selected_blob is not None
         )
-        logger.warning("firmware_apply_falhou message=%s", message)
+        logger.warning("firmware_apply_falhou", message=message)
         self._set_progress(0, "")
         self._set_firmware_label(
             "firmware_status_label",
