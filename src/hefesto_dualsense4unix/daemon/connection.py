@@ -139,6 +139,12 @@ async def reconnect_loop(daemon: Any) -> None:
                 EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
             )
             logger.info("controller_connected", transport=transport)
+            # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                    notify_controller_connected,
+                )
+                notify_controller_connected(transport or "usb")
             if not restored:
                 with contextlib.suppress(Exception):
                     await _restore_last_profile(daemon)
@@ -152,6 +158,11 @@ async def reconnect_loop(daemon: Any) -> None:
                 EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
             )
             logger.info("controller_disconnected", reason="probe_offline")
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                    notify_controller_disconnected,
+                )
+                notify_controller_disconnected("probe offline")
             was_connected = False
 
         # Quando online, dorme intervalo maior; quando offline, dorme curto.
