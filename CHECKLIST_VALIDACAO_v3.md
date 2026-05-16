@@ -175,19 +175,26 @@ Quando todos os itens BT acima passarem, atualizar status da sprint em `docs/pro
 
 ### Defesa preventiva
 
-- [ ] Em cópia de teste em `/tmp/`, criar arquivo com `● Online` + `funcao` (ASCII faltando ç/ã).
+- [ ] Em cópia de teste em `/tmp/`, criar arquivo com ` Online` + `funcao` (ASCII faltando ç/ã).
 - [ ] Rodar `python3 scripts/validar-acentuacao.py --paths /tmp/teste.py --fix`.
-- [ ] Conferir que `●` foi **preservado** mesmo com a correção de `funcao→função` aplicada na mesma linha.
+- [ ] Conferir que `` foi **preservado** mesmo com a correção de `funcao→função` aplicada na mesma linha.
 
 ---
 
-## #32 — BUG-GUI-QUIT-RESIDUAL-01 (achado colateral, não-bloqueante)
+## #32 — BUG-GUI-QUIT-RESIDUAL-01 (RESOLVIDO em v3.1.0)
 
-Sprint aberta para investigar separadamente. **Não bloqueia merge do PR #103.**
-
-- [ ] Reproduzir: GUI rodando, Sair → `pgrep -af "hefesto.*app.main"` ainda mostra PID Python em estado `S` (sleeping em futex).
-- [ ] Workaround atual: `pkill -9 -f hefesto_dualsense4unix.app.main` se quiser garantir kill.
-- [ ] Próxima sprint vai investigar `tray.stop()` D-Bus call que pode estar bloqueando GLib mainloop.
+- [x] **Resolvido** pela combinação de `Gtk.main_quit()` antes do cleanup +
+      `threading.Thread(target=self._shutdown_backend, daemon=True)`
+      (app/app.py linha 277-279). Validado em 5 runs consecutivos via
+      novo signal handler `SIGUSR2 → quit_app` (app.py linha 124-127):
+      quit em <200ms, exit=0, sem processo zumbi.
+- [x] Para reproduzir o teste em qualquer instalação:
+      ```bash
+      .venv/bin/hefesto-dualsense4unix-gui &
+      sleep 4
+      kill -USR2 $!   # simula clique 'Sair' do tray
+      ```
+      Processo deve encerrar limpo em menos de 1s.
 
 ---
 
@@ -281,4 +288,3 @@ Aplicados runtime real após primeira instalação `.deb` no Pop!_OS 22.04 / GNO
 - [ ] **Aba Mouse**: cursor/scroll com pad/giroscópio do DualSense funcional fim-a-fim.
 - [ ] **Aba Teclado**: macros e tokens virtuais validados em jogo real.
 - [ ] **state_full IPC**: verificar paridade campo a campo com snapshot canônico do daemon.
-

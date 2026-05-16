@@ -120,6 +120,11 @@ class HefestoApp(
 
         signal.signal(signal.SIGUSR1, lambda _sig, _frame: GLib.idle_add(self.show_window))
 
+        # SIGUSR2: pedido externo de "quit" — equivalente ao clique 'Sair' do tray.
+        # Útil para automação de testes do caminho de shutdown limpo
+        # (BUG-GUI-QUIT-RESIDUAL-01 #32) sem requerer interação com cosmic-panel.
+        signal.signal(signal.SIGUSR2, lambda _sig, _frame: GLib.idle_add(self.quit_app))
+
         self.builder = Gtk.Builder()
         if not MAIN_GLADE.exists():
             raise FileNotFoundError(f"main.glade não encontrado em {MAIN_GLADE}")

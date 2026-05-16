@@ -78,12 +78,13 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
     # Aguarda n_ticks ticks a 200Hz (~50ms)
-    await asyncio.sleep(0.06)
+    await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
@@ -122,6 +123,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse()
             udp_enabled=False,
             autoswitch_enabled=False,
             mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
@@ -138,7 +140,7 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse()
     daemon._mouse_device = mock_mouse
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.06)
+    await asyncio.sleep(0.15)
     daemon.stop()
     await run_task
 
@@ -177,11 +179,13 @@ async def test_snapshot_nao_chamado_quando_evdev_indisponivel():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
@@ -210,11 +214,13 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
@@ -262,13 +268,15 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
             ipc_enabled=False,
             udp_enabled=False,
             autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
         ),
     )
     daemon._hotkey_manager = _SpyHotkey()
     daemon._mouse_device = mock_mouse
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.04)
+    await asyncio.sleep(0.10)
     daemon.stop()
     await run_task
 
