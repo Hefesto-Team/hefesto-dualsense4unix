@@ -407,7 +407,10 @@ def build_from_name(
         and params
         and isinstance(params[0], list)
     ):
-        nested = cast("list[list[int]]", params)
+        # mypy infere `params` como `list[list[int] | Any]` aqui; o
+        # isinstance(params[0], list) já garante runtime safe — atribuição
+        # via name-binding mantém o tipo concreto sem cast redundante.
+        nested: list[list[int]] = params
         if name == "MultiPositionFeedback":
             strengths = _flatten_multi_position(nested)
             result = factory(strengths)

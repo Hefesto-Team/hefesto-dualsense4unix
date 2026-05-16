@@ -95,6 +95,11 @@ def test_start_stop_restart_status(isolated_systemd_user: Path, dummy_systemctl:
     installer.start()
     installer.stop()
     installer.restart()
+    # status_text agora checa se a unit existe via detect_installed_unit().
+    # Em ambiente isolado sem install(), o status retornaria mensagem
+    # "não instalada". Tocar o arquivo simula install minimal.
+    isolated_systemd_user.mkdir(parents=True, exist_ok=True)
+    (isolated_systemd_user / SERVICE_NORMAL).write_text("dummy")
     text = installer.status_text()
     assert "active" in text
 
@@ -102,6 +107,41 @@ def test_start_stop_restart_status(isolated_systemd_user: Path, dummy_systemctl:
     assert any(f"start {SERVICE_NORMAL}" in c for c in cmds)
     assert any(f"stop {SERVICE_NORMAL}" in c for c in cmds)
     assert any(f"restart {SERVICE_NORMAL}" in c for c in cmds)
+
+
+def test_status_text_unit_nao_instalada_retorna_mensagem_clara(
+    isolated_systemd_user: Path, dummy_systemctl: list
+):
+    """Sem unit em user_unit_dir nem SYSTEM_UNIT_DIRS, status_text retorna
+    mensagem orientadora em vez de string vazia (achado de validação 103)."""
+    installer = ServiceInstaller()
+    text = installer.status_text()
+    assert "não instalada" in text
+    assert "install-service" in text
+
+
+def test_status_text_concatena_stdout_e_stderr(
+    isolated_systemd_user: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Quando systemctl status escreve em stderr, mensagem fica acessível."""
+    isolated_systemd_user.mkdir(parents=True, exist_ok=True)
+    (isolated_systemd_user / SERVICE_NORMAL).write_text("dummy")
+
+    class DualOutputResult:
+        def __init__(self) -> None:
+            self.stdout = "active (running)"
+            self.stderr = "warning: unit deprecated"
+            self.returncode = 0
+
+    def fake_run(cmd, check=True, capture_output=True, text=True):
+        return DualOutputResult()
+
+    monkeypatch.setattr(si.subprocess, "run", fake_run)
+    installer = ServiceInstaller()
+    text = installer.status_text()
+    assert "active (running)" in text
+    assert "warning: unit deprecated" in text
+    assert "[stderr]" in text
 
 
 def test_detect_installed_unit(
