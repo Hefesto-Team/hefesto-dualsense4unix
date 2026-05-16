@@ -19,13 +19,23 @@
 ---
 
 ```
-Versão: 3.2.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1400+ testes unit, ruff clean, mypy zero
+Versão: 3.3.0
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1415+ testes unit, ruff clean, mypy zero; tray fallback via janela compacta em DEs sem StatusNotifierWatcher
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
 
-> **Nota de release v3.2.0** — consolida a wave de auditoria + polish sobre v3.1.1: profile loader com mensagens de erro acionáveis (JSON inválido/schema), `DaemonProtocol` substituindo `daemon: Any` em handlers críticos, autoscroll do log da aba Daemon, fallback offline da aba Status (5 s) e live preview de gatilhos no combobox. Acompanha checklist de validação atualizado (`CHECKLIST_VALIDACAO_v3.2.0.md`) e re-cobertura do shutdown isolado. Pacotes `.deb`, AppImage CLI e AppImage GUI publicados em [Releases v3.2.0](https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/tag/v3.2.0). Para histórico anterior (v3.0.0 rebrand, v3.1.x hardening COSMIC + BT), veja `CHANGELOG.md`.
+> **Nota de release v3.3.0** — resolve o caveat do tray no Pop!_OS COSMIC
+> (compositor 1.0.x sem `StatusNotifierWatcher`) com **janela compacta**
+> 320x90 sempre-on-top como surrogate (auto + opt-out via
+> `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`), notificações D-Bus com
+> botão **"Abrir Hefesto"** (controle desconectado, bateria baixa), e
+> documentação production-ready (troubleshooting, ROADMAP, matriz DE
+> empírica). 4 artefatos publicados em
+> [Releases v3.3.0](https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/tag/v3.3.0):
+> `.deb`, AppImage CLI, AppImage GUI e Flatpak. Para histórico anterior
+> (v3.0.0 rebrand, v3.1.x hardening COSMIC + BT, v3.2.0 auditoria),
+> veja [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -196,9 +206,34 @@ chmod +x Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
 #### Flatpak (COSMIC, Flathub-compatível)
 
 ```bash
-flatpak install hefesto-dualsense4unix.flatpak
+# Pré-requisito: runtime GNOME 47 + Flathub
+flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install -y --user flathub org.gnome.Platform//47
+
+# Instala o bundle e roda
+flatpak install --user hefesto-dualsense4unix-3.3.0.flatpak
 flatpak run br.andrefarias.Hefesto
+
+# Regras udev no host (uma vez só, fora do sandbox)
+flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 ```
+
+> **Nota sobre sandbox**: o manifest Flatpak usa `--device=all` (necessário para
+> `/dev/hidraw*` do DualSense + `/dev/uinput` da emulação Xbox) e
+> `--talk-name=org.freedesktop.portal.*` (notificações D-Bus + tray + portal Wayland).
+> O socket IPC do daemon vive em `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`
+> (mapeado via `--filesystem=xdg-run/hefesto-dualsense4unix:create`), então a CLI
+> nativa (`.deb` ou source install) e a GUI Flatpak conversam pelo mesmo socket
+> automaticamente. Perfis customizados ficam em
+> `~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/`.
+
+> **Caveat COSMIC**: o cosmic-comp 1.0.x ainda não implementa o protocolo
+> `org.kde.StatusNotifierWatcher` que os tray icons Ayatana usam. O Hefesto
+> detecta isso automaticamente e abre uma **janela compacta** (320×90,
+> sempre-on-top) com bateria + perfil ativo + botões. Para desativar e usar só
+> a GUI principal: `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`. Tray nativo via
+> applet Rust/libcosmic está planejado para v3.4 (ver
+> [docs/process/ROADMAP.md](docs/process/ROADMAP.md)).
 
 #### Via fonte (desenvolvimento)
 
@@ -375,18 +410,32 @@ Factories canônicas em `src/hefesto_dualsense4unix/profiles/trigger_modes.py`.
 
 ### Matriz de compatibilidade
 
-| Distro          | Kernel     | Systemd | USB | BT  | Tray | Autoswitch | Notas                                   |
-|-----------------|------------|---------|-----|-----|------|------------|-----------------------------------------|
-| Pop!\_OS 22.04 GNOME X11 | 6.17 | 249+ | OK | ?   | OK   | OK         | Runtime primário histórico              |
-| Pop!\_OS 24.04 COSMIC    | 6.18 | 256+ | OK | ?   | parcial | XWayland-only | Validado 2026-05; ver "Pop!_OS COSMIC" abaixo |
-| Ubuntu 22.04+   | 5.19+      | 249+    | ?   | ?   | ?    | ?          | Mesmo ecossistema do Pop!\_OS           |
-| Ubuntu 24.04    | 6.8+       | 255+    | ?   | ?   | ?    | ?          | Apt tem wlrctl no universe              |
-| Fedora 39+      | 6.5+       | 254+    | ?   | ?   | ?    | ?          | Esperado funcionar                      |
-| Arch (rolling)  | rolling    | atual   | ?   | ?   | ?    | ?          | Comunidade                              |
-| Debian 12 stable| 6.1        | 252     | ?   | ?   | ?    | ?          | Esperado funcionar                      |
-| Alpine / Void   | qualquer   | —       | —   | —   | —    | —          | Fora de escopo (sem logind)             |
+Validações empíricas reais (mantenedor + CI matrix). Não inflamos
+expectativa: o que não foi rodado em hardware está marcado como
+"comunidade" e aceita relato via issue.
 
-`?` = não validado. Contribuições bem-vindas em `CHECKLIST_MANUAL.md` ou via issues `needs-device`.
+| Distro                  | DE / sessão       | USB | BT | Tray | Auto-switch | Notas                                                      |
+|-------------------------|-------------------|-----|----|------|-------------|------------------------------------------------------------|
+| Pop!\_OS 22.04          | GNOME 42 X11      | OK  | OK | OK   | OK          | Runtime primário do mantenedor                             |
+| Pop!\_OS 24.04          | COSMIC alpha      | OK  | OK | janela compacta\* | OK (portal + wlrctl) | Validado 2026-05-15; tray nativo aguarda v3.4 |
+| Ubuntu 24.04            | GNOME 46 Wayland  | OK  | OK | OK (com extension) | OK         | Cobertura CI matrix                                        |
+| Ubuntu 22.04            | GNOME 42 X11      | OK  | OK | OK (com extension) | OK         | Cobertura CI matrix                                        |
+| Fedora 40+              | GNOME 46 Wayland  | comunidade | comunidade | esperado OK | esperado OK | wlrctl no apt/dnf; relatos bem-vindos                    |
+| Arch / EndeavourOS      | KDE Plasma 6      | comunidade | comunidade | esperado OK | esperado OK | applet SNI nativo do Plasma; relatos bem-vindos          |
+| Debian 12 stable        | GNOME 43 X11      | comunidade | comunidade | esperado OK | esperado OK | python3-pydantic 1.x: `pip install --user pydantic>=2`   |
+| Alpine / Void / Artix   | qualquer          | —   | —  | —    | —           | Fora de escopo (sem systemd-logind — ver ADR-009)         |
+
+`*` Pop!_OS COSMIC: o cosmic-comp 1.0.x ainda não implementa
+`org.kde.StatusNotifierWatcher`, então o tray clássico fica oculto. Hefesto
+detecta automaticamente e abre uma **janela compacta** 320×90 sempre-on-top
+com bateria + perfil + botões. Opt-out via
+`HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`. Applet nativo
+Rust+libcosmic está planejado para v3.4 — ver
+[docs/process/ROADMAP.md](docs/process/ROADMAP.md).
+
+Para reportar resultado em distro não listada: rode
+[`CHECKLIST_VALIDACAO_v3.2.0.md`](CHECKLIST_VALIDACAO_v3.2.0.md) e abra
+issue com a label `validation-report`.
 
 ---
 
@@ -510,13 +559,15 @@ Hefesto-DualSense_Unix/
 ### Documentação
 
 - **Guia visual rápido:** [`docs/usage/quickstart.md`](docs/usage/quickstart.md)
+- **Solução de problemas (troubleshooting):** [`docs/usage/troubleshooting.md`](docs/usage/troubleshooting.md)
+- **Roadmap público:** [`docs/process/ROADMAP.md`](docs/process/ROADMAP.md) — v3.3.0 / v3.4 / v4.0
 - **Protocolo de colaboração:** [`AGENTS.md`](AGENTS.md) (anonimato, idioma PT-BR, workflow de issue)
-- **Decisões arquiteturais:** [`docs/adr/`](docs/adr/) — 9 ADRs numeradas
+- **Decisões arquiteturais:** [`docs/adr/`](docs/adr/) — 17 ADRs numeradas (ADR-014 cobre COSMIC/Wayland)
 - **Schemas de protocolo:** [`docs/protocol/`](docs/protocol/) — UDP, IPC JSON-RPC, modos de gatilho
 - **Decisões de processo:** [`docs/process/HEFESTO_DECISIONS_V2.md`](docs/process/HEFESTO_DECISIONS_V2.md), [`HEFESTO_DECISIONS_V3.md`](docs/process/HEFESTO_DECISIONS_V3.md)
 - **Diário de descobertas:** [`docs/process/discoveries/`](docs/process/discoveries/) — uma jornada por arquivo
 - **Changelog:** [`CHANGELOG.md`](CHANGELOG.md)
-- **Roadmap:** [`docs/process/SPRINT_ORDER.md`](docs/process/SPRINT_ORDER.md)
+- **Ordem de sprints internas:** [`docs/process/SPRINT_ORDER.md`](docs/process/SPRINT_ORDER.md)
 
 ---
 

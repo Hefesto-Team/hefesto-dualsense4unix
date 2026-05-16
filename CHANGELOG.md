@@ -5,6 +5,79 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-05-16
+
+Release production-ready: resolve o caveat do tray COSMIC sem esperar v3.4
+(applet Rust + libcosmic) e fecha gaps de documentação que bloqueariam
+adoção pública. Sprints **forward-looking 116/118/119** continuam PLANNED
+para v3.4 (ver `docs/process/ROADMAP.md`).
+
+### Bloco A — Tray fallback COSMIC sem Rust
+
+- **`FEAT-COMPACT-WINDOW-FALLBACK-01`**: nova
+  `src/hefesto_dualsense4unix/app/compact_window.py` — `Gtk.Window`
+  320x90, `set_keep_above(True)`, sem decoração, canto inferior-direito.
+  Conteúdo: glyph status colorido (Unicode NCR para sobreviver ao
+  sanitizer global de geometric shapes) + perfil ativo + bateria %, +
+  3 botões `[ Painel ]` `[ Perfil ]` `[ Sair ]`. Tick periódico de 3 s
+  reusa `ipc_bridge.daemon_state_full()`. **Gating auto + opt-out**:
+  ativa quando `AppTray.start()` falha OU sessão COSMIC, com
+  `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0` para desativar. 7 testes
+  unit.
+- **`FEAT-NOTIFY-ACTION-OPEN-01`**:
+  `desktop_notifications.notify()` ganha kwarg
+  `actions: list[tuple[str, str]] = None` (key, label). Wire-up em
+  `notify_controller_disconnected` + `notify_battery_low` com
+  `[("open", "Abrir Hefesto")]`. Novo listener D-Bus em
+  `app/app.py:_start_notification_action_listener` — thread daemon
+  consome sinais `org.freedesktop.Notifications::ActionInvoked` via
+  jeepney sync e dispara `window.present()` via `GLib.idle_add` no
+  match com action `"open"`. 2 testes unit novos (actions kwarg flatten,
+  default vazio).
+
+### Bloco B — Documentação production-ready
+
+- **`DOC-TROUBLESHOOTING-01`**: novo
+  `docs/usage/troubleshooting.md` (~250 linhas) cobrindo 10 problemas
+  comuns (controle USB/BT não detectado, tray oculto COSMIC + GNOME 42+,
+  Flatpak sandbox + udev, daemon offline, auto-switch travado, pydantic
+  v1 em Jammy/Noble, cursor voador, "Consultando..." indefinido) com
+  comandos de diagnóstico + fix por seção + script para issue. Resolve
+  link quebrado no README:471.
+- **`DOC-ROADMAP-PUBLIC-01`**: novo
+  `docs/process/ROADMAP.md` documentando v3.3.0 (atual), v3.4 (sprints
+  116/118/119 COSMIC nativas Rust), v4.0 (KDE Plasma applet, Flatpak
+  permissions polish) sem datas (princípio: sem prazo quando depende de
+  upstream alheio). Linkado no README.
+- **`DOC-DE-COMPATIBILITY-MATRIX-01`**: matriz README:401 reescrita com
+  honestidade empírica — colunas Distro/DE/USB/BT/Tray/Auto-switch/Notas
+  com validações reais (mantenedor + CI) vs "comunidade - aceito relato".
+  Sinaliza explicitamente que Pop!_OS COSMIC tem tray = "janela compacta"
+  até v3.4.
+- **`DOC-FLATPAK-SANDBOX-NOTE-01`**: README seção Flatpak (196-201)
+  expandida com pré-requisito de runtime GNOME 47, `install-host-udev.sh`,
+  explicação do `--device=all`, socket IPC compartilhado em
+  `$XDG_RUNTIME_DIR`, e caveat COSMIC com instruções de opt-out.
+
+### Bloco C — Robustez
+
+- **`INSTALL-UDEV-SUDO-CHECK-01`**:
+  `scripts/install-host-udev.sh` pre-check `sudo -n true` antes da
+  chamada `sudo bash -c`. Em ambiente sem `NOPASSWD` (CI headless), avisa
+  o usuário em stderr antes de bloquear esperando senha.
+
+### Suíte de testes
+
+`1406 → 1415 passed (+9)`, 14 skipped, ruff clean, mypy `--strict`
+zero em 115 source files.
+
+### Compatibilidade
+
+- Sem mudanças breaking. Callers existentes de `notify()` continuam
+  válidos (kwarg `actions` é opcional).
+- `CompactWindow` é opt-out, não opt-in — quem não quer pode setar
+  `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`.
+
 ## [3.2.0] — 2026-05-16
 
 Wave V3.2 (auditoria + polish) sobre v3.1.1. Três auditorias em paralelo

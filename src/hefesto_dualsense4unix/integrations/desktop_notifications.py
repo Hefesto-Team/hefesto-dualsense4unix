@@ -44,6 +44,7 @@ def notify(
     icon: str = "input-gaming",
     timeout_ms: int = 4000,
     once_key: str | None = None,
+    actions: list[tuple[str, str]] | None = None,
 ) -> bool:
     """Emite uma notification D-Bus padrão freedesktop.
 
@@ -59,6 +60,12 @@ def notify(
             configurou notificações persistentes).
         once_key: Se fornecido, só emite uma vez por execução do daemon
             (chave deduplicação). Útil para avisos como "tray indisponível".
+        actions: Lista de `(key, label)` para botões clicáveis na
+            notification (FEAT-NOTIFY-ACTION-OPEN-01, v3.3.0). O servidor
+            emite `org.freedesktop.Notifications::ActionInvoked` com `key`
+            quando o usuário clica. Use `("default", "Abrir")` para
+            ação implícita ao clicar no corpo. Listener é responsabilidade
+            do caller (ex.: `app/app.py` escuta e chama `window.present()`).
 
     Returns:
         bool: True se a notification foi entregue ao bus.
@@ -79,14 +86,20 @@ def notify(
         interface=_NOTIFICATIONS_IFACE,
     )
 
+    # FEAT-NOTIFY-ACTION-OPEN-01: actions é list[str] alternando key, label,
+    # key, label... (spec freedesktop). Lista vazia = sem botões.
+    actions_flat: list[str] = []
+    for key, label in actions or []:
+        actions_flat.extend([str(key), str(label)])
+
     # Signature: susssasa{sv}i
     #   app_name (s), replaces_id (u=0), icon (s), summary (s), body (s),
-    #   actions (as=[]), hints (a{sv}={}), timeout (i)
+    #   actions (as), hints (a{sv}={}), timeout (i)
     msg = new_method_call(
         addr,
         "Notify",
         "susssasa{sv}i",
-        (app_name, 0, icon, summary, body, [], {}, int(timeout_ms)),
+        (app_name, 0, icon, summary, body, actions_flat, {}, int(timeout_ms)),
     )
 
     conn = None
@@ -103,7 +116,12 @@ def notify(
 
     if once_key is not None:
         _announced_once.add(once_key)
-    logger.debug("notify_sent", summary=summary, once_key=once_key)
+    logger.debug(
+        "notify_sent",
+        summary=summary,
+        once_key=once_key,
+        actions=len(actions or []),
+    )
     return True
 
 
@@ -200,6 +218,9 @@ def notify_controller_disconnected(reason: str = "") -> bool:
         body=body,
         icon="input-gaming",
         timeout_ms=3000,
+        # FEAT-NOTIFY-ACTION-OPEN-01: usuário sem tray clica para restaurar
+        # janela principal. Listener em app/app.py.
+        actions=[("open", "Abrir Hefesto")],
     )
 
 
@@ -215,6 +236,7 @@ def notify_battery_low(pct: int, threshold: int = 15) -> bool:
         icon="battery-caution",
         timeout_ms=8000,
         once_key=f"battery_low_below_{threshold}",
+        actions=[("open", "Abrir Hefesto")],
     )
 
 

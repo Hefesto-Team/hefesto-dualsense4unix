@@ -97,6 +97,17 @@ elif command -v pkexec &>/dev/null; then
   "
 elif command -v sudo &>/dev/null; then
   # Fallback para sudo (fora do Flatpak em sistemas sem polkit)
+  # INSTALL-UDEV-SUDO-CHECK-01 (v3.3.0): se o sudo cache expirou (ou
+  # nunca rodou nessa sessão), o `sudo bash -c` mostra prompt em stdin.
+  # Em sessão automatizada (CI sem TTY ou helper headless), trava.
+  # Pre-check `sudo -n true` detecta isso e avisa antes — usuário sabe
+  # que vai precisar digitar senha em ambiente real.
+  if ! sudo -n true 2>/dev/null; then
+    echo "AVISO: sudo requer senha para instalar regras udev em ${RULES_DEST}." >&2
+    echo "       Se você está rodando sem TTY (CI, headless), cancele com Ctrl+C" >&2
+    echo "       e use 'sudo bash $0' diretamente." >&2
+    echo "" >&2
+  fi
   sudo bash -c "
     for regra in ${RULES[*]}; do
       cp '${RULES_SRC}/'\${regra} '${RULES_DEST}/'\${regra}
