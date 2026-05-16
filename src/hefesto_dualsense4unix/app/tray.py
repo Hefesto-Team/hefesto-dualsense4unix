@@ -6,6 +6,15 @@ dar tempo do `cosmic-applet-status-area` registrar `org.kde.StatusNotifierWatche
 no D-Bus. Se mesmo assim o watcher não estiver presente, emitimos uma
 notification D-Bus orientadora (`cosmic-applet-status-area` desabilitado)
 e seguimos sem tray. A janela principal segue funcional como entrypoint.
+
+Warning benigno conhecido:
+    Em sessão COSMIC + Wayland, ~160ms após `Indicator.set_menu()` aparece:
+    `Gtk-CRITICAL: gtk_widget_get_scale_factor: assertion 'GTK_IS_WIDGET (widget)' failed`
+    É emitido pelo próprio `libayatana-appindicator3` durante a montagem do
+    ProxyMenu D-Bus, fora do nosso código. Não há efeito visível e o tray
+    funciona normalmente (quando o cosmic-applet-status-area está no painel).
+    Discutido em `pop-os/cosmic-applets#1009` e relacionados. Manter como
+    warning até libayatana-appindicator-glib substituir libayatana-appindicator3.
 """
 # ruff: noqa: E402
 from __future__ import annotations

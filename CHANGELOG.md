@@ -33,7 +33,19 @@ Cinco sprints corrigem regressões introduzidas no rebrand `Hefesto → Hefesto 
 - Antes: 1359 passed, 14 skipped.
 - Depois: 1379 passed, 14 skipped (+20 testes — wlrctl 18, portal threshold 7, cascade 5, desktop_notifications 16, tray COSMIC 4 — alguns refactors compensaram).
 - Ruff: clean.
-- Mypy strict: clean nos arquivos tocados (2 erros pré-existentes em `core/trigger_effects.py:410` e `app/main.py:39` herdados do commit `fc504e3`, fora de escopo das sprints v3.1).
+- Mypy strict: clean (após sprints colaterais abaixo zerarem os 2 erros pré-existentes).
+
+#### Achados resolvidos pelo caminho (2026-05-16 madrugada)
+
+Bugs colaterais descobertos durante validação real e fechados na mesma sessão (não viram sprints formais, ficam como entries do release):
+
+- **mypy errors pré-existentes (commit fc504e3)**: `core/trigger_effects.py:410` removido `cast("list[list[int]]", params)` redundante (mypy infere via `isinstance(params[0], list)`); `app/main.py:39` ganhou anotação `logger: structlog.stdlib.BoundLogger` (TYPE_CHECKING import). `mypy --strict` agora retorna `Success: no issues found in 113 source files` — gate rígido v2.2 restaurado integralmente.
+
+- **Gtk-CRITICAL benigno no startup da GUI em COSMIC**: warning `gtk_widget_get_scale_factor: assertion 'GTK_IS_WIDGET (widget)' failed` aparece ~160ms após `Indicator.set_menu()` quando o ProxyMenu D-Bus é montado pela libayatana-appindicator3. Confirmado fora do nosso código (não causa crash, sem efeito visível). Documentado em `src/hefesto_dualsense4unix/app/tray.py` docstring + referência aos issues upstream `pop-os/cosmic-applets#1009`. Sem fix (esperar migração para libayatana-appindicator-glib).
+
+- **`hefesto-dualsense4unix daemon status` retornava string vazia quando unit não-instalada**: `service_install.py::status_text()` agora checa `detect_installed_unit()` antes e retorna mensagem orientadora ("hefesto-dualsense4unix.service não instalada. Para instalar via systemd --user: ..."). Também concatena stderr quando systemctl popula só stderr. 2 testes novos em `test_service_install.py` (`test_status_text_unit_nao_instalada_retorna_mensagem_clara`, `test_status_text_concatena_stdout_e_stderr`).
+
+Suite após achados: 1381 passed, 14 skipped (+2 testes do daemon status). Ruff/mypy ambos clean.
 
 ### Hardening pós-publicação v3.0.0 — round 2 (2026-04-27 noite)
 

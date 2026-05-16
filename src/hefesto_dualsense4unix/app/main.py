@@ -7,9 +7,13 @@ import signal
 import subprocess
 import sys
 import time
+from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.app.app import HefestoApp
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
+
+if TYPE_CHECKING:
+    import structlog
 
 
 def _is_systemd_managed(pid: int) -> bool:
@@ -36,7 +40,7 @@ def _is_systemd_managed(pid: int) -> bool:
         return False
 
 
-def _kill_previous_instances(logger) -> None:
+def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
     """Mata processos GUI anteriores; preserva daemon managed por systemd.
 
     Cobre:
