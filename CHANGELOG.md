@@ -5,6 +5,59 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.1.1] — 2026-05-16
+
+Patch release fechando 5 sprints adicionais na mesma sessão da V3.1.0.
+
+### Sprints fechadas
+
+- **Sprint 109** `FEAT-BLUETOOTH-CONNECTION-01` PROTOCOL_READY → **MERGED**:
+  validado em hardware real com DualSense a0:fa:9c:00:00:01 pareado (USB
+  unplugged + `transport=bt` + battery_pct=75 + lightbar magenta + profile
+  activate fps via BT + evdev event2 + touchpad event4 OK). Proof-of-work
+  em `CHECKLIST_VALIDACAO_v3.md`. Spec ganha **Status: MERGED**.
+
+- **Sprint 108** `FEAT-APPIMAGE-GUI-WITH-GTK-01` (#33): novo
+  `scripts/build_appimage_gui.sh` gera AppImage com GTK3 + PyGObject +
+  Cairo + GdkPixbuf bundlados via `linuxdeploy-plugin-gtk`. AppDir manual
+  + venv embarcada + AppRun com `GI_TYPELIB_PATH` + `GDK_PIXBUF_*`.
+  Tamanho 43 MB (vs 30 MB CLI-only — só +13 MB para GUI bundled). Coexiste
+  com `build_appimage.sh` (CLI-only) — release ganha ambos.
+
+- **Sprint 111** `CHORE-CI-REPUBLISH-TAGS-01`: 12 tags antigas (v1.0.0..v3.0.0)
+  pushadas para o fork. Release entry v3.0.0 anchor histórica criada.
+
+- **Sprint 113** `FEAT-GITHUB-PROJECT-VISIBILITY-01`: aplicado via
+  `gh repo edit` — descrição (140 char) + homepage URL + 20 topics.
+
+- **Sprint 117** `FEAT-COSMIC-NOTIFICATIONS-01`: helpers event-driven
+  `notify_controller_connected/disconnected`, `notify_battery_low` (com
+  dedup via `once_key`), `notify_battery_recovered`, `notify_profile_activated`.
+  Gated por env var `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`
+  (default off). Wire-up em `daemon/lifecycle.py`, `daemon/connection.py`,
+  `profiles/manager.py` (5 sites, lazy import + try/except). 14 testes novos.
+
+### Sprints documentadas como PLANNED (forward-looking V3.4)
+
+Sprint stubs em `docs/process/sprints/` para backlog que requer Rust +
+libcosmic + APIs em flux:
+
+- `FEAT-COSMIC-APPLET-RUST-01` (116, XL).
+- `FEAT-COSMIC-GLOBAL-SHORTCUTS-01` (118, M).
+- `FEAT-COSMIC-PANEL-WIDGET-01` (119, L, depende 116).
+
+### Testes / suite
+
+- v3.1.0: 1381 passed.
+- v3.1.1: **1395 passed**, 14 skipped (+14 testes notifications).
+- Ruff + mypy strict: clean (113 source files).
+
+### Artifacts
+
+- `hefesto-dualsense4unix_3.1.1_amd64.deb` (8.3 MB).
+- `Hefesto-Dualsense4Unix-3.1.1-x86_64.AppImage` (30 MB, CLI-only).
+- `Hefesto-Dualsense4Unix-3.1.1-gui-x86_64.AppImage` (43 MB, GUI bundled — NOVO).
+
 ## [3.1.0] — 2026-05-16
 
 ### Hardening COSMIC pós-rebrand

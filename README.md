@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 3.1.0
+Versão: 3.1.1
 Estado: runtime validado em Pop!_OS 22.04 com DualSense USB; 1332 testes unit, ruff clean, mypy zero
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
