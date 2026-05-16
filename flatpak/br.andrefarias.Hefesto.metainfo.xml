@@ -12,6 +12,24 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.2.0" date="2026-05-16">
+      <description>
+        <p>Wave V3.2 (auditoria + polish): mensagens acionáveis no profile
+           loader, DaemonProtocol substitui daemon: Any em handlers críticos,
+           autoscroll do log da aba Daemon, fallback offline da aba Status
+           após 5s, live preview de gatilhos no combobox. Suporte completo a
+           COSMIC (Pop!_OS 24.04) + Bluetooth validado em hardware real.
+           Fix BUG-FLATPAK-PYGMENTS-MISSING-01: pygments adicionado às deps
+           Python (rich.markdown precisava transitivamente).</p>
+      </description>
+    </release>
+    <release version="3.1.1" date="2026-05-16">
+      <description>
+        <p>Hardening COSMIC + AppImage GUI bundlada + Bluetooth validation
+           end-to-end + notifications D-Bus opt-in + republish de tags
+           históricas no fork.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2024-04-22">
       <description>
         <p>Primeira versão Flatpak. Daemon + GUI GTK3 empacotados com suporte a

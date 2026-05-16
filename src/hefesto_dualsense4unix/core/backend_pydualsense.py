@@ -130,6 +130,13 @@ class PyDualSenseController(IController):
                 buttons_pressed=frozenset(),
             )
         ds = self._ds
+        # BUG-TRANSPORT-CACHE-STALE-01 (v3.2.1): re-detecta transport a cada
+        # tick em vez de só no connect(). Quando o controle troca USB <-> BT
+        # sem desconectar (cabo plugado/desplugado com BT pareado), o
+        # pydualsense atualiza `conType` mas o cached `_transport` ficava
+        # stale, fazendo a CLI/GUI mostrarem o transporte errado por horas.
+        # Custo: 1 getattr + 1 string check por tick (~60Hz) — desprezível.
+        self._transport = self._detect_transport(ds)
         battery = self._read_battery_raw(ds)
         # HOTFIX-2: evdev é fonte primária de input quando disponível.
         if self._evdev.is_available():
