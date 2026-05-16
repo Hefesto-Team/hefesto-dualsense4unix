@@ -204,6 +204,14 @@ def _make_apptray():
 
 
 def _patch_apptray_module(monkeypatch: pytest.MonkeyPatch, fake_gtk, fake_glib_module=None):
+    # FEAT-COSMIC-TRAY-FALLBACK-01: por default os testes existentes assumem
+    # path síncrono (start cria indicator imediato). Em sessão COSMIC real,
+    # a criação é deferida via GLib.timeout_add. Limpamos as env vars aqui
+    # para preservar a semântica antiga. Testes COSMIC-específicos setam
+    # XDG_CURRENT_DESKTOP=COSMIC explicitamente.
+    monkeypatch.delenv("XDG_CURRENT_DESKTOP", raising=False)
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+
     """Substitui Gtk/GLib já importados em `hefesto_dualsense4unix.app.tray`.
 
     Necessário porque o módulo já fez `from gi.repository import GLib, Gtk` no
@@ -285,3 +293,97 @@ def test_apptray_render_perfil_vazio_aplica_use_underline_false(monkeypatch: pyt
     )
     assert nenhum_item is not None
     nenhum_item.set_use_underline.assert_called_once_with(False)
+
+
+# ---------------------------------------------------------------------------
+# FEAT-COSMIC-TRAY-FALLBACK-01 (v3.1.0)
+# ---------------------------------------------------------------------------
+
+
+def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Em XDG_CURRENT_DESKTOP=COSMIC, start() registra GLib.timeout_add em vez
+    de criar o indicator sincronamente, e retorna True imediatamente."""
+    fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
+    fake_glib = MagicMock()
+    _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+
+    tray = _make_apptray()
+    assert tray.start() is True
+
+    fake_glib.timeout_add.assert_called_once()
+    args, _kwargs = fake_glib.timeout_add.call_args
+    assert args[0] == 500  # _INDICATOR_DEFERRED_MS
+    assert tray._indicator is None  # ainda não criado
+
+
+def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatch):
+    """Em GNOME (não-COSMIC), start() cria indicator imediatamente."""
+    fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
+    fake_glib = MagicMock()
+    _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "GNOME")
+
+    tray = _make_apptray()
+    assert tray.start() is True
+
+    # Nao deferiu — indicator existe e timeout_add não foi chamado pelo defer.
+    assert tray._indicator is not None
+    # GLib.timeout_add_seconds é usado para refresh, mas timeout_add (defer) não.
+    fake_glib.timeout_add.assert_not_called()
+
+
+def test_apptray_cosmic_emite_notification_se_watcher_ausente(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Em COSMIC sem watcher StatusNotifier, emite notification orientadora."""
+    fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
+    fake_glib = MagicMock()
+    _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+
+    from hefesto_dualsense4unix.app import tray as apptray_mod
+    notify_calls: list[dict] = []
+
+    def fake_notify(summary, body="", **kwargs):
+        notify_calls.append({"summary": summary, "body": body, **kwargs})
+        return True
+
+    monkeypatch.setattr(apptray_mod, "notify", fake_notify)
+    monkeypatch.setattr(apptray_mod, "statusnotifierwatcher_available", lambda: False)
+
+    tray = _make_apptray()
+    tray.start()
+    # Executa o deferred manualmente (simula GLib.timeout_add disparando).
+    tray._start_deferred()
+
+    assert notify_calls
+    assert "Tray" in notify_calls[0]["body"]
+    assert notify_calls[0]["once_key"] == "cosmic_tray_missing"
+
+
+def test_apptray_cosmic_nao_emite_notification_se_watcher_ok(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Em COSMIC com watcher disponível, NÃO emite notification."""
+    fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
+    fake_glib = MagicMock()
+    _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+
+    from hefesto_dualsense4unix.app import tray as apptray_mod
+    notify_calls: list[dict] = []
+
+    monkeypatch.setattr(
+        apptray_mod, "notify",
+        lambda *a, **kw: (notify_calls.append({"a": a, "kw": kw}), True)[1],
+    )
+    monkeypatch.setattr(apptray_mod, "statusnotifierwatcher_available", lambda: True)
+
+    tray = _make_apptray()
+    tray.start()
+    tray._start_deferred()
+
+    assert notify_calls == []
