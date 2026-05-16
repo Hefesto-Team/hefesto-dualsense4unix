@@ -5,7 +5,9 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
-### v3.1.0 (preview) — Hardening COSMIC pós-rebrand (2026-05-15..16)
+## [3.1.0] — 2026-05-16
+
+### Hardening COSMIC pós-rebrand
 
 Cinco sprints corrigem regressões introduzidas no rebrand `Hefesto → Hefesto - Dualsense4Unix` (commits 7f4687a/08e92b8) e formalizam compatibilidade explícita com Pop!_OS 24.04 COSMIC. Validação primária em hardware real do mantenedor (Pop!_OS 24.04 + COSMIC 1.0.0 + DualSense USB 054c:0ce6 conectado).
 
@@ -31,11 +33,18 @@ Cinco sprints corrigem regressões introduzidas no rebrand `Hefesto → Hefesto 
 #### Testes / suite
 
 - Antes: 1359 passed, 14 skipped.
-- Depois: 1379 passed, 14 skipped (+20 testes — wlrctl 18, portal threshold 7, cascade 5, desktop_notifications 16, tray COSMIC 4 — alguns refactors compensaram).
-- Ruff: clean.
-- Mypy strict: clean (após sprints colaterais abaixo zerarem os 2 erros pré-existentes).
+- Depois: 1381 passed, 14 skipped (+22 testes liquido).
+- Ruff: clean em todo `src/` e `tests/`.
+- Mypy strict: clean (113 source files, zero erros — gate v2.2 restaurado).
 
-#### Achados resolvidos pelo caminho (2026-05-16 madrugada)
+#### Sprints colaterais (mesma sessão)
+
+- **Sprint 85** (`BUG-TEST-POLL-LOOP-UINPUT-TIMING-01`): flaky test resolvido em `tests/unit/test_poll_loop_evdev_cache.py` — 5 `DaemonConfig` ganharam `keyboard_emulation_enabled=False`, `asyncio.sleep` aumentado de 0.04/0.06 para 0.10/0.15 (margem 2x). 3 runs consecutivos da suite verdes.
+- **Sprint 107** (`BUG-GUI-QUIT-RESIDUAL-01` #32): confirmado resolvido pelo `threading.Thread(target=self._shutdown_backend, daemon=True)` em `app/app.py:279`. Signal handler `SIGUSR2 -> quit_app` adicionado em `app.py:124-127` para reprodução automatizada (`kill -USR2 <pid>`); 5 runs em <200ms, exit=0.
+- **Sprint 110** (`VALIDATION-V3-MOUSE-TECLADO-01`): `UinputKeyboardDevice`, `UinputMouseDevice`, `UinputGamepad` (Xbox 360 vendor 0x45e product 0x28e) todos funcionais em COSMIC + Wayland.
+- **Sprint 115** (`CHORE-CI-COSMIC-MATRIX-01`): `.github/workflows/ci.yml` runtime-smoke job agora tem dimensão `desktop_env: [gnome, cosmic]` que valida `_WaylandCascadeBackend` vs `XlibBackend` conforme env mockado.
+
+#### Achados resolvidos pelo caminho
 
 Bugs colaterais descobertos durante validação real e fechados na mesma sessão (não viram sprints formais, ficam como entries do release):
 
@@ -45,7 +54,17 @@ Bugs colaterais descobertos durante validação real e fechados na mesma sessão
 
 - **`hefesto-dualsense4unix daemon status` retornava string vazia quando unit não-instalada**: `service_install.py::status_text()` agora checa `detect_installed_unit()` antes e retorna mensagem orientadora ("hefesto-dualsense4unix.service não instalada. Para instalar via systemd --user: ..."). Também concatena stderr quando systemctl popula só stderr. 2 testes novos em `test_service_install.py` (`test_status_text_unit_nao_instalada_retorna_mensagem_clara`, `test_status_text_concatena_stdout_e_stderr`).
 
-Suite após achados: 1381 passed, 14 skipped (+2 testes do daemon status). Ruff/mypy ambos clean.
+- **`examples/mod_integration_udp.py` referenciado mas inexistente**: `CHECKLIST_MANUAL.md:57` e `docs/process/HEFESTO_PROJECT.md` mencionavam o exemplo, mas o arquivo não existia. Criado script de ~140 linhas demonstrando todas 5 instruções do schema DSX v1 (`TriggerUpdate`, `RGBUpdate`, `PlayerLED`, `MicLED`, `ResetToUserSettings`) via socket UDP em `127.0.0.1:6969`. Validado em hardware real: daemon recebe e processa sem erro.
+
+- **Logger stdlib + format `%s` em `backend_pydualsense.py` e `firmware_actions.py`**: migrado para `structlog.get_logger()` com kwargs estruturados. Eventos canônicos agora: `controller_connected_with_evdev transport=X`, `evdev_reader_stop_failed err=...`, `set_trigger_offline_noop side=X`, `trigger_mode_fora_do_enum_mantendo_raw mode=X`, `firmware_info_falhou detail=X`, `firmware_apply_falhou message=X`.
+
+- **CLI sem flag `--version` global**: adicionado callback Typer `--version` (compat POSIX). `version` subcomando preservado. Ambos retornam `__version__` da package metadata.
+
+- **Tray docstring "(requer extra [tray])" renderizada como "(requer extra )"**: `[tray]` interpretado como markup pelo rich/typer. Trocado por "(requer pip install com extra tray)".
+
+- **Sanitizer global do mantenedor remove glyphs Unicode**: hooks em `~/.config/git/hooks/` + `universal-sanitizer.py` removem caracteres em ranges amplos (incluindo `` U+2194, `` U+25CF, `` U+2717 que o ADR-011 do projeto permite). Substituições aplicadas em `ci.yml` ("" → "vs") e `CHECKLIST_VALIDACAO_v3.md` (codepoints via `python3 -c`). Sem alterar a regra do sanitizer (ambiente do usuário).
+
+Total suite após v3.1.0: **1381 passed, 14 skipped**. Ruff/mypy ambos clean.
 
 ### Hardening pós-publicação v3.0.0 — round 2 (2026-04-27 noite)
 
