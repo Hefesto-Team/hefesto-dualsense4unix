@@ -245,22 +245,13 @@ combobox window treeview.view:selected {
     color: #fff;
 }
 
-@media (prefers-contrast: more) {
-    .hefesto-dualsense4unix-window {
-        background-color: #000;
-        color: #fff;
-    }
-    .hefesto-dualsense4unix-window button,
-    .hefesto-dualsense4unix-window combobox,
-    .hefesto-dualsense4unix-window entry {
-        background-color: #000;
-        color: #fff;
-        border: 2px solid #ff0;
-    }
-    .hefesto-dualsense4unix-window button:hover,
-    .hefesto-dualsense4unix-window button:focus {
-        border: 3px solid #fff;
-        background-color: #ff0;
-        color: #000;
-    }
-}
+/* @media (prefers-contrast: more) NAO foi incluido aqui — GTK3 CSS parser
+ * trata o token `@media` como `@unknown` e FALHA O LOAD INTEIRO do arquivo
+ * (theme_css_falha_carga: "unknown @ rule (1)"). Em GTK4 o suporte e
+ * parcial mas tambem instavel. O canal real continua sendo a classe
+ * `.hefesto-dualsense4unix-high-contrast` aplicada por `app/theme.py`
+ * quando detecta `gtk-theme-name=HighContrast*`.
+ *
+ * Quando o projeto migrar para GTK4, reavaliar e reintroduzir o @media
+ * como bloco separado opt-in.
+ */
