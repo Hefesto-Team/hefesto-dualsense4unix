@@ -128,6 +128,13 @@ class HefestoApp(
         signal.signal(signal.SIGUSR2, lambda _sig, _frame: GLib.idle_add(self.quit_app))
 
         self.builder = Gtk.Builder()
+        # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): vincula o builder ao mesmo
+        # domínio gettext usado pelo `_()` do Python. Labels com
+        # `translatable="yes"` no Glade resolvem via locale ativo
+        # (init_locale() em app/main.py).
+        from hefesto_dualsense4unix.utils.i18n import TEXTDOMAIN
+
+        self.builder.set_translation_domain(TEXTDOMAIN)
         if not MAIN_GLADE.exists():
             raise FileNotFoundError(f"main.glade não encontrado em {MAIN_GLADE}")
         self.builder.add_from_file(str(MAIN_GLADE))

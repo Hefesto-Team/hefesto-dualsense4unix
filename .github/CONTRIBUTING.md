@@ -141,6 +141,72 @@ Se sua PR expõe dados pessoais de terceiros por engano, avise imediatamente par
 
 ---
 
+## Contribuir traduções
+
+A partir de v3.4.0 o projeto tem i18n baseline com EN + PT-BR. Para
+adicionar um idioma novo (ex.: `fr_FR`, `es_ES`, `de_DE`):
+
+```bash
+# 1. Cria o catálogo .po do novo idioma com base no .pot atual.
+bash scripts/i18n_extract.sh --add fr_FR
+# Vai criar po/fr_FR.po com msgstr vazios para todas as ~230 entradas.
+
+# 2. Edita po/fr_FR.po, preenchendo cada msgstr.
+#    Preserve format specifiers (%s, %d) e markup Pango (<span>, <b>, <i>).
+$EDITOR po/fr_FR.po
+
+# 3. Compila os .mo:
+bash scripts/i18n_compile.sh
+
+# 4. Valida localmente:
+LANG=fr_FR.UTF-8 LANGUAGE=fr ./run.sh --gui
+# (ou hefesto-dualsense4unix version)
+
+# 5. Commit + PR.
+git add po/fr_FR.po
+git commit -m "i18n: adiciona traducao fr_FR (v3.4.0)"
+```
+
+### Convenções de tradução
+
+- **Unidades**: preservar SI (s, ms, %). Não converter "segundos" para
+  "seconds" em strings que mostram número (ex.: "5 s" continua "5 s",
+  não "5 seconds").
+- **Formalidade**: usar tom técnico-neutro. EN: imperativo direto
+  ("Apply", "Save"). PT-BR: idem ("Aplicar", "Salvar"). Evitar tu/você
+  ambíguo.
+- **Glossário curto**:
+
+  | PT-BR | EN | Observação |
+  |---|---|---|
+  | gatilho adaptativo | adaptive trigger | mesma feature da Sony |
+  | perfil | profile | nunca "profile" parcial |
+  | atalho | shortcut | não "atalho global" → "global shortcut" |
+  | controle | controller | gamepad também aceito |
+  | bateria | battery | ASCII |
+  | lightbar | lightbar | termo Sony; não traduzir |
+  | rumble | rumble | termo Sony; não traduzir |
+  | daemon | daemon | termo técnico Unix; não traduzir |
+
+- **Markup Pango**: as strings em `main.glade` usam `<span ...>`,
+  `<b>`, `<i>`. Manter literal — o GTK renderiza markup só se a string
+  contém tags.
+
+### Atualizar uma tradução existente
+
+Quando alguém marcar uma nova string via `_()` ou `translatable="yes"`:
+
+```bash
+bash scripts/i18n_extract.sh         # gera .pot novo + msgmerge nos .po
+$EDITOR po/<lang>.po                  # preencher entries marcadas fuzzy/vazias
+bash scripts/i18n_compile.sh         # re-compila .mo
+```
+
+`msgmerge` preserva traduções existentes; só strings realmente novas
+ficam com `msgstr ""` ou `#, fuzzy`.
+
+---
+
 ## Dúvidas
 
 Abra uma issue com o template `question` ou consulte:

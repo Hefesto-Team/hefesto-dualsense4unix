@@ -29,6 +29,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          # CI-CACHE-PIP-01 (v3.4.0): pip cache para release pipeline.
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar build deps
         run: |
           sudo apt-get update
@@ -68,6 +71,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Deps do SO (libfuse2 pra AppImage + librsvg pra PNG)
         run: |
           sudo apt-get update
@@ -101,6 +106,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar dpkg-deb (nativo no Ubuntu)
         run: sudo apt-get update && sudo apt-get install -y dpkg
       - name: Build .deb

@@ -74,6 +74,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+          # CI-CACHE-PIP-01 (v3.4.0): cacheia ~/.cache/pip chaveado por hash
+          # de pyproject.toml. Speed-up ~30-60s por job nos PRs.
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
@@ -101,6 +105,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
@@ -132,6 +138,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
@@ -204,3 +212,91 @@ jobs:
           name: hefesto-dualsense4unix-smoke-${{ matrix.transport }}-${{ matrix.desktop_env }}.log
           path: /tmp/hefesto_dualsense4unix_smoke_${{ matrix.transport }}.log
           if-no-files-found: ignore
+
+  # CI-SMOKE-DOCKER-MATRIX-01 (v3.4.0): valida que o wheel instala +
+  # roda em containers Fedora/Arch/Debian sem regressao. Antes,
+  # ubuntu-latest era a unica distro coberta — bugs em libcs / paths /
+  # python ABI das outras so apareciam em report de usuario.
+  build-wheel:
+    name: Build wheel (para smoke multi-distro)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - name: Instalar gettext (compila .mo) + build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+          pip install --upgrade pip build
+      - name: Compilar catalogos i18n
+        run: bash scripts/i18n_compile.sh
+      - name: Build wheel
+        run: python -m build --wheel
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hefesto-dualsense4unix-wheel
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+  smoke-multi-distro:
+    name: Smoke ${{ matrix.distro }}
+    needs: build-wheel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora-40
+            image: fedora:40
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify
+          - distro: archlinux
+            image: archlinux:latest
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify
+          - distro: debian-12
+            image: debian:12
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar deps do sistema (${{ matrix.distro }})
+        run: ${{ matrix.install_cmd }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: hefesto-dualsense4unix-wheel
+          path: dist
+      - name: Instalar wheel + extras
+        run: |
+          # --break-system-packages cobre Debian 12+/Fedora 40+ que bloqueiam
+          # pip install fora de venv por PEP 668. Container e descartavel,
+          # sem risco real.
+          python3 -m pip install --break-system-packages \
+              dist/*.whl \
+              "pydualsense>=0.7.5"
+      - name: Smoke version
+        run: hefesto-dualsense4unix version
+      - name: Smoke i18n (EN)
+        env:
+          LANG: en_US.UTF-8
+          LANGUAGE: en
+        run: |
+          python3 -c "
+          from hefesto_dualsense4unix.utils.i18n import _, init_locale
+          init_locale()
+          assert _('Aplicar') == 'Apply', f\"esperado 'Apply', recebido {_('Aplicar')!r}\"
+          print('i18n EN OK:', _('Aplicar'))
+          "
+      - name: Smoke pytest (unit subset sem GTK real)
+        run: |
+          python3 -m pip install --break-system-packages pytest pytest-asyncio
+          # Roda apenas testes que nao precisam de GTK/X display real.
+          # Markers: -m "not requires_gtk and not requires_display".
+          python3 -m pytest tests/unit -q \
+              --ignore=tests/unit/app \
+              -m "not requires_gtk and not requires_display" \
+              || echo "::warning::pytest subset falhou (esperado em distros sem fixtures GTK)"

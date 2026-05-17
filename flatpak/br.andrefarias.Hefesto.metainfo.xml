@@ -12,6 +12,19 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.4.0" date="2026-05-16">
+      <description>
+        <p>i18n EN baseline: catalogo po/en.po com 232 strings traduzidas +
+           po/pt_BR.po identidade. Acessibilidade ATK em 15 botoes
+           criticos (Orca anuncia labels descritivas). High-contrast
+           CSS automatico quando tema do sistema casa HighContrast*.
+           Packaging multi-distro: PKGBUILD Arch (AUR-ready), RPM spec
+           Fedora (Copr-ready), Nix flake (NixOS/home-manager). CI smoke
+           matrix Docker (fedora:40, archlinux:latest, debian:12) com
+           cache pip. Locale bundlado em 5 destinos (install.sh, .deb,
+           AppImage, Flatpak, wheel).</p>
+      </description>
+    </release>
     <release version="3.3.1" date="2026-05-16">
       <description>
         <p>Install perfeito: install.sh aplica TODAS as 5 regras udev

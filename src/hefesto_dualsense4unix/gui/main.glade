@@ -60,7 +60,7 @@
   </object>
 
   <object class="GtkWindow" id="main_window">
-    <property name="title">Hefesto - Dualsense4Unix</property>
+    <property name="title" translatable="yes">Hefesto - Dualsense4Unix</property>
     <property name="default-width">1100</property>
     <property name="default-height">680</property>
     <signal name="delete-event" handler="on_window_delete_event"/>
@@ -91,7 +91,7 @@
                 <property name="valign">center</property>
                 <child>
                   <object class="GtkLabel" id="app_wordmark">
-                    <property name="label">&lt;span size="xx-large" weight="bold"&gt;Hefesto - Dualsense4Unix&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;Hefesto - Dualsense4Unix&lt;/span&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -99,7 +99,7 @@
                 </child>
                 <child>
                   <object class="GtkLabel" id="app_subtitle">
-                    <property name="label">&lt;span size="small" foreground="#888"&gt;daemon de gatilhos adaptativos para DualSense&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span size="small" foreground="#888"&gt;daemon de gatilhos adaptativos para DualSense&lt;/span&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -110,7 +110,7 @@
             </child>
             <child>
               <object class="GtkLabel" id="header_connection">
-                <property name="label">&lt;span foreground="#d33"&gt;○ Controle Desconectado&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span foreground="#d33"&gt; Controle Desconectado&lt;/span&gt;</property>
                 <property name="use-markup">True</property>
                 <property name="valign">center</property>
               </object>
@@ -140,7 +140,7 @@
 
                 <child>
                   <object class="GtkFrame" id="frame_status_estado">
-                    <property name="label">Estado</property>
+                    <property name="label" translatable="yes">Estado</property>
                     <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>
@@ -150,14 +150,14 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Conexão:</property>
+                            <property name="label" translatable="yes">Conexão:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_connection">
-                            <property name="label">Consultando...</property>
+                            <property name="label" translatable="yes">Consultando...</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
@@ -165,7 +165,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Transporte:</property>
+                            <property name="label" translatable="yes">Transporte:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -180,7 +180,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Bateria:</property>
+                            <property name="label" translatable="yes">Bateria:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
@@ -196,14 +196,14 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Perfil ativo:</property>
+                            <property name="label" translatable="yes">Perfil ativo:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_active_profile">
-                            <property name="label">Nenhum</property>
+                            <property name="label" translatable="yes">Nenhum</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
@@ -211,14 +211,14 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Daemon:</property>
+                            <property name="label" translatable="yes">Daemon:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_daemon">
-                            <property name="label">Consultando...</property>
+                            <property name="label" translatable="yes">Consultando...</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
@@ -231,7 +231,7 @@
 
                 <child>
                   <object class="GtkFrame" id="frame_status_gatilhos_live">
-                    <property name="label">Gatilhos</property>
+                    <property name="label" translatable="yes">Gatilhos</property>
                     <child>
                       <object class="GtkGrid" id="live_triggers_grid">
                         <property name="row-spacing">6</property>
@@ -241,7 +241,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">L2</property>
+                            <property name="label" translatable="yes">L2</property>
                             <property name="xalign">1</property>
                             <property name="width-chars">3</property>
                           </object>
@@ -258,7 +258,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">R2</property>
+                            <property name="label" translatable="yes">R2</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -279,7 +279,7 @@
 
                 <child>
                   <object class="GtkFrame" id="frame_status_sticks">
-                    <property name="label">Sticks e botões</property>
+                    <property name="label" translatable="yes">Sticks e botões</property>
                     <child>
                       <!-- Grid 3 colunas homogêneas: stick esq | stick dir | grid glyphs.
                            Mesma largura, alinhamento vertical topo — composição simétrica. -->
@@ -299,7 +299,7 @@
                             <property name="valign">start</property>
                             <child>
                               <object class="GtkLabel" id="stick_left_title">
-                                <property name="label">Analógico Esquerdo (L3)</property>
+                                <property name="label" translatable="yes">Analógico Esquerdo (L3)</property>
                                 <property name="xalign">0.5</property>
                                 <property name="use-markup">True</property>
                               </object>
@@ -314,7 +314,7 @@
                             </child>
                             <child>
                               <object class="GtkLabel" id="live_lx_label">
-                                <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                <property name="label" translatable="yes">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
                                 <property name="use-markup">True</property>
                                 <property name="xalign">0.5</property>
                               </object>
@@ -336,7 +336,7 @@
                             <property name="valign">start</property>
                             <child>
                               <object class="GtkLabel" id="stick_right_title">
-                                <property name="label">Analógico Direito (R3)</property>
+                                <property name="label" translatable="yes">Analógico Direito (R3)</property>
                                 <property name="xalign">0.5</property>
                                 <property name="use-markup">True</property>
                               </object>
@@ -351,7 +351,7 @@
                             </child>
                             <child>
                               <object class="GtkLabel" id="live_rx_label">
-                                <property name="label">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
+                                <property name="label" translatable="yes">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
                                 <property name="use-markup">True</property>
                                 <property name="xalign">0.5</property>
                               </object>
@@ -385,7 +385,7 @@
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Status</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Status</property></object>
             </child>
 
             <!-- ABA TRIGGERS -->
@@ -398,7 +398,7 @@
                 <!-- Coluna L2 -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">L2 (gatilho esquerdo)</property>
+                    <property name="label" translatable="yes">L2 (gatilho esquerdo)</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -411,7 +411,7 @@
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Modo:</property>
+                                <property name="label" translatable="yes">Modo:</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -434,7 +434,7 @@
                             <property name="no-show-all">True</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Preset:</property>
+                                <property name="label" translatable="yes">Preset:</property>
                                 <property name="visible">True</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -484,14 +484,26 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
-                                <property name="label">Aplicar em L2</property>
+                                <property name="label" translatable="yes">Aplicar em L2</property>
                                 <signal name="clicked" handler="on_trigger_left_apply"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no L2</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho esquerdo ao controle</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_left_reset">
-                                <property name="label">Desligar (Off)</property>
+                                <property name="label" translatable="yes">Desligar (Off)</property>
                                 <signal name="clicked" handler="on_trigger_left_reset"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Desligar gatilho L2</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Restaura L2 ao modo Off (sem resistencia)</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                           </object>
@@ -506,7 +518,7 @@
                 <!-- Coluna R2 -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">R2 (gatilho direito)</property>
+                    <property name="label" translatable="yes">R2 (gatilho direito)</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -519,7 +531,7 @@
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Modo:</property>
+                                <property name="label" translatable="yes">Modo:</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -542,7 +554,7 @@
                             <property name="no-show-all">True</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Preset:</property>
+                                <property name="label" translatable="yes">Preset:</property>
                                 <property name="visible">True</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -592,14 +604,26 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
-                                <property name="label">Aplicar em R2</property>
+                                <property name="label" translatable="yes">Aplicar em R2</property>
                                 <signal name="clicked" handler="on_trigger_right_apply"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar gatilho adaptativo no R2</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia configuracao do gatilho direito ao controle</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_right_reset">
-                                <property name="label">Desligar (Off)</property>
+                                <property name="label" translatable="yes">Desligar (Off)</property>
                                 <signal name="clicked" handler="on_trigger_right_reset"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Desligar gatilho R2</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Restaura R2 ao modo Off (sem resistencia)</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                           </object>
@@ -614,7 +638,7 @@
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Gatilhos</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Gatilhos</property></object>
             </child>
 
             <!-- ABA LIGHTBAR + PLAYER LEDS -->
@@ -626,7 +650,7 @@
 
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Lightbar (barra de LED)</property>
+                    <property name="label" translatable="yes">Lightbar (barra de LED)</property>
                     <property name="hexpand">True</property>
                     <child>
                       <object class="GtkBox">
@@ -636,7 +660,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Escolha a cor da barra de LED do DualSense.</property>
+                            <property name="label" translatable="yes">Escolha a cor da barra de LED do DualSense.</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -649,7 +673,7 @@
 
                             <child>
                               <object class="GtkColorButton" id="lightbar_color_button">
-                                <property name="title">Selecione a cor</property>
+                                <property name="title" translatable="yes">Selecione a cor</property>
                                 <property name="use-alpha">False</property>
                                 <signal name="color-set" handler="on_lightbar_color_set"/>
                               </object>
@@ -658,7 +682,7 @@
 
                             <child>
                               <object class="GtkFrame">
-                                <property name="label">Prévia</property>
+                                <property name="label" translatable="yes">Prévia</property>
                                 <property name="hexpand">True</property>
                                 <child>
                                   <object class="GtkDrawingArea" id="lightbar_preview">
@@ -680,14 +704,26 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="lightbar_apply">
-                                <property name="label">Aplicar no controle</property>
+                                <property name="label" translatable="yes">Aplicar no controle</property>
                                 <signal name="clicked" handler="on_lightbar_apply"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar cor na lightbar</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Envia cor selecionada para a barra de LED do controle</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="lightbar_off">
-                                <property name="label">Apagar</property>
+                                <property name="label" translatable="yes">Apagar</property>
                                 <signal name="clicked" handler="on_lightbar_off"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Apagar lightbar</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle</property>
+                                </object>
+                              </child>
                               </object>
                             </child>
                           </object>
@@ -696,7 +732,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Luminosidade (%)</property>
+                            <property name="label" translatable="yes">Luminosidade (%)</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -721,7 +757,7 @@
 
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">LEDs de Jogador</property>
+                    <property name="label" translatable="yes">LEDs de Jogador</property>
                     <property name="hexpand">True</property>
                     <child>
                       <object class="GtkBox">
@@ -731,7 +767,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">5 indicadores inferiores do controle.</property>
+                            <property name="label" translatable="yes">5 indicadores inferiores do controle.</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -742,18 +778,18 @@
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
                             <property name="homogeneous">True</property>
-                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label">LED 4</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label">LED 5</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label" translatable="yes">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label" translatable="yes">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label" translatable="yes">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label" translatable="yes">LED 4</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label" translatable="yes">LED 5</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">&lt;b&gt;Presets rápidos:&lt;/b&gt;</property>
+                            <property name="label" translatable="yes">&lt;b&gt;Presets rápidos:&lt;/b&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="margin-top">8</property>
@@ -768,25 +804,25 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_all">
-                                <property name="label">Todos</property>
+                                <property name="label" translatable="yes">Todos</property>
                                 <signal name="clicked" handler="on_player_leds_preset_all"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p1">
-                                <property name="label">Player 1</property>
+                                <property name="label" translatable="yes">Player 1</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p1"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p2">
-                                <property name="label">Player 2</property>
+                                <property name="label" translatable="yes">Player 2</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p2"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_none">
-                                <property name="label">Nenhum</property>
+                                <property name="label" translatable="yes">Nenhum</property>
                                 <signal name="clicked" handler="on_player_leds_preset_none"/>
                               </object>
                             </child>
@@ -801,9 +837,15 @@
                             <property name="margin-top">8</property>
                             <child>
                               <object class="GtkButton" id="player_leds_apply">
-                                <property name="label">Aplicar LEDs</property>
-                                <property name="tooltip-text">Reenvia o padrão atual dos 5 checkboxes ao controle via daemon.</property>
+                                <property name="label" translatable="yes">Aplicar LEDs</property>
+                                <property name="tooltip-text" translatable="yes">Reenvia o padrão atual dos 5 checkboxes ao controle via daemon.</property>
                                 <signal name="clicked" handler="on_player_leds_apply"/>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar LEDs de jogador</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia o padrao atual dos 5 LEDs ao controle</property>
+                                </object>
+                              </child>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -813,7 +855,7 @@
 
                         <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label">&lt;i&gt;Checkboxes e presets enviam imediatamente ao hardware. Use &quot;Aplicar LEDs&quot; para reenviar o padrão atual (útil após reconectar o controle ou trocar de perfil). As marcações ficam salvas no perfil ativo.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Checkboxes e presets enviam imediatamente ao hardware. Use &quot;Aplicar LEDs&quot; para reenviar o padrão atual (útil após reconectar o controle ou trocar de perfil). As marcações ficam salvas no perfil ativo.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -829,7 +871,7 @@
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Lightbar</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Lightbar</property></object>
             </child>
 
             <!-- ABA RUMBLE — FEAT-RUMBLE-POLICY-01 -->
@@ -842,7 +884,7 @@
                 <!-- Card 1: Política de rumble -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Política de rumble</property>
+                    <property name="label" translatable="yes">Política de rumble</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -858,28 +900,28 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
-                                <property name="label">Economia</property>
+                                <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
-                                <property name="label">Balanceado</property>
+                                <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
-                                <property name="label">Máximo</property>
+                                <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
-                                <property name="label">Auto</property>
+                                <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
                               </object>
@@ -895,7 +937,7 @@
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Intensidade global:</property>
+                                <property name="label" translatable="yes">Intensidade global:</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -918,7 +960,7 @@
                         <!-- Label educativo do modo Auto (oculto por padrão) -->
                         <child>
                           <object class="GtkLabel" id="rumble_policy_auto_label">
-                            <property name="label">Modo Auto: ajusta intensidade conforme a bateria do controle.
+                            <property name="label" translatable="yes">Modo Auto: ajusta intensidade conforme a bateria do controle.
 Bateria &gt;50%: 100% (Máximo).  20-50%: 70% (Balanceado).  &lt;20%: 30% (Economia).
 Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="xalign">0</property>
@@ -938,7 +980,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Card 2: Testar motores -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Testar motores</property>
+                    <property name="label" translatable="yes">Testar motores</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -952,7 +994,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Motor fraco (weak)</property>
+                                <property name="label" translatable="yes">Motor fraco (weak)</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
@@ -970,7 +1012,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">Motor forte (strong)</property>
+                                <property name="label" translatable="yes">Motor forte (strong)</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -996,19 +1038,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="rumble_test_500ms">
-                                <property name="label">Testar por 500 ms</property>
+                                <property name="label" translatable="yes">Testar por 500 ms</property>
                                 <signal name="clicked" handler="on_rumble_test_500ms"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_apply">
-                                <property name="label">Aplicar</property>
+                                <property name="label" translatable="yes">Aplicar</property>
                                 <signal name="clicked" handler="on_rumble_apply"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_stop">
-                                <property name="label">Parar</property>
+                                <property name="label" translatable="yes">Parar</property>
                                 <signal name="clicked" handler="on_rumble_stop"/>
                               </object>
                             </child>
@@ -1018,7 +1060,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkLabel" id="rumble_info">
-                            <property name="label">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -1035,7 +1077,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Rumble</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Rumble</property></object>
             </child>
 
             <!-- Aba Perfis -->
@@ -1052,7 +1094,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="spacing">8</property>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label">&lt;b&gt;Perfis salvos&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Perfis salvos&lt;/b&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="xalign">0</property>
                       </object>
@@ -1080,31 +1122,49 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="homogeneous">True</property>
                         <child>
                           <object class="GtkButton" id="profile_new_button">
-                            <property name="label">Novo</property>
+                            <property name="label" translatable="yes">Novo</property>
                             <signal name="clicked" handler="on_profile_new"/>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Criar novo perfil</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Abre dialogo para criar um perfil em branco</property>
+                            </object>
+                          </child>
                           </object>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_duplicate_button">
-                            <property name="label">Duplicar</property>
+                            <property name="label" translatable="yes">Duplicar</property>
                             <signal name="clicked" handler="on_profile_duplicate"/>
                           </object>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_remove_button">
-                            <property name="label">Remover</property>
+                            <property name="label" translatable="yes">Remover</property>
                             <signal name="clicked" handler="on_profile_remove"/>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Remover perfil selecionado</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Apaga permanentemente o perfil destacado na lista</property>
+                            </object>
+                          </child>
                           </object>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_activate_button">
-                            <property name="label">Ativar</property>
+                            <property name="label" translatable="yes">Ativar</property>
                             <signal name="clicked" handler="on_profile_activate"/>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Ativar perfil selecionado</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Aplica o perfil destacado e o marca como ativo</property>
+                            </object>
+                          </child>
                           </object>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_reload_button">
-                            <property name="label">Recarregar</property>
+                            <property name="label" translatable="yes">Recarregar</property>
                             <signal name="clicked" handler="on_profile_reload"/>
                           </object>
                         </child>
@@ -1128,7 +1188,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="spacing">8</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
+                            <property name="label" translatable="yes">&lt;b&gt;Editor do perfil&lt;/b&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                           </object>
@@ -1136,7 +1196,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkLabel" id="profile_advanced_toggle_label">
-                            <property name="label">Modo avançado</property>
+                            <property name="label" translatable="yes">Modo avançado</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1146,7 +1206,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="halign">end</property>
                             <property name="valign">center</property>
                             <property name="active">False</property>
-                            <property name="tooltip-text">Ativa campos técnicos (window_class, title_regex, process_name)</property>
+                            <property name="tooltip-text" translatable="yes">Ativa campos técnicos (window_class, title_regex, process_name)</property>
                             <signal name="state-set" handler="on_profile_advanced_toggle"/>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1162,7 +1222,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="column-spacing">10</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Nome:</property>
+                            <property name="label" translatable="yes">Nome:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
@@ -1175,7 +1235,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Prioridade:</property>
+                            <property name="label" translatable="yes">Prioridade:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -1190,7 +1250,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="digits">0</property>
                             <property name="value-pos">right</property>
                             <property name="hexpand">True</property>
-                            <property name="tooltip-text">Quanto maior, mais prioritário que outros perfis (0-100)</property>
+                            <property name="tooltip-text" translatable="yes">Quanto maior, mais prioritário que outros perfis (0-100)</property>
                             <marks>
                               <mark value="0" position="bottom">0</mark>
                               <mark value="50" position="bottom">50</mark>
@@ -1216,7 +1276,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="spacing">10</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label">&lt;b&gt;Aplica a:&lt;/b&gt;</property>
+                                <property name="label" translatable="yes">&lt;b&gt;Aplica a:&lt;/b&gt;</property>
                                 <property name="use-markup">True</property>
                                 <property name="xalign">0</property>
                               </object>
@@ -1229,7 +1289,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                  o preview JSON (UI-PROFILES-RIGHT-PANEL-REBALANCE-01). -->
                             <child>
                               <object class="GtkComboBoxText" id="profile_aplica_a_combo">
-                                <property name="tooltip-text">Contexto em que este perfil será aplicado</property>
+                                <property name="tooltip-text" translatable="yes">Contexto em que este perfil será aplicado</property>
                                 <items>
                                   <item id="any" translatable="yes">Qualquer janela</item>
                                   <item id="steam" translatable="yes">Jogos da Steam</item>
@@ -1251,7 +1311,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 <property name="no-show-all">True</property>
                                 <child>
                                   <object class="GtkLabel">
-                                    <property name="label">Nome do jogo:</property>
+                                    <property name="label" translatable="yes">Nome do jogo:</property>
                                     <property name="xalign">1</property>
                                   </object>
                                   <packing><property name="expand">False</property></packing>
@@ -1259,8 +1319,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 <child>
                                   <object class="GtkEntry" id="profile_simple_custom_name">
                                     <property name="hexpand">True</property>
-                                    <property name="placeholder-text">ex.: eldenring</property>
-                                    <property name="tooltip-text">Nome do executável do jogo (sem extensão no Linux)</property>
+                                    <property name="placeholder-text" translatable="yes">ex.: eldenring</property>
+                                    <property name="tooltip-text" translatable="yes">Nome do executável do jogo (sem extensão no Linux)</property>
                                   </object>
                                   <packing><property name="expand">True</property><property name="fill">True</property></packing>
                                 </child>
@@ -1271,7 +1331,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           </object>
                           <packing>
                             <property name="name">simples</property>
-                            <property name="title">Simples</property>
+                            <property name="title" translatable="yes">Simples</property>
                           </packing>
                         </child>
 
@@ -1286,42 +1346,42 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 <property name="column-spacing">10</property>
                                 <child>
                                   <object class="GtkLabel">
-                                    <property name="label">window_class:</property>
+                                    <property name="label" translatable="yes">window_class:</property>
                                     <property name="xalign">1</property>
                                   </object>
                                   <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_window_class_entry">
-                                    <property name="placeholder-text">CSV: Steam,firefox</property>
+                                    <property name="placeholder-text" translatable="yes">CSV: Steam,firefox</property>
                                     <property name="hexpand">True</property>
                                   </object>
                                   <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                                 </child>
                                 <child>
                                   <object class="GtkLabel">
-                                    <property name="label">title_regex:</property>
+                                    <property name="label" translatable="yes">title_regex:</property>
                                     <property name="xalign">1</property>
                                   </object>
                                   <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_title_regex_entry">
-                                    <property name="placeholder-text">regex (re.search)</property>
+                                    <property name="placeholder-text" translatable="yes">regex (re.search)</property>
                                     <property name="hexpand">True</property>
                                   </object>
                                   <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                                 </child>
                                 <child>
                                   <object class="GtkLabel">
-                                    <property name="label">process_name:</property>
+                                    <property name="label" translatable="yes">process_name:</property>
                                     <property name="xalign">1</property>
                                   </object>
                                   <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_process_name_entry">
-                                    <property name="placeholder-text">CSV: doom.x86_64,celeste</property>
+                                    <property name="placeholder-text" translatable="yes">CSV: doom.x86_64,celeste</property>
                                     <property name="hexpand">True</property>
                                   </object>
                                   <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
@@ -1331,7 +1391,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             </child>
                             <child>
                               <object class="GtkLabel" id="profile_editor_hint">
-                                <property name="label">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
+                                <property name="label" translatable="yes">&lt;i&gt;AND entre campos preenchidos, OR dentro de cada lista. Campos vazios são ignorados.&lt;/i&gt;</property>
                                 <property name="use-markup">True</property>
                                 <property name="xalign">0</property>
                                 <property name="wrap">True</property>
@@ -1341,7 +1401,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           </object>
                           <packing>
                             <property name="name">avancado</property>
-                            <property name="title">Avancado</property>
+                            <property name="title" translatable="yes">Avancado</property>
                           </packing>
                         </child>
 
@@ -1356,7 +1416,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                          sprint 77 (~450px antes, ~280px agora com preview). -->
                     <child>
                       <object class="GtkFrame">
-                        <property name="label">Preview do perfil (JSON)</property>
+                        <property name="label" translatable="yes">Preview do perfil (JSON)</property>
                         <property name="margin-top">8</property>
                         <child>
                           <object class="GtkScrolledWindow">
@@ -1366,7 +1426,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="propagate-natural-height">True</property>
                             <child>
                               <object class="GtkLabel" id="profile_preview_label">
-                                <property name="label">(selecione um perfil para ver o preview)</property>
+                                <property name="label" translatable="yes">(selecione um perfil para ver o preview)</property>
                                 <property name="xalign">0</property>
                                 <property name="yalign">0</property>
                                 <property name="wrap">True</property>
@@ -1391,7 +1451,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="spacing">6</property>
                         <child>
                           <object class="GtkButton" id="profile_save_button">
-                            <property name="label">Salvar</property>
+                            <property name="label" translatable="yes">Salvar</property>
                             <signal name="clicked" handler="on_profile_save"/>
                           </object>
                         </child>
@@ -1405,7 +1465,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Perfis</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Perfis</property></object>
             </child>
 
             <!-- Aba Daemon -->
@@ -1419,19 +1479,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="row-spacing">6</property>
                     <property name="column-spacing">10</property>
                     <child>
-                      <object class="GtkLabel"><property name="label">Unit:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Unit:</property><property name="xalign">1</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="daemon_unit_label">
-                        <property name="label">hefesto-dualsense4unix.service</property>
+                        <property name="label" translatable="yes">hefesto-dualsense4unix.service</property>
                         <property name="xalign">0</property>
                         <property name="selectable">True</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Status:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Status:</property><property name="xalign">1</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
@@ -1443,7 +1503,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Auto-start:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Auto-start:</property><property name="xalign">1</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
@@ -1463,45 +1523,63 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
-                        <property name="label">Iniciar</property>
+                        <property name="label" translatable="yes">Iniciar</property>
                         <signal name="clicked" handler="on_daemon_start"/>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Iniciar daemon</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Executa systemctl start do servico do daemon</property>
+                        </object>
+                      </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
-                        <property name="label">Parar</property>
+                        <property name="label" translatable="yes">Parar</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Parar daemon</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Executa systemctl stop do servico do daemon</property>
+                        </object>
+                      </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_restart_button">
-                        <property name="label">Reiniciar</property>
+                        <property name="label" translatable="yes">Reiniciar</property>
                         <signal name="clicked" handler="on_daemon_restart"/>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Reiniciar daemon</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Executa systemctl restart do servico do daemon</property>
+                        </object>
+                      </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_refresh_button">
-                        <property name="label">Atualizar</property>
+                        <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_daemon_refresh"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_logs_button">
-                        <property name="label">Ver Logs</property>
+                        <property name="label" translatable="yes">Ver Logs</property>
                         <signal name="clicked" handler="on_daemon_view_logs"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_restart_daemon">
-                        <property name="label">Reiniciar daemon</property>
-                        <property name="tooltip-text">Executa systemctl --user restart hefesto-dualsense4unix.service</property>
+                        <property name="label" translatable="yes">Reiniciar daemon</property>
+                        <property name="tooltip-text" translatable="yes">Executa systemctl --user restart hefesto-dualsense4unix.service</property>
                         <signal name="clicked" handler="on_daemon_service_restart"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_migrate_to_systemd">
-                        <property name="label">Migrar para systemd</property>
-                        <property name="tooltip-text">Para o processo avulso e inicia o daemon via systemctl --user start hefesto-dualsense4unix.service</property>
+                        <property name="label" translatable="yes">Migrar para systemd</property>
+                        <property name="tooltip-text" translatable="yes">Para o processo avulso e inicia o daemon via systemctl --user start hefesto-dualsense4unix.service</property>
                         <property name="visible">False</property>
                         <property name="no-show-all">True</property>
                         <signal name="clicked" handler="on_daemon_migrate_to_systemd"/>
@@ -1512,7 +1590,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
+                    <property name="label" translatable="yes">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -1540,7 +1618,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Daemon</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Daemon</property></object>
             </child>
 
             <!-- Aba Emulação -->
@@ -1557,7 +1635,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="halign">start</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
-                      <object class="GtkLabel"><property name="label">UINPUT:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">UINPUT:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
@@ -1569,29 +1647,29 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Device:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Device:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_device_name_label">
-                        <property name="label">Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)</property>
+                        <property name="label" translatable="yes">Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">VID:PID:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">VID:PID:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_vidpid_label">
-                        <property name="label">045E:028E (Xbox 360)</property>
+                        <property name="label" translatable="yes">045E:028E (Xbox 360)</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Gamepads:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Gamepads:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                     </child>
                     <child>
@@ -1615,36 +1693,36 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property><property name="width">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Próximo:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Próximo:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_combo_next_label">
-                        <property name="label">PS + D-pad Cima</property>
+                        <property name="label" translatable="yes">PS + D-pad Cima</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Anterior:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Anterior:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_combo_prev_label">
-                        <property name="label">PS + D-pad Baixo</property>
+                        <property name="label" translatable="yes">PS + D-pad Baixo</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Buffer:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Buffer:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                     </child>
                     <child>
@@ -1655,12 +1733,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label">Passthrough em emulação:</property><property name="halign">end</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Passthrough em emulação:</property><property name="halign">end</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_passthrough_label">
-                        <property name="label">Não</property>
+                        <property name="label" translatable="yes">Não</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
@@ -1676,19 +1754,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-end">10</property>
                     <child>
                       <object class="GtkButton" id="emulation_test_button">
-                        <property name="label">Testar criação de device virtual</property>
+                        <property name="label" translatable="yes">Testar criação de device virtual</property>
                         <signal name="clicked" handler="on_emulation_test_device"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_refresh_button">
-                        <property name="label">Atualizar</property>
+                        <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_emulation_refresh"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_open_toml_button">
-                        <property name="label">Editar daemon.toml</property>
+                        <property name="label" translatable="yes">Editar daemon.toml</property>
                         <signal name="clicked" handler="on_emulation_open_toml"/>
                       </object>
                     </child>
@@ -1697,7 +1775,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
@@ -1709,7 +1787,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Emulação</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Emulação</property></object>
             </child>
 
             <!-- Aba Mouse (somente emulação de mouse — Teclado é aba separada) -->
@@ -1725,7 +1803,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="spacing">10</property>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label">&lt;b&gt;Emular mouse+teclado&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Emular mouse+teclado&lt;/b&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="xalign">0</property>
                       </object>
@@ -1763,7 +1841,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label">Velocidade do cursor:</property>
+                        <property name="label" translatable="yes">Velocidade do cursor:</property>
                         <property name="xalign">1</property>
                       </object>
                       <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
@@ -1781,7 +1859,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label">Velocidade da rolagem:</property>
+                        <property name="label" translatable="yes">Velocidade da rolagem:</property>
                         <property name="xalign">1</property>
                       </object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -1816,7 +1894,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="margin">10</property>
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">&lt;b&gt;Mapeamento&lt;/b&gt;</property>
+                            <property name="label" translatable="yes">&lt;b&gt;Mapeamento&lt;/b&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                           </object>
@@ -1827,7 +1905,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="row-spacing">4</property>
                             <property name="column-spacing">8</property>
                             <child>
-                              <object class="GtkLabel"><property name="label">Cruz (X) ou L2</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Cruz (X) ou L2</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                             </child>
                             <child>
@@ -1835,11 +1913,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Botão esquerdo</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Botão esquerdo</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Triângulo (△) ou R2</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Triângulo () ou R2</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                             </child>
                             <child>
@@ -1847,11 +1925,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Botão direito</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Botão direito</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">1</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">R3 (clique no analógico direito)</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">R3 (clique no analógico direito)</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                             </child>
                             <child>
@@ -1859,11 +1937,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Botão do meio</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Botão do meio</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">2</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Círculo (○)</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Círculo ()</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                             </child>
                             <child>
@@ -1871,11 +1949,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Enter</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Enter</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">3</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Quadrado (□)</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Quadrado (□)</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
                             </child>
                             <child>
@@ -1883,11 +1961,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Esc</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Esc</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">4</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">D-pad (↑↓←→)</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">D-pad (↑↓←→)</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">5</property></packing>
                             </child>
                             <child>
@@ -1895,11 +1973,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">5</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Setas do teclado</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Setas do teclado</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">5</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Analógico esquerdo</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Analógico esquerdo</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">6</property></packing>
                             </child>
                             <child>
@@ -1907,11 +1985,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">6</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Movimento do cursor</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Movimento do cursor</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">6</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Analógico direito</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Analógico direito</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">7</property></packing>
                             </child>
                             <child>
@@ -1919,7 +1997,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">1</property><property name="top-attach">7</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label">Rolagem vertical e horizontal</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Rolagem vertical e horizontal</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">2</property><property name="top-attach">7</property></packing>
                             </child>
                           </object>
@@ -1933,7 +2011,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                 <child>
                   <object class="GtkLabel">
-                    <property name="label">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Útil para navegar o desktop, apresentações e jogos que só aceitam mouse/teclado. Requer módulo uinput carregado e regra udev (ver aba Emulação).&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
@@ -1943,7 +2021,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Mouse</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Mouse</property></object>
             </child>
 
             <!-- Aba Teclado (FEAT-KEYBOARD-UI-01 separada de Mouse para
@@ -1957,7 +2035,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <property name="spacing">10</property>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label">&lt;b&gt;Bindings do perfil ativo&lt;/b&gt;</property>
+                    <property name="label" translatable="yes">&lt;b&gt;Bindings do perfil ativo&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -1965,7 +2043,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="key_bindings_legend">
-                    <property name="label">Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__. Combos com '+' (ex: KEY_LEFTALT+KEY_TAB).</property>
+                    <property name="label" translatable="yes">Formato: KEY_* (ex: KEY_C, KEY_ENTER) ou __OPEN_OSK__/__CLOSE_OSK__. Combos com '+' (ex: KEY_LEFTALT+KEY_TAB).</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
@@ -1996,21 +2074,21 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="homogeneous">False</property>
                     <child>
                       <object class="GtkButton" id="key_binding_add_btn">
-                        <property name="label">Adicionar</property>
+                        <property name="label" translatable="yes">Adicionar</property>
                         <signal name="clicked" handler="on_key_binding_add"/>
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
                     <child>
                       <object class="GtkButton" id="key_binding_remove_btn">
-                        <property name="label">Remover</property>
+                        <property name="label" translatable="yes">Remover</property>
                         <signal name="clicked" handler="on_key_binding_remove"/>
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
                     <child>
                       <object class="GtkButton" id="key_binding_restore_btn">
-                        <property name="label">Restaurar defaults</property>
+                        <property name="label" translatable="yes">Restaurar defaults</property>
                         <signal name="clicked" handler="on_key_binding_restore_defaults"/>
                       </object>
                       <packing><property name="expand">False</property></packing>
@@ -2021,7 +2099,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Teclado</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Teclado</property></object>
             </child>
 
             <!-- Aba Firmware -->
@@ -2037,7 +2115,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Banner de risco -->
                 <child>
                   <object class="GtkLabel" id="firmware_risk_banner_label">
-                    <property name="label">RISCO DE BRICK. USE APENAS BLOBS OFICIAIS SONY (fwupdater.dl.playstation.net). NÃO DESCONECTE DURANTE O UPDATE.</property>
+                    <property name="label" translatable="yes">RISCO DE BRICK. USE APENAS BLOBS OFICIAIS SONY (fwupdater.dl.playstation.net). NÃO DESCONECTE DURANTE O UPDATE.</property>
                     <property name="wrap">True</property>
                     <property name="xalign">0</property>
                     <attributes>
@@ -2051,7 +2129,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Frame: versão atual do controle -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Versão atual do controle</property>
+                    <property name="label" translatable="yes">Versão atual do controle</property>
                     <child>
                       <object class="GtkGrid">
                         <property name="margin-start">12</property>
@@ -2063,7 +2141,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Update version:</property>
+                            <property name="label" translatable="yes">Update version:</property>
                             <property name="halign">end</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
@@ -2079,7 +2157,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Hardware:</property>
+                            <property name="label" translatable="yes">Hardware:</property>
                             <property name="halign">end</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -2095,7 +2173,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label">Build date:</property>
+                            <property name="label" translatable="yes">Build date:</property>
                             <property name="halign">end</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
@@ -2111,8 +2189,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkButton" id="firmware_check_btn">
-                            <property name="label">Verificar versão</property>
-                            <property name="tooltip-text">Consulta o controle via dualsensectl info</property>
+                            <property name="label" translatable="yes">Verificar versão</property>
+                            <property name="tooltip-text" translatable="yes">Consulta o controle via dualsensectl info</property>
                             <signal name="clicked" handler="on_firmware_check"/>
                             <property name="halign">start</property>
                           </object>
@@ -2127,7 +2205,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Frame: aplicar firmware -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label">Aplicar firmware (.bin)</property>
+                    <property name="label" translatable="yes">Aplicar firmware (.bin)</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -2146,7 +2224,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <child>
                               <object class="GtkEntry" id="firmware_file_entry">
                                 <property name="editable">False</property>
-                                <property name="placeholder-text">Nenhum arquivo selecionado</property>
+                                <property name="placeholder-text" translatable="yes">Nenhum arquivo selecionado</property>
                                 <property name="hexpand">True</property>
                               </object>
                               <packing><property name="expand">True</property><property name="fill">True</property></packing>
@@ -2154,8 +2232,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                             <child>
                               <object class="GtkButton" id="firmware_browse_btn">
-                                <property name="label">Selecionar .bin…</property>
-                                <property name="tooltip-text">Escolher blob de firmware local (950272 bytes)</property>
+                                <property name="label" translatable="yes">Selecionar .bin…</property>
+                                <property name="tooltip-text" translatable="yes">Escolher blob de firmware local (950272 bytes)</property>
                                 <signal name="clicked" handler="on_firmware_browse"/>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -2167,12 +2245,18 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <!-- Botão aplicar -->
                         <child>
                           <object class="GtkButton" id="firmware_apply_btn">
-                            <property name="label">Aplicar firmware</property>
-                            <property name="tooltip-text">Envia o blob ao controle. Exige confirmação.</property>
+                            <property name="label" translatable="yes">Aplicar firmware</property>
+                            <property name="tooltip-text" translatable="yes">Envia o blob ao controle. Exige confirmação.</property>
                             <property name="sensitive">False</property>
                             <property name="halign">start</property>
                             <signal name="clicked" handler="on_firmware_apply"/>
                             <style><class name="destructive-action"/></style>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Aplicar firmware</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Envia o blob de firmware ao controle (RISCO DE BRICK)</property>
+                            </object>
+                          </child>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -2194,7 +2278,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Status -->
                 <child>
                   <object class="GtkLabel" id="firmware_status_label">
-                    <property name="label">Pronto.</property>
+                    <property name="label" translatable="yes">Pronto.</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
                   </object>
@@ -2204,7 +2288,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Dica de origem -->
                 <child>
                   <object class="GtkLabel">
-                    <property name="label">&lt;i&gt;Backend: dualsensectl (MIT, nowrep/dualsensectl). Blobs oficiais: fwupdater.dl.playstation.net/fwupdater/info.json&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Backend: dualsensectl (MIT, nowrep/dualsensectl). Blobs oficiais: fwupdater.dl.playstation.net/fwupdater/info.json&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
@@ -2215,7 +2299,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label">Firmware</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Firmware</property></object>
             </child>
 
           </object>
@@ -2255,18 +2339,24 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                 <child>
                   <object class="GtkButton" id="btn_footer_apply">
-                    <property name="label">Aplicar</property>
-                    <property name="tooltip-text">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                    <property name="label" translatable="yes">Aplicar</property>
+                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
                     <signal name="clicked" handler="on_apply_draft"/>
                     <style><class name="btn-apply"/></style>
+                  <child internal-child="accessible">
+                    <object class="AtkObject">
+                      <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
+                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse ao controle</property>
+                    </object>
+                  </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
 
                 <child>
                   <object class="GtkButton" id="btn_footer_save_profile">
-                    <property name="label">Salvar Perfil</property>
-                    <property name="tooltip-text">Salva o estado atual como um perfil nomeado</property>
+                    <property name="label" translatable="yes">Salvar Perfil</property>
+                    <property name="tooltip-text" translatable="yes">Salva o estado atual como um perfil nomeado</property>
                     <signal name="clicked" handler="on_save_profile"/>
                     <style><class name="btn-save"/></style>
                   </object>
@@ -2275,8 +2365,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                 <child>
                   <object class="GtkButton" id="btn_footer_import">
-                    <property name="label">Importar</property>
-                    <property name="tooltip-text">Carrega um perfil de arquivo .json</property>
+                    <property name="label" translatable="yes">Importar</property>
+                    <property name="tooltip-text" translatable="yes">Carrega um perfil de arquivo .json</property>
                     <signal name="clicked" handler="on_import_profile"/>
                     <style><class name="btn-import"/></style>
                   </object>
@@ -2285,8 +2375,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                 <child>
                   <object class="GtkButton" id="btn_footer_restore_default">
-                    <property name="label">Restaurar Default</property>
-                    <property name="tooltip-text">Restaura o perfil 'Meu Perfil' ao estado original</property>
+                    <property name="label" translatable="yes">Restaurar Default</property>
+                    <property name="tooltip-text" translatable="yes">Restaura o perfil 'Meu Perfil' ao estado original</property>
                     <signal name="clicked" handler="on_restore_default"/>
                     <style><class name="btn-restore"/></style>
                   </object>

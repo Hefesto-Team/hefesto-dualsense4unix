@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hefesto-dualsense4unix"
-version = "3.3.1"
+version = "3.4.0"
 description = "Hefesto - Dualsense4Unix: Linux adaptive trigger daemon for DualSense controllers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -71,6 +71,10 @@ packages = ["src/hefesto_dualsense4unix"]
 include = [
     "src/hefesto_dualsense4unix/gui/*.glade",
     "src/hefesto_dualsense4unix/gui/assets/*.png",
+    # FEAT-I18N-CATALOGS-01 (v3.4.0): catalogos .mo embedded no wheel.
+    # Fallback de path #5 do utils/i18n.py — garante que pip install
+    # sem rodar install.sh ainda resolva traducoes.
+    "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
 [tool.ruff]

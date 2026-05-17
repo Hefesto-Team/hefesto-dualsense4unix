@@ -19,22 +19,23 @@
 ---
 
 ```
-Versão: 3.3.1
+Versão: 3.4.0
 Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1415+ testes unit, ruff clean, mypy zero; tray fallback via janela compacta em DEs sem StatusNotifierWatcher; install.sh aplica todas as 5 regras udev + uinput de cara (sem prompt)
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
 
-> **Nota de release v3.3.0** — resolve o caveat do tray no Pop!_OS COSMIC
-> (compositor 1.0.x sem `StatusNotifierWatcher`) com **janela compacta**
-> 320x90 sempre-on-top como surrogate (auto + opt-out via
-> `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`), notificações D-Bus com
-> botão **"Abrir Hefesto"** (controle desconectado, bateria baixa), e
-> documentação production-ready (troubleshooting, ROADMAP, matriz DE
-> empírica). 4 artefatos publicados em
-> [Releases v3.3.0](https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/tag/v3.3.0):
-> `.deb`, AppImage CLI, AppImage GUI e Flatpak. Para histórico anterior
-> (v3.0.0 rebrand, v3.1.x hardening COSMIC + BT, v3.2.0 auditoria),
+> **Nota de release v3.4.0** — i18n EN baseline (catálogo `po/en.po`
+> com 232 strings + `pt_BR.po` identidade; carregado via `LANG` do
+> sistema), **acessibilidade ATK** em 15 botões críticos (Orca anuncia
+> "Aplicar gatilho adaptativo no L2" em vez de "botão sem nome") +
+> high-contrast palette WCAG AAA detectada automaticamente pelo tema
+> do sistema, **packaging multi-distro** (PKGBUILD AUR + RPM spec
+> Fedora/Copr + Nix flake), **CI smoke matrix Docker**
+> (fedora:40 + archlinux:latest + debian:12) com cache pip. 4
+> artefatos canônicos continuam: `.deb`, AppImage CLI, AppImage GUI e
+> Flatpak. Para histórico anterior (v3.3.x tray fallback + install
+> perfeito, v3.2.0 auditoria, v3.1.x hardening COSMIC, v3.0.0 rebrand)
 > veja [`CHANGELOG.md`](CHANGELOG.md).
 
 ---

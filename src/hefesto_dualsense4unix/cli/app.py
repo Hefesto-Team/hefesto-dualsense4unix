@@ -215,6 +215,12 @@ def daemon_status() -> None:
 
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
+    # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES do
+    # Typer parsear argv para que `--help` e mensagens de erro do nosso
+    # callback global respeitem `LANG=en_US.UTF-8` quando o usuário pedir.
+    from hefesto_dualsense4unix.utils.i18n import init_locale
+
+    init_locale()
     app()
 
 

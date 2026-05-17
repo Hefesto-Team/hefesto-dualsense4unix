@@ -12,6 +12,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
+from hefesto_dualsense4unix.utils.i18n import _  # noqa: E402
+
 
 def prompt_profile_name(
     parent: Gtk.Window,
@@ -23,13 +25,13 @@ def prompt_profile_name(
     Campo pré-preenchido com ``default_name``.
     """
     dialog = Gtk.Dialog(
-        title="Salvar Perfil",
+        title=_("Salvar Perfil"),
         parent=parent,
         modal=True,
         destroy_with_parent=True,
     )
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button("Salvar", Gtk.ResponseType.OK)
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Salvar"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.OK)
 
     content = dialog.get_content_area()
@@ -39,7 +41,7 @@ def prompt_profile_name(
     content.set_margin_start(16)
     content.set_margin_end(16)
 
-    label = Gtk.Label(label="Nome do perfil:")
+    label = Gtk.Label(label=_("Nome do perfil:"))
     label.set_xalign(0.0)
     content.add(label)
 
@@ -72,11 +74,11 @@ def prompt_overwrite_existing(
         destroy_with_parent=True,
         message_type=Gtk.MessageType.QUESTION,
         buttons=Gtk.ButtonsType.NONE,
-        text=f"Perfil '{name}' já existe.",
+        text=_("Perfil '%s' já existe.") % name,
     )
-    dialog.format_secondary_text("Deseja sobrescrever o perfil existente?")
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button("Sobrescrever", Gtk.ResponseType.OK)
+    dialog.format_secondary_text(_("Deseja sobrescrever o perfil existente?"))
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Sobrescrever"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.OK)
 
     response = dialog.run()
@@ -99,14 +101,14 @@ def prompt_import_conflict(
         destroy_with_parent=True,
         message_type=Gtk.MessageType.QUESTION,
         buttons=Gtk.ButtonsType.NONE,
-        text=f"Perfil '{name}' já existe.",
+        text=_("Perfil '%s' já existe.") % name,
     )
     dialog.format_secondary_text(
-        "Escolha o que fazer com o perfil importado:"
+        _("Escolha o que fazer com o perfil importado:")
     )
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button("Renomear", Gtk.ResponseType.REJECT)
-    dialog.add_button("Sobrescrever", Gtk.ResponseType.OK)
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Renomear"), Gtk.ResponseType.REJECT)
+    dialog.add_button(_("Sobrescrever"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.OK)
 
     response = dialog.run()
@@ -130,14 +132,16 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
         destroy_with_parent=True,
         message_type=Gtk.MessageType.WARNING,
         buttons=Gtk.ButtonsType.NONE,
-        text="Restaurar perfil original?",
+        text=_("Restaurar perfil original?"),
     )
     dialog.format_secondary_text(
-        "Isso vai restaurar o 'meu_perfil' para a cópia original (Navegação). "
-        "As suas alterações serão perdidas. Continuar?"
+        _(
+            "Isso vai restaurar o 'meu_perfil' para a cópia original (Navegação). "
+            "As suas alterações serão perdidas. Continuar?"
+        )
     )
-    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
-    dialog.add_button("Restaurar", Gtk.ResponseType.OK)
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Restaurar"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.CANCEL)
 
     response = dialog.run()
