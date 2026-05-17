@@ -146,7 +146,14 @@ class HefestoApp(
         apply_theme(self.window)
 
         self.window.set_title("Hefesto - Dualsense4Unix")
-        self.window.set_wmclass("hefesto", "Hefesto-Dualsense4Unix")
+        # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): WM_CLASS instance
+        # tem que casar com basename do .desktop (`hefesto-dualsense4unix.
+        # desktop`) para a dock COSMIC / GNOME associar o ícone do app.
+        # Antes era `("hefesto", "Hefesto-Dualsense4Unix")` — instance
+        # nao casava e a dock mostrava ícone genérico.
+        self.window.set_wmclass(
+            "hefesto-dualsense4unix", "Hefesto-Dualsense4Unix"
+        )
         if ICON_PATH.exists():
             self.window.set_icon_from_file(str(ICON_PATH))
 

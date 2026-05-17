@@ -5,6 +5,52 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.4.3] — 2026-05-17
+
+Patch para **2 bugs do ícone do app** em uso real no Pop!_OS COSMIC.
+Sem mudanças runtime; apenas discovery de ícone + WM_CLASS para
+associação com a dock.
+
+### Fixes
+
+- **`BUG-ICON-FROM-PLACEHOLDER-SVG-01`**: v3.4.2 gerava os 11 PNGs
+  multi-res a partir de `assets/appimage/Hefesto-Dualsense4Unix.svg`,
+  que era um **placeholder simples** (chama laranja + texto "HEFESTO"
+  em fundo preto) — NÃO a logo real (martelo + gradiente
+  roxo/azul/rosa do PNG 256x256). Sintoma: COSMIC App Library mostrava
+  chama laranja em vez do martelo nos sizes 32/48/128. Fix:
+  - `install.sh` usa o **PNG 256x256 como source canônica** + Lanczos
+    downsample do ImageMagick para todas as resoluções.
+  - SVG placeholder **removido do repo**
+    (`assets/appimage/Hefesto-Dualsense4Unix.svg`) para evitar
+    regressão futura.
+  - `scripts/build_appimage.sh` deixa de regenerar PNG a partir do
+    SVG; só valida que o PNG canônico existe.
+  - `uninstall.sh` remove SVG legacy se ainda presente de instalações
+    v3.4.2.
+
+- **`BUG-DOCK-ICON-WMCLASS-MISMATCH-01`**: janela GTK setava
+  `WM_CLASS` instance como `"hefesto"` (via `self.window.set_wmclass
+  ("hefesto", "Hefesto-Dualsense4Unix")` em `app/app.py:149`). Mas o
+  `.desktop` é `hefesto-dualsense4unix.desktop` — dock COSMIC / GNOME
+  não associava a janela ao app, mostrando **ícone genérico ao
+  abrir** (mesmo com `StartupWMClass=Hefesto-Dualsense4Unix` no
+  .desktop). Fix:
+  - `app/app.py`: `WM_CLASS` instance ajustada para
+    `"hefesto-dualsense4unix"` (case-sensitive, casa basename do
+    `.desktop`).
+  - `app/main.py`: adicionado `GLib.set_prgname("hefesto-dualsense4unix")`
+    + `GLib.set_application_name("Hefesto - Dualsense4Unix")` +
+    `Gtk.Window.set_default_icon_name("hefesto-dualsense4unix")`
+    ANTES de qualquer widget — garantindo derivação correta do
+    `app_id` Wayland.
+
+### Compatibilidade
+
+Sem mudanças breaking. Suite 1415+ passed mantida. Ambos os fixes são
+em paths de discovery (ícone, WM_CLASS) — não tocam runtime do
+daemon, IPC, ou logic da GUI.
+
 ## [3.4.2] — 2026-05-17
 
 Polish patch consolidando **4 bugs achados em validação manual pós-v3.4.1**
