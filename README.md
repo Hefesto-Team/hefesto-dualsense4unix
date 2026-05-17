@@ -258,6 +258,30 @@ Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou est�
 > oferece instalação via Flathub (`com.github.nowrep.dualsensectl`). A GUI funciona normalmente
 > com a aba desabilitada se o binário ausente.
 
+#### Re-aplicar regras udev (3 caminhos idempotentes)
+
+As regras udev são instaladas automaticamente pelo `install.sh` (source),
+pelo `.deb` (apt install) e pelo bundle Flatpak. Para **re-aplicar
+manualmente** (depois de troca de kernel, perda de permissão, ou simples
+sanidade), escolha o caminho conforme o formato instalado:
+
+```bash
+# Source / dev (repositório clonado)
+sudo bash scripts/install_udev.sh
+
+# .deb instalado (helper bundled em /usr/share/)
+sudo bash /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+
+# Flatpak instalado (helper exposto via flatpak run)
+flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+```
+
+Todos os 3 aplicam o mesmo conjunto canônico de **5 regras + uinput
+modules-load** (sincronizados via `assets/`), recarregam o udev e
+disparam triggers específicos para o vendor `054c` (Sony). Idempotentes
+— pode rodar quantas vezes quiser sem efeito colateral. Após rodar,
+desconecte e reconecte o controle (USB) ou re-pareie (BT).
+
 Reconecte o DualSense depois de instalar as regras udev. Confira o acesso:
 
 ```bash
