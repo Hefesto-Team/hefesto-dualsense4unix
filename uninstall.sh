@@ -80,6 +80,17 @@ for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}";
     fi
 done
 
+# FEAT-ICON-MULTI-RES-01 (fix): install.sh gera PNGs em 11 resolucoes
+# (16/22/24/32/48/64/96/128/192/256/512) + SVG escalavel + pixmap
+# legacy. Limpa todos. Nunca remove dirs `<size>x<size>/apps/` (outros
+# apps usam).
+log "removendo icones multi-res hicolor + SVG + pixmap"
+for size in 16 22 24 32 48 64 96 128 192 256 512; do
+    rm -f "${HOME}/.local/share/icons/hicolor/${size}x${size}/apps/${APP_ID}.png"
+done
+rm -f "${HOME}/.local/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
+rm -f "${HOME}/.local/share/pixmaps/${APP_ID}.png"
+
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -q -f "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
 fi
