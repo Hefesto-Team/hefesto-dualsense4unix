@@ -47,4 +47,18 @@ def apply_theme(window: Gtk.Window) -> None:
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
     )
     window.get_style_context().add_class("hefesto-dualsense4unix-window")
+
+    # FEAT-A11Y-HIGH-CONTRAST-01 (v3.4.0): detecta tema HighContrast do
+    # sistema (GNOME/COSMIC Accessibility > Contraste alto) e aplica nossa
+    # classe de override. GTK3 nao tem @media (prefers-contrast: more)
+    # nativo — o canal real e essa classe.
+    settings = Gtk.Settings.get_default()
+    if settings is not None:
+        theme_name = settings.get_property("gtk-theme-name") or ""
+        if "highcontrast" in theme_name.lower():
+            window.get_style_context().add_class(
+                "hefesto-dualsense4unix-high-contrast"
+            )
+            logger.info("theme_high_contrast_aplicado", system_theme=theme_name)
+
     logger.info("theme_aplicado", css=str(_CSS_PATH))

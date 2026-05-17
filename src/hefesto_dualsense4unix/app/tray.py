@@ -34,6 +34,7 @@ from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,
 )
 from hefesto_dualsense4unix.integrations.tray import probe_gi_availability
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -132,17 +133,17 @@ class AppTray:
 
         self._menu = Gtk.Menu()
 
-        self._status_item = Gtk.MenuItem(label="Hefesto - Dualsense4Unix (carregando...)")
+        self._status_item = Gtk.MenuItem(label=_("Hefesto - Dualsense4Unix (carregando...)"))
         self._status_item.set_sensitive(False)
         self._menu.append(self._status_item)
 
-        show = Gtk.MenuItem(label="Abrir painel")
+        show = Gtk.MenuItem(label=_("Abrir painel"))
         show.connect("activate", lambda _w: self.on_show_window())
         self._menu.append(show)
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
-        self._profiles_item = Gtk.MenuItem(label="Perfis")
+        self._profiles_item = Gtk.MenuItem(label=_("Perfis"))
         self._profiles_submenu = Gtk.Menu()
         # TRAY-LOADING-ZOMBIE-01: nascido vazio — `_render_profiles` é fonte
         # única de verdade do submenu. Estado inicial "(nenhum perfil)" é
@@ -153,7 +154,7 @@ class AppTray:
 
         self._menu.append(Gtk.SeparatorMenuItem())
 
-        quit_item = Gtk.MenuItem(label="Sair do Hefesto - Dualsense4Unix")
+        quit_item = Gtk.MenuItem(label=_("Sair do Hefesto - Dualsense4Unix"))
         quit_item.connect("activate", lambda _w: self.on_quit())
         self._menu.append(quit_item)
 
@@ -223,7 +224,7 @@ class AppTray:
             # robustez frente a backports/forks. Sem isso, labels com `_`
             # são interpretadas como mnemonics e ficam com `__` no rendering
             # dbusmenu (StatusNotifierItem).
-            item = Gtk.MenuItem.new_with_label("(nenhum perfil)")
+            item = Gtk.MenuItem.new_with_label(_("(nenhum perfil)"))
             item.set_use_underline(False)
             item.set_sensitive(False)
             self._profiles_submenu.append(item)
@@ -250,9 +251,9 @@ class AppTray:
                 None,
             )
             label = (
-                f"Hefesto - Dualsense4Unix - perfil: {active}"
+                _("Hefesto - Dualsense4Unix - perfil: %s") % active
                 if active
-                else f"Hefesto - Dualsense4Unix - {len(profiles)} perfis"
+                else _("Hefesto - Dualsense4Unix - %d perfis") % len(profiles)
             )
             self._status_item.set_label(label)
 

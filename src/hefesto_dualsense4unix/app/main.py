@@ -10,6 +10,7 @@ import time
 from typing import TYPE_CHECKING
 
 from hefesto_dualsense4unix.app.app import HefestoApp
+from hefesto_dualsense4unix.utils.i18n import init_locale
 from hefesto_dualsense4unix.utils.logging_config import configure_logging, get_logger
 
 if TYPE_CHECKING:
@@ -116,7 +117,12 @@ def _kill_previous_instances(logger: structlog.stdlib.BoundLogger) -> None:
 def main(argv: list[str] | None = None) -> int:
     configure_logging()
     logger = get_logger(__name__)
-    _ = argv
+    _unused_argv = argv
+
+    # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES de
+    # qualquer Gtk.Builder ou widget, garantindo que set_translation_domain
+    # consiga resolver labels traduzíveis do Glade no boot.
+    init_locale()
 
     # Garantia de instância única absoluta — mata qualquer processo antigo do
     # Hefesto - Dualsense4Unix antes de subir. Evita estado inconsistente, socket

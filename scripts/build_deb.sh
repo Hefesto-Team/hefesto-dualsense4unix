@@ -56,6 +56,7 @@ mkdir -p \
     "${STAGING}/usr/share/applications" \
     "${STAGING}/usr/share/hefesto-dualsense4unix/assets" \
     "${STAGING}/usr/share/icons/hicolor/256x256/apps" \
+    "${STAGING}/usr/share/locale" \
     "${STAGING}/opt/hefesto-dualsense4unix"
 
 # ---------------------------------------------------------------------------
@@ -168,6 +169,25 @@ for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/7
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
+
+# ---------------------------------------------------------------------------
+# Copiar catalogos i18n (.mo) — FEAT-I18N-CATALOGS-01 (v3.4.0)
+# ---------------------------------------------------------------------------
+# Os .mo precisam estar em /usr/share/locale/<lang>/LC_MESSAGES/<domain>.mo
+# para o gettext encontrar (candidate path #3 do utils/i18n.py).
+if [ -d "locale" ]; then
+    echo "Copiando catalogos i18n (.mo) ..."
+    for lang_dir in locale/*/; do
+        [ -d "$lang_dir" ] || continue
+        lang="$(basename "$lang_dir")"
+        src_mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+        [ -f "$src_mo" ] || continue
+        install -Dm644 "$src_mo" \
+            "${STAGING}/usr/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+    done
+else
+    echo "aviso: locale/ ausente — rode 'bash scripts/i18n_compile.sh' antes do build se quiser i18n"
+fi
 
 # ---------------------------------------------------------------------------
 # Copiar units systemd user

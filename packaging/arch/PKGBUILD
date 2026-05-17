@@ -1,0 +1,127 @@
+# Maintainer: Vitoria Maria <[REDACTED]>
+# Contributor: Andre Farias <noreply@example.com>
+#
+# PKGBUILD para o Hefesto - Dualsense4Unix (daemon de gatilhos adaptativos
+# para DualSense no Linux). v3.4.0 (FEAT-PACKAGING-ARCH-01).
+#
+# Strategy: o pacote consolida deps Python via `pip install --root --prefix
+# /usr` para cobrir pydualsense (sem pacote oficial em repos Arch), e usa
+# PyGObject + GTK3 + libayatana-appindicator do pacman para a stack GUI.
+# Idempotente; usuario final faz `makepkg -si` apos clonar o repo ou via
+# `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
+
+pkgname=hefesto-dualsense4unix
+pkgver=3.4.0
+pkgrel=1
+pkgdesc="Linux adaptive trigger daemon for the PS5 DualSense controller (GTK3 GUI + CLI + TUI)"
+arch=('any')
+url="https://github.com/AndreBFarias/hefesto-dualsense4unix"
+license=('MIT')
+depends=(
+    'python>=3.10'
+    'python-gobject'
+    'python-cairo'
+    'gtk3'
+    'libayatana-appindicator'
+    'hidapi'
+    'libnotify'
+    # Deps Python no pacman (pacotes oficiais):
+    'python-pydantic'
+    'python-typer'
+    'python-textual'
+    'python-rich'
+    'python-evdev'
+    'python-xlib'
+    'python-structlog'
+    'python-platformdirs'
+    'python-filelock'
+    'python-jeepney'
+    # Sem python-pydualsense no Arch — vamos puxar via pip.
+)
+makedepends=(
+    'python-build'
+    'python-installer'
+    'python-wheel'
+    'python-hatchling'
+    'python-pip'
+    'gettext'
+)
+optdepends=(
+    'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
+    'dualsensectl: aba Firmware (manutencao do controle)'
+)
+install="${pkgname}.install"
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    # Compila catalogos i18n (.mo) antes do wheel para o include do
+    # pyproject pegar os arquivos.
+    bash scripts/i18n_compile.sh
+
+    # Build do wheel via hatchling (PEP 517).
+    python -m build --wheel --no-isolation
+}
+
+package() {
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    # Instala wheel + pydualsense (puxado do PyPI no install time).
+    # --prefix=/usr para alinhar com layout esperado pelos wrappers do
+    # python-installer; --root=$pkgdir para empacotar relativo ao $pkgdir.
+    python -m installer --destdir="$pkgdir" \
+        --prefix=/usr \
+        dist/*.whl
+
+    # pydualsense via pip (--root cobre o destdir; --no-deps para evitar
+    # reinstalar coisas que ja vem do pacman).
+    pip install \
+        --root="$pkgdir" \
+        --prefix=/usr \
+        --no-deps \
+        --no-build-isolation \
+        --no-compile \
+        "pydualsense>=0.7.5"
+
+    # Desktop entry + icones.
+    install -Dm644 packaging/hefesto-dualsense4unix.desktop \
+        "$pkgdir/usr/share/applications/${pkgname}.desktop"
+    install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/${pkgname}.png"
+
+    # Udev rules (5 regras + modules-load uinput).
+    install -Dm644 -t "$pkgdir/usr/lib/udev/rules.d/" \
+        assets/70-ps5-controller.rules \
+        assets/71-uinput.rules \
+        assets/72-ps5-controller-autosuspend.rules \
+        assets/73-ps5-controller-hotplug.rules \
+        assets/74-ps5-controller-hotplug-bt.rules
+    install -Dm644 assets/hefesto-dualsense4unix.conf \
+        "$pkgdir/usr/lib/modules-load.d/hefesto-dualsense4unix.conf"
+
+    # Systemd user units.
+    for unit in assets/*.service; do
+        [ -f "$unit" ] || continue
+        install -Dm644 "$unit" \
+            "$pkgdir/usr/lib/systemd/user/$(basename "$unit")"
+    done
+
+    # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
+    if [ -d locale ]; then
+        for lang_dir in locale/*/; do
+            [ -d "$lang_dir" ] || continue
+            lang="$(basename "$lang_dir")"
+            mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+            [ -f "$mo" ] && install -Dm644 "$mo" \
+                "$pkgdir/usr/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+        done
+    fi
+
+    # License.
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
+
+    # README + checklist para referencia.
+    install -Dm644 README.md "$pkgdir/usr/share/doc/${pkgname}/README.md"
+}

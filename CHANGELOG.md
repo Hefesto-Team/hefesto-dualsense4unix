@@ -5,6 +5,97 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-05-16
+
+Release de **internacionalização + acessibilidade + packaging
+multi-distro + CI matrix**: combina 3 caixas grandes ortogonais ao runtime
+(zero churn no daemon/GUI core, foco em alcance e qualidade externa).
+
+### Adições
+
+- **`FEAT-I18N-INFRASTRUCTURE-01`**: `src/hefesto_dualsense4unix/utils/i18n.py`
+  com `init_locale()` e `_()` wrapper canônico. Resolução de catálogos
+  via 5 candidate paths: `$XDG_DATA_HOME/locale`, `~/.local/share/locale`,
+  `/usr/share/locale`, `/app/share/locale` (Flatpak), e dir do package
+  (wheel embedded). `gettext.bindtextdomain` + `textdomain` apontam para
+  o primeiro path onde achar `.mo`. Sem deps Python novas.
+- **`FEAT-I18N-MARK-STRINGS-01`**: ~210 strings marcadas como
+  traduzíveis. Glade `main.glade` ganhou `translatable="yes"` em ~190
+  labels (botões, headers das 10 abas, tooltips). Python wrappa `_()`
+  em `gui_dialogs.py` (7 strings), `tray.py` (5), `compact_window.py`
+  (7). Logger messages NÃO foram tocadas (são internas).
+- **`FEAT-I18N-CATALOGS-01`**: pipeline `scripts/i18n_extract.sh` +
+  `scripts/i18n_compile.sh`. Extract usa `xgettext --language=Python`
+  + `xgettext --language=Glade` + `msgcat`. Compile usa `msgfmt --check
+  --statistics`. Suporta `--add LANG` para criar idioma novo via
+  `msginit`. Catálogos: `po/en.po` (traduções EN) + `po/pt_BR.po`
+  (identidade — necessário para `LANG=pt_BR` resolver em vez de cair
+  no C/POSIX). 232 mensagens × 2 idiomas.
+- **`INSTALL-LOCALE-FILES-01`**: catálogos `.mo` bundlados em **5
+  destinos**:
+  1. `install.sh` step 4d → `~/.local/share/locale/`.
+  2. `scripts/build_deb.sh` → `/usr/share/locale/` (no `.deb`).
+  3. `scripts/build_appimage.sh` (auto-compile + wheel embedding).
+  4. `scripts/build_appimage_gui.sh` → `AppDir/usr/share/locale/`.
+  5. `flatpak/br.andrefarias.Hefesto.yml` → `/app/share/locale/`.
+  6. `pyproject.toml [tool.hatch.build.targets.wheel] include` →
+     `src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo` (wheel
+     embedded, fallback para `pip install` direto).
+- **`FEAT-A11Y-ATK-LABELS-01`**: 15 botões críticos (trigger
+  apply/reset L+R, lightbar apply/off, player LEDs apply, perfil
+  new/remove/activate, daemon start/stop/restart, firmware apply,
+  footer apply) ganharam `<child internal-child="accessible">` com
+  `AtkObject::accessible-name` e `AtkObject::accessible-description`
+  descritivas. Orca anuncia "Aplicar gatilho adaptativo no L2,
+  botão" em vez de "botão sem nome". Strings ATK também
+  `translatable="yes"`.
+- **`FEAT-A11Y-HIGH-CONTRAST-01`**: `gui/theme.css` ganhou:
+  - Classe `.hefesto-dualsense4unix-high-contrast` com paleta WCAG
+    AAA (background `#000`, foreground `#fff`, accent amarelo puro
+    `#ff0`, borda 2px–3px). `app/theme.py` detecta `Gtk.Settings.
+    gtk-theme-name` casando `HighContrast*` e aplica a classe.
+  - Bloco `@media (prefers-contrast: more)` para forward compat
+    GTK4. GTK3 ignora silenciosamente.
+- **`CHECKLIST-A11Y-MANUAL-01`**: `CHECKLIST_VALIDACAO_v3.4.0.md`
+  novo (sucessor de v3.2.0) com seção Acessibilidade (Tab/Shift+Tab,
+  Enter/Space, Esc, mnemonics, Orca anuncia 10+ botões).
+- **`FEAT-PACKAGING-ARCH-01`**: `packaging/arch/PKGBUILD` (50 LOC)
+  com deps pacman + pip install do pydualsense. Hook
+  `hefesto-dualsense4unix.install` recarrega udev + carrega uinput
+  pós-install. README com guia de submissão ao AUR.
+- **`FEAT-PACKAGING-FEDORA-01`**: `packaging/fedora/hefesto-dualsense4unix.spec`
+  (PEP 517 + `python3-installer`) pronto para `rpmbuild`/Copr. `%post`
+  recarrega udev. README com guia Copr + Fedora oficial review.
+- **`FEAT-PACKAGING-NIX-01`**: `flake.nix` raiz + `packaging/nix/package.nix`
+  com `buildPythonApplication` + `wrapGAppsHook`. Suporta
+  `nix run github:...`, install no profile, configuração NixOS e
+  home-manager. README com 3 paths de uso.
+- **`CI-SMOKE-DOCKER-MATRIX-01`**: job `smoke-multi-distro` em
+  `.github/workflows/ci.yml`. Matrix `fedora:40 + archlinux:latest +
+  debian:12` em containers Docker. Build wheel uma vez via
+  `build-wheel`, download artifact em cada container, instala
+  (`--break-system-packages`), valida `hefesto-dualsense4unix version`
+  + i18n EN + pytest subset (não-GTK).
+- **`CI-CACHE-PIP-01`**: `cache: 'pip'` em todos os
+  `actions/setup-python@v5` que rodam pip install (7 jobs entre
+  ci.yml e release.yml). Chaveado por hash de `pyproject.toml`.
+  Speed-up esperado: 30–60 s por job.
+
+### Documentação
+
+- `docs/process/ROADMAP.md` atualizado: v3.3.1 incluída, v3.4.0 nova,
+  COSMIC + Plasma adiados para v4.0, v3.5+ aberto para idiomas
+  comunitários.
+- `.github/CONTRIBUTING.md` seção "Contribuir traduções": como
+  adicionar idioma novo (`--add LANG`), convenções de tom/unidades,
+  glossário PT-BR  EN, fluxo de atualização.
+- `README.md` headline com nota de release v3.4.0.
+
+### Compatibilidade
+
+Sem mudanças breaking. PT-BR continua sendo source-language e default
+em ambientes sem `LANG=en*`. Suite 1415+ passed mantida.
+
 ## [3.3.1] — 2026-05-16
 
 Patch focado em deixar o **install perfeito**: aplica todas as regras

@@ -34,6 +34,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
 
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -144,7 +145,7 @@ class CompactWindow:
         self._status_label = Gtk.Label()
         # Glyph U+25CB (white circle) via NCR + texto inicial.
         self._status_label.set_markup(
-            '<span foreground="#888">&#9675; Iniciando...</span>'
+            '<span foreground="#888">&#9675; ' + _("Iniciando...") + "</span>"
         )
         self._status_label.set_xalign(0.0)
         line1.pack_start(self._status_label, True, True, 0)
@@ -161,15 +162,15 @@ class CompactWindow:
         line2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         line2.set_homogeneous(True)
 
-        btn_panel = Gtk.Button.new_with_label("Painel")
+        btn_panel = Gtk.Button.new_with_label(_("Painel"))
         btn_panel.connect("clicked", lambda _w: self.on_show_window())
         line2.pack_start(btn_panel, True, True, 0)
 
-        btn_profile = Gtk.Button.new_with_label("Perfil")
+        btn_profile = Gtk.Button.new_with_label(_("Perfil"))
         btn_profile.connect("clicked", self._on_profile_button_clicked)
         line2.pack_start(btn_profile, True, True, 0)
 
-        btn_quit = Gtk.Button.new_with_label("Sair")
+        btn_quit = Gtk.Button.new_with_label(_("Sair"))
         btn_quit.connect("clicked", lambda _w: self.on_quit())
         line2.pack_start(btn_quit, True, True, 0)
 
@@ -189,7 +190,7 @@ class CompactWindow:
 
         profiles = self.on_list_profiles()
         if not profiles:
-            item = Gtk.MenuItem.new_with_label("(nenhum perfil)")
+            item = Gtk.MenuItem.new_with_label(_("(nenhum perfil)"))
             item.set_use_underline(False)
             item.set_sensitive(False)
             self._profiles_menu.append(item)
@@ -234,7 +235,9 @@ class CompactWindow:
             return
         if state is None or not isinstance(state, dict):
             self._status_label.set_markup(
-                '<span foreground="#d33">&#9675; Daemon offline</span>'
+                '<span foreground="#d33">&#9675; '
+                + _("Daemon offline")
+                + "</span>"
             )
             self._battery_label.set_markup(
                 '<span font_family="monospace">— %</span>'
@@ -250,7 +253,9 @@ class CompactWindow:
             )
         else:
             self._status_label.set_markup(
-                '<span foreground="#d33">&#9675; Controle desconectado</span>'
+                '<span foreground="#d33">&#9675; '
+                + _("Controle desconectado")
+                + "</span>"
             )
         if isinstance(battery, int) and 0 <= battery <= 100:
             self._battery_label.set_markup(

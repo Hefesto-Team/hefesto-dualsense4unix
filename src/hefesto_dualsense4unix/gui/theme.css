@@ -200,3 +200,67 @@ combobox window treeview.view:selected {
     color: #ff5555;
     font-style: italic;
 }
+
+/* ===========================================================================
+ * FEAT-A11Y-HIGH-CONTRAST-01 (v3.4.0): palette aumentada para a11y.
+ *
+ * Aplicada de duas formas (ambas no mesmo arquivo para sincronia):
+ *
+ *   1. `.hefesto-dualsense4unix-high-contrast` — classe explicita que o app
+ *      adiciona na window quando `Gtk.Settings.gtk-theme-name` casa
+ *      `HighContrast*` (acessibilidade do GNOME/COSMIC) ou quando o usuario
+ *      ativa o toggle manual na aba Daemon. GTK3 nao tem `@media
+ *      (prefers-contrast: more)` nativo, entao a classe e o canal real.
+ *
+ *   2. `@media (prefers-contrast: more)` — forward compat para GTK4 e
+ *      browsers (se algum dia o tema for renderizado fora do GTK).
+ *      GTK3 ignora silenciosamente o bloco — sem efeito colateral.
+ *
+ * Palette aumentada: preto puro `#000`, branco puro `#fff`, accent amarelo
+ * `#ff0` (contraste WCAG AAA 21:1 sobre preto). Borda 2px em vez de 1px.
+ * =========================================================================== */
+.hefesto-dualsense4unix-high-contrast,
+.hefesto-dualsense4unix-high-contrast.hefesto-dualsense4unix-window {
+    background-color: #000;
+    color: #fff;
+}
+.hefesto-dualsense4unix-high-contrast button,
+.hefesto-dualsense4unix-high-contrast combobox,
+.hefesto-dualsense4unix-high-contrast entry,
+.hefesto-dualsense4unix-high-contrast spinbutton {
+    background-color: #000;
+    color: #fff;
+    border: 2px solid #ff0;
+}
+.hefesto-dualsense4unix-high-contrast button:hover,
+.hefesto-dualsense4unix-high-contrast button:focus,
+.hefesto-dualsense4unix-high-contrast combobox:focus,
+.hefesto-dualsense4unix-high-contrast entry:focus {
+    border: 3px solid #fff;
+    background-color: #ff0;
+    color: #000;
+}
+.hefesto-dualsense4unix-high-contrast label,
+.hefesto-dualsense4unix-high-contrast frame > label {
+    color: #fff;
+}
+
+@media (prefers-contrast: more) {
+    .hefesto-dualsense4unix-window {
+        background-color: #000;
+        color: #fff;
+    }
+    .hefesto-dualsense4unix-window button,
+    .hefesto-dualsense4unix-window combobox,
+    .hefesto-dualsense4unix-window entry {
+        background-color: #000;
+        color: #fff;
+        border: 2px solid #ff0;
+    }
+    .hefesto-dualsense4unix-window button:hover,
+    .hefesto-dualsense4unix-window button:focus {
+        border: 3px solid #fff;
+        background-color: #ff0;
+        color: #000;
+    }
+}

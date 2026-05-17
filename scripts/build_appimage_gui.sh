@@ -47,11 +47,20 @@ for tool in appimagetool linuxdeploy linuxdeploy-plugin-gtk.sh; do
     fi
 done
 
+# FEAT-I18N-CATALOGS-01 (v3.4.0): compila .mo antes do pip install -e .
+# para que o package locale/ seja embarcado via candidate path #5.
+if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \
+        || [[ -z "$(ls "$HERE/src/hefesto_dualsense4unix/locale" 2>/dev/null)" ]]; then
+    echo "[i18n] catalogos .mo ausentes — compilando do po/..."
+    bash "$HERE/scripts/i18n_compile.sh"
+fi
+
 echo "[1/6] Limpando build anterior..."
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin"
 mkdir -p "$APPDIR/usr/share/applications"
 mkdir -p "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "$APPDIR/usr/share/locale"
 mkdir -p "$APPDIR/usr/share/metainfo"
 mkdir -p "$OUT_DIR"
 
@@ -79,6 +88,13 @@ echo "[3/6] Criando venv embarcada no AppDir (com system-site-packages para gi).
 python3.12 -m venv --system-site-packages "$APPDIR/usr"
 "$APPDIR/usr/bin/python3" -m pip install --quiet --upgrade pip
 "$APPDIR/usr/bin/pip" install --quiet "$HERE[emulation,cosmic,tray]"
+
+# Copia catalogos .mo para AppDir/usr/share/locale/ — gettext acha via
+# XDG_DATA_DIRS exportado no AppRun (candidate path #3 do utils/i18n.py).
+# Redundante com candidate #5 (package locale) mas barato e explicito.
+if [[ -d "$HERE/locale" ]]; then
+    cp -r "$HERE/locale"/. "$APPDIR/usr/share/locale/"
+fi
 
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'

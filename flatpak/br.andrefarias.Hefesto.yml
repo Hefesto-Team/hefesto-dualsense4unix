@@ -185,6 +185,23 @@ modules:
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
 
+      # FEAT-I18N-CATALOGS-01 (v3.4.0): instala catalogos .mo em
+      # /app/share/locale/ (candidate path #4 do utils/i18n.py). O loop
+      # encontra cada idioma em locale/<lang>/LC_MESSAGES/<dom>.mo do
+      # source tree (gerado por scripts/i18n_compile.sh antes do build).
+      # Tolerante a ausencia (|| true) para nao bloquear o flatpak-builder
+      # quando o repo foi clonado sem rodar i18n_compile primeiro.
+      - |
+        if [ -d locale ]; then
+          for lang_dir in locale/*/; do
+            [ -d "$lang_dir" ] || continue
+            lang="$(basename "$lang_dir")"
+            mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+            [ -f "$mo" ] && install -Dm644 "$mo" \
+              "/app/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+          done
+        fi
+
     sources:
       # Código-fonte local (usado pelo flatpak-builder com --force-clean)
       - type: dir

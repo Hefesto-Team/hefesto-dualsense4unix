@@ -1,0 +1,50 @@
+## hefesto-dualsense4unix.install — hooks pre/post pacman para o PKGBUILD.
+## v3.4.0 (FEAT-PACKAGING-ARCH-01).
+##
+## post_install dispara reload de udev rules + carregamento do modulo
+## uinput (necessario para emulacao Xbox 360 via uinput). Idempotente:
+## re-rodar nao quebra; udevadm trigger refaz device nodes.
+
+post_install() {
+    echo ">>> Recarregando udev rules para o DualSense..."
+    udevadm control --reload-rules
+    udevadm trigger
+
+    echo ">>> Carregando modulo do kernel uinput (para emulacao Xbox 360)..."
+    modprobe uinput 2>/dev/null || true
+
+    cat <<MSG
+
+================================================================
+  Hefesto - Dualsense4Unix v${1%-*} instalado em /usr/.
+
+  Para subir o daemon como servico do usuario:
+    systemctl --user enable --now hefesto-dualsense4unix.service
+
+  Para a GUI:
+    hefesto-dualsense4unix-gui
+
+  Pacotes opcionais recomendados:
+    sudo pacman -S wlrctl       # auto-switch de perfis em Wayland
+    yay -S dualsensectl-git     # aba Firmware (AUR)
+
+  i18n: defina LANG=en_US.UTF-8 para interface em ingles.
+================================================================
+MSG
+}
+
+post_upgrade() {
+    post_install "$1"
+}
+
+pre_remove() {
+    echo ">>> Parando servicos do Hefesto - Dualsense4Unix (se ativos)..."
+    systemctl --user stop hefesto-dualsense4unix.service 2>/dev/null || true
+    systemctl --user disable hefesto-dualsense4unix.service 2>/dev/null || true
+}
+
+post_remove() {
+    echo ">>> Recarregando udev rules apos remocao das regras do Hefesto..."
+    udevadm control --reload-rules
+    udevadm trigger
+}

@@ -41,6 +41,15 @@ if [[ ! -f "$APPDIR_SRC/Hefesto-Dualsense4Unix.png" ]]; then
     fi
 fi
 
+# Garante que catalogos i18n estao compilados (necessario para o wheel
+# embarcar os .mo via pyproject `[tool.hatch.build.targets.wheel] include`).
+# FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-compila do .po.
+if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \
+        || [[ -z "$(ls "$HERE/src/hefesto_dualsense4unix/locale" 2>/dev/null)" ]]; then
+    echo "[i18n] catalogos .mo ausentes — compilando do po/..."
+    bash "$HERE/scripts/i18n_compile.sh"
+fi
+
 # Garante que há um wheel atualizado.
 if ! ls "$HERE/dist"/hefesto_dualsense4unix-*.whl >/dev/null 2>&1; then
     echo "[2/4] Nenhum wheel em dist/. Buildando..."

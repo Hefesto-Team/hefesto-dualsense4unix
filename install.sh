@@ -361,6 +361,26 @@ if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 4d. Catalogos i18n (.mo) — copia locale/ para ~/.local/share/locale/
+# ---------------------------------------------------------------------------
+# FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-copia sobrescreve. Se
+# locale/ nao existe (usuario clonou e nao rodou scripts/i18n_compile.sh),
+# pulamos silenciosamente e o gettext faz fallback para PT-BR hardcoded.
+readonly LOCALE_SRC="${ROOT_DIR}/locale"
+readonly LOCALE_TARGET="${HOME}/.local/share/locale"
+if [[ -d "${LOCALE_SRC}" ]]; then
+    for lang_dir in "${LOCALE_SRC}"/*/; do
+        [[ -d "${lang_dir}" ]] || continue
+        lang="$(basename "${lang_dir}")"
+        src_mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
+        [[ -f "${src_mo}" ]] || continue
+        target_dir="${LOCALE_TARGET}/${lang}/LC_MESSAGES"
+        mkdir -p "${target_dir}"
+        cp -f "${src_mo}" "${target_dir}/hefesto-dualsense4unix.mo"
+    done
+fi
+
+# ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
 step "5/9" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
