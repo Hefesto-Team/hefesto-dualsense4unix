@@ -12,6 +12,21 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.4.2" date="2026-05-17">
+      <description>
+        <p>Polish patch — 4 bugs achados em validacao manual pos-v3.4.1:
+           (1) icone do app aparecia generico em sizes nao-256
+           (16/22/32/48 do menu apps, 128 do grid) porque so havia o PNG
+           256x256; install.sh agora gera multi-res (11 PNGs + SVG
+           escalavel + pixmap legacy) via rsvg-convert. (2) theme.css
+           bloco @media (prefers-contrast: more) quebrava GTK3 CSS
+           parser inteiro com "unknown @ rule (1)" — substituido por
+           comentario forward-compat. (3) uninstall.sh morria com exit
+           144 quando rodado do diretorio do repo, pkill -f matchava o
+           proprio script. (4) catalogos .mo do install.sh step 4d
+           ficavam orfaos apos uninstall. Sem mudancas runtime.</p>
+      </description>
+    </release>
     <release version="3.4.1" date="2026-05-17">
       <description>
         <p>Patch para o bug de localizacao no Flatpak v3.4.0: catalogo

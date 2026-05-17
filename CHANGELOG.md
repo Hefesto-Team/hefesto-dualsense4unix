@@ -5,6 +5,58 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.4.2] — 2026-05-17
+
+Polish patch consolidando **4 bugs achados em validação manual pós-v3.4.1**
+no Pop!_OS COSMIC. Sem mudanças runtime; apenas distribuição, tema e
+discovery de ícone.
+
+### Fixes
+
+- **`FEAT-ICON-MULTI-RES-01`**: o `install.sh` só copiava o PNG 256x256
+  para `~/.local/share/icons/hicolor/256x256/apps/`. Resultado: GUIs
+  de app library (COSMIC App Library, GNOME Activities) renderizavam
+  fallback genérico em qualquer size diferente de 256 (chip 32x32 do
+  menu, 128x128 do grid). Fix: gera 11 PNGs (16/22/24/32/48/64/96/
+  128/192/256/512) via `rsvg-convert` do SVG original em
+  `assets/appimage/Hefesto-Dualsense4Unix.svg`, +
+  `~/.local/share/icons/hicolor/scalable/apps/hefesto-dualsense4unix.svg`
+  (escalável moderno) + `~/.local/share/pixmaps/hefesto-dualsense4unix.png`
+  (legacy fallback). Fallback para ImageMagick `convert` se rsvg
+  ausente. `gtk-update-icon-cache` regenera cache automaticamente.
+
+- **`BUG-THEME-CSS-MEDIA-GTK3-01`**: `@media (prefers-contrast: more)`
+  introduzido em v3.4.0 quebrava o GTK3 CSS parser inteiro com
+  `gtk-css-provider-error-quark: unknown @ rule (1)` — theme.css não
+  carregava (sem Drácula, sem high-contrast class, GUI ficava com tema
+  do sistema raw). GTK3 não tem `@media` nativo; trata como
+  `@unknown` e aborta o parse. Fix: substituir bloco por comentário
+  documental. A classe `.hefesto-dualsense4unix-high-contrast` aplicada
+  por `app/theme.py` quando `Gtk.Settings.gtk-theme-name=HighContrast*`
+  continua sendo o canal real. Reavaliar `@media` quando migrar para
+  GTK4.
+
+- **`BUG-UNINSTALL-PKILL-SELF-01`**: `uninstall.sh` morria com exit 144
+  quando rodado de dentro de `/.../hefesto-dualsense4unix/` porque
+  `pkill -f 'hefesto-dualsense4unix'` matchava o cmdline do próprio
+  bash que executava o script (path absoluto contém o nome). Fix:
+  patterns específicos em loop: `'hefesto-dualsense4unix daemon '`,
+  `'hefesto-dualsense4unix-gui'`, `'hefesto_dualsense4unix'`,
+  `'br\.andrefarias\.Hefesto'` — nenhum casa o `uninstall.sh` em
+  execução.
+
+- **`BUG-UNINSTALL-LOCALE-NOT-REMOVED-01`**: install.sh step 4d
+  (FEAT-I18N-CATALOGS-01 v3.4.0) copiava catálogos `.mo` para
+  `~/.local/share/locale/<lang>/LC_MESSAGES/hefesto-dualsense4unix.mo`,
+  mas uninstall esquecia. Fix: loop remove só nosso domínio
+  (`hefesto-dualsense4unix.mo`), preservando `LC_MESSAGES/` e `<lang>/`
+  (outros apps usam). Idem para os 11 PNGs hicolor + SVG + pixmap.
+
+### Compatibilidade
+
+Sem mudanças breaking. Suite 1415+ passed mantida. Todos os fixes são
+no install/uninstall/theme — não afetam daemon, GUI runtime, ou IPC.
+
 ## [3.4.1] — 2026-05-17
 
 Patch para fixar **bug de localização no Flatpak v3.4.0**: catálogo
