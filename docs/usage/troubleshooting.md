@@ -302,6 +302,88 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 
 ---
 
+## 11. Interface em inglês não aparece (i18n) no Flatpak
+
+A partir da v3.4.0 o Hefesto - Dualsense4Unix tem catálogo EN baseline
+(`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Sintomas comuns:
+
+### Sintoma A — labels continuam em PT-BR mesmo com `LANG=en_US.UTF-8`
+
+```bash
+LANG=en_US.UTF-8 flatpak run br.andrefarias.Hefesto
+# Janela abre com "Aplicar", "Salvar", "Sair" mesmo após `LANG=` no shell.
+```
+
+**Causa**: o sandbox Flatpak **filtra `LANG`/`LANGUAGE`** do host. Sem
+`--env=`, gettext dentro do sandbox cai no default `pt_BR.UTF-8` (do
+runtime GNOME 47).
+
+**Fix**:
+
+```bash
+flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en br.andrefarias.Hefesto
+```
+
+Ou persistir o override de uma vez só:
+
+```bash
+flatpak override --user --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
+    br.andrefarias.Hefesto
+flatpak run br.andrefarias.Hefesto   # agora pega EN automaticamente
+```
+
+### Sintoma B — Flatpak v3.4.0 só traduzia EN; PT-BR ficava em fallback
+
+**Causa**: bug `BUG-FLATPAK-LOCALE-SYMLINK-01` (corrigido em v3.4.1). O
+runtime `org.gnome.Platform//47` injeta symlinks de Locale Extension
+no deploy sobrescrevendo `/app/share/locale/<lang>/` para alguns
+idiomas (incluindo pt_BR), tornando o `install -Dm644` do manifest
+no-op.
+
+**Fix**: atualizar para Flatpak ≥ v3.4.1 — que instala catálogos em
+path próprio `/app/share/hefesto-dualsense4unix/locale/<lang>/LC_MESSAGES/`
+não tocado pelo runtime.
+
+```bash
+# Atualizar a partir do bundle local v3.4.1:
+flatpak install --user -y --reinstall \
+    dist/flatpak/hefesto-dualsense4unix-3.4.1.flatpak
+
+# Validar:
+flatpak run --command=find br.andrefarias.Hefesto \
+    /app/share/hefesto-dualsense4unix/locale/ -name "*.mo"
+# Esperado:
+#   /app/share/.../locale/en/LC_MESSAGES/hefesto-dualsense4unix.mo
+#   /app/share/.../locale/pt_BR/LC_MESSAGES/hefesto-dualsense4unix.mo
+```
+
+### Sintoma C — `.deb` ou source install em EN mas tray ainda em PT-BR
+
+`.deb` e source install (`./install.sh`) usam paths `/usr/share/locale/`
+e `~/.local/share/locale/` respectivamente — não sofrem o bug do
+Flatpak. Se EN não aparece, checar:
+
+```bash
+ls ~/.local/share/locale/en/LC_MESSAGES/hefesto-dualsense4unix.mo
+# Esperado: arquivo de ~17 KB
+
+# Re-instalar se ausente:
+bash scripts/i18n_compile.sh && ./install.sh --yes
+```
+
+### Adicionar idioma novo (comunidade)
+
+```bash
+bash scripts/i18n_extract.sh --add fr_FR  # cria po/fr_FR.po vazio
+$EDITOR po/fr_FR.po                        # preencher msgstr
+bash scripts/i18n_compile.sh               # gera .mo
+```
+
+Ver `.github/CONTRIBUTING.md` → "Contribuir traduções" para convenções
+de tom + glossário PT-BR  EN.
+
+---
+
 ## Diagnóstico geral (script para issue)
 
 Quando reportar problema, anexe a saída de:

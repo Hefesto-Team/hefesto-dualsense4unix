@@ -122,6 +122,45 @@ ao autostart do ambiente gráfico.
 
 ---
 
+## Localização (i18n)
+
+A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
+identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/
+LC_MESSAGES/hefesto-dualsense4unix.mo`. O default é PT-BR (source
+language).
+
+Para rodar a GUI em inglês:
+
+```bash
+flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
+    br.andrefarias.Hefesto
+```
+
+Ou persistir o override permanentemente:
+
+```bash
+flatpak override --user --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
+    br.andrefarias.Hefesto
+# Próxima execução já pega EN sem precisar passar --env:
+flatpak run br.andrefarias.Hefesto
+```
+
+> **Importante**: o sandbox Flatpak **filtra `LANG`/`LANGUAGE`** do
+> host por padrão. Sem `--env=` ou `flatpak override --env=`, a GUI
+> sempre cai no PT-BR (default do runtime GNOME 47).
+
+Por que path próprio (e não `/app/share/locale/`): o runtime
+`org.gnome.Platform//47` injeta symlinks de Locale Extension no deploy
+sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
+(incluindo pt_BR). Para sobreviver a essa intercepção, instalamos em
+`/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
+Detalhe técnico em `docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
+
+Para adicionar um novo idioma (ES, FR, DE, etc.), ver
+`.github/CONTRIBUTING.md` seção "Contribuir traduções".
+
+---
+
 ## Permissões do sandbox
 
 O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões:
