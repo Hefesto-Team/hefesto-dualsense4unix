@@ -12,6 +12,23 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.4.3" date="2026-05-17">
+      <description>
+        <p>Patch para 2 bugs do ícone em uso real no Pop!_OS COSMIC:
+           (1) install.sh v3.4.2 gerava 11 PNGs a partir do SVG em
+           assets/appimage/Hefesto-Dualsense4Unix.svg, que era um
+           PLACEHOLDER simples (chama laranja + texto "HEFESTO") em vez
+           da logo real (martelo + gradiente roxo/azul/rosa no PNG
+           256x256). Fix: usa PNG real como source com Lanczos
+           downsample do ImageMagick para todas resolucoes. (2) janela
+           GTK setava WM_CLASS instance como "hefesto" mas o .desktop
+           e "hefesto-dualsense4unix.desktop" — dock COSMIC nao
+           associava a janela ao app, mostrando icone generico ao abrir.
+           Fix: WM_CLASS instance ajustada para "hefesto-dualsense4unix"
+           + GLib.set_prgname() + Gtk.Window.set_default_icon_name()
+           no entrypoint da GUI para derivar app_id Wayland correto.</p>
+      </description>
+    </release>
     <release version="3.4.2" date="2026-05-17">
       <description>
         <p>Polish patch — 4 bugs achados em validacao manual pos-v3.4.1:

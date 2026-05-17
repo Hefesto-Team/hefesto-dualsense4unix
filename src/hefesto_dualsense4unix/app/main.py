@@ -124,6 +124,20 @@ def main(argv: list[str] | None = None) -> int:
     # consiga resolver labels traduzíveis do Glade no boot.
     init_locale()
 
+    # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): seta prgname ANTES de
+    # qualquer Gtk init para o GTK derivar `app_id` Wayland corretamente.
+    # Sem isso, a dock COSMIC nao associa janela ao .desktop e mostra
+    # icone generico. prgname deve casar com basename do .desktop file.
+    # Tambem seta application_name (usado em window title bar fallback).
+    import gi
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import GLib, Gtk
+    GLib.set_prgname("hefesto-dualsense4unix")
+    GLib.set_application_name("Hefesto - Dualsense4Unix")
+    # Default icon do app — janelas filhas (diálogos, etc.) herdam.
+    with contextlib.suppress(Exception):
+        Gtk.Window.set_default_icon_name("hefesto-dualsense4unix")
+
     # Garantia de instância única absoluta — mata qualquer processo antigo do
     # Hefesto - Dualsense4Unix antes de subir. Evita estado inconsistente, socket
     # órfão, pid file zumbi.

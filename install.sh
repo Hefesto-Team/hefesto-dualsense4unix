@@ -242,16 +242,20 @@ fi
 # ---------------------------------------------------------------------------
 step "4/9" "atalho de aplicativo e launcher"
 
-# FEAT-ICON-MULTI-RES-01: gera o icone em todas resolucoes do hicolor +
-# SVG escalavel + pixmap legacy. Antes so existia 256x256 PNG, que fazia
-# o COSMIC App Library / GNOME Activities renderizar fallback generico
-# para sizes nao-256 (ex: chip 32x32 do menu apps).
+# FEAT-ICON-MULTI-RES-01 (v3.4.2, refinado em v3.4.3): gera o icone em
+# todas resolucoes do hicolor + pixmap legacy. Antes so existia 256x256
+# PNG, fazendo o COSMIC App Library / GNOME Activities renderizar
+# fallback generico em sizes nao-256 (chip 32x32 do menu apps, 128x128
+# do grid).
 #
-# Estrategia: prefere rsvg-convert (renderiza nitido do vetor original);
-# fallback para ImageMagick convert (resample do PNG 256 — qualidade
-# inferior em sizes pequenos mas funciona). Se nenhum disponivel, mantem
-# so o PNG 256 (comportamento legado).
-ICON_SVG_SRC="${ROOT_DIR}/assets/appimage/Hefesto-Dualsense4Unix.svg"
+# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3 fix): v3.4.2 usava SVG como
+# source para o rsvg-convert. Mas assets/appimage/Hefesto-Dualsense4Unix.
+# svg eh um PLACEHOLDER simples (chama laranja + texto "HEFESTO"),
+# nao a logo real (martelo + gradiente roxo/azul/rosa no PNG 256x256).
+# Resultado: app library mostrava chama laranja em vez do martelo.
+# Fix: source canonico eh o PNG 256x256 sempre, com Lanczos downsample
+# do ImageMagick para outras resolucoes. Sem SVG escalavel ate termos
+# um SVG real do martelo.
 ICON_HICOLOR_BASE="${HOME}/.local/share/icons/hicolor"
 ICON_SIZES="16 22 24 32 48 64 96 128 192 256 512"
 
@@ -260,36 +264,22 @@ mkdir -p "${ICON_TARGET_DIR}"
 cp -f "${ICON_SRC}" "${ICON_TARGET}"
 mkdir -p "$(dirname "${DESKTOP_TARGET}")"
 
-# Multi-res se rsvg-convert disponivel
-if [[ -f "${ICON_SVG_SRC}" ]] && command -v rsvg-convert >/dev/null 2>&1; then
-    printf '      gerando icone multi-res (rsvg-convert)\n'
+if command -v convert >/dev/null 2>&1; then
+    printf '      gerando icone multi-res do PNG 256x256 (ImageMagick Lanczos)\n'
     for size in ${ICON_SIZES}; do
         target_dir="${ICON_HICOLOR_BASE}/${size}x${size}/apps"
         mkdir -p "${target_dir}"
-        rsvg-convert -w "${size}" -h "${size}" "${ICON_SVG_SRC}" \
-            -o "${target_dir}/${APP_ID}.png" 2>/dev/null || true
-    done
-    # SVG escalavel — moderno (COSMIC/GNOME 47+ preferem)
-    mkdir -p "${ICON_HICOLOR_BASE}/scalable/apps"
-    cp -f "${ICON_SVG_SRC}" "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
-    # Pixmap legacy fallback (DEs antigos)
-    mkdir -p "${HOME}/.local/share/pixmaps"
-    cp -f "${ICON_HICOLOR_BASE}/256x256/apps/${APP_ID}.png" \
-        "${HOME}/.local/share/pixmaps/${APP_ID}.png"
-elif command -v convert >/dev/null 2>&1; then
-    printf '      gerando icone multi-res (ImageMagick — instale librsvg2-bin para qualidade superior)\n'
-    for size in ${ICON_SIZES}; do
-        [[ "${size}" == "256" ]] && continue  # ja copiado acima
-        target_dir="${ICON_HICOLOR_BASE}/${size}x${size}/apps"
-        mkdir -p "${target_dir}"
-        convert "${ICON_SRC}" -resize "${size}x${size}" \
+        convert "${ICON_SRC}" -filter Lanczos -resize "${size}x${size}" \
             "${target_dir}/${APP_ID}.png" 2>/dev/null || true
     done
+    # Pixmap legacy fallback (DEs antigos)
     mkdir -p "${HOME}/.local/share/pixmaps"
-    cp -f "${ICON_TARGET}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
+    cp -f "${ICON_SRC}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
+    # Remove SVG placeholder de instalacoes anteriores (v3.4.2 colocava lah).
+    rm -f "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
 else
-    printf '      aviso: rsvg-convert nem convert disponivel — so 256x256 PNG\n'
-    printf '             instale: sudo apt install librsvg2-bin\n'
+    printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
+    printf '             instale: sudo apt install imagemagick\n'
 fi
 
 # Detecção COSMIC → dois caminhos complementares para autoswitch funcionar:
