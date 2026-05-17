@@ -185,20 +185,25 @@ modules:
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
 
-      # FEAT-I18N-CATALOGS-01 (v3.4.0): instala catalogos .mo em
-      # /app/share/locale/ (candidate path #4 do utils/i18n.py). O loop
-      # encontra cada idioma em locale/<lang>/LC_MESSAGES/<dom>.mo do
-      # source tree (gerado por scripts/i18n_compile.sh antes do build).
-      # Tolerante a ausencia (|| true) para nao bloquear o flatpak-builder
-      # quando o repo foi clonado sem rodar i18n_compile primeiro.
+      # FEAT-I18N-CATALOGS-01 (v3.4.0): instala catalogos .mo em path
+      # proprio do app — NAO em /app/share/locale/ porque o Flatpak
+      # runtime GNOME//47 usa Locale extension que injeta symlinks no
+      # deploy (ex.: /app/share/locale/pt_BR -> share/runtime/locale/pt/
+      # share/pt_BR), sobrescrevendo o que instalamos no build.
+      #
+      # Solucao: usar path proprio /app/share/hefesto-dualsense4unix/
+      # locale/ que o runtime nao toca, e adicionar esse path ao
+      # candidate list do utils/i18n.py (gettext.bindtextdomain).
       - |
         if [ -d locale ]; then
           for lang_dir in locale/*/; do
             [ -d "$lang_dir" ] || continue
             lang="$(basename "$lang_dir")"
             mo="${lang_dir}LC_MESSAGES/hefesto-dualsense4unix.mo"
-            [ -f "$mo" ] && install -Dm644 "$mo" \
-              "/app/share/locale/${lang}/LC_MESSAGES/hefesto-dualsense4unix.mo"
+            target_dir="/app/share/hefesto-dualsense4unix/locale/${lang}/LC_MESSAGES"
+            if [ -f "$mo" ]; then
+              install -Dm644 "$mo" "${target_dir}/hefesto-dualsense4unix.mo"
+            fi
           done
         fi
 

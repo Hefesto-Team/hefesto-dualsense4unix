@@ -5,6 +5,36 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.4.1] — 2026-05-17
+
+Patch para fixar **bug de localização no Flatpak v3.4.0**: catálogo
+`pt_BR.mo` não chegava no app deployed porque o runtime `org.gnome.
+Platform//47` usa Locale Extension que injeta symlinks no deploy
+sobrescrevendo `/app/share/locale/<lang>/` — apontando para
+`share/runtime/locale/.../share/<lang>/` (read-only). Nosso
+`install -Dm644` no manifest era efetivamente um no-op porque o symlink
+era recriado depois.
+
+Sem mudanças runtime; apenas distribuição Flatpak.
+
+### Fixes
+
+- **`BUG-FLATPAK-LOCALE-SYMLINK-01`**:
+  - `flatpak/br.andrefarias.Hefesto.yml` — instala `.mo` em
+    `/app/share/hefesto-dualsense4unix/locale/<lang>/LC_MESSAGES/`
+    (path próprio do app, não tocado pelo runtime).
+  - `src/hefesto_dualsense4unix/utils/i18n.py` — adicionado candidate
+    path #4a `/app/share/hefesto-dualsense4unix/locale` antes do #4b
+    `/app/share/locale` (fallback defensivo).
+- Validado: `flatpak run --env=LANG=en_US.UTF-8` → `_('Aplicar')` →
+  `'Apply'`. `--env=LANG=pt_BR.UTF-8` → identity (`'Aplicar'`).
+
+### Compatibilidade
+
+Sem mudanças breaking. PT-BR continua sendo source-language e default.
+.deb / AppImage / wheel continuam usando os candidate paths originais
+(2, 3, 5). Apenas Flatpak ganhou path próprio.
+
 ## [3.4.0] — 2026-05-16
 
 Release de **internacionalização + acessibilidade + packaging
