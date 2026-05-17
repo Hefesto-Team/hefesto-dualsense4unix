@@ -63,7 +63,13 @@ def _candidate_locale_dirs() -> list[Path]:
     # 3. /usr/share/locale/ (.deb + RPM + PKGBUILD)
     candidates.append(Path("/usr/share/locale"))
 
-    # 4. /app/share/locale/ (Flatpak sandbox)
+    # 4a. /app/share/hefesto-dualsense4unix/locale/ (Flatpak sandbox —
+    #     path proprio porque /app/share/locale/<lang> e sobrescrito por
+    #     symlinks da Locale Extension do runtime GNOME//47).
+    candidates.append(Path("/app/share/hefesto-dualsense4unix/locale"))
+
+    # 4b. /app/share/locale/ (Flatpak fallback caso o app instale em
+    #     path canonico — mantido como fallback defensivo).
     candidates.append(Path("/app/share/locale"))
 
     # 5. Diretório do wheel (`hefesto_dualsense4unix/locale/`) — fallback
