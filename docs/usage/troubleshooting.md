@@ -25,9 +25,24 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
 
 **Fix**:
 
-1. **Regras udev ausentes**: rode `./scripts/install_udev.sh` (instalação
-   via fonte) ou reinstale `.deb` (regras vão para `/lib/udev/rules.d/`).
-   Após instalação, desplugue e replugue o controle.
+1. **Regras udev ausentes** — re-aplicar manualmente (3 caminhos
+   idempotentes, escolha conforme o formato instalado):
+
+   ```bash
+   # Source / dev (repositório clonado)
+   sudo bash scripts/install_udev.sh
+
+   # .deb instalado (helper bundled em /usr/share/)
+   sudo bash /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+
+   # Flatpak instalado (helper exposto via flatpak run)
+   flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
+   ```
+
+   Todos aplicam o mesmo conjunto canônico de 5 regras + uinput
+   modules-load (origem única em `assets/`). Após rodar, desplugue e
+   replugue o controle (USB) ou re-pareie (BT).
+
 2. **systemd-logind ausente** (Alpine/Void/Artix/Gentoo sem systemd): o
    projeto requer logind para a TAG `uaccess` funcionar — ver
    [ADR-009](../adr/009-systemd-logind-scope.md). Fallback temporário:

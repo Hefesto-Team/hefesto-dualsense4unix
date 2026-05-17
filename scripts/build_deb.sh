@@ -147,6 +147,28 @@ for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/7
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
+# v3.3.1: bundla install-host-udev.sh em /usr/share para re-aplicar regras
+# manualmente fora do apt install (ex: usuário renomeou /etc/udev/rules.d/
+# por engano, ou quer re-trigger após upgrade do kernel). O script resolve
+# origem em 3 contextos (Flatpak /app/share, .deb /usr/share, source
+# ../assets) — aqui só o .deb precisa do helper exposto.
+echo "Copiando helper install-host-udev.sh ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/scripts"
+install -Dm755 scripts/install-host-udev.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+# Também copia o conf modules-load para o local que o helper procura
+# em /usr/share/hefesto-dualsense4unix/modules-load/.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"
+install -Dm644 assets/hefesto-dualsense4unix.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf"
+# Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
+# as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
+for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/73-*.rules assets/74-*.rules; do
+    [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
+done
+
 # ---------------------------------------------------------------------------
 # Copiar units systemd user
 # ---------------------------------------------------------------------------
