@@ -19,8 +19,8 @@
 ---
 
 ```
-Versão: 3.4.3
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1415+ testes unit, ruff clean, mypy zero; tray fallback via janela compacta em DEs sem StatusNotifierWatcher; install.sh aplica todas as 5 regras udev + uinput de cara (sem prompt)
+Versão: 3.5.0
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1379 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (popups de dropdown corretos) + janela compacta opcional (opt-in); install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
@@ -94,7 +94,6 @@ A GUI principal expõe 10 abas no `GtkNotebook` central, cada uma cobrindo um ei
 | **Emulação** | Gamepad virtual Xbox 360 via `uinput`, pra jogos que só aceitam controles Microsoft. | Toggle **on/off** de `/dev/input/js*` virtual com forward 60 Hz; status do device emulado; mapeamento dos botões DualSense → Xbox360. |
 | **Mouse** | Emulação de mouse usando o stick direito ou touchpad do DualSense. | Toggle **on/off**; sliders de sensibilidade X/Y; deadzone; modo touchpad vs stick; integração com daemon. |
 | **Teclado** | Emulação de teclado/atalhos por botões (combos para hotkeys). | Mapeamento botão → keysym; persistência por perfil; testar combinação. |
-| **Firmware** | Atualização e info do firmware do DualSense (read-only no v3.0). | Versão atual; tipo de hardware; histórico de releases; instruções de update via PS5 (não há flash via Linux ainda). |
 
 > **Observação:** o footer global expõe **Aplicar**, **Salvar Perfil**, **Importar**, **Restaurar Default** — esses persistem o que está editado em qualquer aba ativa para o perfil corrente.
 
@@ -229,12 +228,13 @@ flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 > `~/.var/app/br.andrefarias.Hefesto/config/hefesto-dualsense4unix/profiles/`.
 
 > **Caveat COSMIC**: o cosmic-comp 1.0.x ainda não implementa o protocolo
-> `org.kde.StatusNotifierWatcher` que os tray icons Ayatana usam. O Hefesto
-> detecta isso automaticamente e abre uma **janela compacta** (320×90,
-> sempre-on-top) com bateria + perfil ativo + botões. Para desativar e usar só
-> a GUI principal: `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`. Tray nativo via
-> applet Rust/libcosmic está planejado para v3.4 (ver
-> [docs/process/ROADMAP.md](docs/process/ROADMAP.md)).
+> `org.kde.StatusNotifierWatcher` que os tray icons Ayatana usam. Habilite o
+> applet **"Área de status"** no cosmic-panel (Configurações > Painel >
+> Applets) para ter o ícone de bandeja, ou use a janela principal — fechá-la
+> encerra o app quando não há bandeja. Opcionalmente, uma **janela compacta**
+> 320×90 (bateria + perfil + botões) pode ser ativada com
+> `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1` (opt-in; default desligado).
+> A GUI roda sob XWayland no COSMIC para os popups de dropdown funcionarem.
 
 #### Via fonte (desenvolvimento)
 
@@ -254,10 +254,6 @@ Use `scripts/dev-setup.sh` no início de cada sessão: se `.venv/` falta ou est�
 > **GNOME 42+:** o `install.sh` detecta a extension `ubuntu-appindicators@ubuntu.com`
 > e oferece habilitação automática (sem ela o ícone de bandeja não aparece). Em outras
 > DEs (KDE, COSMIC, XFCE, Cinnamon, MATE) o tray Ayatana funciona nativamente.
-
-> **Aba Firmware (opcional):** depende do binário externo `dualsensectl`. O `install.sh`
-> oferece instalação via Flathub (`com.github.nowrep.dualsensectl`). A GUI funciona normalmente
-> com a aba desabilitada se o binário ausente.
 
 #### Re-aplicar regras udev (3 caminhos idempotentes)
 
@@ -451,12 +447,11 @@ expectativa: o que não foi rodado em hardware está marcado como
 | Alpine / Void / Artix   | qualquer          | —   | —  | —    | —           | Fora de escopo (sem systemd-logind — ver ADR-009)         |
 
 `*` Pop!_OS COSMIC: o cosmic-comp 1.0.x ainda não implementa
-`org.kde.StatusNotifierWatcher`, então o tray clássico fica oculto. Hefesto
-detecta automaticamente e abre uma **janela compacta** 320×90 sempre-on-top
-com bateria + perfil + botões. Opt-out via
-`HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`. Applet nativo
-Rust+libcosmic está planejado para v3.4 — ver
-[docs/process/ROADMAP.md](docs/process/ROADMAP.md).
+`org.kde.StatusNotifierWatcher`, então o tray clássico fica oculto. Habilite o
+applet "Área de status" no cosmic-panel para o ícone de bandeja, ou use a
+janela principal (fechá-la encerra o app quando não há bandeja). Uma **janela
+compacta** 320×90 opcional pode ser ativada via
+`HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1` (opt-in; default desligado).
 
 Para reportar resultado em distro não listada: rode
 [`CHECKLIST_VALIDACAO_v3.2.0.md`](CHECKLIST_VALIDACAO_v3.2.0.md) e abra
@@ -531,12 +526,8 @@ Detalhes empíricos em `docs/process/discoveries/2026-05-15-cosmic-1.0-validatio
 
 **Tray icon invisível no GNOME:**
 
-- A partir do GNOME 42 (Pop!_OS 22.04, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada para renderizar tray icons. O `install.sh --yes` (passo 8/9 a partir da v3.0.0) detecta e habilita automaticamente. Após habilitar, faça **logout/login** do GNOME para o Shell carregar.
+- A partir do GNOME 42 (Pop!_OS 22.04, Ubuntu 22.04), a extension `ubuntu-appindicators@ubuntu.com` precisa estar habilitada para renderizar tray icons. O `install.sh --yes` (no formato nativo) detecta e habilita automaticamente. Após habilitar, faça **logout/login** do GNOME para o Shell carregar.
 - Manualmente: `gnome-extensions enable ubuntu-appindicators@ubuntu.com`.
-
-**Aba Firmware silenciosamente não funciona:**
-
-- Depende do binário externo `dualsensectl` (opcional). Instale via Flathub: `flatpak install -y --user flathub com.github.nowrep.dualsensectl`. Ou compile do GitHub: <https://github.com/nowrep/dualsensectl>.
 
 **Sair do tray não encerra o daemon:**
 

@@ -91,7 +91,5 @@ Apos o projeto sair de Alpha (v4.0+), considerar package review oficial:
 - `pydualsense` puxado via pip durante build — sem RPM no Fedora ainda.
 - `python-uinput` (extras emulation): Fedora tem `python3-python-uinput`
   em alguns chroots; spec atual NAO requer (apenas via pip se preciso).
-- `dualsensectl` (aba Firmware): nao distribuido como RPM oficial; usuario
-  precisa buildar do source (<https://github.com/nowrep/dualsensectl>).
 
 Reportar bugs em <https://github.com/AndreBFarias/hefesto-dualsense4unix/issues>.

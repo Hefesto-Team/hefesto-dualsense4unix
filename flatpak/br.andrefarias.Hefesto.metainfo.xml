@@ -12,6 +12,20 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.5.0" date="2026-05-21">
+      <description>
+        <p>Acabamento de UI no COSMIC + empacotamento. Abas e popups dos
+           dropdowns agora respeitam o tema escuro (fundo do header do
+           notebook + seletores menu/menuitem no CSS); a GUI roda sob
+           XWayland automaticamente em sessoes COSMIC, corrigindo os popups
+           de combobox que abriam mal-posicionados e fechavam sozinhos. A
+           janela compacta (surrogate de tray) ganhou WM_CLASS + icone e
+           fecha encerrando o app. A aba Firmware foi removida (risco de
+           brick; use o caminho oficial Sony). Flatpak: --socket=x11 para o
+           XWayland funcionar no sandbox + glyphs bundlados. install.sh
+           ganhou seletor de formato (native/flatpak/appimage/deb).</p>
+      </description>
+    </release>
     <release version="3.4.3" date="2026-05-17">
       <description>
         <p>Patch para 2 bugs do ícone em uso real no Pop!_OS COSMIC:

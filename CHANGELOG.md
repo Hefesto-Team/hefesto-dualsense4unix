@@ -5,6 +5,52 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.5.0] — 2026-05-21
+
+Acabamento de UI no COSMIC, remoção da aba Firmware e seletor de formato
+no `install.sh`. Foco: fechar a versão final.
+
+### Fixed
+
+- **Abas brancas no COSMIC**: `gui/theme.css` não estilizava o fundo do
+  header do `GtkNotebook` — a tira de abas herdava o tema claro do sistema.
+  Adicionadas regras para `notebook` / `notebook > header` / `stack`.
+- **Popups dos dropdowns brancos + quebrados**: o seletor
+  `combobox window menuitem` nunca casava (o popup do `GtkComboBoxText` é um
+  `GtkMenu` *toplevel*, nó `menu`/`menuitem`). Adicionados seletores
+  top-level `menu`/`menuitem`. Além disso a GUI passa a rodar sob **XWayland**
+  automaticamente em sessões COSMIC (`GDK_BACKEND=x11` em `app/main.py` +
+  `run.sh`), corrigindo o grab/posicionamento dos popups no cosmic-comp
+  Wayland nativo (fechavam sozinhos / exigiam "segurar o clique").
+- **Janela compacta (surrogate de tray) intrusiva no COSMIC**: aparecia como
+  janela flutuante "py" sem ícone, sempre-on-top, e o `delete-event` retornava
+  `True` (não fechava). Agora é **opt-in** — default desligado, ativável com
+  `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1` (antes era opt-out/auto-on no
+  COSMIC); quando ligada tem `WM_CLASS` + ícone e fechar encerra o app.
+- **App ficava órfão ao fechar a janela principal sem bandeja real**: no COSMIC
+  sem `StatusNotifierWatcher`, fechar a principal escondia para um tray
+  invisível e o processo seguia inacessível. Agora `on_window_delete_event` só
+  esconde se há acesso persistente real (bandeja visível ou janela compacta
+  ativa); senão, encerra.
+
+### Removed
+
+- **Aba Firmware**: removida da GUI (risco de brick irreversível via Linux);
+  caminho recomendado é a atualização oficial Sony (PS5 / Firmware Updater).
+  Removidos `app/actions/firmware_actions.py`,
+  `integrations/firmware_updater.py`, os 3 testes correspondentes e o passo
+  `dualsensectl` do `install.sh`.
+
+### Changed
+
+- **`install.sh` com seletor de formato**:
+  `--format=native|flatpak|appimage|deb` (ou prompt interativo; default
+  `native`). flatpak/appimage/deb reusam os build scripts e instalam o pacote
+  real; udev é sempre aplicado no host.
+- **Flatpak**: `--socket=fallback-x11` → `--socket=x11` para o XWayland
+  forçado no COSMIC funcionar dentro do sandbox; glyphs SVG agora bundlados em
+  `/app/share/hefesto-dualsense4unix/glyphs` (resolver olha `sys.prefix`).
+
 ## [3.4.3] — 2026-05-17
 
 Patch para **2 bugs do ícone do app** em uso real no Pop!_OS COSMIC.
