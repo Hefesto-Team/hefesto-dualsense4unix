@@ -32,6 +32,11 @@ no `install.sh`. Foco: fechar a versão final.
   invisível e o processo seguia inacessível. Agora `on_window_delete_event` só
   esconde se há acesso persistente real (bandeja visível ou janela compacta
   ativa); senão, encerra.
+- **CI (gate de anonimato)**: `scripts/check_anonymity.sh` excluía a si mesmo
+  do scan mas não o detector irmão `.github/workflows/anonymity-check.yml`,
+  que contém os mesmos regexes (`anthropic|openai|claude|…`) — a
+  auto-referência fazia o job `build` do release falhar. Detector agora
+  excluído (consistente com a exclusão de `check_anonymity.sh`).
 
 ### Removed
 

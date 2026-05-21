@@ -21,6 +21,9 @@ EXCLUDE_PATHSPECS=(
     ':!tests/unit/test_check_anonymity.py'
     ':!.git/**'
     ':!scripts/check_anonymity.sh'
+    # Detector irmão: contém os mesmos regexes (anthropic|openai|claude|...)
+    # como parte da própria checagem — auto-referência, não violação.
+    ':!.github/workflows/anonymity-check.yml'
 )
 
 # Usa git grep se estivermos em repo (respeita .gitignore + pathspec).
@@ -40,6 +43,7 @@ else
         --exclude="LICENSE" --exclude="NOTICE" --exclude="CHANGELOG.md" \
         --exclude="VALIDATOR_BRIEF.md" --exclude=".gitignore" \
         --exclude="check_anonymity.sh" --exclude="test_check_anonymity.py" \
+        --exclude="anonymity-check.yml" \
         2>/dev/null || true)
 fi
 
