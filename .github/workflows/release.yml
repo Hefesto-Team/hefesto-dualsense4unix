@@ -270,6 +270,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
+          # Idempotente: re-run / re-dispatch da mesma tag não deve falhar com
+          # "release already exists". Se já existe, apaga (preservando a tag
+          # git — sem --cleanup-tag) e recria com os artefatos atuais.
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "Release v${VERSION} já existe — apagando para recriar."
+            gh release delete "v${VERSION}" --yes
+          fi
           gh release create "v${VERSION}" \
             --title "Hefesto - Dualsense4Unix v${VERSION}" \
             --notes-file /tmp/release-notes.md \
