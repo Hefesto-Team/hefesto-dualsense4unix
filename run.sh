@@ -44,6 +44,17 @@ for arg in "$@"; do
 done
 
 if [[ "$MODE" == "gui" ]]; then
+    # XWayland no COSMIC: popups de GtkMenu/GtkComboBox quebram no cosmic-comp
+    # Wayland nativo (fundo claro, mal-posicionados, grab quebrado / "segurar
+    # o clique"). app/main.py também faz isto; aqui garante o caminho
+    # dev/launcher/.desktop antes do Python subir. A sessão COSMIC do Pop!_OS
+    # exporta GDK_BACKEND=wayland,x11 (prefere wayland) — sobrescrevemos para
+    # x11. Opt-out: HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND=1.
+    if [[ "${HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND:-}" != "1" ]] \
+       && [[ "${GDK_BACKEND:-}" != "x11" ]] \
+       && [[ "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" == *[Cc][Oo][Ss][Mm][Ii][Cc]* ]]; then
+        export GDK_BACKEND=x11
+    fi
     exec python3 -m hefesto_dualsense4unix.app.main
 fi
 

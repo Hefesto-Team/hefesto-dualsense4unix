@@ -24,9 +24,14 @@ command: hefesto-dualsense4unix-gui
 finish-args:
   # Compartilhamento IPC entre processos (necessário para GTK X11)
   - --share=ipc
-  # Suporte a X11 com fallback se Wayland não disponível
-  - --socket=fallback-x11
-  # Suporte a Wayland nativo (COSMIC, GNOME)
+  # X11 SEMPRE disponível (não fallback). No COSMIC a GUI força
+  # GDK_BACKEND=x11 (XWayland) para contornar o bug de grab/posicionamento
+  # dos popups de GtkComboBox/GtkMenu no cosmic-comp Wayland nativo. Com
+  # `fallback-x11`, o socket X11 NÃO é montado quando Wayland está presente,
+  # e o XWayland forçado quebraria dentro do sandbox. `--socket=x11` garante
+  # o socket sem afetar GNOME (lá GDK_BACKEND fica livre → Wayland nativo).
+  - --socket=x11
+  # Suporte a Wayland nativo (GNOME e demais; no COSMIC cai em XWayland)
   - --socket=wayland
   # Acesso ao D-Bus de sessão (portals, notificações)
   - --socket=session-bus
@@ -154,6 +159,13 @@ modules:
       # Instalar ícone 256x256 para o lançador do sistema
       - install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png
           /app/share/icons/hicolor/256x256/apps/br.andrefarias.Hefesto.png
+
+      # Glyphs SVG dos botões do DualSense. Sem isto, ButtonGlyph não acha os
+      # assets dentro do sandbox (nem ~/.local/share nem /usr/share resolvem)
+      # e os glyphs da aba Status somem. O resolver olha sys.prefix/share
+      # (=/app no Flatpak) — ver gui/widgets/button_glyph.py.
+      - install -Dm644 -t /app/share/hefesto-dualsense4unix/glyphs/
+          assets/glyphs/*.svg
 
       # Instalar arquivo .desktop adaptado para o App ID Flatpak
       - install -Dm644 flatpak/br.andrefarias.Hefesto.desktop

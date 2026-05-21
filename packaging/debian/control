@@ -13,8 +13,8 @@ Description: Daemon Linux para gatilhos adaptativos do controle DualSense
  Hefesto - Dualsense4Unix e um daemon user-level que habilita os gatilhos
  adaptativos do DualSense (Sony) em Linux, com suporte a perfis automaticos
  por janela ativa, lightbar RGB, rumble, emulacao Xbox 360 via uinput,
- e GUI GTK3 com 10 abas (Status, Gatilhos, Lightbar, Rumble, Perfis,
- Daemon, Emulacao, Mouse, Teclado, Firmware).
+ e GUI GTK3 com 9 abas (Status, Gatilhos, Lightbar, Rumble, Perfis,
+ Daemon, Emulacao, Mouse, Teclado).
  .
  Este pacote inclui um virtualenv Python pre-construido em
  /opt/hefesto-dualsense4unix/venv/ com todas as dependencias Python

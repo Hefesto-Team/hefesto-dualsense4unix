@@ -32,8 +32,10 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
 
+from hefesto_dualsense4unix.app.constants import ICON_PATH
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -49,13 +51,22 @@ COMPACT_REFRESH_SEC = 3
 COMPACT_WIDTH = 320
 COMPACT_HEIGHT = 90
 
-# Env var de opt-out (default ligado).
-ENV_OPT_OUT = "HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW"
+# Env var de controle. A janela compacta é OPT-IN (default DESLIGADO): a
+# versão flutuante always-on-top no COSMIC era intrusiva. `ENV_OPT_OUT` é
+# mantido como alias do nome antigo para compat de imports/testes.
+ENV_COMPACT_WINDOW = "HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW"
+ENV_OPT_OUT = ENV_COMPACT_WINDOW
 
 
 def is_enabled() -> bool:
-    """Compact window auto-ativa salvo HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0."""
-    return os.environ.get(ENV_OPT_OUT, "1") != "0"
+    """Janela compacta é OPT-IN: só ativa com
+    ``HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1``.
+
+    Default DESLIGADO. No COSMIC sem tray, use o applet "Área de status"
+    (Configurações > Painel) ou a janela principal — fechar a principal
+    encerra o app quando não há bandeja real (sem deixá-lo órfão).
+    """
+    return os.environ.get(ENV_COMPACT_WINDOW, "0") == "1"
 
 
 ShowFn = Callable[[], None]
@@ -123,6 +134,15 @@ class CompactWindow:
     def _build_window(self) -> None:
         win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
         win.set_title("Hefesto - Dualsense4Unix")
+        # BUG-COMPACT-WINDOW-WMCLASS-ICON-01: identidade da janela para a
+        # dock/taskbar (XWayland no COSMIC). Sem WM_CLASS casando o
+        # StartupWMClass do .desktop, a janela aparecia como "py" e sem logo.
+        # Espelha exatamente o que app.py faz na janela principal.
+        win.set_wmclass("hefesto-dualsense4unix", "Hefesto-Dualsense4Unix")
+        if ICON_PATH.exists():
+            import contextlib as _ctx
+            with _ctx.suppress(Exception):
+                win.set_icon_from_file(str(ICON_PATH))
         win.set_default_size(COMPACT_WIDTH, COMPACT_HEIGHT)
         win.set_resizable(False)
         win.set_keep_above(True)
@@ -131,7 +151,11 @@ class CompactWindow:
         win.set_decorated(False)
         # Posiciona no canto inferior-direito (área tradicional de widget).
         win.set_gravity(Gdk.Gravity.SOUTH_EAST)
-        win.connect("delete-event", lambda *_: True)  # nunca fecha
+        # BUG-COMPACT-WINDOW-CLOSE-NOOP-01: fechar a janela compacta encerra o
+        # app. Ela é o ponto de acesso persistente quando não há tray; antes o
+        # delete-event retornava True ("nunca fecha"), e o usuário via a janela
+        # ignorar o clique de fechar (parecia travada no COSMIC).
+        win.connect("delete-event", self._on_delete_event)
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         outer.set_margin_start(8)
@@ -178,6 +202,15 @@ class CompactWindow:
 
         win.show_all()
         self._window = win
+
+    def _on_delete_event(self, *_args: Any) -> bool:
+        """Fechar a janela compacta encerra o app (delega a on_quit).
+
+        Retorna True para impedir o destroy default do GTK antes de on_quit
+        rodar o shutdown limpo (tray + daemon).
+        """
+        self.on_quit()
+        return True
 
     def _on_profile_button_clicked(self, btn: Gtk.Button) -> None:
         """Abre popup menu com perfis disponíveis ancorado no botão."""

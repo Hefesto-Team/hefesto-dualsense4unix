@@ -53,8 +53,8 @@ Recommends:     wlrctl
 Hefesto - Dualsense4Unix is a user-level Linux daemon that enables the
 DualSense (PS5) adaptive triggers, with automatic per-window profile
 switching, RGB lightbar, rumble, Xbox 360 controller emulation via
-uinput, and a 10-tab GTK3 GUI (Status, Triggers, Lightbar, Rumble,
-Profiles, Daemon, Emulation, Mouse, Keyboard, Firmware).
+uinput, and a 9-tab GTK3 GUI (Status, Triggers, Lightbar, Rumble,
+Profiles, Daemon, Emulation, Mouse, Keyboard).
 
 It runs without root: udev rules and uinput module enable raw access
 to /dev/hidraw* and /dev/uinput for the active user session.
@@ -66,7 +66,6 @@ After installation, start the daemon as user service:
 Recommended optional packages:
 
     sudo dnf install wlrctl       # auto-switch in Wayland
-    # dualsensectl                # for the Firmware tab (build from source)
 
 %prep
 %autosetup -n %{pypi_name}-%{version}

@@ -48,7 +48,6 @@ makedepends=(
 )
 optdepends=(
     'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
-    'dualsensectl: aba Firmware (manutencao do controle)'
 )
 install="${pkgname}.install"
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")

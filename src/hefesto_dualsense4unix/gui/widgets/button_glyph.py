@@ -9,12 +9,14 @@ O widget alterna entre elas via `set_pressed(bool)`, acionando `queue_draw`.
 Caminho dos assets resolvido por ordem de preferência (BUG-DEB-GLYPHS-
 PATH-RESOLVER-01: o .deb instala em /usr/share/, não em ~/.local/share/):
   1. ~/.local/share/hefesto-dualsense4unix/glyphs/    (install.sh nativo)
-  2. /usr/share/hefesto-dualsense4unix/assets/glyphs/ (.deb / system-wide)
-  3. assets/glyphs/                                   (diretório do repo)
+  2. <sys.prefix>/share/hefesto-dualsense4unix/glyphs/ (Flatpak: /app/share)
+  3. /usr/share/hefesto-dualsense4unix/assets/glyphs/ (.deb / system-wide)
+  4. assets/glyphs/                                   (diretório do repo)
 """
 from __future__ import annotations
 
 import pathlib
+import sys
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -58,9 +60,13 @@ def _resolver_dir_glyphs() -> pathlib.Path:
     candidatos: list[pathlib.Path] = [
         # 1) install.sh nativo copia para ~/.local/share/
         pathlib.Path.home() / ".local" / "share" / "hefesto-dualsense4unix" / "glyphs",
-        # 2) .deb instala assets em /usr/share/hefesto-dualsense4unix/assets/
+        # 2) Flatpak: o manifesto instala em /app/share/...; sys.prefix=/app
+        # dentro do sandbox. Nem ~/.local/share (home isolado) nem /usr/share
+        # (runtime) resolvem lá — sem este candidato os glyphs somem no Flatpak.
+        pathlib.Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "glyphs",
+        # 3) .deb instala assets em /usr/share/hefesto-dualsense4unix/assets/
         pathlib.Path("/usr/share/hefesto-dualsense4unix/assets/glyphs"),
-        # 3) Dev: caminho relativo ao pacote
+        # 4) Dev: caminho relativo ao pacote
         # (src/hefesto_dualsense4unix/gui/widgets/ -> raiz/assets/glyphs/)
         pathlib.Path(__file__).parent.parent.parent.parent.parent / "assets" / "glyphs",
     ]

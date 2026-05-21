@@ -28,7 +28,6 @@ from gi.repository import GdkPixbuf, Gtk
 
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
-from hefesto_dualsense4unix.app.actions.firmware_actions import FirmwareActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
@@ -43,6 +42,9 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import profile_list, profile_switch
 from hefesto_dualsense4unix.app.theme import apply_theme
 from hefesto_dualsense4unix.app.tray import AppTray, _desktop_is_cosmic
+from hefesto_dualsense4unix.integrations.desktop_notifications import (
+    statusnotifierwatcher_available,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -101,7 +103,6 @@ class HefestoApp(
     DaemonActionsMixin,
     EmulationActionsMixin,
     InputActionsMixin,
-    FirmwareActionsMixin,
     FooterActionsMixin,
 ):
     """Aplicação GTK do Hefesto - Dualsense4Unix."""
@@ -235,10 +236,6 @@ class HefestoApp(
             "on_key_binding_add": self.on_key_binding_add,
             "on_key_binding_remove": self.on_key_binding_remove,
             "on_key_binding_restore_defaults": self.on_key_binding_restore_defaults,
-            # Firmware (FEAT-FIRMWARE-UPDATE-GUI-01)
-            "on_firmware_check": self.on_firmware_check,
-            "on_firmware_browse": self.on_firmware_browse,
-            "on_firmware_apply": self.on_firmware_apply,
             # Rodapé — ações globais (UI-GLOBAL-FOOTER-ACTIONS-01)
             "on_apply_draft": self.on_apply_draft,
             "on_save_profile": self.on_save_profile,
@@ -278,11 +275,34 @@ class HefestoApp(
         """
         if self._quitting:
             return False
-        if self.tray is not None and self.tray.is_available():
+        # Esconde pro tray apenas se há acesso persistente REAL (ícone de
+        # bandeja utilizável OU janela compacta opt-in ativa). Sem isso,
+        # fechar = encerrar — senão o app ficaria órfão e invisível no COSMIC
+        # sem o applet de status (BUG-COMPACT-WINDOW-ORPHAN-ON-CLOSE-01).
+        if self._has_persistent_access():
             self.window.hide()
             return True
         Gtk.main_quit()
         return False
+
+    def _has_persistent_access(self) -> bool:
+        """True se o usuário consegue reabrir/controlar o app após fechar a
+        janela principal.
+
+        Acesso persistente = janela compacta ativa OU ícone de bandeja
+        realmente visível. Em COSMIC o indicator só aparece com o
+        StatusNotifierWatcher (cosmic-applet-status-area) presente; sem ele,
+        esconder a janela deixaria o app inacessível.
+        """
+        if self.compact_window is not None:
+            return True
+        if self.tray is None or not self.tray.is_available():
+            return False
+        # Em COSMIC o indicator só é visível com o StatusNotifierWatcher
+        # (cosmic-applet-status-area) presente; fora do COSMIC, basta o tray.
+        if _desktop_is_cosmic():
+            return statusnotifierwatcher_available()
+        return True
 
     def quit_app(self) -> None:
         """Encerra GUI e daemon (BUG-MULTI-INSTANCE-01).
@@ -544,7 +564,6 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_input_tab()
-        self.install_firmware_tab()
         # Conecta switch-page do GtkNotebook para refresh de draft por aba.
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
@@ -576,12 +595,14 @@ class HefestoApp(
             on_list_profiles=profile_list,
             on_switch_profile=profile_switch,
         )
-        tray_ok = self.tray.start()
-        # FEAT-COMPACT-WINDOW-FALLBACK-01 (v3.3.0): se AppIndicator
-        # indisponível (sem ayatana/probe falhou) OU sessão COSMIC sem
-        # cosmic-applet-status-area, oferece janela compacta como surrogate.
-        # Opt-out via HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0.
-        if compact_window_enabled() and (not tray_ok or _desktop_is_cosmic()):
+        self.tray.start()
+        # FEAT-COMPACT-WINDOW-FALLBACK-01: a janela compacta agora é OPT-IN
+        # (HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1). Por padrão NÃO aparece —
+        # a versão "always-on-top sem moldura" no COSMIC era intrusiva. Sem
+        # tray, o caminho é o applet "Área de status" (Configurações > Painel)
+        # ou a janela principal; fechar a principal encerra o app quando não
+        # há bandeja real (ver _has_persistent_access), evitando órfão.
+        if compact_window_enabled():
             self.compact_window = CompactWindow(
                 on_show_window=self.show_window,
                 on_quit=self.quit_app,
@@ -590,10 +611,7 @@ class HefestoApp(
                 on_state=self._compact_state_snapshot,
             )
             if self.compact_window.start():
-                logger.info(
-                    "compact_window_fallback_active",
-                    reason="tray_unavailable" if not tray_ok else "cosmic_session",
-                )
+                logger.info("compact_window_active", reason="opt_in")
 
         # FEAT-NOTIFY-ACTION-OPEN-01 (v3.3.0): listener para botões
         # "Abrir Hefesto" das notificações D-Bus (controlador desconectado,

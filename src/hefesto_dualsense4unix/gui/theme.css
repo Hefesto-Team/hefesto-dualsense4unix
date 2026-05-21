@@ -80,6 +80,40 @@ combobox window treeview.view:selected {
     background-color: #44475a;
     color: #f8f8f2;
 }
+/* Popup REAL do GtkComboBoxText. O dropdown é um GtkMenu *toplevel* cujo nó CSS
+   é `menu`/`menuitem` — NÃO descendente de `combobox`. Por isso o seletor
+   `combobox window menuitem` acima nunca casava e o popup herdava o tema claro
+   do sistema (fundo branco, ilegível sobre o corpo Drácula).
+   BUG-GUI-COMBOBOX-MENU-POPUP-WHITE-01 (COSMIC). Estas regras top-level cobrem
+   também os menus de contexto/tray do próprio app; não vazam para outros
+   processos (provider é por-screen deste processo). */
+menu,
+menu.background,
+menu.csd,
+.context-menu {
+    background-color: #282a36;
+    border: 1px solid #6272a4;
+}
+menu menuitem,
+menu menuitem label {
+    background-color: transparent;
+    color: #f8f8f2;
+    padding: 4px 8px;
+}
+menu menuitem:hover,
+menu menuitem:hover label,
+menu menuitem:focus,
+menu menuitem:focus label {
+    background-color: #44475a;
+    color: #f8f8f2;
+}
+menu menuitem:disabled,
+menu menuitem:disabled label {
+    color: #6272a4;
+}
+menu separator {
+    background-color: #44475a;
+}
 /* Labels gerais — herdam color via .hefesto-dualsense4unix-window mas em alguns
    containers internos (Frame, Box) o GTK aplica cinza disabled-look. Forçar. */
 .hefesto-dualsense4unix-window label {
@@ -120,6 +154,20 @@ combobox window treeview.view:selected {
     font-weight: bold;
 }
 
+/* Fundo do notebook + header das abas. Sem isto, a tira de abas herda o tema
+   claro do sistema (Yaru/Adwaita) e fica BRANCA contra o corpo Drácula.
+   BUG-GUI-NOTEBOOK-HEADER-WHITE-01 (COSMIC). As abas em si (regras abaixo)
+   ficam transparentes sobre este header escuro. */
+.hefesto-dualsense4unix-window notebook,
+.hefesto-dualsense4unix-window notebook > header,
+.hefesto-dualsense4unix-window notebook > header.top,
+.hefesto-dualsense4unix-window notebook > header.bottom,
+.hefesto-dualsense4unix-window notebook > stack {
+    background-color: #282a36;
+}
+.hefesto-dualsense4unix-window notebook > header {
+    border-color: #44475a;
+}
 .hefesto-dualsense4unix-window notebook > header > tabs > tab {
     background: transparent;
     border: none;

@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
-# install.sh — instala Hefesto - Dualsense4Unix completo no ambiente do usuário.
+# install.sh — instala Hefesto - Dualsense4Unix no ambiente do usuário.
+#
+# Formatos (--format=FMT, ou prompt interativo; default: native):
+#   native     venv editável + atalho (instalação de desenvolvimento, atual).
+#   flatpak    build local + flatpak install --user (sandbox GNOME//47).
+#   appimage   build do .AppImage GUI + atalho em ~/.local/bin.
+#   deb        build do .deb + sudo apt install (venv bundlado).
+# Atalhos equivalentes: --flatpak, --appimage, --deb, --native.
 #
 # Flags:
+#   --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
 #   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
 #                         POR DEFAULT, as 5 regras + modules-load uinput são
 #                         aplicadas automaticamente (re-cópia é idempotente).
 #                         Se Flatpak Hefesto está instalado, também propaga.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
-#                         COSMIC XWayland, AppIndicator extension, etc).
+#                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
@@ -43,6 +51,7 @@ ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
+FORMAT=""
 
 for arg in "$@"; do
     case "$arg" in
@@ -52,14 +61,24 @@ for arg in "$@"; do
         --enable-autostart)   ENABLE_AUTOSTART=1 ;;
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
+        --format=*)           FORMAT="${arg#*=}" ;;
+        --native)             FORMAT="native" ;;
+        --flatpak)            FORMAT="flatpak" ;;
+        --appimage)           FORMAT="appimage" ;;
+        --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
+
+case "${FORMAT}" in
+    ""|native|flatpak|appimage|deb) ;;
+    *) printf 'ERRO: formato inválido: %s (use native|flatpak|appimage|deb)\n' "${FORMAT}" >&2; exit 2 ;;
+esac
 
 # Detecta COSMIC: XDG_CURRENT_DESKTOP contém "COSMIC" (case-insensitive).
 # Se detectado e usuário não passou --force-xwayland explícito, pergunta
@@ -109,9 +128,123 @@ run_apt() {
 require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 
 # ---------------------------------------------------------------------------
+# 0. Seleção de formato de instalação
+# ---------------------------------------------------------------------------
+# native (default) faz a instalação de desenvolvimento (venv editável + atalho
+# para run.sh). flatpak/appimage/deb reusam os build scripts e instalam o
+# pacote real. udev é sempre aplicado no host (o controle não funciona sem as
+# regras, em qualquer formato).
+if [[ -z "${FORMAT}" ]]; then
+    if [[ "${AUTO_YES}" -eq 1 ]]; then
+        FORMAT="native"
+    else
+        printf '\nFormato de instalação:\n'
+        printf '  1) native    venv editável + atalho (desenvolvimento; default)\n'
+        printf '  2) flatpak   build local + flatpak install --user (sandbox GNOME//47)\n'
+        printf '  3) appimage  build do .AppImage GUI + atalho em ~/.local/bin\n'
+        printf '  4) deb       build do .deb + sudo apt install (venv bundlado)\n'
+        _fmt_choice=""
+        read -r -p "Escolha [1-4] (Enter = native): " _fmt_choice || true
+        case "${_fmt_choice:-}" in
+            2|flatpak)  FORMAT="flatpak" ;;
+            3|appimage) FORMAT="appimage" ;;
+            4|deb)      FORMAT="deb" ;;
+            *)          FORMAT="native" ;;
+        esac
+    fi
+fi
+printf '\n>>> Formato escolhido: %s\n' "${FORMAT}"
+
+# udev no host — compartilhado por todos os formatos (o pacote .deb já cobre
+# via postinst; flatpak/appimage/native precisam desta chamada explícita).
+install_udev_host() {
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      udev pulado (--no-udev) — rode depois: sudo bash scripts/install_udev.sh\n'
+    elif command -v sudo >/dev/null 2>&1; then
+        if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
+            printf '      udev rules aplicadas + recarregadas\n'
+        else
+            warn "install_udev.sh falhou — rode manualmente: sudo bash scripts/install_udev.sh"
+        fi
+    else
+        warn "sudo ausente — rode scripts/install_udev.sh como root depois"
+    fi
+}
+
+format_flatpak() {
+    step "flatpak" "build + flatpak install --user (GNOME//47)"
+    require flatpak
+    command -v flatpak-builder >/dev/null 2>&1 \
+        || die "flatpak-builder ausente. Instale: sudo apt install flatpak-builder (ou flatpak install flathub org.flatpak.Builder)"
+    bash "${ROOT_DIR}/scripts/build_flatpak.sh" --install \
+        || die "build_flatpak.sh falhou"
+    install_udev_host
+    printf '\n      Abrir: flatpak run br.andrefarias.Hefesto\n'
+}
+
+format_appimage() {
+    step "appimage" "build do .AppImage GUI + atalho"
+    bash "${ROOT_DIR}/scripts/build_appimage_gui.sh" \
+        || die "build_appimage_gui.sh falhou (veja pré-requisitos no cabeçalho do script)"
+    local appimage
+    appimage="$(ls -t "${ROOT_DIR}/dist/appimage/"*.AppImage 2>/dev/null | head -1)"
+    [[ -n "${appimage}" ]] || die "nenhum .AppImage gerado em dist/appimage/"
+    mkdir -p "${BIN_DIR}"
+    local target="${BIN_DIR}/Hefesto-Dualsense4Unix.AppImage"
+    cp -f "${appimage}" "${target}"
+    chmod +x "${target}"
+    mkdir -p "${ICON_TARGET_DIR}" "$(dirname "${DESKTOP_TARGET}")"
+    cp -f "${ICON_SRC}" "${ICON_TARGET}"
+    cat > "${DESKTOP_TARGET}" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Hefesto - Dualsense4Unix
+GenericName=DualSense Controller
+Comment=Daemon de gatilhos adaptativos para DualSense no Linux
+Exec=${target} --gui
+Icon=${APP_ID}
+Categories=Settings;HardwareSettings;
+Terminal=false
+StartupNotify=true
+StartupWMClass=Hefesto-Dualsense4Unix
+DESKTOP
+    command -v update-desktop-database >/dev/null 2>&1 \
+        && update-desktop-database -q "$(dirname "${DESKTOP_TARGET}")" 2>/dev/null || true
+    install_udev_host
+    [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]] \
+        && bash "${ROOT_DIR}/scripts/install_profiles.sh" "${ROOT_DIR}" >/dev/null 2>&1 || true
+    printf '\n      Instalado: %s\n      Abrir pelo menu de apps ou: %s --gui\n' "${target}" "${target}"
+}
+
+format_deb() {
+    step "deb" "build do .deb + sudo apt install"
+    bash "${ROOT_DIR}/scripts/build_deb.sh" \
+        || die "build_deb.sh falhou"
+    local deb
+    deb="$(ls -t "${ROOT_DIR}/dist/"*.deb 2>/dev/null | head -1)"
+    [[ -n "${deb}" ]] || die "nenhum .deb gerado em dist/"
+    command -v sudo >/dev/null 2>&1 || die "sudo necessário para 'apt install'"
+    sudo apt-get install -y "${deb}" || die "apt install falhou"
+    printf '\n      Instalado via apt (udev + .desktop via postinst).\n      Abrir: hefesto-dualsense4unix-gui\n'
+}
+
+if [[ "${FORMAT}" != "native" ]]; then
+    case "${FORMAT}" in
+        flatpak)  format_flatpak ;;
+        appimage) format_appimage ;;
+        deb)      format_deb ;;
+    esac
+    printf '\n─────────────────────────────────────────\n'
+    printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
+    printf ' Desinstalar: ./uninstall.sh\n'
+    printf '─────────────────────────────────────────\n\n'
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
 # 1. Verificar Python
 # ---------------------------------------------------------------------------
-step "1/9" "verificando dependências do sistema"
+step "1/8" "verificando dependências do sistema"
 require python3
 ok
 
@@ -137,7 +270,7 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
-step "2/9" "preparando ambiente Python"
+step "2/8" "preparando ambiente Python"
 
 # Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
 # inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
@@ -203,7 +336,7 @@ ok
 # essas regras o controle não funciona, e o prompt levava usuários a "pular"
 # sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
 # reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
-step "3/9" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/8" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev) — IMPORTANTE: o controle precisa das regras\n'
@@ -240,7 +373,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
 # ---------------------------------------------------------------------------
-step "4/9" "atalho de aplicativo e launcher"
+step "4/8" "atalho de aplicativo e launcher"
 
 # FEAT-ICON-MULTI-RES-01 (v3.4.2, refinado em v3.4.3): gera o icone em
 # todas resolucoes do hicolor + pixmap legacy. Antes so existia 256x256
@@ -419,14 +552,14 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/9" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+step "5/8" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
 # 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
-step "6/9" "daemon systemd --user"
+step "6/8" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
@@ -457,7 +590,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
-step "7/9" "hotplug USB → abre a GUI automaticamente"
+step "7/8" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
@@ -499,7 +632,7 @@ fi
 # ---------------------------------------------------------------------------
 # 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
 # ---------------------------------------------------------------------------
-step "8/9" "GNOME: extension AppIndicator (tray icon)"
+step "8/8" "GNOME: extension AppIndicator (tray icon)"
 
 _desktop="${XDG_CURRENT_DESKTOP:-}"
 if [[ -z "${_desktop}" ]]; then
@@ -527,40 +660,6 @@ else
         else
             printf '      pulado a pedido — habilite depois com: gnome-extensions enable %s\n' "${_ext_id}"
         fi
-    fi
-fi
-
-# ---------------------------------------------------------------------------
-# 9. dualsensectl (opcional — aba Firmware)
-# ---------------------------------------------------------------------------
-step "9/9" "dualsensectl (opcional — aba Firmware)"
-
-if command -v dualsensectl >/dev/null 2>&1; then
-    printf '      já presente em %s\n' "$(command -v dualsensectl)"
-elif ! command -v flatpak >/dev/null 2>&1; then
-    printf '      ausente — para habilitar a aba Firmware, instale manualmente:\n'
-    printf '        https://github.com/nowrep/dualsensectl  (build via cmake)\n'
-    printf '      a aba Firmware ficará desabilitada até instalar (não bloqueia uso geral)\n'
-elif ! { flatpak --user remotes 2>/dev/null; flatpak remotes 2>/dev/null; } \
-        | awk '{print $1}' | grep -qx "flathub"; then
-    printf '      flatpak presente mas remote flathub ausente. Configure com:\n'
-    printf '        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo\n'
-    printf '      e rode novamente este install.sh\n'
-else
-    printf '      dualsensectl ausente — necessário para a aba Firmware da GUI (opcional)\n'
-    printf '      Flathub: com.github.nowrep.dualsensectl\n'
-    ask_yn "instalar agora via flatpak?" "${AUTO_YES}" "n"
-    if [[ "${REPLY,,}" =~ ^y ]]; then
-        if flatpak install --user -y flathub com.github.nowrep.dualsensectl >/dev/null 2>&1; then
-            printf '      instalado via flatpak\n'
-            printf '      lembrete: para que a GUI encontre o binário no PATH, exponha um wrapper:\n'
-            printf '        echo -e "#!/bin/sh\\nflatpak run com.github.nowrep.dualsensectl \\"\\$@\\"" \\\n'
-            printf '          | sudo tee /usr/local/bin/dualsensectl >/dev/null && sudo chmod +x /usr/local/bin/dualsensectl\n'
-        else
-            warn "flatpak install falhou — instale manualmente: flatpak install flathub com.github.nowrep.dualsensectl"
-        fi
-    else
-        printf '      pulado a pedido — aba Firmware ficará desabilitada\n'
     fi
 fi
 

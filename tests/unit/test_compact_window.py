@@ -119,30 +119,30 @@ def _mk_window() -> CompactWindow:
 
 
 # ---------------------------------------------------------------------------
-# is_enabled() / env var opt-out
+# is_enabled() / env var opt-in (default DESLIGADO)
 # ---------------------------------------------------------------------------
 
 
-def test_is_enabled_default_true(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem env var setada, compact window é auto-on."""
+def test_is_enabled_default_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem env var setada, a janela compacta NÃO aparece (opt-in)."""
     monkeypatch.delenv(ENV_OPT_OUT, raising=False)
-    assert is_enabled() is True
-
-
-def test_is_enabled_opt_out_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0 desativa."""
-    monkeypatch.setenv(ENV_OPT_OUT, "0")
     assert is_enabled() is False
 
 
-def test_is_enabled_outros_valores_continuam_ligado(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Apenas '0' explícito desliga (1, true, qualquer outro => on)."""
+def test_is_enabled_opt_in_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1 ativa explicitamente."""
     monkeypatch.setenv(ENV_OPT_OUT, "1")
     assert is_enabled() is True
+
+
+def test_is_enabled_so_um_explicito_ativa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Apenas '1' liga; '0' e qualquer outro valor mantêm desligado."""
+    monkeypatch.setenv(ENV_OPT_OUT, "0")
+    assert is_enabled() is False
     monkeypatch.setenv(ENV_OPT_OUT, "yes")
-    assert is_enabled() is True
+    assert is_enabled() is False
 
 
 # ---------------------------------------------------------------------------
