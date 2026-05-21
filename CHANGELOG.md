@@ -55,6 +55,13 @@ no `install.sh`. Foco: fechar a versão final.
 - **Flatpak**: `--socket=fallback-x11` → `--socket=x11` para o XWayland
   forçado no COSMIC funcionar dentro do sandbox; glyphs SVG agora bundlados em
   `/app/share/hefesto-dualsense4unix/glyphs` (resolver olha `sys.prefix`).
+- **`.deb` por distro (`BUG-DEB-VENV-CROSS-PYVER-01`)**: o venv bundlado
+  (`--copies`) linka contra a `libpython3.X` exata do build, então um `.deb`
+  feito no Jammy (3.10) quebrava no Noble 24.04 (sem `libpython3.10`). Agora o
+  CI gera **um `.deb` por distro** — Jammy/`py310` (Pop!_OS 22.04) e
+  Noble/`py312` (24.04) — com `Depends: python3.X` exato (o apt instala só o
+  compatível e recusa o da distro errada) e tag no nome (`_py310`/`_py312`).
+  Ambos vão anexados ao release.
 
 ## [3.4.3] — 2026-05-17
 
