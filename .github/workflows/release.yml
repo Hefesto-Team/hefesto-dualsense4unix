@@ -97,39 +97,51 @@ jobs:
           path: dist/appimage/*.AppImage
 
   deb:
-    runs-on: ubuntu-22.04
+    # Um .deb por distro: o venv bundlado (--copies) linka contra a
+    # libpython3.X exata do build, então 22.04->py310 e 24.04->py312. Os dois
+    # vão no release; o usuario instala o da sua distro (apt recusa o outro
+    # via Depends python3.X). Resolve BUG-DEB-VENV-CROSS-PYVER-01.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     needs: build
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
+      # setup-python 3.12 fica no PATH só para o build_deb.sh ler a versão via
+      # tomllib (3.11+); o venv bundlado usa /usr/bin/python3 (default da distro).
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: 'pip'
           cache-dependency-path: 'pyproject.toml'
-      - name: Instalar dpkg-deb (nativo no Ubuntu)
-        run: sudo apt-get update && sudo apt-get install -y dpkg
+      - name: Instalar dpkg-deb + python3-venv do sistema
+        run: sudo apt-get update && sudo apt-get install -y dpkg python3-venv
       - name: Build .deb
         run: bash scripts/build_deb.sh
       - name: Upload pacote .deb
         uses: actions/upload-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: dist/*.deb
 
   deb-install-smoke:
     name: Smoke install do .deb
-    # Histórico de iterações:
-    # - Sprint 74: runs-on ubuntu-24.04, presumiu pydantic v2 no apt. FALHOU.
-    # - Sprint 79.1: runs-on ubuntu-22.04 + pip install pydantic>=2. FALHOU
-    #   em v2.2.2 por structlog/typer/platformdirs TAMBEM velhos no Jammy apt.
-    # - Sprint 82 (2026-04-24): MIGRACAO para ubuntu-24.04 (Noble). Empirico
-    #   confirmou typer 0.9, structlog 24.1, platformdirs 4 modernos; so
-    #   pydantic 1.10 do apt exige pip install --user (fix 79.1 preservado).
-    #   Noble e runner alvo preferido: LTS mais recente, dep stack moderna
-    #   exceto pydantic, zero compat layers arriscadas.
-    runs-on: ubuntu-24.04
+    # Um smoke por distro, casando o .deb que aquela distro produz: o py310 é
+    # instalado e validado no 22.04 (Jammy, libpython3.10) e o py312 no 24.04
+    # (Noble, libpython3.12). O venv bundlado é AUTOCONTIDO (pydantic 2, typer,
+    # etc. pinados via pip no build) — não precisa do antigo hack de
+    # `pip install --user pydantic` (que ainda por cima quebraria no 22.04, cujo
+    # pip não tem --break-system-packages). gi vem do python3-gi do sistema via
+    # .pth shim. Resolve BUG-DEB-VENV-CROSS-PYVER-01.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
     needs: [build, deb]
     env:
       VERSION: ${{ needs.build.outputs.version }}
@@ -137,40 +149,26 @@ jobs:
       - name: Baixar artifact do .deb
         uses: actions/download-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          name: deb-${{ needs.build.outputs.version }}-${{ matrix.os }}
           path: ./dist
       - name: Listar artifact
         run: ls -lah ./dist
-      - name: Instalar pydantic v2 + typer moderno via pip
-        # Noble 24.04 apt: pydantic 1.10.14 (precisa v2), typer 0.9.0
-        # (precisa 0.12+ para PEP 604 'int | None' em cli/app.py).
-        # Empirico 2026-04-24 (docker ubuntu:24.04): pydantic>=2 + typer>=0.12
-        # + deps apt = hefesto CLI carrega, 'hefesto-dualsense4unix version' imprime 2.2.2.
-        # --break-system-packages: Noble e PEP 668.
-        run: |
-          python3 -m pip install --user --break-system-packages --upgrade 'pydantic>=2.0' 'typer>=0.12'
       - name: Instalar .deb via apt (resolve deps)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64.deb
+          sudo apt-get install -y ./dist/hefesto-dualsense4unix_*_amd64_*.deb
       - name: Validar binário hefesto-dualsense4unix
         run: |
           which hefesto-dualsense4unix
-          # Expor pydantic v2 + typer 0.12+ do pip --user para o hefesto-dualsense4unix
-          # (instalado em /usr/lib/python3/dist-packages). PYTHONPATH coloca o
-          # user site ANTES do dist-packages para os imports resolverem as
-          # versões modernas primeiro. Subcomando correto e 'hefesto-dualsense4unix version',
-          # não '--version' (não existe como top-level option).
-          USER_SITE="$(python3 -m site --user-site)"
-          echo "USER_SITE=$USER_SITE"
-          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix version
+          # Venv bundlado é autocontido — roda direto, sem PYTHONPATH.
+          # 'version' é subcomando (não existe '--version' top-level).
+          hefesto-dualsense4unix version
       - name: Validar binário hefesto-dualsense4unix-gui
         run: |
           which hefesto-dualsense4unix-gui
           # --help em runner headless pode falhar por falta de DISPLAY/GTK;
           # o critério é localizar o binário. Exit não-zero aqui é aceitável.
-          USER_SITE="$(python3 -m site --user-site)"
-          PYTHONPATH="$USER_SITE" hefesto-dualsense4unix-gui --help || echo "hefesto-dualsense4unix-gui --help retornou não-zero em headless (esperado)"
+          hefesto-dualsense4unix-gui --help || echo "gui --help retornou não-zero em headless (esperado)"
       - name: Desinstalar (valida postrm)
         run: sudo apt-get remove -y hefesto-dualsense4unix
 
@@ -241,10 +239,12 @@ jobs:
         with:
           name: appimage-${{ needs.build.outputs.version }}
           path: dist/appimage/
+      # Dois .deb (um por distro): deb-<ver>-ubuntu-22.04 e -ubuntu-24.04.
       - uses: actions/download-artifact@v4
         with:
-          name: deb-${{ needs.build.outputs.version }}
+          pattern: deb-${{ needs.build.outputs.version }}-*
           path: dist/deb/
+          merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}

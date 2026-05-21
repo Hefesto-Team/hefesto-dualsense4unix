@@ -64,24 +64,21 @@ mkdir -p \
 # ---------------------------------------------------------------------------
 VENV_DIR="${STAGING}/opt/hefesto-dualsense4unix/venv"
 
-# Pegar Python target compatível com Ubuntu/Pop! >= 22.04. python3.10 é a
-# versão padrão do Jammy (libpython3.10.so.1.0 vem com python3-minimal).
-# `python3` default em distros newer pode ser 3.11/3.12 — venv ficaria
-# embarcando libpython mais nova que Jammy não tem (BUG diagnosticado em
-# build local com Pop!_OS 22.04 + pyenv 3.12 → libpython3.12.so missing
-# em ubuntu:22.04). Preferir 3.10 via fallback explícito.
-TARGET_PYTHON=""
-for cand in /usr/bin/python3.10 /usr/bin/python3.11 /usr/bin/python3.12 /usr/bin/python3; do
-    if [ -x "$cand" ]; then
-        TARGET_PYTHON="$cand"
-        break
-    fi
-done
-if [ -z "$TARGET_PYTHON" ]; then
-    echo "Erro: nenhum Python 3 do sistema (/usr/bin/python3*) encontrado." >&2
+# Python target = o python3 DEFAULT da distro de build. O venv (--copies) linka
+# contra libpython3.X.so.1.0 dessa versão exata; logo o .deb é especifico da
+# versão de Python (= da distro). Por isso o CI builda UM .deb por distro
+# (Jammy 22.04 -> 3.10, Noble 24.04 -> 3.12) e o filename + o Depends abaixo
+# carregam a versão, para os dois coexistirem no release e o apt instalar só o
+# compativel (BUG-DEB-VENV-CROSS-PYVER-01: venv 3.10 quebrava no 24.04 por
+# falta de libpython3.10).
+TARGET_PYTHON="/usr/bin/python3"
+if [ ! -x "$TARGET_PYTHON" ]; then
+    echo "Erro: /usr/bin/python3 não encontrado." >&2
     exit 1
 fi
-echo "Python target: ${TARGET_PYTHON} ($(${TARGET_PYTHON} --version 2>&1))"
+PYVER="$("$TARGET_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+PYTAG="py$(printf '%s' "$PYVER" | tr -d .)"
+echo "Python target: ${TARGET_PYTHON} ($(${TARGET_PYTHON} --version 2>&1)) -> ${PYTAG}"
 
 echo "Criando venv em ${VENV_DIR} ..."
 # --copies (não symlink — venv autocontido sobrevive entre máquinas).
@@ -240,6 +237,13 @@ if command -v sed >/dev/null 2>&1; then
     sed -i "s/^Version: .*/Version: ${VERSION}/" "${STAGING}/DEBIAN/control"
 fi
 
+# Exigir a versão EXATA do Python contra a qual o venv foi linkado. Sem isto,
+# `python3 (>= 3.10)` tambem casa o 3.12 do Noble e o apt instalaria o .deb
+# py310 num sistema sem libpython3.10 -> venv quebrado. Com `python${PYVER}`,
+# o apt recusa o pacote na distro errada (o py310 não instala no 24.04, que
+# não tem 3.10) e o usuário pega o .deb correto da sua distro.
+sed -i "s/^Depends: /Depends: python${PYVER}, /" "${STAGING}/DEBIAN/control"
+
 for script in postinst prerm postrm; do
     if [ -f "packaging/debian/${script}" ]; then
         cp "packaging/debian/${script}" "${STAGING}/DEBIAN/${script}"
@@ -262,7 +266,9 @@ fi
 # ---------------------------------------------------------------------------
 mkdir -p dist
 
-OUTPUT_DEB="dist/hefesto-dualsense4unix_${VERSION}_amd64.deb"
+# Filename carrega a tag de Python (ex.: _py310 / _py312) para os .debs das
+# duas distros coexistirem no mesmo release sem colisão.
+OUTPUT_DEB="dist/hefesto-dualsense4unix_${VERSION}_amd64_${PYTAG}.deb"
 
 echo "Construindo ${OUTPUT_DEB} ..."
 dpkg-deb --build --root-owner-group "${STAGING}" "${OUTPUT_DEB}"
