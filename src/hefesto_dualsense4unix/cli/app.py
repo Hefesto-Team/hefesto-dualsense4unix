@@ -249,6 +249,27 @@ def daemon_resume() -> None:
     _toggle_pause("daemon.resume", "retomado")
 
 
+@daemon_app.command("disable")
+def daemon_disable() -> None:
+    """Desliga: para o daemon e desabilita o auto-start (mantém instalado)."""
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().disable()
+    typer.echo(
+        "daemon parado e auto-start desabilitado — religue com "
+        "'hefesto-dualsense4unix daemon enable'"
+    )
+
+
+@daemon_app.command("enable")
+def daemon_enable() -> None:
+    """Habilita o auto-start no boot e inicia o daemon."""
+    from hefesto_dualsense4unix.daemon.service_install import ServiceInstaller
+
+    ServiceInstaller().enable()
+    typer.echo("auto-start habilitado e daemon iniciado")
+
+
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
     # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES do
