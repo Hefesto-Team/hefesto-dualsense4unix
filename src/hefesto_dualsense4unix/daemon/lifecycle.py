@@ -151,6 +151,11 @@ class Daemon:
     # strict via DaemonProtocol (PYDANTIC-PROTOCOL-DAEMON-01).
     _osk_controller: Any = None
     _touchpad_reader: Any = None
+    # FEAT-DAEMON-PAUSE-RESUME-01: pausado, o poll loop segue lendo estado/
+    # bateria e publicando STATE_UPDATE, mas NÃO despacha input (gatilhos/
+    # teclado/mouse/hotkey) nem publica BUTTON_DOWN/UP — daemon vivo, sem afetar
+    # o sistema. Reusa o gate do grace-period; persistido via utils.session.
+    _paused: bool = field(default=False)
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -179,7 +184,11 @@ class Daemon:
         self._stop_event = asyncio.Event()
         self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="hefesto-hid")
         self._install_signal_handlers(loop)
-        logger.info("daemon_starting", poll_hz=self.config.poll_hz)
+        # FEAT-DAEMON-PAUSE-RESUME-01: retoma pausado se a sessão anterior
+        # terminou pausada (o poll loop nasce respeitando _paused).
+        from hefesto_dualsense4unix.utils.session import load_paused_state
+        self._paused = load_paused_state()
+        logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             if self.config.ipc_enabled:
@@ -243,6 +252,37 @@ class Daemon:
         if self._stop_event is not None and not self._stop_event.is_set():
             logger.info("daemon_stop_requested")
             self._stop_event.set()
+
+    def pause(self) -> None:
+        """Pausa o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01).
+
+        O daemon segue vivo: lê estado/bateria, publica STATE_UPDATE e atende o
+        IPC, mas para de despachar gatilhos/teclado/mouse/hotkey e de publicar
+        BUTTON_DOWN/UP. Idempotente; persiste para retomar pausado após restart.
+        """
+        if not self._paused:
+            self._paused = True
+            from hefesto_dualsense4unix.utils.session import save_paused_state
+            save_paused_state(True)
+            logger.info("daemon_paused")
+
+    def resume(self) -> None:
+        """Retoma o despacho de input. Idempotente.
+
+        O baseline de botões ficou sincronizado durante a pausa (o poll loop
+        seguiu primando o edge-tracker e atualizando previous_buttons), então
+        botões segurados ao retomar não disparam — só após soltar e
+        re-pressionar (mesma garantia do fim do grace-period).
+        """
+        if self._paused:
+            self._paused = False
+            from hefesto_dualsense4unix.utils.session import save_paused_state
+            save_paused_state(False)
+            logger.info("daemon_resumed")
+
+    def is_paused(self) -> bool:
+        """True se o despacho de input está pausado."""
+        return self._paused
 
     def reload_config(self, new_config: DaemonConfig) -> None:
         """Aplica nova configuração em runtime sem reiniciar o daemon."""
@@ -505,7 +545,8 @@ class Daemon:
             # semeamos o edge-tracker do teclado SEM emitir, de modo que ao fim
             # do settling botões fantasma/segurados na conexão sejam o baseline
             # (só disparam quando soltos e re-pressionados).
-            input_ready = tick_started >= self._input_ready_at
+            # FEAT-DAEMON-PAUSE-RESUME-01: além do grace-period, respeita _paused.
+            input_ready = tick_started >= self._input_ready_at and not self._paused
             if not input_ready:
                 if self._keyboard_device is not None:
                     self._prime_keyboard_emulation(buttons_pressed)
