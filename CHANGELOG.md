@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.7.0] — 2026-05-22
+
 Recuperação de instalação + áudio COSMIC (Wave V3.7) — auditoria profunda após
 instalação mista (.deb + flatpak + nativo): fim do sequestro do microfone pelo
 WirePlumber, applet COSMIC integrado e listável, uninstall/purge completos,
