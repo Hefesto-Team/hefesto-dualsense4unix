@@ -200,7 +200,19 @@ class IpcHandlersMixin:
             "transport": controller.transport if controller else None,
             "active_profile": snap.active_profile,
             "battery_pct": controller.battery_pct if controller else None,
+            # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
+            "paused": bool(self.daemon is not None and self.daemon.is_paused()),
         }
+
+    async def _handle_daemon_pause(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Pausa o despacho de input sem matar o daemon (FEAT-DAEMON-PAUSE-RESUME-01)."""
+        self.daemon.pause()
+        return {"status": "ok", "paused": True}
+
+    async def _handle_daemon_resume(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01)."""
+        self.daemon.resume()
+        return {"status": "ok", "paused": False}
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
         """Estado completo pra GUI consumir a 20Hz.

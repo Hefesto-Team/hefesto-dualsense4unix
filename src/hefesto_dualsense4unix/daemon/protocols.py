@@ -68,6 +68,8 @@ class DaemonProtocol(Protocol):
     # BUG-DAEMON-CONNECT-GHOST-INPUT-01: instante a partir do qual o input
     # emulado volta a ser despachado após (re)conexão (settling/grace).
     _input_ready_at: float
+    # FEAT-DAEMON-PAUSE-RESUME-01: despacho de input pausado (daemon vivo).
+    _paused: bool
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
@@ -88,6 +90,18 @@ class DaemonProtocol(Protocol):
 
     def stop(self) -> None:
         """Sinaliza o stop_event para encerrar `run()` graciosamente."""
+        ...
+
+    def pause(self) -> None:
+        """Pausa o despacho de input em runtime (FEAT-DAEMON-PAUSE-RESUME-01)."""
+        ...
+
+    def resume(self) -> None:
+        """Retoma o despacho de input em runtime."""
+        ...
+
+    def is_paused(self) -> bool:
+        """True se o despacho de input está pausado."""
         ...
 
     def reload_config(self, new_config: DaemonConfig) -> None:

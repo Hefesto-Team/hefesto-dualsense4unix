@@ -213,6 +213,42 @@ def daemon_status() -> None:
     typer.echo(text)
 
 
+def _toggle_pause(method: str, label: str) -> None:
+    """Chama daemon.pause/resume via IPC (FEAT-DAEMON-PAUSE-RESUME-01)."""
+    import asyncio
+
+    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+
+    async def _call() -> bool:
+        try:
+            async with IpcClient.connect() as client:
+                await client.call(method)
+                return True
+        except (FileNotFoundError, ConnectionError, IpcError):
+            return False
+
+    if asyncio.run(_call()):
+        typer.echo(f"daemon {label}")
+    else:
+        typer.echo(
+            "daemon offline — pausar/retomar exige o daemon rodando "
+            "(inicie com 'hefesto-dualsense4unix daemon start')"
+        )
+        raise typer.Exit(code=1)
+
+
+@daemon_app.command("pause")
+def daemon_pause() -> None:
+    """Pausa o despacho de input — o daemon segue vivo, mas para de afetar o sistema."""
+    _toggle_pause("daemon.pause", "pausado")
+
+
+@daemon_app.command("resume")
+def daemon_resume() -> None:
+    """Retoma o despacho de input previamente pausado."""
+    _toggle_pause("daemon.resume", "retomado")
+
+
 def main() -> None:
     """Entry point declarado em pyproject.toml [project.scripts]."""
     # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES do

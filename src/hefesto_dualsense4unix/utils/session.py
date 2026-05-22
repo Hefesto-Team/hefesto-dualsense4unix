@@ -104,9 +104,39 @@ def read_active_marker() -> str | None:
         return None
 
 
+_PAUSED_FLAG_FILE = "paused.flag"
+
+
+def save_paused_state(paused: bool) -> None:
+    """Persiste se o daemon está pausado (FEAT-DAEMON-PAUSE-RESUME-01).
+
+    Usa um arquivo-flag em config_dir (existe = pausado) para o daemon retomar
+    pausado após restart. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _PAUSED_FLAG_FILE
+        if paused:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("paused_state_saved", paused=paused)
+    except Exception as exc:
+        logger.debug("paused_state_save_failed", err=str(exc))
+
+
+def load_paused_state() -> bool:
+    """Retorna True se o daemon foi deixado pausado na sessão anterior."""
+    try:
+        return (config_dir() / _PAUSED_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
 __all__ = [
     "load_last_profile",
+    "load_paused_state",
     "read_active_marker",
     "save_active_marker",
     "save_last_profile",
+    "save_paused_state",
 ]

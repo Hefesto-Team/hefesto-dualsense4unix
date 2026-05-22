@@ -104,6 +104,8 @@ class IpcServer(IpcHandlersMixin):
             "rumble.policy_custom": self._handle_rumble_policy_custom,
             "daemon.status": self._handle_daemon_status,
             "daemon.state_full": self._handle_daemon_state_full,
+            "daemon.pause": self._handle_daemon_pause,
+            "daemon.resume": self._handle_daemon_resume,
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
