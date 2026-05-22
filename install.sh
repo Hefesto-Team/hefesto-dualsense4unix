@@ -20,6 +20,10 @@
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
+#   --enable-cosmic-applet  compila e instala o applet COSMIC nativo (Rust; a
+#                         1a build do libcosmic e longa, >10 min). Opt-in.
+#   --with-wireplumber-fix  instala drop-in do WirePlumber que impede o DualSense
+#                         de virar o microfone padrão do sistema + reset.
 #   --force-xwayland      grava GDK_BACKEND=x11 no .desktop (recomendado
 #                         para COSMIC enquanto xdg-desktop-portal-cosmic
 #                         não implementa GetActiveWindow). Ativada
@@ -49,6 +53,8 @@ SKIP_SYSTEMD=0
 SKIP_HOTPLUG_GUI=0
 ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
+ENABLE_COSMIC_APPLET=0
+WITH_WIREPLUMBER_FIX=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
 FORMAT=""
@@ -60,6 +66,9 @@ for arg in "$@"; do
         --no-hotplug-gui)     SKIP_HOTPLUG_GUI=1 ;;
         --enable-autostart)   ENABLE_AUTOSTART=1 ;;
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
+        --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;
+        --no-cosmic-applet)   ENABLE_COSMIC_APPLET=0 ;;
+        --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
         --native)             FORMAT="native" ;;
@@ -68,7 +77,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,36p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -244,7 +253,7 @@ fi
 # ---------------------------------------------------------------------------
 # 1. Verificar Python
 # ---------------------------------------------------------------------------
-step "1/8" "verificando dependências do sistema"
+step "1/10" "verificando dependências do sistema"
 require python3
 ok
 
@@ -270,7 +279,7 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
-step "2/8" "preparando ambiente Python"
+step "2/10" "preparando ambiente Python"
 
 # Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
 # inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
@@ -336,7 +345,7 @@ ok
 # essas regras o controle não funciona, e o prompt levava usuários a "pular"
 # sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
 # reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
-step "3/8" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/10" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev) — IMPORTANTE: o controle precisa das regras\n'
@@ -373,7 +382,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
 # ---------------------------------------------------------------------------
-step "4/8" "atalho de aplicativo e launcher"
+step "4/10" "atalho de aplicativo e launcher"
 
 # FEAT-ICON-MULTI-RES-01 (v3.4.2, refinado em v3.4.3): gera o icone em
 # todas resolucoes do hicolor + pixmap legacy. Antes so existia 256x256
@@ -552,14 +561,14 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/8" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+step "5/10" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
 # 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
-step "6/8" "daemon systemd --user"
+step "6/10" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
@@ -590,7 +599,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
-step "7/8" "hotplug USB → abre a GUI automaticamente"
+step "7/10" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
@@ -632,7 +641,7 @@ fi
 # ---------------------------------------------------------------------------
 # 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
 # ---------------------------------------------------------------------------
-step "8/8" "GNOME: extension AppIndicator (tray icon)"
+step "8/10" "GNOME: extension AppIndicator (tray icon)"
 
 _desktop="${XDG_CURRENT_DESKTOP:-}"
 if [[ -z "${_desktop}" ]]; then
@@ -661,6 +670,54 @@ else
             printf '      pulado a pedido — habilite depois com: gnome-extensions enable %s\n' "${_ext_id}"
         fi
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# 9. Applet COSMIC nativo (Rust + libcosmic) — opt-in
+# ---------------------------------------------------------------------------
+step "9/10" "applet COSMIC nativo (opt-in)"
+install_cosmic_applet() {
+    local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
+    if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
+        warn "cargo/just ausentes — applet COSMIC pulado"
+        printf '        instale rustup (https://rustup.rs) + just e os -dev, depois:\n'
+        printf '        sudo apt install just libxkbcommon-dev libwayland-dev libgbm-dev \\\n'
+        printf '             libegl-dev libinput-dev libudev-dev pkg-config\n'
+        printf '        e rode: ./install.sh --enable-cosmic-applet\n'
+        return 0
+    fi
+    printf '      compilando + instalando (1a build do libcosmic e LONGA, >10 min)\n'
+    if just -f "${applet_dir}/justfile" -d "${applet_dir}" install; then
+        printf '      applet instalado — adicione em Config. > Paineis > Miniaplicativos\n'
+    else
+        warn "build/instalacao do applet falhou — veja o log acima"
+    fi
+}
+if [[ "${ENABLE_COSMIC_APPLET}" -eq 1 ]]; then
+    install_cosmic_applet
+elif [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
+    ask_yn "instalar o applet COSMIC nativo agora? (1a build do libcosmic e longa)" "${AUTO_YES}" "n"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        install_cosmic_applet
+    else
+        printf '      pulado (instale depois: ./install.sh --enable-cosmic-applet)\n'
+    fi
+else
+    printf '      fora do COSMIC — pulado\n'
+fi
+
+# ---------------------------------------------------------------------------
+# 10. WirePlumber: DualSense fora da fonte de áudio padrão — opt-in
+# ---------------------------------------------------------------------------
+step "10/10" "audio: impedir o DualSense de virar o microfone padrão"
+if [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
+    if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; then
+        printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
+    else
+        warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
+    fi
+else
+    printf '      pulado (use --with-wireplumber-fix, ou depois: scripts/doctor.sh --fix)\n'
 fi
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ install: build-release
         data/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg \
         /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
     sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
 
 # Remove os artefatos instalados pelo `install`.
 uninstall:
@@ -26,3 +27,4 @@ uninstall:
     sudo rm -f /usr/share/applications/{{app-id}}.desktop
     sudo rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
     sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
