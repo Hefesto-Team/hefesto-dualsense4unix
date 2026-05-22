@@ -1,0 +1,30 @@
+[package]
+name = "hefesto-dualsense4unix-applet"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vitória Maria <vitoriamaria.sds@gmail.com>"]
+description = "Applet nativo COSMIC para gatilhos, perfis e bateria do DualSense (Hefesto - Dualsense4Unix)"
+license = "MIT"
+homepage = "https://github.com/vitoriamariadb/hefesto-dualsense4unix"
+repository = "https://github.com/vitoriamariadb/hefesto-dualsense4unix"
+keywords = ["cosmic", "applet", "dualsense", "gamepad", "wayland"]
+categories = ["gui"]
+
+[dependencies]
+# Rev fixada (== a do extra-cosmic-xkill-applet, já validado no COSMIC desta
+# máquina) para reaproveitar o cache de build do libcosmic e garantir paridade
+# de API. Atualizar em conjunto com o xkill se a mantenedora subir a versão.
+libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "1d7113a", default-features = false, features = [
+    "applet",
+    "tokio",
+    "wayland",
+    "winit",
+    "multi-window",
+] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bin]]
+name = "hefesto-dualsense4unix-applet"
+path = "src/main.rs"
