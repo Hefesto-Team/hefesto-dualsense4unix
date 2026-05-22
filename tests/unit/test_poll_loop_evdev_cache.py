@@ -98,13 +98,22 @@ async def test_snapshot_chamado_exatamente_uma_vez_por_tick_sem_consumidores():
 
 
 @pytest.mark.asyncio
-async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse():
+async def test_snapshot_chamado_exatamente_uma_vez_por_tick_com_hotkey_e_mouse(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Com hotkey_manager E mouse_device ativos, snapshot() deve ser chamado
     1x por tick (não 2x como era antes do refactor REFACTOR-HOTKEY-EVDEV-01).
 
     Este é o cenário crítico da armadilha A-09: 2 consumidores → antes=20 chamadas,
     depois=10 chamadas para 10 ticks.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que o mouse.dispatch
+    ocorra desde o 1º tick (o snapshot evdev é lido fora do gate de settling,
+    mas o dispatch de mouse é suprimido durante o grace).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     n_ticks = 10
     call_counter: list[int] = []
 
@@ -232,10 +241,19 @@ async def test_snapshot_excecao_retorna_frozenset_vazio():
 
 
 @pytest.mark.asyncio
-async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse():
+async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
+    monkeypatch: pytest.MonkeyPatch,
+):
     """Botões retornados por _evdev_buttons_once devem chegar ao hotkey_manager.observe
     E ao mouse_device.dispatch — o mesmo conjunto, não snapshots independentes.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para que observe/dispatch
+    ocorram desde o 1º tick (do contrário a asserção `all(...)` ficaria vacuamente
+    verdadeira sobre listas vazias durante o settling).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     n_ticks = 5
     botoes_esperados = frozenset(["cross", "ps"])
 

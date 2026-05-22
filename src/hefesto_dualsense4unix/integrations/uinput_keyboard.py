@@ -182,6 +182,25 @@ class UinputKeyboardDevice:
 
         self._pressed_buttons = now_mapped
 
+    def prime(self, buttons_pressed: frozenset[str]) -> None:
+        """Semeia o edge-tracker com `buttons_pressed` SEM emitir nada.
+
+        Usado pelo poll loop no 1º tick após conectar (BUG-DAEMON-CONNECT-
+        GHOST-INPUT-01): adota o estado cru lido no instante da conexão como
+        baseline. Assim botões fantasma/segurados na conexão são tratados como
+        "já pressionados" e só geram sequência de teclas quando o usuário
+        soltá-los e pressioná-los de novo — análogo ao racional de
+        `_release_all`, mas no sentido inverso (zero emissão, só estado).
+
+        No-op se o device ainda não foi criado: o `dispatch` também é no-op
+        nesse caso, então não há divergência de estado.
+        """
+        if self._device is None or self._uinput_mod is None:
+            return
+        self._pressed_buttons = frozenset(
+            b for b in buttons_pressed if b in self.bindings
+        )
+
     # ------------------------------------------------------------------
     # Helpers internos
     # ------------------------------------------------------------------
