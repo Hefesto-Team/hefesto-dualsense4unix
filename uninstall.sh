@@ -27,6 +27,7 @@ readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4uni
 readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
 readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
 readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
 # Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
 
@@ -114,11 +115,14 @@ fi
 
 # Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
 # por packaging/cosmic-applet. Remove só se existir (evita pedir sudo à toa).
-if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" ]]; then
-    log "removendo applet COSMIC (sudo): binário + .desktop + ícone"
-    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" 2>/dev/null || true
+if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]]; then
+    log "removendo applet COSMIC (sudo): binário + .desktop + ícones"
+    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" "${APPLET_ICON_PNG}" 2>/dev/null || true
     sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
     sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
+    # cosmic-panel só relê a lista de applets ao reiniciar — sem isso o applet
+    # fica fantasma na lista de Miniaplicativos mesmo após remover os arquivos.
+    command -v killall >/dev/null 2>&1 && killall cosmic-panel 2>/dev/null || true
 fi
 
 # Drop-in do WirePlumber (fix de microfone). Remove só o nosso arquivo, nunca

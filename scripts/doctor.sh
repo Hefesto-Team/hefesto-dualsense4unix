@@ -126,12 +126,22 @@ check_applet() {
     else
         fail "applet .desktop sem X-CosmicApplet=true"
     fi
+    if grep -q '^X-HostWaylandDisplay=true' "${APPLET_DESKTOP}"; then
+        pass "applet .desktop com X-HostWaylandDisplay=true"
+    else
+        warn "applet .desktop sem X-HostWaylandDisplay=true — recomendado p/ falar com o sistema (reinstale o applet)"
+    fi
     local icon
     icon="$(sed -n 's/^Icon=//p' "${APPLET_DESKTOP}" | head -1)"
     if [[ -n "${icon}" ]] && ls /usr/share/icons/hicolor/*/apps/"${icon}".* >/dev/null 2>&1; then
         pass "ícone do applet resolvível (${icon})"
     else
         fail "ícone do applet NÃO resolvível (Icon=${icon}) — falta o arquivo correspondente"
+    fi
+    if [[ -e "/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png" ]]; then
+        pass "ícone PNG 256x256 do applet presente"
+    else
+        warn "ícone PNG 256x256 do applet ausente — a lista de Miniaplicativos pode não mostrar o ícone colorido"
     fi
     if command -v desktop-file-validate >/dev/null 2>&1; then
         if desktop-file-validate "${APPLET_DESKTOP}" >/dev/null 2>&1; then

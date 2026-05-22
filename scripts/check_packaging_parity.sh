@@ -9,6 +9,8 @@
 #      propósito: doctor.sh cita o nome errado para DETECTÁ-lo.)
 #   2) algum .desktop de applet COSMIC tiver Icon= sem o arquivo de ícone
 #      correspondente versionado ao lado (mismatch de sufixo -symbolic).
+#   3) algum .desktop de applet COSMIC não tiver X-HostWaylandDisplay=true
+#      (sem ele o applet roda isolado e não enxerga o sistema no painel COSMIC).
 #
 # Rodável local e em CI. CHORE-PACKAGING-PARITY-ALL-FORMS-01.
 
@@ -40,6 +42,17 @@ while IFS= read -r desk; do
         echo "[ OK ] $(basename "${desk}"): Icon=${icon} tem arquivo versionado"
     else
         echo "[FAIL] $(basename "${desk}"): Icon=${icon} sem arquivo de ícone em ${dir}"
+        rc=1
+    fi
+done < <(grep -rl 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
+
+echo "== X-HostWaylandDisplay nos .desktop de applet COSMIC (packaging/) =="
+while IFS= read -r desk; do
+    grep -q '^X-CosmicApplet=true' "${desk}" 2>/dev/null || continue
+    if grep -q '^X-HostWaylandDisplay=true' "${desk}" 2>/dev/null; then
+        echo "[ OK ] $(basename "${desk}"): X-HostWaylandDisplay=true"
+    else
+        echo "[FAIL] $(basename "${desk}"): falta X-HostWaylandDisplay=true"
         rc=1
     fi
 done < <(grep -rl 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
