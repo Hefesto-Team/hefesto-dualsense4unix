@@ -187,14 +187,21 @@ def test_battery_debounce_constants_coerentes_com_adr008():
 
 
 @pytest.mark.asyncio
-async def test_poll_loop_emits_button_down_up_on_diff():
+async def test_poll_loop_emits_button_down_up_on_diff(monkeypatch):
     """Publica BUTTON_DOWN/UP ao diff entre ticks (INFRA-BUTTON-EVENTS-01).
 
     Tick 1: cross pressionado  -> BUTTON_DOWN cross.
     Tick 2: cross + circle     -> BUTTON_DOWN circle (cross mantido, sem UP).
     Tick 3: nenhum pressionado -> BUTTON_UP cross, BUTTON_UP circle.
     Total esperado: 3 DOWN (cross, circle) + 2 UP (circle, cross por ordem sorted).
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para exercitar a lógica de
+    diff a partir do 1º tick (o settling tem teste dedicado). Ver
+    test_input_settling_* abaixo.
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     states = [
         ControllerState(
             battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb",
@@ -257,11 +264,17 @@ async def test_poll_loop_emits_button_down_up_on_diff():
 
 
 @pytest.mark.asyncio
-async def test_poll_loop_emits_mic_btn_down_up():
+async def test_poll_loop_emits_mic_btn_down_up(monkeypatch):
     """Mic button via ControllerState.buttons_pressed gera BUTTON_DOWN/UP (INFRA-MIC-HID-01).
 
     FakeController com mic_btn alternando entre ticks produz sequência correta.
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado — o mute fantasma DENTRO do
+    settling tem teste dedicado (test_input_settling_suppresses_mic_btn_down).
     """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     states = [
         ControllerState(
             battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb",
@@ -310,8 +323,15 @@ async def test_poll_loop_emits_mic_btn_down_up():
 
 
 @pytest.mark.asyncio
-async def test_poll_loop_no_event_when_buttons_unchanged():
-    """Nenhum evento publicado se buttons_pressed não muda (idempotência — critério 5)."""
+async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
+    """Nenhum evento publicado se buttons_pressed não muda (idempotência — critério 5).
+
+    BUG-DAEMON-CONNECT-GHOST-INPUT-01: grace zerado para validar a idempotência
+    de diff a partir do 1º tick.
+    """
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
+    )
     state_base = ControllerState(
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True, transport="usb",
         buttons_pressed=frozenset({"cross"}),

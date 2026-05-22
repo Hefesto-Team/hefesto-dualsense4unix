@@ -46,6 +46,16 @@ logger = get_logger(__name__)
 
 DEFAULT_POLL_HZ = 60
 
+#: Período de assentamento (settling/grace) pós-conexão em segundos
+#: (BUG-DAEMON-CONNECT-GHOST-INPUT-01). Enquanto ativo, o poll loop continua
+#: lendo estado/bateria e publicando STATE_UPDATE, mas NÃO despacha
+#: teclado/mouse/hotkey nem publica BUTTON_DOWN/UP. Cobre a janela em que o
+#: HID-raw ainda está cru (ex.: micBtn fantasma) e o snapshot evdev ainda
+#: popula após o plug — barrando o mute fantasma e os "comandos aleatórios"
+#: na origem. ~0.3s é compromisso entre cobrir o settling do firmware e a
+#: latência percebida até o input ficar responsivo.
+INPUT_GRACE_SEC: float = 0.3
+
 
 # ---------------------------------------------------------------------------
 # DaemonConfig
@@ -122,6 +132,14 @@ class Daemon:
     _reconnect_task: asyncio.Task[Any] | None = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
+    # BUG-DAEMON-CONNECT-GHOST-INPUT-01 — instante (loop.time()) a partir do
+    # qual o input emulado volta a ser despachado após uma (re)conexão. Setado
+    # pelo poll loop na borda desconectado→conectado e rearmado em reconexão.
+    # Enquanto loop.time() < _input_ready_at, BUTTON_DOWN/UP + dispatch de
+    # teclado/mouse/hotkey ficam suprimidos (settling/grace). 0.0 = sem grace
+    # pendente (estado inicial, antes da 1ª conexão; o poll loop só arma o
+    # grace ao detectar a borda de conexão).
+    _input_ready_at: float = field(default=0.0)
     # CLUSTER-IPC-STATE-PROFILE-01 (Bug A) — cache do último estado lido pelo
     # _poll_loop. Permite que `daemon.state_full` reflita o tick atual em vez
     # de só o snapshot do StateStore (que pode estar estagnado em fallback HID
@@ -327,6 +345,16 @@ class Daemon:
 
         dispatch_keyboard(self, buttons_pressed)
 
+    def _prime_keyboard_emulation(self, buttons_pressed: frozenset[str]) -> None:
+        """Thin wrapper — semeia o edge-tracker do teclado sem emitir.
+
+        Chamado pelo poll loop durante o settling pós-conexão
+        (BUG-DAEMON-CONNECT-GHOST-INPUT-01).
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.keyboard import prime_keyboard
+
+        prime_keyboard(self, buttons_pressed)
+
     def _reassert_rumble(self, now: float) -> None:
         """Thin wrapper — backcompat e chamado pelo poll loop."""
         from hefesto_dualsense4unix.daemon.subsystems.rumble import reassert_rumble
@@ -401,6 +429,10 @@ class Daemon:
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0
         previous_buttons: frozenset[str] = frozenset()
+        # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
+        # desconectado→conectado. Começa False (boot pode ser sem hardware);
+        # vira True na 1ª leitura bem-sucedida, quando armamos o grace.
+        was_connected = False
 
         while not self._is_stopping():
             tick_started = loop.time()
@@ -409,6 +441,11 @@ class Daemon:
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando
             # conectar, o tick seguinte volta a ler estado normalmente.
             if not self.controller.is_connected():
+                # BUG-DAEMON-CONNECT-GHOST-INPUT-01: desconexão detectada via
+                # is_connected() (probe/unplug). Zera o baseline e rearma a
+                # borda para que a próxima conexão refaça o settling.
+                was_connected = False
+                previous_buttons = frozenset()
                 stop_event = self._stop_event
                 assert stop_event is not None
                 with contextlib.suppress(asyncio.TimeoutError):
@@ -424,9 +461,26 @@ class Daemon:
                     from hefesto_dualsense4unix.daemon.connection import reconnect
 
                     previous_buttons = frozenset()
+                    was_connected = False
                     await reconnect(self)
                     continue
                 break
+
+            # BUG-DAEMON-CONNECT-GHOST-INPUT-01: borda desconectado→conectado.
+            # Esta é a 1ª leitura após (re)conectar. Arma o grace-period: até
+            # `_input_ready_at`, todo input emulado fica suprimido (ver gate
+            # `input_ready` abaixo). O baseline de `previous_buttons` e do
+            # edge-tracker do teclado é semeado a cada tick do grace (abaixo),
+            # cobrindo o HID-raw cru (ex.: micBtn) e o snapshot evdev ainda
+            # populando.
+            if not was_connected:
+                self._input_ready_at = tick_started + INPUT_GRACE_SEC
+                was_connected = True
+                logger.info(
+                    "input_settling_started",
+                    grace_sec=INPUT_GRACE_SEC,
+                    transport=state.transport,
+                )
 
             self.store.update_controller_state(state)
             # CLUSTER-IPC-STATE-PROFILE-01 (Bug A): publica o último state
@@ -441,6 +495,37 @@ class Daemon:
                 next_rumble_assert_at = tick_started + 0.200
 
             buttons_pressed = self._evdev_buttons_once()
+            current_buttons = state.buttons_pressed
+
+            # BUG-DAEMON-CONNECT-GHOST-INPUT-01: gate de assentamento. Enquanto
+            # `loop.time() < _input_ready_at`, NÃO despacha teclado/mouse/hotkey
+            # nem publica BUTTON_DOWN/UP. Continua lendo estado, atualizando o
+            # store e publicando STATE_UPDATE/bateria normalmente. Durante o
+            # grace, mantemos `previous_buttons` sincronizado ao estado atual e
+            # semeamos o edge-tracker do teclado SEM emitir, de modo que ao fim
+            # do settling botões fantasma/segurados na conexão sejam o baseline
+            # (só disparam quando soltos e re-pressionados).
+            input_ready = tick_started >= self._input_ready_at
+            if not input_ready:
+                if self._keyboard_device is not None:
+                    self._prime_keyboard_emulation(buttons_pressed)
+                previous_buttons = current_buttons
+                self.store.bump("input.settling.tick")
+                if battery.should_emit(state.battery_pct, tick_started):
+                    self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
+                    battery.mark_emitted(state.battery_pct, tick_started)
+                    self.store.bump("battery.change.emitted")
+                    if self._plugins_subsystem is not None:
+                        self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
+                elapsed = loop.time() - tick_started
+                sleep_for = period - elapsed
+                if sleep_for > 0:
+                    stop_event = self._stop_event
+                    assert stop_event is not None
+                    with contextlib.suppress(asyncio.TimeoutError):
+                        await asyncio.wait_for(stop_event.wait(), timeout=sleep_for)
+                        break
+                continue
 
             if self._mouse_device is not None:
                 self._dispatch_mouse_emulation(state, buttons_pressed)
@@ -455,7 +540,6 @@ class Daemon:
                 active_profile = self.store.active_profile
                 self._plugins_subsystem.tick(state, active_profile)
 
-            current_buttons = state.buttons_pressed
             pressed_now = current_buttons - previous_buttons
             released_now = previous_buttons - current_buttons
             for name in sorted(pressed_now):
@@ -500,6 +584,26 @@ class Daemon:
 
     def _is_stopping(self) -> bool:
         return self._stop_event is not None and self._stop_event.is_set()
+
+    def _arm_input_grace(self) -> None:
+        """Rearma o período de assentamento pós-conexão (BUG-DAEMON-CONNECT-
+        GHOST-INPUT-01).
+
+        Usado por `connection.reconnect`/`reconnect_loop` na transição online
+        para garantir que o input emulado fique suprimido por `INPUT_GRACE_SEC`
+        mesmo quando o poll loop não chega a observar `is_connected() == False`
+        entre o unplug e o replug (ex.: reconexão rápida via probe). Encapsula
+        a constante e o relógio do event loop para não vazar aritmética de
+        tempo para `connection.py`.
+
+        Best-effort fora de um event loop (ex.: chamado em teardown): se não
+        houver loop rodando, não há grace a armar.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._input_ready_at = loop.time() + INPUT_GRACE_SEC
 
 
 

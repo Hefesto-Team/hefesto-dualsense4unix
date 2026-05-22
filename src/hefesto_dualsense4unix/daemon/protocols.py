@@ -65,6 +65,9 @@ class DaemonProtocol(Protocol):
     _last_state: ControllerState | None
     _last_auto_mult: float
     _last_auto_change_at: float
+    # BUG-DAEMON-CONNECT-GHOST-INPUT-01: instante a partir do qual o input
+    # emulado volta a ser despachado após (re)conexão (settling/grace).
+    _input_ready_at: float
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
@@ -77,6 +80,10 @@ class DaemonProtocol(Protocol):
 
     def _is_stopping(self) -> bool:
         """True se `stop()` já foi chamado e a shutdown está em andamento."""
+        ...
+
+    def _arm_input_grace(self) -> None:
+        """Rearma o settling/grace pós-conexão (BUG-DAEMON-CONNECT-GHOST-INPUT-01)."""
         ...
 
     def stop(self) -> None:

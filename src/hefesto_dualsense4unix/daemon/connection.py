@@ -96,6 +96,12 @@ async def reconnect(daemon: DaemonProtocol) -> None:
         await daemon._run_blocking(daemon.controller.disconnect)
     await asyncio.sleep(daemon.config.reconnect_backoff_sec)
     await connect_with_retry(daemon)
+    # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rearma o settling assim que
+    # reconectamos. Cobre a janela em que o poll loop chama reconnect()
+    # diretamente (read_state levantou) e volta a ler estado no próximo tick
+    # — o estado inicial pós-replug (HID-raw cru + snapshot evdev populando)
+    # não deve gerar mute/teclas fantasma.
+    daemon._arm_input_grace()
 
 
 async def reconnect_loop(daemon: DaemonProtocol) -> None:
@@ -134,6 +140,13 @@ async def reconnect_loop(daemon: DaemonProtocol) -> None:
 
         is_connected = bool(daemon.controller.is_connected())
         if is_connected and not was_connected:
+            # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
+            # detectada pelo probe. Rearma o settling antes de qualquer outra
+            # coisa para que o poll loop suprima o input emulado do estado
+            # inicial cru (mute fantasma + teclas aleatórias). O poll loop
+            # também arma o grace na própria borda; aqui cobrimos o caso em
+            # que o probe chega primeiro / reconecta sem o loop ver offline.
+            daemon._arm_input_grace()
             transport = daemon.controller.get_transport()
             daemon.bus.publish(
                 EventTopic.CONTROLLER_CONNECTED, {"transport": transport}

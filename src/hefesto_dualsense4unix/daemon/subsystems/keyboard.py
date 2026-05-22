@@ -207,6 +207,45 @@ def stop_keyboard_emulation(daemon: DaemonProtocol) -> None:
     logger.info("keyboard_emulation_stopped")
 
 
+def _combine_with_touchpad(
+    daemon: DaemonProtocol, buttons_pressed: frozenset[str]
+) -> frozenset[str]:
+    """Mescla as regiões do TouchpadReader ao frozenset de botões.
+
+    Extraído para reuso por `dispatch_keyboard` e `prime_keyboard` (mesma
+    visão de botões que o device de teclado enxerga). Falha de leitura do
+    reader é tratada como "nenhuma região pressionada".
+    """
+    reader = getattr(daemon, "_touchpad_reader", None)
+    if reader is None:
+        return buttons_pressed
+    regions: frozenset[str]
+    try:
+        regions = frozenset(reader.regions_pressed())
+    except Exception as exc:
+        logger.warning("touchpad_regions_read_failed", err=str(exc))
+        regions = frozenset()
+    return buttons_pressed | regions
+
+
+def prime_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -> None:
+    """Semeia o edge-tracker do device de teclado com o baseline da conexão.
+
+    Usado pelo poll loop no 1º tick conectado (BUG-DAEMON-CONNECT-GHOST-
+    INPUT-01). Reaplica a mesma combinação botões+touchpad de `dispatch_keyboard`
+    para que o estado semeado seja idêntico ao que o device veria, e delega ao
+    `UinputKeyboardDevice.prime` (zero emissão). No-op sem device.
+    """
+    device = getattr(daemon, "_keyboard_device", None)
+    if device is None:
+        return
+    combined = _combine_with_touchpad(daemon, buttons_pressed)
+    try:
+        device.prime(combined)
+    except Exception as exc:
+        logger.warning("keyboard_prime_failed", err=str(exc))
+
+
 def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -> None:
     """Traduz o set de botões pressionados em eventos de teclado virtual.
 
@@ -220,16 +259,7 @@ def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -
     device = getattr(daemon, "_keyboard_device", None)
     if device is None:
         return
-    reader = getattr(daemon, "_touchpad_reader", None)
-    if reader is not None:
-        try:
-            regions = reader.regions_pressed()
-        except Exception as exc:
-            logger.warning("touchpad_regions_read_failed", err=str(exc))
-            regions = frozenset()
-        combined = buttons_pressed | regions
-    else:
-        combined = buttons_pressed
+    combined = _combine_with_touchpad(daemon, buttons_pressed)
     try:
         device.dispatch(combined)
     except Exception as exc:
@@ -239,6 +269,7 @@ def dispatch_keyboard(daemon: DaemonProtocol, buttons_pressed: frozenset[str]) -
 __all__ = [
     "_OSKController",
     "dispatch_keyboard",
+    "prime_keyboard",
     "start_keyboard_emulation",
     "stop_keyboard_emulation",
 ]
