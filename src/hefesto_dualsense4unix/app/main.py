@@ -161,6 +161,12 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("gdk_backend_x11_forcado_cosmic")
     _unused_argv = argv
 
+    # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: migra config legada curta→longa
+    # ANTES de qualquer leitura de preferências/perfis pela app (idempotente).
+    from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
+
+    migrate_legacy_paths()
+
     # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): inicializa locale ANTES de
     # qualquer Gtk.Builder ou widget, garantindo que set_translation_domain
     # consiga resolver labels traduzíveis do Glade no boot.

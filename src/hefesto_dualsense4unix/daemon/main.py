@@ -33,6 +33,13 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
 
+    # CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01: traz perfis/sessão/prefs do
+    # layout curto legado (~/.config/hefesto) para o atual, se necessário.
+    # Idempotente e não-destrutivo; roda antes de qualquer leitura de config.
+    from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
+
+    migrate_legacy_paths()
+
     # BUG-MULTI-INSTANCE-01: "última vence" — encerra daemon predecessor
     # (SIGTERM grace 2s, depois SIGKILL) antes de subir. Evita dois daemons
     # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
