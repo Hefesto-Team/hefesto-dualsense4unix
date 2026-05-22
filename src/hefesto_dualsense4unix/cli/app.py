@@ -73,6 +73,17 @@ def status() -> None:
 
 
 @app.command()
+def doctor(
+    fix: bool = typer.Option(False, "--fix", help="Aplica correções seguras (udev + WirePlumber)."),
+    quiet: bool = typer.Option(False, "--quiet", help="Só mostra FAIL/WARN."),
+) -> None:
+    """Diagnóstico de saúde: daemon, udev, applet, áudio + checks do daemon via IPC."""
+    from hefesto_dualsense4unix.cli.cmd_doctor import doctor_cmd
+
+    doctor_cmd(fix=fix, quiet=quiet)
+
+
+@app.command()
 def battery() -> None:
     """Percentual de bateria do controle."""
     from hefesto_dualsense4unix.cli.cmd_status import battery_cmd
