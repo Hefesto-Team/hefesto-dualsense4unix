@@ -5,10 +5,30 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+Recuperação de instalação + áudio COSMIC (Wave V3.7) — auditoria profunda após
+instalação mista (.deb + flatpak + nativo): fim do sequestro do microfone pelo
+WirePlumber, applet COSMIC integrado e listável, uninstall/purge completos,
+migração de perfis legados e diagnóstico (`doctor`).
+
 Acabamento COSMIC round 2 (Wave V3.6) — bugs de uso real reportados após a
 v3.5.0 em Pop!_OS COSMIC + DualSense USB.
 
 ### Added
+
+- **Wave V3.7 — recuperação de instalação + áudio:**
+  - `scripts/purge.sh`: descontaminação total das 3 formas de instalação, com
+    backup de perfis (`CHORE-PURGE-ALL-INSTALL-FORMS-01`).
+  - `scripts/doctor.sh`: health-check ponta-a-ponta com `--fix`
+    (`FEAT-DOCTOR-HEALTHCHECK-01`).
+  - Applet COSMIC integrado ao `install.sh` via `--enable-cosmic-applet` +
+    `update-desktop-database` (`FEAT-INSTALL-COSMIC-APPLET-INTEGRATION-01`).
+  - Drop-in do WirePlumber + `scripts/fix_wireplumber_default_source.sh` + flag
+    `--with-wireplumber-fix`: impede o DualSense de virar o microfone padrão
+    (`FEAT-WIREPLUMBER-DUALSENSE-NOT-DEFAULT-SOURCE-01`).
+  - Migração automática de config legada curto→longo no boot do daemon/GUI
+    (`CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01`).
+  - `scripts/check_packaging_parity.sh`: guarda anti-regressão entre formas
+    (`CHORE-PACKAGING-PARITY-ALL-FORMS-01`).
 
 - **Applet nativo COSMIC** (`packaging/cosmic-applet/`, `FEAT-COSMIC-APPLET-RUST-01`):
   applet em Rust + libcosmic que aparece nos **Miniaplicativos** do COSMIC (registro
@@ -20,6 +40,20 @@ v3.5.0 em Pop!_OS COSMIC + DualSense USB.
   painel pendente de validação no hardware).
 
 ### Fixed
+
+- **Wave V3.7:**
+  - **Hotplug nunca abria a GUI** — `assets/73,74` apontavam para
+    `hefesto-gui-hotplug.service`, mas a unit real é
+    `hefesto-dualsense4unix-gui-hotplug.service`
+    (`BUG-UDEV-HOTPLUG-UNIT-NAME-MISMATCH-01`).
+  - **`uninstall.sh` deixava rastros** (applet COSMIC em `/usr/local`+`/usr/share`
+    e regra udev 74) e mirava o caminho de config errado; agora preserva a config
+    por padrão com backup e cobre o layout legado curto
+    (`BUG-UNINSTALL-COSMIC-APPLET-CONFIG-PATH-01`).
+  - **Applet COSMIC não listado** — `Icon=` sem o sufixo `-symbolic` não resolvia
+    o ícone (`FEAT-INSTALL-COSMIC-APPLET-INTEGRATION-01`).
+  - **Preferências da GUI gravadas no caminho curto legado** (`gui_prefs.py`),
+    divergindo de perfis/sessão (`CHORE-CONFIG-MIGRATE-LEGACY-SHORT-PATH-01`).
 
 - **Ao conectar o controle, o microfone mutava e teclas/atalhos disparavam sozinhos
   no COSMIC** (`BUG-DAEMON-CONNECT-GHOST-INPUT-01`): o estado inicial cru — `micBtn`
