@@ -329,7 +329,7 @@ def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatc
     tray = _make_apptray()
     assert tray.start() is True
 
-    # Nao deferiu — indicator existe e timeout_add não foi chamado pelo defer.
+    # Não deferiu — indicator existe e timeout_add não foi chamado pelo defer.
     assert tray._indicator is not None
     # GLib.timeout_add_seconds é usado para refresh, mas timeout_add (defer) não.
     fake_glib.timeout_add.assert_not_called()

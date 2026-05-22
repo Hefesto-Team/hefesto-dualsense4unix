@@ -151,7 +151,7 @@ class HefestoApp(
         # tem que casar com basename do .desktop (`hefesto-dualsense4unix.
         # desktop`) para a dock COSMIC / GNOME associar o ícone do app.
         # Antes era `("hefesto", "Hefesto-Dualsense4Unix")` — instance
-        # nao casava e a dock mostrava ícone genérico.
+        # não casava e a dock mostrava ícone genérico.
         self.window.set_wmclass(
             "hefesto-dualsense4unix", "Hefesto-Dualsense4Unix"
         )

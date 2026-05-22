@@ -175,7 +175,7 @@ def statusnotifierwatcher_available() -> bool:
 # FEAT-COSMIC-NOTIFICATIONS-01 — helpers de evento canonico (opt-in)
 #
 # Notifications de eventos sao opt-in via env var
-# `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, as funcoes
+# `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, as funções
 # `notify_*` retornam False imediatamente (zero overhead, zero ruido).
 #
 # Eventos cobertos:
@@ -191,8 +191,8 @@ _ENV_NOTIFICATIONS_ENABLED = "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS"
 def _notifications_enabled() -> bool:
     """Lê env var no momento da chamada (re-avalia a cada notify).
 
-    Permite ao usuario habilitar/desabilitar sem reiniciar o daemon — embora,
-    na pratica, a env e fixada antes do daemon subir.
+    Permite ao usuário habilitar/desabilitar sem reiniciar o daemon — embora,
+    na prática, a env e fixada antes do daemon subir.
     """
     return os.environ.get(_ENV_NOTIFICATIONS_ENABLED, "").strip() in ("1", "true", "yes")
 
@@ -225,7 +225,7 @@ def notify_controller_disconnected(reason: str = "") -> bool:
 
 
 def notify_battery_low(pct: int, threshold: int = 15) -> bool:
-    """Emite uma vez por queda abaixo do threshold (dedup via once_key dinamica)."""
+    """Emite uma vez por queda abaixo do threshold (dedup via once_key dinâmica)."""
     if not _notifications_enabled():
         return False
     if pct > threshold:
@@ -242,7 +242,7 @@ def notify_battery_low(pct: int, threshold: int = 15) -> bool:
 
 def notify_battery_recovered(pct: int, threshold: int = 30) -> None:
     """Reseta o cache de battery_low quando bateria volta a subir acima do
-    threshold de recuperacao — permite emitir notify de novo na proxima queda."""
+    threshold de recuperacao — permite emitir notify de novo na próxima queda."""
     if pct >= threshold:
         _announced_once.discard(f"battery_low_below_{threshold - 15}")
         _announced_once.discard("battery_low_below_15")

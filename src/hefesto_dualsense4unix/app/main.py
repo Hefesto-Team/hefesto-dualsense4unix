@@ -174,9 +174,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): seta prgname ANTES de
     # qualquer Gtk init para o GTK derivar `app_id` Wayland corretamente.
-    # Sem isso, a dock COSMIC nao associa janela ao .desktop e mostra
+    # Sem isso, a dock COSMIC não associa janela ao .desktop e mostra
     # icone generico. prgname deve casar com basename do .desktop file.
-    # Tambem seta application_name (usado em window title bar fallback).
+    # Também seta application_name (usado em window title bar fallback).
     import gi
     gi.require_version("Gtk", "3.0")
     from gi.repository import GLib, Gtk

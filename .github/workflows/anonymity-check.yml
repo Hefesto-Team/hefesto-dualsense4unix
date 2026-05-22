@@ -115,7 +115,7 @@ jobs:
           done
           for d in "${BLACKDIRS[@]}"; do
             if git ls-files | grep -qE "(^|/)${d//./\\.}/"; then
-              echo "::error::diretorio proibido versionado: $d/"
+              echo "::error::diretório proibido versionado: $d/"
               FAIL=1
             fi
           done

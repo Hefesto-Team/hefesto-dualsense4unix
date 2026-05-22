@@ -393,7 +393,7 @@ step "4/10" "atalho de aplicativo e launcher"
 # BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3 fix): v3.4.2 usava SVG como
 # source para o rsvg-convert. Mas assets/appimage/Hefesto-Dualsense4Unix.
 # svg eh um PLACEHOLDER simples (chama laranja + texto "HEFESTO"),
-# nao a logo real (martelo + gradiente roxo/azul/rosa no PNG 256x256).
+# não a logo real (martelo + gradiente roxo/azul/rosa no PNG 256x256).
 # Resultado: app library mostrava chama laranja em vez do martelo.
 # Fix: source canonico eh o PNG 256x256 sempre, com Lanczos downsample
 # do ImageMagick para outras resolucoes. Sem SVG escalavel ate termos
@@ -417,7 +417,7 @@ if command -v convert >/dev/null 2>&1; then
     # Pixmap legacy fallback (DEs antigos)
     mkdir -p "${HOME}/.local/share/pixmaps"
     cp -f "${ICON_SRC}" "${HOME}/.local/share/pixmaps/${APP_ID}.png"
-    # Remove SVG placeholder de instalacoes anteriores (v3.4.2 colocava lah).
+    # Remove SVG placeholder de instalações anteriores (v3.4.2 colocava lah).
     rm -f "${ICON_HICOLOR_BASE}/scalable/apps/${APP_ID}.svg"
 else
     printf '      aviso: ImageMagick (convert) ausente — so 256x256 PNG\n'
@@ -542,7 +542,7 @@ fi
 # 4d. Catalogos i18n (.mo) — copia locale/ para ~/.local/share/locale/
 # ---------------------------------------------------------------------------
 # FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-copia sobrescreve. Se
-# locale/ nao existe (usuario clonou e nao rodou scripts/i18n_compile.sh),
+# locale/ não existe (usuário clonou e não rodou scripts/i18n_compile.sh),
 # pulamos silenciosamente e o gettext faz fallback para PT-BR hardcoded.
 readonly LOCALE_SRC="${ROOT_DIR}/locale"
 readonly LOCALE_TARGET="${HOME}/.local/share/locale"

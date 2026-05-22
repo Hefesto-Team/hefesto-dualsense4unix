@@ -1,6 +1,6 @@
 # Pacote Fedora RPM — hefesto-dualsense4unix
 
-RPM spec oficial para usuarios Fedora / CentOS Stream / RHEL / Rocky /
+RPM spec oficial para usuários Fedora / CentOS Stream / RHEL / Rocky /
 Alma / Nobara (comunitario, mantido junto ao source do projeto).
 
 ## Build local
@@ -39,7 +39,7 @@ Passos:
 1. Criar conta em <https://copr.fedorainfracloud.org/>.
 2. Criar projeto novo, ex.: `hefesto-dualsense4unix`.
 3. Habilitar chroots: `fedora-40-x86_64`, `fedora-41-x86_64`, etc.
-4. Adicionar source: aponta para o `.spec` no repositorio GitHub via
+4. Adicionar source: aponta para o `.spec` no repositório GitHub via
    webhook ou Copr CLI:
 
    ```bash
@@ -49,7 +49,7 @@ Passos:
    copr-cli build-package hefesto-dualsense4unix --name hefesto-dualsense4unix
    ```
 
-5. Usuarios finais habilitam o repo com:
+5. Usuários finais habilitam o repo com:
 
    ```bash
    sudo dnf copr enable [REDACTED]/hefesto-dualsense4unix
@@ -65,7 +65,7 @@ Apos o projeto sair de Alpha (v4.0+), considerar package review oficial:
 2. Submeter para pkgs.fedoraproject.org seguindo
    <https://docs.fedoraproject.org/en-US/package-maintainers/>.
 
-## Dependencias DNF
+## Dependências DNF
 
 | RPM package | Para que serve |
 |---|---|
@@ -86,7 +86,7 @@ Apos o projeto sair de Alpha (v4.0+), considerar package review oficial:
 | `python3-filelock` | File locking |
 | `python3-jeepney` | D-Bus async (cosmic backend) |
 
-## Limitacoes conhecidas
+## Limitações conhecidas
 
 - `pydualsense` puxado via pip durante build — sem RPM no Fedora ainda.
 - `python-uinput` (extras emulation): Fedora tem `python3-python-uinput`

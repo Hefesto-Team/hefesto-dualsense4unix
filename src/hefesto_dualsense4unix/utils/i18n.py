@@ -64,7 +64,7 @@ def _candidate_locale_dirs() -> list[Path]:
     candidates.append(Path("/usr/share/locale"))
 
     # 4a. /app/share/hefesto-dualsense4unix/locale/ (Flatpak sandbox —
-    #     path proprio porque /app/share/locale/<lang> e sobrescrito por
+    #     path próprio porque /app/share/locale/<lang> e sobrescrito por
     #     symlinks da Locale Extension do runtime GNOME//47).
     candidates.append(Path("/app/share/hefesto-dualsense4unix/locale"))
 
