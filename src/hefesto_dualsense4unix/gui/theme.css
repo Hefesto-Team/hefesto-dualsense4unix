@@ -6,22 +6,44 @@
     color: #f8f8f2;
 }
 
+/* BUG-GUI-COSMIC-WIDGET-CONTRAST-01: fundo SÓLIDO escuro (não `transparent`).
+   Em COSMIC o tema GTK do sistema é claro; `transparent` deixava o botão exibir
+   o container claro atrás + texto branco => branco-sobre-branco. Fundo Drácula
+   sólido garante contraste independente do container/tema do sistema. */
 .hefesto-dualsense4unix-window button {
-    background-color: transparent;
+    background-image: none;
+    background-color: #383a4a;
     border: 1px solid #bd93f9;
     border-radius: 4px;
     color: #f8f8f2;
     padding: 6px 12px;
 }
 .hefesto-dualsense4unix-window button:hover {
+    background-color: #44475a;
     border: 2px solid #ff79c6;
     padding: 5px 11px; /* compensa o 1px a mais */
 }
 .hefesto-dualsense4unix-window button:active {
-    background-color: rgba(189, 147, 249, 0.15);
+    background-color: #6272a4;
     border-color: #bd93f9;
 }
+/* Toggle ativo (política de rumble): accent roxo sólido + texto escuro pra
+   indicar inequivocamente qual política está selecionada. Inclui :hover do
+   :checked para não "apagar" o destaque ao passar o mouse. */
+.hefesto-dualsense4unix-window button:checked {
+    background-color: #bd93f9;
+    border-color: #bd93f9;
+    color: #282a36;
+    font-weight: bold;
+}
+.hefesto-dualsense4unix-window button:checked:hover {
+    background-color: #caa3fb;
+    border: 2px solid #ff79c6;
+    padding: 5px 11px;
+    color: #282a36;
+}
 .hefesto-dualsense4unix-window button:disabled {
+    background-color: #2f313d;
     border-color: #44475a;
     color: #6272a4;
 }
@@ -29,6 +51,7 @@
 .hefesto-dualsense4unix-window combobox,
 .hefesto-dualsense4unix-window entry,
 .hefesto-dualsense4unix-window spinbutton {
+    background-image: none;
     background-color: #282a36;
     border: 1px solid #bd93f9;
     border-radius: 4px;
@@ -39,16 +62,32 @@
 /* Combobox internals — célula de display + popup precisam contraste explícito.
    No GNOME 47 o renderer default herda cor cinza opaca, ficando mal-contrastado
    contra o background Dracula (#282a36). Forçamos cor do foreground em todos
-   os filhos relevantes. */
+   os filhos relevantes.
+   BUG-GUI-COSMIC-WIDGET-CONTRAST-01: o `button` interno do combobox NÃO deve
+   herdar o fundo sólido #383a4a do botão genérico nem o `transparent` antigo
+   (que vazava o tema claro do COSMIC). Padroniza o display fechado para casar
+   com `entry`: fundo #282a36, sem borda interna dupla, seta roxa. */
 .hefesto-dualsense4unix-window combobox button,
 .hefesto-dualsense4unix-window combobox button label,
 .hefesto-dualsense4unix-window combobox cellview,
 .hefesto-dualsense4unix-window combobox box {
+    background-image: none;
     background-color: #282a36;
+    border: none;
     color: #f8f8f2;
+}
+.hefesto-dualsense4unix-window combobox button:hover,
+.hefesto-dualsense4unix-window combobox button:active,
+.hefesto-dualsense4unix-window combobox button:checked {
+    background-color: #383a4a;
+    border: none;
+    padding: 4px 8px;
 }
 .hefesto-dualsense4unix-window combobox arrow {
     color: #bd93f9;
+    -gtk-icon-source: -gtk-icontheme("pan-down-symbolic");
+    min-height: 16px;
+    min-width: 16px;
 }
 
 /* Popup interno do GtkComboBoxText. O popup é uma window separada (filha do
@@ -114,6 +153,40 @@ menu menuitem:disabled label {
 menu separator {
     background-color: #44475a;
 }
+/* BUG-GUI-COSMIC-WIDGET-CONTRAST-01: containers internos vazando tema claro.
+   GtkBox/GtkFrame/GtkGrid/GtkViewport/GtkScrolledWindow/stack genéricos não
+   tinham regra nossa => no COSMIC herdavam o claro do sistema, e botões
+   `transparent` (antes do fix) exibiam esse claro. Tornamos transparentes para
+   revelar o fundo escuro #282a36 da window.
+   `:not(.hefesto-dualsense4unix-card)` preserva os cards (#21222c) — o seletor
+   simplesmente não casa neles, então a regra .hefesto-dualsense4unix-card vence.
+   `:not(.hefesto-dualsense4unix-log)` idem para as áreas de log. */
+.hefesto-dualsense4unix-window box:not(.hefesto-dualsense4unix-card),
+.hefesto-dualsense4unix-window frame:not(.hefesto-dualsense4unix-card),
+.hefesto-dualsense4unix-window grid:not(.hefesto-dualsense4unix-card),
+.hefesto-dualsense4unix-window viewport:not(.hefesto-dualsense4unix-card):not(.hefesto-dualsense4unix-log),
+.hefesto-dualsense4unix-window scrolledwindow:not(.hefesto-dualsense4unix-card):not(.hefesto-dualsense4unix-log),
+.hefesto-dualsense4unix-window stack:not(.hefesto-dualsense4unix-card) {
+    background-color: transparent;
+}
+/* Frame border (a moldura em si) — linha sutil escura, não o claro do sistema. */
+.hefesto-dualsense4unix-window frame > border {
+    border-color: #44475a;
+}
+/* Corpo de TreeView (lista de perfis, bindings de teclado): sem regra nossa,
+   herdava o branco do tema claro do COSMIC. Casa com a window. A linha
+   selecionada/hover usa accent Drácula em vez do azul default do sistema. */
+.hefesto-dualsense4unix-window treeview,
+.hefesto-dualsense4unix-window treeview.view {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+.hefesto-dualsense4unix-window treeview.view:selected,
+.hefesto-dualsense4unix-window treeview.view:selected:focus {
+    background-color: #44475a;
+    color: #f8f8f2;
+}
+
 /* Labels gerais — herdam color via .hefesto-dualsense4unix-window mas em alguns
    containers internos (Frame, Box) o GTK aplica cinza disabled-look. Forçar. */
 .hefesto-dualsense4unix-window label {
@@ -206,35 +279,44 @@ menu separator {
 /* Footer action buttons — paleta Drácula aplicada para diferenciar a
    responsabilidade de cada ação. Borda lateral colorida marca o botão
    sem dominar; fundo tingido sutil (alpha baixo) mantém legibilidade.
-   Cores de https://draculatheme.com/contribute. */
+   Cores de https://draculatheme.com/contribute.
+   BUG-GUI-COSMIC-WIDGET-CONTRAST-01: prefixados por .hefesto-dualsense4unix-window
+   (especificidade 0,2,0) para vencer a regra base de `button` (0,1,1) — que
+   agora seta `background-image: none` + fundo sólido. Cada `.btn-*` reafirma o
+   fundo escuro sólido #383a4a sob o gradiente; antes o gradiente alpha-baixo
+   pintava sobre `transparent` => sumia no claro do COSMIC. */
 
-.btn-apply {                           /* Aplicar — verde (commit/ação positiva) */
+.hefesto-dualsense4unix-window button.btn-apply {   /* Aplicar — verde (commit/ação positiva) */
+    background-color: #383a4a;
     border-left: 3px solid #50fa7b;
     background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.12), rgba(80, 250, 123, 0.06));
 }
-.btn-apply:hover  { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.22), rgba(80, 250, 123, 0.12)); }
-.btn-apply:active { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.32), rgba(80, 250, 123, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-apply:hover  { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.22), rgba(80, 250, 123, 0.12)); }
+.hefesto-dualsense4unix-window button.btn-apply:active { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.32), rgba(80, 250, 123, 0.18)); }
 
-.btn-save {                            /* Salvar Perfil — ciano (persistência) */
+.hefesto-dualsense4unix-window button.btn-save {    /* Salvar Perfil — ciano (persistência) */
+    background-color: #383a4a;
     border-left: 3px solid #8be9fd;
     background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.12), rgba(139, 233, 253, 0.06));
 }
-.btn-save:hover   { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.22), rgba(139, 233, 253, 0.12)); }
-.btn-save:active  { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.32), rgba(139, 233, 253, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-save:hover   { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.22), rgba(139, 233, 253, 0.12)); }
+.hefesto-dualsense4unix-window button.btn-save:active  { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.32), rgba(139, 233, 253, 0.18)); }
 
-.btn-import {                          /* Importar — laranja (cautela: conteúdo externo) */
+.hefesto-dualsense4unix-window button.btn-import {  /* Importar — laranja (cautela: conteúdo externo) */
+    background-color: #383a4a;
     border-left: 3px solid #ffb86c;
     background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.12), rgba(255, 184, 108, 0.06));
 }
-.btn-import:hover  { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.22), rgba(255, 184, 108, 0.12)); }
-.btn-import:active { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.32), rgba(255, 184, 108, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-import:hover  { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.22), rgba(255, 184, 108, 0.12)); }
+.hefesto-dualsense4unix-window button.btn-import:active { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.32), rgba(255, 184, 108, 0.18)); }
 
-.btn-restore {                         /* Restaurar Default — cinza (reset neutro) */
+.hefesto-dualsense4unix-window button.btn-restore { /* Restaurar Default — cinza (reset neutro) */
+    background-color: #383a4a;
     border-left: 3px solid #6272a4;
     background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.18), rgba(98, 114, 164, 0.08));
 }
-.btn-restore:hover  { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.30), rgba(98, 114, 164, 0.18)); }
-.btn-restore:active { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.42), rgba(98, 114, 164, 0.28)); }
+.hefesto-dualsense4unix-window button.btn-restore:hover  { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.30), rgba(98, 114, 164, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-restore:active { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.42), rgba(98, 114, 164, 0.28)); }
 
 /* UI-PROFILES-RIGHT-PANEL-REBALANCE-01 — preview JSON do perfil */
 .hefesto-dualsense4unix-profile-preview {
@@ -275,16 +357,38 @@ menu separator {
 .hefesto-dualsense4unix-high-contrast button,
 .hefesto-dualsense4unix-high-contrast combobox,
 .hefesto-dualsense4unix-high-contrast entry,
-.hefesto-dualsense4unix-high-contrast spinbutton {
+.hefesto-dualsense4unix-high-contrast spinbutton,
+/* especificidade (0,2,0) p/ vencer .hefesto-dualsense4unix-window button.btn-*
+   (0,2,0) — vem depois no arquivo, então o HC ganha o desempate de ordem. */
+.hefesto-dualsense4unix-high-contrast button.btn-apply,
+.hefesto-dualsense4unix-high-contrast button.btn-save,
+.hefesto-dualsense4unix-high-contrast button.btn-import,
+.hefesto-dualsense4unix-high-contrast button.btn-restore {
+    background-image: none;
     background-color: #000;
     color: #fff;
     border: 2px solid #ff0;
 }
+/* Toggle :checked no HC: amarelo cheio (não o roxo Drácula) p/ manter 21:1. */
+.hefesto-dualsense4unix-high-contrast button:checked {
+    background-color: #ff0;
+    border-color: #fff;
+    color: #000;
+}
 .hefesto-dualsense4unix-high-contrast button:hover,
 .hefesto-dualsense4unix-high-contrast button:focus,
 .hefesto-dualsense4unix-high-contrast combobox:focus,
-.hefesto-dualsense4unix-high-contrast entry:focus {
+.hefesto-dualsense4unix-high-contrast entry:focus,
+.hefesto-dualsense4unix-high-contrast button.btn-apply:hover,
+.hefesto-dualsense4unix-high-contrast button.btn-save:hover,
+.hefesto-dualsense4unix-high-contrast button.btn-import:hover,
+.hefesto-dualsense4unix-high-contrast button.btn-restore:hover,
+.hefesto-dualsense4unix-high-contrast button.btn-apply:active,
+.hefesto-dualsense4unix-high-contrast button.btn-save:active,
+.hefesto-dualsense4unix-high-contrast button.btn-import:active,
+.hefesto-dualsense4unix-high-contrast button.btn-restore:active {
     border: 3px solid #fff;
+    background-image: none;
     background-color: #ff0;
     color: #000;
 }

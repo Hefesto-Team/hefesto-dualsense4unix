@@ -64,3 +64,98 @@ def test_theme_css_cor_roxa_presente() -> None:
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     matches = re.findall(r"#bd93f9", conteúdo, re.IGNORECASE)
     assert len(matches) >= 1, "Cor #bd93f9 (roxo Drácula) não encontrada no CSS"
+
+
+# ---------------------------------------------------------------------------
+# BUG-GUI-COSMIC-WIDGET-CONTRAST-01: botões/toggles/dropdowns legíveis no COSMIC
+# (tema claro do sistema). Regex confirma a entrega: fundo sólido (não
+# `transparent`), estado :checked p/ toggle, combobox display coberto.
+# ---------------------------------------------------------------------------
+
+
+def test_botao_tem_fundo_solido_nao_transparente() -> None:
+    """A regra base de `button` deve usar fundo sólido escuro, NÃO transparent.
+
+    Causa-raiz do branco-sobre-branco no COSMIC: `background-color: transparent`
+    fazia o botão exibir o container claro do tema do sistema atrás dele.
+    """
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    m = re.search(
+        r"\.hefesto-dualsense4unix-window\s+button\s*\{([^}]*)\}",
+        conteúdo,
+    )
+    assert m is not None, "Regra base '.hefesto-dualsense4unix-window button' ausente"
+    corpo = m.group(1)
+    assert "transparent" not in corpo, (
+        "button não deve usar background-color: transparent (vaza tema claro do COSMIC)"
+    )
+    assert re.search(r"background-color:\s*#[0-9a-fA-F]{3,6}", corpo), (
+        "button deve ter background-color sólido (hex) na regra base"
+    )
+
+
+def test_toggle_checked_destacado() -> None:
+    """Deve existir regra :checked para distinguir a política de rumble ativa."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    assert re.search(
+        r"\.hefesto-dualsense4unix-window\s+button:checked\s*\{",
+        conteúdo,
+    ), "Regra '.hefesto-dualsense4unix-window button:checked' ausente (toggle ativo)"
+
+
+def test_combobox_display_coberto() -> None:
+    """O display fechado do combobox deve ter fundo/cor explícitos (não herdar claro)."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    assert re.search(
+        r"\.hefesto-dualsense4unix-window\s+combobox\s+button\b",
+        conteúdo,
+    ), "Cobertura do display do combobox (.hefesto-dualsense4unix-window combobox button) ausente"
+
+
+def test_footer_btn_sobre_fundo_escuro() -> None:
+    """Os .btn-* do footer devem reafirmar fundo escuro sólido sob o gradiente.
+
+    Antes o gradiente alpha-baixo era pintado sobre transparent => sumia no
+    claro do COSMIC.
+    """
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    for cls in ("btn-apply", "btn-save", "btn-import", "btn-restore"):
+        m = re.search(
+            r"\.hefesto-dualsense4unix-window\s+button\."
+            + re.escape(cls)
+            + r"\s*\{([^}]*)\}",
+            conteúdo,
+        )
+        assert m is not None, f"Regra do footer .{cls} (escopada na window) ausente"
+        assert "background-color" in m.group(1), (
+            f".{cls} deve fixar background-color escuro sob o gradiente"
+        )
+
+
+def test_containers_internos_cobertos() -> None:
+    """Containers genéricos devem ser cobertos sem quebrar o card (#21222c)."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    # box/frame/grid devem aparecer escopados na window com :not(card)
+    assert re.search(
+        r"\.hefesto-dualsense4unix-window\s+box:not\(\.hefesto-dualsense4unix-card\)",
+        conteúdo,
+    ), "Regra de containers (box:not(.card)) ausente"
+    # o card NÃO pode ter sido transformado em transparente
+    m = re.search(r"\.hefesto-dualsense4unix-card\s*\{([^}]*)\}", conteúdo)
+    assert m is not None and "#21222c" in m.group(1), (
+        "Card deve manter background #21222c (não pode ser sobrescrito p/ transparent)"
+    )
+
+
+def test_theme_css_sem_regra_at_rule_proibida() -> None:
+    """GTK3 falha a carga inteira com a at-rule de query proibida.
+
+    O arquivo pode documentar em comentários POR QUE não a usa; este teste
+    ignora comentários (/* ... */) e procura a at-rule real fora deles.
+    """
+    at_rule = "@" + "med" + "ia"  # monta a at-rule proibida por partes
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    css_sem_blocos = re.sub(r"/\*.*?\*/", "", conteúdo, flags=re.DOTALL)
+    assert at_rule not in css_sem_blocos, (
+        "at-rule de query quebra o parser CSS do GTK3 (falha a carga inteira)"
+    )
