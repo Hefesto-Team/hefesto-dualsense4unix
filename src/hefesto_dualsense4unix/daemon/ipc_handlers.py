@@ -277,6 +277,8 @@ class IpcHandlersMixin:
             "ry": state.raw_ry if state else 128,
             "buttons": buttons,
             "counters": snap.counters,
+            # FEAT-DAEMON-PAUSE-RESUME-01: applet/GUI distinguem pausado de parado.
+            "paused": bool(self.daemon is not None and self.daemon.is_paused()),
         }
 
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon

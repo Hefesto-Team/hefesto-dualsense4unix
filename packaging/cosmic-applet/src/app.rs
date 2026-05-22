@@ -63,6 +63,10 @@ pub enum Message {
     ProfileSwitched(Result<String, IpcError>),
     /// "Abrir painel" — lança a GUI.
     OpenPanel,
+    /// Pausar/retomar o despacho de input do daemon (FEAT-DAEMON-PAUSE-RESUME-01).
+    TogglePause,
+    /// Resultado de daemon.pause/resume (novo estado de pausa).
+    PauseToggled(Result<bool, IpcError>),
 }
 
 impl cosmic::Application for HefestoApplet {
@@ -190,6 +194,22 @@ impl cosmic::Application for HefestoApplet {
                 }
                 Task::none()
             }
+
+            Message::TogglePause => {
+                let want_paused = !self.state.as_ref().map(|s| s.paused).unwrap_or(false);
+                Task::perform(ipc::set_pause(want_paused), |res| {
+                    cosmic::action::app(Message::PauseToggled(res))
+                })
+            }
+
+            Message::PauseToggled(result) => {
+                if let Ok(paused) = result {
+                    if let Some(state) = self.state.as_mut() {
+                        state.paused = paused; // otimista; o refresh seguinte confirma
+                    }
+                }
+                self.refresh_task()
+            }
         }
     }
 
@@ -267,6 +287,25 @@ impl HefestoApplet {
         content = content.push(self.profiles_block());
         content = content.push(padded_control(divider::horizontal::default()));
 
+        // Ação: pausar/retomar o despacho de input (daemon segue vivo).
+        let paused = self.state.as_ref().map(|s| s.paused).unwrap_or(false);
+        let (pause_icon, pause_label) = if paused {
+            ("media-playback-start-symbolic", "Retomar")
+        } else {
+            ("media-playback-pause-symbolic", "Pausar")
+        };
+        content = content.push(
+            menu_button(
+                cosmic::iced::widget::row![
+                    icon::from_name(pause_icon).size(16),
+                    text::body(pause_label),
+                ]
+                .spacing(spacing.space_xs)
+                .align_y(cosmic::iced::Alignment::Center),
+            )
+            .on_press(Message::TogglePause),
+        );
+
         // Ação: abrir painel.
         content = content.push(
             menu_button(
@@ -322,6 +361,14 @@ impl HefestoApplet {
             .clone()
             .unwrap_or_else(|| "—".to_string());
         col = col.push(status_row("Perfil ativo", profile));
+
+        // FEAT-DAEMON-PAUSE-RESUME-01: indica pausa (daemon vivo, sem input).
+        if state.paused {
+            col = col.push(status_row(
+                "Estado",
+                "Pausado (sem enviar input)".to_string(),
+            ));
+        }
 
         col.into()
     }

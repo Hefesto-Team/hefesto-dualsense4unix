@@ -108,6 +108,10 @@ pub struct DaemonState {
     /// Percentual de bateria 0-100, ou null se desconhecido.
     #[serde(default)]
     pub battery_pct: Option<i64>,
+    /// FEAT-DAEMON-PAUSE-RESUME-01: true se o daemon está pausado (vivo, mas
+    /// sem despachar input). serde(default)=false tolera daemons antigos.
+    #[serde(default)]
+    pub paused: bool,
 }
 
 /// Um perfil retornado por `profile.list`.
@@ -238,6 +242,18 @@ pub async fn switch_profile(name: String) -> Result<String, IpcError> {
         .map(str::to_string)
         .ok_or_else(|| IpcError::Protocol("switch sem 'active_profile'".to_string()))?;
     Ok(active)
+}
+
+/// `daemon.pause` / `daemon.resume` — pausa ou retoma o despacho de input
+/// (FEAT-DAEMON-PAUSE-RESUME-01). Devolve o novo estado de pausa solicitado.
+pub async fn set_pause(paused: bool) -> Result<bool, IpcError> {
+    let method = if paused {
+        "daemon.pause"
+    } else {
+        "daemon.resume"
+    };
+    call_raw(method, json!({})).await?;
+    Ok(paused)
 }
 
 #[cfg(test)]
