@@ -5,6 +5,40 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+Acabamento COSMIC round 2 (Wave V3.6) — bugs de uso real reportados após a
+v3.5.0 em Pop!_OS COSMIC + DualSense USB.
+
+### Added
+
+- **Applet nativo COSMIC** (`packaging/cosmic-applet/`, `FEAT-COSMIC-APPLET-RUST-01`):
+  applet em Rust + libcosmic que aparece nos **Miniaplicativos** do COSMIC (registro
+  via `.desktop` com `X-CosmicApplet=true`), espelhando o padrão do
+  `extra-cosmic-xkill-applet`. Ícone no painel reflete o estado + popover com
+  bateria, perfil ativo, troca de perfil e "Abrir painel". Conversa com o daemon
+  pelo IPC Unix socket (JSON-RPC newline-delimited). `cargo build`/`clippy`/`fmt`
+  e testes do cliente IPC verdes; instala via `just install` (smoke visual no
+  painel pendente de validação no hardware).
+
+### Fixed
+
+- **Ao conectar o controle, o microfone mutava e teclas/atalhos disparavam sozinhos
+  no COSMIC** (`BUG-DAEMON-CONNECT-GHOST-INPUT-01`): o estado inicial cru — `micBtn`
+  lido por HID-raw antes do firmware enviar o primeiro report completo + snapshot
+  evdev ainda populando — era tratado como input real (`previous_buttons` e
+  edge-trackers nascem vazios). Adicionado **grace-period de 0,3 s pós-conexão** +
+  **baseline de botões no 1º tick**: durante o assentamento o daemon lê estado e
+  bateria normalmente, mas não despacha teclado/mouse/hotkey nem publica
+  `BUTTON_DOWN/UP`. Botões segurados na conexão só disparam após soltar e
+  re-pressionar. Rearmado em reconexão (unplug/replug).
+- **Botões e dropdowns ilegíveis (branco sobre branco) no COSMIC**
+  (`BUG-GUI-COSMIC-WIDGET-CONTRAST-01`): os botões usavam `background: transparent`
+  e herdavam o tema GTK claro do sistema (COSMIC não aplica a variante escura por
+  padrão). Agora têm fundo sólido Drácula (`#383a4a`) + borda roxa; o toggle de
+  política de rumble ativo é destacado (`:checked` roxo); footer `.btn-*`,
+  containers (`box`/`frame`/`grid`/`viewport`/`scrolledwindow`/`stack`, preservando
+  `.card`), corpo de `treeview` e display do combobox cobertos. `app/theme.py` seta
+  `gtk-application-prefer-dark-theme=True` como camada defensiva.
+
 ## [3.5.0] — 2026-05-21
 
 Acabamento de UI no COSMIC, remoção da aba Firmware e seletor de formato
