@@ -70,6 +70,8 @@ class DaemonProtocol(Protocol):
     _input_ready_at: float
     # FEAT-DAEMON-PAUSE-RESUME-01: despacho de input pausado (daemon vivo).
     _paused: bool
+    # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar.
+    _failed_subsystems: dict[str, str]
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.

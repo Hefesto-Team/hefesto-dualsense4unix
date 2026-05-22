@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 import signal
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -156,6 +157,10 @@ class Daemon:
     # teclado/mouse/hotkey) nem publica BUTTON_DOWN/UP — daemon vivo, sem afetar
     # o sistema. Reusa o gate do grace-period; persistido via utils.session.
     _paused: bool = field(default=False)
+    # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar
+    # (nome -> erro). Um subsystem quebrado é isolado aqui em vez de derrubar o
+    # daemon (poll/IPC/perfis seguem). Exposto para diagnóstico (doctor/status).
+    _failed_subsystems: dict[str, str] = field(default_factory=dict)
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -191,20 +196,23 @@ class Daemon:
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
+            # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: cada subsystem sobe isolado —
+            # uma falha é registrada em _failed_subsystems e o boot segue
+            # (poll/IPC/perfis sobrevivem a um subsystem quebrado).
             if self.config.ipc_enabled:
-                await self._start_ipc()
+                await self._safe_start("ipc", self._start_ipc)
             if self.config.udp_enabled:
-                await self._start_udp()
+                await self._safe_start("udp", self._start_udp)
             if self.config.autoswitch_enabled:
-                await self._start_autoswitch()
+                await self._safe_start("autoswitch", self._start_autoswitch)
             if self.config.mouse_emulation_enabled:
-                self._start_mouse_emulation()
+                await self._safe_start("mouse", self._start_mouse_emulation)
             if self.config.keyboard_emulation_enabled:
-                self._start_keyboard_emulation()
-            start_hotkey_manager(self)
+                await self._safe_start("keyboard", self._start_keyboard_emulation)
+            await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
             if self.config.mic_button_toggles_system:
-                start_mic_hotkey(self)
-            await self._start_plugins()
+                await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
+            await self._safe_start("plugins", self._start_plugins)
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -446,6 +454,23 @@ class Daemon:
         if self._plugins_subsystem is not None:
             await self._plugins_subsystem.stop()
             self._plugins_subsystem = None
+
+    async def _safe_start(self, name: str, starter: Callable[[], Any]) -> None:
+        """Inicia um subsystem isolando falhas (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01).
+
+        Se `starter` levantar (dep nativa ausente, permissão negada, porta em
+        uso...), registra o erro em `_failed_subsystems` e segue — um subsystem
+        quebrado não derruba o daemon. Aceita starters síncronos e assíncronos.
+        """
+        try:
+            result = starter()
+            if inspect.isawaitable(result):
+                await result
+        except Exception as exc:
+            self._failed_subsystems[name] = str(exc)
+            logger.error(
+                "subsystem_start_failed", subsystem=name, err=str(exc), exc_info=True
+            )
 
     def _evdev_buttons_once(self) -> frozenset[str]:
         """Thin wrapper — backcompat para testes que acessam o método diretamente."""
