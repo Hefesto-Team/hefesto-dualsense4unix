@@ -113,6 +113,20 @@ class ServiceInstaller:
     def restart(self) -> None:
         self._systemctl("restart", SERVICE_NORMAL)
 
+    def enable(self) -> None:
+        """Habilita o auto-start no boot e inicia o daemon (FEAT-DAEMON-DISABLE-CONTROL-01)."""
+        self._systemctl("enable", SERVICE_NORMAL, check=False)
+        self.start()
+
+    def disable(self) -> None:
+        """Para o daemon e desabilita o auto-start, mantendo a unit instalada.
+
+        Distinto de `pause` (runtime, daemon vivo, sem input) e de `uninstall`
+        (remove a unit). É o "desligar" do programa sem desinstalar.
+        """
+        self._disable_if_installed(SERVICE_NORMAL)
+        self.stop()
+
     def status_text(self) -> str:
         """Retorna o output de `systemctl --user status <unit>`.
 
