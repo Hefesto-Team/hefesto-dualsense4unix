@@ -350,7 +350,7 @@ impl HefestoApplet {
         let mut list = Column::new().spacing(0);
         for profile in &self.profiles {
             let is_active = profile.name == active;
-            let mark = if is_active { " " } else { "  " };
+            let mark = if is_active { "> " } else { "  " };
             let label = format!("{mark}{}", profile.name);
             let mut btn = menu_button(text::body(label));
             // Não re-dispara switch no perfil já ativo nem durante uma troca.
