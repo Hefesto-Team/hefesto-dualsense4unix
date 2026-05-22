@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# uninstall.sh - WIPE COMPLETO do Hefesto - Dualsense4Unix.
-# Remove TUDO: artefatos do install, .deb (apt remove), Flatpak, AppImage
-# em ~/Aplicativos, .venv, caches Python, configs, runtime, dados do user.
-# Após rodar, o sistema fica como se Hefesto nunca tivesse sido instalado.
+# uninstall.sh - WIPE do Hefesto - Dualsense4Unix.
+# Remove artefatos do install nativo, o applet COSMIC, .deb (apt remove),
+# Flatpak, AppImage em ~/Aplicativos, .venv, caches Python, runtime e dados.
+#
+# Config do usuário (perfis, sessão, preferências) é PRESERVADA por padrão e,
+# quando apagada, é antes copiada para um backup. Cobre tanto o caminho atual
+# (~/.config/hefesto-dualsense4unix) quanto o legado curto (~/.config/hefesto).
 #
 # Flags:
-#   --udev      remove também as udev rules em /etc/udev/rules.d/ (requer sudo).
-#   --keep-config preserva ~/.config/hefesto-dualsense4unix (perfis do user).
-#   --yes,-y    responde 'sim' para prompts.
+#   --udev          remove também as udev rules em /etc/udev/rules.d/ (sudo).
+#   --purge-config  APAGA a config do usuário (com backup antes). Default: preserva.
+#   --keep-config   preserva a config (default; mantido por retrocompatibilidade).
+#   --yes,-y        responde 'sim' para prompts.
 
 set -euo pipefail
 
@@ -18,17 +22,26 @@ readonly LAUNCHER="${HOME}/.local/bin/hefesto-dualsense4unix-gui"
 readonly BIN_SYMLINK="${HOME}/.local/bin/hefesto-dualsense4unix"
 readonly HOTPLUG_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-gui-hotplug.service"
 
+# Artefatos do applet COSMIC (instalados por packaging/cosmic-applet via sudo).
+# O uninstall nativo não os conhecia → sobreviviam ao wipe (rastro deixado).
+readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
+readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop"
+readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+# Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
+readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
+
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
 REMOVE_UDEV=0
-KEEP_CONFIG=0
+KEEP_CONFIG=1   # preserva config por padrão (perfis do user) — apagar exige --purge-config
 AUTO_YES=0
 for arg in "$@"; do
     case "$arg" in
-        --udev)         REMOVE_UDEV=1 ;;
-        --keep-config)  KEEP_CONFIG=1 ;;
-        --yes|-y)       AUTO_YES=1 ;;
+        --udev)          REMOVE_UDEV=1 ;;
+        --purge-config)  KEEP_CONFIG=0 ;;
+        --keep-config)   KEEP_CONFIG=1 ;;
+        --yes|-y)        AUTO_YES=1 ;;
         *) printf '[uninstall] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -99,6 +112,23 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q "${HOME}/.local/share/applications" 2>/dev/null || true
 fi
 
+# Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
+# por packaging/cosmic-applet. Remove só se existir (evita pedir sudo à toa).
+if [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" ]]; then
+    log "removendo applet COSMIC (sudo): binário + .desktop + ícone"
+    sudo rm -f "${APPLET_BIN}" "${APPLET_DESKTOP}" "${APPLET_ICON}" 2>/dev/null || true
+    sudo gtk-update-icon-cache -q -f /usr/share/icons/hicolor 2>/dev/null || true
+    sudo update-desktop-database -q /usr/share/applications 2>/dev/null || true
+fi
+
+# Drop-in do WirePlumber (fix de microfone). Remove só o nosso arquivo, nunca
+# o diretório wireplumber.conf.d/ (outros apps/usuário podem ter configs lá).
+if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
+    log "removendo drop-in WirePlumber: ${WIREPLUMBER_DROPIN}"
+    rm -f "${WIREPLUMBER_DROPIN}"
+    systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     if [[ "${AUTO_YES}" -eq 0 ]]; then
         read -r -n 1 -p "      remover udev rules de /etc/udev/rules.d/? [y/N] " resp
@@ -113,6 +143,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
+                   /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf 2>/dev/null || true
         sudo udevadm control --reload-rules 2>/dev/null || true
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
@@ -168,19 +199,32 @@ for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Download
     done
 done
 
-# Configs e dados do user (opt-out via --keep-config)
+# Configs e dados do user. PRESERVADOS por padrão; --purge-config apaga (com
+# backup antes). Cobre o caminho atual (longo) E o legado curto (~/.config/
+# hefesto), onde versões pré-rename gravavam perfis/sessão/preferências.
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+    backup_dir="${HOME}/.config/hefesto-dualsense4unix.backup-$(date +%s)"
+    backed_up=0
     for path in \
         "${HOME}/.config/hefesto-dualsense4unix" \
         "${HOME}/.local/share/hefesto-dualsense4unix" \
-        "${HOME}/.cache/hefesto-dualsense4unix"; do
+        "${HOME}/.cache/hefesto-dualsense4unix" \
+        "${HOME}/.config/hefesto" \
+        "${HOME}/.local/share/hefesto" \
+        "${HOME}/.cache/hefesto"; do
         if [[ -d "$path" ]]; then
+            mkdir -p "${backup_dir}"
+            rel="${path#"${HOME}"/}"
+            cp -a "$path" "${backup_dir}/${rel//\//_}" 2>/dev/null || true
+            backed_up=1
             log "removendo ${path}"
             rm -rf "$path"
         fi
     done
+    [[ "${backed_up}" -eq 1 ]] && log "backup da config em ${backup_dir}"
 else
-    log "configs preservadas (--keep-config): ~/.config/hefesto-dualsense4unix"
+    log "configs preservadas (default): ~/.config/hefesto + ~/.config/hefesto-dualsense4unix"
+    log "  (use --purge-config para apagar, com backup automático)"
 fi
 
 # BUG-UNINSTALL-LOCALE-NOT-REMOVED-01 (fix): catalogos .mo do install.sh
