@@ -48,13 +48,21 @@ O binário fica em `target/release/hefesto-dualsense4unix-applet`.
 
 ## Instalar
 
-Requer [`just`] e `sudo`:
+**Recomendado** (integrado ao instalador, a partir da raiz do repositório):
+
+```bash
+./install.sh --native --enable-cosmic-applet
+```
+
+Isso compila o applet, instala os artefatos e sobe o daemon nativo (que o
+applet consome via IPC). Alternativa manual, direto deste diretório (requer
+[`just`] e `sudo`):
 
 ```bash
 just install
 ```
 
-Isso instala:
+Ambos instalam:
 
 | Artefato | Destino |
 |---|---|
@@ -62,9 +70,15 @@ Isso instala:
 | `.desktop` | `/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop` |
 | ícone | `/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg` |
 
-Depois roda `gtk-update-icon-cache`.
+Depois rodam `gtk-update-icon-cache` e `update-desktop-database` (este último é
+necessário para o COSMIC listar o applet em *Miniaplicativos*).
 
-Para remover: `just uninstall`.
+> O `.desktop` declara o ícone como `…-symbolic` (mesmo padrão dos applets
+> nativos do COSMIC); sem o sufixo o ícone não resolve e o applet pode não
+> aparecer na lista.
+
+Para remover: `just uninstall` (ou `./uninstall.sh`, que agora também limpa o
+applet COSMIC).
 
 ## Adicionar ao painel
 
