@@ -1,0 +1,28 @@
+app-id := "com.vitoriamaria.HefestoDualsense4Unix"
+bin := "hefesto-dualsense4unix-applet"
+
+# Compila o binário release (a 1ª build do libcosmic é longa — seja paciente).
+build-release:
+    cargo build --release
+
+# Verifica formatação e lint sem alterar nada.
+check:
+    cargo fmt --check
+    cargo clippy --release -- -D warnings
+
+# Instala binário, .desktop e ícone no sistema (precisa de sudo).
+install: build-release
+    sudo install -Dm755 target/release/{{bin}} /usr/local/bin/{{bin}}
+    sudo install -Dm644 data/{{app-id}}.desktop \
+        /usr/share/applications/{{app-id}}.desktop
+    sudo install -Dm644 \
+        data/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg \
+        /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
+    sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+
+# Remove os artefatos instalados pelo `install`.
+uninstall:
+    sudo rm -f /usr/local/bin/{{bin}}
+    sudo rm -f /usr/share/applications/{{app-id}}.desktop
+    sudo rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
+    sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true

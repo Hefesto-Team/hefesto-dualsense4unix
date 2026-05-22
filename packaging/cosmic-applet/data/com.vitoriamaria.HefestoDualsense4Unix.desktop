@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Hefesto - Dualsense4Unix
+Name[pt_BR]=Hefesto - Dualsense4Unix
+Comment=Gatilhos, perfis e bateria do DualSense
+Comment[pt_BR]=Gatilhos, perfis e bateria do DualSense
+Comment[en]=DualSense triggers, profiles and battery
+Type=Application
+Exec=hefesto-dualsense4unix-applet
+Icon=com.vitoriamaria.HefestoDualsense4Unix
+Terminal=false
+NoDisplay=true
+Categories=COSMIC;
+Keywords=COSMIC;Applet;DualSense;Gamepad;Hefesto;PS5;
+Keywords[pt_BR]=COSMIC;Miniaplicativo;DualSense;Gamepad;Hefesto;PS5;
+StartupNotify=true
+X-CosmicApplet=true
