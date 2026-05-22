@@ -258,7 +258,7 @@ class TestEventNotifications:
         monkeypatch.delenv(
             "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", raising=False
         )
-        # Mesmo com jeepney disponivel, nao emite.
+        # Mesmo com jeepney disponivel, não emite.
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
         assert desktop_notifications.notify_controller_connected("usb") is False
         assert desktop_notifications.notify_controller_disconnected() is False
@@ -291,7 +291,7 @@ class TestEventNotifications:
     def test_battery_low_threshold(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS", "1")
         _install_fake_jeepney(monkeypatch, reply_body=(1,))
-        # 50% > threshold 15 -> nao emite
+        # 50% > threshold 15 -> não emite
         assert desktop_notifications.notify_battery_low(50) is False
         # 10% < threshold -> emite
         assert desktop_notifications.notify_battery_low(10) is True

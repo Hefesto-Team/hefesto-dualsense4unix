@@ -64,7 +64,7 @@ def apply_theme(window: Gtk.Window) -> None:
 
     # FEAT-A11Y-HIGH-CONTRAST-01 (v3.4.0): detecta tema HighContrast do
     # sistema (GNOME/COSMIC Accessibility > Contraste alto) e aplica nossa
-    # classe de override. GTK3 nao tem @media (prefers-contrast: more)
+    # classe de override. GTK3 não tem @media (prefers-contrast: more) — noqa-acento
     # nativo — o canal real e essa classe.
     if settings is not None:
         theme_name = settings.get_property("gtk-theme-name") or ""

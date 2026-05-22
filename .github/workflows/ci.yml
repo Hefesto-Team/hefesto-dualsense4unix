@@ -215,7 +215,7 @@ jobs:
 
   # CI-SMOKE-DOCKER-MATRIX-01 (v3.4.0): valida que o wheel instala +
   # roda em containers Fedora/Arch/Debian sem regressao. Antes,
-  # ubuntu-latest era a unica distro coberta — bugs em libcs / paths /
+  # ubuntu-latest era a única distro coberta — bugs em libcs / paths /
   # python ABI das outras so apareciam em report de usuario.
   build-wheel:
     name: Build wheel (para smoke multi-distro)
@@ -294,7 +294,7 @@ jobs:
       - name: Smoke pytest (unit subset sem GTK real)
         run: |
           python3 -m pip install --break-system-packages pytest pytest-asyncio
-          # Roda apenas testes que nao precisam de GTK/X display real.
+          # Roda apenas testes que não precisam de GTK/X display real.
           # Markers: -m "not requires_gtk and not requires_display".
           python3 -m pytest tests/unit -q \
               --ignore=tests/unit/app \

@@ -28,14 +28,14 @@ fi
 
 # Verifica que o PNG canonico do icone existe. v3.4.3+ removeu o SVG
 # placeholder (chama laranja); o PNG real 256x256 (martelo + gradiente)
-# em assets/appimage/Hefesto-Dualsense4Unix.png e a unica source canonica.
+# em assets/appimage/Hefesto-Dualsense4Unix.png e a única source canonica.
 if [[ ! -f "$APPDIR_SRC/Hefesto-Dualsense4Unix.png" ]]; then
     echo "erro: PNG do icone ausente em $APPDIR_SRC/Hefesto-Dualsense4Unix.png"
     echo "       (o repo distribui o PNG real; verifique o checkout)"
     exit 3
 fi
 
-# Garante que catalogos i18n estao compilados (necessario para o wheel
+# Garante que catalogos i18n estao compilados (necessário para o wheel
 # embarcar os .mo via pyproject `[tool.hatch.build.targets.wheel] include`).
 # FEAT-I18N-CATALOGS-01 (v3.4.0). Idempotente — re-compila do .po.
 if [[ ! -d "$HERE/src/hefesto_dualsense4unix/locale" ]] \

@@ -1,6 +1,6 @@
 # Nix flake — hefesto-dualsense4unix
 
-Pacote Nix oficial para usuarios NixOS / nix-darwin / nix em qualquer
+Pacote Nix oficial para usuários NixOS / nix-darwin / nix em qualquer
 distro Linux (comunitario, mantido junto ao source do projeto).
 
 ## Uso rapido
@@ -40,7 +40,7 @@ python3 -m venv .venv
 .venv/bin/pytest tests/unit -q
 ```
 
-## NixOS — configuracao do sistema
+## NixOS — configuração do sistema
 
 Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 
@@ -79,7 +79,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 }
 ```
 
-## home-manager — configuracao do usuario
+## home-manager — configuração do usuário
 
 ```nix
 { pkgs, ... }: {
@@ -98,7 +98,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
 }
 ```
 
-## Dependencias nixpkgs
+## Dependências nixpkgs
 
 Resolvidas automaticamente pela deriv (`packaging/nix/package.nix`):
 
@@ -111,12 +111,12 @@ Resolvidas automaticamente pela deriv (`packaging/nix/package.nix`):
 | `hidapi` | I/O hidraw |
 | `libnotify` | D-Bus notifications |
 | `gettext` | Compila .mo no preBuild |
-| `wrapGAppsHook` + `gobject-introspection` | wrap binario com GI_TYPELIB_PATH |
+| `wrapGAppsHook` + `gobject-introspection` | wrap binário com GI_TYPELIB_PATH |
 
 `pydualsense` (sem pacote em nixpkgs) eh declarado inline na deriv
 via `python3Packages.buildPythonPackage` + `fetchPypi`.
 
-## Atualizacao de versao
+## Atualização de versão
 
 1. Bump `version = "3.4.0"` em `packaging/nix/package.nix`.
 2. Se mudou hash do `pydualsense` no PyPI, atualizar `sha256`:
@@ -125,12 +125,12 @@ via `python3Packages.buildPythonPackage` + `fetchPypi`.
    ```
 3. Commit + push.
 
-## Limitacoes conhecidas
+## Limitações conhecidas
 
 - `pydualsense` `sha256` esta como `lib.fakeSha256` no template — Nix vai
   reclamar no primeiro build pedindo o hash real. Substituir uma vez.
 - Sem submissao a nixpkgs oficial ainda; aguarda saida de Alpha (v4.0).
-- Wayland backend `wlrctl` nao bundlado; usuario instala via
+- Wayland backend `wlrctl` não bundlado; usuário instala via
   `environment.systemPackages = [ pkgs.wlrctl ];`.
 
 Reportar bugs em <https://github.com/AndreBFarias/hefesto-dualsense4unix/issues>.

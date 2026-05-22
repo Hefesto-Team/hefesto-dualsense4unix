@@ -1,6 +1,6 @@
 # Pacote Arch Linux — hefesto-dualsense4unix
 
-PKGBUILD oficial para usuarios Arch / Manjaro / EndeavourOS / SteamOS
+PKGBUILD oficial para usuários Arch / Manjaro / EndeavourOS / SteamOS
 (comunitario, mantido junto ao source do projeto).
 
 ## Build local
@@ -20,7 +20,7 @@ Vai:
 6. Puxar `pydualsense` do PyPI (sem pacote pacman ainda).
 7. Empacotar udev rules, systemd units, `.desktop`, locale.
 8. Disparar `hefesto-dualsense4unix.install` (post_install): recarrega
-   udev + carrega modulo `uinput`.
+   udev + carrega módulo `uinput`.
 
 Resultado em `~/.cache/yay/hefesto-dualsense4unix/*.pkg.tar.zst` (ou
 similar dependendo do helper AUR).
@@ -49,7 +49,7 @@ Passos:
    git push origin master
    ```
 
-## Atualizacao de versao
+## Atualização de versão
 
 A cada release nova:
 
@@ -60,7 +60,7 @@ A cada release nova:
 Optional: substituir `sha256sums=('SKIP')` por checksum real via
 `makepkg -g >> PKGBUILD` apos baixar o tarball.
 
-## Dependencias do pacman
+## Dependências do pacman
 
 | Pacman package | Para que serve |
 |---|---|
@@ -73,7 +73,7 @@ Optional: substituir `sha256sums=('SKIP')` por checksum real via
 | `libnotify` | D-Bus desktop notifications |
 | `python-pydantic`, `python-typer`, etc | Stack do daemon |
 
-## Limitacoes conhecidas
+## Limitações conhecidas
 
 - `pydualsense` puxado do PyPI durante `package()` — sem mirror em
   Arch ainda. Build precisa de internet.

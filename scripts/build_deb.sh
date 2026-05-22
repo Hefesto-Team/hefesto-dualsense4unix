@@ -238,7 +238,7 @@ if command -v sed >/dev/null 2>&1; then
 fi
 
 # Exigir a versão EXATA do Python contra a qual o venv foi linkado. Sem isto,
-# `python3 (>= 3.10)` tambem casa o 3.12 do Noble e o apt instalaria o .deb
+# `python3 (>= 3.10)` também casa o 3.12 do Noble e o apt instalaria o .deb
 # py310 num sistema sem libpython3.10 -> venv quebrado. Com `python${PYVER}`,
 # o apt recusa o pacote na distro errada (o py310 não instala no 24.04, que
 # não tem 3.10) e o usuário pega o .deb correto da sua distro.

@@ -99,7 +99,7 @@ jobs:
   deb:
     # Um .deb por distro: o venv bundlado (--copies) linka contra a
     # libpython3.X exata do build, então 22.04->py310 e 24.04->py312. Os dois
-    # vão no release; o usuario instala o da sua distro (apt recusa o outro
+    # vão no release; o usuário instala o da sua distro (apt recusa o outro
     # via Depends python3.X). Resolve BUG-DEB-VENV-CROSS-PYVER-01.
     strategy:
       fail-fast: false
