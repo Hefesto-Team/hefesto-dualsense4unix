@@ -29,6 +29,20 @@ def apply_theme(window: Gtk.Window) -> None:
         logger.warning("theme_css_ausente", path=str(_CSS_PATH))
         return
 
+    settings = Gtk.Settings.get_default()
+
+    # BUG-GUI-COSMIC-WIDGET-CONTRAST-01: camada defensiva. Em COSMIC a sessão
+    # não aplica a variante escura do tema GTK por padrão, então containers/
+    # widgets não cobertos pelo nosso CSS herdam o claro do sistema (causando
+    # branco-sobre-branco). Pedir a variante escura faz o tema-base do sistema
+    # já entregar fundos escuros onde existir; o CSS Drácula continua sendo o
+    # canal principal (PRIORITY_APPLICATION sobrepõe o tema mesmo assim).
+    if settings is not None:
+        try:
+            settings.set_property("gtk-application-prefer-dark-theme", True)
+        except (TypeError, ValueError) as exc:  # propriedade ausente em algum backend
+            logger.warning("theme_prefer_dark_indisponivel", erro=str(exc))
+
     provider = Gtk.CssProvider()
     try:
         provider.load_from_path(str(_CSS_PATH))
@@ -52,7 +66,6 @@ def apply_theme(window: Gtk.Window) -> None:
     # sistema (GNOME/COSMIC Accessibility > Contraste alto) e aplica nossa
     # classe de override. GTK3 nao tem @media (prefers-contrast: more)
     # nativo — o canal real e essa classe.
-    settings = Gtk.Settings.get_default()
     if settings is not None:
         theme_name = settings.get_property("gtk-theme-name") or ""
         if "highcontrast" in theme_name.lower():
