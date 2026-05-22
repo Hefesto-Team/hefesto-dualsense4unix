@@ -9,7 +9,7 @@
 # vendor Sony, PID = 0CE6 (DualSense) ou 0DF2 (DualSense Edge). O sufixo
 # varia por sessão de pareamento; por isso o wildcard .*.
 #
-# Estratégia: mesma unit do USB (hefesto-gui-hotplug.service). O
+# Estratégia: mesma unit do USB (hefesto-dualsense4unix-gui-hotplug.service). O
 # launcher usa single_instance (BUG-TRAY-SINGLE-FLASH-01, "primeira vence")
 # → GUI aberta = traz ao foco; GUI fechada = sobe. Idempotente.
 #
@@ -17,7 +17,7 @@
 #   udevadm info -a /dev/hidrawN | grep KERNELS
 # Se o sufixo do PID diferir entre kernels, adicionar variante aqui.
 #
-# Arquivo companheiro: assets/hefesto-gui-hotplug.service.
+# Arquivo companheiro: assets/hefesto-dualsense4unix-gui-hotplug.service.
 
-ACTION=="add", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0CE6.*", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}="hefesto-gui-hotplug.service"
-ACTION=="add", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0DF2.*", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}="hefesto-gui-hotplug.service"
+ACTION=="add", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0CE6.*", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}="hefesto-dualsense4unix-gui-hotplug.service"
+ACTION=="add", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0DF2.*", TAG+="systemd", ENV{SYSTEMD_USER_WANTS}="hefesto-dualsense4unix-gui-hotplug.service"
