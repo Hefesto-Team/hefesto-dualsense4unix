@@ -136,10 +136,22 @@ fi
 
 # Drop-in do WirePlumber (fix de microfone). Remove só o nosso arquivo, nunca
 # o diretório wireplumber.conf.d/ (outros apps/usuário podem ter configs lá).
+#
+# BUG-UNINSTALL-WIREPLUMBER-WORKAROUND-PRESERVE-01 (fix): se o header do drop-in
+# contiver o marker "Recriado manualmente" (ou "Recriado manualmente apos"), o
+# usuário decidiu mantê-lo como workaround standalone (sem o daemon do hefesto).
+# Nesse caso, preservamos — caso contrário, removemos como antes. O reinstall
+# sobrescreve com a versão canônica do hefesto via --with-wireplumber-fix.
 if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
-    log "removendo drop-in WirePlumber: ${WIREPLUMBER_DROPIN}"
-    rm -f "${WIREPLUMBER_DROPIN}"
-    systemctl --user restart wireplumber >/dev/null 2>&1 || true
+    if head -5 "${WIREPLUMBER_DROPIN}" 2>/dev/null | grep -qiE 'recriado manualmente|workaround|standalone'; then
+        log "preservando drop-in WirePlumber (marker 'recriado manualmente' no header)"
+        log "  ${WIREPLUMBER_DROPIN}"
+        log "  remova manualmente se não quiser mais o filtro do DualSense"
+    else
+        log "removendo drop-in WirePlumber: ${WIREPLUMBER_DROPIN}"
+        rm -f "${WIREPLUMBER_DROPIN}"
+        systemctl --user restart wireplumber >/dev/null 2>&1 || true
+    fi
 fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
@@ -204,6 +216,16 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix/glyphs" ]]; then
     log "removendo glyphs do user"
     rm -rf "${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
+fi
+
+# BUG-UNINSTALL-SHARE-DIR-ORPHAN-01 (fix): após remover glyphs/ (e quaisquer
+# outros subdirs no futuro), o diretório-pai fica vazio mas presente, marcando
+# ~/.local/share/hefesto-dualsense4unix/ como rastro órfão. Removemos só se
+# estiver vazio — preserva dados se algo foi colocado lá fora do install.sh.
+if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
+   && [[ -z "$(ls -A "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null)" ]]; then
+    log "removendo diretório-pai vazio ~/.local/share/hefesto-dualsense4unix"
+    rmdir "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null || true
 fi
 
 # .deb instalado via apt: sudo apt remove (idempotente — silencioso se ausente).
@@ -289,6 +311,18 @@ fi
 # nota informativa.
 log "(nota) deps Python via pip --user em ~/.local/lib/python*/site-packages preservadas"
 log "       — remova manualmente se quiser wipe absoluto do user-site"
+
+# BUG-UNINSTALL-OUT-OF-SCOPE-CLARITY-01: documentar o que o uninstall
+# explicitamente NÃO toca, pra evitar atribuição equivocada de problemas
+# de outras toolchains ao hefesto.
+log ""
+log "fora do escopo (não removido — não é do hefesto):"
+log "  /etc/udev/rules.d/99-usb-*.rules         — toolchain de power-mgmt do user (ex: Aurora self-heal)"
+log "  /etc/udev/rules.d/99-storage-no-link-pm.rules — idem (storage PM)"
+log "  /etc/udev/rules.d/50-system76-power.rules    — polkit pra system76-power (Pop_OS)"
+log "  kernel cmdline (usbcore.autosuspend, pcie_aspm, etc.) — kernelstub/grub, não hefesto"
+log "  ~/.config/wireplumber/wireplumber.conf.d/   — dir compartilhado, só nosso .conf é removido"
+log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compartilhado"
 
 printf '\n─────────────────────────────────────────\n'
 printf ' Hefesto - Dualsense4Unix desinstalado (wipe completo)\n'
