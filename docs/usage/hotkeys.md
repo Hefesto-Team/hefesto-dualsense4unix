@@ -65,11 +65,59 @@ custom_command = []
   daemon não mata a Steam.
 - stdin/stdout/stderr vão para `/dev/null` — nada vaza nos logs do daemon.
 
+## Long-press do PS — modo jogo (FEAT-EMULATION-GAMEMODE-LONGPRESS-01, v3.8.1)
+
+Segurar o **botão PS por ~1 segundo** sem combo dispara o "modo jogo": alterna a supressão da
+emulação de mouse/teclado virtual do daemon, mantendo os **hotkeys** (combos de troca de perfil)
+**ativos** — para que o próprio gesto continue funcionando para reativar a emulação.
+
+| Gesto | Ação |
+|-------|------|
+| PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
+| PS (~1s segurando) | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
+| PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
+
+**Diferenças entre os 3 gestos PS:**
+
+- O combo (PS + outro botão) dispara primeiro — long-press e PS solo ficam suprimidos.
+- O long-press dispara **uma vez** assim que o threshold é atingido (default 1000 ms); soltar
+  depois disso **não** abre a Steam.
+- O PS solo só dispara no release, e só se nem combo nem long-press já dispararam.
+
+**Configuração:**
+
+```toml
+[hotkey]
+# Threshold do long-press do PS (ms). Padrão 1000 (1 segundo).
+ps_long_press_ms = 1000
+```
+
+**Estado do modo jogo via IPC** (útil para GUI/applet/CLI custom):
+
+```bash
+# Consulta
+hefesto-dualsense4unix daemon status   # campo `emulation_suppressed` no JSON
+
+# Alternar (espelha o gesto)
+echo '{"jsonrpc":"2.0","id":1,"method":"daemon.emulation.suppress","params":{}}' \
+  | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
+
+# Definir explicitamente
+# params: {"suppressed": true}  ou  {"suppressed": false}
+```
+
+Notifica via D-Bus (`org.freedesktop.Notifications`) em ambas as transições — feedback necessário
+porque a ação é deliberada (sem visual, o usuário não saberia se o gesto pegou). O estado é
+**transitório**: não persiste entre boots — a emulação volta ao estado da config no próximo
+restart do daemon.
+
 ## Observações
 
 - O combo sagrado tem **prioridade** sobre o PS solo: pressionar PS + D-pad
   em menos de 150 ms sempre troca perfil, nunca abre a Steam.
 - O release do PS após um combo não dispara PS solo (suprimido internamente
   pelo `HotkeyManager`).
-- Para desativar temporariamente, use `action = "none"` e recarregue o
-  daemon com `hefesto-dualsense4unix daemon reload` (V1.2+).
+- Para desativar temporariamente o PS solo, use `action = "none"` e recarregue
+  o daemon com `hefesto-dualsense4unix daemon reload` (V1.2+).
+- O long-press do PS sempre funciona — ele é independente do `action` configurado
+  para o PS solo.
