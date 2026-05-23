@@ -5,6 +5,23 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Uninstall deixava `~/.local/share/hefesto-dualsense4unix/` vazio após remover `glyphs/`**:
+  dir-pai órfão ficava como rastro. Agora `rmdir` não-recursivo após o passo glyphs
+  (só se vazio — preserva dados colocados fora do install). (BUG-UNINSTALL-LEFTOVER-AUDIT-01.A)
+- **Uninstall sobrescrevia workaround do user para o drop-in WirePlumber**: se o user
+  recriou `51-hefesto-dualsense-no-default-source.conf` manualmente após uninstall (header
+  marcado "Recriado manualmente"/"workaround"/"standalone"), o uninstall antigo apagava
+  toda vez que rodava. Agora detecta o marker no header (`head -5`) e preserva, com log
+  explícito. Reinstall via `--with-wireplumber-fix` continua sobrescrevendo com a versão
+  canônica. (BUG-UNINSTALL-LEFTOVER-AUDIT-01.B)
+- **Uninstall não diferenciava artefatos do hefesto vs de toolchains do user** (Aurora
+  self-heal, system76-power): log final agora lista o que **não é tocado** e por quê —
+  `/etc/udev/rules.d/99-usb-*.rules`, kernel cmdline (`usbcore.autosuspend=-1`,
+  `pcie_aspm=off`), `~/.config/wireplumber/wireplumber.conf.d/`, etc. Evita atribuição
+  equivocada e protege o setup pessoal do user. (BUG-UNINSTALL-LEFTOVER-AUDIT-01.C)
+
 ## [3.8.2] — 2026-05-23
 
 Boot saudável: destrava o ciclo daemon-em-D-state, GUI imkillable e spam de notificações de boot.
