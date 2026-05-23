@@ -78,6 +78,11 @@ class PyDualSenseController(IController):
         # Inicia leitor evdev em paralelo; sem device evdev, cai no fallback
         # pydualsense pra input (pode ficar zerado se kernel hid_playstation
         # estiver capturando — ver HOTFIX-2).
+        # BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01: o EvdevReader cacheia o path no
+        # __init__. Se o daemon bootou offline (sem controle), o path ficava
+        # None e o hotplug nunca o reavaliava — input caía no HID-raw cru
+        # (sticks ~253 em repouso). Re-procura aqui, a cada (re)conexão.
+        self._evdev.refresh_device()
         if self._evdev.is_available():
             self._evdev.start()
             logger.info(

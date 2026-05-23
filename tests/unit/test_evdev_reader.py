@@ -29,6 +29,36 @@ def test_reader_sem_device_nao_disponivel():
     assert reader.start() is False
 
 
+def test_refresh_device_relocaliza_apos_boot_offline(monkeypatch: pytest.MonkeyPatch):
+    """refresh_device() re-procura o evdev quando o path nasceu None (hotplug
+    pos-boot offline) — BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01."""
+    from pathlib import Path
+
+    reader = EvdevReader(device_path=None)
+    reader._device_path = None  # type: ignore[assignment]
+    assert reader.is_available() is False
+    monkeypatch.setattr(reader, "_find_device", lambda: Path("/dev/input/event2"))
+    assert reader.refresh_device() is True
+    assert reader.is_available() is True
+
+
+def test_refresh_device_noop_quando_ja_tem_path(monkeypatch: pytest.MonkeyPatch):
+    """refresh_device() não re-enumera se já há um path (evita custo ~60ms)."""
+    from pathlib import Path
+
+    reader = EvdevReader(device_path=Path("/dev/input/event2"))
+    calls = {"n": 0}
+
+    def _find() -> Path:
+        calls["n"] += 1
+        return Path("/dev/input/event9")
+
+    monkeypatch.setattr(reader, "_find_device", _find)
+    assert reader.refresh_device() is True
+    assert calls["n"] == 0
+    assert reader._device_path == Path("/dev/input/event2")
+
+
 def test_reader_start_com_device_fake(tmp_path, monkeypatch: pytest.MonkeyPatch):
     """EvdevReader inicia thread quando device_path está presente.
 
