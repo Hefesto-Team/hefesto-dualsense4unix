@@ -278,13 +278,30 @@ def notify_config_errors(invalid: list[tuple[str, str]]) -> bool:
     )
 
 
+def notify_system_warnings(warnings: list[str]) -> bool:
+    """Avisa uma vez por boot sobre problemas de infra detectados
+    (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda reparo — só sugere o comando."""
+    if not _notifications_enabled() or not warnings:
+        return False
+    body = "; ".join(warnings[:2]) + ("…" if len(warnings) > 2 else "")
+    return notify(
+        summary="Hefesto: reparo recomendado",
+        body=body,
+        icon="dialog-warning",
+        timeout_ms=10000,
+        once_key="system_warnings",
+    )
+
+
 __all__ = [
     "notify",
     "notify_battery_low",
     "notify_battery_recovered",
+    "notify_config_errors",
     "notify_controller_connected",
     "notify_controller_disconnected",
     "notify_profile_activated",
+    "notify_system_warnings",
     "reset_once_cache",
     "statusnotifierwatcher_available",
 ]

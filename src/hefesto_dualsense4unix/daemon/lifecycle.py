@@ -216,6 +216,9 @@ class Daemon:
             # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
             # corrompidos (em vez de só pulá-los silenciosamente no fallback).
             self._audit_config_on_boot()
+            # FEAT-SYSTEM-AUTOREPAIR-BOOT-01: detecta infra quebrada (udev/WirePlumber)
+            # e AVISA o comando de reparo — nunca roda sudo sozinho.
+            self._check_system_on_boot()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -498,6 +501,28 @@ class Daemon:
                 notify_config_errors(invalid)
         except Exception as exc:
             logger.debug("config_audit_failed", err=str(exc))
+
+    def _check_system_on_boot(self) -> None:
+        """Detecta problemas de infra no boot (udev/WirePlumber) e AVISA o comando
+        de reparo (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda sudo/reparo sozinho.
+        Best-effort: nunca derruba o boot.
+        """
+        try:
+            from hefesto_dualsense4unix.core.system_check import system_warnings
+
+            infra_warnings = system_warnings()
+            if not infra_warnings:
+                return
+            for detail in infra_warnings:
+                logger.warning("system_check_warning", detail=detail)
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                    notify_system_warnings,
+                )
+
+                notify_system_warnings(infra_warnings)
+        except Exception as exc:
+            logger.debug("system_check_failed", err=str(exc))
 
     def _evdev_buttons_once(self) -> frozenset[str]:
         """Thin wrapper — backcompat para testes que acessam o método diretamente."""
