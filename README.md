@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-1418%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-1450%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -20,23 +20,25 @@
 
 ```
 Versão: 3.8.1
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1418 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (popups de dropdown corretos) + janela compacta opcional (opt-in); install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1450 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (dropdown legível no Drácula + sem busy-loop de CPU) + janela compacta opcional (opt-in); modo jogo via long-press do PS suprime mouse/teclado virtuais sem matar o daemon; install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
 
-> **Nota de release v3.4.0** — i18n EN baseline (catálogo `po/en.po`
-> com 232 strings + `pt_BR.po` identidade; carregado via `LANG` do
-> sistema), **acessibilidade ATK** em 15 botões críticos (Orca anuncia
-> "Aplicar gatilho adaptativo no L2" em vez de "botão sem nome") +
-> high-contrast palette WCAG AAA detectada automaticamente pelo tema
-> do sistema, **packaging multi-distro** (PKGBUILD AUR + RPM spec
-> Fedora/Copr + Nix flake), **CI smoke matrix Docker**
-> (fedora:40 + archlinux:latest + debian:12) com cache pip. 4
-> artefatos canônicos continuam: `.deb`, AppImage CLI, AppImage GUI e
-> Flatpak. Para histórico anterior (v3.3.x tray fallback + install
-> perfeito, v3.2.0 auditoria, v3.1.x hardening COSMIC, v3.0.0 rebrand)
-> veja [`CHANGELOG.md`](CHANGELOG.md).
+> **Nota de release v3.8.1** — correções pós-V3.8 surgidas no review de UI/UX na máquina:
+> a GUI subia a **104% de CPU consumindo ~5 GB de RAM** em poucos minutos por um busy-loop
+> de `GLib.idle_add` com callbacks que retornavam `True` (caiu para **~2.4% CPU / ~90 MB**); os
+> sticks ficavam lidos errado (~253 em repouso) quando o controle conectava após o boot do daemon,
+> porque o `EvdevReader` cacheava o caminho do evdev no `__init__` e nunca o reavaliava no hotplug;
+> a aba **Perfis** travava ao clicar/digitar porque `load_all_profiles()` rodava síncrono na thread
+> GTK (agora vai pra worker thread + cache em memória); o item atualmente **selecionado do dropdown**
+> ficava com fundo claro destoante no COSMIC (CSS cobre `:selected/:active/:checked`); e estreia o
+> **modo jogo via long-press do PS** — segurar o botão PS por ~1s alterna a supressão da emulação de
+> mouse/teclado mantendo os hotkeys de troca de perfil ativos (toque curto continua abrindo a Steam).
+> Para o histórico das versões anteriores (V3.8 controle de ativação + applet visível, v3.7.x
+> recuperação de instalação + áudio COSMIC, v3.6.x acabamento COSMIC + applet Rust, v3.4.0 i18n,
+> v3.3.x tray fallback, v3.2.0 auditoria, v3.1.x hardening COSMIC, v3.0.0 rebrand) veja
+> [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -164,8 +166,13 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.2.0/hefesto-dualsense4unix_3.2.0_amd64.deb
-sudo apt install ./hefesto-dualsense4unix_3.2.0_amd64.deb
+# Pop!_OS 22.04 / Ubuntu 22.04 (Python 3.10)
+curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/hefesto-dualsense4unix_3.8.1_amd64_py310.deb
+sudo apt install ./hefesto-dualsense4unix_3.8.1_amd64_py310.deb
+
+# Pop!_OS 24.04 / Ubuntu 24.04 (Python 3.12)
+curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/hefesto-dualsense4unix_3.8.1_amd64_py312.deb
+sudo apt install ./hefesto-dualsense4unix_3.8.1_amd64_py312.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -198,9 +205,9 @@ pip install pydualsense python-uinput
 #### AppImage (universal)
 
 ```bash
-curl -LO https://github.com/AndreBFarias/hefesto/releases/download/v3.2.0/Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
-chmod +x Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
-./Hefesto-Dualsense4Unix-3.2.0-x86_64.AppImage
+curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
+chmod +x Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
+./Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
 ```
 
 #### Flatpak (COSMIC, Flathub-compatível)
@@ -406,7 +413,8 @@ Notas:
 |-------|------|
 | PS + D-pad Cima | Próximo perfil |
 | PS + D-pad Baixo | Perfil anterior |
-| PS (sozinho) | Steam Big Picture (ou comando custom via `hefesto-dualsense4unix.conf`) |
+| PS (toque curto) | Steam Big Picture (ou comando custom via `hefesto-dualsense4unix.conf`) |
+| **PS (segurar ~1s)** | **Modo jogo on/off** — alterna a supressão da emulação de mouse/teclado virtual mantendo os hotkeys ativos; notifica via D-Bus (v3.8.1, FEAT-EMULATION-GAMEMODE-LONGPRESS-01) |
 | Mic (botão físico) | Muta / desmuta microfone padrão do sistema |
 
 ---
@@ -516,6 +524,28 @@ Detalhes empíricos em `docs/process/discoveries/2026-05-15-cosmic-1.0-validatio
 - `hefesto-dualsense4unix daemon pause` faz o daemon parar de enviar input ao sistema mantendo-o
   vivo (retoma com `daemon resume`). `daemon disable` desliga e tira do auto-start (religa com
   `daemon enable`). Para remover de vez, use `scripts/purge.sh`.
+
+**Modo jogo (segurar PS ~1s):**
+
+- Em jogo, o stick do controle "anda sozinho" se a emulação de mouse virtual estiver ligada.
+  Segure o botão **PS por ~1 segundo** para alternar o "modo jogo": a emulação de mouse/teclado é
+  suprimida (os hotkeys de troca de perfil seguem ativos), e uma notificação D-Bus confirma o
+  estado. Segure de novo para reativar. Toque curto no PS continua abrindo a Steam. (v3.8.1)
+
+**Sticks ficam encostados em ~253 em repouso (drift falso):**
+
+- Sintoma de `controller_connected_without_evdev` no log: o kernel `hid_playstation` capturou o
+  `evdev` e o daemon caiu no fallback HID-raw cru. Corrigido em v3.8.1 — o `EvdevReader` agora
+  re-procura o `/dev/input/event*` a cada conexão. Se você está numa versão anterior, basta
+  reiniciar o daemon **com o controle já plugado**: `systemctl --user restart hefesto-dualsense4unix`.
+
+**GUI consumindo CPU/RAM absurdos (~100% CPU, gigabytes de RAM):**
+
+- Bug pré-existente até v3.8.0 — `install_status_polling` registrava `GLib.idle_add` com
+  callbacks que retornavam `True` (corretos para `timeout_add`, mas viravam busy-loop infinito
+  no `idle_add`). Corrigido em **v3.8.1** (BUG-GUI-IDLE-ADD-BUSY-LOOP-01); GUI agora roda em
+  ~2.4% CPU / ~90 MB. Se reincidir, capture a stack com `sudo py-spy dump --pid <PID_GUI>` e abra
+  issue.
 
 **Controle não aparece em `/dev/hidraw*`:**
 

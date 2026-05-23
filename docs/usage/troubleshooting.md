@@ -384,6 +384,91 @@ de tom + glossário PT-BR  EN.
 
 ---
 
+## 12. Sticks "encostados em ~253" em repouso (drift falso)
+
+**Sintoma:** ao plugar o controle depois que o daemon já estava rodando, o `daemon.state_full` (via
+CLI/applet/GUI) mostra `LX`/`LY`/`RX`/`RY` em torno de `253` em repouso (deveriam estar próximos
+de `128`, o centro). Aparentemente o controle tem drift, mas mover/centrar o stick fisicamente não
+muda o número.
+
+**Causa-raiz (BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01, corrigido em v3.8.1):** o kernel
+`hid_playstation` captura o `evdev` do DualSense. O `EvdevReader` do daemon procura o evdev
+**uma única vez no `__init__`** — se o daemon subiu **offline** (sem o controle plugado), o caminho
+nasce `None` e nunca era reavaliado no hotplug, fazendo o daemon cair no fallback HID-raw cru (que
+parseia os bytes dos sticks errado, devolvendo ~253 em repouso).
+
+**Verificação:**
+
+```bash
+journalctl --user -u hefesto-dualsense4unix --since '5 min ago' \
+  | grep -E 'controller_connected|evdev'
+# Antes do fix: "controller_connected_without_evdev hint='input pode ficar zerado...'"
+# Depois do fix: "evdev_started path=/dev/input/eventN" + "controller_connected_with_evdev"
+```
+
+**Workaround (pré-v3.8.1):** reinicie o daemon **com o controle já plugado** — o `__init__` acha
+o evdev e segue normal até o próximo reboot.
+
+```bash
+systemctl --user restart hefesto-dualsense4unix
+```
+
+**Correção definitiva:** atualizar para a **v3.8.1** ou superior. O `EvdevReader` agora re-procura
+o evdev a cada `connect()` (custo desprezível: só re-enumera quando `_device_path is None`).
+
+---
+
+## 13. GUI consumindo 100% de CPU e/ou crescendo até gigabytes de RAM
+
+**Sintoma:** a GUI fica "épica de lenta" pra navegar, a janela trava ao trocar de aba ou interagir
+com widgets. `top -H -p $(pgrep -x hefesto-dualsen)` mostra a thread principal próxima de 100% e
+`%MEM` crescendo continuamente (chegou a 5+ GB em 6 minutos no caso reportado).
+
+**Causa-raiz (BUG-GUI-IDLE-ADD-BUSY-LOOP-01, corrigido em v3.8.1):** `install_status_polling`
+registrava os ticks de polling do estado em dois mecanismos GLib — `timeout_add` (para o tick
+periódico) **e** `idle_add` (para uma primeira leitura imediata, evitando a janela em que o
+default do Glade ("Consultando…") ficaria visível). Mas os callbacks dos ticks retornam `True`
+para manter o `timeout_add` vivo, e `GLib.idle_add(fn)` **reagenda `fn` enquanto ela retornar
+`True`** — então as duas chamadas viravam **dois busy-loops infinitos** disparando RPCs sem parar.
+
+**Verificação (precisa `py-spy` no venv):**
+
+```bash
+.venv/bin/pip install py-spy
+sudo .venv/bin/py-spy dump --pid <PID_DA_GUI>
+# Se a MainThread mostrar call_async → _tick_live_state → main loop GTK em loop apertado,
+# é esse bug.
+```
+
+**Workaround (pré-v3.8.1):** matar e reabrir a GUI mascara temporariamente — o busy-loop só começa
+depois que `install_status_polling` roda no `on_mount`, então a janela "respira" por uns segundos
+no boot antes de degradar. Não há workaround de runtime real até atualizar.
+
+**Correção definitiva:** **v3.8.1** — wrappers one-shot (`lambda: fn() and False`) garantem que
+`idle_add` execute o tick e retorne `False`, evitando o reagendamento. Pós-fix: ~2.4% CPU + ~90 MB
+RAM em repouso, comportamento normal para GUI GTK3 polling a 10/2/0.5 Hz.
+
+---
+
+## 14. Aba Perfis travando ao clicar/digitar/recarregar
+
+**Sintoma:** clicar num perfil na lista, digitar no editor de nome, ou clicar em "Recarregar" /
+"Salvar" trava a janela inteira por segundos visíveis. Pior quando há vários perfis em disco.
+
+**Causa-raiz (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01, corrigido em v3.8.1):**
+`load_all_profiles()` (glob de `~/.config/.../profiles/*.json` + `FileLock` + parse Pydantic de
+cada perfil) rodava **síncrono na thread de UI** em vários pontos: clique em perfil, abertura da
+aba, salvar, importar, e principalmente o `_build_profile_from_editor` chamado pelo
+`_refresh_preview` **a cada tecla digitada** no editor.
+
+**Correção definitiva:** **v3.8.1** — `_reload_profiles_store` carrega via worker thread
+(`run_in_thread` no `ipc_bridge`); o resultado popula um cache em memória (`_profiles_cache`)
+consultado por `on_profile_selection_changed` e `_build_profile_from_editor`. Clicar em perfil ou
+digitar não toca mais o disco. O footer (salvar/importar) permanece síncrono — são ações raras e
+deliberadas, e evitam detecção de conflito de nome contra cache stale.
+
+---
+
 ## Diagnóstico geral (script para issue)
 
 Quando reportar problema, anexe a saída de:

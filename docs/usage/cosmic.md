@@ -4,18 +4,19 @@ Guia de uso do Hefesto - Dualsense4Unix no ambiente COSMIC, o desktop Wayland na
 
 ---
 
-## Estado atual do suporte
+## Estado atual do suporte (v3.8.1)
 
 | Recurso | Estado | Observação |
 |---|---|---|
 | Deteccao DualSense USB/BT | OK | evdev, independente de display |
 | Polling de botoes/eixos | OK | hidraw, independente de display |
-| Hotkeys globais | OK | /dev/input, independente de display |
-| Mouse emulado (uinput) | OK | nivel kernel |
-| Autoswitch de perfil | Parcial | ver secao abaixo |
-| GUI GTK3 | OK via XWayland | XWayland ativado por padrão no COSMIC |
+| Hotkeys globais | OK | /dev/input, independente de display; long-press do PS = modo jogo (v3.8.1) |
+| Mouse emulado (uinput) | OK | nivel kernel; suprimível pelo modo jogo |
+| Autoswitch de perfil | Parcial | XWayland OK; Wayland puro depende do portal — ver seção abaixo |
+| GUI GTK3 | OK via XWayland | dropdown Drácula legível (v3.8.1); sem busy-loop de CPU (v3.8.1) |
 | Tray AppIndicator | OK via XWayland | Ayatana funciona em XWayland |
-| Applet nativo COSMIC panel | Não implementado | V1.2, sprint futura |
+| **Applet nativo COSMIC panel** | **OK** | Rust + libcosmic (v3.6); aparece em Miniaplicativos com `X-HostWaylandDisplay=true` + PNG 256x256 (v3.8.0) |
+| **Modo jogo (long-press PS)** | **OK (v3.8.1)** | Segurar PS ~1s alterna a supressão da emulação mouse/teclado mantendo hotkeys |
 
 ---
 
@@ -65,13 +66,23 @@ O Hefesto - Dualsense4Unix inicia em modo silencioso. Daemon e polling funcionam
 ## Instalação no COSMIC
 
 ```bash
-git clone https://github.com/AndreBFarias/hefesto
-cd hefesto
-./install.sh
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix
+cd hefesto-dualsense4unix
+./install.sh --yes --enable-cosmic-applet --with-wireplumber-fix --enable-hotplug-gui
 ```
 
-O instalador detecta automaticamente se o sistema usa systemd user session e
-oferece instalar o serviço de daemon.
+Flags relevantes no COSMIC:
+
+- `--enable-cosmic-applet` — compila e instala o applet nativo em Rust/libcosmic. Sem isso, o
+  Hefesto fica acessível só pela GUI GTK3 (XWayland) e pelo tray Ayatana (se o
+  `cosmic-applet-status-area` estiver habilitado em Configurações > Painel > Miniaplicativos).
+- `--with-wireplumber-fix` — instala o drop-in que impede o DualSense de virar o microfone padrão
+  (problema clássico do `wireplumber.conf` ao plugar o controle).
+- `--enable-hotplug-gui` — copia a unit `hefesto-dualsense4unix-gui-hotplug.service` que abre a
+  GUI automaticamente ao plugar/parear o controle.
+
+Após instalar o applet, recarregue o painel: `killall cosmic-panel`. Ele reaparece no segundo
+seguinte e o Hefesto deve aparecer em **Configurações > Painel > Miniaplicativos**.
 
 ---
 
@@ -113,12 +124,23 @@ sudo apt install grim slurp
 
 ## Problemas conhecidos
 
-- **AppIndicator não aparece no painel COSMIC nativo**: o COSMIC usa uma API de
-  applet própria (cosmic-panel). O tray Ayatana funciona via XWayland, mas pode
-  não integrar ao painel nativo do COSMIC. Contorno: usar apenas a janela GTK3
-  ou a CLI (`hefesto-dualsense4unix status`). Integração nativa esta planejada para V1.2.
+- **Applet COSMIC ausente em Miniaplicativos (resolvido em v3.8.0)**: o `.desktop` do applet
+  precisa de `X-HostWaylandDisplay=true` + um ícone PNG 256x256, e o `cosmic-panel` precisa ser
+  recarregado (`killall cosmic-panel`) após instalar. O `install.sh --enable-cosmic-applet` faz
+  isso. Se o applet não aparecer, conferir com `ls /usr/local/bin/hefesto-dualsense4unix-applet
+  /usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop` — ambos devem existir.
+
+- **`wlrctl` não funciona no COSMIC**: o cosmic-comp não implementa
+  `wlr-foreign-toplevel-management-unstable-v1`, então `wlrctl toplevel list --json` retorna
+  vazio. Isso afeta o autoswitch em Wayland **puro** — em XWayland (default no COSMIC 1.0+), o
+  `XlibBackend` funciona normalmente.
 
 - **Portal GetActiveWindow não disponivel**: compositors Wayland que não
   implementam `org.freedesktop.portal.Window` (Sway, Hyprland, COSMIC < 1.0)
   resultam em autoswitch silencioso. Funcionalidade completa requer XWayland
   ativo ou portal disponivel.
+
+- **Tray AppIndicator some no COSMIC**: o `cosmic-applet-status-area` pode estar desabilitado em
+  Configurações > Painel > Miniaplicativos. Habilite-o ou use o **applet nativo COSMIC** (preferível
+  no COSMIC — fala direto com o daemon via IPC JSON-RPC e tem ações de Pausar/Retomar + Modo jogo
+  no popover).
