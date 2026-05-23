@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-1332%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-1418%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -20,7 +20,7 @@
 
 ```
 Versão: 3.7.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1379 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (popups de dropdown corretos) + janela compacta opcional (opt-in); install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1418 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (popups de dropdown corretos) + janela compacta opcional (opt-in); install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
@@ -503,6 +503,19 @@ Detalhes empíricos em `docs/process/discoveries/2026-05-15-cosmic-1.0-validatio
 ---
 
 ### Solução de problemas
+
+**Primeiro recurso — diagnóstico automático:**
+
+- `hefesto-dualsense4unix doctor` roda um health-check ponta-a-ponta (daemon, regras udev, uinput,
+  applet COSMIC, microfone/WirePlumber, controle) e aponta o que está errado. `doctor --fix` aplica
+  as correções seguras (reaplica udev, reseta o WirePlumber). O daemon também avisa proativamente no
+  boot se detectar udev/WirePlumber fora do lugar.
+
+**Desativar sem desinstalar:**
+
+- `hefesto-dualsense4unix daemon pause` faz o daemon parar de enviar input ao sistema mantendo-o
+  vivo (retoma com `daemon resume`). `daemon disable` desliga e tira do auto-start (religa com
+  `daemon enable`). Para remover de vez, use `scripts/purge.sh`.
 
 **Controle não aparece em `/dev/hidraw*`:**
 
