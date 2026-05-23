@@ -21,7 +21,7 @@ from gi.repository import GObject, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
-from hefesto_dualsense4unix.app.ipc_bridge import call_async, profile_switch
+from hefesto_dualsense4unix.app.ipc_bridge import call_async, profile_switch, run_in_thread
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
@@ -49,6 +49,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
 
     _profiles_store: Gtk.ListStore
     _mode_advanced: bool = False  # True = editor avançado ativo; default seguro sem GTK
+    # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: cache em memória dos perfis. Evita
+    # load_all_profiles() síncrono na thread GTK a cada clique/tecla. Populado
+    # por _reload_profiles_store (thread worker); lido por
+    # on_profile_selection_changed e _build_profile_from_editor.
+    _profiles_cache: list[Profile]
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -100,8 +105,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         switch.set_active(self._mode_advanced)
         self._apply_editor_mode()
 
-        self._reload_profiles_store()
-        self._sync_selection_with_active_profile()
+        self._profiles_cache = []
+        self._reload_profiles_store(on_done=self._sync_selection_with_active_profile)
 
     def _sync_selection_with_active_profile(self) -> None:
         """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
@@ -187,9 +192,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         name = self._selected_profile_name(selection)
         if name is None:
             return
-        try:
-            profile = next(p for p in load_all_profiles() if p.name == name)
-        except StopIteration:
+        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: lê do cache em memória em vez de
+        # reler todos os perfis do disco a cada clique (load_all_profiles travava
+        # a thread GTK).
+        profile = self._find_cached_profile(name)
+        if profile is None:
             return
         self._populate_editor(profile)
 
@@ -339,10 +346,37 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return None
         return str(model.get_value(tree_iter, 0))
 
-    def _reload_profiles_store(self, select_name: str | None = None) -> None:
+    def _reload_profiles_store(
+        self,
+        select_name: str | None = None,
+        on_done: Any | None = None,
+    ) -> None:
+        """Recarrega a lista de perfis SEM bloquear a thread GTK.
+
+        PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: load_all_profiles() (glob + FileLock
+        + parse Pydantic) roda em thread worker; o store e o cache em memória
+        (`_profiles_cache`) são atualizados no callback, na thread GTK. `on_done`
+        (opcional) roda após popular o store (ex.: sincronizar a seleção com o
+        perfil ativo no boot).
+        """
+        def _load() -> list[Profile]:
+            return list(load_all_profiles())
+
+        def _on_loaded(profiles: Any) -> bool:
+            self._profiles_cache = list(profiles)
+            self._populate_profiles_store(profiles, select_name)
+            if on_done is not None:
+                on_done()
+            return False  # GLib.idle_add: não repetir
+
+        run_in_thread(_load, _on_loaded)
+
+    def _populate_profiles_store(
+        self, profiles: list[Profile], select_name: str | None
+    ) -> None:
+        """Popula o ListStore a partir da lista de perfis (thread GTK)."""
         store = self._profiles_store
         store.clear()
-        profiles = load_all_profiles()
         select_iter = None
         first_iter = None
         for profile in profiles:
@@ -356,6 +390,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         target = select_iter if select_iter is not None else first_iter
         if target is not None:
             self._get("profiles_tree").get_selection().select_iter(target)
+
+    def _find_cached_profile(self, name: str) -> Profile | None:
+        """Retorna o perfil do cache em memória pelo nome, ou None."""
+        cache: list[Profile] = getattr(self, "_profiles_cache", [])
+        for profile in cache:
+            if profile.name == name:
+                return profile
+        return None
 
     def _populate_editor(self, profile: Profile) -> None:
         """Preenche o editor com os dados do perfil.
@@ -435,10 +477,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             custom = self._get("profile_simple_custom_name").get_text().strip() or None
             match = from_simple_choice(choice=choice, custom_name=custom)
 
-        existing = next(
-            (p for p in load_all_profiles() if p.name == name),
-            None,
-        )
+        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache (este método roda no
+        # _refresh_preview a cada tecla/slider; reler o disco aqui travava a UI).
+        existing = self._find_cached_profile(name)
         base: dict[str, Any] = (
             existing.model_dump(mode="python") if existing else {}
         )

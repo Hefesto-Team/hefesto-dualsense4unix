@@ -519,3 +519,82 @@ class TestProfilePreview:
 
         # build_profile nem deveria ser chamado se label ausente
         stub._build_profile_from_editor.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: cache em memoria + carga assincrona
+# ---------------------------------------------------------------------------
+
+
+class TestProfilesCacheNonBlocking:
+    def test_find_cached_profile_retorna_do_cache(self):
+        _install_gi_stubs()
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        p1 = SimpleNamespace(name="alpha")
+        p2 = SimpleNamespace(name="beta")
+        stub = SimpleNamespace(_profiles_cache=[p1, p2])
+
+        assert ProfilesActionsMixin._find_cached_profile(stub, "beta") is p2
+        assert ProfilesActionsMixin._find_cached_profile(stub, "inexistente") is None
+
+    def test_find_cached_profile_cache_ausente_retorna_none(self):
+        _install_gi_stubs()
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        stub = SimpleNamespace()  # sem _profiles_cache atribuido
+        assert ProfilesActionsMixin._find_cached_profile(stub, "x") is None
+
+    def test_on_profile_selection_changed_le_do_cache_sem_disco(self, monkeypatch):
+        """Selecionar perfil lê do cache; não chama load_all_profiles (não bloqueia)."""
+        _install_gi_stubs()
+        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        tocou_disco: list = []
+        monkeypatch.setattr(
+            mod, "load_all_profiles", lambda: tocou_disco.append(True) or []
+        )
+
+        alvo = SimpleNamespace(name="meu_perfil")
+        populados: list = []
+        stub = SimpleNamespace(_profiles_cache=[alvo])
+        stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
+        stub._find_cached_profile = (  # type: ignore[attr-defined]
+            lambda name: ProfilesActionsMixin._find_cached_profile(stub, name)
+        )
+        stub._populate_editor = lambda p: populados.append(p)  # type: ignore[attr-defined]
+
+        ProfilesActionsMixin.on_profile_selection_changed(stub, MagicMock())
+
+        assert populados == [alvo]
+        assert tocou_disco == []  # não releu o disco a cada clique
+
+    def test_reload_profiles_store_usa_worker_e_popula_cache(self, monkeypatch):
+        """_reload_profiles_store carrega via run_in_thread e popula o cache."""
+        _install_gi_stubs()
+        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
+        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+
+        def fake_run_in_thread(fn, on_success, on_failure=None):
+            on_success(fn())  # simula worker + idle_add sincronos no teste
+
+        monkeypatch.setattr(mod, "run_in_thread", fake_run_in_thread)
+
+        p1 = SimpleNamespace(name="a", priority=1, match=SimpleNamespace(type="any"))
+        monkeypatch.setattr(mod, "load_all_profiles", lambda: [p1])
+
+        populados: list = []
+        feito: list = []
+        stub = SimpleNamespace()
+        stub._populate_profiles_store = (  # type: ignore[attr-defined]
+            lambda profiles, sel: populados.append((list(profiles), sel))
+        )
+
+        ProfilesActionsMixin._reload_profiles_store(
+            stub, select_name="a", on_done=lambda: feito.append(True)
+        )
+
+        assert stub._profiles_cache == [p1]
+        assert populados == [([p1], "a")]
+        assert feito == [True]  # on_done roda apos popular o store
