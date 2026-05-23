@@ -109,6 +109,7 @@ class IpcServer(IpcHandlersMixin):
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
+            "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,

@@ -53,11 +53,24 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     return _on_ps_solo
 
 
+def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
+    """Cria o callback on_ps_long_press: alterna o modo jogo (supressao da
+    emulacao de mouse/teclado). FEAT-EMULATION-GAMEMODE-LONGPRESS-01."""
+
+    def _on_ps_long_press() -> None:
+        daemon.set_emulation_suppressed()
+
+    return _on_ps_long_press
+
+
 def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
-    daemon._hotkey_manager = HotkeyManager(on_ps_solo=build_ps_solo_callback(daemon))
+    daemon._hotkey_manager = HotkeyManager(
+        on_ps_solo=build_ps_solo_callback(daemon),
+        on_ps_long_press=build_ps_long_press_callback(daemon),
+    )
     logger.info("hotkey_manager_started", ps_button_action=daemon.config.ps_button_action)
 
 
@@ -132,6 +145,7 @@ class HotkeySubsystem:
 
 __all__ = [
     "HotkeySubsystem",
+    "build_ps_long_press_callback",
     "build_ps_solo_callback",
     "mic_button_loop",
     "start_hotkey_manager",

@@ -293,6 +293,24 @@ def notify_system_warnings(warnings: list[str]) -> bool:
     )
 
 
+def notify_emulation_suppressed(suppressed: bool) -> bool:
+    """Avisa que o modo jogo foi ligado/desligado (emulação de mouse/teclado).
+
+    FEAT-EMULATION-GAMEMODE-LONGPRESS-01. Diferente dos eventos automáticos,
+    este é feedback de uma ação DELIBERADA do usuário (long-press do PS), então
+    notifica SEMPRE — independente do opt-in
+    `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS`. Sem feedback visível, o
+    usuário não saberia se o gesto pegou.
+    """
+    if suppressed:
+        summary = "Modo jogo ligado"
+        body = "Emulação de mouse/teclado desativada. Segure o PS de novo para reativar."
+    else:
+        summary = "Modo jogo desligado"
+        body = "Emulação de mouse/teclado reativada."
+    return notify(summary=summary, body=body, icon="input-gaming", timeout_ms=2500)
+
+
 __all__ = [
     "notify",
     "notify_battery_low",
@@ -300,6 +318,7 @@ __all__ = [
     "notify_config_errors",
     "notify_controller_connected",
     "notify_controller_disconnected",
+    "notify_emulation_suppressed",
     "notify_profile_activated",
     "notify_system_warnings",
     "reset_once_cache",

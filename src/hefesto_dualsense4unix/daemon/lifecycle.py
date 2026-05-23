@@ -126,6 +126,10 @@ class Daemon:
     _mouse_device: Any = None
     _keyboard_device: Any = None
     _hotkey_manager: Any = None
+    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: quando True, o poll loop não despacha
+    # mouse/teclado (devices ficam vivos; hotkeys seguem ativos). Alternado pelo
+    # long-press do PS. Transitório — não persiste entre boots.
+    _emulation_suppressed: bool = False
     _audio: Any = None
     _plugins_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
@@ -352,6 +356,24 @@ class Daemon:
             return ok
         stop_mouse_emulation(self)
         return True
+
+    def set_emulation_suppressed(self, value: bool | None = None) -> bool:
+        """Liga/desliga a supressão da emulação de mouse/teclado (modo jogo).
+
+        FEAT-EMULATION-GAMEMODE-LONGPRESS-01. `value=None` faz toggle; caso
+        contrário, define explicitamente. Os devices uinput permanecem vivos —
+        só o despacho no poll loop é pulado, e os hotkeys continuam ativos.
+        Notifica o usuário e retorna o novo estado (True = emulação suprimida).
+        """
+        from hefesto_dualsense4unix.integrations.desktop_notifications import (
+            notify_emulation_suppressed,
+        )
+
+        new_state = (not self._emulation_suppressed) if value is None else bool(value)
+        self._emulation_suppressed = new_state
+        logger.info("emulation_suppressed_changed", suppressed=new_state)
+        notify_emulation_suppressed(new_state)
+        return new_state
 
     # ------------------------------------------------------------------
     # Métodos privados preservados para backcompat de testes
@@ -645,10 +667,10 @@ class Daemon:
                         break
                 continue
 
-            if self._mouse_device is not None:
+            if self._mouse_device is not None and not self._emulation_suppressed:
                 self._dispatch_mouse_emulation(state, buttons_pressed)
 
-            if self._keyboard_device is not None:
+            if self._keyboard_device is not None and not self._emulation_suppressed:
                 self._dispatch_keyboard_emulation(buttons_pressed)
 
             if self._hotkey_manager is not None:

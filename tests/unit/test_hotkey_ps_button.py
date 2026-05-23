@@ -95,6 +95,83 @@ def test_ps_solo_readiepara_em_novo_press():
 
 
 # ---------------------------------------------------------------------------
+# HotkeyManager.on_ps_long_press (FEAT-EMULATION-GAMEMODE-LONGPRESS-01)
+# ---------------------------------------------------------------------------
+
+
+def test_long_press_dispara_apos_threshold():
+    """Segurar o PS por >= ps_long_press_ms (default 1s) dispara uma vez."""
+    fired: list[str] = []
+    mgr = HotkeyManager(on_ps_long_press=lambda: fired.append("long"))
+    assert mgr.observe(["ps"], now=0.0) is None  # press inicial
+    assert mgr.observe(["ps"], now=0.5) is None  # 500ms < 1000ms
+    assert fired == []
+    assert mgr.observe(["ps"], now=1.0) == "ps_long_press"  # atinge o threshold
+    assert fired == ["long"]
+    # Ticks seguintes do mesmo hold não repetem.
+    assert mgr.observe(["ps"], now=1.2) is None
+    assert fired == ["long"]
+
+
+def test_long_press_suprime_ps_solo_no_release():
+    """Após o long-press disparar, o release do PS NÃO abre a Steam (ps_solo)."""
+    solo: list[str] = []
+    longp: list[str] = []
+    mgr = HotkeyManager(
+        on_ps_solo=lambda: solo.append("solo"),
+        on_ps_long_press=lambda: longp.append("long"),
+    )
+    mgr.observe(["ps"], now=0.0)
+    mgr.observe(["ps"], now=1.0)  # long-press dispara
+    assert mgr.observe([], now=1.1) is None  # release não é ps_solo
+    assert longp == ["long"]
+    assert solo == []
+
+
+def test_toque_curto_no_ps_ainda_abre_steam():
+    """Toque curto (< threshold) segue disparando ps_solo (Steam) — sem regressão."""
+    solo: list[str] = []
+    longp: list[str] = []
+    mgr = HotkeyManager(
+        on_ps_solo=lambda: solo.append("solo"),
+        on_ps_long_press=lambda: longp.append("long"),
+    )
+    mgr.observe(["ps"], now=0.0)
+    assert mgr.observe([], now=0.1) == "ps_solo"  # 100ms < 1000ms
+    assert solo == ["solo"]
+    assert longp == []
+
+
+def test_long_press_suprimido_por_combo():
+    """PS+D-pad (combo) não dispara long-press mesmo segurando muito tempo."""
+    longp: list[str] = []
+    nextp: list[str] = []
+    mgr = HotkeyManager(
+        on_next=lambda: nextp.append("n"),
+        on_ps_long_press=lambda: longp.append("long"),
+    )
+    mgr.observe(["ps", "dpad_up"], now=0.0)
+    mgr.observe(["ps", "dpad_up"], now=0.2)  # combo dispara
+    mgr.observe(["ps", "dpad_up"], now=1.5)  # segurado > 1s, mas combo ja disparou
+    assert longp == []
+    assert nextp == ["n"]
+
+
+def test_long_press_threshold_configuravel():
+    """ps_long_press_ms configuravel via HotkeyConfig."""
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig
+
+    fired: list[str] = []
+    mgr = HotkeyManager(
+        on_ps_long_press=lambda: fired.append("long"),
+        config=HotkeyConfig(ps_long_press_ms=300),
+    )
+    mgr.observe(["ps"], now=0.0)
+    assert mgr.observe(["ps"], now=0.35) == "ps_long_press"  # 350ms >= 300ms
+    assert fired == ["long"]
+
+
+# ---------------------------------------------------------------------------
 # steam_launcher.open_or_focus_steam
 # ---------------------------------------------------------------------------
 
@@ -293,3 +370,50 @@ def test_start_hotkey_manager_none_nao_chama_steam(monkeypatch):
     daemon._hotkey_manager.on_ps_solo()
 
     assert called == []
+
+
+# ---------------------------------------------------------------------------
+# Modo jogo: long-press -> toggle da supressao de emulacao
+# (FEAT-EMULATION-GAMEMODE-LONGPRESS-01)
+# ---------------------------------------------------------------------------
+
+
+def test_set_emulation_suppressed_toggle_e_set(monkeypatch):
+    """set_emulation_suppressed faz toggle (None) e set explicito (bool)."""
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.testing import FakeController
+
+    # Evita disparar notificação D-Bus real durante o teste.
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.desktop_notifications.notify_emulation_suppressed",
+        lambda _s: True,
+    )
+    daemon = Daemon(controller=FakeController(transport="usb", states=[]), config=DaemonConfig())
+
+    assert daemon._emulation_suppressed is False
+    assert daemon.set_emulation_suppressed() is True  # toggle -> suprimido
+    assert daemon._emulation_suppressed is True
+    assert daemon.set_emulation_suppressed() is False  # toggle -> volta
+    assert daemon.set_emulation_suppressed(True) is True  # set explicito
+    assert daemon.set_emulation_suppressed(True) is True  # idempotente
+    assert daemon.set_emulation_suppressed(False) is False
+
+
+def test_start_hotkey_manager_long_press_toggla_modo_jogo(monkeypatch):
+    """on_ps_long_press do HotkeyManager alterna daemon._emulation_suppressed."""
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.testing import FakeController
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.desktop_notifications.notify_emulation_suppressed",
+        lambda _s: True,
+    )
+    daemon = Daemon(controller=FakeController(transport="usb", states=[]), config=DaemonConfig())
+    daemon._start_hotkey_manager()
+
+    assert daemon._hotkey_manager.on_ps_long_press is not None
+    assert daemon._emulation_suppressed is False
+    daemon._hotkey_manager.on_ps_long_press()  # simula o gesto
+    assert daemon._emulation_suppressed is True
+    daemon._hotkey_manager.on_ps_long_press()
+    assert daemon._emulation_suppressed is False

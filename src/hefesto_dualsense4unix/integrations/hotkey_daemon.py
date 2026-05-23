@@ -35,6 +35,9 @@ DEFAULT_BUFFER_MS = 150
 DEFAULT_COMBO_NEXT = ("ps", "dpad_up")
 DEFAULT_COMBO_PREV = ("ps", "dpad_down")
 PS_BUTTON = "ps"
+# FEAT-EMULATION-GAMEMODE-LONGPRESS-01: segurar o PS por este tempo (sem outro
+# botao) alterna o "modo jogo" (suprime a emulacao de mouse/teclado).
+DEFAULT_PS_LONG_PRESS_MS = 1000
 
 
 @dataclass
@@ -43,6 +46,7 @@ class HotkeyConfig:
     next_profile: tuple[str, ...] = DEFAULT_COMBO_NEXT
     prev_profile: tuple[str, ...] = DEFAULT_COMBO_PREV
     passthrough_in_emulation: bool = False
+    ps_long_press_ms: int = DEFAULT_PS_LONG_PRESS_MS
 
 
 @dataclass
@@ -52,6 +56,7 @@ class HotkeyManager:
     on_next: Any | None = None
     on_prev: Any | None = None
     on_ps_solo: Any | None = None
+    on_ps_long_press: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
     _first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
@@ -62,6 +67,9 @@ class HotkeyManager:
     # _ps_combo_fired: se um combo com PS ja disparou neste ciclo de press.
     _ps_pressed_at: float | None = None
     _ps_combo_fired: bool = False
+    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: se o long-press do PS ja disparou
+    # neste ciclo de hold (evita repetir e suprime o PS solo no release).
+    _ps_long_press_fired: bool = False
 
     def observe(
         self,
@@ -137,18 +145,36 @@ class HotkeyManager:
         if ps_now:
             if self._ps_pressed_at is None:
                 self._ps_pressed_at = t
+            elif (
+                not self._ps_long_press_fired
+                and not self._ps_combo_fired
+                and (t - self._ps_pressed_at) * 1000 >= self.config.ps_long_press_ms
+            ):
+                # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: PS segurado alem do
+                # threshold sem combo — dispara o long-press uma vez (toggle do
+                # modo jogo). Marca para suprimir o PS solo no release seguinte.
+                self._ps_long_press_fired = True
+                logger.info(
+                    "ps_long_press_fired",
+                    held_ms=round((t - self._ps_pressed_at) * 1000, 1),
+                )
+                self._fire_ps_long_press()
+                return "ps_long_press"
             return None
 
         # PS não esta mais pressionado. Verifica se houve release.
         if self._ps_pressed_at is None:
             # Não estava registrado: reset e sai.
             self._ps_combo_fired = False
+            self._ps_long_press_fired = False
             return None
 
         pressed_at = self._ps_pressed_at
         fired_during = self._ps_combo_fired
+        long_press_fired = self._ps_long_press_fired
         self._ps_pressed_at = None
         self._ps_combo_fired = False
+        self._ps_long_press_fired = False
 
         if fired_during:
             logger.debug(
@@ -157,7 +183,15 @@ class HotkeyManager:
             )
             return None
 
-        # Release sem combo — considera PS solo.
+        if long_press_fired:
+            # Long-press ja disparou neste hold — o release não abre Steam.
+            logger.debug(
+                "ps_solo_suppressed_by_long_press",
+                held_ms=round((t - pressed_at) * 1000, 1),
+            )
+            return None
+
+        # Release sem combo nem long-press — considera PS solo (toque curto).
         held_ms = (t - pressed_at) * 1000
         logger.info("ps_solo_released", held_ms=round(held_ms, 1))
         self._fire_ps_solo()
@@ -205,11 +239,24 @@ class HotkeyManager:
         except Exception as exc:
             logger.warning("hotkey_ps_solo_callback_failed", err=str(exc))
 
+    def _fire_ps_long_press(self) -> None:
+        cb = self.on_ps_long_press
+        if cb is None:
+            return
+        try:
+            result = cb()
+            if asyncio.iscoroutine(result):
+                with contextlib.suppress(RuntimeError, Exception):
+                    asyncio.get_running_loop().create_task(result)
+        except Exception as exc:
+            logger.warning("hotkey_ps_long_press_callback_failed", err=str(exc))
+
 
 __all__ = [
     "DEFAULT_BUFFER_MS",
     "DEFAULT_COMBO_NEXT",
     "DEFAULT_COMBO_PREV",
+    "DEFAULT_PS_LONG_PRESS_MS",
     "PS_BUTTON",
     "HotkeyConfig",
     "HotkeyManager",
