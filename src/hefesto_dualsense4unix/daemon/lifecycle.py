@@ -213,6 +213,9 @@ class Daemon:
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
             await self._safe_start("plugins", self._start_plugins)
+            # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
+            # corrompidos (em vez de só pulá-los silenciosamente no fallback).
+            self._audit_config_on_boot()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -471,6 +474,30 @@ class Daemon:
             logger.error(
                 "subsystem_start_failed", subsystem=name, err=str(exc), exc_info=True
             )
+
+    def _audit_config_on_boot(self) -> None:
+        """Valida os perfis no boot e avisa o usuário se houver corrompidos
+        (FEAT-CONFIG-AUDIT-BOOT-01). Best-effort: nunca derruba o boot.
+        """
+        try:
+            from hefesto_dualsense4unix.profiles.loader import audit_profiles
+
+            invalid = audit_profiles()
+            if not invalid:
+                return
+            logger.warning(
+                "config_audit_invalid_profiles",
+                count=len(invalid),
+                profiles=[name for name, _err in invalid],
+            )
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                    notify_config_errors,
+                )
+
+                notify_config_errors(invalid)
+        except Exception as exc:
+            logger.debug("config_audit_failed", err=str(exc))
 
     def _evdev_buttons_once(self) -> frozenset[str]:
         """Thin wrapper — backcompat para testes que acessam o método diretamente."""
