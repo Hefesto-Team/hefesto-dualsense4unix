@@ -8,10 +8,16 @@
 # (~/.config/hefesto-dualsense4unix) quanto o legado curto (~/.config/hefesto).
 #
 # Flags:
-#   --udev          remove também as udev rules em /etc/udev/rules.d/ (sudo).
+#   --keep-udev     PRESERVA udev rules + modules-load (default: remove, sudo).
+#   --udev          [DEPRECATED] no-op — remoção é default desde v3.8.3.
 #   --purge-config  APAGA a config do usuário (com backup antes). Default: preserva.
 #   --keep-config   preserva a config (default; mantido por retrocompatibilidade).
 #   --yes,-y        responde 'sim' para prompts.
+#
+# BUG-UNINSTALL-UDEV-DEFAULT-01 (fix): install.sh aplica as 5 udev rules + modules-
+# load por default (--no-udev é o opt-out). Symmetric, o uninstall.sh deve REMOVER
+# por default. Versões anteriores exigiam --udev explícito, deixando 6 arquivos no
+# /etc/ que continuavam disparando hotplug-units inexistentes ao plugar o controle.
 
 set -euo pipefail
 
@@ -34,12 +40,15 @@ readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-h
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
-REMOVE_UDEV=0
+# Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
+# Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
+REMOVE_UDEV=1
 KEEP_CONFIG=1   # preserva config por padrão (perfis do user) — apagar exige --purge-config
 AUTO_YES=0
 for arg in "$@"; do
     case "$arg" in
-        --udev)          REMOVE_UDEV=1 ;;
+        --keep-udev)     REMOVE_UDEV=0 ;;
+        --udev)          REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
         --purge-config)  KEEP_CONFIG=0 ;;
         --keep-config)   KEEP_CONFIG=1 ;;
         --yes|-y)        AUTO_YES=1 ;;
@@ -134,26 +143,37 @@ if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
 fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
-    if [[ "${AUTO_YES}" -eq 0 ]]; then
-        read -r -n 1 -p "      remover udev rules de /etc/udev/rules.d/? [y/N] " resp
-        echo
-        resp="${resp:-N}"
+    # Conjunto canônico sincronizado com scripts/install_udev.sh + install-host-udev.sh.
+    # As 5 rules + modules-load uinput são SEMPRE instaladas em conjunto e devem
+    # ser SEMPRE removidas em conjunto — não há combinação parcial suportada.
+    #
+    # BUG-UNINSTALL-SUDO-SILENT-FAIL-01 (fix): a versão anterior tinha
+    # `sudo rm ... 2>/dev/null || true`, que mascarava falha de TTY para senha
+    # (script chamado de subshell sem terminal) — log dizia "removendo" mas
+    # nada saía. Agora cacheamos credenciais sudo upfront e falhamos visível
+    # se sudo for recusado, mantendo idempotência em arquivo-ausente (rm -f).
+    log "removendo udev rules + modules-load uinput (sudo)"
+    if ! sudo -v 2>/dev/null; then
+        log "ERRO: sudo recusado/sem TTY — udev rules NÃO foram removidas."
+        log "      rode: sudo bash $0 ${*:-} (ou re-execute interativamente)"
     else
-        resp="Y"
-    fi
-    if [[ "${resp,,}" =~ ^y(es)?$ ]]; then
-        log "removendo udev rules (sudo)"
         sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules \
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
                    /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules \
-                   /etc/modules-load.d/hefesto-dualsense4unix.conf 2>/dev/null || true
-        sudo udevadm control --reload-rules 2>/dev/null || true
+                   /etc/modules-load.d/hefesto-dualsense4unix.conf
+        sudo udevadm control --reload-rules
+        # Re-trigger eventos para que devices PS5 já plugados percam os
+        # atributos injetados pelas rules removidas (autosuspend forçado,
+        # SYSTEMD_USER_WANTS de unit inexistente). Sem isso, comportamento
+        # residual persiste até desplugar/replugar ou reboot.
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
-    else
-        log "udev rules preservadas (rode com --udev --yes para forcar)"
+        sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
     fi
+else
+    log "udev rules preservadas (--keep-udev). Para remover depois:"
+    log "  sudo rm /etc/udev/rules.d/{70..74}-*ps5*.rules /etc/udev/rules.d/71-uinput.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
 fi
 
 if [[ -d "${ROOT_DIR}/.venv" ]]; then
