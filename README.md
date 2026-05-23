@@ -165,14 +165,12 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)
 
-```bash
-# Pop!_OS 22.04 / Ubuntu 22.04 (Python 3.10)
-curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/hefesto-dualsense4unix_3.8.1_amd64_py310.deb
-sudo apt install ./hefesto-dualsense4unix_3.8.1_amd64_py310.deb
+Baixe o `.deb` correspondente ao Python do seu sistema na página de releases (`releases/latest`) e instale com `apt`:
 
-# Pop!_OS 24.04 / Ubuntu 24.04 (Python 3.12)
-curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/hefesto-dualsense4unix_3.8.1_amd64_py312.deb
-sudo apt install ./hefesto-dualsense4unix_3.8.1_amd64_py312.deb
+```bash
+# Pop!_OS 22.04 / Ubuntu 22.04 → arquivo *_py310.deb
+# Pop!_OS 24.04 / Ubuntu 24.04 → arquivo *_py312.deb
+sudo apt install ./hefesto-dualsense4unix_3.8.1_amd64_py3XX.deb
 ```
 
 Depois habilite o daemon (opcional — pode rodar só via GUI):
@@ -204,8 +202,9 @@ pip install pydualsense python-uinput
 
 #### AppImage (universal)
 
+Baixe o `Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage` na página de releases e rode:
+
 ```bash
-curl -LO https://github.com/[REDACTED]/hefesto-dualsense4unix/releases/download/v3.8.1/Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
 chmod +x Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
 ./Hefesto-Dualsense4Unix-3.8.1-x86_64.AppImage
 ```
