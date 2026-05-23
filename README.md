@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 3.8.0
+Versão: 3.8.1
 Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1418 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (popups de dropdown corretos) + janela compacta opcional (opt-in); install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT

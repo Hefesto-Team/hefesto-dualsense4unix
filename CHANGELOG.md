@@ -5,6 +5,41 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.8.1] — 2026-05-22
+
+Correções pós-v3.8 surgidas no review de UI/UX na máquina: input travado no hotplug do controle,
+GUI a 100% de CPU consumindo gigabytes de RAM, lentidão da aba Perfis, dropdown ilegível no COSMIC,
+e modo jogo via long-press do PS.
+
+### Fixed
+
+- **GUI saía a 104% de CPU consumindo ~5 GB de RAM em minutos** (bug pré-existente): a "primeira
+  leitura imediata" dos ticks de status em `install_status_polling` passava callbacks que retornam
+  `True` direto para `GLib.idle_add`, criando dois busy-loops infinitos na thread GTK. Com o fix,
+  a GUI cai para ~2.4% CPU e ~90 MB RAM (BUG-GUI-IDLE-ADD-BUSY-LOOP-01).
+- **Sticks lidos errados (~253 em repouso) quando o controle conectava após o boot do daemon**: o
+  `EvdevReader` cacheava o caminho do evdev no `__init__` e nunca o reavaliava no hotplug, caindo
+  no fallback HID-raw cru. Agora re-procura o evdev a cada conexão
+  (BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01).
+- **Item atualmente selecionado do dropdown ficava com fundo claro destoante no COSMIC**: o CSS
+  do popup do `GtkComboBoxText` agora cobre os estados `:selected`/`:active`/`:checked` do
+  `menuitem` em paridade com `:hover`/`:focus` (BUG-GUI-COMBOBOX-POPUP-SELECTED-COSMIC-01).
+
+### Performance
+
+- **Travas da aba Perfis** ao clicar em um perfil, digitar no editor, salvar ou recarregar:
+  `load_all_profiles()` (glob + FileLock + parse Pydantic) rodava síncrono na thread GTK em vários
+  pontos. Agora a carga vai para um worker thread e os ditos pontos consultam um cache em
+  memória — clicar em perfil ou digitar não toca mais o disco
+  (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01).
+
+### Added
+
+- **Modo jogo via long-press do PS** (segurar ~1s): alterna a supressão da emulação de
+  mouse/teclado mantendo os hotkeys ativos. Não persiste entre boots, notifica via D-Bus, expõe
+  `emulation_suppressed` em `daemon.status`/`state_full` e adiciona o método IPC
+  `daemon.emulation.suppress` (FEAT-EMULATION-GAMEMODE-LONGPRESS-01).
+
 ## [3.8.0] — 2026-05-22
 
 Controle de ativação, robustez (doctor everywhere) e applet visível (Wave V3.8). Generaliza a

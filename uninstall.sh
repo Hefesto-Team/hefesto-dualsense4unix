@@ -177,6 +177,15 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
     -not -path "*/\.git/*" \
     -delete 2>/dev/null || true
 
+# Glyphs SVG copiados pelo install.sh (step 4b) — sao artefatos do pacote, não
+# dados do usuário, entao removemos sempre (independente de --purge-config).
+# BUG-UNINSTALL-GLYPHS-ORPHAN-01: ficavam em ~/.local/share/hefesto-dualsense4unix/
+# glyphs/ apos uninstall, criando rastro.
+if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix/glyphs" ]]; then
+    log "removendo glyphs do user"
+    rm -rf "${HOME}/.local/share/hefesto-dualsense4unix/glyphs"
+fi
+
 # .deb instalado via apt: sudo apt remove (idempotente — silencioso se ausente).
 if dpkg -l hefesto-dualsense4unix >/dev/null 2>&1; then
     log "removendo pacote .deb hefesto-dualsense4unix (sudo)"
@@ -229,6 +238,9 @@ if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
 else
     log "configs preservadas (default): ~/.config/hefesto + ~/.config/hefesto-dualsense4unix"
     log "  (use --purge-config para apagar, com backup automático)"
+    # paused.flag (FEAT-DAEMON-PAUSE-RESUME-01) fica em ~/.config/hefesto-dualsense4unix/
+    # e e propositalmente preservado junto com a config, para o usuário retomar
+    # do mesmo estado se reinstalar. Use --purge-config para apaga-lo tambem.
 fi
 
 # BUG-UNINSTALL-LOCALE-NOT-REMOVED-01 (fix): catalogos .mo do install.sh
