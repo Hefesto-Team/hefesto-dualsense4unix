@@ -70,6 +70,9 @@ class DaemonProtocol(Protocol):
     _input_ready_at: float
     # FEAT-DAEMON-PAUSE-RESUME-01: despacho de input pausado (daemon vivo).
     _paused: bool
+    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo — emulacao mouse/teclado
+    # suprimida (devices vivos, hotkeys ativos).
+    _emulation_suppressed: bool
     # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar.
     _failed_subsystems: dict[str, str]
 
@@ -117,6 +120,14 @@ class DaemonProtocol(Protocol):
         scroll_speed: int | None = None,
     ) -> bool:
         """Liga/desliga emulação de mouse e ajusta velocidades."""
+        ...
+
+    def set_emulation_suppressed(self, value: bool | None = None) -> bool:
+        """Alterna/define a supressão da emulação mouse/teclado (modo jogo).
+
+        FEAT-EMULATION-GAMEMODE-LONGPRESS-01. `value=None` faz toggle. Retorna o
+        novo estado (True = suprimida).
+        """
         ...
 
 

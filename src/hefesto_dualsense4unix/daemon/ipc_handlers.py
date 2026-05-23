@@ -202,6 +202,11 @@ class IpcHandlersMixin:
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo (emulacao suprimida).
+            "emulation_suppressed": bool(
+                self.daemon is not None
+                and getattr(self.daemon, "_emulation_suppressed", False)
+            ),
         }
 
     async def _handle_daemon_pause(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -279,6 +284,11 @@ class IpcHandlersMixin:
             "counters": snap.counters,
             # FEAT-DAEMON-PAUSE-RESUME-01: applet/GUI distinguem pausado de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo (emulacao suprimida).
+            "emulation_suppressed": bool(
+                self.daemon is not None
+                and getattr(self.daemon, "_emulation_suppressed", False)
+            ),
         }
 
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
@@ -480,6 +490,23 @@ class IpcHandlersMixin:
             enabled=enabled, speed=speed, scroll_speed=scroll_speed
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+
+    async def _handle_emulation_suppress(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga o modo jogo (suprime emulação mouse/teclado).
+
+        FEAT-EMULATION-GAMEMODE-LONGPRESS-01. Param opcional `suppressed` (bool)
+        define explicitamente; ausente faz toggle. Espelha o gesto de long-press
+        do PS — usado por GUI/applet/CLI.
+        """
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar modo jogo")
+        suppressed = params.get("suppressed")
+        if suppressed is not None and not isinstance(suppressed, bool):
+            raise ValueError("emulation.suppress: 'suppressed' precisa ser bool")
+        new_state = self.daemon.set_emulation_suppressed(suppressed)
+        return {"status": "ok", "emulation_suppressed": new_state}
 
     async def _handle_plugin_list(self, params: dict[str, Any]) -> list[dict[str, Any]]:
         """Lista plugins carregados no daemon (FEAT-PLUGIN-01).

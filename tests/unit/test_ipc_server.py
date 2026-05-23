@@ -479,3 +479,46 @@ async def test_excecao_inesperada_vira_internal_sem_derrubar(
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.list")
     assert "profiles" in result
+
+
+# --- FEAT-EMULATION-GAMEMODE-LONGPRESS-01 — handler daemon.emulation.suppress ---
+
+
+@pytest.mark.asyncio
+async def test_emulation_suppress_toggle_set_e_validacao(tmp_path: Path) -> None:
+    """daemon.emulation.suppress faz toggle (sem param), set explícito e valida tipo."""
+    from dataclasses import dataclass
+
+    @dataclass
+    class _FakeDaemon:
+        _emulation_suppressed: bool = False
+
+        def set_emulation_suppressed(self, value: bool | None = None) -> bool:
+            new = (not self._emulation_suppressed) if value is None else bool(value)
+            self._emulation_suppressed = new
+            return new
+
+    fake_daemon = _FakeDaemon()
+    controller = FakeController(transport="usb", states=[])
+    store = StateStore()
+    manager = ProfileManager(controller=controller, store=store)
+    server = IpcServer(
+        controller=controller,
+        store=store,
+        profile_manager=manager,
+        socket_path=tmp_path / "emulation_suppress.sock",
+        daemon=fake_daemon,
+    )
+
+    # Toggle (sem param): False -> True.
+    r1 = await server._handle_emulation_suppress({})
+    assert r1 == {"status": "ok", "emulation_suppressed": True}
+    assert fake_daemon._emulation_suppressed is True
+
+    # Set explícito False.
+    r2 = await server._handle_emulation_suppress({"suppressed": False})
+    assert r2 == {"status": "ok", "emulation_suppressed": False}
+
+    # Tipo inválido -> ValueError (vira INVALID_PARAMS no dispatch).
+    with pytest.raises(ValueError, match="suppressed"):
+        await server._handle_emulation_suppress({"suppressed": "nao_e_bool"})
