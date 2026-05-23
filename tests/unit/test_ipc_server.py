@@ -11,6 +11,7 @@ import pytest
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_server import (
+    CODE_INTERNAL,
     CODE_INVALID_PARAMS,
     CODE_METHOD_NOT_FOUND,
     CODE_PROFILE_NOT_FOUND,
@@ -431,3 +432,50 @@ async def test_profile_switch_rejeita_path_absoluto_sem_leak(running_server):
     assert exc_info.value.code == CODE_INVALID_PARAMS
     msg = str(exc_info.value)
     assert "/etc/passwd" not in msg
+
+
+# ---------------------------------------------------------------------------
+# FEAT-IPC-REQUEST-VALIDATION-01 — resiliência do dispatcher a clientes bugados
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_params_nao_objeto_retorna_invalid_params(running_server):
+    """Cliente que envia `params` não-objeto (lista) recebe INVALID_PARAMS limpo,
+    sem derrubar o servidor."""
+    _server, socket_path, _ = running_server
+    reader, writer = await asyncio.open_unix_connection(str(socket_path))
+    try:
+        req = json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "method": "daemon.status", "params": [1, 2, 3]}
+        )
+        writer.write(req.encode("utf-8") + b"\n")
+        await writer.drain()
+        raw = await reader.readline()
+    finally:
+        writer.close()
+        await writer.wait_closed()
+    response = json.loads(raw.decode("utf-8"))
+    assert response["error"]["code"] == CODE_INVALID_PARAMS
+
+
+@pytest.mark.asyncio
+async def test_excecao_inesperada_vira_internal_sem_derrubar(
+    running_server, monkeypatch: pytest.MonkeyPatch
+):
+    """Um handler que levanta exceção inesperada retorna INTERNAL (não vaza
+    stack ao cliente) e o servidor SOBREVIVE — a chamada seguinte funciona."""
+    server, socket_path, _ = running_server
+
+    async def _boom(_params: object) -> object:
+        raise RuntimeError("kaboom inesperado")
+
+    monkeypatch.setitem(server._handlers, "daemon.status", _boom)
+    async with IpcClient.connect(socket_path) as client:
+        with pytest.raises(IpcError) as exc:
+            await client.call("daemon.status")
+    assert exc.value.code == CODE_INTERNAL
+    # Servidor não morreu: outro método (não-patchado) ainda responde.
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call("profile.list")
+    assert "profiles" in result
