@@ -97,6 +97,19 @@ class _EvdevReconnectLoop:
     def is_available(self) -> bool:
         return self._device_path is not None
 
+    def refresh_device(self) -> bool:
+        """Re-procura o device de input quando ainda não há um path.
+
+        Hotplug-safe: o `__init__` chama `_find_device()` uma única vez. Se o
+        daemon subiu sem o controle (offline), o path nasce `None` e jamais
+        seria reavaliado — o evdev criado pelo kernel hid_playstation ao plugar
+        o controle nunca era localizado. `connect()` chama isto a cada
+        (re)conexão para fechar essa janela (BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01).
+        """
+        if self._device_path is None:
+            self._device_path = self._find_device()
+        return self._device_path is not None
+
     def start(self) -> bool:
         if not self.is_available():
             prefix = self._log_prefix()

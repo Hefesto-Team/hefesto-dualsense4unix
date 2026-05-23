@@ -158,6 +158,36 @@ class TestHotReconnect:
         assert inst.is_connected() is True
         assert inst._transport == "usb"
 
+    def test_connect_reativa_evdev_no_hotplug_pos_boot_offline(self) -> None:
+        """BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01: daemon que bootou offline (evdev
+        path=None) re-localiza o evdev quando o controle conecta, em vez de
+        cair no HID-raw cru para sempre (sintoma: sticks ~253 em repouso)."""
+        from pathlib import Path
+        from unittest.mock import MagicMock
+
+        reader = EvdevReader(device_path=None)
+        reader._device_path = None  # boot offline: nenhum evdev encontrado
+        # Simula o evdev surgindo quando o controle conecta (hotplug).
+        reader._find_device = MagicMock(  # type: ignore[method-assign]
+            return_value=Path("/dev/input/event2")
+        )
+        reader.start = MagicMock(return_value=True)  # type: ignore[method-assign]
+        assert reader.is_available() is False  # antes do connect: sem evdev
+
+        inst = PyDualSenseController(evdev_reader=reader)
+        present = _FakePydualsense()
+        present.conType = type("CT", (), {"name": "USB"})()  # type: ignore[attr-defined]
+
+        with patch(
+            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
+            return_value=present,
+        ):
+            inst.connect()
+
+        reader._find_device.assert_called_once()
+        assert reader.is_available() is True
+        reader.start.assert_called_once()
+
     def test_connect_idempotente_quando_ja_conectado(self) -> None:
         """connect() chamado novamente quando já conectado é no-op
         (não tenta reinicializar pydualsense)."""
