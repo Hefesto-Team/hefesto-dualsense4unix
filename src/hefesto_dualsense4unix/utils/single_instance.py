@@ -212,6 +212,12 @@ def acquire_or_takeover(name: str) -> int:
             logger.debug("single_instance_pid_orfao", name=name, pid_antigo=predecessor)
 
     fd = os.open(str(path), os.O_CREAT | os.O_RDWR, 0o600)
+    # BUG-SINGLE-INSTANCE-DOUBLE-CLOSE-01: os ramos internos de erro fazem
+    # `os.close(fd); raise`, e o `except Exception` externo também fechava
+    # → o segundo close levantava OSError(EBADF) que mascarava o erro
+    # original e derrubava o daemon no boot, gerando ciclo de restart pelo
+    # systemd (visível como "controle conecta/desconecta"). Centralizamos
+    # o cleanup com `contextlib.suppress(OSError)` para tolerar double-close.
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -228,12 +234,10 @@ def acquire_or_takeover(name: str) -> int:
                     except OSError:
                         continue
                 else:
-                    os.close(fd)
                     raise RuntimeError(
                         f"Não foi possível adquirir lock {name} após takeover"
                     ) from exc
             else:
-                os.close(fd)
                 raise
 
         own_pid = os.getpid()
@@ -241,7 +245,8 @@ def acquire_or_takeover(name: str) -> int:
         os.write(fd, f"{own_pid}\n".encode("ascii"))
         os.fsync(fd)
     except Exception:
-        os.close(fd)
+        with contextlib.suppress(OSError):
+            os.close(fd)
         raise
 
     _HELD_LOCKS[name] = fd
@@ -332,6 +337,8 @@ def acquire_or_bring_to_front(
 
     # Sem predecessor vivo: adquire o lock normalmente.
     fd = os.open(str(path), os.O_CREAT | os.O_RDWR, 0o600)
+    # BUG-SINGLE-INSTANCE-DOUBLE-CLOSE-01: mesmo cleanup centralizado de
+    # acquire_or_takeover — evita EBADF no caminho de erro.
     try:
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -346,12 +353,10 @@ def acquire_or_bring_to_front(
                     except OSError:
                         continue
                 else:
-                    os.close(fd)
                     raise RuntimeError(
                         f"Não foi possível adquirir lock {name} (bring-to-front fallback)"
                     ) from exc
             else:
-                os.close(fd)
                 raise
 
         own_pid = os.getpid()
@@ -359,7 +364,8 @@ def acquire_or_bring_to_front(
         os.write(fd, f"{own_pid}\n".encode("ascii"))
         os.fsync(fd)
     except Exception:
-        os.close(fd)
+        with contextlib.suppress(OSError):
+            os.close(fd)
         raise
 
     _HELD_LOCKS[name] = fd
