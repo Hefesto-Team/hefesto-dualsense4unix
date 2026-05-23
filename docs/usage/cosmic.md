@@ -66,7 +66,7 @@ O Hefesto - Dualsense4Unix inicia em modo silencioso. Daemon e polling funcionam
 ## Instalação no COSMIC
 
 ```bash
-git clone https://github.com/[REDACTED]/hefesto-dualsense4unix
+# Clone do repositório (veja a página principal para a URL atual)
 cd hefesto-dualsense4unix
 ./install.sh --yes --enable-cosmic-applet --with-wireplumber-fix --enable-hotplug-gui
 ```
