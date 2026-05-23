@@ -259,6 +259,25 @@ def notify_profile_activated(name: str) -> bool:
     )
 
 
+def notify_config_errors(invalid: list[tuple[str, str]]) -> bool:
+    """Avisa, uma vez por boot, que há perfis com configuração inválida
+    (FEAT-CONFIG-AUDIT-BOOT-01). `invalid` = [(nome, erro)]."""
+    if not _notifications_enabled() or not invalid:
+        return False
+    names = ", ".join(name for name, _err in invalid[:3])
+    extra = "…" if len(invalid) > 3 else ""
+    return notify(
+        summary="Perfis com configuração inválida",
+        body=(
+            f"{len(invalid)} perfil(is) ignorado(s): {names}{extra}. "
+            "Rode 'hefesto-dualsense4unix doctor' ou corrija/exclua o arquivo."
+        ),
+        icon="dialog-warning",
+        timeout_ms=8000,
+        once_key="config_errors",
+    )
+
+
 __all__ = [
     "notify",
     "notify_battery_low",

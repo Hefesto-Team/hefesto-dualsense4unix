@@ -168,6 +168,25 @@ def load_all_profiles() -> list[Profile]:
     return profiles
 
 
+def audit_profiles() -> list[tuple[str, str]]:
+    """Valida todos os perfis sem carregá-los para uso, coletando os inválidos.
+
+    FEAT-CONFIG-AUDIT-BOOT-01: usado no boot para AVISAR sobre perfis corrompidos
+    em vez de só pulá-los no fallback. Retorna [(nome, erro)] dos perfis que
+    falham decode/validação. Nunca levanta.
+    """
+    directory = profiles_dir(ensure=True)
+    invalid: list[tuple[str, str]] = []
+    for path in sorted(directory.glob("*.json")):
+        try:
+            with FileLock(str(_lock_path(path))):
+                raw = json.loads(path.read_text(encoding="utf-8"))
+            Profile.model_validate(raw)
+        except _PROFILE_DECODE_ERRORS as exc:
+            invalid.append((path.name, f"{type(exc).__name__}: {exc}"))
+    return invalid
+
+
 def save_profile(profile: Profile) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica."""
     path = _profile_path(profile)
