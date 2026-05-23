@@ -5,6 +5,39 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.8.0] — 2026-05-22
+
+Controle de ativação, robustez (doctor everywhere) e applet visível (Wave V3.8). Generaliza a
+"sacada do doctor" para o CLI + checks via IPC, permite pausar/desligar o programa sem desinstalar,
+endurece o daemon (subsystems resilientes, auditoria de config no boot, shutdown com timeout,
+auto-aviso de infra quebrada) e corrige o applet COSMIC que não aparecia em Miniaplicativos.
+
+### Added
+
+- **Pausar/retomar em runtime** (`daemon pause`/`resume` via CLI/IPC + ação no applet COSMIC): o
+  daemon segue vivo mas para de enviar input ao sistema (FEAT-DAEMON-PAUSE-RESUME-01).
+- **Desligar sem desinstalar** (`daemon disable`/`enable`): para + tira do auto-start mantendo a
+  unit instalada (FEAT-DAEMON-DISABLE-CONTROL-01).
+- **`hefesto-dualsense4unix doctor`** no CLI: reusa `scripts/doctor.sh` + checks do daemon via IPC
+  (FEAT-DOCTOR-CLI-AND-CHECKS-01).
+- **Auditoria de perfis no boot** com notificação sobre perfis corrompidos
+  (FEAT-CONFIG-AUDIT-BOOT-01).
+- **Auto-aviso de infra no boot**: detecta udev/WirePlumber fora do lugar e sugere o reparo, sem
+  rodar sudo sozinho (FEAT-SYSTEM-AUTOREPAIR-BOOT-01).
+- Ícone PNG 256x256 do applet COSMIC.
+
+### Fixed
+
+- **Applet COSMIC não aparecia em Miniaplicativos**: faltava `X-HostWaylandDisplay=true`, o ícone
+  PNG e o `killall cosmic-panel` ao instalar/remover (BUG-COSMIC-APPLET-PANEL-VISIBILITY-01).
+
+### Changed
+
+- **Daemon resiliente**: um subsystem que falha no boot é isolado e não derruba o daemon
+  (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01); o shutdown fecha IPC/UDP com timeout
+  (FEAT-DAEMON-GRACEFUL-SHUTDOWN-01); anti-regressão da resiliência do dispatcher IPC a clientes
+  bugados (FEAT-IPC-REQUEST-VALIDATION-01).
+
 ## [3.7.0] — 2026-05-22
 
 Recuperação de instalação + áudio COSMIC (Wave V3.7) — auditoria profunda após
