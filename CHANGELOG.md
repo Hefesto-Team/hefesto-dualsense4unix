@@ -5,6 +5,53 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.8.2] — 2026-05-23
+
+Boot saudável: destrava o ciclo daemon-em-D-state, GUI imkillable e spam de notificações de boot.
+A mantenedora reportou três sintomas combinados após v3.8.1 — "ao ligar o PC ele fica falando que
+tem algo não instalado", "o app travou legal, não consigo nem dar um kill nele", "o controle fica
+conectando e desconectando, o daemon dá pau legal". Diagnosticados como bugs independentes que se
+reforçavam; corrigidos com fixes cirúrgicos validados runtime na máquina.
+
+### Fixed
+
+- **Loop "conecta/desconecta" do controle no boot**: `os.close(fd)` duplicado em
+  `single_instance.acquire_or_takeover` virava `OSError [Errno 9]` quando o ramo interno de
+  cleanup já tinha fechado o fd — daemon morria no boot, systemd respawnava em 2s
+  (`Restart=on-failure`), mesma sequência. O ciclo aparecia como controle "flapando". Cleanup
+  centralizado com `contextlib.suppress(OSError)` resolve. (BUG-DAEMON-BOOT-DSTATE-LOOP-01.A)
+- **Daemon entrava em `D (disk sleep)` imkillable**: `pydualsense.init()` faz HID I/O síncrono
+  via libhidapi que o kernel não consegue completar em estados degenerados (autosuspend resume,
+  `hid_playstation` rebind, fd órfão `/dev/hidraw* (deleted)`). Agora roda em
+  `threading.Thread(daemon=True)` com timeout 5s — se passar, marca offline e segue; thread
+  vazada morre com o processo. Override via `HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC`.
+  (BUG-DAEMON-BOOT-DSTATE-LOOP-01.B)
+- **GUI ignorava SIGTERM com diálogo modal aberto**: `Gtk.MessageDialog.run()` bloqueia o
+  mainloop GTK, impedindo `GLib.idle_add(quit_app)` agendado por signal handler de executar. Novo
+  handler com 3 defesas: `Gtk.main_quit()` direto + `idle_add(quit_app)` + watchdog thread 2s
+  que força `os._exit(128+sig)`. 2ª SIGTERM em <5s pula direto pro hard exit. Diálogo de erro
+  do restart migrado para padrão não-bloqueante `connect("response", destroy)`. (BUG-GUI-IMKILLABLE-01.A,B)
+- **`subprocess.run(systemctl, timeout=10)` síncrono na thread GTK**: `on_daemon_service_restart`
+  rodava subprocess de 10s na thread principal, bloqueando UI e enfileirando deadlock se o
+  systemd estivesse degenerado. Migrado para worker thread via `_get_executor()` com callback
+  `GLib.idle_add(_on_service_restart_done, …)`. (BUG-GUI-IMKILLABLE-01.C)
+- **Notify "Tray icon indisponivel no COSMIC" disparava toda sessão da GUI**: o probe do
+  `StatusNotifierWatcher` rodava 500ms após `_start_deferred`, antes do
+  `cosmic-applet-status-area` registrar o watcher D-Bus (race conhecido em COSMIC 1.0.6+, que
+  registra em ~1–1.5s). Agora 1500ms + 3 retries de 1s, e flag persistente em
+  `$XDG_RUNTIME_DIR/.../cosmic_tray_warned.flag` faz a notify aparecer só uma vez por
+  instalação. Reemitir: apagar a flag ou
+  `HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1`. (BUG-BOOT-NOTIFICATION-SPAM-01.A)
+- **Notify de avisos de infra (WirePlumber, udev outdated) re-emitia a cada boot do daemon**:
+  `_check_system_on_boot` agora default off — opt-in via
+  `HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY=1`. O log em `warning` permanece para
+  `journalctl --user -u hefesto-dualsense4unix.service`. (BUG-BOOT-NOTIFICATION-SPAM-01.B)
+- **Spam de notify `controller_connected/disconnected` em flap espúrio**: `reconnect_loop` (probe
+  5s) + `poll_loop` (que chama `reconnect()` em `read_state` fail) podem publicar eventos em
+  rajada quando o controle flapa (autosuspend, cabo ruim). Throttle de 30s por chave em
+  `desktop_notifications` elimina a rajada — plug deliberado raramente acontece em <30s.
+  Override via `HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC`. (BUG-BOOT-NOTIFICATION-SPAM-01.C)
+
 ## [3.8.1] — 2026-05-22
 
 Correções pós-v3.8 surgidas no review de UI/UX na máquina: input travado no hotplug do controle,
