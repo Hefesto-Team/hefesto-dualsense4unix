@@ -6,6 +6,8 @@ sem lógica de negócio — facilita troca do backend no futuro (ADR-001).
 """
 from __future__ import annotations
 
+import os
+import threading
 from typing import TYPE_CHECKING
 
 from pydualsense import pydualsense
@@ -25,6 +27,18 @@ if TYPE_CHECKING:
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+#: Timeout para `pydualsense.init()` em segundos
+#: (BUG-BACKEND-PYDUALSENSE-DSTATE-01). A chamada faz HID I/O sync via libhidapi
+#: e, em certos estados degenerados do USB (driver kernel hid_playstation
+#: contendendo o device, hidraw com handle órfão de daemon anterior, hub em
+#: low-power-state), pode entrar em `D (disk sleep)` no kernel — nem SIGKILL
+#: mata. Envolvemos em thread + futures com timeout: se passar do prazo, o
+#: backend é marcado como offline-OK e a próxima tentativa do reconnect_loop
+#: cobre. A thread em D-state é abandonada (vaza recurso, mas o daemon segue
+#: vivo e funcional). 5s é compromisso entre cobrir o caso patológico e não
+#: pesar no boot normal (`init()` saudável retorna em <300ms).
+INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
 
 
 class PyDualSenseController(IController):
@@ -55,8 +69,39 @@ class PyDualSenseController(IController):
         # Zera antes de retentar para evitar `is_connected()` falso-positivo.
         self._ds = None
         ds = pydualsense()
+        # BUG-BACKEND-PYDUALSENSE-DSTATE-01: roda `ds.init()` numa thread
+        # daemon com timeout. Se a chamada entrar em D-state (kernel HID
+        # bloqueado, hidraw órfão, hub em low-power), o daemon principal não
+        # trava: a thread é abandonada (daemon=True → morre com o processo)
+        # e marcamos offline-OK. O probe periódico retenta na próxima
+        # iteração — assim que o kernel liberar o device, a próxima
+        # `ds.init()` retorna em <300ms e o controle volta. Não usamos
+        # ThreadPoolExecutor porque seu __exit__ join-aria a thread morta.
+        _result: list[Exception | None] = []
+
+        def _runner() -> None:
+            try:
+                ds.init()
+                _result.append(None)
+            except Exception as exc:  # propagamos para o caller via _result
+                _result.append(exc)
+
+        t = threading.Thread(target=_runner, daemon=True, name="hefesto-ds-init")
+        t.start()
+        t.join(timeout=INIT_TIMEOUT_SEC)
+        if t.is_alive():
+            logger.warning(
+                "pydualsense_init_timeout — marcando offline; "
+                "kernel pode estar bloqueado em hidraw (hid_playstation conflict)",
+                timeout_sec=INIT_TIMEOUT_SEC,
+            )
+            self._ds = None
+            self._offline = True
+            return
         try:
-            ds.init()
+            init_exc = _result[0] if _result else None
+            if init_exc is not None:
+                raise init_exc
         except Exception as exc:
             # `pydualsense.__find_device()` levanta `Exception("No device detected")`
             # (string match — não é uma subclasse dedicada). Tratamos como
