@@ -208,4 +208,49 @@ def test_call_async_timeout_honrado():
     assert falhas, "on_failure deveria ter sido chamado"
     assert duracao < 1.0, f"Levou {duracao:.2f}s — timeout não honrado"
 
+
+# ---------------------------------------------------------------------------
+# run_in_thread (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01)
+# ---------------------------------------------------------------------------
+
+
+def test_run_in_thread_entrega_resultado():
+    """run_in_thread roda fn() em worker e entrega o resultado via on_success."""
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
+
+    recebido: list = []
+
+    with patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}):
+        bridge.run_in_thread(
+            lambda: ["a", "b"],
+            on_success=lambda val: recebido.append(val) or False,
+        )
+        if bridge._EXECUTOR:
+            bridge._EXECUTOR.shutdown(wait=True)
+
+    assert recebido == [["a", "b"]]
+
+
+def test_run_in_thread_on_failure_em_excecao():
+    """run_in_thread chama on_failure quando fn levanta exceção."""
+    import hefesto_dualsense4unix.app.ipc_bridge as bridge
+
+    erros: list = []
+
+    def _boom() -> object:
+        raise ValueError("falha no worker")
+
+    with patch.dict("sys.modules", {"gi.repository": _make_fake_glib_module()}):
+        bridge.run_in_thread(
+            _boom,
+            on_success=lambda _v: False,
+            on_failure=lambda exc: erros.append(exc) or False,
+        )
+        if bridge._EXECUTOR:
+            bridge._EXECUTOR.shutdown(wait=True)
+
+    assert len(erros) == 1
+    assert isinstance(erros[0], ValueError)
+
+
 # "A obstinação pelo detalhe é o que separa o artesão do improvisador." — Sêneca (adaptado)

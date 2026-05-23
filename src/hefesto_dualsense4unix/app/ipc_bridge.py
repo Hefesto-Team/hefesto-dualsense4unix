@@ -127,6 +127,37 @@ def call_async(
     _get_executor().submit(_worker)
 
 
+def run_in_thread(
+    fn: Callable[[], Any],
+    on_success: Callable[[Any], bool],
+    on_failure: Callable[[Exception], bool] | None = None,
+) -> None:
+    """Roda ``fn()`` em thread worker; callbacks re-postados via GLib.idle_add.
+
+    Generaliza ``call_async`` para qualquer função bloqueante fora de IPC (ex.:
+    ler perfis do disco com ``load_all_profiles``), mantendo a thread GTK livre.
+    Reusa o mesmo executor de 1 worker. Os callbacks DEVEM retornar ``False``
+    (contrato de ``GLib.idle_add``).
+    """
+    from gi.repository import GLib
+
+    def _worker() -> None:
+        try:
+            result = fn()
+        except Exception as exc:
+            if on_failure is not None:
+                GLib.idle_add(on_failure, exc)
+            else:
+                logger.warning(
+                    "ipc_bridge.run_in_thread falhou sem handler de erro",
+                    erro=str(exc),
+                )
+            return
+        GLib.idle_add(on_success, result)
+
+    _get_executor().submit(_worker)
+
+
 # ---------------------------------------------------------------------------
 # Helpers síncronos de alto nível (usados por CLI e código legado da GUI que
 # já está em thread worker ou contexto de teste).
@@ -307,6 +338,7 @@ __all__ = [
     "rumble_policy_set",
     "rumble_set",
     "rumble_stop",
+    "run_in_thread",
     "trigger_set",
 ]
 
