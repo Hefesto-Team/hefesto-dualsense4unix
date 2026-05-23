@@ -128,6 +128,45 @@ class HefestoApp(
         # (BUG-GUI-QUIT-RESIDUAL-01 #32) sem requerer interação com cosmic-panel.
         signal.signal(signal.SIGUSR2, lambda _sig, _frame: GLib.idle_add(self.quit_app))
 
+        # BUG-GUI-IGNORES-SIGTERM-DURING-DIALOG-01: SIGTERM/SIGINT robusto
+        # com fallback two-strikes + watchdog.
+        # Quando um Gtk.MessageDialog modal está aberto (`dialog.run()`
+        # bloqueia a thread principal), o GLib mainloop não processa idle
+        # callbacks — um `quit_app` agendado via `GLib.idle_add` fica
+        # enfileirado e nunca executa. Three defenses:
+        #   1. Chama `Gtk.main_quit()` DIRETO no handler (thread-safe via
+        #      gdk_threads, executa mesmo com mainloop "ocupado").
+        #   2. Agenda `quit_app` via idle_add para o caminho com cleanup.
+        #   3. Arma timer 2s: se ainda vivo, força `os._exit(128+sig)`.
+        # Plus: chamada 2ª SIGTERM em <5s pula direto para hard exit
+        # (cobre o caso em que o mainloop está em D-state — idle nunca roda).
+        self._last_term_signal_at: float = 0.0
+
+        def _on_term_signal(sig: int, _frame: object) -> None:
+            now = time.monotonic()
+            if now - self._last_term_signal_at < 5.0:
+                # 2ª chamada em <5s: hard exit, bypass do mainloop.
+                logger.warning("gui_hard_exit_via_signal_repeat", sig=sig)
+                os._exit(128 + sig)
+            self._last_term_signal_at = now
+            logger.info("gui_signal_quit_solicitado", sig=sig)
+            # Defesa 1: main_quit direto (não passa pelo idle loop).
+            with contextlib.suppress(Exception):
+                Gtk.main_quit()
+            # Defesa 2: idle_add para o caminho de cleanup completo.
+            GLib.idle_add(self.quit_app)
+            # Defesa 3: watchdog — se ainda vivo após 2s, force.
+            def _watchdog() -> None:
+                time.sleep(2.0)
+                logger.warning("gui_hard_exit_via_watchdog", sig=sig)
+                os._exit(128 + sig)
+            threading.Thread(
+                target=_watchdog, daemon=True, name="hefesto-gui-term-watchdog"
+            ).start()
+
+        signal.signal(signal.SIGTERM, _on_term_signal)
+        signal.signal(signal.SIGINT, _on_term_signal)
+
         self.builder = Gtk.Builder()
         # FEAT-I18N-INFRASTRUCTURE-01 (v3.4.0): vincula o builder ao mesmo
         # domínio gettext usado pelo `_()` do Python. Labels com
