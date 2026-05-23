@@ -319,51 +319,85 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:
         """Handler do botão 'Reiniciar daemon' (UX-RECONNECT-01).
 
-        Executa `systemctl --user restart hefesto-dualsense4unix.service` com timeout=10s.
-        Cobre ausência de systemd (FileNotFoundError) e falha do unit
-        (CalledProcessError) exibindo MessageDialog informativo. Nunca
-        usa shell=True.
+        Executa `systemctl --user restart hefesto-dualsense4unix.service` em
+        thread worker (BUG-GUI-SYSTEMCTL-SYNC-NA-THREAD-GTK-01). Antes rodava
+        `subprocess.run` síncrono com `timeout=10s` na thread GTK — bloqueava
+        toda a UI por até 10s e, se `systemctl` entrasse em D-state (journal
+        lento, dbus congestionado), o sinal de kill também era ignorado pelo
+        GLib mainloop. Agora o worker faz o subprocess e devolve resultado via
+        `GLib.idle_add`. Cobre ausência de systemd e falha do unit exibindo
+        MessageDialog não-bloqueante (response handler em vez de `dialog.run()`).
         """
-        try:
-            result = subprocess.run(
-                ["systemctl", "--user", "restart", SERVICE_NORMAL],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=False,
-            )
-        except FileNotFoundError:
-            logger.error("systemctl_missing", unit=SERVICE_NORMAL)
+        self._toast_daemon("Reiniciando daemon...")
+
+        def _worker() -> None:
+            err_type: str | None = None
+            rc: int = -1
+            stderr: str = ""
+            try:
+                result = subprocess.run(
+                    ["systemctl", "--user", "restart", SERVICE_NORMAL],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    check=False,
+                )
+                rc = result.returncode
+                stderr = result.stderr or ""
+            except FileNotFoundError:
+                logger.error("systemctl_missing", unit=SERVICE_NORMAL)
+                err_type = "missing"
+            except subprocess.SubprocessError as exc:
+                logger.error("systemctl_subprocess_error", err=str(exc))
+                err_type = "subprocess"
+                stderr = str(exc)
+            GLib.idle_add(self._on_service_restart_done, rc, stderr, err_type)
+
+        _get_executor().submit(_worker)
+
+    def _on_service_restart_done(
+        self, rc: int, stderr: str, err_type: str | None
+    ) -> bool:
+        """Callback do worker de restart — roda na thread GTK."""
+        if err_type == "missing":
             self._show_restart_error(
                 "systemctl não encontrado — sistema sem systemd --user."
             )
-            return
-        except subprocess.SubprocessError as exc:
-            logger.error("systemctl_subprocess_error", err=str(exc))
-            self._show_restart_error(f"Falha ao executar systemctl: {exc}")
-            return
-
-        if result.returncode != 0:
-            stderr = (result.stderr or "").strip() or "(sem stderr)"
+            return False
+        if err_type == "subprocess":
+            self._show_restart_error(f"Falha ao executar systemctl: {stderr}")
+            return False
+        if rc != 0:
+            stderr_clean = stderr.strip() or "(sem stderr)"
             logger.error(
                 "daemon_restart_failed",
                 unit=SERVICE_NORMAL,
-                rc=result.returncode,
-                stderr=stderr,
+                rc=rc,
+                stderr=stderr_clean,
             )
             self._show_restart_error(
                 f"systemctl restart {SERVICE_NORMAL} falhou "
-                f"(rc={result.returncode}):\n{stderr}"
+                f"(rc={rc}):\n{stderr_clean}"
             )
-            return
-
+            return False
         logger.info("daemon_restart_ok", unit=SERVICE_NORMAL)
         self._toast_daemon(
             f"systemctl --user restart {SERVICE_NORMAL} → ok"
         )
         self._refresh_daemon_view()
+        return False
 
     def _show_restart_error(self, message: str) -> None:
+        """Diálogo de erro NÃO-BLOQUEANTE (BUG-DIALOG-RUN-BLOQUEIA-GTK-MAINLOOP-01).
+
+        `Gtk.MessageDialog.run()` é modal síncrono — bloqueia a thread GTK
+        principal até o usuário clicar OK. Durante esse bloqueio, NENHUM
+        callback agendado via `GLib.idle_add` executa, o que inclui o
+        signal handler de SIGTERM (que faz `idle_add(quit_app)`). Resultado:
+        o app fica "imkillable" enquanto o diálogo está aberto. Em vez de
+        `run()/destroy()`, conectamos ao sinal `response` e destruímos no
+        callback — a UI segue responsiva e sinais funcionam.
+        """
         window: Gtk.Window | None = getattr(self, "window", None)
         dialog = Gtk.MessageDialog(
             transient_for=window,
@@ -373,8 +407,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
             text="Não foi possível reiniciar o daemon",
         )
         dialog.format_secondary_text(message)
-        dialog.run()
-        dialog.destroy()
+        dialog.connect("response", lambda d, _r: d.destroy())
+        dialog.show_all()
 
     def on_daemon_view_logs(self, _btn: Gtk.Button) -> None:
         logs = self._journalctl_tail(SERVICE_NORMAL, lines=80)
