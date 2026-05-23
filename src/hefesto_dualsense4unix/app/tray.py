@@ -19,6 +19,7 @@ Warning benigno conhecido:
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -46,9 +47,22 @@ PROFILE_REFRESH_SEC = 3
 ACTIVE_MARKER = "> "
 
 # FEAT-COSMIC-TRAY-FALLBACK-01: delay para registrar o indicator depois que o
-# cosmic-applet-status-area subir o watcher. Empírico: 500ms cobre os casos
-# de race em COSMIC 1.0.6+; tempo maior é gratuito (usuário não percebe).
-_INDICATOR_DEFERRED_MS = 500
+# cosmic-applet-status-area subir o watcher. Aumentado para 1500ms em
+# BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01 — em COSMIC 1.0.6+ o watcher pode
+# levar até ~1s para ser registrado após o login, e disparar o probe antes
+# disso gerava notificação "Tray icon indisponivel" falsa a cada login.
+_INDICATOR_DEFERRED_MS = 1500
+
+#: Número de tentativas do probe `statusnotifierwatcher_available` antes de
+#: notificar o usuário (BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01). Cada tentativa
+#: separada por `_WATCHER_PROBE_RETRY_MS`. Total: até ~3s de tolerância.
+_WATCHER_PROBE_RETRIES = 3
+_WATCHER_PROBE_RETRY_MS = 1000
+
+#: Flag persistente entre sessões — se existir, não emite o aviso de
+#: "tray indisponível no COSMIC" novamente. Usuário pode apagar manualmente
+#: para receber o aviso de novo (ou setar `HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1`).
+_TRAY_WARNED_FLAG_NAME = "cosmic_tray_warned.flag"
 
 
 def _desktop_is_cosmic() -> bool:
@@ -169,32 +183,92 @@ class AppTray:
 
         logger.info("apptray_started", icon=icon)
 
-        # FEAT-COSMIC-TRAY-FALLBACK-01: probe imediato do StatusNotifierWatcher.
-        # Se ausente em sessão COSMIC, avisa via D-Bus notification (uma vez)
-        # e segue. Não tenta workaround — o usuário precisa instalar/habilitar
-        # cosmic-applet-status-area no painel.
-        if _desktop_is_cosmic() and not statusnotifierwatcher_available():
-            logger.warning(
-                "statusnotifierwatcher_ausente",
-                hint=(
-                    "cosmic-applet-status-area pode estar desabilitado no "
-                    "cosmic-panel. Habilite em Configurações > Painel > "
-                    "Applets para o tray aparecer."
-                ),
-            )
-            notify(
-                summary="Hefesto - Dualsense4Unix",
-                body=(
-                    "Tray icon indisponivel no COSMIC. "
-                    "Habilite o applet 'Area de status' no cosmic-panel "
-                    "(Configurações > Painel) ou use a janela principal."
-                ),
-                icon="input-gaming",
-                timeout_ms=10000,
-                once_key="cosmic_tray_missing",
+        # FEAT-COSMIC-TRAY-FALLBACK-01 + BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01:
+        # probe do StatusNotifierWatcher com retries e flag persistente.
+        # Antes notificava no primeiro probe falhado (race contra o subir do
+        # cosmic-applet-status-area) e reemitia a cada sessão da GUI — virou
+        # a fonte recorrente do "ele fica falando que tem algo não instalado"
+        # ao ligar o PC. Agora: 3 tentativas com 1s entre, e flag persistente
+        # — depois de avisado uma vez, nunca mais notifica até o usuário
+        # apagar o arquivo (ou setar HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1).
+        if _desktop_is_cosmic():
+            GLib.timeout_add(
+                _WATCHER_PROBE_RETRY_MS,
+                lambda: (self._probe_watcher_with_retries(0), False)[1],
             )
 
         return True
+
+    def _probe_watcher_with_retries(self, attempt: int) -> None:
+        """Probe StatusNotifierWatcher com retries — só notifica se TODAS falharem.
+
+        BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01.
+        """
+        if statusnotifierwatcher_available():
+            logger.debug("statusnotifierwatcher_disponivel_apos_retry", attempt=attempt)
+            return
+        if attempt + 1 < _WATCHER_PROBE_RETRIES:
+            GLib.timeout_add(
+                _WATCHER_PROBE_RETRY_MS,
+                lambda: (self._probe_watcher_with_retries(attempt + 1), False)[1],
+            )
+            return
+        # Esgotou as tentativas: avisa SE ainda não avisou em sessão anterior.
+        self._maybe_notify_tray_missing()
+
+    @staticmethod
+    def _maybe_notify_tray_missing() -> None:
+        """Emite notify de tray indisponível só se ainda não avisou (flag persistente).
+
+        BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: usuário não quer receber o
+        mesmo aviso a cada login. Verifica `runtime_dir/cosmic_tray_warned.flag`
+        — se existe, no-op. Senão, notifica e cria a flag. Honra env opt-in
+        `HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING=1` para forçar reemissão.
+        """
+        from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+        try:
+            flag_path = runtime_dir(ensure=True) / _TRAY_WARNED_FLAG_NAME
+        except Exception as exc:
+            logger.debug("tray_warned_flag_path_falhou", err=str(exc))
+            flag_path = None  # type: ignore[assignment]
+
+        reset = os.environ.get(
+            "HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING", ""
+        ).strip() in ("1", "true", "yes")
+        if reset and flag_path is not None:
+            with contextlib.suppress(OSError):
+                flag_path.unlink()
+
+        if flag_path is not None and flag_path.exists():
+            logger.debug("tray_warning_ja_avisado_em_sessao_anterior")
+            return
+
+        logger.warning(
+            "statusnotifierwatcher_ausente",
+            hint=(
+                "cosmic-applet-status-area pode estar desabilitado no "
+                "cosmic-panel. Habilite em Configurações > Painel > "
+                "Applets para o tray aparecer."
+            ),
+        )
+        notify(
+            summary="Hefesto - Dualsense4Unix",
+            body=(
+                "Tray icon indisponivel no COSMIC. "
+                "Habilite o applet 'Area de status' no cosmic-panel "
+                "(Configurações > Painel) ou use a janela principal. "
+                "Este aviso só aparece uma vez."
+            ),
+            icon="input-gaming",
+            timeout_ms=10000,
+            once_key="cosmic_tray_missing",
+        )
+        if flag_path is not None:
+            with contextlib.suppress(OSError):
+                flag_path.write_text(
+                    "Hefesto - Dualsense4Unix tray warning shown.\n", encoding="utf-8"
+                )
 
     def stop(self) -> None:
         if self._indicator is not None:

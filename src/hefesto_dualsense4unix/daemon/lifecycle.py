@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import inspect
+import os
 import signal
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -528,6 +529,15 @@ class Daemon:
         """Detecta problemas de infra no boot (udev/WirePlumber) e AVISA o comando
         de reparo (FEAT-SYSTEM-AUTOREPAIR-BOOT-01). Nunca roda sudo/reparo sozinho.
         Best-effort: nunca derruba o boot.
+
+        BUG-SYSTEM-CHECK-BOOT-SPAM-01: a notificação visual é silenciada por
+        default (`HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY=0`). O usuário
+        reclamava de receber aviso "tem algo não instalado" toda vez que ligava
+        o PC (WirePlumber pinava o DualSense como mic padrão — coisa que ele
+        já sabia, mas não queria ser lembrado a cada login). O log em `warning`
+        permanece — quem quiser pode rodar `journalctl --user -u
+        hefesto-dualsense4unix.service | grep system_check_warning` para ver.
+        Para reativar a notify, setar a env var para "1".
         """
         try:
             from hefesto_dualsense4unix.core.system_check import system_warnings
@@ -537,6 +547,11 @@ class Daemon:
                 return
             for detail in infra_warnings:
                 logger.warning("system_check_warning", detail=detail)
+            notify_enabled = os.environ.get(
+                "HEFESTO_DUALSENSE4UNIX_SYSTEM_WARNINGS_NOTIFY", ""
+            ).strip() in ("1", "true", "yes")
+            if not notify_enabled:
+                return
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.integrations.desktop_notifications import (
                     notify_system_warnings,
