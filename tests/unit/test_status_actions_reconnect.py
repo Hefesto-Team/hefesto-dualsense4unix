@@ -239,4 +239,49 @@ def test_initial_poll_fallback_no_op_quando_poll_ja_sucedeu(host: _Host) -> None
     assert host._reconnect_state != "offline" or host._consecutive_failures == 0
 
 
+# ---------------------------------------------------------------------------
+# BUG-GUI-IDLE-ADD-BUSY-LOOP-01: a "primeira leitura imediata" via GLib.idle_add
+# passava os ticks (que retornam True pro timeout_add) — idle_add reagenda
+# enquanto o callback devolve True, virando busy-loop a 100% CPU + memory leak.
+# Os wrappers em install_status_polling devem ser one-shot (retornar False).
+# ---------------------------------------------------------------------------
+
+
+def test_idle_add_callbacks_sao_one_shot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """install_status_polling registra wrappers one-shot em idle_add (não busy-loop)."""
+    from hefesto_dualsense4unix.app.actions import status_actions as mod
+
+    idle_calls: list[Any] = []
+    monkeypatch.setattr(
+        mod.GLib, "idle_add", lambda fn, *args: idle_calls.append((fn, args)) or 0
+    )
+    # Os demais hooks GLib viram no-op (testamos só idle_add aqui).
+    monkeypatch.setattr(mod.GLib, "timeout_add", lambda *_a, **_kw: 0)
+    monkeypatch.setattr(mod.GLib, "timeout_add_seconds", lambda *_a, **_kw: 0)
+
+    # Stub mínimo para install_status_polling — sem GTK real.
+    host = object.__new__(StatusActionsMixin)
+
+    def _no_slot(_id: str) -> None:
+        return None
+
+    host._get = _no_slot  # type: ignore[attr-defined]
+    # Bypass dos helpers de widget que exigiriam slots no Glade.
+    host._init_stick_previews = lambda: None  # type: ignore[attr-defined]
+    host._init_button_glyphs = lambda: None  # type: ignore[attr-defined]
+    # Substitui os ticks reais por stubs que retornariam True (mantendo o
+    # timeout_add vivo) — provamos que o WRAPPER passado a idle_add devolve False
+    # mesmo quando o tick subjacente devolve True.
+    host._tick_live_state = lambda: True  # type: ignore[attr-defined]
+    host._tick_profile_state = lambda: True  # type: ignore[attr-defined]
+
+    StatusActionsMixin.install_status_polling(host)
+
+    # idle_add foi chamado pelos dois wrappers one-shot.
+    assert len(idle_calls) >= 2
+    for fn, _args in idle_calls[:2]:
+        # Cada wrapper executa o tick e devolve False (one-shot).
+        assert fn() is False
+
+
 # "A consistência é a virtude do burro." — Oscar Wilde.
