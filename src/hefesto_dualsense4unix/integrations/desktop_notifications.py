@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import time
 from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -34,6 +35,41 @@ _DBUS_TIMEOUT_SECONDS = 2.0
 # Cache do "já avisado uma vez" — algumas mensagens são logadas a cada
 # transição de estado e não devem inundar o usuário.
 _announced_once: set[str] = set()
+
+#: Intervalo mínimo entre emissões consecutivas do MESMO `throttle_key`
+#: (BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01). Se o controle ficar oscilando entre
+#: CONNECTED/DISCONNECTED (kernel hid_playstation re-bind, autosuspend,
+#: cabo USB ruim), o reconnect_loop publica eventos a cada 5s e o poll_loop
+#: chama `reconnect()` no read_state fail — cada evento dispara
+#: notify_controller_(connected|disconnected). Sem throttle, o usuário recebe
+#: rajada visual. 30s suprime o flap; eventos legítimos (plug/unplug
+#: deliberado) raramente acontecem em <30s.
+_THROTTLE_MIN_INTERVAL_SEC: float = float(
+    os.environ.get("HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC", "30")
+)
+
+#: Última emissão por throttle_key (monotonic time). Compartilhado pelas
+#: funções `notify_*` que passam `throttle_key`.
+_last_emit_at: dict[str, float] = {}
+
+
+def _throttle_passes(throttle_key: str) -> bool:
+    """True se a chave NÃO foi emitida nos últimos `_THROTTLE_MIN_INTERVAL_SEC`.
+
+    Atualiza o timestamp na chave em caso de sucesso (idempotente para
+    chamadores que só consultam — eles devem retornar False sem chamar isto).
+    """
+    now = time.monotonic()
+    last = _last_emit_at.get(throttle_key, 0.0)
+    if now - last < _THROTTLE_MIN_INTERVAL_SEC:
+        return False
+    _last_emit_at[throttle_key] = now
+    return True
+
+
+def reset_throttle_cache() -> None:
+    """Limpa o cache de throttling — útil em testes."""
+    _last_emit_at.clear()
 
 
 def notify(
@@ -200,6 +236,11 @@ def _notifications_enabled() -> bool:
 def notify_controller_connected(transport: str) -> bool:
     if not _notifications_enabled():
         return False
+    # BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01: throttle de 30s para evitar rajada
+    # quando reconnect_loop e poll_loop alternam estado em <5s (flap por
+    # hid_playstation re-bind ou autosuspend).
+    if not _throttle_passes("controller_connected"):
+        return False
     tr_label = {"usb": "USB", "bt": "Bluetooth"}.get(transport.lower(), transport)
     return notify(
         summary="Controle conectado",
@@ -211,6 +252,10 @@ def notify_controller_connected(transport: str) -> bool:
 
 def notify_controller_disconnected(reason: str = "") -> bool:
     if not _notifications_enabled():
+        return False
+    # BUG-NOTIFY-CONTROLLER-FLAP-SPAM-01: mesmo throttle do connected; uma
+    # transição vira no máximo 1 notify a cada 30s.
+    if not _throttle_passes("controller_disconnected"):
         return False
     body = "DualSense desconectado." if not reason else f"DualSense desconectado ({reason})."
     return notify(
@@ -322,5 +367,6 @@ __all__ = [
     "notify_profile_activated",
     "notify_system_warnings",
     "reset_once_cache",
+    "reset_throttle_cache",
     "statusnotifierwatcher_available",
 ]
