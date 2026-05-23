@@ -219,13 +219,15 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()
         daemon._keyboard_device = None
+    # FEAT-DAEMON-GRACEFUL-SHUTDOWN-01: fecha IPC/UDP com timeout — um stop() que
+    # trave (ex.: cliente em voo) não pode pendurar o shutdown indefinidamente.
     if daemon._ipc_server is not None:
         with contextlib.suppress(Exception):
-            await daemon._ipc_server.stop()
+            await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)
         daemon._ipc_server = None
     if daemon._udp_server is not None:
         with contextlib.suppress(Exception):
-            await daemon._udp_server.stop()
+            await asyncio.wait_for(daemon._udp_server.stop(), timeout=2.0)
         daemon._udp_server = None
     if daemon._autoswitch is not None:
         with contextlib.suppress(Exception):
