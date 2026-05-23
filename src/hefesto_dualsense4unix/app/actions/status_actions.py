@@ -117,8 +117,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
         # Primeira leitura imediata — resolve a janela de 100-500 ms em que
         # o default do Glade ("Consultando...") ficava visível sem motivo.
-        GLib.idle_add(self._tick_live_state)
-        GLib.idle_add(self._tick_profile_state)
+        # BUG-GUI-IDLE-ADD-BUSY-LOOP-01: `_tick_live_state`/`_tick_profile_state`
+        # retornam True (mantém o timeout_add vivo). Passar essas funções direto
+        # ao `idle_add` virava um busy-loop a 100% CPU (idle_add reagenda
+        # enquanto o callback retorna True), acumulando call_async no executor.
+        # Wrappers one-shot disparam o tick uma vez e retornam False.
+        GLib.idle_add(lambda: self._tick_live_state() and False)
+        GLib.idle_add(lambda: self._tick_profile_state() and False)
         # UI-STATUS-OFFLINE-FALLBACK-01: se 5 s passarem sem nenhum poll
         # bem-sucedido, pinta header com mensagem acionável em vez de manter
         # "Consultando..." indefinidamente (acontece quando o daemon nunca
