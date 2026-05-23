@@ -142,7 +142,18 @@ menu menuitem label {
 menu menuitem:hover,
 menu menuitem:hover label,
 menu menuitem:focus,
-menu menuitem:focus label {
+menu menuitem:focus label,
+/* BUG-GUI-COMBOBOX-POPUP-SELECTED-COSMIC-01: o item ATUALMENTE selecionado do
+   combo (ex.: "Desligado", o valor corrente) abria com realce claro herdado do
+   tema do sistema no COSMIC, destoando do corpo Dracula. O bloco hover/focus
+   acima nao cobria os estados de selecao :selected/:active/:checked que o GTK
+   aplica ao item ativo quando o menu abre. Cobrimos todos com o mesmo realce. */
+menu menuitem:selected,
+menu menuitem:selected label,
+menu menuitem:active,
+menu menuitem:active label,
+menu menuitem:checked,
+menu menuitem:checked label {
     background-color: #44475a;
     color: #f8f8f2;
 }
