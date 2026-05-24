@@ -10,9 +10,11 @@
 # backup dela. Use --with-config para apagar a config também.
 #
 # Flags:
-#   --yes, -y       não pergunta nada (assume sim).
-#   --dry-run       só imprime o que faria, sem executar.
-#   --with-config   apaga também a config do usuário (uninstall --purge-config).
+#   --yes, -y           não pergunta nada (assume sim).
+#   --dry-run           só imprime o que faria, sem executar.
+#   --with-config       apaga também a config do usuário (uninstall --purge-config).
+#   --keep-steam-input  PRESERVA Steam Input PSSupport (default: desliga em todos os
+#                       localconfig.vdf via uninstall.sh + reforço explícito).
 #
 # A senha de sudo é pedida pelo próprio sudo quando necessário (udev, /usr/local,
 # apt). CHORE-PURGE-ALL-INSTALL-FORMS-01.
@@ -25,11 +27,13 @@ readonly UNINSTALL="${ROOT_DIR}/uninstall.sh"
 AUTO_YES=0
 DRY_RUN=0
 WITH_CONFIG=0
+KEEP_STEAM_INPUT=0
 for arg in "$@"; do
     case "$arg" in
-        --yes|-y)       AUTO_YES=1 ;;
-        --dry-run)      DRY_RUN=1 ;;
-        --with-config)  WITH_CONFIG=1 ;;
+        --yes|-y)           AUTO_YES=1 ;;
+        --dry-run)          DRY_RUN=1 ;;
+        --with-config)      WITH_CONFIG=1 ;;
+        --keep-steam-input) KEEP_STEAM_INPUT=1 ;;
         *) printf '[purge] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -63,7 +67,7 @@ backup_profiles() {
     fi
 }
 
-# 2) uninstall.sh cobre nativo/.deb/flatpak/appimage/applet/udev/config.
+# 2) uninstall.sh cobre nativo/.deb/flatpak/appimage/applet/udev/config/steam-input.
 run_uninstall() {
     local cfg_flag="--keep-config"
     [[ "${WITH_CONFIG}" -eq 1 ]] && cfg_flag="--purge-config"
@@ -71,8 +75,10 @@ run_uninstall() {
         log "ERRO: uninstall.sh não encontrado em ${UNINSTALL}"
         return 1
     fi
-    log "executando uninstall.sh --udev ${cfg_flag} --yes"
-    run bash "${UNINSTALL}" --udev "${cfg_flag}" --yes
+    local steam_flag=()
+    [[ "${KEEP_STEAM_INPUT}" -eq 1 ]] && steam_flag=(--keep-steam-input)
+    log "executando uninstall.sh --udev ${cfg_flag} ${steam_flag[*]} --yes"
+    run bash "${UNINSTALL}" --udev "${cfg_flag}" "${steam_flag[@]}" --yes
 }
 
 # 3) Reforço: rastros que versões antigas do uninstall.sh não removiam.
@@ -130,6 +136,12 @@ main() {
     reinforce_leftovers
     purge_deb
     purge_flatpak
+    # Reforço Steam Input: se o uninstall pulou (ex: script ausente no momento),
+    # o purge garante o desligamento aqui. Idempotente — exit 0 se já está OFF.
+    if [[ "${KEEP_STEAM_INPUT}" -eq 0 ]] && [[ -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
+        log "reforço: disable_steam_input.sh --apply"
+        run bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply || true
+    fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix: descontaminação concluída.\n'
     if [[ "${WITH_CONFIG}" -eq 0 ]]; then

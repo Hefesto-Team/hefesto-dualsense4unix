@@ -24,6 +24,13 @@
 #                         1a build do libcosmic e longa, >10 min). Opt-in.
 #   --with-wireplumber-fix  instala drop-in do WirePlumber que impede o DualSense
 #                         de virar o microfone padrão do sistema + reset.
+#   --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
+#                         Sem esta flag, o install zera SteamController_PSSupport
+#                         e UseSteamControllerConfig em TODOS os localconfig.vdf
+#                         (todos os Steam users em qualquer formato: deb/flatpak/
+#                         snap), evitando que a Steam intercepte o DualSense e
+#                         entre em conflito com o daemon. Reverte com:
+#                         scripts/disable_steam_input.sh --restore.
 #   --force-xwayland      grava GDK_BACKEND=x11 no .desktop (recomendado
 #                         para COSMIC enquanto xdg-desktop-portal-cosmic
 #                         não implementa GetActiveWindow). Ativada
@@ -55,6 +62,7 @@ ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 WITH_WIREPLUMBER_FIX=0
+KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
 FORMAT=""
@@ -69,6 +77,7 @@ for arg in "$@"; do
         --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;
         --no-cosmic-applet)   ENABLE_COSMIC_APPLET=0 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
+        --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
         --native)             FORMAT="native" ;;
@@ -253,7 +262,7 @@ fi
 # ---------------------------------------------------------------------------
 # 1. Verificar Python
 # ---------------------------------------------------------------------------
-step "1/10" "verificando dependências do sistema"
+step "1/11" "verificando dependências do sistema"
 require python3
 ok
 
@@ -279,7 +288,7 @@ find "${ROOT_DIR}" -type f -name "*.pyc" \
 # ---------------------------------------------------------------------------
 # 2. venv + GTK3 + pacote Python
 # ---------------------------------------------------------------------------
-step "2/10" "preparando ambiente Python"
+step "2/11" "preparando ambiente Python"
 
 # Preferir /usr/bin/python3 (Python do apt) para que --system-site-packages
 # inclua gi/PyGObject. pyenv, se ativo, aponta python3 para uma versão
@@ -345,7 +354,7 @@ ok
 # essas regras o controle não funciona, e o prompt levava usuários a "pular"
 # sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
 # reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
-step "3/10" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/11" "udev rules (hidraw + uinput + autosuspend + hotplug)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev) — IMPORTANTE: o controle precisa das regras\n'
@@ -382,7 +391,7 @@ fi
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
 # ---------------------------------------------------------------------------
-step "4/10" "atalho de aplicativo e launcher"
+step "4/11" "atalho de aplicativo e launcher"
 
 # FEAT-ICON-MULTI-RES-01 (v3.4.2, refinado em v3.4.3): gera o icone em
 # todas resolucoes do hicolor + pixmap legacy. Antes so existia 256x256
@@ -561,14 +570,14 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Symlink ~/.local/bin/hefesto-dualsense4unix
 # ---------------------------------------------------------------------------
-step "5/10" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
+step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
 ok
 
 # ---------------------------------------------------------------------------
 # 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
 # ---------------------------------------------------------------------------
-step "6/10" "daemon systemd --user"
+step "6/11" "daemon systemd --user"
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
@@ -599,7 +608,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7. Hotplug-gui unit (opt-in, default NÃO)
 # ---------------------------------------------------------------------------
-step "7/10" "hotplug USB → abre a GUI automaticamente"
+step "7/11" "hotplug USB → abre a GUI automaticamente"
 
 if [[ "${SKIP_HOTPLUG_GUI}" -eq 1 ]]; then
     printf '      pulado (--no-hotplug-gui)\n'
@@ -641,7 +650,7 @@ fi
 # ---------------------------------------------------------------------------
 # 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
 # ---------------------------------------------------------------------------
-step "8/10" "GNOME: extension AppIndicator (tray icon)"
+step "8/11" "GNOME: extension AppIndicator (tray icon)"
 
 _desktop="${XDG_CURRENT_DESKTOP:-}"
 if [[ -z "${_desktop}" ]]; then
@@ -675,7 +684,7 @@ fi
 # ---------------------------------------------------------------------------
 # 9. Applet COSMIC nativo (Rust + libcosmic) — opt-in
 # ---------------------------------------------------------------------------
-step "9/10" "applet COSMIC nativo (opt-in)"
+step "9/11" "applet COSMIC nativo (opt-in)"
 install_cosmic_applet() {
     local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
     if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
@@ -709,7 +718,7 @@ fi
 # ---------------------------------------------------------------------------
 # 10. WirePlumber: DualSense fora da fonte de áudio padrão — opt-in
 # ---------------------------------------------------------------------------
-step "10/10" "audio: impedir o DualSense de virar o microfone padrão"
+step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
 if [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; then
         printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
@@ -718,6 +727,31 @@ if [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
     fi
 else
     printf '      pulado (use --with-wireplumber-fix, ou depois: scripts/doctor.sh --fix)\n'
+fi
+
+# ---------------------------------------------------------------------------
+# 11. Steam Input: desligar PSSupport (default ON, opt-out --keep-steam-input)
+# ---------------------------------------------------------------------------
+# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01. Sem isso, a Steam com PSSupport=2 +
+# UseSteamControllerConfig=2 (default da própria Steam após o wizard
+# Deck_Configurator*_SteamInputOptIn) pega o /dev/hidraw* do DualSense
+# exclusivamente e re-injeta como Steam Virtual Gamepad com bindings do
+# desktop_ps4.vdf — conflitando com o daemon do Hefesto e produzindo os 3
+# sintomas clássicos (touchpad → cursor, mic muting spam, botões em
+# background). O script itera por TODOS os localconfig.vdf de todos os
+# Steam users em todos os formatos (.deb / Flatpak / Snap), backup ao lado.
+step "11/11" "Steam: desligar PSSupport do PlayStation Controller"
+if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
+    printf '      pulado (--keep-steam-input) — Steam Input pode conflitar com o daemon\n'
+elif [[ ! -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
+    warn "scripts/disable_steam_input.sh ausente ou não-executável — pulado"
+else
+    if bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply; then
+        printf '      Steam Input PSSupport zerado em todos os localconfig.vdf\n'
+        printf '      reverter: bash scripts/disable_steam_input.sh --restore\n'
+    else
+        warn "disable_steam_input.sh falhou — rode: bash scripts/disable_steam_input.sh --apply"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

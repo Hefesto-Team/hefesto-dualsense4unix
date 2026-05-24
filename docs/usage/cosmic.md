@@ -78,6 +78,9 @@ Flags relevantes no COSMIC:
   `cosmic-applet-status-area` estiver habilitado em Configurações > Painel > Miniaplicativos).
 - `--with-wireplumber-fix` — instala o drop-in que impede o DualSense de virar o microfone padrão
   (problema clássico do `wireplumber.conf` ao plugar o controle).
+- `--keep-steam-input` — opt-out do desligamento default de `SteamController_PSSupport`. Sem essa
+  flag, o install zera as toggles do Steam Input nos `localconfig.vdf` para evitar conflito Steam
+  Input vs daemon. Vide [troubleshooting seção 12](troubleshooting.md).
 - `--enable-hotplug-gui` — copia a unit `hefesto-dualsense4unix-gui-hotplug.service` que abre a
   GUI automaticamente ao plugar/parear o controle.
 
