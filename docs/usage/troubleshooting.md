@@ -498,6 +498,75 @@ journalctl --user -u hefesto-dualsense4unix.service -n 30 --no-pager 2>/dev/null
 
 ---
 
+## 12. Steam Input intercepta o DualSense (touchpad vira mouse, mic spam, botões em janela em background)
+
+**Sintomas** (USB ou BT, com Steam rodando OU acabou de fechar):
+
+- Tocar no touchpad do controle move o cursor do desktop.
+- Botões (X, círculo, etc.) disparam `ENTER` / `SPACE` / setas em qualquer janela ativa, inclusive
+  com Steam minimizada ou outra aplicação em foco.
+- COSMIC notifica "Microfone mutado / desmutado" em loop ao plugar.
+
+**Por quê.** A Steam, com **PlayStation Controller Support** em modo *Always Enabled*, pega o
+`/dev/hidraw*` do DualSense exclusivamente e re-injeta como `Steam Virtual Gamepad` com bindings
+do `desktop_ps4.vdf` (touchpad → mouse absoluto, botões → teclas globais). Não é o daemon do
+Hefesto — esses sintomas aparecem **mesmo sem o Hefesto instalado**, e em Windows o driver Sony
+nativo evita esse caminho (por isso "no Windows funciona").
+
+**Onde as toggles ficam.** Em Steam moderno (cliente 2024+), `SteamController_PSSupport` e
+`UseSteamControllerConfig` ficam em `~/.steam/steam/userdata/<userid>/config/localconfig.vdf`
+(per-user), **não** no `config.vdf` global como em versões antigas.
+
+**Solução automatizada (recomendada).** O projeto inclui um helper que cobre
+`.deb / Flatpak / Snap`, todos os user-ids, com backup automático ao lado:
+
+```bash
+# diagnóstico (não modifica nada)
+bash scripts/disable_steam_input.sh --status
+
+# aplicação (fecha Steam, edita .vdf, reabre)
+bash scripts/disable_steam_input.sh --apply
+
+# reverter para o backup mais recente
+bash scripts/disable_steam_input.sh --restore
+```
+
+**Integração com install/uninstall.** Desde v3.8.3+, o desligamento de Steam Input PSSupport é
+**default** em ambos:
+
+- `./install.sh` (step 11/11) — desliga durante a instalação para evitar conflito Steam-vs-daemon.
+- `./uninstall.sh` (passo final) — desliga durante o uninstall, porque sem o daemon do Hefesto
+  Steam Input PSSupport=2 reintroduz os 3 sintomas imediatamente.
+
+Opt-out em ambos: `--keep-steam-input` (preserva a configuração atual da Steam).
+
+`scripts/doctor.sh` também faz o check (`check_steam_input`) e aplica em `--fix`.
+
+**Solução manual (alternativa).** Steam → Settings → Controller → PlayStation Controller Support
+→ *Disabled*. Pode exigir reabrir a Steam para persistir.
+
+**Plano de contingência (Fase B).** Se mesmo após desligar Steam Input o touchpad ainda mover o
+cursor (raro — indica que o compositor consume `event10` diretamente via libinput), aplicar regra
+udev defensiva:
+
+```bash
+sudo tee /etc/udev/rules.d/95-dualsense-touchpad-no-pointer.rules <<'EOF'
+# Impede o touchpad do DualSense de virar ponteiro do desktop.
+# Não afeta o joystick (event8/js0) nem motion sensors (event9).
+ACTION=="add", SUBSYSTEM=="input", \
+  ENV{ID_VENDOR_ID}=="054c", ENV{ID_MODEL_ID}=="0ce6", \
+  ATTRS{name}=="*Touchpad*", \
+  ENV{ID_INPUT_TOUCHPAD}="0", ENV{ID_INPUT_MOUSE}="0"
+EOF
+sudo udevadm control --reload-rules
+sudo udevadm trigger --action=change --subsystem-match=input
+```
+
+Reconectar o controle após o trigger. Esta regra **não** é restauração do estado original — é uma
+adição mínima — mas resolve o sintoma sem reinstalar o daemon.
+
+---
+
 ## Recursos
 
 - [README principal](../../README.md) — instalação e uso

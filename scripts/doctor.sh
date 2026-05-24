@@ -166,6 +166,27 @@ check_wireplumber_source() {
     fi
 }
 
+check_steam_input() {
+    local script="${ROOT_DIR}/scripts/disable_steam_input.sh"
+    if [[ ! -x "$script" ]]; then
+        info "scripts/disable_steam_input.sh ausente — skip"
+        return
+    fi
+    # Reusa o --status do próprio script (cobre deb/flatpak/snap, todos os users).
+    local out
+    out="$(bash "$script" --status 2>&1)"
+    if printf '%s\n' "$out" | grep -q 'tudo limpo'; then
+        pass "Steam Input PSSupport desligado em todos os localconfig.vdf"
+    elif printf '%s\n' "$out" | grep -q 'ação sugerida'; then
+        fail "Steam Input ATIVO (PSSupport=2 ou UseSteamControllerConfig=2) — conflita com o daemon; rode: scripts/doctor.sh --fix"
+    elif printf '%s\n' "$out" | grep -q 'nenhum localconfig.vdf encontrado'; then
+        info "Steam não detectada (sem localconfig.vdf)"
+    else
+        info "Steam Input status:"
+        printf '%s\n' "$out" | sed 's/^/         /'
+    fi
+}
+
 check_controller() {
     local h hidraw=0
     for h in /dev/hidraw*; do [[ -e "$h" ]] && hidraw=1; done
@@ -204,6 +225,13 @@ apply_fixes() {
     else
         warn "fix de áudio do WirePlumber falhou"
     fi
+    if [[ -x "${ROOT_DIR}/scripts/disable_steam_input.sh" ]]; then
+        if bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply >/dev/null 2>&1; then
+            pass "Steam Input PSSupport desligado (todos os localconfig.vdf)"
+        else
+            warn "disable_steam_input.sh falhou"
+        fi
+    fi
 }
 
 main() {
@@ -219,6 +247,8 @@ main() {
     check_applet
     hdr "áudio (microfone)"
     check_wireplumber_source
+    hdr "Steam Input"
+    check_steam_input
     hdr "controle"
     check_controller
     check_perms_soft

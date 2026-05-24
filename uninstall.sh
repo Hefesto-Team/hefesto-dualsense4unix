@@ -8,16 +8,28 @@
 # (~/.config/hefesto-dualsense4unix) quanto o legado curto (~/.config/hefesto).
 #
 # Flags:
-#   --keep-udev     PRESERVA udev rules + modules-load (default: remove, sudo).
-#   --udev          [DEPRECATED] no-op — remoção é default desde v3.8.3.
-#   --purge-config  APAGA a config do usuário (com backup antes). Default: preserva.
-#   --keep-config   preserva a config (default; mantido por retrocompatibilidade).
-#   --yes,-y        responde 'sim' para prompts.
+#   --keep-udev          PRESERVA udev rules + modules-load (default: remove, sudo).
+#   --udev               [DEPRECATED] no-op — remoção é default desde v3.8.3.
+#   --purge-config       APAGA a config do usuário (com backup antes). Default: preserva.
+#   --keep-config        preserva a config (default; mantido por retrocompatibilidade).
+#   --keep-steam-input   PRESERVA Steam Input PSSupport (default: desliga em TODOS os
+#                        localconfig.vdf de todos os Steam users em todos os formatos).
+#                        Simétrico ao install.sh — se sai sem desligar, o sintoma
+#                        "controle vira mouse / botões em background" volta na hora.
+#                        Reverter desligamento: scripts/disable_steam_input.sh --restore.
+#   --yes,-y             responde 'sim' para prompts.
 #
 # BUG-UNINSTALL-UDEV-DEFAULT-01 (fix): install.sh aplica as 5 udev rules + modules-
 # load por default (--no-udev é o opt-out). Symmetric, o uninstall.sh deve REMOVER
 # por default. Versões anteriores exigiam --udev explícito, deixando 6 arquivos no
 # /etc/ que continuavam disparando hotplug-units inexistentes ao plugar o controle.
+#
+# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: install.sh, por default, desliga Steam
+# Input PSSupport+UseSteamControllerConfig em todos os localconfig.vdf para evitar
+# conflito Steam-vs-daemon. O uninstall, simétrico, repete o desligar — porque sem
+# o daemon do Hefesto domesticando o DualSense, Steam Input PSSupport=2 reproduz
+# imediatamente os 3 sintomas (touchpad → cursor, mic spam, botões em background)
+# que motivam o usuário a desinstalar.
 
 set -euo pipefail
 
@@ -43,15 +55,17 @@ readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 # Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
 # Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
 REMOVE_UDEV=1
-KEEP_CONFIG=1   # preserva config por padrão (perfis do user) — apagar exige --purge-config
+KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
+KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
 AUTO_YES=0
 for arg in "$@"; do
     case "$arg" in
-        --keep-udev)     REMOVE_UDEV=0 ;;
-        --udev)          REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
-        --purge-config)  KEEP_CONFIG=0 ;;
-        --keep-config)   KEEP_CONFIG=1 ;;
-        --yes|-y)        AUTO_YES=1 ;;
+        --keep-udev)         REMOVE_UDEV=0 ;;
+        --udev)              REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
+        --purge-config)      KEEP_CONFIG=0 ;;
+        --keep-config)       KEEP_CONFIG=1 ;;
+        --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
+        --yes|-y)            AUTO_YES=1 ;;
         *) printf '[uninstall] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -323,6 +337,27 @@ log "  /etc/udev/rules.d/50-system76-power.rules    — polkit pra system76-powe
 log "  kernel cmdline (usbcore.autosuspend, pcie_aspm, etc.) — kernelstub/grub, não hefesto"
 log "  ~/.config/wireplumber/wireplumber.conf.d/   — dir compartilhado, só nosso .conf é removido"
 log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compartilhado"
+
+# FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01: desliga Steam Input PSSupport em
+# todos os localconfig.vdf por default. Simétrico com install.sh — sem isso,
+# o usuário desinstala o Hefesto e os sintomas que o levaram a desinstalar
+# (touchpad como mouse, mic spam, botões em background) voltam IMEDIATAMENTE
+# porque a Steam preenche o vácuo do controle. Reverter:
+# scripts/disable_steam_input.sh --restore (mantém os backups .bak.steam-input-<ts>).
+DISABLE_STEAM_INPUT_SCRIPT="${ROOT_DIR}/scripts/disable_steam_input.sh"
+if [[ "${KEEP_STEAM_INPUT}" -eq 1 ]]; then
+    log "Steam Input PSSupport preservado (--keep-steam-input)"
+elif [[ ! -x "${DISABLE_STEAM_INPUT_SCRIPT}" ]]; then
+    log "scripts/disable_steam_input.sh ausente — pulei o desligar do Steam Input"
+    log "  (rode depois: bash scripts/disable_steam_input.sh --apply)"
+else
+    log "desligando Steam Input PSSupport em todos os localconfig.vdf"
+    if bash "${DISABLE_STEAM_INPUT_SCRIPT}" --apply; then
+        log "  reverter: bash scripts/disable_steam_input.sh --restore"
+    else
+        log "  ERRO: disable_steam_input.sh falhou — rode manualmente"
+    fi
+fi
 
 printf '\n─────────────────────────────────────────\n'
 printf ' Hefesto - Dualsense4Unix desinstalado (wipe completo)\n'
