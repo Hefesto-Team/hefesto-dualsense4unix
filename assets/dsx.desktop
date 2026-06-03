@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DualSense Fix (dsx)
+Comment=Reaplica todos os fixes do DualSense e diagnostica (storm -71 / HDMI piscando)
+Exec=__DSX_PATH__
+Icon=input-gaming
+Terminal=true
+Categories=Utility;HardwareSettings;
+StartupNotify=false

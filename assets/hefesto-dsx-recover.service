@@ -1,0 +1,15 @@
+[Unit]
+# doc: docs/process/sprints/FEAT-DSX-RECOVER-01.md
+Description=Hefesto — auto-recuperação do storm -71 do DualSense (watcher do journal)
+After=multi-user.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/dsx_recover.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

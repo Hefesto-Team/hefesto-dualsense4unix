@@ -1,0 +1,10 @@
+[Unit]
+# doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
+Description=Hefesto — reaplica Steam Input PSSupport=OFF (disable_steam_input.sh --apply-quiet)
+
+[Service]
+Type=oneshot
+# __SCRIPT__ é substituído pelo install.sh/dsx.sh com o caminho absoluto do repo.
+# --apply-quiet NUNCA fecha a Steam: se ela estiver viva, adia. A reescrita só
+# acontece quando a Steam já saiu (que é justamente quando ela grava o vdf).
+ExecStart=/usr/bin/env bash __SCRIPT__ --apply-quiet

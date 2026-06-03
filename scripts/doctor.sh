@@ -6,12 +6,15 @@
 # o sequestro do microfone pelo WirePlumber e o alcance do controle. Saída
 # PASS/FAIL/WARN por item. Marcadores ASCII (compat sanitizer de anonimato).
 #
-# Uso: scripts/doctor.sh [--fix] [--quiet]
-#   --fix    aplica correções seguras: reaplica udev e instala/reseta o fix de
-#            áudio do WirePlumber.
-#   --quiet  só mostra FAIL/WARN.
+# Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout]
+#   --fix             aplica correções seguras: reaplica udev e instala/reseta o
+#                     fix de áudio do WirePlumber.
+#   --quiet           só mostra FAIL/WARN.
+#   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
+#                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
 #
-# Exit code != 0 se houver qualquer FAIL. FEAT-DOCTOR-HEALTHCHECK-01.
+# Exit code != 0 se houver qualquer FAIL. FEAT-DOCTOR-HEALTHCHECK-01,
+# FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
 
 set -uo pipefail   # sem -e de propósito: cada check trata a própria falha.
 
@@ -22,10 +25,12 @@ readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsen
 
 DO_FIX=0
 QUIET=0
+WATCH_DROPOUT=0
 for arg in "$@"; do
     case "$arg" in
-        --fix)   DO_FIX=1 ;;
-        --quiet) QUIET=1 ;;
+        --fix)            DO_FIX=1 ;;
+        --quiet)          QUIET=1 ;;
+        --watch-dropout)  WATCH_DROPOUT=1 ;;
         *) printf '[doctor] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -152,17 +157,41 @@ check_applet() {
     fi
 }
 
+# BUG-WIREPLUMBER-FIX-FALSE-SUCCESS-01 / ADR-019: checa o microfone ATIVO
+# (pactl get-default-source; fallback ao '*' do wpctl), não o `configured`.
+# 3 estados: OK (ativo != DualSense); WARN (DualSense por ser a única fonte);
+# FAIL (DualSense ativo COM outra fonte available — drop-in não pegou).
 check_wireplumber_source() {
-    local state="${HOME}/.local/state/wireplumber/default-nodes"
-    if [[ -f "${state}" ]] && grep -qiE '^default.configured.audio.source=.*dualsense' "${state}" 2>/dev/null; then
-        fail "WirePlumber fixa o DualSense como microfone padrão — rode: scripts/doctor.sh --fix"
-    else
-        pass "WirePlumber não fixa o DualSense como fonte padrão"
+    local cur=""
+    if command -v pactl >/dev/null 2>&1; then
+        cur="$(pactl get-default-source 2>/dev/null || true)"
     fi
+    if [[ -z "${cur}" ]] && command -v wpctl >/dev/null 2>&1; then
+        cur="$(wpctl status 2>/dev/null | awk '
+            /Sources:/{s=1;next} s&&(/Filters:/||/Sinks:/||/Streams:/||/Video/){s=0}
+            s&&/\*/{sub(/.*\*[[:space:]]+[0-9]+\.[[:space:]]*/,"");print;exit}')"
+    fi
+    if [[ -z "${cur}" ]]; then
+        warn "não consegui ler o microfone ativo (pactl/wpctl ausentes ou WirePlumber parado)"
+        return
+    fi
+    # O '.monitor' do sink do DualSense casa "DualSense" no nome mas é o loopback
+    # da saída, não o mic — inofensivo. Só o alsa_input (mic) é o sintoma real.
+    if [[ ! "${cur}" =~ [Dd]ual[Ss]ense ]] || [[ "${cur}" == *[Mm]onitor* ]]; then
+        pass "microfone ativo não é o mic do DualSense (${cur})"
+        return
+    fi
+    # ativo É o DualSense — distingue escassez (única fonte) de falha real.
+    local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
-        local cur
-        cur="$(wpctl status 2>/dev/null | sed -n '/Default Configured/,$p' | grep -i 'Audio/Source' | head -1)"
-        [[ -n "${cur}" ]] && info "fonte configurada:${cur#*Audio/Source}"
+        has_other="$(wpctl status 2>/dev/null | awk '
+            /Sources:/{s=1;next} s&&(/Filters:/||/Sinks:/||/Streams:/||/Video/){s=0}
+            s&&/[0-9]+\./&&!/[Dd]ual[Ss]ense/{print;exit}')"
+    fi
+    if [[ -n "${has_other}" ]]; then
+        fail "DualSense é o microfone ATIVO com outra fonte disponível — rode: scripts/doctor.sh --fix"
+    else
+        warn "DualSense é o microfone ATIVO por ser a única fonte — conecte mic/webcam, ou desligue de vez: fix_wireplumber_default_source.sh --disable-source"
     fi
 }
 
@@ -209,6 +238,72 @@ check_perms_soft() {
     done
 }
 
+# FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
+# Resolve o controlador PCI (xHCI) onde um device USB (sysfs path) está pendurado:
+# o último 0000:XX:YY.Z na cadeia antes do /usbN é o controlador.
+usb_pci_controller() {
+    local devpath="$1" real
+    real="$(readlink -f "${devpath}" 2>/dev/null || true)"
+    printf '%s\n' "${real}" | grep -oE '0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]' | tail -1
+}
+
+pci_label() {
+    case "$1" in
+        *0c:00.3) echo "Matisse/CPU (0c:00.3)" ;;   # controlador integrado do Ryzen
+        *02:00.0) echo "chipset (02:00.0)" ;;        # southbridge — mais resiliente
+        "")       echo "desconhecido" ;;
+        *)        echo "$1" ;;
+    esac
+}
+
+# Conta sintomas de dropout -71 (EPROTO) e localiza o DualSense por controlador.
+check_usb_dropout() {
+    command -v journalctl >/dev/null 2>&1 || { info "journalctl ausente — pulo o check de dropout"; return; }
+
+    # Localização: em qual controlador o DualSense (vendor 054c) está agora.
+    local d ds_dev="" ds_pci=""
+    for d in /sys/bus/usb/devices/*; do
+        [[ -r "$d/idVendor" ]] || continue
+        [[ "$(cat "$d/idVendor" 2>/dev/null)" == "054c" ]] && ds_dev="$d"
+    done
+    if [[ -n "$ds_dev" ]]; then
+        ds_pci="$(usb_pci_controller "$ds_dev")"
+        info "DualSense no controlador $(pci_label "$ds_pci"), Bus $(cat "$ds_dev/busnum" 2>/dev/null), power/control=$(cat "$ds_dev/power/control" 2>/dev/null)"
+    else
+        info "DualSense não conectado agora — pulo a localização de barramento"
+    fi
+
+    # Contagem de -71 no boot atual (read-only).
+    local n
+    n="$(journalctl -b -k --no-pager 2>/dev/null \
+          | grep -ciE 'error -71|device descriptor read/64, error|not accepting address|unable to enumerate USB device' || true)"
+    n="${n:-0}"
+    if [[ "${n}" -eq 0 ]]; then
+        pass "sem dropout -71 neste boot"
+    else
+        warn "dropout USB: ${n} sintoma(s) -71/enum neste boot (controle conecta/desconecta)"
+        # auto-recuperação (FEAT, Item 5) como mitigação — NÃO mandar trocar porta.
+        if systemctl is-enabled --quiet hefesto-dsx-recover.service 2>/dev/null \
+           || systemctl is-active --quiet hefesto-dsx-recover.service 2>/dev/null; then
+            info "watcher de auto-recuperação ativo (hefesto-dsx-recover.service) — recupera em segundos"
+        else
+            info "auto-recuperação NÃO instalada — rode ./dsx.sh para instalar o watcher e reaplicar tudo"
+        fi
+        if [[ "$ds_pci" == *0c:00.3* ]]; then
+            info "o -71 nasce no controlador Matisse (fragilidade do I/O die do Ryzen, não do device)"
+        fi
+        info "ver em tempo real: scripts/doctor.sh --watch-dropout"
+    fi
+}
+
+# Modo --watch-dropout: bloqueia até o primeiro sintoma de dropout e sai.
+watch_dropout() {
+    printf 'vigiando o journal do kernel por dropout -71 (Ctrl-C para sair)...\n'
+    journalctl -kf -o cat --since now 2>/dev/null \
+      | grep -m1 -iE 'error -71|device descriptor read/64, error|not accepting address|device not responding' \
+      && printf '\n[WATCH] primeiro sinal de dropout capturado acima.\n'
+}
+
 apply_fixes() {
     hdr "aplicando correções (--fix)"
     if command -v sudo >/dev/null 2>&1; then
@@ -235,6 +330,7 @@ apply_fixes() {
 }
 
 main() {
+    [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${DO_FIX}" -eq 1 ]] && apply_fixes
     hdr "daemon"
     check_daemon_installed
@@ -252,6 +348,8 @@ main() {
     hdr "controle"
     check_controller
     check_perms_soft
+    hdr "USB / dropout"
+    check_usb_dropout
 
     printf '\n─────────────────────────────────────────\n'
     if [[ "${FAILS}" -eq 0 ]]; then
