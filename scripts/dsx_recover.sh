@@ -19,6 +19,8 @@ readonly APP_ID="hefesto-dualsense4unix"
 readonly THROTTLE_SECS=20    # intervalo mínimo entre recoveries
 readonly WINDOW_SECS=10      # janela de contagem de sinais
 readonly THRESHOLD=4         # >= 4 sinais em WINDOW_SECS = storm
+readonly BACKOFF_THRESHOLD=5   # recoveries seguidas sem parar = storm persistente
+readonly LONG_BACKOFF_SECS=300 # back-off longo quando o re-bind não resolve (porta USB ruim)
 
 log() { printf '%(%Y-%m-%dT%H:%M:%S)T dsx-recover: %s\n' -1 "$*"; }
 
@@ -87,14 +89,30 @@ restart_daemon() {
 }
 
 last_recover=0
+last_throttle_log=0
+consecutive_recovers=0
 recover() {
     local now; now="$(date +%s)"
     if (( now - last_recover < THROTTLE_SECS )); then
-        log "recovery throttled (último há $(( now - last_recover ))s)"
+        # Loga "throttled" no máximo 1x por janela de throttle — evita spam de journal
+        # quando o storm é contínuo (ex.: controle numa porta USB fisicamente ruim).
+        if (( now - last_throttle_log >= THROTTLE_SECS )); then
+            log "recovery throttled (storm contínuo; último recovery há $(( now - last_recover ))s)"
+            last_throttle_log="$now"
+        fi
         return
     fi
+    # Storm PERSISTENTE: se já houve várias recoveries seguidas e o storm não parou,
+    # o re-bind não resolve (porta ruim / device falhando) — back-off longo + dica.
+    if (( consecutive_recovers >= BACKOFF_THRESHOLD )); then
+        if (( now - last_recover < LONG_BACKOFF_SECS )); then
+            return
+        fi
+        log "storm PERSISTENTE após ${consecutive_recovers} recoveries — back-off ${LONG_BACKOFF_SECS}s (porta USB ruim? prefira Bluetooth ou outra porta)"
+    fi
     last_recover="$now"
-    log "STORM detectado — iniciando recovery"
+    consecutive_recovers=$(( consecutive_recovers + 1 ))
+    log "STORM detectado — iniciando recovery (#${consecutive_recovers})"
     repin_and_trigger
     sleep 2
     rebind_dualsense
@@ -113,6 +131,10 @@ while IFS= read -r line; do
             now="$(date +%s)"
             if (( now - window_start > WINDOW_SECS )); then
                 window_start="$now"; count=0
+                # storm esfriou por bastante tempo? zera o back-off (novo storm = recovery normal).
+                if (( now - last_recover > LONG_BACKOFF_SECS )); then
+                    consecutive_recovers=0
+                fi
             fi
             count=$((count + 1))
             if (( count >= THRESHOLD )); then

@@ -6,12 +6,15 @@
 # o sequestro do microfone pelo WirePlumber e o alcance do controle. Saída
 # PASS/FAIL/WARN por item. Marcadores ASCII (compat sanitizer de anonimato).
 #
-# Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout]
+# Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout] [--suggest-port]
 #   --fix             aplica correções seguras: reaplica udev e instala/reseta o
 #                     fix de áudio do WirePlumber.
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
 #                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
+#   --suggest-port    diz em qual controlador USB o DualSense está e recomenda a
+#                     rota definitiva (chipset robusto ou Bluetooth) se estiver no
+#                     controlador Matisse/CPU (frágil sob carga de GPU).
 #
 # Exit code != 0 se houver qualquer FAIL. FEAT-DOCTOR-HEALTHCHECK-01,
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
@@ -26,11 +29,13 @@ readonly APPLET_DESKTOP="/usr/share/applications/com.vitoriamaria.HefestoDualsen
 DO_FIX=0
 QUIET=0
 WATCH_DROPOUT=0
+SUGGEST_PORT=0
 for arg in "$@"; do
     case "$arg" in
         --fix)            DO_FIX=1 ;;
         --quiet)          QUIET=1 ;;
         --watch-dropout)  WATCH_DROPOUT=1 ;;
+        --suggest-port)   SUGGEST_PORT=1 ;;
         *) printf '[doctor] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -256,44 +261,108 @@ pci_label() {
     esac
 }
 
-# Conta sintomas de dropout -71 (EPROTO) e localiza o DualSense por controlador.
+# Mapeia um número de bus USB para o rótulo do controlador PCI do seu root hub.
+bus_to_label() {
+    pci_label "$(usb_pci_controller "/sys/bus/usb/devices/usb${1}" 2>/dev/null)"
+}
+
+# Conta sintomas de dropout -71 (EPROTO) e ATRIBUI corretamente a fonte.
 check_usb_dropout() {
     command -v journalctl >/dev/null 2>&1 || { info "journalctl ausente — pulo o check de dropout"; return; }
 
     # Localização: em qual controlador o DualSense (vendor 054c) está agora.
-    local d ds_dev="" ds_pci=""
+    local d ds_dev="" ds_pci="" ds_devname=""
     for d in /sys/bus/usb/devices/*; do
         [[ -r "$d/idVendor" ]] || continue
         [[ "$(cat "$d/idVendor" 2>/dev/null)" == "054c" ]] && ds_dev="$d"
     done
     if [[ -n "$ds_dev" ]]; then
         ds_pci="$(usb_pci_controller "$ds_dev")"
+        ds_devname="$(basename "$ds_dev")"
         info "DualSense no controlador $(pci_label "$ds_pci"), Bus $(cat "$ds_dev/busnum" 2>/dev/null), power/control=$(cat "$ds_dev/power/control" 2>/dev/null)"
     else
-        info "DualSense não conectado agora — pulo a localização de barramento"
+        info "DualSense não conectado via USB agora (pode estar via Bluetooth) — pulo a localização de barramento"
     fi
 
-    # Contagem de -71 no boot atual (read-only).
-    local n
-    n="$(journalctl -b -k --no-pager 2>/dev/null \
-          | grep -ciE 'error -71|device descriptor read/64, error|not accepting address|unable to enumerate USB device' || true)"
-    n="${n:-0}"
+    # Sintomas de -71 no boot atual (read-only).
+    local lines n
+    lines="$(journalctl -b -k --no-pager 2>/dev/null \
+              | grep -iE 'error -71|device descriptor read/64, error|not accepting address|unable to enumerate USB device' || true)"
+    n="$(printf '%s' "$lines" | grep -c . || true)"; n="${n:-0}"
     if [[ "${n}" -eq 0 ]]; then
         pass "sem dropout -71 neste boot"
-    else
-        warn "dropout USB: ${n} sintoma(s) -71/enum neste boot (controle conecta/desconecta)"
-        # auto-recuperação (FEAT, Item 5) como mitigação — NÃO mandar trocar porta.
-        if systemctl is-enabled --quiet hefesto-dsx-recover.service 2>/dev/null \
-           || systemctl is-active --quiet hefesto-dsx-recover.service 2>/dev/null; then
-            info "watcher de auto-recuperação ativo (hefesto-dsx-recover.service) — recupera em segundos"
-        else
-            info "auto-recuperação NÃO instalada — rode ./dsx.sh para instalar o watcher e reaplicar tudo"
-        fi
-        if [[ "$ds_pci" == *0c:00.3* ]]; then
-            info "o -71 nasce no controlador Matisse (fragilidade do I/O die do Ryzen, não do device)"
-        fi
-        info "ver em tempo real: scripts/doctor.sh --watch-dropout"
+        return
     fi
+    warn "dropout USB: ${n} sintoma(s) -71/enum neste boot"
+
+    # ATRIBUIÇÃO HONESTA (corrige a heurística antiga que culpava o Matisse só por
+    # o dsx estar lá): extrai QUAIS devices 'usb X-Y' geraram o -71 e mapeia o
+    # bus -> controlador. O -71 de boot costuma ser OUTRO device (ex: webcam no
+    # chipset), não o DualSense.
+    local devs dev busnum hits dsx_hits=0 other_count=0
+    devs="$(printf '%s\n' "$lines" | grep -oE 'usb [0-9]+-[0-9.]+' | awk '{print $2}' | sort -u)"
+    [[ -n "$devs" ]] && info "fonte(s) do -71 neste boot:"
+    for dev in $devs; do
+        busnum="${dev%%-*}"
+        hits="$(printf '%s\n' "$lines" | grep -c "usb ${dev}:" || true)"
+        if [[ -n "$ds_devname" && "$dev" == "$ds_devname" ]]; then
+            dsx_hits="$hits"
+            info "  - usb ${dev} = DualSense (Bus ${busnum} = $(bus_to_label "$busnum")) -- ${hits}x"
+        else
+            other_count=$((other_count + 1))
+            info "  - usb ${dev} = outro device (Bus ${busnum} = $(bus_to_label "$busnum")) -- ${hits}x"
+        fi
+    done
+
+    if [[ "${dsx_hits:-0}" -gt 0 ]]; then
+        info "o -71 ATINGE o DualSense -- fix definitivo: Bluetooth ou porta do chipset (rode: scripts/doctor.sh --suggest-port)"
+    else
+        info "o -71 deste boot NÃO é do DualSense -- provável outro device/porta (ex: webcam). Valide o dsx abrindo a Steam com --watch-dropout."
+    fi
+
+    # rede de segurança (watcher) — NÃO é a solução, só mitigação.
+    if systemctl is-enabled --quiet hefesto-dsx-recover.service 2>/dev/null \
+       || systemctl is-active --quiet hefesto-dsx-recover.service 2>/dev/null; then
+        info "watcher de auto-recuperação ativo (hefesto-dsx-recover.service)"
+    else
+        info "auto-recuperação NÃO instalada -- rode ./dsx.sh para instalar o watcher"
+    fi
+    info "ver em tempo real: scripts/doctor.sh --watch-dropout"
+}
+
+# --suggest-port: diz em qual controlador o DualSense está e recomenda a rota
+# definitiva (chipset robusto / Bluetooth) se estiver no Matisse/CPU frágil.
+suggest_port() {
+    local d ds_dev=""
+    for d in /sys/bus/usb/devices/*; do
+        [[ -r "$d/idVendor" ]] || continue
+        [[ "$(cat "$d/idVendor" 2>/dev/null)" == "054c" ]] && ds_dev="$d"
+    done
+    if [[ -z "$ds_dev" ]]; then
+        if command -v bluetoothctl >/dev/null 2>&1 && timeout 4 bluetoothctl devices 2>/dev/null | grep -qi 'DualSense'; then
+            pass "DualSense via Bluetooth (sem caminho USB) -- rota ótima, -71 impossível para o controle"
+        else
+            info "DualSense não conectado via USB nem Bluetooth -- conecte para avaliar"
+        fi
+        return
+    fi
+    local ds_pci bus
+    ds_pci="$(usb_pci_controller "$ds_dev")"
+    bus="$(cat "$ds_dev/busnum" 2>/dev/null)"
+    info "DualSense em Bus ${bus}, controlador $(pci_label "$ds_pci")"
+    case "$ds_pci" in
+        *0c:00.3*)
+            warn "dsx no controlador Matisse/CPU -- frágil sob carga de GPU/Steam (storm -71)"
+            info "  RECOMENDADO: parear por Bluetooth (remove o USB) OU mover para porta do CHIPSET (02:00.0)"
+            info "  as portas do chipset são as mesmas do teclado/mouse, que nunca caem"
+            ;;
+        *02:00.0*)
+            pass "dsx no controlador do chipset (02:00.0) -- robusto (mesmo do teclado/mouse). Boa rota."
+            ;;
+        *)
+            info "  controlador não reconhecido (${ds_pci}) -- avalie manualmente"
+            ;;
+    esac
 }
 
 # Modo --watch-dropout: bloqueia até o primeiro sintoma de dropout e sai.
@@ -331,6 +400,7 @@ apply_fixes() {
 
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
+    [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
     [[ "${DO_FIX}" -eq 1 ]] && apply_fixes
     hdr "daemon"
     check_daemon_installed
