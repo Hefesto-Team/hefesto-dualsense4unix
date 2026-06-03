@@ -132,9 +132,11 @@ else
     warn "Aurora self-heal indisponível ($AURORA_HEAL) ou sem sudo — pulado"
 fi
 
-step "(b) regras udev do hefesto"
+step "(b) regras udev do hefesto (+ DualSense pure-HID no USB)"
 if [[ "$HAVE_SUDO" -eq 1 && -x "${ROOT_DIR}/scripts/install_udev.sh" ]]; then
-    sudo bash "${ROOT_DIR}/scripts/install_udev.sh" && ok "udev reaplicado" || warn "install_udev.sh falhou"
+    # --disable-usb-audio: regra 75 que deixa o controle só-HID no nível USB
+    # (sem áudio nenhum), reduzindo a superfície que alimenta o storm -71.
+    sudo bash "${ROOT_DIR}/scripts/install_udev.sh" --disable-usb-audio && ok "udev reaplicado (+ pure-HID)" || warn "install_udev.sh falhou"
 else
     warn "sem sudo ou install_udev.sh ausente — udev pulado"
 fi

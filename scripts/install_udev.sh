@@ -12,6 +12,17 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS="$HERE/assets"
 
+# Opt-in: 75-...-disable-usb-audio (DualSense pure-HID no nível USB). Escalada do
+# storm -71 — desliga o áudio USB inteiro do controle (sem mic NEM fone do jack).
+# FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
+DISABLE_USB_AUDIO=0
+for arg in "$@"; do
+    case "$arg" in
+        --disable-usb-audio) DISABLE_USB_AUDIO=1 ;;
+        *) echo "aviso: argumento desconhecido: $arg" >&2 ;;
+    esac
+done
+
 # Falha cedo se algum arquivo esperado estiver ausente.
 for f in \
     "$ASSETS/70-ps5-controller.rules" \
@@ -30,6 +41,16 @@ sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rule
 sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
 sudo install -Dm644 "$ASSETS/73-ps5-controller-hotplug.rules"     /etc/udev/rules.d/73-ps5-controller-hotplug.rules
 sudo install -Dm644 "$ASSETS/74-ps5-controller-hotplug-bt.rules"  /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules
+
+if [[ "${DISABLE_USB_AUDIO}" -eq 1 ]]; then
+    echo "[1b/3] (opt-in) instalando 75-...-disable-usb-audio (DualSense pure-HID)..."
+    sudo install -Dm644 "$ASSETS/75-ps5-controller-disable-usb-audio.rules" /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules
+else
+    # Se a regra opt-in já existe de uma instalação anterior, preserva (não a
+    # removemos aqui — quem remove é o uninstall.sh ou rodar sem a flag não a apaga).
+    [[ -e /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]] && \
+        echo "[1b/3] 75-...-disable-usb-audio já presente (mantido)"
+fi
 
 echo "[2/3] copiando modules-load uinput..."
 sudo install -Dm644 "$ASSETS/hefesto-dualsense4unix.conf" /etc/modules-load.d/hefesto-dualsense4unix.conf

@@ -1,0 +1,18 @@
+# Hefesto - Dualsense4Unix — DualSense PURE-HID no nível USB (OPT-IN / escalada).
+# FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
+#
+# Desliga as interfaces de ÁUDIO USB do DualSense (classe 01: control + streaming),
+# deixando só a interface HID (classe 03). Remove a placa de som USB do controle
+# do sistema → nada (Steam/PipeWire) abre/re-inicializa o áudio, reduzindo a
+# superfície de re-enumeração que alimenta o storm -71 no controlador Matisse.
+#
+# Trade-off (aceito ao optar): o DualSense perde áudio POR INTEIRO — sem mic E sem
+# o fone pelo jack do controle. Reversível: remover este arquivo + replugar (ou
+# `echo <iface> > /sys/bus/usb/drivers/snd-usb-audio/bind`).
+#
+# Casa só interfaces de classe 01 (Audio) do VID 054c (Sony); a HID (classe 03)
+# fica intacta. Dispara no evento `bind` (driver já ligado), então o unbind pega.
+# Cobre DualSense (0ce6) e DualSense Edge (0df2).
+
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/snd-usb-audio/unbind'"
+ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0df2", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/snd-usb-audio/unbind'"

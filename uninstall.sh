@@ -214,6 +214,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
                    /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules \
+                   /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf
         sudo udevadm control --reload-rules
         # Re-trigger eventos para que devices PS5 já plugados percam os
