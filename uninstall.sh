@@ -48,6 +48,9 @@ readonly APPLET_ICON="/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.He
 readonly APPLET_ICON_PNG="/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png"
 # Drop-in do WirePlumber (fix de microfone) — só o nosso arquivo, nunca o dir.
 readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-hefesto-dualsense-no-default-source.conf"
+# Variante --disable-source (node.disabled). Removida incondicionalmente (não tem
+# caso de "workaround standalone" — é gerada só pelo nosso --disable-source).
+readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.conf.d/52-hefesto-dualsense-disable-source.conf"
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
@@ -108,6 +111,22 @@ else
     log "ausente: ${HOTPLUG_UNIT_TARGET}"
 fi
 
+# Guard do Steam Input (path + timer, --user) — FEAT-STEAM-INPUT-SELF-HEAL-01
+log "removendo guard do Steam Input (path/timer/service --user)"
+systemctl --user disable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true
+rm -f "${HOME}/.config/systemd/user/hefesto-steam-input-guard.path" \
+      "${HOME}/.config/systemd/user/hefesto-steam-input-guard.timer" \
+      "${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
+systemctl --user daemon-reload >/dev/null 2>&1 || true
+
+# Watcher de auto-recuperação (serviço de sistema/root) — FEAT-DSX-RECOVER-01
+if [[ -e /etc/systemd/system/hefesto-dsx-recover.service ]]; then
+    log "removendo watcher hefesto-dsx-recover.service (precisa sudo)"
+    sudo systemctl disable --now hefesto-dsx-recover.service >/dev/null 2>&1 || true
+    sudo rm -f /etc/systemd/system/hefesto-dsx-recover.service /usr/local/sbin/dsx_recover.sh || true
+    sudo systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
 for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}"; do
     if [[ -e "${path}" ]]; then
         log "removendo ${path}"
@@ -166,6 +185,13 @@ if [[ -f "${WIREPLUMBER_DROPIN}" ]]; then
         rm -f "${WIREPLUMBER_DROPIN}"
         systemctl --user restart wireplumber >/dev/null 2>&1 || true
     fi
+fi
+# Variante --disable-source (52): remove incondicional + restart (simetria com
+# o --with-wireplumber-disable-mic do install.sh).
+if [[ -f "${WIREPLUMBER_DROPIN_DISABLE}" ]]; then
+    log "removendo drop-in WirePlumber (disable-source): ${WIREPLUMBER_DROPIN_DISABLE}"
+    rm -f "${WIREPLUMBER_DROPIN_DISABLE}"
+    systemctl --user restart wireplumber >/dev/null 2>&1 || true
 fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then

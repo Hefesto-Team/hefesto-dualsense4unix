@@ -22,8 +22,11 @@
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
 #   --enable-cosmic-applet  compila e instala o applet COSMIC nativo (Rust; a
 #                         1a build do libcosmic e longa, >10 min). Opt-in.
-#   --with-wireplumber-fix  instala drop-in do WirePlumber que impede o DualSense
-#                         de virar o microfone padrão do sistema + reset.
+#   --with-wireplumber-fix  instala drop-in do WirePlumber que REBAIXA o DualSense
+#                         para não virar o microfone padrão do sistema + reset.
+#   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
+#                         (node.disabled; controle vira só-HID). Vence até escassez
+#                         de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
 #   --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
 #                         Sem esta flag, o install zera SteamController_PSSupport
 #                         e UseSteamControllerConfig em TODOS os localconfig.vdf
@@ -62,6 +65,7 @@ ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 WITH_WIREPLUMBER_FIX=0
+WITH_WIREPLUMBER_DISABLE_MIC=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
@@ -77,6 +81,7 @@ for arg in "$@"; do
         --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;
         --no-cosmic-applet)   ENABLE_COSMIC_APPLET=0 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
+        --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
@@ -719,14 +724,22 @@ fi
 # 10. WirePlumber: DualSense fora da fonte de áudio padrão — opt-in
 # ---------------------------------------------------------------------------
 step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
-if [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
-    if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; then
+if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
+    [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]] && warn "--with-wireplumber-disable-mic vence --with-wireplumber-fix"
+    # exit 2 (DualSense é a única fonte) não é falha de instalação — só aviso.
+    if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
+        printf '      mic do DualSense DESABILITADO (node.disabled; controle só-HID)\n'
+    else
+        warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
+    fi
+elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
+    if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install; rc=$?; [[ "${rc:-0}" -ne 1 ]]; then
         printf '      drop-in do WirePlumber instalado + fonte padrão reeleita\n'
     else
         warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
     fi
 else
-    printf '      pulado (use --with-wireplumber-fix, ou depois: scripts/doctor.sh --fix)\n'
+    printf '      pulado (use --with-wireplumber-disable-mic ou --with-wireplumber-fix, ou: scripts/doctor.sh --fix)\n'
 fi
 
 # ---------------------------------------------------------------------------
@@ -751,6 +764,22 @@ else
         printf '      reverter: bash scripts/disable_steam_input.sh --restore\n'
     else
         warn "disable_steam_input.sh falhou — rode: bash scripts/disable_steam_input.sh --apply"
+    fi
+
+    # Guard: path unit + timer que reaplicam PSSupport=OFF se a Steam reescrever
+    # o vdf (update/saída). FEAT-STEAM-INPUT-SELF-HEAL-01. Usa --apply-quiet
+    # (nunca fecha a Steam). Units --user, sem sudo.
+    USER_UNIT_DIR="${HOME}/.config/systemd/user"
+    mkdir -p "${USER_UNIT_DIR}"
+    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.path"  "${USER_UNIT_DIR}/hefesto-steam-input-guard.path"
+    install -Dm644 "${ROOT_DIR}/assets/hefesto-steam-input-guard.timer" "${USER_UNIT_DIR}/hefesto-steam-input-guard.timer"
+    sed "s#__SCRIPT__#${ROOT_DIR}/scripts/disable_steam_input.sh#g" \
+        "${ROOT_DIR}/assets/hefesto-steam-input-guard.service" > "${USER_UNIT_DIR}/hefesto-steam-input-guard.service"
+    if systemctl --user daemon-reload 2>/dev/null \
+       && systemctl --user enable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer 2>/dev/null; then
+        printf '      guard do Steam Input habilitado (path + timer 30min)\n'
+    else
+        warn "não consegui habilitar o guard --user (sessão systemd ausente?) — será pego no próximo login"
     fi
 fi
 

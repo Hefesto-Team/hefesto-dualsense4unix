@@ -17,12 +17,16 @@
 # Steam tarball) e por TODOS os user-ids dentro de cada um.
 #
 # Uso:
-#   scripts/disable_steam_input.sh [--apply|--status|--restore]
-#     --apply     (default) fecha Steam, edita os .vdf, reabre Steam se
-#                 estava rodando. Backup automático ao lado de cada .vdf.
-#     --status    só relata o estado atual (PSSupport / UseSteamControllerConfig)
-#                 em cada .vdf. Não modifica nada.
-#     --restore   reverte o último backup (.bak.steam-input-<ts>) de cada .vdf.
+#   scripts/disable_steam_input.sh [--apply|--apply-quiet|--status|--restore]
+#     --apply       (default) fecha Steam, edita os .vdf, reabre Steam se
+#                   estava rodando. Backup automático ao lado de cada .vdf.
+#     --apply-quiet edita SÓ se a Steam NÃO estiver rodando; se estiver, ADIA
+#                   (loga e sai 0) sem fechar a Steam. Usado pelo guard (path/timer)
+#                   para nunca matar a Steam no meio de um jogo — a reescrita
+#                   acontece quando a Steam já saiu (que é quando ela grava o vdf).
+#     --status      só relata o estado atual (PSSupport / UseSteamControllerConfig)
+#                   em cada .vdf. Não modifica nada.
+#     --restore     reverte o último backup (.bak.steam-input-<ts>) de cada .vdf.
 #
 # Backups: `<localconfig.vdf>.bak.steam-input-<unix-ts>`. Idempotente.
 # Exit 0 se nada precisava ser feito, 0 se ação aplicada com sucesso,
@@ -33,9 +37,10 @@ set -uo pipefail   # sem -e: cada usuário tem o seu vdf, falha de um não derru
 MODE="apply"
 for arg in "$@"; do
     case "$arg" in
-        --apply)   MODE="apply" ;;
-        --status)  MODE="status" ;;
-        --restore) MODE="restore" ;;
+        --apply)       MODE="apply" ;;
+        --apply-quiet) MODE="apply-quiet" ;;
+        --status)      MODE="status" ;;
+        --restore)     MODE="restore" ;;
         -h|--help)
             sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
@@ -230,6 +235,27 @@ case "${MODE}" in
             apply_vdf "$vdf" || rc=1
         done
         [[ "${was_running}" -eq 1 ]] && reopen_steam
+        exit "${rc}"
+        ;;
+    apply-quiet)
+        # Nunca fecha a Steam. Se ela está viva, adia (a reescrita pega quando sair).
+        if steam_running; then
+            log "Steam rodando — adiado (não vou fechar; reaplico quando a Steam sair)"
+            exit 0
+        fi
+        any_needs=0
+        for vdf in "${VDFS[@]}"; do
+            needs_fix "$vdf" && any_needs=1
+        done
+        if [[ "${any_needs}" -eq 0 ]]; then
+            log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
+            exit 0
+        fi
+        rc=0
+        for vdf in "${VDFS[@]}"; do
+            apply_vdf "$vdf" || rc=1
+        done
+        # Steam não estava rodando — nada a reabrir.
         exit "${rc}"
         ;;
 esac

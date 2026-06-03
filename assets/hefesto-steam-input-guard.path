@@ -1,0 +1,14 @@
+[Unit]
+# doc: docs/process/sprints/FEAT-STEAM-INPUT-SELF-HEAL-01.md
+Description=Hefesto — vigia os localconfig.vdf da Steam e reaplica Steam Input OFF
+
+[Path]
+# A Steam reescreve localconfig.vdf ao sair / após updates, re-ativando o
+# PSSupport. PathChanged em userdata é best-effort (writes profundos via rename
+# podem não disparar); a garantia real é o .timer (rede de segurança a cada 30min).
+PathChanged=%h/.steam/steam/userdata
+PathChanged=%h/.local/share/Steam/userdata
+PathChanged=%h/.var/app/com.valvesoftware.Steam/.steam/steam/userdata
+
+[Install]
+WantedBy=default.target
