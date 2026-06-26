@@ -1,1 +1,5 @@
-hefesto==0.1.0
+# Requirements do AppImage. Em build offline, scripts/build_appimage.sh
+# SOBRESCREVE este arquivo apontando para o wheel local em dist/. Esta entrada
+# é o fallback/referência (pacote rebatizado: era 'hefesto==0.1.0', stale).
+# A versão efetiva vem do pyproject.toml; não fixe um pin aqui para não defasar.
+hefesto-dualsense4unix
