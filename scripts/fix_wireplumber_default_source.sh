@@ -14,7 +14,12 @@
 #     --disable-source  DESABILITA a source do DualSense (node.disabled; só-HID).
 #                       Remove o mic do controle de vez — vence até escassez de fonte.
 #     --reset-only      só reelege a fonte padrão e reinicia (sem (re)instalar drop-in).
+#     --enable-mic      REMOVE os drop-ins de supressão e deixa o mic do DualSense
+#                       utilizável/elegível como padrão (o oposto de --install).
 #     --status          mostra a fonte padrão atual e sai.
+#
+#   Env: HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 faz --install/--disable
+#        virarem --enable-mic automaticamente (a usuária QUER o mic do DualSense).
 #
 # Exit code (modos install/disable-source): 0 = microfone ativo != DualSense (OK);
 #   2 = DualSense ainda ativo por ser a ÚNICA fonte disponível (aviso, não falha);
@@ -39,12 +44,24 @@ for arg in "$@"; do
         --install)        MODE="install" ;;
         --disable-source) MODE="disable" ;;
         --reset-only)     MODE="reset" ;;
+        --enable-mic)     MODE="enable-mic" ;;
         --status)         MODE="status" ;;
         *) printf '[wp-fix] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
 
 log() { printf '[wp-fix] %s\n' "$*"; }
+
+# FEAT-DUALSENSE-MIC-INTENDED-01: se a usuária declarou que QUER o mic do DualSense
+# (env HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1), suprimir o mic é o oposto do
+# desejado — então qualquer install/disable vira "enable-mic" (remove os drop-ins de
+# supressão e deixa o mic utilizável/elegível como padrão).
+if [[ "${HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED:-}" =~ ^(1|true|yes|TRUE|YES)$ ]]; then
+    if [[ "${MODE}" == "install" || "${MODE}" == "disable" ]]; then
+        log "DUALSENSE_MIC_INTENDED=1 — mic do DualSense é desejado; não suprimo (modo enable-mic)"
+        MODE="enable-mic"
+    fi
+fi
 
 show_status() {
     if command -v wpctl >/dev/null 2>&1; then
@@ -193,8 +210,26 @@ restart_wireplumber() {
     fi
 }
 
+enable_mic_dualsense() {
+    # Remove os drop-ins que suprimem/desabilitam o mic do DualSense, deixando-o
+    # utilizável e elegível como fonte padrão (a persistência do default fica por
+    # conta do estado do WirePlumber + profile pro-audio do card). Idempotente.
+    local f removed=0
+    for f in "${DROPIN_DST}" "${DROPIN_DISABLE_DST}"; do
+        if [[ -f "$f" ]]; then
+            rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
+        fi
+    done
+    [[ "$removed" -eq 0 ]] && log "nenhum drop-in de supressão presente (mic já livre)"
+    restart_wireplumber
+}
+
 case "${MODE}" in
     status)
+        show_status
+        ;;
+    enable-mic)
+        enable_mic_dualsense
         show_status
         ;;
     reset)
