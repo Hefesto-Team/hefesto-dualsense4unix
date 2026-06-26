@@ -36,6 +36,11 @@ readonly DROPIN_DST="${DROPIN_DIR}/${DROPIN_NAME}"
 readonly DROPIN_DISABLE_NAME="52-hefesto-dualsense-disable-source.conf"
 readonly DROPIN_DISABLE_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_DISABLE_NAME}"
 readonly DROPIN_DISABLE_DST="${DROPIN_DIR}/${DROPIN_DISABLE_NAME}"
+# FEAT-WIREPLUMBER-DISABLE-SOURCE-MODE-01 (reforço): 53 desabilita a SAÍDA do
+# DualSense, para o '.monitor' do sink não reaparecer como default-source.
+readonly DROPIN_OUTPUT_NAME="53-hefesto-dualsense-disable-output.conf"
+readonly DROPIN_OUTPUT_SRC="${ROOT_DIR}/assets/wireplumber/${DROPIN_OUTPUT_NAME}"
+readonly DROPIN_OUTPUT_DST="${DROPIN_DIR}/${DROPIN_OUTPUT_NAME}"
 readonly STATE_FILE="${HOME}/.local/state/wireplumber/default-nodes"
 
 MODE="install"
@@ -114,6 +119,13 @@ install_disable_dropin() {
     mkdir -p "${DROPIN_DIR}"
     cp -f "${DROPIN_DISABLE_SRC}" "${DROPIN_DISABLE_DST}"
     log "drop-in DISABLE instalado: ${DROPIN_DISABLE_DST}"
+    # Reforço: desabilita também a SAÍDA do DualSense (53) — sem ela, o
+    # '.monitor' do sink surround reaparece como default-source pós-reboot
+    # (o "mic que voltou"). Best-effort.
+    if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
+        cp -f "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}"
+        log "drop-in DISABLE-OUTPUT instalado: ${DROPIN_OUTPUT_DST}"
+    fi
 }
 
 # Remove a chave de fonte padrão persistida que aponta para o DualSense, para que
@@ -215,7 +227,7 @@ enable_mic_dualsense() {
     # utilizável e elegível como fonte padrão (a persistência do default fica por
     # conta do estado do WirePlumber + profile pro-audio do card). Idempotente.
     local f removed=0
-    for f in "${DROPIN_DST}" "${DROPIN_DISABLE_DST}"; do
+    for f in "${DROPIN_DST}" "${DROPIN_DISABLE_DST}" "${DROPIN_OUTPUT_DST}"; do
         if [[ -f "$f" ]]; then
             rm -f "$f" && { log "removido drop-in de supressão: $f"; removed=1; }
         fi
