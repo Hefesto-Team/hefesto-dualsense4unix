@@ -46,6 +46,11 @@ BIOS/cabo/porta) + correções do review multi-dimensional da GUI e da suíte de
   throttle entre testes) e 2 de tray (testes stale vs comportamento deliberado). 100% verde.
 - **AppImage `requirements.txt` stale**: `hefesto==0.1.0` → nome pós-rebrand
   `hefesto-dualsense4unix`.
+- **CI/release reféns da versão do ruff**: o lint usava `ruff>=0.1` (sem pin), então
+  cada build pegava a versão mais nova publicada no dia. O ruff 0.15.x passou a flagar
+  `RUF100` (noqa de regra não habilitada) e a reordenar blocos de import, quebrando o
+  release num código que estava limpo. Pin para `ruff==0.15.20` (build determinístico)
+  + os 2 pontos corrigidos. (CHORE-CI-PIN-RUFF-01)
 - **Uninstall deixava `~/.local/share/hefesto-dualsense4unix/` vazio após remover `glyphs/`**:
   dir-pai órfão ficava como rastro. Agora `rmdir` não-recursivo após o passo glyphs
   (só se vazio — preserva dados colocados fora do install). (BUG-UNINSTALL-LEFTOVER-AUDIT-01.A)

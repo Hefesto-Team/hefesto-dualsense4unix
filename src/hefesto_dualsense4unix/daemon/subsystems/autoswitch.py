@@ -47,7 +47,7 @@ def _ensure_display_env() -> None:
             timeout=2,
             check=False,
         )
-    except Exception as exc:  # noqa: BLE001 — best-effort, nunca derruba o boot
+    except Exception as exc:  # best-effort, nunca derruba o boot
         logger.debug("autoswitch_display_env_probe_failed", err=str(exc))
         return
     for line in result.stdout.splitlines():

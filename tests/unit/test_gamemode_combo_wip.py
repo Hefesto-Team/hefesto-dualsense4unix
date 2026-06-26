@@ -3,6 +3,7 @@
 FEAT-EMULATION-GAMEMODE-COMBO-01, FEAT-HOTKEY-COMBO-NO-LEAK-01/02 (latch),
 FEAT-EMULATION-GAMEMODE-FLUSH-01 e ps_long_press_ms=0.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -14,7 +15,6 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     HotkeyConfig,
     HotkeyManager,
 )
-
 
 # ---------------------------------------------------------------------------
 # Latch do combo (no-leak-02): membros bloqueados até serem soltos.
