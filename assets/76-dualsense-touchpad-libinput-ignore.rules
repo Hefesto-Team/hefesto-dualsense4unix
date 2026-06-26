@@ -1,0 +1,7 @@
+# FEAT-DUALSENSE-TOUCHPAD-IGNORE-01 (2026-06-26)
+# O kernel hid_playstation expõe o touchpad do DualSense como um touchpad
+# libinput separado que move o cursor SEMPRE (independente do hefesto),
+# brigando com a emulação analógica (cursor "engasgado"). Ignora-o como ponteiro
+# libinput — o hefesto vira a única fonte de cursor. O click do touchpad segue
+# lido pelo hefesto via evdev (bindings de tecla). Reverter: remover este arquivo.
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Wireless Controller Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"

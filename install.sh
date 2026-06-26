@@ -395,10 +395,11 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
 elif ! command -v sudo >/dev/null 2>&1; then
     warn "sudo ausente — pulando (rode scripts/install_udev.sh manualmente como root)"
 else
-    printf '      copiando 3 regras canônicas + modules-load uinput (sudo)\n'
+    printf '      copiando 4 regras canônicas + modules-load uinput (sudo)\n'
     printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
     printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
     printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
+    printf '        76-...-touchpad-libinput-ignore.rules  touchpad só pelo hefesto (sem briga)\n'
     printf '      (73/74 descontinuadas; 75 áudio-off é opt-in via --disable-usb-audio)\n'
 
     if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
