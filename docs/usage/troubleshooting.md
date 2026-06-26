@@ -22,6 +22,14 @@ ls -l /dev/hidraw* | head -5          # confirma device hidraw existe
 groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é o caminho canônico
 ```
 
+> **Storm `-71` / conecta-desconecta em loop** (`dmesg`: `error -71`,
+> `device descriptor read/64`, `not accepting address`): quase sempre é **porta
+> USB ruim**, não software. Confirme a velocidade negociada —
+> `cat /sys/bus/usb/devices/<porta>/speed` deve dar `480` (high-speed). Se der
+> `12` (full-speed), **troque de porta** antes de qualquer outra coisa. Tentar
+> "curar" o storm re-enumerando (authorized-toggle / hotplug) só o realimenta.
+> Detalhe: `docs/process/discoveries/2026-06-23-storm-71-porta-usb-vs-config.md`.
+
 **Fix**:
 
 1. **Regras udev ausentes** — re-aplicar manualmente (3 caminhos
