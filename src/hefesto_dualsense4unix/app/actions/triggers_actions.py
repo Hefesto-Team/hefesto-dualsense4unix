@@ -15,6 +15,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     TriggerParamSpec,
     get_spec,
     preset_to_factory_args,
+    preset_to_positional_params,
 )
 from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
 from hefesto_dualsense4unix.profiles.trigger_presets import (
@@ -313,11 +314,17 @@ class TriggersActionsMixin(WidgetAccessMixin):
         args = preset_to_factory_args(spec, values)
 
         # Persiste params posicionais no draft antes de enviar via IPC.
+        # BUG-TRIGGER-FLAT-MULTIPOS-01: usar SEMPRE a lista posicional plana na
+        # ordem do spec (== ordem dos widgets). Para MultiPosition*/Custom o
+        # `args` é dict e o código antigo gravava () -> perda silenciosa de TODAS
+        # as intensidades ao salvar/aplicar perfil. `preset_to_positional_params`
+        # devolve [s0..s9] / [freq, s0..s9] / [mode, f0..f6], que casa com o
+        # restore por índice em _refresh_triggers_from_draft e com build_from_name.
         draft = getattr(self, "draft", None)
         if draft is not None:
             from hefesto_dualsense4unix.app.draft_config import TriggerDraft
 
-            params_list: list[int] = args if isinstance(args, list) else []
+            params_list: list[int] = preset_to_positional_params(spec, values)
             new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
             new_triggers = draft.triggers.model_copy(update={side: new_trigger})
             self.draft = draft.model_copy(update={"triggers": new_triggers})

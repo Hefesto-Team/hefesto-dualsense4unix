@@ -54,7 +54,12 @@ def _run_call(
     """
     async def _do() -> Any:
         async with IpcClient.connect(timeout=timeout) as client:
-            return await client.call(method, params or {})
+            # BUG-IPC-READ-NO-TIMEOUT-01: o timeout precisa cobrir TAMBÉM a
+            # leitura da resposta, não só o connect — um daemon que aceita a
+            # conexão mas trava ao responder bloquearia o worker eternamente.
+            # IpcClient.call envolve o readline em asyncio.wait_for e converte
+            # TimeoutError em IpcError(-1, "conexão timeout") (já capturado).
+            return await client.call(method, params or {}, timeout=timeout)
 
     return asyncio.run(_do())
 

@@ -5,8 +5,11 @@ W1.2 o loop só publica state.update; em W8.1 consolidamos detecção de
 botão via diff de estados consecutivos, mantendo compat com o bus).
 
 Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
-  - Combo sagrado configurável em `daemon.toml` `[hotkey]`.
-  - Default: PS + D-pad ↑ (próximo perfil), PS + D-pad ↓ (anterior).
+  - Os combos next/prev (PS + D-pad) estão DESATIVADOS no daemon
+    (disabled_until_wired) até a troca de perfil por hotkey ser ligada ao
+    ProfileManager — ver daemon/subsystems/hotkey.py. NÃO há leitura de
+    `daemon.toml`; config efetiva vem de env vars + IPC daemon.reload.
+  - Modo jogo: segurar o botão PS (ps_long_press) suspende a emulação.
   - Buffer de 150ms (V3-2): pressionar PS solo atrasa repasse ao uinput
     pra aguardar possível segundo botão; se passou o buffer, libera.
   - Em modo emulação (uinput gamepad virtual ativo), combo sagrado não

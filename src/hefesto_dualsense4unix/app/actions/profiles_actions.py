@@ -54,6 +54,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # por _reload_profiles_store (thread worker); lido por
     # on_profile_selection_changed e _build_profile_from_editor.
     _profiles_cache: list[Profile]
+    # BUG-ADVANCED-TOGGLE-CLOBBER-01: guard para set_active() programático em
+    # _populate_editor não disparar on_profile_advanced_toggle (que persistiria
+    # 'advanced_editor' indevidamente). Substitui o handler_block dummy que vazava.
+    _suppress_advanced_toggle: bool = False
+    # BUG-DUPLICATE-NO-CONFIG-COPY-01: perfil-fonte de uma duplicação em curso;
+    # usado como base em _build_profile_from_editor para copiar triggers/LEDs/etc.
+    _duplicate_source: Profile | None = None
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -170,6 +177,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         state: bool,
     ) -> bool:
         """Alterna entre modo simples e avançado; persiste preferência."""
+        # BUG-ADVANCED-TOGGLE-CLOBBER-01: ignora chamadas programáticas (set_active
+        # em _populate_editor) — só persiste quando o usuário move o switch.
+        if self._suppress_advanced_toggle:
+            return False
         self._mode_advanced = state
         self._apply_editor_mode()
         set_pref("advanced_editor", state)
@@ -209,6 +220,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self.on_profile_activate(None)
 
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
+        self._duplicate_source = None  # perfil novo parte de defaults, não de cópia
         self._get("profile_name_entry").set_text("novo_perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
@@ -223,14 +235,26 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if name is None:
             self._toast_profile("Selecione um perfil para duplicar")
             return
+        # BUG-DUPLICATE-NO-CONFIG-COPY-01: guarda o perfil-fonte para que
+        # _build_profile_from_editor copie triggers/lightbar/LEDs/etc — antes a
+        # cópia só mudava o nome e o resto virava default (perda da config real).
+        self._duplicate_source = self._find_cached_profile(name)
         current = self._get("profile_name_entry").get_text()
         self._get("profile_name_entry").set_text(f"{current}_copia")
-        self._toast_profile("Editor preenchido com cópia; ajuste o nome e Salvar")
+        self._toast_profile("Editor preenchido com cópia completa; ajuste o nome e Salvar")
 
     def on_profile_remove(self, _btn: Gtk.Button | None) -> None:
         name = self._selected_profile_name()
         if name is None:
             self._toast_profile("Selecione um perfil para remover")
+            return
+        # BUG-DELETE-NO-CONFIRM-01: remoção é permanente — pedir confirmação
+        # (espelha o padrão de confirm_restore_default do rodapé e do CLI).
+        from hefesto_dualsense4unix.app import gui_dialogs
+
+        window = self._get("main_window")
+        if not gui_dialogs.confirm_delete_profile(parent=window, name=name):
+            self._toast_profile("Remoção cancelada.")
             return
         try:
             delete_profile(name)
@@ -260,11 +284,23 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         except (ValueError, ValidationError) as exc:
             self._toast_profile(f"Inválido: {exc}")
             return
+        # BUG-PROFILE-SAVE-SILENT-OVERWRITE-01: avisa ao gravar por cima de OUTRO
+        # perfil existente (não no caso de edição in-place do próprio selecionado).
+        selected = self._selected_profile_name()
+        cache_names = {p.name for p in getattr(self, "_profiles_cache", [])}
+        if profile.name in cache_names and profile.name != selected:
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            window = self._get("main_window")
+            if not gui_dialogs.prompt_overwrite_existing(parent=window, name=profile.name):
+                self._toast_profile("Operação cancelada.")
+                return
         try:
             save_profile(profile)
         except OSError as exc:
             self._toast_profile(f"Falha ao salvar: {exc}")
             return
+        self._duplicate_source = None  # duplicação concluída
         self._reload_profiles_store(select_name=profile.name)
         self._toast_profile(f"Perfil salvo: {profile.name}")
 
@@ -406,6 +442,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         - bate → modo simples, seleciona radio correspondente.
         - não bate → força modo avançado para não perder informação.
         """
+        # Selecionar um perfil existente cancela qualquer duplicação em curso.
+        self._duplicate_source = None
         self._get("profile_name_entry").set_text(profile.name)
         prio = max(0, min(100, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
@@ -426,9 +464,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             stack: Gtk.Stack = self._get("profile_editor_stack")
             stack.set_visible_child_name("simples")
             switch: Gtk.Switch = self._get("profile_advanced_switch")
-            # Suprime o signal para não disparar on_profile_advanced_toggle
-            with switch.handler_block(switch.connect("state-set", lambda *_: None)):
+            # BUG-ADVANCED-TOGGLE-CLOBBER-01: guard flag em vez de bloquear um
+            # handler dummy recém-conectado (que vazava e não bloqueava o real).
+            self._suppress_advanced_toggle = True
+            try:
                 switch.set_active(False)
+            finally:
+                self._suppress_advanced_toggle = False
             self._mode_advanced = False
         else:
             # Match complexo — força modo avançado
@@ -449,8 +491,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             stack = self._get("profile_editor_stack")
             stack.set_visible_child_name("avancado")
             switch = self._get("profile_advanced_switch")
-            with switch.handler_block(switch.connect("state-set", lambda *_: None)):
+            self._suppress_advanced_toggle = True
+            try:
                 switch.set_active(True)
+            finally:
+                self._suppress_advanced_toggle = False
             self._mode_advanced = True
 
     def _build_profile_from_editor(self) -> Profile:
@@ -480,15 +525,21 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache (este método roda no
         # _refresh_preview a cada tecla/slider; reler o disco aqui travava a UI).
         existing = self._find_cached_profile(name)
+        # BUG-DUPLICATE-NO-CONFIG-COPY-01: numa duplicação o nome novo ainda não
+        # existe no cache -> sem o perfil-fonte a config viraria default. Usa a
+        # fonte guardada por on_profile_duplicate como base.
+        source = existing or (self._duplicate_source if self._duplicate_source else None)
         base: dict[str, Any] = (
-            existing.model_dump(mode="python") if existing else {}
+            source.model_dump(mode="python") if source else {}
         )
 
-        # Lê brightness pendente do slider (FEAT-LED-BRIGHTNESS-03).
+        # FEAT-LED-BRIGHTNESS-03: brightness pendente do slider só é aplicado
+        # quando o perfil-base NÃO tem brilho próprio. BUG-PROFILE-BRIGHTNESS-OVERWRITE-01:
+        # antes sobrescrevia incondicionalmente com o global (default 1.0),
+        # apagando o brilho persistido do perfil ao salvar pela aba Perfis.
         pending_brightness: float = getattr(self, "_pending_brightness", 1.0)
-
         leds_base: dict[str, Any] = dict(base.get("leds") or {})
-        leds_base["lightbar_brightness"] = pending_brightness
+        leds_base.setdefault("lightbar_brightness", pending_brightness)
         base["leds"] = leds_base
 
         base.update(

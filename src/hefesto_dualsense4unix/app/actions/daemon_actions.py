@@ -313,7 +313,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._run_systemctl_async("restart")
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
-        self._refresh_daemon_view()
+        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         self._sync_restart_daemon_button_sensitivity()
 
     def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:
@@ -384,7 +384,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._toast_daemon(
             f"systemctl --user restart {SERVICE_NORMAL} → ok"
         )
-        self._refresh_daemon_view()
+        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False
 
     def _show_restart_error(self, message: str) -> None:
@@ -411,8 +411,15 @@ class DaemonActionsMixin(WidgetAccessMixin):
         dialog.show_all()
 
     def on_daemon_view_logs(self, _btn: Gtk.Button) -> None:
-        logs = self._journalctl_tail(SERVICE_NORMAL, lines=80)
-        self._set_daemon_text(logs or "(sem saída)")
+        # BUG-DAEMON-VIEW-SYNC-FREEZE-01: journalctl tem timeout de 5s — rodar
+        # síncrono congelaria a thread GTK. Worker + repinta via GLib.idle_add.
+        self._set_daemon_text("Consultando logs...")
+
+        def _worker() -> None:
+            logs = self._journalctl_tail(SERVICE_NORMAL, lines=80)
+            GLib.idle_add(self._set_daemon_text, logs or "(sem saída)")
+
+        _get_executor().submit(_worker)
 
     def on_daemon_autostart_toggled(
         self, _switch: Gtk.Switch, state: bool
@@ -480,7 +487,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             self._toast_daemon(
                 f"Falha ao iniciar hefesto-dualsense4unix.service via systemd (rc={rc})."
             )
-        self._refresh_daemon_view()
+        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False
 
     # --- helpers ---
@@ -587,7 +594,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def _on_systemctl_done(self, action: str, unit: str, rc: int) -> bool:
         """Callback pós-systemctl — executa na thread principal GTK."""
         self._toast_daemon(f"systemctl {action} {unit} → rc={rc}")
-        self._refresh_daemon_view()
+        self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False  # não repetir via GLib
 
     def _set_daemon_status_markup(

@@ -135,9 +135,12 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
         text=_("Restaurar perfil original?"),
     )
     dialog.format_secondary_text(
+        # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: citava 'Navegação' (outro asset,
+        # navegacao.json); o restore aplica o asset 'meu_perfil' (match: any).
         _(
-            "Isso vai restaurar o 'meu_perfil' para a cópia original (Navegação). "
-            "As suas alterações serão perdidas. Continuar?"
+            "Isso vai restaurar o 'meu_perfil' para a configuração padrão de "
+            "fábrica (aplica-se a todos os apps). As suas alterações serão "
+            "perdidas. Continuar?"
         )
     )
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
@@ -149,7 +152,34 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
     return bool(response == Gtk.ResponseType.OK)
 
 
+def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
+    """Pede confirmação antes de remover PERMANENTEMENTE um perfil.
+
+    Retorna True se o usuário confirmou a remoção, False se cancelou.
+    BUG-DELETE-NO-CONFIRM-01: antes a remoção era 1-clique sem aviso.
+    """
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.NONE,
+        text=_("Remover o perfil '%s'?") % name,
+    )
+    dialog.format_secondary_text(
+        _("Esta ação é permanente e não pode ser desfeita.")
+    )
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Remover"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+    response = dialog.run()
+    dialog.destroy()
+    return bool(response == Gtk.ResponseType.OK)
+
+
 __all__ = [
+    "confirm_delete_profile",
     "confirm_restore_default",
     "prompt_import_conflict",
     "prompt_overwrite_existing",

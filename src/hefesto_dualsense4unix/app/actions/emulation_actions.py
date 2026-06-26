@@ -13,11 +13,9 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
-    DEFAULT_COMBO_NEXT,
-    DEFAULT_COMBO_PREV,
+    DEFAULT_PS_LONG_PRESS_MS,
 )
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DEVICE_NAME,
@@ -32,21 +30,20 @@ UINPUT_DEV = "/dev/uinput"
 class EmulationActionsMixin(WidgetAccessMixin):
     """Controla a aba Emulação."""
 
-    @staticmethod
-    def _traduzir_combo(partes: tuple[str, ...]) -> str:
-        """Traduz nomes técnicos do combo para PT-BR usando BUTTON_GLYPH_LABELS."""
-        return " + ".join(BUTTON_GLYPH_LABELS.get(p, p.upper()) for p in partes)
-
     def install_emulation_tab(self) -> None:
         self._get("emulation_device_name_label").set_text(DEVICE_NAME)
         self._get("emulation_vidpid_label").set_text(
             f"{XBOX360_VENDOR:04X}:{XBOX360_PRODUCT:04X} (Xbox 360)"
         )
-        self._get("emulation_combo_next_label").set_text(
-            self._traduzir_combo(DEFAULT_COMBO_NEXT)
+        # BUG-EMULATION-COMBO-MISLEADING-01: o daemon desativa next/prev
+        # (HotkeyConfig(next_profile=(), prev_profile=()) — disabled_until_wired),
+        # então PS+D-pad NÃO troca de perfil; D-pad volta a emular as setas.
+        # Não anunciar um combo que não funciona — ver subsystems/hotkey.py.
+        self._get("emulation_combo_next_label").set_markup(
+            "<i>troca por hotkey: em desenvolvimento</i>"
         )
-        self._get("emulation_combo_prev_label").set_text(
-            self._traduzir_combo(DEFAULT_COMBO_PREV)
+        self._get("emulation_combo_prev_label").set_markup(
+            "<i>troca por hotkey: em desenvolvimento</i>"
         )
         self._get("emulation_combo_buffer_label").set_text(str(DEFAULT_BUFFER_MS))
         self._get("emulation_passthrough_label").set_text("Não")
@@ -88,13 +85,18 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._refresh_emulation_view()
 
     def on_emulation_open_toml(self, _btn: Gtk.Button) -> None:
+        # BUG-DAEMON-TOML-DEAD-01: o daemon NÃO lê daemon.toml (config vem de
+        # variáveis de ambiente + IPC daemon.reload). O arquivo é só referência;
+        # deixamos isso explícito no cabeçalho e não escrevemos chaves mortas
+        # (next_profile/prev_profile estão disabled_until_wired no daemon).
         path = config_dir(ensure=True) / "daemon.toml"
         if not path.exists():
             path.write_text(
+                "# REFERÊNCIA — o daemon NÃO lê este arquivo.\n"
+                "# Configuração efetiva: variáveis de ambiente + IPC daemon.reload.\n"
                 "[hotkey]\n"
                 f'buffer_ms = {DEFAULT_BUFFER_MS}\n'
-                f'next_profile = {list(DEFAULT_COMBO_NEXT)}\n'
-                f'prev_profile = {list(DEFAULT_COMBO_PREV)}\n'
+                f'ps_long_press_ms = {DEFAULT_PS_LONG_PRESS_MS}  # 0 = desliga o modo jogo\n'
                 "passthrough_in_emulation = false\n",
                 encoding="utf-8",
             )
@@ -123,8 +125,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
         dev_writable = os.access(UINPUT_DEV, os.W_OK) if dev_exists else False
 
         if module_ok and dev_writable:
+            # ADR-011: &#9679; (BLACK CIRCLE) via NCR — sobrevive ao sanitizer.
             uinput_label.set_markup(
-                '<span foreground="#2d8">● Disponível</span>'
+                '<span foreground="#2d8">&#9679; Disponível</span>'
             )
         elif module_ok and dev_exists:
             uinput_label.set_markup(
