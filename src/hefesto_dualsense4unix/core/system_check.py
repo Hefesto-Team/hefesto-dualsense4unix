@@ -8,6 +8,7 @@ sugerido. O reparo de fato fica a cargo do usuário (`doctor --fix`).
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # Nome de unit ERRADO que versões antigas das regras 73/74 instalaram
@@ -44,6 +45,16 @@ def _wireplumber_hijacks_mic() -> bool:
     return False
 
 
+def _dualsense_mic_intended() -> bool:
+    """True se a usuária declarou que QUER o mic do DualSense como entrada de áudio
+    (opt-in via env HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1). Nesse caso o
+    WirePlumber fixar o DualSense como fonte padrão é o COMPORTAMENTO DESEJADO — não
+    um problema — então NÃO avisamos nem sugerimos `doctor --fix` (que o desligaria)."""
+    return os.environ.get(
+        "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED", ""
+    ).strip().lower() in ("1", "true", "yes")
+
+
 def system_warnings() -> list[str]:
     """Avisos de infra para o boot. Read-only; nunca levanta, nunca usa sudo."""
     warnings: list[str] = []
@@ -53,7 +64,7 @@ def system_warnings() -> list[str]:
                 "regras udev de hotplug desatualizadas (nome de unit antigo) — "
                 "rode: sudo bash scripts/install_udev.sh"
             )
-        if _wireplumber_hijacks_mic():
+        if not _dualsense_mic_intended() and _wireplumber_hijacks_mic():
             warnings.append(
                 "WirePlumber fixou o DualSense como microfone padrão — "
                 "rode: scripts/doctor.sh --fix"
