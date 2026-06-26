@@ -89,7 +89,12 @@ def _install_fake_jeepney(
 
 @pytest.fixture(autouse=True)
 def _reset_once_cache() -> None:
+    # Isolamento de testes: zera AMBOS os caches globais entre testes. Sem o
+    # reset do throttle (janela 30s, key fixa "controller_connected"), o 2º teste
+    # que chamasse notify_controller_connected na mesma execução era estrangulado
+    # -> notify retornava False e a suíte falhava por ordem (passava isolado).
     desktop_notifications.reset_once_cache()
+    desktop_notifications.reset_throttle_cache()
 
 
 class TestNotify:
