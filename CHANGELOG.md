@@ -5,8 +5,47 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.8.3] — 2026-06-26
+
+Cura definitiva do storm -71 do DualSense (causa-raiz: o kernel `snd-usb-audio`
+enumerando as interfaces de áudio USB do controle — port-independente, NÃO
+BIOS/cabo/porta) + correções do review multi-dimensional da GUI e da suíte de testes.
+
+### Added
+
+- **Quirk USB opt-in para o storm -71 (preserva áudio)**:
+  `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn` espaça a rajada de control-transfers do
+  snd-usb-audio. `scripts/install_usb_quirk.sh` (aplica/remove/checa, idempotente) +
+  `install.sh --with-usb-quirk` (default OFF) + `uninstall.sh --remove-usb-quirk`.
+  Validado A/B + ao vivo. Alternativa: regra udev 75 `authorized=0` (desliga o áudio
+  do controle). (FEAT-DSX-DEFINITIVE-FIX-01)
+- `doctor.sh`: checks de quirk/áudio (honram `DUALSENSE_MIC_INTENDED`) e `--suggest-port`
+  tratando a localização do controlador USB como diagnóstico NEUTRO.
+
 ### Fixed
 
+- **Storm -71 do DualSense**: era o `snd-usb-audio` enumerando as 3 interfaces de áudio
+  USB do controle sob carga (port-independente). Regra 75 migra de unbind racy para
+  `authorized=0` + unbind belt-and-suspenders.
+- **GUI — perda de dados no perfil ativo**: `_load_draft_from_active_profile` era código
+  morto; a GUI ficava em defaults e salvar/aplicar sobrescrevia o perfil ativo. Agora
+  carrega o perfil ativo em worker. (BUG-DRAFT-NEVER-LOADED-01)
+- **GUI — triggers MultiPosition/Custom**: gravavam params vazios (perda das intensidades)
+  e o "Aplicar" desses modos quebrava (`TypeError`). `build_from_name` aceita lista plana;
+  o draft guarda os params. (BUG-TRIGGER-FLAT-MULTIPOS-01)
+- **GUI — perfis**: duplicar agora copia a config inteira; apagar pede confirmação; salvar
+  não sobrescreve o brilho persistido nem outro perfil em silêncio; o editor avançado não
+  corrompe mais a preferência ao navegar.
+- **GUI — travamentos**: o timeout do IPC cobre também a leitura da resposta; a aba Daemon
+  não roda mais `systemctl`/`journalctl` síncrono na thread GTK; polling 10 Hz com guard
+  de in-flight e sem atropelar a máquina de reconnect.
+- **GUI — consistência**: aba Emulação não anuncia mais o combo PS+D-pad desativado e
+  reflete o modo jogo (segurar PS); aba Teclado recebe refresh do draft; glyph Share acende;
+  botão `daemon.toml` vira referência (o daemon não lê o arquivo).
+- **Suíte de testes (7 falhas)**: 5 de notificações (a fixture não resetava o cache de
+  throttle entre testes) e 2 de tray (testes stale vs comportamento deliberado). 100% verde.
+- **AppImage `requirements.txt` stale**: `hefesto==0.1.0` → nome pós-rebrand
+  `hefesto-dualsense4unix`.
 - **Uninstall deixava `~/.local/share/hefesto-dualsense4unix/` vazio após remover `glyphs/`**:
   dir-pai órfão ficava como rastro. Agora `rmdir` não-recursivo após o passo glyphs
   (só se vazio — preserva dados colocados fora do install). (BUG-UNINSTALL-LEFTOVER-AUDIT-01.A)
