@@ -1774,6 +1774,41 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
+                  <object class="GtkBox" id="emulation_mic_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Microfone do DualSense:</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_mic_status_label">
+                        <property name="label" translatable="yes">—</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_mic_on_button">
+                        <property name="label" translatable="yes">Ligar</property>
+                        <property name="tooltip-text" translatable="yes">Libera o mic embutido do DualSense (para jogos que pedem mic). O quirk segura o storm.</property>
+                        <signal name="clicked" handler="on_emulation_mic_on"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_mic_off_button">
+                        <property name="label" translatable="yes">Desligar</property>
+                        <property name="tooltip-text" translatable="yes">Suprime o mic do DualSense (não vira microfone padrão, sem spam).</property>
+                        <signal name="clicked" handler="on_emulation_mic_off"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
                   <object class="GtkLabel" id="emulation_hint">
                     <property name="label" translatable="yes">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>

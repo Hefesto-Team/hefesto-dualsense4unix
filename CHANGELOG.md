@@ -27,6 +27,13 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- **Toggle do microfone do DualSense (liga só quando precisar)**: o mic embutido
+  vem suprimido por padrão (não vira microfone padrão / sem spam), e agora há como
+  ligá-lo sob demanda para jogos que pedem mic — o quirk segura o storm com o mic
+  ativo. Exposto em três lugares: CLI `hefesto-dualsense4unix mic on|off|status`,
+  botão na aba Emulação da GUI, e ação no applet COSMIC. Reusa
+  `scripts/fix_wireplumber_default_source.sh` (`--enable-mic`/`--disable-source`).
+  (FEAT-DUALSENSE-MIC-TOGGLE-01)
 - **Regra udev 76 (touchpad ignorado pelo libinput) agora no install padrão**:
   `76-dualsense-touchpad-libinput-ignore.rules` passa a ser instalada por default
   (incondicional, como 70/71/72) em `install.sh`/`scripts/install_udev.sh` e no

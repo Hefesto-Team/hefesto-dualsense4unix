@@ -129,6 +129,23 @@ def tray() -> None:
 
 
 @app.command()
+def mic(
+    action: str = typer.Argument(
+        "status", help="on | off | status — liga/desliga o mic embutido do DualSense."
+    ),
+) -> None:
+    """Liga/desliga o microfone embutido do DualSense (via WirePlumber).
+
+    Por padrão o mic vem suprimido (sem virar microfone padrão / sem spam).
+    `mic on` libera o mic quando você for jogar algo que precise dele; `mic off`
+    volta a suprimir. Mesmo caminho usado pelo botão na GUI e no applet COSMIC.
+    """
+    from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
+
+    mic_cmd(action)
+
+
+@app.command()
 def version() -> None:
     """Mostra a versão instalada."""
     from hefesto_dualsense4unix import __version__
