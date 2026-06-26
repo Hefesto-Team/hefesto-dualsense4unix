@@ -89,6 +89,7 @@ if [ "$STORM" -eq 0 ] && [ "$NEW" -eq 0 ]; then
 else
     log " STORM — ${NEW} novos sinais -71 / dropout sob carga. A config de software NÃO segurou."
     log "   Próximos passos (software, NÃO hardware): rodar scripts/doctor.sh; conferir drop-ins 52/53;"
-    log "   considerar o quirk usbcore.quirks=${VID}:0ce6:n (DELAY_CTRL_MSG) como próxima cartada."
+    log "   considerar o quirk usbcore.quirks=054c:0ce6:gn,054c:0df2:gn (g=DELAY_INIT, n=DELAY_CTRL_MSG)"
+    log "   como próxima cartada — instale com: scripts/install_usb_quirk.sh (PRESERVA o áudio do DualSense)."
     exit 1
 fi

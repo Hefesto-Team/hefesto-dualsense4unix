@@ -11,9 +11,16 @@
 # Flags:
 #   --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
 #   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
-#                         POR DEFAULT, as 5 regras + modules-load uinput são
-#                         aplicadas automaticamente (re-cópia é idempotente).
+#                         POR DEFAULT, as 3 regras canônicas + modules-load uinput
+#                         são aplicadas automaticamente (re-cópia é idempotente).
 #                         Se Flatpak Hefesto está instalado, também propaga.
+#   --with-usb-quirk      OPT-IN (default OFF): aplica o quirk de boot
+#                         usbcore.quirks=054c:0ce6:gn,054c:0df2:gn — a alavanca do
+#                         storm -71 que PRESERVA o áudio do DualSense (ALTERNATIVA
+#                         à regra 75 de áudio-off; use uma OU outra). É cmdline do
+#                         kernel (NÃO é regra udev); ciente do bootloader
+#                         (kernelstub/grub), idempotente e reversível. O install
+#                         DEFAULT NÃO aplica (mudança de cmdline é sensível).
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -66,6 +73,7 @@ ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 WITH_WIREPLUMBER_FIX=0
 WITH_WIREPLUMBER_DISABLE_MIC=0
+WITH_USB_QUIRK=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
@@ -82,6 +90,7 @@ for arg in "$@"; do
         --no-cosmic-applet)   ENABLE_COSMIC_APPLET=0 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
+        --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
@@ -91,7 +100,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,36p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,42p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -378,7 +387,7 @@ ok
 # essas regras o controle não funciona, e o prompt levava usuários a "pular"
 # sem entender que depois nada ia funcionar. Re-cópia é idempotente e o
 # reload/trigger é barato (<100 ms). Para CI sem sudo, use `--no-udev`.
-step "3/11" "udev rules (hidraw + uinput + autosuspend + hotplug)"
+step "3/11" "udev rules (hidraw + uinput + autosuspend)"
 
 if [[ "${SKIP_UDEV}" -eq 1 ]]; then
     printf '      pulado (--no-udev) — IMPORTANTE: o controle precisa das regras\n'
@@ -386,12 +395,11 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
 elif ! command -v sudo >/dev/null 2>&1; then
     warn "sudo ausente — pulando (rode scripts/install_udev.sh manualmente como root)"
 else
-    printf '      copiando 5 regras + modules-load uinput (sudo)\n'
+    printf '      copiando 3 regras canônicas + modules-load uinput (sudo)\n'
     printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
     printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
     printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
-    printf '        73-ps5-controller-hotplug.rules        hotplug-GUI ao plugar (USB)\n'
-    printf '        74-ps5-controller-hotplug-bt.rules     hotplug-GUI ao parear (BT)\n'
+    printf '      (73/74 descontinuadas; 75 áudio-off é opt-in via --disable-usb-audio)\n'
 
     if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
         printf '      regras aplicadas + udev recarregado + uinput carregado\n'
@@ -409,6 +417,25 @@ else
         flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto \
             >/dev/null 2>&1 \
             || warn "flatpak install-host-udev.sh falhou (regras já vieram via install_udev.sh)"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3b. Quirk de boot do áudio USB (OPT-IN — default OFF; cmdline, NÃO udev)
+# ---------------------------------------------------------------------------
+# A alavanca do storm -71 que PRESERVA o áudio do DualSense
+# (usbcore.quirks=054c:0ce6:gn,054c:0df2:gn). É um PARÂMETRO DE CMDLINE do
+# kernel — uma regra udev não consegue alterar o próprio enumeramento do device,
+# por isso entra como passo de install ciente do bootloader (kernelstub/grub).
+# Mudança de cmdline é sensível: só aplica com --with-usb-quirk. ALTERNATIVA à
+# regra 75 (áudio-off via install_udev.sh --disable-usb-audio) — use uma OU outra.
+# Idempotente (o script não duplica token). FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
+if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
+    step "3b" "quirk de boot usbcore.quirks (preserva o áudio do DualSense)"
+    if bash "${ROOT_DIR}/scripts/install_usb_quirk.sh"; then
+        printf '      quirk aplicado (vale no próximo boot) — confira: scripts/install_usb_quirk.sh --status\n'
+    else
+        warn "install_usb_quirk.sh falhou — rode: sudo bash scripts/install_usb_quirk.sh"
     fi
 fi
 

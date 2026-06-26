@@ -1,18 +1,46 @@
 # Hefesto - Dualsense4Unix — DualSense PURE-HID no nível USB (OPT-IN / escalada).
-# FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
+# FEAT-DSX-DEFINITIVE-FIX-01 §7.5 · quirk DELAY_CTRL_MSG é a ALTERNATIVA (ver guia).
 #
-# Desliga as interfaces de ÁUDIO USB do DualSense (classe 01: control + streaming),
-# deixando só a interface HID (classe 03). Remove a placa de som USB do controle
-# do sistema → nada (Steam/PipeWire) abre/re-inicializa o áudio, reduzindo a
-# superfície de re-enumeração que alimenta o storm -71 no controlador Matisse.
+# O QUE FAZ: desliga as interfaces de ÁUDIO USB do DualSense (classe 01: Audio
+# Control + Streaming → If0/If1/If2), deixando só a interface HID (classe 03, If3)
+# intacta. Sem a placa de som USB do controle, nada (Steam/PipeWire/kernel) abre
+# nem re-inicializa o áudio — some a rajada de control-transfers do probe do
+# snd-usb-audio que satura o EP0 e alimenta o storm -71 (EPROTO) no controlador.
 #
-# Trade-off (aceito ao optar): o DualSense perde áudio POR INTEIRO — sem mic E sem
-# o fone pelo jack do controle. Reversível: remover este arquivo + replugar (ou
-# `echo <iface> > /sys/bus/usb/drivers/snd-usb-audio/bind`).
+# MECANISMO (dois níveis, belt-and-suspenders):
+#   1. authorized=0 (PRIMÁRIO, race-reduzido): ao ADICIONAR a interface de áudio,
+#      deautoriza-a (ATTR{authorized}="0"). O kernel NÃO faz bind/probe de driver
+#      numa interface deautorizada → o probe control-heavy nem chega a acontecer.
+#      Mais confiável que o unbind tardio (não depende de o driver já ter ligado).
+#   2. snd-usb-audio/unbind (REFORÇO): se mesmo assim o driver bindar (corrida de
+#      timing, kernel sem suporte a interface-authorization), o evento `bind`
+#      desfaz — `echo %k > /sys/bus/usb/drivers/snd-usb-audio/unbind`.
 #
-# Casa só interfaces de classe 01 (Audio) do VID 054c (Sony); a HID (classe 03)
-# fica intacta. Dispara no evento `bind` (driver já ligado), então o unbind pega.
-# Cobre DualSense (0ce6) e DualSense Edge (0df2).
+# ESCOPO: casa só bInterfaceClass==01 (Audio) do VID 054c (Sony). A HID (classe
+# 03, If3 = gamepad) fica INTACTA. Cobre DualSense (0ce6) e DualSense Edge (0df2).
+#
+# TRADE-OFF (aceito ao optar): o DualSense perde áudio POR INTEIRO — sem mic E sem
+# o fone pelo jack do controle. Saída/entrada de áudio ficam por outro caminho
+# (HDMI/webcam/headset USB próprio).
+#
+# REVERTER:
+#   - remover este arquivo + replugar o controle (ou reboot); OU
+#   - reautorizar a quente, sem replug:
+#       echo 1 > /sys/bus/usb/devices/<iface>/authorized
+#       echo <iface> > /sys/bus/usb/drivers/snd-usb-audio/bind   # (re-bind se preciso)
+#
+# OPT-IN / preservar o áudio: esta regra só é instalada com
+# `install_udev.sh --disable-usb-audio` (o dsx.sh passa a flag). Se você QUER o
+# mic/fone do DualSense, NÃO instale esta regra e exporte
+# HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 — o doctor para de alarmar e o
+# fix do WirePlumber preserva o mic. Alternativa que mantém o áudio E reduz o
+# storm: o quirk usbcore.quirks=054c:0ce6:gn,054c:0df2:gn (DELAY_INIT+DELAY_CTRL_MSG)
+# — use UMA OU OUTRA, nunca as duas. Ver FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 
+# --- PRIMÁRIO: deautoriza a interface de áudio antes do probe (race-reduzido) ---
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", ATTR{authorized}="0"
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0df2", ATTR{authorized}="0"
+
+# --- REFORÇO: se mesmo assim bindar, desfaz no evento `bind` ---
 ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/snd-usb-audio/unbind'"
 ACTION=="bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", ATTR{bInterfaceClass}=="01", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0df2", RUN+="/bin/sh -c 'echo %k > /sys/bus/usb/drivers/snd-usb-audio/unbind'"

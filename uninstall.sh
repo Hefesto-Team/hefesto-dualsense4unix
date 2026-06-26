@@ -10,6 +10,11 @@
 # Flags:
 #   --keep-udev          PRESERVA udev rules + modules-load (default: remove, sudo).
 #   --udev               [DEPRECATED] no-op — remoção é default desde v3.8.3.
+#   --remove-usb-quirk   EXPLÍCITO (default NÃO remove): tira o quirk de boot
+#                        usbcore.quirks=054c:0ce6:gn,054c:0df2:gn do cmdline
+#                        (kernelstub/grub) via scripts/install_usb_quirk.sh --remove.
+#                        Por default NÃO remove: cmdline é sensível e pode ser
+#                        mantido por toolchain externa do usuário (ex.: Aurora).
 #   --purge-config       APAGA a config do usuário (com backup antes). Default: preserva.
 #   --keep-config        preserva a config (default; mantido por retrocompatibilidade).
 #   --keep-steam-input   PRESERVA Steam Input PSSupport (default: desliga em TODOS os
@@ -58,6 +63,7 @@ readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 # Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
 # Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
 REMOVE_UDEV=1
+REMOVE_USB_QUIRK=0       # cmdline é sensível: só remove com --remove-usb-quirk explícito
 KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
 KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
 AUTO_YES=0
@@ -65,6 +71,7 @@ for arg in "$@"; do
     case "$arg" in
         --keep-udev)         REMOVE_UDEV=0 ;;
         --udev)              REMOVE_UDEV=1 ;;  # deprecated: já é default; mantido p/ compat
+        --remove-usb-quirk)  REMOVE_USB_QUIRK=1 ;;
         --purge-config)      KEEP_CONFIG=0 ;;
         --keep-config)       KEEP_CONFIG=1 ;;
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
@@ -226,7 +233,25 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     fi
 else
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/{70..74}-*ps5*.rules /etc/udev/rules.d/71-uinput.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
+    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/71-uinput.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
+fi
+
+# Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é
+# cmdline do kernel (sensível) e pode ser mantido por toolchain externa do
+# usuário (ex.: Ritual da Aurora, dona dos kernel params). Só sai com a flag
+# explícita --remove-usb-quirk. install_usb_quirk.sh --remove é idempotente
+# (no-op se o token já estiver ausente).
+if [[ "${REMOVE_USB_QUIRK}" -eq 1 ]]; then
+    if [[ -x "${ROOT_DIR}/scripts/install_usb_quirk.sh" ]]; then
+        log "removendo quirk de boot usbcore.quirks (--remove-usb-quirk)"
+        bash "${ROOT_DIR}/scripts/install_usb_quirk.sh" --remove \
+            || log "  ERRO: install_usb_quirk.sh --remove falhou — rode manualmente"
+    else
+        log "scripts/install_usb_quirk.sh ausente — pulei a remoção do quirk de boot"
+    fi
+else
+    log "quirk de boot usbcore.quirks preservado (cmdline é sensível). Para remover:"
+    log "  bash scripts/install_usb_quirk.sh --remove   (ou ./uninstall.sh --remove-usb-quirk)"
 fi
 
 if [[ -d "${ROOT_DIR}/.venv" ]]; then
