@@ -368,6 +368,10 @@ def test_apply_trigger_multi_position_feedback_envia_strengths(
     assert mode == "MultiPositionFeedback"
     # Envia lista de 10 strengths (pos_0..pos_9).
     assert params == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # BUG-TRIGGER-FLAT-MULTIPOS-01: o draft TAMBÉM precisa guardar a lista plana
+    # (antes gravava () -> perda silenciosa ao salvar/aplicar perfil).
+    assert mixin.draft.triggers.right.mode == "MultiPositionFeedback"
+    assert mixin.draft.triggers.right.params == (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 
 
 def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:

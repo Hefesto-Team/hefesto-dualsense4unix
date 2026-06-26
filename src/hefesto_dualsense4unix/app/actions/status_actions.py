@@ -84,6 +84,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     # bem-sucedida (qualquer tick). Permite que o fallback dedicado pinte
     # uma mensagem clara em até 5 s caso o daemon nunca responda.
     _first_poll_succeeded: bool = False
+    # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: coalesce do tick rápido (10 Hz). Sem
+    # isso, com o executor de 1 worker e o daemon lento, os call_async se
+    # acumulavam numa fila ilimitada. Setado antes do call_async, limpo nos
+    # callbacks (sucesso e falha).
+    _live_inflight: bool = False
     _last_buttons: frozenset[str]
     _button_glyphs: dict[str, ButtonGlyph]
     _stick_left: StickPreviewGtk
@@ -182,6 +187,11 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     def _tick_live_state(self) -> bool:
         """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
+        # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: pula este tick se o anterior ainda
+        # não retornou — evita acúmulo ilimitado no executor de 1 worker.
+        if self._live_inflight:
+            return True
+        self._live_inflight = True
         call_async(
             "daemon.state_full",
             None,
@@ -192,17 +202,23 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     def _on_live_state_result(self, state: Any) -> bool:
         """Callback de sucesso — executa na thread principal via GLib.idle_add."""
+        self._live_inflight = False
         if isinstance(state, dict):
             # UI-STATUS-OFFLINE-FALLBACK-01: marca pelo menos um poll OK.
             self._first_poll_succeeded = True
             self._render_live_state(state)
         else:
-            self._render_offline()
+            # BUG-FAST-TICK-CLOBBERS-RECONNECT-01: o tick rápido NÃO pinta o
+            # header de offline (isso é da máquina de reconnect, a 2s); só zera
+            # os widgets de live-state para não exibir dados stale.
+            self._reset_live_widgets()
         return False  # não repetir via GLib
 
     def _on_live_state_failure(self, _exc: Exception) -> bool:
         """Callback de falha — executa na thread principal via GLib.idle_add."""
-        self._render_offline()
+        self._live_inflight = False
+        # Ver BUG-FAST-TICK-CLOBBERS-RECONNECT-01: só reseta widgets, não o header.
+        self._reset_live_widgets()
         return False  # não repetir via GLib
 
     def _tick_profile_state(self) -> bool:
@@ -424,6 +440,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         efetivos: dict[str, bool] = {nome: (nome in buttons_pressed) for nome in ALL_BUTTONS}
         efetivos["l2"] = l2_lit
         efetivos["r2"] = r2_lit
+        # BUG-GLYPH-SHARE-NAME-MISMATCH-01: o daemon emite "create" (BTN_SELECT),
+        # mas o glyph/asset chama-se "share". Acende o glyph share quando o
+        # daemon reporta create (ou share, por robustez).
+        efetivos["share"] = ("share" in buttons_pressed) or ("create" in buttons_pressed)
 
         # Verifica se algo mudou (diff)
         last_l2 = getattr(self, "_last_l2_lit", False)

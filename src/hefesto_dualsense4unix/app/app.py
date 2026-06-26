@@ -206,9 +206,12 @@ class HefestoApp(
         self._quitting = False
 
         # FEAT-PROFILE-STATE-01: draft central imutavel compartilhado por todos os mixins.
-        # Populado com defaults seguros agora; sobrescrito por _load_draft_from_active_profile
-        # apos daemon conectar (em show() e run()).
+        # Populado com defaults seguros agora; sobrescrito por _bootstrap_draft_async
+        # apos daemon conectar (em show() e run()) — BUG-DRAFT-NEVER-LOADED-01.
         self.draft: DraftConfig = DraftConfig.default()
+        # Nome do perfil ativo (preenchido pelo bootstrap do draft). Usado pelo
+        # rodapé "Salvar Perfil" para pré-preencher o nome — BUG-FOOTER-ACTIVE-NAME-01.
+        self._active_profile_name: str = ""
 
         self.builder.connect_signals(self._signal_handlers())
 
@@ -529,13 +532,15 @@ class HefestoApp(
 
     # --- draft ---
 
-    def _load_draft_from_active_profile(self) -> None:
-        """Carrega DraftConfig a partir do perfil ativo via IPC.
+    def _compute_draft_from_active_profile(self) -> tuple[DraftConfig | None, str]:
+        """Calcula o DraftConfig do perfil ativo via IPC + disco. SEM efeitos colaterais.
 
-        Tenta ``profile.get_active`` e depois ``daemon.state_full``. Se daemon
-        offline ou perfil não encontrado, mantém o default seguro em self.draft.
-        Executado em thread worker (chamado via ThreadPoolExecutor); nunca
-        bloqueia a thread GTK.
+        Roda em thread worker (faz IPC ``daemon.state_full`` + I/O de disco
+        ``load_all_profiles``); NUNCA toca ``self.draft`` nem widgets — a thread
+        GTK aplica o resultado em ``_bootstrap_draft_async`` via GLib.idle_add.
+
+        Retorna ``(draft, active_name)``; ``(None, "")`` se daemon offline ou
+        perfil não encontrado (o chamador mantém o default seguro).
         """
         from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
@@ -551,12 +556,8 @@ class HefestoApp(
                     profile = next(
                         p for p in load_all_profiles() if p.name == active_name
                     )
-                    self.draft = DraftConfig.from_profile(profile)
-                    logger.info(
-                        "draft_carregado_do_perfil_ativo",
-                        perfil=active_name,
-                    )
-                    return
+                    logger.info("draft_carregado_do_perfil_ativo", perfil=active_name)
+                    return DraftConfig.from_profile(profile), active_name
                 except StopIteration:
                     logger.warning(
                         "draft_perfil_ativo_nao_encontrado_em_disco",
@@ -566,6 +567,33 @@ class HefestoApp(
             logger.warning("draft_load_falhou", erro=str(exc))
 
         logger.info("draft_usando_defaults_seguros")
+        return None, ""
+
+    def _bootstrap_draft_async(self) -> None:
+        """Carrega o draft do perfil ativo em worker e aplica na thread GTK.
+
+        BUG-DRAFT-NEVER-LOADED-01: antes ``_load_draft_from_active_profile`` era
+        código morto — nunca chamado — então ``self.draft`` ficava em
+        ``DraftConfig.default()`` a sessão inteira. Consequência: o rodapé
+        "Salvar Perfil" gravava defaults por cima do perfil ativo (perda de dados)
+        e "Aplicar" resetava o hardware. Disparado ao final de ``show()`` e do
+        ramo oculto de ``run()``, após o daemon estar (ou começar a) rodar.
+        """
+        from hefesto_dualsense4unix.app import ipc_bridge
+        from hefesto_dualsense4unix.app.actions.footer_actions import _refresh_all_tabs
+
+        def _apply(result: tuple[DraftConfig | None, str]) -> bool:
+            draft, active_name = result
+            if draft is not None:
+                self.draft = draft
+                self._active_profile_name = active_name
+                _refresh_all_tabs(self)
+            return False  # GLib.idle_add não repete
+
+        ipc_bridge.run_in_thread(
+            self._compute_draft_from_active_profile,
+            on_success=_apply,
+        )
 
     def _on_notebook_switch_page(
         self, _notebook: object, _page: object, page_num: int
@@ -579,13 +607,16 @@ class HefestoApp(
 
         Páginas (indice zero, ordem do notebook):
           0 = Status, 1 = Triggers, 2 = Lightbar, 3 = Rumble,
-          4 = Perfis, 5 = Daemon, 6 = Emulacao, 7 = Mouse
+          4 = Perfis, 5 = Daemon, 6 = Emulacao, 7 = Mouse, 8 = Teclado
         """
         refresh_map = {
             1: getattr(self, "_refresh_triggers_from_draft", None),
             2: getattr(self, "_refresh_lightbar_from_draft", None),
             3: getattr(self, "_refresh_rumble_from_draft", None),
             7: getattr(self, "_refresh_mouse_from_draft", None),
+            # BUG-KEYBOARD-TAB-NO-REFRESH-01: aba Teclado também precisa
+            # re-sincronizar os bindings do draft ao ser exibida.
+            8: getattr(self, "_refresh_key_bindings_from_draft", None),
         }
         fn = refresh_map.get(page_num)
         if fn is not None:
@@ -611,6 +642,8 @@ class HefestoApp(
         # se a unit está instalada mas o service não está ativo. Jamais
         # bloqueia a thread GTK; falha silenciosa via logger.warning.
         self.ensure_daemon_running()
+        # BUG-DRAFT-NEVER-LOADED-01: carrega o draft do perfil ativo (worker).
+        self._bootstrap_draft_async()
 
     def _compact_state_snapshot(self) -> dict[str, Any] | None:
         """Snapshot síncrono de `daemon.state_full` para a CompactWindow.
@@ -671,6 +704,8 @@ class HefestoApp(
                 notebook.connect("switch-page", self._on_notebook_switch_page)
             # BUG-DAEMON-AUTOSTART-01: mesmo no modo oculto, garantir daemon.
             self.ensure_daemon_running()
+            # BUG-DRAFT-NEVER-LOADED-01: carrega o draft do perfil ativo (worker).
+            self._bootstrap_draft_async()
             logger.info("hefesto_start_hidden")
         else:
             self.show()

@@ -40,11 +40,13 @@ FROZEN_WIDGET_IDS: tuple[str, ...] = (
     "btn_footer_restore_default",
     "lightbar_color_button",
     "lightbar_brightness_scale",
-    "trigger_left_mode_combo",
-    "trigger_right_mode_combo",
+    # BUG-FROZEN-WIDGET-IDS-01: IDs reais do glade (eram *_combo / mouse_toggle,
+    # que não existem -> freeze nunca cobria triggers nem o toggle de mouse).
+    "trigger_left_mode",
+    "trigger_right_mode",
     "rumble_weak_scale",
     "rumble_strong_scale",
-    "mouse_toggle",
+    "mouse_emulation_toggle",
 )
 
 
@@ -139,7 +141,10 @@ class FooterActionsMixin(WidgetAccessMixin):
         Após salvar, dispara refresh da aba Perfis se disponível.
         """
         window = self._get("main_window")
-        active_name: str = getattr(self.draft, "_active_name", "") or ""
+        # BUG-FOOTER-ACTIVE-NAME-01: DraftConfig é frozen e nunca teve `_active_name`
+        # (getattr morto -> default sempre vazio). O nome do perfil ativo agora vive
+        # em HefestoApp._active_profile_name (populado por _bootstrap_draft_async).
+        active_name: str = getattr(self, "_active_profile_name", "") or ""
         nome = gui_dialogs.prompt_profile_name(parent=window, default_name=active_name)
         if nome is None:
             return  # usuário cancelou
@@ -162,6 +167,8 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         self._footer_toast(f"Perfil salvo em {path}")
         logger.info("footer_save_profile_ok", nome=nome, path=str(path))
+        # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
+        self._active_profile_name = nome
 
         # Refresh aba Perfis se mixin disponível
         refresh = getattr(self, "_reload_profiles_store", None)
@@ -333,6 +340,10 @@ def _refresh_all_tabs(mixin: Any) -> None:
         "_refresh_triggers_from_draft",
         "_refresh_rumble_from_draft",
         "_refresh_mouse_from_draft",
+        # BUG-KEYBOARD-TAB-NO-REFRESH-01: faltava a aba Teclado -> Restaurar
+        # Default (e qualquer recarga via _refresh_all_tabs) deixava os bindings
+        # stale, podendo reverter o restore ao editar.
+        "_refresh_key_bindings_from_draft",
     ):
         fn = getattr(mixin, method_name, None)
         if fn is not None:

@@ -1693,7 +1693,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">&lt;b&gt;Combo sagrado (trocar perfil durante o jogo)&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Modo jogo&lt;/b&gt;: segure o botão PS para suspender a emulação de mouse/teclado</property>
                         <property name="use-markup">True</property>
                         <property name="halign">start</property>
                       </object>
@@ -1766,7 +1766,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_open_toml_button">
-                        <property name="label" translatable="yes">Editar daemon.toml</property>
+                        <property name="label" translatable="yes">Ver daemon.toml (referência)</property>
                         <signal name="clicked" handler="on_emulation_open_toml"/>
                       </object>
                     </child>

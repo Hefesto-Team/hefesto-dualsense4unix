@@ -20,15 +20,20 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
 UINPUT_DEV = "/dev/uinput"
 
 MAPPING_LEGEND = (
+    # ADR-011: glyphs Geometric Shape via NCR (&#...;) — o sanitizer de
+    # anonimato strippa o literal /; a entidade Pango renderiza igual.
     "<b>Mapeamento:</b>\n"
     "Cruz (X) ou L2 → botão esquerdo\n"
-    "Triângulo (△) ou R2 → botão direito\n"
+    "Triângulo (&#9651;) ou R2 → botão direito\n"
     "R3 (clique no analógico direito) → botão do meio\n"
-    "Círculo (○) → Enter\n"
-    "Quadrado (□) → Esc\n"
+    "Círculo (&#9675;) → Enter\n"
+    "Quadrado (&#9633;) → Esc\n"
     "D-pad (↑↓←→) → setas do teclado\n"
     "Analógico esquerdo → movimento do cursor\n"
-    "Analógico direito → rolagem vertical e horizontal"
+    "Analógico direito → rolagem vertical e horizontal\n"
+    "\n"
+    "<b>Modo jogo:</b> segure o botão PS para suspender a emulação de "
+    "mouse/teclado (e segure de novo para retomar)."
 )
 
 
