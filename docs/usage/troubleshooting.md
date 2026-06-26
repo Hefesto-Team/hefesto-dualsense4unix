@@ -23,12 +23,24 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
 ```
 
 > **Storm `-71` / conecta-desconecta em loop** (`dmesg`: `error -71`,
-> `device descriptor read/64`, `not accepting address`): quase sempre é **porta
-> USB ruim**, não software. Confirme a velocidade negociada —
-> `cat /sys/bus/usb/devices/<porta>/speed` deve dar `480` (high-speed). Se der
-> `12` (full-speed), **troque de porta** antes de qualquer outra coisa. Tentar
-> "curar" o storm re-enumerando (authorized-toggle / hotplug) só o realimenta.
-> Detalhe: `docs/process/discoveries/2026-06-23-storm-71-porta-usb-vs-config.md`.
+> `device descriptor read/64`, `not accepting address`): a causa é a
+> **enumeração das interfaces de áudio USB** do DualSense (driver
+> `snd-usb-audio`) sob carga — uma rajada de control-transfers no endpoint 0
+> derruba o link, gera o `-71` e dispara a re-enumeração. **Não é porta/cabo/BIOS**:
+> o problema é *port-independente* (provado A/B — com o áudio USB desligado, zero
+> storm em qualquer porta, inclusive a do chipset), e também **não é o daemon nem o
+> WirePlumber** (ambos foram eliminados na investigação). Há duas alavancas de
+> software — **use uma OU outra, nunca as duas**:
+>
+> - **Quirk de boot que preserva o áudio** (mic/fone continuam funcionando): espaça
+>   a rajada de control-transfers via `usbcore.quirks`. Aplique com
+>   `sudo bash scripts/install_usb_quirk.sh` ou `./install.sh --with-usb-quirk`.
+> - **Áudio USB desligado** (sem mic/fone, controle vira pure-HID): regra udev `75`
+>   que tira o `authorized` das interfaces de áudio. Aplique com
+>   `sudo bash scripts/install_udev.sh --disable-usb-audio`.
+>
+> Detalhe e A/B completo:
+> `docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
 
 **Fix**:
 

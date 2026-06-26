@@ -1,3 +1,28 @@
+> [!WARNING]
+> **SUPERADO (2026-06-26) — manter apenas como histórico.** A conclusão central
+> deste estudo — *"o `-71` é dropout do controlador Matisse por C-state / Power
+> Supply Idle, a única correção é a BIOS, e não há alavanca de software"* — foi
+> **REFUTADA**. A causa-raiz real do storm `-71` é a **enumeração das interfaces
+> de áudio USB do DualSense** (kernel `snd-usb-audio`): sob carga, uma rajada de
+> control-transfers no EP0 tomba o link, gerando `-71` e re-enumeração. É
+> **port-independente** (provado A/B: áudio desligado = 0 storm em qualquer porta,
+> inclusive a do chipset), e portanto **não** é BIOS/cabo/porta/C-state/I-O die.
+> E **há sim alavanca de software**, em duas variantes alternativas (uma OU
+> outra): **(A)** o quirk de cmdline `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`
+> (`g`=DELAY_INIT, `n`=DELAY_CTRL_MSG), que **preserva o áudio** ao espaçar a
+> rajada — via `scripts/install_usb_quirk.sh` ou `./install.sh --with-usb-quirk`;
+> **(B)** a regra udev 75 (`authorized=0`), que **desliga o áudio** (sem mic/fone)
+> — via `scripts/install_udev.sh --disable-usb-audio`. Os drop-ins WirePlumber
+> 52/53 são **ortogonais**: impedem o mic virar entrada padrão, mas não param o
+> storm.
+>
+> Observação de hardware: a máquina é um **Ryzen 7 5800X Vermeer** (não Matisse;
+> mesmo comportamento de USB host). A teoria antiga "I/O die do Ryzen / C-state /
+> BIOS / trocar de porta" foi superada na investigação de 2026-06-26.
+>
+> **Ver também (doc canônico):**
+> [`docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`](../process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md).
+
 # DualSense em Pop!_OS COSMIC — dropout USB `-71` e WirePlumber default-source (2026-05-28)
 
 > **Estudo de campo.** Achados empíricos coletados em sessão de recuperação na

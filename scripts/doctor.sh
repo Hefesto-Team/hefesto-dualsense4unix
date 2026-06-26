@@ -12,9 +12,11 @@
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
 #                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
-#   --suggest-port    diz em qual controlador USB o DualSense está e recomenda a
-#                     rota definitiva (chipset robusto ou Bluetooth) se estiver no
-#                     controlador Matisse/CPU (frágil sob carga de GPU).
+#   --suggest-port    diz em qual controlador USB o DualSense está (diagnóstico
+#                     NEUTRO). O storm -71 é port-independente (A/B comprovado):
+#                     o fix real é o quirk usbcore.quirks=...gn,gn (alavanca A,
+#                     preserva áudio) OU a regra 75 authorized=0 (alavanca B),
+#                     não trocar de porta/Bluetooth.
 #
 # Exit code != 0 se houver qualquer FAIL. FEAT-DOCTOR-HEALTHCHECK-01,
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
@@ -118,11 +120,118 @@ check_udev() {
     done
 }
 
+# True (0) se o snd-usb-audio AINDA está bindado em alguma interface de áudio
+# (bInterfaceClass==01) de um DualSense (VID 054c). Lê os nós de interface USB em
+# /sys e segue o symlink `driver`. Usado para validar se a regra 75 pegou.
+dualsense_audio_bound() {
+    local iface base vid cls drv
+    for iface in /sys/bus/usb/devices/*:*.*; do
+        [[ -r "${iface}/bInterfaceClass" ]] || continue
+        cls="$(cat "${iface}/bInterfaceClass" 2>/dev/null)"
+        [[ "${cls}" == "01" ]] || continue
+        base="${iface%:*}"   # /sys/bus/usb/devices/3-2:1.0 -> /sys/bus/usb/devices/3-2
+        vid="$(cat "${base}/idVendor" 2>/dev/null)"
+        [[ "${vid}" == "054c" ]] || continue
+        drv="$(basename "$(readlink -f "${iface}/driver" 2>/dev/null)" 2>/dev/null)"
+        [[ "${drv}" == "snd-usb-audio" ]] && return 0
+    done
+    return 1
+}
+
+# FEAT-DSX-DEFINITIVE-FIX-01 §7.5: a regra 75 (OPT-IN) desliga o áudio USB do
+# DualSense (authorized=0 + unbind do snd-usb-audio) para matar o gatilho do
+# storm -71. Aqui validamos que, SE instalada, ela realmente pegou. Não alarmamos
+# quem QUER o mic do DualSense (HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1)
+# nem o caminho padrão (75 ausente = áudio preservado).
+check_usb_audio_off() {
+    local rule75=""
+    if [[ -e /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]]; then
+        rule75=/etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules
+    elif [[ -e /usr/lib/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]]; then
+        rule75=/usr/lib/udev/rules.d/75-ps5-controller-disable-usb-audio.rules
+    fi
+
+    local mic_intended=0
+    case "${HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED:-}" in
+        1|true|yes|TRUE|YES) mic_intended=1 ;;
+    esac
+
+    # Caminho padrão: regra opt-in não instalada → áudio preservado, sem alarme.
+    [[ -z "${rule75}" ]] && return
+
+    if [[ "${mic_intended}" -eq 1 ]]; then
+        # Config contraditória, mas a usuária pediu áudio — não alarmar (info).
+        info "regra 75 (áudio USB off) instalada, mas DUALSENSE_MIC_INTENDED=1 pede o mic — contraditório; para ter o mic remova a 75 (uninstall) ou reinstale sem --disable-usb-audio"
+        return
+    fi
+
+    # Regra instalada e mic não desejado: o áudio USB deve estar desligado.
+    if dualsense_audio_bound; then
+        warn "regra 75 instalada mas snd-usb-audio ainda bindado no áudio do DualSense — a regra não pegou; replugue o controle (ou: sudo bash scripts/install_udev.sh --disable-usb-audio)"
+    elif command -v lsusb >/dev/null 2>&1 && lsusb 2>/dev/null | grep -qiE '054c'; then
+        pass "regra 75 ativa — áudio USB do DualSense desligado (sem snd-usb-audio nas interfaces de áudio)"
+    else
+        info "regra 75 instalada; DualSense não conectado via USB agora — replugue para validar o desligamento do áudio"
+    fi
+}
+
 check_uinput() {
     if [[ -e /dev/uinput ]]; then
         pass "/dev/uinput presente"
     else
         fail "/dev/uinput ausente — rode: sudo modprobe uinput (ou reinstale udev)"
+    fi
+}
+
+# FEAT-DSX-DEFINITIVE-FIX-01 §7.5 (Opção D): o quirk de boot
+# usbcore.quirks=054c:0ce6:gn,054c:0df2:gn é a alavanca do storm -71 que PRESERVA
+# o áudio do DualSense (ALTERNATIVA à regra 75, que desliga o áudio). É um
+# PARÂMETRO DE CMDLINE do kernel (NÃO é regra udev) e OPT-IN — por isso este check
+# é puramente informativo: NUNCA fail nem warn. Reporta ativo (/proc/cmdline),
+# agendado (config do bootloader), runtime (sysfs) ou ausente.
+check_usb_quirk() {
+    local marker="054c:0ce6:gn"
+    local active=0 scheduled=0 runtime=0
+    grep -q "${marker}" /proc/cmdline 2>/dev/null && active=1
+    { [[ -r /etc/kernelstub/configuration ]] && grep -q "${marker}" /etc/kernelstub/configuration 2>/dev/null; } && scheduled=1
+    { [[ -r /etc/default/grub ]] && grep -q "${marker}" /etc/default/grub 2>/dev/null; } && scheduled=1
+    { [[ -r /sys/module/usbcore/parameters/quirks ]] && grep -q "${marker}" /sys/module/usbcore/parameters/quirks 2>/dev/null; } && runtime=1
+
+    if [[ "${active}" -eq 1 ]]; then
+        info "quirk de áudio USB ATIVO neste boot (usbcore.quirks=...gn) — storm -71 mitigado PRESERVANDO o áudio do DualSense"
+    elif [[ "${scheduled}" -eq 1 ]]; then
+        info "quirk de áudio USB agendado p/ o próximo boot (config do bootloader) — reinicie para valer; status: scripts/install_usb_quirk.sh --status"
+    elif [[ "${runtime}" -eq 1 ]]; then
+        info "quirk de áudio USB armado em runtime (sysfs) — vale no próximo replug; para persistir no cmdline: scripts/install_usb_quirk.sh"
+    else
+        info "quirk de áudio USB ausente (opt-in) — alternativa que PRESERVA o áudio: scripts/install_usb_quirk.sh (ou regra 75 p/ áudio-off). Use uma OU outra."
+    fi
+    if [[ "${active}" -eq 1 || "${scheduled}" -eq 1 || "${runtime}" -eq 1 ]]; then
+        info "  caveat: o quirk preserva o áudio no nível do KERNEL (sem storm); com os WP 52/53 o nó segue suprimido no PipeWire até removê-los ou definir DUALSENSE_MIC_INTENDED=1"
+    fi
+}
+
+# CROSS-CHECK do storm -71: a regra 75 (áudio-off) e o quirk (preserva-áudio)
+# são alavancas ALTERNATIVAS do MESMO storm — instalar AS DUAS é contraditório:
+# o quirk espaça a rajada de control-transfers para PRESERVAR o áudio, mas a
+# regra 75 desliga esse mesmo áudio. Se ambas estiverem presentes (75 instalada
+# E quirk ativo/agendado/runtime), avisamos para escolher UMA. Não substitui
+# check_usb_audio_off nem check_usb_quirk; só cruza os dois sinais com warn().
+check_usb_storm_config_conflict() {
+    local rule75=0
+    if [[ -e /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules \
+          || -e /usr/lib/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]]; then
+        rule75=1
+    fi
+
+    local marker="054c:0ce6:gn" quirk=0
+    grep -q "${marker}" /proc/cmdline 2>/dev/null && quirk=1
+    { [[ -r /etc/kernelstub/configuration ]] && grep -q "${marker}" /etc/kernelstub/configuration 2>/dev/null; } && quirk=1
+    { [[ -r /etc/default/grub ]] && grep -q "${marker}" /etc/default/grub 2>/dev/null; } && quirk=1
+    { [[ -r /sys/module/usbcore/parameters/quirks ]] && grep -q "${marker}" /sys/module/usbcore/parameters/quirks 2>/dev/null; } && quirk=1
+
+    if [[ "${rule75}" -eq 1 && "${quirk}" -eq 1 ]]; then
+        warn "config contraditória: o quirk (usbcore.quirks=...gn) PRESERVA o áudio do DualSense, mas a regra 75 o DESLIGA — escolha UMA. Para manter o áudio: remova a 75 (uninstall ou reinstale sem --disable-usb-audio). Para áudio-off: remova o quirk (scripts/install_usb_quirk.sh --remove)."
     fi
 }
 
@@ -186,7 +295,15 @@ check_wireplumber_source() {
         pass "microfone ativo não é o mic do DualSense (${cur})"
         return
     fi
-    # ativo É o DualSense — distingue escassez (única fonte) de falha real.
+    # ativo É o DualSense. Se a usuária QUER o mic do DualSense (opt-in), isso é
+    # o desejado — não alarmar. Espelha a guarda de check_usb_audio_off e de
+    # system_check.py (_dualsense_mic_intended), evitando falso-positivo.
+    case "${HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED:-}" in
+        1|true|yes|TRUE|YES)
+            pass "microfone ativo é o DualSense (DUALSENSE_MIC_INTENDED=1 — desejado)"
+            return ;;
+    esac
+    # ativo É o DualSense (não desejado) — distingue escassez (única fonte) de falha real.
     local has_other=""
     if command -v wpctl >/dev/null 2>&1; then
         has_other="$(wpctl status 2>/dev/null | awk '
@@ -254,8 +371,8 @@ usb_pci_controller() {
 
 pci_label() {
     case "$1" in
-        *0c:00.3) echo "Matisse/CPU (0c:00.3)" ;;   # controlador integrado do Ryzen
-        *02:00.0) echo "chipset (02:00.0)" ;;        # southbridge — mais resiliente
+        *0c:00.3) echo "CPU/Ryzen (0c:00.3)" ;;      # controlador USB integrado do Ryzen
+        *02:00.0) echo "chipset (02:00.0)" ;;        # controlador USB do southbridge
         "")       echo "desconhecido" ;;
         *)        echo "$1" ;;
     esac
@@ -295,10 +412,10 @@ check_usb_dropout() {
     fi
     warn "dropout USB: ${n} sintoma(s) -71/enum neste boot"
 
-    # ATRIBUIÇÃO HONESTA (corrige a heurística antiga que culpava o Matisse só por
-    # o dsx estar lá): extrai QUAIS devices 'usb X-Y' geraram o -71 e mapeia o
-    # bus -> controlador. O -71 de boot costuma ser OUTRO device (ex: webcam no
-    # chipset), não o DualSense.
+    # ATRIBUIÇÃO HONESTA (corrige a heurística antiga que culpava o controlador
+    # do Ryzen só por o dsx estar lá): extrai QUAIS devices 'usb X-Y' geraram o
+    # -71 e mapeia o bus -> controlador. O -71 de boot costuma ser OUTRO device
+    # (ex: webcam no chipset), não o DualSense.
     local devs dev busnum hits dsx_hits=0 other_count=0
     devs="$(printf '%s\n' "$lines" | grep -oE 'usb [0-9]+-[0-9.]+' | awk '{print $2}' | sort -u)"
     [[ -n "$devs" ]] && info "fonte(s) do -71 neste boot:"
@@ -315,9 +432,9 @@ check_usb_dropout() {
     done
 
     if [[ "${dsx_hits:-0}" -gt 0 ]]; then
-        info "o -71 ATINGE o DualSense -- fix definitivo: Bluetooth ou porta do chipset (rode: scripts/doctor.sh --suggest-port)"
+        info "o -71 ATINGE o DualSense -- storm port-independente; fix: quirk usbcore.quirks=...gn,gn (alavanca A, preserva áudio) OU regra 75 authorized=0 (alavanca B). Cheque: scripts/install_usb_quirk.sh --check"
     else
-        info "o -71 deste boot NÃO é do DualSense -- provável outro device/porta (ex: webcam). Valide o dsx abrindo a Steam com --watch-dropout."
+        info "o -71 deste boot NÃO é do DualSense -- provável outro device (ex: webcam). Valide o dsx abrindo a Steam com --watch-dropout."
     fi
 
     # rede de segurança (watcher) — NÃO é a solução, só mitigação.
@@ -330,8 +447,13 @@ check_usb_dropout() {
     info "ver em tempo real: scripts/doctor.sh --watch-dropout"
 }
 
-# --suggest-port: diz em qual controlador o DualSense está e recomenda a rota
-# definitiva (chipset robusto / Bluetooth) se estiver no Matisse/CPU frágil.
+# --suggest-port: diz em qual controlador USB o DualSense está. DIAGNÓSTICO
+# NEUTRO -- o storm -71 é port-independente (A/B comprovado: cai em qualquer
+# porta sob carga de GPU/Steam quando o snd-usb-audio enumera as 3 interfaces
+# de áudio do controle). A localização do controlador NÃO é o fix; o fix é o
+# quirk (alavanca A) OU a regra 75 (alavanca B). Esta função só ajuda a mapear
+# topologia (ex: o dongle WiFi no mesmo controlador, que o rebind por software
+# derrubaria).
 suggest_port() {
     local d ds_dev=""
     for d in /sys/bus/usb/devices/*; do
@@ -340,7 +462,7 @@ suggest_port() {
     done
     if [[ -z "$ds_dev" ]]; then
         if command -v bluetoothctl >/dev/null 2>&1 && timeout 4 bluetoothctl devices 2>/dev/null | grep -qi 'DualSense'; then
-            pass "DualSense via Bluetooth (sem caminho USB) -- rota ótima, -71 impossível para o controle"
+            info "DualSense via Bluetooth (sem caminho USB) -- sem snd-usb-audio, logo sem storm pelo controle"
         else
             info "DualSense não conectado via USB nem Bluetooth -- conecte para avaliar"
         fi
@@ -350,19 +472,9 @@ suggest_port() {
     ds_pci="$(usb_pci_controller "$ds_dev")"
     bus="$(cat "$ds_dev/busnum" 2>/dev/null)"
     info "DualSense em Bus ${bus}, controlador $(pci_label "$ds_pci")"
-    case "$ds_pci" in
-        *0c:00.3*)
-            warn "dsx no controlador Matisse/CPU -- frágil sob carga de GPU/Steam (storm -71)"
-            info "  RECOMENDADO: parear por Bluetooth (remove o USB) OU mover para porta do CHIPSET (02:00.0)"
-            info "  as portas do chipset são as mesmas do teclado/mouse, que nunca caem"
-            ;;
-        *02:00.0*)
-            pass "dsx no controlador do chipset (02:00.0) -- robusto (mesmo do teclado/mouse). Boa rota."
-            ;;
-        *)
-            info "  controlador não reconhecido (${ds_pci}) -- avalie manualmente"
-            ;;
-    esac
+    info "  topologia apenas (diagnóstico neutro). O storm -71 é port-independente:"
+    info "  o fix é o quirk usbcore.quirks=...gn,gn (alavanca A, preserva áudio)"
+    info "  OU a regra 75 authorized=0 (alavanca B). Cheque: scripts/install_usb_quirk.sh --check"
 }
 
 # Modo --watch-dropout: bloqueia até o primeiro sintoma de dropout e sai.
@@ -408,6 +520,9 @@ main() {
     check_socket
     hdr "kernel / udev"
     check_udev
+    check_usb_audio_off
+    check_usb_quirk
+    check_usb_storm_config_conflict
     check_uinput
     hdr "applet COSMIC"
     check_applet

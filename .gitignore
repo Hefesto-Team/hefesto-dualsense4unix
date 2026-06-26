@@ -51,6 +51,11 @@ Task_Final/
 IMPORTANT.md
 *_AI_*.md
 *_agent_*.md
+# Auditorias/varreduras multi-agente: transcripts brutos (.jsonl) e sinteses trazem
+# atribuicao de IA (model-ids, "claude"/"anthropic") — NUNCA versionar. O gate de
+# anonimato isenta docs/process/**, entao o bloqueio aqui e a defesa real.
+docs/process/audits/
+*.jsonl
 
 # Secrets
 .env
