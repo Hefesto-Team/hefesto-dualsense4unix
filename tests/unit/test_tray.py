@@ -315,7 +315,10 @@ def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
 
     fake_glib.timeout_add.assert_called_once()
     args, _kwargs = fake_glib.timeout_add.call_args
-    assert args[0] == 500  # _INDICATOR_DEFERRED_MS
+    # BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: defer tunado p/ COSMIC (1500ms).
+    # Referencia a constante para não regredir se o valor for ajustado de novo.
+    from hefesto_dualsense4unix.app.tray import _INDICATOR_DEFERRED_MS
+    assert args[0] == _INDICATOR_DEFERRED_MS
     assert tray._indicator is None  # ainda não criado
 
 
@@ -337,14 +340,25 @@ def test_apptray_em_gnome_cria_indicator_imediato(monkeypatch: pytest.MonkeyPatc
 
 def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
 ):
-    """Em COSMIC sem watcher StatusNotifier, emite notification orientadora."""
+    """Em COSMIC sem watcher StatusNotifier, emite notification orientadora.
+
+    BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: a notify NÃO é mais imediata — só
+    dispara após esgotar os retries do probe (_WATCHER_PROBE_RETRIES) e apenas
+    se a flag persistente ainda não existir. Isolamos a flag num tmp_path para
+    o teste não depender (nem sujar) o runtime_dir real.
+    """
     fake_gtk, _created = _setup_fake_gi_for_apptray(monkeypatch)
     fake_glib = MagicMock()
     _patch_apptray_module(monkeypatch, fake_gtk, fake_glib)
     monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
 
     from hefesto_dualsense4unix.app import tray as apptray_mod
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    # Flag persistente isolada e garantidamente ausente.
+    monkeypatch.setattr(xdg_paths, "runtime_dir", lambda ensure=False: tmp_path)
     notify_calls: list[dict] = []
 
     def fake_notify(summary, body="", **kwargs):
@@ -355,9 +369,8 @@ def test_apptray_cosmic_emite_notification_se_watcher_ausente(
     monkeypatch.setattr(apptray_mod, "statusnotifierwatcher_available", lambda: False)
 
     tray = _make_apptray()
-    tray.start()
-    # Executa o deferred manualmente (simula GLib.timeout_add disparando).
-    tray._start_deferred()
+    # Simula o ÚLTIMO retry falho do probe -> dispara _maybe_notify_tray_missing.
+    tray._probe_watcher_with_retries(apptray_mod._WATCHER_PROBE_RETRIES - 1)
 
     assert notify_calls
     assert "Tray" in notify_calls[0]["body"]
