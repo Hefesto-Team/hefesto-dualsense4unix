@@ -5,6 +5,26 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`DEFAULT_PS_LONG_PRESS_MS` agora é 0 (long-press do PS desligado por padrão)**:
+  o modo jogo passa a ser SÓ pelo combo deliberado PS+Options. Antes, o default
+  1000ms fazia o toque de "abrir Steam" que passasse de ~1s **alternar o modo jogo
+  sem querer** (modo-jogo acidental). Agora isso vem corrigido de fábrica — não
+  depende mais de um `environment.d` na `$HOME` (que uma formatação apagava).
+  Quem quiser o gesto de volta: `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS>0`.
+  Atualizados os 4 pontos (constante, env default, DaemonConfig, fallback do
+  subsystem) + testes. (FEAT-EMULATION-GAMEMODE-COMBO-01)
+- **Auto-start do daemon no boot agora é default no install** (`install.sh` sem
+  `--no-...`/com `--yes` habilita): o controle só funciona com o daemon rodando;
+  exigir passo manual após cada boot/formatação contrariava "instala tudo".
+
+### Fixed
+
+- **`uninstall.sh` assimétrico**: passa a remover o drop-in WirePlumber **53**
+  (disable-output, gerado junto do 52) e o **91** do `environment.d` (modo-jogo) —
+  antes ficavam órfãos. Mantém o princípio de uninstall simétrico ao install.
+
 ### Added
 
 - **Regra udev 76 (touchpad ignorado pelo libinput) agora no install padrão**:
