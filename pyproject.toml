@@ -39,7 +39,12 @@ dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
-    "ruff>=0.1",
+    # Pin do ruff: lint sem pin (ruff>=0.1) deixa cada release/CI refém da versão
+    # publicada no dia — ruff 0.15.x passou a flagar RUF100 de noqa de regra não
+    # habilitada e a reformatar blocos de import, quebrando o release v3.8.3 num
+    # código que estava limpo na versão anterior. Pin garante build determinístico
+    # (CHORE-CI-PIN-RUFF-01). Bump consciente do mantenedor ao subir o ruff.
+    "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
 ]
