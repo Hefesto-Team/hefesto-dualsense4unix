@@ -61,14 +61,15 @@ fi
 RULES_DEST="/etc/udev/rules.d"
 MODLOAD_DEST="/etc/modules-load.d"
 
-# Regras canônicas (v3.3.1+): 5 hidraw/uinput/autosuspend/hotplug.
+# Regras canônicas: hidraw/uinput/autosuspend.
 # Sincronizado com scripts/install_udev.sh.
+# 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23 — abriam o controle a
+# cada ACTION=="add" e amplificavam a re-enumeração do storm -71. Causa-raiz
+# real: porta USB ruim (full-speed/-71 na 3-1). Ver docs/process/discoveries.
 RULES=(
     "70-ps5-controller.rules"
     "71-uinput.rules"
     "72-ps5-controller-autosuspend.rules"
-    "73-ps5-controller-hotplug.rules"
-    "74-ps5-controller-hotplug-bt.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

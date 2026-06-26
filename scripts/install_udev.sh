@@ -28,8 +28,6 @@ for f in \
     "$ASSETS/70-ps5-controller.rules" \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
-    "$ASSETS/73-ps5-controller-hotplug.rules" \
-    "$ASSETS/74-ps5-controller-hotplug-bt.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -39,8 +37,12 @@ echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
 sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
 sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
-sudo install -Dm644 "$ASSETS/73-ps5-controller-hotplug.rules"     /etc/udev/rules.d/73-ps5-controller-hotplug.rules
-sudo install -Dm644 "$ASSETS/74-ps5-controller-hotplug-bt.rules"  /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules
+# 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23: abriam o controle via
+# hidraw a cada ACTION=="add", amplificando a re-enumeração que alimentava o
+# storm -71 (causa-raiz real: porta USB ruim — full-speed/-71 na 3-1). Limpa
+# instalações antigas para não ficarem órfãs:
+sudo rm -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
+           /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules 2>/dev/null || true
 
 if [[ "${DISABLE_USB_AUDIO}" -eq 1 ]]; then
     echo "[1b/3] (opt-in) instalando 75-...-disable-usb-audio (DualSense pure-HID)..."

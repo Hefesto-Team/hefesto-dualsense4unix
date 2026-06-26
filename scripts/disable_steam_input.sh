@@ -78,20 +78,22 @@ if [[ "${#VDFS[@]}" -eq 0 ]]; then
     exit 0
 fi
 
-# Retorna 0 se o vdf tem PSSupport=2 OU UseSteamControllerConfig=2; 1 caso contrário.
+# Retorna 0 se o vdf tem PSSupport ou UseSteamControllerConfig em "1" OU "2";
+# 1 caso contrário. "[12]" pega tanto o "Always enabled" (=2) quanto o per-game
+# "1" que o legado aurora-steam-input-fix escrevia (e que antes escapava daqui).
 needs_fix() {
     local vdf="$1"
-    grep -qE '"(SteamController_PSSupport|UseSteamControllerConfig)"[[:space:]]+"2"' "$vdf" 2>/dev/null
+    grep -qE '"(SteamController_PSSupport|UseSteamControllerConfig)"[[:space:]]+"[12]"' "$vdf" 2>/dev/null
 }
 
 # Lê e mostra contagem por arquivo.
 report_state() {
-    local vdf="$1" pss uscc_two
-    pss="$(grep -E '"SteamController_PSSupport"[[:space:]]+"2"' "$vdf" 2>/dev/null | wc -l)"
-    uscc_two="$(grep -E '"UseSteamControllerConfig"[[:space:]]+"2"' "$vdf" 2>/dev/null | wc -l)"
+    local vdf="$1" pss uscc
+    pss="$(grep -E '"SteamController_PSSupport"[[:space:]]+"[12]"' "$vdf" 2>/dev/null | wc -l)"
+    uscc="$(grep -E '"UseSteamControllerConfig"[[:space:]]+"[12]"' "$vdf" 2>/dev/null | wc -l)"
     printf '  %s\n' "$vdf"
-    printf '    SteamController_PSSupport="2": %s\n' "$pss"
-    printf '    UseSteamControllerConfig="2": %s\n' "$uscc_two"
+    printf '    SteamController_PSSupport="1"|"2": %s\n' "$pss"
+    printf '    UseSteamControllerConfig="1"|"2": %s\n' "$uscc"
 }
 
 # Steam estava rodando antes? Usado para decidir se reabrimos depois.
@@ -159,8 +161,8 @@ apply_vdf() {
     # -i.tmp evita perda em filesystem sem inplace nativo; removemos o .tmp depois.
     local tab=$'\t'
     if ! sed -i.tmp \
-            -e "s/\"SteamController_PSSupport\"${tab}${tab}\"2\"/\"SteamController_PSSupport\"${tab}${tab}\"0\"/g" \
-            -e "s/\"UseSteamControllerConfig\"${tab}${tab}\"2\"/\"UseSteamControllerConfig\"${tab}${tab}\"0\"/g" \
+            -e "s/\"SteamController_PSSupport\"${tab}${tab}\"[12]\"/\"SteamController_PSSupport\"${tab}${tab}\"0\"/g" \
+            -e "s/\"UseSteamControllerConfig\"${tab}${tab}\"[12]\"/\"UseSteamControllerConfig\"${tab}${tab}\"0\"/g" \
             -- "$vdf"; then
         log "ERRO: sed falhou em $vdf — restaurando do backup"
         cp -a -- "$bak" "$vdf" || true

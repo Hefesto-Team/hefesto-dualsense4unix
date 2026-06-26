@@ -41,6 +41,16 @@ for arg in "$@"; do
 done
 
 # ---------------------------------------------------------------------------
+# Pure-HID (escalada do storm -71): por PADRÃO o dsx NÃO mata mais o áudio USB
+# do DualSense — o microfone/fone nativos do controle ficam utilizáveis. Se o
+# storm -71 reincidir e for preciso a escalada agressiva (controle só-HID),
+# rode com:  HEFESTO_PURE_HID=1 ./dsx.sh
+# — aí a regra 75 (udev) e o modo --disable-source do WirePlumber voltam a ser
+# aplicados. (Decisão da usuária 2026-06-23: reativar o microfone nativo.)
+# ---------------------------------------------------------------------------
+PURE_HID="${HEFESTO_PURE_HID:-0}"
+
+# ---------------------------------------------------------------------------
 # --install-launcher: grava o .desktop com caminho absoluto resolvido
 # ---------------------------------------------------------------------------
 install_launcher() {
@@ -106,18 +116,23 @@ ensure_services() {
     else
         warn "não habilitei o guard --user (sessão systemd ausente?) — pega no próximo login"
     fi
-    # watcher de auto-recuperação (root)
-    if [[ "$HAVE_SUDO" -eq 1 ]]; then
+    # watcher de auto-recuperação (root) — OPT-IN desde 2026-06-23.
+    # Era amplificador do storm -71: sua "cura" (authorized-toggle) RE-ENUMERA o
+    # controle — justamente o gatilho do -71. A causa real era porta USB ruim
+    # (3-1 negociava full-speed e despejava -71; 3-4 high-speed fica estável).
+    # Só instala sob HEFESTO_PURE_HID=1; no padrão, DESARMA se estiver instalado.
+    if [[ "$PURE_HID" == "1" && "$HAVE_SUDO" -eq 1 ]]; then
         sudo install -Dm755 "${ROOT_DIR}/scripts/dsx_recover.sh" /usr/local/sbin/dsx_recover.sh
         sudo install -Dm644 "${ROOT_DIR}/assets/hefesto-dsx-recover.service" /etc/systemd/system/hefesto-dsx-recover.service
         sudo systemctl daemon-reload
         if sudo systemctl enable --now hefesto-dsx-recover.service 2>/dev/null; then
-            ok "watcher de auto-recuperação ativo (hefesto-dsx-recover.service)"
+            ok "watcher de auto-recuperação ativo (pure-HID)"
         else
             warn "não habilitei o watcher — confira: systemctl status hefesto-dsx-recover.service"
         fi
-    else
-        warn "sem sudo — watcher de auto-recuperação NÃO instalado"
+    elif [[ "$HAVE_SUDO" -eq 1 ]]; then
+        sudo systemctl disable --now hefesto-dsx-recover.service 2>/dev/null || true
+        ok "watcher de auto-recuperação desarmado (padrão; HEFESTO_PURE_HID=1 reativa)"
     fi
 }
 
@@ -132,11 +147,20 @@ else
     warn "Aurora self-heal indisponível ($AURORA_HEAL) ou sem sudo — pulado"
 fi
 
-step "(b) regras udev do hefesto (+ DualSense pure-HID no USB)"
+step "(b) regras udev do hefesto"
 if [[ "$HAVE_SUDO" -eq 1 && -x "${ROOT_DIR}/scripts/install_udev.sh" ]]; then
-    # --disable-usb-audio: regra 75 que deixa o controle só-HID no nível USB
-    # (sem áudio nenhum), reduzindo a superfície que alimenta o storm -71.
-    sudo bash "${ROOT_DIR}/scripts/install_udev.sh" --disable-usb-audio && ok "udev reaplicado (+ pure-HID)" || warn "install_udev.sh falhou"
+    if [[ "$PURE_HID" == "1" ]]; then
+        # Escalada -71: regra 75 deixa o controle só-HID no nível USB (sem áudio
+        # nenhum — sem mic NEM fone), reduzindo a superfície de re-enumeração.
+        sudo bash "${ROOT_DIR}/scripts/install_udev.sh" --disable-usb-audio && ok "udev reaplicado (pure-HID: áudio USB OFF)" || warn "install_udev.sh falhou"
+    else
+        # Padrão: preserva o áudio USB do DualSense (mic/fone nativos utilizáveis).
+        # Remove a regra 75 se tiver sido instalada antes, senão o áudio segue OFF.
+        if [[ -e /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules ]]; then
+            sudo rm -f /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules && ok "regra 75 (disable-usb-audio) removida — áudio do DualSense reativado"
+        fi
+        sudo bash "${ROOT_DIR}/scripts/install_udev.sh" && ok "udev reaplicado (áudio do DualSense preservado)" || warn "install_udev.sh falhou"
+    fi
 else
     warn "sem sudo ou install_udev.sh ausente — udev pulado"
 fi
@@ -145,12 +169,19 @@ step "(c) Steam Input PSSupport OFF"
 bash "${ROOT_DIR}/scripts/disable_steam_input.sh" --apply && ok "PSSupport OFF" \
     || warn "disable_steam_input falhou"
 
-step "(d) WirePlumber: desabilitar a source do DualSense (só-HID)"
-rc=0; bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source || rc=$?
+if [[ "$PURE_HID" == "1" ]]; then
+    step "(d) WirePlumber: desabilitar a source do DualSense (escalada pure-HID)"
+    rc=0; bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --disable-source || rc=$?
+else
+    step "(d) WirePlumber: DualSense não-default (microfone preservado e selecionável)"
+    # Remove o drop-in 52 (disable) se existir, deixando só o 51 (rebaixa prioridade).
+    rm -f "${HOME}/.config/wireplumber/wireplumber.conf.d/52-hefesto-dualsense-disable-source.conf"
+    rc=0; bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --install || rc=$?
+fi
 case "$rc" in
-    0) ok "mic do DualSense desabilitado; microfone ativo != DualSense" ;;
-    2) warn "DualSense ainda ativo por ser a ÚNICA fonte — conecte mic/webcam (mas o drop-in está aplicado)" ;;
-    *) warn "disable-source retornou erro ($rc) — veja a saída acima" ;;
+    0) ok "microfone padrão ativo != DualSense (DualSense disponível p/ seleção manual)" ;;
+    2) warn "DualSense é a ÚNICA fonte agora — conecte webcam/mic se quiser outro padrão (drop-in aplicado)" ;;
+    *) warn "fix_wireplumber retornou erro ($rc) — veja a saída acima" ;;
 esac
 
 step "(e) re-pin de power (GPU/xHCI/DualSense)"
