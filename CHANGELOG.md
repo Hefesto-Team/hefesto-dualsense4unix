@@ -5,6 +5,18 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Regra udev 76 (touchpad ignorado pelo libinput) agora no install padrão**:
+  `76-dualsense-touchpad-libinput-ignore.rules` passa a ser instalada por default
+  (incondicional, como 70/71/72) em `install.sh`/`scripts/install_udev.sh` e no
+  caminho `.deb`/Flatpak (`scripts/install-host-udev.sh`). O kernel `hid_playstation`
+  expõe o touchpad do DualSense como ponteiro libinput separado que briga com a
+  emulação analógica do hefesto (cursor "engasgado"); a regra deixa o hefesto como
+  única fonte de cursor. Não-destrutiva e reversível (remover o arquivo).
+  Trigger de `input` aplicado; vale de fato após replug/relogin do controle.
+  (FEAT-DUALSENSE-TOUCHPAD-IGNORE-01)
+
 ## [3.8.3] — 2026-06-26
 
 Cura definitiva do storm -71 do DualSense (causa-raiz: o kernel `snd-usb-audio`

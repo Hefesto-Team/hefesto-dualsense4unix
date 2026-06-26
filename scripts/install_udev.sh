@@ -28,6 +28,7 @@ for f in \
     "$ASSETS/70-ps5-controller.rules" \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
+    "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -37,6 +38,10 @@ echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
 sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
 sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
+# 76: touchpad do DualSense ignorado como ponteiro libinput (para de brigar com a
+# emulação analógica do hefesto). FEAT-DUALSENSE-TOUCHPAD-IGNORE-01. Não-destrutivo
+# e reversível (remover o arquivo). Só vale após re-add do device (replug/relogin).
+sudo install -Dm644 "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules
 # 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23: abriam o controle via
 # hidraw a cada ACTION=="add", amplificando a re-enumeração que alimentava o
 # storm -71 (causa-raiz real: porta USB ruim — full-speed/-71 na 3-1). Limpa
@@ -65,6 +70,9 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true
 sudo udevadm trigger --subsystem-match=usb    --attr-match=idVendor=054c 2>/dev/null || true
 sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
+# input: faz a 76 (LIBINPUT_IGNORE_DEVICE no touchpad) ser reavaliada. libinput só
+# relê a flag ao re-add do device, então replug/relogin do controle ainda é o garantido.
+sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
 
 cat <<'EOF'
 
