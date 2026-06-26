@@ -23,6 +23,7 @@ niri, river via `wlr-foreign-toplevel-management-unstable-v1`). Se nem
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.integrations.window_backends.base import WindowBackend, WindowInfo
@@ -31,6 +32,10 @@ from hefesto_dualsense4unix.integrations.window_backends.xlib import XlibBackend
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# AUTOSWITCH-FLOOD-FIX-01: once-guard p/ não floodar o journal com
+# 'autoswitch_compositor_unsupported' quando não há display (ver detect_window_backend).
+_unsupported_warned: bool = False
 
 
 class _WaylandCascadeBackend:
@@ -100,7 +105,18 @@ def detect_window_backend() -> WindowBackend:
         logger.debug("window_backend_selected", backend="wayland_cascade")
         return _WaylandCascadeBackend()
 
-    logger.warning("autoswitch_compositor_unsupported")
+    # AUTOSWITCH-FLOOD-FIX-01: once-guard. Sem display, esta função era chamada
+    # a cada tick do AutoSwitcher (0,5s) via get_active_window_info legado e
+    # logava WARNING toda vez — 1800+ linhas em 10min no journal. Agora o
+    # subsystem usa build_window_reader() (backend instanciado 1x), mas o
+    # guard protege qualquer caller repetido (CLI/doctor) de floodar: avisa
+    # uma vez, depois rebaixa para debug.
+    global _unsupported_warned
+    if not _unsupported_warned:
+        logger.warning("autoswitch_compositor_unsupported")
+        _unsupported_warned = True
+    else:
+        logger.debug("autoswitch_compositor_unsupported")
     return NullBackend()
 
 
@@ -125,7 +141,37 @@ def get_active_window_info() -> dict[str, Any]:
     return info.as_dict()
 
 
+def build_window_reader() -> Callable[[], dict[str, Any]]:
+    """Cria um leitor de janela com o backend instanciado UMA vez.
+
+    AUTOSWITCH-FLOOD-FIX-01. Diferente de `get_active_window_info()` (stateless,
+    recria o backend a cada chamada — adequado p/ CLI/doctor pontual), este
+    mantém o backend vivo para o poll do AutoSwitcher (2Hz). Ganhos:
+    - não loga `autoswitch_compositor_unsupported` por tick (flood no journal);
+    - preserva o estado anti-flood/anti-D-Bus dos backends
+      (`_consecutive_failures`, `_unsupported_warned`, cache do `which`,
+      `_fallback_announced`) em vez de resetá-lo a cada 0,5s;
+    - evita gastar o timeout de 2s do portal jeepney a cada tick numa sessão
+      Wayland real onde o portal não tem GetActiveWindow.
+
+    Retorna um callable dict→compatível com a API legada (wm_class/wm_name/
+    pid/exe_basename), devolvendo `_UNKNOWN_WINDOW` quando o backend não acha
+    janela. O backend é fixado no momento da chamada — chame após o ambiente
+    gráfico estar disponível (o subsystem importa o env antes).
+    """
+    backend = detect_window_backend()
+
+    def _read() -> dict[str, Any]:
+        info: WindowInfo | None = backend.get_active_window_info()
+        if info is None:
+            return dict(_UNKNOWN_WINDOW)
+        return info.as_dict()
+
+    return _read
+
+
 __all__ = [
+    "build_window_reader",
     "detect_window_backend",
     "get_active_window_info",
 ]
