@@ -56,6 +56,12 @@ readonly WIREPLUMBER_DROPIN="${HOME}/.config/wireplumber/wireplumber.conf.d/51-h
 # Variante --disable-source (node.disabled). Removida incondicionalmente (não tem
 # caso de "workaround standalone" — é gerada só pelo nosso --disable-source).
 readonly WIREPLUMBER_DROPIN_DISABLE="${HOME}/.config/wireplumber/wireplumber.conf.d/52-hefesto-dualsense-disable-source.conf"
+# Variante --disable-output (53): gerada junto do 52 pelo --disable-source.
+# Removida incondicionalmente (simetria — o uninstall esquecia dela).
+readonly WIREPLUMBER_DROPIN_OUTPUT="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
+# environment.d do modo-jogo (PS_LONG_PRESS_MS=0). Hoje redundante (o default do
+# código é 0), mas é artefato do hefesto — remove na desinstalação por simetria.
+readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsense-gamemode.conf"
 
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
@@ -199,6 +205,19 @@ if [[ -f "${WIREPLUMBER_DROPIN_DISABLE}" ]]; then
     log "removendo drop-in WirePlumber (disable-source): ${WIREPLUMBER_DROPIN_DISABLE}"
     rm -f "${WIREPLUMBER_DROPIN_DISABLE}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
+# Variante --disable-output (53): simetria com o --with-wireplumber-disable-mic.
+if [[ -f "${WIREPLUMBER_DROPIN_OUTPUT}" ]]; then
+    log "removendo drop-in WirePlumber (disable-output): ${WIREPLUMBER_DROPIN_OUTPUT}"
+    rm -f "${WIREPLUMBER_DROPIN_OUTPUT}"
+    systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
+# environment.d do modo-jogo (91): artefato do hefesto — remove por simetria.
+if [[ -f "${ENVIRONMENTD_GAMEMODE}" ]]; then
+    log "removendo environment.d do modo-jogo: ${ENVIRONMENTD_GAMEMODE}"
+    rm -f "${ENVIRONMENTD_GAMEMODE}"
 fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then

@@ -639,7 +639,10 @@ else
     if [[ "${ENABLE_AUTOSTART}" -eq 1 ]]; then
         enable_daemon=1
     else
-        ask_yn "habilitar auto-start do daemon no boot?" "${AUTO_YES}" "n"
+        # Default 'y': o daemon precisa estar rodando pro controle funcionar;
+        # autostart no boot é o esperado de "instala tudo" (sem passo manual
+        # após reboot/formatar). Quem não quiser: responder 'n' (ou não usar -y).
+        ask_yn "habilitar auto-start do daemon no boot?" "${AUTO_YES}" "y"
         [[ "${REPLY,,}" =~ ^y ]] && enable_daemon=1
     fi
 

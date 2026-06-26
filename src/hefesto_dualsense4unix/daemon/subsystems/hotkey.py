@@ -84,7 +84,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     # (wire de on_next/on_prev ao ProfileManager.list_profiles/activate). Assim
     # PS+dpad volta a emular as setas normalmente. O modo-jogo segue no PS+Options.
     hotkey_config = HotkeyConfig(
-        ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 1000),
+        ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
         next_profile=(),
         prev_profile=(),
     )

@@ -42,7 +42,10 @@ PS_BUTTON = "ps"
 # botao) alterna o "modo jogo" (suprime a emulacao de mouse/teclado).
 # 0 (ou negativo) desliga o gesto — o PS solo entao so faz a acao de toque
 # curto (ex.: abrir Steam) e o modo jogo passa a ser so pelo combo.
-DEFAULT_PS_LONG_PRESS_MS = 1000
+# Default 0: o long-press estava causando modo-jogo ACIDENTAL (o toque de abrir
+# a Steam que passava de ~1s alternava o modo). O modo jogo agora e' so pelo
+# combo deliberado PS+Options. Quem quiser o gesto de volta: ps_long_press_ms>0.
+DEFAULT_PS_LONG_PRESS_MS = 0
 # FEAT-EMULATION-GAMEMODE-COMBO-01: combo que alterna o modo jogo. Default
 # PS+Options — gesto deliberado que NAO colide com o PS solo (Steam) nem com
 # next/prev (PS+dpad). Tupla vazia desliga o combo.

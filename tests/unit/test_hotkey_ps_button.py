@@ -16,7 +16,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import steam_launcher
-from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
+from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, HotkeyManager
 
 # ---------------------------------------------------------------------------
 # HotkeyManager.on_ps_solo
@@ -99,10 +99,24 @@ def test_ps_solo_readiepara_em_novo_press():
 # ---------------------------------------------------------------------------
 
 
-def test_long_press_dispara_apos_threshold():
-    """Segurar o PS por >= ps_long_press_ms (default 1s) dispara uma vez."""
+def test_long_press_desligado_por_default():
+    """Default novo (FEAT-EMULATION-GAMEMODE-COMBO-01): ps_long_press_ms=0 →
+    segurar o PS NÃO dispara long-press (modo jogo é só pelo combo PS+Options)."""
     fired: list[str] = []
     mgr = HotkeyManager(on_ps_long_press=lambda: fired.append("long"))
+    assert mgr.observe(["ps"], now=0.0) is None
+    assert mgr.observe(["ps"], now=2.0) is None  # 2s segurando, mas long-press off
+    assert fired == []
+
+
+def test_long_press_dispara_apos_threshold():
+    """Com ps_long_press_ms>0 (gesto reativado), segurar o PS >= threshold dispara
+    uma vez. O gesto não é mais default — precisa ser ligado explicitamente."""
+    fired: list[str] = []
+    mgr = HotkeyManager(
+        on_ps_long_press=lambda: fired.append("long"),
+        config=HotkeyConfig(ps_long_press_ms=1000),
+    )
     assert mgr.observe(["ps"], now=0.0) is None  # press inicial
     assert mgr.observe(["ps"], now=0.5) is None  # 500ms < 1000ms
     assert fired == []
@@ -120,6 +134,7 @@ def test_long_press_suprime_ps_solo_no_release():
     mgr = HotkeyManager(
         on_ps_solo=lambda: solo.append("solo"),
         on_ps_long_press=lambda: longp.append("long"),
+        config=HotkeyConfig(ps_long_press_ms=1000),
     )
     mgr.observe(["ps"], now=0.0)
     mgr.observe(["ps"], now=1.0)  # long-press dispara

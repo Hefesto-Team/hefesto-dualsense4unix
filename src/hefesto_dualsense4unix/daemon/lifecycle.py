@@ -87,10 +87,10 @@ class DaemonConfig:
     ps_button_command: list[str] = field(default_factory=list)
     # FEAT-EMULATION-GAMEMODE-LONGPRESS-01 — ms de hold do PS para alternar o
     # modo-jogo (supressão da emulação mouse/teclado). 0 = desliga o gesto (PS
-    # então só faz a ação solo, ex. abrir Steam). BUGFIX: antes ficava hardcoded
-    # em 1000ms no HotkeyManager (config nunca chegava lá), causando toggle
-    # acidental quando o toque de "abrir Steam" passava de ~1s.
-    ps_long_press_ms: int = 1000
+    # então só faz a ação solo, ex. abrir Steam). Default 0: o modo jogo é só
+    # pelo combo PS+Options; o long-press de 1000ms causava toggle ACIDENTAL
+    # quando o toque de "abrir Steam" passava de ~1s.
+    ps_long_press_ms: int = 0
     # BUG-RUMBLE-APPLY-IGNORED-01
     rumble_active: tuple[int, int] | None = None
     # FEAT-RUMBLE-POLICY-01
