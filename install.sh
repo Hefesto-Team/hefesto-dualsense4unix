@@ -312,6 +312,25 @@ if [[ -d "${VENV_DIR}" ]]; then
     fi
 fi
 
+# DURABILIDADE-DIST-UPGRADE-01: um full dist upgrade pode bumpar o Python do
+# sistema (ex.: 3.11 -> 3.12), quebrando o venv — o symlink bin/python passa a
+# apontar para um interpretador removido e os site-packages ficam da versão
+# antiga. O check de "home" acima só pega o caso pyenv. Aqui detectamos
+# bin/python inexecutável OU divergência de minor version e recriamos. Idempotente:
+# quando a versão bate, é no-op.
+if [[ -d "${VENV_DIR}" ]]; then
+    _sys_ver=$("${_VENV_PYTHON}" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
+    _venv_ver=$("${VENV_DIR}/bin/python" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
+    if [[ -z "${_venv_ver}" ]]; then
+        printf '      venv com Python inexecutável (provável dist upgrade) — recriando...\n'
+        rm -rf "${VENV_DIR}"
+    elif [[ -n "${_sys_ver}" ]] && [[ "${_venv_ver}" != "${_sys_ver}" ]]; then
+        printf '      venv em Python %s, sistema agora em %s — recriando...\n' \
+            "${_venv_ver}" "${_sys_ver}"
+        rm -rf "${VENV_DIR}"
+    fi
+fi
+
 if [[ ! -d "${VENV_DIR}" ]]; then
     printf '      criando venv...\n'
     "${_VENV_PYTHON}" -m venv --system-site-packages "${VENV_DIR}" 2>/dev/null

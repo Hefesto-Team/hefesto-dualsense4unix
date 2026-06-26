@@ -140,8 +140,12 @@ fi
 # ---------------------------------------------------------------------------
 # Copiar regras udev
 # ---------------------------------------------------------------------------
+# PACKAGING-UDEV-CANONICAL-FIX-01: empacota só o conjunto canônico 70/71/72.
+# As 73/74 (hotplug-GUI) foram removidas por alimentarem a re-enumeração do
+# storm -71 — paridade com scripts/install_udev.sh (que faz rm -f delas). 75/76
+# são opt-in (não devem auto-ativar via .deb).
 echo "Copiando regras udev ..."
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/73-*.rules assets/74-*.rules; do
+for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
@@ -162,7 +166,7 @@ install -Dm644 assets/hefesto-dualsense4unix.conf \
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules assets/73-*.rules assets/74-*.rules; do
+for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules; do
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
