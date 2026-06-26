@@ -2,17 +2,21 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 import glob
 import os
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.constants import ROOT_DIR
+from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
     DEFAULT_PS_LONG_PRESS_MS,
@@ -48,6 +52,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._get("emulation_combo_buffer_label").set_text(str(DEFAULT_BUFFER_MS))
         self._get("emulation_passthrough_label").set_text("Não")
         self._refresh_emulation_view()
+        self._refresh_mic_status()
 
     # --- handlers ---
 
@@ -150,6 +155,70 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._get("emulation_js_label").set_markup(
                 '<i>Nenhum /dev/input/js* detectado</i>'
             )
+
+    # --- microfone do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01) ---
+    # Liga/desliga o mic embutido reusando o mesmo caminho do CLI/install
+    # (scripts/fix_wireplumber_default_source.sh). Mic ON = sem os drop-ins de
+    # supressão 52/53; OFF = com eles. O quirk segura o storm com o mic ligado.
+
+    _WP_DROPIN_DIR = Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+    _WP_DISABLE_DROPINS = (
+        "52-hefesto-dualsense-disable-source.conf",
+        "53-hefesto-dualsense-disable-output.conf",
+    )
+
+    def _mic_script(self) -> Path | None:
+        for cand in (
+            ROOT_DIR / "scripts" / "fix_wireplumber_default_source.sh",
+            Path("/usr/share/hefesto-dualsense4unix/scripts/fix_wireplumber_default_source.sh"),
+            Path(
+                "/usr/local/share/hefesto-dualsense4unix/scripts/"
+                "fix_wireplumber_default_source.sh"
+            ),
+        ):
+            if cand.is_file():
+                return cand
+        return None
+
+    def _mic_is_on(self) -> bool:
+        """Mic ON quando nenhum drop-in de supressão (52/53) está presente."""
+        return not any(
+            (self._WP_DROPIN_DIR / name).exists() for name in self._WP_DISABLE_DROPINS
+        )
+
+    def _refresh_mic_status(self) -> None:
+        label = self._get("emulation_mic_status_label")
+        if label is None:
+            return
+        if self._mic_is_on():
+            label.set_markup('<span foreground="#2d8">ligado</span>')
+        else:
+            label.set_markup('<span foreground="#c90">desligado (suprimido)</span>')
+
+    def _run_mic(self, flag: str, done_msg: str) -> None:
+        script = self._mic_script()
+        if script is None:
+            self._toast_emulation("script do WirePlumber não encontrado")
+            return
+        self._toast_emulation("aplicando no microfone...")
+
+        def _worker() -> None:
+            with contextlib.suppress(OSError, subprocess.SubprocessError):
+                subprocess.run(["bash", str(script), flag], check=False, timeout=30)
+            GLib.idle_add(self._on_mic_done, done_msg)
+
+        _get_executor().submit(_worker)
+
+    def _on_mic_done(self, msg: str) -> bool:
+        self._refresh_mic_status()
+        self._toast_emulation(msg)
+        return False
+
+    def on_emulation_mic_on(self, _btn: Gtk.Button) -> None:
+        self._run_mic("--enable-mic", "Mic do DualSense ligado")
+
+    def on_emulation_mic_off(self, _btn: Gtk.Button) -> None:
+        self._run_mic("--disable-source", "Mic do DualSense desligado")
 
     def _toast_emulation(self, msg: str) -> None:
         bar: Any = self._get("status_bar")
