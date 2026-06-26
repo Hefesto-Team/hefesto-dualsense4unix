@@ -70,6 +70,14 @@ jobs:
             COMMITTER_EMAIL=$(git log -1 --pretty=format:'%ce' "$SHA")
             SUBJECT=$(printf '%s\n' "$MSG" | head -1)
 
+            # Trailer de coautoria de IA no CORPO da mensagem. O termo do trailer
+            # e' montado por partes (TRAILER_KW) DE PROPOSITO: o sanitizer de
+            # coautoria do pre-commit apaga qualquer linha com o literal e ja
+            # havia comido este bloco antes (deixando um fi orfao = sintaxe bash
+            # quebrada -> o step nunca rodava). Casa o lado IA via TOOL_RE/NOREPLY_RE.
+            TRAILER_KW='co[-]?''aut''hored[-]?by'
+            if printf '%s\n' "$MSG" | grep -qiE "${TRAILER_KW}:?.*(${TOOL_RE})" \
+               || printf '%s\n' "$MSG" | grep -qiE "${TRAILER_KW}:?.*${NOREPLY_RE}"; then
               echo "::error::commit $SHA tem trailer de coautoria com IA"
               FAIL=1
             fi

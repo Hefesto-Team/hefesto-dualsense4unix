@@ -87,9 +87,14 @@ check_socket() {
 }
 
 check_udev() {
+    # DOCTOR-UDEV-CANONICAL-FIX-01: o conjunto CANÔNICO pós-fix-storm é 70/71/72.
+    # As regras 73/74 (hotplug-GUI) foram REMOVIDAS por alimentarem a
+    # re-enumeração do storm -71 (install_udev.sh faz `rm -f`). Antes o doctor
+    # exigia 5 (70-74) e reportava "3/5 — faltam 73 74" PARA SEMPRE após um
+    # install limpo (falso-negativo permanente). 75 (audio-off) e 76
+    # (touchpad-ignore) são opt-in e não entram na contagem canônica.
     local r found=0 missing=""
-    local rules=(70-ps5-controller.rules 71-uinput.rules 72-ps5-controller-autosuspend.rules \
-                 73-ps5-controller-hotplug.rules 74-ps5-controller-hotplug-bt.rules)
+    local rules=(70-ps5-controller.rules 71-uinput.rules 72-ps5-controller-autosuspend.rules)
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
             found=$((found + 1))
@@ -97,23 +102,18 @@ check_udev() {
             missing+=" ${r}"
         fi
     done
-    if [[ "${found}" -eq 5 ]]; then
-        pass "5 regras udev presentes"
+    if [[ "${found}" -eq 3 ]]; then
+        pass "3 regras udev canônicas presentes (70/71/72)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
-        warn "regras udev incompletas (${found}/5) — faltam:${missing}"
+        warn "regras udev incompletas (${found}/3) — faltam:${missing}"
     fi
-    # Consistência do hotplug: 73/74 devem apontar para a unit real.
+    # 73/74 (hotplug-GUI) foram DESCONTINUADAS (amplificavam o storm -71). Se
+    # sobraram de uma instalação antiga, avisa para limpar.
     for r in 73-ps5-controller-hotplug.rules 74-ps5-controller-hotplug-bt.rules; do
-        local path=""
-        [[ -e "/etc/udev/rules.d/${r}" ]] && path="/etc/udev/rules.d/${r}"
-        [[ -z "${path}" && -e "/usr/lib/udev/rules.d/${r}" ]] && path="/usr/lib/udev/rules.d/${r}"
-        [[ -n "${path}" ]] || continue
-        if grep -q 'SYSTEMD_USER_WANTS}="hefesto-gui-hotplug.service"' "${path}" 2>/dev/null; then
-            fail "${r}: aponta para unit ERRADA (hefesto-gui-hotplug.service) — reinstale as regras (sudo bash scripts/install_udev.sh)"
-        elif grep -q "SYSTEMD_USER_WANTS}=\"${HOTPLUG_UNIT}\"" "${path}" 2>/dev/null; then
-            pass "${r}: hotplug aponta para ${HOTPLUG_UNIT}"
+        if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
+            warn "${r}: regra descontinuada presente (amplificava o storm -71) — remova: sudo bash scripts/install_udev.sh"
         fi
     done
 }
