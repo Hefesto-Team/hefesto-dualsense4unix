@@ -51,6 +51,12 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
         auto_reconnect=auto_reconnect,
+        # FEAT-EMULATION-GAMEMODE-COMBO-01: permite desligar o long-press do PS
+        # (0) e deixar o modo jogo so no combo PS+Options. Persistido via
+        # environment.d. Default 1000ms mantem compat upstream.
+        ps_long_press_ms=int(
+            os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "1000")
+        ),
     )
     daemon = Daemon(controller=controller, config=config)
 

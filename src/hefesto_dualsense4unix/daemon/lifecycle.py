@@ -85,6 +85,12 @@ class DaemonConfig:
     # FEAT-HOTKEY-STEAM-01
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
     ps_button_command: list[str] = field(default_factory=list)
+    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01 — ms de hold do PS para alternar o
+    # modo-jogo (supressão da emulação mouse/teclado). 0 = desliga o gesto (PS
+    # então só faz a ação solo, ex. abrir Steam). BUGFIX: antes ficava hardcoded
+    # em 1000ms no HotkeyManager (config nunca chegava lá), causando toggle
+    # acidental quando o toque de "abrir Steam" passava de ~1s.
+    ps_long_press_ms: int = 1000
     # BUG-RUMBLE-APPLY-IGNORED-01
     rumble_active: tuple[int, int] | None = None
     # FEAT-RUMBLE-POLICY-01
@@ -198,6 +204,12 @@ class Daemon:
         # terminou pausada (o poll loop nasce respeitando _paused).
         from hefesto_dualsense4unix.utils.session import load_paused_state
         self._paused = load_paused_state()
+        # FEAT-MOUSE-PERSIST-01: restaura a emulação de mouse se a sessão anterior
+        # a deixou ligada — antes o toggle voltava ao default (off) a cada restart
+        # do daemon (reboot, takeover, reload). Só liga; nunca força off.
+        from hefesto_dualsense4unix.utils.session import load_mouse_emulation_enabled
+        if load_mouse_emulation_enabled():
+            self.config.mouse_emulation_enabled = True
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
@@ -372,9 +384,32 @@ class Daemon:
 
         new_state = (not self._emulation_suppressed) if value is None else bool(value)
         self._emulation_suppressed = new_state
+        if new_state:
+            # FEAT-EMULATION-GAMEMODE-FLUSH-01: ao suprimir, solta tudo que estiver
+            # pressionado nos devices virtuais — senão um modificador (ex.: Meta de
+            # 'options' no PS+Options) fica preso, já que o poll loop para de
+            # despachar e nunca envia o release.
+            self._flush_emulation_devices()
         logger.info("emulation_suppressed_changed", suppressed=new_state)
         notify_emulation_suppressed(new_state)
         return new_state
+
+    def _flush_emulation_devices(self) -> None:
+        """Solta todas as teclas/botões dos devices virtuais (mouse+teclado).
+
+        Idempotente e best-effort. Usado ao ligar a supressão (modo jogo) para
+        não deixar modificador/click preso, e disponível p/ limpeza defensiva.
+        """
+        kbd = self._keyboard_device
+        if kbd is not None:
+            with contextlib.suppress(Exception):
+                kbd.dispatch(frozenset())
+        mouse = self._mouse_device
+        if mouse is not None:
+            with contextlib.suppress(Exception):
+                mouse.dispatch(
+                    lx=128, ly=128, rx=128, ry=128, l2=0, r2=0, buttons=frozenset()
+                )
 
     # ------------------------------------------------------------------
     # Métodos privados preservados para backcompat de testes
@@ -682,11 +717,22 @@ class Daemon:
                         break
                 continue
 
+            # FEAT-HOTKEY-COMBO-NO-LEAK-01: não despacha à emulação os botões de
+            # um combo de hotkey em formação (PS+Options, PS+dpad). Senão
+            # 'options'→Meta (e dpad→setas) vazam pro desktop ao usar o combo, e
+            # se a supressão ligar no mesmo tick o release nunca é enviado → o
+            # modificador trava ("Control/Meta sempre segurado").
+            emu_buttons = buttons_pressed
+            if self._hotkey_manager is not None:
+                blocked = self._hotkey_manager.combo_buttons_active(buttons_pressed)
+                if blocked:
+                    emu_buttons = buttons_pressed - blocked
+
             if self._mouse_device is not None and not self._emulation_suppressed:
-                self._dispatch_mouse_emulation(state, buttons_pressed)
+                self._dispatch_mouse_emulation(state, emu_buttons)
 
             if self._keyboard_device is not None and not self._emulation_suppressed:
-                self._dispatch_keyboard_emulation(buttons_pressed)
+                self._dispatch_keyboard_emulation(emu_buttons)
 
             if self._hotkey_manager is not None:
                 self._hotkey_manager.observe(buttons_pressed, now=tick_started)

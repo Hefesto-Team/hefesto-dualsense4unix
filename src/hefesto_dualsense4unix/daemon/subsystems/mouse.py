@@ -90,6 +90,11 @@ def start_mouse_emulation(daemon: DaemonProtocol) -> bool:
         return False
     daemon._mouse_device = device
     daemon.config.mouse_emulation_enabled = True
+    # FEAT-MOUSE-PERSIST-01: persiste o toggle p/ sobreviver a restart/reboot.
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_mouse_emulation_enabled
+
+        save_mouse_emulation_enabled(True)
     logger.info(
         "mouse_emulation_started",
         speed=daemon.config.mouse_speed,
@@ -106,6 +111,11 @@ def stop_mouse_emulation(daemon: DaemonProtocol) -> None:
         daemon._mouse_device.stop()
     daemon._mouse_device = None
     daemon.config.mouse_emulation_enabled = False
+    # FEAT-MOUSE-PERSIST-01: remove o flag para não religar no próximo boot.
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.session import save_mouse_emulation_enabled
+
+        save_mouse_emulation_enabled(False)
     logger.info("mouse_emulation_stopped")
 
 
