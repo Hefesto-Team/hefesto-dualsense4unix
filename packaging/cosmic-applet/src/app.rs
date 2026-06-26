@@ -43,6 +43,9 @@ pub struct HefestoApplet {
     profiles: Vec<ProfileInfo>,
     /// Troca de perfil em andamento (suprime cliques repetidos / mostra dica).
     switching: bool,
+    /// `true` se o mic embutido do DualSense está liberado (sem drop-ins de
+    /// supressão do WirePlumber). FEAT-DUALSENSE-MIC-TOGGLE-01.
+    mic_on: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +70,8 @@ pub enum Message {
     TogglePause,
     /// Resultado de daemon.pause/resume (novo estado de pausa).
     PauseToggled(Result<bool, IpcError>),
+    /// Liga/desliga o mic embutido do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01).
+    ToggleMic,
 }
 
 impl cosmic::Application for HefestoApplet {
@@ -92,6 +97,7 @@ impl cosmic::Application for HefestoApplet {
                 offline: false,
                 profiles: Vec::new(),
                 switching: false,
+                mic_on: mic_is_on(),
             },
             Task::none(),
         )
@@ -112,6 +118,7 @@ impl cosmic::Application for HefestoApplet {
                 let new_id = window::Id::unique();
                 self.popup = Some(new_id);
                 self.switching = false;
+                self.mic_on = mic_is_on();
 
                 let popup_settings = self.core.applet.get_popup_settings(
                     self.core.main_window_id().unwrap_or(window::Id::RESERVED),
@@ -210,6 +217,13 @@ impl cosmic::Application for HefestoApplet {
                 }
                 self.refresh_task()
             }
+
+            Message::ToggleMic => {
+                let want_on = !self.mic_on;
+                spawn_mic(want_on);
+                self.mic_on = want_on; // otimista; reconfirmado ao reabrir o popover
+                Task::none()
+            }
         }
     }
 
@@ -304,6 +318,25 @@ impl HefestoApplet {
                 .align_y(cosmic::iced::Alignment::Center),
             )
             .on_press(Message::TogglePause),
+        );
+
+        // Ação: ligar/desligar o mic embutido do DualSense (o quirk segura o storm
+        // com o mic ativo). Por padrão fica suprimido; liga sob demanda.
+        let mic_label = if self.mic_on {
+            "Desligar microfone"
+        } else {
+            "Ligar microfone"
+        };
+        content = content.push(
+            menu_button(
+                cosmic::iced::widget::row![
+                    icon::from_name("audio-input-microphone-symbolic").size(16),
+                    text::body(mic_label),
+                ]
+                .spacing(spacing.space_xs)
+                .align_y(cosmic::iced::Alignment::Center),
+            )
+            .on_press(Message::ToggleMic),
         );
 
         // Ação: abrir painel.
@@ -429,6 +462,34 @@ fn status_row<'a>(label: &'a str, value: String) -> Element<'a, Message> {
 /// Lança a GUI desacoplada do applet (best-effort; falha silenciosa).
 fn spawn_gui() {
     let _ = std::process::Command::new(GUI_BIN)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// Mic liberado quando NÃO há drop-ins de supressão (52/53) do WirePlumber.
+/// FEAT-DUALSENSE-MIC-TOGGLE-01. Leitura de filesystem (a verdade do estado).
+fn mic_is_on() -> bool {
+    let Ok(home) = std::env::var("HOME") else {
+        return false;
+    };
+    let base = std::path::Path::new(&home).join(".config/wireplumber/wireplumber.conf.d");
+    let suppressed = [
+        "52-hefesto-dualsense-disable-source.conf",
+        "53-hefesto-dualsense-disable-output.conf",
+    ]
+    .iter()
+    .any(|name| base.join(name).exists());
+    !suppressed
+}
+
+/// Liga/desliga o mic do DualSense via CLI (best-effort; falha silenciosa).
+fn spawn_mic(on: bool) {
+    let action = if on { "on" } else { "off" };
+    let _ = std::process::Command::new("hefesto-dualsense4unix")
+        .arg("mic")
+        .arg(action)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
