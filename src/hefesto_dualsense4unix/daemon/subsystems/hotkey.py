@@ -64,14 +64,41 @@ def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
 
 
 def start_hotkey_manager(daemon: DaemonProtocol) -> None:
-    """Instancia HotkeyManager e atribui a daemon._hotkey_manager."""
-    from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
+    """Instancia HotkeyManager e atribui a daemon._hotkey_manager.
 
+    BUGFIX: o HotkeyManager era criado sem config, ignorando
+    `daemon.config.ps_long_press_ms` (ficava preso no default 1000ms). Agora a
+    config do daemon é propagada — inclusive 0 = desliga o long-press do PS.
+    """
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import (
+        HotkeyConfig,
+        HotkeyManager,
+    )
+
+    # HOTKEY-NEXTPREV-DEAD-FIX-01: os combos next/prev (PS+dpad) NÃO são ligados
+    # a callback aqui (on_next/on_prev ficam None), então só faziam mal: o
+    # observe() detectava PS+dpad, disparava _fire('next'/'prev') com cb=None
+    # (no-op), suprimia as setas da emulação e ainda bloqueava o PS-solo (Steam)
+    # no release — gesto morto que comia o dpad. Desligamos os combos (tupla
+    # vazia) até que a troca de perfil por hotkey seja de fato implementada
+    # (wire de on_next/on_prev ao ProfileManager.list_profiles/activate). Assim
+    # PS+dpad volta a emular as setas normalmente. O modo-jogo segue no PS+Options.
+    hotkey_config = HotkeyConfig(
+        ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 1000),
+        next_profile=(),
+        prev_profile=(),
+    )
     daemon._hotkey_manager = HotkeyManager(
         on_ps_solo=build_ps_solo_callback(daemon),
         on_ps_long_press=build_ps_long_press_callback(daemon),
+        config=hotkey_config,
     )
-    logger.info("hotkey_manager_started", ps_button_action=daemon.config.ps_button_action)
+    logger.info(
+        "hotkey_manager_started",
+        ps_button_action=daemon.config.ps_button_action,
+        ps_long_press_ms=hotkey_config.ps_long_press_ms,
+        next_prev_combos="disabled_until_wired",
+    )
 
 
 def stop_hotkey_manager(daemon: DaemonProtocol) -> None:

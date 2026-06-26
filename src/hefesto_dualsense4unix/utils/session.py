@@ -132,11 +132,42 @@ def load_paused_state() -> bool:
         return False
 
 
+_MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
+
+
+def save_mouse_emulation_enabled(enabled: bool) -> None:
+    """Persiste se a emulação de mouse está ligada (FEAT-MOUSE-PERSIST-01).
+
+    Flag-file em config_dir (existe = ligada) para o daemon restaurar o toggle
+    após restart/reboot — antes o `mouse_emulation_enabled` voltava ao default
+    (desligado) a cada reinício do daemon. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _MOUSE_EMULATION_FLAG_FILE
+        if enabled:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("mouse_emulation_state_saved", enabled=enabled)
+    except Exception as exc:
+        logger.debug("mouse_emulation_state_save_failed", err=str(exc))
+
+
+def load_mouse_emulation_enabled() -> bool:
+    """Retorna True se a emulação de mouse foi deixada ligada na sessão anterior."""
+    try:
+        return (config_dir() / _MOUSE_EMULATION_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
 __all__ = [
     "load_last_profile",
+    "load_mouse_emulation_enabled",
     "load_paused_state",
     "read_active_marker",
     "save_active_marker",
     "save_last_profile",
+    "save_mouse_emulation_enabled",
     "save_paused_state",
 ]

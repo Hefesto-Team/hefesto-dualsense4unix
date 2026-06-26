@@ -37,7 +37,13 @@ DEFAULT_COMBO_PREV = ("ps", "dpad_down")
 PS_BUTTON = "ps"
 # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: segurar o PS por este tempo (sem outro
 # botao) alterna o "modo jogo" (suprime a emulacao de mouse/teclado).
+# 0 (ou negativo) desliga o gesto — o PS solo entao so faz a acao de toque
+# curto (ex.: abrir Steam) e o modo jogo passa a ser so pelo combo.
 DEFAULT_PS_LONG_PRESS_MS = 1000
+# FEAT-EMULATION-GAMEMODE-COMBO-01: combo que alterna o modo jogo. Default
+# PS+Options — gesto deliberado que NAO colide com o PS solo (Steam) nem com
+# next/prev (PS+dpad). Tupla vazia desliga o combo.
+DEFAULT_COMBO_GAMEMODE = ("ps", "options")
 
 
 @dataclass
@@ -47,6 +53,7 @@ class HotkeyConfig:
     prev_profile: tuple[str, ...] = DEFAULT_COMBO_PREV
     passthrough_in_emulation: bool = False
     ps_long_press_ms: int = DEFAULT_PS_LONG_PRESS_MS
+    gamemode_toggle: tuple[str, ...] = DEFAULT_COMBO_GAMEMODE
 
 
 @dataclass
@@ -61,6 +68,11 @@ class HotkeyManager:
 
     _first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
     _last_fired: frozenset[str] | None = None
+    # FEAT-HOTKEY-COMBO-NO-LEAK-02 (latch): membros de um combo PS+X ficam
+    # bloqueados da emulação até serem TODOS soltos — não só enquanto o PS
+    # estiver pressionado. Fecha o leak de Meta na ordem de release (soltar o
+    # PS antes do Options ao alternar o modo-jogo virava um tap de Meta).
+    _combo_latch: set[str] = field(default_factory=set)
 
     # Estado do PS solo (FEAT-HOTKEY-STEAM-01):
     # _ps_pressed_at: timestamp do primeiro observe em que PS apareceu.
@@ -89,6 +101,13 @@ class HotkeyManager:
             "next": frozenset(b.lower() for b in self.config.next_profile),
             "prev": frozenset(b.lower() for b in self.config.prev_profile),
         }
+        # FEAT-EMULATION-GAMEMODE-COMBO-01: combo (default PS+Options) alterna o
+        # modo jogo. So registrado se nao-vazio — frozenset() vazio e' subconjunto
+        # de tudo e dispararia a cada tick.
+        if self.config.gamemode_toggle:
+            combos["gamemode"] = frozenset(
+                b.lower() for b in self.config.gamemode_toggle
+            )
 
         # Esquece registros cujo combo não esta mais pressionado
         stale = [key for key in self._first_seen_at if not key.issubset(buttons)]
@@ -146,7 +165,8 @@ class HotkeyManager:
             if self._ps_pressed_at is None:
                 self._ps_pressed_at = t
             elif (
-                not self._ps_long_press_fired
+                self.config.ps_long_press_ms > 0
+                and not self._ps_long_press_fired
                 and not self._ps_combo_fired
                 and (t - self._ps_pressed_at) * 1000 >= self.config.ps_long_press_ms
             ):
@@ -208,15 +228,62 @@ class HotkeyManager:
         if not emulation_active or self.config.passthrough_in_emulation:
             return True
         buttons = frozenset(str(b).lower() for b in pressed)
-        for combo_tuple in (self.config.next_profile, self.config.prev_profile):
+        for combo_tuple in (
+            self.config.next_profile,
+            self.config.prev_profile,
+            self.config.gamemode_toggle,
+        ):
+            if not combo_tuple:
+                continue
             combo = frozenset(b.lower() for b in combo_tuple)
             if combo.issubset(buttons):
                 return False
         return True
 
+    def combo_buttons_active(self, pressed: Iterable[str]) -> frozenset[str]:
+        """Botões a NÃO despachar à emulação por pertencerem a um combo PS+X.
+
+        FEAT-HOTKEY-COMBO-NO-LEAK-01/02. O poll loop subtrai este conjunto dos
+        botões enviados à emulação de mouse/teclado — senão 'options'→Meta e
+        dpad→setas vazam pro desktop ao usar um combo (PS+Options, PS+dpad),
+        podendo travar o modificador se a supressão ligar no mesmo tick.
+
+        LATCH (no-leak-02): um membro entra no latch quando o combo está "em
+        formação" (PS + membro pressionados juntos) e SÓ sai quando é solto —
+        não quando o PS é solto. Fecha o leak de ordem-de-release: ao alternar
+        o modo-jogo com PS+Options e soltar o PS ANTES do Options, o 'options'
+        continua latchado (bloqueado) até ser solto, em vez de virar um tap de
+        Meta para o COSMIC no tick seguinte.
+        """
+        buttons = frozenset(str(b).lower() for b in pressed)
+        # 1. Enquanto o combo se forma (PS + membro juntos), latcha os membros.
+        if PS_BUTTON in buttons:
+            for combo_tuple in (
+                self.config.next_profile,
+                self.config.prev_profile,
+                self.config.gamemode_toggle,
+            ):
+                if not combo_tuple:
+                    continue
+                combo = frozenset(b.lower() for b in combo_tuple)
+                if PS_BUTTON not in combo:
+                    continue
+                self._combo_latch |= {b for b in combo if b in buttons}
+        # 2. Release = unlatch: solta do latch o que não está mais pressionado.
+        self._combo_latch &= buttons
+        # 3. Bloqueia da emulação tudo que segue latchado (e pressionado).
+        return frozenset(self._combo_latch)
+
     def _fire(self, name: str, combo: frozenset[str]) -> None:
         logger.info("hotkey_fired", combo=name, buttons=sorted(combo))
-        cb = self.on_next if name == "next" else self.on_prev
+        # FEAT-EMULATION-GAMEMODE-COMBO-01: o combo gamemode reaproveita o
+        # callback de long-press (toggle da supressao da emulacao).
+        if name == "gamemode":
+            cb = self.on_ps_long_press
+        elif name == "next":
+            cb = self.on_next
+        else:
+            cb = self.on_prev
         if cb is None:
             return
         try:
@@ -254,6 +321,7 @@ class HotkeyManager:
 
 __all__ = [
     "DEFAULT_BUFFER_MS",
+    "DEFAULT_COMBO_GAMEMODE",
     "DEFAULT_COMBO_NEXT",
     "DEFAULT_COMBO_PREV",
     "DEFAULT_PS_LONG_PRESS_MS",

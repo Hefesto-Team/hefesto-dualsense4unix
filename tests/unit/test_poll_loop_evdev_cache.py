@@ -255,7 +255,6 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
         "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0
     )
     n_ticks = 5
-    botoes_esperados = frozenset(["cross", "ps"])
 
     fc = FakeController(transport="usb", states=_mk_states(n_ticks * 4))
     mock_evdev = MagicMock()
@@ -267,10 +266,16 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
 
     from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 
-    class _SpyHotkey(HotkeyManager):
-        def observe(self, pressed: Any, *, now: Any = None) -> Any:  # type: ignore[override]
-            hotkey_observes.append(frozenset(pressed))
-            return super().observe(pressed, now=now)
+    # O daemon cria o próprio HotkeyManager em run() (start_hotkey_manager), então
+    # espionamos o método real em vez de injetar uma instância (que seria
+    # sobrescrita). Assim testamos o wiring de verdade.
+    _orig_observe = HotkeyManager.observe
+
+    def _spy_observe(self: Any, pressed: Any, *, now: Any = None) -> Any:
+        hotkey_observes.append(frozenset(pressed))
+        return _orig_observe(self, pressed, now=now)
+
+    monkeypatch.setattr(HotkeyManager, "observe", _spy_observe)
 
     dispatch_buttons: list[frozenset[str]] = []
     mock_mouse = MagicMock()
@@ -290,7 +295,6 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
             keyboard_emulation_enabled=False,
         ),
     )
-    daemon._hotkey_manager = _SpyHotkey()
     daemon._mouse_device = mock_mouse
 
     run_task = asyncio.create_task(daemon.run())
@@ -301,10 +305,19 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
     ticks = daemon.store.counter("poll.tick")
     assert ticks >= n_ticks
 
-    # Hotkey e mouse receberam os mesmos botões em todos os ticks.
-    assert all(b == botoes_esperados for b in hotkey_observes), (
+    # FEAT-HOTKEY-COMBO-NO-LEAK-01/02: observe() SEMPRE recebe o conjunto
+    # completo (precisa do 'ps' para detectar combos), mas a emulação NÃO recebe
+    # os membros de um combo PS+X. Aqui 'ps' é membro dos combos (PS+Options
+    # etc.) e fica latchado enquanto pressionado, então mouse.dispatch recebe só
+    # {cross} — o 'ps' não vaza para a emulação.
+    observe_esperado = frozenset(["cross", "ps"])
+    dispatch_esperado = frozenset(["cross"])
+    assert hotkey_observes, "hotkey_manager.observe nunca foi chamado"
+    assert all(b == observe_esperado for b in hotkey_observes), (
         f"hotkey_manager recebeu botões incorretos: {hotkey_observes[:3]!r}"
     )
-    assert all(b == botoes_esperados for b in dispatch_buttons), (
-        f"mouse.dispatch recebeu botões incorretos: {dispatch_buttons[:3]!r}"
+    assert dispatch_buttons, "mouse.dispatch nunca foi chamado"
+    assert all(b == dispatch_esperado for b in dispatch_buttons), (
+        f"mouse.dispatch recebeu botões incorretos (ps deve ser latchado): "
+        f"{dispatch_buttons[:3]!r}"
     )
