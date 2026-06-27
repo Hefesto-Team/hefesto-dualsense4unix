@@ -254,10 +254,17 @@ jobs:
         include:
           - distro: fedora-40
             image: fedora:40
-            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify
+            # python3-evdev (precompilado p/ o Python do Fedora) satisfaz evdev>=1.6
+            # sem build; gcc/python3-devel/systemd-devel ficam de fallback se o pip
+            # decidir compilar o sdist (BUG-CI-SMOKE-EVDEV-NO-GCC-01).
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify python3-evdev gcc python3-devel systemd-devel
           - distro: archlinux
             image: archlinux:latest
-            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify
+            # Arch já está em Python 3.14: evdev (sdist) e pydantic-core (Rust) podem
+            # não ter wheel no PyPI p/ 3.14 → instala os compilados pelo próprio Arch
+            # (precompilados p/ 3.14) p/ satisfazer evdev>=1.6 e pydantic>=2 sem build;
+            # base-devel é fallback de gcc (BUG-CI-SMOKE-EVDEV-NO-GCC-01).
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core base-devel
           - distro: debian-12
             image: debian:12
             install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin
