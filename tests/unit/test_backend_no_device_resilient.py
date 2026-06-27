@@ -1,9 +1,13 @@
 """Testes do backend resiliente quando o DualSense não está plugado.
 
 Cobre BUG-DAEMON-NO-DEVICE-FATAL-01: `PyDualSenseController.connect()`
-deixa de relançar `Exception("No device detected")` e marca estado
-offline-OK; setters viram no-op; `read_state()` devolve snapshot neutro;
-hot-reconnect funciona quando o controle aparece depois.
+trata ausência de controle como estado offline-OK (sem propagar), setters
+viram no-op, `read_state()` devolve snapshot neutro, e o hot-reconnect funciona
+quando o controle aparece depois.
+
+FEAT-DSX-MULTI-CONTROLLER-01: o `connect()` virou um tick de reconciliação de
+hotplug. A presença de controles é dirigida por `_enumerate_device_keys()` e a
+abertura individual por `_open_one()` — ambos seams de teste.
 """
 from __future__ import annotations
 
@@ -35,23 +39,15 @@ class _FakePydualsense:
 
 
 class TestConnectResiliente:
-    def test_connect_swallows_no_device_detected_marks_offline(self) -> None:
-        """Quando pydualsense.init() levanta `Exception("No device detected")`,
-        o backend marca _offline=True e retorna sem propagar."""
+    def test_connect_sem_device_marca_offline(self) -> None:
+        """Sem nenhum DualSense (`_enumerate_device_keys()` vazio), o backend
+        marca _offline=True e retorna sem propagar."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
-        class _FakeDs:
-            connected = False
-
-            def init(self) -> None:
-                raise Exception("No device detected")
-
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            return_value=_FakeDs(),
+        with patch.object(
+            PyDualSenseController, "_enumerate_device_keys", return_value=[]
         ):
-            # Não deve levantar.
-            inst.connect()
+            inst.connect()  # não deve levantar
 
         assert inst._offline is True
         assert inst._ds is None
@@ -59,16 +55,17 @@ class TestConnectResiliente:
 
     def test_connect_propaga_outras_excecoes(self) -> None:
         """Erros distintos de "No device detected" continuam propagando para
-        o `connect_with_retry` fazer backoff."""
+        o `connect_with_retry` fazer backoff (ex.: permissão hidraw)."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
-        class _FakeDs:
-            def init(self) -> None:
-                raise RuntimeError("hidraw permission denied")
-
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            return_value=_FakeDs(),
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[("mac1", b"/dev/hidraw0", False)],
+        ), patch.object(
+            PyDualSenseController,
+            "_open_one",
+            side_effect=RuntimeError("hidraw permission denied"),
         ):
             try:
                 inst.connect()
@@ -107,7 +104,7 @@ class TestSettersOffline:
         from hefesto_dualsense4unix.core.controller import TriggerEffect
 
         inst = PyDualSenseController(evdev_reader=_null_evdev())
-        # _ds=None → caminho offline.
+        # sem handles → caminho offline.
 
         # Não deve levantar nem chamar nada do pydualsense.
         inst.set_trigger("left", TriggerEffect(mode=0))
@@ -123,34 +120,27 @@ class TestSettersOffline:
 
 class TestHotReconnect:
     def test_connect_apos_offline_recupera_quando_device_aparece(self) -> None:
-        """Sequência: 1ª connect → "No device detected" (offline);
+        """Sequência: 1ª connect → sem device (offline);
         2ª connect → device aparece, _offline limpa e _ds populado."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
         # 1ª chamada — sem device.
-        class _MissingDs:
-            connected = False
-
-            def init(self) -> None:
-                raise Exception("No device detected")
-
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            return_value=_MissingDs(),
+        with patch.object(
+            PyDualSenseController, "_enumerate_device_keys", return_value=[]
         ):
             inst.connect()
         assert inst._offline is True
         assert inst._ds is None
 
-        # 2ª chamada — device aparece. Usa um stub que detect_transport aceita.
+        # 2ª chamada — device aparece. Stub que _detect_transport aceita.
         present = _FakePydualsense()
-        # Atributo conType com .name='USB' para _detect_transport reconhecer.
         present.conType = type("CT", (), {"name": "USB"})()  # type: ignore[attr-defined]
 
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            return_value=present,
-        ):
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[("mac1", b"/dev/hidraw0", False)],
+        ), patch.object(PyDualSenseController, "_open_one", return_value=present):
             inst.connect()
 
         assert inst._offline is False
@@ -167,7 +157,6 @@ class TestHotReconnect:
 
         reader = EvdevReader(device_path=None)
         reader._device_path = None  # boot offline: nenhum evdev encontrado
-        # Simula o evdev surgindo quando o controle conecta (hotplug).
         reader._find_device = MagicMock(  # type: ignore[method-assign]
             return_value=Path("/dev/input/event2")
         )
@@ -178,10 +167,11 @@ class TestHotReconnect:
         present = _FakePydualsense()
         present.conType = type("CT", (), {"name": "USB"})()  # type: ignore[attr-defined]
 
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            return_value=present,
-        ):
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[("mac1", b"/dev/hidraw0", False)],
+        ), patch.object(PyDualSenseController, "_open_one", return_value=present):
             inst.connect()
 
         reader._find_device.assert_called_once()
@@ -189,21 +179,23 @@ class TestHotReconnect:
         reader.start.assert_called_once()
 
     def test_connect_idempotente_quando_ja_conectado(self) -> None:
-        """connect() chamado novamente quando já conectado é no-op
-        (não tenta reinicializar pydualsense)."""
+        """connect() para um controle já presente não o reabre (não chama
+        `_open_one`) — apenas reconcilia."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
         present = _FakePydualsense()
-        inst._ds = present  # type: ignore[assignment]
+        inst._handles = {"mac1": present}  # type: ignore[dict-item]
+        inst._primary_key = "mac1"
         inst._offline = False
 
-        # Patch para falhar se invocado — provando que connect() retorna cedo.
-        def _explode() -> None:
-            raise AssertionError("pydualsense() não deveria ser invocado")
+        def _explode(*_a: object, **_k: object) -> None:
+            raise AssertionError("_open_one não deveria ser invocado")
 
-        with patch(
-            "hefesto_dualsense4unix.core.backend_pydualsense.pydualsense",
-            side_effect=_explode,
-        ):
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[("mac1", b"/dev/hidraw0", False)],
+        ), patch.object(PyDualSenseController, "_open_one", side_effect=_explode):
             inst.connect()
 
         assert inst._ds is present
+        assert inst._primary_key == "mac1"

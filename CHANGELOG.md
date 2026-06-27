@@ -3,7 +3,25 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
-## [Unreleased]
+## [3.9.0] — 2026-06-27
+
+### Added
+
+- **Troca de perfil por hotkey no controle (PS + D-pad)**: `PS + ↑` vai pro
+  próximo perfil e `PS + ↓` pro anterior (com wrap-around), aplicando
+  triggers/LEDs/key_bindings pelo mesmo caminho do `profile.switch` (IPC). Como
+  feedback in-hand, o lightbar pisca antes de pintar a cor do perfil novo. Antes
+  os combos ficavam `disabled_until_wired` (disparavam com callback nulo mas ainda
+  comiam o D-pad); agora trocam de verdade e a aba Emulação anuncia o combo em vez
+  de "em desenvolvimento". Gesto explícito arma um lock manual contra o autoswitch.
+  (FEAT-HOTKEY-PROFILE-CYCLE-01)
+- **Watchdog de evdev obsoleto (auto-cura do "controle morto sem erro")**: após
+  uma re-enumeração do controle (storm -71 / replug rápido) o kernel cria um novo
+  `/dev/input/eventN`, mas o `read_loop` podia seguir preso no fd antigo **sem
+  receber ENODEV** — controle morto sem nenhum erro logado. O poll loop agora
+  cruza HID × evdev: com o HID conectado, se o node canônico do evdev mudou,
+  reabre o reader. É **idle-safe** — só dispara por troca real de node, nunca por
+  ociosidade (ficar parado não reabre nada). (FEAT-DSX-EVDEV-WATCHDOG-01)
 
 ### Changed
 
@@ -18,15 +36,98 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 - **Auto-start do daemon no boot agora é default no install** (`install.sh` sem
   `--no-...`/com `--yes` habilita): o controle só funciona com o daemon rodando;
   exigir passo manual após cada boot/formatação contrariava "instala tudo".
+- **Seletor de gamepad da aba Emulação realça o modo ativo**: o botão do modo
+  atual (Desligado / DualSense (PS) / Xbox 360) fica destacado em roxo (classe
+  `.hefesto-active-mode`, mesmo visual da política de rumble), refletindo o estado
+  vindo do daemon — antes nada indicava qual estava selecionado.
 
 ### Fixed
 
+- **Daemon órfão disputando o socket IPC** (GUI/applet/CLI falando com o daemon
+  errado → "nada aplica"): o lock de instância única do daemon era sempre
+  `"daemon"`, então um daemon de socket ISOLADO (`run.sh --fake`, smoke) fazia
+  SIGTERM-takeover do daemon de PRODUÇÃO; o systemd ressuscitava o real e sobravam
+  daemons órfãos em ping-pong. Agora **(1)** o nome do lock é derivado do socket
+  (fake/smoke/custom ganham pid-lock isolado e NUNCA matam o real;
+  `single_instance_name()`), e **(2)** o `run.sh` se recusa a subir um daemon de
+  PRODUÇÃO quando o serviço do systemd já está ativo (use `--fake`, pare o serviço,
+  ou `--force`). (BUG-MULTI-INSTANCE-ISOLATED-SOCKET-01, BUG-MULTI-INSTANCE-RUNSH-GUARD-01)
+- **Controle MORTO no jogo mesmo com gatilhos/cores aplicados** (regressão de
+  gameplay): o forward do gamepad virtual no poll loop estava DENTRO dos dois
+  gates de emulação de desktop — `_paused` (via o `continue` do gate de pausa) e
+  `_emulation_suppressed` (via `emu_active`). Como o controle físico fica
+  EVIOCGRAB-grabado quando o gamepad está ligado (fonte única), entrar em "modo
+  jogo", pausar, ou renascer pausado no boot deixava o jogo sem ver NADA: real
+  escondido + virtual mudo. Agora o forward do gamepad é gateado SÓ pelo
+  grace-period (anti-ghost-input) e independe de pausa/supressão; mouse/teclado
+  seguem suspensos no modo jogo. (FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01)
+- **GUI "Modo jogo" usava `daemon.pause` (persistente) → controle nascia morto
+  após reboot**: o botão (e o applet COSMIC) agora usam `daemon.emulation.suppress`
+  (transitório, paridade com o combo PS+Options), que NÃO persiste `paused.flag`.
+  O label "Modo jogo" passa a refletir o estado certo e o tooltip deixou de
+  mentir. (FEAT-DSX-GAMEMODE-SUPPRESS-01)
+- **Daemon a 100% de CPU e inresponsivo ("os botões não aplicam")**: cada
+  desconexão normal de cliente IPC (a GUI/applet fecham o socket no timeout de
+  0,25s) levantava `BrokenPipeError`/`ConnectionResetError` no `writer.drain()`,
+  logado com `exc_info=True` → o ConsoleRenderer renderizava um traceback rico COM
+  locals (todo o grafo do daemon) a ~5×/s, fritando uma CPU e despejando ~950
+  linhas/s no journal numa espiral. Agora desconexão de cliente é logada em
+  `debug` sem traceback. (BUG-IPC-DISCONNECT-STORM-01)
+- **Rodapé "Aplicar" nunca aplicava os key_bindings editados na aba Teclado**:
+  `to_ipc_dict()` omitia `key_bindings` e o `DraftApplier` não tinha seção de
+  teclado — só `profile.switch` empurrava bindings ao device. Agora "Aplicar"
+  resolve e aplica os bindings ao device vivo (None → DEFAULT_BUTTON_BINDINGS;
+  dict → override) sem reativar perfil. (BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01)
+- **"Aplicar"/"Parar" do Rumble matavam o rumble do JOGO**: "Aplicar" com sliders
+  em 0 (o default) gravava `rumble_active=(0,0)`, reasserido a 5Hz, sobrescrevendo
+  a vibração in-game. Agora (0,0) vira passthrough (`rumble_active=None` — o jogo
+  controla), e há um botão **"Devolver rumble ao jogo"** na aba Rumble (antídoto
+  do "Parar", antes só acessível pela CLI). (BUG-RUMBLE-APPLY-KILLS-GAME-01,
+  FEAT-RUMBLE-PASSTHROUGH-GUI-01)
+- **`run.sh --fake` sequestrava o socket de PRODUÇÃO**: o modo fake (setters
+  no-op, sem HID/evdev) não isolava o socket IPC e, via single-instance "última
+  vence", tomava o lugar do daemon real — GUI/applet/CLI passavam a falar com um
+  daemon fake e "nada aplicava" no controle. Agora isola o socket como o `--smoke`
+  já fazia. (BUG-RUN-FAKE-HIJACK-PROD-SOCKET-01)
+- **Ligar o Mic do DualSense podia reabrir o storm -71 sem aviso**: a GUI/applet/
+  CLI removiam a supressão do WirePlumber sem checar o quirk de áudio USB. Agora
+  avisam (sem bloquear) quando o quirk não está ativo na sessão, e o `install.sh`
+  recomenda aplicá-lo. Não mexe no cmdline (gerido pela toolchain pessoal).
+  (BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01)
+- **Suíte de testes não era hermética e falhava na máquina do mantenedor**: os
+  testes liam o `~/.config/hefesto-dualsense4unix` REAL (flags de sessão de
+  gamepad/mouse/pause, perfis); numa máquina com a emulação de gamepad LIGADA de
+  verdade, 3 testes de dispatch de mouse/teclado falhavam (a CI passava só por
+  rodar em HOME limpo). O `conftest` agora isola `XDG_CONFIG_HOME`/data/cache/
+  state por teste. (BUG-TEST-CONFIG-LEAK-01)
+- **mypy quebrava o gate de CI**: 2 erros novos no `backend_pydualsense.py`
+  (subclasse de `pydualsense` Any + anotação de retorno faltando) e 6 legados em
+  `trigger_effects.py` (`arg-type`) e `tray.py`
+  (`func-returns-value`/`unused-ignore`) — todos corrigidos; `mypy src` limpo.
+- **Botões da aba Emulação não faziam nada ao clicar** (gamepad/máscara,
+  pausar/retomar, Steam Input e mic): os `<signal handler="...">` existiam no
+  `main.glade`, mas as chaves não tinham sido adicionadas ao dict de
+  `builder.connect_signals()`. Como o app fia sinais por dict explícito (não por
+  `self`), o GTK não achava o callback e o clique era no-op. Adicionadas as 9
+  entradas faltantes + teste estático (`test_glade_signal_handlers.py`) que trava
+  a regressão garantindo que todo `handler` do glade esteja registrado.
+  (BUG-GUI-EMULATION-HANDLERS-UNWIRED-01)
 - **`uninstall.sh` assimétrico**: passa a remover o drop-in WirePlumber **53**
   (disable-output, gerado junto do 52) e o **91** do `environment.d` (modo-jogo) —
   antes ficavam órfãos. Mantém o princípio de uninstall simétrico ao install.
 
 ### Added
 
+- **Suporte a MÚLTIPLOS DualSense conectados** (FEAT-DSX-MULTI-CONTROLLER-01): os
+  gatilhos adaptativos, lightbar, rumble e o **perfil ativo** passam a ser aplicados a
+  **TODOS** os controles conectados, com **hotplug** (plugou, já recebe o perfil). A
+  emulação (mouse / gamepad virtual / teclado) permanece no **controle primário** (um
+  só leitor/grab, sem duplicação). O backend HID foi reescrito de single para
+  multi-device: um handle por controle, aberto por `path` via hidapi e indexado pelo
+  serial/MAC (a `pydualsense` não é multi-device nativa), com fan-out de escrita e
+  reconciliação de hotplug no `connect()`. `controller.list` (IPC) agora lista os N
+  controles. (Limitações conhecidas documentadas na sprint: modo-jogo + gamepad virtual,
+  e coordenação inputoutput do primário com 2+ controles.)
 - **Toggle do microfone do DualSense (liga só quando precisar)**: o mic embutido
   vem suprimido por padrão (não vira microfone padrão / sem spam), e agora há como
   ligá-lo sob demanda para jogos que pedem mic — o quirk segura o storm com o mic
@@ -43,6 +144,35 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   única fonte de cursor. Não-destrutiva e reversível (remover o arquivo).
   Trigger de `input` aplicado; vale de fato após replug/relogin do controle.
   (FEAT-DUALSENSE-TOUCHPAD-IGNORE-01)
+- **Touchpad move o cursor (fonte única, suave)**: complementa a regra 76 — agora
+  que o libinput ignora o touchpad, o próprio daemon lê o `event14`
+  (`ABS_X`/`ABS_Y` + `BTN_TOUCH`) e o converte em movimento do cursor (REL_X/REL_Y
+  via mouse virtual). Como há **uma só fonte** de ponteiro, acaba o "engasgo" da
+  briga libinput×emulação. Acumula o delta por tick com **carry sub-pixel** (sem
+  travadas em movimento lento) e escala por `mouse_speed`. Respeita o modo-jogo:
+  o cursor só anda quando a emulação está ligada e não-suprimida; ao suprimir
+  (PS+Options) o movimento acumulado é descartado para o cursor não "pular" ao
+  religar. Levantar e reapoiar o dedo não causa salto. (FEAT-DSX-TOUCHPAD-CURSOR-B4)
+- **Gamepad virtual com máscara DualSense ou Xbox (integrado ao daemon)**: o
+  bridge — antes um processo CLI avulso (`emulate xbox360`) que abria um SEGUNDO
+  leitor do controle e causava **input dobrado** — virou um subsystem do daemon
+  (1 leitor → fan-out). Duas máscaras: **DualSense** (VID/PID Sony, prompts de
+  PlayStation, default) e **Xbox 360** (fallback p/ jogos XInput-only). Faz
+  `EVIOCGRAB` do controle real enquanto ativo (o jogo vê só o virtual, sem
+  duplicar) e é mutuamente exclusivo com a emulação de mouse. Liga/desliga +
+  máscara persistem no boot. Exposto na CLI `hefesto-dualsense4unix gamepad
+  on|off|status [--flavor dualsense|xbox]`, no IPC `gamepad.emulation.set` e na
+  aba Emulação da GUI. (FEAT-DSX-GAMEPAD-FLAVOR-01)
+- **GUI auto-suficiente: botões de gamepad, modo-jogo e Steam Input**: a aba
+  Emulação agora liga/desliga o gamepad virtual (Desligado/DualSense/Xbox),
+  pausa/retoma a emulação (modo jogo, via `daemon.pause`/`resume`) e verifica/
+  desliga o Steam Input (que conflita com o daemon) — tudo sem precisar do
+  terminal. (FEAT-DSX-GUI-SELF-SUFFICIENT-01)
+- **Storm-watch opt-in (`--with-storm-watch`)**: serviço de usuário que registra
+  o storm USB (-71) num log dedicado e legível
+  (`~/.local/state/hefesto-dualsense4unix/storm.log`), replicável e sobrevivente
+  a reboot (sem `/tmp`, sem sudo). O journald já guarda tudo; isto é só um recorte
+  fácil de ler. Simétrico no uninstall. (FEAT-DSX-STORM-WATCH-01)
 
 ## [3.8.3] — 2026-06-26
 

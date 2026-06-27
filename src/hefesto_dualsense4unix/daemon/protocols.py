@@ -57,6 +57,8 @@ class DaemonProtocol(Protocol):
     _autoswitch: Any
     _mouse_device: Any
     _keyboard_device: Any
+    # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (UinputGamepad) ou None.
+    _gamepad_device: Any
     _hotkey_manager: Any
     _audio: Any
     _plugins_subsystem: Any
@@ -120,6 +122,10 @@ class DaemonProtocol(Protocol):
         scroll_speed: int | None = None,
     ) -> bool:
         """Liga/desliga emulação de mouse e ajusta velocidades."""
+        ...
+
+    def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
+        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...
 
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:

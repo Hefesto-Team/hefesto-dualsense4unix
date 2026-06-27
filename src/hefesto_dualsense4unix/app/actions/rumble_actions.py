@@ -21,6 +21,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
+    rumble_passthrough,
     rumble_policy_custom,
     rumble_policy_set,
     rumble_set,
@@ -252,6 +253,21 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._set_scales(0, 0)
         rumble_stop()
         self._toast_rumble("Rumble parado")
+
+    def on_rumble_passthrough(self, _btn: Gtk.Button) -> None:
+        """Devolve o controle da vibração ao JOGO (FEAT-RUMBLE-PASSTHROUGH-GUI-01).
+
+        Chama rumble.passthrough(True): o daemon zera rumble_active (None) e o poll
+        loop PARA de re-afirmar (0,0), deixando o jogo controlar os motores. É o
+        antídoto do 'Parar' (que fixa silêncio). Sem este botão, depois de 'Parar'
+        só dava pra devolver o rumble pela CLI — a auditoria flagou a lacuna de
+        auto-suficiência.
+        """
+        self._set_scales(0, 0)
+        ok = rumble_passthrough(True)
+        self._toast_rumble(
+            "Rumble devolvido ao jogo" if ok else "Falha (daemon offline?)"
+        )
 
     # --- refresh do draft ---
 

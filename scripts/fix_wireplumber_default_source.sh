@@ -222,7 +222,29 @@ restart_wireplumber() {
     fi
 }
 
+# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
+# (usbcore.quirks=054c:0ce6:gn) é o que segura o "storm -71" COM o mic ligado.
+# Só ATIVO (/proc/cmdline) ou armado em RUNTIME (sysfs) protege a SESSÃO ATUAL —
+# o agendado no bootloader (kernelstub/grub) só vale no PRÓXIMO boot, então não
+# conta aqui. Espelha o check_usb_quirk do doctor.sh, restrito aos dois sinais
+# que valem agora. Retorna 0 se ativo nesta sessão.
+usb_quirk_active_session() {
+    local marker="054c:0ce6:gn"
+    grep -q "${marker}" /proc/cmdline 2>/dev/null && return 0
+    { [[ -r /sys/module/usbcore/parameters/quirks ]] \
+        && grep -q "${marker}" /sys/module/usbcore/parameters/quirks 2>/dev/null; } && return 0
+    return 1
+}
+
 enable_mic_dualsense() {
+    # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: ligar o mic SEM o quirk de áudio USB
+    # ativo nesta sessão pode REABRIR o storm -71 (o controle começa a cair no
+    # meio do jogo). Avisamos no stderr e PROSSEGUIMOS — a usuária pode querer o
+    # mic mesmo assim. NÃO tocamos no cmdline (gerido pela toolchain pessoal).
+    if ! usb_quirk_active_session; then
+        printf '[wp-fix] AVISO: ligar o mic do DualSense SEM o quirk de áudio USB ativo nesta sessão pode REABRIR o storm -71 (o controle cai no meio do jogo).\n' >&2
+        printf '[wp-fix]        fix: aplique o quirk com `scripts/install_usb_quirk.sh` (efetivo só no próximo boot/replug).\n' >&2
+    fi
     # Remove os drop-ins que suprimem/desabilitam o mic do DualSense, deixando-o
     # utilizável e elegível como fonte padrão (a persistência do default fica por
     # conta do estado do WirePlumber + profile pro-audio do card). Idempotente.

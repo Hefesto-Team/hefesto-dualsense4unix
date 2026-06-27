@@ -58,6 +58,12 @@ DEFAULT_POLL_HZ = 60
 #: latência percebida até o input ficar responsivo.
 INPUT_GRACE_SEC: float = 0.3
 
+#: FEAT-DSX-EVDEV-WATCHDOG-01: intervalo entre checagens de "node de evdev
+#: obsoleto" no poll loop. Cada checagem escaneia /dev/input, então não roda
+#: todo tick; 2s é folgado o bastante para não pesar e rápido para recuperar o
+#: controle logo após uma re-enumeração (storm -71 / replug).
+EVDEV_WATCHDOG_SEC: float = 2.0
+
 
 # ---------------------------------------------------------------------------
 # DaemonConfig
@@ -78,6 +84,12 @@ class DaemonConfig:
     mouse_emulation_enabled: bool = False
     mouse_speed: int = 6
     mouse_scroll_speed: int = 1
+    # FEAT-DSX-GAMEPAD-FLAVOR-01 — gamepad virtual integrado ao daemon (1 leitor
+    # → fan-out, sem o conflito de 2 leitores do `emulate xbox360` avulso).
+    # Mutuamente exclusivo com mouse_emulation: ligar o gamepad desliga o mouse
+    # (jogar = controle vai pro jogo, não pro cursor). flavor: dualsense|xbox.
+    gamepad_emulation_enabled: bool = False
+    gamepad_flavor: str = "dualsense"
     # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
     # do DualSense. Default True: infraestrutura já sobe com os bindings
     # default (Options/Share/L1/R1). Sub-sprints futuras expõem UI+persist.
@@ -132,6 +144,9 @@ class Daemon:
     _autoswitch: Any = None
     _mouse_device: Any = None
     _keyboard_device: Any = None
+    # FEAT-DSX-GAMEPAD-FLAVOR-01 — UinputGamepad criado em runtime por
+    # start_gamepad_emulation; None quando o gamepad virtual está desligado.
+    _gamepad_device: Any = None
     _hotkey_manager: Any = None
     # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: quando True, o poll loop não despacha
     # mouse/teclado (devices ficam vivos; hotkeys seguem ativos). Alternado pelo
@@ -210,6 +225,16 @@ class Daemon:
         from hefesto_dualsense4unix.utils.session import load_mouse_emulation_enabled
         if load_mouse_emulation_enabled():
             self.config.mouse_emulation_enabled = True
+        # FEAT-DSX-GAMEPAD-FLAVOR-01: restaura o gamepad virtual (liga + flavor)
+        # se a sessão anterior o deixou ligado. Mútua exclusão: o gamepad tem
+        # precedência sobre o mouse (jogar = controle vai pro jogo).
+        from hefesto_dualsense4unix.utils.session import load_gamepad_emulation
+        gp_enabled, gp_flavor = load_gamepad_emulation()
+        if gp_enabled:
+            self.config.gamepad_emulation_enabled = True
+            if gp_flavor:
+                self.config.gamepad_flavor = gp_flavor
+            self.config.mouse_emulation_enabled = False
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
@@ -224,6 +249,8 @@ class Daemon:
                 await self._safe_start("autoswitch", self._start_autoswitch)
             if self.config.mouse_emulation_enabled:
                 await self._safe_start("mouse", self._start_mouse_emulation)
+            if self.config.gamepad_emulation_enabled:
+                await self._safe_start("gamepad", self._start_gamepad_emulation)
             if self.config.keyboard_emulation_enabled:
                 await self._safe_start("keyboard", self._start_keyboard_emulation)
             await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
@@ -360,6 +387,10 @@ class Daemon:
         if scroll_speed is not None:
             self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
         if enabled:
+            # FEAT-DSX-GAMEPAD-FLAVOR-01: mútua exclusão — ligar o mouse desliga
+            # o gamepad virtual (e libera o grab do controle).
+            if self._gamepad_device is not None:
+                self._stop_gamepad_emulation()
             ok = start_mouse_emulation(self)
             if ok and self._mouse_device is not None:
                 self._mouse_device.set_speed(
@@ -368,6 +399,25 @@ class Daemon:
                 )
             return ok
         stop_mouse_emulation(self)
+        return True
+
+    def set_gamepad_emulation(
+        self, enabled: bool, flavor: str | None = None
+    ) -> bool:
+        """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
+
+        FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox'); None mantém
+        o atual. Ligar desliga a emulação de mouse (mútua exclusão). Retorna True
+        se o estado pedido foi alcançado.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            start_gamepad_emulation,
+            stop_gamepad_emulation,
+        )
+
+        if enabled:
+            return start_gamepad_emulation(self, flavor=flavor)
+        stop_gamepad_emulation(self)
         return True
 
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:
@@ -438,6 +488,24 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.mouse import stop_mouse_emulation
 
         stop_mouse_emulation(self)
+
+    def _start_gamepad_emulation(self) -> bool:
+        """Thin wrapper — gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import start_gamepad_emulation
+
+        return start_gamepad_emulation(self, flavor=self.config.gamepad_flavor)
+
+    def _stop_gamepad_emulation(self) -> None:
+        """Thin wrapper — para o gamepad virtual e libera o grab."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import stop_gamepad_emulation
+
+        stop_gamepad_emulation(self)
+
+    def _dispatch_gamepad_emulation(self, state: Any, buttons_pressed: frozenset[str]) -> None:
+        """Thin wrapper — chamado pelo poll loop a cada tick."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import dispatch_gamepad
+
+        dispatch_gamepad(self, state, buttons_pressed)
 
     def _start_keyboard_emulation(self) -> bool:
         """Thin wrapper — wire-up A-07 para FEAT-KEYBOARD-EMULATOR-01."""
@@ -617,6 +685,7 @@ class Daemon:
         battery = BatteryDebouncer()
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0
+        evdev_watchdog_next_at: float = 0.0
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
         # desconectado→conectado. Começa False (boot pode ser sem hardware);
@@ -683,8 +752,48 @@ class Daemon:
                 self._reassert_rumble(tick_started)
                 next_rumble_assert_at = tick_started + 0.200
 
+            # FEAT-DSX-EVDEV-WATCHDOG-01: cross-check HID x evdev. Chegamos aqui só
+            # com o HID conectado (gate acima) e lendo estado — se o evdev reader
+            # ficou preso num node OBSOLETO (re-enumeração pós storm -71 / replug
+            # rápido) sem receber ENODEV, o read_loop zumbi não levanta erro e o
+            # controle fica "morto" sem sinal. Forçamos reabrir. IDLE-SAFE: só
+            # dispara por TROCA real de node, nunca por ociosidade. Throttle p/
+            # não escanear /dev/input todo tick; offload via _run_blocking.
+            if tick_started >= evdev_watchdog_next_at:
+                evdev_watchdog_next_at = tick_started + EVDEV_WATCHDOG_SEC
+                heal = getattr(self.controller, "heal_evdev_if_stale", None)
+                if heal is not None:
+                    with contextlib.suppress(Exception):
+                        if await self._run_blocking(heal):
+                            self.store.bump("evdev.watchdog.reopen")
+
             buttons_pressed = self._evdev_buttons_once()
             current_buttons = state.buttons_pressed
+
+            # FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01: o forward pro gamepad virtual é a
+            # ROTA do controle pro JOGO — precisa sobreviver TANTO ao 'pause'
+            # (daemon.pause) QUANTO ao 'modo jogo' (_emulation_suppressed). Antes
+            # o dispatch do gamepad morava DENTRO dos dois gates de emulação de
+            # DESKTOP: o `continue` do gate de pausa (abaixo) ocorria antes dele,
+            # e ele ainda exigia `emu_active` (não-suprimido). Resultado: entrar
+            # em modo jogo, pausar, ou renascer pausado no boot deixava o controle
+            # MORTO no jogo — o controle físico fica EVIOCGRAB-grabado (gamepad =
+            # fonte única) e o virtual parava de receber input = real escondido +
+            # virtual mudo. Agora o gamepad é despachado AQUI, gateado SÓ pelo
+            # grace-period (anti-ghost-input), com os botões CRUS: o jogo quer
+            # PS/Options/dpad crus; a subtração de combo (abaixo) é proteção
+            # contra vazamento pro DESKTOP e não se aplica ao gamepad.
+            grace_passed = tick_started >= self._input_ready_at
+            gamepad_dispatched = False
+            if grace_passed and self._gamepad_device is not None:
+                self._dispatch_gamepad_emulation(state, buttons_pressed)
+                if self._touchpad_reader is not None:
+                    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                        discard_touchpad_motion,
+                    )
+
+                    discard_touchpad_motion(self)
+                gamepad_dispatched = True
 
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: gate de assentamento. Enquanto
             # `loop.time() < _input_ready_at`, NÃO despacha teclado/mouse/hotkey
@@ -694,8 +803,10 @@ class Daemon:
             # semeamos o edge-tracker do teclado SEM emitir, de modo que ao fim
             # do settling botões fantasma/segurados na conexão sejam o baseline
             # (só disparam quando soltos e re-pressionados).
-            # FEAT-DAEMON-PAUSE-RESUME-01: além do grace-period, respeita _paused.
-            input_ready = tick_started >= self._input_ready_at and not self._paused
+            # FEAT-DAEMON-PAUSE-RESUME-01: além do grace, respeita _paused — mas
+            # isso gateia mouse/teclado/hotkey/edges; o gamepad já foi despachado
+            # acima e NÃO é congelado por pausa/supressão.
+            input_ready = grace_passed and not self._paused
             if not input_ready:
                 if self._keyboard_device is not None:
                     self._prime_keyboard_emulation(buttons_pressed)
@@ -717,22 +828,35 @@ class Daemon:
                         break
                 continue
 
-            # FEAT-HOTKEY-COMBO-NO-LEAK-01: não despacha à emulação os botões de
-            # um combo de hotkey em formação (PS+Options, PS+dpad). Senão
-            # 'options'→Meta (e dpad→setas) vazam pro desktop ao usar o combo, e
-            # se a supressão ligar no mesmo tick o release nunca é enviado → o
-            # modificador trava ("Control/Meta sempre segurado").
+            # FEAT-HOTKEY-COMBO-NO-LEAK-01: não despacha à emulação de DESKTOP os
+            # botões de um combo de hotkey em formação (PS+Options, PS+dpad).
+            # Senão 'options'→Meta (e dpad→setas) vazam pro desktop ao usar o
+            # combo, e se a supressão ligar no mesmo tick o release nunca é
+            # enviado → o modificador trava ("Control/Meta sempre segurado").
             emu_buttons = buttons_pressed
             if self._hotkey_manager is not None:
                 blocked = self._hotkey_manager.combo_buttons_active(buttons_pressed)
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
 
-            if self._mouse_device is not None and not self._emulation_suppressed:
-                self._dispatch_mouse_emulation(state, emu_buttons)
+            # Mouse/teclado de DESKTOP: gateados por emu_active (modo jogo) e só
+            # quando o gamepad NÃO foi despachado (exclusão mútua — com o gamepad
+            # ligado, o controle vai pro jogo, não pro cursor/teclado).
+            emu_active = not self._emulation_suppressed
+            if not gamepad_dispatched:
+                if self._mouse_device is not None and emu_active:
+                    self._dispatch_mouse_emulation(state, emu_buttons)
+                elif self._touchpad_reader is not None:
+                    # B4: emulação off/suprimida → descarta o movimento do
+                    # touchpad acumulado, senão o cursor pula ao religar.
+                    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                        discard_touchpad_motion,
+                    )
 
-            if self._keyboard_device is not None and not self._emulation_suppressed:
-                self._dispatch_keyboard_emulation(emu_buttons)
+                    discard_touchpad_motion(self)
+
+                if self._keyboard_device is not None and emu_active:
+                    self._dispatch_keyboard_emulation(emu_buttons)
 
             if self._hotkey_manager is not None:
                 self._hotkey_manager.observe(buttons_pressed, now=tick_started)

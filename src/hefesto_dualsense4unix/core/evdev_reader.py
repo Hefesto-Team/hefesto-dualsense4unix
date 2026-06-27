@@ -40,13 +40,37 @@ class EvdevSnapshot:
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
 
 
+def _is_virtual_evdev(event_path: str) -> bool:
+    """True se o evdev é um device VIRTUAL (uinput), não o controle físico.
+
+    FEAT-DSX-GAMEPAD-FLAVOR-01 — CRÍTICO: o gamepad virtual com máscara DualSense
+    tem o MESMO VID/PID/nome/caps do controle real, então sem este filtro o
+    `find_dualsense_evdev` poderia retornar o PRÓPRIO device virtual do daemon
+    (feedback loop: o daemon lendo a própria saída). Devices uinput vivem sob
+    `/sys/devices/virtual/input/`; os reais, sob caminhos de USB/Bluetooth.
+    """
+    import os
+
+    try:
+        name = os.path.basename(event_path)  # ex.: "event12"
+        link = os.path.realpath(f"/sys/class/input/{name}/device")
+        return "/devices/virtual/" in link
+    except Exception:
+        return False
+
+
 def find_dualsense_evdev() -> Path | None:
-    """Retorna path do evdev principal do DualSense; None se não houver."""
+    """Retorna path do evdev principal do DualSense FÍSICO; None se não houver.
+
+    Ignora devices virtuais (uinput) — ver `_is_virtual_evdev`.
+    """
     try:
         from evdev import InputDevice, list_devices
     except ImportError:
         return None
     for path in list_devices():
+        if _is_virtual_evdev(path):
+            continue
         try:
             dev = InputDevice(path)
             try:
@@ -80,6 +104,9 @@ class _EvdevReconnectLoop:
     _device_path: Path | None
     _stop_flag: threading.Event
     _thread: threading.Thread | None
+    # InputDevice atualmente aberto pelo loop (ou None). Permite grab/ungrab
+    # em runtime de fora da thread (FEAT-DSX-GAMEPAD-FLAVOR-01).
+    _active_dev: Any = None
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
 
     def _find_device(self) -> Path | None:  # pragma: no cover - abstract
@@ -109,6 +136,42 @@ class _EvdevReconnectLoop:
         if self._device_path is None:
             self._device_path = self._find_device()
         return self._device_path is not None
+
+    def is_stale(self) -> bool:
+        """True se o reader está preso num node de evdev OBSOLETO.
+
+        Caso-alvo (FEAT-DSX-EVDEV-WATCHDOG-01): após uma re-enumeração do
+        controle (storm -71, replug rápido) o kernel cria um novo
+        /dev/input/eventN, mas o read_loop pode seguir bloqueado no fd antigo SEM
+        receber ENODEV — leitura zumbi, controle "morto" sem erro. Detectamos
+        comparando o path aberto com o canônico atual do finder: se ele aponta
+        agora para um node DIFERENTE (e não-None), o nosso está obsoleto.
+
+        IDLE-SAFE: ficar parado não muda o node canônico, então isto NUNCA dispara
+        por ociosidade — só por troca real de node. (O daemon ainda cruza com o
+        HID: só chama o watchdog quando o controller reporta conectado.)
+        """
+        held = self._device_path
+        if held is None:
+            return False  # sem device aberto: o loop de reconexão já cobre
+        current = self._find_device()
+        if current is None:
+            return False  # finder transitório/sem node: conservador, não reabre
+        return current != held
+
+    def request_reopen(self, reason: str = "watchdog") -> None:
+        """Força o loop a largar o device atual e reabrir o canônico.
+
+        Zera o path em cache (próximo ciclo re-localiza o node certo) e fecha o
+        fd ativo — fechar de outra thread desbloqueia o read_loop preso, que cai
+        no handler de OSError → _reset_on_disconnect + reabre. Best-effort.
+        """
+        logger.info(f"{self._log_prefix()}_reopen_requested", reason=reason)
+        self._device_path = None
+        dev = self._active_dev
+        if dev is not None:
+            with contextlib.suppress(Exception):
+                dev.close()
 
     def start(self) -> bool:
         if not self.is_available():
@@ -161,6 +224,12 @@ class _EvdevReconnectLoop:
             logger.info(f"{prefix}_started", path=str(path), name=dev.name)
             backoff = 0.5
             self._device_path = path
+            self._active_dev = dev
+            # Reaplica o grab se foi pedido enquanto o device estava fechado
+            # (ex.: gamepad já estava ligado antes desta (re)conexão).
+            if getattr(self, "_grab", False):
+                with contextlib.suppress(Exception):
+                    dev.grab()
             try:
                 for event in dev.read_loop():
                     if self._stop_flag.is_set():
@@ -174,6 +243,7 @@ class _EvdevReconnectLoop:
                 logger.warning(f"{prefix}_loop_error", err=str(exc))
                 self._reset_on_disconnect()
             finally:
+                self._active_dev = None
                 with contextlib.suppress(Exception):
                     dev.close()
             if not self._stop_flag.is_set():
@@ -226,6 +296,29 @@ class EvdevReader(_EvdevReconnectLoop):
         self._dpad_x = 0
         self._dpad_y = 0
         self._pressed: set[str] = set()
+        self._active_dev: Any = None
+        # FEAT-DSX-GAMEPAD-FLAVOR-01: quando True, o loop faz EVIOCGRAB no
+        # device — o daemon vira leitor exclusivo do controle real e os jogos
+        # deixam de ver o controle cru (evitando input dobrado ao lado do
+        # gamepad virtual). Aplicado/removido por `set_grab`.
+        self._grab: bool = False
+
+    def set_grab(self, grab: bool) -> None:
+        """Liga/desliga o EVIOCGRAB no controle físico (thread-safe-ish).
+
+        Best-effort: registra a intenção em `self._grab` (reaplicada a cada
+        (re)conexão pelo loop) e tenta aplicar imediatamente no device aberto.
+        Nunca propaga exceção.
+        """
+        self._grab = grab
+        dev = self._active_dev
+        if dev is None:
+            return
+        with contextlib.suppress(Exception):
+            if grab:
+                dev.grab()
+            else:
+                dev.ungrab()
 
     def snapshot(self) -> EvdevSnapshot:
         with self._lock:
@@ -342,6 +435,8 @@ def find_dualsense_touchpad_evdev() -> Path | None:
     except ImportError:
         return None
     for path in list_devices():
+        if _is_virtual_evdev(path):
+            continue
         try:
             dev = InputDevice(path)
             try:
@@ -359,15 +454,28 @@ def find_dualsense_touchpad_evdev() -> Path | None:
 
 
 class TouchpadReader(_EvdevReconnectLoop):
-    """Lê click físico do touchpad do DualSense regionalizado.
+    """Lê o touchpad do DualSense: click regionalizado + movimento do dedo.
 
     O touchpad emite `BTN_LEFT` (click firme mecânico, não toque leve) +
-    `ABS_X` (0 a 1919) no device separado descoberto por
-    `find_dualsense_touchpad_evdev`. Correlacionamos o último `ABS_X`
-    observado com o press para discriminar três regiões: esquerda,
-    meio, direita (limites 640 e 1280 sobre largura 1920).
+    `ABS_X` (0 a 1919) / `ABS_Y` (0 a 1079) + `BTN_TOUCH` (dedo presente) no
+    device separado descoberto por `find_dualsense_touchpad_evdev`.
 
-    Threadsafe via RLock. Consultar o estado via `regions_pressed()`.
+    Duas responsabilidades, ambas via o mesmo loop evdev:
+
+    1. **Click regionalizado** (`regions_pressed()`): correlaciona o último
+       `ABS_X` observado com o `BTN_LEFT` para discriminar três regiões —
+       esquerda, meio, direita (limites 640 e 1280 sobre largura 1920). Vira
+       teclas no `dispatch_keyboard`.
+
+    2. **Movimento do cursor** (`consume_motion()`, FEAT-DSX-TOUCHPAD-CURSOR-B4):
+       enquanto `BTN_TOUCH` está ativo, acumula o delta de `ABS_X`/`ABS_Y`
+       entre frames. O poll loop drena esse delta a cada tick e o converte em
+       REL_X/REL_Y via o mouse virtual — touchpad como fonte ÚNICA do cursor
+       (a rule 76 já tira o device do libinput, então não há briga = sem
+       engasgo). `BTN_TOUCH` solto zera a posição de referência: levantar e
+       reapoiar o dedo em outro ponto NÃO faz o cursor pular.
+
+    Threadsafe via RLock.
     """
 
     # Largura do touchpad em unidades absolutas do kernel hid_playstation
@@ -386,10 +494,32 @@ class TouchpadReader(_EvdevReconnectLoop):
         self._stop_flag = threading.Event()
         self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2  # centro por default
         self._regions: frozenset[str] = frozenset()
+        # Movimento do cursor (B4): dedo presente + posição de referência por
+        # eixo (None = ainda sem âncora; o primeiro frame só seeda, não move) +
+        # delta acumulado entre drenagens (`consume_motion`).
+        self._touching: bool = False
+        self._motion_last_x: int | None = None
+        self._motion_last_y: int | None = None
+        self._accum_dx: int = 0
+        self._accum_dy: int = 0
 
     def regions_pressed(self) -> frozenset[str]:
         with self._lock:
             return self._regions
+
+    def consume_motion(self) -> tuple[int, int]:
+        """Retorna e zera o delta acumulado do dedo (unidades do touchpad).
+
+        Chamado pelo poll loop a cada tick. Drena-e-reseta para que o consumo
+        seja sempre o movimento desde a última chamada — o escalonamento para
+        pixels (com `mouse_speed` e carry sub-pixel) é responsabilidade do
+        `UinputMouseDevice.emit_touchpad_move`.
+        """
+        with self._lock:
+            dx, dy = self._accum_dx, self._accum_dy
+            self._accum_dx = 0
+            self._accum_dy = 0
+            return dx, dy
 
     @classmethod
     def _region_from_x(cls, x: int) -> str:
@@ -408,22 +538,51 @@ class TouchpadReader(_EvdevReconnectLoop):
         return "touchpad_reader"
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:
-        if event.type == ecodes.EV_ABS and event.code == ecodes.ABS_X:
-            # Atualiza snapshot de X para correlacionar no próximo BTN_LEFT.
-            with self._lock:
-                self._last_abs_x = int(event.value)
-        elif event.type == ecodes.EV_KEY and event.code == ecodes.BTN_LEFT:
-            with self._lock:
-                if event.value == 1:
-                    self._regions = frozenset(
-                        {self._region_from_x(self._last_abs_x)}
-                    )
-                elif event.value == 0:
-                    self._regions = frozenset()
+        if event.type == ecodes.EV_ABS:
+            if event.code == ecodes.ABS_X:
+                with self._lock:
+                    # Snapshot de X para a região do próximo BTN_LEFT.
+                    self._last_abs_x = int(event.value)
+                    self._accumulate_axis_x(int(event.value))
+            elif event.code == ecodes.ABS_Y:
+                with self._lock:
+                    self._accumulate_axis_y(int(event.value))
+        elif event.type == ecodes.EV_KEY:
+            if event.code == ecodes.BTN_LEFT:
+                with self._lock:
+                    if event.value == 1:
+                        self._regions = frozenset(
+                            {self._region_from_x(self._last_abs_x)}
+                        )
+                    elif event.value == 0:
+                        self._regions = frozenset()
+            elif event.code == ecodes.BTN_TOUCH:
+                with self._lock:
+                    # Dedo apoiado/levantado: zera a âncora dos dois eixos para
+                    # que reapoiar em outro ponto não gere um salto do cursor.
+                    self._touching = event.value == 1
+                    self._motion_last_x = None
+                    self._motion_last_y = None
+
+    def _accumulate_axis_x(self, value: int) -> None:
+        """Acumula delta de X se há dedo e âncora; senão só seeda a âncora."""
+        if self._touching and self._motion_last_x is not None:
+            self._accum_dx += value - self._motion_last_x
+        self._motion_last_x = value
+
+    def _accumulate_axis_y(self, value: int) -> None:
+        if self._touching and self._motion_last_y is not None:
+            self._accum_dy += value - self._motion_last_y
+        self._motion_last_y = value
 
     def _reset_on_disconnect(self) -> None:
         with self._lock:
             self._regions = frozenset()
+            self._touching = False
+            self._motion_last_x = None
+            self._motion_last_y = None
+            self._accum_dx = 0
+            self._accum_dy = 0
 
 
 __all__ = [

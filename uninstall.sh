@@ -124,6 +124,20 @@ else
     log "ausente: ${HOTPLUG_UNIT_TARGET}"
 fi
 
+# Storm-watch (--user) — FEAT-DSX-STORM-WATCH-01. Simétrico ao install.
+readonly STORM_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-storm-watch.service"
+readonly STORM_SCRIPT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/scripts/storm_watch.sh"
+if [[ -f "${STORM_UNIT_TARGET}" ]]; then
+    log "desabilitando hefesto-dualsense4unix-storm-watch.service"
+    systemctl --user disable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1 || true
+    log "removendo ${STORM_UNIT_TARGET}"
+    rm -f "${STORM_UNIT_TARGET}"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+else
+    log "ausente: ${STORM_UNIT_TARGET}"
+fi
+rm -f "${STORM_SCRIPT_TARGET}"
+
 # Guard do Steam Input (path + timer, --user) — FEAT-STEAM-INPUT-SELF-HEAL-01
 log "removendo guard do Steam Input (path/timer/service --user)"
 systemctl --user disable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer >/dev/null 2>&1 || true

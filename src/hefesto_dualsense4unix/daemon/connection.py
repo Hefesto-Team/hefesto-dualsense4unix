@@ -215,6 +215,15 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._mouse_device.stop()
         daemon._mouse_device = None
+    # FEAT-DSX-GAMEPAD-FLAVOR-01: para o gamepad virtual e LIBERA o grab do
+    # controle físico (senão o controle ficaria "sequestrado" após o shutdown).
+    if getattr(daemon, "_gamepad_device", None) is not None:
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                stop_gamepad_emulation,
+            )
+
+            stop_gamepad_emulation(daemon, persist=False)
     if getattr(daemon, "_keyboard_device", None) is not None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()

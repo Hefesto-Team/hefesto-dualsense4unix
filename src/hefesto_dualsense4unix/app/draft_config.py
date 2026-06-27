@@ -239,9 +239,16 @@ class DraftConfig(BaseModel):
     def to_ipc_dict(self) -> dict:  # type: ignore[type-arg]
         """Serializa draft para o formato do contrato IPC ``profile.apply_draft``.
 
-        Retorna dicionario com secoes triggers/leds/rumble/mouse.
+        Retorna dicionario com secoes triggers/leds/rumble/mouse/keyboard.
         Campos reservados (mic_led, emulation, rumble.policy) sao omitidos
         para não causar erros em versões de daemon sem suporte.
+
+        A seção ``keyboard`` é SEMPRE emitida (mesmo com ``key_bindings`` None) —
+        BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: antes ``to_ipc_dict`` omitia os
+        key_bindings, então o rodapé "Aplicar" nunca empurrava o teclado editado
+        ao device (só ``profile.switch`` fazia). O DraftApplier resolve o inner
+        ``key_bindings`` (None → DEFAULT_BUTTON_BINDINGS; dict → override). Daemon
+        antigo ignora a seção desconhecida (aditivo, sem quebra de contrato).
         """
         rgb = self.leds.lightbar_rgb
         return {
@@ -268,6 +275,13 @@ class DraftConfig(BaseModel):
                 "enabled": self.mouse.enabled,
                 "speed": self.mouse.speed,
                 "scroll_speed": self.mouse.scroll_speed,
+            },
+            "keyboard": {
+                "key_bindings": (
+                    {b: list(tokens) for b, tokens in self.key_bindings.items()}
+                    if self.key_bindings is not None
+                    else None
+                ),
             },
         }
 

@@ -234,6 +234,68 @@ async def test_apply_draft_mouse_aplicado(server_and_controller) -> None:
 
 
 @pytest.mark.asyncio
+async def test_apply_draft_keyboard_aplica_bindings(server_and_controller) -> None:
+    """BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: a seção keyboard empurra os
+    bindings editados ao device vivo via set_bindings, sem reativar perfil."""
+    _server, socket_path, _fc, fake_daemon = server_and_controller
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call(
+            "profile.apply_draft",
+            {"keyboard": {"key_bindings": {"cross": ["KEY_SPACE"]}}},
+        )
+    assert "keyboard" in result["applied"]
+    fake_daemon._keyboard_device.set_bindings.assert_called_once_with(
+        {"cross": ("KEY_SPACE",)}
+    )
+
+
+@pytest.mark.asyncio
+async def test_apply_draft_keyboard_none_usa_default(server_and_controller) -> None:
+    """key_bindings=None (ex.: após 'Restaurar defaults') resolve para o mapa
+    DEFAULT_BUTTON_BINDINGS — não fica como no-op herdando o estado antigo."""
+    from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+
+    _server, socket_path, _fc, fake_daemon = server_and_controller
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call(
+            "profile.apply_draft",
+            {"keyboard": {"key_bindings": None}},
+        )
+    assert "keyboard" in result["applied"]
+    fake_daemon._keyboard_device.set_bindings.assert_called_once_with(
+        dict(DEFAULT_BUTTON_BINDINGS)
+    )
+
+
+@pytest.mark.asyncio
+async def test_apply_draft_rumble_zero_e_passthrough(server_and_controller) -> None:
+    """BUG-RUMBLE-APPLY-KILLS-GAME-01: 'Aplicar' com rumble (0,0) é passthrough
+    (rumble_active=None), não silêncio forçado a 5Hz que mataria o rumble do
+    jogo. Aplica (0,0) uma vez para soltar um rumble contínuo anterior."""
+    _server, socket_path, fc, fake_daemon = server_and_controller
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call(
+            "profile.apply_draft", {"rumble": {"weak": 0, "strong": 0}}
+        )
+    assert "rumble" in result["applied"]
+    assert fake_daemon.config.rumble_active is None, "deveria ser passthrough"
+    rumble_cmds = [c for c in fc.commands if c.kind == "set_rumble"]
+    assert rumble_cmds and rumble_cmds[-1].payload[:2] == (0, 0)
+
+
+@pytest.mark.asyncio
+async def test_apply_draft_rumble_nonzero_persiste(server_and_controller) -> None:
+    """Rumble != (0,0) continua persistindo em rumble_active para o poll loop
+    reasserir (vibração contínua deliberada)."""
+    _server, socket_path, _fc, fake_daemon = server_and_controller
+    async with IpcClient.connect(socket_path) as client:
+        await client.call(
+            "profile.apply_draft", {"rumble": {"weak": 40, "strong": 80}}
+        )
+    assert fake_daemon.config.rumble_active == (40, 80)
+
+
+@pytest.mark.asyncio
 async def test_apply_draft_completo_retorna_todos_aplicados(
     server_and_controller,
 ) -> None:

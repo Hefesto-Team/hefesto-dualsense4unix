@@ -1,0 +1,16 @@
+[Unit]
+Description=Hefesto - Dualsense4Unix: registra o storm USB (-71) do DualSense num log dedicado
+Documentation=man:journalctl(1)
+After=default.target
+
+[Service]
+Type=simple
+# %h expande para o HOME do usuário dono da sessão systemd --user.
+ExecStart=%h/.local/share/hefesto-dualsense4unix/scripts/storm_watch.sh
+# Sem permissão p/ journalctl -k (ou journald reiniciando) → re-tenta com calma,
+# sem spin: 5 min entre tentativas. Não derruba a sessão.
+Restart=on-failure
+RestartSec=300
+
+[Install]
+WantedBy=default.target

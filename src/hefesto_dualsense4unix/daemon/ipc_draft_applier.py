@@ -40,6 +40,9 @@ class DraftApplier:
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
         self._apply_section(applied, params.get("rumble"), "rumble", self._apply_rumble)
         self._apply_section(applied, params.get("mouse"), "mouse", self._apply_mouse)
+        self._apply_section(
+            applied, params.get("keyboard"), "keyboard", self._apply_keyboard
+        )
         return applied
 
     @staticmethod
@@ -115,12 +118,25 @@ class DraftApplier:
             raise ValueError("rumble.weak e rumble.strong devem ser inteiros")
         weak = max(0, min(255, weak))
         strong = max(0, min(255, strong))
+        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        # BUG-RUMBLE-APPLY-KILLS-GAME-01: (0,0) num "Aplicar" significa "não force
+        # rumble" (passthrough), NÃO "force silêncio". Antes, rumble_active=(0,0)
+        # fazia o poll loop (_reassert_rumble) reescrever set_rumble(0,0) a cada
+        # tick, SOBRESCREVENDO o rumble do JOGO — qualquer "Aplicar" com sliders em
+        # 0 (o default) matava a vibração in-game. Passthrough = rumble_active None
+        # (o poll loop deixa o jogo controlar; idêntico a rumble.passthrough);
+        # aplica (0,0) uma vez para soltar um rumble contínuo anterior. "Parar"
+        # (rumble.stop) continua fixando (0,0) como silêncio deliberado.
+        if weak == 0 and strong == 0:
+            if daemon_cfg is not None:
+                daemon_cfg.rumble_active = None
+            self.controller.set_rumble(weak=0, strong=0)
+            return
         # AUDIT-FINDING-IPC-DRAFT-RUMBLE-POLICY-01:
         # Persiste valores brutos para que o poll loop (_reassert_rumble)
         # continue reaplicando a política a cada tick. Antes de enviar ao
         # hardware, escala via apply_rumble_policy — mesmo comportamento
         # canônico de _handle_rumble_set.
-        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (weak, strong)
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
@@ -141,6 +157,35 @@ class DraftApplier:
             speed=speed,
             scroll_speed=scroll_speed,
         )
+
+    def _apply_keyboard(self, keyboard_raw: Any) -> None:
+        """Aplica os key_bindings editados ao device de teclado virtual vivo.
+
+        BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: antes o único caminho que empurrava
+        bindings ao device era ``profile.switch`` (que recarrega do DISCO); o
+        rodapé "Aplicar" (``profile.apply_draft``) ignorava o teclado. Agora a
+        seção ``keyboard`` resolve o inner ``key_bindings`` (None →
+        DEFAULT_BUTTON_BINDINGS; ``{}`` → silêncio; dict → override) e chama
+        ``set_bindings`` no device vivo, sem reativar/regravar o perfil.
+
+        No-op seguro quando não há device de teclado (CLI/headless, emulação de
+        teclado desligada, ou gamepad ligado — que assume o ramo do gamepad e o
+        teclado nunca despacha): os bindings entram em vigor quando o teclado
+        virtual subir.
+        """
+        if not isinstance(keyboard_raw, dict):
+            raise ValueError("keyboard deve ser objeto")
+        if "key_bindings" not in keyboard_raw:
+            return
+        device = getattr(self.daemon, "_keyboard_device", None) if self.daemon else None
+        if device is None:
+            return
+        raw = keyboard_raw.get("key_bindings")
+        if raw is not None and not isinstance(raw, dict):
+            raise ValueError("keyboard.key_bindings deve ser objeto ou null")
+        from hefesto_dualsense4unix.profiles.manager import resolve_key_bindings
+
+        device.set_bindings(resolve_key_bindings(raw))
 
 
 __all__ = ["DraftApplier"]

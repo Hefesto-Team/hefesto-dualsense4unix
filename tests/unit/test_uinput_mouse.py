@@ -18,6 +18,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     MOVE_DEADZONE,
     SCROLL_DEADZONE,
     SCROLL_RATE_LIMIT_SEC,
+    TOUCHPAD_SENSITIVITY,
     TRIGGER_PRESS_THRESHOLD,
     UinputMouseDevice,
     _compute_move,
@@ -493,6 +494,59 @@ def test_release_allows_re_emit(monkeypatch: pytest.MonkeyPatch):
     assert len(second) == 2
     assert second[0][1][1] == 1
     assert second[1][1][1] == 0
+
+
+# --- touchpad → cursor (FEAT-DSX-TOUCHPAD-CURSOR-B4) -------------------------
+
+def test_emit_touchpad_move_escala_por_sensibilidade(monkeypatch: pytest.MonkeyPatch):
+    """raw delta → REL_X/REL_Y escalado por TOUCHPAD_SENSITIVITY (speed default)."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+    # factor = 0.45 * (6/6) = 0.45 → dx=100 vira 45; dy=-50 vira -22 (trunca).
+    dev.emit_touchpad_move(100, -50)
+    rel_x = _emits_for(fake_device, fake_mod.REL_X)
+    rel_y = _emits_for(fake_device, fake_mod.REL_Y)
+    assert rel_x and rel_x[-1][1][1] == 45
+    assert rel_y and rel_y[-1][1][1] == -22
+
+
+def test_emit_touchpad_move_zero_nao_emite(monkeypatch: pytest.MonkeyPatch):
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+    dev.emit_touchpad_move(0, 0)
+    assert not _emits_for(fake_device, fake_mod.REL_X)
+    assert not _emits_for(fake_device, fake_mod.REL_Y)
+
+
+def test_emit_touchpad_move_carry_subpixel_sem_engasgo(monkeypatch: pytest.MonkeyPatch):
+    """Movimentos lentos que truncam a 0 acumulam carry e eventualmente emitem 1px."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+    # factor=0.45: cada raw=1 → 0.45 px. Dois ticks somam 0.9 (<1, sem emit),
+    # o terceiro fecha 1.35 → emite exatamente 1px.
+    dev.emit_touchpad_move(1, 0)
+    dev.emit_touchpad_move(1, 0)
+    assert not _emits_for(fake_device, fake_mod.REL_X)  # ainda <1px acumulado
+    dev.emit_touchpad_move(1, 0)
+    rel_x = _emits_for(fake_device, fake_mod.REL_X)
+    assert len(rel_x) == 1
+    assert rel_x[-1][1][1] == 1
+
+
+def test_emit_touchpad_move_respeita_mouse_speed(monkeypatch: pytest.MonkeyPatch):
+    """mouse_speed maior amplifica o movimento do touchpad."""
+    dev, fake_mod, fake_device = _started_device(monkeypatch)
+    dev.set_speed(mouse_speed=12)  # factor = 0.45 * (12/6) = 0.9
+    dev.emit_touchpad_move(100, 0)
+    rel_x = _emits_for(fake_device, fake_mod.REL_X)
+    assert rel_x and rel_x[-1][1][1] == 90
+
+
+def test_emit_touchpad_move_sem_start_nao_levanta():
+    """Sem device criado, emit_touchpad_move é no-op silencioso."""
+    dev = UinputMouseDevice()
+    dev.emit_touchpad_move(100, 100)  # não deve levantar
+
+
+def test_touchpad_sensitivity_default():
+    assert TOUCHPAD_SENSITIVITY == 0.45
 
 
 # "A liberdade é nada mais que uma chance de ser melhor." — Albert Camus

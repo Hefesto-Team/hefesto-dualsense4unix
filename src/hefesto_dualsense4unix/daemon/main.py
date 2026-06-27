@@ -29,6 +29,29 @@ def build_controller() -> IController:
     return PyDualSenseController()
 
 
+def single_instance_name() -> str:
+    """Nome do lock de instância única do daemon, derivado do socket IPC.
+
+    BUG-MULTI-INSTANCE-ISOLATED-SOCKET-01: um daemon com socket ISOLADO (fake via
+    `run.sh --fake`, smoke, ou socket custom) NÃO deve brigar pelo mesmo pid-lock
+    do daemon de PRODUÇÃO. Antes o lock era sempre "daemon": um fake fazia
+    takeover (SIGTERM) do real, o systemd ressuscitava o real, e podiam sobrar
+    daemons órfãos disputando o socket (GUI/applet falando com o daemon errado).
+    Atando o lock ao socket, cada namespace de socket tem seu próprio
+    single-instance: dois daemons de PRODUÇÃO (socket default) ainda se substituem
+    corretamente; fake/smoke/custom nunca matam o real.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import (
+        IPC_SOCKET_DEFAULT_NAME,
+        IPC_SOCKET_ENV_VAR,
+    )
+
+    sock = os.getenv(IPC_SOCKET_ENV_VAR) or IPC_SOCKET_DEFAULT_NAME
+    if sock == IPC_SOCKET_DEFAULT_NAME:
+        return "daemon"
+    return "daemon-" + sock.removesuffix(".sock")
+
+
 def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     configure_logging()
     logger = get_logger(__name__)
@@ -45,7 +68,7 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
-    acquire_or_takeover("daemon")
+    acquire_or_takeover(single_instance_name())
 
     controller = build_controller()
     config = DaemonConfig(
@@ -69,4 +92,4 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         return 130
 
 
-__all__ = ["build_controller", "run_daemon"]
+__all__ = ["build_controller", "run_daemon", "single_instance_name"]

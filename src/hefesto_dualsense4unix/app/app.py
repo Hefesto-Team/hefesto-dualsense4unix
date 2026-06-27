@@ -248,6 +248,7 @@ class HefestoApp(
             "on_rumble_apply": self.on_rumble_apply,
             "on_rumble_test_500ms": self.on_rumble_test_500ms,
             "on_rumble_stop": self.on_rumble_stop,
+            "on_rumble_passthrough": self.on_rumble_passthrough,
             # Perfis
             "on_profile_row_activated": self.on_profile_row_activated,
             "on_profile_new": self.on_profile_new,
@@ -270,6 +271,19 @@ class HefestoApp(
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
             "on_emulation_open_toml": self.on_emulation_open_toml,
+            # Emulação — microfone do DualSense
+            "on_emulation_mic_on": self.on_emulation_mic_on,
+            "on_emulation_mic_off": self.on_emulation_mic_off,
+            # Emulação — gamepad virtual com máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)
+            "on_emulation_gamepad_off": self.on_emulation_gamepad_off,
+            "on_emulation_gamepad_dualsense": self.on_emulation_gamepad_dualsense,
+            "on_emulation_gamepad_xbox": self.on_emulation_gamepad_xbox,
+            # Emulação — modo jogo (pausar/retomar)
+            "on_emulation_pause": self.on_emulation_pause,
+            "on_emulation_resume": self.on_emulation_resume,
+            # Emulação — Steam Input (verificar/desligar)
+            "on_emulation_steam_input_check": self.on_emulation_steam_input_check,
+            "on_emulation_steam_input_disable": self.on_emulation_steam_input_disable,
             # Mouse (aba "Mouse e Teclado")
             "on_mouse_toggle_set": self.on_mouse_toggle_set,
             "on_mouse_speed_changed": self.on_mouse_speed_changed,

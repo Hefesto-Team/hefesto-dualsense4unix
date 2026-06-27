@@ -161,12 +161,51 @@ def load_mouse_emulation_enabled() -> bool:
         return False
 
 
+_GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
+
+
+def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
+    """Persiste o estado do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
+
+    Flag-file em config_dir cujo conteúdo é o flavor (`dualsense`/`xbox`) quando
+    ligado; o arquivo é removido quando desligado. Assim o daemon restaura tanto
+    o liga/desliga quanto a máscara após restart/reboot. Best-effort.
+    """
+    try:
+        flag = config_dir(ensure=True) / _GAMEPAD_EMULATION_FLAG_FILE
+        if enabled:
+            flag.write_text(f"{(flavor or 'dualsense').strip()}\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("gamepad_emulation_state_saved", enabled=enabled, flavor=flavor)
+    except Exception as exc:
+        logger.debug("gamepad_emulation_state_save_failed", err=str(exc))
+
+
+def load_gamepad_emulation() -> tuple[bool, str | None]:
+    """Retorna (ligado, flavor) do gamepad virtual da sessão anterior.
+
+    `(False, None)` se a flag não existir. Se existir mas vazia, assume ligado
+    com flavor None (o caller normaliza para o default).
+    """
+    try:
+        flag = config_dir() / _GAMEPAD_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return False, None
+        flavor = flag.read_text(encoding="utf-8").strip() or None
+        return True, flavor
+    except Exception:
+        return False, None
+
+
 __all__ = [
+    "load_gamepad_emulation",
     "load_last_profile",
     "load_mouse_emulation_enabled",
     "load_paused_state",
     "read_active_marker",
     "save_active_marker",
+    "save_gamepad_emulation",
     "save_last_profile",
     "save_mouse_emulation_enabled",
     "save_paused_state",

@@ -63,6 +63,63 @@ def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:
     return _on_ps_long_press
 
 
+def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
+    """Cria o callback on_next (+1) / on_prev (-1): cicla para o perfil
+    seguinte/anterior e o ativa — triggers + LEDs + key_bindings + marca ativo +
+    notifica — reusando ProfileManager.activate, o MESMO caminho do profile.switch
+    (IPC) e do restore_last_profile. FEAT-HOTKEY-PROFILE-CYCLE-01.
+
+    Antes os combos PS+D-pad estavam disabled_until_wired: o observe() disparava
+    com cb=None (no-op) mas ainda suprimia o D-pad e o PS-solo — gesto morto que
+    comia o D-pad. Agora o cb troca de perfil de verdade.
+
+    Feedback in-hand (você está com o controle na mão): flasha o lightbar em
+    branco antes do activate() repintar a cor do perfil novo, então há sinal
+    visível mesmo que dois perfis tenham a mesma cor. O sleep roda em task
+    própria (não bloqueia o poll loop).
+    """
+
+    async def _cycle() -> None:
+        import time as _time
+
+        from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.utils.session import save_active_marker
+
+        manager = ProfileManager(
+            controller=daemon.controller,
+            store=daemon.store,
+            keyboard_device=getattr(daemon, "_keyboard_device", None),
+        )
+        profiles = await daemon._run_blocking(manager.list_profiles)
+        if len(profiles) < 2:
+            logger.info("profile_cycle_skip", n=len(profiles))
+            return
+        names = [p.name for p in profiles]
+        active = daemon.store.active_profile
+        idx = names.index(active) if active in names else 0
+        target = names[(idx + direction) % len(names)]
+
+        # Feedback visual imediato; activate() repinta a cor do perfil a seguir.
+        with contextlib.suppress(Exception):
+            await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
+            await asyncio.sleep(0.12)
+
+        profile = await daemon._run_blocking(manager.activate, target)
+        with contextlib.suppress(Exception):
+            save_active_marker(profile.name)
+        # Gesto explícito do usuário: libera o autoswitch e arma o lock manual
+        # (paridade com _handle_profile_switch) — senão o autoswitch desfaz a
+        # troca no próximo tick por causa da janela ativa.
+        daemon.store.clear_manual_trigger_active()
+        daemon.store.mark_manual_profile_lock(
+            _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
+        )
+        logger.info("profile_cycled", direction=direction, to=profile.name)
+
+    return _cycle
+
+
 def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     """Instancia HotkeyManager e atribui a daemon._hotkey_manager.
 
@@ -71,33 +128,35 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
     config do daemon é propagada — inclusive 0 = desliga o long-press do PS.
     """
     from hefesto_dualsense4unix.integrations.hotkey_daemon import (
+        DEFAULT_COMBO_NEXT,
+        DEFAULT_COMBO_PREV,
         HotkeyConfig,
         HotkeyManager,
     )
 
-    # HOTKEY-NEXTPREV-DEAD-FIX-01: os combos next/prev (PS+dpad) NÃO são ligados
-    # a callback aqui (on_next/on_prev ficam None), então só faziam mal: o
-    # observe() detectava PS+dpad, disparava _fire('next'/'prev') com cb=None
-    # (no-op), suprimia as setas da emulação e ainda bloqueava o PS-solo (Steam)
-    # no release — gesto morto que comia o dpad. Desligamos os combos (tupla
-    # vazia) até que a troca de perfil por hotkey seja de fato implementada
-    # (wire de on_next/on_prev ao ProfileManager.list_profiles/activate). Assim
-    # PS+dpad volta a emular as setas normalmente. O modo-jogo segue no PS+Options.
+    # FEAT-HOTKEY-PROFILE-CYCLE-01: os combos next/prev (PS+D-pad) agora estão
+    # LIGADOS — on_next/on_prev ciclam o perfil via ProfileManager.activate (o
+    # mesmo caminho do profile.switch). Antes ficavam disabled_until_wired: o
+    # observe() disparava com cb=None (no-op) mas ainda comia o D-pad. Com o cb
+    # de verdade, suprimir o D-pad durante o hold do PS é o comportamento certo
+    # (você está trocando de perfil, não mirando). Modo-jogo segue no PS+Options.
     hotkey_config = HotkeyConfig(
         ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
-        next_profile=(),
-        prev_profile=(),
+        next_profile=DEFAULT_COMBO_NEXT,
+        prev_profile=DEFAULT_COMBO_PREV,
     )
     daemon._hotkey_manager = HotkeyManager(
         on_ps_solo=build_ps_solo_callback(daemon),
         on_ps_long_press=build_ps_long_press_callback(daemon),
+        on_next=build_profile_cycle_callback(daemon, +1),
+        on_prev=build_profile_cycle_callback(daemon, -1),
         config=hotkey_config,
     )
     logger.info(
         "hotkey_manager_started",
         ps_button_action=daemon.config.ps_button_action,
         ps_long_press_ms=hotkey_config.ps_long_press_ms,
-        next_prev_combos="disabled_until_wired",
+        next_prev_combos="ps+dpad_up / ps+dpad_down",
     )
 
 

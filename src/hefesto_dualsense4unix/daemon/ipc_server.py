@@ -14,7 +14,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     rumble.passthrough   {enabled: bool}       -> {status}
     daemon.status        {}          -> {connected, transport, active_profile, battery_pct}
     daemon.state_full    {}          -> {... estado + mouse_emulation se daemon expõe}
-    controller.list      {}          -> {controllers: [{connected, transport}]}
+    controller.list      {}          -> {controllers: [{connected, transport, is_primary?}]}
     daemon.reload        {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
 
@@ -109,6 +109,7 @@ class IpcServer(IpcHandlersMixin):
             "controller.list": self._handle_controller_list,
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
+            "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
             "plugin.list": self._handle_plugin_list,
@@ -227,6 +228,21 @@ class IpcServer(IpcHandlersMixin):
                 if response is not None:
                     writer.write(response + b"\n")
                     await writer.drain()
+        except (ConnectionError, asyncio.IncompleteReadError) as exc:
+            # BUG-IPC-DISCONNECT-STORM-01: cliente que fecha a conexão antes do
+            # daemon terminar de responder é cenário NORMAL — não um erro. A GUI
+            # e o applet COSMIC usam timeout curto (0.25s) e fecham o socket assim
+            # que ele estoura; o `writer.drain()` acima então levanta
+            # BrokenPipeError/ConnectionResetError (ambos subclasses de
+            # ConnectionError). Antes logávamos com exc_info=True e o
+            # ConsoleRenderer renderizava o traceback rico COM locals — todo o
+            # grafo do daemon (StateStore, Server, handlers, AutoSwitcher...). A
+            # ~5 conexões/s de GUI+applet isso fritava 100% de uma CPU e despejava
+            # ~950 linhas/s no journal, criando uma ESPIRAL: daemon lento ->
+            # mais timeouts no cliente -> mais disconnects -> mais tracebacks. O
+            # daemon ficava vivo porém inresponsivo e a interface inteira parava
+            # de "aplicar". Log em debug, sem traceback.
+            logger.debug("ipc_client_disconnect", err=str(exc))
         except Exception as exc:
             logger.warning("ipc_client_error", err=str(exc), exc_info=True)
         finally:

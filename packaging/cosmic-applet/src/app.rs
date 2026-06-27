@@ -17,15 +17,13 @@ use cosmic::Element;
 
 use crate::ipc::{self, DaemonState, IpcError, ProfileInfo};
 
-/// Ícone do app (martelo) — estado normal/conectado.
-const ICON_APP: &str = "com.vitoriamaria.HefestoDualsense4Unix-symbolic";
-/// Estado "daemon offline" — fica visualmente apagado no painel.
-const ICON_OFFLINE: &str = "action-unavailable-symbolic";
-/// Estado "alerta" — bateria abaixo do limiar.
-const ICON_ALERT: &str = "battery-caution-symbolic";
-
-/// Limiar de bateria baixa (%) para o ícone de alerta.
-const LOW_BATTERY_PCT: i64 = 15;
+/// Ícone do painel: a MESMA logo do app usada no `.desktop`
+/// (`Icon=hefesto-dualsense4unix`, PNG multi-tamanho em hicolor). Usado SEMPRE,
+/// em qualquer estado — assim a logo nunca "some" do painel em transições
+/// (onlineoffline). Antes o applet trocava o glifo para um SVG symbolic que
+/// não renderizava de forma confiável no tema (parecia sumir). O estado real
+/// (offline, bateria, perfil) é mostrado DENTRO do popover, não no ícone.
+const ICON_APP: &str = "hefesto-dualsense4unix";
 /// Período de refresh do estado enquanto o popover está aberto (~1.5 Hz).
 const REFRESH_MS: u64 = 700;
 /// Binário da GUI a abrir no "Abrir painel".
@@ -66,10 +64,11 @@ pub enum Message {
     ProfileSwitched(Result<String, IpcError>),
     /// "Abrir painel" — lança a GUI.
     OpenPanel,
-    /// Pausar/retomar o despacho de input do daemon (FEAT-DAEMON-PAUSE-RESUME-01).
-    TogglePause,
-    /// Resultado de daemon.pause/resume (novo estado de pausa).
-    PauseToggled(Result<bool, IpcError>),
+    /// Liga/desliga o "modo jogo": suspende mouse/teclado, mantém o gamepad
+    /// (FEAT-DSX-GAMEMODE-SUPPRESS-01, via daemon.emulation.suppress).
+    ToggleGameMode,
+    /// Resultado de daemon.emulation.suppress (novo estado emulation_suppressed).
+    GameModeToggled(Result<bool, IpcError>),
     /// Liga/desliga o mic embutido do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01).
     ToggleMic,
 }
@@ -202,17 +201,23 @@ impl cosmic::Application for HefestoApplet {
                 Task::none()
             }
 
-            Message::TogglePause => {
-                let want_paused = !self.state.as_ref().map(|s| s.paused).unwrap_or(false);
-                Task::perform(ipc::set_pause(want_paused), |res| {
-                    cosmic::action::app(Message::PauseToggled(res))
+            Message::ToggleGameMode => {
+                // Entrar no modo jogo -> suppressed=true; sair -> false. Lê o
+                // estado atual de emulation_suppressed (não paused).
+                let want_suppressed = !self
+                    .state
+                    .as_ref()
+                    .map(|s| s.emulation_suppressed)
+                    .unwrap_or(false);
+                Task::perform(ipc::set_emulation_suppressed(want_suppressed), |res| {
+                    cosmic::action::app(Message::GameModeToggled(res))
                 })
             }
 
-            Message::PauseToggled(result) => {
-                if let Ok(paused) = result {
+            Message::GameModeToggled(result) => {
+                if let Ok(suppressed) = result {
                     if let Some(state) = self.state.as_mut() {
-                        state.paused = paused; // otimista; o refresh seguinte confirma
+                        state.emulation_suppressed = suppressed; // otimista; refresh confirma
                     }
                 }
                 self.refresh_task()
@@ -268,19 +273,11 @@ impl HefestoApplet {
         })
     }
 
-    /// Escolhe o glifo do painel conforme o estado.
+    /// Glifo do painel: SEMPRE a logo do app. O estado (offline/bateria/perfil)
+    /// vai no popover — manter o ícone fixo evita que a logo "suma" do painel
+    /// quando o daemon fica offline (regressão relatada). Ver `ICON_APP`.
     fn panel_icon(&self) -> &'static str {
-        if self.offline {
-            return ICON_OFFLINE;
-        }
-        match &self.state {
-            Some(s) if !s.connected => ICON_OFFLINE,
-            Some(s) => match s.battery_pct {
-                Some(pct) if pct < LOW_BATTERY_PCT => ICON_ALERT,
-                _ => ICON_APP,
-            },
-            None => ICON_APP,
-        }
+        ICON_APP
     }
 
     /// Conteúdo do popover.
@@ -301,23 +298,29 @@ impl HefestoApplet {
         content = content.push(self.profiles_block());
         content = content.push(padded_control(divider::horizontal::default()));
 
-        // Ação: pausar/retomar o despacho de input (daemon segue vivo).
-        let paused = self.state.as_ref().map(|s| s.paused).unwrap_or(false);
-        let (pause_icon, pause_label) = if paused {
-            ("media-playback-start-symbolic", "Retomar")
+        // Ação: modo jogo — suspende mouse/teclado, mantém o gamepad vivo no
+        // jogo (FEAT-DSX-GAMEMODE-SUPPRESS-01, via daemon.emulation.suppress).
+        // Transitório: não persiste em disco. Lê emulation_suppressed (não paused).
+        let game_mode = self
+            .state
+            .as_ref()
+            .map(|s| s.emulation_suppressed)
+            .unwrap_or(false);
+        let (game_icon, game_label) = if game_mode {
+            ("media-playback-start-symbolic", "Sair do modo jogo")
         } else {
-            ("media-playback-pause-symbolic", "Pausar")
+            ("input-gaming-symbolic", "Modo jogo")
         };
         content = content.push(
             menu_button(
                 cosmic::iced::widget::row![
-                    icon::from_name(pause_icon).size(16),
-                    text::body(pause_label),
+                    icon::from_name(game_icon).size(16),
+                    text::body(game_label),
                 ]
                 .spacing(spacing.space_xs)
                 .align_y(cosmic::iced::Alignment::Center),
             )
-            .on_press(Message::TogglePause),
+            .on_press(Message::ToggleGameMode),
         );
 
         // Ação: ligar/desligar o mic embutido do DualSense (o quirk segura o storm
@@ -395,7 +398,16 @@ impl HefestoApplet {
             .unwrap_or_else(|| "—".to_string());
         col = col.push(status_row("Perfil ativo", profile));
 
-        // FEAT-DAEMON-PAUSE-RESUME-01: indica pausa (daemon vivo, sem input).
+        // FEAT-DSX-GAMEMODE-SUPPRESS-01: modo jogo (mouse/teclado suspensos,
+        // gamepad vivo). Transitório — distinto do pause persistente do daemon.
+        if state.emulation_suppressed {
+            col = col.push(status_row(
+                "Modo jogo",
+                "ligado (mouse/teclado suspensos)".to_string(),
+            ));
+        }
+
+        // FEAT-DAEMON-PAUSE-RESUME-01: indica pausa dura (daemon vivo, sem input).
         if state.paused {
             col = col.push(status_row(
                 "Estado",
