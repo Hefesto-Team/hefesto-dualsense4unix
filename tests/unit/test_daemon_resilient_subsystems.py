@@ -52,7 +52,12 @@ async def test_failing_subsystem_does_not_kill_daemon(
     monkeypatch.setattr(daemon, "_start_ipc", _boom)
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.1)
+    # Espera deterministicamente o 1º tick do poll antes de parar — sob carga e
+    # com cobertura (--cov) no CI um sleep fixo de 0.1s pode não bastar (flaky).
+    for _ in range(500):
+        if store.counter("poll.tick") >= 1:
+            break
+        await asyncio.sleep(0.01)
     daemon.stop()
     await run_task
 

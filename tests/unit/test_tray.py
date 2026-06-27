@@ -316,7 +316,7 @@ def test_apptray_em_cosmic_difere_indicator_via_glib_timeout(
     fake_glib.timeout_add.assert_called_once()
     args, _kwargs = fake_glib.timeout_add.call_args
     # BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01: defer tunado p/ COSMIC (1500ms).
-    # Referencia a constante para não regredir se o valor for ajustado de novo.
+    # Referência a constante para não regredir se o valor for ajustado de novo.
     from hefesto_dualsense4unix.app.tray import _INDICATOR_DEFERRED_MS
     assert args[0] == _INDICATOR_DEFERRED_MS
     assert tray._indicator is None  # ainda não criado
