@@ -21,6 +21,11 @@
 #                         kernel (NÃO é regra udev); ciente do bootloader
 #                         (kernelstub/grub), idempotente e reversível. O install
 #                         DEFAULT NÃO aplica (mudança de cmdline é sensível).
+#   --with-storm-watch    OPT-IN (default OFF): instala um serviço de usuário que
+#                         registra o storm USB (-71) do DualSense num log dedicado
+#                         (~/.local/state/hefesto-dualsense4unix/storm.log).
+#                         Replicável e sobrevive reboot (sem /tmp, sem sudo). O
+#                         journald já guarda tudo; isto é só um recorte legível.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -74,6 +79,7 @@ ENABLE_COSMIC_APPLET=0
 WITH_WIREPLUMBER_FIX=0
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
+WITH_STORM_WATCH=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
@@ -91,6 +97,7 @@ for arg in "$@"; do
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
+        --with-storm-watch)   WITH_STORM_WATCH=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
@@ -703,6 +710,39 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 7b. Storm-watch (opt-in): serviço de usuário que loga o -71 num arquivo
+#     dedicado. FEAT-DSX-STORM-WATCH-01. Habilitado por --with-storm-watch ou
+#     pelo modo "tudo" (--yes). Replicável e simétrico no uninstall.
+# ---------------------------------------------------------------------------
+if [[ "${WITH_STORM_WATCH}" -eq 1 || "${AUTO_YES}" -eq 1 ]]; then
+    step "7b/11" "Storm-watch: serviço de usuário (log dedicado do -71)"
+    readonly STORM_SCRIPT_SRC="${ROOT_DIR}/scripts/storm_watch.sh"
+    readonly STORM_SCRIPT_DIR="${HOME}/.local/share/hefesto-dualsense4unix/scripts"
+    readonly STORM_SCRIPT_TARGET="${STORM_SCRIPT_DIR}/storm_watch.sh"
+    readonly STORM_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-storm-watch.service"
+    readonly STORM_USER_UNIT_DIR="${HOME}/.config/systemd/user"
+    readonly STORM_UNIT_TARGET="${STORM_USER_UNIT_DIR}/hefesto-dualsense4unix-storm-watch.service"
+
+    if [[ ! -f "${STORM_SCRIPT_SRC}" || ! -f "${STORM_UNIT_SRC}" ]]; then
+        warn "storm-watch: arquivos-fonte ausentes — reinstale o repo"
+    else
+        mkdir -p "${STORM_SCRIPT_DIR}" "${STORM_USER_UNIT_DIR}"
+        install -m755 "${STORM_SCRIPT_SRC}" "${STORM_SCRIPT_TARGET}"
+        cp -f "${STORM_UNIT_SRC}" "${STORM_UNIT_TARGET}"
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl --user daemon-reload >/dev/null 2>&1 || true
+            if systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1; then
+                printf '      habilitado — log em ~/.local/state/hefesto-dualsense4unix/storm.log\n'
+            else
+                warn "enable falhou — habilite: systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service"
+            fi
+        else
+            warn "systemctl ausente — unit copiada mas não habilitada"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # 8. Extension AppIndicator no GNOME (necessária para o ícone de bandeja)
 # ---------------------------------------------------------------------------
 step "8/11" "GNOME: extension AppIndicator (tray icon)"
@@ -843,6 +883,26 @@ printf '────────────────────────
 printf ' Abrir:       hefesto-dualsense4unix-gui\n'
 printf ' Desinstalar: ./uninstall.sh\n'
 printf '─────────────────────────────────────────\n'
+
+# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: recomendação (apenas print) para quem usa
+# o microfone do DualSense. O quirk de áudio USB (usbcore.quirks=054c:0ce6:gn) é
+# o que segura o storm -71 COM o mic ligado; ligar o mic sem ele pode reabrir o
+# storm. NÃO aplicamos nem tocamos no cmdline (gerido pela toolchain pessoal
+# Aurora) — só avisamos. Mesma detecção do doctor.sh (ativo/agendado/runtime).
+QUIRK_MARKER="054c:0ce6:gn"
+quirk_present=0
+if grep -q "${QUIRK_MARKER}" /proc/cmdline 2>/dev/null; then quirk_present=1; fi
+if [[ -r /etc/kernelstub/configuration ]] && grep -q "${QUIRK_MARKER}" /etc/kernelstub/configuration 2>/dev/null; then quirk_present=1; fi
+if [[ -r /etc/default/grub ]] && grep -q "${QUIRK_MARKER}" /etc/default/grub 2>/dev/null; then quirk_present=1; fi
+if [[ -r /sys/module/usbcore/parameters/quirks ]] && grep -q "${QUIRK_MARKER}" /sys/module/usbcore/parameters/quirks 2>/dev/null; then quirk_present=1; fi
+if [[ "${quirk_present}" -eq 0 ]]; then
+    printf '\n'
+    printf ' Vai usar o MICROFONE do DualSense?\n'
+    printf '   O quirk de áudio USB segura o storm -71 com o mic ligado.\n'
+    printf '   Para aplicá-lo (vale no próximo boot, NÃO mexe no cmdline agora):\n'
+    printf '     bash scripts/install_usb_quirk.sh\n'
+    printf '─────────────────────────────────────────\n'
+fi
 printf '\n'
 
 # "O que fazes com paz de espírito, isso sim dura." — Marco Aurélio

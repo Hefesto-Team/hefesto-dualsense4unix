@@ -428,13 +428,16 @@ def build_from_name(
         # BUG-TRIGGER-FLAT-MULTIPOS-01: lista posicional PLANA de 10 strengths.
         # A factory tem assinatura factory(strengths: list) — não 10 posicionais —
         # então NÃO pode cair em factory(*params). Empacota como uma lista única.
-        result = factory([int(x) for x in params])
+        flat = cast("list[int]", params)
+        result = factory([int(x) for x in flat])
     elif name == "MultiPositionVibration" and params:
         # flat posicional [frequency, s0..s9] -> factory(frequency, strengths)
-        result = factory(int(params[0]), [int(x) for x in params[1:]])
+        flat = cast("list[int]", params)
+        result = factory(int(flat[0]), [int(x) for x in flat[1:]])
     elif name == "Custom" and params:
         # flat posicional [mode, f0..f6] -> factory(mode, forces)
-        result = factory(int(params[0]), tuple(int(x) for x in params[1:]))
+        flat = cast("list[int]", params)
+        result = factory(int(flat[0]), tuple(int(x) for x in flat[1:]))
     else:
         result = factory(*params)
     assert isinstance(result, TriggerEffect)

@@ -10,6 +10,7 @@
 //!   - `daemon.state_full` -> estado completo (bateria, transporte, perfil...)
 //!   - `profile.list`      -> lista de perfis
 //!   - `profile.switch {name}` -> troca o perfil ativo
+//!   - `daemon.emulation.suppress {suppressed}` -> liga/desliga o "modo jogo"
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -112,6 +113,13 @@ pub struct DaemonState {
     /// sem despachar input). serde(default)=false tolera daemons antigos.
     #[serde(default)]
     pub paused: bool,
+    /// FEAT-DSX-GAMEMODE-SUPPRESS-01: true quando o "modo jogo" está ligado —
+    /// a emulação de mouse/teclado fica suspensa (transitório, não persiste em
+    /// disco), mas o gamepad segue vivo no jogo. Distinto de `paused`, que é o
+    /// kill-switch amplo e persistente do daemon. serde(default)=false tolera
+    /// daemons antigos.
+    #[serde(default)]
+    pub emulation_suppressed: bool,
 }
 
 /// Um perfil retornado por `profile.list`.
@@ -244,16 +252,23 @@ pub async fn switch_profile(name: String) -> Result<String, IpcError> {
     Ok(active)
 }
 
-/// `daemon.pause` / `daemon.resume` — pausa ou retoma o despacho de input
-/// (FEAT-DAEMON-PAUSE-RESUME-01). Devolve o novo estado de pausa solicitado.
-pub async fn set_pause(paused: bool) -> Result<bool, IpcError> {
-    let method = if paused {
-        "daemon.pause"
-    } else {
-        "daemon.resume"
-    };
-    call_raw(method, json!({})).await?;
-    Ok(paused)
+/// `daemon.emulation.suppress {suppressed}` — liga/desliga o "modo jogo":
+/// suspende a emulação de mouse/teclado mantendo o gamepad vivo no jogo
+/// (FEAT-DSX-GAMEMODE-SUPPRESS-01). Transitório — NÃO persiste em disco (ao
+/// contrário do antigo `daemon.pause`, que renascia pausado no boot). Espelha a
+/// semântica da GUI e do combo PS+Options. Devolve o novo `emulation_suppressed`
+/// reportado pelo daemon (fallback: o valor solicitado).
+pub async fn set_emulation_suppressed(suppressed: bool) -> Result<bool, IpcError> {
+    let value = call_raw(
+        "daemon.emulation.suppress",
+        json!({ "suppressed": suppressed }),
+    )
+    .await?;
+    let new_state = value
+        .get("emulation_suppressed")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(suppressed);
+    Ok(new_state)
 }
 
 #[cfg(test)]

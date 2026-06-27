@@ -145,6 +145,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
     calls: dict[str, list[Any]] = {
         "rumble_set": [],
         "rumble_stop": [],
+        "rumble_passthrough": [],
         "rumble_policy_set": [],
         "rumble_policy_custom": [],
         "call_async": [],
@@ -156,6 +157,10 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
 
     def fake_rumble_stop() -> bool:
         calls["rumble_stop"].append(True)
+        return True
+
+    def fake_rumble_passthrough(enabled: bool = True) -> bool:
+        calls["rumble_passthrough"].append(enabled)
         return True
 
     def fake_rumble_policy_set(policy: str) -> bool:
@@ -173,6 +178,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
 
     monkeypatch.setattr(rumble_actions, "rumble_set", fake_rumble_set)
     monkeypatch.setattr(rumble_actions, "rumble_stop", fake_rumble_stop)
+    monkeypatch.setattr(
+        rumble_actions, "rumble_passthrough", fake_rumble_passthrough
+    )
     monkeypatch.setattr(rumble_actions, "rumble_policy_set", fake_rumble_policy_set)
     monkeypatch.setattr(
         rumble_actions, "rumble_policy_custom", fake_rumble_policy_custom
@@ -196,6 +204,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "on_rumble_apply",
         "on_rumble_test_500ms",
         "on_rumble_stop",
+        "on_rumble_passthrough",
         "_refresh_rumble_from_draft",
         "_read_scales",
         "_set_scales",
@@ -340,6 +349,20 @@ def test_on_rumble_stop_zera_scales_e_chama_ipc(
     assert mixin._widgets["rumble_weak_scale"].get_value() == 0
     assert mixin._widgets["rumble_strong_scale"].get_value() == 0
     assert mixin._ipc_calls["rumble_stop"] == [True]
+
+
+def test_on_rumble_passthrough_devolve_rumble_ao_jogo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FEAT-RUMBLE-PASSTHROUGH-GUI-01: o botão chama rumble.passthrough(True) e
+    zera os sliders — antídoto do 'Parar'."""
+    mixin = _build_mixin(monkeypatch)
+    mixin._widgets["rumble_weak_scale"].set_value(120)
+
+    mixin.on_rumble_passthrough(None)
+
+    assert mixin._widgets["rumble_weak_scale"].get_value() == 0
+    assert mixin._ipc_calls["rumble_passthrough"] == [True]
 
 
 def test_on_rumble_test_500ms_aplica_defaults_quando_zero(

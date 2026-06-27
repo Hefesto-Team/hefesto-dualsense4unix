@@ -300,6 +300,11 @@ class IpcHandlersMixin:
                 "speed": int(getattr(daemon_cfg, "mouse_speed", 6)),
                 "scroll_speed": int(getattr(daemon_cfg, "mouse_scroll_speed", 1)),
             }
+            # FEAT-DSX-GAMEPAD-FLAVOR-01: estado do gamepad virtual p/ GUI/applet.
+            result["gamepad_emulation"] = {
+                "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
+                "flavor": str(getattr(daemon_cfg, "gamepad_flavor", "dualsense")),
+            }
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
             rumble_mult_applied: float = 1.0
             rumble_engine = getattr(self.daemon, "_rumble_engine", None)
@@ -314,13 +319,18 @@ class IpcHandlersMixin:
         return result
 
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
+        # FEAT-DSX-MULTI-CONTROLLER-01: lista UMA entrada por controle físico
+        # conectado. O backend real expõe `describe_controllers`; backends que
+        # não o implementam (ex.: FakeController) caem no resumo single-entry.
+        describe = getattr(self.controller, "describe_controllers", None)
+        if callable(describe):
+            return {"controllers": describe()}
+        connected = self.controller.is_connected()
         return {
             "controllers": [
                 {
-                    "connected": self.controller.is_connected(),
-                    "transport": self.controller.get_transport()
-                    if self.controller.is_connected()
-                    else None,
+                    "connected": connected,
+                    "transport": self.controller.get_transport() if connected else None,
                 }
             ]
         }
@@ -490,6 +500,32 @@ class IpcHandlersMixin:
             enabled=enabled, speed=speed, scroll_speed=scroll_speed
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+
+    async def _handle_gamepad_emulation_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01).
+
+        Params:
+            enabled: bool (obrigatório)
+            flavor: "dualsense" | "xbox" (opcional; mantém o atual se ausente)
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("gamepad.emulation.set exige 'enabled' boolean")
+        flavor = params.get("flavor")
+        if flavor is not None and not isinstance(flavor, str):
+            raise ValueError("gamepad.emulation.set: 'flavor' precisa ser string")
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar o gamepad virtual")
+
+        ok = self.daemon.set_gamepad_emulation(enabled=enabled, flavor=flavor)
+        active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
+        return {
+            "status": "ok" if ok else "failed",
+            "enabled": enabled and ok,
+            "flavor": active_flavor,
+        }
 
     async def _handle_emulation_suppress(
         self, params: dict[str, Any]

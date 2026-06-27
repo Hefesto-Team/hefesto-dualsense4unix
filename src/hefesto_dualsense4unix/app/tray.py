@@ -194,27 +194,32 @@ class AppTray:
         if _desktop_is_cosmic():
             GLib.timeout_add(
                 _WATCHER_PROBE_RETRY_MS,
-                lambda: (self._probe_watcher_with_retries(0), False)[1],
+                lambda: self._probe_watcher_with_retries(0),
             )
 
         return True
 
-    def _probe_watcher_with_retries(self, attempt: int) -> None:
+    def _probe_watcher_with_retries(self, attempt: int) -> bool:
         """Probe StatusNotifierWatcher com retries — só notifica se TODAS falharem.
 
         BUG-TRAY-COSMIC-MISSING-NOTIFY-SPAM-01.
+
+        Retorna sempre ``False`` (callback one-shot do GLib): cada tentativa
+        reagenda a próxima internamente via novo ``timeout_add``, então a
+        source que disparou esta chamada nunca deve se repetir sozinha.
         """
         if statusnotifierwatcher_available():
             logger.debug("statusnotifierwatcher_disponivel_apos_retry", attempt=attempt)
-            return
+            return False
         if attempt + 1 < _WATCHER_PROBE_RETRIES:
             GLib.timeout_add(
                 _WATCHER_PROBE_RETRY_MS,
-                lambda: (self._probe_watcher_with_retries(attempt + 1), False)[1],
+                lambda: self._probe_watcher_with_retries(attempt + 1),
             )
-            return
+            return False
         # Esgotou as tentativas: avisa SE ainda não avisou em sessão anterior.
         self._maybe_notify_tray_missing()
+        return False
 
     @staticmethod
     def _maybe_notify_tray_missing() -> None:
@@ -231,7 +236,7 @@ class AppTray:
             flag_path = runtime_dir(ensure=True) / _TRAY_WARNED_FLAG_NAME
         except Exception as exc:
             logger.debug("tray_warned_flag_path_falhou", err=str(exc))
-            flag_path = None  # type: ignore[assignment]
+            flag_path = None
 
         reset = os.environ.get(
             "HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING", ""

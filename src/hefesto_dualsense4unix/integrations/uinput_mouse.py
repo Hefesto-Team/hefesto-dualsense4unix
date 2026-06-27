@@ -11,9 +11,9 @@ Mapeamento canônico (FEAT-MOUSE-01/02, decidido pelo usuário):
 | DualSense                | Saída emulada          | evdev code    |
 |--------------------------|------------------------|---------------|
 | Cross (X) ou L2          | Botão esquerdo         | BTN_LEFT      |
-| Triangle (△) ou R2       | Botão direito          | BTN_RIGHT     |
+| Triangle () ou R2       | Botão direito          | BTN_RIGHT     |
 | R3                       | Botão do meio          | BTN_MIDDLE    |
-| Circle (○)               | Enter                  | KEY_ENTER     |
+| Circle ()               | Enter                  | KEY_ENTER     |
 | Square (□)               | Esc                    | KEY_ESC       |
 | D-pad up/down/left/right | Setas do teclado       | KEY_*         |
 | Analógico esquerdo       | Movimento              | REL_X/REL_Y   |
@@ -50,6 +50,12 @@ SCROLL_RATE_LIMIT_SEC = 0.050
 DEFAULT_MOUSE_SPEED = 6
 DEFAULT_SCROLL_SPEED = 1
 TRIGGER_PRESS_THRESHOLD = 64
+
+# Touchpad como cursor (FEAT-DSX-TOUCHPAD-CURSOR-B4): pixels de cursor por
+# unidade do touchpad (largura 1920 / altura 1079) com `mouse_speed` default.
+# 0.45 mapeia uma varredura horizontal cheia (~1920 un.) a ~864 px — confortável
+# em 1080p e proporcional ao stick (que também usa `mouse_speed`).
+TOUCHPAD_SENSITIVITY = 0.45
 
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_LEFT",
@@ -133,6 +139,10 @@ class UinputMouseDevice:
     # Estado por botão "tap" (FEAT-MOUSE-02): circle/square emitem press+release
     # em cada transição False→True. Guarda previous_state para detectar o delta.
     _prev_edge_keys: frozenset[str] = field(default_factory=frozenset)
+    # Carry fracionário do movimento do touchpad (B4): preserva o sub-pixel
+    # truncado a cada tick para que movimento lento não "engasgue".
+    _tp_carry_x: float = 0.0
+    _tp_carry_y: float = 0.0
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -163,6 +173,8 @@ class UinputMouseDevice:
         self._last_buttons_emulated = frozenset()
         self._last_scroll_at = -math.inf
         self._prev_edge_keys = frozenset()
+        self._tp_carry_x = 0.0
+        self._tp_carry_y = 0.0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -326,6 +338,36 @@ class UinputMouseDevice:
         self._device.syn()
         self._last_scroll_at = now
 
+    def emit_touchpad_move(self, raw_dx: int, raw_dy: int) -> None:
+        """Move o cursor a partir de um delta bruto do touchpad (B4).
+
+        `raw_dx`/`raw_dy` vêm em unidades do touchpad (kernel hid_playstation),
+        já acumuladas pelo `TouchpadReader.consume_motion` desde o último tick.
+        Escala por `TOUCHPAD_SENSITIVITY * mouse_speed/DEFAULT` (mesma noção de
+        velocidade do stick) e mantém carry fracionário para movimento suave —
+        o resto sub-pixel é levado ao próximo tick em vez de truncado (o que
+        causaria o "engasgo" em movimentos lentos).
+        """
+        if self._device is None or self._uinput_mod is None:
+            return
+        if raw_dx == 0 and raw_dy == 0:
+            return
+        factor = TOUCHPAD_SENSITIVITY * (self.mouse_speed / DEFAULT_MOUSE_SPEED)
+        self._tp_carry_x += raw_dx * factor
+        self._tp_carry_y += raw_dy * factor
+        ix = int(self._tp_carry_x)
+        iy = int(self._tp_carry_y)
+        self._tp_carry_x -= ix
+        self._tp_carry_y -= iy
+        if ix == 0 and iy == 0:
+            return
+        u = self._uinput_mod
+        if ix != 0:
+            self._device.emit(u.REL_X, ix, syn=False)
+        if iy != 0:
+            self._device.emit(u.REL_Y, iy, syn=False)
+        self._device.syn()
+
 
 __all__ = [
     "BUTTON_TO_UINPUT",
@@ -337,6 +379,7 @@ __all__ = [
     "MOVE_DEADZONE",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
+    "TOUCHPAD_SENSITIVITY",
     "TRIGGER_PRESS_THRESHOLD",
     "UinputMouseDevice",
     "_compute_move",

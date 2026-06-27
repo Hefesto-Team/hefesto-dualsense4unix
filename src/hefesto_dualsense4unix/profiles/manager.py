@@ -119,21 +119,33 @@ class ProfileManager:
         return candidates[0]
 
 
-def _to_key_bindings(profile: Profile) -> dict[str, KeyBinding]:
-    """Resolve `Profile.key_bindings` em mapping pronto para o device.
+def resolve_key_bindings(
+    raw: dict[str, list[str]] | None,
+) -> dict[str, KeyBinding]:
+    """Resolve um mapping CRU de key_bindings (button→tokens) para o device.
+
+    Mesmas regras de `_to_key_bindings`, mas recebe o mapping cru em vez de um
+    `Profile` — usado por `profile.apply_draft` (DraftApplier) para empurrar os
+    bindings editados na aba Teclado ao device vivo sem reativar o perfil do
+    disco (BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01).
 
     Regras (FEAT-KEYBOARD-PERSISTENCE-01):
     - `None` → herda `DEFAULT_BUTTON_BINDINGS` completo.
     - `{}` → vazio (teclado silencioso; usuário removeu todos os bindings).
-    - dict parcial → override isolado; **não mescla com defaults**
-      (spec: override é explícito; para "usar default", deixe None).
-
-    Converte `list[str]` do schema em `tuple[str, ...]` (KeyBinding).
+    - dict parcial → override isolado; **não mescla com defaults**.
     """
-    raw = profile.key_bindings
     if raw is None:
         return dict(DEFAULT_BUTTON_BINDINGS)
     return {button: tuple(tokens) for button, tokens in raw.items()}
+
+
+def _to_key_bindings(profile: Profile) -> dict[str, KeyBinding]:
+    """Resolve `Profile.key_bindings` em mapping pronto para o device.
+
+    Converte `list[str]` do schema em `tuple[str, ...]` (KeyBinding). Delega a
+    resolução das regras (None/{}/parcial) a `resolve_key_bindings`.
+    """
+    return resolve_key_bindings(profile.key_bindings)
 
 
 def _to_led_settings(leds: LedsConfig) -> LedSettings:
@@ -156,4 +168,9 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
     )
 
 
-__all__ = ["ProfileManager", "_to_key_bindings", "_to_led_settings"]
+__all__ = [
+    "ProfileManager",
+    "_to_key_bindings",
+    "_to_led_settings",
+    "resolve_key_bindings",
+]

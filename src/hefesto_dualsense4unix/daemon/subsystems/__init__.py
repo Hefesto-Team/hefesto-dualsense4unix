@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.base import Subsystem
+from hefesto_dualsense4unix.daemon.subsystems.gamepad import GamepadSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.ipc import IpcSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
 from hefesto_dualsense4unix.daemon.subsystems.mouse import MouseSubsystem
@@ -27,6 +28,7 @@ SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
     UdpSubsystem,
     AutoswitchSubsystem,
     MouseSubsystem,
+    GamepadSubsystem,
     RumbleSubsystem,
     PluginsSubsystem,
     MetricsSubsystem,
@@ -35,6 +37,7 @@ SUBSYSTEM_REGISTRY: list[type[Subsystem]] = [
 __all__ = [
     "SUBSYSTEM_REGISTRY",
     "AutoswitchSubsystem",
+    "GamepadSubsystem",
     "IpcSubsystem",
     "MetricsSubsystem",
     "MouseSubsystem",

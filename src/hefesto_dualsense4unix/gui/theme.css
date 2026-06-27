@@ -42,6 +42,20 @@
     padding: 5px 11px;
     color: #282a36;
 }
+/* Realce do modo ativo num grupo de GtkButton de ação (seletor de gamepad).
+   GtkButton não tem :checked; o código aplica .hefesto-active-mode no botão do
+   modo atual. Mesmo visual do :checked p/ consistência com a política de rumble. */
+.hefesto-dualsense4unix-window button.hefesto-active-mode {
+    background-color: #bd93f9;
+    border-color: #bd93f9;
+    color: #282a36;
+    font-weight: bold;
+}
+.hefesto-dualsense4unix-window button.hefesto-active-mode:hover {
+    background-color: #caa3fb;
+    border: 2px solid #ff79c6;
+    color: #282a36;
+}
 .hefesto-dualsense4unix-window button:disabled {
     background-color: #2f313d;
     border-color: #44475a;

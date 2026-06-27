@@ -25,6 +25,7 @@ fi
 MODE="gui"
 TRANSPORT="usb"
 FAKE=0
+FORCE=0
 SMOKE_DURATION="${HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION:-2.0}"
 
 if [[ $# -eq 0 ]]; then
@@ -39,6 +40,7 @@ for arg in "$@"; do
         --fake)   MODE="daemon"; FAKE=1 ;;
         --bt)     TRANSPORT="bt" ;;
         --usb)    TRANSPORT="usb" ;;
+        --force)  FORCE=1 ;;
         *) echo "aviso: argumento desconhecido: $arg" ;;
     esac
 done
@@ -96,6 +98,30 @@ fi
 
 if [[ "$FAKE" == "1" ]]; then
     export HEFESTO_DUALSENSE4UNIX_FAKE=1
+    # BUG-RUN-FAKE-HIJACK-PROD-SOCKET-01: o modo --fake usa FakeController (setters
+    # no-op, sem HID/evdev). Sem isolar o socket IPC, ele bindava o socket de
+    # PRODUÇÃO e, via single-instance "última vence", SEQUESTRAVA o daemon real —
+    # GUI/applet/CLI passavam a falar com um daemon fake e "nada aplicava" no
+    # controle (cor/gatilho/LED viravam no-op; o grab nunca acontecia). Isola o
+    # socket como o --smoke já faz. Quem quiser apontar a GUI/CLI para o fake
+    # precisa exportar o mesmo HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME.
+    export HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME="${HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME:-hefesto-dualsense4unix-fake.sock}"
+fi
+
+# BUG-MULTI-INSTANCE-RUNSH-GUARD-01: um daemon de PRODUÇÃO aqui (socket default)
+# disputaria o socket IPC com o daemon do systemd — GUI/applet/CLI passariam a
+# falar com o daemon errado e "nada aplicaria" (o pepino do daemon órfão). O
+# --fake é isento: tem socket E pid-lock isolados (ver run_daemon/single_instance_name).
+# Override consciente com --force.
+if [[ "$FAKE" != "1" ]] && [[ "$FORCE" != "1" ]] \
+   && systemctl --user is-active --quiet hefesto-dualsense4unix.service 2>/dev/null; then
+    echo "erro: o daemon do systemd (hefesto-dualsense4unix.service) já está ATIVO." >&2
+    echo "  Subir um segundo daemon de produção aqui faria os dois disputarem o" >&2
+    echo "  socket IPC (GUI/applet/CLI falando com o daemon errado). Escolha:" >&2
+    echo "    systemctl --user stop hefesto-dualsense4unix.service   # pare o de produção, ou" >&2
+    echo "    ./run.sh --fake                                        # daemon isolado (socket próprio), ou" >&2
+    echo "    ./run.sh --daemon --force                              # forçar mesmo assim" >&2
+    exit 1
 fi
 
 exec hefesto-dualsense4unix daemon start --foreground

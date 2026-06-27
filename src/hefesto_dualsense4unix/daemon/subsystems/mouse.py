@@ -140,10 +140,38 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
         )
     except Exception as exc:
         logger.warning("mouse_dispatch_failed", err=str(exc))
+    # B4 (FEAT-DSX-TOUCHPAD-CURSOR-B4): o touchpad é fonte ÚNICA do cursor.
+    # Drena o delta acumulado pelo TouchpadReader desde o tick anterior e o
+    # converte em REL_X/REL_Y. Só roda aqui (dispatch_mouse), que o poll loop
+    # já gateia por mouse_device != None e not _emulation_suppressed.
+    reader = getattr(daemon, "_touchpad_reader", None)
+    consume = getattr(reader, "consume_motion", None)
+    if consume is not None:
+        try:
+            dx, dy = consume()
+            if dx or dy:
+                device.emit_touchpad_move(dx, dy)
+        except Exception as exc:
+            logger.warning("touchpad_move_dispatch_failed", err=str(exc))
+
+
+def discard_touchpad_motion(daemon: DaemonProtocol) -> None:
+    """Drena-e-descarta o movimento acumulado do touchpad (B4).
+
+    Chamado pelo poll loop quando a emulação está suprimida (modo-jogo) ou sem
+    device de mouse: sem isso, o delta acumularia enquanto a emulação está
+    desligada e o cursor "pularia" o acúmulo ao religar.
+    """
+    reader = getattr(daemon, "_touchpad_reader", None)
+    consume = getattr(reader, "consume_motion", None)
+    if consume is not None:
+        with contextlib.suppress(Exception):
+            consume()
 
 
 __all__ = [
     "MouseSubsystem",
+    "discard_touchpad_motion",
     "dispatch_mouse",
     "start_mouse_emulation",
     "stop_mouse_emulation",

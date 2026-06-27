@@ -1051,7 +1051,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <child>
                               <object class="GtkButton" id="rumble_stop">
                                 <property name="label" translatable="yes">Parar</property>
+                                <property name="tooltip-text" translatable="yes">Força silêncio dos motores (re-afirmado pelo daemon). Para devolver a vibração ao jogo, use 'Devolver rumble ao jogo'.</property>
                                 <signal name="clicked" handler="on_rumble_stop"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="rumble_passthrough">
+                                <property name="label" translatable="yes">Devolver rumble ao jogo</property>
+                                <property name="tooltip-text" translatable="yes">Libera o controle da vibração para o JOGO (passthrough). Use depois de 'Parar' para o rumble do jogo voltar a funcionar.</property>
+                                <signal name="clicked" handler="on_rumble_passthrough"/>
                               </object>
                             </child>
                           </object>
@@ -1774,6 +1782,118 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
+                  <object class="GtkBox" id="emulation_gamepad_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">8</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Gamepad p/ jogos:</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_gamepad_status_label">
+                        <property name="label" translatable="yes">—</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_gamepad_off_button">
+                        <property name="label" translatable="yes">Desligado</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o gamepad virtual. O jogo passa a ver o DualSense cru (prompts PS nos jogos que suportam Sony).</property>
+                        <signal name="clicked" handler="on_emulation_gamepad_off"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_gamepad_dualsense_button">
+                        <property name="label" translatable="yes">DualSense (PS)</property>
+                        <property name="tooltip-text" translatable="yes">Gamepad virtual com máscara DualSense: prompts de PlayStation, combos sagrados filtrados, sem duplicar o controle.</property>
+                        <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_gamepad_xbox_button">
+                        <property name="label" translatable="yes">Xbox 360</property>
+                        <property name="tooltip-text" translatable="yes">Gamepad virtual com máscara Xbox: fallback para jogos XInput-only (prompts de Xbox).</property>
+                        <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="emulation_gamemode_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Modo jogo:</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_gamemode_status_label">
+                        <property name="label" translatable="yes">—</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_pause_button">
+                        <property name="label" translatable="yes">Modo jogo</property>
+                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). O gamepad continua funcionando no jogo. Transitório — não sobrevive ao reboot.</property>
+                        <signal name="clicked" handler="on_emulation_pause"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_resume_button">
+                        <property name="label" translatable="yes">Sair do modo jogo</property>
+                        <property name="tooltip-text" translatable="yes">Retoma a emulação de mouse/teclado.</property>
+                        <signal name="clicked" handler="on_emulation_resume"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="emulation_steam_input_box">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">6</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">4</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">Steam Input:</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_steam_input_status_label">
+                        <property name="label" translatable="yes">—</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_steam_input_check_button">
+                        <property name="label" translatable="yes">Verificar</property>
+                        <property name="tooltip-text" translatable="yes">Checa se o Steam Input (PSSupport) está ligado — ele conflita com o daemon.</property>
+                        <signal name="clicked" handler="on_emulation_steam_input_check"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="emulation_steam_input_disable_button">
+                        <property name="label" translatable="yes">Desligar Steam Input</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input PSSupport (fecha e reabre a Steam). Evita o conflito com o daemon.</property>
+                        <signal name="clicked" handler="on_emulation_steam_input_disable"/>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
                   <object class="GtkBox" id="emulation_mic_box">
                     <property name="orientation">horizontal</property>
                     <property name="spacing">6</property>
@@ -1810,7 +1930,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Para jogos que só aceitam Xbox 360, o daemon cria um gamepad virtual a partir do DualSense. Requer o módulo do kernel uinput carregado e regra udev.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Gamepad p/ jogos: &lt;b&gt;DualSense&lt;/b&gt; mostra prompts de PlayStation (ideal); &lt;b&gt;Xbox 360&lt;/b&gt; é fallback p/ jogos que só aceitam Xbox. O daemon vira o único leitor do controle (sem input dobrado). Requer o módulo uinput carregado.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>

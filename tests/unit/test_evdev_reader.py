@@ -164,6 +164,37 @@ def test_dpad_direcoes_converte_para_nomes():
     assert "dpad_up" not in snap.buttons_pressed
 
 
+def test_set_grab_sem_device_apenas_registra_intencao():
+    """set_grab antes de abrir o device só guarda a intenção (sem lançar)."""
+    reader = EvdevReader(device_path=None)
+    assert reader._grab is False
+    reader.set_grab(True)
+    assert reader._grab is True
+    reader.set_grab(False)
+    assert reader._grab is False
+
+
+def test_set_grab_aplica_no_device_aberto():
+    """Com device aberto, set_grab chama grab()/ungrab() no InputDevice."""
+    reader = EvdevReader(device_path=None)
+    dev = MagicMock()
+    reader._active_dev = dev
+    reader.set_grab(True)
+    dev.grab.assert_called_once()
+    reader.set_grab(False)
+    dev.ungrab.assert_called_once()
+
+
+def test_set_grab_nao_propaga_excecao():
+    """grab() que falha (device sumiu) não derruba o caller."""
+    reader = EvdevReader(device_path=None)
+    dev = MagicMock()
+    dev.grab.side_effect = OSError("device foi embora")
+    reader._active_dev = dev
+    reader.set_grab(True)  # não deve lançar
+    assert reader._grab is True
+
+
 def test_pids_contemplam_edge():
     assert 0x0CE6 in DUALSENSE_PIDS  # DualSense
     assert 0x0DF2 in DUALSENSE_PIDS  # DualSense Edge
