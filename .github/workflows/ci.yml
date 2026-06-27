@@ -248,23 +248,27 @@ jobs:
     name: Smoke ${{ matrix.distro }}
     needs: build-wheel
     runs-on: ubuntu-latest
+    # Arch/Fedora são EXPERIMENTAIS (continue-on-error): o evdev não publica wheel no
+    # PyPI (o sdist SEMPRE compila) e o Arch roda Python bleeding-edge (3.14) — alvo
+    # móvel. A falha deles INFORMA mas não bloqueia o run; debian-12 segue gate duro.
+    # BUG-CI-SMOKE-EVDEV-NO-GCC-01.
+    continue-on-error: ${{ matrix.experimental || false }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - distro: fedora-40
             image: fedora:40
-            # python3-evdev (precompilado p/ o Python do Fedora) satisfaz evdev>=1.6
-            # sem build; gcc/python3-devel/systemd-devel ficam de fallback se o pip
-            # decidir compilar o sdist (BUG-CI-SMOKE-EVDEV-NO-GCC-01).
-            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify python3-evdev gcc python3-devel systemd-devel
+            experimental: true
+            # evdev compila do sdist: precisa de gcc + Python.h (python3-devel) +
+            # linux/input.h (kernel-headers). pydantic-core tem wheel p/ o 3.12.
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers
           - distro: archlinux
             image: archlinux:latest
-            # Arch já está em Python 3.14: evdev (sdist) e pydantic-core (Rust) podem
-            # não ter wheel no PyPI p/ 3.14 → instala os compilados pelo próprio Arch
-            # (precompilados p/ 3.14) p/ satisfazer evdev>=1.6 e pydantic>=2 sem build;
-            # base-devel é fallback de gcc (BUG-CI-SMOKE-EVDEV-NO-GCC-01).
-            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core base-devel
+            experimental: true
+            # Python 3.14: instala evdev/pydantic-core compilados pelo próprio Arch
+            # (sem wheel no PyPI p/ 3.14) + gcc/linux-api-headers de fallback p/ o sdist.
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core gcc linux-api-headers
           - distro: debian-12
             image: debian:12
             install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin
