@@ -49,7 +49,7 @@ class GamepadSubsystem:
         start_gamepad_emulation(daemon, flavor=getattr(cfg, "gamepad_flavor", None))
 
     async def stop(self) -> None:  # pragma: no cover - simetria de protocolo
-        # O teardown real é feito por stop_gamepad_emulation no shutdown do
+        # O teardown real fica a cargo de stop_gamepad_emulation no shutdown do
         # daemon (que tem a referência ao device). Aqui é no-op seguro.
         return
 
