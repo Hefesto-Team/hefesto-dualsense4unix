@@ -40,7 +40,7 @@ DEFAULT_COMBO_PREV = ("ps", "dpad_down")
 PS_BUTTON = "ps"
 # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: segurar o PS por este tempo (sem outro
 # botao) alterna o "modo jogo" (suprime a emulacao de mouse/teclado).
-# 0 (ou negativo) desliga o gesto — o PS solo entao so faz a acao de toque
+# 0 (ou negativo) desliga o gesto — o PS solo então só faz a ação de toque
 # curto (ex.: abrir Steam) e o modo jogo passa a ser so pelo combo.
 # Default 0: o long-press estava causando modo-jogo ACIDENTAL (o toque de abrir
 # a Steam que passava de ~1s alternava o modo). O modo jogo agora e' so pelo
