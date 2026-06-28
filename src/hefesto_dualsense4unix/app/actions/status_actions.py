@@ -565,9 +565,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._get("status_battery_bar").set_fraction(0.0)
         self._get("status_battery_bar").set_text("— %")
         # FEAT-DSX-CONTROLLER-SELECTOR-01: sem daemon, esconde o seletor.
+        # Reseta _target_combo_visible junto (espelha o caminho <2 controles em
+        # _refresh_controller_target_combo): sem isso o flag fica stale=True e,
+        # ao reconectar com os MESMOS 2+ controles, o early-return idempotente
+        # não chega ao box.show() e o seletor some pra sempre.
         combo = getattr(self, "_target_combo", None)
         if combo is not None:
             combo.hide()
+            self._target_combo_visible = False
         self._reset_live_widgets()
 
     @staticmethod

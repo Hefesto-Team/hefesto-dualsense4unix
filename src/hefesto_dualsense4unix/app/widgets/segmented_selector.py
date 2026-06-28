@@ -151,6 +151,10 @@ if _GTK_DISPONIVEL:
             )
             self._init_logic(wrap)
             self._buttons: list[Gtk.RadioButton] = []
+            # Founder OCULTO do grupo de rádio (ver _create_buttons): permite que
+            # TODOS os botões visíveis fiquem inativos ao mesmo tempo (estado
+            # _active_id=None visualmente fiel ao GtkComboBox com active=-1).
+            self._group_founder: Gtk.RadioButton | None = None
             self.set_valign(Gtk.Align.CENTER)
             if wrap:
                 flow = Gtk.FlowBox()
@@ -169,16 +173,28 @@ if _GTK_DISPONIVEL:
         # ---- hooks GTK ----
 
         def _create_buttons(self, items: list[tuple[str, str]]) -> None:
-            """Destrói os botões atuais e cria um GtkRadioButton por item."""
+            """Destrói os botões atuais e cria um GtkRadioButton por item.
+
+            Usa um founder OCULTO do grupo (nunca empacotado no container): sem
+            ele, ``new_with_label_from_widget`` faria o PRIMEIRO botão visível
+            nascer ATIVO, divergindo de ``_active_id=None`` e tornando o item
+            default inalcançável por clique (clicar um rádio já-ativo não dispara
+            "toggled"). Com o founder oculto segurando o estado ativo inicial,
+            TODOS os botões visíveis começam inativos — visual fiel ao combo.
+            """
             for child in list(self._container.get_children()):
                 self._container.remove(child)
                 child.destroy()
+            old_founder = self._group_founder
+            if old_founder is not None:
+                old_founder.destroy()
             self._buttons = []
-            group: Gtk.RadioButton | None = None
+            # group=None → este botão funda o grupo; não é empacotado → invisível.
+            self._group_founder = Gtk.RadioButton()
             for the_id, label in items:
-                btn = Gtk.RadioButton.new_with_label_from_widget(group, label)
-                if group is None:
-                    group = btn
+                btn = Gtk.RadioButton.new_with_label_from_widget(
+                    self._group_founder, label
+                )
                 btn.set_mode(False)  # toggle button (sem a bolinha de radio)
                 btn.connect("toggled", self._on_button_toggled, the_id)
                 if self._wrap:
