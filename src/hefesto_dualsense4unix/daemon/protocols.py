@@ -59,6 +59,8 @@ class DaemonProtocol(Protocol):
     _keyboard_device: Any
     # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (UinputGamepad) ou None.
     _gamepad_device: Any
+    # FEAT-DSX-COOP-LOCAL-01: CoopManager (jogadores secundários) ou None.
+    _coop_manager: Any
     _hotkey_manager: Any
     _audio: Any
     _plugins_subsystem: Any
@@ -126,6 +128,10 @@ class DaemonProtocol(Protocol):
 
     def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
+        ...
+
+    def set_coop_enabled(self, enabled: bool) -> bool:
+        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01)."""
         ...
 
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:

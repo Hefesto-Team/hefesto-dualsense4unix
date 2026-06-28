@@ -198,13 +198,43 @@ def load_gamepad_emulation() -> tuple[bool, str | None]:
         return False, None
 
 
+_COOP_ENABLED_FLAG_FILE = "coop_enabled.flag"
+
+
+def save_coop_enabled(enabled: bool) -> None:
+    """Persiste se o co-op local está ligado (FEAT-DSX-COOP-LOCAL-01).
+
+    Flag-file em config_dir (existe = ligado) para o daemon restaurar o toggle
+    após restart/reboot. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _COOP_ENABLED_FLAG_FILE
+        if enabled:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("coop_enabled_state_saved", enabled=enabled)
+    except Exception as exc:
+        logger.debug("coop_enabled_state_save_failed", err=str(exc))
+
+
+def load_coop_enabled() -> bool:
+    """Retorna True se o co-op local foi deixado ligado na sessão anterior."""
+    try:
+        return (config_dir() / _COOP_ENABLED_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
 __all__ = [
+    "load_coop_enabled",
     "load_gamepad_emulation",
     "load_last_profile",
     "load_mouse_emulation_enabled",
     "load_paused_state",
     "read_active_marker",
     "save_active_marker",
+    "save_coop_enabled",
     "save_gamepad_emulation",
     "save_last_profile",
     "save_mouse_emulation_enabled",

@@ -59,15 +59,28 @@ def _is_virtual_evdev(event_path: str) -> bool:
         return False
 
 
-def find_dualsense_evdev() -> Path | None:
-    """Retorna path do evdev principal do DualSense FÍSICO; None se não houver.
+def _event_num(path: Path) -> int:
+    """Número do node evdev (`event12` → 12) para ordenação determinística."""
+    import re
 
-    Ignora devices virtuais (uinput) — ver `_is_virtual_evdev`.
+    m = re.search(r"(\d+)$", path.name)
+    return int(m.group(1)) if m else 0
+
+
+def find_all_dualsense_evdevs() -> list[Path]:
+    """Todos os evdevs principais (gamepad) de DualSense FÍSICOS, ordenados.
+
+    FEAT-DSX-COOP-LOCAL-01: o caminho single-controle usa só o primeiro
+    (`find_dualsense_evdev`), mas o co-op precisa de UM reader por controle —
+    daí enumerar todos. Filtra devices virtuais (uinput, ver `_is_virtual_evdev`)
+    e o touchpad (sem caps de gamepad). Ordena por número do node para que a
+    eleição de "primário" seja estável entre execuções.
     """
     try:
-        from evdev import InputDevice, list_devices
+        from evdev import InputDevice, ecodes, list_devices
     except ImportError:
-        return None
+        return []
+    found: list[Path] = []
     for path in list_devices():
         if _is_virtual_evdev(path):
             continue
@@ -78,19 +91,26 @@ def find_dualsense_evdev() -> Path | None:
                     dev.info.vendor == DUALSENSE_VENDOR
                     and dev.info.product in DUALSENSE_PIDS
                 )
-                # O evdev principal tem gamepad caps (BTN_GAMEPAD)
+                # O evdev principal tem gamepad caps (BTN_GAMEPAD); o touchpad não.
                 if is_gamepad:
-                    caps = dev.capabilities()
-                    from evdev import ecodes
-
-                    buttons = caps.get(ecodes.EV_KEY, [])
+                    buttons = dev.capabilities().get(ecodes.EV_KEY, [])
                     if ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons:
-                        return Path(path)
+                        found.append(Path(path))
             finally:
                 dev.close()
         except Exception:
             continue
-    return None
+    return sorted(found, key=_event_num)
+
+
+def find_dualsense_evdev() -> Path | None:
+    """Retorna path do evdev principal do DualSense FÍSICO; None se não houver.
+
+    Ignora devices virtuais (uinput) — ver `_is_virtual_evdev`. É o primeiro
+    (ordem determinística) de `find_all_dualsense_evdevs`.
+    """
+    paths = find_all_dualsense_evdevs()
+    return paths[0] if paths else None
 
 
 class _EvdevReconnectLoop:
@@ -591,6 +611,7 @@ __all__ = [
     "EvdevReader",
     "EvdevSnapshot",
     "TouchpadReader",
+    "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",
 ]

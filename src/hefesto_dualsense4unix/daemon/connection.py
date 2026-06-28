@@ -211,6 +211,12 @@ async def shutdown(daemon: DaemonProtocol) -> None:
         daemon._plugins_subsystem = None
     daemon._hotkey_manager = None
     daemon._audio = None
+    # FEAT-DSX-COOP-LOCAL-01: desmonta os jogadores secundários (solta o grab e
+    # fecha os uinput) — senão os controles secundários ficariam "sequestrados".
+    if getattr(daemon, "_coop_manager", None) is not None:
+        with contextlib.suppress(Exception):
+            daemon._coop_manager.stop_all()
+        daemon._coop_manager = None
     if daemon._mouse_device is not None:
         with contextlib.suppress(Exception):
             daemon._mouse_device.stop()

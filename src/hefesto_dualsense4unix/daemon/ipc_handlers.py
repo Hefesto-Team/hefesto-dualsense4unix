@@ -312,6 +312,16 @@ class IpcHandlersMixin:
                 "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
                 "flavor": str(getattr(daemon_cfg, "gamepad_flavor", "dualsense")),
             }
+            # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
+            # jogadores ativos) p/ GUI/applet/CLI.
+            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+            players_raw = coop_mgr.player_count() if coop_mgr is not None else 1
+            result["coop"] = {
+                "enabled": bool(getattr(daemon_cfg, "coop_enabled", False)),
+                # coerção defensiva: em testes o daemon pode ser MagicMock e
+                # player_count() devolver um mock não-serializável.
+                "players": players_raw if isinstance(players_raw, int) else 1,
+            }
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
             rumble_mult_applied: float = 1.0
             rumble_engine = getattr(self.daemon, "_rumble_engine", None)
@@ -533,6 +543,22 @@ class IpcHandlersMixin:
             "enabled": enabled and ok,
             "flavor": active_flavor,
         }
+
+    async def _handle_coop_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01).
+
+        Params: enabled: bool (obrigatório). Com o co-op ligado + gamepad virtual
+        ativo + 2+ controles, cada controle vira um jogador (P1, P2, …).
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("coop.set exige 'enabled' boolean")
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar o co-op")
+        effective = self.daemon.set_coop_enabled(enabled)
+        coop = getattr(self.daemon, "_coop_manager", None)
+        players = coop.player_count() if coop is not None else 1
+        return {"status": "ok", "enabled": bool(effective), "players": players}
 
     async def _handle_emulation_suppress(
         self, params: dict[str, Any]
