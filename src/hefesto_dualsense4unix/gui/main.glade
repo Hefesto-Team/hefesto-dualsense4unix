@@ -415,10 +415,15 @@
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
+                            <!-- FEAT-DSX-COMBO-TO-SEGMENTED-01: slot do SegmentedSelector
+                                 (botões segmentados, sem popup; imune ao bug do cosmic-comp).
+                                 O combo de modos era fechado no clique pelo compositor. Os
+                                 itens (PRESETS) e o handler "changed" são ligados no código
+                                 (triggers_actions.install_triggers_tab). -->
                             <child>
-                              <object class="GtkComboBoxText" id="trigger_left_mode">
+                              <object class="GtkBox" id="trigger_left_mode_slot">
+                                <property name="orientation">horizontal</property>
                                 <property name="hexpand">True</property>
-                                <signal name="changed" handler="on_trigger_left_mode_changed"/>
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
@@ -535,10 +540,12 @@
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
+                            <!-- FEAT-DSX-COMBO-TO-SEGMENTED-01: slot do SegmentedSelector
+                                 (espelha o lado esquerdo; ver trigger_left_mode_slot). -->
                             <child>
-                              <object class="GtkComboBoxText" id="trigger_right_mode">
+                              <object class="GtkBox" id="trigger_right_mode_slot">
+                                <property name="orientation">horizontal</property>
                                 <property name="hexpand">True</property>
-                                <signal name="changed" handler="on_trigger_right_mode_changed"/>
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
@@ -1291,21 +1298,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="expand">False</property></packing>
                             </child>
 
-                            <!-- ComboBoxText "Aplica a:" — UI-PROFILES-RADIO-GROUP-REDESIGN-01
-                                 Substitui 6 GtkRadioButton (~180px verticais) por
-                                 um único combo (~40px). Liberação de ~140px para
-                                 o preview JSON (UI-PROFILES-RIGHT-PANEL-REBALANCE-01). -->
+                            <!-- "Aplica a:" — UI-PROFILES-RADIO-GROUP-REDESIGN-01 +
+                                 FEAT-DSX-COMBO-TO-SEGMENTED-01: slot do SegmentedSelector
+                                 (botões segmentados, sem popup; imune ao bug do cosmic-comp,
+                                 que fechava o popup do combo no clique). Os itens (id, label)
+                                 são ligados no código (profiles_actions.install_profiles_tab). -->
                             <child>
-                              <object class="GtkComboBoxText" id="profile_aplica_a_combo">
-                                <property name="tooltip-text" translatable="yes">Contexto em que este perfil será aplicado</property>
-                                <items>
-                                  <item id="any" translatable="yes">Qualquer janela</item>
-                                  <item id="steam" translatable="yes">Jogos da Steam</item>
-                                  <item id="browser" translatable="yes">Navegador</item>
-                                  <item id="terminal" translatable="yes">Terminal</item>
-                                  <item id="editor" translatable="yes">Editor de código</item>
-                                  <item id="game" translatable="yes">Jogo específico</item>
-                                </items>
+                              <object class="GtkBox" id="profile_aplica_a_slot">
+                                <property name="orientation">horizontal</property>
+                                <property name="hexpand">True</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>

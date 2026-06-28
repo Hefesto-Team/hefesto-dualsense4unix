@@ -189,6 +189,37 @@ class _FakeComboBox:
         self._visible = bool(v)
 
 
+class _FakeSegmentedSelector:
+    """Stub do SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
+
+    Espelha o subconjunto da API por-ID usado pela aba Triggers. Não dispara o
+    handler "changed" em set_active_id (os testes invocam os handlers à mão,
+    como faziam com o _FakeComboBox) — a semântica de emissão é coberta nos
+    testes do próprio SegmentedSelector.
+    """
+
+    def __init__(self, wrap: bool = False) -> None:
+        self.wrap = wrap
+        self._items: list[tuple[str, str]] = []
+        self._active_id: str | None = None
+        self.handlers: list[tuple[str, Any]] = []
+
+    def set_items(self, items: list[tuple[str, str]]) -> None:
+        self._items = list(items)
+
+    def get_active_id(self) -> str | None:
+        return self._active_id
+
+    def set_active_id(self, the_id: str) -> None:
+        self._active_id = the_id
+
+    def connect(self, signal: str, cb: Any) -> None:
+        self.handlers.append((signal, cb))
+
+    def show_all(self) -> None:
+        pass
+
+
 class _FakeStatusBar:
     def __init__(self) -> None:
         self.pushed: list[tuple[int, str]] = []
@@ -207,7 +238,9 @@ def _mk_widgets() -> dict[str, Any]:
 
     widgets: dict[str, Any] = {}
     for side in ("left", "right"):
-        widgets[f"trigger_{side}_mode"] = _FakeComboBox()
+        # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de modo virou um slot (GtkBox)
+        # onde install_triggers_tab empacota o SegmentedSelector.
+        widgets[f"trigger_{side}_mode_slot"] = Gtk.Box()
         widgets[f"trigger_{side}_desc"] = Gtk.Label()
         widgets[f"trigger_{side}_params_box"] = Gtk.Box()
         widgets[f"trigger_{side}_preset_combo"] = _FakeComboBox()
@@ -241,6 +274,11 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         return True
 
     monkeypatch.setattr(triggers_actions, "trigger_set", fake_trigger_set)
+    # FEAT-DSX-COMBO-TO-SEGMENTED-01: install_triggers_tab instancia o
+    # SegmentedSelector real (precisa de display). Troca pelo stub headless.
+    monkeypatch.setattr(
+        triggers_actions, "SegmentedSelector", _FakeSegmentedSelector
+    )
 
     inst = _FakeTriggersMixin()
     inst._trigger_set_calls = calls  # type: ignore[attr-defined]
@@ -292,9 +330,11 @@ def test_install_triggers_tab_popula_combo_de_modos(
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
 
-    combo_left = mixin._widgets["trigger_left_mode"]
+    combo_left = mixin._trigger_mode["left"]
     assert combo_left.get_active_id() == "Off"
-    assert len(combo_left._entries) == len(PRESETS)
+    assert len(combo_left._items) == len(PRESETS)
+    # O handler "changed" foi conectado no código (não mais via Glade).
+    assert any(sig == "changed" for sig, _cb in combo_left.handlers)
 
 
 def test_on_trigger_mode_changed_atualiza_draft(
@@ -302,7 +342,7 @@ def test_on_trigger_mode_changed_atualiza_draft(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     combo.set_active_id("Rigid")
 
     mixin.on_trigger_left_mode_changed(combo)
@@ -317,7 +357,7 @@ def test_on_trigger_mode_changed_guard_refresh_noop(
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
     mixin._guard_refresh = True
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     combo.set_active_id("Pulse")
 
     mixin.on_trigger_left_mode_changed(combo)
@@ -331,7 +371,7 @@ def test_apply_trigger_rigid_persiste_draft_e_chama_ipc(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     combo.set_active_id("Rigid")
     mixin.on_trigger_left_mode_changed(combo)
 
@@ -352,7 +392,7 @@ def test_apply_trigger_multi_position_feedback_envia_strengths(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    combo = mixin._widgets["trigger_right_mode"]
+    combo = mixin._trigger_mode["right"]
     combo.set_active_id("MultiPositionFeedback")
     mixin.on_trigger_right_mode_changed(combo)
 
@@ -377,7 +417,7 @@ def test_apply_trigger_multi_position_feedback_envia_strengths(
 def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     combo.set_active_id("Rigid")
 
     mixin.on_trigger_left_reset(None)
@@ -393,7 +433,7 @@ def test_on_preset_changed_feedback_popula_sliders(
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
 
-    mode_combo = mixin._widgets["trigger_left_mode"]
+    mode_combo = mixin._trigger_mode["left"]
     mode_combo.set_active_id("MultiPositionFeedback")
     mixin.on_trigger_left_mode_changed(mode_combo)
 
@@ -411,7 +451,7 @@ def test_on_preset_changed_custom_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     """Preset 'custom' não altera sliders."""
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    mode_combo = mixin._widgets["trigger_left_mode"]
+    mode_combo = mixin._trigger_mode["left"]
     mode_combo.set_active_id("MultiPositionFeedback")
     mixin.on_trigger_left_mode_changed(mode_combo)
 
@@ -433,7 +473,7 @@ def test_collect_values_extrai_dict_de_sliders(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    mode_combo = mixin._widgets["trigger_left_mode"]
+    mode_combo = mixin._trigger_mode["left"]
     mode_combo.set_active_id("Rigid")
     mixin.on_trigger_left_mode_changed(mode_combo)
 
@@ -460,7 +500,7 @@ def test_refresh_triggers_from_draft_sincroniza_widgets(
 
     mixin._refresh_triggers_from_draft()
 
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     assert combo.get_active_id() == "Rigid"
     widgets = mixin._trigger_param_widgets["left"]
     assert widgets["position"].get_value() == 4
@@ -472,7 +512,7 @@ def test_apply_trigger_custom_envia_mode_e_forces(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    combo = mixin._widgets["trigger_right_mode"]
+    combo = mixin._trigger_mode["right"]
     combo.set_active_id("Custom")
     mixin.on_trigger_right_mode_changed(combo)
 
@@ -513,7 +553,7 @@ def test_on_mode_changed_agenda_live_preview(
 
     monkeypatch.setattr(triggers_actions.GLib, "timeout_add", fake_timeout_add)
 
-    combo = mixin._widgets["trigger_left_mode"]
+    combo = mixin._trigger_mode["left"]
     combo.set_active_id("Pulse")
     mixin.on_trigger_left_mode_changed(combo)
 
@@ -558,7 +598,7 @@ def test_fire_live_preview_aplica_e_zera_timer(
     mixin.install_triggers_tab()
     mixin._trigger_live_preview_timer["right"] = 77
 
-    combo = mixin._widgets["trigger_right_mode"]
+    combo = mixin._trigger_mode["right"]
     combo.set_active_id("Rigid")
     mixin.on_trigger_right_mode_changed(combo)
     # _on_mode_changed dispara _schedule_live_preview que zera handle local

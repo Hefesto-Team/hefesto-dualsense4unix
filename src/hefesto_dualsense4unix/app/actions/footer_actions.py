@@ -42,8 +42,10 @@ FROZEN_WIDGET_IDS: tuple[str, ...] = (
     "lightbar_brightness_scale",
     # BUG-FROZEN-WIDGET-IDS-01: IDs reais do glade (eram *_combo / mouse_toggle,
     # que não existem -> freeze nunca cobria triggers nem o toggle de mouse).
-    "trigger_left_mode",
-    "trigger_right_mode",
+    # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de modo virou um slot (GtkBox) com
+    # o SegmentedSelector dentro; congelar o slot propaga insensitive aos botões.
+    "trigger_left_mode_slot",
+    "trigger_right_mode_slot",
     "rumble_weak_scale",
     "rumble_strong_scale",
     "mouse_emulation_toggle",

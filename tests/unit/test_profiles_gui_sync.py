@@ -345,9 +345,14 @@ class _FakeBox:
 
 
 def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNamespace:
-    """Stub com _get que expõe combo + entry_box, para testes sem GTK."""
+    """Stub com _get + ref do seletor "Aplica a:", para testes sem GTK.
+
+    FEAT-DSX-COMBO-TO-SEGMENTED-01: `_selected_simple_choice`/`_select_radio` agora
+    leem `self._aplica_a` (o SegmentedSelector) em vez de `_get(...)`. O ``_FakeCombo``
+    serve de stub por expor a mesma API por-ID (get/set_active_id).
+    """
     stub = SimpleNamespace()
-    widgets: dict[str, Any] = {"profile_aplica_a_combo": combo}
+    widgets: dict[str, Any] = {}
     if box is not None:
         widgets["profile_game_entry_box"] = box
 
@@ -355,6 +360,7 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
         return widgets.get(widget_id)
 
     stub._get = _get  # type: ignore[attr-defined]
+    stub._aplica_a = combo  # type: ignore[attr-defined]
     return stub
 
 
