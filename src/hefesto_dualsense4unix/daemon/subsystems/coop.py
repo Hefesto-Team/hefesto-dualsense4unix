@@ -18,7 +18,8 @@ Pré-requisitos (gate em `should_be_active`):
   - 2+ controles físicos conectados.
 
 Fora de escopo (fase futura): rumble do jogo por jogador (force-feedback nem é
-roteado para o P1 hoje) e player-LED por índice (mapear controleevdev por MAC).
+roteado para o P1 hoje) e player-LED por índice (mapear cada controle ao seu
+evdev por MAC).
 """
 from __future__ import annotations
 
