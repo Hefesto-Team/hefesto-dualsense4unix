@@ -7,6 +7,13 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- **Applet COSMIC: "Fechar painel" e "Sair (desligar Hefesto)" no popover**: o
+  popover do applet ganhou dois itens. "Fechar painel" fecha a janela da GUI
+  (manda SIGTERM só ao processo `-gui`) mantendo o daemon vivo — o controle segue
+  funcionando. "Sair (desligar Hefesto)" para o daemon via `systemctl --user stop`
+  (saída limpa; como o serviço é `Restart=on-failure`, não ressuscita) — religue
+  com `hefesto-dualsense4unix daemon enable`. Antes só o tray GTK tinha "Sair", e
+  no COSMIC o tray usado é o applet, que só tinha "Abrir painel".
 - **Seletor de controle: config de output por-controle**
   (FEAT-DSX-CONTROLLER-SELECTOR-01): com 2+ controles, dá pra escolher um ALVO e
   as ações de output (lightbar, gatilhos, player-LED, rumble, mic-LED) passam a
@@ -42,6 +49,13 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+- **Seletor de controle piscava TODOS os popups da GUI**
+  (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01): o refresh do combo de controle-alvo
+  chamava `show()`/`set_active()` a cada tick (10 Hz), e essas operações rompiam o
+  "grab" de qualquer popup aberto na janela — todas as caixas de seleção da GUI
+  abriam e fechavam ao clicar, impossibilitando escolher. O refresh virou
+  idempotente: só toca o GTK quando rótulos/posição/visibilidade mudam; em
+  steady-state é no-op, preservando os popups. Teste de regressão garante isso.
 - **Corrupção do link Bluetooth com 2 controles (USB+BT) — `DualSense input CRC's
   check failed`** (BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01): com um DualSense por
   USB e outro por Bluetooth, o loop `sendReport` da pydualsense (read+write em

@@ -64,6 +64,11 @@ pub enum Message {
     ProfileSwitched(Result<String, IpcError>),
     /// "Abrir painel" — lança a GUI.
     OpenPanel,
+    /// "Fechar painel" — fecha a janela da GUI (o daemon SEGUE rodando).
+    ClosePanel,
+    /// "Sair (desligar Hefesto)" — para o daemon via systemd; o controle deixa
+    /// de ter gatilhos/emulação até religar.
+    StopDaemon,
     /// Liga/desliga o "modo jogo": suspende mouse/teclado, mantém o gamepad
     /// (FEAT-DSX-GAMEMODE-SUPPRESS-01, via daemon.emulation.suppress).
     ToggleGameMode,
@@ -200,6 +205,24 @@ impl cosmic::Application for HefestoApplet {
             Message::OpenPanel => {
                 spawn_gui();
                 // Fecha o popover ao abrir a GUI (UX de menu).
+                if let Some(id) = self.popup.take() {
+                    return destroy_popup(id);
+                }
+                Task::none()
+            }
+
+            Message::ClosePanel => {
+                spawn_close_gui();
+                // Fecha o popover (UX de menu); o daemon segue rodando.
+                if let Some(id) = self.popup.take() {
+                    return destroy_popup(id);
+                }
+                Task::none()
+            }
+
+            Message::StopDaemon => {
+                spawn_stop_daemon();
+                // Fecha o popover; o próximo refresh mostrará "Daemon desconectado".
                 if let Some(id) = self.popup.take() {
                     return destroy_popup(id);
                 }
@@ -383,6 +406,32 @@ impl HefestoApplet {
                 .align_y(cosmic::iced::Alignment::Center),
             )
             .on_press(Message::OpenPanel),
+        );
+
+        // Ação: fechar a janela da GUI (o daemon SEGUE rodando).
+        content = content.push(
+            menu_button(
+                cosmic::iced::widget::row![
+                    icon::from_name("window-close-symbolic").size(16),
+                    text::body("Fechar painel"),
+                ]
+                .spacing(spacing.space_xs)
+                .align_y(cosmic::iced::Alignment::Center),
+            )
+            .on_press(Message::ClosePanel),
+        );
+
+        // Ação: sair / desligar o daemon (o controle para até religar).
+        content = content.push(
+            menu_button(
+                cosmic::iced::widget::row![
+                    icon::from_name("application-exit-symbolic").size(16),
+                    text::body("Sair (desligar Hefesto)"),
+                ]
+                .spacing(spacing.space_xs)
+                .align_y(cosmic::iced::Alignment::Center),
+            )
+            .on_press(Message::StopDaemon),
         );
 
         content.into()
@@ -569,6 +618,32 @@ fn status_row<'a>(label: &'a str, value: String) -> Element<'a, Message> {
 /// Lança a GUI desacoplada do applet (best-effort; falha silenciosa).
 fn spawn_gui() {
     let _ = std::process::Command::new(GUI_BIN)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// Fecha a janela da GUI (SIGTERM via `pkill -f`). O padrão `-gui` casa só a GUI,
+/// nunca o daemon (cuja cmdline é "... daemon start"). best-effort; falha silenciosa.
+fn spawn_close_gui() {
+    let _ = std::process::Command::new("pkill")
+        .arg("-f")
+        .arg(GUI_BIN)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
+/// Para o daemon via systemd --user. Saída limpa: como o serviço é
+/// `Restart=on-failure`, o `stop` NÃO o ressuscita (fica parado até religar com
+/// `hefesto-dualsense4unix daemon enable`). best-effort; falha silenciosa.
+fn spawn_stop_daemon() {
+    let _ = std::process::Command::new("systemctl")
+        .arg("--user")
+        .arg("stop")
+        .arg("hefesto-dualsense4unix.service")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
