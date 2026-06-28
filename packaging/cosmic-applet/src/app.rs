@@ -71,6 +71,11 @@ pub enum Message {
     GameModeToggled(Result<bool, IpcError>),
     /// Liga/desliga o mic embutido do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01).
     ToggleMic,
+    /// Usuário escolheu o controle-alvo do output (None = todos/broadcast).
+    /// FEAT-DSX-CONTROLLER-SELECTOR-01.
+    SetOutputTarget(Option<i64>),
+    /// Resultado de controller.target.set (novo output_target_index efetivo).
+    OutputTargetSet(Result<Option<i64>, IpcError>),
 }
 
 impl cosmic::Application for HefestoApplet {
@@ -229,6 +234,25 @@ impl cosmic::Application for HefestoApplet {
                 self.mic_on = want_on; // otimista; reconfirmado ao reabrir o popover
                 Task::none()
             }
+
+            Message::SetOutputTarget(index) => {
+                // Atualização otimista; o refresh seguinte confirma.
+                if let Some(state) = self.state.as_mut() {
+                    state.output_target_index = index;
+                }
+                Task::perform(ipc::set_output_target(index), |res| {
+                    cosmic::action::app(Message::OutputTargetSet(res))
+                })
+            }
+
+            Message::OutputTargetSet(result) => {
+                if let Ok(index) = result {
+                    if let Some(state) = self.state.as_mut() {
+                        state.output_target_index = index;
+                    }
+                }
+                self.refresh_task()
+            }
         }
     }
 
@@ -293,6 +317,12 @@ impl HefestoApplet {
         // Bloco de status.
         content = content.push(self.status_block());
         content = content.push(padded_control(divider::horizontal::default()));
+
+        // FEAT-DSX-CONTROLLER-SELECTOR-01: seletor de controle-alvo (2+ controles).
+        if let Some(target) = self.target_block() {
+            content = content.push(target);
+            content = content.push(padded_control(divider::horizontal::default()));
+        }
 
         // Lista de perfis.
         content = content.push(self.profiles_block());
@@ -438,6 +468,49 @@ impl HefestoApplet {
         }
 
         col.into()
+    }
+
+    /// Seletor do controle-alvo das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).
+    ///
+    /// Só aparece com 2+ controles conectados (com 0/1 o broadcast é trivial).
+    /// Lista "Todos (broadcast)" + um item por controle; clicar envia
+    /// `controller.target.set`. O alvo atual é marcado com "> " e não re-dispara.
+    fn target_block(&self) -> Option<Element<'_, Message>> {
+        let state = self.state.as_ref()?;
+        let conectados: Vec<_> = state.controllers.iter().filter(|c| c.connected).collect();
+        if conectados.len() < 2 {
+            return None;
+        }
+        let active = state.output_target_index;
+
+        let mut col = Column::new().spacing(0).padding([4, 0]);
+        col = col.push(padded_control(text::caption_heading("CONTROLE-ALVO")).padding([4, 16]));
+
+        // Opção "Todos" (broadcast = padrão).
+        let todos_mark = if active.is_none() { "> " } else { "  " };
+        let mut todos_btn = menu_button(text::body(format!("{todos_mark}Todos (broadcast)")));
+        if active.is_some() {
+            todos_btn = todos_btn.on_press(Message::SetOutputTarget(None));
+        }
+        col = col.push(todos_btn);
+
+        for c in &conectados {
+            let is_active = active == Some(c.index);
+            let mark = if is_active { "> " } else { "  " };
+            let transporte = match c.transport.as_deref() {
+                Some("usb") => "USB",
+                Some("bluetooth") | Some("bt") => "BT",
+                _ => "?",
+            };
+            let label = format!("{mark}Controle {} — {transporte}", c.index + 1);
+            let mut btn = menu_button(text::body(label));
+            if !is_active {
+                btn = btn.on_press(Message::SetOutputTarget(Some(c.index)));
+            }
+            col = col.push(btn);
+        }
+
+        Some(col.into())
     }
 
     /// Lista clicável de perfis (click -> profile.switch).

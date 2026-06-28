@@ -11,6 +11,7 @@
 //!   - `profile.list`      -> lista de perfis
 //!   - `profile.switch {name}` -> troca o perfil ativo
 //!   - `daemon.emulation.suppress {suppressed}` -> liga/desliga o "modo jogo"
+//!   - `controller.target.set {index|null}` -> escolhe o controle-alvo do output
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -126,11 +127,20 @@ pub struct DaemonState {
     /// só do primário.
     #[serde(default)]
     pub controllers: Vec<ControllerInfo>,
+    /// FEAT-DSX-CONTROLLER-SELECTOR-01: índice 0-based do controle-alvo das
+    /// ações de output, ou `null` = TODOS (broadcast, padrão). serde(default)=None
+    /// tolera daemons antigos sem o campo.
+    #[serde(default)]
+    pub output_target_index: Option<i64>,
 }
 
 /// Um controle físico no estado do daemon (FEAT-DSX-MULTI-CONTROLLER-01).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct ControllerInfo {
+    /// Posição 0-based do controle na lista (0 = primário). FEAT-DSX-CONTROLLER-SELECTOR-01:
+    /// é o número que o seletor de controle-alvo envia em `controller.target.set`.
+    #[serde(default)]
+    pub index: i64,
     #[serde(default)]
     pub connected: bool,
     /// "usb" | "bluetooth" | null.
@@ -293,6 +303,15 @@ pub async fn set_emulation_suppressed(suppressed: bool) -> Result<bool, IpcError
     Ok(new_state)
 }
 
+/// `controller.target.set {index|null}` — escolhe o controle-alvo das ações de
+/// output (FEAT-DSX-CONTROLLER-SELECTOR-01). `None` = TODOS (broadcast, padrão);
+/// `Some(i)` mira só o controle de índice 0-based `i`. Devolve o índice efetivo
+/// aplicado pelo daemon (`null` -> None = todos).
+pub async fn set_output_target(index: Option<i64>) -> Result<Option<i64>, IpcError> {
+    let value = call_raw("controller.target.set", json!({ "index": index })).await?;
+    Ok(value.get("target_index").and_then(|v| v.as_i64()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -390,6 +409,40 @@ mod tests {
         // Ordenação case-insensitive: "apex" antes de "Zelda".
         assert_eq!(profiles[0].name, "apex");
         assert_eq!(profiles[1].name, "Zelda");
+    }
+
+    #[tokio::test]
+    async fn parses_output_target_index_in_state() {
+        let path = temp_socket("target-state");
+        spawn_mock(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"connected":true,"output_target_index":1,"controllers":[{"index":0,"connected":true,"transport":"bt","is_primary":true},{"index":1,"connected":true,"transport":"usb"}]}}"#
+                .to_string(),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let value = call_raw_at(path, "daemon.state_full", json!({}))
+            .await
+            .expect("result");
+        let state: DaemonState = serde_json::from_value(value).unwrap();
+        assert_eq!(state.output_target_index, Some(1));
+        assert_eq!(state.controllers.len(), 2);
+        assert_eq!(state.controllers[1].index, 1);
+    }
+
+    #[tokio::test]
+    async fn set_output_target_extracts_target_index() {
+        let path = temp_socket("target-set");
+        spawn_mock(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"status":"ok","target_index":1}}"#.to_string(),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let value = call_raw_at(path, "controller.target.set", json!({"index": 1}))
+            .await
+            .expect("result");
+        // Mesma extração de set_output_target: target_index -> Option<i64>.
+        let target = value.get("target_index").and_then(|v| v.as_i64());
+        assert_eq!(target, Some(1));
     }
 
     #[tokio::test]

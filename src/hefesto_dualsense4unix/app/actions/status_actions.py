@@ -93,6 +93,10 @@ class StatusActionsMixin(WidgetAccessMixin):
     _button_glyphs: dict[str, ButtonGlyph]
     _stick_left: StickPreviewGtk
     _stick_right: StickPreviewGtk
+    # FEAT-DSX-CONTROLLER-SELECTOR-01: seletor de controle-alvo no banner.
+    _target_combo: Any
+    _target_combo_rows: list[tuple[str, int | None]]
+    _target_combo_updating: bool
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
@@ -115,6 +119,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._button_glyphs = {}
         self._init_stick_previews()
         self._init_button_glyphs()
+        self._init_controller_target_combo()
         GLib.timeout_add(LIVE_POLL_INTERVAL_MS, self._tick_live_state)
         GLib.timeout_add(STATE_POLL_INTERVAL_MS, self._tick_profile_state)
         GLib.timeout_add_seconds(
@@ -180,6 +185,113 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         slot.pack_start(grid, False, False, 0)
         grid.show_all()
+
+    # ------------------------------------------------------------------
+    # Seletor de controle-alvo (FEAT-DSX-CONTROLLER-SELECTOR-01)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _controller_target_rows(
+        conectados: list[dict[str, Any]],
+    ) -> list[tuple[str, int | None]]:
+        """Linhas do seletor: ``[(rótulo, índice_do_controle | None)]``.
+
+        Posição 0 é sempre "Todos os controles" (None = broadcast). As demais,
+        uma por controle conectado, rotuladas "Controle N — TRANSPORTE" (N =
+        index+1, 1-based, batendo com a CLI e o applet). O índice carregado é o
+        ``index`` 0-based do bloco ``controllers`` (o mesmo que o IPC
+        ``controller.target.set`` espera). FEAT-DSX-CONTROLLER-SELECTOR-01.
+        """
+        rows: list[tuple[str, int | None]] = [("Todos os controles", None)]
+        for c in conectados:
+            idx = int(c.get("index", 0))
+            transporte = (c.get("transport") or "?").upper()
+            rows.append((f"Controle {idx + 1} — {transporte}", idx))
+        return rows
+
+    @staticmethod
+    def _target_active_position(
+        rows: list[tuple[str, int | None]], target_index: int | None
+    ) -> int:
+        """Posição na combo correspondente ao alvo atual; 0 ("Todos") se não achar."""
+        for pos, (_label, idx) in enumerate(rows):
+            if idx == target_index:
+                return pos
+        return 0
+
+    def _init_controller_target_combo(self) -> None:
+        """Cria o seletor de controle e o empacota no banner (perto do header).
+
+        Em runtime, não no GLADE: evita editar o `main.glade` e dispensa
+        registrar um handler de sinal (conectamos o "changed" aqui). Fica oculto
+        por padrão (`set_no_show_all` impede que o `show_all` da janela o exiba)
+        e só aparece com 2+ controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
+        """
+        self._target_combo_rows = []
+        self._target_combo_updating = False
+        header_bar = self._get("header_bar")
+        if header_bar is None:
+            return
+        combo = Gtk.ComboBoxText()
+        combo.set_tooltip_text(
+            "Controle alvo das ações (lightbar, gatilhos, LEDs, rumble). "
+            "Com 'Todos', vai para todos os controles."
+        )
+        combo.set_valign(Gtk.Align.CENTER)
+        # Não reaparecer no show_all() da janela; visibilidade é controlada aqui.
+        combo.set_no_show_all(True)
+        combo.hide()
+        combo.connect("changed", self._on_controller_target_changed)
+        # pack_end → fica à esquerda do header_connection (já empacotado ao fim).
+        header_bar.pack_end(combo, False, False, 0)
+        self._target_combo = combo
+
+    def _refresh_controller_target_combo(self, state: dict[str, Any]) -> None:
+        """Atualiza o seletor no tick de estado, preservando a seleção (por índice).
+
+        Reconstrói os itens só quando os rótulos mudam (controle plugado/removido
+        ou troca de transporte) e reflete o ``output_target_index`` do daemon —
+        a fonte da verdade. Some com menos de 2 controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
+        """
+        combo = getattr(self, "_target_combo", None)
+        if combo is None:
+            return
+        conectados = self._connected_controllers(state)
+        if len(conectados) < 2:
+            combo.hide()
+            return
+        rows = self._controller_target_rows(conectados)
+        target_index = state.get("output_target_index")
+        if not isinstance(target_index, int) or isinstance(target_index, bool):
+            target_index = None
+        self._target_combo_updating = True
+        try:
+            labels = [label for label, _ in rows]
+            if labels != [label for label, _ in self._target_combo_rows]:
+                combo.remove_all()
+                for label, _ in rows:
+                    combo.append_text(label)
+                self._target_combo_rows = rows
+            combo.set_active(self._target_active_position(rows, target_index))
+            combo.show()
+        finally:
+            self._target_combo_updating = False
+
+    def _on_controller_target_changed(self, combo: Any) -> None:
+        """Aplica a escolha do seletor via IPC (ignora updates programáticos)."""
+        if getattr(self, "_target_combo_updating", False):
+            return
+        pos = combo.get_active()
+        rows = getattr(self, "_target_combo_rows", [])
+        if pos < 0 or pos >= len(rows):
+            return
+        _label, index = rows[pos]
+        call_async(
+            "controller.target.set",
+            {"index": index},
+            on_success=lambda _r: False,
+            on_failure=lambda _e: False,
+        )
 
     # ------------------------------------------------------------------
     # Timers
@@ -404,6 +516,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_active_profile", "—")
         self._get("status_battery_bar").set_fraction(0.0)
         self._get("status_battery_bar").set_text("— %")
+        # FEAT-DSX-CONTROLLER-SELECTOR-01: sem daemon, esconde o seletor.
+        combo = getattr(self, "_target_combo", None)
+        if combo is not None:
+            combo.hide()
         self._reset_live_widgets()
 
     def _render_live_state(self, state: dict[str, Any]) -> None:
@@ -548,6 +664,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         else:
             battery_bar.set_fraction(battery / 100)
             battery_bar.set_text(f"{battery} %")
+
+        # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
+        # (aparece só com 2+ controles).
+        self._refresh_controller_target_combo(state)
 
     def _reset_live_widgets(self) -> None:
         self._get("live_l2_bar").set_fraction(0.0)

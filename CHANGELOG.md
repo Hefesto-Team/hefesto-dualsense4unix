@@ -7,6 +7,19 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- **Seletor de controle: config de output por-controle**
+  (FEAT-DSX-CONTROLLER-SELECTOR-01): com 2+ controles, dá pra escolher um ALVO e
+  as ações de output (lightbar, gatilhos, player-LED, rumble, mic-LED) passam a
+  mirar SÓ ele — resolve o "ambos mostram Player 1" (seleciono o Controle 2 →
+  seto o LED dele como Player 2) e permite cores/perfis diferentes por controle.
+  O backend ganhou um alvo guardado pela KEY estável (serial/MAC), o `_for_each`
+  o respeita (e cai em broadcast se o alvo desconectar), e há `set_output_target`
+  /`get_output_target_index`. Exposto por IPC `controller.target.set` +
+  `output_target_index` no `daemon.state_full`; pela CLI
+  `hefesto-dualsense4unix controller target <n|all>` e `controller list`; por um
+  seletor no banner da GUI e na lista do popover do applet COSMIC (ambos só
+  aparecem com 2+ controles). Padrão = "Todos" (broadcast, idêntico ao histórico
+  — não afeta o caso de 1 controle).
 - **Co-op local: cada controle vira um jogador (P1, P2, …)**
   (FEAT-DSX-COOP-LOCAL-01): novo modo opcional em que cada DualSense físico ganha
   seu PRÓPRIO gamepad virtual (com grab do controle real) — duas pessoas jogam
@@ -42,6 +55,11 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Conhecido (TODO)
 
+- **Config por-controle é "ao vivo" (não persiste)** (FEAT-DSX-CONTROLLER-SELECTOR-01):
+  o alvo de output vale enquanto o controle estiver conectado. O re-apply de
+  perfil no hotplug e a troca de perfil seguem GLOBAIS nesta fase (o `_desired`
+  não é por-controle); persistir a config por-controle entre reconexões fica para
+  uma fase futura.
 - **Lightbar (cor) por Bluetooth não acende**: gatilhos, rumble e player-LEDs
   funcionam por BT, mas a cor da lightbar não obedece (resistiu a pydualsense crua,
   ao "release" do kernel e ao sysfs). Cosmético; documentado em
