@@ -291,10 +291,13 @@ impl cosmic::Application for HefestoApplet {
         if Some(id) != self.popup {
             return text::body("").into();
         }
-        self.core
-            .applet
-            .popup_container(self.popup_content())
-            .into()
+        // O popover (status + alvo + mic + perfis + ações) pode passar da altura
+        // útil da tela; sem cap + rolagem, os itens de baixo (Abrir/Fechar/Sair)
+        // eram cortados. Envolve TODO o conteúdo num scrollable limitado em
+        // altura, então nada some e dá pra rolar até o fim.
+        let body = cosmic::widget::container(scrollable(self.popup_content()))
+            .max_height(560.0);
+        self.core.applet.popup_container(body).into()
     }
 
     fn subscription(&self) -> Subscription<Message> {

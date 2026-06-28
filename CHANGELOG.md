@@ -49,13 +49,21 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
-- **Seletor de controle piscava TODOS os popups da GUI**
-  (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01): o refresh do combo de controle-alvo
-  chamava `show()`/`set_active()` a cada tick (10 Hz), e essas operações rompiam o
-  "grab" de qualquer popup aberto na janela — todas as caixas de seleção da GUI
-  abriam e fechavam ao clicar, impossibilitando escolher. O refresh virou
-  idempotente: só toca o GTK quando rótulos/posição/visibilidade mudam; em
-  steady-state é no-op, preservando os popups. Teste de regressão garante isso.
+- **TODOS os combos/menus da GUI piscavam e fechavam ao clicar**
+  (BUG-COMBO-POPUP-FLICKER-02): a causa real era o render a 10 Hz. Os sticks do
+  DualSense TREMEM em repouso, então os labels "X: 128 Y: 127" mudavam de largura
+  a cada tick → `queue_resize` → re-layout da janela → fechava qualquer popup
+  aberto (em XWayland E Wayland). Agora os renders (vivo 10 Hz e lento 2 Hz)
+  pausam enquanto houver um grab GTK ativo (`Gtk.grab_get_current()`), ou seja,
+  enquanto um popup está aberto — retomam sozinhos ao fechar. Inclui também o
+  endurecimento do combo do seletor para refresh idempotente
+  (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01: só toca o GTK quando rótulos/posição/
+  visibilidade mudam). Testes de regressão cobrem os dois.
+- **Popover do applet COSMIC estourava a tela (itens de baixo cortados)**: com
+  status + seletor de alvo + mic + perfis + ações, o popover passava da altura
+  útil e os botões finais ("Abrir/Fechar painel", "Sair") ficavam cortados sem
+  rolagem. Todo o conteúdo agora vai num `scrollable` limitado em altura
+  (`max_height`), então nada some e dá pra rolar até o fim.
 - **Corrupção do link Bluetooth com 2 controles (USB+BT) — `DualSense input CRC's
   check failed`** (BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01): com um DualSense por
   USB e outro por Bluetooth, o loop `sendReport` da pydualsense (read+write em

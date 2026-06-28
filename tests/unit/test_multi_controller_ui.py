@@ -189,6 +189,26 @@ def test_combo_refresh_idempotente_nao_pisca() -> None:
     assert combo.set_active_calls == set_active_after_first  # não re-setou
 
 
+def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
+    """Com um popup aberto (grab GTK ativo), os renders NÃO tocam widgets.
+
+    É o que impede o re-layout a 10 Hz (sticks tremendo) de fechar o popup
+    (BUG-COMBO-POPUP-FLICKER-02).
+    """
+    from hefesto_dualsense4unix.app.actions import status_actions as sa
+
+    obj = sa.StatusActionsMixin.__new__(sa.StatusActionsMixin)
+    toques: list[str] = []
+    obj._get = lambda name: toques.append(name) or None  # type: ignore[attr-defined,assignment]
+
+    # Popup aberto → _popup_is_open() True → render retorna sem tocar nada.
+    # (mockamos o helper direto p/ não depender do estado global do Gtk nos testes)
+    monkeypatch.setattr(sa.StatusActionsMixin, "_popup_is_open", staticmethod(lambda: True))
+    obj._render_live_state({"connected": True})
+    obj._render_slow_state({"connected": True})
+    assert toques == []
+
+
 def test_combo_some_com_menos_de_dois() -> None:
     obj = _mixin_with_combo()
     obj._target_combo_visible = True
