@@ -68,7 +68,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
             description = "Hefesto - Dualsense4Unix daemon";
             wantedBy = [ "default.target" ];
             serviceConfig = {
-              ExecStart = "${hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon run";
+              ExecStart = "${hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon start --foreground";
               Restart = "on-failure";
             };
           };
@@ -91,7 +91,7 @@ Adicionar ao `configuration.nix` ou `flake.nix` da maquina:
     Unit.Description = "Hefesto - Dualsense4Unix daemon";
     Install.WantedBy = [ "default.target" ];
     Service = {
-      ExecStart = "${inputs.hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon run";
+      ExecStart = "${inputs.hefesto.packages.${pkgs.system}.default}/bin/hefesto-dualsense4unix daemon start --foreground";
       Restart = "on-failure";
     };
   };

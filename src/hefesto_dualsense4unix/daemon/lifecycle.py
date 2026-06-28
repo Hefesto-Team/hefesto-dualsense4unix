@@ -162,6 +162,9 @@ class Daemon:
     _emulation_suppressed: bool = False
     _audio: Any = None
     _plugins_subsystem: Any = None
+    # FEAT-METRICS-01: MetricsSubsystem (servidor HTTP Prometheus) ou None.
+    # Instanciado por `_start_metrics` quando metrics_enabled; None até o 1º uso.
+    _metrics_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
     # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
     _reconnect_task: asyncio.Task[Any] | None = None
@@ -271,6 +274,10 @@ class Daemon:
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
             await self._safe_start("plugins", self._start_plugins)
+            # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
+            # interno respeita metrics_enabled). Antes nunca era iniciado —
+            # metrics_enabled/metrics_port eram config morta.
+            await self._safe_start("metrics", self._start_metrics)
             # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
             # corrompidos (em vez de só pulá-los silenciosamente no fallback).
             self._audit_config_on_boot()
@@ -626,6 +633,37 @@ class Daemon:
         if self._plugins_subsystem is not None:
             await self._plugins_subsystem.stop()
             self._plugins_subsystem = None
+
+    async def _start_metrics(self) -> None:
+        """Inicializa o MetricsSubsystem se metrics_enabled (FEAT-METRICS-01).
+
+        Espelha `_start_plugins`: o `MetricsSubsystem.start` espera um
+        `DaemonContext` (não é um starter sem-arg), então montamos o contexto
+        aqui. O gate `is_enabled(config)` é respeitado — o servidor HTTP só
+        sobe quando `metrics_enabled=True`.
+        """
+        from hefesto_dualsense4unix.daemon.context import DaemonContext
+        from hefesto_dualsense4unix.daemon.subsystems.metrics import MetricsSubsystem
+
+        ms = MetricsSubsystem()
+        if not ms.is_enabled(self.config):
+            return
+
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=self.bus,
+            store=self.store,
+            config=self.config,
+            executor=self._executor,
+        )
+        await ms.start(ctx)
+        self._metrics_subsystem = ms
+
+    async def _stop_metrics(self) -> None:
+        """Para o MetricsSubsystem de forma limpa. Idempotente."""
+        if self._metrics_subsystem is not None:
+            await self._metrics_subsystem.stop()
+            self._metrics_subsystem = None
 
     async def _safe_start(self, name: str, starter: Callable[[], Any]) -> None:
         """Inicia um subsystem isolando falhas (FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01).

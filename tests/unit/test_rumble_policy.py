@@ -332,11 +332,16 @@ class TestIpcHandlers:
         server.store = MagicMock()
         server.store.snapshot.return_value = snap
 
+        # L1: rumble_mult_applied agora vem da origem VIVA daemon._last_auto_mult
+        # (não do _rumble_engine morto). Confirma que o valor é propagado.
+        server.daemon._last_auto_mult = 0.3
+
         result = asyncio.run(server._handle_daemon_state_full({}))
         assert "rumble_policy" in result
         assert result["rumble_policy"] == "balanceado"
         assert "rumble_policy_custom_mult" in result
         assert "rumble_mult_applied" in result
+        assert result["rumble_mult_applied"] == pytest.approx(0.3)
 
 
 # ---------------------------------------------------------------------------

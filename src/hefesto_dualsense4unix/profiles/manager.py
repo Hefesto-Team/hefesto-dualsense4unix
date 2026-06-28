@@ -51,9 +51,30 @@ class ProfileManager:
     def delete(self, name: str) -> None:
         delete_profile(name)
         active = self.store.active_profile
-        if active == name:
+        # BUG-PROFILE-DELETE-ACTIVE-SLUG-01: `activate()` grava o DISPLAY NAME em
+        # `active_profile`, mas `delete()` aceita slug OU display name. Comparar
+        # as strings cruas deixava o active "preso" quando o delete vinha por
+        # slug (ex.: active="Ação", name="acao" — slugs iguais, strings não).
+        # Normalizamos AMBOS via slugify antes de comparar.
+        if active is not None and self._refers_same_profile(active, name):
             self.store.set_active_profile(None)
         logger.info("profile_deleted", name=name)
+
+    @staticmethod
+    def _refers_same_profile(active: str, name: str) -> bool:
+        """True se `active` e `name` apontam para o mesmo perfil (compara slugs).
+
+        O arquivo já foi removido por `delete_profile`, então NÃO dependemos do
+        disco: `slugify` roda sobre as strings em memória. Tolera nomes exóticos
+        que não produzem slug (ValueError) caindo na comparação literal — assim
+        um active sem slug ainda é limpo quando o delete vem com a mesma string.
+        """
+        from hefesto_dualsense4unix.profiles.slug import slugify
+
+        try:
+            return slugify(active) == slugify(name)
+        except ValueError:
+            return active == name
 
     def activate(self, name: str) -> Profile:
         """Carrega, aplica triggers + LEDs e marca como ativo."""

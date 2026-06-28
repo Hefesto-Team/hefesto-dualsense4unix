@@ -76,13 +76,29 @@ def cmd_show(name: str) -> None:
 
 @app.command("activate")
 def cmd_activate(name: str) -> None:
-    """Marca perfil como ativo. Aplica direto no controle se hardware disponível."""
+    """Ativa um perfil. Prefere o daemon vivo (profile.switch via IPC).
+
+    Com o daemon rodando, `profile.switch` faz a troca DE VERDADE no processo
+    vivo (grava session + marker e aplica no controle). Antes, este comando
+    abria um 2º controller local e gravava só o marker — o daemon vivo
+    sobrescrevia o controle logo em seguida, e o perfil em uso não mudava.
+    Só caímos no fallback (controller local + marker) quando o daemon está
+    offline; nesse caso o comportamento é 100% o de antes.
+    """
     try:
         profile = load_profile(name)
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
 
+    # Caminho online: deixa o daemon vivo trocar o perfil (e persistir o marker).
+    from hefesto_dualsense4unix.app.ipc_bridge import profile_switch
+
+    if profile_switch(name):
+        console.print(f"[green]perfil ativado via daemon:[/green] {name}")
+        return
+
+    # Fallback offline: aplica direto no hardware (se houver) e grava o marker.
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         from hefesto_dualsense4unix.profiles.manager import ProfileManager

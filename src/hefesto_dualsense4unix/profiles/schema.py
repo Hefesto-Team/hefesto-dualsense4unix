@@ -65,6 +65,28 @@ class TriggerConfig(BaseModel):
     mode: str
     params: list[int] | list[list[int]] = Field(default_factory=list)
 
+    @field_validator("mode", mode="after")
+    @classmethod
+    def _validate_mode(cls, value: str) -> str:
+        """Rejeita modos fora do conjunto canônico aceito por `build_from_name`.
+
+        O registro de fábricas (`PRESET_FACTORIES`) é a fonte única de verdade
+        dos modos válidos — inclui "Off", "Custom", "MultiPositionFeedback" etc.
+        Sem esta checagem, um typo no `mode` (ex.: "Galoping") passa pela
+        validação do perfil e só explode com `ValueError` lá no `apply()`, em
+        runtime, longe da origem do erro. Import lazy de `core.trigger_effects`
+        evita ciclo de import com `profiles.schema`.
+        """
+        from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES
+
+        if value not in PRESET_FACTORIES:
+            validos = ", ".join(sorted(PRESET_FACTORIES))
+            raise ValueError(
+                f"modo de trigger desconhecido: {value!r} "
+                f"(modos válidos: {validos})"
+            )
+        return value
+
     @field_validator("params", mode="after")
     @classmethod
     def _validate_params(

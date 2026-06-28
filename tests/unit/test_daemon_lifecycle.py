@@ -364,3 +364,63 @@ async def test_poll_loop_no_event_when_buttons_unchanged(monkeypatch):
     assert up_count == 0
     assert store.counter("button.down.emitted") == 1
     assert store.counter("button.up.emitted") == 0
+
+
+# ---------------------------------------------------------------------------
+# FEAT-METRICS-01: o MetricsSubsystem é iniciado por Daemon.run() (M1).
+# ---------------------------------------------------------------------------
+
+
+def _free_port() -> int:
+    """Retorna uma porta TCP livre em 127.0.0.1."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
+@pytest.mark.asyncio
+async def test_metrics_sobe_quando_metrics_enabled():
+    """Com metrics_enabled=True, `run()` sobe o servidor HTTP de métricas.
+
+    Antes o MetricsSubsystem nunca era iniciado (run() pulava metrics), então
+    metrics_enabled/metrics_port eram config morta.
+    """
+    import urllib.request
+
+    port = _free_port()
+    fc = FakeController(transport="usb", states=_mk_states(20))
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=120, auto_reconnect=False,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+            metrics_enabled=True, metrics_port=port,
+        ),
+    )
+
+    run_task = asyncio.create_task(daemon.run())
+    try:
+        await asyncio.sleep(0.1)
+        assert daemon._metrics_subsystem is not None
+        url = f"http://127.0.0.1:{port}/metrics"
+        payload = await asyncio.to_thread(
+            lambda: urllib.request.urlopen(url, timeout=5).read().decode("utf-8")
+        )
+        assert "hefesto_poll_ticks_total" in payload
+    finally:
+        daemon.stop()
+        await run_task
+        # O shutdown (connection.py) não para o metrics; encerra aqui para não
+        # vazar a thread do servidor HTTP entre os testes.
+        await daemon._stop_metrics()
+
+
+@pytest.mark.asyncio
+async def test_metrics_nao_sobe_quando_disabled():
+    """Com metrics_enabled=False (default), `_start_metrics` é no-op (gate)."""
+    fc = FakeController(transport="usb", states=_mk_states(2))
+    daemon = Daemon(controller=fc, config=DaemonConfig(metrics_enabled=False))
+    await daemon._start_metrics()
+    assert daemon._metrics_subsystem is None
