@@ -106,6 +106,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 for i, name in enumerate(widgets):
                     if i < len(trigger_draft.params):
                         widgets[name].set_value(trigger_draft.params[i])
+                # O set_active_id do modo roda sob _guard_refresh, então
+                # _on_mode_changed retorna cedo e a linha "Preset:" não seria
+                # revelada/escondida ao carregar um perfil. Chamamos explícito:
+                # é seguro sob o guard (o set_active_id("custom") interno do
+                # preset combo re-entra em _on_preset_changed, que sai no guard).
+                self._update_preset_row_visibility(side, trigger_draft.mode)
         finally:
             self._guard_refresh = False
 
@@ -260,11 +266,17 @@ class TriggersActionsMixin(WidgetAccessMixin):
             return
         active = combo.get_active_id()
         if active != "custom":
+            # Salva/restaura o guard em vez de zerar absoluto: este método é o
+            # handler 'value-changed' dos sliders e pode disparar DENTRO de
+            # _refresh_triggers_from_draft (que mantém _guard_refresh=True ao
+            # chamar set_value). Zerar absoluto quebraria o guard no meio do
+            # refresh e deixaria o resto do laço rodar desprotegido (reentrância).
+            prev_guard = self._guard_refresh
             self._guard_refresh = True
             try:
                 combo.set_active_id("custom")
             finally:
-                self._guard_refresh = False
+                self._guard_refresh = prev_guard
 
     def _rebuild_params(self, side: str, preset_id: str) -> None:
         spec = get_spec(preset_id)

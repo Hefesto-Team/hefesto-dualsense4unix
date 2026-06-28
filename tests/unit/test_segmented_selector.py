@@ -176,6 +176,11 @@ def test_widget_real_smoke(wrap: bool) -> None:
     sel.connect("changed", lambda w: ev.append(w.get_active_id()))
     sel.set_items([("off", "Off"), ("rigid", "Rigid"), ("custom", "Custom")])
     assert sel.get_active_id() is None
+    # FIX #4 (None-state visual): NENHUM botão visível ativo — o founder oculto
+    # do grupo segura o estado inicial, casando o visual com get_active_id()==None.
+    # Sem isto, o 1º botão nasceria ativo e o item default ficaria inalcançável
+    # por clique (clicar um rádio já-ativo não dispara "toggled").
+    assert sum(b.get_active() for b in sel._buttons) == 0
 
     sel.set_active_id("custom")
     assert sel.get_active_id() == "custom"

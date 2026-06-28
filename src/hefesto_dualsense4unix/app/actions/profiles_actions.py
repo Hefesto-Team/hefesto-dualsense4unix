@@ -505,7 +505,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 self._suppress_advanced_toggle = False
             self._mode_advanced = False
         else:
-            # Match complexo — força modo avançado
+            # Match complexo — força modo avançado.
+            # BUG-PROFILE-SIMPLE-STALE-01: zera o editor simples para não vazar
+            # estado de um perfil simples anterior ('game' + nome). Sem isso, se o
+            # usuário depois desligar o switch Avançado, a página simples reaparece
+            # com o preset/nome herdados e salvar sobrescreveria este match complexo.
+            self._select_radio("any")
+            self._get("profile_simple_custom_name").set_text("")
             if isinstance(match, MatchCriteria):
                 self._get("profile_window_class_entry").set_text(
                     ",".join(match.window_class)
