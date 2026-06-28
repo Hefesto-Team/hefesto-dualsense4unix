@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install_udev.sh — Instala udev rules + modules-load uinput (caminho source).
 #
-# Conjunto canônico (v3.3.1+): 5 regras .rules + 1 .conf modules-load.
+# Conjunto canônico (v3.3.1+): regras .rules + 1 .conf modules-load.
 # Sincronizado com scripts/install-host-udev.sh (caminho Flatpak/.deb) —
 # ambos usam o mesmo conjunto de assets/.
 #
@@ -29,6 +29,7 @@ for f in \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
     "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" \
+    "$ASSETS/77-dualsense-leds.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -42,6 +43,9 @@ sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rule
 # emulação analógica do hefesto). FEAT-DUALSENSE-TOUCHPAD-IGNORE-01. Não-destrutivo
 # e reversível (remover o arquivo). Só vale após re-add do device (replug/relogin).
 sudo install -Dm644 "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules
+# 77: torna graváveis os nós de LED do kernel (lightbar + player) p/ o daemon
+# (usuário) controlar a COR via sysfs — funciona em USB E BT. FEAT-DSX-LIGHTBAR-SYSFS-01.
+sudo install -Dm644 "$ASSETS/77-dualsense-leds.rules" /etc/udev/rules.d/77-dualsense-leds.rules
 # 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23: abriam o controle via
 # hidraw a cada ACTION=="add", amplificando a re-enumeração que alimentava o
 # storm -71 (causa-raiz real: porta USB ruim — full-speed/-71 na 3-1). Limpa
@@ -73,6 +77,8 @@ sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
 # input: faz a 76 (LIBINPUT_IGNORE_DEVICE no touchpad) ser reavaliada. libinput só
 # relê a flag ao re-add do device, então replug/relogin do controle ainda é o garantido.
 sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
+# leds: aplica a 77 (chmod/uaccess nos nós de LED) sem exigir replug do controle.
+sudo udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true
 
 cat <<'EOF'
 

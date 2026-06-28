@@ -71,6 +71,7 @@ RULES=(
     "71-uinput.rules"
     "72-ps5-controller-autosuspend.rules"
     "76-dualsense-touchpad-libinput-ignore.rules"
+    "77-dualsense-leds.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.
@@ -118,6 +119,7 @@ _build_install_cmd() {
     cmd+="udevadm control --reload-rules; "
     cmd+="udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
+    cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
     cmd+="udevadm trigger 2>/dev/null || true; "
     cmd+="echo 'Regras instaladas com sucesso.'"
     printf '%s' "${cmd}"
