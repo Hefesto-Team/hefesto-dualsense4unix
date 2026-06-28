@@ -298,6 +298,17 @@ class IpcHandlersMixin:
         if callable(describe):
             result["controllers"] = describe()
 
+        # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
+        # (None = TODOS / broadcast). getattr defensivo: backends sem o método
+        # (FakeController) ou controller MagicMock em teste → None.
+        get_target = getattr(self.controller, "get_output_target_index", None)
+        target_index: int | None = None
+        if callable(get_target):
+            raw_target = get_target()
+            if isinstance(raw_target, int) and not isinstance(raw_target, bool):
+                target_index = raw_target
+        result["output_target_index"] = target_index
+
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
         # dono da IPC tiver config acessível (FEAT-CLI-PARITY-01).
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
@@ -351,6 +362,34 @@ class IpcHandlersMixin:
                 }
             ]
         }
+
+    async def _handle_controller_target_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).
+
+        Params:
+            index: int (posição em `controllers`, 0 = primário) ou null (TODOS).
+
+        Com o alvo setado, lightbar/gatilhos/player-LED/rumble/mic-LED passam a
+        mirar SÓ aquele controle — resolve o "ambos mostram Player 1". `index`
+        null volta ao broadcast (padrão). Backends sem o método (FakeController,
+        single-instance) são tolerados via getattr e tratados como broadcast.
+        """
+        index = params.get("index")
+        # bool é subclasse de int — rejeitar True/False como índice.
+        if index is not None and (isinstance(index, bool) or not isinstance(index, int)):
+            raise ValueError("controller.target.set: 'index' precisa ser int ou null")
+        setter = getattr(self.controller, "set_output_target", None)
+        if not callable(setter):
+            return {"status": "ok", "target_index": None}
+        effective = setter(index)
+        # Coerção defensiva: backend real devolve int|None; um mock devolveria
+        # outra coisa — normaliza para int|None serializável.
+        target_index = (
+            effective if isinstance(effective, int) and not isinstance(effective, bool) else None
+        )
+        return {"status": "ok", "target_index": target_index}
 
     # --- rumble ----------------------------------------------------------
 

@@ -166,6 +166,12 @@ class PyDualSenseController(IController):
         self._offline: bool = False
         # Perfil ativo materializado em HID; re-aplicado no hotplug-in.
         self._desired = _DesiredOutput()
+        # FEAT-DSX-CONTROLLER-SELECTOR-01: ALVO das ações de output. None =
+        # TODOS (broadcast, padrão e idêntico ao histórico). Guardamos a KEY
+        # estável (serial/MAC) do controle escolhido — NÃO o índice — para
+        # sobreviver a hotplug/troca de porta. Se a key alvo sumir (controle
+        # desconectou), o `_for_each` cai de volta em broadcast.
+        self._output_target_key: str | None = None
         # Protege a mutação de `_handles`/`_primary_key` contra o fan-out de
         # escrita: o daemon roda `connect`/`read_state`/setters em executor
         # multi-thread (max_workers=2). RLock pois um caminho pode reentrar.
@@ -487,13 +493,22 @@ class PyDualSenseController(IController):
     # --- output (fan-out p/ TODOS os controles) -------------------------
 
     def _for_each(self, op: Callable[[pydualsense], None], *, what: str) -> None:
-        """Aplica `op` a cada handle aberto. 1 handle morto não derruba os outros.
+        """Aplica `op` ao ALVO de output (ou a cada handle aberto, em broadcast).
+
+        FEAT-DSX-CONTROLLER-SELECTOR-01: se `_output_target_key` está setada E o
+        controle ainda está presente em `_handles`, aplica SÓ a esse handle;
+        senão (sem alvo, ou alvo desconectou), volta ao broadcast histórico —
+        TODOS os controles. 1 handle morto não derruba os outros.
 
         Tira um snapshot da lista sob `_io_lock` e faz o HID I/O fora da seção
         crítica (não segura o lock durante a escrita no device).
         """
         with self._io_lock:
-            handles = list(self._handles.items())
+            target = self._output_target_key
+            if target is not None and target in self._handles:
+                handles = [(target, self._handles[target])]
+            else:
+                handles = list(self._handles.items())
         if not handles:
             logger.debug("output_offline_noop", op=what)
             return
@@ -593,9 +608,12 @@ class PyDualSenseController(IController):
     def describe_controllers(self) -> list[dict[str, object]]:
         """Descreve cada controle conectado (observabilidade — IPC `controller.list`).
 
-        Uma entrada por handle aberto: `{connected, transport, is_primary}`.
-        Quando nenhum controle está conectado, devolve uma única entrada
-        offline (preserva o contrato "ao menos um item" do handler legado).
+        Uma entrada por handle aberto: `{index, connected, transport, is_primary}`.
+        O `index` (FEAT-DSX-CONTROLLER-SELECTOR-01) é a POSIÇÃO em
+        `list(self._handles)` (0 = primário) — o mesmo número que o seletor de
+        controle usa em `set_output_target`. Quando nenhum controle está
+        conectado, devolve uma única entrada offline (preserva o contrato "ao
+        menos um item" do handler legado).
         """
         with self._io_lock:
             items = list(self._handles.items())
@@ -603,16 +621,50 @@ class PyDualSenseController(IController):
         if not items:
             return [{"connected": False, "transport": None, "is_primary": False}]
         out: list[dict[str, object]] = []
-        for key, handle in items:
+        for idx, (key, handle) in enumerate(items):
             connected = bool(getattr(handle, "connected", False))
             out.append(
                 {
+                    "index": idx,
                     "connected": connected,
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
                 }
             )
         return out
+
+    def set_output_target(self, index: int | None) -> int | None:
+        """Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).
+
+        `index` é a POSIÇÃO em `list(self._handles)` (0 = primário); guardamos a
+        KEY estável (serial/MAC) correspondente — NÃO o índice — para o alvo
+        sobreviver a hotplug/troca de porta. `None` ou fora de faixa → broadcast
+        (TODOS, padrão). Devolve o índice efetivo (ou None para "todos"). Sob
+        `_io_lock` (consistente com o snapshot que o `_for_each` tira).
+        """
+        with self._io_lock:
+            if index is None:
+                self._output_target_key = None
+                return None
+            keys = list(self._handles)
+            if not (0 <= index < len(keys)):
+                self._output_target_key = None
+                return None
+            self._output_target_key = keys[index]
+            return index
+
+    def get_output_target_index(self) -> int | None:
+        """Posição atual do alvo de output, ou None (FEAT-DSX-CONTROLLER-SELECTOR-01).
+
+        Mapeia a KEY guardada para a posição em `list(self._handles)`; devolve
+        None quando o alvo é "todos" (broadcast) ou quando o controle alvo sumiu
+        (desconectou) — caso em que o `_for_each` já voltou ao broadcast.
+        """
+        with self._io_lock:
+            key = self._output_target_key
+            if key is None or key not in self._handles:
+                return None
+            return list(self._handles).index(key)
 
     def get_battery(self) -> int:
         ds = self._ds

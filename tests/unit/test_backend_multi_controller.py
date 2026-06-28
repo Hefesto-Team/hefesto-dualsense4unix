@@ -296,8 +296,8 @@ class TestDescribeControllers:
 
         desc = inst.describe_controllers()
         assert desc == [
-            {"connected": True, "transport": "usb", "is_primary": True},
-            {"connected": True, "transport": "bt", "is_primary": False},
+            {"index": 0, "connected": True, "transport": "usb", "is_primary": True},
+            {"index": 1, "connected": True, "transport": "bt", "is_primary": False},
         ]
 
     def test_offline_devolve_entrada_neutra(self) -> None:
