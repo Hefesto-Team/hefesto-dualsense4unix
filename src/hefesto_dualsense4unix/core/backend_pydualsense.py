@@ -23,6 +23,7 @@ from __future__ import annotations
 import contextlib
 import os
 import threading
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -64,6 +65,20 @@ DUALSENSE_EDGE_PID = 0x0DF2
 #: pesar no boot normal (`init()` saudável retorna em <300ms).
 INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC", "5"))
 
+#: Throttle do report_thread da pydualsense (segundos de sleep por ciclo
+#: read+write). O loop `sendReport` do upstream roda SEM pausa, na taxa do
+#: controle (~250Hz-1kHz), martelando o hidraw. Com 2+ controles são 2+ threads
+#: saturando o controlador USB compartilhado — e o adaptador Bluetooth vive no
+#: MESMO controlador (família do storm), degradando o link BT
+#: (`DualSense input CRC's check failed`) e matando o output do controle BT.
+#: Como o INPUT vem do evdev (não do `read` da pydualsense), dá pra throttlar o
+#: ciclo sem perder responsividade: ~125Hz de output é de sobra para
+#: gatilhos/LED/rumble, e a leitura de bateria/transporte é esparsa.
+#: BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+REPORT_THREAD_THROTTLE_SEC: float = float(
+    os.environ.get("HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", "0.008")
+)
+
 
 @dataclass
 class _DesiredOutput:
@@ -104,6 +119,30 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         import hidapi
 
         return hidapi.Device(path=self._pinned_path), self._pinned_is_edge
+
+    def sendReport(self) -> None:  # noqa: N802 - override do nome do upstream
+        """Igual ao loop do upstream, mas com throttle por ciclo.
+
+        O upstream faz `read`+`write` num laço apertado sem pausa, na taxa do
+        controle. Com múltiplos controles isso satura o controlador USB e
+        degrada o link Bluetooth (CRC fails → output do BT morre). Como o INPUT
+        real vem do evdev, aqui só precisamos do flush de OUTPUT e da leitura
+        esparsa de bateria/transporte — então pausamos `REPORT_THREAD_THROTTLE_SEC`
+        por ciclo. BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+        """
+        while self.ds_thread:
+            try:
+                in_report = self.device.read(self.input_report_length)
+                self.readInput(in_report)
+                self.writeReport(self.prepareReport())
+                if REPORT_THREAD_THROTTLE_SEC > 0:
+                    time.sleep(REPORT_THREAD_THROTTLE_SEC)
+            except OSError:
+                self.connected = False
+                break
+            except AttributeError:
+                self.connected = False
+                break
 
 
 class PyDualSenseController(IController):
