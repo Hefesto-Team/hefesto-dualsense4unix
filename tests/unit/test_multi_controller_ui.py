@@ -115,3 +115,87 @@ def test_status_controllers_transports_label() -> None:
         {"connected": True, "transport": "usb"},
     ]
     assert StatusActionsMixin._controllers_transports(conectados) == "BT + USB"
+
+
+# --------------------------------------------------------------------------
+# Seletor de alvo — idempotência (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01)
+# --------------------------------------------------------------------------
+
+
+class _FakeCombo:
+    """Combo fake que conta show()/set_active() — detecta o flicker periódico."""
+
+    def __init__(self) -> None:
+        self.items: list[str] = []
+        self.active = -1
+        self.shown = 0
+        self.hidden = 0
+        self.set_active_calls = 0
+
+    def remove_all(self) -> None:
+        self.items = []
+
+    def append_text(self, t: str) -> None:
+        self.items.append(t)
+
+    def set_active(self, p: int) -> None:
+        self.active = p
+        self.set_active_calls += 1
+
+    def get_active(self) -> int:
+        return self.active
+
+    def show(self) -> None:
+        self.shown += 1
+
+    def hide(self) -> None:
+        self.hidden += 1
+
+
+def _mixin_with_combo() -> Any:
+    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+
+    obj = StatusActionsMixin.__new__(StatusActionsMixin)
+    obj._target_combo = _FakeCombo()
+    obj._target_combo_rows = []
+    obj._target_combo_updating = False
+    obj._target_combo_visible = False
+    obj._target_combo_active = -1
+    return obj
+
+
+def test_combo_refresh_idempotente_nao_pisca() -> None:
+    """Refresh repetido com o MESMO estado é no-op (não re-show/re-set_active).
+
+    É o que impede o flicker que fechava todos os popups da GUI a 10 Hz.
+    """
+    obj = _mixin_with_combo()
+    state = _state(
+        {"index": 0, "connected": True, "transport": "bt", "is_primary": True},
+        {"index": 1, "connected": True, "transport": "usb"},
+    )
+    state["output_target_index"] = None
+
+    obj._refresh_controller_target_combo(state)  # 1ª vez: monta + mostra
+    combo = obj._target_combo
+    assert combo.shown == 1
+    assert combo.items == ["Todos os controles", "Controle 1 — BT", "Controle 2 — USB"]
+    set_active_after_first = combo.set_active_calls
+
+    # Chamadas idênticas seguintes (o tick a 10 Hz): NÃO tocam o combo.
+    for _ in range(5):
+        obj._refresh_controller_target_combo(state)
+    assert combo.shown == 1  # não re-mostrou
+    assert combo.set_active_calls == set_active_after_first  # não re-setou
+
+
+def test_combo_some_com_menos_de_dois() -> None:
+    obj = _mixin_with_combo()
+    obj._target_combo_visible = True
+    state = _state({"connected": True, "transport": "usb", "is_primary": True})
+    obj._refresh_controller_target_combo(state)
+    assert obj._target_combo.hidden == 1
+    assert obj._target_combo_visible is False
+    # Repetir não re-esconde (idempotente).
+    obj._refresh_controller_target_combo(state)
+    assert obj._target_combo.hidden == 1
