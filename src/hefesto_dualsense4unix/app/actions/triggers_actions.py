@@ -18,6 +18,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_positional_params,
 )
 from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
+from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
     VIBRATION_POSITION_LABELS,
@@ -34,6 +35,10 @@ class TriggersActionsMixin(WidgetAccessMixin):
     """
 
     _trigger_param_widgets: dict[str, dict[str, Gtk.Scale]]
+    # FEAT-DSX-COMBO-TO-SEGMENTED-01: seletor de modo por lado (substitui o
+    # GtkComboBoxText `trigger_<side>_mode`, fechado no clique pelo cosmic-comp).
+    # Mesma API por-ID do combo (set_items/get_active_id/set_active_id + "changed").
+    _trigger_mode: dict[str, Any]
     # Guard para evitar loop widget->draft->refresh->widget.
     _guard_refresh: bool = False
     # Guard para evitar que a aplicação de preset dispare o handler de slider
@@ -51,12 +56,26 @@ class TriggersActionsMixin(WidgetAccessMixin):
         self._trigger_param_widgets = {"left": {}, "right": {}}
         self._trigger_preset_applying = False
         self._trigger_live_preview_timer = {"left": 0, "right": 0}
+        self._trigger_mode = {}
+        mode_handlers = {
+            "left": self.on_trigger_left_mode_changed,
+            "right": self.on_trigger_right_mode_changed,
+        }
+        mode_items = [(spec.name, spec.label) for spec in PRESETS]
         for side in ("left", "right"):
-            combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
-            combo.remove_all()
-            for spec in PRESETS:
-                combo.append(spec.name, spec.label)
-            combo.set_active_id("Off")
+            # FEAT-DSX-COMBO-TO-SEGMENTED-01: botões segmentados no lugar do combo.
+            # wrap=True para os 19 modos quebrarem linha sem estourar a coluna.
+            sel = SegmentedSelector(wrap=True)
+            sel.set_items(mode_items)
+            sel.connect("changed", mode_handlers[side])
+            slot = self._get(f"trigger_{side}_mode_slot")
+            if slot is not None:
+                slot.pack_start(sel, True, True, 0)
+                sel.show_all()
+            self._trigger_mode[side] = sel
+            # set_active_id EMITE "changed" (como o combo); _guard_refresh está
+            # desligado aqui, então o handler roda e monta os sliders de "Off".
+            sel.set_active_id("Off")
             self._rebuild_params(side, "Off")
             self._populate_preset_combo(side, "MultiPositionFeedback")
 
@@ -77,7 +96,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         try:
             for side in ("left", "right"):
                 trigger_draft = getattr(draft.triggers, side)
-                combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
+                combo = self._trigger_mode.get(side)
                 if combo is None:
                     continue
                 combo.set_active_id(trigger_draft.mode)
@@ -92,10 +111,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
 
     # --- signals ---
 
-    def on_trigger_left_mode_changed(self, combo: Gtk.ComboBoxText) -> None:
+    def on_trigger_left_mode_changed(self, combo: Any) -> None:
+        # `combo` é o SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01); mantém
+        # a API por-ID do GtkComboBoxText (get_active_id).
         self._on_mode_changed("left", combo)
 
-    def on_trigger_right_mode_changed(self, combo: Gtk.ComboBoxText) -> None:
+    def on_trigger_right_mode_changed(self, combo: Any) -> None:
         self._on_mode_changed("right", combo)
 
     def on_trigger_left_preset_changed(self, combo: Gtk.ComboBoxText) -> None:
@@ -118,7 +139,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
 
     # --- helpers ---
 
-    def _on_mode_changed(self, side: str, combo: Gtk.ComboBoxText) -> None:
+    def _on_mode_changed(self, side: str, combo: Any) -> None:
         if self._guard_refresh:
             return
         preset_id = combo.get_active_id()
@@ -170,7 +191,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
             return
 
         # Determina qual dicionario de presets usar com base no modo atual.
-        mode_combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
+        mode_combo = self._trigger_mode.get(side)
         mode_id = mode_combo.get_active_id() if mode_combo else None
 
         if mode_id == "MultiPositionFeedback":
@@ -302,8 +323,8 @@ class TriggersActionsMixin(WidgetAccessMixin):
         return {name: int(scale.get_value()) for name, scale in widgets.items()}
 
     def _apply_trigger(self, side: str) -> None:
-        combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
-        preset_id = combo.get_active_id()
+        combo = self._trigger_mode.get(side)
+        preset_id = combo.get_active_id() if combo else None
         if preset_id is None:
             return
         spec = get_spec(preset_id)
@@ -359,8 +380,9 @@ class TriggersActionsMixin(WidgetAccessMixin):
         return False
 
     def _reset_trigger(self, side: str) -> None:
-        combo: Gtk.ComboBoxText = self._get(f"trigger_{side}_mode")
-        combo.set_active_id("Off")
+        combo = self._trigger_mode.get(side)
+        if combo is not None:
+            combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
         trigger_set(side, "Off", [])
         self._toast_trigger(side, "Off", True)

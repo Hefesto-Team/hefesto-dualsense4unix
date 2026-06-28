@@ -218,9 +218,9 @@ class HefestoApp(
     def _signal_handlers(self) -> dict[str, object]:
         return {
             "on_window_delete_event": self.on_window_delete_event,
-            # Triggers
-            "on_trigger_left_mode_changed": self.on_trigger_left_mode_changed,
-            "on_trigger_right_mode_changed": self.on_trigger_right_mode_changed,
+            # Triggers — os handlers de MODO (on_trigger_*_mode_changed) NÃO entram
+            # aqui: FEAT-DSX-COMBO-TO-SEGMENTED-01 troca o combo por SegmentedSelector
+            # e conecta "changed" no código (install_triggers_tab), não pelo Glade.
             "on_trigger_left_preset_changed": self.on_trigger_left_preset_changed,
             "on_trigger_right_preset_changed": self.on_trigger_right_preset_changed,
             "on_trigger_left_apply": self.on_trigger_left_apply,

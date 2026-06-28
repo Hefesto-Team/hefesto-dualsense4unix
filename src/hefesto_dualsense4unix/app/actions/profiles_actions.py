@@ -22,6 +22,7 @@ from gi.repository import GObject, Gtk
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import call_async, profile_switch, run_in_thread
+from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
@@ -43,6 +44,19 @@ logger = get_logger(__name__)
 # Mapeamento radio-id -> chave de preset
 _RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game")
 
+# FEAT-DSX-COMBO-TO-SEGMENTED-01: itens do seletor "Aplica a:" (id, rótulo curto).
+# Antes vinham do `<items>` do GtkComboBoxText no Glade; agora alimentam o
+# SegmentedSelector no código. Rótulos curtos para caber na aba; o contexto
+# completo fica no tooltip do seletor.
+_APLICA_A_ITEMS: list[tuple[str, str]] = [
+    ("any", "Qualquer"),
+    ("steam", "Steam"),
+    ("browser", "Navegador"),
+    ("terminal", "Terminal"),
+    ("editor", "Editor"),
+    ("game", "Jogo"),
+]
+
 
 class ProfilesActionsMixin(WidgetAccessMixin):
     """Controla a aba Perfis."""
@@ -61,6 +75,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # BUG-DUPLICATE-NO-CONFIG-COPY-01: perfil-fonte de uma duplicação em curso;
     # usado como base em _build_profile_from_editor para copiar triggers/LEDs/etc.
     _duplicate_source: Profile | None = None
+    # FEAT-DSX-COMBO-TO-SEGMENTED-01: seletor "Aplica a:" em botões segmentados
+    # (substitui o GtkComboBoxText `profile_aplica_a_combo`, fechado no clique
+    # pelo cosmic-comp). Mesma API por-ID do combo.
+    _aplica_a: Any
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -82,12 +100,21 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             "changed", self.on_profile_selection_changed
         )
 
-        # UI-PROFILES-RADIO-GROUP-REDESIGN-01: 6 radios substituídos por combo.
-        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
-        if combo is not None:
-            combo.connect("changed", self._on_aplica_a_changed)
-            combo.connect("changed", lambda _c: self._refresh_preview())
-            combo.set_active_id("any")
+        # UI-PROFILES-RADIO-GROUP-REDESIGN-01 + FEAT-DSX-COMBO-TO-SEGMENTED-01:
+        # 6 radios viraram combo e agora viram botões segmentados (sem popup;
+        # imune ao bug do cosmic-comp). Mesma API por-ID; "changed" é emitido por
+        # set_active_id, então os handlers rodam igual ao combo antigo.
+        sel = SegmentedSelector(wrap=True)
+        sel.set_items(_APLICA_A_ITEMS)
+        sel.set_tooltip_text("Contexto em que este perfil será aplicado")
+        slot = self._get("profile_aplica_a_slot")
+        if slot is not None:
+            slot.pack_start(sel, False, False, 0)
+            sel.show_all()
+        self._aplica_a = sel
+        sel.connect("changed", self._on_aplica_a_changed)
+        sel.connect("changed", lambda _c: self._refresh_preview())
+        sel.set_active_id("any")
 
         # UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON atualiza em tempo real
         # conforme inputs do editor. Reutiliza _build_profile_from_editor.
@@ -186,8 +213,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         set_pref("advanced_editor", state)
         return False  # retorno False = deixa o GTK atualizar o estado visual
 
-    def _on_aplica_a_changed(self, combo: Gtk.ComboBoxText) -> None:
-        """Mostra entry "Jogo específico" só quando combo == "game"."""
+    def _on_aplica_a_changed(self, combo: Any) -> None:
+        """Mostra entry "Jogo específico" só quando o seletor == "game".
+
+        ``combo`` é o ``SegmentedSelector`` (FEAT-DSX-COMBO-TO-SEGMENTED-01);
+        mantém a mesma API por-ID do GtkComboBoxText anterior.
+        """
         active_id = combo.get_active_id() or "any"
         box: Gtk.Box = self._get("profile_game_entry_box")
         if box is None:
@@ -313,13 +344,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         stack.set_visible_child_name(page)
 
     def _selected_simple_choice(self) -> str:
-        """Retorna o id ativo do combo "Aplica a:".
+        """Retorna o id ativo do seletor "Aplica a:".
 
         UI-PROFILES-RADIO-GROUP-REDESIGN-01: antes iterava 6 GtkRadioButton.
-        Agora lê `get_active_id()` do `profile_aplica_a_combo`. Fallback "any"
-        preserva comportamento anterior quando combo ainda não foi populado.
+        FEAT-DSX-COMBO-TO-SEGMENTED-01: agora lê `get_active_id()` do
+        SegmentedSelector (`self._aplica_a`). Fallback "any" preserva o
+        comportamento anterior quando o seletor ainda não foi populado.
         """
-        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
+        combo = getattr(self, "_aplica_a", None)
         if combo is None:
             return "any"
         active_id = combo.get_active_id()
@@ -328,13 +360,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         return "any"
 
     def _select_radio(self, choice: str) -> None:
-        """Seleciona o id correspondente no combo "Aplica a:".
+        """Seleciona o id correspondente no seletor "Aplica a:".
 
         Nome histórico preservado para facilitar grep pelo contexto antigo;
-        a implementação usa `set_active_id()` do combo em vez de
+        a implementação usa `set_active_id()` do SegmentedSelector em vez de
         `set_active(True)` num radio específico.
         """
-        combo: Gtk.ComboBoxText = self._get("profile_aplica_a_combo")
+        combo = getattr(self, "_aplica_a", None)
         if combo is None:
             return
         target_id = choice if choice in _RADIO_IDS else "any"
