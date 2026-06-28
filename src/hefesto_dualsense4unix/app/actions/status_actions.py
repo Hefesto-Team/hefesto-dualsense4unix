@@ -97,6 +97,8 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo: Any
     _target_combo_rows: list[tuple[str, int | None]]
     _target_combo_updating: bool
+    _target_combo_visible: bool
+    _target_combo_active: int
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
@@ -229,6 +231,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         self._target_combo_rows = []
         self._target_combo_updating = False
+        self._target_combo_visible = False
+        self._target_combo_active = -1
         header_bar = self._get("header_bar")
         if header_bar is None:
             return
@@ -249,31 +253,50 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _refresh_controller_target_combo(self, state: dict[str, Any]) -> None:
         """Atualiza o seletor no tick de estado, preservando a seleção (por índice).
 
-        Reconstrói os itens só quando os rótulos mudam (controle plugado/removido
-        ou troca de transporte) e reflete o ``output_target_index`` do daemon —
-        a fonte da verdade. Some com menos de 2 controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
+        IDEMPOTENTE: só toca o GTK quando algo MUDA (rótulos, posição ativa ou
+        visibilidade). Sem isso, chamar `show()`/`set_active()` a cada tick (10 Hz)
+        rompia o "grab" de qualquer popup aberto na janela — TODOS os combos da GUI
+        abriam e fechavam ao clicar, impossibilitando escolher
+        (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01). Reflete `output_target_index`
+        (fonte da verdade); some com <2 controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
         """
         combo = getattr(self, "_target_combo", None)
         if combo is None:
             return
         conectados = self._connected_controllers(state)
         if len(conectados) < 2:
-            combo.hide()
+            if self._target_combo_visible:  # só esconde na TRANSIÇÃO
+                combo.hide()
+                self._target_combo_visible = False
             return
         rows = self._controller_target_rows(conectados)
         target_index = state.get("output_target_index")
         if not isinstance(target_index, int) or isinstance(target_index, bool):
             target_index = None
+        labels = [label for label, _ in rows]
+        rows_changed = labels != [label for label, _ in self._target_combo_rows]
+        want_pos = self._target_active_position(rows, target_index)
+        # Steady-state (nada mudou, já visível): NÃO toca no combo — preserva o
+        # grab de qualquer popup aberto na janela.
+        if (
+            not rows_changed
+            and want_pos == self._target_combo_active
+            and self._target_combo_visible
+        ):
+            return
         self._target_combo_updating = True
         try:
-            labels = [label for label, _ in rows]
-            if labels != [label for label, _ in self._target_combo_rows]:
+            if rows_changed:
                 combo.remove_all()
                 for label, _ in rows:
                     combo.append_text(label)
                 self._target_combo_rows = rows
-            combo.set_active(self._target_active_position(rows, target_index))
-            combo.show()
+            if want_pos != combo.get_active():
+                combo.set_active(want_pos)
+            self._target_combo_active = want_pos
+            if not self._target_combo_visible:
+                combo.show()
+                self._target_combo_visible = True
         finally:
             self._target_combo_updating = False
 
