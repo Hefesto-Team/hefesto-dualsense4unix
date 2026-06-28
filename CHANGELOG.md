@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.10.0] — 2026-06-28
+
 ### Added
 
 - **Applet COSMIC: "Fechar painel" e "Sair (desligar Hefesto)" no popover**: o
@@ -46,6 +48,11 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   USB)", a janela compacta lista os transportes e o popover do applet COSMIC
   exibe uma linha "Controles: 2 (BT + USB)". Degrada com graça em daemon antigo
   sem o bloco (a linha some) e em falha de IPC.
+- **Dropdowns viram botões segmentados (imunes ao bug de foco do COSMIC)**
+  (FEAT-DSX-COMBO-TO-SEGMENTED-01): combos com poucas opções (seletor de controle,
+  "Aplica a:" dos perfis) deixaram de ser `GtkComboBox` — cujo popup o cosmic-comp
+  fechava sozinho ao abrir (cosmic-epoch#2497 + NVIDIA, não era bug nosso) — e
+  viraram botões segmentados sem popup. Mesma API por-ID; nenhum menu para piscar.
 
 ### Fixed
 
@@ -74,6 +81,46 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   ~125Hz, env-configurável). Validado ao vivo: de CRC fails recorrentes para **0**
   com os 2 conectados; gatilhos/rumble/player-LEDs estáveis em USB e BT. O INPUT
   vem do evdev, então o throttle não afeta a responsividade.
+- **Lightbar (cor) por Bluetooth — RESOLVIDO** (FEAT-DSX-LIGHTBAR-SYSFS-01): a cor
+  não obedecia por BT (gatilhos/rumble/player-LED já funcionavam). A causa era
+  contenção de DOIS escritores: o kernel `hid_playstation` é dono da lightbar
+  (LED class device) e a reafirmava, enquanto a escrita crua por hidraw da
+  pydualsense (seq-tag BT fixo) disputava e perdia — só na cor. Agora a cor vai
+  pela rota sysfs do kernel
+  (`/sys/class/leds/<inputN>:rgb:indicator/{multi_intensity,brightness}` + os
+  `:white:player-N/brightness`), que monta o report certo (CRC + seq) IGUAL em USB
+  e BT; e a pydualsense para de disputar (limpa os bits de flag de lightbar `0x04`
+  e player `0x10` no report quando o sysfs está ativo). Mapeia controle→nó por MAC;
+  só usa sysfs se o nó for gravável (regra udev nova `77-dualsense-leds.rules`,
+  aplicada pelo install), senão cai no caminho pydualsense sem regressão. Validado
+  ao vivo por BT.
+- **Botões do rodapé da GUI sumiam sob o tiling do COSMIC**: os 4 botões
+  (Aplicar/Salvar/Importar/Restaurar) ficavam cortados porque o `GtkNotebook`
+  exigia altura mínima grande (puxada pelas abas maiores) e a janela não encolhia.
+  Agora as páginas são roláveis (`GtkScrolledWindow`), os botões vão num
+  `GtkFlowBox` (quebram em 2 colunas quando estreito) e a janela tem tamanho
+  mínimo — os 4 botões aparecem em qualquer largura. Validado visualmente.
+- **Comandos da CLI agora falam com o daemon (não abrem um 2º controle)**:
+  `profile activate`, `test trigger` e `test rumble` tentam o daemon vivo por IPC
+  antes de cair no hardware direto. Antes abriam um controller próprio e disputavam
+  o hidraw com o daemon (mesma família do bug da lightbar), e o `profile activate`
+  nem trocava o perfil em uso. O subcomando standalone `emulate xbox360` (que
+  duplicava o gamepad do daemon) foi removido — a máscara de gamepad do daemon já
+  cobre o caso.
+- **Perfil com modo de gatilho inválido é rejeitado na validação** (não mais só no
+  apply, em runtime): `TriggerConfig.mode` ganhou validação contra o conjunto
+  canônico de efeitos.
+- **Endpoint Prometheus `/metrics` agora realmente sobe** quando `metrics_enabled`
+  (o subsystem nunca era iniciado — feature morta), e o multiplicador de rumble
+  auto reportado no `state_full` passou a vir da política viva (antes ficava preso
+  em 1.0).
+- **GUI mais fluida e robusta**: o toggle de mic e os 2 fetches periódicos do tray
+  saíram da thread GTK (não travam mais a UI por segundos); o I/O de disco de
+  salvar/importar/restaurar perfil também foi para worker; as statusbars deixaram
+  de empilhar mensagens (no máx. 1 por contexto). Abrir a GUI não dispara mais um
+  "Off" de gatilho no controle, e "novo perfil" não cria mais um filtro quebrado.
+- **`uninstall.sh` agora remove o AppImage em `~/.local/bin`** e as regras udev
+  76/77 (faltava limpar esses rastros).
 
 ### Conhecido (TODO)
 
@@ -82,11 +129,6 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   perfil no hotplug e a troca de perfil seguem GLOBAIS nesta fase (o `_desired`
   não é por-controle); persistir a config por-controle entre reconexões fica para
   uma fase futura.
-- **Lightbar (cor) por Bluetooth não acende**: gatilhos, rumble e player-LEDs
-  funcionam por BT, mas a cor da lightbar não obedece (resistiu a pydualsense crua,
-  ao "release" do kernel e ao sysfs). Cosmético; documentado em
-  `docs/process/sprints/2026-06-27-multicontrole-validacao-ao-vivo-bt.md`. A cor é
-  confiável por USB.
 
 ## [3.9.0] — 2026-06-27
 
