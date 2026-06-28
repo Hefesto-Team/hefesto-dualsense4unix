@@ -179,11 +179,7 @@ class MouseActionsMixin(WidgetAccessMixin):
             )
 
     def _toast_mouse(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("mouse")
-        bar.push(ctx_id, msg)
+        self._status_toast("mouse", msg)
 
 
 __all__ = ["MAPPING_LEGEND", "UINPUT_DEV", "MouseActionsMixin"]

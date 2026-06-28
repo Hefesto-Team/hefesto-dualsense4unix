@@ -107,6 +107,11 @@ class _FakeStatusBar:
         self._ctx_counter += 1
         return self._ctx_counter
 
+    def pop(self, ctx_id: int) -> None:
+        # _status_toast faz pop antes do push (no máx 1 msg por contexto).
+        if self.pushed:
+            self.pushed.pop()
+
     def push(self, ctx_id: int, msg: str) -> None:
         self.pushed.append((ctx_id, msg))
 
@@ -218,6 +223,13 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
                 instance, type(instance)
             ),
         )
+    # _toast_rumble delega ao helper compartilhado _status_toast (base.py); como o
+    # fake usa composição (não herda WidgetAccessMixin), ligamos o helper à mão.
+    instance._status_toast = (  # type: ignore[attr-defined]
+        rumble_actions.RumbleActionsMixin._status_toast.__get__(
+            instance, type(instance)
+        )
+    )
     return instance
 
 

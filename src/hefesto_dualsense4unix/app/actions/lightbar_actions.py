@@ -121,7 +121,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
         Não aplica no hardware automaticamente; o usuário confirma via botao
         "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
-        Guard _refresh_guard previne loop quando _refresh_lightbar_from_state
+        Guard _refresh_guard previne loop quando _refresh_lightbar_from_draft
         atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).
         """
         if self._refresh_guard:
@@ -158,34 +158,6 @@ class LightbarActionsMixin(WidgetAccessMixin):
             preview.queue_draw()
         ok = led_set((0, 0, 0))
         self._toast_light("Lightbar apagada" if ok else "Falha (daemon offline?)")
-
-    # --- refresh de estado ---
-
-    def _refresh_lightbar_from_state(self, state_full: dict) -> None:  # type: ignore[type-arg]
-        """Atualiza o slider de brightness a partir do state_full do daemon.
-
-        Lê ``state_full['leds']['lightbar_brightness']`` (float 0.0-1.0).
-        Se ausente ou perfil antigo sem o campo, usa default 1.0 (sem dimming).
-        Guard _refresh_guard ativo durante a atualização programática do slider
-        para evitar que on_lightbar_brightness_changed dispare IPC loop.
-        """
-        leds = state_full.get("leds") or {}
-        raw = leds.get("lightbar_brightness", 1.0)
-        try:
-            level = float(raw)
-        except (TypeError, ValueError):
-            level = 1.0
-        level = max(0.0, min(1.0, level))
-        pct = level * 100.0
-        self._current_brightness = level
-        self._pending_brightness = level
-        scale: Gtk.Scale = self._get("lightbar_brightness_scale")
-        if scale is not None:
-            self._refresh_guard = True
-            try:
-                scale.set_value(pct)
-            finally:
-                self._refresh_guard = False
 
     # --- signals player leds ---
 
@@ -307,8 +279,4 @@ class LightbarActionsMixin(WidgetAccessMixin):
         return False
 
     def _toast_light(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("light")
-        bar.push(ctx_id, msg)
+        self._status_toast("light", msg)

@@ -102,6 +102,10 @@ class AppTray:
     _profiles_item: Gtk.MenuItem | None = None
     _status_item: Gtk.MenuItem | None = None
     _profile_menu_items: list[Gtk.MenuItem] = field(default_factory=list)
+    # BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01: guard de inflight do tick de refresh.
+    # Evita empilhar workers se o anterior (coleta de perfis + estado via IPC)
+    # ainda não terminou. Setado antes do dispatch, limpo nos dois callbacks.
+    _refresh_inflight: bool = False
 
     def is_available(self) -> bool:
         ok, _ = probe_gi_availability()
@@ -292,16 +296,64 @@ class AppTray:
             self._indicator = None
 
     def _tick_refresh(self) -> bool:
-        profiles = self.on_list_profiles()
-        self._render_profiles(profiles, self._controllers_suffix())
+        """Dispara a coleta de perfis + estado em thread worker (não bloqueia GTK).
+
+        BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01: antes este tick fazia DUAS chamadas
+        IPC SÍNCRONAS na thread GTK (``on_list_profiles`` e, dentro de
+        ``_controllers_suffix``, ``on_state``) a cada ``PROFILE_REFRESH_SEC`` —
+        cada uma podia travar a UI por até o timeout do socket. Agora um único
+        worker (``run_in_thread``) coleta os dois fora da thread GTK e o render
+        acontece no callback de sucesso (re-postado via ``GLib.idle_add`` pelo
+        próprio ``run_in_thread``). O guard ``_refresh_inflight`` impede empilhar
+        workers se o anterior ainda não retornou. Retorna ``True`` para manter o
+        timer do GLib vivo.
+        """
+        if self._refresh_inflight:
+            return True
+        self._refresh_inflight = True
+        from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
+
+        run_in_thread(
+            self._collect_refresh_data,
+            self._on_refresh_done,
+            self._on_refresh_failed,
+        )
         return True
 
-    def _controllers_suffix(self) -> str:
-        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário.
+    def _collect_refresh_data(
+        self,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+        """Coleta perfis e estado no worker (bloqueante, FORA da thread GTK)."""
+        profiles = self.on_list_profiles()
+        state: dict[str, Any] | None = None
+        if self.on_state is not None:
+            try:
+                state = self.on_state()
+            except Exception:  # tray nunca cai por falha de IPC
+                state = None
+        return profiles, state
 
-        FEAT-DSX-MULTI-CONTROLLER-01: deixa visível no tray que mais de um
-        controle está conectado (todos recebem o output em broadcast). Tolera
-        daemon offline/sem o bloco `controllers` (versão antiga) caindo em ''.
+    def _on_refresh_done(self, data: Any) -> bool:
+        """Callback de sucesso (thread GTK via GLib.idle_add): renderiza tudo."""
+        self._refresh_inflight = False
+        profiles, state = data
+        self._render_profiles(
+            profiles, self._controllers_suffix_from_state(state)
+        )
+        return False  # não repetir via GLib
+
+    def _on_refresh_failed(self, _exc: Exception) -> bool:
+        """Callback de falha (thread GTK): só libera o guard; mantém UI estável."""
+        self._refresh_inflight = False
+        return False  # não repetir via GLib
+
+    def _controllers_suffix(self) -> str:
+        """Compat/síncrono: busca o estado via ``on_state()`` e formata o sufixo.
+
+        Mantido para chamadores diretos e testes; o tick de refresh usa
+        ``_controllers_suffix_from_state`` com o estado JÁ coletado no worker,
+        evitando uma 2ª chamada IPC na thread GTK
+        (BUG-TRAY-SYNC-IPC-ON-GTK-THREAD-01).
         """
         if self.on_state is None:
             return ""
@@ -309,6 +361,16 @@ class AppTray:
             state = self.on_state()
         except Exception:  # tray nunca cai por falha de IPC
             return ""
+        return self._controllers_suffix_from_state(state)
+
+    @staticmethod
+    def _controllers_suffix_from_state(state: dict[str, Any] | None) -> str:
+        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário.
+
+        FEAT-DSX-MULTI-CONTROLLER-01: deixa visível no tray que mais de um
+        controle está conectado (todos recebem o output em broadcast). Tolera
+        daemon offline/sem o bloco `controllers` (versão antiga) caindo em ''.
+        """
         if not isinstance(state, dict):
             return ""
         controllers = state.get("controllers")

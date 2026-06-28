@@ -10,7 +10,6 @@ from __future__ import annotations
 import sys
 import types
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -221,43 +220,8 @@ def test_build_profile_sem_existente_usa_pending(isolated_profiles_dir: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# Testes de _refresh_lightbar_from_state: slider atualizado pelo state_full
+# Teste do guard de refresh: on_lightbar_brightness_changed
 # ---------------------------------------------------------------------------
-
-
-def test_refresh_lightbar_atualiza_slider() -> None:
-    """_refresh_lightbar_from_state move o slider para o valor do state_full."""
-    instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
-    instance._current_brightness = 1.0  # type: ignore[attr-defined]
-    instance._pending_brightness = 1.0  # type: ignore[attr-defined]
-    instance._refresh_guard = False  # type: ignore[attr-defined]
-
-    scale_mock = MagicMock()
-    instance._get = lambda wid: scale_mock if wid == "lightbar_brightness_scale" else None  # type: ignore[attr-defined]
-
-    state_full: dict[str, Any] = {"leds": {"lightbar_brightness": 0.4}}
-    instance._refresh_lightbar_from_state(state_full)
-
-    scale_mock.set_value.assert_called_once_with(pytest.approx(40.0))
-    assert instance._current_brightness == pytest.approx(0.4)  # type: ignore[attr-defined]
-    assert instance._pending_brightness == pytest.approx(0.4)  # type: ignore[attr-defined]
-
-
-def test_refresh_lightbar_default_quando_ausente() -> None:
-    """Quando state_full não tem leds.lightbar_brightness, usa 1.0 (sem dimming)."""
-    instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
-    instance._current_brightness = 0.5  # type: ignore[attr-defined]
-    instance._pending_brightness = 0.5  # type: ignore[attr-defined]
-    instance._refresh_guard = False  # type: ignore[attr-defined]
-
-    scale_mock = MagicMock()
-    instance._get = lambda wid: scale_mock if wid == "lightbar_brightness_scale" else None  # type: ignore[attr-defined]
-
-    state_full: dict[str, Any] = {}
-    instance._refresh_lightbar_from_state(state_full)
-
-    scale_mock.set_value.assert_called_once_with(pytest.approx(100.0))
-    assert instance._current_brightness == pytest.approx(1.0)  # type: ignore[attr-defined]
 
 
 def test_refresh_guard_previne_loop() -> None:

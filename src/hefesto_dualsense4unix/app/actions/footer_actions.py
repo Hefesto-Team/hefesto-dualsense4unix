@@ -6,7 +6,10 @@ para feedback ao usuário.
 
 Padrão de thread:
 - ``on_apply_draft``: usa ``ipc_bridge.call_async`` para não bloquear GTK.
-- Demais: operações de I/O rápidas executadas na thread GTK diretamente.
+- ``on_save_profile`` / ``on_import_profile`` / ``on_restore_default``: diálogos
+  na thread GTK, mas o I/O de disco (carregar/checar conflito/salvar) é despachado
+  para um worker via ``ipc_bridge.run_in_thread`` e renderizado no callback
+  (``GLib.idle_add``) — PERF-FOOTER-ASYNC-IO-01.
 
 Importações de topo para permitir patch nos testes:
 - ``ipc_bridge`` exposto como variável de módulo.
@@ -23,6 +26,7 @@ from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile, save_profile
+from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
@@ -80,11 +84,7 @@ class FooterActionsMixin(WidgetAccessMixin):
 
     def _footer_toast(self, msg: str, context: str = "footer") -> None:
         """Empurra mensagem na statusbar com contexto ``context``."""
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id(context)
-        bar.push(ctx_id, msg)
+        self._status_toast(context, msg)
 
     # ------------------------------------------------------------------
     # Handler: Aplicar
@@ -97,7 +97,7 @@ class FooterActionsMixin(WidgetAccessMixin):
         reabilita e exibe resultado na statusbar.
         """
         self._freeze_ui(True)
-        self._footer_toast("Aplicando perfil inteiro...")
+        self._footer_toast(_("Aplicando perfil inteiro..."))
 
         draft_dict = self.draft.to_ipc_dict()
 
@@ -110,9 +110,9 @@ class FooterActionsMixin(WidgetAccessMixin):
             else:
                 ok = bool(result)
             msg = (
-                "Perfil aplicado ao controle."
+                _("Perfil aplicado ao controle.")
                 if ok
-                else "ERRO ao aplicar perfil (daemon offline?)."
+                else _("ERRO ao aplicar perfil (daemon offline?).")
             )
             self._footer_toast(msg)
             logger.info("footer_apply_draft_resultado", ok=ok)
@@ -120,7 +120,7 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         def _on_err(exc: Exception) -> bool:
             self._freeze_ui(False)
-            self._footer_toast(f"ERRO ao aplicar: {exc}")
+            self._footer_toast(_("ERRO ao aplicar: {erro}").format(erro=exc))
             logger.warning("footer_apply_draft_falhou", erro=str(exc))
             return False
 
@@ -141,6 +141,12 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         Usa ``DraftConfig.to_profile(name)`` e ``save_profile(profile)``.
         Após salvar, dispara refresh da aba Perfis se disponível.
+
+        PERF-FOOTER-ASYNC-IO-01: o diálogo de nome roda na thread GTK, mas o I/O
+        de disco (checagem de conflito + gravação) é despachado para um worker via
+        ``ipc_bridge.run_in_thread``, com o resultado renderizado no callback
+        (``GLib.idle_add``). A checagem de conflito é feita NO DISCO dentro do
+        worker (nunca no cache em memória), evitando decisão com estado stale.
         """
         window = self._get("main_window")
         # BUG-FOOTER-ACTIVE-NAME-01: DraftConfig é frozen e nunca teve `_active_name`
@@ -151,31 +157,44 @@ class FooterActionsMixin(WidgetAccessMixin):
         if nome is None:
             return  # usuário cancelou
 
-        # Verifica conflito
-        existentes = [p.name for p in load_all_profiles()]
-        if nome in existentes:
-            ok = gui_dialogs.prompt_overwrite_existing(parent=window, name=nome)
-            if not ok:
-                self._footer_toast("Operação cancelada.")
-                return
+        # Worker: lê os nomes existentes do disco (sem cache) p/ checar conflito.
+        def _existing_names() -> list[str]:
+            return [p.name for p in load_all_profiles()]
 
-        try:
-            profile = self.draft.to_profile(nome)
-            path = save_profile(profile)
-        except Exception as exc:
-            self._footer_toast(f"Falha ao salvar perfil: {exc}")
+        def _on_checked(existentes: list[str]) -> bool:
+            if nome in existentes and not gui_dialogs.prompt_overwrite_existing(
+                parent=window, name=nome
+            ):
+                self._footer_toast(_("Operação cancelada."))
+                return False
+            self._persist_profile_async(nome)
+            return False
+
+        ipc_bridge.run_in_thread(_existing_names, on_success=_on_checked)
+
+    def _persist_profile_async(self, nome: str) -> None:
+        """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK)."""
+        draft = self.draft
+
+        def _save() -> Path:
+            return save_profile(draft.to_profile(nome))
+
+        def _on_saved(path: Path) -> bool:
+            self._footer_toast(_("Perfil salvo em {caminho}").format(caminho=path))
+            logger.info("footer_save_profile_ok", nome=nome, path=str(path))
+            # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
+            self._active_profile_name = nome
+            refresh = getattr(self, "_reload_profiles_store", None)
+            if refresh is not None:
+                refresh(select_name=nome)
+            return False
+
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao salvar perfil: {erro}").format(erro=exc))
             logger.warning("footer_save_profile_falhou", nome=nome, erro=str(exc))
-            return
+            return False
 
-        self._footer_toast(f"Perfil salvo em {path}")
-        logger.info("footer_save_profile_ok", nome=nome, path=str(path))
-        # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
-        self._active_profile_name = nome
-
-        # Refresh aba Perfis se mixin disponível
-        refresh = getattr(self, "_reload_profiles_store", None)
-        if refresh is not None:
-            refresh(select_name=nome)
+        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Handler: Importar
@@ -217,52 +236,71 @@ class FooterActionsMixin(WidgetAccessMixin):
         if response != Gtk.ResponseType.OK or not filename:
             return
 
-        # Carrega e valida
-        try:
+        # PERF-FOOTER-ASYNC-IO-01: o FileChooser tem que rodar na thread GTK, mas
+        # ler/validar o arquivo e listar os perfis existentes (p/ checar conflito)
+        # é I/O de disco — vai para um worker. A checagem de conflito é feita no
+        # disco (não no cache) e o diálogo de conflito decide no callback GTK.
+        def _read() -> tuple[Profile, list[str]]:
             raw = json.loads(Path(filename).read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
-        except Exception as exc:
-            self._footer_toast(f"Arquivo inválido: {exc}")
+            existentes = [p.name for p in load_all_profiles()]
+            return profile, existentes
+
+        def _on_read(payload: tuple[Profile, list[str]]) -> bool:
+            profile, existentes = payload
+            nome = profile.name
+            if nome in existentes:
+                escolha = gui_dialogs.prompt_import_conflict(parent=window, name=nome)
+                if escolha is None:
+                    self._footer_toast(_("Importação cancelada."))
+                    return False
+                if escolha == "renomear":
+                    novo_nome = gui_dialogs.prompt_profile_name(
+                        parent=window, default_name=nome
+                    )
+                    if not novo_nome:
+                        self._footer_toast(_("Importação cancelada."))
+                        return False
+                    dados = profile.model_dump(mode="python")
+                    dados["name"] = novo_nome
+                    try:
+                        profile = Profile.model_validate(dados)
+                    except Exception as exc:
+                        self._footer_toast(_("Nome inválido: {erro}").format(erro=exc))
+                        return False
+            self._import_save_async(profile)
+            return False
+
+        def _on_read_err(exc: Exception) -> bool:
+            self._footer_toast(_("Arquivo inválido: {erro}").format(erro=exc))
             logger.warning("footer_import_invalido", arquivo=filename, erro=str(exc))
-            return
+            return False
 
-        nome = profile.name
-        existentes = [p.name for p in load_all_profiles()]
+        ipc_bridge.run_in_thread(_read, on_success=_on_read, on_failure=_on_read_err)
 
-        if nome in existentes:
-            escolha = gui_dialogs.prompt_import_conflict(parent=window, name=nome)
-            if escolha is None:
-                self._footer_toast("Importação cancelada.")
-                return
-            if escolha == "renomear":
-                novo_nome = gui_dialogs.prompt_profile_name(
-                    parent=window, default_name=nome
+    def _import_save_async(self, profile: Any) -> None:
+        """Grava o perfil importado em worker (I/O fora da thread GTK)."""
+        def _save() -> Path:
+            return save_profile(profile)
+
+        def _on_saved(path: Path) -> bool:
+            self._footer_toast(
+                _("Perfil importado: {nome} -> {caminho}").format(
+                    nome=profile.name, caminho=path
                 )
-                if not novo_nome:
-                    self._footer_toast("Importação cancelada.")
-                    return
-                dados = profile.model_dump(mode="python")
-                dados["name"] = novo_nome
-                try:
-                    profile = Profile.model_validate(dados)
-                except Exception as exc:
-                    self._footer_toast(f"Nome inválido: {exc}")
-                    return
-                nome = novo_nome
+            )
+            logger.info("footer_import_ok", nome=profile.name, path=str(path))
+            refresh = getattr(self, "_reload_profiles_store", None)
+            if refresh is not None:
+                refresh(select_name=profile.name)
+            return False
 
-        try:
-            path = save_profile(profile)
-        except OSError as exc:
-            self._footer_toast(f"Falha ao importar: {exc}")
-            logger.warning("footer_import_falhou", nome=nome, erro=str(exc))
-            return
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao importar: {erro}").format(erro=exc))
+            logger.warning("footer_import_falhou", nome=profile.name, erro=str(exc))
+            return False
 
-        self._footer_toast(f"Perfil importado: {nome} -> {path}")
-        logger.info("footer_import_ok", nome=nome, path=str(path))
-
-        refresh = getattr(self, "_reload_profiles_store", None)
-        if refresh is not None:
-            refresh(select_name=nome)
+        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Handler: Restaurar Default
@@ -280,7 +318,10 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         if not _MEU_PERFIL_ASSET.exists():
             self._footer_toast(
-                "Asset 'meu_perfil.json' não encontrado — Restaurar Default indisponível."
+                _(
+                    "Asset 'meu_perfil.json' não encontrado — "
+                    "Restaurar Default indisponível."
+                )
             )
             logger.warning(
                 "footer_restore_default_asset_ausente",
@@ -289,32 +330,43 @@ class FooterActionsMixin(WidgetAccessMixin):
             return
 
         if not gui_dialogs.confirm_restore_default(parent=window):
-            self._footer_toast("Restauração cancelada.")
+            self._footer_toast(_("Restauração cancelada."))
             return
 
-        try:
+        # PERF-FOOTER-ASYNC-IO-01: a confirmação roda na thread GTK, mas ler o
+        # asset, gravar o perfil e recarregar o DraftConfig é I/O de disco — vai
+        # para um worker; o resultado é aplicado no callback (GLib.idle_add).
+        def _restore() -> Any:
             from hefesto_dualsense4unix.profiles.schema import Profile
 
             raw = json.loads(_MEU_PERFIL_ASSET.read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
             save_profile(profile)
-        except Exception as exc:
-            self._footer_toast(f"Falha ao restaurar: {exc}")
+            # Recarrega DraftConfig a partir do perfil restaurado (best-effort:
+            # falha aqui não invalida o restore em disco, só mantém o draft antigo).
+            try:
+                return DraftConfig.from_profile(load_profile(_MEU_PERFIL_NOME))
+            except Exception as exc:
+                logger.warning("footer_restore_default_draft_falhou", erro=str(exc))
+                return None
+
+        def _on_restored(novo_draft: Any) -> bool:
+            if novo_draft is not None:
+                self.draft = novo_draft
+                logger.info("footer_restore_default_draft_recarregado")
+            destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
+            self._footer_toast(
+                _("meu_perfil restaurado para {destino}").format(destino=destino)
+            )
+            _refresh_all_tabs(self)
+            return False
+
+        def _on_err(exc: Exception) -> bool:
+            self._footer_toast(_("Falha ao restaurar: {erro}").format(erro=exc))
             logger.warning("footer_restore_default_falhou", erro=str(exc))
-            return
+            return False
 
-        # Recarrega DraftConfig a partir do perfil restaurado
-        try:
-            perfil_disco = load_profile(_MEU_PERFIL_NOME)
-            self.draft = DraftConfig.from_profile(perfil_disco)
-            logger.info("footer_restore_default_draft_recarregado")
-        except Exception as exc:
-            logger.warning("footer_restore_default_draft_falhou", erro=str(exc))
-
-        destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
-        self._footer_toast(f"meu_perfil restaurado para {destino}")
-
-        _refresh_all_tabs(self)
+        ipc_bridge.run_in_thread(_restore, on_success=_on_restored, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Instalação (documentação de ponto canônico)
