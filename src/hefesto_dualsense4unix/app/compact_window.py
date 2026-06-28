@@ -280,6 +280,17 @@ class CompactWindow:
         transport = (state.get("transport") or "").upper() or "?"
         active = state.get("active_profile") or "—"
         battery = state.get("battery_pct")
+        # FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra todos os
+        # transportes (ex.: "BT + USB") no lugar do transporte do primário.
+        controllers = state.get("controllers")
+        if isinstance(controllers, list):
+            conectados = [
+                c for c in controllers if isinstance(c, dict) and c.get("connected")
+            ]
+            if len(conectados) > 1:
+                transport = " + ".join(
+                    (c.get("transport") or "?").upper() for c in conectados
+                )
         if connected:
             self._status_label.set_markup(
                 f'<span foreground="#2d8">&#9679; {transport} · {active}</span>'

@@ -5,6 +5,17 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-controle visível no tray, na GUI e no applet COSMIC**
+  (FEAT-DSX-MULTI-CONTROLLER-01): `daemon.state_full` passou a expor um bloco
+  `controllers` (um item por controle físico, com `transport` e `is_primary`).
+  Com 2+ controles conectados, a aba Status mostra "N controles: **BT** + USB"
+  (primário em negrito), o item de status do tray ganha " · N controles (BT +
+  USB)", a janela compacta lista os transportes e o popover do applet COSMIC
+  exibe uma linha "Controles: 2 (BT + USB)". Degrada com graça em daemon antigo
+  sem o bloco (a linha some) e em falha de IPC.
+
 ### Fixed
 
 - **Corrupção do link Bluetooth com 2 controles (USB+BT) — `DualSense input CRC's

@@ -680,6 +680,8 @@ class HefestoApp(
             on_quit=self.quit_app,
             on_list_profiles=profile_list,
             on_switch_profile=profile_switch,
+            # FEAT-DSX-MULTI-CONTROLLER-01: status item mostra "N controles".
+            on_state=self._compact_state_snapshot,
         )
         self.tray.start()
         # FEAT-COMPACT-WINDOW-FALLBACK-01: a janela compacta agora é OPT-IN

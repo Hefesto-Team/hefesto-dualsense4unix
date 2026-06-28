@@ -326,6 +326,28 @@ class StatusActionsMixin(WidgetAccessMixin):
     # Renderers de estado
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _connected_controllers(state: dict[str, Any]) -> list[dict[str, Any]]:
+        """Controles conectados (FEAT-DSX-MULTI-CONTROLLER-01).
+
+        Vem de `state["controllers"]` (bloco do `daemon.state_full`); o primário
+        é o primeiro da lista (ordem de inserção). Lista vazia se o daemon não
+        expõe o bloco (versão antiga) — os renderers caem no caminho single.
+        """
+        controllers = state.get("controllers")
+        if not isinstance(controllers, list):
+            return []
+        return [
+            c for c in controllers if isinstance(c, dict) and c.get("connected")
+        ]
+
+    @staticmethod
+    def _controllers_transports(conectados: list[dict[str, Any]]) -> str:
+        """'BT + USB' (transportes em texto plano, primário primeiro)."""
+        return " + ".join(
+            (c.get("transport") or "?").upper() for c in conectados
+        )
+
     def _render_online(self, state: dict[str, Any]) -> None:
         """Header canônico de estado ONLINE —  verde + transport.
 
@@ -336,7 +358,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
-        if connected:
+        conectados = self._connected_controllers(state)
+        if connected and len(conectados) > 1:
+            # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
+            partes = " + ".join(
+                f"<b>{(c.get('transport') or '?').upper()}</b>"
+                if c.get("is_primary")
+                else (c.get("transport") or "?").upper()
+                for c in conectados
+            )
+            header.set_markup(
+                f'<span foreground="#2d8">&#9679; {len(conectados)} controles: '
+                f"{partes}</span>"
+            )
+        elif connected:
             header.set_markup(
                 f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
             )
@@ -490,10 +525,19 @@ class StatusActionsMixin(WidgetAccessMixin):
         battery = state.get("battery_pct")
         active_profile = state.get("active_profile") or "Nenhum"
 
-        self._set_label(
-            "status_connection", "Conectado" if connected else "Desconectado"
-        )
-        self._set_label("status_transport", transport.upper() if transport != "—" else "—")
+        conectados = self._connected_controllers(state)
+        if len(conectados) > 1:
+            self._set_label(
+                "status_connection", f"Conectado ({len(conectados)} controles)"
+            )
+            self._set_label("status_transport", self._controllers_transports(conectados))
+        else:
+            self._set_label(
+                "status_connection", "Conectado" if connected else "Desconectado"
+            )
+            self._set_label(
+                "status_transport", transport.upper() if transport != "—" else "—"
+            )
         self._set_label("status_active_profile", active_profile)
         self._set_label("status_daemon", "Online")
 
