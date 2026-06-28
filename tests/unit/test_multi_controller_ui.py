@@ -118,32 +118,16 @@ def test_status_controllers_transports_label() -> None:
 
 
 # --------------------------------------------------------------------------
-# Seletor de alvo — idempotência (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01)
+# Seletor de alvo — botões segmentados (sem popup; imune ao bug do cosmic-comp)
 # --------------------------------------------------------------------------
 
 
-class _FakeCombo:
-    """Combo fake que conta show()/set_active() — detecta o flicker periódico."""
+class _FakeBox:
+    """Box fake que conta show()/hide() do seletor de botões."""
 
     def __init__(self) -> None:
-        self.items: list[str] = []
-        self.active = -1
         self.shown = 0
         self.hidden = 0
-        self.set_active_calls = 0
-
-    def remove_all(self) -> None:
-        self.items = []
-
-    def append_text(self, t: str) -> None:
-        self.items.append(t)
-
-    def set_active(self, p: int) -> None:
-        self.active = p
-        self.set_active_calls += 1
-
-    def get_active(self) -> int:
-        return self.active
 
     def show(self) -> None:
         self.shown += 1
@@ -151,42 +135,65 @@ class _FakeCombo:
     def hide(self) -> None:
         self.hidden += 1
 
+    def get_children(self) -> list[Any]:
+        return []
 
-def _mixin_with_combo() -> Any:
+    def remove(self, _child: Any) -> None:
+        pass
+
+
+def _mixin_with_selector(monkeypatch: Any) -> tuple[Any, list[Any], list[int]]:
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 
     obj = StatusActionsMixin.__new__(StatusActionsMixin)
-    obj._target_combo = _FakeCombo()
+    obj._target_combo = _FakeBox()
     obj._target_combo_rows = []
     obj._target_combo_updating = False
     obj._target_combo_visible = False
     obj._target_combo_active = -1
-    return obj
+    obj._target_buttons = []
+    rebuilds: list[Any] = []
+    actives: list[int] = []
+    # Evita criar GtkRadioButton de verdade (precisaria de display).
+    monkeypatch.setattr(
+        StatusActionsMixin,
+        "_rebuild_target_buttons",
+        lambda self, box, rows: rebuilds.append(rows),
+    )
+    monkeypatch.setattr(
+        StatusActionsMixin,
+        "_set_target_active",
+        lambda self, pos: actives.append(pos),
+    )
+    return obj, rebuilds, actives
 
 
-def test_combo_refresh_idempotente_nao_pisca() -> None:
-    """Refresh repetido com o MESMO estado é no-op (não re-show/re-set_active).
-
-    É o que impede o flicker que fechava todos os popups da GUI a 10 Hz.
-    """
-    obj = _mixin_with_combo()
+def test_seletor_idempotente_nao_reconstroi(monkeypatch: Any) -> None:
+    """Refresh repetido com o MESMO estado não reconstrói os botões nem re-mostra."""
+    obj, rebuilds, _actives = _mixin_with_selector(monkeypatch)
     state = _state(
         {"index": 0, "connected": True, "transport": "bt", "is_primary": True},
         {"index": 1, "connected": True, "transport": "usb"},
     )
     state["output_target_index"] = None
 
-    obj._refresh_controller_target_combo(state)  # 1ª vez: monta + mostra
-    combo = obj._target_combo
-    assert combo.shown == 1
-    assert combo.items == ["Todos os controles", "Controle 1 — BT", "Controle 2 — USB"]
-    set_active_after_first = combo.set_active_calls
+    obj._refresh_controller_target_combo(state)  # 1ª: reconstrói + mostra
+    assert len(rebuilds) == 1
+    assert obj._target_combo.shown == 1
 
-    # Chamadas idênticas seguintes (o tick a 10 Hz): NÃO tocam o combo.
     for _ in range(5):
         obj._refresh_controller_target_combo(state)
-    assert combo.shown == 1  # não re-mostrou
-    assert combo.set_active_calls == set_active_after_first  # não re-setou
+    assert len(rebuilds) == 1  # não reconstruiu de novo
+    assert obj._target_combo.shown == 1  # não re-mostrou
+
+
+def test_short_target_label() -> None:
+    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+
+    f = StatusActionsMixin._short_target_label
+    assert f("Todos os controles") == "Todos"
+    assert f("Controle 1 — BT") == "1 · BT"
+    assert f("Controle 2 — USB") == "2 · USB"
 
 
 def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
@@ -209,10 +216,10 @@ def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
     assert toques == []
 
 
-def test_combo_some_com_menos_de_dois() -> None:
-    obj = _mixin_with_combo()
+def test_seletor_some_com_menos_de_dois(monkeypatch: Any) -> None:
+    obj, _rebuilds, _actives = _mixin_with_selector(monkeypatch)
     obj._target_combo_visible = True
-    state = _state({"connected": True, "transport": "usb", "is_primary": True})
+    state = _state({"index": 0, "connected": True, "transport": "usb", "is_primary": True})
     obj._refresh_controller_target_combo(state)
     assert obj._target_combo.hidden == 1
     assert obj._target_combo_visible is False

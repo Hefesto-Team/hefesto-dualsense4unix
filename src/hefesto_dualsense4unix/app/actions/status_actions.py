@@ -99,6 +99,7 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_updating: bool
     _target_combo_visible: bool
     _target_combo_active: int
+    _target_buttons: list[Any]
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
@@ -222,51 +223,83 @@ class StatusActionsMixin(WidgetAccessMixin):
         return 0
 
     def _init_controller_target_combo(self) -> None:
-        """Cria o seletor de controle e o empacota no banner (perto do header).
+        """Cria o seletor de controle-alvo como BOTÕES segmentados no banner.
 
-        Em runtime, não no GLADE: evita editar o `main.glade` e dispensa
-        registrar um handler de sinal (conectamos o "changed" aqui). Fica oculto
-        por padrão (`set_no_show_all` impede que o `show_all` da janela o exiba)
-        e só aparece com 2+ controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
+        NÃO é dropdown: popups de combo são fechados pelo cosmic-comp (bug de foco
+        do COSMIC — cosmic-epoch#2497 / [[gui-combo-flicker-jitter-relayout]]) em
+        ~40-95% dos cliques, faça o que fizermos. Botões sempre visíveis (sem
+        popup/grab) são imunes. Cada alvo vira um GtkRadioButton em modo toggle
+        (visual de 'segmented control' via classe 'linked'). Oculto por padrão; só
+        aparece com 2+ controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
         """
         self._target_combo_rows = []
         self._target_combo_updating = False
         self._target_combo_visible = False
         self._target_combo_active = -1
+        self._target_buttons = []
         header_bar = self._get("header_bar")
         if header_bar is None:
+            self._target_combo = None
             return
-        combo = Gtk.ComboBoxText()
-        combo.set_tooltip_text(
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        box.get_style_context().add_class("linked")
+        box.set_valign(Gtk.Align.CENTER)
+        box.set_tooltip_text(
             "Controle alvo das ações (lightbar, gatilhos, LEDs, rumble). "
-            "Com 'Todos', vai para todos os controles."
+            "'Todos' aplica a todos os controles."
         )
-        combo.set_valign(Gtk.Align.CENTER)
-        # Não reaparecer no show_all() da janela; visibilidade é controlada aqui.
-        combo.set_no_show_all(True)
-        combo.hide()
-        combo.connect("changed", self._on_controller_target_changed)
-        # pack_end → fica à esquerda do header_connection (já empacotado ao fim).
-        header_bar.pack_end(combo, False, False, 0)
-        self._target_combo = combo
+        box.set_no_show_all(True)
+        box.hide()
+        header_bar.pack_end(box, False, False, 0)
+        self._target_combo = box
+
+    @staticmethod
+    def _short_target_label(label: str) -> str:
+        """'Todos os controles' -> 'Todos'; 'Controle 1 — BT' -> '1 · BT'."""
+        if label.startswith("Todos"):
+            return "Todos"
+        return label.replace("Controle ", "").replace(" — ", " · ")
+
+    def _rebuild_target_buttons(
+        self, box: Any, rows: list[tuple[str, int | None]]
+    ) -> None:
+        """Recria os GtkRadioButton (modo toggle) do seletor a partir das linhas."""
+        for child in list(box.get_children()):
+            box.remove(child)
+            child.destroy()
+        self._target_buttons = []
+        group = None
+        for label, index in rows:
+            btn = Gtk.RadioButton.new_with_label_from_widget(
+                group, self._short_target_label(label)
+            )
+            if group is None:
+                group = btn
+            btn.set_mode(False)  # toggle button (sem a bolinha de radio)
+            btn.set_tooltip_text(label)
+            btn.connect("toggled", self._on_target_button_toggled, index)
+            btn.show()
+            box.pack_start(btn, False, False, 0)
+            self._target_buttons.append(btn)
+
+    def _set_target_active(self, pos: int) -> None:
+        """Marca o botão na posição ``pos`` como ativo (sem disparar IPC)."""
+        if 0 <= pos < len(self._target_buttons):
+            self._target_buttons[pos].set_active(True)
 
     def _refresh_controller_target_combo(self, state: dict[str, Any]) -> None:
-        """Atualiza o seletor no tick de estado, preservando a seleção (por índice).
+        """Atualiza os botões do seletor; reflete ``output_target_index``.
 
-        IDEMPOTENTE: só toca o GTK quando algo MUDA (rótulos, posição ativa ou
-        visibilidade). Sem isso, chamar `show()`/`set_active()` a cada tick (10 Hz)
-        rompia o "grab" de qualquer popup aberto na janela — TODOS os combos da GUI
-        abriam e fechavam ao clicar, impossibilitando escolher
-        (BUG-CONTROLLER-SELECTOR-COMBO-FLICKER-01). Reflete `output_target_index`
-        (fonte da verdade); some com <2 controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
+        IDEMPOTENTE: só reconstrói/marca quando rótulos/posição/visibilidade
+        mudam. Some com <2 controles. FEAT-DSX-CONTROLLER-SELECTOR-01.
         """
-        combo = getattr(self, "_target_combo", None)
-        if combo is None:
+        box = getattr(self, "_target_combo", None)
+        if box is None:
             return
         conectados = self._connected_controllers(state)
         if len(conectados) < 2:
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
-                combo.hide()
+                box.hide()
                 self._target_combo_visible = False
             return
         rows = self._controller_target_rows(conectados)
@@ -276,8 +309,6 @@ class StatusActionsMixin(WidgetAccessMixin):
         labels = [label for label, _ in rows]
         rows_changed = labels != [label for label, _ in self._target_combo_rows]
         want_pos = self._target_active_position(rows, target_index)
-        # Steady-state (nada mudou, já visível): NÃO toca no combo — preserva o
-        # grab de qualquer popup aberto na janela.
         if (
             not rows_changed
             and want_pos == self._target_combo_active
@@ -287,28 +318,22 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_combo_updating = True
         try:
             if rows_changed:
-                combo.remove_all()
-                for label, _ in rows:
-                    combo.append_text(label)
+                self._rebuild_target_buttons(box, rows)
                 self._target_combo_rows = rows
-            if want_pos != combo.get_active():
-                combo.set_active(want_pos)
+            self._set_target_active(want_pos)
             self._target_combo_active = want_pos
             if not self._target_combo_visible:
-                combo.show()
+                box.show()
                 self._target_combo_visible = True
         finally:
             self._target_combo_updating = False
 
-    def _on_controller_target_changed(self, combo: Any) -> None:
-        """Aplica a escolha do seletor via IPC (ignora updates programáticos)."""
+    def _on_target_button_toggled(self, button: Any, index: int | None) -> None:
+        """Aplica a escolha (só no botão que ficou ATIVO; ignora set programático)."""
         if getattr(self, "_target_combo_updating", False):
             return
-        pos = combo.get_active()
-        rows = getattr(self, "_target_combo_rows", [])
-        if pos < 0 or pos >= len(rows):
+        if not button.get_active():
             return
-        _label, index = rows[pos]
         call_async(
             "controller.target.set",
             {"index": index},
