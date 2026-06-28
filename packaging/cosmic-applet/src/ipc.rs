@@ -120,6 +120,28 @@ pub struct DaemonState {
     /// daemons antigos.
     #[serde(default)]
     pub emulation_suppressed: bool,
+    /// FEAT-DSX-MULTI-CONTROLLER-01: um item por controle físico conectado
+    /// (transporte + qual é o primário). serde(default)=vazio tolera daemons
+    /// antigos sem o bloco. Todos recebem o output em broadcast; o input vem
+    /// só do primário.
+    #[serde(default)]
+    pub controllers: Vec<ControllerInfo>,
+}
+
+/// Um controle físico no estado do daemon (FEAT-DSX-MULTI-CONTROLLER-01).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct ControllerInfo {
+    #[serde(default)]
+    pub connected: bool,
+    /// "usb" | "bluetooth" | null.
+    #[serde(default)]
+    pub transport: Option<String>,
+    /// Parte do contrato do daemon (qual controle é o primário). O applet
+    /// mostra só a contagem + transportes; quem destaca o primário é a aba
+    /// Status da GUI. Deserializado para fidelidade ao protocolo.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub is_primary: bool,
 }
 
 /// Um perfil retornado por `profile.list`.

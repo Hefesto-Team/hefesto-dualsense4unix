@@ -291,6 +291,13 @@ class IpcHandlersMixin:
             ),
         }
 
+        # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
+        # por controle físico, com transporte e qual é o primário) para a GUI, o
+        # tray e o applet mostrarem "N controles" sem uma chamada IPC separada.
+        describe = getattr(self.controller, "describe_controllers", None)
+        if callable(describe):
+            result["controllers"] = describe()
+
         # Paridade CLI-GUI: expõe estado da emulação de mouse se o daemon
         # dono da IPC tiver config acessível (FEAT-CLI-PARITY-01).
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None

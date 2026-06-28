@@ -78,6 +78,9 @@ ShowFn = Callable[[], None]
 QuitFn = Callable[[], None]
 ListProfilesFn = Callable[[], list[dict[str, Any]]]
 SwitchProfileFn = Callable[[str], bool]
+#: Snapshot de `daemon.state_full` (ou None se offline) — usado para o tray
+#: mostrar quantos controles estão conectados (FEAT-DSX-MULTI-CONTROLLER-01).
+StateFn = Callable[[], dict[str, Any] | None]
 
 
 @dataclass
@@ -88,6 +91,9 @@ class AppTray:
     on_quit: QuitFn
     on_list_profiles: ListProfilesFn
     on_switch_profile: SwitchProfileFn
+    #: Opcional: snapshot de estado para o status item mostrar "N controles".
+    #: None (default) mantém o comportamento antigo (só perfil).
+    on_state: StateFn | None = None
 
     _indicator: Any = None
     _indicator_ns: Any = None
@@ -287,10 +293,43 @@ class AppTray:
 
     def _tick_refresh(self) -> bool:
         profiles = self.on_list_profiles()
-        self._render_profiles(profiles)
+        self._render_profiles(profiles, self._controllers_suffix())
         return True
 
-    def _render_profiles(self, profiles: list[dict[str, Any]]) -> None:
+    def _controllers_suffix(self) -> str:
+        """' · N controles (BT + USB)' quando há 2+ conectados; '' caso contrário.
+
+        FEAT-DSX-MULTI-CONTROLLER-01: deixa visível no tray que mais de um
+        controle está conectado (todos recebem o output em broadcast). Tolera
+        daemon offline/sem o bloco `controllers` (versão antiga) caindo em ''.
+        """
+        if self.on_state is None:
+            return ""
+        try:
+            state = self.on_state()
+        except Exception:  # tray nunca cai por falha de IPC
+            return ""
+        if not isinstance(state, dict):
+            return ""
+        controllers = state.get("controllers")
+        if not isinstance(controllers, list):
+            return ""
+        conectados = [
+            c for c in controllers if isinstance(c, dict) and c.get("connected")
+        ]
+        if len(conectados) <= 1:
+            return ""
+        transportes = " + ".join(
+            (c.get("transport") or "?").upper() for c in conectados
+        )
+        return _(" · %(n)d controles (%(t)s)") % {
+            "n": len(conectados),
+            "t": transportes,
+        }
+
+    def _render_profiles(
+        self, profiles: list[dict[str, Any]], controllers_suffix: str = ""
+    ) -> None:
         if self._profiles_submenu is None:
             return
         for item in self._profile_menu_items:
@@ -334,7 +373,7 @@ class AppTray:
                 if active
                 else _("Hefesto - Dualsense4Unix - %d perfis") % len(profiles)
             )
-            self._status_item.set_label(label)
+            self._status_item.set_label(label + controllers_suffix)
 
     @staticmethod
     def _preferred_icon() -> str:

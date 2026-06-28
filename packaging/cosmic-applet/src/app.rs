@@ -398,6 +398,28 @@ impl HefestoApplet {
             .unwrap_or_else(|| "—".to_string());
         col = col.push(status_row("Perfil ativo", profile));
 
+        // FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra quantos e os
+        // transportes (ex.: "2 (BT + USB)"). Todos recebem o output em
+        // broadcast; o input vem só do primário. Daemon antigo sem o bloco
+        // `controllers` cai na lista vazia e a linha some.
+        let conectados: Vec<_> =
+            state.controllers.iter().filter(|c| c.connected).collect();
+        if conectados.len() > 1 {
+            let transportes: Vec<String> = conectados
+                .iter()
+                .map(|c| match c.transport.as_deref() {
+                    Some("usb") => "USB".to_string(),
+                    Some("bluetooth") | Some("bt") => "BT".to_string(),
+                    Some(other) if !other.is_empty() => other.to_uppercase(),
+                    _ => "?".to_string(),
+                })
+                .collect();
+            col = col.push(status_row(
+                "Controles",
+                format!("{} ({})", conectados.len(), transportes.join(" + ")),
+            ));
+        }
+
         // FEAT-DSX-GAMEMODE-SUPPRESS-01: modo jogo (mouse/teclado suspensos,
         // gamepad vivo). Transitório — distinto do pause persistente do daemon.
         if state.emulation_suppressed {
