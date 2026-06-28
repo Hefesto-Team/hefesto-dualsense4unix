@@ -2,7 +2,7 @@
   "name": "meu_perfil",
   "version": 1,
   "match": {"type": "any"},
-  "priority": 0,
+  "priority": 1,
   "triggers": {
     "left":  {"mode": "Off", "params": []},
     "right": {"mode": "Off", "params": []}

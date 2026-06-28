@@ -642,11 +642,24 @@ fn spawn_close_gui() {
 /// Para o daemon via systemd --user. Saída limpa: como o serviço é
 /// `Restart=on-failure`, o `stop` NÃO o ressuscita (fica parado até religar com
 /// `hefesto-dualsense4unix daemon enable`). best-effort; falha silenciosa.
+///
+/// Fallback: um daemon iniciado FORA do systemd (ex.: `hefesto-dualsense4unix
+/// daemon start` na linha de comando) não é tocado pelo `systemctl --user stop`.
+/// Replicamos o `pkill` do `packaging/debian/prerm` para encerrá-lo também — os
+/// dois caminhos cobrem casos disjuntos (systemd vs. avulso). best-effort.
 fn spawn_stop_daemon() {
     let _ = std::process::Command::new("systemctl")
         .arg("--user")
         .arg("stop")
         .arg("hefesto-dualsense4unix.service")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+    let _ = std::process::Command::new("pkill")
+        .arg("-TERM")
+        .arg("-f")
+        .arg("hefesto-dualsense4unix daemon start")
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

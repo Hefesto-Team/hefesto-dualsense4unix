@@ -77,7 +77,7 @@ EXPECTED_PRESETS = {
     },
     "meu_perfil": {
         "name": "meu_perfil",
-        "priority": 0,
+        "priority": 1,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
         "lightbar": (40, 80, 180),
@@ -179,10 +179,15 @@ class TestPresetMeuPerfil:
         p = _load_preset("meu_perfil")
         assert isinstance(p.match, MatchAny), "meu_perfil deve ter MatchAny"
 
-    def test_priority_zero(self) -> None:
-        """meu_perfil.json deve ter priority=0 (menor que qualquer perfil de jogo)."""
+    def test_priority_acima_do_fallback(self) -> None:
+        """meu_perfil.json deve ter priority=1 (catch-all pessoal acima do fallback nu).
+
+        Empata-quebra: meu_perfil (priority 1) vence o fallback.json (priority 0)
+        e auto-ativa como slot universal; perfis de jogo (priority 10-70) ainda
+        ganham de ambos.
+        """
         p = _load_preset("meu_perfil")
-        assert p.priority == 0
+        assert p.priority == 1
 
 
 class TestPresetFallback:

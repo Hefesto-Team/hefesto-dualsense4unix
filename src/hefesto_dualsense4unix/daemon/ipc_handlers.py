@@ -334,10 +334,14 @@ class IpcHandlersMixin:
                 "players": players_raw if isinstance(players_raw, int) else 1,
             }
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
-            rumble_mult_applied: float = 1.0
-            rumble_engine = getattr(self.daemon, "_rumble_engine", None)
-            if rumble_engine is not None:
-                rumble_mult_applied = float(rumble_engine.last_mult_applied)
+            # L1: a observabilidade vem da ORIGEM VIVA — `daemon._last_auto_mult`,
+            # o multiplicador auto mais recente, atualizado pela política que de
+            # fato roda (`reassert_rumble` no poll loop / `apply_rumble_policy`
+            # no rumble.set). O antigo `_rumble_engine` NÃO é instanciado no
+            # daemon real (não existe esse atributo), então a leitura caía sempre
+            # no fallback 1.0 — código morto. O RumbleEngine segue em uso por
+            # testes/legado; só deixou de ser a fonte aqui.
+            rumble_mult_applied = float(getattr(self.daemon, "_last_auto_mult", 1.0))
             result["rumble_policy"] = str(getattr(daemon_cfg, "rumble_policy", "balanceado"))
             result["rumble_policy_custom_mult"] = float(
                 getattr(daemon_cfg, "rumble_policy_custom_mult", 0.7)

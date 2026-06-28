@@ -138,6 +138,43 @@ def test_delete_do_ativo_reseta_active_profile(isolated_profiles_dir: Path):
     assert store.active_profile is None
 
 
+def test_delete_por_slug_limpa_active_gravado_como_display_name(
+    isolated_profiles_dir: Path,
+):
+    """BUG-PROFILE-DELETE-ACTIVE-SLUG-01: delete por slug deve limpar o active.
+
+    `activate()` grava o DISPLAY NAME ("Ação") em `active_profile`, mas o
+    arquivo vive como `acao.json` e o usuário (ou a GUI) pode deletar pelo slug
+    ("acao"). Comparar as strings cruas deixava o active preso; com normalização
+    por slugify a limpeza acontece.
+    """
+    save_profile(_mk_profile("Ação"))
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    manager = ProfileManager(controller=fc, store=store)
+    manager.activate("Ação")
+    # active é gravado como display name (acentuado), não como slug.
+    assert store.active_profile == "Ação"
+    # delete pelo SLUG ainda deve limpar o active.
+    manager.delete("acao")
+    assert store.active_profile is None
+
+
+def test_delete_de_outro_perfil_nao_limpa_active(isolated_profiles_dir: Path):
+    """Deletar um perfil diferente do ativo NÃO deve zerar o active."""
+    save_profile(_mk_profile("ativo"))
+    save_profile(_mk_profile("outro"))
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    manager = ProfileManager(controller=fc, store=store)
+    manager.activate("ativo")
+    assert store.active_profile == "ativo"
+    manager.delete("outro")
+    assert store.active_profile == "ativo"
+
+
 def test_create_persiste_no_disco(isolated_profiles_dir: Path):
     fc = FakeController()
     fc.connect()

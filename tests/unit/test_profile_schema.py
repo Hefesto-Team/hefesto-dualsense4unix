@@ -89,6 +89,30 @@ class TestTriggerConfig:
         t = TriggerConfig(mode="Galloping", params=[0, 9, 7, 7, 10])
         assert t.params == [0, 9, 7, 7, 10]
 
+    def test_mode_valido_passa(self):
+        # Todos os modos do registro canônico devem validar.
+        from hefesto_dualsense4unix.core.trigger_effects import PRESET_FACTORIES
+
+        for mode in PRESET_FACTORIES:
+            t = TriggerConfig(mode=mode)
+            assert t.mode == mode
+
+    def test_mode_invalido_rejeita(self):
+        # Um typo de modo deve falhar na validação do schema, não só no apply().
+        with pytest.raises(ValidationError):
+            TriggerConfig(mode="NaoExiste")
+
+    def test_mode_invalido_rejeita_no_perfil(self):
+        # O mesmo vale quando o modo inválido chega via TriggersConfig no Profile.
+        with pytest.raises(ValidationError):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "triggers": {"left": {"mode": "Galoping"}, "right": {"mode": "Off"}},
+                }
+            )
+
 
 class TestProfile:
     def test_construcao_minima(self):

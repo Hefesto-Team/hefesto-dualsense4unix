@@ -182,6 +182,11 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
     Filtra apenas eventos com button='mic_btn'. Chama AudioControl (que já
     tem debounce interno de 200ms) e atualiza set_mic_led no controle.
     Não relança exceções: falhas são logadas como warning.
+
+    O toggle de mute (wpctl/pactl via subprocess) e o set_mic_led (HID) são
+    chamadas SÍNCRONAS bloqueantes (até ~4s). Rodá-las direto no event loop
+    asyncio travaria o daemon inteiro; por isso são offloadadas para o executor
+    via `daemon._run_blocking`. O debounce interno de 200ms continua valendo.
     """
     from hefesto_dualsense4unix.core.events import EventTopic
 
@@ -198,8 +203,8 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             if audio is None:
                 continue
             try:
-                muted = audio.toggle_default_source_mute()
-                daemon.controller.set_mic_led(muted)
+                muted = await daemon._run_blocking(audio.toggle_default_source_mute)
+                await daemon._run_blocking(daemon.controller.set_mic_led, muted)
                 logger.info("mic_hotkey_toggle", muted=muted)
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))

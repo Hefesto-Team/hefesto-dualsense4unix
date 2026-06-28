@@ -236,8 +236,9 @@ fi
 
 if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     # Conjunto canônico sincronizado com scripts/install_udev.sh + install-host-udev.sh.
-    # As 5 rules + modules-load uinput são SEMPRE instaladas em conjunto e devem
+    # As rules + modules-load uinput são SEMPRE instaladas em conjunto e devem
     # ser SEMPRE removidas em conjunto — não há combinação parcial suportada.
+    # (75 é opt-in mas removida sempre; 76/77 entram por default desde v3.9.x.)
     #
     # BUG-UNINSTALL-SUDO-SILENT-FAIL-01 (fix): a versão anterior tinha
     # `sudo rm ... 2>/dev/null || true`, que mascarava falha de TTY para senha
@@ -255,6 +256,8 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
                    /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules \
                    /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules \
+                   /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules \
+                   /etc/udev/rules.d/77-dualsense-leds.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf
         sudo udevadm control --reload-rules
         # Re-trigger eventos para que devices PS5 já plugados percam os
@@ -343,7 +346,7 @@ fi
 rm -rf "${HOME}/.var/app/br.andrefarias.Hefesto" 2>/dev/null || true
 
 # AppImage em locais convencionais
-for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Downloads"; do
+for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Downloads" "${HOME}/.local/bin"; do
     [[ -d "$appimg_dir" ]] || continue
     for f in "$appimg_dir"/Hefesto-Dualsense4Unix*.AppImage "$appimg_dir"/hefesto-dualsense4unix*.AppImage; do
         if [[ -f "$f" ]]; then

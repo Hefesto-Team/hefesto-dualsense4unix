@@ -64,6 +64,17 @@ def cmd_trigger(
         )
     else:
         effect = build_from_name(mode, params_list)
+        # FEAT-CLI-IPC-FIRST-01: com o daemon vivo, despacha pelo IPC (igual ao
+        # cmd_led) para NÃO abrir um 2º PyDualSenseController e brigar pelo hidraw
+        # com o daemon. O caminho --raw não tem contrato IPC (trigger.set exige
+        # nome de preset, não mode inteiro), então segue direto no hardware.
+        from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
+
+        if trigger_set(side_literal, mode, params_list):
+            console.print(
+                f"[green]trigger (via daemon):[/green] {side_literal} {mode} {params_list}"
+            )
+            return
 
     _apply_on_hardware(lambda c: c.set_trigger(side_literal, effect))
     console.print(f"[green]trigger aplicado: {side_literal} {mode} {params_list}[/green]")
@@ -141,6 +152,14 @@ def cmd_rumble(
     weak: int = typer.Option(0, min=0, max=255),
     strong: int = typer.Option(0, min=0, max=255),
 ) -> None:
+    # FEAT-CLI-IPC-FIRST-01: tenta o daemon primeiro (igual ao cmd_led) para não
+    # abrir um 2º controle e disputar o hidraw; cai no hardware se daemon offline.
+    from hefesto_dualsense4unix.app.ipc_bridge import rumble_set
+
+    if rumble_set(weak, strong):
+        console.print(f"[green]rumble (via daemon):[/green] weak={weak} strong={strong}")
+        return
+
     _apply_on_hardware(lambda c: c.set_rumble(weak=weak, strong=strong))
     console.print(f"[green]rumble: weak={weak} strong={strong}[/green]")
 
