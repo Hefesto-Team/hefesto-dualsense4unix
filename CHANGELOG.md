@@ -3,6 +3,29 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Corrupção do link Bluetooth com 2 controles (USB+BT) — `DualSense input CRC's
+  check failed`** (BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01): com um DualSense por
+  USB e outro por Bluetooth, o loop `sendReport` da pydualsense (read+write em
+  hidraw sem pausa, na taxa do controle) rodava em 2 threads e saturava o
+  controlador USB — e o adaptador BT vive no mesmo controlador (família do storm),
+  degradando o link e matando o output do controle BT. `_PinnedPyDualSense` agora
+  sobrescreve `sendReport` com um throttle por ciclo (`REPORT_THREAD_THROTTLE_SEC`,
+  ~125Hz, env-configurável). Validado ao vivo: de CRC fails recorrentes para **0**
+  com os 2 conectados; gatilhos/rumble/player-LEDs estáveis em USB e BT. O INPUT
+  vem do evdev, então o throttle não afeta a responsividade.
+
+### Conhecido (TODO)
+
+- **Lightbar (cor) por Bluetooth não acende**: gatilhos, rumble e player-LEDs
+  funcionam por BT, mas a cor da lightbar não obedece (resistiu a pydualsense crua,
+  ao "release" do kernel e ao sysfs). Cosmético; documentado em
+  `docs/process/sprints/2026-06-27-multicontrole-validacao-ao-vivo-bt.md`. A cor é
+  confiável por USB.
+
 ## [3.9.0] — 2026-06-27
 
 ### Added
