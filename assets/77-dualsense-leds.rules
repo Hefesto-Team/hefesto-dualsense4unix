@@ -1,0 +1,27 @@
+# Hefesto - Dualsense4Unix — acesso de escrita aos LEDs do DualSense via sysfs.
+# FEAT-DSX-LIGHTBAR-SYSFS-01.
+#
+# O QUE FAZ: torna graváveis (pelo usuário do desktop) os nós de LED que o driver
+# de kernel `hid_playstation` expõe para o DualSense — a lightbar RGB
+# (`*:rgb:indicator`, atributo multi_intensity) e os 5 LEDs de player
+# (`*:white:player-N`, atributo brightness).
+#
+# POR QUE: escrever nesses nós DELEGA ao kernel a montagem do output report, que
+# difere entre USB e Bluetooth (no BT exige seq_tag monotônico + CRC-32). Assim a
+# COR da lightbar acende IGUAL em USB e BT. A escrita crua por hidraw (pydualsense)
+# usa seq_tag fixo e disputa esses LEDs com o próprio kernel, fazendo a cor "não
+# colar" no BT (BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01 / lightbar-bt).
+#
+# Sem esta regra, os nós ficam root:root e o daemon (que roda como usuário) cai no
+# caminho pydualsense — sem regressão, mas a cor por BT volta a falhar. Por isso a
+# regra e o código sysfs entram JUNTOS.
+#
+# MECANISMO (dois níveis, belt-and-suspenders):
+#   1. TAG+="uaccess": dá ACL ao usuário da sessão ativa (systemd-logind) — o jeito
+#      moderno e por-sessão.
+#   2. RUN+= chmod 0666: garante gravabilidade mesmo em ambientes sem uaccess para
+#      sysfs (LED é inócuo; world-writable aqui não é risco). Reaplicado a cada
+#      replug/reconexão (ACTION=="add").
+
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:rgb:indicator", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/multi_intensity /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:white:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"

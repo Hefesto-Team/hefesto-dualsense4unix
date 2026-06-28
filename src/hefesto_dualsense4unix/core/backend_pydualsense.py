@@ -111,6 +111,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         super().__init__()
         self._pinned_path = path
         self._pinned_is_edge = is_edge
+        # FEAT-DSX-LIGHTBAR-SYSFS-01: quando a lightbar/player-LED deste controle
+        # estão sendo controlados pela rota sysfs do kernel (cor funciona em
+        # USB E BT), suprimimos a escrita desses LEDs no report_thread para NÃO
+        # disputar com o kernel (a disputa é o que faz a cor "não colar" no BT).
+        # Setado pelo controlador em `_refresh_sysfs_leds` SÓ quando o sysfs é
+        # gravável; senão fica False e o caminho pydualsense segue normal.
+        self._suppress_leds = False
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -144,6 +151,42 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 self.connected = False
                 break
 
+    def prepareReport(self) -> list[int]:  # noqa: N802 - override do nome do upstream
+        """Igual ao upstream, mas cede lightbar+player ao kernel quando suprimido.
+
+        Quando `_suppress_leds` está ligado (a rota sysfs do kernel está ativa e
+        gravável para este controle), limpamos os bits de *flag* que autorizam a
+        lightbar (``0x04``) e os player-LEDs (``0x10``) no byte de flags de LED do
+        report. Sem esses bits, o firmware IGNORA os bytes de cor/player deste
+        report — então o report_thread da pydualsense para de reescrever a
+        lightbar a cada ciclo e não disputa mais com o kernel (a disputa é o que
+        matava a cor no BT). Rumble, gatilhos e LED do mic seguem intactos.
+
+        O byte de flags de LED é o 2º byte de flags: índice 2 no report USB
+        (0x02) e índice 3 no report BT (0x31, que tem o byte de seq extra). No BT
+        recalculamos o CRC-32 (bytes 74..77) por termos alterado o buffer.
+        """
+        report: list[int] = super().prepareReport()
+        if not getattr(self, "_suppress_leds", False):
+            return report
+        try:
+            from pydualsense.enums import ConnectionType
+
+            is_bt = self.conType == ConnectionType.BT
+            led_flags_idx = 3 if is_bt else 2
+            report[led_flags_idx] &= ~(0x04 | 0x10)
+            if is_bt:
+                from pydualsense.checksum import compute
+
+                crc = compute(report)
+                report[74] = crc & 0x000000FF
+                report[75] = (crc & 0x0000FF00) >> 8
+                report[76] = (crc & 0x00FF0000) >> 16
+                report[77] = (crc & 0xFF000000) >> 24
+        except Exception:  # nunca derrubar o report_thread por causa disto
+            return report
+        return report
+
 
 class PyDualSenseController(IController):
     """Implementação de `IController` baseada em `pydualsense` (multi-controle).
@@ -166,6 +209,12 @@ class PyDualSenseController(IController):
         self._offline: bool = False
         # Perfil ativo materializado em HID; re-aplicado no hotplug-in.
         self._desired = _DesiredOutput()
+        # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
+        # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
+        # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
+        # a escrita pydualsense desses LEDs é suprimida (anti-contenção). Vazio =
+        # ninguém coberto (sem regra udev / driver antigo) → caminho pydualsense.
+        self._sysfs: dict[str, Any] = {}
         # FEAT-DSX-CONTROLLER-SELECTOR-01: ALVO das ações de output. None =
         # TODOS (broadcast, padrão e idêntico ao histórico). Guardamos a KEY
         # estável (serial/MAC) do controle escolhido — NÃO o índice — para
@@ -176,6 +225,13 @@ class PyDualSenseController(IController):
         # escrita: o daemon roda `connect`/`read_state`/setters em executor
         # multi-thread (max_workers=2). RLock pois um caminho pode reentrar.
         self._io_lock = threading.RLock()
+        # L2: chaves cuja abertura (`_open_one`) está EM ANDAMENTO. O
+        # `reconnect_loop` (via `connect`) e o reconnect do poll loop podem
+        # disparar a abertura da MESMA key em paralelo — trabalho duplicado caro
+        # (até INIT_TIMEOUT_SEC por probe) cujo handle dup já era descartado.
+        # Marcamos a key aqui sob `_io_lock` antes de abrir e a removemos depois,
+        # para que o probe concorrente pule essa key em vez de reabrir.
+        self._opening: set[str] = set()
         # HOTFIX-2: evdev como fonte primária de input (contorna conflito
         # com kernel hid_playstation). pydualsense segue como caminho de
         # output (triggers, LED, rumble). Single-instance, atrelado ao primário.
@@ -309,29 +365,48 @@ class PyDualSenseController(IController):
 
         # hotplug-IN: abre os que faltam (fora do lock — `_open_one` pode levar
         # até INIT_TIMEOUT_SEC e não deve bloquear read_state/fan-out).
+        new_handles: list[tuple[str, pydualsense]] = []
         for key, path, is_edge in want:
             if key in existing:
                 continue
-            handle = self._open_one(path, is_edge=is_edge)
-            if handle is None:
-                continue  # timeout / sumiu na corrida — retenta no próximo probe
-            dup: pydualsense | None = None
+            # L2: pula se já há handle OU se outro probe concorrente já está
+            # abrindo esta key (guard sob `_io_lock`). Marca a key como "em
+            # abertura" antes do `_open_one` (caro) e a libera no `finally`.
             with self._io_lock:
-                if key in self._handles:
-                    # outro probe concorrente abriu primeiro — descarta o dup.
-                    dup = handle
-                else:
-                    self._handles[key] = handle
-            if dup is not None:
-                with contextlib.suppress(Exception):
-                    dup.close()
-                continue
-            # re-aplica o perfil ativo no controle recém-chegado.
-            self._reapply_desired(handle)
+                if key in self._handles or key in self._opening:
+                    continue
+                self._opening.add(key)
+            try:
+                handle = self._open_one(path, is_edge=is_edge)
+                if handle is None:
+                    continue  # timeout / sumiu na corrida — retenta no próximo probe
+                dup: pydualsense | None = None
+                with self._io_lock:
+                    if key in self._handles:
+                        # outro probe concorrente abriu primeiro — descarta o dup.
+                        dup = handle
+                    else:
+                        self._handles[key] = handle
+                if dup is not None:
+                    with contextlib.suppress(Exception):
+                        dup.close()
+                    continue
+                new_handles.append((key, handle))
+            finally:
+                with self._io_lock:
+                    self._opening.discard(key)
 
         with self._io_lock:
             self._recompute_primary()
             self._offline = not self._handles
+        # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
+        # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
+        # registra com atraso após o hidraw; re-afirma a cor/player ativos nos
+        # nós que acabaram de surgir.
+        self._refresh_sysfs_leds()
+        # re-aplica o perfil ativo nos controles recém-chegados.
+        for key, handle in new_handles:
+            self._reapply_desired(key, handle)
 
     def _close_handles(self, keep: set[str]) -> None:
         """Fecha (e remove) os handles cujas chaves não estão em `keep`.
@@ -386,6 +461,65 @@ class PyDualSenseController(IController):
                 with contextlib.suppress(Exception):
                     handle.close()
             self._primary_key = None
+            self._sysfs = {}
+
+    def _refresh_sysfs_leds(self) -> None:
+        """(Re)mapeia cada handle ao seu nó LED do kernel (FEAT-DSX-LIGHTBAR-SYSFS-01).
+
+        Casa a `key` estável do handle (serial/MAC) com o MAC (`uniq`) do nó
+        sysfs. Só usa um nó quando ele é GRAVÁVEL pelo usuário do daemon (regra
+        udev aplicada) — gate anti-regressão: sem permissão, o controle fica fora
+        do mapa e segue pelo caminho pydualsense histórico.
+
+        Marca `_suppress_leds` nos handles cobertos (para o report_thread não
+        disputar a lightbar com o kernel) e re-afirma a cor/player ativos nos nós
+        que acabaram de surgir (cobre o nó LED que o kernel registra com atraso).
+        """
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            by_mac = sysfs_leds.discover()
+        except Exception as exc:  # ambiente sem /sys, etc. — degrada p/ pydualsense
+            logger.debug("sysfs_leds_discover_falhou", err=str(exc))
+            by_mac = {}
+
+        with self._io_lock:
+            keys = list(self._handles)
+            handles = dict(self._handles)
+            prev = self._sysfs
+
+        mapping: dict[str, Any] = {}
+        for key in keys:
+            nk = sysfs_leds.norm_mac(key)
+            node = by_mac.get(nk) if nk else None
+            if node is not None and node.writable():
+                mapping[key] = node
+        # Sem fallback single-controle: o casamento é SÓ por MAC. Controle real
+        # sempre expõe o MAC (serial == HID_UNIQ) em USB e BT, então o match é
+        # confiável; um handle sem MAC (ou um nó de outra máquina) NUNCA é casado
+        # por coincidência — evita acoplar a um nó errado e mantém os testes
+        # herméticos. Quem não casa segue pelo caminho pydualsense (USB funciona).
+
+        # Marca supressão de LED no report_thread só dos handles cobertos.
+        for key, handle in handles.items():
+            with contextlib.suppress(Exception):
+                # `_suppress_leds` existe no _PinnedPyDualSense (handles de teste
+                # podem não ter — daí o suppress(Exception)).
+                handle._suppress_leds = key in mapping
+
+        # Re-afirma o perfil de LED ativo nos nós que SURGIRAM agora (cor que o
+        # kernel ainda não tinha ou perdeu no connect/resume).
+        new_keys = [k for k in mapping if k not in prev]
+        for key in new_keys:
+            node = mapping[key]
+            with contextlib.suppress(Exception):
+                if self._desired.led is not None:
+                    node.set_rgb(*self._desired.led)
+                if self._desired.player_leds is not None:
+                    node.set_players(self._desired.player_leds)
+
+        with self._io_lock:
+            self._sysfs = mapping
 
     def is_connected(self) -> bool:
         # "Qualquer controle conectado". `ds.connected` é o canônico do
@@ -518,6 +652,46 @@ class PyDualSenseController(IController):
             except Exception as exc:
                 logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
 
+    def _for_each_led(
+        self,
+        *,
+        sysfs_op: Callable[[Any], bool],
+        pydual_op: Callable[[pydualsense], None],
+        what: str,
+    ) -> None:
+        """Aplica um output de LED ao ALVO, preferindo a rota sysfs do kernel.
+
+        Mesma resolução de alvo do `_for_each` (seletor de controle ou broadcast),
+        mas, por handle: tenta o nó LED do kernel (cor funciona em USB E BT) e, se
+        não houver nó coberto ou a escrita falhar, cai no caminho pydualsense
+        (hidraw) — garantindo nenhum regresso quando a regra udev não está
+        aplicada. FEAT-DSX-LIGHTBAR-SYSFS-01.
+        """
+        with self._io_lock:
+            target = self._output_target_key
+            if target is not None and target in self._handles:
+                items = [(target, self._handles[target])]
+            else:
+                items = list(self._handles.items())
+            sysfs_map = dict(self._sysfs)
+        if not items:
+            logger.debug("output_offline_noop", op=what)
+            return
+        for key, handle in items:
+            node = sysfs_map.get(key)
+            if node is not None:
+                try:
+                    if sysfs_op(node):
+                        continue
+                except Exception as exc:
+                    logger.debug(
+                        "sysfs_led_falhou_fallback_pydual", op=what, key=key, err=str(exc)
+                    )
+            try:
+                pydual_op(handle)
+            except Exception as exc:
+                logger.warning("output_handle_failed", op=what, key=key, err=str(exc))
+
     @staticmethod
     def _apply_trigger(handle: pydualsense, side: Side, effect: TriggerEffect) -> None:
         trigger = handle.triggerL if side == "left" else handle.triggerR
@@ -525,19 +699,30 @@ class PyDualSenseController(IController):
         for idx, value in enumerate(effect.forces):
             trigger.setForce(idx, value)
 
-    def _reapply_desired(self, handle: pydualsense) -> None:
-        """Re-aplica o perfil ativo (`_desired`) num handle recém-aberto."""
+    def _reapply_desired(self, key: str, handle: pydualsense) -> None:
+        """Re-aplica o perfil ativo (`_desired`) num handle recém-aberto.
+
+        Gatilhos e LED do mic vão sempre por pydualsense (o kernel não os expõe).
+        Lightbar e player-LED vão pelo nó sysfs do kernel quando o controle está
+        coberto (cor em USB E BT); senão, por pydualsense (fallback histórico).
+        """
         from pydualsense.enums import PlayerID
 
         desired = self._desired
+        with self._io_lock:
+            node = self._sysfs.get(key)
         try:
             if desired.trigger_left is not None:
                 self._apply_trigger(handle, "left", desired.trigger_left)
             if desired.trigger_right is not None:
                 self._apply_trigger(handle, "right", desired.trigger_right)
-            if desired.led is not None:
+            if desired.led is not None and not (
+                node is not None and node.set_rgb(*desired.led)
+            ):
                 handle.light.setColorI(*desired.led)
-            if desired.player_leds is not None:
+            if desired.player_leds is not None and not (
+                node is not None and node.set_players(desired.player_leds)
+            ):
                 mask = sum(1 << i for i, b in enumerate(desired.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
             if desired.mic_led is not None:
@@ -555,7 +740,13 @@ class PyDualSenseController(IController):
     def set_led(self, color: tuple[int, int, int]) -> None:
         self._desired.led = color
         r, g, b = color
-        self._for_each(lambda h: h.light.setColorI(r, g, b), what="set_led")
+        # Prefere a rota sysfs do kernel (cor funciona em USB E BT); cai no
+        # pydualsense (hidraw) quando o controle não está coberto.
+        self._for_each_led(
+            sysfs_op=lambda node: node.set_rgb(r, g, b),
+            pydual_op=lambda h: h.light.setColorI(r, g, b),
+            what="set_led",
+        )
 
     def set_rumble(self, weak: int, strong: int) -> None:
         # Rumble é TRANSITÓRIO (efeito de jogo) — NÃO entra em `_desired`, logo
@@ -597,8 +788,11 @@ class PyDualSenseController(IController):
 
         self._desired.player_leds = bits
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
-        self._for_each(
-            lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
+        # Prefere a rota sysfs do kernel (player-LED em USB E BT, sem disputa);
+        # cai no pydualsense quando o controle não está coberto.
+        self._for_each_led(
+            sysfs_op=lambda node: node.set_players(bits),
+            pydual_op=lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
             what="set_player_leds",
         )
         logger.debug("player_leds_aplicados bits=%s bitmask=%s", list(bits), bitmask)
