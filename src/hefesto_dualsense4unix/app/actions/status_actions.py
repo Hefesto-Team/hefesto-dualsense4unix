@@ -545,7 +545,27 @@ class StatusActionsMixin(WidgetAccessMixin):
             combo.hide()
         self._reset_live_widgets()
 
+    @staticmethod
+    def _popup_is_open() -> bool:
+        """True se um popup (combo/menu) detém um grab GTK neste instante.
+
+        Usado para pausar os renders periódicos e não fechar o popup via
+        re-layout (BUG-COMBO-POPUP-FLICKER-02). Robusto a um ``Gtk`` stubado nos
+        testes (sem ``grab_get_current``) — nesse caso retorna ``False``.
+        """
+        grab = getattr(Gtk, "grab_get_current", None)
+        return grab is not None and grab() is not None
+
     def _render_live_state(self, state: dict[str, Any]) -> None:
+        # BUG-COMBO-POPUP-FLICKER-02: enquanto um popup (combo/menu) está aberto,
+        # ele detém um grab GTK. As atualizações a 10 Hz dos labels (os sticks do
+        # DualSense TREMEM em repouso → o texto "X: 128 Y: 127" muda de largura →
+        # `queue_resize` → re-layout da janela) fechavam o popup na hora — em
+        # XWayland E em Wayland nativo. Pausa o render vivo enquanto houver grab
+        # ativo; retoma sozinho quando o popup fecha. Sem isso, NENHUM combo da
+        # GUI consegue ficar aberto para a usuária escolher.
+        if self._popup_is_open():
+            return
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
@@ -659,6 +679,10 @@ class StatusActionsMixin(WidgetAccessMixin):
                 titulo_dir.set_markup("Analógico Direito (R3)")
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
+        # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
+        # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
+        if self._popup_is_open():
+            return
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")
