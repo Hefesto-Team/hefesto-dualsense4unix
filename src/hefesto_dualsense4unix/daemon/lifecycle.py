@@ -90,6 +90,11 @@ class DaemonConfig:
     # (jogar = controle vai pro jogo, não pro cursor). flavor: dualsense|xbox.
     gamepad_emulation_enabled: bool = False
     gamepad_flavor: str = "dualsense"
+    # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
+    # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
+    # player" (broadcast). OFF por default (preserva o uso de reserva/troca de
+    # controle). Só tem efeito com a emulação de gamepad ligada + 2+ controles.
+    coop_enabled: bool = False
     # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
     # do DualSense. Default True: infraestrutura já sobe com os bindings
     # default (Options/Share/L1/R1). Sub-sprints futuras expõem UI+persist.
@@ -147,6 +152,9 @@ class Daemon:
     # FEAT-DSX-GAMEPAD-FLAVOR-01 — UinputGamepad criado em runtime por
     # start_gamepad_emulation; None quando o gamepad virtual está desligado.
     _gamepad_device: Any = None
+    # FEAT-DSX-COOP-LOCAL-01 — CoopManager: jogadores secundários (P2+) do co-op
+    # local. Criado sob demanda por `get_coop_manager`; None até o 1º uso.
+    _coop_manager: Any = None
     _hotkey_manager: Any = None
     # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: quando True, o poll loop não despacha
     # mouse/teclado (devices ficam vivos; hotkeys seguem ativos). Alternado pelo
@@ -235,6 +243,12 @@ class Daemon:
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
+        # FEAT-DSX-COOP-LOCAL-01: restaura o co-op local se a sessão anterior o
+        # deixou ligado (só tem efeito com gamepad + 2+ controles; o poll loop
+        # reconcilia via CoopManager.sync).
+        from hefesto_dualsense4unix.utils.session import load_coop_enabled
+        if load_coop_enabled():
+            self.config.coop_enabled = True
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
@@ -419,6 +433,32 @@ class Daemon:
             return start_gamepad_emulation(self, flavor=flavor)
         stop_gamepad_emulation(self)
         return True
+
+    def set_coop_enabled(self, enabled: bool) -> bool:
+        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
+
+        Persiste o toggle (sobrevive reboot) e reconcilia na hora: ligar sobe os
+        jogadores secundários (se gamepad on + 2+ controles); desligar desmonta
+        todos (solta grab/uinput). Retorna o estado efetivo de `coop_enabled`.
+        """
+        self.config.coop_enabled = bool(enabled)
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import save_coop_enabled
+
+            save_coop_enabled(self.config.coop_enabled)
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        coop = get_coop_manager(self)
+        if self.config.coop_enabled:
+            coop.sync()
+        else:
+            coop.disable()
+        logger.info(
+            "coop_enabled_set",
+            enabled=self.config.coop_enabled,
+            players=coop.player_count(),
+        )
+        return self.config.coop_enabled
 
     def set_emulation_suppressed(self, value: bool | None = None) -> bool:
         """Liga/desliga a supressão da emulação de mouse/teclado (modo jogo).
@@ -686,6 +726,10 @@ class Daemon:
         loop = asyncio.get_running_loop()
         next_rumble_assert_at: float = 0.0
         evdev_watchdog_next_at: float = 0.0
+        # FEAT-DSX-COOP-LOCAL-01: reconcilia os jogadores secundários (P2+) a cada
+        # ~2s (enumerar evdevs todo tick é caro); o forward roda todo tick.
+        coop_sync_next_at: float = 0.0
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
         # desconectado→conectado. Começa False (boot pode ser sem hardware);
@@ -794,6 +838,18 @@ class Daemon:
 
                     discard_touchpad_motion(self)
                 gamepad_dispatched = True
+
+            # FEAT-DSX-COOP-LOCAL-01: co-op local — repassa cada controle
+            # SECUNDÁRIO ao SEU gamepad virtual (P2+). Como o P1 acima, sobrevive
+            # a pause/modo-jogo (é rota pro jogo) e é gateado só pelo grace. A
+            # reconciliação (sync, throttada ~2s) cria/derruba os secundários e
+            # também desmonta tudo se o co-op/gamepad for desligado.
+            if grace_passed:
+                coop = get_coop_manager(self)
+                if tick_started >= coop_sync_next_at:
+                    coop.sync()
+                    coop_sync_next_at = tick_started + 2.0
+                coop.forward_all()
 
             # BUG-DAEMON-CONNECT-GHOST-INPUT-01: gate de assentamento. Enquanto
             # `loop.time() < _input_ready_at`, NÃO despacha teclado/mouse/hotkey

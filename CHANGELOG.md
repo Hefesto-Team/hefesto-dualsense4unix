@@ -7,6 +7,17 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Added
 
+- **Co-op local: cada controle vira um jogador (P1, P2, …)**
+  (FEAT-DSX-COOP-LOCAL-01): novo modo opcional em que cada DualSense físico ganha
+  seu PRÓPRIO gamepad virtual (com grab do controle real) — duas pessoas jogam
+  co-op local de verdade. Antes o multi-controle era "N controles, 1 player"
+  (output em broadcast, input só do primário → os dois apareciam como P1). O novo
+  `CoopManager` adiciona uma camada de jogadores secundários sem tocar no caminho
+  do P1; o poll loop repassa cada controle ao seu vpad. Liga/desliga por
+  `hefesto-dualsense4unix coop on|off|status` ou IPC `coop.set` (persiste no
+  reboot); exige a emulação de gamepad ligada + 2+ controles. Estado em
+  `daemon.state_full` (`coop.enabled`/`coop.players`). Fora de escopo (fase
+  futura): rumble do jogo por jogador e player-LED por índice.
 - **Multi-controle visível no tray, na GUI e no applet COSMIC**
   (FEAT-DSX-MULTI-CONTROLLER-01): `daemon.state_full` passou a expor um bloco
   `controllers` (um item por controle físico, com `transport` e `is_primary`).

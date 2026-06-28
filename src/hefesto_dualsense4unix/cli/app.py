@@ -51,6 +51,7 @@ daemon_app = typer.Typer(
 )
 app.add_typer(daemon_app, name="daemon")
 
+from hefesto_dualsense4unix.cli.cmd_coop import app as coop_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_emulate import app as emulate_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_gamepad import app as gamepad_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_mouse import app as mouse_app  # noqa: E402
@@ -63,6 +64,7 @@ app.add_typer(test_app, name="test")
 app.add_typer(emulate_app, name="emulate")
 app.add_typer(mouse_app, name="mouse")
 app.add_typer(gamepad_app, name="gamepad")
+app.add_typer(coop_app, name="coop")
 app.add_typer(plugin_app, name="plugin")
 
 
