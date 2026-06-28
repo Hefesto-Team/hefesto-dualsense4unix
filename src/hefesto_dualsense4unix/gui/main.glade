@@ -63,6 +63,11 @@
     <property name="title" translatable="yes">Hefesto - Dualsense4Unix</property>
     <property name="default-width">1100</property>
     <property name="default-height">680</property>
+    <!-- Largura/altura mínimas: garantem o espaço do rodapé (4 botões) em janela
+         flutuante. Sob tiling do COSMIC (que ignora min-size) o GtkFlowBox do
+         rodapé + os ScrolledWindow das abas são a rede de segurança. BUG-FOOTER-CORTADO. -->
+    <property name="width-request">760</property>
+    <property name="height-request">560</property>
     <signal name="delete-event" handler="on_window_delete_event"/>
     <child>
       <object class="GtkBox" id="root_box">
@@ -2286,57 +2291,83 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </packing>
             </child>
 
-            <!-- Caixa de botoes alinhada a direita -->
+            <!-- Caixa de botoes alinhada a direita. GtkFlowBox: os 4 botoes
+                 QUEBRAM LINHA quando a janela fica estreita (em vez de cortar) —
+                 rede de seguranca p/ o tiling do COSMIC, que ignora min-size.
+                 BUG-FOOTER-CORTADO. -->
             <child>
-              <object class="GtkBox" id="footer_buttons_box">
+              <object class="GtkFlowBox" id="footer_buttons_box">
                 <property name="orientation">horizontal</property>
-                <property name="spacing">6</property>
+                <property name="selection-mode">none</property>
+                <property name="max-children-per-line">4</property>
+                <property name="min-children-per-line">2</property>
+                <property name="column-spacing">6</property>
+                <property name="row-spacing">6</property>
+                <property name="homogeneous">False</property>
                 <property name="valign">center</property>
+                <property name="halign">end</property>
+                <property name="hexpand">False</property>
 
                 <child>
-                  <object class="GtkButton" id="btn_footer_apply">
-                    <property name="label" translatable="yes">Aplicar</property>
-                    <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
-                    <signal name="clicked" handler="on_apply_draft"/>
-                    <style><class name="btn-apply"/></style>
-                  <child internal-child="accessible">
-                    <object class="AtkObject">
-                      <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
-                      <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse ao controle</property>
-                    </object>
-                  </child>
+                  <object class="GtkFlowBoxChild">
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkButton" id="btn_footer_apply">
+                        <property name="label" translatable="yes">Aplicar</property>
+                        <property name="tooltip-text" translatable="yes">Envia toda a configuração (gatilhos, LEDs, rumble, mouse) ao controle</property>
+                        <signal name="clicked" handler="on_apply_draft"/>
+                        <style><class name="btn-apply"/></style>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Aplicar todas as configuracoes</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Envia gatilhos LEDs rumble e mouse ao controle</property>
+                        </object>
+                      </child>
+                      </object>
+                    </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
                 </child>
 
                 <child>
-                  <object class="GtkButton" id="btn_footer_save_profile">
-                    <property name="label" translatable="yes">Salvar Perfil</property>
-                    <property name="tooltip-text" translatable="yes">Salva o estado atual como um perfil nomeado</property>
-                    <signal name="clicked" handler="on_save_profile"/>
-                    <style><class name="btn-save"/></style>
+                  <object class="GtkFlowBoxChild">
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkButton" id="btn_footer_save_profile">
+                        <property name="label" translatable="yes">Salvar Perfil</property>
+                        <property name="tooltip-text" translatable="yes">Salva o estado atual como um perfil nomeado</property>
+                        <signal name="clicked" handler="on_save_profile"/>
+                        <style><class name="btn-save"/></style>
+                      </object>
+                    </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
                 </child>
 
                 <child>
-                  <object class="GtkButton" id="btn_footer_import">
-                    <property name="label" translatable="yes">Importar</property>
-                    <property name="tooltip-text" translatable="yes">Carrega um perfil de arquivo .json</property>
-                    <signal name="clicked" handler="on_import_profile"/>
-                    <style><class name="btn-import"/></style>
+                  <object class="GtkFlowBoxChild">
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkButton" id="btn_footer_import">
+                        <property name="label" translatable="yes">Importar</property>
+                        <property name="tooltip-text" translatable="yes">Carrega um perfil de arquivo .json</property>
+                        <signal name="clicked" handler="on_import_profile"/>
+                        <style><class name="btn-import"/></style>
+                      </object>
+                    </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
                 </child>
 
                 <child>
-                  <object class="GtkButton" id="btn_footer_restore_default">
-                    <property name="label" translatable="yes">Restaurar Default</property>
-                    <property name="tooltip-text" translatable="yes">Restaura o perfil 'Meu Perfil' ao estado original</property>
-                    <signal name="clicked" handler="on_restore_default"/>
-                    <style><class name="btn-restore"/></style>
+                  <object class="GtkFlowBoxChild">
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkButton" id="btn_footer_restore_default">
+                        <property name="label" translatable="yes">Restaurar Default</property>
+                        <property name="tooltip-text" translatable="yes">Restaura o perfil 'Meu Perfil' ao estado original</property>
+                        <signal name="clicked" handler="on_restore_default"/>
+                        <style><class name="btn-restore"/></style>
+                      </object>
+                    </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
                 </child>
 
               </object>

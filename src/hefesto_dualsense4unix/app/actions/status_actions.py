@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.app.constants import (
 )
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
 from hefesto_dualsense4unix.gui.widgets import BUTTON_GLYPH_LABELS, ButtonGlyph, StickPreviewGtk
+from hefesto_dualsense4unix.utils.i18n import _
 
 # ---------------------------------------------------------------------------
 # Configuração do grid de glyphs (4x4)
@@ -205,11 +206,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         ``index`` 0-based do bloco ``controllers`` (o mesmo que o IPC
         ``controller.target.set`` espera). FEAT-DSX-CONTROLLER-SELECTOR-01.
         """
-        rows: list[tuple[str, int | None]] = [("Todos os controles", None)]
+        rows: list[tuple[str, int | None]] = [(_("Todos os controles"), None)]
         for c in conectados:
             idx = int(c.get("index", 0))
             transporte = (c.get("transport") or "?").upper()
-            rows.append((f"Controle {idx + 1} — {transporte}", idx))
+            rows.append(
+                (_("Controle {n} — {t}").format(n=idx + 1, t=transporte), idx)
+            )
         return rows
 
     @staticmethod
@@ -562,8 +565,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_label("status_active_profile", "—")
-        self._get("status_battery_bar").set_fraction(0.0)
-        self._get("status_battery_bar").set_text("— %")
+        bar = self._get("status_battery_bar")
+        if bar is not None:
+            bar.set_fraction(0.0)
+            bar.set_text("— %")
         # FEAT-DSX-CONTROLLER-SELECTOR-01: sem daemon, esconde o seletor.
         # Reseta _target_combo_visible junto (espelha o caminho <2 controles em
         # _refresh_controller_target_combo): sem isso o flag fica stale=True e,
@@ -735,12 +740,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_daemon", "Online")
 
         battery_bar = self._get("status_battery_bar")
-        if battery is None:
-            battery_bar.set_fraction(0.0)
-            battery_bar.set_text("— %")
-        else:
-            battery_bar.set_fraction(battery / 100)
-            battery_bar.set_text(f"{battery} %")
+        if battery_bar is not None:
+            if battery is None:
+                battery_bar.set_fraction(0.0)
+                battery_bar.set_text("— %")
+            else:
+                battery_bar.set_fraction(battery / 100)
+                battery_bar.set_text(f"{battery} %")
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).

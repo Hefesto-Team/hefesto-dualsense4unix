@@ -233,11 +233,7 @@ class InputActionsMixin(MouseActionsMixin):
 
     def _toast_input(self, msg: str) -> None:
         """Toast em `status_bar`. Reusa ctx id "input" pra não brigar com mouse."""
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("input")
-        bar.push(ctx_id, msg)
+        self._status_toast("input", msg)
 
 
 __all__ = [

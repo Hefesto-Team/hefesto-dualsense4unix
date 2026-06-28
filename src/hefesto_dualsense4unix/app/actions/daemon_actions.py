@@ -12,7 +12,7 @@ import os
 import re
 import signal
 import subprocess
-from typing import Any, Literal
+from typing import Literal
 
 import gi
 
@@ -719,8 +719,4 @@ class DaemonActionsMixin(WidgetAccessMixin):
             return None
 
     def _toast_daemon(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("daemon")
-        bar.push(ctx_id, msg)
+        self._status_toast("daemon", msg)

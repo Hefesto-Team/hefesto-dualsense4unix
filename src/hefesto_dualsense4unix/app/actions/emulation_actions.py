@@ -458,8 +458,4 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return False
 
     def _toast_emulation(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("emulation")
-        bar.push(ctx_id, msg)
+        self._status_toast("emulation", msg)

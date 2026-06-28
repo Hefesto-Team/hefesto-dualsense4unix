@@ -73,10 +73,19 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 slot.pack_start(sel, True, True, 0)
                 sel.show_all()
             self._trigger_mode[side] = sel
-            # set_active_id EMITE "changed" (como o combo); _guard_refresh está
-            # desligado aqui, então o handler roda e monta os sliders de "Off".
-            sel.set_active_id("Off")
+            # set_active_id EMITE "changed" (como o combo). Fazemos sob _guard_refresh
+            # para o handler curto-circuitar: senão `_on_mode_changed` AGENDA um
+            # live-preview (300ms) que escreve "Off" no hardware ao abrir a GUI e
+            # corre com o bootstrap do perfil, ZERANDO os gatilhos do perfil ativo
+            # (BUG-GUI-OPEN-OFF-TRIGGER-WRITE-01). Montamos os sliders/linha de
+            # preset explicitamente, sem tocar no hardware nem no draft.
+            self._guard_refresh = True
+            try:
+                sel.set_active_id("Off")
+            finally:
+                self._guard_refresh = False
             self._rebuild_params(side, "Off")
+            self._update_preset_row_visibility(side, "Off")
             self._populate_preset_combo(side, "MultiPositionFeedback")
 
     # --- draft integration ---

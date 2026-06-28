@@ -16,9 +16,37 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.footer_actions import FROZEN_WIDGET_IDS, FooterActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Executa ``ipc_bridge.run_in_thread`` de forma síncrona nos testes.
+
+    PERF-FOOTER-ASYNC-IO-01 moveu o I/O de disco dos handlers do rodapé para um
+    worker (``run_in_thread`` + ``GLib.idle_add``). Sem um loop GTK rodando nos
+    testes unit, os callbacks nunca executariam — então rodamos o worker e o
+    callback na mesma thread, preservando a semântica observável.
+    """
+
+    def _sync(fn: Any, on_success: Any, on_failure: Any = None) -> None:
+        try:
+            result = fn()
+        except Exception as exc:  # espelha o run_in_thread real
+            if on_failure is not None:
+                on_failure(exc)
+            return
+        on_success(result)
+
+    monkeypatch.setattr(footer_actions.ipc_bridge, "run_in_thread", _sync)
+
 
 # ---------------------------------------------------------------------------
 # Helpers

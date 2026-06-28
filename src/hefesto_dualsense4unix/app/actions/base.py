@@ -26,5 +26,21 @@ class WidgetAccessMixin:
         if widget is not None:
             widget.set_text(text)
 
+    def _status_toast(self, context: str, msg: str) -> None:
+        """Mostra ``msg`` na statusbar, mantendo no máximo 1 mensagem por contexto.
+
+        Faz ``pop`` antes do ``push``: sem isso cada aba/área empilhava mensagens
+        indefinidamente — o feedback ficava stale (a barra mostrava a primeira da
+        pilha) e a pilha crescia sem limite. Com o pop, cada ``context`` guarda
+        apenas a sua última mensagem. Ponto único reusado por todos os helpers
+        ``_toast_*`` da GUI.
+        """
+        bar = self._get("status_bar")
+        if bar is None:
+            return
+        ctx_id = bar.get_context_id(context)
+        bar.pop(ctx_id)
+        bar.push(ctx_id, msg)
+
 
 __all__ = ["WidgetAccessMixin"]

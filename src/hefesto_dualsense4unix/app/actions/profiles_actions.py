@@ -259,6 +259,22 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._get("profile_title_regex_entry").set_text("")
         self._get("profile_process_name_entry").set_text("")
         self._get("profile_simple_custom_name").set_text("")
+        # BUG-PROFILE-NEW-STALE-MODE-01: se o usuário vinha de um perfil de match
+        # COMPLEXO, o editor ficou em modo avançado (stack/switch/_mode_advanced).
+        # Sem resetar, "Salvar" monta um MatchCriteria VAZIO (não casa com nada),
+        # em vez do "Qualquer" que o radio passou a mostrar. Volta ao modo simples
+        # espelhando o ramo simples de _populate_editor.
+        self._mode_advanced = False
+        stack: Gtk.Stack = self._get("profile_editor_stack")
+        if stack is not None:
+            stack.set_visible_child_name("simples")
+        switch: Gtk.Switch = self._get("profile_advanced_switch")
+        if switch is not None:
+            self._suppress_advanced_toggle = True
+            try:
+                switch.set_active(False)
+            finally:
+                self._suppress_advanced_toggle = False
         self._toast_profile("Novo perfil: edite e clique Salvar")
 
     def on_profile_duplicate(self, _btn: Gtk.Button | None) -> None:
@@ -594,8 +610,4 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         return [item.strip() for item in raw.split(",") if item.strip()]
 
     def _toast_profile(self, msg: str) -> None:
-        bar: Any = self._get("status_bar")
-        if bar is None:
-            return
-        ctx_id = bar.get_context_id("profiles")
-        bar.push(ctx_id, msg)
+        self._status_toast("profiles", msg)

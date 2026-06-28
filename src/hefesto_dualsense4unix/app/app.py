@@ -185,6 +185,11 @@ class HefestoApp(
 
         apply_theme(self.window)
 
+        # BUG-FOOTER-CORTADO: envolve as abas sem scroll num GtkScrolledWindow para
+        # a janela poder encolher e o rodapé (Aplicar/Salvar/...) nunca ser cortado
+        # sob tiling do COSMIC (que ignora a largura/altura mínima da janela).
+        self._wrap_notebook_pages_in_scroll()
+
         self.window.set_title("Hefesto - Dualsense4Unix")
         # BUG-DOCK-ICON-WMCLASS-MISMATCH-01 (v3.4.3): WM_CLASS instance
         # tem que casar com basename do .desktop (`hefesto-dualsense4unix.
@@ -637,6 +642,44 @@ class HefestoApp(
             fn()
 
     # --- run ---
+
+    def _wrap_notebook_pages_in_scroll(self) -> None:
+        """Torna as abas roláveis para o RODAPÉ nunca ser cortado (BUG-FOOTER-CORTADO).
+
+        O `GtkNotebook` pede como altura mínima o MAIOR mínimo entre TODAS as
+        páginas (medido: ~606px, puxado por Perfis/Emulação). Sob tiling do COSMIC
+        — que ignora `width/height-request` da janela — a janela não encolhe abaixo
+        de header+notebook+rodapé e o rodapé de ações (Aplicar/Salvar Perfil/
+        Importar/Restaurar) é empurrado para fora da área visível.
+
+        Envolvendo cada página num `GtkScrolledWindow` (scroll vertical), o mínimo
+        da página cai para ~0 e o rodapé fica SEMPRE visível, em qualquer tamanho
+        de janela. Exceção: a aba **Daemon**, cujo conteúdo principal já é um
+        `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la de novo
+        quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
+        """
+        notebook = self.builder.get_object("main_notebook")
+        if notebook is None:
+            return
+        skip = {"Daemon"}  # já tem scroll próprio (log) — não envolver
+        pages: list[tuple[Any, Any]] = []
+        while notebook.get_n_pages() > 0:
+            page = notebook.get_nth_page(0)
+            label = notebook.get_tab_label(page)  # ref mantém o widget vivo
+            notebook.remove_page(0)
+            pages.append((page, label))
+        for page, label in pages:
+            label_text = label.get_text() if isinstance(label, Gtk.Label) else ""
+            if label_text not in skip and not isinstance(page, Gtk.ScrolledWindow):
+                scroller = Gtk.ScrolledWindow()
+                scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+                scroller.set_propagate_natural_width(True)
+                scroller.set_propagate_natural_height(True)
+                scroller.add(page)
+                scroller.show_all()
+                notebook.append_page(scroller, label)
+            else:
+                notebook.append_page(page, label)
 
     def show(self) -> None:
         self.window.show_all()
