@@ -86,6 +86,13 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
         from hefesto_dualsense4unix.utils.session import save_active_marker
 
+        # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está solto para o jogo —
+        # o ciclo de perfil (PS+dpad) NÃO troca de perfil (re-escreveria gatilhos).
+        store = getattr(daemon, "store", None)
+        if store is not None and getattr(store, "native_mode_active", False):
+            logger.info("profile_cycle_skip_native_mode")
+            return
+
         # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
         # emulação — paridade com o profile.switch (IPC) e o autoswitch.
         manager = ProfileManager(

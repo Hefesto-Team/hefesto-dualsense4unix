@@ -55,6 +55,7 @@ from hefesto_dualsense4unix.cli.cmd_controller import app as controller_app  # n
 from hefesto_dualsense4unix.cli.cmd_coop import app as coop_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_gamepad import app as gamepad_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_mouse import app as mouse_app  # noqa: E402
+from hefesto_dualsense4unix.cli.cmd_native import app as native_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_plugin import app as plugin_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_profile import app as profile_app  # noqa: E402
 from hefesto_dualsense4unix.cli.cmd_test import app as test_app  # noqa: E402
@@ -62,6 +63,7 @@ from hefesto_dualsense4unix.cli.cmd_test import app as test_app  # noqa: E402
 app.add_typer(profile_app, name="profile")
 app.add_typer(test_app, name="test")
 app.add_typer(mouse_app, name="mouse")
+app.add_typer(native_app, name="native")
 app.add_typer(gamepad_app, name="gamepad")
 app.add_typer(coop_app, name="coop")
 app.add_typer(controller_app, name="controller")

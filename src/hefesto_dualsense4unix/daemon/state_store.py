@@ -67,6 +67,11 @@ class StateStore:
         # escolha manual de perfil. 0.0 → lock inativo. Setado pelo handler
         # IPC `profile.switch`; consultado em `AutoSwitcher._activate`.
         self._manual_profile_lock_until: float = 0.0
+        # FEAT-NATIVE-MODE-01: Modo Nativo ("release total" do controle). Enquanto
+        # ativo, o AutoSwitcher NÃO ativa perfil por foco de janela e o hotkey de
+        # ciclo NÃO troca de perfil — nada re-escreve gatilhos/rumble por cima do
+        # jogo nativo (Sackboy & cia). Setado por `Daemon.set_native_mode`.
+        self._native_mode_active: bool = False
 
     # --- escritas ------------------------------------------------------
 
@@ -108,6 +113,16 @@ class StateStore:
         """
         with self._lock:
             self._manual_trigger_active = False
+
+    def set_native_mode_active(self, active: bool) -> None:
+        """Liga/desliga o gate do Modo Nativo (FEAT-NATIVE-MODE-01).
+
+        Enquanto ativo, autoswitch e hotkey de ciclo NÃO re-aplicam perfil —
+        o controle fica "solto" para o jogo nativo. Setado por
+        `Daemon.set_native_mode`.
+        """
+        with self._lock:
+            self._native_mode_active = bool(active)
 
     # --- lock manual de profile.switch (Bug C) ------------------------
 
@@ -154,6 +169,11 @@ class StateStore:
     def manual_trigger_active(self) -> bool:
         with self._lock:
             return self._manual_trigger_active
+
+    @property
+    def native_mode_active(self) -> bool:
+        with self._lock:
+            return self._native_mode_active
 
     def counter(self, name: str) -> int:
         with self._lock:
