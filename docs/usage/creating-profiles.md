@@ -166,3 +166,34 @@ Presets comuns:
 | `Vibration`  | 3     | `[3, 4, 40]` (pos, amp, freq)              |
 
 Valores fora de range levantam `ValueError` na carga do perfil.
+
+## Modo Nativo — jogar com os gatilhos nativos da Sony (Sackboy & cia)
+
+Para jogos que dirigem os gatilhos adaptativos por conta própria (ex.: Sackboy:
+Uma Grande Aventura), o hefesto pode SOLTAR o controle por completo:
+
+```
+hefesto-dualsense4unix native on      # solta o controle pro jogo
+hefesto-dualsense4unix native off     # o hefesto reassume o teu perfil
+hefesto-dualsense4unix native status
+```
+
+Com o Modo Nativo ligado: gatilhos neutros (o jogo impõe os dele), rumble do
+jogo (o hefesto não re-asserta), emulação de mouse/gamepad desligada (libera o
+grab), autoswitch/hotkey de perfil travados, e o dispatch de input congelado. O
+estado da tua emulação (gamepad/mouse) é guardado e RESTAURADO ao desligar. O
+modo sobrevive a reboot (o controle segue solto até você fazer `native off`).
+
+## Anti-storm (dsx) via `doctor`
+
+O diagnóstico do storm -71 e os fixes seguros também vivem no CLI:
+
+```
+hefesto-dualsense4unix doctor              # inclui o bloco "anti-storm / sistema"
+hefesto-dualsense4unix doctor --fix-safe   # SEM sudo: Steam Input OFF + WirePlumber
+hefesto-dualsense4unix doctor --reapply-all # PEDE SENHA: reaplica tudo via dsx.sh
+```
+
+O `--reapply-all` invoca o `dsx.sh` (o motor privilegiado, que mexe em udev/power
+— domínio compartilhado com o ritual-Aurora). O kernel cmdline (quirk anti-storm)
+e as regras `99-usb` continuam da Aurora; o `doctor` só REPORTA o estado delas.
