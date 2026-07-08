@@ -638,15 +638,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         if hasattr(self, "_stick_right"):
             self._stick_right.update(rx, ry)
 
+        # BUG-STATUS-LABEL-REFLOW-01: campo de LARGURA FIXA (3 chars, padding de
+        # espaço em fonte monospace). Antes o texto "X: {lx}" mudava de largura ao
+        # cruzar dígitos (5→10→100) → queue_resize → re-layout do painel a 10 Hz:
+        # os glyphs/botões "respiravam" (aumentam e diminuem) durante o jogo. Com
+        # o campo constante, a largura natural do label não muda → sem reflow.
         lx_label = self._get("live_lx_label")
         if lx_label is not None:
             lx_label.set_markup(
-                f'<span font_family="monospace" size="small">X: {lx}  Y: {ly}</span>'
+                f'<span font_family="monospace" size="small">X: {lx:>3}  Y: {ly:>3}</span>'
             )
         rx_label = self._get("live_rx_label")
         if rx_label is not None:
             rx_label.set_markup(
-                f'<span font_family="monospace" size="small">X: {rx}  Y: {ry}</span>'
+                f'<span font_family="monospace" size="small">X: {rx:>3}  Y: {ry:>3}</span>'
             )
 
         # Botões pressionados — diff antes de redesenhar (performance 10 Hz)
