@@ -272,6 +272,9 @@ class HefestoApp(
             "on_daemon_autostart_toggled": self.on_daemon_autostart_toggled,
             "on_daemon_service_restart": self.on_daemon_service_restart,
             "on_daemon_migrate_to_systemd": self.on_daemon_migrate_to_systemd,
+            # Anti-storm / sistema (FEAT-DSX-UNIFY-01)
+            "on_storm_fix_safe": self.on_storm_fix_safe,
+            "on_storm_reapply_all": self.on_storm_reapply_all,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,

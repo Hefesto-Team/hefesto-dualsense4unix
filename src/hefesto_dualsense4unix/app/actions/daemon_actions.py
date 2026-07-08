@@ -8,10 +8,12 @@ BUG-DAEMON-STATUS-MISMATCH-01: `_daemon_status()` cruza 3 fontes (systemd
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import signal
 import subprocess
+from pathlib import Path
 from typing import Literal
 
 import gi
@@ -54,6 +56,97 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._set_daemon_status_consulting()
         self._refresh_daemon_view_async()
         self._sync_restart_daemon_button_sensitivity()
+        self._refresh_storm_diag()  # FEAT-DSX-UNIFY-01
+
+    # --- anti-storm / sistema (FEAT-DSX-UNIFY-01) ------------------------
+
+    def _find_repo_file(self, relpath: str) -> Path | None:
+        """Localiza um arquivo do repo (script/dsx.sh) em layouts conhecidos."""
+        for base in (
+            Path(__file__).resolve().parents[3],
+            Path("/usr/share/hefesto-dualsense4unix"),
+            Path("/usr/local/share/hefesto-dualsense4unix"),
+        ):
+            candidate = base / relpath
+            if candidate.is_file():
+                return candidate
+        return None
+
+    def _refresh_storm_diag(self) -> None:
+        """Popula o cartão anti-storm (read-only) em thread worker."""
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import storm_doctor
+
+                rows = storm_doctor.storm_report()
+            except Exception as exc:
+                logger.warning("storm_diag_falhou", erro=str(exc))
+                return
+            colors = {"[ OK ]": "#2d8", "[WARN]": "#e0a020", "[INFO]": "#888"}
+
+            def _esc(text: str) -> str:
+                return (
+                    text.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                )
+
+            lines = [
+                f'<span foreground="{colors.get(tag, "#ccc")}">{_esc(tag)}</span> '
+                f"{_esc(msg)}"
+                for tag, msg in rows
+            ]
+            GLib.idle_add(self._apply_storm_diag, "\n".join(lines))
+
+        _get_executor().submit(_worker)
+
+    def _apply_storm_diag(self, markup: str) -> bool:
+        label = self._get("storm_diag_label")
+        if label is not None:
+            label.set_markup(markup)
+        return False  # GLib.idle_add: não repete
+
+    def on_storm_fix_safe(self, _btn: object) -> None:
+        """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber."""
+        self._toast_daemon("Reaplicando fixes seguros (sem sudo)...")
+
+        def _worker() -> None:
+            for relpath, args in (
+                ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
+                ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
+            ):
+                script = self._find_repo_file(relpath)
+                if script is None:
+                    continue
+                with contextlib.suppress(Exception):
+                    subprocess.run(
+                        ["bash", str(script), *args], check=False, timeout=30
+                    )
+            GLib.idle_add(self._refresh_storm_diag)
+
+        _get_executor().submit(_worker)
+
+    def on_storm_reapply_all(self, _btn: object) -> None:
+        """Abre o DualSense Fix (dsx) num terminal (privilegiado — pede senha)."""
+        self._toast_daemon("Abrindo o dsx num terminal (vai pedir senha)...")
+        launched = False
+        with contextlib.suppress(Exception):
+            subprocess.Popen(
+                ["gtk-launch", "dsx-dualsense"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            launched = True
+        if not launched:
+            # Fallback: chama o dsx.sh direto (sem terminal dedicado).
+            dsx = self._find_repo_file("dsx.sh")
+            if dsx is not None:
+                with contextlib.suppress(Exception):
+                    subprocess.Popen(
+                        ["bash", str(dsx)],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
 
     def _set_daemon_status_consulting(self) -> None:
         """Mostra o estado transitório "Consultando..." no label da aba Daemon.
