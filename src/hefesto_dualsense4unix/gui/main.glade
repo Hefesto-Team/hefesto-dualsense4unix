@@ -1603,6 +1603,51 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
+                <!-- FEAT-DSX-UNIFY-01: cartão anti-storm / sistema -->
+                <child>
+                  <object class="GtkBox" id="storm_card">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">4</property>
+                    <style><class name="hefesto-dualsense4unix-card"/></style>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">&lt;b&gt;Anti-storm / Sistema&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="storm_diag_label">
+                        <property name="label" translatable="yes">Diagnóstico ao abrir a aba…</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <property name="wrap">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <child>
+                          <object class="GtkButton" id="btn_storm_fix_safe">
+                            <property name="label" translatable="yes">Reaplicar fixes seguros</property>
+                            <property name="tooltip-text" translatable="yes">Sem sudo: desliga Steam Input (se a Steam não estiver aberta) e configura o WirePlumber</property>
+                            <signal name="clicked" handler="on_storm_fix_safe"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="btn_storm_reapply_all">
+                            <property name="label" translatable="yes">Reaplicar tudo (terminal)</property>
+                            <property name="tooltip-text" translatable="yes">Abre o DualSense Fix (dsx) num terminal — PEDE SENHA (udev/power do sistema)</property>
+                            <signal name="clicked" handler="on_storm_reapply_all"/>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
                 <child>
                   <object class="GtkLabel">
                     <property name="label" translatable="yes">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
