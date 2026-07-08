@@ -182,6 +182,9 @@ class Daemon:
     # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
     # persiste no dataclass — é restaurado do flag no boot.
     _native_mode: bool = False
+    # Estado de pause ANTES de entrar em Modo Nativo, para o off não des-pausar
+    # quem já estava pausado manualmente (BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01).
+    _paused_before_native: bool = False
     # BUG-EMU-DEVICE-RACE-01: serializa as transições de device de emulação
     # (start/stop de mouse e gamepad virtuais). A wave passou a chamar
     # set_mouse_emulation também da thread do executor (hotkey de ciclo via
@@ -440,10 +443,14 @@ class Daemon:
         self.store.set_native_mode_active(enabled)
         save_native_mode(enabled)
         if enabled:
+            self._paused_before_native = self._paused
             self._release_controller_to_game()
             self.pause()
         else:
-            self.resume()
+            # Só des-pausa se o Modo Nativo foi quem pausou (não pisa num pause
+            # manual anterior). BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01.
+            if not self._paused_before_native:
+                self.resume()
             if reapply:
                 self._reapply_last_profile()
         logger.info("native_mode_changed", native=enabled)
@@ -460,11 +467,15 @@ class Daemon:
             self.controller.set_trigger("right", off)
         # Rumble passthrough: reassert_rumble pula quando rumble_active é None.
         self.config.rumble_active = None
-        # Emulação off: libera grab de evdev / device uinput.
+        # Emulação off: libera grab de evdev / device uinput. origin="profile"
+        # de propósito: desligar a emulação no release NÃO é um gesto manual da
+        # usuária — se carimbasse `_emu_manual_ts`, o lock de 30s BLOQUEARIA o
+        # `_reapply_last_profile` ao desligar o Modo Nativo (o mouse do perfil,
+        # ex.: point_and_click, não voltaria). BUG-NATIVE-RELEASE-LOCKS-RESTORE-01.
         with contextlib.suppress(Exception):
-            self.set_mouse_emulation(False)
+            self.set_mouse_emulation(False, origin="profile")
         with contextlib.suppress(Exception):
-            self.set_gamepad_emulation(False)
+            self.set_gamepad_emulation(False, origin="profile")
 
     def _reapply_last_profile(self) -> None:
         """Re-ativa o último perfil salvo (restaura gatilhos/rumble/emulação)."""

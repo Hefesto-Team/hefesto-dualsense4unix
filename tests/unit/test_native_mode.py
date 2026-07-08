@@ -42,9 +42,12 @@ def test_native_on_neutraliza_e_gate(daemon: Daemon, tmp_config: Any) -> None:
     assert daemon.is_paused() is True
     # Rumble em passthrough (o hefesto não re-asserta).
     assert daemon.config.rumble_active is None
-    # Emulação desligada (libera grab/uinput).
-    daemon.set_mouse_emulation.assert_called_with(False)  # type: ignore[attr-defined]
-    daemon.set_gamepad_emulation.assert_called_with(False)  # type: ignore[attr-defined]
+    # Emulação desligada (libera grab/uinput) com origin="profile": NÃO carimba o
+    # lock manual de 30s — senão o restore ao desligar seria bloqueado.
+    daemon.set_mouse_emulation.assert_called_with(False, origin="profile")  # type: ignore[attr-defined]
+    daemon.set_gamepad_emulation.assert_called_with(False, origin="profile")  # type: ignore[attr-defined]
+    # O lock manual NÃO foi carimbado pelo release.
+    assert daemon._emu_manual_ts == float("-inf")
     # Flag persistido.
     assert (tmp_config / "native_mode.flag").exists()
 
@@ -61,6 +64,19 @@ def test_native_off_restaura_e_limpa(
     assert daemon.is_paused() is False  # resume
     assert reapplied == ["x"]  # re-aplicou o último perfil
     assert not (tmp_config / "native_mode.flag").exists()
+
+
+def test_native_off_nao_despausa_pause_manual(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01: se a usuária já estava pausada ANTES
+    do Modo Nativo, desligá-lo NÃO deve des-pausar (só des-pausa se o native
+    foi quem pausou)."""
+    daemon._paused = True  # pause manual anterior
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
+    daemon.set_native_mode(True)
+    daemon.set_native_mode(False)
+    assert daemon.is_paused() is True  # continua pausada
 
 
 def test_native_idempotente(daemon: Daemon) -> None:
