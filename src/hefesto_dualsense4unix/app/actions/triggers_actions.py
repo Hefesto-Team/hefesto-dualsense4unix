@@ -57,6 +57,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
         self._trigger_preset_applying = False
         self._trigger_live_preview_timer = {"left": 0, "right": 0}
         self._trigger_mode = {}
+        self._trigger_preset = {}
         mode_handlers = {
             "left": self.on_trigger_left_mode_changed,
             "right": self.on_trigger_right_mode_changed,
@@ -73,6 +74,20 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 slot.pack_start(sel, True, True, 0)
                 sel.show_all()
             self._trigger_mode[side] = sel
+            # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de PRESET também vira
+            # segmentado (7/6 presets + Personalizar; wrap p/ quebrar linha).
+            preset_sel = SegmentedSelector(wrap=True)
+            preset_handler = (
+                self.on_trigger_left_preset_changed
+                if side == "left"
+                else self.on_trigger_right_preset_changed
+            )
+            preset_sel.connect("changed", preset_handler)
+            preset_slot = self._get(f"trigger_{side}_preset_slot")
+            if preset_slot is not None:
+                preset_slot.pack_start(preset_sel, True, True, 0)
+                preset_sel.show_all()
+            self._trigger_preset[side] = preset_sel
             # set_active_id EMITE "changed" (como o combo). Fazemos sob _guard_refresh
             # para o handler curto-circuitar: senão `_on_mode_changed` AGENDA um
             # live-preview (300ms) que escreve "Off" no hardware ao abrir a GUI e
@@ -134,10 +149,11 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def on_trigger_right_mode_changed(self, combo: Any) -> None:
         self._on_mode_changed("right", combo)
 
-    def on_trigger_left_preset_changed(self, combo: Gtk.ComboBoxText) -> None:
+    def on_trigger_left_preset_changed(self, combo: Any) -> None:
+        # `combo` é o SegmentedSelector (FEAT-DSX-COMBO-TO-SEGMENTED-01).
         self._on_preset_changed("left", combo)
 
-    def on_trigger_right_preset_changed(self, combo: Gtk.ComboBoxText) -> None:
+    def on_trigger_right_preset_changed(self, combo: Any) -> None:
         self._on_preset_changed("right", combo)
 
     def on_trigger_left_apply(self, _btn: Gtk.Button) -> None:
@@ -197,7 +213,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
             self._apply_trigger(side)
         return False  # one-shot
 
-    def _on_preset_changed(self, side: str, combo: Gtk.ComboBoxText) -> None:
+    def _on_preset_changed(self, side: str, combo: Any) -> None:
         """Aplica o preset selecionado populando os sliders de posicao."""
         if self._guard_refresh or self._trigger_preset_applying:
             return
@@ -251,26 +267,26 @@ class TriggersActionsMixin(WidgetAccessMixin):
             self._populate_preset_combo(side, mode_id)
 
     def _populate_preset_combo(self, side: str, mode_id: str) -> None:
-        """Preenche o GtkComboBoxText de preset com as entradas do modo."""
-        combo: Gtk.ComboBoxText | None = self._get(f"trigger_{side}_preset_combo")
+        """Preenche o segmentado de preset com as entradas do modo (+ Personalizar)."""
+        combo = self._trigger_preset.get(side)
         if combo is None:
             return
-        combo.remove_all()
         if mode_id == "MultiPositionFeedback":
             labels = FEEDBACK_POSITION_LABELS
         elif mode_id == "MultiPositionVibration":
             labels = VIBRATION_POSITION_LABELS
         else:
+            combo.set_items([])
             return
-        for chave, label in labels.items():
-            combo.append(chave, label)
+        items = [*labels.items(), ("custom", "Personalizar")]
+        combo.set_items(items)
         combo.set_active_id("custom")
 
     def _update_preset_to_custom(self, side: str) -> None:
-        """Reverte o dropdown de preset para 'Personalizar' quando usuário move slider."""
+        """Reverte o segmentado de preset para 'Personalizar' quando move slider."""
         if self._trigger_preset_applying:
             return
-        combo: Gtk.ComboBoxText | None = self._get(f"trigger_{side}_preset_combo")
+        combo = self._trigger_preset.get(side)
         if combo is None or not combo.get_visible():
             return
         active = combo.get_active_id()
