@@ -22,9 +22,28 @@ Mapeamento canônico (FEAT-MOUSE-01/02, decidido pelo usuário):
 Política:
   - `dispatch()` é chamado a cada tick do poll loop (default 60 Hz) com o
     snapshot dos sticks + triggers analógicos + conjunto de botões canônicos.
+    O período do tick vem de `poll_hz` (passado pelo daemon na criação — não
+    é hardcodado aqui).
   - Botões têm edge-trigger (press/release só no delta). Estado anterior
     guardado na instância via `_last_buttons_emulated`.
-  - Movimento usa deadzone de 20/128 (~16%) e escala `mouse_speed` (default 6).
+  - Movimento (FEAT-MOUSE-CURSOR-FEEL-01): pipeline float com normalização
+    radial, deadzone radial REESCALADA (dz=20/128, resposta contínua a partir
+    de zero na borda), curva expo (`m ** MOUSE_EXPO`) e velocidade-alvo em
+    px/s reais (`curved * mouse_speed * MOUSE_PX_PER_SEC_STEP`). O delta por
+    tick é acumulado com carry fracionário (`_stick_carry_*`) — sub-pixel
+    nunca é truncado fora, então toda velocidade > 0 eventualmente move.
+
+    Tabela nível → px/s máximos (deflexão total):
+
+    | speed |  px/s | speed |  px/s |
+    |-------|-------|-------|-------|
+    |   1   |   125 |   7   |   875 |
+    |   2   |   250 |   8   |  1000 |
+    |   3   |   375 |   9   |  1125 |
+    |   4   |   500 |  10   |  1250 |
+    |   5   |   625 |  11   |  1375 |
+    |   6   |   750 |  12   |  1500 |
+
   - Rolagem usa deadzone maior (40/128) e é rate-limited a 1 evento por 50ms
     (via `time.monotonic`, imune a NTP jumps).
   - Device só é criado via `start()` quando toggle explícito é ligado. Default OFF.
@@ -50,6 +69,20 @@ SCROLL_RATE_LIMIT_SEC = 0.050
 DEFAULT_MOUSE_SPEED = 6
 DEFAULT_SCROLL_SPEED = 1
 TRIGGER_PRESS_THRESHOLD = 64
+
+# FEAT-MOUSE-CURSOR-FEEL-01 (A7) — pipeline float do stick esquerdo.
+# Expoente da curva de resposta: 1.0 seria linear; 1.6 achata a região perto
+# da deadzone (micro-ajuste fino em point-and-click) e preserva o teto em
+# deflexão total. Constante de módulo — configurabilidade fica fora de escopo.
+MOUSE_EXPO = 1.6
+# Velocidade máxima (px/s) que CADA nível de `mouse_speed` adiciona: o teto em
+# deflexão total é `speed * MOUSE_PX_PER_SEC_STEP` (speed 1 → 125 px/s …
+# speed 12 → 1500 px/s; ver tabela na docstring do módulo).
+MOUSE_PX_PER_SEC_STEP = 125.0
+# Default do período do tick quando o criador não informa: espelha o
+# DEFAULT_POLL_HZ do daemon sem importá-lo (integrations não depende de
+# daemon). Os callsites reais passam `config.poll_hz`.
+DEFAULT_POLL_HZ = 60
 
 # Touchpad como cursor (FEAT-DSX-TOUCHPAD-CURSOR-B4): pixels de cursor por
 # unidade do touchpad (largura 1920 / altura 1079) com `mouse_speed` default.
@@ -105,12 +138,37 @@ def _build_capabilities() -> list[tuple[Any, ...]]:
     return [*rels, *buttons, *keys]
 
 
-def _compute_move(raw: int, speed: int) -> int:
-    """Converte valor 0-255 de stick em delta REL_X/REL_Y aplicando deadzone."""
-    offset = raw - STICK_CENTER
-    if abs(offset) < MOVE_DEADZONE:
-        return 0
-    return int(offset / STICK_CENTER * speed)
+def _compute_move_px_per_sec(lx: int, ly: int, speed: int) -> tuple[float, float]:
+    """Converte o stick esquerdo (0-255 por eixo) em velocidade-alvo (px/s).
+
+    Pipeline FEAT-MOUSE-CURSOR-FEEL-01 (substitui o antigo
+    `int((raw-128)/128*speed)` por tick — linear, truncado e quantizado):
+
+      1. Normalização radial: ``nx=(lx-128)/128``, ``ny=(ly-128)/128``,
+         ``mag=hypot(nx, ny)``.
+      2. Deadzone radial REESCALADA: ``m = max(0, (mag-dz)/(1-dz))`` com
+         ``dz = MOVE_DEADZONE/128`` — a resposta começa em 0 exatamente na
+         borda da deadzone (sem o degrau 0→60 px/s do pipeline antigo).
+         ``m`` é clampado a 1.0 para que o canto diagonal (gate quadrado do
+         raw 0-255) não ultrapasse o teto nominal de px/s.
+      3. Curva expo: ``curved = m ** MOUSE_EXPO``.
+      4. Velocidade-alvo radial: ``vel = curved * speed * MOUSE_PX_PER_SEC_STEP``
+         distribuída por eixo proporcionalmente a ``nx/mag`` e ``ny/mag``
+         (simétrica em todas as direções).
+
+    Retorna ``(vx, vy)`` em px/s float — o chamador integra por tick com
+    carry fracionário (``_emit_move``).
+    """
+    nx = (lx - STICK_CENTER) / STICK_CENTER
+    ny = (ly - STICK_CENTER) / STICK_CENTER
+    mag = math.hypot(nx, ny)
+    dz = MOVE_DEADZONE / STICK_CENTER
+    if mag <= dz:
+        return 0.0, 0.0
+    m = min(1.0, (mag - dz) / (1.0 - dz))
+    curved = m ** MOUSE_EXPO
+    vel = curved * (speed * MOUSE_PX_PER_SEC_STEP)
+    return vel * (nx / mag), vel * (ny / mag)
 
 
 def _compute_scroll_step(raw: int) -> int:
@@ -131,6 +189,10 @@ class UinputMouseDevice:
     name: str = DEVICE_NAME
     mouse_speed: int = DEFAULT_MOUSE_SPEED
     scroll_speed: int = DEFAULT_SCROLL_SPEED
+    # FEAT-MOUSE-CURSOR-FEEL-01: frequência do poll loop que chama dispatch();
+    # define o período de integração do movimento (delta/tick = vel/poll_hz).
+    # O daemon passa `config.poll_hz` nos callsites — nunca hardcodar 60 lá.
+    poll_hz: int = DEFAULT_POLL_HZ
 
     _device: Any = None
     _uinput_mod: Any = None
@@ -143,6 +205,12 @@ class UinputMouseDevice:
     # truncado a cada tick para que movimento lento não "engasgue".
     _tp_carry_x: float = 0.0
     _tp_carry_y: float = 0.0
+    # Carry fracionário do movimento do STICK (FEAT-MOUSE-CURSOR-FEEL-01):
+    # mesmo padrão do touchpad — o resto sub-pixel de cada tick é levado ao
+    # próximo em vez de truncado (deflexões pequenas acumulam e movem).
+    # Zerado dentro da deadzone e no start/stop para não virar drift.
+    _stick_carry_x: float = 0.0
+    _stick_carry_y: float = 0.0
 
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível ou módulo ausente."""
@@ -157,6 +225,10 @@ class UinputMouseDevice:
             caps = _build_capabilities()
             self._device = uinput.Device(caps, name=self.name)
             self._uinput_mod = uinput
+            # Carry zerado a cada start: resto de uma sessão anterior não pode
+            # virar movimento fantasma na nova (FEAT-MOUSE-CURSOR-FEEL-01).
+            self._stick_carry_x = 0.0
+            self._stick_carry_y = 0.0
             logger.info("uinput_mouse_created", name=self.name)
             return True
         except Exception as exc:
@@ -175,6 +247,8 @@ class UinputMouseDevice:
         self._prev_edge_keys = frozenset()
         self._tp_carry_x = 0.0
         self._tp_carry_y = 0.0
+        self._stick_carry_x = 0.0
+        self._stick_carry_y = 0.0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -306,16 +380,33 @@ class UinputMouseDevice:
         self._device.syn()
 
     def _emit_move(self, lx: int, ly: int) -> None:
-        """Stick esquerdo → REL_X/REL_Y com deadzone e escala."""
-        dx = _compute_move(lx, self.mouse_speed)
-        dy = _compute_move(ly, self.mouse_speed)
-        if dx == 0 and dy == 0:
+        """Stick esquerdo → REL_X/REL_Y (pipeline float, FEAT-MOUSE-CURSOR-FEEL-01).
+
+        Integra a velocidade-alvo (px/s de `_compute_move_px_per_sec`) pelo
+        período do tick (`1/poll_hz`) com carry fracionário: emite a parte
+        inteira e leva o resto ao próximo tick. `int()` trunca em direção ao
+        zero — simétrico para deltas negativos. Dentro da deadzone os carries
+        são zerados para o resíduo não vazar como drift ao voltar a mover.
+        """
+        vx, vy = _compute_move_px_per_sec(lx, ly, self.mouse_speed)
+        if vx == 0.0 and vy == 0.0:
+            self._stick_carry_x = 0.0
+            self._stick_carry_y = 0.0
+            return
+        period = 1.0 / max(1, self.poll_hz)
+        self._stick_carry_x += vx * period
+        self._stick_carry_y += vy * period
+        ix = int(self._stick_carry_x)
+        iy = int(self._stick_carry_y)
+        self._stick_carry_x -= ix
+        self._stick_carry_y -= iy
+        if ix == 0 and iy == 0:
             return
         u = self._uinput_mod
-        if dx != 0:
-            self._device.emit(u.REL_X, dx, syn=False)
-        if dy != 0:
-            self._device.emit(u.REL_Y, dy, syn=False)
+        if ix != 0:
+            self._device.emit(u.REL_X, ix, syn=False)
+        if iy != 0:
+            self._device.emit(u.REL_Y, iy, syn=False)
         self._device.syn()
 
     def _emit_scroll(self, rx: int, ry: int, now: float) -> None:
@@ -372,17 +463,20 @@ class UinputMouseDevice:
 __all__ = [
     "BUTTON_TO_UINPUT",
     "DEFAULT_MOUSE_SPEED",
+    "DEFAULT_POLL_HZ",
     "DEFAULT_SCROLL_SPEED",
     "DEVICE_NAME",
     "DPAD_TO_KEY",
     "EDGE_KEY_MAP",
+    "MOUSE_EXPO",
+    "MOUSE_PX_PER_SEC_STEP",
     "MOVE_DEADZONE",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
     "TOUCHPAD_SENSITIVITY",
     "TRIGGER_PRESS_THRESHOLD",
     "UinputMouseDevice",
-    "_compute_move",
+    "_compute_move_px_per_sec",
     "_compute_scroll_step",
 ]
 

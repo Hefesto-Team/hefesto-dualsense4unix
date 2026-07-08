@@ -8,7 +8,7 @@ lógica de ciclo (próximo/anterior com wrap-around, skip com <2 perfis).
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -54,15 +54,30 @@ class _FakeController:
 
 
 class _FakeManager:
-    """Substitui ProfileManager: 3 perfis a/b/c, registra activate."""
+    """Substitui ProfileManager: 3 perfis a/b/c, registra activate.
+
+    REGISTRA os appliers recebidos (keyboard_device_provider, mouse_applier,
+    suppression_applier — FEAT-POINT-AND-CLICK-01 / BUG-PROFILE-MOUSE-KILLS-
+    GAMEPAD-01) para que o wiring do callsite de hotkey seja PROVADO, não apenas
+    tolerado — senão renomear/remover os appliers passaria despercebido.
+    """
 
     profiles = ("a", "b", "c")
+    instances: ClassVar[list[_FakeManager]] = []
 
     def __init__(
-        self, controller: Any = None, store: Any = None, keyboard_device: Any = None
+        self,
+        controller: Any = None,
+        store: Any = None,
+        keyboard_device: Any = None,
+        **kwargs: Any,
     ) -> None:
         self.store = store
         self.activated: list[str] = []
+        self.mouse_applier = kwargs.get("mouse_applier")
+        self.suppression_applier = kwargs.get("suppression_applier")
+        self.keyboard_device_provider = kwargs.get("keyboard_device_provider")
+        _FakeManager.instances.append(self)
 
     def list_profiles(self) -> list[_FakeProfile]:
         return [_FakeProfile(n) for n in self.profiles]
@@ -79,12 +94,21 @@ class _FakeDaemon:
         self.controller = _FakeController()
         self.store = _FakeStore(active)
         self._keyboard_device = None
+        self.mouse_applied: list[tuple[bool, int, int]] = []
+        self.suppressed: list[bool] = []
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
         return fn(*args)
 
+    def apply_profile_mouse(self, enabled: bool, speed: int, scroll_speed: int) -> None:
+        self.mouse_applied.append((enabled, speed, scroll_speed))
+
+    def apply_profile_suppression(self, desired: bool) -> None:
+        self.suppressed.append(desired)
+
 
 def _patch_manager(monkeypatch: pytest.MonkeyPatch) -> None:
+    _FakeManager.instances = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.profiles.manager.ProfileManager", _FakeManager
     )
@@ -102,6 +126,29 @@ async def test_cycle_next_avanca(monkeypatch: pytest.MonkeyPatch) -> None:
     d = _FakeDaemon(active="a")
     await build_profile_cycle_callback(d, +1)()
     assert d.store.active_profile == "b"
+
+
+@pytest.mark.asyncio
+async def test_cycle_injeta_appliers_do_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: o callsite de hotkey injeta os appliers
+    GUARDADOS do daemon (apply_profile_mouse/apply_profile_suppression), não os
+    setters crus — senão o ciclo PS+combo mataria o gamepad ao passar por um perfil
+    com seção mouse. Prova o wiring chamando os appliers capturados pelo manager."""
+    _patch_manager(monkeypatch)
+    d = _FakeDaemon(active="a")
+    await build_profile_cycle_callback(d, +1)()
+
+    mgr = _FakeManager.instances[-1]
+    assert mgr.mouse_applier is not None
+    assert mgr.suppression_applier is not None
+    assert callable(mgr.keyboard_device_provider)
+    # Os appliers roteiam para o daemon (são os métodos guardados, não None/setter cru).
+    mgr.mouse_applier(True, 8, 1)
+    mgr.suppression_applier(True)
+    assert d.mouse_applied == [(True, 8, 1)]
+    assert d.suppressed == [True]
 
 
 @pytest.mark.asyncio

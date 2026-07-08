@@ -31,10 +31,17 @@ class IpcSubsystem:
 
         # Daemon é o próprio ctx se tiver atributo daemon; fallback é None.
         daemon = getattr(ctx, "daemon", None)
+        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider LAZY — capturar
+        # `daemon._keyboard_device` eager congelava None (o keyboard sobe
+        # DEPOIS do IPC no boot) e ficava stale após disconnect/reload.
         manager = ProfileManager(
             controller=ctx.controller,
             store=ctx.store,
-            keyboard_device=getattr(daemon, "_keyboard_device", None),
+            keyboard_device_provider=lambda: getattr(
+                daemon, "_keyboard_device", None
+            ),
+            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
         )
         self._server = IpcServer(
             controller=ctx.controller,
@@ -66,7 +73,17 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-    manager = ProfileManager(controller=daemon.controller, store=daemon.store)
+    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy do keyboard + appliers
+    # de emulação — o manager nasce no boot ANTES do keyboard subir
+    # (lifecycle.py sobe IPC primeiro) e o device é anulado/recriado em
+    # disconnect/reload; resolver a cada ativação imuniza o wiring.
+    manager = ProfileManager(
+        controller=daemon.controller,
+        store=daemon.store,
+        keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
+        mouse_applier=daemon.apply_profile_mouse,
+        suppression_applier=daemon.apply_profile_suppression,
+    )
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,
         store=daemon.store,

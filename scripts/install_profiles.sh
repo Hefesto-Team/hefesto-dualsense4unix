@@ -26,34 +26,42 @@ fi
 
 mkdir -p "${DEST_DIR}"
 
-# Contar JSONs existentes no destino (excluindo meu_perfil.json para a lógica abaixo)
-existing_count=$(find "${DEST_DIR}" -maxdepth 1 -name "*.json" ! -name "meu_perfil.json" | wc -l)
-
-if [[ "${existing_count}" -eq 0 ]]; then
-    # Primeira instalação: copiar todos os perfis default (exceto meu_perfil.json,
-    # que tem tratamento especial abaixo).
-    for src in "${SRC_DIR}"/*.json; do
-        fname="$(basename "${src}")"
-        if [[ "${fname}" == "meu_perfil.json" ]]; then
-            continue
-        fi
-        cp -f "${src}" "${DEST_DIR}/${fname}"
-        printf '      copiado: %s\n' "${fname}"
-    done
-else
-    # Reinstalação: não sobrescrever perfis existentes.
-    printf '      perfis já instalados — nenhum sobrescrito\n'
-fi
-
-# meu_perfil.json: sempre copiar SE AUSENTE.
-readonly MEU_PERFIL_SRC="${SRC_DIR}/meu_perfil.json"
-readonly MEU_PERFIL_DEST="${DEST_DIR}/meu_perfil.json"
-
-if [[ ! -f "${MEU_PERFIL_DEST}" ]]; then
-    if [[ -f "${MEU_PERFIL_SRC}" ]]; then
-        cp -f "${MEU_PERFIL_SRC}" "${MEU_PERFIL_DEST}"
-        printf '      copiado: meu_perfil.json (slot do usuário criado)\n'
+# INSTALL-PROFILES-COPY-IF-ABSENT-01: copia cada preset default AUSENTE no
+# destino — nunca sobrescreve um perfil existente (preserva edições da usuária).
+# Antes só copiava quando o dir estava 100% VAZIO, então presets NOVOS (ex.:
+# point_and_click da V3.11) nunca chegavam num upgrade — a feature nascia morta.
+#
+# INSTALL-PROFILES-RESPECT-DELETION-01: um marker `.seeded_presets` registra os
+# presets já semeados. Assim, um preset que a usuária DELETA de propósito NÃO é
+# ressuscitado numa reinstalação (a cópia cega copy-if-absent o traria de volta).
+# Regra: só copia se AUSENTE E ainda-não-semeado; presets já presentes na 1ª
+# execução (perfis da v3.10) são registrados sem cópia, então deleções POSTERIORES
+# passam a ser respeitadas.
+readonly MARKER="${DEST_DIR}/.seeded_presets"
+touch "${MARKER}"
+copied=0
+for src in "${SRC_DIR}"/*.json; do
+    fname="$(basename "${src}")"
+    dest="${DEST_DIR}/${fname}"
+    # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
+    if grep -qxF "${fname}" "${MARKER}"; then
+        continue
     fi
-else
-    printf '      meu_perfil.json já existe — preservado\n'
+    if [[ -f "${dest}" ]]; then
+        # Presente na 1ª execução (v3.10/editado): registra sem copiar.
+        printf '%s\n' "${fname}" >> "${MARKER}"
+        continue
+    fi
+    cp -f "${src}" "${dest}"
+    printf '%s\n' "${fname}" >> "${MARKER}"
+    if [[ "${fname}" == "meu_perfil.json" ]]; then
+        printf '      copiado: meu_perfil.json (slot do usuário criado)\n'
+    else
+        printf '      copiado: %s\n' "${fname}"
+    fi
+    copied=$((copied + 1))
+done
+
+if [[ "${copied}" -eq 0 ]]; then
+    printf '      todos os perfis default já presentes/semeados — nenhum copiado\n'
 fi

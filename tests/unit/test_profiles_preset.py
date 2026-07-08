@@ -1,15 +1,18 @@
 """Testes dos perfis preset em assets/profiles_default/.
 
 Valida que cada JSON é aceito pelo schema pydantic e que os params de
-trigger são reconhecidos por build_from_name. Cobre os 9 arquivos após
-a sprint FEAT-PROFILES-PRESET-06:
+trigger são reconhecidos por build_from_name. Cobre os 10 arquivos após
+a sprint FEAT-POINT-AND-CLICK-01:
   acao.json, aventura.json, bow.json, corrida.json, esportes.json,
-  fallback.json, fps.json, meu_perfil.json, navegacao.json.
+  fallback.json, fps.json, meu_perfil.json, navegacao.json,
+  point_and_click.json.
 """
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,7 +22,7 @@ from hefesto_dualsense4unix.profiles.schema import Profile
 ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "profiles_default"
 
 EXPECTED_PRESETS = {
-    "acao": {  # noqa-acento — nome do arquivo acao.json
+    "acao": {  # slug do arquivo acao.json (noqa-acento)
         "name": "Ação",
         "priority": 65,
         "triggers_left_mode": "Rigid",
@@ -90,6 +93,14 @@ EXPECTED_PRESETS = {
         "triggers_right_mode": "Off",
         "lightbar": (40, 80, 180),
         "lightbar_brightness": 0.4,
+    },
+    "point_and_click": {
+        "name": "point_and_click",
+        "priority": 60,
+        "triggers_left_mode": "Off",
+        "triggers_right_mode": "Off",
+        "lightbar": (255, 170, 0),
+        "lightbar_brightness": 0.6,
     },
 }
 
@@ -250,6 +261,157 @@ class TestPresetFps:
         assert r > 150 and g < 50 and b < 50
 
 
+class TestPresetPointAndClick:
+    """FEAT-POINT-AND-CLICK-01 — perfil default para Grim Fandango e afins."""
+
+    def test_match_grim_fandango(self) -> None:
+        # BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: o match é Grim-específico. O port
+        # Linux do Grim Fandango Remastered é NATIVO (wm_class GrimFandango), não
+        # roda sob ScummVM — os genéricos "scummvm"/"residualvm" foram removidos
+        # para não sequestrar QUALQUER jogo ScummVM (que a usuária pode jogar de
+        # gamepad) ligando modo mouse e matando o gamepad virtual.
+        p = _load_preset("point_and_click")
+        for wm_class in ("GrimFandango", "grim"):
+            assert p.matches({"wm_class": wm_class}), (
+                f"point_and_click deveria casar wm_class={wm_class!r}"
+            )
+        assert not p.matches({"wm_class": "firefox"})
+        assert not p.matches({"wm_class": "scummvm"})
+
+    def test_prioridade_acima_da_navegacao(self) -> None:
+        """priority 60 > navegacao (50): o jogo vence o perfil de browser/Steam."""
+        p = _load_preset("point_and_click")
+        nav = _load_preset("navegacao")
+        assert p.priority == 60
+        assert p.priority > nav.priority
+
+    def test_key_bindings_do_jogo_sem_vazamento_desktop(self) -> None:
+        """Override COMPLETO (dict = sem merge): só estes botões emitem —
+        nada de Super/Alt+Tab/PrintScreen/OSK dentro do jogo (A10)."""
+        p = _load_preset("point_and_click")
+        assert p.key_bindings == {
+            "l1": ["KEY_LEFTSHIFT"],
+            "r1": ["KEY_DOT"],
+            "options": ["KEY_ESC"],
+            "create": ["KEY_I"],
+            "touchpad_left_press": ["KEY_E"],
+            "touchpad_middle_press": ["KEY_U"],
+            "touchpad_right_press": ["KEY_P"],
+        }
+
+    def test_secao_mouse_liga_com_speed_8(self) -> None:
+        p = _load_preset("point_and_click")
+        assert p.mouse is not None
+        assert p.mouse.enabled is True
+        assert p.mouse.speed == 8
+        assert p.mouse.scroll_speed == 1
+
+    def test_sem_supressao_de_emulacao(self) -> None:
+        """O jogo é jogado COM a emulação (mouse+teclado) — suppress off."""
+        p = _load_preset("point_and_click")
+        assert p.suppress_desktop_emulation is False
+
+    def test_triggers_off_para_aventura(self) -> None:
+        p = _load_preset("point_and_click")
+        assert p.triggers.left.mode == "Off"
+        assert p.triggers.right.mode == "Off"
+
+    def test_selecionado_para_janela_grim_fandango(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Matcher end-to-end: janela fake GrimFandango vence navegacao/fallback."""
+        import shutil
+
+        from hefesto_dualsense4unix.profiles import loader as loader_module
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.testing import FakeController
+
+        target = tmp_path / "profiles"
+        target.mkdir()
+        for fname in ("point_and_click.json", "navegacao.json", "fallback.json"):
+            shutil.copy(ASSETS_DIR / fname, target / fname)
+        monkeypatch.setattr(
+            loader_module, "profiles_dir", lambda ensure=False: target
+        )
+
+        manager = ProfileManager(controller=FakeController())
+        escolhido = manager.select_for_window({"wm_class": "GrimFandango"})
+        assert escolhido is not None
+        assert escolhido.name == "point_and_click"
+
+    def test_ativacao_emite_teclas_do_jogo(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Critério de aceite: ativar com FakeController + teclado virtual fake
+        emite KEY_E/KEY_U/KEY_P nas regiões do touchpad e KEY_LEFTSHIFT no l1
+        (rota real: activate → set_bindings → dispatch → key_binding_emit)."""
+        import shutil
+
+        from hefesto_dualsense4unix.daemon.state_store import StateStore
+        from hefesto_dualsense4unix.integrations.uinput_keyboard import (
+            SUPPORTED_KEYS,
+            UinputKeyboardDevice,
+        )
+        from hefesto_dualsense4unix.profiles import loader as loader_module
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.testing import FakeController
+
+        target = tmp_path / "profiles"
+        target.mkdir()
+        shutil.copy(
+            ASSETS_DIR / "point_and_click.json", target / "point_and_click.json"
+        )
+        monkeypatch.setattr(
+            loader_module, "profiles_dir", lambda ensure=False: target
+        )
+
+        # Teclado virtual com módulo uinput fake (mesmo pattern de
+        # test_keyboard_emulator.py) — hermético, sem /dev/uinput.
+        fake_mod = MagicMock()
+        # Códigos únicos e determinísticos (hash() é randomizado por processo
+        # e colisões tornariam as contagens abaixo flaky).
+        for idx, key_name in enumerate(SUPPORTED_KEYS):
+            setattr(fake_mod, key_name, (1, 1000 + idx))
+        fake_device = MagicMock()
+        fake_mod.Device.return_value = fake_device
+        monkeypatch.setitem(sys.modules, "uinput", fake_mod)
+        dev = UinputKeyboardDevice()
+        assert dev.start() is True
+
+        fc = FakeController()
+        fc.connect()
+        manager = ProfileManager(
+            controller=fc,
+            store=StateStore(),
+            keyboard_device_provider=lambda: dev,
+        )
+        manager.activate("point_and_click")
+
+        def presses_de(code: object) -> list:
+            return [
+                c
+                for c in fake_device.method_calls
+                if c[0] == "emit" and c[1][0] == code and c[1][1] == 1
+            ]
+
+        # Regiões do touchpad → E (examinar), U (usar), P (pegar).
+        dev.dispatch(frozenset({"touchpad_left_press"}))
+        assert len(presses_de(fake_mod.KEY_E)) == 1
+        dev.dispatch(frozenset({"touchpad_middle_press"}))
+        assert len(presses_de(fake_mod.KEY_U)) == 1
+        dev.dispatch(frozenset({"touchpad_right_press"}))
+        assert len(presses_de(fake_mod.KEY_P)) == 1
+        # L1 → Shift (correr); R1 → "." (pular diálogo).
+        dev.dispatch(frozenset({"l1"}))
+        assert len(presses_de(fake_mod.KEY_LEFTSHIFT)) == 1
+        dev.dispatch(frozenset({"r1"}))
+        assert len(presses_de(fake_mod.KEY_DOT)) == 1
+        # Override sem merge: options do default (Super) NÃO vaza — vira Esc.
+        dev.dispatch(frozenset({"options"}))
+        assert len(presses_de(fake_mod.KEY_LEFTMETA)) == 0
+        assert len(presses_de(fake_mod.KEY_ESC)) == 1
+
+
 class TestArquivosNaoExistem:
     def test_shooter_deletado(self) -> None:
         path = ASSETS_DIR / "shooter.json"
@@ -261,7 +423,10 @@ class TestArquivosNaoExistem:
 
     def test_todos_novos_existem(self) -> None:
         # Lista contém nomes literais de arquivos JSON (acao.json, navegacao.json).
-        nomes = ["navegacao", "fps", "aventura", "acao", "corrida", "esportes"]  # noqa-acento
+        nomes = [
+            "navegacao", "fps", "aventura",  # slugs de arquivo (noqa-acento)
+            "acao", "corrida", "esportes",  # slugs de arquivo (noqa-acento)
+        ]
         for nome in nomes:
             path = ASSETS_DIR / f"{nome}.json"
             assert path.exists(), f"{nome}.json deve existir"

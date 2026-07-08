@@ -86,10 +86,16 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
         from hefesto_dualsense4unix.utils.session import save_active_marker
 
+        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
+        # emulação — paridade com o profile.switch (IPC) e o autoswitch.
         manager = ProfileManager(
             controller=daemon.controller,
             store=daemon.store,
-            keyboard_device=getattr(daemon, "_keyboard_device", None),
+            keyboard_device_provider=lambda: getattr(
+                daemon, "_keyboard_device", None
+            ),
+            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:

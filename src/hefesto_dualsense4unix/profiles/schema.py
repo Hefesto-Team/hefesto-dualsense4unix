@@ -169,6 +169,22 @@ class RumbleConfig(BaseModel):
     passthrough: bool = True
 
 
+class ProfileMouseConfig(BaseModel):
+    """Seção opcional de emulação de mouse por perfil (FEAT-POINT-AND-CLICK-01).
+
+    Aditiva ao schema v1 (sem bump de versão): perfis sem a seção continuam
+    válidos e NÃO tocam no estado de emulação ao serem ativados. Ranges de
+    `speed`/`scroll_speed` espelham o contrato do daemon
+    (`Daemon.set_mouse_emulation`: 1-12 / 1-5).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    speed: int = Field(default=6, ge=1, le=12)
+    scroll_speed: int = Field(default=1, ge=1, le=5)
+
+
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
 # - `KEY_*` é validado contra `evdev.ecodes` (via lookup lazy em `_validate_key_bindings`).
 # - `__*__` são tokens virtuais reservados para a sub-sprint UI (59.3): o dispatcher
@@ -194,6 +210,17 @@ class Profile(BaseModel):
     # - {} = desativa todos os bindings do perfil (teclado silencioso).
     # - {"triangle": ["KEY_C"]} = override apenas desse botão; demais seguem default.
     key_bindings: dict[str, list[str]] | None = None
+    # FEAT-POINT-AND-CLICK-01: seção opcional de emulação de mouse.
+    # - None = ativar o perfil não toca no estado da emulação (comportamento v1).
+    # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
+    #   dadas (via `mouse_applier` injetado no ProfileManager).
+    mouse: ProfileMouseConfig | None = None
+    # FEAT-POINT-AND-CLICK-01: modo-jogo por perfil. True = ativar o perfil
+    # suprime a emulação de mouse/teclado no desktop (jogos de GAMEPAD que
+    # leem o controle cru); False (default) = ativar o perfil LIBERA a
+    # supressão apenas se ela veio de outro perfil (toggle manual da usuária
+    # é respeitado — ver `Daemon.apply_profile_suppression`).
+    suppress_desktop_emulation: bool = False
 
     @field_validator("name")
     @classmethod
@@ -271,6 +298,7 @@ __all__ = [
     "MatchAny",
     "MatchCriteria",
     "Profile",
+    "ProfileMouseConfig",
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",

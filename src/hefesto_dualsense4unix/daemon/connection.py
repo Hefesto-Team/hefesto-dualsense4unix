@@ -76,10 +76,27 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     if not name:
         return
     try:
+        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
+        # restore pode rodar antes/depois do keyboard subir e após reconexão
+        # (device recriado); resolver na ativação cobre todos os casos.
+        #
+        # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de
+        # propósito. O estado de emulação (mouse/gamepad) no boot é governado
+        # pelos FLAGS persistidos (lifecycle.py restaura antes desta chamada),
+        # não pela seção mouse do perfil. Com o applier injetado, um last_profile
+        # com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
+        # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já
+        # restaurado — matava o gamepad, apagava gamepad_emulation.flag e invertia
+        # a escolha persistida da usuária a cada boot. O perfil ainda aplica
+        # triggers/LEDs/teclado; só a emulação fica com os flags.
         manager = ProfileManager(
             controller=daemon.controller,
             store=daemon.store,
-            keyboard_device=getattr(daemon, "_keyboard_device", None),
+            keyboard_device_provider=lambda: getattr(
+                daemon, "_keyboard_device", None
+            ),
+            mouse_applier=None,
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
         )
         await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)

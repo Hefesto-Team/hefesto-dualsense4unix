@@ -98,6 +98,20 @@ class _DesiredOutput:
     mic_led: bool | None = None
 
 
+def _centered_stick_to_raw(value: Any) -> int:
+    """Converte um eixo de stick da pydualsense (centrado em 0) para cru 0-255.
+
+    FEAT-MOUSE-CURSOR-FEEL-01 (A6): a pydualsense 0.7.5 instalada armazena
+    ``state.LX = states[1] - 128`` (range -128..127, repouso = 0). O fallback
+    HID-raw fazia ``int(state.LX) & 0xFF``, que transformava repouso (cru 128 →
+    LX=0) em raw 0 e drift leve (cru 125 → LX=-3) em raw 253 — o cursor "voava"
+    na diagonal com o stick parado (é a memória "sticks ~253 em repouso").
+    Somar 128 de volta e clampar restaura o valor cru que o resto do pipeline
+    (deadzone em 128, gamepad virtual, check de neutralidade) espera.
+    """
+    return max(0, min(255, int(value) + 128))
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -611,16 +625,19 @@ class PyDualSenseController(IController):
                 buttons_fallback = frozenset({"mic_btn"})
         except AttributeError:
             logger.debug("ds_state_mic_btn_indisponivel_fallback_path", exc_info=True)
+        # FEAT-MOUSE-CURSOR-FEEL-01 (A6): sticks da pydualsense são centrados
+        # em 0 — reconverter para cru 0-255. L2/R2 NÃO passam por aqui: já são
+        # crus 0-255 na lib (não somar 128 neles).
         return ControllerState(
             battery_pct=battery,
             l2_raw=l2_raw,
             r2_raw=r2_raw,
             connected=self.is_connected(),
             transport=self._transport,
-            raw_lx=int(state.LX) & 0xFF,
-            raw_ly=int(state.LY) & 0xFF,
-            raw_rx=int(state.RX) & 0xFF,
-            raw_ry=int(state.RY) & 0xFF,
+            raw_lx=_centered_stick_to_raw(state.LX),
+            raw_ly=_centered_stick_to_raw(state.LY),
+            raw_rx=_centered_stick_to_raw(state.RX),
+            raw_ry=_centered_stick_to_raw(state.RY),
             buttons_pressed=buttons_fallback,
         )
 

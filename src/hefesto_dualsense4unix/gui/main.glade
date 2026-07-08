@@ -2078,7 +2078,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label" translatable="yes">Triângulo () ou R2</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Triângulo (&#9651;) ou R2</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                             </child>
                             <child>
@@ -2102,7 +2102,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">2</property><property name="top-attach">2</property></packing>
                             </child>
                             <child>
-                              <object class="GtkLabel"><property name="label" translatable="yes">Círculo ()</property><property name="xalign">0</property></object>
+                              <object class="GtkLabel"><property name="label" translatable="yes">Círculo (&#9675;)</property><property name="xalign">0</property></object>
                               <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
                             </child>
                             <child>

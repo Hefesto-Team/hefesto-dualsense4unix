@@ -576,7 +576,31 @@ class HefestoApp(
                         p for p in load_all_profiles() if p.name == active_name
                     )
                     logger.info("draft_carregado_do_perfil_ativo", perfil=active_name)
-                    return DraftConfig.from_profile(profile), active_name
+                    draft = DraftConfig.from_profile(profile)
+                    # BUG-MOUSE-GUI-SYNC-01 (A1): sobrepõe o bloco VIVO do daemon
+                    # (emulação ligada por CLI/applet/flag de boot) para a aba
+                    # Mouse não mentir. Overlay programático NÃO marca dirty.
+                    # BUG-MOUSE-OVERLAY-CLOBBERS-SECTION-01: SÓ para perfis SEM
+                    # seção mouse (``in_profile`` False). Quando o perfil TEM seção
+                    # mouse (point_and_click), o overlay do estado vivo era
+                    # persistido por cima do valor do perfil ao Salvar — se o lock
+                    # manual tivesse bloqueado a ativação, o vivo (off/6) sobrescrevia
+                    # o perfil (on/8). Para perfil COM seção, a aba mostra o valor do
+                    # PERFIL (= o que será salvo); a edição explícita da aba (dirty)
+                    # é o caminho para mudar a seção.
+                    me = state.get("mouse_emulation") if state is not None else None
+                    if isinstance(me, dict) and not draft.mouse.in_profile:
+                        try:
+                            allowed = {"enabled", "speed", "scroll_speed"}
+                            overlay = {k: v for k, v in me.items() if k in allowed}
+                            draft = draft.model_copy(
+                                update={"mouse": draft.mouse.model_copy(update=overlay)}
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "draft_overlay_mouse_invalido", erro=str(exc)
+                            )
+                    return draft, active_name
                 except StopIteration:
                     logger.warning(
                         "draft_perfil_ativo_nao_encontrado_em_disco",
@@ -632,7 +656,9 @@ class HefestoApp(
             1: getattr(self, "_refresh_triggers_from_draft", None),
             2: getattr(self, "_refresh_lightbar_from_draft", None),
             3: getattr(self, "_refresh_rumble_from_draft", None),
-            7: getattr(self, "_refresh_mouse_from_draft", None),
+            # BUG-MOUSE-GUI-SYNC-01 (A1): a aba Mouse sincroniza também com o
+            # estado VIVO do daemon (draft imediato + state_full assíncrono).
+            7: getattr(self, "_refresh_mouse_tab", None),
             # BUG-KEYBOARD-TAB-NO-REFRESH-01: aba Teclado também precisa
             # re-sincronizar os bindings do draft ao ser exibida.
             8: getattr(self, "_refresh_key_bindings_from_draft", None),

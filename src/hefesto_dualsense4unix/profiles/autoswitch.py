@@ -45,6 +45,13 @@ class AutoSwitcher:
     _current_profile: str | None = None
     _stop_event: asyncio.Event | None = None
     _task: asyncio.Task[Any] | None = None
+    # FEAT-POINT-AND-CLICK-01 (rate-limit): chave (evento, candidato) do último
+    # log de supressão emitido. O poll de 2 Hz chamava `_activate` a cada tick
+    # enquanto suprimido e inundava o journal (~1074 linhas/2h). Loga 1x por
+    # (motivo, candidato); re-loga quando o candidato ou o motivo muda, ou
+    # quando a supressão termina (chave zerada em `_activate` não-suprimido) e
+    # um novo episódio começa. Estado por instância — nada global.
+    _suppress_log_key: tuple[str, str] | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -73,6 +80,14 @@ class AutoSwitcher:
                 self._candidate_since = now
 
             stable = now - self._candidate_since >= self.debounce_sec
+            # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
+            # a supressão CESSA, independente de haver ativação. Antes a chave só
+            # zerava dentro de `_activate` (que só roda com candidate != current),
+            # então um episódio que terminava com o candidato estável == perfil
+            # corrente (ex.: trigger.reset com a janela do jogo em foco) deixava a
+            # chave presa e deduplicava em silêncio o episódio seguinte.
+            if not self._suppression_active():
+                self._suppress_log_key = None
             if stable and candidate and candidate != self._current_profile:
                 self._activate(candidate, info)
 
@@ -89,6 +104,17 @@ class AutoSwitcher:
         if self._stop_event is not None:
             self._stop_event.set()
 
+    def _suppression_active(self) -> bool:
+        """True se alguma fonte de supressão do autoswitch está ativa agora
+        (override de trigger manual ou lock de perfil manual). Espelha os gates
+        de `_activate`; usado pelo run-loop para saber quando o episódio de
+        supressão terminou e reabrir o log (BUG-AUTOSWITCH-LOG-KEY-STUCK-01)."""
+        if self.store is None:
+            return False
+        if self.store.manual_trigger_active:
+            return True
+        return self.store.manual_profile_lock_active(time.monotonic())
+
     def _activate(self, name: str, info: dict[str, Any]) -> None:
         # BUG-MOUSE-TRIGGERS-01: se o usuário tem um trigger manual aplicado
         # via aba Gatilhos, autoswitch suspende até o override ser limpo por
@@ -96,10 +122,8 @@ class AutoSwitcher:
         # Mouse (que move o cursor e muda o foco de janela), o autoswitch
         # reaplicaria o fallback e zeraria o trigger recém-aplicado.
         if self.store is not None and self.store.manual_trigger_active:
-            logger.info(
-                "autoswitch_suppressed_by_manual_override",
-                candidate=name,
-                wm_class=info.get("wm_class", ""),
+            self._log_suppressed_once(
+                "autoswitch_suppressed_by_manual_override", name, info
             )
             return
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): respeita lock manual armado
@@ -108,12 +132,15 @@ class AutoSwitcher:
         if self.store is not None and self.store.manual_profile_lock_active(
             time.monotonic()
         ):
-            logger.info(
-                "autoswitch_suppressed_by_manual_profile_lock",
-                candidate=name,
-                wm_class=info.get("wm_class", ""),
+            self._log_suppressed_once(
+                "autoswitch_suppressed_by_manual_profile_lock", name, info
             )
             return
+        # Chegou aqui = sem supressão: zera a chave (reabre o log do próximo
+        # episódio). O run-loop faz o MESMO reset a cada tick — necessário para o
+        # caso candidate == current, em que _activate nem roda
+        # (BUG-AUTOSWITCH-LOG-KEY-STUCK-01). Manter ambos cobre chamadas diretas.
+        self._suppress_log_key = None
         from_profile = self._current_profile
         try:
             self.manager.activate(name)
@@ -128,6 +155,22 @@ class AutoSwitcher:
             wm_class=info.get("wm_class", ""),
             wm_name=info.get("wm_name", ""),
         )
+
+    def _log_suppressed_once(
+        self, event: str, name: str, info: dict[str, Any]
+    ) -> None:
+        """Loga a supressão do autoswitch 1x por (motivo, candidato).
+
+        FEAT-POINT-AND-CLICK-01: o tick de 0,5s repetia o mesmo log enquanto o
+        override manual durasse — journal inundado a ~2 Hz. Deduplica pela
+        chave (evento, candidato); a chave é zerada quando `_activate` roda
+        sem supressão, reabrindo o log para o episódio seguinte.
+        """
+        key = (event, name)
+        if self._suppress_log_key == key:
+            return
+        self._suppress_log_key = key
+        logger.info(event, candidate=name, wm_class=info.get("wm_class", ""))
 
 
 __all__ = [

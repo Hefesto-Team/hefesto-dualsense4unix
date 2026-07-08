@@ -135,30 +135,86 @@ def load_paused_state() -> bool:
 _MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
 
 
-def save_mouse_emulation_enabled(enabled: bool) -> None:
-    """Persiste se a emulação de mouse está ligada (FEAT-MOUSE-PERSIST-01).
+def save_mouse_emulation(
+    enabled: bool,
+    speed: int | None = None,
+    scroll_speed: int | None = None,
+) -> None:
+    """Persiste a emulação de mouse: toggle + velocidades (FEAT-MOUSE-CURSOR-FEEL-01).
 
-    Flag-file em config_dir (existe = ligada) para o daemon restaurar o toggle
-    após restart/reboot — antes o `mouse_emulation_enabled` voltava ao default
-    (desligado) a cada reinício do daemon. Best-effort: nunca propaga exceção.
+    Padrão flag-com-conteúdo (mesmo do `gamepad_emulation.flag`): quando
+    ligada, o arquivo existe e carrega JSON ``{"speed": N, "scroll_speed": M}``;
+    quando desligada, o arquivo é removido (semântica existe=ligada preservada
+    do FEAT-MOUSE-PERSIST-01). NÃO usa session.json: `save_last_profile`
+    reescreve aquele arquivo inteiro e apagaria as velocidades.
+    Best-effort: nunca propaga exceção.
     """
     try:
         flag = config_dir(ensure=True) / _MOUSE_EMULATION_FLAG_FILE
         if enabled:
-            flag.write_text("1\n", encoding="utf-8")
+            payload: dict[str, int] = {}
+            if speed is not None:
+                payload["speed"] = int(speed)
+            if scroll_speed is not None:
+                payload["scroll_speed"] = int(scroll_speed)
+            flag.write_text(json.dumps(payload) + "\n", encoding="utf-8")
         else:
             flag.unlink(missing_ok=True)
-        logger.debug("mouse_emulation_state_saved", enabled=enabled)
+        logger.debug(
+            "mouse_emulation_state_saved",
+            enabled=enabled,
+            speed=speed,
+            scroll_speed=scroll_speed,
+        )
     except Exception as exc:
         logger.debug("mouse_emulation_state_save_failed", err=str(exc))
 
 
-def load_mouse_emulation_enabled() -> bool:
-    """Retorna True se a emulação de mouse foi deixada ligada na sessão anterior."""
+def load_mouse_emulation() -> tuple[bool, int | None, int | None]:
+    """Retorna ``(ligada, speed, scroll_speed)`` da sessão anterior.
+
+    ``(False, None, None)`` se a flag não existir. Tolerante ao conteúdo
+    legado ``"1\\n"`` (pré-JSON) e a JSON malformado: a emulação conta como
+    ligada (o arquivo existe) e as velocidades voltam ``None`` — o caller
+    aplica os defaults. Valores não-inteiros no JSON também viram ``None``.
+    """
     try:
-        return (config_dir() / _MOUSE_EMULATION_FLAG_FILE).exists()
+        flag = config_dir() / _MOUSE_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return False, None, None
+        speed: int | None = None
+        scroll_speed: int | None = None
+        content = flag.read_text(encoding="utf-8").strip()
+        if content:
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                data = None  # conteúdo legado "1\n" → defaults
+            if isinstance(data, dict):
+                raw_speed = data.get("speed")
+                raw_scroll = data.get("scroll_speed")
+                if isinstance(raw_speed, int) and not isinstance(raw_speed, bool):
+                    speed = raw_speed
+                if isinstance(raw_scroll, int) and not isinstance(raw_scroll, bool):
+                    scroll_speed = raw_scroll
+        return True, speed, scroll_speed
     except Exception:
-        return False
+        return False, None, None
+
+
+def save_mouse_emulation_enabled(enabled: bool) -> None:
+    """Wrapper legado (FEAT-MOUSE-PERSIST-01) — persiste só o toggle.
+
+    Delega para `save_mouse_emulation` sem velocidades (quando ligada, o JSON
+    sai vazio e o load devolve speeds ``None`` → defaults). Preferir a função
+    nova, que grava as velocidades junto.
+    """
+    save_mouse_emulation(enabled)
+
+
+def load_mouse_emulation_enabled() -> bool:
+    """Wrapper legado — retorna só se a emulação foi deixada ligada."""
+    return load_mouse_emulation()[0]
 
 
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
@@ -230,6 +286,7 @@ __all__ = [
     "load_coop_enabled",
     "load_gamepad_emulation",
     "load_last_profile",
+    "load_mouse_emulation",
     "load_mouse_emulation_enabled",
     "load_paused_state",
     "read_active_marker",
@@ -237,6 +294,7 @@ __all__ = [
     "save_coop_enabled",
     "save_gamepad_emulation",
     "save_last_profile",
+    "save_mouse_emulation",
     "save_mouse_emulation_enabled",
     "save_paused_state",
 ]

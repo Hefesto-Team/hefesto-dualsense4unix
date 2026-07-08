@@ -20,6 +20,8 @@ import contextlib
 import inspect
 import os
 import signal
+import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -160,6 +162,31 @@ class Daemon:
     # mouse/teclado (devices ficam vivos; hotkeys seguem ativos). Alternado pelo
     # long-press do PS. Transitório — não persiste entre boots.
     _emulation_suppressed: bool = False
+    # FEAT-POINT-AND-CLICK-01: instante (time.monotonic) do último toggle MANUAL
+    # do modo-jogo (hotkey PS+Options, IPC `daemon.emulation.suppress`, GUI).
+    # -inf = nunca houve toggle manual (boot). Consultado por
+    # `apply_profile_suppression`: perfil não mexe na supressão dentro da
+    # janela de MANUAL_PROFILE_LOCK_SEC após um gesto manual.
+    _suppress_manual_ts: float = field(default=float("-inf"))
+    # FEAT-POINT-AND-CLICK-01: True quando a supressão ATUAL foi ligada (ou
+    # adotada) por um perfil com suppress_desktop_emulation=True. Perfis sem o
+    # campo só LIBERAM a supressão quando este flag é True — toggle manual da
+    # usuária nunca é revertido por autoswitch/troca de perfil.
+    _suppress_from_profile: bool = False
+    # BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: instante (time.monotonic) do último
+    # toggle MANUAL da EMULAÇÃO (mouse ou gamepad via IPC/GUI/CLI/hotkey). -inf =
+    # nunca. Consultado por `apply_profile_mouse`: um perfil não liga/desliga a
+    # emulação dentro de MANUAL_PROFILE_LOCK_SEC após um gesto manual — não
+    # sequestra um gamepad virtual ligado na mão no meio do jogo.
+    _emu_manual_ts: float = field(default=float("-inf"))
+    # BUG-EMU-DEVICE-RACE-01: serializa as transições de device de emulação
+    # (start/stop de mouse e gamepad virtuais). A wave passou a chamar
+    # set_mouse_emulation também da thread do executor (hotkey de ciclo via
+    # _run_blocking(activate)), concorrendo com a thread do event loop (IPC/
+    # autoswitch); o check-then-act sem lock em start_mouse_emulation podia criar
+    # 2 devices uinput e vazar 1. RLock (reentrante: set_mouse_emulation chama
+    # _stop_gamepad_emulation na mesma thread).
+    _emu_lock: Any = field(default_factory=threading.RLock)
     _audio: Any = None
     _plugins_subsystem: Any = None
     # FEAT-METRICS-01: MetricsSubsystem (servidor HTTP Prometheus) ou None.
@@ -233,9 +260,17 @@ class Daemon:
         # FEAT-MOUSE-PERSIST-01: restaura a emulação de mouse se a sessão anterior
         # a deixou ligada — antes o toggle voltava ao default (off) a cada restart
         # do daemon (reboot, takeover, reload). Só liga; nunca força off.
-        from hefesto_dualsense4unix.utils.session import load_mouse_emulation_enabled
-        if load_mouse_emulation_enabled():
+        # FEAT-MOUSE-CURSOR-FEEL-01 (A5): restaura também speed/scroll do flag
+        # JSON, com clamp ao contrato (1-12 / 1-5); flag legado sem velocidades
+        # (`"1\n"`) mantém os defaults da config.
+        from hefesto_dualsense4unix.utils.session import load_mouse_emulation
+        mouse_on, mouse_speed, mouse_scroll = load_mouse_emulation()
+        if mouse_on:
             self.config.mouse_emulation_enabled = True
+            if mouse_speed is not None:
+                self.config.mouse_speed = max(1, min(12, int(mouse_speed)))
+            if mouse_scroll is not None:
+                self.config.mouse_scroll_speed = max(1, min(5, int(mouse_scroll)))
         # FEAT-DSX-GAMEPAD-FLAVOR-01: restaura o gamepad virtual (liga + flavor)
         # se a sessão anterior o deixou ligado. Mútua exclusão: o gamepad tem
         # precedência sobre o mouse (jogar = controle vai pro jogo).
@@ -396,50 +431,127 @@ class Daemon:
         enabled: bool,
         speed: int | None = None,
         scroll_speed: int | None = None,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
     ) -> bool:
-        """Liga/desliga emulação de mouse e atualiza velocidades. Usado pelo IPC."""
+        """Liga/desliga emulação de mouse e atualiza velocidades. Usado pelo IPC.
+
+        BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: `origin` distingue o gesto MANUAL
+        (IPC/GUI/CLI/hotkey — default, preserva todos os callers) da aplicação
+        por PERFIL (`apply_profile_mouse`). Manual carimba `_emu_manual_ts`,
+        travando o applier de perfil por `MANUAL_PROFILE_LOCK_SEC`.
+        """
         from hefesto_dualsense4unix.daemon.subsystems.mouse import (
             start_mouse_emulation,
             stop_mouse_emulation,
         )
 
+        if origin == "manual":
+            self._emu_manual_ts = time.monotonic()
         if speed is not None:
             self.config.mouse_speed = max(1, min(12, int(speed)))
         if scroll_speed is not None:
             self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
-        if enabled:
-            # FEAT-DSX-GAMEPAD-FLAVOR-01: mútua exclusão — ligar o mouse desliga
-            # o gamepad virtual (e libera o grab do controle).
-            if self._gamepad_device is not None:
-                self._stop_gamepad_emulation()
-            ok = start_mouse_emulation(self)
-            if ok and self._mouse_device is not None:
-                self._mouse_device.set_speed(
-                    mouse_speed=self.config.mouse_speed,
+        # BUG-EMU-DEVICE-RACE-01: serializa a transição de device (create/destroy)
+        # para não colidir com set_gamepad_emulation/outra thread.
+        with self._emu_lock:
+            if enabled:
+                # FEAT-DSX-GAMEPAD-FLAVOR-01: mútua exclusão — ligar o mouse
+                # desliga o gamepad virtual (e libera o grab do controle).
+                if self._gamepad_device is not None:
+                    self._stop_gamepad_emulation()
+                ok = start_mouse_emulation(self)
+                if ok and self._mouse_device is not None:
+                    self._mouse_device.set_speed(
+                        mouse_speed=self.config.mouse_speed,
+                        scroll_speed=self.config.mouse_scroll_speed,
+                    )
+                    # FEAT-MOUSE-CURSOR-FEEL-01 (A5): com device JÁ vivo,
+                    # start_mouse_emulation retorna cedo sem persistir — re-salva
+                    # o flag para que "ligar de novo com speed nova" sobreviva a
+                    # restart (no start de verdade a escrita é redundante).
+                    with contextlib.suppress(Exception):
+                        from hefesto_dualsense4unix.utils.session import (
+                            save_mouse_emulation,
+                        )
+
+                        save_mouse_emulation(
+                            True,
+                            speed=self.config.mouse_speed,
+                            scroll_speed=self.config.mouse_scroll_speed,
+                        )
+                return ok
+            stop_mouse_emulation(self)
+            return True
+
+    def set_mouse_speed(
+        self,
+        speed: int | None = None,
+        scroll_speed: int | None = None,
+    ) -> bool:
+        """Atualiza velocidades da emulação SEM ligar/desligar (speed-only).
+
+        BUG-MOUSE-GUI-SYNC-01 (A4): rota dos sliders da GUI — nunca faz
+        start/stop nem CRIA o flag de emulação. Com device vivo aplica na
+        hora; sem device só atualiza a config (vale quando ligar). Religar a
+        emulação (e matar o gamepad virtual) por slider é impossível aqui.
+
+        FEAT-MOUSE-CURSOR-FEEL-01 (A5): com a emulação JÁ LIGADA, re-persiste
+        o flag existente com as velocidades novas — mudança de speed com o
+        mouse ligado tem que sobreviver a restart. Com a emulação desligada
+        nada é escrito (criar o flag aqui religaria a emulação no boot — a
+        regressão exata do A4).
+        """
+        if speed is not None:
+            self.config.mouse_speed = max(1, min(12, int(speed)))
+        if scroll_speed is not None:
+            self.config.mouse_scroll_speed = max(1, min(5, int(scroll_speed)))
+        if self._mouse_device is not None:
+            self._mouse_device.set_speed(
+                mouse_speed=self.config.mouse_speed,
+                scroll_speed=self.config.mouse_scroll_speed,
+            )
+        if self.config.mouse_emulation_enabled:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.session import save_mouse_emulation
+
+                save_mouse_emulation(
+                    True,
+                    speed=self.config.mouse_speed,
                     scroll_speed=self.config.mouse_scroll_speed,
                 )
-            return ok
-        stop_mouse_emulation(self)
         return True
 
     def set_gamepad_emulation(
-        self, enabled: bool, flavor: str | None = None
+        self,
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
         FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox'); None mantém
         o atual. Ligar desliga a emulação de mouse (mútua exclusão). Retorna True
         se o estado pedido foi alcançado.
+
+        BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: um `gamepad on` manual carimba
+        `_emu_manual_ts` — assim um perfil point-and-click focado logo em seguida
+        (autoswitch) NÃO mata o gamepad ligado na mão (lock de 30s).
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             start_gamepad_emulation,
             stop_gamepad_emulation,
         )
 
-        if enabled:
-            return start_gamepad_emulation(self, flavor=flavor)
-        stop_gamepad_emulation(self)
-        return True
+        if origin == "manual":
+            self._emu_manual_ts = time.monotonic()
+        # BUG-EMU-DEVICE-RACE-01: mesma serialização do set_mouse_emulation.
+        with self._emu_lock:
+            if enabled:
+                return start_gamepad_emulation(self, flavor=flavor)
+            stop_gamepad_emulation(self)
+            return True
 
     def set_coop_enabled(self, enabled: bool) -> bool:
         """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
@@ -467,13 +579,25 @@ class Daemon:
         )
         return self.config.coop_enabled
 
-    def set_emulation_suppressed(self, value: bool | None = None) -> bool:
+    def set_emulation_suppressed(
+        self,
+        value: bool | None = None,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> bool:
         """Liga/desliga a supressão da emulação de mouse/teclado (modo jogo).
 
         FEAT-EMULATION-GAMEMODE-LONGPRESS-01. `value=None` faz toggle; caso
         contrário, define explicitamente. Os devices uinput permanecem vivos —
         só o despacho no poll loop é pulado, e os hotkeys continuam ativos.
         Notifica o usuário e retorna o novo estado (True = emulação suprimida).
+
+        FEAT-POINT-AND-CLICK-01: `origin` distingue o gesto MANUAL da usuária
+        (hotkey/IPC/GUI — default, preserva todos os callers existentes) da
+        aplicação por PERFIL (`apply_profile_suppression`). Toggle manual
+        carimba `_suppress_manual_ts` e zera `_suppress_from_profile` — a
+        partir daí perfis não revertem a escolha (ver
+        `apply_profile_suppression`).
         """
         from hefesto_dualsense4unix.integrations.desktop_notifications import (
             notify_emulation_suppressed,
@@ -481,6 +605,9 @@ class Daemon:
 
         new_state = (not self._emulation_suppressed) if value is None else bool(value)
         self._emulation_suppressed = new_state
+        if origin == "manual":
+            self._suppress_manual_ts = time.monotonic()
+            self._suppress_from_profile = False
         if new_state:
             # FEAT-EMULATION-GAMEMODE-FLUSH-01: ao suprimir, solta tudo que estiver
             # pressionado nos devices virtuais — senão um modificador (ex.: Meta de
@@ -490,6 +617,103 @@ class Daemon:
         logger.info("emulation_suppressed_changed", suppressed=new_state)
         notify_emulation_suppressed(new_state)
         return new_state
+
+    def apply_profile_suppression(self, desired: bool) -> None:
+        """Aplica `suppress_desktop_emulation` de um perfil recém-ativado.
+
+        FEAT-POINT-AND-CLICK-01. Injetado como `suppression_applier` do
+        `ProfileManager` — chamado a CADA ativação de perfil (IPC, autoswitch,
+        hotkey de ciclo, restore no boot), sempre com o valor do campo
+        (inclusive o default False).
+
+        Semântica escolhida (documentada aqui como fonte canônica):
+
+        1. **Lock manual** — se a usuária alternou o modo-jogo manualmente
+           (PS+Options, IPC, GUI) há menos de ``MANUAL_PROFILE_LOCK_SEC``
+           (30s, mesma constante do lock de perfil manual), o perfil NÃO mexe
+           na supressão em NENHUMA direção (nem liga, nem libera). Log
+           informativo e retorno.
+        2. **desired=True** — liga a supressão (idempotente: só chama o setter
+           se o estado muda, evitando flush/notificação repetidos a cada tick
+           do autoswitch) e marca origem "perfil". Se a supressão já estava
+           ligada por gesto manual ANTIGO (lock expirado), o perfil a ADOTA:
+           ao sair do jogo, o perfil do desktop libera — é a UX esperada do
+           autoswitch dono do estado após a janela de respeito.
+        3. **desired=False** — LIBERA a supressão apenas se ela veio de perfil
+           (`_suppress_from_profile`). Supressão de origem manual (lock já
+           expirado, sem perfil que a adotasse) permanece intocada: quem ligou
+           na mão, desliga na mão.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        now = time.monotonic()
+        if now - self._suppress_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            logger.info(
+                "profile_suppression_skipped_manual_lock",
+                desired=desired,
+                remaining_sec=round(
+                    MANUAL_PROFILE_LOCK_SEC - (now - self._suppress_manual_ts), 1
+                ),
+            )
+            return
+        if desired:
+            if not self._emulation_suppressed:
+                self.set_emulation_suppressed(True, origin="profile")
+            self._suppress_from_profile = True
+        elif self._emulation_suppressed and self._suppress_from_profile:
+            self.set_emulation_suppressed(False, origin="profile")
+            self._suppress_from_profile = False
+
+    def apply_profile_mouse(
+        self, enabled: bool, speed: int, scroll_speed: int
+    ) -> None:
+        """Aplica a seção `mouse` de um perfil recém-ativado (BUG-PROFILE-MOUSE-
+        KILLS-GAMEPAD-01). Injetado como `mouse_applier` nas rotas de ativação
+        (IPC switch, autoswitch, hotkey de ciclo). NÃO é usado no restore do
+        boot (lá os flags persistidos governam — ver connection.py).
+
+        Semântica (espelha `apply_profile_suppression`):
+
+        1. **Lock manual** — se a usuária mexeu na emulação (mouse OU gamepad)
+           manualmente há menos de `MANUAL_PROFILE_LOCK_SEC`, o perfil NÃO toca
+           no estado: não sequestra um gamepad virtual ligado na mão no meio do
+           jogo (o bug original: focar um ScummVM matava o gamepad).
+        2. **Idempotente** — só chama `set_mouse_emulation` quando o estado
+           muda; com o mouse já no estado desejado e ligado, atualiza apenas as
+           velocidades (evita destruir/recriar o device a cada tick do
+           autoswitch e o tear-down repetido do gamepad).
+        3. `origin="profile"` — não re-carimba o lock manual.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        now = time.monotonic()
+        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            logger.info(
+                "profile_mouse_skipped_manual_lock",
+                enabled=enabled,
+                remaining_sec=round(
+                    MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
+                ),
+            )
+            return
+        # BUG-PROFILE-MOUSE-IDEMPOTENT-STALE-CONFIG-01: o estado REAL de "ligado"
+        # é config E device vivo. No boot, run() seta config=True do flag ANTES do
+        # start; se start_mouse_emulation falha (uinput indisponível no boot),
+        # fica config=True/_mouse_device=None. Confiar só na config faria o ramo
+        # idempotente pular a (re)criação e o mouse nunca ligaria apesar do perfil
+        # pedir. Checar o device restaura a auto-recuperação por ativação de perfil.
+        actual_on = self.config.mouse_emulation_enabled and self._mouse_device is not None
+        if enabled == actual_on:
+            if enabled:
+                self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
+            return
+        self.set_mouse_emulation(
+            enabled, speed, scroll_speed, origin="profile"
+        )
 
     def _flush_emulation_devices(self) -> None:
         """Solta todas as teclas/botões dos devices virtuais (mouse+teclado).
