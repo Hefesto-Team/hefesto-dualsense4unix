@@ -5,6 +5,50 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Modo Nativo — "release total" do controle** (FEAT-NATIVE-MODE-01): um botão
+  de parar que de fato solta o DualSense para o jogo usar os gatilhos adaptativos
+  NATIVOS da Sony (Sackboy & cia), sem o hefesto no meio. `hefesto-dualsense4unix
+  native on|off|status` (CLI) + `native.mode.set` (IPC). Ligado: gatilhos Off/Off
+  (o jogo impõe os seus), rumble em passthrough, emulação de mouse/gamepad off
+  (libera o grab), autoswitch/hotkey de perfil travados e o dispatch de input
+  congelado (gate pelo próprio flag, não por pause — `daemon.resume` não
+  des-solta). O estado da emulação (mouse/gamepad) é guardado e RESTAURADO ao
+  desligar; sobrevive a reboot.
+- **Modo point-and-click por perfil** (FEAT-POINT-AND-CLICK-01): perfil ganha
+  seção `mouse` opcional (`enabled/speed/scroll_speed`); ao focar o jogo (ex.:
+  Grim Fandango), o autoswitch liga o modo mouse com a velocidade do perfil,
+  respeitando um lock manual de 30 s (não mata um gamepad virtual ligado na mão).
+  Preset default `point_and_click` + supressão de bindings de desktop no jogo.
+- **Diagnóstico anti-storm unificado no `doctor`** (FEAT-DSX-UNIFY-01): o
+  DualSense Fix (dsx) foi trazido para dentro do hefesto na parte segura —
+  `doctor` mostra o bloco "anti-storm / sistema" (quirk, Steam Input, WirePlumber,
+  regra áudio-off, tudo read-only); `doctor --fix-safe` aplica o seguro sem sudo
+  (Steam Input OFF + WirePlumber); `doctor --reapply-all` invoca o `dsx.sh`
+  (privilegiado, pede senha). Cartão equivalente na aba Daemon da GUI. A fronteira
+  Aurora é respeitada (kernel cmdline + regras 99-usb continuam dela).
+
+### Changed
+
+- **Cursor do modo mouse reescrito** (FEAT-MOUSE-CURSOR-FEEL-01): pipeline float
+  com deadzone radial reescalada, curva expo e carry sub-pixel no stick (todas as
+  velocidades passam a funcionar; simétrico; sem degrau). Velocidade persiste
+  entre restarts. Aba Mouse sincroniza com o estado vivo do daemon e o "Aplicar"
+  não desliga mais uma emulação ligada por fora (BUG-MOUSE-GUI-SYNC-01).
+- **Últimos dropdowns viram botões segmentados**: os combos de PRESET de gatilho
+  (imunes ao bug de foco do cosmic-comp) — completando a migração dos combos.
+
+### Fixed
+
+- **GUI "botões que aumentam e diminuem"**: os labels de posição do stick tinham
+  largura variável (o número muda de dígitos) → re-layout do painel a 10 Hz.
+  Campo de largura fixa (monospace) elimina o reflow.
+- **`point_and_click` não instalava em upgrade** e vários bugs de emulação
+  (gamepad morto ao ativar o perfil, flags invertidos no boot, seção mouse
+  descartada ao salvar o perfil, race de device uinput) — achados e corrigidos
+  por três rodadas de auditoria adversarial.
+
 ## [3.10.0] — 2026-06-28
 
 ### Added
