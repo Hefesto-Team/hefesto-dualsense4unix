@@ -450,10 +450,11 @@
                               <packing><property name="expand">False</property></packing>
                             </child>
                             <child>
-                              <object class="GtkComboBoxText" id="trigger_left_preset_combo">
+                              <!-- FEAT-DSX-COMBO-TO-SEGMENTED-01: slot do preset (segmentado,
+                                   sem popup — imune ao bug de foco do cosmic-comp). -->
+                              <object class="GtkBox" id="trigger_left_preset_slot">
                                 <property name="hexpand">True</property>
                                 <property name="visible">True</property>
-                                <signal name="changed" handler="on_trigger_left_preset_changed"/>
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
@@ -572,10 +573,10 @@
                               <packing><property name="expand">False</property></packing>
                             </child>
                             <child>
-                              <object class="GtkComboBoxText" id="trigger_right_preset_combo">
+                              <!-- FEAT-DSX-COMBO-TO-SEGMENTED-01: slot do preset (segmentado). -->
+                              <object class="GtkBox" id="trigger_right_preset_slot">
                                 <property name="hexpand">True</property>
                                 <property name="visible">True</property>
-                                <signal name="changed" handler="on_trigger_right_preset_changed"/>
                               </object>
                               <packing><property name="expand">True</property></packing>
                             </child>
