@@ -75,6 +75,11 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     name = load_last_profile()
     if not name:
         return
+    # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
+    # re-aplica o perfil (que re-escreveria gatilhos/emulação por cima).
+    if getattr(daemon, "_native_mode", False):
+        logger.info("last_profile_restore_skipped_native_mode", name=name)
+        return
     try:
         # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
         # restore pode rodar antes/depois do keyboard subir e após reconexão

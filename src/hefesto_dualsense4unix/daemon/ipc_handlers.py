@@ -202,6 +202,9 @@ class IpcHandlersMixin:
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            "native_mode": bool(
+                self.daemon is not None and self.daemon.is_native_mode()
+            ),
             # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo (emulacao suprimida).
             "emulation_suppressed": bool(
                 self.daemon is not None
@@ -218,6 +221,25 @@ class IpcHandlersMixin:
         """Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01)."""
         self.daemon.resume()
         return {"status": "ok", "paused": False}
+
+    async def _handle_native_mode_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01).
+
+        `enabled` opcional: ausente → toggle. Solta o controle para o jogo
+        (gatilhos Off, rumble passthrough, emulação off, autoswitch/hotkey
+        gateados, pausado). Desligar restaura o último perfil.
+        """
+        if self.daemon is None:
+            raise RuntimeError("daemon indisponível")
+        raw = params.get("enabled")
+        if raw is None:
+            enabled = not self.daemon.is_native_mode()
+        elif isinstance(raw, bool):
+            enabled = raw
+        else:
+            raise ValueError("native.mode.set exige 'enabled' boolean ou omitido")
+        new_state = self.daemon.set_native_mode(enabled)
+        return {"status": "ok", "native_mode": bool(new_state)}
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
         """Estado completo pra GUI consumir a 20Hz.
@@ -284,6 +306,9 @@ class IpcHandlersMixin:
             "counters": snap.counters,
             # FEAT-DAEMON-PAUSE-RESUME-01: applet/GUI distinguem pausado de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            "native_mode": bool(
+                self.daemon is not None and self.daemon.is_native_mode()
+            ),
             # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo (emulacao suprimida).
             "emulation_suppressed": bool(
                 self.daemon is not None

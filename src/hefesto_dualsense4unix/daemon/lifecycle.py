@@ -179,6 +179,9 @@ class Daemon:
     # emulação dentro de MANUAL_PROFILE_LOCK_SEC após um gesto manual — não
     # sequestra um gamepad virtual ligado na mão no meio do jogo.
     _emu_manual_ts: float = field(default=float("-inf"))
+    # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
+    # persiste no dataclass — é restaurado do flag no boot.
+    _native_mode: bool = False
     # BUG-EMU-DEVICE-RACE-01: serializa as transições de device de emulação
     # (start/stop de mouse e gamepad virtuais). A wave passou a chamar
     # set_mouse_emulation também da thread do executor (hotkey de ciclo via
@@ -257,6 +260,15 @@ class Daemon:
         # terminou pausada (o poll loop nasce respeitando _paused).
         from hefesto_dualsense4unix.utils.session import load_paused_state
         self._paused = load_paused_state()
+        # FEAT-NATIVE-MODE-01: se a sessão anterior terminou em Modo Nativo, sobe
+        # SOLTO — o controle fica com o jogo. Implica pausado e NÃO restaura
+        # emulação nem re-aplica perfil (os `not self._native_mode` abaixo e o
+        # gate em `restore_last_profile`).
+        from hefesto_dualsense4unix.utils.session import load_native_mode
+        self._native_mode = load_native_mode()
+        if self._native_mode:
+            self.store.set_native_mode_active(True)
+            self._paused = True
         # FEAT-MOUSE-PERSIST-01: restaura a emulação de mouse se a sessão anterior
         # a deixou ligada — antes o toggle voltava ao default (off) a cada restart
         # do daemon (reboot, takeover, reload). Só liga; nunca força off.
@@ -265,7 +277,7 @@ class Daemon:
         # (`"1\n"`) mantém os defaults da config.
         from hefesto_dualsense4unix.utils.session import load_mouse_emulation
         mouse_on, mouse_speed, mouse_scroll = load_mouse_emulation()
-        if mouse_on:
+        if mouse_on and not self._native_mode:
             self.config.mouse_emulation_enabled = True
             if mouse_speed is not None:
                 self.config.mouse_speed = max(1, min(12, int(mouse_speed)))
@@ -276,7 +288,7 @@ class Daemon:
         # precedência sobre o mouse (jogar = controle vai pro jogo).
         from hefesto_dualsense4unix.utils.session import load_gamepad_emulation
         gp_enabled, gp_flavor = load_gamepad_emulation()
-        if gp_enabled:
+        if gp_enabled and not self._native_mode:
             self.config.gamepad_emulation_enabled = True
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
@@ -397,6 +409,80 @@ class Daemon:
     def is_paused(self) -> bool:
         """True se o despacho de input está pausado."""
         return self._paused
+
+    def is_native_mode(self) -> bool:
+        """True se o Modo Nativo está ativo (controle solto para o jogo)."""
+        return self._native_mode
+
+    def set_native_mode(self, enabled: bool, *, reapply: bool = True) -> bool:
+        """Liga/desliga o Modo Nativo — "release total" do controle.
+
+        FEAT-NATIVE-MODE-01. Para jogar Sackboy & cia com os gatilhos adaptativos
+        NATIVOS da Sony (dirigidos pelo jogo), sem o hefesto no meio.
+
+        `enabled=True`: solta o controle — gatilhos Off/Off (o jogo impõe os
+        seus), rumble em passthrough (`rumble_active=None`, o hefesto não
+        re-asserta), emulação de mouse E gamepad desligada (libera grab/uinput),
+        gate `native_mode_active` (autoswitch/hotkey NÃO re-aplicam perfil) e
+        `pause()` (para o dispatch). Persiste o flag para sobreviver a restart.
+
+        `enabled=False`: limpa o gate, `resume()` e (se `reapply`) re-ativa o
+        último perfil — gatilhos/rumble/emulação voltam. `reapply=False` é usado
+        no boot (o restore do perfil roda por outro caminho).
+
+        Idempotente. Retorna o novo estado.
+        """
+        from hefesto_dualsense4unix.utils.session import save_native_mode
+
+        if enabled == self._native_mode:
+            return self._native_mode
+        self._native_mode = enabled
+        self.store.set_native_mode_active(enabled)
+        save_native_mode(enabled)
+        if enabled:
+            self._release_controller_to_game()
+            self.pause()
+        else:
+            self.resume()
+            if reapply:
+                self._reapply_last_profile()
+        logger.info("native_mode_changed", native=enabled)
+        return self._native_mode
+
+    def _release_controller_to_game(self) -> None:
+        """Neutraliza a saída do hefesto no controle (FEAT-NATIVE-MODE-01)."""
+        from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+        # Gatilhos Off/Off: o hefesto não impõe resistência; o jogo sobrescreve.
+        with contextlib.suppress(Exception):
+            off = build_from_name("Off", [])
+            self.controller.set_trigger("left", off)
+            self.controller.set_trigger("right", off)
+        # Rumble passthrough: reassert_rumble pula quando rumble_active é None.
+        self.config.rumble_active = None
+        # Emulação off: libera grab de evdev / device uinput.
+        with contextlib.suppress(Exception):
+            self.set_mouse_emulation(False)
+        with contextlib.suppress(Exception):
+            self.set_gamepad_emulation(False)
+
+    def _reapply_last_profile(self) -> None:
+        """Re-ativa o último perfil salvo (restaura gatilhos/rumble/emulação)."""
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.utils.session import load_last_profile
+
+        name = load_last_profile() or self.store.active_profile
+        if not name:
+            return
+        manager = ProfileManager(
+            controller=self.controller,
+            store=self.store,
+            keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
+            mouse_applier=self.apply_profile_mouse,
+            suppression_applier=self.apply_profile_suppression,
+        )
+        with contextlib.suppress(Exception):
+            manager.activate(name)
 
     def reload_config(self, new_config: DaemonConfig) -> None:
         """Aplica nova configuração em runtime sem reiniciar o daemon."""

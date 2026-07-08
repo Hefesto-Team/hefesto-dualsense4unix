@@ -132,6 +132,34 @@ def load_paused_state() -> bool:
         return False
 
 
+_NATIVE_MODE_FLAG_FILE = "native_mode.flag"
+
+
+def save_native_mode(active: bool) -> None:
+    """Persiste o Modo Nativo (FEAT-NATIVE-MODE-01) — existe = ativo.
+
+    Para o daemon subir em modo nativo após restart/reboot (o controle
+    permanece solto para o jogo). Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _NATIVE_MODE_FLAG_FILE
+        if active:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("native_mode_saved", active=active)
+    except Exception as exc:
+        logger.debug("native_mode_save_failed", err=str(exc))
+
+
+def load_native_mode() -> bool:
+    """Retorna True se o daemon foi deixado em Modo Nativo na sessão anterior."""
+    try:
+        return (config_dir() / _NATIVE_MODE_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
 _MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
 
 

@@ -163,6 +163,14 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def is_native_mode(self) -> bool:
+        """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
+        ...
+
+    def set_native_mode(self, enabled: bool, *, reapply: bool = True) -> bool:
+        """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
+        ...
+
     def apply_profile_mouse(
         self, enabled: bool, speed: int, scroll_speed: int
     ) -> None:

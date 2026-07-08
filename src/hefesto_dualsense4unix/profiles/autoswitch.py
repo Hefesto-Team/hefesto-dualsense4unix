@@ -116,6 +116,11 @@ class AutoSwitcher:
         return self.store.manual_profile_lock_active(time.monotonic())
 
     def _activate(self, name: str, info: dict[str, Any]) -> None:
+        # FEAT-NATIVE-MODE-01: em Modo Nativo o controle está SOLTO para o jogo —
+        # o autoswitch NÃO ativa perfil (que re-escreveria gatilhos por cima).
+        # Silencioso (estado estável, não um episódio de supressão por tick).
+        if self.store is not None and self.store.native_mode_active:
+            return
         # BUG-MOUSE-TRIGGERS-01: se o usuário tem um trigger manual aplicado
         # via aba Gatilhos, autoswitch suspende até o override ser limpo por
         # trigger.reset ou profile.switch explícito. Sem isso, ao ligar a aba

@@ -21,6 +21,16 @@ NDJSON UTF-8 (V2-3): uma requisição ou resposta por linha, terminada por `\n`.
 | `controller.list`   | `{}`                                          | `{controllers: [{vid, pid, transport}]}` |
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |
+| `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
+
+### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
+
+"Release total" do controle: solta o DualSense para o jogo usar os gatilhos
+adaptativos NATIVOS da Sony (Sackboy & cia). `enabled=true` → gatilhos Off/Off,
+rumble passthrough, emulação (mouse/gamepad) desligada, autoswitch/hotkey
+gateados e daemon pausado; persiste em `native_mode.flag` (sobrevive a restart).
+`enabled=false` → restaura o último perfil. `daemon.state_full` e `daemon.status`
+expõem `native_mode: bool`.
 
 ### `mouse.emulation.set` — `enabled` é OPCIONAL (BUG-MOUSE-GUI-SYNC-01 A4)
 
