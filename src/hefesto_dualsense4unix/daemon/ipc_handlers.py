@@ -539,13 +539,17 @@ class IpcHandlersMixin:
         """Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01).
 
         Params:
-            enabled: bool (obrigatório)
+            enabled: bool (opcional — ausente ativa a rota speed-only)
             speed: int 1-12 (opcional)
             scroll_speed: int 1-5 (opcional)
+
+        Sem ``enabled`` (BUG-MOUSE-GUI-SYNC-01 A4): atualiza SÓ as velocidades
+        na config e no device vivo (se existir), sem start/stop e sem persistir
+        o flag — os sliders da GUI não conseguem religar uma emulação desligada.
         """
         enabled = params.get("enabled")
-        if not isinstance(enabled, bool):
-            raise ValueError("mouse.emulation.set exige 'enabled' boolean")
+        if enabled is not None and not isinstance(enabled, bool):
+            raise ValueError("mouse.emulation.set: 'enabled' precisa ser boolean ou omitido")
         speed = params.get("speed")
         scroll_speed = params.get("scroll_speed")
         if speed is not None and not isinstance(speed, int):
@@ -555,6 +559,15 @@ class IpcHandlersMixin:
 
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar emulação de mouse")
+
+        if enabled is None:
+            ok = self.daemon.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
+            return {
+                "status": "ok" if ok else "failed",
+                "enabled": bool(
+                    getattr(self.daemon.config, "mouse_emulation_enabled", False)
+                ),
+            }
 
         ok = self.daemon.set_mouse_emulation(
             enabled=enabled, speed=speed, scroll_speed=scroll_speed

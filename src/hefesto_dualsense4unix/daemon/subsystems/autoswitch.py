@@ -71,7 +71,19 @@ class AutoswitchSubsystem:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
         _ensure_display_env()
-        manager = ProfileManager(controller=ctx.controller, store=ctx.store)
+        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers de
+        # emulação — antes o manager nascia sem keyboard_device e o autoswitch
+        # nunca propagava key_bindings/mouse ao focar a janela do jogo.
+        daemon = getattr(ctx, "daemon", None)
+        manager = ProfileManager(
+            controller=ctx.controller,
+            store=ctx.store,
+            keyboard_device_provider=lambda: getattr(
+                daemon, "_keyboard_device", None
+            ),
+            mouse_applier=getattr(daemon, "apply_profile_mouse", None),
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+        )
         self._autoswitch = AutoSwitcher(
             manager=manager,
             window_reader=build_window_reader(),
@@ -102,10 +114,16 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     _ensure_display_env()
+    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy — a captura eager de
+    # `_keyboard_device` congelava None (autoswitch sobe antes do keyboard no
+    # boot, lifecycle.py) e ficava stale após disconnect/reload. Os appliers
+    # ligam a seção `mouse` e a supressão de modo-jogo do perfil ao daemon.
     manager = ProfileManager(
         controller=daemon.controller,
         store=daemon.store,
-        keyboard_device=getattr(daemon, "_keyboard_device", None),
+        keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
+        mouse_applier=daemon.apply_profile_mouse,
+        suppression_applier=daemon.apply_profile_suppression,
     )
     daemon._autoswitch = AutoSwitcher(
         manager=manager,

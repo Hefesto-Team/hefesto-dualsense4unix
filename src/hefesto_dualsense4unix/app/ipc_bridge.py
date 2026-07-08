@@ -314,12 +314,19 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
 
 
 def mouse_emulation_set(
-    enabled: bool,
+    enabled: bool | None,
     speed: int | None = None,
     scroll_speed: int | None = None,
 ) -> bool:
-    """Liga/desliga emulação de mouse e atualiza velocidades via IPC."""
-    params: dict[str, Any] = {"enabled": bool(enabled)}
+    """Liga/desliga emulação de mouse e atualiza velocidades via IPC.
+
+    ``enabled=None`` omite o campo do payload — rota speed-only do daemon
+    (BUG-MOUSE-GUI-SYNC-01 A4): atualiza só as velocidades, sem ligar/desligar
+    a emulação nem persistir o flag.
+    """
+    params: dict[str, Any] = {}
+    if enabled is not None:
+        params["enabled"] = bool(enabled)
     if speed is not None:
         params["speed"] = int(speed)
     if scroll_speed is not None:

@@ -33,6 +33,19 @@ def _fake_input_device(
 
 
 class TestFindDualsenseTouchpadEvdev:
+    @pytest.fixture(autouse=True)
+    def _no_real_sysfs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """BUG-TEST-TOUCHPAD-SYSFS-NONHERMETIC-01: `find_dualsense_touchpad_evdev`
+        chama `_is_virtual_evdev`, que lê `/sys/class/input/` REAL. Com o daemon
+        rodando na máquina da usuária, seus nós uinput (event21+ virtuais) faziam
+        os paths MOCKADOS (event22) serem tratados como virtuais e descartados —
+        o teste passava/falhava conforme o daemon estivesse no ar. Isola o filtro
+        aqui (os testes dedicados de `_is_virtual_evdev` exercitam o real)."""
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
+            lambda _path: False,
+        )
+
     def test_encontra_device_com_touchpad_no_nome(self) -> None:
         paths = ["/dev/input/event20", "/dev/input/event21", "/dev/input/event22"]
         devices = {

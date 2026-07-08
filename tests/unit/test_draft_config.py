@@ -329,3 +329,48 @@ def test_to_ipc_dict_mic_led_ausente() -> None:
     draft = DraftConfig.default()
     d = draft.to_ipc_dict()
     assert "mic_led" not in d.get("leds", {})
+
+
+# ---------------------------------------------------------------------------
+# Dirty-tracking da seção mouse (BUG-MOUSE-GUI-SYNC-01 A2)
+# ---------------------------------------------------------------------------
+
+
+def test_to_ipc_dict_mouse_none_quando_nao_tocado() -> None:
+    """Seção mouse intocada vira None — DraftApplier pula e o Aplicar não
+    desliga (nem persiste off) uma emulação ligada por CLI/applet (repro A2)."""
+    draft = DraftConfig.default()
+    d = draft.to_ipc_dict()
+    assert d["mouse"] is None
+
+
+def test_to_ipc_dict_mouse_emitido_quando_dirty() -> None:
+    """Seção mouse tocada (dirty=True) preserva o comportamento atual."""
+    draft = DraftConfig.default()
+    novo_mouse = draft.mouse.model_copy(
+        update={"enabled": True, "speed": 9, "dirty": True}
+    )
+    d = draft.model_copy(update={"mouse": novo_mouse}).to_ipc_dict()
+    assert d["mouse"] == {"enabled": True, "speed": 9, "scroll_speed": 1}
+
+
+def test_to_ipc_dict_mouse_dirty_nao_vaza_no_payload() -> None:
+    """O campo interno `dirty` não faz parte do contrato IPC."""
+    novo_mouse = MouseDraft(enabled=True, dirty=True)
+    d = DraftConfig(mouse=novo_mouse).to_ipc_dict()
+    assert "dirty" not in d["mouse"]
+
+
+def test_from_profile_limpa_dirty_do_mouse() -> None:
+    """Recarregar do perfil (ex.: Restaurar Default) LIMPA o dirty da seção
+    mouse — perfil v1 não tem mouse, então a seção volta a intocada."""
+    profile = _make_profile()
+    draft = DraftConfig.from_profile(profile)
+    assert draft.mouse.dirty is False
+    assert draft.to_ipc_dict()["mouse"] is None
+
+
+def test_mouse_draft_dirty_default_false() -> None:
+    """Sincronização programática (overlay do state_full) não marca dirty."""
+    overlay = MouseDraft(enabled=True, speed=9, scroll_speed=2)
+    assert overlay.dirty is False

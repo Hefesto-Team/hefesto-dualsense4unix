@@ -77,6 +77,10 @@ class DaemonProtocol(Protocol):
     # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo — emulacao mouse/teclado
     # suprimida (devices vivos, hotkeys ativos).
     _emulation_suppressed: bool
+    # FEAT-POINT-AND-CLICK-01: instante do último toggle MANUAL do modo-jogo
+    # (-inf = nunca) e origem da supressão atual (True = veio de perfil).
+    _suppress_manual_ts: float
+    _suppress_from_profile: bool
     # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar.
     _failed_subsystems: dict[str, str]
 
@@ -126,6 +130,14 @@ class DaemonProtocol(Protocol):
         """Liga/desliga emulação de mouse e ajusta velocidades."""
         ...
 
+    def set_mouse_speed(
+        self,
+        speed: int | None = None,
+        scroll_speed: int | None = None,
+    ) -> bool:
+        """Ajusta velocidades SEM ligar/desligar a emulação (BUG-MOUSE-GUI-SYNC-01)."""
+        ...
+
     def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...
@@ -139,6 +151,26 @@ class DaemonProtocol(Protocol):
 
         FEAT-EMULATION-GAMEMODE-LONGPRESS-01. `value=None` faz toggle. Retorna o
         novo estado (True = suprimida).
+        """
+        ...
+
+    def apply_profile_suppression(self, desired: bool) -> None:
+        """Aplica `suppress_desktop_emulation` de um perfil (FEAT-POINT-AND-CLICK-01).
+
+        Respeita o toggle manual recente (janela de MANUAL_PROFILE_LOCK_SEC) e
+        só libera supressão que veio de perfil. Injetado como
+        `suppression_applier` do ProfileManager pelos callsites.
+        """
+        ...
+
+    def apply_profile_mouse(
+        self, enabled: bool, speed: int, scroll_speed: int
+    ) -> None:
+        """Aplica a seção `mouse` de um perfil (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01).
+
+        Respeita o lock manual recente da emulação (não sequestra um gamepad
+        ligado na mão) e é idempotente. Injetado como `mouse_applier` do
+        ProfileManager nas rotas de ativação (IPC switch, autoswitch, hotkey).
         """
         ...
 

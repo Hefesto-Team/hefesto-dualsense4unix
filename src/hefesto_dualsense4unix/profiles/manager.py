@@ -10,6 +10,7 @@ Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from hefesto_dualsense4unix.core.controller import IController
@@ -37,6 +38,24 @@ class ProfileManager:
     # Quando presente, `activate()` propaga o `key_bindings` resolvido para
     # o device. Typing "Any" para evitar ciclo de import com integrations.
     keyboard_device: object | None = None
+    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider LAZY do device de teclado.
+    # O manager é criado no boot ANTES de o keyboard subir (lifecycle sobe
+    # IPC/autoswitch primeiro) e o device é anulado/recriado em disconnect e
+    # reload — capturar a referência eager congela `None` para sempre. Os
+    # callsites injetam `lambda: getattr(daemon, "_keyboard_device", None)`;
+    # `apply_keyboard` resolve o provider a cada ativação. Quando presente,
+    # tem precedência sobre `keyboard_device` (mantido para backcompat).
+    keyboard_device_provider: Callable[[], object | None] | None = None
+    # FEAT-POINT-AND-CLICK-01: applier da seção `mouse` do perfil. Os callsites
+    # injetam `daemon.set_mouse_emulation` (retorna bool — por isso o retorno é
+    # `object`, não `None`). Assinatura: (enabled, speed, scroll_speed).
+    # None = seção mouse do perfil é ignorada (CLI/testes sem daemon).
+    mouse_applier: Callable[[bool, int, int], object] | None = None
+    # FEAT-POINT-AND-CLICK-01: applier da supressão de emulação (modo-jogo)
+    # por perfil. Os callsites injetam `daemon.apply_profile_suppression`, que
+    # concentra a política (origem perfil vs. toggle manual + lock de 30s).
+    # Recebe `profile.suppress_desktop_emulation` a cada ativação.
+    suppression_applier: Callable[[bool], object] | None = None
 
     def list_profiles(self) -> list[Profile]:
         return load_all_profiles()
@@ -77,10 +96,11 @@ class ProfileManager:
             return active == name
 
     def activate(self, name: str) -> Profile:
-        """Carrega, aplica triggers + LEDs e marca como ativo."""
+        """Carrega, aplica triggers + LEDs + teclado + emulação e marca como ativo."""
         profile = load_profile(name)
         self.apply(profile)
         self.apply_keyboard(profile)
+        self.apply_emulation(profile)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
         logger.info("profile_activated", name=profile.name, priority=profile.priority)
@@ -110,11 +130,17 @@ class ProfileManager:
     def apply_keyboard(self, profile: Profile) -> None:
         """Propaga `key_bindings` do perfil ao device virtual de teclado (A-06).
 
-        No-op quando `keyboard_device` é None (CLI, testes sem daemon) ou o
-        device não está ativo. Spec opção (c): método público para que a chamada
-        fique explícita nos pontos que têm acesso ao device.
+        No-op quando não há device (CLI, testes sem daemon) ou o device não
+        está ativo. Spec opção (c): método público para que a chamada fique
+        explícita nos pontos que têm acesso ao device.
+
+        FEAT-POINT-AND-CLICK-01 (A8): quando `keyboard_device_provider` existe,
+        ele é resolvido AQUI, a cada ativação — imune ao boot fora de ordem
+        (IPC/autoswitch sobem antes do keyboard) e ao device anulado/recriado
+        em disconnect/reload.
         """
-        device = self.keyboard_device
+        provider = self.keyboard_device_provider
+        device = provider() if provider is not None else self.keyboard_device
         if device is None:
             return
         resolved = _to_key_bindings(profile)
@@ -126,6 +152,44 @@ class ProfileManager:
                 profile=profile.name,
                 err=str(exc),
             )
+
+    def apply_emulation(self, profile: Profile) -> None:
+        """Aplica a seção `mouse` e a supressão de modo-jogo do perfil.
+
+        FEAT-POINT-AND-CLICK-01. Best-effort (falha loga warning, não aborta a
+        ativação — paridade com `apply_keyboard`):
+
+        - `profile.mouse` presente + `mouse_applier` injetado → liga/desliga a
+          emulação de mouse com as velocidades do perfil. `mouse=None` NÃO toca
+          no estado (comportamento v1 preservado).
+        - `suppression_applier` injetado → recebe SEMPRE o valor de
+          `suppress_desktop_emulation` (inclusive o default False, para que
+          trocar para um perfil sem o campo LIBERE a supressão ligada por outro
+          perfil). A política de "não reverter toggle manual" mora no applier
+          (`Daemon.apply_profile_suppression`).
+        """
+        if self.mouse_applier is not None and profile.mouse is not None:
+            try:
+                self.mouse_applier(
+                    profile.mouse.enabled,
+                    profile.mouse.speed,
+                    profile.mouse.scroll_speed,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "profile_mouse_apply_failed",
+                    profile=profile.name,
+                    err=str(exc),
+                )
+        if self.suppression_applier is not None:
+            try:
+                self.suppression_applier(profile.suppress_desktop_emulation)
+            except Exception as exc:
+                logger.warning(
+                    "profile_suppression_apply_failed",
+                    profile=profile.name,
+                    err=str(exc),
+                )
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe perfil de maior prioridade cujo match case com a janela.

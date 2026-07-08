@@ -81,13 +81,30 @@ class RumbleDraft(BaseModel):
 
 
 class MouseDraft(BaseModel):
-    """Draft da emulacao de mouse."""
+    """Draft da emulacao de mouse.
+
+    ``dirty``: True quando a usuária TOCOU a seção nesta sessão da GUI
+    (toggle ou sliders). ``to_ipc_dict`` só emite a seção mouse quando dirty —
+    BUG-MOUSE-GUI-SYNC-01 (A2): o "Aplicar" com seção intocada NÃO pode
+    desligar (nem persistir off) uma emulação ligada por CLI/applet.
+    Sincronizações programáticas (bootstrap, refresh da aba) NÃO marcam dirty.
+
+    ``in_profile``: True quando o perfil de origem JÁ possuía uma seção
+    ``mouse`` (BUG-MOUSE-SAVE-DROPS-SECTION-01). Separa "a seção existe no
+    perfil" de "a usuária tocou a seção agora" (``dirty``): sem essa distinção,
+    salvar um perfil point-and-click sem mexer na aba Mouse descartava a seção
+    e matava a feature. ``to_profile`` persiste a seção quando ``dirty`` OU
+    ``in_profile``; o overlay do bootstrap e o refresh da aba preservam este
+    flag (só atualizam enabled/speed/scroll para exibir o estado vivo).
+    """
 
     model_config = ConfigDict(frozen=True)
 
     enabled: bool = False
     speed: int = Field(default=6, ge=1, le=12)
     scroll_speed: int = Field(default=1, ge=1, le=5)
+    dirty: bool = False
+    in_profile: bool = False
 
 
 class EmulationDraft(BaseModel):
@@ -177,8 +194,22 @@ class DraftConfig(BaseModel):
         # Rumble — Profile.rumble so tem ``passthrough`` (sem weak/strong persistido)
         rumble = RumbleDraft()
 
-        # Mouse e Emulacao — não presentes no Profile v1; defaults
-        mouse = MouseDraft()
+        # Mouse — FEAT-POINT-AND-CLICK-01: a seção opcional ``profile.mouse``
+        # popula o draft (dirty=False: carga programática não é toque da
+        # usuária). Perfil sem a seção mantém os defaults do draft.
+        # BUG-MOUSE-SAVE-DROPS-SECTION-01: ``in_profile=True`` marca que o
+        # perfil TINHA a seção, para ``to_profile`` preservá-la mesmo sem toque.
+        if profile.mouse is not None:
+            mouse = MouseDraft(
+                enabled=profile.mouse.enabled,
+                speed=profile.mouse.speed,
+                scroll_speed=profile.mouse.scroll_speed,
+                dirty=False,
+                in_profile=True,
+            )
+        else:
+            mouse = MouseDraft()
+        # Emulacao (xbox360) — não presente no Profile v1; defaults
         emulation = EmulationDraft()
 
         return cls(
@@ -194,8 +225,16 @@ class DraftConfig(BaseModel):
         """Converte o draft em um Profile persistivel.
 
         Apenas os campos suportados pelo schema Profile v1 sao preenchidos.
-        Campos extras do draft (mouse, emulation, rumble.policy) sao descartados —
-        o schema não os suporta ainda.
+        FEAT-POINT-AND-CLICK-01: a seção ``mouse`` agora É suportada pelo
+        schema — incluída quando ``self.mouse.dirty`` (a usuária tocou a seção
+        nesta sessão) OU ``self.mouse.in_profile`` (o perfil de origem já a
+        tinha). BUG-MOUSE-SAVE-DROPS-SECTION-01: sem o segundo caso, salvar um
+        perfil point-and-click sem mexer na aba Mouse descartava a seção e
+        matava a feature; perfis legados (sem seção) seguem round-trip
+        inalterados (in_profile=False e dirty=False → sem seção fantasma).
+        Campos ainda sem suporte no schema (emulation, rumble.policy) continuam
+        descartados; ``suppress_desktop_emulation`` não é editável pelo draft
+        (fica no default False do schema).
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
@@ -203,6 +242,7 @@ class DraftConfig(BaseModel):
             LedsConfig,
             MatchAny,
             Profile,
+            ProfileMouseConfig,
             RumbleConfig,
             TriggerConfig,
             TriggersConfig,
@@ -210,6 +250,15 @@ class DraftConfig(BaseModel):
 
         brightness_float = self.leds.lightbar_brightness / 100.0
         rgb = self.leds.lightbar_rgb or (0, 0, 0)
+        mouse_cfg = (
+            ProfileMouseConfig(
+                enabled=self.mouse.enabled,
+                speed=self.mouse.speed,
+                scroll_speed=self.mouse.scroll_speed,
+            )
+            if (self.mouse.dirty or self.mouse.in_profile)
+            else None
+        )
 
         profile = Profile(
             name=name,
@@ -232,6 +281,7 @@ class DraftConfig(BaseModel):
             ),
             rumble=RumbleConfig(),
             key_bindings=self.key_bindings,
+            mouse=mouse_cfg,
         )
         # Revalida para garantir round-trip (captura regressoes de schema)
         return Profile.model_validate(profile.model_dump(mode="python"))
@@ -249,6 +299,10 @@ class DraftConfig(BaseModel):
         ao device (só ``profile.switch`` fazia). O DraftApplier resolve o inner
         ``key_bindings`` (None → DEFAULT_BUTTON_BINDINGS; dict → override). Daemon
         antigo ignora a seção desconhecida (aditivo, sem quebra de contrato).
+
+        A seção ``mouse`` é ``None`` quando não foi tocada nesta sessão
+        (``MouseDraft.dirty`` False) — o DraftApplier pula seção None
+        (BUG-MOUSE-GUI-SYNC-01 A2: "Aplicar" não desliga emulação viva).
         """
         rgb = self.leds.lightbar_rgb
         return {
@@ -271,11 +325,15 @@ class DraftConfig(BaseModel):
                 "weak": self.rumble.weak,
                 "strong": self.rumble.strong,
             },
-            "mouse": {
-                "enabled": self.mouse.enabled,
-                "speed": self.mouse.speed,
-                "scroll_speed": self.mouse.scroll_speed,
-            },
+            "mouse": (
+                {
+                    "enabled": self.mouse.enabled,
+                    "speed": self.mouse.speed,
+                    "scroll_speed": self.mouse.scroll_speed,
+                }
+                if self.mouse.dirty
+                else None
+            ),
             "keyboard": {
                 "key_bindings": (
                     {b: list(tokens) for b, tokens in self.key_bindings.items()}

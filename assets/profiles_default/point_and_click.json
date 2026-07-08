@@ -1,0 +1,32 @@
+{
+  "name": "point_and_click",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": ["GrimFandango", "grim"],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 60,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [255, 170, 0],
+    "player_leds": [false, false, true, false, false],
+    "lightbar_brightness": 0.6
+  },
+  "rumble": {"passthrough": true},
+  "key_bindings": {
+    "l1": ["KEY_LEFTSHIFT"],
+    "r1": ["KEY_DOT"],
+    "options": ["KEY_ESC"],
+    "create": ["KEY_I"],
+    "touchpad_left_press": ["KEY_E"],
+    "touchpad_middle_press": ["KEY_U"],
+    "touchpad_right_press": ["KEY_P"]
+  },
+  "mouse": {"enabled": true, "speed": 8, "scroll_speed": 1},
+  "suppress_desktop_emulation": false
+}

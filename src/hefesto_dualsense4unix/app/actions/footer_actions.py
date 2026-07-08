@@ -53,6 +53,10 @@ FROZEN_WIDGET_IDS: tuple[str, ...] = (
     "rumble_weak_scale",
     "rumble_strong_scale",
     "mouse_emulation_toggle",
+    # BUG-MOUSE-GUI-SYNC-01: os sliders da aba Mouse também disparam IPC —
+    # precisam congelar junto durante a transação do Aplicar.
+    "mouse_speed_scale",
+    "mouse_scroll_speed_scale",
 )
 
 
@@ -393,7 +397,11 @@ def _refresh_all_tabs(mixin: Any) -> None:
         "_refresh_lightbar_from_draft",
         "_refresh_triggers_from_draft",
         "_refresh_rumble_from_draft",
-        "_refresh_mouse_from_draft",
+        # BUG-MOUSE-RESTORE-DEFAULT-LIES-01: usa _refresh_mouse_TAB (draft +
+        # sync com o estado vivo do daemon), não _refresh_mouse_from_draft — se
+        # não, após "Restaurar Default" com a emulação viva (ligada por CLI/
+        # applet) a aba mostra toggle OFF enquanto o cursor continua andando.
+        "_refresh_mouse_tab",
         # BUG-KEYBOARD-TAB-NO-REFRESH-01: faltava a aba Teclado -> Restaurar
         # Default (e qualquer recarga via _refresh_all_tabs) deixava os bindings
         # stale, podendo reverter o restore ao editar.
