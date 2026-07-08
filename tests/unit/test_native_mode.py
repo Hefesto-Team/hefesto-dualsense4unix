@@ -5,12 +5,13 @@ idempotência, a restauração ao desligar, o gate do autoswitch e a rota IPC.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 from hefesto_dualsense4unix.testing import FakeController
@@ -39,17 +40,30 @@ def test_native_on_neutraliza_e_gate(daemon: Daemon, tmp_config: Any) -> None:
     assert daemon.set_native_mode(True) is True
     assert daemon.is_native_mode() is True
     assert daemon.store.native_mode_active is True
-    assert daemon.is_paused() is True
     # Rumble em passthrough (o hefesto não re-asserta).
     assert daemon.config.rumble_active is None
     # Emulação desligada (libera grab/uinput) com origin="profile": NÃO carimba o
     # lock manual de 30s — senão o restore ao desligar seria bloqueado.
     daemon.set_mouse_emulation.assert_called_with(False, origin="profile")  # type: ignore[attr-defined]
     daemon.set_gamepad_emulation.assert_called_with(False, origin="profile")  # type: ignore[attr-defined]
-    # O lock manual NÃO foi carimbado pelo release.
-    assert daemon._emu_manual_ts == float("-inf")
-    # Flag persistido.
+    # Flag persistido (JSON com o stash).
     assert (tmp_config / "native_mode.flag").exists()
+
+
+def test_native_nao_usa_pause(daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+    """BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01 (design): o Modo Nativo gateia o
+    dispatch pelo próprio flag, NÃO por pause(). Então não pisa num pause manual
+    anterior e `daemon.resume` não "des-solta" o controle."""
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
+    # Pause manual anterior.
+    daemon._paused = True
+    daemon.set_native_mode(True)
+    assert daemon.is_paused() is True  # native não mexeu no pause
+    # resume() durante native: o gate é o _native_mode, que continua ativo.
+    daemon.resume()
+    assert daemon.is_native_mode() is True  # continua solto para o jogo
+    daemon.set_native_mode(False)
+    # Off não força pause nem resume — respeita o estado de pause pós-resume.
 
 
 def test_native_off_restaura_e_limpa(
@@ -61,22 +75,44 @@ def test_native_off_restaura_e_limpa(
     assert daemon.set_native_mode(False) is False
     assert daemon.is_native_mode() is False
     assert daemon.store.native_mode_active is False
-    assert daemon.is_paused() is False  # resume
     assert reapplied == ["x"]  # re-aplicou o último perfil
     assert not (tmp_config / "native_mode.flag").exists()
 
 
-def test_native_off_nao_despausa_pause_manual(
-    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+def test_native_restaura_gamepad_do_stash(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch, tmp_config: Any
 ) -> None:
-    """BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01: se a usuária já estava pausada ANTES
-    do Modo Nativo, desligá-lo NÃO deve des-pausar (só des-pausa se o native
-    foi quem pausou)."""
-    daemon._paused = True  # pause manual anterior
+    """BUG-NATIVE-DESTROYS-GAMEPAD-01: o gamepad virtual ligado ANTES do Modo
+    Nativo é restaurado ao desligar (o release apaga o flag; o stash preserva)."""
+    from hefesto_dualsense4unix.utils import session as session_mod
+
+    # Sessão anterior: gamepad ligado (flavor xbox).
+    session_mod.save_gamepad_emulation(True, "xbox")
     monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
     daemon.set_native_mode(True)
+    # O stash capturou o gamepad ligado.
+    assert daemon._native_emu_stash["gamepad"] == [True, "xbox"]
+    daemon.set_gamepad_emulation.reset_mock()  # type: ignore[attr-defined]
     daemon.set_native_mode(False)
-    assert daemon.is_paused() is True  # continua pausada
+    # Restaurou o gamepad (precedência sobre mouse).
+    daemon.set_gamepad_emulation.assert_called_with(True, "xbox", origin="profile")  # type: ignore[attr-defined]
+
+
+def test_native_flag_stash_roundtrip_e_legado(tmp_config: Any) -> None:
+    """O flag guarda o stash (JSON) e o load o devolve; conteúdo legado "1" ok."""
+    from hefesto_dualsense4unix.utils.session import load_native_mode, save_native_mode
+
+    save_native_mode(True, emu_stash={"gamepad": [True, "xbox"], "mouse": [False, 6, 1]})
+    active, stash = load_native_mode()
+    assert active is True
+    assert stash["gamepad"] == [True, "xbox"]
+    # Legado "1\n" → ativo com stash vazio (sem crash).
+    (tmp_config / "native_mode.flag").write_text("1\n", encoding="utf-8")
+    active2, stash2 = load_native_mode()
+    assert active2 is True and stash2 == {}
+    # Ausente → (False, {}).
+    (tmp_config / "native_mode.flag").unlink()
+    assert load_native_mode() == (False, {})
 
 
 def test_native_idempotente(daemon: Daemon) -> None:
@@ -110,6 +146,40 @@ def test_state_full_inclui_native_mode(daemon: Daemon) -> None:
 
     state = asyncio.run(server._handle_daemon_state_full({}))
     assert state["native_mode"] is True
+
+
+async def test_boot_em_modo_nativo_nao_restaura_emulacao(
+    tmp_config: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Auditoria #4: boot com native_mode.flag — sobe SOLTO (native_mode ativo,
+    dispatch gateado) e NÃO restaura emulação de mouse/gamepad persistida (o
+    controle fica com o jogo)."""
+    from hefesto_dualsense4unix.utils import session as session_mod
+
+    # Sessão anterior: gamepad ligado E Modo Nativo ligado.
+    session_mod.save_gamepad_emulation(True, "xbox")
+    session_mod.save_native_mode(True, emu_stash={"gamepad": [True, "xbox"]})
+    # Não criar uinput real.
+    monkeypatch.setattr(Daemon, "_start_mouse_emulation", lambda self: True)
+
+    cfg = DaemonConfig(
+        poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+        autoswitch_enabled=False, keyboard_emulation_enabled=False,
+        ps_button_action="none", mic_button_toggles_system=False,
+    )
+    d = Daemon(controller=FakeController(transport="usb"), config=cfg)
+    run_task = asyncio.create_task(d.run())
+    await asyncio.sleep(0.05)
+    d.stop()
+    await run_task
+
+    assert d.is_native_mode() is True
+    assert d.store.native_mode_active is True
+    # Emulação NÃO restaurada (gate `and not self._native_mode` no boot).
+    assert d.config.gamepad_emulation_enabled is False
+    assert d.config.mouse_emulation_enabled is False
+    # O stash foi carregado (para um native off futuro restaurar).
+    assert d._native_emu_stash.get("gamepad") == [True, "xbox"]
 
 
 def test_ipc_native_mode_set_toggle(daemon: Daemon) -> None:

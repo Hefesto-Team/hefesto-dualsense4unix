@@ -17,6 +17,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -135,16 +136,19 @@ def load_paused_state() -> bool:
 _NATIVE_MODE_FLAG_FILE = "native_mode.flag"
 
 
-def save_native_mode(active: bool) -> None:
+def save_native_mode(active: bool, *, emu_stash: dict[str, Any] | None = None) -> None:
     """Persiste o Modo Nativo (FEAT-NATIVE-MODE-01) — existe = ativo.
 
-    Para o daemon subir em modo nativo após restart/reboot (o controle
-    permanece solto para o jogo). Best-effort: nunca propaga exceção.
+    O conteúdo é JSON com o STASH da emulação PRÉ-nativo (`emu_stash`) para
+    restaurar mouse/gamepad ao desligar (o release apaga os flags próprios).
+    Conteúdo legado `"1\n"` é tolerado no load. Best-effort: nunca propaga.
     """
     try:
         flag = config_dir(ensure=True) / _NATIVE_MODE_FLAG_FILE
         if active:
-            flag.write_text("1\n", encoding="utf-8")
+            flag.write_text(
+                json.dumps(emu_stash or {}), encoding="utf-8"
+            )
         else:
             flag.unlink(missing_ok=True)
         logger.debug("native_mode_saved", active=active)
@@ -152,12 +156,26 @@ def save_native_mode(active: bool) -> None:
         logger.debug("native_mode_save_failed", err=str(exc))
 
 
-def load_native_mode() -> bool:
-    """Retorna True se o daemon foi deixado em Modo Nativo na sessão anterior."""
+def load_native_mode() -> tuple[bool, dict[str, Any]]:
+    """Retorna (ativo, emu_stash) da sessão anterior.
+
+    `emu_stash`: {"mouse": [enabled, speed, scroll], "gamepad": [enabled, flavor]}
+    ou {} (ausente/legado). Tolerante a conteúdo legado `"1"` e a JSON inválido.
+    """
     try:
-        return (config_dir() / _NATIVE_MODE_FLAG_FILE).exists()
+        path = config_dir() / _NATIVE_MODE_FLAG_FILE
+        if not path.exists():
+            return False, {}
+        raw = path.read_text(encoding="utf-8").strip()
+        try:
+            stash = json.loads(raw) if raw else {}
+            if not isinstance(stash, dict):
+                stash = {}
+        except (json.JSONDecodeError, ValueError):
+            stash = {}  # legado "1\n"
+        return True, stash
     except Exception:
-        return False
+        return False, {}
 
 
 _MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"

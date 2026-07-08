@@ -180,11 +180,12 @@ class Daemon:
     # sequestra um gamepad virtual ligado na mão no meio do jogo.
     _emu_manual_ts: float = field(default=float("-inf"))
     # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
-    # persiste no dataclass — é restaurado do flag no boot.
+    # persiste no dataclass — é restaurado do flag no boot. O poll loop gateia o
+    # dispatch por este flag (independente de pause/resume).
     _native_mode: bool = False
-    # Estado de pause ANTES de entrar em Modo Nativo, para o off não des-pausar
-    # quem já estava pausado manualmente (BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01).
-    _paused_before_native: bool = False
+    # Estado de emulação (mouse/gamepad) capturado ANTES do Modo Nativo, para
+    # restaurar ao desligar (o release apaga os flags próprios).
+    _native_emu_stash: dict[str, Any] = field(default_factory=dict)
     # BUG-EMU-DEVICE-RACE-01: serializa as transições de device de emulação
     # (start/stop de mouse e gamepad virtuais). A wave passou a chamar
     # set_mouse_emulation também da thread do executor (hotkey de ciclo via
@@ -268,10 +269,11 @@ class Daemon:
         # emulação nem re-aplica perfil (os `not self._native_mode` abaixo e o
         # gate em `restore_last_profile`).
         from hefesto_dualsense4unix.utils.session import load_native_mode
-        self._native_mode = load_native_mode()
+        self._native_mode, self._native_emu_stash = load_native_mode()
         if self._native_mode:
+            # O gate de dispatch é o próprio _native_mode (consultado no poll
+            # loop); não força _paused (evita conflatar com o pause manual).
             self.store.set_native_mode_active(True)
-            self._paused = True
         # FEAT-MOUSE-PERSIST-01: restaura a emulação de mouse se a sessão anterior
         # a deixou ligada — antes o toggle voltava ao default (off) a cada restart
         # do daemon (reboot, takeover, reload). Só liga; nunca força off.
@@ -425,34 +427,51 @@ class Daemon:
 
         `enabled=True`: solta o controle — gatilhos Off/Off (o jogo impõe os
         seus), rumble em passthrough (`rumble_active=None`, o hefesto não
-        re-asserta), emulação de mouse E gamepad desligada (libera grab/uinput),
-        gate `native_mode_active` (autoswitch/hotkey NÃO re-aplicam perfil) e
-        `pause()` (para o dispatch). Persiste o flag para sobreviver a restart.
+        re-asserta), emulação de mouse E gamepad desligada (libera grab/uinput) —
+        o ESTADO de emulação é guardado (stash) para restaurar depois. Gate
+        `native_mode_active` (autoswitch/hotkey NÃO re-aplicam perfil). O poll
+        loop consulta `_native_mode` DIRETAMENTE (não via `pause()`), então o
+        dispatch fica congelado independente de pause/resume. Persiste flag+stash.
 
-        `enabled=False`: limpa o gate, `resume()` e (se `reapply`) re-ativa o
-        último perfil — gatilhos/rumble/emulação voltam. `reapply=False` é usado
-        no boot (o restore do perfil roda por outro caminho).
+        `enabled=False`: limpa o gate, re-ativa o último perfil (gatilhos/rumble)
+        e restaura a emulação do stash (gamepad tem precedência sobre mouse).
+        `reapply=False` no boot (o restore roda por outro caminho).
+
+        NOTA (BUG-NATIVE-* da auditoria): o Modo Nativo NÃO usa mais `pause()` —
+        gateia o dispatch pelo próprio flag. Assim `daemon.resume` não "des-solta"
+        o controle e um pause manual anterior não é pisado.
 
         Idempotente. Retorna o novo estado.
         """
-        from hefesto_dualsense4unix.utils.session import save_native_mode
+        from hefesto_dualsense4unix.utils.session import (
+            load_gamepad_emulation,
+            load_mouse_emulation,
+            save_native_mode,
+        )
 
         if enabled == self._native_mode:
             return self._native_mode
-        self._native_mode = enabled
-        self.store.set_native_mode_active(enabled)
-        save_native_mode(enabled)
         if enabled:
-            self._paused_before_native = self._paused
+            # Captura o estado de emulação ANTES do release (o release apaga os
+            # flags próprios). BUG-NATIVE-DESTROYS-GAMEPAD-01.
+            m_on, m_speed, m_scroll = load_mouse_emulation()
+            g_on, g_flavor = load_gamepad_emulation()
+            self._native_emu_stash = {
+                "mouse": [bool(m_on), m_speed, m_scroll],
+                "gamepad": [bool(g_on), g_flavor],
+            }
+            self._native_mode = True
+            self.store.set_native_mode_active(True)
+            save_native_mode(True, emu_stash=self._native_emu_stash)
             self._release_controller_to_game()
-            self.pause()
         else:
-            # Só des-pausa se o Modo Nativo foi quem pausou (não pisa num pause
-            # manual anterior). BUG-NATIVE-RESUME-CLOBBERS-PAUSE-01.
-            if not self._paused_before_native:
-                self.resume()
+            self._native_mode = False
+            self.store.set_native_mode_active(False)
+            save_native_mode(False)
             if reapply:
                 self._reapply_last_profile()
+                self._restore_emulation_from_stash()
+            self._native_emu_stash = {}
         logger.info("native_mode_changed", native=enabled)
         return self._native_mode
 
@@ -470,15 +489,14 @@ class Daemon:
         # Emulação off: libera grab de evdev / device uinput. origin="profile"
         # de propósito: desligar a emulação no release NÃO é um gesto manual da
         # usuária — se carimbasse `_emu_manual_ts`, o lock de 30s BLOQUEARIA o
-        # `_reapply_last_profile` ao desligar o Modo Nativo (o mouse do perfil,
-        # ex.: point_and_click, não voltaria). BUG-NATIVE-RELEASE-LOCKS-RESTORE-01.
+        # restore ao desligar (BUG-NATIVE-RELEASE-LOCKS-RESTORE-01).
         with contextlib.suppress(Exception):
             self.set_mouse_emulation(False, origin="profile")
         with contextlib.suppress(Exception):
             self.set_gamepad_emulation(False, origin="profile")
 
     def _reapply_last_profile(self) -> None:
-        """Re-ativa o último perfil salvo (restaura gatilhos/rumble/emulação)."""
+        """Re-ativa o último perfil salvo (restaura gatilhos/rumble/teclado)."""
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
         from hefesto_dualsense4unix.utils.session import load_last_profile
 
@@ -494,6 +512,26 @@ class Daemon:
         )
         with contextlib.suppress(Exception):
             manager.activate(name)
+
+    def _restore_emulation_from_stash(self) -> None:
+        """Restaura a emulação capturada antes do Modo Nativo (FEAT-NATIVE-MODE-01).
+
+        Gamepad tem precedência sobre mouse (mesma regra do boot: jogar = controle
+        vai pro jogo). Roda DEPOIS de `_reapply_last_profile` para vencer uma seção
+        mouse do perfil (o estado pré-nativo da usuária manda).
+        BUG-NATIVE-DESTROYS-GAMEPAD-01.
+        """
+        stash = getattr(self, "_native_emu_stash", None) or {}
+        g = stash.get("gamepad") or [False, None]
+        m = stash.get("mouse") or [False, None, None]
+        if g[0]:
+            with contextlib.suppress(Exception):
+                self.set_gamepad_emulation(True, g[1], origin="profile")
+        elif m[0]:
+            with contextlib.suppress(Exception):
+                self.set_mouse_emulation(
+                    True, m[1], m[2], origin="profile"
+                )
 
     def reload_config(self, new_config: DaemonConfig) -> None:
         """Aplica nova configuração em runtime sem reiniciar o daemon."""
@@ -1221,7 +1259,10 @@ class Daemon:
             # FEAT-DAEMON-PAUSE-RESUME-01: além do grace, respeita _paused — mas
             # isso gateia mouse/teclado/hotkey/edges; o gamepad já foi despachado
             # acima e NÃO é congelado por pausa/supressão.
-            input_ready = grace_passed and not self._paused
+            # FEAT-NATIVE-MODE-01: o Modo Nativo congela o mesmo dispatch pelo
+            # próprio flag (não via pause), então `daemon.resume` NÃO "des-solta"
+            # o controle enquanto o Modo Nativo estiver ativo.
+            input_ready = grace_passed and not self._paused and not self._native_mode
             if not input_ready:
                 if self._keyboard_device is not None:
                     self._prime_keyboard_emulation(buttons_pressed)
