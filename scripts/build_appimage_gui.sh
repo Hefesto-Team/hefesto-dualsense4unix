@@ -96,6 +96,15 @@ if [[ -d "$HERE/locale" ]]; then
     cp -r "$HERE/locale"/. "$APPDIR/usr/share/locale/"
 fi
 
+# Glyphs SVG dos botoes (aba Status): NAO vao no wheel; o resolvedor de
+# button_glyph.py procura em sys.prefix/share/hefesto-dualsense4unix/glyphs.
+# Espelha o modulo hefesto do manifest Flatpak. Sem isto a aba Status abre
+# sem os icones de botao no AppImage GUI.
+if [[ -d "$HERE/assets/glyphs" ]]; then
+    install -Dm644 -t "$APPDIR/usr/share/hefesto-dualsense4unix/glyphs/" \
+        "$HERE/assets/glyphs/"*.svg
+fi
+
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/bash
