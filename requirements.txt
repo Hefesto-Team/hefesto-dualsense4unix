@@ -1,0 +1,33 @@
+# requirements.txt — espelho de conveniencia das dependencias de runtime.
+#
+# FONTE DE VERDADE: pyproject.toml ([project.dependencies]). Este arquivo existe
+# para quem prefere `pip install -r requirements.txt`; o caminho recomendado
+# continua sendo `pip install .` (ou `pip install hefesto-dualsense4unix`), que
+# resolve tudo a partir do pyproject.
+#
+# Dependencias de SISTEMA (NAO instalaveis por pip) para a GUI GTK3:
+#   Debian/Ubuntu: sudo apt install python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0
+#   Fedora:        sudo dnf install python3-gobject gtk3 hidapi
+# Sem elas a CLI/daemon funcionam, mas a GUI (`hefesto-dualsense4unix-gui`) nao sobe.
+
+# --- runtime (core) ---
+pydualsense>=0.7.5
+textual>=0.47
+typer>=0.9
+pydantic>=2.0
+python-xlib>=0.33
+evdev>=1.6
+structlog>=23.0
+rich>=13.0
+platformdirs>=4.0
+filelock>=3.13
+
+# --- extras opcionais (instale conforme o uso) ---
+# emulacao de mouse/teclado/gamepad virtual:
+python-uinput>=0.11        # extra: emulation
+# icone de bandeja (tray) — requer tambem o python3-gi do sistema:
+PyGObject>=3.44            # extra: tray
+# backend Wayland via portal D-Bus (COSMIC/GNOME/Sway) — recomendado:
+jeepney>=0.8              # extra: cosmic
+# metricas Prometheus (opcional, dashboards):
+# prometheus-client>=0.19  # extra: metrics
