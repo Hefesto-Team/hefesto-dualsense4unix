@@ -12,6 +12,19 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.11.0" date="2026-07-09">
+      <description>
+        <p>Modo Nativo (solta o controle para os gatilhos adaptativos nativos da
+           Sony), modo point-and-click por perfil, cursor do mouse reescrito e
+           diagnostico anti-storm unificado no doctor/GUI. Remediacao de
+           estabilidade da GUI no COSMIC: rodape com os quatro botoes de volta,
+           fim da janela preta no boot sob XWayland+NVIDIA, politicas de rumble
+           mutuamente exclusivas, teclado para de apagar os atalhos de OSK, e fim
+           do jank de repaint. Isolamento automatico do socket em modo fake
+           (nunca sequestra o daemon de producao) e o .deb passa a empacotar as
+           regras udev 76/77 (touchpad + LEDs) em paridade com o install nativo.</p>
+      </description>
+    </release>
     <release version="3.5.0" date="2026-05-21">
       <description>
         <p>Acabamento de UI no COSMIC + empacotamento. Abas e popups dos

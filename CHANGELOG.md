@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.11.0] — 2026-07-09
+
 ### Added
 
 - **Modo Nativo — "release total" do controle** (FEAT-NATIVE-MODE-01): um botão
@@ -48,6 +50,28 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   (gamepad morto ao ativar o perfil, flags invertidos no boot, seção mouse
   descartada ao salvar o perfil, race de device uinput) — achados e corrigidos
   por três rodadas de auditoria adversarial.
+- **Remediação de estabilidade da GUI no COSMIC** (GUI-ESTABILIDADE-COSMIC-
+  REMEDIATION-01): 19 achados de 4 auditorias + reprodução ao vivo, corrigidos em
+  5 workstreams. **Rodapé** voltou a `GtkBox` (o `GtkFlowBox` dropava 3 de 4 botões
+  / `Negative content width`). **Janela preta no boot** (race de primeiro-frame
+  XWayland+NVIDIA): monta os widgets antes do `show_all` + repaint forçado pós-map.
+  **Rumble** com exclusão mútua real (1 política afundada por vez; clique sempre
+  reenvia IPC). **Teclado** parou de apagar os bindings de OSK de l3/r3
+  (`parse_binding` aceita tokens virtuais) — fim da perda de dados. **Emulação**
+  reconcilia todos os status ao "Atualizar"/trocar de aba. **Status** diffa o
+  repaint a 10 Hz (fim do jank) + guards de inflight nos 3 pollers. **Perfis**
+  "Ativar" async (não trava a GUI). **Lightbar** "Apagar" persiste no draft.
+  Fim do busy-loop `idle_add` da janela compacta; guard de refresh por-mixin.
+- **FakeController sequestrava o socket de produção** (BUG-FAKE-SOCKET-SYNC-01):
+  um daemon fake cru (`HEFESTO_DUALSENSE4UNIX_FAKE=1` sem nome de socket) usava o
+  socket de produção e a GUI passava a falar com ele ("Conectado Via USB"
+  fantasma). O nome do socket agora é derivado do próprio switch de fake
+  (`ipc_socket_name`), isolando fake/produção de forma automática.
+- **`.deb` não empacotava as regras udev 76/77** (PACKAGING-UDEV-DEB-PARITY-01):
+  sem a 76 o touchpad do DualSense brigava com a emulação de mouse; sem a 77 a
+  lightbar/player-LED via sysfs não gravava. Agora o `.deb` empacota 70/71/72/76/77
+  em paridade com o install nativo, e só empacota units systemd que funcionam nesse
+  contexto.
 
 ## [3.10.0] — 2026-06-28
 

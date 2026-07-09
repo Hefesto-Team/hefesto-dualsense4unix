@@ -19,7 +19,7 @@
 ---
 
 ```
-Versão: 3.10.0
+Versão: 3.11.0
 Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT (lightbar colorida em ambos os transportes); 1675 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (dropdown legível no Drácula + sem busy-loop de CPU) + janela compacta opcional (opt-in); modo jogo via long-press do PS suprime mouse/teclado virtuais sem matar o daemon; install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT

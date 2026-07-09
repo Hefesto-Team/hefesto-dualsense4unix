@@ -140,12 +140,16 @@ fi
 # ---------------------------------------------------------------------------
 # Copiar regras udev
 # ---------------------------------------------------------------------------
-# PACKAGING-UDEV-CANONICAL-FIX-01: empacota só o conjunto canônico 70/71/72.
-# As 73/74 (hotplug-GUI) foram removidas por alimentarem a re-enumeração do
-# storm -71 — paridade com scripts/install_udev.sh (que faz rm -f delas). 75/76
-# são opt-in (não devem auto-ativar via .deb).
+# PACKAGING-UDEV-DEB-PARITY-01: empacota o conjunto canônico 70/71/72/76/77 —
+# PARIDADE com scripts/install_udev.sh (native) e scripts/install-host-udev.sh.
+# 76 (touchpad-libinput-ignore) e 77 (leds) NÃO são opt-in: sem a 76 o touchpad
+# do DualSense briga com a emulação de mouse (feature-título point-and-click);
+# sem a 77 a lightbar/player-LED via sysfs não grava. As 73/74 (hotplug-GUI)
+# ficam de fora (alimentavam a re-enumeração do storm -71); a 75 (disable-usb-
+# audio) é a genuinamente opt-in.
 echo "Copiando regras udev ..."
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules; do
+for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
+                  assets/76-*.rules assets/77-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
@@ -166,7 +170,8 @@ install -Dm644 assets/hefesto-dualsense4unix.conf \
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules; do
+for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
+                  assets/76-*.rules assets/77-*.rules; do
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
@@ -194,16 +199,19 @@ fi
 # Copiar units systemd user
 # ---------------------------------------------------------------------------
 echo "Copiando units systemd ..."
-for service_file in assets/*.service; do
+# PACKAGING-DEB-SERVICES-EXPLICIT-01: só as units que FUNCIONAM no contexto .deb
+# (binários em /usr/bin, resolvidos pelo sed abaixo). As demais de assets/
+# (storm-watch, steam-input-guard, dsx-recover) dependem de scripts que o .deb
+# não instala ou de placeholders (__SCRIPT__) que só o install.sh nativo resolve
+# — empacotá-las deixaria units quebradas visíveis em list-unit-files.
+for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
+    service_file="assets/${base}"
     [ -f "$service_file" ] || continue
-    base=$(basename "$service_file")
     cp "$service_file" "${STAGING}/usr/lib/systemd/user/${base}"
     # ExecStart no source usa %h/.local/bin/... (path do install.sh nativo
-    # que cria symlink). No .deb o binário fica em /usr/bin/. Substituir
-    # in-place pra unit apontar pro wrapper correto.
+    # que cria symlink). No .deb o binário fica em /usr/bin/. O sed cobre tanto
+    # o CLI quanto o -gui (o -gui casa pelo prefixo). Substituir in-place.
     sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
-        "${STAGING}/usr/lib/systemd/user/${base}"
-    sed -i 's|%h/\.local/bin/hefesto-dualsense4unix-gui|/usr/bin/hefesto-dualsense4unix-gui|g' \
         "${STAGING}/usr/lib/systemd/user/${base}"
 done
 
