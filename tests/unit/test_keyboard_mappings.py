@@ -96,4 +96,25 @@ def test_format_binding_inverso_de_parse() -> None:
                  "KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_T"):
         assert format_binding(parse_binding(spec)) == spec
 
+
+def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
+    """GUI Sprint 4 T1 (perda de dados): tokens virtuais OSK NÃO podem levantar.
+
+    `__OPEN_OSK__`/`__CLOSE_OSK__` são os defaults de l3/r3 e a legenda da UI
+    manda digitá-los na célula; `parse_binding` tem de aceitá-los COMO ESTÃO
+    (sem exigir `KEY_*`), preservando o token para o downstream (que os
+    intercepta via `is_virtual_token` e delega ao callback de OSK). Antes deste
+    fix, `_persist_key_bindings_to_draft` descartava l3/r3 no `except ValueError`.
+    """
+    assert parse_binding("__OPEN_OSK__") == ("__OPEN_OSK__",)
+    assert parse_binding("__CLOSE_OSK__") == ("__CLOSE_OSK__",)
+    # Entrada case-insensitive (normalizada para uppercase, como os KEY_*).
+    assert parse_binding("__open_osk__") == ("__OPEN_OSK__",)
+
+
+def test_parse_binding_round_trip_tokens_virtuais() -> None:
+    """Round-trip `format_binding(parse_binding(x)) == x` para os tokens OSK."""
+    for spec in ("__OPEN_OSK__", "__CLOSE_OSK__"):
+        assert format_binding(parse_binding(spec)) == spec
+
 # "Conhece-te a ti mesmo." — Sócrates

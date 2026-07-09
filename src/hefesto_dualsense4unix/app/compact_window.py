@@ -115,7 +115,10 @@ class CompactWindow:
             return False
 
         # Primeiro refresh imediato + tick periódico.
-        GLib.idle_add(self._tick_refresh)
+        # FIX-GUI-COSMIC-REMEDIATION-01 (R2): _tick_refresh retorna True (para o
+        # timeout periódico repetir); no idle_add isso viraria busy-loop 100% CPU
+        # (BUG-GUI-IDLE-ADD-BUSY-LOOP-01). O lambda força retorno False (one-shot).
+        GLib.idle_add(lambda: self._tick_refresh() and False)
         GLib.timeout_add_seconds(COMPACT_REFRESH_SEC, self._tick_refresh)
         logger.info(
             "compact_window_started",

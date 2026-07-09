@@ -40,13 +40,18 @@ def single_instance_name() -> str:
     Atando o lock ao socket, cada namespace de socket tem seu próprio
     single-instance: dois daemons de PRODUÇÃO (socket default) ainda se substituem
     corretamente; fake/smoke/custom nunca matam o real.
+
+    BUG-FAKE-SOCKET-SYNC-01: o nome-base vem de `ipc_socket_name()` (fake-aware), a
+    MESMA fonte que `ipc_socket_path()`. Assim o lock e o socket derivam do mesmo
+    switch de fake — um daemon fake (mesmo iniciado como `daemon start` cru) tem
+    socket E lock isolados, e nunca sequestra/mata o daemon de produção.
     """
     from hefesto_dualsense4unix.utils.xdg_paths import (
         IPC_SOCKET_DEFAULT_NAME,
-        IPC_SOCKET_ENV_VAR,
+        ipc_socket_name,
     )
 
-    sock = os.getenv(IPC_SOCKET_ENV_VAR) or IPC_SOCKET_DEFAULT_NAME
+    sock = ipc_socket_name()
     if sock == IPC_SOCKET_DEFAULT_NAME:
         return "daemon"
     return "daemon-" + sock.removesuffix(".sock")

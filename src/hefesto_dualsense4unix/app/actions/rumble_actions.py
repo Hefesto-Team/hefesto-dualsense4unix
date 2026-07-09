@@ -47,7 +47,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
     """Controla a aba Rumble."""
 
     # Guard para evitar loop widget->draft->refresh->widget.
-    _guard_refresh: bool = False
+    _rumble_guard_refresh: bool = False
     # Política corrente (espelhada localmente para guard de toggle).
     _rumble_policy: str = "balanceado"
 
@@ -80,9 +80,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
     def _apply_policy_to_widgets(self, policy: str, custom_mult: float) -> None:
         """Reflete política e mult nos widgets sem disparar callbacks de sinal."""
-        if self._guard_refresh:
+        if self._rumble_guard_refresh:
             return
-        self._guard_refresh = True
+        self._rumble_guard_refresh = True
         self._rumble_policy = policy
         try:
             # Ativa o toggle correto.
@@ -113,42 +113,52 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if lbl is not None:
                 lbl.set_visible(policy == "auto")
         finally:
-            self._guard_refresh = False
+            self._rumble_guard_refresh = False
 
     # --- handlers dos toggles de política ---
 
-    def on_rumble_policy_economia(self, btn: Gtk.ToggleButton) -> None:
-        if self._guard_refresh or not btn.get_active():
+    def on_rumble_policy_economia(self, _btn: Gtk.ToggleButton) -> None:
+        # A1: NÃO curto-circuitar em get_active()==False. Os 4 toggles são
+        # GtkToggleButton independentes: clicar num já-ativo o desmarca
+        # (get_active()==False), e o antigo `not btn.get_active(): return`
+        # virava clique morto (nenhuma política afundada + IPC não reenviado).
+        # Agora todo clique cai em _set_policy, que re-afirma o botão certo
+        # (desmarcando os irmãos) e reenvia o IPC — sempre exatamente 1 afundado.
+        if self._rumble_guard_refresh:
             return
         self._set_policy("economia")
 
-    def on_rumble_policy_balanceado(self, btn: Gtk.ToggleButton) -> None:
-        if self._guard_refresh or not btn.get_active():
+    def on_rumble_policy_balanceado(self, _btn: Gtk.ToggleButton) -> None:
+        if self._rumble_guard_refresh:
             return
         self._set_policy("balanceado")
 
-    def on_rumble_policy_max(self, btn: Gtk.ToggleButton) -> None:
-        if self._guard_refresh or not btn.get_active():
+    def on_rumble_policy_max(self, _btn: Gtk.ToggleButton) -> None:
+        if self._rumble_guard_refresh:
             return
         self._set_policy("max")
 
-    def on_rumble_policy_auto(self, btn: Gtk.ToggleButton) -> None:
-        if self._guard_refresh or not btn.get_active():
+    def on_rumble_policy_auto(self, _btn: Gtk.ToggleButton) -> None:
+        if self._rumble_guard_refresh:
             return
         self._set_policy("auto")
 
     def _set_policy(self, policy: str) -> None:
         """Envia política ao daemon e atualiza slider para valor canônico."""
         self._rumble_policy = policy
-        # Mover slider para valor canônico do preset (feedback visual).
         slider: Gtk.Scale = self._get("rumble_policy_slider")
-        if slider is not None:
-            pct = int(_POLICY_MULT.get(policy, 0.7) * 100)
-            self._guard_refresh = True
-            try:
+        # A1: exclusão mútua ANTES do IPC — desmarca os irmãos e re-afirma o
+        # botão certo (mesmo quando o clique num já-ativo o desmarcou), sob guard
+        # para os "toggled" reentrantes dos irmãos não reentrarem nos handlers de
+        # política. Junto, move o slider para o valor canônico (feedback visual).
+        self._rumble_guard_refresh = True
+        try:
+            self._activate_policy_toggle(policy)
+            if slider is not None:
+                pct = int(_POLICY_MULT.get(policy, 0.7) * 100)
                 slider.set_value(float(pct))
-            finally:
-                self._guard_refresh = False
+        finally:
+            self._rumble_guard_refresh = False
 
         # Label Auto.
         lbl: Gtk.Label = self._get("rumble_policy_auto_label")
@@ -166,7 +176,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
     def on_rumble_policy_slider_changed(self, slider: Gtk.Scale) -> None:
         """Slider movido: política vira "custom" com mult = valor/100."""
-        if self._guard_refresh:
+        if self._rumble_guard_refresh:
             return
         mult = slider.get_value() / 100.0
         # Se o mult coincide exatamente com um preset, escolhê-lo.
@@ -175,16 +185,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 continue
             if abs(mult - canon_mult) < 0.005:
                 if self._rumble_policy != policy:
-                    self._guard_refresh = True
+                    self._rumble_guard_refresh = True
                     try:
                         self._activate_policy_toggle(policy)
                     finally:
-                        self._guard_refresh = False
+                        self._rumble_guard_refresh = False
                     self._set_policy(policy)
                 return
 
         # Mult não é preset: modo custom.
-        self._guard_refresh = True
+        self._rumble_guard_refresh = True
         try:
             for pid in ("rumble_policy_economia", "rumble_policy_balanceado",
                         "rumble_policy_max", "rumble_policy_auto"):
@@ -195,7 +205,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if lbl is not None:
                 lbl.set_visible(False)
         finally:
-            self._guard_refresh = False
+            self._rumble_guard_refresh = False
 
         self._rumble_policy = "custom"
         rumble_policy_custom(mult)
@@ -274,15 +284,15 @@ class RumbleActionsMixin(WidgetAccessMixin):
     def _refresh_rumble_from_draft(self) -> None:
         """Popula widgets da aba Rumble a partir de self.draft.rumble e state_full.
 
-        Protegido por _guard_refresh para não disparar handlers de sinal
+        Protegido por _rumble_guard_refresh para não disparar handlers de sinal
         durante a atualização programática dos sliders.
         """
-        if self._guard_refresh:
+        if self._rumble_guard_refresh:
             return
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        self._guard_refresh = True
+        self._rumble_guard_refresh = True
         try:
             rumble = draft.rumble
             weak_scale: Gtk.Scale = self._get("rumble_weak_scale")
@@ -292,20 +302,29 @@ class RumbleActionsMixin(WidgetAccessMixin):
             if strong_scale is not None:
                 strong_scale.set_value(float(rumble.strong))
         finally:
-            self._guard_refresh = False
+            self._rumble_guard_refresh = False
         # Sincroniza política do daemon (async — não bloqueia GTK).
         self._sync_policy_from_state()
 
     # --- helpers ---
 
     def _read_scales(self) -> tuple[int, int]:
-        weak = int(self._get("rumble_weak_scale").get_value())
-        strong = int(self._get("rumble_strong_scale").get_value())
+        # B1-rumble: None-guard — _get pode devolver None se o widget não existe
+        # no builder (evita AttributeError ao desreferenciar).
+        w = self._get("rumble_weak_scale")
+        s = self._get("rumble_strong_scale")
+        weak = int(w.get_value()) if w is not None else 0
+        strong = int(s.get_value()) if s is not None else 0
         return weak, strong
 
     def _set_scales(self, weak: int, strong: int) -> None:
-        self._get("rumble_weak_scale").set_value(weak)
-        self._get("rumble_strong_scale").set_value(strong)
+        # B1-rumble: None-guard antes de desreferenciar cada scale.
+        w = self._get("rumble_weak_scale")
+        if w is not None:
+            w.set_value(weak)
+        s = self._get("rumble_strong_scale")
+        if s is not None:
+            s.set_value(strong)
 
     def _rumble_test_stop(self) -> bool:
         # Teste de 500ms encerrado: para via rumble_stop para garantir persistência do zero.

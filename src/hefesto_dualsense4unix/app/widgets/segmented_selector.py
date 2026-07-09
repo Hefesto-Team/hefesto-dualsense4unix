@@ -164,8 +164,22 @@ if _GTK_DISPONIVEL:
                 flow.set_homogeneous(False)
                 flow.set_row_spacing(2)
                 flow.set_column_spacing(0)
+                # M2: com min_children_per_line=1 e 19 botões de rótulo largo, o
+                # FlowBox exige a largura do botão mais largo como mínimo; sob o
+                # scroller-pai da aba Gatilhos (hscroll=NEVER) isso estoura em
+                # `Gtk-WARNING: Negative content width` + coluna larga. Envolver o
+                # FlowBox num ScrolledWindow (h=AUTOMATIC, v=NEVER) dá a largura de
+                # referência: o ScrolledWindow reporta mínimo pequeno, então o
+                # FlowBox NUNCA é alocado com largura negativa (rola em vez disso).
+                # propagate_natural_height mantém a altura natural (sem cortar).
+                scroller = Gtk.ScrolledWindow()
+                scroller.set_policy(
+                    Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER
+                )
+                scroller.set_propagate_natural_height(True)
+                scroller.add(flow)
                 self._container: Any = flow
-                self.pack_start(flow, True, True, 0)
+                self.pack_start(scroller, True, True, 0)
             else:
                 self.get_style_context().add_class("linked")
                 self._container = self
