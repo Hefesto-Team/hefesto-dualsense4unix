@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-1450%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-1856%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -20,7 +20,7 @@
 
 ```
 Versão: 3.11.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT (lightbar colorida em ambos os transportes); 1675 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC (dropdown legível no Drácula + sem busy-loop de CPU) + janela compacta opcional (opt-in); modo jogo via long-press do PS suprime mouse/teclado virtuais sem matar o daemon; install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT (lightbar colorida em ambos os transportes); 1856 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC estabilizada (rodapé completo, sem tela preta no boot, rumble com exclusão mútua, teclado preserva OSK, sem jank de repaint); Modo Nativo solta o controle para os gatilhos adaptativos nativos da Sony; modo point-and-click por perfil + cursor de mouse reescrito; diagnóstico anti-storm unificado no doctor/GUI; modo jogo via long-press do PS suprime mouse/teclado virtuais sem matar o daemon; install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
@@ -601,7 +601,7 @@ Hefesto-DualSense_Unix/
   scripts/
     dev-setup.sh, dev_bootstrap.sh, install_udev.sh
     validar-acentuacao.py, check_anonymity.sh, check_version_consistency.py
-  tests/unit/       # 1003 testes pytest
+  tests/unit/       # 1856 testes pytest
   docs/
     adr/            # 9 Architecture Decision Records
     protocol/       # UDP schema, IPC JSON-RPC, trigger modes
