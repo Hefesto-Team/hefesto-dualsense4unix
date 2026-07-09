@@ -21,7 +21,7 @@ from gi.repository import GObject, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
-from hefesto_dualsense4unix.app.ipc_bridge import call_async, profile_switch, run_in_thread
+from hefesto_dualsense4unix.app.ipc_bridge import call_async, run_in_thread
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
@@ -136,7 +136,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         prefs = load_gui_prefs()
         self._mode_advanced = bool(prefs.get("advanced_editor", False))
         switch: Gtk.Switch = self._get("profile_advanced_switch")
-        switch.set_active(self._mode_advanced)
+        # T7: set_active programático no boot dispara on_profile_advanced_toggle,
+        # que persistiria a pref no disco na thread GTK. Guard igual ao usado em
+        # _populate_editor / on_profile_new.
+        self._suppress_advanced_toggle = True
+        try:
+            switch.set_active(self._mode_advanced)
+        finally:
+            self._suppress_advanced_toggle = False
         self._apply_editor_mode()
 
         self._profiles_cache = []
@@ -316,10 +323,29 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if name is None:
             self._toast_profile("Selecione um perfil para ativar")
             return
-        ok = profile_switch(name)
-        self._toast_profile(
-            f"Perfil ativado: {name}" if ok else "Falha (daemon offline?)"
+        # T4: profile.switch é I/O do daemon (asyncio.run no _safe_call síncrono
+        # travava a thread GTK até o timeout). call_async despacha ao worker e
+        # devolve o toast/refresh via GLib.idle_add — mesmo padrão async da aba.
+        call_async(
+            method="profile.switch",
+            params={"name": name},
+            on_success=lambda _result: self._on_profile_switch_success(name),
+            on_failure=self._on_profile_switch_failure,
         )
+
+    def _on_profile_switch_success(self, name: str) -> bool:
+        """Callback GTK do switch de perfil: toast + re-sincroniza a seleção."""
+        self._toast_profile(f"Perfil ativado: {name}")
+        # Preserva o comportamento visível: seleção acompanha o perfil ativo
+        # reportado pelo daemon após o switch.
+        self._sync_selection_with_active_profile()
+        return False  # GLib.idle_add: não repetir
+
+    def _on_profile_switch_failure(self, exc: Exception) -> bool:
+        """Callback GTK de falha do switch (daemon offline / erro de transporte)."""
+        logger.debug("profile_switch_falhou", err=str(exc))
+        self._toast_profile("Falha (daemon offline?)")
+        return False
 
     def on_profile_reload(self, _btn: Gtk.Button | None) -> None:
         self._reload_profiles_store()

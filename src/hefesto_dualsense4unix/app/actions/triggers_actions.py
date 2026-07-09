@@ -40,7 +40,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
     # Mesma API por-ID do combo (set_items/get_active_id/set_active_id + "changed").
     _trigger_mode: dict[str, Any]
     # Guard para evitar loop widget->draft->refresh->widget.
-    _guard_refresh: bool = False
+    _triggers_guard_refresh: bool = False
     # Guard para evitar que a aplicação de preset dispare o handler de slider
     # e reverta o preset para "custom" imediatamente.
     _trigger_preset_applying: bool = False
@@ -88,17 +88,17 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 preset_slot.pack_start(preset_sel, True, True, 0)
                 preset_sel.show_all()
             self._trigger_preset[side] = preset_sel
-            # set_active_id EMITE "changed" (como o combo). Fazemos sob _guard_refresh
+            # set_active_id EMITE "changed" (como o combo). Fazemos sob _triggers_guard_refresh
             # para o handler curto-circuitar: senão `_on_mode_changed` AGENDA um
             # live-preview (300ms) que escreve "Off" no hardware ao abrir a GUI e
             # corre com o bootstrap do perfil, ZERANDO os gatilhos do perfil ativo
             # (BUG-GUI-OPEN-OFF-TRIGGER-WRITE-01). Montamos os sliders/linha de
             # preset explicitamente, sem tocar no hardware nem no draft.
-            self._guard_refresh = True
+            self._triggers_guard_refresh = True
             try:
                 sel.set_active_id("Off")
             finally:
-                self._guard_refresh = False
+                self._triggers_guard_refresh = False
             self._rebuild_params(side, "Off")
             self._update_preset_row_visibility(side, "Off")
             self._populate_preset_combo(side, "MultiPositionFeedback")
@@ -108,15 +108,15 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def _refresh_triggers_from_draft(self) -> None:
         """Popula widgets da aba Triggers a partir de self.draft.triggers.
 
-        Protegido por _guard_refresh para não disparar handlers de signal
+        Protegido por _triggers_guard_refresh para não disparar handlers de signal
         durante a atualização programatica dos combos.
         """
-        if self._guard_refresh:
+        if self._triggers_guard_refresh:
             return
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        self._guard_refresh = True
+        self._triggers_guard_refresh = True
         try:
             for side in ("left", "right"):
                 trigger_draft = getattr(draft.triggers, side)
@@ -130,14 +130,14 @@ class TriggersActionsMixin(WidgetAccessMixin):
                 for i, name in enumerate(widgets):
                     if i < len(trigger_draft.params):
                         widgets[name].set_value(trigger_draft.params[i])
-                # O set_active_id do modo roda sob _guard_refresh, então
+                # O set_active_id do modo roda sob _triggers_guard_refresh, então
                 # _on_mode_changed retorna cedo e a linha "Preset:" não seria
                 # revelada/escondida ao carregar um perfil. Chamamos explícito:
                 # é seguro sob o guard (o set_active_id("custom") interno do
                 # preset combo re-entra em _on_preset_changed, que sai no guard).
                 self._update_preset_row_visibility(side, trigger_draft.mode)
         finally:
-            self._guard_refresh = False
+            self._triggers_guard_refresh = False
 
     # --- signals ---
 
@@ -171,7 +171,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
     # --- helpers ---
 
     def _on_mode_changed(self, side: str, combo: Any) -> None:
-        if self._guard_refresh:
+        if self._triggers_guard_refresh:
             return
         preset_id = combo.get_active_id()
         if preset_id is None:
@@ -215,7 +215,7 @@ class TriggersActionsMixin(WidgetAccessMixin):
 
     def _on_preset_changed(self, side: str, combo: Any) -> None:
         """Aplica o preset selecionado populando os sliders de posicao."""
-        if self._guard_refresh or self._trigger_preset_applying:
+        if self._triggers_guard_refresh or self._trigger_preset_applying:
             return
         preset_key = combo.get_active_id()
         if preset_key is None or preset_key == "custom":
@@ -293,15 +293,15 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if active != "custom":
             # Salva/restaura o guard em vez de zerar absoluto: este método é o
             # handler 'value-changed' dos sliders e pode disparar DENTRO de
-            # _refresh_triggers_from_draft (que mantém _guard_refresh=True ao
+            # _refresh_triggers_from_draft (que mantém _triggers_guard_refresh=True ao
             # chamar set_value). Zerar absoluto quebraria o guard no meio do
             # refresh e deixaria o resto do laço rodar desprotegido (reentrância).
-            prev_guard = self._guard_refresh
-            self._guard_refresh = True
+            prev_guard = self._triggers_guard_refresh
+            self._triggers_guard_refresh = True
             try:
                 combo.set_active_id("custom")
             finally:
-                self._guard_refresh = prev_guard
+                self._triggers_guard_refresh = prev_guard
 
     def _rebuild_params(self, side: str, preset_id: str) -> None:
         spec = get_spec(preset_id)

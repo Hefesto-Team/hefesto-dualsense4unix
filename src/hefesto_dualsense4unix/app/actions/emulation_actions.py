@@ -58,8 +58,30 @@ class EmulationActionsMixin(WidgetAccessMixin):
     # --- handlers ---
 
     def on_emulation_refresh(self, _btn: Gtk.Button) -> None:
-        self._refresh_emulation_view()
+        self._refresh_emulation_tab()
         self._toast_emulation("Atualizado")
+
+    def _refresh_emulation_tab(self) -> None:
+        """Reconcilia TODOS os status da aba Emulação de uma vez.
+
+        Idempotente e seguro de chamar ao ENTRAR na aba (switch-page chama este
+        agregador via getattr — o nome precisa ser exatamente
+        ``_refresh_emulation_tab``) e pelo botão "Atualizar". Cada refresh só
+        LÊ estado e atualiza labels — uinput/js (sysfs), gamepad+modo-jogo (IPC
+        read-only ``daemon.state_full``), mic (drop-ins do WirePlumber) e Steam
+        Input (localconfig.vdf) — sem NENHUM efeito colateral no hardware. Cada
+        chamada é guardada defensivamente (getattr) porque a Sprint 1 aciona
+        este método por nome via switch-page.
+        """
+        for name in (
+            "_refresh_emulation_view",
+            "_refresh_gamepad_and_gamemode",
+            "_refresh_mic_status",
+            "_refresh_steam_input_status",
+        ):
+            fn = getattr(self, name, None)
+            if callable(fn):
+                fn()
 
     def on_emulation_test_device(self, _btn: Gtk.Button) -> None:
         try:

@@ -226,8 +226,9 @@ class HefestoApp(
             # Triggers — os handlers de MODO (on_trigger_*_mode_changed) NÃO entram
             # aqui: FEAT-DSX-COMBO-TO-SEGMENTED-01 troca o combo por SegmentedSelector
             # e conecta "changed" no código (install_triggers_tab), não pelo Glade.
-            "on_trigger_left_preset_changed": self.on_trigger_left_preset_changed,
-            "on_trigger_right_preset_changed": self.on_trigger_right_preset_changed,
+            # FIX-GUI-COSMIC-REMEDIATION-01 (B3): on_trigger_left/right_preset_changed
+            # removidos daqui — o glade não os referencia e a ligação é feita em
+            # código (triggers_actions.py), então as entradas estavam mortas.
             "on_trigger_left_apply": self.on_trigger_left_apply,
             "on_trigger_right_apply": self.on_trigger_right_apply,
             "on_trigger_left_reset": self.on_trigger_left_reset,
@@ -266,7 +267,9 @@ class HefestoApp(
             # Daemon
             "on_daemon_start": self.on_daemon_start,
             "on_daemon_stop": self.on_daemon_stop,
-            "on_daemon_restart": self.on_daemon_restart,
+            # on_daemon_restart removido: botão "Reiniciar" redundante saiu do glade
+            # (GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 T5). Caminho único de restart é
+            # on_daemon_service_restart (btn_restart_daemon).
             "on_daemon_refresh": self.on_daemon_refresh,
             "on_daemon_view_logs": self.on_daemon_view_logs,
             "on_daemon_autostart_toggled": self.on_daemon_autostart_toggled,
@@ -659,6 +662,11 @@ class HefestoApp(
             1: getattr(self, "_refresh_triggers_from_draft", None),
             2: getattr(self, "_refresh_lightbar_from_draft", None),
             3: getattr(self, "_refresh_rumble_from_draft", None),
+            # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação (página 6) se
+            # reconcilia ao ser exibida — se o daemon subiu após o boot, a aba
+            # deixava de mostrar "—"/offline só ao entrar nela. _refresh_emulation_tab
+            # é criado em emulation_actions.py (Sprint 4); getattr é seguro se ausente.
+            6: getattr(self, "_refresh_emulation_tab", None),
             # BUG-MOUSE-GUI-SYNC-01 (A1): a aba Mouse sincroniza também com o
             # estado VIVO do daemon (draft imediato + state_full assíncrono).
             7: getattr(self, "_refresh_mouse_tab", None),
@@ -711,7 +719,12 @@ class HefestoApp(
                 notebook.append_page(page, label)
 
     def show(self) -> None:
-        self.window.show_all()
+        # FIX-GUI-COSMIC-REMEDIATION-01 (R1 — janela preta): instalar TODAS as
+        # abas + conectar switch-page ANTES de window.show_all(). Antes o
+        # show_all() vinha primeiro e os install_*_tab() reparentavam/rebuildavam
+        # widgets dinâmicos (sticks, grid de glyphs, SegmentedSelectors) DEPOIS
+        # do mapa — a race de primeiro-frame do XWayland+NVIDIA no COSMIC
+        # apresentava um buffer ainda não pintado (janela totalmente preta).
         self.install_status_polling()
         self.install_triggers_tab()
         self.install_lightbar_tab()
@@ -724,12 +737,28 @@ class HefestoApp(
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
             notebook.connect("switch-page", self._on_notebook_switch_page)
+        self.window.show_all()
+        self._force_initial_repaint()
         # BUG-DAEMON-AUTOSTART-01: dispara start do daemon em thread worker
         # se a unit está instalada mas o service não está ativo. Jamais
         # bloqueia a thread GTK; falha silenciosa via logger.warning.
         self.ensure_daemon_running()
         # BUG-DRAFT-NEVER-LOADED-01: carrega o draft do perfil ativo (worker).
         self._bootstrap_draft_async()
+
+    def _force_initial_repaint(self) -> None:
+        """Contorna a race de primeiro-frame XWayland+NVIDIA no COSMIC: injeta um
+        damage total ~60ms após o mapa para o compositor apresentar o buffer."""
+        from gi.repository import GLib
+
+        def _kick() -> bool:
+            gdkwin = self.window.get_window()
+            if gdkwin is not None:
+                gdkwin.invalidate_rect(None, True)
+            self.window.queue_draw()
+            return False  # one-shot
+
+        GLib.timeout_add(60, _kick)
 
     def _compact_state_snapshot(self) -> dict[str, Any] | None:
         """Snapshot síncrono de `daemon.state_full` para a CompactWindow.

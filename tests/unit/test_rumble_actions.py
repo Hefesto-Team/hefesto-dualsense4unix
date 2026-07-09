@@ -126,7 +126,8 @@ class _FakeRumbleMixin:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
-        self._guard_refresh = False
+        # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
+        self._rumble_guard_refresh = False
         self._rumble_policy = "balanceado"
 
         self._widgets: dict[str, Any] = {
@@ -272,22 +273,31 @@ def test_on_rumble_policy_auto_mostra_label(monkeypatch: pytest.MonkeyPatch) -> 
     assert mixin._widgets["rumble_policy_auto_label"].get_visible() is True
 
 
-def test_on_rumble_policy_inativo_noop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Toggle inativo (get_active=False) não dispara IPC."""
+def test_on_rumble_policy_reafirma_e_reenvia_ipc(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A1: clicar num toggle já-ativo o desmarca (get_active=False); o handler
+    re-afirma o botão e REENVIA o IPC (sem clique morto). Sempre 1 afundado."""
     mixin = _build_mixin(monkeypatch)
     btn = mixin._widgets["rumble_policy_max"]
-    btn.set_active(False)
+    btn.set_active(False)  # simula o clique num já-ativo que o desmarcou
     mixin.on_rumble_policy_max(btn)
 
-    assert mixin._ipc_calls["rumble_policy_set"] == []
+    # IPC reenviado mesmo com get_active()==False no clique.
+    assert mixin._ipc_calls["rumble_policy_set"] == ["max"]
+    # Exclusão mútua: exatamente 1 política afundada (max re-afirmado).
+    assert mixin._widgets["rumble_policy_max"].get_active() is True
+    assert mixin._widgets["rumble_policy_economia"].get_active() is False
+    assert mixin._widgets["rumble_policy_balanceado"].get_active() is False
+    assert mixin._widgets["rumble_policy_auto"].get_active() is False
 
 
 def test_on_rumble_policy_guard_refresh_noop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Com _guard_refresh ativo, handler não dispara IPC."""
+    """Com o guard ativo, handler não dispara IPC."""
     mixin = _build_mixin(monkeypatch)
-    mixin._guard_refresh = True
+    mixin._rumble_guard_refresh = True
     btn = mixin._widgets["rumble_policy_max"]
     btn.set_active(True)
     mixin.on_rumble_policy_max(btn)

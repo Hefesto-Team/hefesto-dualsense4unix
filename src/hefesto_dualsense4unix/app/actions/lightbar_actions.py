@@ -153,6 +153,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         button: Gtk.ColorButton = self._get("lightbar_color_button")
         if button is not None:
             button.set_rgba(rgba)
+        # B2: espelha a cor preta no draft (mesmo mecanismo de
+        # on_lightbar_color_set). Sem isso, "Apagar" + "Salvar Perfil" gravava a
+        # cor antiga e revisitar a aba repintava a cor anterior.
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            new_leds = draft.leds.model_copy(update={"lightbar_rgb": self._current_rgb})
+            self.draft = draft.model_copy(update={"leds": new_leds})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()

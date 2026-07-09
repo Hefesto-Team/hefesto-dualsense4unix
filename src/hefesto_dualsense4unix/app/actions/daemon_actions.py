@@ -35,7 +35,7 @@ DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "offline"
 class DaemonActionsMixin(WidgetAccessMixin):
     """Controla a aba Daemon."""
 
-    _daemon_autostart_guard: bool
+    _daemon_autostart_guard: bool = False
     # Contador anti-loop de tentativas de autostart por sessão da GUI.
     # Máximo 2 tentativas: após a segunda falha, o helper vira no-op até
     # a próxima reabertura do processo (BUG-DAEMON-AUTOSTART-01).
@@ -402,8 +402,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def on_daemon_stop(self, _btn: Gtk.Button) -> None:
         self._run_systemctl_async("stop")
 
-    def on_daemon_restart(self, _btn: Gtk.Button) -> None:
-        self._run_systemctl_async("restart")
+    # on_daemon_restart removido (T5): o botão "Reiniciar" redundante saiu do glade;
+    # o caminho único de restart é on_daemon_service_restart (btn_restart_daemon),
+    # que trata erro com diálogo não-bloqueante e tem regra de sensibilidade própria.
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK

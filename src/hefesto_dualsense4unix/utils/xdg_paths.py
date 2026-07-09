@@ -15,6 +15,48 @@ _DIRS = PlatformDirs("hefesto-dualsense4unix")
 IPC_SOCKET_DEFAULT_NAME = "hefesto-dualsense4unix.sock"
 IPC_SOCKET_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME"
 
+# Modo fake (FakeController, sem hardware). Fonte de verdade ÚNICA do switch —
+# `daemon.main.build_controller` e `daemon.subsystems.keyboard` leem a mesma var.
+FAKE_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_FAKE"
+# Socket isolado derivado AUTOMATICAMENTE quando o modo fake está ligado sem um
+# override explícito. Ver `ipc_socket_name`.
+IPC_SOCKET_FAKE_NAME = "hefesto-dualsense4unix-fake.sock"
+
+
+def fake_mode_enabled() -> bool:
+    """True se o backend fake está ligado via `HEFESTO_DUALSENSE4UNIX_FAKE=1`.
+
+    Casa exatamente com `daemon.main.build_controller` (== "1"), o único ponto que
+    decide FakeController vs. hardware real. Centralizar aqui garante que socket +
+    lock + escolha de controller derivem do MESMO switch.
+    """
+    return os.environ.get(FAKE_ENV_VAR) == "1"
+
+
+def ipc_socket_name() -> str:
+    """Nome-base do socket IPC, com isolamento AUTOMÁTICO no modo fake.
+
+    Precedência:
+      1. `HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME` explícito e válido (ex.: smoke com
+         nome próprio) — sempre respeitado.
+      2. Modo fake (`HEFESTO_DUALSENSE4UNIX_FAKE=1`) sem override → socket fake isolado.
+      3. Produção → socket default.
+
+    BUG-FAKE-SOCKET-SYNC-01: antes o isolamento do fake dependia de o chamador setar
+    DUAS variáveis em sincronia (`FAKE=1` **e** `IPC_SOCKET_NAME=…-fake.sock`, como o
+    `run.sh --fake` faz). Um `daemon start` cru só com `FAKE=1` (ou um `FAKE` vazado
+    no ambiente) caía no socket de PRODUÇÃO e **sequestrava** o daemon real — a GUI/
+    applet/CLI passavam a falar com um FakeController ("Conectado Via USB" fantasma).
+    Derivar o socket do próprio switch de fake elimina o footgun de sincronia: um
+    daemon fake NUNCA toca o socket de produção, independentemente de quem o iniciou.
+    """
+    explicit = os.environ.get(IPC_SOCKET_ENV_VAR, "").strip()
+    if explicit and "/" not in explicit and explicit not in ("..", "."):
+        return explicit
+    if fake_mode_enabled():
+        return IPC_SOCKET_FAKE_NAME
+    return IPC_SOCKET_DEFAULT_NAME
+
 
 def config_dir(ensure: bool = False) -> Path:
     p = Path(_DIRS.user_config_dir)
@@ -56,24 +98,24 @@ def profiles_dir(ensure: bool = False) -> Path:
 def ipc_socket_path() -> Path:
     """Resolve o path do socket IPC.
 
-    Respeita a env var `HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME`
-    (default `hefesto-dualsense4unix.sock`) para permitir isolamento entre daemon
-    de produção e sessões efêmeras (ex.: smoke runs). Somente o nome-base é
-    parametrizável; o diretório permanece sob `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`
-    para manter invariantes de permissão e limpeza.
+    Nome-base resolvido por `ipc_socket_name()` (respeita override explícito e
+    isola automaticamente no modo fake). O diretório permanece sob
+    `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/` para manter invariantes de permissão
+    e limpeza.
     """
-    name = os.environ.get(IPC_SOCKET_ENV_VAR, IPC_SOCKET_DEFAULT_NAME).strip()
-    if not name or "/" in name or name in ("..", "."):
-        name = IPC_SOCKET_DEFAULT_NAME
-    return runtime_dir(ensure=True) / name
+    return runtime_dir(ensure=True) / ipc_socket_name()
 
 
 __all__ = [
+    "FAKE_ENV_VAR",
     "IPC_SOCKET_DEFAULT_NAME",
     "IPC_SOCKET_ENV_VAR",
+    "IPC_SOCKET_FAKE_NAME",
     "cache_dir",
     "config_dir",
     "data_dir",
+    "fake_mode_enabled",
+    "ipc_socket_name",
     "ipc_socket_path",
     "profiles_dir",
     "runtime_dir",

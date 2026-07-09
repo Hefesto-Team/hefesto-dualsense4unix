@@ -90,6 +90,21 @@ class StatusActionsMixin(WidgetAccessMixin):
     # acumulavam numa fila ilimitada. Setado antes do call_async, limpo nos
     # callbacks (sucesso e falha).
     _live_inflight: bool = False
+    # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R4: mesmo coalesce para os ticks
+    # lento (2 Hz) e de reconnect (0.5 Hz), reduzindo a contenção no executor de
+    # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
+    _profile_inflight: bool = False
+    _reconnect_inflight: bool = False
+    # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: último valor escrito em cada
+    # widget de live-state. `_render_live_state` só chama set_fraction/set_text/
+    # set_markup quando o valor muda desde o último tick (diff), evitando repaint
+    # contínuo a 10 Hz mesmo com o controle parado (jank no NVIDIA/XWayland).
+    _last_l2: int | None = None
+    _last_r2: int | None = None
+    _last_lx: int | None = None
+    _last_ly: int | None = None
+    _last_rx: int | None = None
+    _last_ry: int | None = None
     _last_buttons: frozenset[str]
     _button_glyphs: dict[str, ButtonGlyph]
     _stick_left: StickPreviewGtk
@@ -386,23 +401,39 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     def _tick_profile_state(self) -> bool:
         """Roda a 2 Hz: perfil ativo + metadata que muda devagar."""
+        # R4: pula este tick se o anterior ainda não retornou — evita acúmulo
+        # no executor de 1 worker compartilhado pelos 3 pollers.
+        if self._profile_inflight:
+            return True
+        self._profile_inflight = True
         call_async(
             "daemon.state_full",
             None,
             on_success=self._on_profile_state_result,
-            on_failure=lambda _exc: False,
+            on_failure=self._on_profile_state_failure,
         )
         return True  # mantém o timer vivo
 
     def _on_profile_state_result(self, state: Any) -> bool:
         """Callback de sucesso para o tick lento — executa na thread GTK."""
+        self._profile_inflight = False
         if isinstance(state, dict):
             self._first_poll_succeeded = True
             self._render_slow_state(state)
         return False  # não repetir via GLib
 
+    def _on_profile_state_failure(self, _exc: Exception) -> bool:
+        """Callback de falha do tick lento — libera o guard de inflight."""
+        self._profile_inflight = False
+        return False  # não repetir via GLib
+
     def _tick_reconnect_state(self) -> bool:
         """Roda a 0.5 Hz: coordena a máquina de estado do header via thread worker."""
+        # R4: pula este tick se o anterior ainda não retornou (mesmo motivo do
+        # guard de inflight dos ticks rápido e lento).
+        if self._reconnect_inflight:
+            return True
+        self._reconnect_inflight = True
         call_async(
             "daemon.state_full",
             None,
@@ -412,6 +443,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         return True
 
     def _on_reconnect_state_result(self, state: Any) -> bool:
+        self._reconnect_inflight = False
         if isinstance(state, dict):
             self._first_poll_succeeded = True
         self._update_reconnect_state(state if isinstance(state, dict) else None)
@@ -453,6 +485,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         return False  # one-shot
 
     def _on_reconnect_state_failure(self, _exc: Exception) -> bool:
+        self._reconnect_inflight = False
         self._update_reconnect_state(None)
         return False
 
@@ -522,26 +555,27 @@ class StatusActionsMixin(WidgetAccessMixin):
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
         conectados = self._connected_controllers(state)
-        if connected and len(conectados) > 1:
-            # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
-            partes = " + ".join(
-                f"<b>{(c.get('transport') or '?').upper()}</b>"
-                if c.get("is_primary")
-                else (c.get("transport") or "?").upper()
-                for c in conectados
-            )
-            header.set_markup(
-                f'<span foreground="#2d8">&#9679; {len(conectados)} controles: '
-                f"{partes}</span>"
-            )
-        elif connected:
-            header.set_markup(
-                f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
-            )
-        else:
-            header.set_markup(
-                '<span foreground="#d33">&#9675; Controle Desconectado</span>'
-            )
+        if header is not None:
+            if connected and len(conectados) > 1:
+                # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
+                partes = " + ".join(
+                    f"<b>{(c.get('transport') or '?').upper()}</b>"
+                    if c.get("is_primary")
+                    else (c.get("transport") or "?").upper()
+                    for c in conectados
+                )
+                header.set_markup(
+                    f'<span foreground="#2d8">&#9679; {len(conectados)} controles: '
+                    f"{partes}</span>"
+                )
+            elif connected:
+                header.set_markup(
+                    f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
+                )
+            else:
+                header.set_markup(
+                    '<span foreground="#d33">&#9675; Controle Desconectado</span>'
+                )
         self._set_label("status_daemon", "Online")
 
     def _render_reconnecting(self) -> None:
@@ -551,16 +585,18 @@ class StatusActionsMixin(WidgetAccessMixin):
         emoji. Emitido como NCR `&#9680;` para escapar do sanitizer global.
         """
         header = self._get("header_connection")
-        header.set_markup(
-            '<span foreground="#d90">&#9680; Tentando Reconectar...</span>'
-        )
+        if header is not None:
+            header.set_markup(
+                '<span foreground="#d90">&#9680; Tentando Reconectar...</span>'
+            )
         self._set_label("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
         header = self._get("header_connection")
-        header.set_markup(
-            '<span foreground="#d33">&#9675; Daemon Offline</span>'
-        )
+        if header is not None:
+            header.set_markup(
+                '<span foreground="#d33">&#9675; Daemon Offline</span>'
+            )
         self._set_label("status_daemon", "Offline")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
@@ -601,58 +637,61 @@ class StatusActionsMixin(WidgetAccessMixin):
         # GUI consegue ficar aberto para a usuária escolher.
         if self._popup_is_open():
             return
-        connected = bool(state.get("connected"))
-        transport = state.get("transport") or "—"
-        header = self._get("header_connection")
-        # Só pintamos o header aqui se estamos em estado ONLINE; isso evita
-        # que o tick rápido sobrescreva "Tentando Reconectar..." durante a
-        # janela em que a máquina de reconnect ainda está tentando recuperar
-        # o IPC (UX-RECONNECT-01 + POLISH-CAPS-01).
-        if getattr(self, "_reconnect_state", "online") == "online":
-            if connected:
-                header.set_markup(
-                    f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
-                )
-            else:
-                header.set_markup(
-                    '<span foreground="#d33">&#9675; Controle Desconectado</span>'
-                )
+        # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: NÃO reescrevemos o header
+        # aqui a 10 Hz. O header é responsabilidade exclusiva de `_render_online`
+        # (chamado pela máquina de reconnect a 0.5 Hz) e de
+        # `_update_reconnect_state`. Reescrevê-lo a cada tick rápido gerava
+        # repaint contínuo do banner mesmo com o controle parado (jank). Todos os
+        # writes abaixo são DIFFADOS contra o último valor: só chamamos
+        # set_fraction/set_text/set_markup quando o valor muda desde o tick
+        # anterior.
 
         l2 = int(state.get("l2_raw", 0))
         r2 = int(state.get("r2_raw", 0))
-        l2_bar = self._get("live_l2_bar")
-        r2_bar = self._get("live_r2_bar")
-        l2_bar.set_fraction(l2 / 255)
-        l2_bar.set_text(f"{l2} / 255")
-        r2_bar.set_fraction(r2 / 255)
-        r2_bar.set_text(f"{r2} / 255")
+        if l2 != self._last_l2:
+            l2_bar = self._get("live_l2_bar")
+            if l2_bar is not None:
+                l2_bar.set_fraction(l2 / 255)
+                l2_bar.set_text(f"{l2} / 255")
+            self._last_l2 = l2
+        if r2 != self._last_r2:
+            r2_bar = self._get("live_r2_bar")
+            if r2_bar is not None:
+                r2_bar.set_fraction(r2 / 255)
+                r2_bar.set_text(f"{r2} / 255")
+            self._last_r2 = r2
 
-        # Sticks — atualiza preview e labels numéricos
+        # Sticks — atualiza preview e labels numéricos, diffados por posição.
         lx = int(state.get("lx", 128))
         ly = int(state.get("ly", 128))
         rx = int(state.get("rx", 128))
         ry = int(state.get("ry", 128))
-
-        if hasattr(self, "_stick_left"):
-            self._stick_left.update(lx, ly)
-        if hasattr(self, "_stick_right"):
-            self._stick_right.update(rx, ry)
 
         # BUG-STATUS-LABEL-REFLOW-01: campo de LARGURA FIXA (3 chars, padding de
         # espaço em fonte monospace). Antes o texto "X: {lx}" mudava de largura ao
         # cruzar dígitos (5→10→100) → queue_resize → re-layout do painel a 10 Hz:
         # os glyphs/botões "respiravam" (aumentam e diminuem) durante o jogo. Com
         # o campo constante, a largura natural do label não muda → sem reflow.
-        lx_label = self._get("live_lx_label")
-        if lx_label is not None:
-            lx_label.set_markup(
-                f'<span font_family="monospace" size="small">X: {lx:>3}  Y: {ly:>3}</span>'
-            )
-        rx_label = self._get("live_rx_label")
-        if rx_label is not None:
-            rx_label.set_markup(
-                f'<span font_family="monospace" size="small">X: {rx:>3}  Y: {ry:>3}</span>'
-            )
+        if lx != self._last_lx or ly != self._last_ly:
+            if hasattr(self, "_stick_left"):
+                self._stick_left.update(lx, ly)
+            lx_label = self._get("live_lx_label")
+            if lx_label is not None:
+                lx_label.set_markup(
+                    f'<span font_family="monospace" size="small">X: {lx:>3}  Y: {ly:>3}</span>'
+                )
+            self._last_lx = lx
+            self._last_ly = ly
+        if rx != self._last_rx or ry != self._last_ry:
+            if hasattr(self, "_stick_right"):
+                self._stick_right.update(rx, ry)
+            rx_label = self._get("live_rx_label")
+            if rx_label is not None:
+                rx_label.set_markup(
+                    f'<span font_family="monospace" size="small">X: {rx:>3}  Y: {ry:>3}</span>'
+                )
+            self._last_rx = rx
+            self._last_ry = ry
 
         # Botões pressionados — diff antes de redesenhar (performance 10 Hz)
         buttons_raw: list[str] = state.get("buttons", []) or []
@@ -758,10 +797,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._refresh_controller_target_combo(state)
 
     def _reset_live_widgets(self) -> None:
-        self._get("live_l2_bar").set_fraction(0.0)
-        self._get("live_l2_bar").set_text("0 / 255")
-        self._get("live_r2_bar").set_fraction(0.0)
-        self._get("live_r2_bar").set_text("0 / 255")
+        l2_bar = self._get("live_l2_bar")
+        if l2_bar is not None:
+            l2_bar.set_fraction(0.0)
+            l2_bar.set_text("0 / 255")
+        r2_bar = self._get("live_r2_bar")
+        if r2_bar is not None:
+            r2_bar.set_fraction(0.0)
+            r2_bar.set_text("0 / 255")
 
         lx_label = self._get("live_lx_label")
         if lx_label is not None:
@@ -788,6 +831,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._last_buttons = frozenset()
         self._last_l2_lit = False
         self._last_r2_lit = False
+        # R3: sincroniza o cache de diff com os valores de repouso que acabamos
+        # de pintar, para o próximo tick não reescrever à toa (nem pular por
+        # cache stale ao reconectar com o controle em repouso).
+        self._last_l2 = 0
+        self._last_r2 = 0
+        self._last_lx = 128
+        self._last_ly = 128
+        self._last_rx = 128
+        self._last_ry = 128
 
         # Títulos sem markup colorido
         titulo_esq = self._get("stick_left_title")

@@ -257,7 +257,8 @@ class _FakeTriggersMixin:
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         self.draft = DraftConfig.default()
-        self._guard_refresh = False
+        # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
+        self._triggers_guard_refresh = False
         self._trigger_preset_applying = False
         self._trigger_param_widgets = {"left": {}, "right": {}}
         self._widgets = _mk_widgets()
@@ -356,7 +357,7 @@ def test_on_trigger_mode_changed_guard_refresh_noop(
 ) -> None:
     mixin = _build_mixin(monkeypatch)
     mixin.install_triggers_tab()
-    mixin._guard_refresh = True
+    mixin._triggers_guard_refresh = True
     combo = mixin._trigger_mode["left"]
     combo.set_active_id("Pulse")
 

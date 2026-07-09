@@ -44,7 +44,7 @@ class MouseActionsMixin(WidgetAccessMixin):
     """Controla a aba Mouse."""
 
     # Guard para evitar loop widget->draft->refresh->widget.
-    _guard_refresh: bool = False
+    _mouse_guard_refresh: bool = False
 
     # Coalescing dos sliders (BUG-MOUSE-GUI-SYNC-01): um RPC em voo por
     # parâmetro; valores emitidos durante o voo guardam só o ÚLTIMO.
@@ -55,15 +55,15 @@ class MouseActionsMixin(WidgetAccessMixin):
     def _refresh_mouse_from_draft(self) -> None:
         """Popula widgets da aba Mouse a partir de self.draft.mouse.
 
-        Protegido por _guard_refresh para não disparar handlers de signal
+        Protegido por _mouse_guard_refresh para não disparar handlers de signal
         durante a atualização programatica dos widgets.
         """
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         draft = getattr(self, "draft", None)
         if draft is None:
             return
-        self._guard_refresh = True
+        self._mouse_guard_refresh = True
         try:
             mouse = draft.mouse
             toggle: Gtk.Switch = self._get("mouse_emulation_toggle")
@@ -76,7 +76,7 @@ class MouseActionsMixin(WidgetAccessMixin):
             if scroll_scale is not None:
                 scroll_scale.set_value(float(mouse.scroll_speed))
         finally:
-            self._guard_refresh = False
+            self._mouse_guard_refresh = False
 
     def install_mouse_tab(self) -> None:
         # mouse_legend_label foi substituído por GtkFrame estático (UI-MOUSE-CLEANUP-01).
@@ -85,6 +85,10 @@ class MouseActionsMixin(WidgetAccessMixin):
         if legend is not None:
             legend.set_markup(MAPPING_LEGEND)
         self._refresh_mouse_view()
+        # T6: popula os widgets a partir do draft já no bootstrap. Sem isto, se o
+        # daemon estiver offline no install, a aba mostra os defaults do glade em
+        # vez dos valores do perfil ativo. Idempotente sob _mouse_guard_refresh.
+        self._refresh_mouse_from_draft()
 
     # --- sincronização com o estado vivo do daemon (BUG-MOUSE-GUI-SYNC-01 A1) ---
 
@@ -99,7 +103,7 @@ class MouseActionsMixin(WidgetAccessMixin):
         A1: o draft nasce do PERFIL (que não tem seção mouse) — sem esta rota a
         aba mente quando a emulação foi ligada por CLI/applet/flag de boot.
         Assíncrono (call_async) para não bloquear a thread GTK; widgets são
-        atualizados sob ``_guard_refresh`` via ``_refresh_mouse_from_draft``.
+        atualizados sob ``_mouse_guard_refresh`` via ``_refresh_mouse_from_draft``.
         NÃO marca ``dirty`` — sincronização programática não é toque da usuária.
         """
         def _on_state(state: Any) -> bool:
@@ -147,7 +151,7 @@ class MouseActionsMixin(WidgetAccessMixin):
     # --- handlers de UI ---
 
     def on_mouse_toggle_set(self, switch: Gtk.Switch, _state: Any) -> bool:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return False
         enabled = bool(switch.get_active())
         speed = self._read_speed("mouse_speed_scale", DEFAULT_MOUSE_SPEED)
@@ -200,22 +204,22 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         Em GTK3, ``set_active`` reemite ``state-set`` SINCRONAMENTE (``return
         True`` no handler não evita — repro real: 999 reentradas +
-        RecursionError). Salva/restaura ``_guard_refresh`` em vez de zerar
+        RecursionError). Salva/restaura ``_mouse_guard_refresh`` em vez de zerar
         absoluto: o revert pode disparar dentro de um refresh programático que
         mantém o guard True (padrão do fix ``_update_preset_to_custom``).
         """
         switch = self._get("mouse_emulation_toggle")
         if switch is None:
             return
-        prev_guard = self._guard_refresh
-        self._guard_refresh = True
+        prev_guard = self._mouse_guard_refresh
+        self._mouse_guard_refresh = True
         try:
             switch.set_active(active)
         finally:
-            self._guard_refresh = prev_guard
+            self._mouse_guard_refresh = prev_guard
 
     def on_mouse_speed_changed(self, scale: Gtk.Scale) -> None:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         speed = int(scale.get_value())
         # Atualiza draft independente de estar habilitado (preserva preferência)
@@ -228,7 +232,7 @@ class MouseActionsMixin(WidgetAccessMixin):
         self._send_mouse_param_async("speed", speed)
 
     def on_mouse_scroll_speed_changed(self, scale: Gtk.Scale) -> None:
-        if self._guard_refresh:
+        if self._mouse_guard_refresh:
             return
         scroll = int(scale.get_value())
         # Atualiza draft independente de estar habilitado (preserva preferência)

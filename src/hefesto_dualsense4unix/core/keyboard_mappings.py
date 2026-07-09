@@ -74,15 +74,24 @@ def parse_binding(spec: str) -> KeyBinding:
     Formato aceito:
     - Tecla única: `"KEY_ENTER"`.
     - Combo: `"KEY_LEFTALT+KEY_TAB"`, `"KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_T"`.
+    - Token virtual OSK: `"__OPEN_OSK__"`, `"__CLOSE_OSK__"` — aceitos COMO
+      ESTÃO (marcadores `__*__` do `is_virtual_token`), sem exigir `KEY_*`.
+      São os defaults de l3/r3 e a legenda da UI manda digitá-los; o
+      downstream (`UinputKeyboardDevice` / keyboard subsystem) os intercepta
+      via `is_virtual_token` e delega ao callback de OSK em vez de emitir tecla.
 
-    Tokens são stripped e uppercased. Vazio retorna tupla vazia. Strings
-    fora do padrão `KEY_*` levantam `ValueError` — validação completa contra
-    `evdev.ecodes` fica a cargo do loader de perfil (sub-sprint 2).
+    Tokens são stripped e uppercased. Vazio retorna tupla vazia. Strings que
+    não sejam `KEY_*` nem token virtual `__*__` levantam `ValueError` —
+    validação completa contra `evdev.ecodes` fica a cargo do loader de perfil
+    (sub-sprint 2).
     """
     if not spec or not spec.strip():
         return ()
     tokens = [tok.strip().upper() for tok in spec.split("+") if tok.strip()]
     for tok in tokens:
+        if is_virtual_token(tok):
+            # Marcador `__OPEN_OSK__`/`__CLOSE_OSK__` — preservado como está.
+            continue
         if not tok.startswith("KEY_"):
             raise ValueError(
                 f"token {tok!r} fora do padrão 'KEY_*' "

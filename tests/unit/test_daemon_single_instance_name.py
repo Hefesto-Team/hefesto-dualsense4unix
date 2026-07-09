@@ -9,14 +9,25 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.main import single_instance_name
 from hefesto_dualsense4unix.utils.xdg_paths import (
+    FAKE_ENV_VAR,
     IPC_SOCKET_DEFAULT_NAME,
     IPC_SOCKET_ENV_VAR,
 )
 
 
 def test_producao_sem_env_usa_lock_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
+    # conftest liga FAKE=1 em todo teste; produção real desliga o fake.
+    monkeypatch.delenv(FAKE_ENV_VAR, raising=False)
     monkeypatch.delenv(IPC_SOCKET_ENV_VAR, raising=False)
     assert single_instance_name() == "daemon"
+
+
+def test_fake_sem_env_auto_isola_lock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """BUG-FAKE-SOCKET-SYNC-01: FAKE=1 sem override → lock isolado, derivado do
+    socket fake-aware. Um daemon fake cru nunca compartilha o lock do real."""
+    monkeypatch.setenv(FAKE_ENV_VAR, "1")
+    monkeypatch.delenv(IPC_SOCKET_ENV_VAR, raising=False)
+    assert single_instance_name() == "daemon-hefesto-dualsense4unix-fake"
 
 
 def test_producao_com_socket_default_usa_lock_daemon(
