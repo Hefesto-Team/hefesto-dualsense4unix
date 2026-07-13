@@ -133,20 +133,26 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_mode_desc = desc
         mode_box.pack_start(desc, False, False, 0)
 
-        opts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        # BUG-HOME-MASK-CLIP-01: co-op e máscara em LINHAS separadas — na mesma
+        # HBox o seletor de máscara estourava a largura do frame e era cortado
+        # na borda direita (visto ao vivo 2026-07-13). A linha própria dá ao
+        # seletor a largura toda para os 2 botões.
+        opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         coop_check = Gtk.CheckButton(label="Co-op local (cada controle = um jogador)")
         coop_check.connect("toggled", self._on_home_coop_toggled)
         self._home_coop_check = coop_check
         opts.pack_start(coop_check, False, False, 0)
 
+        mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         flavor_label = Gtk.Label(label="Máscara:")
-        opts.pack_start(flavor_label, False, False, 0)
+        mask_row.pack_start(flavor_label, False, False, 0)
         flavor = SegmentedSelector(wrap=True)
         flavor.set_items([("dualsense", "DualSense (PS)"), ("xbox", "Xbox 360")])
         flavor.connect("changed", self._on_home_flavor_changed)
         self._home_flavor_selector = flavor
+        mask_row.pack_start(flavor, True, True, 0)
+        opts.pack_start(mask_row, False, False, 0)
         self._home_gamepad_opts = opts
-        opts.pack_start(flavor, False, False, 0)
         mode_box.pack_start(opts, False, False, 0)
 
         origin = Gtk.Label(label="")
