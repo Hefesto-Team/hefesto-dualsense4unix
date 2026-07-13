@@ -206,20 +206,25 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         slot.pack_start(kind_sel, False, False, 0)
         self._mode_kind_selector = kind_sel
 
-        # Opções específicas do gamepad: co-op + máscara, numa linha só.
-        opts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        # Opções específicas do gamepad: co-op e máscara em LINHAS separadas —
+        # na mesma HBox o seletor de máscara estourava a largura do frame e era
+        # cortado na borda direita (BUG-HOME-MASK-CLIP-01, visto ao vivo também
+        # aqui no editor em 2026-07-13). A linha própria dá a largura toda.
+        opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         coop_check = Gtk.CheckButton(
             label="Co-op local (cada controle = um jogador)"
         )
         self._mode_coop_check = coop_check
         opts.pack_start(coop_check, False, False, 0)
+        mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         flavor_label = Gtk.Label(label="Máscara:")
-        opts.pack_start(flavor_label, False, False, 0)
+        mask_row.pack_start(flavor_label, False, False, 0)
         flavor_sel = SegmentedSelector(wrap=True)
         flavor_sel.set_items(_MODE_FLAVOR_ITEMS)
         flavor_sel.set_tooltip_text("Como o gamepad virtual aparece para o jogo")
         self._mode_flavor_selector = flavor_sel
-        opts.pack_start(flavor_sel, False, False, 0)
+        mask_row.pack_start(flavor_sel, True, True, 0)
+        opts.pack_start(mask_row, False, False, 0)
         self._mode_gamepad_opts = opts
         slot.pack_start(opts, False, False, 0)
 
