@@ -12,6 +12,9 @@
 //!   - `profile.switch {name}` -> troca o perfil ativo
 //!   - `daemon.emulation.suppress {suppressed}` -> liga/desliga o "modo jogo"
 //!   - `controller.target.set {index|null}` -> escolhe o controle-alvo do output
+//!   - `native.mode.set {enabled}` -> liga/desliga o Modo Nativo (Sony)
+//!   - `coop.set {enabled}` -> liga/desliga o co-op local
+//!   - `gamepad.emulation.set {enabled, flavor?}` -> gamepad virtual + máscara
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -132,6 +135,43 @@ pub struct DaemonState {
     /// tolera daemons antigos sem o campo.
     #[serde(default)]
     pub output_target_index: Option<i64>,
+    /// FEAT-NATIVE-MODE-01: true quando o Modo Nativo (Sony) está ligado — o
+    /// jogo fala direto com o controle físico, sem gamepad virtual nem emulação.
+    /// serde(default)=false tolera daemons antigos sem o campo.
+    #[serde(default)]
+    pub native_mode: bool,
+    /// FEAT-PROFILE-MODE-01: origem do Modo Nativo — "manual" | "profile" |
+    /// null. Com "profile" a UI anota "(pelo perfil)" na linha de modo.
+    #[serde(default)]
+    pub native_mode_origin: Option<String>,
+    /// FEAT-DSX-COOP-LOCAL-01: estado do co-op local (cada controle = 1
+    /// jogador). serde(default)=desligado tolera daemons antigos sem o bloco.
+    #[serde(default)]
+    pub coop: CoopState,
+    /// FEAT-DSX-GAMEPAD-FLAVOR-01: estado do gamepad virtual (ligado + máscara
+    /// "dualsense"|"xbox"). serde(default)=desligado tolera daemons antigos.
+    #[serde(default)]
+    pub gamepad_emulation: GamepadEmulation,
+}
+
+/// Bloco `coop` do estado do daemon (FEAT-DSX-COOP-LOCAL-01).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct CoopState {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Nº de jogadores ativos (controles virando P1, P2, …) com o co-op ligado.
+    #[serde(default)]
+    pub players: i64,
+}
+
+/// Bloco `gamepad_emulation` do estado do daemon (FEAT-DSX-GAMEPAD-FLAVOR-01).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct GamepadEmulation {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Máscara do gamepad virtual: "dualsense" | "xbox" | null (daemon antigo).
+    #[serde(default)]
+    pub flavor: Option<String>,
 }
 
 /// Um controle físico no estado do daemon (FEAT-DSX-MULTI-CONTROLLER-01).
@@ -312,6 +352,50 @@ pub async fn set_output_target(index: Option<i64>) -> Result<Option<i64>, IpcErr
     Ok(value.get("target_index").and_then(|v| v.as_i64()))
 }
 
+/// `native.mode.set {enabled}` — liga/desliga o Modo Nativo (Sony): o jogo fala
+/// direto com o controle físico, sem gamepad virtual nem emulação
+/// (FEAT-NATIVE-MODE-01). Devolve o novo `native_mode` reportado pelo daemon
+/// (fallback: o valor solicitado).
+pub async fn set_native_mode(enabled: bool) -> Result<bool, IpcError> {
+    let value = call_raw("native.mode.set", json!({ "enabled": enabled })).await?;
+    let new_state = value
+        .get("native_mode")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(enabled);
+    Ok(new_state)
+}
+
+/// `coop.set {enabled}` — liga/desliga o co-op local: com o gamepad virtual
+/// ativo e 2+ controles, cada controle vira um jogador (P1, P2, …)
+/// (FEAT-DSX-COOP-LOCAL-01). Devolve o novo `enabled` efetivo reportado pelo
+/// daemon (fallback: o valor solicitado); o nº de jogadores vem do próximo
+/// `daemon.state_full` (campo `coop.players`).
+pub async fn set_coop(enabled: bool) -> Result<bool, IpcError> {
+    let value = call_raw("coop.set", json!({ "enabled": enabled })).await?;
+    let new_state = value
+        .get("enabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(enabled);
+    Ok(new_state)
+}
+
+/// `gamepad.emulation.set {enabled, flavor?}` — liga/desliga o gamepad virtual
+/// e define a máscara "dualsense" | "xbox" (FEAT-DSX-GAMEPAD-FLAVOR-01).
+/// `flavor: None` omite o campo (o daemon mantém a máscara atual). Devolve o
+/// novo `enabled` reportado pelo daemon (fallback: o valor solicitado).
+pub async fn set_gamepad_emulation(enabled: bool, flavor: Option<&str>) -> Result<bool, IpcError> {
+    let mut params = json!({ "enabled": enabled });
+    if let Some(flavor) = flavor {
+        params["flavor"] = json!(flavor);
+    }
+    let value = call_raw("gamepad.emulation.set", params).await?;
+    let new_state = value
+        .get("enabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(enabled);
+    Ok(new_state)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -443,6 +527,49 @@ mod tests {
         // Mesma extração de set_output_target: target_index -> Option<i64>.
         let target = value.get("target_index").and_then(|v| v.as_i64());
         assert_eq!(target, Some(1));
+    }
+
+    #[tokio::test]
+    async fn parses_mode_blocks_in_state() {
+        let path = temp_socket("mode-state");
+        spawn_mock(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"connected":true,"native_mode":true,"native_mode_origin":"profile","coop":{"enabled":true,"players":2},"gamepad_emulation":{"enabled":true,"flavor":"xbox"}}}"#
+                .to_string(),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let value = call_raw_at(path, "daemon.state_full", json!({}))
+            .await
+            .expect("result");
+        let state: DaemonState = serde_json::from_value(value).unwrap();
+        assert!(state.native_mode);
+        assert_eq!(state.native_mode_origin.as_deref(), Some("profile"));
+        assert!(state.coop.enabled);
+        assert_eq!(state.coop.players, 2);
+        assert!(state.gamepad_emulation.enabled);
+        assert_eq!(state.gamepad_emulation.flavor.as_deref(), Some("xbox"));
+    }
+
+    #[tokio::test]
+    async fn mode_blocks_default_when_absent() {
+        // Daemon antigo sem native_mode/coop/gamepad_emulation: os defaults do
+        // serde precisam cair em "tudo desligado" (sem erro de parse).
+        let path = temp_socket("mode-defaults");
+        spawn_mock(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"connected":true}}"#.to_string(),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let value = call_raw_at(path, "daemon.state_full", json!({}))
+            .await
+            .expect("result");
+        let state: DaemonState = serde_json::from_value(value).unwrap();
+        assert!(!state.native_mode);
+        assert!(state.native_mode_origin.is_none());
+        assert!(!state.coop.enabled);
+        assert_eq!(state.coop.players, 0);
+        assert!(!state.gamepad_emulation.enabled);
+        assert!(state.gamepad_emulation.flavor.is_none());
     }
 
     #[tokio::test]

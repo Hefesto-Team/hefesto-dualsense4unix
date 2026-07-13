@@ -75,6 +75,18 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
 
     acquire_or_takeover(single_instance_name())
 
+    # PERF-MULTI-CONTROLLER-01: o daemon nunca deve disputar CPU de igual com o
+    # JOGO (SCHED_OTHER). Com 2+ controles as threads de evdev/report somam
+    # carga real; um nice moderado elimina o stutter por starvation sem
+    # prejudicar a latência de input (as threads acordam por evento). Opt-out /
+    # ajuste: HEFESTO_DUALSENSE4UNIX_NICE=0..19 (default 5).
+    try:
+        nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
+        if nice_level > 0:
+            os.nice(nice_level)
+    except (OSError, ValueError):
+        logger.warning("daemon_nice_unavailable")
+
     controller = build_controller()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),

@@ -159,11 +159,17 @@ if _GTK_DISPONIVEL:
             if wrap:
                 flow = Gtk.FlowBox()
                 flow.set_selection_mode(Gtk.SelectionMode.NONE)
-                flow.set_max_children_per_line(100)
+                # UX-TRIGGERS-COMPACT-01: teto de 3 por linha + botões compactos
+                # (classe CSS) — os 19 modos viravam um paredão de 2 colunas de
+                # botões ENORMES que engolia a aba inteira e empurrava sliders/
+                # Aplicar para fora da dobra (visto ao vivo 2026-07-13). Com 3
+                # colunas compactas a grade cabe em ~7 linhas curtas.
+                flow.set_max_children_per_line(3)
                 flow.set_min_children_per_line(1)
-                flow.set_homogeneous(False)
+                flow.set_homogeneous(True)
                 flow.set_row_spacing(2)
-                flow.set_column_spacing(0)
+                flow.set_column_spacing(2)
+                self.get_style_context().add_class("hefesto-segmented-compact")
                 # M2: com min_children_per_line=1 e 19 botões de rótulo largo, o
                 # FlowBox exige a largura do botão mais largo como mínimo; sob o
                 # scroller-pai da aba Gatilhos (hscroll=NEVER) isso estoura em

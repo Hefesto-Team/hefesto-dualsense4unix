@@ -32,6 +32,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
     Profile,
+    ProfileModeConfig,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (
     detect_simple_preset,
@@ -57,6 +58,22 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("game", "Jogo"),
 ]
 
+# FEAT-PROFILE-MODE-GUI-01: itens da seção "Modo" do editor (id, rótulo curto).
+# "none" = perfil SEM a seção `mode` (ativar não mexe no modo do sistema);
+# os demais ids espelham ProfileModeConfig.kind.
+_MODE_KIND_ITEMS: list[tuple[str, str]] = [
+    ("none", "Sem opinião"),
+    ("desktop", "Desktop"),
+    ("gamepad", "Jogo (gamepad)"),
+    ("native", "Jogo nativo (Sony)"),
+]
+
+# Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
+_MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
+    ("dualsense", "DualSense (PS)"),
+    ("xbox", "Xbox 360"),
+]
+
 
 class ProfilesActionsMixin(WidgetAccessMixin):
     """Controla a aba Perfis."""
@@ -79,21 +96,35 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # (substitui o GtkComboBoxText `profile_aplica_a_combo`, fechado no clique
     # pelo cosmic-comp). Mesma API por-ID do combo.
     _aplica_a: Any
+    # FEAT-PROFILE-MODE-GUI-01: widgets da seção "Modo" do editor, montados no
+    # código dentro do slot do glade (padrão home_actions). `None` quando o
+    # glade não tem o slot (fallback: o mode do perfil sobrevive por herança).
+    _mode_kind_selector: Any = None
+    _mode_flavor_selector: Any = None
+    _mode_coop_check: Any = None
+    _mode_gamepad_opts: Any = None
+    # Guard anti-loop: True enquanto _set_mode_editor preenche os widgets
+    # programaticamente (set_active_id emite "changed"; sem o guard cada
+    # populate dispararia _refresh_preview em cascata).
+    _suppress_mode_signals: bool = False
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
         tree: Gtk.TreeView = self._get("profiles_tree")
+        # UX-PROFILES-ACTIVE-HIGHLIGHT-01: 4ª coluna (peso da fonte) marca o
+        # perfil ATIVO em negrito — a lista não dizia qual estava valendo.
         store = Gtk.ListStore(
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
             GObject.TYPE_STRING,
+            GObject.TYPE_INT,
         )
         tree.set_model(store)
         self._profiles_store = store
 
         for idx, title in ((0, "Nome"), (1, "Prio"), (2, "Match")):
             renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn(title, renderer, text=idx)
+            column = Gtk.TreeViewColumn(title, renderer, text=idx, weight=3)
             tree.append_column(column)
 
         tree.get_selection().connect(
@@ -115,6 +146,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         sel.connect("changed", self._on_aplica_a_changed)
         sel.connect("changed", lambda _c: self._refresh_preview())
         sel.set_active_id("any")
+
+        # FEAT-PROFILE-MODE-GUI-01: seção "Modo" (o que o perfil liga ao ativar).
+        self._install_mode_section()
 
         # UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON atualiza em tempo real
         # conforme inputs do editor. Reutiliza _build_profile_from_editor.
@@ -149,6 +183,149 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._profiles_cache = []
         self._reload_profiles_store(on_done=self._sync_selection_with_active_profile)
 
+    def _install_mode_section(self) -> None:
+        """Monta a seção "Modo" do editor (FEAT-PROFILE-MODE-GUI-01).
+
+        Widgets dinâmicos dentro do slot do glade (padrão home_actions):
+        SegmentedSelector do kind + CheckButton de co-op + seletor de máscara,
+        os dois últimos visíveis/sensíveis só com kind == "gamepad". Nunca
+        GtkComboBox (o cosmic-comp fecha o popup do combo no clique).
+        """
+        slot = self._get("profile_mode_slot")
+        if slot is None:
+            # Glade desatualizado: editor segue funcional sem a seção — o mode
+            # do perfil sobrevive por herança em _build_profile_from_editor.
+            self._mode_kind_selector = None
+            return
+
+        kind_sel = SegmentedSelector(wrap=True)
+        kind_sel.set_items(_MODE_KIND_ITEMS)
+        kind_sel.set_tooltip_text(
+            "Modo do sistema que ativar este perfil liga (nativo/gamepad/desktop)"
+        )
+        slot.pack_start(kind_sel, False, False, 0)
+        self._mode_kind_selector = kind_sel
+
+        # Opções específicas do gamepad: co-op + máscara, numa linha só.
+        opts = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        coop_check = Gtk.CheckButton(
+            label="Co-op local (cada controle = um jogador)"
+        )
+        self._mode_coop_check = coop_check
+        opts.pack_start(coop_check, False, False, 0)
+        flavor_label = Gtk.Label(label="Máscara:")
+        opts.pack_start(flavor_label, False, False, 0)
+        flavor_sel = SegmentedSelector(wrap=True)
+        flavor_sel.set_items(_MODE_FLAVOR_ITEMS)
+        flavor_sel.set_tooltip_text("Como o gamepad virtual aparece para o jogo")
+        self._mode_flavor_selector = flavor_sel
+        opts.pack_start(flavor_sel, False, False, 0)
+        self._mode_gamepad_opts = opts
+        slot.pack_start(opts, False, False, 0)
+
+        hint = Gtk.Label(
+            label="Sem opinião = ativar este perfil não mexe no modo do sistema."
+        )
+        hint.set_xalign(0.0)
+        hint.set_line_wrap(True)
+        hint.get_style_context().add_class("dim-label")
+        slot.pack_start(hint, False, False, 0)
+        slot.show_all()
+
+        # Contrato do sinal (BUG-HOME-SEGMENTED-SIGNATURE-01): "changed" do
+        # SegmentedSelector é emitido SEM argumentos — o handler recebe só o
+        # seletor e lê get_active_id().
+        kind_sel.connect("changed", self._on_mode_kind_changed)
+        flavor_sel.connect("changed", self._on_mode_flavor_changed)
+        coop_check.connect("toggled", self._on_mode_coop_toggled)
+
+        self._suppress_mode_signals = True
+        try:
+            kind_sel.set_active_id("none")
+            flavor_sel.set_active_id("dualsense")
+        finally:
+            self._suppress_mode_signals = False
+        self._sync_mode_options_visibility("none")
+
+    def _sync_mode_options_visibility(self, kind: str) -> None:
+        """Mostra/habilita co-op e máscara apenas com kind == "gamepad"."""
+        opts = self._mode_gamepad_opts
+        if opts is None:
+            return
+        is_gamepad = kind == "gamepad"
+        opts.set_visible(is_gamepad)
+        # no_show_all: um window.show_all() posterior não deve reexibir a linha
+        # escondida (mesmo padrão de profile_game_entry_box / aba Início).
+        opts.set_no_show_all(not is_gamepad)
+        opts.set_sensitive(is_gamepad)
+
+    def _on_mode_kind_changed(self, selector: Any) -> None:
+        """Handler do kind: sincroniza visibilidade das opções + preview."""
+        kind = selector.get_active_id() or "none"
+        self._sync_mode_options_visibility(kind)
+        if self._suppress_mode_signals:
+            return
+        self._refresh_preview()
+
+    def _on_mode_flavor_changed(self, _selector: Any) -> None:
+        """Handler da máscara: só reflete a escolha no preview JSON."""
+        if self._suppress_mode_signals:
+            return
+        self._refresh_preview()
+
+    def _on_mode_coop_toggled(self, _check: Any) -> None:
+        """Handler do co-op: só reflete a escolha no preview JSON."""
+        if self._suppress_mode_signals:
+            return
+        self._refresh_preview()
+
+    def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
+        """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
+
+        Roda sob guard: os set_active_id/set_active programáticos não devem
+        disparar _refresh_preview em cascata durante o populate.
+        """
+        kind_sel = self._mode_kind_selector
+        if kind_sel is None:
+            return
+        kind = mode.kind if mode is not None else "none"
+        flavor = (mode.gamepad_flavor if mode is not None else None) or "dualsense"
+        coop = bool(mode.coop) if mode is not None else False
+        self._suppress_mode_signals = True
+        try:
+            kind_sel.set_active_id(kind)
+            if self._mode_flavor_selector is not None:
+                self._mode_flavor_selector.set_active_id(flavor)
+            if self._mode_coop_check is not None:
+                self._mode_coop_check.set_active(coop)
+        finally:
+            self._suppress_mode_signals = False
+        # set_active_id só emite quando o id muda — sincroniza explicitamente
+        # para a visibilidade ficar certa mesmo sem emissão.
+        self._sync_mode_options_visibility(kind)
+
+    def _mode_section_from_editor(self) -> dict[str, Any] | None:
+        """Monta o dict da seção ``mode`` a partir dos widgets do editor.
+
+        "none" (sem opinião) → ``None``: a seção é REMOVIDA do perfil salvo.
+        ``gamepad_flavor``/``coop`` só valem com kind == "gamepad" — para os
+        demais kinds gravamos ``None``/``False`` (JSON limpo, sem sobras).
+        """
+        kind_sel = self._mode_kind_selector
+        kind = (kind_sel.get_active_id() if kind_sel is not None else None) or "none"
+        if kind == "none":
+            return None
+        flavor: str | None = None
+        coop = False
+        if kind == "gamepad":
+            flavor_sel = self._mode_flavor_selector
+            flavor = (
+                flavor_sel.get_active_id() if flavor_sel is not None else None
+            ) or "dualsense"
+            coop_check = self._mode_coop_check
+            coop = bool(coop_check.get_active()) if coop_check is not None else False
+        return {"kind": kind, "gamepad_flavor": flavor, "coop": coop}
+
     def _sync_selection_with_active_profile(self) -> None:
         """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
 
@@ -175,6 +352,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             active = result.get("active_profile")
             if not isinstance(active, str) or not active:
                 return False
+            # UX-PROFILES-ACTIVE-HIGHLIGHT-01: negrito na linha do ativo.
+            self._mark_active_profile_row(active)
             self._select_profile_by_name(active)
         except Exception as exc:
             logger.warning("profile_sync_callback_falhou", err=str(exc))
@@ -266,6 +445,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._get("profile_title_regex_entry").set_text("")
         self._get("profile_process_name_entry").set_text("")
         self._get("profile_simple_custom_name").set_text("")
+        # FEAT-PROFILE-MODE-GUI-01: perfil novo nasce "sem opinião" de modo.
+        self._set_mode_editor(None)
         # BUG-PROFILE-NEW-STALE-MODE-01: se o usuário vinha de um perfil de match
         # COMPLEXO, o editor ficou em modo avançado (stack/switch/_mode_advanced).
         # Sem resetar, "Salvar" monta um MatchCriteria VAZIO (não casa com nada),
@@ -336,6 +517,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     def _on_profile_switch_success(self, name: str) -> bool:
         """Callback GTK do switch de perfil: toast + re-sincroniza a seleção."""
         self._toast_profile(f"Perfil ativado: {name}")
+        # UX-PROFILES-ACTIVE-HIGHLIGHT-01: negrito imediato na linha ativada.
+        self._mark_active_profile_row(name)
         # Preserva o comportamento visível: seleção acompanha o perfil ativo
         # reportado pelo daemon após o switch.
         self._sync_selection_with_active_profile()
@@ -489,9 +672,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         store.clear()
         select_iter = None
         first_iter = None
+        active = getattr(self, "_active_profile_hint", None)
         for profile in profiles:
+            weight = 700 if profile.name == active else 400
             row_iter = store.append(
-                [profile.name, profile.priority, profile.match.type]
+                [profile.name, profile.priority, profile.match.type, weight]
             )
             if first_iter is None:
                 first_iter = row_iter
@@ -500,6 +685,18 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         target = select_iter if select_iter is not None else first_iter
         if target is not None:
             self._get("profiles_tree").get_selection().select_iter(target)
+
+    def _mark_active_profile_row(self, active: str | None) -> None:
+        """Realça (negrito) a linha do perfil ATIVO no ListStore, in-place."""
+        self._active_profile_hint = active
+        store = getattr(self, "_profiles_store", None)
+        if store is None:
+            return
+        row = store.get_iter_first()
+        while row is not None:
+            name = store.get_value(row, 0)
+            store.set_value(row, 3, 700 if name == active else 400)
+            row = store.iter_next(row)
 
     def _find_cached_profile(self, name: str) -> Profile | None:
         """Retorna o perfil do cache em memória pelo nome, ou None."""
@@ -521,6 +718,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._get("profile_name_entry").set_text(profile.name)
         prio = max(0, min(100, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
+        # FEAT-PROFILE-MODE-GUI-01: seção "Modo" reflete profile.mode
+        # (None → "Sem opinião").
+        self._set_mode_editor(profile.mode)
 
         match = profile.match
         preset_key = detect_simple_preset(match)
@@ -621,6 +821,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         leds_base: dict[str, Any] = dict(base.get("leds") or {})
         leds_base.setdefault("lightbar_brightness", pending_brightness)
         base["leds"] = leds_base
+
+        # FEAT-PROFILE-MODE-GUI-01: a seção `mode` vem dos widgets do editor.
+        # kind "none" (sem opinião) REMOVE a seção (mode=None). Sem a seção
+        # montada (glade antigo), o mode do perfil-base sobrevive por herança,
+        # como antes desta sprint.
+        if self._mode_kind_selector is not None:
+            base["mode"] = self._mode_section_from_editor()
 
         base.update(
             {

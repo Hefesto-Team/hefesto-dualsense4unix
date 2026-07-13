@@ -59,7 +59,10 @@ def test_default_rumble_zerado() -> None:
     draft = DraftConfig.default()
     assert draft.rumble.weak == 0
     assert draft.rumble.strong == 0
-    assert draft.rumble.policy == "balanceado"
+    # FEAT-RUMBLE-POLICY-PROFILE-01: default é SEM opinião (None) — salvar um
+    # perfil novo sem tocar na aba Rumble não inventa política.
+    assert draft.rumble.policy is None
+    assert draft.rumble.custom_mult is None
 
 
 def test_default_mouse_desabilitado() -> None:

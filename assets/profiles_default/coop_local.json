@@ -1,0 +1,23 @@
+{
+  "name": "coop_local",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": [],
+    "window_title_regex": null,
+    "process_name": []
+  },
+  "priority": 0,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [0, 200, 120],
+    "player_leds": [true, false, false, false, true],
+    "lightbar_brightness": 0.7
+  },
+  "rumble": {"passthrough": true},
+  "mode": {"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": true},
+  "suppress_desktop_emulation": true
+}

@@ -177,6 +177,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_player_leds_preset_p2(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False, True, False, True, False])
 
+    def on_player_leds_preset_p3(self, _btn: Gtk.Button) -> None:
+        # FEAT-COOP-PLAYER-LED-01: padrões canônicos P3/P4 (os mesmos que o
+        # co-op local aplica por controle) também disponíveis como preset.
+        self._set_player_leds([True, False, True, False, True])
+
+    def on_player_leds_preset_p4(self, _btn: Gtk.Button) -> None:
+        self._set_player_leds([True, True, False, True, True])
+
     def on_player_leds_preset_none(self, _btn: Gtk.Button) -> None:
         self._set_player_leds([False] * 5)
 

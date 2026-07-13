@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 
+from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -27,6 +28,15 @@ RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 #: Múltiplo do probe offline para evitar overhead — o poll_loop já detecta
 #: desconexão via exceção em read_state e dispara reconnect a parte.
 RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
+
+#: Fatia curta do sleep ONLINE do reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01).
+#: A cada fatia consultamos o `InputDirWatch` (um `os.listdir` de /dev/input,
+#: ~µs — custo zero quando nada muda) e SÓ quando o conjunto de nodes mudou
+#: antecipamos a reconciliação (`controller.connect()` via executor — o
+#: hid_enumerate custa dezenas de ms e NUNCA roda por fatia). Plugar um
+#: DualSense novo passa de "até 30s" para ~2s até o backend abrir o handle
+#: (describe_controllers/LED/rumble/trigger + throttle adaptativo recalculado).
+RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 
 
 async def connect_with_retry(daemon: DaemonProtocol) -> None:
@@ -102,6 +112,19 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             ),
             mouse_applier=None,
             suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            # FEAT-PROFILE-MODE-01: mode_applier=None no restore pela MESMA
+            # razão do mouse — gamepad/nativo/co-op no boot vêm dos flags
+            # persistidos (utils.session), não do perfil.
+            mode_applier=None,
+            # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado —
+            # diferente de mouse/mode, a política de rumble NÃO tem flag
+            # persistido próprio (reseta a "balanceado" a cada boot), então o
+            # perfil é a única fonte para restaurá-la; aplicá-la só ajusta a
+            # config (não cria/destrói devices — sem o risco do
+            # BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
+            rumble_policy_applier=getattr(
+                daemon, "apply_profile_rumble_policy", None
+            ),
         )
         await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)
@@ -126,7 +149,9 @@ async def reconnect(daemon: DaemonProtocol) -> None:
     daemon._arm_input_grace()
 
 
-async def reconnect_loop(daemon: DaemonProtocol) -> None:
+async def reconnect_loop(
+    daemon: DaemonProtocol, *, input_watch: InputDirWatch | None = None
+) -> None:
     """Probe não-bloqueante de conexão com o DualSense (BUG-DAEMON-NO-DEVICE-FATAL-01).
 
     Diferente de `connect_with_retry` (legado, bloqueante e reusado pela CLI):
@@ -139,10 +164,26 @@ async def reconnect_loop(daemon: DaemonProtocol) -> None:
     O loop coopera com o poll_loop: quando `read_state` levanta após perda de
     conexão, o poll loop dispara `reconnect()` (legado) e o probe deste loop
     detectará a transição back-online no próximo tick.
+
+    FEAT-BACKEND-HOTPLUG-FAST-01: quando ONLINE, o sleep de 30s é fatiado em
+    `RECONNECT_HOTPLUG_POLL_INTERVAL_SEC` consultando um `InputDirWatch`
+    (mudança em /dev/input = hotplug/unplug de controle). Mudou → reconcilia já
+    (`controller.connect()` no executor); sem mudança, o custo por fatia é um
+    listdir (~µs) e o check de 30s permanece como fallback. Reentrância segura:
+    `connect()` é idempotente e tem a guarda `_opening` sob `_io_lock` no
+    backend — um `reconnect()` concorrente do poll loop não duplica abertura.
+    `input_watch` é injetável para testes; None cria o watch real.
     """
     from hefesto_dualsense4unix.daemon.connection import (
         restore_last_profile as _restore_last_profile,
     )
+
+    watch = input_watch if input_watch is not None else InputDirWatch()
+    # Baseline do watch: a 1ª chamada de poll() devolve True por construção
+    # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
+    # de /dev/input dispare reconciliação antecipada — o connect() do boot já
+    # cobriu o estado inicial.
+    watch.poll()
 
     # Se o boot já conectou e restaurou o perfil, não re-publica
     # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
@@ -200,13 +241,47 @@ async def reconnect_loop(daemon: DaemonProtocol) -> None:
                 notify_controller_disconnected("probe offline")
             was_connected = False
 
-        # Quando online, dorme intervalo maior; quando offline, dorme curto.
-        timeout = (
-            RECONNECT_ONLINE_CHECK_INTERVAL_SEC
-            if is_connected
-            else RECONNECT_PROBE_INTERVAL_SEC
+        if is_connected:
+            # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
+            # observando /dev/input — hotplug antecipa a reconciliação (o
+            # connect() da próxima iteração) sem esperar o fallback de 30s.
+            if await _wait_online_or_hotplug(daemon, watch):
+                logger.info(
+                    "backend_hotplug_reconcile", trigger="input_dir_change"
+                )
+        else:
+            # Offline o probe já é curto (5s) e cada iteração reconcilia —
+            # o watch não acrescentaria nada aqui.
+            await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+
+
+async def _wait_online_or_hotplug(
+    daemon: DaemonProtocol, watch: InputDirWatch
+) -> bool:
+    """Espera o intervalo online em fatias, sondando o watch de /dev/input.
+
+    FEAT-BACKEND-HOTPLUG-FAST-01: dorme `RECONNECT_HOTPLUG_POLL_INTERVAL_SEC`
+    por fatia (respeitando `_stop_event`) e consulta `watch.poll()` entre elas
+    (listdir ~µs — custo zero quando nada muda). Retorna:
+      - True  → /dev/input mudou (controle plugado/removido); o chamador deve
+                reconciliar imediatamente;
+      - False → o fallback `RECONNECT_ONLINE_CHECK_INTERVAL_SEC` expirou sem
+                mudança (reconciliação periódica normal) ou o daemon está
+                parando.
+    """
+    elapsed = 0.0
+    while elapsed < RECONNECT_ONLINE_CHECK_INTERVAL_SEC:
+        step = min(
+            RECONNECT_HOTPLUG_POLL_INTERVAL_SEC,
+            RECONNECT_ONLINE_CHECK_INTERVAL_SEC - elapsed,
         )
-        await _wait_or_stop(daemon, timeout)
+        await _wait_or_stop(daemon, step)
+        if daemon._is_stopping():
+            return False
+        elapsed += step
+        if watch.poll():
+            return True
+    return False
 
 
 async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
@@ -293,6 +368,7 @@ async def shutdown(daemon: DaemonProtocol) -> None:
 
 __all__ = [
     "BACKOFF_MAX_SEC",
+    "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
     "connect_with_retry",

@@ -288,17 +288,79 @@ class TestSingleControllerNaoRegride:
 
 class TestDescribeControllers:
     def test_descreve_cada_controle(self) -> None:
+        from types import SimpleNamespace
+
         inst = PyDualSenseController(evdev_reader=_null_evdev())
         h1 = _FakeHandle(transport_name="USB")
+        h1.battery = SimpleNamespace(Level=87)  # type: ignore[attr-defined]
         h2 = _FakeHandle(transport_name="BT")
-        inst._handles = {"a": h1, "b": h2}  # type: ignore[dict-item]
-        inst._primary_key = "a"
+        # Keys reais são o serial hidapi (MAC); a normalização deve casar com a
+        # do `primary_uniq` (norm_mac): minúsculo e sem ":".
+        inst._handles = {
+            "A0:AB:51:C3:11:F0": h1,
+            "48:18:8D:00:AA:BB": h2,
+        }  # type: ignore[dict-item]
+        inst._primary_key = "A0:AB:51:C3:11:F0"
 
         desc = inst.describe_controllers()
         assert desc == [
-            {"index": 0, "connected": True, "transport": "usb", "is_primary": True},
-            {"index": 1, "connected": True, "transport": "bt", "is_primary": False},
+            {
+                "index": 0,
+                "connected": True,
+                "transport": "usb",
+                "is_primary": True,
+                "uniq": "a0ab51c311f0",
+                "battery_pct": 87,
+            },
+            {
+                "index": 1,
+                "connected": True,
+                "transport": "bt",
+                "is_primary": False,
+                "uniq": "48188d00aabb",
+                # _FakeHandle sem atributo battery -> firmware ainda não
+                # reportou -> None (não 0% falso).
+                "battery_pct": None,
+            },
         ]
+
+    def test_uniq_none_para_key_por_path(self) -> None:
+        """Key de fallback por path (sem serial) não vira MAC — uniq é None.
+
+        Mesma semântica do `primary_uniq` (FEAT-DSX-CONTROLLER-IDENTITY-01).
+        """
+        inst = PyDualSenseController(evdev_reader=_null_evdev())
+        inst._handles = {"/dev/hidraw4": _FakeHandle()}  # type: ignore[dict-item]
+        inst._primary_key = "/dev/hidraw4"
+
+        (entry,) = inst.describe_controllers()
+        assert entry["uniq"] is None
+
+    def test_battery_none_quando_desconectado(self) -> None:
+        """Handle desconectado não expõe bateria (evita leitura fantasma)."""
+        from types import SimpleNamespace
+
+        inst = PyDualSenseController(evdev_reader=_null_evdev())
+        h1 = _FakeHandle(connected=False)
+        h1.battery = SimpleNamespace(Level=50)  # type: ignore[attr-defined]
+        inst._handles = {"AA:BB": h1}  # type: ignore[dict-item]
+        inst._primary_key = "AA:BB"
+
+        (entry,) = inst.describe_controllers()
+        assert entry["connected"] is False
+        assert entry["battery_pct"] is None
+
+    def test_battery_clampada_em_0_100(self) -> None:
+        from types import SimpleNamespace
+
+        inst = PyDualSenseController(evdev_reader=_null_evdev())
+        h1 = _FakeHandle()
+        h1.battery = SimpleNamespace(Level=250)  # type: ignore[attr-defined]
+        inst._handles = {"AA:BB": h1}  # type: ignore[dict-item]
+        inst._primary_key = "AA:BB"
+
+        (entry,) = inst.describe_controllers()
+        assert entry["battery_pct"] == 100
 
     def test_offline_devolve_entrada_neutra(self) -> None:
         inst = PyDualSenseController(evdev_reader=_null_evdev())

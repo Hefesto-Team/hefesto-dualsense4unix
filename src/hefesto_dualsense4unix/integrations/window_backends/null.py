@@ -12,6 +12,9 @@ from hefesto_dualsense4unix.integrations.window_backends.base import WindowInfo
 class NullBackend:
     """Backend de janela ativa que sempre retorna None (modo silencioso)."""
 
+    # FEAT-WINDOW-DETECT-DIAG-01: nome estável para diagnóstico (store/doctor).
+    backend_name: str = "null"
+
     def get_active_window_info(self) -> WindowInfo | None:
         """Retorna sempre None — ambiente sem suporte de detecção."""
         return None

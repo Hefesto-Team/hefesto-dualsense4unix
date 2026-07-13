@@ -15,6 +15,7 @@ PATH-RESOLVER-01: o .deb instala em /usr/share/, não em ~/.local/share/):
 """
 from __future__ import annotations
 
+import contextlib
 import pathlib
 import sys
 from typing import Any
@@ -137,8 +138,15 @@ if _GTK_DISPONIVEL:
             self._load_pixbuf_pair()
             self.set_size_request(size, size)
             self.connect("draw", self._on_draw)
+            # BUG-GLYPH-TOOLTIP-ORFAO-01: tooltip DESLIGADO de propósito. Sob
+            # COSMIC+XWayland a janelinha de tooltip ficava PRESA na tela
+            # (órfã, sobre o grid) após o hover — visto ao vivo em 2026-07-13.
+            # O glyph é auto-evidente; o rótulo segue acessível ao leitor de
+            # tela via accessible-name.
             label = tooltip_pt_br or BUTTON_GLYPH_LABELS.get(name, name)
-            self.set_tooltip_text(label)
+            self.set_has_tooltip(False)
+            with contextlib.suppress(Exception):
+                self.get_accessible().set_name(label)
 
         # ------------------------------------------------------------------
         # API publica

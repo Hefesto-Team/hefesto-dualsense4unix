@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 
 from filelock import FileLock
@@ -73,6 +75,115 @@ def _lock_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + LOCK_SUFFIX)
 
 
+# FIX-PACKAGING-SEED-PARITY-01: semeadura em RUNTIME dos presets default.
+# O caminho nativo roda scripts/install_profiles.sh no install.sh, mas o .deb e
+# o AppImage não têm gancho por-usuário (o postinst roda como root e não conhece
+# o $HOME de quem vai usar) — sem isto, quem instala pelo .deb nunca recebe
+# sackboy_nativo/coop_local/point_and_click etc. A semântica é IDÊNTICA à do
+# shell script (copy-if-absent + marker `.seeded_presets` que respeita deleção
+# proposital da usuária); o formato do marker (um filename por linha) é contrato
+# COMPARTILHADO entre os dois semeadores — mantê-los em sincronia.
+SEED_MARKER_NAME = ".seeded_presets"
+
+# Opt-out explícito da semeadura automática ("1" desliga). Usado pela suíte de
+# testes (hermetismo: um teste que carrega perfis não pode receber os presets
+# do repo no seu tmp) e disponível para quem quiser um config 100% manual.
+SEED_SKIP_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"
+
+# Fontes candidatas, na ordem: assets/ do repo (dev / install editável via
+# install.sh) e o share do sistema (.deb/AppImage — build_deb.sh copia assets/
+# inteiro para /usr/share/hefesto-dualsense4unix/assets/). A primeira que
+# existir vence; nenhuma existente → no-op silencioso.
+_DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = (
+    Path(__file__).resolve().parents[3] / "assets" / "profiles_default",
+    Path("/usr/share/hefesto-dualsense4unix/assets/profiles_default"),
+)
+
+# Flag once-per-process: a semeadura roda no máximo uma vez por processo
+# (daemon, GUI, CLI…), na primeira carga de perfis.
+_seed_attempted: bool = False
+
+
+def seed_default_presets(
+    dest_dir: Path | None = None,
+    source_dirs: Sequence[Path] | None = None,
+) -> list[str]:
+    """Copia presets default AUSENTES para o diretório de perfis do usuário.
+
+    Réplica fiel de scripts/install_profiles.sh (INSTALL-PROFILES-COPY-IF-
+    ABSENT-01 + INSTALL-PROFILES-RESPECT-DELETION-01):
+
+    - NUNCA sobrescreve um perfil existente (preserva edições da usuária).
+    - O marker `.seeded_presets` registra cada preset já semeado: um preset
+      que a usuária DELETOU de propósito não é ressuscitado.
+    - Preset já presente na 1ª execução (instalação antiga/editado) é
+      registrado no marker SEM cópia — deleções posteriores são respeitadas.
+
+    Usa o primeiro diretório existente de `source_dirs`; nenhum existente →
+    no-op (retorna lista vazia). Paths injetáveis para testes herméticos.
+    Retorna os filenames efetivamente copiados.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
+    source = next((c for c in candidates if c.is_dir()), None)
+    if source is None:
+        return []
+
+    directory.mkdir(parents=True, exist_ok=True)
+    marker = directory / SEED_MARKER_NAME
+    copied: list[str] = []
+    # FileLock serializa daemon + GUI semeando ao mesmo tempo no primeiro boot.
+    with FileLock(str(_lock_path(marker))):
+        seeded: set[str] = set()
+        if marker.exists():
+            seeded = set(marker.read_text(encoding="utf-8").splitlines())
+        new_entries: list[str] = []
+        for src in sorted(source.glob("*.json")):
+            fname = src.name
+            # Já semeado antes → respeita a decisão da usuária (inclusive deletar).
+            if fname in seeded:
+                continue
+            dest = directory / fname
+            if dest.exists():
+                # Presente na 1ª execução: registra sem copiar.
+                new_entries.append(fname)
+                continue
+            shutil.copyfile(src, dest)
+            new_entries.append(fname)
+            copied.append(fname)
+        # Espelha o `touch` do shell script: o marker passa a existir mesmo
+        # quando nada foi copiado (registra que a semeadura já rodou aqui).
+        if new_entries or not marker.exists():
+            with marker.open("a", encoding="utf-8") as fh:
+                for fname in new_entries:
+                    fh.write(f"{fname}\n")
+    if copied:
+        logger.info("presets_seeded", copied=copied, source=str(source))
+    return copied
+
+
+def _maybe_seed_presets() -> None:
+    """Dispara a semeadura uma vez por processo, antes da primeira carga.
+
+    Best-effort por contrato: uma falha aqui (disco cheio, permissão, marker
+    corrompido) NUNCA pode impedir a carga dos perfis existentes — loga warning
+    e segue. O flag é marcado ANTES da tentativa para não re-tentar em loop a
+    cada `load_*` num ambiente permanentemente quebrado.
+    """
+    global _seed_attempted
+    if _seed_attempted or os.environ.get(SEED_SKIP_ENV_VAR) == "1":
+        return
+    _seed_attempted = True
+    try:
+        seed_default_presets()
+    except Exception as exc:  # boundary best-effort (ver docstring)
+        logger.warning(
+            "presets_seed_failed",
+            err=str(exc),
+            err_type=type(exc).__name__,
+        )
+
+
 def _profile_path(identifier: str | Profile) -> Path:
     """Resolve filename a partir de slug direto ou de Profile.
 
@@ -102,6 +213,7 @@ def load_profile(identifier: str) -> Profile:
        não acompanhou o slug atual (ex.: `meu-perfil.json` com name "Meu Perfil").
     """
     _reject_traversal(identifier)
+    _maybe_seed_presets()
     directory = profiles_dir(ensure=True)
     direct = directory / f"{identifier}.json"
     # Defesa em profundidade: mesmo após rejeição de tokens, confirmar que o
@@ -150,6 +262,7 @@ def load_all_profiles() -> list[Profile]:
     dos demais. Emite `WARN profile_invalid path=... err=...` para cada arquivo
     que falhar a decodificação ou validação Pydantic.
     """
+    _maybe_seed_presets()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
     for path in sorted(directory.glob("*.json")):
@@ -175,6 +288,9 @@ def audit_profiles() -> list[tuple[str, str]]:
     em vez de só pulá-los no fallback. Retorna [(nome, erro)] dos perfis que
     falham decode/validação. Nunca levanta.
     """
+    # Semeia ANTES de auditar: no primeiro boot pós-.deb, os presets precisam
+    # existir quando o daemon montar o relatório de perfis.
+    _maybe_seed_presets()
     directory = profiles_dir(ensure=True)
     invalid: list[tuple[str, str]] = []
     for path in sorted(directory.glob("*.json")):
@@ -256,8 +372,11 @@ def _atomic_write_json(target: Path, payload: object) -> None:
 
 
 __all__ = [
+    "SEED_MARKER_NAME",
+    "SEED_SKIP_ENV_VAR",
     "delete_profile",
     "load_all_profiles",
     "load_profile",
     "save_profile",
+    "seed_default_presets",
 ]

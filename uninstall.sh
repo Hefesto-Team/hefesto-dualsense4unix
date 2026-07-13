@@ -258,6 +258,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules \
                    /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules \
                    /etc/udev/rules.d/77-dualsense-leds.rules \
+                   /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf
         sudo udevadm control --reload-rules
         # Re-trigger eventos para que devices PS5 já plugados percam os

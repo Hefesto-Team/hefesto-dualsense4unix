@@ -69,15 +69,25 @@ class LedsDraft(BaseModel):
 class RumbleDraft(BaseModel):
     """Draft de rumble.
 
-    ``policy``: reservado para FEAT-RUMBLE-POLICY-01; armazenado no draft
-        mas sem bind de widget nesta sprint.
+    ``weak``/``strong``: teste de motores (não persistem no perfil).
+
+    ``policy``/``custom_mult``: política de intensidade persistível no PERFIL
+    (FEAT-RUMBLE-POLICY-PROFILE-01). ``policy=None`` = perfil sem opinião
+    (ativar não mexe na política global do daemon). A aba Rumble grava aqui
+    cada escolha da usuária, para o "Salvar Perfil" do rodapé persistir o que
+    ela vê; ``custom_mult`` (0.0-2.0) só acompanha ``policy="custom"``.
+
+    ``passthrough``: preserva o campo v1 do perfil no round-trip
+    (não editável pela GUI nesta sprint).
     """
 
     model_config = ConfigDict(frozen=True)
 
     weak: int = Field(default=0, ge=0, le=255)
     strong: int = Field(default=0, ge=0, le=255)
-    policy: Literal["economia", "balanceado", "max", "auto"] = "balanceado"
+    policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
+    custom_mult: float | None = Field(default=None, ge=0.0, le=2.0)
+    passthrough: bool = True
 
 
 class MouseDraft(BaseModel):
@@ -191,8 +201,15 @@ class DraftConfig(BaseModel):
             player_leds=player_5,
         )
 
-        # Rumble — Profile.rumble so tem ``passthrough`` (sem weak/strong persistido)
-        rumble = RumbleDraft()
+        # Rumble — weak/strong não persistem no perfil (teste de motores);
+        # a POLÍTICA persiste (FEAT-RUMBLE-POLICY-PROFILE-01): policy e
+        # custom_mult vêm da seção ``rumble`` (None = perfil sem opinião) e
+        # ``passthrough`` é preservado para o round-trip.
+        rumble = RumbleDraft(
+            policy=profile.rumble.policy,
+            custom_mult=profile.rumble.custom_mult,
+            passthrough=profile.rumble.passthrough,
+        )
 
         # Mouse — FEAT-POINT-AND-CLICK-01: a seção opcional ``profile.mouse``
         # popula o draft (dirty=False: carga programática não é toque da
@@ -232,9 +249,13 @@ class DraftConfig(BaseModel):
         perfil point-and-click sem mexer na aba Mouse descartava a seção e
         matava a feature; perfis legados (sem seção) seguem round-trip
         inalterados (in_profile=False e dirty=False → sem seção fantasma).
-        Campos ainda sem suporte no schema (emulation, rumble.policy) continuam
-        descartados; ``suppress_desktop_emulation`` não é editável pelo draft
-        (fica no default False do schema).
+        FEAT-RUMBLE-POLICY-PROFILE-01: a política de rumble agora É persistida
+        — ``rumble.policy``/``rumble.custom_mult`` do draft vão para a seção
+        ``rumble`` do perfil (None = perfil sem opinião, round-trip sem
+        inventar política) e ``passthrough`` é preservado. Campos ainda sem
+        suporte no schema (emulation) continuam descartados;
+        ``suppress_desktop_emulation`` não é editável pelo draft (fica no
+        default False do schema).
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
@@ -279,7 +300,11 @@ class DraftConfig(BaseModel):
                 player_leds=list(self.leds.player_leds),
                 lightbar_brightness=brightness_float,
             ),
-            rumble=RumbleConfig(),
+            rumble=RumbleConfig(
+                passthrough=self.rumble.passthrough,
+                policy=self.rumble.policy,
+                custom_mult=self.rumble.custom_mult,
+            ),
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
         )
@@ -290,8 +315,11 @@ class DraftConfig(BaseModel):
         """Serializa draft para o formato do contrato IPC ``profile.apply_draft``.
 
         Retorna dicionario com secoes triggers/leds/rumble/mouse/keyboard.
-        Campos reservados (mic_led, emulation, rumble.policy) sao omitidos
-        para não causar erros em versões de daemon sem suporte.
+        Campos reservados (mic_led, emulation) sao omitidos para não causar
+        erros em versões de daemon sem suporte. A política de rumble
+        (policy/custom_mult) também não entra aqui: ela já é aplicada na hora
+        pelo IPC vivo (rumble.policy_set/policy_custom) ao mexer na aba e
+        persiste via ``to_profile`` (FEAT-RUMBLE-POLICY-PROFILE-01).
 
         A seção ``keyboard`` é SEMPRE emitida (mesmo com ``key_bindings`` None) —
         BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: antes ``to_ipc_dict`` omitia os

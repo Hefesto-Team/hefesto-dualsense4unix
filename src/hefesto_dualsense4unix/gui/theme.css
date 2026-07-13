@@ -432,3 +432,18 @@ menu separator {
  * Quando o projeto migrar para GTK4, reavaliar e reintroduzir o @media
  * como bloco separado opt-in.
  */
+
+/* UX-TRIGGERS-COMPACT-01: grade compacta dos modos de gatilho (e demais
+ * SegmentedSelector com wrap). Botoes menores para caber em 3 colunas sem
+ * engolir a aba; a fonte levemente reduzida mantem a leitura. */
+.hefesto-segmented-compact button {
+    padding: 3px 8px;
+    font-size: 92%;
+    min-height: 0;
+}
+
+/* FEAT-GUI-HOME-TAB-01: cards de controle da aba Inicio. */
+.hefesto-dualsense4unix-card {
+    padding: 8px;
+    border-radius: 6px;
+}

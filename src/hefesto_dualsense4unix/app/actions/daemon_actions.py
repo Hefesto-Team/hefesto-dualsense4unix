@@ -226,7 +226,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         Anti-loop: limite de 2 tentativas por sessão (`_daemon_autostart_attempts`).
         Após a segunda falha, o helper vira no-op até a próxima abertura
         do processo da GUI.
+
+        FEAT-GUI-HOME-TAB-01: respeita o "Desligar Hefesto" da aba Início —
+        com `_user_stopped_daemon` armado, NÃO ressuscita o daemon (a usuária
+        pediu o desligamento de verdade; religa só por gesto explícito).
         """
+        if getattr(self, "_user_stopped_daemon", False):
+            logger.info("autostart_respeitando_desligamento_manual")
+            return
         if self._daemon_autostart_attempts >= 2:
             return
 
@@ -397,6 +404,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # --- handlers ---
 
     def on_daemon_start(self, _btn: Gtk.Button) -> None:
+        # FEAT-GUI-HOME-TAB-01: "Iniciar" é gesto explícito — desarma o
+        # "Desligar Hefesto" da aba Início (o autostart volta a valer).
+        self._user_stopped_daemon = False
         self._run_systemctl_async("start")
 
     def on_daemon_stop(self, _btn: Gtk.Button) -> None:

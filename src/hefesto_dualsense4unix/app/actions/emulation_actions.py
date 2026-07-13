@@ -83,6 +83,27 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if callable(fn):
                 fn()
 
+    def _sync_uinput_card(self, active_key: str) -> None:
+        """Atualiza device/VID:PID do cartão UINPUT conforme a máscara REAL."""
+        from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
+
+        name_label = self._get("emulation_device_name_label")
+        vid_label = self._get("emulation_vidpid_label")
+        if active_key in FLAVORS:
+            spec = FLAVORS[active_key]
+            nice = "DualSense" if active_key == "dualsense" else "Xbox 360"
+            if name_label is not None:
+                name_label.set_text(str(spec["name"]))
+            if vid_label is not None:
+                vid_label.set_text(
+                    f"{spec['vendor']:04X}:{spec['product']:04X} ({nice})"
+                )
+        else:
+            if name_label is not None:
+                name_label.set_text("— (gamepad virtual desligado)")
+            if vid_label is not None:
+                vid_label.set_text("—")
+
     def on_emulation_test_device(self, _btn: Gtk.Button) -> None:
         try:
             import uinput  # noqa: F401
@@ -323,14 +344,26 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 if gp_label is not None:
                     gp_label.set_markup('<span foreground="#999">desligado</span>')
             self._highlight_gamepad(active_key)
+            # BUG-EMULATION-UINPUT-CARD-STALE-01: o cartão UINPUT mostrava
+            # SEMPRE "X-Box 360 / 045E:028E" (constantes de install) mesmo com
+            # a máscara real em DualSense — informação contraditória na mesma
+            # tela. Reflete o device/VID:PID do vpad REALMENTE ativo.
+            self._sync_uinput_card(active_key)
             gm_label = self._get("emulation_gamemode_status_label")
             if gm_label is not None and isinstance(state, dict):
+                # BUG-GAMEMODE-LABEL-AMBIGUO-01: o label dizia "ativo" quando o
+                # modo jogo estava DESLIGADO (referia-se à emulação) — lido como
+                # "Modo jogo: ativo", significava o CONTRÁRIO do exibido.
                 if state.get("emulation_suppressed"):
-                    gm_label.set_markup('<span foreground="#c90">pausado (modo jogo)</span>')
+                    gm_label.set_markup(
+                        '<span foreground="#c90">LIGADO — mouse/teclado suspensos</span>'
+                    )
                 elif state.get("paused"):
                     gm_label.set_markup('<span foreground="#c90">daemon pausado</span>')
                 else:
-                    gm_label.set_markup('<span foreground="#2d8">ativo</span>')
+                    gm_label.set_markup(
+                        '<span foreground="#2d8">desligado — emulação normal</span>'
+                    )
             return False
 
         def _on_err(_exc: Exception) -> bool:

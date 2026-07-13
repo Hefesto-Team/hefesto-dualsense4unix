@@ -9,7 +9,7 @@ import os
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class MatchCriteria(BaseModel):
@@ -164,9 +164,48 @@ class LedsConfig(BaseModel):
 
 
 class RumbleConfig(BaseModel):
+    """Seção de rumble do perfil.
+
+    FEAT-RUMBLE-POLICY-PROFILE-01: além do ``passthrough`` (v1), o perfil pode
+    declarar a POLÍTICA de intensidade de rumble, aplicada na ativação em
+    paridade com a seção ``mode``:
+
+    - ``policy=None`` (default) — perfil SEM opinião: ativar não mexe na
+      política global do daemon; apenas reverte política que OUTRO perfil
+      tenha aplicado (ver ``Daemon.apply_profile_rumble_policy``).
+    - ``policy`` preenchida — aplicada via ``rumble_policy_applier`` injetado
+      no ``ProfileManager``, respeitando o lock manual de 30s.
+    - ``custom_mult`` — multiplicador 0.0-2.0; só faz sentido com
+      ``policy="custom"`` (validado abaixo).
+
+    Aditivo/retrocompatível: perfis v1 sem os campos continuam válidos.
+    """
+
     model_config = ConfigDict(extra="forbid")
 
     passthrough: bool = True
+    policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
+    custom_mult: float | None = None
+
+    @model_validator(mode="after")
+    def _validate_custom_mult(self) -> RumbleConfig:
+        """Range de ``custom_mult`` + coerência com ``policy``.
+
+        ``custom_mult`` fora de ``policy="custom"`` é erro semântico (o valor
+        seria silenciosamente ignorado pelo daemon) — rejeitamos cedo, na
+        borda do schema, com mensagem clara.
+        """
+        if self.custom_mult is not None:
+            if not (0.0 <= self.custom_mult <= 2.0):
+                raise ValueError(
+                    f"custom_mult fora de [0.0, 2.0]: {self.custom_mult}"
+                )
+            if self.policy != "custom":
+                raise ValueError(
+                    "custom_mult só é válido com policy='custom' "
+                    f"(policy={self.policy!r})"
+                )
+        return self
 
 
 class ProfileMouseConfig(BaseModel):
@@ -183,6 +222,34 @@ class ProfileMouseConfig(BaseModel):
     enabled: bool
     speed: int = Field(default=6, ge=1, le=12)
     scroll_speed: int = Field(default=1, ge=1, le=5)
+
+
+class ProfileModeConfig(BaseModel):
+    """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
+
+    O perfil do JOGO declara como o controle deve se comportar quando ele está
+    em foco — as features passam a COEXISTIR porque o contexto decide, sem
+    toggles globais brigando entre si:
+
+    - ``kind="native"`` — release total: o jogo usa os gatilhos adaptativos
+      NATIVOS da Sony (Sackboy & cia); o hefesto solta o controle.
+    - ``kind="gamepad"`` — gamepad virtual com a máscara `gamepad_flavor`
+      (prompts PlayStation ou Xbox); ``coop=True`` liga o co-op local
+      (cada controle físico vira um jogador).
+    - ``kind="desktop"`` — declaração explícita de app de desktop: desliga
+      gamepad/nativo/co-op vindos de perfil (e também os expirados do lock).
+
+    Perfis SEM a seção não têm opinião: liberam apenas o modo que outro PERFIL
+    tinha ligado (gesto manual da usuária é respeitado — mesma semântica do
+    `suppress_desktop_emulation`). Toggles manuais recentes vencem por
+    ``MANUAL_PROFILE_LOCK_SEC`` (30s), como no `mouse`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["desktop", "gamepad", "native"]
+    gamepad_flavor: Literal["dualsense", "xbox"] | None = None
+    coop: bool = False
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -215,6 +282,9 @@ class Profile(BaseModel):
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
     #   dadas (via `mouse_applier` injetado no ProfileManager).
     mouse: ProfileMouseConfig | None = None
+    # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
+    # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
+    mode: ProfileModeConfig | None = None
     # FEAT-POINT-AND-CLICK-01: modo-jogo por perfil. True = ativar o perfil
     # suprime a emulação de mouse/teclado no desktop (jogos de GAMEPAD que
     # leem o controle cru); False (default) = ativar o perfil LIBERA a

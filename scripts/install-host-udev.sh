@@ -72,6 +72,7 @@ RULES=(
     "72-ps5-controller-autosuspend.rules"
     "76-dualsense-touchpad-libinput-ignore.rules"
     "77-dualsense-leds.rules"
+    "78-dualsense-motion-not-joystick.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

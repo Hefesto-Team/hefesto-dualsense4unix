@@ -402,11 +402,34 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
 elif ! command -v sudo >/dev/null 2>&1; then
     warn "sudo ausente — pulando (rode scripts/install_udev.sh manualmente como root)"
 else
-    printf '      copiando 4 regras canônicas + modules-load uinput (sudo)\n'
-    printf '        70-ps5-controller.rules                permissão hidraw (USB e BT)\n'
-    printf '        71-uinput.rules                        emulação Xbox360 via uinput\n'
-    printf '        72-ps5-controller-autosuspend.rules    evita desconexão intermitente USB\n'
-    printf '        76-...-touchpad-libinput-ignore.rules  touchpad só pelo hefesto (sem briga)\n'
+    # FIX-PACKAGING-SEED-PARITY-01: lista derivada de assets/*.rules em vez de
+    # texto estático — o antigo citava "4 regras" quando o conjunto canônico já
+    # tinha 6 (faltavam a 77-leds e a 78-motion-not-joystick). Regra nova em
+    # assets/ aparece aqui automaticamente (descrição é best-effort por prefixo).
+    # Fora do conjunto canônico: 73/74 descontinuadas, 75 opt-in.
+    canonical_rules=()
+    for rules_path in "${ROOT_DIR}/assets/"[0-9][0-9]-*.rules; do
+        [[ -f "${rules_path}" ]] || continue
+        rules_base="$(basename "${rules_path}")"
+        case "${rules_base}" in
+            73-*|74-*|75-*) continue ;;
+        esac
+        canonical_rules+=("${rules_base}")
+    done
+    printf '      copiando %d regras canônicas + modules-load uinput (sudo)\n' \
+        "${#canonical_rules[@]}"
+    for rules_base in "${canonical_rules[@]}"; do
+        case "${rules_base}" in
+            70-*) rules_desc='permissão hidraw (USB e BT)' ;;
+            71-*) rules_desc='emulação Xbox360 via uinput' ;;
+            72-*) rules_desc='evita desconexão intermitente USB' ;;
+            76-*) rules_desc='touchpad só pelo hefesto (sem briga)' ;;
+            77-*) rules_desc='lightbar/player-LED graváveis via sysfs' ;;
+            78-*) rules_desc='motion sensors fora da lista de joysticks' ;;
+            *)    rules_desc='' ;;
+        esac
+        printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"
+    done
     printf '      (73/74 descontinuadas; 75 áudio-off é opt-in via --disable-usb-audio)\n'
 
     if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then

@@ -12,9 +12,12 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from hefesto_dualsense4unix.daemon.context import DaemonContext
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 logger = get_logger(__name__)
 
@@ -58,6 +61,64 @@ def _ensure_display_env() -> None:
                 logger.info("autoswitch_display_env_imported", var=key)
 
 
+def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]:
+    """Constrói o window reader e o instrumenta com diagnóstico no store.
+
+    FEAT-WINDOW-DETECT-DIAG-01: antes, quando a detecção de janela falhava
+    (ex.: cosmic-comp sem wlr-foreign-toplevel-management), o autoswitch
+    ficava silenciosamente cego — perfil-por-jogo virava letra morta e nada
+    apontava qual backend estava ativo. Agora cada leitura do poll grava no
+    StateStore:
+
+      window_detect_backend    -- backend efetivamente ativo, re-lido a cada
+                                  leitura (a cascata Wayland pode migrar
+                                  portal -> wlrctl -> null em runtime);
+      window_detect_healthy    -- saudável = >= 1 leitura útil desde o boot
+                                  OU presunção inicial do xlib (só escolhido
+                                  com DISPLAY presente; cobre XWayland e
+                                  Proton mesmo antes da primeira leitura
+                                  útil — desktop vazio também dá "unknown");
+      window_detect_last_class -- última wm_class útil (captura o wm_class
+                                  de um jogo direto do estado, sem journal).
+
+    Retorna um callable compatível com `AutoSwitcher.window_reader` (API
+    legada de dict). O envelope fica AQUI (e não no AutoSwitcher) para o
+    diagnóstico existir mesmo se alguém instanciar o AutoSwitcher com outro
+    reader — o contrato do AutoSwitcher permanece intocado.
+    """
+    from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
+
+    reader = build_window_reader()
+
+    def _backend_name() -> str | None:
+        # Defensivo: readers substitutos (testes/integrações antigas) podem
+        # não expor metadados de diagnóstico — None = "desconhecido".
+        name = getattr(reader, "backend_name", None)
+        return name if isinstance(name, str) else None
+
+    # Presunção documentada: "xlib" só é escolhido com DISPLAY presente e
+    # cobre o caso de uso principal (jogos XWayland/Proton) — nasce saudável.
+    initial_backend = _backend_name()
+    initial_healthy = initial_backend == "xlib"
+    store.set_window_detect_backend(initial_backend, healthy=initial_healthy)
+    logger.info(
+        "window_detect_diag_seeded",
+        backend=initial_backend,
+        healthy=initial_healthy,
+    )
+
+    def _read() -> dict[str, Any]:
+        info = reader()
+        wm_class = info.get("wm_class")
+        store.record_window_detect_read(
+            _backend_name(),
+            wm_class if isinstance(wm_class, str) else None,
+        )
+        return info
+
+    return _read
+
+
 class AutoswitchSubsystem:
     """Subsystem que gerencia o AutoSwitcher de perfis."""
 
@@ -66,7 +127,6 @@ class AutoswitchSubsystem:
 
     async def start(self, ctx: DaemonContext) -> None:
         """Inicia o AutoSwitcher com as dependências do DaemonContext."""
-        from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
         from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
@@ -83,10 +143,17 @@ class AutoswitchSubsystem:
             ),
             mouse_applier=getattr(daemon, "apply_profile_mouse", None),
             suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            mode_applier=getattr(daemon, "apply_profile_mode", None),
+            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+            rumble_policy_applier=getattr(
+                daemon, "apply_profile_rumble_policy", None
+            ),
         )
+        # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
+        # saúde/última wm_class útil no store a cada leitura do poll.
         self._autoswitch = AutoSwitcher(
             manager=manager,
-            window_reader=build_window_reader(),
+            window_reader=_build_diag_window_reader(ctx.store),
             store=ctx.store,
         )
         if not self._autoswitch.disabled():
@@ -109,7 +176,6 @@ class AutoswitchSubsystem:
 
 async def start_autoswitch(daemon: DaemonProtocol) -> None:
     """Função utilitária: inicia o AutoSwitcher usando o Daemon diretamente."""
-    from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
     from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
@@ -124,10 +190,15 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
         mouse_applier=daemon.apply_profile_mouse,
         suppression_applier=daemon.apply_profile_suppression,
+        mode_applier=getattr(daemon, "apply_profile_mode", None),
+        # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
     )
+    # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
+    # saúde/última wm_class útil no store a cada leitura do poll.
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
-        window_reader=build_window_reader(),
+        window_reader=_build_diag_window_reader(daemon.store),
         store=daemon.store,
     )
     if not daemon._autoswitch.disabled():

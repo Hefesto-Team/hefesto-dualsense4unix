@@ -25,7 +25,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
@@ -71,6 +71,13 @@ EVDEV_WATCHDOG_SEC: float = 2.0
 # DaemonConfig
 # ---------------------------------------------------------------------------
 
+#: FEAT-RUMBLE-POLICY-PROFILE-01: políticas válidas de intensidade de rumble.
+#: Fonte única para `DaemonConfig.rumble_policy` e para a validação defensiva
+#: em `Daemon.apply_profile_rumble_policy` (o schema de perfil replica o
+#: Literal para não importar o daemon — sem ciclo de import).
+RumblePolicy = Literal["economia", "balanceado", "max", "auto", "custom"]
+RUMBLE_POLICIES: tuple[str, ...] = get_args(RumblePolicy)
+
 
 @dataclass
 class DaemonConfig:
@@ -113,7 +120,7 @@ class DaemonConfig:
     # BUG-RUMBLE-APPLY-IGNORED-01
     rumble_active: tuple[int, int] | None = None
     # FEAT-RUMBLE-POLICY-01
-    rumble_policy: Literal["economia", "balanceado", "max", "auto", "custom"] = "balanceado"
+    rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
     # FEAT-HOTKEY-MIC-01
     mic_button_toggles_system: bool = True
@@ -186,6 +193,21 @@ class Daemon:
     # Estado de emulação (mouse/gamepad) capturado ANTES do Modo Nativo, para
     # restaurar ao desligar (o release apaga os flags próprios).
     _native_emu_stash: dict[str, Any] = field(default_factory=dict)
+    # FEAT-PROFILE-MODE-01: qual MODO o perfil ativo ligou ("native"|"gamepad"|
+    # None). Perfis sem seção `mode` só revertem modo cuja origem foi PERFIL —
+    # gesto manual da usuária nunca é derrubado por autoswitch (mesma semântica
+    # do `_suppress_from_profile`).
+    _mode_from_profile: str | None = None
+    # FEAT-RUMBLE-POLICY-PROFILE-01: True quando a política de rumble VIGENTE
+    # foi aplicada por um perfil (`apply_profile_rumble_policy`). Perfis sem
+    # opinião (rumble.policy=None) só revertem política cuja origem foi
+    # PERFIL — gesto manual da usuária (IPC rumble.policy_set/policy_custom)
+    # nunca é derrubado por autoswitch (paridade com `_mode_from_profile`).
+    _rumble_policy_from_profile: bool = False
+    # Política global vigente ANTES de o 1º perfil-com-opinião mexer, como
+    # par (policy, custom_mult) — é para ela que um perfil sem opinião
+    # reverte. None = nenhum perfil mexeu na política.
+    _rumble_policy_before_profile: tuple[RumblePolicy, float] | None = None
     # BUG-EMU-DEVICE-RACE-01: serializa as transições de device de emulação
     # (start/stop de mouse e gamepad virtuais). A wave passou a chamar
     # set_mouse_emulation também da thread do executor (hotkey de ciclo via
@@ -419,7 +441,13 @@ class Daemon:
         """True se o Modo Nativo está ativo (controle solto para o jogo)."""
         return self._native_mode
 
-    def set_native_mode(self, enabled: bool, *, reapply: bool = True) -> bool:
+    def set_native_mode(
+        self,
+        enabled: bool,
+        *,
+        reapply: bool = True,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
         FEAT-NATIVE-MODE-01. Para jogar Sackboy & cia com os gatilhos adaptativos
@@ -449,6 +477,11 @@ class Daemon:
             save_native_mode,
         )
 
+        if origin == "manual":
+            # FEAT-PROFILE-MODE-01: gesto manual de Modo Nativo entra na mesma
+            # janela de respeito dos toggles de emulação — um perfil (autoswitch)
+            # não liga/desliga o nativo por 30s após a usuária mexer na mão.
+            self._emu_manual_ts = time.monotonic()
         if enabled == self._native_mode:
             return self._native_mode
         if enabled:
@@ -461,7 +494,7 @@ class Daemon:
                 "gamepad": [bool(g_on), g_flavor],
             }
             self._native_mode = True
-            self.store.set_native_mode_active(True)
+            self.store.set_native_mode_active(True, origin=origin)
             save_native_mode(True, emu_stash=self._native_emu_stash)
             self._release_controller_to_game()
         else:
@@ -472,7 +505,9 @@ class Daemon:
                 self._reapply_last_profile()
                 self._restore_emulation_from_stash()
             self._native_emu_stash = {}
-        logger.info("native_mode_changed", native=enabled)
+        if origin == "manual":
+            self._mode_from_profile = None
+        logger.info("native_mode_changed", native=enabled, origin=origin)
         return self._native_mode
 
     def _release_controller_to_game(self) -> None:
@@ -509,6 +544,10 @@ class Daemon:
             keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
             mouse_applier=self.apply_profile_mouse,
             suppression_applier=self.apply_profile_suppression,
+            # FEAT-PROFILE-MODE-01: SEM mode_applier aqui de propósito — este
+            # caminho roda ao SAIR do Modo Nativo; se o last_profile tiver
+            # `mode.kind=native`, o applier o religaria na hora (loop). O gesto
+            # de sair é soberano; o próximo autoswitch/switch re-avalia o modo.
         )
         with contextlib.suppress(Exception):
             manager.activate(name)
@@ -688,13 +727,20 @@ class Daemon:
             stop_gamepad_emulation(self)
             return True
 
-    def set_coop_enabled(self, enabled: bool) -> bool:
+    def set_coop_enabled(
+        self,
+        enabled: bool,
+        *,
+        origin: Literal["manual", "profile"] = "manual",
+    ) -> bool:
         """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
 
         Persiste o toggle (sobrevive reboot) e reconcilia na hora: ligar sobe os
         jogadores secundários (se gamepad on + 2+ controles); desligar desmonta
         todos (solta grab/uinput). Retorna o estado efetivo de `coop_enabled`.
         """
+        if origin == "manual":
+            self._emu_manual_ts = time.monotonic()
         self.config.coop_enabled = bool(enabled)
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.utils.session import save_coop_enabled
@@ -704,7 +750,7 @@ class Daemon:
 
         coop = get_coop_manager(self)
         if self.config.coop_enabled:
-            coop.sync()
+            coop.sync(force=True)
         else:
             coop.disable()
         logger.info(
@@ -849,6 +895,224 @@ class Daemon:
         self.set_mouse_emulation(
             enabled, speed, scroll_speed, origin="profile"
         )
+
+    def apply_profile_mode(self, mode: Any | None) -> None:
+        """Aplica a seção `mode` de um perfil recém-ativado (FEAT-PROFILE-MODE-01).
+
+        Injetado como `mode_applier` nas rotas de ativação (IPC switch,
+        autoswitch, hotkey de ciclo). NÃO usado no restore do boot (lá os flags
+        persistidos governam — ver connection.py). É o que faz as features
+        COEXISTIREM: o perfil do jogo em foco decide o modo, em vez de toggles
+        globais brigando.
+
+        Semântica (espelha `apply_profile_suppression`/`apply_profile_mouse`):
+
+        1. **Lock manual** — gesto manual (gamepad/mouse/nativo/co-op) há menos
+           de `MANUAL_PROFILE_LOCK_SEC` congela: o perfil não mexe no modo.
+        2. **mode=None (perfil sem opinião)** — REVERTE apenas modo que outro
+           PERFIL ligou (`_mode_from_profile`); estado de origem manual fica.
+        3. **kind="native"** — liga o Modo Nativo (release total) com origem
+           perfil; sair do foco (outro perfil ativar) reverte pelo item 2.
+        4. **kind="gamepad"** — desliga nativo-de-perfil se preciso, liga o
+           gamepad com a máscara pedida e sincroniza o co-op ao campo `coop`.
+        5. **kind="desktop"** — declaração explícita: desliga nativo/gamepad/
+           co-op mesmo os de origem manual JÁ EXPIRADA do lock (o perfil está
+           dizendo "este app é desktop puro").
+
+        Idempotente por checagem de estado antes de cada setter (autoswitch
+        re-ativa o mesmo perfil sem flap).
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        kind = getattr(mode, "kind", None) if mode is not None else None
+        now = time.monotonic()
+        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            if kind is not None:
+                logger.info(
+                    "profile_mode_skipped_manual_lock",
+                    kind=kind,
+                    remaining_sec=round(
+                        MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
+                    ),
+                )
+            return
+
+        gamepad_on = (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        )
+
+        if kind is None:
+            # Perfil sem opinião: reverte só o que veio de perfil.
+            if self._mode_from_profile == "native" and self._native_mode:
+                self.set_native_mode(False, reapply=False, origin="profile")
+            elif self._mode_from_profile == "gamepad":
+                if self.config.coop_enabled:
+                    self.set_coop_enabled(False, origin="profile")
+                if gamepad_on:
+                    self.set_gamepad_emulation(False, origin="profile")
+            self._mode_from_profile = None
+            return
+
+        if kind == "native":
+            if not self._native_mode:
+                self.set_native_mode(True, origin="profile")
+            self._mode_from_profile = "native"
+            return
+
+        if kind == "gamepad":
+            if self._native_mode:
+                # Sem reapply: o perfil ATUAL acabou de aplicar triggers/LEDs;
+                # re-aplicar o last_profile/stash desfaria a ativação corrente.
+                self.set_native_mode(False, reapply=False, origin="profile")
+            flavor = getattr(mode, "gamepad_flavor", None)
+            flavor_atual = getattr(self._gamepad_device, "flavor", None)
+            if not gamepad_on or (flavor is not None and flavor != flavor_atual):
+                self.set_gamepad_emulation(True, flavor, origin="profile")
+            want_coop = bool(getattr(mode, "coop", False))
+            if want_coop != bool(self.config.coop_enabled):
+                self.set_coop_enabled(want_coop, origin="profile")
+            self._mode_from_profile = "gamepad"
+            return
+
+        # kind == "desktop": declaração explícita — limpa qualquer modo.
+        if self._native_mode:
+            self.set_native_mode(False, reapply=False, origin="profile")
+        if self.config.coop_enabled:
+            self.set_coop_enabled(False, origin="profile")
+        if gamepad_on:
+            self.set_gamepad_emulation(False, origin="profile")
+        self._mode_from_profile = None
+
+    def apply_profile_rumble_policy(
+        self, policy: str | None, custom_mult: float | None = None
+    ) -> None:
+        """Aplica a política de rumble de um perfil recém-ativado
+        (FEAT-RUMBLE-POLICY-PROFILE-01). Injetado como `rumble_policy_applier`
+        nas rotas de ativação (IPC switch, autoswitch, hotkey de ciclo e
+        restore do boot — a política não tem flag persistido próprio, então o
+        perfil é a única fonte para restaurá-la).
+
+        Semântica (espelha `apply_profile_mode`):
+
+        1. **Lock manual** — gesto manual há menos de `MANUAL_PROFILE_LOCK_SEC`
+           congela: o perfil não mexe na política. O gesto manual DA POLÍTICA
+           é o IPC `rumble.policy_set`/`rumble.policy_custom`, que carimba o
+           mesmo `_emu_manual_ts` dos toggles de emulação (via
+           `mark_rumble_policy_manual`).
+        2. **policy=None (perfil sem opinião)** — REVERTE apenas política que
+           outro PERFIL aplicou: volta ao par (policy, custom_mult) vigente
+           ANTES de o 1º perfil-com-opinião mexer. Política de origem manual
+           fica intocada.
+        3. **policy preenchida** — guarda a política anterior (1ª intervenção
+           de perfil), grava no `DaemonConfig` e re-aplica o rumble ATIVO via
+           `apply_rumble_policy` para efeito imediato. Se a política vigente
+           já era a pedida (gesto manual antigo, lock expirado), o perfil a
+           ADOTA — mesma UX do `apply_profile_suppression`.
+
+        Idempotente: re-ativação do mesmo perfil (tick do autoswitch) não
+        re-aplica nem loga de novo.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        now = time.monotonic()
+        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            if policy is not None:
+                logger.info(
+                    "profile_rumble_policy_skipped_manual_lock",
+                    policy=policy,
+                    remaining_sec=round(
+                        MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
+                    ),
+                )
+            return
+
+        if policy is None:
+            # Perfil sem opinião: reverte só política que veio de perfil.
+            if self._rumble_policy_from_profile:
+                before = self._rumble_policy_before_profile
+                if before is not None:
+                    self.config.rumble_policy = before[0]
+                    self.config.rumble_policy_custom_mult = before[1]
+                    logger.info(
+                        "profile_rumble_policy_reverted",
+                        policy=before[0],
+                        mult=before[1],
+                    )
+                self._rumble_policy_from_profile = False
+                self._rumble_policy_before_profile = None
+                self._reapply_rumble_policy_to_active()
+            return
+
+        if policy not in RUMBLE_POLICIES:
+            # Defensivo: o schema do perfil já rejeita, mas o applier é
+            # público — política desconhecida não pode corromper a config.
+            logger.warning("profile_rumble_policy_invalida", policy=policy)
+            return
+        policy_lit = cast("RumblePolicy", policy)
+
+        if not self._rumble_policy_from_profile:
+            # 1ª intervenção de perfil: guarda a política vigente para o
+            # perfil-sem-opinião reverter depois.
+            self._rumble_policy_before_profile = (
+                self.config.rumble_policy,
+                self.config.rumble_policy_custom_mult,
+            )
+        desired_mult = (
+            max(0.0, min(2.0, float(custom_mult)))
+            if custom_mult is not None
+            else self.config.rumble_policy_custom_mult
+        )
+        changed = (
+            self.config.rumble_policy != policy_lit
+            or self.config.rumble_policy_custom_mult != desired_mult
+        )
+        self.config.rumble_policy = policy_lit
+        self.config.rumble_policy_custom_mult = desired_mult
+        self._rumble_policy_from_profile = True
+        if changed:
+            logger.info(
+                "profile_rumble_policy_applied",
+                policy=policy_lit,
+                mult=desired_mult,
+            )
+            self._reapply_rumble_policy_to_active()
+
+    def mark_rumble_policy_manual(self) -> None:
+        """Registra gesto MANUAL na política de rumble
+        (FEAT-RUMBLE-POLICY-PROFILE-01).
+
+        Chamado pelos handlers IPC `rumble.policy_set`/`rumble.policy_custom`:
+        carimba `_emu_manual_ts` (lock de 30s — perfis não pisam a escolha
+        recente da usuária, paridade com os toggles de emulação) e limpa a
+        origem "perfil" (a política vigente passa a ser manual; perfil sem
+        opinião não a reverte mais — quem mexeu na mão, desfaz na mão).
+        """
+        self._emu_manual_ts = time.monotonic()
+        self._rumble_policy_from_profile = False
+        self._rumble_policy_before_profile = None
+
+    def _reapply_rumble_policy_to_active(self) -> None:
+        """Re-aplica a política vigente ao rumble ATIVO (efeito imediato).
+
+        Sem rumble fixado (`rumble_active=None`, passthrough) é no-op — o
+        multiplicador da política é aplicado na entrada de cada write
+        (`rumble.set`/reassert do poll loop). Best-effort: falha de hardware
+        não aborta a ativação do perfil.
+        """
+        active = self.config.rumble_active
+        if active is None:
+            return
+        from hefesto_dualsense4unix.daemon.ipc_rumble_policy import (
+            apply_rumble_policy,
+        )
+
+        with contextlib.suppress(Exception):
+            eff_weak, eff_strong = apply_rumble_policy(self, active[0], active[1])
+            self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
 
     def _flush_emulation_devices(self) -> None:
         """Solta todas as teclas/botões dos devices virtuais (mouse+teclado).

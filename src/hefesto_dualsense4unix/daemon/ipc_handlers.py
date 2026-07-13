@@ -29,6 +29,16 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+def _as_str_or_none(value: Any) -> str | None:
+    """Normaliza campos informativos do state_full para str | None.
+
+    Blindagem de serialização: com daemon/controller dublados em teste
+    (MagicMock), um getattr devolve um mock — que estoura no json.dumps do
+    servidor. Só strings reais passam; o resto vira None.
+    """
+    return value if isinstance(value, str) else None
+
+
 class IpcHandlersMixin:
     """Mixin com os 19 métodos `_handle_*` do IpcServer.
 
@@ -309,10 +319,44 @@ class IpcHandlersMixin:
             "native_mode": bool(
                 self.daemon is not None and self.daemon.is_native_mode()
             ),
+            # FEAT-PROFILE-MODE-01: origem do nativo ("manual"|"profile"|None) e
+            # qual modo o perfil ativo ligou — a GUI mostra "Nativo (pelo
+            # perfil)" e o comutador da aba Início reflete a origem.
+            # `_as_str_or_none` blinda contra doubles de teste (MagicMock não é
+            # serializável em JSON).
+            "native_mode_origin": _as_str_or_none(
+                getattr(self.store, "native_mode_origin", None)
+            ),
+            "mode_from_profile": _as_str_or_none(
+                getattr(self.daemon, "_mode_from_profile", None)
+                if self.daemon is not None
+                else None
+            ),
+            # BUG-COOP-GRAB-SILENT-FAIL-01: estado observável do EVIOCGRAB do
+            # primário ("off"|"pending"|"held"|"failed") — "failed" com gamepad
+            # ligado = risco de input dobrado; a GUI/doctor avisam.
+            "primary_grab_state": _as_str_or_none(
+                getattr(
+                    getattr(self.controller, "_evdev", None), "grab_state", None
+                )
+            ),
             # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo (emulacao suprimida).
             "emulation_suppressed": bool(
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
+            ),
+            # FEAT-WINDOW-DETECT-DIAG-01: saúde do detector de janela do
+            # autoswitch — qual backend está ativo ("xlib"|"portal"|"wlrctl"|
+            # "null"|None), se já houve leitura útil, e a última wm_class útil
+            # vista (permite capturar o wm_class de um jogo sem ler journal).
+            "window_detect_backend": _as_str_or_none(
+                getattr(self.store, "window_detect_backend", None)
+            ),
+            "window_detect_healthy": bool(
+                getattr(self.store, "window_detect_healthy", False)
+            ),
+            "window_detect_last_class": _as_str_or_none(
+                getattr(self.store, "window_detect_last_class", None)
             ),
         }
 
@@ -495,6 +539,10 @@ class IpcHandlersMixin:
         if daemon_cfg is None:
             raise ValueError("daemon não disponível para alterar política de rumble")
         daemon_cfg.rumble_policy = policy
+        # FEAT-RUMBLE-POLICY-PROFILE-01: gesto MANUAL da usuária na política —
+        # carimba o lock de 30s e limpa a origem "perfil" (um perfil sem
+        # opinião não reverte mais o que ela escolheu na mão).
+        self._mark_rumble_policy_manual()
         logger.info("rumble_policy_alterada", policy=policy)
         return {"status": "ok", "policy": policy}
 
@@ -518,8 +566,23 @@ class IpcHandlersMixin:
             raise ValueError("daemon não disponível para alterar política de rumble")
         daemon_cfg.rumble_policy = "custom"
         daemon_cfg.rumble_policy_custom_mult = mult
+        # FEAT-RUMBLE-POLICY-PROFILE-01: gesto MANUAL — mesma razão do
+        # rumble.policy_set acima.
+        self._mark_rumble_policy_manual()
         logger.info("rumble_policy_custom_definida", mult=mult)
         return {"status": "ok", "mult": mult}
+
+    def _mark_rumble_policy_manual(self) -> None:
+        """Propaga o gesto manual de política de rumble ao daemon.
+
+        FEAT-RUMBLE-POLICY-PROFILE-01: delega a `Daemon.mark_rumble_policy_manual`
+        (carimbo de `_emu_manual_ts` + limpeza da origem "perfil") via getattr —
+        daemons dublados em teste (MagicMock/enxutos) não têm o método e o
+        handler segue funcionando.
+        """
+        mark_manual = getattr(self.daemon, "mark_rumble_policy_manual", None)
+        if callable(mark_manual):
+            mark_manual()
 
     # --- daemon / mouse / plugins ----------------------------------------
 

@@ -56,3 +56,11 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         target = xdg_root / sub
         target.mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv(var, str(target))
+    # FIX-PACKAGING-SEED-PARITY-01 — desliga a semeadura automática de presets
+    # (profiles.loader._maybe_seed_presets). Sem isto, o PRIMEIRO teste do
+    # processo a carregar perfis receberia os JSONs de assets/profiles_default/
+    # do repo no seu tmp (o flag once-per-process faria só um teste, dependente
+    # da ordem, quebrar asserções de listas exatas). Os testes da semeadura
+    # chamam seed_default_presets() com paths injetados ou re-habilitam via
+    # monkeypatch (delenv + _seed_attempted=False).
+    monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")

@@ -58,13 +58,14 @@ class GamepadSubsystem:
 
 
 def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
-    """Grab/ungrab best-effort do evdev do controle físico.
+    """Grab/ungrab do evdev do controle físico, com resultado OBSERVÁVEL.
 
     Sem isso, o jogo veria o controle cru (js0) + o virtual = input dobrado. O
     grab faz o daemon ser o leitor exclusivo do evdev real (ele já é o leitor),
     escondendo o controle cru dos clientes evdev (SDL2). Nunca propaga exceção:
-    em FAKE mode / sem device / sem suporte, o gamepad ainda funciona (só pode
-    haver duplicação, que validamos ao vivo).
+    em FAKE mode / sem device / sem suporte, o gamepad ainda funciona. Falha de
+    EVIOCGRAB deixa de ser silenciosa (BUG-COOP-GRAB-SILENT-FAIL-01): loga
+    warning e conta no store — a GUI/doctor podem apontar "input dobrado".
     """
     controller = getattr(daemon, "controller", None)
     evdev = getattr(controller, "_evdev", None)
@@ -72,8 +73,14 @@ def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
     if setter is None:
         return
     with contextlib.suppress(Exception):
-        setter(grab)
-        logger.info("gamepad_controller_grab", grab=grab)
+        ok = setter(grab)
+        state = getattr(evdev, "grab_state", None)
+        logger.info("gamepad_controller_grab", grab=grab, ok=ok, state=state)
+        if grab and ok is False:
+            store = getattr(daemon, "store", None)
+            if store is not None:
+                with contextlib.suppress(Exception):
+                    store.bump("gamepad.grab.failed")
 
 
 def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -> bool:
