@@ -121,10 +121,23 @@ class WaylandPortalBackend:
 
     _UNSUPPORTED_THRESHOLD: int = 3
 
+    # FEAT-WINDOW-DETECT-DIAG-01: nome estável para diagnóstico (store/doctor).
+    backend_name: str = "portal"
+
     def __init__(self) -> None:
         self._handle_counter: int = 0
         self._consecutive_failures: int = 0
         self._unsupported_warned: bool = False
+
+    @property
+    def unsupported(self) -> bool:
+        """True quando o portal desistiu (falhas seguidas >= threshold).
+
+        FEAT-WINDOW-DETECT-DIAG-01: consumido pela cascata Wayland para
+        reportar qual backend está efetivamente ativo. Volta a False se o
+        portal responder de novo (o contador zera na primeira resposta OK).
+        """
+        return self._consecutive_failures >= self._UNSUPPORTED_THRESHOLD
 
     def _next_handle(self) -> str:
         self._handle_counter += 1

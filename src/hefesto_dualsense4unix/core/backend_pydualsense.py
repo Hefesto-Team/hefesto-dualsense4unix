@@ -79,6 +79,19 @@ REPORT_THREAD_THROTTLE_SEC: float = float(
     os.environ.get("HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", "0.008")
 )
 
+#: Teto do throttle adaptativo por-controle (PERF-MULTI-CONTROLLER-01): com N
+#: controles o throttle vira `base * N` capado aqui — 2 controles ≈ 60Hz de
+#: output, 4 ≈ 30Hz. Output é LED/trigger/rumble (latência de até ~32ms é
+#: imperceptível); o INPUT vem do evdev e não passa por este ciclo.
+REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
+
+#: Keepalive do write OUT quando o report não mudou (PERF-MULTI-CONTROLLER-01):
+#: o firmware retém o último estado, então reescrever um report IDÊNTICO a
+#: ~100Hz só satura o barramento (2+ controles = pressão no host controller da
+#: família do storm). Reescrevemos no máximo a cada 0.5s quando nada mudou —
+#: cobre perda de report e glitch de link sem martelar o USB.
+OUT_REPORT_KEEPALIVE_SEC: float = 0.5
+
 
 @dataclass
 class _DesiredOutput:
@@ -132,6 +145,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # Setado pelo controlador em `_refresh_sysfs_leds` SÓ quando o sysfs é
         # gravável; senão fica False e o caminho pydualsense segue normal.
         self._suppress_leds = False
+        # PERF-MULTI-CONTROLLER-01: throttle POR-INSTÂNCIA (o backend escala
+        # com o nº de controles conectados) + dirty-flag do write OUT.
+        self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
+        self._last_out_report: list[int] | None = None
+        self._last_write_at = 0.0
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -155,9 +173,24 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             try:
                 in_report = self.device.read(self.input_report_length)
                 self.readInput(in_report)
-                self.writeReport(self.prepareReport())
-                if REPORT_THREAD_THROTTLE_SEC > 0:
-                    time.sleep(REPORT_THREAD_THROTTLE_SEC)
+                out = self.prepareReport()
+                now = time.monotonic()
+                # PERF-MULTI-CONTROLLER-01: write OUT só quando o report MUDOU,
+                # com keepalive esparso. O seq-tag BT da pydualsense é fixo, e o
+                # report USB não tem contador — o buffer é função pura do estado
+                # desejado, então a comparação detecta mudança real (rumble do
+                # jogo, trigger novo, LED). Report idêntico reescrito a ~100Hz
+                # era pura pressão de barramento com 2+ controles.
+                if (
+                    out != self._last_out_report
+                    or (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
+                ):
+                    self.writeReport(out)
+                    self._last_out_report = out
+                    self._last_write_at = now
+                throttle = self._throttle_sec
+                if throttle > 0:
+                    time.sleep(throttle)
             except OSError:
                 self.connected = False
                 break
@@ -250,6 +283,20 @@ class PyDualSenseController(IController):
         # com kernel hid_playstation). pydualsense segue como caminho de
         # output (triggers, LED, rumble). Single-instance, atrelado ao primário.
         self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
+
+    # --- identidade ------------------------------------------------------
+
+    @property
+    def primary_uniq(self) -> str | None:
+        """MAC normalizado do controle PRIMÁRIO (None se sem serial/offline).
+
+        FEAT-DSX-CONTROLLER-IDENTITY-01: identidade universal do controle —
+        a mesma usada pelo `discover_dualsense_evdevs` (uniq do evdev) e pelo
+        `sysfs_leds` (HID_UNIQ). Key de fallback por path retorna None.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        return norm_mac(self._primary_key)
 
     # --- compat: `_ds` == handle primário -------------------------------
 
@@ -413,6 +460,16 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._recompute_primary()
             self._offline = not self._handles
+            # PERF-MULTI-CONTROLLER-01: throttle do report_thread escala com o
+            # nº de controles (base x N, capado) — divide a pressão de USB e de
+            # CPU/GIL por controle. Output (LED/trigger/rumble) tolera bem.
+            n = max(1, len(self._handles))
+            throttle = min(
+                REPORT_THREAD_THROTTLE_SEC * n, REPORT_THREAD_THROTTLE_MAX_SEC
+            )
+            for handle in self._handles.values():
+                with contextlib.suppress(Exception):
+                    handle._throttle_sec = throttle
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
         # registra com atraso após o hidraw; re-afirma a cor/player ativos nos
@@ -450,6 +507,13 @@ class PyDualSenseController(IController):
             return
         # Trocou o primário: re-detecta transport e re-atrela o evdev a ele.
         self._transport = self._detect_transport(self._handles[self._primary_key])
+        # FEAT-DSX-CONTROLLER-IDENTITY-01: o reader passa a mirar o MAC do
+        # primário (uniq do evdev == serial hidapi). Antes o finder pegava o
+        # MENOR node — com 2+ controles, "menor node" e "primário do backend"
+        # divergiam após re-enumeração e o P1 passava a ler OUTRO controle
+        # (raiz da duplicação de input no co-op). `retarget` força reabrir no
+        # node certo quando necessário.
+        self._evdev.retarget(self.primary_uniq)
         # BUG-DAEMON-EVDEV-HOTPLUG-CACHE-01: o EvdevReader cacheia o path no
         # __init__. Se o daemon bootou offline (sem controle), o path ficava
         # None e o hotplug nunca o reavaliava — input caía no HID-raw cru
@@ -819,12 +883,19 @@ class PyDualSenseController(IController):
     def describe_controllers(self) -> list[dict[str, object]]:
         """Descreve cada controle conectado (observabilidade — IPC `controller.list`).
 
-        Uma entrada por handle aberto: `{index, connected, transport, is_primary}`.
+        Uma entrada por handle aberto:
+        `{index, connected, transport, is_primary, uniq, battery_pct}`.
         O `index` (FEAT-DSX-CONTROLLER-SELECTOR-01) é a POSIÇÃO em
         `list(self._handles)` (0 = primário) — o mesmo número que o seletor de
-        controle usa em `set_output_target`. Quando nenhum controle está
-        conectado, devolve uma única entrada offline (preserva o contrato "ao
-        menos um item" do handler legado).
+        controle usa em `set_output_target`.
+
+        FEAT-STATE-PER-CONTROLLER-01: `uniq` é o MAC normalizado do controle
+        (mesma normalização do `primary_uniq`; None quando a key é um path sem
+        serial) e `battery_pct` é a bateria 0-100 POR CONTROLE lida do handle
+        (None quando desconectado ou o firmware ainda não reportou) — a GUI
+        identifica cada card e mostra a carga sem chamada IPC extra. Quando
+        nenhum controle está conectado, devolve uma única entrada offline
+        (preserva o contrato "ao menos um item" do handler legado).
         """
         with self._io_lock:
             items = list(self._handles.items())
@@ -840,9 +911,28 @@ class PyDualSenseController(IController):
                     "connected": connected,
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
+                    "uniq": self._key_to_uniq(key),
+                    "battery_pct": self._read_battery_opt(handle) if connected else None,
                 }
             )
         return out
+
+    @staticmethod
+    def _key_to_uniq(key: str) -> str | None:
+        """MAC normalizado da key de um handle, ou None quando a key é um path.
+
+        FEAT-STATE-PER-CONTROLLER-01: mesma normalização do `primary_uniq`
+        (`norm_mac`), com guarda de comprimento — um MAC real tem exatamente
+        12 dígitos hex. A key de fallback por path ("/dev/hidrawN") também
+        contém dígitos hex soltos e, sem a guarda, viraria um pseudo-MAC
+        ("deda4") — identificador ERRADO no card da GUI.
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        normalized = norm_mac(key)
+        if normalized is None or len(normalized) != 12:
+            return None
+        return normalized
 
     def set_output_target(self, index: int | None) -> int | None:
         """Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).
@@ -901,20 +991,33 @@ class PyDualSenseController(IController):
         return "usb" if "usb" in name else "bt"
 
     @staticmethod
-    def _read_battery_raw(ds: pydualsense) -> int:
+    def _read_battery_opt(ds: pydualsense) -> int | None:
+        """Bateria 0-100 de UM handle, ou None quando indisponível.
+
+        FEAT-STATE-PER-CONTROLLER-01: leitura barata — só getattrs no objeto
+        `DSBattery` que o report_thread da pydualsense atualiza (sem HID I/O
+        extra; seguro fora do `_io_lock`, mesmo cuidado do `read_state`).
+        Preserva a distinção "sem dado ainda" (None) de "0%": a GUI não deve
+        mostrar 0% falso num controle recém-plugado.
+        """
         # HOTFIX-1: battery vive em `ds.battery` (top-level), não em ds.state.
         # DSBattery expõe `Level` (0-100) e `State` (enum BatteryState).
         battery = getattr(ds, "battery", None)
-        if battery is None:
-            return 0
-        level = getattr(battery, "Level", None)
+        level = getattr(battery, "Level", None) if battery is not None else None
         if level is None:
-            return 0
+            return None
         try:
             value = int(level)
         except (TypeError, ValueError):
-            return 0
+            return None
         return max(0, min(100, value))
+
+    @staticmethod
+    def _read_battery_raw(ds: pydualsense) -> int:
+        # Contrato legado do read_state/get_battery: bateria SEMPRE int
+        # (0 quando indisponível). Delega a leitura ao `_read_battery_opt`.
+        value = PyDualSenseController._read_battery_opt(ds)
+        return 0 if value is None else value
 
     @staticmethod
     def _coerce_mode(mode: int) -> object:

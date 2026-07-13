@@ -182,5 +182,14 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def apply_profile_mode(self, mode: Any | None) -> None:
+        """Aplica a seção `mode` de um perfil (FEAT-PROFILE-MODE-01).
+
+        Nativo/gamepad/desktop + co-op por perfil, com lock manual de 30s e
+        origem rastreada. Injetado como `mode_applier` do ProfileManager nas
+        rotas de ativação (IPC switch, autoswitch, hotkey).
+        """
+        ...
+
 
 __all__ = ["DaemonProtocol"]

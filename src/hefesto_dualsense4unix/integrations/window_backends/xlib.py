@@ -30,6 +30,9 @@ class XlibBackend:
     Lazy-conecta ao servidor X na primeira chamada a `get_active_window_info`.
     """
 
+    # FEAT-WINDOW-DETECT-DIAG-01: nome estável para diagnóstico (store/doctor).
+    backend_name: str = "xlib"
+
     def __init__(self) -> None:
         self._display: Any = None
         self._connected: bool = False

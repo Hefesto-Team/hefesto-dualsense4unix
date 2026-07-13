@@ -56,6 +56,18 @@ class ProfileManager:
     # concentra a política (origem perfil vs. toggle manual + lock de 30s).
     # Recebe `profile.suppress_desktop_emulation` a cada ativação.
     suppression_applier: Callable[[bool], object] | None = None
+    # FEAT-PROFILE-MODE-01: applier da seção `mode` do perfil (nativo/gamepad/
+    # desktop + co-op). Os callsites injetam `daemon.apply_profile_mode` —
+    # recebe `profile.mode` (inclusive None: perfil sem opinião reverte só modo
+    # ligado por OUTRO perfil). None = seção ignorada (CLI/testes sem daemon).
+    mode_applier: Callable[[object], object] | None = None
+    # FEAT-RUMBLE-POLICY-PROFILE-01: applier da política de rumble do perfil
+    # (seção `rumble.policy`/`rumble.custom_mult`). Os callsites injetam
+    # `daemon.apply_profile_rumble_policy` — recebe (policy, custom_mult) a
+    # cada ativação, inclusive (None, None) para perfil sem opinião (reverte
+    # só política aplicada por OUTRO perfil; política manual fica). None =
+    # seção ignorada (CLI/testes sem daemon).
+    rumble_policy_applier: Callable[[str | None, float | None], None] | None = None
 
     def list_profiles(self) -> list[Profile]:
         return load_all_profiles()
@@ -187,6 +199,38 @@ class ProfileManager:
             except Exception as exc:
                 logger.warning(
                     "profile_suppression_apply_failed",
+                    profile=profile.name,
+                    err=str(exc),
+                )
+        # FEAT-PROFILE-MODE-01: o applier recebe SEMPRE a seção (inclusive
+        # None) — é assim que trocar para um perfil sem opinião REVERTE o modo
+        # ligado por outro perfil, respeitando gesto manual (política no
+        # `Daemon.apply_profile_mode`). Ordem: por último, para que "sair do
+        # nativo" não re-aplique nada por cima dos triggers/LEDs já aplicados.
+        if self.mode_applier is not None:
+            try:
+                self.mode_applier(getattr(profile, "mode", None))
+            except Exception as exc:
+                logger.warning(
+                    "profile_mode_apply_failed",
+                    profile=profile.name,
+                    err=str(exc),
+                )
+        # FEAT-RUMBLE-POLICY-PROFILE-01: idem `mode` — o applier recebe SEMPRE
+        # o par (policy, custom_mult), inclusive (None, None), para que trocar
+        # para um perfil sem opinião REVERTA a política aplicada por outro
+        # perfil. A política de reversão/lock manual mora no applier
+        # (`Daemon.apply_profile_rumble_policy`).
+        if self.rumble_policy_applier is not None:
+            rumble_cfg = getattr(profile, "rumble", None)
+            try:
+                self.rumble_policy_applier(
+                    getattr(rumble_cfg, "policy", None),
+                    getattr(rumble_cfg, "custom_mult", None),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "profile_rumble_policy_apply_failed",
                     profile=profile.name,
                     err=str(exc),
                 )

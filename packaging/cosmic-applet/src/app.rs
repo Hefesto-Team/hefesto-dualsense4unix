@@ -3,8 +3,9 @@
 //! UI fina: um botão de ícone no painel cujo glifo reflete o estado do daemon
 //! (offline = ícone "indisponível"; bateria < 15% = ícone de alerta; conectado
 //! = martelo do app). Clicar abre um popover com bateria, transporte, perfil
-//! ativo, a lista clicável de perfis (troca via IPC) e "Abrir painel" (spawn da
-//! GUI). Enquanto o popover está aberto, um tick ~1.5 Hz reconsulta o daemon via
+//! ativo, o modo do sistema (Desktop / Jogo / Jogo nativo, com co-op e máscara
+//! do gamepad), a lista clicável de perfis (troca via IPC) e "Abrir painel"
+//! (spawn da GUI). Enquanto o popover está aberto, um tick ~1.5 Hz reconsulta o daemon via
 //! `daemon.state_full`. Sem hardware/daemon, tudo degrada para "offline" — nunca
 //! entra em pânico.
 
@@ -16,6 +17,19 @@ use cosmic::widget::{divider, icon, scrollable, text, Column};
 use cosmic::Element;
 
 use crate::ipc::{self, DaemonState, IpcError, ProfileInfo};
+
+/// Modo do sistema derivado do estado do daemon (FEAT-PROFILE-MODE-01).
+/// Mesma regra da GUI GTK (`home_actions.py::_render_home`): `native_mode`
+/// manda; senão `gamepad_emulation.enabled`; senão desktop.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SystemMode {
+    /// Emulação de mouse/teclado (uso do dia a dia).
+    Desktop,
+    /// Gamepad virtual ligado (jogos; aceita co-op e máscara DualSense/Xbox).
+    Gamepad,
+    /// Modo Nativo (Sony): o jogo fala direto com o controle físico.
+    Native,
+}
 
 /// Ícone do painel: a MESMA logo do app usada no `.desktop`
 /// (`Icon=hefesto-dualsense4unix`, PNG multi-tamanho em hicolor). Usado SEMPRE,
@@ -81,6 +95,20 @@ pub enum Message {
     SetOutputTarget(Option<i64>),
     /// Resultado de controller.target.set (novo output_target_index efetivo).
     OutputTargetSet(Result<Option<i64>, IpcError>),
+    /// Usuário escolheu o modo do sistema (Desktop / Jogo / Jogo nativo).
+    /// FEAT-PROFILE-MODE-01 — paridade com a aba Início da GUI.
+    SetSystemMode(SystemMode),
+    /// Resultado da aplicação de modo/máscara (native.mode.set /
+    /// gamepad.emulation.set). Só dispara o refresh de confirmação.
+    SystemModeApplied(Result<bool, IpcError>),
+    /// Liga/desliga o co-op local (cada controle vira um jogador).
+    /// FEAT-DSX-COOP-LOCAL-01.
+    ToggleCoop,
+    /// Resultado de coop.set (novo enabled efetivo).
+    CoopSet(Result<bool, IpcError>),
+    /// Usuário escolheu a máscara do gamepad virtual ("dualsense" | "xbox").
+    /// FEAT-DSX-GAMEPAD-FLAVOR-01.
+    SetGamepadFlavor(&'static str),
 }
 
 impl cosmic::Application for HefestoApplet {
@@ -276,6 +304,74 @@ impl cosmic::Application for HefestoApplet {
                 }
                 self.refresh_task()
             }
+
+            Message::SetSystemMode(mode) => {
+                // Atualização otimista (o refresh seguinte confirma); as
+                // chamadas IPC saem na MESMA ordem da GUI GTK — ver
+                // `apply_system_mode`.
+                if let Some(state) = self.state.as_mut() {
+                    match mode {
+                        SystemMode::Native => state.native_mode = true,
+                        SystemMode::Gamepad => {
+                            state.native_mode = false;
+                            state.gamepad_emulation.enabled = true;
+                        }
+                        SystemMode::Desktop => {
+                            state.native_mode = false;
+                            state.coop.enabled = false;
+                            state.gamepad_emulation.enabled = false;
+                        }
+                    }
+                }
+                // Máscara atual (ou "dualsense") ao religar o gamepad —
+                // paridade com home_actions.py (flavor_atual_ou_dualsense).
+                let flavor = self
+                    .state
+                    .as_ref()
+                    .and_then(|s| s.gamepad_emulation.flavor.clone())
+                    .unwrap_or_else(|| "dualsense".to_string());
+                Task::perform(apply_system_mode(mode, flavor), |res| {
+                    cosmic::action::app(Message::SystemModeApplied(res))
+                })
+            }
+
+            Message::SystemModeApplied(_result) => {
+                // Sucesso ou falha, o estado real vem do daemon: reconsulta
+                // imediata (a otimista já foi feita ao disparar a ação).
+                self.refresh_task()
+            }
+
+            Message::ToggleCoop => {
+                let want_enabled = !self.state.as_ref().map(|s| s.coop.enabled).unwrap_or(false);
+                if let Some(state) = self.state.as_mut() {
+                    state.coop.enabled = want_enabled; // otimista; refresh confirma
+                }
+                Task::perform(ipc::set_coop(want_enabled), |res| {
+                    cosmic::action::app(Message::CoopSet(res))
+                })
+            }
+
+            Message::CoopSet(result) => {
+                if let Ok(enabled) = result {
+                    if let Some(state) = self.state.as_mut() {
+                        state.coop.enabled = enabled;
+                    }
+                }
+                // O nº de jogadores (coop.players) vem do refresh.
+                self.refresh_task()
+            }
+
+            Message::SetGamepadFlavor(flavor) => {
+                if let Some(state) = self.state.as_mut() {
+                    // Otimista; a máscara só existe com o gamepad ligado.
+                    state.gamepad_emulation.enabled = true;
+                    state.gamepad_emulation.flavor = Some(flavor.to_string());
+                }
+                Task::perform(
+                    async move { ipc::set_gamepad_emulation(true, Some(flavor)).await },
+                    |res| cosmic::action::app(Message::SystemModeApplied(res)),
+                )
+            }
         }
     }
 
@@ -295,8 +391,7 @@ impl cosmic::Application for HefestoApplet {
         // útil da tela; sem cap + rolagem, os itens de baixo (Abrir/Fechar/Sair)
         // eram cortados. Envolve TODO o conteúdo num scrollable limitado em
         // altura, então nada some e dá pra rolar até o fim.
-        let body = cosmic::widget::container(scrollable(self.popup_content()))
-            .max_height(560.0);
+        let body = cosmic::widget::container(scrollable(self.popup_content())).max_height(560.0);
         self.core.applet.popup_container(body).into()
     }
 
@@ -343,6 +438,13 @@ impl HefestoApplet {
         // Bloco de status.
         content = content.push(self.status_block());
         content = content.push(padded_control(divider::horizontal::default()));
+
+        // FEAT-PROFILE-MODE-01: modo do sistema (Desktop / Jogo / Jogo nativo),
+        // com co-op e máscara do gamepad quando o modo é Jogo.
+        if let Some(mode) = self.mode_block() {
+            content = content.push(mode);
+            content = content.push(padded_control(divider::horizontal::default()));
+        }
 
         // FEAT-DSX-CONTROLLER-SELECTOR-01: seletor de controle-alvo (2+ controles).
         if let Some(target) = self.target_block() {
@@ -480,12 +582,26 @@ impl HefestoApplet {
             .unwrap_or_else(|| "—".to_string());
         col = col.push(status_row("Perfil ativo", profile));
 
+        // FEAT-PROFILE-MODE-01: modo do sistema atual; no nativo ligado pelo
+        // perfil ativo, anota a origem (paridade com a aba Início da GUI).
+        let mode_label = match system_mode(state) {
+            SystemMode::Desktop => "Desktop".to_string(),
+            SystemMode::Gamepad => "Jogo".to_string(),
+            SystemMode::Native => {
+                if state.native_mode_origin.as_deref() == Some("profile") {
+                    "Jogo nativo (pelo perfil)".to_string()
+                } else {
+                    "Jogo nativo".to_string()
+                }
+            }
+        };
+        col = col.push(status_row("Modo", mode_label));
+
         // FEAT-DSX-MULTI-CONTROLLER-01: com 2+ controles, mostra quantos e os
         // transportes (ex.: "2 (BT + USB)"). Todos recebem o output em
         // broadcast; o input vem só do primário. Daemon antigo sem o bloco
         // `controllers` cai na lista vazia e a linha some.
-        let conectados: Vec<_> =
-            state.controllers.iter().filter(|c| c.connected).collect();
+        let conectados: Vec<_> = state.controllers.iter().filter(|c| c.connected).collect();
         if conectados.len() > 1 {
             let transportes: Vec<String> = conectados
                 .iter()
@@ -520,6 +636,70 @@ impl HefestoApplet {
         }
 
         col.into()
+    }
+
+    /// Comutador do modo do sistema (FEAT-PROFILE-MODE-01), paridade com a aba
+    /// Início da GUI GTK: 3 entradas mutuamente exclusivas ( = ativa) e, no
+    /// modo Jogo, o toggle de co-op local + a máscara DualSense/Xbox.
+    /// `None` quando o daemon está offline (sem estado não há o que comutar).
+    fn mode_block(&self) -> Option<Element<'_, Message>> {
+        if self.offline {
+            return None;
+        }
+        let state = self.state.as_ref()?;
+        let mode = system_mode(state);
+
+        let mut col = Column::new().spacing(0).padding([4, 0]);
+        col = col.push(padded_control(text::caption_heading("MODO DO SISTEMA")).padding([4, 16]));
+
+        // 3 modos mutuamente exclusivos; o ativo fica marcado e não re-dispara.
+        let entries = [
+            (SystemMode::Desktop, "Desktop (mouse e teclado)"),
+            (SystemMode::Gamepad, "Jogo (gamepad)"),
+            (SystemMode::Native, "Jogo nativo (Sony)"),
+        ];
+        for (entry, label) in entries {
+            let is_active = mode == entry;
+            let mark = if is_active { " " } else { " " };
+            let mut btn = menu_button(text::body(format!("{mark}{label}")));
+            if !is_active {
+                btn = btn.on_press(Message::SetSystemMode(entry));
+            }
+            col = col.push(btn);
+        }
+
+        // Opções que só fazem sentido com o gamepad virtual ligado (mesma
+        // visibilidade condicional da GUI GTK).
+        if mode == SystemMode::Gamepad {
+            // Toggle do co-op local; ligado mostra o nº de jogadores do estado.
+            let coop_label = if state.coop.enabled && state.coop.players > 0 {
+                format!(" Co-op local — {} jogadores", state.coop.players)
+            } else if state.coop.enabled {
+                " Co-op local".to_string()
+            } else {
+                " Co-op local".to_string()
+            };
+            col = col.push(menu_button(text::body(coop_label)).on_press(Message::ToggleCoop));
+
+            // Máscara do gamepad virtual: DualSense ou Xbox.
+            let flavor = state
+                .gamepad_emulation
+                .flavor
+                .as_deref()
+                .unwrap_or("dualsense");
+            let flavors = [("dualsense", "Máscara DualSense"), ("xbox", "Máscara Xbox")];
+            for (id, label) in flavors {
+                let is_active = flavor == id;
+                let mark = if is_active { " " } else { " " };
+                let mut btn = menu_button(text::body(format!("{mark}{label}")));
+                if !is_active {
+                    btn = btn.on_press(Message::SetGamepadFlavor(id));
+                }
+                col = col.push(btn);
+            }
+        }
+
+        Some(col.into())
     }
 
     /// Seletor do controle-alvo das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).
@@ -602,6 +782,44 @@ impl HefestoApplet {
         // Rola se houver muitos perfis (limita altura do popover).
         col = col.push(scrollable(list).height(Length::Shrink).width(Length::Fill));
         col.into()
+    }
+}
+
+/// Deriva o modo do sistema do estado do daemon. Mesma regra da GUI GTK
+/// (`home_actions.py::_render_home`): `native_mode` manda; senão
+/// `gamepad_emulation.enabled`; senão desktop.
+fn system_mode(state: &DaemonState) -> SystemMode {
+    if state.native_mode {
+        SystemMode::Native
+    } else if state.gamepad_emulation.enabled {
+        SystemMode::Gamepad
+    } else {
+        SystemMode::Desktop
+    }
+}
+
+/// Aplica o modo do sistema no daemon, na MESMA ordem da GUI GTK
+/// (`home_actions.py::_on_home_mode_changed`) — a ordem importa:
+///   - nativo:  `native.mode.set(true)`
+///   - gamepad: `native.mode.set(false)` e SÓ DEPOIS
+///     `gamepad.emulation.set(true, flavor)` (sai do nativo antes de ligar)
+///   - desktop: `native.mode.set(false)` + `coop.set(false)` +
+///     `gamepad.emulation.set(false)`
+///
+/// Como na GUI, os passos intermediários são best-effort (erro ignorado); o
+/// resultado devolvido é o da última chamada.
+async fn apply_system_mode(mode: SystemMode, flavor: String) -> Result<bool, IpcError> {
+    match mode {
+        SystemMode::Native => ipc::set_native_mode(true).await,
+        SystemMode::Gamepad => {
+            let _ = ipc::set_native_mode(false).await;
+            ipc::set_gamepad_emulation(true, Some(&flavor)).await
+        }
+        SystemMode::Desktop => {
+            let _ = ipc::set_native_mode(false).await;
+            let _ = ipc::set_coop(false).await;
+            ipc::set_gamepad_emulation(false, None).await
+        }
     }
 }
 

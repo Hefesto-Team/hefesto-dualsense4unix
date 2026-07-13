@@ -29,6 +29,7 @@ from gi.repository import GdkPixbuf, Gtk
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
+from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
@@ -95,6 +96,7 @@ def _activate_window_by_pid(predecessor_pid: int) -> None:
 
 
 class HefestoApp(
+    HomeActionsMixin,
     StatusActionsMixin,
     TriggersActionsMixin,
     LightbarActionsMixin,
@@ -241,6 +243,8 @@ class HefestoApp(
             "on_player_leds_preset_all": self.on_player_leds_preset_all,
             "on_player_leds_preset_p1": self.on_player_leds_preset_p1,
             "on_player_leds_preset_p2": self.on_player_leds_preset_p2,
+            "on_player_leds_preset_p3": self.on_player_leds_preset_p3,
+            "on_player_leds_preset_p4": self.on_player_leds_preset_p4,
             "on_player_leds_preset_none": self.on_player_leds_preset_none,
             "on_player_led_toggled": self.on_player_led_toggled,
             "on_player_leds_apply": self.on_player_leds_apply,
@@ -654,25 +658,28 @@ class HefestoApp(
         A correspondencia entre page_num e o mixin e baseada na ordem das abas
         no GtkNotebook definida no Glade.
 
-        Páginas (indice zero, ordem do notebook):
-          0 = Status, 1 = Triggers, 2 = Lightbar, 3 = Rumble,
-          4 = Perfis, 5 = Daemon, 6 = Emulacao, 7 = Mouse, 8 = Teclado
+        Páginas (indice zero, ordem do notebook — FEAT-GUI-HOME-TAB-01
+        acrescentou "Início" como página 0, deslocando as demais):
+          0 = Início, 1 = Status, 2 = Triggers, 3 = Lightbar, 4 = Rumble,
+          5 = Perfis, 6 = Daemon, 7 = Emulacao, 8 = Mouse, 9 = Teclado
         """
         refresh_map = {
-            1: getattr(self, "_refresh_triggers_from_draft", None),
-            2: getattr(self, "_refresh_lightbar_from_draft", None),
-            3: getattr(self, "_refresh_rumble_from_draft", None),
-            # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação (página 6) se
+            # FEAT-GUI-HOME-TAB-01: comutador de modo reconcilia ao ser exibido.
+            0: getattr(self, "_refresh_home_tab", None),
+            2: getattr(self, "_refresh_triggers_from_draft", None),
+            3: getattr(self, "_refresh_lightbar_from_draft", None),
+            4: getattr(self, "_refresh_rumble_from_draft", None),
+            # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação se
             # reconcilia ao ser exibida — se o daemon subiu após o boot, a aba
             # deixava de mostrar "—"/offline só ao entrar nela. _refresh_emulation_tab
             # é criado em emulation_actions.py (Sprint 4); getattr é seguro se ausente.
-            6: getattr(self, "_refresh_emulation_tab", None),
+            7: getattr(self, "_refresh_emulation_tab", None),
             # BUG-MOUSE-GUI-SYNC-01 (A1): a aba Mouse sincroniza também com o
             # estado VIVO do daemon (draft imediato + state_full assíncrono).
-            7: getattr(self, "_refresh_mouse_tab", None),
+            8: getattr(self, "_refresh_mouse_tab", None),
             # BUG-KEYBOARD-TAB-NO-REFRESH-01: aba Teclado também precisa
             # re-sincronizar os bindings do draft ao ser exibida.
-            8: getattr(self, "_refresh_key_bindings_from_draft", None),
+            9: getattr(self, "_refresh_key_bindings_from_draft", None),
         }
         fn = refresh_map.get(page_num)
         if fn is not None:
@@ -725,6 +732,7 @@ class HefestoApp(
         # widgets dinâmicos (sticks, grid de glyphs, SegmentedSelectors) DEPOIS
         # do mapa — a race de primeiro-frame do XWayland+NVIDIA no COSMIC
         # apresentava um buffer ainda não pintado (janela totalmente preta).
+        self.install_home_tab()
         self.install_status_polling()
         self.install_triggers_tab()
         self.install_lightbar_tab()

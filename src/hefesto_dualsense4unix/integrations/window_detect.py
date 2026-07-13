@@ -23,7 +23,6 @@ niri, river via `wlr-foreign-toplevel-management-unstable-v1`). Se nem
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.integrations.window_backends.base import WindowBackend, WindowInfo
@@ -63,14 +62,40 @@ class _WaylandCascadeBackend:
         self._portal = WaylandPortalBackend()
         self._wlrctl = WlrctlBackend()
         self._fallback_announced: bool = False
+        # FEAT-WINDOW-DETECT-DIAG-01: fonte da última leitura ÚTIL da cascata
+        # ("portal" | "wlrctl" | None). Alimenta `backend_name`.
+        self._last_source: str | None = None
+
+    @property
+    def backend_name(self) -> str:
+        """Backend efetivamente ativo na cascata: "portal" | "wlrctl" | "null".
+
+        FEAT-WINDOW-DETECT-DIAG-01. Dinâmico de propósito: a cascata pode
+        migrar em runtime (portal desiste após o threshold de falhas; wlrctl
+        descobre que o compositor não expõe o protocolo — caso COSMIC).
+        Prioridade: fonte da última leitura útil, se ainda viável; senão o
+        primeiro backend da fila que ainda se declara disponível; senão
+        "null" (cascata cega — o autoswitch fica no fallback).
+        """
+        if self._last_source == "portal" and not self._portal.unsupported:
+            return "portal"
+        if self._last_source == "wlrctl" and self._wlrctl.available:
+            return "wlrctl"
+        if not self._portal.unsupported:
+            return "portal"
+        if self._wlrctl.available:
+            return "wlrctl"
+        return "null"
 
     def get_active_window_info(self) -> WindowInfo | None:
         info = self._portal.get_active_window_info()
         if info is not None:
+            self._last_source = "portal"
             return info
 
         info = self._wlrctl.get_active_window_info()
         if info is not None:
+            self._last_source = "wlrctl"
             if not self._fallback_announced:
                 logger.info(
                     "wayland_backend_fallback_wlrctl",
@@ -141,7 +166,50 @@ def get_active_window_info() -> dict[str, Any]:
     return info.as_dict()
 
 
-def build_window_reader() -> Callable[[], dict[str, Any]]:
+class WindowReaderDiag:
+    """Leitor de janela com diagnóstico de primeira classe.
+
+    FEAT-WINDOW-DETECT-DIAG-01: além de callable (API legada — retorna o dict
+    wm_class/wm_name/pid/exe_basename, com `_UNKNOWN_WINDOW` quando o backend
+    não acha janela), expõe metadados para o autoswitch gravar no StateStore:
+
+      backend_name       -- backend efetivamente ativo ("xlib" | "portal" |
+                            "wlrctl" | "null"); dinâmico na cascata Wayland.
+      last_read_useful   -- a última leitura retornou wm_class útil
+                            (!= "unknown" e não-vazia)?
+      useful_reads       -- total de leituras úteis desde a construção.
+      last_useful_class  -- última wm_class útil vista (permite capturar o
+                            wm_class de um jogo sem ler o journal).
+    """
+
+    def __init__(self, backend: WindowBackend) -> None:
+        self._backend = backend
+        self.last_read_useful: bool = False
+        self.useful_reads: int = 0
+        self.last_useful_class: str | None = None
+
+    @property
+    def backend_name(self) -> str:
+        """Nome do backend ativo; cai no nome da classe se não declarado."""
+        name = getattr(self._backend, "backend_name", None)
+        if isinstance(name, str) and name:
+            return name
+        return type(self._backend).__name__.lower()
+
+    def __call__(self) -> dict[str, Any]:
+        info: WindowInfo | None = self._backend.get_active_window_info()
+        result: dict[str, Any] = (
+            dict(_UNKNOWN_WINDOW) if info is None else info.as_dict()
+        )
+        wm_class = str(result.get("wm_class") or "")
+        self.last_read_useful = wm_class not in ("", "unknown")
+        if self.last_read_useful:
+            self.useful_reads += 1
+            self.last_useful_class = wm_class
+        return result
+
+
+def build_window_reader() -> WindowReaderDiag:
     """Cria um leitor de janela com o backend instanciado UMA vez.
 
     AUTOSWITCH-FLOOD-FIX-01. Diferente de `get_active_window_info()` (stateless,
@@ -154,23 +222,18 @@ def build_window_reader() -> Callable[[], dict[str, Any]]:
     - evita gastar o timeout de 2s do portal jeepney a cada tick numa sessão
       Wayland real onde o portal não tem GetActiveWindow.
 
-    Retorna um callable dict→compatível com a API legada (wm_class/wm_name/
-    pid/exe_basename), devolvendo `_UNKNOWN_WINDOW` quando o backend não acha
-    janela. O backend é fixado no momento da chamada — chame após o ambiente
-    gráfico estar disponível (o subsystem importa o env antes).
+    FEAT-WINDOW-DETECT-DIAG-01: retorna `WindowReaderDiag` — callable
+    retrocompatível com a API legada (mesmo dict wm_class/wm_name/pid/
+    exe_basename) que também expõe `backend_name`/`last_read_useful`/
+    `last_useful_class` para diagnóstico. O backend é fixado no momento da
+    chamada — chame após o ambiente gráfico estar disponível (o subsystem
+    importa o env antes).
     """
-    backend = detect_window_backend()
-
-    def _read() -> dict[str, Any]:
-        info: WindowInfo | None = backend.get_active_window_info()
-        if info is None:
-            return dict(_UNKNOWN_WINDOW)
-        return info.as_dict()
-
-    return _read
+    return WindowReaderDiag(detect_window_backend())
 
 
 __all__ = [
+    "WindowReaderDiag",
     "build_window_reader",
     "detect_window_backend",
     "get_active_window_info",

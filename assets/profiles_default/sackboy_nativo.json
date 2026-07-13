@@ -1,0 +1,23 @@
+{
+  "name": "sackboy_nativo",
+  "version": 1,
+  "match": {
+    "type": "criteria",
+    "window_class": ["steam_app_1599660"],
+    "window_title_regex": ".*[Ss]ackboy.*",
+    "process_name": []
+  },
+  "priority": 80,
+  "triggers": {
+    "left":  {"mode": "Off", "params": []},
+    "right": {"mode": "Off", "params": []}
+  },
+  "leds": {
+    "lightbar": [80, 60, 220],
+    "player_leds": [false, false, true, false, false],
+    "lightbar_brightness": 0.6
+  },
+  "rumble": {"passthrough": true},
+  "mode": {"kind": "native"},
+  "suppress_desktop_emulation": false
+}

@@ -3,8 +3,9 @@
 #
 # Verifica daemon, serviço, socket IPC, regras udev (incluindo a consistência do
 # nome de unit do hotplug), uinput, applet COSMIC (.desktop + ícone resolvível),
-# o sequestro do microfone pelo WirePlumber e o alcance do controle. Saída
-# PASS/FAIL/WARN por item. Marcadores ASCII (compat sanitizer de anonimato).
+# o detector de janela do autoswitch (perfil-por-jogo), o sequestro do microfone
+# pelo WirePlumber e o alcance do controle. Saída PASS/FAIL/WARN por item.
+# Marcadores ASCII (compat sanitizer de anonimato).
 #
 # Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout] [--suggest-port]
 #   --fix             aplica correções seguras: reaplica udev e instala/reseta o
@@ -317,6 +318,107 @@ check_wireplumber_source() {
     fi
 }
 
+# FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
+# (perfil-por-jogo). Quando a detecção falha, o autoswitch fica silenciosamente
+# cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
+# Cobre: DISPLAY/WAYLAND_DISPLAY do shell atual E do systemd --user (o daemon
+# importa de lá quando sobe sem display — _ensure_display_env), o backend xlib
+# (X11/XWayland: inclui jogos Proton/Steam), o portal XDG (GetActiveWindow) e o
+# wlrctl. Caso COSMIC validado ao vivo: o cosmic-comp NÃO expõe
+# wlr-foreign-toplevel-management ("Foreign Toplevel Management interface not
+# found") — wlrctl instalado NÃO ajuda; suporte nativo exigiria o protocolo
+# próprio zcosmic_toplevel_info_v1. Veredito: OK / DEGRADADO (só XWayland) /
+# CEGO.
+check_window_detect() {
+    local env_display="${DISPLAY:-}" env_wayland="${WAYLAND_DISPLAY:-}"
+    local sysd_env="" sysd_display="" sysd_wayland=""
+    if command -v systemctl >/dev/null 2>&1; then
+        sysd_env="$(systemctl --user show-environment 2>/dev/null || true)"
+        sysd_display="$(printf '%s\n' "${sysd_env}" | sed -n 's/^DISPLAY=//p' | head -1)"
+        sysd_wayland="$(printf '%s\n' "${sysd_env}" | sed -n 's/^WAYLAND_DISPLAY=//p' | head -1)"
+    fi
+    info "shell atual:    DISPLAY=${env_display:-<vazio>}  WAYLAND_DISPLAY=${env_wayland:-<vazio>}"
+    info "systemd --user: DISPLAY=${sysd_display:-<vazio>}  WAYLAND_DISPLAY=${sysd_wayland:-<vazio>}"
+
+    # Valores efetivos: espelha o daemon (usa o env; se faltar, importa do
+    # systemd --user via _ensure_display_env no boot do autoswitch).
+    local eff_display="${env_display:-${sysd_display}}"
+    local eff_wayland="${env_wayland:-${sysd_wayland}}"
+    if [[ -z "${env_display}" && -n "${sysd_display}" ]]; then
+        info "DISPLAY só existe no systemd --user — o daemon importa sozinho no boot do autoswitch"
+    fi
+
+    # Backend xlib (X11/XWayland). xprop prova que o servidor X responde;
+    # python-xlib (o que o daemon usa de fato) fica como probe secundário
+    # porque o python3 do PATH pode não ser o venv do daemon.
+    local xlib_ok=0
+    if [[ -n "${eff_display}" ]]; then
+        if command -v xprop >/dev/null 2>&1 \
+           && DISPLAY="${eff_display}" timeout 3 xprop -root _NET_ACTIVE_WINDOW >/dev/null 2>&1; then
+            xlib_ok=1
+            pass "servidor X responde em DISPLAY=${eff_display} (xprop) — backend xlib viável"
+        elif DISPLAY="${eff_display}" timeout 3 python3 -c \
+             'from Xlib import display; display.Display().close()' >/dev/null 2>&1; then
+            xlib_ok=1
+            pass "python-xlib conecta em DISPLAY=${eff_display} — backend xlib viável"
+        else
+            warn "DISPLAY=${eff_display} setado, mas nem xprop nem python-xlib falam com o X — backend xlib fora"
+        fi
+    else
+        info "sem DISPLAY — backend xlib indisponível (jogos XWayland/Proton NÃO detectáveis)"
+    fi
+
+    # Portal XDG: interface Window com o método GetActiveWindow de verdade
+    # (busctl com filtro de interface SEMPRE sai 0 — o grep é o teste real).
+    local portal_ok=0
+    if command -v busctl >/dev/null 2>&1; then
+        if busctl --user --timeout=3 introspect org.freedesktop.portal.Desktop \
+             /org/freedesktop/portal/desktop org.freedesktop.portal.Window 2>/dev/null \
+             | grep -q 'GetActiveWindow'; then
+            portal_ok=1
+            pass "portal XDG expõe org.freedesktop.portal.Window::GetActiveWindow"
+        else
+            info "portal XDG sem GetActiveWindow (esperado no COSMIC atual) — backend portal fora"
+        fi
+    fi
+
+    # wlrctl (wlr-foreign-toplevel-management), interpretando o caso COSMIC.
+    local wlrctl_ok=0 wlrctl_out="" wlrctl_rc=0
+    if ! command -v wlrctl >/dev/null 2>&1; then
+        info "wlrctl não instalado — backend wlrctl indisponível (irrelevante se o veredito abaixo for OK)"
+    elif [[ -z "${eff_wayland}" ]]; then
+        info "wlrctl instalado, mas sem WAYLAND_DISPLAY — nada a testar"
+    else
+        wlrctl_out="$(WAYLAND_DISPLAY="${eff_wayland}" timeout 3 wlrctl toplevel list 2>&1)"
+        wlrctl_rc=$?
+        if printf '%s' "${wlrctl_out}" | grep -qi 'toplevel management interface not found'; then
+            info "compositor SEM wlr-foreign-toplevel-management (caso do cosmic-comp) — wlrctl instalado não ajuda aqui; jogos XWayland/Proton continuam detectáveis via xlib. Suporte nativo ao COSMIC exigiria zcosmic_toplevel_info_v1."
+        elif [[ "${wlrctl_rc}" -eq 0 ]]; then
+            wlrctl_ok=1
+            pass "wlrctl responde (wlr-foreign-toplevel-management OK)"
+        else
+            warn "wlrctl falhou (rc=${wlrctl_rc}): $(printf '%s' "${wlrctl_out}" | head -1)"
+        fi
+    fi
+
+    # Veredito.
+    if [[ "${xlib_ok}" -eq 1 && -z "${eff_wayland}" ]]; then
+        pass "veredito: OK via xlib (sessão X11 pura — todas as janelas detectáveis)"
+    elif [[ "${xlib_ok}" -eq 1 && ( "${portal_ok}" -eq 1 || "${wlrctl_ok}" -eq 1 ) ]]; then
+        pass "veredito: OK via xlib + backend Wayland disponível (cobertura total)"
+    elif [[ "${xlib_ok}" -eq 1 ]]; then
+        warn "veredito: DEGRADADO — só XWayland: jogos Proton/Steam e apps X11 são detectados (xlib), mas apps Wayland nativos aparecem como 'unknown'. Limitação do compositor (COSMIC exigiria zcosmic_toplevel_info_v1), não do hefesto."
+    elif [[ "${portal_ok}" -eq 1 ]]; then
+        pass "veredito: OK via portal XDG (Wayland puro)"
+    elif [[ "${wlrctl_ok}" -eq 1 ]]; then
+        pass "veredito: OK via wlrctl (Wayland puro)"
+    elif [[ -z "${eff_display}" && -z "${eff_wayland}" ]]; then
+        fail "veredito: CEGO — sem DISPLAY e sem WAYLAND_DISPLAY (nem no systemd --user). Se o daemon subiu antes do login gráfico, reinicie: systemctl --user restart ${APP_ID}.service"
+    else
+        fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
+    fi
+}
+
 check_steam_input() {
     local script="${ROOT_DIR}/scripts/disable_steam_input.sh"
     if [[ ! -x "$script" ]]; then
@@ -526,6 +628,8 @@ main() {
     check_uinput
     hdr "applet COSMIC"
     check_applet
+    hdr "detector de janela (autoswitch / perfil-por-jogo)"
+    check_window_detect
     hdr "áudio (microfone)"
     check_wireplumber_source
     hdr "Steam Input"

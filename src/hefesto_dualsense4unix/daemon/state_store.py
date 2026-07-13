@@ -72,6 +72,18 @@ class StateStore:
         # ciclo NÃO troca de perfil — nada re-escreve gatilhos/rumble por cima do
         # jogo nativo (Sackboy & cia). Setado por `Daemon.set_native_mode`.
         self._native_mode_active: bool = False
+        # FEAT-PROFILE-MODE-01: origem do nativo ativo ("manual" congela o
+        # autoswitch; "profile" o mantém observando para reverter ao sair).
+        self._native_mode_origin: str | None = None
+        # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do
+        # autoswitch. `backend` é o nome do backend efetivamente ativo
+        # ("xlib" | "portal" | "wlrctl" | "null"); `healthy` segue a semântica
+        # documentada em `record_window_detect_read`; `last_class` é a última
+        # wm_class ÚTIL (!= "unknown") vista — permite capturar o wm_class de
+        # um jogo direto do estado do daemon, sem garimpar o journal.
+        self._window_detect_backend: str | None = None
+        self._window_detect_healthy: bool = False
+        self._window_detect_last_class: str | None = None
 
     # --- escritas ------------------------------------------------------
 
@@ -114,15 +126,61 @@ class StateStore:
         with self._lock:
             self._manual_trigger_active = False
 
-    def set_native_mode_active(self, active: bool) -> None:
+    def set_native_mode_active(
+        self, active: bool, origin: str | None = None
+    ) -> None:
         """Liga/desliga o gate do Modo Nativo (FEAT-NATIVE-MODE-01).
 
-        Enquanto ativo, autoswitch e hotkey de ciclo NÃO re-aplicam perfil —
-        o controle fica "solto" para o jogo nativo. Setado por
-        `Daemon.set_native_mode`.
+        Enquanto ativo com origem MANUAL, autoswitch e hotkey de ciclo NÃO
+        re-aplicam perfil — o controle fica "solto" para o jogo nativo até a
+        usuária desligar. Com origem "profile" (FEAT-PROFILE-MODE-01) o
+        autoswitch CONTINUA observando a janela: ao focar outro app, o perfil
+        seguinte reverte o nativo (senão o modo por-perfil nunca sairia).
+        Setado por `Daemon.set_native_mode`.
         """
         with self._lock:
             self._native_mode_active = bool(active)
+            self._native_mode_origin = origin if active else None
+
+    # --- diagnóstico do detector de janela (FEAT-WINDOW-DETECT-DIAG-01) --
+
+    def set_window_detect_backend(self, backend: str | None, healthy: bool) -> None:
+        """Semeia o diagnóstico do detector na partida do autoswitch.
+
+        `backend` é o nome do backend escolhido ("xlib" | "portal" | "wlrctl"
+        | "null"). `healthy` inicial usa a presunção do chamador (subsystem
+        autoswitch): backend "xlib" nasce saudável — ele só é escolhido com
+        DISPLAY presente e cobre XWayland/Proton, o caso de uso principal;
+        os demais nascem não-saudáveis até a primeira leitura útil (ver
+        `record_window_detect_read`). Zera `last_class` (novo boot do
+        detector = novo episódio de observação).
+        """
+        with self._lock:
+            self._window_detect_backend = backend
+            self._window_detect_healthy = healthy
+            self._window_detect_last_class = None
+
+    def record_window_detect_read(
+        self, backend: str | None, wm_class: str | None
+    ) -> None:
+        """Registra uma leitura do detector de janela (poll do autoswitch).
+
+        Semântica de `window_detect_healthy` (documentada de propósito):
+        saudável = houve ao menos UMA leitura útil (wm_class != "unknown" e
+        não-vazia) desde o boot do autoswitch, OU a presunção inicial do
+        backend xlib (ver `set_window_detect_backend`). Leitura "unknown"
+        NÃO derruba a flag: desktop vazio também produz "unknown", então
+        unknown persistente não distingue "detector cego" de "nenhuma janela
+        focada" — o veredito fino de ambiente fica no doctor.sh. `backend` é
+        re-gravado a cada leitura porque a cascata Wayland pode migrar em
+        runtime (portal -> wlrctl -> null).
+        """
+        useful = bool(wm_class) and wm_class != "unknown"
+        with self._lock:
+            self._window_detect_backend = backend
+            if useful:
+                self._window_detect_healthy = True
+                self._window_detect_last_class = wm_class
 
     # --- lock manual de profile.switch (Bug C) ------------------------
 
@@ -174,6 +232,41 @@ class StateStore:
     def native_mode_active(self) -> bool:
         with self._lock:
             return self._native_mode_active
+
+    @property
+    def native_mode_origin(self) -> str | None:
+        """Origem do Modo Nativo ativo: "manual" | "profile" | None (inativo)."""
+        with self._lock:
+            return self._native_mode_origin
+
+    @property
+    def window_detect_backend(self) -> str | None:
+        """Backend ativo do detector de janela (FEAT-WINDOW-DETECT-DIAG-01).
+
+        "xlib" | "portal" | "wlrctl" | "null"; None = autoswitch nunca subiu.
+        """
+        with self._lock:
+            return self._window_detect_backend
+
+    @property
+    def window_detect_healthy(self) -> bool:
+        """Detecção de janela saudável? (FEAT-WINDOW-DETECT-DIAG-01).
+
+        True = ao menos 1 leitura útil desde o boot do autoswitch OU presunção
+        do backend xlib (semântica completa em `record_window_detect_read`).
+        """
+        with self._lock:
+            return self._window_detect_healthy
+
+    @property
+    def window_detect_last_class(self) -> str | None:
+        """Última wm_class ÚTIL vista pelo detector (FEAT-WINDOW-DETECT-DIAG-01).
+
+        None = nenhuma leitura útil ainda. Serve para capturar o wm_class de
+        um jogo (ex.: Sackboy) direto do estado, sem ler o journal.
+        """
+        with self._lock:
+            return self._window_detect_last_class
 
     def counter(self, name: str) -> int:
         with self._lock:

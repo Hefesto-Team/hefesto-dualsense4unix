@@ -15,6 +15,7 @@ Redesign UI-STATUS-STICKS-REDESIGN-01:
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import gi
@@ -785,12 +786,19 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         battery_bar = self._get("status_battery_bar")
         if battery_bar is not None:
+            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL (show_text) e,
+            # com 2+ controles, dizer DE QUAL controle é a leitura (a bateria
+            # do state_full é a do primário) — antes a barra ficava muda e
+            # ambígua com dois controles conectados.
+            with contextlib.suppress(Exception):
+                battery_bar.set_show_text(True)
             if battery is None:
                 battery_bar.set_fraction(0.0)
                 battery_bar.set_text("— %")
             else:
                 battery_bar.set_fraction(battery / 100)
-                battery_bar.set_text(f"{battery} %")
+                suffix = " (Controle 1)" if len(conectados) > 1 else ""
+                battery_bar.set_text(f"{battery} %{suffix}")
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).

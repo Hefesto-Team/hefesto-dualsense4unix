@@ -147,6 +147,12 @@ def _stub_with(rows, tree) -> Any:
     stub._select_profile_by_name = lambda name: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._select_profile_by_name(stub, name)
     )
+    # UX-PROFILES-ACTIVE-HIGHLIGHT-01: o sync também realça a linha ativa; o
+    # store fake destes testes tem 3 colunas (sem a de peso), então o stub só
+    # registra a intenção.
+    stub._mark_active_profile_row = lambda active: setattr(  # type: ignore[attr-defined]
+        stub, "_active_profile_hint", active
+    )
     return stub
 
 

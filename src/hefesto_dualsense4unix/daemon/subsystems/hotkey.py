@@ -103,6 +103,11 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             ),
             mouse_applier=getattr(daemon, "apply_profile_mouse", None),
             suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            mode_applier=getattr(daemon, "apply_profile_mode", None),
+            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+            rumble_policy_applier=getattr(
+                daemon, "apply_profile_rumble_policy", None
+            ),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:

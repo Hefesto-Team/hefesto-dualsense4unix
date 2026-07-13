@@ -1,0 +1,12 @@
+# FEAT-DSX-CONTROLLER-IDENTITY-01 (2026-07-13)
+# O kernel hid_playstation expõe os SENSORES DE MOVIMENTO (acelerômetro +
+# giroscópio) do DualSense como um node evdev com handler jsN próprio. Jogos e
+# SDL enumeram esse node como se fosse um JOYSTICK a mais: com 2 controles a
+# lista do jogo mostra 6 "joysticks" (2 gamepads reais + 2 sensores + vpads),
+# e os sensores jorram eventos contínuos (ruído de acelerômetro) que o jogo
+# drena sem querer. Marca o node como acelerômetro e NÃO-joystick — SDL2 e
+# jogos passam a ignorá-lo na enumeração de gamepads. Não afeta o gamepad
+# principal, o touchpad nem apps que leem sensores por caminho explícito.
+# Reverter: remover este arquivo e recarregar udev.
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"

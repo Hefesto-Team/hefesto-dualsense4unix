@@ -342,6 +342,48 @@ def test_on_rumble_policy_slider_changed_custom(
         assert mixin._widgets[pid].get_active() is False
 
 
+# --- Testes: política persiste no draft (FEAT-RUMBLE-POLICY-PROFILE-01) --
+
+
+def test_set_policy_grava_no_draft(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Escolher um preset persiste a política no draft (rodapé salva o que ela vê)."""
+    mixin = _build_mixin(monkeypatch)
+    btn = mixin._widgets["rumble_policy_max"]
+    btn.set_active(True)
+    mixin.on_rumble_policy_max(btn)
+
+    assert mixin.draft.rumble.policy == "max"
+    assert mixin.draft.rumble.custom_mult is None
+
+
+def test_slider_custom_grava_mult_no_draft(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Slider em valor não-canônico persiste policy=custom + mult no draft."""
+    mixin = _build_mixin(monkeypatch)
+    slider = mixin._widgets["rumble_policy_slider"]
+    slider.set_value(55.0)
+    mixin.on_rumble_policy_slider_changed(slider)
+
+    assert mixin.draft.rumble.policy == "custom"
+    assert mixin.draft.rumble.custom_mult == pytest.approx(0.55)
+
+
+def test_preset_apos_custom_zera_custom_mult(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Voltar a um preset limpa custom_mult (schema rejeita mult fora de custom)."""
+    mixin = _build_mixin(monkeypatch)
+    slider = mixin._widgets["rumble_policy_slider"]
+    slider.set_value(55.0)
+    mixin.on_rumble_policy_slider_changed(slider)
+    mixin._set_policy("economia")
+
+    assert mixin.draft.rumble.policy == "economia"
+    assert mixin.draft.rumble.custom_mult is None
+    # E o draft com política vira um perfil válido (round-trip do rodapé).
+    profile = mixin.draft.to_profile("perfil_rumble", priority=5)
+    assert profile.rumble.policy == "economia"
+
+
 # --- Testes: apply / test / stop --------------------------------------
 
 

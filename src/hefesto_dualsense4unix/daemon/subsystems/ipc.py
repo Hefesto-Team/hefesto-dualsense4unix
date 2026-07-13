@@ -42,6 +42,11 @@ class IpcSubsystem:
             ),
             mouse_applier=getattr(daemon, "apply_profile_mouse", None),
             suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            mode_applier=getattr(daemon, "apply_profile_mode", None),
+            # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+            rumble_policy_applier=getattr(
+                daemon, "apply_profile_rumble_policy", None
+            ),
         )
         self._server = IpcServer(
             controller=ctx.controller,
@@ -83,6 +88,11 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
         keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
         mouse_applier=daemon.apply_profile_mouse,
         suppression_applier=daemon.apply_profile_suppression,
+        # getattr defensivo: testes de boot injetam daemons enxutos sem o
+        # applier de modo (FEAT-PROFILE-MODE-01).
+        mode_applier=getattr(daemon, "apply_profile_mode", None),
+        # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
+        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
     )
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,

@@ -7,6 +7,10 @@ FEAT-RUMBLE-POLICY-01: aba reestruturada em 2 cards:
 Política define multiplicador global aplicado pelo daemon sobre todo rumble,
 inclusive passthrough de jogo (XInput virtual). Slider de intensidade ajusta
 "custom" em 0-100%.
+
+FEAT-RUMBLE-POLICY-PROFILE-01: cada escolha de política da usuária também é
+gravada em ``self.draft.rumble`` — o "Salvar Perfil" do rodapé persiste no
+perfil exatamente o que a aba mostra (aplicada de volta na ativação).
 """
 # ruff: noqa: E402
 from __future__ import annotations
@@ -165,6 +169,17 @@ class RumbleActionsMixin(WidgetAccessMixin):
         if lbl is not None:
             lbl.set_visible(policy == "auto")
 
+        # FEAT-RUMBLE-POLICY-PROFILE-01: além do daemon vivo, grava a escolha
+        # no draft — o "Salvar Perfil" do rodapé persiste a política que a
+        # usuária vê. Preset zera custom_mult (o valor só faz sentido em
+        # policy="custom"; o schema do perfil rejeita a combinação).
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            new_rumble = draft.rumble.model_copy(
+                update={"policy": policy, "custom_mult": None}
+            )
+            self.draft = draft.model_copy(update={"rumble": new_rumble})
+
         ok = rumble_policy_set(policy)
         self._toast_rumble(
             f"Política de rumble: {policy}"
@@ -208,6 +223,14 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._rumble_guard_refresh = False
 
         self._rumble_policy = "custom"
+        # FEAT-RUMBLE-POLICY-PROFILE-01: persiste o custom no draft (mesma
+        # razão do preset em `_set_policy` — o rodapé salva o que ela vê).
+        draft = getattr(self, "draft", None)
+        if draft is not None:
+            new_rumble = draft.rumble.model_copy(
+                update={"policy": "custom", "custom_mult": mult}
+            )
+            self.draft = draft.model_copy(update={"rumble": new_rumble})
         rumble_policy_custom(mult)
 
     def _activate_policy_toggle(self, policy: str) -> None:

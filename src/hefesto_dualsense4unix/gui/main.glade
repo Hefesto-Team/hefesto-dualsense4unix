@@ -136,6 +136,22 @@
             <property name="scrollable">True</property>
             <property name="margin">8</property>
 
+            <!-- ABA INICIO (FEAT-GUI-HOME-TAB-01): comutador de modo do sistema
+                 + cards por controle + desligar de verdade. Conteudo dinamico
+                 montado em install_home_tab() (home_actions.py). -->
+            <child>
+              <object class="GtkBox" id="tab_home_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">12</property>
+                <property name="margin">12</property>
+              </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="tab_home_label">
+                <property name="label" translatable="yes">Início</property>
+              </object>
+            </child>
+
             <!-- ABA STATUS -->
             <child>
               <object class="GtkBox" id="tab_status_box">
@@ -834,6 +850,18 @@
                               </object>
                             </child>
                             <child>
+                              <object class="GtkButton" id="player_leds_preset_p3">
+                                <property name="label" translatable="yes">Player 3</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p3"/>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_p4">
+                                <property name="label" translatable="yes">Player 4</property>
+                                <signal name="clicked" handler="on_player_leds_preset_p4"/>
+                              </object>
+                            </child>
+                            <child>
                               <object class="GtkButton" id="player_leds_preset_none">
                                 <property name="label" translatable="yes">Nenhum</property>
                                 <signal name="clicked" handler="on_player_leds_preset_none"/>
@@ -1422,6 +1450,27 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                       </object>
                       <packing><property name="expand">False</property><property name="fill">True</property></packing>
+                    </child>
+
+                    <!-- Modo do sistema por perfil — FEAT-PROFILE-MODE-GUI-01:
+                         slot para os widgets dinâmicos montados no código
+                         (profiles_actions._install_mode_section). SegmentedSelector
+                         + co-op + máscara; nunca GtkComboBox (o cosmic-comp fecha
+                         o popup do combo no clique). Fica FORA da stack simples/
+                         avançado porque o modo pertence ao perfil, não ao match. -->
+                    <child>
+                      <object class="GtkFrame" id="profile_mode_frame">
+                        <property name="label" translatable="yes">Modo (o que este perfil liga ao ativar)</property>
+                        <property name="margin-top">8</property>
+                        <child>
+                          <object class="GtkBox" id="profile_mode_slot">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">6</property>
+                            <property name="margin">8</property>
+                          </object>
+                        </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
                     </child>
 
                     <!-- Preview JSON — UI-PROFILES-RIGHT-PANEL-REBALANCE-01

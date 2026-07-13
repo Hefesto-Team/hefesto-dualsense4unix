@@ -30,15 +30,28 @@ def test_pinned_override_de_sendreport() -> None:
     )
 
 
-def test_sendreport_throttla_e_faz_flush(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Cada ciclo lê, escreve o output (flush) e dorme REPORT_THREAD_THROTTLE_SEC;
-    o loop para quando ds_thread vira False."""
+def _make_inst() -> bp._PinnedPyDualSense:
     inst = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
     inst.input_report_length = 64
     inst.connected = True
     inst.ds_thread = True
+    # Campos que o __init__ real inicializa (PERF-MULTI-CONTROLLER-01).
+    inst._throttle_sec = bp.REPORT_THREAD_THROTTLE_SEC
+    inst._last_out_report = None
+    inst._last_write_at = 0.0
+    return inst
+
+
+def test_sendreport_throttla_e_escreve_so_quando_muda(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cada ciclo lê e dorme `_throttle_sec`; o write OUT só acontece quando o
+    report MUDA (dirty-flag) — report idêntico repetido não vai ao barramento
+    (PERF-MULTI-CONTROLLER-01)."""
+    inst = _make_inst()
 
     calls = {"read": 0, "write": 0, "sleep": 0}
+    reports = [[0] * 64, [0] * 64, [1] + [0] * 63]  # muda só no 3º ciclo
 
     class _FakeDev:
         def read(self, _n: int) -> bytes:
@@ -51,7 +64,7 @@ def test_sendreport_throttla_e_faz_flush(monkeypatch: pytest.MonkeyPatch) -> Non
         calls["write"] += 1
 
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
-    monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
+    monkeypatch.setattr(inst, "prepareReport", lambda: reports[min(calls["sleep"], 2)])
     monkeypatch.setattr(inst, "writeReport", _count_write)
 
     def _fake_sleep(secs: float) -> None:
@@ -66,7 +79,43 @@ def test_sendreport_throttla_e_faz_flush(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert calls["sleep"] == 3
     assert calls["read"] >= 3  # leu a cada ciclo
-    assert calls["write"] >= 3  # E fez flush do output a cada ciclo (broadcast vivo)
+    assert calls["write"] == 2  # 1º (novo) + 3º (mudou); o idêntico foi pulado
+
+
+def test_sendreport_keepalive_reescreve_report_identico(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem mudança no report, o write ainda acontece a cada
+    OUT_REPORT_KEEPALIVE_SEC (cobre perda de report/glitch de link)."""
+    inst = _make_inst()
+
+    calls = {"write": 0, "sleep": 0}
+    now = {"t": 100.0}
+
+    class _FakeDev:
+        def read(self, _n: int) -> bytes:
+            return bytes(_n)
+
+    inst.device = _FakeDev()
+    monkeypatch.setattr(inst, "readInput", lambda _r: None)
+    monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
+    def _count_write(_r: object) -> None:
+        calls["write"] += 1
+
+    monkeypatch.setattr(inst, "writeReport", _count_write)
+    monkeypatch.setattr(bp.time, "monotonic", lambda: now["t"])
+
+    def _fake_sleep(_secs: float) -> None:
+        calls["sleep"] += 1
+        now["t"] += bp.OUT_REPORT_KEEPALIVE_SEC + 0.01  # cada ciclo "passa" 0.51s
+        if calls["sleep"] >= 3:
+            inst.ds_thread = False
+
+    monkeypatch.setattr(bp.time, "sleep", _fake_sleep)
+
+    inst.sendReport()
+
+    assert calls["write"] == 3  # report nunca mudou, mas o keepalive reescreveu
 
 
 def test_sendreport_encerra_em_oserror(monkeypatch: pytest.MonkeyPatch) -> None:

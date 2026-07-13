@@ -97,6 +97,7 @@ class TestWlrctlBackendParsing:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = json.dumps([{"appId": "steam", "title": "Steam"}])
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -114,6 +115,7 @@ class TestWlrctlBackendParsing:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = json.dumps([])
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -128,6 +130,7 @@ class TestWlrctlBackendParsing:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = "   \n  "
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -143,6 +146,7 @@ class TestWlrctlBackendParsing:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = json.dumps([{}])
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -212,6 +216,7 @@ class TestWlrctlBackendErrosSubprocess:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = "<not json>"
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -227,6 +232,7 @@ class TestWlrctlBackendErrosSubprocess:
         fake_result = MagicMock(spec=subprocess.CompletedProcess)
         fake_result.returncode = 0
         fake_result.stdout = json.dumps({"app_id": "firefox"})
+        fake_result.stderr = ""
 
         with patch(
             "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
@@ -234,6 +240,80 @@ class TestWlrctlBackendErrosSubprocess:
         ):
             info = backend.get_active_window_info()
         assert info is None
+
+
+class TestWlrctlProtocoloNaoSuportado:
+    """FEAT-WINDOW-DETECT-DIAG-01: compositor sem o protocolo wlr (COSMIC).
+
+    O cosmic-comp não expõe `wlr-foreign-toplevel-management`; o wlrctl
+    imprime "Foreign Toplevel Management interface not found!" no stderr e
+    sai com rc 0 OU 1 conforme a versão. Antes isso era falha transiente
+    (retry eterno a 2 Hz); agora marca o backend indisponível de vez.
+    """
+
+    def _fake_result(self, rc: int) -> MagicMock:
+        fake = MagicMock(spec=subprocess.CompletedProcess)
+        fake.returncode = rc
+        fake.stdout = ""
+        fake.stderr = "Foreign Toplevel Management interface not found!"
+        return fake
+
+    @pytest.mark.parametrize("rc", [0, 1])
+    def test_interface_not_found_marca_indisponivel(self, rc: int) -> None:
+        backend = _make_backend_available()
+
+        with patch(
+            "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
+            return_value=self._fake_result(rc),
+        ):
+            info = backend.get_active_window_info()
+
+        assert info is None
+        assert backend.available is False
+        assert backend.protocol_unsupported is True
+
+    def test_apos_deteccao_nao_chama_mais_subprocess(self) -> None:
+        """Indisponível permanente: o retry a 2 Hz não re-executa o binário."""
+        backend = _make_backend_available()
+
+        with patch(
+            "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
+            return_value=self._fake_result(0),
+        ) as mock_run:
+            backend.get_active_window_info()
+            backend.get_active_window_info()
+            backend.get_active_window_info()
+
+        assert mock_run.call_count == 1
+
+    def test_stderr_generico_nao_marca_protocolo(self) -> None:
+        """Erro comum (sem o marcador) segue transiente — não desliga o backend."""
+        backend = _make_backend_available()
+
+        fake = MagicMock(spec=subprocess.CompletedProcess)
+        fake.returncode = 2
+        fake.stdout = ""
+        fake.stderr = "wlrctl: cannot connect to compositor"
+
+        with patch(
+            "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",
+            return_value=fake,
+        ):
+            info = backend.get_active_window_info()
+
+        assert info is None
+        assert backend.available is True
+        assert backend.protocol_unsupported is False
+
+    def test_bin_ausente_nao_e_protocolo_nao_suportado(self) -> None:
+        """Diagnóstico distingue 'binário ausente' de 'compositor sem protocolo'."""
+        with patch(
+            "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.shutil.which",
+            return_value=None,
+        ):
+            backend = WlrctlBackend()
+        assert backend.available is False
+        assert backend.protocol_unsupported is False
 
 
 @pytest.mark.parametrize(
@@ -253,6 +333,7 @@ def test_parametrizado_app_id_variantes(
     fake_result = MagicMock(spec=subprocess.CompletedProcess)
     fake_result.returncode = 0
     fake_result.stdout = json.dumps(input_data)
+    fake_result.stderr = ""
 
     with patch(
         "hefesto_dualsense4unix.integrations.window_backends.wlr_toplevel.subprocess.run",

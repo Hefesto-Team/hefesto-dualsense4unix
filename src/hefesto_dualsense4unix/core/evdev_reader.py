@@ -67,21 +67,55 @@ def _event_num(path: Path) -> int:
     return int(m.group(1)) if m else 0
 
 
-def find_all_dualsense_evdevs() -> list[Path]:
-    """Todos os evdevs principais (gamepad) de DualSense FÍSICOS, ordenados.
+class InputDirWatch:
+    """Detector barato de mudança em /dev/input (PERF-MULTI-CONTROLLER-01).
 
-    FEAT-DSX-COOP-LOCAL-01: o caminho single-controle usa só o primeiro
-    (`find_dualsense_evdev`), mas o co-op precisa de UM reader por controle —
-    daí enumerar todos. Filtra devices virtuais (uinput, ver `_is_virtual_evdev`)
-    e o touchpad (sem caps de gamepad). Ordena por número do node para que a
-    eleição de "primário" seja estável entre execuções.
+    A enumeração completa (`discover_dualsense_evdevs`) abre TODOS os nodes de
+    input (open + ioctls + close, ~10-40ms) — caro demais para rodar em timer
+    de 2s no event loop (era o hitch rítmico do co-op). O conjunto de nodes só
+    muda em hotplug/re-enumeração, e isso é observável por um `os.listdir`
+    (~µs). Cada consumidor tem a SUA instância (o "mudou?" é relativo ao último
+    `poll()` DESTE watch).
+    """
+
+    def __init__(self, root: str = "/dev/input") -> None:
+        self._root = root
+        self._last: frozenset[str] | None = None
+
+    def poll(self) -> bool:
+        """True se o conteúdo de /dev/input mudou desde o último poll (ou 1ª vez)."""
+        import os
+
+        try:
+            current = frozenset(os.listdir(self._root))
+        except OSError:
+            current = frozenset()
+        changed = current != self._last
+        self._last = current
+        return changed
+
+
+def discover_dualsense_evdevs() -> dict[str, Path]:
+    """Mapeia IDENTIDADE (MAC normalizado) -> node evdev de cada DualSense físico.
+
+    FEAT-DSX-CONTROLLER-IDENTITY-01: a identidade universal de um controle no
+    projeto é o MAC (o `uniq` do evdev == `serial_number` do hidapi, ambos
+    normalizados via `norm_mac`). Nodes evdev são VOLÁTEIS (re-enumeração pós
+    storm/replug muda `eventN`); a chave por MAC sobrevive. Nodes sem `uniq`
+    legível (não deveria acontecer com hid_playstation) usam o próprio path
+    como chave-fallback, prefixado com "path:" para nunca colidir com um MAC.
+
+    Filtra devices virtuais (uinput, ver `_is_virtual_evdev`) e nodes sem caps
+    de gamepad (touchpad/motion sensors ficam de fora).
     """
     try:
         from evdev import InputDevice, ecodes, list_devices
     except ImportError:
-        return []
-    found: list[Path] = []
-    for path in list_devices():
+        return {}
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    found: dict[str, Path] = {}
+    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
         try:
@@ -95,12 +129,24 @@ def find_all_dualsense_evdevs() -> list[Path]:
                 if is_gamepad:
                     buttons = dev.capabilities().get(ecodes.EV_KEY, [])
                     if ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons:
-                        found.append(Path(path))
+                        key = norm_mac(getattr(dev, "uniq", None)) or f"path:{path}"
+                        # 1º node vence em duplicata do mesmo MAC (ordem estável
+                        # por número de node) — duplicata real não deve existir.
+                        found.setdefault(key, Path(path))
             finally:
                 dev.close()
         except Exception:
             continue
-    return sorted(found, key=_event_num)
+    return found
+
+
+def find_all_dualsense_evdevs() -> list[Path]:
+    """Todos os evdevs principais (gamepad) de DualSense FÍSICOS, ordenados.
+
+    Compat: wrapper de `discover_dualsense_evdevs` que descarta a identidade.
+    Ordena por número do node para eleição estável entre execuções.
+    """
+    return sorted(discover_dualsense_evdevs().values(), key=_event_num)
 
 
 def find_dualsense_evdev() -> Path | None:
@@ -127,6 +173,8 @@ class _EvdevReconnectLoop:
     # InputDevice atualmente aberto pelo loop (ou None). Permite grab/ungrab
     # em runtime de fora da thread (FEAT-DSX-GAMEPAD-FLAVOR-01).
     _active_dev: Any = None
+    # Watch barato de /dev/input para o is_stale (lazy; PERF-MULTI-CONTROLLER-01).
+    _stale_watch: Any = None
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
 
     def _find_device(self) -> Path | None:  # pragma: no cover - abstract
@@ -137,6 +185,9 @@ class _EvdevReconnectLoop:
 
     def _reset_on_disconnect(self) -> None:  # pragma: no cover - abstract
         raise NotImplementedError
+
+    def _reapply_grab(self, dev: Any) -> None:
+        """Hook de (re)aplicação de grab ao abrir o device. No-op na base."""
 
     def _log_prefix(self) -> str:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -174,6 +225,16 @@ class _EvdevReconnectLoop:
         held = self._device_path
         if held is None:
             return False  # sem device aberto: o loop de reconexão já cobre
+        # PERF-MULTI-CONTROLLER-01: o node canônico só muda se /dev/input mudou
+        # — checagem por listdir (~µs) evita a enumeração completa (~10-40ms)
+        # a cada tick do watchdog. 1ª chamada estabelece baseline e verifica.
+        watch = getattr(self, "_stale_watch", None)
+        if watch is None:
+            watch = InputDirWatch()
+            self._stale_watch = watch
+            watch.poll()
+        elif not watch.poll():
+            return False
         current = self._find_device()
         if current is None:
             return False  # finder transitório/sem node: conservador, não reabre
@@ -246,10 +307,10 @@ class _EvdevReconnectLoop:
             self._device_path = path
             self._active_dev = dev
             # Reaplica o grab se foi pedido enquanto o device estava fechado
-            # (ex.: gamepad já estava ligado antes desta (re)conexão).
-            if getattr(self, "_grab", False):
-                with contextlib.suppress(Exception):
-                    dev.grab()
+            # (ex.: gamepad já estava ligado antes desta (re)conexão). Falha
+            # NÃO é silenciosa: `_reapply_grab` registra estado + warning
+            # (BUG-COOP-GRAB-SILENT-FAIL-01).
+            self._reapply_grab(dev)
             try:
                 for event in dev.read_loop():
                     if self._stop_flag.is_set():
@@ -307,8 +368,13 @@ class EvdevReader(_EvdevReconnectLoop):
 
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
 
-    def __init__(self, device_path: Path | None = None) -> None:
-        self._device_path = device_path or find_dualsense_evdev()
+    def __init__(self, device_path: Path | None = None, target_uniq: str | None = None) -> None:
+        # FEAT-DSX-CONTROLLER-IDENTITY-01: quando `_target_uniq` está setado, o
+        # finder resolve o node PELO MAC (identidade estável) em vez de "menor
+        # node" — com 2+ controles, "menor node" e "primário do backend" podem
+        # divergir após re-enumeração e o reader passaria a ler OUTRO controle.
+        self._target_uniq = target_uniq
+        self._device_path = device_path or self._locate()
         self._lock = threading.RLock()
         self._snapshot = EvdevSnapshot()
         self._thread: threading.Thread | None = None
@@ -322,23 +388,70 @@ class EvdevReader(_EvdevReconnectLoop):
         # deixam de ver o controle cru (evitando input dobrado ao lado do
         # gamepad virtual). Aplicado/removido por `set_grab`.
         self._grab: bool = False
+        # BUG-COOP-GRAB-SILENT-FAIL-01: estado observável do grab. "off" (não
+        # pedido), "pending" (pedido, device ainda não aberto), "held" (ativo),
+        # "failed" (EVIOCGRAB recusado — ex.: EBUSY, outro leitor já graba).
+        # Falha de grab NÃO pode ser silenciosa: com gamepad virtual ligado,
+        # físico sem grab = input DOBRADO no jogo.
+        self._grab_state: str = "off"
 
-    def set_grab(self, grab: bool) -> None:
+    def retarget(self, uniq: str | None) -> None:
+        """Re-aponta o reader para o controle de MAC `uniq` (normalizado).
+
+        Se o node atualmente aberto não pertence ao novo alvo, força reabrir
+        (fecha o fd; o loop re-localiza pelo finder, agora filtrado por MAC).
+        """
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        norm = norm_mac(uniq)
+        if norm == self._target_uniq:
+            return
+        self._target_uniq = norm
+        current = self._locate()
+        if current is not None and current == self._device_path:
+            return  # o node aberto já é o do alvo — nada a fazer
+        self.request_reopen(reason="retarget")
+
+    @property
+    def grab_state(self) -> str:
+        """Estado observável do EVIOCGRAB: off | pending | held | failed."""
+        return self._grab_state
+
+    def set_grab(self, grab: bool) -> bool:
         """Liga/desliga o EVIOCGRAB no controle físico (thread-safe-ish).
 
-        Best-effort: registra a intenção em `self._grab` (reaplicada a cada
-        (re)conexão pelo loop) e tenta aplicar imediatamente no device aberto.
-        Nunca propaga exceção.
+        Registra a intenção em `self._grab` (reaplicada a cada (re)conexão pelo
+        loop) e tenta aplicar imediatamente no device aberto. Retorna True se o
+        estado desejado foi APLICADO agora (ou é pending com device fechado —
+        o loop aplica ao abrir); False se o EVIOCGRAB falhou (`grab_state` vira
+        "failed" e o chamador NÃO deve assumir exclusividade do device).
         """
         self._grab = grab
         dev = self._active_dev
         if dev is None:
-            return
-        with contextlib.suppress(Exception):
+            self._grab_state = "pending" if grab else "off"
+            return True
+        try:
             if grab:
                 dev.grab()
+                self._grab_state = "held"
             else:
                 dev.ungrab()
+                self._grab_state = "off"
+            return True
+        except Exception as exc:
+            if grab:
+                self._grab_state = "failed"
+                logger.warning(
+                    "evdev_grab_failed",
+                    path=str(self._device_path),
+                    err=str(exc),
+                    hint="outro leitor exclusivo? físico ficaria DOBRADO no jogo",
+                )
+                return False
+            # ungrab falhou (device já fechado/sumiu): estado efetivo é solto.
+            self._grab_state = "off"
+            return True
 
     def snapshot(self) -> EvdevSnapshot:
         with self._lock:
@@ -354,8 +467,30 @@ class EvdevReader(_EvdevReconnectLoop):
 
     # Hooks do loop base ------------------------------------------------
 
-    def _find_device(self) -> Path | None:
+    def _locate(self) -> Path | None:
+        """Resolve o node do controle-alvo (por MAC) ou o primeiro físico."""
+        if self._target_uniq is not None:
+            return discover_dualsense_evdevs().get(self._target_uniq)
         return find_dualsense_evdev()
+
+    def _find_device(self) -> Path | None:
+        return self._locate()
+
+    def _reapply_grab(self, dev: Any) -> None:
+        """Reaplica o grab pedido ao (re)abrir o device, com estado observável."""
+        if not self._grab:
+            return
+        try:
+            dev.grab()
+            self._grab_state = "held"
+        except Exception as exc:
+            self._grab_state = "failed"
+            logger.warning(
+                "evdev_grab_failed",
+                path=str(self._device_path),
+                err=str(exc),
+                hint="grab falhou ao reabrir o device; o controle pode dobrar input",
+            )
 
     def _log_prefix(self) -> str:
         return "evdev"
@@ -367,6 +502,10 @@ class EvdevReader(_EvdevReconnectLoop):
             self._dpad_x = 0
             self._dpad_y = 0
             self._snapshot = self._with(buttons_pressed=frozenset())
+        # Grab pedido volta a "pending" — será reaplicado (com verificação)
+        # quando o loop reabrir o device (BUG-COOP-GRAB-SILENT-FAIL-01).
+        if self._grab:
+            self._grab_state = "pending"
 
     # Alias retrocompatível para testes legados (HOTFIX-3).
     _reset_buttons_on_disconnect = _reset_on_disconnect

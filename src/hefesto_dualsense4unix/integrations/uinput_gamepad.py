@@ -139,6 +139,10 @@ class UinputGamepad:
     _device: Any = None
     _uinput_mod: Any = None
     _last_buttons: frozenset[str] = field(default_factory=frozenset)
+    # PERF-MULTI-CONTROLLER-01: último sexteto analógico emitido — o forward
+    # roda a cada tick (60Hz) por vpad; sem delta eram 7 writes/tick/vpad no
+    # /dev/uinput mesmo com tudo parado.
+    _last_axes: tuple[int, int, int, int, int, int] | None = None
 
     @classmethod
     def for_flavor(cls, flavor: str | None = DEFAULT_FLAVOR) -> UinputGamepad:
@@ -185,6 +189,7 @@ class UinputGamepad:
             self._device.destroy()
         self._device = None
         self._last_buttons = frozenset()
+        self._last_axes = None
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -199,17 +204,28 @@ class UinputGamepad:
         l2: int,
         r2: int,
     ) -> None:
-        """Aplica valores analógicos no device virtual."""
+        """Aplica valores analógicos no device virtual (só o que MUDOU).
+
+        PERF-MULTI-CONTROLLER-01: emite apenas os eixos com valor novo e o SYN
+        só quando algo foi emitido. Sticks parados = zero writes (o kernel de
+        qualquer forma descartaria ABS repetido, mas o write/syscall era pago).
+        """
         if self._device is None or self._uinput_mod is None:
             return
+        axes = (lx, ly, rx, ry, l2, r2)
+        last = self._last_axes
+        if axes == last:
+            return
         u = self._uinput_mod
-        self._device.emit(u.ABS_X, lx, syn=False)
-        self._device.emit(u.ABS_Y, ly, syn=False)
-        self._device.emit(u.ABS_RX, rx, syn=False)
-        self._device.emit(u.ABS_RY, ry, syn=False)
-        self._device.emit(u.ABS_Z, l2, syn=False)
-        self._device.emit(u.ABS_RZ, r2, syn=False)
-        self._device.syn()
+        events = (u.ABS_X, u.ABS_Y, u.ABS_RX, u.ABS_RY, u.ABS_Z, u.ABS_RZ)
+        emitted = False
+        for idx, ev in enumerate(events):
+            if last is None or axes[idx] != last[idx]:
+                self._device.emit(ev, axes[idx], syn=False)
+                emitted = True
+        if emitted:
+            self._device.syn()
+        self._last_axes = axes
 
     def forward_buttons(self, pressed: frozenset[str]) -> None:
         """Aplica set de botões pressionados. Diff com último snapshot."""

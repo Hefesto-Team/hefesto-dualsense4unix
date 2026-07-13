@@ -37,6 +37,12 @@ mkdir -p "${DEST_DIR}"
 # Regra: só copia se AUSENTE E ainda-não-semeado; presets já presentes na 1ª
 # execução (perfis da v3.10) são registrados sem cópia, então deleções POSTERIORES
 # passam a ser respeitadas.
+#
+# FIX-PACKAGING-SEED-PARITY-01: a MESMA semântica existe em runtime no Python
+# (`profiles/loader.py::seed_default_presets`) para .deb/AppImage, onde este
+# script não roda. O formato do marker (um filename por linha) é contrato
+# compartilhado entre os dois semeadores — mudou aqui, mude lá (e nos testes
+# tests/unit/test_preset_seed_runtime.py).
 readonly MARKER="${DEST_DIR}/.seeded_presets"
 touch "${MARKER}"
 copied=0
