@@ -259,7 +259,14 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules \
                    /etc/udev/rules.d/77-dualsense-leds.rules \
                    /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules \
-                   /etc/modules-load.d/hefesto-dualsense4unix.conf
+                   /etc/modules-load.d/hefesto-dualsense4unix.conf \
+                   /etc/modprobe.d/hefesto-dualsense-storm.conf
+        # SPRINT-GAME-RUMBLE-01: a cura de raiz do storm (modprobe.d) é DEFAULT
+        # no install (preserva mic+fone), então é removida por DEFAULT aqui
+        # (simétrico — feedback_uninstall_simetrico_default). Limpa também o
+        # quirk_flags runtime (vale no próximo replug do controle).
+        [[ -e /sys/module/snd_usb_audio/parameters/quirk_flags ]] && \
+            printf '' | sudo tee /sys/module/snd_usb_audio/parameters/quirk_flags >/dev/null 2>&1 || true
         sudo udevadm control --reload-rules
         # Re-trigger eventos para que devices PS5 já plugados percam os
         # atributos injetados pelas rules removidas (autosuspend forçado,
