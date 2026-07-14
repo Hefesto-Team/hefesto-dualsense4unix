@@ -204,11 +204,30 @@ class CoopManager:
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
 
         primary = self._primary_identity()
+        # BUG-COOP-BOOT-PRIMARY-DUP-01: o conjunto `want` é keyed por MAC; se o
+        # primário ainda não resolveu o MAC (`primary_uniq` None no boot/restart
+        # com controles já plugados → fallback "path:"), não há como excluí-lo de
+        # `want` e um secundário nasceria para o PRÓPRIO controle do P1 (input
+        # DOBRADO até o próximo sync ~2s). Adia enquanto não há MAC do primário;
+        # `_retry_spawn` garante o re-teste no tick seguinte, sem depender do
+        # watch de /dev/input (resolver o MAC não muda os nodes).
+        if primary is None or primary.startswith("path:"):
+            logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
+            self._retry_spawn = True
+            return
         want = {
             mac: str(path)
             for mac, path in discover_dualsense_evdevs().items()
             if mac != primary
         }
+        # SPRINT-GAME-RUMBLE-01: a máscara (flavor) do P1 pode ter mudado em
+        # runtime (aba Início / perfil xboxdualsense). O vpad de cada
+        # secundário nasce com o flavor vigente na criação (`_flavor()`), mas
+        # não se repropaga sozinho — sem isto, P2+ ficam presos no flavor antigo
+        # (rumble morto e prompts divergentes do P1). Derrubar por mismatch aqui
+        # força a recriação com a máscara nova. Só efetiva no ciclo cheio (o
+        # `set_gamepad_emulation` chama `sync(force=True)` após trocar o flavor).
+        desired_flavor = self._flavor()
 
         for mac in list(self._players):
             player = self._players[mac]
@@ -224,6 +243,17 @@ class CoopManager:
                 self._teardown_player(mac)
             elif player.reader.grab_state == "failed":
                 logger.warning("coop_player_grab_failed_retry", identity=mac)
+                self._teardown_player(mac)
+            elif (
+                player.vpad is not None
+                and getattr(player.vpad, "flavor", None) != desired_flavor
+            ):
+                logger.info(
+                    "coop_player_flavor_changed",
+                    identity=mac,
+                    old=getattr(player.vpad, "flavor", None),
+                    new=desired_flavor,
+                )
                 self._teardown_player(mac)
 
         # hotplug-IN: cria secundários novos.

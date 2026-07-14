@@ -161,6 +161,28 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 
 ---
 
+### Limitações por modo — o que o "Jogar pelo Hefesto" não entrega (e por quê)
+
+No modo **Jogar pelo Hefesto** (gamepad virtual) o daemon fica _entre_ o jogo e o controle: o jogo enxerga um `/dev/input/js*` virtual, não o DualSense. É isso que habilita co-op local, máscara Xbox/PS e a tradução de input — mas o `uinput` do Linux só carrega **botões, eixos e vibração** (force-feedback). Tudo que depende do canal HID cru do DualSense **não trafega pelo controle virtual**:
+
+| Recurso | Jogar pelo Hefesto | Jogar direto (Nativo) | Por quê |
+|---|:---:|:---:|---|
+| Botões / sticks / gatilhos (input) | **sim** | **sim** | núcleo — paridade total nos dois modos |
+| **Rumble do jogo** | **sim** _(máscara Xbox)_ | **sim** | ver nota abaixo |
+| Gatilhos adaptativos | não | **sim** | `uinput` não tem canal de resistência de gatilho |
+| Lightbar RGB pelo jogo | não | **sim** | `uinput` não expõe LED/RGB (só a cor do perfil) |
+| Giroscópio / acelerômetro (aim) | não | **sim** | motion fica no device físico, não no virtual |
+| Touchpad como touchpad | não | **sim** | o virtual não tem `BTN_TOUCH`/multitoque |
+| Bateria dentro do jogo | não _(a GUI mostra)_ | **sim** | `uinput` não tem `power_supply` (SDL vê "wired") |
+
+**Regra prática:** para gatilhos adaptativos, gyro-aim ou lightbar controlada pelo jogo, use **Jogar direto (Nativo)**. Para co-op local (cada controle = 1 jogador) e compatibilidade máxima com jogos Windows/Proton, use **Jogar pelo Hefesto**.
+
+**Máscara e rumble:** a vibração do jogo no modo "Jogar pelo Hefesto" exige a máscara **Xbox 360** (aba Início, ou por perfil no editor). Com a máscara DualSense (prompts PlayStation), o driver HIDAPI do jogo adota o controle _físico_ pelo `/dev/hidraw` e ignora o controle virtual — o rumble nunca chega ao pipeline do Hefesto. Para manter os prompts PS e ainda ter vibração, inicie o jogo com `SDL_JOYSTICK_HIDAPI=0 %command%` (Steam → Propriedades → Opções de inicialização).
+
+**Botão Mute (microfone):** mutar o microfone é função do controle **P1** por construção — o `mic_btn` só é lido do controle primário (via HID cru; não tem keycode evdev estável) e o sistema tem um único microfone. No co-op, o botão Mute dos jogadores 2+ não muta o mic nem acende o LED de mic; o P1 cobre a função para a máquina toda.
+
+---
+
 ### Instalação
 
 #### Ubuntu / Debian / Pop!\_OS / Mint (.deb — recomendado)

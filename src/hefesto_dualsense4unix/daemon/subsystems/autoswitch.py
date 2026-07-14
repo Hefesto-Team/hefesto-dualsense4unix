@@ -148,6 +148,9 @@ class AutoswitchSubsystem:
             rumble_policy_applier=getattr(
                 daemon, "apply_profile_rumble_policy", None
             ),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
+            ),
         )
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
         # saúde/última wm_class útil no store a cada leitura do poll.
@@ -193,6 +196,9 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         mode_applier=getattr(daemon, "apply_profile_mode", None),
         # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
         rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
+        rumble_passthrough_applier=getattr(
+            daemon, "apply_profile_rumble_passthrough", None
+        ),
     )
     # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
     # saúde/última wm_class útil no store a cada leitura do poll.

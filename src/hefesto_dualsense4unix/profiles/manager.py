@@ -68,6 +68,14 @@ class ProfileManager:
     # só política aplicada por OUTRO perfil; política manual fica). None =
     # seção ignorada (CLI/testes sem daemon).
     rumble_policy_applier: Callable[[str | None, float | None], None] | None = None
+    # SPRINT-GAME-RUMBLE-01: applier da seção `rumble.passthrough` do perfil.
+    # Os callsites injetam `daemon.apply_profile_rumble_passthrough` — recebe o
+    # bool a cada ativação. passthrough=True (default de TODO perfil) solta o
+    # rumble FIXADO pela GUI (rumble_active=None), devolvendo a vibração ao JOGO;
+    # sem isto, testar os motores na GUI ("Aplicar"/"Parar") deixava o rumble
+    # travado e o FF do jogo era ignorado mesmo com a máscara certa. None =
+    # seção ignorada (CLI/testes sem daemon).
+    rumble_passthrough_applier: Callable[[bool], None] | None = None
 
     def list_profiles(self) -> list[Profile]:
         return load_all_profiles()
@@ -231,6 +239,21 @@ class ProfileManager:
             except Exception as exc:
                 logger.warning(
                     "profile_rumble_policy_apply_failed",
+                    profile=profile.name,
+                    err=str(exc),
+                )
+        # SPRINT-GAME-RUMBLE-01: aplica o `rumble.passthrough` do perfil — solta
+        # o rumble FIXADO pela GUI para o JOGO controlar a vibração. SEMPRE (o
+        # default True cobre todo perfil); o applier só age se há rumble fixado.
+        if self.rumble_passthrough_applier is not None:
+            rumble_cfg = getattr(profile, "rumble", None)
+            try:
+                self.rumble_passthrough_applier(
+                    bool(getattr(rumble_cfg, "passthrough", True))
+                )
+            except Exception as exc:
+                logger.warning(
+                    "profile_rumble_passthrough_apply_failed",
                     profile=profile.name,
                     err=str(exc),
                 )

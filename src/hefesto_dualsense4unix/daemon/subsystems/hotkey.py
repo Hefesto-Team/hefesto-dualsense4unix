@@ -32,6 +32,19 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         cfg = daemon.config
         if cfg.ps_button_action == "none":
             return
+        # FEAT-PARITY-REVIEW-01: com o gamepad virtual ativo ("Jogar pelo
+        # Hefesto") o PS já é encaminhado CRU ao jogo como BTN_MODE (guide/
+        # overlay). Disparar TAMBÉM a ação de sistema (focar Steam / comando)
+        # roubaria o foco no meio da partida. O Modo Nativo tem o mesmo espírito
+        # (o controle é do jogo). Só o PS-SOLO é gateado — os combos PS+Options/
+        # PS+dpad seguem valendo (são hotkeys nossos, não vão pro jogo).
+        if getattr(daemon, "_gamepad_device", None) is not None:
+            logger.info("hotkey_ps_solo_skip_gamepad_ativo")
+            return
+        store = getattr(daemon, "store", None)
+        if store is not None and getattr(store, "native_mode_active", False):
+            logger.info("hotkey_ps_solo_skip_native_mode")
+            return
         if cfg.ps_button_action == "steam":
             from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
 
@@ -107,6 +120,9 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
             rumble_policy_applier=getattr(
                 daemon, "apply_profile_rumble_policy", None
+            ),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
             ),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)

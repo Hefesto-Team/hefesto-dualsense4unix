@@ -11,6 +11,7 @@ orquestrador para muito abaixo do limite de 100 LOC por método.
 """
 from __future__ import annotations
 
+import contextlib
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
@@ -416,6 +417,48 @@ class IpcHandlersMixin:
                 getattr(daemon_cfg, "rumble_policy_custom_mult", 0.7)
             )
             result["rumble_mult_applied"] = rumble_mult_applied
+
+            # SPRINT-GAME-RUMBLE-01: diagnóstico de rumble in-game + estado do
+            # rumble. `plays` = nº de "play" de FF que o JOGO pediu nos vpads
+            # (P1 + co-op) desde a criação. Em 0 durante o jogo = o jogo NÃO
+            # enxerga o vpad (ex.: máscara DualSense atraindo o hidraw do
+            # físico). `passthrough` (rumble_active is None) distingue "jogo
+            # controla a vibração" de "fixo (teste pela GUI)" — a GUI não tinha
+            # como saber em qual estado estava.
+            vpads: list[Any] = []
+            gp_device = getattr(self.daemon, "_gamepad_device", None)
+            if gp_device is not None:
+                vpads.append(gp_device)
+            coop_mgr = getattr(self.daemon, "_coop_manager", None)
+            if coop_mgr is not None:
+                players = getattr(coop_mgr, "_players", {})
+                if isinstance(players, dict):
+                    vpads.extend(
+                        p.vpad
+                        for p in players.values()
+                        if getattr(p, "vpad", None) is not None
+                    )
+            ff_plays = 0
+            ff_last: tuple[int, int] = (0, 0)
+            for vp in vpads:
+                with contextlib.suppress(Exception):
+                    ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
+                    last = getattr(vp, "ff_last_sent", None)
+                    if isinstance(last, tuple) and len(last) == 2 and last != (0, 0):
+                        ff_last = (int(last[0]), int(last[1]))
+            result["rumble_ff"] = {
+                "plays": ff_plays,
+                "last_weak": ff_last[0],
+                "last_strong": ff_last[1],
+                "vpads": len(vpads),
+            }
+            rumble_active = getattr(daemon_cfg, "rumble_active", None)
+            result["rumble_passthrough"] = rumble_active is None
+            result["rumble_active"] = (
+                [int(rumble_active[0]), int(rumble_active[1])]
+                if rumble_active is not None
+                else None
+            )
 
         return result
 

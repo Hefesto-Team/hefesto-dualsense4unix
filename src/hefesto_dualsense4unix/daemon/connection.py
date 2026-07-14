@@ -125,6 +125,9 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             rumble_policy_applier=getattr(
                 daemon, "apply_profile_rumble_policy", None
             ),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
+            ),
         )
         await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)

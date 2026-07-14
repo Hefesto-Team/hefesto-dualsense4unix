@@ -47,6 +47,9 @@ class IpcSubsystem:
             rumble_policy_applier=getattr(
                 daemon, "apply_profile_rumble_policy", None
             ),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
+            ),
         )
         self._server = IpcServer(
             controller=ctx.controller,
@@ -93,6 +96,9 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
         mode_applier=getattr(daemon, "apply_profile_mode", None),
         # FEAT-RUMBLE-POLICY-PROFILE-01: política de rumble por perfil.
         rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
+        rumble_passthrough_applier=getattr(
+            daemon, "apply_profile_rumble_passthrough", None
+        ),
     )
     daemon._ipc_server = IpcServer(
         controller=daemon.controller,

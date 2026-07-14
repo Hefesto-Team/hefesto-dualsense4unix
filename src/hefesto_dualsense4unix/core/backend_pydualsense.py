@@ -604,14 +604,17 @@ class PyDualSenseController(IController):
 
         # Re-afirma o perfil de LED ativo nos nós que SURGIRAM agora (cor que o
         # kernel ainda não tinha ou perdeu no connect/resume).
+        # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) NÃO re-afirma — o jogo é
+        # dono do LED; `_desired` segue guardado e o unmute o re-aplica.
         new_keys = [k for k in mapping if k not in prev]
-        for key in new_keys:
-            node = mapping[key]
-            with contextlib.suppress(Exception):
-                if self._desired.led is not None:
-                    node.set_rgb(*self._desired.led)
-                if self._desired.player_leds is not None:
-                    node.set_players(self._desired.player_leds)
+        if not self._output_mute:
+            for key in new_keys:
+                node = mapping[key]
+                with contextlib.suppress(Exception):
+                    if self._desired.led is not None:
+                        node.set_rgb(*self._desired.led)
+                    if self._desired.player_leds is not None:
+                        node.set_players(self._desired.player_leds)
 
         with self._io_lock:
             self._sysfs = mapping
@@ -772,12 +775,21 @@ class PyDualSenseController(IController):
             else:
                 items = list(self._handles.items())
             sysfs_map = dict(self._sysfs)
+            muted = self._output_mute
         if not items:
             logger.debug("output_offline_noop", op=what)
             return
         for key, handle in items:
             node = sysfs_map.get(key)
-            if node is not None:
+            # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) o JOGO é dono do LED
+            # do controle. A rota sysfs escreve DIRETO no /sys (fora do
+            # report_thread, que o mute cobre), então sem este gate um perfil/
+            # reassert de player-LED/lightbar pisaria no número que o jogo setou.
+            # `_desired` já guarda o valor (setado pelo caller) e o unmute o
+            # re-aplica ao sysfs — aqui só evitamos tocar o hardware. O pydual_op
+            # abaixo apenas atualiza o estado interno (o report_thread mutado não
+            # escreve), mantendo o handle coerente para o próximo unmute.
+            if node is not None and not muted:
                 try:
                     if sysfs_op(node):
                         continue
@@ -809,17 +821,23 @@ class PyDualSenseController(IController):
         desired = self._desired
         with self._io_lock:
             node = self._sysfs.get(key)
+            muted = self._output_mute
+        # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) a rota sysfs de LED é
+        # desabilitada (o jogo é dono do LED). `node and not muted` mantém o
+        # fallback: sem sysfs disponível, o LED cai em handle.light — mas o
+        # report_thread também está mutado, então nada chega ao hardware; o
+        # estado interno fica coerente para o unmute re-aplicar.
         try:
             if desired.trigger_left is not None:
                 self._apply_trigger(handle, "left", desired.trigger_left)
             if desired.trigger_right is not None:
                 self._apply_trigger(handle, "right", desired.trigger_right)
             if desired.led is not None and not (
-                node is not None and node.set_rgb(*desired.led)
+                node is not None and not muted and node.set_rgb(*desired.led)
             ):
                 handle.light.setColorI(*desired.led)
             if desired.player_leds is not None and not (
-                node is not None and node.set_players(desired.player_leds)
+                node is not None and not muted and node.set_players(desired.player_leds)
             ):
                 mask = sum(1 << i for i, b in enumerate(desired.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
@@ -967,6 +985,19 @@ class PyDualSenseController(IController):
                     handle._output_muted = self._output_mute
                     if not self._output_mute:
                         handle._last_out_report = None
+            # FEAT-PARITY-REVIEW-01: snapshot p/ re-aplicar o LED do perfil na
+            # rota sysfs ao DESMUTAR (fora do lock). Controles cobertos por sysfs
+            # não recebem LED pelo report_thread (_suppress_leds), então só o
+            # sysfs restaura a cor/player do perfil ao sair do Modo Nativo.
+            sysfs_nodes = list(self._sysfs.values()) if not muted else []
+            desired_led = self._desired.led
+            desired_players = self._desired.player_leds
+        for node in sysfs_nodes:
+            with contextlib.suppress(Exception):
+                if desired_led is not None:
+                    node.set_rgb(*desired_led)
+                if desired_players is not None:
+                    node.set_players(desired_players)
         logger.info("backend_output_mute", muted=bool(muted))
 
     def set_output_target(self, index: int | None) -> int | None:

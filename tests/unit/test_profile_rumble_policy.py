@@ -222,6 +222,50 @@ def test_manager_repassa_politica_ao_applier() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Passthrough do perfil (SPRINT-GAME-RUMBLE-01)
+# ---------------------------------------------------------------------------
+
+
+def test_applier_passthrough_solta_rumble_fixado(daemon: Daemon) -> None:
+    # Rumble FIXADO pela GUI (ex.: "Aplicar" na aba Rumble).
+    daemon.config.rumble_active = (100, 120)
+    daemon.apply_profile_rumble_passthrough(True)
+    # Ativar um perfil com passthrough=true DEVOLVE a vibração ao jogo — senão o
+    # FF do jogo seria ignorado por apply_game_rumble mesmo com a máscara certa.
+    assert daemon.config.rumble_active is None
+
+
+def test_applier_passthrough_false_preserva_rumble_fixado(daemon: Daemon) -> None:
+    daemon.config.rumble_active = (100, 120)
+    daemon.apply_profile_rumble_passthrough(False)
+    # passthrough=false não solta o rumble fixado.
+    assert daemon.config.rumble_active == (100, 120)
+
+
+def test_applier_passthrough_noop_quando_ja_em_passthrough(daemon: Daemon) -> None:
+    daemon.config.rumble_active = None
+    # Já em passthrough: no-op silencioso (não quebra, não escreve à toa).
+    daemon.apply_profile_rumble_passthrough(True)
+    assert daemon.config.rumble_active is None
+
+
+def test_manager_repassa_passthrough_ao_applier() -> None:
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    received: list[bool] = []
+    mgr = ProfileManager(
+        controller=FakeController(),
+        store=StateStore(),
+        rumble_passthrough_applier=received.append,
+    )
+    mgr.apply_emulation(_profile({"passthrough": True}))
+    mgr.apply_emulation(_profile({"passthrough": False}))
+    mgr.apply_emulation(_profile(None))  # sem seção → default True
+    assert received == [True, False, True]
+
+
+# ---------------------------------------------------------------------------
 # Round-trip draft → profile → draft
 # ---------------------------------------------------------------------------
 
