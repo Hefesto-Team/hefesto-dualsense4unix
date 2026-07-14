@@ -39,7 +39,9 @@
     "passthrough": true
   },
   "mode": {
-    "kind": "native"
+    "kind": "gamepad",
+    "gamepad_flavor": "dualsense",
+    "coop": true
   },
-  "suppress_desktop_emulation": false
+  "suppress_desktop_emulation": true
 }
