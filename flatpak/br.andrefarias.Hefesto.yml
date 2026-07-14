@@ -199,6 +199,12 @@ modules:
       - install -Dm644 assets/hefesto-dualsense4unix.conf
           /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 
+      # SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio)
+      # no path que o install-host-udev.sh procura dentro do sandbox. PRESERVA
+      # mic+fone do controle (não é a regra 75, que é áudio-off e segue opt-in).
+      - install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf
+          /app/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf
+
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh
