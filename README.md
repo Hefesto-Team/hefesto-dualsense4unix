@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-1856%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-2016%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -19,8 +19,8 @@
 ---
 
 ```
-Versão: 3.11.0 (+multi-controle 4P no main, ver CHANGELOG [Unreleased])
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1978 testes unit, ruff clean, mypy zero; MULTI-CONTROLE de verdade: identidade por MAC (fim da duplicação do 3º controle), co-op local por padrão com 2+ controles (um gamepad virtual POR jogador, player LED P1..P4 por controle), hotplug em ~2s; aba Início com o comutador "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar direto (Sony)) e "Desligar de verdade"; modo por perfil (sackboy_nativo, coop_local) + política de rumble por perfil; applet COSMIC com os modos; GUI COSMIC estabilizada (sem tela preta, sem jitter de hover); Modo Nativo solta o controle para os gatilhos adaptativos da Sony; point-and-click por perfil; diagnóstico anti-storm e do detector de janela no doctor/GUI; install.sh com seletor de formato (native/flatpak/appimage/deb), udev + uinput de cara e presets que se semeiam sozinhos
+Versão: 3.12.0
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 2016 testes unit, ruff clean, mypy zero; vibração dos jogos de ponta a ponta (force-feedback do gamepad virtual passa pelo gerenciador de rumble; Modo Nativo sem pisoteio de output); MULTI-CONTROLE de verdade: identidade por MAC (fim da duplicação do 3º controle), co-op local por padrão com 2+ controles (um gamepad virtual POR jogador, player LED P1..P4 por controle), hotplug em ~2s; aba Início com o comutador "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar direto (Sony)) e "Desligar de verdade"; modo por perfil (sackboy_nativo, coop_local) + política de rumble por perfil; applet COSMIC com os modos; GUI COSMIC estabilizada (sem tela preta, sem jitter de hover); Modo Nativo solta o controle para os gatilhos adaptativos da Sony; point-and-click por perfil; diagnóstico anti-storm e do detector de janela no doctor/GUI; install.sh com seletor de formato (native/flatpak/appimage/deb), udev + uinput de cara e presets que se semeiam sozinhos
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```
@@ -61,8 +61,8 @@ Projetado para Pop!\_OS, Ubuntu, Fedora, Arch, Debian e Mint. Usa `evdev` para e
 | **Auto-switch** | Troca de perfil automática por janela ativa (X11 nativo, Wayland via portal XDG) com lock de 30 s após escolha manual via tray/CLI |
 | **Resiliência** | Daemon sobe sem hardware presente; reconnect_loop probe 5 s; tolera plug/unplug em runtime sem morrer |
 | **Hotkeys** | Combos sagrados PS+D-pad sem exigir grupo `input`; botão Mic físico muta microfone do sistema |
-| **Lightbar e LEDs** | Barra RGB + luminosidade + 5 LEDs de jogador; presets rápidos (Todos, Player 1, Player 2, Nenhum) |
-| **Rumble** | Política global (Economia 0.3×, Balanceado 0.7×, Máximo 1.0×, Auto dinâmico por bateria) com debounce 5 s |
+| **Lightbar e LEDs** | Barra RGB + luminosidade + 5 LEDs de jogador; presets rápidos (Todos, Player 1–4, Nenhum) |
+| **Rumble** | Política global (Economia 0.3×, Balanceado 0.7×, Máximo 1.0×, Auto por bateria) aplicada também ao force-feedback dos JOGOS (vpad com FF_RUMBLE); persistível por perfil |
 | **Emulação Xbox 360** | `uinput` virtual para jogos que só aceitam gamepads Microsoft |
 | **Interface** | GUI GTK3 tema Drácula, TUI Textual com preview ao vivo, CLI `typer` com cores |
 | **Plataforma** | `.deb` nativo (179 KB), bundle Flatpak `br.andrefarias.Hefesto`, AppImage, instalação via fonte |
@@ -89,7 +89,7 @@ A GUI principal expõe 10 abas no `GtkNotebook` central, cada uma cobrindo um ei
 |-----|---------------|----------------------|
 | **Status** | Dashboard ao vivo do controle e do daemon. É a primeira aba e onde você confirma se conectou. | Conexão, Transporte (USB/BT), Bateria, Perfil ativo, Daemon (online/offline); barras L2/R2 0–255; sticks analógicos esquerdo (L3) e direito (R3) com X/Y; grid 4×4 de glyphs (X, O, □, , D-pad, L1/R1/L2/R2, Share, Options, PS, Touchpad) que acende em roxo quando pressionado. |
 | **Gatilhos** | Configurar o efeito adaptativo de L2 e R2 separadamente. É a feature-flagship do projeto. | Por gatilho (L2 e R2): combobox **Modo** (19 modos: Off, Rigid, Pulse, Galloping, Machine, Bow, Automatic Gun, etc.), combobox **Preset** (intensidade leve/média/dura), botão **Aplicar**, botão **Desligar**. |
-| **Lightbar** | Cor da barra LED frontal e LEDs de jogador. | Color picker RGB com prévia ao vivo, slider de **Luminosidade (%)**, botões **Aplicar no controle** / **Apagar**; checkboxes **LED 1–5** (player LEDs) com presets rápidos **Todos**, **Player 1**, **Player 2**, **Nenhum** + botão **Aplicar LEDs**. |
+| **Lightbar** | Cor da barra LED frontal e LEDs de jogador. | Color picker RGB com prévia ao vivo, slider de **Luminosidade (%)**, botões **Aplicar no controle** / **Apagar**; checkboxes **LED 1–5** (player LEDs) com presets rápidos **Todos**, **Player 1–4**, **Nenhum** + botão **Aplicar LEDs**. |
 | **Rumble** | Política global de vibração e teste dos motores. | Radios de política: **Economia** (0,3×), **Balanceado** (0,7×), **Máximo** (1,0×), **Auto** (dinâmico por bateria); slider **Intensidade global**; testar **Motor fraco (weak)** / **Motor forte (strong)** com **Testar por 500 ms**, **Aplicar**, **Parar**. |
 | **Perfis** | Gerência de perfis JSON com auto-switch por janela. | Lista de perfis com prioridade; botões **Novo** / **Duplicar** / **Renomear** / **Excluir**; editor com modo **simples** (radios Steam / Navegador / Terminal / Editor / Jogo específico) e modo **avançado** (campos `window_class` / `title_regex` / `process_name`). |
 | **Daemon** | Controle do service systemd `--user` que roda em background. | Status do daemon (online/offline), botões **Start** / **Stop** / **Restart**, **Instalar service** / **Desinstalar**; toggle de auto-start no boot; visualizador de log curto. |
