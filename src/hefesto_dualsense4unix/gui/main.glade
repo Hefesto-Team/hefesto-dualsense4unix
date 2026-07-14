@@ -1682,6 +1682,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <signal name="clicked" handler="on_storm_reapply_all"/>
                           </object>
                         </child>
+                        <child>
+                          <object class="GtkButton" id="btn_storm_copy_launch">
+                            <property name="label" translatable="yes">Copiar opções p/ jogos</property>
+                            <property name="tooltip-text" translatable="yes">Copia as Opções de Inicialização da Steam que evitam o controle duplicado e mantêm a vibração. Cole em: jogo → Propriedades → Opções de inicialização.</property>
+                            <signal name="clicked" handler="on_storm_copy_launch"/>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>

@@ -161,6 +161,31 @@ Para jogos que só aceitam gamepad Microsoft, o daemon expõe `/dev/input/js*` v
 
 ---
 
+### Jogar sem travar: vibração, controle duplicado e o travamento do USB
+
+Três problemas clássicos do DualSense no Linux, e a receita que resolve os três (validada em gameplay):
+
+**1. O controle desconecta sozinho no meio do jogo (travamento do USB).** É o kernel: ao reconectar, o driver de áudio USB (`snd-usb-audio`) sonda o mixer do controle e satura o canal de controle (EP0), o que derruba o USB (`can't add hid device: -71`) num laço. O Hefesto instala a **cura de raiz por padrão** — um ajuste do módulo (`/etc/modprobe.d/hefesto-dualsense-storm.conf`) que torna essa sondagem tolerante e espaçada, **preservando o microfone e o fone do controle**:
+
+```bash
+scripts/install_snd_quirk.sh --status   # a cura está ativa?
+scripts/install_snd_quirk.sh            # (re)instala   ·   --remove reverte
+```
+
+O cartão **Anti-storm / Sistema** (aba Daemon) mostra o estado da cura e se o áudio do controle está sadio.
+
+**2. A vibração não funciona nos jogos.** No modo "Jogar pelo Hefesto", use a máscara **Xbox 360** (aba Início, ou por perfil). Com a máscara DualSense, o jogo fala com o controle _físico_ por outro caminho e ignora o controle virtual — a vibração nunca chega. Ver a nota de máscara mais abaixo.
+
+**3. O jogo enxerga o controle duplicado.** O jogo lista o controle virtual _e_ o DualSense físico. Cole estas **Opções de inicialização** na Steam (botão **"Copiar opções p/ jogos"**, aba Daemon → cartão Anti-storm):
+
+```
+SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%
+```
+
+Steam → jogo → **Propriedades** → **Opções de inicialização**. Isso faz o jogo enxergar só o gamepad do Hefesto (fim da duplicação), mantendo a vibração. Se você já tem outras variáveis lá, mantenha-as **antes** do `%command%`. Recomendado também: **Propriedades → Controlador → Desativar Steam Input**.
+
+---
+
 ### Limitações por modo — o que o "Jogar pelo Hefesto" não entrega (e por quê)
 
 No modo **Jogar pelo Hefesto** (gamepad virtual) o daemon fica _entre_ o jogo e o controle: o jogo enxerga um `/dev/input/js*` virtual, não o DualSense. É isso que habilita co-op local, máscara Xbox/PS e a tradução de input — mas o `uinput` do Linux só carrega **botões, eixos e vibração** (force-feedback). Tudo que depende do canal HID cru do DualSense **não trafega pelo controle virtual**:

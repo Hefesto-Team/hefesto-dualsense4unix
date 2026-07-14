@@ -50,12 +50,19 @@ _MODE_DESCRIPTIONS = {
         "Mouse e Teclado)."
     ),
     "gamepad": (
-        "Recomendado para a maioria dos jogos: o Hefesto cuida de gatilhos, "
-        "LEDs, rumble e de um controle por jogador."
+        "Recomendado para a maioria dos jogos: o Hefesto cuida de LEDs, "
+        "vibração e de um controle por jogador. Para a vibração funcionar e o "
+        "controle não aparecer duplicado no jogo, use a máscara Xbox 360 e cole "
+        "as opções da Steam (aba Daemon → \"Copiar opções p/ jogos\")."
     ),
+    # SPRINT-GAME-RUMBLE-01: o nativo entrega gatilhos adaptativos, mas deixa o
+    # jogo falar direto com o DualSense — inclusive pelo canal de áudio (haptics
+    # do PS5), que é o que dispara o travamento/desconexão em alguns títulos.
     "native": (
-        "Para jogos com suporte PS5 nativo (ex.: Sackboy): o Hefesto solta o "
-        "controle e o jogo fala direto com o DualSense."
+        "Para jogos com suporte PS5 nativo: entrega os gatilhos adaptativos da "
+        "Sony, mas o jogo fala direto com o controle — em alguns títulos isso "
+        "desconecta o controle no meio da partida. Se acontecer, use \"Jogar "
+        "pelo Hefesto\"."
     ),
 }
 
