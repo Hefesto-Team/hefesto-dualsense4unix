@@ -52,6 +52,25 @@ for candidate in \
     fi
 done
 
+# SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio).
+# Quem instala por .deb/Flatpak também precisa dela — o install.sh nativo a
+# aplica no step 3c, e este helper é o caminho equivalente para os pacotes.
+# PRESERVA mic+fone (não é a regra 75, que é áudio-off e segue opt-in).
+SNDQUIRK_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/modprobe" \
+    "/usr/share/hefesto-dualsense4unix/modprobe" \
+    "/app/share/hefesto-dualsense4unix/assets/modprobe" \
+    "/usr/share/hefesto-dualsense4unix/assets/modprobe" \
+    "${SCRIPT_DIR}/../assets/modprobe" \
+; do
+    if [[ -f "${candidate}/hefesto-dualsense-storm.conf" ]]; then
+        SNDQUIRK_SRC="${candidate}"
+        break
+    fi
+done
+SNDQUIRK_DEST="/etc/modprobe.d"
+
 if [[ -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
@@ -100,6 +119,9 @@ done
 if [[ -n "${MODLOAD_SRC}" ]]; then
     echo "  - hefesto-dualsense4unix.conf (modules-load: uinput)"
 fi
+if [[ -n "${SNDQUIRK_SRC}" ]]; then
+    echo "  - hefesto-dualsense-storm.conf (cura do travamento do USB; preserva mic+fone)"
+fi
 echo ""
 
 # Comando núcleo executado com privilégios elevados (pkexec ou sudo).
@@ -114,6 +136,15 @@ _build_install_cmd() {
         cmd+="'${MODLOAD_DEST}/hefesto-dualsense4unix.conf'; "
         # Carrega uinput agora para não esperar reboot.
         cmd+="modprobe uinput 2>/dev/null || true; "
+    fi
+    # Cura de raiz do storm (paridade com o step 3c do install.sh nativo).
+    # Também escreve o quirk_flags a quente — vale no próximo replug do controle,
+    # sem reboot. Best-effort: se o sysfs não existir, segue.
+    if [[ -n "${SNDQUIRK_SRC}" ]]; then
+        cmd+="install -Dm644 '${SNDQUIRK_SRC}/hefesto-dualsense-storm.conf' "
+        cmd+="'${SNDQUIRK_DEST}/hefesto-dualsense-storm.conf'; "
+        cmd+="printf '%s' '054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m,054c:0df2:ignore_ctl_error|ctl_msg_delay_1m' "
+        cmd+="> /sys/module/snd_usb_audio/parameters/quirk_flags 2>/dev/null || true; "
     fi
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
     # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).

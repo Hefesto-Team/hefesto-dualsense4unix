@@ -162,11 +162,21 @@ echo "Copiando helper install-host-udev.sh ..."
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/scripts"
 install -Dm755 scripts/install-host-udev.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+# Cura de raiz do storm: o usuário do .deb precisa poder consultar/reverter
+# (`--status` / `--remove`) sem o repo. O script resolve o .conf em /usr/share.
+install -Dm755 scripts/install_snd_quirk.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh"
 # Também copia o conf modules-load para o local que o helper procura
 # em /usr/share/hefesto-dualsense4unix/modules-load/.
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf"
+# SPRINT-GAME-RUMBLE-01: a cura de RAIZ do storm (quirk do snd_usb_audio) no path
+# que o install-host-udev.sh procura. PRESERVA mic+fone. Sem isto, quem instala
+# pelo .deb ficaria sem a cura que o install.sh nativo aplica no step 3c.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe"
+install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"

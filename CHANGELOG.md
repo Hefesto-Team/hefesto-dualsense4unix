@@ -5,6 +5,64 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.13.0] — 2026-07-14
+
+### Added
+
+- **Cura de raiz do travamento do USB (storm -71)** — instalada **por padrão**. O
+  storm foi provado como o `snd-usb-audio` sondando o mixer UAC do DualSense e
+  saturando o canal de controle (EP0) a cada re-enumeração, colidindo com o
+  `usbhid` (`can't add hid device: -71`) num laço de desconexão. O ajuste
+  (`quirk_flags=054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`, em
+  `/etc/modprobe.d/hefesto-dualsense-storm.conf`) torna a sondagem tolerante e
+  espaçada — **preservando o microfone e o fone do controle**, ao contrário da
+  regra 75 (áudio-off), que segue opt-in. Validado em gameplay: storm ZERO numa
+  sessão que antes derrubava o controle em minutos. `scripts/install_snd_quirk.sh`
+  (`--status`/`--remove`/`--runtime`); step 3c do `install.sh` (`--no-snd-quirk`
+  pula); remoção simétrica no `uninstall.sh`.
+- **Vibração dos jogos de ponta a ponta no modo "Jogar pelo Hefesto"** — com a
+  máscara **Xbox 360**. Causa-raiz provada: com a máscara DualSense o SDL/HIDAPI
+  do jogo adota o controle **físico** via `/dev/hidraw` e **ignora** o gamepad
+  virtual (mesmo VID/PID, sem hidraw) — o force-feedback nunca chegava ao nosso
+  pipeline. Perfis de jogo migrados para `xbox`.
+- **Botão "Copiar opções p/ jogos"** (aba Daemon → cartão Anti-storm): copia as
+  Opções de Inicialização da Steam que acabam com o **controle duplicado** no jogo
+  (`SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%`)
+  mantendo a vibração.
+- **Diagnóstico da cura no doctor/GUI**: `check_snd_quirk` (a cura está ativa?) e
+  `check_snd_audio_healthy` (mic+fone do controle presentes?).
+- **Contador de force-feedback por gamepad virtual** no `daemon.state_full`
+  (`rumble_ff.plays`) + estado `rumble_passthrough`/`rumble_active` — dá para ver
+  se o jogo está mesmo pedindo vibração.
+
+### Fixed
+
+- **Perfil devolve a vibração ao jogo** (`rumble.passthrough`): testar os motores
+  na GUI fixava o rumble e o perfil do jogo **não soltava** — o force-feedback do
+  jogo era ignorado mesmo com a máscara certa. Agora ativar um perfil com
+  `passthrough` (o padrão) libera o rumble fixado.
+- **Máscara propaga aos controles de co-op**: trocar dualsensexbox recriava só o
+  gamepad do P1; os jogadores 2+ ficavam na máscara antiga (vibração morta e
+  prompts divergentes).
+- **Co-op não duplica o input no boot**: com o MAC do primário ainda não resolvido
+  (~5 s), o co-op criava um jogador secundário para o **próprio** controle do P1.
+- **Modo Nativo não pisa mais nos LEDs do jogo**: a rota sysfs de lightbar/
+  player-LED ignorava o mute de output; agora respeita e re-aplica o perfil ao sair.
+- **Botão PS não rouba mais o foco para a Steam** durante o jogo (com o gamepad
+  virtual ativo, o PS já vai cru para o jogo).
+- **Cursor não salta ao sair do Modo Nativo**: o movimento do touchpad acumulado
+  enquanto o input está congelado agora é descartado.
+- **Aba Rumble**: terminar o teste dos motores devolve a vibração ao jogo (antes
+  deixava o rumble travado em silêncio); os botões explicam o que fazem.
+
+### Docs
+
+- README: seção **"Jogar sem travar"** (travamento do USB, vibração e controle
+  duplicado — a receita completa) e **"Limitações por modo"** (o que só o Modo
+  Nativo entrega — gatilhos adaptativos, giroscópio, touchpad — e por quê).
+- Auditoria da matriz capacidade × modo e o design/plano anti-storm em
+  `docs/process/sprints/2026-07-14-*`.
+
 ## [3.12.0] — 2026-07-13
 
 ### Added

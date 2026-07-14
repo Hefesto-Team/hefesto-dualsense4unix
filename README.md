@@ -5,7 +5,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Release](https://img.shields.io/github/v/release/AndreBFarias/hefesto?color=6a3fb4&label=release)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/AndreBFarias/hefesto-dualsense4unix/total?color=brightgreen&label=downloads)](https://github.com/AndreBFarias/hefesto-dualsense4unix/releases)
-[![Testes](https://img.shields.io/badge/testes-2016%20unit-brightgreen.svg)](tests/unit/)
+[![Testes](https://img.shields.io/badge/testes-2022%20unit-brightgreen.svg)](tests/unit/)
 [![CI](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions/workflows/release.yml/badge.svg)](https://github.com/AndreBFarias/hefesto-dualsense4unix/actions)
 
 <div align="center">
@@ -19,8 +19,8 @@
 ---
 
 ```
-Versão: 3.12.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 2016 testes unit, ruff clean, mypy zero; vibração dos jogos de ponta a ponta (force-feedback do gamepad virtual passa pelo gerenciador de rumble; Modo Nativo sem pisoteio de output); MULTI-CONTROLE de verdade: identidade por MAC (fim da duplicação do 3º controle), co-op local por padrão com 2+ controles (um gamepad virtual POR jogador, player LED P1..P4 por controle), hotplug em ~2s; aba Início com o comutador "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar direto (Sony)) e "Desligar de verdade"; modo por perfil (sackboy_nativo, coop_local) + política de rumble por perfil; applet COSMIC com os modos; GUI COSMIC estabilizada (sem tela preta, sem jitter de hover); Modo Nativo solta o controle para os gatilhos adaptativos da Sony; point-and-click por perfil; diagnóstico anti-storm e do detector de janela no doctor/GUI; install.sh com seletor de formato (native/flatpak/appimage/deb), udev + uinput de cara e presets que se semeiam sozinhos
+Versão: 3.13.0
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 2022 testes unit, ruff clean, mypy zero; CURA DE RAIZ do travamento do USB (storm -71) instalada por padrão — ajuste do snd-usb-audio que acaba com as desconexões no meio do jogo PRESERVANDO mic e fone do controle (validado em gameplay: storm zero); VIBRAÇÃO dos jogos de ponta a ponta no modo "Jogar pelo Hefesto" com a máscara Xbox 360 (a máscara DualSense fazia o jogo ignorar o gamepad virtual e falar com o controle físico via hidraw); fim do CONTROLE DUPLICADO no jogo (botão "Copiar opções p/ jogos" cola as Opções de Inicialização da Steam); vibração dos jogos de ponta a ponta (force-feedback do gamepad virtual passa pelo gerenciador de rumble; Modo Nativo sem pisoteio de output/LEDs); MULTI-CONTROLE de verdade: identidade por MAC (fim da duplicação do 3º controle), co-op local por padrão com 2+ controles (um gamepad virtual POR jogador, player LED P1..P4 por controle), hotplug em ~2s; aba Início com o comutador "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar direto (Sony)) e "Desligar de verdade"; modo por perfil (sackboy_nativo, coop_local) + política de rumble por perfil; applet COSMIC com os modos; GUI COSMIC estabilizada (sem tela preta, sem jitter de hover); Modo Nativo solta o controle para os gatilhos adaptativos da Sony; point-and-click por perfil; diagnóstico anti-storm e do detector de janela no doctor/GUI; install.sh com seletor de formato (native/flatpak/appimage/deb), udev + uinput de cara e presets que se semeiam sozinhos
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```

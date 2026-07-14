@@ -12,6 +12,20 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.13.0" date="2026-07-14">
+      <description>
+        <p>Cura de raiz do travamento do USB (storm -71): um ajuste do modulo
+           snd-usb-audio para o DualSense torna a sondagem do mixer tolerante e
+           espacada, acabando com as desconexoes no meio do jogo — e PRESERVANDO
+           o microfone e o fone do controle (instalado por padrao). A vibracao dos
+           jogos passa a funcionar de ponta a ponta no modo "Jogar pelo Hefesto"
+           com a mascara Xbox 360, e o controle deixa de aparecer duplicado no jogo
+           (a interface copia as Opcoes de Inicializacao da Steam num clique). A
+           mascara agora se propaga aos controles de co-op, os perfis devolvem a
+           vibracao ao jogo automaticamente, e o Modo Nativo nao pisa mais nos LEDs
+           que o jogo acende. Auditoria de paridade por modo documentada no README.</p>
+      </description>
+    </release>
     <release version="3.11.0" date="2026-07-09">
       <description>
         <p>Modo Nativo (solta o controle para os gatilhos adaptativos nativos da
