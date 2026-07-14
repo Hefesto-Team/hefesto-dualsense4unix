@@ -180,13 +180,22 @@ modules:
       # PACKAGING-UDEV-CANONICAL-FIX-01: conjunto CANÔNICO 70/71/72. As 73/74
       # (hotplug-GUI) foram removidas por alimentarem a re-enumeração do storm
       # -71 — paridade com scripts/install_udev.sh (assets/ é fonte de verdade).
-      # 75/76 são opt-in e não entram no bundle auto-instalado.
+      # A 75 é opt-in e não entra no bundle auto-instalado.
+      # FIX-FLATPAK-UDEV-PARITY-01: 76/77/78 SÃO obrigatórias para o
+      # install-host-udev.sh (pre-flight aborta se qualquer uma faltar no
+      # bundle) — sem elas o setup de udev do Flatpak falhava inteiro.
       - install -Dm644 assets/70-ps5-controller.rules
           /app/share/hefesto-dualsense4unix/udev-rules/70-ps5-controller.rules
       - install -Dm644 assets/71-uinput.rules
           /app/share/hefesto-dualsense4unix/udev-rules/71-uinput.rules
       - install -Dm644 assets/72-ps5-controller-autosuspend.rules
           /app/share/hefesto-dualsense4unix/udev-rules/72-ps5-controller-autosuspend.rules
+      - install -Dm644 assets/76-dualsense-touchpad-libinput-ignore.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/76-dualsense-touchpad-libinput-ignore.rules
+      - install -Dm644 assets/77-dualsense-leds.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/77-dualsense-leds.rules
+      - install -Dm644 assets/78-dualsense-motion-not-joystick.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/78-dualsense-motion-not-joystick.rules
       - install -Dm644 assets/hefesto-dualsense4unix.conf
           /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 

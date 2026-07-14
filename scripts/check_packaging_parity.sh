@@ -103,6 +103,12 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
            && ! grep -qF "${rules_name}" scripts/build_deb.sh 2>/dev/null; then
             missing+=("scripts/build_deb.sh")
         fi
+        # FIX-FLATPAK-UDEV-PARITY-01: o manifesto Flatpak precisa bundlar TODA
+        # regra obrigatória — o install-host-udev.sh (que vai no bundle) tem
+        # pre-flight que ABORTA se qualquer uma faltar em /app/share.
+        if ! grep -qF "${rules_name}" flatpak/*.yml 2>/dev/null; then
+            missing+=("flatpak/*.yml")
+        fi
     fi
 
     if [[ "${#missing[@]}" -eq 0 ]]; then

@@ -366,6 +366,13 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     def _tick_live_state(self) -> bool:
         """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
+        # BUG-STATUS-TICK-HIDDEN-TAB-01: sticks/glyphs/gatilhos só existem na
+        # aba Status (página 1) — com outra aba visível, 10 Hz de state_full
+        # só saturam o worker compartilhado. O poller lento (2 Hz) segue vivo
+        # para header/reconnect.
+        notebook = self._get("main_notebook")
+        if notebook is not None and notebook.get_current_page() != 1:
+            return True
         # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: pula este tick se o anterior ainda
         # não retornou — evita acúmulo ilimitado no executor de 1 worker.
         if self._live_inflight:

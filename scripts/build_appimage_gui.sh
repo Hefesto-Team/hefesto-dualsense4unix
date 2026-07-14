@@ -105,6 +105,15 @@ if [[ -d "$HERE/assets/glyphs" ]]; then
         "$HERE/assets/glyphs/"*.svg
 fi
 
+# FIX-APPIMAGE-PRESET-SEED-01: presets default para a semeadura runtime
+# (profiles/loader.py procura em sys.prefix/share/.../assets/profiles_default;
+# sem esta cópia o AppImage nunca semeia coop_local/sackboy_nativo/etc.).
+if [[ -d "$HERE/assets/profiles_default" ]]; then
+    install -Dm644 -t \
+        "$APPDIR/usr/share/hefesto-dualsense4unix/assets/profiles_default/" \
+        "$HERE/assets/profiles_default/"*.json
+fi
+
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/bash

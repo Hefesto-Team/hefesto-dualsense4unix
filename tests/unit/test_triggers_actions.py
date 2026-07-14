@@ -202,6 +202,7 @@ class _FakeSegmentedSelector:
         self.wrap = wrap
         self._items: list[tuple[str, str]] = []
         self._active_id: str | None = None
+        self._visible = True
         self.handlers: list[tuple[str, Any]] = []
 
     def set_items(self, items: list[tuple[str, str]]) -> None:
@@ -218,6 +219,12 @@ class _FakeSegmentedSelector:
 
     def show_all(self) -> None:
         pass
+
+    def get_visible(self) -> bool:
+        return self._visible
+
+    def set_visible(self, v: bool) -> None:
+        self._visible = bool(v)
 
 
 class _FakeStatusBar:
@@ -299,7 +306,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         "_on_preset_changed",
         "_update_preset_row_visibility",
         "_populate_preset_combo",
+        "_on_param_slider_changed",
         "_update_preset_to_custom",
+        "_persist_params_to_draft",
         "_rebuild_params",
         "_build_param_row",
         "_collect_values",
@@ -349,7 +358,10 @@ def test_on_trigger_mode_changed_atualiza_draft(
     mixin.on_trigger_left_mode_changed(combo)
 
     assert mixin.draft.triggers.left.mode == "Rigid"
-    assert mixin.draft.triggers.left.params == ()
+    # BUG-TRIGGERS-DRAFT-STALE-01: o draft já nasce com os defaults dos
+    # sliders (antes gravava () — "Salvar Perfil" antes do live-preview
+    # persistia o gatilho zerado). Rigid: position=5, force=200.
+    assert mixin.draft.triggers.left.params == (5, 200)
 
 
 def test_on_trigger_mode_changed_guard_refresh_noop(
@@ -609,3 +621,131 @@ def test_fire_live_preview_aplica_e_zera_timer(
 
     assert mixin._trigger_live_preview_timer["right"] == 0
     assert any(call[0] == "right" for call in mixin._trigger_set_calls)
+
+
+# ---------------------------------------------------------------------------
+# BUG-TRIGGERS-PRESET-DUP-01 — seletor de preset sem "Personalizar" duplicado
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("mode_id", ["MultiPositionFeedback", "MultiPositionVibration"])
+def test_populate_preset_combo_sem_duplicar_personalizar(
+    monkeypatch: pytest.MonkeyPatch, mode_id: str
+) -> None:
+    """Os dicts de labels JÁ trazem "custom"; o combo não pode duplicá-lo."""
+    from hefesto_dualsense4unix.profiles.trigger_presets import (
+        FEEDBACK_POSITION_LABELS,
+        VIBRATION_POSITION_LABELS,
+    )
+
+    labels = (
+        FEEDBACK_POSITION_LABELS
+        if mode_id == "MultiPositionFeedback"
+        else VIBRATION_POSITION_LABELS
+    )
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    mixin._populate_preset_combo("left", mode_id)
+
+    items = mixin._trigger_preset["left"]._items
+    ids = [key for key, _label in items]
+    # Exatamente uma entrada "custom", sempre por último (UX: Personalizar no fim).
+    assert ids.count("custom") == 1
+    assert ids[-1] == "custom"
+    assert len(items) == len(labels)
+
+
+# ---------------------------------------------------------------------------
+# BUG-TRIGGERS-DRAFT-STALE-01 — slider/preset atualizam o draft (rodapé salva
+# o que a usuária vê/sente) + agendam o live-preview
+# ---------------------------------------------------------------------------
+
+
+def test_slider_atualiza_draft_e_agenda_live_preview(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mexer num slider grava os params correntes no draft e agenda o preview."""
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    agendados: list[tuple[int, str]] = []
+    monkeypatch.setattr(
+        triggers_actions.GLib,
+        "timeout_add",
+        lambda interval, _fn, *args, **_kw: (
+            agendados.append((interval, args[0] if args else "")) or 7
+        ),
+    )
+
+    combo = mixin._trigger_mode["left"]
+    combo.set_active_id("Rigid")
+    mixin.on_trigger_left_mode_changed(combo)
+    agendados.clear()  # descarta o preview do mode-changed; foco é o do slider
+
+    widgets = mixin._trigger_param_widgets["left"]
+    widgets["position"].set_value(7)
+    # O stub de Gtk.Scale não emite "value-changed"; invoca o handler à mão
+    # (é o que o sinal real dispara via _rebuild_params).
+    mixin._on_param_slider_changed("left")
+
+    assert mixin.draft.triggers.left.mode == "Rigid"
+    assert mixin.draft.triggers.left.params == (7, 200)
+    assert agendados == [(300, "left")]
+
+
+def test_slider_durante_refresh_nao_grava_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Refresh programático (guard ativo) não pode reescrever o draft."""
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    combo = mixin._trigger_mode["left"]
+    combo.set_active_id("Rigid")
+    mixin.on_trigger_left_mode_changed(combo)
+    draft_antes = mixin.draft
+
+    mixin._triggers_guard_refresh = True
+    try:
+        mixin._trigger_param_widgets["left"]["position"].set_value(9)
+        mixin._on_param_slider_changed("left")
+    finally:
+        mixin._triggers_guard_refresh = False
+
+    assert mixin.draft is draft_antes
+
+
+def test_preset_changed_atualiza_draft_e_agenda_preview(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Escolher um preset posicional persiste os valores no draft + preview."""
+    from hefesto_dualsense4unix.profiles.trigger_presets import (
+        FEEDBACK_POSITION_PRESETS,
+    )
+
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+
+    agendados: list[tuple[int, str]] = []
+    monkeypatch.setattr(
+        triggers_actions.GLib,
+        "timeout_add",
+        lambda interval, _fn, *args, **_kw: (
+            agendados.append((interval, args[0] if args else "")) or 7
+        ),
+    )
+
+    mode_combo = mixin._trigger_mode["left"]
+    mode_combo.set_active_id("MultiPositionFeedback")
+    mixin.on_trigger_left_mode_changed(mode_combo)
+    agendados.clear()
+
+    preset_combo = mixin._widgets["trigger_left_preset_combo"]
+    preset_combo.set_active_id("rampa_crescente")
+    mixin.on_trigger_left_preset_changed(preset_combo)
+
+    esperado = tuple(FEEDBACK_POSITION_PRESETS["rampa_crescente"])
+    assert mixin.draft.triggers.left.mode == "MultiPositionFeedback"
+    assert mixin.draft.triggers.left.params == esperado
+    assert (300, "left") in agendados

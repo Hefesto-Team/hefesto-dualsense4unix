@@ -16,7 +16,7 @@ Persistência entre sessões NÃO é escopo desta sprint; o draft é in-memory o
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -152,6 +152,17 @@ class DraftConfig(BaseModel):
     # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
     key_bindings: dict[str, list[str]] | None = None
 
+    # BUG-FOOTER-SAVE-DROPS-SECTIONS-01: seções do perfil que o draft NÃO
+    # edita (match, mode, suppress_desktop_emulation, priority) transportadas
+    # do perfil de origem e reemitidas em ``to_profile`` — sem isso, o
+    # "Salvar Perfil" do rodapé zerava o match para "any", apagava a seção
+    # mode e resetava a prioridade do perfil ativo. ``Any`` evita importar o
+    # schema aqui (os valores são revalidados no ``model_validate`` final).
+    source_match: Any | None = None
+    source_mode: Any | None = None
+    source_suppress: bool = False
+    source_priority: int | None = None
+
     # --- construtores ---
 
     @classmethod
@@ -236,6 +247,10 @@ class DraftConfig(BaseModel):
             mouse=mouse,
             emulation=emulation,
             key_bindings=profile.key_bindings,
+            source_match=profile.match,
+            source_mode=profile.mode,
+            source_suppress=profile.suppress_desktop_emulation,
+            source_priority=profile.priority,
         )
 
     def to_profile(self, name: str, priority: int = 5) -> Profile:
@@ -253,9 +268,11 @@ class DraftConfig(BaseModel):
         — ``rumble.policy``/``rumble.custom_mult`` do draft vão para a seção
         ``rumble`` do perfil (None = perfil sem opinião, round-trip sem
         inventar política) e ``passthrough`` é preservado. Campos ainda sem
-        suporte no schema (emulation) continuam descartados;
-        ``suppress_desktop_emulation`` não é editável pelo draft (fica no
-        default False do schema).
+        suporte no schema (emulation) continuam descartados.
+        BUG-FOOTER-SAVE-DROPS-SECTIONS-01: ``match``, ``mode``,
+        ``suppress_desktop_emulation`` e ``priority`` do perfil de ORIGEM são
+        reemitidos (o draft não os edita; salvar o perfil ativo pelo rodapé
+        não pode zerá-los). Draft sem origem (perfil novo) usa os defaults.
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
@@ -283,8 +300,12 @@ class DraftConfig(BaseModel):
 
         profile = Profile(
             name=name,
-            priority=priority,
-            match=MatchAny(),
+            priority=(
+                self.source_priority if self.source_priority is not None else priority
+            ),
+            match=self.source_match if self.source_match is not None else MatchAny(),
+            mode=self.source_mode,
+            suppress_desktop_emulation=self.source_suppress,
             triggers=TriggersConfig(
                 left=TriggerConfig(
                     mode=self.triggers.left.mode,

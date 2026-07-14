@@ -83,7 +83,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if callable(fn):
                 fn()
 
-    def _sync_uinput_card(self, active_key: str) -> None:
+    def _sync_uinput_card(self, active_key: str | None) -> None:
         """Atualiza device/VID:PID do cartão UINPUT conforme a máscara REAL."""
         from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
 
@@ -371,6 +371,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if lbl is not None:
                 lbl.set_markup('<span foreground="#999">daemon offline</span>')
             self._highlight_gamepad(None)
+            # BUG-EMULATION-UINPUT-CARD-STALE-02: offline, o cartão UINPUT não
+            # pode seguir afirmando o device/VID:PID do último estado online.
+            sync_card = getattr(self, "_sync_uinput_card", None)
+            if sync_card is not None:
+                sync_card(None)
             return False
 
         call_async("daemon.state_full", {}, on_success=_on_state, on_failure=_on_err)

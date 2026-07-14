@@ -18,10 +18,13 @@
     color: #f8f8f2;
     padding: 6px 12px;
 }
+/* BUG-GUI-HOVER-JITTER-01: hover NUNCA muda espessura de borda nem padding —
+   borda 2px fazia o botão crescer, o layout renegociar, o mouse "sair" do
+   botão e voltar => interface inteira balançando em loop (todas as abas).
+   Ênfase de hover é só COR (borda rosa + fundo), dimensões idênticas. */
 .hefesto-dualsense4unix-window button:hover {
     background-color: #44475a;
-    border: 2px solid #ff79c6;
-    padding: 5px 11px; /* compensa o 1px a mais */
+    border-color: #ff79c6;
 }
 .hefesto-dualsense4unix-window button:active {
     background-color: #6272a4;
@@ -38,8 +41,7 @@
 }
 .hefesto-dualsense4unix-window button:checked:hover {
     background-color: #caa3fb;
-    border: 2px solid #ff79c6;
-    padding: 5px 11px;
+    border-color: #ff79c6;
     color: #282a36;
 }
 /* Realce do modo ativo num grupo de GtkButton de ação (seletor de gamepad).
@@ -53,7 +55,7 @@
 }
 .hefesto-dualsense4unix-window button.hefesto-active-mode:hover {
     background-color: #caa3fb;
-    border: 2px solid #ff79c6;
+    border-color: #ff79c6;
     color: #282a36;
 }
 .hefesto-dualsense4unix-window button:disabled {

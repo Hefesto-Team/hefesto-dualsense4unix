@@ -179,14 +179,11 @@ class TriggersActionsMixin(WidgetAccessMixin):
         self._rebuild_params(side, preset_id)
         # Mostra/esconde a linha de preset conforme o modo selecionado.
         self._update_preset_row_visibility(side, preset_id)
-        # Atualiza draft com novo modo (params zerados ate usuário ajustar sliders)
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            from hefesto_dualsense4unix.app.draft_config import TriggerDraft
-
-            new_trigger = TriggerDraft(mode=preset_id, params=())
-            new_triggers = draft.triggers.model_copy(update={side: new_trigger})
-            self.draft = draft.model_copy(update={"triggers": new_triggers})
+        # BUG-TRIGGERS-DRAFT-STALE-01: grava o novo modo COM os defaults dos
+        # sliders recém-montados (antes gravava params=() — "Salvar Perfil"
+        # antes do live-preview de 300 ms persistia o gatilho zerado). O draft
+        # passa a espelhar exatamente o que o live-preview vai aplicar.
+        self._persist_params_to_draft(side)
         # UI-TRIGGERS-LIVE-PREVIEW-01: aplica o modo no hardware em 300 ms
         # para o usuário sentir o efeito sem precisar clicar "Aplicar". O
         # debounce evita inundar o IPC quando o combobox dispara mudanças
@@ -212,6 +209,35 @@ class TriggersActionsMixin(WidgetAccessMixin):
         with contextlib.suppress(Exception):
             self._apply_trigger(side)
         return False  # one-shot
+
+    def _persist_params_to_draft(self, side: str) -> None:
+        """Grava modo + params posicionais correntes dos sliders no draft.
+
+        BUG-TRIGGERS-DRAFT-STALE-01: o "Salvar Perfil" do rodapé lê
+        ``self.draft`` direto — sem persistir aqui, mexer em slider/preset sem
+        clicar "Aplicar" salvava o perfil com params defasados/zerados.
+        Semântica: o que a usuária vê/sente é o que salva.
+        BUG-TRIGGER-FLAT-MULTIPOS-01: usa SEMPRE a lista posicional plana na
+        ordem do spec (== ordem dos widgets), que casa com o restore por
+        índice em ``_refresh_triggers_from_draft`` e com ``build_from_name``.
+        """
+        combo = self._trigger_mode.get(side)
+        preset_id = combo.get_active_id() if combo else None
+        if preset_id is None:
+            return
+        spec = get_spec(preset_id)
+        if spec is None:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        from hefesto_dualsense4unix.app.draft_config import TriggerDraft
+
+        values = self._collect_values(side)
+        params_list: list[int] = preset_to_positional_params(spec, values)
+        new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
+        new_triggers = draft.triggers.model_copy(update={side: new_trigger})
+        self.draft = draft.model_copy(update={"triggers": new_triggers})
 
     def _on_preset_changed(self, side: str, combo: Any) -> None:
         """Aplica o preset selecionado populando os sliders de posicao."""
@@ -255,6 +281,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
         finally:
             self._trigger_preset_applying = False
 
+        # BUG-TRIGGERS-DRAFT-STALE-01: o preset recém-aplicado nos sliders
+        # precisa valer para o "Salvar Perfil" do rodapé e ser sentido no
+        # controle — persiste no draft e agenda o live-preview existente.
+        self._persist_params_to_draft(side)
+        self._schedule_live_preview(side)
+
     def _update_preset_row_visibility(self, side: str, mode_id: str) -> None:
         """Exibe ou oculta a linha de preset conforme o modo selecionado."""
         preset_row: Gtk.Box | None = self._get(f"trigger_{side}_preset_row")
@@ -278,9 +310,31 @@ class TriggersActionsMixin(WidgetAccessMixin):
         else:
             combo.set_items([])
             return
-        items = [*labels.items(), ("custom", "Personalizar")]
+        # BUG-TRIGGERS-PRESET-DUP-01: os dicionários de labels JÁ contêm a
+        # entrada "custom" ("Personalizar"); anexar outra fixa duplicava o
+        # botão no segmentado. Reordenamos explicitamente para "Personalizar"
+        # ficar sempre por último (UX), independente da ordem dos dicts.
+        items = [(key, label) for key, label in labels.items() if key != "custom"]
+        items.append(("custom", labels.get("custom", "Personalizar")))
         combo.set_items(items)
         combo.set_active_id("custom")
+
+    def _on_param_slider_changed(self, side: str) -> None:
+        """Handler 'value-changed' dos sliders de parâmetro do lado ``side``.
+
+        Mantém o comportamento existente (reverter o preset para
+        "Personalizar") e, quando o toque é da usuária — fora de refresh
+        programático (``_triggers_guard_refresh``) e de aplicação de preset
+        (``_trigger_preset_applying``, que persiste em lote ao final de
+        ``_on_preset_changed``) —, grava os params correntes no draft e agenda
+        o live-preview (BUG-TRIGGERS-DRAFT-STALE-01: sem isso, ajustar slider
+        sem clicar "Aplicar" salvava o perfil com params defasados).
+        """
+        self._update_preset_to_custom(side)
+        if self._triggers_guard_refresh or self._trigger_preset_applying:
+            return
+        self._persist_params_to_draft(side)
+        self._schedule_live_preview(side)
 
     def _update_preset_to_custom(self, side: str) -> None:
         """Reverte o segmentado de preset para 'Personalizar' quando move slider."""
@@ -322,10 +376,12 @@ class TriggersActionsMixin(WidgetAccessMixin):
             row = self._build_param_row(param)
             box.pack_start(row, False, False, 0)
             self._trigger_param_widgets[side][param.name] = row.scale
-            # Conecta sinal para reverter preset para "custom" ao mover slider.
+            # Conecta sinal que reverte o preset para "custom", persiste o
+            # draft e agenda o live-preview ao mover o slider
+            # (BUG-TRIGGERS-DRAFT-STALE-01).
             row.scale.connect(
                 "value-changed",
-                lambda _scale, _side=side: self._update_preset_to_custom(_side),
+                lambda _scale, _side=side: self._on_param_slider_changed(_side),
             )
 
         box.show_all()
@@ -372,20 +428,11 @@ class TriggersActionsMixin(WidgetAccessMixin):
         args = preset_to_factory_args(spec, values)
 
         # Persiste params posicionais no draft antes de enviar via IPC.
-        # BUG-TRIGGER-FLAT-MULTIPOS-01: usar SEMPRE a lista posicional plana na
-        # ordem do spec (== ordem dos widgets). Para MultiPosition*/Custom o
-        # `args` é dict e o código antigo gravava () -> perda silenciosa de TODAS
-        # as intensidades ao salvar/aplicar perfil. `preset_to_positional_params`
-        # devolve [s0..s9] / [freq, s0..s9] / [mode, f0..f6], que casa com o
-        # restore por índice em _refresh_triggers_from_draft e com build_from_name.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            from hefesto_dualsense4unix.app.draft_config import TriggerDraft
-
-            params_list: list[int] = preset_to_positional_params(spec, values)
-            new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
-            new_triggers = draft.triggers.model_copy(update={side: new_trigger})
-            self.draft = draft.model_copy(update={"triggers": new_triggers})
+        # BUG-TRIGGER-FLAT-MULTIPOS-01: `_persist_params_to_draft` usa SEMPRE a
+        # lista posicional plana na ordem do spec (== ordem dos widgets). Para
+        # MultiPosition*/Custom o `args` é dict e o código antigo gravava () ->
+        # perda silenciosa de TODAS as intensidades ao salvar/aplicar perfil.
+        self._persist_params_to_draft(side)
 
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional

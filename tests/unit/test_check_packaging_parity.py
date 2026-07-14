@@ -25,8 +25,10 @@ RULE = "79-teste-parity.rules"
 def fake_repo(tmp_path: Path) -> Path:
     """Repo fake mínimo: só o script + uma regra 79 coberta em TODO lugar.
 
-    Sem packaging/ nem flatpak/, as seções de applet COSMIC passam vazias —
-    aqui o alvo é exclusivamente a seção de paridade udev.
+    Sem packaging/, as seções de applet COSMIC passam vazias — aqui o alvo é
+    exclusivamente a seção de paridade udev. FIX-FLATPAK-UDEV-PARITY-01: o
+    check passou a exigir a regra também no manifesto Flatpak, então o repo
+    fake ganha um flatpak/fake.yml cobrindo a regra obrigatória.
     """
     repo_root = Path(__file__).resolve().parents[2]
     src_script = repo_root / SCRIPT_REL_PATH
@@ -35,12 +37,14 @@ def fake_repo(tmp_path: Path) -> Path:
 
     (tmp_path / "scripts").mkdir()
     (tmp_path / "assets").mkdir()
+    (tmp_path / "flatpak").mkdir()
     dst_script = tmp_path / SCRIPT_REL_PATH
     shutil.copy2(src_script, dst_script)
     dst_script.chmod(0o755)
 
     (tmp_path / "assets" / RULE).write_text("# regra de teste\n", encoding="utf-8")
-    # Cobertura completa: nativo e host por nome; .deb por glob (como o real).
+    # Cobertura completa: nativo e host por nome; .deb por glob (como o real);
+    # Flatpak por nome no manifesto.
     (tmp_path / "scripts" / "install_udev.sh").write_text(
         f'sudo install -Dm644 "$ASSETS/{RULE}" /etc/udev/rules.d/{RULE}\n',
         encoding="utf-8",
@@ -54,6 +58,11 @@ def fake_repo(tmp_path: Path) -> Path:
     )
     (tmp_path / "uninstall.sh").write_text(
         f"sudo rm -f /etc/udev/rules.d/{RULE}\n", encoding="utf-8"
+    )
+    (tmp_path / "flatpak" / "fake.yml").write_text(
+        f"      - install -Dm644 assets/{RULE}\n"
+        f"          /app/share/hefesto-dualsense4unix/udev-rules/{RULE}\n",
+        encoding="utf-8",
     )
     return tmp_path
 

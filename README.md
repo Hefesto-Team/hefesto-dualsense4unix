@@ -19,8 +19,8 @@
 ---
 
 ```
-Versão: 3.11.0
-Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT (lightbar colorida em ambos os transportes); 1856 testes unit, ruff clean, mypy zero; GUI sob XWayland no COSMIC estabilizada (rodapé completo, sem tela preta no boot, rumble com exclusão mútua, teclado preserva OSK, sem jank de repaint); Modo Nativo solta o controle para os gatilhos adaptativos nativos da Sony; modo point-and-click por perfil + cursor de mouse reescrito; diagnóstico anti-storm unificado no doctor/GUI; modo jogo via long-press do PS suprime mouse/teclado virtuais sem matar o daemon; install.sh com seletor de formato (native/flatpak/appimage/deb) e udev + uinput de cara
+Versão: 3.11.0 (+multi-controle 4P no main, ver CHANGELOG [Unreleased])
+Estado: runtime validado em Pop!_OS 22.04 e 24.04 COSMIC com DualSense USB+BT; 1978 testes unit, ruff clean, mypy zero; MULTI-CONTROLE de verdade: identidade por MAC (fim da duplicação do 3º controle), co-op local por padrão com 2+ controles (um gamepad virtual POR jogador, player LED P1..P4 por controle), hotplug em ~2s; aba Início com o comutador "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar direto (Sony)) e "Desligar de verdade"; modo por perfil (sackboy_nativo, coop_local) + política de rumble por perfil; applet COSMIC com os modos; GUI COSMIC estabilizada (sem tela preta, sem jitter de hover); Modo Nativo solta o controle para os gatilhos adaptativos da Sony; point-and-click por perfil; diagnóstico anti-storm e do detector de janela no doctor/GUI; install.sh com seletor de formato (native/flatpak/appimage/deb), udev + uinput de cara e presets que se semeiam sozinhos
 Alvo:   Linux com systemd-logind, Python 3.10+
 Licença: MIT
 ```

@@ -61,11 +61,12 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
 # FEAT-PROFILE-MODE-GUI-01: itens da seção "Modo" do editor (id, rótulo curto).
 # "none" = perfil SEM a seção `mode` (ativar não mexe no modo do sistema);
 # os demais ids espelham ProfileModeConfig.kind.
+# UX-MODE-TERMS-01: mesmos rótulos da aba Início (ação da usuária, sem jargão).
 _MODE_KIND_ITEMS: list[tuple[str, str]] = [
     ("none", "Sem opinião"),
-    ("desktop", "Desktop"),
-    ("gamepad", "Jogo (gamepad)"),
-    ("native", "Jogo nativo (Sony)"),
+    ("desktop", "Controlar o PC"),
+    ("gamepad", "Jogar pelo Hefesto"),
+    ("native", "Jogar direto (Sony)"),
 ]
 
 # Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
@@ -201,7 +202,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         kind_sel = SegmentedSelector(wrap=True)
         kind_sel.set_items(_MODE_KIND_ITEMS)
         kind_sel.set_tooltip_text(
-            "Modo do sistema que ativar este perfil liga (nativo/gamepad/desktop)"
+            "O que ativar este perfil liga: controlar o PC, jogar pelo "
+            "Hefesto ou jogar direto (Sony)"
         )
         slot.pack_start(kind_sel, False, False, 0)
         self._mode_kind_selector = kind_sel
@@ -813,7 +815,18 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # BUG-DUPLICATE-NO-CONFIG-COPY-01: numa duplicação o nome novo ainda não
         # existe no cache -> sem o perfil-fonte a config viraria default. Usa a
         # fonte guardada por on_profile_duplicate como base.
-        source = existing or (self._duplicate_source if self._duplicate_source else None)
+        # BUG-RENAME-DROPS-CONFIG-01: renomear pelo campo Nome (nome novo, sem
+        # passar por Duplicar) também não pode nascer com config default — o
+        # perfil SELECIONADO na lista é a fonte natural do rename. Best-effort:
+        # sem tree/seleção utilizável (preview cedo, stubs), segue sem fonte.
+        selected_source = None
+        try:
+            selected_source = self._find_cached_profile(
+                self._selected_profile_name() or ""
+            )
+        except Exception:
+            selected_source = None
+        source = existing or self._duplicate_source or selected_source
         base: dict[str, Any] = (
             source.model_dump(mode="python") if source else {}
         )

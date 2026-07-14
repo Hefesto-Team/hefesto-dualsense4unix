@@ -5,6 +5,103 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-controle de verdade (até 4 jogadores locais)**: identidade de
+  controle por MAC de ponta a ponta (backend hidapi, evdev e co-op falam a
+  mesma língua — FEAT-DSX-CONTROLLER-IDENTITY-01), acabando com a duplicação
+  de input ao plugar um 3º controle; co-op local cria um gamepad virtual POR
+  jogador sem cap de jogadores; **cada controle mostra o player LED do seu
+  jogador** (P1..P4, via sysfs por MAC — FEAT-COOP-PLAYER-LED-01), com
+  presets Player 3/Player 4 novos na aba Lightbar.
+- **Co-op é o padrão** (FEAT-COOP-DEFAULT-ON-01): com 2+ controles em modo
+  jogo, "cada controle = um jogador" já vem ligado; o que se persiste é o
+  opt-out. Voltar ao desktop não apaga a preferência.
+- **Modo por perfil** (FEAT-PROFILE-MODE-01): perfis ganham a seção `mode`
+  (`desktop` | `gamepad` + máscara + co-op | `native`) com lock manual de
+  30 s e reversão ao trocar para perfil "sem opinião". Presets novos:
+  `sackboy_nativo` (Jogo direto/Sony ao focar o jogo) e `coop_local`.
+  Editor de Perfis da GUI ganhou o seletor de modo.
+- **Política de rumble por perfil** (FEAT-RUMBLE-POLICY-PROFILE-01):
+  `rumble.policy`/`custom_mult` persistem no perfil, com applier próprio
+  (mesma semântica de lock/reversão do modo) — "Salvar Perfil" não descarta
+  mais a política.
+- **Aba Início** (FEAT-GUI-HOME-TAB-01): primeira aba com o comutador
+  "O que o controle faz agora" (Controlar o PC / Jogar pelo Hefesto / Jogar
+  direto (Sony)), co-op, máscara, um card por controle (transporte, bateria,
+  fim do MAC) e "Desligar Hefesto (voltar ao Linux puro)" que NÃO religa
+  sozinho ao reabrir a GUI.
+- **Applet COSMIC com os modos** : seção "O que o controle faz" no popover
+  (3 modos + cada-controle-é-um-jogador + máscara DualSense/Xbox), linha de
+  modo no status com origem "(pelo perfil)".
+- **Hotplug rápido no backend** (FEAT-BACKEND-HOTPLUG-FAST-01): controle
+  plugado com o daemon vivo entra em ~2 s (watch de /dev/input barato no
+  reconnect_loop; fallback de 30 s mantido).
+- **Diagnóstico do detector de janela** (FEAT-WINDOW-DETECT-DIAG-01):
+  `state_full` expõe `window_detect_backend/healthy/last_class` (dá para
+  capturar o wm_class de um jogo sem journal) e o `doctor.sh` ganhou a seção
+  "detector de janela" com veredito OK/DEGRADADO/CEGO (no COSMIC/Wayland
+  nativo: DEGRADADO — jogos XWayland/Proton seguem detectáveis via Xlib).
+- **Semeadura runtime dos presets** (FIX-PACKAGING-SEED-PARITY-01): a
+  primeira carga de perfis semeia os presets default (copy-if-absent com
+  marker compartilhado com o install_profiles.sh) — usuários de `.deb`/
+  AppImage passam a receber os perfis novos sem passo manual.
+- Regra udev 78: Motion Sensors do DualSense deixam de enumerar como
+  joystick (jogos param de ver 3 "joysticks" por controle).
+
+### Changed
+
+- Performance multi-controle: varredura de /dev/input saiu do caminho quente
+  (InputDirWatch), forward analógico só emite eixo que mudou, `os.nice(5)`
+  (env `HEFESTO_DUALSENSE4UNIX_NICE`), throttle do report HID adaptativo ao
+  nº de controles (cap 32 ms) e write OUT com dirty-flag + keepalive 0,5 s.
+- `state_full.controllers` agora traz `uniq` (MAC) e `battery_pct` por
+  controle.
+- Terminologia dos modos sem jargão (UX-MODE-TERMS-01): "Desktop/Jogo
+  (gamepad virtual)/Jogo nativo" viraram "Controlar o PC / Jogar pelo
+  Hefesto / Jogar direto (Sony)" na GUI e no applet.
+- `check_packaging_parity.sh` passou a validar a paridade de TODAS as regras
+  udev nos instaladores; a lista de regras do `install.sh` é derivada dos
+  assets (não desatualiza mais).
+
+### Fixed
+
+- Comutador de modo e máscara da aba Início não disparavam nada (assinatura
+  errada do handler do sinal `changed` — BUG-HOME-SEGMENTED-SIGNATURE-01).
+- "Salvar Perfil" do rodapé zerava o `match` (virava "any"), apagava a seção
+  `mode`/`suppress` e resetava a prioridade do perfil ativo
+  (BUG-FOOTER-SAVE-DROPS-SECTIONS-01); renomear pelo campo Nome criava perfil
+  com config default em vez de levar a config do selecionado
+  (BUG-RENAME-DROPS-CONFIG-01).
+- Trocar de modo na Início mostrava "Falha" com o modo já aplicado (timeout
+  IPC de 0,25 s curto demais para criar uinput+grab — agora 2 s); "Desligar
+  Hefesto" dava toast de sucesso mesmo com o systemctl falhando; render
+  offline deixava descrição/origem/máscara do último estado online.
+- Lista de Perfis não re-marcava o ativo quando o autoswitch/hotkey trocava o
+  perfil; aba Daemon não re-renderizava ao ser exibida; poller de 10 Hz da
+  Status rodava com a aba invisível; cartão UINPUT da Emulação ficava stale
+  com o daemon offline.
+- Botão "Personalizar" duplicado nos presets por posição dos Gatilhos;
+  ajustes de slider/preset de gatilho e a política de rumble exibida agora
+  entram/derivam do draft (o que a tela mostra é o que "Salvar Perfil"
+  grava); slider de intensidade custom passou a cobrir até 200%.
+- Flatpak: o manifesto só embalava 3 das 6 regras udev obrigatórias e o
+  `install-host-udev.sh` abortava — setup de udev do Flatpak não instalava
+  NADA (FIX-FLATPAK-UDEV-PARITY-01; parity check agora cobre o manifesto).
+  AppImage passa a bundlar os presets default (semeadura runtime resolve via
+  `sys.prefix`). `dev_bootstrap.sh` criava venv sem `--system-site-packages`
+  (GUI sem PyGObject em bootstrap dev fresco).
+- Interface "balançava" ao passar o mouse nos botões: hover mudava a
+  espessura da borda (1px→2px), o layout renegociava e oscilava em loop —
+  ênfase de hover agora é só cor (BUG-GUI-HOVER-JITTER-01).
+- Seletor de máscara cortado na borda direita na aba Início e no editor de
+  Perfis (BUG-HOME-MASK-CLIP-01) — máscara em linha própria; cards de
+  controle com tamanho uniforme.
+- Co-op não cria mais gamepad virtual com grab apenas "pendente" — só com
+  EVIOCGRAB confirmado (BUG-COOP-GRAB-PENDING-VPAD-01); fim da janela de
+  input dobrado no hotplug.
+- `Icon=` do `.desktop` do applet apontava para nome de ícone inexistente.
+
 ## [3.11.0] — 2026-07-09
 
 ### Added

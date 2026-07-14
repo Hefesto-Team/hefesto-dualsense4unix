@@ -29,6 +29,14 @@ def _install_gi_stubs() -> None:
     """
     try:
         # Ambiente com GTK real: não instala stubs.
+        # BUG-TEST-GDK-VERSION-PIN-01: SEM o require_version, este import
+        # carregava Gdk 4.0 e envenenava o processo inteiro — qualquer módulo
+        # que exigisse 3.0 depois (lightbar_actions) falhava na coleta,
+        # dependendo da ORDEM alfabética dos arquivos de teste.
+        import gi as _gi
+
+        _gi.require_version("Gdk", "3.0")
+        _gi.require_version("Gtk", "3.0")
         from gi.repository import Gdk as _Gdk  # noqa: F401
         return
     except Exception:

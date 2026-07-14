@@ -584,14 +584,15 @@ impl HefestoApplet {
 
         // FEAT-PROFILE-MODE-01: modo do sistema atual; no nativo ligado pelo
         // perfil ativo, anota a origem (paridade com a aba Início da GUI).
+        // UX-MODE-TERMS-01: mesmos termos da aba Início da GUI (sem jargão).
         let mode_label = match system_mode(state) {
-            SystemMode::Desktop => "Desktop".to_string(),
-            SystemMode::Gamepad => "Jogo".to_string(),
+            SystemMode::Desktop => "Controlando o PC".to_string(),
+            SystemMode::Gamepad => "Jogando pelo Hefesto".to_string(),
             SystemMode::Native => {
                 if state.native_mode_origin.as_deref() == Some("profile") {
-                    "Jogo nativo (pelo perfil)".to_string()
+                    "Jogando direto (pelo perfil)".to_string()
                 } else {
-                    "Jogo nativo".to_string()
+                    "Jogando direto (Sony)".to_string()
                 }
             }
         };
@@ -650,13 +651,15 @@ impl HefestoApplet {
         let mode = system_mode(state);
 
         let mut col = Column::new().spacing(0).padding([4, 0]);
-        col = col.push(padded_control(text::caption_heading("MODO DO SISTEMA")).padding([4, 16]));
+        col = col
+            .push(padded_control(text::caption_heading("O QUE O CONTROLE FAZ")).padding([4, 16]));
 
         // 3 modos mutuamente exclusivos; o ativo fica marcado e não re-dispara.
+        // UX-MODE-TERMS-01: rótulos pela ação, em paridade com a GUI.
         let entries = [
-            (SystemMode::Desktop, "Desktop (mouse e teclado)"),
-            (SystemMode::Gamepad, "Jogo (gamepad)"),
-            (SystemMode::Native, "Jogo nativo (Sony)"),
+            (SystemMode::Desktop, "Controlar o PC"),
+            (SystemMode::Gamepad, "Jogar pelo Hefesto"),
+            (SystemMode::Native, "Jogar direto (Sony)"),
         ];
         for (entry, label) in entries {
             let is_active = mode == entry;
@@ -673,11 +676,14 @@ impl HefestoApplet {
         if mode == SystemMode::Gamepad {
             // Toggle do co-op local; ligado mostra o nº de jogadores do estado.
             let coop_label = if state.coop.enabled && state.coop.players > 0 {
-                format!(" Co-op local — {} jogadores", state.coop.players)
+                format!(
+                    " Cada controle = um jogador — {} jogadores",
+                    state.coop.players
+                )
             } else if state.coop.enabled {
-                " Co-op local".to_string()
+                " Cada controle = um jogador".to_string()
             } else {
-                " Co-op local".to_string()
+                " Cada controle = um jogador".to_string()
             };
             col = col.push(menu_button(text::body(coop_label)).on_press(Message::ToggleCoop));
 
