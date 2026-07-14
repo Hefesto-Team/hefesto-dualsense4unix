@@ -5,6 +5,45 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.13.1] — 2026-07-14
+
+Correções da auditoria pré-release (bugs de UI e paridade de empacotamento) que
+não bloqueavam o rumble/storm, mas quebravam fluxos secundários ou pacotes.
+
+### Fixed
+
+- **Trocar a máscara não congela mais o input** (M4): o teardown dos controles de
+  co-op fechava o fd só depois de um `join` de 2s por jogador (a thread ficava
+  parada em `select()`); trocar dualsensexbox travava o P1 por 2-6s. Agora o fd
+  é fechado na hora, desbloqueando a leitura.
+- **Botão PS volta a abrir a Steam no desktop** (M5): o botão PS era suprimido
+  pela mera existência do gamepad virtual, matando "abrir a Steam" no desktop com
+  a Steam fechada. Agora só é suprimido quando a Steam já está rodando (em jogo).
+- **Aba Rumble: o teste de 500 ms é cancelável** (M6): clicar Parar/Aplicar/
+  Devolver dentro da janela do teste não é mais desfeito pelo timer pendente.
+- **Cartão anti-storm reavaliado ao abrir a aba e no "Atualizar"** (M7): o
+  diagnóstico não fica mais preso ao estado do bootstrap.
+- **"Reaplicar tudo (terminal)" abre mesmo sem o `.desktop`** (M8): confere o
+  código de saída do `gtk-launch` e cai num emulador de terminal.
+- **"Reaplicar fixes seguros" dá retorno final** (M9): a barra não fica mais em
+  "Reaplicando..." para sempre.
+- **Empacotamento**: os scripts que a GUI/doctor executam vão no `.deb` (M10); a
+  cura de raiz é empacotada no path VIVO `/usr/lib/modprobe.d` também no `.deb` e
+  no PKGBUILD (M11/M13); o PKGBUILD usa o conjunto canônico de regras udev (sem
+  as 73/74 que alimentavam o storm) e as units systemd corrigidas (M13/M14).
+
+### Added
+
+- **Indicador de estado da vibração na aba Rumble** (Feature #4): mostra se a
+  vibração está "com o jogo" ou "fixa" e quantas vezes o jogo pediu vibração
+  (`rumble_ff`) — antes essa observabilidade não tinha consumidor.
+
+### Changed
+
+- O gate de versão (`check_version_consistency.py`) agora cobre PKGBUILD, spec,
+  nix e debian/control (M12) — Arch/Fedora/Nix estavam presos em 3.4.0, agora
+  todos em sincronia. O gate de paridade cobre `assets/modprobe/*.conf` (M11).
+
 ## [3.13.0] — 2026-07-14
 
 ### Added

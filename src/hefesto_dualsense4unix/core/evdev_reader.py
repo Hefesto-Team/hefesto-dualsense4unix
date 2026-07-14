@@ -269,6 +269,17 @@ class _EvdevReconnectLoop:
 
     def stop(self) -> None:
         self._stop_flag.set()
+        # M4 (auditoria): o read_loop bloqueia em select() no fd até chegar um
+        # evento — com o controle OCIOSO, o `_stop_flag.is_set()` só é visto após
+        # o próximo input, e o join abaixo esperava os 2s inteiros. Como o teardown
+        # do co-op roda NO event loop (IPC gamepad.emulation.set), trocar a máscara
+        # com P2/P3 parados congelava o input do P1 por 2-6s. Fechar o fd de outra
+        # thread (idêntico a request_reopen) desbloqueia o read_loop na hora → sai
+        # imediatamente. Best-effort: fd já fechado / ausente é no-op.
+        dev = self._active_dev
+        if dev is not None:
+            with contextlib.suppress(Exception):
+                dev.close()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
             self._thread = None

@@ -186,10 +186,22 @@ def open_or_focus_steam(
         return False
 
 
+def is_steam_running() -> bool:
+    """True se a Steam já está rodando (proxy de 'provavelmente em jogo').
+
+    M5 (auditoria): usado pelo gate do PS-solo — com a Steam FECHADA, focar/abrir
+    a Steam é justamente o que o botão PS deve fazer no desktop; só faz sentido
+    SUPRIMIR a ação quando a Steam já está aberta (para não roubar foco no jogo).
+    Best-effort: nunca levanta.
+    """
+    return _steam_running()
+
+
 __all__ = [
     "PGREP_BINARY",
     "STEAM_BINARY",
     "STEAM_WM_CLASS",
     "WMCTRL_BINARY",
+    "is_steam_running",
     "open_or_focus_steam",
 ]

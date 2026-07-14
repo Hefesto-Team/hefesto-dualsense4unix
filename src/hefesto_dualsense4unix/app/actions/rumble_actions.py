@@ -17,6 +17,7 @@ perfil exatamente o que a aba mostra (aplicada de volta na ativação).
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import gi
@@ -83,6 +84,10 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 policy = "balanceado"
                 custom_mult = 0.7
             self._apply_policy_to_widgets(str(policy), float(custom_mult))
+            # Feature #4 (auditoria): consome rumble_passthrough / rumble_active /
+            # rumble_ff do state_full — antes nada na GUI mostrava se a vibração
+            # estava DEVOLVIDA ao jogo ou FIXA, nem se o jogo pediu FF.
+            self._update_rumble_state_label(result if isinstance(result, dict) else {})
             if indicar_sem_opiniao:
                 self._toast_rumble(
                     "Política exibida = estado atual do daemon; o perfil não "
@@ -263,7 +268,20 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
     # --- handlers de teste de motores ---
 
+    # M6 (auditoria): id do timer do teste de 500ms em curso (GLib source), para
+    # cancelá-lo se a usuária clicar Parar/Aplicar/Devolver ou testar de novo
+    # dentro da janela — senão o `_rumble_test_stop` pendente desfazia a ação.
+    _rumble_test_source: int | None = None
+
+    def _cancel_rumble_test_timer(self) -> None:
+        src = self._rumble_test_source
+        if src is not None:
+            with contextlib.suppress(Exception):
+                GLib.source_remove(src)
+            self._rumble_test_source = None
+
     def on_rumble_apply(self, _btn: Gtk.Button) -> None:
+        self._cancel_rumble_test_timer()
         weak, strong = self._read_scales()
         # Persiste no draft antes de enviar via IPC.
         draft = getattr(self, "draft", None)
@@ -279,6 +297,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
         )
 
     def on_rumble_test_500ms(self, _btn: Gtk.Button) -> None:
+        # Cancela um teste anterior ainda em curso antes de armar o novo.
+        self._cancel_rumble_test_timer()
         weak, strong = self._read_scales()
         if weak == 0 and strong == 0:
             weak = 160
@@ -289,7 +309,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._toast_rumble("Falha (daemon offline?)")
             return
         self._toast_rumble(f"Testando por 500 ms (weak={weak}, strong={strong})")
-        GLib.timeout_add(500, self._rumble_test_stop)
+        self._rumble_test_source = GLib.timeout_add(500, self._rumble_test_stop)
 
     def on_rumble_stop(self, _btn: Gtk.Button) -> None:
         """Para rumble via rumble.stop (BUG-RUMBLE-APPLY-IGNORED-01).
@@ -298,6 +318,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         persista (0, 0) e o poll loop re-afirme silêncio continuamente,
         evitando que write HID residual reative os motores.
         """
+        self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
         rumble_stop()
         self._toast_rumble(
@@ -314,6 +335,7 @@ class RumbleActionsMixin(WidgetAccessMixin):
         só dava pra devolver o rumble pela CLI — a auditoria flagou a lacuna de
         auto-suficiência.
         """
+        self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
         ok = rumble_passthrough(True)
         self._toast_rumble(
@@ -355,11 +377,22 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 else _POLICY_MULT.get(rumble.policy, 0.7)
             )
             self._apply_policy_to_widgets(rumble.policy, mult)
+            # Feature #4: mesmo com política do perfil, o indicador de estado da
+            # vibração (jogo controla / fixo + FF do jogo) vem do daemon VIVO.
+            self._refresh_rumble_state_label_async()
         else:
             # Perfil SEM opinião: exibe o estado vivo do daemon como referência
             # (async — não bloqueia GTK), com indicação na statusbar e SEM
-            # gravar o valor do daemon no draft.
+            # gravar o valor do daemon no draft. (Já atualiza o indicador.)
             self._sync_policy_from_state(indicar_sem_opiniao=True)
+
+    def _refresh_rumble_state_label_async(self) -> None:
+        """Atualiza só o indicador de estado da vibração via state_full (async)."""
+        def _on_state(result: Any) -> bool:
+            self._update_rumble_state_label(result if isinstance(result, dict) else {})
+            return False
+
+        call_async("daemon.state_full", {}, on_success=_on_state, on_failure=lambda _e: False)
 
     # --- helpers ---
 
@@ -388,11 +421,46 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # só passa com rumble_active is None) até a usuária clicar "Devolver ao
         # jogo" na mão — era a origem do "testei os motores e aí o jogo não
         # vibra mais". rumble_stop() zera o motor primeiro; passthrough solta.
+        self._rumble_test_source = None  # o timer disparou; não há o que cancelar
         rumble_stop()
         rumble_passthrough(True)
         self._set_scales(0, 0)
         self._toast_rumble("Teste encerrado — vibração devolvida ao jogo")
         return False
+
+    def _update_rumble_state_label(self, state: dict[str, Any]) -> None:
+        """Feature #4: mostra o estado vivo da vibração na aba Rumble.
+
+        `rumble_passthrough` True = o JOGO controla (o esperado para jogar);
+        False = FIXO pela GUI (o FF do jogo é ignorado). `rumble_ff.plays` = quantas
+        vezes o jogo pediu vibração no gamepad virtual — em 0 durante o jogo indica
+        que o jogo não está enxergando o vpad (ex.: máscara errada)."""
+        label = self._get("rumble_state_label")
+        if label is None:
+            return
+        passthrough = state.get("rumble_passthrough")
+        active = state.get("rumble_active")
+        ff = state.get("rumble_ff") if isinstance(state.get("rumble_ff"), dict) else {}
+        plays = ff.get("plays", 0) if isinstance(ff, dict) else 0
+        if passthrough is True:
+            estado = '<span foreground="#2d8">o JOGO controla a vibração</span>'
+        elif isinstance(active, list) and len(active) == 2:
+            if active == [0, 0]:
+                estado = (
+                    '<span foreground="#e0a020">FIXA em silêncio '
+                    '(clique "Devolver ao jogo")</span>'
+                )
+            else:
+                estado = (
+                    f'<span foreground="#e0a020">FIXA em weak={active[0]}, '
+                    f'strong={active[1]} (clique "Devolver ao jogo" para jogar)</span>'
+                )
+        else:
+            estado = "—"
+        plays_txt = ""
+        if isinstance(plays, int) and not isinstance(plays, bool) and plays > 0:
+            plays_txt = f"  ·  o jogo pediu vibração {plays}x"
+        label.set_markup(f"Estado da vibração: {estado}{plays_txt}")
 
     def _toast_rumble(self, msg: str) -> None:
         self._status_toast("rumble", msg)

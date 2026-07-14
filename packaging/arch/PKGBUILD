@@ -11,7 +11,7 @@
 # `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
 
 pkgname=hefesto-dualsense4unix
-pkgver=3.4.0
+pkgver=3.13.1
 pkgrel=1
 pkgdesc="Linux adaptive trigger daemon for the PS5 DualSense controller (GTK3 GUI + CLI + TUI)"
 arch=('any')
@@ -90,21 +90,36 @@ package() {
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         "$pkgdir/usr/share/icons/hicolor/256x256/apps/${pkgname}.png"
 
-    # Udev rules (5 regras + modules-load uinput).
+    # Udev rules — conjunto CANÔNICO (M13): 70/71/72/76/77/78, alinhado a
+    # scripts/install_udev.sh + install-host-udev.sh + build_deb.sh. As regras
+    # 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS 2026-06-23 — abriam
+    # o controle a cada ACTION=="add" e AMPLIFICAVAM o storm -71.
     install -Dm644 -t "$pkgdir/usr/lib/udev/rules.d/" \
         assets/70-ps5-controller.rules \
         assets/71-uinput.rules \
         assets/72-ps5-controller-autosuspend.rules \
-        assets/73-ps5-controller-hotplug.rules \
-        assets/74-ps5-controller-hotplug-bt.rules
+        assets/76-dualsense-touchpad-libinput-ignore.rules \
+        assets/77-dualsense-leds.rules \
+        assets/78-dualsense-motion-not-joystick.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         "$pkgdir/usr/lib/modules-load.d/hefesto-dualsense4unix.conf"
 
-    # Systemd user units.
-    for unit in assets/*.service; do
+    # SPRINT-GAME-RUMBLE-01: cura de RAIZ do storm -71 (quirk do snd_usb_audio)
+    # no path VIVO que o kmod lê. PRESERVA mic+fone. Paridade com o .deb.
+    install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-dualsense-storm.conf"
+
+    # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
+    # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de
+    # scripts que o pacote não instala ou de placeholders (__SCRIPT__) — copiá-las
+    # deixaria units quebradas (203/EXEC no `systemctl --user enable`). Espelha
+    # a allowlist+sed do build_deb.sh.
+    for base in hefesto-dualsense4unix.service hefesto-dualsense4unix-gui-hotplug.service; do
+        unit="assets/${base}"
         [ -f "$unit" ] || continue
-        install -Dm644 "$unit" \
-            "$pkgdir/usr/lib/systemd/user/$(basename "$unit")"
+        install -Dm644 "$unit" "$pkgdir/usr/lib/systemd/user/${base}"
+        sed -i 's|%h/\.local/bin/hefesto-dualsense4unix|/usr/bin/hefesto-dualsense4unix|g' \
+            "$pkgdir/usr/lib/systemd/user/${base}"
     done
 
     # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.

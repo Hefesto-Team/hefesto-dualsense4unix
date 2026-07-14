@@ -12,6 +12,16 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.13.1" date="2026-07-14">
+      <description>
+        <p>Correções da auditoria pré-release: trocar a máscara não congela mais o
+           input do co-op; o botão PS volta a abrir a Steam no desktop; o teste de
+           vibração é cancelável; o cartão anti-storm é reavaliado ao abrir a aba;
+           a aba Rumble mostra se a vibração está com o jogo ou fixa. Paridade de
+           empacotamento: a cura de raiz e os scripts da GUI passam a ir também no
+           .deb e no pacote Arch, com as versões de todos os pacotes em sincronia.</p>
+      </description>
+    </release>
     <release version="3.13.0" date="2026-07-14">
       <description>
         <p>Cura de raiz do travamento do USB (storm -71): um ajuste do modulo
