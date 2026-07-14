@@ -148,6 +148,37 @@ class DaemonActionsMixin(WidgetAccessMixin):
                         stderr=subprocess.DEVNULL,
                     )
 
+    #: SPRINT-GAME-RUMBLE-01: Opções de Inicialização da Steam que fazem o jogo
+    #: ver SÓ o gamepad virtual do Hefesto (sem duplicar com o DualSense físico)
+    #: e mantêm a vibração. HIDAPI=0 tira o caminho hidraw; IGNORE_DEVICES manda o
+    #: SDL ignorar o DualSense físico (054c:0ce6) — o vpad é Xbox (045e), intacto.
+    STEAM_LAUNCH_OPTIONS = (
+        "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
+    )
+
+    def on_storm_copy_launch(self, _btn: object) -> None:
+        """Copia as Opções de Inicialização da Steam (anti-duplicação + vibração).
+
+        O Hefesto não injeta env vars no jogo (só orienta): estas opções fazem o
+        jogo enxergar apenas o gamepad virtual (evita o controle duplicado) e
+        preservam o rumble pelo FF do vpad. Validado em gameplay (Sackboy).
+        """
+        launch = self.STEAM_LAUNCH_OPTIONS
+        copied = False
+        with contextlib.suppress(Exception):
+            from gi.repository import Gdk, Gtk
+
+            clip = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            clip.set_text(launch, -1)
+            clip.store()
+            copied = True
+        if copied:
+            self._toast_daemon(
+                "Copiado! Cole em: Steam → jogo → Propriedades → Opções de inicialização"
+            )
+        else:
+            self._toast_daemon(f"Copie manualmente: {launch}")
+
     def _set_daemon_status_consulting(self) -> None:
         """Mostra o estado transitório "Consultando..." no label da aba Daemon.
 

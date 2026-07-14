@@ -282,6 +282,9 @@ class HefestoApp(
             # Anti-storm / sistema (FEAT-DSX-UNIFY-01)
             "on_storm_fix_safe": self.on_storm_fix_safe,
             "on_storm_reapply_all": self.on_storm_reapply_all,
+            # SPRINT-GAME-RUMBLE-01: copia as Opções de Inicialização da Steam
+            # (anti-duplicação do controle + vibração pelo vpad).
+            "on_storm_copy_launch": self.on_storm_copy_launch,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
