@@ -72,7 +72,8 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
     if on:
         return (
             WARN,
-            f"Steam Input LIGADO em {len(on)} perfil(is) — 'doctor --fix-safe' desliga",
+            f"Steam Input LIGADO em {len(on)} perfil(is) — "
+            "clique 'Reaplicar fixes seguros' para desligar",
         )
     return OK, "Steam Input desligado para o DualSense"
 
@@ -125,10 +126,14 @@ def check_snd_quirk(
     conf = conf_path or Path("/etc/modprobe.d/hefesto-dualsense-storm.conf")
     persisted = bool(conf.is_file() and _SND_QUIRK_RE.search(_safe_read(conf)))
     if active:
-        return OK, "cura de raiz do storm ATIVA (snd quirk — mic+fone preservados)"
+        return OK, "cura do travamento do USB ATIVA (mic e fone do controle preservados)"
     if persisted:
-        return INFO, "cura de raiz agendada (replug/boot p/ ativar; mic+fone preservados)"
-    return WARN, "cura de raiz do storm AUSENTE (instale: scripts/install_snd_quirk.sh)"
+        return INFO, "cura do travamento agendada (reconecte o controle p/ ativar)"
+    return (
+        WARN,
+        "cura do travamento do USB AUSENTE — clique 'Reaplicar fixes seguros' "
+        "(o controle pode desconectar no meio do jogo)",
+    )
 
 
 def check_snd_audio_healthy(cards_text: str | None = None) -> tuple[str, str]:

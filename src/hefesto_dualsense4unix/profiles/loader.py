@@ -15,6 +15,7 @@ acentuado via busca adaptativa em três camadas.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -167,6 +168,61 @@ def seed_default_presets(
     return copied
 
 
+#: SPRINT-GAME-RUMBLE-01: presets de jogo cuja máscara migrou dualsense->xbox
+#: (a DualSense faz o jogo ignorar o vpad e matar a vibração). Marker próprio para
+#: a migração rodar UMA vez em quem já tinha o preset semeado com o valor antigo.
+_FLAVOR_MIGRATION_MARKER = ".flavor_xbox_migrated"
+_FLAVOR_MIGRATION_PRESETS = ("sackboy_nativo.json", "coop_local.json")
+
+
+def migrate_game_presets_to_xbox(dest_dir: Path | None = None) -> list[str]:
+    """One-shot: troca `gamepad_flavor` dualsense->xbox nos presets de JOGO.
+
+    H1 da auditoria: `seed_default_presets` NUNCA sobrescreve, então quem já tinha
+    `sackboy_nativo`/`coop_local` semeados com `dualsense` continuaria com a
+    vibração morta mesmo após o bump. Esta migração corrige o valor UMA vez.
+
+    Conservadora: só reescreve quando o preset ainda está EXATAMENTE em
+    `"gamepad_flavor": "dualsense"` dentro de um `mode.kind=="gamepad"` — se a
+    usuária mudou o modo/flavor na mão, não toca. Idempotente via marker próprio.
+    Best-effort: falha loga e segue. Retorna os arquivos migrados.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _FLAVOR_MIGRATION_MARKER
+    if marker.exists():
+        return []
+    migrated: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return []
+        for fname in _FLAVOR_MIGRATION_PRESETS:
+            path = directory / fname
+            if not path.is_file():
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            mode = data.get("mode")
+            if (
+                isinstance(mode, dict)
+                and mode.get("kind") == "gamepad"
+                and mode.get("gamepad_flavor") == "dualsense"
+            ):
+                mode["gamepad_flavor"] = "xbox"
+                with contextlib.suppress(Exception):
+                    path.write_text(
+                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    migrated.append(fname)
+        with contextlib.suppress(Exception):
+            marker.write_text("xbox\n", encoding="utf-8")
+    if migrated:
+        logger.info("game_presets_flavor_migrated", files=migrated)
+    return migrated
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga.
 
@@ -181,6 +237,9 @@ def _maybe_seed_presets() -> None:
     _seed_attempted = True
     try:
         seed_default_presets()
+        # H1: corrige a máscara dos presets de jogo já semeados (one-shot).
+        with contextlib.suppress(Exception):
+            migrate_game_presets_to_xbox()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
@@ -382,6 +441,7 @@ __all__ = [
     "delete_profile",
     "load_all_profiles",
     "load_profile",
+    "migrate_game_presets_to_xbox",
     "save_profile",
     "seed_default_presets",
 ]
