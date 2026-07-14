@@ -66,6 +66,20 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ### Fixed
 
+- **Vibração dos jogos no DualSense — 3 causas encadeadas, flagradas em
+  gameplay ao vivo (Sackboy)**: (1) o gamepad virtual NÃO anunciava
+  force-feedback (a lib python-uinput não suporta FF) — vpad migrado para
+  python-evdev com FF_RUMBLE/FF_PERIODIC completos; o rumble do jogo agora
+  passa pelo gerenciador do Hefesto (política + intensidade global) e chega
+  ao controle físico do jogador certo, inclusive no co-op
+  (FEAT-VPAD-FF-PASSTHROUGH-01); (2) no Modo Nativo, o keepalive do
+  report_thread pisoteava o rumble/gatilhos/LED que o jogo escrevia no hidraw
+  a cada 0,5 s — em nativo o output HID do Hefesto agora é 100% mutado
+  (FEAT-NATIVE-OUTPUT-MUTE-01); (3) sair do jogo revertia o nativo-de-perfil
+  sem devolver o gamepad/co-op de antes (a usuária ficava sem controle —
+  BUG-NATIVE-REVERT-DROPS-STASH-01). Nota: haptics por ÁUDIO (Sackboy & cia)
+  seguem indisponíveis por decisão (o áudio do DualSense fica suprimido pelo
+  anti-storm); o caminho garantido de vibração é "Jogar pelo Hefesto".
 - Comutador de modo e máscara da aba Início não disparavam nada (assinatura
   errada do handler do sinal `changed` — BUG-HOME-SEGMENTED-SIGNATURE-01).
 - "Salvar Perfil" do rodapé zerava o `match` (virava "any"), apagava a seção

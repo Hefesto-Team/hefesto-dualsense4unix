@@ -28,13 +28,21 @@ class _FakeController:
 
 
 class _FakeDevice:
-    def __init__(self, flavor: str | None = "dualsense", start_ok: bool = True) -> None:
+    def __init__(
+        self,
+        flavor: str | None = "dualsense",
+        start_ok: bool = True,
+        rumble_sink: object | None = None,
+    ) -> None:
         self.flavor = ug.normalize_flavor(flavor)
         self._start_ok = start_ok
         self.started = False
         self.stopped = False
         self.analog: dict | None = None
         self.buttons: frozenset[str] | None = None
+        # FEAT-VPAD-FF-PASSTHROUGH-01: sink injetado + contagem de pumps.
+        self.rumble_sink = rumble_sink
+        self.ff_pumps = 0
 
     def start(self) -> bool:
         self.started = True
@@ -48,6 +56,9 @@ class _FakeDevice:
 
     def forward_buttons(self, pressed: frozenset[str]) -> None:
         self.buttons = pressed
+
+    def pump_ff(self) -> None:
+        self.ff_pumps += 1
 
 
 class _FakeDaemon:
@@ -69,8 +80,10 @@ def _patch_for_flavor(monkeypatch: pytest.MonkeyPatch) -> list[_FakeDevice]:
     """Faz UinputGamepad.for_flavor devolver _FakeDevice e registra os criados."""
     created: list[_FakeDevice] = []
 
-    def _fake_for_flavor(flavor: str | None = "dualsense") -> _FakeDevice:
-        dev = _FakeDevice(flavor)
+    def _fake_for_flavor(
+        flavor: str | None = "dualsense", *, rumble_sink: object | None = None
+    ) -> _FakeDevice:
+        dev = _FakeDevice(flavor, rumble_sink=rumble_sink)
         created.append(dev)
         return dev
 
@@ -95,6 +108,9 @@ class TestStartGamepad:
         assert daemon.config.gamepad_flavor == "xbox"
         # Grab do controle físico ligado (evita input dobrado).
         assert daemon.controller._evdev.grab_calls == [True]
+        # FEAT-VPAD-FF-PASSTHROUGH-01: o vpad nasce com sink de rumble → o FF
+        # do jogo tem para onde voltar (motores do primário).
+        assert created[0].rumble_sink is not None
 
     def test_start_desliga_mouse_mutua_exclusao(
         self, monkeypatch: pytest.MonkeyPatch, no_persist: None
@@ -135,8 +151,10 @@ class TestStartGamepad:
     def test_start_falha_se_device_nao_inicia(
         self, monkeypatch: pytest.MonkeyPatch, no_persist: None
     ) -> None:
-        def _fail(flavor: str | None = "dualsense") -> _FakeDevice:
-            return _FakeDevice(flavor, start_ok=False)
+        def _fail(
+            flavor: str | None = "dualsense", *, rumble_sink: object | None = None
+        ) -> _FakeDevice:
+            return _FakeDevice(flavor, start_ok=False, rumble_sink=rumble_sink)
 
         monkeypatch.setattr(ug.UinputGamepad, "for_flavor", staticmethod(_fail))
         daemon = _FakeDaemon()
@@ -187,6 +205,8 @@ class TestDispatchGamepad:
 
         assert dev.analog == {"lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
         assert dev.buttons == buttons
+        # FEAT-VPAD-FF-PASSTHROUGH-01: cada dispatch bombeia o FF do vpad.
+        assert dev.ff_pumps == 1
 
     def test_dispatch_noop_sem_device(self) -> None:
         daemon = _FakeDaemon()

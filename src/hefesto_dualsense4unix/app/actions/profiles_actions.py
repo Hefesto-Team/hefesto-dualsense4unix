@@ -141,7 +141,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         sel.set_tooltip_text("Contexto em que este perfil será aplicado")
         slot = self._get("profile_aplica_a_slot")
         if slot is not None:
-            slot.pack_start(sel, False, False, 0)
+            # BUG-APLICA-A-CLIP-01: sem expand/fill o SegmentedSelector colapsa
+            # à largura mínima (o ScrolledWindow interno reporta mínimo ~0) e
+            # os botões saem CORTADOS — mesma família do BUG-HOME-MASK-CLIP-01.
+            slot.pack_start(sel, True, True, 0)
             sel.show_all()
         self._aplica_a = sel
         sel.connect("changed", self._on_aplica_a_changed)

@@ -446,6 +446,7 @@ class Daemon:
         enabled: bool,
         *,
         reapply: bool = True,
+        restore_stash: bool = False,
         origin: Literal["manual", "profile"] = "manual",
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
@@ -463,7 +464,13 @@ class Daemon:
 
         `enabled=False`: limpa o gate, re-ativa o último perfil (gatilhos/rumble)
         e restaura a emulação do stash (gamepad tem precedência sobre mouse).
-        `reapply=False` no boot (o restore roda por outro caminho).
+        `reapply=False` quando o chamador NÃO quer o last_profile re-aplicado
+        (reversão por perfil: o perfil novo acabou de aplicar triggers/LEDs).
+        `restore_stash=True` com `reapply=False` restaura SÓ a emulação do
+        stash (BUG-NATIVE-REVERT-DROPS-STASH-01: a reversão por
+        perfil-sem-opinião deixava a usuária SEM gamepad ao sair do jogo —
+        flagrado ao vivo no Sackboy: alt-tab → nativo off → gamepad nunca
+        voltava).
 
         NOTA (BUG-NATIVE-* da auditoria): o Modo Nativo NÃO usa mais `pause()` —
         gateia o dispatch pelo próprio flag. Assim `daemon.resume` não "des-solta"
@@ -501,8 +508,15 @@ class Daemon:
             self._native_mode = False
             self.store.set_native_mode_active(False)
             save_native_mode(False)
+            # FEAT-NATIVE-OUTPUT-MUTE-01: desmuta ANTES do reapply — o
+            # perfil/rumble/LED re-aplicados precisam chegar ao controle.
+            unmute = getattr(self.controller, "set_output_mute", None)
+            if callable(unmute):
+                with contextlib.suppress(Exception):
+                    unmute(False)
             if reapply:
                 self._reapply_last_profile()
+            if reapply or restore_stash:
                 self._restore_emulation_from_stash()
             self._native_emu_stash = {}
         if origin == "manual":
@@ -529,6 +543,13 @@ class Daemon:
             self.set_mouse_emulation(False, origin="profile")
         with contextlib.suppress(Exception):
             self.set_gamepad_emulation(False, origin="profile")
+        # FEAT-NATIVE-OUTPUT-MUTE-01: release TOTAL inclui o output HID — sem
+        # isto o keepalive do report_thread pisoteava o rumble/gatilhos/LED que
+        # o JOGO escrevia no hidraw (rumble morto no Sackboy, ao vivo).
+        mute = getattr(self.controller, "set_output_mute", None)
+        if callable(mute):
+            with contextlib.suppress(Exception):
+                mute(True)
 
     def _reapply_last_profile(self) -> None:
         """Re-ativa o último perfil salvo (restaura gatilhos/rumble/teclado)."""
@@ -948,7 +969,12 @@ class Daemon:
         if kind is None:
             # Perfil sem opinião: reverte só o que veio de perfil.
             if self._mode_from_profile == "native" and self._native_mode:
-                self.set_native_mode(False, reapply=False, origin="profile")
+                # restore_stash: devolve o gamepad/co-op que a usuária tinha
+                # ANTES do jogo (sem re-aplicar last_profile — o perfil novo
+                # acabou de aplicar os triggers/LEDs dele).
+                self.set_native_mode(
+                    False, reapply=False, restore_stash=True, origin="profile"
+                )
             elif self._mode_from_profile == "gamepad":
                 if self.config.coop_enabled:
                     self.set_coop_enabled(False, origin="profile")
