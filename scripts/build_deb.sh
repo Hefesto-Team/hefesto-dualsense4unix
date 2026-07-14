@@ -178,8 +178,17 @@ done
 # _find_repo_file("dsx.sh") resolve <base>/dsx.sh, então vai na RAIZ do share.
 [ -f dsx.sh ] && install -Dm755 dsx.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dsx.sh"
-[ -f assets/dsx.desktop ] && install -Dm644 assets/dsx.desktop \
-    "${STAGING}/usr/share/applications/dsx-dualsense.desktop"
+# REVIEW-M8-DSX-PLACEHOLDER-01: o dsx.desktop shipa com Exec=__DSX_PATH__ (só o
+# `dsx.sh --install-launcher` resolvia isso em runtime — que o usuário do .deb
+# nunca roda). Copiar cru deixava o launcher quebrado ("Failed to execute
+# __DSX_PATH__") e o `gtk-launch dsx-dualsense` retornando 0 sem rodar nada.
+# Substituímos pelo caminho absoluto do .deb no momento do build.
+if [ -f assets/dsx.desktop ]; then
+    mkdir -p "${STAGING}/usr/share/applications"
+    sed 's#__DSX_PATH__#/usr/share/hefesto-dualsense4unix/dsx.sh#g' \
+        assets/dsx.desktop \
+        > "${STAGING}/usr/share/applications/dsx-dualsense.desktop"
+fi
 # Também copia o conf modules-load para o local que o helper procura
 # em /usr/share/hefesto-dualsense4unix/modules-load/.
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"
