@@ -275,6 +275,21 @@ if [[ "${FORMAT}" != "native" ]]; then
         appimage) format_appimage ;;
         deb)      format_deb ;;
     esac
+    # SPRINT-GAME-RUMBLE-01 (H4): a cura de RAIZ do storm é DEFAULT também nos
+    # formatos de pacote. O fluxo nativo a aplica no step 3c (abaixo), mas os
+    # formatos dão `exit 0` antes dele. O .deb já entrega o .conf em
+    # /usr/lib/modprobe.d (pega no próximo boot); aqui ativamos A QUENTE (sem
+    # reboot) e cobrimos flatpak/appimage, que não escrevem em /etc. Preserva
+    # mic+fone. --no-snd-quirk pula.
+    if [[ "${SKIP_SND_QUIRK}" -eq 0 ]]; then
+        step "cura" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
+        if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
+            bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1 || true
+            printf '      cura instalada e ativada (replug do controle p/ valer já)\n'
+        else
+            warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
+        fi
+    fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Desinstalar: ./uninstall.sh\n'

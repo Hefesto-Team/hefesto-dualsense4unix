@@ -307,10 +307,15 @@ class PyDualSenseController(IController):
         FEAT-DSX-CONTROLLER-IDENTITY-01: identidade universal do controle —
         a mesma usada pelo `discover_dualsense_evdevs` (uniq do evdev) e pelo
         `sysfs_leds` (HID_UNIQ). Key de fallback por path retorna None.
-        """
-        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
-        return norm_mac(self._primary_key)
+        M3 (auditoria): delega a `_key_to_uniq`, que tem a guarda de 12 dígitos
+        hex — `norm_mac('/dev/hidraw3')` devolvia um pseudo-MAC ('deda3'), e um
+        pseudo-MAC != None furava o guard anti-input-dobrado do co-op
+        (coop.py: `primary is None or primary.startswith('path:')`), spawnando um
+        jogador secundário NO PRÓPRIO controle do primário. Com None, o guard
+        adia o spawn até o MAC real resolver — como a docstring sempre prometeu.
+        """
+        return self._key_to_uniq(self._primary_key) if self._primary_key else None
 
     # --- compat: `_ds` == handle primário -------------------------------
 

@@ -299,7 +299,7 @@ class HomeActionsMixin(WidgetAccessMixin):
 
             coop = state.get("coop") or {}
             self._home_coop_check.set_active(bool(coop.get("enabled")))
-            flavor = gamepad.get("flavor") or "dualsense"
+            flavor = gamepad.get("flavor") or "xbox"
             self._home_flavor_selector.set_active_id(str(flavor))
 
             origin_bits: list[str] = []
@@ -406,7 +406,7 @@ class HomeActionsMixin(WidgetAccessMixin):
                 timeout_s=_MODE_IPC_TIMEOUT_S,
             )
         elif mode_id == "gamepad":
-            flavor = self._home_flavor_selector.get_active_id() or "dualsense"
+            flavor = self._home_flavor_selector.get_active_id() or "xbox"
             # Ordem FIFO do worker: sair do nativo antes de ligar o gamepad.
             call_async(
                 "native.mode.set",

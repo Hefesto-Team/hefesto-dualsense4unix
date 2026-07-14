@@ -89,7 +89,15 @@ FLAVORS: dict[str, dict[str, Any]] = {
         "product": XBOX360_PRODUCT,
     },
 }
-DEFAULT_FLAVOR = "dualsense"
+#: SPRINT-GAME-RUMBLE-01: o default é **xbox**, não dualsense. Com a máscara
+#: DualSense o vpad tem o MESMO VID/PID do controle físico (054c:0ce6) mas SEM
+#: hidraw — o SDL/HIDAPI do jogo adota o FÍSICO pelo hidraw e IGNORA o vpad, então
+#: o force-feedback nunca chega ao nosso pipeline (rumble in-game MORTO) e o jogo
+#: ainda enxerga os dois devices (controle DUPLICADO). Com a máscara Xbox 360
+#: (045e:028e) o jogo vê o vpad pelo caminho evdev/FF e a vibração funciona —
+#: provado com SDL2 e validado em gameplay. Quem prefere prompts de PlayStation
+#: escolhe "dualsense" na GUI/perfil, ciente do trade-off (documentado no README).
+DEFAULT_FLAVOR = "xbox"
 
 # Retrocompat: nome histórico apontando para o flavor Xbox.
 DEVICE_NAME = XBOX360_NAME

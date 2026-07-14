@@ -1907,14 +1907,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">Gamepad virtual com máscara DualSense: prompts de PlayStation, combos sagrados filtrados, sem duplicar o controle.</property>
+                        <property name="tooltip-text" translatable="yes">Máscara DualSense: mostra prompts de PlayStation, mas a vibração NÃO funciona em jogo e o controle pode aparecer duplicado (o jogo fala com o controle físico). Prefira Xbox 360 para jogar.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_xbox_button">
                         <property name="label" translatable="yes">Xbox 360</property>
-                        <property name="tooltip-text" translatable="yes">Gamepad virtual com máscara Xbox: fallback para jogos XInput-only (prompts de Xbox).</property>
+                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360 (recomendada para jogar): a vibração funciona em jogo e o controle não aparece duplicado. Os jogos mostram prompts de Xbox (A/B/X/Y).</property>
                         <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
                       </object>
                     </child>
@@ -2028,7 +2028,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Gamepad p/ jogos: &lt;b&gt;DualSense&lt;/b&gt; mostra prompts de PlayStation (ideal); &lt;b&gt;Xbox 360&lt;/b&gt; é fallback p/ jogos que só aceitam Xbox. O daemon vira o único leitor do controle (sem input dobrado). Requer o módulo uinput carregado.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Gamepad p/ jogos: &lt;b&gt;Xbox 360&lt;/b&gt; é a recomendada — a vibração funciona e o controle não fica duplicado. &lt;b&gt;DualSense&lt;/b&gt; mostra prompts de PlayStation, mas a vibração em jogo não funciona. O daemon vira o único leitor do controle. Requer o módulo uinput carregado.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>

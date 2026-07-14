@@ -61,9 +61,16 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # --- anti-storm / sistema (FEAT-DSX-UNIFY-01) ------------------------
 
     def _find_repo_file(self, relpath: str) -> Path | None:
-        """Localiza um arquivo do repo (script/dsx.sh) em layouts conhecidos."""
+        """Localiza um arquivo do repo (script/dsx.sh) em layouts conhecidos.
+
+        BUG-GUI-REPO-ROOT-OFFBYONE-01: `parents[3]` resolvia para `<repo>/src`
+        (este arquivo está em src/hefesto_dualsense4unix/app/actions/) — nenhum
+        script era encontrado e os botões do cartão anti-storm eram no-op
+        SILENCIOSO (toast de sucesso, nada executado). A raiz do repo é
+        `parents[4]`. Coberto por teste de regressão.
+        """
         for base in (
-            Path(__file__).resolve().parents[3],
+            Path(__file__).resolve().parents[4],
             Path("/usr/share/hefesto-dualsense4unix"),
             Path("/usr/local/share/hefesto-dualsense4unix"),
         ):
@@ -114,6 +121,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
+                # SPRINT-GAME-RUMBLE-01 (H7): aplica a cura de raiz A QUENTE
+                # (sysfs) — best-effort, sem pedir senha. Vale no próximo replug
+                # do controle. A instalação persistente (/etc/modprobe.d) precisa
+                # de root e vem do install; aqui garantimos o efeito na sessão.
+                ("scripts/install_snd_quirk.sh", ["--runtime"]),
             ):
                 script = self._find_repo_file(relpath)
                 if script is None:
@@ -151,10 +163,30 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #: SPRINT-GAME-RUMBLE-01: Opções de Inicialização da Steam que fazem o jogo
     #: ver SÓ o gamepad virtual do Hefesto (sem duplicar com o DualSense físico)
     #: e mantêm a vibração. HIDAPI=0 tira o caminho hidraw; IGNORE_DEVICES manda o
-    #: SDL ignorar o DualSense físico (054c:0ce6) — o vpad é Xbox (045e), intacto.
-    STEAM_LAUNCH_OPTIONS = (
+    #: SDL ignorar o DualSense FÍSICO (054c:0ce6). Só é seguro com a máscara XBOX
+    #: (vpad 045e) — com a máscara dualsense o vpad TAMBÉM é 054c:0ce6 e a opção
+    #: esconderia o vpad junto (jogo não veria controle nenhum). Por isso o
+    #: handler consulta o flavor ativo antes de incluir o IGNORE_DEVICES (H2).
+    STEAM_LAUNCH_XBOX = (
         "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
     )
+    STEAM_LAUNCH_DUALSENSE = "SDL_JOYSTICK_HIDAPI=0 %command%"
+
+    def _query_gamepad_flavor(self) -> str:
+        """Flavor do gamepad virtual ativo via state_full ('xbox' fallback)."""
+        try:
+            from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
+
+            state = daemon_state_full()
+            if isinstance(state, dict):
+                gp = state.get("gamepad_emulation")
+                if isinstance(gp, dict):
+                    fl = gp.get("flavor")
+                    if isinstance(fl, str) and fl:
+                        return fl
+        except Exception:
+            logger.debug("storm_copy_flavor_probe_falhou", exc_info=True)
+        return "xbox"
 
     def on_storm_copy_launch(self, _btn: object) -> None:
         """Copia as Opções de Inicialização da Steam (anti-duplicação + vibração).
@@ -162,8 +194,18 @@ class DaemonActionsMixin(WidgetAccessMixin):
         O Hefesto não injeta env vars no jogo (só orienta): estas opções fazem o
         jogo enxergar apenas o gamepad virtual (evita o controle duplicado) e
         preservam o rumble pelo FF do vpad. Validado em gameplay (Sackboy).
+
+        H2: com a máscara DualSense, IGNORE_DEVICES=054c:0ce6 esconderia o próprio
+        vpad — então nesse caso copiamos só HIDAPI=0 e avisamos que a máscara Xbox
+        (aba Início) é a recomendada para vibração sem controle duplicado.
         """
-        launch = self.STEAM_LAUNCH_OPTIONS
+        flavor = self._query_gamepad_flavor()
+        if flavor == "xbox":
+            launch = self.STEAM_LAUNCH_XBOX
+            extra = ""
+        else:
+            launch = self.STEAM_LAUNCH_DUALSENSE
+            extra = " (dica: troque a máscara para Xbox 360 na aba Início p/ vibração sem duplicar)"
         copied = False
         with contextlib.suppress(Exception):
             from gi.repository import Gdk, Gtk
@@ -174,10 +216,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
             copied = True
         if copied:
             self._toast_daemon(
-                "Copiado! Cole em: Steam → jogo → Propriedades → Opções de inicialização"
+                "Copiado! Cole em: Steam → jogo → Propriedades → "
+                f"Opções de inicialização{extra}"
             )
         else:
-            self._toast_daemon(f"Copie manualmente: {launch}")
+            self._toast_daemon(f"Copie manualmente: {launch}{extra}")
 
     def _set_daemon_status_consulting(self) -> None:
         """Mostra o estado transitório "Consultando..." no label da aba Daemon.

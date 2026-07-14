@@ -339,3 +339,17 @@ def test_consulting_placeholder_aparece_antes_do_worker(
     assert "Offline" not in host._label.markup
     assert "Iniciando" not in host._label.markup
     assert "fn" in captured, "worker do _refresh_daemon_view_async não foi agendado"
+
+
+def test_find_repo_file_resolve_raiz_do_repo() -> None:
+    """BUG-GUI-REPO-ROOT-OFFBYONE-01 (H3 da auditoria): _find_repo_file achava
+    a raiz do repo em parents[3] (= <repo>/src), então os 3 botões do cartão
+    anti-storm eram no-op silencioso. A raiz correta é parents[4] — provamos
+    resolvendo um arquivo real do repo (dsx.sh na raiz)."""
+    host = _Host()
+    found = host._find_repo_file("dsx.sh")
+    assert found is not None, "não resolveu dsx.sh — _find_repo_file quebrado (parents errado)"
+    assert found.name == "dsx.sh"
+    assert found.is_file()
+    # E um script real que os botões chamam.
+    assert host._find_repo_file("scripts/install_snd_quirk.sh") is not None

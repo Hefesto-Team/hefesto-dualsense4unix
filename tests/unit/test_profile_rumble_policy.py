@@ -242,6 +242,15 @@ def test_applier_passthrough_false_preserva_rumble_fixado(daemon: Daemon) -> Non
     assert daemon.config.rumble_active == (100, 120)
 
 
+def test_applier_passthrough_preserva_silencio_deliberado(daemon: Daemon) -> None:
+    # M2 (auditoria): "Parar" fixa (0,0) como silêncio deliberado. Ativar um
+    # perfil (todo perfil tem passthrough=True) NÃO pode religar o jogo — senão
+    # um alt-tab logo após "Parar" volta a sacudir o controle.
+    daemon.config.rumble_active = (0, 0)
+    daemon.apply_profile_rumble_passthrough(True)
+    assert daemon.config.rumble_active == (0, 0)
+
+
 def test_applier_passthrough_noop_quando_ja_em_passthrough(daemon: Daemon) -> None:
     daemon.config.rumble_active = None
     # Já em passthrough: no-op silencioso (não quebra, não escreve à toa).
