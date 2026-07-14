@@ -272,7 +272,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self.draft = draft.model_copy(update={"rumble": new_rumble})
         ok = rumble_set(weak, strong)
         self._toast_rumble(
-            f"Rumble aplicado: weak={weak}, strong={strong}"
+            f"Rumble FIXO em weak={weak}, strong={strong} — enquanto fixo o jogo "
+            "NÃO controla a vibração; clique 'Devolver ao jogo' para jogar"
             if ok
             else "Falha (daemon offline?)"
         )
@@ -299,7 +300,10 @@ class RumbleActionsMixin(WidgetAccessMixin):
         """
         self._set_scales(0, 0)
         rumble_stop()
-        self._toast_rumble("Rumble parado")
+        self._toast_rumble(
+            "Rumble parado (fixo em silêncio) — 'Devolver ao jogo' para o jogo "
+            "voltar a controlar a vibração"
+        )
 
     def on_rumble_passthrough(self, _btn: Gtk.Button) -> None:
         """Devolve o controle da vibração ao JOGO (FEAT-RUMBLE-PASSTHROUGH-GUI-01).
@@ -378,10 +382,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
             s.set_value(strong)
 
     def _rumble_test_stop(self) -> bool:
-        # Teste de 500ms encerrado: para via rumble_stop para garantir persistência do zero.
+        # SPRINT-GAME-RUMBLE-01: fim do teste = zera os motores E DEVOLVE o
+        # rumble ao jogo (passthrough). Antes fixava (0, 0), o que deixava o
+        # rumble "travado em silêncio" e o FF do jogo IGNORADO (apply_game_rumble
+        # só passa com rumble_active is None) até a usuária clicar "Devolver ao
+        # jogo" na mão — era a origem do "testei os motores e aí o jogo não
+        # vibra mais". rumble_stop() zera o motor primeiro; passthrough solta.
         rumble_stop()
+        rumble_passthrough(True)
         self._set_scales(0, 0)
-        self._toast_rumble("Teste encerrado (motores zerados)")
+        self._toast_rumble("Teste encerrado — vibração devolvida ao jogo")
         return False
 
     def _toast_rumble(self, msg: str) -> None:

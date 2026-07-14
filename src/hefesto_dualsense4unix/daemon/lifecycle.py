@@ -744,7 +744,21 @@ class Daemon:
         # BUG-EMU-DEVICE-RACE-01: mesma serialização do set_mouse_emulation.
         with self._emu_lock:
             if enabled:
-                return start_gamepad_emulation(self, flavor=flavor)
+                ok = start_gamepad_emulation(self, flavor=flavor)
+                # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
+                # vpads de co-op já criados. Trocar o flavor não muda /dev/input,
+                # então o watch do coop não dispara sozinho — force=True roda o
+                # ciclo cheio e o teardown por flavor-mismatch recria cada
+                # secundário com a nova máscara (senão P2+ ficam no flavor antigo,
+                # com rumble morto e prompts divergentes do P1).
+                if ok:
+                    from hefesto_dualsense4unix.daemon.subsystems.coop import (
+                        get_coop_manager,
+                    )
+
+                    with contextlib.suppress(Exception):
+                        get_coop_manager(self).sync(force=True)
+                return ok
             stop_gamepad_emulation(self)
             return True
 
@@ -1108,6 +1122,28 @@ class Daemon:
                 mult=desired_mult,
             )
             self._reapply_rumble_policy_to_active()
+
+    def apply_profile_rumble_passthrough(self, passthrough: bool) -> None:
+        """Aplica `rumble.passthrough` de um perfil recém-ativado (SPRINT-GAME-RUMBLE-01).
+
+        passthrough=True (default de TODO perfil) devolve a vibração ao JOGO:
+        solta o rumble FIXADO pela GUI (`rumble_active=None`) e zera os motores
+        uma vez. Sem isto, um "Aplicar"/"Parar" na aba Rumble deixava o rumble
+        travado e `apply_game_rumble` ignorava o FF do jogo mesmo com a máscara
+        Xbox correta — a segunda metade do "testei os motores e o jogo não vibra".
+
+        Só age quando há rumble fixado (`rumble_active is not None`): em
+        passthrough já ativo é no-op (não escreve HID à toa nem compete com o
+        rumble do jogo em andamento). Idempotente e best-effort.
+        """
+        if not passthrough:
+            return
+        if self.config.rumble_active is None:
+            return
+        self.config.rumble_active = None
+        with contextlib.suppress(Exception):
+            self.controller.set_rumble(weak=0, strong=0)
+        logger.info("profile_rumble_passthrough_released")
 
     def mark_rumble_policy_manual(self) -> None:
         """Registra gesto MANUAL na política de rumble
@@ -1556,6 +1592,18 @@ class Daemon:
             # o controle enquanto o Modo Nativo estiver ativo.
             input_ready = grace_passed and not self._paused and not self._native_mode
             if not input_ready:
+                # FEAT-PARITY-REVIEW-01 (touchpad/nativo): enquanto o input está
+                # congelado (Modo Nativo, pausa ou grace-period) ninguém drena o
+                # touchpad. Sem isto o _accum_dx/dy do TouchpadReader cresce a
+                # sessão inteira e vira um SALTO de cursor quando a emulação de
+                # mouse volta (a saída do Nativo restaura o mouse do stash). Drena
+                # a cada tick — no-op quando não há touchpad reader.
+                if self._touchpad_reader is not None:
+                    from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                        discard_touchpad_motion,
+                    )
+
+                    discard_touchpad_motion(self)
                 if self._keyboard_device is not None:
                     self._prime_keyboard_emulation(buttons_pressed)
                 previous_buttons = current_buttons

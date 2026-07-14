@@ -211,6 +211,11 @@ class UinputGamepad:
     #: Último par (weak, strong) 0-255 entregue ao sink — o sink escreve HID,
     #: então só é chamado quando o par MUDOU (throttle por mudança).
     _ff_last_sent: tuple[int, int] = (0, 0)
+    #: SPRINT-GAME-RUMBLE-01 — nº de "play" de FF que o JOGO pediu neste vpad
+    #: desde a criação (diagnóstico: "o jogo mandou rumble? quantas vezes?").
+    #: Incrementa em cada `_start_ff_effect` de efeito válido; exposto no
+    #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
+    _ff_play_count: int = 0
 
     @classmethod
     def for_flavor(
@@ -302,6 +307,7 @@ class UinputGamepad:
         self._ff_playing.clear()
         self._ff_gain = 1.0
         self._ff_last_sent = (0, 0)
+        self._ff_play_count = 0
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -310,6 +316,16 @@ class UinputGamepad:
     def ff_supported(self) -> bool:
         """True se o device virtual nasceu com EV_FF (rumble do jogo roteável)."""
         return self._ff_supported
+
+    @property
+    def ff_play_count(self) -> int:
+        """Nº de play de FF que o JOGO pediu neste vpad (diagnóstico de rumble)."""
+        return self._ff_play_count
+
+    @property
+    def ff_last_sent(self) -> tuple[int, int]:
+        """Último par (weak, strong) 0-255 entregue ao sink (rumble do jogo)."""
+        return self._ff_last_sent
 
     def forward_analog(
         self,
@@ -481,6 +497,11 @@ class UinputGamepad:
         else:
             deadline = self.time_fn() + (duration_ms * max(1, repeats)) / 1000.0
         self._ff_playing[effect_id] = deadline
+        # SPRINT-GAME-RUMBLE-01: instrumentação — um play de efeito válido = o
+        # jogo pediu rumble neste vpad. Se o contador fica em 0 durante o jogo,
+        # o jogo NÃO enxerga o vpad (ex.: máscara DualSense atraindo o hidraw
+        # do físico); se sobe mas o controle não vibra, o elo é o sink/hardware.
+        self._ff_play_count += 1
 
     def _refresh_ff(self) -> None:
         """Expira efeitos vencidos e entrega o rumble alvo ao sink (se mudou).
