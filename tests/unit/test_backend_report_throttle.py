@@ -35,10 +35,12 @@ def _make_inst() -> bp._PinnedPyDualSense:
     inst.input_report_length = 64
     inst.connected = True
     inst.ds_thread = True
-    # Campos que o __init__ real inicializa (PERF-MULTI-CONTROLLER-01).
+    # Campos que o __init__ real inicializa (PERF-MULTI-CONTROLLER-01 +
+    # FEAT-NATIVE-OUTPUT-MUTE-01).
     inst._throttle_sec = bp.REPORT_THREAD_THROTTLE_SEC
     inst._last_out_report = None
     inst._last_write_at = 0.0
+    inst._output_muted = False
     return inst
 
 
@@ -116,6 +118,68 @@ def test_sendreport_keepalive_reescreve_report_identico(
     inst.sendReport()
 
     assert calls["write"] == 3  # report nunca mudou, mas o keepalive reescreveu
+
+
+def test_sendreport_mutado_nao_escreve_nem_keepalive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo), ZERO writes — nem o
+    keepalive (que pisoteava o rumble que o jogo escrevia no hidraw)."""
+    inst = _make_inst()
+    inst._output_muted = True
+
+    calls = {"write": 0, "sleep": 0}
+    now = {"t": 100.0}
+
+    class _FakeDev:
+        def read(self, _n: int) -> bytes:
+            return bytes(_n)
+
+    inst.device = _FakeDev()
+    monkeypatch.setattr(inst, "readInput", lambda _r: None)
+    monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
+
+    def _count_write(_r: object) -> None:
+        calls["write"] += 1
+
+    monkeypatch.setattr(inst, "writeReport", _count_write)
+    monkeypatch.setattr(bp.time, "monotonic", lambda: now["t"])
+
+    def _fake_sleep(_secs: float) -> None:
+        calls["sleep"] += 1
+        now["t"] += bp.OUT_REPORT_KEEPALIVE_SEC + 0.01
+        if calls["sleep"] >= 3:
+            inst.ds_thread = False
+
+    monkeypatch.setattr(bp.time, "sleep", _fake_sleep)
+
+    inst.sendReport()
+
+    assert calls["write"] == 0  # release total: o jogo é o dono do output
+    assert calls["sleep"] == 3  # a leitura de input/bateria continuou viva
+
+
+def test_set_output_mute_propaga_e_forca_reassert_ao_desmutar() -> None:
+    """Backend propaga o mute a todos os handles; desmutar limpa o dirty-flag
+    (o estado desejado do hefesto é re-escrito no próximo ciclo)."""
+    ctl = bp.PyDualSenseController()
+
+    class _FakeHandle:
+        def __init__(self) -> None:
+            self._output_muted = False
+            self._last_out_report: list[int] | None = [1, 2, 3]
+
+    h1, h2 = _FakeHandle(), _FakeHandle()
+    ctl._handles = {"aa": h1, "bb": h2}  # type: ignore[dict-item]
+
+    ctl.set_output_mute(True)
+    assert h1._output_muted and h2._output_muted
+    assert h1._last_out_report == [1, 2, 3]  # mute não mexe no dirty
+
+    ctl.set_output_mute(False)
+    assert not h1._output_muted and not h2._output_muted
+    assert h1._last_out_report is None  # próximo ciclo re-escreve tudo
+    assert h2._last_out_report is None
 
 
 def test_sendreport_encerra_em_oserror(monkeypatch: pytest.MonkeyPatch) -> None:

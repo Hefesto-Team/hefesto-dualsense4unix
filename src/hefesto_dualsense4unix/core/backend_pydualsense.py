@@ -150,6 +150,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
         self._last_out_report: list[int] | None = None
         self._last_write_at = 0.0
+        # FEAT-NATIVE-OUTPUT-MUTE-01: em Modo Nativo o JOGO escreve no hidraw
+        # (rumble/gatilhos/LED nativos); QUALQUER write nosso — até o keepalive
+        # de 0.5s — pisoteia o que o jogo mandou (rumble zerado a cada meio
+        # segundo, sentido ao vivo no Sackboy 2026-07-13). Mutado = zero write;
+        # a leitura de input/bateria continua.
+        self._output_muted = False
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -173,21 +179,25 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             try:
                 in_report = self.device.read(self.input_report_length)
                 self.readInput(in_report)
-                out = self.prepareReport()
-                now = time.monotonic()
-                # PERF-MULTI-CONTROLLER-01: write OUT só quando o report MUDOU,
-                # com keepalive esparso. O seq-tag BT da pydualsense é fixo, e o
-                # report USB não tem contador — o buffer é função pura do estado
-                # desejado, então a comparação detecta mudança real (rumble do
-                # jogo, trigger novo, LED). Report idêntico reescrito a ~100Hz
-                # era pura pressão de barramento com 2+ controles.
-                if (
-                    out != self._last_out_report
-                    or (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
-                ):
-                    self.writeReport(out)
-                    self._last_out_report = out
-                    self._last_write_at = now
+                # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
+                # write; o jogo é o dono do output deste controle.
+                if not self._output_muted:
+                    out = self.prepareReport()
+                    now = time.monotonic()
+                    # PERF-MULTI-CONTROLLER-01: write OUT só quando o report
+                    # MUDOU, com keepalive esparso. O seq-tag BT da pydualsense
+                    # é fixo, e o report USB não tem contador — o buffer é
+                    # função pura do estado desejado, então a comparação detecta
+                    # mudança real (rumble do jogo, trigger novo, LED). Report
+                    # idêntico reescrito a ~100Hz era pura pressão de barramento
+                    # com 2+ controles.
+                    if (
+                        out != self._last_out_report
+                        or (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
+                    ):
+                        self.writeReport(out)
+                        self._last_out_report = out
+                        self._last_write_at = now
                 throttle = self._throttle_sec
                 if throttle > 0:
                     time.sleep(throttle)
@@ -268,6 +278,10 @@ class PyDualSenseController(IController):
         # sobreviver a hotplug/troca de porta. Se a key alvo sumir (controle
         # desconectou), o `_for_each` cai de volta em broadcast.
         self._output_target_key: str | None = None
+        # FEAT-NATIVE-OUTPUT-MUTE-01: espelho no backend do mute de output
+        # (Modo Nativo) — aplicado a todo handle atual E aos que abrirem
+        # durante o mute (hotplug com o jogo aberto).
+        self._output_mute = False
         # Protege a mutação de `_handles`/`_primary_key` contra o fan-out de
         # escrita: o daemon roda `connect`/`read_state`/setters em executor
         # multi-thread (max_workers=2). RLock pois um caminho pode reentrar.
@@ -470,6 +484,9 @@ class PyDualSenseController(IController):
             for handle in self._handles.values():
                 with contextlib.suppress(Exception):
                     handle._throttle_sec = throttle
+                    # FEAT-NATIVE-OUTPUT-MUTE-01: handle novo aberto durante o
+                    # Modo Nativo herda o mute (hotplug com jogo em foco).
+                    handle._output_muted = self._output_mute
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
         # registra com atraso após o hidraw; re-afirma a cor/player ativos nos
@@ -933,6 +950,24 @@ class PyDualSenseController(IController):
         if normalized is None or len(normalized) != 12:
             return None
         return normalized
+
+    def set_output_mute(self, muted: bool) -> None:
+        """Muta/desmuta TODA escrita de output HID (FEAT-NATIVE-OUTPUT-MUTE-01).
+
+        Modo Nativo = o JOGO é o dono do hidraw: rumble, gatilhos adaptativos e
+        LEDs vêm dele. Mutado, o report_thread NÃO escreve nada (nem o
+        keepalive — que zerava o rumble do jogo a cada 0.5s, sentido ao vivo no
+        Sackboy). Ao desmutar, o dirty-flag é limpo para o estado desejado do
+        hefesto ser re-escrito no próximo ciclo (~ms).
+        """
+        with self._io_lock:
+            self._output_mute = bool(muted)
+            for handle in self._handles.values():
+                with contextlib.suppress(Exception):
+                    handle._output_muted = self._output_mute
+                    if not self._output_mute:
+                        handle._last_out_report = None
+        logger.info("backend_output_mute", muted=bool(muted))
 
     def set_output_target(self, index: int | None) -> int | None:
         """Define o ALVO das ações de output (FEAT-DSX-CONTROLLER-SELECTOR-01).

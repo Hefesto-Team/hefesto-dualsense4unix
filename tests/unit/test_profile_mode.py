@@ -34,6 +34,7 @@ class _Calls:
 
     def __init__(self, daemon: Daemon) -> None:
         self.native: list[tuple[bool, str]] = []
+        self.native_restore_stash: list[bool] = []
         self.gamepad: list[tuple[bool, str | None, str]] = []
         self.coop: list[tuple[bool, str]] = []
         self._daemon = daemon
@@ -42,9 +43,16 @@ class _Calls:
         d = self._daemon
 
         def fake_native(
-            enabled: bool, *, reapply: bool = True, origin: str = "manual"
+            enabled: bool,
+            *,
+            reapply: bool = True,
+            restore_stash: bool = False,
+            origin: str = "manual",
         ) -> bool:
             self.native.append((enabled, origin))
+            # BUG-NATIVE-REVERT-DROPS-STASH-01: registra se a reversão pediu a
+            # restauração do stash (gamepad/co-op de antes do jogo).
+            self.native_restore_stash.append(restore_stash)
             d._native_mode = enabled
             return enabled
 
@@ -114,6 +122,10 @@ def test_perfil_sem_opiniao_reverte_so_modo_de_perfil(
     daemon.apply_profile_mode(None)  # focou um app comum
 
     assert calls.native == [(True, "profile"), (False, "profile")]
+    # BUG-NATIVE-REVERT-DROPS-STASH-01: a reversão por perfil-sem-opinião
+    # PRECISA restaurar o stash de emulação (gamepad/co-op de antes do jogo) —
+    # sem isso a usuária saía do Sackboy sem gamepad (flagrado ao vivo).
+    assert calls.native_restore_stash == [False, True]
     assert daemon._mode_from_profile is None
 
     # Nativo de origem MANUAL não é revertido por perfil sem opinião.

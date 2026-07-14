@@ -81,11 +81,15 @@ class _FakeVpad:
         self.flavor = ""
         self.analog: list[dict[str, int]] = []
         self.buttons: list[frozenset[str]] = []
+        # FEAT-VPAD-FF-PASSTHROUGH-01: sink de rumble injetado + nº de pumps.
+        self.rumble_sink: Any = None
+        self.ff_pumps = 0
 
     @classmethod
-    def for_flavor(cls, flavor: str) -> _FakeVpad:
+    def for_flavor(cls, flavor: str, *, rumble_sink: Any = None) -> _FakeVpad:
         inst = cls()
         inst.flavor = flavor
+        inst.rumble_sink = rumble_sink
         cls.created.append(inst)
         return inst
 
@@ -101,6 +105,9 @@ class _FakeVpad:
 
     def forward_buttons(self, pressed: frozenset[str]) -> None:
         self.buttons.append(pressed)
+
+    def pump_ff(self) -> None:
+        self.ff_pumps += 1
 
 
 class _FakeLedNode:
@@ -399,6 +406,10 @@ def test_forward_all_repassa_snapshot_ao_vpad(
     assert vpad is not None
     assert vpad.analog[-1] == {"lx": 200, "ly": 50, "rx": 128, "ry": 128, "l2": 10, "r2": 20}
     assert vpad.buttons[-1] == frozenset({"cross"})
+    # FEAT-VPAD-FF-PASSTHROUGH-01: o vpad do jogador nasce com sink de rumble
+    # (FF do jogo → controle DELE) e o tick bombeia o FF.
+    assert vpad.rumble_sink is not None
+    assert vpad.ff_pumps == 1
 
 
 def test_sync_remove_no_hotplug_out(

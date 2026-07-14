@@ -17,10 +17,16 @@ Política:
     BUG-DSX-GAMEPAD-DOUBLE-INPUT-01). Liberado ao desligar.
   - **Persistência**: liga/desliga + flavor sobrevivem a restart/reboot via
     `utils.session` (igual ao mouse).
+  - **Force-feedback do jogo** (FEAT-VPAD-FF-PASSTHROUGH-01): o vpad do P1
+    nasce com um `rumble_sink` que devolve o rumble pedido pelo JOGO ao
+    controle físico PRIMÁRIO, passando pela mesma política global de
+    intensidade do reassert. `dispatch_gamepad` bombeia o FF a cada tick.
 """
 from __future__ import annotations
 
 import contextlib
+import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -83,6 +89,138 @@ def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
                     store.bump("gamepad.grab.failed")
 
 
+def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
+    """Multiplicador da política global de rumble para o rumble do JOGO.
+
+    FEAT-VPAD-FF-PASSTHROUGH-01: o FF do vpad passa pela MESMA política
+    (economia/balanceado/max/auto/custom) do slider "Intensidade global" —
+    espelho fiel de `subsystems.rumble.reassert_rumble` (bateria do snapshot
+    do store + `_effective_mult` com o estado de debounce compartilhado do
+    daemon). Duplicado aqui de propósito: o reassert é do caminho do rumble
+    FIXADO e este é do rumble do jogo; a fonte canônica do cálculo segue
+    sendo `core.rumble._effective_mult`.
+    """
+    from hefesto_dualsense4unix.core.rumble import _effective_mult
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import AUTO_DEBOUNCE_SEC
+
+    battery_pct = 50  # fallback neutro (igual ao reassert)
+    try:
+        ctrl = daemon.store.snapshot().controller
+        if ctrl is not None and ctrl.battery_pct is not None:
+            battery_pct = int(ctrl.battery_pct)
+    except Exception:
+        logger.debug("game_rumble_state_read_fallback", exc_info=True)
+    mult, daemon._last_auto_mult, daemon._last_auto_change_at = _effective_mult(
+        config=daemon.config,
+        battery_pct=battery_pct,
+        now=now,
+        last_auto_mult=daemon._last_auto_mult,
+        last_auto_change_at=daemon._last_auto_change_at,
+        auto_debounce_sec=AUTO_DEBOUNCE_SEC,
+    )
+    return mult
+
+
+def _resolve_output_index(controller: Any, uniq: str) -> int | None:
+    """Posição do controle de MAC `uniq` em `describe_controllers`, ou None.
+
+    É o mesmo índice que `set_output_target` espera
+    (FEAT-DSX-CONTROLLER-SELECTOR-01). None = backend sem introspecção
+    (ex.: FakeController) ou controle não encontrado.
+    """
+    describe = getattr(controller, "describe_controllers", None)
+    if not callable(describe):
+        return None
+    try:
+        for entry in describe():
+            if entry.get("uniq") == uniq:
+                index = entry.get("index")
+                return index if isinstance(index, int) else None
+    except Exception:
+        logger.debug("game_rumble_describe_failed", exc_info=True)
+    return None
+
+
+def apply_game_rumble(
+    daemon: DaemonProtocol,
+    weak: int,
+    strong: int,
+    *,
+    target_uniq: str | None = None,
+) -> None:
+    """Aplica no controle FÍSICO o rumble vindo do jogo (FF do vpad).
+
+    FEAT-VPAD-FF-PASSTHROUGH-01. Decisões (documentadas):
+      - `rumble_active` FIXADO manual VENCE: com rumble fixado (usuária
+        testando os motores pela GUI), o FF do jogo é IGNORADO — o reassert
+        de 200ms manteria o valor fixado de qualquer forma; ignorar evita
+        briga de escrita HID. Em passthrough (`rumble_active is None`) o
+        reassert é no-op e o FF do jogo manda sozinho.
+      - A política global de intensidade é aplicada AQUI (mesmo multiplicador
+        do reassert) — o slider vale também para o rumble do jogo.
+      - `target_uniq` (MAC) mira o controle de UM jogador via o seletor
+        público do backend (`set_output_target` por índice, resolvido por
+        `describe_controllers`), salvando e restaurando o alvo anterior. O
+        bloco todo é síncrono (sem await), então nenhuma outra task do event
+        loop intercala um output no alvo trocado. Sem targeting público
+        (ex.: FakeController) ou sem MAC, cai no broadcast histórico —
+        limitação documentada: TODOS os controles vibram juntos.
+    """
+    if daemon.config.rumble_active is not None:
+        return  # rumble fixado manual vence o FF do jogo
+    controller = daemon.controller
+    mult = _game_rumble_mult(daemon, time.monotonic())
+    weak_eff = max(0, min(255, round(weak * mult)))
+    strong_eff = max(0, min(255, round(strong * mult)))
+
+    # Any: métodos de targeting são opcionais no backend (só o PyDualSense os
+    # tem; IController/FakeController não) — o gate é o callable() abaixo.
+    set_target: Any = getattr(controller, "set_output_target", None)
+    get_target: Any = getattr(controller, "get_output_target_index", None)
+    index: int | None = None
+    if target_uniq is not None and callable(set_target) and callable(get_target):
+        index = _resolve_output_index(controller, target_uniq)
+    if index is None:
+        try:
+            controller.set_rumble(weak=weak_eff, strong=strong_eff)
+        except Exception as exc:
+            logger.warning("game_rumble_failed", err=str(exc))
+        return
+    previous: int | None = None
+    try:
+        previous = get_target()
+        set_target(index)
+        controller.set_rumble(weak=weak_eff, strong=strong_eff)
+    except Exception as exc:
+        logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
+    finally:
+        # Restaura o alvo anterior mesmo em falha (o seletor da usuária não
+        # pode ficar sequestrado pelo rumble de um jogador).
+        with contextlib.suppress(Exception):
+            set_target(previous)
+
+
+def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
+    """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO.
+
+    FEAT-VPAD-FF-PASSTHROUGH-01: o MAC do primário é resolvido NA HORA do
+    rumble (`primary_uniq` muda em hotplug); com o co-op ativo isso garante
+    que o rumble do P1 não sacode o controle dos outros jogadores. Backend
+    sem `primary_uniq` (ex.: FakeController) cai em broadcast.
+    """
+
+    def _sink(weak: int, strong: int) -> None:
+        uniq = getattr(daemon.controller, "primary_uniq", None)
+        apply_game_rumble(
+            daemon,
+            weak,
+            strong,
+            target_uniq=uniq if isinstance(uniq, str) and uniq else None,
+        )
+
+    return _sink
+
+
 def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -> bool:
     """Cria o gamepad virtual com a máscara `flavor`. Idempotente.
 
@@ -111,7 +249,9 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
 
         stop_mouse_emulation(daemon)
 
-    device = UinputGamepad.for_flavor(key)
+    # FEAT-VPAD-FF-PASSTHROUGH-01: o rumble que o JOGO pedir no vpad volta
+    # para os motores do controle físico primário.
+    device = UinputGamepad.for_flavor(key, rumble_sink=make_primary_rumble_sink(daemon))
     if not device.start():
         logger.warning("gamepad_emulation_start_failed", flavor=key)
         return False
@@ -182,13 +322,21 @@ def dispatch_gamepad(
             r2=state.r2_raw,
         )
         device.forward_buttons(buttons_pressed)
+        # FEAT-VPAD-FF-PASSTHROUGH-01: drena o FF (rumble do jogo) do vpad e
+        # repassa ao controle físico. getattr defensivo: fakes/devices sem
+        # pump_ff degradam sem crash.
+        pump = getattr(device, "pump_ff", None)
+        if pump is not None:
+            pump()
     except Exception as exc:
         logger.warning("gamepad_dispatch_failed", err=str(exc))
 
 
 __all__ = [
     "GamepadSubsystem",
+    "apply_game_rumble",
     "dispatch_gamepad",
+    "make_primary_rumble_sink",
     "start_gamepad_emulation",
     "stop_gamepad_emulation",
 ]

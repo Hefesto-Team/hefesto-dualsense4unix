@@ -31,8 +31,10 @@ Pré-requisitos (gate em `should_be_active`):
     seguem a mesma máscara/flavor);
   - 2+ controles físicos conectados.
 
-Fora de escopo (fase futura): rumble do jogo por jogador (force-feedback nem é
-roteado para o P1 hoje).
+FEAT-VPAD-FF-PASSTHROUGH-01: o vpad de cada jogador nasce com um
+`rumble_sink` que devolve o rumble pedido pelo JOGO ao controle físico
+DAQUELE jogador (targeting por MAC via `apply_game_rumble`); o
+`forward_all()` bombeia o FF de cada vpad a cada tick.
 """
 from __future__ import annotations
 
@@ -44,6 +46,8 @@ from typing import TYPE_CHECKING
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
@@ -316,11 +320,34 @@ class CoopManager:
                 self._teardown_player(identity)
                 self._retry_spawn = True
 
+    def _make_player_rumble_sink(self, identity: str) -> Callable[[int, int], None]:
+        """Sink de FF do vpad de UM jogador → rumble no controle DELE (por MAC).
+
+        FEAT-VPAD-FF-PASSTHROUGH-01: delega em `apply_game_rumble` com
+        `target_uniq=MAC` — targeting via o seletor público do backend
+        (`describe_controllers` + `set_output_target`), com a política global
+        de intensidade e o respeito ao rumble fixado já embutidos lá.
+        Identidade sem MAC ("path:...") não tem como casar o handle →
+        broadcast (limitação documentada; não acontece com DualSense real).
+        """
+        daemon = self._daemon
+
+        def _sink(weak: int, strong: int) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import apply_game_rumble
+
+            target = None if identity.startswith("path:") else identity
+            apply_game_rumble(daemon, weak, strong, target_uniq=target)
+
+        return _sink
+
     def _promote_player(self, player: _SecondaryPlayer) -> None:
         """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
         from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
-        vpad = UinputGamepad.for_flavor(self._flavor())
+        vpad = UinputGamepad.for_flavor(
+            self._flavor(),
+            rumble_sink=self._make_player_rumble_sink(player.identity),
+        )
         if not vpad.start():
             logger.warning(
                 "coop_player_vpad_failed",
@@ -478,6 +505,11 @@ class CoopManager:
                     r2=snap.r2_raw,
                 )
                 player.vpad.forward_buttons(snap.buttons_pressed)
+                # FEAT-VPAD-FF-PASSTHROUGH-01: rumble do jogo deste jogador.
+                # getattr defensivo: fakes/vpads sem pump_ff degradam sem crash.
+                pump = getattr(player.vpad, "pump_ff", None)
+                if pump is not None:
+                    pump()
             except Exception as exc:  # nunca derruba o poll loop
                 logger.warning("coop_forward_failed", evdev=player.evdev_path, err=str(exc))
 
