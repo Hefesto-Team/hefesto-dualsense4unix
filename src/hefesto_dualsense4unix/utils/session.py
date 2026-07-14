@@ -300,32 +300,40 @@ def load_gamepad_emulation() -> tuple[bool, str | None]:
         return False, None
 
 
-_COOP_ENABLED_FLAG_FILE = "coop_enabled.flag"
+#: FEAT-COOP-DEFAULT-ON-01: co-op local é o PADRÃO (cada controle = um
+#: jogador). O que se persiste é o OPT-OUT: flag presente = usuária desligou.
+_COOP_DISABLED_FLAG_FILE = "coop_disabled.flag"
+#: Semântica antiga (presente = ligado) — removido na primeira escrita nova.
+_COOP_ENABLED_FLAG_FILE_LEGACY = "coop_enabled.flag"
 
 
 def save_coop_enabled(enabled: bool) -> None:
-    """Persiste se o co-op local está ligado (FEAT-DSX-COOP-LOCAL-01).
+    """Persiste a escolha da usuária sobre o co-op local.
 
-    Flag-file em config_dir (existe = ligado) para o daemon restaurar o toggle
-    após restart/reboot. Best-effort: nunca propaga exceção.
+    FEAT-COOP-DEFAULT-ON-01: com 2+ controles, "cada controle = um jogador" é
+    o comportamento esperado por padrão; grava-se apenas o opt-out
+    (`coop_disabled.flag` existe = desligado de propósito). Migra o flag
+    legado `coop_enabled.flag` apagando-o. Best-effort: nunca propaga exceção.
     """
     try:
-        flag = config_dir(ensure=True) / _COOP_ENABLED_FLAG_FILE
+        cfg = config_dir(ensure=True)
+        (cfg / _COOP_ENABLED_FLAG_FILE_LEGACY).unlink(missing_ok=True)
+        flag = cfg / _COOP_DISABLED_FLAG_FILE
         if enabled:
-            flag.write_text("1\n", encoding="utf-8")
-        else:
             flag.unlink(missing_ok=True)
+        else:
+            flag.write_text("1\n", encoding="utf-8")
         logger.debug("coop_enabled_state_saved", enabled=enabled)
     except Exception as exc:
         logger.debug("coop_enabled_state_save_failed", err=str(exc))
 
 
 def load_coop_enabled() -> bool:
-    """Retorna True se o co-op local foi deixado ligado na sessão anterior."""
+    """True (padrão) salvo se a usuária desligou o co-op (opt-out persistido)."""
     try:
-        return (config_dir() / _COOP_ENABLED_FLAG_FILE).exists()
+        return not (config_dir() / _COOP_DISABLED_FLAG_FILE).exists()
     except Exception:
-        return False
+        return True
 
 
 __all__ = [

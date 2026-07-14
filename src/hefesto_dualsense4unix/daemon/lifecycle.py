@@ -739,13 +739,15 @@ class Daemon:
         jogadores secundários (se gamepad on + 2+ controles); desligar desmonta
         todos (solta grab/uinput). Retorna o estado efetivo de `coop_enabled`.
         """
+        self.config.coop_enabled = bool(enabled)
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
-        self.config.coop_enabled = bool(enabled)
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import save_coop_enabled
+            # FEAT-COOP-DEFAULT-ON-01: só gesto MANUAL persiste a escolha —
+            # perfil ligando/desligando co-op não pode virar opt-out da usuária.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.session import save_coop_enabled
 
-            save_coop_enabled(self.config.coop_enabled)
+                save_coop_enabled(self.config.coop_enabled)
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
         coop = get_coop_manager(self)

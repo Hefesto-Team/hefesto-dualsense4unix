@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 import tempfile
 from collections.abc import Sequence
 from pathlib import Path
@@ -91,11 +92,15 @@ SEED_MARKER_NAME = ".seeded_presets"
 SEED_SKIP_ENV_VAR = "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED"
 
 # Fontes candidatas, na ordem: assets/ do repo (dev / install editável via
-# install.sh) e o share do sistema (.deb/AppImage — build_deb.sh copia assets/
-# inteiro para /usr/share/hefesto-dualsense4unix/assets/). A primeira que
-# existir vence; nenhuma existente → no-op silencioso.
+# install.sh), o share RELATIVO ao interpretador (AppImage/venv — sys.prefix
+# aponta para dentro do bundle montado, mesmo padrão dos glyphs) e o share do
+# sistema (.deb — build_deb.sh copia assets/ inteiro para
+# /usr/share/hefesto-dualsense4unix/assets/). A primeira que existir vence;
+# nenhuma existente → no-op silencioso.
 _DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = (
     Path(__file__).resolve().parents[3] / "assets" / "profiles_default",
+    Path(sys.prefix) / "share" / "hefesto-dualsense4unix" / "assets"
+    / "profiles_default",
     Path("/usr/share/hefesto-dualsense4unix/assets/profiles_default"),
 )
 

@@ -31,31 +31,38 @@ logger = get_logger(__name__)
 #: Intervalo do poller da aba Início (só age com a aba visível).
 HOME_POLL_INTERVAL_MS = 2000
 
+#: BUG-HOME-IPC-TIMEOUT-01: trocar de modo cria uinput + grab (bem mais que os
+#: 0.25s default do call_async) — sem folga, o toast dizia "Falha" com o modo
+#: JÁ aplicado. Mesma folga do Aplicar do rodapé (footer_actions).
+_MODE_IPC_TIMEOUT_S = 2.0
+
+# UX-MODE-TERMS-01: rótulos pela AÇÃO da usuária ("o que o controle faz
+# agora"), não pela tecnologia — "gamepad virtual"/"nativo" viravam jargão.
 _MODE_ITEMS = [
-    ("desktop", "Desktop"),
-    ("gamepad", "Jogo (gamepad virtual)"),
-    ("native", "Jogo nativo (Sony)"),
+    ("desktop", "Controlar o PC"),
+    ("gamepad", "Jogar pelo Hefesto"),
+    ("native", "Jogar direto (Sony)"),
 ]
 
 _MODE_DESCRIPTIONS = {
     "desktop": (
-        "O controle navega o desktop (mouse/teclado virtuais conforme as "
-        "abas Mouse/Teclado)."
+        "O controle vira mouse/teclado do computador (ajustes nas abas "
+        "Mouse e Teclado)."
     ),
     "gamepad": (
-        "O jogo vê um gamepad virtual por jogador; o controle físico fica "
-        "exclusivo do hefesto."
+        "Recomendado para a maioria dos jogos: o Hefesto cuida de gatilhos, "
+        "LEDs, rumble e de um controle por jogador."
     ),
     "native": (
-        "Release total: o jogo fala direto com o DualSense (gatilhos "
-        "adaptativos da Sony). O hefesto solta o controle."
+        "Para jogos com suporte PS5 nativo (ex.: Sackboy): o Hefesto solta o "
+        "controle e o jogo fala direto com o DualSense."
     ),
 }
 
 _GLOSSARY = (
-    "Modo jogo (aba Entrada): suspende só mouse/teclado virtuais.  ·  "
+    "Modo jogo (aba Emulação): suspende só mouse/teclado virtuais.  ·  "
     "Pausar: congela o daemon sem soltar o controle.  ·  "
-    "Jogo nativo: solta o controle para o jogo.  ·  "
+    "Jogar direto: solta o controle para o jogo.  ·  "
     "Desligar Hefesto: para o daemon até você religar."
 )
 
@@ -111,7 +118,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             SegmentedSelector,
         )
 
-        frame_mode = Gtk.Frame(label="Modo do sistema")
+        frame_mode = Gtk.Frame(label="O que o controle faz agora")
         mode_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         mode_box.set_margin_top(10)
         mode_box.set_margin_bottom(10)
@@ -138,7 +145,11 @@ class HomeActionsMixin(WidgetAccessMixin):
         # na borda direita (visto ao vivo 2026-07-13). A linha própria dá ao
         # seletor a largura toda para os 2 botões.
         opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        coop_check = Gtk.CheckButton(label="Co-op local (cada controle = um jogador)")
+        # FEAT-COOP-DEFAULT-ON-01: já vem ligado por padrão; o checkbox é o
+        # opt-out ("todos os controles agem como o mesmo jogador" ao desmarcar).
+        coop_check = Gtk.CheckButton(
+            label="Cada controle é um jogador (padrão com 2+ controles)"
+        )
         coop_check.connect("toggled", self._on_home_coop_toggled)
         self._home_coop_check = coop_check
         opts.pack_start(coop_check, False, False, 0)
@@ -167,6 +178,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         # --- Frame: controles conectados -----------------------------------
         frame_ctrl = Gtk.Frame(label="Controles")
         ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        # Cards de tamanho IGUAL (homogeneous): sem isso o card do primário
+        # (linha extra "primário") ficava mais largo que o dos demais.
+        ctrl_box.set_homogeneous(True)
         ctrl_box.set_margin_top(10)
         ctrl_box.set_margin_bottom(10)
         ctrl_box.set_margin_start(12)
@@ -251,6 +265,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                 selector.set_sensitive(False)
                 self._home_coop_check.set_sensitive(False)
                 self._home_flavor_selector.set_sensitive(False)
+                # BUG-HOME-OFFLINE-STALE-01: sem limpar, descrição/origem/
+                # opções do gamepad ficavam do último estado online.
+                self._home_mode_desc.set_text("")
+                self._home_origin_label.set_text("")
+                self._home_gamepad_opts.set_visible(False)
                 self._render_home_controllers([])
                 return
             assert state is not None
@@ -348,7 +367,7 @@ class HomeActionsMixin(WidgetAccessMixin):
                 warn.set_xalign(0.0)
                 warn.get_style_context().add_class("hefesto-dualsense4unix-status-err")
                 card.pack_start(warn, False, False, 0)
-            box.pack_start(card, False, False, 0)
+            box.pack_start(card, True, True, 0)
         box.show_all()
 
     # --- handlers -----------------------------------------------------------
@@ -372,25 +391,48 @@ class HomeActionsMixin(WidgetAccessMixin):
             return False
 
         if mode_id == "native":
-            call_async("native.mode.set", {"enabled": True}, _done, _fail)
+            call_async(
+                "native.mode.set",
+                {"enabled": True},
+                _done,
+                _fail,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
+            )
         elif mode_id == "gamepad":
             flavor = self._home_flavor_selector.get_active_id() or "dualsense"
             # Ordem FIFO do worker: sair do nativo antes de ligar o gamepad.
             call_async(
-                "native.mode.set", {"enabled": False}, lambda _r: False, lambda _e: False
+                "native.mode.set",
+                {"enabled": False},
+                lambda _r: False,
+                lambda _e: False,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
             )
             call_async(
                 "gamepad.emulation.set",
                 {"enabled": True, "flavor": flavor},
                 _done,
                 _fail,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
             )
         else:  # desktop
+            # FEAT-COOP-DEFAULT-ON-01: NÃO desliga o co-op aqui — desligar o
+            # gamepad já desmonta os jogadores; preservar a preferência faz o
+            # co-op voltar sozinho ao reentrar em "Jogar pelo Hefesto".
             call_async(
-                "native.mode.set", {"enabled": False}, lambda _r: False, lambda _e: False
+                "native.mode.set",
+                {"enabled": False},
+                lambda _r: False,
+                lambda _e: False,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
             )
-            call_async("coop.set", {"enabled": False}, lambda _r: False, lambda _e: False)
-            call_async("gamepad.emulation.set", {"enabled": False}, _done, _fail)
+            call_async(
+                "gamepad.emulation.set",
+                {"enabled": False},
+                _done,
+                _fail,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
+            )
 
     def _on_home_coop_toggled(self, check: Any) -> None:
         if getattr(self, "_home_guard", False):
@@ -411,7 +453,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._refresh_home_tab()
             return False
 
-        call_async("coop.set", {"enabled": enabled}, _done, _fail)
+        call_async(
+            "coop.set",
+            {"enabled": enabled},
+            _done,
+            _fail,
+            timeout_s=_MODE_IPC_TIMEOUT_S,
+        )
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
         flavor_id = selector.get_active_id()
@@ -430,6 +478,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             {"enabled": True, "flavor": flavor_id},
             _done,
             lambda _e: False,
+            timeout_s=_MODE_IPC_TIMEOUT_S,
         )
 
     def _on_home_shutdown_clicked(self, _button: object) -> None:
@@ -458,8 +507,26 @@ class HomeActionsMixin(WidgetAccessMixin):
             # sem ele, reabrir/atualizar a GUI ressuscitava o daemon parado.
             self._user_stopped_daemon = True
 
-            def _worker_ok(_r: Any) -> bool:
-                self._status_toast("home", "Hefesto desligado — controle no modo puro do Linux")
+            def _worker_ok(result: Any) -> bool:
+                # BUG-HOME-SHUTDOWN-FALSE-OK-01: systemctl com rc!=0 (sem
+                # sessão systemd, daemon avulso) NÃO desligou nada — o toast
+                # não pode mentir nem armar o _user_stopped_daemon à toa.
+                rc = getattr(result, "returncode", 1)
+                if rc == 0:
+                    self._status_toast(
+                        "home", "Hefesto desligado — controle no modo puro do Linux"
+                    )
+                else:
+                    self._user_stopped_daemon = False
+                    err = (getattr(result, "stderr", b"") or b"").decode(
+                        "utf-8", "replace"
+                    ).strip()
+                    self._status_toast(
+                        "home",
+                        "Falha ao desligar via systemd"
+                        + (f" ({err})" if err else "")
+                        + " — se o daemon roda avulso, pare-o na aba Daemon.",
+                    )
                 self._refresh_home_tab()
                 return False
 

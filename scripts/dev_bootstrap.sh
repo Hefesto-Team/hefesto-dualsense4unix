@@ -18,10 +18,15 @@ sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
 if [[ "$WITH_TRAY" == "1" ]]; then
     echo "[1.5/4] instalando deps opcionais de tray..."
     sudo apt-get install -y libgirepository1.0-dev libcairo2-dev pkg-config python3-dev
+    # xvfb: opcional de dev — display virtual para validar a GUI sem tocar a sessão.
+    sudo apt-get install -y xvfb xdotool imagemagick || true
 fi
 
 echo "[2/4] criando virtualenv..."
-python3 -m venv .venv
+# FIX-DEV-VENV-SYSTEM-SITE-01: --system-site-packages é OBRIGATÓRIO — o
+# PyGObject (gi) vem do pacote de sistema (python3-gi); sem a flag, o
+# run.sh --gui quebra num bootstrap fresco (paridade com install.sh).
+python3 -m venv --system-site-packages .venv
 # shellcheck disable=SC1091
 . .venv/bin/activate
 

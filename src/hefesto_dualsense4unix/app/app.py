@@ -669,6 +669,12 @@ class HefestoApp(
             2: getattr(self, "_refresh_triggers_from_draft", None),
             3: getattr(self, "_refresh_lightbar_from_draft", None),
             4: getattr(self, "_refresh_rumble_from_draft", None),
+            # BUG-PROFILES-ACTIVE-STALE-01: autoswitch/hotkey trocam o perfil
+            # sem passar pela GUI — re-marcar o ativo (negrito) ao exibir a aba.
+            5: getattr(self, "_sync_selection_with_active_profile", None),
+            # BUG-DAEMON-TAB-STALE-01: status do daemon re-renderiza ao entrar
+            # na aba (daemon pode ter subido/caído por fora via CLI/systemd).
+            6: getattr(self, "_refresh_daemon_view_async", None),
             # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação se
             # reconcilia ao ser exibida — se o daemon subiu após o boot, a aba
             # deixava de mostrar "—"/offline só ao entrar nela. _refresh_emulation_tab
@@ -815,6 +821,9 @@ class HefestoApp(
         # bateria baixa). Best-effort: silencioso se jeepney/D-Bus offline.
         self._start_notification_action_listener()
         if start_hidden and self.tray.is_available():
+            # BUG-HOME-TAB-HIDDEN-INSTALL-01: sem instalar a Início aqui, abrir
+            # a janela depois (show_window) deixava a página 0 em branco.
+            self.install_home_tab()
             self.install_status_polling()
             self.install_triggers_tab()
             self.install_lightbar_tab()

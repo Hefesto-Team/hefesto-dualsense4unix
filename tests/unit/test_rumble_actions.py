@@ -489,3 +489,121 @@ def test_install_rumble_tab_chama_state_full(
     mixin = _build_mixin(monkeypatch)
     mixin.install_rumble_tab()
     assert any(c[0] == "daemon.state_full" for c in mixin._ipc_calls["call_async"])
+
+
+# --- Testes: BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01 -----------------------
+
+
+def test_refresh_com_opiniao_no_draft_reflete_draft_nao_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Perfil com opinião: widgets refletem o DRAFT (o que o rodapé salva),
+    sem consultar o estado vivo do daemon."""
+    mixin = _build_mixin(monkeypatch)
+    new_rumble = mixin.draft.rumble.model_copy(update={"policy": "economia"})
+    mixin.draft = mixin.draft.model_copy(update={"rumble": new_rumble})
+
+    mixin._refresh_rumble_from_draft()
+
+    assert mixin._widgets["rumble_policy_economia"].get_active() is True
+    assert mixin._widgets["rumble_policy_max"].get_active() is False
+    assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(30.0)
+    # O daemon nem foi consultado (a tela mostra o draft, não o estado vivo).
+    assert mixin._ipc_calls["call_async"] == []
+    # E o draft segue intocado (economia).
+    assert mixin.draft.rumble.policy == "economia"
+
+
+def test_refresh_sem_opiniao_exibe_daemon_sem_gravar_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Perfil SEM opinião: widgets exibem o estado do daemon com indicação na
+    statusbar, mas o draft NÃO ganha opinião (senão todo perfil ganharia
+    política só de abrir a aba)."""
+    mixin = _build_mixin(monkeypatch)
+
+    def call_async_entrega_max(
+        method: str, params: dict, on_success: Any = None, on_failure: Any = None
+    ) -> None:
+        assert method == "daemon.state_full"
+        if on_success is not None:
+            on_success({"rumble_policy": "max", "rumble_policy_custom_mult": 0.7})
+
+    monkeypatch.setattr(rumble_actions, "call_async", call_async_entrega_max)
+    assert mixin.draft.rumble.policy is None  # default: sem opinião
+
+    mixin._refresh_rumble_from_draft()
+
+    # Widgets refletem o estado vivo do daemon (referência).
+    assert mixin._widgets["rumble_policy_max"].get_active() is True
+    # Mas o draft continua sem opinião — o rodapé não salvará política.
+    assert mixin.draft.rumble.policy is None
+    assert mixin.draft.rumble.custom_mult is None
+    # Indicação de "sem opinião no perfil" na statusbar.
+    mensagens = [msg for _ctx, msg in mixin._widgets["status_bar"].pushed]
+    assert any("não" in m and "opinião" in m for m in mensagens)
+
+
+def test_toggle_apos_refresh_sem_opiniao_grava_draft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Clicar num toggle depois do refresh continua gravando no draft."""
+    mixin = _build_mixin(monkeypatch)
+    mixin._refresh_rumble_from_draft()
+
+    btn = mixin._widgets["rumble_policy_auto"]
+    btn.set_active(True)
+    mixin.on_rumble_policy_auto(btn)
+
+    assert mixin.draft.rumble.policy == "auto"
+
+
+# --- Testes: BUG-RUMBLE-CUSTOM-MULT-CAP-01 (slider até 200%) -----------
+
+
+def test_custom_mult_150_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Slider em 150% vira custom_mult=1.5 e volta ao slider como 150 (ida e
+    volta valor/100), inclusive no round-trip de perfil."""
+    mixin = _build_mixin(monkeypatch)
+    slider = mixin._widgets["rumble_policy_slider"]
+    slider.set_value(150.0)
+    mixin.on_rumble_policy_slider_changed(slider)
+
+    assert mixin._rumble_policy == "custom"
+    assert mixin.draft.rumble.policy == "custom"
+    assert mixin.draft.rumble.custom_mult == pytest.approx(1.5)
+    assert mixin._ipc_calls["rumble_policy_custom"] == [pytest.approx(1.5)]
+
+    # Volta: refletir o draft nos widgets recoloca o slider em 150%.
+    mixin._apply_policy_to_widgets("custom", 1.5)
+    assert slider.get_value() == pytest.approx(150.0)
+
+    # Round-trip de perfil (o schema aceita custom_mult até 2.0).
+    profile = mixin.draft.to_profile("perfil_custom_150", priority=5)
+    assert profile.rumble.policy == "custom"
+    assert profile.rumble.custom_mult == pytest.approx(1.5)
+
+
+def test_glade_rumble_policy_adj_permite_ate_200() -> None:
+    """O adjustment do slider de política aceita até 200% (custom_mult 2.0);
+    upper=100 truncava o range do schema (BUG-RUMBLE-CUSTOM-MULT-CAP-01)."""
+    import xml.etree.ElementTree as ET
+    from pathlib import Path
+
+    glade = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+    )
+    tree = ET.parse(glade)  # também valida que o XML segue bem formado
+    adj = next(
+        (
+            obj
+            for obj in tree.iter("object")
+            if obj.get("id") == "rumble_policy_adj"
+        ),
+        None,
+    )
+    assert adj is not None, "adjustment rumble_policy_adj não encontrado"
+    props = {p.get("name"): (p.text or "") for p in adj.findall("property")}
+    assert float(props["upper"]) == 200.0
+    assert float(props["lower"]) == 0.0

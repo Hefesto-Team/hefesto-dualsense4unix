@@ -6,7 +6,9 @@ FEAT-RUMBLE-POLICY-01: aba reestruturada em 2 cards:
 
 Política define multiplicador global aplicado pelo daemon sobre todo rumble,
 inclusive passthrough de jogo (XInput virtual). Slider de intensidade ajusta
-"custom" em 0-100%.
+"custom" em 0-200% (BUG-RUMBLE-CUSTOM-MULT-CAP-01: o schema aceita
+``custom_mult`` até 2.0; o slider acompanha — mapeamento valor/100 nos dois
+sentidos).
 
 FEAT-RUMBLE-POLICY-PROFILE-01: cada escolha de política da usuária também é
 gravada em ``self.draft.rumble`` — o "Salvar Perfil" do rodapé persiste no
@@ -64,8 +66,15 @@ class RumbleActionsMixin(WidgetAccessMixin):
         """
         self._sync_policy_from_state()
 
-    def _sync_policy_from_state(self) -> None:
-        """Lê política atual via state_full e sincroniza widgets."""
+    def _sync_policy_from_state(self, *, indicar_sem_opiniao: bool = False) -> None:
+        """Lê política atual via state_full e sincroniza widgets.
+
+        BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01: o estado do daemon é SÓ exibição —
+        nunca é gravado no draft (senão todo perfil ganharia opinião de
+        política só de abrir a aba). Com ``indicar_sem_opiniao``, avisa na
+        statusbar que o perfil não tem opinião (o "Salvar Perfil" do rodapé
+        não vai persistir política até a usuária escolher uma).
+        """
         def _on_state(result: Any) -> bool:
             if isinstance(result, dict):
                 policy = result.get("rumble_policy", "balanceado")
@@ -74,6 +83,11 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 policy = "balanceado"
                 custom_mult = 0.7
             self._apply_policy_to_widgets(str(policy), float(custom_mult))
+            if indicar_sem_opiniao:
+                self._toast_rumble(
+                    "Política exibida = estado atual do daemon; o perfil não "
+                    "tem opinião (escolha uma política para salvá-la no perfil)."
+                )
             return False
 
         def _on_err(exc: Exception) -> bool:
@@ -326,8 +340,22 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 strong_scale.set_value(float(rumble.strong))
         finally:
             self._rumble_guard_refresh = False
-        # Sincroniza política do daemon (async — não bloqueia GTK).
-        self._sync_policy_from_state()
+        # BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01: a política destacada na tela tem
+        # de ser a MESMA que o "Salvar Perfil" do rodapé grava (draft.policy).
+        if rumble.policy is not None:
+            # Perfil tem opinião (ou a usuária já tocou): widgets refletem o
+            # DRAFT — não o daemon, que pode estar noutra política (CLI/applet).
+            mult = (
+                rumble.custom_mult
+                if rumble.custom_mult is not None
+                else _POLICY_MULT.get(rumble.policy, 0.7)
+            )
+            self._apply_policy_to_widgets(rumble.policy, mult)
+        else:
+            # Perfil SEM opinião: exibe o estado vivo do daemon como referência
+            # (async — não bloqueia GTK), com indicação na statusbar e SEM
+            # gravar o valor do daemon no draft.
+            self._sync_policy_from_state(indicar_sem_opiniao=True)
 
     # --- helpers ---
 

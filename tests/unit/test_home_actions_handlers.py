@@ -82,6 +82,7 @@ def ipc_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]
         params: dict[str, Any] | None,
         _done: Any = None,
         _fail: Any = None,
+        timeout_s: float = 0.25,
     ) -> None:
         calls.append((method, dict(params or {})))
 
@@ -117,9 +118,11 @@ def test_modo_gamepad_sai_do_nativo_e_liga_com_flavor(
     ]
 
 
-def test_modo_desktop_desliga_nativo_coop_e_gamepad(
+def test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop(
     ipc_calls: list[tuple[str, dict[str, Any]]],
 ) -> None:
+    """FEAT-COOP-DEFAULT-ON-01: desktop NÃO desliga o co-op (preferência
+    preservada — desligar o gamepad já desmonta os jogadores)."""
     stub = _HomeStub()
     stub._home_mode_selector.set_active_id("desktop")
 
@@ -127,7 +130,6 @@ def test_modo_desktop_desliga_nativo_coop_e_gamepad(
 
     assert ipc_calls == [
         ("native.mode.set", {"enabled": False}),
-        ("coop.set", {"enabled": False}),
         ("gamepad.emulation.set", {"enabled": False}),
     ]
 

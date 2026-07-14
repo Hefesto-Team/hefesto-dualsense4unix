@@ -10,10 +10,12 @@
     <property name="value">100</property>
   </object>
 
-  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global (0-100%) -->
+  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global.
+       BUG-RUMBLE-CUSTOM-MULT-CAP-01: 0-200% — o schema aceita custom_mult
+       até 2.0 e o upper antigo (100) truncava o slider em 100%. -->
   <object class="GtkAdjustment" id="rumble_policy_adj">
     <property name="lower">0</property>
-    <property name="upper">100</property>
+    <property name="upper">200</property>
     <property name="step-increment">1</property>
     <property name="page-increment">10</property>
     <property name="value">70</property>
