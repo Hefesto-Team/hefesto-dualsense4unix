@@ -162,10 +162,17 @@ class HomeActionsMixin(WidgetAccessMixin):
         opts.pack_start(coop_check, False, False, 0)
 
         mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        flavor_label = Gtk.Label(label="Máscara:")
+        # UX (auditoria): rotula pela CONSEQUÊNCIA, não pela tecnologia — a ordem
+        # e os textos deixam claro que Xbox é o que faz o jogo vibrar.
+        flavor_label = Gtk.Label(label="O jogo vê o controle como:")
         mask_row.pack_start(flavor_label, False, False, 0)
         flavor = SegmentedSelector(wrap=True)
-        flavor.set_items([("dualsense", "DualSense (PS)"), ("xbox", "Xbox 360")])
+        flavor.set_items(
+            [
+                ("xbox", "Xbox 360 (vibra)"),
+                ("dualsense", "DualSense (botões PS, sem vibrar)"),
+            ]
+        )
         flavor.connect("changed", self._on_home_flavor_changed)
         self._home_flavor_selector = flavor
         mask_row.pack_start(flavor, True, True, 0)
