@@ -40,7 +40,7 @@
   },
   "mode": {
     "kind": "gamepad",
-    "gamepad_flavor": "dualsense",
+    "gamepad_flavor": "xbox",
     "coop": true
   },
   "suppress_desktop_emulation": true

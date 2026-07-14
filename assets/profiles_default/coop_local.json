@@ -18,6 +18,6 @@
     "lightbar_brightness": 0.7
   },
   "rumble": {"passthrough": true},
-  "mode": {"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": true},
+  "mode": {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": true},
   "suppress_desktop_emulation": true
 }

@@ -171,9 +171,16 @@ install -Dm755 scripts/install_snd_quirk.sh \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf"
-# SPRINT-GAME-RUMBLE-01: a cura de RAIZ do storm (quirk do snd_usb_audio) no path
-# que o install-host-udev.sh procura. PRESERVA mic+fone. Sem isto, quem instala
-# pelo .deb ficaria sem a cura que o install.sh nativo aplica no step 3c.
+# SPRINT-GAME-RUMBLE-01: a cura de RAIZ do storm (quirk do snd_usb_audio).
+# DOIS destinos, de propósito:
+#   1. /usr/lib/modprobe.d/ — o path VIVO que o kmod lê de verdade (junto com
+#      /etc/modprobe.d). É o que faz a cura PEGAR no .deb sem passo manual; o
+#      dpkg o remove no purge. (BUG-DEB-MODPROBE-INERT-PATH-01: só empacotar em
+#      /usr/share deixava a cura INERTE — o kernel nunca lê de lá.)
+#   2. /usr/share/.../modprobe/ — cópia espelhada que o install-host-udev.sh e o
+#      install_snd_quirk.sh procuram (mesma lógica das udev-rules acima).
+install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf"
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe"
 install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf"

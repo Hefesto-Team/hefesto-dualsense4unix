@@ -252,7 +252,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._suppress_mode_signals = True
         try:
             kind_sel.set_active_id("none")
-            flavor_sel.set_active_id("dualsense")
+            flavor_sel.set_active_id("xbox")
         finally:
             self._suppress_mode_signals = False
         self._sync_mode_options_visibility("none")
@@ -299,7 +299,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if kind_sel is None:
             return
         kind = mode.kind if mode is not None else "none"
-        flavor = (mode.gamepad_flavor if mode is not None else None) or "dualsense"
+        flavor = (mode.gamepad_flavor if mode is not None else None) or "xbox"
         coop = bool(mode.coop) if mode is not None else False
         self._suppress_mode_signals = True
         try:
@@ -331,7 +331,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             flavor_sel = self._mode_flavor_selector
             flavor = (
                 flavor_sel.get_active_id() if flavor_sel is not None else None
-            ) or "dualsense"
+            ) or "xbox"
             coop_check = self._mode_coop_check
             coop = bool(coop_check.get_active()) if coop_check is not None else False
         return {"kind": kind, "gamepad_flavor": flavor, "coop": coop}

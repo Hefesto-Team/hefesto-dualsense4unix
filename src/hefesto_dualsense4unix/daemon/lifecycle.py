@@ -98,7 +98,9 @@ class DaemonConfig:
     # Mutuamente exclusivo com mouse_emulation: ligar o gamepad desliga o mouse
     # (jogar = controle vai pro jogo, não pro cursor). flavor: dualsense|xbox.
     gamepad_emulation_enabled: bool = False
-    gamepad_flavor: str = "dualsense"
+    # SPRINT-GAME-RUMBLE-01: default xbox (a máscara que faz a vibração in-game
+    # funcionar e evita o controle duplicado — ver uinput_gamepad.DEFAULT_FLAVOR).
+    gamepad_flavor: str = "xbox"
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
     # player" (broadcast). OFF por default (preserva o uso de reserva/troca de
@@ -1132,13 +1134,24 @@ class Daemon:
         travado e `apply_game_rumble` ignorava o FF do jogo mesmo com a máscara
         Xbox correta — a segunda metade do "testei os motores e o jogo não vibra".
 
-        Só age quando há rumble fixado (`rumble_active is not None`): em
-        passthrough já ativo é no-op (não escreve HID à toa nem compete com o
-        rumble do jogo em andamento). Idempotente e best-effort.
+        Só age quando há rumble fixado em valor NÃO-ZERO (`rumble_active` com
+        weak/strong > 0 — o caso do "Aplicar"/teste que deixou motor ligado). Em
+        passthrough já ativo é no-op.
+
+        M2 (auditoria): NÃO desfaz o silêncio DELIBERADO (`rumble_active == (0,0)`,
+        o "Parar" da GUI). Antes, como todo perfil tem `passthrough=True`, um
+        alt-tab/PS+dpad/reconexão logo após "Parar" religava o passthrough e o
+        jogo voltava a sacudir o controle — contrariando o gesto da usuária. O
+        silêncio fixo é intencional e sobrevive à troca de perfil; para devolver
+        ao jogo, a usuária usa "Devolver ao jogo" (ou aplica um rumble de teste).
         """
         if not passthrough:
             return
-        if self.config.rumble_active is None:
+        active = self.config.rumble_active
+        if active is None:
+            return
+        if active == (0, 0):
+            # Silêncio deliberado (botão "Parar") — preserva; não religa o jogo.
             return
         self.config.rumble_active = None
         with contextlib.suppress(Exception):

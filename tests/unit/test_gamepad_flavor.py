@@ -26,8 +26,9 @@ class TestNormalizeFlavor:
             ("xbox360", "xbox"),
             ("x360", "xbox"),
             ("xinput", "xbox"),
-            (None, "dualsense"),
-            ("lixo-desconhecido", "dualsense"),
+            # SPRINT-GAME-RUMBLE-01: default é xbox (a máscara que vibra em jogo).
+            (None, "xbox"),
+            ("lixo-desconhecido", "xbox"),
             ("  XBOX  ", "xbox"),
         ],
     )
@@ -49,14 +50,16 @@ class TestForFlavor:
         assert gp.product == ug.XBOX360_PRODUCT == 0x028E
         assert gp.flavor == "xbox"
 
-    def test_default_e_dualsense(self) -> None:
-        assert ug.DEFAULT_FLAVOR == "dualsense"
+    def test_default_e_xbox(self) -> None:
+        # SPRINT-GAME-RUMBLE-01: o default é xbox — a máscara DualSense faz o jogo
+        # ignorar o vpad (rumble morto) e duplicar o controle. Decisão de produto.
+        assert ug.DEFAULT_FLAVOR == "xbox"
         gp = ug.UinputGamepad.for_flavor()
-        assert gp.flavor == "dualsense"
+        assert gp.flavor == "xbox"
 
     def test_flavor_desconhecido_cai_no_default(self) -> None:
         gp = ug.UinputGamepad.for_flavor("nintendo64")
-        assert gp.flavor == "dualsense"
+        assert gp.flavor == "xbox"
 
     def test_bustype_usb_para_match_sdl(self) -> None:
         # BUS_USB ajuda o GUID da SDL a casar no gamecontrollerdb.
