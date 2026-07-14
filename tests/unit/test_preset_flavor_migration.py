@@ -26,9 +26,12 @@ def test_presets_shipados_gamepad_nascem_xbox() -> None:
     for path in sorted(_PRESETS_DIR.glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         mode = data.get("mode")
-        if isinstance(mode, dict) and mode.get("kind") == "gamepad":
-            if mode.get("gamepad_flavor") != "xbox":
-                ofensores.append(f"{path.name}: {mode.get('gamepad_flavor')!r}")
+        if (
+            isinstance(mode, dict)
+            and mode.get("kind") == "gamepad"
+            and mode.get("gamepad_flavor") != "xbox"
+        ):
+            ofensores.append(f"{path.name}: {mode.get('gamepad_flavor')!r}")
     assert not ofensores, (
         "presets de jogo (mode.kind=gamepad) devem shipar com flavor 'xbox' "
         f"(a máscara que vibra); ainda em dualsense: {ofensores}"
