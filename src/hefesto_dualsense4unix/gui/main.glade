@@ -1110,6 +1110,16 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
 
                         <child>
+                          <object class="GtkLabel" id="rumble_state_label">
+                            <property name="label" translatable="yes">Estado da vibração: —</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
                           <object class="GtkLabel" id="rumble_info">
                             <property name="label" translatable="yes">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>

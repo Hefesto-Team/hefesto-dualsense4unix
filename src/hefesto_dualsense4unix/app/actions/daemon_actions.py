@@ -11,6 +11,7 @@ from __future__ import annotations
 import contextlib
 import os
 import re
+import shutil
 import signal
 import subprocess
 from pathlib import Path
@@ -118,6 +119,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._toast_daemon("Reaplicando fixes seguros (sem sudo)...")
 
         def _worker() -> None:
+            ran = 0
+            missing = 0
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
@@ -129,36 +132,75 @@ class DaemonActionsMixin(WidgetAccessMixin):
             ):
                 script = self._find_repo_file(relpath)
                 if script is None:
+                    missing += 1
                     continue
                 with contextlib.suppress(Exception):
                     subprocess.run(
                         ["bash", str(script), *args], check=False, timeout=30
                     )
+                    ran += 1
             GLib.idle_add(self._refresh_storm_diag)
+            # M9 (auditoria): toast FINAL — antes a statusbar congelava em
+            # "Reaplicando..." para sempre. Distingue "rodou" de "scripts não
+            # encontrados" (H3/M10 — instalação de pacote sem os scripts).
+            if ran == 0 and missing:
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Não encontrei os scripts de correção nesta instalação.",
+                )
+            else:
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Fixes reaplicados. Se a Steam estava aberta, feche-a e "
+                    "clique de novo para desligar o Steam Input.",
+                )
 
         _get_executor().submit(_worker)
 
     def on_storm_reapply_all(self, _btn: object) -> None:
         """Abre o DualSense Fix (dsx) num terminal (privilegiado — pede senha)."""
         self._toast_daemon("Abrindo o dsx num terminal (vai pedir senha)...")
+        # M8 (auditoria): o gtk-launch NÃO levanta exceção quando o .desktop
+        # 'dsx-dualsense' não existe — sai com returncode 2. O `Popen` antigo
+        # marcava launched=True mesmo assim e o fallback nunca rodava (botão
+        # morto). Agora conferimos o returncode com `run`; se o .desktop faltar,
+        # abre o dsx.sh direto num terminal.
         launched = False
         with contextlib.suppress(Exception):
-            subprocess.Popen(
+            proc = subprocess.run(
                 ["gtk-launch", "dsx-dualsense"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
             )
-            launched = True
-        if not launched:
-            # Fallback: chama o dsx.sh direto (sem terminal dedicado).
-            dsx = self._find_repo_file("dsx.sh")
-            if dsx is not None:
-                with contextlib.suppress(Exception):
-                    subprocess.Popen(
-                        ["bash", str(dsx)],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+            launched = proc.returncode == 0
+        if launched:
+            return
+        # Fallback: abre o dsx.sh num emulador de terminal (pede senha lá).
+        dsx = self._find_repo_file("dsx.sh")
+        if dsx is None:
+            self._toast_daemon("dsx não encontrado nesta instalação.")
+            return
+        for term_cmd in (
+            ["x-terminal-emulator", "-e", "bash", str(dsx)],
+            ["cosmic-term", "-e", "bash", str(dsx)],
+            ["gnome-terminal", "--", "bash", str(dsx)],
+        ):
+            if shutil.which(term_cmd[0]) is None:
+                continue
+            with contextlib.suppress(Exception):
+                subprocess.Popen(
+                    term_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                return
+        # Sem emulador de terminal: roda direto (sem TTY dedicado; pkexec cuida da senha).
+        with contextlib.suppress(Exception):
+            subprocess.Popen(
+                ["bash", str(dsx)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
 
     #: SPRINT-GAME-RUMBLE-01: Opções de Inicialização da Steam que fazem o jogo
     #: ver SÓ o gamepad virtual do Hefesto (sem duplicar com o DualSense físico)
@@ -490,8 +532,19 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # o caminho único de restart é on_daemon_service_restart (btn_restart_daemon),
     # que trata erro com diálogo não-bloqueante e tem regra de sensibilidade própria.
 
+    def _refresh_daemon_tab_on_show(self) -> None:
+        """Reconcilia a aba Daemon ao ser exibida (M7): status do daemon + o
+        cartão anti-storm (que antes só era populado no bootstrap da aba)."""
+        self._refresh_daemon_view_async()
+        self._refresh_storm_diag()
+
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
+        # M7 (auditoria): o cartão anti-storm também é reavaliado no "Atualizar" —
+        # antes só rodava no bootstrap da aba e ao clicar "Reaplicar fixes
+        # seguros", então o diagnóstico ficava stale a sessão inteira (ex.: a
+        # usuária instala a cura por fora e o WARN nunca somia).
+        self._refresh_storm_diag()
         self._sync_restart_daemon_button_sensitivity()
 
     def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:

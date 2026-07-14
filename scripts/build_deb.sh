@@ -166,6 +166,20 @@ install -Dm755 scripts/install-host-udev.sh \
 # (`--status` / `--remove`) sem o repo. O script resolve o .conf em /usr/share.
 install -Dm755 scripts/install_snd_quirk.sh \
     "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/install_snd_quirk.sh"
+# M10 (auditoria): os scripts que a GUI/doctor executam (via _find_repo_file, que
+# resolve /usr/share/.../scripts) precisam existir no .deb — senão o cartão
+# anti-storm ("Reaplicar fixes seguros") e o doctor caem em no-op silencioso.
+for _s in doctor.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx_recover.sh; do
+    [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
+done
+# dsx.sh + dsx.desktop (o botão "Reaplicar tudo (terminal)" procura o .desktop
+# 'dsx-dualsense'; sem ele, o fallback abre dsx.sh direto — M8). O
+# _find_repo_file("dsx.sh") resolve <base>/dsx.sh, então vai na RAIZ do share.
+[ -f dsx.sh ] && install -Dm755 dsx.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dsx.sh"
+[ -f assets/dsx.desktop ] && install -Dm644 assets/dsx.desktop \
+    "${STAGING}/usr/share/applications/dsx-dualsense.desktop"
 # Também copia o conf modules-load para o local que o helper procura
 # em /usr/share/hefesto-dualsense4unix/modules-load/.
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"

@@ -32,19 +32,26 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         cfg = daemon.config
         if cfg.ps_button_action == "none":
             return
-        # FEAT-PARITY-REVIEW-01: com o gamepad virtual ativo ("Jogar pelo
-        # Hefesto") o PS já é encaminhado CRU ao jogo como BTN_MODE (guide/
-        # overlay). Disparar TAMBÉM a ação de sistema (focar Steam / comando)
-        # roubaria o foco no meio da partida. O Modo Nativo tem o mesmo espírito
-        # (o controle é do jogo). Só o PS-SOLO é gateado — os combos PS+Options/
-        # PS+dpad seguem valendo (são hotkeys nossos, não vão pro jogo).
-        if getattr(daemon, "_gamepad_device", None) is not None:
-            logger.info("hotkey_ps_solo_skip_gamepad_ativo")
-            return
+        # FEAT-PARITY-REVIEW-01 + M5 (auditoria): com o gamepad virtual ativo o PS
+        # já vai CRU ao jogo como BTN_MODE — disparar TAMBÉM a ação de sistema
+        # roubaria o foco DURANTE a partida. Mas suprimir pela MERA existência do
+        # vpad matava o PS no desktop com a Steam FECHADA (onde abrir a Steam é
+        # justamente o que se quer). Então o gate do vpad só vale quando a Steam
+        # JÁ está rodando (proxy de "em jogo"); Steam fechada + vpad → a ação
+        # roda (abre a Steam). O Modo Nativo continua suprimindo sempre (o
+        # controle é do jogo). Combos PS+Options/PS+dpad seguem valendo.
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("hotkey_ps_solo_skip_native_mode")
             return
+        if getattr(daemon, "_gamepad_device", None) is not None:
+            from hefesto_dualsense4unix.integrations.steam_launcher import (
+                is_steam_running,
+            )
+
+            if is_steam_running():
+                logger.info("hotkey_ps_solo_skip_gamepad_em_jogo")
+                return
         if cfg.ps_button_action == "steam":
             from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
 

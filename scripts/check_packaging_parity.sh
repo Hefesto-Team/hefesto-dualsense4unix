@@ -122,6 +122,33 @@ for rules_path in assets/[0-9][0-9]-*.rules; do
     fi
 done
 
+# M11 (auditoria): a cura de RAIZ do storm (assets/modprobe/*.conf) precisa ser
+# empacotada por TODOS os caminhos, senão o install-host-udev.sh pula a cura em
+# silêncio (SNDQUIRK_SRC=""). O glob de regras acima só pega *.rules — este bloco
+# cobre o .conf. Antes ausente: removê-lo do build_deb/flatpak passava despercebido.
+echo "== paridade da cura de raiz (assets/modprobe/*.conf × instaladores) =="
+for conf_path in assets/modprobe/*.conf; do
+    [[ -f "${conf_path}" ]] || continue
+    conf_name="$(basename "${conf_path}")"
+    missing=()
+    grep -qF "${conf_name}" scripts/build_deb.sh 2>/dev/null \
+        || missing+=("scripts/build_deb.sh")
+    grep -qF "${conf_name}" flatpak/*.yml 2>/dev/null \
+        || missing+=("flatpak/*.yml")
+    grep -qF "${conf_name}" scripts/install-host-udev.sh 2>/dev/null \
+        || missing+=("scripts/install-host-udev.sh")
+    grep -qF "${conf_name}" packaging/arch/PKGBUILD 2>/dev/null \
+        || missing+=("packaging/arch/PKGBUILD")
+    grep -qF "${conf_name}" uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] ${conf_name}: coberta em todos os instaladores"
+    else
+        echo "[FAIL] ${conf_name}: FALTANDO em: ${missing[*]}"
+        rc=1
+    fi
+done
+
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then
     echo "paridade de empacotamento OK"

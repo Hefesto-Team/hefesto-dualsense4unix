@@ -44,6 +44,7 @@ def _install_gi_stubs() -> None:
 
     glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
+    glib_mod.source_remove = lambda *_a, **_kw: None  # type: ignore[attr-defined]
     glib_mod.idle_add = lambda fn, *a, **kw: fn(*a, **kw)  # type: ignore[attr-defined]
     repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
     repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
@@ -97,6 +98,9 @@ class _FakeLabel:
     def set_text(self, t: str) -> None:
         self._text = t
 
+    def set_markup(self, t: str) -> None:
+        self._text = t
+
 
 class _FakeStatusBar:
     def __init__(self) -> None:
@@ -129,6 +133,8 @@ class _FakeRumbleMixin:
         # M1: guard renomeado por mixin (era _guard_refresh compartilhado).
         self._rumble_guard_refresh = False
         self._rumble_policy = "balanceado"
+        # M6: id do timer do teste de 500ms (atributo de classe no mixin real).
+        self._rumble_test_source: int | None = None
 
         self._widgets: dict[str, Any] = {
             "rumble_policy_economia": _FakeToggleButton(),
@@ -139,6 +145,7 @@ class _FakeRumbleMixin:
             "rumble_policy_auto_label": _FakeLabel(),
             "rumble_weak_scale": _FakeScale(0.0),
             "rumble_strong_scale": _FakeScale(0.0),
+            "rumble_state_label": _FakeLabel(),
             "status_bar": _FakeStatusBar(),
         }
 
@@ -212,6 +219,9 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "on_rumble_stop",
         "on_rumble_passthrough",
         "_refresh_rumble_from_draft",
+        "_refresh_rumble_state_label_async",
+        "_cancel_rumble_test_timer",
+        "_update_rumble_state_label",
         "_read_scales",
         "_set_scales",
         "_rumble_test_stop",
@@ -508,8 +518,11 @@ def test_refresh_com_opiniao_no_draft_reflete_draft_nao_daemon(
     assert mixin._widgets["rumble_policy_economia"].get_active() is True
     assert mixin._widgets["rumble_policy_max"].get_active() is False
     assert mixin._widgets["rumble_policy_slider"].get_value() == pytest.approx(30.0)
-    # O daemon nem foi consultado (a tela mostra o draft, não o estado vivo).
-    assert mixin._ipc_calls["call_async"] == []
+    # A POLÍTICA veio do draft (não do daemon) — BUG-RUMBLE-POLICY-DRAFT-DIVERGE-01.
+    # Feature #4: há UMA leitura de state_full APENAS para o indicador de estado da
+    # vibração (FF/passthrough — dado vivo que não existe no draft); ela NÃO lê a
+    # política do daemon, então o bug do policy-diverge não retorna.
+    assert mixin._ipc_calls["call_async"] == [("daemon.state_full", {})]
     # E o draft segue intocado (economia).
     assert mixin.draft.rumble.policy == "economia"
 

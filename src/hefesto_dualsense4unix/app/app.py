@@ -677,7 +677,8 @@ class HefestoApp(
             5: getattr(self, "_sync_selection_with_active_profile", None),
             # BUG-DAEMON-TAB-STALE-01: status do daemon re-renderiza ao entrar
             # na aba (daemon pode ter subido/caído por fora via CLI/systemd).
-            6: getattr(self, "_refresh_daemon_view_async", None),
+            # M7 (auditoria): também reavalia o cartão anti-storm ao exibir a aba.
+            6: getattr(self, "_refresh_daemon_tab_on_show", None),
             # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação se
             # reconcilia ao ser exibida — se o daemon subiu após o boot, a aba
             # deixava de mostrar "—"/offline só ao entrar nela. _refresh_emulation_tab
