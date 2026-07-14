@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.12.0] — 2026-07-13
+
 ### Added
 
 - **Multi-controle de verdade (até 4 jogadores locais)**: identidade de
