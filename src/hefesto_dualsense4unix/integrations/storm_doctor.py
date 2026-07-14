@@ -18,6 +18,9 @@ WARN = "[WARN]"
 INFO = "[INFO]"
 
 _QUIRK_RE = re.compile(r"054c:0ce6")
+# SPRINT-GAME-RUMBLE-01: a cura de raiz é o quirk_flags do snd_usb_audio para o
+# DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
+_SND_QUIRK_RE = re.compile(r"054c:0ce6:.*ignore_ctl_error")
 _STEAM_INPUT_RE = re.compile(
     r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
 )
@@ -101,16 +104,57 @@ def check_authorized_rule(rules_dir: Path | None = None) -> tuple[str, str]:
     return INFO, "regra áudio-off inativa (áudio do controle preservado)"
 
 
+def check_snd_quirk(
+    quirk_flags_text: str | None = None, conf_path: Path | None = None
+) -> tuple[str, str]:
+    """A CURA DE RAIZ do storm (snd_usb_audio quirk_flags) está ativa?
+
+    SPRINT-GAME-RUMBLE-01: o quirk `054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m`
+    torna o probe do mixer UAC tolerante e espaça o EP0 — mata o storm na origem
+    PRESERVANDO mic+fone (ao contrário da regra 75). Reporta o sysfs (sessão) e o
+    drop-in de /etc/modprobe.d (persistente).
+    """
+    if quirk_flags_text is None:
+        try:
+            quirk_flags_text = Path(
+                "/sys/module/snd_usb_audio/parameters/quirk_flags"
+            ).read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            quirk_flags_text = ""
+    active = bool(_SND_QUIRK_RE.search(quirk_flags_text or ""))
+    conf = conf_path or Path("/etc/modprobe.d/hefesto-dualsense-storm.conf")
+    persisted = bool(conf.is_file() and _SND_QUIRK_RE.search(_safe_read(conf)))
+    if active:
+        return OK, "cura de raiz do storm ATIVA (snd quirk — mic+fone preservados)"
+    if persisted:
+        return INFO, "cura de raiz agendada (replug/boot p/ ativar; mic+fone preservados)"
+    return WARN, "cura de raiz do storm AUSENTE (instale: scripts/install_snd_quirk.sh)"
+
+
+def check_snd_audio_healthy(cards_text: str | None = None) -> tuple[str, str]:
+    """O áudio do controle (mic+fone) está presente? Prova que a cura não o quebrou."""
+    if cards_text is None:
+        cards_text = _safe_read(Path("/proc/asound/cards"))
+    if re.search(r"DualSense", cards_text or "", re.IGNORECASE):
+        return OK, "áudio do controle presente (mic+fone do DualSense ativos)"
+    return INFO, "áudio do controle ausente (controle desconectado? — ou áudio-off)"
+
+
 def storm_report(
     home: Path | None = None,
     *,
     quirks_text: str | None = None,
     dropin_dir: Path | None = None,
     rules_dir: Path | None = None,
+    snd_quirk_text: str | None = None,
+    snd_conf_path: Path | None = None,
+    cards_text: str | None = None,
 ) -> list[tuple[str, str]]:
     """Bloco de diagnóstico storm para o `doctor` (read-only)."""
     home = home or Path.home()
     return [
+        check_snd_quirk(snd_quirk_text, snd_conf_path),
+        check_snd_audio_healthy(cards_text),
         check_quirk(quirks_text),
         check_steam_input(home),
         check_wireplumber(dropin_dir),
@@ -128,6 +172,8 @@ def _safe_read(path: Path) -> str:
 __all__ = [
     "check_authorized_rule",
     "check_quirk",
+    "check_snd_audio_healthy",
+    "check_snd_quirk",
     "check_steam_input",
     "check_wireplumber",
     "find_localconfig_vdfs",

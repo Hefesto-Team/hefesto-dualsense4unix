@@ -80,6 +80,7 @@ WITH_WIREPLUMBER_FIX=0
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
 WITH_STORM_WATCH=0
+SKIP_SND_QUIRK=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
 AUTO_YES=0
@@ -97,6 +98,7 @@ for arg in "$@"; do
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
+        --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --with-storm-watch)   WITH_STORM_WATCH=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
@@ -467,6 +469,26 @@ if [[ "${WITH_USB_QUIRK}" -eq 1 ]]; then
         printf '      quirk aplicado (vale no próximo boot) — confira: scripts/install_usb_quirk.sh --status\n'
     else
         warn "install_usb_quirk.sh falhou — rode: sudo bash scripts/install_usb_quirk.sh"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3c. Cura de RAIZ do storm na camada de ÁUDIO (DEFAULT ON — modprobe.d)
+# ---------------------------------------------------------------------------
+# quirk_flags do snd_usb_audio (ignore_ctl_error|ctl_msg_delay_1m) para o
+# DualSense: torna o probe do mixer UAC tolerante e ESPAÇA os control-transfers
+# no EP0 — a rajada que gera o storm -71 na re-enumeração sob carga. PRESERVA
+# mic+fone (NÃO desliga áudio), então é DEFAULT — ao contrário do 3b (cmdline,
+# sensível) e da regra 75 (áudio-off total). Escreve só em /etc/modprobe.d (não
+# boot-crítico). --no-snd-quirk pula (CI/sem hardware, como --no-udev). Validado
+# ao vivo (storm zero em gameplay). SPRINT-GAME-RUMBLE-01.
+if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
+    step "3c" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
+    if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
+        bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1 || true
+        printf '      cura instalada e ativada (replug do controle p/ valer já). status: scripts/install_snd_quirk.sh --status\n'
+    else
+        warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
     fi
 fi
 
