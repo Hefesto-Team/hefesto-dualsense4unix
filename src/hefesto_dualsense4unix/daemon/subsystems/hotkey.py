@@ -32,26 +32,23 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         cfg = daemon.config
         if cfg.ps_button_action == "none":
             return
-        # FEAT-PARITY-REVIEW-01 + M5 (auditoria): com o gamepad virtual ativo o PS
-        # já vai CRU ao jogo como BTN_MODE — disparar TAMBÉM a ação de sistema
-        # roubaria o foco DURANTE a partida. Mas suprimir pela MERA existência do
-        # vpad matava o PS no desktop com a Steam FECHADA (onde abrir a Steam é
-        # justamente o que se quer). Então o gate do vpad só vale quando a Steam
-        # JÁ está rodando (proxy de "em jogo"); Steam fechada + vpad → a ação
-        # roda (abre a Steam). O Modo Nativo continua suprimindo sempre (o
-        # controle é do jogo). Combos PS+Options/PS+dpad seguem valendo.
+        # FEAT-PARITY-REVIEW-01 + M5: com o controle dedicado a um JOGO, o PS já
+        # vai cru como BTN_MODE (guide/overlay) e disparar TAMBÉM a ação de sistema
+        # roubaria o foco. O sinal de "está em jogo" é o MODO JOGO — Modo Nativo
+        # (native_mode_active) ou emulação suprimida (_emulation_suppressed, que os
+        # perfis de jogo ligam e o long-press do PS alterna). Ambos são flags EM
+        # MEMÓRIA — nada de subprocess aqui (o callback roda inline no poll loop; um
+        # pgrep bloqueava input/IPC/co-op por até 2s — REVIEW-M5-PGREP-BLOCK-01).
+        # Cobre também jogos NÃO-Steam (Lutris/Heroic/nativo), que a checagem por
+        # processo Steam deixava passar (REVIEW-M5-NONSTEAM-FOCUS-01). No desktop
+        # (sem modo jogo) a ação roda normal — abre a Steam. Combos PS+* seguem.
         store = getattr(daemon, "store", None)
         if store is not None and getattr(store, "native_mode_active", False):
             logger.info("hotkey_ps_solo_skip_native_mode")
             return
-        if getattr(daemon, "_gamepad_device", None) is not None:
-            from hefesto_dualsense4unix.integrations.steam_launcher import (
-                is_steam_running,
-            )
-
-            if is_steam_running():
-                logger.info("hotkey_ps_solo_skip_gamepad_em_jogo")
-                return
+        if getattr(daemon, "_emulation_suppressed", False):
+            logger.info("hotkey_ps_solo_skip_modo_jogo")
+            return
         if cfg.ps_button_action == "steam":
             from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
 

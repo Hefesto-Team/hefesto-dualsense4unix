@@ -158,13 +158,20 @@ class DaemonActionsMixin(WidgetAccessMixin):
         _get_executor().submit(_worker)
 
     def on_storm_reapply_all(self, _btn: object) -> None:
-        """Abre o DualSense Fix (dsx) num terminal (privilegiado — pede senha)."""
+        """Abre o DualSense Fix (dsx) num terminal (privilegiado — pede senha).
+
+        REVIEW-M8-GTK-BLOCK-01: o corpo roda numa thread WORKER — o
+        `subprocess.run(gtk-launch, timeout=10)` (M8) bloquearia a thread GTK por
+        até 10s se o session bus/portal congestionasse. Toasts voltam via
+        GLib.idle_add. Mesmo padrão do `on_storm_fix_safe`.
+        """
         self._toast_daemon("Abrindo o dsx num terminal (vai pedir senha)...")
-        # M8 (auditoria): o gtk-launch NÃO levanta exceção quando o .desktop
-        # 'dsx-dualsense' não existe — sai com returncode 2. O `Popen` antigo
-        # marcava launched=True mesmo assim e o fallback nunca rodava (botão
-        # morto). Agora conferimos o returncode com `run`; se o .desktop faltar,
-        # abre o dsx.sh direto num terminal.
+        _get_executor().submit(self._reapply_all_worker)
+
+    def _reapply_all_worker(self) -> None:
+        # M8: o gtk-launch NÃO levanta exceção quando o .desktop 'dsx-dualsense'
+        # não existe — sai com returncode 2. Conferimos o returncode; se o
+        # .desktop faltar, abrimos o dsx.sh num emulador de terminal.
         launched = False
         with contextlib.suppress(Exception):
             proc = subprocess.run(
@@ -177,10 +184,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
             launched = proc.returncode == 0
         if launched:
             return
-        # Fallback: abre o dsx.sh num emulador de terminal (pede senha lá).
         dsx = self._find_repo_file("dsx.sh")
         if dsx is None:
-            self._toast_daemon("dsx não encontrado nesta instalação.")
+            GLib.idle_add(self._toast_daemon, "dsx não encontrado nesta instalação.")
             return
         for term_cmd in (
             ["x-terminal-emulator", "-e", "bash", str(dsx)],
@@ -194,7 +200,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     term_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
                 return
-        # Sem emulador de terminal: roda direto (sem TTY dedicado; pkexec cuida da senha).
+        # Sem emulador de terminal: roda direto (pkexec cuida da senha).
         with contextlib.suppress(Exception):
             subprocess.Popen(
                 ["bash", str(dsx)],

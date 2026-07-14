@@ -1,8 +1,10 @@
-"""M5 (auditoria) — o gate do PS-solo suprime a ação de sistema DURANTE o jogo
-(vpad ativo E Steam rodando), mas NÃO no desktop com a Steam fechada.
+"""M5 (auditoria + review) — o gate do PS-solo suprime a ação de sistema quando o
+controle está DEDICADO a um jogo (Modo Nativo ou modo jogo/_emulation_suppressed),
+mas NÃO no desktop.
 
-Antes o gate pulava a ação pela MERA existência do vpad, matando o "abre a Steam"
-no desktop (onde o BTN_MODE não tem quem receba).
+O gate usa flags EM MEMÓRIA (sem subprocess): o `is_steam_running`/pgrep anterior
+bloqueava o poll loop até 2s (REVIEW-M5-PGREP-BLOCK-01) e deixava passar jogos
+não-Steam (REVIEW-M5-NONSTEAM-FOCUS-01).
 """
 from __future__ import annotations
 
@@ -13,56 +15,48 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import steam_launcher
 
 
-def _daemon(*, gamepad: bool, native: bool = False, action: str = "steam") -> Any:
+def _daemon(*, suppressed: bool = False, native: bool = False, action: str = "steam") -> Any:
     return SimpleNamespace(
         config=SimpleNamespace(ps_button_action=action, ps_button_command=""),
-        _gamepad_device=object() if gamepad else None,
+        _emulation_suppressed=suppressed,
         store=SimpleNamespace(native_mode_active=native),
     )
 
 
-def test_ps_solo_abre_steam_no_desktop_com_steam_fechada(monkeypatch):
-    """vpad ativo, Steam FECHADA → a ação roda (abre a Steam)."""
-    opened = []
-    monkeypatch.setattr(steam_launcher, "is_steam_running", lambda: False)
+def _patch_steam(monkeypatch) -> list[Any]:
+    opened: list[Any] = []
     monkeypatch.setattr(
         steam_launcher, "open_or_focus_steam", lambda: opened.append(True) or True
     )
-    cb = hotkey.build_ps_solo_callback(_daemon(gamepad=True))
-    cb()
-    assert opened == [True], "com a Steam fechada o PS-solo deve abrir a Steam"
+    # Guard-rail do review: o gate NÃO pode chamar subprocess (pgrep) no poll loop.
+    def _boom(*_a, **_kw):  # pragma: no cover
+        raise AssertionError("gate do PS-solo não pode rodar subprocess/pgrep")
+
+    monkeypatch.setattr(steam_launcher, "_default_pgrep", _boom)
+    return opened
 
 
-def test_ps_solo_suprimido_em_jogo_com_steam_rodando(monkeypatch):
-    """vpad ativo, Steam JÁ rodando (em jogo) → suprime (não rouba foco)."""
-    opened = []
-    monkeypatch.setattr(steam_launcher, "is_steam_running", lambda: True)
-    monkeypatch.setattr(
-        steam_launcher, "open_or_focus_steam", lambda: opened.append(True) or True
-    )
-    cb = hotkey.build_ps_solo_callback(_daemon(gamepad=True))
-    cb()
-    assert opened == [], "com a Steam rodando e vpad ativo, o PS-solo é suprimido"
+def test_ps_solo_abre_steam_no_desktop(monkeypatch):
+    """Sem modo jogo e sem nativo → a ação roda (abre a Steam)."""
+    opened = _patch_steam(monkeypatch)
+    hotkey.build_ps_solo_callback(_daemon())()
+    assert opened == [True]
+
+
+def test_ps_solo_suprimido_em_modo_jogo(monkeypatch):
+    """Emulação suprimida (modo jogo — inclui jogos NÃO-Steam) → suprime."""
+    opened = _patch_steam(monkeypatch)
+    hotkey.build_ps_solo_callback(_daemon(suppressed=True))()
+    assert opened == []
 
 
 def test_ps_solo_suprimido_no_modo_nativo(monkeypatch):
-    opened = []
-    monkeypatch.setattr(steam_launcher, "is_steam_running", lambda: False)
-    monkeypatch.setattr(
-        steam_launcher, "open_or_focus_steam", lambda: opened.append(True) or True
-    )
-    cb = hotkey.build_ps_solo_callback(_daemon(gamepad=False, native=True))
-    cb()
-    assert opened == [], "no Modo Nativo o controle é do jogo — PS-solo suprimido"
+    opened = _patch_steam(monkeypatch)
+    hotkey.build_ps_solo_callback(_daemon(native=True))()
+    assert opened == []
 
 
-def test_ps_solo_sem_vpad_abre_steam(monkeypatch):
-    """Sem vpad (desktop puro) → ação roda normalmente."""
-    opened = []
-    monkeypatch.setattr(steam_launcher, "is_steam_running", lambda: False)
-    monkeypatch.setattr(
-        steam_launcher, "open_or_focus_steam", lambda: opened.append(True) or True
-    )
-    cb = hotkey.build_ps_solo_callback(_daemon(gamepad=False))
-    cb()
-    assert opened == [True]
+def test_ps_solo_none_nao_faz_nada(monkeypatch):
+    opened = _patch_steam(monkeypatch)
+    hotkey.build_ps_solo_callback(_daemon(action="none"))()
+    assert opened == []
