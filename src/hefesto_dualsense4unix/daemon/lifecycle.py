@@ -784,12 +784,21 @@ class Daemon:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
         FEAT-DSX-GAMEPAD-FLAVOR-01. `flavor` em ('dualsense','xbox'); None mantém
-        o atual. Ligar desliga a emulação de mouse (mútua exclusão). Retorna True
-        se o estado pedido foi alcançado.
+        o atual. Ligar desliga a emulação de mouse (mútua exclusão) e SAI do Modo
+        Nativo (idem). Retorna True se o estado pedido foi alcançado.
 
         BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: um `gamepad on` manual carimba
         `_emu_manual_ts` — assim um perfil point-and-click focado logo em seguida
         (autoswitch) NÃO mata o gamepad ligado na mão (lock de 30s).
+
+        HARM-01: sair do nativo antes de ligar o vpad é garantido AQUI porque o
+        daemon é o único ponto por onde todas as superfícies passam (GUI, applet,
+        CLI, perfil, hotkey, autoswitch) — a CLI não pode importar o
+        `app.actions.mode_transition` sem arrastar GTK. Sem isto, um `gamepad on`
+        com o nativo ligado deixava os dois ligados juntos: o físico grabado pelo
+        vpad e o dispatch congelado pelo gate do nativo = jogo sem controle
+        nenhum. O caminho inverso (`native.mode.set True` com o vpad ligado) já
+        era coberto pelo `_release_controller_to_game`.
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             start_gamepad_emulation,
@@ -801,6 +810,13 @@ class Daemon:
         # BUG-EMU-DEVICE-RACE-01: mesma serialização do set_mouse_emulation.
         with self._emu_lock:
             if enabled:
+                # HARM-01: a MESMA saída que a GUI já pede no passo 1 do plano
+                # dela (`native.mode.set False`) — não uma segunda semântica de
+                # "sair do nativo". Quando a GUI manda o passo, este vira no-op
+                # (o setter é idempotente). O restore do stash que ele dispara
+                # não reentra aqui: `_native_mode` já é False quando roda.
+                if self._native_mode:
+                    self.set_native_mode(False, origin=origin)
                 ok = start_gamepad_emulation(self, flavor=flavor)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
                 # vpads de co-op já criados. Trocar o flavor não muda /dev/input,
@@ -816,10 +832,9 @@ class Daemon:
                     with contextlib.suppress(Exception):
                         get_coop_manager(self).sync(force=True)
                 return ok
+            # HARM-16: o zero dos motores vem de dentro do stop (parar o vpad é
+            # o que deixa o motor sem dono), não de um passo extra aqui.
             stop_gamepad_emulation(self)
-            # HARM-16: o vpad morre no meio de um FF do jogo e o motor fica
-            # ligado — mesma doença do Modo Nativo, mesmo remédio.
-            self._zero_rumble_motors()
             return True
 
     def set_coop_enabled(

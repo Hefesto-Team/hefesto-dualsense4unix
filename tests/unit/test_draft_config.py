@@ -348,13 +348,18 @@ def test_to_ipc_dict_mouse_none_quando_nao_tocado() -> None:
 
 
 def test_to_ipc_dict_mouse_emitido_quando_dirty() -> None:
-    """Seção mouse tocada (dirty=True) preserva o comportamento atual."""
+    """Seção mouse tocada (dirty=True) viaja — só as velocidades (HARM-05).
+
+    ``enabled`` fica de fora: quem liga/desliga o mouse é o MODO. Só os sliders
+    marcam dirty, então o `enabled` do draft aqui é sempre eco de estado velho —
+    emiti-lo fazia o Aplicar durante o jogo religar o mouse e matar o vpad.
+    """
     draft = DraftConfig.default()
     novo_mouse = draft.mouse.model_copy(
         update={"enabled": True, "speed": 9, "dirty": True}
     )
     d = draft.model_copy(update={"mouse": novo_mouse}).to_ipc_dict()
-    assert d["mouse"] == {"enabled": True, "speed": 9, "scroll_speed": 1}
+    assert d["mouse"] == {"speed": 9, "scroll_speed": 1}
 
 
 def test_to_ipc_dict_mouse_dirty_nao_vaza_no_payload() -> None:
@@ -362,6 +367,21 @@ def test_to_ipc_dict_mouse_dirty_nao_vaza_no_payload() -> None:
     novo_mouse = MouseDraft(enabled=True, dirty=True)
     d = DraftConfig(mouse=novo_mouse).to_ipc_dict()
     assert "dirty" not in d["mouse"]
+
+
+def test_to_ipc_dict_mouse_nunca_leva_enabled() -> None:
+    """Nenhum "Aplicar" pode mudar o modo do sistema (HARM-05, aceite).
+
+    Repro que este teste tranca: Início em "Controlar o PC" -> aba Mouse liga o
+    switch -> "Jogar pelo Hefesto" -> um "Aplicar" qualquer (mudou um gatilho).
+    Com `enabled=True` no payload o daemon aplicava a exclusão mútua e o vpad
+    morria no meio do jogo. O payload não consegue mais expressar isso — não é
+    uma limpeza tardia (que só alcança o SEGUNDO Aplicar), é o campo não existir.
+    """
+    sujo = MouseDraft(enabled=True, speed=9, scroll_speed=3, dirty=True)
+    for mouse in (sujo, sujo.model_copy(update={"enabled": False})):
+        d = DraftConfig(mouse=mouse).to_ipc_dict()
+        assert "enabled" not in d["mouse"]
 
 
 def test_from_profile_limpa_dirty_do_mouse() -> None:

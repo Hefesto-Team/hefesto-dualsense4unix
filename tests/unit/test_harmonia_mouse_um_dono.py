@@ -214,20 +214,20 @@ def test_aplicar_com_sucesso_baixa_o_dirty(apply_result: dict[str, Any]) -> None
 def test_aplicar_seguinte_nao_reenvia_a_secao_mouse(
     apply_result: dict[str, Any],
 ) -> None:
-    """Aceite do HARM-05: nenhum "Aplicar" muda o modo do sistema."""
+    """Aceite do HARM-05: nenhum "Aplicar" muda o modo do sistema.
+
+    O PRIMEIRO Aplicar é o que importa — baixar o `dirty` no callback de
+    sucesso só alcança o segundo, e o dano já foi. Nem o primeiro leva
+    `enabled`: ele carrega só a edição pendente, que é a velocidade.
+    """
     stub = _FooterStub()
     _com_mouse_tocado(stub)
 
     stub.on_apply_draft()
     stub.on_apply_draft()
 
-    assert apply_result["enviados"][0]["mouse"] == {
-        "enabled": True,
-        "speed": 6,
-        "scroll_speed": 1,
-    }
-    # O segundo Aplicar não tem nada de mouse a dizer — e é ele que religava o
-    # mouse (e matava o vpad) no meio do jogo.
+    assert apply_result["enviados"][0]["mouse"] == {"speed": 6, "scroll_speed": 1}
+    # Aplicada a edição, o segundo Aplicar não tem nada de mouse a dizer.
     assert apply_result["enviados"][1]["mouse"] is None
 
 
@@ -479,3 +479,73 @@ def test_desligar_o_mouse_na_mao_persiste_off(tmp_config: Path, daemon: Daemon) 
     daemon.set_mouse_emulation(False)
 
     assert session.load_mouse_preference()[0] is False
+
+
+# ---------------------------------------------------------------------------
+# HARM-05 (c) — o "Aplicar" não derruba o vpad (do draft até o daemon)
+# ---------------------------------------------------------------------------
+
+
+def _applier(daemon: Daemon) -> Any:
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+
+    return DraftApplier(controller=daemon.controller, store=daemon.store, daemon=daemon)
+
+
+def test_aplicar_jogando_nao_derruba_o_vpad(
+    tmp_config: Path, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O repro do revisor, do draft ao daemon (aceite do item HIGH).
+
+    Início em "Controlar o PC" -> a aba Mouse liga o switch -> "Jogar pelo
+    Hefesto" -> um "Aplicar" qualquer (mudou um gatilho). O payload levava
+    `mouse.enabled=true`, o daemon aplicava a exclusão mútua e o vpad morria no
+    meio da partida. Aqui o draft está do jeito exato daquele momento: mouse
+    `enabled=True` (de quando ela estava no desktop) e `dirty` de um slider.
+    """
+    monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox")
+    assert daemon._gamepad_device is not None
+
+    sujo = DraftConfig.default()
+    sujo = sujo.model_copy(
+        update={
+            "mouse": sujo.mouse.model_copy(
+                update={"enabled": True, "speed": 9, "dirty": True}
+            )
+        }
+    )
+
+    _applier(daemon).apply(sujo.to_ipc_dict())
+
+    assert daemon._gamepad_device is not None
+    assert daemon._mouse_device is None
+    assert daemon.config.gamepad_emulation_enabled is True
+
+
+def test_aplicar_jogando_ainda_aplica_a_velocidade_editada(
+    tmp_config: Path, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tirar `enabled` do payload não pode custar a edição que ele carregava.
+
+    A seção só viaja por causa dos sliders — se ela virasse no-op, o item HIGH
+    teria sido "consertado" jogando a feature fora (e o applier engole a
+    exceção da seção, então a perda seria SILENCIOSA).
+    """
+    monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: object())
+    gamepad_sub.start_gamepad_emulation(daemon, flavor="xbox")
+
+    sujo = DraftConfig.default()
+    sujo = sujo.model_copy(
+        update={
+            "mouse": sujo.mouse.model_copy(
+                update={"speed": 11, "scroll_speed": 4, "dirty": True}
+            )
+        }
+    )
+
+    aplicadas = _applier(daemon).apply(sujo.to_ipc_dict())
+
+    assert "mouse" in aplicadas
+    assert daemon.config.mouse_speed == 11
+    assert daemon.config.mouse_scroll_speed == 4

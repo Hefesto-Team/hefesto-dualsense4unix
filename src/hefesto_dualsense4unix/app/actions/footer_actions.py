@@ -156,10 +156,15 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         ``dirty`` quer dizer "há uma edição de mouse por aplicar" — e era ligado
         para nunca mais baixar (o único ``dirty=False`` era a carga programática
-        do bootstrap). Resultado: depois de a usuária tocar a aba Mouse UMA vez,
-        todo "Aplicar" do rodapé pelo resto da sessão reenviava a seção mouse e
-        RELIGAVA o mouse — matando o vpad no meio do jogo. Aplicou, acabou a
+        do bootstrap): a seção viajava em todo "Aplicar" pelo resto da sessão, e
+        a aba Mouse nunca mais se reconciliava com o estado vivo (o overlay do
+        daemon pula enquanto houver edição pendente). Aplicou, acabou a
         pendência.
+
+        Isto NÃO é o que impede o Aplicar de mexer no modo — quem garante isso é
+        ``to_ipc_dict``, que não emite ``enabled`` (o dano vinha do PRIMEIRO
+        Aplicar, que uma limpeza no callback de sucesso não alcança: ela roda
+        depois de o payload já ter ido e voltado).
 
         ``in_profile=True`` junto: a seção deixa de ser "edição pendente" e passa
         a fazer parte da configuração, que é exatamente o que ``to_profile``

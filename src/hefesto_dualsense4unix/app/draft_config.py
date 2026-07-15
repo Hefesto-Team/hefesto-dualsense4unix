@@ -356,6 +356,17 @@ class DraftConfig(BaseModel):
         A seção ``mouse`` é ``None`` quando não foi tocada nesta sessão
         (``MouseDraft.dirty`` False) — o DraftApplier pula seção None
         (BUG-MOUSE-GUI-SYNC-01 A2: "Aplicar" não desliga emulação viva).
+
+        HARM-05: a seção mouse NÃO leva ``enabled``. O dono do liga/desliga é o
+        MODO (aba Início), e o Aplicar é o rodapé de ajustes — se ele emitisse
+        ``enabled``, um Aplicar feito durante "Jogar pelo Hefesto" (por ter
+        mexido num gatilho) mandaria ``enabled=True`` de uma sessão de desktop
+        anterior, o daemon aplicaria a exclusão mútua e o vpad morreria no meio
+        da partida. Não é hipótese: ``dirty`` só é ligado pelos SLIDERS
+        (``mouse_actions``); o switch confirma pelo IPC e baixa o dirty na hora.
+        Logo ``enabled`` aqui nunca foi edição pendente — era sempre eco de
+        estado velho, e só podia causar dano. O que sobra (velocidades) cai na
+        rota speed-only do applier, que não liga nem desliga nada.
         """
         rgb = self.leds.lightbar_rgb
         return {
@@ -380,7 +391,6 @@ class DraftConfig(BaseModel):
             },
             "mouse": (
                 {
-                    "enabled": self.mouse.enabled,
                     "speed": self.mouse.speed,
                     "scroll_speed": self.mouse.scroll_speed,
                 }

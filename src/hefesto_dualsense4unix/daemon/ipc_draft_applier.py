@@ -143,15 +143,28 @@ class DraftApplier:
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
 
     def _apply_mouse(self, mouse_raw: Any) -> None:
+        """Aplica a seção mouse do draft.
+
+        HARM-05: sem ``enabled`` cai na rota speed-only (``set_mouse_speed``) —
+        a mesma que o handler ``mouse.emulation.set`` já oferece (A4): atualiza
+        as velocidades sem start/stop e sem persistir o flag. É por aqui que o
+        "Aplicar" do rodapé entra, e ele não pode mudar o modo do sistema: o
+        dono do liga/desliga é a aba Início. Exigir ``enabled`` aqui não
+        protegia nada — só fazia a edição de velocidade morrer em silêncio
+        (``_apply_section`` engole a exceção como "seção falhou").
+        """
         if not isinstance(mouse_raw, dict):
             raise ValueError("mouse deve ser objeto")
         enabled = mouse_raw.get("enabled")
-        if not isinstance(enabled, bool):
-            raise ValueError("mouse.enabled deve ser booleano")
+        if enabled is not None and not isinstance(enabled, bool):
+            raise ValueError("mouse.enabled deve ser booleano ou omitido")
         speed = mouse_raw.get("speed")
         scroll_speed = mouse_raw.get("scroll_speed")
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar emulação de mouse")
+        if enabled is None:
+            self.daemon.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
+            return
         self.daemon.set_mouse_emulation(
             enabled=enabled,
             speed=speed,

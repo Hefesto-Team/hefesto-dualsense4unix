@@ -205,3 +205,15 @@ class TestRefreshTimeout:
 
         assert calls == [("daemon.state_full", home_actions._STATE_IPC_TIMEOUT_S)]
         assert home_actions._STATE_IPC_TIMEOUT_S > 0.25
+
+
+def test_glossario_manda_ligar_onde_o_botao_existe() -> None:
+    """A Início não tem botão de LIGAR — o único dela é o de desligar.
+
+    O glossário mandava ligar "aqui nesta aba", enquanto os outros dois textos
+    da MESMA aba (o label de sessão offline e o diálogo de desligar) já mandavam
+    para a aba Sistema, onde o botão realmente mora. Quem seguisse o glossário
+    procuraria na aba errada um botão que não existe.
+    """
+    assert "aba Sistema" in home_actions._GLOSSARY
+    assert "nesta aba" not in home_actions._GLOSSARY

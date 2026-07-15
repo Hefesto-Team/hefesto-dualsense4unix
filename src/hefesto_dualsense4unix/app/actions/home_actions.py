@@ -99,7 +99,7 @@ _MODE_DESCRIPTIONS = {
 _GLOSSARY = (
     "Modo jogo (aba Emulação): pausa só o mouse/teclado, sem soltar o "
     "controle.  ·  "
-    "Desligar Hefesto: para tudo até você ligar de novo aqui nesta aba."
+    "Desligar Hefesto: para tudo até você ligar de novo na aba Sistema."
 )
 
 

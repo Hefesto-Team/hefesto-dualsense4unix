@@ -225,28 +225,32 @@ def profile_switch(name: str) -> bool:
     return ok
 
 
-def trigger_set_checked(
-    side: str, mode: str, params: list[int]
+def _call_checked(
+    method: str,
+    params: dict[str, Any],
+    timeout: float | None = 0.25,
 ) -> tuple[bool, str | None]:
-    """Aplica gatilho devolvendo o MOTIVO quando o daemon RECUSA (HARM-19).
+    """RPC que distingue "o daemon RECUSOU" de "o daemon não respondeu".
 
     Retorna ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
-    respondeu e recusou por parâmetro inválido (``CODE_INVALID_PARAMS`` — ex.:
-    Fim <= Início): ele está vivo, o pedido é que não serve. Falha de
-    transporte (daemon offline/timeout) volta como ``(False, None)``.
+    respondeu e recusou por parâmetro inválido (``CODE_INVALID_PARAMS``): ele
+    está VIVO, o pedido é que não serve — a UI tem de mostrar o motivo dele, não
+    acusar o daemon de estar morto. Falha de transporte (offline, socket ausente,
+    timeout) volta como ``(False, None)``.
 
-    Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)`` e a
-    aba Triggers pintava a recusa de validação como "daemon offline?".
+    Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)``
+    (ver o docstring dele) e a UI pintava recusa de validação como "daemon
+    offline?". ``IpcError`` é capturado ANTES de ``_IPC_TRANSPORT_ERRORS``, que
+    o contém.
     """
-    payload = {"side": side, "mode": mode, "params": params}
     try:
-        _run_call("trigger.set", payload)
+        _run_call(method, params, timeout=timeout)
     except IpcError as exc:
         if exc.code == CODE_INVALID_PARAMS:
             return False, exc.message
         logger.debug(
             "ipc_bridge falha esperada de transporte",
-            method="trigger.set",
+            method=method,
             erro_tipo=type(exc).__name__,
             erro=str(exc),
         )
@@ -254,12 +258,24 @@ def trigger_set_checked(
     except _IPC_TRANSPORT_ERRORS as exc:
         logger.debug(
             "ipc_bridge falha esperada de transporte",
-            method="trigger.set",
+            method=method,
             erro_tipo=type(exc).__name__,
             erro=str(exc),
         )
         return False, None
     return True, None
+
+
+def trigger_set_checked(
+    side: str, mode: str, params: list[int]
+) -> tuple[bool, str | None]:
+    """Aplica gatilho devolvendo o MOTIVO quando o daemon RECUSA (HARM-19).
+
+    Recusa típica: Fim <= Início. Ver ``_call_checked`` para o contrato.
+    """
+    return _call_checked(
+        "trigger.set", {"side": side, "mode": mode, "params": params}
+    )
 
 
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
@@ -307,13 +323,28 @@ def rumble_passthrough(enabled: bool = True) -> bool:
     return ok
 
 
+def rumble_policy_set_checked(
+    policy: str, *, timeout: float | None = 0.25
+) -> tuple[bool, str | None]:
+    """Altera a intensidade devolvendo o MOTIVO quando o daemon RECUSA.
+
+    Mesmo tratamento dos gatilhos (ver ``_call_checked``): a aba Rumble afirmava
+    "O Hefesto não está rodando" também para erro JSON-RPC — daemon VIVO que
+    recusou o pedido. ``timeout`` é do chamador: a folga de leitura de estado
+    mora em ``app.actions.mode_transition``, que importa este módulo (importá-lo
+    aqui seria ciclo).
+    """
+    return _call_checked("rumble.policy_set", {"policy": policy}, timeout=timeout)
+
+
 def rumble_policy_set(policy: str) -> bool:
     """Altera política global de intensidade de rumble (FEAT-RUMBLE-POLICY-01).
 
     ``policy`` deve ser um de "economia", "balanceado", "max", "auto", "custom".
     Retorna True se o daemon confirmou; False se offline ou parâmetro inválido.
+    Descarta o motivo da recusa — use ``rumble_policy_set_checked`` para tê-lo.
     """
-    ok, _ = _safe_call("rumble.policy_set", {"policy": policy})
+    ok, _motivo = rumble_policy_set_checked(policy)
     return ok
 
 
@@ -387,6 +418,7 @@ __all__ = [
     "rumble_passthrough",
     "rumble_policy_custom",
     "rumble_policy_set",
+    "rumble_policy_set_checked",
     "rumble_set",
     "rumble_stop",
     "run_in_thread",

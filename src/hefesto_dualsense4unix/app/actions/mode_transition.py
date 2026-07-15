@@ -55,6 +55,13 @@ def plan_mode_transition(
     do nativo vem ANTES de ligar o gamepad: na ordem inversa o vpad nasceria
     com o físico ainda grabado pelo jogo.
 
+    O daemon TAMBÉM garante essa saída (`set_gamepad_emulation` — HARM-01), por
+    causa das superfícies que não podem importar este módulo (a CLI arrastaria
+    GTK junto). O passo daqui não virou redundância descartável de propósito:
+    sem ele o plano deixaria de dizer o que o modo gamepad é, e a GUI passaria a
+    depender em silêncio da versão do daemon do outro lado do socket (um .deb
+    antigo traria o defeito de volta). Custa uma chamada idempotente.
+
     Levanta ``ValueError`` em modo desconhecido — um modo novo tem que passar
     por aqui em vez de virar um terceiro dono.
     """
