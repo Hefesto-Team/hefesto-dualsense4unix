@@ -1,4 +1,4 @@
-"""Subsystem Gamepad — gamepad virtual (DualSense/Xbox) via uinput.
+"""Subsystem Gamepad — gamepad virtual (DualSense/Xbox).
 
 FEAT-DSX-GAMEPAD-FLAVOR-01. Integra o bridge — antes um processo CLI avulso
 (`emulate xbox360`) que abria um SEGUNDO leitor do mesmo controle e causava
@@ -9,8 +9,10 @@ Política:
   - **Mutuamente exclusivo com a emulação de mouse**: ligar o gamepad desliga o
     mouse (jogar = o controle vai pro jogo, não pro cursor do desktop). O poll
     loop, quando o gamepad está ativo, NÃO despacha mouse/teclado.
-  - **Máscara (flavor)**: `dualsense` (prompts PlayStation, default) ou `xbox`
-    (fallback p/ jogos XInput-only). Ver `integrations/uinput_gamepad`.
+  - **Máscara (flavor)**: `dualsense` (prompts PlayStation) ou `xbox` (fallback
+    p/ jogos XInput-only). Quem escolhe o BACKEND por trás da máscara (uhid ou
+    uinput) é `integrations/virtual_pad.make_virtual_pad`, com o fallback e o
+    motivo logado num lugar só — este subsystem não sabe em qual está.
   - **Grab do controle físico** (best-effort): enquanto o gamepad virtual está
     ativo, o daemon faz EVIOCGRAB no evdev do controle real para o jogo enxergar
     SÓ o device virtual (senão veria o controle cru + o virtual = input dobrado,
@@ -34,6 +36,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+    from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
 logger = get_logger(__name__)
 
@@ -200,6 +203,25 @@ def apply_game_rumble(
             set_target(previous)
 
 
+def resolve_hidraw_path(daemon: DaemonProtocol, uniq: str | None) -> str | None:
+    """Nó hidraw do controle `uniq` (None = primário), ou None se indisponível.
+
+    SPRINT-UHID-VPAD-01: é o que o backend uhid precisa para copiar o blueprint
+    do controle físico. `hidraw_path` só existe no backend pydualsense (o
+    FakeController e o IController não têm) — sem ele, o vpad simplesmente nasce
+    no uinput, que é o comportamento de hoje.
+    """
+    getter = getattr(daemon.controller, "hidraw_path", None)
+    if not callable(getter):
+        return None
+    try:
+        path = getter(uniq)
+    except Exception as exc:
+        logger.debug("hidraw_path_falhou", err=str(exc), uniq=uniq)
+        return None
+    return path if isinstance(path, str) else None
+
+
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO.
 
@@ -227,10 +249,8 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
     Desliga a emulação de mouse (mútua exclusão) e faz grab do controle real.
     Retorna True se ativo ao final; False se falhou ao iniciar.
     """
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import (
-        UinputGamepad,
-        normalize_flavor,
-    )
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
+    from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
@@ -251,8 +271,20 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
 
     # FEAT-VPAD-FF-PASSTHROUGH-01: o rumble que o JOGO pedir no vpad volta
     # para os motores do controle físico primário.
-    device = UinputGamepad.for_flavor(key, rumble_sink=make_primary_rumble_sink(daemon))
-    if not device.start():
+    # SPRINT-UHID-VPAD-01: a factory prefere o backend uhid (DualSense com hidraw
+    # de verdade = vibração in-game na máscara DualSense) e cai no uinput sozinha
+    # quando o uhid não sobe; o P1 é sempre o jogador 1.
+    # Limitação conhecida: o backend é escolhido AQUI, uma vez. Ligar o gamepad
+    # com o controle desconectado não tem hidraw de onde copiar o blueprint, e o
+    # P1 fica no uinput até alguém religar a emulação (o `set_gamepad_emulation`
+    # recria o vpad). Plugar o controle depois não promove o vpad sozinho.
+    device: VirtualPad | None = make_virtual_pad(
+        key,
+        rumble_sink=make_primary_rumble_sink(daemon),
+        player=1,
+        hidraw_path=resolve_hidraw_path(daemon, None),
+    )
+    if device is None:
         logger.warning("gamepad_emulation_start_failed", flavor=key)
         return False
 

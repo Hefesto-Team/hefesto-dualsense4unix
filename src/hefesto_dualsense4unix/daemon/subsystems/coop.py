@@ -46,11 +46,11 @@ from typing import TYPE_CHECKING
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
 
     from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+    from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
 logger = get_logger(__name__)
 
@@ -96,7 +96,7 @@ class _SecondaryPlayer:
     evdev_path: str
     reader: EvdevReader
     player_index: int
-    vpad: UinputGamepad | None = None
+    vpad: VirtualPad | None = None
 
 
 class CoopManager:
@@ -105,7 +105,7 @@ class CoopManager:
     Aditivo e idempotente: `sync()` reconcilia o conjunto de secundários com os
     controles fisicamente plugados (hotplug-safe); `forward_all()` repassa cada
     um ao seu gamepad virtual; `disable()`/`stop_all()` desmontam tudo (solta o
-    grab, fecha os uinput e restaura os player-LEDs do perfil). Nunca propaga
+    grab, fecha os vpads e restaura os player-LEDs do perfil). Nunca propaga
     exceção para não derrubar o poll loop.
     """
 
@@ -141,6 +141,28 @@ class CoopManager:
     def player_count(self) -> int:
         """Total de jogadores ativos (P1 + secundários, incluindo pendentes)."""
         return 1 + len(self._players)
+
+    def player_indexes(self) -> dict[str, int]:
+        """MAC -> número do jogador que o JOGO vê (P1 no primário, P2+ nos demais).
+
+        LEIGO-01b: a GUI rotulava os cards por POSIÇÃO na lista (`idx+1`), o que
+        mente em dois casos reais — com o co-op desligado todos os controles
+        alimentam o MESMO vpad (são um jogador só) e, com ele ligado,
+        `_next_player_index` REUSA índices de quem saiu, então a ordem da lista
+        deixa de casar com o número do jogador.
+
+        Só entra quem o jogo enxerga: um secundário ainda aguardando o grab não
+        tem vpad — reservou o índice, mas não é jogador nenhum até ser promovido.
+        Identidade sem MAC ("path:") fica de fora (não há como casar o card).
+        """
+        out: dict[str, int] = {}
+        primary = self._primary_identity()
+        if primary is not None and not primary.startswith("path:"):
+            out[primary] = 1
+        for mac, player in self._players.items():
+            if player.vpad is not None and not mac.startswith("path:"):
+                out[mac] = player.player_index
+        return out
 
     def _primary_evdev_path(self) -> str | None:
         ev = getattr(getattr(self._daemon, "controller", None), "_evdev", None)
@@ -370,15 +392,34 @@ class CoopManager:
 
         return _sink
 
+    def _hidraw_for(self, identity: str) -> str | None:
+        """Nó hidraw do controle deste jogador (SPRINT-UHID-VPAD-01), ou None.
+
+        Identidade sem MAC ("path:...") não tem como casar um handle do backend —
+        mesma limitação do sink de rumble; o vpad daquele jogador nasce no uinput.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import resolve_hidraw_path
+
+        if identity.startswith("path:"):
+            return None
+        return resolve_hidraw_path(self._daemon, identity)
+
     def _promote_player(self, player: _SecondaryPlayer) -> None:
         """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
-        from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+        from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
-        vpad = UinputGamepad.for_flavor(
+        # SPRINT-UHID-VPAD-01: `player_index` e o hidraw DESTE controle não são
+        # detalhe — no backend uhid o índice vira o MAC do vpad, e MAC repetido
+        # faz o probe do 2º jogador em diante morrer com -EEXIST (co-op de 4
+        # reduzido a 1). O hidraw é de onde o vpad copia o blueprint; sem ele
+        # (identidade sem MAC, backend fake) a factory cai no uinput sozinha.
+        vpad = make_virtual_pad(
             self._flavor(),
             rumble_sink=self._make_player_rumble_sink(player.identity),
+            player=player.player_index,
+            hidraw_path=self._hidraw_for(player.identity),
         )
-        if not vpad.start():
+        if vpad is None:
             logger.warning(
                 "coop_player_vpad_failed",
                 identity=player.identity,
@@ -556,6 +597,46 @@ class CoopManager:
     stop_all = disable
 
 
+def resolve_player_numbers(
+    daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
+) -> list[int | None]:
+    """Número do jogador que o JOGO vê, para cada controle de `controllers`.
+
+    LEIGO-01b: a fonte do número é o daemon, nunca a posição na lista. `None`
+    significa "este controle não é um jogador agora" e a UI simplesmente não
+    mostra número — melhor calar que mentir. Acontece em três casos:
+
+    - sem gamepad virtual (modo desktop/nativo): não existe jogador — o controle
+      mexe no PC ou fala direto com o jogo;
+    - controle desconectado;
+    - co-op ligado mas o jogador ainda não foi promovido (aguardando o grab), ou
+      controle sem MAC para casar.
+
+    Com o gamepad ligado e o co-op DESLIGADO todos os controles conectados são o
+    jogador 1 — é literalmente o que o jogo vê (um vpad só, alimentado pelo
+    primário). Função de leitura pura: não toca no estado do co-op.
+    """
+    if getattr(daemon, "_gamepad_device", None) is None:
+        return [None] * len(controllers)
+    connected = [bool(c.get("connected")) for c in controllers]
+    coop_on = bool(getattr(getattr(daemon, "config", None), "coop_enabled", False))
+    manager = getattr(daemon, "_coop_manager", None)
+    if not coop_on or manager is None:
+        return [1 if ok else None for ok in connected]
+    index_by_mac = manager.player_indexes()
+    out: list[int | None] = []
+    for ctrl, ok in zip(controllers, connected, strict=True):
+        uniq = ctrl.get("uniq")
+        number = index_by_mac.get(uniq) if ok and isinstance(uniq, str) else None
+        # Blindagem de serialização (mesma do `_as_str_or_none` do state_full):
+        # com o daemon dublado por MagicMock em teste, `player_indexes()` devolve
+        # um mock — que estoura no json.dumps do servidor IPC. Só int real passa.
+        out.append(
+            number if isinstance(number, int) and not isinstance(number, bool) else None
+        )
+    return out
+
+
 def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
     """Retorna o `CoopManager` do daemon, criando-o sob demanda (lazy)."""
     manager = getattr(daemon, "_coop_manager", None)
@@ -565,4 +646,9 @@ def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
     return manager
 
 
-__all__ = ["CoopManager", "get_coop_manager", "player_led_pattern"]
+__all__ = [
+    "CoopManager",
+    "get_coop_manager",
+    "player_led_pattern",
+    "resolve_player_numbers",
+]

@@ -50,6 +50,7 @@ import os
 import re
 import struct
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -123,6 +124,112 @@ _VIBRATION_FLAGS = 0x03
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
+#: Report de input do DualSense em USB (sticks/gatilhos/botões → jogo).
+_INPUT_REPORT_USB = 0x01
+
+#: Tamanho do payload do report 0x01 — 64 bytes COM o report id, que é o
+#: `DS_INPUT_REPORT_USB_SIZE` do hid-playstation.c. O driver compara o tamanho
+#: (`size == DS_INPUT_REPORT_USB_SIZE`) e **descarta calado** o report que não
+#: bate: com 1 byte a menos o vpad nascia mudo — o kernel aceitava o INPUT2 sem
+#: erro e o evdev nunca saía do repouso.
+#:
+#: A conta pelo descriptor engana: os campos de bits (4 do d-pad + 15 + 13) somam
+#: 32 bits = 4 bytes, e arredondá-los para baixo um a um dá 3. Confira sempre
+#: contra um report cru do controle: `os.read(open('/dev/hidraw4'), 128)` -> 64 B.
+_INPUT_PAYLOAD_SIZE = 63
+
+#: Offsets dentro do payload do report 0x01 (depois do report id), medidos num
+#: report cru do controle físico: `01 7f 7f 7d 7c 00 00 97 08 00 ...`.
+_SEQ_OFFSET = 6
+_BUTTONS0_OFFSET = 7
+_BUTTONS1_OFFSET = 8
+_BUTTONS2_OFFSET = 9
+
+#: Sticks em repouso. Um payload zerado NÃO é neutro: 0 é o canto do stick, e um
+#: report emitido por `forward_buttons` antes do primeiro `forward_analog`
+#: mandaria o personagem correndo para a diagonal superior-esquerda.
+_STICK_CENTER = 0x80
+_AXES_NEUTRAL = (_STICK_CENTER, _STICK_CENTER, _STICK_CENTER, _STICK_CENTER, 0, 0)
+
+#: Nibble ALTO do buttons0 (o baixo é o d-pad).
+_BUTTONS0_BITS: dict[str, int] = {
+    "square": 0x10,
+    "cross": 0x20,
+    "circle": 0x40,
+    "triangle": 0x80,
+}
+_BUTTONS1_BITS: dict[str, int] = {
+    "l1": 0x01,
+    "r1": 0x02,
+    "l2_btn": 0x04,
+    "r2_btn": 0x08,
+    "create": 0x10,
+    "options": 0x20,
+    "l3": 0x40,
+    "r3": 0x80,
+}
+_BUTTONS2_BITS: dict[str, int] = {
+    "ps": 0x01,
+    "mic_btn": 0x04,
+}
+
+#: Todos viram o MESMO bit de click do touchpad (0x02): a regionalização
+#: (esquerda/meio/direita) é invenção nossa para o modo mouse, o DualSense real
+#: só reporta "o touchpad foi clicado".
+_TOUCHPAD_BUTTONS = frozenset({
+    "touchpad", "touchpad_press",
+    "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
+})
+_TOUCHPAD_BIT = 0x02
+
+#: Pontos de toque do touchpad (4 B cada) dentro do payload do report 0x01.
+#:
+#: O byte de contato é INVERTIDO: o `dualsense_parse_report` lê
+#: ``active = !(point->contact & 0x80)`` — ou seja, payload zerado significa
+#: **dedo encostado em (0,0)**, não "sem toque". Sem carimbar o 0x80 o vpad nasce
+#: com dois toques fantasma presos no canto do touchpad.
+#:
+#: 32/36, não 31/35: o `reserved2` do `struct dualsense_input_report` fica no 31 e
+#: empurra os pontos. Medido num report cru do controle com o dedo FORA do
+#: touchpad — o 0x80 aparece exatamente em ``payload[32]`` e ``payload[36]``
+#: (o 31 vale 0x15, lixo do sensor_timestamp).
+_TOUCH_POINT_OFFSETS = (32, 36)
+_TOUCH_INACTIVE = 0x80
+
+#: Byte de `status` do report 0x01 (bateria + carga). O `dualsense_parse_report` lê
+#: ``battery_data = status & 0x0F`` e ``charging_status = (status & 0xF0) >> 4``;
+#: no caso 0x0 a capacidade vira ``min(battery_data * 10 + 5, 100)``.
+#:
+#: Zerado, o vpad anuncia **5% descarregando para sempre** — o jogo mostra alerta
+#: de bateria fraca num controle carregado. Medido: o físico manda 0x29 (= 95%).
+#: Espelhamos a bateria do controle físico daquele jogador; sem dado, "cheio e
+#: carregando" (0x1F) é a mentira menos daninha — não dispara alerta.
+_STATUS_OFFSET = 52
+_STATUS_DESCONHECIDO = 0x1F
+_CHARGING_SHIFT = 4
+_BATTERY_MAX_NIBBLE = 0x0A
+
+#: D-pad é HAT, não bitmask: 0=N, 1=NE, 2=E, 3=SE, 4=S, 5=SW, 6=W, 7=NW.
+_DPAD_NEUTRAL = 0x08
+_HAT_BY_VECTOR: dict[tuple[int, int], int] = {
+    (0, -1): 0, (1, -1): 1, (1, 0): 2, (1, 1): 3,
+    (0, 1): 4, (-1, 1): 5, (-1, 0): 6, (-1, -1): 7,
+    (0, 0): _DPAD_NEUTRAL,
+}
+
+#: Intervalo entre bombeadas do `wait_for_bind`. O probe do hid_playstation faz
+#: várias idas e voltas (GET_REPORT 0x09/0x20/0x05) antes do UHID_START.
+_BIND_POLL_INTERVAL_S = 0.01
+
+#: Graça após o UHID_START para o probe do hid_playstation se decidir.
+#:
+#: O `wait_for_bind` roda DENTRO do poll loop (o co-op promove jogador em
+#: `sync`/`forward_all`), então cada milissegundo aqui é input congelado do P1.
+#: Medido ao vivo: o probe que recusa manda CLOSE+STOP em ~2 ms → 50 ms são 25x de
+#: folga, pagos uma vez por promoção de jogador. (Começou em 150 ms, que davam 75x
+#: sem necessidade: o poll loop travava 3x mais para nada.)
+_BIND_SETTLE_S = 0.05
+
 
 def player_mac(player: int) -> str:
     """MAC próprio do vpad do jogador (1-based).
@@ -134,9 +241,32 @@ def player_mac(player: int) -> str:
     return f"02:fe:00:00:00:{player:02x}"
 
 
+def _bitmask(pressed: frozenset[str], bits: dict[str, int]) -> int:
+    """OR dos bits dos botões pressionados que existem no mapa dado."""
+    mask = 0
+    for name, bit in bits.items():
+        if name in pressed:
+            mask |= bit
+    return mask
+
+
 def _mac_to_report_bytes(mac: str) -> bytes:
     """MAC textual → os 6 bytes do report 0x09, em little-endian."""
     return bytes(reversed(bytes.fromhex(mac.replace(":", ""))))
+
+
+def _percent_para_nibble(percent: int) -> int:
+    """Bateria em % → o nibble do byte de status, no nível REPRESENTÁVEL mais perto.
+
+    O kernel faz o caminho inverso: ``capacity = min(nibble * 10 + 5, 100)``. Só
+    existem 11 níveis (5, 15, …, 95 e 100), então arredondar para o mais próximo
+    erra no máximo 5% — truncar erraria 9% e "100%" nunca chegaria a aparecer
+    (viraria 95%, com o controle na base carregado).
+    """
+    if percent >= 100:
+        return _BATTERY_MAX_NIBBLE
+    nibble = int((percent - 5 + 5) // 10)  # == round-half-up de (percent-5)/10
+    return min(max(nibble, 0), _BATTERY_MAX_NIBBLE - 1)
 
 
 def _hidiocgfeature(fd: int, report_id: int, size: int) -> bytes:
@@ -242,6 +372,9 @@ class UhidDualSense:
     blueprint: dict[str, Any] | None = None
     #: Recebe (weak, strong) 0-255 pedidos pelo JOGO — igual ao vpad uinput.
     rumble_sink: Callable[[int, int], None] | None = None
+    #: Relógio/sleep injetáveis (testes herméticos do `wait_for_bind`).
+    time_fn: Callable[[], float] = time.monotonic
+    sleep_fn: Callable[[float], None] = time.sleep
 
     _fd: int | None = None
     _features: dict[int, bytes] = field(default_factory=dict)
@@ -250,10 +383,61 @@ class UhidDualSense:
     _rumble_count: int = 0
     _started: bool = False
     _lock: threading.RLock = field(default_factory=threading.RLock)
+    #: Estado do controle físico que o encoder transforma em report 0x01.
+    _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
+    _buttons: frozenset[str] = field(default_factory=frozenset)
+    _status_byte: int = _STATUS_DESCONHECIDO
+    #: Último payload EMITIDO, com o seq zerado — é a chave do delta. Comparar o
+    #: payload (e não o (axes, buttons) cru) mata os falsos "mudou": trocar
+    #: touchpad_left_press por touchpad_middle_press dá o MESMO bit no report.
+    _last_body: bytes | None = None
+    #: Contador de sequência do report (0-255, wrap). O hid_playstation o usa
+    #: para detectar perda de pacote, então só anda quando um report SAI.
+    _seq: int = 0
+
+    @classmethod
+    def for_flavor(
+        cls,
+        flavor: str | None = None,
+        *,
+        rumble_sink: Callable[[int, int], None] | None = None,
+        player: int = 1,
+        blueprint: dict[str, Any] | None = None,
+    ) -> UhidDualSense | None:
+        """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
+
+        No uhid a máscara é sempre DualSense — é a graça do backend: o device tem
+        hidraw de verdade, então o SDL usa o driver PS5 e a vibração funciona
+        (com uinput+máscara DualSense ela é impossível). Forjar um Xbox 360 aqui
+        seria pior que o uinput: o `hid_playstation` só faz bind em 054c:0ce6, e
+        sem driver o device HID não vira gamepad nenhum. Por isso `xbox` devolve
+        None e o chamador segue no `UinputGamepad`, que faz Xbox muito bem.
+
+        `flavor=None` significa "sem preferência" e resolve para dualsense — de
+        propósito NÃO passa pelo `normalize_flavor`, cujo default é xbox: quem
+        chega aqui já escolheu o backend uhid, e herdar aquele default desligaria
+        o uhid em silêncio justo no caso comum.
+        """
+        from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
+
+        if flavor is not None and normalize_flavor(flavor) != "dualsense":
+            return None
+        return cls(player=player, blueprint=blueprint, rumble_sink=rumble_sink)
 
     @property
     def name(self) -> str:
         return f"Hefesto Virtual DualSense P{self.player}"
+
+    @property
+    def flavor(self) -> str:
+        """Sempre "dualsense" — o único flavor que este backend faz (`for_flavor`).
+
+        Não é enfeite: o daemon compara `vpad.flavor` com a máscara desejada para
+        decidir se recria o vpad (`coop.sync`, `start_gamepad_emulation`). Sem esta
+        propriedade o getattr daria None, o mismatch seria eterno e cada tick de
+        sync derrubaria e recriaria os vpads do co-op.
+        """
+        return "dualsense"
 
     @property
     def mac(self) -> str:
@@ -364,6 +548,10 @@ class UhidDualSense:
             self._output_count = 0
             self._rumble_count = 0
             self._started = False
+            self._axes = _AXES_NEUTRAL
+            self._buttons = frozenset()
+            self._last_body = None
+            self._seq = 0
 
     def _silence_rumble(self) -> None:
         """Zera os motores do controle físico se o jogo os deixou ligados.
@@ -388,6 +576,153 @@ class UhidDualSense:
         return event
 
     # --- input (nós → kernel) --------------------------------------------
+
+    def forward_analog(
+        self,
+        *,
+        lx: int,
+        ly: int,
+        rx: int,
+        ry: int,
+        l2: int,
+        r2: int,
+    ) -> None:
+        """Guarda os analógicos do controle físico e emite o report (se mudou).
+
+        Mesma assinatura do `UinputGamepad.forward_analog` — o call site troca de
+        backend sem cirurgia. A diferença é o destino: lá vira evento evdev, aqui
+        vira o report HID 0x01 inteiro (sticks, gatilhos, botões e d-pad juntos).
+        """
+        if self._fd is None:
+            return
+        self._axes = (lx & 0xFF, ly & 0xFF, rx & 0xFF, ry & 0xFF, l2 & 0xFF, r2 & 0xFF)
+        self._emit_if_changed()
+
+    def forward_buttons(self, pressed: frozenset[str]) -> None:
+        """Idem para os botões (vocabulário do `EvdevReader.BUTTON_MAP` + d-pad).
+
+        Nomes desconhecidos são ignorados: o report do DualSense não tem onde
+        pôr o que não existe no controle real.
+        """
+        if self._fd is None:
+            return
+        self._buttons = frozenset(pressed)
+        self._emit_if_changed()
+
+    def _emit_if_changed(self) -> bool:
+        """Emite o report 0x01 só quando o payload mudou.
+
+        Espelha o delta do `UinputGamepad`: o forward roda a cada tick por vpad, e
+        sem isto seriam ~250 writes/s por controle no /dev/uhid com tudo parado.
+        """
+        body = self._encode_body()
+        chave = bytes(body)
+        if chave == self._last_body:
+            return False
+        self._last_body = chave
+        # O seq só anda quando um report SAI: ele existe para o hid_playstation
+        # detectar perda de pacote, e furar a contagem em report suprimido pelo
+        # delta seria reportar perda que não houve.
+        self._seq = (self._seq + 1) & 0xFF
+        body[_SEQ_OFFSET] = self._seq
+        return self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body))
+
+    def _encode_body(self) -> bytearray:
+        """Payload do report 0x01 a partir do estado, com o seq ZERADO.
+
+        Zerado de propósito: é assim que o payload serve de chave do delta (ver
+        `_emit_if_changed`, que carimba o seq depois da comparação).
+        """
+        body = bytearray(_INPUT_PAYLOAD_SIZE)
+        for offset in _TOUCH_POINT_OFFSETS:
+            body[offset] = _TOUCH_INACTIVE
+        body[_STATUS_OFFSET] = self._status_byte
+        body[0:6] = bytes(self._axes)
+        pressed = self._buttons
+        body[_BUTTONS0_OFFSET] = self._dpad_hat(pressed) | _bitmask(pressed, _BUTTONS0_BITS)
+        body[_BUTTONS1_OFFSET] = _bitmask(pressed, _BUTTONS1_BITS)
+        buttons2 = _bitmask(pressed, _BUTTONS2_BITS)
+        if pressed & _TOUCHPAD_BUTTONS:
+            buttons2 |= _TOUCHPAD_BIT
+        body[_BUTTONS2_OFFSET] = buttons2
+        return body
+
+    def forward_battery(self, percent: int | None, *, charging: bool = False) -> None:
+        """Espelha a bateria do controle físico no vpad (opcional).
+
+        Sem isto o vpad anuncia 5% descarregando para sempre e o jogo mostra
+        alerta de bateria fraca num controle cheio. `percent=None` volta para
+        "cheio e carregando", que não dispara alerta nenhum.
+        """
+        if percent is None:
+            novo = _STATUS_DESCONHECIDO
+        else:
+            estado = 0x1 if charging else 0x0
+            novo = (estado << _CHARGING_SHIFT) | _percent_para_nibble(percent)
+        if novo == self._status_byte:
+            return
+        self._status_byte = novo
+        self._emit_if_changed()
+
+    @staticmethod
+    def _dpad_hat(pressed: frozenset[str]) -> int:
+        """D-pad → HAT (0-7, 8=neutro).
+
+        Em opostos simultâneos (cima+baixo), esquerda e cima vencem — MESMA
+        precedência do `UinputGamepad._dpad_vector`. O controle físico não
+        produz esse estado (o hat de origem já é exclusivo), mas remap/testes
+        produzem, e os dois backends têm de reagir igual à mesma tecla: divergir
+        aqui daria um bug que só aparece depois de trocar de backend.
+        """
+        x = -1 if "dpad_left" in pressed else (1 if "dpad_right" in pressed else 0)
+        y = -1 if "dpad_up" in pressed else (1 if "dpad_down" in pressed else 0)
+        return _HAT_BY_VECTOR[(x, y)]
+
+    def wait_for_bind(self, timeout_s: float = 2.0) -> bool:
+        """Bloqueia até o `hid_playstation` REGISTRAR o controle, ou estourar.
+
+        `start()` só diz que o CREATE2 foi aceito: o UHID_START chega depois, e
+        vem do probe do driver — que pode recusar (MAC duplicado, kernel sem
+        hid_playstation). Sem esta espera o fallback para o uinput seria
+        desonesto: "deu certo" com o jogo sem controle nenhum.
+
+        O UHID_START **não basta**: ele chega no começo do probe, não no fim.
+        Medido ao vivo com dois vpads de MAC igual — o segundo recebeu
+        ``START, OPEN, GET_REPORT, GET_REPORT, CLOSE, STOP`` em 2 ms enquanto o
+        kernel logava ``Failed to create dualsense / probe failed -17``; parar no
+        START devolvia True para um device natimorto. O probe que dá certo NUNCA
+        manda STOP, então a confirmação é: viu START, e o STOP não veio no
+        intervalo de graça.
+        """
+        if self._fd is None:
+            return False
+        deadline = self.time_fn() + timeout_s
+        while not self._started:
+            # Bombear aqui é obrigatório: quem consome os eventos é o pump_ff, e
+            # no start() o poll loop do daemon ainda não está de pé.
+            self.pump_ff()
+            if self._started:
+                break
+            if self.time_fn() >= deadline:
+                logger.warning("uhid_bind_timeout", player=self.player,
+                               timeout_s=timeout_s)
+                return False
+            self.sleep_fn(_BIND_POLL_INTERVAL_S)
+
+        # START visto: agora confirmar que o probe não desistiu logo em seguida.
+        settle_deadline = self.time_fn() + _BIND_SETTLE_S
+        while self.time_fn() < settle_deadline:
+            self.pump_ff()
+            if not self._started:  # veio UHID_STOP: o probe recusou o device
+                logger.warning("uhid_probe_recusou", player=self.player, mac=self.mac)
+                return False
+            self.sleep_fn(_BIND_POLL_INTERVAL_S)
+        return True
+
+    @property
+    def is_bound(self) -> bool:
+        """True quando o driver fez bind no device (UHID_START recebido)."""
+        return self._started
 
     def send_report(self, report: bytes) -> bool:
         """Entrega um input report HID ao kernel (UHID_INPUT2)."""

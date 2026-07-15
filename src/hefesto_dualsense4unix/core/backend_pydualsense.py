@@ -53,6 +53,32 @@ logger = get_logger(__name__)
 #: comum). Usado para sinalizar `is_edge` ao abrir o handle.
 DUALSENSE_EDGE_PID = 0x0DF2
 
+
+def _is_virtual_hidraw(path: bytes) -> bool:
+    """True se o hidraw é de um device VIRTUAL (nosso vpad uhid), não físico.
+
+    Espelha o `_is_virtual_evdev` do `evdev_reader` — e pela mesma razão CRÍTICA:
+    o vpad do SPRINT-UHID-VPAD-01 nasce com VID/PID/bus idênticos ao controle
+    real (é o que faz o `hid_playstation` fazer bind nele) e, ao contrário do
+    vpad de uinput, tem **hidraw de verdade**. Sem este filtro o daemon adota o
+    PRÓPRIO vpad como se fosse mais um controle físico — feedback loop (o daemon
+    lendo a própria saída) e "3 controles" com dois na mesa.
+
+    Medido ao vivo antes do filtro: com o vpad no ar, o enumerate devolvia
+    ``('02:fe:00:00:00:02', b'/dev/hidraw7', False)`` — o MAC que nós forjamos.
+
+    O caminho hidraw nunca precisou disso porque uinput não cria hidraw. Devices
+    uhid vivem sob `/sys/devices/virtual/misc/uhid/`; os reais, sob USB/Bluetooth.
+    """
+    node = os.path.basename(path.decode("utf-8", "replace"))
+    if not node.startswith("hidraw"):  # path de libusb ("0001:0002:00")
+        return False
+    try:
+        destino = os.path.realpath(f"/sys/class/hidraw/{node}/device")
+    except OSError:  # pragma: no cover - sysfs some sob replug
+        return False
+    return "/devices/virtual/" in destino
+
 #: Timeout para `pydualsense.init()` em segundos
 #: (BUG-BACKEND-PYDUALSENSE-DSTATE-01). A chamada faz HID I/O sync via libhidapi
 #: e, em certos estados degenerados do USB (driver kernel hid_playstation
@@ -300,6 +326,32 @@ class PyDualSenseController(IController):
 
     # --- identidade ------------------------------------------------------
 
+    def hidraw_path(self, uniq: str | None = None) -> str | None:
+        """Nó hidraw do controle `uniq` (None = primário), ou None.
+
+        SPRINT-UHID-VPAD-01: é de onde o vpad uhid copia o report descriptor e os
+        feature reports do probe (o "blueprint"). Vem do `_pinned_path` do handle
+        já aberto — não re-enumera.
+
+        Devolve None para path de libusb ("0001:0002:00"), que não é nó do sysfs
+        e não serve de blueprint; o chamador cai no uinput.
+        """
+        with self._io_lock:
+            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
+            handle = self._handles.get(key) if key is not None else None
+        path = getattr(handle, "_pinned_path", None)
+        if not isinstance(path, bytes):
+            return None
+        texto = path.decode("utf-8", "replace")
+        return texto if texto.startswith("/dev/hidraw") else None
+
+    def _key_for_uniq(self, uniq: str) -> str | None:
+        """Key do handle cujo MAC normalizado é `uniq` (None se não achar)."""
+        for key in self._handles:
+            if self._key_to_uniq(key) == uniq:
+                return key
+        return None
+
     @property
     def primary_uniq(self) -> str | None:
         """MAC normalizado do controle PRIMÁRIO (None se sem serial/offline).
@@ -362,6 +414,8 @@ class PyDualSenseController(IController):
         seen: set[str] = set()
         for info in hidapi.enumerate(vendor_id=DUALSENSE_VENDOR):
             if info.product_id not in DUALSENSE_PIDS:
+                continue
+            if _is_virtual_hidraw(info.path):
                 continue
             # hidapi: serial_number vem de wchar_t* → str (ou None); path vem de
             # char* → bytes. NÃO chamar .decode() no serial (já é str).

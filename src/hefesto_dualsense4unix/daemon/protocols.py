@@ -57,7 +57,8 @@ class DaemonProtocol(Protocol):
     _autoswitch: Any
     _mouse_device: Any
     _keyboard_device: Any
-    # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (UinputGamepad) ou None.
+    # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (`integrations.virtual_pad.
+    # VirtualPad` — uhid ou uinput, ver `make_virtual_pad`) ou None.
     _gamepad_device: Any
     # FEAT-DSX-COOP-LOCAL-01: CoopManager (jogadores secundários) ou None.
     _coop_manager: Any

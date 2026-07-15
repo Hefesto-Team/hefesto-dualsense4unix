@@ -714,7 +714,16 @@ class HefestoApp(
         notebook = self.builder.get_object("main_notebook")
         if notebook is None:
             return
-        skip = {"Daemon"}  # já tem scroll próprio (log) — não envolver
+        # EST-10: identificar a aba pelo WIDGET, não pelo texto visível. O `skip`
+        # era `{"Daemon"}` comparado com `label.get_text()` — renomear a aba (o
+        # SPRINT-LEIGO-01 troca "Daemon" por "Sistema") faria o skip parar de
+        # casar em silêncio, envolvendo o log num segundo ScrolledWindow e
+        # quebrando o auto-scroll. O id do Glade não muda quando o rótulo muda.
+        skip_pages = {
+            page
+            for page in (self.builder.get_object("daemon_box"),)  # log com scroll próprio
+            if page is not None
+        }
         pages: list[tuple[Any, Any]] = []
         while notebook.get_n_pages() > 0:
             page = notebook.get_nth_page(0)
@@ -722,8 +731,7 @@ class HefestoApp(
             notebook.remove_page(0)
             pages.append((page, label))
         for page, label in pages:
-            label_text = label.get_text() if isinstance(label, Gtk.Label) else ""
-            if label_text not in skip and not isinstance(page, Gtk.ScrolledWindow):
+            if page not in skip_pages and not isinstance(page, Gtk.ScrolledWindow):
                 scroller = Gtk.ScrolledWindow()
                 scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
                 scroller.set_propagate_natural_width(True)
