@@ -96,6 +96,7 @@ package() {
     # o controle a cada ACTION=="add" e AMPLIFICAVAM o storm -71.
     install -Dm644 -t "$pkgdir/usr/lib/udev/rules.d/" \
         assets/70-ps5-controller.rules \
+        assets/71-uhid.rules \
         assets/71-uinput.rules \
         assets/72-ps5-controller-autosuspend.rules \
         assets/76-dualsense-touchpad-libinput-ignore.rules \

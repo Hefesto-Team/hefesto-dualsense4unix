@@ -1,0 +1,444 @@
+"""Contrato do vpad uhid (SPRINT-UHID-VPAD-01) — sem tocar /dev/uhid.
+
+O que estes testes travam são as três coisas que custaram um PoC para descobrir e
+que quebram em SILÊNCIO se alguém mexer (o probe do `hid_playstation` simplesmente
+não registra o controle, e a vibração volta a só funcionar na máscara Xbox):
+
+1. **MAC próprio por jogador.** Copiar o feature 0x09 do controle físico faz o
+   probe morrer com ``Duplicate device found for MAC address … / probe failed -17``.
+   Os bytes 1..6 do report 0x09 são o MAC em **little-endian**.
+2. **Responder UHID_GET_REPORT** com o feature capturado (senão não registra).
+3. **Responder UHID_SET_REPORT** (senão o probe trava).
+
+Mais o passthrough de rumble: o report de output 0x02 que o JOGO escreve no hidraw
+do vpad tem os motores em ``body[2]`` (fraco) e ``body[3]`` (forte) — é daí que sai
+o par (weak, strong) entregue ao `rumble_sink`, que vibra o controle físico.
+
+O device é substituído por um fd falso (`os.write`/`os.read` monkeypatchados), então
+o teste roda em CI sem /dev/uhid e sem hardware.
+"""
+from __future__ import annotations
+
+import struct
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.integrations import uhid_gamepad
+from hefesto_dualsense4unix.integrations.uhid_gamepad import (
+    HID_MAX_DESCRIPTOR_SIZE,
+    UHID_GET_REPORT,
+    UHID_GET_REPORT_REPLY,
+    UHID_OUTPUT,
+    UHID_SET_REPORT,
+    UHID_SET_REPORT_REPLY,
+    UHID_START,
+    UhidDualSense,
+    player_mac,
+)
+
+#: Feature 0x09 como o controle físico devolve: id + MAC(LE) + resto.
+_FEATURE_09_FISICO = bytes([0x09]) + bytes.fromhex("f011c39cfaa0") + bytes(13)
+
+
+def _blueprint() -> dict[str, Any]:
+    return {
+        "descriptor": bytes([0x05, 0x01, 0x09, 0x05, 0xA1, 0x01]),
+        "features": {
+            0x05: bytes([0x05]) + bytes(40),
+            0x09: _FEATURE_09_FISICO,
+            0x20: bytes([0x20]) + bytes(63),
+        },
+    }
+
+
+class _FakeFd:
+    """Captura os writes e serve reads enfileirados no lugar do /dev/uhid."""
+
+    def __init__(self) -> None:
+        self.writes: list[bytes] = []
+        self.reads: list[bytes] = []
+
+
+@pytest.fixture()
+def fake_uhid(monkeypatch: pytest.MonkeyPatch) -> _FakeFd:
+    fake = _FakeFd()
+
+    monkeypatch.setattr(uhid_gamepad.os, "open", lambda *_a, **_k: 4242)
+    monkeypatch.setattr(uhid_gamepad.os, "close", lambda _fd: None)
+    monkeypatch.setattr(uhid_gamepad.os, "set_blocking", lambda _fd, _b: None)
+
+    def _write(_fd: int, data: bytes) -> int:
+        fake.writes.append(data)
+        return len(data)
+
+    def _read(_fd: int, _size: int) -> bytes:
+        if not fake.reads:
+            raise BlockingIOError
+        return fake.reads.pop(0)
+
+    monkeypatch.setattr(uhid_gamepad.os, "write", _write)
+    monkeypatch.setattr(uhid_gamepad.os, "read", _read)
+    return fake
+
+
+def _output_event(report: bytes) -> bytes:
+    """struct uhid_output_req { __u8 data[4096]; __u16 size; __u8 rtype; }"""
+    event = struct.pack("<I", UHID_OUTPUT)
+    event += report.ljust(HID_MAX_DESCRIPTOR_SIZE, b"\0")[:HID_MAX_DESCRIPTOR_SIZE]
+    event += struct.pack("<HB", len(report), 1)
+    return event
+
+
+#: valid_flag0 que o HARDWARE REAL manda no rumble. Os DualSense da máquina de
+#: teste têm firmware 0x0630 (>= 0x0215), então o hid_playstation usa
+#: `use_vibration_v2`: manda COMPATIBLE_VIBRATION2 no valid_flag2 e o valid_flag0
+#: chega com HAPTICS_SELECT (0x02) SOZINHO — nunca com 0x01.
+#:
+#: O default deste helper já foi 0x01 e por isso a suíte ficou VERDE com um
+#: `& 0x01` na produção que descartava todo o rumble no hardware alvo. Medido ao
+#: vivo (report cru do kernel): rumble -> valid_flag0=0x02 flag2=0x04;
+#: lightbar -> valid_flag0=0x00 flag1=0x04 com motores zerados.
+_HAPTICS_SELECT = 0x02
+
+
+def _rumble_report(weak: int, strong: int, *, valid_flag0: int = _HAPTICS_SELECT) -> bytes:
+    body = bytearray(47)
+    body[0] = valid_flag0
+    body[2] = weak
+    body[3] = strong
+    return bytes([0x02]) + bytes(body)
+
+
+class TestMacProprio:
+    def test_cada_jogador_tem_mac_distinto_e_localmente_administrado(self) -> None:
+        macs = [player_mac(n) for n in (1, 2, 3, 4)]
+        assert len(set(macs)) == 4
+        # Bit 1 do primeiro octeto = faixa localmente administrada (não colide
+        # com hardware real, que é o que faz o probe recusar por duplicidade).
+        for mac in macs:
+            assert int(mac.split(":")[0], 16) & 0x02
+
+    def test_create_reescreve_o_mac_do_fisico(self, fake_uhid: _FakeFd) -> None:
+        """Sem isto: 'Duplicate device found for MAC address' → probe falha -17."""
+        pad = UhidDualSense(player=2, blueprint=_blueprint())
+
+        assert pad.start() is True
+
+        esperado = bytes(reversed(bytes.fromhex(player_mac(2).replace(":", ""))))
+        assert pad._features[0x09][1:7] == esperado
+        # E o report do físico não vazou.
+        assert pad._features[0x09][1:7] != _FEATURE_09_FISICO[1:7]
+
+    def test_nome_e_mac_identificam_o_jogador(self) -> None:
+        pad = UhidDualSense(player=3, blueprint=_blueprint())
+        assert pad.name == "Hefesto Virtual DualSense P3"
+        assert pad.mac == "02:fe:00:00:00:03"
+
+
+class TestProbe:
+    def test_get_report_responde_com_o_feature_capturado(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """Sem a resposta o hid_playstation não registra o DualSense."""
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        fake_uhid.writes.clear()
+        # id=7, rnum=0x20 (firmware)
+        fake_uhid.reads.append(struct.pack("<IIBB", UHID_GET_REPORT, 7, 0x20, 3))
+
+        pad.pump_ff()
+
+        (reply,) = fake_uhid.writes
+        tipo, request_id, err = struct.unpack("<IIH", reply[:10])
+        assert (tipo, request_id, err) == (UHID_GET_REPORT_REPLY, 7, 0)
+        size = struct.unpack("<H", reply[10:12])[0]
+        assert reply[12:12 + size] == _blueprint()["features"][0x20]
+
+    def test_set_report_e_respondido(self, fake_uhid: _FakeFd) -> None:
+        """Sem reply o probe trava."""
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        fake_uhid.writes.clear()
+        fake_uhid.reads.append(struct.pack("<IIBB", UHID_SET_REPORT, 9, 0x02, 2))
+
+        pad.pump_ff()
+
+        (reply,) = fake_uhid.writes
+        assert struct.unpack("<IIH", reply[:10]) == (UHID_SET_REPORT_REPLY, 9, 0)
+
+    def test_uhid_start_marca_o_bind(self, fake_uhid: _FakeFd) -> None:
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        fake_uhid.reads.append(struct.pack("<I", UHID_START) + bytes(8))
+
+        pad.pump_ff()
+
+        assert pad._started is True
+
+    def test_sem_blueprint_nao_cria(self) -> None:
+        assert UhidDualSense(player=1, blueprint=None).start() is False
+
+
+class TestRumblePassthrough:
+    def test_rumble_do_jogo_chega_ao_controle_fisico(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """O que era impossível no uinput: vibrar com a máscara DualSense."""
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        for weak, strong in ((200, 100), (0, 255), (0, 0)):
+            fake_uhid.reads.append(_output_event(_rumble_report(weak, strong)))
+
+        pad.pump_ff()
+
+        assert recebido == [(200, 100), (0, 255), (0, 0)]
+        assert pad.ff_last_sent == (0, 0)
+        assert pad.ff_play_count == 3
+
+    def test_valor_repetido_nao_reenvia(self, fake_uhid: _FakeFd) -> None:
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        for _ in range(3):
+            fake_uhid.reads.append(_output_event(_rumble_report(120, 120)))
+
+        pad.pump_ff()
+
+        assert recebido == [(120, 120)]
+
+    def test_report_de_outro_tipo_e_ignorado(self, fake_uhid: _FakeFd) -> None:
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        fake_uhid.reads.append(_output_event(bytes([0x31]) + bytes(10)))
+
+        pad.pump_ff()
+
+        assert recebido == []
+
+    @pytest.mark.parametrize(
+        ("valid_flag0", "firmware"),
+        [
+            (0x02, "firmware novo (>=0x0215, use_vibration_v2): HAPTICS_SELECT só"),
+            (0x01, "firmware antigo: COMPATIBLE_VIBRATION"),
+            (0x03, "SDL/HIDAPI: os dois bits"),
+        ],
+    )
+    def test_rumble_chega_em_qualquer_firmware(
+        self, fake_uhid: _FakeFd, valid_flag0: int, firmware: str
+    ) -> None:
+        """O `& 0x01` matava o rumble nos DualSense de firmware novo — que são os
+        desta máquina (0x0630). A checagem tem de ser MÁSCARA."""
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        fake_uhid.reads.append(
+            _output_event(_rumble_report(64, 128, valid_flag0=valid_flag0))
+        )
+
+        pad.pump_ff()
+
+        assert recebido == [(64, 128)], f"rumble descartado — {firmware}"
+
+    def test_report_sem_a_flag_de_vibracao_nao_zera_o_rumble(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """O jogo usa o MESMO report 0x02 para lightbar/gatilhos, com motores em 0.
+
+        Sem checar DS_OUTPUT_VALID_FLAG0_COMPATIBLE_VIBRATION, acender um LED no
+        meio de uma explosão MATAVA a vibração.
+        """
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        fake_uhid.reads.append(_output_event(_rumble_report(220, 180)))
+        # Agora um report SÓ de lightbar: motores zerados, sem a flag de vibração.
+        fake_uhid.reads.append(_output_event(_rumble_report(0, 0, valid_flag0=0x04)))
+
+        pad.pump_ff()
+
+        assert recebido == [(220, 180)]
+        assert pad.ff_last_sent == (220, 180)
+
+    def test_contador_de_rumble_nao_conta_report_de_led(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """ff_play_count responde "o jogo pediu vibração?" — LED não é vibração."""
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        fake_uhid.reads.append(_output_event(_rumble_report(0, 0, valid_flag0=0x04)))
+        fake_uhid.reads.append(_output_event(_rumble_report(10, 20)))
+
+        pad.pump_ff()
+
+        assert pad.ff_play_count == 1
+        assert pad.output_count == 2
+
+    def test_sink_que_explode_nao_derruba_o_pump(self, fake_uhid: _FakeFd) -> None:
+        def _boom(_w: int, _s: int) -> None:
+            raise RuntimeError("controle sumiu no meio")
+
+        pad = UhidDualSense(player=1, blueprint=_blueprint(), rumble_sink=_boom)
+        pad.start()
+        fake_uhid.reads.append(_output_event(_rumble_report(10, 20)))
+
+        pad.pump_ff()  # não propaga
+
+        assert pad.ff_last_sent == (10, 20)
+
+
+class TestCicloDeVida:
+    def test_stop_zera_o_rumble_antes_de_sumir(self, fake_uhid: _FakeFd) -> None:
+        """O vpad some; ninguém mais mandaria o stop e o controle ficaria vibrando."""
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        fake_uhid.reads.append(_output_event(_rumble_report(180, 90)))
+        pad.pump_ff()
+
+        pad.stop()
+
+        assert recebido[-1] == (0, 0)
+        assert pad.is_active() is False
+
+    def test_stop_sem_rumble_pendente_nao_chama_o_sink(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+
+        pad.stop()
+
+        assert recebido == []
+
+    def test_start_duas_vezes_e_idempotente(self, fake_uhid: _FakeFd) -> None:
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        assert pad.start() is True
+        writes = len(fake_uhid.writes)
+
+        assert pad.start() is True
+        assert len(fake_uhid.writes) == writes
+
+    def test_pump_sem_device_e_no_op(self) -> None:
+        UhidDualSense(player=1, blueprint=_blueprint()).pump_ff()
+
+    def test_stop_sem_start_e_no_op(self) -> None:
+        UhidDualSense(player=1, blueprint=_blueprint()).stop()
+
+    def test_uhid_stop_do_kernel_zera_o_rumble(self, fake_uhid: _FakeFd) -> None:
+        """rmmod/unbind: ninguém mais mandaria o stop e o controle ficaria vibrando."""
+        recebido: list[tuple[int, int]] = []
+        pad = UhidDualSense(player=1, blueprint=_blueprint(),
+                            rumble_sink=lambda w, s: recebido.append((w, s)))
+        pad.start()
+        fake_uhid.reads.append(_output_event(_rumble_report(255, 255)))
+        pad.pump_ff()
+        fake_uhid.reads.append(struct.pack("<I", uhid_gamepad.UHID_STOP) + bytes(8))
+
+        pad.pump_ff()
+
+        assert recebido[-1] == (0, 0)
+
+    def test_stop_concorrente_no_meio_do_pump_nao_explode(
+        self, fake_uhid: _FakeFd, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O poll loop bombeia enquanto a GUI troca de modo (stop em outra thread).
+
+        Antes o pump relia self._fd a cada volta: com o fd já None, o os.read(None)
+        levantava TypeError — que, ao contrário do OSError, ninguém pegava.
+        """
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        chamadas = {"n": 0}
+        real_read = uhid_gamepad.os.read
+
+        def _read_que_para_o_pad(fd: int, size: int) -> bytes:
+            chamadas["n"] += 1
+            if chamadas["n"] == 1:
+                pad.stop()  # outra thread desliga o modo bem aqui
+                return _output_event(_rumble_report(1, 2))
+            return real_read(fd, size)
+
+        monkeypatch.setattr(uhid_gamepad.os, "read", _read_que_para_o_pad)
+
+        pad.pump_ff()  # não pode levantar
+
+        assert pad.is_active() is False
+
+    def test_blueprint_com_feature_09_curto_nao_abre_o_device(
+        self, fake_uhid: _FakeFd
+    ) -> None:
+        """Slice assign em bytearray curto REDIMENSIONA o report em vez de escrever.
+
+        E o fd de /dev/uhid não pode vazar quando a validação reprova.
+        """
+        bp = _blueprint()
+        bp["features"][0x09] = bytes([0x09, 0x11])  # 2 bytes: não cabe o MAC
+
+        assert UhidDualSense(player=1, blueprint=bp).start() is False
+        assert fake_uhid.writes == []  # nem chegou a abrir/escrever
+
+    def test_blueprint_sem_feature_09_nao_vaza_fd(self, fake_uhid: _FakeFd) -> None:
+        bp = _blueprint()
+        del bp["features"][0x09]
+
+        assert UhidDualSense(player=1, blueprint=bp).start() is False
+        assert fake_uhid.writes == []
+
+
+class TestSendReport:
+    def test_manda_o_report_cru_sem_padding_de_4kb(self, fake_uhid: _FakeFd) -> None:
+        """4 KB por evento x 250 Hz x 4 controles = ~4 MB/s de cópia à toa.
+
+        O uhid_char_write copia min(count, sizeof(event)) e zera o resto —
+        verificado no kernel real: o report cru é aceito.
+        """
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+        fake_uhid.writes.clear()
+        report = bytes([0x01]) + bytes(63)
+
+        assert pad.send_report(report) is True
+
+        (event,) = fake_uhid.writes
+        tipo, size = struct.unpack("<IH", event[:6])
+        assert tipo == uhid_gamepad.UHID_INPUT2
+        assert size == len(report)
+        assert event[6:] == report
+        assert len(event) < 200  # não 4 KB
+
+    def test_sem_device_devolve_false(self) -> None:
+        assert UhidDualSense(player=1, blueprint=_blueprint()).send_report(b"\x01") is False
+
+    def test_report_maior_que_o_maximo_e_recusado(self, fake_uhid: _FakeFd) -> None:
+        pad = UhidDualSense(player=1, blueprint=_blueprint())
+        pad.start()
+
+        assert pad.send_report(bytes(HID_MAX_DESCRIPTOR_SIZE + 1)) is False
+
+
+class TestBlueprint:
+    def test_hidraw_que_nao_e_dualsense_e_recusado(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Apontar para o hidraw de um teclado dava um "blueprint" que só
+        quebrava lá na frente, com erro que não diz nada da causa."""
+        monkeypatch.setattr(uhid_gamepad, "_is_dualsense", lambda _node: False)
+
+        assert uhid_gamepad.capture_dualsense_blueprint("/dev/hidraw9") is None
+
+    @pytest.mark.parametrize(
+        "path", ["/dev/../etc/passwd", "/dev/hidrawX", "/dev/input/js0", ""]
+    )
+    def test_path_fora_do_padrao_e_recusado(self, path: str) -> None:
+        assert uhid_gamepad.capture_dualsense_blueprint(path) is None

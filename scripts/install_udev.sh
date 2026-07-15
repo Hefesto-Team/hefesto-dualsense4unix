@@ -26,6 +26,7 @@ done
 # Falha cedo se algum arquivo esperado estiver ausente.
 for f in \
     "$ASSETS/70-ps5-controller.rules" \
+    "$ASSETS/71-uhid.rules" \
     "$ASSETS/71-uinput.rules" \
     "$ASSETS/72-ps5-controller-autosuspend.rules" \
     "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" \
@@ -39,6 +40,13 @@ done
 echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
 sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules
+# 71-uhid: /dev/uhid acessível ao usuário — o gamepad virtual vira um DualSense de
+# verdade (hidraw + lightbar + LEDs + sensores), o que faz a vibração funcionar
+# também com a máscara DualSense. SPRINT-UHID-VPAD-01.
+# O número TEM de ser < 73: quem transforma a TAG uaccess em ACL é a
+# /usr/lib/udev/rules.d/73-seat-late.rules. Numerada 79, a regra rodava DEPOIS
+# dela e o /dev/uhid ficava root-only (MODE aplicado, ACL não) — medido ao vivo.
+sudo install -Dm644 "$ASSETS/71-uhid.rules"                       /etc/udev/rules.d/71-uhid.rules
 sudo install -Dm644 "$ASSETS/72-ps5-controller-autosuspend.rules" /etc/udev/rules.d/72-ps5-controller-autosuspend.rules
 # 76: touchpad do DualSense ignorado como ponteiro libinput (para de brigar com a
 # emulação analógica do hefesto). FEAT-DUALSENSE-TOUCHPAD-IGNORE-01. Não-destrutivo
@@ -71,8 +79,11 @@ fi
 echo "[2/3] copiando modules-load uinput..."
 sudo install -Dm644 "$ASSETS/hefesto-dualsense4unix.conf" /etc/modules-load.d/hefesto-dualsense4unix.conf
 
-echo "[3/3] carregando uinput + reload udev + trigger..."
+echo "[3/3] carregando uinput + uhid + reload udev + trigger..."
 sudo modprobe uinput 2>/dev/null || echo "  aviso: modprobe uinput falhou (kernel sem suporte CONFIG_INPUT_UINPUT?)"
+# uhid: gamepad virtual como DualSense de verdade (SPRINT-UHID-VPAD-01). Sem ele
+# o daemon cai no uinput (sem vibração na máscara DualSense), então é aviso, não erro.
+sudo modprobe uhid 2>/dev/null || echo "  aviso: modprobe uhid falhou (kernel sem CONFIG_UHID?)"
 sudo udevadm control --reload-rules
 # Trigger seletivo para PS5 (vendor 054c). O trigger global no fim cobre
 # devices que estavam quietos antes do reload (ex: BT pareado e idle).
@@ -84,6 +95,10 @@ sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
 sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
 # leds: aplica a 77 (chmod/uaccess nos nós de LED) sem exigir replug do controle.
 sudo udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true
+# misc: /dev/uinput e /dev/uhid vivem aqui. Sem este trigger as regras 71-* só
+# valiam no próximo boot (o nó já existia quando as regras chegaram) — e sem elas
+# o daemon não cria vpad nenhum: co-op de 4 jogadores morto até reiniciar.
+sudo udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true
 
 cat <<'EOF'
 

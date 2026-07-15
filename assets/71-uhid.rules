@@ -1,0 +1,17 @@
+# SPRINT-UHID-VPAD-01 (2026-07-15) — acesso a /dev/uhid via systemd-logind.
+#
+# O gamepad virtual do modo "Jogar pelo Hefesto" deixa de ser um device de
+# uinput (só evdev, SEM hidraw) e passa a ser criado por /dev/uhid: o driver
+# hid_playstation do kernel faz bind nele e registra um DualSense COMPLETO —
+# com hidraw, lightbar, LEDs de jogador, sensores de movimento e touchpad.
+#
+# Por que isso importa: sem hidraw, o SDL não vibra o controle com a máscara
+# DualSense (ele usa o driver PS5 e procura o hidraw que o uinput não tem) —
+# era por isso que só a máscara Xbox 360 vibrava, e por isso gatilhos
+# adaptativos/lightbar/giroscópio/touchpad eram impossíveis no vpad.
+#
+# /dev/uhid nasce root-only (crw------- root root); esta regra dá acesso ao
+# usuário da sessão local pelo mesmo mecanismo da 71-uinput.rules (uaccess).
+# Reverter: remover este arquivo e recarregar udev (o daemon volta ao uinput
+# sozinho, avisando que a vibração da máscara DualSense não vai funcionar).
+KERNEL=="uhid", SUBSYSTEM=="misc", MODE="0660", TAG+="uaccess"

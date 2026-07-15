@@ -44,15 +44,28 @@ def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:
 
 @app.command("on")
 def cmd_on(
-    flavor: str = typer.Option(
-        "dualsense",
+    flavor: str | None = typer.Option(
+        None,
         "--flavor",
         "-f",
-        help="Máscara do controle: dualsense (prompts PS) | xbox (XInput-only).",
+        help=(
+            "Como o jogo vê o controle: xbox (a vibração funciona em mais jogos) "
+            "| dualsense (botões de PlayStation). Sem esta opção, mantém a que já "
+            "está configurada."
+        ),
     ),
 ) -> None:
-    """Liga o gamepad virtual no daemon com a máscara escolhida."""
-    result = _call_sync("gamepad.emulation.set", {"enabled": True, "flavor": flavor})
+    """Liga o gamepad virtual no daemon.
+
+    HARM-08: o default era `dualsense` HARDCODED aqui, enquanto o daemon e a GUI
+    já usavam `xbox` — então um `gamepad on` sem argumento TROCAVA a máscara de
+    quem tinha Xbox configurado e matava o rumble in-game, em silêncio. Sem
+    `--flavor` não mandamos o campo: o daemon mantém a máscara atual.
+    """
+    params: dict[str, Any] = {"enabled": True}
+    if flavor is not None:
+        params["flavor"] = flavor
+    result = _call_sync("gamepad.emulation.set", params)
     ok = isinstance(result, dict) and bool(result.get("enabled"))
     active = result.get("flavor") if isinstance(result, dict) else None
     if ok:

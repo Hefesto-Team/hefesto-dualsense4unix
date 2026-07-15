@@ -42,6 +42,13 @@ const ICON_APP: &str = "hefesto-dualsense4unix";
 const REFRESH_MS: u64 = 700;
 /// Binário da GUI a abrir no "Abrir painel".
 const GUI_BIN: &str = "hefesto-dualsense4unix-gui";
+/// Como o jogo vê o controle quando o daemon ainda não respondeu qual é a máscara.
+///
+/// HARM-08: tem de ser o MESMO default do daemon (`uinput_gamepad.DEFAULT_FLAVOR`)
+/// e da GUI. Enquanto aqui era "dualsense" e lá "xbox", o mesmo gesto ligava
+/// máscaras diferentes conforme a porta de entrada — e a DualSense não vibra na
+/// maioria dos jogos (o vpad de uinput não tem hidraw; ver SPRINT-UHID-VPAD-01).
+const DEFAULT_FLAVOR: &str = "xbox";
 
 pub struct HefestoApplet {
     core: Core,
@@ -323,13 +330,16 @@ impl cosmic::Application for HefestoApplet {
                         }
                     }
                 }
-                // Máscara atual (ou "dualsense") ao religar o gamepad —
-                // paridade com home_actions.py (flavor_atual_ou_dualsense).
+                // Máscara atual ao religar o gamepad. HARM-08: o fallback era
+                // "dualsense" enquanto daemon e GUI já usavam "xbox" — quando o
+                // estado ainda não chegou, o applet religava o gamepad na máscara
+                // que NÃO vibra na maioria dos jogos. O default tem de ser um só
+                // em todas as portas de entrada (DEFAULT_FLAVOR do daemon).
                 let flavor = self
                     .state
                     .as_ref()
                     .and_then(|s| s.gamepad_emulation.flavor.clone())
-                    .unwrap_or_else(|| "dualsense".to_string());
+                    .unwrap_or_else(|| DEFAULT_FLAVOR.to_string());
                 Task::perform(apply_system_mode(mode, flavor), |res| {
                     cosmic::action::app(Message::SystemModeApplied(res))
                 })
@@ -692,13 +702,19 @@ impl HefestoApplet {
             };
             col = col.push(menu_button(text::body(coop_label)).on_press(Message::ToggleCoop));
 
-            // Máscara do gamepad virtual: DualSense ou Xbox.
+            // Como o jogo vê o controle. HARM-08/HARM-09: o fallback era
+            // "dualsense" (divergindo do daemon) e os rótulos diziam "Máscara X",
+            // sem contar a consequência que a GUI conta — a ordem e os textos
+            // agora espelham a aba Início.
             let flavor = state
                 .gamepad_emulation
                 .flavor
                 .as_deref()
-                .unwrap_or("dualsense");
-            let flavors = [("dualsense", "Máscara DualSense"), ("xbox", "Máscara Xbox")];
+                .unwrap_or(DEFAULT_FLAVOR);
+            let flavors = [
+                ("xbox", "Xbox 360 (vibra)"),
+                ("dualsense", "DualSense (botões PS, sem vibrar)"),
+            ];
             for (id, label) in flavors {
                 let is_active = flavor == id;
                 let mark = if is_active { "> " } else { "  " };

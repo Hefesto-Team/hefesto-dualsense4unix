@@ -316,6 +316,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules \
                    /etc/udev/rules.d/77-dualsense-leds.rules \
                    /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules \
+                   /etc/udev/rules.d/71-uhid.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-dualsense-storm.conf
         # SPRINT-GAME-RUMBLE-01: a cura de raiz do storm (modprobe.d) é DEFAULT
@@ -334,7 +335,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     fi
 else
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/71-uinput.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
+    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/7{6,7,8}-dualsense*.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
 fi
 
 # Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é

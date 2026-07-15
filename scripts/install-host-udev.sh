@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-host-udev.sh — Instala regras udev + modules-load uinput do
+# install-host-udev.sh — Instala regras udev + modules-load (uinput, uhid) do
 # Hefesto - Dualsense4Unix no sistema hospedeiro.
 #
 # Pode ser executado de 3 formas (todas idempotentes):
@@ -87,6 +87,10 @@ MODLOAD_DEST="/etc/modules-load.d"
 # real: porta USB ruim (full-speed/-71 na 3-1). Ver docs/process/discoveries.
 RULES=(
     "70-ps5-controller.rules"
+    # 71-uhid: /dev/uhid — o gamepad virtual vira um DualSense de verdade, o que faz
+    # a vibração funcionar também com a máscara DualSense. SPRINT-UHID-VPAD-01.
+    # O número TEM de ser < 73 (a 73-seat-late.rules é quem vira a TAG uaccess em ACL).
+    "71-uhid.rules"
     "71-uinput.rules"
     "72-ps5-controller-autosuspend.rules"
     "76-dualsense-touchpad-libinput-ignore.rules"
@@ -117,7 +121,7 @@ for regra in "${RULES[@]}"; do
     echo "  - ${regra}"
 done
 if [[ -n "${MODLOAD_SRC}" ]]; then
-    echo "  - hefesto-dualsense4unix.conf (modules-load: uinput)"
+    echo "  - hefesto-dualsense4unix.conf (modules-load: uinput, uhid)"
 fi
 if [[ -n "${SNDQUIRK_SRC}" ]]; then
     echo "  - hefesto-dualsense-storm.conf (cura do travamento do USB; preserva mic+fone)"
@@ -136,6 +140,10 @@ _build_install_cmd() {
         cmd+="'${MODLOAD_DEST}/hefesto-dualsense4unix.conf'; "
         # Carrega uinput agora para não esperar reboot.
         cmd+="modprobe uinput 2>/dev/null || true; "
+        # uhid: o gamepad virtual vira um DualSense de verdade (vibração também na
+        # máscara DualSense). Sem o módulo o daemon cai no uinput sozinho — por isso
+        # é best-effort, como o uinput. SPRINT-UHID-VPAD-01.
+        cmd+="modprobe uhid 2>/dev/null || true; "
     fi
     # Cura de raiz do storm (paridade com o step 3c do install.sh nativo).
     # Também escreve o quirk_flags a quente — vale no próximo replug do controle,
@@ -152,6 +160,9 @@ _build_install_cmd() {
     cmd+="udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
+    # misc: /dev/uinput e /dev/uhid. Sem este trigger as regras 71-* só valeriam no
+    # próximo boot (o nó já existia quando elas chegaram) — e sem elas não há vpad.
+    cmd+="udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true; "
     cmd+="udevadm trigger 2>/dev/null || true; "
     cmd+="echo 'Regras instaladas com sucesso.'"
     printf '%s' "${cmd}"

@@ -11,7 +11,7 @@
 # Flags:
 #   --format=FMT          escolhe o formato (native|flatpak|appimage|deb).
 #   --no-udev             pula udev rules (sudo) — útil em CI sem hardware.
-#                         POR DEFAULT, as 3 regras canônicas + modules-load uinput
+#                         POR DEFAULT, as regras canônicas + modules-load (uinput, uhid)
 #                         são aplicadas automaticamente (re-cópia é idempotente).
 #                         Se Flatpak Hefesto está instalado, também propaga.
 #   --with-usb-quirk      OPT-IN (default OFF): aplica o quirk de boot
@@ -515,7 +515,7 @@ else
         esac
         canonical_rules+=("${rules_base}")
     done
-    printf '      copiando %d regras canônicas + modules-load uinput (sudo)\n' \
+    printf '      copiando %d regras canônicas + modules-load (uinput, uhid) (sudo)\n' \
         "${#canonical_rules[@]}"
     for rules_base in "${canonical_rules[@]}"; do
         case "${rules_base}" in
