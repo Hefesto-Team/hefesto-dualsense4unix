@@ -93,17 +93,21 @@ class RumbleDraft(BaseModel):
 class MouseDraft(BaseModel):
     """Draft da emulacao de mouse.
 
-    ``dirty``: True quando a usuária TOCOU a seção nesta sessão da GUI
-    (toggle ou sliders). ``to_ipc_dict`` só emite a seção mouse quando dirty —
-    BUG-MOUSE-GUI-SYNC-01 (A2): o "Aplicar" com seção intocada NÃO pode
-    desligar (nem persistir off) uma emulação ligada por CLI/applet.
-    Sincronizações programáticas (bootstrap, refresh da aba) NÃO marcam dirty.
+    ``dirty``: True enquanto houver edição de mouse POR APLICAR (a usuária
+    mexeu no toggle ou nos sliders nesta sessão). ``to_ipc_dict`` só emite a
+    seção mouse quando dirty — BUG-MOUSE-GUI-SYNC-01 (A2): o "Aplicar" com
+    seção intocada NÃO pode desligar (nem persistir off) uma emulação ligada
+    por CLI/applet. Sincronizações programáticas (bootstrap, refresh da aba)
+    NÃO marcam dirty, e o rodapé o baixa depois de aplicar com sucesso
+    (HARM-05: sem isso ele nunca baixava e todo "Aplicar" seguinte religava o
+    mouse, matando o vpad no meio do jogo).
 
-    ``in_profile``: True quando o perfil de origem JÁ possuía uma seção
-    ``mouse`` (BUG-MOUSE-SAVE-DROPS-SECTION-01). Separa "a seção existe no
-    perfil" de "a usuária tocou a seção agora" (``dirty``): sem essa distinção,
-    salvar um perfil point-and-click sem mexer na aba Mouse descartava a seção
-    e matava a feature. ``to_profile`` persiste a seção quando ``dirty`` OU
+    ``in_profile``: True quando a seção ``mouse`` FAZ PARTE da configuração —
+    o perfil de origem já a tinha, ou a usuária a editou e aplicou. Separa
+    "a seção existe" de "há edição pendente" (``dirty``)
+    (BUG-MOUSE-SAVE-DROPS-SECTION-01): sem essa distinção, salvar um perfil
+    point-and-click sem mexer na aba Mouse descartava a seção e matava a
+    feature. ``to_profile`` persiste a seção quando ``dirty`` OU
     ``in_profile``; o overlay do bootstrap e o refresh da aba preservam este
     flag (só atualizam enabled/speed/scroll para exibir o estado vivo).
     """

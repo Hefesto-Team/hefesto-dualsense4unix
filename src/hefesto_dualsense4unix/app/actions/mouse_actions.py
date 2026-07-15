@@ -12,6 +12,11 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_DESKTOP,
+    STATE_IPC_TIMEOUT_S,
+    mode_of_state,
+)
 from hefesto_dualsense4unix.integrations.uinput_mouse import (
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
@@ -21,6 +26,14 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 UINPUT_DEV = "/dev/uinput"
+
+#: HARM-05: a razão de o switch estar bloqueado, em texto simples. Fala da
+#: CONSEQUÊNCIA (o que ela perde), não da regra — e diz onde é o botão certo.
+MODE_GATE_HINT = (
+    "Só dá para ligar o mouse em \"Controlar o PC\" (aba Início): jogando, o "
+    "controle é do jogo — ligar o mouse aqui derrubaria o controle virtual e "
+    "os jogadores do co-op no meio da partida."
+)
 
 MAPPING_LEGEND = (
     # ADR-011: glyphs Geometric Shape via NCR (&#...;) — o sanitizer de
@@ -97,6 +110,29 @@ class MouseActionsMixin(WidgetAccessMixin):
         self._refresh_mouse_from_draft()
         self._refresh_mouse_from_daemon_async()
 
+    def _sync_mouse_mode_gate(self, mode: str | None) -> None:
+        """HARM-05: o switch da aba Mouse só existe dentro de "Controlar o PC".
+
+        O dono da emulação de mouse/teclado é o MODO, não esta aba — aqui só se
+        ajusta o que o modo desktop liga. Ligar o switch durante "Jogar pelo
+        Hefesto" derrubava o vpad e os jogadores do co-op SEM AVISO (a exclusão
+        mútua do daemon é silenciosa): a exclusão continua, mas agora é visível
+        ANTES do clique, com a razão ao lado.
+
+        Modo desconhecido (daemon offline) também bloqueia, mas sem texto: não
+        dá para saber o que explicar, e oferecer às cegas é o que mentia.
+        """
+        blocked = mode != MODE_DESKTOP
+        toggle = self._get("mouse_emulation_toggle")
+        if toggle is not None:
+            toggle.set_sensitive(not blocked)
+        hint = self._get("mouse_mode_hint_label")
+        if hint is None:
+            return
+        texto = MODE_GATE_HINT if blocked and mode is not None else ""
+        hint.set_text(texto)
+        hint.set_visible(bool(texto))
+
     def _refresh_mouse_from_daemon_async(self) -> None:
         """Sincroniza a aba Mouse com o bloco ``mouse_emulation`` vivo do daemon.
 
@@ -107,6 +143,12 @@ class MouseActionsMixin(WidgetAccessMixin):
         NÃO marca ``dirty`` — sincronização programática não é toque da usuária.
         """
         def _on_state(state: Any) -> bool:
+            # HARM-05: o gate do modo vem ANTES de qualquer return — os ramos
+            # abaixo pulam a atualização do draft (edição pendente, seção do
+            # perfil), não a exclusão mútua, que vale sempre.
+            self._sync_mouse_mode_gate(
+                mode_of_state(state if isinstance(state, dict) else None)
+            )
             me = state.get("mouse_emulation") if isinstance(state, dict) else None
             if not isinstance(me, dict):
                 return False
@@ -141,11 +183,21 @@ class MouseActionsMixin(WidgetAccessMixin):
             return False
 
         def _on_err(_exc: Exception) -> bool:
-            # Daemon offline: mantém o draft atual (defaults seguros).
+            # Daemon offline: mantém o draft atual (defaults seguros). O switch
+            # fecha (HARM-05) — sem estado não dá para saber se ligar o mouse
+            # derrubaria um jogo em andamento.
+            self._sync_mouse_mode_gate(None)
             return False
 
         ipc_bridge.call_async(
-            "daemon.state_full", {}, on_success=_on_state, on_failure=_on_err
+            "daemon.state_full",
+            {},
+            on_success=_on_state,
+            on_failure=_on_err,
+            # HARM-15: o state_full não cabe nos 0.25s default sob carga
+            # (hotplug, co-op subindo) — sem folga o `_on_err` fechava o switch
+            # com o daemon VIVO e em modo desktop.
+            timeout_s=STATE_IPC_TIMEOUT_S,
         )
 
     # --- handlers de UI ---

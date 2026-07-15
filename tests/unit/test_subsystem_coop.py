@@ -600,3 +600,139 @@ def test_sysfs_indisponivel_nao_derruba_o_coop(
     assert mgr.player_count() == 2
     player = mgr._players[MAC_P2]
     assert player.vpad is not None and player.vpad.started is True
+
+
+# ---------------------------------------------------------------------------
+# LEIGO-01b — o número do jogador tem de ser o que o JOGO vê
+# ---------------------------------------------------------------------------
+
+
+class TestPlayerIndexes:
+    """`player_indexes` é a fonte do número no card (nunca a posição na lista)."""
+
+    def test_primario_e_p1_e_secundarios_seguem_o_indice_do_jogador(
+        self, patched: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _set_evdevs(
+            monkeypatch,
+            {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7",
+             MAC_P3: "/dev/input/event9"},
+        )
+        mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1))
+        mgr.sync()
+
+        assert mgr.player_indexes() == {MAC_P1: 1, MAC_P2: 2, MAC_P3: 3}
+
+    def test_indice_reusado_diverge_da_ordem_da_lista(
+        self, patched: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O caso que o `idx+1` da GUI mentia: P2 sai, entra outro e reusa o 2.
+
+        Depois do rodízio, o controle que está em SEGUNDO na lista (MAC_P3) é o
+        jogador 3, e o TERCEIRO (MAC_P4) é o jogador 2 — rotular por posição
+        trocaria os dois de personagem.
+        """
+        _set_evdevs(
+            monkeypatch,
+            {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7",
+             MAC_P3: "/dev/input/event9"},
+        )
+        mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1))
+        mgr.sync()
+        assert mgr.player_indexes()[MAC_P2] == 2
+
+        # P2 despluga; P4 entra e reusa o índice 2 que ficou livre.
+        _set_evdevs(
+            monkeypatch,
+            {MAC_P1: "/dev/input/event5", MAC_P3: "/dev/input/event9",
+             MAC_P4: "/dev/input/event11"},
+        )
+        mgr.sync()
+
+        assert mgr.player_indexes() == {MAC_P1: 1, MAC_P3: 3, MAC_P4: 2}
+
+    def test_jogador_aguardando_grab_ainda_nao_tem_numero(
+        self, patched: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem vpad o jogo não vê jogador nenhum — melhor calar que mentir."""
+        _FakeReader.grab_result = "pending"
+        _set_evdevs(
+            monkeypatch,
+            {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"},
+        )
+        mgr = CoopManager(_make_daemon(primary_uniq=MAC_P1))
+        mgr.sync()
+
+        assert mgr._players[MAC_P2].vpad is None
+        assert mgr.player_indexes() == {MAC_P1: 1}
+
+
+class TestResolvePlayerNumbers:
+    """A tradução "payload de controllers -> número por card"."""
+
+    @staticmethod
+    def _ctrl(uniq: str | None, connected: bool = True) -> dict[str, Any]:
+        return {"uniq": uniq, "connected": connected}
+
+    def test_sem_gamepad_virtual_ninguem_e_jogador(self) -> None:
+        """Modo desktop/nativo: o controle mexe no PC ou fala direto com o jogo."""
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        daemon = _make_daemon(gamepad=False)
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2)]
+        ) == [None, None]
+
+    def test_coop_desligado_todos_sao_o_jogador_1(self) -> None:
+        """O que o jogo vê de verdade: um vpad só, alimentado pelo primário.
+
+        Era exatamente aqui que a GUI mentia — rotulava P1/P2 por posição com o
+        co-op DESLIGADO, quando os dois controles moviam o mesmo personagem.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        daemon = _make_daemon(coop=False)
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2)]
+        ) == [1, 1]
+
+    def test_desconectado_nao_tem_numero(self) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        daemon = _make_daemon(coop=False)
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2, connected=False)]
+        ) == [1, None]
+
+    def test_coop_ligado_usa_o_numero_do_daemon(
+        self, patched: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        _set_evdevs(
+            monkeypatch,
+            {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"},
+        )
+        daemon = _make_daemon(primary_uniq=MAC_P1)
+        mgr = CoopManager(daemon)
+        daemon._coop_manager = mgr
+        mgr.sync()
+
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2)]
+        ) == [1, 2]
+
+    def test_controle_sem_mac_nao_recebe_numero_chutado(
+        self, patched: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5"})
+        daemon = _make_daemon(primary_uniq=MAC_P1)
+        mgr = CoopManager(daemon)
+        daemon._coop_manager = mgr
+        mgr.sync()
+
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(None)]
+        ) == [1, None]

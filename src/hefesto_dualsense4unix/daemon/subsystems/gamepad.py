@@ -222,6 +222,42 @@ def resolve_hidraw_path(daemon: DaemonProtocol, uniq: str | None) -> str | None:
     return path if isinstance(path, str) else None
 
 
+def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
+    """Troca o vpad do P1 de uinput para uhid quando o hidraw aparece. True = trocou.
+
+    No boot o `_safe_start("gamepad")` do lifecycle roda ANTES do
+    `controller.connect()`: o vpad do P1 nasce sem hidraw de onde copiar o
+    blueprint e cai no uinput — ou seja, o caminho uhid (a vibração da máscara
+    DualSense) ficava MORTO no fluxo normal, e só subia se a emulação fosse
+    religada com o controle já conectado. Medido ao vivo:
+    ``vpad_uhid_sem_hidraw_usando_uinput player=1`` em todo boot.
+
+    Chamado quando o controle conecta. Conservador de propósito:
+
+    - só age no vpad do P1 que é uinput (se já é uhid, não há o que fazer);
+    - só com a máscara DualSense (a Xbox é uinput por design — o
+      `hid_playstation` não faz bind em VID/PID da Microsoft);
+    - recria o device, então o jogo aberto PERDE o vpad por um instante. É
+      aceitável porque a janela real é o boot (sem jogo) e o replug de um
+      controle que já derrubou o input do jogo de qualquer forma.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+
+    device = getattr(daemon, "_gamepad_device", None)
+    if device is None or isinstance(device, UhidDualSense):
+        return False
+    if getattr(device, "flavor", None) != "dualsense":
+        return False
+    if resolve_hidraw_path(daemon, None) is None:
+        return False  # o controle segue sem hidraw legível: nada mudou
+
+    logger.info("vpad_promovendo_para_uhid", motivo="hidraw do controle apareceu")
+    # `persist=False`: a preferência não mudou, só o backend. `release_grab=False`:
+    # soltar o grab aqui devolveria o controle físico ao jogo no meio da troca.
+    stop_gamepad_emulation(daemon, persist=False, release_grab=False)
+    return start_gamepad_emulation(daemon, flavor="dualsense")
+
+
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO.
 
@@ -264,20 +300,23 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
         stop_gamepad_emulation(daemon, persist=False, release_grab=False)
 
     # Mútua exclusão: o controle vai pro jogo, não pro cursor.
+    # HARM-06: `persist=False` — a preferência de mouse da usuária sobrevive ao
+    # modo jogo. Gravar "off" aqui fazia o round-trip desktop->gamepad->desktop
+    # apagá-la e o controle voltava do jogo sem função nenhuma.
     if getattr(daemon, "_mouse_device", None) is not None:
         from hefesto_dualsense4unix.daemon.subsystems.mouse import stop_mouse_emulation
 
-        stop_mouse_emulation(daemon)
+        stop_mouse_emulation(daemon, persist=False)
 
     # FEAT-VPAD-FF-PASSTHROUGH-01: o rumble que o JOGO pedir no vpad volta
     # para os motores do controle físico primário.
     # SPRINT-UHID-VPAD-01: a factory prefere o backend uhid (DualSense com hidraw
     # de verdade = vibração in-game na máscara DualSense) e cai no uinput sozinha
     # quando o uhid não sobe; o P1 é sempre o jogador 1.
-    # Limitação conhecida: o backend é escolhido AQUI, uma vez. Ligar o gamepad
-    # com o controle desconectado não tem hidraw de onde copiar o blueprint, e o
-    # P1 fica no uinput até alguém religar a emulação (o `set_gamepad_emulation`
-    # recria o vpad). Plugar o controle depois não promove o vpad sozinho.
+    # Se o controle ainda não conectou, não há hidraw de onde copiar o blueprint
+    # e o P1 nasce no uinput — é o caso do BOOT (o `_safe_start("gamepad")` do
+    # lifecycle roda ANTES do `controller.connect()`). Quem conserta isso é o
+    # `upgrade_primary_vpad_to_uhid`, chamado quando o controle conecta.
     device: VirtualPad | None = make_virtual_pad(
         key,
         rumble_sink=make_primary_rumble_sink(daemon),

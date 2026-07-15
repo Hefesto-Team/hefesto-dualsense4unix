@@ -1,6 +1,7 @@
 """`_wrap_notebook_pages_in_scroll` não pode depender do TEXTO da aba (EST-10).
 
-A aba Daemon é a única que NÃO deve ser envolvida num `GtkScrolledWindow`: o
+A aba Sistema (ex-"Daemon", `daemon_box`) é a única que NÃO deve ser envolvida
+num `GtkScrolledWindow`: o
 conteúdo principal dela já é um scroller (o log, com auto-scroll) e envolvê-la de
 novo quebra a rolagem.
 

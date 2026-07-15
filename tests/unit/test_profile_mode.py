@@ -160,6 +160,50 @@ def test_kind_gamepad_liga_flavor_e_coop(
     assert calls.coop == []
 
 
+class TestCoopDefaultOn:
+    """LEIGO-01 — nenhum perfil desliga o co-op pelas costas da usuária.
+
+    O checkbox saiu da tela: se um perfil ainda conseguisse zerar
+    `coop_enabled`, os dois controles viravam o mesmo jogador SEM caminho de
+    volta. Cada teste aqui é uma porta que precisa continuar fechada.
+    """
+
+    def test_perfil_sem_campo_coop_nao_desliga_o_coop(
+        self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # O default do esquema é True: um perfil de gamepad que não fala de
+        # co-op LIGA o co-op (antes, o mesmo JSON o desligava).
+        calls = _Calls(daemon)
+        calls.bind(monkeypatch)
+
+        mode = _profile({"kind": "gamepad", "gamepad_flavor": "xbox"}).mode
+        assert mode is not None
+        assert mode.coop is True
+
+        daemon.apply_profile_mode(mode)
+        assert calls.coop == [(True, "profile")]
+
+    def test_sair_do_gamepad_por_perfil_sem_opiniao_preserva_a_preferencia(
+        self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls = _Calls(daemon)
+        calls.bind(monkeypatch)
+        daemon.apply_profile_mode(
+            _profile({"kind": "gamepad", "gamepad_flavor": "xbox"}).mode
+        )
+        daemon.config.gamepad_emulation_enabled = True
+        daemon._gamepad_device = object()
+        calls.coop.clear()
+
+        # Perfil sem opinião entra em foco: desliga o gamepad que o perfil
+        # anterior ligou, mas a preferência de co-op tem de sobreviver.
+        daemon.apply_profile_mode(None)
+
+        assert calls.gamepad[-1] == (False, None, "profile")
+        assert calls.coop == []
+        assert daemon.config.coop_enabled is True
+
+
 def test_transicao_native_para_gamepad_desliga_nativo_sem_reapply(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -174,12 +218,12 @@ def test_transicao_native_para_gamepad_desliga_nativo_sem_reapply(
     assert daemon._mode_from_profile == "gamepad"
 
 
-def test_kind_desktop_limpa_tudo_inclusive_manual_expirado(
+def test_kind_desktop_limpa_modo_inclusive_manual_expirado(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls = _Calls(daemon)
     calls.bind(monkeypatch)
-    # Estado manual ANTIGO (lock expirado): gamepad + coop ligados na mão.
+    # Estado manual ANTIGO (lock expirado): gamepad + co-op ligados na mão.
     daemon.config.gamepad_emulation_enabled = True
     daemon._gamepad_device = object()
     daemon.config.coop_enabled = True
@@ -187,9 +231,13 @@ def test_kind_desktop_limpa_tudo_inclusive_manual_expirado(
 
     daemon.apply_profile_mode(_profile({"kind": "desktop"}).mode)
 
-    assert calls.coop == [(False, "profile")]
     assert calls.gamepad == [(False, None, "profile")]
     assert daemon._mode_from_profile is None
+    # LEIGO-01: o desktop limpa o MODO, não a preferência de co-op. Desligar o
+    # gamepad já desmonta os jogadores; zerar a flag aqui deixava o co-op morto
+    # pela sessão inteira — e, sem o checkbox na tela, sem caminho de volta.
+    assert calls.coop == []
+    assert daemon.config.coop_enabled is True
 
 
 def test_lock_manual_congela_o_perfil(

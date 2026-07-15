@@ -114,20 +114,29 @@ def start_mouse_emulation(daemon: DaemonProtocol) -> bool:
     return True
 
 
-def stop_mouse_emulation(daemon: DaemonProtocol) -> None:
-    """Para e descarta o dispositivo virtual. Idempotente."""
+def stop_mouse_emulation(daemon: DaemonProtocol, *, persist: bool = True) -> None:
+    """Para e descarta o dispositivo virtual. Idempotente.
+
+    ``persist=False`` (HARM-06) desliga o device SEM tocar na preferência
+    persistida — é o que a exclusão mútua do gamepad usa. Desligar o mouse
+    porque o controle foi para o jogo não é a usuária dizendo "não quero mouse";
+    gravar "off" ali fazia o round-trip desktop->gamepad->desktop apagar a
+    preferência e o controle voltava sem função nenhuma.
+    Espelha `stop_gamepad_emulation(persist=...)`.
+    """
     if daemon._mouse_device is None:
         return
     with contextlib.suppress(Exception):
         daemon._mouse_device.stop()
     daemon._mouse_device = None
     daemon.config.mouse_emulation_enabled = False
-    # FEAT-MOUSE-PERSIST-01: remove o flag para não religar no próximo boot.
-    with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.utils.session import save_mouse_emulation
+    # FEAT-MOUSE-PERSIST-01: grava "off" para não religar no próximo boot.
+    if persist:
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import save_mouse_emulation
 
-        save_mouse_emulation(False)
-    logger.info("mouse_emulation_stopped")
+            save_mouse_emulation(False)
+    logger.info("mouse_emulation_stopped", persist=persist)
 
 
 def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozenset[str]) -> None:

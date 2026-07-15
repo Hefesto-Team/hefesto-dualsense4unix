@@ -13,7 +13,6 @@
 //!   - `daemon.emulation.suppress {suppressed}` -> liga/desliga o "modo jogo"
 //!   - `controller.target.set {index|null}` -> escolhe o controle-alvo do output
 //!   - `native.mode.set {enabled}` -> liga/desliga o Modo Nativo (Sony)
-//!   - `coop.set {enabled}` -> liga/desliga o co-op local
 //!   - `gamepad.emulation.set {enabled, flavor?}` -> gamepad virtual + máscara
 
 use std::path::PathBuf;
@@ -157,9 +156,14 @@ pub struct DaemonState {
 /// Bloco `coop` do estado do daemon (FEAT-DSX-COOP-LOCAL-01).
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct CoopState {
+    /// Parte do contrato do daemon. A UI não lê mais este campo: desde o
+    /// LEIGO-01 cada controle é um jogador SEMPRE, então não há toggle a
+    /// refletir — o que o applet mostra é `players`, o nº que o jogo vê.
+    /// Deserializado para fidelidade ao protocolo.
     #[serde(default)]
+    #[allow(dead_code)]
     pub enabled: bool,
-    /// Nº de jogadores ativos (controles virando P1, P2, …) com o co-op ligado.
+    /// Nº de jogadores ativos (controles virando P1, P2, …).
     #[serde(default)]
     pub players: i64,
 }
@@ -365,19 +369,9 @@ pub async fn set_native_mode(enabled: bool) -> Result<bool, IpcError> {
     Ok(new_state)
 }
 
-/// `coop.set {enabled}` — liga/desliga o co-op local: com o gamepad virtual
-/// ativo e 2+ controles, cada controle vira um jogador (P1, P2, …)
-/// (FEAT-DSX-COOP-LOCAL-01). Devolve o novo `enabled` efetivo reportado pelo
-/// daemon (fallback: o valor solicitado); o nº de jogadores vem do próximo
-/// `daemon.state_full` (campo `coop.players`).
-pub async fn set_coop(enabled: bool) -> Result<bool, IpcError> {
-    let value = call_raw("coop.set", json!({ "enabled": enabled })).await?;
-    let new_state = value
-        .get("enabled")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(enabled);
-    Ok(new_state)
-}
+// LEIGO-01: o wrapper de `coop.set` saiu junto com o toggle do applet. O método
+// IPC continua no daemon (CLI/diagnóstico), mas o applet não tem mais por que
+// desligar o co-op — cada controle é um jogador, sempre.
 
 /// `gamepad.emulation.set {enabled, flavor?}` — liga/desliga o gamepad virtual
 /// e define a máscara "dualsense" | "xbox" (FEAT-DSX-GAMEPAD-FLAVOR-01).

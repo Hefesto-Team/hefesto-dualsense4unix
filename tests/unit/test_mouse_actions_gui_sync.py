@@ -41,6 +41,9 @@ class _FakeSwitch:
         self._owner = owner
         self._active = False
         self.set_active_calls = 0
+        # HARM-05: o switch agora tem gate de modo (só sensível em "Controlar
+        # o PC") — o refresh o liga/desliga junto com o resto.
+        self.sensitive = True
 
     def get_active(self) -> bool:
         return self._active
@@ -49,6 +52,9 @@ class _FakeSwitch:
         self.set_active_calls += 1
         self._active = bool(value)
         self._owner.on_mouse_toggle_set(self, bool(value))
+
+    def set_sensitive(self, value: bool) -> None:
+        self.sensitive = bool(value)
 
 
 class _FakeScale:

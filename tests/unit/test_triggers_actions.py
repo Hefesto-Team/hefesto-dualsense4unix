@@ -277,11 +277,13 @@ class _FakeTriggersMixin:
 def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     calls: list[tuple[str, str, list[int]]] = []
 
-    def fake_trigger_set(side: str, mode: str, params: list[int]) -> bool:
+    def fake_trigger_set(
+        side: str, mode: str, params: list[int]
+    ) -> tuple[bool, str | None]:
         calls.append((side, mode, list(params)))
-        return True
+        return True, None
 
-    monkeypatch.setattr(triggers_actions, "trigger_set", fake_trigger_set)
+    monkeypatch.setattr(triggers_actions, "trigger_set_checked", fake_trigger_set)
     # FEAT-DSX-COMBO-TO-SEGMENTED-01: install_triggers_tab instancia o
     # SegmentedSelector real (precisa de display). Troca pelo stub headless.
     monkeypatch.setattr(
@@ -749,3 +751,112 @@ def test_preset_changed_atualiza_draft_e_agenda_preview(
     assert mixin.draft.triggers.left.mode == "MultiPositionFeedback"
     assert mixin.draft.triggers.left.params == esperado
     assert (300, "left") in agendados
+
+
+# --- HARM-19: erro de validação explica o erro, não acusa o daemon ------
+
+
+def _mensagem_real_do_daemon(mode: str, params: list[int]) -> str:
+    """Mensagem que o daemon devolve ao recusar `params` (CODE_INVALID_PARAMS).
+
+    Vem do `build_from_name` de verdade — é o que o `_handle_trigger_set` chama
+    e o `ipc_server` converte em erro JSON-RPC. Assim o teste prova a
+    COEXISTÊNCIA (o texto do daemon casa com o tradutor da aba), não a fantasia
+    do teste sobre esse texto.
+    """
+    from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
+    with pytest.raises(ValueError) as exc:
+        build_from_name(mode, params)
+    return str(exc.value)
+
+
+def test_humanizar_erro_de_ordem_usa_os_rotulos_dos_sliders() -> None:
+    from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+
+    motivo = _mensagem_real_do_daemon("Bow", [5, 3, 4, 4])
+    texto = triggers_actions.humanizar_erro_gatilho(motivo, get_spec("Bow"))
+
+    assert texto == "Fim (3) precisa ser maior que Início (5)"
+
+
+def test_humanizar_erro_de_faixa_usa_os_rotulos_dos_sliders() -> None:
+    from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
+
+    motivo = _mensagem_real_do_daemon("Rigid", [5, 300])
+    texto = triggers_actions.humanizar_erro_gatilho(motivo, get_spec("Rigid"))
+
+    assert texto == "Força precisa estar entre 0 e 255 (você pediu 300)"
+
+
+def test_humanizar_mensagem_desconhecida_devolve_none() -> None:
+    assert triggers_actions.humanizar_erro_gatilho("pane geral", None) is None
+
+
+def test_toast_de_validacao_explica_e_nao_culpa_o_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HARM-19: com o daemon VIVO recusando (Fim <= Início), o toast dizia
+    "falhou (daemon offline?)" — mandava a usuária caçar o problema no lugar
+    errado."""
+    mixin = _build_mixin(monkeypatch)
+    motivo = _mensagem_real_do_daemon("Bow", [5, 3, 4, 4])
+    monkeypatch.setattr(
+        triggers_actions,
+        "trigger_set_checked",
+        lambda *_a, **_kw: (False, motivo),
+    )
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+    combo.set_active_id("Bow")
+    mixin.on_trigger_left_mode_changed(combo)
+    widgets = mixin._trigger_param_widgets["left"]
+    widgets["start"].set_value(5)
+    widgets["end"].set_value(3)
+
+    mixin.on_trigger_left_apply(None)
+
+    _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
+    assert msg == "LEFT -> Bow não aplicado: Fim (3) precisa ser maior que Início (5)"
+    assert "daemon" not in msg
+
+
+def test_toast_de_daemon_offline_continua_falando_em_daemon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem motivo = ninguém respondeu; aí sim a suspeita do daemon é honesta."""
+    mixin = _build_mixin(monkeypatch)
+    monkeypatch.setattr(
+        triggers_actions, "trigger_set_checked", lambda *_a, **_kw: (False, None)
+    )
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+    combo.set_active_id("Rigid")
+    mixin.on_trigger_left_mode_changed(combo)
+
+    mixin.on_trigger_left_apply(None)
+
+    _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
+    assert msg == "LEFT -> Rigid falhou (daemon offline?)"
+
+
+def test_toast_de_motivo_desconhecido_mostra_o_texto_cru(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Texto cru do daemon ainda diz mais que "offline?" — nunca cair no ramo
+    errado por não reconhecer o formato."""
+    mixin = _build_mixin(monkeypatch)
+    monkeypatch.setattr(
+        triggers_actions,
+        "trigger_set_checked",
+        lambda *_a, **_kw: (False, "formato novo de recusa"),
+    )
+    mixin.install_triggers_tab()
+    combo = mixin._trigger_mode["left"]
+    combo.set_active_id("Rigid")
+    mixin.on_trigger_left_mode_changed(combo)
+
+    mixin.on_trigger_left_apply(None)
+
+    _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
+    assert msg == "LEFT -> Rigid não aplicado: formato novo de recusa"

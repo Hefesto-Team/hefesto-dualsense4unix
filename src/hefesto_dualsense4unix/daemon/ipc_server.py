@@ -18,6 +18,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     controller.target.set {index|null} -> {status, target_index}
     daemon.reload        {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
+    mouse.emulation.restore {}                            -> {status, enabled}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -112,6 +113,7 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
+            "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "coop.set": self._handle_coop_set,
             "daemon.emulation.suppress": self._handle_emulation_suppress,

@@ -181,71 +181,110 @@ def load_native_mode() -> tuple[bool, dict[str, Any]]:
 _MOUSE_EMULATION_FLAG_FILE = "mouse_emulation.flag"
 
 
+def _read_mouse_flag() -> dict[str, Any] | None:
+    """Lê o flag de mouse cru: ``None`` = arquivo ausente (nunca configurada).
+
+    Tolerante ao conteúdo legado ``"1\\n"`` (pré-JSON), a JSON malformado e a
+    tipos errados: devolve ``{}`` (= o arquivo existe, sem dados aproveitáveis),
+    nunca levanta. Valores não-inteiros de velocidade são descartados aqui, no
+    ponto único de parse.
+    """
+    try:
+        flag = config_dir() / _MOUSE_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return None
+        content = flag.read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+    if not content:
+        return {}
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return {}  # conteúdo legado "1\n" → arquivo existe, sem dados
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, Any] = {}
+    raw_enabled = data.get("enabled")
+    if isinstance(raw_enabled, bool):
+        out["enabled"] = raw_enabled
+    for key in ("speed", "scroll_speed"):
+        raw = data.get(key)
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            out[key] = raw
+    return out
+
+
 def save_mouse_emulation(
     enabled: bool,
     speed: int | None = None,
     scroll_speed: int | None = None,
 ) -> None:
-    """Persiste a emulação de mouse: toggle + velocidades (FEAT-MOUSE-CURSOR-FEEL-01).
+    """Persiste a PREFERÊNCIA de emulação de mouse: toggle + velocidades.
 
-    Padrão flag-com-conteúdo (mesmo do `gamepad_emulation.flag`): quando
-    ligada, o arquivo existe e carrega JSON ``{"speed": N, "scroll_speed": M}``;
-    quando desligada, o arquivo é removido (semântica existe=ligada preservada
-    do FEAT-MOUSE-PERSIST-01). NÃO usa session.json: `save_last_profile`
-    reescreve aquele arquivo inteiro e apagaria as velocidades.
-    Best-effort: nunca propaga exceção.
+    FEAT-MOUSE-CURSOR-FEEL-01 + HARM-06 (SPRINT-HARMONIA-01). O arquivo carrega
+    JSON ``{"enabled": bool, "speed": N, "scroll_speed": M}`` e agora existe
+    também quando a emulação está DESLIGADA: antes o "off" era gravado apagando
+    o arquivo, o que confundia "a usuária desligou" com "nunca foi configurada".
+    O modo "Controlar o PC" precisa distinguir os dois — ele liga o mouse por
+    default no segundo caso e respeita o "off" no primeiro.
+
+    ``speed``/``scroll_speed`` omitidos PRESERVAM o que já estava gravado (o
+    desligar não passa velocidades e não pode zerar a escolha da usuária).
+    Arquivo ausente segue significando "nunca configurada"; conteúdo legado sem
+    a chave ``enabled`` (inclusive o ``"1\\n"`` pré-JSON) segue contando como
+    ligada — era o que existir-o-arquivo queria dizer.
+
+    NÃO usa session.json: `save_last_profile` reescreve aquele arquivo inteiro
+    e apagaria as velocidades. Best-effort: nunca propaga exceção.
     """
     try:
+        anterior = _read_mouse_flag() or {}
+        payload: dict[str, Any] = {"enabled": bool(enabled)}
+        for key, valor in (("speed", speed), ("scroll_speed", scroll_speed)):
+            if valor is not None:
+                payload[key] = int(valor)
+            elif key in anterior:
+                payload[key] = anterior[key]
         flag = config_dir(ensure=True) / _MOUSE_EMULATION_FLAG_FILE
-        if enabled:
-            payload: dict[str, int] = {}
-            if speed is not None:
-                payload["speed"] = int(speed)
-            if scroll_speed is not None:
-                payload["scroll_speed"] = int(scroll_speed)
-            flag.write_text(json.dumps(payload) + "\n", encoding="utf-8")
-        else:
-            flag.unlink(missing_ok=True)
+        flag.write_text(json.dumps(payload) + "\n", encoding="utf-8")
         logger.debug(
             "mouse_emulation_state_saved",
             enabled=enabled,
-            speed=speed,
-            scroll_speed=scroll_speed,
+            speed=payload.get("speed"),
+            scroll_speed=payload.get("scroll_speed"),
         )
     except Exception as exc:
         logger.debug("mouse_emulation_state_save_failed", err=str(exc))
 
 
+def load_mouse_preference() -> tuple[bool | None, int | None, int | None]:
+    """Preferência de mouse persistida: ``(ligada|None, speed, scroll_speed)``.
+
+    HARM-06: ``None`` no primeiro campo = **nunca configurada** (arquivo
+    ausente) — quem entra em "Controlar o PC" liga o mouse por default nesse
+    caso, em vez de deixar o controle sem função nenhuma. ``False`` = a usuária
+    desligou de propósito, e sair-e-voltar do modo tem que respeitar isso.
+
+    Velocidades ``None`` (flag legado sem elas) = usar os defaults da config.
+    """
+    data = _read_mouse_flag()
+    if data is None:
+        return None, None, None
+    # Sem a chave `enabled` o arquivo é de uma versão antiga, quando existir
+    # JÁ significava ligada.
+    return bool(data.get("enabled", True)), data.get("speed"), data.get("scroll_speed")
+
+
 def load_mouse_emulation() -> tuple[bool, int | None, int | None]:
     """Retorna ``(ligada, speed, scroll_speed)`` da sessão anterior.
 
-    ``(False, None, None)`` se a flag não existir. Tolerante ao conteúdo
-    legado ``"1\\n"`` (pré-JSON) e a JSON malformado: a emulação conta como
-    ligada (o arquivo existe) e as velocidades voltam ``None`` — o caller
-    aplica os defaults. Valores não-inteiros no JSON também viram ``None``.
+    ``(False, None, None)`` se a flag não existir (nunca configurada = não
+    ligar sozinha no boot). Quem precisa distinguir "desligada" de "nunca
+    configurada" usa `load_mouse_preference`.
     """
-    try:
-        flag = config_dir() / _MOUSE_EMULATION_FLAG_FILE
-        if not flag.exists():
-            return False, None, None
-        speed: int | None = None
-        scroll_speed: int | None = None
-        content = flag.read_text(encoding="utf-8").strip()
-        if content:
-            try:
-                data = json.loads(content)
-            except json.JSONDecodeError:
-                data = None  # conteúdo legado "1\n" → defaults
-            if isinstance(data, dict):
-                raw_speed = data.get("speed")
-                raw_scroll = data.get("scroll_speed")
-                if isinstance(raw_speed, int) and not isinstance(raw_speed, bool):
-                    speed = raw_speed
-                if isinstance(raw_scroll, int) and not isinstance(raw_scroll, bool):
-                    scroll_speed = raw_scroll
-        return True, speed, scroll_speed
-    except Exception:
-        return False, None, None
+    enabled, speed, scroll_speed = load_mouse_preference()
+    return bool(enabled), speed, scroll_speed
 
 
 def save_mouse_emulation_enabled(enabled: bool) -> None:
@@ -342,6 +381,7 @@ __all__ = [
     "load_last_profile",
     "load_mouse_emulation",
     "load_mouse_emulation_enabled",
+    "load_mouse_preference",
     "load_paused_state",
     "read_active_marker",
     "save_active_marker",

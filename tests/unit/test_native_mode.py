@@ -200,3 +200,77 @@ def test_ipc_native_mode_set_toggle(daemon: Daemon) -> None:
     daemon._reapply_last_profile = lambda: None  # type: ignore[method-assign]
     r2 = asyncio.run(server._handle_native_mode_set({}))
     assert r2 == {"status": "ok", "native_mode": False}
+
+
+# --- HARM-16: sair de um modo zera os motores --------------------------
+
+
+def _rumbles(controller: FakeController) -> list[tuple[int, int]]:
+    return [c.payload for c in controller.commands if c.kind == "set_rumble"]
+
+
+def test_native_off_zera_os_motores(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """HARM-16: no Modo Nativo quem vibra o controle é o JOGO (hidraw direto,
+    com o nosso output mutado). Ao sair, `rumble_active` está em passthrough —
+    o reassert do poll loop é no-op — e ninguém zerava o hardware: o controle
+    vibrava para sempre e o jogo perdia a vibração."""
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
+    daemon.set_native_mode(True)
+    controller: FakeController = daemon.controller  # type: ignore[assignment]
+    controller.commands.clear()
+
+    daemon.set_native_mode(False)
+
+    assert (0, 0) in _rumbles(controller)
+
+
+def test_native_off_zera_depois_de_desmutar(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ordem importa: mutado, o report_thread não escreve NADA — zerar antes
+    do unmute deixaria o motor ligado até a próxima mudança de output."""
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
+    ordem: list[str] = []
+    daemon.controller.set_output_mute = lambda muted: ordem.append(  # type: ignore[attr-defined]
+        f"mute={muted}"
+    )
+    daemon.controller.set_rumble = lambda weak, strong: ordem.append(  # type: ignore[method-assign]
+        f"rumble={weak},{strong}"
+    )
+    daemon.set_native_mode(True)
+    ordem.clear()
+
+    daemon.set_native_mode(False)
+
+    assert ordem[:2] == ["mute=False", "rumble=0,0"]
+
+
+def test_gamepad_off_zera_os_motores(tmp_config: Any) -> None:
+    """HARM-16 (mesmo mal, outro modo): o vpad morre no meio de um FF do jogo e
+    o motor fica ligado — em passthrough ninguém re-afirma o silêncio."""
+    d = Daemon(controller=FakeController())
+    d.config.rumble_active = None
+    controller: FakeController = d.controller  # type: ignore[assignment]
+    controller.commands.clear()
+
+    d.set_gamepad_emulation(False)
+
+    assert (0, 0) in _rumbles(controller)
+
+
+def test_saida_de_modo_nao_desfaz_rumble_fixado_pela_usuaria(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Com rumble FIXADO (aba Rumble), o dono é a usuária: o reassert re-afirma
+    o valor de qualquer jeito e zerar seria desfazer o gesto dela."""
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: None)
+    daemon.set_native_mode(True)
+    daemon.config.rumble_active = (120, 200)
+    controller: FakeController = daemon.controller  # type: ignore[assignment]
+    controller.commands.clear()
+
+    daemon.set_native_mode(False)
+
+    assert _rumbles(controller) == []

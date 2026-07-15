@@ -18,8 +18,19 @@ def test_logging_config_importa_com_structlog_typing_presente() -> None:
 
     import hefesto_dualsense4unix.utils.logging_config as mod
 
-    importlib.reload(mod)
-    assert hasattr(mod, "Processor")
+    # `reload` re-executa o corpo do módulo e zera `_configured` — um efeito
+    # colateral GLOBAL que precisa ser desfeito. Sem restaurar, o próximo
+    # `get_logger()` da sessão reconfigura o structlog com uma LISTA NOVA de
+    # processors; todo logger já cacheado (`cache_logger_on_first_use=True`)
+    # segue apontando para a lista ANTIGA, e o `capture_logs()` dos outros
+    # testes — que mexe na lista NOVA in-place, de propósito — deixa de
+    # interceptá-los (test_profile_loader quebrava assim, à distância).
+    configurado_antes = mod._configured
+    try:
+        importlib.reload(mod)
+        assert hasattr(mod, "Processor")
+    finally:
+        mod._configured = configurado_antes
 
 
 def test_logging_config_fallback_quando_typing_ausente(

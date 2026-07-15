@@ -248,10 +248,15 @@ def test_daemon_status_matriz(
     assert result == expected_status
 
 
-def test_online_systemd_com_enabled_exibe_autostart(
+def test_online_systemd_com_enabled_diz_que_liga_sozinho(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Label mostra '+ auto-start' quando systemd active + enabled."""
+    """Verde + a informação de que o Hefesto sobe junto com o computador.
+
+    LEIGO-03: o texto dizia "Online (systemd + auto-start)". O fato exibido é o
+    mesmo (`is-enabled` == enabled), então o teste continua sendo sobre ELE — só
+    parou de exigir a palavra do systemd.
+    """
     host = _Host()
 
     def _fake_oneline(args: list[str]) -> str:
@@ -267,28 +272,57 @@ def test_online_systemd_com_enabled_exibe_autostart(
 
     host._set_daemon_status_markup("online_systemd", "enabled")
 
-    assert "auto-start" in host._label.markup
     assert "#2d8" in host._label.markup
+    assert "Funcionando" in host._label.markup
+    assert "liga sozinho" in host._label.markup
+
+
+def test_online_systemd_sem_enabled_nao_promete_ligar_sozinho() -> None:
+    """Com `is-enabled` != enabled o label NÃO pode prometer o autostart."""
+    host = _Host()
+    host._set_daemon_status_markup("online_systemd", "disabled")
+
+    assert "#2d8" in host._label.markup
+    assert "Funcionando" in host._label.markup
+    assert "liga sozinho" not in host._label.markup
 
 
 def test_offline_label_vermelho(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Label 'Offline' usa cor vermelha (#d33) e glifo circulo vazio."""
+    """Estado desligado: vermelho + a palavra que a usuária entende."""
     host = _Host()
     host._set_daemon_status_markup("offline", "disabled")
 
     assert "#d33" in host._label.markup
-    assert "Offline" in host._label.markup
-    # Glifo circulo vazio (U+25CB) deve estar presente.
-    assert "" in host._label.markup or "" in host._label.markup
+    assert "Desligado" in host._label.markup
 
 
 def test_online_avulso_label_amarelo(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Label 'Online (processo avulso)' usa cor amarela (#ca0)."""
+    """Avulso: amarelo + o aviso de que está funcionando "no improviso"."""
     host = _Host()
     host._set_daemon_status_markup("online_avulso", "disabled")
 
     assert "#ca0" in host._label.markup
-    assert "avulso" in host._label.markup
+    assert "improvisado" in host._label.markup
+
+
+def test_nenhum_estado_vaza_jargao_na_tela(monkeypatch: pytest.MonkeyPatch) -> None:
+    """LEIGO-03: systemd/unit/rc=/.service/Online não aparecem no label.
+
+    O acoplamento a texto de UI é o que quebrou os testes acima quando a aba foi
+    reescrita; este aqui é o oposto — trava a REGRA do sprint (nada de jargão),
+    não uma frase específica.
+    """
+    proibidas = ("systemd", "unit", "rc=", ".service", "Online", "Offline",
+                 "daemon", "avulso", "pid")
+    for status in ("online_systemd", "online_avulso", "iniciando", "offline"):
+        for enabled in ("enabled", "disabled"):
+            host = _Host()
+            host._set_daemon_status_markup(status, enabled)  # type: ignore[arg-type]
+            visivel = host._label.markup
+            for palavra in proibidas:
+                assert palavra not in visivel, (
+                    f"{status}/{enabled} mostra {palavra!r} na tela: {visivel!r}"
+                )
 
 
 def test_botao_migrate_visivel_apenas_em_avulso(

@@ -159,17 +159,6 @@ class _FakeSelector:
             handler(self)
 
 
-class _FakeCheck:
-    def __init__(self, active: bool = False) -> None:
-        self._active = active
-
-    def get_active(self) -> bool:
-        return self._active
-
-    def set_active(self, active: bool) -> None:
-        self._active = active
-
-
 class _FakeBox:
     """Linha de opções do gamepad: registra visibilidade/sensibilidade."""
 
@@ -220,7 +209,6 @@ class _EditorStub(ProfilesActionsMixin):
         """Equivale ao _install_mode_section: widgets fake + handlers ligados."""
         self._mode_kind_selector = _FakeSelector("none")
         self._mode_flavor_selector = _FakeSelector("dualsense")
-        self._mode_coop_check = _FakeCheck(False)
         self._mode_gamepad_opts = _FakeBox()
         self._mode_kind_selector.connect("changed", self._on_mode_kind_changed)
         self._mode_flavor_selector.connect("changed", self._on_mode_flavor_changed)
@@ -263,7 +251,9 @@ class TestBuildProfileMode:
         assert profile.mode is not None
         assert profile.mode.kind == "desktop"
         assert profile.mode.gamepad_flavor is None
-        assert profile.mode.coop is False
+        # LEIGO-01: o editor não emite mais `coop` — o campo herda o default
+        # (True) e o kind "desktop" sequer o lê (não há gamepad, não há jogador).
+        assert profile.mode.coop is True
 
     def test_kind_native(self) -> None:
         stub = _EditorStub().com_secao_mode()
@@ -274,33 +264,32 @@ class TestBuildProfileMode:
         assert profile.mode is not None
         assert profile.mode.kind == "native"
         assert profile.mode.gamepad_flavor is None
-        assert profile.mode.coop is False
+        assert profile.mode.coop is True
 
-    def test_kind_gamepad_com_flavor_e_coop(self) -> None:
+    def test_kind_gamepad_com_flavor(self) -> None:
         stub = _EditorStub().com_secao_mode()
         stub._mode_kind_selector.set_active_id("gamepad")
         stub._mode_flavor_selector.set_active_id("xbox")
-        stub._mode_coop_check.set_active(True)
 
         profile = stub._build_profile_from_editor()
 
         assert profile.mode is not None
         assert profile.mode.kind == "gamepad"
         assert profile.mode.gamepad_flavor == "xbox"
+        # LEIGO-01: salvar um perfil de jogo NUNCA desliga o co-op. Era este o
+        # caminho que o fazia — todo perfil saía do editor com `coop: false`.
         assert profile.mode.coop is True
 
-    def test_flavor_e_coop_so_valem_com_gamepad(self) -> None:
-        """Máscara/co-op marcados mas kind != gamepad → gravados limpos."""
+    def test_flavor_so_vale_com_gamepad(self) -> None:
+        """Máscara escolhida mas kind != gamepad → gravada limpa."""
         stub = _EditorStub().com_secao_mode()
         stub._mode_flavor_selector.set_active_id("xbox")
-        stub._mode_coop_check.set_active(True)
         stub._mode_kind_selector.set_active_id("native")
 
         profile = stub._build_profile_from_editor()
 
         assert profile.mode is not None
         assert profile.mode.gamepad_flavor is None
-        assert profile.mode.coop is False
 
     def test_none_remove_secao_de_perfil_existente(self) -> None:
         """Perfil que TINHA mode + editor em "none" → seção removida ao salvar."""
@@ -344,7 +333,6 @@ class TestRoundTripMode:
         stub._populate_editor(original)
         assert stub._mode_kind_selector.get_active_id() == "gamepad"
         assert stub._mode_flavor_selector.get_active_id() == "dualsense"
-        assert stub._mode_coop_check.get_active() is True
 
         rebuilt = stub._build_profile_from_editor()
         assert rebuilt.mode == original.mode
@@ -366,7 +354,6 @@ class TestRoundTripMode:
         stub = _EditorStub(name="navegador").com_secao_mode()
         # Editor sujo de um perfil anterior COM mode: o populate deve limpar.
         stub._mode_kind_selector.set_active_id("gamepad")
-        stub._mode_coop_check.set_active(True)
         stub._profiles_cache = [original]
 
         stub._populate_editor(original)

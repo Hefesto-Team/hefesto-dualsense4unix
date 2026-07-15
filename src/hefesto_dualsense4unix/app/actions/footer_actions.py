@@ -81,6 +81,19 @@ class FooterActionsMixin(WidgetAccessMixin):
             widget = self._get(widget_id)
             if widget is not None:
                 widget.set_sensitive(sensitive)
+        if freeze:
+            return
+        # HARM-05: descongelar é "devolver o que a transação tomou", não "liberar
+        # tudo" — o switch do mouse tem um gate próprio (só em "Controlar o PC")
+        # e um set_sensitive(True) cego aqui o reabria fora do modo desktop,
+        # ressuscitando o clique que derruba o vpad no meio do jogo. Reconciliar
+        # com o daemon reaplica o gate (e a aba volta a mostrar o estado vivo).
+        reconcile = getattr(self, "_refresh_mouse_from_daemon_async", None)
+        if reconcile is not None:
+            try:
+                reconcile()
+            except Exception as exc:
+                logger.warning("footer_regate_mouse_falhou", erro=str(exc))
 
     # ------------------------------------------------------------------
     # Statusbar
@@ -113,6 +126,8 @@ class FooterActionsMixin(WidgetAccessMixin):
                 ok = result.get("status") == "ok"
             else:
                 ok = bool(result)
+            if ok:
+                self._clear_mouse_dirty()
             msg = (
                 _("Perfil aplicado ao controle.")
                 if ok
@@ -135,6 +150,27 @@ class FooterActionsMixin(WidgetAccessMixin):
             on_failure=_on_err,
             timeout_s=1.5,
         )
+
+    def _clear_mouse_dirty(self) -> None:
+        """Baixa o ``dirty`` da seção mouse DEPOIS de aplicar com sucesso (HARM-05).
+
+        ``dirty`` quer dizer "há uma edição de mouse por aplicar" — e era ligado
+        para nunca mais baixar (o único ``dirty=False`` era a carga programática
+        do bootstrap). Resultado: depois de a usuária tocar a aba Mouse UMA vez,
+        todo "Aplicar" do rodapé pelo resto da sessão reenviava a seção mouse e
+        RELIGAVA o mouse — matando o vpad no meio do jogo. Aplicou, acabou a
+        pendência.
+
+        ``in_profile=True`` junto: a seção deixa de ser "edição pendente" e passa
+        a fazer parte da configuração, que é exatamente o que ``to_profile``
+        pergunta. Sem isso, "Aplicar" antes de "Salvar Perfil" faria o perfil
+        salvo perder a seção mouse (BUG-MOUSE-SAVE-DROPS-SECTION-01 de novo).
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.mouse.dirty:
+            return
+        novo_mouse = draft.mouse.model_copy(update={"dirty": False, "in_profile": True})
+        self.draft = draft.model_copy(update={"mouse": novo_mouse})
 
     # ------------------------------------------------------------------
     # Handler: Salvar Perfil

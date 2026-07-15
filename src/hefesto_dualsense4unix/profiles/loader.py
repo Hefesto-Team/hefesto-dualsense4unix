@@ -223,6 +223,62 @@ def migrate_game_presets_to_xbox(dest_dir: Path | None = None) -> list[str]:
     return migrated
 
 
+#: LEIGO-01: marker da migração do default de `mode.coop` (False -> True).
+_COOP_DEFAULT_MIGRATION_MARKER = ".coop_default_on_migrated"
+
+
+def migrate_profiles_coop_default(dest_dir: Path | None = None) -> list[str]:
+    """One-shot: apaga o `"coop": false` herdado do default antigo dos perfis.
+
+    LEIGO-01: até aqui `ProfileModeConfig.coop` nascia False, então **todo**
+    perfil salvo pela GUI gravava `"coop": false` — e ativá-lo desligava o co-op
+    da usuária sem ela ter pedido nada. Trocar o default no esquema não basta:
+    os `false` já GRAVADOS continuam no disco e continuariam vencendo. Com o
+    checkbox fora da tela, não sobraria caminho para religar.
+
+    Apaga a chave em vez de gravar `true`: o perfil passa a **herdar** o padrão,
+    então um default futuro volta a valer sem uma segunda migração.
+
+    Conservadora: só toca em seções `mode.kind == "gamepad"` com `coop` ainda
+    exatamente em `false` — é a única combinação que desliga o co-op ao ativar
+    (os outros kinds nem leem o campo). Idempotente via marker próprio.
+    Best-effort: falha loga e segue. Retorna os arquivos migrados.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _COOP_DEFAULT_MIGRATION_MARKER
+    if marker.exists():
+        return []
+    migrated: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return []
+        for path in sorted(directory.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(data, dict):
+                continue
+            mode = data.get("mode")
+            if (
+                isinstance(mode, dict)
+                and mode.get("kind") == "gamepad"
+                and mode.get("coop") is False
+            ):
+                del mode["coop"]
+                with contextlib.suppress(Exception):
+                    path.write_text(
+                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    migrated.append(path.name)
+        with contextlib.suppress(Exception):
+            marker.write_text("coop-default-on\n", encoding="utf-8")
+    if migrated:
+        logger.info("profiles_coop_default_migrated", files=migrated)
+    return migrated
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga.
 
@@ -240,6 +296,9 @@ def _maybe_seed_presets() -> None:
         # H1: corrige a máscara dos presets de jogo já semeados (one-shot).
         with contextlib.suppress(Exception):
             migrate_game_presets_to_xbox()
+        # LEIGO-01: apaga o `coop: false` que o default antigo gravou (one-shot).
+        with contextlib.suppress(Exception):
+            migrate_profiles_coop_default()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
@@ -442,6 +501,7 @@ __all__ = [
     "load_all_profiles",
     "load_profile",
     "migrate_game_presets_to_xbox",
+    "migrate_profiles_coop_default",
     "save_profile",
     "seed_default_presets",
 ]
