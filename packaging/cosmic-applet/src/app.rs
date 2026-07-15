@@ -663,7 +663,10 @@ impl HefestoApplet {
         ];
         for (entry, label) in entries {
             let is_active = mode == entry;
-            let mark = if is_active { " " } else { " " };
+            // Marca visual do item ATIVO (espelha target_block/profiles_block).
+            // Antes eram dois espaços iguais (glifo comido numa edição): o modo
+            // ativo não recebia marca nenhuma.
+            let mark = if is_active { "> " } else { "  " };
             let mut btn = menu_button(text::body(format!("{mark}{label}")));
             if !is_active {
                 btn = btn.on_press(Message::SetSystemMode(entry));
@@ -675,15 +678,17 @@ impl HefestoApplet {
         // visibilidade condicional da GUI GTK).
         if mode == SystemMode::Gamepad {
             // Toggle do co-op local; ligado mostra o nº de jogadores do estado.
+            // Indicador ON/OFF do co-op (antes os 3 ramos começavam com espaço,
+            // sem afordância do estado — só dava pra inferir pelo sufixo).
             let coop_label = if state.coop.enabled && state.coop.players > 0 {
                 format!(
-                    " Cada controle = um jogador — {} jogadores",
+                    "[x] Cada controle = um jogador — {} jogadores",
                     state.coop.players
                 )
             } else if state.coop.enabled {
-                " Cada controle = um jogador".to_string()
+                "[x] Cada controle = um jogador".to_string()
             } else {
-                " Cada controle = um jogador".to_string()
+                "[ ] Cada controle = um jogador".to_string()
             };
             col = col.push(menu_button(text::body(coop_label)).on_press(Message::ToggleCoop));
 
@@ -696,7 +701,7 @@ impl HefestoApplet {
             let flavors = [("dualsense", "Máscara DualSense"), ("xbox", "Máscara Xbox")];
             for (id, label) in flavors {
                 let is_active = flavor == id;
-                let mark = if is_active { " " } else { " " };
+                let mark = if is_active { "> " } else { "  " };
                 let mut btn = menu_button(text::body(format!("{mark}{label}")));
                 if !is_active {
                     btn = btn.on_press(Message::SetGamepadFlavor(id));

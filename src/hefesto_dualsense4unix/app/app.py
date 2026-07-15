@@ -281,7 +281,6 @@ class HefestoApp(
             "on_daemon_migrate_to_systemd": self.on_daemon_migrate_to_systemd,
             # Anti-storm / sistema (FEAT-DSX-UNIFY-01)
             "on_storm_fix_safe": self.on_storm_fix_safe,
-            "on_storm_reapply_all": self.on_storm_reapply_all,
             # SPRINT-GAME-RUMBLE-01: copia as Opções de Inicialização da Steam
             # (anti-duplicação do controle + vibração pelo vpad).
             "on_storm_copy_launch": self.on_storm_copy_launch,
