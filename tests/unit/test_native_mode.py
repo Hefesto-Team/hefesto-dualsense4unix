@@ -202,6 +202,93 @@ def test_ipc_native_mode_set_toggle(daemon: Daemon) -> None:
     assert r2 == {"status": "ok", "native_mode": False}
 
 
+class _FakeVpad:
+    """Gamepad virtual dublado — o suficiente para ser parado (sem uinput/uhid)."""
+
+    flavor = "xbox"
+
+    def __init__(self) -> None:
+        self.stopped = False
+
+    def stop(self) -> None:
+        self.stopped = True
+
+
+# --- HARM-01: o daemon garante a ordem dos modos (inclusive p/ a CLI) ------
+
+
+def _daemon_com_vpad(monkeypatch: pytest.MonkeyPatch) -> Daemon:
+    """Daemon real com o vpad dublado — sem uinput/uhid de verdade."""
+    from hefesto_dualsense4unix.integrations import virtual_pad
+
+    monkeypatch.setattr(virtual_pad, "make_virtual_pad", lambda *_a, **_k: _FakeVpad())
+    d = Daemon(
+        controller=FakeController(),
+        config=DaemonConfig(ipc_enabled=False, udp_enabled=False),
+    )
+    monkeypatch.setattr(d, "_reapply_last_profile", lambda: None)
+    return d
+
+
+def test_gamepad_on_com_nativo_ligado_sai_do_nativo(
+    tmp_config: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Aceite do item: `gamepad on` com o nativo ligado não deixa os dois juntos.
+
+    A GUI e o applet saem do nativo antes porque o plano deles manda; a CLI
+    mandava `gamepad.emulation.set {enabled: True}` cru e reproduzia o HARM-01
+    por fora da GUI — físico grabado pelo vpad + dispatch congelado pelo gate do
+    nativo = jogo sem controle nenhum. Quem fecha é o daemon, o único ponto por
+    onde TODAS as superfícies passam.
+    """
+    d = _daemon_com_vpad(monkeypatch)
+    d.set_native_mode(True)
+    assert d.is_native_mode() is True
+
+    d.set_gamepad_emulation(True, flavor="xbox")
+
+    assert d.is_native_mode() is False
+    assert d.config.gamepad_emulation_enabled is True
+    assert d._gamepad_device is not None
+
+
+def test_native_on_com_gamepad_ligado_derruba_o_vpad(
+    tmp_config: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O caminho inverso, com o daemon de verdade (sem os mocks do fixture).
+
+    Já era coberto pelo `_release_controller_to_game`; o teste existe para o
+    par ficar travado dos DOIS lados — a garantia é "nunca os dois ligados",
+    não "gamepad sai do nativo".
+    """
+    d = _daemon_com_vpad(monkeypatch)
+    d.set_gamepad_emulation(True, flavor="xbox")
+    assert d.config.gamepad_emulation_enabled is True
+
+    d.set_native_mode(True)
+
+    assert d.is_native_mode() is True
+    assert d.config.gamepad_emulation_enabled is False
+    assert d._gamepad_device is None
+
+
+def test_gamepad_on_sem_nativo_nao_mexe_no_modo(
+    tmp_config: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A saída do nativo é condicional: sem nativo ligado, nada de efeito extra
+    (o setter é idempotente, mas o restore do stash não pode rodar à toa)."""
+    d = _daemon_com_vpad(monkeypatch)
+    chamadas: list[Any] = []
+    monkeypatch.setattr(
+        d, "_restore_emulation_from_stash", lambda: chamadas.append("restore")
+    )
+
+    d.set_gamepad_emulation(True, flavor="xbox")
+
+    assert chamadas == []
+    assert d.config.gamepad_emulation_enabled is True
+
+
 # --- HARM-16: sair de um modo zera os motores --------------------------
 
 
@@ -256,6 +343,51 @@ def test_gamepad_off_zera_os_motores(tmp_config: Any) -> None:
     controller.commands.clear()
 
     d.set_gamepad_emulation(False)
+
+    assert (0, 0) in _rumbles(controller)
+
+
+def test_ligar_o_mouse_derruba_o_vpad_e_zera_os_motores(
+    tmp_config: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O terceiro caminho de saída, que o HARM-16 não cobria.
+
+    `set_mouse_emulation(True)` derruba o gamepad pela exclusão mútua — o vpad
+    morre no meio de um FF do jogo exatamente como nos outros dois caminhos, mas
+    passava pelo wrapper `_stop_gamepad_emulation`, que não zerava nada: o
+    controle vibrava para sempre.
+    """
+    d = Daemon(controller=FakeController())
+    d.config.rumble_active = None
+    d._gamepad_device = _FakeVpad()
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.mouse.start_mouse_emulation",
+        lambda _t: True,
+    )
+    controller: FakeController = d.controller  # type: ignore[assignment]
+    controller.commands.clear()
+
+    d.set_mouse_emulation(True)
+
+    assert d._gamepad_device is None
+    assert (0, 0) in _rumbles(controller)
+
+
+def test_zerar_e_consequencia_de_parar_o_vpad(tmp_config: Any) -> None:
+    """A garantia mora no `stop`, não na memória de cada caller (HARM-16).
+
+    Era isto que faltava: três caminhos derrubam o vpad e cada um tinha de
+    lembrar de zerar por conta própria. Um caller novo herda o zero de graça.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import stop_gamepad_emulation
+
+    d = Daemon(controller=FakeController())
+    d.config.rumble_active = None
+    d._gamepad_device = _FakeVpad()
+    controller: FakeController = d.controller  # type: ignore[assignment]
+    controller.commands.clear()
+
+    stop_gamepad_emulation(d, persist=False, release_grab=False)
 
     assert (0, 0) in _rumbles(controller)
 

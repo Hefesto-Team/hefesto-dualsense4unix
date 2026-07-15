@@ -37,7 +37,7 @@ def _rotulo_do_param(spec: Any, nome: str) -> str:
     """Rótulo do slider para o parâmetro `nome` do preset (ex.: end -> "Fim")."""
     for param in getattr(spec, "params", ()):
         if param.name == nome:
-            return param.label
+            return str(param.label)
     return nome
 
 

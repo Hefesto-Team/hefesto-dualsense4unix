@@ -346,21 +346,23 @@ def stop_gamepad_emulation(
 
     `persist=False` e `release_grab=False` são usados na troca de flavor (a
     recriação imediata reaplica ambos).
-    """
-    if daemon._gamepad_device is None:
-        # Garante config/flag coerentes mesmo sem device (ex.: falha no start).
-        daemon.config.gamepad_emulation_enabled = False
-        if release_grab:
-            _set_controller_grab(daemon, False)
-        if persist:
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
-                save_gamepad_emulation(False)
-        return
-    with contextlib.suppress(Exception):
-        daemon._gamepad_device.stop()
-    daemon._gamepad_device = None
+    HARM-16: zerar os motores é CONSEQUÊNCIA de parar o vpad, e por isso mora
+    aqui. Era responsabilidade de cada caller lembrar, e um esqueceu: o
+    `set_mouse_emulation(True)` derruba o gamepad pela exclusão mútua e o
+    controle ficava vibrando para sempre (em passthrough o reassert do poll loop
+    é no-op — ver `zero_motors_on_mode_exit`). Com o zero aqui, um caller novo
+    não tem como esquecer. Vale também para a troca de flavor e o shutdown: o
+    dono do FF (o jogo, via vpad) some nos dois, e o motor não pode ficar ligado
+    no vácuo — quem tem rumble FIXO pela aba Rumble não é afetado (no-op).
+    """
+    tinha_device = daemon._gamepad_device is not None
+    if tinha_device:
+        with contextlib.suppress(Exception):
+            daemon._gamepad_device.stop()
+        daemon._gamepad_device = None
+    # Sem device (ex.: falha no start) o resto ainda roda: config/flag/grab
+    # coerentes valem em qualquer caso.
     daemon.config.gamepad_emulation_enabled = False
     if release_grab:
         _set_controller_grab(daemon, False)
@@ -369,7 +371,11 @@ def stop_gamepad_emulation(
             from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
             save_gamepad_emulation(False)
-    logger.info("gamepad_emulation_stopped")
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import zero_motors_on_mode_exit
+
+    zero_motors_on_mode_exit(daemon)
+    if tinha_device:
+        logger.info("gamepad_emulation_stopped")
 
 
 def dispatch_gamepad(

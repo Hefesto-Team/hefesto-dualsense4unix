@@ -162,7 +162,14 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         "rumble_policy_set": [],
         "rumble_policy_custom": [],
         "call_async": [],
+        # Folga de timeout pedida em cada rota (HARM-15/HARM-19): sem ela a aba
+        # declarava o daemon morto/desconhecido com ele VIVO.
+        "call_async_timeout": [],
+        "rumble_policy_set_timeout": [],
     }
+    # HARM-19: a aba usa a rota "checked" — `(ok, motivo)`. Mutável para o teste
+    # escolher entre daemon que RECUSA (vivo) e daemon que não responde.
+    resultado_policy: list[tuple[bool, str | None]] = [(True, None)]
 
     def fake_rumble_set(weak: int, strong: int) -> bool:
         calls["rumble_set"].append((weak, strong))
@@ -176,25 +183,35 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
         calls["rumble_passthrough"].append(enabled)
         return True
 
-    def fake_rumble_policy_set(policy: str) -> bool:
+    def fake_rumble_policy_set_checked(
+        policy: str, *, timeout: float | None = None
+    ) -> tuple[bool, str | None]:
         calls["rumble_policy_set"].append(policy)
-        return True
+        calls["rumble_policy_set_timeout"].append(timeout)
+        return resultado_policy[0]
 
     def fake_rumble_policy_custom(mult: float) -> bool:
         calls["rumble_policy_custom"].append(mult)
         return True
 
     def fake_call_async(
-        method: str, params: dict, on_success: Any = None, on_failure: Any = None
+        method: str,
+        params: dict,
+        on_success: Any = None,
+        on_failure: Any = None,
+        **kwargs: Any,
     ) -> None:
         calls["call_async"].append((method, params))
+        calls["call_async_timeout"].append(kwargs.get("timeout_s"))
 
     monkeypatch.setattr(rumble_actions, "rumble_set", fake_rumble_set)
     monkeypatch.setattr(rumble_actions, "rumble_stop", fake_rumble_stop)
     monkeypatch.setattr(
         rumble_actions, "rumble_passthrough", fake_rumble_passthrough
     )
-    monkeypatch.setattr(rumble_actions, "rumble_policy_set", fake_rumble_policy_set)
+    monkeypatch.setattr(
+        rumble_actions, "rumble_policy_set_checked", fake_rumble_policy_set_checked
+    )
     monkeypatch.setattr(
         rumble_actions, "rumble_policy_custom", fake_rumble_policy_custom
     )
@@ -202,6 +219,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeRumbleMixin:
 
     instance = _FakeRumbleMixin()
     instance._ipc_calls = calls  # type: ignore[attr-defined]
+    instance._policy_result = resultado_policy  # type: ignore[attr-defined]
 
     for name in (
         "install_rumble_tab",
@@ -536,7 +554,11 @@ def test_refresh_sem_opiniao_exibe_daemon_sem_gravar_draft(
     mixin = _build_mixin(monkeypatch)
 
     def call_async_entrega_max(
-        method: str, params: dict, on_success: Any = None, on_failure: Any = None
+        method: str,
+        params: dict,
+        on_success: Any = None,
+        on_failure: Any = None,
+        **_kw: Any,
     ) -> None:
         assert method == "daemon.state_full"
         if on_success is not None:
@@ -667,3 +689,93 @@ def test_faixa_do_slider_cabe_no_que_o_handler_do_daemon_aceita() -> None:
     result = asyncio.run(handlers._handle_rumble_policy_custom({"mult": topo}))
     assert result["status"] == "ok"
     assert handlers.daemon.config.rumble_policy_custom_mult == pytest.approx(topo)
+
+
+# ---------------------------------------------------------------------------
+# HARM-15/HARM-19 — a aba Rumble para de mentir sobre o daemon
+# ---------------------------------------------------------------------------
+
+
+def test_sem_resposta_a_aba_nao_chuta_uma_politica(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem resposta, a aba NÃO SABE a política — e afirmar uma é mentir.
+
+    Repro: o daemon está em "max"; a usuária abre a aba durante um hotplug; o
+    state_full passa do timeout. O `_on_err` afirmava "Balanceado / 70%" POR CIMA
+    da política real, e o controle passava a fazer o oposto do que a tela dizia.
+    """
+    mixin = _build_mixin(monkeypatch)
+    # A tela como o daemon a deixou: "Máximo" afundado, slider em 100%.
+    mixin._widgets["rumble_policy_balanceado"].set_active(False)
+    mixin._widgets["rumble_policy_max"].set_active(True)
+    mixin._widgets["rumble_policy_slider"].set_value(100.0)
+
+    def call_async_falha(
+        _method: str,
+        _params: dict,
+        on_success: Any = None,
+        on_failure: Any = None,
+        **_kw: Any,
+    ) -> None:
+        if on_failure is not None:
+            on_failure(RuntimeError("conexão timeout"))
+
+    monkeypatch.setattr(rumble_actions, "call_async", call_async_falha)
+
+    mixin._sync_policy_from_state()
+
+    # Os widgets ficam como estavam — nada de "Balanceado / 70%" inventado.
+    assert mixin._widgets["rumble_policy_max"].get_active() is True
+    assert mixin._widgets["rumble_policy_balanceado"].get_active() is False
+    assert mixin._widgets["rumble_policy_slider"].get_value() == 100.0
+
+
+def test_leitura_da_politica_da_folga_de_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HARM-15: o state_full não cabe nos 0.25s default sob carga."""
+    mixin = _build_mixin(monkeypatch)
+
+    mixin._sync_policy_from_state()
+    mixin._refresh_rumble_state_label_async()
+
+    assert mixin._ipc_calls["call_async_timeout"] == [1.0, 1.0]
+
+
+def test_recusa_do_daemon_vivo_mostra_o_motivo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_safe_call` devolve (False, None) também para erro JSON-RPC do servidor —
+    daemon VIVO que recusou. O toast acusava categoricamente "não está rodando"."""
+    mixin = _build_mixin(monkeypatch)
+    mixin._policy_result[0] = (False, "mult fora da faixa")  # type: ignore[attr-defined]
+
+    mixin._set_policy("max")
+
+    msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
+    assert "mult fora da faixa" in msg
+    assert "não está rodando" not in msg
+
+
+def test_daemon_offline_continua_dizendo_que_esta_offline(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem motivo = não respondeu: aí sim o diagnóstico é o daemon."""
+    mixin = _build_mixin(monkeypatch)
+    mixin._policy_result[0] = (False, None)  # type: ignore[attr-defined]
+
+    mixin._set_policy("max")
+
+    msg = [m for _ctx, m in mixin._widgets["status_bar"].pushed][-1]
+    assert "não está rodando" in msg
+
+
+def test_troca_de_politica_da_folga_de_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mixin = _build_mixin(monkeypatch)
+
+    mixin._set_policy("economia")
+
+    assert mixin._ipc_calls["rumble_policy_set_timeout"] == [1.0]

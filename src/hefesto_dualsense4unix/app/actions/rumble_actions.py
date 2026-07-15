@@ -33,11 +33,12 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.mode_transition import STATE_IPC_TIMEOUT_S
 from hefesto_dualsense4unix.app.ipc_bridge import (
     call_async,
     rumble_passthrough,
     rumble_policy_custom,
-    rumble_policy_set,
+    rumble_policy_set_checked,
     rumble_set,
     rumble_stop,
 )
@@ -112,11 +113,22 @@ class RumbleActionsMixin(WidgetAccessMixin):
                 )
             return False
 
-        def _on_err(exc: Exception) -> bool:
-            self._apply_policy_to_widgets("balanceado", 0.7)
+        def _on_err(_exc: Exception) -> bool:
+            # Sem resposta, a aba NÃO SABE a política — e afirmar uma é mentir.
+            # Pintava "Balanceado / 70%" por cima da política real (repro: daemon
+            # em "max", state_full passando dos 250ms durante um hotplug), e o
+            # que ela via passava a divergir do que o controle faz.
             return False
 
-        call_async("daemon.state_full", {}, on_success=_on_state, on_failure=_on_err)
+        call_async(
+            "daemon.state_full",
+            {},
+            on_success=_on_state,
+            on_failure=_on_err,
+            # HARM-15: o daemon monta o state_full varrendo os controles; sob
+            # carga (hotplug, co-op subindo) não cabe nos 0.25s default.
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
 
     def _apply_policy_to_widgets(self, policy: str, custom_mult: float) -> None:
         """Reflete política e mult nos widgets sem disparar callbacks de sinal."""
@@ -216,12 +228,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
             )
             self.draft = draft.model_copy(update={"rumble": new_rumble})
 
-        ok = rumble_policy_set(policy)
-        self._toast_rumble(
-            f"Intensidade da vibração: {_POLICY_LABEL.get(policy, policy)}"
-            if ok
-            else "O Hefesto não está rodando — ligue na aba Sistema."
-        )
+        # HARM-19: recusa do daemon VIVO (motivo preenchido) não pode virar
+        # acusação de daemon morto — é o tratamento que os gatilhos já têm.
+        ok, motivo = rumble_policy_set_checked(policy, timeout=STATE_IPC_TIMEOUT_S)
+        if ok:
+            texto = f"Intensidade da vibração: {_POLICY_LABEL.get(policy, policy)}"
+        elif motivo:
+            texto = f"O Hefesto não aceitou essa intensidade: {motivo}"
+        else:
+            texto = "O Hefesto não está rodando — ligue na aba Sistema."
+        self._toast_rumble(texto)
 
     # --- handler do slider de intensidade ---
 
@@ -409,7 +425,15 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._update_rumble_state_label(result if isinstance(result, dict) else {})
             return False
 
-        call_async("daemon.state_full", {}, on_success=_on_state, on_failure=lambda _e: False)
+        call_async(
+            "daemon.state_full",
+            {},
+            on_success=_on_state,
+            on_failure=lambda _e: False,
+            # HARM-15: mesma leitura, mesma folga (o indicador some por um tick
+            # em vez de mostrar estado inventado).
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
 
     # --- helpers ---
 

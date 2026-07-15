@@ -3,8 +3,10 @@
 //! Espelha `src/hefesto_dualsense4unix/cli/ipc_client.py` do daemon Python:
 //! cada requisição é UMA linha JSON terminada em `\n`; a resposta também é
 //! uma única linha JSON. Usamos `tokio::net::UnixStream` + `BufReader` e um
-//! timeout curto (~250 ms) por chamada — se o socket não existir ou o daemon
-//! não responder a tempo, devolvemos `Err` e a UI degrada para "offline".
+//! timeout por chamada — se o socket não existir ou o daemon não responder a
+//! tempo, devolvemos `Err` e a UI degrada para "offline". São DOIS timeouts:
+//! `IPC_TIMEOUT` (leitura/refresh) e `MODE_IPC_TIMEOUT` (trocar de modo, que
+//! cria uinput + grab). Ver os dois consts abaixo.
 //!
 //! Métodos consumidos pelo applet:
 //!   - `daemon.state_full` -> estado completo (bateria, transporte, perfil...)
@@ -23,9 +25,17 @@ use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
-/// Timeout por chamada IPC. Curto de propósito: o painel não pode travar
+/// Timeout de LEITURA/refresh. Curto de propósito: o painel não pode travar
 /// esperando um daemon morto.
 const IPC_TIMEOUT: Duration = Duration::from_millis(250);
+
+/// Timeout das chamadas que TROCAM DE MODO (`native.mode.set`,
+/// `gamepad.emulation.set`). Espelha o `MODE_IPC_TIMEOUT_S` da GUI
+/// (`app/actions/mode_transition.py`): trocar de modo cria uinput + faz grab do
+/// controle, e não cabe nos 250 ms da leitura. Com o timeout curto o applet
+/// dizia "offline" com o modo JÁ aplicado — e esta onda dobrou a exposição, ao
+/// fazer o applet mandar 2-3 chamadas por troca em vez de 1.
+const MODE_IPC_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Nome-base padrão do socket (igual a `IPC_SOCKET_DEFAULT_NAME` no Python).
 const SOCKET_DEFAULT_NAME: &str = "hefesto-dualsense4unix.sock";
@@ -237,12 +247,22 @@ struct RpcErrorBody {
     message: String,
 }
 
-/// Executa uma chamada JSON-RPC e devolve o `result` bruto.
+/// Executa uma chamada JSON-RPC de LEITURA e devolve o `result` bruto.
 ///
 /// Abre uma conexão nova por chamada (mesmo padrão da CLI Python: barato e
 /// stateless). Todo o I/O é coberto por um único timeout de [`IPC_TIMEOUT`].
+/// Para trocas de modo use [`call_raw_with_timeout`] com [`MODE_IPC_TIMEOUT`].
 async fn call_raw(method: &str, params: serde_json::Value) -> Result<serde_json::Value, IpcError> {
-    call_raw_at(socket_path(), method, params).await
+    call_raw_at(socket_path(), method, params, IPC_TIMEOUT).await
+}
+
+/// Variante de [`call_raw`] com timeout explícito.
+async fn call_raw_with_timeout(
+    method: &str,
+    params: serde_json::Value,
+    timeout: Duration,
+) -> Result<serde_json::Value, IpcError> {
+    call_raw_at(socket_path(), method, params, timeout).await
 }
 
 /// Variante de [`call_raw`] com caminho de socket explícito (usada nos testes).
@@ -250,6 +270,7 @@ async fn call_raw_at(
     path: std::path::PathBuf,
     method: &str,
     params: serde_json::Value,
+    timeout: Duration,
 ) -> Result<serde_json::Value, IpcError> {
     let fut = async {
         let stream = UnixStream::connect(&path)
@@ -295,7 +316,7 @@ async fn call_raw_at(
             .ok_or_else(|| IpcError::Protocol("resposta sem 'result'".to_string()))
     };
 
-    match tokio::time::timeout(IPC_TIMEOUT, fut).await {
+    match tokio::time::timeout(timeout, fut).await {
         Ok(res) => res,
         Err(_) => Err(IpcError::Offline),
     }
@@ -361,7 +382,12 @@ pub async fn set_output_target(index: Option<i64>) -> Result<Option<i64>, IpcErr
 /// (FEAT-NATIVE-MODE-01). Devolve o novo `native_mode` reportado pelo daemon
 /// (fallback: o valor solicitado).
 pub async fn set_native_mode(enabled: bool) -> Result<bool, IpcError> {
-    let value = call_raw("native.mode.set", json!({ "enabled": enabled })).await?;
+    let value = call_raw_with_timeout(
+        "native.mode.set",
+        json!({ "enabled": enabled }),
+        MODE_IPC_TIMEOUT,
+    )
+    .await?;
     let new_state = value
         .get("native_mode")
         .and_then(|v| v.as_bool())
@@ -382,7 +408,7 @@ pub async fn set_gamepad_emulation(enabled: bool, flavor: Option<&str>) -> Resul
     if let Some(flavor) = flavor {
         params["flavor"] = json!(flavor);
     }
-    let value = call_raw("gamepad.emulation.set", params).await?;
+    let value = call_raw_with_timeout("gamepad.emulation.set", params, MODE_IPC_TIMEOUT).await?;
     let new_state = value
         .get("enabled")
         .and_then(|v| v.as_bool())
@@ -397,7 +423,10 @@ pub async fn set_gamepad_emulation(enabled: bool, flavor: Option<&str>) -> Resul
 /// função nenhuma até a pessoa achar a aba Mouse — o defeito que o HARM-06 curou
 /// na GUI e que o applet reproduzia por ter o plano de modo duplicado aqui.
 pub async fn restore_mouse() -> Result<bool, IpcError> {
-    let value = call_raw("mouse.emulation.restore", json!({})).await?;
+    // Passo do modo, não leitura: cria o uinput do mouse — mesma folga que a
+    // GUI dá a TODOS os passos do `plan_mode_transition`.
+    let value =
+        call_raw_with_timeout("mouse.emulation.restore", json!({}), MODE_IPC_TIMEOUT).await?;
     Ok(value
         .get("enabled")
         .and_then(|v| v.as_bool())
@@ -459,7 +488,7 @@ mod tests {
     async fn offline_when_socket_absent() {
         let path = temp_socket("absent");
         // Sem servidor: connect falha -> Offline (sem panic).
-        let res = call_raw_at(path, "daemon.state_full", json!({})).await;
+        let res = call_raw_at(path, "daemon.state_full", json!({}), IPC_TIMEOUT).await;
         assert!(matches!(res, Err(IpcError::Offline)));
     }
 
@@ -473,7 +502,7 @@ mod tests {
         );
         // Pequena espera para o listener ficar pronto.
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "daemon.state_full", json!({}))
+        let value = call_raw_at(path, "daemon.state_full", json!({}), IPC_TIMEOUT)
             .await
             .expect("result");
         let state: DaemonState = serde_json::from_value(value).unwrap();
@@ -492,7 +521,7 @@ mod tests {
                 .to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "profile.list", json!({}))
+        let value = call_raw_at(path, "profile.list", json!({}), IPC_TIMEOUT)
             .await
             .expect("result");
         let parsed: ProfileListResult = serde_json::from_value(value).unwrap();
@@ -512,7 +541,7 @@ mod tests {
                 .to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "daemon.state_full", json!({}))
+        let value = call_raw_at(path, "daemon.state_full", json!({}), IPC_TIMEOUT)
             .await
             .expect("result");
         let state: DaemonState = serde_json::from_value(value).unwrap();
@@ -529,7 +558,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":1,"result":{"status":"ok","target_index":1}}"#.to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "controller.target.set", json!({"index": 1}))
+        let value = call_raw_at(path, "controller.target.set", json!({"index": 1}), IPC_TIMEOUT)
             .await
             .expect("result");
         // Mesma extração de set_output_target: target_index -> Option<i64>.
@@ -546,7 +575,7 @@ mod tests {
                 .to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "daemon.state_full", json!({}))
+        let value = call_raw_at(path, "daemon.state_full", json!({}), IPC_TIMEOUT)
             .await
             .expect("result");
         let state: DaemonState = serde_json::from_value(value).unwrap();
@@ -568,7 +597,7 @@ mod tests {
             r#"{"jsonrpc":"2.0","id":1,"result":{"connected":true}}"#.to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let value = call_raw_at(path, "daemon.state_full", json!({}))
+        let value = call_raw_at(path, "daemon.state_full", json!({}), IPC_TIMEOUT)
             .await
             .expect("result");
         let state: DaemonState = serde_json::from_value(value).unwrap();
@@ -580,6 +609,74 @@ mod tests {
         assert!(state.gamepad_emulation.flavor.is_none());
     }
 
+    /// Servidor que demora `atraso` antes de responder — simula a troca de modo
+    /// (criar uinput + grab do controle), que não cabe no timeout de leitura.
+    fn spawn_mock_lento(path: PathBuf, reply: String, atraso: Duration) {
+        let listener = UnixListener::bind(&path).expect("bind mock socket");
+        tokio::spawn(async move {
+            if let Ok((stream, _)) = listener.accept().await {
+                let (read_half, mut write_half) = stream.into_split();
+                let mut reader = BufReader::new(read_half);
+                let mut line = String::new();
+                let _ = reader.read_line(&mut line).await;
+                tokio::time::sleep(atraso).await;
+                let mut out = reply.into_bytes();
+                out.push(b'\n');
+                let _ = write_half.write_all(&out).await;
+                let _ = write_half.flush().await;
+            }
+        });
+    }
+
+    #[tokio::test]
+    async fn troca_de_modo_nao_cabe_no_timeout_de_leitura() {
+        // O defeito: `IPC_TIMEOUT` (250ms) cobria TAMBÉM native.mode.set e
+        // gamepad.emulation.set — o applet dizia "offline" com o modo JÁ
+        // aplicado. Aqui o daemon responde em 400ms, como um daemon vivo
+        // criando uinput + grab.
+        let path = temp_socket("modo-lento-curto");
+        spawn_mock_lento(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"native_mode":true}}"#.to_string(),
+            Duration::from_millis(400),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        let res = call_raw_at(path, "native.mode.set", json!({"enabled": true}), IPC_TIMEOUT).await;
+
+        assert!(matches!(res, Err(IpcError::Offline)), "{res:?}");
+    }
+
+    #[tokio::test]
+    async fn troca_de_modo_cabe_no_timeout_de_modo() {
+        let path = temp_socket("modo-lento-folga");
+        spawn_mock_lento(
+            path.clone(),
+            r#"{"jsonrpc":"2.0","id":1,"result":{"native_mode":true}}"#.to_string(),
+            Duration::from_millis(400),
+        );
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        let value = call_raw_at(
+            path,
+            "native.mode.set",
+            json!({"enabled": true}),
+            MODE_IPC_TIMEOUT,
+        )
+        .await
+        .expect("o daemon respondeu dentro da folga de modo");
+
+        assert_eq!(value.get("native_mode").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    #[test]
+    fn timeout_de_modo_espelha_o_da_gui() {
+        // `MODE_IPC_TIMEOUT_S = 2.0` em app/actions/mode_transition.py. Os dois
+        // lados falam com o MESMO daemon: divergir aqui é reabrir o defeito.
+        assert_eq!(MODE_IPC_TIMEOUT, Duration::from_secs(2));
+        assert!(MODE_IPC_TIMEOUT > IPC_TIMEOUT);
+    }
+
     #[tokio::test]
     async fn maps_rpc_error() {
         let path = temp_socket("err");
@@ -589,7 +686,7 @@ mod tests {
                 .to_string(),
         );
         tokio::time::sleep(Duration::from_millis(20)).await;
-        let res = call_raw_at(path, "profile.switch", json!({"name":"x"})).await;
+        let res = call_raw_at(path, "profile.switch", json!({"name":"x"}), IPC_TIMEOUT).await;
         match res {
             Err(IpcError::Rpc { code, message }) => {
                 assert_eq!(code, -32602);

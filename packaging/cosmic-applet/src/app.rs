@@ -453,17 +453,30 @@ impl HefestoApplet {
         } else {
             ("input-gaming-symbolic", "Modo jogo")
         };
-        content = content.push(
-            menu_button(
-                cosmic::iced::widget::row![
-                    icon::from_name(game_icon).size(16),
-                    text::body(game_label),
-                ]
-                .spacing(spacing.space_xs)
-                .align_y(cosmic::iced::Alignment::Center),
-            )
-            .on_press(Message::ToggleGameMode),
+        // HARM-03: LIGAR o modo jogo em "Controlando o PC" deixa o controle sem
+        // função nenhuma — nesse modo ele SÓ faz mouse/teclado, e é justamente
+        // isso que o modo jogo suspende. O fix existia só no GTK
+        // (`_sync_gamemode_button`) e o applet seguia oferecendo. Modo
+        // desconhecido (daemon offline) também não oferece: sem estado não dá
+        // para saber o que o clique faria — mesma regra do GTK.
+        //
+        // SAIR, por outro lado, é sensível SEMPRE: é a saída de emergência de
+        // quem caiu em desktop+suspenso pelo combo PS+Options (decisão
+        // deliberada da GUI, onde "Modo jogo" e "Sair do modo jogo" são dois
+        // botões e só o de entrar é bloqueado).
+        let pode_entrar = pode_ligar_modo_jogo(self.state.as_ref());
+        let mut game_btn = menu_button(
+            cosmic::iced::widget::row![
+                icon::from_name(game_icon).size(16),
+                text::body(game_label),
+            ]
+            .spacing(spacing.space_xs)
+            .align_y(cosmic::iced::Alignment::Center),
         );
+        if game_mode || pode_entrar {
+            game_btn = game_btn.on_press(Message::ToggleGameMode);
+        }
+        content = content.push(game_btn);
 
         // Ação: ligar/desligar o mic embutido do DualSense (o quirk segura o storm
         // com o mic ativo). Por padrão fica suprimido; liga sob demanda.
@@ -794,6 +807,23 @@ fn system_mode(state: &DaemonState) -> SystemMode {
     }
 }
 
+/// HARM-03: LIGAR o "Modo jogo" só faz sentido com um jogo no comando.
+///
+/// Espelha `_sync_gamemode_button` (`app/actions/emulation_actions.py`), a
+/// mesma regra: em "Controlando o PC" o controle SÓ faz mouse/teclado, e o modo
+/// jogo é exatamente o que os suspende — ligá-lo lá deixa o controle sem função
+/// nenhuma. Modo desconhecido (`None`, daemon offline) também não oferece: sem
+/// estado não dá para saber o que o clique faria.
+///
+/// Vale só para LIGAR. Sair do modo jogo é sensível sempre — é a saída de
+/// emergência de quem caiu em desktop+suspenso pelo combo PS+Options.
+fn pode_ligar_modo_jogo(state: Option<&DaemonState>) -> bool {
+    matches!(
+        state.map(system_mode),
+        Some(SystemMode::Gamepad) | Some(SystemMode::Native)
+    )
+}
+
 /// "N controles = N jogadores" — a informação que substituiu o toggle de co-op
 /// (LEIGO-01), em paridade com a aba Início da GUI.
 ///
@@ -932,4 +962,66 @@ fn spawn_mic(on: bool) {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ipc::GamepadEmulation;
+
+    fn state_desktop() -> DaemonState {
+        DaemonState {
+            connected: true,
+            ..Default::default()
+        }
+    }
+
+    fn state_gamepad() -> DaemonState {
+        DaemonState {
+            connected: true,
+            gamepad_emulation: GamepadEmulation {
+                enabled: true,
+                flavor: Some("xbox".to_string()),
+            },
+            ..Default::default()
+        }
+    }
+
+    fn state_native() -> DaemonState {
+        DaemonState {
+            connected: true,
+            native_mode: true,
+            ..Default::default()
+        }
+    }
+
+    // HARM-03 — "Modo jogo" não é oferecido em "Controlando o PC".
+
+    #[test]
+    fn modo_jogo_nao_e_oferecido_controlando_o_pc() {
+        // Ligá-lo aqui suspende mouse/teclado, que é a ÚNICA função do controle
+        // nesse modo: o clique deixaria o controle sem função nenhuma.
+        assert!(!pode_ligar_modo_jogo(Some(&state_desktop())));
+    }
+
+    #[test]
+    fn modo_jogo_e_oferecido_jogando() {
+        assert!(pode_ligar_modo_jogo(Some(&state_gamepad())));
+        assert!(pode_ligar_modo_jogo(Some(&state_native())));
+    }
+
+    #[test]
+    fn modo_jogo_nao_e_oferecido_com_daemon_offline() {
+        // Sem estado não dá para saber o que o clique faria — mesma regra do GTK.
+        assert!(!pode_ligar_modo_jogo(None));
+    }
+
+    #[test]
+    fn nativo_vence_o_gamepad_na_leitura_do_modo() {
+        // Paridade com `mode_of_state` da GUI: com os dois ligados, quem manda é
+        // o físico grabado pelo jogo.
+        let mut state = state_gamepad();
+        state.native_mode = true;
+        assert_eq!(system_mode(&state), SystemMode::Native);
+    }
 }
