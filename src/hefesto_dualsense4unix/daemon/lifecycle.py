@@ -325,7 +325,14 @@ class Daemon:
         # FEAT-DSX-COOP-LOCAL-01: restaura o co-op local se a sessão anterior o
         # deixou ligado (só tem efeito com gamepad + 2+ controles; o poll loop
         # reconcilia via CoopManager.sync).
-        from hefesto_dualsense4unix.utils.session import load_coop_enabled
+        # LEIGO-01: a migração vem ANTES da leitura — o checkbox saiu da UI, e o
+        # opt-out gravado por uma versão antiga deixaria o co-op desligado sem
+        # nenhum caminho de volta na interface.
+        from hefesto_dualsense4unix.utils.session import (
+            load_coop_enabled,
+            migrate_coop_optout,
+        )
+        migrate_coop_optout()
         if load_coop_enabled():
             self.config.coop_enabled = True
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)

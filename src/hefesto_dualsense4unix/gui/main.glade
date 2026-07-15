@@ -1906,7 +1906,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">Máscara DualSense: mostra prompts de PlayStation, mas a vibração NÃO funciona em jogo e o controle pode aparecer duplicado (o jogo fala com o controle físico). Prefira Xbox 360 para jogar.</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
@@ -2035,7 +2035,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
-                    <property name="label" translatable="yes">&lt;i&gt;Gamepad p/ jogos: &lt;b&gt;Xbox 360&lt;/b&gt; é a recomendada — a vibração funciona e o controle não fica duplicado. &lt;b&gt;DualSense&lt;/b&gt; mostra prompts de PlayStation, mas a vibração em jogo não funciona. O daemon vira o único leitor do controle. Requer o módulo uinput carregado.&lt;/i&gt;</property>
+                    <property name="label" translatable="yes">&lt;i&gt;Como o jogo vê o controle: &lt;b&gt;DualSense&lt;/b&gt; mostra os botões de PlayStation e vibra. &lt;b&gt;Xbox 360&lt;/b&gt; serve para jogos que só entendem controle de Xbox. Enquanto isso, o Hefesto é quem fala com o controle.&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
