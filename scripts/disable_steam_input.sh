@@ -97,8 +97,18 @@ report_state() {
 }
 
 # Steam estava rodando antes? Usado para decidir se reabrimos depois.
+#
+# BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01: o steamwebhelper é casado por NOME
+# EXATO de processo (pgrep -x, campo comm) em vez da cmdline inteira (-f). Com -f,
+# QUALQUER processo que apenas MENCIONE "steamwebhelper" na linha de comando dava
+# falso-positivo — em especial o earlyoom, cujo regex `--avoid ^(...|steam|
+# steamwebhelper|...)$` lista o nome. O efeito: a Steam "parecia" viva mesmo
+# parada (o desligar do Steam Input travava com "Steam ainda rodando") e, pior, o
+# fallback `pkill -f` mirava o próprio earlyoom (só não o matou porque roda como
+# root). O steam do runtime segue casado pelo PATH (steamrt64/steam), que não
+# aparece em listas de nomes-a-evitar.
 steam_running() {
-    pgrep -af 'steamrt64/steam' >/dev/null 2>&1 || pgrep -af 'steamwebhelper' >/dev/null 2>&1
+    pgrep -af 'steamrt64/steam' >/dev/null 2>&1 || pgrep -x steamwebhelper >/dev/null 2>&1
 }
 
 stop_steam() {
@@ -117,9 +127,13 @@ stop_steam() {
     fi
     if steam_running; then
         log "steam -shutdown não fechou em 30s — fallback pkill"
-        pkill -TERM -f 'steamrt64/steam|steamwebhelper' 2>/dev/null || true
+        # steamwebhelper por nome EXATO (-x), NUNCA -f: senão o pkill mira
+        # qualquer processo que só cite "steamwebhelper" na cmdline (ex.: earlyoom).
+        pkill -TERM -f 'steamrt64/steam' 2>/dev/null || true
+        pkill -TERM -x steamwebhelper 2>/dev/null || true
         sleep 3
-        pkill -KILL -f 'steamrt64/steam|steamwebhelper' 2>/dev/null || true
+        pkill -KILL -f 'steamrt64/steam' 2>/dev/null || true
+        pkill -KILL -x steamwebhelper 2>/dev/null || true
     fi
     sleep 2  # margem para Steam terminar de gravar últimos arquivos
     if steam_running; then

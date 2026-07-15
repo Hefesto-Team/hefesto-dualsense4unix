@@ -32,8 +32,16 @@
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
-#   --enable-cosmic-applet  compila e instala o applet COSMIC nativo (Rust; a
-#                         1a build do libcosmic e longa, >10 min). Opt-in.
+#   --enable-cosmic-applet  força compilar+instalar o applet COSMIC nativo
+#                         (Rust) mesmo fora do COSMIC. Em COSMIC o applet já é
+#                         DEFAULT-ON (a 1a build do libcosmic e longa, >10 min;
+#                         requer cargo+just — se ausentes, o install NÃO falha,
+#                         só avisa como instalar).
+#   --no-cosmic-applet    OPT-OUT do applet COSMIC (não compila nem instala; um
+#                         applet já instalado é preservado — remova via uninstall).
+#   --no-dev              cria o venv SEM o extra [dev] (ruff/mypy/pytest). Por
+#                         DEFAULT o venv já vem com os dev tools (gate local).
+#                         Use em CI/máquina enxuta que só precisa rodar o app.
 #   --with-wireplumber-fix  instala drop-in do WirePlumber que REBAIXA o DualSense
 #                         para não virar o microfone padrão do sistema + reset.
 #   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
@@ -76,6 +84,8 @@ SKIP_HOTPLUG_GUI=0
 ENABLE_AUTOSTART=0
 ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
+DISABLE_COSMIC_APPLET=0
+NO_DEV=0
 WITH_WIREPLUMBER_FIX=0
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
@@ -93,8 +103,9 @@ for arg in "$@"; do
         --no-hotplug-gui)     SKIP_HOTPLUG_GUI=1 ;;
         --enable-autostart)   ENABLE_AUTOSTART=1 ;;
         --enable-hotplug-gui) ENABLE_HOTPLUG_GUI=1 ;;
-        --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1 ;;
-        --no-cosmic-applet)   ENABLE_COSMIC_APPLET=0 ;;
+        --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1; DISABLE_COSMIC_APPLET=0 ;;
+        --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
+        --no-dev)             NO_DEV=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
@@ -169,6 +180,50 @@ run_apt() {
 require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 
 # ---------------------------------------------------------------------------
+# Credencial sudo: adquirir UMA vez no início (BUG-INSTALL-SUDO-NONINTERACTIVE-01)
+# ---------------------------------------------------------------------------
+# Vários sub-passos usam sudo internamente (install_udev.sh, install_snd_quirk.sh
+# → as_root install, o `just install` do applet → sudo install). Sem cachear a
+# credencial no começo, cada um tenta pedir a senha por conta própria e, sem TTY
+# (install rodado não-interativo), FALHA — e o passo seguia como se tivesse dado
+# certo: o step 3c não gravava /etc/modprobe.d/hefesto-dualsense-storm.conf e o
+# applet não era instalado, ambos em silêncio. Aqui primamos a credencial (uma
+# senha) e a mantemos viva durante todo o install (a build do applet passa de
+# 10 min e estouraria o timestamp_timeout default do sudo, ~15 min).
+SUDO_KEEPALIVE_PID=""
+
+_start_sudo_keepalive() {
+    [[ -n "${SUDO_KEEPALIVE_PID}" ]] && return 0
+    # Renova a cada 50s enquanto o install ($$) estiver vivo; para se a
+    # credencial não puder mais ser renovada (evita loop preso).
+    ( while kill -0 "$$" 2>/dev/null; do sudo -n true 2>/dev/null || exit 0; sleep 50; done ) &
+    SUDO_KEEPALIVE_PID=$!
+}
+
+acquire_sudo() {
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0          # já é root
+    command -v sudo >/dev/null 2>&1 || return 0          # sem sudo — cada passo avisa
+    if sudo -n true 2>/dev/null; then                    # credencial já em cache
+        _start_sudo_keepalive
+        return 0
+    fi
+    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
+    printf '\n>>> Alguns passos precisam de sudo (udev, cura do storm, applet COSMIC).\n'
+    printf '    Vou pedir sua senha UMA vez; os passos seguintes reusam a credencial.\n'
+    if sudo -v; then
+        _start_sudo_keepalive
+    else
+        warn "sudo indisponível (senha/TTY) — passos com root serão pulados e avisados"
+    fi
+    return 0
+}
+
+_cleanup_sudo_keepalive() {
+    [[ -n "${SUDO_KEEPALIVE_PID}" ]] && kill "${SUDO_KEEPALIVE_PID}" 2>/dev/null || true
+}
+trap _cleanup_sudo_keepalive EXIT
+
+# ---------------------------------------------------------------------------
 # 0. Seleção de formato de instalação
 # ---------------------------------------------------------------------------
 # native (default) faz a instalação de desenvolvimento (venv editável + atalho
@@ -195,6 +250,17 @@ if [[ -z "${FORMAT}" ]]; then
     fi
 fi
 printf '\n>>> Formato escolhido: %s\n' "${FORMAT}"
+
+# Prime a credencial sudo uma vez (ver acquire_sudo). Só pede a senha se algum
+# passo com root está de fato habilitado: udev (default), format deb (apt) ou o
+# applet forçado (--enable-cosmic-applet). Em COSMIC o applet é default-on e
+# também usa sudo, mas aí o udev já cobre o prime; --no-udev (CI sem hardware)
+# dispensa o prompt salvo se deb/applet explícito.
+_NEEDS_SUDO=1
+if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
+    _NEEDS_SUDO=0
+fi
+acquire_sudo
 
 # udev no host — compartilhado por todos os formatos (o pacote .deb já cobre
 # via postinst; flatpak/appimage/native precisam desta chamada explícita).
@@ -400,8 +466,24 @@ printf '      instalando pacote Python...\n'
 # porque o WaylandPortalBackend faz `try: import jeepney` e ignora se ausente — mas
 # se está instalado o cascade portal→wlrctl funciona em qualquer compositor que
 # implemente o portal.
-"${VENV_DIR}/bin/pip" install \
-    --quiet --disable-pip-version-check -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null
+# BUG-INSTALL-VENV-NO-DEV-01: o extra [dev] (ruff/mypy/pytest) entra POR PADRÃO
+# — assim o venv recém-criado já roda o gate pré-release local (antes o install
+# recriava o venv sem dev tools e o `ruff`/`mypy` sumiam). --no-dev pula
+# (CI/máquina enxuta). Se a instalação COM dev falhar (ex.: offline), cai para
+# só o essencial e avisa, em vez de abortar o install inteiro.
+_extras="emulation,cosmic"
+[[ "${NO_DEV}" -eq 0 ]] && _extras="${_extras},dev"
+if ! "${VENV_DIR}/bin/pip" install \
+        --quiet --disable-pip-version-check -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
+    if [[ "${NO_DEV}" -eq 0 ]]; then
+        warn "pip install com [dev] falhou — tentando só o essencial (ruff/mypy/pytest ficam de fora)"
+        "${VENV_DIR}/bin/pip" install \
+            --quiet --disable-pip-version-check -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null \
+            || die "pip install do pacote falhou — verifique a conexão e reexecute"
+    else
+        die "pip install do pacote falhou — verifique a conexão e reexecute"
+    fi
+fi
 ok
 
 # ---------------------------------------------------------------------------
@@ -499,11 +581,21 @@ fi
 # ao vivo (storm zero em gameplay). SPRINT-GAME-RUMBLE-01.
 if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     step "3c" "cura de raiz do storm (snd_usb_audio quirk — preserva mic+fone)"
+    SND_QUIRK_CONF="/etc/modprobe.d/hefesto-dualsense-storm.conf"
     if bash "${ROOT_DIR}/scripts/install_snd_quirk.sh"; then
         bash "${ROOT_DIR}/scripts/install_snd_quirk.sh" --runtime >/dev/null 2>&1 || true
-        printf '      cura instalada e ativada (replug do controle p/ valer já). status: scripts/install_snd_quirk.sh --status\n'
     else
-        warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
+        warn "install_snd_quirk.sh retornou erro — rode: sudo bash scripts/install_snd_quirk.sh"
+    fi
+    # Post-check: confirma que a cura PERSISTENTE realmente foi gravada. Sem sudo
+    # cacheado (install não-interativo), o `as_root install` interno falhava e o
+    # passo seguia como se tivesse aplicado — deixando só o runtime, que some no
+    # reboot. Agora avisamos explicitamente se o .conf não existe.
+    if [[ -f "${SND_QUIRK_CONF}" ]]; then
+        printf '      cura persistente OK em %s + ativada (replug do controle p/ valer já)\n' "${SND_QUIRK_CONF}"
+    else
+        warn "cura NÃO persistiu — ${SND_QUIRK_CONF} ausente (sudo recusado?)"
+        warn "rode manualmente: sudo bash scripts/install_snd_quirk.sh"
     fi
 fi
 
@@ -837,13 +929,20 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 9. Applet COSMIC nativo (Rust + libcosmic) — opt-in
+# 9. Applet COSMIC nativo (Rust + libcosmic) — DEFAULT-ON em COSMIC
 # ---------------------------------------------------------------------------
-step "9/11" "applet COSMIC nativo (opt-in)"
+# BUG-INSTALL-APPLET-OPT-IN-SKIPPED-01: o applet era opt-in (--enable-cosmic-
+# applet), então um ./install.sh normal PULAVA — e quem já tinha o applet o
+# perdia/deixava stale num ciclo uninstall+install. Agora é DEFAULT-ON: instala
+# quando faz sentido (em COSMIC, ou se já está instalado, ou se forçado por
+# --enable-cosmic-applet). Opt-out via --no-cosmic-applet. A build exige
+# cargo+just; se ausentes, NÃO falha o install (só avisa como instalar Rust).
+readonly APPLET_BIN="/usr/local/bin/hefesto-dualsense4unix-applet"
+step "9/11" "applet COSMIC nativo (padrão em COSMIC; --no-cosmic-applet desativa)"
 install_cosmic_applet() {
     local applet_dir="${ROOT_DIR}/packaging/cosmic-applet"
     if ! command -v cargo >/dev/null 2>&1 || ! command -v just >/dev/null 2>&1; then
-        warn "cargo/just ausentes — applet COSMIC pulado"
+        warn "cargo/just ausentes — applet COSMIC pulado (o install segue normal)"
         printf '        instale rustup (https://rustup.rs) + just e os -dev, depois:\n'
         printf '        sudo apt install just libxkbcommon-dev libwayland-dev libgbm-dev \\\n'
         printf '             libegl-dev libinput-dev libudev-dev pkg-config\n'
@@ -857,17 +956,16 @@ install_cosmic_applet() {
         warn "build/instalacao do applet falhou — veja o log acima"
     fi
 }
-if [[ "${ENABLE_COSMIC_APPLET}" -eq 1 ]]; then
+_applet_installed=0
+[[ -e "${APPLET_BIN}" ]] && _applet_installed=1
+if [[ "${DISABLE_COSMIC_APPLET}" -eq 1 ]]; then
+    printf '      pulado (--no-cosmic-applet)\n'
+    [[ "${_applet_installed}" -eq 1 ]] \
+        && printf '      (applet já instalado foi preservado — remova via ./uninstall.sh)\n'
+elif [[ "${ENABLE_COSMIC_APPLET}" -eq 1 || "${DESKTOP_IS_COSMIC}" -eq 1 || "${_applet_installed}" -eq 1 ]]; then
     install_cosmic_applet
-elif [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
-    ask_yn "instalar o applet COSMIC nativo agora? (1a build do libcosmic e longa)" "${AUTO_YES}" "n"
-    if [[ "${REPLY,,}" =~ ^y ]]; then
-        install_cosmic_applet
-    else
-        printf '      pulado (instale depois: ./install.sh --enable-cosmic-applet)\n'
-    fi
 else
-    printf '      fora do COSMIC — pulado\n'
+    printf '      fora do COSMIC e não instalado — pulado (force: ./install.sh --enable-cosmic-applet)\n'
 fi
 
 # ---------------------------------------------------------------------------

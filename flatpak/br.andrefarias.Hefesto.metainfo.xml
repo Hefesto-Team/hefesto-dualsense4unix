@@ -12,6 +12,17 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.13.3" date="2026-07-14">
+      <description>
+        <p>Correções do instalador flagradas num ciclo desinstala+reinstala: o
+           install.sh agora pede a senha do sudo uma vez só no início e a mantém
+           viva, então a cura persistente do storm e o applet COSMIC param de
+           falhar em silêncio quando rodados sem terminal; o applet COSMIC passa
+           a ser instalado por padrão em sessões COSMIC (opt-out via
+           --no-cosmic-applet); e o ambiente Python nativo já vem com as
+           ferramentas de desenvolvimento por padrão.</p>
+      </description>
+    </release>
     <release version="3.13.2" date="2026-07-14">
       <description>
         <p>Remove o launcher standalone "DualSense Fix (dsx)" e o dsx.sh — eram da
