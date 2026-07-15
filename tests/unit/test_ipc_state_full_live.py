@@ -208,3 +208,53 @@ async def test_state_full_aciona_warning_quando_neutro_persistente(
 
     # bump foi chamado pelo menos 3 vezes (3 chamadas = 3 incrementos)
     assert store.counter("state_full.stale_neutral") >= 3
+
+
+class TestPlayerPorControle:
+    """LEIGO-01b — o `state_full` carrega o número do jogador de cada controle.
+
+    A GUI rotulava os cards por POSIÇÃO na lista (`idx+1`), o que mente: com o
+    co-op desligado todos os controles alimentam o mesmo gamepad virtual (um
+    jogador só) e, com ele ligado, os índices são reusados. O número só pode
+    vir do daemon — então ele tem de estar no payload.
+    """
+
+    @pytest.mark.asyncio
+    async def test_controllers_ganham_o_campo_player(self, running_server: Any) -> None:
+        _server, socket_path, fc, _store, daemon = running_server
+        # Controller com o método real de descrição (o FakeController não o tem)
+        # e daemon sem gamepad virtual: ninguém é jogador (modo desktop).
+        fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "a0fa9cc31100"},
+        ]
+        daemon._gamepad_device = None
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        assert result["controllers"] == [
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "a0fa9cc31100", "player": None},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_payload_segue_serializavel_com_daemon_dublado(
+        self, running_server: Any
+    ) -> None:
+        """Blindagem: `_coop_manager` MagicMock não pode estourar o json.dumps.
+
+        O daemon dos testes é um MagicMock — sem coerção, `player_indexes()`
+        devolveria um mock e o `state_full` inteiro deixaria de serializar
+        (a mesma armadilha que o `_as_str_or_none` já cobria).
+        """
+        _server, socket_path, fc, _store, _daemon = running_server
+        fc.describe_controllers = lambda: [  # type: ignore[attr-defined]
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "uniq": "a0fa9cc31100"},
+        ]
+
+        async with IpcClient.connect(socket_path) as client:
+            result = await client.call("daemon.state_full")
+
+        assert result["controllers"][0]["player"] is None

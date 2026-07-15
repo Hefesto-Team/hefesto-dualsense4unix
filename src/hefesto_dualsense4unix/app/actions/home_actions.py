@@ -4,15 +4,17 @@ FEAT-GUI-HOME-TAB-01. A primeira aba responde as três perguntas que a interface
 antiga espalhava por quatro lugares:
 
 1. "Em que modo o sistema está?" — comutador Desktop / Jogo (gamepad) / Jogo
-   nativo, com co-op e máscara (DualSense/Xbox) quando fazem sentido. Reflete
-   também o modo ligado POR PERFIL (FEAT-PROFILE-MODE-01).
+   nativo, com a máscara (DualSense/Xbox) quando faz sentido. Reflete também o
+   modo ligado POR PERFIL (FEAT-PROFILE-MODE-01). LEIGO-01: não há mais toggle
+   de co-op — cada controle é um jogador, sempre; a aba só INFORMA quantos.
 2. "Quais controles estão conectados?" — um card por controle físico, com
-   transporte, papel (P1/P2…), bateria e o fim do MAC como identificador
-   discreto (FEAT-STATE-PER-CONTROLLER-01), além do aviso de grab degradado
-   (input dobrado).
+   transporte, jogador (P1/P2…, o número que o JOGO vê — LEIGO-01b), bateria e o
+   aviso de grab degradado (input dobrado). LEIGO-02: o fim do MAC saiu do card
+   — ela distingue os controles pela COR da luz e pelo LED de jogador, não por
+   um hash que não está escrito em lugar nenhum do aparelho.
 3. "Como desligo o hefesto DE VERDADE?" — botão dedicado que para o daemon e
-   NÃO o religa ao reabrir/atualizar a GUI (diferente do "Parar" da aba
-   Daemon, que o `ensure_daemon_running` ressuscitava sem avisar).
+   NÃO o religa ao reabrir/atualizar a GUI (diferente do "Desligar o Hefesto"
+   da aba Sistema, que o `ensure_daemon_running` ressuscitava sem avisar).
 
 Todo widget é montado em código dentro de `tab_home_box` (Glade só reserva o
 container) — padrão dos widgets dinâmicos, imune ao bug de popup do cosmic-comp
@@ -23,6 +25,12 @@ from __future__ import annotations
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_IPC_TIMEOUT_S,
+    STATE_IPC_TIMEOUT_S,
+    apply_mode,
+    mode_of_state,
+)
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -31,17 +39,16 @@ logger = get_logger(__name__)
 #: Intervalo do poller da aba Início (só age com a aba visível).
 HOME_POLL_INTERVAL_MS = 2000
 
-#: BUG-HOME-IPC-TIMEOUT-01: trocar de modo cria uinput + grab (bem mais que os
-#: 0.25s default do call_async) — sem folga, o toast dizia "Falha" com o modo
-#: JÁ aplicado. Mesma folga do Aplicar do rodapé (footer_actions).
-_MODE_IPC_TIMEOUT_S = 2.0
+#: HARM-01: a folga da troca de modo mora em `mode_transition` (dono único) —
+#: aqui ela vale também para o co-op e a máscara, que criam/desmontam os mesmos
+#: uinput e não cabem nos 0.25s default do call_async.
+_MODE_IPC_TIMEOUT_S = MODE_IPC_TIMEOUT_S
 
-#: HARM-15: o refresh também não cabe nos 0.25s default do call_async — o daemon
-#: monta o state_full varrendo os controles, e sob carga (hotplug, co-op subindo)
-#: passa disso. Sem folga o `_fail` pintava a aba inteira de "Daemon desligado"
-#: com o daemon VIVO. Folga menor que a da troca de modo: aqui o custo de esperar
-#: é um tick de 2s, não uma ação da usuária.
-_STATE_IPC_TIMEOUT_S = 1.0
+#: HARM-15: o refresh também não cabe nos 0.25s default do call_async — sem folga
+#: o `_fail` pintava a aba inteira de "Daemon desligado" com o daemon VIVO. Vem de
+#: `mode_transition` (dono único): a aba Mouse lê o MESMO state_full para saber o
+#: modo e precisa exatamente da mesma folga.
+_STATE_IPC_TIMEOUT_S = STATE_IPC_TIMEOUT_S
 
 # UX-MODE-TERMS-01: rótulos pela AÇÃO da usuária ("o que o controle faz
 # agora"), não pela tecnologia — "gamepad virtual"/"nativo" viravam jargão.
@@ -51,34 +58,65 @@ _MODE_ITEMS = [
     ("native", "Jogar direto (Sony)"),
 ]
 
+# LEIGO-02: "(vibra)"/"(sem vibrar)" eram verdade enquanto a máscara DualSense
+# não vibrava; com o vpad uhid (SPRINT-UHID-VPAD-01) as duas vibram, então o
+# rótulo antigo virou MENTIRA. O que resta de diferença é o que a usuária vê na
+# tela do jogo: os desenhos dos botões. Xbox segue na lista porque há jogos que
+# só entendem XInput.
+_FLAVOR_ITEMS = [
+    ("xbox", "Xbox 360"),
+    ("dualsense", "DualSense (botões PlayStation)"),
+]
+
 _MODE_DESCRIPTIONS = {
     "desktop": (
         "O controle vira mouse/teclado do computador (ajustes nas abas "
         "Mouse e Teclado)."
     ),
+    # LEIGO-02: a recomendação de 3 linhas ("use a máscara Xbox 360 e cole as
+    # opções da Steam") existia só para contornar a máscara DualSense que não
+    # vibrava. O SPRINT-UHID-VPAD-01 curou isso (o gamepad virtual é um
+    # DualSense de verdade via /dev/uhid, e vibra) — o trade-off morreu com ele,
+    # e a frase que o explicava morre junto.
     "gamepad": (
-        "Recomendado para a maioria dos jogos: o Hefesto cuida de LEDs, "
-        "vibração e de um controle por jogador. Para a vibração funcionar e o "
-        "controle não aparecer duplicado no jogo, use a máscara Xbox 360 e cole "
-        "as opções da Steam (aba Daemon → \"Copiar opções p/ jogos\")."
+        "Escolha certa para quase todos os jogos: o Hefesto acende as luzes, "
+        "faz o controle vibrar e dá um jogador para cada controle."
     ),
-    # SPRINT-GAME-RUMBLE-01: o nativo entrega gatilhos adaptativos, mas deixa o
-    # jogo falar direto com o DualSense — inclusive pelo canal de áudio (haptics
-    # do PS5), que é o que dispara o travamento/desconexão em alguns títulos.
+    # SPRINT-GAME-RUMBLE-01: sem o Hefesto no meio, o jogo fala direto com o
+    # DualSense — inclusive pelo canal de áudio (haptics do PS5), que é o que
+    # dispara o travamento/desconexão em alguns títulos.
     "native": (
-        "Para jogos com suporte PS5 nativo: entrega os gatilhos adaptativos da "
-        "Sony, mas o jogo fala direto com o controle — em alguns títulos isso "
-        "desconecta o controle no meio da partida. Se acontecer, use \"Jogar "
-        "pelo Hefesto\"."
+        "Só para jogos feitos para o PlayStation 5: os gatilhos ficam duros de "
+        "apertar, como no PS5. Alguns jogos derrubam o controle no meio da "
+        "partida neste modo — se acontecer, volte para \"Jogar pelo Hefesto\"."
     ),
 }
 
+# LEIGO-02: o glossário enfileirava 4 conceitos, dois deles mortos — "Pausar"
+# não é mais botão de lugar nenhum e "Jogar direto" já é um dos três botões
+# logo acima (com descrição própria). Sobram os dois que a aba NÃO explica por
+# si: o "Modo jogo" (que mora em outra aba) e o desligar de verdade.
 _GLOSSARY = (
-    "Modo jogo (aba Emulação): suspende só mouse/teclado virtuais.  ·  "
-    "Pausar: congela o daemon sem soltar o controle.  ·  "
-    "Jogar direto: solta o controle para o jogo.  ·  "
-    "Desligar Hefesto: para o daemon até você religar."
+    "Modo jogo (aba Emulação): pausa só o mouse/teclado, sem soltar o "
+    "controle.  ·  "
+    "Desligar Hefesto: para tudo até você ligar de novo aqui nesta aba."
 )
+
+
+def _mode_label(mode_id: object) -> str:
+    """Rótulo do modo como a usuária o lê no botão (LEIGO-02) — função pura.
+
+    Os toasts ecoavam o id interno ("gamepad", "native"): palavras que não
+    aparecem em lugar nenhum da interface. O fallback devolve o próprio id para
+    um modo desconhecido (payload de daemon mais novo) ser visível em vez de
+    virar texto vazio.
+    """
+    return dict(_MODE_ITEMS).get(str(mode_id), str(mode_id))
+
+
+def _flavor_label(flavor_id: object) -> str:
+    """Idem para a aparência do controle no jogo ("xbox" → "Xbox 360")."""
+    return dict(_FLAVOR_ITEMS).get(str(flavor_id), str(flavor_id))
 
 
 def _format_controller_subtitle(
@@ -99,18 +137,39 @@ def _format_controller_subtitle(
     return "  ·  ".join(parts)
 
 
-def _format_controller_uniq_suffix(uniq: object) -> str | None:
-    """Identificador discreto do controle: o fim do MAC ("…c311f0").
+def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
+    """Frase que substituiu o checkbox de co-op (LEIGO-01) — função pura.
 
-    FEAT-STATE-PER-CONTROLLER-01: os 6 últimos dígitos hex distinguem
-    controles fisicamente idênticos — os 6 primeiros são o prefixo do
-    fabricante (iguais em todos os DualSense). Devolve None quando o backend
-    não tem o MAC (key de fallback por path) — o card simplesmente omite a
-    linha.
+    Só fala quando há o que dizer: com um controle só não existe pergunta a
+    responder. E só afirma "N jogadores" quando o daemon de fato numerou N
+    jogadores distintos (campo `player`) — enquanto o segundo jogador não subiu,
+    o jogo ainda vê um gamepad só e a frase seria mentira.
     """
-    if not isinstance(uniq, str) or not uniq:
-        return None
-    return "…" + uniq[-6:]
+    if len(controllers) < 2:
+        return ""
+    players = {
+        c.get("player")
+        for c in controllers
+        if isinstance(c.get("player"), int) and not isinstance(c.get("player"), bool)
+    }
+    if len(players) < 2:
+        return ""
+    return f"{len(controllers)} controles = {len(players)} jogadores"
+
+
+def _format_controller_title(position: int, player: object) -> str:
+    """Título do card: "Controle 2 — P3" (função pura).
+
+    LEIGO-01b: `position` (1-based) é só a ordem na lista — a identificação
+    física do card. O número do JOGADOR vem do daemon e pode divergir da ordem
+    (índices são reusados quando alguém sai e outro entra). Sem número de
+    jogador (modo desktop/nativo, jogador ainda subindo) o card só se identifica,
+    em vez de inventar um "P" que o jogo não confirma.
+    """
+    name = f"Controle {position}"
+    if isinstance(player, int) and not isinstance(player, bool):
+        return f"{name} — P{player}"
+    return name
 
 
 class HomeActionsMixin(WidgetAccessMixin):
@@ -159,27 +218,24 @@ class HomeActionsMixin(WidgetAccessMixin):
         # na borda direita (visto ao vivo 2026-07-13). A linha própria dá ao
         # seletor a largura toda para os 2 botões.
         opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        # FEAT-COOP-DEFAULT-ON-01: já vem ligado por padrão; o checkbox é o
-        # opt-out ("todos os controles agem como o mesmo jogador" ao desmarcar).
-        coop_check = Gtk.CheckButton(
-            label="Cada controle é um jogador (padrão com 2+ controles)"
-        )
-        coop_check.connect("toggled", self._on_home_coop_toggled)
-        self._home_coop_check = coop_check
-        opts.pack_start(coop_check, False, False, 0)
+        # LEIGO-01: onde havia um checkbox de co-op agora só há INFORMAÇÃO.
+        # Ninguém pluga dois controles esperando que os dois movam o MESMO
+        # personagem, então não existe escolha a oferecer — cada controle é um
+        # jogador, sempre. O texto é preenchido no _render_home a partir dos
+        # jogadores que o daemon reporta; com um controle só, fica vazio.
+        players_hint = Gtk.Label(label="")
+        players_hint.set_xalign(0.0)
+        players_hint.set_line_wrap(True)
+        players_hint.get_style_context().add_class("dim-label")
+        self._home_players_hint = players_hint
+        opts.pack_start(players_hint, False, False, 0)
 
         mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        # UX (auditoria): rotula pela CONSEQUÊNCIA, não pela tecnologia — a ordem
-        # e os textos deixam claro que Xbox é o que faz o jogo vibrar.
+        # UX (auditoria): rotula pela CONSEQUÊNCIA, não pela tecnologia.
         flavor_label = Gtk.Label(label="O jogo vê o controle como:")
         mask_row.pack_start(flavor_label, False, False, 0)
         flavor = SegmentedSelector(wrap=True)
-        flavor.set_items(
-            [
-                ("xbox", "Xbox 360 (vibra)"),
-                ("dualsense", "DualSense (botões PS, sem vibrar)"),
-            ]
-        )
+        flavor.set_items(_FLAVOR_ITEMS)
         flavor.connect("changed", self._on_home_flavor_changed)
         self._home_flavor_selector = flavor
         mask_row.pack_start(flavor, True, True, 0)
@@ -282,10 +338,10 @@ class HomeActionsMixin(WidgetAccessMixin):
         try:
             if offline:
                 self._home_session_label.set_text(
-                    "Daemon desligado — religue na aba Daemon (Iniciar)."
+                    "O Hefesto está desligado — ligue na aba Sistema."
                 )
                 selector.set_sensitive(False)
-                self._home_coop_check.set_sensitive(False)
+                self._home_players_hint.set_text("")
                 self._home_flavor_selector.set_sensitive(False)
                 # BUG-HOME-OFFLINE-STALE-01: sem limpar, descrição/origem/
                 # opções do gamepad ficavam do último estado online.
@@ -296,24 +352,19 @@ class HomeActionsMixin(WidgetAccessMixin):
                 return
             assert state is not None
             selector.set_sensitive(True)
-            self._home_coop_check.set_sensitive(True)
             self._home_flavor_selector.set_sensitive(True)
             self._home_session_label.set_text("")
 
             gamepad = state.get("gamepad_emulation") or {}
-            if state.get("native_mode"):
-                mode = "native"
-            elif gamepad.get("enabled"):
-                mode = "gamepad"
-            else:
-                mode = "desktop"
+            # HARM-01: a leitura do modo também tem um dono só — a Emulação
+            # deriva do MESMO payload pela MESMA regra, então as duas abas não
+            # podem mais discordar sobre em que modo o sistema está.
+            mode = mode_of_state(state) or "desktop"
             selector.set_active_id(mode)
             self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode, ""))
             self._home_gamepad_opts.set_visible(mode == "gamepad")
             self._home_gamepad_opts.set_no_show_all(mode != "gamepad")
 
-            coop = state.get("coop") or {}
-            self._home_coop_check.set_active(bool(coop.get("enabled")))
             flavor = gamepad.get("flavor") or "xbox"
             self._home_flavor_selector.set_active_id(str(flavor))
 
@@ -322,8 +373,9 @@ class HomeActionsMixin(WidgetAccessMixin):
                 origin_bits.append("nativo ligado pelo perfil ativo")
             if state.get("mode_from_profile") == "gamepad":
                 origin_bits.append("gamepad ligado pelo perfil ativo")
-            if bool(coop.get("enabled")) and coop.get("players"):
-                origin_bits.append(f"co-op: {coop.get('players')} jogador(es)")
+            # LEIGO-01: a contagem de jogadores saiu daqui — dizia "co-op: N
+            # jogador(es)" (jargão) e agora mora na frase do próprio bloco do
+            # gamepad, contada a partir dos jogadores que o daemon numerou.
             self._home_origin_label.set_text(" · ".join(origin_bits))
 
             # HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada
@@ -331,12 +383,14 @@ class HomeActionsMixin(WidgetAccessMixin):
             # aba inventava um card "Controle 1 — P1 · ?" com o cabo na mesa. A
             # aba Status (_connected_controllers) e o applet já filtravam; a
             # Início era a única que não.
+            connected = [
+                c
+                for c in (state.get("controllers") or [])
+                if isinstance(c, dict) and c.get("connected")
+            ]
+            self._home_players_hint.set_text(_format_players_hint(connected))
             self._render_home_controllers(
-                [
-                    c
-                    for c in (state.get("controllers") or [])
-                    if isinstance(c, dict) and c.get("connected")
-                ],
+                connected,
                 grab_state=state.get("primary_grab_state"),
                 gamepad_on=bool(gamepad.get("enabled")),
             )
@@ -370,8 +424,9 @@ class HomeActionsMixin(WidgetAccessMixin):
             card.set_margin_end(6)
             is_primary = bool(ctrl.get("is_primary"))
             title = Gtk.Label()
-            player = f"P{idx + 1}"
-            name = f"Controle {idx + 1} — {player}"
+            # LEIGO-01b: o número do jogador vem do daemon (`player`), NUNCA de
+            # idx+1 — a posição na lista não é o que o jogo vê.
+            name = _format_controller_title(idx + 1, ctrl.get("player"))
             title.set_markup(f"<b>{name}</b>" if is_primary else name)
             title.set_xalign(0.0)
             card.pack_start(title, False, False, 0)
@@ -385,14 +440,11 @@ class HomeActionsMixin(WidgetAccessMixin):
             sub.set_xalign(0.0)
             sub.get_style_context().add_class("dim-label")
             card.pack_start(sub, False, False, 0)
-            # FEAT-STATE-PER-CONTROLLER-01: fim do MAC como identificador
-            # discreto — distingue "Controle 1"/"Controle 2" fisicamente iguais.
-            uniq_txt = _format_controller_uniq_suffix(ctrl.get("uniq"))
-            if uniq_txt is not None:
-                uid = Gtk.Label(label=uniq_txt)
-                uid.set_xalign(0.0)
-                uid.get_style_context().add_class("dim-label")
-                card.pack_start(uid, False, False, 0)
+            # LEIGO-02: aqui saía o fim do MAC ("…c311f0"). Ele não serve a
+            # nenhuma tarefa dela: o número não está gravado no controle
+            # físico, então não há como casar card com aparelho por ele. Quem
+            # distingue os controles na mesa é a COR da lightbar e o LED de
+            # jogador — o card já mostra o número do jogador.
             if is_primary and gamepad_on and grab_state == "failed":
                 warn = Gtk.Label(label="grab falhou — input pode dobrar no jogo")
                 warn.set_xalign(0.0)
@@ -412,7 +464,10 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode_id, ""))
 
         def _done(_result: Any) -> bool:
-            self._status_toast("home", f"Modo aplicado: {mode_id}")
+            # LEIGO-02: o toast dizia "Modo aplicado: gamepad" — o id interno,
+            # uma palavra que não existe em botão nenhum. Ecoa o rótulo que ela
+            # acabou de clicar.
+            self._status_toast("home", f"Pronto — agora: {_mode_label(mode_id)}")
             self._refresh_home_tab()
             return False
 
@@ -421,75 +476,14 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._refresh_home_tab()
             return False
 
-        if mode_id == "native":
-            call_async(
-                "native.mode.set",
-                {"enabled": True},
-                _done,
-                _fail,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-        elif mode_id == "gamepad":
-            flavor = self._home_flavor_selector.get_active_id() or "xbox"
-            # Ordem FIFO do worker: sair do nativo antes de ligar o gamepad.
-            call_async(
-                "native.mode.set",
-                {"enabled": False},
-                lambda _r: False,
-                lambda _e: False,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-            call_async(
-                "gamepad.emulation.set",
-                {"enabled": True, "flavor": flavor},
-                _done,
-                _fail,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-        else:  # desktop
-            # FEAT-COOP-DEFAULT-ON-01: NÃO desliga o co-op aqui — desligar o
-            # gamepad já desmonta os jogadores; preservar a preferência faz o
-            # co-op voltar sozinho ao reentrar em "Jogar pelo Hefesto".
-            call_async(
-                "native.mode.set",
-                {"enabled": False},
-                lambda _r: False,
-                lambda _e: False,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-            call_async(
-                "gamepad.emulation.set",
-                {"enabled": False},
-                _done,
-                _fail,
-                timeout_s=_MODE_IPC_TIMEOUT_S,
-            )
-
-    def _on_home_coop_toggled(self, check: Any) -> None:
-        if getattr(self, "_home_guard", False):
-            return
-        enabled = bool(check.get_active())
-
-        def _done(result: Any) -> bool:
-            players = (result or {}).get("players") if isinstance(result, dict) else None
-            extra = f" ({players} jogadores)" if players else ""
-            self._status_toast(
-                "home", ("Co-op ligado" if enabled else "Co-op desligado") + extra
-            )
-            self._refresh_home_tab()
-            return False
-
-        def _fail(exc: Exception) -> bool:
-            self._status_toast("home", f"Falha no co-op ({exc})")
-            self._refresh_home_tab()
-            return False
-
-        call_async(
-            "coop.set",
-            {"enabled": enabled},
-            _done,
-            _fail,
-            timeout_s=_MODE_IPC_TIMEOUT_S,
+        # HARM-01: a sequência (sair do nativo antes de ligar o gamepad, com a
+        # folga de 2s) mora em `mode_transition` — a Início é a dona do modo,
+        # não da mecânica; a Emulação chama exatamente o mesmo caminho.
+        apply_mode(
+            mode_id,
+            flavor=self._home_flavor_selector.get_active_id(),
+            on_done=_done,
+            on_fail=_fail,
         )
 
     def _on_home_flavor_changed(self, selector: Any) -> None:
@@ -501,7 +495,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             return
 
         def _done(_result: Any) -> bool:
-            self._status_toast("home", f"Máscara do gamepad: {flavor_id}")
+            # LEIGO-02: era "Máscara do gamepad: xbox" — jargão + id cru.
+            self._status_toast(
+                "home", f"O jogo agora vê: {_flavor_label(flavor_id)}"
+            )
             return False
 
         call_async(
@@ -525,9 +522,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             text="Desligar o Hefesto?",
         )
         dialog.format_secondary_text(
-            "O daemon para e o controle volta ao comportamento puro do Linux.\n"
-            "A GUI continua aberta e NÃO religa o daemon sozinha — religue na "
-            "aba Daemon (Iniciar) ou feche e abra o painel."
+            "O controle continua funcionando nos jogos, mas sem luzes, sem "
+            "gatilhos e sem os seus ajustes.\n"
+            "Esta janela continua aberta e NÃO liga o Hefesto de novo sozinha "
+            "— ligue na aba Sistema ou feche e abra o painel."
         )
 
         def _on_response(dlg: Any, response: int) -> None:
@@ -552,11 +550,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                     err = (getattr(result, "stderr", b"") or b"").decode(
                         "utf-8", "replace"
                     ).strip()
+                    logger.warning("home_shutdown_falhou", erro=err)
                     self._status_toast(
                         "home",
-                        "Falha ao desligar via systemd"
-                        + (f" ({err})" if err else "")
-                        + " — se o daemon roda avulso, pare-o na aba Daemon.",
+                        "Não consegui desligar o Hefesto — tente pela aba "
+                        "Sistema.",
                     )
                 self._refresh_home_tab()
                 return False

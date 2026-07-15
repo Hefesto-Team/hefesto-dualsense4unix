@@ -12,6 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -224,8 +225,46 @@ def profile_switch(name: str) -> bool:
     return ok
 
 
+def trigger_set_checked(
+    side: str, mode: str, params: list[int]
+) -> tuple[bool, str | None]:
+    """Aplica gatilho devolvendo o MOTIVO quando o daemon RECUSA (HARM-19).
+
+    Retorna ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
+    respondeu e recusou por parâmetro inválido (``CODE_INVALID_PARAMS`` — ex.:
+    Fim <= Início): ele está vivo, o pedido é que não serve. Falha de
+    transporte (daemon offline/timeout) volta como ``(False, None)``.
+
+    Existe porque ``_safe_call`` colapsa os dois casos em ``(False, None)`` e a
+    aba Triggers pintava a recusa de validação como "daemon offline?".
+    """
+    payload = {"side": side, "mode": mode, "params": params}
+    try:
+        _run_call("trigger.set", payload)
+    except IpcError as exc:
+        if exc.code == CODE_INVALID_PARAMS:
+            return False, exc.message
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method="trigger.set",
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None
+    except _IPC_TRANSPORT_ERRORS as exc:
+        logger.debug(
+            "ipc_bridge falha esperada de transporte",
+            method="trigger.set",
+            erro_tipo=type(exc).__name__,
+            erro=str(exc),
+        )
+        return False, None
+    return True, None
+
+
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
-    ok, _ = _safe_call("trigger.set", {"side": side, "mode": mode, "params": params})
+    """Aplica gatilho; True se o daemon confirmou. Descarta o motivo da recusa."""
+    ok, _motivo = trigger_set_checked(side, mode, params)
     return ok
 
 
@@ -352,6 +391,7 @@ __all__ = [
     "rumble_stop",
     "run_in_thread",
     "trigger_set",
+    "trigger_set_checked",
 ]
 
 # "O segredo de ter sucesso é saber o que descartar." — Charlie Munger

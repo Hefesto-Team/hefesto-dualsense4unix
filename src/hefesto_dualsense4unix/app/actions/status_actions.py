@@ -463,7 +463,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         UI-STATUS-OFFLINE-FALLBACK-01: o default do Glade é "Consultando..."
         em todos os labels. Se o daemon nunca subiu, os 3 timers continuam
         rodando mas o usuário fica olhando "Consultando..." sem entender que
-        precisa abrir a aba Daemon e clicar em Iniciar.
+        precisa abrir a aba Sistema e ligar o Hefesto.
         """
         if self._first_poll_succeeded:
             return False  # one-shot, não reagendar
@@ -474,7 +474,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             # a entidade `&#9675;`.
             header.set_markup(
                 '<span foreground="#d33">'
-                "&#9675; Desconectado — abra a aba Daemon e clique em Iniciar"
+                "&#9675; Desconectado — abra a aba Sistema e clique em \"Ligar o Hefesto\""
                 "</span>"
             )
         self._set_label("status_daemon", "Offline (sem resposta do daemon)")

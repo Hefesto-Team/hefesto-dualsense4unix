@@ -217,7 +217,11 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
     assert result is False  # one-shot, não reagenda
     header = host.builder.get_object("header_connection")
     assert "Desconectado" in header.markup
-    assert "aba Daemon" in header.markup
+    # O ponto do fallback é ser ACIONÁVEL: dizer onde resolver. LEIGO-03
+    # renomeou a aba ("Daemon" → "Sistema") e o botão ("Iniciar" → "Ligar o
+    # Hefesto"); o header aponta para os nomes que existem na tela.
+    assert "aba Sistema" in header.markup
+    assert "Ligar o Hefesto" in header.markup
     assert "#d33" in header.markup
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")

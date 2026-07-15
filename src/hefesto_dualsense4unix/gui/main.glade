@@ -10,9 +10,14 @@
     <property name="value">100</property>
   </object>
 
-  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global.
-       BUG-RUMBLE-CUSTOM-MULT-CAP-01: 0-200% — o schema aceita custom_mult
-       até 2.0 e o upper antigo (100) truncava o slider em 100%. -->
+  <!-- FEAT-RUMBLE-POLICY-01: slider de intensidade global. 0-200% porque acima
+       de 100% AMPLIFICA o que o jogo pediu — é a razão de existir da faixa
+       (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
+       HARM-19: o teto passou a ter UM dono — `profiles.schema.
+       RUMBLE_CUSTOM_MULT_MAX` (2.0). Eram três: 2.0 no schema, 1.0 no handler
+       `rumble.policy_custom` e 200% aqui; de 101% em diante a usuária levava um
+       erro de validação que a aba reportava como "daemon offline?". Mexeu no
+       teto? Mexa no schema — este slider é `mult * 100`. -->
   <object class="GtkAdjustment" id="rumble_policy_adj">
     <property name="lower">0</property>
     <property name="upper">200</property>
@@ -924,10 +929,10 @@
                 <property name="spacing">12</property>
                 <property name="margin">16</property>
 
-                <!-- Card 1: Política de rumble -->
+                <!-- Card 1: Intensidade da vibração -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label" translatable="yes">Política de rumble</property>
+                    <property name="label" translatable="yes">Intensidade da vibração</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -1037,7 +1042,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                             <child>
                               <object class="GtkLabel">
-                                <property name="label" translatable="yes">Motor fraco (weak)</property>
+                                <property name="label" translatable="yes">Vibração leve</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
@@ -1055,7 +1060,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                             <child>
                               <object class="GtkLabel">
-                                <property name="label" translatable="yes">Motor forte (strong)</property>
+                                <property name="label" translatable="yes">Vibração forte</property>
                                 <property name="xalign">0</property>
                               </object>
                               <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
@@ -1094,14 +1099,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <child>
                               <object class="GtkButton" id="rumble_stop">
                                 <property name="label" translatable="yes">Parar</property>
-                                <property name="tooltip-text" translatable="yes">Força silêncio dos motores (re-afirmado pelo daemon). Para devolver a vibração ao jogo, use 'Devolver rumble ao jogo'.</property>
+                                <property name="tooltip-text" translatable="yes">Trava o controle em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
                                 <signal name="clicked" handler="on_rumble_stop"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_passthrough">
-                                <property name="label" translatable="yes">Devolver rumble ao jogo</property>
-                                <property name="tooltip-text" translatable="yes">Libera o controle da vibração para o JOGO (passthrough). Use depois de 'Parar' para o rumble do jogo voltar a funcionar.</property>
+                                <property name="label" translatable="yes">Deixar o jogo controlar a vibração</property>
+                                <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer o controle vibrar.</property>
                                 <signal name="clicked" handler="on_rumble_passthrough"/>
                               </object>
                             </child>
@@ -1121,7 +1126,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                         <child>
                           <object class="GtkLabel" id="rumble_info">
-                            <property name="label" translatable="yes">&lt;i&gt;Os valores acima passam pela política selecionada antes de chegar ao hardware. Throttle mínimo: 20 ms entre comandos.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Os valores acima ainda passam pela intensidade escolhida ali em cima antes de chegar ao controle.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -1492,7 +1497,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                          sprint 77 (~450px antes, ~280px agora com preview). -->
                     <child>
                       <object class="GtkFrame">
-                        <property name="label" translatable="yes">Preview do perfil (JSON)</property>
+                        <property name="label" translatable="yes">Detalhes técnicos</property>
                         <property name="margin-top">8</property>
                         <child>
                           <object class="GtkScrolledWindow">
@@ -1544,7 +1549,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label" translatable="yes">Perfis</property></object>
             </child>
 
-            <!-- Aba Daemon -->
+            <!-- Aba Sistema (LEIGO-03: era "Daemon"; o systemd não é assunto
+                 de quem usa — a linha "Unit: hefesto-dualsense4unix.service"
+                 saiu daqui e o id do serviço vive só no código/log) -->
             <child>
               <object class="GtkBox" id="daemon_box">
                 <property name="orientation">vertical</property>
@@ -1555,19 +1562,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="row-spacing">6</property>
                     <property name="column-spacing">10</property>
                     <child>
-                      <object class="GtkLabel"><property name="label" translatable="yes">Unit:</property><property name="xalign">1</property></object>
-                      <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="daemon_unit_label">
-                        <property name="label" translatable="yes">hefesto-dualsense4unix.service</property>
-                        <property name="xalign">0</property>
-                        <property name="selectable">True</property>
-                      </object>
-                      <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel"><property name="label" translatable="yes">Status:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">O Hefesto está:</property><property name="xalign">1</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
@@ -1579,7 +1574,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                     </child>
                     <child>
-                      <object class="GtkLabel"><property name="label" translatable="yes">Auto-start:</property><property name="xalign">1</property></object>
+                      <object class="GtkLabel"><property name="label" translatable="yes">Ligar junto com o computador:</property><property name="xalign">1</property></object>
                       <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                     </child>
                     <child>
@@ -1599,24 +1594,24 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
-                        <property name="label" translatable="yes">Iniciar</property>
+                        <property name="label" translatable="yes">Ligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_start"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
-                          <property name="AtkObject::accessible-name" translatable="yes">Iniciar daemon</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Executa systemctl start do servico do daemon</property>
+                          <property name="AtkObject::accessible-name" translatable="yes">Ligar o Hefesto</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Liga o Hefesto: luzes, gatilhos e seus ajustes voltam a valer</property>
                         </object>
                       </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
-                        <property name="label" translatable="yes">Parar</property>
+                        <property name="label" translatable="yes">Desligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
                       <child internal-child="accessible">
                         <object class="AtkObject">
-                          <property name="AtkObject::accessible-name" translatable="yes">Parar daemon</property>
-                          <property name="AtkObject::accessible-description" translatable="yes">Executa systemctl stop do servico do daemon</property>
+                          <property name="AtkObject::accessible-name" translatable="yes">Desligar o Hefesto</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Desliga o Hefesto: o controle continua funcionando, mas sem luzes, gatilhos nem seus ajustes</property>
                         </object>
                       </child>
                       </object>
@@ -1629,21 +1624,22 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_logs_button">
-                        <property name="label" translatable="yes">Ver Logs</property>
+                        <property name="label" translatable="yes">Ver detalhes</property>
+                        <property name="tooltip-text" translatable="yes">Mostra o registro técnico do Hefesto aqui embaixo — útil para relatar um problema.</property>
                         <signal name="clicked" handler="on_daemon_view_logs"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_restart_daemon">
-                        <property name="label" translatable="yes">Reiniciar daemon</property>
-                        <property name="tooltip-text" translatable="yes">Executa systemctl --user restart hefesto-dualsense4unix.service</property>
+                        <property name="label" translatable="yes">Reiniciar o Hefesto</property>
+                        <property name="tooltip-text" translatable="yes">Desliga e liga o Hefesto de novo — resolve a maioria dos travamentos.</property>
                         <signal name="clicked" handler="on_daemon_service_restart"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="btn_migrate_to_systemd">
-                        <property name="label" translatable="yes">Migrar para systemd</property>
-                        <property name="tooltip-text" translatable="yes">Para o processo avulso e inicia o daemon via systemctl --user start hefesto-dualsense4unix.service</property>
+                        <property name="label" translatable="yes">Corrigir modo de execução</property>
+                        <property name="tooltip-text" translatable="yes">O Hefesto está rodando de um jeito improvisado: não liga sozinho nem se recupera se travar. Este botão o coloca no jeito certo.</property>
                         <property name="visible">False</property>
                         <property name="no-show-all">True</property>
                         <signal name="clicked" handler="on_daemon_migrate_to_systemd"/>
@@ -1660,7 +1656,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">&lt;b&gt;Anti-storm / Sistema&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Saúde do sistema&lt;/b&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="xalign">0</property>
                       </object>
@@ -1680,8 +1676,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="spacing">4</property>
                         <child>
                           <object class="GtkButton" id="btn_storm_fix_safe">
-                            <property name="label" translatable="yes">Reaplicar fixes seguros</property>
-                            <property name="tooltip-text" translatable="yes">Sem sudo: desliga Steam Input (se a Steam não estiver aberta) e configura o WirePlumber</property>
+                            <property name="label" translatable="yes">Aplicar correções</property>
+                            <property name="tooltip-text" translatable="yes">Não pede senha: desliga o Steam Input (se a Steam não estiver aberta) e ajusta o áudio do controle.</property>
                             <signal name="clicked" handler="on_storm_fix_safe"/>
                           </object>
                         </child>
@@ -1699,7 +1695,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label" translatable="yes">&lt;b&gt;Saída de systemctl status&lt;/b&gt;</property>
+                    <property name="label" translatable="yes">&lt;b&gt;Detalhes técnicos&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -1727,7 +1723,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label" translatable="yes">Daemon</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Sistema</property></object>
             </child>
 
             <!-- Aba Emulação -->
@@ -1903,7 +1899,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_off_button">
                         <property name="label" translatable="yes">Desligado</property>
-                        <property name="tooltip-text" translatable="yes">Desliga o gamepad virtual. O jogo passa a ver o DualSense cru (prompts PS nos jogos que suportam Sony).</property>
+                        <property name="tooltip-text" translatable="yes">Volta o controle a controlar o PC (mouse/teclado) — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai do "Jogar direto (Sony)".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_off"/>
                       </object>
                     </child>
@@ -1945,7 +1941,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_pause_button">
                         <property name="label" translatable="yes">Modo jogo</property>
-                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). O gamepad continua funcionando no jogo. Transitório — não sobrevive ao reboot.</property>
+                        <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
                         <signal name="clicked" handler="on_emulation_pause"/>
                       </object>
                     </child>
@@ -1954,6 +1950,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="label" translatable="yes">Sair do modo jogo</property>
                         <property name="tooltip-text" translatable="yes">Retoma a emulação de mouse/teclado.</property>
                         <signal name="clicked" handler="on_emulation_resume"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="emulation_gamemode_hint_label">
+                        <property name="label" translatable="yes"></property>
+                        <property name="margin-start">8</property>
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                       </object>
                     </child>
                   </object>
@@ -2068,10 +2072,29 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkSwitch" id="mouse_emulation_toggle">
                         <property name="active">False</property>
+                        <!-- HARM-05: nasce fechado e só abre quando o daemon
+                             confirmar o modo "Controlar o PC" (o refresh da aba
+                             é assíncrono). Oferecê-lo antes de saber o modo é
+                             oferecer às cegas o clique que derruba o vpad. -->
+                        <property name="sensitive">False</property>
                         <signal name="state-set" handler="on_mouse_toggle_set"/>
                       </object>
                       <packing><property name="expand">False</property></packing>
                     </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- HARM-05: a razão de o switch estar bloqueado, em texto simples.
+                     Fora do modo "Controlar o PC" ligar o mouse derrubava o vpad e
+                     os jogadores do co-op SEM AVISO, no meio do jogo. -->
+                <child>
+                  <object class="GtkLabel" id="mouse_mode_hint_label">
+                    <property name="label"></property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <property name="no-show-all">True</property>
+                    <style><class name="dim-label"/></style>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>

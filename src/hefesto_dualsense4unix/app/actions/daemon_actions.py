@@ -1,4 +1,11 @@
-"""Aba Daemon: status systemd --user + controles.
+"""Aba Sistema: o Hefesto está funcionando? liga sozinho? está saudável?
+
+LEIGO-03: a aba se chamava "Daemon" e mostrava a unit do systemd, a saída crua
+de `systemctl status` e toasts com `rc=N`. O mecanismo continua igual — quem
+manda no serviço ainda é o systemd `--user`; o que mudou é que ele não é mais
+assunto de quem usa. Os nomes técnicos (`SERVICE_NORMAL`, rc, stderr) vivem no
+código e no log; a tela responde às três perguntas do título, e o detalhe
+técnico fica no painel "Detalhes técnicos" para quem for relatar um problema.
 
 SIMPLIFY-UNIT-01: unit única `hefesto-dualsense4unix.service`. Sem dropdown de seleção.
 BUG-DAEMON-STATUS-MISMATCH-01: `_daemon_status()` cruza 3 fontes (systemd
@@ -31,9 +38,26 @@ logger = get_logger(__name__)
 # Tipo canônico para o estado do daemon (BUG-DAEMON-STATUS-MISMATCH-01).
 DaemonStatus = Literal["online_systemd", "online_avulso", "iniciando", "offline"]
 
+#: LEIGO-03: o toast dizia "systemctl start hefesto-...service → rc=0" — o
+#: comando cru e um código que só um dev distingue (rc=0 é sucesso, rc=1 é
+#: falha, e os dois "pareciam" iguais na barra de status). Cada ação diz o que
+#: MUDOU para quem usa; o rc vai para o log.
+_SYSTEMCTL_OK_MSG: dict[str, str] = {
+    "start": "Pronto — Hefesto ligado.",
+    "stop": "Hefesto desligado.",
+    "enable": "Pronto — o Hefesto vai ligar sozinho com o computador.",
+    "disable": "Pronto — o Hefesto não vai mais ligar sozinho.",
+}
+_SYSTEMCTL_FAIL_MSG: dict[str, str] = {
+    "start": "Não consegui ligar o Hefesto",
+    "stop": "Não consegui desligar o Hefesto",
+    "enable": "Não consegui deixar o Hefesto ligando sozinho",
+    "disable": "Não consegui desligar o início automático",
+}
+
 
 class DaemonActionsMixin(WidgetAccessMixin):
-    """Controla a aba Daemon."""
+    """Controla a aba Sistema (o `daemon_box` do Glade)."""
 
     _daemon_autostart_guard: bool = False
     # Contador anti-loop de tentativas de autostart por sessão da GUI.
@@ -115,7 +139,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
     def on_storm_fix_safe(self, _btn: object) -> None:
         """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber."""
-        self._toast_daemon("Reaplicando fixes seguros (sem sudo)...")
+        self._toast_daemon("Aplicando correções (não pede senha)…")
 
         def _worker() -> None:
             ran = 0
@@ -150,7 +174,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             else:
                 GLib.idle_add(
                     self._toast_daemon,
-                    "Fixes reaplicados. Se a Steam estava aberta, feche-a e "
+                    "Correções aplicadas. Se a Steam estava aberta, feche-a e "
                     "clique de novo para desligar o Steam Input.",
                 )
 
@@ -201,7 +225,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
             extra = ""
         else:
             launch = self.STEAM_LAUNCH_DUALSENSE
-            extra = " (dica: troque a máscara para Xbox 360 na aba Início p/ vibração sem duplicar)"
+            extra = (
+                " (dica: na aba Início, deixe o jogo vendo o controle como "
+                "\"Xbox 360\" para ele não aparecer duas vezes)"
+            )
         copied = False
         with contextlib.suppress(Exception):
             from gi.repository import Gdk, Gtk
@@ -219,7 +246,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             self._toast_daemon(f"Copie manualmente: {launch}{extra}")
 
     def _set_daemon_status_consulting(self) -> None:
-        """Mostra o estado transitório "Consultando..." no label da aba Daemon.
+        """Mostra o estado transitório "Consultando..." no label da aba Sistema.
 
         Usado no bootstrap da aba, antes do primeiro `_refresh_daemon_view_async`
         retornar. Evita falso-negativo "Offline" em cenário onde o daemon está
@@ -228,10 +255,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label = self._get("daemon_status_label")
         if label is None:
             return
-        label.set_markup('<span foreground="#888"> Consultando...</span>')
-        label.set_tooltip_text(
-            "Verificando estado do daemon via systemctl. Aguarde."
-        )
+        label.set_markup('<span foreground="#888"> Verificando…</span>')
+        label.set_tooltip_text("Verificando se o Hefesto está rodando. Aguarde.")
 
     def _refresh_daemon_view_async(self) -> None:
         """Dispara `_refresh_daemon_view` em thread worker, sem bloquear o GTK.
@@ -463,12 +488,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         if installed:
             btn.set_sensitive(True)
             btn.set_tooltip_text(
-                "Executa systemctl --user restart hefesto-dualsense4unix.service"
+                "Desliga e liga o Hefesto de novo — resolve a maioria dos "
+                "travamentos."
             )
         else:
             btn.set_sensitive(False)
             btn.set_tooltip_text(
-                "serviço hefesto-dualsense4unix.service não instalado — rode install.sh"
+                "O Hefesto ainda não foi instalado como serviço. Rode o "
+                "instalador (install.sh) uma vez."
             )
 
     # --- handlers ---
@@ -487,7 +514,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
     # que trata erro com diálogo não-bloqueante e tem regra de sensibilidade própria.
 
     def _refresh_daemon_tab_on_show(self) -> None:
-        """Reconcilia a aba Daemon ao ser exibida (M7): status do daemon + o
+        """Reconcilia a aba Sistema ao ser exibida (M7): status do daemon + o
         cartão anti-storm (que antes só era populado no bootstrap da aba)."""
         self._refresh_daemon_view_async()
         self._refresh_storm_diag()
@@ -546,11 +573,16 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """Callback do worker de restart — roda na thread GTK."""
         if err_type == "missing":
             self._show_restart_error(
-                "systemctl não encontrado — sistema sem systemd --user."
+                "Este computador não tem o gerenciador de serviços que o "
+                "Hefesto usa. Rode o instalador (install.sh) uma vez."
             )
             return False
         if err_type == "subprocess":
-            self._show_restart_error(f"Falha ao executar systemctl: {stderr}")
+            logger.error("daemon_restart_subprocess", err=stderr)
+            self._show_restart_error(
+                "Algo deu errado ao reiniciar. Tente de novo; se insistir, "
+                "veja os 'Detalhes técnicos'."
+            )
             return False
         if rc != 0:
             stderr_clean = stderr.strip() or "(sem stderr)"
@@ -560,15 +592,17 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 rc=rc,
                 stderr=stderr_clean,
             )
+            # LEIGO-03: o diálogo mostrava "systemctl restart ...service falhou
+            # (rc=1)" + o stderr cru. O motivo técnico continua existindo — no
+            # log, onde serve para quem for depurar.
             self._show_restart_error(
-                f"systemctl restart {SERVICE_NORMAL} falhou "
-                f"(rc={rc}):\n{stderr_clean}"
+                "O Hefesto não reiniciou. Tente 'Desligar o Hefesto' e "
+                "'Ligar o Hefesto'; os 'Detalhes técnicos' aqui embaixo "
+                "mostram o motivo."
             )
             return False
         logger.info("daemon_restart_ok", unit=SERVICE_NORMAL)
-        self._toast_daemon(
-            f"systemctl --user restart {SERVICE_NORMAL} → ok"
-        )
+        self._toast_daemon("Hefesto reiniciado.")
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False
 
@@ -589,7 +623,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             flags=0,
             message_type=Gtk.MessageType.ERROR,
             buttons=Gtk.ButtonsType.CLOSE,
-            text="Não foi possível reiniciar o daemon",
+            text="Não foi possível reiniciar o Hefesto",
         )
         dialog.format_secondary_text(message)
         dialog.connect("response", lambda d, _r: d.destroy())
@@ -666,11 +700,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """Callback pós-migração — executa na thread principal GTK."""
         if rc == 0:
             self._toast_daemon(
-                "Daemon migrado para systemd com sucesso."
+                "Pronto — o Hefesto agora liga sozinho e volta sozinho se "
+                "travar."
             )
         else:
+            logger.warning("daemon_migrate_falhou", unit=SERVICE_NORMAL, rc=rc)
             self._toast_daemon(
-                f"Falha ao iniciar hefesto-dualsense4unix.service via systemd (rc={rc})."
+                "Não consegui corrigir o modo de execução — veja os 'Detalhes "
+                "técnicos' aqui embaixo."
             )
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False
@@ -731,7 +768,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return "offline"
 
     def _refresh_daemon_view(self) -> None:
-        """Atualiza a aba Daemon com base no estado canônico do daemon.
+        """Atualiza a aba Sistema com base no estado canônico do daemon.
 
         Consulta `_daemon_status()` (3 fontes) e pinta o label com cor e
         tooltip PT-BR amigável. Também atualiza o switch auto-start e o
@@ -778,7 +815,16 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
     def _on_systemctl_done(self, action: str, unit: str, rc: int) -> bool:
         """Callback pós-systemctl — executa na thread principal GTK."""
-        self._toast_daemon(f"systemctl {action} {unit} → rc={rc}")
+        if rc == 0:
+            self._toast_daemon(
+                _SYSTEMCTL_OK_MSG.get(action, "Pronto.")
+            )
+        else:
+            logger.warning("systemctl_acao_falhou", acao=action, unit=unit, rc=rc)
+            falha = _SYSTEMCTL_FAIL_MSG.get(action, "Não consegui")
+            self._toast_daemon(
+                f"{falha} — veja 'Detalhes técnicos' aqui embaixo."
+            )
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
         return False  # não repetir via GLib
 
@@ -796,34 +842,37 @@ class DaemonActionsMixin(WidgetAccessMixin):
         if label is None:
             return
 
+        # LEIGO-03: o estado interno continua o mesmo (a matriz de 3 fontes é
+        # que dá a verdade); o que muda é a leitura. Quem usa pergunta três
+        # coisas — está funcionando? liga sozinho? preciso fazer algo? —, e não
+        # o que o systemd acha da unit.
         status_map: dict[DaemonStatus, tuple[str, str, str]] = {
             "online_systemd": (
                 "#2d8",
-                " Online (systemd + auto-start)"
+                " Funcionando (liga sozinho com o computador)"
                 if enabled == "enabled"
-                else " Online (gerenciado pelo systemd)",
-                "Daemon em execução sob controle do systemd. "
-                "Reinício automático habilitado caso o processo falhe.",
+                else " Funcionando",
+                "O Hefesto está rodando. Se travar, ele volta sozinho.",
             ),
             "online_avulso": (
                 "#ca0",
-                " Online (processo avulso, sem systemd)",
-                "Daemon em execução fora do systemd. "
-                "Não há reinício automático. "
-                "Use 'Migrar para systemd' para ativar gerenciamento completo.",
+                " Funcionando (modo improvisado)",
+                "O Hefesto está rodando, mas de um jeito improvisado: não liga "
+                "sozinho com o computador nem volta sozinho se travar. "
+                "Clique em 'Corrigir modo de execução'.",
             ),
             "iniciando": (
                 "#ca0",
-                " Iniciando...",
-                "systemd reporta unit ativa mas o processo ainda não escreveu "
-                "o pid file. Aguarde alguns segundos.",
+                " Ligando...",
+                "O Hefesto está terminando de ligar. Aguarde alguns segundos e "
+                "clique em Atualizar.",
             ),
             "offline": (
                 "#d33",
-                " Offline",
-                "Daemon não está em execução. "
-                "Use 'Iniciar' para subir via systemd ou "
-                "'hefesto-dualsense4unix daemon start' na linha de comando.",
+                " Desligado",
+                "O Hefesto não está rodando — o controle funciona, mas sem "
+                "luzes, gatilhos nem os seus ajustes. "
+                "Clique em 'Ligar o Hefesto'.",
             ),
         }
         color, text, tooltip = status_map[status]

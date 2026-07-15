@@ -63,7 +63,10 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
 # os demais ids espelham ProfileModeConfig.kind.
 # UX-MODE-TERMS-01: mesmos rótulos da aba Início (ação da usuária, sem jargão).
 _MODE_KIND_ITEMS: list[tuple[str, str]] = [
-    ("none", "Sem opinião"),
+    # LEIGO-06: "Sem opinião" é o programa se descrevendo por dentro (o perfil
+    # sem a seção `mode`). O rótulo diz o que ATIVAR o perfil faz — ou melhor,
+    # o que ele NÃO faz.
+    ("none", "Não mexer no modo"),
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
     ("native", "Jogar direto (Sony)"),
@@ -71,9 +74,26 @@ _MODE_KIND_ITEMS: list[tuple[str, str]] = [
 
 # Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
 _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
-    ("dualsense", "DualSense (PS)"),
+    ("dualsense", "DualSense (botões PlayStation)"),
     ("xbox", "Xbox 360"),
 ]
+
+# LEIGO-06: a coluna "Quando usar" mostrava o valor CRU do schema ("any",
+# "criteria") — o nome do campo, não uma resposta. `MatchAny` é o fallback que
+# vale sempre; `MatchCriteria` casa por janela/processo.
+_MATCH_LABELS: dict[str, str] = {
+    "any": "Sempre",
+    "criteria": "Só neste programa",
+}
+
+
+def _match_label(match_type: object) -> str:
+    """Rótulo da coluna "Quando usar" (função pura — testável sem GTK).
+
+    Um tipo desconhecido (perfil gravado por uma versão mais nova) cai no
+    próprio valor: melhor a usuária ver algo estranho do que uma célula vazia.
+    """
+    return _MATCH_LABELS.get(str(match_type), str(match_type))
 
 
 class ProfilesActionsMixin(WidgetAccessMixin):
@@ -102,7 +122,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # glade não tem o slot (fallback: o mode do perfil sobrevive por herança).
     _mode_kind_selector: Any = None
     _mode_flavor_selector: Any = None
-    _mode_coop_check: Any = None
     _mode_gamepad_opts: Any = None
     # Guard anti-loop: True enquanto _set_mode_editor preenche os widgets
     # programaticamente (set_active_id emite "changed"; sem o guard cada
@@ -123,7 +142,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         tree.set_model(store)
         self._profiles_store = store
 
-        for idx, title in ((0, "Nome"), (1, "Prio"), (2, "Match")):
+        # LEIGO-06: "Prio" e "Match" eram abreviação de dev + o nome do campo
+        # do schema. O conteúdo da 3ª coluna responde "quando este perfil
+        # entra?", então é esse o título.
+        for idx, title in ((0, "Nome"), (1, "Prioridade"), (2, "Quando usar")):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(title, renderer, text=idx, weight=3)
             tree.append_column(column)
@@ -216,17 +238,20 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # cortado na borda direita (BUG-HOME-MASK-CLIP-01, visto ao vivo também
         # aqui no editor em 2026-07-13). A linha própria dá a largura toda.
         opts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        coop_check = Gtk.CheckButton(
-            label="Co-op local (cada controle = um jogador)"
-        )
-        self._mode_coop_check = coop_check
-        opts.pack_start(coop_check, False, False, 0)
+        # LEIGO-01: aqui havia um checkbox "Co-op local (cada controle = um
+        # jogador)" — o MESMO conceito da aba Início com outro nome, e o pior dos
+        # dois: salvar qualquer perfil gravava `coop: false` e desligava o co-op
+        # ao ativá-lo. Cada controle é um jogador sempre, então não há campo.
         mask_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        flavor_label = Gtk.Label(label="Máscara:")
+        # LEIGO-06: "Máscara" é a palavra do código (SPRINT-GAME-RUMBLE-01);
+        # a usuária pergunta como o jogo vai mostrar os botões.
+        flavor_label = Gtk.Label(label="O jogo vê o controle como:")
         mask_row.pack_start(flavor_label, False, False, 0)
         flavor_sel = SegmentedSelector(wrap=True)
         flavor_sel.set_items(_MODE_FLAVOR_ITEMS)
-        flavor_sel.set_tooltip_text("Como o gamepad virtual aparece para o jogo")
+        flavor_sel.set_tooltip_text(
+            "Quais desenhos de botão o jogo mostra na tela"
+        )
         self._mode_flavor_selector = flavor_sel
         mask_row.pack_start(flavor_sel, True, True, 0)
         opts.pack_start(mask_row, False, False, 0)
@@ -234,7 +259,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         slot.pack_start(opts, False, False, 0)
 
         hint = Gtk.Label(
-            label="Sem opinião = ativar este perfil não mexe no modo do sistema."
+            label=(
+                "\"Não mexer no modo\" = ativar este perfil deixa o sistema "
+                "exatamente como está."
+            )
         )
         hint.set_xalign(0.0)
         hint.set_line_wrap(True)
@@ -247,7 +275,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # seletor e lê get_active_id().
         kind_sel.connect("changed", self._on_mode_kind_changed)
         flavor_sel.connect("changed", self._on_mode_flavor_changed)
-        coop_check.connect("toggled", self._on_mode_coop_toggled)
 
         self._suppress_mode_signals = True
         try:
@@ -258,7 +285,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._sync_mode_options_visibility("none")
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
-        """Mostra/habilita co-op e máscara apenas com kind == "gamepad"."""
+        """Mostra/habilita a máscara apenas com kind == "gamepad"."""
         opts = self._mode_gamepad_opts
         if opts is None:
             return
@@ -283,12 +310,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         self._refresh_preview()
 
-    def _on_mode_coop_toggled(self, _check: Any) -> None:
-        """Handler do co-op: só reflete a escolha no preview JSON."""
-        if self._suppress_mode_signals:
-            return
-        self._refresh_preview()
-
     def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
         """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
 
@@ -300,14 +321,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         kind = mode.kind if mode is not None else "none"
         flavor = (mode.gamepad_flavor if mode is not None else None) or "xbox"
-        coop = bool(mode.coop) if mode is not None else False
         self._suppress_mode_signals = True
         try:
             kind_sel.set_active_id(kind)
             if self._mode_flavor_selector is not None:
                 self._mode_flavor_selector.set_active_id(flavor)
-            if self._mode_coop_check is not None:
-                self._mode_coop_check.set_active(coop)
         finally:
             self._suppress_mode_signals = False
         # set_active_id só emite quando o id muda — sincroniza explicitamente
@@ -318,23 +336,26 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         """Monta o dict da seção ``mode`` a partir dos widgets do editor.
 
         "none" (sem opinião) → ``None``: a seção é REMOVIDA do perfil salvo.
-        ``gamepad_flavor``/``coop`` só valem com kind == "gamepad" — para os
-        demais kinds gravamos ``None``/``False`` (JSON limpo, sem sobras).
+        ``gamepad_flavor`` só vale com kind == "gamepad" — para os demais kinds
+        gravamos ``None`` (JSON limpo, sem sobras).
+
+        LEIGO-01: ``coop`` NÃO é emitido. O editor não pergunta mais (cada
+        controle é um jogador, sempre), e omitir a chave faz o perfil HERDAR o
+        default do esquema — gravar o valor de hoje congelaria a decisão no
+        disco de novo, que foi exatamente o defeito que a migração teve de
+        limpar.
         """
         kind_sel = self._mode_kind_selector
         kind = (kind_sel.get_active_id() if kind_sel is not None else None) or "none"
         if kind == "none":
             return None
         flavor: str | None = None
-        coop = False
         if kind == "gamepad":
             flavor_sel = self._mode_flavor_selector
             flavor = (
                 flavor_sel.get_active_id() if flavor_sel is not None else None
             ) or "xbox"
-            coop_check = self._mode_coop_check
-            coop = bool(coop_check.get_active()) if coop_check is not None else False
-        return {"kind": kind, "gamepad_flavor": flavor, "coop": coop}
+        return {"kind": kind, "gamepad_flavor": flavor}
 
     def _sync_selection_with_active_profile(self) -> None:
         """Consulta o daemon e seleciona a linha do perfil ativo (FEAT-GUI-LOAD-LAST-PROFILE-01).
@@ -686,7 +707,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         for profile in profiles:
             weight = 700 if profile.name == active else 400
             row_iter = store.append(
-                [profile.name, profile.priority, profile.match.type, weight]
+                [
+                    profile.name,
+                    profile.priority,
+                    _match_label(profile.match.type),
+                    weight,
+                ]
             )
             if first_iter is None:
                 first_iter = row_iter
@@ -729,7 +755,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         prio = max(0, min(100, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
         # FEAT-PROFILE-MODE-GUI-01: seção "Modo" reflete profile.mode
-        # (None → "Sem opinião").
+        # (None → "Não mexer no modo").
         self._set_mode_editor(profile.mode)
 
         match = profile.match

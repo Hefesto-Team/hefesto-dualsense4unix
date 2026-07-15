@@ -1,6 +1,6 @@
 """Testes do primeiro refresh do status do daemon no bootstrap da GUI.
 
-BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Daemon (e a aba Status) mostrava
+BUG-GUI-DAEMON-STATUS-INITIAL-01 — a aba Sistema (e a aba Status) mostrava
 "Offline" no primeiro frame mesmo com o daemon ativo, porque:
 
   1. O default do Glade em ``status_daemon`` era ``"Offline"``.
@@ -257,9 +257,11 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
     assert "#2d8" in host._label.markup, (
         f"esperava cor verde (#2d8) para online_systemd; markup={host._label.markup!r}"
     )
-    assert "Online" in host._label.markup
-    assert "Offline" not in host._label.markup
-    assert "Consultando" not in host._label.markup  # já foi sobrescrito pelo async
+    # LEIGO-03: o label deixou de dizer "Online (systemd + auto-start)" — o
+    # estado exibido é o mesmo, a palavra é que virou português de gente.
+    assert "Funcionando" in host._label.markup
+    assert "Desligado" not in host._label.markup
+    assert "Verificando" not in host._label.markup  # já sobrescrito pelo async
     assert host._sw.active is True  # enabled
 
 
@@ -268,8 +270,8 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 ) -> None:
     """Cenário 2: daemon inativo (systemd inactive + sem processo).
 
-    Após `install_daemon_tab`, o label final é " Offline" vermelho — nunca
-    fica preso em "Iniciando..." nem no estado "Consultando..." transitório.
+    Após `install_daemon_tab`, o label final é " Desligado" vermelho — nunca
+    fica preso em "Ligando..." nem no estado "Verificando…" transitório.
     """
     _patch_installer_none(monkeypatch)
     _patch_executor_immediate(monkeypatch)
@@ -292,21 +294,21 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
     assert "#d33" in host._label.markup, (
         f"esperava cor vermelha (#d33) para offline; markup={host._label.markup!r}"
     )
-    assert "Offline" in host._label.markup
-    assert "Iniciando" not in host._label.markup
-    assert "Consultando" not in host._label.markup
+    assert "Desligado" in host._label.markup
+    assert "Ligando" not in host._label.markup
+    assert "Verificando" not in host._label.markup
     assert host._sw.active is False
 
 
 def test_consulting_placeholder_aparece_antes_do_worker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Cenário 3: worker não responde — label permanece "Consultando...".
+    """Cenário 3: worker não responde — label permanece "Verificando…".
 
     Aqui o executor NÃO é substituído pelo síncrono: o `submit` do
     `ThreadPoolExecutor` real agenda o worker em outra thread e retorna
     imediatamente. Durante o primeiro frame da GUI (antes do worker terminar),
-    o usuário precisa ver "Consultando..." cinza — nunca "Offline" cru.
+    o usuário precisa ver "Verificando…" cinza — nunca "Desligado" cru.
     """
     _patch_installer_none(monkeypatch)
 
@@ -329,15 +331,15 @@ def test_consulting_placeholder_aparece_antes_do_worker(
     host.install_daemon_tab()
 
     # Worker foi agendado mas não executado — label deve mostrar o placeholder
-    # "Consultando..." cinza (nem verde, nem vermelho, nem amarelo).
-    assert "Consultando" in host._label.markup, (
-        f"esperava placeholder 'Consultando...'; markup={host._label.markup!r}"
+    # "Verificando…" cinza (nem verde, nem vermelho, nem amarelo).
+    assert "Verificando" in host._label.markup, (
+        f"esperava o placeholder 'Verificando…'; markup={host._label.markup!r}"
     )
     assert "#888" in host._label.markup, (
         f"esperava cor cinza (#888) no placeholder; markup={host._label.markup!r}"
     )
-    assert "Offline" not in host._label.markup
-    assert "Iniciando" not in host._label.markup
+    assert "Desligado" not in host._label.markup
+    assert "Ligando" not in host._label.markup
     assert "fn" in captured, "worker do _refresh_daemon_view_async não foi agendado"
 
 

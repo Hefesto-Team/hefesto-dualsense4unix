@@ -2,6 +2,7 @@
 # ruff: noqa: E402
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import gi
@@ -17,7 +18,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_factory_args,
     preset_to_positional_params,
 )
-from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
+from hefesto_dualsense4unix.app.ipc_bridge import trigger_set_checked
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
@@ -25,6 +26,44 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
     resolve_feedback_preset,
     resolve_vibration_preset,
 )
+
+# HARM-19: formatos de recusa que `core/trigger_effects` levanta (ValueError ->
+# CODE_INVALID_PARAMS no IPC). Traduzidos abaixo para a língua da aba.
+_RE_ERRO_ORDEM = re.compile(r"(\w+) \((-?\d+)\) deve ser > (\w+) \((-?\d+)\)")
+_RE_ERRO_RANGE = re.compile(r"(\w+) fora do range (-?\d+)-(-?\d+): (-?\d+)")
+
+
+def _rotulo_do_param(spec: Any, nome: str) -> str:
+    """Rótulo do slider para o parâmetro `nome` do preset (ex.: end -> "Fim")."""
+    for param in getattr(spec, "params", ()):
+        if param.name == nome:
+            return param.label
+    return nome
+
+
+def humanizar_erro_gatilho(motivo: str, spec: Any = None) -> str | None:
+    """Traduz a recusa do daemon para português simples (HARM-19).
+
+    O daemon fala a língua do `core/trigger_effects` ("end (3) deve ser > start
+    (5)"); a aba fala a dos próprios sliders ("Fim"/"Início"). Devolve None
+    quando a mensagem não casa com nenhum formato conhecido — aí o chamador
+    mostra o texto cru do daemon, que ainda diz mais que "daemon offline?".
+    """
+    m = _RE_ERRO_ORDEM.search(motivo)
+    if m:
+        maior, v_maior, menor, v_menor = m.groups()
+        return (
+            f"{_rotulo_do_param(spec, maior)} ({v_maior}) precisa ser maior que "
+            f"{_rotulo_do_param(spec, menor)} ({v_menor})"
+        )
+    m = _RE_ERRO_RANGE.search(motivo)
+    if m:
+        nome, lo, hi, valor = m.groups()
+        return (
+            f"{_rotulo_do_param(spec, nome)} precisa estar entre {lo} e {hi} "
+            f"(você pediu {valor})"
+        )
+    return None
 
 
 class TriggersActionsMixin(WidgetAccessMixin):
@@ -437,48 +476,66 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional
             # no formato aceito por build_from_name nomeado.
-            ok = self._send_trigger_named(side, preset_id, args)
+            ok, motivo = self._send_trigger_named(side, preset_id, args)
         else:
-            ok = trigger_set(side, preset_id, args)
+            ok, motivo = trigger_set_checked(side, preset_id, args)
 
-        self._toast_trigger(side, preset_id, ok)
+        self._toast_trigger(side, preset_id, ok, motivo=motivo, spec=spec)
 
     def _send_trigger_named(
         self, side: str, preset_id: str, kwargs: dict[str, object]
-    ) -> bool:
+    ) -> tuple[bool, str | None]:
         """Formato alternativo pra presets com kwargs (custom, multi_pos)."""
         if preset_id == "Custom":
             mode_val = int(kwargs.get("mode", 0) or 0)  # type: ignore[call-overload]
             forces_obj = kwargs.get("forces", ())
             forces = list(forces_obj) if isinstance(forces_obj, (list, tuple)) else []
-            return trigger_set(side, preset_id, [mode_val, *forces])
+            return trigger_set_checked(side, preset_id, [mode_val, *forces])
         if preset_id == "MultiPositionFeedback":
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set(side, preset_id, strengths)
+            return trigger_set_checked(side, preset_id, strengths)
         if preset_id == "MultiPositionVibration":
             freq = int(kwargs.get("frequency", 0) or 0)  # type: ignore[call-overload]
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set(side, preset_id, [freq, *strengths])
-        return False
+            return trigger_set_checked(side, preset_id, [freq, *strengths])
+        return False, f"preset sem formato nomeado conhecido: {preset_id}"
 
     def _reset_trigger(self, side: str) -> None:
         combo = self._trigger_mode.get(side)
         if combo is not None:
             combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
-        trigger_set(side, "Off", [])
+        trigger_set_checked(side, "Off", [])
         self._toast_trigger(side, "Off", True)
 
-    def _toast_trigger(self, side: str, preset_id: str, ok: bool) -> None:
+    def _toast_trigger(
+        self,
+        side: str,
+        preset_id: str,
+        ok: bool,
+        *,
+        motivo: str | None = None,
+        spec: Any = None,
+    ) -> None:
+        """Mostra o resultado do apply na statusbar.
+
+        HARM-19: `motivo` preenchido = o daemon está VIVO e recusou o pedido
+        (ex.: Fim <= Início). Culpar o daemon aí ("offline?") mandava a usuária
+        caçar o problema no lugar errado — o problema está nos sliders dela.
+        """
         bar: Any = self._get("status_bar")
         if bar is None:
             return
         ctx_id = bar.get_context_id("trigger")
-        msg = (
-            f"{side.upper()} -> {preset_id} aplicado"
-            if ok
-            else f"{side.upper()} -> {preset_id} falhou (daemon offline?)"
-        )
+        if ok:
+            msg = f"{side.upper()} -> {preset_id} aplicado"
+        elif motivo:
+            msg = (
+                f"{side.upper()} -> {preset_id} não aplicado: "
+                f"{humanizar_erro_gatilho(motivo, spec) or motivo}"
+            )
+        else:
+            msg = f"{side.upper()} -> {preset_id} falhou (daemon offline?)"
         bar.push(ctx_id, msg)

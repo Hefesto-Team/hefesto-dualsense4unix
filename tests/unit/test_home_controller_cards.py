@@ -1,9 +1,10 @@
-"""Cards de controle da aba Início com bateria + fim do MAC (FEAT-STATE-PER-CONTROLLER-01).
+"""Cards de controle da aba Início (FEAT-STATE-PER-CONTROLLER-01 + LEIGO-02).
 
 Duas camadas, ambas herméticas (sem GTK real):
 
-1. Funções puras de formatação (`_format_controller_subtitle` e
-   `_format_controller_uniq_suffix`) — o contrato de texto dos cards.
+1. Funções puras de formatação (`_format_controller_subtitle`,
+   `_format_controller_title`, `_format_players_hint`, `_mode_label`) — o
+   contrato de texto dos cards e dos toasts.
 2. `_render_home_controllers` com um Gtk fake injetado em ``sys.modules``
    (o método importa ``gi.repository`` dentro da função, então o
    ``monkeypatch.setitem`` cobre com ou sem PyGObject instalado — A-12).
@@ -22,8 +23,11 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
     HomeActionsMixin,
+    _flavor_label,
     _format_controller_subtitle,
-    _format_controller_uniq_suffix,
+    _format_controller_title,
+    _format_players_hint,
+    _mode_label,
 )
 
 # ---------------------------------------------------------------------------
@@ -65,19 +69,73 @@ class TestFormatSubtitle:
         )
 
 
-class TestFormatUniqSuffix:
-    def test_mac_normalizado_vira_sufixo_de_6_hex(self) -> None:
-        assert _format_controller_uniq_suffix("a0ab51c311f0") == "…c311f0"
+class TestLabelsDosToasts:
+    """LEIGO-02: os toasts falam o rótulo do botão, nunca o id interno."""
 
-    def test_none_e_vazio_omitem(self) -> None:
-        assert _format_controller_uniq_suffix(None) is None
-        assert _format_controller_uniq_suffix("") is None
+    def test_modo_vira_o_texto_do_botao(self) -> None:
+        assert _mode_label("gamepad") == "Jogar pelo Hefesto"
+        assert _mode_label("desktop") == "Controlar o PC"
+        assert _mode_label("native") == "Jogar direto (Sony)"
 
-    def test_nao_string_omite(self) -> None:
-        assert _format_controller_uniq_suffix(123456) is None
+    def test_aparencia_vira_o_texto_do_botao(self) -> None:
+        assert _flavor_label("xbox") == "Xbox 360"
+        assert _flavor_label("dualsense") == "DualSense (botões PlayStation)"
 
-    def test_uniq_curto_nao_estoura(self) -> None:
-        assert _format_controller_uniq_suffix("f0") == "…f0"
+    def test_id_desconhecido_nao_vira_vazio(self) -> None:
+        """Daemon mais novo com um modo que esta GUI não conhece: mostra o id
+        cru em vez de um toast em branco."""
+        assert _mode_label("modo_do_futuro") == "modo_do_futuro"
+        assert _flavor_label(None) == "None"
+
+    def test_nenhum_rotulo_promete_vibracao_exclusiva(self) -> None:
+        """O vpad uhid (SPRINT-UHID-VPAD-01) fez a máscara DualSense vibrar —
+        "(vibra)"/"(sem vibrar)" viraram mentira e não podem voltar."""
+        for texto in (_flavor_label("xbox"), _flavor_label("dualsense")):
+            assert "vibra" not in texto.lower()
+
+
+class TestFormatControllerTitle:
+    """LEIGO-01b: o "P" do card é o número do daemon, nunca a posição na lista."""
+
+    def test_posicao_e_jogador_podem_divergir(self) -> None:
+        # 2º controle da lista sendo o jogador 3 é real: índices são reusados
+        # quando um jogador sai e outro entra.
+        assert _format_controller_title(2, 3) == "Controle 2 — P3"
+
+    def test_sem_numero_de_jogador_o_card_so_se_identifica(self) -> None:
+        """Modo desktop/nativo, ou jogador ainda subindo: não inventa um "P"."""
+        assert _format_controller_title(1, None) == "Controle 1"
+
+    def test_bool_nao_vira_numero_de_jogador(self) -> None:
+        assert _format_controller_title(1, True) == "Controle 1"
+
+
+class TestFormatPlayersHint:
+    """LEIGO-01: a frase que substituiu o checkbox de co-op."""
+
+    def test_dois_controles_dois_jogadores(self) -> None:
+        assert (
+            _format_players_hint([{"player": 1}, {"player": 2}])
+            == "2 controles = 2 jogadores"
+        )
+
+    def test_um_controle_nao_diz_nada(self) -> None:
+        """Com um controle só não há pergunta a responder."""
+        assert _format_players_hint([{"player": 1}]) == ""
+        assert _format_players_hint([]) == ""
+
+    def test_nao_promete_jogadores_que_o_jogo_ainda_nao_ve(self) -> None:
+        """2 controles alimentando o MESMO vpad não são 2 jogadores."""
+        assert _format_players_hint([{"player": 1}, {"player": 1}]) == ""
+
+    def test_jogador_ainda_subindo_nao_conta(self) -> None:
+        assert _format_players_hint([{"player": 1}, {"player": None}]) == ""
+
+    def test_quatro_jogadores(self) -> None:
+        assert (
+            _format_players_hint([{"player": n} for n in (1, 2, 3, 4)])
+            == "4 controles = 4 jogadores"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +214,12 @@ def _card_texts(card: _FakeWidget) -> list[str]:
     return [str(child.label) for child in card.children]
 
 
-def test_render_mostra_bateria_e_fim_do_mac(fake_gtk: None) -> None:
+def test_render_mostra_bateria_e_nunca_o_mac(fake_gtk: None) -> None:
+    """LEIGO-02: o fim do MAC saiu do card — a bateria e o jogador ficam.
+
+    O hash não casa com nada que ela consiga ler no controle físico; quem
+    distingue os aparelhos na mesa é a cor da luz e o LED de jogador.
+    """
     host = _Host()
     controllers: list[dict[str, Any]] = [
         {
@@ -184,15 +247,15 @@ def test_render_mostra_bateria_e_fim_do_mac(fake_gtk: None) -> None:
 
     texts_p1 = _card_texts(cards[0])
     assert "USB  ·  primário  ·  87%" in texts_p1
-    assert "…c311f0" in texts_p1
-    # O identificador é discreto: classe dim-label no widget do MAC.
-    uniq_widget = next(c for c in cards[0].children if c.label == "…c311f0")
-    assert "dim-label" in uniq_widget.style.classes
+    assert not any("c311f0" in t for t in texts_p1), (
+        "o fim do MAC voltou ao card — ele não identifica nada que a usuária "
+        "consiga ler no controle"
+    )
 
     texts_p2 = _card_texts(cards[1])
     assert "BT" in texts_p2
-    # Sem uniq/bateria: nada de "…" nem "%" no segundo card.
-    assert not any("…" in t or "%" in t for t in texts_p2)
+    # Sem bateria: nada de "%" no segundo card.
+    assert not any("%" in t for t in texts_p2)
 
 
 def test_render_sem_campos_novos_nao_regride(fake_gtk: None) -> None:
@@ -204,6 +267,35 @@ def test_render_sem_campos_novos_nao_regride(fake_gtk: None) -> None:
 
     (card,) = host._home_controllers_box.get_children()
     assert "USB  ·  primário" in _card_texts(card)
+
+
+def test_render_usa_o_jogador_do_daemon_e_nao_a_posicao(fake_gtk: None) -> None:
+    """LEIGO-01b: com índice reusado, o card do 2º da lista mostra P3."""
+    host = _Host()
+    host._render_home_controllers(
+        [
+            {"index": 0, "connected": True, "transport": "usb",
+             "is_primary": True, "player": 1},
+            {"index": 1, "connected": True, "transport": "bt",
+             "is_primary": False, "player": 3},
+        ]
+    )
+
+    cards = host._home_controllers_box.get_children()
+    assert "<b>Controle 1 — P1</b>" in _card_texts(cards[0])
+    assert "Controle 2 — P3" in _card_texts(cards[1])
+
+
+def test_render_sem_jogador_omite_o_p(fake_gtk: None) -> None:
+    """Modo desktop: ninguém é jogador — o card não inventa P1."""
+    host = _Host()
+    host._render_home_controllers(
+        [{"index": 0, "connected": True, "transport": "usb",
+          "is_primary": True, "player": None}]
+    )
+
+    (card,) = host._home_controllers_box.get_children()
+    assert "<b>Controle 1</b>" in _card_texts(card)
 
 
 def test_render_lista_vazia_mostra_placeholder(fake_gtk: None) -> None:

@@ -104,10 +104,16 @@ def test_plano_do_gamepad_sai_do_nativo_antes_de_ligar_o_vpad() -> None:
     ]
 
 
-def test_plano_do_desktop_desliga_nativo_e_gamepad() -> None:
+def test_plano_do_desktop_desliga_nativo_e_gamepad_e_liga_o_mouse() -> None:
+    """HARM-06: "Controlar o PC" é um modo, não só o desligar dos outros dois.
+
+    O restore vem por último: ligar o mouse antes de o gamepad sair faria a
+    exclusão mútua do daemon derrubar o mouse recém-ligado.
+    """
     assert mode_transition.plan_mode_transition("desktop") == [
         ("native.mode.set", {"enabled": False}),
         ("gamepad.emulation.set", {"enabled": False}),
+        ("mouse.emulation.restore", {}),
     ]
 
 
@@ -203,6 +209,7 @@ def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
     assert _methods(ipc) == [
         ("native.mode.set", {"enabled": False}),
         ("gamepad.emulation.set", {"enabled": False}),
+        ("mouse.emulation.restore", {}),
     ]
 
 
@@ -217,8 +224,11 @@ def test_nenhum_caminho_da_emulacao_liga_o_vpad_sem_transicao(ipc: list[Call]) -
     ):
         ipc.clear()
         handler(None)
-        assert ipc[0][0] == "native.mode.set"
-        assert ipc[-1][0] == "gamepad.emulation.set"
+        metodos = [m for m, _p, _t in ipc]
+        # A ordem é o que importa: sair do nativo ANTES de tocar no vpad.
+        assert metodos.index("native.mode.set") < metodos.index(
+            "gamepad.emulation.set"
+        )
         assert all(t == 2.0 for _m, _p, t in ipc)
 
 

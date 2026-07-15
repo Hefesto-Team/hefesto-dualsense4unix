@@ -299,9 +299,25 @@ class TestIpcHandlers:
         assert cfg.rumble_policy_custom_mult == pytest.approx(0.45)
 
     def test_policy_custom_fora_de_range(self) -> None:
+        """HARM-19: o teto é o do esquema (2.0), não 1.0.
+
+        Este teste travava `1.5` como inválido — mas 1.5 é justamente o caso de
+        uso: acima de 1.0 o multiplicador AMPLIFICA o que o jogo pediu, e o
+        slider da GUI (0-200%) sempre ofereceu essa faixa. Quem estava fora do
+        combinado era o handler.
+        """
         server, _cfg = self._make_server()
         with pytest.raises(ValueError, match="fora de"):
-            asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+            asyncio.run(server._handle_rumble_policy_custom({"mult": 2.5}))
+
+    def test_policy_custom_amplificado_e_aceito(self) -> None:
+        """150% no slider = mult 1.5 — o que a UI oferece, o daemon aceita."""
+        server, cfg = self._make_server()
+
+        result = asyncio.run(server._handle_rumble_policy_custom({"mult": 1.5}))
+
+        assert result["mult"] == 1.5
+        assert cfg.rumble_policy_custom_mult == 1.5
 
     def test_policy_auto(self) -> None:
         server, cfg = self._make_server()

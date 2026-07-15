@@ -1,14 +1,21 @@
-"""Aba Rumble: política global (Economia/Balanceado/Máximo/Auto) + Testar motores.
+"""Aba Rumble: intensidade global (Economia/Balanceado/Máximo/Auto) + Testar motores.
 
 FEAT-RUMBLE-POLICY-01: aba reestruturada em 2 cards:
-  1. "Política de rumble" — 4 GtkToggleButton agrupados + slider intensidade + label Auto.
-  2. "Testar motores" — sliders weak/strong + botões Testar/Aplicar/Parar.
+  1. "Intensidade da vibração" — 4 GtkToggleButton agrupados + slider + label Auto.
+  2. "Testar motores" — sliders de vibração leve/forte + botões Testar/Aplicar/Parar.
+
+LEIGO-06: "política", "rumble", "weak"/"strong" e "throttle" saíram da TELA —
+continuam sendo os nomes do IPC e do schema (`rumble.policy`, `policy="max"`),
+que este módulo traduz na fronteira.
 
 Política define multiplicador global aplicado pelo daemon sobre todo rumble,
 inclusive passthrough de jogo (XInput virtual). Slider de intensidade ajusta
-"custom" em 0-200% (BUG-RUMBLE-CUSTOM-MULT-CAP-01: o schema aceita
-``custom_mult`` até 2.0; o slider acompanha — mapeamento valor/100 nos dois
-sentidos).
+"custom" em 0-200% (mapeamento valor/100 nos dois sentidos).
+
+HARM-19: o teto tem UM dono — ``profiles.schema.RUMBLE_CUSTOM_MULT_MAX``. Eram
+três (2.0 no schema, 1.0 no handler ``rumble.policy_custom``, 200% no slider), e
+de 101% em diante a usuária levava um erro de validação que esta aba nem
+mostrava. Mexeu no teto? Mexa no schema — este slider é ``mult * 100``.
 
 FEAT-RUMBLE-POLICY-PROFILE-01: cada escolha de política da usuária também é
 gravada em ``self.draft.rumble`` — o "Salvar Perfil" do rodapé persiste no
@@ -41,6 +48,16 @@ _POLICY_MULT: dict[str, float] = {
     "balanceado": 0.7,
     "max": 1.0,
     "auto": 1.0,  # Slider vai para 100% no auto (indicativo; não é custom).
+}
+
+#: LEIGO-06: o toast ecoava a CHAVE interna ("max", "economia") — palavra
+#: diferente da que a usuária acabou de clicar no botão ("Máximo"). Os rótulos
+#: são os do glade (main.glade, card "Intensidade da vibração").
+_POLICY_LABEL: dict[str, str] = {
+    "economia": "Economia",
+    "balanceado": "Balanceado",
+    "max": "Máximo",
+    "auto": "Auto",
 }
 
 _LABEL_AUTO = (
@@ -201,9 +218,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
 
         ok = rumble_policy_set(policy)
         self._toast_rumble(
-            f"Política de rumble: {policy}"
+            f"Intensidade da vibração: {_POLICY_LABEL.get(policy, policy)}"
             if ok
-            else "Falha ao alterar política (daemon offline?)"
+            else "O Hefesto não está rodando — ligue na aba Sistema."
         )
 
     # --- handler do slider de intensidade ---

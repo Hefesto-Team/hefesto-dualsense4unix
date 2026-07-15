@@ -4,6 +4,8 @@ Responsabilidades:
   - Re-aplicar rumble_active no hardware a cada ~200ms.
   - Delegar cálculo de multiplicador para `hefesto_dualsense4unix.core.rumble._effective_mult`
     (fonte canônica única — AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01).
+  - Zerar os motores quando um modo termina e o dono da vibração some
+    (`zero_motors_on_mode_exit` — HARM-16).
 
 O estado de debounce da política "auto" (_last_auto_mult, _last_auto_change_at)
 é mantido diretamente no objeto Daemon por compatibilidade com testes existentes.
@@ -76,6 +78,28 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         logger.warning("rumble_reassert_failed", err=str(exc), exc_info=True)
 
 
+def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
+    """Zera os motores ao SAIR de um modo (HARM-16).
+
+    Em passthrough (`rumble_active is None`) quem dirige os motores é o JOGO —
+    pelo hidraw no Modo Nativo, pelo FF do vpad no modo gamepad. Ao sair do
+    modo esse dono some no meio de uma vibração e NINGUÉM zera o hardware: o
+    reassert do poll loop é no-op justamente em passthrough, então o controle
+    fica vibrando para sempre (e o jogo perde a vibração).
+
+    No-op com rumble FIXADO (`rumble_active` não-None): ali o dono é a usuária
+    (aba Rumble), o reassert re-afirmaria o valor em 200ms de qualquer forma e
+    zerar seria desfazer o gesto dela. Best-effort: falha de hardware não pode
+    abortar a troca de modo.
+    """
+    if daemon.config.rumble_active is not None:
+        return
+    try:
+        daemon.controller.set_rumble(weak=0, strong=0)
+    except Exception as exc:
+        logger.warning("rumble_zero_on_mode_exit_failed", err=str(exc), exc_info=True)
+
+
 class RumbleSubsystem:
     """Subsystem sentinela para o registry — lógica real está em reassert_rumble().
 
@@ -104,4 +128,5 @@ __all__ = [
     "RUMBLE_POLICY_MULT",
     "RumbleSubsystem",
     "reassert_rumble",
+    "zero_motors_on_mode_exit",
 ]

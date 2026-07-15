@@ -32,7 +32,10 @@ def test_roundtrip_liga_desliga(tmp_config: Path) -> None:
     assert (tmp_config / "mouse_emulation.flag").exists()
     assert session.load_mouse_emulation_enabled() is True
     session.save_mouse_emulation_enabled(False)
-    assert not (tmp_config / "mouse_emulation.flag").exists()
+    # HARM-06: o "off" agora é GRAVADO (era o apagar do arquivo). O que a
+    # usuária desligou tem que ser distinguível do que ela nunca configurou —
+    # senão "Controlar o PC" religa o mouse contra a vontade dela.
+    assert (tmp_config / "mouse_emulation.flag").exists()
     assert session.load_mouse_emulation_enabled() is False
 
 
@@ -62,11 +65,16 @@ def test_flag_json_roundtrip_com_velocidades(tmp_config: Path) -> None:
     assert session.load_mouse_emulation() == (True, 9, 3)
     # Conteúdo é JSON de verdade (contrato do flag-com-conteúdo).
     data = json.loads((tmp_config / "mouse_emulation.flag").read_text("utf-8"))
-    assert data == {"speed": 9, "scroll_speed": 3}
-    # Desligar remove o arquivo (semântica existe=ligado preservada).
+    assert data == {"enabled": True, "speed": 9, "scroll_speed": 3}
+    # HARM-06: desligar GRAVA "off" (era apagar o arquivo) e PRESERVA as
+    # velocidades — o desligar não passa velocidades e não pode zerar a escolha.
     session.save_mouse_emulation(False)
-    assert not (tmp_config / "mouse_emulation.flag").exists()
-    assert session.load_mouse_emulation() == (False, None, None)
+    assert json.loads((tmp_config / "mouse_emulation.flag").read_text("utf-8")) == {
+        "enabled": False,
+        "speed": 9,
+        "scroll_speed": 3,
+    }
+    assert session.load_mouse_emulation() == (False, 9, 3)
 
 
 def test_flag_json_sem_velocidades_devolve_none(tmp_config: Path) -> None:

@@ -571,37 +571,47 @@ def test_toggle_apos_refresh_sem_opiniao_grava_draft(
     assert mixin.draft.rumble.policy == "auto"
 
 
-# --- Testes: BUG-RUMBLE-CUSTOM-MULT-CAP-01 (slider até 200%) -----------
+# --- Testes: HARM-19 (a faixa do slider = a faixa que o daemon aceita) ----
 
 
-def test_custom_mult_150_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Slider em 150% vira custom_mult=1.5 e volta ao slider como 150 (ida e
-    volta valor/100), inclusive no round-trip de perfil."""
+def test_custom_mult_round_trip(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ida e volta valor/100 no slider, inclusive no round-trip de perfil."""
     mixin = _build_mixin(monkeypatch)
     slider = mixin._widgets["rumble_policy_slider"]
-    slider.set_value(150.0)
+    slider.set_value(100.0)
     mixin.on_rumble_policy_slider_changed(slider)
 
+    # 100% coincide com o preset "max" — a aba afunda o preset em vez de custom.
+    assert mixin._rumble_policy == "max"
+    assert mixin.draft.rumble.policy == "max"
+
+    slider.set_value(95.0)
+    mixin.on_rumble_policy_slider_changed(slider)
     assert mixin._rumble_policy == "custom"
-    assert mixin.draft.rumble.policy == "custom"
-    assert mixin.draft.rumble.custom_mult == pytest.approx(1.5)
-    assert mixin._ipc_calls["rumble_policy_custom"] == [pytest.approx(1.5)]
+    assert mixin.draft.rumble.custom_mult == pytest.approx(0.95)
+    assert mixin._ipc_calls["rumble_policy_custom"] == [pytest.approx(0.95)]
 
-    # Volta: refletir o draft nos widgets recoloca o slider em 150%.
-    mixin._apply_policy_to_widgets("custom", 1.5)
-    assert slider.get_value() == pytest.approx(150.0)
+    mixin._apply_policy_to_widgets("custom", 0.95)
+    assert slider.get_value() == pytest.approx(95.0)
 
-    # Round-trip de perfil (o schema aceita custom_mult até 2.0).
-    profile = mixin.draft.to_profile("perfil_custom_150", priority=5)
+    profile = mixin.draft.to_profile("perfil_custom_95", priority=5)
     assert profile.rumble.policy == "custom"
-    assert profile.rumble.custom_mult == pytest.approx(1.5)
+    assert profile.rumble.custom_mult == pytest.approx(0.95)
 
 
-def test_glade_rumble_policy_adj_permite_ate_200() -> None:
-    """O adjustment do slider de política aceita até 200% (custom_mult 2.0);
-    upper=100 truncava o range do schema (BUG-RUMBLE-CUSTOM-MULT-CAP-01)."""
+def test_glade_rumble_policy_adj_vai_ate_o_teto_do_schema() -> None:
+    """O slider oferece a faixa INTEIRA que o schema aceita (`mult * 100`).
+
+    HARM-19: a faixa teve três donos (2.0 no schema, 1.0 no handler, 200% aqui) e
+    de 101% em diante a usuária levava erro de validação. A cura foi alinhar o
+    HANDLER ao schema — truncar o slider em 100% mataria o que o
+    BUG-RUMBLE-CUSTOM-MULT-CAP-01 entregou de propósito: acima de 100% o
+    multiplicador AMPLIFICA o que o jogo pediu.
+    """
     import xml.etree.ElementTree as ET
     from pathlib import Path
+
+    from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
     glade = (
         Path(__file__).resolve().parents[2]
@@ -609,14 +619,51 @@ def test_glade_rumble_policy_adj_permite_ate_200() -> None:
     )
     tree = ET.parse(glade)  # também valida que o XML segue bem formado
     adj = next(
-        (
-            obj
-            for obj in tree.iter("object")
-            if obj.get("id") == "rumble_policy_adj"
-        ),
+        (obj for obj in tree.iter("object") if obj.get("id") == "rumble_policy_adj"),
         None,
     )
     assert adj is not None, "adjustment rumble_policy_adj não encontrado"
     props = {p.get("name"): (p.text or "") for p in adj.findall("property")}
-    assert float(props["upper"]) == 200.0
+    assert float(props["upper"]) == RUMBLE_CUSTOM_MULT_MAX * 100
     assert float(props["lower"]) == 0.0
+
+
+def test_faixa_do_slider_cabe_no_que_o_handler_do_daemon_aceita() -> None:
+    """A faixa da UI é subconjunto da faixa aceita por `rumble.policy_custom`.
+
+    Prova de coexistência (o par que estava divergente): o topo do adjustment
+    (upper/100) tem de passar pela validação do handler REAL do daemon.
+    """
+    import asyncio
+    import xml.etree.ElementTree as ET
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    glade = (
+        Path(__file__).resolve().parents[2]
+        / "src" / "hefesto_dualsense4unix" / "gui" / "main.glade"
+    )
+    tree = ET.parse(glade)
+    adj = next(
+        obj for obj in tree.iter("object") if obj.get("id") == "rumble_policy_adj"
+    )
+    props = {p.get("name"): (p.text or "") for p in adj.findall("property")}
+    topo = float(props["upper"]) / 100.0
+
+    class _Handlers(IpcHandlersMixin):
+        def __init__(self) -> None:
+            self.daemon = SimpleNamespace(
+                config=SimpleNamespace(
+                    rumble_policy="balanceado", rumble_policy_custom_mult=0.7
+                )
+            )
+
+        def _mark_rumble_policy_manual(self) -> None:
+            pass
+
+    handlers = _Handlers()
+    result = asyncio.run(handlers._handle_rumble_policy_custom({"mult": topo}))
+    assert result["status"] == "ok"
+    assert handlers.daemon.config.rumble_policy_custom_mult == pytest.approx(topo)

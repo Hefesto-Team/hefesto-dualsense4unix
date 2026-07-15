@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
-from hefesto_dualsense4unix.profiles.schema import MatchAny
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, MatchAny
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -366,7 +366,26 @@ class IpcHandlersMixin:
         # tray e o applet mostrarem "N controles" sem uma chamada IPC separada.
         describe = getattr(self.controller, "describe_controllers", None)
         if callable(describe):
-            result["controllers"] = describe()
+            controllers = describe()
+            result["controllers"] = controllers
+            # LEIGO-01b: o número do jogador de cada controle vem do daemon —
+            # a GUI o rotulava por POSIÇÃO na lista (idx+1), que mente quando o
+            # co-op está desligado (todos são o mesmo jogador) e quando um
+            # índice é reusado depois de um jogador sair. `None` = não é jogador
+            # agora; a UI omite o número em vez de inventar um.
+            if self.daemon is not None and isinstance(controllers, list):
+                from hefesto_dualsense4unix.daemon.subsystems.coop import (
+                    resolve_player_numbers,
+                )
+
+                entries = [c for c in controllers if isinstance(c, dict)]
+                with contextlib.suppress(Exception):
+                    for entry, number in zip(
+                        entries,
+                        resolve_player_numbers(self.daemon, entries),
+                        strict=True,
+                    ):
+                        entry["player"] = number
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
         # (None = TODOS / broadcast). getattr defensivo: backends sem o método
@@ -593,16 +612,24 @@ class IpcHandlersMixin:
         """Define política "custom" com multiplicador explícito (FEAT-RUMBLE-POLICY-01).
 
         Params:
-            mult: float 0.0-1.0
+            mult: float 0.0-2.0 (acima de 1.0 AMPLIFICA o que o jogo pediu)
+
+        HARM-19: a faixa era `0.0-1.0` aqui e `0.0-2.0` no esquema de perfil
+        (`RumbleConfig.custom_mult`), com o slider da GUI indo até 200% — três
+        donos, três faixas. O slider manda `valor/100`, então de 101% em diante a
+        usuária recebia um erro de validação (que a aba ainda reportava como
+        "daemon offline?"). Alinhado ao esquema, que é quem documenta a intenção:
+        o `BUG-RUMBLE-CUSTOM-MULT-CAP-01` subiu o slider para 200% justamente
+        porque "o schema aceita custom_mult até 2.0" — e esqueceu deste handler.
         """
         mult_raw = params.get("mult")
         try:
             mult = float(mult_raw)  # type: ignore[arg-type]
         except (TypeError, ValueError) as exc:
             raise ValueError("rumble.policy_custom: 'mult' precisa ser float") from exc
-        if not (0.0 <= mult <= 1.0):
+        if not (0.0 <= mult <= RUMBLE_CUSTOM_MULT_MAX):
             raise ValueError(
-                f"rumble.policy_custom: mult fora de [0.0, 1.0]: {mult}"
+                f"rumble.policy_custom: mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: {mult}"
             )
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is None:
@@ -704,6 +731,27 @@ class IpcHandlersMixin:
             enabled=enabled, speed=speed, scroll_speed=scroll_speed
         )
         return {"status": "ok" if ok else "failed", "enabled": enabled and ok}
+
+    async def _handle_mouse_emulation_restore(
+        self, _params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Restaura a emulação de mouse conforme a preferência persistida (HARM-06).
+
+        Params: nenhum — quem sabe qual é a preferência é o daemon, que a
+        gravou. É o passo que faz "Controlar o PC" LIGAR o mouse em vez de só
+        desligar gamepad/nativo; entra na transição de modo
+        (`app/actions/mode_transition.py`), nunca em um botão solto.
+
+        Daemon dublado em teste (sem o método) responde `failed` em vez de
+        estourar: o modo desktop continua valendo sem o mouse.
+        """
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para restaurar emulação de mouse")
+        restore = getattr(self.daemon, "restore_mouse_preference", None)
+        if not callable(restore):
+            return {"status": "failed", "enabled": False}
+        enabled = bool(restore())
+        return {"status": "ok", "enabled": enabled}
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]

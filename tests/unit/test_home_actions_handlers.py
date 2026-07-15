@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import home_actions
+from hefesto_dualsense4unix.app.actions import home_actions, mode_transition
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
 
@@ -74,7 +74,12 @@ class _HomeStub:
 
 @pytest.fixture()
 def ipc_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]]]:
-    """Grava as chamadas IPC dos handlers sem tocar o daemon."""
+    """Grava as chamadas IPC dos handlers sem tocar o daemon.
+
+    HARM-01: a troca de modo passou a ser despachada por `mode_transition` (dono
+    único da sequência), então o fake precisa cobrir os DOIS módulos — a Início
+    ainda chama `call_async` direto para co-op e máscara.
+    """
     calls: list[tuple[str, dict[str, Any]]] = []
 
     def _fake_call_async(
@@ -87,6 +92,7 @@ def ipc_calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, dict[str, Any]
         calls.append((method, dict(params or {})))
 
     monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+    monkeypatch.setattr(mode_transition, "call_async", _fake_call_async)
     return calls
 
 
@@ -122,7 +128,11 @@ def test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop(
     ipc_calls: list[tuple[str, dict[str, Any]]],
 ) -> None:
     """FEAT-COOP-DEFAULT-ON-01: desktop NÃO desliga o co-op (preferência
-    preservada — desligar o gamepad já desmonta os jogadores)."""
+    preservada — desligar o gamepad já desmonta os jogadores).
+
+    HARM-06: e desktop LIGA o mouse (conforme a preferência persistida) — o
+    modo é o dono da emulação de mouse/teclado, não a aba Mouse.
+    """
     stub = _HomeStub()
     stub._home_mode_selector.set_active_id("desktop")
 
@@ -131,6 +141,7 @@ def test_modo_desktop_desliga_nativo_e_gamepad_preservando_coop(
     assert ipc_calls == [
         ("native.mode.set", {"enabled": False}),
         ("gamepad.emulation.set", {"enabled": False}),
+        ("mouse.emulation.restore", {}),
     ]
 
 
@@ -174,3 +185,28 @@ def test_flavor_changed_fora_do_modo_gamepad_e_no_op(
     stub._on_home_flavor_changed(stub._home_flavor_selector)
 
     assert ipc_calls == []
+
+
+class TestCheckboxDeCoopSumiu:
+    """LEIGO-01 — o opt-out não existe mais em nenhuma porta da aba Início.
+
+    Pedido literal da mantenedora: "esse quadrado do click não deveria aparecer,
+    ninguém conecta dois controles no pc esperando que os dois controles
+    controlem a mesma pessoa". Um handler sobrevivente seria um caminho para
+    gravar `coop_disabled.flag` — o defeito de volta por outra porta.
+    """
+
+    def test_nao_ha_handler_de_toggle_de_coop(self) -> None:
+        assert not hasattr(HomeActionsMixin, "_on_home_coop_toggled")
+
+    def test_nenhum_caminho_da_aba_chama_coop_set(
+        self, ipc_calls: list[tuple[str, dict[str, Any]]]
+    ) -> None:
+        """Os três modos + a máscara: nenhum deles fala em `coop.set`."""
+        for modo in ("desktop", "gamepad", "native"):
+            stub = _HomeStub()
+            stub._home_mode_selector.set_active_id(modo)
+            stub._on_home_mode_changed(stub._home_mode_selector)
+
+        assert [method for method, _ in ipc_calls] != []
+        assert not [method for method, _ in ipc_calls if method == "coop.set"]

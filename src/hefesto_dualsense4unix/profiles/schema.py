@@ -11,6 +11,15 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+#: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
+#: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
+#:
+#: HARM-19: mora aqui, num dono só, porque a faixa já valeu 2.0 no esquema, 1.0 no
+#: handler `rumble.policy_custom` e 200% no slider da GUI ao mesmo tempo — de 101%
+#: em diante a usuária levava um erro de validação que a aba reportava como
+#: "daemon offline?". Quem mudar o teto muda AQUI e os três seguem juntos.
+RUMBLE_CUSTOM_MULT_MAX = 2.0
+
 
 class MatchCriteria(BaseModel):
     """Casamento por critérios específicos (V2-8, V2-10).
@@ -196,9 +205,10 @@ class RumbleConfig(BaseModel):
         borda do schema, com mensagem clara.
         """
         if self.custom_mult is not None:
-            if not (0.0 <= self.custom_mult <= 2.0):
+            if not (0.0 <= self.custom_mult <= RUMBLE_CUSTOM_MULT_MAX):
                 raise ValueError(
-                    f"custom_mult fora de [0.0, 2.0]: {self.custom_mult}"
+                    f"custom_mult fora de [0.0, {RUMBLE_CUSTOM_MULT_MAX}]: "
+                    f"{self.custom_mult}"
                 )
             if self.policy != "custom":
                 raise ValueError(
@@ -234,8 +244,8 @@ class ProfileModeConfig(BaseModel):
     - ``kind="native"`` — release total: o jogo usa os gatilhos adaptativos
       NATIVOS da Sony (Sackboy & cia); o hefesto solta o controle.
     - ``kind="gamepad"`` — gamepad virtual com a máscara `gamepad_flavor`
-      (prompts PlayStation ou Xbox); ``coop=True`` liga o co-op local
-      (cada controle físico vira um jogador).
+      (prompts PlayStation ou Xbox). Cada controle físico vira um jogador
+      (``coop``, ligado por padrão — ver o campo).
     - ``kind="desktop"`` — declaração explícita de app de desktop: desliga
       gamepad/nativo/co-op vindos de perfil (e também os expirados do lock).
 
@@ -249,7 +259,12 @@ class ProfileModeConfig(BaseModel):
 
     kind: Literal["desktop", "gamepad", "native"]
     gamepad_flavor: Literal["dualsense", "xbox"] | None = None
-    coop: bool = False
+    # LEIGO-01: default True. Ninguém pluga dois controles esperando que os dois
+    # movam o MESMO personagem — o default False fazia todo perfil salvo pela GUI
+    # carregar `coop: false` e desligar o co-op ao ativar, pelas costas de quem
+    # nunca pediu isso. Perfis já gravados são migrados em
+    # `loader.migrate_profiles_coop_default`.
+    coop: bool = True
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).

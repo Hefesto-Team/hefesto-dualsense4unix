@@ -108,11 +108,6 @@ pub enum Message {
     /// Resultado da aplicação de modo/máscara (native.mode.set /
     /// gamepad.emulation.set). Só dispara o refresh de confirmação.
     SystemModeApplied(Result<bool, IpcError>),
-    /// Liga/desliga o co-op local (cada controle vira um jogador).
-    /// FEAT-DSX-COOP-LOCAL-01.
-    ToggleCoop,
-    /// Resultado de coop.set (novo enabled efetivo).
-    CoopSet(Result<bool, IpcError>),
     /// Usuário escolheu a máscara do gamepad virtual ("dualsense" | "xbox").
     /// FEAT-DSX-GAMEPAD-FLAVOR-01.
     SetGamepadFlavor(&'static str),
@@ -325,7 +320,6 @@ impl cosmic::Application for HefestoApplet {
                         }
                         SystemMode::Desktop => {
                             state.native_mode = false;
-                            state.coop.enabled = false;
                             state.gamepad_emulation.enabled = false;
                         }
                     }
@@ -348,26 +342,6 @@ impl cosmic::Application for HefestoApplet {
             Message::SystemModeApplied(_result) => {
                 // Sucesso ou falha, o estado real vem do daemon: reconsulta
                 // imediata (a otimista já foi feita ao disparar a ação).
-                self.refresh_task()
-            }
-
-            Message::ToggleCoop => {
-                let want_enabled = !self.state.as_ref().map(|s| s.coop.enabled).unwrap_or(false);
-                if let Some(state) = self.state.as_mut() {
-                    state.coop.enabled = want_enabled; // otimista; refresh confirma
-                }
-                Task::perform(ipc::set_coop(want_enabled), |res| {
-                    cosmic::action::app(Message::CoopSet(res))
-                })
-            }
-
-            Message::CoopSet(result) => {
-                if let Ok(enabled) = result {
-                    if let Some(state) = self.state.as_mut() {
-                        state.coop.enabled = enabled;
-                    }
-                }
-                // O nº de jogadores (coop.players) vem do refresh.
                 self.refresh_task()
             }
 
@@ -687,20 +661,13 @@ impl HefestoApplet {
         // Opções que só fazem sentido com o gamepad virtual ligado (mesma
         // visibilidade condicional da GUI GTK).
         if mode == SystemMode::Gamepad {
-            // Toggle do co-op local; ligado mostra o nº de jogadores do estado.
-            // Indicador ON/OFF do co-op (antes os 3 ramos começavam com espaço,
-            // sem afordância do estado — só dava pra inferir pelo sufixo).
-            let coop_label = if state.coop.enabled && state.coop.players > 0 {
-                format!(
-                    "[x] Cada controle = um jogador — {} jogadores",
-                    state.coop.players
-                )
-            } else if state.coop.enabled {
-                "[x] Cada controle = um jogador".to_string()
-            } else {
-                "[ ] Cada controle = um jogador".to_string()
-            };
-            col = col.push(menu_button(text::body(coop_label)).on_press(Message::ToggleCoop));
+            // LEIGO-01: o toggle de co-op virou INFORMAÇÃO. Ninguém pluga dois
+            // controles esperando que os dois movam o mesmo personagem, então
+            // não há escolha a oferecer — e o toggle ainda gravava o opt-out em
+            // disco. Com um controle só não há o que dizer.
+            if let Some(linha) = players_hint(state) {
+                col = col.push(padded_control(text::body(linha)).padding([4, 16]));
+            }
 
             // Como o jogo vê o controle. HARM-08/HARM-09: o fallback era
             // "dualsense" (divergindo do daemon) e os rótulos diziam "Máscara X",
@@ -825,13 +792,32 @@ fn system_mode(state: &DaemonState) -> SystemMode {
     }
 }
 
+/// "N controles = N jogadores" — a informação que substituiu o toggle de co-op
+/// (LEIGO-01), em paridade com a aba Início da GUI.
+///
+/// `None` quando não há o que informar: um controle só (nada a explicar) ou o
+/// daemon ainda não montou o segundo jogador (dizer "2 jogadores" antes disso
+/// seria mentira — o jogo ainda vê um gamepad só).
+fn players_hint(state: &DaemonState) -> Option<String> {
+    let controles = state.controllers.iter().filter(|c| c.connected).count();
+    let jogadores = state.coop.players.max(0) as usize;
+    if controles < 2 || jogadores < 2 {
+        return None;
+    }
+    Some(format!("{controles} controles = {jogadores} jogadores"))
+}
+
 /// Aplica o modo do sistema no daemon, na MESMA ordem da GUI GTK
 /// (`home_actions.py::_on_home_mode_changed`) — a ordem importa:
 ///   - nativo:  `native.mode.set(true)`
 ///   - gamepad: `native.mode.set(false)` e SÓ DEPOIS
 ///     `gamepad.emulation.set(true, flavor)` (sai do nativo antes de ligar)
-///   - desktop: `native.mode.set(false)` + `coop.set(false)` +
-///     `gamepad.emulation.set(false)`
+///   - desktop: `native.mode.set(false)` + `gamepad.emulation.set(false)`
+///
+/// LEIGO-01: o desktop NÃO chama mais `coop.set(false)`. Aquela chamada saía com
+/// `origin=manual` e GRAVAVA o opt-out em disco (`coop_disabled.flag`) — quem
+/// só voltou a mexer no PC entre duas partidas perdia o co-op para sempre.
+/// Desligar o gamepad já desmonta os jogadores; a preferência fica.
 ///
 /// Como na GUI, os passos intermediários são best-effort (erro ignorado); o
 /// resultado devolvido é o da última chamada.
@@ -844,7 +830,6 @@ async fn apply_system_mode(mode: SystemMode, flavor: String) -> Result<bool, Ipc
         }
         SystemMode::Desktop => {
             let _ = ipc::set_native_mode(false).await;
-            let _ = ipc::set_coop(false).await;
             ipc::set_gamepad_emulation(false, None).await
         }
     }

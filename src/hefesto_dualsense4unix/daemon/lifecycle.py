@@ -374,6 +374,16 @@ class Daemon:
                         EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
                     )
                     logger.info("controller_connected", transport=transport)
+                    # SPRINT-UHID-VPAD-01: o gamepad subiu ANTES deste connect
+                    # (ordem do boot), então o vpad do P1 nasceu sem hidraw e
+                    # caiu no uinput — sem a vibração da máscara DualSense.
+                    # Agora que o controle está aberto, promove.
+                    with contextlib.suppress(Exception):
+                        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                            upgrade_primary_vpad_to_uhid,
+                        )
+
+                        upgrade_primary_vpad_to_uhid(self)
                     # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
                     with contextlib.suppress(Exception):
                         from hefesto_dualsense4unix.integrations.desktop_notifications import (
@@ -464,8 +474,9 @@ class Daemon:
         loop consulta `_native_mode` DIRETAMENTE (não via `pause()`), então o
         dispatch fica congelado independente de pause/resume. Persiste flag+stash.
 
-        `enabled=False`: limpa o gate, re-ativa o último perfil (gatilhos/rumble)
-        e restaura a emulação do stash (gamepad tem precedência sobre mouse).
+        `enabled=False`: limpa o gate, zera os motores (o jogo não é mais o dono
+        do rumble — HARM-16), re-ativa o último perfil (gatilhos/rumble) e
+        restaura a emulação do stash (gamepad tem precedência sobre mouse).
         `reapply=False` quando o chamador NÃO quer o last_profile re-aplicado
         (reversão por perfil: o perfil novo acabou de aplicar triggers/LEDs).
         `restore_stash=True` com `reapply=False` restaura SÓ a emulação do
@@ -516,6 +527,11 @@ class Daemon:
             if callable(unmute):
                 with contextlib.suppress(Exception):
                     unmute(False)
+            # HARM-16: quem estava vibrando era o JOGO (escrevendo direto no
+            # hidraw, com o nosso output mutado). Ao sair, ninguém zera esses
+            # motores: `rumble_active` está em passthrough (None), então o
+            # reassert do poll loop é no-op e a vibração fica FIXA para sempre.
+            self._zero_rumble_motors()
             if reapply:
                 self._reapply_last_profile()
             if reapply or restore_stash:
@@ -574,6 +590,14 @@ class Daemon:
         )
         with contextlib.suppress(Exception):
             manager.activate(name)
+
+    def _zero_rumble_motors(self) -> None:
+        """Zera os motores ao SAIR de um modo (HARM-16). Thin wrapper."""
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import (
+            zero_motors_on_mode_exit,
+        )
+
+        zero_motors_on_mode_exit(self)
 
     def _restore_emulation_from_stash(self) -> None:
         """Restaura a emulação capturada antes do Modo Nativo (FEAT-NATIVE-MODE-01).
@@ -681,6 +705,30 @@ class Daemon:
             stop_mouse_emulation(self)
             return True
 
+    def restore_mouse_preference(self) -> bool:
+        """Aplica a preferência de mouse persistida (HARM-06). Retorna se ligou.
+
+        É o que faz "Controlar o PC" ser um modo de verdade, e não só o
+        desligar dos outros dois: entrar nele devolve o cursor conforme a última
+        escolha da usuária. Sem isto o controle ficava sem função NENHUMA até
+        alguém achar a aba Mouse.
+
+        Nunca configurada (flag ausente) liga por default — a alternativa é o
+        controle mudo. "Desligado de propósito" é respeitado, e é por isso que
+        `load_mouse_preference` distingue os dois casos.
+
+        A leitura mora aqui, no daemon, porque é ele quem grava a preferência —
+        um segundo leitor na GUI seria um segundo dono do mesmo conceito.
+        """
+        from hefesto_dualsense4unix.utils.session import load_mouse_preference
+
+        pref, speed, scroll_speed = load_mouse_preference()
+        if pref is None:
+            pref = True
+        ok = self.set_mouse_emulation(pref, speed, scroll_speed)
+        logger.info("mouse_preference_restored", enabled=pref, ok=ok)
+        return bool(pref and ok)
+
     def set_mouse_speed(
         self,
         speed: int | None = None,
@@ -762,6 +810,9 @@ class Daemon:
                         get_coop_manager(self).sync(force=True)
                 return ok
             stop_gamepad_emulation(self)
+            # HARM-16: o vpad morre no meio de um FF do jogo e o motor fica
+            # ligado — mesma doença do Modo Nativo, mesmo remédio.
+            self._zero_rumble_motors()
             return True
 
     def set_coop_enabled(
@@ -954,9 +1005,13 @@ class Daemon:
            perfil; sair do foco (outro perfil ativar) reverte pelo item 2.
         4. **kind="gamepad"** — desliga nativo-de-perfil se preciso, liga o
            gamepad com a máscara pedida e sincroniza o co-op ao campo `coop`.
-        5. **kind="desktop"** — declaração explícita: desliga nativo/gamepad/
-           co-op mesmo os de origem manual JÁ EXPIRADA do lock (o perfil está
+        5. **kind="desktop"** — declaração explícita: desliga nativo/gamepad
+           mesmo os de origem manual JÁ EXPIRADA do lock (o perfil está
            dizendo "este app é desktop puro").
+
+        LEIGO-01: a PREFERÊNCIA de co-op nunca é desligada por perfil que sai do
+        gamepad (itens 2 e 5) — sem gamepad não há jogadores para desmontar, e
+        zerá-la aqui deixaria o co-op morto pelo resto da sessão.
 
         Idempotente por checagem de estado antes de cada setter (autoswitch
         re-ativa o mesmo perfil sem flap).
@@ -991,11 +1046,13 @@ class Daemon:
                 self.set_native_mode(
                     False, reapply=False, restore_stash=True, origin="profile"
                 )
-            elif self._mode_from_profile == "gamepad":
-                if self.config.coop_enabled:
-                    self.set_coop_enabled(False, origin="profile")
-                if gamepad_on:
-                    self.set_gamepad_emulation(False, origin="profile")
+            # LEIGO-01: sair do gamepad NÃO desliga o co-op — desligar o gamepad
+            # já desmonta os jogadores (`CoopManager.should_be_active`), e zerar
+            # a preferência aqui a deixava desligada pela sessão inteira, sem
+            # caminho de volta agora que o checkbox saiu da tela. Mesma decisão
+            # do `mode_transition.plan_mode_transition` (desktop).
+            elif self._mode_from_profile == "gamepad" and gamepad_on:
+                self.set_gamepad_emulation(False, origin="profile")
             self._mode_from_profile = None
             return
 
@@ -1014,17 +1071,22 @@ class Daemon:
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             if not gamepad_on or (flavor is not None and flavor != flavor_atual):
                 self.set_gamepad_emulation(True, flavor, origin="profile")
-            want_coop = bool(getattr(mode, "coop", False))
+            # LEIGO-01: o default do campo é True (esquema) — o fallback do
+            # getattr acompanha, senão um `mode` dublado sem o campo voltaria a
+            # significar "desliga o co-op".
+            want_coop = bool(getattr(mode, "coop", True))
             if want_coop != bool(self.config.coop_enabled):
                 self.set_coop_enabled(want_coop, origin="profile")
             self._mode_from_profile = "gamepad"
             return
 
         # kind == "desktop": declaração explícita — limpa qualquer modo.
+        # LEIGO-01: o co-op fica de fora da limpeza pelo mesmo motivo do ramo
+        # `kind is None` — desligar o gamepad abaixo já desmonta os jogadores, e
+        # a preferência tem de sobreviver ao app de desktop para o co-op voltar
+        # sozinho no próximo jogo.
         if self._native_mode:
             self.set_native_mode(False, reapply=False, origin="profile")
-        if self.config.coop_enabled:
-            self.set_coop_enabled(False, origin="profile")
         if gamepad_on:
             self.set_gamepad_emulation(False, origin="profile")
         self._mode_from_profile = None

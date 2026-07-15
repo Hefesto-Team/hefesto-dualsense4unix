@@ -663,7 +663,7 @@ class HefestoApp(
         Páginas (indice zero, ordem do notebook — FEAT-GUI-HOME-TAB-01
         acrescentou "Início" como página 0, deslocando as demais):
           0 = Início, 1 = Status, 2 = Triggers, 3 = Lightbar, 4 = Rumble,
-          5 = Perfis, 6 = Daemon, 7 = Emulacao, 8 = Mouse, 9 = Teclado
+          5 = Perfis, 6 = Sistema, 7 = Emulacao, 8 = Mouse, 9 = Teclado
         """
         refresh_map = {
             # FEAT-GUI-HOME-TAB-01: comutador de modo reconcilia ao ser exibido.
@@ -707,9 +707,9 @@ class HefestoApp(
 
         Envolvendo cada página num `GtkScrolledWindow` (scroll vertical), o mínimo
         da página cai para ~0 e o rodapé fica SEMPRE visível, em qualquer tamanho
-        de janela. Exceção: a aba **Daemon**, cujo conteúdo principal já é um
-        `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la de novo
-        quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
+        de janela. Exceção: a aba **Sistema** (`daemon_box`), cujo conteúdo
+        principal já é um `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la
+        de novo quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
         """
         notebook = self.builder.get_object("main_notebook")
         if notebook is None:

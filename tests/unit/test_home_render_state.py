@@ -98,7 +98,7 @@ class _HomeStub:
         self._home_guard = False
         self._home_controllers_box = _FakeWidget()
         self._home_mode_selector = _FakeWidget()
-        self._home_coop_check = _FakeWidget()
+        self._home_players_hint = _FakeWidget()
         self._home_flavor_selector = _FakeWidget()
         self._home_mode_desc = _FakeWidget()
         self._home_origin_label = _FakeWidget()
