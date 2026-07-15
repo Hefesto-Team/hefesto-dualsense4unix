@@ -105,6 +105,7 @@ install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
 # Udev rules.
 install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/70-ps5-controller.rules \
+    assets/71-uhid.rules \
     assets/71-uinput.rules \
     assets/72-ps5-controller-autosuspend.rules \
     assets/73-ps5-controller-hotplug.rules \

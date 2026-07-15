@@ -36,6 +36,13 @@ HOME_POLL_INTERVAL_MS = 2000
 #: JÁ aplicado. Mesma folga do Aplicar do rodapé (footer_actions).
 _MODE_IPC_TIMEOUT_S = 2.0
 
+#: HARM-15: o refresh também não cabe nos 0.25s default do call_async — o daemon
+#: monta o state_full varrendo os controles, e sob carga (hotplug, co-op subindo)
+#: passa disso. Sem folga o `_fail` pintava a aba inteira de "Daemon desligado"
+#: com o daemon VIVO. Folga menor que a da troca de modo: aqui o custo de esperar
+#: é um tick de 2s, não uma ação da usuária.
+_STATE_IPC_TIMEOUT_S = 1.0
+
 # UX-MODE-TERMS-01: rótulos pela AÇÃO da usuária ("o que o controle faz
 # agora"), não pela tecnologia — "gamepad virtual"/"nativo" viravam jargão.
 _MODE_ITEMS = [
@@ -263,7 +270,8 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._render_home(None)
             return False
 
-        call_async("daemon.state_full", None, _ok, _fail)
+        call_async("daemon.state_full", None, _ok, _fail,
+                   timeout_s=_STATE_IPC_TIMEOUT_S)
 
     def _render_home(self, state: dict[str, Any] | None) -> None:
         from gi.repository import Gtk
@@ -318,8 +326,17 @@ class HomeActionsMixin(WidgetAccessMixin):
                 origin_bits.append(f"co-op: {coop.get('players')} jogador(es)")
             self._home_origin_label.set_text(" · ".join(origin_bits))
 
+            # HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada
+            # com connected=False quando não há nenhum controle — sem filtrar, a
+            # aba inventava um card "Controle 1 — P1 · ?" com o cabo na mesa. A
+            # aba Status (_connected_controllers) e o applet já filtravam; a
+            # Início era a única que não.
             self._render_home_controllers(
-                list(state.get("controllers") or []),
+                [
+                    c
+                    for c in (state.get("controllers") or [])
+                    if isinstance(c, dict) and c.get("connected")
+                ],
                 grab_state=state.get("primary_grab_state"),
                 gamepad_on=bool(gamepad.get("enabled")),
             )
