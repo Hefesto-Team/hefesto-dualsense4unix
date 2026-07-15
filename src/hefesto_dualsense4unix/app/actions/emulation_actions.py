@@ -19,6 +19,7 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_DESKTOP,
     MODE_GAMEPAD,
     MODE_NATIVE,
+    STATE_IPC_TIMEOUT_S,
     apply_mode,
     mode_of_state,
 )
@@ -426,7 +427,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._sync_gamemode_button(None)
             return False
 
-        call_async("daemon.state_full", {}, on_success=_on_state, on_failure=_on_err)
+        # HARM-15: a folga do state_full vale AQUI também — sem ela esta aba
+        # (para onde a UI inteira manda a usuária quando algo dá errado) se pinta
+        # de "daemon offline" com o daemon VIVO, sempre que ele passa dos 0,25s
+        # default (hotplug, co-op subindo). O timeout mora no mode_transition
+        # junto do `mode_of_state`: é a mesma leitura.
+        call_async(
+            "daemon.state_full", {}, on_success=_on_state, on_failure=_on_err,
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
 
     def _apply_mode(self, mode_id: str, flavor: str | None, msg: str) -> None:
         """Muda o modo pelo MESMO caminho da Início (HARM-01).

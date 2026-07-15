@@ -151,9 +151,21 @@ def test_toggle_status_failed_tambem_reverte(monkeypatch: pytest.MonkeyPatch) ->
     assert harness.draft.mouse.dirty is False
 
 
-def test_toggle_sucesso_atualiza_draft_e_marca_dirty(
+def test_toggle_sucesso_atualiza_draft_sem_deixar_pendencia(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """HARM-05: o sucesso do toggle NÃO deixa a seção suja.
+
+    O `dirty` significa "há algo pendente para o Aplicar enviar". Marcá-lo aqui,
+    DEPOIS de o daemon já ter aplicado o `mouse.emulation.set` com sucesso, era
+    uma contradição — e cara: a seção ficava suja pelo resto da sessão, e o
+    primeiro "Aplicar" do rodapé re-enviava mouse.emulation.set, religando o
+    mouse e MATANDO o vpad no meio do jogo.
+
+    O `in_profile=True` no lugar preserva a outra função do dirty: o `to_profile`
+    inclui a seção quando `dirty` OU `in_profile`, então o "Salvar Perfil"
+    continua levando o mouse junto.
+    """
     harness, switch = _make_harness()
     assert switch is not None
     harness.widgets["mouse_speed_scale"] = _FakeScale(9.0)
@@ -180,7 +192,13 @@ def test_toggle_sucesso_atualiza_draft_e_marca_dirty(
     assert harness.draft.mouse.enabled is True
     assert harness.draft.mouse.speed == 9
     assert harness.draft.mouse.scroll_speed == 2
-    assert harness.draft.mouse.dirty is True
+    assert harness.draft.mouse.dirty is False, (
+        "o daemon já aplicou — não há pendência; dirty aqui fazia o Aplicar "
+        "seguinte religar o mouse e matar o vpad"
+    )
+    assert harness.draft.mouse.in_profile is True, (
+        "sem isto o Salvar Perfil perderia a seção mouse"
+    )
     assert switch.get_active() is True
 
 

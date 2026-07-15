@@ -367,6 +367,43 @@ def save_coop_enabled(enabled: bool) -> None:
         logger.debug("coop_enabled_state_save_failed", err=str(exc))
 
 
+#: Marker da migração do opt-out de co-op (LEIGO-01). Ao lado do flag.
+_COOP_OPTOUT_MIGRATION_MARKER = ".coop_optout_migrated"
+
+
+def migrate_coop_optout() -> bool:
+    """One-shot: apaga o `coop_disabled.flag` das versões antigas. True = migrou.
+
+    LEIGO-01: o checkbox "Cada controle é um jogador" saiu da tela — cada
+    controle é um jogador, sempre. Quem o desmarcou numa versão JÁ LANÇADA tem o
+    opt-out gravado em disco, e ele sobrevive ao upgrade: o co-op ficaria
+    desligado **sem nenhum caminho de volta na interface**.
+
+    Apagar é a leitura certa da decisão de produto ("ninguém conecta dois
+    controles no PC esperando que os dois controlem a mesma pessoa"), e espelha o
+    que o `save_coop_enabled` já fazia com o flag legado. Idempotente via marker
+    próprio: se alguém desligar o co-op pela CLI depois da migração, a escolha
+    fica de pé.
+
+    Best-effort: nunca propaga exceção — o daemon sobe de qualquer jeito.
+    """
+    try:
+        cfg = config_dir(ensure=True)
+        marker = cfg / _COOP_OPTOUT_MIGRATION_MARKER
+        if marker.exists():
+            return False
+        flag = cfg / _COOP_DISABLED_FLAG_FILE
+        migrou = flag.exists()
+        flag.unlink(missing_ok=True)
+        marker.write_text("1\n", encoding="utf-8")
+        if migrou:
+            logger.info("coop_optout_migrado", motivo="o checkbox saiu da UI (LEIGO-01)")
+        return migrou
+    except Exception as exc:
+        logger.debug("coop_optout_migracao_falhou", err=str(exc))
+        return False
+
+
 def load_coop_enabled() -> bool:
     """True (padrão) salvo se a usuária desligou o co-op (opt-out persistido)."""
     try:

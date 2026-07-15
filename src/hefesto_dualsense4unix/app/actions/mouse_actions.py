@@ -214,12 +214,19 @@ class MouseActionsMixin(WidgetAccessMixin):
                 return _on_err(RuntimeError("daemon respondeu status=failed"))
             draft = getattr(self, "draft", None)
             if draft is not None:
+                # HARM-05: `dirty=False` — o daemon ACABOU de aplicar, não há nada
+                # pendente. Marcar dirty aqui fazia o próprio sucesso do toggle
+                # deixar a seção suja pelo resto da sessão, e o "Aplicar" seguinte
+                # do rodapé re-enviava `mouse.emulation.set` — religando o mouse e
+                # matando o vpad no meio do jogo. `in_profile=True` mantém a seção
+                # no "Salvar Perfil" (é o que o dirty garantia de carona).
                 new_mouse = draft.mouse.model_copy(
                     update={
                         "enabled": enabled,
                         "speed": speed,
                         "scroll_speed": scroll,
-                        "dirty": True,
+                        "dirty": False,
+                        "in_profile": True,
                     }
                 )
                 self.draft = draft.model_copy(update={"mouse": new_mouse})

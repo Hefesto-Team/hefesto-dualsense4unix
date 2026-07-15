@@ -678,9 +678,11 @@ impl HefestoApplet {
                 .flavor
                 .as_deref()
                 .unwrap_or(DEFAULT_FLAVOR);
+            // Paridade com a aba Início: com o vpad uhid as DUAS máscaras vibram,
+            // então o "(sem vibrar)" virou mentira (SPRINT-UHID-VPAD-01).
             let flavors = [
-                ("xbox", "Xbox 360 (vibra)"),
-                ("dualsense", "DualSense (botões PS, sem vibrar)"),
+                ("dualsense", "DualSense (botões PlayStation)"),
+                ("xbox", "Xbox 360"),
             ];
             for (id, label) in flavors {
                 let is_active = flavor == id;
@@ -830,7 +832,15 @@ async fn apply_system_mode(mode: SystemMode, flavor: String) -> Result<bool, Ipc
         }
         SystemMode::Desktop => {
             let _ = ipc::set_native_mode(false).await;
-            ipc::set_gamepad_emulation(false, None).await
+            let saiu = ipc::set_gamepad_emulation(false, None).await;
+            // HARM-06: o modo desktop é o DONO do mouse — entrar nele LIGA o
+            // cursor conforme a preferência persistida, senão o controle fica sem
+            // função nenhuma. Espelha o 3º passo do plan_mode_transition da GUI
+            // (mode_transition.py); vem por último pela mesma razão: ligar o
+            // mouse antes de o gamepad sair faria a exclusão mútua do daemon
+            // derrubar o mouse recém-ligado. Falhar aqui não é falhar no modo.
+            let _ = ipc::restore_mouse().await;
+            saiu
         }
     }
 }
