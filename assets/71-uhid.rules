@@ -1,7 +1,7 @@
 # SPRINT-UHID-VPAD-01 (2026-07-15) — acesso a /dev/uhid via systemd-logind.
 #
 # O gamepad virtual do modo "Jogar pelo Hefesto" deixa de ser um device de
-# uinput (só evdev, SEM hidraw) e passa a ser criado por /dev/uhid: o driver
+# uinput (só evdev, SEM hidraw) e passa a nascer de /dev/uhid: o driver
 # hid_playstation do kernel faz bind nele e registra um DualSense COMPLETO —
 # com hidraw, lightbar, LEDs de jogador, sensores de movimento e touchpad.
 #
