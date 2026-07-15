@@ -15,6 +15,13 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_DESKTOP,
+    MODE_GAMEPAD,
+    MODE_NATIVE,
+    apply_mode,
+    mode_of_state,
+)
 from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
@@ -328,12 +335,49 @@ class EmulationActionsMixin(WidgetAccessMixin):
             else:
                 ctx.remove_class("hefesto-active-mode")
 
+    def _sync_gamemode_button(self, mode: str | None) -> None:
+        """HARM-03: "Modo jogo" não é oferecido em "Controlar o PC".
+
+        Em modo desktop o controle SÓ faz mouse/teclado — suspendê-los deixava
+        o controle sem função nenhuma, e o tooltip afirmava o contrário ("o
+        gamepad continua funcionando no jogo": não há gamepad nesse modo). O
+        botão fica desabilitado com a razão em texto simples ao lado.
+
+        "Sair do modo jogo" continua sensível em TODOS os modos: é a saída de
+        emergência de quem caiu em desktop+suspenso pelo combo PS+Options.
+        """
+        pause_btn = self._get("emulation_pause_button")
+        hint = self._get("emulation_gamemode_hint_label")
+        blocked = mode is None or mode == MODE_DESKTOP
+        if pause_btn is not None:
+            pause_btn.set_sensitive(not blocked)
+        if hint is None:
+            return
+        hint.set_text(
+            "Em \"Controlar o PC\" o controle só faz mouse/teclado — "
+            "suspendê-los deixaria o controle sem função nenhuma."
+            if mode == MODE_DESKTOP
+            else ""
+        )
+
     def _refresh_gamepad_and_gamemode(self) -> None:
         """Lê daemon.state_full e atualiza os labels de gamepad + modo-jogo."""
         def _on_state(state: Any) -> bool:
+            mode = mode_of_state(state if isinstance(state, dict) else None)
             gp = state.get("gamepad_emulation") if isinstance(state, dict) else None
             gp_label = self._get("emulation_gamepad_status_label")
-            if isinstance(gp, dict) and gp.get("enabled"):
+            # HARM-01: no Modo Nativo o vpad está desligado, mas dizer só
+            # "desligado" (e realçar "Desligado") fazia esta aba contradizer a
+            # Início, que mostra "Jogar direto (Sony)". Nenhum dos três botões
+            # é a verdade aqui — o realce sai e o label conta o modo real.
+            if mode == MODE_NATIVE:
+                active_key = None
+                if gp_label is not None:
+                    gp_label.set_markup(
+                        '<span foreground="#c90">jogar direto (Sony) — o jogo '
+                        'fala direto com o controle</span>'
+                    )
+            elif isinstance(gp, dict) and gp.get("enabled"):
                 flavor = gp.get("flavor") or "?"
                 active_key = "xbox" if flavor == "xbox" else "dualsense"
                 nice = "DualSense (PS)" if active_key == "dualsense" else "Xbox 360"
@@ -344,6 +388,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 if gp_label is not None:
                     gp_label.set_markup('<span foreground="#999">desligado</span>')
             self._highlight_gamepad(active_key)
+            self._sync_gamemode_button(mode)
             # BUG-EMULATION-UINPUT-CARD-STALE-01: o cartão UINPUT mostrava
             # SEMPRE "X-Box 360 / 045E:028E" (constantes de install) mesmo com
             # a máscara real em DualSense — informação contraditória na mesma
@@ -376,15 +421,22 @@ class EmulationActionsMixin(WidgetAccessMixin):
             sync_card = getattr(self, "_sync_uinput_card", None)
             if sync_card is not None:
                 sync_card(None)
+            # HARM-03: sem estado não dá para saber se "Modo jogo" faz sentido;
+            # oferecê-lo às cegas pode cair no caso que mata o controle.
+            self._sync_gamemode_button(None)
             return False
 
         call_async("daemon.state_full", {}, on_success=_on_state, on_failure=_on_err)
 
-    def _set_gamepad(self, enabled: bool, flavor: str | None, msg: str) -> None:
-        params: dict[str, Any] = {"enabled": enabled}
-        if flavor is not None:
-            params["flavor"] = flavor
+    def _apply_mode(self, mode_id: str, flavor: str | None, msg: str) -> None:
+        """Muda o modo pelo MESMO caminho da Início (HARM-01).
 
+        Antes esta aba chamava `gamepad.emulation.set` cru, sem sair do Modo
+        Nativo: nativo + gamepad ligados juntos = físico grabado pelo jogo +
+        vpad congelado, ou seja, JOGO SEM CONTROLE NENHUM — e a Início ainda
+        exibia "Jogar direto (Sony)", escondendo o estado real. Delegar a
+        `mode_transition` mantém um dono só para a sequência e o timeout.
+        """
         def _on_ok(_res: Any) -> bool:
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(msg)
@@ -392,18 +444,26 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
         def _on_err(exc: Exception) -> bool:
             self._toast_emulation(f"daemon offline — gamepad não alterado ({exc})")
+            self._refresh_gamepad_and_gamemode()
             return False
 
-        call_async("gamepad.emulation.set", params, on_success=_on_ok, on_failure=_on_err)
+        apply_mode(mode_id, flavor=flavor, on_done=_on_ok, on_fail=_on_err)
 
     def on_emulation_gamepad_off(self, _btn: Gtk.Button) -> None:
-        self._set_gamepad(False, None, "Gamepad virtual desligado")
+        # "Desligado" = o modo "Controlar o PC" da Início. Desligar só o vpad
+        # deixaria o Modo Nativo de pé com o botão realçado como "Desligado" —
+        # duas abas contando histórias diferentes sobre o mesmo estado.
+        self._apply_mode(
+            MODE_DESKTOP, None, "Gamepad virtual desligado — o controle controla o PC"
+        )
 
     def on_emulation_gamepad_dualsense(self, _btn: Gtk.Button) -> None:
-        self._set_gamepad(True, "dualsense", "Gamepad DualSense ligado (prompts PS)")
+        self._apply_mode(
+            MODE_GAMEPAD, "dualsense", "Gamepad DualSense ligado (prompts PS)"
+        )
 
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
-        self._set_gamepad(True, "xbox", "Gamepad Xbox 360 ligado (fallback)")
+        self._apply_mode(MODE_GAMEPAD, "xbox", "Gamepad Xbox 360 ligado (vibra no jogo)")
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
