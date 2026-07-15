@@ -88,6 +88,53 @@ done
 
 log() { printf '[uninstall] %s\n' "$*"; }
 
+# ---------------------------------------------------------------------------
+# Credencial sudo: adquirir UMA vez no início (BUG-UNINSTALL-SUDO-NONINTERACTIVE-01)
+# ---------------------------------------------------------------------------
+# Simétrico ao acquire_sudo do install.sh. Vários passos usam sudo (remoção das
+# udev rules + a cura do storm em /etc/modprobe.d, o applet COSMIC em /usr/local,
+# o watcher dsx-recover, o `apt remove`). Sem cachear a credencial no começo, cada
+# um pedia a senha por conta própria e, sem TTY, FALHAVA — deixando a cura .conf e
+# o binário do applet para trás (o `sudo rm ... || true` do applet mascarava a
+# falha; o bloco udev abortava com "sudo recusado/sem TTY"). Aqui primamos uma vez
+# e mantemos a credencial viva durante todo o uninstall.
+SUDO_KEEPALIVE_PID=""
+_start_sudo_keepalive() {
+    [[ -n "${SUDO_KEEPALIVE_PID}" ]] && return 0
+    ( while kill -0 "$$" 2>/dev/null; do sudo -n true 2>/dev/null || exit 0; sleep 50; done ) &
+    SUDO_KEEPALIVE_PID=$!
+}
+acquire_sudo() {
+    [[ "${EUID:-$(id -u)}" -eq 0 ]] && return 0          # já é root
+    command -v sudo >/dev/null 2>&1 || return 0          # sem sudo — cada passo avisa
+    if sudo -n true 2>/dev/null; then                    # credencial já em cache
+        _start_sudo_keepalive
+        return 0
+    fi
+    [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
+    printf '[uninstall] Alguns passos precisam de sudo (udev, cura do storm, applet COSMIC).\n'
+    printf '[uninstall] Vou pedir sua senha UMA vez; os passos seguintes reusam a credencial.\n'
+    if sudo -v; then
+        _start_sudo_keepalive
+    else
+        log "sudo indisponível (senha/TTY) — passos com root serão pulados/avisados"
+    fi
+    return 0
+}
+_cleanup_sudo_keepalive() {
+    [[ -n "${SUDO_KEEPALIVE_PID}" ]] && kill "${SUDO_KEEPALIVE_PID}" 2>/dev/null || true
+}
+trap _cleanup_sudo_keepalive EXIT
+
+# Prime a credencial só se algum passo com root vai rodar: remoção de udev
+# (default), applet COSMIC instalado, watcher dsx-recover ou pacote .deb.
+_NEEDS_SUDO=0
+[[ "${REMOVE_UDEV}" -eq 1 ]] && _NEEDS_SUDO=1
+[[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
+[[ -e /etc/systemd/system/hefesto-dsx-recover.service ]] && _NEEDS_SUDO=1
+dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
+acquire_sudo
+
 log "parando daemon hefesto-dualsense4unix (se ativo)"
 timeout 5 systemctl --user stop hefesto-dualsense4unix.service >/dev/null 2>&1 || true
 systemctl --user disable hefesto-dualsense4unix.service >/dev/null 2>&1 || true
@@ -251,10 +298,12 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     # BUG-UNINSTALL-SUDO-SILENT-FAIL-01 (fix): a versão anterior tinha
     # `sudo rm ... 2>/dev/null || true`, que mascarava falha de TTY para senha
     # (script chamado de subshell sem terminal) — log dizia "removendo" mas
-    # nada saía. Agora cacheamos credenciais sudo upfront e falhamos visível
-    # se sudo for recusado, mantendo idempotência em arquivo-ausente (rm -f).
+    # nada saía. O acquire_sudo no topo já cacheia a credencial upfront; aqui só
+    # testamos se dá pra sudo AGORA sem prompt via `sudo -n true` — NÃO `sudo -v`,
+    # que sob `NOPASSWD:ALL` falha exigindo terminal mesmo com o sudo utilizável.
+    # Falha visível se sudo não estiver disponível, com idempotência em rm -f.
     log "removendo udev rules + modules-load uinput (sudo)"
-    if ! sudo -v 2>/dev/null; then
+    if ! sudo -n true 2>/dev/null; then
         log "ERRO: sudo recusado/sem TTY — udev rules NÃO foram removidas."
         log "      rode: sudo bash $0 ${*:-} (ou re-execute interativamente)"
     else

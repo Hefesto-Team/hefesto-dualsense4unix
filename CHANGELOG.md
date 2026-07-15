@@ -5,6 +5,55 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.13.3] — 2026-07-14
+
+Três percalços do instalador flagrados num ciclo `./uninstall.sh` seguido de
+`./install.sh` rodado não-interativo.
+
+### Fixed
+
+- **`install.sh` agora cacheia a credencial `sudo` UMA vez no início**
+  (BUG-INSTALL-SUDO-NONINTERACTIVE-01). Vários sub-passos usam `sudo`
+  internamente (regras udev, cura persistente do storm via
+  `install_snd_quirk.sh`, e o `just install` do applet COSMIC). Sem cachear a
+  credencial, cada um tentava pedir a senha por conta própria e, sem TTY
+  (install rodado não-interativo), FALHAVA — e o passo seguia como se tivesse
+  dado certo: o `/etc/modprobe.d/hefesto-dualsense-storm.conf` não era gravado
+  (a cura runtime pegava, a persistente sumia no reboot) e o applet abortava com
+  "Recipe `install` failed". Agora o install prima a credencial no começo
+  (uma senha), mantém viva durante a build longa do applet (>10 min) e o step da
+  cura tem post-check explícito: se o `.conf` não existir ao final, AVISA em vez
+  de fingir sucesso.
+- **Applet COSMIC passa a ser instalado por padrão** em sessões COSMIC
+  (BUG-INSTALL-APPLET-OPT-IN-SKIPPED-01). Antes era opt-in
+  (`--enable-cosmic-applet`), então um `./install.sh` comum PULAVA o applet — e
+  quem já o tinha o perdia num ciclo desinstala+reinstala. Agora instala quando
+  faz sentido (em COSMIC, ou se já está instalado, ou se forçado pela flag), com
+  opt-out via `--no-cosmic-applet`. A build exige `cargo`+`just`; se ausentes, o
+  install NÃO falha — só avisa como instalar o Rust.
+- **`uninstall.sh` também cacheia o `sudo` uma vez no início**
+  (BUG-UNINSTALL-SUDO-NONINTERACTIVE-01), simétrico ao install. Sem isso, num
+  ciclo não-interativo o bloco de udev abortava com "sudo recusado/sem TTY" e o
+  `sudo rm` do applet era mascarado por `|| true` — a cura `.conf` e o binário do
+  applet sobreviviam ao wipe. Agora a credencial é primada e mantida viva, então
+  a desinstalação remove tudo de fato.
+- **Detecção de "Steam rodando" não confunde mais com o `earlyoom`**
+  (BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01). O `disable_steam_input.sh` casava
+  o `steamwebhelper` pela cmdline inteira (`pgrep -f`), então o `earlyoom` — que
+  lista `steam|steamwebhelper` no seu regex `--avoid` — dava falso-positivo: o
+  desligar do Steam Input travava com "Steam ainda rodando" e o `pkill -f` de
+  fallback chegava a mirar o próprio `earlyoom`. Agora o `steamwebhelper` é casado
+  por nome EXATO de processo (`pgrep -x`/`pkill -x`).
+
+### Changed
+
+- **O `venv` do formato nativo já vem com o extra `[dev]`** (ruff/mypy/pytest)
+  por PADRÃO (BUG-INSTALL-VENV-NO-DEV-01). Antes o `install.sh` recriava o
+  `venv` só com o essencial, e o gate pré-release (`ruff`, `mypy`) não rodava
+  local sem um `pip install -e ".[dev]"` manual. Nova flag `--no-dev` pula os
+  dev tools para CI/máquina enxuta. Se a instalação com `[dev]` falhar (ex.:
+  offline), cai para só o essencial e avisa, em vez de abortar o install.
+
 ## [3.13.2] — 2026-07-14
 
 ### Removed
