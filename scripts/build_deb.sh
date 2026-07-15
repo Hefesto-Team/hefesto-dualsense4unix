@@ -173,22 +173,8 @@ for _s in doctor.sh disable_steam_input.sh fix_wireplumber_default_source.sh dsx
     [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
 done
-# dsx.sh + dsx.desktop (o botão "Reaplicar tudo (terminal)" procura o .desktop
-# 'dsx-dualsense'; sem ele, o fallback abre dsx.sh direto — M8). O
-# _find_repo_file("dsx.sh") resolve <base>/dsx.sh, então vai na RAIZ do share.
-[ -f dsx.sh ] && install -Dm755 dsx.sh \
-    "${STAGING}/usr/share/hefesto-dualsense4unix/dsx.sh"
-# REVIEW-M8-DSX-PLACEHOLDER-01: o dsx.desktop shipa com Exec=__DSX_PATH__ (só o
-# `dsx.sh --install-launcher` resolvia isso em runtime — que o usuário do .deb
-# nunca roda). Copiar cru deixava o launcher quebrado ("Failed to execute
-# __DSX_PATH__") e o `gtk-launch dsx-dualsense` retornando 0 sem rodar nada.
-# Substituímos pelo caminho absoluto do .deb no momento do build.
-if [ -f assets/dsx.desktop ]; then
-    mkdir -p "${STAGING}/usr/share/applications"
-    sed 's#__DSX_PATH__#/usr/share/hefesto-dualsense4unix/dsx.sh#g' \
-        assets/dsx.desktop \
-        > "${STAGING}/usr/share/applications/dsx-dualsense.desktop"
-fi
+# (O launcher standalone "DualSense Fix (dsx)" e o dsx.sh foram REMOVIDOS — eram
+# baseados na teoria de HW já refutada; a cura de raiz do storm está integrada.)
 # Também copia o conf modules-load para o local que o helper procura
 # em /usr/share/hefesto-dualsense4unix/modules-load/.
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modules-load"

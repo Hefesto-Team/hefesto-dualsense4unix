@@ -20,7 +20,7 @@ console = Console()
 
 
 def _find_repo_file(relpath: str) -> Path | None:
-    """Localiza um arquivo do repo (script/dsx.sh) em layouts conhecidos."""
+    """Localiza um arquivo do repo (ex.: scripts/install_snd_quirk.sh) em layouts conhecidos."""
     candidates = [
         Path(__file__).resolve().parents[3] / relpath,
         Path("/usr/share/hefesto-dualsense4unix") / relpath,
@@ -84,15 +84,17 @@ def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
     fix_safe: bool = False,
-    reapply_all: bool = False,
 ) -> None:
     """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon.
 
     FEAT-DSX-UNIFY-01:
     - `--fix-safe`: aplica só o SEGURO (sem sudo) — Steam Input OFF (se a Steam
-      não estiver rodando) + drop-in do WirePlumber. Reversível/idempotente.
-    - `--reapply-all`: invoca o `dsx.sh` (o motor privilegiado — PEDE SENHA) para
-      reaplicar TUDO, incluindo a parte de udev/power. Confirma antes.
+      não estiver rodando) + drop-in do WirePlumber + cura de raiz a quente.
+      Reversível/idempotente.
+
+    O antigo `--reapply-all` (que invocava o dsx.sh) foi REMOVIDO: o dsx.sh era
+    baseado na teoria de HW já refutada (I/O die / power). A cura real é o quirk
+    do snd_usb_audio, instalado por padrão e aplicável por `--fix-safe`.
     """
     rc = 0
     sh = _find_doctor_sh()
@@ -120,17 +122,9 @@ def doctor_cmd(
         _run_script("scripts/disable_steam_input.sh", "--apply-quiet")
         # --install: DualSense não-default, microfone preservado.
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
+        # Cura de raiz do storm a quente (sysfs) — best-effort, sem senha.
+        _run_script("scripts/install_snd_quirk.sh", "--runtime")
         _print_storm_block()
-
-    if reapply_all:
-        console.print("\n== reaplicar tudo (dsx.sh — privilegiado) ==")
-        rc = _run_script(
-            "dsx.sh",
-            confirm=(
-                "Isto roda o dsx.sh e vai PEDIR SUA SENHA (mexe em udev/power do "
-                "sistema). Continuar?"
-            ),
-        ) or rc
 
     raise typer.Exit(code=rc)
 

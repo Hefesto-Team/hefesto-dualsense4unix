@@ -154,6 +154,14 @@ if [[ -e /etc/systemd/system/hefesto-dsx-recover.service ]]; then
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
+# Launcher standalone "DualSense Fix (dsx)" — REMOVIDO do projeto (teoria de HW
+# refutada; a cura de raiz do storm está integrada). Limpa resíduos: o
+# --install-launcher gravava no ~/.local, e o .deb em /usr/share.
+rm -f "${HOME}/.local/share/applications/dsx-dualsense.desktop" 2>/dev/null || true
+if [[ -e /usr/share/applications/dsx-dualsense.desktop ]]; then
+    sudo rm -f /usr/share/applications/dsx-dualsense.desktop 2>/dev/null || true
+fi
+
 for path in "${DESKTOP_TARGET}" "${ICON_TARGET}" "${LAUNCHER}" "${BIN_SYMLINK}"; do
     if [[ -e "${path}" ]]; then
         log "removendo ${path}"

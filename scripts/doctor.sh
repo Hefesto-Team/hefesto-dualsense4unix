@@ -544,7 +544,7 @@ check_usb_dropout() {
        || systemctl is-active --quiet hefesto-dsx-recover.service 2>/dev/null; then
         info "watcher de auto-recuperação ativo (hefesto-dsx-recover.service)"
     else
-        info "auto-recuperação NÃO instalada -- rode ./dsx.sh para instalar o watcher"
+        info "auto-recuperação NÃO instalada -- instale o watcher: sudo install -Dm755 scripts/dsx_recover.sh /usr/local/sbin/dsx_recover.sh && sudo install -Dm644 assets/hefesto-dsx-recover.service /etc/systemd/system/ && sudo systemctl enable --now hefesto-dsx-recover.service"
     fi
     info "ver em tempo real: scripts/doctor.sh --watch-dropout"
 }

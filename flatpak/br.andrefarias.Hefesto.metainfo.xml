@@ -12,6 +12,15 @@
 
   <!-- Versão atual -->
   <releases>
+    <release version="3.13.2" date="2026-07-14">
+      <description>
+        <p>Remove o launcher standalone "DualSense Fix (dsx)" e o dsx.sh — eram da
+           teoria de hardware já refutada; a cura de raiz do storm (no áudio USB)
+           está integrada e instalada por padrão. O cartão anti-storm e o watcher
+           de auto-recuperação continuam. Corrige a marca visual do item ativo no
+           applet COSMIC (o modo/máscara selecionado não recebia indicador).</p>
+      </description>
+    </release>
     <release version="3.13.1" date="2026-07-14">
       <description>
         <p>Correções da auditoria pré-release: trocar a máscara não congela mais o

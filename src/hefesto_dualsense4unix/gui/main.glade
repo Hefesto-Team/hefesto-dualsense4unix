@@ -1686,13 +1686,6 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkButton" id="btn_storm_reapply_all">
-                            <property name="label" translatable="yes">Reaplicar tudo (terminal)</property>
-                            <property name="tooltip-text" translatable="yes">Abre o DualSense Fix (dsx) num terminal — PEDE SENHA (udev/power do sistema)</property>
-                            <signal name="clicked" handler="on_storm_reapply_all"/>
-                          </object>
-                        </child>
-                        <child>
                           <object class="GtkButton" id="btn_storm_copy_launch">
                             <property name="label" translatable="yes">Copiar opções p/ jogos</property>
                             <property name="tooltip-text" translatable="yes">Copia as Opções de Inicialização da Steam que evitam o controle duplicado e mantêm a vibração. Cole em: jogo → Propriedades → Opções de inicialização.</property>

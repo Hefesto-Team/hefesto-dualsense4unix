@@ -5,6 +5,26 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.13.2] — 2026-07-14
+
+### Removed
+
+- **Launcher standalone "DualSense Fix (dsx)" e o `dsx.sh`** — eram baseados na
+  teoria de hardware (I/O die / power) que foi REFUTADA; a causa do storm é o
+  áudio USB e a cura de raiz (quirk do `snd_usb_audio`) já está integrada e
+  instalada por padrão. Removidos: o `.desktop` do menu, o `dsx.sh`, o
+  empacotamento no `.deb`, o botão "Reaplicar tudo (terminal)" da GUI e a flag
+  `doctor --reapply-all` (que o invocava). O que fica: o cartão anti-storm
+  ("Reaplicar fixes seguros" + cura de raiz) e o watcher de auto-recuperação
+  `hefesto-dsx-recover` (coisa separada). O `uninstall.sh` limpa o launcher
+  residual.
+
+### Fixed
+
+- **Applet COSMIC: marca visual do item ativo** — o modo/máscara selecionado no
+  popover não recebia marcador (eram dois espaços iguais, glifo comido numa
+  edição). Agora o ativo mostra "> " e o co-op um "[x]/[ ]".
+
 ## [3.13.1] — 2026-07-14
 
 Correções da auditoria pré-release (bugs de UI e paridade de empacotamento) que

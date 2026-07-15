@@ -1,8 +1,9 @@
 """Diagnóstico do storm -71 do DualSense (FEAT-DSX-UNIFY-01).
 
-Checks READ-ONLY do estado anti-storm — a parte "segura" do dsx.sh trazida para
-dentro do hefesto. NÃO muta nada; NÃO precisa de root. Cada função recebe os
-paths por parâmetro (default = sistema real) para ser testável com fixtures.
+Checks READ-ONLY do estado anti-storm, integrados ao hefesto (o launcher
+standalone dsx.sh foi removido — teoria de HW refutada; a cura de raiz do storm
+é o quirk do snd_usb_audio). NÃO muta nada; NÃO precisa de root. Cada função
+recebe os paths por parâmetro (default = sistema real) para testes com fixtures.
 
 Fronteira Aurora: o quirk `054c:0ce6:gn` do cmdline e as regras 99-usb são do
 ritual-Aurora — aqui só REPORTAMOS o estado, não mexemos.

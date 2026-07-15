@@ -343,13 +343,13 @@ def test_consulting_placeholder_aparece_antes_do_worker(
 
 def test_find_repo_file_resolve_raiz_do_repo() -> None:
     """BUG-GUI-REPO-ROOT-OFFBYONE-01 (H3 da auditoria): _find_repo_file achava
-    a raiz do repo em parents[3] (= <repo>/src), então os 3 botões do cartão
+    a raiz do repo em parents[3] (= <repo>/src), então os botões do cartão
     anti-storm eram no-op silencioso. A raiz correta é parents[4] — provamos
-    resolvendo um arquivo real do repo (dsx.sh na raiz)."""
+    resolvendo um arquivo REAL que os botões chamam."""
     host = _Host()
-    found = host._find_repo_file("dsx.sh")
-    assert found is not None, "não resolveu dsx.sh — _find_repo_file quebrado (parents errado)"
-    assert found.name == "dsx.sh"
+    found = host._find_repo_file("scripts/install_snd_quirk.sh")
+    assert found is not None, "não resolveu — _find_repo_file quebrado (parents errado)"
+    assert found.name == "install_snd_quirk.sh"
     assert found.is_file()
-    # E um script real que os botões chamam.
-    assert host._find_repo_file("scripts/install_snd_quirk.sh") is not None
+    # E um arquivo na raiz do repo (prova que a base é a raiz, não src/).
+    assert host._find_repo_file("run.sh") is not None
