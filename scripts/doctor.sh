@@ -96,8 +96,12 @@ check_udev() {
     # exigia 5 (70-74) e reportava "3/5 — faltam 73 74" PARA SEMPRE após um
     # install limpo (falso-negativo permanente). 75 (audio-off) e 76
     # (touchpad-ignore) são opt-in e não entram na contagem canônica.
+    # SPRINT-UHID-VPAD-01: a 71-uhid entra no conjunto canônico (o install a aplica
+    # sem flag). Regra da casa: um item no install = um check no doctor.
     local r found=0 missing=""
-    local rules=(70-ps5-controller.rules 71-uinput.rules 72-ps5-controller-autosuspend.rules)
+    local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
+                 72-ps5-controller-autosuspend.rules)
+    local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
             found=$((found + 1))
@@ -105,12 +109,12 @@ check_udev() {
             missing+=" ${r}"
         fi
     done
-    if [[ "${found}" -eq 3 ]]; then
-        pass "3 regras udev canônicas presentes (70/71/72)"
+    if [[ "${found}" -eq "${total}" ]]; then
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
-        warn "regras udev incompletas (${found}/3) — faltam:${missing}"
+        warn "regras udev incompletas (${found}/${total}) — faltam:${missing}"
     fi
     # 73/74 (hotplug-GUI) foram DESCONTINUADAS (amplificavam o storm -71). Se
     # sobraram de uma instalação antiga, avisa para limpar.
@@ -176,11 +180,53 @@ check_usb_audio_off() {
     fi
 }
 
-check_uinput() {
-    if [[ -e /dev/uinput ]]; then
-        pass "/dev/uinput presente"
+# DOCTOR-UINPUT-ACESSO-01: existir NÃO basta. O nó nasce root-only e quem o torna
+# usável é a regra udev (uaccess). Checar só `-e` dava PASS com o daemon incapaz de
+# criar vpad nenhum — falso-positivo justamente no caso que o install passou a
+# cobrir (`udevadm trigger --subsystem-match=misc`, sem o qual a regra só valia no
+# próximo boot).
+_check_node_gravavel() {
+    local node="$1" modulo="$2" para_que="$3"
+    if [[ ! -e "${node}" ]]; then
+        fail "${node} ausente — rode: sudo modprobe ${modulo} (ou reinstale as regras udev)"
+        return
+    fi
+    if [[ -w "${node}" ]]; then
+        pass "${node} presente e gravável (${para_que})"
     else
-        fail "/dev/uinput ausente — rode: sudo modprobe uinput (ou reinstale udev)"
+        fail "${node} existe mas SEM permissão para o seu usuário — ${para_que} não vai funcionar. Rode: sudo bash scripts/install_udev.sh"
+    fi
+}
+
+check_uinput() {
+    _check_node_gravavel /dev/uinput uinput "gamepad virtual"
+}
+
+# SPRINT-UHID-VPAD-01: sem /dev/uhid o gamepad virtual cai no uinput, que não tem
+# hidraw — e aí a vibração não funciona com a máscara DualSense. É degradação, não
+# quebra: warn, nunca fail.
+check_uhid() {
+    if [[ ! -e /dev/uhid ]]; then
+        warn "/dev/uhid ausente — o controle virtual funciona, mas a vibração só vale com a máscara Xbox 360. Rode: sudo modprobe uhid"
+        return
+    fi
+    if [[ -w /dev/uhid ]]; then
+        pass "/dev/uhid presente e gravável (vibração nas duas máscaras)"
+    else
+        warn "/dev/uhid existe mas SEM permissão para o seu usuário — a vibração só vai funcionar com a máscara Xbox 360. Rode: sudo bash scripts/install_udev.sh"
+    fi
+}
+
+# O hid_playstation é quem entrega lightbar e LED de jogador pelo sysfs (regra 77) e
+# quem faz o gamepad virtual virar um DualSense de verdade (uhid). Sem ele o daemon
+# funciona, mas essas features somem — por isso warn, não fail.
+check_hid_playstation() {
+    if lsmod 2>/dev/null | grep -q '^hid_playstation'; then
+        pass "driver hid_playstation carregado (cor da luz e LED de jogador)"
+    elif [[ -d /sys/module/hid_playstation ]]; then
+        pass "driver hid_playstation ativo (embutido no kernel)"
+    else
+        warn "driver hid_playstation não carregado — cor da luz e LED de jogador podem não funcionar. Kernel muito antigo? Rode: sudo modprobe hid_playstation"
     fi
 }
 
@@ -626,6 +672,8 @@ main() {
     check_usb_quirk
     check_usb_storm_config_conflict
     check_uinput
+    check_uhid
+    check_hid_playstation
     hdr "applet COSMIC"
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"

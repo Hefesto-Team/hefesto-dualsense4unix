@@ -93,6 +93,11 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/70-ps5-controller.rules
     install -Dm644 assets/71-uinput.rules \
         $out/lib/udev/rules.d/71-uinput.rules
+    # 71-uhid: /dev/uhid — o gamepad virtual vira um DualSense de verdade (hidraw +
+    # lightbar + LEDs), o que faz a vibração funcionar também com a máscara DualSense.
+    # O número precisa ser < 73 (a 73-seat-late.rules é quem vira a TAG uaccess em ACL).
+    install -Dm644 assets/71-uhid.rules \
+        $out/lib/udev/rules.d/71-uhid.rules
     install -Dm644 assets/72-ps5-controller-autosuspend.rules \
         $out/lib/udev/rules.d/72-ps5-controller-autosuspend.rules
     install -Dm644 assets/73-ps5-controller-hotplug.rules \
