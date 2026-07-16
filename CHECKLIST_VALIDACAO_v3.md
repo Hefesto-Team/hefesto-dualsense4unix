@@ -139,7 +139,7 @@ Marcar `[x]` quando passar; logar evidência quando falhar.
 
 ## #29 — Bluetooth (MERGED 2026-05-16)
 
-Validado em sessão real (sprint 109) com DualSense a0:fa:9c:00:00:01
+Validado em sessão real (sprint 109) com DualSense AA:BB:CC:00:00:01
 pareado e USB desplugado.
 
 ### Pareamento (primeira vez)

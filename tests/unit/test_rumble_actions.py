@@ -20,6 +20,21 @@ import pytest
 
 
 def _install_gi_stubs() -> None:
+    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
+    # o merge abaixo mutaria o gi REAL (sobrescreve GLib.idle_add e
+    # require_version) e fazia testes de GUI pularem como "ambiente sem GTK".
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
+        try:
+            import gi
+
+            gi.require_version("Gtk", "3.0")
+            from gi.repository import Gtk  # noqa: F401
+
+            return
+        except Exception:  # pragma: no cover — ambientes sem GTK
+            pass
+
     # Reutiliza módulos stub existentes (se outros testes já injetaram) para
     # merge de atributos — caso contrário cria do zero.
     gi_mod = sys.modules.get("gi") or types.ModuleType("gi")

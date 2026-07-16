@@ -37,8 +37,10 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     player_mac,
 )
 
-#: Feature 0x09 como o controle físico devolve: id + MAC(LE) + resto.
-_FEATURE_09_FISICO = bytes([0x09]) + bytes.fromhex("f011c39cfaa0") + bytes(13)
+#: Feature 0x09 como o controle físico devolve: id + MAC(LE) + resto. O MAC é
+#: FORJADO (aa:bb:cc:00:00:01 em little-endian) — identidade real nunca entra
+#: em fixture (regra de anonimato do repo).
+_FEATURE_09_FISICO = bytes([0x09]) + bytes.fromhex("010000ccbbaa") + bytes(13)
 
 
 def _blueprint() -> dict[str, Any]:

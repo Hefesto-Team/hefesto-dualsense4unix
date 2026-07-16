@@ -73,6 +73,10 @@ class DaemonProtocol(Protocol):
     # BUG-DAEMON-CONNECT-GHOST-INPUT-01: instante a partir do qual o input
     # emulado volta a ser despachado após (re)conexão (settling/grace).
     _input_ready_at: float
+    # VPAD-01/VPAD-02: instante (time.monotonic) da última tentativa de
+    # rebackend do vpad do P1 (uinput→uhid); -inf = nunca. Cooldown único
+    # compartilhado entre a promoção do hotplug e a re-seleção pela GUI.
+    _last_rebackend_ts: float
     # FEAT-DAEMON-PAUSE-RESUME-01: despacho de input pausado (daemon vivo).
     _paused: bool
     # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: modo jogo — emulacao mouse/teclado

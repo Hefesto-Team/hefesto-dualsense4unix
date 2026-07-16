@@ -17,9 +17,16 @@ import pytest
 # injetamos stubs em `gi.repository` antes do import. Isso evita requerer Xvfb
 # para testar lógica pura de transição de estado.
 def _install_gi_stubs() -> None:
-    if "gi" in sys.modules and hasattr(sys.modules["gi"], "require_version"):
+    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
+    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
+    # "ambiente sem GTK" mesmo com o GTK real presente.
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
-            # Se o gi real já funciona (ambiente com GTK), não mexe.
+            # Se o gi real funciona (ambiente com GTK), não mexe.
+            import gi
+
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk  # noqa: F401
 
             return

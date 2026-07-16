@@ -13,8 +13,8 @@ from __future__ import annotations
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-MAC_A = "a0fa9cc31100"
-MAC_B = "a0fa9cc31122"
+MAC_A = "aabbcc001100"
+MAC_B = "aabbcc001122"
 
 
 def _null_evdev() -> EvdevReader:

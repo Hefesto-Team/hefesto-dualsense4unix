@@ -428,6 +428,23 @@ class IpcHandlersMixin:
                     result["gamepad_emulation"]["ff_supported"] = bool(
                         getattr(gp_dev, "ff_supported", False)
                     )
+                # VPAD-05 — degradação NUNCA silenciosa: flavor dualsense em
+                # backend uinput = vpad sem hidraw (vibração in-game morta) e
+                # sem launch option segura. O dado honesto sai AQUI; o banner
+                # da GUI (fase 2) e o doctor só consomem. `degraded_motivo` é
+                # o que a factory pendurou no vpad ("uhid_indisponivel",
+                # "uhid_start_falhou", "uhid_bind_falhou",
+                # "uhid_vetado_pelo_chamador").
+                with contextlib.suppress(Exception):
+                    degraded = bool(
+                        getattr(gp_dev, "flavor", None) == "dualsense"
+                        and getattr(gp_dev, "backend", None) == "uinput"
+                    )
+                    result["gamepad_emulation"]["degraded"] = degraded
+                    if degraded:
+                        motivo = getattr(gp_dev, "fallback_motivo", None)
+                        if isinstance(motivo, str) and motivo:
+                            result["gamepad_emulation"]["degraded_motivo"] = motivo
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)

@@ -25,10 +25,10 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, player_led_pattern
 
-MAC_P1 = "a0fa9cc31100"
-MAC_P2 = "a0fa9cc31122"
-MAC_P3 = "a0fa9cc31133"
-MAC_P4 = "a0fa9cc31144"
+MAC_P1 = "aabbcc001100"
+MAC_P2 = "aabbcc001122"
+MAC_P3 = "aabbcc001133"
+MAC_P4 = "aabbcc001144"
 
 PROFILE_LEDS = (False, False, False, False, True)
 

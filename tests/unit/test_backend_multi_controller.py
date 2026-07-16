@@ -297,10 +297,10 @@ class TestDescribeControllers:
         # Keys reais são o serial hidapi (MAC); a normalização deve casar com a
         # do `primary_uniq` (norm_mac): minúsculo e sem ":".
         inst._handles = {
-            "A0:AB:51:C3:11:F0": h1,
-            "48:18:8D:00:AA:BB": h2,
+            "AA:BB:CC:00:00:03": h1,
+            "AA:BB:CC:00:00:04": h2,
         }  # type: ignore[dict-item]
-        inst._primary_key = "A0:AB:51:C3:11:F0"
+        inst._primary_key = "AA:BB:CC:00:00:03"
 
         desc = inst.describe_controllers()
         assert desc == [
@@ -309,7 +309,7 @@ class TestDescribeControllers:
                 "connected": True,
                 "transport": "usb",
                 "is_primary": True,
-                "uniq": "a0ab51c311f0",
+                "uniq": "aabbcc000003",
                 "battery_pct": 87,
             },
             {
@@ -317,7 +317,7 @@ class TestDescribeControllers:
                 "connected": True,
                 "transport": "bt",
                 "is_primary": False,
-                "uniq": "48188d00aabb",
+                "uniq": "aabbcc000004",
                 # _FakeHandle sem atributo battery -> firmware ainda não
                 # reportou -> None (não 0% falso).
                 "battery_pct": None,

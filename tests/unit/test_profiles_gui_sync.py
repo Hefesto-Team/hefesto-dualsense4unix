@@ -28,8 +28,15 @@ def _install_gi_stubs() -> None:
     Réplica do helper de ``test_status_actions_reconnect.py`` para evitar requerer
     GTK/PyGObject em CI e no ``.venv`` sem ``--with-tray`` (A-12).
     """
-    if "gi" in sys.modules and hasattr(sys.modules["gi"], "require_version"):
+    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
+    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
+    # "ambiente sem GTK" mesmo com o GTK real presente.
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
+            import gi
+
+            gi.require_version("Gtk", "3.0")
             from gi.repository import Gtk  # noqa: F401
 
             return

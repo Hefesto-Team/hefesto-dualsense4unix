@@ -20,8 +20,8 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 
-MAC_1 = "a0fa9cc31100"
-MAC_2 = "a0fa9cc31122"
+MAC_1 = "aabbcc001100"
+MAC_2 = "aabbcc001122"
 
 
 class _EC:

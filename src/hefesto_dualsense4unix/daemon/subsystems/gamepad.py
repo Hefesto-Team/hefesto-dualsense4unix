@@ -29,7 +29,7 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -39,6 +39,18 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
 logger = get_logger(__name__)
+
+#: VPAD-01/VPAD-02: cooldown (s) COMPARTILHADO entre as duas bordas de rebackend
+#: do vpad do P1 (uinput→uhid): a promoção do hotplug (`reconnect_loop`) e o
+#: "botão de força" da GUI (re-selecionar DualSense). O precheck
+#: `uhid_available()` pega o uhid quebrado ANTES do device existir (nó ausente,
+#: sem ACL); não pega o que aceita o CREATE2 e nunca faz bind (kernel sem
+#: `hid_playstation`, MAC duplicado). Sem a trava, cada reconexão BT (frequente
+#: nesta máquina) ou clique repetido na GUI derrubaria e recriaria o vpad
+#: uinput que FUNCIONA — input drop em loop no meio do jogo. O apply de
+#: perfil/autoswitch nem chega ao cooldown: o latch do BT-04(b) veta a promoção
+#: por origem automática em `_deve_promover_backend`.
+REBACKEND_COOLDOWN_SEC = 30.0
 
 
 class GamepadSubsystem:
@@ -203,55 +215,83 @@ def apply_game_rumble(
             set_target(previous)
 
 
-def resolve_hidraw_path(daemon: DaemonProtocol, uniq: str | None) -> str | None:
-    """Nó hidraw do controle `uniq` (None = primário), ou None se indisponível.
+def controller_allows_uhid(daemon: DaemonProtocol) -> bool:
+    """True quando o backend do controle é o real (pydualsense) — uhid liberado.
 
-    SPRINT-UHID-VPAD-01: é o que o backend uhid precisa para copiar o blueprint
-    do controle físico. `hidraw_path` só existe no backend pydualsense (o
-    FakeController e o IController não têm) — sem ele, o vpad simplesmente nasce
-    no uinput, que é o comportamento de hoje.
+    VPAD-08: o modo FAKE (`run.sh --fake`, usado em smoke NA MÁQUINA da usuária)
+    não pode registrar um DualSense Edge REAL no kernel — a Steam enxergaria um
+    controle fantasma. O único backend com `hidraw_path` no repo é o pydualsense
+    (`backend_pydualsense.py`); `FakeController`/`IController` não têm o método,
+    e essa é a declaração explícita de "sem uhid" que a factory recebe em
+    `allow_uhid`. Não confundir com "controle conectado": o blueprint do vpad é
+    o canônico embutido (VPAD-03/BT-01) e o uhid sobe mesmo sem físico nenhum —
+    este gate é sobre o BACKEND, não sobre o hardware do momento.
     """
-    getter = getattr(daemon.controller, "hidraw_path", None)
-    if not callable(getter):
-        return None
-    try:
-        path = getter(uniq)
-    except Exception as exc:
-        logger.debug("hidraw_path_falhou", err=str(exc), uniq=uniq)
-        return None
-    return path if isinstance(path, str) else None
+    return callable(getattr(daemon.controller, "hidraw_path", None))
+
+
+def _rebackend_em_cooldown(daemon: DaemonProtocol, now: float) -> bool:
+    """True se a última tentativa de rebackend está a menos de um cooldown.
+
+    O carimbo (`daemon._last_rebackend_ts`) é um só para as duas bordas
+    (hotplug e re-seleção pela GUI) de propósito: o modo de falha que a trava
+    cobre — uhid que aceita o CREATE2 mas nunca faz bind — é o mesmo nos dois
+    caminhos, e alternar entre eles não pode burlar o cooldown.
+    """
+    carimbo = getattr(daemon, "_last_rebackend_ts", float("-inf"))
+    return (now - carimbo) < REBACKEND_COOLDOWN_SEC
 
 
 def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
-    """Troca o vpad do P1 de uinput para uhid quando o hidraw aparece. True = trocou.
+    """Recria em uhid o vpad do P1 que degradou para uinput. True = trocou.
 
-    No boot o `_safe_start("gamepad")` do lifecycle roda ANTES do
-    `controller.connect()`: o vpad do P1 nasce sem hidraw de onde copiar o
-    blueprint e cai no uinput — ou seja, o caminho uhid (a vibração da máscara
-    DualSense) ficava MORTO no fluxo normal, e só subia se a emulação fosse
-    religada com o controle já conectado. Medido ao vivo:
-    ``vpad_uhid_sem_hidraw_usando_uinput player=1`` em todo boot.
+    Pós-VPAD-03/BT-01 o vpad do P1 já NASCE uhid no boot — o blueprint canônico
+    embutido não depende de controle conectado, então o caso histórico ("o
+    gamepad sobe antes do `controller.connect` e caía no uinput") morreu. Esta
+    função virou REDE DE SEGURANÇA: recupera o vpad que caiu no uinput por razão
+    transitória (ex.: /dev/uhid ainda sem ACL na primeira sessão pós-install),
+    chamada quando o controle conecta (boot em `lifecycle.run`; hotplug tardio
+    no `reconnect_loop` — VPAD-01). Conservadora de propósito:
 
-    Chamado quando o controle conecta. Conservador de propósito:
-
-    - só age no vpad do P1 que é uinput (se já é uhid, não há o que fazer);
-    - só com a máscara DualSense (a Xbox é uinput por design — o
-      `hid_playstation` não faz bind em VID/PID da Microsoft);
+    - só age no vpad do P1 que é uinput com máscara DualSense (a Xbox é uinput
+      por design — o `hid_playstation` não faz bind em VID/PID da Microsoft);
+    - precheck `uhid_available()` (ressalva do VPAD-01): sem ele, com o uhid
+      persistentemente quebrado (permissão do nó, kernel sem `hid_playstation`),
+      cada conexão destruiria e recriaria o vpad uinput que ESTÁ funcionando —
+      input drop em loop com o jogo aberto;
+    - cooldown compartilhado com a re-seleção da GUI (`REBACKEND_COOLDOWN_SEC`):
+      o precheck não pega o uhid que aceita o CREATE2 e nunca binda — sem a
+      trava, cada reconexão BT viraria o mesmo input drop em loop;
+    - backend fake nunca promove (VPAD-08);
     - recria o device, então o jogo aberto PERDE o vpad por um instante. É
-      aceitável porque a janela real é o boot (sem jogo) e o replug de um
-      controle que já derrubou o input do jogo de qualquer forma.
+      aceitável porque a janela real é a recuperação de uma degradação que já
+      tirou a vibração do jogo de qualquer forma.
     """
-    from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import (
+        UhidDualSense,
+        uhid_available,
+    )
 
     device = getattr(daemon, "_gamepad_device", None)
     if device is None or isinstance(device, UhidDualSense):
         return False
     if getattr(device, "flavor", None) != "dualsense":
         return False
-    if resolve_hidraw_path(daemon, None) is None:
-        return False  # o controle segue sem hidraw legível: nada mudou
+    if not controller_allows_uhid(daemon):
+        return False  # backend fake: nunca registrar um Edge real (VPAD-08)
+    if not uhid_available():
+        return False  # uhid segue quebrado: derrubar o uinput seria só input drop
+    now = time.monotonic()
+    if _rebackend_em_cooldown(daemon, now):
+        # A tentativa anterior (desta borda OU da re-seleção na GUI — o
+        # carimbo é um só) acabou de recriar o device e voltou ao uinput:
+        # insistir agora seria o input drop em loop que a ressalva do
+        # VPAD-01 proíbe. Nunca silencioso: o motivo fica no journal.
+        logger.info("rebackend_suprimido_por_cooldown", origem="hotplug")
+        return False
+    daemon._last_rebackend_ts = now
 
-    logger.info("vpad_promovendo_para_uhid", motivo="hidraw do controle apareceu")
+    logger.info("vpad_promovendo_para_uhid", motivo="vpad degradado com uhid disponível")
     # `persist=False`: a preferência não mudou, só o backend. `release_grab=False`:
     # soltar o grab aqui devolveria o controle físico ao jogo no meio da troca.
     stop_gamepad_emulation(daemon, persist=False, release_grab=False)
@@ -279,11 +319,82 @@ def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], Non
     return _sink
 
 
-def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -> bool:
+def _deve_promover_backend(
+    daemon: DaemonProtocol,
+    existing: Any,
+    key: str,
+    origin: Literal["manual", "profile"] = "manual",
+) -> bool:
+    """True quando um apply de flavor IDÊNTICO deve recriar o vpad (VPAD-02).
+
+    Re-selecionar DualSense na GUI é o "botão de força" da promoção
+    uinput→uhid: os dois backends respondem flavor 'dualsense', então o
+    early-return que comparava SÓ o flavor fazia da re-seleção um no-op — não
+    existia caminho pela interface para recuperar um vpad degradado. A
+    comparação agora é (flavor, backend), com os MESMOS gates da promoção do
+    hotplug — porque perfis/autoswitch reaplicam a emulação a cada troca de
+    janela e um apply idêntico não pode recriar o device à toa:
+
+    - backend já uhid (ou máscara xbox, uinput por design) → no-op de verdade;
+    - **latch do BT-04(b)**: `origin != "manual"` NUNCA promove — o botão de
+      força é gesto da USUÁRIA (1 clique = 1 tentativa). Perfis/autoswitch
+      reaplicam a emulação a cada troca de janela; com o uhid quebrado por
+      razão estável que o precheck não enxerga (kernel sem `hid_playstation`:
+      `uhid_available()` só testa o acesso ao nó), cada apply automático
+      pós-cooldown destruiria o vpad uinput que FUNCIONA e pagaria ~0,5 s de
+      `wait_for_bind` com o input congelado — input drop periódico indefinido
+      no meio do jogo. A recuperação automática que existe é a do hotplug
+      (VPAD-01), em borda física de conexão — não em timer de janela;
+    - backend fake veta (VPAD-08): recriar daria só OUTRO uinput (churn);
+    - `uhid_available()`: com o uhid quebrado, derrubar o uinput que funciona
+      seria input drop sem ganho nenhum;
+    - cooldown compartilhado com o VPAD-01 (`REBACKEND_COOLDOWN_SEC`): o uhid
+      que aceita o CREATE2 mas nunca binda passa pelo precheck — sem a trava,
+      cada apply derrubaria o vpad em loop no meio do jogo. Ressalva do
+      VPAD-02: esse no-op devolve True (a GUI mostra sucesso), então NÃO pode
+      ser mudo — o motivo vai para o journal ("cliquei e nada" tem rastro).
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
+
+    if key != "dualsense" or getattr(existing, "backend", None) != "uinput":
+        return False
+    if origin != "manual":
+        # BT-04(b): apply automático (perfil/autoswitch) com vpad degradado é
+        # no-op SEMPRE. DEBUG de propósito: o autoswitch flapando reaplicaria
+        # a cada troca de janela e um INFO viraria spam no journal; o rastro
+        # visível para a usuária é o badge de degradação do VPAD-05.
+        logger.debug("rebackend_suprimido_por_origem_automatica", origem=origin)
+        return False
+    if not controller_allows_uhid(daemon):
+        return False  # backend fake: nunca registrar um Edge real (VPAD-08)
+    if not uhid_available():
+        return False  # uhid segue quebrado: derrubar o uinput seria só input drop
+    now = time.monotonic()
+    if _rebackend_em_cooldown(daemon, now):
+        logger.info("rebackend_suprimido_por_cooldown", origem="reselecao_gui")
+        return False
+    daemon._last_rebackend_ts = now
+    logger.info(
+        "vpad_promovendo_para_uhid", motivo="re-seleção da máscara DualSense (VPAD-02)"
+    )
+    return True
+
+
+def start_gamepad_emulation(
+    daemon: DaemonProtocol,
+    flavor: str | None = None,
+    *,
+    origin: Literal["manual", "profile"] = "manual",
+) -> bool:
     """Cria o gamepad virtual com a máscara `flavor`. Idempotente.
 
     Desliga a emulação de mouse (mútua exclusão) e faz grab do controle real.
-    Retorna True se ativo ao final; False se falhou ao iniciar.
+    Retorna True se ativo ao final; False se falhou ao iniciar. Idempotência
+    por (flavor, backend): apply idêntico com backend saudável é no-op; mesma
+    máscara DualSense com backend degradado (uinput) recria em uhid (VPAD-02).
+    `origin` vem de `set_gamepad_emulation` (BT-04(b)): só o gesto MANUAL da
+    usuária destrava a promoção por apply idêntico — perfil/autoswitch nunca
+    recriam o vpad degradado (o latch anti-churn; ver `_deve_promover_backend`).
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
@@ -294,9 +405,12 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
 
     existing = daemon._gamepad_device
     if existing is not None:
-        if getattr(existing, "flavor", None) == key:
+        if getattr(existing, "flavor", None) == key and not _deve_promover_backend(
+            daemon, existing, key, origin
+        ):
             return True
-        # Flavor mudou: recria sem repersistir/regrab intermediário.
+        # Flavor mudou — ou mesma máscara com backend degradado e uhid de
+        # volta (VPAD-02): recria sem repersistir/regrab intermediário.
         stop_gamepad_emulation(daemon, persist=False, release_grab=False)
 
     # Mútua exclusão: o controle vai pro jogo, não pro cursor.
@@ -310,24 +424,33 @@ def start_gamepad_emulation(daemon: DaemonProtocol, flavor: str | None = None) -
 
     # FEAT-VPAD-FF-PASSTHROUGH-01: o rumble que o JOGO pedir no vpad volta
     # para os motores do controle físico primário.
-    # SPRINT-UHID-VPAD-01: a factory prefere o backend uhid (DualSense com hidraw
-    # de verdade = vibração in-game na máscara DualSense) e cai no uinput sozinha
-    # quando o uhid não sobe; o P1 é sempre o jogador 1.
-    # Se o controle ainda não conectou, não há hidraw de onde copiar o blueprint
-    # e o P1 nasce no uinput — é o caso do BOOT (o `_safe_start("gamepad")` do
-    # lifecycle roda ANTES do `controller.connect()`). Quem conserta isso é o
-    # `upgrade_primary_vpad_to_uhid`, chamado quando o controle conecta.
+    # SPRINT-UHID-VPAD-01 + VPAD-03/BT-01: a factory prefere o backend uhid
+    # (DualSense com hidraw de verdade = vibração in-game na máscara DualSense)
+    # e cai no uinput sozinha quando o uhid não sobe. O blueprint é o canônico
+    # embutido: o vpad nasce uhid Edge JÁ NO BOOT, mesmo com o
+    # `_safe_start("gamepad")` rodando antes do `controller.connect()` e mesmo
+    # sem controle nenhum conectado. `allow_uhid` veta o uhid no backend fake
+    # (VPAD-08 — o smoke não pode plantar um Edge real no kernel).
     device: VirtualPad | None = make_virtual_pad(
         key,
         rumble_sink=make_primary_rumble_sink(daemon),
         player=1,
-        hidraw_path=resolve_hidraw_path(daemon, None),
+        allow_uhid=controller_allows_uhid(daemon),
     )
     if device is None:
         logger.warning("gamepad_emulation_start_failed", flavor=key)
         return False
 
     daemon._gamepad_device = device
+    if key == "dualsense" and getattr(device, "backend", None) == "uinput":
+        # VPAD-05 — fallback NUNCA silencioso: além do motivo que a factory já
+        # logou, o degrau vira contador no store (doctor) e o `state_full` expõe
+        # `gamepad_emulation.degraded`/`degraded_motivo` para a GUI. getattr
+        # defensivo: daemons dublados em teste não têm store.
+        store = getattr(daemon, "store", None)
+        if store is not None:
+            with contextlib.suppress(Exception):
+                store.bump("gamepad.uhid.fallback")
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key
     _set_controller_grab(daemon, True)
@@ -410,10 +533,12 @@ def dispatch_gamepad(
 
 
 __all__ = [
+    "REBACKEND_COOLDOWN_SEC",
     "GamepadSubsystem",
     "apply_game_rumble",
     "dispatch_gamepad",
     "make_primary_rumble_sink",
     "start_gamepad_emulation",
     "stop_gamepad_emulation",
+    "upgrade_primary_vpad_to_uhid",
 ]

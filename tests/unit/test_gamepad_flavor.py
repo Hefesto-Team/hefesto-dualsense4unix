@@ -37,12 +37,16 @@ class TestNormalizeFlavor:
 
 
 class TestForFlavor:
-    def test_dualsense_usa_vidpid_sony(self) -> None:
+    def test_dualsense_usa_o_edge_e_nunca_o_pid_do_fisico(self) -> None:
+        """VPAD-04: a máscara dualsense é o Edge 0x0df2 MESMO no uinput. O PID
+        do físico (0ce6) no vpad era a mina da launch option persistida
+        (`IGNORE_DEVICES=0x054c/0x0ce6` escondia físico E vpad = zero controles)."""
         gp = ug.UinputGamepad.for_flavor("dualsense")
         assert gp.vendor == ug.DUALSENSE_VENDOR == 0x054C
-        assert gp.product == ug.DUALSENSE_PRODUCT == 0x0CE6
+        assert gp.product == ug.DUALSENSE_EDGE_PRODUCT == 0x0DF2
+        assert gp.product != ug.DUALSENSE_PRODUCT  # 0ce6 identifica só o FÍSICO
         assert gp.flavor == "dualsense"
-        assert "DualSense" in gp.name
+        assert "DualSense Edge" in gp.name
 
     def test_xbox_usa_vidpid_microsoft(self) -> None:
         gp = ug.UinputGamepad.for_flavor("xbox")

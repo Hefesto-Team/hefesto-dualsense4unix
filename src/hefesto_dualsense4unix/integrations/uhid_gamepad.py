@@ -24,9 +24,13 @@ E o rumble que o jogo pede chega a nós como `UHID_OUTPUT` — de onde o
 Como o device é forjado
 -----------------------
 O report descriptor e os feature reports (0x05 calibração, 0x09 MAC, 0x20
-firmware) são **copiados do DualSense físico** via `HIDIOCGFEATURE` — é o que o
-`hid_playstation` pede no probe (`dualsense_get_mac_address`,
-`dualsense_get_calibration_data`, `dualsense_get_firmware_info`).
+firmware) são os que o `hid_playstation` pede no probe
+(`dualsense_get_mac_address`, `dualsense_get_calibration_data`,
+`dualsense_get_firmware_info`). Desde VPAD-03/BT-01 eles vêm do **blueprint
+canônico embutido** (`uhid_blueprint.py`) — nenhuma leitura do controle físico
+no caminho de criação, então o vpad sobe até sem controle conectado e o EIO do
+BT ocioso deixou de existir como modo de falha. A captura do físico
+(`capture_dualsense_blueprint`) sobrevive como ferramenta de diagnóstico.
 
 Três detalhes custaram um PoC e não podem se perder:
 
@@ -104,9 +108,16 @@ DUALSENSE_PRODUCT = 0x0CE6
 #: `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6` esconde SÓ o físico e o vpad
 #: (0x0DF2) sobrevive: layout PS, vibração e nada de duplicado.
 #:
-#: Invariante que garante que 0x0DF2 nunca colide com o físico: o caminho uhid só
-#: aceita físico 0x0CE6 (o `_is_dualsense` recusa o resto), então o Edge do vpad é
-#: sempre um PID distinto do controle real de onde ele copia o blueprint.
+#: Invariante VPAD-06 (travado por teste dedicado): NENHUM caminho de criação de
+#: vpad com flavor dualsense produz 054c:0ce6 — o fallback uinput também nasce
+#: Edge 0x0DF2 (`uinput_gamepad.DUALSENSE_EDGE_PRODUCT` espelha esta constante),
+#: então a launch option persistida (`IGNORE_DEVICES=0x054c/0x0ce6`) nunca mais
+#: esconde o vpad junto do físico. Duas ressalvas honestas: (1) `DUALSENSE_PIDS`
+#: trata 0x0DF2 como PID de FÍSICO (o Edge real existe) — quem impede o daemon de
+#: adotar o próprio vpad é o filtro de ancestralidade (`_is_virtual_evdev` /
+#: `_is_virtual_hidraw`), nunca o VID/PID; (2) o dono de um Edge FÍSICO divide
+#: VID/PID com o vpad — só a dedup por ancestralidade na regra udev (Fase B do
+#: sprint) cobre esse caso.
 VPAD_PRODUCT = 0x0DF2
 
 #: Feature reports que o probe do hid_playstation lê, com os tamanhos que o
@@ -317,10 +328,17 @@ def _is_dualsense(node: str) -> bool:
 
 
 def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
-    """Lê do DualSense físico tudo que o vpad precisa para se passar por um.
+    """Lê do DualSense físico o mesmo shape do blueprint canônico (DIAGNÓSTICO).
+
+    Fora do caminho de criação desde VPAD-03/BT-01: o vpad usa o blueprint
+    canônico embutido (`uhid_blueprint.canonical_blueprint`) e nunca mais lê o
+    físico — por BT, um controle ocioso não responde features e cada GET_REPORT
+    estoura o timeout de 5 s do hidp com EIO (janelas de minutos), o que
+    derrubava o vpad para uinput. A função fica para diagnóstico/recaptura
+    (irmã de `scripts/capture_blueprint.py`).
 
     Devolve ``{"descriptor": bytes, "features": {id: bytes}}`` ou None quando o
-    controle não está acessível ou não é um DualSense (o chamador cai no uinput).
+    controle não está acessível ou não é um DualSense.
     """
     node = os.path.basename(hidraw_path.rstrip("/"))
     if not re.fullmatch(r"hidraw\d+", node):
@@ -341,18 +359,14 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
         logger.warning("uhid_descriptor_invalido", tamanho=len(descriptor))
         return None
 
-    # UHID-BT (paridade): o descriptor de BT declara o report de INPUT 0x31 (item
-    # HID `85 31`), enquanto o USB usa 0x01. O vpad é forjado como BUS_USB e emite
-    # reports 0x01 — copiar um descriptor de BT pode fazer o HID core dimensionar
-    # errado o 0x01 e o vpad nascer torto. Ainda NÃO validado em BT; por ora só
-    # AVISAMOS (log-only; no USB o descriptor não tem 0x31, então nunca dispara)
-    # para o caso ficar observável. Fix definitivo = descriptor USB canônico,
-    # independente do transporte do físico (ver o doc de sprint do BT).
+    # Diagnóstico: o descriptor de BT declara o report de INPUT 0x31 (item HID
+    # `85 31`), enquanto o USB usa 0x01. Como blueprint de vpad ele é impróprio
+    # por construção (o vpad é BUS_USB emitindo report 0x01 de 64 B) — e é por
+    # isso que o caminho de criação usa o descriptor USB canônico embutido, não
+    # esta captura. Aqui só se registra o fato, para quem estiver inspecionando.
     if b"\x85\x31" in descriptor:
-        logger.warning(
-            "uhid_blueprint_bt_descriptor", path=hidraw_path, tamanho=len(descriptor),
-            hint="físico via BT: vpad uhid não validado em BT; se bugar use USB ou máscara Xbox",
-        )
+        logger.info("uhid_descriptor_bt_diagnostico", path=hidraw_path,
+                    tamanho=len(descriptor))
 
     features: dict[int, bytes] = {}
     try:
@@ -401,7 +415,9 @@ class UhidDualSense:
     #: PID que o vpad apresenta ao kernel/jogo. Default Edge (`VPAD_PRODUCT`) —
     #: distinto do físico para desduplicar; ver a constante para o porquê.
     product: int = VPAD_PRODUCT
-    #: Blueprint de `capture_dualsense_blueprint` (descriptor + features).
+    #: Blueprint no shape de `uhid_blueprint.canonical_blueprint` — o que a
+    #: factory injeta (descriptor + features). `capture_dualsense_blueprint`
+    #: produz o mesmo shape (hoje só diagnóstico).
     blueprint: dict[str, Any] | None = None
     #: Recebe (weak, strong) 0-255 pedidos pelo JOGO — igual ao vpad uinput.
     rumble_sink: Callable[[int, int], None] | None = None
@@ -442,9 +458,10 @@ class UhidDualSense:
         No uhid a máscara é sempre DualSense — é a graça do backend: o device tem
         hidraw de verdade, então o SDL usa o driver PS5 e a vibração funciona
         (com uinput+máscara DualSense ela é impossível). Forjar um Xbox 360 aqui
-        seria pior que o uinput: o `hid_playstation` só faz bind em 054c:0ce6, e
-        sem driver o device HID não vira gamepad nenhum. Por isso `xbox` devolve
-        None e o chamador segue no `UinputGamepad`, que faz Xbox muito bem.
+        seria pior que o uinput: o `hid_playstation` só faz bind em VID/PID da
+        Sony (0ce6, 0df2...), e sem driver o device HID não vira gamepad nenhum.
+        Por isso `xbox` devolve None e o chamador segue no `UinputGamepad`, que
+        faz Xbox muito bem.
 
         `flavor=None` significa "sem preferência" e resolve para dualsense — de
         propósito NÃO passa pelo `normalize_flavor`, cujo default é xbox: quem
@@ -552,10 +569,12 @@ class UhidDualSense:
         return True
 
     def _features_com_mac_proprio(self) -> dict[int, bytes]:
-        """Copia os features do físico trocando o MAC pelo do jogador.
+        """Copia os features do blueprint carimbando o MAC do jogador no 0x09.
 
-        O probe do hid_playstation recusa MAC repetido (-EEXIST): sem esta troca,
-        o vpad só sobe se o controle de onde copiamos estiver desligado.
+        O template canônico vem com as áreas de MAC ZERADAS (identidade nunca é
+        fossilizada — regra de anonimato); é aqui que o vpad ganha o MAC forjado
+        `02:fe:00:00:00:0N`. O probe do hid_playstation recusa MAC repetido
+        (-EEXIST): sem MAC próprio por jogador, o co-op de 4 vira 1.
         """
         assert self.blueprint is not None
         features = dict(self.blueprint["features"])

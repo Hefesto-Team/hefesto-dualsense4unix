@@ -17,21 +17,116 @@ from typing import Any
 
 import pytest
 
+# --- Fakes headless de widgets Gtk usados pela aba Triggers ------------
+# Módulo-level para servirem tanto ao stub de CI (_install_gi_stubs)
+# quanto ao patch hermético dos bindings do módulo em _build_mixin.
+
+
+class _Orientation:
+    HORIZONTAL = 0
+    VERTICAL = 1
+
+
+class _PositionType:
+    LEFT = 0
+    RIGHT = 1
+
+
+class _Adjustment:
+    def __init__(
+        self,
+        value: float = 0,
+        lower: float = 0,
+        upper: float = 100,
+        step_increment: float = 1,
+        page_increment: float = 10,
+    ) -> None:
+        self.value = value
+
+
+class _Box:
+    def __init__(self, *_a: Any, **_kw: Any) -> None:
+        self._children: list[Any] = []
+
+    def pack_start(self, child: Any, *_a: Any, **_kw: Any) -> None:
+        self._children.append(child)
+
+    def get_children(self) -> list[Any]:
+        return list(self._children)
+
+    def remove(self, child: Any) -> None:
+        self._children.remove(child)
+
+    def show_all(self) -> None:
+        pass
+
+    def set_homogeneous(self, _v: bool) -> None:
+        pass
+
+    def set_visible(self, _v: bool) -> None:
+        pass
+
+
+class _Scale:
+    def __init__(self, *_a: Any, **kw: Any) -> None:
+        adjust = kw.get("adjustment")
+        self._value: float = float(adjust.value) if adjust else 0.0
+
+    def set_digits(self, _n: int) -> None:
+        pass
+
+    def set_value_pos(self, _p: int) -> None:
+        pass
+
+    def set_hexpand(self, _v: bool) -> None:
+        pass
+
+    def set_value(self, v: float) -> None:
+        self._value = float(v)
+
+    def get_value(self) -> float:
+        return self._value
+
+    def queue_draw(self) -> None:
+        pass
+
+    def connect(self, _signal: str, _cb: Any) -> None:
+        pass
+
+
+class _Label:
+    def __init__(self, *_a: Any, **kw: Any) -> None:
+        self._text = kw.get("label", "")
+
+    def set_xalign(self, _x: float) -> None:
+        pass
+
+    def set_size_request(self, _w: int, _h: int) -> None:
+        pass
+
+    def set_text(self, t: str) -> None:
+        self._text = t
+
+    def set_markup(self, m: str) -> None:
+        self._text = m
+
 
 def _install_gi_stubs() -> None:
     # Se PyGObject real está disponível, não fazemos nada (integração real).
-    real_gi = False
-    if "gi" in sys.modules and hasattr(sys.modules["gi"], "require_version"):
+    # GATE-SKIP-MASK-01: a checagem antiga só valia se "gi" JÁ estivesse em
+    # sys.modules — na coleta a fio frio o stub entrava mesmo com GTK real
+    # instalado e envenenava o processo inteiro.
+    existente = sys.modules.get("gi")
+    if existente is None or getattr(existente, "__spec__", None) is not None:
         try:
-            from gi.repository import Gtk
+            import gi
 
-            real_gi = getattr(Gtk, "__spec__", None) is not None and hasattr(
-                Gtk, "Window"
-            ) and "gi.repository" in str(getattr(Gtk, "__spec__", ""))
-        except Exception:  # pragma: no cover
-            real_gi = False
-    if real_gi:
-        return
+            gi.require_version("Gtk", "3.0")
+            from gi.repository import Gtk  # noqa: F401
+
+            return
+        except Exception:  # pragma: no cover — ambientes sem GTK
+            pass
 
     # Reutiliza módulos stub se já criados por testes anteriores (merge de atributos).
     gi_mod = sys.modules.get("gi") or types.ModuleType("gi")
@@ -45,89 +140,6 @@ def _install_gi_stubs() -> None:
     glib_mod = sys.modules.get("gi.repository.GLib") or types.ModuleType(
         "gi.repository.GLib"
     )
-
-    class _Orientation:
-        HORIZONTAL = 0
-        VERTICAL = 1
-
-    class _PositionType:
-        LEFT = 0
-        RIGHT = 1
-
-    class _Adjustment:
-        def __init__(
-            self,
-            value: float = 0,
-            lower: float = 0,
-            upper: float = 100,
-            step_increment: float = 1,
-            page_increment: float = 10,
-        ) -> None:
-            self.value = value
-
-    class _Box:
-        def __init__(self, *_a: Any, **_kw: Any) -> None:
-            self._children: list[Any] = []
-
-        def pack_start(self, child: Any, *_a: Any, **_kw: Any) -> None:
-            self._children.append(child)
-
-        def get_children(self) -> list[Any]:
-            return list(self._children)
-
-        def remove(self, child: Any) -> None:
-            self._children.remove(child)
-
-        def show_all(self) -> None:
-            pass
-
-        def set_homogeneous(self, _v: bool) -> None:
-            pass
-
-        def set_visible(self, _v: bool) -> None:
-            pass
-
-    class _Scale:
-        def __init__(self, *_a: Any, **kw: Any) -> None:
-            adjust = kw.get("adjustment")
-            self._value: float = float(adjust.value) if adjust else 0.0
-
-        def set_digits(self, _n: int) -> None:
-            pass
-
-        def set_value_pos(self, _p: int) -> None:
-            pass
-
-        def set_hexpand(self, _v: bool) -> None:
-            pass
-
-        def set_value(self, v: float) -> None:
-            self._value = float(v)
-
-        def get_value(self) -> float:
-            return self._value
-
-        def queue_draw(self) -> None:
-            pass
-
-        def connect(self, _signal: str, _cb: Any) -> None:
-            pass
-
-    class _Label:
-        def __init__(self, *_a: Any, **kw: Any) -> None:
-            self._text = kw.get("label", "")
-
-        def set_xalign(self, _x: float) -> None:
-            pass
-
-        def set_size_request(self, _w: int, _h: int) -> None:
-            pass
-
-        def set_text(self, t: str) -> None:
-            self._text = t
-
-        def set_markup(self, m: str) -> None:
-            self._text = m
 
     # Registrar classes mínimas adicionais (idempotente: só adiciona se ausente).
     for cls_name in (
@@ -241,17 +253,17 @@ class _FakeStatusBar:
 
 
 def _mk_widgets() -> dict[str, Any]:
-    from gi.repository import Gtk  # stubs instalados
-
+    # GATE-SKIP-MASK-01: fakes headless direto (nada de gi/sys.modules) —
+    # um Gtk.Box REAL rejeitaria o _FakeSegmentedSelector no pack_start.
     widgets: dict[str, Any] = {}
     for side in ("left", "right"):
         # FEAT-DSX-COMBO-TO-SEGMENTED-01: o combo de modo virou um slot (GtkBox)
         # onde install_triggers_tab empacota o SegmentedSelector.
-        widgets[f"trigger_{side}_mode_slot"] = Gtk.Box()
-        widgets[f"trigger_{side}_desc"] = Gtk.Label()
-        widgets[f"trigger_{side}_params_box"] = Gtk.Box()
+        widgets[f"trigger_{side}_mode_slot"] = _Box()
+        widgets[f"trigger_{side}_desc"] = _Label()
+        widgets[f"trigger_{side}_params_box"] = _Box()
         widgets[f"trigger_{side}_preset_combo"] = _FakeComboBox()
-        widgets[f"trigger_{side}_preset_row"] = Gtk.Box()
+        widgets[f"trigger_{side}_preset_row"] = _Box()
     widgets["status_bar"] = _FakeStatusBar()
     return widgets
 
@@ -288,6 +300,31 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     # SegmentedSelector real (precisa de display). Troca pelo stub headless.
     monkeypatch.setattr(
         triggers_actions, "SegmentedSelector", _FakeSegmentedSelector
+    )
+    # GATE-SKIP-MASK-01: em vez de envenenar sys.modules["gi"], trocamos os
+    # bindings Gtk/GLib DO MÓDULO em teste pelos fakes headless. O
+    # monkeypatch desfaz tudo no teardown — os demais testes do processo
+    # seguem vendo o PyGObject real.
+    monkeypatch.setattr(
+        triggers_actions,
+        "Gtk",
+        types.SimpleNamespace(
+            Orientation=_Orientation,
+            PositionType=_PositionType,
+            Adjustment=_Adjustment,
+            Box=_Box,
+            Scale=_Scale,
+            Label=_Label,
+        ),
+    )
+    monkeypatch.setattr(
+        triggers_actions,
+        "GLib",
+        types.SimpleNamespace(
+            timeout_add=lambda *_a, **_kw: 0,
+            idle_add=lambda fn, *a, **kw: fn(*a, **kw),
+            source_remove=lambda *_a, **_kw: None,
+        ),
     )
 
     inst = _FakeTriggersMixin()

@@ -48,14 +48,14 @@ def _build_fake_leds(root: Path, *, mac: str, prefix: str = "input88", players: 
 
 @pytest.fixture
 def fake_leds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    leds_class = _build_fake_leds(tmp_path, mac="a0:fa:9c:00:00:01")
+    leds_class = _build_fake_leds(tmp_path, mac="AA:BB:CC:00:00:01")
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(leds_class))
     return leds_class
 
 
 def test_norm_mac_strips_colons_and_lowercases() -> None:
-    assert sysfs_leds.norm_mac("a0:fa:9c:00:00:01") == "a0fa9cc311f0"
-    assert sysfs_leds.norm_mac("a0fa9cc311f0") == "a0fa9cc311f0"
+    assert sysfs_leds.norm_mac("AA:BB:CC:00:00:01") == "aabbcc000001"
+    assert sysfs_leds.norm_mac("aabbcc000001") == "aabbcc000001"
     assert sysfs_leds.norm_mac(None) is None
     assert sysfs_leds.norm_mac("") is None
     # string sem nenhum dígito hex -> None (não casa um nó por MAC)
@@ -67,8 +67,8 @@ def test_norm_mac_strips_colons_and_lowercases() -> None:
 
 def test_discover_keys_by_normalized_mac(fake_leds: Path) -> None:
     found = sysfs_leds.discover()
-    assert set(found) == {"a0fa9cc311f0"}
-    node = found["a0fa9cc311f0"]
+    assert set(found) == {"aabbcc000001"}
+    node = found["aabbcc000001"]
     assert node.indicator_dir.endswith("input88:rgb:indicator")
     assert len(node.player_dirs) == 5
 
@@ -80,7 +80,7 @@ def test_discover_falls_back_to_uniq_when_no_hid_uniq(
     dev = tmp_path / "devices" / "hid0"
     (dev / "input" / "input88").mkdir(parents=True)
     (dev / "uevent").write_text("HID_NAME=DualSense Wireless Controller\n")
-    (dev / "input" / "input88" / "uniq").write_text("a0:fa:9c:00:00:01\n")
+    (dev / "input" / "input88" / "uniq").write_text("aa:bb:cc:00:00:01\n")
     leds_real = dev / "leds" / "input88:rgb:indicator"
     leds_real.mkdir(parents=True)
     (leds_real / "multi_intensity").write_text("0 0 0")
@@ -91,31 +91,31 @@ def test_discover_falls_back_to_uniq_when_no_hid_uniq(
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(leds_class))
 
     found = sysfs_leds.discover()
-    assert set(found) == {"a0fa9cc311f0"}
+    assert set(found) == {"aabbcc000001"}
 
 
 def test_set_rgb_writes_intensity_and_full_brightness(fake_leds: Path) -> None:
-    node = sysfs_leds.discover()["a0fa9cc311f0"]
+    node = sysfs_leds.discover()["aabbcc000001"]
     assert node.set_rgb(255, 90, 0) is True
     assert Path(node._multi_intensity).read_text() == "255 90 0"
     assert Path(node._indicator_brightness).read_text() == "255"
 
 
 def test_set_rgb_clamps_out_of_range(fake_leds: Path) -> None:
-    node = sysfs_leds.discover()["a0fa9cc311f0"]
+    node = sysfs_leds.discover()["aabbcc000001"]
     assert node.set_rgb(999, -5, 256) is True
     assert Path(node._multi_intensity).read_text() == "255 0 255"
 
 
 def test_set_players_maps_bits_to_brightness(fake_leds: Path) -> None:
-    node = sysfs_leds.discover()["a0fa9cc311f0"]
+    node = sysfs_leds.discover()["aabbcc000001"]
     assert node.set_players((True, False, True, False, True)) is True
     vals = [Path(d, "brightness").read_text() for d in node.player_dirs]
     assert vals == ["1", "0", "1", "0", "1"]
 
 
 def test_writable_reflects_permission(fake_leds: Path) -> None:
-    node = sysfs_leds.discover()["a0fa9cc311f0"]
+    node = sysfs_leds.discover()["aabbcc000001"]
     assert node.writable() is True
     # remove permissão de escrita -> writable() vira False (gate anti-regressão)
     os.chmod(node._multi_intensity, 0o444)
