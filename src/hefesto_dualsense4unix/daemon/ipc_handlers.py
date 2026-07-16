@@ -92,6 +92,16 @@ class IpcHandlersMixin:
         self.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
+        # DEDUP-04: gatilho "mudança de perfil" — perfis com `steam_app_<id>`
+        # no match materializam arquivo de env próprio; a troca manual também
+        # pode ter mudado modo/máscara via apply do perfil.
+        if self.daemon is not None:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
+
+                materialize_launch_env(self.daemon)
         return {"active_profile": profile.name}
 
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -360,6 +370,14 @@ class IpcHandlersMixin:
                 getattr(self.store, "window_detect_last_class", None)
             ),
         }
+        # DEDUP-06 (achado NOVO da revisão): físico primário em BT + Modo
+        # Nativo é estruturalmente frágil — o SDL pode não enxergar o DualSense
+        # BT nem SEM launch option (o backend evdev deferencia ao HIDAPI por
+        # VID/PID e o HIDAPI não lê o hidraw BT). Fora do alcance do wrapper;
+        # a GUI e o doctor avisam a partir DESTA flag.
+        result["native_bt_fragil"] = bool(
+            result["native_mode"] and result["transport"] == "bt"
+        )
 
         # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
         # por controle físico, com transporte e qual é o primário) para a GUI, o
@@ -445,6 +463,22 @@ class IpcHandlersMixin:
                         motivo = getattr(gp_dev, "fallback_motivo", None)
                         if isinstance(motivo, str) and motivo:
                             result["gamepad_emulation"]["degraded_motivo"] = motivo
+            # DEDUP-06 — guard anti-veneno: `dedup_ok` agregado POR JOGADOR
+            # (P1 + todos os vpads do co-op). `degraded` acima fala SÓ pelo
+            # primário; um jogador do co-op em uinput com o IGNORE congelado
+            # na env do jogo é AQUELE jogador com zero controle — o guard é
+            # quem torna isso visível (GUI/doctor consomem daqui). O log de
+            # transição (`dedup_broken`) sai na materialização do launch_env,
+            # nunca aqui (o state_full roda a 20 Hz — seria flood).
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    dedup_status,
+                )
+
+                dedup_ok, motivos = dedup_status(self.daemon)
+                result["gamepad_emulation"]["dedup_ok"] = dedup_ok
+                if motivos:
+                    result["gamepad_emulation"]["dedup_motivo"] = ", ".join(motivos)
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
@@ -722,7 +756,38 @@ class IpcHandlersMixin:
 
         new_cfg = replace(self.daemon.config, **overrides)
         self.daemon.reload_config(new_cfg)
+        # DEDUP-04: gatilho "mudança de config" da materialização das envs de
+        # launch (o override pode ter trocado máscara/emulação sem passar
+        # pelos hooks de start/stop).
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                materialize_launch_env,
+            )
+
+            materialize_launch_env(self.daemon)
         return {"status": "ok", "config": asdict(new_cfg)}
+
+    async def _handle_launch_env_refresh(
+        self, _params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Rematerializa as envs de launch do wrapper (DEDUP-04) sob demanda.
+
+        Gatilho que os hooks de transição NÃO cobrem (achado MED da revisão
+        adversarial da Fase 2): criar/editar/apagar perfil pela GUI grava
+        DIRETO no disco (processo da GUI) e o daemon nunca fica sabendo — o
+        `steam_app_<appid>.env` de antecipação ficaria ausente/rançoso
+        exatamente na PRIMEIRA sessão do jogo novo (perfil nativo recém-criado
+        + launch em seguida = IGNORE congelado + autoswitch derrubando a
+        emulação = zero controles). A GUI chama este método best-effort após
+        save/delete/import de perfil; daemon dublado sem materialização
+        responde `failed` em vez de estourar.
+        """
+        if self.daemon is None:
+            return {"status": "failed"}
+        from hefesto_dualsense4unix.daemon.launch_env import materialize_launch_env
+
+        materialize_launch_env(self.daemon)
+        return {"status": "ok"}
 
     async def _handle_mouse_emulation_set(
         self, params: dict[str, Any]

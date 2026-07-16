@@ -86,12 +86,17 @@ class _FakeLabel:
     def __init__(self) -> None:
         self.markup: str | None = None
         self.text: str | None = None
+        self.visible: bool | None = None
 
     def set_markup(self, markup: str) -> None:
         self.markup = markup
 
     def set_text(self, text: str) -> None:
         self.text = text
+
+    def set_visible(self, value: bool) -> None:
+        # UX-03: o _render_offline agora esconde o banner de degradação do vpad.
+        self.visible = value
 
     def set_fraction(self, _frac: float) -> None:  # pragma: no cover
         pass

@@ -71,8 +71,9 @@ DUALSENSE_NAME = "Sony Interactive Entertainment DualSense Wireless Controller"
 # honesta (refutação nº 2 do sprint doc): um vpad uinput 0df2 não tem hidraw —
 # o SDL não usa o driver HIDAPI PS5 nele e cai no matching evdev com um GUID
 # (version 0x3) ausente do gamecontrollerdb; esse mapeamento NUNCA foi validado
-# ao vivo, e por isso o `compose_launch` não anuncia IGNORE_DEVICES no ramo
-# degradado (ver `daemon_actions.compose_launch`).
+# ao vivo, e por isso as envs materializadas para o wrapper de launch omitem o
+# IGNORE_DEVICES quando qualquer vpad está neste backend degradado (ver
+# `daemon.launch_env.compose_env` — DEDUP-04).
 DUALSENSE_EDGE_PRODUCT = 0x0DF2
 DUALSENSE_EDGE_NAME = (
     "Sony Interactive Entertainment DualSense Edge Wireless Controller"

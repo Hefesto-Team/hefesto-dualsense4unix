@@ -14,7 +14,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import types
-from typing import Any
+from typing import Any, ClassVar
 
 
 def _install_gi_stubs() -> None:
@@ -107,6 +107,37 @@ class _Host(DaemonActionsMixin):
         cobrindo o caso 'systemd inactive + nenhum processo avulso'.
         """
         return False
+
+
+class _FakePopen:
+    """Substituto hermético de `subprocess.Popen` para este arquivo.
+
+    HERMETICIDADE (achado da onda SPRINT-UX-AUTOSWITCH-01): os testes daqui
+    mockavam só `subprocess.run`; quando o systemctl fake "falhava"
+    (`raise_on_start`/`start_rc!=0`), o `_start_service_blocking` caía no
+    fallback de Popen REAL e spawnava um daemon `--foreground` DE VERDADE na
+    máquina (órfão, `start_new_session=True`) a cada rodada da suíte — mesmo
+    perigo do `test_quit_app` que já matou o daemon da usuária. O fake
+    preserva o caminho de código (poll() vivo → rc 0) sem processo real.
+    """
+
+    spawned: ClassVar[list[list[str]]] = []
+
+    def __init__(self, cmd: list[str], *args: Any, **kwargs: Any) -> None:
+        type(self).spawned.append(list(cmd))
+        self.pid = 424242
+        self.returncode: int | None = None
+
+    def poll(self) -> int | None:
+        return None
+
+
+@pytest.fixture(autouse=True)
+def _popen_hermetico(monkeypatch: pytest.MonkeyPatch) -> type[_FakePopen]:
+    """Nenhum teste deste arquivo pode spawnar processo real (ver _FakePopen)."""
+    _FakePopen.spawned = []
+    monkeypatch.setattr(da.subprocess, "Popen", _FakePopen)
+    return _FakePopen
 
 
 @pytest.fixture
@@ -239,6 +270,7 @@ def test_falha_silenciosa_em_timeout(
     host: _Host,
     sync_executor: _SyncExecutor,
     monkeypatch: pytest.MonkeyPatch,
+    _popen_hermetico: type[_FakePopen],
 ) -> None:
     """TimeoutExpired em `start` não propaga; contador ainda incrementa."""
     monkeypatch.setattr(
@@ -254,6 +286,9 @@ def test_falha_silenciosa_em_timeout(
     host.ensure_daemon_running()
 
     assert host._daemon_autostart_attempts == 1
+    # O timeout do systemctl cai no fallback de Popen — que TEM de ser o fake
+    # (1 spawn registrado, nenhum processo real na máquina).
+    assert len(_popen_hermetico.spawned) == 1
 
 
 def test_submete_ao_executor(

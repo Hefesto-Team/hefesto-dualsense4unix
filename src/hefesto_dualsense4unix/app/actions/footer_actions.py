@@ -104,6 +104,27 @@ class FooterActionsMixin(WidgetAccessMixin):
         self._status_toast(context, msg)
 
     # ------------------------------------------------------------------
+    # DEDUP-04: aviso ao daemon quando o conjunto de perfis muda
+    # ------------------------------------------------------------------
+
+    def _notify_launch_env_refresh(self) -> None:
+        """Avisa o daemon que o conjunto de perfis mudou (`launch_env.refresh`).
+
+        save/import/restore de perfil rodam no processo da GUI, direto no
+        disco — sem este aviso o `steam_app_<appid>.env` de antecipação só
+        seria regravado na PRÓXIMA transição de estado do daemon, tarde demais
+        para o primeiro launch de um jogo com perfil recém-criado (achado MED
+        da revisão adversarial da Fase 2). Best-effort: daemon offline é
+        normal (ele rematerializa sozinho no boot).
+        """
+        ipc_bridge.call_async(
+            method="launch_env.refresh",
+            params={},
+            on_success=lambda _result: False,
+            on_failure=lambda _exc: False,
+        )
+
+    # ------------------------------------------------------------------
     # Handler: Aplicar
     # ------------------------------------------------------------------
 
@@ -232,6 +253,9 @@ class FooterActionsMixin(WidgetAccessMixin):
             refresh = getattr(self, "_reload_profiles_store", None)
             if refresh is not None:
                 refresh(select_name=nome)
+            # DEDUP-04: o daemon rematerializa o launch_env (perfil novo pode
+            # ter steam_app_<id> no match — a antecipação por appid).
+            self._notify_launch_env_refresh()
             return False
 
         def _on_err(exc: Exception) -> bool:
@@ -338,6 +362,8 @@ class FooterActionsMixin(WidgetAccessMixin):
             refresh = getattr(self, "_reload_profiles_store", None)
             if refresh is not None:
                 refresh(select_name=profile.name)
+            # DEDUP-04: perfil importado também muda o conjunto de perfis.
+            self._notify_launch_env_refresh()
             return False
 
         def _on_err(exc: Exception) -> bool:
@@ -404,6 +430,8 @@ class FooterActionsMixin(WidgetAccessMixin):
                 _("meu_perfil restaurado para {destino}").format(destino=destino)
             )
             _refresh_all_tabs(self)
+            # DEDUP-04: restaurar o default também muda o conjunto de perfis.
+            self._notify_launch_env_refresh()
             return False
 
         def _on_err(exc: Exception) -> bool:

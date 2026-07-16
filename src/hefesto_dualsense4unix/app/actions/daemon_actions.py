@@ -185,63 +185,44 @@ class DaemonActionsMixin(WidgetAccessMixin):
 
         _get_executor().submit(_worker)
 
-    #: UHID-04 + "carregamento completo": Opções de Inicialização da Steam que
-    #: (1) fazem o jogo ver SÓ o gamepad virtual do Hefesto (sem duplicar com o
-    #: DualSense físico), (2) mantêm a vibração e (3) preservam o cache de shaders
-    #: entre execuções. São COMPOSTAS por `compose_launch` a partir da máscara e do
-    #: backend ativos — não são string fixa, porque cada máscara esconde o físico
-    #: de um jeito e só o backend uhid (Edge 0x0df2) tem PID próprio.
-
-    #: Pré-carregamento ("forçar carregamento completo antes da tela"): a NVIDIA
-    #: persiste o cache de shaders no disco e NÃO o limpa entre execuções — o jogo
-    #: compila os shaders uma vez e nas próximas sobe sem as travadas da primeira
-    #: tela. Inócuo em qualquer jogo. Não força o pré-cache do Steam (isso é um
-    #: toggle da Steam: Config → Downloads → "Pré-cache de shaders") — o toast lembra.
-    STEAM_LAUNCH_PRELOAD = "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1"
-
-    #: Esconde o DualSense FÍSICO (054c:0ce6) do jogo por VID/PID. Seguro porque
-    #: o vpad NUNCA é 054c:0ce6 (invariante VPAD-06, em TODOS os caminhos de
-    #: criação): no Xbox é 045e, no DualSense é o Edge 054c:0df2 (UHID-04). É a
-    #: peça que mata o controle duplicado. O ramo dualsense degradado (uinput)
-    #: ainda a OMITE por prudência — não por colisão de PID, mas porque o
-    #: mapeamento SDL do Edge-uinput nunca foi validado (ver compose_launch).
-    STEAM_IGNORE_PHYSICAL = "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6"
-
     @classmethod
     def compose_launch(cls, flavor: str, backend: str) -> tuple[str, str]:
-        """(string de Launch Option, dica extra) pela máscara/backend ativos.
+        """(string de Launch Option, dica extra) — agora a chamada do WRAPPER.
 
         Pura e sem GTK — é o miolo testável do botão `on_storm_copy_launch`.
 
-        - Xbox (uinput 045e): `SDL_JOYSTICK_HIDAPI=0` força o SDL a ler o evdev (que
-          o daemon graba) e `IGNORE_DEVICES` esconde o físico; o rumble volta pelo
-          XInput/FF do vpad (por isso SEM `PROTON_ENABLE_HIDRAW`).
-        - DualSense Edge (uhid 0x0df2): `IGNORE_DEVICES` esconde SÓ o físico (0ce6)
-          e o vpad Edge sobrevive com layout PS + rumble. HIDAPI fica LIGADO (o SDL
-          usa o driver PS5 no vpad) e `PROTON_ENABLE_HIDRAW=1` entrega o hidraw do
-          vpad ao jogo pelo Proton. É a "mesma solução do Xbox", agora no layout PS.
-        - DualSense mas backend uinput (o uhid não subiu): o vpad já é um Edge
-          0x0df2 SEM hidraw (VPAD-04) — o SDL cai no matching evdev com um GUID
-          (version 0x3) fora do gamecontrollerdb, mapeamento NUNCA validado ao
-          vivo. Anunciar `IGNORE_DEVICES` aqui poderia deixar como ÚNICO controle
-          um vpad de botões trocados — pior que o duplicado (plano B da refutação
-          nº 2 do sprint vpad-sempre-edge): dica honesta, SEM `IGNORE_DEVICES`,
-          até a validação SDL ao vivo positiva ser documentada no sprint doc.
+        DEDUP-04/UX-05: o botão parou de recomendar o veneno estático. A env
+        colada de antes (`SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6`
+        persistida por jogo) pressupunha um estado DINÂMICO — vpad vivo como
+        Edge 0df2; quando o pressuposto falhava (EIO de BT, hotplug, modo
+        Nativo, daemon morto) ela escondia o ÚNICO controle que restou e o
+        jogo ficava com ZERO controles ("em BT nada funciona", provado ao
+        vivo). A string devolvida aqui é CONSTANTE e idêntica para QUALQUER
+        (máscara, backend): quem decide as envs é o wrapper `hefesto-launch`
+        NA HORA do launch, consultando o estado real do daemon via IPC — e a
+        própria string degrada para `exec env "$@"` quando o wrapper faltar
+        (o jogo SEMPRE abre; pior caso: controle duplicado, nunca zero).
+
+        Os parâmetros (flavor, backend) permanecem na assinatura por
+        compatibilidade com quem consulta o estado antes de copiar — são
+        deliberadamente IGNORADOS.
         """
-        preload = cls.STEAM_LAUNCH_PRELOAD
-        ignore = cls.STEAM_IGNORE_PHYSICAL
-        if flavor == "xbox":
-            return f"SDL_JOYSTICK_HIDAPI=0 {ignore} {preload} %command%", ""
-        if backend == "uhid":
-            return f"PROTON_ENABLE_HIDRAW=1 {ignore} {preload} %command%", ""
-        return (
-            f"{preload} %command%",
-            "  a máscara DualSense caiu no backend simples (sem hidraw): o vpad é "
-            "um Edge (0x0df2) cujo mapeamento a SDL ainda não tem validado — "
-            "esconder o físico agora poderia deixar um controle de botões trocados "
-            "como único. Reconecte o controle ou re-selecione DualSense na aba "
-            "Início; enquanto isso a máscara Xbox 360 desduplica e vibra.",
+        del flavor, backend  # a string é constante — decisão é do wrapper
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            WRAPPER_LAUNCH,
         )
+
+        return WRAPPER_LAUNCH, ""
+
+    @staticmethod
+    def _wrapper_installed() -> bool:
+        """True se o wrapper hefesto-launch está instalado e executável."""
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            WRAPPER_HOME_RELPATH,
+        )
+
+        wrapper = Path.home() / WRAPPER_HOME_RELPATH
+        return wrapper.is_file() and os.access(wrapper, os.X_OK)
 
     def _query_gamepad_state(self) -> tuple[str, str]:
         """(flavor, backend) do gamepad virtual ativo via state_full.
@@ -266,16 +247,16 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return "xbox", ""
 
     def on_storm_copy_launch(self, _btn: object) -> None:
-        """Copia as Opções de Inicialização da Steam (anti-duplicação + vibração +
-        pré-carregamento), escolhendo a variante certa pela máscara/backend ativos.
+        """Copia a Opção de Inicialização da Steam — a chamada do wrapper.
 
-        O Hefesto não injeta env vars no jogo (só orienta): estas opções fazem o
-        jogo enxergar apenas o gamepad virtual e preservam o rumble. UHID-04: no
-        modo DualSense-Edge o botão AGORA gera uma opção que desduplica no layout PS
-        (o vpad é 0x0df2, distinto do físico 0x0ce6).
+        DEDUP-04/UX-05: a string é CONSTANTE (idêntica em qualquer máscara/
+        backend) — o wrapper `hefesto-launch` decide as envs na hora do
+        launch consultando o daemon via IPC, e degrada sozinho quando o
+        daemon está morto/degradado (nenhuma env => físico visível => o jogo
+        sempre abre com controle). Fallback honesto: com o wrapper ainda não
+        instalado, a string continua abrindo o jogo — só não desduplica.
         """
-        flavor, backend = self._query_gamepad_state()
-        launch, extra = self.compose_launch(flavor, backend)
+        launch, extra = self.compose_launch("", "")
         copied = False
         with contextlib.suppress(Exception):
             from gi.repository import Gdk, Gtk
@@ -284,18 +265,97 @@ class DaemonActionsMixin(WidgetAccessMixin):
             clip.set_text(launch, -1)
             clip.store()
             copied = True
+        if not self._wrapper_installed():
+            extra = (
+                f"{extra}  Atenção: o wrapper ainda não está instalado "
+                "(rode ./install.sh) — a opção continua abrindo o jogo, mas "
+                "sem esconder o controle físico (pode duplicar) até o "
+                "install completar."
+            )
         if copied:
-            # A string traz o `%command%`. Se o jogo JÁ tem opções (ex.: a Sackboy
-            # tem `__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%`), colar por cima
-            # APAGA as dela — por isso instruímos o MERGE: colar antes do `%command%`
-            # já existente e manter o resto.
+            # A string termina em `%command%`. Se o jogo JÁ tem opções, o certo
+            # é o botão 'Aplicar aos jogos da Steam' (funde sozinho, removendo
+            # as opções antigas do Hefesto); manualmente: manter as opções do
+            # usuário ENTRE `hefesto-launch` e o `%command%` final, com UM só
+            # `%command%` na linha.
             self._toast_daemon(
                 "Copiado! Cole em: Steam → jogo → Propriedades → Opções de "
-                "inicialização. Se já houver algo lá, cole ANTES do seu %command% "
-                f"e mantenha o resto.{extra}"
+                "inicialização. Se já houver algo lá, prefira o botão 'Aplicar "
+                "aos jogos da Steam' — ele funde sem apagar as suas opções."
+                f"{extra}"
             )
         else:
             self._toast_daemon(f"Copie manualmente: {launch}{extra}")
+
+    def on_steam_apply_launch(self, _btn: object) -> None:
+        """Aplica a chamada do wrapper aos localconfig.vdf (DEDUP-05).
+
+        Migração assistida de UM clique: remove as strings NOSSAS antigas
+        (o veneno `IGNORE_DEVICES` estático + co-ocorrentes) e instala a
+        chamada constante do wrapper, preservando opções genuinamente do
+        usuário. Recusa honesta com a Steam aberta (ela regrava o vdf ao
+        sair e a edição seria perdida). Sudo-zero: o vdf é arquivo do
+        usuário. Roda em thread worker (subprocess + I/O de arquivo).
+        """
+        self._toast_daemon("Verificando os arquivos da Steam…")
+
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import (
+                    steam_launch_options as slo,
+                )
+
+                if slo.steam_running():
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        "A Steam está aberta — feche-a e clique de novo. Não "
+                        "edito as Opções de Inicialização com a Steam viva "
+                        "porque ela regrava o arquivo ao sair e a mudança "
+                        "seria perdida.",
+                    )
+                    return
+                vdfs = slo.discover_vdfs()
+                if not vdfs:
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        "Não encontrei arquivos da Steam neste computador — "
+                        "nada a aplicar.",
+                    )
+                    return
+                total = 0
+                skipped_sandbox = 0
+                for vdf in vdfs:
+                    if slo.is_sandboxed_layout(vdf):
+                        skipped_sandbox += 1
+                        continue
+                    changed, _diff = slo.process_vdf(vdf, "migrate")
+                    total += changed
+                if total:
+                    msg = (
+                        f"Pronto — {total} jogo(s) atualizados para o launcher "
+                        "do Hefesto (as opções antigas foram substituídas; "
+                        "backup ao lado de cada arquivo)."
+                    )
+                else:
+                    msg = (
+                        "Nada a mudar — nenhum jogo com as opções antigas do "
+                        "Hefesto. Para um jogo novo, use 'Copiar opções p/ "
+                        "jogos' e cole nas Propriedades do jogo."
+                    )
+                if skipped_sandbox:
+                    msg += (
+                        " Steam Flatpak/Snap detectada e pulada: a sandbox "
+                        "não enxerga o launcher do computador."
+                    )
+                GLib.idle_add(self._toast_daemon, msg)
+            except Exception as exc:
+                logger.warning("steam_apply_launch_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Não consegui aplicar — veja os 'Detalhes técnicos'.",
+                )
+
+        _get_executor().submit(_worker)
 
     def _set_daemon_status_consulting(self) -> None:
         """Mostra o estado transitório "Consultando..." no label da aba Sistema.

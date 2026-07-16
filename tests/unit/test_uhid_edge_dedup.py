@@ -42,10 +42,11 @@ def test_product_e_campo_overridavel():
 
 
 def test_backend_property_distingue_os_dois_vpads():
-    """O botão de Launch Options decide a variante pelo backend — uhid tem hidraw
-    (IGNORE_DEVICES é seguro); uinput no flavor dualsense é o fallback degradado:
-    também é Edge 0x0df2 (VPAD-04), mas sem hidraw o mapeamento SDL nunca foi
-    validado e o compose_launch fica conservador (sem IGNORE_DEVICES)."""
+    """As envs materializadas para o wrapper de launch decidem pelo backend —
+    uhid tem hidraw (IGNORE_DEVICES é seguro); uinput no flavor dualsense é o
+    fallback degradado: também é Edge 0x0df2 (VPAD-04), mas sem hidraw o
+    mapeamento SDL nunca foi validado e o `launch_env.compose_env` fica
+    conservador (sem IGNORE_DEVICES — DEDUP-04)."""
     assert uhid.UhidDualSense(player=1).backend == "uhid"
     assert UinputGamepad.for_flavor("xbox").backend == "uinput"
     assert UinputGamepad.for_flavor("dualsense").backend == "uinput"

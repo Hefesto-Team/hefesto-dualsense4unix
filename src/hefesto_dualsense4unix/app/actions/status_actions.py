@@ -24,6 +24,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.home_actions import vpad_degradation_text
 from hefesto_dualsense4unix.app.constants import (
     LIVE_POLL_INTERVAL_MS,
     RECONNECT_FAIL_THRESHOLD,
@@ -622,6 +623,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         if combo is not None:
             combo.hide()
             self._target_combo_visible = False
+        # UX-03: daemon offline não é degradação do vpad — o banner some junto.
+        self._refresh_vpad_banner(None)
         self._reset_live_widgets()
 
     @staticmethod
@@ -810,6 +813,26 @@ class StatusActionsMixin(WidgetAccessMixin):
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).
         self._refresh_controller_target_combo(state)
+
+        # UX-03: banner de degradação do vpad (máscara DualSense em uinput).
+        self._refresh_vpad_banner(state)
+
+    def _refresh_vpad_banner(self, state: dict[str, Any] | None) -> None:
+        """UX-03: banner de degradação do vpad primário na aba Status.
+
+        Consome `gamepad_emulation.backend` do state_full pela MESMA função
+        pura da aba Início (`vpad_degradation_text`) — as duas abas nunca
+        discordam sobre o estado do vpad. O widget é um GtkLabel fixo do Glade
+        (`status_vpad_banner`), sempre inline: nada de popup/popover
+        (cosmic-epoch#2497). Backend ausente/"" é transitório e não acende.
+        """
+        banner = self._get("status_vpad_banner")
+        if banner is None:
+            return
+        aviso = vpad_degradation_text(state)
+        if aviso:
+            banner.set_text(aviso)
+        banner.set_visible(bool(aviso))
 
     def _reset_live_widgets(self) -> None:
         l2_bar = self._get("live_l2_bar")

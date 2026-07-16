@@ -281,9 +281,12 @@ class HefestoApp(
             "on_daemon_migrate_to_systemd": self.on_daemon_migrate_to_systemd,
             # Anti-storm / sistema (FEAT-DSX-UNIFY-01)
             "on_storm_fix_safe": self.on_storm_fix_safe,
-            # SPRINT-GAME-RUMBLE-01: copia as Opções de Inicialização da Steam
-            # (anti-duplicação do controle + vibração pelo vpad).
+            # SPRINT-GAME-RUMBLE-01 + DEDUP-04: copia a Opção de Inicialização
+            # da Steam (agora a string CONSTANTE do wrapper hefesto-launch).
             "on_storm_copy_launch": self.on_storm_copy_launch,
+            # DEDUP-05: migração assistida — troca as opções antigas do
+            # Hefesto pela chamada do wrapper nos localconfig.vdf.
+            "on_steam_apply_launch": self.on_steam_apply_launch,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,

@@ -761,6 +761,25 @@ if [[ -d "${GLYPHS_SRC}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 4b-2. Wrapper de launch da Steam (DEDUP-04) — DEFAULT, sem flag, sem sudo
+# ---------------------------------------------------------------------------
+# `hefesto-launch %command%` é a Opção de Inicialização CONSTANTE: o wrapper
+# decide as envs na hora do launch consultando o daemon via IPC (daemon morto/
+# degradado => nenhuma env => o jogo abre com o físico visível — pior caso é
+# controle duplicado, nunca zero). Passo de USUÁRIO de propósito: instalável
+# sem sudo e simétrico no uninstall (que limpa o vdf ANTES de apagar isto).
+readonly LAUNCH_WRAPPER_SRC="${ROOT_DIR}/assets/hefesto-launch.sh"
+readonly LAUNCH_WRAPPER_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
+if [[ -f "${LAUNCH_WRAPPER_SRC}" ]]; then
+    install -Dm755 "${LAUNCH_WRAPPER_SRC}" "${LAUNCH_WRAPPER_TARGET}"
+    # Diretório da materialização (o daemon regrava a cada transição; criar
+    # aqui garante que o wrapper nunca falha por diretório ausente).
+    mkdir -p "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+else
+    warn "assets/hefesto-launch.sh ausente — wrapper de launch da Steam não instalado"
+fi
+
+# ---------------------------------------------------------------------------
 # 4c. Perfis default (primeira instalação copia; reinstalação preserva)
 # ---------------------------------------------------------------------------
 if [[ -f "${ROOT_DIR}/scripts/install_profiles.sh" ]]; then
@@ -1038,6 +1057,33 @@ else
     else
         warn "não consegui habilitar o guard --user (sessão systemd ausente?) — será pego no próximo login"
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# 11b. Launch Options: migrar o veneno estático para o wrapper — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# DEDUP-05 (P0, "inseparável do DEDUP-04"): migra as Launch Options VENENOSAS
+# de ondas anteriores (IGNORE_DEVICES estático persistido por jogo — esconde o
+# único controle quando o vpad degrada => jogo com ZERO controles) para a
+# chamada do wrapper hefesto-launch. Só toca linhas com a assinatura nossa;
+# opções do usuário são preservadas. --stop-steam: fecha a Steam se preciso
+# (ela regrava o vdf ao sair) e reabre depois; com um JOGO aberto o módulo
+# RECUSA (rc=3) em vez de matá-lo. Módulo 100% stdlib — python3 do sistema.
+#
+# Passo PRÓPRIO, fora do bloco do Steam Input, de propósito (achado MED da
+# revisão adversarial): --keep-steam-input é opt-out SÓ do PSSupport e não
+# pode pular o desenvenenamento; e a migração tampouco depende de o
+# disable_steam_input.sh existir/ser executável.
+step "11b" "Steam: migrar Launch Options antigas para o wrapper hefesto-launch"
+LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
+if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    if python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
+        printf '      Launch Options antigas do Hefesto migradas para o wrapper hefesto-launch\n'
+    else
+        warn "migração das Launch Options adiada — rode com a Steam fechada (e sem jogo aberto): python3 ${LAUNCH_MIGRATE_PY} --migrate"
+    fi
+else
+    warn "steam_launch_options.py ausente ou sem python3 — migração pulada; rode depois: python3 ${LAUNCH_MIGRATE_PY} --migrate"
 fi
 
 # ---------------------------------------------------------------------------

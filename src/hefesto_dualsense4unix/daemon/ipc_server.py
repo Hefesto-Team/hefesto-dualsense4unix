@@ -17,6 +17,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     controller.list      {}          -> {controllers: [{index, connected, transport, is_primary?}]}
     controller.target.set {index|null} -> {status, target_index}
     daemon.reload        {}          -> {status}
+    launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
 
@@ -112,6 +113,7 @@ class IpcServer(IpcHandlersMixin):
             "controller.list": self._handle_controller_list,
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
+            "launch_env.refresh": self._handle_launch_env_refresh,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,

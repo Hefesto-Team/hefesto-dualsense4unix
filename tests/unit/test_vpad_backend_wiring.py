@@ -481,6 +481,42 @@ class TestFallbackNuncaSilencioso:
         assert start_gamepad_emulation(daemon, flavor="dualsense") is True
 
 
+class TestStartFalhoRematerializaLaunchEnv:
+    """Achado HIGH da revisão adversarial da Fase 2 (DEDUP-04): a falha TOTAL
+    do start (make_virtual_pad devolvendo None — uhid E uinput inacessíveis)
+    tem que REGRAVAR o launch_env. Sem isso, um `default.env` rançoso com
+    IGNORE (sessão anterior saudável + daemon morto SUJO) sobrevive com o
+    daemon vivo e sem vpad nenhum: o wrapper passa no gate de vida, exporta o
+    IGNORE, o físico some e não existe vpad = ZERO controles no launch."""
+
+    def test_default_env_rancoso_perde_o_ignore_no_start_falho(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        from hefesto_dualsense4unix.daemon import launch_env as launch_env_mod
+
+        monkeypatch.setattr(
+            launch_env_mod, "launch_env_dir", lambda ensure=False: tmp_path
+        )
+        rancoso = (
+            "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n"
+            "PROTON_ENABLE_HIDRAW=1\n"
+        )
+        (tmp_path / "default.env").write_text(rancoso, encoding="utf-8")
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
+            lambda *_a, **_k: None,
+        )
+        daemon = _daemon(hidraw={})
+        # Boot da sessão N+1: a emulação estava LIGADA na sessão anterior.
+        daemon.config.gamepad_emulation_enabled = True
+
+        assert start_gamepad_emulation(daemon, flavor="dualsense") is False
+
+        texto = (tmp_path / "default.env").read_text(encoding="utf-8")
+        assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in texto
+        assert "__GL_SHADER_DISK_CACHE=1" in texto  # só o preload inócuo
+
+
 def test_o_lifecycle_propaga_a_origem_ate_o_gate() -> None:
     """BT-04(b): sem o `origin=origin` no repasse do `set_gamepad_emulation`,
     o latch anti-churn morre em silêncio — o apply de perfil/autoswitch volta
