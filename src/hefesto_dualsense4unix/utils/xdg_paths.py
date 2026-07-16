@@ -88,6 +88,28 @@ def runtime_dir(ensure: bool = False) -> Path:
     return p
 
 
+def state_dir(ensure: bool = False) -> Path:
+    """XDG_STATE_HOME/hefesto-dualsense4unix (~/.local/state/... por default)."""
+    p = Path(_DIRS.user_state_dir)
+    if ensure:
+        p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def launch_env_dir(ensure: bool = False) -> Path:
+    """Diretório dos arquivos de env materializados para o wrapper de launch.
+
+    DEDUP-04: o daemon regrava aqui (`default.env` + `steam_app_<appid>.env`)
+    o conjunto de envs que o wrapper `hefesto-launch` deve exportar quando o
+    gate de vida (connect+ping IPC) passar. O caminho é ESTÁVEL e conhecido
+    pelo wrapper POSIX-sh — mudar aqui exige mudar `assets/hefesto-launch.sh`.
+    """
+    p = state_dir() / "launch_env"
+    if ensure:
+        p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def profiles_dir(ensure: bool = False) -> Path:
     p = config_dir() / "profiles"
     if ensure:
@@ -117,6 +139,8 @@ __all__ = [
     "fake_mode_enabled",
     "ipc_socket_name",
     "ipc_socket_path",
+    "launch_env_dir",
     "profiles_dir",
     "runtime_dir",
+    "state_dir",
 ]

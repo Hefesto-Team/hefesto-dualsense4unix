@@ -166,6 +166,21 @@
                 <property name="spacing">12</property>
                 <property name="margin">12</property>
 
+                <!-- UX-03: banner de degradação do gamepad virtual (máscara
+                     DualSense no backend uinput). Texto e visibilidade vêm do
+                     StatusActionsMixin._refresh_vpad_banner; invisível por
+                     padrão e imune ao show_all (no-show-all). -->
+                <child>
+                  <object class="GtkLabel" id="status_vpad_banner">
+                    <property name="visible">False</property>
+                    <property name="no-show-all">True</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <style><class name="hefesto-dualsense4unix-status-warn"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
                 <child>
                   <object class="GtkFrame" id="frame_status_estado">
                     <property name="label" translatable="yes">Estado</property>
@@ -1684,8 +1699,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <child>
                           <object class="GtkButton" id="btn_storm_copy_launch">
                             <property name="label" translatable="yes">Copiar opções p/ jogos</property>
-                            <property name="tooltip-text" translatable="yes">Copia as Opções de Inicialização da Steam que evitam o controle duplicado e mantêm a vibração. Cole em: jogo → Propriedades → Opções de inicialização.</property>
+                            <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde o controle físico — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
                             <signal name="clicked" handler="on_storm_copy_launch"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="btn_steam_apply_launch">
+                            <property name="label" translatable="yes">Aplicar aos jogos da Steam</property>
+                            <property name="tooltip-text" translatable="yes">Troca as opções antigas do Hefesto pela linha nova do launcher em todos os jogos que as tinham — sem apagar as suas outras opções. Pede a Steam fechada e faz backup antes.</property>
+                            <signal name="clicked" handler="on_steam_apply_launch"/>
                           </object>
                         </child>
                       </object>

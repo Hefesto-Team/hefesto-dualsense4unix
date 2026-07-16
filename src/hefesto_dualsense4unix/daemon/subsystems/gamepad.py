@@ -62,11 +62,18 @@ class GamepadSubsystem:
         """Cria o device virtual se gamepad_emulation_enabled=True.
 
         Idempotente: retorna sem erro se já existe. Lê o flavor da config.
+        DEDUP-04: materializa o `launch_env/` também quando a emulação está
+        DESLIGADA no boot — sem isso o wrapper leria um `default.env` rançoso
+        da sessão anterior (ex.: com IGNORE de um vpad que não existe mais).
+        O ramo LIGADO cobre os dois desfechos: sucesso e falha total do start
+        regravam o arquivo dentro de `start_gamepad_emulation` — TODO boot
+        reescreve o launch_env com o estado real.
         """
         cfg = ctx.config
-        if not getattr(cfg, "gamepad_emulation_enabled", False):
-            return
         daemon = getattr(ctx, "daemon", ctx)
+        if not getattr(cfg, "gamepad_emulation_enabled", False):
+            _materialize_launch_env(daemon)
+            return
         start_gamepad_emulation(daemon, flavor=getattr(cfg, "gamepad_flavor", None))
 
     async def stop(self) -> None:  # pragma: no cover - simetria de protocolo
@@ -76,6 +83,19 @@ class GamepadSubsystem:
 
     def is_enabled(self, config: DaemonConfig) -> bool:
         return bool(getattr(config, "gamepad_emulation_enabled", False))
+
+
+def _materialize_launch_env(daemon: DaemonProtocol) -> None:
+    """Regrava as envs de launch do wrapper (DEDUP-04) — sempre best-effort.
+
+    Chamado nas bordas de transição do vpad (start/stop cobrem troca de
+    máscara, promoção uhid<->uinput e liga/desliga por perfil). NUNCA pode
+    derrubar a emulação: a falha vira log e o wrapper degrada sozinho.
+    """
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.launch_env import materialize_launch_env
+
+        materialize_launch_env(daemon)
 
 
 def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
@@ -213,6 +233,58 @@ def apply_game_rumble(
         # pode ficar sequestrado pelo rumble de um jogador).
         with contextlib.suppress(Exception):
             set_target(previous)
+
+
+def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
+    """(dedup_ok, motivos) agregados POR JOGADOR — o guard DEDUP-06.
+
+    `dedup_ok=True` significa: um jogo lançado AGORA com o IGNORE congelado na
+    env não deixa NENHUM jogador sem controle utilizável. A agregação é por
+    jogador de propósito (exigência da revisão): no co-op cada vpad nasce do
+    hidraw daquele controle e cai individualmente em uinput/0ce6 — um único
+    jogador degradado com o IGNORE congelado é AQUELE jogador com zero
+    controle, e um `dedup_ok` só-do-P1 mentiria.
+
+    Estados:
+      - emulação desligada / Modo Nativo: nenhum IGNORE materializado → ok
+        (o launch_env já omite o IGNORE nesses estados);
+      - máscara xbox: o vpad é uinput 045e POR DESIGN — o IGNORE cirúrgico do
+        físico Sony nunca o esconde (invariante VPAD-06) → ok;
+      - máscara dualsense: ok SÓ se o vpad do P1 e TODOS os vpads do co-op
+        estão em uhid. Motivos: `fallback_motivo` do P1 (ou `sem_uhid`) e
+        `jogador_<N>_uinput` por jogador degradado;
+      - emulação ligada SEM device (start falhou): `vpad_ausente`.
+
+    Só leitura de atributos — nunca propaga exceção pro `state_full` (getattr
+    defensivo em tudo; daemons dublados de teste não têm coop/store).
+    """
+    cfg = getattr(daemon, "config", None)
+    enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
+    if not enabled:
+        return True, []
+    with contextlib.suppress(Exception):
+        if bool(daemon.is_native_mode()):
+            return True, []
+    device = getattr(daemon, "_gamepad_device", None)
+    if device is None:
+        return False, ["vpad_ausente"]
+    if getattr(device, "flavor", None) != "dualsense":
+        return True, []
+    motivos: list[str] = []
+    if getattr(device, "backend", None) == "uinput":
+        motivo = getattr(device, "fallback_motivo", None)
+        motivos.append(motivo if isinstance(motivo, str) and motivo else "sem_uhid")
+    coop = getattr(daemon, "_coop_manager", None)
+    players = getattr(coop, "_players", None)
+    if isinstance(players, dict):
+        for player in players.values():
+            vpad = getattr(player, "vpad", None)
+            if vpad is None or getattr(vpad, "backend", None) != "uinput":
+                continue
+            indice = getattr(player, "player_index", None)
+            rotulo = str(indice) if isinstance(indice, int) else "?"
+            motivos.append(f"jogador_{rotulo}_uinput")
+    return not motivos, motivos
 
 
 def controller_allows_uhid(daemon: DaemonProtocol) -> bool:
@@ -439,6 +511,16 @@ def start_gamepad_emulation(
     )
     if device is None:
         logger.warning("gamepad_emulation_start_failed", flavor=key)
+        # DEDUP-04 (achado HIGH da revisão adversarial da Fase 2): a falha
+        # TOTAL do start também é uma transição de estado. Sem regravar aqui,
+        # um `default.env` rançoso da sessão anterior (com IGNORE) sobrevive a
+        # um daemon que morreu SUJO (SIGKILL/OOM) e voltou sem conseguir subir
+        # vpad nenhum (ex.: /dev/uhid E /dev/uinput sem ACL — classe já vista
+        # nesta máquina pela ordem das regras udev >=73): daemon VIVO passa no
+        # gate do wrapper, o IGNORE esconde o físico e não existe vpad = ZERO
+        # controles NO LAUNCH. O `_snapshot` com `_gamepad_device=None` compõe
+        # o arquivo seguro (só o preload de shaders).
+        _materialize_launch_env(daemon)
         return False
 
     daemon._gamepad_device = device
@@ -458,6 +540,9 @@ def start_gamepad_emulation(
         from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
         save_gamepad_emulation(True, key)
+    # DEDUP-04: gatilho "transição de backend/máscara" da materialização — o
+    # wrapper hefesto-launch decide as envs pelo que fica gravado aqui.
+    _materialize_launch_env(daemon)
     logger.info("gamepad_emulation_started", flavor=key)
     return True
 
@@ -497,6 +582,10 @@ def stop_gamepad_emulation(
     from hefesto_dualsense4unix.daemon.subsystems.rumble import zero_motors_on_mode_exit
 
     zero_motors_on_mode_exit(daemon)
+    # DEDUP-04: sem vpad o wrapper não pode mais anunciar IGNORE — regrava as
+    # envs de launch com o estado real (o `persist=False` da troca de flavor
+    # regrava de novo no start seguinte; escrever 2x é barato e idempotente).
+    _materialize_launch_env(daemon)
     if tinha_device:
         logger.info("gamepad_emulation_stopped")
 
@@ -536,6 +625,7 @@ __all__ = [
     "REBACKEND_COOLDOWN_SEC",
     "GamepadSubsystem",
     "apply_game_rumble",
+    "dedup_status",
     "dispatch_gamepad",
     "make_primary_rumble_sink",
     "start_gamepad_emulation",

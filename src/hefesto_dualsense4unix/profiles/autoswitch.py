@@ -3,6 +3,12 @@
 Poll a 2Hz (`poll_interval_sec=0.5`), debounce de 500ms para evitar flicker
 em alt-tab, aplica via ProfileManager.activate quando escolha muda.
 
+UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese — leitura SEM INFORMAÇÃO
+("não sei qual janela está em foco") pula o tick inteiro e retém o perfil
+corrente. Antes, o backend cego virava `wm_class='unknown'`, o `MatchAny`
+do perfil padrão casava com tudo e a emulação caía no meio do jogo
+(provado ao vivo: journal 03:40:29 e 13:07:18 de 2026-07-16).
+
 Desligável via env `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1` (usado pelo unit headless,
 V2-4 / Patch 8).
 """
@@ -52,6 +58,13 @@ class AutoSwitcher:
     # quando a supressão termina (chave zerada em `_activate` não-suprimido) e
     # um novo episódio começa. Estado por instância — nada global.
     _suppress_log_key: tuple[str, str] | None = None
+    # UX-01 (SPRINT-UX-AUTOSWITCH-01): episódio de leituras sem informação em
+    # curso. Serve para (a) logar `autoswitch_window_info_unavailable` 1x por
+    # episódio (padrão do `_log_suppressed_once` — sem flood a 2 Hz) e (b)
+    # resetar o relógio do debounce na PRIMEIRA leitura útil após o gap (o
+    # debounce é wall-time: sem o reset, o tempo pulado contaria como
+    # estabilidade e um glitch idêntico ao de antes do gap ativaria na hora).
+    _info_gap_active: bool = False
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -71,30 +84,87 @@ class AutoSwitcher:
                 logger.warning("autoswitch_window_read_failed", err=str(exc))
                 info = {}
 
-            profile = self.manager.select_for_window(info)
-            candidate = profile.name if profile else None
-
-            now = loop.time()
-            if candidate != self._last_candidate:
-                self._last_candidate = candidate
-                self._candidate_since = now
-
-            stable = now - self._candidate_since >= self.debounce_sec
-            # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
-            # a supressão CESSA, independente de haver ativação. Antes a chave só
-            # zerava dentro de `_activate` (que só roda com candidate != current),
-            # então um episódio que terminava com o candidato estável == perfil
-            # corrente (ex.: trigger.reset com a janela do jogo em foco) deixava a
-            # chave presa e deduplicava em silêncio o episódio seguinte.
-            if not self._suppression_active():
-                self._suppress_log_key = None
-            if stable and candidate and candidate != self._current_profile:
-                self._activate(candidate, info)
+            self._tick(info, loop.time())
 
             with contextlib.suppress(asyncio.TimeoutError):
                 await asyncio.wait_for(
                     self._stop_event.wait(), timeout=self.poll_interval_sec
                 )
+
+    def _tick(self, info: dict[str, Any], now: float) -> None:
+        """Um ciclo de decisão do autoswitch (leitura já feita pelo caller).
+
+        Separado do run-loop para os testes dirigirem o relógio: o debounce é
+        wall-time e o buraco-do-debounce da UX-01 só é testável com `now`
+        controlado.
+        """
+        # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
+        # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
+        # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,
+        # não reinicia o debounce, não ativa nada. O perfil corrente fica
+        # retido até evidência POSITIVA de outra janela. Sem TTL de propósito:
+        # o EIO de BT já mediu 5,1 s e loading screens duram minutos — TTL
+        # re-introduziria o drop no meio do jogo.
+        if self._tick_sem_informacao(info):
+            if not self._info_gap_active:
+                self._info_gap_active = True
+                logger.info(
+                    "autoswitch_window_info_unavailable",
+                    wm_class=str(info.get("wm_class", "")),
+                    current=self._current_profile or "",
+                )
+            # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: o reset da chave de supressão
+            # NÃO pode ser pulado junto com o tick — um episódio de supressão
+            # que termina durante o gap deduplicaria o seguinte em silêncio.
+            if not self._suppression_active():
+                self._suppress_log_key = None
+            return
+
+        resumed = self._info_gap_active
+        self._info_gap_active = False
+
+        profile = self.manager.select_for_window(info)
+        candidate = profile.name if profile else None
+
+        if candidate != self._last_candidate or resumed:
+            # `resumed`: primeira leitura útil após um gap reinicia o relógio
+            # do debounce — o tempo pulado não conta como estabilidade
+            # (armadilha 1 da UX-01: sem isso, duas leituras-glitch idênticas
+            # separadas por minutos ativariam instantaneamente).
+            self._last_candidate = candidate
+            self._candidate_since = now
+
+        stable = now - self._candidate_since >= self.debounce_sec
+        # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
+        # a supressão CESSA, independente de haver ativação. Antes a chave só
+        # zerava dentro de `_activate` (que só roda com candidate != current),
+        # então um episódio que terminava com o candidato estável == perfil
+        # corrente (ex.: trigger.reset com a janela do jogo em foco) deixava a
+        # chave presa e deduplicava em silêncio o episódio seguinte.
+        if not self._suppression_active():
+            self._suppress_log_key = None
+        if stable and candidate and candidate != self._current_profile:
+            self._activate(candidate, info)
+
+    @staticmethod
+    def _tick_sem_informacao(info: dict[str, Any]) -> bool:
+        """True quando a leitura de janela não carrega NENHUMA evidência.
+
+        UX-01: info vazio OU (`wm_class` vazio/'unknown' E `wm_name` vazio E
+        `exe_basename` vazio). A condição é estrita de propósito: janela X com
+        título ou processo preenchidos AINDA entra no select (preserva perfis
+        por `window_title_regex`/`process_name`). Tradeoff residual aceito e
+        coberto por teste: janela X sem WM_CLASS mas com título ativa o
+        fallback MatchAny depois do debounce.
+        """
+        if not info:
+            return True
+        wm_class = str(info.get("wm_class") or "")
+        if wm_class not in ("", "unknown"):
+            return False
+        wm_name = str(info.get("wm_name") or "")
+        exe_basename = str(info.get("exe_basename") or "")
+        return not wm_name and not exe_basename
 
     def start(self) -> asyncio.Task[Any]:
         self._task = asyncio.create_task(self.run(), name="autoswitch")

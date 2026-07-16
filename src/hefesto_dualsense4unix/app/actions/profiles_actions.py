@@ -529,6 +529,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         self._reload_profiles_store()
         self._toast_profile(f"Perfil removido: {name}")
+        # DEDUP-04: o daemon rematerializa o launch_env (o steam_app_<id>.env
+        # do perfil apagado precisa sumir junto — senão fica rançoso).
+        self._notify_launch_env_refresh()
 
     def on_profile_activate(self, _btn: Gtk.Button | None) -> None:
         name = self._selected_profile_name()
@@ -590,8 +593,26 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._duplicate_source = None  # duplicação concluída
         self._reload_profiles_store(select_name=profile.name)
         self._toast_profile(f"Perfil salvo: {profile.name}")
+        # DEDUP-04: perfil novo/editado pode ter steam_app_<id> no match — o
+        # daemon rematerializa a antecipação por appid do launch_env AGORA
+        # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).
+        self._notify_launch_env_refresh()
 
     # --- helpers internos ---
+
+    def _notify_launch_env_refresh(self) -> None:
+        """Avisa o daemon que o conjunto de perfis mudou (`launch_env.refresh`).
+
+        save/delete de perfil rodam no processo da GUI, direto no disco — o
+        daemon não vê (achado MED da revisão adversarial da Fase 2).
+        Best-effort: daemon offline é normal (rematerializa no boot).
+        """
+        call_async(
+            method="launch_env.refresh",
+            params={},
+            on_success=lambda _result: False,
+            on_failure=lambda _exc: False,
+        )
 
     def _apply_editor_mode(self) -> None:
         """Aplica a página correta da stack conforme _mode_advanced."""

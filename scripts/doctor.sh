@@ -378,15 +378,129 @@ check_dualsense_sink_disabled() {
     fi
 }
 
-# Duplicação no jogo: o EVIOCGRAB do daemon esconde o evdev, mas a Steam/SDL lê o
-# DualSense FÍSICO pelo /dev/hidraw (fora do alcance do grab). O único jeito de o
-# JOGO parar de ver o físico ao lado do gamepad virtual é a Opção de Inicialização
-# SDL_JOYSTICK_HIDAPI=0. Puramente informativo (não temos como aplicar no vdf).
-check_game_dup() {
-    info "controle DOBRANDO no jogo (aparece PS + Xbox)? cole na Opção de Inicialização da Steam (jogo → Propriedades → Opções de inicialização), ANTES do %command% que já estiver lá:"
-    info "  máscara Xbox 360 (recomendada):  SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
-    info "  máscara DualSense:               SDL_JOYSTICK_HIDAPI=0 %command%   (a Xbox é mais confiável p/ não dobrar)"
-    info "  a GUI tem o botão 'Copiar opções da Steam' (escolhe pela máscara ativa). Também: Propriedades → Controlador → Desativar Steam Input."
+# Duplicação no jogo — DEDUP-04/UX-05: o doctor PAROU de recomendar a env
+# estática (`IGNORE_DEVICES` colado por jogo era o veneno do "em BT nada
+# funciona": quando o vpad degrada, a opção persistida esconde o ÚNICO
+# controle => jogo com zero controles). O caminho suportado é o wrapper
+# `hefesto-launch %command%`: string constante que decide as envs NA HORA
+# consultando o daemon via IPC e degrada para "nenhuma env" (jogo sempre
+# abre; pior caso: duplicado). Aqui: verificação do wrapper instalado + da
+# materialização viva.
+check_launch_wrapper() {
+    local wrapper="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
+    if [[ -x "${wrapper}" ]]; then
+        pass "wrapper de launch instalado (${wrapper})"
+    elif [[ -e "${wrapper}" ]]; then
+        fail "wrapper hefesto-launch presente mas NÃO executável — rode: chmod +x ${wrapper}"
+    else
+        fail "wrapper hefesto-launch ausente — rode ./install.sh (entra por default, sem flag)"
+    fi
+    local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+    if [[ -f "${envdir}/default.env" ]]; then
+        pass "materialização de launch viva (${envdir}/default.env)"
+        [[ "${QUIET}" -eq 1 ]] || sed -n 's/^# estado: /       estado: /p' "${envdir}/default.env" | head -1
+    else
+        warn "launch_env/default.env ausente — o daemon materializa ao (re)iniciar/ligar a emulação; sem ele o wrapper lança sem envs (fail-safe: jogo abre, pode duplicar)"
+    fi
+    info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (migra os jogos já configurados)."
+}
+
+# UX-04: ACUSA (nunca recomenda) o veneno estático persistido nos
+# localconfig.vdf — a assinatura `SDL_GAMECONTROLLER_IGNORE_DEVICES=
+# 0x054c/0x0ce6` colada por jogo esconde físico E vpad quando o vpad degrada.
+check_vdf_poison() {
+    shopt -s nullglob
+    local vdfs=(
+        "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf
+        "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf
+        "${HOME}/.var/app/com.valvesoftware.Steam/.steam/steam/userdata/"*/config/localconfig.vdf
+        "${HOME}/snap/steam/common/.steam/steam/userdata/"*/config/localconfig.vdf
+    )
+    shopt -u nullglob
+    if [[ "${#vdfs[@]}" -eq 0 ]]; then
+        info "nenhum localconfig.vdf da Steam encontrado — nada a acusar"
+        return
+    fi
+    local vdf poisoned=0
+    for vdf in "${vdfs[@]}"; do
+        [[ -f "${vdf}" ]] || continue
+        if grep -q 'SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6' "${vdf}" 2>/dev/null; then
+            poisoned=1
+            warn "veneno estático persistido em ${vdf} — se o Hefesto cair/degradar, esse jogo abre com ZERO controles"
+        fi
+    done
+    if [[ "${poisoned}" -eq 1 ]]; then
+        info "cura (com a Steam fechada): botão 'Aplicar aos jogos da Steam' na GUI, ou:"
+        info "  python3 ${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py --migrate"
+    else
+        pass "nenhuma Launch Option com o veneno estático nos localconfig.vdf"
+    fi
+}
+
+# DEDUP-06: o guard anti-veneno consultado do MESMO jeito que o wrapper
+# consulta o daemon — via IPC no socket de produção (nunca inspeção de
+# processo). Reporta o `dedup_ok` agregado POR JOGADOR (P1 + co-op) e o aviso
+# BT+Nativo (o SDL pode não enxergar o físico BT — fora do alcance do wrapper).
+check_dedup_ipc() {
+    local sock; sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        info "daemon parado — sem estado de dedup a consultar (suba o daemon e rode de novo)"
+        return
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 ausente — não dá para consultar o dedup via IPC"
+        return
+    fi
+    local out
+    if ! out="$(python3 - "${sock}" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}
+    ).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+data = json.loads(buf.decode("utf-8"))
+res = data.get("result") or {}
+ge = res.get("gamepad_emulation") or {}
+print(f"enabled={ge.get('enabled')}")
+print(f"dedup_ok={ge.get('dedup_ok')}")
+print(f"dedup_motivo={ge.get('dedup_motivo') or ''}")
+print(f"native_bt={res.get('native_bt_fragil')}")
+PYEOF
+)"; then
+        warn "IPC não respondeu — estado de dedup indisponível (daemon travado?)"
+        return
+    fi
+    local enabled dedup_ok motivo native_bt
+    enabled="$(sed -n 's/^enabled=//p' <<<"${out}")"
+    dedup_ok="$(sed -n 's/^dedup_ok=//p' <<<"${out}")"
+    motivo="$(sed -n 's/^dedup_motivo=//p' <<<"${out}")"
+    native_bt="$(sed -n 's/^native_bt=//p' <<<"${out}")"
+    if [[ "${native_bt}" == "True" ]]; then
+        warn "Modo Nativo com o controle em BLUETOOTH — o SDL pode não enxergar o físico BT (limite do HIDAPI); se o jogo não vir o controle, use cabo USB ou a emulação"
+    fi
+    if [[ "${enabled}" != "True" ]]; then
+        info "emulação de gamepad desligada — dedup por vpad não se aplica agora"
+    elif [[ "${dedup_ok}" == "True" ]]; then
+        pass "dedup POR JOGADOR ok (todos os vpads Edge/uhid, ou máscara Xbox)"
+    elif [[ "${dedup_ok}" == "False" ]]; then
+        warn "dedup QUEBRADA (${motivo:-sem motivo}) — jogo aberto com o IGNORE congelado pode deixar esse jogador com ZERO controles; reinicie o Hefesto na aba Sistema"
+    else
+        info "daemon não reporta dedup_ok (versão antiga do daemon?)"
+    fi
 }
 
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
@@ -708,8 +822,10 @@ main() {
     check_dualsense_sink_disabled
     hdr "Steam Input"
     check_steam_input
-    hdr "controle no jogo (duplicação)"
-    check_game_dup
+    hdr "controle no jogo (duplicação / wrapper de launch)"
+    check_launch_wrapper
+    check_vdf_poison
+    check_dedup_ipc
     hdr "controle"
     check_controller
     check_perms_soft

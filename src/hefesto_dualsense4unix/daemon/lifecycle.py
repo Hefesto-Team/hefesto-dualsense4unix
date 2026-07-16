@@ -555,6 +555,17 @@ class Daemon:
             self._native_emu_stash = {}
         if origin == "manual":
             self._mode_from_profile = None
+        # DEDUP-04: o Modo Nativo muda o conteúdo das envs de launch
+        # (PROTON_ENABLE_HIDRAW sem IGNORE — o jogo fala com o hidraw do
+        # FÍSICO). Os hooks de start/stop do gamepad não cobrem o caso
+        # "nativo ligado com emulação já desligada", então regrava aqui, no
+        # fim da transição inteira.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                materialize_launch_env,
+            )
+
+            materialize_launch_env(self)
         logger.info("native_mode_changed", native=enabled, origin=origin)
         return self._native_mode
 

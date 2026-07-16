@@ -428,6 +428,19 @@ class CoopManager:
             player=player.player_index,
             players=self.player_count(),
         )
+        # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
+        # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
+        # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
+        self._materialize_launch_env()
+
+    def _materialize_launch_env(self) -> None:
+        """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.launch_env import (
+                materialize_launch_env,
+            )
+
+            materialize_launch_env(self._daemon)
 
     def _teardown_player(self, identity: str) -> None:
         player = self._players.pop(identity, None)
@@ -445,6 +458,8 @@ class CoopManager:
         # (nada a escrever); em teardown-com-respawn (node novo / retry de
         # grab) o reassert do mesmo ciclo de sync reaplica o padrão do jogador.
         self._revert_single_player_led(identity)
+        # DEDUP-04: o conjunto de jogadores mudou — regrava as envs do wrapper.
+        self._materialize_launch_env()
         logger.info("coop_player_removed", identity=identity, players=self.player_count())
 
     # -- player LEDs por jogador (FEAT-COOP-PLAYER-LED-01) ---------------

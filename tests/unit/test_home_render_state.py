@@ -104,6 +104,8 @@ class _HomeStub:
         self._home_origin_label = _FakeWidget()
         self._home_session_label = _FakeWidget()
         self._home_gamepad_opts = _FakeWidget()
+        # UX-03: banner de degradação do vpad (novo caminho do _render_home).
+        self._home_vpad_banner = _FakeWidget()
 
 
 @pytest.fixture()

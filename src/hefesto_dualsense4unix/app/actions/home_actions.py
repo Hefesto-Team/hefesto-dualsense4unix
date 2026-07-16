@@ -26,6 +26,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.mode_transition import (
+    MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
     STATE_IPC_TIMEOUT_S,
     apply_mode,
@@ -119,6 +120,80 @@ def _flavor_label(flavor_id: object) -> str:
     return dict(_FLAVOR_ITEMS).get(str(flavor_id), str(flavor_id))
 
 
+# UX-03 (SPRINT-UX-AUTOSWITCH-01): texto do banner de degradação do vpad.
+# "Reconecte o controle" foi REFUTADO pela revisão adversarial — a promoção
+# uinput→uhid só acontece no boot do daemon (único call site do
+# `upgrade_primary_vpad_to_uhid` é o connect, `lifecycle.py`), então reconectar
+# NÃO cura nada; o conselho honesto é reiniciar o Hefesto pela aba Sistema.
+VPAD_DEGRADED_TEXT = (
+    "O gamepad virtual subiu no modo simples: a vibração e a separação do "
+    "controle físico não estão garantidas. Reinicie o Hefesto na aba Sistema."
+)
+
+# DEDUP-06: um jogador do co-op degradado em uinput com o jogo aberto sob o
+# IGNORE congelado é AQUELE jogador com zero controle — o banner do primário
+# não o cobria (a dedup quebrada voltava a ser silenciosa, o que o item P0
+# proíbe). Sempre banner inline, nunca popover (cosmic-epoch#2497).
+VPAD_COOP_DEGRADED_TEXT = (
+    "O gamepad virtual de um dos jogadores do co-op subiu no modo simples: "
+    "aquele jogador pode ficar sem vibração — e sem controle, se o jogo foi "
+    "aberto com a desduplicação ligada. Reinicie o Hefesto na aba Sistema."
+)
+
+# DEDUP-06 (achado novo da revisão): Modo Nativo com o físico em Bluetooth é
+# estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem sem
+# launch option (o backend evdev deferencia ao HIDAPI, que não lê o hidraw BT).
+NATIVE_BT_FRAGIL_TEXT = (
+    "Modo Nativo com o controle em Bluetooth: alguns jogos não enxergam o "
+    "DualSense por BT (limite do SDL). Se o jogo não vir o controle, use o "
+    "cabo USB ou volte para a emulação de gamepad."
+)
+
+
+def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
+    """Texto do banner de degradação do vpad; ``None`` quando não há aviso.
+
+    UX-03: o `state_full.gamepad_emulation` expõe `backend` ("uhid" = DualSense
+    Edge real com hidraw; "uinput" = fallback sem hidraw). Máscara DualSense no
+    backend uinput significa vibração in-game morta e separação do controle
+    físico não garantida — sem o banner, a usuária conclui que "o hefesto não
+    funciona". Função pura (padrão `_flavor_label`), consumida pelas abas
+    Início e Status.
+
+    DEDUP-06 (o guard anti-veneno): o banner também fala pelos jogadores do
+    co-op — `dedup_ok=False` com motivo `jogador_N_uinput` acende o aviso
+    mesmo com o vpad primário saudável — e pelo estado BT+Nativo
+    (`native_bt_fragil` do state_full), que tem aviso próprio.
+
+    Sem alarme falso: backend ausente/"" é transitório real (vpad subindo, o
+    `_gamepad_device` ainda None — o `ipc_handlers` só emite a chave com device
+    vivo) e NÃO acende o banner; `dedup_motivo="vpad_ausente"` idem (mesmo
+    transitório visto pelo guard); máscara xbox em uinput é o desenho normal;
+    fora do modo gamepad não há vpad a avaliar.
+    """
+    if not isinstance(state, dict):
+        return None
+    if state.get("native_bt_fragil") is True:
+        return NATIVE_BT_FRAGIL_TEXT
+    if mode_of_state(state) != MODE_GAMEPAD:
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    if gamepad.get("flavor") != "dualsense":
+        return None
+    if gamepad.get("backend") == "uinput":
+        return VPAD_DEGRADED_TEXT
+    motivo = gamepad.get("dedup_motivo")
+    if (
+        gamepad.get("dedup_ok") is False
+        and isinstance(motivo, str)
+        and "jogador" in motivo
+    ):
+        return VPAD_COOP_DEGRADED_TEXT
+    return None
+
+
 def _format_controller_subtitle(
     transport: object, *, is_primary: bool, battery_pct: object
 ) -> str:
@@ -185,6 +260,22 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_installed = True
         self._home_guard = False
         self._home_inflight = False
+
+        # --- Banner: degradação do vpad (UX-03) -----------------------------
+        # Rótulo simples e sempre inline no topo da aba — nada de popup nem
+        # popover (cosmic-epoch#2497 fecha qualquer popup no COSMIC). Invisível
+        # por padrão; o `_render_home` liga/desliga a partir do
+        # `gamepad_emulation.backend` do state_full (`vpad_degradation_text`).
+        vpad_banner = Gtk.Label(label="")
+        vpad_banner.set_xalign(0.0)
+        vpad_banner.set_line_wrap(True)
+        vpad_banner.get_style_context().add_class(
+            "hefesto-dualsense4unix-status-warn"
+        )
+        vpad_banner.set_no_show_all(True)
+        vpad_banner.set_visible(False)
+        self._home_vpad_banner = vpad_banner
+        box.pack_start(vpad_banner, False, False, 0)
 
         # --- Frame: modo do sistema ---------------------------------------
         from hefesto_dualsense4unix.app.widgets.segmented_selector import (
@@ -348,6 +439,8 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_mode_desc.set_text("")
                 self._home_origin_label.set_text("")
                 self._home_gamepad_opts.set_visible(False)
+                # UX-03: offline não é degradação do vpad — o banner some junto.
+                self._home_vpad_banner.set_visible(False)
                 self._render_home_controllers([])
                 return
             assert state is not None
@@ -367,6 +460,14 @@ class HomeActionsMixin(WidgetAccessMixin):
 
             flavor = gamepad.get("flavor") or "xbox"
             self._home_flavor_selector.set_active_id(str(flavor))
+
+            # UX-03: banner de degradação do vpad — visível SÓ quando a máscara
+            # DualSense caiu no backend uinput (função pura decide; backend
+            # ausente/"" é transitório e não acende nada).
+            aviso_vpad = vpad_degradation_text(state)
+            if aviso_vpad:
+                self._home_vpad_banner.set_text(aviso_vpad)
+            self._home_vpad_banner.set_visible(bool(aviso_vpad))
 
             origin_bits: list[str] = []
             if state.get("native_mode") and state.get("native_mode_origin") == "profile":
@@ -577,4 +678,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         dialog.show()
 
 
-__all__ = ["HOME_POLL_INTERVAL_MS", "HomeActionsMixin"]
+__all__ = [
+    "HOME_POLL_INTERVAL_MS",
+    "VPAD_DEGRADED_TEXT",
+    "HomeActionsMixin",
+    "vpad_degradation_text",
+]

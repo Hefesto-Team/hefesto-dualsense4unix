@@ -513,6 +513,48 @@ else
     fi
 fi
 
+# DEDUP-04/DEDUP-05 (INCONDICIONAL, sem flag — o índice da onda manda): remove
+# das LaunchOptions o NOSSO trecho, novo E legado. Ordem OBRIGATÓRIA: o vdf é
+# desenvenenado ANTES de apagar o wrapper (regra histórica da simetria — a
+# assimetria já quebrou o mic; aqui, com o hefesto desinstalado, o veneno
+# `IGNORE_DEVICES` persistido esconderia o físico => jogo com ZERO controles,
+# e a revisão REFUTOU qualquer gate neste caminho). `__GL_SHADER_*` e opções
+# do usuário são preservadas byte a byte. --stop-steam: a Steam regrava o vdf
+# ao sair, então o strip fecha (e reabre) a Steam se preciso.
+LAUNCH_STRIP_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
+if [[ -f "${LAUNCH_STRIP_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    log "removendo Launch Options do Hefesto (wrapper + veneno legado) dos localconfig.vdf"
+    if python3 "${LAUNCH_STRIP_PY}" --strip --stop-steam; then
+        log "  backups .bak.hefesto-launch-<ts> ao lado de cada vdf"
+    else
+        log "  ERRO: strip adiado (Steam não fechou?) — rode com a Steam fechada:"
+        log "        python3 ${LAUNCH_STRIP_PY} --strip"
+    fi
+else
+    log "steam_launch_options.py ausente ou sem python3 — pulei o strip das Launch Options"
+    log "  (a string do wrapper degrada sozinha: o jogo continua abrindo sem ele)"
+fi
+
+# Só DEPOIS do vdf limpo o wrapper pode sair (simetria com o passo 4b-2 do
+# install.sh). O launch_env/ é materialização volátil do daemon — sai junto.
+readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto-launch"
+if [[ -e "${LAUNCH_WRAPPER}" ]]; then
+    log "removendo wrapper de launch ${LAUNCH_WRAPPER}"
+    rm -f "${LAUNCH_WRAPPER}"
+fi
+rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
+if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then
+    log "removendo materialização de launch (~/.local/state/hefesto-dualsense4unix/launch_env)"
+    rm -rf "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+fi
+rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
+# O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete
+# a checagem de diretório-pai vazio para não deixar rastro.
+if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
+   && [[ -z "$(ls -A "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null)" ]]; then
+    rmdir "${HOME}/.local/share/hefesto-dualsense4unix" 2>/dev/null || true
+fi
+
 printf '\n─────────────────────────────────────────\n'
 printf ' Hefesto - Dualsense4Unix desinstalado (wipe completo)\n'
 printf '─────────────────────────────────────────\n\n'
