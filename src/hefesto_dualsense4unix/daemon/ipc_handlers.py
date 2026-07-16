@@ -412,6 +412,22 @@ class IpcHandlersMixin:
                 "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
                 "flavor": str(getattr(daemon_cfg, "gamepad_flavor", "dualsense")),
             }
+            # UHID-04: backend do vpad primário VIVO ("uhid" = DualSense Edge real
+            # 0x0df2, "uinput" = Xbox/fallback). O botão de Launch Options escolhe a
+            # variante por aqui: só o "uhid" tem PID próprio e desduplica por
+            # IGNORE_DEVICES; no flavor dualsense com backend "uinput" (uhid não
+            # subiu) não há launch option que desduplique — a GUI avisa em vez de
+            # prometer. ff_supported/plays saem no bloco rumble_ff abaixo.
+            gp_dev = getattr(self.daemon, "_gamepad_device", None)
+            if gp_dev is not None:
+                with contextlib.suppress(Exception):
+                    result["gamepad_emulation"]["backend"] = str(
+                        getattr(gp_dev, "backend", "") or ""
+                    )
+                with contextlib.suppress(Exception):
+                    result["gamepad_emulation"]["ff_supported"] = bool(
+                        getattr(gp_dev, "ff_supported", False)
+                    )
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)

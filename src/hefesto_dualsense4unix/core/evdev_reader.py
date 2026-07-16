@@ -442,6 +442,23 @@ class EvdevReader(_EvdevReconnectLoop):
         if dev is None:
             self._grab_state = "pending" if grab else "off"
             return True
+        # BUG-GRAB-DOUBLE-EBUSY-01: re-grabar um fd que ESTE reader já graba
+        # levanta EBUSY (errno 16) no kernel — e o `except` abaixo marcava
+        # `grab_state="failed"` MESMO com o device fisicamente exclusivo. Era o
+        # card "grab falhou — input pode dobrar no jogo" mentindo depois de uma
+        # troca de máscara/flavor (que re-chama `set_grab(True)` sem soltar antes,
+        # `gamepad.py`: stop(release_grab=False) → re-grab) ou do upgrade
+        # uinput→uhid. `grab_state == "held"` já significa "este fd é exclusivo":
+        # nada a (re)fazer. Idempotente nos dois sentidos — ungrab de um device
+        # que este reader NÃO graba ("off"/"pending"/"failed") também é no-op (o
+        # `ungrab()` de um fd solto levantaria EINVAL espúrio). Um EBUSY EXTERNO
+        # real (outro leitor exclusivo) nunca chega a "held" primeiro → continua
+        # virando "failed" e o card segue honesto quando há duplicação de verdade.
+        if grab and self._grab_state == "held":
+            return True
+        if not grab and self._grab_state != "held":
+            self._grab_state = "off"
+            return True
         try:
             if grab:
                 dev.grab()

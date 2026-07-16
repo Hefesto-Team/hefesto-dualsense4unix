@@ -364,6 +364,31 @@ check_wireplumber_source() {
     fi
 }
 
+# O drop-in 53 (disable-output) põe node.disabled no SINK do DualSense — deixa o
+# alto-falante e o fone no jack do controle MUDOS e derruba o canal de
+# haptic-de-áudio. Instalado SÓ pelo fluxo de mic-off (--disable-source /
+# install --with-wireplumber-disable-mic). Aqui só REPORTAMOS: presença = saída
+# do controle desligada de propósito. NÃO afeta o rumble in-game (HID/vpad).
+check_dualsense_sink_disabled() {
+    local d="${HOME}/.config/wireplumber/wireplumber.conf.d/53-hefesto-dualsense-disable-output.conf"
+    if [[ -f "${d}" ]]; then
+        warn "saída de áudio do DualSense DESLIGADA (drop-in 53) — alto-falante/fone do controle mudos e canal de haptic-de-áudio off. Se não foi intencional: fix_wireplumber_default_source.sh --enable-mic + systemctl --user restart wireplumber"
+    else
+        pass "saída de áudio do DualSense preservada (sem o drop-in 53 disable-output)"
+    fi
+}
+
+# Duplicação no jogo: o EVIOCGRAB do daemon esconde o evdev, mas a Steam/SDL lê o
+# DualSense FÍSICO pelo /dev/hidraw (fora do alcance do grab). O único jeito de o
+# JOGO parar de ver o físico ao lado do gamepad virtual é a Opção de Inicialização
+# SDL_JOYSTICK_HIDAPI=0. Puramente informativo (não temos como aplicar no vdf).
+check_game_dup() {
+    info "controle DOBRANDO no jogo (aparece PS + Xbox)? cole na Opção de Inicialização da Steam (jogo → Propriedades → Opções de inicialização), ANTES do %command% que já estiver lá:"
+    info "  máscara Xbox 360 (recomendada):  SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
+    info "  máscara DualSense:               SDL_JOYSTICK_HIDAPI=0 %command%   (a Xbox é mais confiável p/ não dobrar)"
+    info "  a GUI tem o botão 'Copiar opções da Steam' (escolhe pela máscara ativa). Também: Propriedades → Controlador → Desativar Steam Input."
+}
+
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
 # (perfil-por-jogo). Quando a detecção falha, o autoswitch fica silenciosamente
 # cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
@@ -680,8 +705,11 @@ main() {
     check_window_detect
     hdr "áudio (microfone)"
     check_wireplumber_source
+    check_dualsense_sink_disabled
     hdr "Steam Input"
     check_steam_input
+    hdr "controle no jogo (duplicação)"
+    check_game_dup
     hdr "controle"
     check_controller
     check_perms_soft

@@ -1906,7 +1906,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona.</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>

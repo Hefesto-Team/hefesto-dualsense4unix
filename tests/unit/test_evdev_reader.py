@@ -195,6 +195,42 @@ def test_set_grab_nao_propaga_excecao():
     assert reader._grab is True
 
 
+def test_set_grab_idempotente_nao_regraba_o_mesmo_fd():
+    """BUG-GRAB-DOUBLE-EBUSY-01: re-grabar um fd já grabbed (troca de máscara)
+    não re-chama grab() nem marca 'failed' — o card 'grab falhou' para de mentir."""
+    reader = EvdevReader(device_path=None)
+    dev = MagicMock()
+    reader._active_dev = dev
+    assert reader.set_grab(True) is True
+    assert reader.grab_state == "held"
+    # 2ª chamada (o re-grab da troca de flavor): idempotente, sem EBUSY.
+    assert reader.set_grab(True) is True
+    assert reader.grab_state == "held"
+    dev.grab.assert_called_once()  # grab() SÓ na 1ª vez — sem re-grab espúrio
+
+
+def test_set_grab_ebusy_externo_ainda_marca_failed():
+    """EBUSY de OUTRO leitor (estado nunca chegou a 'held') continua honesto:
+    o card DEVE alarmar quando há duplicação real."""
+    reader = EvdevReader(device_path=None)
+    dev = MagicMock()
+    dev.grab.side_effect = OSError(16, "Device or resource busy")
+    reader._active_dev = dev
+    assert reader.set_grab(True) is False
+    assert reader.grab_state == "failed"
+
+
+def test_ungrab_de_device_solto_e_noop():
+    """ungrab quando este reader não graba (estado 'off') não chama ungrab()
+    nem levanta — evita o EINVAL espúrio de soltar um fd já solto."""
+    reader = EvdevReader(device_path=None)
+    dev = MagicMock()
+    reader._active_dev = dev
+    assert reader.set_grab(False) is True
+    assert reader.grab_state == "off"
+    dev.ungrab.assert_not_called()
+
+
 def test_pids_contemplam_edge():
     assert 0x0CE6 in DUALSENSE_PIDS  # DualSense
     assert 0x0DF2 in DUALSENSE_PIDS  # DualSense Edge

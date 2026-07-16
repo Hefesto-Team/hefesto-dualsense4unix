@@ -147,11 +147,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
-                # SPRINT-GAME-RUMBLE-01 (H7): aplica a cura de raiz A QUENTE
-                # (sysfs) — best-effort, sem pedir senha. Vale no próximo replug
-                # do controle. A instalação persistente (/etc/modprobe.d) precisa
-                # de root e vem do install; aqui garantimos o efeito na sessão.
-                ("scripts/install_snd_quirk.sh", ["--runtime"]),
+                # BUG-C: o quirk anti-storm NÃO entra aqui de propósito. Escrevê-lo
+                # a quente era `sudo tee` no /sys/module/snd_usb_audio/parameters/
+                # quirk_flags (param de MÓDULO, root-only, fora do alcance do
+                # uaccess) — o ÚNICO sudo em runtime da GUI, e sem ticket cacheado
+                # falhava calado enquanto o botão dizia "não pede senha" (mentira).
+                # A versão persistente (/etc/modprobe.d) é default no install e pega
+                # no próximo replug do controle; o toast instrui isso. Assim o botão
+                # roda 100% sem senha (os dois scripts acima são user-space).
             ):
                 script = self._find_repo_file(relpath)
                 if script is None:
@@ -174,26 +177,69 @@ class DaemonActionsMixin(WidgetAccessMixin):
             else:
                 GLib.idle_add(
                     self._toast_daemon,
-                    "Correções aplicadas. Se a Steam estava aberta, feche-a e "
-                    "clique de novo para desligar o Steam Input.",
+                    "Correções aplicadas (sem senha). Se a Steam estava aberta, "
+                    "feche-a e clique de novo para desligar o Steam Input. A cura "
+                    "anti-storm do áudio já é persistente (install) — reconecte o "
+                    "controle para ela pegar nesta sessão.",
                 )
 
         _get_executor().submit(_worker)
 
-    #: SPRINT-GAME-RUMBLE-01: Opções de Inicialização da Steam que fazem o jogo
-    #: ver SÓ o gamepad virtual do Hefesto (sem duplicar com o DualSense físico)
-    #: e mantêm a vibração. HIDAPI=0 tira o caminho hidraw; IGNORE_DEVICES manda o
-    #: SDL ignorar o DualSense FÍSICO (054c:0ce6). Só é seguro com a máscara XBOX
-    #: (vpad 045e) — com a máscara dualsense o vpad TAMBÉM é 054c:0ce6 e a opção
-    #: esconderia o vpad junto (jogo não veria controle nenhum). Por isso o
-    #: handler consulta o flavor ativo antes de incluir o IGNORE_DEVICES (H2).
-    STEAM_LAUNCH_XBOX = (
-        "SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%"
-    )
-    STEAM_LAUNCH_DUALSENSE = "SDL_JOYSTICK_HIDAPI=0 %command%"
+    #: UHID-04 + "carregamento completo": Opções de Inicialização da Steam que
+    #: (1) fazem o jogo ver SÓ o gamepad virtual do Hefesto (sem duplicar com o
+    #: DualSense físico), (2) mantêm a vibração e (3) preservam o cache de shaders
+    #: entre execuções. São COMPOSTAS por `compose_launch` a partir da máscara e do
+    #: backend ativos — não são string fixa, porque cada máscara esconde o físico
+    #: de um jeito e só o backend uhid (Edge 0x0df2) tem PID próprio.
 
-    def _query_gamepad_flavor(self) -> str:
-        """Flavor do gamepad virtual ativo via state_full ('xbox' fallback)."""
+    #: Pré-carregamento ("forçar carregamento completo antes da tela"): a NVIDIA
+    #: persiste o cache de shaders no disco e NÃO o limpa entre execuções — o jogo
+    #: compila os shaders uma vez e nas próximas sobe sem as travadas da primeira
+    #: tela. Inócuo em qualquer jogo. Não força o pré-cache do Steam (isso é um
+    #: toggle da Steam: Config → Downloads → "Pré-cache de shaders") — o toast lembra.
+    STEAM_LAUNCH_PRELOAD = "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1"
+
+    #: Esconde o DualSense FÍSICO (054c:0ce6) do jogo por VID/PID. Comum às duas
+    #: máscaras porque o vpad NUNCA é 054c:0ce6: no Xbox é 045e, no DualSense é o
+    #: Edge 054c:0df2 (UHID-04). É a peça que mata o controle duplicado.
+    STEAM_IGNORE_PHYSICAL = "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6"
+
+    @classmethod
+    def compose_launch(cls, flavor: str, backend: str) -> tuple[str, str]:
+        """(string de Launch Option, dica extra) pela máscara/backend ativos.
+
+        Pura e sem GTK — é o miolo testável do botão `on_storm_copy_launch`.
+
+        - Xbox (uinput 045e): `SDL_JOYSTICK_HIDAPI=0` força o SDL a ler o evdev (que
+          o daemon graba) e `IGNORE_DEVICES` esconde o físico; o rumble volta pelo
+          XInput/FF do vpad (por isso SEM `PROTON_ENABLE_HIDRAW`).
+        - DualSense Edge (uhid 0x0df2): `IGNORE_DEVICES` esconde SÓ o físico (0ce6)
+          e o vpad Edge sobrevive com layout PS + rumble. HIDAPI fica LIGADO (o SDL
+          usa o driver PS5 no vpad) e `PROTON_ENABLE_HIDRAW=1` entrega o hidraw do
+          vpad ao jogo pelo Proton. É a "mesma solução do Xbox", agora no layout PS.
+        - DualSense mas backend uinput (o uhid não subiu): o vpad ainda é 054c:0ce6,
+          então NÃO existe launch option que o separe do físico — a dica é honesta.
+        """
+        preload = cls.STEAM_LAUNCH_PRELOAD
+        ignore = cls.STEAM_IGNORE_PHYSICAL
+        if flavor == "xbox":
+            return f"SDL_JOYSTICK_HIDAPI=0 {ignore} {preload} %command%", ""
+        if backend == "uhid":
+            return f"PROTON_ENABLE_HIDRAW=1 {ignore} {preload} %command%", ""
+        return (
+            f"{preload} %command%",
+            "  a máscara DualSense caiu no backend simples (sem hidraw): o vpad "
+            "ainda divide o VID/PID com o físico e nenhuma opção o desduplica. Rode "
+            "o doctor/reative a máscara DualSense; enquanto isso a máscara Xbox 360 "
+            "(aba Início) desduplica e vibra.",
+        )
+
+    def _query_gamepad_state(self) -> tuple[str, str]:
+        """(flavor, backend) do gamepad virtual ativo via state_full.
+
+        Fallback ('xbox', '') quando o estado não veio — a variante Xbox é a mais
+        conservadora (desduplica com qualquer vpad de VID/PID próprio).
+        """
         try:
             from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
 
@@ -202,33 +248,25 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 gp = state.get("gamepad_emulation")
                 if isinstance(gp, dict):
                     fl = gp.get("flavor")
-                    if isinstance(fl, str) and fl:
-                        return fl
+                    bk = gp.get("backend")
+                    flavor = fl if isinstance(fl, str) and fl else "xbox"
+                    backend = bk if isinstance(bk, str) else ""
+                    return flavor, backend
         except Exception:
-            logger.debug("storm_copy_flavor_probe_falhou", exc_info=True)
-        return "xbox"
+            logger.debug("storm_copy_state_probe_falhou", exc_info=True)
+        return "xbox", ""
 
     def on_storm_copy_launch(self, _btn: object) -> None:
-        """Copia as Opções de Inicialização da Steam (anti-duplicação + vibração).
+        """Copia as Opções de Inicialização da Steam (anti-duplicação + vibração +
+        pré-carregamento), escolhendo a variante certa pela máscara/backend ativos.
 
         O Hefesto não injeta env vars no jogo (só orienta): estas opções fazem o
-        jogo enxergar apenas o gamepad virtual (evita o controle duplicado) e
-        preservam o rumble pelo FF do vpad. Validado em gameplay (Sackboy).
-
-        H2: com a máscara DualSense, IGNORE_DEVICES=054c:0ce6 esconderia o próprio
-        vpad — então nesse caso copiamos só HIDAPI=0 e avisamos que a máscara Xbox
-        (aba Início) é a recomendada para vibração sem controle duplicado.
+        jogo enxergar apenas o gamepad virtual e preservam o rumble. UHID-04: no
+        modo DualSense-Edge o botão AGORA gera uma opção que desduplica no layout PS
+        (o vpad é 0x0df2, distinto do físico 0x0ce6).
         """
-        flavor = self._query_gamepad_flavor()
-        if flavor == "xbox":
-            launch = self.STEAM_LAUNCH_XBOX
-            extra = ""
-        else:
-            launch = self.STEAM_LAUNCH_DUALSENSE
-            extra = (
-                " (dica: na aba Início, deixe o jogo vendo o controle como "
-                "\"Xbox 360\" para ele não aparecer duas vezes)"
-            )
+        flavor, backend = self._query_gamepad_state()
+        launch, extra = self.compose_launch(flavor, backend)
         copied = False
         with contextlib.suppress(Exception):
             from gi.repository import Gdk, Gtk
@@ -238,9 +276,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
             clip.store()
             copied = True
         if copied:
+            # A string traz o `%command%`. Se o jogo JÁ tem opções (ex.: a Sackboy
+            # tem `__GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1 %command%`), colar por cima
+            # APAGA as dela — por isso instruímos o MERGE: colar antes do `%command%`
+            # já existente e manter o resto.
             self._toast_daemon(
-                "Copiado! Cole em: Steam → jogo → Propriedades → "
-                f"Opções de inicialização{extra}"
+                "Copiado! Cole em: Steam → jogo → Propriedades → Opções de "
+                "inicialização. Se já houver algo lá, cole ANTES do seu %command% "
+                f"e mantenha o resto.{extra}"
             )
         else:
             self._toast_daemon(f"Copie manualmente: {launch}{extra}")
