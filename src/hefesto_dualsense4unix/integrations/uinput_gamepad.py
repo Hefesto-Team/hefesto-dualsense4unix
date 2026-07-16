@@ -335,6 +335,14 @@ class UinputGamepad:
         """Último par (weak, strong) 0-255 entregue ao sink (rumble do jogo)."""
         return self._ff_last_sent
 
+    @property
+    def backend(self) -> str:
+        """Sempre "uinput": device de evdev (sem hidraw). É o backend da máscara
+        Xbox 360 e o fallback do flavor dualsense quando o uhid não sobe. O botão
+        de Launch Options usa isto: no flavor dualsense, "uinput" ⇒ o vpad ainda é
+        054c:0ce6 e IGNORE_DEVICES do físico o esconderia junto (não desduplica)."""
+        return "uinput"
+
     def forward_analog(
         self,
         *,

@@ -42,8 +42,11 @@
 #   --no-dev              cria o venv SEM o extra [dev] (ruff/mypy/pytest). Por
 #                         DEFAULT o venv já vem com os dev tools (gate local).
 #                         Use em CI/máquina enxuta que só precisa rodar o app.
-#   --with-wireplumber-fix  instala drop-in do WirePlumber que REBAIXA o DualSense
-#                         para não virar o microfone padrão do sistema + reset.
+#   (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
+#                         microfone padrão (drop-in 51, user-space) — simétrica com o
+#                         uninstall que a remove. Opt-out: --keep-dualsense-mic.
+#   --keep-dualsense-mic  NÃO rebaixa o DualSense (deixa-o elegível como mic padrão).
+#   --with-wireplumber-fix  redundante (já é o default); mantida para compat.
 #   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
 #                         (node.disabled; controle vira só-HID). Vence até escassez
 #                         de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
@@ -86,7 +89,12 @@ ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 DISABLE_COSMIC_APPLET=0
 NO_DEV=0
-WITH_WIREPLUMBER_FIX=0
+# BUG-UNINSTALL-WP-ASYMMETRY: DEFAULT ON. O uninstall remove o drop-in 51 por
+# padrão, então o install tem de recolocá-lo por padrão (simetria) — senão o
+# ciclo uninstall→install deixa o DualSense virar o microfone padrão. É a cura
+# GENTIL (só rebaixa a prioridade, user-space, sem sudo, idempotente). Opt-out:
+# --keep-dualsense-mic (ou export HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1).
+WITH_WIREPLUMBER_FIX=1
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
 WITH_STORM_WATCH=0
@@ -106,7 +114,8 @@ for arg in "$@"; do
         --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1; DISABLE_COSMIC_APPLET=0 ;;
         --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
         --no-dev)             NO_DEV=1 ;;
-        --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;
+        --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
+        --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
@@ -969,7 +978,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 10. WirePlumber: DualSense fora da fonte de áudio padrão — opt-in
+# 10. WirePlumber: DualSense fora da fonte de áudio padrão — DEFAULT (opt-out: --keep-dualsense-mic)
 # ---------------------------------------------------------------------------
 step "10/11" "audio: impedir o DualSense de virar o microfone padrão"
 if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -eq 1 ]]; then
@@ -987,7 +996,7 @@ elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
         warn "fix do WirePlumber falhou — rode: bash scripts/fix_wireplumber_default_source.sh --install"
     fi
 else
-    printf '      pulado (use --with-wireplumber-disable-mic ou --with-wireplumber-fix, ou: scripts/doctor.sh --fix)\n'
+    printf '      pulado (--keep-dualsense-mic): o DualSense pode virar o microfone padrão\n'
 fi
 
 # ---------------------------------------------------------------------------

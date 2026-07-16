@@ -59,6 +59,13 @@ class VirtualPad(Protocol):
         ...
 
     @property
+    def backend(self) -> str:
+        """"uinput" (evdev, máscara Xbox / fallback) ou "uhid" (DualSense HID real,
+        Edge 0x0DF2). O botão de Launch Options escolhe a variante por aqui: só o
+        "uhid" tem PID próprio e pode ser desduplicado por IGNORE_DEVICES."""
+        ...
+
+    @property
     def ff_supported(self) -> bool:
         """True quando o rumble do jogo tem por onde chegar até nós."""
         ...

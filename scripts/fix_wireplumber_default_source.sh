@@ -125,6 +125,12 @@ install_disable_dropin() {
     if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
         cp -f "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}"
         log "drop-in DISABLE-OUTPUT instalado: ${DROPIN_OUTPUT_DST}"
+        log "AVISO: o 53 desabilita tambem o SINK (saida) do DualSense — o"
+        log "       alto-falante e o fone no jack do controle ficam MUDOS, e o"
+        log "       canal de haptic-de-audio some. O rumble do jogo NAO usa esse"
+        log "       canal (vai por HID/vpad), entao a vibracao in-game continua."
+        log "       Reverter: bash scripts/fix_wireplumber_default_source.sh --enable-mic"
+        log "       + systemctl --user restart wireplumber."
     fi
 }
 

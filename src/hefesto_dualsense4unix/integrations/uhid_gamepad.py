@@ -87,10 +87,27 @@ UHID_EVENT_SIZE = 4 + _CREATE2_HEAD + HID_MAX_DESCRIPTOR_SIZE
 
 BUS_USB = 0x03
 
-#: VID/PID do DualSense. O vpad usa os do controle real: é o que faz o
-#: `hid_playstation` reconhecê-lo (e o jogo mostrar prompts de PlayStation).
+#: VID/PID do DualSense FÍSICO. É o que o `_is_dualsense` exige do controle de
+#: onde copiamos o blueprint, e o que o botão de Launch Options manda o SDL
+#: IGNORAR (IGNORE_DEVICES) para esconder o físico do jogo.
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
+
+#: PID que o VPAD apresenta — de propósito DIFERENTE do físico (0x0CE6). É a chave
+#: do fim do controle duplicado (UHID-04): com físico E vpad no MESMO 054c:0ce6,
+#: nenhuma Launch Option por VID/PID conseguia separá-los — `IGNORE_DEVICES` para
+#: 054c:0ce6 escondia os dois e o jogo ficava sem controle nenhum. Como o vpad é
+#: forjado, ele vira um DualSense **Edge** (0x0DF2): o `hid_playstation` o
+#: registra como DualSense COMPLETO (validado ao vivo — hidraw+lightbar+motion+
+#: touchpad+rumble; dmesg "Registered DualSense controller") e o SDL o reconhece
+#: como PS5 (prompts PlayStation). Assim
+#: `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6` esconde SÓ o físico e o vpad
+#: (0x0DF2) sobrevive: layout PS, vibração e nada de duplicado.
+#:
+#: Invariante que garante que 0x0DF2 nunca colide com o físico: o caminho uhid só
+#: aceita físico 0x0CE6 (o `_is_dualsense` recusa o resto), então o Edge do vpad é
+#: sempre um PID distinto do controle real de onde ele copia o blueprint.
+VPAD_PRODUCT = 0x0DF2
 
 #: Feature reports que o probe do hid_playstation lê, com os tamanhos que o
 #: driver espera: 0x05 calibração, 0x09 MAC/pairing, 0x20 firmware.
@@ -324,6 +341,19 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
         logger.warning("uhid_descriptor_invalido", tamanho=len(descriptor))
         return None
 
+    # UHID-BT (paridade): o descriptor de BT declara o report de INPUT 0x31 (item
+    # HID `85 31`), enquanto o USB usa 0x01. O vpad é forjado como BUS_USB e emite
+    # reports 0x01 — copiar um descriptor de BT pode fazer o HID core dimensionar
+    # errado o 0x01 e o vpad nascer torto. Ainda NÃO validado em BT; por ora só
+    # AVISAMOS (log-only; no USB o descriptor não tem 0x31, então nunca dispara)
+    # para o caso ficar observável. Fix definitivo = descriptor USB canônico,
+    # independente do transporte do físico (ver o doc de sprint do BT).
+    if b"\x85\x31" in descriptor:
+        logger.warning(
+            "uhid_blueprint_bt_descriptor", path=hidraw_path, tamanho=len(descriptor),
+            hint="físico via BT: vpad uhid não validado em BT; se bugar use USB ou máscara Xbox",
+        )
+
     features: dict[int, bytes] = {}
     try:
         fd = os.open(hidraw_path, os.O_RDWR)
@@ -368,6 +398,9 @@ class UhidDualSense:
 
     #: 1-based; define o MAC e o nome do device.
     player: int = 1
+    #: PID que o vpad apresenta ao kernel/jogo. Default Edge (`VPAD_PRODUCT`) —
+    #: distinto do físico para desduplicar; ver a constante para o porquê.
+    product: int = VPAD_PRODUCT
     #: Blueprint de `capture_dualsense_blueprint` (descriptor + features).
     blueprint: dict[str, Any] | None = None
     #: Recebe (weak, strong) 0-255 pedidos pelo JOGO — igual ao vpad uinput.
@@ -438,6 +471,14 @@ class UhidDualSense:
         sync derrubaria e recriaria os vpads do co-op.
         """
         return "dualsense"
+
+    @property
+    def backend(self) -> str:
+        """Sempre "uhid": o daemon/GUI usa isto para saber que o vpad é o DualSense
+        HID real (Edge 0x0DF2) — e não o uinput. O botão de Launch Options decide
+        a variante por aqui: "uhid" ⇒ IGNORE_DEVICES do físico é seguro (o vpad
+        tem PID próprio); "uinput" no flavor dualsense = fallback degradado."""
+        return "uhid"
 
     @property
     def mac(self) -> str:
@@ -571,7 +612,7 @@ class UhidDualSense:
         event += b"hefesto-vpad".ljust(64, b"\0")[:64]
         event += self.mac.encode("ascii").ljust(64, b"\0")[:64]
         event += struct.pack("<HH", len(descriptor), BUS_USB)
-        event += struct.pack("<IIII", DUALSENSE_VENDOR, DUALSENSE_PRODUCT, 0x0100, 0)
+        event += struct.pack("<IIII", DUALSENSE_VENDOR, self.product, 0x0100, 0)
         event += descriptor.ljust(HID_MAX_DESCRIPTOR_SIZE, b"\0")[:HID_MAX_DESCRIPTOR_SIZE]
         return event
 
@@ -849,6 +890,7 @@ class UhidDualSense:
 
 __all__ = [
     "UHID_NODE",
+    "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",
     "player_mac",
