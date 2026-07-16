@@ -16,12 +16,26 @@ e **já devolve o pad startado** — é ali que mora o fallback, num lugar só.
 
 Por que o fallback vive na factory
 ----------------------------------
-O caminho uhid tem quatro pontos de falha (nó ausente/sem regra udev, controle
-físico sem hidraw legível, CREATE2 recusado, `hid_playstation` que não faz bind) e
-todos significam a mesma coisa para o chamador: **use o uinput**. Espalhar isso
-pelos call sites daria uma versão diferente do fallback em cada um. Cada motivo é
-logado (não silenciado): "caiu no uinput" sem dizer por quê é um bug que a usuária
-sente no jogo e ninguém consegue diagnosticar.
+O caminho uhid tem três pontos de falha (nó ausente/sem regra udev, CREATE2
+recusado, `hid_playstation` que não faz bind) e todos significam a mesma coisa
+para o chamador: **use o uinput**. Espalhar isso pelos call sites daria uma
+versão diferente do fallback em cada um. Cada motivo é logado (não silenciado):
+"caiu no uinput" sem dizer por quê é um bug que a usuária sente no jogo e
+ninguém consegue diagnosticar.
+
+Blueprint canônico embutido (VPAD-03 / BT-01)
+---------------------------------------------
+O vpad uhid usa SEMPRE o blueprint sintético de `uhid_blueprint.py` — nenhuma
+leitura do controle físico no caminho de criação. O modo de falha "controle
+físico sem hidraw legível" morreu por construção: era ele que, em BT com o
+controle ocioso (GET_REPORT estourando o timeout de 5 s do hidp com EIO),
+derrubava o vpad para uinput `054c:0ce6` — indistinguível do físico e alvo da
+launch option `IGNORE_DEVICES` persistida na Steam (jogo com zero controles).
+O vpad sobe uhid Edge até sem controle conectado (boot antes do connect).
+
+`allow_uhid=False` é o veto explícito do chamador (VPAD-08): o daemon FAKE
+(`run.sh --fake`, usado em smoke na máquina da usuária) não pode registrar um
+DualSense Edge REAL no kernel — a Steam enxergaria um controle fantasma.
 """
 from __future__ import annotations
 
@@ -100,15 +114,20 @@ def make_virtual_pad(
     *,
     rumble_sink: Callable[[int, int], None] | None = None,
     player: int = 1,
-    hidraw_path: str | None = None,
+    allow_uhid: bool = True,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
     Prefere o uhid quando tudo se alinha (máscara DualSense + /dev/uhid usável +
-    blueprint do controle físico em `hidraw_path`); qualquer tropeço cai no
+    permissão do chamador em `allow_uhid`); qualquer tropeço cai no
     `UinputGamepad`, que continua sendo o backend do Xbox 360 e o piso de
-    compatibilidade. `hidraw_path` é o nó do controle FÍSICO daquele jogador (o
-    vpad copia dele o report descriptor e os features do probe).
+    compatibilidade. O blueprint é SEMPRE o canônico embutido
+    (`uhid_blueprint.canonical_blueprint`) — o vpad não depende de controle
+    físico conectado, nem de hidraw legível (VPAD-03/BT-01).
+
+    `allow_uhid=False` (VPAD-08): o chamador declara "sem uhid" quando o backend
+    do controle é o fake (`run.sh --fake`) — um vpad uhid é um DualSense Edge
+    REAL no kernel, visível pela Steam, e o smoke não pode plantar um.
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import (
         UinputGamepad,
@@ -116,10 +135,20 @@ def make_virtual_pad(
     )
 
     key = normalize_flavor(flavor)
-    uhid = _try_uhid(key, rumble_sink=rumble_sink, player=player, hidraw_path=hidraw_path)
-    if uhid is not None:
-        return uhid
+    motivo: str | None = None
+    if allow_uhid:
+        uhid, motivo = _try_uhid(key, rumble_sink=rumble_sink, player=player)
+        if uhid is not None:
+            return uhid
+    elif key == "dualsense":
+        motivo = "uhid_vetado_pelo_chamador"
+        logger.info("vpad_uhid_vetado_pelo_chamador_usando_uinput", player=player)
     pad = UinputGamepad.for_flavor(key, rumble_sink=rumble_sink)
+    if motivo is not None:
+        # VPAD-05 — fallback nunca silencioso: o PORQUÊ viaja com o vpad e o
+        # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
+        # GUI/doctor, sem ninguém precisar garimpar o journal.
+        pad.fallback_motivo = motivo
     if not pad.start():
         return None
     return pad
@@ -130,48 +159,44 @@ def _try_uhid(
     *,
     rumble_sink: Callable[[int, int], None] | None,
     player: int,
-    hidraw_path: str | None,
-) -> VirtualPad | None:
-    """Tenta o backend uhid; None = "use o uinput" (com o motivo no log)."""
+) -> tuple[VirtualPad | None, str | None]:
+    """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
+
+    O motivo vai ao log (como sempre foi) E volta ao chamador (VPAD-05): a
+    factory o pendura no vpad uinput degradado para o `state_full` expor.
+    ``(None, None)`` só no flavor xbox — uinput por design, não degradação.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         UHID_NODE,
         UhidDualSense,
-        capture_dualsense_blueprint,
         uhid_available,
     )
 
     if flavor != "dualsense":
         # Xbox não é trabalho do uhid: o `hid_playstation` só faz bind em
-        # 054c:0ce6, e um device HID sem driver não vira gamepad nenhum.
-        return None
-    if hidraw_path is None:
-        logger.info("vpad_uhid_sem_hidraw_usando_uinput", player=player)
-        return None
+        # VID/PID da Sony, e um device HID sem driver não vira gamepad nenhum.
+        return None, None
     if not uhid_available():
         logger.info("vpad_uhid_indisponivel_usando_uinput", node=UHID_NODE, player=player)
-        return None
-    blueprint = capture_dualsense_blueprint(hidraw_path)
-    if blueprint is None:
-        logger.warning("vpad_uhid_blueprint_falhou_usando_uinput",
-                       hidraw=hidraw_path, player=player)
-        return None
+        return None, "uhid_indisponivel"
     pad = UhidDualSense.for_flavor(
-        flavor, rumble_sink=rumble_sink, player=player, blueprint=blueprint
+        flavor, rumble_sink=rumble_sink, player=player, blueprint=canonical_blueprint()
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
-        return None
+        return None, "uhid_indisponivel"
     if not pad.start():
         logger.warning("vpad_uhid_start_falhou_usando_uinput", player=player)
-        return None
+        return None, "uhid_start_falhou"
     if not pad.wait_for_bind(UHID_BIND_TIMEOUT_S):
         # O CREATE2 foi aceito mas o driver não fez bind (kernel sem
         # hid_playstation, MAC duplicado). Sem o `stop()` o device HID ficaria de
         # pé, mudo, disputando o jogo com o vpad uinput que vem a seguir.
         logger.warning("vpad_uhid_bind_falhou_usando_uinput", player=player)
         pad.stop()
-        return None
+        return None, "uhid_bind_falhou"
     logger.info("vpad_uhid_ativo", player=player, name=pad.name, mac=pad.mac)
-    return pad
+    return pad, None
 
 
 __all__ = ["UHID_BIND_TIMEOUT_S", "VirtualPad", "make_virtual_pad"]

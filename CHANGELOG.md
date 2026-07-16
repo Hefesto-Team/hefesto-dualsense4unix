@@ -1369,7 +1369,7 @@ Patch release fechando 5 sprints adicionais na mesma sessão da V3.1.0.
 ### Sprints fechadas
 
 - **Sprint 109** `FEAT-BLUETOOTH-CONNECTION-01` PROTOCOL_READY → **MERGED**:
-  validado em hardware real com DualSense a0:fa:9c:00:00:01 pareado (USB
+  validado em hardware real com DualSense AA:BB:CC:00:00:01 pareado (USB
   unplugged + `transport=bt` + battery_pct=75 + lightbar magenta + profile
   activate fps via BT + evdev event2 + touchpad event4 OK). Proof-of-work
   em `CHECKLIST_VALIDACAO_v3.md`. Spec ganha **Status: MERGED**.

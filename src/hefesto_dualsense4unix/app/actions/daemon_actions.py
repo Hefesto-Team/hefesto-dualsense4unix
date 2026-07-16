@@ -199,9 +199,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #: toggle da Steam: Config → Downloads → "Pré-cache de shaders") — o toast lembra.
     STEAM_LAUNCH_PRELOAD = "__GL_SHADER_DISK_CACHE=1 __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=1"
 
-    #: Esconde o DualSense FÍSICO (054c:0ce6) do jogo por VID/PID. Comum às duas
-    #: máscaras porque o vpad NUNCA é 054c:0ce6: no Xbox é 045e, no DualSense é o
-    #: Edge 054c:0df2 (UHID-04). É a peça que mata o controle duplicado.
+    #: Esconde o DualSense FÍSICO (054c:0ce6) do jogo por VID/PID. Seguro porque
+    #: o vpad NUNCA é 054c:0ce6 (invariante VPAD-06, em TODOS os caminhos de
+    #: criação): no Xbox é 045e, no DualSense é o Edge 054c:0df2 (UHID-04). É a
+    #: peça que mata o controle duplicado. O ramo dualsense degradado (uinput)
+    #: ainda a OMITE por prudência — não por colisão de PID, mas porque o
+    #: mapeamento SDL do Edge-uinput nunca foi validado (ver compose_launch).
     STEAM_IGNORE_PHYSICAL = "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6"
 
     @classmethod
@@ -217,8 +220,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
           e o vpad Edge sobrevive com layout PS + rumble. HIDAPI fica LIGADO (o SDL
           usa o driver PS5 no vpad) e `PROTON_ENABLE_HIDRAW=1` entrega o hidraw do
           vpad ao jogo pelo Proton. É a "mesma solução do Xbox", agora no layout PS.
-        - DualSense mas backend uinput (o uhid não subiu): o vpad ainda é 054c:0ce6,
-          então NÃO existe launch option que o separe do físico — a dica é honesta.
+        - DualSense mas backend uinput (o uhid não subiu): o vpad já é um Edge
+          0x0df2 SEM hidraw (VPAD-04) — o SDL cai no matching evdev com um GUID
+          (version 0x3) fora do gamecontrollerdb, mapeamento NUNCA validado ao
+          vivo. Anunciar `IGNORE_DEVICES` aqui poderia deixar como ÚNICO controle
+          um vpad de botões trocados — pior que o duplicado (plano B da refutação
+          nº 2 do sprint vpad-sempre-edge): dica honesta, SEM `IGNORE_DEVICES`,
+          até a validação SDL ao vivo positiva ser documentada no sprint doc.
         """
         preload = cls.STEAM_LAUNCH_PRELOAD
         ignore = cls.STEAM_IGNORE_PHYSICAL
@@ -228,10 +236,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
             return f"PROTON_ENABLE_HIDRAW=1 {ignore} {preload} %command%", ""
         return (
             f"{preload} %command%",
-            "  a máscara DualSense caiu no backend simples (sem hidraw): o vpad "
-            "ainda divide o VID/PID com o físico e nenhuma opção o desduplica. Rode "
-            "o doctor/reative a máscara DualSense; enquanto isso a máscara Xbox 360 "
-            "(aba Início) desduplica e vibra.",
+            "  a máscara DualSense caiu no backend simples (sem hidraw): o vpad é "
+            "um Edge (0x0df2) cujo mapeamento a SDL ainda não tem validado — "
+            "esconder o físico agora poderia deixar um controle de botões trocados "
+            "como único. Reconecte o controle ou re-selecione DualSense na aba "
+            "Início; enquanto isso a máscara Xbox 360 desduplica e vibra.",
         )
 
     def _query_gamepad_state(self) -> tuple[str, str]:

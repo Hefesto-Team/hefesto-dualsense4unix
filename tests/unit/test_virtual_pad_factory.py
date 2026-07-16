@@ -1,28 +1,38 @@
-"""Escolha do backend do vpad e o fallback honesto (SPRINT-UHID-VPAD-01).
+"""Escolha do backend do vpad e o fallback honesto (SPRINT-UHID-VPAD-01 + VPAD-03).
 
-O ponto do sprint é a máscara DualSense VIBRAR no jogo, e isso só acontece pelo
-backend uhid (device HID de verdade → hidraw → o SDL usa o driver PS5 e o FF chega
-até nós). O que estes testes travam:
+O ponto do sprint original é a máscara DualSense VIBRAR no jogo, e isso só
+acontece pelo backend uhid (device HID de verdade → hidraw → o SDL usa o driver
+PS5 e o FF chega até nós). Com VPAD-03/BT-01 o blueprint virou o CANÔNICO
+EMBUTIDO — nenhuma leitura do controle físico no caminho de criação. O que
+estes testes travam:
 
-1. **máscara DualSense + /dev/uhid usável + blueprint capturável → uhid.** Se a
-   factory silenciosamente preferir o uinput, tudo continua "funcionando" — menos a
-   vibração, que é o motivo do sprint.
-2. **máscara Xbox → uinput, sempre.** O `hid_playstation` só faz bind em 054c:0ce6:
-   um uhid com VID/PID de Xbox seria um device HID sem driver = controle nenhum.
-3. **fallback**: nó ausente, blueprint que não veio, `start()` recusado e bind que
-   não chega caem TODOS no uinput — e um bind que falha não pode deixar o device
-   uhid de pé disputando o jogo com o uinput que vem em seguida.
+1. **máscara DualSense + /dev/uhid usável → uhid, SEM precisar de físico.** Era
+   o buraco do estudo de 117 agentes: sem hidraw legível (BT dormindo, boot
+   antes do connect) o vpad caía para uinput `054c:0ce6`, indistinguível do
+   físico — e a launch option `IGNORE_DEVICES` persistida escondia os dois.
+2. **máscara Xbox → uinput, sempre.** O `hid_playstation` só faz bind em VID da
+   Sony: um uhid com VID/PID de Xbox seria um device HID sem driver.
+3. **fallback**: nó ausente, `start()` recusado e bind que não chega caem TODOS
+   no uinput — e um bind que falha não pode deixar o device uhid de pé
+   disputando o jogo com o uinput que vem em seguida.
+4. **`allow_uhid=False` (VPAD-08)**: o chamador fake veta o uhid — o smoke não
+   pode registrar um DualSense Edge REAL no kernel.
 
 Herméticos: os dois backends são substituídos por fakes; nada toca /dev/uhid nem
 /dev/uinput, e o teste roda em CI sem hardware.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import virtual_pad
+from hefesto_dualsense4unix.integrations.uhid_blueprint import (
+    CANONICAL_DESCRIPTOR_USB,
+    TEMPLATE_FEATURE_0X09,
+)
 from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad, make_virtual_pad
 
 
@@ -76,6 +86,8 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Troca os dois backends por fakes; devolve o registro do que foi criado.
 
     `uhid_kwargs`/`uinput_kwargs` = None enquanto aquele backend não foi tentado.
+    O blueprint NÃO é dublado: o canônico embutido é puro (bytes no pacote, sem
+    I/O) — o que chega ao backend é exatamente o que o vpad real usaria.
     """
     from hefesto_dualsense4unix.integrations import uhid_gamepad, uinput_gamepad
 
@@ -87,8 +99,6 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         "uhid_start_ok": True,
         "uhid_bind_ok": True,
         "uinput_start_ok": True,
-        "blueprint": {"descriptor": b"\x05\x01", "features": {0x09: b"\x09" + bytes(19)}},
-        "capturados": [],
     }
 
     def _uhid_for_flavor(
@@ -113,62 +123,55 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         registro["uinput"] = pad
         return pad
 
-    def _capture(path: str) -> Any:
-        registro["capturados"].append(path)
-        return registro["blueprint"]
-
     monkeypatch.setattr(uhid_gamepad.UhidDualSense, "for_flavor",
                         staticmethod(_uhid_for_flavor))
     monkeypatch.setattr(uinput_gamepad.UinputGamepad, "for_flavor",
                         staticmethod(_uinput_for_flavor))
-    monkeypatch.setattr(uhid_gamepad, "capture_dualsense_blueprint", _capture)
     monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
     return registro
 
 
-def test_dualsense_com_uhid_disponivel_usa_uhid(backends: dict[str, Any]) -> None:
-    pad = make_virtual_pad("dualsense", player=3, hidraw_path="/dev/hidraw4")
+def test_dualsense_usa_uhid_sem_precisar_do_fisico(backends: dict[str, Any]) -> None:
+    """O critério central do VPAD-03: nada de hidraw, nada de controle conectado
+    — e o vpad ainda assim nasce uhid (hoje era uinput)."""
+    pad = make_virtual_pad("dualsense", player=3)
 
     assert pad is backends["uhid"]
     assert backends["uinput_kwargs"] is None  # nem tentou o uinput
-    assert backends["capturados"] == ["/dev/hidraw4"]
 
 
 def test_uhid_recebe_o_player_do_slot(backends: dict[str, Any]) -> None:
     """MAC próprio por jogador: sem o `player` certo, o probe do P2 morre -EEXIST."""
-    make_virtual_pad("dualsense", player=4, hidraw_path="/dev/hidraw4")
+    make_virtual_pad("dualsense", player=4)
 
     assert backends["uhid_kwargs"]["player"] == 4
 
 
-def test_uhid_recebe_o_blueprint_do_controle_fisico(backends: dict[str, Any]) -> None:
-    make_virtual_pad("dualsense", player=1, hidraw_path="/dev/hidraw4")
+def test_uhid_recebe_o_blueprint_canonico(backends: dict[str, Any]) -> None:
+    """O blueprint injetado é o sintético embutido — descriptor USB de 289 B e o
+    template 0x09 SEM identidade (o start() carimba o MAC do jogador depois)."""
+    make_virtual_pad("dualsense", player=1)
 
-    assert backends["uhid_kwargs"]["blueprint"] is backends["blueprint"]
+    blueprint = backends["uhid_kwargs"]["blueprint"]
+    assert blueprint["descriptor"] is CANONICAL_DESCRIPTOR_USB
+    assert blueprint["features"][0x09] is TEMPLATE_FEATURE_0X09
+    assert set(blueprint["features"]) == {0x05, 0x09, 0x20}
 
 
 def test_rumble_sink_chega_ao_backend_escolhido(backends: dict[str, Any]) -> None:
     def _sink(_weak: int, _strong: int) -> None: ...
 
-    pad = make_virtual_pad("dualsense", rumble_sink=_sink, hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("dualsense", rumble_sink=_sink)
 
     assert pad is not None
     assert backends["uhid"].rumble_sink is _sink
 
 
 def test_mascara_xbox_nunca_vai_para_o_uhid(backends: dict[str, Any]) -> None:
-    pad = make_virtual_pad("xbox", hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("xbox")
 
     assert pad is backends["uinput"]
     assert backends["uhid_kwargs"] is None
-    assert backends["capturados"] == []  # nem lê o controle físico à toa
-
-
-def test_sem_hidraw_cai_no_uinput(backends: dict[str, Any]) -> None:
-    pad = make_virtual_pad("dualsense", hidraw_path=None)
-
-    assert pad is backends["uinput"]
-    assert backends["uinput_kwargs"]["flavor"] == "dualsense"  # a máscara é preservada
 
 
 def test_sem_dev_uhid_cai_no_uinput(
@@ -178,25 +181,40 @@ def test_sem_dev_uhid_cai_no_uinput(
 
     monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
 
-    pad = make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("dualsense")
 
     assert pad is backends["uinput"]
+    assert backends["uinput_kwargs"]["flavor"] == "dualsense"  # a máscara é preservada
     assert backends["uhid_kwargs"] is None
 
 
-def test_blueprint_indisponivel_cai_no_uinput(backends: dict[str, Any]) -> None:
-    backends["blueprint"] = None
-
-    pad = make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4")
+def test_allow_uhid_false_veta_o_uhid_mesmo_disponivel(
+    backends: dict[str, Any],
+) -> None:
+    """VPAD-08: o daemon FAKE declara "sem uhid" — registrar um DualSense Edge
+    REAL no kernel a partir de um smoke exporia um controle fantasma à Steam."""
+    pad = make_virtual_pad("dualsense", allow_uhid=False)
 
     assert pad is backends["uinput"]
-    assert backends["uhid_kwargs"] is None
+    assert backends["uhid_kwargs"] is None  # nem chegou a tentar
+
+
+def test_allow_uhid_false_loga_o_veto(
+    backends: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    logados: list[str] = []
+    monkeypatch.setattr(virtual_pad.logger, "info",
+                        lambda evento, **_kw: logados.append(evento))
+
+    make_virtual_pad("dualsense", allow_uhid=False)
+
+    assert "vpad_uhid_vetado_pelo_chamador_usando_uinput" in logados
 
 
 def test_uhid_start_falho_cai_no_uinput(backends: dict[str, Any]) -> None:
     backends["uhid_start_ok"] = False
 
-    pad = make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("dualsense")
 
     assert pad is backends["uinput"]
 
@@ -211,7 +229,7 @@ def test_bind_que_nao_chega_cai_no_uinput_e_destroi_o_uhid(
     """
     backends["uhid_bind_ok"] = False
 
-    pad = make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("dualsense")
 
     assert pad is backends["uinput"]
     assert backends["uhid"].stopped is True
@@ -221,14 +239,14 @@ def test_nenhum_backend_sobe_devolve_none(backends: dict[str, Any]) -> None:
     backends["uhid_start_ok"] = False
     backends["uinput_start_ok"] = False
 
-    assert make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4") is None
+    assert make_virtual_pad("dualsense") is None
 
 
 def test_flavor_desconhecido_normaliza_antes_de_escolher(
     backends: dict[str, Any],
 ) -> None:
     """A factory decide pelo flavor NORMALIZADO ("ps" é sinônimo de dualsense)."""
-    pad = make_virtual_pad("ps", hidraw_path="/dev/hidraw4")
+    pad = make_virtual_pad("ps")
 
     assert pad is backends["uhid"]
 
@@ -240,11 +258,140 @@ def test_fallback_loga_o_motivo(
     logados: list[str] = []
     monkeypatch.setattr(virtual_pad.logger, "warning",
                         lambda evento, **_kw: logados.append(evento))
-    backends["blueprint"] = None
+    backends["uhid_start_ok"] = False
 
-    make_virtual_pad("dualsense", hidraw_path="/dev/hidraw4")
+    make_virtual_pad("dualsense")
 
-    assert logados == ["vpad_uhid_blueprint_falhou_usando_uinput"]
+    assert logados == ["vpad_uhid_start_falhou_usando_uinput"]
+
+
+def test_criacao_nao_le_o_controle_fisico() -> None:
+    """BT-01, critério 4: nenhum caminho de criação de vpad lê o físico.
+
+    Se `capture_dualsense_blueprint` voltar para a factory, o EIO do BT dormindo
+    volta a decidir o backend — exatamente o bug do estudo de 117 agentes.
+    """
+    fonte = Path(virtual_pad.__file__).read_text(encoding="utf-8")
+
+    assert "capture_dualsense_blueprint" not in fonte
+    assert "canonical_blueprint" in fonte
+
+
+class TestMotivoDoFallback:
+    """VPAD-05 — fallback nunca silencioso: o vpad degradado carrega o PORQUÊ.
+
+    A factory pendura `fallback_motivo` no uinput quando o flavor dualsense
+    degradou; o `state_full` expõe isso (`gamepad_emulation.degraded_motivo`)
+    para a GUI/doctor sem ninguém garimpar o journal. Xbox e uhid saudável NÃO
+    carregam motivo — uinput por design não é degradação.
+    """
+
+    def test_uhid_indisponivel(
+        self, backends: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+        monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
+
+        pad = make_virtual_pad("dualsense")
+
+        assert getattr(pad, "fallback_motivo", None) == "uhid_indisponivel"
+
+    def test_start_falhou(self, backends: dict[str, Any]) -> None:
+        backends["uhid_start_ok"] = False
+
+        pad = make_virtual_pad("dualsense")
+
+        assert getattr(pad, "fallback_motivo", None) == "uhid_start_falhou"
+
+    def test_bind_falhou(self, backends: dict[str, Any]) -> None:
+        backends["uhid_bind_ok"] = False
+
+        pad = make_virtual_pad("dualsense")
+
+        assert getattr(pad, "fallback_motivo", None) == "uhid_bind_falhou"
+
+    def test_veto_do_chamador(self, backends: dict[str, Any]) -> None:
+        """VPAD-08: o backend fake veta o uhid — e o estado diz isso às claras."""
+        pad = make_virtual_pad("dualsense", allow_uhid=False)
+
+        assert getattr(pad, "fallback_motivo", None) == "uhid_vetado_pelo_chamador"
+
+    def test_xbox_nao_e_degradacao(self, backends: dict[str, Any]) -> None:
+        pad = make_virtual_pad("xbox")
+
+        assert getattr(pad, "fallback_motivo", None) is None
+
+    def test_uhid_saudavel_nao_carrega_motivo(self, backends: dict[str, Any]) -> None:
+        pad = make_virtual_pad("dualsense")
+
+        assert getattr(pad, "fallback_motivo", None) is None
+
+
+class TestInvarianteVpad06:
+    """VPAD-06 — o teste-invariante do sprint: NENHUM caminho de criação de vpad
+    com flavor dualsense expõe o VID/PID do FÍSICO (054c:0ce6).
+
+    É o teste que teria pegado o "zero controles" antes do estudo de 117
+    agentes: o fallback uinput nascia 0ce6 e a launch option persistida na Steam
+    (`IGNORE_DEVICES=0x054c/0x0ce6`) escondia físico E vpad juntos. Usa os
+    backends REAIS (o VID/PID testado é o de produção) — só o I/O de /dev/uhid
+    e /dev/uinput é stubado, então roda em CI sem hardware e sem skip (regra
+    dos 22 skips falsos).
+    """
+
+    @pytest.fixture()
+    def io_stub(self, monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
+        from hefesto_dualsense4unix.integrations import uhid_gamepad, uinput_gamepad
+
+        estado = {"available": True, "start": True, "bind": True}
+        monkeypatch.setattr(uhid_gamepad, "uhid_available",
+                            lambda: estado["available"])
+        monkeypatch.setattr(uhid_gamepad.UhidDualSense, "start",
+                            lambda self: estado["start"])
+        monkeypatch.setattr(uhid_gamepad.UhidDualSense, "wait_for_bind",
+                            lambda self, timeout_s=2.0: estado["bind"])
+        monkeypatch.setattr(uhid_gamepad.UhidDualSense, "stop", lambda self: None)
+        monkeypatch.setattr(uinput_gamepad.UinputGamepad, "start",
+                            lambda self: True)
+        return estado
+
+    @pytest.mark.parametrize(
+        ("cenario", "backend_esperado"),
+        [
+            ("uhid_ok", "uhid"),
+            ("uhid_indisponivel", "uinput"),
+            ("uhid_start_falhou", "uinput"),
+            ("uhid_bind_falhou", "uinput"),
+            ("uhid_vetado_allow_false", "uinput"),
+        ],
+    )
+    def test_nenhum_caminho_expoe_o_vidpid_do_fisico(
+        self, cenario: str, backend_esperado: str, io_stub: dict[str, bool]
+    ) -> None:
+        allow_uhid = True
+        if cenario == "uhid_indisponivel":
+            io_stub["available"] = False
+        elif cenario == "uhid_start_falhou":
+            io_stub["start"] = False
+        elif cenario == "uhid_bind_falhou":
+            io_stub["bind"] = False
+        elif cenario == "uhid_vetado_allow_false":
+            allow_uhid = False
+
+        pad = make_virtual_pad("dualsense", allow_uhid=allow_uhid)
+
+        assert pad is not None
+        assert pad.backend == backend_esperado
+        product = getattr(pad, "product", None)
+        assert product != 0x0CE6, (
+            "vpad dividindo VID/PID com o físico — a launch option persistida "
+            "esconderia os dois (jogo com ZERO controles)"
+        )
+        assert product == 0x0DF2  # Edge nos DOIS backends (VPAD-04)
+        # UhidDualSense não tem campo vendor (constante do módulo, testada em
+        # test_uhid_edge_dedup); no uinput o vendor é campo e TEM de ser Sony.
+        assert getattr(pad, "vendor", 0x054C) == 0x054C
 
 
 def test_os_dois_backends_reais_cumprem_o_protocolo() -> None:

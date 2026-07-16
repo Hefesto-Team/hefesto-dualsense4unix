@@ -237,6 +237,56 @@ def test_pids_contemplam_edge():
     assert DUALSENSE_VENDOR == 0x054C
 
 
+def test_discover_nao_adota_o_vpad_uinput_0df2(monkeypatch: pytest.MonkeyPatch):
+    """VPAD-04 (ressalva): `DUALSENSE_PIDS` inclui 0x0DF2 porque o DualSense Edge
+    FÍSICO existe — então, com o vpad uinput agora nascendo Edge, a ÚNICA coisa
+    que o separa de um Edge de verdade é a ancestralidade virtual
+    (`_is_virtual_evdev`), nunca o VID/PID. Sem o filtro, o daemon adota o
+    próprio vpad como controle físico — o feedback loop que o projeto já sofreu
+    no UHID-02 (o daemon lendo a própria saída)."""
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from evdev import ecodes
+
+    from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+    class _FakeDev:
+        def __init__(self, path: str) -> None:
+            self.path = path
+            self.info = SimpleNamespace(vendor=0x054C, product=0x0DF2)
+            # vpad uinput não tem uniq; o Edge físico tem MAC (sintético).
+            self.uniq = "" if "event20" in path else "e8:47:3a:00:00:01"
+
+        def capabilities(self) -> dict[int, list[int]]:
+            return {ecodes.EV_KEY: [ecodes.BTN_SOUTH]}
+
+        def close(self) -> None: ...
+
+    monkeypatch.setattr(
+        "evdev.list_devices",
+        lambda: ["/dev/input/event20", "/dev/input/event21"],
+    )
+    monkeypatch.setattr("evdev.InputDevice", _FakeDev)
+    monkeypatch.setattr(
+        "os.path.realpath",
+        lambda p: (
+            # event20 = o NOSSO vpad (uinput vive sob /devices/virtual/);
+            # event21 = um Edge físico de verdade, com ancestral USB.
+            "/sys/devices/virtual/input/input99/event20"
+            if "event20" in p
+            else "/sys/devices/pci0000:00/0000:00:08.1/0000:0c:00.3/usb3/3-4/"
+            "3-4:1.3/0003:054C:0DF2.0009/input/input21/event21"
+        ),
+    )
+
+    found = discover_dualsense_evdevs()
+
+    assert found == {"e8473a000001": Path("/dev/input/event21")}, (
+        "o vpad uinput-0df2 entrou na enumeração — feedback loop do UHID-02"
+    )
+
+
 def test_reset_buttons_on_disconnect_limpa_pressed():
     """HOTFIX-3: botoes pressionados somem quando device cai."""
     reader = EvdevReader(device_path=None)

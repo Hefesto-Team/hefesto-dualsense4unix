@@ -228,6 +228,14 @@ class Daemon:
     _reconnect_task: asyncio.Task[Any] | None = None
     _last_auto_mult: float = field(default=0.7)
     _last_auto_change_at: float = field(default=0.0)
+    # VPAD-01/VPAD-02: instante (time.monotonic) da última tentativa de trocar
+    # o backend do vpad do P1 (uinput→uhid); -inf = nunca tentou. O cooldown
+    # (`gamepad.REBACKEND_COOLDOWN_SEC`) é UM SÓ para a promoção do hotplug
+    # (reconnect_loop) e a re-seleção pela GUI: o precheck `uhid_available()`
+    # não pega o uhid que aceita o CREATE2 mas nunca faz bind (kernel sem
+    # hid_playstation) — sem a trava, cada borda derrubaria e recriaria o vpad
+    # uinput que funciona (input drop em loop no meio do jogo).
+    _last_rebackend_ts: float = field(default=float("-inf"))
     # BUG-DAEMON-CONNECT-GHOST-INPUT-01 — instante (loop.time()) a partir do
     # qual o input emulado volta a ser despachado após uma (re)conexão. Setado
     # pelo poll loop na borda desconectado→conectado e rearmado em reconexão.
@@ -381,10 +389,11 @@ class Daemon:
                         EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
                     )
                     logger.info("controller_connected", transport=transport)
-                    # SPRINT-UHID-VPAD-01: o gamepad subiu ANTES deste connect
-                    # (ordem do boot), então o vpad do P1 nasceu sem hidraw e
-                    # caiu no uinput — sem a vibração da máscara DualSense.
-                    # Agora que o controle está aberto, promove.
+                    # SPRINT-UHID-VPAD-01 + VPAD-03: com o blueprint canônico o
+                    # vpad do P1 já nasce uhid no boot (isto aqui é no-op no
+                    # caminho feliz). A chamada fica como REDE DE SEGURANÇA:
+                    # recupera um vpad que degradou para uinput por razão
+                    # transitória (ex.: /dev/uhid sem ACL na 1ª sessão).
                     with contextlib.suppress(Exception):
                         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                             upgrade_primary_vpad_to_uhid,
@@ -817,7 +826,10 @@ class Daemon:
                 # não reentra aqui: `_native_mode` já é False quando roda.
                 if self._native_mode:
                     self.set_native_mode(False, origin=origin)
-                ok = start_gamepad_emulation(self, flavor=flavor)
+                # BT-04(b): `origin` segue até o gate da promoção uinput→uhid —
+                # só o gesto manual da usuária recria um vpad degradado; o
+                # apply de perfil/autoswitch (a cada troca de janela) nunca.
+                ok = start_gamepad_emulation(self, flavor=flavor, origin=origin)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
                 # vpads de co-op já criados. Trocar o flavor não muda /dev/input,
                 # então o watch do coop não dispara sozinho — force=True roda o

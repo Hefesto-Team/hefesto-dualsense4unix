@@ -83,8 +83,8 @@ class TestEnumeracaoIgnoraOVpad:
                 self.path = path
                 self.product_id = 0x0CE6
 
-        fisico_usb = _Info("a0:fa:9c:00:00:01", b"/dev/hidraw4")
-        fisico_bt = _Info("14:3a:9a:00:00:04", b"/dev/hidraw5")
+        fisico_usb = _Info("aa:bb:cc:00:00:01", b"/dev/hidraw4")
+        fisico_bt = _Info("aa:bb:cc:00:00:02", b"/dev/hidraw5")
         nosso_vpad = _Info("02:fe:00:00:00:02", b"/dev/hidraw7")
 
         monkeypatch.setattr(
@@ -104,7 +104,40 @@ class TestEnumeracaoIgnoraOVpad:
         chaves = bp.PyDualSenseController._enumerate_device_keys()
 
         seriais = [k for k, _path, _edge in chaves]
-        assert seriais == ["a0:fa:9c:00:00:01", "14:3a:9a:00:00:04"]
+        assert seriais == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"]
         assert "02:fe:00:00:00:02" not in seriais, (
             "o daemon adotou o próprio vpad como controle físico — feedback loop"
         )
+
+    def test_vpad_edge_0df2_filtrado_mas_edge_fisico_adotado(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """VPAD-04 (ressalva): 0x0DF2 está em `DUALSENSE_PIDS` porque o Edge
+        FÍSICO existe — o que separa o NOSSO vpad Edge (uhid E uinput nascem
+        0df2 agora) de um Edge de verdade é a ancestralidade virtual, nunca o
+        VID/PID."""
+        from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+        class _Info:
+            def __init__(self, serial: str, path: bytes) -> None:
+                self.serial_number = serial
+                self.path = path
+                self.product_id = 0x0DF2
+
+        edge_fisico = _Info("e8:47:3a:00:00:01", b"/dev/hidraw3")
+        nosso_vpad = _Info("02:fe:00:00:00:01", b"/dev/hidraw8")
+
+        monkeypatch.setitem(
+            __import__("sys").modules, "hidapi",
+            type("_H", (), {"enumerate": staticmethod(
+                lambda **_kw: [edge_fisico, nosso_vpad])})(),
+        )
+        monkeypatch.setattr(
+            bp, "_is_virtual_hidraw", lambda path: path == b"/dev/hidraw8"
+        )
+
+        chaves = bp.PyDualSenseController._enumerate_device_keys()
+
+        assert [(k, edge) for k, _path, edge in chaves] == [
+            ("e8:47:3a:00:00:01", True)  # o Edge físico entra, flagado como Edge
+        ], "o vpad Edge (0df2) entrou na enumeração — feedback loop do UHID-02"

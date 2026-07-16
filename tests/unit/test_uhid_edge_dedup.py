@@ -42,8 +42,25 @@ def test_product_e_campo_overridavel():
 
 
 def test_backend_property_distingue_os_dois_vpads():
-    """O botão de Launch Options decide a variante pelo backend — uhid tem PID
-    próprio (desduplica), uinput no flavor dualsense é fallback (não desduplica)."""
+    """O botão de Launch Options decide a variante pelo backend — uhid tem hidraw
+    (IGNORE_DEVICES é seguro); uinput no flavor dualsense é o fallback degradado:
+    também é Edge 0x0df2 (VPAD-04), mas sem hidraw o mapeamento SDL nunca foi
+    validado e o compose_launch fica conservador (sem IGNORE_DEVICES)."""
     assert uhid.UhidDualSense(player=1).backend == "uhid"
     assert UinputGamepad.for_flavor("xbox").backend == "uinput"
     assert UinputGamepad.for_flavor("dualsense").backend == "uinput"
+
+
+def test_os_dois_backends_apresentam_o_mesmo_edge():
+    """VPAD-04/VPAD-06: uhid E uinput usam o MESMO PID Edge — se as constantes
+    divergirem, um dos caminhos volta a colidir (ou vira um TERCEIRO device
+    que nenhuma launch option conhece)."""
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import (
+        DUALSENSE_EDGE_PRODUCT,
+        FLAVORS,
+    )
+
+    assert DUALSENSE_EDGE_PRODUCT == uhid.VPAD_PRODUCT == 0x0DF2
+    assert FLAVORS["dualsense"]["product"] == uhid.VPAD_PRODUCT
+    assert FLAVORS["dualsense"]["vendor"] == 0x054C
+    assert "DualSense Edge" in FLAVORS["dualsense"]["name"]

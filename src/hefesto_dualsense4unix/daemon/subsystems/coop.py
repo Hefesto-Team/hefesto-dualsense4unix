@@ -392,32 +392,24 @@ class CoopManager:
 
         return _sink
 
-    def _hidraw_for(self, identity: str) -> str | None:
-        """Nó hidraw do controle deste jogador (SPRINT-UHID-VPAD-01), ou None.
-
-        Identidade sem MAC ("path:...") não tem como casar um handle do backend —
-        mesma limitação do sink de rumble; o vpad daquele jogador nasce no uinput.
-        """
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import resolve_hidraw_path
-
-        if identity.startswith("path:"):
-            return None
-        return resolve_hidraw_path(self._daemon, identity)
-
     def _promote_player(self, player: _SecondaryPlayer) -> None:
         """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
         from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
-        # SPRINT-UHID-VPAD-01: `player_index` e o hidraw DESTE controle não são
-        # detalhe — no backend uhid o índice vira o MAC do vpad, e MAC repetido
-        # faz o probe do 2º jogador em diante morrer com -EEXIST (co-op de 4
-        # reduzido a 1). O hidraw é de onde o vpad copia o blueprint; sem ele
-        # (identidade sem MAC, backend fake) a factory cai no uinput sozinha.
+        # SPRINT-UHID-VPAD-01 + VPAD-03: `player_index` não é detalhe — no
+        # backend uhid o índice vira o MAC do vpad (02:fe:00:00:00:0N), e MAC
+        # repetido faz o probe do 2º jogador em diante morrer com -EEXIST (co-op
+        # de 4 reduzido a 1). O blueprint é o canônico embutido (nenhuma leitura
+        # do físico): jogador com controle não-DualSense (8BitDo, Pro Controller)
+        # também ganha vpad uhid Edge — decisão de produto do VPAD-09
+        # (uniformidade, dedup segura e rumble via hidraw para todos). O backend
+        # fake veta o uhid (VPAD-08).
         vpad = make_virtual_pad(
             self._flavor(),
             rumble_sink=self._make_player_rumble_sink(player.identity),
             player=player.player_index,
-            hidraw_path=self._hidraw_for(player.identity),
+            allow_uhid=controller_allows_uhid(self._daemon),
         )
         if vpad is None:
             logger.warning(

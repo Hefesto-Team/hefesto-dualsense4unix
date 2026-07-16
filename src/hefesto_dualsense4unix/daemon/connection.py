@@ -218,6 +218,28 @@ async def reconnect_loop(
                 EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
             )
             logger.info("controller_connected", transport=transport)
+            # VPAD-01: hotplug tardio promove o vpad degradado — espelha o
+            # gancho do boot (`lifecycle.run`). Antes, o único caller era o
+            # connect inicial: quem ligasse o controle DEPOIS do boot ficava
+            # com o vpad uinput até reiniciar o daemon. Roda no executor
+            # (`_run_blocking`): este loop divide o event loop com o poll
+            # loop e a promoção é síncrona (pior caso ~0,5 s no
+            # `UHID_BIND_TIMEOUT_S`) — bloquear aqui congelaria o input. O
+            # `_emu_lock` (RLock) serializa com set_gamepad_emulation/
+            # set_mouse_emulation das outras superfícies (IPC/GUI/hotkey);
+            # os gates internos do upgrade (já-uhid, precheck
+            # `uhid_available()`, cooldown compartilhado com o VPAD-02)
+            # garantem zero churn nas reconexões normais.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    upgrade_primary_vpad_to_uhid,
+                )
+
+                def _promover_vpad() -> bool:
+                    with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
+                        return upgrade_primary_vpad_to_uhid(daemon)
+
+                await daemon._run_blocking(_promover_vpad)
             # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.integrations.desktop_notifications import (

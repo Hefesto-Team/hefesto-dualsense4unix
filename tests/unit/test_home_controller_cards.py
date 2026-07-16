@@ -227,7 +227,7 @@ def test_render_mostra_bateria_e_nunca_o_mac(fake_gtk: None) -> None:
             "connected": True,
             "transport": "usb",
             "is_primary": True,
-            "uniq": "a0ab510000f0",
+            "uniq": "aabbcc000003",
             "battery_pct": 87,
         },
         {

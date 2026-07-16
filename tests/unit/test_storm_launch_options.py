@@ -33,10 +33,14 @@ def test_dualsense_edge_desduplica_no_layout_ps():
 
 
 def test_dualsense_fallback_uinput_e_honesto():
-    """Se o uhid não subiu (backend uinput no flavor dualsense), o vpad ainda é
-    054c:0ce6 — nenhuma opção o separa do físico. O botão AVISA em vez de prometer."""
+    """Backend uinput no flavor dualsense: o vpad já é Edge 0df2 (VPAD-04), mas
+    SEM hidraw o mapeamento SDL desse GUID nunca foi validado — anunciar
+    IGNORE_DEVICES poderia deixar um controle de botões trocados como ÚNICO
+    (plano B da refutação nº 2 do sprint vpad-sempre-edge). O botão AVISA em
+    vez de prometer; a parte condicional do VPAD-04 só entra depois da
+    validação SDL ao vivo positiva documentada no sprint doc."""
     launch, extra = DaemonActionsMixin.compose_launch("dualsense", "uinput")
-    assert _IGNORE not in launch  # esconderia o próprio vpad
+    assert _IGNORE not in launch  # condicional à validação SDL (ainda HIPÓTESE)
     assert _PRELOAD in launch
     assert launch.endswith("%command%")
     assert extra != "" and "Xbox" in extra

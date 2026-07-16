@@ -5,9 +5,12 @@ permitindo que jogos recebam o input do DualSense já traduzido/filtrado
 pelo daemon (combos sagrados removidos).
 
 Dois **flavors** (a "máscara" que o jogo vê):
-  - ``dualsense``: VID/PID Sony (054c:0ce6) + nome DualSense → o jogo casa
-    no gamecontrollerdb da SDL como PlayStation e mostra **prompts PS**.
-    Padrão, porque é o que a usuária quer ver nos jogos.
+  - ``dualsense``: VID Sony + PID do DualSense **Edge** (054c:0df2) → prompts
+    PlayStation. O PID é DE PROPÓSITO distinto do físico (0ce6) — invariante
+    VPAD-04/VPAD-06: nenhum caminho de criação de vpad pode dividir VID/PID
+    com o controle real, senão a launch option persistida na Steam
+    (``IGNORE_DEVICES=0x054c/0x0ce6``) esconde físico E vpad juntos e o jogo
+    fica com ZERO controles (o bug do estudo de 117 agentes).
   - ``xbox``: VID/PID Xbox 360 (045e:028e) → **prompts Xbox**. Fallback
     para jogos "XInput-only" (Windows-ports via Proton) que ignoram Sony.
 
@@ -52,10 +55,28 @@ XBOX360_VENDOR = 0x045E
 XBOX360_PRODUCT = 0x028E
 XBOX360_NAME = "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 
-# DualSense (Sony) — máscara que rende prompts de PlayStation nos jogos.
+# DualSense (Sony) FÍSICO (054c:0ce6). NÃO entra em máscara de vpad nenhuma:
+# é o VID/PID que a launch option IGNORE_DEVICES manda o SDL esconder — um vpad
+# com este PID some junto com o físico (VPAD-04). As constantes ficam porque
+# identificam o controle REAL em outros módulos (espelham `evdev_reader` e
+# `uhid_gamepad.DUALSENSE_PRODUCT`).
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 DUALSENSE_NAME = "Sony Interactive Entertainment DualSense Wireless Controller"
+
+# DualSense **Edge** — a máscara "dualsense" do vpad (VPAD-04). Espelha o
+# `uhid_gamepad.VPAD_PRODUCT`: uhid E uinput apresentam o MESMO Edge 0x0df2,
+# então o invariante VPAD-06 (vpad nunca divide VID/PID com o físico) vale em
+# TODOS os caminhos de criação, inclusive neste fallback degradado. Ressalva
+# honesta (refutação nº 2 do sprint doc): um vpad uinput 0df2 não tem hidraw —
+# o SDL não usa o driver HIDAPI PS5 nele e cai no matching evdev com um GUID
+# (version 0x3) ausente do gamecontrollerdb; esse mapeamento NUNCA foi validado
+# ao vivo, e por isso o `compose_launch` não anuncia IGNORE_DEVICES no ramo
+# degradado (ver `daemon_actions.compose_launch`).
+DUALSENSE_EDGE_PRODUCT = 0x0DF2
+DUALSENSE_EDGE_NAME = (
+    "Sony Interactive Entertainment DualSense Edge Wireless Controller"
+)
 
 # Bus USB (0x03): apresentar como controle USB real ajuda o match da SDL no
 # gamecontrollerdb (o GUID inclui bustype+vendor+product). O default do
@@ -77,11 +98,12 @@ MAX_FF_EFFECTS = 16
 _FF_MAX_EVENTS_PER_PUMP = 64
 
 # Catálogo de flavors. `name`/`vendor`/`product` definem a máscara.
+# VPAD-04: a entrada dualsense usa o Edge (0x0df2) — NUNCA o 0x0ce6 do físico.
 FLAVORS: dict[str, dict[str, Any]] = {
     "dualsense": {
-        "name": DUALSENSE_NAME,
+        "name": DUALSENSE_EDGE_NAME,
         "vendor": DUALSENSE_VENDOR,
-        "product": DUALSENSE_PRODUCT,
+        "product": DUALSENSE_EDGE_PRODUCT,
     },
     "xbox": {
         "name": XBOX360_NAME,
@@ -89,14 +111,16 @@ FLAVORS: dict[str, dict[str, Any]] = {
         "product": XBOX360_PRODUCT,
     },
 }
-#: SPRINT-GAME-RUMBLE-01: o default é **xbox**, não dualsense. Com a máscara
-#: DualSense o vpad tem o MESMO VID/PID do controle físico (054c:0ce6) mas SEM
-#: hidraw — o SDL/HIDAPI do jogo adota o FÍSICO pelo hidraw e IGNORA o vpad, então
-#: o force-feedback nunca chega ao nosso pipeline (rumble in-game MORTO) e o jogo
-#: ainda enxerga os dois devices (controle DUPLICADO). Com a máscara Xbox 360
+#: SPRINT-GAME-RUMBLE-01: o default é **xbox**, não dualsense. Na época da
+#: decisão o vpad dualsense-uinput tinha o MESMO VID/PID do físico (054c:0ce6)
+#: e SEM hidraw — o SDL/HIDAPI do jogo adotava o FÍSICO pelo hidraw e IGNORAVA
+#: o vpad (rumble in-game MORTO + controle DUPLICADO). Com a máscara Xbox 360
 #: (045e:028e) o jogo vê o vpad pelo caminho evdev/FF e a vibração funciona —
-#: provado com SDL2 e validado em gameplay. Quem prefere prompts de PlayStation
-#: escolhe "dualsense" na GUI/perfil, ciente do trade-off (documentado no README).
+#: provado com SDL2 e validado em gameplay. Hoje a máscara DualSense vibra pelo
+#: backend uhid (Edge 0x0df2 com hidraw de verdade) e o fallback uinput também
+#: é Edge (VPAD-04), mas o default segue xbox: é o piso de compatibilidade que
+#: funciona validado em QUALQUER backend. Quem prefere prompts de PlayStation
+#: escolhe "dualsense" na GUI/perfil (documentado no README).
 DEFAULT_FLAVOR = "xbox"
 
 # Retrocompat: nome histórico apontando para o flavor Xbox.
@@ -198,6 +222,12 @@ class UinputGamepad:
     rumble_sink: Callable[[int, int], None] | None = None
     #: Relógio monotônico injetável (testes de expiração de duração).
     time_fn: Callable[[], float] = time.monotonic
+    #: VPAD-05 — por que o flavor dualsense caiu NESTE backend (uinput), setado
+    #: pela factory (`make_virtual_pad`): "uhid_indisponivel",
+    #: "uhid_start_falhou", "uhid_bind_falhou" ou "uhid_vetado_pelo_chamador".
+    #: None = uinput por design (máscara xbox), não é degradação. Exposto no
+    #: `state_full` (`gamepad_emulation.degraded_motivo`) para GUI/doctor.
+    fallback_motivo: str | None = None
 
     _device: Any = None
     #: Módulo `evdev.ecodes` (guardado no start p/ não reimportar por tick).
@@ -338,9 +368,11 @@ class UinputGamepad:
     @property
     def backend(self) -> str:
         """Sempre "uinput": device de evdev (sem hidraw). É o backend da máscara
-        Xbox 360 e o fallback do flavor dualsense quando o uhid não sobe. O botão
-        de Launch Options usa isto: no flavor dualsense, "uinput" ⇒ o vpad ainda é
-        054c:0ce6 e IGNORE_DEVICES do físico o esconderia junto (não desduplica)."""
+        Xbox 360 e o fallback do flavor dualsense quando o uhid não sobe. Mesmo
+        degradado o PID é o Edge 0x0df2 (invariante VPAD-06 — nunca o 0ce6 do
+        físico), mas sem hidraw o mapeamento SDL desse GUID nunca foi validado:
+        o botão de Launch Options usa isto para NÃO anunciar IGNORE_DEVICES no
+        ramo degradado (plano B da refutação nº 2 do sprint doc)."""
         return "uinput"
 
     def forward_analog(
@@ -572,6 +604,8 @@ __all__ = [
     "DEFAULT_FLAVOR",
     "DEVICE_NAME",
     "DEVICE_VERSION",
+    "DUALSENSE_EDGE_NAME",
+    "DUALSENSE_EDGE_PRODUCT",
     "DUALSENSE_NAME",
     "DUALSENSE_PRODUCT",
     "DUALSENSE_VENDOR",
