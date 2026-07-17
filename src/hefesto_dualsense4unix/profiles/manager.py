@@ -218,6 +218,15 @@ class ProfileManager:
         self.controller.reset_output_overrides(overrides or None)
         for uniq, spec in overrides.items():
             self.controller.apply_output_for(uniq, spec)
+        # COR-03 (fix de integração, 2026-07-17): o broadcast acima escreve o
+        # GLOBAL nos conectados — sem este reassert, a paleta automática só
+        # apareceria no próximo replug (boot com controles presentes ficava
+        # com a cor global; visto AO VIVO na validação pós-install). Converge
+        # o estado físico ao RESOLVIDO por-controle (explícita > auto >
+        # global). Getattr defensivo: backends sem o método (fakes) seguem.
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
 
     @staticmethod
     def _configure_auto_player_colors(profile: Profile) -> None:

@@ -466,3 +466,102 @@ class TestSchemaAditivo:
             )
         }
         assert _controllers_to_specs(overrides, None) == {}
+
+
+class TestAtivacaoReassertaResolvido:
+    """Fix de integração (2026-07-17, pego AO VIVO na validação pós-install).
+
+    A ativação de perfil terminava no broadcast do GLOBAL
+    (`apply_output_defaults`) e a paleta automática só aparecia no PRÓXIMO
+    replug — um boot com os controles já conectados ficava com a cor global
+    (visto na máquina: dois DualSense em BT, ambos com o roxo do perfil).
+    O fix: `reassert_resolved_outputs()` ao final da ativação (manager) e do
+    apply_draft (applier) converge o estado físico ao resolvido
+    (explícita > automática > global).
+    """
+
+    @pytest.fixture(autouse=True)
+    def _singleton_limpo(self) -> Any:
+        identity.reset_identity_registry()
+        yield
+        identity.reset_identity_registry()
+
+    def _backend_com_nos(
+        self,
+    ) -> tuple[PyDualSenseController, _FakeLedNode, _FakeLedNode]:
+        inst, _h1, _h2 = _backend_com_dois()
+        n1, n2 = _FakeLedNode("/fake/led1"), _FakeLedNode("/fake/led2")
+        inst._sysfs = {KEY_1: n1, KEY_2: n2}
+        registry = identity.get_identity_registry()
+        registry.configure(enabled=True, brightness=1.0)
+        inst.set_auto_output_provider(make_auto_output_provider(registry))
+        return inst, n1, n2
+
+    def test_apply_de_perfil_repinta_a_paleta_nos_conectados(self) -> None:
+        """O cenário exato do bug: perfil global roxo + auto ON + 2 conectados."""
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.schema import (
+            LedsConfig,
+            MatchAny,
+            Profile,
+        )
+
+        inst, n1, n2 = self._backend_com_nos()
+        manager = ProfileManager(controller=inst)
+        profile = Profile(
+            name="vitoria-fake",
+            match=MatchAny(),
+            leds=LedsConfig(lightbar=(129, 61, 156), lightbar_brightness=1.0),
+        )
+        manager.apply(profile)
+        # A ÚLTIMA escrita em cada nó é a cor do SLOT (a paleta venceu o
+        # broadcast global) — antes do fix ficava o roxo (129, 61, 156).
+        assert n1.colors[-1] == player_slot_color(1)  # azul
+        assert n2.colors[-1] == player_slot_color(2)  # vermelho
+        assert n1.patterns[-1] == player_led_pattern(1)
+        assert n2.patterns[-1] == player_led_pattern(2)
+
+    def test_apply_com_auto_off_mantem_o_global(self) -> None:
+        """Regressão do comportamento histórico: auto OFF = broadcast puro."""
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.schema import (
+            LedsConfig,
+            MatchAny,
+            Profile,
+        )
+
+        inst, n1, n2 = self._backend_com_nos()
+        manager = ProfileManager(controller=inst)
+        profile = Profile(
+            name="fixo",
+            match=MatchAny(),
+            leds=LedsConfig(
+                lightbar=(129, 61, 156),
+                lightbar_brightness=1.0,
+                auto_player_colors=False,
+            ),
+        )
+        manager.apply(profile)
+        # O reassert com auto OFF re-escreve o RESOLVIDO = global (inócuo).
+        assert n1.colors[-1] == (129, 61, 156)
+        assert n2.colors[-1] == (129, 61, 156)
+
+    def test_reassert_e_no_op_em_modo_nativo(self) -> None:
+        inst, n1, _n2 = self._backend_com_nos()
+        inst._output_mute = True
+        antes = list(n1.colors)
+        inst.reassert_resolved_outputs()
+        assert n1.colors == antes  # D12: mutado, o jogo é dono do LED
+
+    def test_apply_draft_chama_o_reassert(self) -> None:
+        """O caminho do "Aplicar" da GUI converge o físico ao resolvido."""
+        from unittest.mock import MagicMock
+
+        from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+
+        controller = MagicMock()
+        applier = DraftApplier(
+            controller=controller, store=MagicMock(), daemon=MagicMock()
+        )
+        applier._apply_leds({"lightbar": [10, 20, 30], "lightbar_brightness": 1.0})
+        controller.reassert_resolved_outputs.assert_called_once()

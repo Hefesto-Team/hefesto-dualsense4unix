@@ -1506,6 +1506,39 @@ class PyDualSenseController(IController):
             return None
         return normalized
 
+    def reassert_resolved_outputs(self) -> None:
+        """Re-aplica o desired RESOLVIDO por-controle (3 camadas) via sysfs.
+
+        COR-03 — fix de integração pego AO VIVO na validação pós-install
+        (2026-07-17): a ativação de perfil termina num broadcast do GLOBAL
+        (`apply_output_defaults`), que pisa a paleta automática nos controles
+        conectados; os reasserts por-key (`_merged_desired_for_key`) só
+        rodavam em hotplug/new_keys/unmute — então um boot com os controles
+        JÁ conectados ficava com a cor global até o próximo replug. Este
+        método é o "unmute sem mute": o manager (ativação de perfil) e o
+        ipc_draft_applier ("Aplicar" da GUI) o chamam AO FINAL, para o estado
+        físico convergir ao resolvido (explícita > automática > global).
+
+        Escreve pela rota sysfs (os nós do mapa `_sysfs`, com registro no
+        rastreio "escrito por nós"). Controle sem nó gravável (sem a regra
+        77) segue no caminho pydualsense com o global até o próximo
+        `_reapply_desired` — limitação documentada do caminho degradado. Em
+        Modo Nativo é no-op (o jogo é dono do LED; o unmute já re-aplica).
+        """
+        with self._io_lock:
+            if self._output_mute:
+                return
+            reasserts = [
+                (key, node, self._merged_desired_for_key(key))
+                for key, node in self._sysfs.items()
+            ]
+        for key, node, desired in reasserts:
+            with contextlib.suppress(Exception):
+                if desired.led is not None and node.set_rgb(*desired.led):
+                    self.record_sysfs_write(key, desired.led)
+                if desired.player_leds is not None:
+                    node.set_players(desired.player_leds)
+
     def set_output_mute(self, muted: bool) -> None:
         """Muta/desmuta TODA escrita de output HID (FEAT-NATIVE-OUTPUT-MUTE-01).
 

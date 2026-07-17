@@ -146,9 +146,18 @@ class DraftApplier:
         self._configure_auto_colors(leds_raw)
         rgb = self._scaled_rgb_from(leds_raw)
         bits = self._player_bits_from(leds_raw)
-        if rgb is None and bits is None:
-            return
-        self.controller.apply_output_defaults(OutputSpec(led=rgb, player_leds=bits))
+        if rgb is not None or bits is not None:
+            self.controller.apply_output_defaults(
+                OutputSpec(led=rgb, player_leds=bits)
+            )
+        # COR-03 (fix de integração, 2026-07-17): converge o estado físico ao
+        # RESOLVIDO por-controle após o toggle/broadcast — sem isto, religar
+        # as cores automáticas pelo "Aplicar" só surtiria efeito no próximo
+        # replug (e o D4 "a cor única aparece em todos" já dependia do
+        # broadcast acima). Getattr defensivo (fakes seguem sem o método).
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
 
     @staticmethod
     def _configure_auto_colors(leds_raw: dict[str, Any]) -> None:
