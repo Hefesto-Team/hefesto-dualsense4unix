@@ -16,6 +16,7 @@ Persistência entre sessões NÃO é escopo desta sprint; o draft é in-memory o
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -130,6 +131,81 @@ class EmulationDraft(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Conversores sub-draft <-> schema (compartilhados por from_profile/to_profile
+# e pelos overrides por-controle do PERFIL-04)
+# ---------------------------------------------------------------------------
+
+
+def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
+    """Converte ``LedsConfig`` (schema) no sub-draft de LEDs da GUI.
+
+    Mesma conversão histórica de ``from_profile``: brilho float 0.0-1.0 vira
+    percentual inteiro 0-100 e ``player_leds`` é normalizado para 5 flags.
+    """
+    rgb_raw = leds_cfg.lightbar  # tuple[int, int, int]
+    brightness_raw = float(leds_cfg.lightbar_brightness)  # 0.0-1.0
+    brightness_pct = max(0, min(100, round(brightness_raw * 100)))
+    player = tuple(bool(b) for b in leds_cfg.player_leds)
+    # Garante 5 elementos (schema valida, mas defensive)
+    while len(player) < 5:
+        player = (*player, False)
+    player_5: tuple[bool, bool, bool, bool, bool] = (
+        player[0], player[1], player[2], player[3], player[4]
+    )
+    return LedsDraft(
+        lightbar_rgb=(int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])),
+        lightbar_brightness=brightness_pct,
+        player_leds=player_5,
+    )
+
+
+def _leds_draft_to_config(leds: LedsDraft) -> Any:
+    """Converte o sub-draft de LEDs em ``LedsConfig`` persistível (schema)."""
+    from hefesto_dualsense4unix.profiles.schema import LedsConfig
+
+    rgb = leds.lightbar_rgb or (0, 0, 0)
+    return LedsConfig(
+        lightbar=rgb,
+        player_leds=list(leds.player_leds),
+        lightbar_brightness=leds.lightbar_brightness / 100.0,
+    )
+
+
+def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
+    """Converte ``TriggersConfig`` (schema) no sub-draft de gatilhos da GUI.
+
+    Nota: TriggerConfig.params é Union[list[int], list[list[int]]];
+    TriggerDraft aceita ambos via tuple, mas mypy precisa cast.
+    """
+    return TriggersDraft(
+        left=TriggerDraft(
+            mode=cfg.left.mode,
+            params=tuple(cast("list[int]", cfg.left.params)),
+        ),
+        right=TriggerDraft(
+            mode=cfg.right.mode,
+            params=tuple(cast("list[int]", cfg.right.params)),
+        ),
+    )
+
+
+def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
+    """Converte o sub-draft de gatilhos em ``TriggersConfig`` persistível."""
+    from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
+
+    return TriggersConfig(
+        left=TriggerConfig(
+            mode=triggers.left.mode,
+            params=list(triggers.left.params),
+        ),
+        right=TriggerConfig(
+            mode=triggers.right.mode,
+            params=list(triggers.right.params),
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
 # DraftConfig raiz
 # ---------------------------------------------------------------------------
 
@@ -166,6 +242,16 @@ class DraftConfig(BaseModel):
     source_mode: Any | None = None
     source_suppress: bool = False
     source_priority: int | None = None
+    # PERFIL-02 (sprint perfis-por-controle): o mapa ``controllers`` do
+    # perfil (overrides por MAC) atravessa o draft — ``to_profile`` reconstrói
+    # o Profile do zero e o apagaria no primeiro "Salvar Perfil" (a mesma
+    # classe de bug dos dois BUG-*-DROPS-SECTION acima). Mesmo padrão dos
+    # ``source_*`` vizinhos: ``Any`` evita importar o schema aqui.
+    # PERFIL-04: diferente dos demais ``source_*``, este a GUI EDITA — os
+    # handlers de lightbar/gatilhos com um controle selecionado no seletor
+    # gravam via ``with_controller_leds``/``with_controller_triggers``
+    # (entradas não tocadas seguem passthrough byte-idêntico).
+    source_controllers: Any | None = None
 
     # --- construtores ---
 
@@ -181,40 +267,10 @@ class DraftConfig(BaseModel):
         Mapeia os campos do schema ``Profile`` para o draft equivalente.
         Campos ausentes no perfil recebem defaults seguros.
         """
-        # Triggers
-        # Nota: TriggerConfig.params é Union[list[int], list[list[int]]];
-        # TriggerDraft aceita ambos via tuple, mas mypy precisa cast.
-        left_cfg = profile.triggers.left
-        right_cfg = profile.triggers.right
-        triggers = TriggersDraft(
-            left=TriggerDraft(
-                mode=left_cfg.mode,
-                params=tuple(cast("list[int]", left_cfg.params)),
-            ),
-            right=TriggerDraft(
-                mode=right_cfg.mode,
-                params=tuple(cast("list[int]", right_cfg.params)),
-            ),
-        )
-
-        # LEDs
-        leds_cfg = profile.leds
-        rgb_raw = leds_cfg.lightbar  # tuple[int, int, int]
-        brightness_raw = leds_cfg.lightbar_brightness  # float 0.0-1.0
-        brightness_pct = max(0, min(100, round(brightness_raw * 100)))
-        player_raw = leds_cfg.player_leds  # list[bool], len=5
-        player = tuple(bool(b) for b in player_raw)
-        # Garante 5 elementos (schema valida, mas defensive)
-        while len(player) < 5:
-            player = (*player, False)
-        player_5: tuple[bool, bool, bool, bool, bool] = (
-            player[0], player[1], player[2], player[3], player[4]
-        )
-        leds = LedsDraft(
-            lightbar_rgb=(int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])),
-            lightbar_brightness=brightness_pct,
-            player_leds=player_5,
-        )
+        # Triggers e LEDs — conversores compartilhados (mesma semântica
+        # histórica; ver _triggers_config_to_draft/_leds_config_to_draft).
+        triggers = _triggers_config_to_draft(profile.triggers)
+        leds = _leds_config_to_draft(profile.leds)
 
         # Rumble — weak/strong não persistem no perfil (teste de motores);
         # a POLÍTICA persiste (FEAT-RUMBLE-POLICY-PROFILE-01): policy e
@@ -255,6 +311,7 @@ class DraftConfig(BaseModel):
             source_mode=profile.mode,
             source_suppress=profile.suppress_desktop_emulation,
             source_priority=profile.priority,
+            source_controllers=profile.controllers,
         )
 
     def to_profile(self, name: str, priority: int = 5) -> Profile:
@@ -277,21 +334,19 @@ class DraftConfig(BaseModel):
         ``suppress_desktop_emulation`` e ``priority`` do perfil de ORIGEM são
         reemitidos (o draft não os edita; salvar o perfil ativo pelo rodapé
         não pode zerá-los). Draft sem origem (perfil novo) usa os defaults.
+        PERFIL-02: o mapa ``controllers`` (overrides por MAC) é reemitido do
+        perfil de origem pelo mesmo motivo — sem o passthrough, o primeiro
+        "Salvar Perfil" apagaria os ajustes por-controle da usuária.
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
         from hefesto_dualsense4unix.profiles.schema import (
-            LedsConfig,
             MatchAny,
             Profile,
             ProfileMouseConfig,
             RumbleConfig,
-            TriggerConfig,
-            TriggersConfig,
         )
 
-        brightness_float = self.leds.lightbar_brightness / 100.0
-        rgb = self.leds.lightbar_rgb or (0, 0, 0)
         mouse_cfg = (
             ProfileMouseConfig(
                 enabled=self.mouse.enabled,
@@ -310,21 +365,8 @@ class DraftConfig(BaseModel):
             match=self.source_match if self.source_match is not None else MatchAny(),
             mode=self.source_mode,
             suppress_desktop_emulation=self.source_suppress,
-            triggers=TriggersConfig(
-                left=TriggerConfig(
-                    mode=self.triggers.left.mode,
-                    params=list(self.triggers.left.params),
-                ),
-                right=TriggerConfig(
-                    mode=self.triggers.right.mode,
-                    params=list(self.triggers.right.params),
-                ),
-            ),
-            leds=LedsConfig(
-                lightbar=rgb,
-                player_leds=list(self.leds.player_leds),
-                lightbar_brightness=brightness_float,
-            ),
+            triggers=_triggers_draft_to_config(self.triggers),
+            leds=_leds_draft_to_config(self.leds),
             rumble=RumbleConfig(
                 passthrough=self.rumble.passthrough,
                 policy=self.rumble.policy,
@@ -332,14 +374,251 @@ class DraftConfig(BaseModel):
             ),
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
+            controllers=self.source_controllers,
         )
-        # Revalida para garantir round-trip (captura regressoes de schema)
-        return Profile.model_validate(profile.model_dump(mode="python"))
+        # Revalida para garantir round-trip (captura regressoes de schema).
+        # Fix do review (2026-07-16): o `model_dump` DENSIFICA as seções
+        # PARCIAIS dos overrides por-controle (campos não escritos viram
+        # defaults do schema marcados como explícitos) — reintroduziria a
+        # resolução-por-objeto refutada um save depois (a ativação pisaria o
+        # global do controle). Passamos as INSTÂNCIAS já validadas: pydantic
+        # (revalidate_instances="never") as preserva com o `model_fields_set`
+        # original — parcial continua parcial.
+        payload = profile.model_dump(mode="python")
+        payload["controllers"] = profile.controllers
+        return Profile.model_validate(payload)
+
+    # --- overrides por-controle (PERFIL-04) ---
+
+    def controller_override(self, uniq: str | None) -> Any | None:
+        """Override do controle ``uniq`` no mapa em edição, ou None.
+
+        ``uniq`` é o MAC normalizado (12 hex) que o seletor de alvo da GUI
+        deriva do ``state_full`` (o mesmo ``uniq`` do bloco ``controllers``).
+        Devolve o ``ControllerOverrides`` do schema (validando entradas cruas
+        defensivamente) — None quando não há mapa, não há entrada, ou o alvo
+        é "Todos" (``uniq`` None).
+        """
+        if not uniq:
+            return None
+        mapa = self.source_controllers
+        if not isinstance(mapa, dict):
+            return None
+        entry = mapa.get(uniq)
+        if entry is None:
+            return None
+        from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+        if isinstance(entry, ControllerOverrides):
+            return entry
+        return ControllerOverrides.model_validate(entry)
+
+    def effective_leds_for(self, uniq: str | None) -> LedsDraft:
+        """LEDs EFETIVOS que a aba exibe para o alvo ``uniq``.
+
+        Override presente → a seção ``leds`` dele (brilho incluso, LIDO DO
+        PERFIL — nunca do backend, senão o valor exibido diverge do salvo);
+        sem override (ou alvo "Todos") → a seção global do draft.
+
+        Fix do review (2026-07-16): o merge aqui é POR CAMPO, guiado pelo
+        ``model_fields_set`` do pydantic — campo NÃO escrito no JSON do
+        override herda o global (paridade com a ativação de perfil). Sem
+        isso, um override parcial escrito à mão exibia (e, via semeadura,
+        SALVAVA) os defaults do schema no lugar do global. Overrides criados
+        pela GUI são densos (todos os campos escritos) e não mudam.
+        """
+        override = self.controller_override(uniq)
+        leds_cfg = getattr(override, "leds", None)
+        if leds_cfg is None:
+            return self.leds
+        campos = leds_cfg.model_fields_set
+        base = _leds_config_to_draft(leds_cfg)
+        herdados: dict[str, Any] = {}
+        if "lightbar" not in campos:
+            herdados["lightbar_rgb"] = self.leds.lightbar_rgb
+        if "lightbar_brightness" not in campos:
+            herdados["lightbar_brightness"] = self.leds.lightbar_brightness
+        if "player_leds" not in campos:
+            herdados["player_leds"] = self.leds.player_leds
+        return base.model_copy(update=herdados) if herdados else base
+
+    def effective_triggers_for(self, uniq: str | None) -> TriggersDraft:
+        """Gatilhos EFETIVOS que a aba exibe para o alvo ``uniq`` (ver leds).
+
+        Merge POR LADO: um override só de ``left`` exibe o ``right`` global
+        (mesma regra de ``effective_leds_for``, fix do review 2026-07-16).
+        """
+        override = self.controller_override(uniq)
+        triggers_cfg = getattr(override, "triggers", None)
+        if triggers_cfg is None:
+            return self.triggers
+        lados = triggers_cfg.model_fields_set
+        base = _triggers_config_to_draft(triggers_cfg)
+        herdados: dict[str, Any] = {}
+        if "left" not in lados:
+            herdados["left"] = self.triggers.left
+        if "right" not in lados:
+            herdados["right"] = self.triggers.right
+        return base.model_copy(update=herdados) if herdados else base
+
+    def with_controller_leds(self, uniq: str, leds: LedsDraft) -> DraftConfig:
+        """Novo draft com a seção ``leds`` do override de ``uniq`` substituída.
+
+        PERFIL-04: é por aqui que a edição de lightbar/player-LEDs com um
+        controle selecionado no seletor entra no mapa ``controllers`` do
+        perfil (e o "Salvar Perfil" do rodapé a persiste). O chamador semeia
+        ``leds`` com o efetivo em tela (``effective_leds_for`` + o campo
+        editado) — o que a usuária vê é o que salva.
+        """
+        return self._with_override_section(uniq, "leds", _leds_draft_to_config(leds))
+
+    def with_controller_triggers(
+        self, uniq: str, triggers: TriggersDraft
+    ) -> DraftConfig:
+        """Novo draft com a seção ``triggers`` do override de ``uniq`` substituída."""
+        return self._with_override_section(
+            uniq, "triggers", _triggers_draft_to_config(triggers)
+        )
+
+    def _with_override_section(
+        self, uniq: str, section: str, value: Any
+    ) -> DraftConfig:
+        """Grava ``value`` na seção ``section`` do override de ``uniq``.
+
+        Nunca muta o dict compartilhado do draft congelado: constrói um mapa
+        NOVO (entradas não tocadas seguem os mesmos objetos — passthrough
+        byte-idêntico preservado) e devolve o draft substituído.
+        """
+        from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+        mapa: dict[str, Any] = dict(self.source_controllers or {})
+        atual = self.controller_override(uniq) or ControllerOverrides()
+        mapa[uniq] = atual.model_copy(update={section: value})
+        return self.model_copy(update={"source_controllers": mapa})
+
+    def with_override_fields_cleared(
+        self, section: str, fields: Iterable[str]
+    ) -> DraftConfig:
+        """Limpa ``fields`` da seção ``section`` de TODOS os overrides do mapa.
+
+        Fix do review (2026-07-16, HIGH): espelha no DRAFT a regra que o
+        backend já aplica ao vivo (`_record_desired_locked` com broadcast) —
+        uma edição em "Todos" vale para todo mundo, então o campo editado sai
+        dos overrides por-controle. Sem isso, "mudei todos para azul" ao vivo
+        + "Salvar Perfil" persistia o override antigo intacto e a PRÓXIMA
+        ativação ressuscitava a cor velha no alvo (o "voltou verde" que o
+        sprint doc proíbe, na camada de persistência).
+
+        Granularidade guiada pelo ``model_fields_set``: só os campos pedidos
+        saem; o resto do override (ex.: player-LEDs próprios) fica. Seção que
+        esvazia vira ``None``; entrada sem nenhuma seção some do mapa; mapa
+        vazio volta a ``None`` (nenhuma chave fantasma no JSON salvo).
+        """
+        mapa = self.source_controllers
+        if not isinstance(mapa, dict) or not mapa:
+            return self
+        alvo_campos = set(fields)
+        novo: dict[str, Any] = {}
+        mudou = False
+        for uniq, entry in mapa.items():
+            override = self.controller_override(str(uniq))
+            if override is None:
+                novo[uniq] = entry
+                continue
+            cfg = getattr(override, section, None)
+            if cfg is None or not (cfg.model_fields_set & alvo_campos):
+                # Nada da seção/campos editados aqui — passthrough intacto.
+                novo[uniq] = entry
+                continue
+            mudou = True
+            restantes = cfg.model_fields_set - alvo_campos
+            nova_secao = (
+                type(cfg)(**{nome: getattr(cfg, nome) for nome in restantes})
+                if restantes
+                else None
+            )
+            novo_override = override.model_copy(update={section: nova_secao})
+            if novo_override.leds is None and novo_override.triggers is None:
+                continue  # entrada esvaziou — some do mapa
+            novo[uniq] = novo_override
+        if not mudou:
+            return self
+        return self.model_copy(update={"source_controllers": novo or None})
+
+    def _controllers_to_ipc(self) -> dict[str, Any] | None:
+        """Seção ``controllers`` do contrato IPC ``profile.apply_draft``.
+
+        ``{uniq: {leds?, triggers?}}`` com os MESMOS formatos das seções
+        globais (rgb lista, brilho float 0.0-1.0, params lista). None quando
+        não há mapa — o DraftApplier pula seção None e daemon antigo ignora
+        a chave desconhecida (aditivo).
+
+        Fix do review (2026-07-16): emissão POR CAMPO guiada pelo
+        ``model_fields_set`` — campo não escrito no override NÃO viaja (o
+        DraftApplier trata chave ausente como "sem opinião" e o merge por
+        campo do backend herda o global), em paridade com a ativação de
+        perfil. Exceção deliberada: cor e brilho formam UM campo no backend
+        (o RGB pré-escalado); quando só um dos dois é escrito, o outro é
+        resolvido do GLOBAL do draft aqui na borda, para o alvo receber a
+        mesma cor efetiva que a ativação produziria.
+        """
+        mapa = self.source_controllers
+        if not isinstance(mapa, dict) or not mapa:
+            return None
+        out: dict[str, Any] = {}
+        for uniq in mapa:
+            override = self.controller_override(str(uniq))
+            if override is None:
+                continue
+            entry: dict[str, Any] = {}
+            if override.leds is not None:
+                campos = override.leds.model_fields_set
+                leds_entry: dict[str, Any] = {}
+                if "lightbar" in campos or "lightbar_brightness" in campos:
+                    rgb = (
+                        tuple(override.leds.lightbar)
+                        if "lightbar" in campos
+                        else self.leds.lightbar_rgb
+                    )
+                    brilho = (
+                        float(override.leds.lightbar_brightness)
+                        if "lightbar_brightness" in campos
+                        else self.leds.lightbar_brightness / 100.0
+                    )
+                    if rgb is not None:
+                        leds_entry["lightbar_rgb"] = list(rgb)
+                        leds_entry["lightbar_brightness"] = brilho
+                if "player_leds" in campos:
+                    leds_entry["player_leds"] = [
+                        bool(b) for b in override.leds.player_leds
+                    ]
+                if leds_entry:
+                    entry["leds"] = leds_entry
+            if override.triggers is not None:
+                lados = override.triggers.model_fields_set
+                trig_entry: dict[str, Any] = {}
+                if "left" in lados:
+                    trig_entry["left"] = {
+                        "mode": override.triggers.left.mode,
+                        "params": list(override.triggers.left.params),
+                    }
+                if "right" in lados:
+                    trig_entry["right"] = {
+                        "mode": override.triggers.right.mode,
+                        "params": list(override.triggers.right.params),
+                    }
+                if trig_entry:
+                    entry["triggers"] = trig_entry
+            if entry:
+                out[str(uniq)] = entry
+        return out or None
 
     def to_ipc_dict(self) -> dict:  # type: ignore[type-arg]
         """Serializa draft para o formato do contrato IPC ``profile.apply_draft``.
 
-        Retorna dicionario com secoes triggers/leds/rumble/mouse/keyboard.
+        Retorna dicionario com secoes triggers/leds/rumble/mouse/keyboard/
+        controllers (esta última só quando o perfil em edição tem overrides
+        por-controle — PERFIL-04; ver ``_controllers_to_ipc``).
         Campos reservados (mic_led, emulation) sao omitidos para não causar
         erros em versões de daemon sem suporte. A política de rumble
         (policy/custom_mult) também não entra aqui: ela já é aplicada na hora
@@ -404,6 +683,11 @@ class DraftConfig(BaseModel):
                     else None
                 ),
             },
+            # PERFIL-04: overrides por-controle do mapa em edição — o
+            # DraftApplier os aplica via API por-uniq (apply_output_for),
+            # DEPOIS das seções globais (o override vence no alvo). None
+            # quando não há mapa (seção pulada; daemon antigo ignora).
+            "controllers": self._controllers_to_ipc(),
         }
 
 

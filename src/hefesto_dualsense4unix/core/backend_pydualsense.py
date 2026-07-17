@@ -12,8 +12,10 @@ determinística, usamos uma subclasse (`_PinnedPyDualSense`) que sobrescreve o
 `__find_device` manglado e abre por `path` (hidraw) via `hidapi.Device`. Assim:
 
   - OUTPUT (gatilhos, lightbar, rumble, LEDs de player, LED do mic) é aplicado
-    a TODOS os controles (fan-out) e o "perfil ativo" é cacheado em `_desired`
-    para ser re-aplicado a um controle plugado em runtime (hotplug-in).
+    a TODOS os controles (fan-out) e o "perfil ativo" é cacheado como estado
+    desejado POR CONTROLE (PERFIL-01/4P-01: `_desired_default` broadcast +
+    `_desired_by_uniq` keyed por MAC) para ser re-aplicado — com MERGE POR
+    CAMPO — a um controle plugado em runtime (hotplug-in).
   - INPUT/EMULAÇÃO permanece SÓ no controle PRIMÁRIO (o evdev e o `read_state`
     seguem single-instance; o `_ds` aponta para o primário). 100% compatível
     com o caso de 1 controle.
@@ -32,6 +34,7 @@ from pydualsense import pydualsense
 from hefesto_dualsense4unix.core.controller import (
     ControllerState,
     IController,
+    OutputSpec,
     Side,
     Transport,
     TriggerEffect,
@@ -43,7 +46,7 @@ from hefesto_dualsense4unix.core.evdev_reader import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -123,11 +126,14 @@ OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 class _DesiredOutput:
     """Último output aplicado = "perfil ativo" materializado em HID.
 
-    Re-aplicado a cada handle recém-aberto (hotplug-in), garantindo que um
-    controle plugado em runtime receba o mesmo perfil dos demais. O rumble é
-    transitório (efeito de jogo, não faz parte de um perfil) e por isso NÃO
-    entra aqui — não seria correto "ressuscitar" um rumble antigo num controle
-    novo.
+    PERFIL-01 (4P-01): existe um `_desired_default` (padrão broadcast) e um
+    override PARCIAL por controle em `_desired_by_uniq` (keyed pelo MAC
+    12-hex, estável entre USB e BT — provado ao vivo). O hotplug-in re-aplica
+    o MERGE POR CAMPO dos dois no controle CERTO — nunca o de outro (era o
+    bug provado: mirar o Controle 2 no seletor e replugar o Controle 1 o
+    pintava com a cor do 2). O rumble é transitório (efeito de jogo, não faz
+    parte de um perfil) e por isso NÃO entra aqui — não seria correto
+    "ressuscitar" um rumble antigo num controle novo.
     """
 
     trigger_left: TriggerEffect | None = None
@@ -135,6 +141,41 @@ class _DesiredOutput:
     led: tuple[int, int, int] | None = None
     player_leds: tuple[bool, bool, bool, bool, bool] | None = None
     mic_led: bool | None = None
+
+
+#: Campos de `_DesiredOutput`/`OutputSpec` — a ordem é a de aplicação no HID.
+_OUTPUT_FIELDS = ("trigger_left", "trigger_right", "led", "player_leds", "mic_led")
+
+
+def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
+    """Campos NÃO-None de um `OutputSpec` (o vocabulário parcial do PERFIL-01)."""
+    return {
+        name: getattr(spec, name)
+        for name in _OUTPUT_FIELDS
+        if getattr(spec, name) is not None
+    }
+
+
+def _merge_desired(default: _DesiredOutput, override: _DesiredOutput | None) -> _DesiredOutput:
+    """MERGE POR CAMPO (PERFIL-01): campo do override quando não-None, senão o default.
+
+    NUNCA resolução por objeto (refutada na revisão adversarial do sprint):
+    um override PARCIAL (só gatilhos) precisa herdar a cor global do perfil —
+    resolver por objeto aplicaria `led=None` como no-op e o controle replugado
+    ficaria sem a cor broadcast.
+    """
+    if override is None:
+        return default
+    return _DesiredOutput(
+        **{
+            name: (
+                getattr(override, name)
+                if getattr(override, name) is not None
+                else getattr(default, name)
+            )
+            for name in _OUTPUT_FIELDS
+        }
+    )
 
 
 def _centered_stick_to_raw(value: Any) -> int:
@@ -290,8 +331,13 @@ class PyDualSenseController(IController):
         # há nenhum DualSense — daemon segue vivo, IPC/UDP/CLI funcionais, e
         # `connect()` é retentado periodicamente pelo `reconnect_loop`.
         self._offline: bool = False
-        # Perfil ativo materializado em HID; re-aplicado no hotplug-in.
-        self._desired = _DesiredOutput()
+        # PERFIL-01 (4P-01): estado desejado POR CONTROLE. `_desired_default`
+        # é o padrão broadcast (o "perfil ativo" histórico); `_desired_by_uniq`
+        # guarda o override PARCIAL de cada controle, keyed pelo MAC 12-hex
+        # normalizado (o mesmo `_key_to_uniq` — estável entre USB e BT). O
+        # hotplug-in re-aplica o MERGE POR CAMPO dos dois no controle certo.
+        self._desired_default = _DesiredOutput()
+        self._desired_by_uniq: dict[str, _DesiredOutput] = {}
         # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
         # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
         # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
@@ -393,6 +439,69 @@ class PyDualSenseController(IController):
             else:
                 self._handles = {"_primary": value}
                 self._primary_key = "_primary"
+
+    # --- estado desejado por controle (PERFIL-01 / 4P-01) ----------------
+
+    @property
+    def _desired(self) -> _DesiredOutput:
+        """Alias de compatibilidade → `_desired_default` (padrão broadcast).
+
+        O co-op lê `getattr(ctrl, "_desired", None).player_leds` como "o
+        padrão do perfil" (coop.py `_profile_player_leds`) — um rename seco
+        falharia EM SILÊNCIO (getattr devolvendo None para sempre; o co-op
+        desligado pararia de restaurar o player-LED do perfil sem nenhum
+        teste quebrando). Leitura apenas; a escrita interna usa
+        `_desired_default`/`_desired_by_uniq`.
+        """
+        return self._desired_default
+
+    def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
+        """Desired efetivo do controle `key`: MERGE POR CAMPO (override sobre default).
+
+        Chamar sob `_io_lock` (lê o mapa por-uniq). Key sem MAC (fallback por
+        path) não tem override possível — devolve o default puro (o controle
+        segue só o global, comportamento documentado do sprint).
+        """
+        uniq = self._key_to_uniq(key)
+        override = self._desired_by_uniq.get(uniq) if uniq is not None else None
+        return _merge_desired(self._desired_default, override)
+
+    def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
+        """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
+
+        `target_key=None` (broadcast — sem alvo, ou alvo que desconectou, o
+        mesmo fallback do `_for_each`): grava no default E LIMPA o campo
+        escrito de todos os overrides por-uniq — um "Todos" ao vivo da GUI
+        vale para todo mundo; sem a limpeza, "mudei todos para azul,
+        repluguei e um voltou verde". Alvo presente: grava SÓ no override do
+        MAC do alvo (era o bug provado do 4P-01 — o setter gravava no global
+        incondicionalmente e o replug de OUTRO controle herdava o ajuste).
+        Alvo sem MAC (key por path): a escrita de hardware acontece, mas não
+        há identidade estável para lembrar — log em vez de silêncio.
+        """
+        if target_key is not None:
+            uniq = self._key_to_uniq(target_key)
+            if uniq is None:
+                logger.debug(
+                    "desired_por_controle_sem_mac",
+                    key=target_key,
+                    campos=sorted(fields),
+                )
+                return
+            override = self._desired_by_uniq.setdefault(uniq, _DesiredOutput())
+            for name, value in fields.items():
+                setattr(override, name, value)
+            return
+        for name, value in fields.items():
+            setattr(self._desired_default, name, value)
+            for override in self._desired_by_uniq.values():
+                setattr(override, name, None)
+        # Poda overrides que ficaram sem nenhum campo (mapa limpo p/ debug).
+        self._desired_by_uniq = {
+            uniq: override
+            for uniq, override in self._desired_by_uniq.items()
+            if any(getattr(override, name) is not None for name in _OUTPUT_FIELDS)
+        }
 
     # --- enumeração + abertura ------------------------------------------
 
@@ -664,16 +773,21 @@ class PyDualSenseController(IController):
         # Re-afirma o perfil de LED ativo nos nós que SURGIRAM agora (cor que o
         # kernel ainda não tinha ou perdeu no connect/resume).
         # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) NÃO re-afirma — o jogo é
-        # dono do LED; `_desired` segue guardado e o unmute o re-aplica.
+        # dono do LED; o desejado segue guardado e o unmute o re-aplica.
+        # PERFIL-01: o valor re-afirmado é o MERGE por controle (default +
+        # override do uniq DESTE nó) — nunca o desejado de outro controle.
         new_keys = [k for k in mapping if k not in prev]
-        if not self._output_mute:
-            for key in new_keys:
-                node = mapping[key]
+        if not self._output_mute and new_keys:
+            with self._io_lock:
+                reasserts = [
+                    (mapping[key], self._merged_desired_for_key(key)) for key in new_keys
+                ]
+            for node, desired in reasserts:
                 with contextlib.suppress(Exception):
-                    if self._desired.led is not None:
-                        node.set_rgb(*self._desired.led)
-                    if self._desired.player_leds is not None:
-                        node.set_players(self._desired.player_leds)
+                    if desired.led is not None:
+                        node.set_rgb(*desired.led)
+                    if desired.player_leds is not None:
+                        node.set_players(desired.player_leds)
 
         with self._io_lock:
             self._sysfs = mapping
@@ -786,7 +900,14 @@ class PyDualSenseController(IController):
 
     # --- output (fan-out p/ TODOS os controles) -------------------------
 
-    def _for_each(self, op: Callable[[pydualsense], None], *, what: str) -> None:
+    def _for_each(
+        self,
+        op: Callable[[pydualsense], None],
+        *,
+        what: str,
+        broadcast: bool = False,
+        record: dict[str, Any] | None = None,
+    ) -> None:
         """Aplica `op` ao ALVO de output (ou a cada handle aberto, em broadcast).
 
         FEAT-DSX-CONTROLLER-SELECTOR-01: se `_output_target_key` está setada E o
@@ -794,15 +915,25 @@ class PyDualSenseController(IController):
         senão (sem alvo, ou alvo desconectou), volta ao broadcast histórico —
         TODOS os controles. 1 handle morto não derruba os outros.
 
+        PERFIL-01: `broadcast=True` IGNORA o seletor (broadcast real — o
+        caminho do perfil, que não pode ser sequestrado pelo alvo da GUI);
+        `record` grava os campos no estado desejado do MESMO escopo resolvido
+        aqui, sob o MESMO lock — alvo e registro nunca divergem (a corrida do
+        seletor global mutável que a revisão apontou). O registro acontece
+        mesmo offline (perfil ativado sem controle vale para o hotplug).
+
         Tira um snapshot da lista sob `_io_lock` e faz o HID I/O fora da seção
         crítica (não segura o lock durante a escrita no device).
         """
         with self._io_lock:
             target = self._output_target_key
-            if target is not None and target in self._handles:
+            if not broadcast and target is not None and target in self._handles:
                 handles = [(target, self._handles[target])]
             else:
+                target = None
                 handles = list(self._handles.items())
+            if record:
+                self._record_desired_locked(target, record)
         if not handles:
             logger.debug("output_offline_noop", op=what)
             return
@@ -818,6 +949,8 @@ class PyDualSenseController(IController):
         sysfs_op: Callable[[Any], bool],
         pydual_op: Callable[[pydualsense], None],
         what: str,
+        broadcast: bool = False,
+        record: dict[str, Any] | None = None,
     ) -> None:
         """Aplica um output de LED ao ALVO, preferindo a rota sysfs do kernel.
 
@@ -826,13 +959,19 @@ class PyDualSenseController(IController):
         não houver nó coberto ou a escrita falhar, cai no caminho pydualsense
         (hidraw) — garantindo nenhum regresso quando a regra udev não está
         aplicada. FEAT-DSX-LIGHTBAR-SYSFS-01.
+
+        PERFIL-01: `broadcast`/`record` idênticos ao `_for_each` — alvo e
+        registro do estado desejado resolvidos juntos, sob o mesmo lock.
         """
         with self._io_lock:
             target = self._output_target_key
-            if target is not None and target in self._handles:
+            if not broadcast and target is not None and target in self._handles:
                 items = [(target, self._handles[target])]
             else:
+                target = None
                 items = list(self._handles.items())
+            if record:
+                self._record_desired_locked(target, record)
             sysfs_map = dict(self._sysfs)
             muted = self._output_mute
         if not items:
@@ -869,51 +1008,75 @@ class PyDualSenseController(IController):
             trigger.setForce(idx, value)
 
     def _reapply_desired(self, key: str, handle: pydualsense) -> None:
-        """Re-aplica o perfil ativo (`_desired`) num handle recém-aberto.
+        """Re-aplica o estado desejado DESTE controle num handle recém-aberto.
+
+        PERFIL-01 (4P-01): o que se aplica é o MERGE POR CAMPO do default
+        broadcast com o override por-uniq do controle `key` — o do controle
+        CERTO, nunca o de outro (era o bug provado: mirar o Controle 2 no
+        seletor e replugar o Controle 1 o pintava com a cor do 2).
+        """
+        with self._io_lock:
+            node = self._sysfs.get(key)
+            muted = self._output_mute
+            desired = self._merged_desired_for_key(key)
+        self._write_partial_output(
+            handle, node, muted, desired, what="reapply_perfil_no_hotplug"
+        )
+
+    def _write_partial_output(
+        self,
+        handle: pydualsense,
+        node: Any,
+        muted: bool,
+        out: _DesiredOutput,
+        *,
+        what: str,
+    ) -> None:
+        """Escreve os campos NÃO-None de `out` em UM handle.
 
         Gatilhos e LED do mic vão sempre por pydualsense (o kernel não os expõe).
         Lightbar e player-LED vão pelo nó sysfs do kernel quando o controle está
         coberto (cor em USB E BT); senão, por pydualsense (fallback histórico).
+
+        FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) a rota sysfs de LED é
+        desabilitada (o jogo é dono do LED). `node and not muted` mantém o
+        fallback: sem sysfs disponível, o LED cai em handle.light — mas o
+        report_thread também está mutado, então nada chega ao hardware; o
+        estado interno fica coerente para o unmute re-aplicar.
         """
         from pydualsense.enums import PlayerID
 
-        desired = self._desired
-        with self._io_lock:
-            node = self._sysfs.get(key)
-            muted = self._output_mute
-        # FEAT-PARITY-REVIEW-01: em Modo Nativo (muted) a rota sysfs de LED é
-        # desabilitada (o jogo é dono do LED). `node and not muted` mantém o
-        # fallback: sem sysfs disponível, o LED cai em handle.light — mas o
-        # report_thread também está mutado, então nada chega ao hardware; o
-        # estado interno fica coerente para o unmute re-aplicar.
         try:
-            if desired.trigger_left is not None:
-                self._apply_trigger(handle, "left", desired.trigger_left)
-            if desired.trigger_right is not None:
-                self._apply_trigger(handle, "right", desired.trigger_right)
-            if desired.led is not None and not (
-                node is not None and not muted and node.set_rgb(*desired.led)
+            if out.trigger_left is not None:
+                self._apply_trigger(handle, "left", out.trigger_left)
+            if out.trigger_right is not None:
+                self._apply_trigger(handle, "right", out.trigger_right)
+            if out.led is not None and not (
+                node is not None and not muted and node.set_rgb(*out.led)
             ):
-                handle.light.setColorI(*desired.led)
-            if desired.player_leds is not None and not (
-                node is not None and not muted and node.set_players(desired.player_leds)
+                handle.light.setColorI(*out.led)
+            if out.player_leds is not None and not (
+                node is not None and not muted and node.set_players(out.player_leds)
             ):
-                mask = sum(1 << i for i, b in enumerate(desired.player_leds) if b)
+                mask = sum(1 << i for i, b in enumerate(out.player_leds) if b)
                 handle.light.playerNumber = PlayerID(mask)
-            if desired.mic_led is not None:
-                handle.audio.setMicrophoneLED(desired.mic_led)
+            if out.mic_led is not None:
+                handle.audio.setMicrophoneLED(out.mic_led)
         except Exception as exc:
-            logger.warning("reapply_perfil_no_hotplug_falhou", err=str(exc))
+            logger.warning("reapply_perfil_no_hotplug_falhou", op=what, err=str(exc))
 
     def set_trigger(self, side: Side, effect: TriggerEffect) -> None:
-        if side == "left":
-            self._desired.trigger_left = effect
-        else:
-            self._desired.trigger_right = effect
-        self._for_each(lambda h: self._apply_trigger(h, side, effect), what="set_trigger")
+        # PERFIL-01: o registro no estado desejado vai para o ESCOPO do alvo
+        # (broadcast → default; alvo selecionado → override por-uniq), junto
+        # com a resolução do alvo, sob o mesmo lock (`record=`).
+        campo = "trigger_left" if side == "left" else "trigger_right"
+        self._for_each(
+            lambda h: self._apply_trigger(h, side, effect),
+            what="set_trigger",
+            record={campo: effect},
+        )
 
     def set_led(self, color: tuple[int, int, int]) -> None:
-        self._desired.led = color
         r, g, b = color
         # Prefere a rota sysfs do kernel (cor funciona em USB E BT); cai no
         # pydualsense (hidraw) quando o controle não está coberto.
@@ -921,6 +1084,7 @@ class PyDualSenseController(IController):
             sysfs_op=lambda node: node.set_rgb(r, g, b),
             pydual_op=lambda h: h.light.setColorI(r, g, b),
             what="set_led",
+            record={"led": color},
         )
 
     def set_rumble(self, weak: int, strong: int) -> None:
@@ -939,8 +1103,11 @@ class PyDualSenseController(IController):
         diferença USB/BT em `prepareReport` (outReport[9] USB / outReport[10] BT).
         """
         flag = bool(muted)
-        self._desired.mic_led = flag
-        self._for_each(lambda h: h.audio.setMicrophoneLED(flag), what="set_mic_led")
+        self._for_each(
+            lambda h: h.audio.setMicrophoneLED(flag),
+            what="set_mic_led",
+            record={"mic_led": flag},
+        )
 
     def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
         """Aplica bitmask de 5 LEDs de player em TODOS os controles.
@@ -961,7 +1128,6 @@ class PyDualSenseController(IController):
         """
         from pydualsense.enums import PlayerID
 
-        self._desired.player_leds = bits
         bitmask = sum(1 << i for i, b in enumerate(bits) if b)
         # Prefere a rota sysfs do kernel (player-LED em USB E BT, sem disputa);
         # cai no pydualsense quando o controle não está coberto.
@@ -969,8 +1135,155 @@ class PyDualSenseController(IController):
             sysfs_op=lambda node: node.set_players(bits),
             pydual_op=lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
             what="set_player_leds",
+            record={"player_leds": bits},
         )
         logger.debug("player_leds_aplicados bits=%s bitmask=%s", list(bits), bitmask)
+
+    # --- API por-uniq (PERFIL-01 / 4P-01) --------------------------------
+
+    def apply_output_defaults(self, spec: OutputSpec) -> None:
+        """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
+
+        Broadcast REAL: IGNORA o seletor de alvo (`_output_target_key`) de
+        propósito — os setters clássicos o respeitam, então ativar um perfil
+        (manual OU via autoswitch, mesma cadeia) com um alvo selecionado na
+        GUI aplicava SÓ no alvo (bug provado do sprint). Grava no
+        `_desired_default` SEM limpar os overrides por-uniq: quem substitui o
+        mapa na ativação é `reset_output_overrides` (ciclo de vida explícito)
+        — um default novo não pode apagar o override que o próprio perfil
+        acabou de registrar.
+        """
+        fields = _spec_fields(spec)
+        if not fields:
+            return
+        with self._io_lock:
+            for name, value in fields.items():
+                setattr(self._desired_default, name, value)
+        if spec.trigger_left is not None:
+            efeito_l = spec.trigger_left
+            self._for_each(
+                lambda h: self._apply_trigger(h, "left", efeito_l),
+                what="apply_output_defaults",
+                broadcast=True,
+            )
+        if spec.trigger_right is not None:
+            efeito_r = spec.trigger_right
+            self._for_each(
+                lambda h: self._apply_trigger(h, "right", efeito_r),
+                what="apply_output_defaults",
+                broadcast=True,
+            )
+        if spec.led is not None:
+            r, g, b = spec.led
+            self._for_each_led(
+                sysfs_op=lambda node: node.set_rgb(r, g, b),
+                pydual_op=lambda h: h.light.setColorI(r, g, b),
+                what="apply_output_defaults",
+                broadcast=True,
+            )
+        if spec.player_leds is not None:
+            from pydualsense.enums import PlayerID
+
+            bits = spec.player_leds
+            bitmask = sum(1 << i for i, b in enumerate(bits) if b)
+            self._for_each_led(
+                sysfs_op=lambda node: node.set_players(bits),
+                pydual_op=lambda h: setattr(h.light, "playerNumber", PlayerID(bitmask)),
+                what="apply_output_defaults",
+                broadcast=True,
+            )
+        if spec.mic_led is not None:
+            flag = spec.mic_led
+            self._for_each(
+                lambda h: h.audio.setMicrophoneLED(flag),
+                what="apply_output_defaults",
+                broadcast=True,
+            )
+
+    def apply_output_for(self, uniq: str, spec: OutputSpec) -> None:
+        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override dele.
+
+        PERFIL-01: NÃO passa pelo `_output_target_key` — o alvo é o parâmetro,
+        resolvido na borda pelo chamador (por construção imune à corrida do
+        seletor global mutável com o executor multi-thread). Controle
+        DESCONECTADO: o override fica REGISTRADO no mapa em memória (o hotplug
+        lê o mapa, não o JSON do perfil, e aplica quando ele chegar) — só a
+        escrita de hardware é pulada.
+        """
+        fields = _spec_fields(spec)
+        if not fields:
+            return
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            # Sem MAC 12-hex não há identidade estável (receiver 2.4G, key por
+            # path) — fora do mapa, com log em vez de silêncio (regra do sprint).
+            logger.warning("apply_output_for_sem_mac_ignorado", uniq=uniq)
+            return
+        with self._io_lock:
+            override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
+            for name, value in fields.items():
+                setattr(override, name, value)
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            muted = self._output_mute
+        if handle is None:
+            logger.debug(
+                "apply_output_for_desconectado_registrado",
+                uniq=alvo,
+                campos=sorted(fields),
+            )
+            return
+        self._write_partial_output(
+            handle, node, muted, _DesiredOutput(**fields), what="apply_output_for"
+        )
+
+    def reset_output_overrides(
+        self, overrides: Mapping[str, OutputSpec] | None = None
+    ) -> None:
+        """SUBSTITUI o mapa de overrides por-uniq inteiro (ativação de perfil).
+
+        Ciclo de vida explícito do PERFIL-01: sem a substituição, o override
+        do perfil ANTERIOR ressuscitaria no hotplug sob o perfil novo (e o
+        autoswitch troca de perfil o dia inteiro). Overrides de controles
+        DESCONECTADOS também entram no mapa (o hotplug lê o mapa em memória).
+        Nenhuma escrita de hardware aqui — o chamador aplica na sequência
+        (`apply_output_defaults` + `apply_output_for` por controle conectado).
+        """
+        novo: dict[str, _DesiredOutput] = {}
+        for uniq, spec in (overrides or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.warning("override_por_controle_sem_mac_ignorado", uniq=uniq)
+                continue
+            novo[alvo] = _DesiredOutput(**_spec_fields(spec))
+        with self._io_lock:
+            self._desired_by_uniq = novo
+
+    def set_rumble_for(self, uniq: str, weak: int, strong: int) -> bool:
+        """Rumble mirado no controle de MAC `uniq`, SEM tocar no seletor global.
+
+        PERFIL-01: substitui o flip transitório do `_output_target_key` que o
+        `apply_game_rumble` fazia — com o estado desejado keyed pelo alvo lido
+        de um global mutável, a corrida com o executor multi-thread
+        (max_workers=2) persistiria config no controle errado. O rumble segue
+        transitório (nunca entra no desejado). Devolve False quando o MAC não
+        casa com nenhum handle (o chamador decide o fallback broadcast).
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+        if handle is None:
+            return False
+        try:
+            handle.setLeftMotor(strong)
+            handle.setRightMotor(weak)
+        except Exception as exc:
+            logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
+        return True
 
     # --- introspecção / leitura do primário -----------------------------
 
@@ -1048,15 +1361,21 @@ class PyDualSenseController(IController):
             # rota sysfs ao DESMUTAR (fora do lock). Controles cobertos por sysfs
             # não recebem LED pelo report_thread (_suppress_leds), então só o
             # sysfs restaura a cor/player do perfil ao sair do Modo Nativo.
-            sysfs_nodes = list(self._sysfs.values()) if not muted else []
-            desired_led = self._desired.led
-            desired_players = self._desired.player_leds
-        for node in sysfs_nodes:
+            # PERFIL-01: valor por controle (merge default + override do uniq).
+            reasserts = (
+                [
+                    (node, self._merged_desired_for_key(key))
+                    for key, node in self._sysfs.items()
+                ]
+                if not muted
+                else []
+            )
+        for node, desired in reasserts:
             with contextlib.suppress(Exception):
-                if desired_led is not None:
-                    node.set_rgb(*desired_led)
-                if desired_players is not None:
-                    node.set_players(desired_players)
+                if desired.led is not None:
+                    node.set_rgb(*desired.led)
+                if desired.player_leds is not None:
+                    node.set_players(desired.player_leds)
         logger.info("backend_output_mute", muted=bool(muted))
 
     def set_output_target(self, index: int | None) -> int | None:

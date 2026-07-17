@@ -8,6 +8,8 @@ Cobre:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from hefesto_dualsense4unix.app.draft_config import (
@@ -397,3 +399,89 @@ def test_mouse_draft_dirty_default_false() -> None:
     """Sincronização programática (overlay do state_full) não marca dirty."""
     overlay = MouseDraft(enabled=True, speed=9, scroll_speed=2)
     assert overlay.dirty is False
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-02 (sprint 2026-07-16-perfis-por-controle): passthrough do mapa
+# `controllers` — o anti-BUG-FOOTER-SAVE-DROPS-SECTIONS-01 desta frente
+# ---------------------------------------------------------------------------
+
+#: MAC forjado da faixa permitida (test_anonimato_de_fixtures.py).
+_MAC_BT = "aabbcc000002"
+
+
+def _profile_com_mapa(name: str = "vitoria") -> Profile:
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    base = _make_profile(name=name)
+    return base.model_copy(
+        update={
+            "controllers": {
+                _MAC_BT: ControllerOverrides(leds=LedsConfig(lightbar=(0, 0, 255))),
+            }
+        }
+    )
+
+
+def test_from_profile_transporta_controllers() -> None:
+    """O mapa do perfil entra no draft como passthrough (source_controllers)."""
+    draft = DraftConfig.from_profile(_profile_com_mapa())
+    assert draft.source_controllers is not None
+    assert _MAC_BT in draft.source_controllers
+
+
+def test_to_profile_preserva_controllers_apos_editar_outra_coisa() -> None:
+    """O round-trip que trava a classe de bug histórica: carregar perfil COM
+    mapa → editar OUTRA seção na GUI (leds globais) → salvar → mapa intacto.
+
+    `to_profile()` reconstrói o Profile do zero — sem o passthrough, este é
+    exatamente o caminho que já apagou seções DUAS vezes
+    (BUG-FOOTER-SAVE-DROPS-SECTIONS-01, BUG-MOUSE-SAVE-DROPS-SECTION-01).
+    """
+    original = _profile_com_mapa()
+    draft = DraftConfig.from_profile(original)
+
+    # A usuária mexe em OUTRA coisa: a cor global da lightbar.
+    novo_leds = draft.leds.model_copy(update={"lightbar_rgb": (255, 0, 0)})
+    draft = draft.model_copy(update={"leds": novo_leds})
+
+    salvo = draft.to_profile(original.name)
+    assert salvo.leds.lightbar == (255, 0, 0)  # a edição valeu
+    assert salvo.controllers == original.controllers  # o mapa NÃO se perdeu
+    assert salvo.controllers is not None
+    assert salvo.controllers[_MAC_BT].leds is not None
+    assert salvo.controllers[_MAC_BT].leds.lightbar == (0, 0, 255)
+
+
+def test_to_profile_sem_mapa_nao_inventa_a_chave() -> None:
+    """Perfil de origem SEM mapa (os antigos da usuária) segue sem mapa após
+    o ciclo do draft — e um draft novo (sem origem) idem."""
+    draft = DraftConfig.from_profile(_make_profile(name="antigo"))
+    assert draft.to_profile("antigo").controllers is None
+    assert DraftConfig.default().to_profile("novo").controllers is None
+
+
+def test_roundtrip_draft_e_loader_ponta_a_ponta(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O fluxo inteiro do rodapé: load_profile → from_profile → editar outra
+    coisa → to_profile → save_profile → o JSON no disco mantém o mapa."""
+    import json
+
+    from hefesto_dualsense4unix.profiles import loader as loader_module
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+    target = tmp_path / "profiles"
+    target.mkdir()
+    monkeypatch.setattr(
+        loader_module, "profiles_dir", lambda ensure=False: target
+    )
+
+    save_profile(_profile_com_mapa(name="vitoria"))
+    draft = DraftConfig.from_profile(load_profile("vitoria"))
+    novo_leds = draft.leds.model_copy(update={"lightbar_brightness": 50})
+    draft = draft.model_copy(update={"leds": novo_leds})
+    path = save_profile(draft.to_profile("vitoria"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["controllers"][_MAC_BT]["leds"]["lightbar"] == [0, 0, 255]
+    assert abs(data["leds"]["lightbar_brightness"] - 0.5) < 0.01

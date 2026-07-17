@@ -597,11 +597,21 @@ class Daemon:
                 mute(True)
 
     def _reapply_last_profile(self) -> None:
-        """Re-ativa o último perfil salvo (restaura gatilhos/rumble/teclado)."""
+        """Re-ativa o perfil corrente ao sair do Modo Nativo (gatilhos/teclado).
+
+        PERFIL-03: prefere `store.active_profile` (o perfil ATIVO — inclusive
+        um escolhido pelo autoswitch pela janela em foco) e só cai no
+        session.json quando não há ativo em memória. Com a semântica nova
+        (session.json = última escolha MANUAL), a ordem antiga re-aplicaria a
+        última escolha manual por cima do perfil que o autoswitch ativou —
+        mudança não intencional apontada pela tabela dos 5 call sites. A
+        ativação vai com `origin="system"`: sair do nativo não é escolha nova
+        de perfil e NÃO regrava a intenção manual.
+        """
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
         from hefesto_dualsense4unix.utils.session import load_last_profile
 
-        name = load_last_profile() or self.store.active_profile
+        name = self.store.active_profile or load_last_profile()
         if not name:
             return
         manager = ProfileManager(
@@ -616,7 +626,7 @@ class Daemon:
             # de sair é soberano; o próximo autoswitch/switch re-avalia o modo.
         )
         with contextlib.suppress(Exception):
-            manager.activate(name)
+            manager.activate(name, origin="system")
 
     def _zero_rumble_motors(self) -> None:
         """Zera os motores ao SAIR de um modo (HARM-16). Thin wrapper."""

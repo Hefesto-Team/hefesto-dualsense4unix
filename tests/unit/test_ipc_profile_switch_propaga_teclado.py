@@ -203,6 +203,13 @@ async def test_boot_restore_nao_aplica_secao_mouse(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
         lambda: "mouseprof",
     )
+    # PERFIL-03: o restore agora consulta também o marker manual
+    # (`resolve_boot_profile`) — anula-o para o teste não ler o
+    # active_profile.txt REAL da máquina (hermeticidade).
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.read_active_marker",
+        lambda: None,
+    )
 
     await restore_last_profile(daemon)  # type: ignore[arg-type]
 

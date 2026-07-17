@@ -433,3 +433,49 @@ async def test_histerese_no_run_loop_mantem_perfil(isolated_profiles_dir: Path):
 
     assert switcher._current_profile == "shooter"
     assert manager.store.counter("profile.activated") == 1
+
+
+def test_autoswitch_ativa_sem_gravar_last_profile_manual(
+    isolated_profiles_dir: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """PERFIL-03: a troca automática ativa o perfil (aplica + marca ativo) mas
+    NÃO grava session.json nem o marker — o bug provado do autoload era o
+    autoswitch reescrever a intenção manual da usuária a cada troca de janela
+    (ao vivo: session.json dizia 'Navegação' com active_profile.txt='vitoria').
+    Integração com manager e sessão REAIS, config isolada."""
+    config = tmp_path / "config"
+    config.mkdir()
+
+    def fake_config_dir(ensure: bool = False) -> Path:
+        if ensure:
+            config.mkdir(parents=True, exist_ok=True)
+        return config
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.config_dir", fake_config_dir
+    )
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    monkeypatch.setattr(xdg_paths, "config_dir", fake_config_dir)
+
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)
+    sw._tick({"wm_class": "Doom"}, 0.6)
+
+    assert sw._current_profile == "shooter"
+    assert manager.store.active_profile == "shooter"
+    from hefesto_dualsense4unix.utils.session import (
+        load_last_profile,
+        read_active_marker,
+    )
+
+    assert load_last_profile() is None
+    assert read_active_marker() is None

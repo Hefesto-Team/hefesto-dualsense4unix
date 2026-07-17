@@ -1,13 +1,18 @@
 """Persistência de sessão — salva e carrega o último perfil ativo do usuário.
 
 O arquivo `~/.config/hefesto-dualsense4unix/session.json` guarda apenas o nome do
-último perfil explicitamente ativado. O daemon lê esse arquivo no
-startup e re-ativa o perfil automaticamente.
+último perfil explicitamente ativado — desde o PERFIL-03, SÓ o gesto manual
+(`ProfileManager.activate(origin="manual")`) o escreve; autoswitch e restores
+de sistema não tocam nele. O daemon lê esse arquivo no startup (via
+`resolve_boot_profile`) e re-ativa o perfil automaticamente.
 
 CLUSTER-IPC-STATE-PROFILE-01 (Bug B): adicional `active_profile.txt` é marker
 secundário para a CLI legada (`hefesto-dualsense4unix profile current`).
 `session.json` continua sendo o canônico para o daemon restaurar no boot.
-Ambos são escritos em paridade pelo handler IPC `profile.switch`.
+Ambos são escritos em paridade pelos gestos manuais (handler IPC
+`profile.switch` e ciclo por hotkey); quando divergem (herança de versões em
+que o autoswitch clobberava o session.json), o marker vence no boot — ver
+`resolve_boot_profile`.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
@@ -89,7 +94,8 @@ def read_active_marker() -> str | None:
     """Lê `active_profile.txt`, ou None se ausente/vazio.
 
     Marker secundário usado pela CLI (`hefesto-dualsense4unix profile current`).
-    Daemon usa `load_last_profile` (session.json) no restore.
+    Daemon usa `resolve_boot_profile` (session.json + seed do marker) no
+    restore.
 
     Import lazy de `config_dir` (mesma justificativa de `save_active_marker`).
     """
@@ -103,6 +109,39 @@ def read_active_marker() -> str | None:
         return content or None
     except Exception:
         return None
+
+
+def resolve_boot_profile() -> str | None:
+    """Nome do perfil a restaurar no boot — com o seed de migração (PERFIL-03).
+
+    `session.json` é o canônico e, pós-fix, guarda só a última escolha
+    MANUAL (`ProfileManager.activate(origin="manual")`). Mas versões
+    anteriores deixavam o autoswitch sobrescrevê-lo a cada troca de janela —
+    o valor herdado pode ser lixo (provado ao vivo: session.json dizia
+    "Navegação" enquanto a escolha da usuária era "vitoria"). O marker
+    `active_profile.txt` sempre foi manual-only (escrito apenas pelo
+    profile.switch IPC e pelo ciclo de hotkey), então quando os dois
+    DIVERGEM é o marker que carrega a intenção manual — ele vence, com log.
+
+    Pós-fix os dois arquivos convergem a cada gesto manual (o autoswitch
+    não grava mais nenhum dos dois) e o seed vira no-op. Sem marker (nunca
+    houve escolha manual) o comportamento é o histórico: session.json.
+
+    Nota (review 2026-07-16): esta função só resolve NOMES — não valida se o
+    perfil carrega. Quem cobre marker órfão (perfil renomeado/apagado) é o
+    `restore_last_profile` (daemon/connection.py), que cai no session.json
+    com o log `last_profile_seed_marker_invalido` quando a ativação falha.
+    """
+    session_name = load_last_profile()
+    marker = read_active_marker()
+    if marker and marker != session_name:
+        logger.info(
+            "last_profile_seed_from_marker",
+            session=session_name,
+            marker=marker,
+        )
+        return marker
+    return session_name
 
 
 _PAUSED_FLAG_FILE = "paused.flag"
@@ -421,6 +460,7 @@ __all__ = [
     "load_mouse_preference",
     "load_paused_state",
     "read_active_marker",
+    "resolve_boot_profile",
     "save_active_marker",
     "save_coop_enabled",
     "save_gamepad_emulation",

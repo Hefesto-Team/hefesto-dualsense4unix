@@ -156,26 +156,6 @@ def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
     return mult
 
 
-def _resolve_output_index(controller: Any, uniq: str) -> int | None:
-    """Posição do controle de MAC `uniq` em `describe_controllers`, ou None.
-
-    É o mesmo índice que `set_output_target` espera
-    (FEAT-DSX-CONTROLLER-SELECTOR-01). None = backend sem introspecção
-    (ex.: FakeController) ou controle não encontrado.
-    """
-    describe = getattr(controller, "describe_controllers", None)
-    if not callable(describe):
-        return None
-    try:
-        for entry in describe():
-            if entry.get("uniq") == uniq:
-                index = entry.get("index")
-                return index if isinstance(index, int) else None
-    except Exception:
-        logger.debug("game_rumble_describe_failed", exc_info=True)
-    return None
-
-
 def apply_game_rumble(
     daemon: DaemonProtocol,
     weak: int,
@@ -193,13 +173,15 @@ def apply_game_rumble(
         reassert é no-op e o FF do jogo manda sozinho.
       - A política global de intensidade é aplicada AQUI (mesmo multiplicador
         do reassert) — o slider vale também para o rumble do jogo.
-      - `target_uniq` (MAC) mira o controle de UM jogador via o seletor
-        público do backend (`set_output_target` por índice, resolvido por
-        `describe_controllers`), salvando e restaurando o alvo anterior. O
-        bloco todo é síncrono (sem await), então nenhuma outra task do event
-        loop intercala um output no alvo trocado. Sem targeting público
-        (ex.: FakeController) ou sem MAC, cai no broadcast histórico —
-        limitação documentada: TODOS os controles vibram juntos.
+      - `target_uniq` (MAC) mira o controle de UM jogador via a API por-uniq
+        do backend (`set_rumble_for`, PERFIL-01) — SEM o flip transitório do
+        seletor global (`set_output_target`) que existia antes: o flip corria
+        com o executor multi-thread (max_workers=2) e, com o estado desejado
+        keyed pelo alvo lido na hora, uma escrita da GUI intercalada
+        persistiria config no controle errado. O seletor da usuária nunca é
+        tocado. Sem a API (ex.: FakeController) ou com MAC que não casa
+        nenhum handle, cai no broadcast histórico — limitação documentada:
+        TODOS os controles vibram juntos.
     """
     if daemon.config.rumble_active is not None:
         return  # rumble fixado manual vence o FF do jogo
@@ -208,31 +190,21 @@ def apply_game_rumble(
     weak_eff = max(0, min(255, round(weak * mult)))
     strong_eff = max(0, min(255, round(strong * mult)))
 
-    # Any: métodos de targeting são opcionais no backend (só o PyDualSense os
+    # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     # tem; IController/FakeController não) — o gate é o callable() abaixo.
-    set_target: Any = getattr(controller, "set_output_target", None)
-    get_target: Any = getattr(controller, "get_output_target_index", None)
-    index: int | None = None
-    if target_uniq is not None and callable(set_target) and callable(get_target):
-        index = _resolve_output_index(controller, target_uniq)
-    if index is None:
+    rumble_for: Any = getattr(controller, "set_rumble_for", None)
+    if target_uniq is not None and callable(rumble_for):
         try:
-            controller.set_rumble(weak=weak_eff, strong=strong_eff)
+            if rumble_for(target_uniq, weak_eff, strong_eff):
+                return
         except Exception as exc:
-            logger.warning("game_rumble_failed", err=str(exc))
-        return
-    previous: int | None = None
+            logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
+            return
+        # MAC não casou nenhum handle → broadcast histórico (documentado).
     try:
-        previous = get_target()
-        set_target(index)
         controller.set_rumble(weak=weak_eff, strong=strong_eff)
     except Exception as exc:
-        logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
-    finally:
-        # Restaura o alvo anterior mesmo em falha (o seletor da usuária não
-        # pode ficar sequestrado pelo rumble de um jogador).
-        with contextlib.suppress(Exception):
-            set_target(previous)
+        logger.warning("game_rumble_failed", err=str(exc))
 
 
 def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:

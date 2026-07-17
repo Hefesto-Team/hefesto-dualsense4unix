@@ -736,3 +736,89 @@ class TestResolvePlayerNumbers:
         assert resolve_player_numbers(
             daemon, [self._ctrl(MAC_P1), self._ctrl(None)]
         ) == [1, None]
+
+
+# -- PERFIL-01 (4P-01): regressão do contrato `_desired` com o backend REAL --
+#
+# O coop lê `getattr(ctrl, "_desired", None).player_leds` como "o padrão do
+# perfil" — um rename seco no backend falharia EM SILÊNCIO (getattr devolvendo
+# None para sempre; o revert do co-op pararia de restaurar o player-LED do
+# perfil sem nenhum teste quebrando). Estes testes usam o PyDualSenseController
+# de verdade (handles stubados) para travar o contrato após o refactor
+# `_desired` → `_desired_default` + `_desired_by_uniq`.
+
+
+def _backend_real_com_handle() -> tuple[Any, Any]:
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+    reader = EvdevReader(device_path=None)
+    reader._device_path = None
+    backend = PyDualSenseController(evdev_reader=reader)
+    handle = SimpleNamespace(
+        connected=True,
+        light=SimpleNamespace(playerNumber=None, setColorI=lambda *a: None),
+    )
+    backend._handles = {"AA:BB:CC:00:00:07": handle}
+    backend._primary_key = "AA:BB:CC:00:00:07"
+    return backend, handle
+
+
+def test_profile_player_leds_le_o_default_do_backend_real() -> None:
+    """Após o refactor PERFIL-01, `_desired` (property de compat) segue
+    devolvendo o padrão BROADCAST do perfil — o que o revert precisa."""
+    backend, _handle = _backend_real_com_handle()
+    backend.set_player_leds(PROFILE_LEDS)  # broadcast do perfil
+
+    daemon = SimpleNamespace(
+        config=SimpleNamespace(coop_enabled=True, gamepad_flavor="dualsense"),
+        _gamepad_device=object(),
+        controller=backend,
+        _coop_manager=None,
+    )
+    mgr = CoopManager(daemon)
+    assert mgr._profile_player_leds() == PROFILE_LEDS
+
+
+def test_profile_player_leds_ignora_override_por_uniq() -> None:
+    """O override de UM controle não é "o padrão do perfil": o revert broadcast
+    do co-op lê só o default (revert por-uniq é assunto do PERFIL-06)."""
+    from hefesto_dualsense4unix.core.controller import OutputSpec
+
+    backend, _handle = _backend_real_com_handle()
+    backend.set_player_leds(PROFILE_LEDS)
+    backend.apply_output_for(
+        "aabbcc000007", OutputSpec(player_leds=(True, True, True, True, True))
+    )
+
+    daemon = SimpleNamespace(
+        config=SimpleNamespace(coop_enabled=True, gamepad_flavor="dualsense"),
+        _gamepad_device=object(),
+        controller=backend,
+        _coop_manager=None,
+    )
+    mgr = CoopManager(daemon)
+    assert mgr._profile_player_leds() == PROFILE_LEDS
+
+
+def test_revert_do_coop_restaura_o_padrao_do_perfil_no_backend_real() -> None:
+    """O revert re-emite o padrão do perfil pelo caminho público broadcast e o
+    hardware (handle stub) recebe o valor CERTO — fim a fim no backend real."""
+    from pydualsense.enums import PlayerID
+
+    backend, handle = _backend_real_com_handle()
+    backend.set_player_leds(PROFILE_LEDS)
+    handle.light.playerNumber = "pisoteado-pelo-coop"
+
+    daemon = SimpleNamespace(
+        config=SimpleNamespace(coop_enabled=False, gamepad_flavor="dualsense"),
+        _gamepad_device=None,
+        controller=backend,
+        _coop_manager=None,
+    )
+    mgr = CoopManager(daemon)
+    mgr._leds_overridden = True
+    mgr._revert_player_leds()
+
+    bitmask = sum(1 << i for i, on in enumerate(PROFILE_LEDS) if on)
+    assert handle.light.playerNumber == PlayerID(bitmask)

@@ -281,7 +281,16 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
         _write_active_marker(name)
         return
     except IpcError as exc:
+        # Fix do review (2026-07-16, MED): recusa ≠ ativação. O daemon está
+        # VIVO e disse não (perfil inexistente/corrompido) — gravar o marker
+        # aqui registrava um switch que nunca aconteceu, e o marker tem
+        # autoridade de boot (resolve_boot_profile): um marker envenenado
+        # desviava o restore de TODO boot seguinte.
         console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
+        console.print(
+            "[dim]nada foi ativado — o marker local ficou como estava.[/dim]"
+        )
+        return
     except (FileNotFoundError, ConnectionError, OSError):
         console.print(
             "[yellow]daemon offline — gravando marker local apenas.[/yellow]"

@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 Transport = Literal["usb", "bt"]
 Side = Literal["left", "right"]
@@ -40,6 +43,28 @@ class TriggerEffect:
         for i, b in enumerate(self.forces):
             if not (0 <= b <= 255):
                 raise ValueError(f"forces[{i}] fora de byte: {b}")
+
+
+@dataclass(frozen=True)
+class OutputSpec:
+    """Saída parcial desejada de um controle (PERFIL-01 / 4P-01).
+
+    Vocabulário da API por-uniq do backend: campo ``None`` = "sem opinião"
+    (o campo herda o padrão broadcast no MERGE POR CAMPO — nunca resolução
+    por objeto, refutada na revisão: um override parcial só de gatilhos
+    precisa herdar a cor global do perfil).
+
+    Usado por `IController.apply_output_defaults` (padrão do perfil em
+    broadcast REAL), `apply_output_for` (override de UM controle, keyed por
+    MAC) e `reset_output_overrides` (substituição do mapa na ativação de
+    perfil).
+    """
+
+    trigger_left: TriggerEffect | None = None
+    trigger_right: TriggerEffect | None = None
+    led: tuple[int, int, int] | None = None
+    player_leds: tuple[bool, bool, bool, bool, bool] | None = None
+    mic_led: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -139,10 +164,60 @@ class IController(ABC):
     @abstractmethod
     def get_transport(self) -> Transport: ...
 
+    # --- API por-uniq (PERFIL-01 / 4P-01) --------------------------------
+    # Métodos CONCRETOS de propósito: backends de um controle só
+    # (FakeController) herdam comportamento seguro sem mudança; o backend
+    # multi-controle (PyDualSenseController) sobrescreve os três com o estado
+    # desejado por-controle de verdade.
+
+    def apply_output_defaults(self, spec: OutputSpec) -> None:
+        """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
+
+        Base: delega aos setters clássicos (suficiente para backend de um
+        controle só). O backend multi-controle sobrescreve para IGNORAR o
+        seletor de alvo da GUI — os setters clássicos o respeitam, então
+        ativar um perfil (manual OU autoswitch, mesma cadeia) com um alvo
+        selecionado aplicava SÓ no alvo (bug provado do PERFIL-01).
+        """
+        if spec.trigger_left is not None:
+            self.set_trigger("left", spec.trigger_left)
+        if spec.trigger_right is not None:
+            self.set_trigger("right", spec.trigger_right)
+        if spec.led is not None:
+            self.set_led(spec.led)
+        if spec.player_leds is not None:
+            self.set_player_leds(spec.player_leds)
+        if spec.mic_led is not None:
+            self.set_mic_led(spec.mic_led)
+
+    def apply_output_for(self, uniq: str, spec: OutputSpec) -> None:
+        """Aplica `spec` SÓ no controle de MAC `uniq` e registra o override.
+
+        O alvo é o PARÂMETRO (resolvido na borda pelo chamador) — nunca o
+        seletor global mutável de output. Base: no-op — backend sem
+        identidade por-controle não tem onde registrar. No backend real, um
+        controle DESCONECTADO fica registrado no mapa em memória e recebe o
+        override quando o hotplug o trouxer de volta.
+        """
+        return
+
+    def reset_output_overrides(
+        self, overrides: Mapping[str, OutputSpec] | None = None
+    ) -> None:
+        """SUBSTITUI o mapa de overrides por-controle (ativação de perfil).
+
+        Ciclo de vida explícito do PERFIL-01: toda ativação de perfil troca o
+        mapa inteiro (vazio quando o perfil não tem overrides) — senão o
+        override do perfil ANTERIOR ressuscita no hotplug sob o perfil novo.
+        Base: no-op — sem estado por-controle não há mapa a substituir.
+        """
+        return
+
 
 __all__ = [
     "ControllerState",
     "IController",
+    "OutputSpec",
     "Side",
     "Transport",
     "TriggerEffect",

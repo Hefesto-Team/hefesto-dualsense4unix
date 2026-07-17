@@ -145,9 +145,11 @@ class TriggersActionsMixin(WidgetAccessMixin):
     # --- draft integration ---
 
     def _refresh_triggers_from_draft(self) -> None:
-        """Popula widgets da aba Triggers a partir de self.draft.triggers.
+        """Popula widgets da aba Triggers a partir do draft.
 
-        Protegido por _triggers_guard_refresh para não disparar handlers de signal
+        PERFIL-04: exibe os gatilhos EFETIVOS do alvo de edição atual — o
+        override por-controle quando existe, senão a seção global. Protegido
+        por _triggers_guard_refresh para não disparar handlers de signal
         durante a atualização programatica dos combos.
         """
         if self._triggers_guard_refresh:
@@ -155,10 +157,13 @@ class TriggersActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         if draft is None:
             return
+        triggers_draft = draft.effective_triggers_for(
+            getattr(self, "_edit_target_uniq", None)
+        )
         self._triggers_guard_refresh = True
         try:
             for side in ("left", "right"):
-                trigger_draft = getattr(draft.triggers, side)
+                trigger_draft = getattr(triggers_draft, side)
                 combo = self._trigger_mode.get(side)
                 if combo is None:
                     continue
@@ -275,8 +280,24 @@ class TriggersActionsMixin(WidgetAccessMixin):
         values = self._collect_values(side)
         params_list: list[int] = preset_to_positional_params(spec, values)
         new_trigger = TriggerDraft(mode=preset_id, params=tuple(params_list))
-        new_triggers = draft.triggers.model_copy(update={side: new_trigger})
-        self.draft = draft.model_copy(update={"triggers": new_triggers})
+        uniq = getattr(self, "_edit_target_uniq", None)
+        if uniq is None:
+            new_triggers = draft.triggers.model_copy(update={side: new_trigger})
+            draft = draft.model_copy(update={"triggers": new_triggers})
+            # Fix HIGH do review (2026-07-16): edição em "Todos" limpa o LADO
+            # editado dos overrides por-controle — espelho da regra do backend
+            # ao vivo. Sem isso, "Salvar Perfil" persistia o gatilho antigo do
+            # alvo e a próxima ativação o ressuscitava.
+            self.draft = draft.with_override_fields_cleared("triggers", {side})
+            return
+        # PERFIL-04: gatilho editado com um controle selecionado no seletor
+        # vai para o override por-MAC do perfil (draft.controllers[uniq]) —
+        # semeado com o efetivo em tela, então o OUTRO lado preserva o que a
+        # usuária vê. "Salvar Perfil" persiste dentro do mesmo perfil.
+        base = draft.effective_triggers_for(uniq)
+        self.draft = draft.with_controller_triggers(
+            uniq, base.model_copy(update={side: new_trigger})
+        )
 
     def _on_preset_changed(self, side: str, combo: Any) -> None:
         """Aplica o preset selecionado populando os sliders de posicao."""

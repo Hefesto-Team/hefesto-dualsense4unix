@@ -34,6 +34,9 @@ from hefesto_dualsense4unix.app.constants import (
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
 from hefesto_dualsense4unix.gui.widgets import BUTTON_GLYPH_LABELS, ButtonGlyph, StickPreviewGtk
 from hefesto_dualsense4unix.utils.i18n import _
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Configuração do grid de glyphs (4x4)
@@ -118,6 +121,18 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_visible: bool
     _target_combo_active: int
     _target_buttons: list[Any]
+    # PERFIL-04 (sprint perfis-por-controle): alvo de EDIÇÃO derivado do
+    # seletor — o MAC normalizado (uniq) do controle selecionado, ou None em
+    # "Todos"/alvo sem MAC (aí a edição segue GLOBAL, como sempre). As abas
+    # Lightbar/Gatilhos leem `_edit_target_uniq` para gravar no override do
+    # perfil (draft.controllers) e exibir os valores efetivos do alvo. Fica
+    # em sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
+    # HORA no clique do seletor (a próxima mexida já cai no override certo).
+    _edit_target_uniq: str | None = None
+    _edit_target_label: str | None = None
+    _target_uniq_by_index: dict[int, str | None]
+    _target_label_by_index: dict[int, str]
+    _edit_badge: Any = None
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
@@ -257,6 +272,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_combo_visible = False
         self._target_combo_active = -1
         self._target_buttons = []
+        # PERFIL-04: estado do alvo de edição por-controle.
+        self._edit_target_uniq = None
+        self._edit_target_label = None
+        self._target_uniq_by_index = {}
+        self._target_label_by_index = {}
+        self._edit_badge = None
         header_bar = self._get("header_bar")
         if header_bar is None:
             self._target_combo = None
@@ -272,6 +293,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         box.hide()
         header_bar.pack_end(box, False, False, 0)
         self._target_combo = box
+        # PERFIL-04: badge "Editando: Controle N (BT)" — rótulo inline no
+        # banner (nunca popup — cosmic-epoch#2497), visível só quando um
+        # controle com MAC está selecionado. Deixa explícito que as abas
+        # Lightbar/Gatilhos estão editando UM controle dentro do perfil.
+        badge = Gtk.Label()
+        with contextlib.suppress(Exception):
+            badge.get_style_context().add_class("dim-label")
+        badge.set_no_show_all(True)
+        badge.hide()
+        header_bar.pack_end(badge, False, False, 6)
+        self._edit_badge = badge
 
     @staticmethod
     def _short_target_label(label: str) -> str:
@@ -307,6 +339,91 @@ class StatusActionsMixin(WidgetAccessMixin):
         if 0 <= pos < len(self._target_buttons):
             self._target_buttons[pos].set_active(True)
 
+    # ------------------------------------------------------------------
+    # Alvo de edição por-controle (PERFIL-04)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _edit_badge_text(label: str | None) -> str:
+        """Texto do badge de edição por-controle; vazio = badge escondido."""
+        if not label:
+            return ""
+        return _("Editando: {alvo}").format(alvo=label)
+
+    def _update_target_maps(self, conectados: list[dict[str, Any]]) -> None:
+        """Recalcula index→uniq e index→rótulo a partir do ``state_full``.
+
+        O ``uniq`` (MAC normalizado, estável entre USB e BT) vem do bloco
+        ``controllers`` que o daemon já expõe. Controle sem MAC (key por
+        path) fica com uniq None — a edição dele segue GLOBAL, como hoje.
+        """
+        uniq_by_index: dict[int, str | None] = {}
+        label_by_index: dict[int, str] = {}
+        for c in conectados:
+            idx = int(c.get("index", 0))
+            raw_uniq = c.get("uniq")
+            uniq_by_index[idx] = (
+                raw_uniq if isinstance(raw_uniq, str) and raw_uniq else None
+            )
+            transporte = (c.get("transport") or "?").upper()
+            label_by_index[idx] = _("Controle {n} ({t})").format(
+                n=idx + 1, t=transporte
+            )
+        self._target_uniq_by_index = uniq_by_index
+        self._target_label_by_index = label_by_index
+
+    def _sync_edit_target(self, target_index: int | None) -> None:
+        """Deriva o alvo de EDIÇÃO (uniq) do índice do seletor.
+
+        Idempotente: só atualiza badge e re-popula as abas por-controle
+        (lightbar/gatilhos) quando o alvo efetivamente muda. ``None`` =
+        "Todos" (edição global, badge some).
+        """
+        uniq: str | None = None
+        label: str | None = None
+        if target_index is not None:
+            uniq = getattr(self, "_target_uniq_by_index", {}).get(target_index)
+            label = getattr(self, "_target_label_by_index", {}).get(target_index)
+            if uniq is None and label is not None:
+                # Alvo sem MAC estável (regra do sprint): edita o global,
+                # com trilha em vez de silêncio.
+                logger.debug(
+                    "edit_target_sem_mac_edita_global", indice=target_index
+                )
+        if uniq == self._edit_target_uniq and label == self._edit_target_label:
+            return
+        self._edit_target_uniq = uniq
+        self._edit_target_label = label
+        self._update_edit_badge()
+        self._refresh_target_tabs()
+
+    def _update_edit_badge(self) -> None:
+        """Mostra/esconde o badge conforme o alvo de edição atual."""
+        badge = getattr(self, "_edit_badge", None)
+        if badge is None:
+            return
+        texto = self._edit_badge_text(
+            self._edit_target_label if self._edit_target_uniq else None
+        )
+        if texto:
+            badge.set_text(texto)
+            badge.show()
+        else:
+            badge.hide()
+
+    def _refresh_target_tabs(self) -> None:
+        """Re-popula as abas por-controle para exibir os valores do alvo novo."""
+        for nome in ("_refresh_lightbar_from_draft", "_refresh_triggers_from_draft"):
+            fn = getattr(self, nome, None)
+            if fn is None:
+                continue
+            try:
+                fn()
+            except Exception as exc:
+                logger.warning(
+                    "edit_target_refresh_aba_falhou", metodo=nome, erro=str(exc)
+                )
+
     def _refresh_controller_target_combo(self, state: dict[str, Any]) -> None:
         """Atualiza os botões do seletor; reflete ``output_target_index``.
 
@@ -317,15 +434,22 @@ class StatusActionsMixin(WidgetAccessMixin):
         if box is None:
             return
         conectados = self._connected_controllers(state)
+        # PERFIL-04: mantém os mapas index→uniq/rótulo e o alvo de edição em
+        # sync com o daemon (cobre alvo trocado por CLI/applet e o boot).
+        self._update_target_maps(conectados)
+        target_index = state.get("output_target_index")
+        if not isinstance(target_index, int) or isinstance(target_index, bool):
+            target_index = None
         if len(conectados) < 2:
+            # Sem seletor visível não há edição por-controle — o alvo de
+            # edição volta ao global (badge some).
+            self._sync_edit_target(None)
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
                 box.hide()
                 self._target_combo_visible = False
             return
+        self._sync_edit_target(target_index)
         rows = self._controller_target_rows(conectados)
-        target_index = state.get("output_target_index")
-        if not isinstance(target_index, int) or isinstance(target_index, bool):
-            target_index = None
         labels = [label for label, _ in rows]
         rows_changed = labels != [label for label, _ in self._target_combo_rows]
         want_pos = self._target_active_position(rows, target_index)
@@ -354,6 +478,11 @@ class StatusActionsMixin(WidgetAccessMixin):
             return
         if not button.get_active():
             return
+        # PERFIL-04: o alvo de edição muda NA HORA (não espera o tick de 2 Hz)
+        # — a usuária clica "1 · BT" e a próxima mexida na lightbar já cai no
+        # override certo do draft. Se o IPC falhar, o sync de 2 Hz reconverge
+        # com o estado real do daemon.
+        self._sync_edit_target(index)
         call_async(
             "controller.target.set",
             {"index": index},
@@ -623,6 +752,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         if combo is not None:
             combo.hide()
             self._target_combo_visible = False
+        # PERFIL-04: sem daemon não há alvo de edição por-controle — a edição
+        # volta ao global e o badge some (idempotente se já estava global).
+        self._sync_edit_target(None)
         # UX-03: daemon offline não é degradação do vpad — o banner some junto.
         self._refresh_vpad_banner(None)
         self._reset_live_widgets()

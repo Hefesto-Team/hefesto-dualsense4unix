@@ -14,6 +14,7 @@ from hefesto_dualsense4unix.profiles.loader import (
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+    ControllerOverrides,
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -351,6 +352,134 @@ def test_load_profile_scan_pula_invalido_e_acha_o_valido(
     assert restored.name == "Ação"
     eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
     assert any("aaa-quebrado.json" in str(rec.get("path", "")) for rec in eventos)
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-02 (sprint 2026-07-16-perfis-por-controle): serialização que OMITE
+# o mapa `controllers` quando None/vazio — requisito de compatibilidade
+# ---------------------------------------------------------------------------
+
+#: MAC forjado da faixa permitida (test_anonimato_de_fixtures.py).
+_MAC_BT = "aabbcc000002"
+
+
+def test_save_omite_controllers_quando_none(isolated_profiles_dir: Path):
+    """Perfil sem opinião por-controle NÃO grava `"controllers": null` — sem a
+    omissão, binário antigo (extra="forbid") rejeitaria TODO perfil salvo pelo
+    novo no downgrade."""
+    path = save_profile(_mk_profile("sem_mapa"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert "controllers" not in data
+
+
+def test_save_omite_controllers_quando_vazio(isolated_profiles_dir: Path):
+    """Mapa `{}` explícito também some do JSON (vazio == sem opinião)."""
+    profile = _mk_profile("mapa_vazio").model_copy(update={"controllers": {}})
+    path = save_profile(profile)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert "controllers" not in data
+
+
+def test_save_persiste_controllers_preenchido(isolated_profiles_dir: Path):
+    """Aceite 1 do sprint: o mapa preenchido sobrevive a save→load sem perda."""
+    profile = _mk_profile("com_mapa").model_copy(
+        update={
+            "controllers": {
+                _MAC_BT: ControllerOverrides(leds=LedsConfig(lightbar=(0, 255, 0))),
+            }
+        }
+    )
+    path = save_profile(profile)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["controllers"][_MAC_BT]["leds"]["lightbar"] == [0, 255, 0]
+
+    restored = load_profile("com_mapa")
+    assert restored.controllers is not None
+    assert restored.controllers[_MAC_BT].leds is not None
+    assert restored.controllers[_MAC_BT].leds.lightbar == (0, 255, 0)
+
+
+def test_save_preserva_override_parcial_escrito_a_mao(isolated_profiles_dir: Path):
+    """Fix do review (2026-07-16, MED): entrada PARCIAL escrita à mão (só
+    `lightbar`) continua parcial após save→load→save. O dump denso marcava os
+    defaults do schema como explícitos no próximo load e a ativação pisava o
+    global do controle (player-LEDs apagados, brilho 1.0) — a
+    resolução-por-objeto refutada pelo sprint doc, via serialização."""
+    raw = _mk_profile("parcial").model_dump(mode="json")
+    raw["controllers"] = {_MAC_BT: {"leds": {"lightbar": [0, 255, 0]}}}
+    profile = Profile.model_validate(raw)
+
+    path = save_profile(profile)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["controllers"][_MAC_BT] == {"leds": {"lightbar": [0, 255, 0]}}
+
+    # O ciclo completo load→save também não densifica.
+    save_profile(load_profile("parcial"))
+    data2 = json.loads(path.read_text(encoding="utf-8"))
+    assert data2["controllers"][_MAC_BT] == {"leds": {"lightbar": [0, 255, 0]}}
+
+
+def test_perfil_antigo_roundtrip_load_save_nao_introduz_a_chave(
+    isolated_profiles_dir: Path,
+):
+    """Aceite 2 do sprint: perfil ANTIGO (JSON sem o campo, como os da usuária:
+    vitoria/sackboy_nativo/navegacao) passa por load→save e o arquivo fica
+    BYTE-IDÊNTICO — em particular, sem ganhar `controllers`."""
+    path = save_profile(_mk_profile("antigo"))
+    antes = path.read_bytes()
+    assert b"controllers" not in antes
+
+    save_profile(load_profile("antigo"))
+    depois = path.read_bytes()
+    assert depois == antes
+
+
+def test_perfil_antigo_carrega_sem_warning(isolated_profiles_dir: Path):
+    """Migração silenciosa: perfil v1 mínimo (escrito à mão, sem NENHUM campo
+    novo) carrega sem erro e sem `profile_invalid` no log."""
+    import structlog
+
+    legado = isolated_profiles_dir / "legado.json"
+    legado.write_text(
+        json.dumps({"name": "legado", "match": {"type": "any"}}),
+        encoding="utf-8",
+    )
+
+    with structlog.testing.capture_logs() as captured:
+        profiles = load_all_profiles()
+
+    assert [p.name for p in profiles] == ["legado"]
+    assert profiles[0].controllers is None
+    eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
+    assert eventos == []
+
+
+def test_perfil_com_mapa_invalido_vira_warning_nao_crash(
+    isolated_profiles_dir: Path,
+):
+    """Key degenerada no disco (JSON editado à mão) segue o contrato do
+    loader: warning `profile_invalid` e os demais perfis carregam."""
+    import structlog
+
+    save_profile(_mk_profile("valido"))
+    invalido = isolated_profiles_dir / "mapa_ruim.json"
+    invalido.write_text(
+        json.dumps(
+            {
+                "name": "mapa_ruim",
+                "match": {"type": "any"},
+                "controllers": {"000000000001": {}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with structlog.testing.capture_logs() as captured:
+        profiles = load_all_profiles()
+
+    assert [p.name for p in profiles] == ["valido"]
+    eventos = [rec for rec in captured if rec.get("event") == "profile_invalid"]
+    assert any("mapa_ruim.json" in str(rec.get("path", "")) for rec in eventos)
 
 
 def test_carrega_perfis_default_do_assets_simulado(isolated_profiles_dir: Path):

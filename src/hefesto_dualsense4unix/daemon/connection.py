@@ -78,11 +78,31 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
-    """Reativa o último perfil salvo pelo usuário (FEAT-PERSIST-SESSION-01)."""
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
-    from hefesto_dualsense4unix.utils.session import load_last_profile
+    """Reativa o último perfil salvo pelo usuário (FEAT-PERSIST-SESSION-01).
 
-    name = load_last_profile()
+    PERFIL-03: o nome vem de `resolve_boot_profile` — session.json (canônico,
+    manual-only pós-fix) com o seed de migração do `active_profile.txt`
+    (quando divergem, o marker carrega a intenção manual herdada de versões
+    em que o autoswitch clobberava o session.json). A ativação vai com
+    `origin="system"`: restore de boot não é gesto novo da usuária e NÃO
+    regrava a intenção manual.
+
+    Fix do review (2026-07-16, MED): o marker vence na divergência SEM
+    verificar se o perfil ainda carrega — um marker órfão (perfil renomeado/
+    apagado/corrompido) suprimia o restore INTEIRO em todo boot, mesmo com o
+    session.json apontando um perfil carregável. Quando a ativação do nome
+    resolvido falha, tentamos o session.json como fallback, com o log
+    `last_profile_seed_marker_invalido` (recusa do marker ≠ boot sem perfil).
+    """
+    from functools import partial
+
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.utils.session import (
+        load_last_profile,
+        resolve_boot_profile,
+    )
+
+    name = resolve_boot_profile()
     if not name:
         return
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
@@ -90,52 +110,73 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     if getattr(daemon, "_native_mode", False):
         logger.info("last_profile_restore_skipped_native_mode", name=name)
         return
+    # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
+    # restore pode rodar antes/depois do keyboard subir e após reconexão
+    # (device recriado); resolver na ativação cobre todos os casos.
+    #
+    # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de
+    # propósito. O estado de emulação (mouse/gamepad) no boot é governado
+    # pelos FLAGS persistidos (lifecycle.py restaura antes desta chamada),
+    # não pela seção mouse do perfil. Com o applier injetado, um last_profile
+    # com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
+    # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já
+    # restaurado — matava o gamepad, apagava gamepad_emulation.flag e invertia
+    # a escolha persistida da usuária a cada boot. O perfil ainda aplica
+    # triggers/LEDs/teclado; só a emulação fica com os flags.
+    manager = ProfileManager(
+        controller=daemon.controller,
+        store=daemon.store,
+        keyboard_device_provider=lambda: getattr(
+            daemon, "_keyboard_device", None
+        ),
+        mouse_applier=None,
+        suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+        # FEAT-PROFILE-MODE-01: mode_applier=None no restore pela MESMA
+        # razão do mouse — gamepad/nativo/co-op no boot vêm dos flags
+        # persistidos (utils.session), não do perfil.
+        mode_applier=None,
+        # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado —
+        # diferente de mouse/mode, a política de rumble NÃO tem flag
+        # persistido próprio (reseta a "balanceado" a cada boot), então o
+        # perfil é a única fonte para restaurá-la; aplicá-la só ajusta a
+        # config (não cria/destrói devices — sem o risco do
+        # BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
+        rumble_policy_applier=getattr(
+            daemon, "apply_profile_rumble_policy", None
+        ),
+        rumble_passthrough_applier=getattr(
+            daemon, "apply_profile_rumble_passthrough", None
+        ),
+    )
     try:
-        # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
-        # restore pode rodar antes/depois do keyboard subir e após reconexão
-        # (device recriado); resolver na ativação cobre todos os casos.
-        #
-        # BUG-BOOT-RESTORE-FLIPS-EMULATION-01: mouse_applier=None no restore de
-        # propósito. O estado de emulação (mouse/gamepad) no boot é governado
-        # pelos FLAGS persistidos (lifecycle.py restaura antes desta chamada),
-        # não pela seção mouse do perfil. Com o applier injetado, um last_profile
-        # com mouse.enabled (ex.: point_and_click, que vira last_profile por mero
-        # autoswitch) rodava set_mouse_emulation(True) DEPOIS do gamepad já
-        # restaurado — matava o gamepad, apagava gamepad_emulation.flag e invertia
-        # a escolha persistida da usuária a cada boot. O perfil ainda aplica
-        # triggers/LEDs/teclado; só a emulação fica com os flags.
-        manager = ProfileManager(
-            controller=daemon.controller,
-            store=daemon.store,
-            keyboard_device_provider=lambda: getattr(
-                daemon, "_keyboard_device", None
-            ),
-            mouse_applier=None,
-            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-            # FEAT-PROFILE-MODE-01: mode_applier=None no restore pela MESMA
-            # razão do mouse — gamepad/nativo/co-op no boot vêm dos flags
-            # persistidos (utils.session), não do perfil.
-            mode_applier=None,
-            # FEAT-RUMBLE-POLICY-PROFILE-01: aqui o applier VAI injetado —
-            # diferente de mouse/mode, a política de rumble NÃO tem flag
-            # persistido próprio (reseta a "balanceado" a cada boot), então o
-            # perfil é a única fonte para restaurá-la; aplicá-la só ajusta a
-            # config (não cria/destrói devices — sem o risco do
-            # BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
-            rumble_policy_applier=getattr(
-                daemon, "apply_profile_rumble_policy", None
-            ),
-            rumble_passthrough_applier=getattr(
-                daemon, "apply_profile_rumble_passthrough", None
-            ),
+        await daemon._run_blocking(
+            partial(manager.activate, name, origin="system")
         )
-        await daemon._run_blocking(manager.activate, name)
         logger.info("last_profile_restored", name=name)
     except Exception as exc:
         # Sem `exc_info=True`: este warning dispara normalmente quando o perfil
         # persistido na sessão foi deletado/renomeado — err=str(exc) já dá o
         # diagnóstico; traceback completo seria ruído e atrasaria o boot.
         logger.warning("last_profile_restore_failed", name=name, err=str(exc))
+        # Fix do review (2026-07-16, MED): o nome resolvido pode ter vindo do
+        # marker (que vence na divergência) e o marker pode estar órfão —
+        # cair no session.json preserva o restore em vez de deixar o boot
+        # sem perfil nenhum.
+        fallback = load_last_profile()
+        if not fallback or fallback == name:
+            return
+        logger.info(
+            "last_profile_seed_marker_invalido", marker=name, fallback=fallback
+        )
+        try:
+            await daemon._run_blocking(
+                partial(manager.activate, fallback, origin="system")
+            )
+            logger.info("last_profile_restored", name=fallback)
+        except Exception as exc2:
+            logger.warning(
+                "last_profile_restore_failed", name=fallback, err=str(exc2)
+            )
 
 
 async def reconnect(daemon: DaemonProtocol) -> None:

@@ -267,6 +267,27 @@ class ProfileModeConfig(BaseModel):
     coop: bool = True
 
 
+class ControllerOverrides(BaseModel):
+    """Overrides POR CONTROLE dentro do perfil (PERFIL-02, 2026-07-16).
+
+    Subconjunto deliberado das seções do perfil que fazem sentido por
+    controle físico: ``leds`` (lightbar + player_leds + brilho) e
+    ``triggers``. Campo ``None`` = sem opinião — o controle herda a seção
+    GLOBAL do perfil (merge POR CAMPO na aplicação, PERFIL-01: override
+    parcial nunca apaga a cor global no replug).
+
+    Fora por decisão (revisão adversarial do sprint perfis-por-controle):
+    - ``label`` — identidade visível é outra frente (4P-03);
+    - ``mic_led`` — o mic jamais é colateral de troca de perfil
+      (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    leds: LedsConfig | None = None
+    triggers: TriggersConfig | None = None
+
+
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
 # - `KEY_*` é validado contra `evdev.ecodes` (via lookup lazy em `_validate_key_bindings`).
 # - `__*__` são tokens virtuais reservados para a sub-sprint UI (59.3): o dispatcher
@@ -306,6 +327,15 @@ class Profile(BaseModel):
     # supressão apenas se ela veio de outro perfil (toggle manual da usuária
     # é respeitado — ver `Daemon.apply_profile_suppression`).
     suppress_desktop_emulation: bool = False
+    # PERFIL-02 (sprint 2026-07-16-perfis-por-controle): mapa ADITIVO de
+    # overrides por controle físico, keyed pelo MAC normalizado (12 hex
+    # minúsculos — o mesmo `norm_mac` do backend; PROVADO ao vivo estável
+    # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
+    # por-controle. A serialização em `save_profile` OMITE o campo quando
+    # None/vazio — requisito de compatibilidade: sem a omissão, todo save
+    # gravaria `"controllers": null` e binário antigo (extra="forbid")
+    # rejeitaria TODO perfil no downgrade, não só os que usam o mapa.
+    controllers: dict[str, ControllerOverrides] | None = None
 
     @field_validator("name")
     @classmethod
@@ -373,11 +403,57 @@ class Profile(BaseModel):
                     )
         return value
 
+    @field_validator("controllers", mode="after")
+    @classmethod
+    def _validate_controllers_keys(
+        cls, value: dict[str, ControllerOverrides] | None
+    ) -> dict[str, ControllerOverrides] | None:
+        """Chave do mapa = MAC normalizado (12 hex); rejeita degenerados.
+
+        Usa o MESMO ``norm_mac`` do backend (import lazy, padrão do módulo):
+        ``"AA:BB:CC:00:00:02"`` é aceito e canonizado para ``"aabbcc000002"``
+        — JSON editado à mão continua casando com a key que o backend
+        enumera. Rejeições, com mensagem clara:
+
+        - o que não vira 12 dígitos hex (ex.: key de fallback ``path:...``);
+        - uniq DEGENERADO, que não identifica UMA unidade — OUI ``00:00:00``
+          (medido ao vivo no Pro Controller, ``000000000001``, idêntico
+          entre unidades) e broadcast ``ff:ff:ff:ff:ff:ff``;
+        - duas chaves que canonizam para o mesmo MAC (colisão silenciosa:
+          um dos overrides venceria por ordem de inserção, sem aviso).
+        """
+        if value is None:
+            return value
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        canonizado: dict[str, ControllerOverrides] = {}
+        for key, overrides in value.items():
+            mac = norm_mac(key)
+            if mac is None or len(mac) != 12:
+                raise ValueError(
+                    f"controllers: chave {key!r} não é um MAC de 12 dígitos "
+                    "hex (ex.: 'aabbcc000002')"
+                )
+            if mac.startswith("000000") or mac == "ffffffffffff":
+                raise ValueError(
+                    f"controllers: chave {key!r} é um uniq degenerado — não "
+                    "identifica um controle único (visto em receivers 2.4G "
+                    "e no Pro Controller)"
+                )
+            if mac in canonizado:
+                raise ValueError(
+                    "controllers: chaves duplicadas após normalização "
+                    f"({mac!r}) — remova uma das grafias"
+                )
+            canonizado[mac] = overrides
+        return canonizado
+
     def matches(self, window_info: dict[str, Any]) -> bool:
         return self.match.matches(window_info)
 
 
 __all__ = [
+    "ControllerOverrides",
     "LedsConfig",
     "Match",
     "MatchAny",
