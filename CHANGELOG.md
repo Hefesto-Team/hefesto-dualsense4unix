@@ -5,6 +5,43 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [3.14.0] — 2026-07-17
+
+### Fixed
+
+- **A cor automática por controle agora aparece sozinha no boot e ao acordar o
+  controle (COR-WAKE-01).** Ela só surgia depois de uma ativação manual de
+  perfil; com os DualSense dormindo em Bluetooth no boot (ou num resume que
+  reseta o LED da classe do kernel), os dois ficavam no MESMO azul-fraco padrão.
+  O daemon passa a reconciliar a cor resolvida por-controle em TODA
+  reconexão/hotplug (validado ao vivo: azul no 1, vermelho no 2, sozinhos).
+- **Salvar um perfil de programa específico como "Sempre" agora pede
+  confirmação (COR-A).** Desligar o "Modo avançado" e Salvar convertia o alvo
+  (janela/processo) em "Sempre" em silêncio — o perfil que valia só num jogo
+  passava a valer para tudo, com o toast dizendo "Perfil salvo".
+- **Aba Teclado inteira em português de gente (KBD-01).** Os tokens crus do
+  kernel (`KEY_LEFTALT`, `__OPEN_OSK__`, ids `l1`/`create`) viraram nomes
+  reconhecíveis ("Alt + Tab", "Abrir teclado na tela", "L1"), com a edição
+  convertida de amigável para cru na fronteira.
+- **Jargão que vazava para quem usa, em toda a GUI.** "daemon offline?" virou
+  "ligue na aba Sistema"; a aba Rumble parou de mandar clicar um botão
+  inexistente ("Devolver ao jogo"); a aba Emulação mostra "9 controles
+  detectados pelo sistema" no lugar dos caminhos crus `/dev/input/js*`; toasts
+  pararam de despejar tuplas RGB, exceções Python cruas e comandos de terminal
+  (`pip`, `modprobe`, `install_udev.sh`, "storm -71"); "Daemon" virou "Hefesto"
+  na aba Status; a prévia da Lightbar mostra a cor REAL do controle (não a
+  manual) quando o automático está ligado.
+- **README**: o passo de desduplicação parou de mandar colar a variável
+  `SDL_GAMECONTROLLER_IGNORE_DEVICES` na Steam — o wrapper `hefesto-launch`
+  (instalado por padrão) cuida disso; o botão vira só o último recurso manual.
+- **Numeração de controle consistente** entre os cards, o seletor de alvo e o
+  applet: tudo pelo número de SESSÃO do controle (`player_slot`), nunca pela
+  posição na lista — o mesmo controle deixou de aparecer como "1" num lugar e
+  "2" noutro.
+
+Base da auditoria: `docs/process/sprints/2026-07-17-AUDITORIA-onda-validacao-e-correcoes.md`
+(28 agentes, verificação adversarial; 6 HIGH + o batch de jargão corrigidos).
+
 ### Added
 
 - **Cores automáticas por controle (COR-01/COR-03), estilo PS5.** Cada DualSense
