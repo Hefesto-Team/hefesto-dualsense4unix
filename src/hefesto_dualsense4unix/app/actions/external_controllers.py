@@ -96,6 +96,37 @@ def short_button_label(entry: dict[str, Any]) -> str:
     return f"{curto} · {via}" if via else curto
 
 
+def external_slot(dualsense_count: int, index: int) -> int:
+    """Slot GLOBAL de co-op de um externo: continua a numeração dos DualSense.
+
+    Com 2 DualSense (slots 1 e 2), o 1º externo é o Controle 3, o 2º é o 4 —
+    o MESMO número que o Hefesto escreve no LED de player do controle, para a
+    GUI e o LED nunca discordarem. ``index`` é 0-based na lista de externos.
+    """
+    return dualsense_count + index + 1
+
+
+def button_labels_for(
+    externals: list[dict[str, Any]], dualsense_count: int = 0
+) -> list[str]:
+    """Rótulos dos botões dos externos, numerados pelo SLOT GLOBAL de co-op.
+
+    Continua a contagem dos DualSense (``dualsense_count``): com 2 DualSense,
+    os externos viram "Nintendo 3 · cabo", "Nintendo 4 · cabo" — SINCRONIZADO
+    com o número que aparece no LED de player do próprio controle. Ordem = a
+    do inventário (estável por ``uniq`` no backend).
+    """
+    saida: list[str] = []
+    for i, e in enumerate(externals):
+        slot = external_slot(dualsense_count, i)
+        vid = str(e.get("vid") or "").lower()
+        nome = _VENDOR_BY_VID.get(vid) or friendly_type(e)
+        bus = str(e.get("bus") or "").lower()
+        via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
+        saida.append(f"{nome} {slot} · {via}" if via else f"{nome} {slot}")
+    return saida
+
+
 def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
     """Aviso honesto quando é um controle Nintendo-mode POR Bluetooth.
 
@@ -113,6 +144,57 @@ def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
     return None
 
 
+def input_mode(entry: dict[str, Any]) -> str:
+    """Modo do controle: 'nintendo' (Switch), 'xbox' (X-input) ou 'outro'.
+
+    O 8BitDo/Pro Controller tem DOIS modos de HARDWARE (combo ao ligar):
+    - Switch/Nintendo: enumera 057e:2009, driver hid-nintendo — dá giroscópio,
+      mas por Bluetooth o driver do kernel desiste (morte conhecida);
+    - X-input/Xbox: enumera 045e:xxxx, driver xpad/hid-generic — descriptor
+      Xbox padrão, PULA o hid-nintendo e o descriptor clone malformado; por
+      cabo é um Xbox 360 de verdade, à prova de travas (sem gyro).
+    """
+    vid = str(entry.get("vid") or "").lower()
+    driver = str(entry.get("driver") or "").lower()
+    if vid == "057e" or driver in ("nintendo", "hid-nintendo"):
+        return "nintendo"
+    if vid == "045e" or driver in ("xpad", "microsoft"):
+        return "xbox"
+    return "outro"
+
+
+def mode_guidance(entry: dict[str, Any]) -> tuple[str, str] | None:
+    """(modo_atual_legível, orientação) para a ficha — ou None se não se aplica.
+
+    Só para controles que TÊM os dois modos (Nintendo/8BitDo). A orientação é
+    HONESTA: X-input (Xbox) é a raiz da estabilidade (foge do driver que morre
+    em BT), Switch (Nintendo) dá gyro mas trava em BT. Como é modo de HARDWARE,
+    a "troca" é no controle (combo ao ligar), não no software.
+    """
+    modo = input_mode(entry)
+    if modo == "nintendo":
+        atual = "Nintendo (modo Switch)"
+        orient = (
+            "O jogo vê botões da Nintendo e você tem giroscópio — mas por "
+            "Bluetooth esse modo pode travar (é o driver do Linux desistindo, "
+            "não o Hefesto). Para o co-op à prova de travas, troque o controle "
+            "para o modo Xbox (X-input): ele vira um Xbox 360 de verdade e foge "
+            "do driver problemático. No 8BitDo isso é um combo ao ligar/conectar "
+            "(veja o manual do seu controle). Por cabo, o modo Xbox é o mais sólido."
+        )
+        return atual, orient
+    if modo == "xbox":
+        atual = "Xbox (X-input)"
+        orient = (
+            "Modo sólido: o jogo vê um Xbox 360 de verdade (driver xpad), sem o "
+            "problema do Bluetooth do modo Switch. Você perde o giroscópio — se "
+            "precisar de gyro, troque o controle para o modo Switch (combo ao "
+            "ligar), sabendo que por Bluetooth ele fica instável."
+        )
+        return atual, orient
+    return None
+
+
 def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
     """Linhas ``(rótulo, valor)`` da ficha read-only do controle externo.
 
@@ -123,6 +205,9 @@ def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
         ("Controle", friendly_type(entry)),
         ("Como conectou", transport_label(entry)),
     ]
+    guia = mode_guidance(entry)
+    if guia is not None:
+        rows.append(("O jogo vê como", guia[0]))
     driver = str(entry.get("driver") or "").strip()
     if driver:
         rows.append(("Driver do Linux", driver))

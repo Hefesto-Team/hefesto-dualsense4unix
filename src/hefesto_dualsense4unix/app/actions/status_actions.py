@@ -33,9 +33,10 @@ from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    button_labels_for,
     external_key,
+    external_slot,
     friendly_type,
-    short_button_label,
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import vpad_degradation_text
@@ -404,15 +405,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         # edição do output). São GtkButton comuns; clicar abre a ficha secreta
         # só daquele controle (janela read-only), sem trocar o alvo de edição.
         self._external_buttons = []
-        for ext in getattr(self, "_externals", []):
-            eb = Gtk.Button.new_with_label(short_button_label(ext))
+        externals = getattr(self, "_externals", [])
+        # Slot GLOBAL: continua a numeração dos DualSense (rows menos "Todos").
+        dualsense_count = max(0, len(self._target_buttons) - 1)
+        rotulos = button_labels_for(externals, dualsense_count)
+        for i, (ext, rotulo) in enumerate(zip(externals, rotulos, strict=False)):
+            slot = external_slot(dualsense_count, i)
+            eb = Gtk.Button.new_with_label(rotulo)
             eb.set_tooltip_text(
-                f"{friendly_type(ext)} — {transport_label(ext)} "
-                "(clique para ver; o Hefesto não mexe nele)"
+                f"Controle {slot}: {friendly_type(ext)} — {transport_label(ext)} "
+                "(clique para ver; o Hefesto não mexe no que ele faz)"
             )
             with contextlib.suppress(Exception):
                 eb.get_style_context().add_class("hefesto-external-btn")
-            eb.connect("clicked", self._on_external_clicked, external_key(ext))
+            eb.connect("clicked", self._on_external_clicked, external_key(ext), slot)
             eb.show()
             box.pack_start(eb, False, False, 0)
             self._external_buttons.append(eb)
@@ -454,8 +460,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._externals_inflight = False
         return False
 
-    def _on_external_clicked(self, _button: Any, key: str) -> None:
-        """Abre a ficha secreta read-only do controle externo `key` (8BIT-02)."""
+    def _on_external_clicked(self, _button: Any, key: str, slot: int) -> None:
+        """Abre a ficha secreta read-only do controle externo `key` (8BIT-02).
+
+        `slot` = número GLOBAL de co-op (mesmo do LED de player) — a ficha o
+        mostra para GUI e LED nunca discordarem.
+        """
         ext = next(
             (e for e in getattr(self, "_externals", []) if external_key(e) == key),
             None,
@@ -466,7 +476,7 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         window = self._get("main_window")
         with contextlib.suppress(Exception):
-            gui_dialogs.show_external_controller(parent=window, entry=ext)
+            gui_dialogs.show_external_controller(parent=window, entry=ext, slot=slot)
 
     def _set_target_active(self, pos: int) -> None:
         """Marca o botão na posição ``pos`` como ativo (sem disparar IPC)."""
