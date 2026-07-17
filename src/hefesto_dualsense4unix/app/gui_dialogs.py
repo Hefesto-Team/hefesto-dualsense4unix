@@ -86,6 +86,40 @@ def prompt_overwrite_existing(
     return bool(response == Gtk.ResponseType.OK)
 
 
+def confirm_downgrade_match_to_any(
+    parent: Gtk.Window,
+    name: str,
+) -> bool:
+    """Confirma transformar um perfil de programa específico em "Sempre".
+
+    COR-A: desligar "Modo avançado" num perfil de jogo e Salvar trocava o alvo
+    (window_class/título) por MatchAny em SILÊNCIO — o perfil que valia só num
+    jogo passava a valer para TUDO, sem aviso e com o toast "Perfil salvo".
+    Retorna True se o usuário confirmou a mudança, False se cancelou.
+    """
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.NONE,
+        text=_("O perfil '%s' vale só em programas específicos.") % name,
+    )
+    dialog.format_secondary_text(
+        _(
+            "Salvar assim faz ele valer para TUDO (Quando usar: Sempre) e apaga "
+            "os programas em que ele valia. Tem certeza?"
+        )
+    )
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Valer para tudo"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+    response = dialog.run()
+    dialog.destroy()
+    return bool(response == Gtk.ResponseType.OK)
+
+
 def prompt_import_conflict(
     parent: Gtk.Window,
     name: str,

@@ -236,6 +236,56 @@ class TestHotplugPintaCorDoSlot:
         assert node.colors[-1] == AZUL
         assert node.patterns[-1] == player_led_pattern(1)
 
+    def test_connect_reasserta_cor_em_no_ja_mapeado_sem_perfil(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """COR-WAKE-01 (fix ao vivo 2026-07-17): um `backend_hotplug_reconcile`
+        (connect) re-resolve a cor/LED por-controle em nós JÁ mapeados — não só
+        nos `new_keys`. Reproduz o wake que deixava os dois DualSense na cor
+        default do kernel: o kernel reseta a classe LED sem recriar o `inputN`
+        (mesmo `indicator_dir` → NÃO é new_key), então nem `_reapply_desired`
+        (só handles novos) nem o priming de `new_keys` re-pintavam; só uma
+        ativação MANUAL de perfil resolvia. Agora o reassert ao fim do
+        `connect()` converge sozinho, sem tocar em perfil."""
+        from unittest.mock import patch
+
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        inst, _h1, _h2 = _backend_com_dois()
+        inst.set_auto_output_provider(
+            _provider_fixo(
+                {
+                    UNIQ_1: _DesiredOutput(led=AZUL, player_leds=player_led_pattern(1)),
+                    UNIQ_2: _DesiredOutput(
+                        led=VERMELHO, player_leds=player_led_pattern(2)
+                    ),
+                }
+            )
+        )
+        node1, node2 = _FakeLedNode("/fake/led1"), _FakeLedNode("/fake/led2")
+        # Nós JÁ mapeados (mesma `indicator_dir` que o discover devolve) →
+        # NÃO são `new_keys` no próximo `_refresh_sysfs_leds`.
+        inst._sysfs = {KEY_1: node1, KEY_2: node2}  # type: ignore[dict-item]
+        monkeypatch.setattr(
+            sysfs_leds, "discover", lambda: {UNIQ_1: node1, UNIQ_2: node2}
+        )
+        # Zera o histórico: mede SÓ o efeito do connect (não escritas de boot).
+        node1.colors.clear()
+        node2.colors.clear()
+        # Nenhum controle NOVO: enumerate devolve os mesmos já presentes.
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[
+                (KEY_1, b"/dev/hidraw0", False),
+                (KEY_2, b"/dev/hidraw1", False),
+            ],
+        ):
+            inst.connect()
+
+        assert node1.colors[-1] == AZUL
+        assert node2.colors[-1] == VERMELHO
+
     def test_mutado_nao_escreve_cor_auto_no_no(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

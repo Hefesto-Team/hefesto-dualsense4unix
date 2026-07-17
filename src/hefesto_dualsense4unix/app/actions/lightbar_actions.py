@@ -225,9 +225,10 @@ class LightbarActionsMixin(WidgetAccessMixin):
         else:
             ok = led_set(self._current_rgb, brightness=self._current_brightness)
         msg = (
-            f"Cor RGB {self._current_rgb} a {pct}% aplicada"
+            f"Cor aplicada no controle ({pct}% de brilho)"
             if ok
-            else "Falha (daemon offline?)"
+            else "não consegui aplicar a cor — o Hefesto pode estar desligado "
+            "(ligue na aba Sistema)"
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"

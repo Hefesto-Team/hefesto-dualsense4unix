@@ -632,7 +632,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 "&#9675; Desconectado — abra a aba Sistema e clique em \"Ligar o Hefesto\""
                 "</span>"
             )
-        self._set_label("status_daemon", "Offline (sem resposta do daemon)")
+        self._set_label("status_daemon", "Sem resposta (ligue na aba Sistema)")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_label("status_active_profile", "—")
@@ -739,7 +739,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 header.set_markup(
                     '<span foreground="#d33">&#9675; Controle Desconectado</span>'
                 )
-        self._set_label("status_daemon", "Online")
+        self._set_label("status_daemon", "Ligado")
 
     def _render_reconnecting(self) -> None:
         """Header intermediário — U+25D0 laranja + "tentando reconectar...".
@@ -758,9 +758,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
-                '<span foreground="#d33">&#9675; Daemon Offline</span>'
+                '<span foreground="#d33">&#9675; Hefesto desligado</span>'
             )
-        self._set_label("status_daemon", "Offline")
+        self._set_label("status_daemon", "Desligado")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_label("status_active_profile", "—")
@@ -840,7 +840,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 "status_transport", transport.upper() if transport != "—" else "—"
             )
         self._set_label("status_active_profile", active_profile)
-        self._set_label("status_daemon", "Online")
+        self._set_label("status_daemon", "Ligado")
 
         # STATUS-02: com 2+ controles cada card tem a PRÓPRIA bateria — a
         # linha do frame Estado (que só sabia falar do primário, com o

@@ -585,6 +585,24 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             if not gui_dialogs.prompt_overwrite_existing(parent=window, name=profile.name):
                 self._toast_profile("Operação cancelada.")
                 return
+        # COR-A: salvar um perfil que ANTES valia só num programa específico
+        # (MatchCriteria) como MatchAny apaga o alvo em silêncio — o caminho
+        # clássico é o leigo desligar o "Modo avançado" (a página simples herda
+        # 'Qualquer'/Sempre) e clicar Salvar sem perceber. Confirma a perda.
+        original = self._find_cached_profile(profile.name)
+        if (
+            isinstance(profile.match, MatchAny)
+            and original is not None
+            and isinstance(original.match, MatchCriteria)
+        ):
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            window = self._get("main_window")
+            if not gui_dialogs.confirm_downgrade_match_to_any(
+                parent=window, name=profile.name
+            ):
+                self._toast_profile("Operação cancelada.")
+                return
         try:
             save_profile(profile)
         except OSError as exc:

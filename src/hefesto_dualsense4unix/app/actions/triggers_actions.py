@@ -550,13 +550,22 @@ class TriggersActionsMixin(WidgetAccessMixin):
         if bar is None:
             return
         ctx_id = bar.get_context_id("trigger")
+        # TRG-01: "LEFT -> Off" trocava a fala da usuária (o gatilho que ela
+        # clicou) por id interno + lado em inglês. Nome do lado em PT-BR.
+        lado = {
+            "left": "Gatilho esquerdo (L2)",
+            "right": "Gatilho direito (R2)",
+        }.get(side, side)
         if ok:
-            msg = f"{side.upper()} -> {preset_id} aplicado"
+            msg = f"{lado}: {preset_id} aplicado"
         elif motivo:
             msg = (
-                f"{side.upper()} -> {preset_id} não aplicado: "
+                f"{lado}: {preset_id} não aplicado — "
                 f"{humanizar_erro_gatilho(motivo, spec) or motivo}"
             )
         else:
-            msg = f"{side.upper()} -> {preset_id} falhou (daemon offline?)"
+            msg = (
+                f"{lado}: não consegui aplicar {preset_id} — o Hefesto pode "
+                "estar desligado (ligue na aba Sistema)"
+            )
         bar.push(ctx_id, msg)

@@ -35,11 +35,11 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
 # rápida dos tokens aceitos. Tokens `__*__` são virtuais (OSK); demais são
 # KEY_* canônicos do evdev.ecodes.
 BINDINGS_LEGEND = (
-    "<b>Formato de tecla:</b> KEY_* (ex: KEY_C, KEY_ENTER) "
-    "ou __OPEN_OSK__ / __CLOSE_OSK__ para teclado virtual.\n"
-    "<b>Combos:</b> separar por '+' (ex: KEY_LEFTALT+KEY_TAB).\n"
-    "<b>Default:</b> Options=Super, Share=PrintScreen, L1=Alt+Shift+Tab, "
-    "R1=Alt+Tab, L3=abrir OSK, R3=fechar OSK."
+    "<b>Como funciona:</b> cada botão do controle pode digitar uma tecla do "
+    "teclado. Clique duas vezes na coluna “Tecla do teclado” para trocar.\n"
+    "<b>Combinações:</b> junte teclas com “+” (ex.: Alt + Tab).\n"
+    "<b>Teclado na tela:</b> escreva “Abrir teclado na tela” ou "
+    "“Fechar teclado na tela”."
 )
 
 
@@ -67,6 +67,104 @@ CANONICAL_BUTTONS: tuple[str, ...] = (
     "touchpad_middle_press",
     "touchpad_right_press",
 )
+
+
+# KBD-01: a aba Teclado era 100% jargão de programador — ids internos em inglês
+# (l1, create, touchpad_left_press) e tokens crus do evdev (KEY_LEFTALT,
+# KEY_SYSRQ, __OPEN_OSK__). Estes mapas humanizam a EXIBIÇÃO (o modelo segue
+# guardando id/binding crus para a persistência); a edição converte de volta na
+# fronteira (`_dehumanize_binding`). Nomes na língua da usuária, não do kernel.
+_BUTTON_LABELS: dict[str, str] = {
+    "cross": "X (Cruz)",
+    "circle": "Círculo",
+    "triangle": "Triângulo",
+    "square": "Quadrado",
+    "dpad_up": "Direcional ↑",
+    "dpad_down": "Direcional ↓",
+    "dpad_left": "Direcional ←",
+    "dpad_right": "Direcional →",
+    "l1": "L1",
+    "r1": "R1",
+    "l2": "L2 (gatilho esquerdo)",
+    "r2": "R2 (gatilho direito)",
+    "l3": "L3 (clicar analógico esquerdo)",
+    "r3": "R3 (clicar analógico direito)",
+    "options": "Options",
+    "create": "Share / Create",
+    "ps": "Botão PS",
+    "touchpad_left_press": "Touchpad — lado esquerdo",
+    "touchpad_middle_press": "Touchpad — meio",
+    "touchpad_right_press": "Touchpad — lado direito",
+}
+
+#: Tokens de tecla crus → nome que a pessoa reconhece. Fora deste mapa, um
+#: `KEY_X` vira só "X" (letras/números). Round-trip garantido por `_REV_KEY`.
+_KEY_LABELS: dict[str, str] = {
+    "KEY_LEFTALT": "Alt",
+    "KEY_RIGHTALT": "Alt direito",
+    "KEY_LEFTSHIFT": "Shift",
+    "KEY_RIGHTSHIFT": "Shift direito",
+    "KEY_LEFTCTRL": "Ctrl",
+    "KEY_RIGHTCTRL": "Ctrl direito",
+    "KEY_LEFTMETA": "Super (tecla Windows)",
+    "KEY_TAB": "Tab",
+    "KEY_ENTER": "Enter",
+    "KEY_ESC": "Esc",
+    "KEY_SPACE": "Espaço",
+    "KEY_BACKSPACE": "Backspace",
+    "KEY_DELETE": "Delete",
+    "KEY_SYSRQ": "PrintScreen",
+    "KEY_UP": "Seta ↑",
+    "KEY_DOWN": "Seta ↓",
+    "KEY_LEFT": "Seta ←",
+    "KEY_RIGHT": "Seta →",
+    "__OPEN_OSK__": "Abrir teclado na tela",
+    "__CLOSE_OSK__": "Fechar teclado na tela",
+}
+
+#: Mapa reverso (rótulo minúsculo → token cru) para a edição amigável.
+_REV_KEY: dict[str, str] = {label.lower(): raw for raw, label in _KEY_LABELS.items()}
+
+
+def humanize_button(button_id: str) -> str:
+    """Rótulo amigável de um botão do controle (fallback: o próprio id)."""
+    return _BUTTON_LABELS.get(button_id, button_id)
+
+
+def humanize_binding(serialized: str) -> str:
+    """'KEY_LEFTALT+KEY_TAB' → 'Alt + Tab'; '__OPEN_OSK__' → 'Abrir teclado…'."""
+    partes = [tok.strip() for tok in serialized.split("+") if tok.strip()]
+    saida = []
+    for tok in partes:
+        if tok in _KEY_LABELS:
+            saida.append(_KEY_LABELS[tok])
+        elif tok.startswith("KEY_"):
+            saida.append(tok[4:])  # KEY_C -> C
+        else:
+            saida.append(tok)
+    return " + ".join(saida)
+
+
+def dehumanize_binding(friendly: str) -> str:
+    """Inverso de `humanize_binding` — 'Alt + Tab' → 'KEY_LEFTALT+KEY_TAB'.
+
+    Aceita também tokens já crus (idempotente sobre a saída do daemon) para
+    quem preferir digitar `KEY_*`. Token desconhecido segue como está — o
+    `parse_binding` valida e rejeita com um toast na fronteira.
+    """
+    partes = [tok.strip() for tok in friendly.split("+") if tok.strip()]
+    saida = []
+    for tok in partes:
+        chave = tok.lower()
+        if chave in _REV_KEY:
+            saida.append(_REV_KEY[chave])
+        elif tok.startswith("KEY_") or tok.startswith("__"):
+            saida.append(tok)
+        elif len(tok) == 1 and tok.isalnum():
+            saida.append(f"KEY_{tok.upper()}")
+        else:
+            saida.append(tok)
+    return "+".join(saida)
 
 
 class InputActionsMixin(MouseActionsMixin):
@@ -98,18 +196,36 @@ class InputActionsMixin(MouseActionsMixin):
         )
         tree.set_model(store)
         self._key_bindings_store = store
-        for idx, title in ((0, "Botão"), (1, "Tecla(s)")):
+        for idx, title in ((0, "Botão do controle"), (1, "Tecla do teclado")):
             renderer = Gtk.CellRendererText()
             if idx == 1:
                 renderer.set_property("editable", True)
                 renderer.connect(
                     "edited", self._on_key_binding_cell_edited
                 )
-            column = Gtk.TreeViewColumn(title, renderer, text=idx)
+            # KBD-01: exibe amigável (o modelo guarda id/binding CRUS p/ a
+            # persistência); a edição converte de volta em `_on_..._edited`.
+            column = Gtk.TreeViewColumn(title, renderer)
+            column.set_cell_data_func(renderer, self._render_binding_cell, idx)
             tree.append_column(column)
         legend: Gtk.Label | None = self._get("key_bindings_legend")
         if legend is not None:
             legend.set_markup(BINDINGS_LEGEND)
+
+    @staticmethod
+    def _render_binding_cell(
+        _column: Gtk.TreeViewColumn,
+        cell: Gtk.CellRendererText,
+        model: Gtk.TreeModel,
+        treeiter: Gtk.TreeIter,
+        col_idx: int,
+    ) -> None:
+        """Exibe amigável (KBD-01) sem tocar no valor CRU do modelo."""
+        raw = model.get_value(treeiter, col_idx)
+        if col_idx == 0:
+            cell.set_property("text", humanize_button(raw))
+        else:
+            cell.set_property("text", humanize_binding(raw))
 
     def _refresh_key_bindings_from_draft(self) -> None:
         """Popula o store com as bindings efetivas do draft central.
@@ -194,13 +310,16 @@ class InputActionsMixin(MouseActionsMixin):
         text = new_text.strip()
         if not text:
             return
+        # KBD-01: a pessoa edita nomes amigáveis ("Alt + Tab"); convertemos de
+        # volta para os tokens crus que o daemon entende antes de validar/gravar.
+        raw = dehumanize_binding(text)
         try:
-            parse_binding(text)
+            parse_binding(raw)
         except ValueError as exc:
-            self._toast_input(f"Binding inválido: {exc}")
+            self._toast_input(f"Não reconheci essa tecla: {exc}")
             return
         treeiter = store.get_iter(path)
-        store.set_value(treeiter, 1, text)
+        store.set_value(treeiter, 1, raw)
         self._persist_key_bindings_to_draft()
 
     def _persist_key_bindings_to_draft(self) -> None:

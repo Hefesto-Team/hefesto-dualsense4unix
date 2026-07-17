@@ -67,6 +67,15 @@ _LABEL_AUTO = (
     "Transições com debounce de 5 segundos para evitar oscilação."
 )
 
+#: RUM-01: o texto dos toasts/estado mandava clicar "Devolver ao jogo" — botão
+#: que NÃO existe. O botão real (main.glade) tem este rótulo; um único dono aqui
+#: impede a dessincronia de voltar. Ao mexer no rótulo do glade, mexa aqui.
+_BTN_GIVE_BACK_TO_GAME = "Deixar o jogo controlar a vibração"
+
+#: JARG-01/LB-02: "daemon offline?" vaza jargão + palpite. O resto do app já
+#: fala "ligue na aba Sistema" — a fronteira da GUI traduz aqui também.
+_MSG_HEFESTO_OFF = "não consegui — o Hefesto pode estar desligado (ligue na aba Sistema)."
+
 
 class RumbleActionsMixin(WidgetAccessMixin):
     """Controla a aba Rumble."""
@@ -323,10 +332,11 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self.draft = draft.model_copy(update={"rumble": new_rumble})
         ok = rumble_set(weak, strong)
         self._toast_rumble(
-            f"Rumble FIXO em weak={weak}, strong={strong} — enquanto fixo o jogo "
-            "NÃO controla a vibração; clique 'Devolver ao jogo' para jogar"
+            f"Vibração travada (fraca={weak}, forte={strong}) — enquanto travada o "
+            f"jogo NÃO controla a vibração; clique “{_BTN_GIVE_BACK_TO_GAME}” "
+            "para jogar"
             if ok
-            else "Falha (daemon offline?)"
+            else f"Vibração {_MSG_HEFESTO_OFF}"
         )
 
     def on_rumble_test_500ms(self, _btn: Gtk.Button) -> None:
@@ -339,9 +349,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
             self._set_scales(weak, strong)
         ok = rumble_set(weak, strong)
         if not ok:
-            self._toast_rumble("Falha (daemon offline?)")
+            self._toast_rumble(f"Teste {_MSG_HEFESTO_OFF}")
             return
-        self._toast_rumble(f"Testando por 500 ms (weak={weak}, strong={strong})")
+        self._toast_rumble(f"Testando por meio segundo (fraca={weak}, forte={strong})")
         self._rumble_test_source = GLib.timeout_add(500, self._rumble_test_stop)
 
     def on_rumble_stop(self, _btn: Gtk.Button) -> None:
@@ -355,8 +365,8 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._set_scales(0, 0)
         rumble_stop()
         self._toast_rumble(
-            "Rumble parado (fixo em silêncio) — 'Devolver ao jogo' para o jogo "
-            "voltar a controlar a vibração"
+            f"Vibração parada (travada em silêncio) — clique "
+            f"“{_BTN_GIVE_BACK_TO_GAME}” para o jogo voltar a controlar a vibração"
         )
 
     def on_rumble_passthrough(self, _btn: Gtk.Button) -> None:
@@ -372,7 +382,9 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._set_scales(0, 0)
         ok = rumble_passthrough(True)
         self._toast_rumble(
-            "Rumble devolvido ao jogo" if ok else "Falha (daemon offline?)"
+            "Pronto — agora o jogo controla a vibração"
+            if ok
+            else f"Vibração {_MSG_HEFESTO_OFF}"
         )
 
     # --- refresh do draft ---
@@ -488,13 +500,14 @@ class RumbleActionsMixin(WidgetAccessMixin):
         elif isinstance(active, list) and len(active) == 2:
             if active == [0, 0]:
                 estado = (
-                    '<span foreground="#e0a020">FIXA em silêncio '
-                    '(clique "Devolver ao jogo")</span>'
+                    '<span foreground="#e0a020">travada em silêncio '
+                    f'(clique “{_BTN_GIVE_BACK_TO_GAME}”)</span>'
                 )
             else:
                 estado = (
-                    f'<span foreground="#e0a020">FIXA em weak={active[0]}, '
-                    f'strong={active[1]} (clique "Devolver ao jogo" para jogar)</span>'
+                    f'<span foreground="#e0a020">travada em fraca={active[0]}, '
+                    f'forte={active[1]} (clique “{_BTN_GIVE_BACK_TO_GAME}” '
+                    "para jogar)</span>"
                 )
         else:
             estado = "—"

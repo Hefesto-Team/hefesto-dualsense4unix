@@ -257,7 +257,7 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">Daemon:</property>
+                            <property name="label" translatable="yes">Hefesto:</property>
                             <property name="xalign">1</property>
                           </object>
                           <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
@@ -2295,7 +2295,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <property name="spacing">10</property>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label" translatable="yes">&lt;b&gt;Bindings do perfil ativo&lt;/b&gt;</property>
+                    <property name="label" translatable="yes">&lt;b&gt;Atalhos de teclado do perfil ativo&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>

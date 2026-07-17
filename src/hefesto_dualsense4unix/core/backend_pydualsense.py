@@ -728,6 +728,19 @@ class PyDualSenseController(IController):
         # re-aplica o perfil ativo nos controles recém-chegados.
         for key, handle in new_handles:
             self._reapply_desired(key, handle)
+        # COR-WAKE-01 (fix ao vivo 2026-07-17): re-resolve a cor/LED por-controle
+        # em TODA reconciliação de hotplug/wake — não só nos handles/nós que
+        # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
+        # dormindo em BT (ou um resume que faz o kernel resetar a classe LED sem
+        # recriar o `inputN` — mesmo `indicator_dir`, logo NÃO é `new_key`)
+        # deixava os dois controles na cor default do kernel
+        # (`KERNEL_DEFAULT_BLUE` = 0,0,128) até uma ativação MANUAL de perfil.
+        # `connect()` roda a cada `backend_hotplug_reconcile`, então este
+        # reassert converge o físico ao resolvido (explícita > automática >
+        # global) sozinho. É idempotente (reescreve a MESMA cor), pega o
+        # `_io_lock` por conta própria e já é no-op em Modo Nativo (output
+        # mutado — o jogo é dono do LED).
+        self.reassert_resolved_outputs()
 
     def _close_handles(self, keep: set[str]) -> None:
         """Fecha (e remove) os handles cujas chaves não estão em `keep`.
