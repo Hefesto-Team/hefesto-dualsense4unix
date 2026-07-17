@@ -25,6 +25,10 @@ gi.require_version("Gtk", "3.0")
 
 import pytest
 
+# CI headless sem libcairo: pula o módulo (o ControllerCard renderiza os sticks
+# via cairo e cai num stub sem os sub-widgets quando o GTK real não está pronto).
+pytest.importorskip("cairo")
+
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     L2_R2_THRESHOLD,

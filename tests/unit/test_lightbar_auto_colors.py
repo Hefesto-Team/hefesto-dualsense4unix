@@ -383,6 +383,21 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     assert host.draft.leds.auto_player_colors is True  # alvo não dispara D4
 
 
+def _gdk_rgba_ok() -> bool:
+    """Gdk.RGBA existe? A CI headless de release tem um Gdk parcial sem RGBA;
+    este caso exercita o botão "Apagar" que constrói um Gdk.RGBA. Pula lá."""
+    try:
+        import gi
+
+        gi.require_version("Gdk", "3.0")
+        from gi.repository import Gdk
+
+        return hasattr(Gdk, "RGBA")
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not _gdk_rgba_ok(), reason="Gdk.RGBA ausente (CI headless)")
 def test_apagar_em_todos_leva_toggle_no_ipc(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

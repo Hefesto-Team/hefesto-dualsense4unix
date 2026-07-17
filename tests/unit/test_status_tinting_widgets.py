@@ -24,8 +24,13 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 
-import cairo
 import pytest
+
+# CI sem libcairo (não está nas deps do build): pula o módulo inteiro em vez de
+# estourar ModuleNotFoundError na coleta — mesmo padrão de `importorskip("gi")`.
+pytest.importorskip("cairo")
+
+import cairo
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.gui.widgets import button_glyph as glyph_mod

@@ -737,6 +737,24 @@ class TestDialogoGtkReal:
 # ---------------------------------------------------------------------------
 
 
+def _gdkpixbuf_ok() -> bool:
+    """GdkPixbuf disponível? A App real o importa (app.py); a CI headless de
+    release não tem o typelib, então esta fiação-da-App-inteira é pulada lá
+    (mesma filosofia do importorskip dos testes de GUI). Roda local."""
+    try:
+        import gi
+
+        gi.require_version("GdkPixbuf", "2.0")
+        from gi.repository import GdkPixbuf  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(
+    not _gdkpixbuf_ok(), reason="GdkPixbuf ausente (CI headless): a App real precisa dele"
+)
 class TestFiacaoNoApp:
     def test_app_compoe_o_mixin(self) -> None:
         from hefesto_dualsense4unix.app import app as app_mod
