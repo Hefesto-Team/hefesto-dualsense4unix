@@ -11,7 +11,7 @@
 # `yay -S hefesto-dualsense4unix` se o pacote for submetido ao AUR.
 
 pkgname=hefesto-dualsense4unix
-pkgver=3.13.3
+pkgver=3.14.0
 pkgrel=1
 pkgdesc="Linux adaptive trigger daemon for the PS5 DualSense controller (GTK3 GUI + CLI + TUI)"
 arch=('any')
