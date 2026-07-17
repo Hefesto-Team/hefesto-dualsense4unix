@@ -207,6 +207,32 @@ def apply_game_rumble(
         logger.warning("game_rumble_failed", err=str(exc))
 
 
+def notify_vpad_degradado(daemon: DaemonProtocol, *, player: int, motivo: str) -> None:
+    """Anuncia a TRANSIÇÃO "vpad deste jogador nasceu degradado" (BT-03).
+
+    Duas saídas, ambas best-effort e nunca fatais:
+
+    - log estruturado ``vpad_degradado`` — a fonte de verdade nesta máquina é
+      o stdout do daemon (roda ``--foreground`` fora do systemd; ver "Precisão
+      de linguagem" do sprint BT: nenhum critério pode depender do journal);
+    - ``daemon.bus.publish("vpad.degraded", ...)`` — o EventBus é a infra de
+      notificação existente (``core/events.py``). O tópico vai como literal
+      documentado porque `EventTopic` está fora da fronteira desta frente
+      (promover a constante quando `events.py` entrar em escopo); publicar num
+      tópico sem assinantes é no-op barato por construção do bus.
+
+    Chamado SÓ na borda de criação degradada (P1 em `start_gamepad_emulation`;
+    secundários em `CoopManager._promote_player`) — nunca no `state_full` a
+    10 Hz (seria flood, a mesma regra do `dedup_broken` do DEDUP-06).
+    """
+    logger.warning("vpad_degradado", player=player, motivo=motivo)
+    bus = getattr(daemon, "bus", None)
+    if bus is None:
+        return
+    with contextlib.suppress(Exception):
+        bus.publish("vpad.degraded", {"player": player, "motivo": motivo})
+
+
 def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     """(dedup_ok, motivos) agregados POR JOGADOR — o guard DEDUP-06.
 
@@ -505,6 +531,13 @@ def start_gamepad_emulation(
         if store is not None:
             with contextlib.suppress(Exception):
                 store.bump("gamepad.uhid.fallback")
+        # BT-03: a degradação do P1 é uma transição anunciada (log + bus).
+        motivo = getattr(device, "fallback_motivo", None)
+        notify_vpad_degradado(
+            daemon,
+            player=1,
+            motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
+        )
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key
     _set_controller_grab(daemon, True)
@@ -600,6 +633,7 @@ __all__ = [
     "dedup_status",
     "dispatch_gamepad",
     "make_primary_rumble_sink",
+    "notify_vpad_degradado",
     "start_gamepad_emulation",
     "stop_gamepad_emulation",
     "upgrade_primary_vpad_to_uhid",

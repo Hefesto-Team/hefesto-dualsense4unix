@@ -91,6 +91,59 @@ Cada PR que toca `src/hefesto_dualsense4unix/tui/**` inclui no body:
 - [ ] Combo configurado em `daemon.toml` troca perfil com janela de jogo em foco.
 - [ ] Modo `--unsafe-keyboard-hotkeys` exibe aviso de risco antes de ativar.
 
+## Onda multicontrole+dedup — cores automáticas, cards e perfis por controle (2026-07-17)
+
+Pré-requisito: `./uninstall.sh && ./install.sh` SEM flags (instala o wrapper
+`hefesto-launch`, o quirk do mic e migra o vdf com a Steam fechada) + daemon novo.
+
+### COR-07 — cores e LED automáticos (2 DualSense: 1 BT + 1 cabo)
+
+- [ ] Ligar o daemon com os 2 DualSense → cada um acende cor DIFERENTE + LED do
+      seu número sozinho, nos dois transportes (tolerar o pisca breve do kernel
+      no bind — o estado FINAL é o que vale).
+- [ ] Replugar o Controle 1 → volta com a MESMA cor/número.
+- [ ] Escolher cor manual para o controle BT (alvo "Controle N" na aba
+      Lightbar) → sobrevive a replug e a restart do daemon.
+- [ ] Salvar o perfil "vitoria", fechar e reabrir a GUI → tudo como deixou.
+- [ ] Jogo em Modo Nativo → o hefesto NÃO pisa nos LEDs do jogo.
+- [ ] Co-op num jogo real: conferir LED aceso vs número de player que o JOGO
+      mostra — se divergirem (borda de replug do primário), é o comportamento
+      documentado ("número do controle" ≠ "número do jogador"): anotar o passo,
+      não é reprovação.
+
+### STATUS-05 — aba Status em cards (2 DualSense)
+
+- [ ] 2 cards, cada um com a cor do PRÓPRIO lightbar (swatch cru + traços
+      clareados legíveis), número e bateria próprios.
+- [ ] Mexer cada controle → só o card dele acende.
+- [ ] Aceite explícito do compromisso da cor: swatch = cor crua; traços = mesma
+      matiz, clareada para dar contraste (não é literalmente "a mesma cor"
+      quando o lightbar está escuro). Rejeitar aqui = decisão de design, não bug.
+- [ ] Screenshot da aba anexado ao doc do sprint.
+
+### PERFIL-05 — perfis por controle (o que falta da validação humana)
+
+- [ ] (a) Cores/gatilhos DIFERENTES por controle no perfil `vitoria`; desplugar
+      e replugar o do cabo → cada um mantém a SUA cor (sem contaminação).
+- [ ] (c) Desligar/religar o controle BT (botão PS religa) → o override
+      por-controle re-aplica sozinho quando ele volta.
+- [ ] (d) Trocar o MESMO controle de cabo para BT → mesma identidade, mesmos
+      settings (o MAC é a chave, provado estável nos dois transportes).
+
+### Diálogo do wrapper (1x por jogo)
+
+- [ ] Abrir um jogo Steam SEM a linha do `hefesto-launch` nas opções → o aviso
+      aparece UMA vez, com a linha copiável; "Não perguntar para este jogo"
+      cala aquele appid para sempre; o jogo segue jogável (pior caso: controle
+      duplicado, nunca zero).
+
+### 8BIT-05 — decisão de modo do 8BitDo (custo zero de código)
+
+- [ ] Escolher o modo (cabo Switch = provadamente estável; X-input por cabo =
+      Xbox 360 real sem gyro; X-input por BT = experimento) e jogar 10 min
+      observando "descontrolado/inputs cancelados". Guia:
+      `docs/usage/troubleshooting-8bitdo.md`.
+
 ---
 
 ## Matriz de distros testadas

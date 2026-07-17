@@ -5,12 +5,20 @@ a cada 2s (`RECONNECT_POLL_INTERVAL_S`) observa o IPC e move o header entre
 três estados visuais — `online`, `reconnecting`, `offline`. O polling rápido
 dos widgets de live-state é independente e preserva a fluidez da aba Status.
 
-Redesign UI-STATUS-STICKS-REDESIGN-01:
-  - Bloco "Sticks e botões" virou Grid 2 colunas no GLADE.
-  - Coluna esquerda: 2 StickPreviewGtk (L3 e R3) inseridos por código.
-  - Coluna direita: Grid 4x4 de ButtonGlyph inserido por código.
-  - `_on_state_update` diffa `buttons_pressed` contra `_last_buttons` para
-    evitar queue_draw desnecessário a 10 Hz.
+Redesign STATUS-02 (aba Status vira 1 card por controle):
+  - O Glade da aba tem só o frame "Estado" + um GtkScrolledWindow com o box
+    `status_players_slot`; os cards (`ControllerCard`) são montados por
+    código, um por controle CONECTADO do bloco `controllers` do state_full.
+  - Reconstrução de cards SÓ quando o conjunto `(index, uniq)` muda
+    (2 ticks com o mesmo conjunto = os MESMOS widgets, sem rebuild); a
+    entrada-placeholder offline é filtrada por `connected`
+    (HARM-CARD-FANTASMA-01) e não vira card fantasma.
+  - O tick rápido distribui `controllers[i]` para o card i; o diff por
+    seção vive dentro do card (`ControllerCard.update`).
+  - Gate de timers (aceite do STATUS-02): NENHUMA ocorrência NOVA de
+    timeout/idle do GLib em relação ao baseline da mixin — 2 periódicos em
+    ms (100/500), 1 periódico em segundos (reconnect), 1 one-shot de 5 s e
+    2 idle one-shot. `tests/unit/test_status_cards.py` trava esse diff.
 """
 # ruff: noqa: E402
 from __future__ import annotations
@@ -32,32 +40,19 @@ from hefesto_dualsense4unix.app.constants import (
     STATE_POLL_INTERVAL_MS,
 )
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
-from hefesto_dualsense4unix.gui.widgets import BUTTON_GLYPH_LABELS, ButtonGlyph, StickPreviewGtk
+
+# GRID_BOTOES/ALL_BUTTONS/L2_R2_THRESHOLD moraram aqui até o STATUS-02;
+# re-exportados (ver __all__) para os consumidores históricos da mixin.
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+    ALL_BUTTONS,
+    GRID_BOTOES,
+    L2_R2_THRESHOLD,
+    ControllerCard,
+)
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-# ---------------------------------------------------------------------------
-# Configuração do grid de glyphs (4x4)
-# ---------------------------------------------------------------------------
-
-# Ordem de leitura: linha 0..3, coluna 0..3
-GRID_BOTOES: list[list[str]] = [
-    ["cross",    "circle",   "square",   "triangle"],
-    ["dpad_up",  "dpad_down", "dpad_left", "dpad_right"],
-    ["l1",       "r1",       "l2",       "r2"],
-    ["share",    "options",  "ps",       "touchpad"],
-]
-
-# Todos os 16 botões do grid numa lista plana (para iteração)
-ALL_BUTTONS: list[str] = [b for linha in GRID_BOTOES for b in linha]
-
-# Threshold para L2/R2 analógicos
-L2_R2_THRESHOLD = 30
-
-# Roxo Drácula em markup Pango
-_ROXO_DRACULA = "#bd93f9"
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -65,11 +60,8 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     Assume que `self.builder` contém os widgets do `main.glade`:
         status_connection, status_transport, status_battery_bar,
-        status_active_profile, status_daemon,
-        live_l2_bar, live_r2_bar, live_lx_label, live_rx_label,
-        stick_left_preview_slot, stick_right_preview_slot,
-        buttons_glyphs_slot,
-        stick_left_title, stick_right_title,
+        status_battery_caption, status_active_profile, status_daemon,
+        status_players_slot (box dos cards por controle — STATUS-02),
         header_connection.
 
     Estados do reconnect (`_reconnect_state`):
@@ -100,20 +92,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
     _profile_inflight: bool = False
     _reconnect_inflight: bool = False
-    # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: último valor escrito em cada
-    # widget de live-state. `_render_live_state` só chama set_fraction/set_text/
-    # set_markup quando o valor muda desde o último tick (diff), evitando repaint
-    # contínuo a 10 Hz mesmo com o controle parado (jank no NVIDIA/XWayland).
-    _last_l2: int | None = None
-    _last_r2: int | None = None
-    _last_lx: int | None = None
-    _last_ly: int | None = None
-    _last_rx: int | None = None
-    _last_ry: int | None = None
-    _last_buttons: frozenset[str]
-    _button_glyphs: dict[str, ButtonGlyph]
-    _stick_left: StickPreviewGtk
-    _stick_right: StickPreviewGtk
+    # STATUS-02: cards por controle, keyed por `(index, uniq)` (com sufixo
+    # posicional defensivo em duplicata). Os caches de diff dos widgets de
+    # live-state (R3) migraram para DENTRO de cada ControllerCard.
+    _status_cards: dict[tuple[Any, ...], Any]
+    _status_card_keys: list[tuple[Any, ...]]
     # FEAT-DSX-CONTROLLER-SELECTOR-01: seletor de controle-alvo no banner.
     _target_combo: Any
     _target_combo_rows: list[tuple[str, int | None]]
@@ -135,9 +118,12 @@ class StatusActionsMixin(WidgetAccessMixin):
     _edit_badge: Any = None
 
     def install_status_polling(self) -> None:
-        """Liga os timers da aba Status e inicializa os widgets de sticks/glyphs.
+        """Liga os timers da aba Status e prepara o container dos cards.
 
-        Chamado uma vez no on_mount após o builder estar disponível.
+        Chamado uma vez no on_mount após o builder estar disponível. Os
+        widgets de live-state não são mais singletons: cada controle ganha
+        um ControllerCard montado sob demanda em `_sync_status_cards`
+        (STATUS-02) — aqui só se zera o estado do conjunto.
 
         BUG-GUI-DAEMON-STATUS-INITIAL-01: o primeiro tick dos timers acontecia
         somente após ``LIVE_POLL_INTERVAL_MS`` (100 ms) e
@@ -151,10 +137,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         suficiente, os labels continuam mostrando "Consultando..." (novo
         default do Glade) em vez do falso-negativo "Offline".
         """
-        self._last_buttons = frozenset()
-        self._button_glyphs = {}
-        self._init_stick_previews()
-        self._init_button_glyphs()
+        self._status_cards = {}
+        self._status_card_keys = []
         self._init_controller_target_combo()
         GLib.timeout_add(LIVE_POLL_INTERVAL_MS, self._tick_live_state)
         GLib.timeout_add(STATE_POLL_INTERVAL_MS, self._tick_profile_state)
@@ -178,49 +162,90 @@ class StatusActionsMixin(WidgetAccessMixin):
         GLib.timeout_add_seconds(5, self._check_initial_poll_fallback)
 
     # ------------------------------------------------------------------
-    # Inicialização dos widgets dinâmicos
+    # Cards por controle (STATUS-02)
     # ------------------------------------------------------------------
 
-    def _init_stick_previews(self) -> None:
-        """Cria e insere os dois StickPreviewGtk nos slots do GLADE."""
-        slot_esq = self._get("stick_left_preview_slot")
-        slot_dir = self._get("stick_right_preview_slot")
-        if slot_esq is None or slot_dir is None:
+    @staticmethod
+    def _status_card_keys_for(
+        conectados: list[dict[str, Any]],
+    ) -> list[tuple[Any, ...]]:
+        """Chaves estáveis dos cards: ``(index, uniq)`` por controle CONECTADO.
+
+        O filtro de ``connected`` já aconteceu (`_connected_controllers`) —
+        é ele que impede o card fantasma da entrada-placeholder offline
+        (HARM-CARD-FANTASMA-01: `describe_controllers` devolve UMA entrada
+        com connected=False quando não há controle nenhum). ``uniq`` None
+        (handle keyed por path, sem MAC) é chave VÁLIDA: o índice
+        desambigua. Duplicata exata (defensivo — não deveria existir) ganha
+        um sufixo posicional para nunca colidir no dict de cards.
+        """
+        keys: list[tuple[Any, ...]] = []
+        vistos: dict[tuple[Any, Any], int] = {}
+        for pos, c in enumerate(conectados):
+            indice = c.get("index")
+            if not isinstance(indice, int) or isinstance(indice, bool):
+                indice = pos
+            raw_uniq = c.get("uniq")
+            uniq = raw_uniq if isinstance(raw_uniq, str) and raw_uniq else None
+            base = (indice, uniq)
+            repeticao = vistos.get(base, 0)
+            vistos[base] = repeticao + 1
+            keys.append(base if repeticao == 0 else (indice, uniq, repeticao))
+        return keys
+
+    def _sync_status_cards(self, state: dict[str, Any]) -> None:
+        """Monta/atualiza os cards por controle a partir do ``state_full``.
+
+        Reconstrução SÓ quando o CONJUNTO de chaves muda (2 ticks com o
+        mesmo conjunto = os MESMOS objetos de widget, sem rebuild — jank
+        zero a 10 Hz); o resto é `ControllerCard.update` com diff interno.
+        Com 0 controles não há card nenhum e quem responde é o fallback
+        offline existente da aba (UI-STATUS-OFFLINE-FALLBACK-01).
+        """
+        slot = self._get("status_players_slot")
+        if slot is None or not hasattr(slot, "pack_start"):
+            # Builder fake de testes de outras áreas (ou Glade antigo em
+            # upgrade parcial): sem slot real, a aba segue sem cards.
             return
+        if getattr(self, "_status_cards", None) is None:
+            self._status_cards = {}
+            self._status_card_keys = []
+        conectados = self._connected_controllers(state)
+        keys = self._status_card_keys_for(conectados)
+        if keys != self._status_card_keys:
+            self._rebuild_status_cards(slot, keys)
+        for key, entry in zip(keys, conectados, strict=True):
+            card = self._status_cards.get(key)
+            if card is not None:
+                card.update(entry, state)
 
-        self._stick_left = StickPreviewGtk(label="L3")
-        self._stick_left.set_size_request(120, 120)
-        slot_esq.pack_start(self._stick_left, False, False, 0)
-        self._stick_left.show()
+    def _rebuild_status_cards(
+        self, slot: Any, keys: list[tuple[Any, ...]]
+    ) -> None:
+        """Recria os cards — o conjunto de controles mudou."""
+        for child in list(slot.get_children()):
+            slot.remove(child)
+            child.destroy()
+        self._status_cards = {}
+        self._status_card_keys = list(keys)
+        # 2+ cards → sticks de 90px (compact); card único mantém o layout
+        # equivalente ao da aba antiga (sticks 120px).
+        compact = len(keys) >= 2
+        for key in keys:
+            card = ControllerCard(compact=compact)
+            self._status_cards[key] = card
+            slot.pack_start(card, False, False, 0)
+            card.show_all()
 
-        self._stick_right = StickPreviewGtk(label="R3")
-        self._stick_right.set_size_request(120, 120)
-        slot_dir.pack_start(self._stick_right, False, False, 0)
-        self._stick_right.show()
-
-    def _init_button_glyphs(self) -> None:
-        """Cria o Grid 4x4 de ButtonGlyph e insere no slot do GLADE."""
-        slot = self._get("buttons_glyphs_slot")
-        if slot is None:
-            return
-
-        grid = Gtk.Grid()
-        grid.set_row_spacing(8)
-        grid.set_column_spacing(8)
-        grid.set_halign(Gtk.Align.CENTER)
-        grid.set_valign(Gtk.Align.CENTER)
-
-        for row, linha in enumerate(GRID_BOTOES):
-            for col, nome in enumerate(linha):
-                tooltip = BUTTON_GLYPH_LABELS.get(nome, nome)
-                # Tamanho 40px equilibra a grade com os sticks 120x120
-                # (layout de 3 colunas homogêneas).
-                glyph = ButtonGlyph(nome, size=40, tooltip_pt_br=tooltip)
-                self._button_glyphs[nome] = glyph
-                grid.attach(glyph, col, row, 1, 1)
-
-        slot.pack_start(grid, False, False, 0)
-        grid.show_all()
+    def _clear_status_cards(self) -> None:
+        """Remove todos os cards (daemon offline — nenhum controle conhecido)."""
+        slot = self._get("status_players_slot")
+        if slot is not None and hasattr(slot, "get_children"):
+            for child in list(slot.get_children()):
+                slot.remove(child)
+                child.destroy()
+        self._status_cards = {}
+        self._status_card_keys = []
 
     # ------------------------------------------------------------------
     # Seletor de controle-alvo (FEAT-DSX-CONTROLLER-SELECTOR-01)
@@ -739,10 +764,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
         self._set_label("status_active_profile", "—")
+        # STATUS-02: offline volta ao layout single — a linha de bateria do
+        # frame Estado reaparece (os cards vão embora junto com o daemon).
+        self._set_battery_row_visible(True)
         bar = self._get("status_battery_bar")
         if bar is not None:
             bar.set_fraction(0.0)
             bar.set_text("— %")
+        # STATUS-02: sem daemon não há controle conhecido — nenhum card
+        # (o fallback offline da aba é o frame Estado + header, como sempre).
+        self._clear_status_cards()
         # FEAT-DSX-CONTROLLER-SELECTOR-01: sem daemon, esconde o seletor.
         # Reseta _target_combo_visible junto (espelha o caminho <2 controles em
         # _refresh_controller_target_combo): sem isso o flag fica stale=True e,
@@ -772,133 +803,18 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     def _render_live_state(self, state: dict[str, Any]) -> None:
         # BUG-COMBO-POPUP-FLICKER-02: enquanto um popup (combo/menu) está aberto,
-        # ele detém um grab GTK. As atualizações a 10 Hz dos labels (os sticks do
-        # DualSense TREMEM em repouso → o texto "X: 128 Y: 127" muda de largura →
-        # `queue_resize` → re-layout da janela) fechavam o popup na hora — em
+        # ele detém um grab GTK. As atualizações a 10 Hz (os sticks do DualSense
+        # TREMEM em repouso → re-layout da janela) fechavam o popup na hora — em
         # XWayland E em Wayland nativo. Pausa o render vivo enquanto houver grab
         # ativo; retoma sozinho quando o popup fecha. Sem isso, NENHUM combo da
         # GUI consegue ficar aberto para a usuária escolher.
         if self._popup_is_open():
             return
-        # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: NÃO reescrevemos o header
-        # aqui a 10 Hz. O header é responsabilidade exclusiva de `_render_online`
-        # (chamado pela máquina de reconnect a 0.5 Hz) e de
-        # `_update_reconnect_state`. Reescrevê-lo a cada tick rápido gerava
-        # repaint contínuo do banner mesmo com o controle parado (jank). Todos os
-        # writes abaixo são DIFFADOS contra o último valor: só chamamos
-        # set_fraction/set_text/set_markup quando o valor muda desde o tick
-        # anterior.
-
-        l2 = int(state.get("l2_raw", 0))
-        r2 = int(state.get("r2_raw", 0))
-        if l2 != self._last_l2:
-            l2_bar = self._get("live_l2_bar")
-            if l2_bar is not None:
-                l2_bar.set_fraction(l2 / 255)
-                l2_bar.set_text(f"{l2} / 255")
-            self._last_l2 = l2
-        if r2 != self._last_r2:
-            r2_bar = self._get("live_r2_bar")
-            if r2_bar is not None:
-                r2_bar.set_fraction(r2 / 255)
-                r2_bar.set_text(f"{r2} / 255")
-            self._last_r2 = r2
-
-        # Sticks — atualiza preview e labels numéricos, diffados por posição.
-        lx = int(state.get("lx", 128))
-        ly = int(state.get("ly", 128))
-        rx = int(state.get("rx", 128))
-        ry = int(state.get("ry", 128))
-
-        # BUG-STATUS-LABEL-REFLOW-01: campo de LARGURA FIXA (3 chars, padding de
-        # espaço em fonte monospace). Antes o texto "X: {lx}" mudava de largura ao
-        # cruzar dígitos (5→10→100) → queue_resize → re-layout do painel a 10 Hz:
-        # os glyphs/botões "respiravam" (aumentam e diminuem) durante o jogo. Com
-        # o campo constante, a largura natural do label não muda → sem reflow.
-        if lx != self._last_lx or ly != self._last_ly:
-            if hasattr(self, "_stick_left"):
-                self._stick_left.update(lx, ly)
-            lx_label = self._get("live_lx_label")
-            if lx_label is not None:
-                lx_label.set_markup(
-                    f'<span font_family="monospace" size="small">X: {lx:>3}  Y: {ly:>3}</span>'
-                )
-            self._last_lx = lx
-            self._last_ly = ly
-        if rx != self._last_rx or ry != self._last_ry:
-            if hasattr(self, "_stick_right"):
-                self._stick_right.update(rx, ry)
-            rx_label = self._get("live_rx_label")
-            if rx_label is not None:
-                rx_label.set_markup(
-                    f'<span font_family="monospace" size="small">X: {rx:>3}  Y: {ry:>3}</span>'
-                )
-            self._last_rx = rx
-            self._last_ry = ry
-
-        # Botões pressionados — diff antes de redesenhar (performance 10 Hz)
-        buttons_raw: list[str] = state.get("buttons", []) or []
-        buttons_pressed = frozenset(buttons_raw)
-        self._refresh_glyphs(state, buttons_pressed)
-
-    def _refresh_glyphs(
-        self, state: dict[str, Any], buttons_pressed: frozenset[str]
-    ) -> None:
-        """Atualiza ButtonGlyphs e títulos de sticks quando o estado muda."""
-        last: frozenset[str] = getattr(self, "_last_buttons", frozenset())
-
-        l2_raw = int(state.get("l2_raw", 0))
-        r2_raw = int(state.get("r2_raw", 0))
-        l2_lit = l2_raw > L2_R2_THRESHOLD
-        r2_lit = r2_raw > L2_R2_THRESHOLD
-
-        # Compõe conjunto efetivo incluindo L2/R2 analógicos
-        efetivos: dict[str, bool] = {nome: (nome in buttons_pressed) for nome in ALL_BUTTONS}
-        efetivos["l2"] = l2_lit
-        efetivos["r2"] = r2_lit
-        # BUG-GLYPH-SHARE-NAME-MISMATCH-01: o daemon emite "create" (BTN_SELECT),
-        # mas o glyph/asset chama-se "share". Acende o glyph share quando o
-        # daemon reporta create (ou share, por robustez).
-        efetivos["share"] = ("share" in buttons_pressed) or ("create" in buttons_pressed)
-
-        # Verifica se algo mudou (diff)
-        last_l2 = getattr(self, "_last_l2_lit", False)
-        last_r2 = getattr(self, "_last_r2_lit", False)
-        if buttons_pressed == last and l2_lit == last_l2 and r2_lit == last_r2:
-            return
-
-        self._last_buttons = buttons_pressed
-        self._last_l2_lit = l2_lit
-        self._last_r2_lit = r2_lit
-
-        for nome, glyph in self._button_glyphs.items():
-            glyph.set_pressed(efetivos.get(nome, False))
-
-        # Títulos dos sticks: roxo Drácula se L3/R3 pressionados
-        l3_pressed = "l3" in buttons_pressed
-        r3_pressed = "r3" in buttons_pressed
-
-        if hasattr(self, "_stick_left"):
-            self._stick_left.set_l3_pressed(l3_pressed)
-        if hasattr(self, "_stick_right"):
-            self._stick_right.set_l3_pressed(r3_pressed)
-
-        titulo_esq = self._get("stick_left_title")
-        titulo_dir = self._get("stick_right_title")
-        if titulo_esq is not None:
-            if l3_pressed:
-                titulo_esq.set_markup(
-                    f'<span foreground="{_ROXO_DRACULA}">Analógico Esquerdo (L3)</span>'
-                )
-            else:
-                titulo_esq.set_markup("Analógico Esquerdo (L3)")
-        if titulo_dir is not None:
-            if r3_pressed:
-                titulo_dir.set_markup(
-                    f'<span foreground="{_ROXO_DRACULA}">Analógico Direito (R3)</span>'
-                )
-            else:
-                titulo_dir.set_markup("Analógico Direito (R3)")
+        # GUI-ESTABILIDADE-COSMIC-REMEDIATION-01 / R3: o header NÃO é reescrito
+        # aqui a 10 Hz (é da máquina de reconnect, a 0.5 Hz). STATUS-02: o tick
+        # rápido só distribui `controllers[i]` do state_full para o card de
+        # cada controle — o diff por widget vive DENTRO do ControllerCard.
+        self._sync_status_cards(state)
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
         # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
@@ -926,12 +842,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_label("status_active_profile", active_profile)
         self._set_label("status_daemon", "Online")
 
+        # STATUS-02: com 2+ controles cada card tem a PRÓPRIA bateria — a
+        # linha do frame Estado (que só sabia falar do primário, com o
+        # sufixo ambíguo "(Controle 1)" do UX-BATTERY-LABEL-01) some em vez
+        # de duplicar/ambiguar a leitura.
+        self._set_battery_row_visible(len(conectados) <= 1)
         battery_bar = self._get("status_battery_bar")
-        if battery_bar is not None:
-            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL (show_text) e,
-            # com 2+ controles, dizer DE QUAL controle é a leitura (a bateria
-            # do state_full é a do primário) — antes a barra ficava muda e
-            # ambígua com dois controles conectados.
+        if battery_bar is not None and len(conectados) <= 1:
+            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL (show_text).
             with contextlib.suppress(Exception):
                 battery_bar.set_show_text(True)
             if battery is None:
@@ -939,8 +857,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 battery_bar.set_text("— %")
             else:
                 battery_bar.set_fraction(battery / 100)
-                suffix = " (Controle 1)" if len(conectados) > 1 else ""
-                battery_bar.set_text(f"{battery} %{suffix}")
+                battery_bar.set_text(f"{battery} %")
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).
@@ -948,6 +865,18 @@ class StatusActionsMixin(WidgetAccessMixin):
 
         # UX-03: banner de degradação do vpad (máscara DualSense em uinput).
         self._refresh_vpad_banner(state)
+
+        # STATUS-02: o tick lento também mantém o CONJUNTO de cards em dia —
+        # com a aba Status fora de foco o tick rápido pausa, e sem isto a
+        # troca de aba mostraria cards do conjunto antigo por até 100 ms.
+        self._sync_status_cards(state)
+
+    def _set_battery_row_visible(self, visible: bool) -> None:
+        """Mostra/esconde a linha de bateria do frame Estado (caption + barra)."""
+        for widget_id in ("status_battery_caption", "status_battery_bar"):
+            widget = self._get(widget_id)
+            if widget is not None and hasattr(widget, "set_visible"):
+                widget.set_visible(visible)
 
     def _refresh_vpad_banner(self, state: dict[str, Any] | None) -> None:
         """UX-03: banner de degradação do vpad primário na aba Status.
@@ -967,54 +896,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         banner.set_visible(bool(aviso))
 
     def _reset_live_widgets(self) -> None:
-        l2_bar = self._get("live_l2_bar")
-        if l2_bar is not None:
-            l2_bar.set_fraction(0.0)
-            l2_bar.set_text("0 / 255")
-        r2_bar = self._get("live_r2_bar")
-        if r2_bar is not None:
-            r2_bar.set_fraction(0.0)
-            r2_bar.set_text("0 / 255")
+        """IPC sem resposta neste tick: os cards mostram "—".
 
-        lx_label = self._get("live_lx_label")
-        if lx_label is not None:
-            lx_label.set_markup(
-                '<span font_family="monospace" size="small">X: 128  Y: 128</span>'
-            )
-        rx_label = self._get("live_rx_label")
-        if rx_label is not None:
-            rx_label.set_markup(
-                '<span font_family="monospace" size="small">X: 128  Y: 128</span>'
-            )
+        Contrato do STATUS-02: NUNCA exibir o último valor de inputs como se
+        estivesse vivo — cada card troca a área de inputs pelo "—" (sem
+        leitor) e invalida os caches de diff, para o próximo tick bom
+        repintar tudo.
+        """
+        for card in getattr(self, "_status_cards", {}).values():
+            card.reset_inputs()
 
-        # Sticks ao centro
-        if hasattr(self, "_stick_left"):
-            self._stick_left.update(128, 128)
-            self._stick_left.set_l3_pressed(False)
-        if hasattr(self, "_stick_right"):
-            self._stick_right.update(128, 128)
-            self._stick_right.set_l3_pressed(False)
 
-        # Glyphs todos apagados
-        for glyph in getattr(self, "_button_glyphs", {}).values():
-            glyph.set_pressed(False)
-        self._last_buttons = frozenset()
-        self._last_l2_lit = False
-        self._last_r2_lit = False
-        # R3: sincroniza o cache de diff com os valores de repouso que acabamos
-        # de pintar, para o próximo tick não reescrever à toa (nem pular por
-        # cache stale ao reconectar com o controle em repouso).
-        self._last_l2 = 0
-        self._last_r2 = 0
-        self._last_lx = 128
-        self._last_ly = 128
-        self._last_rx = 128
-        self._last_ry = 128
-
-        # Títulos sem markup colorido
-        titulo_esq = self._get("stick_left_title")
-        titulo_dir = self._get("stick_right_title")
-        if titulo_esq is not None:
-            titulo_esq.set_markup("Analógico Esquerdo (L3)")
-        if titulo_dir is not None:
-            titulo_dir.set_markup("Analógico Direito (R3)")
+__all__ = [
+    "ALL_BUTTONS",
+    "GRID_BOTOES",
+    "L2_R2_THRESHOLD",
+    "StatusActionsMixin",
+]

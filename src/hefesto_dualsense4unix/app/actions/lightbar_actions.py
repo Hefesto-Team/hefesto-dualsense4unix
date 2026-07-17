@@ -9,8 +9,14 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
+from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
+
+#: Aviso D4 (sprint cores-e-led-automaticos): cor única em "Todos" com o
+#: automático ligado seria INVISÍVEL (a paleta vence o global no merge do
+#: backend) — então o fluxo desliga o toggle e avisa, nunca em popup.
+_AVISO_D4 = "Cores automáticas desligadas para aplicar uma cor única"
 
 
 class LightbarActionsMixin(WidgetAccessMixin):
@@ -34,7 +40,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         """
         return getattr(self, "_edit_target_uniq", None)
 
-    def _persist_leds_update(self, update: dict[str, Any]) -> None:
+    def _persist_leds_update(self, update: dict[str, Any]) -> bool:
         """Grava campos de LEDs no draft — no GLOBAL ou no override do alvo.
 
         PERFIL-04 (sprint perfis-por-controle): com um controle selecionado
@@ -50,13 +56,28 @@ class LightbarActionsMixin(WidgetAccessMixin):
         azul" + "Salvar Perfil" ressuscitava a cor antiga do alvo na próxima
         ativação. Cor e brilho saem JUNTOS (formam um único campo — o RGB
         pré-escalado — no estado desejado do backend).
+
+        COR-04 (semântica D4): COR (``lightbar_rgb``) editada em "Todos" com
+        o automático ligado também DESLIGA ``auto_player_colors`` no draft —
+        senão a cor única seria invisível (a paleta automática vence o global
+        no merge). Brilho e player-LEDs NÃO disparam o D4 (o brilho escala a
+        própria paleta — D11 — e os player-LEDs não são cor). Devolve True
+        quando o D4 desligou o automático AGORA (o chamador compõe o aviso
+        ``_AVISO_D4`` no toast — visível, nunca popup); o checkbox da aba é
+        sincronizado aqui mesmo, sob guard.
         """
         draft = getattr(self, "draft", None)
         if draft is None:
-            return
+            return False
         uniq = self._edit_uniq()
         if uniq is None:
-            new_leds = draft.leds.model_copy(update=update)
+            campos_update = dict(update)
+            d4_disparou = bool(
+                "lightbar_rgb" in campos_update and draft.leds.auto_player_colors
+            )
+            if d4_disparou:
+                campos_update["auto_player_colors"] = False
+            new_leds = draft.leds.model_copy(update=campos_update)
             draft = draft.model_copy(update={"leds": new_leds})
             campos: set[str] = set()
             if "lightbar_rgb" in update or "lightbar_brightness" in update:
@@ -66,9 +87,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
             if campos:
                 draft = draft.with_override_fields_cleared("leds", campos)
             self.draft = draft
-            return
+            if d4_disparou:
+                self._sync_auto_checkbox(False)
+            return d4_disparou
         base = draft.effective_leds_for(uniq)
         self.draft = draft.with_controller_leds(uniq, base.model_copy(update=update))
+        return False
 
     def _refresh_lightbar_from_draft(self) -> None:
         """Popula widgets da aba Lightbar a partir do draft.
@@ -87,6 +111,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         self._refresh_guard = True
         try:
             leds = draft.effective_leds_for(self._edit_uniq())
+            # COR-04: o checkbox "Cores automáticas por controle" reflete o
+            # GLOBAL do draft (campo do PERFIL), nunca o efetivo do alvo — um
+            # override por-controle não tem opinião sobre o toggle.
+            auto_check: Gtk.CheckButton = self._get("auto_player_colors_check")
+            if auto_check is not None:
+                auto_check.set_active(bool(draft.leds.auto_player_colors))
             # Cor RGB
             if leds.lightbar_rgb is not None:
                 r, g, b = leds.lightbar_rgb
@@ -133,6 +163,18 @@ class LightbarActionsMixin(WidgetAccessMixin):
             rgba.alpha = 1.0
             button.set_rgba(rgba)
             self._current_rgb = (255, 128, 0)
+        # COR-04: widgets do automático conectados em CÓDIGO (não pelo Glade)
+        # — o dict de ``_signal_handlers()`` vive em app.py, e a fiação aqui
+        # segue o precedente do install_triggers_tab (SegmentedSelector).
+        auto_check: Gtk.CheckButton = self._get("auto_player_colors_check")
+        if auto_check is not None:
+            auto_check.connect("toggled", self.on_auto_player_colors_toggled)
+        reset_target: Gtk.Button = self._get("lightbar_auto_reset_target")
+        if reset_target is not None:
+            reset_target.connect("clicked", self.on_lightbar_auto_reset_target)
+        reset_all: Gtk.Button = self._get("lightbar_auto_reset_all")
+        if reset_all is not None:
+            reset_all.connect("clicked", self.on_lightbar_auto_reset_all)
 
     # --- signals lightbar ---
 
@@ -145,20 +187,51 @@ class LightbarActionsMixin(WidgetAccessMixin):
             int(rgba.green * 255),
             int(rgba.blue * 255),
         )
-        # Atualiza draft (global ou override do alvo — PERFIL-04)
-        self._persist_leds_update({"lightbar_rgb": self._current_rgb})
+        # Atualiza draft (global ou override do alvo — PERFIL-04). Em "Todos"
+        # com o automático ligado, o D4 desliga o toggle — aviso visível
+        # (COR-04; sem outro toast por cima: escolher cor não tem toast).
+        if self._persist_leds_update({"lightbar_rgb": self._current_rgb}):
+            self._toast_light(_AVISO_D4)
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
 
     def on_lightbar_apply(self, _btn: Gtk.Button) -> None:
-        ok = led_set(self._current_rgb, brightness=self._current_brightness)
+        """Envia a cor da tela ao hardware.
+
+        COR-04: em "Todos", a cor viaja JUNTO com o toggle do automático num
+        único ``profile.apply_draft`` parcial (seção ``leds``) — o ``led.set``
+        clássico gravaria só o default e a paleta automática (se ligada no
+        daemon) venceria no próximo reassert ("apliquei e voltou colorido").
+        O D4 roda antes: auto ligado é desligado no draft, com aviso composto
+        no toast. Com um controle selecionado (ou sem draft — hosts parciais
+        de teste), o fluxo por-controle clássico permanece: ``led.set``
+        respeita o alvo do seletor e não mexe no toggle.
+        """
         pct = round(self._current_brightness * 100)
-        self._toast_light(
+        draft = getattr(self, "draft", None)
+        d4_disparou = False
+        if self._edit_uniq() is None and draft is not None:
+            d4_disparou = self._d4_disable_auto_for_single_color()
+            ok = ipc_bridge.apply_draft(
+                {
+                    "leds": {
+                        "lightbar_rgb": list(self._current_rgb),
+                        "lightbar_brightness": self._current_brightness,
+                        "auto_player_colors": self.draft.leds.auto_player_colors,
+                    }
+                }
+            )
+        else:
+            ok = led_set(self._current_rgb, brightness=self._current_brightness)
+        msg = (
             f"Cor RGB {self._current_rgb} a {pct}% aplicada"
             if ok
             else "Falha (daemon offline?)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
         """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
@@ -195,12 +268,154 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # B2: espelha a cor preta no draft (mesmo mecanismo de
         # on_lightbar_color_set). Sem isso, "Apagar" + "Salvar Perfil" gravava a
         # cor antiga e revisitar a aba repintava a cor anterior.
-        self._persist_leds_update({"lightbar_rgb": self._current_rgb})
+        # COR-04 (D4): apagar é aplicar a cor única preta — em "Todos" com o
+        # automático ligado, o toggle desliga (senão a paleta reacenderia por
+        # cima no próximo reassert) e o preto viaja com o toggle num único
+        # apply_draft parcial, como no on_lightbar_apply.
+        d4_disparou = self._persist_leds_update({"lightbar_rgb": self._current_rgb})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
-        ok = led_set((0, 0, 0))
-        self._toast_light("Lightbar apagada" if ok else "Falha (daemon offline?)")
+        draft = getattr(self, "draft", None)
+        if self._edit_uniq() is None and draft is not None:
+            ok = ipc_bridge.apply_draft(
+                {
+                    "leds": {
+                        "lightbar_rgb": [0, 0, 0],
+                        "auto_player_colors": draft.leds.auto_player_colors,
+                    }
+                }
+            )
+        else:
+            ok = led_set((0, 0, 0))
+        msg = "Lightbar apagada" if ok else "Falha (daemon offline?)"
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
+
+    # --- signals cores automáticas por controle (COR-04) ---
+
+    def on_auto_player_colors_toggled(self, checkbox: Gtk.CheckButton) -> None:
+        """Checkbox "Cores automáticas por controle" → ``draft.leds``.
+
+        Campo do PERFIL: grava SEMPRE na seção GLOBAL do draft, mesmo com um
+        controle selecionado no seletor (um override por-controle não tem
+        opinião sobre o toggle — regra do schema). Persiste no "Salvar
+        Perfil" (``to_profile``) e viaja no "Aplicar" (``to_ipc_dict``).
+        RELIGAR o automático NÃO apaga cores explícitas por-controle: elas
+        continuam vencendo onde existirem (merge do backend, D5) — quem as
+        remove são os botões "Voltar ao automático".
+        """
+        if self._refresh_guard:
+            return
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        ativo = bool(checkbox.get_active())
+        if bool(draft.leds.auto_player_colors) == ativo:
+            return  # sem mudança real (eco de set_active programático)
+        self.draft = draft.model_copy(
+            update={
+                "leds": draft.leds.model_copy(update={"auto_player_colors": ativo})
+            }
+        )
+        if ativo:
+            self._toast_light(
+                "Cores automáticas ligadas — cores escolhidas por controle "
+                "continuam valendo onde existirem"
+            )
+        else:
+            self._toast_light(
+                "Cores automáticas desligadas — vale a cor única do perfil"
+            )
+
+    def on_lightbar_auto_reset_target(self, _btn: Gtk.Button) -> None:
+        """"Voltar ao automático" — remove a cor explícita do ALVO selecionado.
+
+        Só a cor (``lightbar`` + ``lightbar_brightness``, que formam UM campo
+        no backend) sai do override do controle; player-LEDs e gatilhos
+        próprios ficam. A automática volta a valer nele no próximo Aplicar
+        (ou na próxima ativação do perfil salvo). Com o alvo em "Todos" não
+        há controle selecionado: orienta pelo toast, sem popup.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        uniq = self._edit_uniq()
+        if uniq is None:
+            self._toast_light(
+                "Escolha um controle no seletor acima — para limpar todos, "
+                'use "Voltar todos ao automático"'
+            )
+            return
+        self.draft = draft.with_controller_fields_cleared(
+            uniq, "leds", {"lightbar", "lightbar_brightness"}
+        )
+        self._refresh_lightbar_from_draft()
+        if self.draft.leds.auto_player_colors:
+            self._toast_light(
+                "Cor própria removida — a cor automática volta a valer "
+                "neste controle no próximo Aplicar"
+            )
+        else:
+            self._toast_light(
+                'Cor própria removida — ligue "Cores automáticas por '
+                'controle" para valer a paleta'
+            )
+
+    def on_lightbar_auto_reset_all(self, _btn: Gtk.Button) -> None:
+        """"Voltar todos ao automático" — limpa as cores explícitas e religa o auto.
+
+        Remove ``lightbar``/``lightbar_brightness`` de TODOS os overrides
+        por-controle do draft (player-LEDs e gatilhos explícitos ficam) e
+        religa ``auto_player_colors`` — a paleta automática volta a valer em
+        todo mundo no próximo Aplicar/Salvar.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        novo = draft.with_override_fields_cleared(
+            "leds", {"lightbar", "lightbar_brightness"}
+        )
+        novo = novo.model_copy(
+            update={"leds": novo.leds.model_copy(update={"auto_player_colors": True})}
+        )
+        self.draft = novo
+        self._refresh_lightbar_from_draft()
+        self._toast_light(
+            "Cores automáticas religadas para todos os controles — aplique "
+            "ou salve o perfil para valer"
+        )
+
+    def _d4_disable_auto_for_single_color(self) -> bool:
+        """D4 fora do ``_persist_leds_update``: desliga o auto no draft.
+
+        Usado pelos caminhos que APLICAM a cor da tela sem editá-la
+        (``on_lightbar_apply``): religou o automático e clicou "Aplicar no
+        controle" em "Todos" → o toggle desliga aqui, e o chamador compõe o
+        ``_AVISO_D4`` no toast do resultado. Devolve True quando desligou
+        AGORA; False se já estava desligado (ou sem draft).
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.leds.auto_player_colors:
+            return False
+        self.draft = draft.model_copy(
+            update={"leds": draft.leds.model_copy(update={"auto_player_colors": False})}
+        )
+        self._sync_auto_checkbox(False)
+        return True
+
+    def _sync_auto_checkbox(self, active: bool) -> None:
+        """Reflete ``active`` no checkbox SEM disparar o handler (guard)."""
+        check: Gtk.CheckButton = self._get("auto_player_colors_check")
+        if check is None:
+            return
+        prev = self._refresh_guard
+        self._refresh_guard = True
+        try:
+            check.set_active(active)
+        finally:
+            self._refresh_guard = prev
 
     # --- signals player leds ---
 

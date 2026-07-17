@@ -11,7 +11,9 @@ orquestrador para muito abaixo do limite de 100 LOC por método.
 """
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import time
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +42,143 @@ def _as_str_or_none(value: Any) -> str | None:
     return value if isinstance(value, str) else None
 
 
+#: STATUS-01: TTL (s) da leitura sysfs por nó LED no enriquecimento do
+#: `state_full`. O tick da GUI é 10 Hz (`LIVE_POLL_INTERVAL_MS=100`) e
+#: `multi_intensity`/`brightness` são I/O de arquivo — sem o cache seriam até
+#: 20 opens/s POR CONTROLE. Cor de lightbar com 1 s de frescor é imperceptível.
+_LIGHTBAR_READ_TTL_SEC = 1.0
+
+
+def _norm_uniq(value: Any) -> str | None:
+    """MAC 12-hex normalizado de uma key/serial do backend, ou None.
+
+    Mesma normalização + guarda de comprimento do `_key_to_uniq` do backend
+    (uma key de fallback por path contém dígitos hex soltos e viraria um
+    pseudo-MAC sem a guarda). Vive aqui para o handler casar as keys de
+    `_sysfs`/`_sysfs_written` (serial com `:`) com o `uniq` do
+    `describe_controllers` sem depender de método privado do backend.
+    """
+    if not isinstance(value, str):
+        return None
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    normalized = norm_mac(value)
+    if normalized is None or len(normalized) != 12:
+        return None
+    return normalized
+
+
+def _rgb_or_none(value: Any) -> tuple[int, int, int] | None:
+    """Coerção defensiva de um RGB vindo de backend/fake para tupla de ints."""
+    if not isinstance(value, (tuple, list)) or len(value) != 3:
+        return None
+    try:
+        return (int(value[0]), int(value[1]), int(value[2]))
+    except (TypeError, ValueError):
+        return None
+
+
+# --- 8BIT-01: inventário de gamepads externos (opt-in do controller.list) ----
+
+#: Orçamentos da sonda "quem segura o hidraw" (opcional e degradável): pgrep
+#: com timeout curto e varredura de /proc/<pid>/fd com teto de tempo — o
+#: estudo mediu ~6 ms para ~4600 fds, então 0.5 s é folga patológica. A sonda
+#: roda na MESMA thread do inventário (nunca no event loop).
+_HOLDERS_PGREP_TIMEOUT_SEC = 1.0
+_HOLDERS_SCAN_BUDGET_SEC = 0.5
+_HOLDERS_MAX_STEAM_PIDS = 8
+
+
+def _steam_pids() -> list[int]:
+    """PIDs do processo Steam via pgrep — padrões do `steam_running` canônico.
+
+    Mesmos matches de `integrations/steam_launch_options.steam_running`
+    (`-f steamrt64/steam` pega o runtime pelo PATH; nunca `-f steam` solto —
+    o falso-positivo histórico do earlyoom), mais `-x steam` para instalações
+    fora do runtime. Best-effort: qualquer falha devolve o que juntou.
+    """
+    import subprocess
+
+    pids: set[int] = set()
+    for args in (["pgrep", "-f", "steamrt64/steam"], ["pgrep", "-x", "steam"]):
+        try:
+            proc = subprocess.run(
+                args,
+                capture_output=True,
+                timeout=_HOLDERS_PGREP_TIMEOUT_SEC,
+                check=False,
+                text=True,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode != 0:
+            continue
+        for token in proc.stdout.split():
+            with contextlib.suppress(ValueError):
+                pids.add(int(token))
+    return sorted(pids)[:_HOLDERS_MAX_STEAM_PIDS]
+
+
+def _steam_hidraw_holders() -> dict[str, list[int]]:
+    """Mapa `/dev/hidrawN` -> PIDs do Steam que seguram o nó (8BIT-01).
+
+    Sonda OPCIONAL e degradável, restrita aos PIDs do Steam (nunca
+    `/proc/*/fd` de todos os processos) — funciona sem sudo para processos do
+    mesmo usuário (readlink em /proc/<pid>/fd, provado ao vivo no estudo).
+    Estourou o orçamento/permissão -> devolve o que tem; quem consome trata
+    ausência como "não sondado", NUNCA como "ninguém segura". Lembrete de
+    honestidade do sprint: fd aberto pelo Steam é estado NORMAL, não
+    assinatura de conflito.
+    """
+    import os
+
+    holders: dict[str, list[int]] = {}
+    deadline = time.monotonic() + _HOLDERS_SCAN_BUDGET_SEC
+    for pid in _steam_pids():
+        fd_dir = f"/proc/{pid}/fd"
+        try:
+            entries = os.listdir(fd_dir)
+        except OSError:
+            continue  # processo morreu / sem permissão: segue degradado
+        for fd in entries:
+            if time.monotonic() > deadline:
+                return holders
+            target = ""
+            with contextlib.suppress(OSError):
+                target = os.readlink(os.path.join(fd_dir, fd))
+            if target.startswith("/dev/hidraw"):
+                pids_do_no = holders.setdefault(target, [])
+                if pid not in pids_do_no:
+                    pids_do_no.append(pid)
+    return holders
+
+
+def _external_inventory() -> list[dict[str, Any]]:
+    """Inventário de externos + sonda de holders — roda FORA do event loop.
+
+    Composição síncrona chamada via `asyncio.to_thread` pelo
+    `_handle_controller_list`: a enumeração evdev custa 10-40 ms
+    (PERF-MULTI-CONTROLLER-01) e a sonda faz subprocess/readlink — nada disso
+    pode bloquear o loop do daemon (congelaria o input no meio do jogo).
+
+    O campo `holders` só aparece quando a sonda RODOU e achou o Steam
+    segurando aquele hidraw ({"steam_pids": [...]}); sonda falha/vazia =
+    campo ausente, sem erro (não é critério de aceite do 8BIT-01).
+    """
+    from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
+
+    inventory = discover_external_gamepads()
+    holders: dict[str, list[int]] = {}
+    with contextlib.suppress(Exception):
+        holders = _steam_hidraw_holders()
+    if holders:
+        for entry in inventory:
+            hidraw = entry.get("hidraw")
+            if isinstance(hidraw, str) and hidraw in holders:
+                entry["holders"] = {"steam_pids": holders[hidraw]}
+    return inventory
+
+
 class IpcHandlersMixin:
     """Mixin com os 19 métodos `_handle_*` do IpcServer.
 
@@ -52,6 +191,15 @@ class IpcHandlersMixin:
     store: StateStore
     profile_manager: Any
     daemon: DaemonProtocol
+
+    #: STATUS-01: cache TTL das leituras sysfs de lightbar (lazy, por
+    #: instância — ver `_lightbar_read_cached`). Class attribute com default
+    #: None de propósito: o mixin não é dataclass, então isto NÃO vira field
+    #: do `IpcServer` (não muda o __init__ dele); a instância faz shadow na
+    #: primeira leitura.
+    _lightbar_read_cache: (
+        dict[str, tuple[float, tuple[int, int, int] | None, bool]] | None
+    ) = None
 
     # --- perfis ----------------------------------------------------------
 
@@ -406,6 +554,19 @@ class IpcHandlersMixin:
                         strict=True,
                     ):
                         entry["player"] = number
+            # STATUS-01 + COR-05 + BT-03: enriquecimento POR CONTROLE físico —
+            # slot de sessão, cor da lightbar (com dono da escrita), inputs ao
+            # vivo e backend/motivo do vpad por jogador. Mora AQUI (no handler,
+            # a 10 Hz com cache TTL), NUNCA em `describe_controllers()` — que
+            # roda no caminho quente do FF do jogo e não pode fazer I/O de
+            # arquivo. O suppress é a última linha de defesa da serialização
+            # (daemon/controller dublados em teste); cada seção interna já é
+            # defensiva por conta própria.
+            if isinstance(controllers, list):
+                with contextlib.suppress(Exception):
+                    self._enrich_controllers_per_controller(
+                        [c for c in controllers if isinstance(c, dict)], state
+                    )
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
         # (None = TODOS / broadcast). getattr defensivo: backends sem o método
@@ -550,22 +711,323 @@ class IpcHandlersMixin:
 
         return result
 
+    # --- STATUS-01 + COR-05 + BT-03: estado POR CONTROLE físico -----------
+
+    def _enrich_controllers_per_controller(
+        self, entries: list[dict[str, Any]], state: Any
+    ) -> None:
+        """Enriquece cada entrada de `controllers` com o estado POR CONTROLE.
+
+        Campos novos (sempre presentes — shape estável para GUI/CLI/applet;
+        os campos PRÉ-existentes não mudam):
+
+        - ``player_slot``: número de sessão do CONTROLE (COR-01/D6), do
+          `identity_registry` do daemon — consulta DEFENSIVA com
+          ``assign=False`` (ler estado nunca aloca slot). O registry é
+          entregue por outra frente; ausente → None.
+        - ``lightbar_rgb``/``lightbar_on``/``lightbar_source``: a cor efetiva
+          CONHECIDA (o que está/estaria aceso), decidida pelo DONO DA ESCRITA:
+          * ``"sysfs"`` — nó gravável (mapa `_sysfs` do backend) E escrito por
+            nós (rastreio `_sysfs_written`, com o priming do
+            `_refresh_sysfs_leds` garantindo o frescor): a leitura da classe
+            LED é a verdade. SÓ neste estado ``(0, 0, 0)`` significa
+            "apagada" (refutação 1 do sprint).
+          * ``"desired"`` — nó não-gravável/fora do mapa (a escrita foi por
+            hidraw → classe stale POR CONSTRUÇÃO) mas o backend conhece a
+            última cor mandada aplicar (`resolved_led_for`).
+          * ``"desconhecida"`` — nada conhecido (rgb None; NUNCA rotular de
+            "apagada" — o LED pode estar brilhando o azul-kernel agora).
+          Modo Nativo: a matriz NÃO muda — o jogo escreve por hidraw (não
+          toca a classe LED), então a fonte devolve a ÚLTIMA COR CONHECIDA; o
+          campo global ``native_mode`` (já no payload) é o aviso da GUI ("o
+          jogo é dono do LED") — nenhuma flag nova por controle.
+
+          Contrato de cor (D8 — divergência fundamentada, decisão do
+          orquestrador da onda): expõe-se UMA cor, a efetiva conhecida
+          (pós-escala de brilho — o `_DesiredOutput.led` já é pós-escala; o
+          manager pré-escala na borda). O par pré/pós-brilho do D8 original
+          exigiria refactor do estado desejado fora do escopo; a legibilidade
+          de cor escura (objetivo do D8) é da GUI via
+          `utils/color_contrast.ensure_min_contrast`.
+        - ``inputs``: ``{lx,ly,rx,ry,l2_raw,r2_raw,buttons}`` ou None. O
+          PRIMÁRIO espelha o `state` do topo do payload (`daemon._last_state`
+          — a MESMA fonte, nunca um snapshot evdev paralelo: armadilha A-09);
+          secundários vêm de `CoopManager.live_snapshots()` (leitura
+          não-destrutiva por MAC). Sem leitor → None (o card mostra "—",
+          nunca um valor congelado fingindo vida).
+        - ``vpad_backend``/``vpad_motivo`` (BT-03): backend real do vpad DO
+          JOGADOR deste controle ("uhid" | "uinput") e o motivo quando
+          degradado (máscara DualSense em uinput — `fallback_motivo` que a
+          factory pendurou: "uhid_indisponivel", "uhid_start_falhou",
+          "uhid_bind_falhou", "uhid_vetado_pelo_chamador"; ou "sem_uhid").
+          Estende o `dedup_status` (DEDUP-06), que agrega por jogador — aqui
+          o dado sai POR CONTROLE: primário → `_gamepad_device`; secundário
+          promovido → o vpad dele no co-op; controle que não é jogador com
+          vpad próprio (co-op off/pending/emulação off) → None. Máscara xbox
+          é uinput POR DESIGN → nunca tem motivo.
+
+        Custo: leituras sysfs no MÁXIMO 1x/s por nó (`_lightbar_read_cached`);
+        o resto é leitura de atributos. Nada aqui toca hardware.
+        """
+        sysfs_map = getattr(self.controller, "_sysfs", None)
+        written_map = getattr(self.controller, "_sysfs_written", None)
+        node_by_uniq: dict[str, Any] = {}
+        written_by_uniq: dict[str, tuple[int, int, int]] = {}
+        if isinstance(sysfs_map, dict):
+            for key, node in sysfs_map.items():
+                uniq = _norm_uniq(key)
+                if uniq is not None and node is not None:
+                    node_by_uniq[uniq] = node
+        if isinstance(written_map, dict):
+            for key, raw in written_map.items():
+                uniq = _norm_uniq(key)
+                rgb = _rgb_or_none(raw)
+                if uniq is not None and rgb is not None:
+                    written_by_uniq[uniq] = rgb
+
+        snapshots = self._coop_live_snapshots()
+        vpad_by_uniq = self._coop_vpads_by_uniq()
+        gp_dev = (
+            getattr(self.daemon, "_gamepad_device", None)
+            if self.daemon is not None
+            else None
+        )
+
+        for entry in entries:
+            uniq = entry.get("uniq")
+            uniq = uniq if isinstance(uniq, str) and uniq else None
+
+            entry["player_slot"] = self._player_slot_for(uniq)
+
+            rgb, on, source = self._lightbar_for_uniq(
+                uniq, node_by_uniq, written_by_uniq
+            )
+            entry["lightbar_rgb"] = list(rgb) if rgb is not None else None
+            entry["lightbar_on"] = on
+            entry["lightbar_source"] = source
+
+            if entry.get("is_primary") and state is not None:
+                entry["inputs"] = self._inputs_from_state(state)
+            elif uniq is not None and uniq in snapshots:
+                entry["inputs"] = self._inputs_from_snapshot(snapshots[uniq])
+            else:
+                entry["inputs"] = None
+
+            backend, motivo = (None, None)
+            if entry.get("is_primary") and gp_dev is not None:
+                backend, motivo = self._vpad_backend_motivo(gp_dev)
+            elif uniq is not None and uniq in vpad_by_uniq:
+                backend, motivo = vpad_by_uniq[uniq]
+            entry["vpad_backend"] = backend
+            entry["vpad_motivo"] = motivo
+
+    def _lightbar_for_uniq(
+        self,
+        uniq: str | None,
+        node_by_uniq: dict[str, Any],
+        written_by_uniq: dict[str, tuple[int, int, int]],
+    ) -> tuple[tuple[int, int, int] | None, bool, str]:
+        """(rgb, on, source) de UM controle, pelo dono da escrita (STATUS-01)."""
+        if uniq is not None:
+            node = node_by_uniq.get(uniq)
+            if node is not None and uniq in written_by_uniq:
+                rgb, node_on = self._lightbar_read_cached(node)
+                if rgb is not None:
+                    # `set_rgb` fixa brightness=255 e apaga por "0 0 0" — aceso
+                    # de verdade = brightness > 0 E cor não-preta.
+                    return rgb, bool(node_on and rgb != (0, 0, 0)), "sysfs"
+                # Nó sumiu na corrida (replug) — cai para o desired abaixo.
+            resolved = getattr(self.controller, "resolved_led_for", None)
+            if callable(resolved):
+                rgb = None
+                with contextlib.suppress(Exception):
+                    rgb = _rgb_or_none(resolved(uniq))
+                if rgb is not None:
+                    return rgb, rgb != (0, 0, 0), "desired"
+        return None, False, "desconhecida"
+
+    def _lightbar_read_cached(
+        self, node: Any
+    ) -> tuple[tuple[int, int, int] | None, bool]:
+        """Leitura (rgb, brightness>0) de um nó LED com cache TTL por nó.
+
+        STATUS-01: o `state_full` roda a 10 Hz e `get_rgb`/`is_on` são I/O de
+        arquivo — o cache garante no máximo 1 leitura/s por nó
+        (`_LIGHTBAR_READ_TTL_SEC`). Keyed pelo `indicator_dir` (estável por nó
+        e muda quando o kernel recria o nó — invalidação natural no replug).
+        """
+        cache = self._lightbar_read_cache
+        if cache is None:
+            cache = {}
+            self._lightbar_read_cache = cache
+        cache_key = str(getattr(node, "indicator_dir", "") or f"id:{id(node)}")
+        now = time.monotonic()
+        hit = cache.get(cache_key)
+        if hit is not None and (now - hit[0]) < _LIGHTBAR_READ_TTL_SEC:
+            return hit[1], hit[2]
+        rgb: tuple[int, int, int] | None = None
+        on = False
+        with contextlib.suppress(Exception):
+            rgb = _rgb_or_none(node.get_rgb())
+        with contextlib.suppress(Exception):
+            on = bool(node.is_on())
+        if len(cache) > 64:
+            # Poda defensiva: replug infinito não pode crescer sem teto (o
+            # conjunto real é 1-4 nós; 64 já é patológico).
+            cache.clear()
+        cache[cache_key] = (now, rgb, on)
+        return rgb, on
+
+    def _player_slot_for(self, uniq: str | None) -> int | None:
+        """Slot de sessão do controle `uniq` via identity_registry (COR-01/D9).
+
+        Consulta DEFENSIVA e só-leitura (``assign=False`` — expor estado nunca
+        aloca slot novo). O registry é entregue pela frente de cores/perfis;
+        daemon sem o atributo (ou dublê de teste devolvendo mock) → None.
+        Controle sem MAC (uniq None) nunca tem slot (D9).
+        """
+        if uniq is None or self.daemon is None:
+            return None
+        registry = getattr(self.daemon, "identity_registry", None)
+        slot_for = getattr(registry, "slot_for", None) if registry is not None else None
+        if not callable(slot_for):
+            return None
+        raw: Any = None
+        with contextlib.suppress(Exception):
+            raw = slot_for(uniq, assign=False)
+        if isinstance(raw, int) and not isinstance(raw, bool):
+            return raw
+        return None
+
+    @staticmethod
+    def _inputs_from_state(state: Any) -> dict[str, Any] | None:
+        """Inputs do PRIMÁRIO a partir do `state` do topo (`daemon._last_state`)."""
+        try:
+            return {
+                "lx": int(state.raw_lx),
+                "ly": int(state.raw_ly),
+                "rx": int(state.raw_rx),
+                "ry": int(state.raw_ry),
+                "l2_raw": int(state.l2_raw),
+                "r2_raw": int(state.r2_raw),
+                "buttons": sorted(state.buttons_pressed),
+            }
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _inputs_from_snapshot(snap: Any) -> dict[str, Any] | None:
+        """Inputs de um secundário a partir do `EvdevSnapshot` do reader dele."""
+        try:
+            return {
+                "lx": int(snap.lx),
+                "ly": int(snap.ly),
+                "rx": int(snap.rx),
+                "ry": int(snap.ry),
+                "l2_raw": int(snap.l2_raw),
+                "r2_raw": int(snap.r2_raw),
+                "buttons": sorted(snap.buttons_pressed),
+            }
+        except (AttributeError, TypeError, ValueError):
+            return None
+
+    def _coop_live_snapshots(self) -> dict[str, Any]:
+        """`CoopManager.live_snapshots()` com blindagem de dublês de teste."""
+        coop = (
+            getattr(self.daemon, "_coop_manager", None)
+            if self.daemon is not None
+            else None
+        )
+        live = getattr(coop, "live_snapshots", None) if coop is not None else None
+        if not callable(live):
+            return {}
+        out: Any = None
+        with contextlib.suppress(Exception):
+            out = live()
+        return out if isinstance(out, dict) else {}
+
+    def _coop_vpads_by_uniq(self) -> dict[str, tuple[str | None, str | None]]:
+        """MAC -> (vpad_backend, vpad_motivo) dos jogadores secundários (BT-03).
+
+        Mesma fonte (`coop._players`, getattr defensivo) e mesmo critério de
+        degradação do `dedup_status` da Fase 2 — aqui POR CONTROLE em vez de
+        agregado. Jogador pendente (sem vpad) fica fora: não é jogador ainda.
+        """
+        coop = (
+            getattr(self.daemon, "_coop_manager", None)
+            if self.daemon is not None
+            else None
+        )
+        players = getattr(coop, "_players", None) if coop is not None else None
+        if not isinstance(players, dict):
+            return {}
+        out: dict[str, tuple[str | None, str | None]] = {}
+        for mac, player in players.items():
+            if not isinstance(mac, str) or mac.startswith("path:"):
+                continue
+            vpad = getattr(player, "vpad", None)
+            if vpad is None:
+                continue
+            out[mac] = self._vpad_backend_motivo(vpad)
+        return out
+
+    @staticmethod
+    def _vpad_backend_motivo(vpad: Any) -> tuple[str | None, str | None]:
+        """(backend, motivo) de UM vpad — motivo só quando degradado (BT-03).
+
+        Degradado = máscara DualSense servida por uinput (sem hidraw → sem
+        vibração in-game, sem dedup por PID próprio); o motivo é o
+        `fallback_motivo` da factory, com "sem_uhid" de piso. Máscara xbox é
+        uinput POR DESIGN — nunca é degradação (invariante do `dedup_status`).
+        """
+        raw_backend = getattr(vpad, "backend", None)
+        backend = raw_backend if isinstance(raw_backend, str) and raw_backend else None
+        motivo: str | None = None
+        if backend == "uinput" and getattr(vpad, "flavor", None) == "dualsense":
+            raw = getattr(vpad, "fallback_motivo", None)
+            motivo = raw if isinstance(raw, str) and raw else "sem_uhid"
+        return backend, motivo
+
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
-        # FEAT-DSX-MULTI-CONTROLLER-01: lista UMA entrada por controle físico
-        # conectado. O backend real expõe `describe_controllers`; backends que
-        # não o implementam (ex.: FakeController) caem no resumo single-entry.
+        """Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01.
+
+        FEAT-DSX-MULTI-CONTROLLER-01: `controllers` segue com UMA entrada por
+        controle físico ADOTADO (DualSense) — shape intocado. O backend real
+        expõe `describe_controllers`; backends sem o método (FakeController)
+        caem no resumo single-entry.
+
+        8BIT-01 — decisão documentada: o handler é sync-fast (só leitura de
+        atributos), então o inventário de gamepads EXTERNOS (read-only, todos
+        os vendors) entra SÓ sob `{"external": true}` — quem não pediu não
+        paga os 10-40 ms da enumeração. Mesmo sob opt-in, a enumeração roda
+        FORA do event loop via `asyncio.to_thread` (pool default do loop, não
+        o `daemon._executor` de 2 workers "hefesto-hid" — roubar um worker do
+        HID atrasaria output de rumble/led; e `self.daemon` pode ser None).
+        NADA disso entra no `state_full` (caminho quente).
+
+        Resposta com opt-in: chave nova `external` = lista de
+        `{name, vid, pid, bus, uniq, driver, evdev_path, hidraw[, holders]}`.
+        Sem opt-in, a chave nem aparece (payload byte-idêntico ao legado).
+        """
+        external_raw = params.get("external", False)
+        if not isinstance(external_raw, bool):
+            raise ValueError("controller.list: 'external' precisa ser boolean")
         describe = getattr(self.controller, "describe_controllers", None)
         if callable(describe):
-            return {"controllers": describe()}
-        connected = self.controller.is_connected()
-        return {
-            "controllers": [
-                {
-                    "connected": connected,
-                    "transport": self.controller.get_transport() if connected else None,
-                }
-            ]
-        }
+            result: dict[str, Any] = {"controllers": describe()}
+        else:
+            connected = self.controller.is_connected()
+            result = {
+                "controllers": [
+                    {
+                        "connected": connected,
+                        "transport": self.controller.get_transport() if connected else None,
+                    }
+                ]
+            }
+        if external_raw:
+            result["external"] = await asyncio.to_thread(_external_inventory)
+        return result
 
     async def _handle_controller_target_set(
         self, params: dict[str, Any]

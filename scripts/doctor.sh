@@ -2,9 +2,13 @@
 # doctor.sh — diagnóstico de saúde do Hefesto - Dualsense4Unix.
 #
 # Verifica daemon, serviço, socket IPC, regras udev (incluindo a consistência do
-# nome de unit do hotplug), uinput, applet COSMIC (.desktop + ícone resolvível),
-# o detector de janela do autoswitch (perfil-por-jogo), o sequestro do microfone
-# pelo WirePlumber e o alcance do controle. Saída PASS/FAIL/WARN por item.
+# nome de unit do hotplug), uinput, a gravabilidade do nó de LED do DualSense
+# físico (cor por-controle via sysfs, regra 77), applet COSMIC (.desktop + ícone
+# resolvível), o detector de janela do autoswitch (perfil-por-jogo), o sequestro
+# do microfone pelo WirePlumber e o alcance do controle; reconhece também, no
+# journal do kernel, a assinatura de morte por Bluetooth do 8BitDo em modo
+# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle).
+# Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
 # Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout] [--suggest-port]
@@ -90,17 +94,23 @@ check_socket() {
 }
 
 check_udev() {
-    # DOCTOR-UDEV-CANONICAL-FIX-01: o conjunto CANÔNICO pós-fix-storm é 70/71/72.
+    # DOCTOR-UDEV-CANONICAL-FIX-01 + COR-06/STATUS-07: o conjunto CANÔNICO é o
+    # que o install_udev.sh põe SEM FLAG: 70, 71-uhid, 71-uinput, 72, 76
+    # (touchpad-ignore), 77 (LEDs graváveis) e 78 (motion fora do joystick).
+    # A ÚNICA opt-in é a 75 (audio-off, --disable-usb-audio) — fora da contagem.
     # As regras 73/74 (hotplug-GUI) foram REMOVIDAS por alimentarem a
     # re-enumeração do storm -71 (install_udev.sh faz `rm -f`). Antes o doctor
     # exigia 5 (70-74) e reportava "3/5 — faltam 73 74" PARA SEMPRE após um
-    # install limpo (falso-negativo permanente). 75 (audio-off) e 76
-    # (touchpad-ignore) são opt-in e não entram na contagem canônica.
-    # SPRINT-UHID-VPAD-01: a 71-uhid entra no conjunto canônico (o install a aplica
-    # sem flag). Regra da casa: um item no install = um check no doctor.
+    # install limpo (falso-negativo permanente); depois chamou a 76 de opt-in
+    # (falso: é default desde o install) e ignorou 77/78 — sem a 77 o nó de LED
+    # não é gravável e a cor por-controle degrada p/ hidraw em silêncio.
+    # Regra da casa: um item no install = um check no doctor.
     local r found=0 missing=""
     local rules=(70-ps5-controller.rules 71-uhid.rules 71-uinput.rules
-                 72-ps5-controller-autosuspend.rules)
+                 72-ps5-controller-autosuspend.rules
+                 76-dualsense-touchpad-libinput-ignore.rules
+                 77-dualsense-leds.rules
+                 78-dualsense-motion-not-joystick.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -110,11 +120,11 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
-        warn "regras udev incompletas (${found}/${total}) — faltam:${missing}"
+        warn "regras udev incompletas (${found}/${total}) — faltam:${missing} — rode: sudo bash scripts/install_udev.sh"
     fi
     # 73/74 (hotplug-GUI) foram DESCONTINUADAS (amplificavam o storm -71). Se
     # sobraram de uma instalação antiga, avisa para limpar.
@@ -227,6 +237,37 @@ check_hid_playstation() {
         pass "driver hid_playstation ativo (embutido no kernel)"
     else
         warn "driver hid_playstation não carregado — cor da luz e LED de jogador podem não funcionar. Kernel muito antigo? Rode: sudo modprobe hid_playstation"
+    fi
+}
+
+# COR-06/STATUS-07: probe READ-ONLY da gravabilidade do LED do DualSense FÍSICO.
+# A regra 77 (default no install) dá escrita ao usuário nos nós de LED do kernel;
+# sem ela o daemon só alcança a cor por hidraw — que em BT sofre EIO — e a cor
+# por-controle degrada em silêncio (lightbar_source=="desired"). Só `test -w`:
+# este check NUNCA escreve no nó. O vpad uhid do daemon também cria um nó
+# rgb:indicator, mas o realpath do device dele vive em /devices/virtual/ e NÃO
+# serve de alvo (filtrado). Sem DualSense físico conectado: pula sem falhar.
+check_led_sysfs_gravavel() {
+    local node dev_real nome ok_nodes="" bad_nodes=""
+    for node in /sys/class/leds/*rgb:indicator*; do
+        [[ -e "${node}" ]] || continue
+        dev_real="$(readlink -f "${node}/device" 2>/dev/null || true)"
+        [[ -z "${dev_real}" ]] && dev_real="$(readlink -f "${node}" 2>/dev/null || true)"
+        [[ "${dev_real}" == */devices/virtual/* ]] && continue   # vpad do daemon
+        [[ -e "${node}/multi_intensity" ]] || continue
+        nome="${node##*/}"
+        if [[ -w "${node}/multi_intensity" ]]; then
+            ok_nodes+=" ${nome}"
+        else
+            bad_nodes+=" ${nome}"
+        fi
+    done
+    if [[ -n "${bad_nodes}" ]]; then
+        warn "nó de LED do DualSense físico SEM escrita p/ o seu usuário:${bad_nodes} — a cor por-controle (sobretudo em BT) depende do sysfs; a regra 77 dá a permissão: sudo bash scripts/install_udev.sh (e reconecte o controle)"
+    elif [[ -n "${ok_nodes}" ]]; then
+        pass "nó de LED do DualSense físico gravável pelo usuário (${ok_nodes# }) — cor por-controle via sysfs OK (regra 77 valendo)"
+    else
+        info "sem DualSense físico com nó de LED agora (só o controle virtual, ou nenhum) — pulo o teste de gravabilidade; conecte o controle p/ validar a regra 77"
     fi
 }
 
@@ -647,6 +688,58 @@ check_perms_soft() {
     done
 }
 
+# 8BIT-03: assinatura de morte por Bluetooth do 8BitDo SN30 Pro (firmware
+# clone) em modo Switch — o hid-nintendo desiste do controle e o input morre
+# com o link BT ainda de pé. PROVADO ao vivo (2026-07-16, journal desta
+# máquina) que o gate tem de ser a CASCATA, nunca a linha isolada:
+#   - morte real (0005:057E:2009.0014, 13:23:47->13:24:00): dezenas de
+#     "timeout waiting for input report" culminando em
+#     "joycon_enforce_subcmd_rate: exceeded max attempts";
+#   - NÃO-terminal medido (.0008 às 12:38:46: 3x exceeded com UM timeout;
+#     o controle viveu mais ~8 min): "exceeded" isolado NÃO pode disparar.
+# O hefesto está fora da cadeia causal (o daemon só abre DualSense — filtro
+# Sony 054c — e é incapaz de tocar um device 057e); a morte aconteceu até SEM
+# Steam rodando, então "feche o Steam" não é cura. A coabitação Steam×hidraw
+# NUNCA vira warning aqui: o Steam segura o hidraw de TODO controle
+# suportado, inclusive dos DualSense saudáveis.
+#
+# Função PURA e testável: lê linhas do journal do kernel no stdin e imprime
+# "instância N" (uma por linha, N = timeouts acumulados até o último
+# "exceeded max attempts" qualificado) só para instâncias hid com a cascata:
+# >= $1 timeouts (default 10) acumulados ANTES de um "exceeded" na MESMA
+# instância. Journal limpo ou só linhas isoladas => saída vazia.
+_hid_nintendo_cascade_scan() {
+    local min="${1:-10}"
+    sed -nE \
+        -e 's/^.*([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}).*timeout waiting for input report.*$/\1 timeout/p' \
+        -e 's/^.*([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}).*joycon_enforce_subcmd_rate: exceeded max attempts.*$/\1 exceeded/p' \
+      | awk -v min="${min}" '
+            $2 == "timeout"                    { t[$1]++ }
+            $2 == "exceeded" && t[$1] >= min   { casc[$1] = t[$1] }
+            END { for (i in casc) printf "%s %d\n", i, casc[i] }
+        ' | sort
+}
+
+# Check INFORMATIVO (warn no positivo; exit code inalterado; nada muda no
+# sistema; nenhuma flag nova). Silencioso quando o boot atual não tem a
+# cascata — o 8BitDo não é gerenciado pelo hefesto e um "OK" aqui só faria
+# barulho. Usa `journalctl -b -k` SEM sudo (grupo adm; o dmesg cru é
+# restrito por kernel.dmesg_restrict=1) — mesmo padrão dos outros checks.
+check_hid_nintendo_bt_cascade() {
+    command -v journalctl >/dev/null 2>&1 || return 0
+    local hits
+    hits="$(journalctl -b -k --no-pager 2>/dev/null | _hid_nintendo_cascade_scan)"
+    [[ -z "${hits}" ]] && return 0
+    local inst n
+    while read -r inst n; do
+        [[ -z "${inst}" ]] && continue
+        warn "o driver desistiu do controle (instância ${inst}, neste boot): ${n}x 'timeout waiting for input report' culminando em 'joycon_enforce_subcmd_rate: exceeded max attempts' — por Bluetooth o firmware 8BitDo em modo Switch engasga com o hid-nintendo"
+    done <<<"${hits}"
+    info "a configuração provadamente estável é cabo em modo Switch; X-input por cabo vira Xbox 360 real (sem gyro); X-input por Bluetooth é experimento"
+    info "não é o hefesto: o daemon só abre DualSense (filtro Sony 054c) e é incapaz de tocar um device Nintendo (057e)"
+    info "guia: docs/usage/troubleshooting-8bitdo.md"
+}
+
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
 # Resolve o controlador PCI (xHCI) onde um device USB (sysfs path) está pendurado:
 # o último 0000:XX:YY.Z na cadeia antes do /usbN é o controlador.
@@ -813,6 +906,7 @@ main() {
     check_uinput
     check_uhid
     check_hid_playstation
+    check_led_sysfs_gravavel
     hdr "applet COSMIC"
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"
@@ -829,6 +923,7 @@ main() {
     hdr "controle"
     check_controller
     check_perms_soft
+    check_hid_nintendo_bt_cascade
     hdr "USB / dropout"
     check_usb_dropout
 
@@ -842,4 +937,9 @@ main() {
     [[ "${FAILS}" -eq 0 ]]
 }
 
-main
+# `source scripts/doctor.sh` (testes de unidade das funções de parse, ex.
+# _hid_nintendo_cascade_scan) carrega as funções SEM executar o diagnóstico;
+# a execução direta segue idêntica.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main
+fi

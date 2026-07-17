@@ -282,9 +282,8 @@ def test_idle_add_callbacks_sao_one_shot(monkeypatch: pytest.MonkeyPatch) -> Non
         return None
 
     host._get = _no_slot  # type: ignore[attr-defined]
-    # Bypass dos helpers de widget que exigiriam slots no Glade.
-    host._init_stick_previews = lambda: None  # type: ignore[attr-defined]
-    host._init_button_glyphs = lambda: None  # type: ignore[attr-defined]
+    # STATUS-02: os inits de sticks/glyphs singleton saíram da mixin (os
+    # cards por controle absorvem os widgets) — sem bypass a fazer aqui.
     # Substitui os ticks reais por stubs que retornariam True (mantendo o
     # timeout_add vivo) — provamos que o WRAPPER passado a idle_add devolve False
     # mesmo quando o tick subjacente devolve True.

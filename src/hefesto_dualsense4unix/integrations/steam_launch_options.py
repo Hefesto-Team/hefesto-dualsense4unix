@@ -112,6 +112,14 @@ _LAUNCH_OPTIONS_RE = re.compile(
     r'^(?P<prefix>\s*"LaunchOptions"\s+")(?P<value>(?:\\.|[^"\\])*)(?P<suffix>"\s*)$'
 )
 
+#: Par chave-valor de UMA linha KeyValues (`"chave"  "valor"`), com o mesmo
+#: escaping de `_LAUNCH_OPTIONS_RE`. Usado pela leitura POR APPID (read-only).
+_VDF_PAIR_RE = re.compile(
+    r'^\s*"(?P<key>(?:\\.|[^"\\])*)"\s+"(?P<value>(?:\\.|[^"\\])*)"\s*$'
+)
+#: Linha só-chave (`"chave"`) que abre um bloco `{` na linha seguinte.
+_VDF_KEY_ONLY_RE = re.compile(r'^\s*"(?P<key>(?:\\.|[^"\\])*)"\s*$')
+
 
 def _vdf_unescape(value: str) -> str:
     """Desfaz o escaping de KeyValues da Steam (\\\" e \\\\)."""
@@ -293,6 +301,76 @@ def is_sandboxed_layout(vdf: Path) -> bool:
     """True para vdf de Steam Flatpak/Snap (migração proibida — DEDUP-04)."""
     text = str(vdf)
     return any(marker in text for marker in _SANDBOXED_MARKERS)
+
+
+def read_launch_options_by_appid(text: str) -> dict[str, str]:
+    """Mapeia appid → LaunchOptions (desescapado) de um localconfig.vdf.
+
+    Leitura ESTRUTURAL e read-only para o lembrete do wrapper "1x por jogo"
+    (DEDUP-05, item 4): o `_LAUNCH_OPTIONS_RE` de migrate/strip enxerga
+    linhas soltas sem saber de QUAL jogo são; aqui um parser mínimo de
+    KeyValues (pilha de blocos por linha) liga cada LaunchOptions ao appid
+    do bloco pai. Só entram chaves NUMÉRICAS cujo pai imediato é `apps`
+    (case-insensitive — o caminho canônico é Software/Valve/Steam/apps).
+    Nunca escreve nada; conteúdo fora do padrão é ignorado em silêncio.
+    """
+    out: dict[str, str] = {}
+    stack: list[str] = []
+    pending: str | None = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line == "{":
+            stack.append(pending if pending is not None else "")
+            pending = None
+            continue
+        if line == "}":
+            if stack:
+                stack.pop()
+            pending = None
+            continue
+        pair = _VDF_PAIR_RE.match(line)
+        if pair is not None:
+            pending = None
+            if _vdf_unescape(pair.group("key")).lower() != "launchoptions":
+                continue
+            if len(stack) < 2 or stack[-2].lower() != "apps":
+                continue
+            appid = stack[-1]
+            if appid.isdigit():
+                out[appid] = _vdf_unescape(pair.group("value"))
+            continue
+        key_only = _VDF_KEY_ONLY_RE.match(line)
+        if key_only is not None:
+            pending = _vdf_unescape(key_only.group("key"))
+    return out
+
+
+def appid_needs_wrapper(appid: str, home: Path | None = None) -> bool:
+    """True quando o lembrete do wrapper se aplica ao jogo `appid` (read-only).
+
+    Consumido pelo diálogo "1x por jogo" da GUI (DEDUP-05, item 4): existe ao
+    menos um localconfig.vdf ELEGÍVEL (Steam nativa — Flatpak/Snap ficam de
+    fora: a sandbox não enxerga o wrapper do host e a própria migração é
+    recusada lá) e NENHUM deles chama o wrapper nas LaunchOptions deste
+    appid. Jogo sem entrada no vdf conta como "precisa" (LaunchOptions nunca
+    configurada). vdf ilegível é pulado (best-effort: o pior caso é lembrar
+    uma vez à toa — e o anti-spam da GUI limita a 1 exibição por sessão).
+    """
+    eligible = [v for v in discover_vdfs(home) if not is_sandboxed_layout(v)]
+    if not eligible:
+        return False
+    alvo = str(appid).strip()
+    for vdf in eligible:
+        try:
+            text = vdf.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        value = read_launch_options_by_appid(text).get(alvo)
+        if value is not None and WRAPPER_PREFIX in value:
+            return False
+    return True
 
 
 def steam_running() -> bool:

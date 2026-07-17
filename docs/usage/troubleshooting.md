@@ -591,6 +591,7 @@ adição mínima — mas resolve o sintoma sem reinstalar o daemon.
 
 - [README principal](../../README.md) — instalação e uso
 - [Quickstart visual](quickstart.md) — primeiros passos com screenshots
+- [8BitDo SN30 Pro](troubleshooting-8bitdo.md) — modos, identificação e a morte por Bluetooth (controle não gerenciado pelo hefesto)
 - [ROADMAP](../process/ROADMAP.md) — o que vem nas próximas releases
 - [ADR-014](../adr/014-cosmic-wayland-support.md) — decisão técnica COSMIC/Wayland
 - [Diário de descobertas](../process/discoveries/) — bugs encontrados e fixes

@@ -743,7 +743,12 @@ impl HefestoApplet {
                 Some("bluetooth") | Some("bt") => "BT",
                 _ => "?",
             };
-            let label = format!("{mark}Controle {} — {transporte}", c.index + 1);
+            // COR-01 (D6): "Controle N" é o slot de SESSÃO (`player_slot`,
+            // estável a replug — o mesmo número da GUI/CLI); fallback
+            // posicional (index+1) para daemon antigo sem o campo. O clique
+            // continua enviando o `index` POSICIONAL — contrato do IPC.
+            let numero = c.player_slot.filter(|s| *s >= 1).unwrap_or(c.index + 1);
+            let label = format!("{mark}Controle {numero} — {transporte}");
             let mut btn = menu_button(text::body(label));
             if !is_active {
                 btn = btn.on_press(Message::SetOutputTarget(Some(c.index)));

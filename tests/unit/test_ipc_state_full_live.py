@@ -233,9 +233,15 @@ class TestPlayerPorControle:
         async with IpcClient.connect(socket_path) as client:
             result = await client.call("daemon.state_full")
 
+        # STATUS-01/COR-05/BT-03: além do `player`, cada entrada carrega os
+        # campos por controle — aqui tudo None/"desconhecida" (FakeController
+        # sem sysfs/desired, sem coop, sem registry, `_last_state` None).
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
-             "is_primary": True, "uniq": "aabbcc001100", "player": None},
+             "is_primary": True, "uniq": "aabbcc001100", "player": None,
+             "player_slot": None, "lightbar_rgb": None, "lightbar_on": False,
+             "lightbar_source": "desconhecida", "inputs": None,
+             "vpad_backend": None, "vpad_motivo": None},
         ]
 
     @pytest.mark.asyncio

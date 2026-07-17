@@ -264,6 +264,12 @@ class Daemon:
     # (nome -> erro). Um subsystem quebrado é isolado aqui em vez de derrubar o
     # daemon (poll/IPC/perfis seguem). Exposto para diagnóstico (doctor/status).
     _failed_subsystems: dict[str, str] = field(default_factory=dict)
+    # COR-01/COR-03: registro de identidade MAC→slot de sessão ("Controle N"
+    # estável + cor automática por controle). Fiado em `run()` SÓ quando o
+    # backend suporta o provider (`set_auto_output_provider`) — com o
+    # FakeController fica None e nada de controllers.json é lido/escrito
+    # (testes herméticos). O reconcile roda no tick lento do poll loop.
+    identity_registry: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -375,6 +381,12 @@ class Daemon:
             # FEAT-SYSTEM-AUTOREPAIR-BOOT-01: detecta infra quebrada (udev/WirePlumber)
             # e AVISA o comando de reparo — nunca roda sudo sozinho.
             self._check_system_on_boot()
+            # COR-01/COR-03: fiação do registro de identidade + provider de
+            # cor automática ANTES do connect inicial — o 1º reconcile do
+            # backend (`_reapply_desired`) já resolve com o provider e os
+            # slots restaurados do disco (a cor nasce certa no mesmo tick de
+            # hotplug, D1). Fora do caminho quente (o load é um read único).
+            self._wire_identity_registry()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -1572,6 +1584,68 @@ class Daemon:
         dispatch_mouse(self, state, buttons_pressed)
 
     # ------------------------------------------------------------------
+    # Identidade dos controles (COR-01/COR-03)
+    # ------------------------------------------------------------------
+
+    def _wire_identity_registry(self) -> None:
+        """Cria o registro de identidade e injeta o provider de cor no backend.
+
+        COR-01/COR-03: SÓ quando o backend suporta a injeção
+        (`set_auto_output_provider` — o PyDualSenseController real). Com o
+        FakeController fica tudo desligado: `identity_registry` permanece
+        None, nenhum `controllers.json` é lido/escrito e o reconcile do poll
+        loop é no-op — testes/smoke herméticos por construção. Best-effort:
+        falha aqui loga warning e o daemon segue (LEDs caem no broadcast
+        histórico).
+        """
+        if not hasattr(self.controller, "set_auto_output_provider"):
+            return
+        try:
+            from hefesto_dualsense4unix.daemon.subsystems.identity import (
+                get_identity_registry,
+                make_auto_output_provider,
+            )
+
+            registry = get_identity_registry()
+            registry.load()
+            self.identity_registry = registry
+            self.controller.set_auto_output_provider(
+                make_auto_output_provider(registry)
+            )
+            logger.info("identity_registry_wired")
+        except Exception as exc:
+            logger.warning("identity_registry_wire_failed", err=str(exc))
+
+    def _sync_identity_registry(self) -> None:
+        """Reconcilia o registro com os controles conectados (tick lento ~2s).
+
+        COR-01 (D2): marca desconectados (slot vira RESERVA do MAC) e expira
+        as reservas quando a sessão esvazia — por isso roda TAMBÉM offline
+        (o gate de `is_connected` do poll loop não pode engolir a transição
+        para zero controles). Fonte do conjunto: `describe_controllers` do
+        backend (getattrs baratos, sem HID I/O) — nunca no caminho quente
+        por evento. No-op sem registro (backend fake) ou sem a API.
+        """
+        registry = self.identity_registry
+        if registry is None:
+            return
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return
+        try:
+            infos = describe()
+            uniqs = {
+                info["uniq"]
+                for info in infos
+                if isinstance(info, dict)
+                and info.get("connected")
+                and isinstance(info.get("uniq"), str)
+            }
+            registry.sync_connected(uniqs)
+        except Exception as exc:  # nunca derrubar o poll loop
+            logger.debug("identity_sync_falhou", err=str(exc))
+
+    # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
     # ------------------------------------------------------------------
 
@@ -1584,6 +1658,12 @@ class Daemon:
         # FEAT-DSX-COOP-LOCAL-01: reconcilia os jogadores secundários (P2+) a cada
         # ~2s (enumerar evdevs todo tick é caro); o forward roda todo tick.
         coop_sync_next_at: float = 0.0
+        # COR-01: reconcilia o registro de identidade (slots de sessão) a cada
+        # ~2s. ANTES do gate de conexão de propósito: é este reconcile que
+        # observa a sessão ESVAZIAR (zero controles → reservas expiram, D2) —
+        # depois do gate ele nunca rodaria desconectado. Custo por tick: uma
+        # comparação de float; o describe (getattrs) só no tick lento.
+        identity_sync_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
@@ -1593,6 +1673,9 @@ class Daemon:
 
         while not self._is_stopping():
             tick_started = loop.time()
+            if tick_started >= identity_sync_next_at:
+                identity_sync_next_at = tick_started + 2.0
+                self._sync_identity_registry()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando

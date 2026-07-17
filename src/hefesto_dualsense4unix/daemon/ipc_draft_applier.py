@@ -134,14 +134,55 @@ class DraftApplier:
         (o estado normal do fluxo de edição por-controle), o "Aplicar" do
         rodapé gravava a seção GLOBAL no override do alvo, o default nunca
         era atualizado e o replug de outro controle reassertava estado velho.
+
+        COR-04: ``auto_player_colors`` viaja nesta seção — propagado ao
+        registro de identidade ANTES do broadcast (mesma ordem da ativação
+        de perfil: ``_configure_auto_player_colors`` primeiro), para os
+        reasserts subsequentes já resolverem com o toggle novo. Payload sem
+        a chave (GUI antiga) = sem opinião — o estado vigente fica.
         """
         if not isinstance(leds_raw, dict):
             raise ValueError("leds deve ser objeto")
+        self._configure_auto_colors(leds_raw)
         rgb = self._scaled_rgb_from(leds_raw)
         bits = self._player_bits_from(leds_raw)
         if rgb is None and bits is None:
             return
         self.controller.apply_output_defaults(OutputSpec(led=rgb, player_leds=bits))
+
+    @staticmethod
+    def _configure_auto_colors(leds_raw: dict[str, Any]) -> None:
+        """COR-04: propaga o toggle do automático ao registro de identidade.
+
+        Espelho do ``ProfileManager._configure_auto_player_colors`` para o
+        caminho ``profile.apply_draft`` (o "Aplicar" do rodapé e o botão
+        "Aplicar no controle" em "Todos") — sem isto o toggle editado na GUI
+        só valeria na PRÓXIMA ativação de perfil, e a semântica D4 ("a cor
+        única aparece em todos") ficaria quebrada ao vivo. O brilho
+        acompanha quando presente (a paleta automática respeita o brilho do
+        perfil — D11). Best-effort na mesma medida do manager: falha de
+        import/configure loga warning e NÃO derruba a aplicação da cor.
+        """
+        raw = leds_raw.get("auto_player_colors")
+        if raw is None:
+            return
+        if not isinstance(raw, bool):
+            raise ValueError("leds.auto_player_colors deve ser booleano")
+        brightness: float | None = None
+        brightness_raw = leds_raw.get("lightbar_brightness")
+        if brightness_raw is not None:
+            try:
+                brightness = max(0.0, min(1.0, float(brightness_raw)))
+            except (TypeError, ValueError):
+                brightness = None
+        try:
+            from hefesto_dualsense4unix.daemon.subsystems.identity import (
+                get_identity_registry,
+            )
+
+            get_identity_registry().configure(enabled=raw, brightness=brightness)
+        except Exception as exc:
+            logger.warning("apply_draft_auto_colors_falhou", erro=str(exc))
 
     def _apply_triggers(self, triggers_raw: Any) -> None:
         """Aplica a seção GLOBAL de gatilhos em TODOS os controles.

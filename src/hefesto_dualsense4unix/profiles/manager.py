@@ -188,6 +188,15 @@ class ProfileManager:
         hotplug o aplica quando ele chegar; é o teste de fogo do PERFIL-05c).
         O brilho do override escala pelo MESMO caminho da seção global.
 
+        COR-03: a ativação também configura o estado do AUTOMÁTICO (cores por
+        controle) no registro de identidade — `enabled` vem de
+        `profile.leds.auto_player_colors` (perfil sem seção `leds` no JSON
+        valida com `LedsConfig()` → auto ON, o default do campo) e o brilho
+        vigente de `profile.leds.lightbar_brightness` (a cor automática é
+        escalada pelo MESMO brilho do global — D11). O provider injetado no
+        backend consulta esse estado a cada resolução; a escrita física dos
+        conectados acontece pelos broadcasts/reasserts desta mesma ativação.
+
         Mic-LED fica de fora por decisão deliberada
         (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01): jamais colateral de
         profile switch.
@@ -196,6 +205,7 @@ class ProfileManager:
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
         effective = settings.apply_brightness(settings.brightness_level)
+        self._configure_auto_player_colors(profile)
         self.controller.apply_output_defaults(
             OutputSpec(
                 trigger_left=left,
@@ -208,6 +218,30 @@ class ProfileManager:
         self.controller.reset_output_overrides(overrides or None)
         for uniq, spec in overrides.items():
             self.controller.apply_output_for(uniq, spec)
+
+    @staticmethod
+    def _configure_auto_player_colors(profile: Profile) -> None:
+        """Propaga o toggle/brilho do automático ao registro de identidade (COR-03).
+
+        Import lazy do singleton (`get_identity_registry`) de propósito: o
+        `ProfileManager` é instanciado em ≥3 lugares (restore de boot,
+        hotkey, IPC) e todos precisam configurar o MESMO estado que o
+        provider do backend consulta — sem parâmetro novo em cada callsite.
+        Best-effort (falha loga debug, não aborta a ativação): CLI/testes
+        sem daemon configuram um singleton que ninguém consulta — inócuo e
+        sem I/O (`configure` só toca memória).
+        """
+        try:
+            from hefesto_dualsense4unix.daemon.subsystems.identity import (
+                get_identity_registry,
+            )
+
+            get_identity_registry().configure(
+                enabled=bool(profile.leds.auto_player_colors),
+                brightness=float(profile.leds.lightbar_brightness),
+            )
+        except Exception as exc:
+            logger.debug("auto_player_colors_configure_falhou", err=str(exc))
 
     def apply_keyboard(self, profile: Profile) -> None:
         """Propaga `key_bindings` do perfil ao device virtual de teclado (A-06).

@@ -665,6 +665,7 @@ Hefesto-DualSense_Unix/
 
 - **Guia visual rápido:** [`docs/usage/quickstart.md`](docs/usage/quickstart.md)
 - **Solução de problemas (troubleshooting):** [`docs/usage/troubleshooting.md`](docs/usage/troubleshooting.md)
+- **8BitDo SN30 Pro (modos e morte por Bluetooth):** [`docs/usage/troubleshooting-8bitdo.md`](docs/usage/troubleshooting-8bitdo.md)
 - **Roadmap público:** [`docs/process/ROADMAP.md`](docs/process/ROADMAP.md) — v3.3.0 / v3.4 / v4.0
 - **Protocolo de colaboração:** [`AGENTS.md`](AGENTS.md) (anonimato, idioma PT-BR, workflow de issue)
 - **Decisões arquiteturais:** [`docs/adr/`](docs/adr/) — 17 ADRs numeradas (ADR-014 cobre COSMIC/Wayland)

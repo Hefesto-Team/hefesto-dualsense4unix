@@ -56,6 +56,14 @@ logger = get_logger(__name__)
 #: comum). Usado para sinalizar `is_edge` ao abrir o handle.
 DUALSENSE_EDGE_PID = 0x0DF2
 
+#: STATUS-01 (priming): azul-default que o `hid_playstation` acende no probe
+#: por um caminho interno que NUNCA atualiza a classe LED (`dualsense_create`
+#: → `dualsense_set_lightbar`, provado no kernel upstream). Escrever ESTE RGB
+#: via sysfs num nó recém-surgido é idempotente com o hardware (a lightbar já
+#: está azul) e serve só para a classe LED convergir com a realidade — sem
+#: isso, todo reconnect BT/hotplug leria `0 0 0` com o LED visivelmente aceso.
+KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
+
 
 def _is_virtual_hidraw(path: bytes) -> bool:
     """True se o hidraw é de um device VIRTUAL (nosso vpad uhid), não físico.
@@ -338,12 +346,27 @@ class PyDualSenseController(IController):
         # hotplug-in re-aplica o MERGE POR CAMPO dos dois no controle certo.
         self._desired_default = _DesiredOutput()
         self._desired_by_uniq: dict[str, _DesiredOutput] = {}
+        # COR-03: provider da camada AUTOMÁTICA do desejado (cor do slot +
+        # player-LED do número do controle), injetado pelo daemon via
+        # `set_auto_output_provider` (injeção de dependência — core/ nunca
+        # importa daemon/). None = sem camada automática (o merge cai no
+        # comportamento histórico default+override). Consultado POR UNIQ em
+        # `_merged_desired_for_key`, SOB `_io_lock` — o provider DEVE ser
+        # barato e sem I/O.
+        self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
         # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
         # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
         # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
         # a escrita pydualsense desses LEDs é suprimida (anti-contenção). Vazio =
         # ninguém coberto (sem regra udev / driver antigo) → caminho pydualsense.
         self._sysfs: dict[str, Any] = {}
+        # STATUS-01: rastreio "escrito por nós" — key (a mesma de `_sysfs`) ->
+        # última cor RGB escrita POR ESTE backend via classe LED (sysfs). É a
+        # prova de POSSE do nó que autoriza ler `multi_intensity` como verdade
+        # (refutação 1 do sprint: a classe nasce zerada no probe e `0 0 0` sem
+        # escrita nossa NUNCA significa "apagada"). Mantido por
+        # `record_sysfs_write`/`_refresh_sysfs_leds`; podado junto com o mapa.
+        self._sysfs_written: dict[str, tuple[int, int, int]] = {}
         # FEAT-DSX-CONTROLLER-SELECTOR-01: ALVO das ações de output. None =
         # TODOS (broadcast, padrão e idêntico ao histórico). Guardamos a KEY
         # estável (serial/MAC) do controle escolhido — NÃO o índice — para
@@ -455,16 +478,58 @@ class PyDualSenseController(IController):
         """
         return self._desired_default
 
-    def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
-        """Desired efetivo do controle `key`: MERGE POR CAMPO (override sobre default).
+    def set_auto_output_provider(
+        self, fn: Callable[[str], _DesiredOutput | None] | None
+    ) -> None:
+        """Injeta (ou remove, com None) o provider da camada AUTOMÁTICA (COR-03).
 
-        Chamar sob `_io_lock` (lê o mapa por-uniq). Key sem MAC (fallback por
-        path) não tem override possível — devolve o default puro (o controle
-        segue só o global, comportamento documentado do sprint).
+        O provider recebe o UNIQ (MAC 12-hex normalizado) de um controle e
+        devolve um `_DesiredOutput` com APENAS os campos automáticos
+        preenchidos (`led` = cor do slot já escalada pelo brilho, D11;
+        `player_leds` = padrão do número do controle, D7) — ou None quando
+        não tem opinião (auto desligado, uniq sem slot, vpad). É consultado
+        por `_merged_desired_for_key` SOB `_io_lock`: DEVE ser barato e sem
+        I/O (nada de disco/HID — só memória). Exceções do provider são
+        engolidas com log (a resolução cai no merge histórico) — um provider
+        quebrado jamais derruba um reassert de LED.
+        """
+        with self._io_lock:
+            self._auto_output_provider = fn
+
+    def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
+        """Desired efetivo do controle `key`: MERGE POR CAMPO em 3 camadas.
+
+        Precedência (D5, POR CAMPO): override explícito por-uniq > camada
+        AUTOMÁTICA do provider (COR-03) > default global do perfil. Chamar
+        sob `_io_lock` (lê o mapa por-uniq; o provider é chamado aqui dentro
+        — barato e sem I/O por contrato de `set_auto_output_provider`).
+
+        Key sem MAC (fallback por path) não tem override NEM camada
+        automática possível — devolve o default puro (o controle segue só o
+        global, comportamento documentado do sprint; a cor automática exige
+        identidade estável, D9/D10).
+
+        Nota honesta (D4): com o auto LIGADO, um "Todos" da GUI grava só o
+        default — e a automática continuaria vencendo (está acima no merge).
+        É exatamente por isso que a semântica D4 manda a GUI DESLIGAR o
+        toggle ao aplicar "Todos"; o merge daqui fica honesto e não resolve
+        isso por conta própria.
         """
         uniq = self._key_to_uniq(key)
         override = self._desired_by_uniq.get(uniq) if uniq is not None else None
-        return _merge_desired(self._desired_default, override)
+        base = self._desired_default
+        provider = self._auto_output_provider
+        if provider is not None and uniq is not None:
+            try:
+                auto = provider(uniq)
+            except Exception as exc:
+                logger.debug(
+                    "auto_output_provider_falhou", uniq=uniq, err=str(exc)
+                )
+                auto = None
+            if auto is not None:
+                base = _merge_desired(base, auto)
+        return _merge_desired(base, override)
 
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
         """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
@@ -737,6 +802,22 @@ class PyDualSenseController(IController):
         Marca `_suppress_leds` nos handles cobertos (para o report_thread não
         disputar a lightbar com o kernel) e re-afirma a cor/player ativos nos nós
         que acabaram de surgir (cobre o nó LED que o kernel registra com atraso).
+
+        STATUS-01 (priming + rastreio "escrito por nós"):
+          - "nó novo" inclui o nó RECRIADO do mesmo controle (reconnect BT gera
+            outro ``inputN`` — o ``indicator_dir`` muda): a classe LED renasce
+            ZERADA no probe do kernel e precisa convergir de novo;
+          - nó novo cuja cor resolvida é None recebe o azul-default do kernel
+            (``KERNEL_DEFAULT_BLUE``) — escrita idempotente com o hardware, só
+            para a classe LED espelhar a lightbar que o probe já acendeu;
+          - toda escrita de COR bem-sucedida daqui é registrada em
+            ``_sysfs_written`` (prova de posse do nó — é o que autoriza o
+            handler IPC a ler ``multi_intensity`` como verdade e o único estado
+            em que ``0 0 0`` significa "apagada");
+          - exceção documentada: em Modo Nativo (muted) NADA disso roda — o
+            jogo é dono do LED (o gate histórico cobre reassert E priming); o
+            nó novo fica SEM rastreio e o estado por controle sai como
+            "desired"/"desconhecida" até o unmute re-afirmar.
         """
         from hefesto_dualsense4unix.core import sysfs_leds
 
@@ -776,21 +857,64 @@ class PyDualSenseController(IController):
         # dono do LED; o desejado segue guardado e o unmute o re-aplica.
         # PERFIL-01: o valor re-afirmado é o MERGE por controle (default +
         # override do uniq DESTE nó) — nunca o desejado de outro controle.
-        new_keys = [k for k in mapping if k not in prev]
+        # STATUS-01: nó RECRIADO (mesmo MAC, `indicator_dir` diferente) também é
+        # "novo" — a classe LED dele renasceu zerada. `getattr` defensivo: nós
+        # dublados em teste podem não ter `indicator_dir` (aí compara None==None
+        # e nada re-prima à toa).
+        def _node_dir(node: Any) -> Any:
+            return getattr(node, "indicator_dir", None)
+
+        new_keys = [
+            k
+            for k in mapping
+            if k not in prev or _node_dir(prev[k]) != _node_dir(mapping[k])
+        ]
         if not self._output_mute and new_keys:
             with self._io_lock:
                 reasserts = [
-                    (mapping[key], self._merged_desired_for_key(key)) for key in new_keys
+                    (key, mapping[key], self._merged_desired_for_key(key))
+                    for key in new_keys
                 ]
-            for node, desired in reasserts:
+            for key, node, desired in reasserts:
                 with contextlib.suppress(Exception):
-                    if desired.led is not None:
-                        node.set_rgb(*desired.led)
+                    # Priming (STATUS-01, refutação 1): sem cor resolvida, a
+                    # classe zerada do probe converge para o azul que o kernel
+                    # de fato acendeu — e a escrita entra no rastreio (só assim
+                    # o handler pode confiar na leitura do nó).
+                    cor = desired.led if desired.led is not None else KERNEL_DEFAULT_BLUE
+                    if node.set_rgb(*cor):
+                        self.record_sysfs_write(key, cor)
                     if desired.player_leds is not None:
                         node.set_players(desired.player_leds)
 
         with self._io_lock:
             self._sysfs = mapping
+            # Poda do rastreio: nó que saiu do mapa (controle desconectou /
+            # perdeu gravabilidade) não tem mais escrita nossa válida — quando
+            # voltar, entra como new_key e o priming/reassert re-registra.
+            self._sysfs_written = {
+                key: rgb for key, rgb in self._sysfs_written.items() if key in mapping
+            }
+
+    def record_sysfs_write(self, key: str, rgb: tuple[int, int, int]) -> None:
+        """Registra que NÓS escrevemos `rgb` na classe LED do controle `key`.
+
+        STATUS-01 — metade pública do rastreio "escrito por nós": os caminhos
+        de escrita sysfs de cor fora desta função (`_for_each_led` do
+        `set_led`, `_write_partial_output` do hotplug/`apply_output_for`, o
+        reassert do unmute em `set_output_mute`) podem chamá-lo na borda da
+        escrita bem-sucedida. Janela ACEITA e documentada (decisão do sprint):
+        enquanto esses call sites não chamam (estão fora da fronteira desta
+        entrega), o rastreio guarda a cor da última passada de
+        priming/reassert — o que ainda basta para o handler IPC, porque o
+        rastreio é prova de POSSE do nó (todas as escritas subsequentes do
+        backend nesse nó também vão via sysfs) e a COR exibida vem da leitura
+        viva (`SysfsLedNode.get_rgb`), não daqui. Em particular, o unmute do
+        Modo Nativo re-escreve a MESMA cor resolvida que a última passada já
+        registrou.
+        """
+        with self._io_lock:
+            self._sysfs_written[key] = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
     def is_connected(self) -> bool:
         # "Qualquer controle conectado". `ds.connected` é o canônico do
@@ -1284,6 +1408,47 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
         return True
+
+    def resolved_player_leds_for(
+        self, uniq: str
+    ) -> tuple[bool, bool, bool, bool, bool] | None:
+        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura).
+
+        PERFIL-06: API pública de LEITURA para o revert do co-op — devolve o
+        MERGE POR CAMPO (default broadcast + override por-uniq) do campo
+        `player_leds`, pelo MESMO resolvedor dos reasserts de hotplug/unmute
+        (`_merged_desired_for_key`). `uniq` sem MAC 12-hex (fallback por
+        path) não tem override possível → devolve o default puro (o controle
+        segue só o global, regra do sprint). None = nenhum perfil/GUI setou
+        player-LED ainda — o chamador não escreve nada. Não toca hardware
+        nem muta estado.
+        """
+        with self._io_lock:
+            return self._merged_desired_for_key(uniq).player_leds
+
+    def resolved_led_for(self, uniq: str) -> tuple[int, int, int] | None:
+        """Cor de lightbar RESOLVIDA do controle `uniq` (leitura pura).
+
+        STATUS-01/COR-05: espelho de `resolved_player_leds_for` para o campo
+        `led` — o MERGE POR CAMPO (default broadcast + override por-uniq) pelo
+        MESMO resolvedor dos reasserts (`_merged_desired_for_key`). É a fonte
+        do `lightbar_source == "desired"` do handler IPC: quando o nó sysfs
+        não é gravável (escrita foi por hidraw → classe LED stale por
+        construção), esta é a última cor que o daemon mandou aplicar.
+
+        Nota (D8 — divergência fundamentada, decidida pelo orquestrador da
+        onda): o valor devolvido é PÓS-escala de brilho — `_DesiredOutput.led`
+        guarda o RGB como chegou ao `set_led`, e o manager pré-escala
+        `lightbar_brightness` na borda (`led_control.py`). O D8 original pedia
+        expor também a cor-identidade PRÉ-brilho, mas separá-la exigiria
+        refactor do estado desejado (fora do escopo desta frente); o objetivo
+        do D8 (traços legíveis com cor escura) foi resolvido por outra via —
+        `utils/color_contrast.ensure_min_contrast` clareia preservando o matiz
+        na borda da GUI. None = nenhum perfil/GUI setou cor ainda. Não toca
+        hardware nem muta estado.
+        """
+        with self._io_lock:
+            return self._merged_desired_for_key(uniq).led
 
     # --- introspecção / leitura do primário -----------------------------
 
