@@ -31,6 +31,9 @@ from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationAction
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
+from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
+    LaunchWrapperDialogMixin,
+)
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto_dualsense4unix.app.actions.rumble_actions import RumbleActionsMixin
@@ -97,6 +100,7 @@ def _activate_window_by_pid(predecessor_pid: int) -> None:
 
 class HefestoApp(
     HomeActionsMixin,
+    LaunchWrapperDialogMixin,
     StatusActionsMixin,
     TriggersActionsMixin,
     LightbarActionsMixin,
@@ -318,6 +322,21 @@ class HefestoApp(
             "on_import_profile": self.on_import_profile,
             "on_restore_default": self.on_restore_default,
         }
+
+    # --- tick de estado ---
+
+    def _render_slow_state(self, state: dict[str, Any]) -> None:
+        """Tick lento (2 Hz) da aba Status + lembrete do wrapper (DEDUP-05).
+
+        Zero timers novos: o diálogo "1x por jogo" engancha no MESMO tick de
+        ``daemon.state_full`` que a GUI já tem — o ``super()`` pinta a aba
+        Status como sempre (StatusActionsMixin) e, em seguida, o
+        ``LaunchWrapperDialogMixin`` decide (função pura + cache por appid) se
+        o jogo em foco merece o lembrete do ``hefesto-launch``. O mixin nunca
+        propaga exceção — um defeito no lembrete não pode quebrar o render.
+        """
+        super()._render_slow_state(state)
+        self._maybe_prompt_wrapper_dialog(state)
 
     # --- banner ---
 

@@ -151,7 +151,18 @@ class TestFanOut:
 
 class TestEnumerate:
     def test_enumerate_device_keys_dedupe_e_filtra(self) -> None:
+        """Dedupe por serial + filtro de PID + fallback por path — HERMÉTICO.
+
+        BUG-TEST-ENUMERATE-HERMETICO-01 (2026-07-17): o `_is_virtual_hidraw`
+        real consulta o sysfs DA MÁQUINA (realpath de /sys/class/hidraw/N) —
+        com o vpad uhid vivo, um path fake como "/dev/hidraw4" pode calhar de
+        ser o nó VIRTUAL real e o teste reprovava conforme o estado do
+        hardware. Aqui o filtro é stubado (o caso virtual tem entrada própria
+        e determinística: "/dev/hidraw9").
+        """
         import hidapi
+
+        from hefesto_dualsense4unix.core import backend_pydualsense as mod
 
         class _DI:
             # Espelha a API real do hidapi: serial_number vem de wchar_t* → str
@@ -168,9 +179,15 @@ class TestEnumerate:
             _DI(0x0DF2, b"/dev/hidraw2", "CC:DD"),  # Edge
             _DI(0x9999, b"/dev/hidraw3", "EE:FF"),  # não-DualSense -> filtra
             _DI(0x0CE6, b"/dev/hidraw4", None),  # sem serial -> chave por path
+            _DI(0x0CE6, b"/dev/hidraw9", "02:fe:00:00:00:01"),  # vpad -> filtra
         ]
 
-        with patch.object(hidapi, "enumerate", lambda vendor_id=0: fake):
+        with (
+            patch.object(hidapi, "enumerate", lambda vendor_id=0: fake),
+            patch.object(
+                mod, "_is_virtual_hidraw", lambda path: path == b"/dev/hidraw9"
+            ),
+        ):
             keys = PyDualSenseController._enumerate_device_keys()
 
         got = {key: (path, edge) for key, path, edge in keys}
@@ -179,6 +196,7 @@ class TestEnumerate:
         assert got["CC:DD"] == (b"/dev/hidraw2", True)  # Edge detectado
         assert "EE:FF" not in got  # PID não-DualSense filtrado
         assert got["/dev/hidraw4"] == (b"/dev/hidraw4", False)  # fallback path
+        assert "02:fe:00:00:00:01" not in got  # vpad virtual filtrado
 
 
 class TestHotplug:

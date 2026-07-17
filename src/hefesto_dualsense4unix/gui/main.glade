@@ -222,7 +222,10 @@
                         </child>
 
                         <child>
-                          <object class="GtkLabel">
+                          <!-- STATUS-02: id p/ a mixin esconder a linha junto
+                               com a barra quando há 2+ controles (cada card
+                               tem a própria bateria). -->
+                          <object class="GtkLabel" id="status_battery_caption">
                             <property name="label" translatable="yes">Bateria:</property>
                             <property name="xalign">1</property>
                           </object>
@@ -272,158 +275,33 @@
                   <packing><property name="expand">False</property></packing>
                 </child>
 
+                <!-- STATUS-02: um card por controle (ControllerCard, montado
+                     por código em status_actions._sync_status_cards). Os
+                     frames fixos "Gatilhos"/"Sticks e botões" (singletons do
+                     primário) saíram — cada card carrega as próprias barras
+                     L2/R2, sticks e glyphs, pintados na cor da lightbar
+                     DAQUELE controle. Rolagem só vertical (nunca horizontal);
+                     sem controle nenhum o box fica vazio e o fallback offline
+                     do frame Estado responde (UI-STATUS-OFFLINE-FALLBACK-01). -->
                 <child>
-                  <object class="GtkFrame" id="frame_status_gatilhos_live">
-                    <property name="label" translatable="yes">Gatilhos</property>
+                  <object class="GtkScrolledWindow" id="status_players_scroll">
+                    <property name="hscrollbar-policy">never</property>
+                    <property name="vscrollbar-policy">automatic</property>
+                    <property name="shadow-type">none</property>
+                    <property name="propagate-natural-height">True</property>
                     <child>
-                      <object class="GtkGrid" id="live_triggers_grid">
-                        <property name="row-spacing">6</property>
-                        <property name="column-spacing">12</property>
-                        <property name="margin">12</property>
-                        <style><class name="hefesto-dualsense4unix-card"/></style>
-
+                      <object class="GtkViewport">
+                        <property name="shadow-type">none</property>
                         <child>
-                          <object class="GtkLabel">
-                            <property name="label" translatable="yes">L2</property>
-                            <property name="xalign">1</property>
-                            <property name="width-chars">3</property>
+                          <object class="GtkBox" id="status_players_slot">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">12</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkProgressBar" id="live_l2_bar">
-                            <property name="show-text">True</property>
-                            <property name="text">0 / 255</property>
-                            <property name="hexpand">True</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
-                        </child>
-
-                        <child>
-                          <object class="GtkLabel">
-                            <property name="label" translatable="yes">R2</property>
-                            <property name="xalign">1</property>
-                          </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkProgressBar" id="live_r2_bar">
-                            <property name="show-text">True</property>
-                            <property name="text">0 / 255</property>
-                            <property name="hexpand">True</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                         </child>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
-
-                <child>
-                  <object class="GtkFrame" id="frame_status_sticks">
-                    <property name="label" translatable="yes">Sticks e botões</property>
-                    <child>
-                      <!-- Grid 3 colunas homogêneas: stick esq | stick dir | grid glyphs.
-                           Mesma largura, alinhamento vertical topo — composição simétrica. -->
-                      <object class="GtkGrid" id="sticks_buttons_grid">
-                        <property name="column-spacing">16</property>
-                        <property name="row-spacing">0</property>
-                        <property name="margin">12</property>
-                        <property name="column-homogeneous">True</property>
-                        <style><class name="hefesto-dualsense4unix-card"/></style>
-
-                        <!-- Coluna 0: Stick esquerdo -->
-                        <child>
-                          <object class="GtkBox" id="stick_left_capsule">
-                            <property name="orientation">vertical</property>
-                            <property name="spacing">4</property>
-                            <property name="halign">center</property>
-                            <property name="valign">start</property>
-                            <child>
-                              <object class="GtkLabel" id="stick_left_title">
-                                <property name="label" translatable="yes">Analógico Esquerdo (L3)</property>
-                                <property name="xalign">0.5</property>
-                                <property name="use-markup">True</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkBox" id="stick_left_preview_slot">
-                                <property name="orientation">vertical</property>
-                                <property name="halign">center</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_lx_label">
-                                <property name="label" translatable="yes">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
-                                <property name="use-markup">True</property>
-                                <property name="xalign">0.5</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="left-attach">0</property>
-                            <property name="top-attach">0</property>
-                          </packing>
-                        </child>
-
-                        <!-- Coluna 1: Stick direito -->
-                        <child>
-                          <object class="GtkBox" id="stick_right_capsule">
-                            <property name="orientation">vertical</property>
-                            <property name="spacing">4</property>
-                            <property name="halign">center</property>
-                            <property name="valign">start</property>
-                            <child>
-                              <object class="GtkLabel" id="stick_right_title">
-                                <property name="label" translatable="yes">Analógico Direito (R3)</property>
-                                <property name="xalign">0.5</property>
-                                <property name="use-markup">True</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkBox" id="stick_right_preview_slot">
-                                <property name="orientation">vertical</property>
-                                <property name="halign">center</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="live_rx_label">
-                                <property name="label" translatable="yes">&lt;span font_family="monospace" size="small"&gt;X: 128  Y: 128&lt;/span&gt;</property>
-                                <property name="use-markup">True</property>
-                                <property name="xalign">0.5</property>
-                              </object>
-                              <packing><property name="expand">False</property></packing>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="left-attach">1</property>
-                            <property name="top-attach">0</property>
-                          </packing>
-                        </child>
-
-                        <!-- Coluna 2: Grid de glyphs (inserido por status_actions._init_button_glyphs) -->
-                        <child>
-                          <object class="GtkBox" id="buttons_glyphs_slot">
-                            <property name="orientation">vertical</property>
-                            <property name="halign">center</property>
-                            <property name="valign">center</property>
-                          </object>
-                          <packing>
-                            <property name="left-attach">2</property>
-                            <property name="top-attach">0</property>
-                          </packing>
-                        </child>
-
-                      </object>
-                    </child>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
               </object>
             </child>
@@ -717,6 +595,39 @@
                           <packing><property name="expand">False</property></packing>
                         </child>
 
+                        <!-- COR-04: cores automáticas por controle (toggle do perfil).
+                             Sem <signal> de propósito: a fiação é em código
+                             (install_lightbar_tab), fora do dict de app.py. -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="spacing">2</property>
+                            <child>
+                              <object class="GtkCheckButton" id="auto_player_colors_check">
+                                <property name="label" translatable="yes">Cores automáticas por controle</property>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Cores automáticas por controle</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Cada DualSense conectado ganha uma cor de jogador automaticamente</property>
+                                </object>
+                              </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="auto_player_colors_subtitle">
+                                <property name="label" translatable="yes">&lt;i&gt;Cada DualSense ganha uma cor de jogador, estilo PS5.&lt;/i&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="margin-start">24</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
@@ -773,6 +684,41 @@
                                 <object class="AtkObject">
                                   <property name="AtkObject::accessible-name" translatable="yes">Apagar lightbar</property>
                                   <property name="AtkObject::accessible-description" translatable="yes">Desliga a barra de LED do controle</property>
+                                </object>
+                              </child>
+                              </object>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- COR-04: desfazer cor explícita (por alvo e em lote).
+                             Sem <signal>: fiação em código (install_lightbar_tab). -->
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="homogeneous">True</property>
+                            <child>
+                              <object class="GtkButton" id="lightbar_auto_reset_target">
+                                <property name="label" translatable="yes">Voltar ao automático</property>
+                                <property name="tooltip-text" translatable="yes">Remove a cor escolhida do controle selecionado no seletor acima — a cor automática volta a valer nele.</property>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Voltar o controle selecionado ao automático</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Remove a cor escolhida do controle selecionado; a cor automática volta a valer nele</property>
+                                </object>
+                              </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="lightbar_auto_reset_all">
+                                <property name="label" translatable="yes">Voltar todos ao automático</property>
+                                <property name="tooltip-text" translatable="yes">Remove as cores escolhidas de todos os controles e religa as cores automáticas.</property>
+                              <child internal-child="accessible">
+                                <object class="AtkObject">
+                                  <property name="AtkObject::accessible-name" translatable="yes">Voltar todos os controles ao automático</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Remove as cores escolhidas de todos os controles e religa as cores automáticas</property>
                                 </object>
                               </child>
                               </object>
@@ -923,6 +869,19 @@
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
                             <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- COR-04: com o automático ligado, o LED do número
+                             do controle vence os interruptores manuais. -->
+                        <child>
+                          <object class="GtkLabel" id="player_leds_auto_note">
+                            <property name="label" translatable="yes">&lt;i&gt;Os interruptores manuais valem com as cores automáticas desligadas.&lt;/i&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-top">4</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>

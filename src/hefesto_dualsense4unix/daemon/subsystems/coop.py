@@ -43,35 +43,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+# FEAT-COOP-PLAYER-LED-01 / COR-03: os padrões canônicos de player-LED
+# (P1..P4 do PS5) moraram aqui até o COR-03; agora o dono é
+# `core.led_control` (a cor automática por controle usa o MESMO padrão fora
+# do co-op — D7 "número do controle"). O import reexporta para preservar o
+# contrato público (`from ...coop import player_led_pattern` continua
+# válido — testes e chamadores antigos não quebram).
+from hefesto_dualsense4unix.core.led_control import player_led_pattern
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
 
-    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader, EvdevSnapshot
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
     from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
 logger = get_logger(__name__)
-
-#: FEAT-COOP-PLAYER-LED-01 — padrões canônicos do DualSense para os 5 LEDs de
-#: player (ordem física esquerda→direita: [L2, L1, centro, R1, R2]), os mesmos
-#: que o PS5 usa para indicar P1..P4.
-_PLAYER_LED_PATTERNS: dict[int, tuple[bool, bool, bool, bool, bool]] = {
-    1: (False, False, True, False, False),
-    2: (False, True, False, True, False),
-    3: (True, False, True, False, True),
-    4: (True, True, False, True, True),
-}
-
-
-def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
-    """Padrão canônico de player-LED do jogador `index`.
-
-    P5+ não tem padrão oficial no DualSense: acende os 5 LEDs (fallback
-    inequívoco — nunca colide com P1..P4).
-    """
-    return _PLAYER_LED_PATTERNS.get(index, (True, True, True, True, True))
 
 
 @dataclass
@@ -162,6 +150,31 @@ class CoopManager:
         for mac, player in self._players.items():
             if player.vpad is not None and not mac.startswith("path:"):
                 out[mac] = player.player_index
+        return out
+
+    def live_snapshots(self) -> dict[str, EvdevSnapshot]:
+        """MAC -> snapshot de input AO VIVO de cada jogador secundário promovido.
+
+        STATUS-01: é a fonte dos `inputs` por controle no `state_full` (o
+        primário sai de `daemon._last_state`, a MESMA fonte do topo do payload
+        — nunca daqui). Leitura pura e não-destrutiva: `EvdevReader.snapshot()`
+        já devolve uma CÓPIA sob lock, sem consumir nada do reader.
+
+        Ficam FORA (o card mostra "—", nunca um valor congelado fingindo vida):
+          - jogador pendente (`vpad is None` — aguardando o grab confirmar; o
+            jogo também não o vê);
+          - identidade sem MAC (`path:...` — não casa com o `uniq` de nenhuma
+            entrada de `controllers`);
+          - reader cujo snapshot falhou (defensivo — nunca derruba o handler).
+        """
+        out: dict[str, EvdevSnapshot] = {}
+        for mac, player in list(self._players.items()):
+            if player.vpad is None or mac.startswith("path:"):
+                continue
+            try:
+                out[mac] = player.reader.snapshot()
+            except Exception as exc:
+                logger.debug("coop_live_snapshot_falhou", identity=mac, err=str(exc))
         return out
 
     def _primary_evdev_path(self) -> str | None:
@@ -429,6 +442,25 @@ class CoopManager:
             player=player.player_index,
             players=self.player_count(),
         )
+        # BT-03: vpad de secundário que nasceu degradado (máscara DualSense em
+        # uinput) é transição anunciada — mesma borda do P1 (log estruturado +
+        # bus), nunca reavaliada por tick. Máscara xbox é uinput POR DESIGN e
+        # não degradação (o mesmo critério do `dedup_status`).
+        if (
+            getattr(vpad, "flavor", None) == "dualsense"
+            and getattr(vpad, "backend", None) == "uinput"
+        ):
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                notify_vpad_degradado,
+            )
+
+            motivo = getattr(vpad, "fallback_motivo", None)
+            with contextlib.suppress(Exception):
+                notify_vpad_degradado(
+                    self._daemon,
+                    player=player.player_index,
+                    motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
+                )
         # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
         # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
         # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
@@ -511,11 +543,11 @@ class CoopManager:
         (`apply_output_defaults`/`set_player_leds`) e o backend guarda o
         último padrão pedido no DEFAULT do estado desejado para re-afirmá-lo
         em reconexões. PERFIL-01: `_desired` é a property de compatibilidade
-        do backend → `_desired_default` (o padrão broadcast, exatamente o que
-        este revert precisa); overrides por-controle são assunto do
-        PERFIL-06 (revert por-uniq). Ler esse valor é a forma mais simples e
-        fiel de saber "o padrão do perfil ativo" sem recarregar o perfil aqui.
-        None = nenhum perfil/GUI setou player-LED ainda.
+        do backend → `_desired_default` (o padrão broadcast — a BASE do
+        revert); o padrão POR CONTROLE (default + override do uniq) vem de
+        `_resolved_player_leds` (PERFIL-06). Ler esse valor é a forma mais
+        simples e fiel de saber "o padrão do perfil ativo" sem recarregar o
+        perfil aqui. None = nenhum perfil/GUI setou player-LED ainda.
         """
         ctrl = getattr(self._daemon, "controller", None)
         bits = getattr(getattr(ctrl, "_desired", None), "player_leds", None)
@@ -523,11 +555,61 @@ class CoopManager:
             return None
         return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
 
+    def _resolved_player_leds(
+        self, mac: str
+    ) -> tuple[bool, bool, bool, bool, bool] | None:
+        """Padrão de player-LED do perfil para `mac`, resolvido POR-UNIQ.
+
+        PERFIL-06: prefere a API de leitura do backend
+        (`resolved_player_leds_for` — merge por campo default + override do
+        uniq): restaurar o broadcast global por cima de um override
+        por-controle era exatamente o "caminho (4)" do COR-02 que este item
+        fecha. Backend sem a API (fakes/legado) cai no padrão broadcast
+        (`_profile_player_leds`), o comportamento histórico. None = sem
+        padrão conhecido → quem chama não escreve nada.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        reader = getattr(ctrl, "resolved_player_leds_for", None)
+        if not callable(reader):
+            return self._profile_player_leds()
+        try:
+            bits = reader(mac)
+        except Exception as exc:
+            logger.warning(
+                "coop_player_led_resolucao_falhou", identity=mac, err=str(exc)
+            )
+            return None
+        if bits is None or len(bits) != 5:
+            return None
+        return (bool(bits[0]), bool(bits[1]), bool(bits[2]), bool(bits[3]), bool(bits[4]))
+
+    def _backend_output_muted(self) -> bool:
+        """True quando o backend está em Modo Nativo (output_mute) — gate D12.
+
+        Mutado, o JOGO é dono do LED: os reverts por-uniq (escrita sysfs
+        direta, fora do report_thread que o mute cobre) NÃO escrevem — o
+        estado desejado segue guardado no backend e o unmute re-aplica o
+        resolvido por-uniq de cada controle (`set_output_mute(False)`).
+        Espelha o gate dos caminhos públicos (`_for_each_led`).
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        return bool(getattr(ctrl, "_output_mute", False))
+
     def _revert_single_player_led(self, mac: str) -> None:
-        """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort."""
+        """Devolve UM controle (por MAC) ao padrão do perfil. Best-effort.
+
+        PERFIL-06: o padrão restaurado é o RESOLVIDO POR-UNIQ deste mac
+        (override de `player_leds` do perfil onde existe, default broadcast
+        onde não) — nunca o global cego por cima do override. Em Modo
+        Nativo (output_mute) não escreve: o jogo é dono do LED e o unmute do
+        backend re-aplica o resolvido (D12).
+        """
         if not self._leds_overridden or mac.startswith("path:"):
             return
-        bits = self._profile_player_leds()
+        if self._backend_output_muted():
+            logger.debug("coop_player_led_revert_mutado", identity=mac)
+            return
+        bits = self._resolved_player_leds(mac)
         if bits is None:
             return
         from hefesto_dualsense4unix.core import sysfs_leds
@@ -543,24 +625,108 @@ class CoopManager:
     def _revert_player_leds(self) -> None:
         """Restaura o padrão do perfil em TODOS os controles (co-op desligado).
 
-        Decisão (documentada): reverter = re-emitir o último padrão broadcast
-        pelo MESMO caminho público que o perfil usa (`set_player_leds`, que
-        prefere sysfs e cai em pydualsense) — cobre o primário e quaisquer
-        secundários de uma vez. Sem padrão conhecido (None), não escreve nada:
-        o próximo apply de perfil / reassert do backend na reconexão cobre.
+        PERFIL-06 (revert por-uniq): com a API de leitura do backend
+        (`resolved_player_leds_for`), cada controle conectado volta ao SEU
+        padrão resolvido — default broadcast onde não há override, override
+        por-uniq onde há — em dois passos:
+
+        1. re-emite o DEFAULT por `apply_output_defaults` (broadcast REAL e
+           NÃO-destrutivo: grava no default sem limpar os overrides —
+           `set_player_leds` broadcast LIMPARIA o campo `player_leds` de
+           todos os overrides por-uniq, corrompendo o estado do perfil);
+        2. corrige por-uniq, pela MESMA rota sysfs por MAC do co-op, os
+           conectados cujo resolvido difere do default
+           (`_reassert_overridden_player_leds`). O transiente do passo 1
+           nesses controles dura ms até o passo 2 cobrir.
+
+        Backend sem a API (fakes/legado): re-emite o último padrão broadcast
+        pelo caminho público que o perfil usa (`set_player_leds`, que
+        prefere sysfs e cai em pydualsense) — o comportamento histórico.
+        Sem padrão conhecido (None), não escreve nada: o próximo apply de
+        perfil / reassert do backend na reconexão cobre. Os caminhos
+        públicos do backend respeitam o output_mute por construção; a
+        correção sysfs tem o gate explícito (D12).
         """
         if not self._leds_overridden:
             return
         self._leds_overridden = False
-        bits = self._profile_player_leds()
         ctrl = getattr(self._daemon, "controller", None)
-        if bits is None or ctrl is None:
+        if ctrl is None:
             logger.debug("coop_player_led_revert_sem_padrao")
             return
+        bits = self._profile_player_leds()
+        if not callable(getattr(ctrl, "resolved_player_leds_for", None)):
+            # Comportamento histórico: backend sem estado por-controle.
+            if bits is None:
+                logger.debug("coop_player_led_revert_sem_padrao")
+                return
+            try:
+                ctrl.set_player_leds(bits)
+            except Exception as exc:
+                logger.warning("coop_player_led_revert_falhou", err=str(exc))
+            return
+        if bits is not None:
+            from hefesto_dualsense4unix.core.controller import OutputSpec
+
+            try:
+                ctrl.apply_output_defaults(OutputSpec(player_leds=bits))
+            except Exception as exc:
+                logger.warning("coop_player_led_revert_falhou", err=str(exc))
+        self._reassert_overridden_player_leds(default=bits)
+
+    def _reassert_overridden_player_leds(
+        self, default: tuple[bool, bool, bool, bool, bool] | None
+    ) -> None:
+        """Re-escreve por-uniq (sysfs por MAC) os conectados com override efetivo.
+
+        Complemento do passo broadcast do `_revert_player_leds` (PERFIL-06):
+        o `apply_output_defaults` pinta TODOS os conectados com o default;
+        aqui os controles cujo padrão RESOLVIDO difere (têm override de
+        `player_leds` no perfil ativo) voltam ao padrão DELES. Best-effort:
+        só toca o sysfs quando há o que corrigir, e nunca em Modo Nativo
+        (output_mute — o unmute do backend re-aplica o resolvido, D12).
+        Controle sem MAC (uniq None no describe) fica de fora — segue só o
+        global, como em todo o resto do mapa por-uniq.
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        describe = getattr(ctrl, "describe_controllers", None)
+        if not callable(describe):
+            return
         try:
-            ctrl.set_player_leds(bits)
+            infos = describe()
         except Exception as exc:
-            logger.warning("coop_player_led_revert_falhou", err=str(exc))
+            logger.warning("coop_player_led_revert_describe_falhou", err=str(exc))
+            return
+        pending: list[tuple[str, tuple[bool, bool, bool, bool, bool]]] = []
+        for info in infos:
+            if not info.get("connected"):
+                continue
+            uniq = info.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                continue
+            bits = self._resolved_player_leds(uniq)
+            if bits is None or bits == default:
+                continue
+            pending.append((uniq, bits))
+        if not pending:
+            return
+        if self._backend_output_muted():
+            logger.debug(
+                "coop_player_led_revert_mutado",
+                identities=[mac for mac, _ in pending],
+            )
+            return
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            nodes = sysfs_leds.discover()
+        except Exception as exc:
+            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+            return
+        for mac, bits in pending:
+            node = nodes.get(mac)
+            if node is None or not node.set_players(bits):
+                logger.debug("coop_player_led_revert_indisponivel", identity=mac)
 
     # -- por tick -------------------------------------------------------
 

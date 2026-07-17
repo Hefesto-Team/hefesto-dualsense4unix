@@ -12,13 +12,24 @@ PATH-RESOLVER-01: o .deb instala em /usr/share/, não em ~/.local/share/):
   2. <sys.prefix>/share/hefesto-dualsense4unix/glyphs/ (Flatpak: /app/share)
   3. /usr/share/hefesto-dualsense4unix/assets/glyphs/ (.deb / system-wide)
   4. assets/glyphs/                                   (diretório do repo)
+
+STATUS-03 (tinting por controle): ``set_accent(rgb)`` troca a variante
+ativa por uma tintada com a cor do lightbar do controle (ajustada por
+``ensure_min_contrast``): o literal ``#bd93f9`` é substituído no TEXTO do
+SVG (replace-all; há 1-4 ocorrências por arquivo) e o pixbuf é carregado
+via ``GdkPixbuf.PixbufLoader`` com ``set_size``, lendo do ``GLYPHS_DIR``
+resolvido — com CACHE por ``(nome, size, hex)``: trocar o accent nunca
+recarrega por tick nem recria o widget.
 """
 from __future__ import annotations
 
 import contextlib
 import pathlib
 import sys
+from collections.abc import Sequence
 from typing import Any
+
+from hefesto_dualsense4unix.utils.color_contrast import ensure_min_contrast, rgb_para_hex
 
 # ---------------------------------------------------------------------------
 # Mapa PT-BR — consumido por UI-STATUS-STICKS-REDESIGN-01
@@ -88,6 +99,31 @@ except FileNotFoundError:
 
 
 # ---------------------------------------------------------------------------
+# Tinting da variante ativa (STATUS-03)
+# ---------------------------------------------------------------------------
+
+#: Literal presente nos 19 ``*_active.svg`` shipados (roxo Drácula).
+_HEX_ATIVO_STOCK = "#bd93f9"
+
+#: Cache de pixbufs tintados. A chave embute o caminho RESOLVIDO do SVG
+#: (dir + nome — hermético quando GLYPHS_DIR muda em teste), o tamanho e o
+#: hex ajustado: no máximo 1 carga de pixbuf por (nome, size, hex).
+_PIXBUF_TINT_CACHE: dict[tuple[str, int, str], Any] = {}
+
+
+def _tintar_svg(texto: str, hex_cor: str) -> str:
+    """Substitui TODAS as ocorrências do literal stock pelo hex do accent."""
+    return texto.replace(_HEX_ATIVO_STOCK, hex_cor).replace(
+        _HEX_ATIVO_STOCK.upper(), hex_cor
+    )
+
+
+def limpar_cache_tinting() -> None:
+    """Esvazia o cache de pixbufs tintados (higiene de testes)."""
+    _PIXBUF_TINT_CACHE.clear()
+
+
+# ---------------------------------------------------------------------------
 # ButtonGlyph
 # ---------------------------------------------------------------------------
 
@@ -104,6 +140,48 @@ except (ImportError, ValueError):
 
 
 if _GTK_DISPONIVEL:
+
+    def _carregar_pixbuf_tintado(nome: str, size: int, hex_cor: str) -> Any:
+        """Carrega a variante ativa tintada (caminho de MISS do cache).
+
+        Lê SEMPRE do ``GLYPHS_DIR`` resolvido (módulo — funciona nos 4
+        caminhos de resolução e é monkeypatchável em teste), tinta o texto
+        do SVG e materializa via ``GdkPixbuf.PixbufLoader`` com
+        ``set_size(size, size)``. Retorna None em qualquer falha (o widget
+        cai na variante stock).
+        """
+        if GLYPHS_DIR is None:
+            return None
+        caminho = GLYPHS_DIR / f"{nome}_active.svg"
+        try:
+            texto = caminho.read_text(encoding="utf-8")
+        except OSError:
+            return None
+        loader = None
+        try:
+            loader = GdkPixbuf.PixbufLoader()
+            # set_size ANTES do write: pós size-prepared o pedido é ignorado.
+            loader.set_size(size, size)
+            loader.write(_tintar_svg(texto, hex_cor).encode("utf-8"))
+            loader.close()
+            return loader.get_pixbuf()
+        except Exception:
+            if loader is not None:
+                with contextlib.suppress(Exception):
+                    loader.close()
+            return None
+
+    def _pixbuf_tintado_cacheado(nome: str, size: int, hex_cor: str) -> Any:
+        """Consulta o cache por (nome, size, hex); carrega só no MISS."""
+        if GLYPHS_DIR is None:
+            return None
+        chave = (str(GLYPHS_DIR / f"{nome}_active.svg"), size, hex_cor)
+        if chave in _PIXBUF_TINT_CACHE:
+            return _PIXBUF_TINT_CACHE[chave]
+        pixbuf = _carregar_pixbuf_tintado(nome, size, hex_cor)
+        if pixbuf is not None:
+            _PIXBUF_TINT_CACHE[chave] = pixbuf
+        return pixbuf
 
     class ButtonGlyph(Gtk.DrawingArea):  # type: ignore[misc]
         """Exibe um glyph SVG de botao do DualSense com estado pressionado.
@@ -136,6 +214,10 @@ if _GTK_DISPONIVEL:
             self._pb_normal: GdkPixbuf.Pixbuf | None = None
             self._pb_active: GdkPixbuf.Pixbuf | None = None
             self._load_pixbuf_pair()
+            # STATUS-03: guarda a variante ativa stock (roxo Drácula) para
+            # set_accent(None) restaurar sem reler o disco.
+            self._pb_active_stock: GdkPixbuf.Pixbuf | None = self._pb_active
+            self._accent_hex: str | None = None
             self.set_size_request(size, size)
             self.connect("draw", self._on_draw)
             # BUG-GLYPH-TOOLTIP-ORFAO-01: tooltip DESLIGADO de propósito. Sob
@@ -156,6 +238,31 @@ if _GTK_DISPONIVEL:
             """Altera o estado pressionado e agenda redesenho."""
             if pressed != self._pressed:
                 self._pressed = pressed
+                self.queue_draw()
+
+        def set_accent(self, rgb: Sequence[int] | None) -> None:
+            """Tinta a variante ativa com a cor do controle, sem recriar o widget.
+
+            A cor é AJUSTADA por ``ensure_min_contrast`` (decisão D8: swatch
+            cru, traços ajustados); o pixbuf tintado vem do cache por
+            ``(nome, size, hex)`` — repetir cores NÃO relê SVG do disco.
+            ``None`` restaura o roxo Drácula stock. Aceita ``[r, g, b]`` do
+            IPC ou tuple.
+            """
+            hex_novo = (
+                None if rgb is None else rgb_para_hex(ensure_min_contrast(rgb))
+            )
+            if hex_novo == self._accent_hex:
+                return
+            self._accent_hex = hex_novo
+            if hex_novo is None:
+                self._pb_active = self._pb_active_stock
+            else:
+                tintado = _pixbuf_tintado_cacheado(self._name, self._size, hex_novo)
+                self._pb_active = (
+                    tintado if tintado is not None else self._pb_active_stock
+                )
+            if self._pressed:
                 self.queue_draw()
 
         @property
@@ -215,12 +322,20 @@ else:
             self._name = name
             self._size = size
             self._pressed = False
+            self._accent_hex: str | None = None
 
         def set_pressed(self, pressed: bool) -> None:
             """Altera o estado pressionado."""
             if pressed != self._pressed:
                 self._pressed = pressed
                 self.queue_draw()
+
+        def set_accent(self, rgb: Sequence[int] | None) -> None:
+            """Registra o accent (mesma normalização do widget real)."""
+            if rgb is None:
+                self._accent_hex = None
+            else:
+                self._accent_hex = rgb_para_hex(ensure_min_contrast(rgb))
 
         @property
         def is_pressed(self) -> bool:

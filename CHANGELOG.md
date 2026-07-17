@@ -5,6 +5,69 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Cores automáticas por controle (COR-01/COR-03), estilo PS5.** Cada DualSense
+  conectado ganha sozinho uma cor de lightbar (1=azul, 2=vermelho, 3=verde,
+  4=rosa, 5+=branco) e o player-LED com o **número do controle**, pela ordem de
+  conexão da sessão — replug recupera o mesmo número; sessão nova renumera do 1.
+  A precedência é POR CAMPO: cor explícita por-controle > automática > global do
+  perfil (o co-op, quando ativo, continua vencendo por cima). Toggle "Cores
+  automáticas por controle" na aba Lightbar (`leds.auto_player_colors`, ligado
+  por padrão) + botões "Voltar (todos) ao automático".
+- **Aba Status em cards por controle (STATUS-01/02/03 + BT-03).** Um card por
+  DualSense com swatch da cor real do lightbar, bateria própria, inputs ao vivo
+  (sticks/gatilhos/botões) **tintados na cor do próprio controle** com
+  contraste garantido ≥ 3.0 (matiz preservado; cor escura é clareada — o
+  swatch mostra a cor crua), rótulo honesto da fonte da cor ("apagada" só
+  quando fomos nós que apagamos; "cor desconhecida" quando não dá para saber)
+  e aviso de emulação degradada por controle (backend uinput + motivo).
+- **Lembrete do wrapper 1x por jogo (DEDUP-05).** Com a emulação ativa e um
+  jogo Steam em foco que ainda não abre pelo `hefesto-launch`, a GUI mostra UM
+  diálogo (nunca popover) com a linha para copiar; "Não perguntar para este
+  jogo" persiste a dispensa. Sem o wrapper o pior caso é controle DUPLICADO —
+  nunca zero controles.
+- **doctor.sh**: as 7 regras udev canônicas (70/71-uhid/71-uinput/72/76/77/78)
+  agora são conferidas (antes 4; a 75 de áudio segue opt-in); probe read-only
+  da gravabilidade do nó de LED (a rota da cor por-controle em BT); e o
+  diagnóstico da cascata de morte do 8BitDo/hid-nintendo por Bluetooth
+  (informativo, zero falso-positivo — a linha isolada não dispara).
+- **Inventário read-only de gamepads externos** no IPC `controller.list`
+  (opt-in): nome, VID:PID, barramento, driver do kernel — o 8BitDo e afins
+  aparecem com identidade honesta, sem o hefesto adotá-los.
+- **Guia**: `docs/usage/troubleshooting-8bitdo.md` — modos do SN30 Pro, o que
+  cada um expõe, a assinatura de morte por BT e os comandos de diagnóstico.
+
+### Changed
+
+- **Mudança visível ao atualizar**: perfis existentes com cor global salva
+  passam a exibir **cores automáticas por controle** (o novo
+  `auto_player_colors` nasce ligado — é o comportamento pedido, mas muda o que
+  se vê sem ação da usuária). Reaplicar uma cor manualmente (por controle ou
+  em "Todos", que desliga o automático com aviso) volta a valer como antes.
+- **Downgrade quebra para perfis re-salvos**: `LedsConfig` é `extra="forbid"` —
+  qualquer perfil salvo pela versão nova (ganha `auto_player_colors`; e
+  `controllers` quando usado) fica inválido em daemon antigo (warning
+  `profile_invalid`, some da lista). Aceito porque daemon+GUI shippam juntos.
+- **O player-LED fora do co-op mostra o número do CONTROLE (slot de sessão),
+  não o número de jogador que o jogo atribui** — os dois podem divergir em
+  borda de replug do primário (jogos numeram pela ordem de enumeração do SDL).
+  Com o co-op ativo, o LED volta a mostrar o número de JOGADOR do co-op.
+- **Perfis por controle (PERFIL-06): revert do co-op resolve POR CONTROLE +
+  contrato de downgrade.** Desligar o co-op (ou um jogador sair) devolve cada
+  controle ao padrão de player-LED RESOLVIDO para ele — o override do mapa
+  `controllers` do perfil onde existe, o padrão global onde não — em vez de
+  re-emitir o broadcast global por cima do override; o caminho novo também
+  deixou de apagar os overrides por-uniq registrados no backend (o revert
+  antigo, por `set_player_leds` broadcast, limpava o campo de todos).
+  **Downgrade**: como a serialização OMITE o campo `controllers` quando
+  ausente/vazio (PERFIL-02), só perfis que USAM `controllers` são rejeitados
+  por um binário antigo (`extra="forbid"` → warning `profile_invalid`, o
+  perfil some da lista até o campo ser removido do JSON) — aceito porque
+  daemon+GUI shippam juntos. Sem a omissão, TODO perfil salvo pelo binário
+  novo seria rejeitado no downgrade — por isso ela é requisito de
+  compatibilidade, não estética.
+
 ## [3.13.3] — 2026-07-14
 
 Três percalços do instalador flagrados num ciclo `./uninstall.sh` seguido de

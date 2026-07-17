@@ -153,6 +153,19 @@ class LedsConfig(BaseModel):
     lightbar: tuple[int, int, int] = (0, 0, 0)
     player_leds: list[bool] = Field(default_factory=lambda: [False] * 5)
     lightbar_brightness: float = Field(default=1.0, ge=0.0, le=1.0)
+    # COR-03 (sprint cores-e-led-automaticos): cores automáticas por controle
+    # — cada DualSense acende a cor do SEU slot (paleta PS5) + o LED do número
+    # do controle (D7). Default True = o comportamento pedido pela mantenedora
+    # nasce ligado; False = comportamento broadcast histórico intacto (D5).
+    # Perfil antigo sem o campo valida com o default (aditivo, sem migração).
+    # SÓ tem efeito na seção GLOBAL `profile.leds`: dentro de um override
+    # por-controle (`ControllerOverrides.leds`) o campo é aceito pelo schema
+    # (reuso do modelo) mas ignorado — o toggle é do perfil, não do controle
+    # (`_controllers_to_specs` não o lê, então ele nunca densifica um
+    # override parcial). ATENÇÃO downgrade: perfil salvo com este campo fica
+    # inválido em binário antigo (`extra="forbid"`) — coberto nas notas de
+    # release (COR-08).
+    auto_player_colors: bool = True
 
     @field_validator("lightbar")
     @classmethod

@@ -4,10 +4,18 @@ Desenha um circulo externo (borda) com um ponto interno que se move
 proporcionalmente aos valores X/Y do stick (0-255, centro=128).
 
 Tamanho recomendado: 120x120 pixels (via set_size_request).
+
+STATUS-03 (tinting por controle): ``set_accent(rgb)`` pinta os traços
+(borda, cruz e ponto) com a cor do lightbar do controle, ajustada por
+``ensure_min_contrast`` — o comportamento clássico (roxo Drácula no L3)
+fica intacto enquanto ``set_accent`` nunca for chamado.
 """
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
+
+from hefesto_dualsense4unix.utils.color_contrast import ensure_min_contrast
 
 # ---------------------------------------------------------------------------
 # Resolução condicional de GTK
@@ -50,6 +58,7 @@ if _GTK_DISPONIVEL:
             self._x = CENTER_STICK
             self._y = CENTER_STICK
             self._l3_pressed = False
+            self._accent: tuple[float, float, float] | None = None
             self.set_size_request(120, 120)
             self.connect("draw", self._on_draw)
 
@@ -72,6 +81,27 @@ if _GTK_DISPONIVEL:
                 self._l3_pressed = pressed
                 self.queue_draw()
 
+        def set_accent(self, rgb: Sequence[int] | None) -> None:
+            """Pinta os traços (borda/cruz/ponto) com a cor do controle.
+
+            A cor é AJUSTADA por ``ensure_min_contrast`` (decisão D8: o
+            swatch do card mostra a cor crua; os traços recebem a ajustada)
+            — passar uma cor já legível é idempotente. Com accent ativo, o
+            estado pressionado (L3/R3) realça em branco Drácula, que segue
+            distinguível de qualquer accent. ``None`` restaura a paleta
+            padrão (comportamento pré-STATUS-03). Aceita ``[r, g, b]`` do
+            IPC ou tuple.
+            """
+            novo: tuple[float, float, float] | None
+            if rgb is None:
+                novo = None
+            else:
+                ar, ag, ab = ensure_min_contrast(rgb)
+                novo = (ar / 255, ag / 255, ab / 255)
+            if novo != self._accent:
+                self._accent = novo
+                self.queue_draw()
+
         # ------------------------------------------------------------------
         # Interno
         # ------------------------------------------------------------------
@@ -88,8 +118,17 @@ if _GTK_DISPONIVEL:
             ctx.set_source_rgb(*FUNDO_COLOR)  # type: ignore[attr-defined]
             ctx.paint()  # type: ignore[attr-defined]
 
+            # Cores efetivas dos traços: paleta clássica OU accent por
+            # controle (STATUS-03). Com accent, o pressionado realça em
+            # branco Drácula (distinguível de qualquer accent).
+            if self._accent is None:
+                borda = L3_COLOR if self._l3_pressed else BORDA_COLOR
+                cor_ponto = L3_COLOR if self._l3_pressed else PONTO_NORMAL
+            else:
+                borda = PONTO_NORMAL if self._l3_pressed else self._accent
+                cor_ponto = borda
+
             # Circulo externo (borda)
-            borda = L3_COLOR if self._l3_pressed else BORDA_COLOR
             ctx.set_source_rgb(*borda)  # type: ignore[attr-defined]
             ctx.arc(cx, cy, raio_externo, 0, 2 * math.pi)  # type: ignore[attr-defined]
             ctx.set_line_width(2)  # type: ignore[attr-defined]
@@ -111,7 +150,6 @@ if _GTK_DISPONIVEL:
             px = cx + fator_x * raio_externo * 0.85
             py = cy + fator_y * raio_externo * 0.85
 
-            cor_ponto = L3_COLOR if self._l3_pressed else PONTO_NORMAL
             ctx.set_source_rgb(*cor_ponto)  # type: ignore[attr-defined]
             ctx.arc(px, py, 6, 0, 2 * math.pi)  # type: ignore[attr-defined]
             ctx.fill()  # type: ignore[attr-defined]
@@ -128,6 +166,7 @@ else:
             self._x = CENTER_STICK
             self._y = CENTER_STICK
             self._l3_pressed = False
+            self._accent: tuple[float, float, float] | None = None
 
         def set_size_request(self, *_args: object) -> None:
             """No-op no stub."""
@@ -140,6 +179,14 @@ else:
         def set_l3_pressed(self, pressed: bool) -> None:
             """Define pressionamento (no-op no stub)."""
             self._l3_pressed = pressed
+
+        def set_accent(self, rgb: Sequence[int] | None) -> None:
+            """Define o accent dos traços (mesma normalização do widget real)."""
+            if rgb is None:
+                self._accent = None
+            else:
+                ar, ag, ab = ensure_min_contrast(rgb)
+                self._accent = (ar / 255, ag / 255, ab / 255)
 
         def queue_draw(self) -> None:
             """No-op no stub."""

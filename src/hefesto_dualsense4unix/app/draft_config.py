@@ -57,6 +57,12 @@ class LedsDraft(BaseModel):
     ``player_leds``: tupla de 5 booleanos (LED1..LED5).
     ``mic_led``: reservado para V2 (INFRA-SET-MIC-LED-01); default False,
         não acessado por nenhum widget desta sprint.
+    ``auto_player_colors``: toggle "Cores automáticas por controle" (COR-04)
+        — espelha ``LedsConfig.auto_player_colors`` do schema. Campo do
+        PERFIL: só a seção GLOBAL do draft o carrega com significado; os
+        overrides por-controle NUNCA o gravam (``_leds_draft_to_config`` só
+        o emite com ``include_auto=True``, usado pelo ``to_profile`` e pelo
+        ``to_ipc_dict`` — nunca por ``with_controller_leds``).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -65,6 +71,7 @@ class LedsDraft(BaseModel):
     lightbar_brightness: int = Field(default=100, ge=0, le=100)
     player_leds: tuple[bool, bool, bool, bool, bool] = (False, False, False, False, False)
     mic_led: bool = False  # reservado V2
+    auto_player_colors: bool = True  # COR-04 (default do schema: ligado)
 
 
 class RumbleDraft(BaseModel):
@@ -141,6 +148,10 @@ def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
 
     Mesma conversão histórica de ``from_profile``: brilho float 0.0-1.0 vira
     percentual inteiro 0-100 e ``player_leds`` é normalizado para 5 flags.
+    COR-04: ``auto_player_colors`` é lido junto (perfil antigo sem o campo
+    valida com o default True do schema — o getattr é só defesa contra
+    objetos parciais de teste). Para OVERRIDES por-controle o valor lido é
+    inócuo: o toggle é do perfil e ninguém consulta o campo no efetivo.
     """
     rgb_raw = leds_cfg.lightbar  # tuple[int, int, int]
     brightness_raw = float(leds_cfg.lightbar_brightness)  # 0.0-1.0
@@ -156,19 +167,30 @@ def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
         lightbar_rgb=(int(rgb_raw[0]), int(rgb_raw[1]), int(rgb_raw[2])),
         lightbar_brightness=brightness_pct,
         player_leds=player_5,
+        auto_player_colors=bool(getattr(leds_cfg, "auto_player_colors", True)),
     )
 
 
-def _leds_draft_to_config(leds: LedsDraft) -> Any:
-    """Converte o sub-draft de LEDs em ``LedsConfig`` persistível (schema)."""
+def _leds_draft_to_config(leds: LedsDraft, *, include_auto: bool = False) -> Any:
+    """Converte o sub-draft de LEDs em ``LedsConfig`` persistível (schema).
+
+    COR-04: ``include_auto=True`` (usado SÓ pela seção GLOBAL — ``to_profile``)
+    emite ``auto_player_colors`` explicitamente. O default False mantém os
+    overrides por-controle (``with_controller_leds``) SEM o campo: o toggle é
+    do perfil, e gravá-lo no override densificaria uma seção parcial com um
+    campo que o backend ignora (regra documentada no schema ``LedsConfig``).
+    """
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
     rgb = leds.lightbar_rgb or (0, 0, 0)
-    return LedsConfig(
-        lightbar=rgb,
-        player_leds=list(leds.player_leds),
-        lightbar_brightness=leds.lightbar_brightness / 100.0,
-    )
+    kwargs: dict[str, Any] = {
+        "lightbar": rgb,
+        "player_leds": list(leds.player_leds),
+        "lightbar_brightness": leds.lightbar_brightness / 100.0,
+    }
+    if include_auto:
+        kwargs["auto_player_colors"] = leds.auto_player_colors
+    return LedsConfig(**kwargs)
 
 
 def _triggers_config_to_draft(cfg: Any) -> TriggersDraft:
@@ -366,7 +388,9 @@ class DraftConfig(BaseModel):
             mode=self.source_mode,
             suppress_desktop_emulation=self.source_suppress,
             triggers=_triggers_draft_to_config(self.triggers),
-            leds=_leds_draft_to_config(self.leds),
+            # COR-04: a seção GLOBAL emite auto_player_colors explicitamente
+            # (round-trip do toggle "Cores automáticas por controle").
+            leds=_leds_draft_to_config(self.leds, include_auto=True),
             rumble=RumbleConfig(
                 passthrough=self.rumble.passthrough,
                 policy=self.rumble.policy,
@@ -545,6 +569,40 @@ class DraftConfig(BaseModel):
             return self
         return self.model_copy(update={"source_controllers": novo or None})
 
+    def with_controller_fields_cleared(
+        self, uniq: str, section: str, fields: Iterable[str]
+    ) -> DraftConfig:
+        """Limpa ``fields`` da seção ``section`` do override de UM ``uniq``.
+
+        COR-04 ("Voltar ao automático" com um controle selecionado): remove a
+        cor explícita SÓ do alvo — a automática (ou o global, com o auto
+        desligado) volta a valer nele no próximo Aplicar. Mesma granularidade
+        por campo de ``with_override_fields_cleared``: campos não pedidos
+        (ex.: player-LEDs próprios, gatilhos) ficam; seção que esvazia vira
+        ``None``; entrada sem nenhuma seção some do mapa; mapa vazio volta a
+        ``None``. Sem override (ou sem os campos) devolve ``self`` intacto.
+        """
+        override = self.controller_override(uniq)
+        if override is None:
+            return self
+        cfg = getattr(override, section, None)
+        alvo_campos = set(fields)
+        if cfg is None or not (cfg.model_fields_set & alvo_campos):
+            return self
+        restantes = cfg.model_fields_set - alvo_campos
+        nova_secao = (
+            type(cfg)(**{nome: getattr(cfg, nome) for nome in restantes})
+            if restantes
+            else None
+        )
+        novo_override = override.model_copy(update={section: nova_secao})
+        mapa: dict[str, Any] = dict(self.source_controllers or {})
+        if novo_override.leds is None and novo_override.triggers is None:
+            mapa.pop(uniq, None)  # entrada esvaziou — some do mapa
+        else:
+            mapa[uniq] = novo_override
+        return self.model_copy(update={"source_controllers": mapa or None})
+
     def _controllers_to_ipc(self) -> dict[str, Any] | None:
         """Seção ``controllers`` do contrato IPC ``profile.apply_draft``.
 
@@ -663,6 +721,10 @@ class DraftConfig(BaseModel):
                 "lightbar_rgb": list(rgb) if rgb is not None else None,
                 "lightbar_brightness": self.leds.lightbar_brightness / 100.0,
                 "player_leds": list(self.leds.player_leds),
+                # COR-04: o toggle viaja no "Aplicar" — o DraftApplier o
+                # propaga ao registro de identidade (mesmo destino da
+                # ativação de perfil); daemon antigo ignora a chave (aditivo).
+                "auto_player_colors": self.leds.auto_player_colors,
             },
             "rumble": {
                 "weak": self.rumble.weak,

@@ -167,8 +167,8 @@ class IController(ABC):
     # --- API por-uniq (PERFIL-01 / 4P-01) --------------------------------
     # Métodos CONCRETOS de propósito: backends de um controle só
     # (FakeController) herdam comportamento seguro sem mudança; o backend
-    # multi-controle (PyDualSenseController) sobrescreve os três com o estado
-    # desejado por-controle de verdade.
+    # multi-controle (PyDualSenseController) sobrescreve os quatro com o
+    # estado desejado por-controle de verdade.
 
     def apply_output_defaults(self, spec: OutputSpec) -> None:
         """Aplica `spec` como PADRÃO do perfil em TODOS os controles.
@@ -212,6 +212,20 @@ class IController(ABC):
         Base: no-op — sem estado por-controle não há mapa a substituir.
         """
         return
+
+    def resolved_player_leds_for(
+        self, uniq: str
+    ) -> tuple[bool, bool, bool, bool, bool] | None:
+        """Padrão de player-LED RESOLVIDO do controle `uniq` (leitura pura).
+
+        PERFIL-06: merge por campo do default broadcast com o override
+        por-uniq — a fonte do revert do co-op restaurar o padrão POR
+        CONTROLE (override do perfil onde existe, default onde não) em vez
+        do broadcast cego. Base: None — backend sem estado por-controle não
+        conhece padrão nenhum, e o chamador trata None como "não escrever
+        nada" (None-safe por contrato). Nunca toca hardware.
+        """
+        return None
 
 
 __all__ = [

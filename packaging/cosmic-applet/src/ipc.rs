@@ -206,6 +206,13 @@ pub struct ControllerInfo {
     #[serde(default)]
     #[allow(dead_code)]
     pub is_primary: bool,
+    /// COR-01 (D6): slot de SESSÃO do controle (1-based, estável a replug) —
+    /// é o "Controle N" que a GUI/CLI também mostram. `serde(default)`=None
+    /// tolera daemons antigos sem o campo; o rótulo cai em `index + 1`
+    /// (posicional histórico). O `controller.target.set` continua enviando o
+    /// `index` posicional — o slot é só exibição.
+    #[serde(default)]
+    pub player_slot: Option<i64>,
 }
 
 /// Um perfil retornado por `profile.list`.

@@ -1,243 +1,87 @@
-"""tests/unit/test_status_buttons_glyphs.py — testes do redesign UI-STATUS-STICKS-REDESIGN-01.
+"""tests/unit/test_status_buttons_glyphs.py — glyphs/sticks do card por controle.
 
-Verifica que `_render_live_state` / `_refresh_glyphs` atualizam os ButtonGlyphs
-e os StickPreviewGtk corretamente sem acoplar a GTK3 real.
+O redesign UI-STATUS-STICKS-REDESIGN-01 virou parte do ControllerCard no
+STATUS-02: a lógica de acender glyphs, o threshold analógico de L2/R2 e o
+diff a 10 Hz moram em ``ControllerCard._update_inputs``/``_refresh_glyphs``
+(antes eram singletons da mixin de status). Exercita com GTK REAL:
 
-Cenários:
   (a) cross + dpad_up pressionados → set_pressed(True) exatamente nesses dois.
   (b) Nenhum botão pressionado → todos False.
-  (c) L2/R2 analógicos: l2_raw > 30 ilumina glyph l2; ≤ 30 apaga.
-  (d) l3 pressionado → stick_left.set_l3_pressed(True); título roxo.
-  (e) r3 pressionado → stick_right.set_l3_pressed(True); título roxo.
-  (f) Diff: estado igual ao anterior → set_pressed não chamado novamente.
+  (c) L2/R2 analógicos: l2_raw > 30 ilumina o glyph l2; <= 30 apaga.
+  (d) l3 pressionado → stick esquerdo pressionado; título com o accent.
+  (e) r3 pressionado → stick direito pressionado; título com o accent.
+  (f) Diff: estado igual ao anterior → set_pressed não é chamado de novo.
+  (g) ALL_BUTTONS continua com 16 entradas (grid 4x4).
+  (h) reset_inputs apaga todos os glyphs e mostra o "—" (sem leitor).
 """
+# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
 from __future__ import annotations
 
-import sys
-import types
 from typing import Any
+
+import gi
+
+gi.require_version("Gtk", "3.0")
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Stubs de GTK para CI sem display
-# ---------------------------------------------------------------------------
-
-def _install_gi_stubs() -> None:
-    # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
-    # poluir sys.modules["gi"] na coleta fazia testes de GUI pularem como
-    # "ambiente sem GTK" mesmo com o GTK real presente.
-    existente = sys.modules.get("gi")
-    if existente is None or getattr(existente, "__spec__", None) is not None:
-        try:
-            import gi
-
-            gi.require_version("Gtk", "3.0")
-            from gi.repository import Gtk  # noqa: F401
-            return
-        except Exception:  # pragma: no cover — ambientes sem GTK
-            pass
-
-    gi_mod = types.ModuleType("gi")
-
-    def _require_version(_n: str, _v: str) -> None:
-        return None
-
-    gi_mod.require_version = _require_version  # type: ignore[attr-defined]
-
-    repo_mod = types.ModuleType("gi.repository")
-    gtk_mod = types.ModuleType("gi.repository.Gtk")
-    glib_mod = types.ModuleType("gi.repository.GLib")
-
-    # Align enum stub
-    class _FakeAlign:
-        CENTER = "center"
-        START = "start"
-
-    class _FakeGrid:
-        def __init__(self) -> None:
-            self._children: list[Any] = []
-
-        def set_row_spacing(self, *_a: object) -> None:
-            pass
-
-        def set_column_spacing(self, *_a: object) -> None:
-            pass
-
-        def set_halign(self, *_a: object) -> None:
-            pass
-
-        def set_valign(self, *_a: object) -> None:
-            pass
-
-        def attach(self, *_a: object) -> None:
-            pass
-
-        def show_all(self) -> None:
-            pass
-
-    class _FakeBox:
-        def __init__(self, *_a: object, **_kw: object) -> None:
-            self._children: list[Any] = []
-
-        def pack_start(self, child: Any, *_a: object) -> None:
-            self._children.append(child)
-
-        def show(self) -> None:
-            pass
-
-    gtk_mod.Align = _FakeAlign  # type: ignore[attr-defined]
-    gtk_mod.Grid = _FakeGrid  # type: ignore[attr-defined]
-    gtk_mod.Box = _FakeBox  # type: ignore[attr-defined]
-    gtk_mod.DrawingArea = object  # type: ignore[attr-defined]
-    gtk_mod.Builder = object  # type: ignore[attr-defined]
-    gtk_mod.Window = object  # type: ignore[attr-defined]
-    gtk_mod.Button = object  # type: ignore[attr-defined]
-    gtk_mod.ComboBoxText = object  # type: ignore[attr-defined]
-    gtk_mod.Switch = object  # type: ignore[attr-defined]
-    glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
-    glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
-    repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
-    repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
-
-    sys.modules["gi"] = gi_mod
-    sys.modules["gi.repository"] = repo_mod
-    sys.modules["gi.repository.Gtk"] = gtk_mod
-    sys.modules["gi.repository.GLib"] = glib_mod
-
-
-_install_gi_stubs()
-
-from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.widgets.controller_card import (
     ALL_BUTTONS,
     L2_R2_THRESHOLD,
-    StatusActionsMixin,
+    ControllerCard,
 )
 
-# ---------------------------------------------------------------------------
-# Fakes
-# ---------------------------------------------------------------------------
-
-class _FakeGlyph:
-    """Stub de ButtonGlyph que rastreia chamadas a set_pressed."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self._pressed = False
-        self.chamadas: list[bool] = []
-
-    def set_pressed(self, val: bool) -> None:
-        self.chamadas.append(val)
-        self._pressed = val
-
-    @property
-    def is_pressed(self) -> bool:
-        return self._pressed
+STATE: dict[str, Any] = {"native_mode": False}
 
 
-class _FakeStick:
-    """Stub de StickPreviewGtk."""
-
-    def __init__(self, label: str = "L") -> None:
-        self._label = label
-        self._x = 128
-        self._y = 128
-        self._l3_pressed = False
-
-    def update(self, x: int, y: int) -> None:
-        self._x = x
-        self._y = y
-
-    def set_l3_pressed(self, val: bool) -> None:
-        self._l3_pressed = val
-
-    def set_size_request(self, *_a: object) -> None:
-        pass
-
-    def show(self) -> None:
-        pass
-
-
-class _FakeLabel:
-    def __init__(self) -> None:
-        self.markup: str | None = None
-        self.text: str | None = None
-
-    def set_markup(self, mk: str) -> None:
-        self.markup = mk
-
-    def set_text(self, t: str) -> None:
-        self.text = t
-
-    def set_fraction(self, _f: float) -> None:
-        pass
+def _entry(**inputs_kw: Any) -> dict[str, Any]:
+    inputs: dict[str, Any] = {
+        "lx": 128,
+        "ly": 128,
+        "rx": 128,
+        "ry": 128,
+        "l2_raw": 0,
+        "r2_raw": 0,
+        "buttons": [],
+    }
+    inputs.update(inputs_kw)
+    return {
+        "index": 0,
+        "connected": True,
+        "transport": "usb",
+        "is_primary": True,
+        "uniq": "aa:bb:cc:00:00:01",
+        "battery_pct": 80,
+        "player": None,
+        "player_slot": 1,
+        "lightbar_rgb": [16, 32, 72],
+        "lightbar_on": True,
+        "lightbar_source": "sysfs",
+        "inputs": inputs,
+        "vpad_backend": "uhid",
+        "vpad_motivo": None,
+    }
 
 
-class _FakeBar(_FakeLabel):
-    def set_fraction(self, _f: float) -> None:
-        pass
-
-
-class _FakeBuilder:
-    """Builder mínimo que devolve fakes por ID."""
-
-    def __init__(self) -> None:
-        self._w: dict[str, Any] = {}
-
-    def get_object(self, wid: str) -> Any:
-        if wid not in self._w:
-            if "bar" in wid:
-                self._w[wid] = _FakeBar()
-            else:
-                self._w[wid] = _FakeLabel()
-        return self._w[wid]
-
-
-class _Host(StatusActionsMixin):
-    """Host mínimo que injeta fakes nos atributos dinâmicos."""
-
-    def __init__(self) -> None:
-        self.builder = _FakeBuilder()
-        self._reconnect_state = "online"
-        self._consecutive_failures = 0
-        self._last_buttons: frozenset[str] = frozenset()
-        self._last_l2_lit = False
-        self._last_r2_lit = False
-        # Injeta glyphs fake para todos os botões do grid
-        self._button_glyphs: dict[str, _FakeGlyph] = {  # type: ignore[assignment]
-            nome: _FakeGlyph(nome) for nome in ALL_BUTTONS
-        }
-        # Injeta sticks fake
-        self._stick_left: _FakeStick = _FakeStick("L3")  # type: ignore[assignment]
-        self._stick_right: _FakeStick = _FakeStick("R3")  # type: ignore[assignment]
-
-
-@pytest.fixture
-def host() -> _Host:
-    return _Host()
+@pytest.fixture()
+def card() -> ControllerCard:
+    c = ControllerCard(compact=False)
+    c.show_all()
+    return c
 
 
 # ---------------------------------------------------------------------------
 # (a) cross + dpad_up pressionados
 # ---------------------------------------------------------------------------
 
-def test_cross_e_dpad_up_pressionados(host: _Host) -> None:
-    """cross e dpad_up recebem set_pressed(True); os demais recebem False."""
-    state: dict[str, Any] = {
-        "buttons": ["cross", "dpad_up"],
-        "l2_raw": 0,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
 
-    assert host._button_glyphs["cross"].is_pressed
-    assert host._button_glyphs["dpad_up"].is_pressed
+def test_cross_e_dpad_up_pressionados(card: ControllerCard) -> None:
+    """cross e dpad_up acendem; os demais ficam apagados."""
+    card.update(_entry(buttons=["cross", "dpad_up"]), STATE)
 
-    for nome, glyph in host._button_glyphs.items():
+    assert card._glyphs["cross"].is_pressed
+    assert card._glyphs["dpad_up"].is_pressed
+    for nome, glyph in card._glyphs.items():
         if nome not in ("cross", "dpad_up", "l2", "r2"):
             assert not glyph.is_pressed, f"{nome} devia estar False"
 
@@ -246,19 +90,10 @@ def test_cross_e_dpad_up_pressionados(host: _Host) -> None:
 # (b) Nenhum botão pressionado
 # ---------------------------------------------------------------------------
 
-def test_nenhum_botao_pressionado(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": [],
-        "l2_raw": 0,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
 
-    for nome, glyph in host._button_glyphs.items():
+def test_nenhum_botao_pressionado(card: ControllerCard) -> None:
+    card.update(_entry(), STATE)
+    for nome, glyph in card._glyphs.items():
         assert not glyph.is_pressed, f"{nome} devia estar False"
 
 
@@ -266,179 +101,129 @@ def test_nenhum_botao_pressionado(host: _Host) -> None:
 # (c) L2/R2 analógicos por threshold
 # ---------------------------------------------------------------------------
 
-def test_l2_raw_acima_threshold_ilumina_glyph(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": [],
-        "l2_raw": L2_R2_THRESHOLD + 1,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
-    assert host._button_glyphs["l2"].is_pressed
-    assert not host._button_glyphs["r2"].is_pressed
+
+def test_l2_raw_acima_threshold_ilumina_glyph(card: ControllerCard) -> None:
+    card.update(_entry(l2_raw=L2_R2_THRESHOLD + 1), STATE)
+    assert card._glyphs["l2"].is_pressed
+    assert not card._glyphs["r2"].is_pressed
 
 
-def test_l2_raw_abaixo_threshold_apaga_glyph(host: _Host) -> None:
-    # Primeiro acende
-    state_on: dict[str, Any] = {
-        "buttons": [],
-        "l2_raw": L2_R2_THRESHOLD + 5,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state_on)
-    assert host._button_glyphs["l2"].is_pressed
+def test_l2_raw_abaixo_threshold_apaga_glyph(card: ControllerCard) -> None:
+    card.update(_entry(l2_raw=L2_R2_THRESHOLD + 5), STATE)
+    assert card._glyphs["l2"].is_pressed
 
-    # Depois apaga
-    state_off: dict[str, Any] = {
-        "buttons": [],
-        "l2_raw": L2_R2_THRESHOLD,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state_off)
-    assert not host._button_glyphs["l2"].is_pressed
+    card.update(_entry(l2_raw=L2_R2_THRESHOLD), STATE)
+    assert not card._glyphs["l2"].is_pressed
 
 
-def test_r2_raw_acima_threshold_ilumina_glyph(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": [],
-        "l2_raw": 0,
-        "r2_raw": L2_R2_THRESHOLD + 10,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
-    assert host._button_glyphs["r2"].is_pressed
-    assert not host._button_glyphs["l2"].is_pressed
+def test_r2_raw_acima_threshold_ilumina_glyph(card: ControllerCard) -> None:
+    card.update(_entry(r2_raw=L2_R2_THRESHOLD + 10), STATE)
+    assert card._glyphs["r2"].is_pressed
+    assert not card._glyphs["l2"].is_pressed
 
 
 # ---------------------------------------------------------------------------
-# (d) L3 pressionado — stick esquerdo roxo
+# (d) L3 pressionado — stick esquerdo com o accent do controle
 # ---------------------------------------------------------------------------
 
-def test_l3_pressionado_pinta_titulo_roxo(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": ["l3"],
-        "l2_raw": 0,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
 
-    assert host._stick_left._l3_pressed
-    assert not host._stick_right._l3_pressed
+def test_l3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
+    card.update(_entry(buttons=["l3"]), STATE)
 
-    titulo = host.builder.get_object("stick_left_title")
-    assert titulo.markup is not None
-    assert "#bd93f9" in titulo.markup
+    assert card._stick_left._l3_pressed
+    assert not card._stick_right._l3_pressed
 
-    titulo_dir = host.builder.get_object("stick_right_title")
-    # Direito sem markup colorido
-    assert titulo_dir.markup is not None
-    assert "#bd93f9" not in titulo_dir.markup
+    markup_esq = card._stick_left_title.get_label()
+    assert card._accent_hex in markup_esq  # cor do CONTROLE, não roxo fixo
+    markup_dir = card._stick_right_title.get_label()
+    assert card._accent_hex not in markup_dir
 
 
 # ---------------------------------------------------------------------------
-# (e) R3 pressionado — stick direito roxo
+# (e) R3 pressionado — stick direito com o accent
 # ---------------------------------------------------------------------------
 
-def test_r3_pressionado_pinta_titulo_roxo(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": ["r3"],
-        "l2_raw": 0,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
 
-    assert host._stick_right._l3_pressed
-    assert not host._stick_left._l3_pressed
+def test_r3_pressionado_pinta_titulo_com_accent(card: ControllerCard) -> None:
+    card.update(_entry(buttons=["r3"]), STATE)
 
-    titulo = host.builder.get_object("stick_right_title")
-    assert titulo.markup is not None
-    assert "#bd93f9" in titulo.markup
+    assert card._stick_right._l3_pressed
+    assert not card._stick_left._l3_pressed
+    assert card._accent_hex in card._stick_right_title.get_label()
 
 
 # ---------------------------------------------------------------------------
 # (f) Diff: estado idêntico não dispara set_pressed novamente
 # ---------------------------------------------------------------------------
 
-def test_diff_estado_igual_nao_re_dispara_set_pressed(host: _Host) -> None:
-    state: dict[str, Any] = {
-        "buttons": ["circle"],
-        "l2_raw": 0,
-        "r2_raw": 0,
-        "lx": 128,
-        "ly": 128,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
-    chamadas_apos_1 = {
-        nome: len(g.chamadas) for nome, g in host._button_glyphs.items()
-    }
 
-    # Segundo tick com mesmo estado
-    host._render_live_state(state)
-    chamadas_apos_2 = {
-        nome: len(g.chamadas) for nome, g in host._button_glyphs.items()
-    }
+def test_diff_estado_igual_nao_re_dispara_set_pressed(
+    card: ControllerCard,
+) -> None:
+    chamadas: dict[str, int] = dict.fromkeys(ALL_BUTTONS, 0)
 
-    # Nenhum glyph deve ter recebido chamada adicional
+    for nome, glyph in card._glyphs.items():
+        original = glyph.set_pressed
+
+        def _espiao(
+            val: bool, _nome: str = nome, _orig: Any = original
+        ) -> None:
+            chamadas[_nome] += 1
+            _orig(val)
+
+        glyph.set_pressed = _espiao  # type: ignore[method-assign]
+
+    card.update(_entry(buttons=["circle"]), STATE)
+    apos_1 = dict(chamadas)
+
+    card.update(_entry(buttons=["circle"]), STATE)  # mesmo estado
     for nome in ALL_BUTTONS:
-        assert chamadas_apos_1[nome] == chamadas_apos_2[nome], (
+        assert apos_1[nome] == chamadas[nome], (
             f"set_pressed chamado novamente em '{nome}' sem mudança de estado"
         )
 
 
 # ---------------------------------------------------------------------------
-# (g) grid tem exatamente 16 entradas (ALL_BUTTONS)
+# (g) grid tem exatamente 16 entradas (ALL_BUTTONS) e o card os carrega
 # ---------------------------------------------------------------------------
 
-def test_all_buttons_tem_16_entradas() -> None:
+
+def test_all_buttons_tem_16_entradas(card: ControllerCard) -> None:
     assert len(ALL_BUTTONS) == 16, f"Esperado 16, obtido {len(ALL_BUTTONS)}"
+    assert sorted(card._glyphs) == sorted(ALL_BUTTONS)
 
 
 # ---------------------------------------------------------------------------
-# (h) reset_live_widgets apaga todos os glyphs
+# (h) reset_inputs apaga todos os glyphs e mostra o "—"
 # ---------------------------------------------------------------------------
 
-def test_reset_live_widgets_apaga_glyphs(host: _Host) -> None:
-    # Primeiro acende alguns
-    state: dict[str, Any] = {
-        "buttons": ["cross", "triangle"],
-        "l2_raw": 100,
-        "r2_raw": 0,
-        "lx": 200,
-        "ly": 60,
-        "rx": 128,
-        "ry": 128,
-    }
-    host._render_live_state(state)
-    assert host._button_glyphs["cross"].is_pressed
 
-    # Reset
-    host._reset_live_widgets()
+def test_reset_inputs_apaga_glyphs_e_mostra_sem_leitor(
+    card: ControllerCard,
+) -> None:
+    card.update(
+        _entry(buttons=["cross", "triangle"], l2_raw=100, lx=200, ly=60),
+        STATE,
+    )
+    assert card._glyphs["cross"].is_pressed
 
-    for nome, glyph in host._button_glyphs.items():
+    card.reset_inputs()
+
+    for nome, glyph in card._glyphs.items():
         assert not glyph.is_pressed, f"{nome} devia estar apagado após reset"
-    assert not host._stick_left._l3_pressed
-    assert not host._stick_right._l3_pressed
+    assert not card._stick_left._l3_pressed
+    assert not card._stick_right._l3_pressed
+    assert card._sem_leitor_label.get_visible() is True
+    assert card._inputs_area.get_visible() is False
+
+
+# ---------------------------------------------------------------------------
+# Alias share/create (BUG-GLYPH-SHARE-NAME-MISMATCH-01) — preservado no card
+# ---------------------------------------------------------------------------
+
+
+def test_daemon_emite_create_e_o_glyph_share_acende(
+    card: ControllerCard,
+) -> None:
+    card.update(_entry(buttons=["create"]), STATE)
+    assert card._glyphs["share"].is_pressed

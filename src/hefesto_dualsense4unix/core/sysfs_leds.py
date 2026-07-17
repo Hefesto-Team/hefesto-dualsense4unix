@@ -75,6 +75,53 @@ class SysfsLedNode:
         """
         return os.access(self._multi_intensity, os.W_OK)
 
+    # --- leitura (STATUS-01) ----------------------------------------------
+
+    def get_rgb(self) -> tuple[int, int, int] | None:
+        """Cor atual da classe LED (``multi_intensity``), ou None se ilegível.
+
+        STATUS-01 — ATENÇÃO ao que isto significa (refutação 1 do sprint): o
+        ``multi_intensity`` NÃO é "a verdade do hardware" — é o último valor
+        escrito VIA CLASSE LED. O probe do kernel registra o LED multicolor com
+        intensidades ZERADAS e acende a lightbar de azul por um caminho interno
+        que nunca atualiza a classe; escrita por hidraw (pydualsense/jogo em
+        Modo Nativo) também não a atualiza. Quem decide se esta leitura é
+        confiável é o rastreio "escrito por nós" do backend
+        (``_sysfs_written``) — nunca rotular ``(0, 0, 0)`` daqui como
+        "apagada" sem essa prova de posse. Tolerante: nó que sumiu (replug/BT)
+        devolve None em vez de levantar.
+        """
+        try:
+            with open(self._multi_intensity) as fh:
+                parts = fh.read().split()
+        except OSError:
+            return None
+        if len(parts) != 3:
+            return None
+        try:
+            r, g, b = (int(parts[0]), int(parts[1]), int(parts[2]))
+        except ValueError:
+            return None
+        return (r, g, b)
+
+    def is_on(self) -> bool:
+        """True se o ``brightness`` do LED multicolor é > 0. Tolerante (nó pode sumir).
+
+        Nota de semântica: o caminho de escrita do daemon fixa ``brightness``
+        em 255 e apaga por ``multi_intensity "0 0 0"`` (ver ``set_rgb``), então
+        "fisicamente apagada" = ``is_on() and get_rgb() == (0, 0, 0)`` com a
+        escrita rastreada como nossa — quem compõe essa leitura é o handler IPC.
+        """
+        try:
+            with open(self._indicator_brightness) as fh:
+                raw = fh.read().strip()
+        except OSError:
+            return False
+        try:
+            return int(raw or "0") > 0
+        except ValueError:
+            return False
+
     # --- escrita ---------------------------------------------------------
 
     @staticmethod

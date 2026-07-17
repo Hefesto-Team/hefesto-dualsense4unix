@@ -159,6 +159,157 @@ def find_dualsense_evdev() -> Path | None:
     return paths[0] if paths else None
 
 
+# --- 8BIT-01: inventário READ-ONLY de gamepads externos -----------------
+
+#: Nomes de barramento (linux/input.h). Hardcoded de propósito: python-evdev
+#: nem sempre reexporta as constantes `BUS_*`; os dois valores são ABI estável
+#: do kernel. Barramentos fora do mapa saem como hex ("0x06" etc.) — o
+#: contrato é `usb | bluetooth | outro`, nunca um chute de nome.
+_BUS_NAMES: dict[int, str] = {0x03: "usb", 0x05: "bluetooth"}
+
+#: Teto da subida no sysfs ao procurar driver/hidraw a partir do input device.
+#: A hierarquia real é rasa (input/inputN -> HID -> interface -> ...); 10
+#: níveis cobrem USB e Bluetooth com folga sem risco de varrer /sys inteiro.
+_SYSFS_WALK_MAX_LEVELS = 10
+
+
+def _bus_name(bustype: int) -> str:
+    """Nome legível do barramento evdev ("usb" | "bluetooth" | "0xNN")."""
+    return _BUS_NAMES.get(bustype, f"0x{bustype:02x}")
+
+
+def _sysfs_driver_hidraw(device_dir: str) -> tuple[str | None, str | None]:
+    """(driver, hidraw) subindo o sysfs a partir do dir do input device.
+
+    O evdev de um gamepad vive em `.../<pai>/input/inputN`; o driver do kernel
+    e o nó hidraw irmão ficam em um ANCESTRAL (o HID device para hid-nintendo/
+    hid-playstation, a interface USB para o xpad — que é USB-only e nem tem
+    hidraw). Sobe até `_SYSFS_WALK_MAX_LEVELS` níveis colhendo:
+
+    - ``driver``: basename do realpath do primeiro symlink `driver` encontrado
+      (o driver MAIS PRÓXIMO do device — "nintendo", "xpad", ...).
+    - ``hidraw``: primeiro nó de um subdir `hidraw/` (ex.: "/dev/hidraw6").
+
+    Tolerante a ausência por contrato (8BIT-01): qualquer campo irresolvível
+    sai None — inventário read-only nunca falha por sysfs incompleto.
+    """
+    import os
+
+    driver: str | None = None
+    hidraw: str | None = None
+    current = device_dir
+    for _ in range(_SYSFS_WALK_MAX_LEVELS):
+        if driver is None:
+            drv_link = os.path.join(current, "driver")
+            if os.path.islink(drv_link):
+                with contextlib.suppress(OSError):
+                    driver = os.path.basename(os.path.realpath(drv_link)) or None
+        if hidraw is None:
+            hidraw_dir = os.path.join(current, "hidraw")
+            if os.path.isdir(hidraw_dir):
+                nodes: list[str] = []
+                with contextlib.suppress(OSError):
+                    nodes = sorted(
+                        n for n in os.listdir(hidraw_dir) if n.startswith("hidraw")
+                    )
+                if nodes:
+                    hidraw = f"/dev/{nodes[0]}"
+        if driver is not None and hidraw is not None:
+            break
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return driver, hidraw
+
+
+def _external_device_sysfs(event_path: str) -> tuple[str | None, str | None]:
+    """Resolve (driver, hidraw) de um node evdev via /sys/class/input.
+
+    Mesmo ponto de partida do `_is_virtual_evdev`: o realpath de
+    `/sys/class/input/<eventN>/device` cai no dir do input device físico;
+    a subida fica com `_sysfs_driver_hidraw`. Falha qualquer -> (None, None).
+    """
+    import os
+
+    try:
+        name = os.path.basename(event_path)
+        device_dir = os.path.realpath(f"/sys/class/input/{name}/device")
+    except Exception:
+        return None, None
+    return _sysfs_driver_hidraw(device_dir)
+
+
+def discover_external_gamepads() -> list[dict[str, Any]]:
+    """Inventário READ-ONLY de gamepads físicos NÃO-DualSense (8BIT-01).
+
+    Enumera os evdevs com caps de gamepad (BTN_GAMEPAD/BTN_SOUTH) SEM filtro
+    de vendor — 8BitDo em modo Switch (057e:2009/hid-nintendo), X-input
+    (045e:028e/xpad), qualquer marca. Exclusões, nesta ordem:
+
+    1. Virtuais via `_is_virtual_evdev` (`/devices/virtual/`): cobre o vpad
+       uhid do daemon (vive sob /devices/virtual/misc/uhid), os vpads do
+       Steam Input e o teclado virtual do próprio daemon (uinput) — que, além
+       de virtual, nem tem caps de gamepad.
+    2. DualSense/Edge físicos (`DUALSENSE_VENDOR` + `DUALSENSE_PIDS`): são o
+       domínio do caminho existente (`discover_dualsense_evdevs`); este
+       inventário é SÓ dos externos — uma lista de controles com um dono só.
+
+    Por device: name, vid/pid (hex 4 dígitos minúsculo, ex. "057e"), bus
+    ("usb" | "bluetooth" | "0xNN"), uniq (MAC como o kernel reporta, ou
+    None), driver do kernel (readlink no sysfs, tolerante a ausência),
+    evdev_path e hidraw irmão (quando resolvível). Tudo JSON-serializável.
+
+    Dedup como no `discover_dualsense_evdevs`: 1º node (ordem estável por
+    número) vence por `uniq`; sem uniq, o path é a chave (nunca colide).
+
+    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre TODOS os nodes de /dev/input
+    (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e
+    em qualquer caminho quente (`state_full`/tick). Consumidor canônico: o
+    handler `controller.list` sob opt-in, via thread.
+    """
+    try:
+        from evdev import InputDevice, ecodes, list_devices
+    except ImportError:
+        return []
+
+    found: dict[str, dict[str, Any]] = {}
+    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
+        if _is_virtual_evdev(path):
+            continue
+        try:
+            dev = InputDevice(path)
+            try:
+                vendor = int(dev.info.vendor)
+                product = int(dev.info.product)
+                if vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS:
+                    continue
+                buttons = dev.capabilities().get(ecodes.EV_KEY, [])
+                if not (
+                    ecodes.BTN_GAMEPAD in buttons or ecodes.BTN_SOUTH in buttons
+                ):
+                    continue
+                uniq_raw = str(getattr(dev, "uniq", "") or "").strip()
+                driver, hidraw = _external_device_sysfs(path)
+                entry: dict[str, Any] = {
+                    "name": str(dev.name),
+                    "vid": f"{vendor:04x}",
+                    "pid": f"{product:04x}",
+                    "bus": _bus_name(int(dev.info.bustype)),
+                    "uniq": uniq_raw or None,
+                    "driver": driver,
+                    "evdev_path": str(path),
+                    "hidraw": hidraw,
+                }
+                key = uniq_raw.lower() if uniq_raw else f"path:{path}"
+                found.setdefault(key, entry)
+            finally:
+                dev.close()
+        except Exception:
+            continue
+    return list(found.values())
+
+
 class _EvdevReconnectLoop:
     """Loop base de leitura evdev com auto-reconnect e backoff exponencial.
 
@@ -778,6 +929,7 @@ __all__ = [
     "EvdevReader",
     "EvdevSnapshot",
     "TouchpadReader",
+    "discover_external_gamepads",
     "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",
