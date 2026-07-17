@@ -5,7 +5,7 @@ uso na thread principal GTK. Nenhum acessa IPC diretamente.
 """
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import gi
 
@@ -212,10 +212,88 @@ def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
     return bool(response == Gtk.ResponseType.OK)
 
 
+def _escape_markup(text: str) -> str:
+    """Escapa `&`/`<`/`>` para markup Pango (sem depender de GLib no import)."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def show_external_controller(parent: Gtk.Window, entry: dict[str, Any]) -> None:
+    """Ficha READ-ONLY de um controle externo (8BIT-02) — a "aba secreta".
+
+    Abre só para o controle clicado no seletor do topo. Mostra identidade
+    honesta (tipo, como conectou, driver) + o aviso do Nintendo/8BitDo por
+    Bluetooth. NÃO controla nada: o Hefesto não mexe nesses controles — eles
+    funcionam pelo driver do Linux + Steam. Modal, run/destroy.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        detail_rows,
+        friendly_type,
+        nintendo_bt_warning,
+    )
+
+    dialog = Gtk.Dialog(
+        title=friendly_type(entry),
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+    )
+    dialog.add_button(_("Fechar"), Gtk.ResponseType.CLOSE)
+    dialog.set_default_response(Gtk.ResponseType.CLOSE)
+    content = dialog.get_content_area()
+    content.set_spacing(10)
+    content.set_border_width(16)
+
+    intro = Gtk.Label()
+    intro.set_markup(
+        _(
+            "<b>Este controle funciona</b> — pelo Linux e pela Steam. O Hefesto "
+            "só o mostra aqui; não mexe nele (nada de cor, gatilho ou co-op "
+            "virtual: isso é exclusivo do DualSense)."
+        )
+    )
+    intro.set_line_wrap(True)
+    intro.set_xalign(0.0)
+    intro.set_max_width_chars(52)
+    content.pack_start(intro, False, False, 0)
+
+    grid = Gtk.Grid()
+    grid.set_row_spacing(6)
+    grid.set_column_spacing(14)
+    for row, (rotulo, valor) in enumerate(detail_rows(entry)):
+        chave = Gtk.Label(label=str(rotulo) + ":")
+        chave.set_xalign(1.0)
+        chave.get_style_context().add_class("dim-label")
+        val = Gtk.Label(label=str(valor))
+        val.set_xalign(0.0)
+        val.set_line_wrap(True)
+        val.set_selectable(True)
+        grid.attach(chave, 0, row, 1, 1)
+        grid.attach(val, 1, row, 1, 1)
+    content.pack_start(grid, False, False, 0)
+
+    aviso = nintendo_bt_warning(entry)
+    if aviso:
+        warn = Gtk.Label()
+        # &#9888; (WARNING SIGN) via NCR — sobrevive ao sanitizer de emojis.
+        warn.set_markup(
+            f'<span foreground="#e0a020">&#9888; {_escape_markup(aviso)}</span>'
+        )
+        warn.set_line_wrap(True)
+        warn.set_xalign(0.0)
+        warn.set_max_width_chars(52)
+        content.pack_start(warn, False, False, 0)
+
+    dialog.show_all()
+    dialog.run()
+    dialog.destroy()
+
+
 __all__ = [
     "confirm_delete_profile",
+    "confirm_downgrade_match_to_any",
     "confirm_restore_default",
     "prompt_import_conflict",
     "prompt_overwrite_existing",
     "prompt_profile_name",
+    "show_external_controller",
 ]

@@ -32,6 +32,12 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.external_controllers import (
+    external_key,
+    friendly_type,
+    short_button_label,
+    transport_label,
+)
 from hefesto_dualsense4unix.app.actions.home_actions import vpad_degradation_text
 from hefesto_dualsense4unix.app.constants import (
     LIVE_POLL_INTERVAL_MS,
@@ -122,6 +128,14 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_visible: bool
     _target_combo_active: int
     _target_buttons: list[Any]
+    # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a ficha
+    # secreta que abre ao clicar. Cache do inventário (fetch com throttle) +
+    # botões próprios (fora do grupo de rádio dos DualSense).
+    _external_buttons: list[Any]
+    _externals: list[dict[str, Any]]
+    _externals_fetch_ts: float = 0.0
+    _externals_inflight: bool = False
+    _externals_sig: tuple[str, ...] | None = None
     # PERFIL-04 (sprint perfis-por-controle): alvo de EDIÇÃO derivado do
     # seletor — o MAC normalizado (uniq) do controle selecionado, ou None em
     # "Todos"/alvo sem MAC (aí a edição segue GLOBAL, como sempre). As abas
@@ -317,6 +331,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_combo_visible = False
         self._target_combo_active = -1
         self._target_buttons = []
+        # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a
+        # "ficha secreta" que abre ao clicar num deles. Cache do inventário
+        # (fetch opt-in, caro — throttle no tick lento) + botões próprios.
+        self._external_buttons = []
+        self._externals = []
+        self._externals_fetch_ts = 0.0
+        self._externals_inflight = False
+        self._externals_sig = None
         # PERFIL-04: estado do alvo de edição por-controle.
         self._edit_target_uniq = None
         self._edit_target_label = None
@@ -378,6 +400,73 @@ class StatusActionsMixin(WidgetAccessMixin):
             btn.show()
             box.pack_start(btn, False, False, 0)
             self._target_buttons.append(btn)
+        # 8BIT-02: os externos NÃO entram no grupo de rádio (não são alvo de
+        # edição do output). São GtkButton comuns; clicar abre a ficha secreta
+        # só daquele controle (janela read-only), sem trocar o alvo de edição.
+        self._external_buttons = []
+        for ext in getattr(self, "_externals", []):
+            eb = Gtk.Button.new_with_label(short_button_label(ext))
+            eb.set_tooltip_text(
+                f"{friendly_type(ext)} — {transport_label(ext)} "
+                "(clique para ver; o Hefesto não mexe nele)"
+            )
+            with contextlib.suppress(Exception):
+                eb.get_style_context().add_class("hefesto-external-btn")
+            eb.connect("clicked", self._on_external_clicked, external_key(ext))
+            eb.show()
+            box.pack_start(eb, False, False, 0)
+            self._external_buttons.append(eb)
+
+    def _maybe_fetch_externals(self) -> None:
+        """Atualiza o inventário de externos (8BIT-01) com throttle (~4 s).
+
+        Caro (enumera evdev + sonda de holders — 10-40 ms + subprocess), então
+        NUNCA no caminho quente: só no tick lento, e no máximo a cada 4 s. O
+        resultado alimenta os botões de externos no próximo refresh do seletor.
+
+        No-op sem o seletor inicializado (`_init_controller_target_combo` não
+        rodou): cobre os testes de widget parciais e evita IPC fora da GUI real.
+        """
+        if getattr(self, "_target_combo", None) is None:
+            return
+        now = GLib.get_monotonic_time() / 1_000_000.0
+        if self._externals_inflight or (now - self._externals_fetch_ts) < 4.0:
+            return
+        self._externals_fetch_ts = now
+        self._externals_inflight = True
+        call_async(
+            "controller.list",
+            {"external": True},
+            on_success=self._on_externals_result,
+            on_failure=lambda _e: self._on_externals_done(),
+            # O inventário externo enumera TODOS os /dev/input + sonda de
+            # holders (subprocess) — 10-40 ms + ~até 1 s. O default de 0.25 s
+            # do call_async estouraria; damos folga (é opt-in, tick lento).
+            timeout_s=3.0,
+        )
+
+    def _on_externals_result(self, result: Any) -> bool:
+        ext = result.get("external") if isinstance(result, dict) else None
+        self._externals = ext if isinstance(ext, list) else []
+        return self._on_externals_done()
+
+    def _on_externals_done(self) -> bool:
+        self._externals_inflight = False
+        return False
+
+    def _on_external_clicked(self, _button: Any, key: str) -> None:
+        """Abre a ficha secreta read-only do controle externo `key` (8BIT-02)."""
+        ext = next(
+            (e for e in getattr(self, "_externals", []) if external_key(e) == key),
+            None,
+        )
+        if ext is None:
+            return
+        from hefesto_dualsense4unix.app import gui_dialogs
+
+        window = self._get("main_window")
+        with contextlib.suppress(Exception):
+            gui_dialogs.show_external_controller(parent=window, entry=ext)
 
     def _set_target_active(self, pos: int) -> None:
         """Marca o botão na posição ``pos`` como ativo (sem disparar IPC)."""
@@ -485,18 +574,33 @@ class StatusActionsMixin(WidgetAccessMixin):
         target_index = state.get("output_target_index")
         if not isinstance(target_index, int) or isinstance(target_index, bool):
             target_index = None
-        if len(conectados) < 2:
-            # Sem seletor visível não há edição por-controle — o alvo de
-            # edição volta ao global (badge some).
+        # getattr defensivo: Hosts de teste montam o seletor sem passar pelo
+        # `_init_controller_target_combo` (que semeia `_externals`).
+        externals = getattr(self, "_externals", [])
+        # 8BIT-02: o seletor aparece com 2+ controles NO TOTAL (DualSense +
+        # externos) — assim o 8BitDo/Nintendo entra no topo mesmo com 1 DualSense.
+        total = len(conectados) + len(externals)
+        if total < 2:
             self._sync_edit_target(None)
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
                 box.hide()
                 self._target_combo_visible = False
             return
-        self._sync_edit_target(target_index)
-        rows = self._controller_target_rows(conectados)
+        # Edição por-controle SÓ existe com 2+ DualSense (os externos não são
+        # alvo — o Hefesto não mexe neles). Com <2 DualSense, só "Todos".
+        editavel = len(conectados) >= 2
+        self._sync_edit_target(target_index if editavel else None)
+        rows: list[tuple[str, int | None]] = (
+            self._controller_target_rows(conectados)
+            if editavel
+            else [(_("Todos os controles"), None)]
+        )
+        ext_sig = tuple(external_key(e) for e in externals)
         labels = [label for label, _ in rows]
-        rows_changed = labels != [label for label, _ in self._target_combo_rows]
+        rows_changed = (
+            labels != [label for label, _ in self._target_combo_rows]
+            or ext_sig != self._externals_sig
+        )
         want_pos = self._target_active_position(rows, target_index)
         if (
             not rows_changed
@@ -509,6 +613,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             if rows_changed:
                 self._rebuild_target_buttons(box, rows)
                 self._target_combo_rows = rows
+                self._externals_sig = ext_sig
             self._set_target_active(want_pos)
             self._target_combo_active = want_pos
             if not self._target_combo_visible:
@@ -844,6 +949,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
         if self._popup_is_open():
             return
+        # 8BIT-02: inventário de externos (opt-in, caro) atualizado no tick lento
+        # com throttle próprio — alimenta os botões de externos do seletor.
+        self._maybe_fetch_externals()
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")

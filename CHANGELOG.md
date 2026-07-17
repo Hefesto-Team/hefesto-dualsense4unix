@@ -5,6 +5,20 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Added
+
+- **Controles externos no seletor do topo (8BIT-02).** Os controles que NÃO são
+  DualSense (8BitDo/Nintendo em modo Switch, Xbox, etc.) agora aparecem como
+  botões no seletor do topo (ao lado de "Todos | 1·BT | 2·BT"), com rótulo
+  amigável ("Nintendo · cabo"). Clicar num deles abre uma ficha secreta
+  read-only SÓ daquele controle — tipo, como conectou, driver do Linux — deixando
+  claro que **ele funciona (pelo Linux + Steam) e o Hefesto não mexe nele**
+  (nada de cor/gatilho/co-op virtual: exclusivo do DualSense). Quando é um
+  controle em modo Switch por Bluetooth, a ficha avisa que ele pode travar
+  sozinho — é o driver `hid-nintendo` do kernel desistindo, não o Hefesto, e a
+  saída estável é o cabo. Escopo enxuto de propósito ("só ver como aparecem, não
+  uma super central"): superfície 100% read-only, sem o Hefesto adotá-los.
+
 ## [3.14.0] — 2026-07-17
 
 ### Fixed
