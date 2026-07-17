@@ -5,6 +5,7 @@ uso na thread principal GTK. Nenhum acessa IPC diretamente.
 """
 from __future__ import annotations
 
+import contextlib
 from typing import Any, cast
 
 import gi
@@ -217,17 +218,21 @@ def _escape_markup(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def show_external_controller(parent: Gtk.Window, entry: dict[str, Any]) -> None:
+def show_external_controller(
+    parent: Gtk.Window, entry: dict[str, Any], slot: int | None = None
+) -> None:
     """Ficha READ-ONLY de um controle externo (8BIT-02) — a "aba secreta".
 
     Abre só para o controle clicado no seletor do topo. Mostra identidade
     honesta (tipo, como conectou, driver) + o aviso do Nintendo/8BitDo por
-    Bluetooth. NÃO controla nada: o Hefesto não mexe nesses controles — eles
-    funcionam pelo driver do Linux + Steam. Modal, run/destroy.
+    Bluetooth. ``slot`` = número GLOBAL de co-op (o MESMO do LED de player), pra
+    GUI e LED não discordarem. NÃO controla nada: o Hefesto não mexe nesses
+    controles — eles funcionam pelo driver do Linux + Steam. Modal, run/destroy.
     """
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         detail_rows,
         friendly_type,
+        mode_guidance,
         nintendo_bt_warning,
     )
 
@@ -237,11 +242,27 @@ def show_external_controller(parent: Gtk.Window, entry: dict[str, Any]) -> None:
         modal=True,
         destroy_with_parent=True,
     )
+    # Popup NÃO-INTERATIVO com o visual da GUI (Drácula): a classe da janela faz
+    # o CSS screen-wide (theme.css) pintar fundo/labels/botão como no resto do
+    # app — sem isso o diálogo herdava o tema claro do sistema (branco no COSMIC).
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
     dialog.add_button(_("Fechar"), Gtk.ResponseType.CLOSE)
     dialog.set_default_response(Gtk.ResponseType.CLOSE)
     content = dialog.get_content_area()
     content.set_spacing(10)
     content.set_border_width(16)
+
+    # Número GLOBAL de co-op — o MESMO que o LED de player do controle mostra,
+    # para GUI e LED nunca discordarem (o 1º externo continua a contagem dos
+    # DualSense: com 2 DualSense, este é o Controle 3).
+    if slot is not None:
+        slot_lbl = Gtk.Label()
+        slot_lbl.set_markup(
+            f'<span size="x-large" weight="bold">{_("Controle")} {slot}</span>'
+        )
+        slot_lbl.set_xalign(0.0)
+        content.pack_start(slot_lbl, False, False, 0)
 
     intro = Gtk.Label()
     intro.set_markup(
@@ -266,10 +287,23 @@ def show_external_controller(parent: Gtk.Window, entry: dict[str, Any]) -> None:
         val = Gtk.Label(label=str(valor))
         val.set_xalign(0.0)
         val.set_line_wrap(True)
-        val.set_selectable(True)
         grid.attach(chave, 0, row, 1, 1)
         grid.attach(val, 1, row, 1, 1)
     content.pack_start(grid, False, False, 0)
+
+    # Xbox/Nintendo (como o jogo o enxerga): é modo de HARDWARE do controle, não
+    # um toggle de software — a ficha DETECTA o modo atual e ORIENTA a troca +
+    # o trade-off (X-input/Xbox = à prova de travas por foge do hid-nintendo;
+    # Switch/Nintendo = gyro, mas instável por Bluetooth).
+    guia = mode_guidance(entry)
+    if guia is not None:
+        _atual, orient = guia
+        modo_lbl = Gtk.Label(label=orient)
+        modo_lbl.set_line_wrap(True)
+        modo_lbl.set_xalign(0.0)
+        modo_lbl.set_max_width_chars(52)
+        modo_lbl.get_style_context().add_class("dim-label")
+        content.pack_start(modo_lbl, False, False, 0)
 
     aviso = nintendo_bt_warning(entry)
     if aviso:
