@@ -272,6 +272,7 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
         from evdev import InputDevice, ecodes, list_devices
     except ImportError:
         return []
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     found: dict[str, dict[str, Any]] = {}
     for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
@@ -301,7 +302,7 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
                     "evdev_path": str(path),
                     "hidraw": hidraw,
                 }
-                key = uniq_raw.lower() if uniq_raw else f"path:{path}"
+                key = norm_mac(uniq_raw) or f"path:{path}"
                 found.setdefault(key, entry)
             finally:
                 dev.close()

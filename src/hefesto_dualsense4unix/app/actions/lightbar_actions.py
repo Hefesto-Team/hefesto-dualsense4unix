@@ -40,6 +40,30 @@ class LightbarActionsMixin(WidgetAccessMixin):
         """
         return getattr(self, "_edit_target_uniq", None)
 
+    def _auto_preview_slot(self) -> int | None:
+        """Slot do controle em edição QUANDO a prévia deve mostrar a cor
+        AUTOMÁTICA (achado ao vivo 2026-07-17).
+
+        Com "Cores automáticas por controle" LIGADO e um controle específico
+        selecionado no seletor do banner, o que ele EXIBE é a cor da paleta
+        (azul/vermelho...), não a cor manual global — mas a prévia mostrava a
+        manual (roxo), MENTINDO. O número vem do rótulo do alvo mantido pela
+        aba Status (``_edit_target_label`` = "Controle N — BT"). ``None`` =
+        mostrar a cor manual (automático desligado, ou alvo "Todos").
+        """
+        import re
+
+        draft = getattr(self, "draft", None)
+        if draft is None or not draft.leds.auto_player_colors:
+            return None
+        if self._edit_uniq() is None:
+            return None
+        label = getattr(self, "_edit_target_label", None)
+        if not isinstance(label, str):
+            return None
+        match = re.search(r"Controle\s+(\d+)", label)
+        return int(match.group(1)) if match else None
+
     def _persist_leds_update(self, update: dict[str, Any]) -> bool:
         """Grava campos de LEDs no draft — no GLOBAL ou no override do alvo.
 
@@ -129,6 +153,24 @@ class LightbarActionsMixin(WidgetAccessMixin):
                     rgba.blue = b / 255.0
                     rgba.alpha = 1.0
                     button.set_rgba(rgba)
+            # Prévia HONESTA (achado ao vivo): com automático ligado + um
+            # controle específico em edição, mostra a cor REAL da paleta desse
+            # controle (o brilho é aplicado no draw, como no caminho manual) —
+            # antes a prévia ficava roxa enquanto o controle estava azul.
+            auto_slot = self._auto_preview_slot()
+            if auto_slot is not None:
+                from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+                self._current_rgb = player_slot_color(auto_slot)
+                auto_btn: Gtk.ColorButton = self._get("lightbar_color_button")
+                if auto_btn is not None:
+                    ar, ag, ab = self._current_rgb
+                    auto_rgba = Gdk.RGBA()
+                    auto_rgba.red = ar / 255.0
+                    auto_rgba.green = ag / 255.0
+                    auto_rgba.blue = ab / 255.0
+                    auto_rgba.alpha = 1.0
+                    auto_btn.set_rgba(auto_rgba)
             # Brightness
             pct = float(leds.lightbar_brightness)
             self._current_brightness = pct / 100.0
@@ -345,8 +387,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         uniq = self._edit_uniq()
         if uniq is None:
             self._toast_light(
-                "Escolha um controle no seletor acima — para limpar todos, "
-                'use "Voltar todos ao automático"'
+                'Sem um controle escolhido, use o botão '
+                '"Voltar todos ao automático".'
             )
             return
         self.draft = draft.with_controller_fields_cleared(
@@ -455,11 +497,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft — mantém consistência com on_player_led_toggled.
         self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
-        label = " ".join("x" if b else "-" for b in bits)
+        descricao = self._descreve_player_leds(bits)
         self._toast_light(
-            f"Player LEDs aplicados: {label}"
+            f"LEDs de jogador aplicados — {descricao}"
             if ok
-            else f"Player LEDs: {label} (daemon offline?)"
+            else "não consegui aplicar os LEDs de jogador — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
 
     def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
@@ -477,9 +520,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
-        label = " ".join("x" if b else "-" for b in bits)
+        descricao = self._descreve_player_leds(bits)
         self._toast_light(
-            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
+            f"LEDs de jogador atualizados — {descricao}"
+            if ok
+            else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
 
     # --- helpers ---
@@ -505,9 +551,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
-        label = " ".join("x" if s else "-" for s in pattern)
+        descricao = self._descreve_player_leds(pattern)
         self._toast_light(
-            f"Player LEDs: {label}" if ok else f"Player LEDs: {label} (daemon offline?)"
+            f"LEDs de jogador atualizados — {descricao}"
+            if ok
+            else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
+            "estar desligado (ligue na aba Sistema)"
         )
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:
@@ -516,6 +565,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
             checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
             states.append(bool(checkbox.get_active()) if checkbox is not None else False)
         return (states[0], states[1], states[2], states[3], states[4])
+
+    @staticmethod
+    def _descreve_player_leds(bits: list[bool] | tuple[bool, ...]) -> str:
+        """Padrão dos LEDs de jogador em palavras (LB-03).
+
+        Troca a antiga notação "x - - - -" (parecia depuração) por texto que
+        casa com os rótulos "LED 1".."LED 5" das caixas: "LEDs acesos: 1 e 3".
+        """
+        acesos = [str(i) for i, ligado in enumerate(bits, start=1) if ligado]
+        if not acesos:
+            return "todos os LEDs apagados"
+        if len(acesos) == 1:
+            return f"LED aceso: {acesos[0]}"
+        return "LEDs acesos: " + ", ".join(acesos[:-1]) + " e " + acesos[-1]
 
     def _on_lightbar_preview_draw(
         self, widget: Gtk.DrawingArea, cairo_ctx: Any

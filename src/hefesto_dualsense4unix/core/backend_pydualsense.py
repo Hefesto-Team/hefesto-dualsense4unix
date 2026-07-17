@@ -1575,16 +1575,21 @@ class PyDualSenseController(IController):
             # PERFIL-01: valor por controle (merge default + override do uniq).
             reasserts = (
                 [
-                    (node, self._merged_desired_for_key(key))
+                    (key, node, self._merged_desired_for_key(key))
                     for key, node in self._sysfs.items()
                 ]
                 if not muted
                 else []
             )
-        for node, desired in reasserts:
+        for key, node, desired in reasserts:
             with contextlib.suppress(Exception):
-                if desired.led is not None:
-                    node.set_rgb(*desired.led)
+                # STATUS-03: espelha o reassert_resolved_outputs — registrar a
+                # POSSE do nó (escrita nossa) mesmo quando o nó surgiu PELA
+                # PRIMEIRA VEZ durante o Modo Nativo (reconnect BT no meio do
+                # jogo); sem isto, ao desmutar a cor era escrita mas o campo
+                # diagnostico da cor ficava como "desconhecida".
+                if desired.led is not None and node.set_rgb(*desired.led):
+                    self.record_sysfs_write(key, desired.led)
                 if desired.player_leds is not None:
                     node.set_players(desired.player_leds)
         logger.info("backend_output_mute", muted=bool(muted))

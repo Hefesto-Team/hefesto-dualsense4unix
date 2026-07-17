@@ -271,6 +271,15 @@ class InputActionsMixin(MouseActionsMixin):
             if candidate not in existing:
                 store.append([candidate, "KEY_SPACE"])
                 self._persist_key_bindings_to_draft()
+                # KBD-02: antes, "Adicionar" escolhia um botão sozinho e já o
+                # mapeava para uma tecla sem avisar. Agora explicamos, com o
+                # nome humano do botão, o que aconteceu e para onde ir p/ trocar.
+                self._toast_input(
+                    "Adicionei uma linha para o botão "
+                    f"“{humanize_button(candidate)}”, começando na tecla "
+                    "“Espaço”. Clique duas vezes na coluna “Tecla do teclado” "
+                    "para escolher outra, ou remova a linha se não quiser."
+                )
                 return
         self._toast_input("Todos os botões já têm binding — edite os existentes.")
 

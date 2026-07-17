@@ -367,6 +367,8 @@ if [[ "${FORMAT}" != "native" ]]; then
     fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
+    printf ' Obs.: ajuste do microfone, desligar do Steam Input e preparo\n'
+    printf ' dos jogos da Steam só valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n\n'
     exit 0
@@ -529,7 +531,8 @@ else
     for rules_base in "${canonical_rules[@]}"; do
         case "${rules_base}" in
             70-*) rules_desc='permissão hidraw (USB e BT)' ;;
-            71-*) rules_desc='emulação Xbox360 via uinput' ;;
+            71-uinput.rules) rules_desc='emulação Xbox360 via uinput' ;;
+            71-uhid.rules) rules_desc='DualSense virtual via uhid (vibração na máscara PS)' ;;
             72-*) rules_desc='evita desconexão intermitente USB' ;;
             76-*) rules_desc='touchpad só pelo hefesto (sem briga)' ;;
             77-*) rules_desc='lightbar/player-LED graváveis via sysfs' ;;
@@ -1077,6 +1080,9 @@ fi
 step "11b" "Steam: migrar Launch Options antigas para o wrapper hefesto-launch"
 LAUNCH_MIGRATE_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/steam_launch_options.py"
 if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    printf '      se a Steam estiver aberta, ela será fechada e reaberta só para\n'
+    printf '      concluir a migração — pause downloads antes de seguir.\n'
+    printf '      (com um jogo aberto, a migração é adiada e nada é fechado.)\n'
     if python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
         printf '      Launch Options antigas do Hefesto migradas para o wrapper hefesto-launch\n'
     else

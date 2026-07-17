@@ -533,3 +533,28 @@ class TestApplierAutoColors:
         assert applied == []  # seção falhou (best-effort, logada)
         assert identity.get_identity_registry().auto_enabled is True  # intacto
         controller.apply_output_defaults.assert_not_called()
+
+
+class TestPreviaHonestaAuto:
+    """Achado ao vivo 2026-07-17: com auto ON + um controle específico em
+    edição, a prévia mostra a cor REAL da paleta (não a manual global)."""
+
+    def test_le_o_slot_do_alvo(self) -> None:
+        draft = DraftConfig.default()  # auto_player_colors=True (default COR-04)
+        host = _Host(draft, uniq="aabbcc000002")
+        host._edit_target_label = "Controle 2 — BT"
+        assert host._auto_preview_slot() == 2
+
+    def test_none_quando_auto_desligado(self) -> None:
+        draft = DraftConfig.default()
+        leds = draft.leds.model_copy(update={"auto_player_colors": False})
+        draft = draft.model_copy(update={"leds": leds})
+        host = _Host(draft, uniq="aabbcc000002")
+        host._edit_target_label = "Controle 2 — BT"
+        assert host._auto_preview_slot() is None
+
+    def test_none_no_alvo_todos(self) -> None:
+        draft = DraftConfig.default()
+        host = _Host(draft, uniq=None)  # "Todos" — sem controle específico
+        host._edit_target_label = "Todos os controles"
+        assert host._auto_preview_slot() is None
