@@ -153,7 +153,7 @@ def _steam_hidraw_holders() -> dict[str, list[int]]:
     return holders
 
 
-def _external_inventory() -> list[dict[str, Any]]:
+def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
     """Inventário de externos + sonda de holders — roda FORA do event loop.
 
     Composição síncrona chamada via `asyncio.to_thread` pelo
@@ -164,18 +164,33 @@ def _external_inventory() -> list[dict[str, Any]]:
     O campo `holders` só aparece quando a sonda RODOU e achou o Steam
     segurando aquele hidraw ({"steam_pids": [...]}); sonda falha/vazia =
     campo ausente, sem erro (não é critério de aceite do 8BIT-01).
+
+    8BIT-02: cada externo ganha `player_slot` = número GLOBAL de co-op
+    (continua a contagem dos DualSense: `dualsense_count + índice + 1`), e o
+    daemon ESCREVE esse número no LED de player do controle (só LED, nunca
+    input). Best-effort: sem a regra udev 79 (LED não gravável), a escrita
+    falha em silêncio e o `player_slot` segue exposto para a GUI numerar.
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
+    from hefesto_dualsense4unix.core.external_leds import (
+        hid_instance_for_hidraw,
+        write_player_number,
+    )
 
     inventory = discover_external_gamepads()
     holders: dict[str, list[int]] = {}
     with contextlib.suppress(Exception):
         holders = _steam_hidraw_holders()
-    if holders:
-        for entry in inventory:
-            hidraw = entry.get("hidraw")
-            if isinstance(hidraw, str) and hidraw in holders:
-                entry["holders"] = {"steam_pids": holders[hidraw]}
+    for index, entry in enumerate(inventory):
+        hidraw = entry.get("hidraw")
+        if holders and isinstance(hidraw, str) and hidraw in holders:
+            entry["holders"] = {"steam_pids": holders[hidraw]}
+        slot = dualsense_count + index + 1
+        entry["player_slot"] = slot
+        inst = hid_instance_for_hidraw(hidraw if isinstance(hidraw, str) else None)
+        if inst:
+            with contextlib.suppress(Exception):
+                write_player_number(inst, slot)
     return inventory
 
 
@@ -1026,7 +1041,14 @@ class IpcHandlersMixin:
                 ]
             }
         if external_raw:
-            result["external"] = await asyncio.to_thread(_external_inventory)
+            # 8BIT-02: os externos numeram CONTINUANDO os DualSense conectados
+            # (o daemon é a fonte única do `player_slot` e escreve o LED).
+            ds_count = sum(
+                1
+                for c in result["controllers"]
+                if isinstance(c, dict) and c.get("connected")
+            )
+            result["external"] = await asyncio.to_thread(_external_inventory, ds_count)
         return result
 
     async def _handle_controller_target_set(

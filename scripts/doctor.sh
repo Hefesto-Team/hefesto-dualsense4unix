@@ -110,7 +110,8 @@ check_udev() {
                  72-ps5-controller-autosuspend.rules
                  76-dualsense-touchpad-libinput-ignore.rules
                  77-dualsense-leds.rules
-                 78-dualsense-motion-not-joystick.rules)
+                 78-dualsense-motion-not-joystick.rules
+                 79-external-controller-leds.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -120,7 +121,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
