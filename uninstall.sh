@@ -316,6 +316,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules \
                    /etc/udev/rules.d/77-dualsense-leds.rules \
                    /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules \
+                   /etc/udev/rules.d/79-external-controller-leds.rules \
                    /etc/udev/rules.d/71-uhid.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-dualsense-storm.conf

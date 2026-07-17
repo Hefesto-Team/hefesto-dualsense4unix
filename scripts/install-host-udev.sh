@@ -96,6 +96,9 @@ RULES=(
     "76-dualsense-touchpad-libinput-ignore.rules"
     "77-dualsense-leds.rules"
     "78-dualsense-motion-not-joystick.rules"
+    # 79: LEDs de player dos Nintendo/8BitDo graváveis p/ o daemon numerar o
+    # co-op misto (continua a contagem dos DualSense; só LED, nunca input). 8BIT-02.
+    "79-external-controller-leds.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

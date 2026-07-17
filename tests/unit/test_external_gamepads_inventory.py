@@ -44,6 +44,17 @@ from hefesto_dualsense4unix.testing import FakeController
 MAC_8BITDO_FORJADO = "aa:bb:cc:00:be:ef"
 
 
+@pytest.fixture(autouse=True)
+def _led_writer_hermetico(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hermeticidade 8BIT-02: o `_external_inventory` ESCREVE o LED de player do
+    controle externo. Sem isto, rodar a suíte na máquina da mantenedora (com um
+    8BitDo real em `/dev/hidraw6`) piscaria o LED FÍSICO. Neutraliza por padrão;
+    o teste dedicado ao LED re-substitui por um captor depois deste fixture."""
+    import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+    monkeypatch.setattr(leds_mod, "write_player_number", lambda *a, **k: False)
+
+
 # --- fakes de evdev + sysfs -------------------------------------------------
 
 
@@ -450,7 +461,11 @@ async def test_controller_list_external_roda_fora_do_event_loop(
 
     result = await ipc_server._handle_controller_list({"external": True})
 
-    assert result["external"] == sentinela
+    assert len(result["external"]) == 1
+    ext = dict(result["external"][0])
+    slot = ext.pop("player_slot")  # 8BIT-02: número GLOBAL de co-op, sempre >= 1
+    assert isinstance(slot, int) and slot >= 1
+    assert ext == sentinela[0]
     assert result["controllers"], "o shape legado continua presente"
     assert visto["thread"] != loop_thread, (
         "a enumeração (10-40 ms) rodou NA thread do event loop"
@@ -548,4 +563,49 @@ def test_holders_merge_e_degradacao(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", explode)
     inventario = ih_mod._external_inventory()
-    assert inventario == [base], "sonda quebrada degrada em silêncio (sem campo)"
+    # Degrada em silêncio: SEM `holders` (sonda quebrada), mas o `player_slot`
+    # (8BIT-02) segue exposto — é independente da sonda.
+    assert "holders" not in inventario[0]
+    assert inventario[0] == {**base, "player_slot": 1}
+
+
+def test_external_inventory_numera_slot_global_e_escreve_led(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """8BIT-02: cada externo recebe `player_slot` = dualsense_count + índice + 1
+    (continua a contagem dos DualSense) e o daemon ESCREVE esse número no LED
+    de player do próprio controle (best-effort — só LED, nunca input)."""
+    import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+    n1 = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": "057e", "pid": "2009", "bus": "usb",
+        "uniq": MAC_8BITDO_FORJADO, "driver": "nintendo",
+        "evdev_path": "/dev/input/event261", "hidraw": "/dev/hidraw6",
+    }
+    n2 = {**n1, "uniq": "aa:bb:cc:00:be:f0",
+          "evdev_path": "/dev/input/event262", "hidraw": "/dev/hidraw7"}
+    monkeypatch.setattr(
+        er_mod, "discover_external_gamepads", lambda: [dict(n1), dict(n2)]
+    )
+    monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
+    # Resolve a instância HID e captura as escritas (sem tocar o sysfs real).
+    inst_por_hidraw = {"/dev/hidraw6": "0003:057E:2009.0006",
+                       "/dev/hidraw7": "0003:057E:2009.0007"}
+    monkeypatch.setattr(
+        leds_mod, "hid_instance_for_hidraw", lambda h: inst_por_hidraw.get(h)
+    )
+    escritas: list[tuple[str, int]] = []
+    monkeypatch.setattr(
+        leds_mod, "write_player_number",
+        lambda inst, num: (escritas.append((inst, num)), True)[1],
+    )
+
+    # Com 2 DualSense (slots 1 e 2), os externos são 3 e 4.
+    inventario = ih_mod._external_inventory(dualsense_count=2)
+
+    assert [e["player_slot"] for e in inventario] == [3, 4]
+    assert escritas == [
+        ("0003:057E:2009.0006", 3),
+        ("0003:057E:2009.0007", 4),
+    ]

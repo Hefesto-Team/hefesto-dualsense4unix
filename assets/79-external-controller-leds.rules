@@ -1,0 +1,26 @@
+# Hefesto - Dualsense4Unix — acesso de escrita aos LEDs de player dos controles
+# Nintendo/8BitDo (modo Switch). 8BIT-02.
+#
+# O QUE FAZ: torna graváveis (pelo usuário do desktop) os nós de LED de player
+# que o driver `hid-nintendo` expõe para os controles Nintendo/8BitDo em modo
+# Switch — os 4 LEDs de player VERDES (`*057E:*:green:player-N`) e o 5º AZUL
+# (`*057E:*:blue:player-5`). O DualSense usa `:white:player-N` (coberto pela
+# 77-dualsense-leds).
+#
+# POR QUE: no co-op de controles MISTOS (DualSense + Nintendo), cada controle
+# precisa de um NÚMERO distinto. O Hefesto dá 1..N aos DualSense e CONTINUA a
+# contagem nos externos (o 1º externo = slot N+1), escrevendo esse número no
+# LED de player do controle — para o LED físico bater com o número da GUI.
+# Só LED, nunca input: o Hefesto não adota esses controles.
+#
+# Sem esta regra, os nós ficam root:root e o daemon (que roda como usuário,
+# sudo-zero) NÃO consegue escrever — a numeração do LED cai no default do
+# kernel (colisão possível), sem regressão de input. Por isso a regra e a
+# coordenação de LED entram JUNTAS.
+#
+# MECANISMO (dois níveis, igual à 77-dualsense-leds): TAG+="uaccess" (ACL para
+# a sessão ativa) + RUN chmod 0666 (fallback; LED é inócuo). Reaplicado a cada
+# replug/reconexão (ACTION=="add").
+
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:green:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:blue:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"

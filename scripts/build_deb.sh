@@ -149,7 +149,8 @@ fi
 # audio) é a genuinamente opt-in.
 echo "Copiando regras udev ..."
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
-                  assets/76-*.rules assets/77-*.rules assets/78-*.rules; do
+                  assets/76-*.rules assets/77-*.rules assets/78-*.rules \
+                  assets/79-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
@@ -197,7 +198,8 @@ install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
-                  assets/76-*.rules assets/77-*.rules assets/78-*.rules; do
+                  assets/76-*.rules assets/77-*.rules assets/78-*.rules \
+                  assets/79-*.rules; do
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done

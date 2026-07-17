@@ -198,6 +198,8 @@ modules:
           /app/share/hefesto-dualsense4unix/udev-rules/77-dualsense-leds.rules
       - install -Dm644 assets/78-dualsense-motion-not-joystick.rules
           /app/share/hefesto-dualsense4unix/udev-rules/78-dualsense-motion-not-joystick.rules
+      - install -Dm644 assets/79-external-controller-leds.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/79-external-controller-leds.rules
       - install -Dm644 assets/hefesto-dualsense4unix.conf
           /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 

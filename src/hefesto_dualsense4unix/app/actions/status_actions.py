@@ -35,8 +35,8 @@ from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.external_controllers import (
     button_labels_for,
     external_key,
-    external_slot,
     friendly_type,
+    slot_of,
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import vpad_degradation_text
@@ -410,7 +410,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         dualsense_count = max(0, len(self._target_buttons) - 1)
         rotulos = button_labels_for(externals, dualsense_count)
         for i, (ext, rotulo) in enumerate(zip(externals, rotulos, strict=False)):
-            slot = external_slot(dualsense_count, i)
+            slot = slot_of(ext, dualsense_count, i)
             eb = Gtk.Button.new_with_label(rotulo)
             eb.set_tooltip_text(
                 f"Controle {slot}: {friendly_type(ext)} — {transport_label(ext)} "

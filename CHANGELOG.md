@@ -18,6 +18,21 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
   sozinho — é o driver `hid-nintendo` do kernel desistindo, não o Hefesto, e a
   saída estável é o cabo. Escopo enxuto de propósito ("só ver como aparecem, não
   uma super central"): superfície 100% read-only, sem o Hefesto adotá-los.
+- **Numeração de co-op sincronizada entre a GUI e o LED do controle externo
+  (8BIT-02).** No co-op MISTO (DualSense + Nintendo/8BitDo), o daemon continua a
+  contagem dos DualSense nos externos — com 2 DualSense (jogadores 1 e 2), o 1º
+  externo é o **3** e o 2º é o **4** — e ESCREVE esse número no LED de player do
+  próprio controle (os LEDs verdes do modo Switch), para o número da interface
+  bater com o LED físico. Só LED, nunca input. A nova regra udev
+  `79-external-controller-leds` (instalada por padrão, `< 73` não se aplica: LED
+  é inócuo) torna esses nós graváveis pelo daemon sem root; sem ela a escrita
+  falha em silêncio e o número cai no default do kernel, sem regressão de input.
+- **Orientação de "como o jogo enxerga" o controle Nintendo/8BitDo (8BIT-02).**
+  A ficha do controle mostra o modo atual (Nintendo/Switch ou Xbox/X-input) e
+  explica, sem jargão, a troca de HARDWARE (combo ao ligar): o modo **Xbox
+  (X-input)** é a raiz da estabilidade — o jogo vê um Xbox 360 de verdade (driver
+  `xpad`) e foge do driver que morre em Bluetooth; o modo **Switch** dá
+  giroscópio mas trava por BT. É orientação honesta, não uma promessa de cura.
 
 ## [3.14.0] — 2026-07-17
 

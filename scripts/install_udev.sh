@@ -32,6 +32,7 @@ for f in \
     "$ASSETS/76-dualsense-touchpad-libinput-ignore.rules" \
     "$ASSETS/77-dualsense-leds.rules" \
     "$ASSETS/78-dualsense-motion-not-joystick.rules" \
+    "$ASSETS/79-external-controller-leds.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -59,6 +60,10 @@ sudo install -Dm644 "$ASSETS/77-dualsense-leds.rules" /etc/udev/rules.d/77-duals
 # ignoram; para de poluir a lista de gamepads e de jorrar eventos de acelerômetro
 # no jogo). FEAT-DSX-CONTROLLER-IDENTITY-01. Reversível (remover o arquivo).
 sudo install -Dm644 "$ASSETS/78-dualsense-motion-not-joystick.rules" /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules
+# 79: torna graváveis os LEDs de player dos controles Nintendo/8BitDo p/ o daemon
+# numerar o CO-OP MISTO (continua a contagem dos DualSense; só LED, nunca input).
+# 8BIT-02. Sem ela, o número do LED do 8BitDo cai no default do kernel.
+sudo install -Dm644 "$ASSETS/79-external-controller-leds.rules" /etc/udev/rules.d/79-external-controller-leds.rules
 # 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23: abriam o controle via
 # hidraw a cada ACTION=="add", amplificando a re-enumeração que alimentava o
 # storm -71 (causa-raiz real: porta USB ruim — full-speed/-71 na 3-1). Limpa

@@ -106,6 +106,16 @@ def external_slot(dualsense_count: int, index: int) -> int:
     return dualsense_count + index + 1
 
 
+def slot_of(entry: dict[str, Any], dualsense_count: int, index: int) -> int:
+    """Slot do externo: o `player_slot` que o DAEMON já mandou (fonte única —
+    é o MESMO que ele escreveu no LED), com fallback para o cálculo local em
+    daemons antigos que não expõem o campo."""
+    slot = entry.get("player_slot")
+    if isinstance(slot, int) and not isinstance(slot, bool) and slot >= 1:
+        return slot
+    return external_slot(dualsense_count, index)
+
+
 def button_labels_for(
     externals: list[dict[str, Any]], dualsense_count: int = 0
 ) -> list[str]:
@@ -118,7 +128,7 @@ def button_labels_for(
     """
     saida: list[str] = []
     for i, e in enumerate(externals):
-        slot = external_slot(dualsense_count, i)
+        slot = slot_of(e, dualsense_count, i)
         vid = str(e.get("vid") or "").lower()
         nome = _VENDOR_BY_VID.get(vid) or friendly_type(e)
         bus = str(e.get("bus") or "").lower()
