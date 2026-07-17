@@ -1,7 +1,7 @@
 """Testes unitários de InputActionsMixin (FEAT-KEYBOARD-UI-01, sprint 59.3).
 
 Cobrem a lógica PURA de CRUD de key_bindings: resolução de bindings efetivos
-(defaults vs override), conversão schema↔store, e as regras de adicionar/
+(defaults vs override), conversão schemastore, e as regras de adicionar/
 remover/restaurar. Não exercitam GTK real — usam stubs de ListStore e
 widgets que imitam a API mínima requerida.
 """
@@ -184,5 +184,57 @@ def test_on_key_binding_cell_edited_binding_invalido_gera_toast() -> None:
     mixin._on_key_binding_cell_edited(None, "0", "not_valid")
     # Valor NÃO mudou.
     assert mixin._key_bindings_store.rows[0][1] == "KEY_A"
-    # Toast foi emitido.
-    assert any("inválido" in t for t in mixin._toasts)
+    # Toast foi emitido (mensagem amigável do KBD-01).
+    assert any("reconheci" in t for t in mixin._toasts)
+
+
+def test_on_key_binding_cell_edited_aceita_nome_amigavel() -> None:
+    """KBD-01: a pessoa digita 'Alt + Tab'; grava-se o token cru equivalente."""
+    mixin = _build_mixin()
+    mixin._key_bindings_store.rows = [["l1", "KEY_A"]]
+    mixin._on_key_binding_cell_edited(None, "0", "Alt + Tab")
+    assert mixin._key_bindings_store.rows[0][1] == "KEY_LEFTALT+KEY_TAB"
+
+
+class TestHumanizacaoTeclado:
+    """KBD-01: exibição amigável  tokens crus (round-trip)."""
+
+    def test_humanize_button(self) -> None:
+        from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
+
+        assert humanize_button("l1") == "L1"
+        assert humanize_button("create") == "Share / Create"
+        assert humanize_button("touchpad_left_press") == "Touchpad — lado esquerdo"
+        # Fallback: id desconhecido volta como está.
+        assert humanize_button("xpto") == "xpto"
+
+    def test_humanize_binding(self) -> None:
+        from hefesto_dualsense4unix.app.actions.input_actions import humanize_binding
+
+        assert humanize_binding("KEY_LEFTALT+KEY_TAB") == "Alt + Tab"
+        assert humanize_binding("KEY_SYSRQ") == "PrintScreen"
+        assert humanize_binding("__OPEN_OSK__") == "Abrir teclado na tela"
+        assert humanize_binding("KEY_C") == "C"
+
+    def test_dehumanize_binding(self) -> None:
+        from hefesto_dualsense4unix.app.actions.input_actions import dehumanize_binding
+
+        assert dehumanize_binding("Alt + Tab") == "KEY_LEFTALT+KEY_TAB"
+        assert dehumanize_binding("PrintScreen") == "KEY_SYSRQ"
+        assert dehumanize_binding("Abrir teclado na tela") == "__OPEN_OSK__"
+        # Idempotente sobre tokens já crus.
+        assert dehumanize_binding("KEY_LEFTALT+KEY_TAB") == "KEY_LEFTALT+KEY_TAB"
+
+    def test_round_trip_dos_defaults(self) -> None:
+        """Todo binding default humanizado e de volta reproduz o token cru."""
+        from hefesto_dualsense4unix.app.actions.input_actions import (
+            dehumanize_binding,
+            humanize_binding,
+        )
+        from hefesto_dualsense4unix.core.keyboard_mappings import (
+            DEFAULT_BUTTON_BINDINGS,
+        )
+
+        for tokens in DEFAULT_BUTTON_BINDINGS.values():
+            cru = "+".join(tokens)
+            assert dehumanize_binding(humanize_binding(cru)) == cru

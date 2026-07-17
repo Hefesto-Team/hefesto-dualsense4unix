@@ -170,7 +170,7 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert host._reconnect_state == "offline"
     assert host._consecutive_failures == RECONNECT_FAIL_THRESHOLD
     header = host.builder.get_object("header_connection")
-    assert "Daemon Offline" in header.markup
+    assert "Hefesto desligado" in header.markup
     # U+25CB via NCR `&#9675;`.
     assert "&#9675;" in header.markup
     assert "#d33" in header.markup  # vermelho canônico
@@ -238,7 +238,7 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")
     # _set_label chama set_text (não set_markup).
-    assert "sem resposta" in (daemon_label.text or "")
+    assert "Sem resposta" in (daemon_label.text or "")
 
 
 def test_initial_poll_fallback_no_op_quando_poll_ja_sucedeu(host: _Host) -> None:

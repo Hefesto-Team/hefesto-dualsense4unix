@@ -854,14 +854,18 @@ def test_toast_de_validacao_explica_e_nao_culpa_o_daemon(
     mixin.on_trigger_left_apply(None)
 
     _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
-    assert msg == "LEFT -> Bow não aplicado: Fim (3) precisa ser maior que Início (5)"
+    assert msg == (
+        "Gatilho esquerdo (L2): Bow não aplicado — "
+        "Fim (3) precisa ser maior que Início (5)"
+    )
     assert "daemon" not in msg
 
 
-def test_toast_de_daemon_offline_continua_falando_em_daemon(
+def test_toast_de_daemon_offline_aponta_para_a_aba_sistema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sem motivo = ninguém respondeu; aí sim a suspeita do daemon é honesta."""
+    """Sem motivo = ninguém respondeu; JARG-01: em vez de "daemon offline?",
+    o leigo é mandado ligar o Hefesto na aba Sistema."""
     mixin = _build_mixin(monkeypatch)
     monkeypatch.setattr(
         triggers_actions, "trigger_set_checked", lambda *_a, **_kw: (False, None)
@@ -874,7 +878,10 @@ def test_toast_de_daemon_offline_continua_falando_em_daemon(
     mixin.on_trigger_left_apply(None)
 
     _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
-    assert msg == "LEFT -> Rigid falhou (daemon offline?)"
+    assert msg == (
+        "Gatilho esquerdo (L2): não consegui aplicar Rigid — o Hefesto pode "
+        "estar desligado (ligue na aba Sistema)"
+    )
 
 
 def test_toast_de_motivo_desconhecido_mostra_o_texto_cru(
@@ -896,4 +903,4 @@ def test_toast_de_motivo_desconhecido_mostra_o_texto_cru(
     mixin.on_trigger_left_apply(None)
 
     _ctx, msg = mixin._widgets["status_bar"].pushed[-1]
-    assert msg == "LEFT -> Rigid não aplicado: formato novo de recusa"
+    assert msg == "Gatilho esquerdo (L2): Rigid não aplicado — formato novo de recusa"

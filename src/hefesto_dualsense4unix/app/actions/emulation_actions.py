@@ -300,9 +300,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
             done = "Mic do DualSense ligado"
         else:
             done = (
-                "Mic ligado — ATENÇÃO: sem o quirk de áudio USB ativo isso pode "
-                "reabrir o storm -71; rode scripts/install_usb_quirk.sh "
-                "(vale no próximo boot)"
+                "Mic ligado — atenção: sem o ajuste de áudio o controle pode "
+                "travar no meio do jogo. Abra a aba Sistema e clique em "
+                "“Aplicar correções” (vale no próximo boot)."
             )
         self._run_mic("--enable-mic", done)
 

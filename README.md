@@ -176,13 +176,9 @@ O cartão **Anti-storm / Sistema** (aba Daemon) mostra o estado da cura e se o �
 
 **2. A vibração não funciona nos jogos.** No modo "Jogar pelo Hefesto", use a máscara **Xbox 360** (aba Início, ou por perfil). Com a máscara DualSense, o jogo fala com o controle _físico_ por outro caminho e ignora o controle virtual — a vibração nunca chega. Ver a nota de máscara mais abaixo.
 
-**3. O jogo enxerga o controle duplicado.** O jogo lista o controle virtual _e_ o DualSense físico. Cole estas **Opções de inicialização** na Steam (botão **"Copiar opções p/ jogos"**, aba Daemon → cartão Anti-storm):
+**3. O jogo enxerga o controle duplicado.** O Hefesto já cuida disso **sozinho**: o instalador (`./install.sh`, sem flags) coloca o atalho `hefesto-launch` nas Opções de inicialização dos seus jogos Steam e migra ajustes antigos — sempre com a Steam **fechada**. Você não precisa colar nada.
 
-```
-SDL_JOYSTICK_HIDAPI=0 SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6 %command%
-```
-
-Steam → jogo → **Propriedades** → **Opções de inicialização**. Isso faz o jogo enxergar só o gamepad do Hefesto (fim da duplicação), mantendo a vibração. Se você já tem outras variáveis lá, mantenha-as **antes** do `%command%`. Recomendado também: **Propriedades → Controlador → Desativar Steam Input**.
+Se um jogo novo ainda aparecer com o controle duplicado, abra a aba **Sistema** e clique em **"Aplicar aos jogos da Steam"** (com a Steam fechada). Como último recurso manual, o botão **"Copiar opções p/ jogos"** (aba **Sistema**) copia a linha certa — `hefesto-launch %command%` — para você colar em Steam → jogo → **Propriedades** → **Opções de inicialização**. O `hefesto-launch` decide na hora o que cada jogo precisa; com o Hefesto desligado ele some do caminho (pior caso: controle duplicado, nunca zero). Recomendado também: **Propriedades → Controlador → Desativar Steam Input**.
 
 ---
 

@@ -129,8 +129,11 @@ def test_mic_on_avisa_quando_quirk_ausente(monkeypatch: pytest.MonkeyPatch) -> N
     flag, msg = ran[0]
     assert flag == "--enable-mic"
     # ...e o aviso persiste na mensagem FINAL (não num toast que é sobrescrito).
-    assert "storm -71" in msg
-    assert "install_usb_quirk.sh" in msg
+    # EMU-04: sem jargão ("storm -71"/nome de script) — o leigo é mandado para
+    # o botão "Aplicar correções" da aba Sistema.
+    assert "travar" in msg
+    assert "Aplicar correções" in msg
+    assert "storm" not in msg
 
 
 def test_mic_on_nao_avisa_quando_quirk_ativo(monkeypatch: pytest.MonkeyPatch) -> None:

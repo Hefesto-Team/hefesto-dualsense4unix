@@ -379,18 +379,18 @@ class MouseActionsMixin(WidgetAccessMixin):
             )
         elif module_ok and dev_exists:
             label.set_markup(
-                '<span foreground="#d33">sem permissão em /dev/uinput — '
-                'rode ./scripts/install_udev.sh</span>'
+                '<span foreground="#d33">o mouse virtual está sem permissão — '
+                'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         elif module_ok:
             label.set_markup(
-                '<span foreground="#c90">módulo ok, /dev/uinput ausente '
-                '(modprobe uinput)</span>'
+                '<span foreground="#c90">o mouse virtual ainda não está pronto — '
+                'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         else:
             label.set_markup(
-                '<span foreground="#d33">python-uinput não instalado '
-                '(pip install python-uinput)</span>'
+                '<span foreground="#d33">falta um componente do mouse virtual — '
+                'rode a instalação de novo (./install.sh)</span>'
             )
 
     def _toast_mouse(self, msg: str) -> None:
