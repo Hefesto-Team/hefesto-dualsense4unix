@@ -171,7 +171,12 @@ def _leds_config_to_draft(leds_cfg: Any) -> LedsDraft:
     )
 
 
-def _leds_draft_to_config(leds: LedsDraft, *, include_auto: bool = False) -> Any:
+def _leds_draft_to_config(
+    leds: LedsDraft,
+    *,
+    include_auto: bool = False,
+    only_fields: set[str] | None = None,
+) -> Any:
     """Converte o sub-draft de LEDs em ``LedsConfig`` persistível (schema).
 
     COR-04: ``include_auto=True`` (usado SÓ pela seção GLOBAL — ``to_profile``)
@@ -179,6 +184,13 @@ def _leds_draft_to_config(leds: LedsDraft, *, include_auto: bool = False) -> Any
     overrides por-controle (``with_controller_leds``) SEM o campo: o toggle é
     do perfil, e gravá-lo no override densificaria uma seção parcial com um
     campo que o backend ignora (regra documentada no schema ``LedsConfig``).
+
+    ``only_fields`` (COR-04) restringe o ``LedsConfig`` aos campos nomeados
+    (nomes do schema: ``lightbar``/``lightbar_brightness``/``player_leds``), de
+    modo que o ``model_fields_set`` resultante fique PARCIAL — o backend herda
+    os campos ausentes do global por campo (a paleta automática segue acendendo
+    o LED do número no controle). ``None`` (default) mantém a seção densa (usada
+    pela seção GLOBAL do ``to_profile``).
     """
     from hefesto_dualsense4unix.profiles.schema import LedsConfig
 
@@ -190,6 +202,8 @@ def _leds_draft_to_config(leds: LedsDraft, *, include_auto: bool = False) -> Any
     }
     if include_auto:
         kwargs["auto_player_colors"] = leds.auto_player_colors
+    if only_fields is not None:
+        kwargs = {nome: val for nome, val in kwargs.items() if nome in only_fields}
     return LedsConfig(**kwargs)
 
 
@@ -449,7 +463,8 @@ class DraftConfig(BaseModel):
         override herda o global (paridade com a ativação de perfil). Sem
         isso, um override parcial escrito à mão exibia (e, via semeadura,
         SALVAVA) os defaults do schema no lugar do global. Overrides criados
-        pela GUI são densos (todos os campos escritos) e não mudam.
+        pela GUI carregam SÓ os campos que a usuária mudou (COR-04) — este
+        mesmo caminho por campo herda o resto do global.
         """
         override = self.controller_override(uniq)
         leds_cfg = getattr(override, "leds", None)
@@ -493,8 +508,29 @@ class DraftConfig(BaseModel):
         perfil (e o "Salvar Perfil" do rodapé a persiste). O chamador semeia
         ``leds`` com o efetivo em tela (``effective_leds_for`` + o campo
         editado) — o que a usuária vê é o que salva.
+
+        COR-04: o override guarda SÓ os campos de LED que DIVERGEM do global do
+        draft (o efetivo semeado = global + o que a usuária mexeu). Campo igual
+        ao global não entra no override — herda o global no merge por campo do
+        backend; no caso dos player-LEDs, isso deixa a paleta automática acender
+        o LED do NÚMERO do controle em vez de congelá-lo. Sem nenhuma
+        divergência, o alvo não precisa de opinião própria: a seção ``leds`` do
+        override é limpa (herda tudo do global).
         """
-        return self._with_override_section(uniq, "leds", _leds_draft_to_config(leds))
+        campos: set[str] = set()
+        if leds.lightbar_rgb != self.leds.lightbar_rgb:
+            campos.add("lightbar")
+        if leds.lightbar_brightness != self.leds.lightbar_brightness:
+            campos.add("lightbar_brightness")
+        if leds.player_leds != self.leds.player_leds:
+            campos.add("player_leds")
+        if not campos:
+            return self.with_controller_fields_cleared(
+                uniq, "leds", {"lightbar", "lightbar_brightness", "player_leds"}
+            )
+        return self._with_override_section(
+            uniq, "leds", _leds_draft_to_config(leds, only_fields=campos)
+        )
 
     def with_controller_triggers(
         self, uniq: str, triggers: TriggersDraft

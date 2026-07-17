@@ -117,13 +117,12 @@ class EmulationActionsMixin(WidgetAccessMixin):
             import uinput  # noqa: F401
         except ImportError:
             self._toast_emulation(
-                "python-uinput não instalado — pip install python-uinput"
+                "O gamepad virtual não está disponível — reinstale o Hefesto."
             )
             return
         if not os.access(UINPUT_DEV, os.W_OK):
             self._toast_emulation(
-                f"sem permissão em {UINPUT_DEV} — carregue módulo uinput "
-                "e configure udev rule (ver README)"
+                "O Hefesto não tem acesso ao gamepad virtual — reinstale o Hefesto."
             )
             return
         try:
@@ -132,13 +131,17 @@ class EmulationActionsMixin(WidgetAccessMixin):
             gp = UinputGamepad()
             ok = gp.start()
             gp.stop()
-        except (OSError, RuntimeError) as exc:
-            self._toast_emulation(f"Falha: {exc}")
+        except (OSError, RuntimeError):
+            self._toast_emulation(
+                "Não consegui criar o gamepad virtual — reinstale o Hefesto."
+            )
             return
         if ok:
-            self._toast_emulation("Device virtual criado com sucesso")
+            self._toast_emulation("Gamepad virtual criado com sucesso")
         else:
-            self._toast_emulation("start() retornou False — veja logs do daemon")
+            self._toast_emulation(
+                "Não consegui criar o gamepad virtual — reinstale o Hefesto."
+            )
         self._refresh_emulation_view()
 
     def on_emulation_open_toml(self, _btn: Gtk.Button) -> None:
@@ -164,9 +167,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 stderr=subprocess.DEVNULL,
             )
         except FileNotFoundError:
-            self._toast_emulation(f"xdg-open indisponível; edite manualmente: {path}")
+            self._toast_emulation("Não consegui abrir o arquivo de referência.")
             return
-        self._toast_emulation(f"Abrindo {path}")
+        self._toast_emulation("Abri o arquivo de referência no seu editor.")
 
     # --- helpers ---
 
@@ -184,28 +187,32 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if module_ok and dev_writable:
             # ADR-011: &#9679; (BLACK CIRCLE) via NCR — sobrevive ao sanitizer.
             uinput_label.set_markup(
-                '<span foreground="#2d8">&#9679; Disponível</span>'
+                '<span foreground="#2d8">&#9679; Gamepad virtual pronto</span>'
             )
         elif module_ok and dev_exists:
             uinput_label.set_markup(
-                f'<span foreground="#c90">Módulo ok, sem permissão em {UINPUT_DEV}</span>'
+                '<span foreground="#c90">Gamepad virtual sem acesso — '
+                'reinstale o Hefesto</span>'
             )
         elif module_ok:
             uinput_label.set_markup(
-                f'<span foreground="#c90">Módulo ok, {UINPUT_DEV} ausente '
-                '(modprobe uinput)</span>'
+                '<span foreground="#c90">Gamepad virtual indisponível — '
+                'reinstale o Hefesto</span>'
             )
         else:
             uinput_label.set_markup(
-                '<span foreground="#d33">python-uinput não instalado</span>'
+                '<span foreground="#d33">Gamepad virtual indisponível — '
+                'reinstale o Hefesto</span>'
             )
 
         js_nodes = sorted(glob.glob("/dev/input/js*"))
         if js_nodes:
-            self._get("emulation_js_label").set_text(", ".join(js_nodes))
+            n = len(js_nodes)
+            palavra = "controle detectado" if n == 1 else "controles detectados"
+            self._get("emulation_js_label").set_text(f"{n} {palavra} pelo sistema")
         else:
             self._get("emulation_js_label").set_markup(
-                '<i>Nenhum /dev/input/js* detectado</i>'
+                '<i>Nenhum controle detectado pelo sistema</i>'
             )
 
     # --- microfone do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01) ---
@@ -337,29 +344,36 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 ctx.remove_class("hefesto-active-mode")
 
     def _sync_gamemode_button(self, mode: str | None) -> None:
-        """HARM-03: "Modo jogo" não é oferecido em "Controlar o PC".
+        """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto".
 
-        Em modo desktop o controle SÓ faz mouse/teclado — suspendê-los deixava
-        o controle sem função nenhuma, e o tooltip afirmava o contrário ("o
-        gamepad continua funcionando no jogo": não há gamepad nesse modo). O
-        botão fica desabilitado com a razão em texto simples ao lado.
+        Em "Controlar o PC" o controle SÓ faz mouse/teclado — suspendê-los
+        deixava o controle sem função nenhuma. Em "Jogar direto (Sony)" o jogo
+        fala direto com o controle: não há mouse/teclado nem gamepad virtual
+        para suspender, e o toast ainda afirmava "gamepad ativo". Nos dois casos
+        o botão fica desabilitado com a razão em texto simples ao lado.
 
         "Sair do modo jogo" continua sensível em TODOS os modos: é a saída de
         emergência de quem caiu em desktop+suspenso pelo combo PS+Options.
         """
         pause_btn = self._get("emulation_pause_button")
         hint = self._get("emulation_gamemode_hint_label")
-        blocked = mode is None or mode == MODE_DESKTOP
+        blocked = mode is None or mode in {MODE_DESKTOP, MODE_NATIVE}
         if pause_btn is not None:
             pause_btn.set_sensitive(not blocked)
         if hint is None:
             return
-        hint.set_text(
-            "Em \"Controlar o PC\" o controle só faz mouse/teclado — "
-            "suspendê-los deixaria o controle sem função nenhuma."
-            if mode == MODE_DESKTOP
-            else ""
-        )
+        if mode == MODE_DESKTOP:
+            hint.set_text(
+                "Em \"Controlar o PC\" o controle só faz mouse/teclado — "
+                "suspendê-los deixaria o controle sem função nenhuma."
+            )
+        elif mode == MODE_NATIVE:
+            hint.set_text(
+                "Em \"Jogar direto (Sony)\" o jogo fala direto com o controle — "
+                "não há mouse/teclado para suspender."
+            )
+        else:
+            hint.set_text("")
 
     def _refresh_gamepad_and_gamemode(self) -> None:
         """Lê daemon.state_full e atualiza os labels de gamepad + modo-jogo."""
@@ -451,8 +465,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._toast_emulation(msg)
             return False
 
-        def _on_err(exc: Exception) -> bool:
-            self._toast_emulation(f"daemon offline — gamepad não alterado ({exc})")
+        def _on_err(_exc: Exception) -> bool:
+            self._toast_emulation(
+                "Não consegui mudar o controle — o Hefesto pode estar "
+                "desligado. Veja a aba Sistema."
+            )
             self._refresh_gamepad_and_gamemode()
             return False
 
@@ -468,7 +485,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def on_emulation_gamepad_dualsense(self, _btn: Gtk.Button) -> None:
         self._apply_mode(
-            MODE_GAMEPAD, "dualsense", "Gamepad DualSense ligado (prompts PS)"
+            MODE_GAMEPAD,
+            "dualsense",
+            "Gamepad DualSense ligado — o jogo mostra os botões da Sony",
         )
 
     def on_emulation_gamepad_xbox(self, _btn: Gtk.Button) -> None:
@@ -480,8 +499,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._toast_emulation(msg)
             return False
 
-        def _on_err(exc: Exception) -> bool:
-            self._toast_emulation(f"daemon offline ({exc})")
+        def _on_err(_exc: Exception) -> bool:
+            self._toast_emulation(
+                "Não consegui aplicar — o Hefesto pode estar desligado. "
+                "Veja a aba Sistema."
+            )
             return False
 
         call_async(
@@ -500,7 +522,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         # edges). Suppress suspende SÓ mouse/teclado e NÃO persiste; o gamepad
         # segue vivo no jogo (FEAT-DSX-GAMEPAD-ALWAYS-LIVE-01). Como o label
         # 'Modo jogo' lê emulation_suppressed, ele passa a refletir o estado certo.
-        self._set_suppress(True, "Modo jogo: mouse/teclado suspensos (gamepad ativo)")
+        self._set_suppress(True, "Modo jogo ligado — mouse e teclado suspensos")
 
     def on_emulation_resume(self, _btn: Gtk.Button) -> None:
         self._set_suppress(False, "Modo jogo desligado: mouse/teclado retomados")

@@ -34,9 +34,10 @@ Decisões herdadas da revisão adversarial (não relaxar):
 - Steam aberta => recusa com mensagem honesta (a Steam regrava o vdf ao
   sair e pisaria a edição). `--stop-steam` (install/uninstall) fecha e
   reabre com o mesmo fluxo do precedente `scripts/disable_steam_input.sh`.
-- Steam Flatpak/Snap: recusa a MIGRAÇÃO (escrever caminho do host num vdf
-  cuja sandbox não enxerga o wrapper quebraria o launch); o strip é sempre
-  permitido (remover é seguro).
+- Steam Flatpak/Snap: a MIGRAÇÃO não escreve o wrapper (o caminho do host
+  num vdf cuja sandbox não enxerga o wrapper quebraria o launch) mas ainda
+  REMOVE o veneno legado — pular o vdf por completo o deixaria gravado para
+  sempre; o strip é sempre permitido (remover é seguro).
 
 Módulo 100% stdlib DE PROPÓSITO: o uninstall.sh o executa como script
 avulso (`python3 src/.../steam_launch_options.py --strip`) depois de o
@@ -614,15 +615,21 @@ def main(argv: list[str] | None = None) -> int:
     rc = 0
     total = 0
     for vdf in vdfs:
+        effective_mode = mode
         if mode == "migrate" and is_sandboxed_layout(vdf):
+            # Steam Flatpak/Snap: escrever o caminho do wrapper do host num vdf
+            # que a sandbox não enxerga quebraria o launch — então, em vez de
+            # PULAR (o que deixaria o veneno legado gravado para sempre), aqui
+            # fazemos só o STRIP: remover o veneno é seguro e o wrapper NÃO é
+            # escrito na sandbox.
+            effective_mode = "strip"
             print(
-                f"[launch-options] PULADO (Steam Flatpak/Snap): {vdf} — o wrapper "
-                "do host é invisível dentro da sandbox; escrever o caminho lá "
-                "quebraria o launch. O strip do uninstall continua cobrindo esse vdf."
+                f"[launch-options] Steam Flatpak/Snap: {vdf} — o wrapper do host "
+                "é invisível dentro da sandbox, então aqui só REMOVO o veneno "
+                "legado (não escrevo o wrapper)."
             )
-            continue
         try:
-            changed, diff = process_vdf(vdf, mode, dry_run=args.dry_run)
+            changed, diff = process_vdf(vdf, effective_mode, dry_run=args.dry_run)
         except OSError as exc:
             print(f"[launch-options] ERRO em {vdf}: {exc}")
             rc = 1
@@ -636,7 +643,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         total += changed
         verb = "migraria" if args.dry_run else "migrado"
-        if mode == "strip":
+        if effective_mode == "strip":
             verb = "limparia" if args.dry_run else "limpo"
         print(f"[launch-options] {verb}: {changed} LaunchOptions em {vdf}")
         if args.dry_run and diff:

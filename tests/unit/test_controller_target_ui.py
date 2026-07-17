@@ -447,18 +447,16 @@ def _draft_com_override_verde() -> DraftConfig:
 
 def test_editar_cor_em_todos_limpa_a_cor_do_override() -> None:
     """Cor global editada em "Todos" → o campo de cor (e o brilho, que forma
-    UM campo com ela no backend) sai do override; o efetivo do C2 vira azul."""
+    UM campo com ela no backend) sai do override; o efetivo do C2 vira azul.
+    COR-04: a GUI só grava no override o que a usuária mexeu (a cor), então
+    essa era a única opinião do C2 — limpá-la poda a entrada e o C2 herda o
+    azul (nada de player-LEDs congelados por trás)."""
     host = _lightbar_host(_draft_com_override_verde(), None)  # alvo: Todos
     host.on_lightbar_color_set(_FakeColorButton((0, 0, 255)))
 
     assert host.draft.leds.lightbar_rgb == (0, 0, 255)
     assert host.draft.effective_leds_for(UNIQ_2).lightbar_rgb == (0, 0, 255)
-    override = host.draft.controller_override(UNIQ_2)
-    assert override is not None and override.leds is not None
-    assert "lightbar" not in override.leds.model_fields_set
-    assert "lightbar_brightness" not in override.leds.model_fields_set
-    # Só o campo editado sai: os player-LEDs próprios do override ficam.
-    assert "player_leds" in override.leds.model_fields_set
+    assert host.draft.controller_override(UNIQ_2) is None
 
 
 def test_editar_player_leds_em_todos_preserva_a_cor_do_override() -> None:

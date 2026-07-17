@@ -287,9 +287,11 @@ def test_main_migra_com_steam_fechada(tmp_path, monkeypatch, capsys):
     assert slo._vdf_escape(slo.WRAPPER_LAUNCH) in texto
 
 
-def test_main_recusa_migrar_vdf_de_sandbox(tmp_path, monkeypatch, capsys):
+def test_main_migrate_em_vdf_de_sandbox_so_remove_o_veneno(tmp_path, monkeypatch, capsys):
     """Steam Flatpak/Snap: o wrapper do host é invisível à sandbox — escrever
-    o caminho lá quebraria o launch (DEDUP-04). O strip continua permitido."""
+    o caminho lá quebraria o launch (DEDUP-04). Em vez de PULAR (deixando o
+    veneno legado gravado para sempre), o migrate faz só o STRIP: o veneno sai
+    e o wrapper NÃO é escrito na sandbox. O strip explícito continua permitido."""
     sandbox = (
         tmp_path / ".var/app/com.valvesoftware.Steam/.steam/steam/userdata"
         / "12345678/config"
@@ -303,7 +305,9 @@ def test_main_recusa_migrar_vdf_de_sandbox(tmp_path, monkeypatch, capsys):
 
     rc = slo.main(["--migrate", "--vdf", str(vdf)])
     assert rc == 0
-    assert vdf.read_text(encoding="utf-8") == original  # recusado, intacto
+    texto = vdf.read_text(encoding="utf-8")
+    assert slo.IGNORE_SIGNATURE not in texto  # veneno removido
+    assert slo._vdf_escape(slo.WRAPPER_PREFIX) not in texto  # wrapper NÃO entra na sandbox
     assert "sandbox" in capsys.readouterr().out
 
     rc = slo.main(["--strip", "--vdf", str(vdf)])

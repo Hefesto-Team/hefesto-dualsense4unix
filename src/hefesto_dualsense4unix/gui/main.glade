@@ -360,7 +360,7 @@
                             <property name="no-show-all">True</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label" translatable="yes">Preset:</property>
+                                <property name="label" translatable="yes">Efeito pronto:</property>
                                 <property name="visible">True</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -423,7 +423,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_left_reset">
-                                <property name="label" translatable="yes">Desligar (Off)</property>
+                                <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_left_reset"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
@@ -483,7 +483,7 @@
                             <property name="no-show-all">True</property>
                             <child>
                               <object class="GtkLabel">
-                                <property name="label" translatable="yes">Preset:</property>
+                                <property name="label" translatable="yes">Efeito pronto:</property>
                                 <property name="visible">True</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
@@ -545,7 +545,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_right_reset">
-                                <property name="label" translatable="yes">Desligar (Off)</property>
+                                <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_right_reset"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">

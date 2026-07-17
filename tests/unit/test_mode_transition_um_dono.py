@@ -342,14 +342,24 @@ def test_modo_jogo_desabilitado_em_controlar_o_pc() -> None:
     assert "sem função nenhuma" in stub.hint.text
 
 
-@pytest.mark.parametrize("mode", ["gamepad", "native"])
-def test_modo_jogo_disponivel_jogando_e_sem_explicacao_sobrando(mode: str) -> None:
+def test_modo_jogo_disponivel_jogando_e_sem_explicacao_sobrando() -> None:
     stub = _GameModeStub()
     stub._sync_gamemode_button("desktop")  # estado anterior: bloqueado
-    stub._sync_gamemode_button(mode)
+    stub._sync_gamemode_button("gamepad")
 
     assert stub.pause_btn.sensitive is True
     assert stub.hint.text == ""
+
+
+def test_modo_jogo_desabilitado_em_jogar_direto_sony() -> None:
+    """EMU-07: no Modo Nativo o jogo fala direto com o controle — não há
+    mouse/teclado nem gamepad virtual para suspender, então "Modo jogo" fica
+    bloqueado (antes ficava clicável e o toast mentia "gamepad ativo")."""
+    stub = _GameModeStub()
+    stub._sync_gamemode_button("native")
+
+    assert stub.pause_btn.sensitive is False
+    assert "mouse/teclado para suspender" in stub.hint.text
 
 
 def test_modo_jogo_desabilitado_com_daemon_offline() -> None:

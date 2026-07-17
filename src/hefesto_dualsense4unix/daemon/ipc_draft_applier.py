@@ -226,15 +226,30 @@ class DraftApplier:
         sem estado por-controle (FakeController) herda o no-op seguro do
         ``IController``; controle desconectado fica registrado no mapa em
         memória do backend real (o hotplug o aplica quando chegar).
+
+        A seção presente SUBSTITUI o mapa inteiro de overrides
+        (``reset_output_overrides``) ANTES de reaplicar — o MESMO ciclo de
+        vida da ativação de perfil (``ProfileManager.apply``). Sem isto, um
+        ajuste especial que a usuária TIROU de um controle na GUI (ele voltou
+        a "Todos" e sumiu do payload) seguiria vivo no controle até a próxima
+        troca de perfil, e o "Aplicar" mostraria a cor/gatilho antigo.
         """
         if not isinstance(raw, dict):
             raise ValueError("controllers deve ser objeto")
+        specs: dict[str, OutputSpec] = {}
         for uniq, entry in raw.items():
             if not isinstance(entry, dict):
                 raise ValueError(f"controllers[{uniq!r}] deve ser objeto")
             spec = self._controller_override_spec(entry, str(uniq))
             if spec is not None:
-                self.controller.apply_output_for(str(uniq), spec)
+                specs[str(uniq)] = spec
+        # Getattr defensivo: stubs/fakes de teste sem o método seguem (a base
+        # ``IController`` e os backends reais o têm — no-op sem estado por-uniq).
+        reset = getattr(self.controller, "reset_output_overrides", None)
+        if callable(reset):
+            reset(specs or None)
+        for uniq, spec in specs.items():
+            self.controller.apply_output_for(uniq, spec)
 
     def _controller_override_spec(
         self, entry: dict[str, Any], uniq: str

@@ -602,11 +602,24 @@ class HomeActionsMixin(WidgetAccessMixin):
             )
             return False
 
+        def _fail(_exc: Exception) -> bool:
+            # EMU-06: sem callback de falha, a troca podia falhar em silêncio e
+            # o botão "pulava" de volta ~2s depois (o poller reconcilia) sem
+            # nenhuma explicação. Avisa e reconcilia agora, como o seletor de
+            # modo.
+            self._status_toast(
+                "home",
+                "Não consegui trocar o que o jogo vê — o Hefesto pode estar "
+                "desligado.",
+            )
+            self._refresh_home_tab()
+            return False
+
         call_async(
             "gamepad.emulation.set",
             {"enabled": True, "flavor": flavor_id},
             _done,
-            lambda _e: False,
+            _fail,
             timeout_s=_MODE_IPC_TIMEOUT_S,
         )
 
@@ -626,7 +639,8 @@ class HomeActionsMixin(WidgetAccessMixin):
             "O controle continua funcionando nos jogos, mas sem luzes, sem "
             "gatilhos e sem os seus ajustes.\n"
             "Esta janela continua aberta e NÃO liga o Hefesto de novo sozinha "
-            "— ligue na aba Sistema ou feche e abra o painel."
+            "— para ligar de novo, vá na aba Sistema e clique em \"Ligar o "
+            "Hefesto\"."
         )
 
         def _on_response(dlg: Any, response: int) -> None:

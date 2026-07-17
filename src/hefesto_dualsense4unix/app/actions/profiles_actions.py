@@ -469,7 +469,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
 
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
         self._duplicate_source = None  # perfil novo parte de defaults, não de cópia
-        self._get("profile_name_entry").set_text("novo_perfil")
+        self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
         self._get("profile_window_class_entry").set_text("")
@@ -506,7 +506,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # cópia só mudava o nome e o resto virava default (perda da config real).
         self._duplicate_source = self._find_cached_profile(name)
         current = self._get("profile_name_entry").get_text()
-        self._get("profile_name_entry").set_text(f"{current}_copia")
+        self._get("profile_name_entry").set_text(f"{current} (cópia)")
         self._toast_profile("Editor preenchido com cópia completa; ajuste o nome e Salvar")
 
     def on_profile_remove(self, _btn: Gtk.Button | None) -> None:
@@ -572,7 +572,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         try:
             profile = self._build_profile_from_editor()
         except (ValueError, ValidationError) as exc:
-            self._toast_profile(f"Inválido: {exc}")
+            # COR-D: nada de despejar o dump cru do pydantic (nome de campo
+            # interno + URL de erro) no rodapé de uma linha — traduz o erro
+            # para uma frase que o usuário entende e sabe o que fazer.
+            self._toast_profile(self._humanize_profile_error(exc))
             return
         # BUG-PROFILE-SAVE-SILENT-OVERWRITE-01: avisa ao gravar por cima de OUTRO
         # perfil existente (não no caso de edição in-place do próprio selecionado).
@@ -927,6 +930,23 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     @staticmethod
     def _split_csv(raw: str) -> list[str]:
         return [item.strip() for item in raw.split(",") if item.strip()]
+
+    @staticmethod
+    def _humanize_profile_error(exc: Exception) -> str:
+        """Traduz erros de validação do perfil para frase de gente (COR-D).
+
+        O ``str`` de uma ``ValidationError`` do pydantic traz o nome do campo
+        interno e uma URL de documentação — ilegível no rodapé de uma linha.
+        Mapeia os casos comuns; só cai no texto genérico quando não reconhece.
+        """
+        text = str(exc)
+        if "name não pode ser vazio" in text:
+            return "Dê um nome ao perfil."
+        if "caractere inválido" in text:
+            return "O nome não pode ter barra ( / ) nem dois pontos ( .. )."
+        if "não produz slug válido" in text:
+            return "Use letras ou números no nome do perfil."
+        return "Não foi possível salvar. Revise os campos do perfil."
 
     def _toast_profile(self, msg: str) -> None:
         self._status_toast("profiles", msg)

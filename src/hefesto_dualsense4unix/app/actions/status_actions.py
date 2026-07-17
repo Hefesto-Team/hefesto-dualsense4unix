@@ -55,6 +55,24 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+def _display_slot(entry: dict[str, Any]) -> int:
+    """Numero de exibicao de um controle na GUI.
+
+    Usa o ``player_slot`` de sessão — a identidade ESTÁVEL que sobrevive a
+    desconectar/reconectar (o MESMO numero mostrado nos cards, na linha de
+    comando e no applet), para o seletor e o card nunca discordarem sobre qual
+    controle e o "Controle 1". Sem slot (controle sem MAC / registro ausente),
+    cai na posicao 1-based (``index + 1``).
+    """
+    slot = entry.get("player_slot")
+    if isinstance(slot, int) and not isinstance(slot, bool):
+        return slot
+    idx = entry.get("index")
+    if isinstance(idx, int) and not isinstance(idx, bool):
+        return idx + 1
+    return 1
+
+
 class StatusActionsMixin(WidgetAccessMixin):
     """Atualiza a aba Status em tempo real.
 
@@ -258,8 +276,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         """Linhas do seletor: ``[(rótulo, índice_do_controle | None)]``.
 
         Posição 0 é sempre "Todos os controles" (None = broadcast). As demais,
-        uma por controle conectado, rotuladas "Controle N — TRANSPORTE" (N =
-        index+1, 1-based, batendo com a CLI e o applet). O índice carregado é o
+        uma por controle conectado, rotuladas "Controle N — TRANSPORTE" — N é o
+        ``player_slot`` de sessão (COR-01/D6: o MESMO número dos cards, da linha
+        de comando e do applet, estável entre replugs), com fallback para a
+        posição 1-based quando não há slot. O índice CARREGADO na linha segue o
         ``index`` 0-based do bloco ``controllers`` (o mesmo que o IPC
         ``controller.target.set`` espera). FEAT-DSX-CONTROLLER-SELECTOR-01.
         """
@@ -268,7 +288,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             idx = int(c.get("index", 0))
             transporte = (c.get("transport") or "?").upper()
             rows.append(
-                (_("Controle {n} — {t}").format(n=idx + 1, t=transporte), idx)
+                (_("Controle {n} — {t}").format(n=_display_slot(c), t=transporte), idx)
             )
         return rows
 
@@ -392,7 +412,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             )
             transporte = (c.get("transport") or "?").upper()
             label_by_index[idx] = _("Controle {n} ({t})").format(
-                n=idx + 1, t=transporte
+                n=_display_slot(c), t=transporte
             )
         self._target_uniq_by_index = uniq_by_index
         self._target_label_by_index = label_by_index
@@ -758,7 +778,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
-                '<span foreground="#d33">&#9675; Hefesto desligado</span>'
+                '<span foreground="#d33">'
+                "&#9675; Hefesto desligado — abra a aba Sistema e clique em "
+                "\"Ligar o Hefesto\""
+                "</span>"
             )
         self._set_label("status_daemon", "Desligado")
         self._set_label("status_connection", "—")
