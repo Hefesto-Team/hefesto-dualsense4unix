@@ -74,6 +74,7 @@ class _FakeManager:
     ) -> None:
         self.store = store
         self.activated: list[str] = []
+        self.origins: list[str] = []
         self.mouse_applier = kwargs.get("mouse_applier")
         self.suppression_applier = kwargs.get("suppression_applier")
         self.keyboard_device_provider = kwargs.get("keyboard_device_provider")
@@ -82,8 +83,11 @@ class _FakeManager:
     def list_profiles(self) -> list[_FakeProfile]:
         return [_FakeProfile(n) for n in self.profiles]
 
-    def activate(self, name: str) -> _FakeProfile:
+    def activate(self, name: str, *, origin: str = "manual") -> _FakeProfile:
+        # PERFIL-03: o call site de hotkey passa origin="manual" (gesto
+        # físico). Registrado para o teste de fiação dos origins.
         self.activated.append(name)
+        self.origins.append(origin)
         if self.store is not None:
             self.store.active_profile = name
         return _FakeProfile(name)

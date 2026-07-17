@@ -157,9 +157,16 @@ def test_apply_daemon_recusa_ipc_error(
     draft.write_text(json.dumps(_draft_json_valido()), encoding="utf-8")
 
     result = runner.invoke(app, ["profile", "apply", "--file", str(draft)])
-    # Mesmo com recusa, marker é gravado e exit=0 (modo defensivo).
     assert result.exit_code == 0
     assert "recusou" in result.output
+
+    # Fix do review (2026-07-16, MED): recusa ≠ ativação. O marker tem
+    # autoridade de boot (resolve_boot_profile) — gravá-lo aqui registrava um
+    # switch que NUNCA aconteceu e desviava o restore de todo boot seguinte.
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    marker = xdg_paths.config_dir() / "active_profile.txt"
+    assert not marker.exists()
 
 
 def test_apply_no_save_exige_perfil_pre_existente(

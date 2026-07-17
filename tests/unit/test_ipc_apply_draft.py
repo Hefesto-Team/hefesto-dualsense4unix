@@ -383,3 +383,154 @@ async def test_apply_draft_ordem_leds_primeiro(server_and_controller) -> None:
     applied = result["applied"]
     if "leds" in applied and "triggers" in applied:
         assert applied.index("leds") < applied.index("triggers")
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-04: seção `controllers` — overrides por-controle no apply_draft
+# ---------------------------------------------------------------------------
+
+#: MAC forjado da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
+_UNIQ_2 = "aabbcc000002"
+
+
+class _CtrlPorUniq:
+    """Stub de backend que registra as chamadas da API por-uniq."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, Any]] = []
+
+    def apply_output_for(self, uniq: str, spec: Any) -> None:
+        self.calls.append((uniq, spec))
+
+
+def _applier_com_stub() -> tuple[Any, _CtrlPorUniq]:
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+
+    ctrl = _CtrlPorUniq()
+    return DraftApplier(controller=ctrl, store=MagicMock(), daemon=None), ctrl
+
+
+def test_apply_controllers_aplica_por_uniq_com_brilho_escalado() -> None:
+    """A seção controllers vira `apply_output_for(uniq, spec)` — a API
+    por-uniq do PERFIL-01 (nunca o seletor global) — com o RGB escalado
+    pelo brilho no MESMO caminho da seção global de leds."""
+    applier, ctrl = _applier_com_stub()
+    applied = applier.apply(
+        {
+            "controllers": {
+                _UNIQ_2: {
+                    "leds": {
+                        "lightbar_rgb": [0, 100, 255],
+                        "lightbar_brightness": 0.5,
+                        "player_leds": [True, False, False, False, False],
+                    },
+                    "triggers": {"right": {"mode": "Rigid", "params": [5, 200]}},
+                }
+            }
+        }
+    )
+    assert applied == ["controllers"]
+    assert len(ctrl.calls) == 1
+    uniq, spec = ctrl.calls[0]
+    assert uniq == _UNIQ_2
+    assert spec.led == (0, 50, 127)  # escalado por 0.5 (mesmo caminho)
+    assert spec.player_leds == (True, False, False, False, False)
+    assert spec.trigger_right is not None
+    assert spec.trigger_left is None  # lado sem opinião não viaja
+    assert spec.mic_led is None  # mic jamais colateral
+
+
+def test_apply_controllers_entrada_vazia_nao_chama_backend() -> None:
+    """Entrada sem seções ({}) não gera chamada (nada a aplicar)."""
+    applier, ctrl = _applier_com_stub()
+    applied = applier.apply({"controllers": {_UNIQ_2: {}}})
+    assert applied == ["controllers"]
+    assert ctrl.calls == []
+
+
+def test_apply_controllers_invalido_nao_bloqueia_outras_secoes() -> None:
+    """Seção controllers malformada falha best-effort (warning) e as demais
+    seções seguem aplicadas — contrato do DraftApplier."""
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+
+    fc = FakeController(transport="usb")
+    fc.connect()
+    applier = DraftApplier(controller=fc, store=MagicMock(), daemon=None)
+    applied = applier.apply(
+        {
+            "controllers": ["não sou um objeto"],
+            "leds": {"lightbar_rgb": [255, 0, 0]},
+        }
+    )
+    assert "controllers" not in applied
+    assert "leds" in applied
+
+
+def test_apply_draft_global_com_alvo_selecionado_atinge_todos() -> None:
+    """Fix do review (2026-07-16, MED): as seções GLOBAIS do apply_draft vão
+    por broadcast REAL (`apply_output_defaults`, a mesma medicina do
+    `ProfileManager.apply`). Antes, com um alvo selecionado no seletor (o
+    estado normal do fluxo de edição por-controle), os setters clássicos
+    gravavam a seção GLOBAL no OVERRIDE do alvo: o `_desired_default` nunca
+    era atualizado (replug do outro controle reassertava estado velho) e o
+    outro controle não recebia NADA."""
+    from hefesto_dualsense4unix.core.backend_pydualsense import (
+        PyDualSenseController,
+    )
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+    from tests.unit.test_backend_multi_controller import (
+        KEY_1,
+        KEY_2,
+        _FakeHandle,
+        _null_evdev,
+    )
+
+    backend = PyDualSenseController(evdev_reader=_null_evdev())
+    h1, h2 = _FakeHandle(), _FakeHandle()
+    backend._handles = {KEY_1: h1, KEY_2: h2}
+    backend._primary_key = KEY_1
+    backend.set_output_target(1)  # usuária editando o Controle 2 (fluxo novo)
+
+    applier = DraftApplier(controller=backend, store=MagicMock(), daemon=None)
+    applied = applier.apply(
+        {
+            "leds": {
+                "lightbar_rgb": [129, 61, 156],
+                "lightbar_brightness": 1.0,
+                "player_leds": [True, False, False, False, False],
+            },
+            "triggers": {"right": {"mode": "Rigid", "params": [5, 200]}},
+        }
+    )
+    assert applied == ["leds", "triggers"]
+    for h in (h1, h2):  # os DOIS controles receberam a seção global
+        assert h.light.colors[-1] == (129, 61, 156)
+        assert h.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+    # O default foi atualizado (o replug reasserta o estado NOVO)...
+    assert backend._desired_default.led == (129, 61, 156)
+    assert backend._desired_default.trigger_right is not None
+    # ...e a seção global NÃO virou override do alvo.
+    assert backend._desired_by_uniq == {}
+    # O seletor da usuária segue como estava (estado de UI preservado).
+    assert backend.get_output_target_index() == 1
+
+
+@pytest.mark.asyncio
+async def test_apply_draft_controllers_fim_a_fim_com_backend_sem_estado(
+    server_and_controller,
+) -> None:
+    """Fim a fim via IPC: backend sem estado por-controle (FakeController)
+    herda o no-op seguro do IController — a seção aplica sem erro (aditivo,
+    daemon antigo simplesmente ignora a chave)."""
+    _server, socket_path, _fc, _ = server_and_controller
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call(
+            "profile.apply_draft",
+            {
+                "controllers": {
+                    _UNIQ_2: {"leds": {"lightbar_rgb": [0, 0, 255]}}
+                }
+            },
+        )
+    assert result["status"] == "ok"
+    assert "controllers" in result["applied"]

@@ -375,20 +375,20 @@ class TestVpadFF:
 
 
 class _FakeBackend:
-    """Backend multi-controle: registra rumbles com o ALVO vigente em cada um."""
+    """Backend multi-controle com a API por-uniq (PERFIL-01): registra rumbles.
+
+    `rumbles` guarda `(uniq | None, weak, strong)` — None = broadcast. O
+    seletor global (`set_output_target`) existe só para PROVAR que o rumble
+    do jogo nunca o toca (`target_calls` fica vazio): o flip transitório foi
+    substituído por `set_rumble_for` no PERFIL-01.
+    """
 
     def __init__(self, uniqs: tuple[str, ...] = (MAC_1, MAC_2)) -> None:
         self._uniqs = list(uniqs)
         self._target: int | None = None
-        self.rumbles: list[tuple[int | None, int, int]] = []
+        self.rumbles: list[tuple[str | None, int, int]] = []
         self.target_calls: list[int | None] = []
         self.primary_uniq: str | None = uniqs[0] if uniqs else None
-
-    def describe_controllers(self) -> list[dict[str, object]]:
-        return [
-            {"index": i, "uniq": u, "is_primary": i == 0, "connected": True}
-            for i, u in enumerate(self._uniqs)
-        ]
 
     def set_output_target(self, index: int | None) -> int | None:
         self.target_calls.append(index)
@@ -398,8 +398,14 @@ class _FakeBackend:
     def get_output_target_index(self) -> int | None:
         return self._target
 
+    def set_rumble_for(self, uniq: str, weak: int, strong: int) -> bool:
+        if uniq not in self._uniqs:
+            return False
+        self.rumbles.append((uniq, weak, strong))
+        return True
+
     def set_rumble(self, weak: int, strong: int) -> None:
-        self.rumbles.append((self._target, weak, strong))
+        self.rumbles.append((None, weak, strong))
 
 
 def _make_daemon(
@@ -435,24 +441,28 @@ class TestApplyGameRumble:
         gp_mod.apply_game_rumble(daemon, 200, 100)
         assert daemon.controller.rumbles == [(None, 100, 50)]
 
-    def test_target_por_mac_salva_e_restaura_o_alvo(self) -> None:
+    def test_target_por_mac_via_api_por_uniq_sem_flip(self) -> None:
+        """PERFIL-01: o FF do jogo mira por `set_rumble_for` — o seletor
+        global NUNCA é tocado (o flip transitório corria com o executor
+        multi-thread e podia persistir config no controle errado)."""
         backend = _FakeBackend()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 255, 255, target_uniq=MAC_2)
 
-        assert backend.rumbles == [(1, 255, 255)]  # aplicado no controle certo
-        assert backend.target_calls == [1, None]  # mirou e voltou ao broadcast
+        assert backend.rumbles == [(MAC_2, 255, 255)]  # aplicado no controle certo
+        assert backend.target_calls == []  # seletor global intocado
         assert backend.get_output_target_index() is None
 
-    def test_target_restaura_selecao_previa_da_usuaria(self) -> None:
+    def test_target_nao_toca_selecao_previa_da_usuaria(self) -> None:
         backend = _FakeBackend()
         backend.set_output_target(0)  # usuária tinha selecionado o Controle 1
         backend.target_calls.clear()
         daemon = _make_daemon(controller=backend)
         gp_mod.apply_game_rumble(daemon, 100, 100, target_uniq=MAC_2)
 
-        assert backend.rumbles == [(1, 100, 100)]
+        assert backend.rumbles == [(MAC_2, 100, 100)]
         assert backend.get_output_target_index() == 0  # seleção preservada
+        assert backend.target_calls == []  # nem um flip sequer
 
     def test_mac_desconhecido_cai_em_broadcast(self) -> None:
         backend = _FakeBackend()
@@ -475,7 +485,7 @@ class TestApplyGameRumble:
         daemon = _make_daemon(controller=backend)
         sink = gp_mod.make_primary_rumble_sink(daemon)
         sink(64, 128)
-        assert backend.rumbles == [(0, 64, 128)]
+        assert backend.rumbles == [(MAC_1, 64, 128)]
 
 
 class TestCoopPlayerRumbleSink:
@@ -485,7 +495,7 @@ class TestCoopPlayerRumbleSink:
         mgr = CoopManager(daemon)
         sink = mgr._make_player_rumble_sink(MAC_2)
         sink(32, 200)
-        assert backend.rumbles == [(1, 32, 200)]
+        assert backend.rumbles == [(MAC_2, 32, 200)]
 
     def test_identidade_sem_mac_cai_em_broadcast(self) -> None:
         backend = _FakeBackend()

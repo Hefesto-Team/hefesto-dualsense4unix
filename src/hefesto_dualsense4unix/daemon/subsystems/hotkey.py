@@ -97,6 +97,7 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
     """
 
     async def _cycle() -> None:
+        import functools
         import time as _time
 
         from hefesto_dualsense4unix.daemon.state_store import MANUAL_PROFILE_LOCK_SEC
@@ -143,7 +144,13 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             await daemon._run_blocking(daemon.controller.set_led, (255, 255, 255))
             await asyncio.sleep(0.12)
 
-        profile = await daemon._run_blocking(manager.activate, target)
+        # PERFIL-03: botão físico no controle = gesto MANUAL — origin="manual"
+        # persiste a intenção em session.json (paridade com o profile.switch).
+        # `functools.partial` porque `_run_blocking(fn, *args)` só aceita
+        # posicionais e `origin` é keyword-only.
+        profile = await daemon._run_blocking(
+            functools.partial(manager.activate, target, origin="manual")
+        )
         with contextlib.suppress(Exception):
             save_active_marker(profile.name)
         # Gesto explícito do usuário: libera o autoswitch e arma o lock manual

@@ -25,11 +25,59 @@ class LightbarActionsMixin(WidgetAccessMixin):
     # Guard para bloquear o handler durante refresh programático do slider.
     _refresh_guard: bool = False
 
-    def _refresh_lightbar_from_draft(self) -> None:
-        """Popula widgets da aba Lightbar a partir de self.draft.leds.
+    def _edit_uniq(self) -> str | None:
+        """MAC do controle em edição (PERFIL-04); None = edição global.
 
-        Protegido por _refresh_guard para não disparar handlers de signal
-        durante a atualização programatica dos widgets.
+        Vem do seletor de alvo do banner (``StatusActionsMixin`` mantém
+        ``_edit_target_uniq`` em sync com o daemon). getattr defensivo: o
+        mixin pode ser instanciado sozinho em testes.
+        """
+        return getattr(self, "_edit_target_uniq", None)
+
+    def _persist_leds_update(self, update: dict[str, Any]) -> None:
+        """Grava campos de LEDs no draft — no GLOBAL ou no override do alvo.
+
+        PERFIL-04 (sprint perfis-por-controle): com um controle selecionado
+        no seletor do banner, a edição cai em ``draft.controllers[uniq].leds``
+        — semeada com o que está NA TELA (o efetivo do alvo), então mudar só
+        a cor preserva brilho/player-LEDs exibidos. É o que faz o "Salvar
+        Perfil" do rodapé persistir o ajuste DENTRO do perfil, por controle
+        ("configurei pro 1-BT, fica salvo pra ele dentro do meu perfil").
+
+        Em "Todos", seção global do draft — E o campo editado sai dos
+        overrides por-controle (fix HIGH do review 2026-07-16), espelhando a
+        regra que o backend aplica ao vivo: sem a limpeza, "mudei todos para
+        azul" + "Salvar Perfil" ressuscitava a cor antiga do alvo na próxima
+        ativação. Cor e brilho saem JUNTOS (formam um único campo — o RGB
+        pré-escalado — no estado desejado do backend).
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        uniq = self._edit_uniq()
+        if uniq is None:
+            new_leds = draft.leds.model_copy(update=update)
+            draft = draft.model_copy(update={"leds": new_leds})
+            campos: set[str] = set()
+            if "lightbar_rgb" in update or "lightbar_brightness" in update:
+                campos |= {"lightbar", "lightbar_brightness"}
+            if "player_leds" in update:
+                campos.add("player_leds")
+            if campos:
+                draft = draft.with_override_fields_cleared("leds", campos)
+            self.draft = draft
+            return
+        base = draft.effective_leds_for(uniq)
+        self.draft = draft.with_controller_leds(uniq, base.model_copy(update=update))
+
+    def _refresh_lightbar_from_draft(self) -> None:
+        """Popula widgets da aba Lightbar a partir do draft.
+
+        PERFIL-04: exibe os LEDs EFETIVOS do alvo de edição atual — o
+        override por-controle quando existe (brilho incluso, lido do PERFIL,
+        não do backend), senão a seção global. Protegido por _refresh_guard
+        para não disparar handlers de signal durante a atualização
+        programatica dos widgets.
         """
         if self._refresh_guard:
             return
@@ -38,7 +86,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         self._refresh_guard = True
         try:
-            leds = draft.leds
+            leds = draft.effective_leds_for(self._edit_uniq())
             # Cor RGB
             if leds.lightbar_rgb is not None:
                 r, g, b = leds.lightbar_rgb
@@ -97,12 +145,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
             int(rgba.green * 255),
             int(rgba.blue * 255),
         )
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"lightbar_rgb": self._current_rgb})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft (global ou override do alvo — PERFIL-04)
+        self._persist_leds_update({"lightbar_rgb": self._current_rgb})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -131,14 +175,9 @@ class LightbarActionsMixin(WidgetAccessMixin):
         pct = max(0.0, min(100.0, raw))
         self._current_brightness = pct / 100.0
         self._pending_brightness = self._current_brightness
-        # Atualiza draft com novo valor de brightness.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(
-                update={"lightbar_brightness": round(pct)}
-            )
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft com novo valor de brightness (global ou override do
+        # alvo — PERFIL-04).
+        self._persist_leds_update({"lightbar_brightness": round(pct)})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -156,10 +195,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # B2: espelha a cor preta no draft (mesmo mecanismo de
         # on_lightbar_color_set). Sem isso, "Apagar" + "Salvar Perfil" gravava a
         # cor antiga e revisitar a aba repintava a cor anterior.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            new_leds = draft.leds.model_copy(update={"lightbar_rgb": self._current_rgb})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        self._persist_leds_update({"lightbar_rgb": self._current_rgb})
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()
@@ -201,10 +237,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         bits = self.get_current_player_leds()
         # Atualiza draft — mantém consistência com on_player_led_toggled.
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         label = " ".join("x" if b else "-" for b in bits)
         self._toast_light(
@@ -225,12 +258,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if getattr(self, "_player_leds_batch_guard", False):
             return
         bits = self.get_current_player_leds()
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft (global ou override do alvo — PERFIL-04)
+        self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         label = " ".join("x" if b else "-" for b in bits)
         self._toast_light(
@@ -257,12 +286,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         bits: tuple[bool, bool, bool, bool, bool] = (
             pattern[0], pattern[1], pattern[2], pattern[3], pattern[4]
         )
-        # Atualiza draft
-        draft = getattr(self, "draft", None)
-        if draft is not None:
-
-            new_leds = draft.leds.model_copy(update={"player_leds": bits})
-            self.draft = draft.model_copy(update={"leds": new_leds})
+        # Atualiza draft (global ou override do alvo — PERFIL-04)
+        self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         label = " ".join("x" if s else "-" for s in pattern)
         self._toast_light(

@@ -59,8 +59,10 @@ class IpcHandlersMixin:
         """Aplica perfil escolhido pelo usuário (entrada manual via IPC).
 
         Persistência (CLUSTER-IPC-STATE-PROFILE-01 Bug B):
-          - `manager.activate(name)` já grava `session.json` (canônico — usado
-            pelo daemon em `restore_last_profile` no boot/reconnect).
+          - `manager.activate(name, origin="manual")` grava `session.json`
+            (canônico — usado pelo daemon em `restore_last_profile` no
+            boot/reconnect). PERFIL-03: este handler é gesto MANUAL da
+            usuária (GUI/CLI) — só os origins "manual" persistem a intenção.
           - Adicionalmente, escrevemos `active_profile.txt` para paridade com
             a CLI legada (`hefesto-dualsense4unix profile current` ainda lê esse marker).
           - Falha em escrever o marker é best-effort: loga warning mas não
@@ -75,7 +77,7 @@ class IpcHandlersMixin:
         name = params.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
-        profile = self.profile_manager.activate(name)
+        profile = self.profile_manager.activate(name, origin="manual")
         # Bug B: paridade do marker da CLI legada com session.json.
         from hefesto_dualsense4unix.utils.session import save_active_marker
         save_active_marker(profile.name)

@@ -226,7 +226,11 @@ class AutoSwitcher:
         self._suppress_log_key = None
         from_profile = self._current_profile
         try:
-            self.manager.activate(name)
+            # PERFIL-03: troca AUTOMÁTICA por janela — origin="autoswitch" NÃO
+            # grava session.json. Era o bug provado do autoload: o autoswitch
+            # reescrevia a intenção manual da usuária a cada troca de janela e
+            # o boot restaurava "Navegação" em vez do perfil que ela escolheu.
+            self.manager.activate(name, origin="autoswitch")
         except Exception as exc:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return

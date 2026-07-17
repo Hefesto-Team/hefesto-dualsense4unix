@@ -3,8 +3,9 @@
 Responsabilidades:
   - Listar, selecionar e aplicar perfis.
   - Atualizar o `StateStore` com o nome do perfil ativo.
-  - Chamar `set_trigger` e `apply_led_settings` no controle quando um
-    perfil é ativado.
+  - Aplicar triggers + LEDs no controle quando um perfil é ativado — via a
+    API por-uniq do backend (PERFIL-01: broadcast REAL que ignora o seletor
+    de alvo da GUI + substituição do mapa de overrides por-controle).
 
 Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch` (W6.2).
 """
@@ -13,9 +14,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from hefesto_dualsense4unix.core.controller import IController
+from hefesto_dualsense4unix.core.controller import IController, OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS, KeyBinding
-from hefesto_dualsense4unix.core.led_control import LedSettings, apply_led_settings
+from hefesto_dualsense4unix.core.led_control import LedSettings
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
@@ -24,7 +25,11 @@ from hefesto_dualsense4unix.profiles.loader import (
     load_profile,
     save_profile,
 )
-from hefesto_dualsense4unix.profiles.schema import LedsConfig, Profile
+from hefesto_dualsense4unix.profiles.schema import (
+    ControllerOverrides,
+    LedsConfig,
+    Profile,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -115,17 +120,43 @@ class ProfileManager:
         except ValueError:
             return active == name
 
-    def activate(self, name: str) -> Profile:
-        """Carrega, aplica triggers + LEDs + teclado + emulação e marca como ativo."""
+    def activate(self, name: str, *, origin: str = "manual") -> Profile:
+        """Carrega, aplica triggers + LEDs + teclado + emulação e marca como ativo.
+
+        PERFIL-03 (autoload): `origin` separa o GESTO MANUAL da usuária das
+        ativações automáticas — o bug provado do sprint era o autoswitch
+        reescrever `session.json` a cada troca de janela, e o boot restaurar
+        "Navegação" em vez da escolha dela. Valores:
+
+          - ``"manual"`` (default) — profile.switch via IPC (GUI/CLI) e o
+            ciclo por hotkey (PS+D-pad): É a intenção da usuária → persiste
+            em `session.json` (`save_last_profile`).
+          - ``"autoswitch"`` — troca automática por janela em foco: aplica e
+            marca ativo, mas NÃO grava a intenção manual.
+          - ``"system"`` — restore de boot e saída do Modo Nativo: idem, o
+            sistema re-aplicando estado não é escolha nova.
+
+        O default "manual" é deliberado: um caller novo que esqueça o
+        parâmetro preserva o comportamento histórico (gravar), nunca
+        silencia um gesto real da usuária. NÃO confundir com o `origin`
+        do latch de `start_gamepad_emulation` ("manual"/"profile") — são
+        contratos distintos.
+        """
         profile = load_profile(name)
         self.apply(profile)
         self.apply_keyboard(profile)
         self.apply_emulation(profile)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
-        logger.info("profile_activated", name=profile.name, priority=profile.priority)
-        from hefesto_dualsense4unix.utils.session import save_last_profile
-        save_last_profile(profile.name)
+        logger.info(
+            "profile_activated",
+            name=profile.name,
+            priority=profile.priority,
+            origin=origin,
+        )
+        if origin == "manual":
+            from hefesto_dualsense4unix.utils.session import save_last_profile
+            save_last_profile(profile.name)
         # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
         # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
         try:
@@ -138,14 +169,45 @@ class ProfileManager:
         return profile
 
     def apply(self, profile: Profile) -> None:
-        """Aplica triggers e LEDs do perfil no controle (sem marcar como ativo)."""
-        for side, trigger in (("left", profile.triggers.left), ("right", profile.triggers.right)):
-            effect = build_from_name(trigger.mode, trigger.params)
-            self.controller.set_trigger(side, effect)  # type: ignore[arg-type]
+        """Aplica triggers e LEDs do perfil em TODOS os controles (sem marcar ativo).
 
-        leds = profile.leds
-        settings = _to_led_settings(leds)
-        apply_led_settings(self.controller, settings)
+        PERFIL-01 (4P-01): a seção global vai por `apply_output_defaults` —
+        broadcast REAL que IGNORA o seletor de alvo da GUI. Os setters
+        clássicos respeitam o seletor, então ativar um perfil com um alvo
+        selecionado (manual OU via autoswitch, que passa pela MESMA cadeia
+        `activate()` → `apply()`) atingia SÓ o alvo — bug provado do sprint.
+        O brilho passa pelo MESMO caminho de escala do histórico
+        (`LedSettings.apply_brightness`, paridade com `apply_led_settings`).
+
+        Na sequência, a ativação SUBSTITUI o mapa de overrides por-controle
+        (`reset_output_overrides`): nada do perfil anterior ressuscita num
+        replug sob o perfil novo. PERFIL-04: as entradas de
+        `profile.controllers` (mapa por-MAC no JSON) entram no reset e cada
+        uma é aplicada via `apply_output_for` — controle conectado recebe na
+        hora, desconectado fica REGISTRADO no mapa em memória do backend (o
+        hotplug o aplica quando ele chegar; é o teste de fogo do PERFIL-05c).
+        O brilho do override escala pelo MESMO caminho da seção global.
+
+        Mic-LED fica de fora por decisão deliberada
+        (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01): jamais colateral de
+        profile switch.
+        """
+        left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
+        right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
+        settings = _to_led_settings(profile.leds)
+        effective = settings.apply_brightness(settings.brightness_level)
+        self.controller.apply_output_defaults(
+            OutputSpec(
+                trigger_left=left,
+                trigger_right=right,
+                led=effective.lightbar,
+                player_leds=settings.player_leds,
+            )
+        )
+        overrides = _controllers_to_specs(profile.controllers, profile.leds)
+        self.controller.reset_output_overrides(overrides or None)
+        for uniq, spec in overrides.items():
+            self.controller.apply_output_for(uniq, spec)
 
     def apply_keyboard(self, profile: Profile) -> None:
         """Propaga `key_bindings` do perfil ao device virtual de teclado (A-06).
@@ -300,6 +362,83 @@ def _to_key_bindings(profile: Profile) -> dict[str, KeyBinding]:
     return resolve_key_bindings(profile.key_bindings)
 
 
+def _controllers_to_specs(
+    controllers: dict[str, ControllerOverrides] | None,
+    global_leds: LedsConfig | None = None,
+) -> dict[str, OutputSpec]:
+    """Converte o mapa `controllers` do perfil em `OutputSpec` por MAC.
+
+    PERFIL-04 (sprint perfis-por-controle): o vocabulário parcial se
+    preserva — seção ausente no override (`None`) vira campo `None` no spec
+    ("sem opinião": o merge POR CAMPO do backend herda o padrão broadcast).
+
+    Fix do review (2026-07-16, MED): a parcialidade vale também DENTRO da
+    seção — só campos EXPLICITAMENTE escritos no JSON (``model_fields_set``
+    do pydantic) entram no spec; campo não escrito vira ``None`` e herda o
+    global no merge do backend, em paridade com o applier IPC. Antes, os
+    defaults do schema densificavam os campos ausentes (player-LEDs todos
+    apagados, brilho 1.0, gatilho ``Off``) e pisavam o global do controle —
+    a resolução-por-objeto refutada pelo sprint doc, um nível abaixo.
+
+    Cor e brilho formam UM campo no backend (o RGB pré-escalado); quando o
+    override escreve só um dos dois, o outro é resolvido de ``global_leds``
+    (a seção global do perfil) AQUI na borda. O brilho escala o RGB pelo
+    MESMO caminho da seção global (`LedSettings.apply_brightness`): o que
+    fica registrado no mapa do backend — e reaplicado no hotplug — é a cor
+    JÁ escalada, em paridade com o broadcast. Entradas sem nenhum campo
+    escrito são puladas.
+    """
+    out: dict[str, OutputSpec] = {}
+    for uniq, cfg in (controllers or {}).items():
+        trigger_left: TriggerEffect | None = None
+        trigger_right: TriggerEffect | None = None
+        if cfg.triggers is not None:
+            lados = cfg.triggers.model_fields_set
+            if "left" in lados:
+                trigger_left = build_from_name(
+                    cfg.triggers.left.mode, cfg.triggers.left.params
+                )
+            if "right" in lados:
+                trigger_right = build_from_name(
+                    cfg.triggers.right.mode, cfg.triggers.right.params
+                )
+        led: tuple[int, int, int] | None = None
+        player_leds: tuple[bool, bool, bool, bool, bool] | None = None
+        if cfg.leds is not None:
+            campos = cfg.leds.model_fields_set
+            if "lightbar" in campos or "lightbar_brightness" in campos:
+                rgb = (
+                    cfg.leds.lightbar
+                    if "lightbar" in campos or global_leds is None
+                    else global_leds.lightbar
+                )
+                brilho = (
+                    cfg.leds.lightbar_brightness
+                    if "lightbar_brightness" in campos or global_leds is None
+                    else global_leds.lightbar_brightness
+                )
+                settings = LedSettings(
+                    lightbar=rgb, brightness_level=float(brilho)
+                )
+                led = settings.apply_brightness(settings.brightness_level).lightbar
+            if "player_leds" in campos:
+                player_leds = _to_led_settings(cfg.leds).player_leds
+        if (
+            trigger_left is None
+            and trigger_right is None
+            and led is None
+            and player_leds is None
+        ):
+            continue
+        out[uniq] = OutputSpec(
+            trigger_left=trigger_left,
+            trigger_right=trigger_right,
+            led=led,
+            player_leds=player_leds,
+        )
+    return out
+
+
 def _to_led_settings(leds: LedsConfig) -> LedSettings:
     """Converte `LedsConfig` (schema de perfil) em `LedSettings` (camada de hardware).
 
@@ -322,6 +461,7 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
 
 __all__ = [
     "ProfileManager",
+    "_controllers_to_specs",
     "_to_key_bindings",
     "_to_led_settings",
     "resolve_key_bindings",

@@ -376,11 +376,12 @@ class CoopManager:
         """Sink de FF do vpad de UM jogador → rumble no controle DELE (por MAC).
 
         FEAT-VPAD-FF-PASSTHROUGH-01: delega em `apply_game_rumble` com
-        `target_uniq=MAC` — targeting via o seletor público do backend
-        (`describe_controllers` + `set_output_target`), com a política global
-        de intensidade e o respeito ao rumble fixado já embutidos lá.
-        Identidade sem MAC ("path:...") não tem como casar o handle →
-        broadcast (limitação documentada; não acontece com DualSense real).
+        `target_uniq=MAC` — targeting via a API por-uniq do backend
+        (`set_rumble_for`, PERFIL-01, sem flip do seletor global), com a
+        política global de intensidade e o respeito ao rumble fixado já
+        embutidos lá. Identidade sem MAC ("path:...") não tem como casar o
+        handle → broadcast (limitação documentada; não acontece com DualSense
+        real).
         """
         daemon = self._daemon
 
@@ -506,10 +507,13 @@ class CoopManager:
     def _profile_player_leds(self) -> tuple[bool, bool, bool, bool, bool] | None:
         """Último padrão de player-LED aplicado pelo perfil/GUI (broadcast).
 
-        Decisão (documentada): o perfil aplica player-LEDs por broadcast via
-        `controller.set_player_leds` (`core/led_control.apply_led_settings`) e
-        o backend guarda o último padrão pedido em `_desired.player_leds` para
-        re-afirmá-lo em reconexões. Ler esse valor é a forma mais simples e
+        Decisão (documentada): o perfil aplica player-LEDs por broadcast
+        (`apply_output_defaults`/`set_player_leds`) e o backend guarda o
+        último padrão pedido no DEFAULT do estado desejado para re-afirmá-lo
+        em reconexões. PERFIL-01: `_desired` é a property de compatibilidade
+        do backend → `_desired_default` (o padrão broadcast, exatamente o que
+        este revert precisa); overrides por-controle são assunto do
+        PERFIL-06 (revert por-uniq). Ler esse valor é a forma mais simples e
         fiel de saber "o padrão do perfil ativo" sem recarregar o perfil aqui.
         None = nenhum perfil/GUI setou player-LED ainda.
         """

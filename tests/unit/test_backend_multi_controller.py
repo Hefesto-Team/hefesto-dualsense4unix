@@ -11,14 +11,25 @@ Cobre:
 
 O INPUT/EMULAÇÃO permanece single-controller (lê do primário) — coberto pelos
 testes de `read_state` em `test_controller.py`.
+
+PERFIL-01 (4P-01): `TestDesiredPorControle` cobre o estado desejado POR
+CONTROLE — o bug provado ao vivo (replug herdando o ajuste de outro controle),
+o merge POR CAMPO, o reset na ativação de perfil, o registro de controle
+desconectado e o cenário 2P com um override para cada.
 """
 from __future__ import annotations
 
 from unittest.mock import patch
 
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
-from hefesto_dualsense4unix.core.controller import TriggerEffect
+from hefesto_dualsense4unix.core.controller import OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+#: Keys MAC-formadas (faixa forjada aa:bb:cc — teste-guarda de anonimato).
+KEY_1 = "AA:BB:CC:00:00:01"
+KEY_2 = "AA:BB:CC:00:00:02"
+UNIQ_1 = "aabbcc000001"
+UNIQ_2 = "aabbcc000002"
 
 
 def _null_evdev() -> EvdevReader:
@@ -392,3 +403,171 @@ class TestPinnedPyDualSense:
         assert captured["path"] == b"/dev/hidraw9"
         assert is_edge is True
         assert isinstance(dev, _FakeDev)
+
+
+def _with_two_macs() -> tuple[PyDualSenseController, _FakeHandle, _FakeHandle]:
+    """Dois controles com keys MAC reais (uniq resolve) — cenários PERFIL-01."""
+    inst = PyDualSenseController(evdev_reader=_null_evdev())
+    h1, h2 = _FakeHandle(), _FakeHandle()
+    inst._handles = {KEY_1: h1, KEY_2: h2}  # type: ignore[dict-item]
+    inst._primary_key = KEY_1
+    return inst, h1, h2
+
+
+def _reconcile(inst: PyDualSenseController, keys: list[str], opened: list[_FakeHandle]) -> None:
+    """Um tick de hotplug: `keys` presentes; handles novos saem de `opened`.
+
+    Hermético: `sysfs_leds.discover` é stubado para {} — nunca toca o
+    /sys/class/leds real (na máquina da mantenedora há DualSense de verdade).
+    """
+    fila = list(opened)
+    with patch.object(
+        PyDualSenseController,
+        "_enumerate_device_keys",
+        return_value=[(k, f"/dev/hidraw{i}".encode(), False) for i, k in enumerate(keys)],
+    ), patch.object(
+        PyDualSenseController,
+        "_open_one",
+        side_effect=lambda path, *, is_edge: fila.pop(0),
+    ), patch("hefesto_dualsense4unix.core.sysfs_leds.discover", return_value={}):
+        inst.connect()
+
+
+class TestDesiredPorControle:
+    """PERFIL-01 (4P-01): o hotplug reaplica o desejado DO CONTROLE CERTO."""
+
+    def test_replug_do_controle_1_nao_herda_a_cor_do_controle_2(self) -> None:
+        """O bug PROVADO AO VIVO: mirar o Controle 2 no seletor e replugar o
+        Controle 1 o pintava com a cor do 2 (o `_desired` era global)."""
+        inst, _h1, _h2 = _with_two_macs()
+        inst.set_led((10, 10, 10))  # cor A, broadcast (perfil)
+        inst.set_output_target(1)  # seletor: Controle 2
+        inst.set_led((0, 255, 0))  # cor B só nele
+        inst.set_output_target(None)
+
+        _reconcile(inst, keys=[KEY_2], opened=[])  # Controle 1 desconecta
+        assert KEY_1 not in inst._handles
+        h1b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_2, KEY_1], opened=[h1b])  # ...e volta
+
+        assert h1b.light.colors[-1] == (10, 10, 10)  # cor A — NUNCA a B do outro
+        assert (0, 255, 0) not in h1b.light.colors
+
+    def test_replug_do_alvo_recebe_o_proprio_override(self) -> None:
+        inst, _h1, _h2 = _with_two_macs()
+        inst.set_led((10, 10, 10))
+        inst.set_output_target(1)
+        inst.set_led((0, 255, 0))
+        inst.set_output_target(None)
+
+        _reconcile(inst, keys=[KEY_1], opened=[])  # Controle 2 desconecta
+        h2b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h2b])
+
+        assert h2b.light.colors[-1] == (0, 255, 0)  # o override DELE sobrevive
+
+    def test_override_parcial_faz_merge_por_campo_no_replug(self) -> None:
+        """Exigido pela revisão: só triggers no override → replug recebe os
+        triggers do override E a cor global (nunca resolução por objeto)."""
+        inst, _h1, _h2 = _with_two_macs()
+        inst.set_led((10, 20, 30))  # cor global do perfil
+        inst.set_output_target(1)
+        inst.set_trigger("right", TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0)))
+        inst.set_output_target(None)
+
+        _reconcile(inst, keys=[KEY_1], opened=[])
+        h2b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h2b])
+
+        assert h2b.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]  # override
+        assert h2b.light.colors[-1] == (10, 20, 30)  # + cor global (merge)
+
+    def test_reset_na_ativacao_nada_do_perfil_anterior_ressuscita(self) -> None:
+        """Ativar perfil com override e depois perfil SEM `controllers`:
+        o replug recebe o default do perfil novo (mapa substituído)."""
+        inst, _h1, _h2 = _with_two_macs()
+        # Perfil 1: default vermelho + override verde no Controle 2 (o fluxo
+        # que o ProfileManager.apply executa; PERFIL-02 pluga o JSON).
+        inst.apply_output_defaults(OutputSpec(led=(255, 0, 0)))
+        inst.reset_output_overrides({UNIQ_2: OutputSpec(led=(0, 255, 0))})
+        # Perfil 2: sem overrides.
+        inst.apply_output_defaults(OutputSpec(led=(0, 0, 255)))
+        inst.reset_output_overrides(None)
+
+        _reconcile(inst, keys=[KEY_1], opened=[])
+        h2b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h2b])
+
+        assert h2b.light.colors[-1] == (0, 0, 255)  # default novo, sem fantasma
+
+    def test_apply_output_for_desconectado_fica_registrado_e_aplica_no_hotplug(
+        self,
+    ) -> None:
+        """Override de controle DESCONECTADO entra no mapa (só a escrita de
+        hardware é pulada) — "aplica quando chegar" exige o registro."""
+        inst = PyDualSenseController(evdev_reader=_null_evdev())
+        h1 = _FakeHandle()
+        inst._handles = {KEY_1: h1}  # type: ignore[dict-item]
+        inst._primary_key = KEY_1
+        inst.apply_output_defaults(OutputSpec(led=(10, 20, 30)))
+        inst.apply_output_for(UNIQ_2, OutputSpec(led=(0, 255, 0)))  # nem plugado
+
+        h2 = _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h2])
+
+        assert h2.light.colors[-1] == (0, 255, 0)  # chegou e recebeu o DELE
+        assert h1.light.colors[-1] == (10, 20, 30)  # o conectado ficou no global
+
+    def test_apply_output_for_conectado_escreve_no_hardware_na_hora(self) -> None:
+        inst, _h1, h2 = _with_two_macs()
+        inst.apply_output_for(UNIQ_2, OutputSpec(led=(0, 255, 0)))
+        assert h2.light.colors == [(0, 255, 0)]
+        assert _h1.light.colors == []
+
+    def test_multi_2p_cada_controle_mantem_o_seu_no_replug(self) -> None:
+        """Cenário 2P: um override para cada — replug devolve o de CADA um."""
+        inst, _h1, _h2 = _with_two_macs()
+        inst.set_output_target(0)
+        inst.set_led((255, 0, 0))  # Controle 1: vermelho
+        inst.set_output_target(1)
+        inst.set_led((0, 0, 255))  # Controle 2: azul
+        inst.set_output_target(None)
+
+        _reconcile(inst, keys=[], opened=[])  # os dois saem
+        h1b, h2b = _FakeHandle(), _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h1b, h2b])
+
+        assert h1b.light.colors[-1] == (255, 0, 0)
+        assert h2b.light.colors[-1] == (0, 0, 255)
+
+    def test_mic_led_mirado_nao_vaza_no_replug_de_outro_controle(self) -> None:
+        """A cura de carona do PERFIL-01: o mic-LED mirado persistia no
+        `_desired` global e vazava no hotplug de OUTRO controle."""
+        inst, _h1, _h2 = _with_two_macs()
+        inst.set_output_target(1)
+        inst.set_mic_led(True)  # só no Controle 2
+        inst.set_output_target(None)
+
+        _reconcile(inst, keys=[KEY_2], opened=[])
+        h1b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_2, KEY_1], opened=[h1b])
+
+        assert h1b.audio.mic_led_history == []  # nada herdado
+
+    def test_perfil_broadcast_apos_override_pinta_todos_e_replug_segue_o_novo(
+        self,
+    ) -> None:
+        """Regressão do caso mono-perfil: broadcast novo vence overrides velhos
+        (o campo escrito é limpo do mapa — "um voltou verde" é proibido)."""
+        inst, h1, h2 = _with_two_macs()
+        inst.set_output_target(1)
+        inst.set_led((0, 255, 0))
+        inst.set_output_target(None)
+        inst.set_led((0, 0, 255))  # "Todos"
+
+        assert h1.light.colors[-1] == (0, 0, 255)
+        assert h2.light.colors[-1] == (0, 0, 255)
+        _reconcile(inst, keys=[KEY_1], opened=[])
+        h2b = _FakeHandle()
+        _reconcile(inst, keys=[KEY_1, KEY_2], opened=[h2b])
+        assert h2b.light.colors[-1] == (0, 0, 255)  # não "voltou verde"

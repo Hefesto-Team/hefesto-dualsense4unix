@@ -427,9 +427,36 @@ def audit_profiles() -> list[tuple[str, str]]:
 
 
 def save_profile(profile: Profile) -> Path:
-    """Grava perfil em `<slugify(profile.name)>.json` de forma atômica."""
+    """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
+
+    PERFIL-02 (sprint perfis-por-controle): o campo aditivo ``controllers``
+    é OMITIDO do JSON quando None/vazio — requisito de COMPATIBILIDADE, não
+    estética. `model_dump` sem exclude emitiria ``"controllers": null`` em
+    TODO save, e binário antigo (``extra="forbid"``) rejeitaria TODO perfil
+    no downgrade; com a omissão, só perfis que USAM o mapa ficam
+    incompatíveis, e perfis antigos seguem round-trip load→save sem ganhar
+    a chave.
+
+    Fix do review (2026-07-16, MED): as ENTRADAS do mapa são serializadas
+    com ``exclude_unset`` — um override PARCIAL escrito à mão (só
+    ``lightbar``, só ``left``...) continua parcial no disco. O dump denso
+    marcava os defaults do schema como explícitos no próximo load e a
+    ativação pisava o global do controle (player-LEDs apagados, brilho 1.0)
+    — a resolução-por-objeto refutada pelo sprint doc, reintroduzida pela
+    serialização. Overrides criados pela GUI são densos por semeadura (o que
+    ela vê é o que salva) e saem com os mesmos campos de antes; a única
+    diferença cosmética é a seção nunca-escrita (ex.: ``"triggers": null``)
+    deixar de aparecer — o load é semanticamente idêntico.
+    """
     path = _profile_path(profile)
     payload = profile.model_dump(mode="json")
+    if not payload.get("controllers"):
+        payload.pop("controllers", None)
+    else:
+        payload["controllers"] = {
+            uniq: cfg.model_dump(mode="json", exclude_unset=True)
+            for uniq, cfg in (profile.controllers or {}).items()
+        }
     with FileLock(str(_lock_path(path))):
         _atomic_write_json(path, payload)
     return path

@@ -5,6 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from hefesto_dualsense4unix.profiles.schema import (
+    ControllerOverrides,
     LedsConfig,
     MatchAny,
     MatchCriteria,
@@ -180,3 +181,147 @@ class TestProfile:
         dumped = original.model_dump(mode="json")
         restored = Profile.model_validate(dumped)
         assert restored == original
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-02 (sprint 2026-07-16-perfis-por-controle): mapa `controllers`
+# ---------------------------------------------------------------------------
+
+#: MACs forjados das faixas permitidas (test_anonimato_de_fixtures.py).
+_MAC_CABO = "aabbcc000001"
+_MAC_BT = "aabbcc000002"
+
+
+class TestControllersMap:
+    def test_perfil_antigo_sem_mapa_carrega_com_none(self):
+        """Migração: perfil v1 (sem o campo) valida e `controllers` fica None."""
+        p = Profile.model_validate({"name": "vitoria", "match": {"type": "any"}})
+        assert p.controllers is None
+
+    def test_mapa_valido_roundtrip(self):
+        """O aceite 1 do sprint: o mapa sobrevive a dump→validate sem perda."""
+        original = Profile(
+            name="vitoria",
+            match=MatchAny(),
+            controllers={
+                _MAC_BT: ControllerOverrides(
+                    leds=LedsConfig(lightbar=(0, 255, 0)),
+                ),
+            },
+        )
+        restored = Profile.model_validate(original.model_dump(mode="json"))
+        assert restored == original
+        assert restored.controllers is not None
+        assert restored.controllers[_MAC_BT].leds is not None
+        assert restored.controllers[_MAC_BT].leds.lightbar == (0, 255, 0)
+
+    def test_override_parcial_valido(self):
+        """Só triggers no override — leds None herda a seção global (merge
+        POR CAMPO acontece na aplicação, PERFIL-01)."""
+        p = Profile.model_validate(
+            {
+                "name": "x",
+                "match": {"type": "any"},
+                "controllers": {
+                    _MAC_CABO: {"triggers": {"left": {"mode": "Rigid", "params": [0, 100]}}}
+                },
+            }
+        )
+        assert p.controllers is not None
+        override = p.controllers[_MAC_CABO]
+        assert override.leds is None
+        assert override.triggers is not None
+        assert override.triggers.left.mode == "Rigid"
+
+    def test_key_com_separadores_e_caixa_canonizada(self):
+        """JSON editado à mão com "AA:BB:CC:..." casa a key que o backend
+        enumera — mesma normalização do `norm_mac`."""
+        p = Profile.model_validate(
+            {
+                "name": "x",
+                "match": {"type": "any"},
+                "controllers": {"AA:BB:CC:00:00:02": {}},
+            }
+        )
+        assert p.controllers is not None
+        assert list(p.controllers) == [_MAC_BT]
+
+    def test_key_path_fallback_rejeitada(self):
+        """Key de fallback por path (controle sem serial) não entra no mapa."""
+        with pytest.raises(ValidationError, match="12 dígitos"):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "controllers": {"path:/dev/hidraw3": {}},
+                }
+            )
+
+    def test_key_curta_rejeitada(self):
+        with pytest.raises(ValidationError, match="12 dígitos"):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "controllers": {"aabbcc": {}},
+                }
+            )
+
+    def test_key_degenerada_pro_controller_rejeitada(self):
+        """O uniq `000000000001` (medido no Pro Controller, idêntico entre
+        unidades) tem 12 hex mas NÃO identifica um controle — rejeitar com
+        mensagem clara é o aceite 4 do sprint."""
+        with pytest.raises(ValidationError, match="degenerado"):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "controllers": {"000000000001": {}},
+                }
+            )
+
+    def test_key_broadcast_rejeitada(self):
+        with pytest.raises(ValidationError, match="degenerado"):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "controllers": {"ffffffffffff": {}},
+                }
+            )
+
+    def test_keys_que_colidem_apos_normalizacao_rejeitadas(self):
+        """Duas grafias do mesmo MAC não podem coexistir — uma venceria em
+        silêncio por ordem de inserção."""
+        with pytest.raises(ValidationError, match="duplicadas"):
+            Profile.model_validate(
+                {
+                    "name": "x",
+                    "match": {"type": "any"},
+                    "controllers": {
+                        _MAC_BT: {},
+                        "AA:BB:CC:00:00:02": {},
+                    },
+                }
+            )
+
+    def test_override_rejeita_campo_extra(self):
+        """`extra="forbid"` no override — `label` e `mic_led` ficaram FORA por
+        decisão da revisão adversarial (4P-03 / AUDIT-FINDING-PROFILE-MIC-LED-
+        RESET-01); um campo desconhecido é erro, não silêncio."""
+        for campo in ("label", "mic_led"):
+            with pytest.raises(ValidationError):
+                Profile.model_validate(
+                    {
+                        "name": "x",
+                        "match": {"type": "any"},
+                        "controllers": {_MAC_BT: {campo: "y"}},
+                    }
+                )
+
+    def test_mapa_vazio_valida(self):
+        """`{}` explícito é válido (vira omissão no save — ver loader)."""
+        p = Profile.model_validate(
+            {"name": "x", "match": {"type": "any"}, "controllers": {}}
+        )
+        assert p.controllers == {}

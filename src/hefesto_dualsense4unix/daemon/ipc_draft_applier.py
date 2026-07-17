@@ -1,15 +1,18 @@
 """DraftApplier — aplica `profile.apply_draft` em ordem canônica.
 
 Extraído de `_handle_profile_apply_draft` em AUDIT-FINDING-IPC-SERVER-SPLIT-01.
-Cada seção (leds, triggers, rumble, mouse) é aplicada de forma best-effort:
-falha em uma seção loga warning mas não bloqueia as demais. A ordem é leds ->
-triggers -> rumble -> mouse (leds primeiro por ser menos transiente
-visualmente).
+Cada seção (leds, triggers, controllers, rumble, mouse, keyboard) é aplicada
+de forma best-effort: falha em uma seção loga warning mas não bloqueia as
+demais. A ordem é leds -> triggers -> controllers -> rumble -> mouse ->
+keyboard (leds primeiro por ser menos transiente visualmente; controllers
+DEPOIS das seções globais para o override por-controle vencer no alvo —
+PERFIL-04).
 """
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.controller import OutputSpec, TriggerEffect
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -22,7 +25,7 @@ logger = get_logger(__name__)
 
 
 class DraftApplier:
-    """Aplica as 4 seções de `profile.apply_draft` em ordem canônica."""
+    """Aplica as seções de `profile.apply_draft` em ordem canônica."""
 
     def __init__(
         self,
@@ -38,6 +41,11 @@ class DraftApplier:
         applied: list[str] = []
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
+        # PERFIL-04: overrides por-controle DEPOIS das seções globais — o
+        # override vence no alvo (mesma precedência da ativação de perfil).
+        self._apply_section(
+            applied, params.get("controllers"), "controllers", self._apply_controllers
+        )
         self._apply_section(applied, params.get("rumble"), "rumble", self._apply_rumble)
         self._apply_section(applied, params.get("mouse"), "mouse", self._apply_mouse)
         self._apply_section(
@@ -60,54 +68,157 @@ class DraftApplier:
         except Exception as exc:
             logger.warning(f"apply_draft_{section}_falhou", erro=str(exc))
 
-    def _apply_leds(self, leds_raw: Any) -> None:
-        if not isinstance(leds_raw, dict):
-            raise ValueError("leds deve ser objeto")
+    @staticmethod
+    def _scaled_rgb_from(leds_raw: dict[str, Any]) -> tuple[int, int, int] | None:
+        """RGB da seção de leds já escalado pelo brilho (0.0-1.0); None sem cor.
+
+        É O caminho de escala do brilho no apply_draft — os overrides
+        por-controle (PERFIL-04) passam por aqui também, em paridade com a
+        seção global.
+        """
         rgb_raw = leds_raw.get("lightbar_rgb")
+        if rgb_raw is None:
+            return None
+        if not isinstance(rgb_raw, list) or len(rgb_raw) != 3:
+            raise ValueError("leds.lightbar_rgb deve ser lista de 3 inteiros")
         brightness_raw = leds_raw.get("lightbar_brightness", 1.0)
         try:
             brightness = float(brightness_raw)
         except (TypeError, ValueError):
             brightness = 1.0
         brightness = max(0.0, min(1.0, brightness))
-        if rgb_raw is not None:
-            if not isinstance(rgb_raw, list) or len(rgb_raw) != 3:
-                raise ValueError("leds.lightbar_rgb deve ser lista de 3 inteiros")
-            r = max(0, min(255, int(rgb_raw[0] * brightness)))
-            g = max(0, min(255, int(rgb_raw[1] * brightness)))
-            b = max(0, min(255, int(rgb_raw[2] * brightness)))
-            self.controller.set_led((r, g, b))
+        return (
+            max(0, min(255, int(rgb_raw[0] * brightness))),
+            max(0, min(255, int(rgb_raw[1] * brightness))),
+            max(0, min(255, int(rgb_raw[2] * brightness))),
+        )
+
+    @staticmethod
+    def _player_bits_from(
+        leds_raw: dict[str, Any],
+    ) -> tuple[bool, bool, bool, bool, bool] | None:
+        """5 flags de player-LEDs da seção de leds; None quando ausentes."""
         player_leds_raw = leds_raw.get("player_leds")
-        if player_leds_raw is not None:
-            if not isinstance(player_leds_raw, list) or len(player_leds_raw) != 5:
-                raise ValueError("leds.player_leds deve ser lista de 5 booleanos")
-            bits: tuple[bool, bool, bool, bool, bool] = (
-                bool(player_leds_raw[0]),
-                bool(player_leds_raw[1]),
-                bool(player_leds_raw[2]),
-                bool(player_leds_raw[3]),
-                bool(player_leds_raw[4]),
-            )
-            self.controller.set_player_leds(bits)
+        if player_leds_raw is None:
+            return None
+        if not isinstance(player_leds_raw, list) or len(player_leds_raw) != 5:
+            raise ValueError("leds.player_leds deve ser lista de 5 booleanos")
+        return (
+            bool(player_leds_raw[0]),
+            bool(player_leds_raw[1]),
+            bool(player_leds_raw[2]),
+            bool(player_leds_raw[3]),
+            bool(player_leds_raw[4]),
+        )
+
+    @staticmethod
+    def _trigger_effect_from(side_raw: Any, label: str) -> TriggerEffect:
+        """Valida um lado de triggers do payload e constrói o efeito."""
+        if not isinstance(side_raw, dict):
+            raise ValueError(f"{label} deve ser objeto")
+        mode = side_raw.get("mode")
+        trigger_params = side_raw.get("params", [])
+        if not isinstance(mode, str):
+            raise ValueError(f"{label}.mode deve ser string")
+        if not isinstance(trigger_params, list):
+            raise ValueError(f"{label}.params deve ser lista")
+        return build_from_name(mode, trigger_params)
+
+    def _apply_leds(self, leds_raw: Any) -> None:
+        """Aplica a seção GLOBAL de leds do draft em TODOS os controles.
+
+        Fix do review (2026-07-16, MED): via ``apply_output_defaults`` —
+        broadcast REAL que ignora o seletor de alvo e grava o
+        ``_desired_default`` (mesma medicina do `ProfileManager.apply`). Os
+        setters clássicos respeitavam o seletor: com um alvo selecionado
+        (o estado normal do fluxo de edição por-controle), o "Aplicar" do
+        rodapé gravava a seção GLOBAL no override do alvo, o default nunca
+        era atualizado e o replug de outro controle reassertava estado velho.
+        """
+        if not isinstance(leds_raw, dict):
+            raise ValueError("leds deve ser objeto")
+        rgb = self._scaled_rgb_from(leds_raw)
+        bits = self._player_bits_from(leds_raw)
+        if rgb is None and bits is None:
+            return
+        self.controller.apply_output_defaults(OutputSpec(led=rgb, player_leds=bits))
 
     def _apply_triggers(self, triggers_raw: Any) -> None:
+        """Aplica a seção GLOBAL de gatilhos em TODOS os controles.
+
+        Broadcast real via ``apply_output_defaults`` — mesma justificativa
+        de ``_apply_leds`` (fix do review 2026-07-16, MED).
+        """
         if not isinstance(triggers_raw, dict):
             raise ValueError("triggers deve ser objeto")
+        effects: dict[str, TriggerEffect] = {}
         for side in ("left", "right"):
             side_raw = triggers_raw.get(side)
             if side_raw is None:
                 continue
-            if not isinstance(side_raw, dict):
-                raise ValueError(f"triggers.{side} deve ser objeto")
-            mode = side_raw.get("mode")
-            trigger_params = side_raw.get("params", [])
-            if not isinstance(mode, str):
-                raise ValueError(f"triggers.{side}.mode deve ser string")
-            if not isinstance(trigger_params, list):
-                raise ValueError(f"triggers.{side}.params deve ser lista")
-            effect = build_from_name(mode, trigger_params)
-            self.controller.set_trigger(side, effect)
+            effects[side] = self._trigger_effect_from(side_raw, f"triggers.{side}")
+        if effects:
+            self.controller.apply_output_defaults(
+                OutputSpec(
+                    trigger_left=effects.get("left"),
+                    trigger_right=effects.get("right"),
+                )
+            )
         self.store.mark_manual_trigger_active()
+
+    def _apply_controllers(self, raw: Any) -> None:
+        """Aplica os overrides POR CONTROLE do draft (PERFIL-04).
+
+        Cada entrada ``{uniq: {leds?, triggers?}}`` vira um ``OutputSpec``
+        aplicado via ``apply_output_for`` — a API por-uniq do PERFIL-01
+        (alvo no parâmetro, nunca o seletor global). O brilho escala o RGB
+        pelo MESMO caminho da seção global (``_scaled_rgb_from``). Backend
+        sem estado por-controle (FakeController) herda o no-op seguro do
+        ``IController``; controle desconectado fica registrado no mapa em
+        memória do backend real (o hotplug o aplica quando chegar).
+        """
+        if not isinstance(raw, dict):
+            raise ValueError("controllers deve ser objeto")
+        for uniq, entry in raw.items():
+            if not isinstance(entry, dict):
+                raise ValueError(f"controllers[{uniq!r}] deve ser objeto")
+            spec = self._controller_override_spec(entry, str(uniq))
+            if spec is not None:
+                self.controller.apply_output_for(str(uniq), spec)
+
+    def _controller_override_spec(
+        self, entry: dict[str, Any], uniq: str
+    ) -> OutputSpec | None:
+        """Converte uma entrada de override em ``OutputSpec``; None se vazia."""
+        led: tuple[int, int, int] | None = None
+        player: tuple[bool, bool, bool, bool, bool] | None = None
+        leds_raw = entry.get("leds")
+        if leds_raw is not None:
+            if not isinstance(leds_raw, dict):
+                raise ValueError(f"controllers[{uniq!r}].leds deve ser objeto")
+            led = self._scaled_rgb_from(leds_raw)
+            player = self._player_bits_from(leds_raw)
+        trigger_left: TriggerEffect | None = None
+        trigger_right: TriggerEffect | None = None
+        triggers_raw = entry.get("triggers")
+        if triggers_raw is not None:
+            if not isinstance(triggers_raw, dict):
+                raise ValueError(f"controllers[{uniq!r}].triggers deve ser objeto")
+            base = f"controllers[{uniq!r}].triggers"
+            left_raw = triggers_raw.get("left")
+            if left_raw is not None:
+                trigger_left = self._trigger_effect_from(left_raw, f"{base}.left")
+            right_raw = triggers_raw.get("right")
+            if right_raw is not None:
+                trigger_right = self._trigger_effect_from(right_raw, f"{base}.right")
+        if led is None and player is None and trigger_left is None and trigger_right is None:
+            return None
+        return OutputSpec(
+            trigger_left=trigger_left,
+            trigger_right=trigger_right,
+            led=led,
+            player_leds=player,
+        )
 
     def _apply_rumble(self, rumble_raw: Any) -> None:
         if not isinstance(rumble_raw, dict):

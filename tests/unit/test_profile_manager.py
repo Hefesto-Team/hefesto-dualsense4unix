@@ -332,3 +332,257 @@ def test_activate_propaga_player_leds(isolated_profiles_dir: Path):
     manager = ProfileManager(controller=fc, store=store)
     manager.activate("p2_canonico")
     assert fc.last_player_leds == (False, True, False, True, False)
+
+
+# -- PERFIL-01 (4P-01): perfil atinge TODOS os controles, mesmo com alvo -----
+#
+# Bug provado no código (agravante da revisão): `ProfileManager.apply()` usava
+# os setters broadcast que RESPEITAM `_output_target_key` — com um alvo
+# selecionado na GUI, ativar um perfil (manual OU via autoswitch, que passa
+# pela MESMA cadeia `activate()`) aplicava só no alvo.
+
+
+def _backend_com_dois_controles():
+    """PyDualSenseController real com dois handles stubados (keys MAC aa:bb:cc)."""
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+    from tests.unit.test_backend_multi_controller import (
+        KEY_1,
+        KEY_2,
+        _FakeHandle,
+        _null_evdev,
+    )
+
+    inst = PyDualSenseController(evdev_reader=_null_evdev())
+    h1, h2 = _FakeHandle(), _FakeHandle()
+    inst._handles = {KEY_1: h1, KEY_2: h2}
+    inst._primary_key = KEY_1
+    return inst, h1, h2
+
+
+def test_activate_manual_com_alvo_selecionado_atinge_todos(
+    isolated_profiles_dir: Path,
+):
+    """Ativação MANUAL com alvo=Controle 2 no seletor → as DUAS lightbars."""
+    save_profile(_mk_profile("shooter"))
+    backend, h1, h2 = _backend_com_dois_controles()
+    backend.set_output_target(1)  # usuária estava mexendo só no Controle 2
+
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("shooter")
+
+    for h in (h1, h2):
+        assert h.light.colors[-1] == (10, 20, 30)
+        assert h.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+    # O seletor da usuária segue como estava (estado de UI preservado).
+    assert backend.get_output_target_index() == 1
+
+
+def test_activate_via_autoswitch_com_alvo_selecionado_atinge_todos(
+    isolated_profiles_dir: Path,
+):
+    """Mesma cadeia pelo AUTOSWITCH (`AutoSwitcher._activate` → `activate`):
+    toda troca automática com alvo ativo também aplicava só no alvo."""
+    from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+
+    save_profile(_mk_profile("shooter"))
+    backend, h1, h2 = _backend_com_dois_controles()
+    backend.set_output_target(1)
+
+    manager = ProfileManager(controller=backend, store=StateStore())
+    switcher = AutoSwitcher(manager=manager, window_reader=lambda: {})
+    switcher._activate("shooter", {"wm_class": "shooter_class"})
+
+    for h in (h1, h2):
+        assert h.light.colors[-1] == (10, 20, 30)
+        assert h.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+
+
+def test_activate_substitui_o_mapa_de_overrides(isolated_profiles_dir: Path):
+    """Reset na ativação: o override em memória do perfil anterior não pode
+    ressuscitar no hotplug sob o perfil novo (ciclo de vida explícito)."""
+    from hefesto_dualsense4unix.core.controller import OutputSpec
+
+    save_profile(_mk_profile("shooter"))
+    backend, _h1, _h2 = _backend_com_dois_controles()
+    backend.apply_output_for("aabbcc000002", OutputSpec(led=(0, 255, 0)))
+    assert backend._desired_by_uniq  # override registrado
+
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("shooter")
+
+    assert backend._desired_by_uniq == {}  # mapa substituído (vazio: sem campo)
+    assert backend._desired_default.led == (10, 20, 30)
+
+
+def test_activate_nao_toca_o_mic_led(isolated_profiles_dir: Path):
+    """AUDIT-FINDING-PROFILE-MIC-LED-RESET-01: profile switch JAMAIS mexe no
+    LED do mic — nem pelo caminho novo (`apply_output_defaults`)."""
+    save_profile(_mk_profile("shooter"))
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc, store=StateStore())
+    manager.activate("shooter")
+    assert fc.mic_led_history == []
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-04: ativação aplica o mapa `controllers` do perfil por-uniq
+# ---------------------------------------------------------------------------
+
+
+def _mk_profile_com_override(name: str = "vitoria") -> Profile:
+    """Perfil com seção global + override de lightbar SÓ para o segundo MAC."""
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+    from tests.unit.test_backend_multi_controller import UNIQ_2
+
+    return _mk_profile(
+        name,
+        controllers={
+            UNIQ_2: ControllerOverrides(
+                leds=LedsConfig(
+                    lightbar=(0, 0, 255),
+                    player_leds=[False, True, False, True, False],
+                )
+            )
+        },
+    )
+
+
+def test_activate_aplica_override_so_no_alvo(isolated_profiles_dir: Path):
+    """O pedido dela aplicado: ativar o perfil pinta SÓ o controle do
+    override de azul — o outro recebe a seção global (o merge do PERFIL-01
+    cuida do hotplug depois)."""
+    from tests.unit.test_backend_multi_controller import UNIQ_2
+
+    save_profile(_mk_profile_com_override("vitoria"))
+    backend, h1, h2 = _backend_com_dois_controles()
+
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("vitoria")
+
+    assert h1.light.colors[-1] == (10, 20, 30)  # global
+    assert h2.light.colors[-1] == (0, 0, 255)  # override do alvo
+    # O mapa em memória ficou registrado para o hotplug reaplicar.
+    assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)
+    assert backend._desired_by_uniq[UNIQ_2].player_leds == (
+        False, True, False, True, False,
+    )
+    # Override sem seção triggers = sem opinião (merge por campo no replug).
+    assert backend._desired_by_uniq[UNIQ_2].trigger_left is None
+
+
+def test_activate_registra_override_de_desconectado(isolated_profiles_dir: Path):
+    """Override de controle DESCONECTADO fica registrado no mapa (a escrita
+    de hardware é pulada) — é o que faz o religar do BT receber a cor dele
+    (teste de fogo do PERFIL-05c)."""
+    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+    from tests.unit.test_backend_multi_controller import (
+        KEY_1,
+        UNIQ_2,
+        _FakeHandle,
+        _null_evdev,
+    )
+
+    save_profile(_mk_profile_com_override("vitoria"))
+    backend = PyDualSenseController(evdev_reader=_null_evdev())
+    h1 = _FakeHandle()
+    backend._handles = {KEY_1: h1}  # só o Controle 1 conectado
+    backend._primary_key = KEY_1
+
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("vitoria")
+
+    assert h1.light.colors[-1] == (10, 20, 30)  # o conectado ficou no global
+    assert backend._desired_by_uniq[UNIQ_2].led == (0, 0, 255)  # registrado
+
+
+def test_activate_override_escala_brilho_no_mesmo_caminho(
+    isolated_profiles_dir: Path,
+):
+    """Brilho do override passa pelo MESMO caminho de escala do global
+    (`LedSettings.apply_brightness`): o hardware recebe a cor JÁ escalada."""
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+    from tests.unit.test_backend_multi_controller import UNIQ_2
+
+    save_profile(
+        _mk_profile(
+            "vitoria",
+            controllers={
+                UNIQ_2: ControllerOverrides(
+                    leds=LedsConfig(
+                        lightbar=(100, 200, 50), lightbar_brightness=0.5
+                    )
+                )
+            },
+        )
+    )
+    backend, _h1, h2 = _backend_com_dois_controles()
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("vitoria")
+
+    assert h2.light.colors[-1] == (50, 100, 25)
+    assert backend._desired_by_uniq[UNIQ_2].led == (50, 100, 25)
+
+
+# ---------------------------------------------------------------------------
+# Fix do review (2026-07-16, MED): override PARCIAL dentro da seção não
+# densifica — campo não escrito herda o GLOBAL (merge por campo de verdade)
+# ---------------------------------------------------------------------------
+
+
+def test_activate_override_parcial_herda_player_e_brilho_do_global(
+    isolated_profiles_dir: Path,
+):
+    """O EXATO JSON do aceite 1 do PERFIL-02, escrito à mão: override só com
+    a cor. Os campos NÃO escritos herdam o GLOBAL — antes, os defaults do
+    schema densificavam e o controle acordava com player-LEDs TODOS apagados
+    e a cor a brilho cheio (a resolução-por-objeto refutada, um nível
+    abaixo)."""
+    from tests.unit.test_backend_multi_controller import UNIQ_2
+
+    raw = _mk_profile(
+        "vitoria",
+        leds=LedsConfig(
+            lightbar=(129, 61, 156),
+            player_leds=[True, False, False, False, False],
+            lightbar_brightness=0.5,
+        ),
+    ).model_dump(mode="json")
+    raw["controllers"] = {UNIQ_2: {"leds": {"lightbar": [0, 255, 0]}}}
+    save_profile(Profile.model_validate(raw))
+
+    backend, _h1, h2 = _backend_com_dois_controles()
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("vitoria")
+
+    # A cor escrita herda o brilho 0.5 do GLOBAL (verde escalado, não cheio).
+    assert h2.light.colors[-1] == (0, 127, 0)
+    assert backend._desired_by_uniq[UNIQ_2].led == (0, 127, 0)
+    # Campos não escritos ficam SEM OPINIÃO no mapa → hotplug herda o global
+    # (antes: player_leds=(False,)*5 apagava o player 1 aceso do global).
+    assert backend._desired_by_uniq[UNIQ_2].player_leds is None
+    assert backend._desired_by_uniq[UNIQ_2].trigger_left is None
+
+
+def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
+    isolated_profiles_dir: Path,
+):
+    """Override só de `left`: o `right` daquele controle segue o GLOBAL —
+    antes o default `Off` densificado desligava o gatilho direito global do
+    controle do override."""
+    from tests.unit.test_backend_multi_controller import UNIQ_2
+
+    raw = _mk_profile("vitoria").model_dump(mode="json")
+    raw["controllers"] = {
+        UNIQ_2: {"triggers": {"left": {"mode": "Rigid", "params": [1, 100]}}}
+    }
+    save_profile(Profile.model_validate(raw))
+
+    backend, _h1, h2 = _backend_com_dois_controles()
+    manager = ProfileManager(controller=backend, store=StateStore())
+    manager.activate("vitoria")
+
+    # O lado escrito aplicou; o NÃO escrito manteve o global (Rigid 5,200).
+    assert h2.triggerL.forces == [1, 100, 0, 0, 0, 0, 0]
+    assert h2.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+    assert backend._desired_by_uniq[UNIQ_2].trigger_right is None
