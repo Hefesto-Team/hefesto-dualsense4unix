@@ -375,10 +375,17 @@ class StatusActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _short_target_label(label: str) -> str:
-        """'Todos os controles' -> 'Todos'; 'Controle 1 — BT' -> '1 · BT'."""
+        """'Todos os controles' -> 'Todos'; 'Controle 1 — BT' -> 'Sony 1 · BT'.
+
+        Os controles adotados são sempre DualSense (backend DualSense-only), então
+        o chip do seletor mostra a marca 'Sony' + o número (``player_slot``), para
+        ficar consistente com o botão do controle externo ('8BitDo 3 · BT'). O
+        rótulo canônico 'Controle N' segue INTACTO no tooltip e no badge de edição
+        (convenção unificada COR-01/D6) — só o texto compacto do chip ganha a marca.
+        """
         if label.startswith("Todos"):
             return "Todos"
-        return label.replace("Controle ", "").replace(" — ", " · ")
+        return label.replace("Controle ", "Sony ").replace(" — ", " · ")
 
     def _rebuild_target_buttons(
         self, box: Any, rows: list[tuple[str, int | None]]

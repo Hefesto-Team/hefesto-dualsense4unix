@@ -172,10 +172,7 @@ def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
     falha em silêncio e o `player_slot` segue exposto para a GUI numerar.
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
-    from hefesto_dualsense4unix.core.external_leds import (
-        hid_instance_for_hidraw,
-        write_player_number,
-    )
+    from hefesto_dualsense4unix.core.external_leds import apply_player_number
 
     inventory = discover_external_gamepads()
     holders: dict[str, list[int]] = {}
@@ -187,10 +184,11 @@ def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
             entry["holders"] = {"steam_pids": holders[hidraw]}
         slot = dualsense_count + index + 1
         entry["player_slot"] = slot
-        inst = hid_instance_for_hidraw(hidraw if isinstance(hidraw, str) else None)
-        if inst:
+        # Numera o LED no MODO do controle: barra verde (Switch/cabo) OU
+        # lightbar RGB (8BitDo em modo DS4 por Bluetooth) — vale por cabo E BT.
+        if isinstance(hidraw, str):
             with contextlib.suppress(Exception):
-                write_player_number(inst, slot)
+                apply_player_number(hidraw, slot)
     return inventory
 
 

@@ -47,6 +47,17 @@ _VENDOR_BY_VID: dict[str, str] = {
 #: (cabo Switch = estável), não código nosso.
 _NINTENDO_MODE_VIDS = frozenset({"057e"})
 
+#: Marca por OUI do MAC (3 primeiros octetos = 6 hex minúsculos, sem ``:``).
+#: É o ÚNICO sinal que desambigua um 8BitDo em modo DualShock4 — que MENTE o
+#: VID 054c (Sony) e o nome "Wireless Controller", ficando IDÊNTICO a um DS4
+#: Sony de verdade — de um controle Sony genuíno: o OUI ``e4:17:d8`` é da
+#: 8BitDo (registro IEEE "8BITDO TECHNOLOGY HK LIMITED"). Quando presente e
+#: conhecido, o OUI VENCE o VID (o firmware clone mente o VID, nunca o MAC).
+#: Só existe por Bluetooth — por cabo o ``uniq`` vem vazio e caímos no VID.
+_BRAND_BY_OUI: dict[str, str] = {
+    "e417d8": "8BitDo",
+}
+
 
 def _vidpid(entry: dict[str, Any]) -> str:
     vid = str(entry.get("vid") or "").lower()
@@ -54,20 +65,53 @@ def _vidpid(entry: dict[str, Any]) -> str:
     return f"{vid}:{pid}"
 
 
+def _oui_of(entry: dict[str, Any]) -> str | None:
+    """OUI (6 hex minúsculos) do MAC do controle, ou ``None`` sem ``uniq``.
+
+    ``uniq`` vem preenchido por Bluetooth (ex.: ``e4:17:d8:00:00:03``) e vazio
+    por cabo — por isso a marca por OUI só desambigua no transporte BT.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    uniq = entry.get("uniq")
+    mac = norm_mac(uniq if isinstance(uniq, str) else None)
+    return mac[:6] if mac and len(mac) >= 6 else None
+
+
 def friendly_type(entry: dict[str, Any]) -> str:
     """Tipo amigável do controle externo (ex.: 'Pro Controller (modo Switch)').
 
-    Ordem: VID:PID conhecido → fabricante (por VID) → o nome cru do device.
+    Ordem: VID:PID conhecido → marca por OUI do MAC (desambigua o clone que
+    mente o VID) → fabricante (por VID) → o nome cru do device.
     """
     vp = _vidpid(entry)
     if vp in _TYPE_BY_VIDPID:
         return _TYPE_BY_VIDPID[vp]
+    oui = _oui_of(entry)
+    if oui and oui in _BRAND_BY_OUI:
+        return _BRAND_BY_OUI[oui]
     vid = str(entry.get("vid") or "").lower()
     vendor = _VENDOR_BY_VID.get(vid)
     if vendor:
         return vendor
     name = str(entry.get("name") or "").strip()
     return name or "Controle externo"
+
+
+def brand_of(entry: dict[str, Any]) -> str:
+    """Marca do controle, com o OUI do MAC VENCENDO o VID.
+
+    Um 8BitDo em modo DualShock4 reporta VID 054c (Sony) e nome genérico
+    "Wireless Controller" — indistinguível de um DS4 real por VID/nome. O OUI
+    do MAC (``e4:17:d8`` = 8BitDo) é o único sinal que os separa, então vem
+    primeiro. Sem OUI conhecido (ou sem ``uniq``, caso USB) cai no fabricante
+    por VID e, por fim, no :func:`friendly_type`.
+    """
+    oui = _oui_of(entry)
+    if oui and oui in _BRAND_BY_OUI:
+        return _BRAND_BY_OUI[oui]
+    vid = str(entry.get("vid") or "").lower()
+    return _VENDOR_BY_VID.get(vid) or friendly_type(entry)
 
 
 def transport_label(entry: dict[str, Any]) -> str:
@@ -86,11 +130,7 @@ def short_button_label(entry: dict[str, Any]) -> str:
     Ex.: '8BitDo · cabo', 'Pro Controller · BT'. Prioriza o fabricante para
     ficar curto; o tooltip/ficha carregam o nome completo.
     """
-    vid = str(entry.get("vid") or "").lower()
-    vp = _vidpid(entry)
-    curto = _VENDOR_BY_VID.get(vid)
-    if not curto:
-        curto = _TYPE_BY_VIDPID.get(vp, str(entry.get("name") or "Externo"))
+    curto = brand_of(entry)
     bus = str(entry.get("bus") or "").lower()
     via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
     return f"{curto} · {via}" if via else curto
@@ -129,8 +169,7 @@ def button_labels_for(
     saida: list[str] = []
     for i, e in enumerate(externals):
         slot = slot_of(e, dualsense_count, i)
-        vid = str(e.get("vid") or "").lower()
-        nome = _VENDOR_BY_VID.get(vid) or friendly_type(e)
+        nome = brand_of(e)
         bus = str(e.get("bus") or "").lower()
         via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
         saida.append(f"{nome} {slot} · {via}" if via else f"{nome} {slot}")
