@@ -597,6 +597,72 @@ class TestPrimingERastreio:
 
         assert backend._sysfs_written == {}
 
+
+def _stub_handle_transporte(transporte: str) -> Any:
+    """Handle stub com `conType` (o que `_detect_transport` lê) + _suppress_leds."""
+    con = SimpleNamespace(name="BT_31" if transporte == "bt" else "USB_01")
+    return SimpleNamespace(
+        connected=True,
+        conType=con,
+        _suppress_leds=None,
+        light=SimpleNamespace(playerNumber=None, setColorI=lambda *a: None),
+    )
+
+
+class TestSupressaoDeLedPorTransporte:
+    """LIGHTBAR-BT-NEVER-01: por BT a pydualsense fica SEMPRE suprimida.
+
+    O report BT da pydualsense 0.7.5 é malformado (layout off-by-one, sem o
+    tag 0x10) e um write com flags de LED dentro da janela da máquina de
+    estados da lightbar LATCHEIA a lightbar apagada até o power-off (provado
+    ao vivo 2026-07-18: o nó de LED atrasado na reconexão BT rebaixava a
+    supressão por 1 tick e re-envenenava o controle). Em USB o fallback
+    histórico (não-suprimido quando sem nó sysfs) continua.
+    """
+
+    def test_bt_sem_no_sysfs_continua_suprimido(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Nó de LED ATRASADO/ausente (discover vazio): o handle BT NÃO pode
+        # ser rebaixado para False — era a janela residual do envenenamento.
+        backend = _backend_com_nos(monkeypatch, {})
+        handle = _stub_handle_transporte("bt")
+        backend._handles = {KEY1: handle}
+
+        backend._refresh_sysfs_leds()
+
+        assert handle._suppress_leds is True
+
+    def test_bt_com_no_sysfs_suprimido(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        backend = _backend_com_nos(monkeypatch, {MAC1: _FakeLedNode(rgb=(0, 0, 0))})
+        handle = _stub_handle_transporte("bt")
+        backend._handles = {KEY1: handle}
+
+        backend._refresh_sysfs_leds()
+
+        assert handle._suppress_leds is True
+
+    def test_usb_sem_no_sysfs_libera_o_fallback_pydualsense(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # USB sem regra udev: o caminho histórico pydualsense segue valendo.
+        backend = _backend_com_nos(monkeypatch, {})
+        handle = _stub_handle_transporte("usb")
+        backend._handles = {KEY1: handle}
+
+        backend._refresh_sysfs_leds()
+
+        assert handle._suppress_leds is False
+
+    def test_usb_com_no_sysfs_suprimido(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        backend = _backend_com_nos(monkeypatch, {MAC1: _FakeLedNode(rgb=(0, 0, 0))})
+        handle = _stub_handle_transporte("usb")
+        backend._handles = {KEY1: handle}
+
+        backend._refresh_sysfs_leds()
+
+        assert handle._suppress_leds is True
+
     def test_resolved_led_for_espelha_o_merge_por_uniq(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
