@@ -53,9 +53,14 @@ class TestConnectResiliente:
         assert inst._ds is None
         assert inst.is_connected() is False
 
-    def test_connect_propaga_outras_excecoes(self) -> None:
-        """Erros distintos de "No device detected" continuam propagando para
-        o `connect_with_retry` fazer backoff (ex.: permissão hidraw)."""
+    def test_connect_engole_excecao_de_um_device_e_segue(self) -> None:
+        """LIGHTBAR-BT-ADOPT-01 (complemento): erro de UM device (ex.: permissão
+        hidraw) NÃO aborta o connect() — é logado e o tick segue até o fim
+        (`_refresh_sysfs_leds`/reassert). Antes, a exceção propagava e pulava o
+        refresh em TODO tick; com `_suppress_leds` nascendo True, handles JÁ
+        abertos ficariam suprimidos para sempre (lightbar/player inaplicáveis).
+        O retry natural continua: o device fica fora de `_handles` e o próximo
+        tick do reconnect_loop tenta abrir de novo."""
         inst = PyDualSenseController(evdev_reader=_null_evdev())
 
         with patch.object(
@@ -67,15 +72,11 @@ class TestConnectResiliente:
             "_open_one",
             side_effect=RuntimeError("hidraw permission denied"),
         ):
-            try:
-                inst.connect()
-            except RuntimeError as exc:
-                assert "hidraw permission denied" in str(exc)
-            else:
-                raise AssertionError("connect deveria ter relançado RuntimeError")
+            inst.connect()  # não deve levantar
 
-        # Após exceção, _offline NÃO foi marcado (não é offline-OK).
-        assert inst._offline is False
+        # O device que falhou não entrou; sem nenhum handle, offline é marcado
+        # ao FIM do tick (o connect chegou ao fim em vez de abortar no meio).
+        assert inst._offline is True
         assert inst._ds is None
 
 

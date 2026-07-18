@@ -217,9 +217,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # estão sendo controlados pela rota sysfs do kernel (cor funciona em
         # USB E BT), suprimimos a escrita desses LEDs no report_thread para NÃO
         # disputar com o kernel (a disputa é o que faz a cor "não colar" no BT).
-        # Setado pelo controlador em `_refresh_sysfs_leds` SÓ quando o sysfs é
-        # gravável; senão fica False e o caminho pydualsense segue normal.
-        self._suppress_leds = False
+        # `_refresh_sysfs_leds` mantém True SÓ quando o sysfs é gravável; senão
+        # vira False e o caminho pydualsense segue normal.
+        #
+        # LIGHTBAR-BT-ADOPT-01 (provado ao vivo 2026-07-18; estudo 5 agentes):
+        # nasce TRUE, nunca False. O report_thread começa a escrever assim que o
+        # handle abre — ANTES de `_refresh_sysfs_leds` rodar. Nascendo False, o
+        # 1º report saía com os flags de lightbar/player LIGADOS — e o report BT
+        # da pydualsense 0.7.5 é MALFORMADO (layout off-by-one: [1]=0x02 fixo,
+        # 0xFF onde o firmware espera o tag obrigatório 0x10, campos deslocados
+        # 1 byte). Chegando dentro da JANELA da máquina de estados da lightbar
+        # do firmware (~3.4s pós-connect BT — o SDL espera essa janela e fecha
+        # com flag1 0x08 "Reset LED state"; o kernel nunca envia 0x08), a
+        # lightbar LATCHEIA APAGADA e passa a ignorar as escritas de cor do
+        # kernel (330k writes em multi_intensity sem acender, provado ao vivo) —
+        # enquanto player-LEDs/gatilhos, sem máquina de estados própria, seguem
+        # funcionando. O latch persiste até o POWER-OFF do controle (sobrevive a
+        # re-parear e a rebind do driver; cabo USB escapa — report 0x02 sem
+        # seq/janela). Sintoma: a lightbar acende no connect e APAGA na adoção.
+        # Nascer suprimido fecha a janela inteira (inclusive o zumbi do
+        # init-timeout, que nenhum refresh alcança); quem decide o estado final
+        # continua sendo `_refresh_sysfs_leds` (~ms depois, no próprio connect).
+        self._suppress_leds = True
         # PERF-MULTI-CONTROLLER-01: throttle POR-INSTÂNCIA (o backend escala
         # com o nº de controles conectados) + dirty-flag do write OUT.
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
@@ -700,6 +719,15 @@ class PyDualSenseController(IController):
                         dup.close()
                     continue
                 new_handles.append((key, handle))
+            except Exception as exc:
+                # LIGHTBAR-BT-ADOPT-01 (complemento): falha de UM device não pode
+                # abortar o connect() — sem isto, uma exceção do `_open_one` (ex.:
+                # permissão hidraw de um 2º controle) pulava `_refresh_sysfs_leds`
+                # em TODO tick e, com `_suppress_leds` nascendo True, deixava os
+                # handles JÁ abertos suprimidos para sempre (lightbar/player
+                # inaplicáveis). Loga e segue para o próximo device.
+                logger.debug("backend_open_one_failed", key=key, err=str(exc))
+                continue
             finally:
                 with self._io_lock:
                     self._opening.discard(key)
@@ -720,6 +748,25 @@ class PyDualSenseController(IController):
                     # FEAT-NATIVE-OUTPUT-MUTE-01: handle novo aberto durante o
                     # Modo Nativo herda o mute (hotplug com jogo em foco).
                     handle._output_muted = self._output_mute
+        # LIGHTBAR-BT-RESET-01: a adoção (feature reads do init da pydualsense)
+        # derruba o claim da lightbar no FIRMWARE do DualSense por BT — a
+        # lightbar apaga e passa a ignorar as escritas de cor do kernel até um
+        # power-off (provado ao vivo 2026-07-17/18). A cura é o report "Reset
+        # LED state" (flag1=0x08) que o SDL envia em toda conexão BT e o kernel
+        # nunca envia. Enviado AQUI, logo após abrir o handle (pós feature
+        # reads) e ANTES do reassert de cor — a próxima escrita sysfs volta a
+        # colar. Só BT (USB não tem o claim) e best-effort (falha = sintoma
+        # antigo, sem regressão).
+        for _key, handle in new_handles:
+            with contextlib.suppress(Exception):
+                if self._detect_transport(handle) == "bt":
+                    from hefesto_dualsense4unix.core.lightbar_reset import (
+                        send_release_leds,
+                    )
+
+                    if send_release_leds(handle.device):
+                        logger.info("lightbar_reset_enviado", key=_key)
+
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
         # registra com atraso após o hidraw; re-afirma a cor/player ativos nos
@@ -857,12 +904,43 @@ class PyDualSenseController(IController):
         # por coincidência — evita acoplar a um nó errado e mantém os testes
         # herméticos. Quem não casa segue pelo caminho pydualsense (USB funciona).
 
-        # Marca supressão de LED no report_thread só dos handles cobertos.
+        # LIGHTBAR-BT-ADOPT-01 (telemetria): a cobertura sysfs muda raramente
+        # (adoção, replug, regra udev) — logar em INFO torna DATÁVEL uma futura
+        # regressão de lightbar (a de 2026-07-17 não tinha registro; o logging
+        # de LED era debug-only e a janela da quebra ficou sem timestamp).
+        # Dispara também quando o conjunto DESCOBERTO muda (handle presente sem
+        # nó sysfs): foi exatamente o ponto cego que escondeu a reconexão
+        # envenenada de 2026-07-18 00:53 (o 14:3a entrou em `keys` sem nó e o
+        # log de cobertura não disparou).
+        uncovered = sorted(k for k in keys if k not in mapping)
+        if set(mapping) != set(prev) or uncovered != getattr(
+            self, "_led_uncovered_prev", None
+        ):
+            logger.info(
+                "sysfs_led_cobertura",
+                cobertos=sorted(mapping),
+                sem_no_sysfs=uncovered,
+            )
+        self._led_uncovered_prev = uncovered
+
+        # Marca supressão de LED no report_thread. Coberto pelo sysfs => o
+        # kernel é o dono (design original).
+        # LIGHTBAR-BT-NEVER-01 (política, estudo 2026-07-18): por BLUETOOTH a
+        # pydualsense fica SEMPRE suprimida, coberta ou não — o report BT dela
+        # (0.7.5) é MALFORMADO (layout off-by-one, sem o tag 0x10 obrigatório)
+        # e um write com flags de LED dentro da janela da máquina de estados da
+        # lightbar LATCHEIA a lightbar apagada até o power-off do controle
+        # (provado ao vivo: nó de LED atrasado na reconexão BT rebaixava a
+        # supressão por 1 tick e re-envenenava). Não há regressão: a cor via
+        # pydualsense NUNCA funcionou por BT ("não obedecia por BT" — o motivo
+        # de a rota sysfs existir, a36a2e5). Em USB o fallback histórico segue.
         for key, handle in handles.items():
             with contextlib.suppress(Exception):
                 # `_suppress_leds` existe no _PinnedPyDualSense (handles de teste
                 # podem não ter — daí o suppress(Exception)).
-                handle._suppress_leds = key in mapping
+                handle._suppress_leds = (
+                    key in mapping or self._detect_transport(handle) == "bt"
+                )
 
         # Re-afirma o perfil de LED ativo nos nós que SURGIRAM agora (cor que o
         # kernel ainda não tinha ou perdeu no connect/resume).
