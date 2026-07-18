@@ -21,6 +21,18 @@
 # MECANISMO (dois níveis, igual à 77-dualsense-leds): TAG+="uaccess" (ACL para
 # a sessão ativa) + RUN chmod 0666 (fallback; LED é inócuo). Reaplicado a cada
 # replug/reconexão (ACTION=="add").
+#
+# MODO DS4 (8BitDo por BLUETOOTH): o 8BitDo pareado por Bluetooth se apresenta
+# como DualShock4 (054C:05C4, driver hid-playstation) e NÃO tem barra de player
+# — só a lightbar RGB (nós `inputNN:red|green|blue|global`). Como indicador de
+# posição, o Hefesto pinta a lightbar com a COR do slot (3 = verde). Estas
+# regras liberam a escrita desses canais, ancoradas em DRIVERS=="playstation"
+# para NÃO tocar LEDs de outros devices; o DualSense usa `:rgb:indicator`
+# (coberto pela 77), então não casa aqui. Cobre o pedido "atender BT também".
 
 ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:green:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
 ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:blue:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:red", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:green", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:blue", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:global", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"

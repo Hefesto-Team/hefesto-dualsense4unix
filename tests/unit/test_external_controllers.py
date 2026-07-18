@@ -6,6 +6,7 @@ o aviso honesto do Nintendo/8BitDo por Bluetooth. Sem GTK, sem IPC.
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    brand_of,
     button_labels_for,
     detail_rows,
     external_key,
@@ -31,6 +32,26 @@ _8BITDO_CABO = {
 _8BITDO_BT = {**_8BITDO_CABO, "bus": "bluetooth", "hidraw": "/dev/hidraw6"}
 _XBOX = {"name": "X360 Controller", "vid": "045e", "pid": "028e", "bus": "usb"}
 _DESCONHECIDO = {"name": "Marca Xpto Pad", "vid": "abcd", "pid": "0001", "bus": "usb"}
+#: 8BitDo em modo DualShock4: MENTE o VID (054c=Sony) e o nome ("Wireless
+#: Controller"), IDÊNTICO a um DS4 Sony real — só o OUI do MAC o denuncia.
+#: Caso vivo da mantenedora. MAC FORJADO (faixa e8:47:3a do gate de anonimato);
+#: o OUI sintético é injetado em `_BRAND_BY_OUI` nos testes do mecanismo — a
+#: entrada REAL da tabela (e417d8) é travada por assert próprio, sem MAC.
+_8BITDO_DS4 = {
+    "name": "Wireless Controller",
+    "vid": "054c",
+    "pid": "05c4",
+    "bus": "bluetooth",
+    "uniq": "e8:47:3a:00:00:07",
+    "driver": "playstation",
+    "evdev_path": "/dev/input/event9",
+    "hidraw": "/dev/hidraw7",
+}
+#: DualShock4 Sony GENUÍNO: mesmo VID:PID e nome do 8BitDo-DS4, mas OUI
+#: desconhecido — deve continuar "Sony" (o OUI não desambigua a favor do 8BitDo).
+_DS4_SONY = {**_8BITDO_DS4, "uniq": "aa:bb:cc:00:00:09"}
+#: 8BitDo-DS4 por CABO: uniq vazio (USB não expõe MAC) — sem OUI, degrada p/ VID.
+_8BITDO_DS4_CABO = {**_8BITDO_DS4, "bus": "usb", "uniq": ""}
 
 
 class TestFriendlyType:
@@ -61,6 +82,54 @@ class TestBotaoCurto:
 
     def test_nintendo_bt(self) -> None:
         assert short_button_label(_8BITDO_BT) == "Nintendo · BT"
+
+
+class TestMarcaPorOUI:
+    """O OUI do MAC desambigua o 8BitDo-em-modo-DS4 do DualShock4 Sony real.
+
+    O mecanismo é exercitado com OUI SINTÉTICO (e8473a, faixa forjada do gate
+    de anonimato) injetado na tabela — nunca com o MAC real do controle da
+    mantenedora. A entrada REAL da tabela é travada à parte, só pelo OUI.
+    """
+
+    def _com_oui_sintetico(self, monkeypatch) -> None:
+        from hefesto_dualsense4unix.app.actions import external_controllers as ec
+
+        monkeypatch.setitem(ec._BRAND_BY_OUI, "e8473a", "8BitDo")
+
+    def test_tabela_real_tem_o_oui_da_8bitdo(self) -> None:
+        # Trava a entrada de produção: OUI e417d8 (registro IEEE público da
+        # 8BITDO TECHNOLOGY HK — 6 hex, não é MAC de device) → "8BitDo".
+        from hefesto_dualsense4unix.app.actions import external_controllers as ec
+
+        assert ec._BRAND_BY_OUI.get("e417d8") == "8BitDo"
+
+    def test_oui_vence_vid_para_8bitdo_ds4(self, monkeypatch) -> None:
+        # VID mente "054c" (Sony); OUI conhecido na tabela → marca = 8BitDo.
+        self._com_oui_sintetico(monkeypatch)
+        assert brand_of(_8BITDO_DS4) == "8BitDo"
+        assert friendly_type(_8BITDO_DS4) == "8BitDo"
+
+    def test_botao_e_slot_do_8bitdo_ds4(self, monkeypatch) -> None:
+        self._com_oui_sintetico(monkeypatch)
+        assert short_button_label(_8BITDO_DS4) == "8BitDo · BT"
+        # com 2 DualSense conectados, o externo é o Controle 3.
+        assert button_labels_for([_8BITDO_DS4], dualsense_count=2) == ["8BitDo 3 · BT"]
+
+    def test_ds4_sony_genuino_continua_sony(self, monkeypatch) -> None:
+        # mesmo VID:PID/nome, mas OUI fora da tabela → NÃO vira 8BitDo.
+        self._com_oui_sintetico(monkeypatch)
+        assert brand_of(_DS4_SONY) == "Sony"
+
+    def test_sem_uniq_usb_degrada_para_vid(self, monkeypatch) -> None:
+        # por cabo o uniq vem vazio (sem OUI) → cai no fabricante por VID.
+        self._com_oui_sintetico(monkeypatch)
+        assert brand_of(_8BITDO_DS4_CABO) == "Sony"
+
+    def test_oui_desconhecido_preserva_comportamento_antigo(self) -> None:
+        # fixtures com OUI forjado (aabbcc) seguem pelo VID, como antes.
+        assert brand_of(_8BITDO_CABO) == "Nintendo"
+        assert brand_of(_XBOX) == "Xbox"
 
 
 class TestAvisoBluetooth:

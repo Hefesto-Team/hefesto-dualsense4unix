@@ -192,8 +192,10 @@ def test_short_target_label() -> None:
 
     f = StatusActionsMixin._short_target_label
     assert f("Todos os controles") == "Todos"
-    assert f("Controle 1 — BT") == "1 · BT"
-    assert f("Controle 2 — USB") == "2 · USB"
+    # O chip do seletor mostra a marca 'Sony' + número (consistente com o botão
+    # do externo '8BitDo 3 · BT'); o 'Controle N' canônico segue no tooltip/badge.
+    assert f("Controle 1 — BT") == "Sony 1 · BT"
+    assert f("Controle 2 — USB") == "Sony 2 · USB"
 
 
 def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:

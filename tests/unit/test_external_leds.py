@@ -134,3 +134,123 @@ class TestHidInstanceForHidraw:
 
     def test_none_para_nao_hidraw(self) -> None:
         assert external_leds.hid_instance_for_hidraw("/dev/input/event8") is None
+
+
+def _mk_lightbar_nodes(root: Path, prefix: str) -> None:
+    """Cria a lightbar RGB de um DS4 no sysfs falso (red/green/blue/global)."""
+    for ch in ("red", "green", "blue", "global"):
+        node = root / f"{prefix}:{ch}"
+        node.mkdir(parents=True)
+        (node / "brightness").write_text("0", encoding="ascii")
+
+
+def _read_lb(root: Path, prefix: str, ch: str) -> str:
+    return (root / f"{prefix}:{ch}" / "brightness").read_text().strip()
+
+
+class TestWriteLightbarSlot:
+    """8BitDo por BT (modo DS4): pinta a lightbar com a COR do slot."""
+
+    def test_slot_3_pinta_verde(self, tmp_path: Path) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        assert (
+            external_leds.write_lightbar_slot("input111", 3, leds_root=str(tmp_path))
+            is True
+        )
+        # player_slot_color(3) = verde (0, 255, 0); 'global' mestre = 1.
+        assert _read_lb(tmp_path, "input111", "red") == "0"
+        assert _read_lb(tmp_path, "input111", "green") == "255"
+        assert _read_lb(tmp_path, "input111", "blue") == "0"
+        assert _read_lb(tmp_path, "input111", "global") == "1"
+
+    def test_slot_1_pinta_azul(self, tmp_path: Path) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        external_leds.write_lightbar_slot("input111", 1, leds_root=str(tmp_path))
+        # slot 1 = azul (0, 0, 255) — mesma paleta dos DualSense.
+        assert _read_lb(tmp_path, "input111", "blue") == "255"
+        assert _read_lb(tmp_path, "input111", "red") == "0"
+        assert _read_lb(tmp_path, "input111", "green") == "0"
+
+    def test_sem_nos_best_effort(self, tmp_path: Path) -> None:
+        # Sem a regra udev do DS4 / sem os nós: não levanta e devolve False.
+        assert (
+            external_leds.write_lightbar_slot("input111", 3, leds_root=str(tmp_path))
+            is False
+        )
+
+
+class TestResolveExternalLeds:
+    def test_nintendo_quando_ha_green_player(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        _mk_player_nodes(tmp_path, _INST)
+        monkeypatch.setattr(external_leds, "hid_instance_for_hidraw", lambda h: _INST)
+        assert external_leds.resolve_external_leds(
+            "/dev/hidraw2", leds_root=str(tmp_path)
+        ) == ("nintendo", _INST)
+
+    def test_ds4_lightbar_via_realpath(self, tmp_path: Path, monkeypatch) -> None:
+        # Sem barra verde -> resolve pela lightbar RGB (nó :red cujo device é o
+        # mesmo do hidraw). Prefixo = inputNN real, NÃO a instância HID.
+        hid_dir = tmp_path / "hiddev"
+        real_red = hid_dir / "leds" / "input111:red"
+        real_red.mkdir(parents=True)
+        (real_red / "brightness").write_text("0", encoding="ascii")
+        leds = tmp_path / "leds"
+        leds.mkdir()
+        os.symlink(real_red, leds / "input111:red")
+        monkeypatch.setattr(external_leds, "_hid_device_dir", lambda h: str(hid_dir))
+        monkeypatch.setattr(
+            external_leds, "hid_instance_for_hidraw", lambda h: "0005:054C:05C4.0016"
+        )
+        assert external_leds.resolve_external_leds(
+            "/dev/hidraw7", leds_root=str(leds)
+        ) == ("ds4", "input111")
+
+    def test_nenhum_modo(self, tmp_path: Path, monkeypatch) -> None:
+        monkeypatch.setattr(external_leds, "hid_instance_for_hidraw", lambda h: None)
+        monkeypatch.setattr(external_leds, "_hid_device_dir", lambda h: None)
+        assert external_leds.resolve_external_leds(
+            "/dev/hidraw9", leds_root=str(tmp_path)
+        ) == (None, None)
+
+
+class TestApplyPlayerNumber:
+    """Despacha o indicador de posição pelo MODO — cabo (verde) OU BT (lightbar)."""
+
+    def test_despacha_nintendo(self, tmp_path: Path, monkeypatch) -> None:
+        _mk_player_nodes(tmp_path, _INST)
+        monkeypatch.setattr(
+            external_leds, "resolve_external_leds", lambda h, r=None: ("nintendo", _INST)
+        )
+        assert (
+            external_leds.apply_player_number(
+                "/dev/hidraw2", 3, leds_root=str(tmp_path)
+            )
+            is True
+        )
+        assert [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] == [
+            "1",
+            "1",
+            "1",
+            "0",
+        ]
+
+    def test_despacha_ds4_lightbar(self, tmp_path: Path, monkeypatch) -> None:
+        _mk_lightbar_nodes(tmp_path, "input111")
+        monkeypatch.setattr(
+            external_leds, "resolve_external_leds", lambda h, r=None: ("ds4", "input111")
+        )
+        assert (
+            external_leds.apply_player_number(
+                "/dev/hidraw7", 3, leds_root=str(tmp_path)
+            )
+            is True
+        )
+        assert _read_lb(tmp_path, "input111", "green") == "255"
+
+    def test_sem_modo_e_noop(self, monkeypatch) -> None:
+        monkeypatch.setattr(
+            external_leds, "resolve_external_leds", lambda h, r=None: (None, None)
+        )
+        assert external_leds.apply_player_number("/dev/hidraw9", 3) is False

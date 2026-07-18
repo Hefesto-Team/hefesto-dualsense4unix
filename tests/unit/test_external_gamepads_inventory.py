@@ -589,16 +589,13 @@ def test_external_inventory_numera_slot_global_e_escreve_led(
         er_mod, "discover_external_gamepads", lambda: [dict(n1), dict(n2)]
     )
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
-    # Resolve a instância HID e captura as escritas (sem tocar o sysfs real).
-    inst_por_hidraw = {"/dev/hidraw6": "0003:057E:2009.0006",
-                       "/dev/hidraw7": "0003:057E:2009.0007"}
-    monkeypatch.setattr(
-        leds_mod, "hid_instance_for_hidraw", lambda h: inst_por_hidraw.get(h)
-    )
+    # Captura as escritas de LED por hidraw (sem tocar o sysfs real). O daemon
+    # chama apply_player_number, que escolhe a barra verde (Switch/cabo) ou a
+    # lightbar RGB (8BitDo-DS4 por BT) conforme o modo — cobre CABO e BLUETOOTH.
     escritas: list[tuple[str, int]] = []
     monkeypatch.setattr(
-        leds_mod, "write_player_number",
-        lambda inst, num: (escritas.append((inst, num)), True)[1],
+        leds_mod, "apply_player_number",
+        lambda hidraw, num: (escritas.append((hidraw, num)), True)[1],
     )
 
     # Com 2 DualSense (slots 1 e 2), os externos são 3 e 4.
@@ -606,6 +603,6 @@ def test_external_inventory_numera_slot_global_e_escreve_led(
 
     assert [e["player_slot"] for e in inventario] == [3, 4]
     assert escritas == [
-        ("0003:057E:2009.0006", 3),
-        ("0003:057E:2009.0007", 4),
+        ("/dev/hidraw6", 3),
+        ("/dev/hidraw7", 4),
     ]

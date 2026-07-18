@@ -14,6 +14,7 @@ graváveis pelo daemon (sudo-zero). Sem a regra, a escrita falha em SILÊNCIO
 """
 from __future__ import annotations
 
+import glob
 import os
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -82,4 +83,95 @@ def write_player_number(
     return escreveu
 
 
-__all__ = ["LEDS_ROOT", "hid_instance_for_hidraw", "write_player_number"]
+def _hid_device_dir(hidraw_dev: str | None) -> str | None:
+    """Diretório real do device HID do ``hidraw`` (onde ficam os nós de LED)."""
+    if not hidraw_dev:
+        return None
+    name = os.path.basename(str(hidraw_dev))
+    if not name.startswith("hidraw"):
+        return None
+    try:
+        return os.path.realpath(f"/sys/class/hidraw/{name}/device")
+    except OSError:
+        return None
+
+
+def resolve_external_leds(
+    hidraw_dev: str | None, leds_root: str | None = None
+) -> tuple[str | None, str | None]:
+    """Descobre COMO indicar a posição no LED do externo, pelo modo do controle.
+
+    Devolve ``("nintendo", inst)`` quando há a barra verde de player
+    (``<inst>:green:player-N``, modo Switch/8BitDo-cabo — ``inst`` = instância
+    HID); ``("ds4", prefixo)`` quando só há a lightbar RGB do DualShock4
+    (``<inputNN>:red|:green|:blue``, caso do 8BitDo por Bluetooth — o prefixo é
+    o ``inputNN`` real, NÃO a instância HID); ``(None, None)`` sem nenhum.
+
+    A lightbar do DS4 usa prefixo ``inputNN`` arbitrário (não a instância HID),
+    então é resolvida por ``realpath``: o nó ``:red`` cujo device é o mesmo do
+    ``hidraw``. Best-effort; nunca levanta.
+    """
+    root = leds_root if leds_root is not None else LEDS_ROOT
+    inst = hid_instance_for_hidraw(hidraw_dev)
+    if inst and glob.glob(f"{root}/{inst}:green:player-*"):
+        return ("nintendo", inst)
+    hid_dir = _hid_device_dir(hidraw_dev)
+    if hid_dir:
+        for red in glob.glob(f"{root}/*:red"):
+            try:
+                if os.path.realpath(red).startswith(hid_dir):
+                    base = os.path.basename(red)
+                    return ("ds4", base[: -len(":red")])
+            except OSError:
+                continue
+    return (None, None)
+
+
+def write_lightbar_slot(
+    prefix: str, slot: int, leds_root: str | None = None
+) -> bool:
+    """Pinta a lightbar RGB (DualShock4) com a cor canônica do ``slot``.
+
+    O 8BitDo por Bluetooth cai em modo DS4 — sem barra de player, só a lightbar
+    RGB (``<prefix>:red|:green|:blue`` + ``:global`` mestre 0/1). Como indicador
+    de posição, acende a lightbar na cor do slot (1=azul, 2=vermelho, 3=verde,
+    4=rosa — a MESMA paleta dos DualSense). Best-effort: ``False`` se os nós não
+    existem/são graváveis (sem a regra udev do DS4, sem regressão).
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    root = leds_root if leds_root is not None else LEDS_ROOT
+    r, g, b = player_slot_color(slot)
+    escreveu = _set_brightness(f"{root}/{prefix}:red/brightness", r)
+    escreveu = _set_brightness(f"{root}/{prefix}:green/brightness", g) or escreveu
+    escreveu = _set_brightness(f"{root}/{prefix}:blue/brightness", b) or escreveu
+    # ``global`` é o mestre 0/1 da lightbar DS4 — liga p/ a cor valer.
+    _set_brightness(f"{root}/{prefix}:global/brightness", 1)
+    return escreveu
+
+
+def apply_player_number(
+    hidraw_dev: str | None, slot: int, leds_root: str | None = None
+) -> bool:
+    """Acende o indicador de posição do controle externo NO MODO que ele estiver.
+
+    Switch/8BitDo-cabo (barra verde) -> :func:`write_player_number`; 8BitDo por
+    Bluetooth (modo DS4, lightbar RGB) -> :func:`write_lightbar_slot` com a cor
+    do slot. Assim a numeração vale por CABO e por BLUETOOTH. Best-effort.
+    """
+    kind, ident = resolve_external_leds(hidraw_dev, leds_root)
+    if kind == "nintendo" and ident:
+        return write_player_number(ident, slot, leds_root)
+    if kind == "ds4" and ident:
+        return write_lightbar_slot(ident, slot, leds_root)
+    return False
+
+
+__all__ = [
+    "LEDS_ROOT",
+    "apply_player_number",
+    "hid_instance_for_hidraw",
+    "resolve_external_leds",
+    "write_lightbar_slot",
+    "write_player_number",
+]
