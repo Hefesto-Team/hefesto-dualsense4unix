@@ -21,7 +21,7 @@ import re
 import signal
 import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import gi
 
@@ -54,6 +54,102 @@ _SYSTEMCTL_FAIL_MSG: dict[str, str] = {
     "enable": "Não consegui deixar o Hefesto ligando sozinho",
     "disable": "Não consegui desligar o início automático",
 }
+
+
+def _apply_result_count(value: object) -> int:
+    """Conta um campo do resultado de ``apply_wrapper_to_all_games``.
+
+    O contrato (PATH-06) devolve ``{applied, skipped, errors}``; cada campo
+    pode vir como contagem (int) ou como lista de itens — tolera os dois.
+    ``bool`` é rejeitado (subclasse de int) por blindagem de payload.
+    """
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return max(value, 0)
+    if isinstance(value, (list, tuple, set)):
+        return len(value)
+    return 0
+
+
+def format_apply_wrapper_result(result: object) -> str:
+    """Mensagem pro leigo a partir do dict do ``apply_wrapper_to_all_games``.
+
+    Pura (testável sem GTK) — o miolo do toast do botão "Aplicar aos jogos da
+    Steam". Resposta fora do contrato vira recusa honesta, nunca "Pronto".
+    """
+    if not isinstance(result, dict):
+        return (
+            "Não consegui aplicar — resposta inesperada; veja os "
+            "'Detalhes técnicos'."
+        )
+    applied = _apply_result_count(result.get("applied"))
+    skipped = _apply_result_count(result.get("skipped"))
+    errors = _apply_result_count(result.get("errors"))
+    if applied:
+        msg = (
+            f"Pronto — {applied} jogo(s) agora abrem pelo hefesto-launch "
+            "(as suas opções foram preservadas; backup ao lado de cada "
+            "arquivo)."
+        )
+    elif errors == 0:
+        msg = (
+            "Nada a mudar — os jogos já abrem pelo hefesto-launch (ou não "
+            "encontrei jogos da Steam neste computador)."
+        )
+    else:
+        msg = "Nenhum jogo foi alterado."
+    if skipped:
+        msg += f" {skipped} jogo(s) ficaram como estavam."
+    if errors:
+        msg += (
+            f" Atenção: {errors} jogo(s) falharam — veja os "
+            "'Detalhes técnicos'."
+        )
+    return msg
+
+
+def format_proton_lock_result(result: object) -> str:
+    """Mensagem pro leigo a partir do dict do ``lock_proton_for_all_games``.
+
+    Pura (testável sem GTK) — o miolo do toast do botão "Travar Proton
+    validado" (PLAT-01). Contrato esperado da lane do pin
+    (``integrations/proton_pin``): ``{locked, skipped, errors}`` com
+    contagens (int) ou listas de itens — ``applied`` é aceito como sinônimo
+    de ``locked`` — e, opcional, ``tool`` (str, o nome da versão pinada).
+    Resposta fora do contrato vira recusa honesta, nunca "Pronto".
+    """
+    if not isinstance(result, dict):
+        return (
+            "Não consegui travar o Proton — resposta inesperada; veja os "
+            "'Detalhes técnicos'."
+        )
+    locked = _apply_result_count(result.get("locked", result.get("applied")))
+    skipped = _apply_result_count(result.get("skipped"))
+    errors = _apply_result_count(result.get("errors"))
+    tool = result.get("tool")
+    tool_txt = f" ({tool})" if isinstance(tool, str) and tool else ""
+    if locked:
+        msg = (
+            f"Pronto — {locked} jogo(s) travados no Proton validado"
+            f"{tool_txt}; atualizações da Steam não trocam mais a versão "
+            "(backup do arquivo da Steam feito)."
+        )
+    elif errors == 0:
+        msg = (
+            f"Nada a mudar — os jogos já estão no Proton validado{tool_txt} "
+            "(ou não encontrei jogos da Steam neste computador)."
+        )
+    else:
+        msg = "Nenhum jogo foi alterado."
+    if skipped:
+        msg += f" {skipped} jogo(s) ficaram como estavam."
+    if errors:
+        msg += (
+            f" Atenção: {errors} jogo(s) falharam — veja os "
+            "'Detalhes técnicos'."
+        )
+    return msg
 
 
 class DaemonActionsMixin(WidgetAccessMixin):
@@ -288,14 +384,66 @@ class DaemonActionsMixin(WidgetAccessMixin):
             self._toast_daemon(f"Copie manualmente: {launch}{extra}")
 
     def on_steam_apply_launch(self, _btn: object) -> None:
-        """Aplica a chamada do wrapper aos localconfig.vdf (DEDUP-05).
+        """Botão "Aplicar aos jogos da Steam" — agora com confirmação (PATH-06).
 
-        Migração assistida de UM clique: remove as strings NOSSAS antigas
-        (o veneno `IGNORE_DEVICES` estático + co-ocorrentes) e instala a
-        chamada constante do wrapper, preservando opções genuinamente do
-        usuário. Recusa honesta com a Steam aberta (ela regrava o vdf ao
-        sair e a edição seria perdida). Sudo-zero: o vdf é arquivo do
-        usuário. Roda em thread worker (subprocess + I/O de arquivo).
+        A ação deixou de ser só migração das linhas envenenadas: aplica o
+        wrapper a TODOS os jogos instalados (`apply_wrapper_to_all_games`,
+        integrations/steam_launch_options), preservando as opções existentes
+        (o launcher entra na frente). Por mexer em todos os jogos, pede
+        confirmação num diálogo TEMADO e NÃO-bloqueante (padrão
+        `_show_restart_error`: `connect("response")`, nunca `run()`).
+        """
+        dialog = self._build_steam_apply_confirm_dialog()
+        dialog.show_all()
+
+    def _build_steam_apply_confirm_dialog(self) -> Gtk.MessageDialog:
+        """Monta o diálogo de confirmação (sem exibir) — separado p/ testes."""
+        window: Gtk.Window | None = getattr(self, "window", None)
+        dialog = Gtk.MessageDialog(
+            transient_for=window,
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text="Aplicar o hefesto-launch aos jogos da Steam?",
+        )
+        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class(
+                "hefesto-dualsense4unix-window"
+            )
+        dialog.format_secondary_text(
+            "Cada jogo instalado passa a abrir pelo launcher do Hefesto — é "
+            "isso que evita o controle duplicado no jogo.\n\n"
+            "As opções que você já tem nos jogos são preservadas (o launcher "
+            "entra na frente delas) e fica um backup ao lado de cada "
+            "arquivo.\n\n"
+            "A Steam precisa estar FECHADA — se estiver aberta, eu aviso e "
+            "não mexo em nada."
+        )
+        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Aplicar a todos", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        dialog.connect("response", self._on_steam_apply_confirm_response)
+        return dialog
+
+    def _on_steam_apply_confirm_response(
+        self, dialog: Any, response: int
+    ) -> None:
+        """Handler do diálogo de confirmação — só o OK dispara o worker."""
+        with contextlib.suppress(Exception):
+            dialog.destroy()
+        if response != Gtk.ResponseType.OK:
+            return
+        self._steam_apply_launch_worker()
+
+    def _steam_apply_launch_worker(self) -> None:
+        """Aplica o wrapper em massa (confirmado) — em thread worker.
+
+        Recusa honesta com a Steam aberta (ela regrava o vdf ao sair e a
+        edição seria perdida) — instrui e NÃO toca em nada. Sudo-zero: o vdf
+        é arquivo do usuário. Import lazy + `getattr`: a função nova é do
+        contrato PATH-06 (`{applied, skipped, errors}`); numa instalação
+        antiga sem ela, recusa com o caminho do install em vez de quebrar.
         """
         self._toast_daemon("Verificando os arquivos da Steam…")
 
@@ -314,45 +462,140 @@ class DaemonActionsMixin(WidgetAccessMixin):
                         "seria perdida.",
                     )
                     return
-                vdfs = slo.discover_vdfs()
-                if not vdfs:
+                apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
+                if apply_fn is None:
                     GLib.idle_add(
                         self._toast_daemon,
-                        "Não encontrei arquivos da Steam neste computador — "
-                        "nada a aplicar.",
+                        "Esta instalação ainda não tem a aplicação em massa "
+                        "— rode ./install.sh para atualizar o Hefesto.",
                     )
                     return
-                total = 0
-                skipped_sandbox = 0
-                for vdf in vdfs:
-                    if slo.is_sandboxed_layout(vdf):
-                        skipped_sandbox += 1
-                        continue
-                    changed, _diff = slo.process_vdf(vdf, "migrate")
-                    total += changed
-                if total:
-                    msg = (
-                        f"Pronto — {total} jogo(s) atualizados para o launcher "
-                        "do Hefesto (as opções antigas foram substituídas; "
-                        "backup ao lado de cada arquivo)."
-                    )
-                else:
-                    msg = (
-                        "Nada a mudar — nenhum jogo com as opções antigas do "
-                        "Hefesto. Para um jogo novo, use 'Copiar opções p/ "
-                        "jogos' e cole nas Propriedades do jogo."
-                    )
-                if skipped_sandbox:
-                    msg += (
-                        " Steam Flatpak/Snap detectada e pulada: a sandbox "
-                        "não enxerga o launcher do computador."
-                    )
-                GLib.idle_add(self._toast_daemon, msg)
+                result = apply_fn()
+                GLib.idle_add(
+                    self._toast_daemon, format_apply_wrapper_result(result)
+                )
             except Exception as exc:
                 logger.warning("steam_apply_launch_falhou", erro=str(exc))
                 GLib.idle_add(
                     self._toast_daemon,
                     "Não consegui aplicar — veja os 'Detalhes técnicos'.",
+                )
+
+        _get_executor().submit(_worker)
+
+    def on_proton_lock(self, _btn: object) -> None:
+        """Botão "Travar Proton validado" (PLAT-01, aba Sistema).
+
+        Aponta o `CompatToolMapping` do config.vdf da Steam para a versão de
+        Proton que o Hefesto validou (a semântica do winebus MUDOU entre
+        Proton 9→10 — travar imuniza contra upgrade que mude comportamento).
+        Por mexer no arquivo global da Steam, pede confirmação num diálogo
+        TEMADO e NÃO-bloqueante (padrão do "Aplicar aos jogos da Steam":
+        `connect("response")`, nunca `run()`).
+        """
+        dialog = self._build_proton_lock_confirm_dialog()
+        dialog.show_all()
+
+    def _build_proton_lock_confirm_dialog(self) -> Gtk.MessageDialog:
+        """Monta o diálogo de confirmação (sem exibir) — separado p/ testes."""
+        window: Gtk.Window | None = getattr(self, "window", None)
+        dialog = Gtk.MessageDialog(
+            transient_for=window,
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.NONE,
+            text="Travar os jogos no Proton validado?",
+        )
+        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class(
+                "hefesto-dualsense4unix-window"
+            )
+        dialog.format_secondary_text(
+            "O Proton é a peça da Steam que roda os jogos de Windows no "
+            "Linux. Quando a Steam o atualiza sozinha, o comportamento do "
+            "controle pode mudar do nada — travar deixa todos os jogos na "
+            "versão que o Hefesto validou, e ela só muda quando VOCÊ rodar "
+            "o install de novo.\n\n"
+            "Fica um backup do arquivo da Steam antes de qualquer "
+            "mudança.\n\n"
+            "A Steam precisa estar FECHADA — se estiver aberta, eu aviso e "
+            "não mexo em nada."
+        )
+        dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Travar Proton", Gtk.ResponseType.OK)
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        dialog.connect("response", self._on_proton_lock_confirm_response)
+        return dialog
+
+    def _on_proton_lock_confirm_response(
+        self, dialog: Any, response: int
+    ) -> None:
+        """Handler do diálogo de confirmação — só o OK dispara o worker."""
+        with contextlib.suppress(Exception):
+            dialog.destroy()
+        if response != Gtk.ResponseType.OK:
+            return
+        self._proton_lock_worker()
+
+    def _proton_lock_worker(self) -> None:
+        """Trava o Proton pinado em todos os jogos (confirmado) — em worker.
+
+        Codifica CONTRA O CONTRATO da lane do pin (PLAT-01): import lazy de
+        `integrations.proton_pin` + `getattr` defensivo em
+        `lock_proton_for_all_games` — instalação sem o módulo ou sem a
+        função recusa honesta apontando ./install.sh, nunca AttributeError.
+        Recusa com a Steam aberta (ela regrava o config.vdf ao sair e a
+        edição seria perdida) — gate do próprio proton_pin quando existir,
+        senão o `steam_running` de steam_launch_options. Sudo-zero: o vdf é
+        arquivo do usuário.
+        """
+        self._toast_daemon("Verificando o Proton pinado…")
+
+        def _worker() -> None:
+            try:
+                import importlib
+
+                try:
+                    pp: object = importlib.import_module(
+                        "hefesto_dualsense4unix.integrations.proton_pin"
+                    )
+                except ImportError:
+                    pp = None
+                lock_fn = getattr(pp, "lock_proton_for_all_games", None)
+                if lock_fn is None:
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        "Esta instalação ainda não tem o Proton pinado — "
+                        "rode ./install.sh para atualizar o Hefesto.",
+                    )
+                    return
+                steam_running = getattr(pp, "steam_running", None)
+                if steam_running is None:
+                    from hefesto_dualsense4unix.integrations import (
+                        steam_launch_options as slo,
+                    )
+
+                    steam_running = slo.steam_running
+                if steam_running():
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        "A Steam está aberta — feche-a e clique de novo. "
+                        "Não travo o Proton com a Steam viva porque ela "
+                        "regrava o arquivo ao sair e a mudança seria "
+                        "perdida.",
+                    )
+                    return
+                result = lock_fn()
+                GLib.idle_add(
+                    self._toast_daemon, format_proton_lock_result(result)
+                )
+            except Exception as exc:
+                logger.warning("proton_lock_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Não consegui travar o Proton — veja os 'Detalhes "
+                    "técnicos'.",
                 )
 
         _get_executor().submit(_worker)
@@ -737,6 +980,11 @@ class DaemonActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.CLOSE,
             text="Não foi possível reiniciar o Hefesto",
         )
+        # GUI-05/P5: classe de tema (precedente gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class(
+                "hefesto-dualsense4unix-window"
+            )
         dialog.format_secondary_text(message)
         dialog.connect("response", lambda d, _r: d.destroy())
         dialog.show_all()

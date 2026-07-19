@@ -163,6 +163,10 @@ class Daemon:
     # FEAT-DSX-GAMEPAD-FLAVOR-01 — UinputGamepad criado em runtime por
     # start_gamepad_emulation; None quando o gamepad virtual está desligado.
     _gamepad_device: Any = None
+    # GYRO-01 — PhysicalReportReader do vpad do P1 (espelho de motion: hidraw
+    # do físico → forward_motion). Criado/parado por start/stop_motion_reader
+    # junto do vpad uhid; None com a emulação desligada ou no fallback uinput.
+    _motion_reader: Any = None
     # FEAT-DSX-COOP-LOCAL-01 — CoopManager: jogadores secundários (P2+) do co-op
     # local. Criado sob demanda por `get_coop_manager`; None até o 1º uso.
     _coop_manager: Any = None
@@ -270,6 +274,13 @@ class Daemon:
     # FakeController fica None e nada de controllers.json é lido/escrito
     # (testes herméticos). O reconcile roda no tick lento do poll loop.
     identity_registry: Any = None
+    # EXT-04: registro de identidade dos controles EXTERNOS (uniq→slot global
+    # de co-op, namespace `externals` do controllers.json) + aplicador de LED
+    # do tick lento. Fiados JUNTO com o identity_registry (backend real) —
+    # com o FakeController ficam None: nenhuma enumeração de /dev/input nem
+    # escrita de LED em teste/smoke (hermeticidade por construção).
+    external_registry: Any = None
+    _external_led_sync: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -387,6 +398,9 @@ class Daemon:
             # slots restaurados do disco (a cor nasce certa no mesmo tick de
             # hotplug, D1). Fora do caminho quente (o load é um read único).
             self._wire_identity_registry()
+            # EXT-04: identidade + LED dos externos, no MESMO gate de backend
+            # real do identity_registry (fake => tudo desligado).
+            self._wire_external_registry()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -568,8 +582,8 @@ class Daemon:
         if origin == "manual":
             self._mode_from_profile = None
         # DEDUP-04: o Modo Nativo muda o conteúdo das envs de launch
-        # (PROTON_ENABLE_HIDRAW sem IGNORE — o jogo fala com o hidraw do
-        # FÍSICO). Os hooks de start/stop do gamepad não cobrem o caso
+        # (sem DISABLE/IGNORE — o jogo fala com o hidraw do FÍSICO,
+        # GUERRA-01). Os hooks de start/stop do gamepad não cobrem o caso
         # "nativo ligado com emulação já desligada", então regrava aqui, no
         # fim da transição inteira.
         with contextlib.suppress(Exception):
@@ -862,6 +876,15 @@ class Daemon:
                 # BT-04(b): `origin` segue até o gate da promoção uinput→uhid —
                 # só o gesto manual da usuária recria um vpad degradado; o
                 # apply de perfil/autoswitch (a cada troca de janela) nunca.
+                # MISC-08 item 3 (2026-07-18): assinatura ANTES do apply — um
+                # apply IDÊNTICO (mesmo flavor, mesmo device) não pode custar
+                # teardown+respawn de vpad nenhum. Ao vivo, recriar os vpads
+                # mid-game invalidou os handles do jogo (a Steam nunca reabriu
+                # o hidraw do vpad P1). O `start_gamepad_emulation` já é
+                # no-op por (flavor, backend); o guard aqui poupa também o
+                # ciclo FORÇADO do co-op (que reescreve player-LEDs via sysfs
+                # a cada força — ruído de escrita sem mudança nenhuma).
+                device_antes = self._gamepad_device
                 ok = start_gamepad_emulation(self, flavor=flavor, origin=origin)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
                 # vpads de co-op já criados. Trocar o flavor não muda /dev/input,
@@ -869,13 +892,17 @@ class Daemon:
                 # ciclo cheio e o teardown por flavor-mismatch recria cada
                 # secundário com a nova máscara (senão P2+ ficam no flavor antigo,
                 # com rumble morto e prompts divergentes do P1).
-                if ok:
+                if ok and self._gamepad_device is not device_antes:
                     from hefesto_dualsense4unix.daemon.subsystems.coop import (
                         get_coop_manager,
                     )
 
                     with contextlib.suppress(Exception):
                         get_coop_manager(self).sync(force=True)
+                elif ok:
+                    # Config efetiva não mudou: nenhum vpad foi recriado e o
+                    # co-op segue no ciclo normal (~2s) do poll loop.
+                    logger.debug("gamepad_apply_identico_sem_recriacao")
                 return ok
             # HARM-16: o zero dos motores vem de dentro do stop (parar o vpad é
             # o que deixa o motor sem dono), não de um passo extra aqui.
@@ -1217,6 +1244,7 @@ class Daemon:
                     )
                 self._rumble_policy_from_profile = False
                 self._rumble_policy_before_profile = None
+                self._seed_rumble_mult_observability()
                 self._reapply_rumble_policy_to_active()
             return
 
@@ -1246,11 +1274,22 @@ class Daemon:
         self.config.rumble_policy = policy_lit
         self.config.rumble_policy_custom_mult = desired_mult
         self._rumble_policy_from_profile = True
+        self._seed_rumble_mult_observability()
         if changed:
+            # MISC-08 item 1 (2026-07-18): o campo `mult` carregava o
+            # custom_mult vigente (0.7 default) mesmo em política fixa —
+            # "mult=0.7 policy=max" no journal parecia atenuação real do
+            # rumble. Loga o mult EFETIVO da política aplicada (para "auto"
+            # não há valor fixo: é resolvido por bateria a cada tick).
             logger.info(
                 "profile_rumble_policy_applied",
                 policy=policy_lit,
-                mult=desired_mult,
+                mult=(
+                    desired_mult
+                    if policy_lit == "custom"
+                    else RUMBLE_POLICY_MULT.get(policy_lit)
+                ),
+                custom_mult=desired_mult,
             )
             self._reapply_rumble_policy_to_active()
 
@@ -1300,6 +1339,25 @@ class Daemon:
         self._emu_manual_ts = time.monotonic()
         self._rumble_policy_from_profile = False
         self._rumble_policy_before_profile = None
+
+    def _seed_rumble_mult_observability(self) -> None:
+        """Sincroniza `_last_auto_mult` com o mult efetivo da política vigente.
+
+        MISC-08 item 1 (2026-07-18): `daemon._last_auto_mult` é a fonte do
+        `rumble_mult_applied` do state_full, mas só era atualizado quando um
+        caminho de rumble de fato COMPUTAVA (`reassert_rumble` exige rumble
+        fixado; `_game_rumble_mult` exige FF do jogo). Em passthrough ocioso,
+        aplicar um perfil com política fixa deixava o campo preso no default
+        0.7 — ao vivo, `policy=max` + `rumble_mult_applied=0.7` no state_full
+        parecia atenuação real do rumble do jogo. Política "auto" fica de
+        fora de propósito: o valor dela é resolvido por bateria (com
+        debounce) no próximo cômputo.
+        """
+        policy = self.config.rumble_policy
+        if policy == "custom":
+            self._last_auto_mult = float(self.config.rumble_policy_custom_mult)
+        elif policy in RUMBLE_POLICY_MULT:
+            self._last_auto_mult = RUMBLE_POLICY_MULT[policy]
 
     def _reapply_rumble_policy_to_active(self) -> None:
         """Re-aplica a política vigente ao rumble ATIVO (efeito imediato).
@@ -1646,6 +1704,60 @@ class Daemon:
             logger.debug("identity_sync_falhou", err=str(exc))
 
     # ------------------------------------------------------------------
+    # Identidade + LED dos controles EXTERNOS (EXT-04)
+    # ------------------------------------------------------------------
+
+    def _wire_external_registry(self) -> None:
+        """Cria o registro de externos + o aplicador de LED do tick lento.
+
+        EXT-04: gate = `identity_registry` já fiado (backend real). Com o
+        FakeController fica tudo None — nenhuma enumeração de /dev/input,
+        nenhuma escrita de LED, nenhum controllers.json em teste/smoke.
+        Best-effort: falha loga warning e o daemon segue (externos ficam sem
+        número, como um kernel sem a regra udev 79).
+        """
+        if self.identity_registry is None:
+            return
+        try:
+            from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
+                ExternalIdentityRegistry,
+                ExternalLedSync,
+            )
+
+            registry = ExternalIdentityRegistry()
+            registry.load()
+            self.external_registry = registry
+            self._external_led_sync = ExternalLedSync(self, registry)
+            # EXT-04: numeração global ÚNICA — o registro dos DualSense passa a
+            # pular os slots já reservados pelos externos ao numerar um
+            # DualSense novo (evita duas frentes acenderem o mesmo "Controle
+            # N" no co-op misto). Mão dupla do `reserve` que os externos já
+            # leem do lado DualSense; ninguém renumera quem já tem slot.
+            self.identity_registry.set_external_reserve_provider(
+                lambda: set(registry.snapshot().values())
+            )
+            logger.info("external_registry_wired")
+        except Exception as exc:
+            logger.warning("external_registry_wire_failed", err=str(exc))
+
+    async def _sync_external_leds(self) -> None:
+        """Tick lento (~2s) do LED dos externos — SEMPRE fora do event loop.
+
+        EXT-04 item 3: o `tick()` enumera /dev/input (10-40 ms) e escreve
+        sysfs, então roda no executor (`_run_blocking`). A disciplina de
+        escrita (cache por-valor + rate-limit por device + telemetria
+        `external_led_written`) mora no `ExternalLedSync`. No-op sem a fiação
+        (backend fake). Nunca propaga exceção para o poll loop.
+        """
+        sync = self._external_led_sync
+        if sync is None:
+            return
+        try:
+            await self._run_blocking(sync.tick)
+        except Exception as exc:  # nunca derrubar o poll loop
+            logger.debug("external_led_sync_falhou", err=str(exc))
+
+    # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
     # ------------------------------------------------------------------
 
@@ -1664,6 +1776,11 @@ class Daemon:
         # depois do gate ele nunca rodaria desconectado. Custo por tick: uma
         # comparação de float; o describe (getattrs) só no tick lento.
         identity_sync_next_at: float = 0.0
+        # EXT-04: LED dos EXTERNOS no tick lento do daemon (leitura IPC virou
+        # pura). Também ANTES do gate de conexão: o 8BitDo/Pro Controller
+        # merece número mesmo sem nenhum DualSense plugado. No-op sem fiação
+        # (backend fake) — custo por tick: uma comparação de float.
+        external_led_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
@@ -1676,6 +1793,9 @@ class Daemon:
             if tick_started >= identity_sync_next_at:
                 identity_sync_next_at = tick_started + 2.0
                 self._sync_identity_registry()
+            if tick_started >= external_led_next_at:
+                external_led_next_at = tick_started + 2.0
+                await self._sync_external_leds()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando

@@ -21,11 +21,28 @@
 #                         kernel (NÃO é regra udev); ciente do bootloader
 #                         (kernelstub/grub), idempotente e reversível. O install
 #                         DEFAULT NÃO aplica (mudança de cmdline é sensível).
-#   --with-storm-watch    OPT-IN (default OFF): instala um serviço de usuário que
-#                         registra o storm USB (-71) do DualSense num log dedicado
-#                         (~/.local/state/hefesto-dualsense4unix/storm.log).
-#                         Replicável e sobrevive reboot (sem /tmp, sem sudo). O
-#                         journald já guarda tudo; isto é só um recorte legível.
+#   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
+#                         usuário que vigia o ecossistema USB/BT/xHCI no journal
+#                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
+#                         e contadores de erro do rádio) num log dedicado
+#                         (~/.local/state/hefesto-dualsense4unix/kernel.log;
+#                         compat: storm.log). Sem sudo, replicável, simétrico.
+#   --with-storm-watch    [DEPRECATED] no-op — o kernel-watch (sucessor) já é
+#                         DEFAULT; mantida por compatibilidade.
+#   --no-proton-pin       OPT-OUT do Proton pinado (DEFAULT ON): o install
+#                         garante a versão de Proton VALIDADA (assets/
+#                         proton-pin.conf, SHA256 obrigatório, cache offline em
+#                         ~/.cache/hefesto-dualsense4unix/proton) e TRAVA o
+#                         default global + os jogos instalados nela
+#                         (CompatToolMapping; exige Steam fechada, com backup).
+#                         Sem o pin, um upgrade de Proton pode reintroduzir o
+#                         controle duplicado (semântica winebus mudou no 10).
+#   (DEFAULT) plataforma: regras udev 81 (controles/adaptadores BT e hosts USB
+#                         sem economia de energia), modprobe.d do btusb
+#                         (enable_autosuspend=0), FastConnectable do BlueZ
+#                         (SEM restart do bluetoothd) e cmdline gerenciado
+#                         (usbcore.autosuspend/usbcore.quirks com MERGE e
+#                         registro de dono). --no-udev pula os que tocam /etc.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -97,7 +114,8 @@ NO_DEV=0
 WITH_WIREPLUMBER_FIX=1
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
-WITH_STORM_WATCH=0
+SKIP_KERNEL_WATCH=0
+NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
@@ -119,7 +137,9 @@ for arg in "$@"; do
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
-        --with-storm-watch)   WITH_STORM_WATCH=1 ;;
+        --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
+        --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
+        --no-proton-pin)      NO_PROTON_PIN=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
@@ -129,7 +149,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,42p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,87p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -187,6 +207,32 @@ run_apt() {
 }
 
 require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
+
+# Registro de dono dos params de cmdline (PLAT-03): estado local que diz quem
+# garante cada parâmetro — "hefesto" (nosso; o uninstall reverte), "terceiro"
+# (Aurora/manual; o uninstall NUNCA toca) ou "compartilhado" (token
+# usbcore.quirks fundido; o uninstall remove SÓ os IDs nossos). Regra da
+# preservação: "hefesto"/"compartilhado" de um install PASSADO vence o
+# "terceiro" do plano novo (o plano novo vê o token presente e não sabe que
+# fomos nós que o pusemos).
+readonly CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
+_register_cmdline_owner() {
+    local key="$1" value="$2" prev=""
+    mkdir -p "$(dirname "${CMDLINE_OWNERS_FILE}")"
+    if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
+        prev="$(sed -n "s/^${key}=//p" "${CMDLINE_OWNERS_FILE}" | head -1)"
+    fi
+    if [[ "${value}" == "terceiro" && ( "${prev}" == "hefesto" || "${prev}" == "compartilhado" ) ]]; then
+        value="${prev}"
+    fi
+    {
+        if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
+            grep -v "^${key}=" "${CMDLINE_OWNERS_FILE}" || true
+        fi
+        printf '%s=%s\n' "${key}" "${value}"
+    } > "${CMDLINE_OWNERS_FILE}.tmp"
+    mv "${CMDLINE_OWNERS_FILE}.tmp" "${CMDLINE_OWNERS_FILE}"
+}
 
 # ---------------------------------------------------------------------------
 # Credencial sudo: adquirir UMA vez no início (BUG-INSTALL-SUDO-NONINTERACTIVE-01)
@@ -367,8 +413,9 @@ if [[ "${FORMAT}" != "native" ]]; then
     fi
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
-    printf ' Obs.: ajuste do microfone, desligar do Steam Input e preparo\n'
-    printf ' dos jogos da Steam só valem no formato "native" (padrão).\n'
+    printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
+    printf ' jogos da Steam e os passos de plataforma (Proton pinado, BT no\n'
+    printf ' máximo, cmdline) só valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
     printf '─────────────────────────────────────────\n\n'
     exit 0
@@ -516,13 +563,14 @@ else
     # texto estático — o antigo citava "4 regras" quando o conjunto canônico já
     # tinha 6 (faltavam a 77-leds e a 78-motion-not-joystick). Regra nova em
     # assets/ aparece aqui automaticamente (descrição é best-effort por prefixo).
-    # Fora do conjunto canônico: 73/74 descontinuadas, 75 opt-in.
+    # Fora do conjunto canônico: só a 75 (opt-in). 73/74 descontinuadas SAÍRAM
+    # do repo em 2026-07-18 (o install_udev.sh ainda as remove de máquinas antigas).
     canonical_rules=()
     for rules_path in "${ROOT_DIR}/assets/"[0-9][0-9]-*.rules; do
         [[ -f "${rules_path}" ]] || continue
         rules_base="$(basename "${rules_path}")"
         case "${rules_base}" in
-            73-*|74-*|75-*) continue ;;
+            75-*) continue ;;
         esac
         canonical_rules+=("${rules_base}")
     done
@@ -530,18 +578,22 @@ else
         "${#canonical_rules[@]}"
     for rules_base in "${canonical_rules[@]}"; do
         case "${rules_base}" in
-            70-*) rules_desc='permissão hidraw (USB e BT)' ;;
+            70-*) rules_desc='permissão hidraw (USB, BT e vpad virtual)' ;;
             71-uinput.rules) rules_desc='emulação Xbox360 via uinput' ;;
             71-uhid.rules) rules_desc='DualSense virtual via uhid (vibração na máscara PS)' ;;
             72-*) rules_desc='evita desconexão intermitente USB' ;;
             76-*) rules_desc='touchpad só pelo hefesto (sem briga)' ;;
             77-*) rules_desc='lightbar/player-LED graváveis via sysfs' ;;
             78-*) rules_desc='motion sensors fora da lista de joysticks' ;;
+            79-*) rules_desc='LED de player dos controles Nintendo/8BitDo' ;;
+            80-*) rules_desc='motion sensors fora da API js legada' ;;
+            81-hefesto-usb-power.rules) rules_desc='controles e adaptadores BT nunca dormem (USB)' ;;
+            81-hefesto-usb-host-power.rules) rules_desc='hosts USB (xHCI) sem economia que derruba o barramento' ;;
             *)    rules_desc='' ;;
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"
     done
-    printf '      (73/74 descontinuadas; 75 áudio-off é opt-in via --disable-usb-audio)\n'
+    printf '      (75 áudio-off é opt-in via --disable-usb-audio)\n'
 
     if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
         printf '      regras aplicadas + udev recarregado + uinput carregado\n'
@@ -608,6 +660,178 @@ if [[ "${SKIP_SND_QUIRK}" -eq 0 && "${SKIP_UDEV}" -eq 0 ]]; then
     else
         warn "cura NÃO persistiu — ${SND_QUIRK_CONF} ausente (sudo recusado?)"
         warn "rode manualmente: sudo bash scripts/install_snd_quirk.sh"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3d. Bluetooth no máximo (PLAT-04) — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# As regras 81 (devices + hosts USB sem economia) entram junto com as udev do
+# passo 3 (install_udev.sh é o dono). Aqui entram as camadas restantes:
+#   - modprobe.d do btusb (enable_autosuspend=0): o btusb LIGA o autosuspend
+#     do adaptador BT no probe (default Y do módulo — o furo provado no estudo
+#     2026-07-18). O conf corta na raiz, inclusive p/ adaptadores composite
+#     (classe ef) que escapam da regra 81. Vale no próximo probe; o runtime
+#     imediato já é coberto pela regra 81 (power/control=on).
+#   - FastConnectable do BlueZ: page scan agressivo → o botão PS reconecta
+#     mais rápido. Drop-in em /etc/bluetooth/main.conf.d/ SE o BlueZ suportar
+#     o diretório; senão bloco marcado idempotente APENSADO ao main.conf
+#     (conffile do dpkg → backup antes). ARMADILHA respeitada: NUNCA
+#     reiniciamos o bluetoothd (derrubaria os controles BT conectados —
+#     provado ao vivo 2026-07-17); vale no próximo boot/restart natural.
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+    step "3d" "Bluetooth no máximo (btusb sem autosuspend + reconexão rápida)"
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — passos de BT no máximo pulados (re-execute ./install.sh)"
+    else
+        # btusb: conf persistente + runtime p/ probes futuros (best-effort).
+        if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-btusb-no-autosuspend.conf" \
+                /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf 2>/dev/null; then
+            printf '      modprobe.d do btusb instalado (adaptador BT nunca dorme; vale no próximo probe)\n'
+        else
+            warn "não consegui gravar /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+        fi
+        if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
+            printf '0' | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
+        fi
+        # FastConnectable (decisão por suporte real do BlueZ da máquina).
+        FASTCONN_SENTINEL='# >>> hefesto FastConnectable >>>'
+        if [[ -d /etc/bluetooth/main.conf.d ]]; then
+            if sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.conf" \
+                    /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf 2>/dev/null; then
+                printf '      FastConnectable via drop-in main.conf.d (vale no próximo boot/restart do bluetoothd)\n'
+            else
+                warn "drop-in do FastConnectable falhou"
+            fi
+        elif [[ -f /etc/bluetooth/main.conf ]]; then
+            if sudo grep -qF "${FASTCONN_SENTINEL}" /etc/bluetooth/main.conf 2>/dev/null; then
+                printf '      FastConnectable já aplicado (bloco marcado presente) — nada a fazer\n'
+            else
+                _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
+                if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
+                   && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.block"; } \
+                        | sudo tee -a /etc/bluetooth/main.conf >/dev/null 2>&1; then
+                    printf '      FastConnectable apensado ao main.conf (backup: %s)\n' "${_bt_backup}"
+                    printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
+                else
+                    warn "não consegui apensar o bloco FastConnectable ao /etc/bluetooth/main.conf"
+                fi
+            fi
+        else
+            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — FastConnectable pulado\n'
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3e. Cmdline do kernel gerenciado (PLAT-03 item 2) — DEFAULT, registro de dono
+# ---------------------------------------------------------------------------
+# Garante usbcore.autosuspend=-1 + usbcore.quirks=054c:0ce6:gn,054c:0df2:gn no
+# cmdline do PRÓXIMO boot, com as regras provadas no estudo 2026-07-18:
+#   - o kernel respeita SÓ UM token usbcore.quirks= → o passo faz MERGE no
+#     token existente (delete + add do fundido), NUNCA adiciona um segundo;
+#   - já presente (Aurora/manual) = registra "terceiro" e NÃO toca — na
+#     máquina de referência o passo é no-op com atribuição registrada;
+#   - ausente = aplica e registra "hefesto" — o uninstall reverte SÓ o nosso;
+#   - NUNCA reintroduz 054c:0ce6:k / processor.max_cstate / threadirqs
+#     (removidos de propósito pela Aurora v3.24 — guarda no módulo).
+# Quem DECIDE é o módulo puro integrations/kernel_cmdline.py (100% stdlib,
+# testável); aqui só traduzimos o plano em kernelstub --delete/--add-options.
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
+    step "3e" "cmdline do kernel (usbcore.autosuspend + usbcore.quirks com merge)"
+    _cmdline_plan="$(python3 - "${ROOT_DIR}" <<'PYEOF'
+import json
+import os
+import shutil
+import sys
+
+root = sys.argv[1]
+sys.path.insert(0, os.path.join(root, "src"))
+from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
+
+tokens = None
+backend = "none"
+conf = "/etc/kernelstub/configuration"
+grub = "/etc/default/grub"
+if shutil.which("kernelstub") and os.path.isfile(conf):
+    try:
+        with open(conf, encoding="utf-8") as fh:
+            data = json.load(fh)
+        tokens = list((data.get("user") or {}).get("kernel_options") or [])
+        backend = "kernelstub"
+    except (OSError, ValueError):
+        tokens = None
+if tokens is None and os.path.isfile(grub):
+    try:
+        line = ""
+        with open(grub, encoding="utf-8") as fh:
+            for raw in fh:
+                raw = raw.strip()
+                if raw.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
+                    line = raw.split("=", 1)[1].strip().strip('"')
+        tokens = line.split()
+        backend = "grub"
+    except OSError:
+        tokens = None
+if tokens is None:
+    print("backend=none")
+    raise SystemExit(0)
+actions = kc.plan_tokens(tokens)
+violations = kc.forbidden_reintroductions(actions)
+if violations:
+    print("backend=guard-violation")
+    for violation in violations:
+        print("viol\t" + violation)
+    raise SystemExit(0)
+print("backend=" + backend)
+for a in actions:
+    print("\t".join(["plan", a.param, a.op, a.token, a.owner, " ".join(a.remove_tokens)]))
+PYEOF
+)" || _cmdline_plan=""
+    _cmdline_backend="$(sed -n 's/^backend=//p' <<<"${_cmdline_plan}" | head -1)"
+    if [[ -z "${_cmdline_backend}" || "${_cmdline_backend}" == "none" ]]; then
+        warn "sem kernelstub e sem /etc/default/grub legíveis — passo pulado (nada registrado)"
+    elif [[ "${_cmdline_backend}" == "guard-violation" ]]; then
+        warn "guarda anti-reintrodução disparou — passo ABORTADO (nada foi escrito):"
+        sed -n 's/^viol\t/        /p' <<<"${_cmdline_plan}"
+    else
+        _cmdline_changed=0
+        while IFS=$'\t' read -r _tagp _param _op _token _owner _removes; do
+            [[ "${_tagp}" == "plan" ]] || continue
+            case "${_op}" in
+                none)
+                    _register_cmdline_owner "cmdline.${_param}" "${_owner}"
+                    printf '      %s: já garantido (dono registrado: %s) — não toco\n' \
+                        "${_param}" \
+                        "$(sed -n "s/^cmdline.${_param}=//p" "${CMDLINE_OWNERS_FILE}" | head -1)"
+                    ;;
+                add|replace)
+                    if [[ "${_cmdline_backend}" != "kernelstub" ]]; then
+                        warn "${_param}: bootloader é grub — aplique manualmente em GRUB_CMDLINE_LINUX_DEFAULT: ${_token}"
+                        [[ -n "${_removes}" ]] && warn "  (removendo antes o(s) token(s): ${_removes} — o kernel respeita SÓ UM usbcore.quirks=)"
+                        continue
+                    fi
+                    if ! sudo -n true 2>/dev/null; then
+                        warn "${_param}: sudo indisponível — cmdline NÃO escrito (re-execute ./install.sh)"
+                        continue
+                    fi
+                    _ks_ok=1
+                    for _rm_tok in ${_removes}; do
+                        sudo kernelstub --delete-options "${_rm_tok}" >/dev/null 2>&1 || _ks_ok=0
+                    done
+                    sudo kernelstub --add-options "${_token}" >/dev/null 2>&1 || _ks_ok=0
+                    if [[ "${_ks_ok}" -eq 1 ]]; then
+                        _register_cmdline_owner "cmdline.${_param}" "${_owner}"
+                        _cmdline_changed=1
+                        printf '      %s: %s aplicado (dono: %s) — vale no PRÓXIMO boot\n' \
+                            "${_param}" "${_token}" "${_owner}"
+                    else
+                        warn "${_param}: kernelstub falhou — rode: sudo kernelstub --add-options '${_token}'"
+                    fi
+                    ;;
+            esac
+        done <<<"${_cmdline_plan}"
+        [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
     fi
 fi
 
@@ -814,6 +1038,13 @@ fi
 # ---------------------------------------------------------------------------
 step "5/11" "symlink ${BIN_DIR}/hefesto-dualsense4unix"
 ln -sf "${VENV_DIR}/bin/hefesto-dualsense4unix" "${BIN_DIR}/hefesto-dualsense4unix"
+# PATH-06: o wrapper de launch também entra no PATH — `which hefesto-launch`
+# passa a funcionar e a Launch Option pode ser digitada à mão como
+# `hefesto-launch %command%`. A string canônica do botão (WRAPPER_LAUNCH,
+# formato `sh -c` com caminho absoluto) continua a mesma: funciona SEM PATH.
+if [[ -x "${LAUNCH_WRAPPER_TARGET}" ]]; then
+    ln -sf "${LAUNCH_WRAPPER_TARGET}" "${BIN_DIR}/hefesto-launch"
+fi
 ok
 
 # ---------------------------------------------------------------------------
@@ -893,12 +1124,18 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 7b. Storm-watch (opt-in): serviço de usuário que loga o -71 num arquivo
-#     dedicado. FEAT-DSX-STORM-WATCH-01. Habilitado por --with-storm-watch ou
-#     pelo modo "tudo" (--yes). Replicável e simétrico no uninstall.
+# 7b. kernel-watch (DEFAULT — opt-out --no-kernel-watch): vigia do ecossistema
+#     USB/BT/xHCI num log dedicado. Evolução do storm-watch (PLAT-06 item 4):
+#     além do storm -71, vigia o rate-limit do hid-nintendo (a morte do 8BitDo
+#     em BT), erros de hci/xHCI e o delta dos contadores de erro do rádio BT.
+#     Script/unit mantêm os NOMES antigos (compat); o log novo é
+#     ~/.local/state/hefesto-dualsense4unix/kernel.log (storm.log vira symlink
+#     se não existir como arquivo). Sem sudo; simétrico no uninstall.
 # ---------------------------------------------------------------------------
-if [[ "${WITH_STORM_WATCH}" -eq 1 || "${AUTO_YES}" -eq 1 ]]; then
-    step "7b/11" "Storm-watch: serviço de usuário (log dedicado do -71)"
+if [[ "${SKIP_KERNEL_WATCH}" -eq 1 ]]; then
+    step "7b/11" "kernel-watch pulado (--no-kernel-watch)"
+else
+    step "7b/11" "kernel-watch: vigia USB/BT/xHCI (log dedicado do ecossistema)"
     readonly STORM_SCRIPT_SRC="${ROOT_DIR}/scripts/storm_watch.sh"
     readonly STORM_SCRIPT_DIR="${HOME}/.local/share/hefesto-dualsense4unix/scripts"
     readonly STORM_SCRIPT_TARGET="${STORM_SCRIPT_DIR}/storm_watch.sh"
@@ -907,7 +1144,7 @@ if [[ "${WITH_STORM_WATCH}" -eq 1 || "${AUTO_YES}" -eq 1 ]]; then
     readonly STORM_UNIT_TARGET="${STORM_USER_UNIT_DIR}/hefesto-dualsense4unix-storm-watch.service"
 
     if [[ ! -f "${STORM_SCRIPT_SRC}" || ! -f "${STORM_UNIT_SRC}" ]]; then
-        warn "storm-watch: arquivos-fonte ausentes — reinstale o repo"
+        warn "kernel-watch: arquivos-fonte ausentes — reinstale o repo"
     else
         mkdir -p "${STORM_SCRIPT_DIR}" "${STORM_USER_UNIT_DIR}"
         install -m755 "${STORM_SCRIPT_SRC}" "${STORM_SCRIPT_TARGET}"
@@ -915,7 +1152,7 @@ if [[ "${WITH_STORM_WATCH}" -eq 1 || "${AUTO_YES}" -eq 1 ]]; then
         if command -v systemctl >/dev/null 2>&1; then
             systemctl --user daemon-reload >/dev/null 2>&1 || true
             if systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1; then
-                printf '      habilitado — log em ~/.local/state/hefesto-dualsense4unix/storm.log\n'
+                printf '      habilitado — log em ~/.local/state/hefesto-dualsense4unix/kernel.log (compat: storm.log)\n'
             else
                 warn "enable falhou — habilite: systemctl --user enable --now hefesto-dualsense4unix-storm-watch.service"
             fi
@@ -1090,6 +1327,51 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     fi
 else
     warn "steam_launch_options.py ausente ou sem python3 — migração pulada; rode depois: python3 ${LAUNCH_MIGRATE_PY} --migrate"
+fi
+
+# ---------------------------------------------------------------------------
+# 11c. Proton PINADO (PLAT-01) — DEFAULT, opt-out --no-proton-pin
+# ---------------------------------------------------------------------------
+# A semântica do winebus MUDOU entre Proton 9→10 (PROTON_ENABLE_HIDRAW morreu
+# — provado no estudo 2026-07-18); sem pin, um upgrade automático de Proton
+# pode reintroduzir o controle duplicado da noite pro dia. O módulo
+# integrations/proton_pin.py (100% stdlib, python3 do sistema) garante a
+# versão validada do assets/proton-pin.conf em compatibilitytools.d (cache
+# offline-first em ~/.cache/hefesto-dualsense4unix/proton; SHA256 OBRIGATÓRIO
+# — checksum errado = NADA é extraído) e TRAVA o default global + os jogos
+# instalados nela (CompatToolMapping no config.vdf, com backup
+# config.vdf.bak.hefesto-proton-<ts>; com a Steam/jogo abertos a trava é
+# ADIADA com instrução — mesmo gate dos outros passos que editam vdf).
+# Upgrade é sempre DELIBERADO: editar o proton-pin.conf + rodar o install.
+step "11c" "Proton pinado: versão validada + trava dos jogos"
+PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+if [[ "${NO_PROTON_PIN}" -eq 1 ]]; then
+    printf '      pulado (--no-proton-pin) — sem o pin, um upgrade de Proton pode duplicar o controle\n'
+elif [[ ! -f "${PROTON_PIN_PY}" ]] || ! command -v python3 >/dev/null 2>&1; then
+    warn "proton_pin.py ausente ou sem python3 — pin do Proton pulado"
+elif [[ ! -f "${ROOT_DIR}/assets/proton-pin.conf" ]]; then
+    warn "assets/proton-pin.conf ausente — pin do Proton pulado (reinstale o repo)"
+else
+    _pp_rc=0
+    python3 "${PROTON_PIN_PY}" --ensure || _pp_rc=$?
+    if [[ "${_pp_rc}" -eq 1 ]]; then
+        warn "checksum do Proton NÃO bateu — passo ABORTADO (nunca instalo binário não verificado)"
+    elif [[ "${_pp_rc}" -eq 2 ]]; then
+        warn "sem rede e sem cache — o pin fica PENDENTE (rode ./install.sh de novo com internet); trava adiada"
+    elif [[ "${_pp_rc}" -ne 0 ]]; then
+        warn "garantia da versão pinada falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --ensure"
+    else
+        _pl_rc=0
+        python3 "${PROTON_PIN_PY}" --lock || _pl_rc=$?
+        if [[ "${_pl_rc}" -eq 0 ]]; then
+            printf '      jogos travados na versão pinada (backup do config.vdf ao lado; reverter: uninstall)\n'
+        elif [[ "${_pl_rc}" -eq 3 ]]; then
+            warn "Steam (ou um jogo) aberta — trava ADIADA; feche a Steam e rode: python3 ${PROTON_PIN_PY} --lock"
+            warn "  (ou use o botão 'Travar Proton validado' na aba Sistema da GUI)"
+        else
+            warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------

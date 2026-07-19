@@ -288,6 +288,8 @@ class _HomeStub:
         self._home_session_label = _FakeWidget()
         self._home_gamepad_opts = _FakeWidget()
         self._home_vpad_banner = _FakeWidget()
+        # GUI-05 item 3: o _render_home também rege o banner "jogo sem wrapper".
+        self._home_wrapper_banner = _FakeWidget()
         # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 

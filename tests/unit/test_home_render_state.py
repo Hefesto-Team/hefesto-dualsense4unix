@@ -106,6 +106,8 @@ class _HomeStub:
         self._home_gamepad_opts = _FakeWidget()
         # UX-03: banner de degradação do vpad (novo caminho do _render_home).
         self._home_vpad_banner = _FakeWidget()
+        # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
+        self._home_wrapper_banner = _FakeWidget()
 
 
 @pytest.fixture()
@@ -182,6 +184,52 @@ class TestCardFantasma:
         )
 
         assert len(host._home_controllers_box.get_children()) == 2
+
+
+class TestBannerJogoSemWrapper:
+    """GUI-05 item 3: o `_render_home` liga/desliga o banner do wrapper a
+    partir do `gamepad_emulation.wrapper_used` (contrato da lane do daemon:
+    False = jogo aberto sem o hefesto-launch; True/None/ausente = sem banner).
+    """
+
+    def _estado(self, wrapper_used: object) -> dict[str, Any]:
+        estado = _state([])
+        if wrapper_used is not None:
+            estado["gamepad_emulation"]["wrapper_used"] = wrapper_used
+        return estado
+
+    def test_false_acende_o_banner_com_o_texto_pro_leigo(
+        self, fake_gtk: None
+    ) -> None:
+        host = _HomeStub()
+
+        host._render_home(self._estado(False))
+
+        banner = host._home_wrapper_banner
+        assert banner.visible is True
+        assert banner.get_text() == home_actions.WRAPPER_MISSING_TEXT
+        assert "hefesto-launch" in banner.get_text()
+        assert "aba Sistema" in banner.get_text()
+
+    @pytest.mark.parametrize("valor", [True, None, "false", 0])
+    def test_qualquer_coisa_que_nao_seja_false_literal_apaga(
+        self, fake_gtk: None, valor: object
+    ) -> None:
+        """True = caso bom; None/ausente = sem jogo (ou daemon antigo sem o
+        campo); tipos tortos NÃO acendem (nunca alarme falso)."""
+        host = _HomeStub()
+
+        host._render_home(self._estado(valor))
+
+        assert host._home_wrapper_banner.visible is False
+
+    def test_offline_apaga_o_banner(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+        host._home_wrapper_banner.visible = True  # sobra de um render anterior
+
+        host._render_home(None)
+
+        assert host._home_wrapper_banner.visible is False
 
 
 class TestRefreshTimeout:

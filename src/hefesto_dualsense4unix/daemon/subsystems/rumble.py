@@ -95,7 +95,16 @@ def zero_motors_on_mode_exit(daemon: DaemonProtocol) -> None:
     if daemon.config.rumble_active is not None:
         return
     try:
-        daemon.controller.set_rumble(weak=0, strong=0)
+        # GUERRA-01 (keepalive neutro): `set_rumble(0, 0)` com os motores do
+        # backend JÁ em 0 vira report neutro — que NÃO para um motor que o
+        # jogo deixou girando por fora (hidraw direto). O backend pydualsense
+        # expõe `force_rumble_stop()` (um report de stop de verdade); os
+        # demais backends/fakes seguem no zero clássico.
+        force = getattr(daemon.controller, "force_rumble_stop", None)
+        if callable(force):
+            force()
+        else:
+            daemon.controller.set_rumble(weak=0, strong=0)
     except Exception as exc:
         logger.warning("rumble_zero_on_mode_exit_failed", err=str(exc), exc_info=True)
 

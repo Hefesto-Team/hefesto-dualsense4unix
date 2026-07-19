@@ -24,6 +24,18 @@
 #                        Reverter desligamento: scripts/disable_steam_input.sh --restore.
 #   --yes,-y             responde 'sim' para prompts.
 #
+# Onda PLATAFORMA (2026-07-18) — removidos por DEFAULT, simétricos ao install:
+#   - regras udev 81 (USB power devices + hosts) + modprobe.d do btusb — rm +
+#     reload; o power/control atual NÃO é revertido a quente (inócuo até reboot).
+#   - FastConnectable do BlueZ: drop-in main.conf.d OU bloco marcado do
+#     main.conf (entre as sentinelas hefesto), com backup; SEM restart do
+#     bluetoothd (vale no próximo boot/restart natural).
+#   - Proton pinado: destrava SÓ o CompatToolMapping que NÓS escrevemos
+#     (proton_pin.py --unlock); o Proton EXTRAÍDO fica (dado do usuário).
+#   - cmdline: reverte SÓ os params registrados como "hefesto" no estado local
+#     (cmdline-owners.conf); token usbcore.quirks "compartilhado" perde só os
+#     IDs nossos (merge inverso). Params de terceiro (Aurora) NUNCA são tocados.
+#
 # BUG-UNINSTALL-UDEV-DEFAULT-01 (fix): install.sh aplica as 5 udev rules + modules-
 # load por default (--no-udev é o opt-out). Symmetric, o uninstall.sh deve REMOVER
 # por default. Versões anteriores exigiam --udev explícito, deixando 6 arquivos no
@@ -127,9 +139,13 @@ _cleanup_sudo_keepalive() {
 trap _cleanup_sudo_keepalive EXIT
 
 # Prime a credencial só se algum passo com root vai rodar: remoção de udev
-# (default), applet COSMIC instalado, watcher dsx-recover ou pacote .deb.
+# (default), applet COSMIC instalado, watcher dsx-recover, pacote .deb ou os
+# artefatos de plataforma (FastConnectable do BlueZ / cmdline registrado).
 _NEEDS_SUDO=0
 [[ "${REMOVE_UDEV}" -eq 1 ]] && _NEEDS_SUDO=1
+[[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] && _NEEDS_SUDO=1
+grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
+[[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
 [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-dsx-recover.service ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
@@ -171,11 +187,15 @@ else
     log "ausente: ${HOTPLUG_UNIT_TARGET}"
 fi
 
-# Storm-watch (--user) — FEAT-DSX-STORM-WATCH-01. Simétrico ao install.
+# kernel-watch (--user; nomes storm-watch preservados por compat) — DEFAULT no
+# install desde a onda PLATAFORMA. Simétrico: unit + script saem; os LOGS ficam
+# (kernel.log/storm.log são dado de diagnóstico do usuário). O symlink de
+# compat storm.log→kernel.log é artefato NOSSO e sai; um storm.log ARQUIVO
+# real (histórico antigo) fica.
 readonly STORM_UNIT_TARGET="${HOME}/.config/systemd/user/hefesto-dualsense4unix-storm-watch.service"
 readonly STORM_SCRIPT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/scripts/storm_watch.sh"
 if [[ -f "${STORM_UNIT_TARGET}" ]]; then
-    log "desabilitando hefesto-dualsense4unix-storm-watch.service"
+    log "desabilitando hefesto-dualsense4unix-storm-watch.service (kernel-watch)"
     systemctl --user disable --now hefesto-dualsense4unix-storm-watch.service >/dev/null 2>&1 || true
     log "removendo ${STORM_UNIT_TARGET}"
     rm -f "${STORM_UNIT_TARGET}"
@@ -184,6 +204,10 @@ else
     log "ausente: ${STORM_UNIT_TARGET}"
 fi
 rm -f "${STORM_SCRIPT_TARGET}"
+if [[ -L "${HOME}/.local/state/hefesto-dualsense4unix/storm.log" ]]; then
+    log "removendo symlink de compat storm.log→kernel.log (o kernel.log fica — é seu histórico)"
+    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/storm.log"
+fi
 
 # Guard do Steam Input (path + timer, --user) — FEAT-STEAM-INPUT-SELF-HEAL-01
 log "removendo guard do Steam Input (path/timer/service --user)"
@@ -307,6 +331,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         log "ERRO: sudo recusado/sem TTY — udev rules NÃO foram removidas."
         log "      rode: sudo bash $0 ${*:-} (ou re-execute interativamente)"
     else
+        # 73/74 saíram do repo (2026-07-18) mas o rm fica: limpa instalações antigas.
         sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules \
                    /etc/udev/rules.d/71-uinput.rules \
                    /etc/udev/rules.d/72-ps5-controller-autosuspend.rules \
@@ -317,9 +342,13 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/77-dualsense-leds.rules \
                    /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules \
                    /etc/udev/rules.d/79-external-controller-leds.rules \
+                   /etc/udev/rules.d/80-motion-joydev-hide.rules \
+                   /etc/udev/rules.d/81-hefesto-usb-power.rules \
+                   /etc/udev/rules.d/81-hefesto-usb-host-power.rules \
                    /etc/udev/rules.d/71-uhid.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
-                   /etc/modprobe.d/hefesto-dualsense-storm.conf
+                   /etc/modprobe.d/hefesto-dualsense-storm.conf \
+                   /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         # SPRINT-GAME-RUMBLE-01: a cura de raiz do storm (modprobe.d) é DEFAULT
         # no install (preserva mic+fone), então é removida por DEFAULT aqui
         # (simétrico — feedback_uninstall_simetrico_default). Limpa também o
@@ -333,10 +362,44 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         # residual persiste até desplugar/replugar ou reboot.
         sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
         sudo udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
+        # input: devolve os js de Motion Sensors (regra 80) e as flags ID_INPUT_*
+        # (regra 78) ao default do kernel sem exigir replug.
+        sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
+        # Regras 81 (PLAT-03): SÓ rm + reload, de propósito — o power/control
+        # "on" atual dos devices/hosts NÃO é revertido a quente (é inócuo; o
+        # kernel volta ao default no próximo boot/replug sem as regras).
     fi
 else
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/7{6,7,8}-dualsense*.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/modules-load.d/hefesto-dualsense4unix.conf"
+    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/7{6,7,8}-dualsense*.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+fi
+
+# ---------------------------------------------------------------------------
+# FastConnectable do BlueZ (PLAT-04) — simétrico ao install 3d. Drop-in OU
+# bloco marcado entre as sentinelas hefesto no /etc/bluetooth/main.conf
+# (conffile do dpkg → backup antes de mexer). NUNCA reinicia o bluetoothd
+# (derrubaria os controles BT conectados); a remoção vale no próximo
+# boot/restart natural do serviço.
+# ---------------------------------------------------------------------------
+if sudo -n true 2>/dev/null; then
+    if [[ -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]]; then
+        log "removendo FastConnectable (drop-in /etc/bluetooth/main.conf.d)"
+        sudo rm -f /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf || true
+    fi
+    if [[ -f /etc/bluetooth/main.conf ]] \
+       && sudo grep -qF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+        log "removendo bloco FastConnectable do /etc/bluetooth/main.conf (backup antes)"
+        sudo cp /etc/bluetooth/main.conf \
+            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
+        sudo sed -i '/^# >>> hefesto FastConnectable >>>$/,/^# <<< hefesto FastConnectable <<<$/d' \
+            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco marcado falhou — remova manualmente"
+        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
+    fi
+elif [[ -e /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ]] \
+     || grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+    log "sudo indisponível — FastConnectable do BlueZ não removido"
+    log "  (remova /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf ou o bloco"
+    log "   entre as sentinelas '# >>> hefesto FastConnectable >>>' do main.conf)"
 fi
 
 # Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é
@@ -355,6 +418,86 @@ if [[ "${REMOVE_USB_QUIRK}" -eq 1 ]]; then
 else
     log "quirk de boot usbcore.quirks preservado (cmdline é sensível). Para remover:"
     log "  bash scripts/install_usb_quirk.sh --remove   (ou ./uninstall.sh --remove-usb-quirk)"
+fi
+
+# ---------------------------------------------------------------------------
+# Cmdline gerenciado (PLAT-03) — reverte SÓ o que o install registrou como
+# NOSSO no estado local (cmdline-owners.conf). "terceiro" (Aurora/manual)
+# NUNCA é tocado; "compartilhado" (token usbcore.quirks fundido) perde SÓ os
+# IDs do hefesto (strip_quirks_token do módulo puro) e o restante é re-adicionado.
+# Sem registro = install nunca escreveu cmdline = nada a reverter.
+# ---------------------------------------------------------------------------
+CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
+if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
+    _cmdline_reverted=0
+    if ! command -v kernelstub >/dev/null 2>&1; then
+        log "cmdline: registro presente mas sem kernelstub — reverta manualmente os"
+        log "  params marcados 'hefesto' em ${CMDLINE_OWNERS_FILE} (registro preservado)"
+    elif ! sudo -n true 2>/dev/null; then
+        log "cmdline: sudo indisponível — params NÃO revertidos (registro preservado;"
+        log "  re-execute o uninstall com sudo para reverter)"
+    else
+        _own_autosusp="$(sed -n 's/^cmdline\.usbcore\.autosuspend=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
+        _own_quirks="$(sed -n 's/^cmdline\.usbcore\.quirks=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
+        _cmdline_reverted=1
+        if [[ "${_own_autosusp}" == "hefesto" ]]; then
+            log "cmdline: removendo usbcore.autosuspend=-1 (registrado como nosso; vale no próximo boot)"
+            sudo kernelstub --delete-options "usbcore.autosuspend=-1" >/dev/null 2>&1 \
+                || log "  ERRO: kernelstub --delete-options falhou — rode manualmente"
+        elif [[ -n "${_own_autosusp}" ]]; then
+            log "cmdline: usbcore.autosuspend é de ${_own_autosusp} — preservado"
+        fi
+        if [[ "${_own_quirks}" == "hefesto" || "${_own_quirks}" == "compartilhado" ]]; then
+            if command -v python3 >/dev/null 2>&1; then
+                _quirks_plan="$(python3 - "${ROOT_DIR}" <<'PYEOF'
+import json
+import os
+import sys
+
+root = sys.argv[1]
+sys.path.insert(0, os.path.join(root, "src"))
+from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
+
+try:
+    with open("/etc/kernelstub/configuration", encoding="utf-8") as fh:
+        data = json.load(fh)
+    tokens = list((data.get("user") or {}).get("kernel_options") or [])
+except (OSError, ValueError):
+    raise SystemExit(0)
+for tok in kc.tokens_for_param(tokens, kc.QUIRKS_PARAM):
+    rest, changed = kc.strip_quirks_token(tok)
+    if not changed:
+        continue
+    print("del\t" + tok)
+    if rest is not None:
+        print("add\t" + rest)
+PYEOF
+)" || _quirks_plan=""
+                if [[ -n "${_quirks_plan}" ]]; then
+                    log "cmdline: removendo os IDs do hefesto do usbcore.quirks (dono: ${_own_quirks}; vale no próximo boot)"
+                    while IFS=$'\t' read -r _qop _qtok; do
+                        case "${_qop}" in
+                            del) sudo kernelstub --delete-options "${_qtok}" >/dev/null 2>&1 \
+                                     || log "  ERRO: delete-options '${_qtok}' falhou" ;;
+                            add) sudo kernelstub --add-options "${_qtok}" >/dev/null 2>&1 \
+                                     || log "  ERRO: add-options '${_qtok}' falhou (re-adicione o restante do token!)" ;;
+                        esac
+                    done <<<"${_quirks_plan}"
+                else
+                    log "cmdline: usbcore.quirks sem IDs nossos na configuration — nada a reverter"
+                fi
+            else
+                log "cmdline: sem python3 — usbcore.quirks compartilhado NÃO revertido (registro preservado)"
+                _cmdline_reverted=0
+            fi
+        elif [[ -n "${_own_quirks}" ]]; then
+            log "cmdline: usbcore.quirks é de ${_own_quirks} — preservado"
+        fi
+    fi
+    if [[ "${_cmdline_reverted}" -eq 1 ]]; then
+        log "removendo registro de dono ${CMDLINE_OWNERS_FILE}"
+        rm -f "${CMDLINE_OWNERS_FILE}"
+    fi
 fi
 
 if [[ -d "${ROOT_DIR}/.venv" ]]; then
@@ -489,7 +632,8 @@ log "fora do escopo (não removido — não é do hefesto):"
 log "  /etc/udev/rules.d/99-usb-*.rules         — toolchain de power-mgmt do user (ex: Aurora self-heal)"
 log "  /etc/udev/rules.d/99-storage-no-link-pm.rules — idem (storage PM)"
 log "  /etc/udev/rules.d/50-system76-power.rules    — polkit pra system76-power (Pop_OS)"
-log "  kernel cmdline (usbcore.autosuspend, pcie_aspm, etc.) — kernelstub/grub, não hefesto"
+log "  kernel cmdline de TERCEIRO (pcie_aspm, mitigations, etc.) — só os params"
+log "    REGISTRADOS como do hefesto (cmdline-owners.conf) são revertidos acima"
 log "  ~/.config/wireplumber/wireplumber.conf.d/   — dir compartilhado, só nosso .conf é removido"
 log "  ~/.local/lib/python*/site-packages/         — pip --user pode ser compartilhado"
 
@@ -512,6 +656,27 @@ else
     else
         log "  ERRO: disable_steam_input.sh falhou — rode manualmente"
     fi
+fi
+
+# PLAT-01: destrava o CompatToolMapping do Proton pinado — SÓ o que NÓS
+# escrevemos (registro em ~/.local/state/.../proton-pin-lock.json). Roda ANTES
+# do strip das Launch Options DE PROPÓSITO: o strip (--stop-steam) REABRE a
+# Steam ao final, e o unlock exige Steam fechada. O Proton EXTRAÍDO em
+# compatibilitytools.d FICA — é dado do usuário (apague a pasta GE-Proton*
+# manualmente se não quiser mais).
+PROTON_PIN_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+if [[ -f "${PROTON_PIN_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    log "destravando o Proton pinado (só o mapping que o hefesto escreveu)"
+    _pp_rc=0
+    python3 "${PROTON_PIN_PY}" --unlock || _pp_rc=$?
+    if [[ "${_pp_rc}" -eq 3 ]]; then
+        log "  ADIADO: feche a Steam (e o jogo) e rode: python3 ${PROTON_PIN_PY} --unlock"
+    elif [[ "${_pp_rc}" -ne 0 ]]; then
+        log "  ERRO: unlock falhou (rc=${_pp_rc}) — rode: python3 ${PROTON_PIN_PY} --unlock"
+    fi
+    log "  o Proton extraído (compatibilitytools.d) FICA — é dado do usuário"
+else
+    log "proton_pin.py ausente ou sem python3 — pulei o destravamento do Proton pinado"
 fi
 
 # DEDUP-04/DEDUP-05 (INCONDICIONAL, sem flag — o índice da onda manda): remove
@@ -542,6 +707,11 @@ readonly LAUNCH_WRAPPER="${HOME}/.local/share/hefesto-dualsense4unix/bin/hefesto
 if [[ -e "${LAUNCH_WRAPPER}" ]]; then
     log "removendo wrapper de launch ${LAUNCH_WRAPPER}"
     rm -f "${LAUNCH_WRAPPER}"
+fi
+# PATH-06: o symlink do wrapper no PATH sai junto (simétrico ao passo 5 do install).
+if [[ -L "${HOME}/.local/bin/hefesto-launch" || -e "${HOME}/.local/bin/hefesto-launch" ]]; then
+    log "removendo symlink ${HOME}/.local/bin/hefesto-launch"
+    rm -f "${HOME}/.local/bin/hefesto-launch"
 fi
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
 if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then

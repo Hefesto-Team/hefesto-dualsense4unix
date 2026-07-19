@@ -364,3 +364,192 @@ def test_install_migra_fora_do_bloco_do_steam_input():
     pos_fim_bloco_steam_input = texto.index("guard do Steam Input habilitado")
     pos_migrate = texto.index("--migrate --stop-steam")
     assert pos_migrate > pos_fim_bloco_steam_input
+
+
+# --- apply_wrapper_to_all_games (PATH-06 item 2: via em-massa consentida) ----
+
+
+def _vdf_sem_launch_options(appid: str) -> str:
+    """Um localconfig.vdf com um app SEM a linha LaunchOptions."""
+    return (
+        '"UserLocalConfigStore"\n{\n'
+        f'{_TAB}"Software"\n{_TAB}{{\n'
+        f'{_TAB * 2}"Valve"\n{_TAB * 2}{{\n'
+        f'{_TAB * 3}"Steam"\n{_TAB * 3}{{\n'
+        f'{_TAB * 4}"apps"\n{_TAB * 4}{{\n'
+        f'{_TAB * 5}"{appid}"\n{_TAB * 5}{{\n'
+        f'{_TAB * 6}"playtime"{_TAB * 2}"42"\n'
+        f"{_TAB * 5}}}\n"
+        f"{_TAB * 4}}}\n{_TAB * 3}}}\n{_TAB * 2}}}\n{_TAB}}}\n}}\n"
+    )
+
+
+def test_apply_wrapper_prefixa_preservando_opcoes_do_usuario():
+    texto = _vdf({"620": "MANGOHUD=1 %command%"})
+    novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
+    assert aplicados == ["620"]
+    assert pulados == []
+    valores = slo.read_launch_options_by_appid(novo)
+    assert valores["620"] == f"{slo.WRAPPER_PREFIX} MANGOHUD=1 %command%"
+
+
+def test_apply_wrapper_insere_launch_options_em_jogo_sem_nenhuma():
+    texto = _vdf_sem_launch_options("1599660")
+    novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
+    assert aplicados == ["1599660"]
+    assert pulados == []
+    valores = slo.read_launch_options_by_appid(novo)
+    assert valores["1599660"] == slo.WRAPPER_LAUNCH
+    # O resto do bloco fica intacto (a linha nova NÃO substitui nada).
+    assert '"playtime"' in novo
+
+
+def test_apply_wrapper_e_idempotente_e_reporta_skip():
+    texto = _vdf({"620": "MANGOHUD=1 %command%"})
+    uma_vez, _, _ = slo.apply_wrapper_vdf_text(texto)
+    duas_vezes, aplicados, pulados = slo.apply_wrapper_vdf_text(uma_vez)
+    assert duas_vezes == uma_vez
+    assert aplicados == []
+    assert pulados == [("620", "ja_tem_wrapper")]
+
+
+def test_apply_wrapper_remove_veneno_legado_junto():
+    texto = _vdf({"1599660": LINHA_914})
+    novo, aplicados, _ = slo.apply_wrapper_vdf_text(texto)
+    assert aplicados == ["1599660"]
+    assert slo.IGNORE_SIGNATURE not in novo
+    assert slo.read_launch_options_by_appid(novo)["1599660"] == slo.WRAPPER_LAUNCH
+
+
+def test_apply_wrapper_pula_ignore_estendido_sem_tocar():
+    texto = _vdf({"1599660": LINHA_ESTENDIDA, "620": ""})
+    novo, aplicados, pulados = slo.apply_wrapper_vdf_text(texto)
+    assert ("1599660", "ignore_estendido") in pulados
+    assert aplicados == ["620"]
+    # A linha estendida permanece byte a byte.
+    assert slo.read_launch_options_by_appid(novo)["1599660"] == LINHA_ESTENDIDA
+
+
+def test_apply_wrapper_to_all_games_recusa_com_steam_aberta(tmp_path, monkeypatch):
+    vdf = tmp_path / "localconfig.vdf"
+    original = _vdf({"620": "MANGOHUD=1 %command%"})
+    vdf.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
+    assert resultado["applied"] == []
+    assert resultado["errors"] == [{"vdf": "", "appid": "", "reason": "steam_aberta"}]
+    assert vdf.read_text(encoding="utf-8") == original
+
+
+def test_apply_wrapper_to_all_games_recusa_com_jogo_aberto(tmp_path, monkeypatch):
+    vdf = tmp_path / "localconfig.vdf"
+    original = _vdf({"620": ""})
+    vdf.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: True)
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
+    assert resultado["errors"] == [
+        {"vdf": "", "appid": "", "reason": "jogo_da_steam_aberto"}
+    ]
+    assert vdf.read_text(encoding="utf-8") == original
+
+
+def test_apply_wrapper_to_all_games_aplica_com_backup(tmp_path, monkeypatch):
+    vdf = tmp_path / "localconfig.vdf"
+    vdf.write_text(
+        _vdf({"620": "MANGOHUD=1 %command%", "440": slo._vdf_escape(slo.WRAPPER_LAUNCH)}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
+    assert [a["appid"] for a in resultado["applied"]] == ["620"]
+    assert [(s["appid"], s["reason"]) for s in resultado["skipped"]] == [
+        ("440", "ja_tem_wrapper")
+    ]
+    assert resultado["errors"] == []
+    assert len(list(tmp_path.glob("localconfig.vdf.bak.hefesto-launch-*"))) == 1
+    valores = slo.read_launch_options_by_appid(vdf.read_text(encoding="utf-8"))
+    assert valores["620"].startswith(slo.WRAPPER_PREFIX)
+
+
+def test_apply_wrapper_to_all_games_dry_run_nao_toca(tmp_path, monkeypatch):
+    vdf = tmp_path / "localconfig.vdf"
+    original = _vdf_sem_launch_options("1599660")
+    vdf.write_text(original, encoding="utf-8")
+    # dry_run é preview (contagem do diálogo da GUI) — nem consulta a Steam.
+    monkeypatch.setattr(
+        slo, "steam_running", lambda: (_ for _ in ()).throw(AssertionError)
+    )
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf], dry_run=True)
+    assert [a["appid"] for a in resultado["applied"]] == ["1599660"]
+    assert vdf.read_text(encoding="utf-8") == original
+    assert list(tmp_path.glob("*.bak.*")) == []
+
+
+def test_apply_wrapper_to_all_games_vdf_nao_utf8_vira_erro_por_vdf(
+    tmp_path, monkeypatch
+):
+    """Achado #6: um localconfig.vdf não-UTF-8 (byte latin-1 legado /
+    multi-usuário) vira erro POR-VDF em vez de abortar a varredura inteira com
+    UnicodeDecodeError — o vdf válido seguinte continua sendo processado."""
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    ruim = tmp_path / "ruim" / "localconfig.vdf"
+    ruim.parent.mkdir()
+    ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff byte invalido\n}\n')
+    bom = tmp_path / "bom" / "localconfig.vdf"
+    bom.parent.mkdir()
+    bom.write_text(_vdf({"620": "MANGOHUD=1 %command%"}), encoding="utf-8")
+
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[ruim, bom])
+    # O ruim é reportado como erro por-vdf; o bom foi aplicado (não abortou).
+    assert [e["vdf"] for e in resultado["errors"]] == [str(ruim)]
+    assert [a["appid"] for a in resultado["applied"]] == ["620"]
+    assert slo.read_launch_options_by_appid(bom.read_text(encoding="utf-8"))[
+        "620"
+    ].startswith(slo.WRAPPER_PREFIX)
+
+
+def test_main_strip_vdf_nao_utf8_nao_estoura_traceback(
+    tmp_path, monkeypatch, capsys
+):
+    """Achado #6: no --strip do uninstall, um vdf não-UTF-8 vira ERRO por-vdf
+    (rc=1) e o loop segue limpando os demais — nunca traceback/abort deixando o
+    veneno IGNORE gravado nos vdfs restantes ("zero controles pós-uninstall")."""
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    ruim = tmp_path / "ruim" / "localconfig.vdf"
+    ruim.parent.mkdir()
+    ruim.write_bytes(b'"UserLocalConfigStore"\n{\n\xff\n}\n')
+    bom = tmp_path / "bom" / "localconfig.vdf"
+    bom.parent.mkdir()
+    bom.write_text(_vdf({"1599660": LINHA_914}), encoding="utf-8")
+
+    rc = slo.main(["--strip", "--vdf", str(ruim), "--vdf", str(bom)])
+    assert rc == 1  # houve erro por-vdf...
+    out = capsys.readouterr().out
+    assert "ERRO" in out
+    assert str(ruim) in out
+    # ...mas o vdf bom foi desenvenenado (a varredura não abortou no ruim).
+    assert slo.IGNORE_SIGNATURE not in bom.read_text(encoding="utf-8")
+
+
+def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
+    sandbox = (
+        tmp_path / ".var/app/com.valvesoftware.Steam/.steam/steam/userdata"
+        / "12345678/config"
+    )
+    sandbox.mkdir(parents=True)
+    vdf = sandbox / "localconfig.vdf"
+    original = _vdf({"620": ""})
+    vdf.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    resultado = slo.apply_wrapper_to_all_games(vdfs=[vdf])
+    assert resultado["applied"] == []
+    assert resultado["skipped"] == [
+        {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
+    ]
+    assert vdf.read_text(encoding="utf-8") == original

@@ -31,6 +31,26 @@ logger = get_logger(__name__)
 DEFAULT_POLL_INTERVAL_SEC = 0.5
 DEFAULT_DEBOUNCE_SEC = 0.5
 
+#: MISC-08 item 2 (2026-07-18): wm_class da PRÓPRIA GUI/applet do hefesto.
+#: Focar a nossa janela não é evidência de "saiu do jogo" — ao vivo (journal
+#: 20:15:40-51) cada alt-tab jogoGUI flipava vitoriasackboy_nativo, mexendo
+#: em política de rumble/modo no meio da partida. Valores provados no journal
+#: (`Main.py`, `Hefesto-Dualsense4Unix`) + o instance do WM_CLASS e o prgname
+#: ("hefesto-dualsense4unix", app/app.py + app/main.py), o entrypoint da GUI
+#: ("hefesto-dualsense4unix-gui", app/main.py) e o APP_ID do applet COSMIC
+#: (packaging/cosmic-applet/src/app.rs). Comparação case-insensitive.
+#: Tradeoff aceito: "Main.py" é genérico (outro app GTK rodando um Main.py
+#: também seria retido) — é o valor que a nossa GUI de fato reporta sob
+#: XWayland, então precisa estar coberto.
+OWN_GUI_WM_CLASSES: frozenset[str] = frozenset(
+    {
+        "main.py",
+        "hefesto-dualsense4unix",
+        "hefesto-dualsense4unix-gui",
+        "com.vitoriamaria.hefestodualsense4unix",
+    }
+)
+
 
 WindowReader = Callable[[], dict[str, Any]]
 
@@ -59,8 +79,10 @@ class AutoSwitcher:
     # um novo episódio começa. Estado por instância — nada global.
     _suppress_log_key: tuple[str, str] | None = None
     # UX-01 (SPRINT-UX-AUTOSWITCH-01): episódio de leituras sem informação em
-    # curso. Serve para (a) logar `autoswitch_window_info_unavailable` 1x por
-    # episódio (padrão do `_log_suppressed_once` — sem flood a 2 Hz) e (b)
+    # curso (inclui foco na própria GUI/applet — MISC-08 item 2). Serve para
+    # (a) logar `autoswitch_window_info_unavailable` (ou
+    # `autoswitch_janela_propria_ignorada`) 1x por episódio (padrão do
+    # `_log_suppressed_once` — sem flood a 2 Hz) e (b)
     # resetar o relógio do debounce na PRIMEIRA leitura útil após o gap (o
     # debounce é wall-time: sem o reset, o tempo pulado contaria como
     # estabilidade e um glitch idêntico ao de antes do gap ativaria na hora).
@@ -105,11 +127,18 @@ class AutoSwitcher:
         # retido até evidência POSITIVA de outra janela. Sem TTL de propósito:
         # o EIO de BT já mediu 5,1 s e loading screens duram minutos — TTL
         # re-introduziria o drop no meio do jogo.
-        if self._tick_sem_informacao(info):
+        # MISC-08 item 2 (2026-07-18): a PRÓPRIA GUI/applet em foco entra no
+        # MESMO caminho — olhar o hefesto não é sair do jogo; tratar como
+        # janela comum fazia o fallback MatchAny flipar o perfil a cada
+        # alt-tab jogoGUI (journal 20:15:40-51).
+        eh_propria = self._janela_propria(info)
+        if eh_propria or self._tick_sem_informacao(info):
             if not self._info_gap_active:
                 self._info_gap_active = True
                 logger.info(
-                    "autoswitch_window_info_unavailable",
+                    "autoswitch_janela_propria_ignorada"
+                    if eh_propria
+                    else "autoswitch_window_info_unavailable",
                     wm_class=str(info.get("wm_class", "")),
                     current=self._current_profile or "",
                 )
@@ -165,6 +194,19 @@ class AutoSwitcher:
         wm_name = str(info.get("wm_name") or "")
         exe_basename = str(info.get("exe_basename") or "")
         return not wm_name and not exe_basename
+
+    @staticmethod
+    def _janela_propria(info: dict[str, Any]) -> bool:
+        """True quando a janela em foco é a própria GUI/applet do hefesto.
+
+        MISC-08 item 2: match por `wm_class` normalizado (case-insensitive)
+        contra `OWN_GUI_WM_CLASSES`. Só o wm_class decide — título/processo
+        não entram: a GUI reporta wm_class estável ("Main.py" ou
+        "Hefesto-Dualsense4Unix" conforme o momento do set_wmclass sob
+        XWayland) e é isso que o journal provou.
+        """
+        wm_class = str(info.get("wm_class") or "").strip().casefold()
+        return wm_class in OWN_GUI_WM_CLASSES
 
     def start(self) -> asyncio.Task[Any]:
         self._task = asyncio.create_task(self.run(), name="autoswitch")
@@ -263,6 +305,7 @@ class AutoSwitcher:
 __all__ = [
     "DEFAULT_DEBOUNCE_SEC",
     "DEFAULT_POLL_INTERVAL_SEC",
+    "OWN_GUI_WM_CLASSES",
     "AutoSwitcher",
     "WindowReader",
 ]

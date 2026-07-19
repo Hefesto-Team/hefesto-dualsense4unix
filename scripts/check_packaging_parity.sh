@@ -126,8 +126,11 @@ done
 # empacotada por TODOS os caminhos, senão o install-host-udev.sh pula a cura em
 # silêncio (SNDQUIRK_SRC=""). O glob de regras acima só pega *.rules — este bloco
 # cobre o .conf. Antes ausente: removê-lo do build_deb/flatpak passava despercebido.
-echo "== paridade da cura de raiz (assets/modprobe/*.conf × instaladores) =="
-for conf_path in assets/modprobe/*.conf; do
+# Onda PLATAFORMA 2026-07-18: assets/modprobe.d/ (novo, distinto do legado
+# assets/modprobe/) entra no MESMO contrato de paridade — o btusb-no-autosuspend
+# não pode sumir de um instalador sem ninguém notar.
+echo "== paridade da cura de raiz (assets/modprobe{,.d}/*.conf × instaladores) =="
+for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
     [[ -f "${conf_path}" ]] || continue
     conf_name="$(basename "${conf_path}")"
     missing=()

@@ -24,18 +24,17 @@ HIDP DATA|OUTPUT) + os bytes ``[0..73]``.
 """
 from __future__ import annotations
 
-import zlib
 from typing import Any
 
+from hefesto_dualsense4unix.core.ds_output_report import (
+    BT_REPORT_LEN,
+    COMMON_LEN,
+    VALID_FLAG1_RELEASE_LEDS,
+    build_bt_report,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-#: Tamanho do report de output 0x31 por Bluetooth (com CRC).
-BT_REPORT_LEN = 78
-
-#: ``common.valid_flag1`` bit 3 — "Reset LED state" (RELEASE_LEDS do kernel).
-_VALID_FLAG1_RELEASE_LEDS = 0x08
 
 
 def build_bt_release_leds_report(seq: int = 0) -> bytes:
@@ -44,15 +43,11 @@ def build_bt_release_leds_report(seq: int = 0) -> bytes:
     Todos os demais flags/campos ZERADOS — não toca rumble, gatilhos, player
     LEDs nem cor; só devolve o claim da lightbar ao host. ``seq`` é o nibble
     de sequência (0..15); o firmware aceita 0 fixo (comportamento do SDL).
+    Envelope/CRC vêm do builder comum (BTREPORT-02: `core/ds_output_report`).
     """
-    buf = bytearray(BT_REPORT_LEN)
-    buf[0] = 0x31
-    buf[1] = (int(seq) & 0x0F) << 4
-    buf[2] = 0x10  # tag mágico obrigatório ("Magic value required in tag field")
-    buf[4] = _VALID_FLAG1_RELEASE_LEDS  # common.valid_flag1 ([3] é o valid_flag0)
-    crc = zlib.crc32(b"\xa2" + bytes(buf[:74])) & 0xFFFFFFFF
-    buf[74:78] = crc.to_bytes(4, "little")
-    return bytes(buf)
+    common = bytearray(COMMON_LEN)
+    common[1] = VALID_FLAG1_RELEASE_LEDS  # common.valid_flag1 ([0] é o flag0)
+    return bytes(build_bt_report(common, seq=seq))
 
 
 def send_release_leds(device: Any) -> bool:

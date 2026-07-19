@@ -874,9 +874,11 @@ class TestNotifyVpadDegradado:
             flavor="dualsense", backend="uinput",
             fallback_motivo="uhid_indisponivel", stop=lambda: None,
         )
+        # `**_sinks`: o co-op também passa os sinks de replicação (REPLICA-03).
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
-            lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True: vpad_degradado,
+            lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True,
+            **_sinks: vpad_degradado,
         )
         monkeypatch.setattr(
             "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env",

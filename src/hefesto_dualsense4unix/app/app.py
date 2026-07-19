@@ -291,6 +291,9 @@ class HefestoApp(
             # DEDUP-05: migração assistida — troca as opções antigas do
             # Hefesto pela chamada do wrapper nos localconfig.vdf.
             "on_steam_apply_launch": self.on_steam_apply_launch,
+            # PLAT-01: trava o CompatToolMapping da Steam na versão de Proton
+            # validada pelo Hefesto (contrato integrations/proton_pin).
+            "on_proton_lock": self.on_proton_lock,
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,

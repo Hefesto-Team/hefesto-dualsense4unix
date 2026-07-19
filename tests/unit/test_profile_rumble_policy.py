@@ -195,6 +195,72 @@ def test_gesto_manual_ipc_carimba_lock_e_limpa_origem(daemon: Daemon) -> None:
 
 
 # ---------------------------------------------------------------------------
+# MISC-08 item 1 (2026-07-18) — policy=max reportava mult 0.7
+# ---------------------------------------------------------------------------
+
+
+def test_cenario_journal_policy_max_reporta_mult_efetivo_1_0(
+    daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cenário exato do journal 2026-07-18 19:59:48: perfil `vitoria` com
+    `rumble.policy=max` ativado em passthrough ocioso. O log dizia
+    `profile_rumble_policy_applied mult=0.7 policy=max` (o campo carregava o
+    custom_mult default) e o state_full expunha `rumble_mult_applied=0.7`
+    (`_last_auto_mult` nunca sincronizado em política fixa). Max = 1.0 nos
+    dois lugares."""
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.daemon import lifecycle as lifecycle_mod
+
+    spy = MagicMock()
+    monkeypatch.setattr(lifecycle_mod, "logger", spy)
+
+    daemon.config.rumble_active = None  # passthrough, como ao vivo
+    daemon.apply_profile_rumble_policy("max", None)
+
+    # Fonte do `rumble_mult_applied` do state_full.
+    assert daemon._last_auto_mult == pytest.approx(1.0)
+
+    aplicados = [
+        c
+        for c in spy.info.call_args_list
+        if c[0][0] == "profile_rumble_policy_applied"
+    ]
+    assert len(aplicados) == 1
+    assert aplicados[0].kwargs["policy"] == "max"
+    assert aplicados[0].kwargs["mult"] == pytest.approx(1.0)
+
+
+def test_state_full_reporta_mult_1_0_com_policy_max(daemon: Daemon) -> None:
+    """A evidência do state_full ao vivo (`rumble_policy=max` +
+    `rumble_mult_applied=0.7`) vira regressão de ponta a ponta."""
+    from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+
+    daemon.apply_profile_rumble_policy("max", None)
+
+    server = IpcServer(
+        controller=daemon.controller,
+        store=daemon.store,
+        profile_manager=object(),
+        daemon=daemon,
+    )
+    result = asyncio.run(server._handle_daemon_state_full({}))
+    assert result["rumble_policy"] == "max"
+    assert result["rumble_mult_applied"] == pytest.approx(1.0)
+
+
+def test_seed_observavel_custom_e_reversao(daemon: Daemon) -> None:
+    """Custom seeda o mult observável com o custom_mult; perfil sem opinião
+    ressincroniza com a política revertida (balanceado = 0.7)."""
+    daemon.apply_profile_rumble_policy("custom", 0.4)
+    assert daemon._last_auto_mult == pytest.approx(0.4)
+
+    daemon.apply_profile_rumble_policy(None, None)
+    assert daemon.config.rumble_policy == "balanceado"
+    assert daemon._last_auto_mult == pytest.approx(0.7)
+
+
+# ---------------------------------------------------------------------------
 # ProfileManager repassa ao applier
 # ---------------------------------------------------------------------------
 

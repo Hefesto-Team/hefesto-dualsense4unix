@@ -369,6 +369,11 @@ class LaunchWrapperDialogMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.NONE,
             text=f"{_DIALOG_TITLE} (app {appid})",
         )
+        # GUI-05/P5: sem a classe de tema, o diálogo herdava o tema do sistema
+        # — sob XWayland no COSMIC isso é Adwaita CLARO, destoando do app
+        # inteiro (precedente: gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
         dialog.format_secondary_text(_DIALOG_BODY)
         dialog.add_button("Copiar opções", RESPONSE_COPY)
         dialog.add_button("Não perguntar para este jogo", RESPONSE_DISMISS)

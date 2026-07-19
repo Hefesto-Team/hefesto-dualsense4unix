@@ -150,7 +150,7 @@ fi
 echo "Copiando regras udev ..."
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
                   assets/76-*.rules assets/77-*.rules assets/78-*.rules \
-                  assets/79-*.rules; do
+                  assets/79-*.rules assets/80-*.rules assets/81-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
@@ -194,16 +194,23 @@ install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe"
 install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf"
+# PLAT-04 (onda PLATAFORMA 2026-07-18): btusb sem autosuspend — o adaptador
+# Bluetooth nunca dorme. Mesmos DOIS destinos da cura do storm (path vivo do
+# kmod + espelho que o install-host-udev.sh resolve em modprobe.d/).
+install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d"
+install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
                   assets/76-*.rules assets/77-*.rules assets/78-*.rules \
-                  assets/79-*.rules; do
+                  assets/79-*.rules assets/80-*.rules assets/81-*.rules; do
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
-
 # ---------------------------------------------------------------------------
 # Copiar catalogos i18n (.mo) — FEAT-I18N-CATALOGS-01 (v3.4.0)
 # ---------------------------------------------------------------------------

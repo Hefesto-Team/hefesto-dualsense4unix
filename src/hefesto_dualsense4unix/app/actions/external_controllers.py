@@ -212,6 +212,41 @@ def input_mode(entry: dict[str, Any]) -> str:
     return "outro"
 
 
+#: GUI-05/P4: itens do seletor SEGMENTADO READ-ONLY da ficha — os DOIS modos de
+#: HARDWARE do 8BitDo/Pro Controller. Ids casam com o retorno de `input_mode`.
+#: Sem popup/dropdown (veto do 8BIT-02: cosmic-comp fecha qualquer popup).
+MODE_SELECTOR_ITEMS: list[tuple[str, str]] = [
+    ("nintendo", "Nintendo (Switch)"),
+    ("xbox", "Xbox (X-input)"),
+]
+
+#: Subtítulo curto sob o segmentado — liga ao texto de orientação existente.
+MODE_SELECTOR_SUBTITLE = (
+    "O modo é uma troca física no controle (combo ao ligar) — veja o manual."
+)
+
+#: Tooltip do segmentado read-only (explica por que ele não é clicável).
+MODE_SELECTOR_TOOLTIP = (
+    "Só leitura: mostra o modo em que o controle está agora. A troca não é "
+    "por software — é um combo de botões no próprio controle ao ligar."
+)
+
+
+def mode_selector_state(
+    entry: dict[str, Any],
+) -> tuple[list[tuple[str, str]], str] | None:
+    """(itens, id ativo) do segmentado read-only da ficha — ou ``None``.
+
+    Só para controles com os dois modos de hardware (`input_mode` devolvendo
+    "nintendo"/"xbox" — o mesmo gate do `mode_guidance`); "outro" não tem o
+    que marcar. Pura (testável sem GTK), consumida por `gui_dialogs`.
+    """
+    modo = input_mode(entry)
+    if modo not in ("nintendo", "xbox"):
+        return None
+    return list(MODE_SELECTOR_ITEMS), modo
+
+
 def mode_guidance(entry: dict[str, Any]) -> tuple[str, str] | None:
     """(modo_atual_legível, orientação) para a ficha — ou None se não se aplica.
 
@@ -254,9 +289,9 @@ def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
         ("Controle", friendly_type(entry)),
         ("Como conectou", transport_label(entry)),
     ]
-    guia = mode_guidance(entry)
-    if guia is not None:
-        rows.append(("O jogo vê como", guia[0]))
+    # GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo detectado
+    # agora aparece no seletor segmentado read-only da ficha
+    # (`mode_selector_state`), fonte única sem informação duplicada.
     driver = str(entry.get("driver") or "").strip()
     if driver:
         rows.append(("Driver do Linux", driver))

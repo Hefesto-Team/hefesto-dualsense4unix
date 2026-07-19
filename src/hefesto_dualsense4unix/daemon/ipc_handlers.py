@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
+from collections.abc import Callable
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
@@ -47,6 +48,10 @@ def _as_str_or_none(value: Any) -> str | None:
 #: `multi_intensity`/`brightness` são I/O de arquivo — sem o cache seriam até
 #: 20 opens/s POR CONTROLE. Cor de lightbar com 1 s de frescor é imperceptível.
 _LIGHTBAR_READ_TTL_SEC = 1.0
+
+#: GUI-05 item 3: TTL (s) da leitura do marker `last_run` do wrapper no
+#: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
+_WRAPPER_MARKER_TTL_SEC = 2.0
 
 
 def _norm_uniq(value: Any) -> str | None:
@@ -153,7 +158,10 @@ def _steam_hidraw_holders() -> dict[str, list[int]]:
     return holders
 
 
-def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
+def _external_inventory(
+    dualsense_count: int = 0,
+    slot_resolver: Callable[[str | None], int | None] | None = None,
+) -> list[dict[str, Any]]:
     """Inventário de externos + sonda de holders — roda FORA do event loop.
 
     Composição síncrona chamada via `asyncio.to_thread` pelo
@@ -165,14 +173,15 @@ def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
     segurando aquele hidraw ({"steam_pids": [...]}); sonda falha/vazia =
     campo ausente, sem erro (não é critério de aceite do 8BIT-01).
 
-    8BIT-02: cada externo ganha `player_slot` = número GLOBAL de co-op
-    (continua a contagem dos DualSense: `dualsense_count + índice + 1`), e o
-    daemon ESCREVE esse número no LED de player do controle (só LED, nunca
-    input). Best-effort: sem a regra udev 79 (LED não gravável), a escrita
-    falha em silêncio e o `player_slot` segue exposto para a GUI numerar.
+    EXT-04 — leitura PURA: esta função NUNCA MAIS escreve LED (a escrita a
+    cada poll de 4s da GUI bombardeava o firmware clone do 8BitDo até o
+    hid-nintendo desregistrá-lo — `joycon_enforce_subcmd_rate` ao vivo).
+    Quem numera E acende é o tick lento do daemon (`ExternalLedSync`);
+    `player_slot` aqui vem do registry (via `slot_resolver`, leitura pura por
+    uniq) e cai no posicional `dualsense_count + índice + 1` quando o
+    registry ainda não opinou (daemon fake/legado ou 1º tick pendente).
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
-    from hefesto_dualsense4unix.core.external_leds import apply_player_number
 
     inventory = discover_external_gamepads()
     holders: dict[str, list[int]] = {}
@@ -182,13 +191,21 @@ def _external_inventory(dualsense_count: int = 0) -> list[dict[str, Any]]:
         hidraw = entry.get("hidraw")
         if holders and isinstance(hidraw, str) and hidraw in holders:
             entry["holders"] = {"steam_pids": holders[hidraw]}
-        slot = dualsense_count + index + 1
-        entry["player_slot"] = slot
-        # Numera o LED no MODO do controle: barra verde (Switch/cabo) OU
-        # lightbar RGB (8BitDo em modo DS4 por Bluetooth) — vale por cabo E BT.
-        if isinstance(hidraw, str):
+        slot: int | None = None
+        if slot_resolver is not None:
+            # EXT-04: a MESMA identidade que o tick usa para numerar/acender o
+            # LED (`ExternalLedSync.tick`) — uniq ou `path:<evdev_path>`. Um
+            # externo SEM MAC era resolvido por uniq=None (sempre None) e caía
+            # no posicional, exibindo número != do LED aceso quando havia slot
+            # de DualSense reservado. `peek` continua assign=False (leitura pura).
+            identity = entry.get("uniq") or f"path:{entry.get('evdev_path')}"
             with contextlib.suppress(Exception):
-                apply_player_number(hidraw, slot)
+                raw = slot_resolver(identity)
+                if isinstance(raw, int) and not isinstance(raw, bool):
+                    slot = raw
+        entry["player_slot"] = (
+            slot if slot is not None else dualsense_count + index + 1
+        )
     return inventory
 
 
@@ -213,6 +230,13 @@ class IpcHandlersMixin:
     _lightbar_read_cache: (
         dict[str, tuple[float, tuple[int, int, int] | None, bool]] | None
     ) = None
+
+    #: GUI-05 item 3: cache TTL do marker `last_run` do wrapper (leitura de
+    #: arquivo — o state_full roda a 10-20 Hz) e a PRIMEIRA detecção do appid
+    #: em foco (base da janela de ~120s). Mesmo padrão do cache acima: class
+    #: attributes (o mixin não é dataclass) com shadow por instância no 1º uso.
+    _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
+    _wrapper_first_seen: tuple[int, float] | None = None
 
     # --- perfis ----------------------------------------------------------
 
@@ -655,6 +679,32 @@ class IpcHandlersMixin:
                 result["gamepad_emulation"]["dedup_ok"] = dedup_ok
                 if motivos:
                     result["gamepad_emulation"]["dedup_motivo"] = ", ".join(motivos)
+            # GUI-05 item 3 — honestidade do dedup: `wrapper_used` responde se
+            # o jogo em foco (janela `steam_app_N`) PASSOU pelo hefesto-launch
+            # (marker `last_run` gravado pelo wrapper, janela de ~120s até a
+            # 1ª detecção do appid). true = passou; false = jogo aberto SEM o
+            # wrapper (as envs de dedup nunca chegaram ao processo); null =
+            # nenhum jogo detectado. O FATO 0 do estudo 2026-07-18: o
+            # `dedup_ok` sozinho era falso-tranquilizante — daqui em diante um
+            # jogo sem wrapper também derruba o `dedup_ok` (com motivo),
+            # exceto em Modo Nativo/emulação off (não há env que importe).
+            result["gamepad_emulation"]["wrapper_used"] = None
+            with contextlib.suppress(Exception):
+                wrapper_used = self._wrapper_used_now()
+                result["gamepad_emulation"]["wrapper_used"] = wrapper_used
+                if (
+                    wrapper_used is False
+                    and result["gamepad_emulation"].get("enabled")
+                    and not result.get("native_mode")
+                    and result["gamepad_emulation"].get("dedup_ok", False)
+                ):
+                    result["gamepad_emulation"]["dedup_ok"] = False
+                    motivo_atual = result["gamepad_emulation"].get("dedup_motivo")
+                    result["gamepad_emulation"]["dedup_motivo"] = (
+                        f"{motivo_atual}, jogo_sem_wrapper"
+                        if motivo_atual
+                        else "jogo_sem_wrapper"
+                    )
             # FEAT-DSX-COOP-LOCAL-01: estado do co-op local (toggle + nº de
             # jogadores ativos) p/ GUI/applet/CLI.
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
@@ -687,32 +737,84 @@ class IpcHandlersMixin:
             # físico). `passthrough` (rumble_active is None) distingue "jogo
             # controla a vibração" de "fixo (teste pela GUI)" — a GUI não tinha
             # como saber em qual estado estava.
-            vpads: list[Any] = []
+            # REPLICA-03: além do agregado (compat), expõe contadores POR VPAD
+            # (`per_vpad`) — o agregado escondia QUAL vpad recebeu o quê
+            # (telemetria cega do estudo 2026-07-18). `player` é o número do
+            # jogador (1 = P1; secundários usam o player_index do co-op).
+            # GYRO-03: cada vpad viaja com o SEU espelho de motion (o
+            # `PhysicalReportReader` do P1 mora em `daemon._motion_reader`;
+            # o de cada jogador do co-op, em `player.motion_reader`) — é dele
+            # que sai o `motion_hz` (taxa REAL de entrega ao /dev/uhid).
+            vpads: list[tuple[int, Any, Any]] = []
             gp_device = getattr(self.daemon, "_gamepad_device", None)
             if gp_device is not None:
-                vpads.append(gp_device)
+                vpads.append((1, gp_device, getattr(self.daemon, "_motion_reader", None)))
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
             if coop_mgr is not None:
                 players = getattr(coop_mgr, "_players", {})
                 if isinstance(players, dict):
                     vpads.extend(
-                        p.vpad
+                        (
+                            int(getattr(p, "player_index", 0) or 0),
+                            p.vpad,
+                            getattr(p, "motion_reader", None),
+                        )
                         for p in players.values()
                         if getattr(p, "vpad", None) is not None
                     )
             ff_plays = 0
             ff_last: tuple[int, int] = (0, 0)
-            for vp in vpads:
+            per_vpad: list[dict[str, Any]] = []
+            for player_num, vp, motion_reader in vpads:
                 with contextlib.suppress(Exception):
                     ff_plays += int(getattr(vp, "ff_play_count", 0) or 0)
                     last = getattr(vp, "ff_last_sent", None)
                     if isinstance(last, tuple) and len(last) == 2 and last != (0, 0):
                         ff_last = (int(last[0]), int(last[1]))
+                with contextlib.suppress(Exception):
+                    # coerção defensiva: em testes o vpad pode ser MagicMock e
+                    # `backend` devolver um mock não-serializável.
+                    backend = getattr(vp, "backend", None)
+                    # GYRO-03: `motion_streaming` = o vpad está no modo "o
+                    # reader é o relógio" (gyro/accel/touch espelhados do
+                    # físico); `motion_hz` = taxa de entrega do reader (EMA,
+                    # pós-throttle) — 0.0 sem reader (uinput/sem físico) ou
+                    # com o fluxo parado. Tipagem estrita nas duas leituras:
+                    # um MagicMock nunca vira True/taxa fantasma no payload.
+                    streaming = getattr(vp, "motion_streaming", False)
+                    hz_raw = getattr(motion_reader, "emit_hz", 0.0)
+                    per_vpad.append(
+                        {
+                            "player": player_num,
+                            "backend": backend if isinstance(backend, str) else None,
+                            "ff_play_count": int(getattr(vp, "ff_play_count", 0) or 0),
+                            "output_count": int(getattr(vp, "output_count", 0) or 0),
+                            "trigger_replicas": int(
+                                getattr(vp, "trigger_replicas", 0) or 0
+                            ),
+                            "lightbar_replicas": int(
+                                getattr(vp, "lightbar_replicas", 0) or 0
+                            ),
+                            "player_led_replicas": int(
+                                getattr(vp, "player_led_replicas", 0) or 0
+                            ),
+                            "motion_streaming": (
+                                streaming if isinstance(streaming, bool) else False
+                            ),
+                            "motion_hz": (
+                                float(hz_raw)
+                                if isinstance(hz_raw, (int, float))
+                                and not isinstance(hz_raw, bool)
+                                else 0.0
+                            ),
+                        }
+                    )
             result["rumble_ff"] = {
                 "plays": ff_plays,
                 "last_weak": ff_last[0],
                 "last_strong": ff_last[1],
                 "vpads": len(vpads),
+                "per_vpad": per_vpad,
             }
             rumble_active = getattr(daemon_cfg, "rumble_active", None)
             result["rumble_passthrough"] = rumble_active is None
@@ -1001,6 +1103,55 @@ class IpcHandlersMixin:
             motivo = raw if isinstance(raw, str) and raw else "sem_uhid"
         return backend, motivo
 
+    # --- GUI-05 item 3: honestidade do wrapper (`wrapper_used`) -----------
+
+    def _wrapper_used_now(self) -> bool | None:
+        """`wrapper_used` do momento: True/False com jogo em foco, None sem.
+
+        Fonte da "janela de jogo": `store.window_detect_last_class` (a última
+        wm_class ÚTIL do detector do autoswitch). Limitação documentada: se o
+        jogo fechar direto para um desktop vazio ("unknown" não sobrescreve a
+        última útil), o valor persiste até outra janela útil ganhar foco — a
+        GUI já trata null como "sem jogo" e o marker segue datado.
+
+        A PRIMEIRA detecção de cada appid é carimbada aqui (epoch) e é a base
+        da janela de `WRAPPER_MARKER_WINDOW_SEC` contra o `last_run` do
+        wrapper; a decisão em si é a função PURA `wrapper_used_state`.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            steam_appid_from_wm_class,
+            wrapper_used_state,
+        )
+
+        wm_class = getattr(self.store, "window_detect_last_class", None)
+        appid = steam_appid_from_wm_class(
+            wm_class if isinstance(wm_class, str) else None
+        )
+        if appid is None:
+            self._wrapper_first_seen = None
+            return None
+        first = self._wrapper_first_seen
+        if first is None or first[0] != appid:
+            first = (appid, time.time())
+            self._wrapper_first_seen = first
+        return wrapper_used_state(
+            appid=appid,
+            marker=self._wrapper_marker_cached(),
+            first_seen_epoch=first[1],
+        )
+
+    def _wrapper_marker_cached(self) -> tuple[int, int] | None:
+        """Marker `last_run` com cache TTL — o state_full roda a 10-20 Hz."""
+        now = time.monotonic()
+        hit = self._wrapper_marker_cache
+        if hit is not None and (now - hit[0]) < _WRAPPER_MARKER_TTL_SEC:
+            return hit[1]
+        from hefesto_dualsense4unix.daemon.launch_env import read_last_run_marker
+
+        marker = read_last_run_marker()
+        self._wrapper_marker_cache = (now, marker)
+        return marker
+
     async def _handle_controller_list(self, params: dict[str, Any]) -> dict[str, Any]:
         """Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01.
 
@@ -1039,14 +1190,26 @@ class IpcHandlersMixin:
                 ]
             }
         if external_raw:
-            # 8BIT-02: os externos numeram CONTINUANDO os DualSense conectados
-            # (o daemon é a fonte única do `player_slot` e escreve o LED).
+            # 8BIT-02/EXT-04: os externos numeram CONTINUANDO os DualSense.
+            # A fonte do slot é o registry persistente do daemon (leitura
+            # PURA — quem escreve o LED é o tick lento, nunca este handler);
+            # o posicional ds_count+índice+1 é só o fallback de exibição
+            # enquanto o registry não opinou (daemon fake/1º tick pendente).
             ds_count = sum(
                 1
                 for c in result["controllers"]
                 if isinstance(c, dict) and c.get("connected")
             )
-            result["external"] = await asyncio.to_thread(_external_inventory, ds_count)
+            registry = (
+                getattr(self.daemon, "external_registry", None)
+                if self.daemon is not None
+                else None
+            )
+            peek = getattr(registry, "peek", None) if registry is not None else None
+            resolver = peek if callable(peek) else None
+            result["external"] = await asyncio.to_thread(
+                _external_inventory, ds_count, resolver
+            )
         return result
 
     async def _handle_controller_target_set(

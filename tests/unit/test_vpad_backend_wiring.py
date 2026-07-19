@@ -152,10 +152,18 @@ class TestGamepadPrimario:
         daemon = _daemon(hidraw={None: "/dev/hidraw4"})
 
         assert start_gamepad_emulation(daemon, flavor="dualsense") is True
-        assert chamadas == [
-            {"flavor": "dualsense", "rumble_sink": chamadas[0]["rumble_sink"],
-             "player": 1, "allow_uhid": True}
-        ]
+        assert len(chamadas) == 1
+        chamada = chamadas[0]
+        assert chamada["flavor"] == "dualsense"
+        assert chamada["player"] == 1
+        assert chamada["allow_uhid"] is True
+        assert callable(chamada["rumble_sink"])
+        # REPLICA-03: o vpad do P1 nasce com os sinks de replicação completos
+        # (gatilhos/lightbar/player-LED do jogo + devolução no fim da sessão).
+        for sink in (
+            "trigger_sink", "lightbar_sink", "player_led_sink", "session_end_sink"
+        ):
+            assert callable(chamada[sink]), f"sink ausente na fiação do P1: {sink}"
         assert daemon.hidraw_calls == []  # o caminho de criação não lê o físico
 
     def test_backend_fake_passa_o_veto_a_factory(
@@ -210,7 +218,9 @@ class TestCoopPorJogador:
         assert len(chamadas) == 1
         assert chamadas[0]["player"] == 2
         assert chamadas[0]["allow_uhid"] is True
-        assert daemon.hidraw_calls == []  # blueprint canônico: ninguém pede hidraw
+        # Blueprint canônico: a CRIAÇÃO do vpad nunca lê o hidraw de ninguém
+        # (o vpad fake não é uhid, então nem o espelho de motion resolve nó).
+        assert daemon.hidraw_calls == []
 
     def test_jogador_sem_mac_tambem_ganha_uhid(
         self, chamadas: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch

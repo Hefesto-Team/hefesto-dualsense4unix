@@ -33,6 +33,9 @@ for f in \
     "$ASSETS/77-dualsense-leds.rules" \
     "$ASSETS/78-dualsense-motion-not-joystick.rules" \
     "$ASSETS/79-external-controller-leds.rules" \
+    "$ASSETS/80-motion-joydev-hide.rules" \
+    "$ASSETS/81-hefesto-usb-power.rules" \
+    "$ASSETS/81-hefesto-usb-host-power.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -64,10 +67,22 @@ sudo install -Dm644 "$ASSETS/78-dualsense-motion-not-joystick.rules" /etc/udev/r
 # numerar o CO-OP MISTO (continua a contagem dos DualSense; só LED, nunca input).
 # 8BIT-02. Sem ela, o número do LED do 8BitDo cai no default do kernel.
 sudo install -Dm644 "$ASSETS/79-external-controller-leds.rules" /etc/udev/rules.d/79-external-controller-leds.rules
-# 73/74 (GUI auto-spawn no hotplug) REMOVIDAS 2026-06-23: abriam o controle via
-# hidraw a cada ACTION=="add", amplificando a re-enumeração que alimentava o
-# storm -71 (causa-raiz real: porta USB ruim — full-speed/-71 na 3-1). Limpa
-# instalações antigas para não ficarem órfãs:
+# 80: os nós js legados dos Motion Sensors (joydev cria jsN para CADA
+# acelerômetro — físico E vpad) viram MODE 0000: a API js legada para de
+# enumerar "joysticks" fantasmas (js2/js4/js6/js8 ao vivo). KERNEL-07.
+sudo install -Dm644 "$ASSETS/80-motion-joydev-hide.rules" /etc/udev/rules.d/80-motion-joydev-hide.rules
+# 81 (devices): controles (Sony/Nintendo/8BitDo/Microsoft) e adaptadores BT
+# (classe e0) com power/control=on + autosuspend_delay_ms=-1 — USB nunca dorme.
+# PLAT-03 item 1 (estudo 2026-07-18-estudo-kernel-hardening.md §2).
+sudo install -Dm644 "$ASSETS/81-hefesto-usb-power.rules" /etc/udev/rules.d/81-hefesto-usb-power.rules
+# 81 (hosts): controladores USB PCI (classe 0x0c03*) sempre em power/control=on
+# — a economia no HOST derruba o barramento inteiro (teclado+mouse+controle
+# juntos, visto em maio/2026). PLAT-03 item 3.
+sudo install -Dm644 "$ASSETS/81-hefesto-usb-host-power.rules" /etc/udev/rules.d/81-hefesto-usb-host-power.rules
+# 73/74 (GUI auto-spawn no hotplug) DESCONTINUADAS 2026-06-23 (abriam o controle
+# via hidraw a cada ACTION=="add", amplificando a re-enumeração do storm -71) e
+# REMOVIDAS do repo em 2026-07-18. O rm compensatório fica por 1 release para
+# limpar instalações antigas — depois pode sair junto com este comentário:
 sudo rm -f /etc/udev/rules.d/73-ps5-controller-hotplug.rules \
            /etc/udev/rules.d/74-ps5-controller-hotplug-bt.rules 2>/dev/null || true
 
@@ -95,7 +110,8 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true
 sudo udevadm trigger --subsystem-match=usb    --attr-match=idVendor=054c 2>/dev/null || true
 sudo udevadm trigger --action=change --subsystem-match=usb 2>/dev/null || true
-# input: faz a 76 (LIBINPUT_IGNORE_DEVICE no touchpad) ser reavaliada. libinput só
+# input: faz a 76 (LIBINPUT_IGNORE_DEVICE no touchpad), a 78 (ID_INPUT_*) e a 80
+# (MODE 0000 nos js de Motion Sensors) serem reavaliadas sem replug. libinput só
 # relê a flag ao re-add do device, então replug/relogin do controle ainda é o garantido.
 sudo udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true
 # leds: aplica a 77 (chmod/uaccess nos nós de LED) sem exigir replug do controle.
@@ -104,6 +120,9 @@ sudo udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true
 # valiam no próximo boot (o nó já existia quando as regras chegaram) — e sem elas
 # o daemon não cria vpad nenhum: co-op de 4 jogadores morto até reiniciar.
 sudo udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true
+# pci: aplica a 81-host (power/control=on nos controladores xHCI) sem reboot —
+# os hosts já existiam quando a regra chegou. PLAT-03 item 3.
+sudo udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true
 
 cat <<'EOF'
 

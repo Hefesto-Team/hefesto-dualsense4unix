@@ -18,20 +18,35 @@ from hefesto_dualsense4unix.daemon.launch_env import (
 )
 
 _IGNORE = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
+_DISABLE = "PROTON_DISABLE_HIDRAW"
 
 
 # --- compose_env (pura) — os estados do critério de aceite -------------------
 
 
 def test_uhid_vivo_em_todos_os_vpads_desduplica_no_layout_ps():
+    """GUERRA-01: IGNORE (caminho SDL) + DISABLE (caminho winebus-hidraw dos
+    Protons 10/11, que a env do SDL não filtra). PROTON_ENABLE_HIDRAW morreu."""
     env = compose_env(
         native_mode=False, emulation_enabled=True,
         flavor="dualsense", backends=["uhid"],
     )
     assert env[_IGNORE] == "0x054c/0x0ce6"
-    assert env["PROTON_ENABLE_HIDRAW"] == "1"
+    assert env[_DISABLE] == "0x054C/0x0CE6"
+    assert "PROTON_ENABLE_HIDRAW" not in env  # aposentada (Proton 10+)
     assert "SDL_JOYSTICK_HIDAPI" not in env  # HIDAPI ligado (driver PS5 no vpad)
     assert env["__GL_SHADER_DISK_CACHE"] == "1"
+
+
+def test_disable_nunca_inclui_o_vpad_0df2():
+    """O vpad Edge 0df2 PRECISA do hidraw (rumble/triggers/lightbar do jogo
+    chegam por ele) — o DISABLE lista SÓ o físico 0ce6."""
+    for flavor, backends in (("dualsense", ["uhid"]), ("xbox", ["uinput"])):
+        env = compose_env(
+            native_mode=False, emulation_enabled=True,
+            flavor=flavor, backends=backends,
+        )
+        assert "0df2" not in env[_DISABLE].lower(), flavor
 
 
 def test_uinput_degradado_nunca_esconde_o_fisico():
@@ -42,7 +57,7 @@ def test_uinput_degradado_nunca_esconde_o_fisico():
         flavor="dualsense", backends=["uinput"],
     )
     assert _IGNORE not in env
-    assert "PROTON_ENABLE_HIDRAW" not in env
+    assert _DISABLE not in env
     assert env["__GL_SHADER_DISK_CACHE"] == "1"  # só o preload inócuo
 
 
@@ -63,16 +78,20 @@ def test_xbox_forca_evdev_e_esconde_o_fisico():
     )
     assert env["SDL_JOYSTICK_HIDAPI"] == "0"
     assert env[_IGNORE] == "0x054c/0x0ce6"
-    assert "PROTON_ENABLE_HIDRAW" not in env  # rumble volta pelo FF do vpad
+    # GUERRA-01: o vazamento winebus-hidraw vale para QUALQUER máscara.
+    assert env[_DISABLE] == "0x054C/0x0CE6"
 
 
 def test_modo_nativo_entrega_o_hidraw_sem_esconder_nada():
+    """Nativo: NENHUMA env de hidraw — a whitelist default do winebus já expõe
+    o físico Sony; DISABLE aqui seria o "zero controles" ao vivo."""
     env = compose_env(
         native_mode=True, emulation_enabled=False,
         flavor="dualsense", backends=[],
     )
-    assert env["PROTON_ENABLE_HIDRAW"] == "1"
     assert _IGNORE not in env
+    assert _DISABLE not in env
+    assert "PROTON_ENABLE_HIDRAW" not in env  # aposentada, nem no nativo
 
 
 def test_emulacao_desligada_ou_sem_vpad_vivo_nao_esconde():
@@ -151,7 +170,8 @@ def test_materialize_grava_default_env_com_o_estado_real(tmp_path, monkeypatch):
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
     assert env[_IGNORE] == "0x054c/0x0ce6"
-    assert env["PROTON_ENABLE_HIDRAW"] == "1"
+    assert env[_DISABLE] == "0x054C/0x0CE6"
+    assert "PROTON_ENABLE_HIDRAW" not in env
 
 
 def test_materialize_reflete_degradacao_por_jogador(tmp_path, monkeypatch):
@@ -177,8 +197,9 @@ def test_materialize_por_appid_e_limpeza_de_rancosos(tmp_path, monkeypatch):
     materialize_launch_env(_fake_daemon(backend="uhid"))
 
     env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
-    assert env_jogo["PROTON_ENABLE_HIDRAW"] == "1"
     assert _IGNORE not in env_jogo  # nativo: esconder o físico = zero controles
+    assert _DISABLE not in env_jogo
+    assert env_jogo["__GL_SHADER_DISK_CACHE"] == "1"
     assert not rancoso.exists()
 
 
@@ -303,7 +324,8 @@ def test_default_env_mantem_ignore_quando_todos_os_nativos_tem_appid(
     materialize_launch_env(_fake_daemon(backend="uhid"))
     env = _env_do_arquivo(tmp_path / "default.env")
     assert env[_IGNORE] == "0x054c/0x0ce6"
-    # E o arquivo por-appid antecipa o modo nativo DAQUELE jogo (sem IGNORE).
+    # E o arquivo por-appid antecipa o modo nativo DAQUELE jogo (sem
+    # IGNORE/DISABLE — o jogo fala com o hidraw do físico).
     env_jogo = _env_do_arquivo(tmp_path / "steam_app_1599660.env")
     assert _IGNORE not in env_jogo
-    assert env_jogo["PROTON_ENABLE_HIDRAW"] == "1"
+    assert _DISABLE not in env_jogo

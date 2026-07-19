@@ -10,3 +10,11 @@
 # Reverter: remover este arquivo e recarregar udev.
 ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"
 ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Edge Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"
+# KERNEL-07 (2026-07-18): defesa em profundidade — por BLUETOOTH o nome vem SEM
+# o prefixo "Sony Interactive Entertainment", e os vpads UHID do daemon têm nome
+# próprio ("Hefesto Virtual DualSense PN Motion Sensors"). O builtin input_id do
+# kernel atual já classifica certo, mas sem estas linhas uma regressão dele
+# voltaria a poluir a lista de gamepads em silêncio.
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="DualSense Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="DualSense Edge Wireless Controller Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Hefesto Virtual DualSense P* Motion Sensors", ENV{ID_INPUT_JOYSTICK}="", ENV{ID_INPUT_ACCELEROMETER}="1"

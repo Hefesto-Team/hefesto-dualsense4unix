@@ -16,6 +16,19 @@ from gi.repository import Gtk  # noqa: E402
 from hefesto_dualsense4unix.utils.i18n import _  # noqa: E402
 
 
+def _apply_app_theme(dialog: Any) -> None:
+    """Aplica a classe de tema do app ao toplevel do diálogo (GUI-05/P5).
+
+    TODO o CSS Drácula é escopado a ``.hefesto-dualsense4unix-window`` — um
+    diálogo sem a classe herda o tema do sistema, que sob XWayland no COSMIC
+    (XSettings apontando um gtk-theme nem instalado) degrada para Adwaita
+    CLARO, ilegível ao lado do corpo escuro do app. Best-effort: um style
+    context stubado nos testes não pode derrubar o fluxo do diálogo.
+    """
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+
+
 def prompt_profile_name(
     parent: Gtk.Window,
     default_name: str = "",
@@ -31,6 +44,7 @@ def prompt_profile_name(
         modal=True,
         destroy_with_parent=True,
     )
+    _apply_app_theme(dialog)
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Salvar"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.OK)
@@ -77,6 +91,7 @@ def prompt_overwrite_existing(
         buttons=Gtk.ButtonsType.NONE,
         text=_("Perfil '%s' já existe.") % name,
     )
+    _apply_app_theme(dialog)
     dialog.format_secondary_text(_("Deseja sobrescrever o perfil existente?"))
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Sobrescrever"), Gtk.ResponseType.OK)
@@ -106,6 +121,7 @@ def confirm_downgrade_match_to_any(
         buttons=Gtk.ButtonsType.NONE,
         text=_("O perfil '%s' vale só em programas específicos.") % name,
     )
+    _apply_app_theme(dialog)
     dialog.format_secondary_text(
         _(
             "Salvar assim faz ele valer para TUDO (Quando usar: Sempre) e apaga "
@@ -138,6 +154,7 @@ def prompt_import_conflict(
         buttons=Gtk.ButtonsType.NONE,
         text=_("Perfil '%s' já existe.") % name,
     )
+    _apply_app_theme(dialog)
     dialog.format_secondary_text(
         _("Escolha o que fazer com o perfil importado:")
     )
@@ -169,6 +186,7 @@ def confirm_restore_default(parent: Gtk.Window) -> bool:
         buttons=Gtk.ButtonsType.NONE,
         text=_("Restaurar perfil original?"),
     )
+    _apply_app_theme(dialog)
     dialog.format_secondary_text(
         # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: citava 'Navegação' (outro asset,
         # navegacao.json); o restore aplica o asset 'meu_perfil' (match: any).
@@ -201,6 +219,7 @@ def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
         buttons=Gtk.ButtonsType.NONE,
         text=_("Remover o perfil '%s'?") % name,
     )
+    _apply_app_theme(dialog)
     dialog.format_secondary_text(
         _("Esta ação é permanente e não pode ser desfeita.")
     )
@@ -216,6 +235,54 @@ def confirm_delete_profile(parent: Gtk.Window, name: str) -> bool:
 def _escape_markup(text: str) -> str:
     """Escapa `&`/`<`/`>` para markup Pango (sem depender de GLib no import)."""
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _external_mode_row(entry: dict[str, Any]) -> tuple[Any, Any] | None:
+    """(linha com o segmentado read-only do modo, subtítulo) — ou ``None``.
+
+    GUI-05/P4: o modo detectado ("O jogo vê como") deixou de ser só uma linha
+    de texto na grade e virou um seletor SEGMENTADO do padrão da casa
+    (``Nintendo | Xbox``) — READ-ONLY, porque o modo é troca de HARDWARE
+    (combo no próprio controle), nunca um toggle de software. Sem popup nem
+    dropdown (veto do 8BIT-02: cosmic-comp fecha qualquer popup). Separado do
+    diálogo modal para os testes montarem a linha sem ``run()``.
+    """
+    from hefesto_dualsense4unix.app.actions.external_controllers import (
+        MODE_SELECTOR_SUBTITLE,
+        MODE_SELECTOR_TOOLTIP,
+        mode_selector_state,
+    )
+    from hefesto_dualsense4unix.app.widgets.segmented_selector import (
+        SegmentedSelector,
+    )
+
+    estado = mode_selector_state(entry)
+    if estado is None:
+        return None
+    itens, ativo = estado
+
+    row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    chave = Gtk.Label(label=_("O jogo vê como") + ":")
+    chave.set_xalign(0.0)
+    chave.get_style_context().add_class("dim-label")
+    row.pack_start(chave, False, False, 0)
+
+    seletor = SegmentedSelector()
+    seletor.set_items(itens)
+    seletor.set_active_id(ativo)
+    # Insensitive de propósito: visual idêntico aos segmentados do app, mas
+    # não-clicável — não existe troca por software para oferecer.
+    with contextlib.suppress(Exception):
+        seletor.set_sensitive(False)
+    seletor.set_tooltip_text(MODE_SELECTOR_TOOLTIP)
+    row.pack_start(seletor, False, False, 0)
+
+    sub = Gtk.Label(label=MODE_SELECTOR_SUBTITLE)
+    sub.set_line_wrap(True)
+    sub.set_xalign(0.0)
+    sub.set_max_width_chars(52)
+    sub.get_style_context().add_class("dim-label")
+    return row, sub
 
 
 def show_external_controller(
@@ -245,8 +312,7 @@ def show_external_controller(
     # Popup NÃO-INTERATIVO com o visual da GUI (Drácula): a classe da janela faz
     # o CSS screen-wide (theme.css) pintar fundo/labels/botão como no resto do
     # app — sem isso o diálogo herdava o tema claro do sistema (branco no COSMIC).
-    with contextlib.suppress(Exception):
-        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+    _apply_app_theme(dialog)
     dialog.add_button(_("Fechar"), Gtk.ResponseType.CLOSE)
     dialog.set_default_response(Gtk.ResponseType.CLOSE)
     content = dialog.get_content_area()
@@ -294,7 +360,15 @@ def show_external_controller(
     # Xbox/Nintendo (como o jogo o enxerga): é modo de HARDWARE do controle, não
     # um toggle de software — a ficha DETECTA o modo atual e ORIENTA a troca +
     # o trade-off (X-input/Xbox = à prova de travas por foge do hid-nintendo;
-    # Switch/Nintendo = gyro, mas instável por Bluetooth).
+    # Switch/Nintendo = gyro, mas instável por Bluetooth). GUI-05/P4: o modo
+    # detectado aparece num segmentado READ-ONLY (Nintendo | Xbox) do padrão da
+    # casa — a linha de texto da grade virou este widget (fonte única).
+    modo_widgets = _external_mode_row(entry)
+    if modo_widgets is not None:
+        modo_row, modo_sub = modo_widgets
+        content.pack_start(modo_row, False, False, 0)
+        content.pack_start(modo_sub, False, False, 0)
+
     guia = mode_guidance(entry)
     if guia is not None:
         _atual, orient = guia

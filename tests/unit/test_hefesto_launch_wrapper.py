@@ -35,7 +35,7 @@ _WRAPPER = _ROOT / "assets" / "hefesto-launch.sh"
 _PROBE = (
     'printf "IGNORE=%s|HIDAPI=%s|HIDRAW=%s|LD=%s\\n" '
     '"$SDL_GAMECONTROLLER_IGNORE_DEVICES" "$SDL_JOYSTICK_HIDAPI" '
-    '"$PROTON_ENABLE_HIDRAW" "$LD_PRELOAD"'
+    '"$PROTON_DISABLE_HIDRAW" "$LD_PRELOAD"'
 )
 
 
@@ -143,7 +143,7 @@ def test_daemon_vivo_exporta_as_envs_materializadas(runtime, tmp_path):
         [
             "# materializado em teste",
             "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6",
-            "PROTON_ENABLE_HIDRAW=1",
+            "PROTON_DISABLE_HIDRAW=0x054C/0x0CE6",
         ],
     )
     daemon = _FakeDaemon(_socket_path(runtime))
@@ -152,7 +152,10 @@ def test_daemon_vivo_exporta_as_envs_materializadas(runtime, tmp_path):
     finally:
         daemon.stop()
     assert result.returncode == 0
-    assert result.stdout.strip() == "IGNORE=0x054c/0x0ce6|HIDAPI=|HIDRAW=1|LD="
+    assert (
+        result.stdout.strip()
+        == "IGNORE=0x054c/0x0ce6|HIDAPI=|HIDRAW=0x054C/0x0CE6|LD="
+    )
 
 
 def test_arquivo_por_appid_vence_o_default(runtime, tmp_path):
@@ -230,17 +233,29 @@ def test_sem_steamappid_nao_exporta_nada_mesmo_com_daemon_vivo(runtime, tmp_path
 
 
 def test_allowlist_barra_env_fora_da_lista(runtime, tmp_path):
-    """Arquivo adulterado com LD_PRELOAD não passa do wrapper (allowlist)."""
+    """Arquivo adulterado com LD_PRELOAD não passa do wrapper (allowlist) — e
+    a env APOSENTADA (PROTON_ENABLE_HIDRAW, GUERRA-01) também é descartada."""
     _write_env_file(
         tmp_path, "default.env",
-        ["LD_PRELOAD=/tmp/evil.so", "PROTON_ENABLE_HIDRAW=1"],
+        [
+            "LD_PRELOAD=/tmp/evil.so",
+            "PROTON_ENABLE_HIDRAW=1",
+            "PROTON_DISABLE_HIDRAW=0x054C/0x0CE6",
+        ],
     )
     daemon = _FakeDaemon(_socket_path(runtime))
     try:
         result = _run_wrapper(runtime=runtime, state_home=tmp_path)
+        # A aposentada não chega ao jogo nem por arquivo rançoso (daemon VIVO).
+        check = _run_wrapper(
+            runtime=runtime,
+            state_home=tmp_path,
+            args=["sh", "-c", 'printf "ENABLE=%s\\n" "${PROTON_ENABLE_HIDRAW:-}"'],
+        )
     finally:
         daemon.stop()
-    assert result.stdout.strip() == "IGNORE=|HIDAPI=|HIDRAW=1|LD="
+    assert result.stdout.strip() == "IGNORE=|HIDAPI=|HIDRAW=0x054C/0x0CE6|LD="
+    assert check.stdout.strip() == "ENABLE="
 
 
 def test_launch_options_do_usuario_sobrevivem_ao_wrapper(runtime, tmp_path):
@@ -253,3 +268,55 @@ def test_launch_options_do_usuario_sobrevivem_ao_wrapper(runtime, tmp_path):
     )
     assert result.returncode == 0
     assert result.stdout.strip() == "oi"
+
+
+# --- marker de execução last_run (GUERRA-01 / honestidade do dedup) ----------
+
+
+def _last_run(state_home: Path) -> dict[str, str]:
+    marker = state_home / "hefesto-dualsense4unix" / "launch_env" / "last_run"
+    out: dict[str, str] = {}
+    for linha in marker.read_text(encoding="utf-8").splitlines():
+        chave, _, valor = linha.partition("=")
+        out[chave] = valor
+    return out
+
+
+def test_marker_last_run_gravado_com_appid_e_epoch(runtime, tmp_path):
+    """O wrapper grava appid + epoch em chave=valor — é o que o daemon compara
+    com a janela steam_app para expor `wrapper_used` (dedup honesto)."""
+    antes = int(time.time())
+    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="1599660")
+    assert result.returncode == 0
+    marker = _last_run(tmp_path)
+    assert marker["appid"] == "1599660"
+    assert antes <= int(marker["epoch"]) <= int(time.time()) + 1
+
+
+def test_marker_last_run_independe_do_daemon_vivo(runtime, tmp_path):
+    """Best-effort de propósito: o marker atesta que o jogo passou pelo
+    WRAPPER (não que o daemon vive) — daemon morto grava do mesmo jeito."""
+    assert not _socket_path(runtime).exists()
+    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="42")
+    assert result.returncode == 0
+    assert _last_run(tmp_path)["appid"] == "42"
+
+
+def test_marker_last_run_sem_appid_nao_grava(runtime, tmp_path):
+    """Atalho não-Steam (SteamAppId ausente/0) => sem marker (nada a casar
+    com janela steam_app), e o launch segue normal."""
+    for appid in (None, "0", "abc"):
+        result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid=appid)
+        assert result.returncode == 0
+    marker = tmp_path / "hefesto-dualsense4unix" / "launch_env" / "last_run"
+    assert not marker.exists()
+
+
+def test_marker_last_run_regravado_a_cada_launch(runtime, tmp_path):
+    """Dois launches => o marker reflete o ÚLTIMO (mv atômico, nunca metade)."""
+    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="10")
+    _run_wrapper(runtime=runtime, state_home=tmp_path, appid="20")
+    marker = _last_run(tmp_path)
+    assert marker["appid"] == "20"
+    tmp_sobra = tmp_path / "hefesto-dualsense4unix" / "launch_env" / "last_run.tmp"
+    assert not tmp_sobra.exists()

@@ -124,10 +124,12 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     # Nunca criar vpad REAL (uhid registraria um DualSense Edge no kernel da
     # máquina; uinput idem) — o backend real do teste tem `hidraw_path`, então
     # `controller_allows_uhid` liberaria o uhid sem este patch.
+    # `**_sinks` cobre os sinks de replicação do REPLICA-03 (o co-op passa
+    # trigger/lightbar/player_led/session_end junto do rumble_sink).
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
-        lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True: _FakeVpad(
-            str(flavor), rumble_sink
+        lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True, **_sinks: (
+            _FakeVpad(str(flavor), rumble_sink)
         ),
     )
     monkeypatch.setattr(

@@ -63,6 +63,15 @@
     border-color: #44475a;
     color: #6272a4;
 }
+/* GUI-05/P4: segmentado READ-ONLY (ficha do controle externo) — o modo
+   DETECTADO continua destacado em roxo mesmo com o widget insensitive; sem
+   esta regra o :disabled acima apagava o :checked e nada parecia marcado. */
+.hefesto-dualsense4unix-window button:checked:disabled {
+    background-color: #bd93f9;
+    border-color: #bd93f9;
+    color: #282a36;
+    font-weight: bold;
+}
 
 .hefesto-dualsense4unix-window combobox,
 .hefesto-dualsense4unix-window entry,
@@ -179,6 +188,43 @@ menu menuitem:disabled label {
 }
 menu separator {
     background-color: #44475a;
+}
+/* GUI-05/P5: diálogos (GtkMessageDialog) temados no TOP-LEVEL, no padrão dos
+   menus acima — o nó `messagedialog` é um toplevel próprio e NÃO herda o
+   escopo de `.hefesto-dualsense4unix-window`. Sob XWayland no COSMIC
+   (GDK_BACKEND=x11 por causa do cosmic-epoch#2497) o XSettings aponta um
+   gtk-theme nem instalado e o diálogo degradava para Adwaita CLARO. Cada
+   diálogo NOSSO também recebe a classe da janela (cinto e suspensório); estas
+   regras cobrem qualquer diálogo futuro sem a classe. Provider é por processo:
+   nada vaza para outros apps. */
+messagedialog,
+messagedialog.background,
+messagedialog decoration {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+messagedialog box,
+messagedialog grid {
+    background-color: transparent;
+}
+messagedialog label {
+    color: #f8f8f2;
+}
+messagedialog button {
+    background-image: none;
+    background-color: #383a4a;
+    border: 1px solid #bd93f9;
+    border-radius: 4px;
+    color: #f8f8f2;
+    padding: 6px 12px;
+}
+messagedialog button:hover {
+    background-color: #44475a;
+    border-color: #ff79c6;
+}
+messagedialog button:active {
+    background-color: #6272a4;
+    border-color: #bd93f9;
 }
 /* BUG-GUI-COSMIC-WIDGET-CONTRAST-01: containers internos vazando tema claro.
    GtkBox/GtkFrame/GtkGrid/GtkViewport/GtkScrolledWindow/stack genéricos não
