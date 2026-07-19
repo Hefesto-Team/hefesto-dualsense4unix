@@ -46,10 +46,10 @@ MAC_8BITDO_FORJADO = "aa:bb:cc:00:be:ef"
 
 @pytest.fixture(autouse=True)
 def _led_writer_hermetico(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Hermeticidade 8BIT-02: o `_external_inventory` ESCREVE o LED de player do
-    controle externo. Sem isto, rodar a suíte na máquina da mantenedora (com um
-    8BitDo real em `/dev/hidraw6`) piscaria o LED FÍSICO. Neutraliza por padrão;
-    o teste dedicado ao LED re-substitui por um captor depois deste fixture."""
+    """Hermeticidade 8BIT-02/EXT-04: desde o EXT-04 a leitura é PURA (quem
+    escreve LED é o tick do daemon), mas o dublê fica como DEFESA EM
+    PROFUNDIDADE — uma regressão que reintroduzisse a escrita na leitura
+    piscaria o LED FÍSICO do 8BitDo real da mantenedora ao rodar a suíte."""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     monkeypatch.setattr(leds_mod, "write_player_number", lambda *a, **k: False)
@@ -569,12 +569,12 @@ def test_holders_merge_e_degradacao(monkeypatch: pytest.MonkeyPatch) -> None:
     assert inventario[0] == {**base, "player_slot": 1}
 
 
-def test_external_inventory_numera_slot_global_e_escreve_led(
+def test_external_inventory_e_leitura_pura_sem_escrita_de_led(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """8BIT-02: cada externo recebe `player_slot` = dualsense_count + índice + 1
-    (continua a contagem dos DualSense) e o daemon ESCREVE esse número no LED
-    de player do próprio controle (best-effort — só LED, nunca input)."""
+    """EXT-04 item 1: listar externos NUNCA escreve LED (a escrita a cada poll
+    de 4s da GUI matou o 8BitDo BT ao vivo — `joycon_enforce_subcmd_rate`).
+    Sem resolver, o `player_slot` cai no posicional dualsense_count+índice+1."""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     n1 = {
@@ -589,20 +589,53 @@ def test_external_inventory_numera_slot_global_e_escreve_led(
         er_mod, "discover_external_gamepads", lambda: [dict(n1), dict(n2)]
     )
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
-    # Captura as escritas de LED por hidraw (sem tocar o sysfs real). O daemon
-    # chama apply_player_number, que escolhe a barra verde (Switch/cabo) ou a
-    # lightbar RGB (8BitDo-DS4 por BT) conforme o modo — cobre CABO e BLUETOOTH.
-    escritas: list[tuple[str, int]] = []
-    monkeypatch.setattr(
-        leds_mod, "apply_player_number",
-        lambda hidraw, num: (escritas.append((hidraw, num)), True)[1],
-    )
 
-    # Com 2 DualSense (slots 1 e 2), os externos são 3 e 4.
+    def bomba_led(*_a: Any, **_kw: Any) -> bool:
+        raise AssertionError("leitura de inventário escreveu LED (EXT-04!)")
+
+    monkeypatch.setattr(leds_mod, "apply_player_number", bomba_led)
+    monkeypatch.setattr(leds_mod, "write_player_number", bomba_led)
+    monkeypatch.setattr(leds_mod, "write_lightbar_slot", bomba_led)
+
+    # Com 2 DualSense (slots 1 e 2), os externos exibem 3 e 4 (fallback).
     inventario = ih_mod._external_inventory(dualsense_count=2)
 
     assert [e["player_slot"] for e in inventario] == [3, 4]
-    assert escritas == [
-        ("/dev/hidraw6", 3),
-        ("/dev/hidraw7", 4),
-    ]
+
+
+def test_external_inventory_prefere_o_slot_do_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """EXT-04 item 2: com o registry opinando (via `slot_resolver`, leitura
+    pura por uniq), o `player_slot` é o slot PERSISTENTE — não o posicional.
+    Resolver sem opinião (None) ou quebrado cai no posicional, sem erro."""
+    n1 = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": "057e", "pid": "2009", "bus": "usb",
+        "uniq": MAC_8BITDO_FORJADO, "driver": "nintendo",
+        "evdev_path": "/dev/input/event261", "hidraw": "/dev/hidraw6",
+    }
+    n2 = {**n1, "uniq": "aa:bb:cc:00:be:f0",
+          "evdev_path": "/dev/input/event262", "hidraw": "/dev/hidraw7"}
+    monkeypatch.setattr(
+        er_mod, "discover_external_gamepads", lambda: [dict(n1), dict(n2)]
+    )
+    monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
+
+    slots = {MAC_8BITDO_FORJADO: 4}  # replug preservou o 4 (reserva)
+
+    inventario = ih_mod._external_inventory(
+        dualsense_count=1, slot_resolver=lambda uniq: slots.get(uniq or "")
+    )
+
+    # 1º externo: slot do registry (4). 2º: registry sem opinião → posicional
+    # (1 DualSense + índice 1 + 1 = 3).
+    assert [e["player_slot"] for e in inventario] == [4, 3]
+
+    def resolver_quebrado(_uniq: str | None) -> int | None:
+        raise RuntimeError("registry indisponível")
+
+    inventario = ih_mod._external_inventory(
+        dualsense_count=1, slot_resolver=resolver_quebrado
+    )
+    assert [e["player_slot"] for e in inventario] == [2, 3]

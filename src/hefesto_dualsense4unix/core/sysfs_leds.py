@@ -55,6 +55,14 @@ class SysfsLedNode:
         self.indicator_dir = indicator_dir
         #: Diretórios dos LEDs de player, ordenados por número (1..5).
         self.player_dirs = player_dirs
+        # GUERRA-01 item 3: cache do último (rgb, brightness) ESCRITO com
+        # sucesso por esta instância — `reassert_resolved_outputs()` roda a
+        # cada reconciliação (30s do reconnect_loop) e reescrevia a MESMA cor
+        # incondicionalmente (o "flash azul de 30s" da guerra de escritores).
+        # Nó recriado (wake/adoção BT) = instância nova = cache vazio =
+        # escreve naturalmente.
+        self._last_write: tuple[tuple[int, int, int], int] | None = None
+        self._skip_logged = False
 
     # --- introspecção ----------------------------------------------------
 
@@ -141,13 +149,41 @@ class SysfsLedNode:
         de chamar ``set_led``), então fixamos ``brightness`` no máximo (255) e o
         dimming vem do próprio RGB. Para apagar usamos ``multi_intensity "0 0 0"``
         (não ``brightness 0``) — "off" determinístico que não reacende no boot.
+
+        GUERRA-01 item 3: escrita IGUAL à última bem-sucedida desta instância é
+        pulada em silêncio (cache) — o reassert periódico do reconnect_loop
+        deixa de gerar output report quando a cor resolvida não mudou. Escrita
+        que falha NÃO cacheia (a próxima tentativa re-escreve). Posse retomada
+        de terceiros (ex.: fim de sessão de jogo) usa ``invalidate_cache()``.
         """
         r = max(0, min(255, int(r)))
         g = max(0, min(255, int(g)))
         b = max(0, min(255, int(b)))
+        wanted = ((r, g, b), 255)
+        if self._last_write == wanted:
+            if not self._skip_logged:
+                # 1x por nó (telemetria da cura): o journal prova que o
+                # reassert parou de martelar o firmware com a mesma cor.
+                logger.info(
+                    "lightbar_reassert_skip_cache",
+                    node=self.indicator_dir,
+                    rgb=(r, g, b),
+                )
+                self._skip_logged = True
+            return True
         ok = self._write(self._indicator_brightness, "255")
         ok = self._write(self._multi_intensity, f"{r} {g} {b}") and ok
+        self._last_write = wanted if ok else None
         return ok
+
+    def invalidate_cache(self) -> None:
+        """Esquece a última escrita — a próxima ``set_rgb`` escreve SEMPRE.
+
+        Para os casos de posse retomada em que um terceiro (jogo via hidraw,
+        kernel no resume) pode ter mudado a cor por fora da classe LED sem
+        recriar o nó — o cache ficaria "certo" com o hardware errado.
+        """
+        self._last_write = None
 
     def set_players(self, bits: tuple[bool, bool, bool, bool, bool]) -> bool:
         """Acende/apaga os 5 LEDs de player (``bits[0]`` = LED 1, à esquerda)."""

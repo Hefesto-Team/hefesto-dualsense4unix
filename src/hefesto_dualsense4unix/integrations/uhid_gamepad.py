@@ -152,6 +152,50 @@ _VIBRATION_FLAGS = 0x03
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
+# --- REPLICA-03: replicação do output do jogo (gatilhos/lightbar/player) ----
+#
+#: Offsets DENTRO do payload do report 0x02 (após o report id). Fontes, que
+#: descrevem o MESMO layout (o `struct dualsense_output_report_common` do
+#: kernel `drivers/hid/hid-playstation.c` e o `DS5EffectsState_t` do SDL
+#: `SDL_hidapi_ps5.c`) — e é o layout do nosso builder `core/ds_output_report`:
+#:   [10..20] rgucRightTriggerEffect (modo + 10 parâmetros)
+#:   [21..31] rgucLeftTriggerEffect  (modo + 10 parâmetros)
+#:   [43]     player_leds (ucPadLights)
+#:   [44..46] lightbar_red/green/blue
+_VALID_FLAG1_OFFSET = 1
+_TRIGGER_R_BLOCK_OFFSET = 10
+_TRIGGER_L_BLOCK_OFFSET = 21
+_TRIGGER_BLOCK_LEN = 11
+_PLAYER_LEDS_OFFSET = 43
+_LIGHTBAR_RGB_OFFSET = 44
+
+#: Bits dos gatilhos no valid_flag0 (SDL_hidapi_ps5.c: "Enable right trigger
+#: effect" = 0x04, "Enable left trigger effect" = 0x08; o kernel não os nomeia
+#: — o hid-playstation nunca escreve trigger effect).
+_TRIGGER_R_EFFECT_ENABLE = 0x04
+_TRIGGER_L_EFFECT_ENABLE = 0x08
+
+#: Bits do valid_flag1 (hid-playstation.c: LIGHTBAR_CONTROL_ENABLE = BIT(2),
+#: PLAYER_INDICATOR_CONTROL_ENABLE = BIT(4)).
+_LIGHTBAR_CONTROL_ENABLE = 0x04
+_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10
+
+#: Só os 5 bits baixos do byte de player são LEDs (o 0x20 é o "sem fade" do
+#: firmware — o kernel manda `player_leds & 0x1F` do lado de lá também).
+_PLAYER_LEDS_MASK = 0x1F
+
+#: Rate-limit da replicação: nunca repassar mais que ~250 Hz por categoria ao
+#: report_thread/rádio BT do físico (regra do REPLICA-03). O valor retido fica
+#: pendente e sai no próximo pump (o poll loop roda mais rápido que isso).
+_REPLICA_MIN_INTERVAL_S = 1.0 / 250.0
+
+#: Graça pós-bind antes de replicar: o PROBE do hid_playstation no PRÓPRIO
+#: vpad emite outputs (reset de LEDs e, via `dualsense_set_player_leds`, um
+#: player-LED com a numeração DO KERNEL — que conta os físicos junto).
+#: Replicá-los pintaria o físico com o número errado no nascimento de todo
+#: vpad — o exato P3 que o REPLICA-03 cura. O jogo escreve segundos depois.
+_GAME_REPLICA_GRACE_S = 0.5
+
 #: Report de input do DualSense em USB (sticks/gatilhos/botões → jogo).
 _INPUT_REPORT_USB = 0x01
 
@@ -223,6 +267,34 @@ _TOUCHPAD_BIT = 0x02
 #: (o 31 vale 0x15, lixo do sensor_timestamp).
 _TOUCH_POINT_OFFSETS = (32, 36)
 _TOUCH_INACTIVE = 0x80
+
+#: GYRO-01 — janela de MOTION do payload do report 0x01: bytes 15..39 do
+#: `struct dualsense_input_report` (hid-playstation.c): gyro[3] __le16 em
+#: 15-20, accel[3] __le16 em 21-26, sensor_timestamp __le32 em 27-30 (unidade
+#: de 0,33 µs — o dt que o SDL usa para integrar o gyro), reserved2 em 31 e os
+#: dois pontos de toque (4 B cada) em 32-35/36-39. É a fatia que o
+#: `PhysicalReportReader` copia VERBATIM do report cru do físico (0x01 USB /
+#: 0x31 BT) e entrega em `forward_motion` — zero matemática no caminho.
+_MOTION_WINDOW_START = 15
+_MOTION_WINDOW_LEN = 25
+_MOTION_WINDOW = slice(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
+
+#: Janela NEUTRA — byte a byte idêntica ao que o encoder sempre emitiu: IMU
+#: zerada + `_TOUCH_INACTIVE` nos bytes de contato (32/36 absolutos). É o
+#: default do campo e o estado ao qual `stop()`/streaming-off retornam
+#: (anti-regressão: sem reader, o report não muda NADA em relação a hoje).
+_MOTION_NEUTRAL = bytes(
+    _TOUCH_INACTIVE if offset in _TOUCH_POINT_OFFSETS else 0
+    for offset in range(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
+)
+
+#: Tamanho do feature 0x05 (calibração da IMU) — `DS_FEATURE_REPORT_CALIBRATION_
+#: SIZE` do hid-playstation.c. Um `calibration_0x05` só é carimbado no blueprint
+#: quando tem exatamente este tamanho E o report id certo; qualquer outra coisa
+#: cai no canônico (o probe do driver usa os campos como divisores — lixo aqui
+#: quebraria o motion do vpad inteiro).
+_CALIBRATION_FEATURE_ID = 0x05
+_CALIBRATION_FEATURE_SIZE = 41
 
 #: Byte de `status` do report 0x01 (bateria + carga). O `dualsense_parse_report` lê
 #: ``battery_data = status & 0x0F`` e ``charging_status = (status & 0xF0) >> 4``;
@@ -419,8 +491,26 @@ class UhidDualSense:
     #: factory injeta (descriptor + features). `capture_dualsense_blueprint`
     #: produz o mesmo shape (hoje só diagnóstico).
     blueprint: dict[str, Any] | None = None
+    #: GYRO-01 — feature 0x05 (calibração da IMU) lido do controle FÍSICO deste
+    #: jogador (`backend.read_calibration()`), ou None = canônico do blueprint.
+    #: O hid_playstation do vpad (e o SDL) calibram o motion com o 0x05 que o
+    #: vpad responde no probe; com a janela de motion espelhando os int16 CRUS
+    #: do físico, o 0x05 precisa ser o DAQUELA unidade — o canônico veio de UMA
+    #: unidade (a P1 branca) e faz as outras drivarem (bias) e escalarem errado.
+    #: Fallback fail-safe: inválido/None mantém o canônico (vpad sempre nasce).
+    calibration_0x05: bytes | None = None
     #: Recebe (weak, strong) 0-255 pedidos pelo JOGO — igual ao vpad uinput.
     rumble_sink: Callable[[int, int], None] | None = None
+    #: REPLICA-03 — replicação do output do jogo ao físico DESTE jogador.
+    #: Recebe ("left"|"right", bloco de 11 bytes: modo + 10 parâmetros).
+    trigger_sink: Callable[[str, bytes], None] | None = None
+    #: Recebe (r, g, b) 0-255 da lightbar que o jogo pintou no vpad.
+    lightbar_sink: Callable[[int, int, int], None] | None = None
+    #: Recebe os 5 LEDs de player (bits[0] = LED 1) que o jogo acendeu.
+    player_led_sink: Callable[[tuple[bool, bool, bool, bool, bool]], None] | None = None
+    #: Chamado no fim da sessão de jogo (UHID_CLOSE/STOP/stop()) SE algo foi
+    #: replicado — é o gancho "devolve perfil/paleta/co-op" da posse.
+    session_end_sink: Callable[[], None] | None = None
     #: Relógio/sleep injetáveis (testes herméticos do `wait_for_bind`).
     time_fn: Callable[[], float] = time.monotonic
     sleep_fn: Callable[[float], None] = time.sleep
@@ -431,11 +521,38 @@ class UhidDualSense:
     _output_count: int = 0
     _rumble_count: int = 0
     _started: bool = False
+    #: REPLICA-03: sessão de jogo (UHID_OPEN..UHID_CLOSE) + graça pós-bind.
+    _game_open: bool = False
+    _bound_at: float | None = None
+    #: True quando ALGO foi replicado nesta sessão (gate do session_end_sink).
+    _game_dirty: bool = False
+    #: Dedup por valor + rate-limit por categoria (trigger_left/right,
+    #: lightbar, player_leds): último valor ENTREGUE, pendente retido pelo
+    #: rate-limit e timestamp da última entrega.
+    _replica_last: dict[str, Any] = field(default_factory=dict)
+    _replica_pending: dict[str, Any] = field(default_factory=dict)
+    _replica_ts: dict[str, float] = field(default_factory=dict)
+    _trigger_replicas: int = 0
+    _lightbar_replicas: int = 0
+    _player_led_replicas: int = 0
     _lock: threading.RLock = field(default_factory=threading.RLock)
     #: Estado do controle físico que o encoder transforma em report 0x01.
     _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
     _buttons: frozenset[str] = field(default_factory=frozenset)
     _status_byte: int = _STATUS_DESCONHECIDO
+    #: GYRO-01: janela de motion (payload[15:40]) espelhada do físico pelo
+    #: `PhysicalReportReader`. Nasce NEUTRA (= report idêntico ao histórico).
+    _motion_window: bytes = _MOTION_NEUTRAL
+    #: True enquanto um reader é o RELÓGIO da emissão: `forward_analog`/
+    #: `forward_buttons`/`forward_battery` só atualizam o cache e quem emite é
+    #: `forward_motion` (evita emissão dupla e destrava o ritmo dos 60 Hz do
+    #: poll loop — o físico entrega 250 Hz USB / ~765 Hz BT).
+    _motion_streaming: bool = False
+    #: Nº de janelas de motion EMITIDAS (telemetria GYRO-03: "o gyro flui?").
+    _motion_count: int = 0
+    #: Anti-flood: janela de tamanho errado loga warning UMA vez por instância
+    #: (o reader roda a até ~765 Hz — um bug de chamador viraria flood).
+    _motion_invalid_logged: bool = False
     #: Último payload EMITIDO, com o seq zerado — é a chave do delta. Comparar o
     #: payload (e não o (axes, buttons) cru) mata os falsos "mudou": trocar
     #: touchpad_left_press por touchpad_middle_press dá o MESMO bit no report.
@@ -450,8 +567,14 @@ class UhidDualSense:
         flavor: str | None = None,
         *,
         rumble_sink: Callable[[int, int], None] | None = None,
+        trigger_sink: Callable[[str, bytes], None] | None = None,
+        lightbar_sink: Callable[[int, int, int], None] | None = None,
+        player_led_sink: Callable[[tuple[bool, bool, bool, bool, bool]], None]
+        | None = None,
+        session_end_sink: Callable[[], None] | None = None,
         player: int = 1,
         blueprint: dict[str, Any] | None = None,
+        calibration_0x05: bytes | None = None,
     ) -> UhidDualSense | None:
         """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
 
@@ -472,7 +595,16 @@ class UhidDualSense:
 
         if flavor is not None and normalize_flavor(flavor) != "dualsense":
             return None
-        return cls(player=player, blueprint=blueprint, rumble_sink=rumble_sink)
+        return cls(
+            player=player,
+            blueprint=blueprint,
+            calibration_0x05=calibration_0x05,
+            rumble_sink=rumble_sink,
+            trigger_sink=trigger_sink,
+            lightbar_sink=lightbar_sink,
+            player_led_sink=player_led_sink,
+            session_end_sink=session_end_sink,
+        )
 
     @property
     def name(self) -> str:
@@ -520,6 +652,21 @@ class UhidDualSense:
     def output_count(self) -> int:
         """Nº total de reports de output do jogo (rumble + LED + gatilhos + mic)."""
         return self._output_count
+
+    @property
+    def trigger_replicas(self) -> int:
+        """Nº de efeitos de gatilho do jogo REPLICADOS ao físico (REPLICA-03)."""
+        return self._trigger_replicas
+
+    @property
+    def lightbar_replicas(self) -> int:
+        """Nº de cores de lightbar do jogo REPLICADAS ao físico (REPLICA-03)."""
+        return self._lightbar_replicas
+
+    @property
+    def player_led_replicas(self) -> int:
+        """Nº de padrões de player-LED do jogo REPLICADOS ao físico (REPLICA-03)."""
+        return self._player_led_replicas
 
     @property
     def ff_supported(self) -> bool:
@@ -587,6 +734,24 @@ class UhidDualSense:
         report09[1:7] = _mac_to_report_bytes(self.mac)
         assert len(report09) == len(features[0x09])
         features[0x09] = bytes(report09)
+        # GYRO-01: calibração POR UNIDADE — o 0x05 do físico deste jogador
+        # substitui o canônico quando é um report íntegro (41 B, id 0x05).
+        # Sem isso, a janela de motion espelhada de outra unidade seria
+        # calibrada com o bias/sensibilidade da unidade errada (drift na mira).
+        calib = self.calibration_0x05
+        if calib is not None:
+            if (
+                len(calib) == _CALIBRATION_FEATURE_SIZE
+                and calib[0] == _CALIBRATION_FEATURE_ID
+            ):
+                features[_CALIBRATION_FEATURE_ID] = bytes(calib)
+                logger.info("uhid_calibration_por_unidade", player=self.player)
+            else:
+                logger.warning(
+                    "uhid_calibration_invalida_usando_canonica",
+                    tamanho=len(calib),
+                    player=self.player,
+                )
         return features
 
     def stop(self) -> None:
@@ -599,6 +764,9 @@ class UhidDualSense:
                 return
             self._fd = None
             self._silence_rumble()
+            # REPLICA-03: o vpad some — a posse do output volta ao perfil
+            # ANTES do device morrer (mesma razão do _silence_rumble).
+            self._end_game_session()
             with contextlib.suppress(OSError):
                 os.write(fd, struct.pack("<I", UHID_DESTROY))
             with contextlib.suppress(OSError):
@@ -608,10 +776,20 @@ class UhidDualSense:
             self._output_count = 0
             self._rumble_count = 0
             self._started = False
+            self._game_open = False
+            self._bound_at = None
+            self._trigger_replicas = 0
+            self._lightbar_replicas = 0
+            self._player_led_replicas = 0
             self._axes = _AXES_NEUTRAL
             self._buttons = frozenset()
             self._last_body = None
             self._seq = 0
+            # GYRO-01: o espelho de motion morre junto com o device — a
+            # próxima vida do vpad nasce neutra (o reader religa o streaming).
+            self._motion_window = _MOTION_NEUTRAL
+            self._motion_streaming = False
+            self._motion_count = 0
 
     def _silence_rumble(self) -> None:
         """Zera os motores do controle físico se o jogo os deixou ligados.
@@ -669,23 +847,88 @@ class UhidDualSense:
         self._buttons = frozenset(pressed)
         self._emit_if_changed()
 
-    def _emit_if_changed(self) -> bool:
+    def forward_motion(self, window: bytes) -> None:
+        """Espelha a janela de MOTION do físico (25 B = payload[15:40]) e emite.
+
+        GYRO-01 — irmão de `forward_analog`, mas com o relógio invertido: quem
+        chama é o `PhysicalReportReader` (thread própria, no ritmo do report
+        cru do físico já com throttle), e cada janela nova SAI na hora — os
+        sticks/botões cacheados pelo poll loop pegam carona no mesmo report.
+        Janela de tamanho errado é descartada (report torto no vpad quebraria
+        o parse do hid_playstation inteiro, não só o motion).
+        """
+        if len(window) != _MOTION_WINDOW_LEN:
+            if not self._motion_invalid_logged:
+                self._motion_invalid_logged = True
+                logger.warning(
+                    "uhid_motion_window_invalida",
+                    tamanho=len(window),
+                    player=self.player,
+                )
+            return
+        if self._fd is None:
+            return
+        with self._lock:
+            self._motion_window = bytes(window)
+            if self._emit_if_changed(from_motion=True):
+                self._motion_count += 1
+
+    def set_motion_streaming(self, on: bool) -> None:
+        """Liga/desliga o modo "o reader é o relógio" (GYRO-01).
+
+        Ligado: `forward_analog`/`forward_buttons`/`forward_battery` só
+        atualizam cache (quem emite é `forward_motion` — evita report em dobro
+        e o serrilhado de 60 Hz no gyro). Desligado (reader caiu/parou):
+        fail-safe — a janela volta ao NEUTRO e a emissão volta ao delta do
+        poll loop. Voltar neutro importa: um último sample de gyro congelado
+        no report viraria rotação fantasma infinita na mira do jogo.
+        """
+        with self._lock:
+            alvo = bool(on)
+            if alvo == self._motion_streaming:
+                return
+            self._motion_streaming = alvo
+            logger.info("uhid_motion_streaming", on=alvo, player=self.player)
+            if not alvo:
+                self._motion_window = _MOTION_NEUTRAL
+                self._emit_if_changed()
+
+    @property
+    def motion_streaming(self) -> bool:
+        """True enquanto um `PhysicalReportReader` dita o ritmo da emissão."""
+        return self._motion_streaming
+
+    @property
+    def motion_forward_count(self) -> int:
+        """Nº de janelas de motion emitidas (telemetria GYRO-03)."""
+        return self._motion_count
+
+    def _emit_if_changed(self, *, from_motion: bool = False) -> bool:
         """Emite o report 0x01 só quando o payload mudou.
 
         Espelha o delta do `UinputGamepad`: o forward roda a cada tick por vpad, e
         sem isto seriam ~250 writes/s por controle no /dev/uhid com tudo parado.
+
+        GYRO-01: com `_motion_streaming` ligado, só o caminho do reader
+        (`from_motion=True`) emite — os forwards do poll loop viram só-cache.
+        Sob `_lock`: o reader e o poll loop agora emitem de threads diferentes,
+        e `_last_body`/`_seq` precisam de UM dono por vez (o RLock deixa o
+        `send_report` reentrar sem deadlock).
         """
-        body = self._encode_body()
-        chave = bytes(body)
-        if chave == self._last_body:
-            return False
-        self._last_body = chave
-        # O seq só anda quando um report SAI: ele existe para o hid_playstation
-        # detectar perda de pacote, e furar a contagem em report suprimido pelo
-        # delta seria reportar perda que não houve.
-        self._seq = (self._seq + 1) & 0xFF
-        body[_SEQ_OFFSET] = self._seq
-        return self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body))
+        with self._lock:
+            if self._motion_streaming and not from_motion:
+                return False
+            body = self._encode_body()
+            chave = bytes(body)
+            if chave == self._last_body:
+                return False
+            self._last_body = chave
+            # O seq só anda quando um report SAI: ele existe para o hid_playstation
+            # detectar perda de pacote, e furar a contagem em report suprimido pelo
+            # delta seria reportar perda que não houve.
+            self._seq = (self._seq + 1) & 0xFF
+            body[_SEQ_OFFSET] = self._seq
+            return self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body))
 
     def _encode_body(self) -> bytearray:
         """Payload do report 0x01 a partir do estado, com o seq ZERADO.
@@ -694,8 +937,10 @@ class UhidDualSense:
         `_emit_if_changed`, que carimba o seq depois da comparação).
         """
         body = bytearray(_INPUT_PAYLOAD_SIZE)
-        for offset in _TOUCH_POINT_OFFSETS:
-            body[offset] = _TOUCH_INACTIVE
+        # GYRO-01: a janela 15..39 (gyro/accel/timestamp/touch) vem inteira do
+        # espelho do físico; o default `_MOTION_NEUTRAL` reproduz byte a byte o
+        # que sempre se emitiu (zeros + `_TOUCH_INACTIVE` em 32/36).
+        body[_MOTION_WINDOW] = self._motion_window
         body[_STATUS_OFFSET] = self._status_byte
         body[0:6] = bytes(self._axes)
         pressed = self._buttons
@@ -821,6 +1066,9 @@ class UhidDualSense:
         fd = self._fd
         if fd is None:
             return
+        # REPLICA-03: entrega o que o rate-limit reteve no tick anterior —
+        # o pump roda a cada tick do poll loop, então a latência é ~1 tick.
+        self._flush_replicas()
         for _ in range(_MAX_EVENTS_PER_PUMP):
             try:
                 data = os.read(fd, UHID_EVENT_SIZE)
@@ -839,13 +1087,23 @@ class UhidDualSense:
         event_type = struct.unpack("<I", data[:4])[0]
         if event_type == UHID_START:
             self._started = True
+            # REPLICA-03: âncora da graça anti-ruído-de-probe (o probe do
+            # hid_playstation emite outputs PRÓPRIOS logo após o START).
+            self._bound_at = self.time_fn()
             logger.info("uhid_bind_ok", player=self.player, name=self.name)
+        elif event_type == UHID_OPEN:
+            # Primeiro usuário abriu o device — começa a sessão de jogo
+            # (política de posse do REPLICA-03: o jogo vence até o CLOSE).
+            self._game_open = True
         elif event_type in (UHID_STOP, UHID_CLOSE):
             # O driver largou o device (rmmod, jogo fechou o hidraw, unbind). Se o
             # jogo deixou motor ligado, ninguém mais mandaria o stop — o controle
             # físico ficaria vibrando até alguém desligar o Hefesto.
             self._started = self._started and event_type == UHID_CLOSE
+            self._game_open = False
             self._silence_rumble()
+            # REPLICA-03: fim da sessão devolve perfil/paleta/co-op ao físico.
+            self._end_game_session()
         elif event_type == UHID_OUTPUT:
             self._handle_output(data)
         elif event_type == UHID_GET_REPORT:
@@ -857,6 +1115,11 @@ class UhidDualSense:
         """UHID_OUTPUT = o jogo escreveu no hidraw do vpad (rumble/LED/gatilhos).
 
         struct uhid_output_req { __u8 data[4096]; __u16 size; __u8 rtype; }
+
+        REPLICA-03: além do rumble (histórico), o report 0x02 do jogo carrega
+        gatilhos adaptativos, lightbar e player-LEDs — cada categoria presente
+        (pelos bits de valid_flag0/1) é replicada ao controle físico deste
+        jogador via os sinks, com dedup por valor e rate-limit.
         """
         payload_size = struct.unpack("<H", data[4 + HID_MAX_DESCRIPTOR_SIZE:
                                                 6 + HID_MAX_DESCRIPTOR_SIZE])[0]
@@ -865,6 +1128,8 @@ class UhidDualSense:
             return
         self._output_count += 1
         body = report[1:]
+        if len(body) > _VALID_FLAG1_OFFSET:
+            self._replicate_from_output(body)
         if len(body) <= _RUMBLE_STRONG_OFFSET:
             return
         if not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS:
@@ -884,6 +1149,149 @@ class UhidDualSense:
             self.rumble_sink(weak, strong)
         except Exception as exc:
             logger.warning("uhid_rumble_sink_failed", err=str(exc), player=self.player)
+
+    # --- REPLICA-03: gatilhos/lightbar/player-LED do jogo → físico ---------
+
+    def _replicating(self) -> bool:
+        """True quando a replicação está armada: sessão aberta + graça vencida.
+
+        A graça (`_GAME_REPLICA_GRACE_S` após o UHID_START) filtra os outputs
+        que o PRÓPRIO probe do hid_playstation emite no nascimento do vpad —
+        entre eles um player-LED com a numeração DO KERNEL (que conta os
+        físicos junto): replicá-lo renumeraria o controle errado a cada boot.
+        """
+        if not self._game_open:
+            return False
+        bound_at = self._bound_at
+        if bound_at is None:
+            return False
+        return (self.time_fn() - bound_at) >= _GAME_REPLICA_GRACE_S
+
+    def _replicate_from_output(self, body: bytes) -> None:
+        """Enfileira as categorias presentes no report 0x02 (bits de valid_flag)."""
+        if not self._replicating():
+            return
+        flag0 = body[_VALID_FLAG0_OFFSET]
+        flag1 = body[_VALID_FLAG1_OFFSET]
+        fim_r = _TRIGGER_R_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
+        if flag0 & _TRIGGER_R_EFFECT_ENABLE and len(body) >= fim_r:
+            self._queue_replica(
+                "trigger_right", bytes(body[_TRIGGER_R_BLOCK_OFFSET:fim_r])
+            )
+        fim_l = _TRIGGER_L_BLOCK_OFFSET + _TRIGGER_BLOCK_LEN
+        if flag0 & _TRIGGER_L_EFFECT_ENABLE and len(body) >= fim_l:
+            self._queue_replica(
+                "trigger_left", bytes(body[_TRIGGER_L_BLOCK_OFFSET:fim_l])
+            )
+        if flag1 & _PLAYER_INDICATOR_CONTROL_ENABLE and len(body) > _PLAYER_LEDS_OFFSET:
+            mask = body[_PLAYER_LEDS_OFFSET] & _PLAYER_LEDS_MASK
+            self._queue_replica(
+                "player_leds", tuple(bool(mask & (1 << i)) for i in range(5))
+            )
+        if flag1 & _LIGHTBAR_CONTROL_ENABLE and len(body) >= _LIGHTBAR_RGB_OFFSET + 3:
+            self._queue_replica(
+                "lightbar",
+                (
+                    body[_LIGHTBAR_RGB_OFFSET],
+                    body[_LIGHTBAR_RGB_OFFSET + 1],
+                    body[_LIGHTBAR_RGB_OFFSET + 2],
+                ),
+            )
+        self._flush_replicas()
+
+    def _queue_replica(self, categoria: str, valor: Any) -> None:
+        """Dedup por valor: igual ao último ENTREGUE (e sem pendência) = drop."""
+        if valor == self._replica_last.get(categoria) and (
+            categoria not in self._replica_pending
+        ):
+            return
+        self._replica_pending[categoria] = valor
+
+    def _flush_replicas(self) -> None:
+        """Entrega as pendências respeitando o rate-limit por categoria."""
+        if not self._replica_pending:
+            return
+        now = self.time_fn()
+        for categoria in list(self._replica_pending):
+            valor = self._replica_pending[categoria]
+            if valor == self._replica_last.get(categoria):
+                # O jogo voltou ao valor já entregue antes do flush: nada a fazer.
+                del self._replica_pending[categoria]
+                continue
+            ts = self._replica_ts.get(categoria)
+            if ts is not None and (now - ts) < _REPLICA_MIN_INTERVAL_S:
+                continue  # retido; sai no próximo pump
+            del self._replica_pending[categoria]
+            primeira = categoria not in self._replica_ts
+            self._replica_ts[categoria] = now
+            self._replica_last[categoria] = valor
+            self._forward_replica(categoria, valor, primeira=primeira)
+
+    def _forward_replica(self, categoria: str, valor: Any, *, primeira: bool) -> None:
+        """Entrega UMA réplica ao sink da categoria (contadores + telemetria)."""
+        if primeira:
+            # 1x por categoria por sessão: prova no journal que o output do
+            # jogo está chegando ao físico, sem flood a cada report.
+            logger.info(
+                "uhid_replica_ativa", categoria=categoria, player=self.player
+            )
+        try:
+            if categoria == "trigger_right":
+                if self.trigger_sink is None:
+                    return
+                self._trigger_replicas += 1
+                self._game_dirty = True
+                self.trigger_sink("right", valor)
+            elif categoria == "trigger_left":
+                if self.trigger_sink is None:
+                    return
+                self._trigger_replicas += 1
+                self._game_dirty = True
+                self.trigger_sink("left", valor)
+            elif categoria == "lightbar":
+                if self.lightbar_sink is None:
+                    return
+                self._lightbar_replicas += 1
+                self._game_dirty = True
+                self.lightbar_sink(valor[0], valor[1], valor[2])
+            elif categoria == "player_leds":
+                if self.player_led_sink is None:
+                    return
+                self._player_led_replicas += 1
+                self._game_dirty = True
+                self.player_led_sink(valor)
+        except Exception as exc:
+            logger.warning(
+                "uhid_replica_sink_failed",
+                categoria=categoria,
+                err=str(exc),
+                player=self.player,
+            )
+
+    def _end_game_session(self) -> None:
+        """Fim da sessão (CLOSE/STOP/stop): devolve a posse do output ao perfil.
+
+        O estado de dedup/rate-limit zera SEMPRE (sessão nova recomeça limpa:
+        o primeiro valor do próximo jogo é entregue mesmo que repita o da
+        sessão anterior). O `session_end_sink` só dispara se ALGO foi
+        replicado — sem isso, todo teardown de vpad reescreveria perfil e
+        paleta em controles que o jogo nunca tocou.
+        """
+        self._replica_pending.clear()
+        self._replica_last.clear()
+        self._replica_ts.clear()
+        if not self._game_dirty:
+            return
+        self._game_dirty = False
+        logger.info("uhid_game_session_end", player=self.player)
+        if self.session_end_sink is None:
+            return
+        try:
+            self.session_end_sink()
+        except Exception as exc:
+            logger.warning(
+                "uhid_session_end_sink_failed", err=str(exc), player=self.player
+            )
 
     def _reply_get_report(self, data: bytes) -> None:
         """struct uhid_get_report_req { __u32 id; __u8 rnum; __u8 rtype; }"""

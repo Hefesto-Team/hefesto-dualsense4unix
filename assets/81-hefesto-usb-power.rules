@@ -1,0 +1,29 @@
+# hefesto-dualsense4unix — controles e adaptadores BT nunca dormem.
+# PLAT-03 item 1 (estudo 2026-07-18-estudo-kernel-hardening.md §2).
+#
+# power/control=on desliga o runtime PM do device; autosuspend_delay_ms=-1 é a
+# trava redundante (delay negativo = nunca suspende) caso algo devolva "auto".
+# ACTION add|change: add cobre plug/coldplug (systemd-udev-trigger no boot);
+# change reaplica quando qualquer agente mexe em runtime (precedente: 99-usb-power-change
+# da Aurora). DEVTYPE=usb_device: o atributo power/ vive no device, não na interface.
+#
+# ATRIBUIÇÃO: em máquinas com o ritual-Aurora as regras 99-usb-* já garantem o
+# mesmo estado — esta regra escreve o MESMO valor por cima (inócua, idempotente)
+# para a máquina ficar íntegra sozinha se a Aurora sair. O install registra o
+# dono ("terceiro" quando já coberto). Instalada/removida pelo install/uninstall
+# do hefesto (default, sem flag).
+#
+# Adaptadores BT COMPOSITE (bDeviceClass ef) escapam do match por classe e0 —
+# para eles a cura é o modprobe.d (hefesto-btusb-no-autosuspend.conf), que
+# impede o btusb de religar o autosuspend no probe. As duas camadas se somam.
+# Sony (DualSense/Edge e afins)
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="054c", TEST=="power/control", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
+# Nintendo (Pro Controller e 8BitDo em modo Switch: 057e:2009)
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", TEST=="power/control", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
+# 8BitDo (modo próprio/X-input)
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="2dc8", TEST=="power/control", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
+# Microsoft (controles Xbox)
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="045e", TEST=="power/control", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"
+# Adaptadores Bluetooth por CLASSE (e0 = Wireless Controller; cobre o TP-Link
+# 2357:0604 desta máquina — bDeviceClass e0/01/01 PROVADO no sysfs)
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{bDeviceClass}=="e0", TEST=="power/control", ATTR{power/control}="on", ATTR{power/autosuspend_delay_ms}="-1"

@@ -373,3 +373,100 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
 
     # Após reconnect, o evento ABS_Z=200 deve ter sido processado
     assert snap.l2_raw == 200
+
+
+def test_stop_nao_loga_read_lost_no_teardown_intencional(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MISC-08 item 4 (2026-07-18): `stop()` fecha o fd de outra thread para
+    desbloquear o select (M4) — o EBADF resultante é o MECANISMO do stop, não
+    perda de device. Ao vivo, cada teardown de jogador do co-op cuspia um
+    warning `evdev_read_lost EBADF` falso-alarmante; agora vira debug
+    `evdev_read_stopped` e NÃO dispara `_reset_on_disconnect`."""
+    import sys
+    import threading
+    import time
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.core import evdev_reader as er_mod
+
+    fechado = threading.Event()
+
+    class _DevPreso:
+        name = "DualSense fake preso no select"
+
+        def read_loop(self):  # bloqueia como um controle OCIOSO
+            fechado.wait(timeout=5.0)
+            raise OSError(9, "Bad file descriptor")
+
+        def close(self) -> None:
+            fechado.set()
+
+        def grab(self) -> None: ...
+
+        def ungrab(self) -> None: ...
+
+    fake_mod = MagicMock()
+    fake_mod.InputDevice = lambda *_a, **_kw: _DevPreso()
+    fake_mod.ecodes = MagicMock()
+    monkeypatch.setitem(sys.modules, "evdev", fake_mod)
+
+    reader = EvdevReader(device_path=Path("/dev/input/event259"))
+    spy = MagicMock()
+    monkeypatch.setattr(er_mod, "logger", spy)
+
+    assert reader.start() is True
+    time.sleep(0.2)  # thread entra no read_loop e fica presa (idle)
+    reader.stop()
+
+    warnings = [c.args[0] for c in spy.warning.call_args_list]
+    assert "evdev_read_lost" not in warnings, (
+        "teardown intencional não pode alarmar como perda de device"
+    )
+    debugs = [c.args[0] for c in spy.debug.call_args_list]
+    assert "evdev_read_stopped" in debugs
+
+
+def test_read_lost_real_continua_com_warning_e_reset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O caminho de PERDA REAL (unplug/storm) fica intacto: warning
+    `evdev_read_lost` + reset — o silêncio é só para o stop intencional."""
+    import sys
+    import time
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.core import evdev_reader as er_mod
+
+    class _DevMorto:
+        name = "DualSense fake que morre"
+
+        def read_loop(self):
+            raise OSError(19, "No such device")
+
+        def close(self) -> None: ...
+
+        def grab(self) -> None: ...
+
+        def ungrab(self) -> None: ...
+
+    fake_mod = MagicMock()
+    fake_mod.InputDevice = lambda *_a, **_kw: _DevMorto()
+    fake_mod.ecodes = MagicMock()
+    monkeypatch.setitem(sys.modules, "evdev", fake_mod)
+    # Hermético: após o reset o loop re-localiza o node — nunca no /dev real.
+    monkeypatch.setattr(er_mod, "find_dualsense_evdev", lambda: None)
+    monkeypatch.setattr(er_mod, "discover_dualsense_evdevs", lambda: {})
+
+    reader = EvdevReader(device_path=Path("/dev/input/event259"))
+    spy = MagicMock()
+    monkeypatch.setattr(er_mod, "logger", spy)
+
+    assert reader.start() is True
+    time.sleep(0.2)
+    reader.stop()
+
+    warnings = [c.args[0] for c in spy.warning.call_args_list]
+    assert "evdev_read_lost" in warnings

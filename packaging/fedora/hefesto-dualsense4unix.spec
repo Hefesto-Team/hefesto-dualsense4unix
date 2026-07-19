@@ -102,14 +102,25 @@ install -Dm644 packaging/hefesto-dualsense4unix.desktop \
 install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{app_id}.png
 
-# Udev rules.
+# Udev rules — conjunto canônico (paridade com scripts/install_udev.sh).
+# 73/74 (hotplug-GUI) descontinuadas e removidas do repo em 2026-07-18.
 install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/70-ps5-controller.rules \
     assets/71-uhid.rules \
     assets/71-uinput.rules \
     assets/72-ps5-controller-autosuspend.rules \
-    assets/73-ps5-controller-hotplug.rules \
-    assets/74-ps5-controller-hotplug-bt.rules
+    assets/76-dualsense-touchpad-libinput-ignore.rules \
+    assets/77-dualsense-leds.rules \
+    assets/78-dualsense-motion-not-joystick.rules \
+    assets/79-external-controller-leds.rules \
+    assets/80-motion-joydev-hide.rules \
+    assets/81-hefesto-usb-power.rules \
+    assets/81-hefesto-usb-host-power.rules
+# Onda PLATAFORMA 2026-07-18: modprobe.d (cura do storm + btusb sem autosuspend).
+install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
+    %{buildroot}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf
+install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+    %{buildroot}/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 
@@ -160,10 +171,18 @@ fi
 %{_datadir}/applications/%{app_id}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/%{app_id}.png
 %{_udevrulesdir}/70-ps5-controller.rules
+%{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
 %{_udevrulesdir}/72-ps5-controller-autosuspend.rules
-%{_udevrulesdir}/73-ps5-controller-hotplug.rules
-%{_udevrulesdir}/74-ps5-controller-hotplug-bt.rules
+%{_udevrulesdir}/76-dualsense-touchpad-libinput-ignore.rules
+%{_udevrulesdir}/77-dualsense-leds.rules
+%{_udevrulesdir}/78-dualsense-motion-not-joystick.rules
+%{_udevrulesdir}/79-external-controller-leds.rules
+%{_udevrulesdir}/80-motion-joydev-hide.rules
+%{_udevrulesdir}/81-hefesto-usb-power.rules
+%{_udevrulesdir}/81-hefesto-usb-host-power.rules
+/usr/lib/modprobe.d/hefesto-dualsense-storm.conf
+/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
 %{_modulesloaddir}/hefesto-dualsense4unix.conf
 %{_userunitdir}/*.service
 %{_datadir}/locale/*/LC_MESSAGES/hefesto-dualsense4unix.mo

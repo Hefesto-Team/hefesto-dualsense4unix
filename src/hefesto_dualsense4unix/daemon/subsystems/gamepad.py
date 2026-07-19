@@ -111,17 +111,16 @@ def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
     controller = getattr(daemon, "controller", None)
     evdev = getattr(controller, "_evdev", None)
     setter = getattr(evdev, "set_grab", None)
-    if setter is None:
-        return
-    with contextlib.suppress(Exception):
-        ok = setter(grab)
-        state = getattr(evdev, "grab_state", None)
-        logger.info("gamepad_controller_grab", grab=grab, ok=ok, state=state)
-        if grab and ok is False:
-            store = getattr(daemon, "store", None)
-            if store is not None:
-                with contextlib.suppress(Exception):
-                    store.bump("gamepad.grab.failed")
+    if setter is not None:
+        with contextlib.suppress(Exception):
+            ok = setter(grab)
+            state = getattr(evdev, "grab_state", None)
+            logger.info("gamepad_controller_grab", grab=grab, ok=ok, state=state)
+            if grab and ok is False:
+                store = getattr(daemon, "store", None)
+                if store is not None:
+                    with contextlib.suppress(Exception):
+                        store.bump("gamepad.grab.failed")
 
 
 def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
@@ -205,6 +204,129 @@ def apply_game_rumble(
         controller.set_rumble(weak=weak_eff, strong=strong_eff)
     except Exception as exc:
         logger.warning("game_rumble_failed", err=str(exc))
+
+
+def apply_game_trigger(
+    daemon: DaemonProtocol,
+    side: str,
+    block: bytes,
+    *,
+    target_uniq: str | None = None,
+) -> None:
+    """Aplica no físico o trigger effect que o JOGO escreveu no vpad (REPLICA-03).
+
+    Sem broadcast de propósito (diferente do rumble): replicar um efeito de
+    gatilho em TODOS os controles pintaria o jogador errado. Sem MAC alvo ou
+    sem a API por-uniq no backend (FakeController), a réplica é descartada com
+    log — nunca degrada para broadcast.
+    """
+    fn: Any = getattr(daemon.controller, "set_game_trigger_for", None)
+    if target_uniq is None or not callable(fn):
+        logger.debug("game_trigger_sem_alvo_descartado", target=target_uniq)
+        return
+    try:
+        fn(target_uniq, side, block)
+    except Exception as exc:
+        logger.warning("game_trigger_failed", err=str(exc), target=target_uniq)
+
+
+def apply_game_lightbar(
+    daemon: DaemonProtocol,
+    rgb: tuple[int, int, int],
+    *,
+    target_uniq: str | None = None,
+) -> None:
+    """Aplica no físico a cor de lightbar que o JOGO pintou no vpad (REPLICA-03)."""
+    fn: Any = getattr(daemon.controller, "set_game_output_for", None)
+    if target_uniq is None or not callable(fn):
+        logger.debug("game_lightbar_sem_alvo_descartado", target=target_uniq)
+        return
+    try:
+        fn(target_uniq, led=rgb)
+    except Exception as exc:
+        logger.warning("game_lightbar_failed", err=str(exc), target=target_uniq)
+
+
+def apply_game_player_leds(
+    daemon: DaemonProtocol,
+    bits: tuple[bool, bool, bool, bool, bool],
+    *,
+    target_uniq: str | None = None,
+) -> None:
+    """Aplica no físico os player-LEDs que o JOGO acendeu no vpad (REPLICA-03).
+
+    É a cura do P3 para DualSense por construção: o número NO CONTROLE passa a
+    ser o número que o JOGO atribuiu, não o dos nossos registries.
+    """
+    fn: Any = getattr(daemon.controller, "set_game_output_for", None)
+    if target_uniq is None or not callable(fn):
+        logger.debug("game_player_leds_sem_alvo_descartado", target=target_uniq)
+        return
+    try:
+        fn(target_uniq, player_leds=bits)
+    except Exception as exc:
+        logger.warning("game_player_leds_failed", err=str(exc), target=target_uniq)
+
+
+def end_game_output_session(
+    daemon: DaemonProtocol, *, target_uniq: str | None = None
+) -> None:
+    """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
+    fn: Any = getattr(daemon.controller, "end_game_session_for", None)
+    if target_uniq is None or not callable(fn):
+        logger.debug("game_session_end_sem_alvo", target=target_uniq)
+        return
+    try:
+        fn(target_uniq)
+    except Exception as exc:
+        logger.warning("game_session_end_failed", err=str(exc), target=target_uniq)
+
+
+def make_primary_replica_sinks(daemon: DaemonProtocol) -> dict[str, Any]:
+    """Sinks de replicação do vpad do P1 → físico PRIMÁRIO (REPLICA-03).
+
+    Espelho de `make_primary_rumble_sink`: o MAC do primário é resolvido NA
+    HORA de cada réplica (`primary_uniq` muda em hotplug). As chaves do dict
+    casam com os kwargs de `make_virtual_pad`/`UhidDualSense` de propósito —
+    o call site desempacota com `**`.
+
+    O CLOSE encerra a sessão de CADA controle que recebeu réplica, não só o
+    primário do INSTANTE do CLOSE: o primário pode ter caído/trocado no BT no
+    meio do jogo (reconexão BT é frequente nesta máquina), e a camada GAME
+    grudou no controle que RECEBEU a cor — não no primário atual. Encerrar só
+    o `primary_uniq` corrente vazaria a camada game no controle original, que
+    voltaria como TOPO do merge no reconnect (a mesma writer-war/paleta
+    corrompida que o REPLICA-03 mata). Por isso lembramos todo uniq replicado
+    na sessão e devolvemos CADA um. Tudo roda na thread de poll (sem lock).
+    """
+
+    replicados: set[str] = set()
+
+    def _uniq() -> str | None:
+        uniq = getattr(daemon.controller, "primary_uniq", None)
+        if isinstance(uniq, str) and uniq:
+            replicados.add(uniq)
+            return uniq
+        return None
+
+    def _session_end() -> None:
+        alvos = tuple(replicados)
+        replicados.clear()
+        for uniq in alvos:
+            end_game_output_session(daemon, target_uniq=uniq)
+
+    return {
+        "trigger_sink": lambda side, block: apply_game_trigger(
+            daemon, side, block, target_uniq=_uniq()
+        ),
+        "lightbar_sink": lambda r, g, b: apply_game_lightbar(
+            daemon, (r, g, b), target_uniq=_uniq()
+        ),
+        "player_led_sink": lambda bits: apply_game_player_leds(
+            daemon, bits, target_uniq=_uniq()
+        ),
+        "session_end_sink": _session_end,
+    }
 
 
 def notify_vpad_degradado(daemon: DaemonProtocol, *, player: int, motivo: str) -> None:
@@ -368,6 +490,82 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     return start_gamepad_emulation(daemon, flavor="dualsense")
 
 
+def read_primary_calibration(daemon: DaemonProtocol) -> bytes | None:
+    """Feature 0x05 do controle PRIMÁRIO para o vpad do P1 (GYRO-01).
+
+    Best-effort por contrato: backend sem `read_calibration` (FakeController),
+    daemon offline (o vpad sobe antes do `controller.connect` no boot) ou
+    falha de leitura devolvem None e o vpad fica no 0x05 canônico — o
+    invariante "vpad sempre nasce" nunca depende do físico.
+    """
+    fn: Any = getattr(daemon.controller, "read_calibration", None)
+    if not callable(fn):
+        return None
+    try:
+        data = fn()
+    except Exception as exc:
+        logger.warning("gamepad_calibration_read_failed", err=str(exc))
+        return None
+    return data if isinstance(data, bytes) else None
+
+
+def start_motion_reader(daemon: DaemonProtocol, device: Any) -> None:
+    """Sobe o espelho de motion do P1 (GYRO-01): hidraw do físico → vpad.
+
+    Só existe no caminho uhid (o uinput não tem `forward_motion` — é evdev
+    puro) e só quando o backend expõe `hidraw_path` (o FakeController não tem
+    físico para espelhar). O `path_provider` re-resolve o hidraw do PRIMÁRIO
+    a cada (re)abertura — hotplug/retarget convergem sem recriar o reader; o
+    `attach_motion_reader` do backend fecha o ciclo cutucando o reader na
+    troca de primário (`_recompute_primary`).
+    """
+    stop_motion_reader(daemon)  # idempotência: nunca dois readers no mesmo P1
+    if getattr(device, "backend", None) != "uhid":
+        return
+    hidraw_fn: Any = getattr(daemon.controller, "hidraw_path", None)
+    if not callable(hidraw_fn):
+        return
+    from hefesto_dualsense4unix.core.physical_report_reader import (
+        PhysicalReportReader,
+    )
+
+    def _primary_hidraw() -> str | None:
+        try:
+            path = hidraw_fn()
+        except Exception:
+            return None
+        return path if isinstance(path, str) else None
+
+    reader = PhysicalReportReader(path_provider=_primary_hidraw, vpad=device)
+    if not reader.start():  # pragma: no cover - start() atual nunca falha
+        return
+    daemon._motion_reader = reader
+    attach: Any = getattr(daemon.controller, "attach_motion_reader", None)
+    if callable(attach):
+        with contextlib.suppress(Exception):
+            attach(reader)
+    logger.info("motion_reader_spawned", player=1)
+
+
+def stop_motion_reader(daemon: DaemonProtocol) -> None:
+    """Para o espelho de motion do P1 (idempotente).
+
+    Chamado ANTES do `device.stop()` em `stop_gamepad_emulation`: o reader
+    escreve no /dev/uhid do vpad e não pode sobreviver ao fd do device.
+    """
+    reader = getattr(daemon, "_motion_reader", None)
+    if reader is None:
+        return
+    daemon._motion_reader = None
+    detach: Any = getattr(daemon.controller, "attach_motion_reader", None)
+    if callable(detach):
+        with contextlib.suppress(Exception):
+            detach(None)
+    with contextlib.suppress(Exception):
+        reader.stop()
+    logger.info("motion_reader_stopped", player=1)
+
+
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO.
 
@@ -501,11 +699,18 @@ def start_gamepad_emulation(
     # `_safe_start("gamepad")` rodando antes do `controller.connect()` e mesmo
     # sem controle nenhum conectado. `allow_uhid` veta o uhid no backend fake
     # (VPAD-08 — o smoke não pode plantar um Edge real no kernel).
+    # REPLICA-03: além do rumble, o output completo do jogo (gatilhos
+    # adaptativos, lightbar, player-LEDs) volta ao físico do P1 pelos sinks
+    # de replicação; o de fim-de-sessão devolve perfil/paleta no UHID_CLOSE.
+    # GYRO-01: o 0x05 do físico primário calibra o motion espelhado no vpad
+    # (None → canônico; ver `read_primary_calibration`).
     device: VirtualPad | None = make_virtual_pad(
         key,
         rumble_sink=make_primary_rumble_sink(daemon),
         player=1,
         allow_uhid=controller_allows_uhid(daemon),
+        calibration_0x05=read_primary_calibration(daemon),
+        **make_primary_replica_sinks(daemon),
     )
     if device is None:
         logger.warning("gamepad_emulation_start_failed", flavor=key)
@@ -538,6 +743,9 @@ def start_gamepad_emulation(
             player=1,
             motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
         )
+    # GYRO-01: com o vpad uhid de pé, o gyro/accel/touchpad do físico passa a
+    # fluir pelo espelho de report (thread própria; no fallback uinput é no-op).
+    start_motion_reader(daemon, device)
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key
     _set_controller_grab(daemon, True)
@@ -569,6 +777,9 @@ def stop_gamepad_emulation(
     dono do FF (o jogo, via vpad) some nos dois, e o motor não pode ficar ligado
     no vácuo — quem tem rumble FIXO pela aba Rumble não é afetado (no-op).
     """
+    # GYRO-01: o reader morre ANTES do vpad — ele escreve no /dev/uhid do
+    # device e pararia num fd fechado/reciclado se a ordem invertesse.
+    stop_motion_reader(daemon)
     tinha_device = daemon._gamepad_device is not None
     if tinha_device:
         with contextlib.suppress(Exception):
@@ -629,12 +840,20 @@ def dispatch_gamepad(
 __all__ = [
     "REBACKEND_COOLDOWN_SEC",
     "GamepadSubsystem",
+    "apply_game_lightbar",
+    "apply_game_player_leds",
     "apply_game_rumble",
+    "apply_game_trigger",
     "dedup_status",
     "dispatch_gamepad",
+    "end_game_output_session",
+    "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
+    "read_primary_calibration",
     "start_gamepad_emulation",
+    "start_motion_reader",
     "stop_gamepad_emulation",
+    "stop_motion_reader",
     "upgrade_primary_vpad_to_uhid",
 ]

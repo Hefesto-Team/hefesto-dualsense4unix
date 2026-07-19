@@ -71,6 +71,21 @@ for candidate in \
 done
 SNDQUIRK_DEST="/etc/modprobe.d"
 
+# PLAT-04 item 1: btusb sem autosuspend (o btusb LIGA o autosuspend do
+# adaptador BT no probe; o conf corta na raiz, inclusive p/ adaptadores
+# composite classe ef que escapam da regra 81 por classe e0).
+BTUSB_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "/usr/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../assets/modprobe.d" \
+; do
+    if [[ -f "${candidate}/hefesto-btusb-no-autosuspend.conf" ]]; then
+        BTUSB_SRC="${candidate}"
+        break
+    fi
+done
+
 if [[ -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
@@ -99,6 +114,15 @@ RULES=(
     # 79: LEDs de player dos Nintendo/8BitDo graváveis p/ o daemon numerar o
     # co-op misto (continua a contagem dos DualSense; só LED, nunca input). 8BIT-02.
     "79-external-controller-leds.rules"
+    # 80: jsN legados dos Motion Sensors (físico E vpad) em MODE 0000 — a API js
+    # legada para de enumerar "joysticks" fantasmas. KERNEL-07.
+    "80-motion-joydev-hide.rules"
+    # 81 (devices): controles e adaptadores BT nunca dormem (power/control=on +
+    # autosuspend_delay_ms=-1). PLAT-03 item 1.
+    "81-hefesto-usb-power.rules"
+    # 81 (hosts): controladores USB PCI (classe 0x0c03*) em power/control=on —
+    # a economia no HOST derruba o barramento inteiro. PLAT-03 item 3.
+    "81-hefesto-usb-host-power.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.
@@ -129,6 +153,9 @@ fi
 if [[ -n "${SNDQUIRK_SRC}" ]]; then
     echo "  - hefesto-dualsense-storm.conf (cura do travamento do USB; preserva mic+fone)"
 fi
+if [[ -n "${BTUSB_SRC}" ]]; then
+    echo "  - hefesto-btusb-no-autosuspend.conf (adaptador Bluetooth nunca dorme)"
+fi
 echo ""
 
 # Comando núcleo executado com privilégios elevados (pkexec ou sudo).
@@ -157,15 +184,27 @@ _build_install_cmd() {
         cmd+="printf '%s' '054c:0ce6:ignore_ctl_error|ctl_msg_delay_1m,054c:0df2:ignore_ctl_error|ctl_msg_delay_1m' "
         cmd+="> /sys/module/snd_usb_audio/parameters/quirk_flags 2>/dev/null || true; "
     fi
+    # btusb sem autosuspend (PLAT-04): conf persistente + runtime p/ probes
+    # futuros (best-effort; o adaptador já plugado é coberto pela regra 81).
+    if [[ -n "${BTUSB_SRC}" ]]; then
+        cmd+="install -Dm644 '${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf' "
+        cmd+="'${SNDQUIRK_DEST}/hefesto-btusb-no-autosuspend.conf'; "
+        cmd+="printf '0' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
+    fi
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
     # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).
     cmd+="udevadm control --reload-rules; "
     cmd+="udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=usb --attr-match=idVendor=054c 2>/dev/null || true; "
     cmd+="udevadm trigger --subsystem-match=leds --action=add 2>/dev/null || true; "
+    # input: reavalia 76 (touchpad-ignore), 78 (ID_INPUT_*) e 80 (js de Motion
+    # Sensors em MODE 0000) sem exigir replug do controle.
+    cmd+="udevadm trigger --action=change --subsystem-match=input 2>/dev/null || true; "
     # misc: /dev/uinput e /dev/uhid. Sem este trigger as regras 71-* só valeriam no
     # próximo boot (o nó já existia quando elas chegaram) — e sem elas não há vpad.
     cmd+="udevadm trigger --subsystem-match=misc --action=add 2>/dev/null || true; "
+    # pci: aplica a 81-host (power/control=on nos xHCI) sem reboot. PLAT-03.
+    cmd+="udevadm trigger --action=change --subsystem-match=pci 2>/dev/null || true; "
     cmd+="udevadm trigger 2>/dev/null || true; "
     cmd+="echo 'Regras instaladas com sucesso.'"
     printf '%s' "${cmd}"

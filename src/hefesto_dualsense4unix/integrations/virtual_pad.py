@@ -113,8 +113,14 @@ def make_virtual_pad(
     flavor: str | None,
     *,
     rumble_sink: Callable[[int, int], None] | None = None,
+    trigger_sink: Callable[[str, bytes], None] | None = None,
+    lightbar_sink: Callable[[int, int, int], None] | None = None,
+    player_led_sink: Callable[[tuple[bool, bool, bool, bool, bool]], None]
+    | None = None,
+    session_end_sink: Callable[[], None] | None = None,
     player: int = 1,
     allow_uhid: bool = True,
+    calibration_0x05: bytes | None = None,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
@@ -125,9 +131,20 @@ def make_virtual_pad(
     (`uhid_blueprint.canonical_blueprint`) — o vpad não depende de controle
     físico conectado, nem de hidraw legível (VPAD-03/BT-01).
 
+    REPLICA-03: os sinks de gatilho/lightbar/player-LED/fim-de-sessão replicam
+    o output do JOGO ao controle físico — são exclusivos do backend uhid (o
+    uinput é evdev-only: FF é o único output que chega até ele), então no
+    fallback eles são deliberadamente descartados.
+
     `allow_uhid=False` (VPAD-08): o chamador declara "sem uhid" quando o backend
     do controle é o fake (`run.sh --fake`) — um vpad uhid é um DualSense Edge
     REAL no kernel, visível pela Steam, e o smoke não pode plantar um.
+
+    GYRO-01: `calibration_0x05` é o feature 0x05 lido do controle FÍSICO deste
+    jogador (`backend.read_calibration`) — quando presente e íntegro, o vpad o
+    carimba no blueprint no lugar do canônico, para o motion espelhado ser
+    calibrado com a unidade certa. None/inválido = canônico (fallback fail-safe;
+    o vpad nasce do mesmo jeito). Exclusivo do backend uhid, como os sinks.
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import (
         UinputGamepad,
@@ -137,7 +154,16 @@ def make_virtual_pad(
     key = normalize_flavor(flavor)
     motivo: str | None = None
     if allow_uhid:
-        uhid, motivo = _try_uhid(key, rumble_sink=rumble_sink, player=player)
+        uhid, motivo = _try_uhid(
+            key,
+            rumble_sink=rumble_sink,
+            trigger_sink=trigger_sink,
+            lightbar_sink=lightbar_sink,
+            player_led_sink=player_led_sink,
+            session_end_sink=session_end_sink,
+            player=player,
+            calibration_0x05=calibration_0x05,
+        )
         if uhid is not None:
             return uhid
     elif key == "dualsense":
@@ -158,7 +184,13 @@ def _try_uhid(
     flavor: str,
     *,
     rumble_sink: Callable[[int, int], None] | None,
+    trigger_sink: Callable[[str, bytes], None] | None = None,
+    lightbar_sink: Callable[[int, int, int], None] | None = None,
+    player_led_sink: Callable[[tuple[bool, bool, bool, bool, bool]], None]
+    | None = None,
+    session_end_sink: Callable[[], None] | None = None,
     player: int,
+    calibration_0x05: bytes | None = None,
 ) -> tuple[VirtualPad | None, str | None]:
     """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
 
@@ -181,7 +213,15 @@ def _try_uhid(
         logger.info("vpad_uhid_indisponivel_usando_uinput", node=UHID_NODE, player=player)
         return None, "uhid_indisponivel"
     pad = UhidDualSense.for_flavor(
-        flavor, rumble_sink=rumble_sink, player=player, blueprint=canonical_blueprint()
+        flavor,
+        rumble_sink=rumble_sink,
+        trigger_sink=trigger_sink,
+        lightbar_sink=lightbar_sink,
+        player_led_sink=player_led_sink,
+        session_end_sink=session_end_sink,
+        player=player,
+        blueprint=canonical_blueprint(),
+        calibration_0x05=calibration_0x05,
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
         return None, "uhid_indisponivel"

@@ -6,6 +6,9 @@ o aviso honesto do Nintendo/8BitDo por Bluetooth. Sem GTK, sem IPC.
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    MODE_SELECTOR_ITEMS,
+    MODE_SELECTOR_SUBTITLE,
+    MODE_SELECTOR_TOOLTIP,
     brand_of,
     button_labels_for,
     detail_rows,
@@ -14,6 +17,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     friendly_type,
     input_mode,
     mode_guidance,
+    mode_selector_state,
     nintendo_bt_warning,
     short_button_label,
     transport_label,
@@ -189,9 +193,51 @@ class TestModo:
     def test_guidance_none_para_controle_sem_dois_modos(self) -> None:
         assert mode_guidance(_DESCONHECIDO) is None
 
-    def test_detail_rows_inclui_o_modo(self) -> None:
+    def test_detail_rows_nao_duplica_o_modo(self) -> None:
+        """GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo mora no
+        seletor segmentado read-only (`mode_selector_state`), fonte única."""
         rows = dict(detail_rows(_8BITDO_CABO))
-        assert rows["O jogo vê como"] == "Nintendo (modo Switch)"
+        assert "O jogo vê como" not in rows
+
+
+class TestSeletorSegmentadoReadOnly:
+    """GUI-05/P4: camada PURA do segmentado read-only da ficha (Nintendo|Xbox)."""
+
+    def test_itens_casam_com_input_mode(self) -> None:
+        # Os ids do seletor são exatamente os retornos possíveis de
+        # `input_mode` para controles de dois modos.
+        assert [iid for iid, _ in MODE_SELECTOR_ITEMS] == ["nintendo", "xbox"]
+
+    def test_nintendo_marca_nintendo(self) -> None:
+        estado = mode_selector_state(_8BITDO_CABO)
+        assert estado is not None
+        itens, ativo = estado
+        assert itens == MODE_SELECTOR_ITEMS
+        assert ativo == "nintendo"
+
+    def test_xbox_marca_xbox(self) -> None:
+        estado = mode_selector_state(_XBOX)
+        assert estado is not None
+        assert estado[1] == "xbox"
+
+    def test_outro_nao_tem_seletor(self) -> None:
+        assert mode_selector_state(_DESCONHECIDO) is None
+
+    def test_mesmo_gate_do_mode_guidance(self) -> None:
+        # Seletor e texto de orientação aparecem JUNTOS (mesma condição) —
+        # nunca um segmentado sem a explicação, nem o contrário.
+        for entry in (_8BITDO_CABO, _8BITDO_BT, _XBOX, _DESCONHECIDO):
+            assert (mode_selector_state(entry) is None) == (
+                mode_guidance(entry) is None
+            )
+
+    def test_subtitulo_diz_que_a_troca_e_fisica(self) -> None:
+        assert "física" in MODE_SELECTOR_SUBTITLE
+        assert "manual" in MODE_SELECTOR_SUBTITLE
+
+    def test_tooltip_explica_o_read_only(self) -> None:
+        assert "leitura" in MODE_SELECTOR_TOOLTIP.lower()
+        assert "software" in MODE_SELECTOR_TOOLTIP
 
 
 class TestChave:

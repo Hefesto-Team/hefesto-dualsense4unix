@@ -58,14 +58,101 @@ logger = get_logger(__name__)
 ENV_ALLOWLIST = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
-    "PROTON_ENABLE_HIDRAW",
+    "PROTON_DISABLE_HIDRAW",
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
 )
 
 _IGNORE_VALUE = "0x054c/0x0ce6"
 
+#: GUERRA-01: lista VID/PID que o winebus.sys dos Protons 10/11 lê para NEGAR
+#: hidraw (a whitelist default dele dá hidraw à família Sony INTEIRA — físico
+#: 0ce6 E vpad 0df2 — e ignora a env do SDL). SÓ o físico entra aqui: o vpad
+#: Edge 0df2 PRECISA do hidraw (é por ele que rumble/triggers/lightbar do
+#: jogo chegam) — NUNCA incluir 0x0DF2. `PROTON_ENABLE_HIDRAW` morreu no
+#: Proton 10 e foi aposentada (só AMPLIAVA exposição).
+_DISABLE_HIDRAW_VALUE = "0x054C/0x0CE6"
+
 _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$")
+
+#: GUI-05 item 3 (honestidade do dedup): idade MÁXIMA, em segundos, do marker
+#: `last_run` (gravado pelo wrapper no LAUNCH) em relação à PRIMEIRA detecção
+#: da janela `steam_app_<appid>`. A janela serve para DESCARTAR markers de
+#: sessões ANTIGAS (o jogo de ontem/horas atrás) — NÃO para limitar a latência
+#: launch→janela: jogos pesados (Proton na 1ª execução, compilação de shaders,
+#: RDR2 com o Rockstar Launcher) só abrem a janela `steam_app_N` minutos depois
+#: do launch, e o marker legítimo desse launch ficaria fora de uma janela
+#: curta, derrubando `wrapper_used` para false no MEIO do jogo (falso alarme
+#: de "jogo sem wrapper"). Por isso 15 min: cobre o carregamento AAA mais lento
+#: e ainda rejeita marker de uma sessão de verdade velha. Marker de outro
+#: appid, ou ausente = o jogo NÃO passou pelo `hefesto-launch`.
+WRAPPER_MARKER_WINDOW_SEC = 900.0
+
+
+def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
+    """Appid do jogo a partir da wm_class (`steam_app_N`), ou None."""
+    if not isinstance(wm_class, str):
+        return None
+    m = _STEAM_APP_WC_RE.match(wm_class)
+    return int(m.group(1)) if m is not None else None
+
+
+def read_last_run_marker(base_dir: Path | None = None) -> tuple[int, int] | None:
+    """Lê o marker `last_run` do wrapper: ``(appid, epoch)`` ou None.
+
+    Formato (gravado por `assets/hefesto-launch.sh`, chave=valor por linha):
+    ``appid=<int>`` + ``epoch=<unix epoch s>``. Tolerante a lixo: linhas
+    desconhecidas são ignoradas; faltando qualquer um dos dois campos (ou
+    valores não-numéricos), devolve None — quem consome trata como "wrapper
+    nunca rodou". Nunca levanta.
+    """
+    try:
+        path = (base_dir if base_dir is not None else launch_env_dir()) / "last_run"
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    except Exception:  # defensivo: leitura de marker jamais derruba o IPC
+        logger.debug("wrapper_marker_read_falhou", exc_info=True)
+        return None
+    appid: int | None = None
+    epoch: int | None = None
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if key == "appid" and value.isdigit():
+            appid = int(value)
+        elif key == "epoch" and value.isdigit():
+            epoch = int(value)
+    if appid is None or epoch is None or appid <= 0:
+        return None
+    return appid, epoch
+
+
+def wrapper_used_state(
+    *,
+    appid: int,
+    marker: tuple[int, int] | None,
+    first_seen_epoch: float,
+    window_sec: float = WRAPPER_MARKER_WINDOW_SEC,
+) -> bool:
+    """Decisão PURA do `wrapper_used` para um jogo detectado (GUI-05 item 3).
+
+    ``appid`` = jogo cuja janela `steam_app_N` o detector viu;
+    ``first_seen_epoch`` = epoch da PRIMEIRA detecção desse appid;
+    ``marker`` = `(appid, epoch)` do `last_run` (ou None).
+
+    True quando o marker é do MESMO appid e foi gravado até ``window_sec``
+    ANTES da primeira detecção — o wrapper roda no launch, antes de a janela
+    existir. Marker mais NOVO que a primeira detecção também conta (relaunch
+    pelo wrapper com a leitura do detector ainda quente). O caso "sem jogo"
+    (wm_class não é steam_app) é decidido pelo chamador (devolve None lá).
+    """
+    if marker is None:
+        return False
+    marker_appid, marker_epoch = marker
+    if marker_appid != appid:
+        return False
+    return (first_seen_epoch - marker_epoch) <= window_sec
 
 
 def compose_env(
@@ -77,13 +164,21 @@ def compose_env(
 ) -> dict[str, str]:
     """Envs de launch para UM estado do daemon. Pura e testável.
 
-    - Modo Nativo: `PROTON_ENABLE_HIDRAW=1` SEM IGNORE — o jogo fala com o
-      hidraw do FÍSICO; esconder o físico aqui é exatamente o "zero
-      controles" relatado ao vivo.
+    GUERRA-01 (estudo 2026-07-18): o IGNORE do SDL só filtra o caminho SDL —
+    o winebus dos Protons 10/11 dá hidraw à família Sony inteira POR DEFAULT
+    e é por ESSE canal que o jogo continuava escrevendo no físico (a guerra
+    de escritores de lightbar/rumble). A env moderna é `PROTON_DISABLE_HIDRAW`
+    (lista VID/PID); `PROTON_ENABLE_HIDRAW` morreu no Proton 10.
+
+    - Modo Nativo: NENHUMA env de hidraw — a whitelist default do winebus já
+      expõe o físico Sony (Protons 10/11); esconder o físico aqui é
+      exatamente o "zero controles" relatado ao vivo.
     - Xbox: `SDL_JOYSTICK_HIDAPI=0` (SDL lê o evdev, que o daemon graba) +
-      IGNORE do físico. O vpad é 045e — nunca colide com o 0ce6.
+      IGNORE + DISABLE do físico (o vazamento winebus vale para qualquer
+      máscara). O vpad é 045e — nunca colide com o 0ce6.
     - DualSense com TODOS os vpads em uhid (Edge 0df2 com hidraw real):
-      `PROTON_ENABLE_HIDRAW=1` + IGNORE — dedup no layout PS.
+      DISABLE do físico + IGNORE — dedup no layout PS; o vpad segue com
+      hidraw pleno pela whitelist default (NUNCA 0x0DF2 no DISABLE).
     - DualSense com QUALQUER vpad em uinput (degradado), emulação desligada
       ou sem vpad vivo: SÓ o preload de shaders. Duplicado > zero controles.
 
@@ -91,14 +186,14 @@ def compose_env(
     "carregamento completo" que o botão da GUI sempre prometeu.
     """
     env: dict[str, str] = {}
-    if native_mode:
-        env["PROTON_ENABLE_HIDRAW"] = "1"
-    elif emulation_enabled and backends:
+    # Modo Nativo: expõe o físico — sem DISABLE, sem IGNORE (whitelist default).
+    if not native_mode and emulation_enabled and backends:
         if flavor == "xbox":
             env["SDL_JOYSTICK_HIDAPI"] = "0"
             env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
+            env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
         elif flavor == "dualsense" and all(b == "uhid" for b in backends):
-            env["PROTON_ENABLE_HIDRAW"] = "1"
+            env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
             env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         # dualsense degradado (algum uinput) => sem IGNORE, de propósito.
     env["__GL_SHADER_DISK_CACHE"] = "1"
@@ -332,6 +427,10 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
 
 __all__ = [
     "ENV_ALLOWLIST",
+    "WRAPPER_MARKER_WINDOW_SEC",
     "compose_env",
     "materialize_launch_env",
+    "read_last_run_marker",
+    "steam_appid_from_wm_class",
+    "wrapper_used_state",
 ]

@@ -60,6 +60,9 @@ class DaemonProtocol(Protocol):
     # FEAT-DSX-GAMEPAD-FLAVOR-01: gamepad virtual (`integrations.virtual_pad.
     # VirtualPad` — uhid ou uinput, ver `make_virtual_pad`) ou None.
     _gamepad_device: Any
+    # GYRO-01: `core.physical_report_reader.PhysicalReportReader` do vpad do
+    # P1 (espelho de motion do físico → vpad uhid) ou None.
+    _motion_reader: Any
     # FEAT-DSX-COOP-LOCAL-01: CoopManager (jogadores secundários) ou None.
     _coop_manager: Any
     _hotkey_manager: Any

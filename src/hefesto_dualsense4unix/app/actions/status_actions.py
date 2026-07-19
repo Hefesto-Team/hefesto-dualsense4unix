@@ -39,7 +39,10 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     slot_of,
     transport_label,
 )
-from hefesto_dualsense4unix.app.actions.home_actions import vpad_degradation_text
+from hefesto_dualsense4unix.app.actions.home_actions import (
+    vpad_degradation_text,
+    wrapper_banner_text,
+)
 from hefesto_dualsense4unix.app.constants import (
     LIVE_POLL_INTERVAL_MS,
     RECONNECT_FAIL_THRESHOLD,
@@ -933,6 +936,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._sync_edit_target(None)
         # UX-03: daemon offline não é degradação do vpad — o banner some junto.
         self._refresh_vpad_banner(None)
+        # GUI-05: idem para o aviso "jogo sem wrapper".
+        self._refresh_wrapper_banner(None)
         self._reset_live_widgets()
 
     @staticmethod
@@ -1014,6 +1019,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         # UX-03: banner de degradação do vpad (máscara DualSense em uinput).
         self._refresh_vpad_banner(state)
 
+        # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
+        self._refresh_wrapper_banner(state)
+
         # STATUS-02: o tick lento também mantém o CONJUNTO de cards em dia —
         # com a aba Status fora de foco o tick rápido pausa, e sem isto a
         # troca de aba mostraria cards do conjunto antigo por até 100 ms.
@@ -1039,6 +1047,23 @@ class StatusActionsMixin(WidgetAccessMixin):
         if banner is None:
             return
         aviso = vpad_degradation_text(state)
+        if aviso:
+            banner.set_text(aviso)
+        banner.set_visible(bool(aviso))
+
+    def _refresh_wrapper_banner(self, state: dict[str, Any] | None) -> None:
+        """GUI-05 item 3: banner "jogo sem wrapper" na aba Status.
+
+        Consome `gamepad_emulation.wrapper_used` do state_full pela MESMA
+        função pura da aba Início (`wrapper_banner_text`) — as duas abas nunca
+        discordam. Widget fixo do Glade (`status_wrapper_banner`), sempre
+        inline: nada de popup/popover (cosmic-epoch#2497). Campo ausente/None
+        (sem jogo aberto, daemon antigo) não acende nada.
+        """
+        banner = self._get("status_wrapper_banner")
+        if banner is None:
+            return
+        aviso = wrapper_banner_text(state)
         if aviso:
             banner.set_text(aviso)
         banner.set_visible(bool(aviso))

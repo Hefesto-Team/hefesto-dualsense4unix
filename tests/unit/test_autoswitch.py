@@ -479,3 +479,150 @@ def test_autoswitch_ativa_sem_gravar_last_profile_manual(
 
     assert load_last_profile() is None
     assert read_active_marker() is None
+
+
+# ---------------------------------------------------------------------------
+# MISC-08 item 2 (2026-07-18) — GUI-neutra: a PRÓPRIA GUI/applet em foco não
+# conta como janela para seleção de perfil; o perfil corrente fica retido
+# (mesma histerese UX-01 da leitura sem informação). Journal 2026-07-18
+# 20:15:40-51: cada alt-tab jogoGUI flipava vitoriasackboy_nativo.
+# ---------------------------------------------------------------------------
+
+
+def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
+    """Cenário do journal: sackboy_nativo ativo + foco na própria GUI
+    (wm_class Main.py / Hefesto-Dualsense4Unix) NÃO cai para o fallback
+    MatchAny vitoria — por mais que o foco na GUI dure."""
+    save_profile(
+        _mk_profile(
+            "sackboy_nativo",
+            match=MatchCriteria(window_class=["steam_app_1599660"]),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.0)
+    sw._tick({"wm_class": "steam_app_1599660"}, 0.6)
+    assert sw._current_profile == "sackboy_nativo"
+
+    # Alt-tab para a GUI, bem além do debounce, em todas as formas de
+    # wm_class que a nossa GUI/applet reporta (journal + código).
+    for t, wm in (
+        (1.0, "Main.py"),
+        (1.5, "Hefesto-Dualsense4Unix"),
+        (30.0, "hefesto-dualsense4unix"),
+        (60.0, "hefesto-dualsense4unix-gui"),
+        (120.0, "com.vitoriamaria.HefestoDualsense4Unix"),
+    ):
+        sw._tick({"wm_class": wm, "wm_name": "Hefesto DualSense4Unix"}, t)
+
+    assert sw._current_profile == "sackboy_nativo"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_gui_propria_nunca_ativa_fallback_sem_perfil_corrente(
+    isolated_profiles_dir: Path,
+):
+    """Sem perfil corrente, encarar a GUI por minutos não ativa o MatchAny —
+    a janela própria é 'sem informação', não evidência de desktop."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    for t in range(10):
+        sw._tick(
+            {"wm_class": "Main.py", "wm_name": "Hefesto DualSense4Unix"},
+            float(t) * 30.0,
+        )
+
+    assert sw._current_profile is None
+    assert manager.store.counter("profile.activated") == 0
+
+
+def test_pos_gui_debounce_reinicia(isolated_profiles_dir: Path):
+    """Voltar da GUI reinicia o relógio do debounce (armadilha 1 da UX-01):
+    glitch de jogo → foco longo na GUI → glitch idêntico NÃO ativa na hora."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)  # glitch útil (1 tick só)
+    for t in (0.4, 10.0, 100.0):  # foco longo na GUI
+        sw._tick({"wm_class": "Main.py"}, t)
+
+    sw._tick({"wm_class": "Doom"}, 100.5)  # glitch idêntico pós-GUI
+    assert sw._current_profile is None  # o tempo na GUI não conta
+
+    sw._tick({"wm_class": "Doom"}, 101.1)  # estabilidade REAL >= debounce
+    assert sw._current_profile == "shooter"
+
+
+def test_log_janela_propria_uma_vez_por_episodio(
+    isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Journal sem flood: `autoswitch_janela_propria_ignorada` sai 1x por
+    episódio; leitura útil fecha o episódio e reabre o log."""
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
+
+    spy = MagicMock()
+    monkeypatch.setattr(autoswitch_mod, "logger", spy)
+
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _mk_switcher(manager)
+
+    # Episódio 1: 3 ticks na GUI → 1 log.
+    for t in (0.0, 0.5, 1.0):
+        sw._tick({"wm_class": "Main.py"}, t)
+    # Leitura útil encerra o episódio.
+    sw._tick({"wm_class": "Doom"}, 1.5)
+    # Episódio 2: 2 ticks na GUI → mais 1 log.
+    for t in (2.0, 2.5):
+        sw._tick({"wm_class": "Hefesto-Dualsense4Unix"}, t)
+
+    eventos = [
+        c
+        for c in spy.info.call_args_list
+        if c[0][0] == "autoswitch_janela_propria_ignorada"
+    ]
+    assert len(eventos) == 2
+
+
+def test_janela_propria_matcher():
+    """Matcher unitário: wm_class nossos (case-insensitive, com espaços) são
+    próprios; janelas de jogo/apps comuns não são."""
+    proprias = [
+        "Main.py",
+        "main.py",
+        "Hefesto-Dualsense4Unix",
+        "hefesto-dualsense4unix",
+        "  hefesto-dualsense4unix-gui ",
+        "com.vitoriamaria.HefestoDualsense4Unix",
+    ]
+    for wm in proprias:
+        assert AutoSwitcher._janela_propria({"wm_class": wm}), wm
+
+    alheias = [
+        {"wm_class": "steam_app_1599660"},
+        {"wm_class": "Doom"},
+        {"wm_class": "unknown"},
+        {"wm_class": ""},
+        {},
+    ]
+    for info in alheias:
+        assert not AutoSwitcher._janela_propria(info), info

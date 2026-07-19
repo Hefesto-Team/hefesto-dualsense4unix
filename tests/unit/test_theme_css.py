@@ -147,6 +147,49 @@ def test_containers_internos_cobertos() -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# GUI-05/P5: diálogos temados no top-level (padrão dos menus) — o nó
+# `messagedialog` é toplevel próprio e não herda o escopo da window; sem o
+# bloco, um diálogo futuro sem a classe herdaria o Adwaita claro do XWayland.
+# ---------------------------------------------------------------------------
+
+
+def test_messagedialog_top_level_coberto() -> None:
+    """Bloco top-level `messagedialog` com fundo escuro Drácula presente."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    m = re.search(r"^messagedialog[^{]*\{([^}]*)\}", conteúdo, re.MULTILINE)
+    assert m is not None, "Bloco top-level 'messagedialog' ausente no theme.css"
+    corpo = m.group(1)
+    assert "#282a36" in corpo, "messagedialog deve ter o fundo Drácula #282a36"
+    assert "#f8f8f2" in corpo, "messagedialog deve ter o foreground #f8f8f2"
+
+
+def test_messagedialog_botoes_cobertos() -> None:
+    """Os botões do diálogo também precisam de regra própria (não herdam da
+    window) — sem ela, 'Cancelar/Aplicar' vinham no claro do sistema."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    m = re.search(r"messagedialog\s+button\s*\{([^}]*)\}", conteúdo)
+    assert m is not None, "Regra 'messagedialog button' ausente"
+    assert re.search(r"background-color:\s*#[0-9a-fA-F]{3,6}", m.group(1)), (
+        "messagedialog button deve ter fundo sólido escuro"
+    )
+
+
+def test_segmentado_read_only_mantem_o_destaque() -> None:
+    """GUI-05/P4: o modo detectado (botão :checked) do segmentado READ-ONLY
+    (ficha do externo, insensitive) continua destacado — sem a regra
+    :checked:disabled, o :disabled apagava o roxo e nada parecia marcado."""
+    conteúdo = CSS_PATH.read_text(encoding="utf-8")
+    m = re.search(
+        r"\.hefesto-dualsense4unix-window\s+button:checked:disabled\s*\{([^}]*)\}",
+        conteúdo,
+    )
+    assert m is not None, "Regra button:checked:disabled ausente"
+    assert "#bd93f9" in m.group(1), (
+        "o destaque do modo detectado deve manter o accent roxo"
+    )
+
+
 def test_theme_css_sem_regra_at_rule_proibida() -> None:
     """GTK3 falha a carga inteira com a at-rule de query proibida.
 

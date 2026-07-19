@@ -22,6 +22,7 @@ container) — padrão dos widgets dinâmicos, imune ao bug de popup do cosmic-c
 """
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
@@ -150,6 +151,39 @@ NATIVE_BT_FRAGIL_TEXT = (
 )
 
 
+# GUI-05 item 3 (honestidade do dedup): texto do banner "jogo sem wrapper".
+# Discreto e pro leigo — diz a consequência (duplicar) e o caminho (aba
+# Sistema), sem jargão de env/vdf.
+WRAPPER_MISSING_TEXT = (
+    "O jogo está rodando sem o hefesto-launch — controles podem duplicar. "
+    "Copie as opções na aba Sistema."
+)
+
+
+def wrapper_banner_text(state: dict[str, Any] | None) -> str | None:
+    """Texto do banner "jogo sem wrapper"; ``None`` quando não há aviso.
+
+    Contrato do `state_full.gamepad_emulation.wrapper_used` (produzido pelo
+    daemon cruzando o marker do `hefesto-launch` com a janela steam_app):
+
+    - ``False`` = há jogo aberto E ele NÃO passou pelo wrapper → banner;
+    - ``True`` = o jogo abriu pelo wrapper → sem banner;
+    - ``None``/ausente = sem jogo aberto, ou daemon antigo sem o campo →
+      sem banner (nunca alarme falso por payload incompleto).
+
+    Só o ``False`` LITERAL acende — função pura, consumida pelas abas Início
+    e Status (mesmo desenho do `vpad_degradation_text`).
+    """
+    if not isinstance(state, dict):
+        return None
+    gamepad = state.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return None
+    if gamepad.get("wrapper_used") is False:
+        return WRAPPER_MISSING_TEXT
+    return None
+
+
 def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     """Texto do banner de degradação do vpad; ``None`` quando não há aviso.
 
@@ -276,6 +310,21 @@ class HomeActionsMixin(WidgetAccessMixin):
         vpad_banner.set_visible(False)
         self._home_vpad_banner = vpad_banner
         box.pack_start(vpad_banner, False, False, 0)
+
+        # --- Banner: jogo aberto SEM o wrapper (GUI-05 item 3) --------------
+        # Mesmo desenho do banner do vpad: label inline, invisível por padrão;
+        # o `_render_home` liga/desliga a partir do
+        # `gamepad_emulation.wrapper_used` do state_full (`wrapper_banner_text`).
+        wrapper_banner = Gtk.Label(label="")
+        wrapper_banner.set_xalign(0.0)
+        wrapper_banner.set_line_wrap(True)
+        wrapper_banner.get_style_context().add_class(
+            "hefesto-dualsense4unix-status-warn"
+        )
+        wrapper_banner.set_no_show_all(True)
+        wrapper_banner.set_visible(False)
+        self._home_wrapper_banner = wrapper_banner
+        box.pack_start(wrapper_banner, False, False, 0)
 
         # --- Frame: modo do sistema ---------------------------------------
         from hefesto_dualsense4unix.app.widgets.segmented_selector import (
@@ -441,6 +490,8 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_gamepad_opts.set_visible(False)
                 # UX-03: offline não é degradação do vpad — o banner some junto.
                 self._home_vpad_banner.set_visible(False)
+                # GUI-05: idem para o aviso "jogo sem wrapper".
+                self._home_wrapper_banner.set_visible(False)
                 self._render_home_controllers([])
                 return
             assert state is not None
@@ -468,6 +519,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             if aviso_vpad:
                 self._home_vpad_banner.set_text(aviso_vpad)
             self._home_vpad_banner.set_visible(bool(aviso_vpad))
+
+            # GUI-05 item 3: banner "jogo sem wrapper" — só o False LITERAL de
+            # `gamepad_emulation.wrapper_used` acende (função pura decide).
+            aviso_wrapper = wrapper_banner_text(state)
+            if aviso_wrapper:
+                self._home_wrapper_banner.set_text(aviso_wrapper)
+            self._home_wrapper_banner.set_visible(bool(aviso_wrapper))
 
             origin_bits: list[str] = []
             if state.get("native_mode") and state.get("native_mode_origin") == "profile":
@@ -635,6 +693,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             buttons=Gtk.ButtonsType.YES_NO,
             text="Desligar o Hefesto?",
         )
+        # GUI-05/P5: sem a classe de tema o diálogo herdava o claro do sistema
+        # (precedente: gui_dialogs._apply_app_theme).
+        with contextlib.suppress(Exception):
+            dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
         dialog.format_secondary_text(
             "O controle continua funcionando nos jogos, mas sem luzes, sem "
             "gatilhos e sem os seus ajustes.\n"
@@ -695,6 +757,8 @@ class HomeActionsMixin(WidgetAccessMixin):
 __all__ = [
     "HOME_POLL_INTERVAL_MS",
     "VPAD_DEGRADED_TEXT",
+    "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
     "vpad_degradation_text",
+    "wrapper_banner_text",
 ]

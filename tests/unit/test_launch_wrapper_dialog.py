@@ -674,6 +674,21 @@ class TestRespostaDoDialogo:
         assert lwd.load_dismissed_appids() == set()
 
 
+class TestTemaDoDialogo:
+    """GUI-05/P5 — espelho stub-level (roda headless, sem GTK real).
+
+    O assert GTK-real vive em ``TestDialogoGtkReal`` (has_class de verdade);
+    aqui a garantia é estrutural, por fonte: a construção aplica a classe de
+    tema escopo-de-todo-o-CSS, e ANTES de qualquer chance de early-return.
+    """
+
+    def test_build_aplica_a_classe_de_tema(self) -> None:
+        import inspect
+
+        src = inspect.getsource(LaunchWrapperDialogMixin._build_wrapper_dialog)
+        assert 'add_class("hefesto-dualsense4unix-window")' in src
+
+
 # ---------------------------------------------------------------------------
 # Diálogo GTK real (construção + sinal response de verdade)
 # ---------------------------------------------------------------------------
@@ -701,6 +716,11 @@ class TestDialogoGtkReal:
         dlg = stub._build_wrapper_dialog("777")
         try:
             assert isinstance(dlg, Gtk.MessageDialog)
+            # GUI-05/P5: o diálogo carrega a classe de tema — sem ela, sob
+            # XWayland no COSMIC ele abria Adwaita CLARO (tema nem instalado).
+            assert dlg.get_style_context().has_class(
+                "hefesto-dualsense4unix-window"
+            )
             # NÃO-modal: aberto durante o jogo, não pode segurar grab GTK.
             assert dlg.get_modal() is False
             assert "777" in (dlg.get_property("text") or "")

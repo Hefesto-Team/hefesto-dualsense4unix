@@ -41,7 +41,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # FEAT-COOP-PLAYER-LED-01 / COR-03: os padrões canônicos de player-LED
 # (P1..P4 do PS5) moraram aqui até o COR-03; agora o dono é
@@ -85,6 +85,11 @@ class _SecondaryPlayer:
     reader: EvdevReader
     player_index: int
     vpad: VirtualPad | None = None
+    # GYRO-01 (co-op): espelho de motion do FÍSICO deste jogador → vpad dele
+    # (`core.physical_report_reader.PhysicalReportReader`). Só nasce quando o
+    # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
+    # externos (8BitDo/Nintendo passam direto ao jogo — gyro nativo deles).
+    motion_reader: Any = None
 
 
 class CoopManager:
@@ -406,6 +411,54 @@ class CoopManager:
 
         return _sink
 
+    def _make_player_replica_sinks(self, identity: str) -> dict[str, Any]:
+        """Sinks de replicação (REPLICA-03) do vpad de UM jogador → físico DELE.
+
+        Espelho por-jogador do `make_primary_replica_sinks` do P1: gatilhos
+        adaptativos, lightbar e player-LEDs que o JOGO escrever no vpad deste
+        jogador vão para o controle da identidade dele (por MAC), e o fim da
+        sessão uhid devolve perfil/paleta/co-op. Identidade sem MAC
+        ("path:...") não tem alvo estável — os appliers descartam com log
+        (sem broadcast: réplica no controle errado é o bug P1-lightbar).
+        """
+        daemon = self._daemon
+        target = None if identity.startswith("path:") else identity
+
+        def _trigger(side: str, block: bytes) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_trigger,
+            )
+
+            apply_game_trigger(daemon, side, block, target_uniq=target)
+
+        def _lightbar(r: int, g: int, b: int) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_lightbar,
+            )
+
+            apply_game_lightbar(daemon, (r, g, b), target_uniq=target)
+
+        def _player_leds(bits: tuple[bool, bool, bool, bool, bool]) -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                apply_game_player_leds,
+            )
+
+            apply_game_player_leds(daemon, bits, target_uniq=target)
+
+        def _session_end() -> None:
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                end_game_output_session,
+            )
+
+            end_game_output_session(daemon, target_uniq=target)
+
+        return {
+            "trigger_sink": _trigger,
+            "lightbar_sink": _lightbar,
+            "player_led_sink": _player_leds,
+            "session_end_sink": _session_end,
+        }
+
     def _promote_player(self, player: _SecondaryPlayer) -> None:
         """Cria o vpad de um jogador com grab CONFIRMADO. Falha derruba o jogador."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
@@ -424,6 +477,12 @@ class CoopManager:
             rumble_sink=self._make_player_rumble_sink(player.identity),
             player=player.player_index,
             allow_uhid=controller_allows_uhid(self._daemon),
+            # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
+            # (None para externos/sem MAC → canônico, fail-safe).
+            calibration_0x05=self._read_player_calibration(player.identity),
+            # REPLICA-03: o output do jogo (gatilhos/lightbar/player-LED)
+            # replica no físico DESTE jogador; CLOSE devolve perfil/paleta.
+            **self._make_player_replica_sinks(player.identity),
         )
         if vpad is None:
             logger.warning(
@@ -435,6 +494,9 @@ class CoopManager:
             self._retry_spawn = True
             return
         player.vpad = vpad
+        # GYRO-01 (co-op): o gyro/touchpad do físico deste jogador flui pelo
+        # espelho de report — um reader POR JOGADOR, no hidraw por-uniq.
+        self._start_player_motion_reader(player)
         logger.info(
             "coop_player_added",
             identity=player.identity,
@@ -466,6 +528,71 @@ class CoopManager:
         # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
         self._materialize_launch_env()
 
+    def _read_player_calibration(self, identity: str) -> bytes | None:
+        """Feature 0x05 do físico de UM jogador (GYRO-01), ou None = canônico.
+
+        Identidade sem MAC ("path:...") e controles fora do backend pydualsense
+        (externos: 8BitDo/Nintendo) não têm handle por-uniq → None, fail-safe.
+        """
+        if identity.startswith("path:"):
+            return None
+        fn = getattr(self._daemon.controller, "read_calibration", None)
+        if not callable(fn):
+            return None
+        try:
+            data = fn(identity)
+        except Exception as exc:
+            logger.warning(
+                "coop_calibration_read_failed", identity=identity, err=str(exc)
+            )
+            return None
+        return data if isinstance(data, bytes) else None
+
+    def _start_player_motion_reader(self, player: _SecondaryPlayer) -> None:
+        """Espelho de motion por jogador (GYRO-01 co-op): hidraw dele → vpad dele.
+
+        Gates (todos fail-safe — sem reader o vpad segue como hoje, IMU neutra):
+        - vpad em uhid (o uinput é evdev puro, sem `forward_motion`);
+        - identidade com MAC (o hidraw por-uniq vem do backend pydualsense);
+        - `hidraw_path(identity)` resolvendo AGORA — controle externo
+          (8BitDo/Nintendo) não tem handle no backend e fica sem espelho POR
+          DESIGN: ele passa direto ao jogo com o gyro nativo dele (decisão da
+          mantenedora no estudo 2026-07-19 — dar-lhe vpad reverteria o 8BIT-02).
+        """
+        vpad = player.vpad
+        if getattr(vpad, "backend", None) != "uhid":
+            return
+        identity = player.identity
+        if identity.startswith("path:"):
+            return
+        hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
+        if not callable(hidraw_fn):
+            return
+        try:
+            if hidraw_fn(identity) is None:
+                return  # externo/sem handle: gyro nativo, sem espelho
+        except Exception:
+            return
+        from hefesto_dualsense4unix.core.physical_report_reader import (
+            PhysicalReportReader,
+        )
+
+        def _player_hidraw() -> str | None:
+            try:
+                path = hidraw_fn(identity)
+            except Exception:
+                return None
+            return path if isinstance(path, str) else None
+
+        reader = PhysicalReportReader(path_provider=_player_hidraw, vpad=vpad)
+        reader.start()
+        player.motion_reader = reader
+        logger.info(
+            "coop_motion_reader_spawned",
+            identity=identity,
+            player=player.player_index,
+        )
+
     def _materialize_launch_env(self) -> None:
         """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
         with contextlib.suppress(Exception):
@@ -483,6 +610,12 @@ class CoopManager:
             player.reader.set_grab(False)
         with contextlib.suppress(Exception):
             player.reader.stop()
+        # GYRO-01: o reader de motion morre ANTES do vpad (ele escreve no
+        # /dev/uhid do vpad — mesma ordem do stop_gamepad_emulation do P1).
+        if player.motion_reader is not None:
+            with contextlib.suppress(Exception):
+                player.motion_reader.stop()
+            player.motion_reader = None
         if player.vpad is not None:
             with contextlib.suppress(Exception):
                 player.vpad.stop()

@@ -69,6 +69,52 @@ class TestPresets:
 
 
 # ---------------------------------------------------------------------------
+# MISC-08 item 1 (2026-07-18) — o 2º retorno de _effective_mult é o último
+# mult EFETIVO (fonte de `daemon._last_auto_mult` → `rumble_mult_applied`
+# do state_full). Políticas fixas o deixavam INTOCADO, preso no default 0.7:
+# ao vivo, policy=max reportava rumble_mult_applied=0.7 e parecia atenuação
+# real do rumble do jogo (o hardware recebia 1.0).
+# ---------------------------------------------------------------------------
+
+
+class TestMultEfetivoObservavel:
+    """Toda política sincroniza o estado observável com o mult efetivo."""
+
+    def test_max_sincroniza_estado_observavel(self) -> None:
+        """O cenário do journal: policy=max com estado herdado 0.7 tem que
+        devolver new_last=1.0 — não deixar o 0.7 fantasma para o state_full."""
+        cfg = _config("max")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(1.0)
+        assert new_last == pytest.approx(1.0)
+
+    def test_economia_sincroniza_estado_observavel(self) -> None:
+        cfg = _config("economia")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(0.3)
+        assert new_last == pytest.approx(0.3)
+
+    def test_custom_sincroniza_estado_observavel(self) -> None:
+        cfg = _config("custom", custom_mult=0.45)
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.7, 0.0)
+        assert mult == pytest.approx(0.45)
+        assert new_last == pytest.approx(0.45)
+
+    def test_politica_desconhecida_sincroniza_fallback(self) -> None:
+        cfg = _config("turbo")
+        mult, new_last, _ = _effective_mult(cfg, 100, 1.0, 0.3, 0.0)
+        assert mult == pytest.approx(0.7)
+        assert new_last == pytest.approx(0.7)
+
+    def test_politica_fixa_preserva_relogio_do_debounce_auto(self) -> None:
+        """Política fixa não mexe no timestamp do debounce do auto — só no
+        valor observável."""
+        cfg = _config("max")
+        _, _, new_at = _effective_mult(cfg, 100, 500.0, 0.7, 123.0)
+        assert new_at == pytest.approx(123.0)
+
+
+# ---------------------------------------------------------------------------
 # Modo Auto — thresholds de bateria
 # ---------------------------------------------------------------------------
 

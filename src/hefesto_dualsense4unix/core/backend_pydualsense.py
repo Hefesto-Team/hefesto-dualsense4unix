@@ -23,6 +23,7 @@ determinística, usamos uma subclasse (`_PinnedPyDualSense`) que sobrescreve o
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import os
 import threading
 import time
@@ -63,6 +64,41 @@ DUALSENSE_EDGE_PID = 0x0DF2
 #: está azul) e serve só para a classe LED convergir com a realidade — sem
 #: isso, todo reconnect BT/hotplug leria `0 0 0` com o LED visivelmente aceso.
 KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
+
+#: REPLICA-03: tamanho do bloco de trigger effect que o jogo escreve no report
+#: 0x02 do vpad (modo + 10 parâmetros — `rgucRightTriggerEffect[11]` do
+#: DS5EffectsState_t do SDL; no kernel a área é o `reserved2` do
+#: `dualsense_output_report_common`, common[10..20]/[21..31]).
+GAME_TRIGGER_BLOCK_LEN = 11
+
+#: GYRO-01: feature report da calibração da IMU (`DS_FEATURE_REPORT_CALIBRATION`
+#: / `_SIZE` do hid-playstation.c). Lido POR UNIDADE em `read_calibration` para
+#: o vpad carimbar no blueprint — por BT os 4 últimos bytes são CRC-32 (seed
+#: 0xA3) e são validados antes de aceitar.
+_CALIBRATION_FEATURE_ID = 0x05
+_CALIBRATION_FEATURE_SIZE = 41
+
+
+def _read_feature_via_hidraw(path: str, report_id: int, size: int) -> bytes:
+    """GET_REPORT de feature via HIDIOCGFEATURE num fd efêmero (GYRO-01).
+
+    Espelho do `_hidiocgfeature` de `uhid_gamepad.py` (caminho VALIDADO ao
+    vivo pelo capture do blueprint) — duplicado aqui porque core/ não importa
+    integrations/. Devolve o report como o kernel o entrega: ``data[0]`` é o
+    report id e o payload começa em ``data[1]`` (`hidraw_get_report` +
+    `hid_hw_raw_request`). Propaga OSError (EIO do BT ocioso, permissão) para
+    o chamador decidir o fallback.
+    """
+    fd = os.open(path, os.O_RDWR)
+    try:
+        buf = bytearray(size)
+        buf[0] = report_id
+        # HIDIOCGFEATURE(len) = _IOC(READ|WRITE, 'H', 0x07, len)
+        request = (3 << 30) | (size << 16) | (ord("H") << 8) | 0x07
+        ret = fcntl.ioctl(fd, request, buf, True)
+        return bytes(buf[:ret]) if ret > 0 else b""
+    finally:
+        os.close(fd)
 
 
 def _is_virtual_hidraw(path: bytes) -> bool:
@@ -250,6 +286,28 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # segundo, sentido ao vivo no Sackboy 2026-07-13). Mutado = zero write;
         # a leitura de input/bateria continua.
         self._output_muted = False
+        # GUERRA-01 item 2 (keepalive neutro): com o upstream, TODO report sai
+        # com os bits de vibração do flag0 ligados (0xFF) e motores=0 — o
+        # keepalive zerava rumble de TERCEIROS (o jogo escrevendo direto no
+        # hidraw do físico) a cada ≤0.5s. Agora os bits de vibração só ligam
+        # quando há rumble NOSSO ativo (`_rumble_active`) ou na transição
+        # ativa→0 (`_rumble_stop_pending`: UM report com flags ligados e
+        # motores 0 para parar o motor de verdade; depois volta ao neutro).
+        self._rumble_active = False
+        self._rumble_stop_pending = False
+        # BTREPORT-02: contador de sequência do report 0x31 (wrap 0-15, como o
+        # hid_playstation faz), carimbado por `writeReport` no momento do
+        # write — nunca no prepare, senão todo report "mudaria" e o dedup
+        # `_last_out_report` morreria (write a ~125Hz de volta).
+        self._bt_seq = 0
+        # REPLICA-03: blocos CRUS de trigger effect do JOGO (11 bytes: modo +
+        # 10 parâmetros, layout do DS5EffectsState_t do SDL). Quando setados,
+        # `_build_common` os embute VERBATIM em common[10..20]/[21..31] no
+        # lugar do estado da pydualsense — a DSTrigger só representa 7 forças
+        # e espalharia zeros nos parâmetros 8/9/10 do efeito do jogo. None =
+        # posse do perfil (caminho DSTrigger histórico).
+        self._raw_trigger_right: bytes | None = None
+        self._raw_trigger_left: bytes | None = None
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -302,41 +360,144 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 self.connected = False
                 break
 
-    def prepareReport(self) -> list[int]:  # noqa: N802 - override do nome do upstream
-        """Igual ao upstream, mas cede lightbar+player ao kernel quando suprimido.
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
+        super().setLeftMotor(intensity)
+        self._track_rumble_transition()
 
-        Quando `_suppress_leds` está ligado (a rota sysfs do kernel está ativa e
-        gravável para este controle), limpamos os bits de *flag* que autorizam a
-        lightbar (``0x04``) e os player-LEDs (``0x10``) no byte de flags de LED do
-        report. Sem esses bits, o firmware IGNORA os bytes de cor/player deste
-        report — então o report_thread da pydualsense para de reescrever a
-        lightbar a cada ciclo e não disputa mais com o kernel (a disputa é o que
-        matava a cor no BT). Rumble, gatilhos e LED do mic seguem intactos.
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
+        super().setRightMotor(intensity)
+        self._track_rumble_transition()
 
-        O byte de flags de LED é o 2º byte de flags: índice 2 no report USB
-        (0x02) e índice 3 no report BT (0x31, que tem o byte de seq extra). No BT
-        recalculamos o CRC-32 (bytes 74..77) por termos alterado o buffer.
+    def _track_rumble_transition(self) -> None:
+        """GUERRA-01 item 2: rastreia rumble NOSSO ativo e a transição ativa→0.
+
+        `_rumble_active` liga com qualquer motor > 0; ao ambos zerarem, vira
+        `_rumble_stop_pending` — o próximo report sai com os flags de vibração
+        LIGADOS (e motores 0) para o firmware parar o motor de verdade, e só
+        então o report volta ao neutro. 0→0 não gera stop (nunca vibrou).
         """
-        report: list[int] = super().prepareReport()
-        if not getattr(self, "_suppress_leds", False):
-            return report
+        active = bool(self.leftMotor or self.rightMotor)
+        if active:
+            self._rumble_active = True
+        elif self._rumble_active:
+            self._rumble_active = False
+            self._rumble_stop_pending = True
+
+    def _build_common(self, *, rumble_asserted: bool) -> bytearray:
+        """Payload "common" (47 bytes) a partir do estado da pydualsense.
+
+        Mesmo mapeamento de campos do upstream (motores, mic, gatilhos, LED),
+        mas com DUAS políticas nossas aplicadas na origem:
+
+        - keepalive neutro (GUERRA-01 item 2): sem rumble nosso ativo, os bits
+          de vibração (flag0 0x01|0x02, atenuação 0x40 do flag1 e a vibração
+          v2 0x04 do flag2) saem DESLIGADOS — o firmware mantém o estado
+          anterior e o rumble de terceiros sobrevive ao nosso keepalive;
+        - supressão de LED (FEAT-DSX-LIGHTBAR-SYSFS-01): `_suppress_leds`
+          limpa lightbar 0x04 + player 0x10 do flag1 (o kernel é o dono).
+        """
+        from hefesto_dualsense4unix.core import ds_output_report as rep
+
+        common = bytearray(rep.COMMON_LEN)
+        flag0 = 0xFF  # upstream: vibração+gatilhos+áudio sempre autorizados
+        flag1 = 0x01 | 0x02 | 0x04 | 0x10 | 0x40  # upstream: mic+LED+atenuação
+        flag2 = int(self.light.ledOption.value)
+        if not rumble_asserted:
+            flag0 &= ~(
+                rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
+            )
+            flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
+            flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
+        if getattr(self, "_suppress_leds", False):
+            flag1 &= ~(
+                rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
+                | rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
+            )
+        common[0] = flag0
+        common[1] = flag1
+        common[2] = int(self.rightMotor) & 0xFF
+        common[3] = int(self.leftMotor) & 0xFF
+        common[8] = int(self.audio.microphone_led) & 0xFF
+        common[9] = 0x10 if self.audio.microphone_mute else 0x00
+        # REPLICA-03: bloco cru do jogo (se em posse) vence o estado DSTrigger.
+        raw_r = getattr(self, "_raw_trigger_right", None)
+        if raw_r is not None and len(raw_r) == GAME_TRIGGER_BLOCK_LEN:
+            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = raw_r
+        else:
+            common[10] = int(self.triggerR.mode.value) & 0xFF
+            for i in range(6):
+                common[11 + i] = int(self.triggerR.forces[i]) & 0xFF
+            common[19] = int(self.triggerR.forces[6]) & 0xFF
+        raw_l = getattr(self, "_raw_trigger_left", None)
+        if raw_l is not None and len(raw_l) == GAME_TRIGGER_BLOCK_LEN:
+            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = raw_l
+        else:
+            common[21] = int(self.triggerL.mode.value) & 0xFF
+            for i in range(6):
+                common[22 + i] = int(self.triggerL.forces[i]) & 0xFF
+            common[30] = int(self.triggerL.forces[6]) & 0xFF
+        common[rep.COMMON_VALID_FLAG2] = flag2
+        common[41] = int(self.light.pulseOptions.value) & 0xFF
+        common[42] = int(self.light.brightness.value) & 0xFF
+        common[43] = int(self.light.playerNumber.value) & 0xFF
+        common[44] = int(self.light.TouchpadColor[0]) & 0xFF
+        common[45] = int(self.light.TouchpadColor[1]) & 0xFF
+        common[46] = int(self.light.TouchpadColor[2]) & 0xFF
+        return common
+
+    def prepareReport(self) -> list[int]:  # noqa: N802 - override do nome do upstream
+        """Monta o report pelo builder comum (BTREPORT-02) — não usa o upstream.
+
+        USB: envelope 0x02 (idêntico ao histórico). BT: envelope 0x31 CORRETO
+        (`[1]=seq<<4`, `[2]=0x10`, common em `[3..49]`, CRC nos 4 últimos) —
+        o 0x31 da pydualsense 0.7.5 é malformado e o firmware o descarta, o
+        que fazia todo o nosso output BT (rumble/gatilhos/keepalive) ser
+        no-op. O nibble de seq sai 0 aqui (report comparável para o dedup
+        `_last_out_report`); quem carimba o contador real é `writeReport`.
+
+        Fallback: qualquer falha na montagem cai no report do upstream (USB
+        correto; BT malformado = comportamento pré-fix, nunca pior) — o
+        report_thread não pode morrer por causa disto.
+        """
         try:
             from pydualsense.enums import ConnectionType
 
-            is_bt = self.conType == ConnectionType.BT
-            led_flags_idx = 3 if is_bt else 2
-            report[led_flags_idx] &= ~(0x04 | 0x10)
-            if is_bt:
-                from pydualsense.checksum import compute
+            from hefesto_dualsense4unix.core import ds_output_report as rep
 
-                crc = compute(report)
-                report[74] = crc & 0x000000FF
-                report[75] = (crc & 0x0000FF00) >> 8
-                report[76] = (crc & 0x00FF0000) >> 16
-                report[77] = (crc & 0xFF000000) >> 24
-        except Exception:  # nunca derrubar o report_thread por causa disto
+            stop_pending = self._rumble_stop_pending
+            common = self._build_common(
+                rumble_asserted=self._rumble_active or stop_pending
+            )
+            if self.conType == ConnectionType.BT:
+                report = list(rep.build_bt_report(common, seq=0))
+            else:
+                report = list(rep.build_usb_report(common))
+            if stop_pending:
+                # O report de STOP (flags ligados, motores 0) foi montado —
+                # o próximo ciclo volta ao neutro. Limpa SÓ o snapshot lido
+                # (um pending novo, setado durante a montagem, sobrevive).
+                self._rumble_stop_pending = False
             return report
-        return report
+        except Exception:  # nunca derrubar o report_thread por causa disto
+            fallback: list[int] = super().prepareReport()
+            return fallback
+
+    def writeReport(self, outReport: list[int]) -> None:  # noqa: N802,N803 - upstream
+        """Write com carimbo de sequência BT (BTREPORT-02).
+
+        Reports 0x31 ganham o contador por handle (wrap 0-15) + CRC recalculado
+        NUMA CÓPIA — o buffer original (que `sendReport` guarda em
+        `_last_out_report`) permanece com seq 0, mantendo o dedup funcional.
+        """
+        if len(outReport) == 78 and outReport[0] == 0x31:
+            from hefesto_dualsense4unix.core import ds_output_report as rep
+
+            stamped = list(outReport)
+            rep.stamp_bt_seq(stamped, self._bt_seq)
+            self._bt_seq = (self._bt_seq + 1) & 0x0F
+            self.device.write(bytes(stamped))
+            return
+        self.device.write(bytes(outReport))
 
 
 class PyDualSenseController(IController):
@@ -373,6 +534,16 @@ class PyDualSenseController(IController):
         # `_merged_desired_for_key`, SOB `_io_lock` — o provider DEVE ser
         # barato e sem I/O.
         self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
+        # REPLICA-03: camada GAME do desejado — o que o JOGO escreveu no vpad
+        # deste controle (lightbar/player-LED), replicado pelo daemon. É o TOPO
+        # do merge de `_merged_desired_for_key` (jogo vence override, auto e
+        # default enquanto a sessão uhid estiver aberta) e some no
+        # `end_game_session_for` (UHID_CLOSE), quando o perfil/paleta voltam.
+        # Os trigger effects do jogo ficam à parte (`_game_triggers_by_uniq`):
+        # são blocos CRUS de 11 bytes (não cabem no TriggerEffect de 7 forças)
+        # aplicados direto no handle (`_raw_trigger_*`).
+        self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
+        self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
         # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
         # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
         # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
@@ -411,6 +582,11 @@ class PyDualSenseController(IController):
         # com kernel hid_playstation). pydualsense segue como caminho de
         # output (triggers, LED, rumble). Single-instance, atrelado ao primário.
         self._evdev = evdev_reader if evdev_reader is not None else EvdevReader()
+        # GYRO-01: `PhysicalReportReader` do vpad do P1 (espelho de motion),
+        # registrado pelo daemon via `attach_motion_reader`. O backend só o
+        # cutuca no retarget de primário (`_recompute_primary`), junto do
+        # `_evdev.retarget` — quem cria/para o reader é o subsystem gamepad.
+        self._motion_reader: Any | None = None
 
     # --- identidade ------------------------------------------------------
 
@@ -439,6 +615,77 @@ class PyDualSenseController(IController):
             if self._key_to_uniq(key) == uniq:
                 return key
         return None
+
+    def attach_motion_reader(self, reader: Any | None) -> None:
+        """Registra (ou remove, com None) o reader de motion do P1 (GYRO-01).
+
+        Injeção do daemon (`subsystems/gamepad.py`) — core/ nunca importa
+        daemon/. O único uso aqui é o retarget: quando o primário troca,
+        `_recompute_primary` manda o reader largar o hidraw antigo e reabrir
+        no do primário novo (o `path_provider` dele re-resolve sozinho).
+        """
+        with self._io_lock:
+            self._motion_reader = reader
+
+    def read_calibration(self, uniq: str | None = None) -> bytes | None:
+        """Feature 0x05 (calibração da IMU) do controle `uniq` (None = primário).
+
+        GYRO-01: é o report que o vpad carimba no blueprint para o
+        `hid_playstation`/SDL calibrarem o motion espelhado com o bias e a
+        sensibilidade DA UNIDADE que produz os bytes crus — o canônico
+        embutido veio de UMA unidade e faz as outras drivarem.
+
+        A leitura vai por HIDIOCGFEATURE direto no hidraw do handle (o mesmo
+        caminho provado do `capture_dualsense_blueprint`), NÃO pelo
+        `get_feature_report` da hidapi: o wrapper pure-python instalado faz
+        ``return buf[1:]`` — descarta o byte do report id e devolve
+        payload+pad, o que desmolduraria o report (e a validação por id
+        passaria só quando o primeiro byte de payload por acaso fosse 0x05).
+        O ioctl devolve o report EXATO do kernel, id incluído — byte-compatível
+        com o `CANONICAL_FEATURE_0X05` do blueprint. Fd próprio e efêmero: zero
+        contenção com o read bloqueante do report_thread no handle da hidapi.
+
+        Fail-safe por contrato: qualquer falha devolve None e o chamador fica
+        no 0x05 canônico (vpad sempre nasce; drift leve tolerável). Modos de
+        falha reais: BT ocioso responde EIO no GET_REPORT (timeout de 5 s do
+        hidp — raro aqui, o report_thread mantém o link quente) e rádio
+        corrompendo o report — por BT os 4 últimos bytes são CRC-32 (seed
+        0xA3, `PS_FEATURE_CRC32_SEED` do kernel) e são VALIDADOS antes de
+        aceitar: uma calibração corrompida carimbada no vpad quebraria o
+        motion inteiro, não só o drift.
+        """
+        from hefesto_dualsense4unix.core.ds_output_report import (
+            BT_FEATURE_CRC_SEED,
+            bt_crc32,
+        )
+
+        with self._io_lock:
+            key = self._primary_key if uniq is None else self._key_for_uniq(uniq)
+            handle = self._handles.get(key) if key is not None else None
+            if handle is None:
+                return None
+            transporte = self._detect_transport(handle)
+            path = self.hidraw_path(uniq)
+            if path is None:
+                return None  # path de libusb: sem nó hidraw para o ioctl
+            try:
+                data = _read_feature_via_hidraw(
+                    path, _CALIBRATION_FEATURE_ID, _CALIBRATION_FEATURE_SIZE
+                )
+            except OSError as exc:
+                logger.info("calibration_read_failed", key=key, err=str(exc))
+                return None
+        if len(data) != _CALIBRATION_FEATURE_SIZE or data[0] != _CALIBRATION_FEATURE_ID:
+            logger.warning(
+                "calibration_report_invalido", key=key, tamanho=len(data)
+            )
+            return None
+        if transporte == "bt":
+            crc = int.from_bytes(data[-4:], "little")
+            if bt_crc32(data[:-4], seed=BT_FEATURE_CRC_SEED) != crc:
+                logger.warning("calibration_crc_invalido", key=key)
+                return None
+        return data
 
     @property
     def primary_uniq(self) -> str | None:
@@ -516,12 +763,14 @@ class PyDualSenseController(IController):
             self._auto_output_provider = fn
 
     def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
-        """Desired efetivo do controle `key`: MERGE POR CAMPO em 3 camadas.
+        """Desired efetivo do controle `key`: MERGE POR CAMPO em 4 camadas.
 
-        Precedência (D5, POR CAMPO): override explícito por-uniq > camada
-        AUTOMÁTICA do provider (COR-03) > default global do perfil. Chamar
-        sob `_io_lock` (lê o mapa por-uniq; o provider é chamado aqui dentro
-        — barato e sem I/O por contrato de `set_auto_output_provider`).
+        Precedência (D5, POR CAMPO): camada GAME (REPLICA-03 — o que o jogo
+        escreveu no vpad, viva só durante a sessão uhid) > override explícito
+        por-uniq > camada AUTOMÁTICA do provider (COR-03) > default global do
+        perfil. Chamar sob `_io_lock` (lê o mapa por-uniq; o provider é
+        chamado aqui dentro — barato e sem I/O por contrato de
+        `set_auto_output_provider`).
 
         Key sem MAC (fallback por path) não tem override NEM camada
         automática possível — devolve o default puro (o controle segue só o
@@ -548,7 +797,11 @@ class PyDualSenseController(IController):
                 auto = None
             if auto is not None:
                 base = _merge_desired(base, auto)
-        return _merge_desired(base, override)
+        resolved = _merge_desired(base, override)
+        game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
+        if game is not None:
+            resolved = _merge_desired(resolved, game)
+        return resolved
 
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
         """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
@@ -829,6 +1082,12 @@ class PyDualSenseController(IController):
         # None e o hotplug nunca o reavaliava — input caía no HID-raw cru
         # (sticks ~253 em repouso). Re-procura aqui, a cada troca de primário.
         self._evdev.refresh_device()
+        # GYRO-01: o espelho de motion do P1 também segue o primário — larga o
+        # hidraw antigo; o `path_provider` do reader re-resolve o novo sozinho.
+        # Best-effort e não-bloqueante (só fecha um fd), seguro sob o _io_lock.
+        if self._motion_reader is not None:
+            with contextlib.suppress(Exception):
+                self._motion_reader.request_reopen("primary_changed")
         if self._evdev.is_available():
             self._evdev.start()
             logger.info("controller_primary_bound", transport=self._transport, with_evdev=True)
@@ -1229,11 +1488,25 @@ class PyDualSenseController(IController):
         broadcast com o override por-uniq do controle `key` — o do controle
         CERTO, nunca o de outro (era o bug provado: mirar o Controle 2 no
         seletor e replugar o Controle 1 o pintava com a cor do 2).
+
+        REPLICA-03: reconexão NO MEIO de uma sessão de jogo (wake BT) — o
+        merge já traz a camada game (LED/player) e os blocos crus de trigger
+        do jogo são re-pendurados no handle novo, para a posse sobreviver.
         """
         with self._io_lock:
             node = self._sysfs.get(key)
             muted = self._output_mute
             desired = self._merged_desired_for_key(key)
+            uniq = self._key_to_uniq(key)
+            game_triggers = (
+                dict(self._game_triggers_by_uniq.get(uniq, {}))
+                if uniq is not None
+                else {}
+            )
+        for side, block in game_triggers.items():
+            attr = "_raw_trigger_left" if side == "left" else "_raw_trigger_right"
+            with contextlib.suppress(Exception):
+                setattr(handle, attr, block)
         self._write_partial_output(
             handle, node, muted, desired, what="reapply_perfil_no_hotplug"
         )
@@ -1310,6 +1583,31 @@ class PyDualSenseController(IController):
             handle.setRightMotor(weak)
 
         self._for_each(_do, what="set_rumble")
+
+    def force_rumble_stop(self) -> None:
+        """Para os motores de TODOS os controles com um report de stop (HARM-16).
+
+        GUERRA-01 item 2 mudou o keepalive para NEUTRO: `set_rumble(0, 0)` com
+        os nossos motores JÁ em 0 (0→0) não emite mais report com flags de
+        vibração — de propósito (é o que parava de zerar rumble de terceiros).
+        Mas a saída de um modo (Nativo/gamepad) precisa parar um motor que o
+        JOGO deixou vibrando por fora (hidraw direto/FF) — aqui forçamos o
+        `_rumble_stop_pending` em cada handle: UM report com flags ligados e
+        motores 0, e o ciclo seguinte volta ao neutro. Broadcast deliberado
+        (ignora o seletor de alvo): sair de modo para TODO mundo.
+        """
+        with self._io_lock:
+            handles = list(self._handles.items())
+        for key, handle in handles:
+            try:
+                handle.setLeftMotor(0)
+                handle.setRightMotor(0)
+                handle._rumble_stop_pending = True
+            except Exception as exc:
+                logger.warning(
+                    "output_handle_failed", op="force_rumble_stop", key=key,
+                    err=str(exc),
+                )
 
     def set_mic_led(self, muted: bool) -> None:
         """Acende/apaga o LED do microfone em TODOS os controles (INFRA-SET-MIC-LED-01).
@@ -1499,6 +1797,167 @@ class PyDualSenseController(IController):
         except Exception as exc:
             logger.warning("output_handle_failed", op="set_rumble_for", key=key, err=str(exc))
         return True
+
+    # --- REPLICA-03: posse do output pelo JOGO (sessão uhid) --------------
+
+    def set_game_trigger_for(self, uniq: str, side: Side, block: bytes) -> bool:
+        """Aplica no físico `uniq` o trigger effect CRU que o jogo mandou ao vpad.
+
+        REPLICA-03: `block` são os 11 bytes (modo + 10 parâmetros) do report
+        0x02 do jogo, embutidos VERBATIM no report do físico pelo
+        `_build_common` (a rota DSTrigger só representa 7 forças e mutilaria
+        o efeito). A posse fica registrada em `_game_triggers_by_uniq` — o
+        hotplug re-pendura no handle novo e `end_game_session_for` devolve o
+        perfil. False = sem identidade estável (MAC) ou bloco inválido.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        block_b = bytes(block)
+        if len(block_b) != GAME_TRIGGER_BLOCK_LEN:
+            logger.warning(
+                "game_trigger_bloco_invalido", uniq=alvo, tamanho=len(block_b)
+            )
+            return False
+        lado = "left" if side == "left" else "right"
+        with self._io_lock:
+            self._game_triggers_by_uniq.setdefault(alvo, {})[lado] = block_b
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+        if handle is None:
+            return True  # registrado; o hotplug aplica quando o controle voltar
+        attr = "_raw_trigger_left" if lado == "left" else "_raw_trigger_right"
+        try:
+            # O report_thread detecta a mudança no próximo prepareReport
+            # (o dedup `_last_out_report` compara o buffer montado).
+            setattr(handle, attr, block_b)
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="set_game_trigger_for", key=key,
+                err=str(exc),
+            )
+        return True
+
+    def set_game_output_for(
+        self,
+        uniq: str,
+        *,
+        led: tuple[int, int, int] | None = None,
+        player_leds: tuple[bool, bool, bool, bool, bool] | None = None,
+    ) -> bool:
+        """Aplica no físico `uniq` a lightbar/player-LED que o jogo pintou no vpad.
+
+        REPLICA-03: grava a camada GAME do desejado (topo do merge — o
+        reassert periódico passa a reafirmar a COR DO JOGO, nunca a paleta
+        por baixo dela, matando a race verde-limãoazul por construção) e
+        escreve no hardware pela rota normal (sysfs preferido, fallback
+        pydualsense). Controle desconectado: fica registrado (hotplug aplica).
+        False = sem identidade estável (MAC).
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        fields: dict[str, Any] = {}
+        if led is not None:
+            r, g, b = led
+            fields["led"] = (int(r) & 0xFF, int(g) & 0xFF, int(b) & 0xFF)
+        if player_leds is not None:
+            fields["player_leds"] = tuple(bool(x) for x in player_leds)
+        if not fields:
+            return True
+        with self._io_lock:
+            layer = self._game_output_by_uniq.setdefault(alvo, _DesiredOutput())
+            for name, value in fields.items():
+                setattr(layer, name, value)
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            muted = self._output_mute
+        if handle is None:
+            return True
+        self._write_partial_output(
+            handle, node, muted, _DesiredOutput(**fields), what="game_output_replica"
+        )
+        return True
+
+    def end_game_session_for(self, uniq: str) -> bool:
+        """Fim da sessão de jogo do controle `uniq`: devolve perfil/paleta/co-op.
+
+        REPLICA-03 (UHID_CLOSE): a camada GAME e os triggers crus somem; o
+        estado físico converge de volta ao desejado resolvido (explícito >
+        automático > global). O nó sysfs tem o cache invalidado (GUERRA-01
+        item 3): o jogo pode ter escrito a cor por hidraw sem recriar o nó —
+        o cache estaria "certo" com o hardware errado. Trigger do jogo sem
+        perfil por baixo volta a Off (efeito de jogo não sobrevive à sessão).
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            game = self._game_output_by_uniq.pop(alvo, None)
+            triggers = self._game_triggers_by_uniq.pop(alvo, None)
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            muted = self._output_mute
+            desired = (
+                self._merged_desired_for_key(key) if key is not None else None
+            )
+        if game is None and triggers is None:
+            return True  # o jogo nunca tocou este controle
+        logger.info(
+            "game_session_devolvida",
+            uniq=alvo,
+            lightbar=bool(game is not None and game.led is not None),
+            player_leds=bool(game is not None and game.player_leds is not None),
+            triggers=sorted(triggers) if triggers else [],
+        )
+        if handle is None or desired is None:
+            return True  # desconectado: o hotplug reaplica o perfil sozinho
+        if triggers:
+            with contextlib.suppress(Exception):
+                handle._raw_trigger_left = None
+                handle._raw_trigger_right = None
+            lados: tuple[tuple[Side, str], ...] = (
+                ("left", "trigger_left"),
+                ("right", "trigger_right"),
+            )
+            for lado, campo in lados:
+                if lado not in triggers:
+                    continue
+                effect = getattr(desired, campo)
+                try:
+                    if effect is not None:
+                        self._apply_trigger(handle, lado, effect)
+                    else:
+                        self._reset_trigger(handle, lado)
+                except Exception as exc:
+                    logger.warning(
+                        "output_handle_failed", op="end_game_session_trigger",
+                        key=key, err=str(exc),
+                    )
+        restore = _DesiredOutput()
+        if game is not None and game.led is not None:
+            if node is not None:
+                with contextlib.suppress(Exception):
+                    node.invalidate_cache()
+            restore.led = desired.led  # None = paleta sem opinião: fica como está
+        if game is not None and game.player_leds is not None:
+            restore.player_leds = desired.player_leds
+        self._write_partial_output(
+            handle, node, muted, restore, what="game_session_close"
+        )
+        return True
+
+    @staticmethod
+    def _reset_trigger(handle: pydualsense, side: Side) -> None:
+        """Volta um gatilho a Off (sem efeito) — o estado de fábrica do firmware."""
+        from pydualsense.enums import TriggerModes
+
+        trigger = handle.triggerL if side == "left" else handle.triggerR
+        trigger.mode = TriggerModes.Off
+        for idx in range(7):
+            trigger.setForce(idx, 0)
 
     def resolved_player_leds_for(
         self, uniq: str

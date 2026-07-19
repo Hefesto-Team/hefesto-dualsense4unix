@@ -281,6 +281,66 @@ class TestPersistencia:
         assert reg.snapshot() == {UNIQ_A: 1}
 
 
+class TestReservaExternaCompartilhada:
+    """EXT-04: numeração global ÚNICA — o registro dos DualSense pula os slots
+    já detidos pelos EXTERNOS (provider injetado por `_wire_external_registry`).
+
+    Sem isto, um DualSense que conecta DEPOIS de um externo já numerado
+    reivindicava o slot do externo → duas frentes acendiam o mesmo 'Controle
+    N' no co-op misto.
+    """
+
+    def test_provider_none_e_comportamento_historico(
+        self, isolated_config: Path
+    ) -> None:
+        """Sem provider (FakeController) numera só pelos próprios _slots."""
+        reg = ControllerIdentityRegistry()
+        assert reg._extra_reserved is None
+        assert reg.slot_for(UNIQ_A) == 1
+        assert reg.slot_for(UNIQ_B) == 2
+
+    def test_ds_novo_pula_slot_reservado_por_externo(
+        self, isolated_config: Path
+    ) -> None:
+        """2 DualSense (1,2) + 1 externo detendo o slot 3: um 3º DualSense
+        conectando DEPOIS recebe 4, NUNCA o 3 do externo."""
+        reg = ControllerIdentityRegistry()
+        externos = {3}
+        reg.set_external_reserve_provider(lambda: set(externos))
+        assert reg.slot_for(UNIQ_A) == 1
+        assert reg.slot_for(UNIQ_B) == 2
+        # O menor livre PRÓPRIO seria 3, mas o externo o detém.
+        assert reg.slot_for(UNIQ_C) == 4
+
+    def test_caso_minimo_1ds_externo_2ds(self, isolated_config: Path) -> None:
+        """O caso mais simples do achado: 1 DS=1, externo=2, 2º DS não vira 2."""
+        reg = ControllerIdentityRegistry()
+        reg.set_external_reserve_provider(lambda: {2})
+        assert reg.slot_for(UNIQ_A) == 1
+        assert reg.slot_for(UNIQ_B) == 3  # pula o 2 do externo
+
+    def test_nao_renumera_quem_ja_tem_slot(self, isolated_config: Path) -> None:
+        """A união externa só afeta atribuições NOVAS — jamais mexe num slot
+        já dado, mesmo que o externo passe a reservá-lo (estabilidade vence)."""
+        reg = ControllerIdentityRegistry()
+        assert reg.slot_for(UNIQ_A) == 1  # atribuído ANTES de haver reserva
+        reg.set_external_reserve_provider(lambda: {1})  # externo "reivindica" 1
+        assert reg.slot_for(UNIQ_A) == 1  # A continua 1 (leitura do existente)
+
+    def test_provider_que_explode_cai_no_historico(
+        self, isolated_config: Path
+    ) -> None:
+        """Provider quebrado nunca derruba a atribuição (contextlib.suppress)."""
+        reg = ControllerIdentityRegistry()
+
+        def explode() -> set[int]:
+            raise RuntimeError("registry externo indisponível")
+
+        reg.set_external_reserve_provider(explode)
+        assert reg.slot_for(UNIQ_A) == 1
+        assert reg.slot_for(UNIQ_B) == 2
+
+
 class TestConfiguracaoDoAuto:
     def test_defaults(self, isolated_config: Path) -> None:
         reg = ControllerIdentityRegistry()

@@ -1,0 +1,14 @@
+# >>> hefesto FastConnectable >>>
+# hefesto-dualsense4unix — reconexão Bluetooth mais rápida (page scan agressivo;
+# o botão PS do DualSense reconecta em menos tempo). PLAT-04 item 3.
+# Bloco gerenciado pelo install do hefesto: o uninstall remove TUDO entre as
+# sentinelas ">>> hefesto FastConnectable >>>" e "<<< hefesto FastConnectable <<<".
+# O [General] repetido é seguro: o GKeyFile do bluetoothd FUNDE grupos duplicados
+# (provado ao vivo em 2026-07-18 com o GLib desta máquina) — este bloco pode ser
+# APENSADO ao FIM do /etc/bluetooth/main.conf sem tocar o resto do arquivo
+# (main.conf é conffile do dpkg: sempre com backup antes).
+# Vale no próximo start do bluetoothd — NUNCA forçar restart do serviço
+# (derrubaria os controles BT conectados; provado ao vivo em 2026-07-17).
+[General]
+FastConnectable=true
+# <<< hefesto FastConnectable <<<

@@ -127,3 +127,74 @@ def test_discover_empty_when_no_nodes(tmp_path: Path, monkeypatch: pytest.Monkey
     empty.mkdir(parents=True)
     monkeypatch.setattr(sysfs_leds, "LEDS_ROOT", str(empty))
     assert sysfs_leds.discover() == {}
+
+
+# --- GUERRA-01 item 3: cache da última escrita em set_rgb --------------------
+
+
+def _conta_writes(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
+    """Instrumenta `SysfsLedNode._write` para contar toques no filesystem."""
+    calls = {"n": 0}
+    original = sysfs_leds.SysfsLedNode._write
+
+    def _contando(path: str, data: str) -> bool:
+        calls["n"] += 1
+        return original(path, data)
+
+    monkeypatch.setattr(sysfs_leds.SysfsLedNode, "_write", staticmethod(_contando))
+    return calls
+
+
+def test_set_rgb_igual_pula_o_filesystem(
+    fake_leds: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Reescrever a MESMA cor (o reassert de 30s do reconnect_loop) não toca o
+    filesystem — o "flash azul" periódico morre; cor nova escreve normal."""
+    node = sysfs_leds.discover()["aabbcc000001"]
+    calls = _conta_writes(monkeypatch)
+
+    assert node.set_rgb(0, 0, 153) is True
+    assert calls["n"] == 2  # brightness + multi_intensity
+    assert node.set_rgb(0, 0, 153) is True  # cache: nada de write, mas True
+    assert calls["n"] == 2
+    assert node.set_rgb(153, 0, 0) is True  # cor mudou => escreve
+    assert calls["n"] == 4
+
+
+def test_invalidate_cache_forca_a_proxima_escrita(
+    fake_leds: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Posse retomada (fim de sessão de jogo): `invalidate_cache()` garante que
+    a paleta volta ao físico mesmo sendo "a mesma cor" para o cache."""
+    node = sysfs_leds.discover()["aabbcc000001"]
+    calls = _conta_writes(monkeypatch)
+    node.set_rgb(0, 0, 153)
+    node.invalidate_cache()
+    node.set_rgb(0, 0, 153)
+    assert calls["n"] == 4
+
+
+def test_set_rgb_falho_nao_cacheia_e_retenta(
+    fake_leds: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Escrita que falhou não pode virar cache — a próxima tentativa escreve
+    (senão um EIO transitório congelaria a cor errada até o replug)."""
+    node = sysfs_leds.discover()["aabbcc000001"]
+    os.chmod(node._multi_intensity, 0o444)
+    assert node.set_rgb(10, 20, 30) is False
+    os.chmod(node._multi_intensity, 0o644)
+    calls = _conta_writes(monkeypatch)
+    assert node.set_rgb(10, 20, 30) is True  # retentou de verdade
+    assert calls["n"] == 2
+    assert Path(node._multi_intensity).read_text() == "10 20 30"
+
+
+def test_no_recriado_escreve_naturalmente(fake_leds: Path) -> None:
+    """Wake/adoção BT recria o nó => instância NOVA => cache vazio => escreve
+    (o cache é por instância de propósito)."""
+    node1 = sysfs_leds.discover()["aabbcc000001"]
+    assert node1.set_rgb(0, 0, 153) is True
+    node2 = sysfs_leds.discover()["aabbcc000001"]
+    assert node2._last_write is None
+    assert node2.set_rgb(0, 0, 153) is True
+    assert Path(node2._multi_intensity).read_text() == "0 0 153"

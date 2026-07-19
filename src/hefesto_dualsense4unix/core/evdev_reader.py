@@ -480,8 +480,19 @@ class _EvdevReconnectLoop:
                         break
                     self._handle_event(event, ecodes)
             except OSError as exc:
-                logger.warning(f"{prefix}_read_lost", err=str(exc), path=str(path))
-                self._reset_on_disconnect()
+                if self._stop_flag.is_set():
+                    # MISC-08 item 4 (2026-07-18): teardown INTENCIONAL —
+                    # `stop()` fecha o fd de outra thread justamente para
+                    # desbloquear este read_loop (M4), e o EBADF resultante é
+                    # o mecanismo do stop, não uma perda de device. Ao vivo,
+                    # cada teardown de jogador do co-op cuspia um warning
+                    # `evdev_read_lost EBADF` falso-alarmante no journal.
+                    logger.debug(f"{prefix}_read_stopped", path=str(path))
+                else:
+                    logger.warning(
+                        f"{prefix}_read_lost", err=str(exc), path=str(path)
+                    )
+                    self._reset_on_disconnect()
                 self._device_path = None
             except Exception as exc:
                 logger.warning(f"{prefix}_loop_error", err=str(exc))

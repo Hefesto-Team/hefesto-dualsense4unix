@@ -1,0 +1,20 @@
+# Hefesto - Dualsense4Unix — esconde da API js legada os nós de Motion Sensors.
+# KERNEL-07 (estudo 2026-07-18 §P6).
+#
+# O QUE FAZ: o joydev do kernel cria um /dev/input/jsN para CADA nó de
+# acelerômetro (DualSense físico E vpad — cada vpad DOBRA o ruído; ao vivo:
+# js2/js4/js6/js8 só de Motion Sensors). SDL2 já os ignora (a regra 78 zera
+# ID_INPUT_JOYSTICK e marca ID_INPUT_ACCELEROMETER), mas jogos/engines que usam
+# a API js LEGADA enumeram esses jsN como "joysticks" fantasmas. MODE 0000
+# torna o nó ilegível — a enumeração legada os pula.
+#
+# MECANISMO: o jsN não tem atributo `name` próprio; ATTRS{name} sobe a
+# hierarquia até o input parent (inputNN), onde o hid_playstation/uhid nomeia
+# o device com o sufixo "Motion Sensors". Cobre físico USB/BT ("Sony
+# Interactive Entertainment ..." e o nome BT sem prefixo) e os vpads
+# ("Hefesto Virtual DualSense PN Motion Sensors") num só wildcard.
+#
+# NÃO afeta: o gamepad principal (jsN dele tem outro name), o evdev dos
+# sensores (apps que leem IMU por /dev/input/event* seguem funcionando) nem o
+# SDL (que não usa js*). Reverter: remover este arquivo e recarregar udev.
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="js[0-9]*", ATTRS{name}=="*Motion Sensors*", MODE="0000"

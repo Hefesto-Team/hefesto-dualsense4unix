@@ -101,7 +101,11 @@ package() {
         assets/72-ps5-controller-autosuspend.rules \
         assets/76-dualsense-touchpad-libinput-ignore.rules \
         assets/77-dualsense-leds.rules \
-        assets/78-dualsense-motion-not-joystick.rules
+        assets/78-dualsense-motion-not-joystick.rules \
+        assets/79-external-controller-leds.rules \
+        assets/80-motion-joydev-hide.rules \
+        assets/81-hefesto-usb-power.rules \
+        assets/81-hefesto-usb-host-power.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         "$pkgdir/usr/lib/modules-load.d/hefesto-dualsense4unix.conf"
 
@@ -109,6 +113,9 @@ package() {
     # no path VIVO que o kmod lê. PRESERVA mic+fone. Paridade com o .deb.
     install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
         "$pkgdir/usr/lib/modprobe.d/hefesto-dualsense-storm.conf"
+    # PLAT-04: btusb sem autosuspend (adaptador BT nunca dorme).
+    install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf"
 
     # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
     # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de

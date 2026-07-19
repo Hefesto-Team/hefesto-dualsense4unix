@@ -47,13 +47,14 @@ cor injetado no backend (``make_auto_output_provider``).
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
 import tempfile
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -124,6 +125,12 @@ class ControllerIdentityRegistry:
         self._loaded = False
         #: vpads já logados (evita spam — o provider consulta a cada reassert).
         self._vpad_logged: set[str] = set()
+        #: provider OPCIONAL dos slots já reservados pelos EXTERNOS (EXT-04):
+        #: o espaço de numeração é ÚNICO entre DualSense e externos, então a
+        #: atribuição une essas reservas ao ``used`` — um DualSense que entra
+        #: DEPOIS de um externo numerado pula o slot dele. None (não fiado /
+        #: FakeController) = comportamento histórico, hermético.
+        self._extra_reserved: Callable[[], set[int]] | None = None
         # -- estado do automático (COR-03, configurado pelo ProfileManager) --
         self._auto_enabled = True
         self._auto_brightness = 1.0
@@ -183,6 +190,22 @@ class ControllerIdentityRegistry:
             return value.lower().replace(":", "").replace("-", ""), True
         return value, False
 
+    def set_external_reserve_provider(
+        self, provider: Callable[[], set[int]] | None
+    ) -> None:
+        """Injeta o provider dos slots já detidos pelos EXTERNOS (EXT-04).
+
+        A numeração global é um espaço ÚNICO: os externos já leem o piso dos
+        DualSense (``reserve``) ao numerar; este provider fecha o laço no
+        sentido inverso — a atribuição de um DualSense NOVO une os slots
+        reservados pelos externos ao ``used``, para não colidir com um externo
+        que numerou antes. Fiado por ``lifecycle._wire_external_registry`` só
+        no backend real; ``None`` (FakeController) preserva o comportamento
+        histórico. NÃO renumera quem já tem slot — só evita colisões NOVAS.
+        """
+        with self._lock:
+            self._extra_reserved = provider
+
     def slot_for(self, uniq: str | None, *, assign: bool = True) -> int | None:
         """Slot do controle ``uniq`` — atribui o MENOR livre na 1ª consulta.
 
@@ -218,6 +241,13 @@ class ControllerIdentityRegistry:
             if not assign:
                 return None
             used = set(self._slots.values())
+            prov = self._extra_reserved
+            if prov is not None:
+                # EXT-04: numeração global ÚNICA — pula os slots que os
+                # externos já detêm (um DualSense que conecta DEPOIS de um
+                # externo numerado não pode reivindicar o slot dele).
+                with contextlib.suppress(Exception):
+                    used |= {int(s) for s in prov()}
             slot = 1
             while slot in used:
                 slot += 1
@@ -363,16 +393,25 @@ class ControllerIdentityRegistry:
         Só entradas com MAC 12-hex (voláteis ficam de fora — D9). Nunca
         propaga exceção (paridade com ``utils.session``): perder um save
         significa, no pior caso, renumerar no próximo boot — inócuo.
+
+        EXT-04: o arquivo é COMPARTILHADO com o registro dos externos
+        (namespace ``externals`` — ``subsystems/external_identity.py``);
+        read-modify-write para preservar o namespace do outro lado.
         """
         try:
             path = self._path()
-            payload = {
-                "boot_id": _read_boot_id(),
-                "slots": {
-                    key: slot
-                    for key, slot in self._slots.items()
-                    if key not in self._volatile
-                },
+            payload: dict[str, Any] = {}
+            with contextlib.suppress(Exception):
+                existente = json.loads(path.read_text(encoding="utf-8"))
+                if isinstance(existente, dict) and isinstance(
+                    existente.get("externals"), dict
+                ):
+                    payload["externals"] = existente["externals"]
+            payload["boot_id"] = _read_boot_id()
+            payload["slots"] = {
+                key: slot
+                for key, slot in self._slots.items()
+                if key not in self._volatile
             }
             data = json.dumps(payload, ensure_ascii=False)
             fd, tmp = tempfile.mkstemp(

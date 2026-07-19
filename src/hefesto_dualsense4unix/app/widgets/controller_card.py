@@ -202,6 +202,50 @@ def texto_degradacao(entry: dict[str, Any]) -> str | None:
     return f"emulação degradada (uinput): {legivel}"
 
 
+def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | None:
+    """Linha discreta do giroscópio espelhado (GYRO-03); ``None`` = some.
+
+    Só aparece quando o vpad DESTE controle está com o espelho de motion
+    ATIVO (``motion_streaming`` no ``rumble_ff.per_vpad`` do state_full) —
+    a ausência da linha não é alarme: uinput/máscara xbox/Modo Nativo não
+    têm espelho por design, e acusar "sem giroscópio" em todo card seria
+    ruído crônico (quem diagnostica silêncio anômalo é o doctor).
+
+    Mapeamento controle→vpad: entrada com ``player`` numerado (co-op, D7)
+    casa com o vpad daquele jogador; sem número, o PRIMÁRIO casa com o vpad
+    do P1 (fora do co-op o espelho só existe nele). Demais controles → None.
+
+    GYRO-03-FIX: jogador 1 SEM ``is_primary`` nunca mostra a linha — fora do
+    co-op ``resolve_player_numbers`` numera TODOS os conectados como jogador
+    1 (é o que o jogo vê), mas o espelho do vpad P1 lê só o hidraw do
+    PRIMÁRIO; exibir a linha num secundário seria telemetria mentindo.
+    """
+    rumble_ff = state_global.get("rumble_ff")
+    per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
+    if not isinstance(per_vpad, list):
+        return None
+    player = _int_ou_none(entry.get("player"))
+    if player == 1 and not bool(entry.get("is_primary")):
+        # Co-op OFF com 2+ DualSense: todos vêm com player=1, mas só o
+        # primário tem reader de motion. (Em co-op, o jogador 1 É o primário
+        # e os secundários recebem índices >= 2 — o guarda não os afeta.)
+        return None
+    if player is None:
+        if not bool(entry.get("is_primary")):
+            return None
+        player = 1
+    for item in per_vpad:
+        if not isinstance(item, dict) or _int_ou_none(item.get("player")) != player:
+            continue
+        if item.get("motion_streaming") is not True:
+            return None
+        hz = item.get("motion_hz")
+        if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
+            return f"Giroscópio: fluindo para o jogo (~{hz:.0f} Hz)"
+        return "Giroscópio: fluindo para o jogo"
+    return None
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -266,6 +310,7 @@ if _GTK_DISPONIVEL:
             self._last_battery: Any = _SENTINELA
             self._last_lightbar: Any = _SENTINELA
             self._last_degradacao: Any = _SENTINELA
+            self._last_motion: Any = _SENTINELA
             self._accent: RGB | None = None
             self._accent_hex: str = rgb_para_hex(
                 ensure_min_contrast(ACCENT_NEUTRO)
@@ -299,6 +344,7 @@ if _GTK_DISPONIVEL:
             self._update_bateria(entry)
             self._update_lightbar(entry, state_global)
             self._update_degradacao(entry)
+            self._update_motion(entry, state_global)
             self._update_inputs(entry.get("inputs"))
 
         def reset_inputs(self) -> None:
@@ -368,6 +414,17 @@ if _GTK_DISPONIVEL:
             badge.hide()
             self._degradacao_badge = badge
             corpo.pack_start(badge, False, False, 0)
+
+            # GYRO-03: linha discreta do giroscópio espelhado — inline
+            # (dim-label), nunca popup (veto cosmic-comp). Só aparece com o
+            # espelho de motion ATIVO no vpad deste controle.
+            motion = Gtk.Label()
+            motion.set_xalign(0.0)
+            motion.get_style_context().add_class("dim-label")
+            motion.set_no_show_all(True)
+            motion.hide()
+            self._motion_label = motion
+            corpo.pack_start(motion, False, False, 0)
 
             # "—": sem leitor de inputs para este controle agora.
             sem_leitor = Gtk.Label(label="—")
@@ -539,6 +596,19 @@ if _GTK_DISPONIVEL:
                 self._degradacao_badge.show()
             else:
                 self._degradacao_badge.hide()
+
+        def _update_motion(
+            self, entry: dict[str, Any], state_global: dict[str, Any]
+        ) -> None:
+            texto = texto_motion(entry, state_global)
+            if texto == self._last_motion:
+                return
+            self._last_motion = texto
+            if texto:
+                self._motion_label.set_text(texto)
+                self._motion_label.show()
+            else:
+                self._motion_label.hide()
 
         # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
@@ -724,6 +794,7 @@ else:
             self.rotulo: str | None = None
             self.accent: RGB | None = None
             self.degradacao: str | None = None
+            self.motion: str | None = None
             self.sem_leitor: bool = False
 
         def update(
@@ -734,6 +805,7 @@ else:
             self.rotulo, _base = rotulo_lightbar(entry, state_global)
             self.accent = accent_do_card(entry, state_global)
             self.degradacao = texto_degradacao(entry)
+            self.motion = texto_motion(entry, state_global)
             self.sem_leitor = not isinstance(entry.get("inputs"), dict)
 
         def reset_inputs(self) -> None:
@@ -759,5 +831,6 @@ __all__ = [
     "accent_do_card",
     "rotulo_lightbar",
     "texto_degradacao",
+    "texto_motion",
     "titulo_do_card",
 ]

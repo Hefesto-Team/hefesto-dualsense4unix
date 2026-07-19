@@ -348,6 +348,195 @@ def read_launch_options_by_appid(text: str) -> dict[str, str]:
     return out
 
 
+def apply_wrapper_vdf_text(text: str) -> tuple[str, list[str], list[tuple[str, str]]]:
+    """Aplica o wrapper a TODOS os jogos do bloco ``apps`` de UM vdf (puro).
+
+    PATH-06 item 2: a via em-massa consentida. Diferente de ``transform_vdf_text``
+    (que só toca linhas já NOSSAS), aqui todo app do vdf entra:
+
+    - app COM LaunchOptions: prefixa via ``migrate_value`` (preserva as opções
+      do usuário; remove veneno legado se houver). Já chama o wrapper => skip
+      (idempotente). Lista de IGNORE estendida => skip honesto (mexer quebraria
+      o launch — mesma regra do migrate).
+    - app SEM a linha LaunchOptions: insere ``"LaunchOptions" "<wrapper>"`` no
+      fim do bloco do app, com a indentação dos vizinhos.
+
+    Retorna ``(texto_novo, appids_aplicados, [(appid, motivo_skip), ...])``.
+    O parse de blocos é o MESMO do ``read_launch_options_by_appid`` (pilha por
+    linha); conteúdo fora do padrão passa intacto byte a byte.
+    """
+    lines = text.splitlines(keepends=True)
+    applied: list[str] = []
+    skipped: list[tuple[str, str]] = []
+    replacements: dict[int, str] = {}
+    #: (índice da linha `}` do app, linha nova a inserir ANTES dela)
+    insertions: list[tuple[int, str]] = []
+
+    stack: list[str] = []
+    pending: str | None = None
+    #: frame do app aberto: (appid, profundidade, idx da linha `{`, idx da
+    #: linha LaunchOptions ou None)
+    frame: tuple[str, int, int, int | None] | None = None
+    for idx, raw in enumerate(lines):
+        line = raw.strip()
+        if not line:
+            continue
+        if line == "{":
+            stack.append(pending if pending is not None else "")
+            pending = None
+            if (
+                frame is None
+                and len(stack) >= 2
+                and stack[-1].isdigit()
+                and stack[-2].lower() == "apps"
+            ):
+                frame = (stack[-1], len(stack), idx, None)
+            continue
+        if line == "}":
+            if frame is not None and len(stack) == frame[1]:
+                appid, _, open_idx, lo_idx = frame
+                if lo_idx is None:
+                    # App sem LaunchOptions: a linha nova entra no fim do
+                    # bloco, indentada como o `{` de abertura + 1 tab.
+                    body = lines[open_idx].rstrip("\r\n")
+                    eol = lines[open_idx][len(body):] or "\n"
+                    indent = body[: len(body) - len(body.lstrip())] + "\t"
+                    insertions.append((
+                        idx,
+                        f'{indent}"LaunchOptions"\t\t'
+                        f'"{_vdf_escape(WRAPPER_LAUNCH)}"{eol}',
+                    ))
+                    applied.append(appid)
+                frame = None
+            if stack:
+                stack.pop()
+            pending = None
+            continue
+        pair = _VDF_PAIR_RE.match(line)
+        if pair is not None:
+            pending = None
+            if (
+                frame is None
+                or len(stack) != frame[1]
+                or _vdf_unescape(pair.group("key")).lower() != "launchoptions"
+            ):
+                continue
+            appid = frame[0]
+            frame = (appid, frame[1], frame[2], idx)
+            value = _vdf_unescape(pair.group("value"))
+            if has_extended_ignore(value):
+                skipped.append((appid, "ignore_estendido"))
+                continue
+            if WRAPPER_PREFIX in value:
+                skipped.append((appid, "ja_tem_wrapper"))
+                continue
+            new_value = migrate_value(value)
+            if new_value == value:
+                skipped.append((appid, "ja_tem_wrapper"))
+                continue
+            body = lines[idx].rstrip("\r\n")
+            eol = lines[idx][len(body):]
+            m = _LAUNCH_OPTIONS_RE.match(body)
+            if m is None:  # linha fora do formato conhecido — não arriscar
+                skipped.append((appid, "linha_fora_do_padrao"))
+                continue
+            replacements[idx] = (
+                m.group("prefix") + _vdf_escape(new_value) + m.group("suffix") + eol
+            )
+            applied.append(appid)
+            continue
+        key_only = _VDF_KEY_ONLY_RE.match(line)
+        if key_only is not None:
+            pending = _vdf_unescape(key_only.group("key"))
+
+    if not replacements and not insertions:
+        return text, applied, skipped
+    out: list[str] = []
+    insert_by_idx = dict(insertions)
+    for idx, raw in enumerate(lines):
+        if idx in insert_by_idx:
+            out.append(insert_by_idx[idx])
+        out.append(replacements.get(idx, raw))
+    return "".join(out), applied, skipped
+
+
+def apply_wrapper_to_all_games(
+    home: Path | None = None,
+    vdfs: list[Path] | None = None,
+    *,
+    dry_run: bool = False,
+) -> dict[str, list[dict[str, str]]]:
+    """Aplica o wrapper a todos os jogos dos localconfig.vdf elegíveis.
+
+    PATH-06 item 2 (a via em-massa consentida do botão "Aplicar aos jogos da
+    Steam"): SOMENTE com a Steam fechada (mesmo gate de processo do
+    migrate/strip — a Steam viva regrava o vdf ao sair e a edição seria
+    perdida; com um JOGO aberto nem se cogita). vdf sandbox (Flatpak/Snap) é
+    pulado inteiro: o wrapper do host é invisível lá dentro (DEDUP-04).
+
+    Retorna ``{"applied": [...], "skipped": [...], "errors": [...]}`` — cada
+    item é ``{"vdf": ..., "appid": ..., "reason": ...}`` (``reason`` vazio nos
+    aplicados). Backups ``.bak.hefesto-launch-<ts>`` ao lado de cada vdf
+    tocado, como o ``process_vdf``.
+    """
+    result: dict[str, list[dict[str, str]]] = {
+        "applied": [],
+        "skipped": [],
+        "errors": [],
+    }
+    if not dry_run and steam_game_running():
+        result["errors"].append(
+            {"vdf": "", "appid": "", "reason": "jogo_da_steam_aberto"}
+        )
+        return result
+    if not dry_run and steam_running():
+        result["errors"].append({"vdf": "", "appid": "", "reason": "steam_aberta"})
+        return result
+    for vdf in vdfs if vdfs is not None else discover_vdfs(home):
+        if is_sandboxed_layout(vdf):
+            result["skipped"].append(
+                {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
+            )
+            continue
+        try:
+            original = vdf.read_text(encoding="utf-8")
+        except (OSError, ValueError) as exc:
+            # ValueError cobre UnicodeDecodeError: um localconfig.vdf não-UTF-8
+            # (byte latin-1 legado / multi-usuário) vira erro POR-VDF, não
+            # aborta a varredura inteira. NÃO usamos errors="replace" aqui —
+            # este vdf é REESCRITO adiante e trocar bytes por U+FFFD corromperia
+            # o conteúdo alheio.
+            result["errors"].append(
+                {"vdf": str(vdf), "appid": "", "reason": str(exc)}
+            )
+            continue
+        new_text, applied, skipped = apply_wrapper_vdf_text(original)
+        for appid, reason in skipped:
+            result["skipped"].append(
+                {"vdf": str(vdf), "appid": appid, "reason": reason}
+            )
+        if not applied:
+            continue
+        if not dry_run:
+            try:
+                backup = vdf.with_name(
+                    vdf.name + f".bak.hefesto-launch-{int(time.time())}"
+                )
+                shutil.copy2(vdf, backup)
+                tmp = vdf.with_name(vdf.name + ".hefesto-tmp")
+                tmp.write_text(new_text, encoding="utf-8")
+                shutil.copymode(vdf, tmp)
+                tmp.replace(vdf)
+            except OSError as exc:
+                result["errors"].append(
+                    {"vdf": str(vdf), "appid": "", "reason": str(exc)}
+                )
+                continue
+        for appid in applied:
+            result["applied"].append({"vdf": str(vdf), "appid": appid, "reason": ""})
+    return result
+
+
 def appid_needs_wrapper(appid: str, home: Path | None = None) -> bool:
     """True quando o lembrete do wrapper se aplica ao jogo `appid` (read-only).
 
@@ -366,7 +555,9 @@ def appid_needs_wrapper(appid: str, home: Path | None = None) -> bool:
     for vdf in eligible:
         try:
             text = vdf.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, ValueError):
+            # best-effort read-only: vdf ilegível OU não-UTF-8 é pulado (o pior
+            # caso é lembrar uma vez à toa, e a GUI limita a 1x por sessão).
             continue
         value = read_launch_options_by_appid(text).get(alvo)
         if value is not None and WRAPPER_PREFIX in value:
@@ -494,7 +685,9 @@ def _report_status(vdfs: list[Path]) -> int:
     for vdf in vdfs:
         try:
             text = vdf.read_text(encoding="utf-8")
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
+            # best-effort read-only: vdf ilegível OU não-UTF-8 é reportado e
+            # pulado, sem abortar o relatório dos demais.
             print(f"[launch-options] ERRO lendo {vdf}: {exc}")
             continue
         n_poison = text.count(IGNORE_SIGNATURE)
@@ -630,7 +823,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         try:
             changed, diff = process_vdf(vdf, effective_mode, dry_run=args.dry_run)
-        except OSError as exc:
+        except (OSError, ValueError) as exc:
+            # ValueError cobre UnicodeDecodeError: um localconfig.vdf não-UTF-8
+            # vira ERRO por-vdf (rc=1) e o loop segue limpando os demais, em vez
+            # de estourar traceback e deixar o veneno IGNORE nos vdfs restantes
+            # (o "jogo com zero controles pós-uninstall" que o --strip evita).
             print(f"[launch-options] ERRO em {vdf}: {exc}")
             rc = 1
             continue

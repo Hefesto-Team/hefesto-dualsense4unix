@@ -181,6 +181,21 @@
                   <packing><property name="expand">False</property></packing>
                 </child>
 
+                <!-- GUI-05 item 3: banner "jogo sem wrapper" (honestidade do
+                     dedup). Texto e visibilidade vêm do
+                     StatusActionsMixin._refresh_wrapper_banner; invisível por
+                     padrão e imune ao show_all (no-show-all). -->
+                <child>
+                  <object class="GtkLabel" id="status_wrapper_banner">
+                    <property name="visible">False</property>
+                    <property name="no-show-all">True</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <style><class name="hefesto-dualsense4unix-status-warn"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
                 <child>
                   <object class="GtkFrame" id="frame_status_estado">
                     <property name="label" translatable="yes">Estado</property>
@@ -1667,6 +1682,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="label" translatable="yes">Aplicar aos jogos da Steam</property>
                             <property name="tooltip-text" translatable="yes">Troca as opções antigas do Hefesto pela linha nova do launcher em todos os jogos que as tinham — sem apagar as suas outras opções. Pede a Steam fechada e faz backup antes.</property>
                             <signal name="clicked" handler="on_steam_apply_launch"/>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="btn_proton_lock">
+                            <property name="label" translatable="yes">Travar Proton validado</property>
+                            <property name="tooltip-text" translatable="yes">Deixa todos os jogos na versão de Proton que o Hefesto validou — assim uma atualização da Steam não muda o comportamento do controle do nada. Pede a Steam fechada e faz backup antes.</property>
+                            <signal name="clicked" handler="on_proton_lock"/>
                           </object>
                         </child>
                       </object>

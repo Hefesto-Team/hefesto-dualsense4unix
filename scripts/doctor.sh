@@ -111,7 +111,10 @@ check_udev() {
                  76-dualsense-touchpad-libinput-ignore.rules
                  77-dualsense-leds.rules
                  78-dualsense-motion-not-joystick.rules
-                 79-external-controller-leds.rules)
+                 79-external-controller-leds.rules
+                 80-motion-joydev-hide.rules
+                 81-hefesto-usb-power.rules
+                 81-hefesto-usb-host-power.rules)
     local total=${#rules[@]}
     for r in "${rules[@]}"; do
         if [[ -e "/etc/udev/rules.d/${r}" || -e "/usr/lib/udev/rules.d/${r}" ]]; then
@@ -121,7 +124,7 @@ check_udev() {
         fi
     done
     if [[ "${found}" -eq "${total}" ]]; then
-        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79)"
+        pass "${total} regras udev canônicas presentes (70/71-uhid/71-uinput/72/76/77/78/79/80/81-power/81-host)"
     elif [[ "${found}" -eq 0 ]]; then
         fail "nenhuma regra udev instalada — rode: sudo bash scripts/install_udev.sh"
     else
@@ -437,6 +440,17 @@ check_launch_wrapper() {
     else
         fail "wrapper hefesto-launch ausente — rode ./install.sh (entra por default, sem flag)"
     fi
+    # PATH-06: o install cria ~/.local/bin/hefesto-launch — `hefesto-launch
+    # %command%` digitado à mão passa a funcionar (a string canônica do botão
+    # continua sendo o `sh -c` com caminho absoluto, que funciona sem PATH).
+    local pathlink="${HOME}/.local/bin/hefesto-launch"
+    if command -v hefesto-launch >/dev/null 2>&1; then
+        pass "wrapper no PATH ($(command -v hefesto-launch))"
+    elif [[ -x "${pathlink}" ]]; then
+        warn "symlink ${pathlink} existe mas ~/.local/bin não está no PATH desta sessão — 'hefesto-launch %command%' digitado à mão só funciona com o PATH ajustado"
+    else
+        warn "wrapper fora do PATH (${pathlink} ausente) — rode ./install.sh (o passo 5 cria o symlink, sem flag)"
+    fi
     local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
     if [[ -f "${envdir}/default.env" ]]; then
         pass "materialização de launch viva (${envdir}/default.env)"
@@ -444,7 +458,31 @@ check_launch_wrapper() {
     else
         warn "launch_env/default.env ausente — o daemon materializa ao (re)iniciar/ligar a emulação; sem ele o wrapper lança sem envs (fail-safe: jogo abre, pode duplicar)"
     fi
-    info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (migra os jogos já configurados)."
+    # KERNEL-07/MISC-08: PROTON_ENABLE_HIDRAW é env MORTA nos Protons 10/11 (o
+    # script nem a menciona; no winebus ela só AMPLIA exposição) — presença num
+    # .env materializado = estado antigo do daemon.
+    local stale_env
+    stale_env="$(grep -ls "PROTON_ENABLE_HIDRAW" "${envdir}"/*.env 2>/dev/null | head -1)"
+    if [[ -n "${stale_env}" ]]; then
+        warn "launch_env com PROTON_ENABLE_HIDRAW (env morta nos Protons 10/11): ${stale_env} — materialização antiga; reinicie o daemon (systemctl --user restart hefesto-dualsense4unix) para regravar"
+    fi
+    # PATH-06 item 3: quantos jogos já chamam o wrapper nas LaunchOptions. O
+    # caminho absoluto do wrapper só aparece no vdf dentro da string `sh -c`
+    # que nós escrevemos — contá-lo = contar jogos com o wrapper aplicado.
+    local vdf n_wrapper=0
+    shopt -s nullglob
+    for vdf in "${HOME}/.steam/steam/userdata/"*/config/localconfig.vdf \
+               "${HOME}/.local/share/Steam/userdata/"*/config/localconfig.vdf; do
+        [[ -f "${vdf}" ]] || continue
+        n_wrapper=$((n_wrapper + $(grep -o '.local/share/hefesto-dualsense4unix/bin/hefesto-launch' "${vdf}" 2>/dev/null | wc -l)))
+    done
+    shopt -u nullglob
+    if [[ "${n_wrapper}" -gt 0 ]]; then
+        pass "${n_wrapper} jogo(s) com o wrapper hefesto-launch aplicado nas LaunchOptions"
+    else
+        warn "NENHUM jogo com o wrapper nas LaunchOptions — o jogo roda SEM dedup (foi a causa-mãe da sessão de 2026-07-18); use 'Aplicar aos jogos da Steam' na GUI (com a Steam fechada)"
+    fi
+    info "controle DOBRANDO no jogo? use o botão 'Copiar opções p/ jogos' da GUI (string constante do wrapper) ou 'Aplicar aos jogos da Steam' (aplica o wrapper aos jogos, preservando as opções existentes)."
 }
 
 # UX-04: ACUSA (nunca recomenda) o veneno estático persistido nos
@@ -643,6 +681,479 @@ check_window_detect() {
         fail "veredito: CEGO — sem DISPLAY e sem WAYLAND_DISPLAY (nem no systemd --user). Se o daemon subiu antes do login gráfico, reinicie: systemctl --user restart ${APP_ID}.service"
     else
         fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
+    fi
+}
+
+# ============================================================================
+# Energia USB e rádio (onda PLATAFORMA 2026-07-18) — tudo READ-ONLY.
+# Estudos: 2026-07-18-estudo-kernel-hardening.md + 2026-07-18-estudo-bt-maximo.md.
+# ============================================================================
+
+# PLAT-03 item 1: nenhum device USB pode estar em economia de energia — um
+# controle/adaptador dormindo é queda na certa (a regra 81 mantém tudo 'on').
+check_usb_power_devices() {
+    local dev ctl vid nome bad=0 total=0 exemplos=""
+    for dev in /sys/bus/usb/devices/*; do
+        [[ -r "${dev}/power/control" && -r "${dev}/idVendor" ]] || continue
+        total=$((total + 1))
+        ctl="$(cat "${dev}/power/control" 2>/dev/null)"
+        if [[ "${ctl}" == "auto" ]]; then
+            bad=$((bad + 1))
+            vid="$(cat "${dev}/idVendor" 2>/dev/null)"
+            nome="$(cat "${dev}/product" 2>/dev/null || true)"
+            exemplos+=" $(basename "${dev}") (${vid} ${nome:-?})"
+        fi
+    done
+    if [[ "${total}" -eq 0 ]]; then
+        info "sem devices USB legíveis no sysfs — pulo o check de energia dos devices"
+    elif [[ "${bad}" -eq 0 ]]; then
+        pass "nenhum device USB em economia de energia (power/control=on em ${total}/${total})"
+    else
+        warn "economia de energia ATIVA em ${bad} device(s) USB:${exemplos} — a regra 81 deveria mantê-los 'on': sudo bash scripts/install_udev.sh (e replugue)"
+    fi
+}
+
+# PLAT-03 item 3: o HOST xHCI em economia suspende o controlador PCI inteiro —
+# num wake mal suportado o barramento TODO cai (teclado+mouse+controle juntos,
+# visto em maio/2026). A regra 81-host mantém os hosts em 'on'.
+check_usb_power_hosts() {
+    local pci cls ctl found=0 bad=""
+    for pci in /sys/bus/pci/devices/*; do
+        cls="$(cat "${pci}/class" 2>/dev/null)" || continue
+        [[ "${cls}" == 0x0c03* ]] || continue
+        found=1
+        ctl="$(cat "${pci}/power/control" 2>/dev/null)"
+        [[ "${ctl}" != "on" ]] && bad+=" $(basename "${pci}")=${ctl:-?}"
+    done
+    if [[ "${found}" -eq 0 ]]; then
+        info "nenhum host USB (classe PCI 0x0c03*) legível — pulo o check dos hosts"
+    elif [[ -z "${bad}" ]]; then
+        pass "hosts USB (xHCI) com power/control=on — o barramento inteiro não dorme"
+    else
+        warn "host(s) USB em economia:${bad} — a suspensão do CONTROLADOR derruba teclado, mouse e controle juntos; a regra 81-host corrige: sudo bash scripts/install_udev.sh"
+    fi
+}
+
+# ASPM: a FONTE é o /proc/cmdline. ARMADILHA PROVADA (estudo 2026-07-18 §3):
+# com pcie_aspm=off a policy do sysfs continua mostrando "[default]" — ela
+# MENTE. NUNCA usar a policy sysfs como prova do off; quem confirma de verdade
+# é o LnkCtl do lspci (exige sudo — fora do doctor).
+check_pcie_aspm() {
+    local tok policy
+    tok="$(grep -o 'pcie_aspm=[^ ]*' /proc/cmdline 2>/dev/null | head -1)"
+    if [[ -n "${tok}" ]]; then
+        pass "ASPM definido no boot (${tok}) — lido do /proc/cmdline (a policy do sysfs mente com pcie_aspm=off; nunca a use como prova)"
+        return
+    fi
+    policy="$(cat /sys/module/pcie_aspm/parameters/policy 2>/dev/null || true)"
+    if [[ "${policy}" == *"[powersave]"* || "${policy}" == *"[powersupersave]"* ]]; then
+        warn "sem pcie_aspm= no cmdline e policy de economia ativa (${policy}) — pode somar latência/instabilidade aos hosts USB; mudar é decisão do dono (ex.: pcie_aspm=off via kernelstub)"
+    else
+        info "sem pcie_aspm= no cmdline; policy ativa: ${policy:-ilegível} (informativo — a política é decisão do dono da máquina)"
+    fi
+}
+
+# PLAT-03 item 4: caça a sabotadores de energia — ferramentas que RELIGAM o
+# USB autosuspend por cima do udev. Nada é desinstalado; só instrução de exceção.
+check_power_saboteurs() {
+    local achados="" p
+    if command -v dpkg-query >/dev/null 2>&1; then
+        for p in tlp powertop tuned; do
+            dpkg-query -W "$p" >/dev/null 2>&1 && achados+=" ${p}"
+        done
+    fi
+    if [[ -n "${achados}" ]]; then
+        warn "ferramenta(s) de economia presentes:${achados} — podem religar o USB autosuspend por cima do udev. Exceções: TLP → USB_DENYLIST=\"054c:0ce6 054c:0df2\"; powertop → NÃO use --auto-tune; tuned → evite perfis powersave (nada foi desinstalado)"
+    else
+        pass "sem TLP/powertop/tuned instalados (nenhum religador de economia USB)"
+    fi
+    # system76-power (Pop!_OS/COSMIC): não é inimigo dos controles (a regra 81
+    # re-assert em 'change' defende o USB), mas o perfil importa em jogo — o
+    # wrapper hefesto-launch pede Performance no launch e restaura no exit.
+    if command -v systemctl >/dev/null 2>&1 \
+       && systemctl is-active --quiet com.system76.PowerDaemon.service 2>/dev/null; then
+        local prof=""
+        command -v system76-power >/dev/null 2>&1 \
+            && prof="$(timeout 3 system76-power profile 2>/dev/null | head -1 || true)"
+        info "system76-power ativo (${prof:-perfil ilegível}) — o wrapper pede Performance durante o jogo e restaura o perfil ao sair"
+    fi
+    # Assinatura provada do system76-power no storage: link PM med_power_with_dipm.
+    local h val achou=0
+    for h in /sys/class/scsi_host/host*/link_power_management_policy; do
+        [[ -r "${h}" ]] || continue
+        val="$(cat "${h}" 2>/dev/null)"
+        [[ "${val}" == med_power* ]] && achou=1
+    done
+    if [[ "${achou}" -eq 1 ]]; then
+        info "storage com link PM em economia (med_power_with_dipm — assinatura do system76-power); não derruba os controles (USB defendido pela regra 81), mas mostra um agente de economia vivo"
+    fi
+}
+
+# PLAT-04 item 1: o btusb liga o autosuspend do adaptador BT no probe (default
+# do módulo). O conf do hefesto corta na raiz; esperado N pós-boot.
+check_btusb_autosuspend() {
+    local conf=/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
+    local param=/sys/module/btusb/parameters/enable_autosuspend
+    local val=""
+    [[ -r "${param}" ]] && val="$(cat "${param}" 2>/dev/null)"
+    if [[ "${val}" == "N" || "${val}" == "0" ]]; then
+        pass "btusb sem autosuspend (enable_autosuspend=N) — o rádio dos controles não dorme"
+    elif [[ -f "${conf}" ]]; then
+        if [[ -z "${val}" ]]; then
+            info "modprobe.d do btusb instalado; módulo btusb não carregado agora (sem adaptador BT?)"
+        else
+            info "modprobe.d do btusb instalado, mas o módulo ainda está com enable_autosuspend=${val} — vale no próximo probe (replug do adaptador BT ou reboot); o runtime já é coberto pela regra 81"
+        fi
+    else
+        warn "btusb com autosuspend LIGADO (enable_autosuspend=${val:-?}) e sem o conf do hefesto — em máquina sem usbcore.autosuspend=-1 global o rádio dos controles dorme; rode ./install.sh (o conf entra por default)"
+    fi
+}
+
+# PLAT-04 item 3: FastConnectable = reconexão entrante mais rápida (botão PS).
+check_bluez_fastconnectable() {
+    local dropin=/etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf
+    if [[ -f "${dropin}" ]]; then
+        pass "FastConnectable do BlueZ instalado (drop-in main.conf.d) — botão PS reconecta mais rápido (vale desde o último start do bluetoothd)"
+    elif grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+        pass "FastConnectable do BlueZ instalado (bloco marcado no main.conf) — vale desde o último start do bluetoothd"
+    elif grep -qsE '^[[:space:]]*FastConnectable[[:space:]]*=[[:space:]]*true' /etc/bluetooth/main.conf 2>/dev/null; then
+        pass "FastConnectable já configurado por terceiro no main.conf"
+    elif [[ ! -e /etc/bluetooth/main.conf ]]; then
+        info "sem /etc/bluetooth/main.conf (BlueZ ausente?) — pulo o check de FastConnectable"
+    else
+        warn "reconexão rápida BT (FastConnectable) não configurada — rode ./install.sh (entra por default, SEM restart do bluetoothd)"
+    fi
+}
+
+# O "clone DS4" 054C:05C4 que stormou o rádio com 211 mil erros de CRC numa
+# noite (estudo 2026-07-18 §2.1). Pelo OUI no cache do adaptador, é quase
+# certamente um 8BitDo em modo D-input — o conselho é TROCAR O MODO/cabo, não
+# jogar fora. (054C:05C4 também é o PID do DS4 v1 legítimo; o journal
+# desempata: hw_version=0x00000000 denuncia o firmware clone.)
+check_bt_clone_ds4() {
+    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo a caça ao clone DS4"; return; }
+    local macs mac inf clone=0
+    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
+    if [[ -z "${macs}" ]]; then
+        info "nenhum dispositivo Bluetooth pareado — sem clone DS4 possível"
+        return
+    fi
+    for mac in ${macs}; do
+        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+        if printf '%s' "${inf}" | grep -q 'Modalias: usb:v054Cp05C4'; then
+            clone=1
+            warn "controle 'tipo DualShock 4' (054C:05C4) pareado (${mac}) — esse firmware não calcula a verificação de integridade e INUNDA o sistema de erros (já foram 211 mil numa noite), degradando o Bluetooth de TODOS os controles"
+            info "  provavelmente é um 8BitDo em modo D-input: troque o modo (Switch) ou use no cabo"
+            info "  para desparear: bluetoothctl remove ${mac}  (se for um DS4 v1 legítimo, o journal desempata: 'hw_version=0x00000000' = clone)"
+        fi
+    done
+    [[ "${clone}" -eq 0 ]] && pass "nenhum clone DS4 (054C:05C4) pareado"
+}
+
+# Saúde do rádio 2.4 GHz: RSSI, Trusted, Discovering, contadores do adaptador
+# e IdleTimeout — os 5 checks do estudo BT §5/§6, todos read-only.
+check_bt_radio() {
+    command -v bluetoothctl >/dev/null 2>&1 || return 0
+    local macs mac inf nome rssi gamepad_conectado=0
+    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
+    for mac in ${macs}; do
+        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+        printf '%s' "${inf}" | grep -qiE 'dualsense|wireless controller|pro controller|8bitdo|joy-con|xbox' || continue
+        nome="$(printf '%s\n' "${inf}" | sed -n 's/^[[:space:]]*Name: //p' | head -1)"
+        if printf '%s' "${inf}" | grep -q 'Connected: yes'; then
+            gamepad_conectado=1
+            rssi="$(printf '%s\n' "${inf}" | awk '/RSSI:/{ for (i = 1; i <= NF; i++) if ($i ~ /^\(?-[0-9]+\)?$/) { gsub(/[()]/, "", $i); print $i; exit } }')"
+            if [[ -n "${rssi}" ]] && (( rssi < -70 )); then
+                warn "sinal fraco do ${nome:-controle} (${mac}): RSSI ${rssi} dBm (bom é > -60) — ponha o adaptador BT num extensor USB curto, fora da sombra do gabinete e a 20 cm ou mais dos receivers 2.4G"
+            elif [[ -n "${rssi}" ]]; then
+                pass "sinal do ${nome:-controle}: RSSI ${rssi} dBm"
+            fi
+        fi
+        if printf '%s' "${inf}" | grep -q 'Trusted: no'; then
+            warn "${nome:-controle} (${mac}) pareado mas SEM confiança (Trusted: no) — a reconexão pelo botão PS pode depender de autorização; cura de 1 comando (reversível): bluetoothctl trust ${mac}"
+        fi
+    done
+    # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
+    # a tela de Bluetooth do cosmic-settings aberta mantém Discovering=yes).
+    if [[ "${gamepad_conectado}" -eq 1 ]] \
+       && timeout 4 bluetoothctl show 2>/dev/null | grep -q 'Discovering: yes'; then
+        warn "adaptador em modo de busca (Discovering: yes) com controle BT conectado — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
+    fi
+    # Contadores do adaptador (proxy não-intrusivo de rádio sujo — sem btmon).
+    if command -v hciconfig >/dev/null 2>&1; then
+        local errs
+        errs="$(hciconfig hci0 2>/dev/null | grep -oE 'errors:[0-9]+' | grep -oE '[0-9]+' | paste -sd/ -)"
+        if [[ -n "${errs}" && "${errs}" != "0/0" ]]; then
+            warn "adaptador BT com erros acumulados (RX/TX: ${errs}) — rádio sujo; veja as linhas [BT-ERR] no kernel.log e os conselhos de posicionamento acima"
+        elif [[ -n "${errs}" ]]; then
+            pass "adaptador BT sem erros de RX/TX (0/0)"
+        fi
+    fi
+    # IdleTimeout do input.conf: default 0 = nunca desconecta por ociosidade
+    # (já é o máximo). Valor > 0 = regressão de terceiro.
+    local idle
+    idle="$(grep -sE '^[[:space:]]*IdleTimeout[[:space:]]*=' /etc/bluetooth/input.conf 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//')"
+    if [[ -n "${idle}" && "${idle}" != "0" ]]; then
+        warn "desconexão por ociosidade LIGADA no BlueZ (input.conf IdleTimeout=${idle}) — controles BT vão cair sozinhos; o default 0 (nunca) é o certo: remova a linha de /etc/bluetooth/input.conf"
+    else
+        pass "sem desconexão por ociosidade no BlueZ (IdleTimeout no default 0)"
+    fi
+}
+
+# Termômetro do rádio: 'input CRC's check failed' no boot atual. Fundo
+# aceitável medido: 2–39; o storm do clone foi 211 mil (20/s).
+check_bt_crc_counters() {
+    command -v journalctl >/dev/null 2>&1 || return 0
+    local nds nds4
+    nds="$(journalctl -b -k --no-pager 2>/dev/null | grep -c "DualSense input CRC" || true)"
+    nds4="$(journalctl -b -k --no-pager 2>/dev/null | grep -c "DualShock4 input CRC" || true)"
+    nds="${nds:-0}"; nds4="${nds4:-0}"
+    if [[ "${nds4}" -gt 100 ]]; then
+        warn "DualShock4 com ${nds4} erros de CRC neste boot — assinatura do clone DS4 conectado bombardeando o rádio (troque o modo/cabo ou despareie; ver o aviso do clone acima)"
+    fi
+    if [[ "${nds}" -gt 100 ]]; then
+        warn "DualSense com ${nds} erros de CRC neste boot — rádio sujo (interferência 2.4 GHz); afaste o dongle dos receivers (extensor USB) e evite Wi-Fi USB 2.4G durante o jogo"
+    elif [[ "${nds4}" -le 100 ]]; then
+        pass "integridade dos pacotes BT ok neste boot (DualSense: ${nds}, DualShock4: ${nds4} erros de CRC — fundo aceitável)"
+    fi
+}
+
+# kernel-watch (PLAT-06 item 4): resume o log dedicado pro leigo. Lê o
+# kernel.log novo (fallback: storm.log antigo) e conta ocorrências por tag.
+check_kernel_watch() {
+    local unit="hefesto-dualsense4unix-storm-watch.service"
+    if command -v systemctl >/dev/null 2>&1; then
+        if systemctl --user is-active --quiet "${unit}" 2>/dev/null; then
+            pass "kernel-watch ativo (${unit})"
+        elif systemctl --user cat "${unit}" >/dev/null 2>&1; then
+            warn "kernel-watch instalado mas parado — ligue: systemctl --user enable --now ${unit}"
+        else
+            warn "kernel-watch não instalado — rode ./install.sh (entra por default; --no-kernel-watch é o opt-out)"
+        fi
+    fi
+    local log="${HOME}/.local/state/hefesto-dualsense4unix/kernel.log"
+    [[ -f "${log}" ]] || log="${HOME}/.local/state/hefesto-dualsense4unix/storm.log"
+    if [[ ! -f "${log}" ]]; then
+        info "sem log do kernel-watch ainda (nasce no primeiro start/evento)"
+        return
+    fi
+    local tag n resumo="" n_joycon=0 n_usb71=0 n_bterr=0
+    for tag in USB-71 JOYCON BT-HCI XHCI BT-ERR; do
+        n="$(grep -cF "[${tag}]" "${log}" 2>/dev/null || true)"; n="${n:-0}"
+        resumo+=" ${tag}=${n}"
+        case "${tag}" in
+            JOYCON) n_joycon="${n}" ;;
+            USB-71) n_usb71="${n}" ;;
+            BT-ERR) n_bterr="${n}" ;;
+        esac
+    done
+    info "kernel-watch (${log##*/}):${resumo}"
+    if [[ "${n_joycon}" -gt 0 ]]; then
+        warn "o kernel deu rate-limit no controle Nintendo/8BitDo ${n_joycon} vez(es) [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo, sem knob de módulo); a configuração estável é NO CABO"
+    fi
+    if [[ "${n_usb71}" -gt 0 ]]; then
+        warn "storm USB (-71) registrado ${n_usb71} vez(es) no kernel-watch [USB-71] — confira a seção USB/dropout abaixo"
+    fi
+    if [[ "${n_bterr}" -gt 0 ]]; then
+        warn "o rádio BT acumulou erros em ${n_bterr} janela(s) [BT-ERR] — rádio sujo; ver os conselhos de posicionamento acima"
+    fi
+}
+
+# PLAT-03 item 2: os params do hefesto no cmdline — comparação /proc/cmdline
+# (boot ATUAL) × configuration do kernelstub/grub (PRÓXIMO boot) = "aplicado"
+# vs "pendente de reboot". A policy sysfs NUNCA entra aqui (ela mente).
+check_cmdline_platform() {
+    local owners="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
+    local tok ativo agendado
+    for tok in "usbcore.autosuspend=-1" "054c:0ce6:gn" "054c:0df2:gn"; do
+        ativo=0; agendado=0
+        grep -qF "${tok}" /proc/cmdline 2>/dev/null && ativo=1
+        { [[ -r /etc/kernelstub/configuration ]] && grep -qF "${tok}" /etc/kernelstub/configuration 2>/dev/null; } && agendado=1
+        { [[ -r /etc/default/grub ]] && grep -qF "${tok}" /etc/default/grub 2>/dev/null; } && agendado=1
+        if [[ "${ativo}" -eq 1 ]]; then
+            pass "cmdline: ${tok} APLICADO neste boot"
+        elif [[ "${agendado}" -eq 1 ]]; then
+            warn "cmdline: ${tok} agendado mas NÃO ativo — pendente de reboot"
+        else
+            warn "cmdline: ${tok} ausente — rode ./install.sh (o passo 3e aplica com MERGE no token único e registro de dono)"
+        fi
+    done
+    # O kernel respeita SÓ UM token usbcore.quirks= — mais de um é bug de merge.
+    local n_tokens
+    n_tokens="$(grep -o 'usbcore\.quirks=' /proc/cmdline 2>/dev/null | wc -l || true)"
+    if [[ "${n_tokens:-0}" -gt 1 ]]; then
+        warn "MAIS DE UM token usbcore.quirks= no cmdline (${n_tokens}) — o kernel respeita só um; rode ./install.sh (o passo 3e funde num token único)"
+    fi
+    if [[ -f "${owners}" ]]; then
+        info "donos registrados: $(tr '\n' ' ' < "${owners}")"
+    fi
+}
+
+# PLAT-01: relatório read-only do Proton pinado (proton_pin.py --report).
+check_proton_pin() {
+    local py="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/proton_pin.py"
+    local conf="${ROOT_DIR}/assets/proton-pin.conf"
+    if [[ ! -f "${py}" || ! -f "${conf}" ]] || ! command -v python3 >/dev/null 2>&1; then
+        info "proton_pin.py/proton-pin.conf ausentes ou sem python3 — pulo o check do Proton pinado"
+        return
+    fi
+    if [[ ! -f "${HOME}/.steam/steam/config/config.vdf" \
+          && ! -f "${HOME}/.local/share/Steam/config/config.vdf" ]]; then
+        info "Steam não detectada (sem config.vdf) — pulo o check do Proton pinado"
+        return
+    fi
+    local resumo
+    resumo="$(python3 "${py}" --report 2>/dev/null | python3 -c '
+import json
+import sys
+
+d = json.load(sys.stdin)
+print("name=" + str(d.get("pinned_name", "")))
+print("present=" + ("1" if d.get("pinned_present") else "0"))
+print("manifest=" + ("1" if d.get("pinned_manifest_ok") else "0"))
+print("global=" + ("1" if d.get("global_is_pinned") else "0"))
+off = d.get("games_off_pin") or []
+print("off=" + str(len(off)))
+leaky = d.get("games_leaky_proton") or []
+print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
+' 2>/dev/null)"
+    if [[ -z "${resumo}" ]]; then
+        warn "relatório do Proton pinado indisponível — rode: python3 ${py} --report"
+        return
+    fi
+    local nome present manifest glob off leaky
+    nome="$(sed -n 's/^name=//p' <<<"${resumo}")"
+    present="$(sed -n 's/^present=//p' <<<"${resumo}")"
+    manifest="$(sed -n 's/^manifest=//p' <<<"${resumo}")"
+    glob="$(sed -n 's/^global=//p' <<<"${resumo}")"
+    off="$(sed -n 's/^off=//p' <<<"${resumo}")"
+    leaky="$(sed -n 's/^leaky=//p' <<<"${resumo}")"
+    if [[ "${present}" == "1" && "${manifest}" == "1" ]]; then
+        pass "Proton pinado presente e íntegro (${nome})"
+    elif [[ "${present}" == "1" ]]; then
+        warn "Proton pinado presente (${nome}) mas o manifesto do hefesto não bate — reinstale: ./install.sh (re-verifica o SHA256)"
+    else
+        warn "Proton pinado AUSENTE (${nome}) — rode ./install.sh (baixa, verifica o SHA256 e extrai por default)"
+    fi
+    if [[ "${glob}" == "1" && "${off:-0}" -eq 0 ]]; then
+        pass "todos os jogos travados no Proton pinado (default global + por jogo)"
+    else
+        [[ "${glob}" != "1" ]] && warn "default global da Steam NÃO aponta pro Proton pinado — use o botão 'Travar Proton validado' (aba Sistema da GUI, com a Steam fechada) ou rode ./install.sh"
+        [[ "${off:-0}" -gt 0 ]] && warn "${off} jogo(s) fora do Proton pinado — um upgrade de Proton pode reintroduzir o controle duplicado nesses jogos"
+    fi
+    if [[ -n "${leaky}" ]]; then
+        warn "jogo(s) em Proton <= 9: ${leaky} — nessa família o PROTON_DISABLE_HIDRAW não existe e o controle físico VAZA duplicado no jogo; trave no Proton pinado"
+    fi
+}
+
+# GYRO-03: o giroscópio está chegando ao jogo? ------------------------------
+# O vpad uhid (máscara DualSense Edge) expõe um nó evdev próprio de motion
+# ("Hefesto Virtual DualSense PN Motion Sensors"). Com o espelho de motion do
+# daemon vivo (PhysicalReportReader), esse nó AMOSTRA continuamente — o gyro
+# de um DualSense real nunca fica em silêncio absoluto (ruído do sensor).
+# Silêncio de ~1s = o gyro NÃO está fluindo pro jogo. READ-ONLY: leitura
+# O_RDONLY sem grab, o mesmo probe validado à mão em 2026-07-19.
+
+# Nós eventN dos Motion Sensors DOS VPADS (nunca os do físico — o nome do
+# físico começa com "Sony..."/"DualSense..."; só o vpad tem o prefixo
+# "Hefesto Virtual"). Fonte parametrizada p/ teste hermético.
+_vpad_motion_event_nodes() {
+    local src="${1:-/proc/bus/input/devices}"
+    [[ -r "${src}" ]] || return 0
+    awk '
+        /^N: Name=/ {
+            alvo = ($0 ~ /Hefesto Virtual DualSense P[0-9]+ Motion Sensors/)
+        }
+        alvo && /^H: Handlers=/ {
+            for (i = 2; i <= NF; i++) {
+                t = $i
+                sub(/^Handlers=/, "", t)
+                if (t ~ /^event[0-9]+$/) print t
+            }
+        }
+    ' "${src}" 2>/dev/null
+}
+
+# Amostra ~1s de UM nó evdev (só leitura, sem grab) e imprime "vivo" quando
+# chega pelo menos um evento EV_ABS de eixo de gyro/accel, ou "silencio".
+# GYRO-03-FIX: o hid_playstation emite EV_MSC/MSC_TIMESTAMP neste nó a CADA
+# report 0x01 do vpad, mesmo com a janela de motion NEUTRA (espelho morto) —
+# stick/botão durante a amostra virava falso "vivo". Só EV_ABS (type=3) com
+# code de gyro/accel (ABS_X..ABS_RZ = 0..5) prova gyro fluindo: espelho vivo
+# = ruído do sensor mudando valor sempre; janela neutra = o input core
+# suprime ABS repetido e NADA de EV_ABS sai (mesma lógica do probe manual de
+# 2026-07-19). struct input_event (64-bit) = 24 B: 16 de timestamp + u16
+# type + u16 code + s32 value → com `od -tu2 -w24`, type é o 9º campo e
+# code o 10º.
+_motion_node_sample() {
+    local node="$1" dur="${2:-1}"
+    local veredito
+    veredito="$(timeout "${dur}" dd if="${node}" bs=24 2>/dev/null \
+        | od -An -v -tu2 -w24 \
+        | awk '$9 == 3 && $10 <= 5 { print "vivo"; exit }')"
+    printf '%s\n' "${veredito:-silencio}"
+}
+
+check_vpad_motion() {
+    local nodes
+    nodes="$(_vpad_motion_event_nodes)"
+    if [[ -z "${nodes}" ]]; then
+        info "nenhum nó Motion de vpad agora (emulação desligada, backend uinput ou máscara xbox) — giroscópio via vpad não se aplica"
+        return
+    fi
+    local ev node veredito
+    for ev in ${nodes}; do
+        node="/dev/input/${ev}"
+        if [[ ! -r "${node}" ]]; then
+            warn "sem permissão de leitura em ${node} — não deu para amostrar o giroscópio do vpad (regra udev/uaccess? rode como o usuário da sessão)"
+            continue
+        fi
+        veredito="$(_motion_node_sample "${node}")"
+        if [[ "${veredito}" == "vivo" ]]; then
+            pass "giroscópio chegando ao jogo: SIM (${ev} amostrando)"
+        else
+            warn "giroscópio chegando ao jogo: NÃO (${ev} em silêncio por ~1s) — o espelho de motion do daemon não está alimentando este vpad; veja motion_streaming/motion_hz abaixo e o journal do daemon"
+        fi
+    done
+    # Telemetria do daemon (motion_streaming/motion_hz por vpad) — contexto
+    # extra quando o IPC responde; a amostragem acima já deu o veredito.
+    local sock; sock="$(runtime_socket)"
+    [[ -S "${sock}" ]] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    local out
+    out="$(python3 - "${sock}" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}
+    ).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+data = json.loads(buf.decode("utf-8"))
+res = data.get("result") or {}
+for item in (res.get("rumble_ff") or {}).get("per_vpad") or []:
+    streaming = "sim" if item.get("motion_streaming") else "não"
+    hz = item.get("motion_hz") or 0.0
+    print(
+        f"vpad do jogador {item.get('player')}: espelho de motion "
+        f"{'ATIVO' if streaming == 'sim' else 'inativo'} ({hz:.0f} Hz)"
+    )
+PYEOF
+)" || return 0
+    if [[ -n "${out}" ]]; then
+        while IFS= read -r linha; do info "${linha}"; done <<<"${out}"
     fi
 }
 
@@ -908,6 +1419,18 @@ main() {
     check_uhid
     check_hid_playstation
     check_led_sysfs_gravavel
+    hdr "energia USB e rádio"
+    check_usb_power_devices
+    check_usb_power_hosts
+    check_pcie_aspm
+    check_power_saboteurs
+    check_btusb_autosuspend
+    check_bluez_fastconnectable
+    check_bt_clone_ds4
+    check_bt_radio
+    check_bt_crc_counters
+    check_kernel_watch
+    check_cmdline_platform
     hdr "applet COSMIC"
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"
@@ -921,6 +1444,9 @@ main() {
     check_launch_wrapper
     check_vdf_poison
     check_dedup_ipc
+    check_proton_pin
+    hdr "giroscópio no jogo (vpad Motion)"
+    check_vpad_motion
     hdr "controle"
     check_controller
     check_perms_soft

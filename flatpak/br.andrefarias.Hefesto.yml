@@ -200,6 +200,12 @@ modules:
           /app/share/hefesto-dualsense4unix/udev-rules/78-dualsense-motion-not-joystick.rules
       - install -Dm644 assets/79-external-controller-leds.rules
           /app/share/hefesto-dualsense4unix/udev-rules/79-external-controller-leds.rules
+      - install -Dm644 assets/80-motion-joydev-hide.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/80-motion-joydev-hide.rules
+      - install -Dm644 assets/81-hefesto-usb-power.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/81-hefesto-usb-power.rules
+      - install -Dm644 assets/81-hefesto-usb-host-power.rules
+          /app/share/hefesto-dualsense4unix/udev-rules/81-hefesto-usb-host-power.rules
       - install -Dm644 assets/hefesto-dualsense4unix.conf
           /app/share/hefesto-dualsense4unix/modules-load/hefesto-dualsense4unix.conf
 
@@ -208,6 +214,8 @@ modules:
       # mic+fone do controle (não é a regra 75, que é áudio-off e segue opt-in).
       - install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf
           /app/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf
+      - install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf
+          /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf
 
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh

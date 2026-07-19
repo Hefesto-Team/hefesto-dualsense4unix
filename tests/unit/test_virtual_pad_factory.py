@@ -103,10 +103,12 @@ def backends(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     def _uhid_for_flavor(
         flavor: str | None, *, rumble_sink: Any = None, player: int = 1,
-        blueprint: Any = None,
+        blueprint: Any = None, **sinks: Any,
     ) -> Any:
+        # REPLICA-03: a factory repassa também os sinks de replicação
+        # (trigger/lightbar/player_led/session_end) — registrados à parte.
         registro["uhid_kwargs"] = {"flavor": flavor, "player": player,
-                                   "blueprint": blueprint}
+                                   "blueprint": blueprint, "sinks": sinks}
         pad = _FakeUhid(
             player=player,
             blueprint=blueprint,
