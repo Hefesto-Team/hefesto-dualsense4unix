@@ -1,0 +1,256 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Sun, 20 Jul 2026 15:00:00 -0300
+Subject: [PATCH] HID: nintendo: don't transmit after rate-limit exhaustion,
+ retry bluetooth probe, make reliability limits tunable
+
+On a bluetooth link degraded by 2.4GHz interference (measured on a Pro
+Controller, bus 0005, with a USB3 WiFi dongle on an adjacent port of the
+same xHCI), the driver currently makes a bad situation worse in two ways:
+
+1. joycon_enforce_subcmd_rate() gives up after
+   JC_SUBCMD_RATE_MAX_ATTEMPTS ("exceeded max attempts") and returns as
+   if a safe TX window had been found. The caller then transmits anyway,
+   without rate limiting and without the TX offset - exactly what the
+   comment above the rate limiter warns "can cause bluetooth controller
+   disconnections". Observed in the field as a burst of "timeout waiting
+   for input report" at 4/s plus "exceeded max attempts" every ~6.5s,
+   ending with the BT link dropping and hid removing the device.
+
+   Make joycon_enforce_subcmd_rate() return -EAGAIN on exhaustion when
+   the new skip_tx_on_rate_exceeded parameter is set, and have both
+   callers skip that transmission: joycon_hid_send_sync() skips the
+   try (reporting -ETIMEDOUT, the same error a timed out send produces
+   today), joycon_send_rumble_data() drops the rumble packet. This
+   strictly reduces traffic on an already degraded link; behavior when
+   a safe window IS found is unchanged. The parameter defaults to off,
+   keeping the historical transmit-anyway behavior until the tradeoff
+   (skipped commands vs. link pressure) is measured on a real degraded
+   link, and allowing a live revert through sysfs without a rebuild.
+
+2. If the link is degraded at connection time, joycon_read_info() times
+   out (-ETIMEDOUT) and probe fails permanently: HID does not re-probe,
+   so a single unlucky reconnection window costs the user the
+   controller until they power-cycle it. Measured three times on the
+   same machine (always -110, always bus 0005).
+
+   Add an optional retry-with-backoff loop around joycon_init() in the
+   probe path, bluetooth only (over USB the transport is reliable and a
+   failure there is meaningful). Default is 0 retries, i.e. behavior is
+   unchanged unless the new bt_probe_retries parameter is set.
+
+Additionally, expose the previously hardcoded reliability limits
+(input report wait, rate-limiter attempts, sync send tries, probe info
+timeout) as module parameters. All defaults match the current hardcoded
+values, so there is no behavior change out of the box; the parameters
+exist because tuning these against real interference scenarios
+currently requires a rebuild, and /sys/module/hid_nintendo/parameters/
+makes field diagnosis of degraded-link behavior practical.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/hid/hid-nintendo.c |  112 +++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 100 insertions(+), 12 deletions(-)
+
+--- a/drivers/hid/hid-nintendo.c
++++ b/drivers/hid/hid-nintendo.c
+@@ -43,6 +43,43 @@
+ #include <linux/spinlock.h>
+
+ /*
++ * Tunables for the subcommand reliability logic. All defaults match the
++ * previously hardcoded values, so behavior is unchanged unless a parameter
++ * is explicitly set. They exist because degraded bluetooth links (e.g. 2.4GHz
++ * interference) interact badly with fixed timeouts/attempt counts, and field
++ * debugging of those scenarios requires adjusting them without a rebuild.
++ */
++static unsigned int input_report_wait_ms = 250;
++module_param(input_report_wait_ms, uint, 0644);
++MODULE_PARM_DESC(input_report_wait_ms,
++		 "Max time (ms) to wait for an input report before a subcommand TX attempt (default 250)");
++
++static unsigned int subcmd_rate_max_attempts = 25;
++module_param(subcmd_rate_max_attempts, uint, 0644);
++MODULE_PARM_DESC(subcmd_rate_max_attempts,
++		 "Max attempts to find a safe subcommand TX window (default 25)");
++
++static unsigned int sync_send_tries = 2;
++module_param(sync_send_tries, uint, 0644);
++MODULE_PARM_DESC(sync_send_tries,
++		 "Tries for a synchronous subcommand send (default 2)");
++
++static unsigned int probe_info_timeout_ms = 2000;
++module_param(probe_info_timeout_ms, uint, 0644);
++MODULE_PARM_DESC(probe_info_timeout_ms,
++		 "Timeout (ms) for the device info request during probe (default 2000)");
++
++static unsigned int bt_probe_retries;
++module_param(bt_probe_retries, uint, 0644);
++MODULE_PARM_DESC(bt_probe_retries,
++		 "Extra init retries during probe for bluetooth controllers (default 0 = no retry, same as before)");
++
++static bool skip_tx_on_rate_exceeded;
++module_param(skip_tx_on_rate_exceeded, bool, 0644);
++MODULE_PARM_DESC(skip_tx_on_rate_exceeded,
++		 "Skip a subcommand/rumble transmission when no safe TX window was found instead of transmitting anyway (default N = transmit, same as before)");
++
++/*
+  * Reference the url below for the following HID report defines:
+  * https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering
+  */
+@@ -803,7 +840,7 @@
+ 		spin_unlock_irqrestore(&ctlr->lock, flags);
+ 		ret = wait_event_timeout(ctlr->wait,
+ 					 ctlr->received_input_report,
+-					 HZ / 4);
++					 msecs_to_jiffies(input_report_wait_ms));
+ 		/* We will still proceed, even with a timeout here */
+ 		if (!ret)
+ 			hid_warn(ctlr->hdev,
+@@ -823,16 +860,17 @@
+ #define JC_SUBCMD_RATE_LIMITER_USB_MS	20
+ #define JC_SUBCMD_RATE_LIMITER_BT_MS	60
+ #define JC_SUBCMD_RATE_LIMITER_MS(ctlr)	((ctlr)->hdev->bus == BUS_USB ? JC_SUBCMD_RATE_LIMITER_USB_MS : JC_SUBCMD_RATE_LIMITER_BT_MS)
+-static void joycon_enforce_subcmd_rate(struct joycon_ctlr *ctlr)
++static int joycon_enforce_subcmd_rate(struct joycon_ctlr *ctlr)
+ {
+ 	unsigned int current_ms;
+ 	unsigned long subcmd_delta;
+ 	int consecutive_valid_deltas = 0;
+ 	int attempts = 0;
++	int max_attempts = clamp_t(int, subcmd_rate_max_attempts, 1, 1000);
+ 	unsigned long flags;
+
+ 	if (unlikely(ctlr->ctlr_state != JOYCON_CTLR_STATE_READ))
+-		return;
++		return 0;
+
+ 	do {
+ 		joycon_wait_for_input_report(ctlr);
+@@ -847,11 +885,20 @@
+ 	} while ((consecutive_valid_deltas < JC_SUBCMD_VALID_DELTA_REQ ||
+ 		  subcmd_delta < JC_SUBCMD_RATE_LIMITER_MS(ctlr)) &&
+ 		 ctlr->ctlr_state == JOYCON_CTLR_STATE_READ &&
+-		 attempts < JC_SUBCMD_RATE_MAX_ATTEMPTS);
++		 attempts < max_attempts);
+
+-	if (attempts >= JC_SUBCMD_RATE_MAX_ATTEMPTS) {
++	if (attempts >= max_attempts) {
+ 		hid_warn(ctlr->hdev, "%s: exceeded max attempts", __func__);
+-		return;
++		/*
++		 * No safe TX window was found. Transmitting anyway at an
++		 * uncontrolled rate is exactly what the comment above warns
++		 * causes bluetooth controller disconnections, so optionally
++		 * tell the caller to skip this transmission instead of
++		 * making a degraded link worse. Opt-in: the default keeps
++		 * the historical behavior of transmitting anyway.
++		 */
++		if (skip_tx_on_rate_exceeded)
++			return -EAGAIN;
+ 	}
+
+ 	ctlr->last_subcmd_sent_msecs = current_ms;
+@@ -863,20 +910,31 @@
+ 	 * the rate of disconnections.
+ 	 */
+ 	msleep(JC_SUBCMD_TX_OFFSET_MS);
++	return 0;
+ }
+
+ static int joycon_hid_send_sync(struct joycon_ctlr *ctlr, u8 *data, size_t len,
+ 				u32 timeout)
+ {
+ 	int ret;
+-	int tries = 2;
++	int tries = clamp_t(int, sync_send_tries, 1, 10);
+
+ 	/*
+ 	 * The controller occasionally seems to drop subcommands. In testing,
+ 	 * doing one retry after a timeout appears to always work.
+ 	 */
+ 	while (tries--) {
+-		joycon_enforce_subcmd_rate(ctlr);
++		ret = joycon_enforce_subcmd_rate(ctlr);
++		if (ret) {
++			/*
++			 * No safe TX window; skip this try rather than
++			 * transmitting at an unsafe rate. Report the same
++			 * error a timed out send would have reported.
++			 */
++			memset(ctlr->input_buf, 0, JC_MAX_RESP_SIZE);
++			ret = -ETIMEDOUT;
++			continue;
++		}
+
+ 		ret = __joycon_hid_send(ctlr->hdev, data, len);
+ 		if (ret < 0) {
+@@ -1795,7 +1853,10 @@
+ 	if (++ctlr->subcmd_num > 0xF)
+ 		ctlr->subcmd_num = 0;
+
+-	joycon_enforce_subcmd_rate(ctlr);
++	ret = joycon_enforce_subcmd_rate(ctlr);
++	if (ret)
++		/* No safe TX window; drop this rumble packet. */
++		return ret;
+
+ 	ret = __joycon_hid_send(ctlr->hdev, (u8 *)&rumble_output,
+ 				sizeof(rumble_output));
+@@ -1815,9 +1876,13 @@
+ 		ret = joycon_send_rumble_data(ctlr);
+ 		mutex_unlock(&ctlr->output_mutex);
+
+-		/* -ENODEV means the controller was just unplugged */
++		/*
++		 * -ENODEV means the controller was just unplugged. -EAGAIN
++		 * means the rate limiter found no safe TX window and the
++		 * packet was intentionally dropped (already warned there).
++		 */
+ 		spin_lock_irqsave(&ctlr->lock, flags);
+-		if (ret < 0 && ret != -ENODEV &&
++		if (ret < 0 && ret != -ENODEV && ret != -EAGAIN &&
+ 		    ctlr->ctlr_state != JOYCON_CTLR_STATE_REMOVED)
+ 			hid_warn(ctlr->hdev, "Failed to set rumble; e=%d", ret);
+
+@@ -2420,7 +2485,8 @@
+ 	struct joycon_input_report *report;
+
+ 	req.subcmd_id = JC_SUBCMD_REQ_DEV_INFO;
+-	ret = joycon_send_subcmd(ctlr, &req, 0, 2 * HZ);
++	ret = joycon_send_subcmd(ctlr, &req, 0,
++				 msecs_to_jiffies(probe_info_timeout_ms));
+ 	if (ret) {
+ 		hid_err(ctlr->hdev, "Failed to get joycon info; ret=%d\n", ret);
+ 		return ret;
+@@ -2686,6 +2752,28 @@
+ 	hid_device_io_start(hdev);
+
+ 	ret = joycon_init(hdev);
++	if (ret && !joycon_using_usb(ctlr)) {
++		/*
++		 * Over bluetooth the first init exchange can time out on a
++		 * momentarily degraded link (e.g. 2.4GHz interference right
++		 * after reconnection). Failing probe here permanently loses
++		 * the controller: HID does not re-probe, so the user has to
++		 * power-cycle the pad. Retry with backoff before giving up.
++		 * Default is 0 retries (same behavior as before).
++		 */
++		int retries = clamp_t(int, bt_probe_retries, 0, 10);
++		unsigned int backoff_ms = 100;
++
++		while (ret && retries--) {
++			hid_warn(hdev,
++				 "init over bluetooth failed (%d); retrying (%d left)\n",
++				 ret, retries);
++			msleep(backoff_ms);
++			if (backoff_ms < 1600)
++				backoff_ms *= 2;
++			ret = joycon_init(hdev);
++		}
++	}
+ 	if (ret) {
+ 		hid_err(hdev, "Failed to initialize controller; ret=%d\n", ret);
+ 		goto err_close;
+--
+2.43.0

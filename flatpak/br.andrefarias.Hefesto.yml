@@ -216,6 +216,20 @@ modules:
           /app/share/hefesto-dualsense4unix/modprobe/hefesto-dualsense-storm.conf
       - install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf
           /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf
+      # Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+      # O install-host-udev.sh (abaixo) copia p/ /etc/modprobe.d do HOST. Sem o
+      # módulo DKMS o in-tree ignora o parâmetro e sobe normal (fail-safe).
+      - install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf
+          /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf
+      # Onda T (corretor, achado #9): fontes DKMS + lib genérica no /app/share —
+      # paridade com .deb/rpm/arch. O install-host-udev.sh as encontra; dentro
+      # do sandbox o dkms do HOST não é alcançável, então o dkms_lib.sh avisa
+      # honesto e segue (fail-safe) — a rota real do Flatpak é rodar o script
+      # a partir do host. Sem os arquivos aqui, nem essa rota existiria.
+      - install -Dm644 scripts/dkms_lib.sh
+          /app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh
+      - mkdir -p /app/share/hefesto-dualsense4unix/dkms
+      - cp -a assets/dkms/hid-nintendo /app/share/hefesto-dualsense4unix/dkms/
 
       # BROKER-01 (Onda S — fd-injection): binário standalone + units-
       # template do broker root hide-hidraw. O sandbox NÃO instala unit de

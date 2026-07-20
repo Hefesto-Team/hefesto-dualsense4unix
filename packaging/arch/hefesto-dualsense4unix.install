@@ -25,7 +25,9 @@ post_install() {
     hefesto-dualsense4unix-gui
 
   Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
-  cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro):
+  cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro) e
+  modulo DKMS hid-nintendo patchado (Onda T — cura de raiz do probe BT dos
+  controles Nintendo/8BitDo; requer dkms + linux-headers):
     sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
 
   Pacotes opcionais recomendados:
@@ -63,6 +65,25 @@ pre_remove() {
               /etc/systemd/system/hefesto-hidraw-broker.socket
         systemctl daemon-reload 2>/dev/null || true
     fi
+
+    # Onda T (corretor, achado #9): o modulo DKMS hefesto-hid-nintendo e
+    # construido FORA do manifesto do pacman (install-host-udev.sh) — sem
+    # este bloco, pacman -R deixava o modulo patchado registrado vencendo o
+    # in-tree para sempre. NUNCA descarrega modulo em uso; o in-tree volta
+    # sozinho no proximo boot.
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+        echo ">>> Removendo modulo DKMS hefesto-hid-nintendo (in-tree volta no boot)..."
+        dkms status hefesto-hid-nintendo 2>/dev/null \
+            | sed -n 's|^hefesto-hid-nintendo/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-hid-nintendo/${_v}" --all 2>/dev/null || true
+                rm -rf "/usr/src/hefesto-hid-nintendo-${_v}"
+            done
+        depmod -a 2>/dev/null || true
+    fi
+    rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
 }
 
 post_remove() {
