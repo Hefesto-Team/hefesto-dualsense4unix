@@ -13,7 +13,10 @@ from hefesto_dualsense4unix.core.lightbar_reset import (
     BT_REPORT_LEN,
     build_bt_release_leds_report,
     send_release_leds,
+    should_reclaim_on_wake,
 )
+
+_KDEF = (0, 0, 128)  # KERNEL_DEFAULT_BLUE do backend
 
 
 class TestBuildReport:
@@ -78,3 +81,49 @@ class TestSendReleaseLeds:
 
     def test_write_incompleto_devolve_false(self) -> None:
         assert send_release_leds(_FakeDevice(written_ret=10)) is False
+
+
+class TestShouldReclaimOnWake:
+    """LIGHTBAR-BT-RESET-02 (Onda L): reenviar o 0x08 SÓ na assinatura do wake
+    BT (nó sysfs voltou ao default do kernel com o desired resolvido diferente),
+    nunca por timer. Falha-sem: antes da Onda L o 0x08 só saía para handles
+    NOVOS, então o wake sem reabrir handle (caso 17:28) deixava a lightbar
+    apagada até desconectar/reconectar."""
+
+    def test_borda_do_wake_bt_dispara(self) -> None:
+        # BT + nó voltou ao default do kernel + desired é vermelho → reclaim.
+        assert should_reclaim_on_wake("bt", (255, 0, 0), _KDEF, _KDEF) is True
+
+    def test_usb_nunca_dispara(self) -> None:
+        # USB não tem o claim da lightbar — mesma assinatura, mas não mexe.
+        assert should_reclaim_on_wake("usb", (255, 0, 0), _KDEF, _KDEF) is False
+
+    def test_claim_intacto_nao_dispara(self) -> None:
+        # A cor atual ainda é a desejada (claim OK) → não pisca à toa.
+        assert should_reclaim_on_wake("bt", (255, 0, 0), (255, 0, 0), _KDEF) is False
+
+    def test_desired_igual_ao_default_e_indistinguivel(self) -> None:
+        # Se o próprio desired É o default do kernel, a assinatura não distingue
+        # "wake" de "cor correta" → não mexe.
+        assert should_reclaim_on_wake("bt", _KDEF, _KDEF, _KDEF) is False
+
+    def test_desired_ausente_nao_dispara(self) -> None:
+        assert should_reclaim_on_wake("bt", None, _KDEF, _KDEF) is False
+
+    def test_no_ilegivel_nao_dispara(self) -> None:
+        # get_rgb() devolveu None (nó ilegível) → não afirma a borda.
+        assert should_reclaim_on_wake("bt", (255, 0, 0), None, _KDEF) is False
+
+
+class TestOndaLFiadaNoBackend:
+    """Guarda de fiação: o backend chama a função nova no connect() e loga o
+    reenvio de wake — sem isso, a função pura existiria sem efeito."""
+
+    def test_connect_chama_should_reclaim_on_wake(self) -> None:
+        from pathlib import Path
+
+        fonte = Path(
+            "src/hefesto_dualsense4unix/core/backend_pydualsense.py"
+        ).read_text(encoding="utf-8")
+        assert "should_reclaim_on_wake" in fonte
+        assert "lightbar_reset_reenviado_wake" in fonte
