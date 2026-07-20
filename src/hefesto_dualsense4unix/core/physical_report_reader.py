@@ -97,6 +97,17 @@ _HZ_EMA_ALPHA = 0.25
 _HZ_STALE_S = 1.0
 
 
+def _open_por_caminho(path: str) -> int:
+    """Opener default (sem broker): o `os.open` por caminho de sempre.
+
+    BROKER-01 (Onda S): o construtor aceita um `opener` injetável — o
+    broker-aware (`integrations.hidraw_broker_client.make_broker_opener`)
+    pede o fd ao broker root (funciona com o nó ESCONDIDO pelo hide) e cai
+    neste mesmo `os.open` quando o broker está ausente/recusou/timeout.
+    """
+    return os.open(path, os.O_RDONLY)
+
+
 def _novo_wake_pipe() -> tuple[int, int]:
     """Par de self-pipe (não-bloqueante) para acordar o select do reader.
 
@@ -164,11 +175,23 @@ class PhysicalReportReader:
         *,
         max_hz: float = MOTION_EMIT_MAX_HZ,
         time_fn: Callable[[], float] = time.monotonic,
+        opener: Callable[[str], int] | None = None,
     ) -> None:
         self._path_provider = path_provider
         self._vpad = vpad
         self._min_interval = 1.0 / float(max_hz) if max_hz > 0 else 0.0
         self._time_fn = time_fn
+        # BROKER-01 (Onda S §6.2): opener injetável — TODOS os gatilhos de
+        # reopen (start inicial, silêncio ≥1 s, request_reopen do retarget,
+        # ENODEV de wake BT/hotplug, backoff pós-falha) convergem no ÚNICO
+        # open do `_run()`, então a injeção cobre todos por construção.
+        # Contrato: devolve fd pronto para select/read; levanta OSError em
+        # falha (o loop já trata com o backoff). Default = comportamento de
+        # hoje (os.open por caminho). GYRO-FD-01 intacto: o opener é chamado
+        # SEMPRE da própria thread do reader, que segue dona única do fd.
+        self._opener: Callable[[str], int] = (
+            opener if opener is not None else _open_por_caminho
+        )
         self._stop_flag = threading.Event()
         self._thread: threading.Thread | None = None
         # fd ativo — a thread do reader é a ÚNICA dona (abre, usa e fecha).
@@ -333,7 +356,7 @@ class PhysicalReportReader:
                 backoff = min(backoff * 2, _BACKOFF_MAX_S)
                 continue
             try:
-                fd = os.open(path, os.O_RDONLY)
+                fd = self._opener(path)
             except OSError as exc:
                 logger.warning("motion_reader_open_failed", path=path, err=str(exc))
                 if self._stop_flag.wait(backoff):

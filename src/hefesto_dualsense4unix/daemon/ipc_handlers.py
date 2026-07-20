@@ -1814,6 +1814,16 @@ class IpcHandlersMixin:
         Params:
             enabled: bool (obrigatório)
             flavor: "dualsense" | "xbox" (opcional; mantém o atual se ausente)
+
+        Achado Onda S #6 — decisão registrada (desenho §9): o setter continua
+        sendo chamado direto (síncrono) porque a parte BLOQUEANTE da cadeia —
+        `_broker_sync_grab` → `client.hide/restore_all`, até ~4 s com broker
+        lento — foi movida para o executor dedicado do broker
+        (`broker_call_nonblocking`). Envolver o setter INTEIRO em
+        `asyncio.to_thread` manteria o hide/restore bloqueando o start/stop
+        dentro do worker (contra o §9) e criaria corrida real: o
+        `coop.sync(force=True)` do setter passaria a mutar `_players` numa
+        thread concorrente ao `coop.sync()` do poll loop (sem lock).
         """
         enabled = params.get("enabled")
         if not isinstance(enabled, bool):
@@ -1837,6 +1847,12 @@ class IpcHandlersMixin:
 
         Params: enabled: bool (obrigatório). Com o co-op ligado + gamepad virtual
         ativo + 2+ controles, cada controle vira um jogador (P1, P2, …).
+
+        Achado Onda S #6: mesma decisão do `_handle_gamepad_emulation_set` —
+        o hide/restore por jogador (`_broker_hide_player`/`_broker_restore_
+        player`) roda no executor dedicado via `broker_call_nonblocking`; o
+        setter em si fica no event loop (mover `coop.sync` para thread
+        criaria corrida com o `sync` do poll loop em `_players`).
         """
         enabled = params.get("enabled")
         if not isinstance(enabled, bool):

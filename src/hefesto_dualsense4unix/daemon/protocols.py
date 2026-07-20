@@ -66,6 +66,12 @@ class DaemonProtocol(Protocol):
     # GYRO-01: `core.physical_report_reader.PhysicalReportReader` do vpad do
     # P1 (espelho de motion do físico → vpad uhid) ou None.
     _motion_reader: Any
+    # BROKER-01: lease-cliente do broker root hide-hidraw
+    # (`integrations.hidraw_broker_client.HidrawBrokerClient`) ou None.
+    _hidraw_broker_client: Any
+    # Achados Onda S #5/#6/#10: executor dedicado (1 worker) das operações do
+    # broker — ver `broker_call_nonblocking`; ou None até o 1º uso.
+    _hidraw_broker_executor: Any
     # FEAT-DSX-COOP-LOCAL-01: CoopManager (jogadores secundários) ou None.
     _coop_manager: Any
     _hotkey_manager: Any

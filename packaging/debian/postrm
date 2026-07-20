@@ -19,6 +19,27 @@ case "$1" in
         # Limpeza do venv bundlado (apt remove apenas arquivos rastreados;
         # o venv tem .pyc gerados em runtime que ficam orfaos sem isso).
         rm -rf /opt/hefesto-dualsense4unix 2>/dev/null || true
+        # BROKER-01 (Onda S — achados #2/#8): belt do purge — se o prerm foi
+        # interrompido (ou o remove veio de uma versao sem o bloco do broker),
+        # a unit ROOT hefesto-hidraw-broker nao pode sobreviver ao purge
+        # habilitada. Mesma sequencia do prerm: disable --now (dispara o
+        # ExecStopPost --restore-all-and-exit) + belt explicito + rm das
+        # units renderizadas e do binario instalado pelo install-host-udev.sh
+        # (ambos fora do manifesto do dpkg — purge promete remocao COMPLETA).
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl disable --now hefesto-hidraw-broker.socket \
+                hefesto-hidraw-broker.service 2>/dev/null || true
+        fi
+        if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+            /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+                --restore-all-and-exit 2>/dev/null || true
+        fi
+        rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
+              /etc/systemd/system/hefesto-hidraw-broker.socket \
+              /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload 2>/dev/null || true
+        fi
         ;;
     upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
 esac

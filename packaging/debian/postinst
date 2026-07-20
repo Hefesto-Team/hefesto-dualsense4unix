@@ -30,6 +30,11 @@ case "$1" in
         echo "Para habilitar o inicio automatico do daemon:"
         echo "  systemctl --user enable --now hefesto-dualsense4unix.service"
         echo ""
+        echo "Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do"
+        echo "jogo, cura de raiz do duplicado; o postinst roda sem sessao e NAO"
+        echo "pode renderizar o uid — ative da SUA sessao de usuario):"
+        echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+        echo ""
         echo "Ou abra 'Hefesto' no menu de aplicativos."
         ;;
     abort-upgrade|abort-remove|abort-deconfigure) ;;

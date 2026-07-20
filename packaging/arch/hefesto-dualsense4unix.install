@@ -24,6 +24,10 @@ post_install() {
   Para a GUI:
     hefesto-dualsense4unix-gui
 
+  Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
+  cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro):
+    sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+
   Pacotes opcionais recomendados:
     sudo pacman -S wlrctl       # auto-switch de perfis em Wayland
 
@@ -40,6 +44,25 @@ pre_remove() {
     echo ">>> Parando servicos do Hefesto - Dualsense4Unix (se ativos)..."
     systemctl --user stop hefesto-dualsense4unix.service 2>/dev/null || true
     systemctl --user disable hefesto-dualsense4unix.service 2>/dev/null || true
+
+    # BROKER-01 (Onda S — achado #21): purge nao pode deixar a unit ROOT do
+    # broker orfa habilitada. disable+stop dispara o ExecStopPost
+    # --restore-all-and-exit da propria unit (nenhum hidraw fisico fica 0600
+    # orfao); o belt explicito roda o MESMO restore ANTES de o pacman apagar
+    # o binario (a ordem do pacman remove os arquivos DEPOIS de pre_remove).
+    if systemctl is-enabled hefesto-hidraw-broker.socket >/dev/null 2>&1 \
+            || systemctl is-active hefesto-hidraw-broker.service >/dev/null 2>&1; then
+        echo ">>> Desabilitando broker root hide-hidraw (hefesto-hidraw-broker)..."
+        systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service \
+            2>/dev/null || true
+        if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+            /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit \
+                2>/dev/null || true
+        fi
+        rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
+              /etc/systemd/system/hefesto-hidraw-broker.socket
+        systemctl daemon-reload 2>/dev/null || true
+    fi
 }
 
 post_remove() {

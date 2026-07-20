@@ -130,6 +130,20 @@ package() {
             "$pkgdir/usr/lib/systemd/user/${base}"
     done
 
+    # BROKER-01 (Onda S — fd-injection): binário standalone + units-template
+    # do broker root hide-hidraw. NÃO ativa sozinho aqui — pacman roda
+    # package()/hooks sem sessão (sem SUDO_UID equivalente ⇒ renderizaria uid
+    # 0, PROIBIDO — lição 6). Bundla também o install-host-udev.sh (mesmo
+    # helper do .deb/Flatpak) para o usuário ATIVAR depois de instalar:
+    #   sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh
+    install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
+    install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/systemd/" \
+        assets/systemd/hefesto-hidraw-broker.service \
+        assets/systemd/hefesto-hidraw-broker.socket
+    install -Dm755 scripts/install-host-udev.sh \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
+
     # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
     if [ -d locale ]; then
         for lang_dir in locale/*/; do

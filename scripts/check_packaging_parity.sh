@@ -14,6 +14,10 @@
 #   4) alguma regra udev de assets/ não estiver coberta pelos instaladores
 #      (install_udev.sh, install-host-udev.sh, build_deb.sh) e pelo uninstall.sh
 #      — regra nova não pode sumir de um instalador sem ninguém notar.
+#   5) BROKER-01 (Onda S): o broker root hide-hidraw (fd-injection) não estiver
+#      referenciado em TODAS as formas de empacotamento (build_deb.sh,
+#      PKGBUILD, spec, flatpak, install-host-udev.sh) E no uninstall.sh —
+#      purge/remoção não pode deixar a unit ROOT órfã habilitada (achado #21).
 #
 # Rodável local e em CI. CHORE-PACKAGING-PARITY-ALL-FORMS-01.
 
@@ -22,8 +26,13 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 rc=0
 
+# Diretórios de BUILD dentro de packaging/ (target/ do Rust chega a dezenas
+# de GB): fora de todo grep recursivo — senão o check leva minutos e trava a
+# suíte que o executa por subprocess (test_check_packaging_parity.py).
+GREP_EXCLUDES=(--exclude-dir=target --exclude-dir=.flatpak-builder --exclude-dir=build)
+
 echo "== nome de unit do hotplug (assets/packaging/flatpak) =="
-if grep -rn 'hefesto-gui-hotplug' assets/ packaging/ flatpak/ 2>/dev/null \
+if grep -rn "${GREP_EXCLUDES[@]}" 'hefesto-gui-hotplug' assets/ packaging/ flatpak/ 2>/dev/null \
         | grep -v 'hefesto-dualsense4unix-gui-hotplug'; then
     echo "[FAIL] nome de unit ERRADO 'hefesto-gui-hotplug.service' acima"
     echo "       use 'hefesto-dualsense4unix-gui-hotplug.service'"
@@ -47,7 +56,7 @@ while IFS= read -r desk; do
         echo "[FAIL] $(basename "${desk}"): Icon=${icon} sem arquivo de ícone em ${dir}"
         rc=1
     fi
-done < <(grep -rl 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
+done < <(grep -rl "${GREP_EXCLUDES[@]}" 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
 
 echo "== X-HostWaylandDisplay nos .desktop de applet COSMIC (packaging/) =="
 while IFS= read -r desk; do
@@ -58,7 +67,7 @@ while IFS= read -r desk; do
         echo "[FAIL] $(basename "${desk}"): falta X-HostWaylandDisplay=true"
         rc=1
     fi
-done < <(grep -rl 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
+done < <(grep -rl "${GREP_EXCLUDES[@]}" 'X-CosmicApplet' --include='*.desktop' packaging/ 2>/dev/null)
 
 # FIX-PACKAGING-SEED-PARITY-01: paridade das regras udev entre assets/ e os
 # instaladores. A 78 (motion-not-joystick) nasceu só no caminho nativo — sem
@@ -151,6 +160,52 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
         rc=1
     fi
 done
+
+# BROKER-01 (Onda S — fd-injection, achado #21 da auditoria): purge/remoção
+# não pode deixar a unit ROOT do broker órfã habilitada em NENHUMA forma de
+# empacotamento. Gate: só cobra paridade SE o repo realmente tem o broker
+# (asset canônico presente) — um checkout sem a onda S (ex.: fixture mínima
+# de outros testes) fica silencioso, igual ao bloco de modprobe acima.
+echo "== paridade do broker hide-hidraw (hefesto-hidraw-broker) =="
+if [[ -f assets/systemd/hefesto-hidraw-broker.service ]]; then
+    missing=()
+    grep -qF "hefesto-hidraw-broker" scripts/build_deb.sh 2>/dev/null \
+        || missing+=("scripts/build_deb.sh")
+    grep -qF "hefesto-hidraw-broker" packaging/arch/PKGBUILD 2>/dev/null \
+        || missing+=("packaging/arch/PKGBUILD")
+    grep -qF "hefesto-hidraw-broker" packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
+        || missing+=("packaging/fedora/hefesto-dualsense4unix.spec")
+    grep -qF "hefesto-hidraw-broker" flatpak/*.yml 2>/dev/null \
+        || missing+=("flatpak/*.yml")
+    grep -qF "hefesto-hidraw-broker" scripts/install-host-udev.sh 2>/dev/null \
+        || missing+=("scripts/install-host-udev.sh")
+    # Achados Onda S #2/#8: o caminho Debian tem DOIS lados — o build
+    # (build_deb.sh EMPACOTA o broker; o grep acima cobre) e a REMOÇÃO
+    # (prerm/postrm, que o dpkg executa no apt remove/purge). Só o grep do
+    # build dava falso-verde: um purge sem broker nos maintainer scripts
+    # deixava a unit ROOT órfã habilitada. prerm E postrm precisam do
+    # caminho de remoção (disable + restore-all + rm das units).
+    grep -qF "hefesto-hidraw-broker" packaging/debian/prerm 2>/dev/null \
+        || missing+=("packaging/debian/prerm")
+    grep -qF "hefesto-hidraw-broker" packaging/debian/postrm 2>/dev/null \
+        || missing+=("packaging/debian/postrm")
+    # uninstall.sh é obrigatório em TODO checkout (o caminho nativo sempre
+    # precisa poder desfazer) — não é gateado pela existência do asset acima
+    # de propósito redundante: se o asset sumiu mas o texto ficou, ok; se o
+    # texto sumiu, falha aqui igual aos demais.
+    grep -qF "hefesto-hidraw-broker" uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] hefesto-hidraw-broker: coberto em todas as formas + remoção (uninstall.sh)"
+    else
+        echo "[FAIL] hefesto-hidraw-broker: FALTANDO em: ${missing[*]}"
+        echo "       purge/remoção pode deixar a unit ROOT órfã habilitada — cubra o binário"
+        echo "       + as units-template + o caminho de remoção no(s) instalador(es) furado(s)."
+        rc=1
+    fi
+else
+    echo "[ OK ] hefesto-hidraw-broker: assets/systemd/hefesto-hidraw-broker.service ausente — nada a checar"
+fi
 
 echo "─────────────────────────────────────────"
 if [[ "${rc}" -eq 0 ]]; then

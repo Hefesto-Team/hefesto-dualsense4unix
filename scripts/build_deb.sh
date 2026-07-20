@@ -212,6 +212,23 @@ for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
 # ---------------------------------------------------------------------------
+# BROKER-01 (Onda S — fd-injection): binário standalone + units-template
+# ---------------------------------------------------------------------------
+# O binário (stdlib pura) e as units NÃO ativam sozinhos aqui — postinst do
+# .deb roda sem sessão (SUDO_UID ausente ⇒ renderizaria uid 0, PROIBIDO —
+# lição 6). Só empacota; a ATIVAÇÃO (render __SESSION_UID__/__SESSION_GROUP__
+# + enable --now do .socket) é o mesmo helper install-host-udev.sh já
+# bundlado acima — rode-o depois do apt install para ligar o broker.
+echo "Copiando broker root hide-hidraw (hefesto-hidraw-broker) ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/broker"
+install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/broker/hidraw_broker.py"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/systemd"
+for _unit in hefesto-hidraw-broker.service hefesto-hidraw-broker.socket; do
+    [ -f "assets/systemd/${_unit}" ] && install -Dm644 "assets/systemd/${_unit}" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/systemd/${_unit}"
+done
+# ---------------------------------------------------------------------------
 # Copiar catalogos i18n (.mo) — FEAT-I18N-CATALOGS-01 (v3.4.0)
 # ---------------------------------------------------------------------------
 # Os .mo precisam estar em /usr/share/locale/<lang>/LC_MESSAGES/<domain>.mo
@@ -334,6 +351,9 @@ echo "  SHA-256 : ${SHA}"
 echo ""
 echo "Para instalar localmente:"
 echo "  sudo apt install ./${OUTPUT_DEB}"
+echo ""
+echo "Broker root hide-hidraw (BROKER-01) — ative depois do apt install:"
+echo "  sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh"
 echo ""
 echo "Para verificar conteúdo:"
 echo "  dpkg-deb -c ${OUTPUT_DEB}"

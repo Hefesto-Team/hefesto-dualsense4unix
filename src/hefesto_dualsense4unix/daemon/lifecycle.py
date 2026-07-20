@@ -206,6 +206,18 @@ class Daemon:
     # do físico → forward_motion). Criado/parado por start/stop_motion_reader
     # junto do vpad uhid; None com a emulação desligada ou no fallback uinput.
     _motion_reader: Any = None
+    # BROKER-01 — lease-cliente do broker root hide-hidraw
+    # (`integrations.hidraw_broker_client.HidrawBrokerClient`). Criado sob
+    # demanda por `broker_client_for` (lazy, lock de módulo); a conexão É a
+    # lease (EOF restaura tudo). None até o 1º hide/open; o shutdown fecha e
+    # zera explicitamente.
+    _hidraw_broker_client: Any = None
+    # Achados Onda S #5/#6/#10 — executor DEDICADO (1 worker, FIFO) das
+    # operações hide/restore do broker (`broker_call_nonblocking`): I/O de
+    # socket com timeout de 2 s jamais roda na thread do event loop. Lazy
+    # (criado no 1º uso a partir do loop); o shutdown o desliga com
+    # `cancel_futures=True` antes de fechar a lease.
+    _hidraw_broker_executor: Any = None
     # FEAT-DSX-COOP-LOCAL-01 — CoopManager: jogadores secundários (P2+) do co-op
     # local. Criado sob demanda por `get_coop_manager`; None até o 1º uso.
     _coop_manager: Any = None

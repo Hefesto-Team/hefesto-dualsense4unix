@@ -43,6 +43,18 @@
 #                         (SEM restart do bluetoothd) e cmdline gerenciado
 #                         (usbcore.autosuspend/usbcore.quirks com MERGE e
 #                         registro de dono). --no-udev pula os que tocam /etc.
+#   (DEFAULT) broker root hide-hidraw (BROKER-01/Onda S — fd-injection): passo
+#                         3h — esconde o hidraw FÍSICO do DualSense do JOGO
+#                         (cura de raiz do controle duplicado) via broker de
+#                         SISTEMA socket-activated; serve fd O_RDWR ao daemon
+#                         via SCM_RIGHTS (cmd `open`) para o giroscópio nunca
+#                         morrer, mesmo com o nó escondido. PRIMEIRO serviço de
+#                         SISTEMA (systemd system, não --user) do projeto. Sem
+#                         flag de opt-out ainda (broker ausente/recusado
+#                         degrada para o comportamento de hoje — duplicado,
+#                         nunca zero controles). Vale para TODO formato
+#                         (native/flatpak/appimage/deb — achado Onda S #7).
+#                         --no-udev pula (mesmo gate dos passos de plataforma).
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -149,7 +161,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,87p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,99p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -232,6 +244,28 @@ _register_cmdline_owner() {
         printf '%s=%s\n' "${key}" "${value}"
     } > "${CMDLINE_OWNERS_FILE}.tmp"
     mv "${CMDLINE_OWNERS_FILE}.tmp" "${CMDLINE_OWNERS_FILE}"
+}
+
+# Render das units do broker root hide-hidraw (BROKER-01/Onda S): substitui
+# __SESSION_UID__/__SESSION_GROUP__ pelos valores reais da sessão e GARANTE
+# que nenhum placeholder sobra (guarda pós-render — lição 6 da auditoria:
+# nunca instalar unit com __SESSION_* literal, que autorizaria um uid
+# inválido no .service ou deixaria o .socket sem grupo). Escreve os 2
+# arquivos renderizados em "${out_dir}" e devolve 0; devolve 1 SEM escrever
+# nada utilizável se o placeholder sobrar (ex.: asset editado errado). Função
+# isolada de propósito — testável sem sudo/systemctl (tests/unit/
+# test_install_broker_step.py).
+_render_broker_units() {
+    local service_src="$1" socket_src="$2" out_dir="$3" uid="$4" grupo="$5"
+    sed "s/__SESSION_UID__/${uid}/" "${service_src}" \
+        > "${out_dir}/hefesto-hidraw-broker.service"
+    sed "s/__SESSION_GROUP__/${grupo}/" "${socket_src}" \
+        > "${out_dir}/hefesto-hidraw-broker.socket"
+    if grep -q '__SESSION_' "${out_dir}/hefesto-hidraw-broker.service" \
+            "${out_dir}/hefesto-hidraw-broker.socket"; then
+        return 1
+    fi
+    return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -333,6 +367,76 @@ install_udev_host() {
     fi
 }
 
+# BROKER-01 (Onda S — achado #7): o broker root hide-hidraw é DEFAULT em TODO
+# formato de instalação, não só no native. flatpak/appimage/deb davam `exit 0`
+# ANTES do passo 3h e ficavam sem a cura de raiz do controle duplicado, em
+# silêncio. Função compartilhada: o passo 3h (native) e o bloco dos formatos
+# de pacote chamam o MESMO caminho (render por-máquina + enable do .socket).
+# Best-effort integral: qualquer falha vira warn e o install segue (broker
+# ausente degrada para o comportamento de hoje — duplicado, nunca zero).
+install_broker_host() {
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        printf '      broker pulado (--no-udev) — re-execute ./install.sh sem a flag para ativá-lo\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — broker hide-hidraw NÃO instalado (a cura de raiz do duplicado fica de fora)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — broker hide-hidraw pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    _broker_uid="${SUDO_UID:-$(id -u)}"
+    if [[ "${_broker_uid}" == "0" ]]; then
+        # Lição 6 (auditoria): renderizar uid 0 criaria um broker que só
+        # autoriza ROOT — nenhum daemon de usuária conseguiria conectar.
+        # Aborta SÓ este passo (nunca o install inteiro).
+        warn "SESSION_UID resolveu 0 (root) — o broker autorizaria ROOT e nenhum daemon de usuária conectaria. Rode ./install.sh da SESSÃO da usuária (sudo é pedido internamente). Passo ABORTADO."
+        return 0
+    fi
+    _broker_grupo="$(id -gn -- "${_broker_uid}")"
+    _broker_bin_src="${ROOT_DIR}/src/hefesto_dualsense4unix/broker/hidraw_broker.py"
+    _broker_bin_dst="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
+    _broker_tmp="$(mktemp -d)"
+    if [[ ! -f "${_broker_bin_src}" ]]; then
+        warn "src/hefesto_dualsense4unix/broker/hidraw_broker.py ausente — broker NÃO instalado"
+    elif ! _render_broker_units \
+            "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.service" \
+            "${ROOT_DIR}/assets/systemd/hefesto-hidraw-broker.socket" \
+            "${_broker_tmp}" "${_broker_uid}" "${_broker_grupo}"; then
+        warn "render das units do broker deixou placeholder __SESSION_* sobrando — broker NÃO instalado"
+    elif ! sudo install -Dm755 "${_broker_bin_src}" "${_broker_bin_dst}" 2>/dev/null; then
+        warn "não consegui gravar ${_broker_bin_dst}"
+    elif ! sudo install -Dm644 "${_broker_tmp}/hefesto-hidraw-broker.service" \
+            /etc/systemd/system/hefesto-hidraw-broker.service 2>/dev/null \
+         || ! sudo install -Dm644 "${_broker_tmp}/hefesto-hidraw-broker.socket" \
+            /etc/systemd/system/hefesto-hidraw-broker.socket 2>/dev/null; then
+        warn "não consegui gravar as units do broker em /etc/systemd/system"
+    else
+        sudo systemctl daemon-reload >/dev/null 2>&1 || true
+        if sudo systemctl enable --now hefesto-hidraw-broker.socket >/dev/null 2>&1; then
+            printf '      hefesto-hidraw-broker.socket habilitado (uid %s, grupo %s — só o .socket; o .service sobe na 1ª conexão)\n' \
+                "${_broker_uid}" "${_broker_grupo}"
+            # Registro de posse p/ uninstall (mesma disciplina do
+            # cmdline-owners PLAT-03): caminhos + sha256, p/ o
+            # uninstall remover SÓ o que fomos NÓS que instalamos.
+            _broker_owner_file="${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
+            mkdir -p "$(dirname "${_broker_owner_file}")"
+            {
+                for _bp in "${_broker_bin_dst}" \
+                           /etc/systemd/system/hefesto-hidraw-broker.service \
+                           /etc/systemd/system/hefesto-hidraw-broker.socket; do
+                    printf '%s=%s\n' "${_bp}" "$(sha256sum "${_bp}" 2>/dev/null | awk '{print $1}')"
+                done
+            } > "${_broker_owner_file}"
+        else
+            warn "enable --now do hefesto-hidraw-broker.socket falhou — habilite manualmente"
+        fi
+    fi
+    rm -rf "${_broker_tmp}"
+}
+
 format_flatpak() {
     step "flatpak" "build + flatpak install --user (GNOME//47)"
     require flatpak
@@ -411,6 +515,12 @@ if [[ "${FORMAT}" != "native" ]]; then
             warn "install_snd_quirk.sh falhou — rode: sudo bash scripts/install_snd_quirk.sh"
         fi
     fi
+    # BROKER-01 (Onda S — achado #7): o broker hide-hidraw é DEFAULT em TODO
+    # formato (regra da casa: install SEM FLAGS). Antes, flatpak/appimage/deb
+    # saíam daqui sem o broker e sem nenhum aviso — o P2 duplicado voltava em
+    # qualquer jogo sem wrapper. Mesmo passo 3h do fluxo native.
+    step "broker" "broker root hide-hidraw (BROKER-01 — DEFAULT em todo formato)"
+    install_broker_host
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
@@ -1024,6 +1134,25 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
             warn "bt-agent ainda ausente — agente de pareamento NÃO habilitado"
         fi
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3h. Broker root hide-hidraw (BROKER-01/Onda S — fd-injection) — DEFAULT
+# ---------------------------------------------------------------------------
+# Esconde o hidraw FÍSICO do DualSense do JOGO (cura de RAIZ do controle
+# duplicado): broker de SISTEMA (PRIMEIRO da história do projeto — os demais
+# são --user), socket-activated, que recebe hide/restore do daemon E devolve
+# um fd O_RDWR via SCM_RIGHTS (cmd `open`) para o motion reader nunca precisar
+# reabrir por caminho — o giroscópio sobrevive mesmo com o nó escondido.
+# Desenho completo: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
+# §7.1. Sem flag de opt-out: broker ausente/recusado degrada para o
+# comportamento de hoje (duplicado, nunca zero controles — invariante sagrado).
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+    step "3h" "broker root hide-hidraw (cura de raiz do P2 duplicado — BROKER-01)"
+    # Achado Onda S #7: o corpo virou a função compartilhada
+    # `install_broker_host` — o MESMO caminho roda nos formatos
+    # flatpak/appimage/deb (que saem com `exit 0` antes deste passo).
+    install_broker_host
 fi
 
 # ---------------------------------------------------------------------------
