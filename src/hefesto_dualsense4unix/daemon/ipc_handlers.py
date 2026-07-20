@@ -49,6 +49,17 @@ def _as_str_or_none(value: Any) -> str | None:
 #: 20 opens/s POR CONTROLE. Cor de lightbar com 1 s de frescor é imperceptível.
 _LIGHTBAR_READ_TTL_SEC = 1.0
 
+#: Fix cross-cutting U x G/HANG-01 (2026-07-20, MEDIUM): teto (s) para
+#: `identity.renumber` adquirir os `RLock` de instância de
+#: `lock_for_renumber`. O MESMO lock é tomado por `ExternalLedSync.tick()`
+#: (via `sync_connected`→`_save_locked`, I/O de disco) rodando no pool
+#: dedicado `hefesto-ext` sob `EXTERNAL_TICK_TIMEOUT_SEC` — se aquele worker
+#: travar segurando o lock, um `acquire()` sem teto aqui bloquearia o ÚNICO
+#: event loop do daemon para sempre (zero read_state, zero rumble, zero
+#: watchdog), a mesma classe de incidente que HANG-01 foi desenhado para
+#: conter. `asyncio.wait_for` devolve erro ao IPC em vez de pendurar o loop.
+_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
+
 #: GUI-05 item 3: TTL (s) da leitura do marker `last_run` do wrapper no
 #: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
@@ -178,8 +189,16 @@ def _external_inventory(
     hid-nintendo desregistrá-lo — `joycon_enforce_subcmd_rate` ao vivo).
     Quem numera E acende é o tick lento do daemon (`ExternalLedSync`);
     `player_slot` aqui vem do registry (via `slot_resolver`, leitura pura por
-    uniq) e cai no posicional `dualsense_count + índice + 1` quando o
-    registry ainda não opinou (daemon fake/legado ou 1º tick pendente).
+    uniq).
+
+    NUMA-05 (fim do posicional): com `slot_resolver` PRESENTE, a opinião dele
+    é a fonte ÚNICA de `player_slot` — inclusive quando a opinião é "nenhuma
+    ainda" (``None``, registry sem sessão pra aquele device ou exceção
+    suprimida). O posicional `dualsense_count + índice + 1` re-embaralhava a
+    GUI a cada mudança de `ds_count` (o ponto cego do incidente de 14:42:
+    um DualSense sumir do `ds_count` deslocava TODOS os externos exibidos) e
+    agora só sobrevive quando NÃO HÁ resolver nenhum (daemon fake/legado,
+    antes do 8BIT-02 — nunca opinou). Null honesto > número errado.
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
 
@@ -203,9 +222,13 @@ def _external_inventory(
                 raw = slot_resolver(identity)
                 if isinstance(raw, int) and not isinstance(raw, bool):
                     slot = raw
-        entry["player_slot"] = (
-            slot if slot is not None else dualsense_count + index + 1
-        )
+            # NUMA-05: resolver PRESENTE = fonte ÚNICA, mesmo devolvendo None
+            # (sem opinião ainda) ou tendo levantado (suppress acima) — NUNCA
+            # mais cai no posicional aqui embaixo.
+            entry["player_slot"] = slot
+        else:
+            # Compat: só daemon SEM resolver (fake/legado) usa o posicional.
+            entry["player_slot"] = dualsense_count + index + 1
     return inventory
 
 
@@ -378,6 +401,23 @@ class IpcHandlersMixin:
         g = max(0, min(255, int(rgb[1] * brightness)))
         b = max(0, min(255, int(rgb[2] * brightness)))
         self.controller.set_led((r, g, b))
+        # Fix cross-cutting U x N (2026-07-20, HIGH): `set_led` escreve CRU via
+        # `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`) — sem
+        # isto a cor do JOGO ficava sobrescrita na hora, e a trava manual
+        # logo abaixo impedia até o autoswitch corrigir no próximo alt-tab.
+        # `reassert_resolved_outputs` (getattr defensivo, mesmo padrão de
+        # `identity.renumber` e `DraftApplier._apply_leds`) reaplica o
+        # RESOLVIDO por-controle já com a escrita acima registrada em
+        # `_desired` — se `display_authority=='game'`, o merge devolve a cor
+        # do jogo por cima; sem jogo com autoridade, a cor manual "gruda"
+        # normalmente. O gate de N deixa de ser furável por aqui.
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
+        # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
+        # AutoSwitcher reescrevia a cor no próximo tick de troca de foco
+        # ("perfil eterno", U9).
+        self.store.mark_manual_trigger_active()
         return {"status": "ok"}
 
     async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -396,7 +436,177 @@ class IpcHandlersMixin:
             bits_raw[0], bits_raw[1], bits_raw[2], bits_raw[3], bits_raw[4]
         )
         self.controller.set_player_leds(bits)
+        # Fix cross-cutting U x N (2026-07-20, HIGH) — mesmo raciocínio de
+        # `_handle_led_set`: reassert imediato para o merge de N (jogo vence
+        # sob `display_authority=='game'`) corrigir a escrita crua acima
+        # antes de a trava manual abaixo bloquear o autoswitch.
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
+        # ONDA-U (Causa A): mesma trava de trigger.set (U9).
+        self.store.mark_manual_trigger_active()
         return {"status": "ok", "bits": list(bits)}
+
+    # --- identidade (numeração) -------------------------------------------
+
+    async def _handle_identity_renumber(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Compacta os slots de exibição (DualSense + externos) p/ 1..N (ONDA-U/U2/U10).
+
+        Cura o "sony 1 / sony 4" com só 2 controles: slots de sessões
+        anteriores ficam RESERVADOS (D2) e nunca encolhem sozinhos enquanto
+        a sessão não esvazia de vez. Gate: recusa com uma sessão de jogo
+        ABERTA (``display_authority == 'game'``) — repintar o LED do
+        controle que o jogo está usando NO MEIO da partida é o mesmo erro
+        que o NUMA-03 já resolveu para o tick automático; aqui é uma ação
+        EXPLÍCITA da usuária, então o gate é o mesmo critério, não uma cópia
+        frouxa.
+
+        A numeração é um espaço ÚNICO entre DualSense (``identity.py``) e
+        externos (``external_identity.py`` — EXT-04), então a compactação é
+        GLOBAL: junta os dois ``snapshot()``, ordena pelo slot ATUAL
+        (preserva a ORDEM RELATIVA — quem já era o menor continua na
+        frente) e reatribui 1..N: cada registro só recebe de volta a fatia
+        de chaves que é dele (``ControllerIdentityRegistry.compact`` /
+        ``ExternalIdentityRegistry.compact``, ambos sob o
+        ``CONTROLLERS_FILE_LOCK`` de NUMA-04 via ``_save_locked``). Sem
+        controle nenhum registrado (nenhum dos dois registros fiado, ou
+        ambos vazios) devolve ``renumbered`` vazio — no-op seguro.
+
+        Repintura: ``reassert_resolved_outputs`` (getattr defensivo, mesmo
+        padrão do apply_draft) reafirma o LED do DualSense já com o slot
+        novo; os externos são repintados pelo PRÓPRIO tick lento seguinte
+        (``ExternalLedSync.tick`` compara contra o slot atualizado — sem
+        precisar de escrita síncrona aqui), mas o agendamento é adiantado
+        via ``daemon._schedule_external_tick`` (getattr defensivo) para não
+        esperar o intervalo cheio do poll.
+
+        Atomicidade plan→apply (fix TOCTOU, achado MEDIUM 2026-07-20): o
+        span inteiro ``snapshot()`` → plano em memória → ``compact()`` roda
+        com os DOIS ``RLock`` de instância (``lock_for_renumber``, quando o
+        registro os expõe) tomados o tempo todo — sem isto, um
+        ``slot_for(assign=True)`` concorrente (hotplug real sob o
+        ``_io_lock`` do backend, ou o tick do ``ExternalLedSync``) podia ler
+        o estado AINDA não-compactado entre as duas chamadas e reivindicar
+        exatamente o slot-alvo que o ``compact()`` estava prestes a devolver
+        a outro controle — dois "Controle 1" simultâneos. Ordem de aquisição
+        fixa (identity antes de external, sempre) evita deadlock; nenhum
+        outro caminho do código toma os dois locks ao mesmo tempo. Getattr
+        defensivo: fakes/backends antigos sem o método seguem sem a trava
+        (mesmo risco de HEAD, nunca pior).
+
+        Isolamento do lock (fix MEDIUM cross-cutting U x HANG-01, 2026-07-20):
+        a aquisição dos dois ``RLock`` + o plano + o ``compact()`` rodam via
+        ``asyncio.to_thread`` sob ``asyncio.wait_for`` — nunca mais direto
+        neste método `async`, que é despachado no ÚNICO event loop do
+        daemon. O MESMO lock de ``external_registry`` é tomado por
+        ``ExternalLedSync.tick()`` (``sync_connected``→``_save_locked``, I/O
+        de disco) no pool dedicado ``hefesto-ext`` sob
+        ``EXTERNAL_TICK_TIMEOUT_SEC`` (HANG-01) — se aquele worker travar
+        segurando o lock, um ``acquire()`` sem teto aqui pendurava o loop
+        inteiro para sempre (zero ``read_state``, zero rumble, zero
+        watchdog), reproduzindo a classe de incidente que o HANG-01 foi
+        desenhado para conter, por um caminho novo que o fix de HANG-01 não
+        cobria. Offload no executor PADRÃO do loop (não o ``hefesto-ext``
+        dedicado — enfileirar atrás de um worker já travado não ajudaria) +
+        timeout devolve erro ao IPC em vez de travar o daemon inteiro.
+        """
+        authority = (
+            getattr(self.daemon, "display_authority", "unknown")
+            if self.daemon is not None
+            else "unknown"
+        )
+        if authority == "game":
+            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
+
+        identity_registry = (
+            getattr(self.daemon, "identity_registry", None)
+            if self.daemon is not None
+            else None
+        )
+        external_registry = (
+            getattr(self.daemon, "external_registry", None)
+            if self.daemon is not None
+            else None
+        )
+
+        try:
+            renumbered = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._renumber_locked, identity_registry, external_registry
+                ),
+                timeout=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "identity_renumber_lock_timeout",
+                timeout_sec=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
+            )
+            return {"ok": False, "reason": "lock_timeout"}
+
+        if not renumbered:
+            return {"ok": True, "renumbered": {}}
+
+        reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+        if callable(reassert):
+            reassert()
+        schedule_external_tick = (
+            getattr(self.daemon, "_schedule_external_tick", None)
+            if self.daemon is not None
+            else None
+        )
+        if callable(schedule_external_tick):
+            schedule_external_tick()
+
+        return {"ok": True, "renumbered": renumbered}
+
+    @staticmethod
+    def _renumber_locked(
+        identity_registry: Any, external_registry: Any
+    ) -> dict[str, int]:
+        """Corpo BLOQUEANTE de `identity.renumber` — só via `asyncio.to_thread`.
+
+        Extraído para nunca mais rodar direto no event loop (fix MEDIUM
+        cross-cutting 2026-07-20, ver docstring do chamador). Devolve
+        ``{}`` quando não há controle nenhum registrado (no-op seguro,
+        idêntico ao HEAD).
+        """
+        with contextlib.ExitStack() as locks:
+            for reg in (identity_registry, external_registry):
+                acquire = getattr(reg, "lock_for_renumber", None)
+                if callable(acquire):
+                    locks.enter_context(acquire())
+
+            entries: list[tuple[int, str, Any]] = []
+            if identity_registry is not None:
+                entries.extend(
+                    (slot, key, identity_registry)
+                    for key, slot in identity_registry.snapshot().items()
+                )
+            if external_registry is not None:
+                entries.extend(
+                    (slot, key, external_registry)
+                    for key, slot in external_registry.snapshot().items()
+                )
+            if not entries:
+                return {}
+
+            entries.sort(key=lambda entry: entry[0])
+            renumbered: dict[str, int] = {}
+            identity_map: dict[str, int] = {}
+            external_map: dict[str, int] = {}
+            for new_slot, (_old_slot, key, registry) in enumerate(entries, start=1):
+                renumbered[key] = new_slot
+                if registry is identity_registry:
+                    identity_map[key] = new_slot
+                else:
+                    external_map[key] = new_slot
+
+            if identity_registry is not None and identity_map:
+                identity_registry.compact(identity_map)
+            if external_registry is not None and external_map:
+                external_registry.compact(external_map)
+
+            return renumbered
 
     # --- estado ----------------------------------------------------------
 
@@ -565,6 +775,11 @@ class IpcHandlersMixin:
         result["native_bt_fragil"] = bool(
             result["native_mode"] and result["transport"] == "bt"
         )
+
+        # NUMA-05: sinal de autoridade de exibição (NUMA-01) para GUI/doctor —
+        # a mesma leitura que o `defend_display`/merge-gate do backend usam,
+        # SÓ exposição (nunca decide nada aqui).
+        result["game_signal"] = self._game_signal_snapshot()
 
         # FEAT-DSX-MULTI-CONTROLLER-01: lista de controles conectados (uma entrada
         # por controle físico, com transporte e qual é o primário) para a GUI, o
@@ -1103,6 +1318,76 @@ class IpcHandlersMixin:
             motivo = raw if isinstance(raw, str) and raw else "sem_uhid"
         return backend, motivo
 
+    # --- NUMA-05: sinal de autoridade de exibição (game/daemon/unknown) ----
+
+    _AUTHORITY_VALUES = ("game", "daemon", "unknown")
+
+    def _game_signal_snapshot(self) -> dict[str, Any]:
+        """`game_signal` do `state_full` — quem manda na exibição AGORA.
+
+        Contrato (NUMA-01, `daemon/lifecycle.py`): `daemon.display_authority`
+        é property PÚBLICA 'game'|'daemon'|'unknown' — a MESMA leitura que o
+        merge-gate do backend (`_game_wins`) e o `ExternalLedSync.tick`
+        consultam, nunca uma segunda fonte da verdade. ``degradado`` é
+        derivado da PRÓPRIA autoridade: ``authority == "unknown"`` já É o
+        estado degradado/fail-safe da síntese da Onda N (ambiguidade —
+        detector cego, marker ilegível, ou o sinal simplesmente ainda não
+        foi fiado nesta versão do daemon) — nunca inventa 'game'/'daemon'.
+
+        Diagnóstico rico opcional (evidência/motivo/timestamp da última
+        transição) é best-effort via `daemon._game_signal.diagnostico()` —
+        ponto de extensão forward-compatible; a casca `GameSignal` atual
+        (NUMA-01) não o expõe ainda, então ``evidencia``/``motivo``/``desde``
+        ficam ``None`` na prática, exceto o `motivo="sinal_nao_wireado"`
+        quando `display_authority` nem existe (versão anterior ao NUMA-01).
+        Exceção em `diagnostico()` não derruba o `state_full` — a
+        `authority` já foi lida antes, independente do diagnóstico.
+        """
+        authority_raw = (
+            getattr(self.daemon, "display_authority", None)
+            if self.daemon is not None
+            else None
+        )
+        wired = isinstance(authority_raw, str) and authority_raw in self._AUTHORITY_VALUES
+        authority = authority_raw if wired else "unknown"
+
+        evidencia: str | None = None
+        motivo: str | None = None if wired else "sinal_nao_wireado"
+        desde: float | None = None
+        # unknown É o estado degradado/fail-safe por definição da síntese —
+        # tanto o "não wireado" (wired=False) quanto o "classify() genuíno
+        # devolveu unknown" (wired=True, authority=="unknown") contam.
+        degradado = authority == "unknown"
+
+        diag_source = (
+            getattr(self.daemon, "_game_signal", None)
+            if self.daemon is not None
+            else None
+        )
+        diagnostico = getattr(diag_source, "diagnostico", None)
+        if callable(diagnostico):
+            with contextlib.suppress(Exception):
+                raw_diag = diagnostico()
+                if isinstance(raw_diag, dict):
+                    evidencia = _as_str_or_none(raw_diag.get("evidencia"))
+                    motivo = _as_str_or_none(raw_diag.get("motivo")) or motivo
+                    desde_raw = raw_diag.get("desde")
+                    if isinstance(desde_raw, (int, float)) and not isinstance(
+                        desde_raw, bool
+                    ):
+                        desde = float(desde_raw)
+                    degradado_raw = raw_diag.get("degradado")
+                    if isinstance(degradado_raw, bool):
+                        degradado = degradado_raw
+
+        return {
+            "authority": authority,
+            "evidencia": evidencia,
+            "motivo": motivo,
+            "desde": desde,
+            "degradado": degradado,
+        }
+
     # --- GUI-05 item 3: honestidade do wrapper (`wrapper_used`) -----------
 
     def _wrapper_used_now(self) -> bool | None:
@@ -1190,11 +1475,13 @@ class IpcHandlersMixin:
                 ]
             }
         if external_raw:
-            # 8BIT-02/EXT-04: os externos numeram CONTINUANDO os DualSense.
-            # A fonte do slot é o registry persistente do daemon (leitura
-            # PURA — quem escreve o LED é o tick lento, nunca este handler);
-            # o posicional ds_count+índice+1 é só o fallback de exibição
-            # enquanto o registry não opinou (daemon fake/1º tick pendente).
+            # 8BIT-02/EXT-04/NUMA-05: os externos numeram CONTINUANDO os
+            # DualSense. A fonte do slot é o registry persistente do daemon
+            # (leitura PURA — quem escreve o LED é o tick lento, nunca este
+            # handler); com o registry presente, `player_slot=None` (sem
+            # opinião ainda) É o resultado — nunca mais o posicional. O
+            # posicional ds_count+índice+1 só sobrevive sem `daemon`/registry
+            # nenhum (daemon fake/legado — compat).
             ds_count = sum(
                 1
                 for c in result["controllers"]
@@ -1263,6 +1550,10 @@ class IpcHandlersMixin:
         # Aplica política antes de enviar ao hardware.
         eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong)
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
+        # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
+        # AutoSwitcher reescrevia o rumble no próximo tick de troca de foco
+        # (U11).
+        self.store.mark_manual_trigger_active()
         return {"status": "ok", "weak": weak, "strong": strong}
 
     async def _handle_rumble_stop(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1277,6 +1568,8 @@ class IpcHandlersMixin:
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (0, 0)
         self.controller.set_rumble(weak=0, strong=0)
+        # ONDA-U (Causa A): mesma trava de trigger.set (U11).
+        self.store.mark_manual_trigger_active()
         return {"status": "ok"}
 
     async def _handle_rumble_passthrough(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1289,6 +1582,20 @@ class IpcHandlersMixin:
         Params:
             enabled: bool — True = habilitar passthrough (zerar rumble_active).
                             False = sem efeito; para fixar valores use rumble.set.
+
+        ONDA-U (Causa A, fix HIGH 2026-07-20 — "trava sem fim"): `rumble.set`/
+        `rumble.stop` armam `mark_manual_trigger_active()` (silêncio ou valor
+        fixo são overrides DELIBERADOS, que devem sobreviver a uma troca de
+        foco — mesma semântica de `trigger.set`). Mas este handler é o gesto
+        SIMÉTRICO de liberação ("Devolver ao jogo" da aba Rumble e o fim do
+        "Testar motores" em `_rumble_test_stop`, que sempre termina chamando
+        `rumble_passthrough(True)`) — o único par de `clear_manual_trigger_
+        active()` do repo vivia em `profile.switch`/`trigger.reset`; sem este
+        `elif`, armar aqui TAMBÉM deixava a trava permanentemente ligada (sem
+        timeout, sem indicador na GUI) até a usuária ir na aba Perfis clicar
+        "Ativar" — silenciando o autoswitch por engano numa ação pensada para
+        NÃO deixar rastro. `enabled=False` é documentado como sem efeito (nem
+        rumble_active é tocado) — não mexe na trava por coerência.
         """
         enabled = params.get("enabled")
         if not isinstance(enabled, bool):
@@ -1297,6 +1604,7 @@ class IpcHandlersMixin:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
+            self.store.clear_manual_trigger_active()
         return {"status": "ok", "passthrough": enabled}
 
     async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:

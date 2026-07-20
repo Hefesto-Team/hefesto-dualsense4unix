@@ -320,3 +320,101 @@ def test_marker_last_run_regravado_a_cada_launch(runtime, tmp_path):
     assert marker["appid"] == "20"
     tmp_sobra = tmp_path / "hefesto-dualsense4unix" / "launch_env" / "last_run.tmp"
     assert not tmp_sobra.exists()
+
+
+# --- NUMA-01: pid=$$ no last_run + marker last_exit ---------------------------
+
+
+def _last_exit(state_home: Path) -> dict[str, str]:
+    marker = state_home / "hefesto-dualsense4unix" / "launch_env" / "last_exit"
+    out: dict[str, str] = {}
+    for linha in marker.read_text(encoding="utf-8").splitlines():
+        chave, _, valor = linha.partition("=")
+        out[chave] = valor
+    return out
+
+
+def test_marker_last_run_grava_pid(runtime, tmp_path):
+    """NUMA-01: `pid=$$` no `last_run` — o `exec env` final preserva o PID
+    (o wrapper VIRA o jogo), então este é o pid do próprio processo do jogo
+    enquanto ele roda."""
+    result = _run_wrapper(runtime=runtime, state_home=tmp_path, appid="1599660")
+    assert result.returncode == 0
+    marker = _last_run(tmp_path)
+    assert marker["pid"].isdigit()
+    assert int(marker["pid"]) > 0
+
+
+def test_launch_normal_nao_grava_last_exit(runtime, tmp_path):
+    """Caminho feliz (o `exec` no fim do wrapper SUCEDE): o handler de EXIT
+    nunca dispara — `last_exit` não é gravado. A liveness de "jogo ainda
+    rodando" é o `pid` do `last_run` (checado via kill(pid, 0) pelo
+    daemon), não este marker."""
+    daemon = _FakeDaemon(_socket_path(runtime))
+    try:
+        result = _run_wrapper(runtime=runtime, state_home=tmp_path)
+    finally:
+        daemon.stop()
+    assert result.returncode == 0
+    marker = tmp_path / "hefesto-dualsense4unix" / "launch_env" / "last_exit"
+    assert not marker.exists()
+
+
+def test_exec_falhando_grava_last_exit_e_o_launch_nao_trava(runtime, tmp_path):
+    """NUMA-01: PATH sem o binário `env(1)` => o `exec env "$@"` final falha
+    e o wrapper cai no handler de EXIT (`_hefesto_on_exit`) — `last_exit`
+    é gravado best-effort e o processo termina (nunca trava esperando)."""
+    import shutil
+
+    bindir = tmp_path / "bin-sem-env"
+    bindir.mkdir()
+    for tool in ("sh", "date", "mkdir", "mv"):
+        real_path = shutil.which(tool)
+        assert real_path is not None, f"ferramenta de teste ausente: {tool}"
+        (bindir / tool).symlink_to(real_path)
+
+    env = {
+        "PATH": str(bindir),
+        "HOME": os.environ.get("HOME", "/tmp"),
+        "XDG_RUNTIME_DIR": str(runtime),
+        "XDG_STATE_HOME": str(tmp_path),
+        "SteamAppId": "1599660",
+    }
+    antes = int(time.time())
+    result = subprocess.run(
+        ["sh", str(_WRAPPER), "sh", "-c", "printf jogo-abriu"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10.0,
+        check=False,
+    )
+    # exec falhou (env ausente) => o comando embrulhado NUNCA rodou, mas o
+    # wrapper termina (não trava) e grava o marker de saída.
+    assert result.returncode != 0
+    assert "jogo-abriu" not in result.stdout
+    saida = _last_exit(tmp_path)
+    assert antes <= int(saida["epoch"]) <= int(time.time()) + 1
+    # Correção pós-auditoria da Onda N: `pid=$$` no `last_exit` correlaciona
+    # a saída ao PRÓPRIO wrapper que a gravou — sem isso, `last_run`/
+    # `last_exit` sendo arquivos GLOBAIS, o `last_exit` de UM launch que
+    # falhou o `exec` podia invalidar o `last_run` de um launch B
+    # POSTERIOR e bem-sucedido só por ordem de escrita no disco.
+    assert saida["pid"].isdigit()
+    assert int(saida["pid"]) > 0
+
+
+def test_last_exit_best_effort_com_diretorio_ilegivel(runtime, tmp_path):
+    """`record_last_exit`/`record_last_run` nunca travam nem derrubam o
+    launch mesmo com o diretório de estado ILEGÍVEL (ex.: permissão
+    negada) — o jogo abre do mesmo jeito."""
+    state_home = tmp_path / "estado"
+    launch_env_dir = state_home / "hefesto-dualsense4unix" / "launch_env"
+    launch_env_dir.parent.mkdir(parents=True)
+    launch_env_dir.parent.chmod(0o500)  # sem permissão de escrita
+    try:
+        result = _run_wrapper(runtime=runtime, state_home=state_home)
+    finally:
+        launch_env_dir.parent.chmod(0o700)
+    assert result.returncode == 0
+    assert result.stdout.strip() == "IGNORE=|HIDAPI=|HIDRAW=|LD="

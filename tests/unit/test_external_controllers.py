@@ -20,6 +20,8 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     mode_selector_state,
     nintendo_bt_warning,
     short_button_label,
+    slot_label,
+    slot_of,
     transport_label,
 )
 
@@ -272,3 +274,58 @@ class TestSlotGlobalDosBotoes:
             "Nintendo 3 · cabo",
             "Xbox 4 · cabo",
         ]
+
+
+class TestSlotOfFimDoPosicional:
+    """NUMA-05 (bloco 11 POSICIONAL) — `slot_of` nunca mais reembaralha.
+
+    Com `player_slot` PRESENTE no payload do daemon (o normal desde o
+    8BIT-01), a chave é a fonte ÚNICA — mesmo valendo ``None`` (registry sem
+    opinião ainda). O posicional só roda quando a CHAVE está AUSENTE (daemon
+    de antes do 8BIT-02).
+    """
+
+    def test_player_slot_inteiro_vence(self) -> None:
+        entry = {**_8BITDO_CABO, "player_slot": 4}
+        # index/dualsense_count diferentes do slot -> o valor do daemon vence.
+        assert slot_of(entry, dualsense_count=0, index=0) == 4
+
+    def test_player_slot_none_devolve_none_falha_sem(self) -> None:
+        """FALHA-SEM: no HEAD pré-NUMA-05, isto devolvia o posicional (1)
+        em vez de None — reembaralhando a numeração a cada refresh."""
+        entry = {**_8BITDO_CABO, "player_slot": None}
+        assert slot_of(entry, dualsense_count=0, index=0) is None
+
+    def test_player_slot_none_estavel_sob_troca_de_ds_count(self) -> None:
+        """POSICIONAL bloco 11: `ds_count` 1 -> 0 não move o slot None."""
+        entry = {**_8BITDO_CABO, "player_slot": None}
+        primeiro = slot_of(entry, dualsense_count=1, index=0)
+        segundo = slot_of(entry, dualsense_count=0, index=0)
+        assert primeiro is None
+        assert segundo is None
+
+    def test_chave_ausente_cai_no_posicional_legado(self) -> None:
+        """Compat: daemon de antes do 8BIT-02 nunca manda `player_slot`."""
+        entry = dict(_8BITDO_CABO)
+        entry.pop("player_slot", None)
+        assert slot_of(entry, dualsense_count=2, index=1) == external_slot(2, 1)
+
+    def test_player_slot_zero_ou_negativo_degrada_pra_none(self) -> None:
+        # Payload malformado (nunca deveria acontecer, mas não pode virar
+        # "Controle 0"): trata como sem opinião, não como posicional.
+        entry = {**_8BITDO_CABO, "player_slot": 0}
+        assert slot_of(entry, dualsense_count=0, index=0) is None
+
+
+class TestSlotLabel:
+    def test_numero_vira_string(self) -> None:
+        assert slot_label(3) == "3"
+
+    def test_none_vira_traco(self) -> None:
+        assert slot_label(None) == "—"
+
+
+class TestButtonLabelsForToleraSlotNone:
+    def test_none_vira_traco_no_rotulo(self) -> None:
+        entry = {**_8BITDO_CABO, "player_slot": None}
+        assert button_labels_for([entry], dualsense_count=2) == ["Nintendo — · cabo"]

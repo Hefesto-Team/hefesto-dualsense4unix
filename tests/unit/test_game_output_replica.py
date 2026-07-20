@@ -274,6 +274,74 @@ class TestFimDaSessao:
         assert node.invalidated == 1  # o cache ainda é invalidado (posse retomada)
 
 
+class TestRetencaoNaoSobreviveAoClose:
+    """Correção pós-auditoria da Onda N: a réplica RETIDA (NUMA-02) sob
+    autoridade 'daemon' — ex.: o cliente Steam escrevendo player_leds sem
+    jogo nenhum, o próprio mecanismo do incidente 14:42 — não pode
+    sobreviver ao UHID_CLOSE da sessão que a escreveu. Sem a purga em
+    `end_game_session_for`, o valor fica pendurado em
+    `_retained_game_outputs` (dict por UNIQ, não por sessão) e vaza pelo
+    `replay_retained_game_outputs()` para a PRÓXIMA sessão de jogo real
+    deste controle — o "player 3 verde" acendendo antes de o jogo escrever
+    qualquer coisa."""
+
+    def test_close_purga_a_retencao_do_cliente(self) -> None:
+        node = _FakeNode()
+        ctl = _ctl_com(_fake_handle(), node)
+        autoridade = {"valor": "daemon"}
+        ctl.set_game_authority_provider(lambda: autoridade["valor"])
+
+        # Cliente Steam escreve player_leds sob 'daemon' (sem jogo): fica
+        # RETIDO, nunca chega ao físico (é o veto de drop-sem-retenção).
+        assert (
+            ctl.set_game_output_for(
+                MAC_1, player_leds=(False, False, True, False, False)
+            )
+            is True
+        )
+        assert ctl._retained_game_outputs[UNIQ_1] == {
+            "player_leds": (False, False, True, False, False)
+        }
+        assert node.player_calls == []
+
+        # Cliente fecha a sessão (UHID_CLOSE) — o fantasma tem de sumir
+        # JUNTO com as camadas GAME/triggers (que aqui nunca existiram).
+        assert ctl.end_game_session_for(MAC_1) is True
+        assert ctl._retained_game_outputs == {}
+
+        # Minutos/horas depois, um jogo de verdade e SEM RELAÇÃO nenhuma
+        # com a sessão antiga abre: a autoridade sobe e o replay da
+        # abertura do gate não pode entregar o valor do cliente morto.
+        autoridade["valor"] = "game"
+        node.player_calls.clear()
+        ctl.replay_retained_game_outputs()
+
+        assert node.player_calls == []
+
+    def test_close_purga_a_retencao_mesmo_com_camada_game_presente(self) -> None:
+        """Caso misto: o jogo já tinha escrito (camada GAME) e, além disso,
+        havia uma retenção pendurada de um episódio 'daemon' anterior — o
+        CLOSE tem de zerar as duas, não só a camada GAME de sempre."""
+        ctl = _ctl_com(_fake_handle(), _FakeNode())
+        ctl._retained_game_outputs[UNIQ_1] = {"led": (9, 9, 9)}
+        ctl.set_game_output_for(MAC_1, led=(0, 255, 0))  # sem provider: jogo vence
+
+        ctl.end_game_session_for(MAC_1)
+
+        assert ctl._retained_game_outputs == {}
+
+    def test_desconectado_ainda_purga_a_retencao(self) -> None:
+        """Controle sem handle (desconectado no momento do CLOSE): o early
+        return por `handle is None` não pode pular a purga da retenção —
+        ela já foi feita antes, sob o MESMO lock."""
+        ctl = bp.PyDualSenseController()
+        ctl._retained_game_outputs[UNIQ_1] = {"player_leds": (True,) * 5}
+
+        assert ctl.end_game_session_for(MAC_1) is True
+
+        assert ctl._retained_game_outputs == {}
+
+
 class _FakeReplicaBackend:
     """Backend com a API por-uniq do REPLICA-03 — registra as chamadas."""
 

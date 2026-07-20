@@ -38,7 +38,9 @@ from __future__ import annotations
 
 import contextlib
 import datetime as _dt
+import os
 import re
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -97,35 +99,184 @@ def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
     return int(m.group(1)) if m is not None else None
 
 
+def _read_kv_int_fields(path: Path) -> dict[str, int]:
+    """Lê um marker chave=valor (NUMÉRICO), best-effort — nunca levanta.
+
+    Compartilhado por `read_last_run_marker`/`read_last_run_pid`/
+    `read_last_exit_marker`: linhas desconhecidas ou com valor não-dígito
+    são ignoradas silenciosamente (marker corrompido/adulterado não quebra
+    o parse dos campos válidos). Arquivo ausente/ilegível devolve `{}`.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return {}
+    except Exception:  # defensivo: leitura de marker jamais derruba o IPC
+        logger.debug("wrapper_marker_read_falhou", exc_info=True)
+        return {}
+    out: dict[str, int] = {}
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if value.isdigit():
+            out[key] = int(value)
+    return out
+
+
 def read_last_run_marker(base_dir: Path | None = None) -> tuple[int, int] | None:
     """Lê o marker `last_run` do wrapper: ``(appid, epoch)`` ou None.
 
     Formato (gravado por `assets/hefesto-launch.sh`, chave=valor por linha):
-    ``appid=<int>`` + ``epoch=<unix epoch s>``. Tolerante a lixo: linhas
-    desconhecidas são ignoradas; faltando qualquer um dos dois campos (ou
-    valores não-numéricos), devolve None — quem consome trata como "wrapper
-    nunca rodou". Nunca levanta.
+    ``appid=<int>`` + ``epoch=<unix epoch s>`` (+ `pid=<int>` OPCIONAL desde
+    NUMA-01 — ignorado aqui, ver `read_last_run_pid`; o contrato de retorno
+    deste `read_last_run_marker` fica intacto para os chamadores existentes,
+    `wrapper_used_state` incluso). Tolerante a lixo: linhas desconhecidas
+    são ignoradas; faltando qualquer um dos dois campos (ou valores
+    não-numéricos), devolve None — quem consome trata como "wrapper nunca
+    rodou". Nunca levanta.
     """
-    try:
-        path = (base_dir if base_dir is not None else launch_env_dir()) / "last_run"
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    except Exception:  # defensivo: leitura de marker jamais derruba o IPC
-        logger.debug("wrapper_marker_read_falhou", exc_info=True)
-        return None
-    appid: int | None = None
-    epoch: int | None = None
-    for line in text.splitlines():
-        key, _, value = line.partition("=")
-        value = value.strip()
-        if key == "appid" and value.isdigit():
-            appid = int(value)
-        elif key == "epoch" and value.isdigit():
-            epoch = int(value)
+    path = (base_dir if base_dir is not None else launch_env_dir()) / "last_run"
+    fields = _read_kv_int_fields(path)
+    appid = fields.get("appid")
+    epoch = fields.get("epoch")
     if appid is None or epoch is None or appid <= 0:
         return None
     return appid, epoch
+
+
+def read_last_run_pid(base_dir: Path | None = None) -> int | None:
+    """Lê o campo `pid=` OPCIONAL do marker `last_run` (NUMA-01), ou None.
+
+    `pid=$$` é gravado pelo wrapper no MOMENTO do launch — como `exec env
+    "$@"` preserva o PID (o wrapper VIRA o jogo), este é o pid do próprio
+    processo do jogo enquanto ele roda. Ausente (marker antigo, sem o
+    campo) ou lixo (não-dígito) devolve None. Nunca levanta.
+    """
+    path = (base_dir if base_dir is not None else launch_env_dir()) / "last_run"
+    return _read_kv_int_fields(path).get("pid")
+
+
+def read_last_exit_marker(base_dir: Path | None = None) -> int | None:
+    """Lê o marker `last_exit` do wrapper: epoch (int) ou None (NUMA-01).
+
+    Formato: ``epoch=<unix epoch s>`` (+ ``pid=<int>`` OPCIONAL desde a
+    correção pós-auditoria, ver `read_last_exit_pid`), gravado pelo trap de
+    EXIT do wrapper — best-effort e só cobre as saídas SEM `exec`
+    bem-sucedido (o exec substitui o processo do wrapper pelo jogo; o trap
+    de um shell que virou outro programa não existe mais para disparar).
+    Serve para encurtar na prática a janela de "pid reuse" do `last_run`
+    (ver riscos da síntese): um marker de saída mais novo que o `last_run`
+    é evidência de que aquele launch específico NUNCA chegou a rodar o
+    jogo — MAS só quando os dois pertencem ao MESMO launch (ver
+    `read_last_exit_pid`/`wrapper_game_running`: sem essa correlação por
+    pid, o `last_exit` de um launch A que falhou o próprio `exec` invalida
+    o `last_run` de um launch B posterior e bem-sucedido, sempre que o trap
+    tardio de A grava DEPOIS de B já ter sobrescrito o marker global —
+    achado da auditoria da Onda N). Arquivo ausente/ilegível ou sem campo
+    válido devolve None. Nunca levanta.
+    """
+    path = (base_dir if base_dir is not None else launch_env_dir()) / "last_exit"
+    return _read_kv_int_fields(path).get("epoch")
+
+
+def read_last_exit_pid(base_dir: Path | None = None) -> int | None:
+    """Lê o campo `pid=` OPCIONAL do marker `last_exit`, ou None.
+
+    Correção pós-auditoria da Onda N: `last_run`/`last_exit` são arquivos
+    GLOBAIS (não por appid/sessão) — dois wrappers concorrentes (um cujo
+    `exec` FALHA, outro que lança o jogo com sucesso) escrevem nos MESMOS
+    dois arquivos sem qualquer lock entre si. `pid=$$` é o PID do PRÓPRIO
+    wrapper que gravou aquele `last_exit` (o mesmo `$$` que ele também
+    gravou no seu `last_run`, ANTES do `exec` falhar) — correlacionar este
+    pid com o `pid=` do `last_run` CORRENTE (`read_last_run_pid`) é o que
+    permite a `wrapper_game_running` distinguir "este `last_exit` é do
+    MESMO launch que o `last_run` atual" (invalida de verdade) de "este
+    `last_exit` é de um launch ANTERIOR/outro, que só perdeu a corrida de
+    escrita" (não invalida — o jogo do launch mais novo segue rodando).
+    Ausente (marker antigo, sem o campo) ou lixo (não-dígito) devolve None
+    — quem consome trata como "sem correlação possível" e cai no critério
+    anterior, só por epoch. Nunca levanta.
+    """
+    path = (base_dir if base_dir is not None else launch_env_dir()) / "last_exit"
+    return _read_kv_int_fields(path).get("pid")
+
+
+def pid_is_alive(pid: int | None) -> bool:
+    """True quando `pid` é de um processo vivo agora (NUMA-01).
+
+    `None`/`pid<=0` ⇒ False (sem pid, sem evidência). Usa `os.kill(pid, 0)`
+    (não envia sinal nenhum, só sonda `/proc`): `ProcessLookupError` ⇒
+    morto; `PermissionError` ⇒ vivo, mas de outro dono (ainda conta como
+    vivo — o marker é do MESMO usuário do daemon na prática). Qualquer
+    outro `OSError` degrada para False (fail-safe do lado do CHAMADOR:
+    `wrapper_game_running` trata "não sei se vive" como "não conta" —
+    quem quer o fail-safe do lado do JOGO é `classify`, via `unknown`
+    explícito no gather, nunca aqui).
+    """
+    if pid is None or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def wrapper_game_running(
+    *,
+    marker: tuple[int, int] | None,
+    exit_marker: int | None,
+    pid_alive: bool,
+    marker_pid: int | None = None,
+    exit_pid: int | None = None,
+    now: float | None = None,
+    window_sec: float = WRAPPER_MARKER_WINDOW_SEC,
+) -> bool:
+    """Decisão PURA: o marker do wrapper ainda atesta um jogo em execução?
+
+    NUMA-01 — evidência #3 do sinal "jogo real ativo": marker `last_run`
+    FRESCO (gravado até `window_sec` atrás de `now`) E `pid_alive` E sem
+    `exit_marker` mais novo que o próprio marker (senão aquele launch já
+    terminou/nunca decolou). Cobre a janela launch→janela (shaders/AAA,
+    mesma constante generosa de `wrapper_used_state`), Wayland puro COM
+    wrapper (não depende do detector de janela) e sobrevive a restart do
+    daemon (o marker é do disco, não de memória). Nunca levanta.
+
+    Correção pós-auditoria da Onda N (`last_run`/`last_exit` GLOBAIS, sem
+    pid/sessão amarrando um ao outro): um `exit_marker` mais novo (ou
+    igual) que `marker_epoch` só invalida o launch corrente quando
+    `marker_pid`/`exit_pid` estão presentes E CASAM — ou seja, quando o
+    `last_exit` pertence ao MESMO launch do `last_run` que está sendo
+    avaliado. Sequência do achado: launch A grava `last_run` (epoch=E1,
+    pid=P1) e o próprio `exec` FALHA; launch B (retry, ou outro jogo)
+    grava `last_run` (epoch=E2>E1, pid=P2) com sucesso — P2 vivo rodando o
+    jogo de verdade; o trap tardio de A só termina de gravar `last_exit`
+    (epoch=E3>=E2) DEPOIS que B já sobrescreveu o marker. Sem a correlação
+    por pid, `exit_marker(E3) >= marker_epoch(E2)` derrubava B mesmo com o
+    jogo de B genuinamente vivo. Com `exit_pid=P1 != marker_pid=P2`, o
+    `exit_marker` é reconhecido como de OUTRO launch e ignorado — o
+    critério antigo (só por epoch) permanece como fallback quando qualquer
+    um dos dois pids está ausente (markers gravados antes desta correção,
+    ou leitura que falhou): fail-safe do lado conservador desta evidência
+    específica (`classify` ainda tem os outros 2 ramos). Nunca levanta.
+    """
+    if marker is None:
+        return False
+    _, marker_epoch = marker
+    moment = now if now is not None else time.time()
+    if (moment - marker_epoch) > window_sec:
+        return False
+    if not pid_alive:
+        return False
+    if exit_marker is None or exit_marker < marker_epoch:
+        return True
+    if marker_pid is None or exit_pid is None:
+        return False
+    return exit_pid != marker_pid
 
 
 def wrapper_used_state(
@@ -430,7 +581,12 @@ __all__ = [
     "WRAPPER_MARKER_WINDOW_SEC",
     "compose_env",
     "materialize_launch_env",
+    "pid_is_alive",
+    "read_last_exit_marker",
+    "read_last_exit_pid",
     "read_last_run_marker",
+    "read_last_run_pid",
     "steam_appid_from_wm_class",
+    "wrapper_game_running",
     "wrapper_used_state",
 ]

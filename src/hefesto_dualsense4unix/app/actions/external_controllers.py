@@ -146,14 +146,34 @@ def external_slot(dualsense_count: int, index: int) -> int:
     return dualsense_count + index + 1
 
 
-def slot_of(entry: dict[str, Any], dualsense_count: int, index: int) -> int:
+def slot_of(entry: dict[str, Any], dualsense_count: int, index: int) -> int | None:
     """Slot do externo: o `player_slot` que o DAEMON já mandou (fonte única —
-    é o MESMO que ele escreveu no LED), com fallback para o cálculo local em
-    daemons antigos que não expõem o campo."""
-    slot = entry.get("player_slot")
-    if isinstance(slot, int) and not isinstance(slot, bool) and slot >= 1:
-        return slot
+    é o MESMO que ele escreveu no LED), com fallback para o cálculo local
+    SÓ em daemons antigos que nem sequer expõem o campo.
+
+    NUMA-05: a chave `player_slot` PRESENTE (ainda que valendo ``None`` — o
+    registry sem opinião ainda) é a fonte única e vence SEMPRE — devolve
+    ``None`` sem calcular nada. O posicional `external_slot` (que
+    reembaralhava a numeração a cada troca de `dualsense_count` — o ponto
+    cego do incidente de 14:42) só roda quando a CHAVE está AUSENTE (daemon
+    de antes do 8BIT-02, que nunca mandou `player_slot`). Null honesto
+    (exibido como "—" via :func:`slot_label`) vale mais que número errado.
+    """
+    if "player_slot" in entry:
+        slot = entry["player_slot"]
+        if isinstance(slot, int) and not isinstance(slot, bool) and slot >= 1:
+            return slot
+        return None
     return external_slot(dualsense_count, index)
+
+
+def slot_label(slot: int | None) -> str:
+    """Texto de exibição do slot: o número, ou "—" honesto (NUMA-05).
+
+    Centraliza a regra "null > número errado" num único ponto — a GUI nunca
+    mais inventa um número quando o registry ainda não opinou.
+    """
+    return str(slot) if slot is not None else "—"
 
 
 def button_labels_for(
@@ -168,11 +188,13 @@ def button_labels_for(
     """
     saida: list[str] = []
     for i, e in enumerate(externals):
-        slot = slot_of(e, dualsense_count, i)
+        rotulo_slot = slot_label(slot_of(e, dualsense_count, i))
         nome = brand_of(e)
         bus = str(e.get("bus") or "").lower()
         via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
-        saida.append(f"{nome} {slot} · {via}" if via else f"{nome} {slot}")
+        saida.append(
+            f"{nome} {rotulo_slot} · {via}" if via else f"{nome} {rotulo_slot}"
+        )
     return saida
 
 

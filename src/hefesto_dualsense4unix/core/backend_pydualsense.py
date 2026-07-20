@@ -71,6 +71,14 @@ KERNEL_DEFAULT_BLUE: tuple[int, int, int] = (0, 0, 128)
 #: `dualsense_output_report_common`, common[10..20]/[21..31]).
 GAME_TRIGGER_BLOCK_LEN = 11
 
+#: NUMA-03: intervalo mínimo entre duas defesas de exibição disparadas por
+#: réplica RETIDA (`defend_display` via `set_game_output_for` sob autoridade
+#: 'daemon'). Réplica retida = prova de escritor ativo, mas a defesa reescreve
+#: sysfs em todos os nós — sem o teto ela viraria o reassert incondicional que
+#: causou o flash azul de 30s (GUERRA-01). A defesa por TRANSIÇÃO (*→daemon)
+#: não passa por este teto: já é rate-limitada pela histerese de 30s do sinal.
+DEFEND_DISPLAY_MIN_INTERVAL_S = 30.0
+
 #: GYRO-01: feature report da calibração da IMU (`DS_FEATURE_REPORT_CALIBRATION`
 #: / `_SIZE` do hid-playstation.c). Lido POR UNIDADE em `read_calibration` para
 #: o vpad carimbar no blueprint — por BT os 4 últimos bytes são CRC-32 (seed
@@ -101,8 +109,33 @@ def _read_feature_via_hidraw(path: str, report_id: int, size: int) -> bytes:
         os.close(fd)
 
 
+#: Identidade do vpad no HID: phys gravado pelo blueprint (uhid_gamepad) e
+#: prefixo do MAC forjado (`player_mac()` → 02:fe:00:00:00:0N).
+_VPAD_PHYS = "hefesto-vpad"
+_VPAD_UNIQ_PREFIX = "02fe"
+
+
+def _hidraw_uevent(node: str) -> dict[str, str]:
+    """Pares chave=valor do uevent do device HID pai do hidraw ({} se ilegível)."""
+    try:
+        with open(
+            f"/sys/class/hidraw/{node}/device/uevent",
+            encoding="utf-8",
+            errors="replace",
+        ) as fh:
+            raw = fh.read()
+    except OSError:
+        return {}
+    pares: dict[str, str] = {}
+    for linha in raw.splitlines():
+        chave, sep, valor = linha.partition("=")
+        if sep:
+            pares[chave] = valor
+    return pares
+
+
 def _is_virtual_hidraw(path: bytes) -> bool:
-    """True se o hidraw é de um device VIRTUAL (nosso vpad uhid), não físico.
+    """True se o hidraw é do NOSSO vpad uhid, não de controle físico.
 
     Espelha o `_is_virtual_evdev` do `evdev_reader` — e pela mesma razão CRÍTICA:
     o vpad do SPRINT-UHID-VPAD-01 nasce com VID/PID/bus idênticos ao controle
@@ -114,8 +147,16 @@ def _is_virtual_hidraw(path: bytes) -> bool:
     Medido ao vivo antes do filtro: com o vpad no ar, o enumerate devolvia
     ``('02:fe:00:00:00:02', b'/dev/hidraw7', False)`` — o MAC que nós forjamos.
 
-    O caminho hidraw nunca precisou disso porque uinput não cria hidraw. Devices
-    uhid vivem sob `/sys/devices/virtual/misc/uhid/`; os reais, sob USB/Bluetooth.
+    BLUEZ-UHID-01 (2026-07-19): morar sob `/sys/devices/virtual/misc/uhid/`
+    DEIXOU de implicar "nosso vpad" — com BlueZ ≥5.73 (UserspaceHID default) o
+    bluetoothd cria os HIDs dos controles BT FÍSICOS via /dev/uhid, no mesmo
+    subtree. Medido ao vivo com o backport 5.85: os 4 controles BT da mesa
+    ficaram invisíveis ao daemon (`connected: False` com 4 hidraws saudáveis).
+    O critério agora é a IDENTIDADE do vpad no uevent do pai HID — HID_PHYS
+    `hefesto-vpad` (blueprint) ou HID_UNIQ com prefixo 02:fe — alinhado à regra
+    do projeto de validar pelo uevent do pai HID imediato, nunca por topologia.
+    uevent ilegível sob o subtree virtual → True: na dúvida, o risco maior é o
+    feedback loop de auto-adoção (o retry do reconcile cobre o falso-positivo).
     """
     node = os.path.basename(path.decode("utf-8", "replace"))
     if not node.startswith("hidraw"):  # path de libusb ("0001:0002:00")
@@ -124,7 +165,14 @@ def _is_virtual_hidraw(path: bytes) -> bool:
         destino = os.path.realpath(f"/sys/class/hidraw/{node}/device")
     except OSError:  # pragma: no cover - sysfs some sob replug
         return False
-    return "/devices/virtual/" in destino
+    if "/devices/virtual/" not in destino:
+        return False
+    uevent = _hidraw_uevent(node)
+    if not uevent:
+        return True
+    phys = uevent.get("HID_PHYS", "")
+    uniq = uevent.get("HID_UNIQ", "").lower().replace(":", "")
+    return phys == _VPAD_PHYS or uniq.startswith(_VPAD_UNIQ_PREFIX)
 
 #: Timeout para `pydualsense.init()` em segundos
 #: (BUG-BACKEND-PYDUALSENSE-DSTATE-01). A chamada faz HID I/O sync via libhidapi
@@ -544,6 +592,32 @@ class PyDualSenseController(IController):
         # aplicados direto no handle (`_raw_trigger_*`).
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
+        # NUMA-02: provider da AUTORIDADE de exibição ('game'|'daemon'|
+        # 'unknown'), injetado pelo daemon (GameSignal do lifecycle) — leitura
+        # de estado cacheado, zero I/O (mesmo contrato do
+        # `_auto_output_provider`). None = sem fiação = `_game_wins()` True
+        # (compat byte-idêntica: FakeController e a suíte REPLICA-03 inteira
+        # não mudam de comportamento — fail-safe "nunca pior que hoje").
+        self._game_authority_provider: Callable[[], str] | None = None
+        # NUMA-02 (retain-latest): réplicas de EXIBIÇÃO recebidas sob
+        # autoridade 'daemon' — 1 valor por (uniq, categoria), sempre o MAIS
+        # recente (bounded por construção: só 'led'/'player_leds' por MAC).
+        # `replay_retained_game_outputs()` entrega tudo 1x na abertura do
+        # gate — a escrita ÚNICA de player-LED que jogos fazem (FATO 0) não
+        # pode se perder na latência ~2s do sinal. Drop sem retenção é
+        # vetado pela síntese da Onda N. Correção pós-auditoria: também
+        # purgado por `end_game_session_for` no fim da MESMA sessão que o
+        # gerou — sem isso, o valor sobrevive ao UHID_CLOSE (é um dict por
+        # uniq, não por sessão) e vaza para a PRÓXIMA sessão de jogo real
+        # deste controle via `replay_retained_game_outputs`, mesmo sem
+        # nenhuma relação com quem escreveu o valor original.
+        self._retained_game_outputs: dict[str, dict[str, Any]] = {}
+        # Log `game_output_retido_sem_jogo` 1x por episódio (re-armado no
+        # replay — episódio = um período contínuo de autoridade 'daemon').
+        self._retained_log_armed = True
+        # NUMA-03: monotonic da última defesa de exibição (rate-limit da
+        # defesa disparada por réplica retida).
+        self._defend_last_at: float | None = None
         # FEAT-DSX-LIGHTBAR-SYSFS-01: mapeia key (serial/MAC/path) -> nó LED do
         # kernel (sysfs) para os controles cuja lightbar/player-LED são graváveis
         # por sysfs. Quando presente, a cor/player vão por essa rota (USB E BT) e
@@ -762,6 +836,40 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._auto_output_provider = fn
 
+    def set_game_authority_provider(
+        self, fn: Callable[[], str] | None
+    ) -> None:
+        """Injeta (ou remove, com None) o provider da autoridade de exibição.
+
+        NUMA-02 — espelho exato de `set_auto_output_provider`: o daemon
+        (GameSignal do lifecycle, tick lento ~2s) injeta uma função que
+        devolve a autoridade corrente ('game'|'daemon'|'unknown'). É
+        consultada por `_game_wins()` SOB `_io_lock`: DEVE ser leitura de
+        estado cacheado, sem I/O. Sem provider o backend é HEAD
+        byte-idêntico — remover esta fiação desliga a Onda N inteira
+        (rollback de 1 linha, decisão da síntese).
+        """
+        with self._io_lock:
+            self._game_authority_provider = fn
+
+    def _game_wins(self) -> bool:
+        """True quando a camada GAME participa do merge (autoridade ≠ 'daemon').
+
+        NUMA-02 — fail-safe assimétrico da síntese: sem provider injetado OU
+        exceção no provider ⇒ True (jogo vence = comportamento atual;
+        bloquear réplica exige evidência POSITIVA de não-jogo). Só a
+        autoridade 'daemon' explícita fecha o gate; 'game', 'unknown' e
+        qualquer lixo devolvido mantêm o caminho de hoje.
+        """
+        provider = self._game_authority_provider
+        if provider is None:
+            return True
+        try:
+            return provider() != "daemon"
+        except Exception as exc:
+            logger.debug("game_authority_provider_falhou", err=str(exc))
+            return True
+
     def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
         """Desired efetivo do controle `key`: MERGE POR CAMPO em 4 camadas.
 
@@ -799,7 +907,13 @@ class PyDualSenseController(IController):
                 base = _merge_desired(base, auto)
         resolved = _merge_desired(base, override)
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
-        if game is not None:
+        # NUMA-02 (gate de exibição em ponto ÚNICO): sob autoridade 'daemon' a
+        # camada GAME não entra no merge — este if governa de uma vez o
+        # priming, o reassert de hotplug, `reassert_resolved_outputs` e o
+        # unmute. Consequência provada nos replays: camada STALE (cliente
+        # Steam segurando a sessão uhid sem UHID_CLOSE) é neutralizada no
+        # resolve, não defendida — fechar o jogo devolve a paleta em ≤ ~32s.
+        if game is not None and self._game_wins():
             resolved = _merge_desired(resolved, game)
         return resolved
 
@@ -1853,6 +1967,15 @@ class PyDualSenseController(IController):
         escreve no hardware pela rota normal (sysfs preferido, fallback
         pydualsense). Controle desconectado: fica registrado (hotplug aplica).
         False = sem identidade estável (MAC).
+
+        NUMA-02 (retain-latest): sob autoridade 'daemon' (evidência positiva
+        de NÃO-jogo — no incidente 14:42, o escritor era o CLIENTE Steam) a
+        réplica de exibição é RETIDA: não popula a camada GAME, não escreve
+        hardware; `replay_retained_game_outputs()` entrega o valor mais
+        recente 1x na abertura do gate. A telemetria `uhid_replica_ativa`
+        do vpad segue intacta (é emitida antes de chegar aqui). Réplica
+        retida = prova de escritor ativo ⇒ dispara a defesa de exibição,
+        rate-limitada (NUMA-03).
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -1864,6 +1987,32 @@ class PyDualSenseController(IController):
         if player_leds is not None:
             fields["player_leds"] = tuple(bool(x) for x in player_leds)
         if not fields:
+            return True
+        defender = False
+        with self._io_lock:
+            # Decisão de gate UMA vez, sob o lock — o sinal pode flipar no
+            # tick de outro thread e uma réplica não pode ser retida E
+            # aplicada ao mesmo tempo.
+            wins = self._game_wins()
+            if not wins:
+                retido = self._retained_game_outputs.setdefault(alvo, {})
+                retido.update(fields)  # retain-latest: 1 valor por categoria
+                if self._retained_log_armed:
+                    logger.info(
+                        "game_output_retido_sem_jogo",
+                        uniq=alvo,
+                        campos=sorted(fields),
+                    )
+                    self._retained_log_armed = False
+                agora = time.monotonic()
+                defender = (
+                    self._defend_last_at is None
+                    or (agora - self._defend_last_at)
+                    >= DEFEND_DISPLAY_MIN_INTERVAL_S
+                )
+        if not wins:
+            if defender:
+                self.defend_display()
             return True
         with self._io_lock:
             layer = self._game_output_by_uniq.setdefault(alvo, _DesiredOutput())
@@ -1880,6 +2029,27 @@ class PyDualSenseController(IController):
         )
         return True
 
+    def replay_retained_game_outputs(self) -> None:
+        """Entrega as réplicas RETIDAS na abertura do gate (NUMA-02).
+
+        Chamado pelo lifecycle na transição `daemon→game|unknown`: cada valor
+        retido (o MAIS recente por (uniq, categoria)) é entregue exatamente
+        1x pelo caminho normal (`set_game_output_for`) — a escrita única de
+        player-LED que jogos fazem (FATO 0) atravessa a latência ~2s do
+        sinal sem se perder. Risco aceito na síntese: o último valor pode
+        ser do CLIENTE Steam, mas cliente e jogo compartilham a numeração do
+        Steam Input e o jogo sobrescreve em seguida. Re-arma o log
+        `game_output_retido_sem_jogo` (episódio novo). Falha em um controle
+        não aborta os demais.
+        """
+        with self._io_lock:
+            retidos = self._retained_game_outputs
+            self._retained_game_outputs = {}
+            self._retained_log_armed = True
+        for alvo, campos in retidos.items():
+            with contextlib.suppress(Exception):
+                self.set_game_output_for(alvo, **campos)
+
     def end_game_session_for(self, uniq: str) -> bool:
         """Fim da sessão de jogo do controle `uniq`: devolve perfil/paleta/co-op.
 
@@ -1889,6 +2059,17 @@ class PyDualSenseController(IController):
         item 3): o jogo pode ter escrito a cor por hidraw sem recriar o nó —
         o cache estaria "certo" com o hardware errado. Trigger do jogo sem
         perfil por baixo volta a Off (efeito de jogo não sobrevive à sessão).
+
+        Correção pós-auditoria da Onda N: a réplica RETIDA (NUMA-02,
+        `_retained_game_outputs` — escrita sob autoridade 'daemon', ex.: o
+        cliente Steam abrindo sessão uhid sem jogo nenhum) também é
+        descartada AQUI, no fim da MESMA sessão que a gerou. Sem isso, o
+        valor fantasma sobrevive ao UHID_CLOSE (e a qualquer disconnect/
+        reconnect físico) e só seria purgado quando a autoridade saísse de
+        'daemon' — vazando via `replay_retained_game_outputs()` para a
+        PRÓXIMA sessão de jogo real deste controle, totalmente não
+        relacionada à que escreveu o valor (o "player 3 verde" acendendo
+        antes de o jogo escrever qualquer coisa).
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -1896,6 +2077,7 @@ class PyDualSenseController(IController):
         with self._io_lock:
             game = self._game_output_by_uniq.pop(alvo, None)
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
+            retido = self._retained_game_outputs.pop(alvo, None)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -1904,6 +2086,12 @@ class PyDualSenseController(IController):
                 self._merged_desired_for_key(key) if key is not None else None
             )
         if game is None and triggers is None:
+            if retido:
+                logger.info(
+                    "game_output_retido_descartado_no_close",
+                    uniq=alvo,
+                    campos=sorted(retido),
+                )
             return True  # o jogo nunca tocou este controle
         logger.info(
             "game_session_devolvida",
@@ -2056,7 +2244,7 @@ class PyDualSenseController(IController):
             return None
         return normalized
 
-    def reassert_resolved_outputs(self) -> None:
+    def reassert_resolved_outputs(self, *, verify: bool = False) -> None:
         """Re-aplica o desired RESOLVIDO por-controle (3 camadas) via sysfs.
 
         COR-03 — fix de integração pego AO VIVO na validação pós-install
@@ -2074,20 +2262,72 @@ class PyDualSenseController(IController):
         77) segue no caminho pydualsense com o global até o próximo
         `_reapply_desired` — limitação documentada do caminho degradado. Em
         Modo Nativo é no-op (o jogo é dono do LED; o unmute já re-aplica).
+
+        NUMA-03 (``verify=True``): repassa a verificação de escritor
+        estrangeiro a `SysfsLedNode.set_rgb`/`set_players_verified` — mas SÓ
+        para o nó com autoridade 'daemon' vigente E posse registrada em
+        `_sysfs_written` (STATUS-01: leitura de classe sem prova de escrita
+        nossa nunca vira verdade — o probe do kernel zera a classe com a
+        lightbar acesa). Sem posse ou fora de 'daemon', o nó segue o caminho
+        histórico (`verify=False` é byte-idêntico ao HEAD).
         """
         with self._io_lock:
             if self._output_mute:
                 return
+            # `verify` só vale sob autoridade 'daemon' explícita — em
+            # game/unknown/sem-provider a defesa não roda (fail-safe).
+            check = verify and not self._game_wins()
+            posse = set(self._sysfs_written) if check else set()
             reasserts = [
                 (key, node, self._merged_desired_for_key(key))
                 for key, node in self._sysfs.items()
             ]
         for key, node, desired in reasserts:
             with contextlib.suppress(Exception):
-                if desired.led is not None and node.set_rgb(*desired.led):
-                    self.record_sysfs_write(key, desired.led)
+                verificar = check and key in posse
+                if desired.led is not None:
+                    ok = (
+                        node.set_rgb(*desired.led, verify=True)
+                        if verificar
+                        else node.set_rgb(*desired.led)
+                    )
+                    if ok:
+                        self.record_sysfs_write(key, desired.led)
                 if desired.player_leds is not None:
-                    node.set_players(desired.player_leds)
+                    escrever_verificado = (
+                        getattr(node, "set_players_verified", None)
+                        if verificar
+                        else None
+                    )
+                    if callable(escrever_verificado):
+                        escrever_verificado(desired.player_leds)
+                    else:
+                        node.set_players(desired.player_leds)
+
+    def defend_display(self) -> None:
+        """Defesa de exibição: invalida os caches sysfs + reassert verificado.
+
+        NUMA-03 — disparada (a) pelo lifecycle na transição `*→daemon` e
+        (b) por réplica de exibição RETIDA (rate-limitada por
+        `DEFEND_DISPLAY_MIN_INTERVAL_S` em `set_game_output_for` — réplica
+        retida é prova de escritor ativo, e o invalidate alcança até o vetor
+        hidraw-direto que a re-leitura de classe não vê; no incidente 14:42,
+        repinte ≤2s da escrita estrangeira). NÃO é o reassert incondicional
+        do flash azul (GUERRA-01): só em transição ou sob evidência de
+        escritor, sempre com teto de frequência. No-op TOTAL sob
+        `_output_mute` (Modo Nativo: o jogo é o dono — nada escrito, nem
+        repaint). Falha de um nó não aborta os demais (suppress por item do
+        reassert).
+        """
+        with self._io_lock:
+            if self._output_mute:
+                return
+            self._defend_last_at = time.monotonic()
+            nodes = list(self._sysfs.values())
+        for node in nodes:
+            with contextlib.suppress(Exception):
+                node.invalidate_cache()
+        self.reassert_resolved_outputs(verify=True)
 
     def set_output_mute(self, muted: bool) -> None:
         """Muta/desmuta TODA escrita de output HID (FEAT-NATIVE-OUTPUT-MUTE-01).

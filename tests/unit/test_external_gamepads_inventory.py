@@ -606,9 +606,13 @@ def test_external_inventory_e_leitura_pura_sem_escrita_de_led(
 def test_external_inventory_prefere_o_slot_do_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """EXT-04 item 2: com o registry opinando (via `slot_resolver`, leitura
-    pura por uniq), o `player_slot` é o slot PERSISTENTE — não o posicional.
-    Resolver sem opinião (None) ou quebrado cai no posicional, sem erro."""
+    """EXT-04 item 2 + NUMA-05 (fim do posicional): com o registry opinando
+    (via `slot_resolver`, leitura pura por uniq), o `player_slot` é o slot
+    PERSISTENTE — nunca o posicional. Resolver PRESENTE sem opinião (None)
+    ou que levanta é a fonte ÚNICA mesmo assim: devolve `player_slot=None`,
+    NUNCA o posicional (falha-sem: no HEAD pré-NUMA-05 caía em
+    `dualsense_count+índice+1`, reembaralhando a GUI a cada troca de
+    `ds_count` — o ponto cego do incidente de 14:42)."""
     n1 = {
         "name": "Nintendo Co., Ltd. Pro Controller",
         "vid": "057e", "pid": "2009", "bus": "usb",
@@ -628,14 +632,54 @@ def test_external_inventory_prefere_o_slot_do_registry(
         dualsense_count=1, slot_resolver=lambda uniq: slots.get(uniq or "")
     )
 
-    # 1º externo: slot do registry (4). 2º: registry sem opinião → posicional
-    # (1 DualSense + índice 1 + 1 = 3).
-    assert [e["player_slot"] for e in inventario] == [4, 3]
+    # 1º externo: slot do registry (4). 2º: registry sem opinião → None
+    # (NUMA-05 — nunca mais o posicional 1 DualSense + índice 1 + 1 = 3).
+    assert [e["player_slot"] for e in inventario] == [4, None]
 
     def resolver_quebrado(_uniq: str | None) -> int | None:
         raise RuntimeError("registry indisponível")
 
+    # Resolver PRESENTE que levanta em TODOS: ainda assim é a fonte única —
+    # None nos dois, nunca o posicional [2, 3].
     inventario = ih_mod._external_inventory(
         dualsense_count=1, slot_resolver=resolver_quebrado
     )
-    assert [e["player_slot"] for e in inventario] == [2, 3]
+    assert [e["player_slot"] for e in inventario] == [None, None]
+
+
+def test_external_inventory_posicional_so_sobrevive_sem_resolver(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NUMA-05 bloco 11 (POSICIONAL): `player_slot=None` (resolver presente
+    sem opinião) é ESTÁVEL sob a troca de `dualsense_count` 1 -> 0 — no HEAD
+    pré-NUMA-05, o posicional reembaralhava a numeração a cada mudança de
+    `ds_count`. Sem resolver nenhum (compat, daemon antes do 8BIT-02), o
+    posicional legado segue vivo e SEGUE a troca de `ds_count` (esperado)."""
+    n1 = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": "057e", "pid": "2009", "bus": "usb",
+        "uniq": MAC_8BITDO_FORJADO, "driver": "nintendo",
+        "evdev_path": "/dev/input/event261", "hidraw": "/dev/hidraw6",
+    }
+    monkeypatch.setattr(
+        er_mod, "discover_external_gamepads", lambda: [dict(n1)]
+    )
+    monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
+
+    resolver_sem_opiniao = lambda _uniq: None  # noqa: E731 — registry mudo
+
+    com_ds_count_1 = ih_mod._external_inventory(
+        dualsense_count=1, slot_resolver=resolver_sem_opiniao
+    )
+    com_ds_count_0 = ih_mod._external_inventory(
+        dualsense_count=0, slot_resolver=resolver_sem_opiniao
+    )
+    assert [e["player_slot"] for e in com_ds_count_1] == [None]
+    assert [e["player_slot"] for e in com_ds_count_0] == [None]
+
+    # Compat: SEM resolver nenhum, o posicional legado segue a troca de
+    # ds_count (comportamento intocado do daemon fake/antigo).
+    sem_resolver_1 = ih_mod._external_inventory(dualsense_count=1)
+    sem_resolver_0 = ih_mod._external_inventory(dualsense_count=0)
+    assert [e["player_slot"] for e in sem_resolver_1] == [2]
+    assert [e["player_slot"] for e in sem_resolver_0] == [1]

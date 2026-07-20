@@ -21,10 +21,14 @@ from hefesto_dualsense4unix.core.backend_pydualsense import _is_virtual_hidraw
 
 class TestIsVirtualHidraw:
     def test_hidraw_de_uhid_e_virtual(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Os uhid vivem sob /sys/devices/virtual/misc/uhid/."""
+        """Os uhid do VPAD vivem sob /sys/devices/virtual/misc/uhid/."""
         monkeypatch.setattr(
             "os.path.realpath",
             lambda _p: "/sys/devices/virtual/misc/uhid/0003:054C:0CE6.001D",
+        )
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.backend_pydualsense._hidraw_uevent",
+            lambda _n: {"HID_PHYS": "hefesto-vpad", "HID_UNIQ": "02:fe:00:00:00:01"},
         )
 
         assert _is_virtual_hidraw(b"/dev/hidraw7") is True
@@ -68,6 +72,64 @@ class TestIsVirtualHidraw:
         monkeypatch.setattr("os.path.realpath", _boom)
 
         assert _is_virtual_hidraw(b"/dev/hidraw9") is False
+
+
+class TestBluezUhidFisicoNaoEVirtual:
+    """BLUEZ-UHID-01: com BlueZ ≥5.73 (UserspaceHID) o bluetoothd cria os HIDs
+    dos controles BT FÍSICOS via /dev/uhid — mesmo subtree do vpad. O critério
+    de topologia (`/devices/virtual/`) virou falso-positivo em massa: medido ao
+    vivo em 2026-07-19 (backport 5.85), os 4 controles BT ficaram invisíveis
+    (`connected: False` com 4 hidraws saudáveis). Identidade decide, não morada.
+    """
+
+    _UHID_BT = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0015"
+
+    def _com_uevent(
+        self, monkeypatch: pytest.MonkeyPatch, uevent: dict[str, str]
+    ) -> None:
+        monkeypatch.setattr("os.path.realpath", lambda _p: self._UHID_BT)
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.backend_pydualsense._hidraw_uevent",
+            lambda _n: uevent,
+        )
+
+    def test_dualsense_bt_via_bluetoothd_uhid_nao_e_virtual(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A regressão do dia: físico BT sob uhid TEM de ser enxergado."""
+        self._com_uevent(
+            monkeypatch,
+            {
+                "HID_ID": "0005:0000054C:00000CE6",
+                "HID_PHYS": "aa:bb:cc:00:00:05",
+                "HID_UNIQ": "aa:bb:cc:00:00:02",
+            },
+        )
+
+        assert _is_virtual_hidraw(b"/dev/hidraw4") is False
+
+    def test_vpad_por_phys_e_virtual(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._com_uevent(
+            monkeypatch, {"HID_PHYS": "hefesto-vpad", "HID_UNIQ": "02:fe:00:00:00:02"}
+        )
+
+        assert _is_virtual_hidraw(b"/dev/hidraw5") is True
+
+    def test_vpad_por_uniq_e_virtual_mesmo_sem_phys(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Defesa em profundidade: o prefixo 02:fe basta (D9 do identity)."""
+        self._com_uevent(monkeypatch, {"HID_UNIQ": "02:FE:00:00:00:03"})
+
+        assert _is_virtual_hidraw(b"/dev/hidraw6") is True
+
+    def test_uevent_ilegivel_sob_virtual_continua_virtual(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Na dúvida o risco maior é o feedback loop de auto-adoção."""
+        self._com_uevent(monkeypatch, {})
+
+        assert _is_virtual_hidraw(b"/dev/hidraw7") is True
 
 
 class TestEnumeracaoIgnoraOVpad:

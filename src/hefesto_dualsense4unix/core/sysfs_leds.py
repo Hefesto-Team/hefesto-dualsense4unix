@@ -63,6 +63,10 @@ class SysfsLedNode:
         # escreve naturalmente.
         self._last_write: tuple[tuple[int, int, int], int] | None = None
         self._skip_logged = False
+        # NUMA-03: log de escritor estrangeiro 1x POR EPISÓDIO (espelho de
+        # `_skip_logged`, mas com re-arme: uma verificação LIMPA — cor lida
+        # igual à esperada — encerra o episódio e re-arma o log).
+        self._foreign_logged = False
 
     # --- introspecção ----------------------------------------------------
 
@@ -142,7 +146,7 @@ class SysfsLedNode:
             logger.debug("sysfs_led_write_falhou", path=path, err=str(exc))
             return False
 
-    def set_rgb(self, r: int, g: int, b: int) -> bool:
+    def set_rgb(self, r: int, g: int, b: int, *, verify: bool = False) -> bool:
         """Acende a lightbar na cor ``(r, g, b)`` via kernel (USB e BT).
 
         A cor JÁ chega escalada pelo brilho do perfil (o daemon multiplica antes
@@ -155,22 +159,58 @@ class SysfsLedNode:
         deixa de gerar output report quando a cor resolvida não mudou. Escrita
         que falha NÃO cacheia (a próxima tentativa re-escreve). Posse retomada
         de terceiros (ex.: fim de sessão de jogo) usa ``invalidate_cache()``.
+
+        NUMA-03 (``verify=True``): no cache-hit, re-lê ``get_rgb()`` (memória
+        do kernel — zero subcomando HID) ANTES do skip; classe divergente do
+        cache = escritor estrangeiro (incidente 14:42 medido: cliente Steam
+        pintou verde com o cache acreditando em azul) ⇒ invalida, REESCREVE e
+        loga ``lightbar_escritor_estrangeiro`` 1x por episódio (re-armado por
+        uma verificação limpa). ``get_rgb()`` None/ilegível ⇒ comporta como
+        hoje (skip, sem log, sem repaint) — veto 5 da síntese: nó que sumiu
+        num BT drop NÃO pode virar falso estrangeiro. ``verify=False``
+        (default) é byte-idêntico ao comportamento histórico.
+
+        Limitação documentada (fato §2 do mapa): escrita CRUA por hidraw que
+        não passa pela classe LED segue INVISÍVEL a esta re-leitura (o kernel
+        não atualiza ``multi_intensity``) — cobertura parcial fica com o
+        ``defend_display`` do backend (invalidate + reassert dirigido); a
+        cura completa é a posse autoritativa dos fds (Onda S).
         """
         r = max(0, min(255, int(r)))
         g = max(0, min(255, int(g)))
         b = max(0, min(255, int(b)))
         wanted = ((r, g, b), 255)
         if self._last_write == wanted:
-            if not self._skip_logged:
-                # 1x por nó (telemetria da cura): o journal prova que o
-                # reassert parou de martelar o firmware com a mesma cor.
+            intruso: tuple[int, int, int] | None = None
+            if verify:
+                lido = self.get_rgb()
+                if lido is not None and lido != (r, g, b):
+                    intruso = lido
+                else:
+                    # Verificação limpa (ou ilegível — trata como hoje):
+                    # encerra o episódio de escritor estrangeiro, se havia.
+                    self._foreign_logged = False
+            if intruso is None:
+                if not self._skip_logged:
+                    # 1x por nó (telemetria da cura): o journal prova que o
+                    # reassert parou de martelar o firmware com a mesma cor.
+                    logger.info(
+                        "lightbar_reassert_skip_cache",
+                        node=self.indicator_dir,
+                        rgb=(r, g, b),
+                    )
+                    self._skip_logged = True
+                return True
+            if not self._foreign_logged:
                 logger.info(
-                    "lightbar_reassert_skip_cache",
+                    "lightbar_escritor_estrangeiro",
                     node=self.indicator_dir,
-                    rgb=(r, g, b),
+                    lido=intruso,
+                    esperado=(r, g, b),
                 )
-                self._skip_logged = True
-            return True
+                self._foreign_logged = True
+            # Cache invalidado: cai na reescrita abaixo (retoma a posse).
+            self._last_write = None
         ok = self._write(self._indicator_brightness, "255")
         ok = self._write(self._multi_intensity, f"{r} {g} {b}") and ok
         self._last_write = wanted if ok else None
@@ -193,6 +233,58 @@ class SysfsLedNode:
         for i, directory in enumerate(self.player_dirs):
             on = "1" if (i < len(bits) and bits[i]) else "0"
             ok = self._write(os.path.join(directory, "brightness"), on) and ok
+        return ok
+
+    def get_players(self) -> tuple[bool, ...] | None:
+        """Padrão ACESO dos LEDs de player, lido da classe (puro — testes/doctor).
+
+        NUMA-03: leitura de ``brightness`` é memória do kernel (zero
+        subcomando HID). ``None`` quando não há nós de player ou algum ficou
+        ilegível (replug/BT drop) — o chamador trata como "sem leitura", nunca
+        como padrão apagado. Mesma ressalva do ``get_rgb``: escrita crua por
+        hidraw não atualiza a classe, então isto é o último valor VIA CLASSE.
+        """
+        if not self.player_dirs:
+            return None
+        bits: list[bool] = []
+        for directory in self.player_dirs:
+            try:
+                with open(os.path.join(directory, "brightness")) as fh:
+                    raw = fh.read().strip()
+                bits.append(int(raw or "0") > 0)
+            except (OSError, ValueError):
+                return None
+        return tuple(bits)
+
+    def set_players_verified(
+        self, bits: tuple[bool, bool, bool, bool, bool]
+    ) -> bool:
+        """``set_players`` que SÓ escreve nos nós de brightness divergentes.
+
+        NUMA-03 (defesa dirigida): re-lê cada ``brightness`` (memória do
+        kernel) e reescreve apenas os LEDs cujo estado físico via classe
+        difere do desejado — repinta um padrão rabiscado por escritor
+        estrangeiro (o "player 3" da Steam no incidente 14:42) sem gerar
+        output report quando está tudo certo. Nó ilegível é escrito sem
+        verificação (não dá para provar que está certo — melhor a escrita
+        idempotente do que confiar num nó mudo).
+        """
+        if not self.player_dirs:
+            return False
+        ok = True
+        for i, directory in enumerate(self.player_dirs):
+            want = bool(i < len(bits) and bits[i])
+            atual: bool | None = None
+            try:
+                with open(os.path.join(directory, "brightness")) as fh:
+                    atual = int(fh.read().strip() or "0") > 0
+            except (OSError, ValueError):
+                atual = None
+            if atual is not None and atual == want:
+                continue
+            ok = self._write(
+                os.path.join(directory, "brightness"), "1" if want else "0"
+            ) and ok
         return ok
 
 

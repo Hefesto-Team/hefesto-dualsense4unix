@@ -673,6 +673,19 @@ class UhidDualSense:
         """No caminho uhid o rumble sempre existe — é hidraw de verdade."""
         return True
 
+    @property
+    def game_open(self) -> bool:
+        """True enquanto há sessão uhid ABERTA neste vpad (UHID_OPEN..CLOSE).
+
+        NUMA-02 — leitura pura para o agregado do sinal de autoridade do
+        daemon. Veto permanente da síntese da Onda N: sessão aberta JAMAIS é
+        evidência de jogo (o CLIENTE Steam também abre — mecanismo do
+        incidente 14:42); serve só para modular a histerese da queda para
+        'daemon' (sem nenhuma sessão aberta não há escritor de réplica a
+        proteger) e para diagnóstico.
+        """
+        return self._game_open
+
     def is_active(self) -> bool:
         return self._fd is not None
 

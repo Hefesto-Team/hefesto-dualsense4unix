@@ -293,14 +293,17 @@ def show_external_controller(
     Abre só para o controle clicado no seletor do topo. Mostra identidade
     honesta (tipo, como conectou, driver) + o aviso do Nintendo/8BitDo por
     Bluetooth. ``slot`` = número GLOBAL de co-op (o MESMO do LED de player), pra
-    GUI e LED não discordarem. NÃO controla nada: o Hefesto não mexe nesses
-    controles — eles funcionam pelo driver do Linux + Steam. Modal, run/destroy.
+    GUI e LED não discordarem. NUMA-05: ``slot=None`` (registry ainda sem
+    opinião) exibe "—" honesto em vez de omitir a linha ou inventar posição.
+    NÃO controla nada: o Hefesto não mexe nesses controles — eles funcionam
+    pelo driver do Linux + Steam. Modal, run/destroy.
     """
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         detail_rows,
         friendly_type,
         mode_guidance,
         nintendo_bt_warning,
+        slot_label,
     )
 
     dialog = Gtk.Dialog(
@@ -321,14 +324,16 @@ def show_external_controller(
 
     # Número GLOBAL de co-op — o MESMO que o LED de player do controle mostra,
     # para GUI e LED nunca discordarem (o 1º externo continua a contagem dos
-    # DualSense: com 2 DualSense, este é o Controle 3).
-    if slot is not None:
-        slot_lbl = Gtk.Label()
-        slot_lbl.set_markup(
-            f'<span size="x-large" weight="bold">{_("Controle")} {slot}</span>'
-        )
-        slot_lbl.set_xalign(0.0)
-        content.pack_start(slot_lbl, False, False, 0)
+    # DualSense: com 2 DualSense, este é o Controle 3). NUMA-05: sempre exibe
+    # a linha — sem opinião do registry ainda (`slot=None`), mostra "Controle
+    # —" em vez de sumir com a linha inteira (null honesto > omissão muda).
+    slot_lbl = Gtk.Label()
+    slot_lbl.set_markup(
+        f'<span size="x-large" weight="bold">{_("Controle")} '
+        f"{slot_label(slot)}</span>"
+    )
+    slot_lbl.set_xalign(0.0)
+    content.pack_start(slot_lbl, False, False, 0)
 
     intro = Gtk.Label()
     intro.set_markup(

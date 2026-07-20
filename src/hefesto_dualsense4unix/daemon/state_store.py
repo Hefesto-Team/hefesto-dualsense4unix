@@ -15,9 +15,11 @@ Consumo típico:
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 
 # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): janela de supressão do autoswitch após
 # escolha manual via IPC `profile.switch`. Quando o usuário ativa um perfil
@@ -84,6 +86,17 @@ class StateStore:
         self._window_detect_backend: str | None = None
         self._window_detect_healthy: bool = False
         self._window_detect_last_class: str | None = None
+        # NUMA-01: leitura CRUA do tick corrente (inclusive "unknown"/None —
+        # ao contrário de `_window_detect_last_class`, que só guarda a
+        # última classe ÚTIL e por isso é vetada como evidência de jogo: ela
+        # NUNCA decai, prenderia a autoridade em `game` para sempre após o
+        # jogo fechar). `_window_detect_read_monotonic` é o relógio dessa
+        # leitura; `_game_window_seen_at` é o carimbo (mesmo relógio) da
+        # ÚLTIMA vez que a classe casou `steam_app_\d+` — usado pelo
+        # `game_signal` para computar uma idade que DECAI.
+        self._window_detect_current_class: str | None = None
+        self._window_detect_read_monotonic: float | None = None
+        self._game_window_seen_at: float | None = None
 
     # --- escritas ------------------------------------------------------
 
@@ -153,15 +166,24 @@ class StateStore:
         DISPLAY presente e cobre XWayland/Proton, o caso de uso principal;
         os demais nascem não-saudáveis até a primeira leitura útil (ver
         `record_window_detect_read`). Zera `last_class` (novo boot do
-        detector = novo episódio de observação).
+        detector = novo episódio de observação) e, junto (NUMA-01), zera
+        também a classe CRUA/monotonic/`game_window_seen_at` — um boot novo
+        do detector não pode herdar o carimbo de jogo do episódio anterior.
         """
         with self._lock:
             self._window_detect_backend = backend
             self._window_detect_healthy = healthy
             self._window_detect_last_class = None
+            self._window_detect_current_class = None
+            self._window_detect_read_monotonic = None
+            self._game_window_seen_at = None
 
     def record_window_detect_read(
-        self, backend: str | None, wm_class: str | None
+        self,
+        backend: str | None,
+        wm_class: str | None,
+        *,
+        now: float | None = None,
     ) -> None:
         """Registra uma leitura do detector de janela (poll do autoswitch).
 
@@ -174,13 +196,31 @@ class StateStore:
         focada" — o veredito fino de ambiente fica no doctor.sh. `backend` é
         re-gravado a cada leitura porque a cascata Wayland pode migrar em
         runtime (portal -> wlrctl -> null).
+
+        NUMA-01: `window_detect_current_class` grava a leitura CRUA desta
+        chamada a CADA vez (inclusive "unknown"/None) — ao contrário do
+        `last_class` sticky acima, este é o valor que `game_signal.classify`
+        consome (o sticky é VETADO como evidência: nunca decai, prenderia a
+        autoridade em `game` para sempre). Quando a classe casa
+        `steam_app_\\d+`, carimba `game_window_seen_at` com `now`
+        (`time.monotonic()` por default, injetável para teste) — é dessa
+        marca que `game_signal` deriva uma idade que DECAI.
         """
+        moment = now if now is not None else time.monotonic()
         useful = bool(wm_class) and wm_class != "unknown"
         with self._lock:
             self._window_detect_backend = backend
+            self._window_detect_current_class = (
+                wm_class if isinstance(wm_class, str) else None
+            )
+            self._window_detect_read_monotonic = moment
             if useful:
                 self._window_detect_healthy = True
                 self._window_detect_last_class = wm_class
+            if steam_appid_from_wm_class(
+                wm_class if isinstance(wm_class, str) else None
+            ) is not None:
+                self._game_window_seen_at = moment
 
     # --- lock manual de profile.switch (Bug C) ------------------------
 
@@ -267,6 +307,30 @@ class StateStore:
         """
         with self._lock:
             return self._window_detect_last_class
+
+    @property
+    def window_detect_current_class(self) -> str | None:
+        """wm_class CRUA da ÚLTIMA leitura (NUMA-01) — inclusive "unknown"/None.
+
+        Diferente de `window_detect_last_class` (sticky, só guarda a última
+        classe ÚTIL): este é regravado a CADA leitura e é o que
+        `game_signal.classify` consome — o sticky é VETADO como evidência
+        de jogo (nunca decai, prenderia a autoridade em `game` para sempre).
+        """
+        with self._lock:
+            return self._window_detect_current_class
+
+    @property
+    def game_window_seen_at(self) -> float | None:
+        """Monotonic da ÚLTIMA leitura cuja classe casou `steam_app_\\d+`.
+
+        NUMA-01: None = nunca visto (ou zerado por `set_window_detect_backend`
+        — novo boot do detector). `game_signal` deriva daqui uma IDADE que
+        decai — ao contrário do sticky, este carimbo permite ao sinal
+        "esquecer" um jogo fechado.
+        """
+        with self._lock:
+            return self._game_window_seen_at
 
     def counter(self, name: str) -> int:
         with self._lock:

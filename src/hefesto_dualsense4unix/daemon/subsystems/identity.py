@@ -38,7 +38,11 @@ máquina: um arquivo de outro boot é sessão MORTA e é ignorado no load (a
 próxima sessão renumera do 1, D2). A expiração em runtime regrava o arquivo
 vazio. O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
 o ponto de monkeypatch dos testes (``xdg_paths.config_dir``), padrão
-``save_active_marker``.
+``save_active_marker``. O arquivo é COMPARTILHADO com o registro dos
+externos (``external_identity.py``, namespace ``externals``): ``load`` e
+``_save_locked`` dos DOIS lados adquirem o mesmo ``CONTROLLERS_FILE_LOCK``
+(NUMA-04) em volta do read→``os.replace`` — fecha o lost-update dos dois
+escritores independentes sem unificar os dois registros.
 
 Config do automático (COR-03): o registro também guarda o estado vigente do
 toggle ``auto_player_colors`` e do brilho do perfil ativo (D11), configurados
@@ -77,6 +81,19 @@ _MAC_RE = re.compile(
 
 #: Prefixo (canônico, 12-hex) dos MACs forjados dos vpads uhid — D9.
 _VPAD_MAC_PREFIX = "02fe"
+
+#: Lock de MÓDULO (NUMA-04, sprint 2026-07-19): protege TODO acesso
+#: read→``os.replace`` ao ``controllers.json`` COMPARTILHADO pelos dois
+#: registros independentes — este (namespace ``slots``) e o dos externos
+#: (``external_identity.py``, namespace ``externals``). Cada registro tinha
+#: só o próprio ``RLock`` de INSTÂNCIA, que não protege contra o OUTRO objeto
+#: fazendo read-modify-write ao MESMO tempo — um lost-update latente (um dos
+#: dois namespaces podia sumir quando o tick do externo e o sync do DualSense
+#: salvavam intercalados). ``external_identity.py`` IMPORTA e usa este MESMO
+#: Lock — nunca cria o seu. Um `threading.Lock` de PROCESSO basta (o daemon é
+#: singleton); `flock` inter-processo foi avaliado e REJEITADO como
+#: sobre-engenharia (não há dois processos daemon concorrentes a proteger).
+CONTROLLERS_FILE_LOCK = threading.Lock()
 
 
 def _read_boot_id() -> str | None:
@@ -323,6 +340,49 @@ class ControllerIdentityRegistry:
         with self._lock:
             return dict(self._slots)
 
+    def lock_for_renumber(self) -> threading.RLock:
+        """Expõe o `RLock` de instância — SÓ para `identity.renumber` (fix TOCTOU).
+
+        Achado MEDIUM da corretora final (2026-07-20): entre o `snapshot()` e
+        o `compact()` do handler IPC não havia lock nenhum cobrindo o span
+        inteiro plan→apply — um `slot_for(assign=True)` concorrente (hotplug
+        real sob o `_io_lock` do backend) podia ler `used` ainda
+        NÃO-compactado e reivindicar o slot-alvo que o `compact()` estava
+        prestes a devolver a outro controle, gerando dois controles com o
+        MESMO slot. O `RLock` é reentrante: o handler mantém isto tomado
+        durante `snapshot()`+plano+`compact()` do MESMO thread sem
+        autodeadlock; qualquer `slot_for` de OUTRO thread bloqueia até o
+        handler soltar. Não usar para mais nada — vazar o lock de instância é
+        exceção deliberada, não precedente.
+        """
+        return self._lock
+
+    def compact(self, mapping: dict[str, int]) -> None:
+        """Reatribui slots conforme ``mapping`` (``identity.renumber``, ONDA-U/U2).
+
+        Distinta da atribuição LAZY de ``slot_for``: é uma reescrita
+        EXPLÍCITA, disparada só pelo handler IPC (gate de sessão vazia é
+        responsabilidade do CHAMADOR — este método não sabe de
+        ``display_authority``). Só reescreve chaves que já existem NESTE
+        registro — o chamador monta ``mapping`` a partir de um
+        ``snapshot()`` deste mesmo objeto (a compactação é GLOBAL entre
+        DualSense e externos, cada registro aplica só a fatia que é dele).
+        Não mexe em reserva/expiração/voláteis (``_volatile`` continua
+        intocado — ``_save_locked`` já filtra por ele); só troca o número do
+        slot. Persiste sob ``CONTROLLERS_FILE_LOCK`` via ``_save_locked``
+        (mesmo NUMA-04 do save do tick lento) quando algo de fato mudou.
+        """
+        with self._lock:
+            changed = False
+            for key, new_slot in mapping.items():
+                if key in self._slots and self._slots[key] != new_slot:
+                    self._slots[key] = new_slot
+                    changed = True
+            if changed:
+                self._dirty = True
+                self._save_locked()
+                self._dirty = False
+
     # ------------------------------------------------------------------
     # Persistência (restart do daemon com controles presentes)
     # ------------------------------------------------------------------
@@ -334,19 +394,23 @@ class ControllerIdentityRegistry:
         Entradas carregadas entram como RESERVAS: o primeiro reconcile com
         controles presentes as reivindica (restart do daemon preserva os
         números); um boot novo da máquina (boot_id difere) é sessão morta e
-        o arquivo é ignorado. Idempotente; nunca propaga exceção.
+        o arquivo é ignorado. Idempotente; nunca propaga exceção. NUMA-04: a
+        leitura roda sob ``CONTROLLERS_FILE_LOCK`` — o mesmo lock que
+        ``external_identity.py`` usa para o próprio load/save do MESMO
+        arquivo.
         """
         with self._lock:
             if self._loaded:
                 return
             self._loaded = True
-            try:
-                data = json.loads(self._path().read_text(encoding="utf-8"))
-            except (FileNotFoundError, json.JSONDecodeError, OSError):
-                return
-            except Exception as exc:  # defensivo — load jamais derruba o boot
-                logger.debug("identity_load_falhou", err=str(exc))
-                return
+            with CONTROLLERS_FILE_LOCK:
+                try:
+                    data = json.loads(self._path().read_text(encoding="utf-8"))
+                except (FileNotFoundError, json.JSONDecodeError, OSError):
+                    return
+                except Exception as exc:  # defensivo — load jamais derruba o boot
+                    logger.debug("identity_load_falhou", err=str(exc))
+                    return
             boot_id = _read_boot_id()
             if not isinstance(data, dict):
                 return
@@ -396,33 +460,37 @@ class ControllerIdentityRegistry:
 
         EXT-04: o arquivo é COMPARTILHADO com o registro dos externos
         (namespace ``externals`` — ``subsystems/external_identity.py``);
-        read-modify-write para preservar o namespace do outro lado.
+        read-modify-write para preservar o namespace do outro lado. NUMA-04:
+        o span INTEIRO read→``os.replace`` roda sob ``CONTROLLERS_FILE_LOCK``
+        — fecha o lost-update entre os dois escritores independentes (cada
+        um só tinha o próprio RLock de instância, que não protegia o outro).
         """
         try:
-            path = self._path()
-            payload: dict[str, Any] = {}
-            with contextlib.suppress(Exception):
-                existente = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(existente, dict) and isinstance(
-                    existente.get("externals"), dict
-                ):
-                    payload["externals"] = existente["externals"]
-            payload["boot_id"] = _read_boot_id()
-            payload["slots"] = {
-                key: slot
-                for key, slot in self._slots.items()
-                if key not in self._volatile
-            }
-            data = json.dumps(payload, ensure_ascii=False)
-            fd, tmp = tempfile.mkstemp(
-                dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
-            )
-            try:
-                os.write(fd, data.encode())
-            finally:
-                os.close(fd)
-            os.replace(tmp, path)
-            logger.debug("identity_slots_salvos", slots=payload["slots"])
+            with CONTROLLERS_FILE_LOCK:
+                path = self._path()
+                payload: dict[str, Any] = {}
+                with contextlib.suppress(Exception):
+                    existente = json.loads(path.read_text(encoding="utf-8"))
+                    if isinstance(existente, dict) and isinstance(
+                        existente.get("externals"), dict
+                    ):
+                        payload["externals"] = existente["externals"]
+                payload["boot_id"] = _read_boot_id()
+                payload["slots"] = {
+                    key: slot
+                    for key, slot in self._slots.items()
+                    if key not in self._volatile
+                }
+                data = json.dumps(payload, ensure_ascii=False)
+                fd, tmp = tempfile.mkstemp(
+                    dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
+                )
+                try:
+                    os.write(fd, data.encode())
+                finally:
+                    os.close(fd)
+                os.replace(tmp, path)
+                logger.debug("identity_slots_salvos", slots=payload["slots"])
         except Exception as exc:
             logger.debug("identity_save_falhou", err=str(exc))
 
@@ -499,6 +567,7 @@ def reset_identity_registry() -> None:
 
 
 __all__ = [
+    "CONTROLLERS_FILE_LOCK",
     "ControllerIdentityRegistry",
     "get_identity_registry",
     "make_auto_output_provider",
