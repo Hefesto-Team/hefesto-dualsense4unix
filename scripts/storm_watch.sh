@@ -10,6 +10,13 @@
 #   [USB-71]  o storm clássico (-71/enum) — mesmos padrões do doctor.sh;
 #   [JOYCON]  joycon_enforce_subcmd_rate — o rate-limit do hid-nintendo que
 #             derruba o 8BitDo/Pro Controller em BT (provado ao vivo 2026-07-18);
+#   [JOYCON-PROBE]  Onda T (2026-07-20, desenho: docs/process/estudos/2026-07-
+#             20-desenho-onda-t-patch-dkms.md) — a morte "invisível" por
+#             PROBE (joycon_read_info -110, ANTES do device registrar; a
+#             cascata [JOYCON] acima não vê nada porque o subcmd rate nem
+#             chega a rodar) + o retry do patch DKMS agindo ("init over
+#             bluetooth failed; retrying"). Tag NOVA, [JOYCON] fica intacto —
+#             a string "exceeded max attempts" não mudou no patch;
 #   [BT-HCI]  timeout/erro do hci no kernel — PREVENTIVO (zero histórico local:
 #             silencioso até a 1ª ocorrência real, nada de alarmar o leigo);
 #   [XHCI]    reset/morte do host USB — PREVENTIVO (idem);
@@ -35,17 +42,22 @@ set -uo pipefail
 
 # União dos padrões vigiados (case-insensitive; `can.t` cobre o apóstrofo).
 # [USB-71] = regexes já provadas do doctor.sh (batalha de maio) + can't add hid.
-GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
+# [JOYCON-PROBE] (Onda T) = "probe - fail = -" (nintendo_hid_probe do driver,
+# QUALQUER retorno negativo — não hardcoda -110) + "failed to get joycon
+# info" (joycon_read_info, a causa medida) + "init over bluetooth failed" (só
+# existe no patch — o retry agindo). [JOYCON] intacto (exceeded max attempts).
+GREP_UNION="error -71|can.t add hid device|device descriptor read/64, error|not accepting address|unable to enumerate usb device|joycon_enforce_subcmd_rate|probe - fail = -|failed to get joycon info|init over bluetooth failed|bluetooth: hci[0-9].*(timeout|failed|error)|xhci_hcd.*(reset|died|timeout|halt)"
 
 # Classificador: linha short-iso do journal → "TIMESTAMP [TAG] mensagem".
-# Ordem: do mais específico para o mais genérico (JOYCON antes de USB-71 etc.).
-# mawk-compatível (sem IGNORECASE): casa sobre tolower($0).
+# Ordem: do mais específico para o mais genérico (JOYCON/JOYCON-PROBE antes
+# de USB-71 etc.). mawk-compatível (sem IGNORECASE): casa sobre tolower($0).
 classify() {
     awk '
     {
         low = tolower($0)
         tag = "[KERNEL]"
         if (low ~ /joycon_enforce_subcmd_rate/) tag = "[JOYCON]"
+        else if (low ~ /probe - fail = -|failed to get joycon info|init over bluetooth failed/) tag = "[JOYCON-PROBE]"
         else if (low ~ /error -71|can.t add hid device|device descriptor read\/64, error|not accepting address|unable to enumerate usb device/) tag = "[USB-71]"
         else if (low ~ /xhci_hcd.*(reset|died|timeout|halt)/) tag = "[XHCI]"
         else if (low ~ /bluetooth: hci[0-9].*(timeout|failed|error)/) tag = "[BT-HCI]"
@@ -141,7 +153,7 @@ if ! journalctl -k -n1 >/dev/null 2>&1; then
     exit 1
 fi
 
-echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência)" >>"${LOG}"
+echo "# $(date '+%F %T') kernel-watch iniciado (padrões: USB-71 JOYCON JOYCON-PROBE BT-HCI XHCI + contadores hci; preventivos ficam silenciosos até a 1ª ocorrência)" >>"${LOG}"
 
 bt_delta_loop &
 BT_LOOP_PID=$!

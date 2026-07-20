@@ -151,6 +151,11 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
         || missing+=("scripts/install-host-udev.sh")
     grep -qF "${conf_name}" packaging/arch/PKGBUILD 2>/dev/null \
         || missing+=("packaging/arch/PKGBUILD")
+    # Onda T (corretor, achado #10): o .spec do Fedora ficava FORA deste gate
+    # — remover um install -Dm644 de conf lá passava verde e o RPM saía sem a
+    # cura. Agora o .spec está sob o mesmo contrato dos demais instaladores.
+    grep -qF "${conf_name}" packaging/fedora/hefesto-dualsense4unix.spec 2>/dev/null \
+        || missing+=("packaging/fedora/hefesto-dualsense4unix.spec")
     grep -qF "${conf_name}" uninstall.sh 2>/dev/null \
         || missing+=("uninstall.sh")
     if [[ "${#missing[@]}" -eq 0 ]]; then
@@ -160,6 +165,34 @@ for conf_path in assets/modprobe/*.conf assets/modprobe.d/*.conf; do
         rc=1
     fi
 done
+
+# Onda T (corretor, achado #9): a cura de RAIZ do probe BT é o MÓDULO DKMS —
+# a conf modprobe.d acima é inerte sem ele. Todo formato empacotado precisa
+# carregar as fontes (dkms/hid-nintendo) + a lib (dkms_lib.sh), e o
+# install-host-udev.sh (o passo pós-instalação que deb/rpm/arch documentam)
+# precisa RODAR o dkms_install_patched_module. Sem este gate, o furo "só a
+# conf viaja, o módulo nunca chega ao usuário de pacote" passava verde.
+echo "== paridade da cura DKMS (assets/dkms/hid-nintendo × instaladores) =="
+if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
+    missing=()
+    for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        { grep -qF "dkms/hid-nintendo" "${inst}" 2>/dev/null \
+            && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
+            || missing+=("${inst}")
+    done
+    { grep -qF "dkms/hid-nintendo" flatpak/*.yml 2>/dev/null \
+        && grep -qF "dkms_lib.sh" flatpak/*.yml 2>/dev/null; } \
+        || missing+=("flatpak/*.yml")
+    grep -qF "dkms_install_patched_module" scripts/install-host-udev.sh 2>/dev/null \
+        || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] dkms hid-nintendo: fontes+lib em todos os formatos e o helper roda o DKMS"
+    else
+        echo "[FAIL] dkms hid-nintendo: FALTANDO em: ${missing[*]}"
+        rc=1
+    fi
+fi
 
 # BROKER-01 (Onda S — fd-injection, achado #21 da auditoria): purge/remoção
 # não pode deixar a unit ROOT do broker órfã habilitada em NENHUMA forma de

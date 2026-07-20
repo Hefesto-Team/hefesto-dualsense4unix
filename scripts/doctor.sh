@@ -1075,19 +1075,23 @@ check_kernel_watch() {
         info "sem log do kernel-watch ainda (nasce no primeiro start/evento)"
         return
     fi
-    local tag n resumo="" n_joycon=0 n_usb71=0 n_bterr=0
-    for tag in USB-71 JOYCON BT-HCI XHCI BT-ERR; do
+    local tag n resumo="" n_joycon=0 n_joycon_probe=0 n_usb71=0 n_bterr=0
+    for tag in USB-71 JOYCON JOYCON-PROBE BT-HCI XHCI BT-ERR; do
         n="$(grep -cF "[${tag}]" "${log}" 2>/dev/null || true)"; n="${n:-0}"
         resumo+=" ${tag}=${n}"
         case "${tag}" in
             JOYCON) n_joycon="${n}" ;;
+            JOYCON-PROBE) n_joycon_probe="${n}" ;;
             USB-71) n_usb71="${n}" ;;
             BT-ERR) n_bterr="${n}" ;;
         esac
     done
     info "kernel-watch (${log##*/}):${resumo}"
     if [[ "${n_joycon}" -gt 0 ]]; then
-        warn "o kernel deu rate-limit no controle Nintendo/8BitDo ${n_joycon} vez(es) [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo, sem knob de módulo); a configuração estável é NO CABO"
+        warn "o kernel deu rate-limit no controle Nintendo/8BitDo ${n_joycon} vez(es) [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo); a configuração estável é NO CABO. Onda T: o patch DKMS (ver seção abaixo) reduz a chance do link cair, mas não elimina a degradação de rádio"
+    fi
+    if [[ "${n_joycon_probe}" -gt 0 ]]; then
+        warn "o hid-nintendo falhou no PROBE ${n_joycon_probe} vez(es) [JOYCON-PROBE] neste log — morte 'invisível' (o device nem chega a registrar; sem cascata [JOYCON]); ver a seção DKMS hid-nintendo abaixo"
     fi
     if [[ "${n_usb71}" -gt 0 ]]; then
         warn "storm USB (-71) registrado ${n_usb71} vez(es) no kernel-watch [USB-71] — confira a seção USB/dropout abaixo"
@@ -1765,6 +1769,126 @@ check_hid_nintendo_bt_cascade() {
     info "guia: docs/usage/troubleshooting-8bitdo.md"
 }
 
+# ---------------------------------------------------------------------------
+# Onda T — patch DKMS do hid-nintendo (probe BT resiliente + module params).
+# Desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
+# ---------------------------------------------------------------------------
+# Nomes fixos (mesmos do assets/dkms/hid-nintendo/dkms.conf) — mudar de
+# versão exige atualizar os dois lados.
+readonly HEFESTO_DKMS_HID_NINTENDO_PKG="hefesto-hid-nintendo"
+readonly HEFESTO_DKMS_HID_NINTENDO_VER="1.0.0"
+
+# Onda T (assinatura complementar à cascata de check_hid_nintendo_bt_cascade
+# acima): "exceeded max attempts" DENSO mas SEM a cascata de timeouts que o
+# gate `_hid_nintendo_cascade_scan` exige (>=10) aponta para OUTRA coisa —
+# jitter/contenda de rádio (BT degradado mas NÃO morto), não a queda
+# terminal. Função PURA (mesma leitura de journal, stdin → stdout): gate
+# PRÓPRIO (exceeded >= $1, default 5, E timeouts < exceeded na MESMA
+# instância hid). Journal limpo ou só a cascata terminal => saída vazia.
+_hid_nintendo_dense_exceeded_scan() {
+    local min="${1:-5}"
+    sed -nE \
+        -e 's/^.*([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}).*timeout waiting for input report.*$/\1 timeout/p' \
+        -e 's/^.*([0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}).*joycon_enforce_subcmd_rate: exceeded max attempts.*$/\1 exceeded/p' \
+      | awk -v min="${min}" '
+            $2 == "timeout"  { t[$1]++ }
+            $2 == "exceeded" { e[$1]++ }
+            END {
+                for (i in e) {
+                    to = (i in t ? t[i] : 0)
+                    if (e[i] >= min && to < e[i]) printf "%s %d %d\n", i, e[i], to
+                }
+            }
+        ' | sort
+}
+
+# Assinaturas do estudo de premissas (LER: docs/process/estudos/2026-07-20-
+# estudo-premissas-onda-t-hid-nintendo.md, premissa 7) que HOJE não têm check
+# dedicado: a morte por PROBE (o driver falha ANTES de registrar o device —
+# "exceeded max attempts" nem entra na cadeia, então check_hid_nintendo_bt_
+# cascade não vê nada) e o "exceeded" denso sem cascata (acima). Usa
+# `_TRANSPORT=kernel` — NUNCA `journalctl -k` sozinho para checks novos (a
+# armadilha "-k implica -b" documentada no sprint T0 já confundiu um
+# diagnóstico desta onda); `-b` aqui é explícito e proposital (histórico
+# deste boot, mesmo escopo do check_hid_nintendo_bt_cascade acima).
+_check_hid_nintendo_probe_death_signature() {
+    command -v journalctl >/dev/null 2>&1 || return 0
+    local jlog info_fail probe_fail retry_hits
+    jlog="$(journalctl -b _TRANSPORT=kernel --no-pager 2>/dev/null)"
+    [[ -z "${jlog}" ]] && return 0
+    info_fail="$(printf '%s\n' "${jlog}" | grep -ciE 'Failed to get joycon info; ret=-[0-9]+' || true)"
+    probe_fail="$(printf '%s\n' "${jlog}" | grep -ciE 'probe - fail = -[0-9]+' || true)"
+    retry_hits="$(printf '%s\n' "${jlog}" | grep -ciE 'init over bluetooth failed.*retrying' || true)"
+    info_fail="${info_fail:-0}"; probe_fail="${probe_fail:-0}"; retry_hits="${retry_hits:-0}"
+    if [[ "${info_fail}" -gt 0 && "${probe_fail}" -gt 0 ]]; then
+        warn "morte por PROBE do hid-nintendo neste boot: ${info_fail}x 'Failed to get joycon info' + ${probe_fail}x 'probe - fail' — o driver falhou ANTES de registrar o device e o in-tree NÃO re-proba sozinho; sem o patch DKMS, replug/power-cycle é a única saída"
+        if [[ "${retry_hits}" -gt 0 ]]; then
+            info "o retry do patch DKMS está agindo (${retry_hits}x 'init over bluetooth failed; retrying') — se o probe passou depois, a cura funcionou"
+        else
+            info "sem sinal do retry do patch neste boot — confira acima se o módulo CARREGADO é o patchado"
+        fi
+    fi
+}
+
+_check_hid_nintendo_exceeded_dense_signature() {
+    command -v journalctl >/dev/null 2>&1 || return 0
+    local hits
+    hits="$(journalctl -b _TRANSPORT=kernel --no-pager 2>/dev/null | _hid_nintendo_dense_exceeded_scan)"
+    [[ -z "${hits}" ]] && return 0
+    local inst n_exc n_to
+    while read -r inst n_exc n_to; do
+        [[ -z "${inst}" ]] && continue
+        warn "interferência/contenda BT no controle Nintendo/8BitDo (instância ${inst}, neste boot): ${n_exc}x 'exceeded max attempts' com só ${n_to}x timeout — rádio degradado SEM a cascata de morte terminal (gate >=10 timeouts do check acima); o link não caiu, mas está sob contenda"
+    done <<<"${hits}"
+}
+
+# Check principal da Onda T: o patch DKMS está instalado/ativo? Read-only —
+# NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
+check_hefesto_hid_nintendo_dkms() {
+    if ! command -v dkms >/dev/null 2>&1; then
+        info "dkms ausente — patch DKMS do hid-nintendo (Onda T) não instalado (opcional; ./install.sh instala por default, ou: sudo apt install dkms)"
+        return
+    fi
+    local kver status
+    kver="$(uname -r)"
+    status="$(dkms status "${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER}" 2>/dev/null)"
+    if [[ -z "${status}" ]]; then
+        info "patch DKMS do hid-nintendo (Onda T) não instalado — driver in-tree em uso (cura de raiz do probe BT: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh; opt-out: --no-dkms)"
+        return
+    fi
+    if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
+        pass "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER} construído p/ o kernel atual (${kver})"
+    else
+        warn "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente, in-tree em uso; status: ${status}"
+    fi
+
+    # Próximo carregamento: NUNCA usar srcversion (armadilha do estudo — não
+    # distingue in-tree de DKMS); modinfo -F filename aponta o caminho real.
+    local modpath
+    modpath="$(modinfo -F filename hid_nintendo 2>/dev/null)"
+    if [[ "${modpath}" == */updates/dkms/* ]]; then
+        info "próximo carregamento resolve para o módulo patchado (${modpath})"
+    elif [[ -n "${modpath}" ]]; then
+        info "próximo carregamento ainda resolve para o in-tree (${modpath}) — confira /etc/depmod.d ou rode: sudo depmod -a"
+    fi
+
+    # Módulo CARREGADO agora: só o patchado expõe parameters/ (0 params no
+    # in-tree — confirmado byte a byte no estudo de premissas).
+    if [[ -d /sys/module/hid_nintendo/parameters ]]; then
+        local retries skiptx
+        retries="$(cat /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || echo '?')"
+        skiptx="$(cat /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || echo '?')"
+        pass "módulo hid_nintendo CARREGADO é o patchado (bt_probe_retries=${retries}, skip_tx_on_rate_exceeded=${skiptx}; esperados 3/Y via /etc/modprobe.d/hefesto-hid-nintendo.conf)"
+    elif [[ -d /sys/module/hid_nintendo ]]; then
+        warn "módulo hid_nintendo carregado é o in-tree (sem parameters/) — o patchado vale SÓ no próximo boot (replug NÃO troca módulo carregado: re-liga no driver residente; substituir módulo em uso derrubaria Pro Controller/8BitDo conectados)"
+    else
+        info "hid_nintendo não está carregado agora (sem controle Nintendo/8BitDo plugado?)"
+    fi
+
+    _check_hid_nintendo_probe_death_signature
+    _check_hid_nintendo_exceeded_dense_signature
+}
+
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
 # Resolve o controlador PCI (xHCI) onde um device USB (sysfs path) está pendurado:
 # o último 0000:XX:YY.Z na cadeia antes do /usbN é o controlador.
@@ -1973,6 +2097,8 @@ main() {
     check_controller
     check_perms_soft
     check_hid_nintendo_bt_cascade
+    hdr "DKMS hid-nintendo (Onda T — cura de raiz do probe BT)"
+    check_hefesto_hid_nintendo_dkms
     hdr "USB / dropout"
     check_usb_dropout
 

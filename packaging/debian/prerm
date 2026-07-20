@@ -38,6 +38,24 @@ case "$1" in
                   /etc/systemd/system/hefesto-hidraw-broker.socket
             systemctl daemon-reload 2>/dev/null || true
         fi
+        # Onda T (corretor, achado #9): o modulo DKMS hefesto-hid-nintendo e
+        # construido FORA do manifesto do dpkg (install-host-udev.sh) — sem
+        # este bloco, apt remove deixava o modulo patchado registrado no
+        # DKMS vencendo o in-tree para sempre (mesma logica do broker acima).
+        # NUNCA descarrega modulo em uso (controles conectados cairiam); o
+        # in-tree volta sozinho no proximo boot (depmod ja refeito).
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+            dkms status hefesto-hid-nintendo 2>/dev/null \
+                | sed -n 's|^hefesto-hid-nintendo/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-hid-nintendo/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-hid-nintendo-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+        fi
+        rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
         ;;
 esac
 

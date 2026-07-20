@@ -48,6 +48,8 @@ makedepends=(
 )
 optdepends=(
     'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
+    'dkms: módulo hid-nintendo patchado (Onda T — cura de raiz do probe BT dos controles Nintendo/8BitDo)'
+    'linux-headers: build do módulo DKMS hid-nintendo patchado'
 )
 install="${pkgname}.install"
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
@@ -116,6 +118,19 @@ package() {
     # PLAT-04: btusb sem autosuspend (adaptador BT nunca dorme).
     install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
         "$pkgdir/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    # Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+    # Sem o módulo DKMS o in-tree só loga "unknown parameter ignored" (fail-safe).
+    install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+        "$pkgdir/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
+    # Onda T (corretor, achado #9): a conf acima é INERTE sem o MÓDULO DKMS.
+    # Empacota as fontes (dkms/hid-nintendo) + a lib genérica; quem roda o
+    # dkms add/build/install é o install-host-udev.sh (bundlado abaixo) no
+    # pós-instalação — mesma instrução do broker.
+    install -Dm644 scripts/dkms_lib.sh \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh"
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
+    cp -a assets/dkms/hid-nintendo/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
 
     # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
     # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de

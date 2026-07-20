@@ -48,6 +48,9 @@ Requires:       python3-jeepney
 # pydualsense puxado via pip no %install (sem RPM Fedora ainda).
 
 Recommends:     wlrctl
+# Onda T: modulo hid-nintendo patchado via DKMS (cura de raiz do probe BT
+# dos controles Nintendo/8BitDo) — o install-host-udev.sh roda o build.
+Recommends:     dkms
 
 %description
 Hefesto - Dualsense4Unix is a user-level Linux daemon that enables the
@@ -121,6 +124,18 @@ install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf
 install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
+# Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+# Sem o módulo DKMS o in-tree ignora o parâmetro e sobe normal (fail-safe).
+install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+    %{buildroot}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf
+# Onda T (corretor, achado #9): a conf acima e INERTE sem o MODULO DKMS.
+# Empacota as fontes + a lib generica; o install-host-udev.sh (abaixo) roda
+# o dkms add/build/install no pos-instalacao (mesma instrucao do broker).
+install -Dm644 scripts/dkms_lib.sh \
+    %{buildroot}%{_datadir}/%{app_id}/scripts/dkms_lib.sh
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo
+cp -a assets/dkms/hid-nintendo/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo/
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 
@@ -164,7 +179,9 @@ install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
 
 cat <<MSG
 Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
-cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro):
+cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro) e
+modulo DKMS hid-nintendo patchado (Onda T — cura de raiz do probe BT dos
+controles Nintendo/8BitDo; requer dkms + kernel-devel):
   sudo %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 MSG
 
@@ -184,6 +201,23 @@ if [ $1 -eq 0 ]; then
     rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
           /etc/systemd/system/hefesto-hidraw-broker.socket
     /usr/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+    # Onda T (corretor, achado #9): o modulo DKMS hefesto-hid-nintendo e
+    # construido FORA do manifesto do rpm (install-host-udev.sh) — sem este
+    # bloco, dnf remove deixava o modulo patchado registrado vencendo o
+    # in-tree para sempre. NUNCA descarrega modulo em uso; o in-tree volta
+    # sozinho no proximo boot.
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+        dkms status hefesto-hid-nintendo 2>/dev/null \
+            | sed -n 's|^hefesto-hid-nintendo/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-hid-nintendo/${_v}" --all >/dev/null 2>&1 || :
+                rm -rf "/usr/src/hefesto-hid-nintendo-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || :
+    fi
+    rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
 fi
 
 %postun
@@ -217,10 +251,13 @@ fi
 %{_udevrulesdir}/81-hefesto-usb-host-power.rules
 /usr/lib/modprobe.d/hefesto-dualsense-storm.conf
 /usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
+/usr/lib/modprobe.d/hefesto-hid-nintendo.conf
 %{_modulesloaddir}/hefesto-dualsense4unix.conf
 %{_userunitdir}/*.service
 %{_datadir}/locale/*/LC_MESSAGES/hefesto-dualsense4unix.mo
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
+%{_datadir}/%{app_id}/scripts/dkms_lib.sh
+%{_datadir}/%{app_id}/dkms/hid-nintendo/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket

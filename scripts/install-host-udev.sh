@@ -86,6 +86,22 @@ for candidate in \
     fi
 done
 
+# Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3 —
+# cura da morte por probe BT). O parâmetro só existe no módulo DKMS do hefesto;
+# com o in-tree o kernel loga "unknown parameter ignored" e sobe normal
+# (fail-safe do desenho da Onda T) — instalar a conf é sempre seguro.
+HIDNINTENDO_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "/usr/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../assets/modprobe.d" \
+; do
+    if [[ -f "${candidate}/hefesto-hid-nintendo.conf" ]]; then
+        HIDNINTENDO_SRC="${candidate}"
+        break
+    fi
+done
+
 # BROKER-01 (Onda S — fd-injection): broker root que esconde o hidraw FÍSICO
 # do DualSense do JOGO e serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd
 # `open`) para o giroscópio nunca morrer, mesmo com o nó escondido. Resolve o
@@ -202,6 +218,9 @@ fi
 if [[ -n "${BTUSB_SRC}" ]]; then
     echo "  - hefesto-btusb-no-autosuspend.conf (adaptador Bluetooth nunca dorme)"
 fi
+if [[ -n "${HIDNINTENDO_SRC}" ]]; then
+    echo "  - hefesto-hid-nintendo.conf (probe BT resiliente do hid-nintendo patchado)"
+fi
 if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     echo "  - hefesto-hidraw-broker (broker root hide-hidraw, BROKER-01; uid ${BROKER_SESSION_UID}, grupo ${BROKER_SESSION_GROUP})"
 elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
@@ -241,6 +260,15 @@ _build_install_cmd() {
         cmd+="install -Dm644 '${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-btusb-no-autosuspend.conf'; "
         cmd+="printf '0' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
+    fi
+    # Onda T: conf persistente do hid-nintendo patchado + parâmetro a quente
+    # (só existe se o módulo DKMS estiver carregado — best-effort; vale já no
+    # próximo probe BT, sem reload de módulo nem replug dos controles em uso).
+    if [[ -n "${HIDNINTENDO_SRC}" ]]; then
+        cmd+="install -Dm644 '${HIDNINTENDO_SRC}/hefesto-hid-nintendo.conf' "
+        cmd+="'${SNDQUIRK_DEST}/hefesto-hid-nintendo.conf'; "
+        cmd+="printf '3' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
+        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
     fi
     # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
     # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —
@@ -329,6 +357,67 @@ else
     echo "  sudo udevadm control --reload-rules" >&2
     echo "  sudo udevadm trigger" >&2
     exit 1
+fi
+
+# -----------------------------------------------------------------------------
+# Onda T — cura de RAIZ do probe BT: módulo DKMS hid-nintendo patchado.
+# A conf modprobe.d instalada acima é INERTE sem o módulo (o in-tree só loga
+# "unknown parameter ignored"). Este bloco é o caminho OFICIAL dos formatos
+# empacotados (.deb/rpm/arch instruem rodar este script no pós-instalação):
+# sem ele, usuário de pacote nunca ganharia o módulo — a cura ficava
+# reservada a quem roda ./install.sh de um checkout git.
+# Fail-safe TOTAL (contrato do dkms_lib.sh): dkms/headers ausentes ou build
+# falho = aviso honesto + segue; as regras udev já instaladas acima nunca são
+# afetadas; NUNCA recarrega módulo (controles em uso não podem cair).
+# -----------------------------------------------------------------------------
+DKMS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/dkms/hid-nintendo" \
+    "/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo" \
+    "${SCRIPT_DIR}/../assets/dkms/hid-nintendo" \
+; do
+    if [[ -f "${candidate}/dkms.conf" ]]; then
+        DKMS_SRC="${candidate}"
+        break
+    fi
+done
+DKMS_LIB_SH=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
+    "/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh" \
+    "${SCRIPT_DIR}/dkms_lib.sh" \
+; do
+    if [[ -f "${candidate}" ]]; then
+        DKMS_LIB_SH="${candidate}"
+        break
+    fi
+done
+if [[ -n "${DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
+    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
+    DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${DKMS_SRC}/dkms.conf")"
+    if [[ -n "${DKMS_VER}" ]]; then
+        # Rodando já como root (sudo bash …, o caminho documentado nos
+        # pacotes) o dkms_lib.sh ainda prefixa sudo — shim inócuo quando o
+        # binário sudo não existe no sistema.
+        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+            sudo() { "$@"; }
+        fi
+        echo ""
+        echo "Cura de raiz do probe BT (Onda T): módulo DKMS hid-nintendo patchado ..."
+        # shellcheck source=dkms_lib.sh
+        source "${DKMS_LIB_SH}"
+        dkms_install_patched_module hefesto-hid-nintendo "${DKMS_VER}" \
+            "${DKMS_SRC}" hid-nintendo
+        if dkms_module_from_updates hid-nintendo; then
+            echo "  módulo patchado staged (vence o in-tree no próximo boot/carregamento)"
+        else
+            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
+        fi
+    fi
+else
+    echo ""
+    echo "AVISO: fontes DKMS do hid-nintendo não encontradas neste formato — a conf"
+    echo "       hefesto-hid-nintendo.conf fica inerte sem o módulo patchado (in-tree segue)."
 fi
 
 echo ""

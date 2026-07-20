@@ -202,6 +202,25 @@ install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d"
 install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+# Onda T (2026-07-20): opções do hid-nintendo patchado (bt_probe_retries=3).
+# Mesmos DOIS destinos. Sem o módulo DKMS o in-tree só loga "unknown parameter
+# ignored" e sobe normal (fail-safe do desenho da Onda T) — o conf pode (e
+# deve, paridade) viajar em todo formato.
+install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
+install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf"
+# Onda T (corretor, achado #9): a conf acima é INERTE sem o MÓDULO DKMS — e o
+# módulo só nasce do source + dkms_lib.sh. Empacota os dois para o
+# install-host-udev.sh (o passo pós-instalação que o postinst documenta)
+# rodar o dkms add/build/install no host. Sem isso a cura de raiz do probe
+# BT nunca chegaria a quem instala por .deb (ficava só no checkout git).
+echo "Copiando fontes DKMS do hid-nintendo patchado (Onda T) ..."
+install -Dm644 scripts/dkms_lib.sh \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/dkms_lib.sh"
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
+cp -a assets/dkms/hid-nintendo/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"

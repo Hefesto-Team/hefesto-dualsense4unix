@@ -78,6 +78,15 @@
 #     e removido por default; o pacote bluez-tools (dependência) NÃO é removido
 #     (pode ser útil ao usuário fora do Hefesto — mesma lógica de preservar deps
 #     compartilhadas do sistema).
+#
+# Onda T (2026-07-20, DKMS hid-nintendo patchado — probe BT resiliente, ver
+# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
+#   - módulo out-of-tree hid-nintendo (hefesto-hid-nintendo/1.0.0): removido
+#     por DEFAULT via `dkms remove --all` (scripts/dkms_lib.sh) + a conf
+#     /etc/modprobe.d/hefesto-hid-nintendo.conf. Sem flag nova (simétrico ao
+#     install SEM FLAGS). O in-tree volta sozinho no próximo BOOT (replug
+#     NÃO troca módulo carregado) — NUNCA descarregamos um módulo em uso
+#     (mesma regra do broker/btusb); os params vivos voltam a 0 a quente.
 
 set -euo pipefail
 
@@ -194,6 +203,14 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 # Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
+# Onda T: DKMS hid-nintendo patchado (probe BT resiliente) — dkms remove +
+# /etc/modprobe.d, ambos root. `dkms status` sem sudo já lista o registro
+# (leitura de /var/lib/dkms), então a checagem de presença aqui não precisa
+# de credencial — só a REMOÇÃO precisa.
+[[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]] && _NEEDS_SUDO=1
+command -v dkms >/dev/null 2>&1 \
+    && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q . \
+    && _NEEDS_SUDO=1
 acquire_sudo
 
 log "parando daemon hefesto-dualsense4unix (se ativo)"
@@ -560,6 +577,46 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
         log "  sudo systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service"
         log "  sudo ${BROKER_BIN} --restore-all-and-exit"
         log "  sudo rm -f ${BROKER_SERVICE} ${BROKER_SOCKET} ${BROKER_BIN} ${BROKER_OWNER_FILE}"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Onda T (2026-07-20, DKMS hid-nintendo patchado — probe BT resiliente, ver
+# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md): removido por
+# DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
+# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
+# /usr/src/<pkg>-<ver>; a options do modprobe.d sai junto. O in-tree volta
+# SOZINHO no próximo BOOT (dkms remove já roda depmod; replug NÃO troca
+# módulo carregado) — até lá, se o patchado estiver CARREGADO, ele continua
+# rodando. Para ele ficar de fato inócuo (== vanilla) devolvemos também os
+# params vivos a 0 via /sys (0644, sem reload — a conf que os ligou já saiu).
+# ---------------------------------------------------------------------------
+if command -v dkms >/dev/null 2>&1 \
+        && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q .; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo patch DKMS do hid-nintendo (Onda T): dkms remove --all"
+        # shellcheck source=scripts/dkms_lib.sh
+        source "${ROOT_DIR}/scripts/dkms_lib.sh"
+        dkms_remove_patched_module hefesto-hid-nintendo 1.0.0
+    else
+        log "sudo indisponível — patch DKMS do hid-nintendo NÃO removido"
+        log "  sudo dkms remove hefesto-hid-nintendo/1.0.0 --all"
+    fi
+fi
+if [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo opções do hid-nintendo patchado (/etc/modprobe.d/hefesto-hid-nintendo.conf)"
+        sudo rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+        # Módulo patchado ainda CARREGADO? Devolve o comportamento vanilla a
+        # quente (params 0644; NUNCA reload — derrubaria Pro/8BitDo em uso).
+        if [[ -d /sys/module/hid_nintendo/parameters ]]; then
+            printf '0' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
+            printf '0' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
+            log "params vivos do hid_nintendo devolvidos a 0 (comportamento vanilla até o boot)"
+        fi
+    else
+        log "sudo indisponível — /etc/modprobe.d/hefesto-hid-nintendo.conf NÃO removido"
+        log "  sudo rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf"
     fi
 fi
 

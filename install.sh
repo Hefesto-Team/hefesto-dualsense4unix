@@ -55,6 +55,22 @@
 #                         nunca zero controles). Vale para TODO formato
 #                         (native/flatpak/appimage/deb — achado Onda S #7).
 #                         --no-udev pula (mesmo gate dos passos de plataforma).
+#   (DEFAULT) DKMS hid-nintendo patchado (Onda T — cura de raiz do probe BT
+#                         que mata o Pro Controller/8BitDo em silêncio, sem
+#                         re-probar): módulo out-of-tree via DKMS
+#                         (assets/dkms/hid-nintendo/) que substitui o in-tree
+#                         (vence por precedência updates/dkms; NUNCA remove o
+#                         in-tree). Defaults do patch == comportamento vanilla;
+#                         a cura (retry de probe em BT) entra pela conf
+#                         /etc/modprobe.d/hefesto-hid-nintendo.conf
+#                         (bt_probe_retries=3). Fail-safe total: dkms/headers
+#                         ausentes ou build falho = aviso honesto, o in-tree
+#                         segue valendo, o install NUNCA aborta. Ativação
+#                         NUNCA recarrega um módulo já carregado (derrubaria
+#                         controles em uso) — vale no próximo boot/replug se
+#                         o módulo estiver descarregado. Vale para TODO
+#                         formato. Opt-out: --no-dkms (CI/sem hardware/kernel
+#                         sem headers, como --no-udev).
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -126,6 +142,7 @@ NO_DEV=0
 WITH_WIREPLUMBER_FIX=1
 WITH_WIREPLUMBER_DISABLE_MIC=0
 WITH_USB_QUIRK=0
+NO_DKMS=0
 SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
@@ -148,6 +165,7 @@ for arg in "$@"; do
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
+        --no-dkms)            NO_DKMS=1 ;;
         --no-snd-quirk)       SKIP_SND_QUIRK=1 ;;
         --no-kernel-watch)    SKIP_KERNEL_WATCH=1 ;;
         --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
@@ -341,12 +359,15 @@ fi
 printf '\n>>> Formato escolhido: %s\n' "${FORMAT}"
 
 # Prime a credencial sudo uma vez (ver acquire_sudo). Só pede a senha se algum
-# passo com root está de fato habilitado: udev (default), format deb (apt) ou o
-# applet forçado (--enable-cosmic-applet). Em COSMIC o applet é default-on e
-# também usa sudo, mas aí o udev já cobre o prime; --no-udev (CI sem hardware)
-# dispensa o prompt salvo se deb/applet explícito.
+# passo com root está de fato habilitado: udev (default), format deb (apt), o
+# applet forçado (--enable-cosmic-applet) ou o DKMS (default, Onda T — --no-udev
+# NÃO o desliga de propósito, é gate independente: --no-dkms). Em COSMIC o
+# applet é default-on e também usa sudo, mas aí o udev já cobre o prime;
+# --no-udev (CI sem hardware) dispensa o prompt salvo se deb/applet/dkms
+# explícito.
 _NEEDS_SUDO=1
-if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" && "${ENABLE_COSMIC_APPLET}" -eq 0 ]]; then
+if [[ "${SKIP_UDEV}" -eq 1 && "${FORMAT}" != "deb" \
+        && "${ENABLE_COSMIC_APPLET}" -eq 0 && "${NO_DKMS}" -eq 1 ]]; then
     _NEEDS_SUDO=0
 fi
 acquire_sudo
@@ -437,6 +458,64 @@ install_broker_host() {
     rm -rf "${_broker_tmp}"
 }
 
+# Onda T (desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md):
+# módulo hid-nintendo patchado (probe BT resiliente + module params) via DKMS
+# genérico (scripts/dkms_lib.sh — reusado pela Onda W/rtw88). DEFAULT ON (regra
+# da casa: install SEM FLAGS aplica), opt-out --no-dkms. Compartilhada entre o
+# passo 3i (native) e o bloco dos formatos de pacote (mesmo padrão do broker
+# acima) — DKMS é uma mudança de SISTEMA/kernel, ortogonal ao formato do app.
+# Contrato fail-safe fica TODO dentro de dkms_lib.sh (ver seu cabeçalho): esta
+# função só decide SE chama (flag/sudo) e a mensagem de ativação, nunca
+# recarrega/descarrega o módulo.
+install_dkms_hid_nintendo_host() {
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — patch DKMS do hid-nintendo NÃO instalado (driver in-tree continua, fail-safe)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — patch DKMS do hid-nintendo pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_install_patched_module hefesto-hid-nintendo 1.0.0 \
+        "${ROOT_DIR}/assets/dkms/hid-nintendo" hid-nintendo
+    if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" \
+            /etc/modprobe.d/hefesto-hid-nintendo.conf 2>/dev/null; then
+        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)\n'
+    else
+        warn "não consegui gravar /etc/modprobe.d/hefesto-hid-nintendo.conf"
+    fi
+    # dkms_install_patched_module é fail-safe POR DESENHO: retorna 0 em TODOS
+    # os ramos (sucesso E falha). O único juiz de "staged de verdade" é o
+    # modinfo resolver p/ updates/dkms — sem esta checagem, o install
+    # anunciava ativação futura mesmo com dkms ausente/build falho (mensagem
+    # FALSA: nada foi staged e o próximo plug carrega o in-tree vanilla).
+    if ! dkms_module_from_updates hid-nintendo; then
+        warn "patch DKMS do hid-nintendo NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored')"
+        return 0
+    fi
+    # ATIVAÇÃO FAIL-SAFE (mesmo princípio do btusb/broker acima): NUNCA
+    # recarregamos um módulo em uso — a mantenedora joga com Pro Controller e
+    # 8BitDo conectados AGORA, e substituir o módulo carregado os derrubaria.
+    # Nota de precisão (diferente do btusb): substituição de módulo NÃO pega
+    # em replug — se o in-tree está CARREGADO, o replug o re-liga a ele
+    # mesmo; só o próximo BOOT troca. Mensagem honesta nos dois ramos.
+    if [[ -d /sys/module/hid_nintendo/parameters ]]; then
+        printf '      módulo patchado JÁ carregado (params visíveis em /sys/module/hid_nintendo/parameters)\n'
+    elif [[ -d /sys/module/hid_nintendo ]]; then
+        printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria Pro/8BitDo conectados);\n'
+        printf '      o patchado vale no próximo boot (replug re-liga no módulo já carregado)\n'
+    else
+        printf '      hid_nintendo descarregado — o patchado entra sozinho no próximo plug\n'
+    fi
+    return 0
+}
+
 format_flatpak() {
     step "flatpak" "build + flatpak install --user (GNOME//47)"
     require flatpak
@@ -521,6 +600,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # qualquer jogo sem wrapper. Mesmo passo 3h do fluxo native.
     step "broker" "broker root hide-hidraw (BROKER-01 — DEFAULT em todo formato)"
     install_broker_host
+    # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
+    # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
+    # do fluxo native. Opt-out: --no-dkms.
+    step "dkms" "DKMS hid-nintendo patchado (Onda T — DEFAULT em todo formato)"
+    install_dkms_hid_nintendo_host
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
@@ -1154,6 +1238,21 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
     # flatpak/appimage/deb (que saem com `exit 0` antes deste passo).
     install_broker_host
 fi
+
+# ---------------------------------------------------------------------------
+# 3i. DKMS hid-nintendo patchado (Onda T) — DEFAULT, opt-out --no-dkms
+# ---------------------------------------------------------------------------
+# Cura de RAIZ da morte silenciosa do Pro Controller/8BitDo em Bluetooth: o
+# driver in-tree falha o PROBE (joycon_read_info -110) e NUNCA re-proba — o
+# device some do sistema até replug/power-cycle (medido 3x nesta máquina).
+# Módulo out-of-tree via DKMS (probe BT com retry opcional + module params;
+# defaults == vanilla) via a lib genérica scripts/dkms_lib.sh (reusada pela
+# Onda W/rtw88). Desenho completo:
+# docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
+# Contrato fail-safe: dkms/headers ausentes ou build falho = aviso honesto,
+# o in-tree segue valendo, o install NUNCA aborta por causa disto.
+step "3i" "Onda T: hid-nintendo patchado via DKMS (probe BT resiliente + module params)"
+install_dkms_hid_nintendo_host
 
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
