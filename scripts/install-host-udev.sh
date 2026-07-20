@@ -420,6 +420,52 @@ else
     echo "       hefesto-hid-nintendo.conf fica inerte sem o módulo patchado (in-tree segue)."
 fi
 
+# -----------------------------------------------------------------------------
+# Onda W — cura de RAIZ do fantasma USB do dongle WiFi: módulo DKMS rtw88_usb
+# patchado (device-gone + usb_queue_reset_device, gate hang_reset). Mesmo
+# caminho OFICIAL dos formatos empacotados da Onda T acima: sem este bloco,
+# usuário de pacote nunca ganharia o módulo. Fail-safe TOTAL (contrato do
+# dkms_lib.sh): dkms/headers ausentes ou build falho = aviso honesto + segue
+# (in-tree continua); NUNCA recarrega módulo — o WiFi em uso não pode cair,
+# a troca vale no próximo boot (replug NÃO troca módulo carregado).
+# -----------------------------------------------------------------------------
+RTW88_DKMS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/dkms/rtw88-usb" \
+    "/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb" \
+    "${SCRIPT_DIR}/../assets/dkms/rtw88-usb" \
+; do
+    if [[ -f "${candidate}/dkms.conf" ]]; then
+        RTW88_DKMS_SRC="${candidate}"
+        break
+    fi
+done
+if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
+    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
+    RTW88_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${RTW88_DKMS_SRC}/dkms.conf")"
+    if [[ -n "${RTW88_DKMS_VER}" ]]; then
+        # Mesmo shim do bloco acima: rodando já como root sem o binário sudo.
+        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+            sudo() { "$@"; }
+        fi
+        echo ""
+        echo "Cura de raiz do fantasma USB do dongle WiFi (Onda W): módulo DKMS rtw88_usb patchado ..."
+        # shellcheck source=dkms_lib.sh
+        source "${DKMS_LIB_SH}"
+        dkms_install_patched_module hefesto-rtw88-usb "${RTW88_DKMS_VER}" \
+            "${RTW88_DKMS_SRC}" rtw88_usb
+        if dkms_module_from_updates rtw88_usb; then
+            echo "  módulo patchado staged (vence o in-tree no próximo boot — NUNCA recarregamos com WiFi em uso)"
+        else
+            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
+        fi
+    fi
+else
+    echo ""
+    echo "AVISO: fontes DKMS do rtw88-usb não encontradas neste formato — sem o módulo"
+    echo "       patchado o fantasma USB do dongle WiFi segue possível (in-tree continua)."
+fi
+
 echo ""
 echo "Desconecte e reconecte o controle DualSense para aplicar as permissões."
 echo "Confira com: ls -l /dev/hidraw* /dev/uinput"

@@ -15,7 +15,12 @@
 # hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo;
 # e (BROKER-01, Onda S) o broker root hide-hidraw fd-injection — unit de
 # SISTEMA ativa, ping autenticado por SO_PEERCRED, coerência do que está
-# escondido com o daemon/Modo Nativo e recusa a outro uid.
+# escondido com o daemon/Modo Nativo e recusa a outro uid; e (Onda W) o
+# patch DKMS do rtw88_usb (dongle WiFi) — status do módulo patchado vs.
+# in-tree, a assinatura do fantasma USB (device retido após disconnect
+# perdido: duplicata de idVendor:idProduct, colisão de rename wlx... e -71
+# sem interface de rede) e o powersave EFETIVO do WiFi via NetworkManager
+# conf.d (leitura de arquivo só — nunca nmcli/rfkill).
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
@@ -1889,6 +1894,169 @@ check_hefesto_hid_nintendo_dkms() {
     _check_hid_nintendo_exceeded_dense_signature
 }
 
+# ---------------------------------------------------------------------------
+# Onda W — patch DKMS do rtw88_usb (device-gone + queue de port reset — cura
+# do fantasma USB do dongle WiFi). Desenho:
+# docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md.
+# ---------------------------------------------------------------------------
+# Nomes fixos (mesmos do assets/dkms/rtw88-usb/dkms.conf) — mudar de versão
+# exige atualizar os dois lados.
+readonly HEFESTO_DKMS_RTW88_PKG="hefesto-rtw88-usb"
+readonly HEFESTO_DKMS_RTW88_VER="1.0.0"
+
+# Check principal da Onda W: o patch DKMS está instalado/ativo? Read-only —
+# NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
+check_hefesto_rtw88_usb_dkms() {
+    if ! command -v dkms >/dev/null 2>&1; then
+        info "dkms ausente — patch DKMS do rtw88_usb (Onda W) não instalado (opcional; ./install.sh instala por default, ou: sudo apt install dkms)"
+        return
+    fi
+    local kver status
+    kver="$(uname -r)"
+    status="$(dkms status "${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER}" 2>/dev/null)"
+    if [[ -z "${status}" ]]; then
+        info "patch DKMS do rtw88_usb (Onda W) não instalado — driver in-tree em uso (cura de raiz do fantasma USB do dongle WiFi: ./install.sh no checkout do repo, ou, instalado por pacote .deb/rpm/arch: sudo /usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh; opt-out: --no-dkms)"
+        return
+    fi
+    if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
+        pass "DKMS ${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER} construído p/ o kernel atual (${kver})"
+    else
+        warn "DKMS ${HEFESTO_DKMS_RTW88_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente OU kernel fora do pino BUILD_EXCLUSIVE_KERNEL (7.0.y é EOL, série nova precisa de rebase do BASELINE), in-tree em uso; status: ${status}"
+    fi
+
+    # Próximo carregamento: NUNCA usar srcversion (mesma armadilha do estudo
+    # da Onda T — não distingue in-tree de DKMS); modinfo -F filename aponta
+    # o caminho real.
+    local modpath
+    modpath="$(modinfo -F filename rtw88_usb 2>/dev/null)"
+    if [[ "${modpath}" == */updates/dkms/* ]]; then
+        info "próximo carregamento resolve para o módulo patchado (${modpath})"
+    elif [[ -n "${modpath}" ]]; then
+        info "próximo carregamento ainda resolve para o in-tree (${modpath}) — confira /etc/depmod.d ou rode: sudo depmod -a"
+    fi
+
+    # Módulo CARREGADO agora: diferente do hid_nintendo (0 params no
+    # in-tree), o rtw88_usb in-tree JÁ expõe parameters/ (switch_usb_mode) —
+    # o marcador exclusivo do patchado é o PARÂMETRO NOVO hang_reset.
+    if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
+        local hang
+        hang="$(cat /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || echo '?')"
+        pass "módulo rtw88_usb CARREGADO é o patchado (hang_reset=${hang}; Y = usb_queue_reset_device ativo em device-gone, N = só detecção/silenciamento)"
+    elif [[ -d /sys/module/rtw88_usb ]]; then
+        warn "módulo rtw88_usb carregado é o in-tree (sem hang_reset) — o patchado vale SÓ no próximo boot (replug NÃO troca módulo carregado: o dongle re-liga no driver residente; substituir módulo em uso derrubaria o WiFi)"
+    else
+        info "rtw88_usb não está carregado agora (dongle WiFi desconectado?)"
+    fi
+}
+
+# Assinatura do fantasma USB (W1, medido 20/07: 13h de device retido após um
+# port-status-change perdido no xHCI). Read-only, três ângulos independentes
+# — cada um vira warn com a cura; journal do BOOT ATUAL só (mesma disciplina
+# do check_usb_dropout acima).
+check_usb_fantasma() {
+    local d driver idv idp key any=0
+    local -A _seen=()
+
+    # (a) DUPLICATA: mais de um device em /sys/bus/usb/devices/* com o mesmo
+    # idVendor:idProduct AINDA vinculado ao driver rtw88_usb — a assinatura
+    # real do incidente (fantasma + device vivo re-enumerado, mesmos IDs, um
+    # único dongle físico).
+    for d in /sys/bus/usb/devices/*; do
+        [[ -r "$d/idVendor" && -r "$d/idProduct" ]] || continue
+        driver="$(basename "$(readlink -f "$d/driver" 2>/dev/null || true)" 2>/dev/null)"
+        [[ "${driver}" == "rtw88_usb" ]] || continue
+        idv="$(cat "$d/idVendor" 2>/dev/null)"
+        idp="$(cat "$d/idProduct" 2>/dev/null)"
+        key="${idv}:${idp}"
+        if [[ -n "${_seen[$key]:-}" ]]; then
+            any=1
+            warn "device USB fantasma: $(basename "$d") E ${_seen[$key]} vinculados ao MESMO driver rtw88_usb com idVendor:idProduct=${key} — só existe um dongle físico; um 'USB disconnect' não foi processado. Cura: sudo sh -c 'echo ${_seen[$key]} > /sys/bus/usb/drivers/rtw88_usb/unbind' (confira o endereço exato) ou reboot"
+        else
+            _seen["${key}"]="$(basename "$d")"
+        fi
+    done
+
+    # (b) journal do boot com colisão de rename do udev — o dano concreto do
+    # fantasma (a interface nova não consegue assumir o nome wlx... que o
+    # device fantasma ainda segura). NÃO restrito a _TRANSPORT=kernel: quem
+    # renomeia é o systemd-udevd (userspace).
+    if command -v journalctl >/dev/null 2>&1; then
+        local rename_n
+        rename_n="$(journalctl -b --no-pager 2>/dev/null \
+            | grep -ciE 'wlx[0-9a-f]+.*(File exists|Arquivo existe)' || true)"
+        rename_n="${rename_n:-0}"
+        if [[ "${rename_n}" -gt 0 ]]; then
+            any=1
+            warn "colisão de rename do udev neste boot: ${rename_n}x 'wlx... File exists/Arquivo existe' — sintoma do fantasma (a interface nova não consegue assumir o nome que o device fantasma ainda segura)"
+        fi
+    fi
+
+    # (c) device com driver rtw88_usb em sysfs SEM filho net/ (nunca virou
+    # interface de rede, ou a perdeu) + -71 recente no kernel log deste
+    # device — o padrão do firmware wedged/disconnect perdido medido 20/07.
+    if command -v journalctl >/dev/null 2>&1; then
+        local jlog
+        jlog="$(journalctl -b -k --no-pager 2>/dev/null)"
+        for d in /sys/bus/usb/devices/*; do
+            [[ -r "$d/idVendor" ]] || continue
+            driver="$(basename "$(readlink -f "$d/driver" 2>/dev/null || true)" 2>/dev/null)"
+            [[ "${driver}" == "rtw88_usb" ]] || continue
+            if find "$d" -maxdepth 2 -type d -name net 2>/dev/null | grep -q .; then
+                continue
+            fi
+            local devname eproto_n
+            devname="$(basename "$d")"
+            eproto_n="$(printf '%s\n' "${jlog}" | grep -c "usb ${devname}:.*error -71" || true)"
+            eproto_n="${eproto_n:-0}"
+            if [[ "${eproto_n}" -gt 0 ]]; then
+                any=1
+                warn "device USB ${devname} (driver rtw88_usb) SEM interface de rede (net/) e com ${eproto_n}x '-71' neste boot — assinatura de device-gone (firmware wedged ou disconnect perdido). Cura: sudo sh -c 'echo ${devname} > /sys/bus/usb/drivers/rtw88_usb/unbind' ou reboot"
+            fi
+        done
+    fi
+
+    [[ "${any}" -eq 0 ]] && pass "sem sinal de device USB fantasma (rtw88_usb) neste boot"
+}
+
+# Powersave EFETIVO do WiFi (W2 — vilão ATIVO é o LPS RASO via mac80211,
+# ligado hoje por wifi.powersave=3 do NetworkManager; disable_lps_deep é
+# NO-OP em USB, não é medido/julgado aqui). Leitura SÓ de arquivo (conf.d) —
+# NUNCA invoca nmcli/rfkill (regra da casa: doctor é read-only e não toca
+# NetworkManager). Sem julgamento até scripts/medir_w2_lps.sh medir A/B.
+check_wifi_powersave() {
+    local -a files=(/etc/NetworkManager/NetworkManager.conf)
+    if [[ -d /etc/NetworkManager/conf.d ]]; then
+        local f
+        while IFS= read -r -d '' f; do
+            files+=("${f}")
+        done < <(find /etc/NetworkManager/conf.d -maxdepth 1 -name '*.conf' -print0 2>/dev/null | sort -z)
+    fi
+    local val="" src="" f hit
+    for f in "${files[@]}"; do
+        [[ -r "${f}" ]] || continue
+        hit="$(sed -n 's/^[[:space:]]*wifi\.powersave[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "${f}" 2>/dev/null | tail -1)"
+        [[ -n "${hit}" ]] && { val="${hit}"; src="${f}"; }
+    done
+    if [[ -z "${val}" ]]; then
+        info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale) — não medido ainda: scripts/medir_w2_lps.sh"
+    elif [[ "${val}" == "3" ]]; then
+        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src} — histórico de instabilidade em dongles Realtek USB (rtw88); meça antes de mudar: scripts/medir_w2_lps.sh"
+    elif [[ "${val}" == "2" && "${src}" == "/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" ]]; then
+        pass "wifi.powersave=2 (desliga) via o conf.d do hefesto — opt-in aplicado após medição W2 confirmar ganho"
+    else
+        info "wifi.powersave=${val} via ${src}"
+    fi
+
+    if command -v journalctl >/dev/null 2>&1; then
+        local n
+        n="$(journalctl -b -k --no-pager 2>/dev/null | grep -ciE 'failed to leave lps state' || true)"
+        n="${n:-0}"
+        if [[ "${n}" -gt 0 ]]; then
+            warn "${n}x 'failed to leave lps state' neste boot — assinatura do LPS raso (mac80211 emperrando ao sair do power save); reforça o histórico de instabilidade citado acima"
+        fi
+    fi
+}
+
 # FEAT-DOCTOR-USB-DROPOUT-DIAGNOSTIC-01.
 # Resolve o controlador PCI (xHCI) onde um device USB (sysfs path) está pendurado:
 # o último 0000:XX:YY.Z na cadeia antes do /usbN é o controlador.
@@ -2099,6 +2267,10 @@ main() {
     check_hid_nintendo_bt_cascade
     hdr "DKMS hid-nintendo (Onda T — cura de raiz do probe BT)"
     check_hefesto_hid_nintendo_dkms
+    hdr "DKMS rtw88_usb / WiFi (Onda W — fantasma USB + powersave)"
+    check_hefesto_rtw88_usb_dkms
+    check_usb_fantasma
+    check_wifi_powersave
     hdr "USB / dropout"
     check_usb_dropout
 

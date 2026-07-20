@@ -1,0 +1,21 @@
+# Baseline do módulo DKMS hefesto-rtw88-usb (Onda W)
+# O usb.c/usb.h deste diretório == vanilla v7.0.11 + 0001 + 0002 aplicados.
+# Paridade verificável (na raiz do asset, caminhos -p6):
+#   patch -R -p6 usb.c usb.h < patch/0002-*.patch ; patch -R -p6 usb.c < patch/0001-*.patch
+# deve reproduzir exatamente SHA256_VANILLA_C / SHA256_VANILLA_H.
+# Os demais headers (main.h, debug.h, mac.h, reg.h, tx.h, rx.h, fw.h, ps.h,
+# util.h, hci.h) são vanilla INTOCADOS — só existem aqui porque o linux-headers
+# não os traz e o usb.c os inclui.
+KERNEL_BASE=v7.0.11
+KERNEL_TESTED=7.0.11-76070011-generic
+POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
+SHA256_VANILLA_C=969ce8bc2518ae87c203707c43315c25eefa999a3ae9e684487ef8d0305768de
+SHA256_VANILLA_H=eb30ffd421bbc4e8bc4234dc094a2f3fc9156dfd3e7f8027cb1116a51693797e
+SHA256_PATCHED_C=41d90be506a8cb55e5f4847566432ddbb50e6987f78419e127d7f84f148ab9eb
+SHA256_PATCHED_H=492505146c1475f9abe106be0dbdad9fa7b8a8b5902251e588300d612d56160d
+# sha256 de: sha256sum main.h debug.h mac.h reg.h tx.h rx.h fw.h ps.h util.h hci.h | sha256sum
+SHA256_HEADERS_BUNDLE=19749c2249bd3976a75b085ed521fc01d457b9307bfdc42f1edbc63c4345e654
+PATCH_1=0001-wifi-rtw88-usb-fix-memory-leaks-on-USB-write-failures.patch
+PATCH_2=0002-wifi-rtw88-usb-detect-device-gone-and-queue-port-reset.patch
+UPSTREAM_0001=6b964941bbfe6e0f18b1a5e008486dbb62df440a
+MODELO_0002=rtw89 2135c28be6a8 (RTW89_FLAG_UNPLUGGED + continual_io_error>4)

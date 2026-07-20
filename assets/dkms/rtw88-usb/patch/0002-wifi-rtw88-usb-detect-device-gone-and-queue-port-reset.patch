@@ -1,0 +1,333 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Mon, 20 Jul 2026 19:00:00 -0300
+Subject: [PATCH 2/2] wifi: rtw88: usb: detect device gone and queue a port
+ reset to recover
+
+When the USB device stops responding - because it was physically
+unplugged but the port status change was lost by the host controller,
+or because its firmware wedged - the driver currently treats every I/O
+error as transient: the teardown path performs dozens of control
+messages against dead hardware (each one doubled by rtw_usb_reg_sec()
+on 8822B/8822C/8821C), rtw_usb_read() returns stale data from the
+shared ring buffer to power-off polling loops, mac80211 warns about
+leaked ack frames on unregister, and a device whose disconnect was
+never delivered lingers forever as a ghost: it stays in lsusb/sysfs,
+owns the netdev name (breaking the udev rename of the replugged
+device) until a manual unbind or a reboot. Observed in the field on an
+RTL8822BU: the ghost lived for 13 hours, and the manual unbind "cured"
+it only because rtw_usb_disconnect() calls usb_reset_device(), forcing
+the USB core to revalidate the port.
+
+Port the recovery pattern from rtw89 (see commit 2135c28be6a8 ("wifi:
+rtw89: usb: Hide some errors when the device is unplugged")):
+
+- struct rtw_usb gains a device_gone flag and a continual_io_error
+  counter, both local to the USB transport;
+- -ENODEV/-ESHUTDOWN (the USB core already knows the device is gone)
+  arm the flag immediately; other errors (-EPROTO, -EILSEQ,
+  -ETIMEDOUT, ...) arm it only after more than 4 consecutive failures
+  without a single success in between, so transient bursts (EMI) never
+  trip it - any successful control transfer resets the counter, and the
+  core watchdog does register I/O every ~2s;
+- all register I/O helpers and the TX submit path return early once
+  the flag is set, and rtw_usb_read() returns a deterministic 0
+  instead of stale ring buffer data on failure;
+- on the first arming of the flag, queue a usb_queue_reset_device() -
+  the automated equivalent of the usb_reset_device() call in
+  rtw_usb_disconnect(): a wedged-but-present device is re-enumerated
+  and recovers; a physically absent device finally gets its disconnect
+  processed by the core. This is the piece rtw89 does not need (no
+  ghost was ever reported there) and can be disabled with the new
+  hang_reset module parameter (default Y).
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/net/wireless/realtek/rtw88/usb.c | 133 ++++++++++++++++++++---
+ drivers/net/wireless/realtek/rtw88/usb.h |  10 ++
+ 2 files changed, 128 insertions(+), 15 deletions(-)
+
+diff --git a/drivers/net/wireless/realtek/rtw88/usb.c b/drivers/net/wireless/realtek/rtw88/usb.c
+--- a/drivers/net/wireless/realtek/rtw88/usb.c
++++ b/drivers/net/wireless/realtek/rtw88/usb.c
+@@ -20,8 +20,19 @@
+ MODULE_PARM_DESC(switch_usb_mode,
+ 		 "Set to N to disable switching to USB 3 mode to avoid potential interference in the 2.4 GHz band (default: Y)");
+
++static bool rtw_usb_hang_reset = true;
++module_param_named(hang_reset, rtw_usb_hang_reset, bool, 0644);
++MODULE_PARM_DESC(hang_reset,
++		 "Set to N to disable queueing a USB port reset when the device is detected as gone or wedged (default: Y)");
++
+ #define RTW_USB_MAX_RXQ_LEN	512
+
++/* Stop doing I/O after this many consecutive I/O errors without a single
++ * success in between (same threshold as rtw89). Transient error bursts
++ * (e.g. EMI) are forgiven: any successful control transfer resets it.
++ */
++#define RTW_USB_MAX_CONTINUAL_IO_ERR	4
++
+ struct rtw_usb_txcb {
+ 	struct rtw_dev *rtwdev;
+ 	struct sk_buff_head tx_ack_queue;
+@@ -39,6 +50,58 @@
+ 	rtw_tx_fill_txdesc_checksum(rtwdev, &pkt_info, skb->data);
+ }
+
++/* The device is gone: either the USB core already told us so (-ENODEV,
++ * -ESHUTDOWN) or it stopped responding for too long. Stop all register
++ * I/O (each rtw_usb_read/rtw_usb_write against dead hardware costs up to
++ * a full control message timeout, and the power-off polling would read
++ * garbage) and, once, queue a reset of the port.
++ *
++ * The queued reset replicates what the usb_reset_device() call in
++ * rtw_usb_disconnect() already does on unbind: it forces the USB core to
++ * revalidate the port. A wedged-but-present device is re-enumerated and
++ * recovers; a device that is physically gone, but whose port status
++ * change was lost by the host controller, finally gets its disconnect
++ * processed instead of lingering as a ghost that holds the netdev name.
++ * usb_queue_reset_device() is safe in atomic context (the reset runs
++ * from a work item, which the USB core cancels if the interface is
++ * unbound first).
++ */
++static void rtw_usb_device_gone(struct rtw_usb *rtwusb)
++{
++	struct rtw_dev *rtwdev = rtwusb->rtwdev;
++
++	if (test_and_set_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return;
++
++	rtw_info(rtwdev, "device gone, stopping register I/O%s\n",
++		 rtw_usb_hang_reset ? "; queueing port reset" : "");
++
++	if (rtw_usb_hang_reset)
++		usb_queue_reset_device(rtwusb->intf);
++}
++
++static void rtw_usb_io_error(struct rtw_usb *rtwusb, int error)
++{
++	/* Definitive: the USB core already knows the device is gone. */
++	if (error == -ENODEV || error == -ESHUTDOWN) {
++		rtw_usb_device_gone(rtwusb);
++		return;
++	}
++
++	/* Possibly transient (-EPROTO, -EILSEQ, -ETIMEDOUT...): arm
++	 * device_gone only when the errors are persistent, i.e. many
++	 * consecutive failures without a single success in between.
++	 */
++	if (atomic_inc_return(&rtwusb->continual_io_error) >
++	    RTW_USB_MAX_CONTINUAL_IO_ERR)
++		rtw_usb_device_gone(rtwusb);
++}
++
++static void rtw_usb_io_ok(struct rtw_usb *rtwusb)
++{
++	atomic_set(&rtwusb->continual_io_error, 0);
++}
++
+ static void rtw_usb_reg_sec(struct rtw_dev *rtwdev, u32 addr, __le32 *data)
+ {
+ 	struct rtw_usb *rtwusb = rtw_get_usb_priv(rtwdev);
+@@ -60,11 +123,20 @@
+ 	if (!reg_on_section)
+ 		return;
+
++	if (test_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return;
++
+ 	status = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+ 				 RTW_USB_CMD_REQ, RTW_USB_CMD_WRITE,
+ 				 t_reg, 0, data, t_len, 500);
+
+-	if (status != t_len && status != -ENODEV)
++	if (status == t_len) {
++		rtw_usb_io_ok(rtwusb);
++		return;
++	}
++
++	rtw_usb_io_error(rtwusb, status);
++	if (status != -ENODEV)
+ 		rtw_err(rtwdev, "%s: reg 0x%x, usb write %u fail, status: %d\n",
+ 			__func__, t_reg, t_len, status);
+ }
+@@ -78,6 +150,9 @@
+ 	int idx, ret;
+ 	static int count;
+
++	if (test_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return 0;
++
+ 	spin_lock_irqsave(&rtwusb->usb_lock, flags);
+
+ 	idx = rtwusb->usb_data_index;
+@@ -90,9 +165,21 @@
+ 	ret = usb_control_msg(udev, usb_rcvctrlpipe(udev, 0),
+ 			      RTW_USB_CMD_REQ, RTW_USB_CMD_READ, addr,
+ 			      RTW_USB_VENQT_CMD_IDX, data, len, 1000);
+-	if (ret < 0 && ret != -ENODEV && count++ < 4)
+-		rtw_err(rtwdev, "read register 0x%x failed with %d\n",
+-			addr, ret);
++	if (ret < 0) {
++		/* Deterministic value instead of stale data from the
++		 * shared ring buffer: a polling loop (e.g. power off)
++		 * reading a leftover value from an unrelated register
++		 * could falsely succeed against dead hardware.
++		 */
++		*data = 0;
++
++		rtw_usb_io_error(rtwusb, ret);
++		if (ret != -ENODEV && count++ < 4)
++			rtw_err(rtwdev, "read register 0x%x failed with %d\n",
++				addr, ret);
++	} else {
++		rtw_usb_io_ok(rtwusb);
++	}
+
+ 	if (rtwdev->chip->id == RTW_CHIP_TYPE_8822C ||
+ 	    rtwdev->chip->id == RTW_CHIP_TYPE_8822B ||
+@@ -126,6 +213,9 @@
+ 	int idx, ret;
+ 	static int count;
+
++	if (test_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return;
++
+ 	spin_lock_irqsave(&rtwusb->usb_lock, flags);
+
+ 	idx = rtwusb->usb_data_index;
+@@ -140,9 +230,14 @@
+ 	ret = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+ 			      RTW_USB_CMD_REQ, RTW_USB_CMD_WRITE,
+ 			      addr, 0, data, len, 500);
+-	if (ret < 0 && ret != -ENODEV && count++ < 4)
+-		rtw_err(rtwdev, "write register 0x%x failed with %d\n",
+-			addr, ret);
++	if (ret < 0) {
++		rtw_usb_io_error(rtwusb, ret);
++		if (ret != -ENODEV && count++ < 4)
++			rtw_err(rtwdev, "write register 0x%x failed with %d\n",
++				addr, ret);
++	} else {
++		rtw_usb_io_ok(rtwusb);
++	}
+
+ 	if (rtwdev->chip->id == RTW_CHIP_TYPE_8822C ||
+ 	    rtwdev->chip->id == RTW_CHIP_TYPE_8822B ||
+@@ -175,6 +270,9 @@
+ 	u32 n, block_size;
+ 	int ret;
+
++	if (test_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return;
++
+ 	switch (rtwdev->chip->id) {
+ 	case RTW_CHIP_TYPE_8723D:
+ 		block_size = 254;
+@@ -204,6 +302,7 @@
+ 				      RTW_USB_CMD_REQ, RTW_USB_CMD_WRITE,
+ 				      addr, 0, buf, n, 500);
+ 		if (ret != n) {
++			rtw_usb_io_error(rtwusb, ret);
+ 			if (ret != -ENODEV)
+ 				rtw_err(rtwdev,
+ 					"write 0x%x len %d failed: %d\n",
+@@ -211,6 +310,8 @@
+ 			break;
+ 		}
+
++		rtw_usb_io_ok(rtwusb);
++
+ 		addr += n;
+ 		buf += n;
+ 		size -= n;
+@@ -375,6 +476,9 @@
+ 	if (ep < 0)
+ 		return ep;
+
++	if (test_bit(RTW_USB_FLAG_DEVICE_GONE, rtwusb->flags))
++		return -ENODEV;
++
+ 	pipe = usb_sndbulkpipe(usbd, rtwusb->out_ep[ep]);
+ 	urb = usb_alloc_urb(0, GFP_ATOMIC);
+ 	if (!urb)
+@@ -386,6 +490,9 @@
+
+ 	usb_free_urb(urb);
+
++	if (ret == -ENODEV)
++		rtw_usb_device_gone(rtwusb);
++
+ 	return ret;
+ }
+
+@@ -714,7 +821,9 @@
+ 	if (error) {
+ 		skb_queue_tail(&rtwusb->rx_free_queue, rxcb->rx_skb);
+
+-		if (error != -ENODEV)
++		if (error == -ENODEV)
++			rtw_usb_device_gone(rtwusb);
++		else
+ 			rtw_err(rtwdev, "Err sending rx data urb %d\n",
+ 				error);
+
+@@ -766,19 +875,24 @@
+ 		skb_queue_tail(&rtwusb->rx_free_queue, skb);
+
+ 		switch (urb->status) {
+-		case -EINVAL:
+-		case -EPIPE:
+ 		case -ENODEV:
+ 		case -ESHUTDOWN:
+-		case -ENOENT:
++			rtw_usb_device_gone(rtwusb);
++			break;
+ 		case -EPROTO:
+ 		case -EILSEQ:
+ 		case -ETIME:
+ 		case -ECOMM:
+ 		case -EOVERFLOW:
++			rtw_usb_io_error(rtwusb, urb->status);
++			break;
++		case -EINVAL:
++		case -EPIPE:
++		case -ENOENT:
+ 		case -EINPROGRESS:
+ 			break;
+ 		default:
++			rtw_usb_io_error(rtwusb, urb->status);
+ 			rtw_err(rtwdev, "status %d\n", urb->status);
+ 			break;
+ 		}
+@@ -1054,6 +1168,7 @@
+ 	int ret;
+
+ 	rtwusb->udev = udev;
++	rtwusb->intf = intf;
+ 	ret = rtw_usb_parse(rtwdev, intf);
+ 	if (ret)
+ 		return ret;
+diff --git a/drivers/net/wireless/realtek/rtw88/usb.h b/drivers/net/wireless/realtek/rtw88/usb.h
+--- a/drivers/net/wireless/realtek/rtw88/usb.h
++++ b/drivers/net/wireless/realtek/rtw88/usb.h
+@@ -61,9 +61,19 @@
+ 	u8 sn;
+ };
+
++enum rtw_usb_flags {
++	RTW_USB_FLAG_DEVICE_GONE,
++
++	NUM_OF_RTW_USB_FLAGS,
++};
++
+ struct rtw_usb {
+ 	struct rtw_dev *rtwdev;
+ 	struct usb_device *udev;
++	struct usb_interface *intf;
++
++	DECLARE_BITMAP(flags, NUM_OF_RTW_USB_FLAGS);
++	atomic_t continual_io_error;
+
+ 	/* protects usb_data_index */
+ 	spinlock_t usb_lock;

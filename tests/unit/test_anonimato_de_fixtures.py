@@ -18,6 +18,13 @@ Faixas permitidas (todas forjadas, documentadas onde nasceram):
 
 Tokens de 12 hex são checados também em little-endian (o report 0x09 guarda o
 MAC em LE — foi assim que um MAC real escapou da primeira varredura).
+
+Além das faixas, existe uma allowlist de TOKENS EXATOS: hashes abreviados de
+commits PÚBLICOS do kernel upstream (12 hex é a abreviação canônica do git no
+kernel) citados como proveniência dos patches DKMS. São identidade do KERNEL,
+verificável por qualquer um em git.kernel.org — não da mantenedora. A entrada
+é sempre exata e documentada linha a linha; nunca prefixo/faixa (um MAC real
+jamais ganharia carona num hash documentado).
 """
 from __future__ import annotations
 
@@ -29,13 +36,32 @@ _TESTS_DIR = Path(__file__).resolve().parents[1]
 #: Prefixos (3 bytes, sem ":") das faixas sintéticas permitidas em fixtures.
 _PREFIXOS_FORJADOS = ("02fe00", "aabbcc", "e8473a", "ffffff", "000000")
 
+#: Hashes abreviados (12 hex) de commits PÚBLICOS do kernel upstream citados
+#: nos testes da Onda W (test_dkms_rtw88_usb_assets.py) como proveniência dos
+#: patches do rtw88. Match EXATO apenas — nada de faixa.
+_HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
+    {
+        # wifi: rtw88: usb: fix memory leaks on USB write failures — o
+        # backport 0001 (CVE-2026-63821), pinado verbatim no teste.
+        "6b964941bbfe",
+        # commit apontado pelo "Fixes:" do 0001 (onde o memleak nasceu).
+        "a82dfd33d123",
+        # wifi: rtw89 — modelo do contador continual_io_error portado no
+        # 0002 (proveniência gravada no BASELINE e no limiar do teste).
+        "2135c28be6a8",
+    }
+)
+
 _MAC_COM_DOIS_PONTOS = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
 _MAC_12_HEX = re.compile(r"\b[0-9a-fA-F]{12}\b")
 
 
 def _permitido(mac_12hex: str) -> bool:
-    """True se o MAC (12 hex, sem ':') está numa faixa forjada — em BE ou LE."""
+    """True se o token (12 hex, sem ':') é faixa forjada (BE/LE) ou hash
+    upstream documentado (match exato)."""
     norm = mac_12hex.lower()
+    if norm in _HASHES_UPSTREAM_DOCUMENTADOS:
+        return True
     invertido = "".join(norm[i : i + 2] for i in range(10, -1, -2))
     return norm.startswith(_PREFIXOS_FORJADOS) or invertido.startswith(
         _PREFIXOS_FORJADOS

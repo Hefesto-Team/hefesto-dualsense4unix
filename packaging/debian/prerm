@@ -56,6 +56,29 @@ case "$1" in
             depmod -a 2>/dev/null || true
         fi
         rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+        # Onda W: o modulo DKMS hefesto-rtw88-usb tambem nasce FORA do
+        # manifesto do dpkg (install-host-udev.sh) — mesma simetria: sem
+        # este bloco, apt remove deixava o patchado registrado no DKMS
+        # vencendo o in-tree para sempre. NUNCA descarrega modulo em uso
+        # (o WiFi cairia); o in-tree volta sozinho no proximo boot.
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+            dkms status hefesto-rtw88-usb 2>/dev/null \
+                | sed -n 's|^hefesto-rtw88-usb/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-rtw88-usb/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-rtw88-usb-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+            # belt (simetrico ao uninstall.sh nativo): se o patchado ainda
+            # esta CARREGADO, desarma o reset agressivo a quente ate o boot —
+            # deteccao/silenciamento seguem; o modulo em uso nunca e
+            # descarregado (o WiFi cairia).
+            if [ -e /sys/module/rtw88_usb/parameters/hang_reset ]; then
+                printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || true
+            fi
+        fi
         ;;
 esac
 

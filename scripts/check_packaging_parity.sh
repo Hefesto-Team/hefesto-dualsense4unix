@@ -194,6 +194,55 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     fi
 fi
 
+# Onda W: a cura de raiz do fantasma USB do dongle WiFi é o módulo DKMS
+# rtw88_usb — mesma lição do hid-nintendo (achado #9): as fontes precisam
+# viajar em TODO formato E o install-host-udev.sh precisa RODAR o DKMS.
+# E a lição do broker (#2/#8) vale dobrada aqui: a REMOÇÃO de pacote
+# (prerm/postrm/.install/%preun) precisa DESREGISTRAR o módulo, senão o
+# patchado vence o in-tree para sempre numa máquina que removeu o app.
+echo "== paridade da cura DKMS (assets/dkms/rtw88-usb × instaladores) =="
+if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
+    missing=()
+    for inst in scripts/build_deb.sh packaging/arch/PKGBUILD \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        { grep -qF "dkms/rtw88-usb" "${inst}" 2>/dev/null \
+            && grep -qF "dkms_lib.sh" "${inst}" 2>/dev/null; } \
+            || missing+=("${inst}")
+    done
+    { grep -qF "dkms/rtw88-usb" flatpak/*.yml 2>/dev/null \
+        && grep -qF "dkms_lib.sh" flatpak/*.yml 2>/dev/null; } \
+        || missing+=("flatpak/*.yml")
+    grep -qF "dkms_install_patched_module hefesto-rtw88-usb" \
+        scripts/install-host-udev.sh 2>/dev/null \
+        || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
+    for hook in packaging/debian/prerm packaging/debian/postrm \
+                packaging/arch/hefesto-dualsense4unix.install \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        { grep -qF "dkms remove" "${hook}" 2>/dev/null \
+            && grep -qF "hefesto-rtw88-usb" "${hook}" 2>/dev/null; } \
+            || missing+=("${hook}(remoção)")
+    done
+    grep -qF "hefesto-rtw88-usb" uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh")
+    # Paridade de MENSAGEM: o texto pós-instalação de TODO formato tem de citar
+    # o rtw88_usb (o postinst do .deb ficava só com o hid-nintendo — assimetria
+    # que nenhum gate pegava porque o postinst fica isolado dos blocos de cópia).
+    for msg in packaging/debian/postinst \
+               packaging/arch/hefesto-dualsense4unix.install \
+               packaging/fedora/hefesto-dualsense4unix.spec; do
+        grep -qiE "rtw88[_-]usb" "${msg}" 2>/dev/null \
+            || missing+=("${msg}(mensagem sem rtw88_usb)")
+    done
+    if [[ "${#missing[@]}" -eq 0 ]]; then
+        echo "[ OK ] dkms rtw88-usb: fontes+lib em todos os formatos, o helper roda o DKMS e a remoção desregistra"
+    else
+        echo "[FAIL] dkms rtw88-usb: FALTANDO em: ${missing[*]}"
+        rc=1
+    fi
+else
+    echo "[ OK ] dkms rtw88-usb: assets/dkms/rtw88-usb/dkms.conf ausente — nada a checar"
+fi
+
 # BROKER-01 (Onda S — fd-injection, achado #21 da auditoria): purge/remoção
 # não pode deixar a unit ROOT do broker órfã habilitada em NENHUMA forma de
 # empacotamento. Gate: só cobra paridade SE o repo realmente tem o broker

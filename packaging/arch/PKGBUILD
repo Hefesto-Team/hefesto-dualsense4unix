@@ -48,8 +48,8 @@ makedepends=(
 )
 optdepends=(
     'wlrctl: backend Wayland (wlroots) para auto-switch de perfis'
-    'dkms: módulo hid-nintendo patchado (Onda T — cura de raiz do probe BT dos controles Nintendo/8BitDo)'
-    'linux-headers: build do módulo DKMS hid-nintendo patchado'
+    'dkms: módulos patchados hid-nintendo (Onda T — probe BT Nintendo/8BitDo) e rtw88_usb (Onda W — fantasma USB do dongle WiFi)'
+    'linux-headers: build dos módulos DKMS patchados (hid-nintendo, rtw88-usb)'
 )
 install="${pkgname}.install"
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
@@ -131,6 +131,12 @@ package() {
     mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
     cp -a assets/dkms/hid-nintendo/. \
         "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
+    # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+    # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota:
+    # quem roda o dkms é o install-host-udev.sh no pós-instalação.
+    mkdir -p "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
+    cp -a assets/dkms/rtw88-usb/. \
+        "$pkgdir/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
 
     # Systemd user units (M14): SÓ as que funcionam no contexto de pacote
     # (binário em /usr/bin, resolvido pelo sed). As demais de assets/ dependem de

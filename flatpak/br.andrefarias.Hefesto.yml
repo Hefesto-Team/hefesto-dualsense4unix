@@ -230,6 +230,10 @@ modules:
           /app/share/hefesto-dualsense4unix/scripts/dkms_lib.sh
       - mkdir -p /app/share/hefesto-dualsense4unix/dkms
       - cp -a assets/dkms/hid-nintendo /app/share/hefesto-dualsense4unix/dkms/
+      # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+      # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota
+      # da Onda T: o dkms roda a partir do HOST via install-host-udev.sh.
+      - cp -a assets/dkms/rtw88-usb /app/share/hefesto-dualsense4unix/dkms/
 
       # BROKER-01 (Onda S — fd-injection): binário standalone + units-
       # template do broker root hide-hidraw. O sandbox NÃO instala unit de
