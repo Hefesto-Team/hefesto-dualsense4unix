@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     button_labels_for,
     external_key,
     friendly_type,
+    slot_label,
     slot_of,
     transport_label,
 )
@@ -423,7 +424,8 @@ class StatusActionsMixin(WidgetAccessMixin):
             slot = slot_of(ext, dualsense_count, i)
             eb = Gtk.Button.new_with_label(rotulo)
             eb.set_tooltip_text(
-                f"Controle {slot}: {friendly_type(ext)} — {transport_label(ext)} "
+                f"Controle {slot_label(slot)}: {friendly_type(ext)} — "
+                f"{transport_label(ext)} "
                 "(clique para ver; o Hefesto não mexe no que ele faz)"
             )
             with contextlib.suppress(Exception):
@@ -470,11 +472,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._externals_inflight = False
         return False
 
-    def _on_external_clicked(self, _button: Any, key: str, slot: int) -> None:
+    def _on_external_clicked(
+        self, _button: Any, key: str, slot: int | None
+    ) -> None:
         """Abre a ficha secreta read-only do controle externo `key` (8BIT-02).
 
         `slot` = número GLOBAL de co-op (mesmo do LED de player) — a ficha o
-        mostra para GUI e LED nunca discordarem.
+        mostra para GUI e LED nunca discordarem. NUMA-05: ``None`` (registry
+        ainda sem opinião) é repassado como está — a ficha mostra "—", nunca
+        inventa uma posição.
         """
         ext = next(
             (e for e in getattr(self, "_externals", []) if external_key(e) == key),

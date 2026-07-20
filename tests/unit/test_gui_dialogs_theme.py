@@ -169,6 +169,27 @@ def test_ficha_monta_o_segmentado_e_o_subtitulo() -> None:
     assert "mode_guidance(" in src  # a orientação existente continua lá
 
 
+def test_ficha_tolera_slot_none_com_traco_honesto() -> None:
+    """NUMA-05 — espelho por fonte (headless, sem GTK real): a ficha do
+    controle externo SEMPRE monta a linha "Controle N" — nunca mais a omite
+    quando o registry ainda não opinou (`slot=None`). A formatação "número
+    ou —" é centralizada em `slot_label` (mesma fonte que `button_labels_for`
+    e o tooltip do seletor usam — GUI e ficha nunca discordam).
+
+    FALHA-SEM: no HEAD pré-NUMA-05, a ficha tinha ``if slot is not None:``
+    ao redor do label — com resolver opinando None, a linha SUMIA (em vez de
+    mostrar "—"). Este teste reprova se o guard condicional voltar.
+    """
+    from hefesto_dualsense4unix.app import gui_dialogs
+
+    src = inspect.getsource(gui_dialogs.show_external_controller)
+    assert "slot_label(" in src, "a ficha não usa mais o formatador honesto"
+    compacto = re.sub(r"\s+", "", src)
+    assert "ifslotisnotNone:" not in compacto, (
+        "o guard condicional antigo voltou — a linha some com slot=None"
+    )
+
+
 def test_external_mode_row_e_read_only_por_construcao() -> None:
     """Espelho por fonte (headless): insensitive + tooltip + sem popup."""
     from hefesto_dualsense4unix.app import gui_dialogs

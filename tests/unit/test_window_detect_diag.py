@@ -16,6 +16,7 @@ Cobre:
 """
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import pytest
@@ -237,6 +238,68 @@ class TestStoreWindowDetect:
         store.record_window_detect_read("xlib", "Celeste")
         store.set_window_detect_backend("xlib", healthy=True)
         assert store.window_detect_last_class is None
+
+
+class TestStoreSinalNuma01:
+    """NUMA-01 (bloco 14 do plano) — `window_detect_current_class` +
+    `game_window_seen_at` no `StateStore`: a fonte de evidência do
+    `game_signal` (NUNCA o sticky `window_detect_last_class`, vetado)."""
+
+    def test_estado_inicial(self) -> None:
+        store = StateStore()
+        assert store.window_detect_current_class is None
+        assert store.game_window_seen_at is None
+
+    def test_grava_a_classe_crua_a_cada_leitura_inclusive_unknown(self) -> None:
+        """Ao contrário do sticky `last_class`, o CRU é regravado SEMPRE —
+        inclusive com "unknown" ou None (falha-sem: sem isso o consumidor
+        não distingue "alt-tab para o desktop" de "nunca leu")."""
+        store = StateStore()
+        store.record_window_detect_read("xlib", "steam_app_42")
+        assert store.window_detect_current_class == "steam_app_42"
+        store.record_window_detect_read("xlib", "unknown")
+        assert store.window_detect_current_class == "unknown"
+        store.record_window_detect_read("xlib", None)
+        assert store.window_detect_current_class is None
+
+    def test_carimba_game_window_seen_at_so_quando_casa_steam_app(self) -> None:
+        store = StateStore()
+        store.record_window_detect_read("xlib", "Celeste", now=10.0)
+        assert store.game_window_seen_at is None
+        store.record_window_detect_read("xlib", "steam_app_1599660", now=20.0)
+        assert store.game_window_seen_at == 20.0
+
+    def test_game_window_seen_at_e_sticky_ele_mesmo_ate_o_proximo_match(
+        self,
+    ) -> None:
+        """O CARIMBO (não a classe) persiste até o PRÓXIMO steam_app — é a
+        idade dele (calculada por quem consome, `now - seen_at`) que decai
+        e vira evidência fresca/velha em `game_signal.classify`, nunca o
+        valor em si sendo tratado como "ainda é jogo"."""
+        store = StateStore()
+        store.record_window_detect_read("xlib", "steam_app_42", now=5.0)
+        store.record_window_detect_read("xlib", "unknown", now=50.0)
+        assert store.game_window_seen_at == 5.0
+
+    def test_now_default_usa_o_relogio_real_monotonic(self) -> None:
+        """Sem `now` explícito, usa `time.monotonic()` — a chamada de
+        produção do autoswitch não precisa injetar relógio."""
+        store = StateStore()
+        antes = time.monotonic()
+        store.record_window_detect_read("xlib", "steam_app_1")
+        depois = time.monotonic()
+        assert store.game_window_seen_at is not None
+        assert antes <= store.game_window_seen_at <= depois
+
+    def test_set_window_detect_backend_zera_tudo(self) -> None:
+        """`set_window_detect_backend` (novo boot do detector) zera TAMBÉM
+        a classe crua/monotonic/`game_window_seen_at` — um episódio novo de
+        observação não pode herdar o carimbo de jogo do anterior."""
+        store = StateStore()
+        store.record_window_detect_read("xlib", "steam_app_42", now=5.0)
+        store.set_window_detect_backend("xlib", healthy=True)
+        assert store.window_detect_current_class is None
+        assert store.game_window_seen_at is None
 
 
 class TestSubsystemDiagReader:

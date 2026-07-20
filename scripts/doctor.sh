@@ -5,9 +5,14 @@
 # nome de unit do hotplug), uinput, a gravabilidade do nó de LED do DualSense
 # físico (cor por-controle via sysfs, regra 77), applet COSMIC (.desktop + ícone
 # resolvível), o detector de janela do autoswitch (perfil-por-jogo), o sequestro
-# do microfone pelo WirePlumber e o alcance do controle; reconhece também, no
-# journal do kernel, a assinatura de morte por Bluetooth do 8BitDo em modo
-# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle).
+# do microfone pelo WirePlumber e o alcance do controle; a autoridade de
+# exibição do co-op (NUMA-05: quem manda em lightbar/numeração agora — jogo,
+# daemon ou "unknown" — e a CAUSA quando presa em unknown); reconhece também,
+# no journal do kernel, a assinatura de morte por Bluetooth do 8BitDo em modo
+# Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle);
+# e (G2) o rádio/pareamento — versão do bluez vs. o piso 5.79, o
+# hefesto-bt-agent.service, bond "meio-salvo" por dois ângulos (Connected sem
+# hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo.
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
@@ -423,6 +428,39 @@ check_dualsense_sink_disabled() {
     fi
 }
 
+# G2 item 5: sink de áudio PADRÃO mudo — sintoma do incidente U12 de hoje
+# (mute global escondia áudio/haptic de todo mundo, não só do DualSense).
+# Função PURA (_wpctl_volume_muted) só interpreta o texto do `wpctl
+# get-volume`; nenhuma escrita.
+_wpctl_volume_muted() {
+    local out="$1"
+    if [[ -z "${out}" ]]; then
+        printf 'unknown\n'
+    elif printf '%s' "${out}" | grep -qi 'MUTED'; then
+        printf 'muted\n'
+    else
+        printf 'unmuted\n'
+    fi
+}
+
+check_audio_sink_muted() {
+    command -v wpctl >/dev/null 2>&1 || { info "wpctl ausente — não checo o mudo do sink padrão"; return; }
+    local out veredito
+    out="$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)"
+    veredito="$(_wpctl_volume_muted "${out}")"
+    case "${veredito}" in
+        muted)
+            warn "sink de áudio PADRÃO está MUDO (${out}) — sintoma do incidente U12 (mute global, não só do DualSense); reative: wpctl set-mute @DEFAULT_AUDIO_SINK@ 0"
+            ;;
+        unmuted)
+            pass "sink de áudio padrão não está mudo (${out})"
+            ;;
+        *)
+            info "não consegui ler o volume do sink padrão (wpctl get-volume vazio) — WirePlumber parado?"
+            ;;
+    esac
+}
+
 # Duplicação no jogo — DEDUP-04/UX-05: o doctor PAROU de recomendar a env
 # estática (`IGNORE_DEVICES` colado por jogo era o veneno do "em BT nada
 # funciona": quando o vpad degrada, a opção persistida esconde o ÚNICO
@@ -581,6 +619,103 @@ PYEOF
     else
         info "daemon não reporta dedup_ok (versão antiga do daemon?)"
     fi
+}
+
+# NUMA-05: diagnóstico da AUTORIDADE DE EXIBIÇÃO ('game'|'daemon'|'unknown',
+# NUMA-01) — a causa-raiz do incidente de 14:42 era "não existe autoridade de
+# exibição": sessão uhid do cliente Steam virava "jogo" aos olhos do daemon.
+# Reporta o sinal ATUAL + a CAUSA quando ele está preso em 'unknown' (o
+# comportamento degradado é sempre igual ao de hoje — nunca pior — mas
+# escondido sem esta seção a mantenedora não teria como saber POR QUE). O
+# posse-por-controle (`player_slot`/`lightbar_source`/`lightbar_rgb`, já no
+# `state_full` desde STATUS-01/EXT-04) é listado junto — é o mesmo par
+# get_players()/get_rgb() vs. autoridade que o `defend_display` compara.
+check_display_authority() {
+    local sock; sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        info "daemon parado — sem sinal de autoridade de exibição a consultar (suba o daemon e rode de novo)"
+        return
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 ausente — não dá para consultar a autoridade de exibição via IPC"
+        return
+    fi
+    local out
+    if ! out="$(python3 - "${sock}" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}
+    ).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+data = json.loads(buf.decode("utf-8"))
+res = data.get("result") or {}
+gs = res.get("game_signal")
+if not isinstance(gs, dict):
+    print("sem_sinal=1")
+else:
+    print("sem_sinal=0")
+    print(f"authority={gs.get('authority')}")
+    print(f"evidencia={gs.get('evidencia') or ''}")
+    print(f"motivo={gs.get('motivo') or ''}")
+    print(f"degradado={gs.get('degradado')}")
+for c in res.get("controllers") or []:
+    if not isinstance(c, dict):
+        continue
+    slot = c.get("player_slot")
+    fonte = c.get("lightbar_source")
+    rgb = c.get("lightbar_rgb")
+    print(f"posse|{slot}|{fonte}|{rgb}")
+PYEOF
+)"; then
+        warn "IPC não respondeu — autoridade de exibição indisponível (daemon travado?)"
+        return
+    fi
+    local sem_sinal authority evidencia motivo degradado
+    sem_sinal="$(sed -n 's/^sem_sinal=//p' <<<"${out}")"
+    if [[ "${sem_sinal}" == "1" ]]; then
+        info "daemon não reporta o sinal de autoridade de exibição (versão antiga, sem NUMA-05)"
+        return
+    fi
+    authority="$(sed -n 's/^authority=//p' <<<"${out}")"
+    evidencia="$(sed -n 's/^evidencia=//p' <<<"${out}")"
+    motivo="$(sed -n 's/^motivo=//p' <<<"${out}")"
+    degradado="$(sed -n 's/^degradado=//p' <<<"${out}")"
+    case "${authority}" in
+        game)
+            pass "autoridade de exibição: JOGO (evidência: ${evidencia:-desconhecida}) — DualSense mostram o número do jogo, externos sem disputa"
+            ;;
+        daemon)
+            pass "autoridade de exibição: DAEMON — numeração/cor do co-op valendo, defesa contra escritor estrangeiro ativa"
+            ;;
+        unknown)
+            if [[ "${degradado}" == "True" ]]; then
+                warn "autoridade de exibição UNKNOWN (causa: ${motivo:-sem motivo reportado}) — degrada para o comportamento de hoje (réplica passa, jogo vence, daemon NÃO repinta); nunca pior, mas sem a defesa do NUMA-03"
+            else
+                info "autoridade de exibição unknown sem causa reportada — comportamento atual"
+            fi
+            ;;
+        *)
+            info "autoridade de exibição não reconhecida (${authority:-vazia}) — versão inconsistente do daemon?"
+            ;;
+    esac
+    while IFS='|' read -r tag slot fonte rgb; do
+        [[ "${tag}" == "posse" ]] || continue
+        info "controle player_slot=${slot:-—} lightbar_source=${fonte:-desconhecida} lightbar_rgb=${rgb:-None}"
+    done <<<"${out}"
 }
 
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
@@ -987,6 +1122,160 @@ check_cmdline_platform() {
     if [[ -f "${owners}" ]]; then
         info "donos registrados: $(tr '\n' ' ' < "${owners}")"
     fi
+}
+
+# ============================================================================
+# G2 — doctor: "Rádio e pareamento" (sprint 2026-07-19-sprint-onda-g-gyro02-
+# doctor.md). Tudo READ-ONLY; fecha o ciclo do que a Onda R instala (backport
+# bluez 5.85 + hefesto-bt-agent.service) com visibilidade pro leigo. A causa
+# medida do bond "meio-salvo" (Paired: yes / Bonded: no) é "No agent available
+# for request type 2" (estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4):
+# nenhum agente D-Bus respondeu no momento do pareamento. O check 6 do sprint
+# ("autoridade de exibição unknown presa") JÁ existe (NUMA-05/
+# check_display_authority, mais abaixo) — não duplicado aqui.
+# ============================================================================
+
+# Compara a versão do bluez instalada com o piso 5.79 (abaixo dele: crashes
+# crônicos de input/HIDP documentados no estudo da Onda R). Função PURA —
+# só `dpkg --compare-versions`, sem tocar em pacote nenhum.
+_bluez_version_verdict() {
+    local ver="$1"
+    if [[ -z "${ver}" ]]; then
+        printf 'unknown\n'
+        return
+    fi
+    if dpkg --compare-versions "${ver}" ge 5.79 2>/dev/null; then
+        printf 'ok\n'
+    else
+        printf 'old\n'
+    fi
+}
+
+check_bluez_backport_version() {
+    if ! command -v dpkg-query >/dev/null 2>&1 || ! command -v dpkg >/dev/null 2>&1; then
+        info "dpkg ausente (sistema não-Debian?) — pulo o check de versão do bluez"
+        return
+    fi
+    local ver veredito
+    ver="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+    veredito="$(_bluez_version_verdict "${ver}")"
+    case "${veredito}" in
+        ok)
+            pass "bluez ${ver} >= 5.79 (sem os crashes crônicos de input/HIDP do 5.72)"
+            ;;
+        old)
+            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3)"
+            ;;
+        *)
+            info "bluez não instalado via dpkg (ou versão ilegível) — pulo o check de versão"
+            ;;
+    esac
+}
+
+# hefesto-bt-agent.service (Onda R): agente NoInputNoOutput persistente que
+# responde o D-Bus na hora do pareamento — sem ele, um pareamento disparado
+# fora da GUI/daemon (bluetoothctl manual, Blueman, re-pair em massa pós-
+# migração do backport) fica "meio-salvo". É unit de SISTEMA (WantedBy=multi-
+# user.target, /etc/systemd/system/) — por isso `systemctl` sem --user, ao
+# contrário de check_service.
+check_bt_agent_service() {
+    command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o agente de pareamento"; return; }
+    local state
+    state="$(systemctl is-active hefesto-bt-agent.service 2>/dev/null || true)"
+    if [[ "${state}" == "active" ]]; then
+        pass "hefesto-bt-agent.service ativo — pareamento fora da GUI/daemon tem agente D-Bus para responder"
+    elif systemctl cat hefesto-bt-agent.service >/dev/null 2>&1; then
+        warn "hefesto-bt-agent.service instalado mas ${state:-inativo} — bond meio-salvo à espreita (Paired sem Bonded); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
+    else
+        warn "hefesto-bt-agent.service não instalado — pareamento fora da GUI/daemon pode ficar meio-salvo (Paired sem Bonded, 'No agent available for request type 2'); rode ./install.sh (ONDA-R aplica por default)"
+    fi
+}
+
+# Normaliza um MAC para minúsculo sem ':' — mesma forma usada para comparar
+# HID_UNIQ (sysfs) com o MAC do bluetoothctl (formatos diferem em caixa).
+_mac_norm() {
+    local m="${1,,}"
+    printf '%s\n' "${m//:/}"
+}
+
+# HID_UNIQ de cada hidraw vivo, normalizado (um por linha). Existe em USB E
+# BT (mesma fonte de sysfs_leds._read_mac); raiz parametrizada p/ teste.
+_hidraw_uniqs() {
+    local root="${1:-/sys/class/hidraw}"
+    local f uniq
+    for f in "${root}"/*/device/uevent; do
+        [[ -r "${f}" ]] || continue
+        uniq="$(sed -n 's/^HID_UNIQ=//p' "${f}" | head -1)"
+        [[ -z "${uniq}" ]] && continue
+        _mac_norm "${uniq}"
+    done
+}
+
+# Dado UM bloco de `bluetoothctl info <mac>` + a lista de HID_UNIQ vivos,
+# imprime o MAC quando o device é gamepad (Icon: input-gaming), está
+# Connected: yes, E nenhum hidraw bate com ele — senão nada (silencioso).
+# Função PURA: só parsing de texto, sem chamar bluetoothctl/sysfs.
+_bt_gamepad_missing_hidraw() {
+    local info="$1" hidraw_list="$2" mac
+    mac="$(printf '%s\n' "${info}" | awk '/^Device /{print $2; exit}')"
+    [[ -z "${mac}" ]] && return 0
+    printf '%s\n' "${info}" | grep -q '^[[:space:]]*Icon: input-gaming' || return 0
+    printf '%s\n' "${info}" | grep -q '^[[:space:]]*Connected: yes' || return 0
+    if printf '%s\n' "${hidraw_list}" | grep -qxF "$(_mac_norm "${mac}")"; then
+        return 0
+    fi
+    printf '%s\n' "${mac}"
+}
+
+check_bt_connected_sem_hidraw() {
+    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo o check de pareamento meio-salvo"; return; }
+    local macs mac inf hidraw_list resultado achou=0
+    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
+    if [[ -z "${macs}" ]]; then
+        info "nenhum dispositivo Bluetooth pareado — sem 'Connected sem hidraw' possível"
+        return
+    fi
+    hidraw_list="$(_hidraw_uniqs)"
+    for mac in ${macs}; do
+        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+        resultado="$(_bt_gamepad_missing_hidraw "${inf}" "${hidraw_list}")"
+        if [[ -n "${resultado}" ]]; then
+            achou=1
+            fail "controle BT ${resultado} CONECTADO mas SEM hidraw correspondente (HID_UNIQ) — pareamento meio-salvo; despareie e repareie: bluetoothctl remove ${resultado} (depois PS no controle)"
+        fi
+    done
+    [[ "${achou}" -eq 0 ]] && pass "todo device BT conectado (gamepad) tem hidraw correspondente"
+}
+
+# Dado UM bloco de `bluetoothctl info <mac>`, imprime o MAC quando o bond
+# está "meio-salvo" (Paired: yes / Bonded: no) — senão nada. Função PURA,
+# mesmo padrão de _bt_gamepad_missing_hidraw.
+_bt_paired_sem_bonded() {
+    local info="$1" mac
+    mac="$(printf '%s\n' "${info}" | awk '/^Device /{print $2; exit}')"
+    [[ -z "${mac}" ]] && return 0
+    printf '%s\n' "${info}" | grep -q '^[[:space:]]*Paired: yes' || return 0
+    printf '%s\n' "${info}" | grep -q '^[[:space:]]*Bonded: no' || return 0
+    printf '%s\n' "${mac}"
+}
+
+check_bt_paired_sem_bonded() {
+    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo o check de bond meio-salvo"; return; }
+    local macs mac inf resultado achou=0
+    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
+    if [[ -z "${macs}" ]]; then
+        info "nenhum dispositivo Bluetooth pareado — sem bond meio-salvo possível"
+        return
+    fi
+    for mac in ${macs}; do
+        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+        resultado="$(_bt_paired_sem_bonded "${inf}")"
+        if [[ -n "${resultado}" ]]; then
+            achou=1
+            fail "${resultado} Paired mas NÃO Bonded — bond meio-salvo ('No agent available for request type 2'); cura: bluetoothctl remove ${resultado} && repareie (PS no controle); confira o hefesto-bt-agent.service ativo acima"
+        fi
+    done
+    [[ "${achou}" -eq 0 ]] && pass "nenhum device BT com bond meio-salvo (Paired sem Bonded)"
 }
 
 # PLAT-01: relatório read-only do Proton pinado (proton_pin.py --report).
@@ -1431,6 +1720,11 @@ main() {
     check_bt_crc_counters
     check_kernel_watch
     check_cmdline_platform
+    hdr "rádio e pareamento (G2)"
+    check_bluez_backport_version
+    check_bt_agent_service
+    check_bt_connected_sem_hidraw
+    check_bt_paired_sem_bonded
     hdr "applet COSMIC"
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"
@@ -1438,12 +1732,14 @@ main() {
     hdr "áudio (microfone)"
     check_wireplumber_source
     check_dualsense_sink_disabled
+    check_audio_sink_muted
     hdr "Steam Input"
     check_steam_input
     hdr "controle no jogo (duplicação / wrapper de launch)"
     check_launch_wrapper
     check_vdf_poison
     check_dedup_ipc
+    check_display_authority
     check_proton_pin
     hdr "giroscópio no jogo (vpad Motion)"
     check_vpad_motion

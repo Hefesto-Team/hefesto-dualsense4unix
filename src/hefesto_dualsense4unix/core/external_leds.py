@@ -11,6 +11,13 @@ SÓ LED, nunca input: o Hefesto não adota esses controles (o input segue pelo
 kernel/Steam). A regra udev ``79-external-controller-leds`` torna esses nós
 graváveis pelo daemon (sudo-zero). Sem a regra, a escrita falha em SILÊNCIO
 (best-effort) e o LED fica no default do kernel — sem regressão.
+
+GYRO-02 (2026-07-19): `enable_imu` é a ÚNICA exceção que sai do sysfs e
+escreve um output report CRU no hidraw — o subcomando Enable-IMU (0x40/0x01)
+do protocolo Switch, para ligar a IMU do Nintendo Pro REAL (que o hid-nintendo
+declara mas não ativa, ver estudo 2026-07-19-estudo-gyro-universal-vpad.md
+§Parte 2). Ainda é I/O pura e best-effort; a decisão de QUANDO enviar (OUI,
+bus, uma vez por adoção, backoff) mora em `ExternalImuEnabler`.
 """
 from __future__ import annotations
 
@@ -81,6 +88,100 @@ def write_player_number(
     # co-op usa 1..4; garante o 5º (azul) apagado se existir.
     _set_brightness(f"{root}/{hid_instance}:blue:player-5/brightness", 0)
     return escreveu
+
+
+#: GYRO-02: cabeçalho do output report "rumble + subcomando" do protocolo
+#: Switch (hid-nintendo.c: ``JC_OUTPUT_RUMBLE_AND_SUBCMD``) — o MESMO envelope
+#: que o kernel usa tanto para o subcomando de LED de player (0x30, que aqui
+#: ``write_player_number`` evita e resolve via sysfs) quanto para o Enable-IMU
+#: (0x40): ``output_id(1B) + packet_num(1B) + rumble_data(8B) + subcmd_id(1B)
+#: + dados do subcomando``. ``packet_num`` é um contador 0..0xF que o firmware
+#: só usa p/ deduplicar; 0x00 é aceito num envio isolado (não há sequência
+#: anterior a continuar). ``rumble_data`` NEUTRO é o valor "sem vibração" que
+#: o próprio driver manda quando não há rumble em curso.
+_JC_OUTPUT_RUMBLE_AND_SUBCMD = 0x01
+_JC_RUMBLE_NEUTRAL = bytes((0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40))
+
+#: Subcomando Enable-IMU + argumento "ligar" (GYRO-02 — Nintendo Pro REAL tem
+#: a IMU em STANDBY; ver docs/process/estudos/2026-07-19-estudo-gyro-universal-vpad.md).
+_JC_SUBCMD_ENABLE_IMU = 0x40
+_JC_ENABLE_IMU_ARG_ON = 0x01
+
+
+def build_enable_imu_packet(packet_num: int = 0) -> bytes:
+    """Monta o pacote cru do subcomando Enable-IMU (0x40, arg 0x01).
+
+    Byte a byte: ``[0x01, packet_num&0xF, *rumble_neutro(8B), 0x40, 0x01]`` —
+    12 bytes, o mesmo envelope rumble+subcmd do protocolo Switch (ver
+    docstring do módulo). Função PURA — não sabe de hidraw, OUI ou bus; só
+    monta bytes (testável sem device nenhum).
+    """
+    return (
+        bytes((_JC_OUTPUT_RUMBLE_AND_SUBCMD, packet_num & 0x0F))
+        + _JC_RUMBLE_NEUTRAL
+        + bytes((_JC_SUBCMD_ENABLE_IMU, _JC_ENABLE_IMU_ARG_ON))
+    )
+
+
+def enable_imu(hidraw_dev: str | None, *, packet_num: int = 0) -> bool:
+    """Escreve o pacote Enable-IMU cru no ``hidraw_dev`` (GYRO-02).
+
+    Best-effort, como o resto do módulo: ``False`` sem device/sem permissão
+    de escrita — NUNCA levanta. Quem decide POR QUE/QUANDO enviar (OUI ==
+    Nintendo real, bus == usb, uma vez por adoção, backoff ≤2 tentativas
+    ≥2s) é o chamador (`ExternalImuEnabler`, em `external_identity.py`) —
+    esta função é só o I/O cru, análoga a `_set_brightness`.
+    """
+    if not hidraw_dev or not os.path.exists(hidraw_dev):
+        return False
+    packet = build_enable_imu_packet(packet_num)
+    try:
+        fd = os.open(hidraw_dev, os.O_WRONLY)
+    except OSError:
+        return False
+    try:
+        os.write(fd, packet)
+        return True
+    except OSError:
+        return False
+    finally:
+        os.close(fd)
+
+
+def read_player_pattern(
+    hid_instance: str, leds_root: str | None = None
+) -> int | None:
+    """Lê o padrão de player ACESO na barra verde do externo (PURA, NUMA-03).
+
+    Espelho de leitura de :func:`write_player_number`: lê o ``brightness``
+    dos nós ``<inst>:green:player-1..4`` e decodifica o padrão. Retorno:
+
+    - ``1..4`` — padrão canônico (LEDs 1..n acesos em prefixo, resto apagado),
+      o que o próprio daemon escreve;
+    - ``0`` — todos apagados (kernel default ou apagão de terceiro);
+    - ``-1`` — padrão NÃO-canônico (buracos — assinatura de escritor
+      estrangeiro, ex.: o "player 1+3" que a Steam pinta);
+    - ``None`` — algum nó ausente/ilegível (device sumiu, modo DS4 sem barra
+      verde) — o chamador trata como "sem leitura" (skip, comportamento de
+      hoje), NUNCA como padrão apagado.
+
+    Leitura de classe LED é memória do kernel: ZERO subcomando BT (EXT-04 —
+    o inventário segue 100% puro; foi subcomando em excesso que matou o
+    8BitDo BT). Nunca levanta.
+    """
+    root = leds_root if leds_root is not None else LEDS_ROOT
+    bits: list[bool] = []
+    for i in range(1, _MAX_PLAYER_LEDS + 1):
+        alvo = f"{root}/{hid_instance}:green:player-{i}/brightness"
+        try:
+            with open(alvo, encoding="ascii") as fh:
+                bits.append(int(fh.read().strip() or "0") > 0)
+        except (OSError, ValueError):
+            return None
+    acesos = bits.count(True)
+    if bits != [i < acesos for i in range(_MAX_PLAYER_LEDS)]:
+        return -1  # buracos: alguém escreveu um padrão que não é nosso
+    return acesos
 
 
 def _hid_device_dir(hidraw_dev: str | None) -> str | None:
@@ -170,7 +271,10 @@ def apply_player_number(
 __all__ = [
     "LEDS_ROOT",
     "apply_player_number",
+    "build_enable_imu_packet",
+    "enable_imu",
     "hid_instance_for_hidraw",
+    "read_player_pattern",
     "resolve_external_leds",
     "write_lightbar_slot",
     "write_player_number",

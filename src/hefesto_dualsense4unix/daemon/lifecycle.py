@@ -66,6 +66,38 @@ INPUT_GRACE_SEC: float = 0.3
 #: controle logo após uma re-enumeração (storm -71 / replug).
 EVDEV_WATCHDOG_SEC: float = 2.0
 
+#: HANG-01 (Sprint 2026-07-19): teto de espera do tick de LED dos externos
+#: (`ExternalLedSync.tick`, executado no pool DEDICADO `hefesto-ext`, ver
+#: `_external_executor`). Medido ao vivo (16:08:56, PID 2835): uma
+#: "debandada" (mass-unplug) faz `discover_external_gamepads` abrir/fechar
+#: TODOS os nodes de /dev/input em rajada, e um wedge de GIL do CPython sob
+#: esse churn de threads pode nunca devolver o controle a Python — sem
+#: timeout, o poll loop ficava suspenso PARA SEMPRE em
+#: `await self._run_blocking(sync.tick)` (zero read_state, zero logs, zero
+#: watchdog). A THREAD presa NÃO é recuperável (é um wedge de baixo nível, não
+#: uma trava lógica nossa) — o trade-off aceito é vazar o(s) worker(s) do
+#: pool `hefesto-ext`.
+#: CORREÇÃO PÓS-AUDITORIA (20/07): a 1ª versão deste fix rodava `sync.tick`
+#: no MESMO `self._executor` ("hefesto-hid", 2 workers) do qual `read_state`
+#: (SEM wait_for), `_gather_game_signal_inputs` e o watchdog evdev também
+#: dependem — 2 timeouts consecutivos (o guard de reentrância permite um 2º
+#: agendamento porque a task asyncio já retorna "done" ao capturar o
+#: TimeoutError, mesmo com a thread ainda presa) vazavam os 2 workers do
+#: MESMO pool que o poll loop usa pra ler o controle — reproduzindo o hang
+#: original, só que adiado por ~2x este timeout em vez de instantâneo. Agora
+#: `sync.tick` roda em `self._external_executor`, um pool PRÓPRIO e ISOLADO —
+#: o pior caso vaza só ali, nunca no pool de que `read_state` depende. 10s é
+#: folgado para uma enumeração normal (10-40ms) e curto o bastante para o
+#: daemon nunca parecer morto por mais que isso.
+EXTERNAL_TICK_TIMEOUT_SEC: float = 10.0
+
+#: HANG-01: timeouts CONSECUTIVOS do tick de externos a partir dos quais o
+#: daemon PARA de agendar `discover` (inventário congela; `external_led` para
+#: de atualizar) até o próximo `input_dir_change` do `InputDirWatch` — evita
+#: empilhar uma task nova a cada ~2s em cima de um pool cujo(s) worker(s) já
+#: podem estar presos (dobrar/triplicar o vazamento em vez de conter em 1).
+EXTERNAL_TICK_MAX_TIMEOUTS: int = 2
+
 
 # ---------------------------------------------------------------------------
 # DaemonConfig
@@ -154,6 +186,13 @@ class Daemon:
 
     _stop_event: asyncio.Event | None = None
     _executor: ThreadPoolExecutor | None = None
+    # HANG-01 (correção pós-auditoria 20/07): pool DEDICADO e ISOLADO do tick
+    # de LED dos externos (`ExternalLedSync.tick`, via `_sync_external_leds`)
+    # — nunca compartilhado com `_executor`. Um wedge de GIL travando a única
+    # thread deste pool não pode mais esgotar o pool de que `read_state`/
+    # `_gather_game_signal_inputs`/o watchdog evdev dependem (ver comentário
+    # de `EXTERNAL_TICK_TIMEOUT_SEC`).
+    _external_executor: ThreadPoolExecutor | None = None
     _tasks: list[asyncio.Task[Any]] = field(default_factory=list)
     _ipc_server: Any = None
     _udp_server: Any = None
@@ -281,6 +320,31 @@ class Daemon:
     # escrita de LED em teste/smoke (hermeticidade por construção).
     external_registry: Any = None
     _external_led_sync: Any = None
+    # HANG-01: task auxiliar do tick de LED dos externos — `_sync_external_
+    # leds` deixou de ser aguardado inline pelo poll loop (ver `_schedule_
+    # external_tick`). None = nenhum tick em voo agora.
+    _external_tick_task: asyncio.Task[Any] | None = None
+    # HANG-01: timeouts CONSECUTIVOS do tick (zerado por um tick que termina
+    # dentro do prazo). >= EXTERNAL_TICK_MAX_TIMEOUTS degrada.
+    _external_tick_timeouts: int = 0
+    # HANG-01: True após degradar (2+ timeouts seguidos) — o poll loop para
+    # de chamar `_schedule_external_tick` até o `InputDirWatch` observar
+    # mudança real em /dev/input (replug: o inventário pode ter mudado).
+    _external_tick_degraded: bool = False
+    # HANG-01: ciclos do poll loop que PULARAM o agendamento porque o tick
+    # anterior ainda não tinha terminado (guard de reentrância) — só
+    # observabilidade, nunca lido por lógica de gate.
+    _external_tick_skipped: int = 0
+    # HANG-01: watch barato de /dev/input (mesma classe do EVDEV_WATCHDOG)
+    # usado só para destravar a degradação; criado sob demanda.
+    _external_tick_watch: Any = None
+    # NUMA-01: casca do sinal "jogo real ativo" (`game`|`daemon`|`unknown`) —
+    # ao contrário de identity/external_registry, SEMPRE nasce (mesmo com
+    # FakeController): é ela quem sustenta o contrato público
+    # `display_authority`. Só a INJEÇÃO no backend (`set_game_authority_
+    # provider`) é gateada por `hasattr` — sem o método, o backend fica
+    # byte-idêntico ao HEAD (fail-safe da síntese da Onda N).
+    _game_signal: Any = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -308,6 +372,13 @@ class Daemon:
         self.bus.bind_loop(loop)
         self._stop_event = asyncio.Event()
         self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="hefesto-hid")
+        # HANG-01: pool próprio p/ o tick de externos — NUNCA o mesmo de cima
+        # (ver comentário de `_external_executor` e `EXTERNAL_TICK_TIMEOUT_
+        # SEC`; 1 worker basta, o guard de reentrância nunca deixa 2 ticks
+        # concorrentes de verdade).
+        self._external_executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="hefesto-ext"
+        )
         self._install_signal_handlers(loop)
         # FEAT-DAEMON-PAUSE-RESUME-01: retoma pausado se a sessão anterior
         # terminou pausada (o poll loop nasce respeitando _paused).
@@ -401,6 +472,10 @@ class Daemon:
             # EXT-04: identidade + LED dos externos, no MESMO gate de backend
             # real do identity_registry (fake => tudo desligado).
             self._wire_external_registry()
+            # NUMA-01: sinal "jogo real ativo" — ATIVA o gate NUMA-02/03
+            # (dormente até aqui). Ao contrário dos dois acima, nasce SEMPRE
+            # (ver docstring de `_wire_game_signal`).
+            self._wire_game_signal()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -1740,22 +1815,274 @@ class Daemon:
         except Exception as exc:
             logger.warning("external_registry_wire_failed", err=str(exc))
 
+    def _schedule_external_tick(self) -> None:
+        """Agenda o tick de LED dos externos como TASK auxiliar (HANG-01).
+
+        Chamado pelo poll loop a cada ~2s; NUNCA aguarda o tick — antes disto
+        o `await self._sync_external_leds()` inline suspendia o POLL LOOP
+        INTEIRO para sempre se `sync.tick()` travasse no executor (mecanismo
+        do incidente 19/07 16:08: zero read_state, zero logs, zero watchdog,
+        por 10 minutos). Guard de reentrância: se a task anterior ainda não
+        terminou, pula este ciclo (só conta — nunca empilha 2 ticks
+        concorrentes brigando pelo mesmo `ExternalLedSync`).
+
+        Degradado (2+ timeouts consecutivos em `_sync_external_leds`): fica
+        mudo até o `InputDirWatch` observar uma mudança REAL em /dev/input —
+        aí destrava e volta a agendar (o replug pode ter corrigido o que
+        travou o worker, ou pelo menos justifica tentar de novo).
+        """
+        if self._external_led_sync is None:
+            return
+        if self._external_tick_degraded:
+            watch = self._external_tick_watch
+            if watch is None:
+                from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
+
+                watch = InputDirWatch()
+                self._external_tick_watch = watch
+                watch.poll()  # baseline — não destrava no MESMO tick que degradou
+                return
+            if not watch.poll():
+                return
+            logger.info("external_tick_recuperado", motivo="input_dir_change")
+            self._external_tick_degraded = False
+            self._external_tick_timeouts = 0
+        task = self._external_tick_task
+        if task is not None and not task.done():
+            self._external_tick_skipped += 1
+            return
+        self._external_tick_task = asyncio.create_task(
+            self._sync_external_leds(), name="external_led_tick"
+        )
+
     async def _sync_external_leds(self) -> None:
-        """Tick lento (~2s) do LED dos externos — SEMPRE fora do event loop.
+        """Corpo da TASK do tick de LED dos externos (HANG-01).
 
         EXT-04 item 3: o `tick()` enumera /dev/input (10-40 ms) e escreve
-        sysfs, então roda no executor (`_run_blocking`). A disciplina de
-        escrita (cache por-valor + rate-limit por device + telemetria
-        `external_led_written`) mora no `ExternalLedSync`. No-op sem a fiação
-        (backend fake). Nunca propaga exceção para o poll loop.
+        sysfs, então roda no executor DEDICADO (`_run_external_blocking`,
+        pool `hefesto-ext`) — NUNCA no `self._executor` ("hefesto-hid") de
+        que `read_state`/`_gather_game_signal_inputs`/o watchdog evdev
+        dependem — sob `asyncio.wait_for`: a THREAD presa não é recuperável
+        (é um wedge de baixo nível do CPython sob churn extremo de threads,
+        não uma trava lógica nossa — trade-off aceito do projeto, mesmo
+        espírito do `INIT_TIMEOUT_SEC` de `backend_pydualsense.py`: vaza o
+        worker do pool `hefesto-ext`, isolado do pool que o poll loop usa
+        pra ler o controle). Correção pós-auditoria: a versão anterior
+        reusava `self._executor` — 2 timeouts consecutivos (possíveis pelo
+        guard de reentrância, que só olha a task asyncio "done", não o
+        worker) esgotavam os 2 workers do MESMO pool do `read_state`,
+        reproduzindo o hang original de forma adiada. 1º timeout: WARNING;
+        2º+ CONSECUTIVO: ERROR + degrada (`_schedule_external_tick` para de
+        agendar até o próximo hotplug). Nunca propaga exceção para o
+        chamador (`asyncio.create_task` — uma exceção aqui viraria
+        "exception never retrieved" silencioso, então capturamos tudo).
         """
         sync = self._external_led_sync
         if sync is None:
             return
         try:
-            await self._run_blocking(sync.tick)
+            await asyncio.wait_for(
+                self._run_external_blocking(sync.tick),
+                timeout=EXTERNAL_TICK_TIMEOUT_SEC,
+            )
+        except asyncio.TimeoutError:
+            self._external_tick_timeouts += 1
+            log = (
+                logger.warning
+                if self._external_tick_timeouts == 1
+                else logger.error
+            )
+            log(
+                "external_tick_pendurado",
+                timeout_sec=EXTERNAL_TICK_TIMEOUT_SEC,
+                consecutivos=self._external_tick_timeouts,
+            )
+            if self._external_tick_timeouts >= EXTERNAL_TICK_MAX_TIMEOUTS:
+                self._external_tick_degraded = True
+                logger.info(
+                    "external_tick_degradado",
+                    consecutivos=self._external_tick_timeouts,
+                    instrucao=(
+                        "inventário de externos congelado até o próximo "
+                        "hotplug em /dev/input; ver doctor/reiniciar o serviço"
+                    ),
+                )
         except Exception as exc:  # nunca derrubar o poll loop
             logger.debug("external_led_sync_falhou", err=str(exc))
+        else:
+            self._external_tick_timeouts = 0
+
+    # ------------------------------------------------------------------
+    # Sinal "jogo real ativo" (NUMA-01)
+    # ------------------------------------------------------------------
+
+    @property
+    def display_authority(self) -> str:
+        """Autoridade de exibição CORRENTE ('game'|'daemon'|'unknown').
+
+        NUMA-01 — contrato PÚBLICO explícito (síntese da Onda N: "sem
+        `getattr` de privado no consumidor"). 'unknown' quando o
+        `GameSignal` ainda não foi fiado (antes de `run()`, ou backend sem
+        `set_game_authority_provider` — mesmo default fail-safe do sinal).
+        """
+        signal = self._game_signal
+        return signal.authority if signal is not None else "unknown"
+
+    def _wire_game_signal(self) -> None:
+        """Cria o `GameSignal` (NUMA-01) e injeta a autoridade no backend real.
+
+        Diferente de `_wire_identity_registry`/`_wire_external_registry`: o
+        objeto `GameSignal` SEMPRE nasce (mesmo com FakeController) — é ele
+        quem sustenta `display_authority`. Só a injeção no controller
+        (`set_game_authority_provider`) é gateada por `hasattr` (padrão
+        `set_auto_output_provider`, acima): sem o método, o backend fica
+        byte-idêntico ao HEAD — fail-safe da síntese ("remover 1 linha
+        desliga a onda inteira" — aqui seria remover a chamada abaixo).
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.game_signal import GameSignal
+
+        self._game_signal = GameSignal()
+        if not hasattr(self.controller, "set_game_authority_provider"):
+            return
+        try:
+            self.controller.set_game_authority_provider(
+                lambda: self._game_signal.authority
+            )
+            logger.info("game_signal_wired")
+        except Exception as exc:
+            logger.warning("game_signal_wire_failed", err=str(exc))
+
+    def _any_game_session_open(self) -> bool:
+        """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01).
+
+        Usado SÓ para modular a histerese da queda em `GameSignal.evaluate`
+        — veto permanente honrado: sessão uhid JAMAIS alimenta `classify`
+        (é o mecanismo do incidente 14:42: o cliente Steam também abre
+        sessão). Espelha a varredura de vpads de `launch_env._snapshot`.
+        """
+        vpads: list[Any] = []
+        primary = self._gamepad_device
+        if primary is not None:
+            vpads.append(primary)
+        players = getattr(self._coop_manager, "_players", None)
+        if isinstance(players, dict):
+            for player in players.values():
+                vpad = getattr(player, "vpad", None)
+                if vpad is not None:
+                    vpads.append(vpad)
+        return any(bool(getattr(vpad, "game_open", False)) for vpad in vpads)
+
+    def _profile_rule_matches_game(self, wm_class: str | None) -> bool:
+        """NUMA-01 evidência #2: `wm_class` corrente casa regra de jogo do
+        autoswitch (`mode.kind == "gamepad"`, match ESPECÍFICO — não o
+        `MatchAny` catch-all do perfil fallback). Cobre GOG/Heroic fora da
+        Steam pelo MESMO mecanismo de seleção do autoswitch
+        (`ProfileManager.select_for_window`). Best-effort: qualquer falha
+        ao carregar perfis do disco devolve False — o chamador
+        (`_gather_game_signal_inputs`) já roda protegido por try/except no
+        tick.
+        """
+        if not wm_class:
+            return False
+        from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+        manager = ProfileManager(controller=self.controller)
+        profile = manager.select_for_window({"wm_class": wm_class})
+        if profile is None:
+            return False
+        mode = getattr(profile, "mode", None)
+        match = getattr(profile, "match", None)
+        return (
+            mode is not None
+            and getattr(mode, "kind", None) == "gamepad"
+            and getattr(match, "type", None) == "criteria"
+        )
+
+    def _gather_game_signal_inputs(self) -> dict[str, Any]:
+        """Reúne TODA evidência de `classify()` (NUMA-01) — roda no executor.
+
+        O I/O de disco (marker do wrapper, perfis) e a sondagem de pid
+        moram AQUI, nunca no provider injetado (que precisa ser leitura de
+        bool cacheado, zero I/O — contrato de
+        `backend_pydualsense.set_game_authority_provider`). Propaga
+        qualquer exceção para o chamador (`_sync_game_signal`), que
+        degrada para `unknown` (fail-safe).
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            pid_is_alive,
+            read_last_exit_marker,
+            read_last_exit_pid,
+            read_last_run_marker,
+            read_last_run_pid,
+        )
+
+        mono_now = time.monotonic()
+        window_healthy = self.store.window_detect_healthy
+        window_class_current = self.store.window_detect_current_class
+        seen_at = self.store.game_window_seen_at
+        window_seen_age = (mono_now - seen_at) if seen_at is not None else None
+        marker = read_last_run_marker()
+        marker_pid = read_last_run_pid()
+        exit_marker = read_last_exit_marker()
+        # Correção pós-auditoria da Onda N: `marker_pid`/`exit_pid` correlacionam
+        # um `last_exit` (arquivo GLOBAL) ao MESMO launch do `last_run` corrente
+        # — sem isso, o `last_exit` tardio de um launch concorrente que falhou o
+        # próprio `exec` invalidaria um `last_run` legítimo e mais novo (ver
+        # `wrapper_game_running`).
+        exit_pid = read_last_exit_pid()
+        marker_pid_alive = pid_is_alive(marker_pid)
+        return {
+            "window_healthy": window_healthy,
+            "window_class_current": window_class_current,
+            "window_seen_age": window_seen_age,
+            "profile_rule_match": self._profile_rule_matches_game(window_class_current),
+            "marker": marker,
+            "marker_pid_alive": marker_pid_alive,
+            "marker_pid": marker_pid,
+            "exit_marker": exit_marker,
+            "exit_pid": exit_pid,
+            "session_open": self._any_game_session_open(),
+            "now": time.time(),
+        }
+
+    async def _sync_game_signal(self) -> None:
+        """Tick lento (~2s) do sinal "jogo real ativo" (NUMA-01).
+
+        É esta fiação que ATIVA o gate NUMA-02/03 (dormente sem ela — os
+        3684 testes da suíte REPLICA-03 passam byte-idênticos sem
+        provider). Todo I/O mora em `_gather_game_signal_inputs` (roda no
+        executor); a classificação em si (`classify` + histerese) é pura e
+        barata, direto no event loop. Callbacks de transição são
+        best-effort (`contextlib.suppress`) — falha de um passo não aborta
+        o tick nem o outro callback.
+        """
+        signal = self._game_signal
+        if signal is None:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
+
+        anterior = signal.authority
+        try:
+            inputs = await self._run_blocking(self._gather_game_signal_inputs)
+        except Exception as exc:
+            logger.warning("game_signal_degradado", motivo=str(exc))
+            signal.mark_degraded(str(exc))
+        else:
+            raw = classify(**inputs)
+            signal.evaluate(raw, session_open=bool(inputs["session_open"]))
+        novo = signal.authority
+        if novo == anterior:
+            return
+        if novo == "daemon":
+            with contextlib.suppress(Exception):
+                defend = getattr(self.controller, "defend_display", None)
+                if callable(defend):
+                    defend()
+        elif anterior == "daemon":
+            with contextlib.suppress(Exception):
+                replay = getattr(self.controller, "replay_retained_game_outputs", None)
+                if callable(replay):
+                    replay()
 
     # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
@@ -1781,6 +2108,10 @@ class Daemon:
         # merece número mesmo sem nenhum DualSense plugado. No-op sem fiação
         # (backend fake) — custo por tick: uma comparação de float.
         external_led_next_at: float = 0.0
+        # NUMA-01: sinal "jogo real ativo" no MESMO tick lento (~2s), TAMBÉM
+        # antes do gate de conexão — o marker do wrapper e a janela do jogo
+        # independem do controle estar plugado neste instante.
+        game_signal_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
@@ -1795,7 +2126,12 @@ class Daemon:
                 self._sync_identity_registry()
             if tick_started >= external_led_next_at:
                 external_led_next_at = tick_started + 2.0
-                await self._sync_external_leds()
+                # HANG-01: nunca mais `await` inline — só AGENDA a task (o
+                # poll loop segue SEMPRE, mesmo se o tick anterior travar).
+                self._schedule_external_tick()
+            if tick_started >= game_signal_next_at:
+                game_signal_next_at = tick_started + 2.0
+                await self._sync_game_signal()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando
@@ -2022,6 +2358,14 @@ class Daemon:
                     await asyncio.wait_for(stop_event.wait(), timeout=sleep_for)
                     break
 
+        # HANG-01: ao sair do poll loop (stop pedido ou erro fatal), não
+        # deixa a task do tick de externos pendurada — best-effort (só pede
+        # o cancelamento; ninguém aqui espera por ela, `shutdown()` já cancela
+        # `_tasks` e derruba o executor).
+        tick_task = self._external_tick_task
+        if tick_task is not None and not tick_task.done():
+            tick_task.cancel()
+
     # ------------------------------------------------------------------
     # Helpers internos
     # ------------------------------------------------------------------
@@ -2035,6 +2379,20 @@ class Daemon:
         assert self._executor is not None, "executor não inicializado"
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(self._executor, fn, *args)
+
+    async def _run_external_blocking(self, fn: Callable[..., Any], *args: Any) -> Any:
+        """Como `_run_blocking`, mas no pool DEDICADO `hefesto-ext` (HANG-01).
+
+        Isola o tick de LED dos externos (`_sync_external_leds`) do pool
+        `hefesto-hid` de que `read_state`/`_gather_game_signal_inputs`/o
+        watchdog evdev dependem — um wedge aqui vaza no máximo o(s)
+        worker(s) deste pool próprio, nunca aquele.
+        """
+        assert self._external_executor is not None, (
+            "external executor não inicializado"
+        )
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._external_executor, fn, *args)
 
     def _is_stopping(self) -> bool:
         return self._stop_event is not None and self._stop_event.is_set()

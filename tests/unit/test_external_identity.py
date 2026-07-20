@@ -13,8 +13,13 @@ Cobre as três peças da cura da "morte do 8BitDo" (estudo 2026-07-18
    fiado — hermeticidade (a suíte roda na máquina da mantenedora com um
    8BitDo REAL plugado).
 
+GYRO-02 (2026-07-19): `ExternalImuEnabler` (enable-IMU do Nintendo Pro REAL,
+FASEADO — só USB) tem seção própria mais abaixo.
+
 MACs sempre na faixa forjada canônica (`aa:bb:cc:*`) — regra do teste-guarda
-de anonimato.
+de anonimato. O OUI real do Nintendo (`E0:F6:B5`) NUNCA aparece aqui — os
+testes de `ExternalImuEnabler` monkeypatcham `NINTENDO_REAL_OUI` para uma
+faixa forjada (`aabbcc`) e usam os MESMOS MACs sintéticos do arquivo.
 """
 from __future__ import annotations
 
@@ -31,6 +36,7 @@ from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     LED_MIN_INTERVAL_SEC,
     ExternalIdentityRegistry,
+    ExternalImuEnabler,
     ExternalLedSync,
 )
 
@@ -127,6 +133,32 @@ def test_peek_e_leitura_pura() -> None:
     assert r.peek("") is None
 
 
+# --- registry: compact (ONDA-U/U2/U10) ---------------------------------------
+
+
+def test_compact_reescreve_so_as_chaves_do_mapping() -> None:
+    """`compact` (`identity.renumber`) — reatribuição EXPLÍCITA, não a lazy.
+
+    Falha-sem: `ExternalIdentityRegistry` no HEAD não tem `compact` nenhum.
+    """
+    r = ExternalIdentityRegistry()
+    r.slot_for(MAC_A, reserve=0)  # slot 1
+    r.slot_for(MAC_B, reserve=0)  # slot 2
+    key_a, key_b = MAC_A.replace(":", ""), MAC_B.replace(":", "")
+    r.compact({key_a: 5, "aabbcc00ff00": 9})  # chave fora do registro ignorada
+    assert r.snapshot() == {key_a: 5, key_b: 2}
+
+
+def test_compact_persiste_no_disco_quando_muda(tmp_path: Path) -> None:
+    r = ExternalIdentityRegistry()
+    r.slot_for(MAC_A, reserve=0)
+    r.sync_connected([MAC_A])  # save inicial
+    key_a = MAC_A.replace(":", "")
+    r.compact({key_a: 7})
+    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
+    assert data["externals"] == {key_a: 7}
+
+
 def test_identidade_sem_mac_e_volatil_nunca_persistida(tmp_path: Path) -> None:
     r = ExternalIdentityRegistry()
     assert r.slot_for("path:/dev/input/event9", reserve=0) == 1
@@ -217,17 +249,22 @@ def _sync(
     inventario: list[dict[str, Any]],
     *,
     ds_slots: dict[str, int] | None = None,
+    authority: str | None = None,
+    auto_enabled: bool = True,
 ) -> ExternalLedSync:
+    """``authority`` ausente preserva o default 'unknown' (sem fiação, NUMA-03)."""
     monkeypatch.setattr(
         er_mod,
         "discover_external_gamepads",
         lambda: [dict(e) for e in inventario],
     )
-    daemon = SimpleNamespace(
-        identity_registry=SimpleNamespace(
-            snapshot=lambda: dict(ds_slots or {})
-        )
+    identity_registry = SimpleNamespace(
+        snapshot=lambda: dict(ds_slots or {}), auto_enabled=auto_enabled
     )
+    daemon_kwargs: dict[str, Any] = {"identity_registry": identity_registry}
+    if authority is not None:
+        daemon_kwargs["display_authority"] = authority
+    daemon = SimpleNamespace(**daemon_kwargs)
     return ExternalLedSync(daemon, ExternalIdentityRegistry())
 
 
@@ -372,6 +409,168 @@ def test_tick_enumeracao_quebrada_nao_derruba(
     assert led_escritas == []
 
 
+# --- NUMA-03.4: autoridade de exibição modula o tick --------------------------
+
+
+def test_sem_fiacao_authority_ausente_e_byte_identico_ao_head(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """`daemon` sem `display_authority` (backend velho/FakeController) degrada
+    para 'unknown' — o cache por-valor sozinho decide, IGUAL a HEAD."""
+    sync = _sync(monkeypatch, [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")])
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+    sync.tick(now=10.0)
+    assert led_escritas == [("/dev/hidraw6", 1)], "sem mudança, sem escrita"
+
+
+def test_daemon_repinta_escritor_estrangeiro_detectado_por_classe_led(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, led_escritas: list[tuple[str, int]]
+) -> None:
+    """NUMA-03.4(a): sob 'daemon', o tick RE-LÊ o padrão físico (classe LED,
+    zero subcomando BT) antes do skip por-valor. Um escritor estrangeiro (o
+    'player 1+3' que a Steam pinta, padrão NÃO-canônico) é detectado e
+    repintado DENTRO do rate-limit de 2s."""
+    import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+    inst = "0003:057E:2009.000E"
+    leds_root = tmp_path / "leds"
+    for i in range(1, 5):
+        node = leds_root / f"{inst}:green:player-{i}"
+        node.mkdir(parents=True)
+        (node / "brightness").write_text("0", encoding="ascii")
+    monkeypatch.setattr(leds_mod, "LEDS_ROOT", str(leds_root))
+    monkeypatch.setattr(leds_mod, "hid_instance_for_hidraw", lambda h: inst)
+
+    eventos: list[tuple[str, dict[str, Any]]] = []
+
+    class _SpyLogger:
+        def info(self, evento: str, **kw: Any) -> None:
+            eventos.append((evento, kw))
+
+        def debug(self, *_a: Any, **_kw: Any) -> None: ...
+
+        def warning(self, *_a: Any, **_kw: Any) -> None: ...
+
+    monkeypatch.setattr(ei_mod, "logger", _SpyLogger())
+
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        authority="daemon",
+    )
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+
+    # Escritor estrangeiro pinta um padrão com BURACO por fora (1+3 aceso).
+    for i, aceso in enumerate(["1", "0", "1", "0"], start=1):
+        (leds_root / f"{inst}:green:player-{i}" / "brightness").write_text(
+            aceso, encoding="ascii"
+        )
+
+    sync.tick(now=0.5)  # detecta, mas dentro do rate-limit: NÃO escreve ainda
+    assert led_escritas == [("/dev/hidraw6", 1)], "<2s não repinta"
+
+    sync.tick(now=2.1)  # fora do rate-limit: repinta
+    assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)]
+    repintados = [kw for ev, kw in eventos if ev == "external_led_repintado"]
+    assert repintados == [{"uniq": MAC_A, "intruso": -1}]
+
+
+def test_daemon_leitura_falha_e_skip_como_hoje(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """Nó sumido/ilegível (BT dormiu) NUNCA vira falso estrangeiro — skip,
+    igual ao comportamento de hoje (veto dos juízes, NUMA-03.1/.4)."""
+    import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+    monkeypatch.setattr(leds_mod, "hid_instance_for_hidraw", lambda h: None)
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        authority="daemon",
+    )
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+    sync.tick(now=10.0)
+    assert led_escritas == [("/dev/hidraw6", 1)], "sem leitura, sem repaint"
+
+
+def test_authority_game_numera_device_novo_mas_nao_corrige_cacheado(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """NUMA-03.4(b): sob 'game'/'unknown' um device já cacheado NÃO é
+    corrigido (externos não são disputados em jogo) — mas o 8BitDo chegando
+    NO MEIO do jogo (device NOVO) ainda recebe o número 1x."""
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        authority="game",
+    )
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+
+    # Divergência simulada no cache do device JÁ numerado — não deve mexer.
+    sync._last_value[(MAC_A, "/dev/hidraw6")] = 99
+
+    monkeypatch.setattr(
+        er_mod,
+        "discover_external_gamepads",
+        lambda: [
+            _entry(MAC_A, "/dev/hidraw6", "/dev/input/event261"),
+            _entry(MAC_B, "/dev/hidraw7", "/dev/input/event262"),
+        ],
+    )
+    sync.tick(now=5.0)
+    assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw7", 2)], (
+        "A cacheado (mesmo com cache divergente) fica intocado; B novo numera"
+    )
+
+
+def test_queda_game_para_daemon_reacende_incondicionalmente(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """NUMA-03.4(d): a transição `game|unknown -> daemon` re-arma os caches —
+    o tick seguinte reacende os slots do daemon SEM esperar o rate-limit
+    normal (não dá pra confiar no que ficou aceso sem disputa)."""
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        authority="game",
+    )
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+
+    sync.tick(now=0.1)  # ainda 'game': cacheado, sem disputa — nada muda
+    assert led_escritas == [("/dev/hidraw6", 1)]
+
+    sync._daemon.display_authority = "daemon"
+    sync.tick(now=0.2)  # queda -> daemon: re-arm reacende MESMO <2s depois
+    assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)]
+
+
+def test_auto_player_colors_off_para_de_escrever_e_limpa_cache(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """NUMA-03.4(c): simetria com o provider DualSense — OFF para de afirmar
+    (zero escritas) e limpa o cache; achado ao vivo sem o fix: o externo
+    continuava aceso com o DualSense já apagado. OFF->ON reescreve."""
+    sync = _sync(monkeypatch, [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")])
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 1)]
+
+    sync._daemon.identity_registry.auto_enabled = False
+    sync.tick(now=1.0)
+    assert led_escritas == [("/dev/hidraw6", 1)], "OFF: zero escritas novas"
+    assert sync._last_value == {}, "cache limpo enquanto OFF"
+
+    sync._daemon.identity_registry.auto_enabled = True
+    sync.tick(now=1.5)
+    assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)], (
+        "OFF->ON reescreve"
+    )
+
+
 # --- fiação do lifecycle: hermeticidade com backend fake ----------------------
 
 
@@ -401,3 +600,242 @@ async def test_sync_external_leds_e_noop_sem_fiacao() -> None:
     )
     # Sem executor e sem fiação: precisa ser no-op silencioso.
     await daemon._sync_external_leds()
+
+
+# ---------------------------------------------------------------------------
+# GYRO-02 — ExternalImuEnabler: enable-IMU do Nintendo Pro REAL (FASEADO)
+# ---------------------------------------------------------------------------
+
+#: MAC com OUI forjado (aabbcc, mesma faixa de MAC_A/MAC_B) usado como
+#: "Nintendo real" nestes testes — o teste monkeypatcha `NINTENDO_REAL_OUI`
+#: para esta MESMA faixa, nunca a OUI real (`E0:F6:B5`).
+MAC_NINTENDO_FAKE = "aa:bb:cc:00:99:01"
+#: MAC com outra faixa forjada (`e8:47:3a`, "Edge físico" no guarda de
+#: anonimato) representando um controle QUALQUER com OUI diferente do
+#: Nintendo real (ex.: o 8BitDo, que nunca deve disparar o enable-IMU).
+MAC_OUTRA_MARCA = "e8:47:3a:00:00:09"
+
+
+def _imu_entry(uniq: str | None, hidraw: str | None, *, bus: str = "usb") -> dict[str, Any]:
+    return {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": "057e",
+        "pid": "2009",
+        "bus": bus,
+        "uniq": uniq,
+        "driver": "nintendo",
+        "evdev_path": "/dev/input/event7",
+        "hidraw": hidraw,
+    }
+
+
+@pytest.fixture()
+def oui_nintendo_forjada(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Aponta `NINTENDO_REAL_OUI` para a faixa forjada `aabbcc` (anonimato)."""
+    monkeypatch.setattr(ei_mod, "NINTENDO_REAL_OUI", "aabbcc")
+    return "aabbcc"
+
+
+@pytest.fixture()
+def imu_escritas(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, int]]:
+    """Captura chamadas a `enable_imu` (nunca toca hidraw real)."""
+    import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+    chamadas: list[tuple[str, int]] = []
+
+    def _fake(hidraw: str, *, packet_num: int = 0) -> bool:
+        chamadas.append((hidraw, packet_num))
+        return True
+
+    monkeypatch.setattr(leds_mod, "enable_imu", _fake)
+    return chamadas
+
+
+class TestExternalImuEnabler:
+    def test_oui_nintendo_real_usb_envia_uma_vez(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == [("/dev/hidraw5", 0)]
+        # Ticks seguintes (mesmo device, mesmo inventário): sucesso já
+        # aconteceu — nunca reenvia dentro da MESMA adoção.
+        enabler.tick(inventario, now=100.0)
+        enabler.tick(inventario, now=200.0)
+        assert imu_escritas == [("/dev/hidraw5", 0)]
+
+    def test_oui_errado_zero_escrita(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_OUTRA_MARCA, "/dev/hidraw5", bus="usb")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == []
+
+    def test_bus_bluetooth_zero_escrita_fase1(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        """FASE 1: só USB — BT é o mesmo território que matou o 8BitDo."""
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="bluetooth")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == []
+
+    def test_sem_uniq_zero_escrita(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        """Sem MAC não há OUI para checar — nunca dispara (não é sobre VID)."""
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(None, "/dev/hidraw5", bus="usb")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == []
+
+    def test_sem_hidraw_zero_escrita(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_NINTENDO_FAKE, None, bus="usb")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == []
+
+    def test_backoff_no_maximo_duas_tentativas_espacadas(
+        self, oui_nintendo_forjada: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Falha nunca vira loop: no máximo 2 tentativas, ≥2s entre elas."""
+        import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+        tentativas: list[float] = []
+
+        def _falha(hidraw: str, *, packet_num: int = 0) -> bool:
+            tentativas.append(1.0)
+            return False
+
+        monkeypatch.setattr(leds_mod, "enable_imu", _falha)
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")]
+
+        enabler.tick(inventario, now=0.0)
+        assert len(tentativas) == 1
+        enabler.tick(inventario, now=1.0)  # dentro do backoff: nem tenta
+        assert len(tentativas) == 1
+        enabler.tick(inventario, now=2.5)  # fora do backoff: 2ª tentativa
+        assert len(tentativas) == 2
+        # Esgotado (2/2): nunca mais tenta nesta adoção, mesmo esperando.
+        enabler.tick(inventario, now=100.0)
+        assert len(tentativas) == 2
+
+    def test_replug_reinicia_a_adocao(
+        self, oui_nintendo_forjada: str, imu_escritas: list[tuple[str, int]]
+    ) -> None:
+        """Device some do inventário (unplug) e volta (replug) → nova
+        adoção → envia de novo (o firmware reinicia a IMU em standby)."""
+        enabler = ExternalImuEnabler()
+        inventario = [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")]
+        enabler.tick(inventario, now=0.0)
+        assert imu_escritas == [("/dev/hidraw5", 0)]
+
+        enabler.tick([], now=10.0)  # sumiu
+        enabler.tick(inventario, now=20.0)  # replug
+        assert imu_escritas == [("/dev/hidraw5", 0), ("/dev/hidraw5", 0)]
+
+    def test_telemetria_enviado_e_falhou(
+        self, oui_nintendo_forjada: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        eventos: list[tuple[str, dict[str, Any]]] = []
+
+        class _SpyLogger:
+            def info(self, evento: str, **kw: Any) -> None:
+                eventos.append(("info", evento, kw))
+
+            def warning(self, evento: str, **kw: Any) -> None:
+                eventos.append(("warning", evento, kw))
+
+            def debug(self, *_a: Any, **_kw: Any) -> None: ...
+
+        monkeypatch.setattr(ei_mod, "logger", _SpyLogger())
+
+        import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+        monkeypatch.setattr(leds_mod, "enable_imu", lambda hidraw, **k: True)
+        ok_enabler = ExternalImuEnabler()
+        ok_enabler.tick(
+            [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")], now=0.0
+        )
+        sucesso = [
+            kw
+            for nivel, ev, kw in eventos
+            if nivel == "info" and ev == "external_imu_enable_enviado"
+        ]
+        assert sucesso == [
+            {"uniq": "aabbcc009901", "bus": "usb", "tentativa": 1}
+        ]
+
+        eventos.clear()
+        monkeypatch.setattr(leds_mod, "enable_imu", lambda hidraw, **k: False)
+        falha_enabler = ExternalImuEnabler()
+        falha_enabler.tick(
+            [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")], now=0.0
+        )
+        falha = [
+            kw
+            for nivel, ev, kw in eventos
+            if nivel == "warning" and ev == "external_imu_enable_falhou"
+        ]
+        assert falha == [{"uniq": "aabbcc009901", "bus": "usb", "tentativa": 1}]
+
+    def test_enable_imu_explode_nunca_propaga(
+        self, oui_nintendo_forjada: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`enable_imu` levantando (bug/EIO inesperado) não pode derrubar o
+        tick — suppress + warn (mesma disciplina do resto do módulo)."""
+        import hefesto_dualsense4unix.core.external_leds as leds_mod
+
+        def _explode(hidraw: str, **k: Any) -> bool:
+            raise OSError("EIO")
+
+        monkeypatch.setattr(leds_mod, "enable_imu", _explode)
+        enabler = ExternalImuEnabler()
+        enabler.tick(
+            [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")], now=0.0
+        )  # não levanta
+
+    def test_tick_enumeracao_vazia_nao_levanta(self, oui_nintendo_forjada: str) -> None:
+        ExternalImuEnabler().tick([], now=0.0)  # não levanta, sem device nenhum
+
+
+class TestExternalLedSyncChamaImuEnabler:
+    """Integração: `ExternalLedSync.tick()` também dispara o enable-IMU,
+    reusando o MESMO inventário — sem enumeração extra de /dev/input."""
+
+    def test_tick_do_led_sync_dispara_enable_imu(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        oui_nintendo_forjada: str,
+        imu_escritas: list[tuple[str, int]],
+        led_escritas: list[tuple[str, int]],
+    ) -> None:
+        sync = _sync(
+            monkeypatch,
+            [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")],
+        )
+        sync.tick(now=0.0)
+        assert imu_escritas == [("/dev/hidraw5", 0)]
+        # O LED também foi aceso normalmente — o enable-IMU não atrapalha.
+        assert led_escritas == [("/dev/hidraw5", 1)]
+
+    def test_auto_player_colors_off_nao_bloqueia_o_enable_imu(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        oui_nintendo_forjada: str,
+        imu_escritas: list[tuple[str, int]],
+    ) -> None:
+        """`auto_player_colors` OFF para de afirmar LED, mas o enable-IMU (não
+        é sobre cor/número) segue independente."""
+        sync = _sync(
+            monkeypatch,
+            [_imu_entry(MAC_NINTENDO_FAKE, "/dev/hidraw5", bus="usb")],
+            auto_enabled=False,
+        )
+        sync.tick(now=0.0)
+        assert imu_escritas == [("/dev/hidraw5", 0)]

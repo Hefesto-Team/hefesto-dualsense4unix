@@ -103,6 +103,15 @@ record_last_run() {
     # Formato (chave=valor, uma por linha; consumido pelo daemon):
     #   appid=<SteamAppId numérico do launch>
     #   epoch=<unix epoch em segundos do launch>
+    #   pid=<PID deste wrapper — NUMA-01>
+    #
+    # NUMA-01: `pid=$$` é o PID DESTE processo. Como o `exec env "$@"` final
+    # PRESERVA o PID (o wrapper VIRA o jogo — mesmo truque do Game Mode
+    # abaixo), este é o pid do próprio jogo enquanto ele roda; o daemon soma
+    # `kill(pid, 0)` a este marker para saber se o launch ainda está vivo
+    # (evidência "jogo real ativo" — game_signal.wrapper_game_running). Campo
+    # NOVO e opcional: `read_last_run_marker` do daemon o ignora (compat com
+    # markers antigos sem o campo).
     #
     # Best-effort de ponta a ponta: gravado ANTES do gate de vida (o marker
     # atesta o wrapper, não o daemon) e NENHUMA falha aqui pode atrasar ou
@@ -117,10 +126,66 @@ record_last_run() {
     {
         printf 'appid=%s\n' "$lr_appid"
         printf 'epoch=%s\n' "$(date +%s)"
+        printf 'pid=%s\n' "$$"
     } > "$lr_dir/last_run.tmp" 2>/dev/null || return 0
     mv -f "$lr_dir/last_run.tmp" "$lr_dir/last_run" 2>/dev/null || true
     return 0
 }
+
+record_last_exit() {
+    # Marker de encerramento (NUMA-01): epoch de uma saída deste wrapper SEM
+    # `exec` bem-sucedido — encurta na prática a janela de "pid reuse" do
+    # `last_run` (um `last_exit` mais novo que o `last_run` do MESMO launch
+    # prova que aquele processo nunca virou o jogo). Só dispara via o
+    # handler de EXIT (`_hefesto_on_exit`, abaixo): o `exec` bem-sucedido
+    # SUBSTITUI este processo pelo jogo — não há trap de shell para disparar
+    # depois disso, e é exatamente por isso que a detecção de "jogo ainda
+    # rodando" do NUMA-01 usa `pid_alive`, não este marker.
+    #
+    # Arquivo: $XDG_STATE_HOME/hefesto-dualsense4unix/launch_env/last_exit
+    # Formato (chave=valor, uma por linha):
+    #   epoch=<unix epoch em segundos>
+    #   pid=<PID deste wrapper>
+    #
+    # Correção pós-auditoria da Onda N: `last_run`/`last_exit` são arquivos
+    # GLOBAIS (não por appid/sessão) — sem o `pid=$$` aqui (o MESMO `$$` que
+    # este processo já gravou no seu PRÓPRIO `last_run`, ANTES do `exec`
+    # falhar), o daemon não tem como saber se um `last_exit` mais novo
+    # pertence ao launch que está avaliando ou a outro concorrente que só
+    # perdeu a corrida de escrita destes dois arquivos (o achado: launch A
+    # falha o exec e grava `last_exit` tarde, DEPOIS de um launch B legítimo
+    # já ter sobrescrito o `last_run` — sem correlação por pid, A invalidava
+    # B com o jogo de B genuinamente rodando). `read_last_exit_pid` do
+    # daemon ignora o campo em markers antigos sem ele (compat).
+    #
+    # Best-effort ABSOLUTO (mesma disciplina do `record_last_run`): nunca
+    # atrasa nem derruba a saída, mesmo com o diretório ilegível.
+    le_dir="${XDG_STATE_HOME:-$HOME/.local/state}/hefesto-dualsense4unix/launch_env"
+    mkdir -p "$le_dir" 2>/dev/null || return 0
+    {
+        printf 'epoch=%s\n' "$(date +%s)"
+        printf 'pid=%s\n' "$$"
+    } > "$le_dir/last_exit.tmp" 2>/dev/null || return 0
+    mv -f "$le_dir/last_exit.tmp" "$le_dir/last_exit" 2>/dev/null || true
+    return 0
+}
+
+# NUMA-01: handler ÚNICO de trap EXIT deste wrapper. Combina o restaurador
+# de Game Mode (só ativo se `enter_game_mode` alterou o perfil — guardado
+# pela variável `hefesto_gm_prev`, setada ABAIXO em vez de `enter_game_mode`
+# armar seu PRÓPRIO trap) com `record_last_exit`. Registrado UMA vez, cedo,
+# para cobrir qualquer saída sem `exec` (binário `env` ausente, erro de
+# shell) — o `exec env "$@"` bem-sucedido DESCARTA este trap por completo
+# (o processo virou outro programa; é o comportamento documentado do Game
+# Mode abaixo, preservado aqui).
+hefesto_gm_prev=""
+
+_hefesto_on_exit() {
+    [ -n "$hefesto_gm_prev" ] && gm_set_profile "$hefesto_gm_prev" 2>/dev/null
+    record_last_exit
+    return 0
+}
+trap '_hefesto_on_exit' EXIT
 
 # --- Game Mode COSMIC (PLAT-05) ---------------------------------------------
 # Pede Performance ao system76-power na largada do jogo e devolve o perfil
@@ -136,8 +201,9 @@ record_last_run() {
 #
 # Restauração: o `exec env` final PRESERVA o PID (o wrapper VIRA o jogo),
 # então o trap de EXIT do sh morre no exec — quem restaura é um filho em
-# background que espera este PID sumir. O trap fica mesmo assim: cobre a
-# saída SEM exec (ex.: env(1) ausente). Restaurar duas vezes é inócuo.
+# background que espera este PID sumir. O handler único `_hefesto_on_exit`
+# (topo do script, NUMA-01) fica mesmo assim: cobre a saída SEM exec (ex.:
+# env(1) ausente). Restaurar duas vezes é inócuo.
 # Se quem lança matar o grupo de processos inteiro no fim, a restauração se
 # perde — best-effort documentado, nunca pior que não ter Game Mode.
 #
@@ -212,8 +278,11 @@ enter_game_mode() {
         *) return 0 ;;  # vazio, performance ou desconhecido: nada a fazer
     esac
     gm_set_profile performance || return 0
-    # Trap só para a saída SEM exec (exec bem-sucedido descarta traps).
-    trap 'gm_set_profile "$gm_prev" || true' EXIT
+    # NUMA-01: em vez de armar o PRÓPRIO trap (que substituiria o handler
+    # único `_hefesto_on_exit` registrado no topo do script, perdendo o
+    # `record_last_exit`), só marca a variável que ele consulta. Cobre só a
+    # saída SEM exec (exec bem-sucedido descarta o trap inteiro).
+    hefesto_gm_prev="$gm_prev"
     gm_pid=$$
     (
         # Restaurador: espera o PID do jogo (o mesmo deste wrapper, via
