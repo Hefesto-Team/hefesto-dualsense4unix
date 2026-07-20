@@ -1162,9 +1162,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="hexpand">True</property>
                         <property name="vexpand">True</property>
                         <child>
+                          <!-- ONDA-U (U3-B): "row-activated" (duplo-clique)
+                               foi REMOVIDO — atropelava edição em andamento
+                               (duplo-clique acidental ativava o perfil na
+                               hora, sem confirmação, via profile.switch). O
+                               botão "Ativar" já cobre o gesto explícito de
+                               trocar de perfil; menos intrusivo que somar
+                               uma confirmação a um segundo caminho. -->
                           <object class="GtkTreeView" id="profiles_tree">
                             <property name="headers-visible">True</property>
-                            <signal name="row-activated" handler="on_profile_row_activated"/>
                           </object>
                         </child>
                       </object>

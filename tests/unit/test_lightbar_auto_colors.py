@@ -304,9 +304,8 @@ def test_cor_com_alvo_selecionado_nao_dispara_d4() -> None:
     assert not any(_AVISO_D4 in toast for toast in host._toasts)
 
 
-def test_brilho_e_player_leds_em_todos_nao_disparam_d4() -> None:
-    """D4 é sobre COR: brilho escala a própria paleta (D11) e player-LEDs
-    não são cor — nenhum dos dois desliga o automático."""
+def test_brilho_em_todos_nao_dispara_d4() -> None:
+    """Brilho escala a própria paleta (D11) — nunca desliga o automático."""
     host, _check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
 
     class _FakeScale:
@@ -316,8 +315,55 @@ def test_brilho_e_player_leds_em_todos_nao_disparam_d4() -> None:
 
     host.on_lightbar_brightness_changed(_FakeScale())
     assert host.draft.leds.auto_player_colors is True
-    host._persist_leds_update({"player_leds": (True, True, False, False, False)})
+
+
+def test_player_leds_em_todos_com_auto_on_dispara_d4(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ONDA-U (U9): clique manual de player-LED em "Todos" com o automático
+    ligado AGORA desliga o toggle — antes só ``lightbar_rgb`` disparava o D4,
+    e a paleta automática (COR-03) reescrevia o player-LED por cima no
+    próximo merge do backend, fazendo o clique manual parecer que "não
+    funciona" (falha-sem: no HEAD nem o toggle nem o toast do D4 apareciam
+    aqui). Exercita o caminho REAL do botão "Aplicar LEDs"
+    (``on_player_leds_apply``), não só ``_persist_leds_update`` isolado — é o
+    chamador quem compõe o toast."""
+    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
+    check.active = True  # espelho visual do draft
+
+    host.on_player_leds_apply(None)
+
+    assert host.draft.leds.auto_player_colors is False
+    assert check.get_active() is False  # checkbox sincronizado, sob guard
+    assert any(_AVISO_D4 in toast for toast in host._toasts)
+
+
+def test_player_leds_em_todos_com_auto_off_nao_dispara_de_novo(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    host, _check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=False)))
+
+    host.on_player_leds_apply(None)
+
+    assert host.draft.leds.auto_player_colors is False
+    assert not any(_AVISO_D4 in toast for toast in host._toasts)
+
+
+def test_player_leds_com_alvo_selecionado_nao_dispara_d4(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fluxo por-controle permanece como está: override, auto intacto."""
+    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    host, _check = _host_com_checkbox(
+        DraftConfig.from_profile(_perfil(auto=True)), uniq=UNIQ_2
+    )
+
+    host.on_player_leds_apply(None)
+
     assert host.draft.leds.auto_player_colors is True
+    assert not any(_AVISO_D4 in toast for toast in host._toasts)
 
 
 def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(

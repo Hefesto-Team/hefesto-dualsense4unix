@@ -98,11 +98,19 @@ _MODE_DESCRIPTIONS = {
 # não é mais botão de lugar nenhum e "Jogar direto" já é um dos três botões
 # logo acima (com descrição própria). Sobram os dois que a aba NÃO explica por
 # si: o "Modo jogo" (que mora em outra aba) e o desligar de verdade.
+# ONDA-U (U1): o "ligar de novo" deixou de mandar pra aba Sistema — o mesmo
+# botão vira "Ligar o Hefesto" nesta própria aba (toggle in-place).
 _GLOSSARY = (
     "Modo jogo (aba Emulação): pausa só o mouse/teclado, sem soltar o "
     "controle.  ·  "
-    "Desligar Hefesto: para tudo até você ligar de novo na aba Sistema."
+    'Desligar Hefesto: para tudo até você clicar em "Ligar o Hefesto" aqui '
+    "mesmo, nesta aba."
 )
+
+# ONDA-U (U1): rótulos do botão único de energia da aba Início — ele TROCA de
+# texto/ação conforme o daemon está online ou offline (nunca dois botões).
+_BTN_LABEL_ONLINE = "Desligar Hefesto (voltar ao Linux puro)"
+_BTN_LABEL_OFFLINE = "Ligar o Hefesto"
 
 
 def _mode_label(mode_id: object) -> str:
@@ -225,6 +233,35 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
         and "jogador" in motivo
     ):
         return VPAD_COOP_DEGRADED_TEXT
+    return None
+
+
+# ONDA-U (U2/U10): texto do "Renumerar agora" quando bloqueado por sessão de
+# jogo aberta — mesmo gate do IPC (`identity.renumber`), pra usuária ver o
+# "porquê" ANTES de clicar, em vez de levar um {ok: false} sem explicação.
+RENUMBER_GAME_OPEN_TEXT = (
+    "Feche o jogo para renumerar — evita repintar o controle em uso no meio "
+    "da partida."
+)
+
+
+def _renumber_gate_text(state: dict[str, Any] | None) -> str | None:
+    """Aviso do "Renumerar agora" bloqueado; ``None`` = liberado — função pura
+    (padrão ``vpad_degradation_text``/``wrapper_banner_text``).
+
+    Espelha o MESMO critério do handler de ``identity.renumber``
+    (``display_authority == 'game'`` via ``state_full.game_signal.
+    authority``) — nunca uma segunda fonte da verdade; se o daemon ainda não
+    fiou o sinal (``game_signal`` ausente/authority desconhecida), o botão
+    fica liberado (sem alarme falso).
+    """
+    if not isinstance(state, dict):
+        return None
+    game_signal = state.get("game_signal")
+    if not isinstance(game_signal, dict):
+        return None
+    if game_signal.get("authority") == "game":
+        return RENUMBER_GAME_OPEN_TEXT
     return None
 
 
@@ -394,16 +431,39 @@ class HomeActionsMixin(WidgetAccessMixin):
 
         # --- Frame: controles conectados -----------------------------------
         frame_ctrl = Gtk.Frame(label="Controles")
+        ctrl_frame_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+
         ctrl_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         # Cards de tamanho IGUAL (homogeneous): sem isso o card do primário
         # (linha extra "primário") ficava mais largo que o dos demais.
         ctrl_box.set_homogeneous(True)
         ctrl_box.set_margin_top(10)
-        ctrl_box.set_margin_bottom(10)
         ctrl_box.set_margin_start(12)
         ctrl_box.set_margin_end(12)
         self._home_controllers_box = ctrl_box
-        frame_ctrl.add(ctrl_box)
+        ctrl_frame_box.pack_start(ctrl_box, False, False, 0)
+
+        # ONDA-U (U2/U10): "Renumerar agora" — compacta a numeração de
+        # exibição (DualSense + externos, IPC `identity.renumber`) para 1..N
+        # preservando a ordem relativa. Fica junto dos cards: é aqui que a
+        # numeração aparece ("sony 1 / sony 4" com só 2 controles).
+        renumber_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        renumber_row.set_margin_start(12)
+        renumber_row.set_margin_end(12)
+        renumber_row.set_margin_bottom(10)
+        renumber_btn = Gtk.Button(label="Renumerar agora")
+        renumber_btn.connect("clicked", self._on_home_renumber_clicked)
+        self._home_renumber_btn = renumber_btn
+        renumber_row.pack_start(renumber_btn, False, False, 0)
+        renumber_hint = Gtk.Label(label="")
+        renumber_hint.set_xalign(0.0)
+        renumber_hint.set_line_wrap(True)
+        renumber_hint.get_style_context().add_class("dim-label")
+        self._home_renumber_hint = renumber_hint
+        renumber_row.pack_start(renumber_hint, False, False, 0)
+        ctrl_frame_box.pack_start(renumber_row, False, False, 0)
+
+        frame_ctrl.add(ctrl_frame_box)
         box.pack_start(frame_ctrl, False, False, 0)
 
         # --- Frame: sessão (desligar de verdade) ---------------------------
@@ -415,10 +475,14 @@ class HomeActionsMixin(WidgetAccessMixin):
         sess_box.set_margin_end(12)
 
         shutdown_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        shutdown_btn = Gtk.Button(label="Desligar Hefesto (voltar ao Linux puro)")
+        # ONDA-U (U1): botão ÚNICO — o `_render_home` troca rótulo/estilo
+        # entre "Desligar"/"Ligar" conforme o daemon está online/offline; o
+        # clique sempre passa por `_on_home_power_clicked` (dispatcher).
+        shutdown_btn = Gtk.Button(label=_BTN_LABEL_ONLINE)
         shutdown_btn.get_style_context().add_class("destructive-action")
-        shutdown_btn.connect("clicked", self._on_home_shutdown_clicked)
+        shutdown_btn.connect("clicked", self._on_home_power_clicked)
         self._home_shutdown_btn = shutdown_btn
+        self._home_offline = False
         shutdown_row.pack_start(shutdown_btn, False, False, 0)
         sess_status = Gtk.Label(label="")
         sess_status.set_xalign(0.0)
@@ -477,9 +541,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_guard = True
         try:
             if offline:
-                self._home_session_label.set_text(
-                    "O Hefesto está desligado — ligue na aba Sistema."
-                )
+                self._home_session_label.set_text("O Hefesto está desligado.")
                 selector.set_sensitive(False)
                 self._home_players_hint.set_text("")
                 self._home_flavor_selector.set_sensitive(False)
@@ -493,11 +555,39 @@ class HomeActionsMixin(WidgetAccessMixin):
                 # GUI-05: idem para o aviso "jogo sem wrapper".
                 self._home_wrapper_banner.set_visible(False)
                 self._render_home_controllers([])
+                # ONDA-U (U1): toggle in-place — o botão de "Desligar" vira
+                # "Ligar o Hefesto" bem aqui, nada de mandar pra aba Sistema.
+                self._home_offline = True
+                self._home_shutdown_btn.set_label(_BTN_LABEL_OFFLINE)
+                self._home_shutdown_btn.get_style_context().remove_class(
+                    "destructive-action"
+                )
+                self._home_shutdown_btn.get_style_context().add_class(
+                    "suggested-action"
+                )
+                # ONDA-U (U2/U10): sem daemon, "Renumerar agora" não tem quem
+                # atenda o IPC.
+                self._home_renumber_btn.set_sensitive(False)
+                self._home_renumber_hint.set_text("")
                 return
             assert state is not None
             selector.set_sensitive(True)
             self._home_flavor_selector.set_sensitive(True)
             self._home_session_label.set_text("")
+            # ONDA-U (U1): online devolve o botão único ao estado "Desligar".
+            self._home_offline = False
+            self._home_shutdown_btn.set_label(_BTN_LABEL_ONLINE)
+            self._home_shutdown_btn.get_style_context().remove_class(
+                "suggested-action"
+            )
+            self._home_shutdown_btn.get_style_context().add_class(
+                "destructive-action"
+            )
+            # ONDA-U (U2/U10): gate do botão espelha o do IPC — jogo aberto
+            # desabilita e explica o porquê ANTES do clique.
+            aviso_renumerar = _renumber_gate_text(state)
+            self._home_renumber_btn.set_sensitive(aviso_renumerar is None)
+            self._home_renumber_hint.set_text(aviso_renumerar or "")
 
             gamepad = state.get("gamepad_emulation") or {}
             # HARM-01: a leitura do modo também tem um dono só — a Emulação
@@ -681,6 +771,68 @@ class HomeActionsMixin(WidgetAccessMixin):
             timeout_s=_MODE_IPC_TIMEOUT_S,
         )
 
+    def _on_home_renumber_clicked(self, _button: object) -> None:
+        """U2/U10: dispara ``identity.renumber`` e traduz o resultado em toast.
+
+        Contrato fixado com o daemon (sprint ONDA-U): método
+        ``identity.renumber``, args ``{}``. Retorno
+        ``{ok: true, renumbered: {uniq: slot}}`` ou ``{ok: false, reason}``.
+        O gate visual (``_render_home``/``_renumber_gate_text``) já desabilita
+        o botão com jogo aberto, mas o handler NÃO confia só nisso — o
+        daemon decide de verdade (o estado do poll pode estar defasado em
+        até ``HOME_POLL_INTERVAL_MS``); aqui só se traduz a resposta.
+        """
+
+        def _ok(result: Any) -> bool:
+            if not isinstance(result, dict) or not result.get("ok"):
+                reason = result.get("reason") if isinstance(result, dict) else None
+                if reason == "sessao_de_jogo_aberta":
+                    msg = "Feche o jogo antes de renumerar."
+                else:
+                    msg = "Não consegui renumerar — tente de novo."
+                self._status_toast("home", msg)
+                return False
+            renumerados = result.get("renumbered")
+            n = len(renumerados) if isinstance(renumerados, dict) else 0
+            if n:
+                self._status_toast(
+                    "home",
+                    f"Numeração compactada — {n} controle(s) renumerado(s).",
+                )
+            else:
+                self._status_toast("home", "Numeração já estava compacta.")
+            self._refresh_home_tab()
+            return False
+
+        def _fail(_exc: Exception) -> bool:
+            self._status_toast(
+                "home",
+                "Não consegui renumerar — o Hefesto pode estar desligado.",
+            )
+            return False
+
+        call_async("identity.renumber", {}, _ok, _fail, timeout_s=_MODE_IPC_TIMEOUT_S)
+
+    def _on_home_power_clicked(self, button: object) -> None:
+        """Dispatcher do botão único de energia da aba Início (ONDA-U, U1).
+
+        Offline: reusa o MESMO caminho de ``on_daemon_start``
+        (``DaemonActionsMixin`` — ``systemctl --user start`` em thread
+        worker, com toast e reset do flag ``_user_stopped_daemon``) — nada de
+        duplicar a lógica de subir o daemon. ``getattr`` defensivo (mesmo
+        padrão de ``_edit_uniq`` em ``lightbar_actions``): os dois mixins só
+        convivem de fato na instância composta (``HefestoApp``), nunca
+        isolados nos testes. Online: mantém o fluxo de confirmação existente
+        (``_on_home_shutdown_clicked``). O estado vem de ``self._home_offline``,
+        mantido pelo ``_render_home``.
+        """
+        if getattr(self, "_home_offline", False):
+            start = getattr(self, "on_daemon_start", None)
+            if callable(start):
+                start(button)
+            return
+        self._on_home_shutdown_clicked(button)
+
     def _on_home_shutdown_clicked(self, _button: object) -> None:
         """Desliga o daemon DE VERDADE (com confirmação não-bloqueante)."""
         from gi.repository import Gtk
@@ -701,8 +853,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             "O controle continua funcionando nos jogos, mas sem luzes, sem "
             "gatilhos e sem os seus ajustes.\n"
             "Esta janela continua aberta e NÃO liga o Hefesto de novo sozinha "
-            "— para ligar de novo, vá na aba Sistema e clique em \"Ligar o "
-            "Hefesto\"."
+            # ONDA-U (U1): "Ligar o Hefesto" agora é o MESMO botão desta aba
+            # (toggle in-place) — o aviso não manda mais pra aba Sistema.
+            "— para ligar de novo, clique em \"Ligar o Hefesto\" aqui mesmo, "
+            "nesta aba."
         )
 
         def _on_response(dlg: Any, response: int) -> None:
@@ -756,6 +910,7 @@ class HomeActionsMixin(WidgetAccessMixin):
 
 __all__ = [
     "HOME_POLL_INTERVAL_MS",
+    "RENUMBER_GAME_OPEN_TEXT",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",

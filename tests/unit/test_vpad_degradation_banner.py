@@ -224,6 +224,9 @@ class _StyleCtx:
     def add_class(self, _name: str) -> None:
         pass
 
+    def remove_class(self, _name: str) -> None:
+        pass
+
 
 class _FakeWidget:
     def __init__(self, label: str | None = None, **_kwargs: object) -> None:
@@ -244,6 +247,9 @@ class _FakeWidget:
         self.label = markup
 
     def set_text(self, text: str) -> None:
+        self.label = text
+
+    def set_label(self, text: str) -> None:
         self.label = text
 
     def set_sensitive(self, _value: bool) -> None:
@@ -290,6 +296,12 @@ class _HomeStub:
         self._home_vpad_banner = _FakeWidget()
         # GUI-05 item 3: o _render_home também rege o banner "jogo sem wrapper".
         self._home_wrapper_banner = _FakeWidget()
+        # ONDA-U (U1): botão único de energia (toggle in-place).
+        self._home_shutdown_btn = _FakeWidget()
+        self._home_offline = False
+        # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
+        self._home_renumber_btn = _FakeWidget()
+        self._home_renumber_hint = _FakeWidget()
         # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 

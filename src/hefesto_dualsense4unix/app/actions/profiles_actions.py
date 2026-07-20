@@ -459,13 +459,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         self._populate_editor(profile)
 
-    def on_profile_row_activated(
-        self,
-        _tree: Gtk.TreeView,
-        _path: Gtk.TreePath,
-        _column: Gtk.TreeViewColumn,
-    ) -> None:
-        self.on_profile_activate(None)
+    # ONDA-U (U3-B): `on_profile_row_activated` foi REMOVIDO junto com o
+    # binding `row-activated` do glade — duplo-clique na lista ativava o
+    # perfil na hora (profile.switch sem confirmação), atropelando edição em
+    # andamento (selecionar texto/navegar vira 2 cliques rápidos por
+    # acidente). O botão "Ativar" (`on_profile_activate`) já cobre o gesto
+    # explícito; remover o binding é menos intrusivo que somar uma
+    # confirmação a um segundo caminho para a mesma ação.
 
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
         self._duplicate_source = None  # perfil novo parte de defaults, não de cópia

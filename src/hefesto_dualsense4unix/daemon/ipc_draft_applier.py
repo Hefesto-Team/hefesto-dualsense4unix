@@ -38,6 +38,15 @@ class DraftApplier:
         self.daemon = daemon
 
     def apply(self, params: dict[str, Any]) -> list[str]:
+        # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
+        # só dentro de `_apply_triggers` (BUG-MOUSE-TRIGGERS-01), então um
+        # "Aplicar no controle" sem a seção `triggers` (ex.: só `leds`, o
+        # botão da aba Lightbar) não armava a trava; o `AutoSwitcher`
+        # reativava o perfil salvo no próximo tick com troca de foco de
+        # janela e apagava a edição recém-aplicada ("perfil eterno", U3/U4/
+        # U9/U11). `apply_draft` É sempre edição manual explícita — arma
+        # incondicional, independente de quais seções vieram no payload.
+        self.store.mark_manual_trigger_active()
         applied: list[str] = []
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
@@ -214,7 +223,6 @@ class DraftApplier:
                     trigger_right=effects.get("right"),
                 )
             )
-        self.store.mark_manual_trigger_active()
 
     def _apply_controllers(self, raw: Any) -> None:
         """Aplica os overrides POR CONTROLE do draft (PERFIL-04).

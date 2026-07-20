@@ -264,7 +264,9 @@ class HefestoApp(
             "on_rumble_stop": self.on_rumble_stop,
             "on_rumble_passthrough": self.on_rumble_passthrough,
             # Perfis
-            "on_profile_row_activated": self.on_profile_row_activated,
+            # ONDA-U (U3-B): "on_profile_row_activated" foi REMOVIDO junto com
+            # o handler no mixin e o binding "row-activated" do glade (ver
+            # profiles_actions.py) — duplo-clique não ativa mais o perfil.
             "on_profile_new": self.on_profile_new,
             "on_profile_duplicate": self.on_profile_duplicate,
             "on_profile_remove": self.on_profile_remove,

@@ -9,6 +9,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     trigger.reset        {side?}               -> {status}
     led.set              {rgb}                 -> {status}
     led.player_set       {bits: [bool]*5}      -> {status, bits}
+    identity.renumber    {}          -> {ok, renumbered: {uniq: slot}} | {ok: false, reason}
     rumble.set           {weak, strong}        -> {status, weak, strong}
     rumble.stop          {}                    -> {status}
     rumble.passthrough   {enabled: bool}       -> {status}
@@ -120,6 +121,8 @@ class IpcServer(IpcHandlersMixin):
             "coop.set": self._handle_coop_set,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
+            # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.
+            "identity.renumber": self._handle_identity_renumber,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
         }
