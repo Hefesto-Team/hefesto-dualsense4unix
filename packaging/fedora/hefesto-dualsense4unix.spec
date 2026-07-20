@@ -146,11 +146,45 @@ fi
 install -Dm755 scripts/install-host-udev.sh \
     %{buildroot}%{_datadir}/%{app_id}/scripts/install-host-udev.sh
 
+# BROKER-01 (Onda S — fd-injection): binario standalone + units-template do
+# broker root hide-hidraw. NAO ativa sozinho aqui — %post roda sem sessao de
+# usuario (renderizaria uid 0, PROIBIDO — licao 6). O install-host-udev.sh
+# acima (ja empacotado) e o caminho de ATIVACAO pos-instalacao.
+install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py \
+    %{buildroot}%{_datadir}/%{app_id}/broker/hidraw_broker.py
+install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
+    assets/systemd/hefesto-hidraw-broker.service \
+    assets/systemd/hefesto-hidraw-broker.socket
+
 %post
 # Recarrega udev rules + carrega uinput. Idempotente.
 /usr/sbin/udevadm control --reload-rules || :
 /usr/sbin/udevadm trigger || :
 /usr/sbin/modprobe uinput 2>/dev/null || :
+
+cat <<MSG
+Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
+cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro):
+  sudo %{_datadir}/%{app_id}/scripts/install-host-udev.sh
+MSG
+
+%preun
+# BROKER-01 (achado #21): purge nao pode deixar a unit ROOT do broker orfa
+# habilitada. disable+stop dispara o ExecStopPost --restore-all-and-exit da
+# propria unit (nenhum hidraw fisico fica 0600 orfao); o belt explicito roda
+# o MESMO restore ANTES do rpm apagar o binario (arquivos saem DEPOIS do
+# %preun). So na remocao final ($1 -eq 0), nunca em upgrade.
+if [ $1 -eq 0 ]; then
+    /usr/bin/systemctl disable --now hefesto-hidraw-broker.socket \
+        hefesto-hidraw-broker.service >/dev/null 2>&1 || :
+    if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+        /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+            --restore-all-and-exit >/dev/null 2>&1 || :
+    fi
+    rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
+          /etc/systemd/system/hefesto-hidraw-broker.socket
+    /usr/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+fi
 
 %postun
 if [ $1 -eq 0 ]; then
@@ -187,6 +221,9 @@ fi
 %{_userunitdir}/*.service
 %{_datadir}/locale/*/LC_MESSAGES/hefesto-dualsense4unix.mo
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
+%{_datadir}/%{app_id}/broker/hidraw_broker.py
+%{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
+%{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
 * Sat May 16 2026 Vitoria Maria <[REDACTED]> - 3.4.0-1

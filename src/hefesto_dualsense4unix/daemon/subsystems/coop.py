@@ -230,6 +230,8 @@ class CoopManager:
                 self.disable()
             return
 
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+
         activated = not self._was_active
         self._was_active = True
         self._promote_pending()
@@ -238,7 +240,23 @@ class CoopManager:
         grab_degraded = any(
             p.reader.grab_state == "failed" for p in self._players.values()
         )
-        if not (self._watch.poll() or activated or grab_degraded or retry_needed or force):
+        # Achado Onda S #1: vpad MORTO (uhid derrubado por UHID_STOP sem
+        # `_teardown_player` — `_started=False` com o objeto vivo) também
+        # força o ciclo cheio: o jogador é derrubado e respawnado abaixo.
+        # Sem isto ele ficaria vpad-morto PARA SEMPRE (nenhum gatilho de
+        # /dev/input dispara quando o kernel só derruba o uhid).
+        vpad_morto = any(
+            p.vpad is not None and not vpad_vivo(p.vpad)
+            for p in self._players.values()
+        )
+        if not (
+            self._watch.poll()
+            or activated
+            or grab_degraded
+            or vpad_morto
+            or retry_needed
+            or force
+        ):
             return
 
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
@@ -283,6 +301,12 @@ class CoopManager:
                 self._teardown_player(mac)
             elif player.reader.grab_state == "failed":
                 logger.warning("coop_player_grab_failed_retry", identity=mac)
+                self._teardown_player(mac)
+            elif player.vpad is not None and not vpad_vivo(player.vpad):
+                # Achado Onda S #1: vpad morto (UHID_STOP pós-promoção) —
+                # derruba (o teardown restaura o físico via broker) e o loop
+                # de spawn deste MESMO ciclo recria o jogador do zero.
+                logger.warning("coop_player_vpad_morto_respawn", identity=mac)
                 self._teardown_player(mac)
             elif (
                 player.vpad is not None
@@ -527,6 +551,11 @@ class CoopManager:
         # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
         # proíbe o IGNORE), então cada spawn regrava as envs do wrapper.
         self._materialize_launch_env()
+        # BROKER-01: ÚLTIMA linha do caminho feliz — hide do físico DESTE
+        # jogador, só com o vpad confirmado (regra de ouro: nunca hide sem
+        # vpad vivo). O reader de motion acima nem depende da ordem: o opener
+        # dele fura o hide via broker (fd-injection).
+        self._broker_hide_player(player)
 
     def _read_player_calibration(self, identity: str) -> bytes | None:
         """Feature 0x05 do físico de UM jogador (GYRO-01), ou None = canônico.
@@ -584,7 +613,18 @@ class CoopManager:
                 return None
             return path if isinstance(path, str) else None
 
-        reader = PhysicalReportReader(path_provider=_player_hidraw, vpad=vpad)
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            make_broker_opener,
+        )
+
+        # BROKER-01 §6.3: o reader deste jogador nasce com o opener
+        # broker-aware — reabre o hidraw via fd do broker root mesmo com o nó
+        # escondido; sem broker, os.open por caminho (comportamento de hoje).
+        reader = PhysicalReportReader(
+            path_provider=_player_hidraw,
+            vpad=vpad,
+            opener=make_broker_opener(self._daemon),
+        )
         reader.start()
         player.motion_reader = reader
         logger.info(
@@ -592,6 +632,78 @@ class CoopManager:
             identity=identity,
             player=player.player_index,
         )
+
+    # -- broker hide-hidraw por jogador (BROKER-01) ----------------------
+
+    def _player_hidraw_node(self, identity: str) -> str | None:
+        """`/dev/hidrawN` do físico DESTE jogador via `hidraw_path(uniq)`, ou None.
+
+        Controles externos (8BitDo/Nintendo, identidade `path:*`) nunca têm
+        hide: não há handle por-uniq no backend — e o validador do broker os
+        rejeitaria de qualquer forma (defesa dupla).
+        """
+        if identity.startswith("path:"):
+            return None
+        hidraw_fn = getattr(self._daemon.controller, "hidraw_path", None)
+        if not callable(hidraw_fn):
+            return None
+        with contextlib.suppress(Exception):
+            node = hidraw_fn(identity)
+            return node if isinstance(node, str) and node else None
+        return None
+
+    def _broker_hide_player(self, player: _SecondaryPlayer) -> None:
+        """Hide do físico do jogador — SÓ com vpad confirmado E VIVO (BROKER-01).
+
+        Chamado como última etapa do caminho feliz de `_promote_player`:
+        nunca se esconde o físico de um jogador sem vpad (seria ZERO controle
+        para aquela pessoa). Achado Onda S #1: o gate é VIDA (`vpad_vivo`,
+        lição 6/#17), não existência — um uhid derrubado por UHID_STOP mantém
+        o objeto Python com `_started=False` e NÃO autoriza hide. Achados
+        #5/#10: a chamada ao broker vai via `broker_call_nonblocking` — o
+        `coop.sync()` roda NA thread do event loop (poll loop) e um broker
+        lento não pode congelar todos os jogadores. Best-effort integral:
+        broker ausente, daemon dublado sem `is_native_mode` — nada levanta e,
+        na dúvida, NÃO esconde.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
+
+        if not vpad_vivo(player.vpad):
+            return
+        with contextlib.suppress(Exception):
+            if self._daemon.is_native_mode():
+                return
+            node = self._player_hidraw_node(player.identity)
+            if node is None:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self._daemon)
+            broker_call_nonblocking(self._daemon, lambda: client.hide(node))
+
+    def _broker_restore_player(self, identity: str) -> None:
+        """Restore do físico do jogador no `_teardown_player` (best-effort).
+
+        O nó re-resolve por identity NA HORA; se o controle já saiu
+        fisicamente, devolve None e o EOF/`restore_node_gone` do broker cobre.
+        Sem gate de modo: expor nunca é errado. Achados Onda S #5/#10: a
+        chamada ao broker vai via `broker_call_nonblocking` — o teardown roda
+        no tick do poll loop (hotplug-out) e não pode bloquear o event loop.
+        """
+        with contextlib.suppress(Exception):
+            node = self._player_hidraw_node(identity)
+            if node is None:
+                return
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(self._daemon)
+            broker_call_nonblocking(self._daemon, lambda: client.restore(node))
 
     def _materialize_launch_env(self) -> None:
         """Regrava as envs do wrapper hefesto-launch (best-effort, DEDUP-04)."""
@@ -606,6 +718,9 @@ class CoopManager:
         player = self._players.pop(identity, None)
         if player is None:
             return
+        # BROKER-01: restore do físico ANTES de soltar grab/reader/vpad — o
+        # jogador está saindo e o nó dele não pode ficar 0600 sem dono.
+        self._broker_restore_player(identity)
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
         with contextlib.suppress(Exception):

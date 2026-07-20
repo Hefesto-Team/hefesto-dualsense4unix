@@ -394,6 +394,36 @@ def test_sync_derruba_player_cujo_grab_degradou(
     assert MAC_P2 in mgr._players and mgr._players[MAC_P2] is not player
 
 
+def test_sync_derruba_e_respawna_player_com_vpad_morto(
+    patched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Achado Onda S #1: vpad uhid derrubado por UHID_STOP pós-promoção.
+
+    O kernel derruba o uhid (`_started=False`) sem destruir o objeto Python
+    e SEM tocar /dev/input — nenhum watch dispara. Antes, o jogador ficava
+    vpad-morto para sempre (e o rehide ainda escondia o físico dele = zero
+    input). Agora o sync detecta VIDA (mesmo em tick quieto), derruba (o
+    teardown restaura o físico via broker) e respawna no mesmo ciclo.
+    """
+    _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
+    mgr = CoopManager(_make_daemon())
+    mgr.sync()
+    player = mgr._players[MAC_P2]
+    assert player.vpad is not None
+
+    # UHID_STOP: objeto vivo, device morto — e o tick é QUIETO (sem watch).
+    player.vpad._started = False
+    _watch_quiet(monkeypatch)
+    mgr.sync()
+
+    assert player.vpad.stopped is True
+    assert player.reader.stopped is True
+    # Recriado limpo no mesmo ciclo, com vpad novo e VIVO.
+    renascido = mgr._players.get(MAC_P2)
+    assert renascido is not None and renascido is not player
+    assert renascido.vpad is not None and renascido.vpad is not player.vpad
+
+
 def test_forward_all_repassa_snapshot_ao_vpad(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:

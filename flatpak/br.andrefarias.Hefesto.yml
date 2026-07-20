@@ -217,6 +217,19 @@ modules:
       - install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf
           /app/share/hefesto-dualsense4unix/modprobe.d/hefesto-btusb-no-autosuspend.conf
 
+      # BROKER-01 (Onda S — fd-injection): binário standalone + units-
+      # template do broker root hide-hidraw. O sandbox NÃO instala unit de
+      # SISTEMA sozinho (fora do alcance de um Flatpak) — install-host-
+      # udev.sh (abaixo) é quem faz a ATIVAÇÃO no HOST (render
+      # __SESSION_UID__/__SESSION_GROUP__ + enable --now do .socket), o
+      # mesmo caminho que hoje aplica as regras udev fora do sandbox.
+      - install -Dm644 src/hefesto_dualsense4unix/broker/hidraw_broker.py
+          /app/share/hefesto-dualsense4unix/broker/hidraw_broker.py
+      - install -Dm644 assets/systemd/hefesto-hidraw-broker.service
+          /app/share/hefesto-dualsense4unix/systemd/hefesto-hidraw-broker.service
+      - install -Dm644 assets/systemd/hefesto-hidraw-broker.socket
+          /app/share/hefesto-dualsense4unix/systemd/hefesto-hidraw-broker.socket
+
       # Instalar script de setup de udev (executado pelo usuário uma vez)
       - install -Dm755 scripts/install-host-udev.sh
           /app/bin/install-host-udev.sh

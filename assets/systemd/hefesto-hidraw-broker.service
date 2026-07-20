@@ -1,0 +1,82 @@
+# hefesto-hidraw-broker.service — broker root que esconde o hidraw do DualSense
+# físico do jogo E serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd open —
+# fd-injection, Onda S). BROKER-01 / FUT-01 / PLAT-02. PRIMEIRO serviço de
+# SISTEMA do projeto (os demais são --user). Instalado pelo install.sh com
+# __SESSION_UID__ renderizado.
+# instalado por hefesto-dualsense4unix (install.sh) — remoção: uninstall.sh
+#
+# HARDENING — diretivas que NÃO PODEM entrar (quebrariam hide/restore/open):
+#   PrivateDevices=yes   -> /dev esfregado SEM /dev/hidraw* (chmod/open → ENOENT).
+#   RuntimeDirectory=... -> apagado em TODO stop/crash do serviço: levaria o
+#                           broker.sock junto e a lease do daemon nunca
+#                           renasceria (lição 4/#10 da auditoria). A DONA do
+#                           diretório e do socket é a SOCKET UNIT.
+#   udevadm no restore   -> escreveria em /sys; conflita com ProtectKernelTunables.
+#
+# DeviceAllow=char-hidraw rw é NECESSÁRIO (mudou vs desenho de 2026-07-18: "o
+# broker nunca abre device" morreu com o cmd open): o broker faz open(2) O_RDWR
+# real de /dev/hidrawN e o device cgroup governa exatamente esse open.
+# `char-hidraw` resolve o GRUPO de char devices pelo NOME em /proc/devices —
+# à prova do major dinâmico do hidraw (237 hoje, outro amanhã).
+# Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §5.
+[Unit]
+Description=Hefesto — broker root que esconde o hidraw do DualSense físico do jogo (BROKER-01)
+Documentation=file:docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
+# O serviço só faz sentido com o socket; se o socket cair, o serviço para junto.
+Requires=hefesto-hidraw-broker.socket
+After=hefesto-hidraw-broker.socket
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker
+# uid autorizado (a sessão dona); gravado pelo install a partir de SUDO_UID.
+# O broker RECUSA uid 0 (lição 6: render errado nunca vira broker de root).
+Environment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__
+# Baseline limpo no start: nunca herda um físico escondido órfão.
+ExecStartPre=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit
+# Se o broker cai/é parado, RESTAURA todo físico escondido (belt final).
+ExecStopPost=/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --restore-all-and-exit
+Restart=on-failure
+RestartSec=1
+
+# --- HARDENING (cada diretiva revisada na matriz §5.3 do desenho) ---
+User=root
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+RestrictAddressFamilies=AF_UNIX
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+# ProcSubset=pid mantém /proc/self/fd/ acessível — as operações de ACL/chmod
+# são pinadas por inode via /proc/self/fd/N (lição 5, minor-reuse).
+ProcSubset=pid
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RemoveIPC=yes
+UMask=0077
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @mount @debug @cpu-emulation @obsolete @raw-io @reboot @swap @clock
+# Capabilities: uid 0 com bounding set mínimo. FOWNER = modo/ACL do nó;
+# DAC_OVERRIDE = open(2) do nó 0600 (cmd open) + robustez;
+# DAC_READ_SEARCH = atravessar/ler /sys mesmo com bits restritivos.
+CapabilityBoundingSet=CAP_FOWNER CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH
+AmbientCapabilities=
+# Device cgroup: closed + allow SÓ o grupo hidraw. `rw` e não `r`: o fd
+# servido pelo cmd open é O_RDWR — `r` faria o open falhar com EPERM.
+DevicePolicy=closed
+DeviceAllow=char-hidraw rw
+
+[Install]
+WantedBy=multi-user.target

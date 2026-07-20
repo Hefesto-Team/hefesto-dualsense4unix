@@ -121,6 +121,114 @@ def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
                 if store is not None:
                     with contextlib.suppress(Exception):
                         store.bump("gamepad.grab.failed")
+    # BROKER-01: hide/restore do hidraw colado ao EVIOCGRAB — fora do
+    # suppress acima (falha de grab não silencia o broker) e com o próprio
+    # suppress lá dentro. A colocação aqui dá DE GRAÇA a regra da troca de
+    # flavor: `release_grab=False` nem passa por esta função ⇒ o físico segue
+    # escondido durante a recriação do vpad (sem janela para SDL/winebus).
+    _broker_sync_grab(daemon, grab)
+
+
+def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
+    """Hide/restore do hidraw do físico colado ao EVIOCGRAB (BROKER-01).
+
+    Best-effort SEMPRE: broker ausente/quebrado ⇒ log debug (no cliente) e a
+    emulação segue — o invariante "duplicado > zero controles" proíbe que
+    qualquer falha aqui derrube start/stop. Gates: backend com `hidraw_path`
+    (só o pydualsense — FakeController do smoke fica fora) e, no hide, fora
+    do Modo Nativo. O restore NÃO tem gate de modo: expor nunca é errado.
+
+    Achados Onda S #6/#10: a operação do broker (I/O de socket, até ~4 s com
+    broker lento) vai via `broker_call_nonblocking` — os setters de IPC
+    (`gamepad.emulation.set`) chamam esta função NA thread do event loop e o
+    hide/restore jamais pode congelar o daemon inteiro (§9 do desenho:
+    "hide/restore best-effort jamais bloqueiam start/stop da emulação").
+    Os gates (nativo, resolução do nó) seguem inline — são leituras baratas.
+    """
+    with contextlib.suppress(Exception):
+        hidraw_fn = getattr(getattr(daemon, "controller", None), "hidraw_path", None)
+        if not callable(hidraw_fn):
+            return
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+            broker_client_for,
+        )
+
+        client = broker_client_for(daemon)
+        if grab:
+            if daemon.is_native_mode():
+                return
+            node = hidraw_fn()
+            if isinstance(node, str) and node:
+                broker_call_nonblocking(daemon, lambda: client.hide(node))
+        else:
+            broker_call_nonblocking(daemon, client.restore_all)
+
+
+def vpad_vivo(device: Any) -> bool:
+    """VIDA de UM objeto vpad, não existência (lição 6/#17 da auditoria).
+
+    uhid só conta como vivo com `_started` não-False (o UHID_STOP de um probe
+    que recusou derruba o device sem destruir o objeto Python —
+    `uhid_gamepad._handle_event`); uinput/fakes sem o atributo contam como
+    vivos enquanto o objeto existir; None nunca é vivo. Achado Onda S #1: o
+    gate vale para o vpad do P1 E para o de CADA jogador de co-op — esconder
+    o físico de quem só tem vpad morto é o caminho direto para ZERO controles.
+    """
+    if device is None:
+        return False
+    return getattr(device, "_started", None) is not False
+
+
+def _vpad_vivo(daemon: DaemonProtocol) -> bool:
+    """VIDA do vpad do P1 (gate do rehide/hide do primário) — ver `vpad_vivo`."""
+    return vpad_vivo(getattr(daemon, "_gamepad_device", None))
+
+
+def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
+    """Re-hide de TODOS os hidraw físicos com vpad vivo (P1 + jogadores co-op).
+
+    BROKER-01 §2.2: nó recriado pelo replug/wake BT NASCE VISÍVEL (rule 70 +
+    uaccess re-aplicados pelo udev) — o broker re-aplica o fs mesmo para nó
+    já rastreado (lição 2: idempotência só em memória mentiria), então chamar
+    isto a cada reconciliação online do `reconnect_loop` converge sozinho.
+    SEMPRE via executor (o cliente do broker faz I/O de socket com timeout de
+    2 s — nunca no event loop). Gates espelham o hide do grab: emulação
+    ligada, vpad VIVO (não só existente), fora do Modo Nativo, backend com
+    `hidraw_path`. Jogador de co-op sem vpad vivo ou externo (`path:*`) NUNCA
+    autoriza hide do próprio nó.
+    """
+    if daemon.is_native_mode():
+        return
+    if not getattr(daemon.config, "gamepad_emulation_enabled", False):
+        return
+    if not _vpad_vivo(daemon):
+        return
+    hidraw_fn = getattr(daemon.controller, "hidraw_path", None)
+    if not callable(hidraw_fn):
+        return
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        broker_client_for,
+    )
+
+    client = broker_client_for(daemon)
+    nodes: set[str] = set()
+    node = hidraw_fn()
+    if isinstance(node, str) and node:
+        nodes.add(node)
+    coop = getattr(daemon, "_coop_manager", None)
+    players = getattr(coop, "_players", None) or {}
+    for identity, player in players.items():
+        # Achado Onda S #1: VIDA do vpad do jogador, não existência — um uhid
+        # derrubado por UHID_STOP (`_started=False`) com o objeto Python vivo
+        # NÃO autoriza esconder o físico dele (lição 6/#17, agora para P2+).
+        if not vpad_vivo(getattr(player, "vpad", None)) or identity.startswith("path:"):
+            continue  # jogador sem vpad VIVO nunca autoriza hide
+        n = hidraw_fn(identity)
+        if isinstance(n, str) and n:
+            nodes.add(n)
+    for n in sorted(nodes):
+        client.hide(n)
 
 
 def _game_rumble_mult(daemon: DaemonProtocol, now: float) -> float:
@@ -528,6 +636,9 @@ def start_motion_reader(daemon: DaemonProtocol, device: Any) -> None:
     from hefesto_dualsense4unix.core.physical_report_reader import (
         PhysicalReportReader,
     )
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        make_broker_opener,
+    )
 
     def _primary_hidraw() -> str | None:
         try:
@@ -536,7 +647,12 @@ def start_motion_reader(daemon: DaemonProtocol, device: Any) -> None:
             return None
         return path if isinstance(path, str) else None
 
-    reader = PhysicalReportReader(path_provider=_primary_hidraw, vpad=device)
+    # BROKER-01 §6.3: opener broker-aware — o reader reabre o hidraw via fd
+    # do broker root (funciona com o nó ESCONDIDO pelo hide do grab) e cai em
+    # os.open por caminho quando o broker está ausente (comportamento de hoje).
+    reader = PhysicalReportReader(
+        path_provider=_primary_hidraw, vpad=device, opener=make_broker_opener(daemon)
+    )
     if not reader.start():  # pragma: no cover - start() atual nunca falha
         return
     daemon._motion_reader = reader
@@ -851,9 +967,11 @@ __all__ = [
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
     "read_primary_calibration",
+    "rehide_physical_hidraw",
     "start_gamepad_emulation",
     "start_motion_reader",
     "stop_gamepad_emulation",
     "stop_motion_reader",
     "upgrade_primary_vpad_to_uhid",
+    "vpad_vivo",
 ]

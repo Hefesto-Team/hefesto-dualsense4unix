@@ -12,7 +12,10 @@
 # Switch (cascata do hid-nintendo — informativo, não gerenciamos o controle);
 # e (G2) o rádio/pareamento — versão do bluez vs. o piso 5.79, o
 # hefesto-bt-agent.service, bond "meio-salvo" por dois ângulos (Connected sem
-# hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo.
+# hidraw correspondente E Paired sem Bonded) e o sink de áudio padrão mudo;
+# e (BROKER-01, Onda S) o broker root hide-hidraw fd-injection — unit de
+# SISTEMA ativa, ping autenticado por SO_PEERCRED, coerência do que está
+# escondido com o daemon/Modo Nativo e recusa a outro uid.
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
@@ -1335,6 +1338,227 @@ print("leaky=" + " ".join(f"{a}:{t}" for a, t in leaky))
     fi
 }
 
+# BROKER-01 (Onda S — fd-injection): o broker root que esconde o hidraw
+# FÍSICO do DualSense do JOGO (cura de raiz do duplicado, complementar ao
+# wrapper de launch acima). Verifica a unit de SISTEMA (não --user), o ping
+# autenticado por SO_PEERCRED, a coerência do que está escondido (com o
+# daemon ativo e o Modo Nativo) e — best-effort — a recusa a outro uid.
+# Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.3.
+check_hidraw_broker() {
+    command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o broker hide-hidraw"; return; }
+    if ! systemctl cat hefesto-hidraw-broker.socket >/dev/null 2>&1; then
+        info "broker hide-hidraw não instalado (rode ./install.sh — BROKER-01 é DEFAULT, sem flag)"
+        return
+    fi
+    local sock_state
+    sock_state="$(systemctl is-active hefesto-hidraw-broker.socket 2>/dev/null || true)"
+    if [[ "${sock_state}" != "active" ]]; then
+        warn "hefesto-hidraw-broker.socket instalado mas ${sock_state:-inativo} — o físico NÃO é escondido do jogo (P2 duplicado volta); ligue: sudo systemctl enable --now hefesto-hidraw-broker.socket"
+        return
+    fi
+    pass "hefesto-hidraw-broker.socket ativo"
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 ausente — não dá para pingar o broker"
+        return
+    fi
+    local ping_out
+    if ! ping_out="$(python3 - <<'PYEOF' 2>/dev/null
+import glob
+import json
+import os
+import socket
+import struct
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect("/run/hefesto-hidraw-broker/broker.sock")
+s.sendall(json.dumps({"cmd": "ping"}).encode("utf-8") + b"\n")
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(4096)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+resp = json.loads(buf.decode("utf-8"))
+print(f"ok={resp.get('ok')}")
+print(f"peer_uid={resp.get('peer_uid')}")
+
+s.sendall(json.dumps({"cmd": "status"}).encode("utf-8") + b"\n")
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+resp = json.loads(buf.decode("utf-8"))
+hidden = resp.get("hidden") or []
+print(f"hidden_count={len(hidden)}")
+
+# Onda S (achado #9): teste FUNCIONAL do cmd `open` — a rede de segurança que
+# a tabela de riscos do desenho (§9) promete para DeviceAllow=char-hidraw e
+# CapabilityBoundingSet. ping/status/hide NÃO exercitam o open(2) real sob o
+# device cgroup (DevicePolicy=closed): só o `open` prova que o fd-injection
+# (giroscópio sobrevivendo ao hide) está vivo. Candidatos: nós já escondidos
+# (status acima) + hidraw de Sony no sysfs; o validador do broker decide o
+# que é físico (vpad uhid vira reject_not_physical_dualsense = pulado).
+candidatos = list(hidden)
+for uevent in sorted(glob.glob("/sys/class/hidraw/hidraw*/device/uevent")):
+    try:
+        with open(uevent, encoding="utf-8", errors="replace") as fh:
+            texto = fh.read()
+    except OSError:
+        continue
+    if "054C" not in texto.upper():
+        continue
+    node = "/dev/" + uevent.split("/")[4]
+    if node not in candidatos:
+        candidatos.append(node)
+
+resultado = "skip"
+detalhe = ""
+tam_fd = struct.calcsize("i")
+espaco = socket.CMSG_SPACE(2 * tam_fd)
+for node in candidatos:
+    s.sendall(json.dumps({"cmd": "open", "node": node}).encode("utf-8") + b"\n")
+    buf = b""
+    fds = []
+    while not buf.endswith(b"\n"):
+        chunk, anc, _flags, _addr = s.recvmsg(65536, espaco)
+        for nivel, tipo, dados in anc:
+            if nivel == socket.SOL_SOCKET and tipo == socket.SCM_RIGHTS:
+                n = len(dados) // tam_fd
+                fds.extend(struct.unpack(f"{n}i", dados[: n * tam_fd]))
+        if not chunk:
+            raise SystemExit(1)
+        buf += chunk
+    resp = json.loads(buf.decode("utf-8"))
+    for fd in fds:
+        try:
+            os.close(fd)  # o doctor só PROVA o open; nunca segura o fd
+        except OSError:
+            pass
+    if resp.get("ok") and fds:
+        resultado = "ok"
+        detalhe = node
+        break
+    erro = resp.get("error") or ""
+    if erro == "reject_not_physical_dualsense":
+        continue  # vpad/uhid: nem falha nem sucesso — segue para o próximo
+    resultado = "fail"
+    detalhe = f"{node} erro={erro} errno={resp.get('errno')}"
+    break
+print(f"open={resultado}")
+print(f"open_detalhe={detalhe}")
+PYEOF
+)"; then
+        warn "broker não respondeu no socket (/run/hefesto-hidraw-broker/broker.sock) — verifique: systemctl status hefesto-hidraw-broker.service"
+        return
+    fi
+
+    local ok peer_uid hidden_count
+    ok="$(sed -n 's/^ok=//p' <<<"${ping_out}")"
+    peer_uid="$(sed -n 's/^peer_uid=//p' <<<"${ping_out}")"
+    hidden_count="$(sed -n 's/^hidden_count=//p' <<<"${ping_out}")"
+    hidden_count="${hidden_count:-0}"
+
+    if [[ "${ok}" != "True" ]]; then
+        warn "broker recusou o ping (autorização por SO_PEERCRED/uid falhou)"
+        return
+    fi
+    if [[ "${peer_uid}" != "$(id -u)" ]]; then
+        warn "broker ecoou peer_uid=${peer_uid}, esperado $(id -u) — SO_PEERCRED inconsistente"
+    else
+        pass "ping ok — peer_uid=${peer_uid} confere (SO_PEERCRED)"
+    fi
+
+    # Onda S (achado #9): veredito do teste funcional do cmd `open` (feito no
+    # python acima, na MESMA lease). Com o open quebrado — DeviceAllow com
+    # 'r' em vez de 'rw', CapabilityBoundingSet sem CAP_DAC_OVERRIDE, hidraw
+    # como módulo não carregado — ping/status/hide continuam verdes (não
+    # dependem do device cgroup) e o gyro morre em silêncio sob o hide.
+    local open_res open_det
+    open_res="$(sed -n 's/^open=//p' <<<"${ping_out}")"
+    open_det="$(sed -n 's/^open_detalhe=//p' <<<"${ping_out}")"
+    case "${open_res}" in
+        ok)
+            pass "cmd open serviu fd real via SCM_RIGHTS (${open_det}) — fd-injection do giroscópio operante"
+            ;;
+        fail)
+            fail "cmd open do broker FALHOU (${open_det}) — o giroscópio morre sob o hide; confira DeviceAllow=char-hidraw rw e CapabilityBoundingSet (CAP_DAC_OVERRIDE) em /etc/systemd/system/hefesto-hidraw-broker.service e rode: sudo systemctl restart hefesto-hidraw-broker.service"
+            ;;
+        *)
+            info "cmd open não testado (nenhum hidraw físico de DualSense visível agora)"
+            ;;
+    esac
+
+    # Coerência escondidos x daemon ativo x Modo Nativo — só cruza se o
+    # daemon responde IPC (sem ele não há campo native_mode pra cruzar).
+    local sock native_mode=""
+    sock="$(runtime_socket)"
+    if [[ -S "${sock}" ]]; then
+        native_mode="$(python3 - "${sock}" <<'PYEOF' 2>/dev/null
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect(sys.argv[1])
+s.sendall(
+    json.dumps({"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}).encode("utf-8")
+    + b"\n"
+)
+buf = b""
+while not buf.endswith(b"\n"):
+    chunk = s.recv(65536)
+    if not chunk:
+        raise SystemExit(1)
+    buf += chunk
+data = json.loads(buf.decode("utf-8"))
+res = data.get("result") or {}
+print(res.get("native_mode"))
+PYEOF
+)"
+    fi
+
+    if [[ "${hidden_count}" -gt 0 ]]; then
+        if [[ ! -S "${sock}" ]]; then
+            fail "broker com ${hidden_count} nó(s) escondido(s) e o daemon PARADO — invariante quebrada (belts falharam); cura: sudo systemctl restart hefesto-hidraw-broker.service"
+        elif [[ "${native_mode}" == "True" ]]; then
+            warn "broker com ${hidden_count} nó(s) escondido(s) em Modo Nativo — o físico deveria estar exposto ao jogo"
+        else
+            pass "broker escondendo ${hidden_count} nó(s) físico(s) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
+        fi
+    else
+        info "broker sem nós escondidos no momento (emulação desligada ou nenhum grab ativo)"
+    fi
+
+    # Recusa a outro uid — best-effort (só roda com sudo -n disponível e o
+    # usuário nobody presente); nunca falha o doctor por esta checagem.
+    if sudo -n true 2>/dev/null && id nobody >/dev/null 2>&1; then
+        if sudo -n -u nobody python3 - <<'PYEOF' >/dev/null 2>&1
+import json
+import socket
+import sys
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+s.settimeout(2.0)
+s.connect("/run/hefesto-hidraw-broker/broker.sock")
+s.sendall(json.dumps({"cmd": "ping"}).encode("utf-8") + b"\n")
+buf = s.recv(4096)
+sys.exit(0 if buf else 1)
+PYEOF
+        then
+            warn "broker respondeu ping para outro uid (nobody) — recusa por SO_PEERCRED/DAC NÃO está funcionando"
+        else
+            pass "broker recusa outro uid (nobody) — DAC do socket + SO_PEERCRED ok"
+        fi
+    else
+        info "validação de recusa a outro uid pulada (sem sudo -n ou usuário nobody ausente)"
+    fi
+}
+
 # GYRO-03: o giroscópio está chegando ao jogo? ------------------------------
 # O vpad uhid (máscara DualSense Edge) expõe um nó evdev próprio de motion
 # ("Hefesto Virtual DualSense PN Motion Sensors"). Com o espelho de motion do
@@ -1741,6 +1965,8 @@ main() {
     check_dedup_ipc
     check_display_authority
     check_proton_pin
+    hdr "broker hide-hidraw (BROKER-01 — cura de raiz do duplicado)"
+    check_hidraw_broker
     hdr "giroscópio no jogo (vpad Motion)"
     check_vpad_motion
     hdr "controle"

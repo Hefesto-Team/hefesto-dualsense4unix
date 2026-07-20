@@ -141,3 +141,188 @@ def test_udev_parity_do_repo_real_esta_verde() -> None:
     udev_section = result.stdout.split("== paridade das regras udev", 1)
     assert len(udev_section) == 2, "seção udev ausente na saída do script"
     assert "[FAIL]" not in udev_section[1].split("═", 1)[0].split("─", 1)[0]
+
+
+# --- BROKER-01 (Onda S — fd-injection, achado #21): paridade do broker ------
+#
+# Purge/remoção não pode deixar a unit ROOT do broker órfã habilitada em
+# nenhuma forma de empacotamento. `_seed_broker_parity` monta um repo fake
+# mínimo com o asset canônico presente (o que ARMA a checagem — sem ele a
+# seção fica silenciosa, ver test_broker_sem_asset_pula_sem_falhar) e as 5
+# formas + uninstall.sh cobrindo `hefesto-hidraw-broker`.
+
+BROKER_TXT = "hefesto-hidraw-broker (broker root hide-hidraw)"
+
+
+@pytest.fixture
+def fake_repo_broker(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+
+    for d in (
+        "scripts",
+        "assets/systemd",
+        "packaging/arch",
+        "packaging/debian",
+        "packaging/fedora",
+        "flatpak",
+    ):
+        (tmp_path / d).mkdir(parents=True)
+
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+
+    # Asset canônico: só a PRESENÇA importa para o gate da seção — o
+    # conteúdo real vive em B1 (fora do escopo deste teste de paridade).
+    (tmp_path / "assets" / "systemd" / "hefesto-hidraw-broker.service").write_text(
+        "# unit de teste\n", encoding="utf-8"
+    )
+
+    (tmp_path / "scripts" / "build_deb.sh").write_text(
+        f"echo '{BROKER_TXT}'\n", encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(
+        f"# {BROKER_TXT}\n", encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        f"# {BROKER_TXT}\n", encoding="utf-8"
+    )
+    (tmp_path / "flatpak" / "fake-broker.yml").write_text(
+        f"# {BROKER_TXT}\n", encoding="utf-8"
+    )
+    (tmp_path / "scripts" / "install-host-udev.sh").write_text(
+        f"echo '{BROKER_TXT}'\n", encoding="utf-8"
+    )
+    (tmp_path / "uninstall.sh").write_text(
+        f"echo '{BROKER_TXT}'\n", encoding="utf-8"
+    )
+    # Achados Onda S #2/#8: o lado de REMOÇÃO do caminho Debian — prerm e
+    # postrm precisam do teardown do broker (o build_deb.sh só EMPACOTA).
+    (tmp_path / "packaging" / "debian" / "prerm").write_text(
+        f"# {BROKER_TXT}\n", encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "debian" / "postrm").write_text(
+        f"# {BROKER_TXT}\n", encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_broker_coberto_em_todos_passa(fake_repo_broker: Path) -> None:
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 0, result.stdout
+    assert "[ OK ] hefesto-hidraw-broker" in result.stdout
+
+
+def test_broker_sem_asset_pula_sem_falhar(tmp_path: Path) -> None:
+    """Sem o asset canônico (repo/fixture que não conhece a onda S), a seção
+    fica silenciosa — nunca [FAIL] por ausência do que não existe."""
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "assets").mkdir()
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+
+    result = run_check(tmp_path)
+    assert "hefesto-hidraw-broker" not in "\n".join(
+        line for line in result.stdout.splitlines() if "[FAIL]" in line
+    )
+    broker_section = result.stdout.split("== paridade do broker hide-hidraw", 1)
+    assert len(broker_section) == 2, "seção do broker ausente na saída do script"
+    assert "[ OK ]" in broker_section[1].split("═", 1)[0].split("─", 1)[0]
+
+
+def test_broker_fora_do_build_deb_falha_nomeando_o_furado(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "scripts" / "build_deb.sh").write_text("# nada\n", encoding="utf-8")
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "[FAIL] hefesto-hidraw-broker" in result.stdout
+    assert "scripts/build_deb.sh" in result.stdout
+
+
+def test_broker_fora_do_pkgbuild_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "packaging" / "arch" / "PKGBUILD").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "packaging/arch/PKGBUILD" in result.stdout
+
+
+def test_broker_fora_do_spec_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "packaging/fedora/hefesto-dualsense4unix.spec" in result.stdout
+
+
+def test_broker_fora_do_flatpak_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "flatpak" / "fake-broker.yml").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "flatpak/*.yml" in result.stdout
+
+
+def test_broker_fora_do_install_host_udev_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "scripts" / "install-host-udev.sh").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "scripts/install-host-udev.sh" in result.stdout
+
+
+def test_broker_fora_do_uninstall_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "uninstall.sh").write_text("# nada\n", encoding="utf-8")
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "uninstall.sh" in result.stdout
+
+
+def test_broker_fora_do_prerm_debian_falha(fake_repo_broker: Path) -> None:
+    """Achados Onda S #2/#8: o gate dava falso-verde com o purge do .deb sem
+    NENHUM teardown do broker — ele só olhava o build_deb.sh (que menciona o
+    broker para EMPACOTAR, não para remover). prerm sem broker = FAIL."""
+    (fake_repo_broker / "packaging" / "debian" / "prerm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "[FAIL] hefesto-hidraw-broker" in result.stdout
+    assert "packaging/debian/prerm" in result.stdout
+
+
+def test_broker_fora_do_postrm_debian_falha(fake_repo_broker: Path) -> None:
+    (fake_repo_broker / "packaging" / "debian" / "postrm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_broker)
+    assert result.returncode == 1
+    assert "packaging/debian/postrm" in result.stdout
+
+
+def test_broker_parity_do_repo_real_esta_verde() -> None:
+    """No repo REAL, a seção do broker não pode ter [FAIL] — regressão."""
+    repo_root = Path(__file__).resolve().parents[2]
+    if not (repo_root / SCRIPT_REL_PATH).exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    result = subprocess.run(
+        ["bash", SCRIPT_REL_PATH],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    broker_section = result.stdout.split("== paridade do broker hide-hidraw", 1)
+    assert len(broker_section) == 2, "seção do broker ausente na saída do script"
+    assert "[FAIL]" not in broker_section[1].split("═", 1)[0].split("─", 1)[0]

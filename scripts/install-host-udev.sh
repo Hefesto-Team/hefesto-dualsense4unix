@@ -86,6 +86,52 @@ for candidate in \
     fi
 done
 
+# BROKER-01 (Onda S — fd-injection): broker root que esconde o hidraw FÍSICO
+# do DualSense do JOGO e serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd
+# `open`) para o giroscópio nunca morrer, mesmo com o nó escondido. Resolve o
+# binário standalone (stdlib pura, roda no python3 do sistema) e as units-
+# template nos mesmos 3 contextos acima. PRIMEIRO serviço de SISTEMA
+# (systemd system, socket-activated) do projeto. Desenho completo:
+# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.4.
+BROKER_BIN_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/broker" \
+    "/usr/share/hefesto-dualsense4unix/broker" \
+    "${SCRIPT_DIR}/../src/hefesto_dualsense4unix/broker" \
+; do
+    if [[ -f "${candidate}/hidraw_broker.py" ]]; then
+        BROKER_BIN_SRC="${candidate}"
+        break
+    fi
+done
+
+BROKER_UNITS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/systemd" \
+    "/usr/share/hefesto-dualsense4unix/systemd" \
+    "${SCRIPT_DIR}/../assets/systemd" \
+; do
+    if [[ -f "${candidate}/hefesto-hidraw-broker.service" ]]; then
+        BROKER_UNITS_SRC="${candidate}"
+        break
+    fi
+done
+
+# uid/grupo da SESSÃO (lição 6: NUNCA root) — capturado AQUI, antes de
+# qualquer elevação (pkexec/sudo troca o ambiente da linha abaixo pra
+# frente). Nos 3 contextos de uso deste script, `id -u`/`SUDO_UID` neste
+# ponto ainda refletem quem CHAMOU o script, nunca o alvo da elevação.
+BROKER_SESSION_UID="${SUDO_UID:-$(id -u)}"
+BROKER_SESSION_GROUP=""
+if [[ "${BROKER_SESSION_UID}" != "0" ]]; then
+    BROKER_SESSION_GROUP="$(id -gn -- "${BROKER_SESSION_UID}" 2>/dev/null || true)"
+fi
+BROKER_INSTALL_OK=0
+if [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" \
+        && "${BROKER_SESSION_UID}" != "0" && -n "${BROKER_SESSION_GROUP}" ]]; then
+    BROKER_INSTALL_OK=1
+fi
+
 if [[ -z "${RULES_SRC}" ]]; then
     echo "ERRO: regras udev não encontradas em nenhum dos paths esperados." >&2
     echo "      Verifique a instalação." >&2
@@ -156,6 +202,11 @@ fi
 if [[ -n "${BTUSB_SRC}" ]]; then
     echo "  - hefesto-btusb-no-autosuspend.conf (adaptador Bluetooth nunca dorme)"
 fi
+if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
+    echo "  - hefesto-hidraw-broker (broker root hide-hidraw, BROKER-01; uid ${BROKER_SESSION_UID}, grupo ${BROKER_SESSION_GROUP})"
+elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
+    echo "  - hefesto-hidraw-broker NÃO instalado (SESSION_UID resolveu 0/root — rode este script a partir da sessão da usuária)"
+fi
 echo ""
 
 # Comando núcleo executado com privilégios elevados (pkexec ou sudo).
@@ -190,6 +241,34 @@ _build_install_cmd() {
         cmd+="install -Dm644 '${BTUSB_SRC}/hefesto-btusb-no-autosuspend.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-btusb-no-autosuspend.conf'; "
         cmd+="printf '0' > /sys/module/btusb/parameters/enable_autosuspend 2>/dev/null || true; "
+    fi
+    # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
+    # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —
+    # o .service sobe na 1ª conexão do daemon, ativação por socket). Guarda
+    # pós-render (lição 6): placeholder __SESSION_* sobrando ABORTA só o
+    # broker (nunca as regras udev já instaladas acima).
+    if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
+        cmd+="install -Dm755 '${BROKER_BIN_SRC}/hidraw_broker.py' "
+        cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
+        cmd+="sed 's/__SESSION_UID__/${BROKER_SESSION_UID}/' "
+        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
+        cmd+="> /tmp/hefesto-hidraw-broker.service.render; "
+        cmd+="sed 's/__SESSION_GROUP__/${BROKER_SESSION_GROUP}/' "
+        cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' "
+        cmd+="> /tmp/hefesto-hidraw-broker.socket.render; "
+        cmd+="if grep -q '__SESSION_' /tmp/hefesto-hidraw-broker.service.render "
+        cmd+="/tmp/hefesto-hidraw-broker.socket.render 2>/dev/null; then "
+        cmd+="echo 'ERRO: render do broker deixou placeholder __SESSION_* — broker NAO instalado' >&2; "
+        cmd+="rm -f /tmp/hefesto-hidraw-broker.service.render /tmp/hefesto-hidraw-broker.socket.render; "
+        cmd+="else "
+        cmd+="install -Dm644 /tmp/hefesto-hidraw-broker.service.render "
+        cmd+="/etc/systemd/system/hefesto-hidraw-broker.service; "
+        cmd+="install -Dm644 /tmp/hefesto-hidraw-broker.socket.render "
+        cmd+="/etc/systemd/system/hefesto-hidraw-broker.socket; "
+        cmd+="rm -f /tmp/hefesto-hidraw-broker.service.render /tmp/hefesto-hidraw-broker.socket.render; "
+        cmd+="systemctl daemon-reload; "
+        cmd+="systemctl enable --now hefesto-hidraw-broker.socket; "
+        cmd+="fi; "
     fi
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,
     # cobrindo BT (subsystem=hidraw) + USB (subsystem=usb).

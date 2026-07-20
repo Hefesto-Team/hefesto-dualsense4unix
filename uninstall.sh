@@ -53,6 +53,17 @@
 # imediatamente os 3 sintomas (touchpad → cursor, mic spam, botões em background)
 # que motivam o usuário a desinstalar.
 #
+# Onda S (2026-07-20, broker root hide-hidraw fd-injection — BROKER-01, ver
+# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md):
+#   - hefesto-hidraw-broker.{service,socket} (PRIMEIRO serviço de SISTEMA
+#     socket-activated do projeto): desabilitado + parado por DEFAULT — o
+#     stop dispara ExecStopPost --restore-all-and-exit, então NENHUM hidraw
+#     físico fica 0600 órfão. Um belt explícito roda o mesmo restore-all-
+#     and-exit ANTES de remover o binário (o binário precisa existir ainda
+#     para rodar). Remove só os caminhos que o install.sh REGISTROU em
+#     broker-owner.conf e que carregam o header do hefesto — nunca toca
+#     unit de terceiros.
+#
 # Onda R (2026-07-19, bluetoothd 5.72 crasha crônico — ver estudo
 # docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md):
 #   --keep-bluez         PRESERVA o backport do bluez (default: RESTAURA as versões
@@ -180,6 +191,9 @@ dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -e /etc/systemd/system/hefesto-bt-agent.service ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
+# Onda S: broker root hide-hidraw (BROKER-01) — unit de sistema, precisa root.
+[[ -e /etc/systemd/system/hefesto-hidraw-broker.service ]] && _NEEDS_SUDO=1
+[[ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]] && _NEEDS_SUDO=1
 acquire_sudo
 
 log "parando daemon hefesto-dualsense4unix (se ativo)"
@@ -496,6 +510,56 @@ if [[ -e /etc/systemd/system/hefesto-bt-agent.service ]]; then
     else
         log "sudo indisponível — hefesto-bt-agent.service NÃO removido"
         log "  sudo systemctl disable --now hefesto-bt-agent.service && sudo rm /etc/systemd/system/hefesto-bt-agent.service"
+    fi
+fi
+
+# Broker root hide-hidraw (BROKER-01/Onda S — fd-injection). Simétrico ao
+# install.sh (passo 3h): disable+stop dispara o ExecStopPost
+# --restore-all-and-exit da própria unit (nenhum hidraw físico fica 0600
+# órfão); um belt explícito roda o MESMO restore ANTES de remover o binário
+# (precisa existir ainda para rodar). Remove SÓ os caminhos que o install
+# REGISTROU em broker-owner.conf e que ainda carregam o header do hefesto —
+# nunca toca unit de terceiros. Desenho:
+# docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §7.2.
+BROKER_BIN="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"
+BROKER_SERVICE="/etc/systemd/system/hefesto-hidraw-broker.service"
+BROKER_SOCKET="/etc/systemd/system/hefesto-hidraw-broker.socket"
+BROKER_OWNER_FILE="${HOME}/.local/state/hefesto-dualsense4unix/broker-owner.conf"
+if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "desabilitando hefesto-hidraw-broker (socket + service — dispara restore-all no stop)"
+        sudo systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service \
+            >/dev/null 2>&1 || true
+        if [[ -x "${BROKER_BIN}" ]]; then
+            log "belt: restore-all-and-exit explícito (cobre unit editada/broker morto)"
+            sudo "${BROKER_BIN}" --restore-all-and-exit >/dev/null 2>&1 || true
+        fi
+        if [[ -f "${BROKER_OWNER_FILE}" ]]; then
+            while IFS='=' read -r _bp _bsum; do
+                [[ -z "${_bp}" ]] && continue
+                if grep -qF 'instalado por hefesto-dualsense4unix' "${_bp}" 2>/dev/null \
+                        || [[ "${_bp}" == "${BROKER_BIN}" ]]; then
+                    log "removendo ${_bp}"
+                    sudo rm -f "${_bp}"
+                else
+                    log "aviso: ${_bp} não carrega o header do hefesto — NÃO removido"
+                fi
+            done < "${BROKER_OWNER_FILE}"
+        else
+            # Sem registro (instalação de uma onda anterior, ou perdido):
+            # remove só os 3 caminhos CANÔNICOS fixos, nunca glob.
+            log "sem registro de posse (${BROKER_OWNER_FILE} ausente) — removendo caminhos canônicos"
+            [[ -e "${BROKER_SERVICE}" ]] && sudo rm -f "${BROKER_SERVICE}"
+            [[ -e "${BROKER_SOCKET}" ]] && sudo rm -f "${BROKER_SOCKET}"
+            [[ -e "${BROKER_BIN}" ]] && sudo rm -f "${BROKER_BIN}"
+        fi
+        sudo rm -f "${BROKER_OWNER_FILE}"
+        sudo systemctl daemon-reload >/dev/null 2>&1 || true
+    else
+        log "sudo indisponível — broker hide-hidraw NÃO removido"
+        log "  sudo systemctl disable --now hefesto-hidraw-broker.socket hefesto-hidraw-broker.service"
+        log "  sudo ${BROKER_BIN} --restore-all-and-exit"
+        log "  sudo rm -f ${BROKER_SERVICE} ${BROKER_SOCKET} ${BROKER_BIN} ${BROKER_OWNER_FILE}"
     fi
 fi
 

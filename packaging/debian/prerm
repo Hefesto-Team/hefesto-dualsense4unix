@@ -13,4 +13,32 @@ case "$1" in
         ;;
 esac
 
+case "$1" in
+    remove)
+        # BROKER-01 (Onda S — achados #2/#8, licao 6/#21): a unit ROOT do
+        # broker (hefesto-hidraw-broker.{socket,service}) e instalada FORA do
+        # manifesto do dpkg (render por-maquina via install-host-udev.sh) —
+        # sem este bloco, apt remove/purge deixava um servico root orfao
+        # HABILITADO para sempre. disable --now dispara o ExecStopPost
+        # --restore-all-and-exit da propria unit; o belt explicito repete o
+        # restore ANTES de o dpkg apagar qualquer arquivo (nenhum hidraw
+        # fisico pode ficar 0600 root sem dono). Mesma sequencia do
+        # pre_remove (Arch) e do %preun (Fedora).
+        if command -v systemctl >/dev/null 2>&1 \
+                && { systemctl is-enabled hefesto-hidraw-broker.socket >/dev/null 2>&1 \
+                     || systemctl is-active hefesto-hidraw-broker.service >/dev/null 2>&1 \
+                     || [ -e /etc/systemd/system/hefesto-hidraw-broker.socket ]; }; then
+            systemctl disable --now hefesto-hidraw-broker.socket \
+                hefesto-hidraw-broker.service 2>/dev/null || true
+            if [ -x /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker ]; then
+                /usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker \
+                    --restore-all-and-exit 2>/dev/null || true
+            fi
+            rm -f /etc/systemd/system/hefesto-hidraw-broker.service \
+                  /etc/systemd/system/hefesto-hidraw-broker.socket
+            systemctl daemon-reload 2>/dev/null || true
+        fi
+        ;;
+esac
+
 exit 0

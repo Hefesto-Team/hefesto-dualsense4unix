@@ -64,3 +64,9 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # chamam seed_default_presets() com paths injetados ou re-habilitam via
     # monkeypatch (delenv + _seed_attempted=False).
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
+    # BROKER-01: aponta o cliente do broker hide-hidraw para um socket
+    # INEXISTENTE em TODO teste. Na máquina da mantenedora o broker REAL está
+    # de pé em /run/hefesto-hidraw-broker/broker.sock — um teste que
+    # resolvesse o default esconderia/abriria hidraw DE VERDADE no meio da
+    # suíte. Testes do próprio cliente passam o caminho explicitamente.
+    monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))

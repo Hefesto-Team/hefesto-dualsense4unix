@@ -308,6 +308,18 @@ async def reconnect_loop(
             was_connected = False
 
         if is_connected:
+            # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
+            # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
+            # udev) e é re-escondido aqui (o broker re-aplica o fs mesmo para
+            # nó já rastreado, lição 2). No executor de propósito: o cliente
+            # do broker faz I/O de socket com timeout de 2 s e não pode morar
+            # no event loop. Best-effort: falha nunca derruba o probe.
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    rehide_physical_hidraw,
+                )
+
+                await daemon._run_blocking(rehide_physical_hidraw, daemon)
             # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
             # observando /dev/input — hotplug antecipa a reconciliação (o
             # connect() da próxima iteração) sem esperar o fallback de 30s.
@@ -393,6 +405,25 @@ async def shutdown(daemon: DaemonProtocol) -> None:
             )
 
             stop_gamepad_emulation(daemon, persist=False)
+    # Achados Onda S #5/#6/#10: desliga o executor dedicado do broker ANTES do
+    # close da lease — operações ainda na fila (o restore_all que o stop acima
+    # agendou, hides atrasados) são canceladas: o EOF do close abaixo restaura
+    # TUDO de uma vez, e um hide tardio pós-close reabriria uma lease órfã.
+    broker_executor = getattr(daemon, "_hidraw_broker_executor", None)
+    if broker_executor is not None:
+        with contextlib.suppress(Exception):
+            broker_executor.shutdown(wait=False, cancel_futures=True)
+        daemon._hidraw_broker_executor = None
+    # BROKER-01: fecha a lease do broker explicitamente (belt) — o
+    # `stop_gamepad_emulation` acima já pediu restore_all; o close derruba a
+    # conexão AGORA (EOF imediato ⇒ o broker restaura o que restou) sem
+    # esperar o kernel varrer os fds do processo. Morte suja (SIGKILL/OOM)
+    # segue coberta pelo EOF automático.
+    client = getattr(daemon, "_hidraw_broker_client", None)
+    if client is not None:
+        with contextlib.suppress(Exception):
+            client.close()
+        daemon._hidraw_broker_client = None
     if getattr(daemon, "_keyboard_device", None) is not None:
         with contextlib.suppress(Exception):
             daemon._keyboard_device.stop()
