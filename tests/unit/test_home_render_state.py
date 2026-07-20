@@ -30,7 +30,12 @@ class _StyleCtx:
         self.classes: list[str] = []
 
     def add_class(self, name: str) -> None:
-        self.classes.append(name)
+        if name not in self.classes:
+            self.classes.append(name)
+
+    def remove_class(self, name: str) -> None:
+        if name in self.classes:
+            self.classes.remove(name)
 
 
 class _FakeWidget:
@@ -55,6 +60,12 @@ class _FakeWidget:
 
     def set_text(self, text: str) -> None:
         self.label = text
+
+    def set_label(self, text: str) -> None:
+        self.label = text
+
+    def get_label(self) -> str:
+        return str(self.label or "")
 
     def get_text(self) -> str:
         return str(self.label or "")
@@ -108,6 +119,12 @@ class _HomeStub:
         self._home_vpad_banner = _FakeWidget()
         # GUI-05 item 3: banner "jogo sem wrapper" (honestidade do dedup).
         self._home_wrapper_banner = _FakeWidget()
+        # ONDA-U (U1): botão único de energia (toggle in-place).
+        self._home_shutdown_btn = _FakeWidget()
+        self._home_offline = False
+        # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
+        self._home_renumber_btn = _FakeWidget()
+        self._home_renumber_hint = _FakeWidget()
 
 
 @pytest.fixture()
@@ -257,13 +274,241 @@ class TestRefreshTimeout:
         assert home_actions._STATE_IPC_TIMEOUT_S > 0.25
 
 
-def test_glossario_manda_ligar_onde_o_botao_existe() -> None:
-    """A Início não tem botão de LIGAR — o único dela é o de desligar.
+def test_glossario_manda_ligar_nesta_propria_aba() -> None:
+    """ONDA-U (U1): a Início GANHOU o botão de ligar — toggle in-place.
 
-    O glossário mandava ligar "aqui nesta aba", enquanto os outros dois textos
-    da MESMA aba (o label de sessão offline e o diálogo de desligar) já mandavam
-    para a aba Sistema, onde o botão realmente mora. Quem seguisse o glossário
-    procuraria na aba errada um botão que não existe.
+    Antes o glossário mandava pra aba Sistema, que era onde o único botão
+    de religar morava. Com o toggle in-place (o mesmo botão vira "Ligar o
+    Hefesto" aqui mesmo), o texto que ainda mandasse pra outra aba seria uma
+    mentira nova — quem seguisse o glossário procuraria em um lugar que não
+    tem mais nada de especial.
     """
-    assert "aba Sistema" in home_actions._GLOSSARY
-    assert "nesta aba" not in home_actions._GLOSSARY
+    assert "nesta aba" in home_actions._GLOSSARY
+    assert "aba Sistema" not in home_actions._GLOSSARY
+
+
+class TestTogglePowerInPlace:
+    """U1: o botão "Desligar Hefesto" vira "Ligar o Hefesto" quando offline —
+    toggle in-place, sem mandar a usuária pra aba Sistema (falha-sem: no HEAD
+    o `_render_home` offline não tocava `_home_shutdown_btn` nenhuma vez)."""
+
+    def test_offline_troca_rotulo_e_estilo_para_ligar(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(None)
+
+        btn = host._home_shutdown_btn
+        assert btn.get_label() == home_actions._BTN_LABEL_OFFLINE
+        assert "suggested-action" in btn.style.classes
+        assert "destructive-action" not in btn.style.classes
+        assert host._home_offline is True
+
+    def test_online_devolve_rotulo_e_estilo_de_desligar(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+        host._render_home(None)  # primeiro offline, simula a reconexão
+
+        host._render_home(_state([]))
+
+        btn = host._home_shutdown_btn
+        assert btn.get_label() == home_actions._BTN_LABEL_ONLINE
+        assert "destructive-action" in btn.style.classes
+        assert "suggested-action" not in btn.style.classes
+        assert host._home_offline is False
+
+    def test_offline_nao_manda_mais_pra_aba_sistema(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(None)
+
+        assert host._home_session_label.get_text() == "O Hefesto está desligado."
+
+
+class TestPowerClickDispatcher:
+    """U1: `_on_home_power_clicked` decide entre ligar (reusa
+    `on_daemon_start`) e o fluxo de desligar existente, pelo estado
+    `_home_offline` mantido pelo `_render_home`."""
+
+    def test_offline_chama_on_daemon_start_com_o_botao(self) -> None:
+        host = _HomeStub()
+        host._home_offline = True
+        calls: list[object] = []
+        host.on_daemon_start = lambda btn: calls.append(btn)  # type: ignore[attr-defined]
+        shutdown_calls: list[object] = []
+        host._on_home_shutdown_clicked = lambda btn: shutdown_calls.append(btn)  # type: ignore[method-assign]
+        button = object()
+
+        HomeActionsMixin._on_home_power_clicked(host, button)  # type: ignore[arg-type]
+
+        assert calls == [button]
+        assert shutdown_calls == []
+
+    def test_online_chama_o_fluxo_de_desligar_existente(self) -> None:
+        host = _HomeStub()
+        host._home_offline = False
+        shutdown_calls: list[object] = []
+        host._on_home_shutdown_clicked = lambda btn: shutdown_calls.append(btn)  # type: ignore[method-assign]
+        button = object()
+
+        HomeActionsMixin._on_home_power_clicked(host, button)  # type: ignore[arg-type]
+
+        assert shutdown_calls == [button]
+
+    def test_offline_sem_on_daemon_start_nao_quebra(self) -> None:
+        """getattr defensivo: se o mixin de daemon não estiver composto (não
+        deveria acontecer fora de teste isolado), o clique não estoura."""
+        host = _HomeStub()
+        host._home_offline = True
+
+        HomeActionsMixin._on_home_power_clicked(host, object())  # type: ignore[arg-type]
+
+
+class TestRenumberButtonGate:
+    """U2/U10: "Renumerar agora" reflete o MESMO gate do IPC
+    `identity.renumber` — desabilitado (com aviso) quando há jogo aberto."""
+
+    def test_offline_desabilita_sem_aviso(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(None)
+
+        assert host._home_renumber_btn.sensitive is False
+        assert host._home_renumber_hint.get_text() == ""
+
+    def test_online_sem_jogo_habilita(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(_state([]))  # sem game_signal = sem jogo
+
+        assert host._home_renumber_btn.sensitive is True
+        assert host._home_renumber_hint.get_text() == ""
+
+    def test_jogo_aberto_desabilita_e_explica(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+        estado = _state([])
+        estado["game_signal"] = {"authority": "game"}
+
+        host._render_home(estado)
+
+        assert host._home_renumber_btn.sensitive is False
+        assert (
+            host._home_renumber_hint.get_text()
+            == home_actions.RENUMBER_GAME_OPEN_TEXT
+        )
+
+    def test_authority_daemon_habilita(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+        estado = _state([])
+        estado["game_signal"] = {"authority": "daemon"}
+
+        host._render_home(estado)
+
+        assert host._home_renumber_btn.sensitive is True
+
+
+class TestRenumberClickHandler:
+    """U2/U10: `_on_home_renumber_clicked` chama o IPC com o contrato fixado
+    e traduz a resposta em toast — falha-sem: no HEAD o botão não existia."""
+
+    def _stub_com_toasts(self) -> _HomeStub:
+        host = _HomeStub()
+        host.toasts: list[str] = []  # type: ignore[attr-defined]
+        host._status_toast = lambda _ctx, msg: host.toasts.append(msg)  # type: ignore[method-assign]
+        host._refresh_home_tab = lambda: None  # type: ignore[method-assign]
+        return host
+
+    def test_dispara_identity_renumber_sem_parametros(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[tuple[str, dict[str, Any]]] = []
+
+        def _fake_call_async(
+            method: str,
+            params: dict[str, Any] | None,
+            _done: Any = None,
+            _fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            calls.append((method, dict(params or {})))
+
+        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+
+        assert calls == [("identity.renumber", {})]
+
+    def test_sucesso_com_renumerados_avisa_quantidade(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_call_async(
+            _method: str,
+            _params: dict[str, Any] | None,
+            done: Any = None,
+            _fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            done({"ok": True, "renumbered": {"aabbcc000001": 1, "aabbcc000002": 2}})
+
+        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+
+        assert any("2 controle(s)" in t for t in host.toasts)  # type: ignore[attr-defined]
+
+    def test_sucesso_sem_renumerados_avisa_ja_compacto(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_call_async(
+            _method: str,
+            _params: dict[str, Any] | None,
+            done: Any = None,
+            _fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            done({"ok": True, "renumbered": {}})
+
+        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+
+        assert any("já estava compacta" in t for t in host.toasts)  # type: ignore[attr-defined]
+
+    def test_recusado_por_sessao_de_jogo_aberta_avisa_fechar_o_jogo(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_call_async(
+            _method: str,
+            _params: dict[str, Any] | None,
+            done: Any = None,
+            _fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            done({"ok": False, "reason": "sessao_de_jogo_aberta"})
+
+        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+
+        assert any("Feche o jogo" in t for t in host.toasts)  # type: ignore[attr-defined]
+
+    def test_falha_de_ipc_avisa_daemon_desligado(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fake_call_async(
+            _method: str,
+            _params: dict[str, Any] | None,
+            _done: Any = None,
+            fail: Any = None,
+            timeout_s: float = 0.25,
+        ) -> None:
+            fail(RuntimeError("timeout"))
+
+        monkeypatch.setattr(home_actions, "call_async", _fake_call_async)
+        host = self._stub_com_toasts()
+
+        HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
+
+        assert any("desligado" in t for t in host.toasts)  # type: ignore[attr-defined]

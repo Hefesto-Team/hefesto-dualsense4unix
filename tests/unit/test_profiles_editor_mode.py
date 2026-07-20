@@ -416,3 +416,24 @@ class TestModeOptionsVisibility:
         assert stub.preview_calls == 0
         # Mas a visibilidade das opções foi sincronizada mesmo sob guard.
         assert stub._mode_gamepad_opts.visible is True
+
+
+class TestDuploCliqueNaoAtivaMaisOPerfil:
+    """U3-B: duplo-clique na lista de perfis atropelava edição em andamento —
+    `row-activated` disparava `profile.switch` na hora, sem confirmação.
+
+    Fix escolhido (menos intrusivo, documentado no glade e em
+    `profiles_actions.py`): REMOVER o binding, não somar uma confirmação a um
+    segundo caminho para a mesma ação — o botão "Ativar" já é o gesto
+    explícito. Falha-sem: antes do fix, `on_profile_row_activated` existia e
+    o glade tinha o `<signal name="row-activated">`."""
+
+    def test_handler_nao_existe_mais_no_mixin(self) -> None:
+        assert not hasattr(ProfilesActionsMixin, "on_profile_row_activated")
+
+    def test_glade_nao_tem_mais_o_binding_row_activated(self) -> None:
+        from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+
+        conteudo = MAIN_GLADE.read_text(encoding="utf-8")
+        assert 'id="profiles_tree"' in conteudo  # a árvore continua existindo
+        assert '<signal name="row-activated"' not in conteudo

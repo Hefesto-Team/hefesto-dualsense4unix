@@ -84,7 +84,10 @@ EXPECTED_PRESETS = {
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
         "lightbar": (40, 80, 180),
-        "lightbar_brightness": 0.4,
+        # ONDA-U (U9-brightness): 0.4→1.0 — o default de código já é 1.0; o
+        # asset destoava (queixa "brightness não é 100%"). navegacao.json é
+        # perfil DIFERENTE (não é cópia deste) e mantém 0.4 de propósito.
+        "lightbar_brightness": 1.0,
     },
     "navegacao": {
         "name": "Navegação",
@@ -199,6 +202,14 @@ class TestPresetMeuPerfil:
         """
         p = _load_preset("meu_perfil")
         assert p.priority == 1
+
+    def test_brightness_100_por_cento(self) -> None:
+        """ONDA-U (U9-brightness): default de código já é 1.0; o asset
+        destoava em 0.4 (queixa "brightness deveria ser 100% e não é") —
+        decisão de produto: alinhar o asset ao default (falha-sem: antes
+        deste fix o asset tinha 0.4)."""
+        p = _load_preset("meu_perfil")
+        assert abs(p.leds.lightbar_brightness - 1.0) < 1e-6
 
 
 class TestPresetFallback:

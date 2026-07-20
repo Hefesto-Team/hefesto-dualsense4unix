@@ -461,7 +461,10 @@ def test_editar_cor_em_todos_limpa_a_cor_do_override() -> None:
 
 def test_editar_player_leds_em_todos_preserva_a_cor_do_override() -> None:
     """Granularidade POR CAMPO: mexer nos player-LEDs em "Todos" não apaga a
-    cor própria do C2 — só o campo editado sai do override."""
+    cor própria do C2 — só o campo editado sai do override. ONDA-U (U9):
+    `_perfil_base()` nasce com o automático LIGADO, então este clique também
+    dispara o D4 (fora do escopo deste teste — coberto em
+    test_lightbar_auto_colors.py)."""
     host = _lightbar_host(_draft_com_override_verde(), None)
     host._persist_leds_update({"player_leds": (True, True, False, False, False)})
 

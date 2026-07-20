@@ -10,7 +10,7 @@
   "leds": {
     "lightbar": [40, 80, 180],
     "player_leds": [false, false, true, false, false],
-    "lightbar_brightness": 0.4
+    "lightbar_brightness": 1.0
   },
   "rumble": {"passthrough": true},
   "key_bindings": null

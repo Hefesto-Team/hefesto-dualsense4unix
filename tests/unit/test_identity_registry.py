@@ -364,6 +364,53 @@ class TestConfiguracaoDoAuto:
         assert reg.auto_brightness == 0.0
 
 
+class TestCompactRenumeracao:
+    """`compact` (ONDA-U/U2/U10) — reatribuição EXPLÍCITA, distinta da lazy.
+
+    Falha-sem: `ControllerIdentityRegistry` no HEAD não tem `compact` nenhum
+    — `identity.renumber` não existiria como handler possível.
+    """
+
+    def test_reescreve_so_as_chaves_do_mapping(self, isolated_config: Path) -> None:
+        reg = ControllerIdentityRegistry()
+        reg.slot_for(UNIQ_A)  # slot 1
+        reg.slot_for(UNIQ_B)  # slot 2
+        reg.compact({UNIQ_A: 3, UNIQ_B: 1})
+        assert reg.snapshot() == {UNIQ_A: 3, UNIQ_B: 1}
+
+    def test_chave_fora_do_registro_e_ignorada(self, isolated_config: Path) -> None:
+        reg = ControllerIdentityRegistry()
+        reg.slot_for(UNIQ_A)
+        reg.compact({UNIQ_A: 5, "aabbcc00ffff": 9})
+        assert reg.snapshot() == {UNIQ_A: 5}
+
+    def test_persiste_no_disco_quando_muda(self, isolated_config: Path) -> None:
+        reg = ControllerIdentityRegistry()
+        reg.slot_for(UNIQ_A)
+        reg.slot_for(UNIQ_B)
+        reg.sync_connected({UNIQ_A, UNIQ_B})  # save inicial (1, 2)
+        reg.compact({UNIQ_A: 2, UNIQ_B: 1})
+        data = _arquivo(isolated_config)
+        assert data["slots"] == {UNIQ_A: 2, UNIQ_B: 1}
+
+    def test_sem_mudanca_nao_regrava(
+        self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        reg = ControllerIdentityRegistry()
+        reg.slot_for(UNIQ_A)
+        reg.sync_connected({UNIQ_A})
+        chamou = {"sim": False}
+        original = reg._save_locked
+
+        def espiao() -> None:
+            chamou["sim"] = True
+            original()
+
+        monkeypatch.setattr(reg, "_save_locked", espiao)
+        reg.compact({UNIQ_A: 1})  # já é 1 — no-op
+        assert chamou["sim"] is False
+
+
 class TestSingleton:
     def test_get_devolve_a_mesma_instancia(self) -> None:
         reset_identity_registry()

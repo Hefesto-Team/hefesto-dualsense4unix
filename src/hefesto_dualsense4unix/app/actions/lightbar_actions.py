@@ -84,11 +84,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
         COR-04 (semântica D4): COR (``lightbar_rgb``) editada em "Todos" com
         o automático ligado também DESLIGA ``auto_player_colors`` no draft —
         senão a cor única seria invisível (a paleta automática vence o global
-        no merge). Brilho e player-LEDs NÃO disparam o D4 (o brilho escala a
-        própria paleta — D11 — e os player-LEDs não são cor). Devolve True
-        quando o D4 desligou o automático AGORA (o chamador compõe o aviso
-        ``_AVISO_D4`` no toast — visível, nunca popup); o checkbox da aba é
-        sincronizado aqui mesmo, sob guard.
+        no merge). Brilho NÃO dispara o D4 (o brilho escala a própria paleta
+        — D11). ONDA-U (U9): ``player_leds`` (clique manual de player-LED)
+        AGORA também dispara o D4 — antes só ``lightbar_rgb`` disparava, e a
+        paleta automática (COR-03) reescrevia o player-LED por cima no
+        próximo merge do backend, fazendo o clique manual parecer que "não
+        funciona". Devolve True quando o D4 desligou o automático AGORA (o
+        chamador compõe o aviso ``_AVISO_D4`` no toast — visível, nunca
+        popup); o checkbox da aba é sincronizado aqui mesmo, sob guard.
         """
         draft = getattr(self, "draft", None)
         if draft is None:
@@ -97,7 +100,8 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if uniq is None:
             campos_update = dict(update)
             d4_disparou = bool(
-                "lightbar_rgb" in campos_update and draft.leds.auto_player_colors
+                ("lightbar_rgb" in campos_update or "player_leds" in campos_update)
+                and draft.leds.auto_player_colors
             )
             if d4_disparou:
                 campos_update["auto_player_colors"] = False
@@ -495,15 +499,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         bits = self.get_current_player_leds()
         # Atualiza draft — mantém consistência com on_player_led_toggled.
-        self._persist_leds_update({"player_leds": bits})
+        # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
+        # dispara o D4 (mesma composição de toast do on_lightbar_apply).
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         descricao = self._descreve_player_leds(bits)
-        self._toast_light(
+        msg = (
             f"LEDs de jogador aplicados — {descricao}"
             if ok
             else "não consegui aplicar os LEDs de jogador — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     def on_player_led_toggled(self, _checkbox: Gtk.CheckButton) -> None:
         """Sinal de toggle de qualquer checkbox de player LED.
@@ -518,15 +527,19 @@ class LightbarActionsMixin(WidgetAccessMixin):
             return
         bits = self.get_current_player_leds()
         # Atualiza draft (global ou override do alvo — PERFIL-04)
-        self._persist_leds_update({"player_leds": bits})
+        # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         descricao = self._descreve_player_leds(bits)
-        self._toast_light(
+        msg = (
             f"LEDs de jogador atualizados — {descricao}"
             if ok
             else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     # --- helpers ---
 
@@ -549,15 +562,19 @@ class LightbarActionsMixin(WidgetAccessMixin):
             pattern[0], pattern[1], pattern[2], pattern[3], pattern[4]
         )
         # Atualiza draft (global ou override do alvo — PERFIL-04)
-        self._persist_leds_update({"player_leds": bits})
+        # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
+        d4_disparou = self._persist_leds_update({"player_leds": bits})
         ok = player_leds_set(bits)
         descricao = self._descreve_player_leds(pattern)
-        self._toast_light(
+        msg = (
             f"LEDs de jogador atualizados — {descricao}"
             if ok
             else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
+        if d4_disparou:
+            msg = f"{_AVISO_D4} — {msg}"
+        self._toast_light(msg)
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:
         states: list[bool] = []
