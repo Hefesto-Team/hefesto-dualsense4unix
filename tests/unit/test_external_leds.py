@@ -254,3 +254,64 @@ class TestApplyPlayerNumber:
             external_leds, "resolve_external_leds", lambda h, r=None: (None, None)
         )
         assert external_leds.apply_player_number("/dev/hidraw9", 3) is False
+
+
+# --- GYRO-02: pacote cru + escrita do Enable-IMU (0x40/0x01) -----------------
+
+
+class TestBuildEnableImuPacket:
+    """Golden bytes do subcomando Enable-IMU (protocolo Switch, hid-nintendo).
+
+    Envelope rumble+subcmd: output_id(1B)=0x01, packet_num(1B), rumble_data
+    neutro (8B), subcmd_id(1B)=0x40, arg(1B)=0x01 — 12 bytes no total.
+    """
+
+    def test_pacote_padrao_packet_num_zero(self) -> None:
+        pacote = external_leds.build_enable_imu_packet()
+        assert pacote == bytes(
+            (
+                0x01,  # output_id: rumble + subcmd
+                0x00,  # packet_num
+                0x00, 0x01, 0x40, 0x40,  # rumble neutro (esquerda)
+                0x00, 0x01, 0x40, 0x40,  # rumble neutro (direita)
+                0x40,  # subcmd_id: Enable-IMU
+                0x01,  # arg: ligar
+            )
+        )
+        assert len(pacote) == 12
+
+    def test_packet_num_capado_em_4_bits(self) -> None:
+        """O contador do firmware é 0..0xF — valores fora capam por máscara."""
+        pacote = external_leds.build_enable_imu_packet(packet_num=0x1F)
+        assert pacote[1] == 0x0F
+
+    def test_e_funcao_pura_sem_hidraw_nenhum(self) -> None:
+        """Duas chamadas com o mesmo argumento dão o MESMO pacote (sem estado)."""
+        a = external_leds.build_enable_imu_packet(packet_num=3)
+        b = external_leds.build_enable_imu_packet(packet_num=3)
+        assert a == b
+
+
+class TestEnableImu:
+    """``enable_imu`` escreve o pacote CRU no hidraw — best-effort, nunca levanta."""
+
+    def test_escreve_o_pacote_exato_no_device(self, tmp_path: Path) -> None:
+        no = tmp_path / "hidraw7"
+        no.write_bytes(b"")
+        assert external_leds.enable_imu(str(no)) is True
+        assert no.read_bytes() == external_leds.build_enable_imu_packet()
+
+    def test_sem_device_e_false_sem_levantar(self, tmp_path: Path) -> None:
+        assert external_leds.enable_imu(str(tmp_path / "nao-existe")) is False
+
+    def test_hidraw_none_e_false(self) -> None:
+        assert external_leds.enable_imu(None) is False
+
+    def test_sem_permissao_e_false_sem_levantar(self, tmp_path: Path) -> None:
+        no = tmp_path / "hidraw8"
+        no.write_bytes(b"")
+        os.chmod(no, 0o000)
+        try:
+            assert external_leds.enable_imu(str(no)) is False
+        finally:
+            os.chmod(no, 0o600)  # devolve p/ o tmp_path poder limpar

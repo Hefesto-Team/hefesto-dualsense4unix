@@ -131,12 +131,14 @@ class TestEmitHz:
 # ---------------------------------------------------------------------------
 
 
-def _vpad_ns(*, streaming: Any, backend: str = "uhid") -> SimpleNamespace:
+def _vpad_ns(
+    *, streaming: Any, backend: str = "uhid", ff_play_count: int = 0
+) -> SimpleNamespace:
     return SimpleNamespace(
         backend=backend,
         flavor="dualsense",
         ff_supported=True,
-        ff_play_count=0,
+        ff_play_count=ff_play_count,
         output_count=0,
         trigger_replicas=0,
         lightbar_replicas=0,
@@ -240,6 +242,46 @@ async def test_state_full_motion_defensivo_contra_mock(
     por_jogador = {item["player"]: item for item in per_vpad}
     assert por_jogador[1]["motion_streaming"] is False
     assert por_jogador[1]["motion_hz"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_state_full_ff_play_count_e_motion_hz_sao_por_vpad(
+    servidor_com_motion: Any,
+) -> None:
+    """G3: `ff_play_count`/`motion_hz` são campos OPCIONAIS por-item de
+    `per_vpad` — cada vpad carrega o SEU próprio contador/taxa, nunca o
+    agregado (que segue existindo em `rumble_ff.plays`, para compat)."""
+    socket_path, daemon = servidor_com_motion
+    # P1 e o jogador 2 do co-op com contadores DIFERENTES — se algum dia a
+    # leitura voltasse a agregar, os dois ficariam iguais (ao agregado).
+    daemon._gamepad_device = _vpad_ns(streaming=True, ff_play_count=7)
+    daemon._motion_reader = SimpleNamespace(emit_hz=248.3)
+    daemon._coop_manager = SimpleNamespace(
+        _players={
+            "aa:bb:cc:dd:ee:02": SimpleNamespace(
+                player_index=2,
+                vpad=_vpad_ns(streaming=False, ff_play_count=3),
+                motion_reader=SimpleNamespace(emit_hz=120.0),
+            ),
+        },
+        player_count=lambda: 2,
+    )
+    per_vpad = await _per_vpad(socket_path)
+    por_jogador = {item["player"]: item for item in per_vpad}
+    for item in per_vpad:
+        # Shape: os dois campos sempre presentes (opcionais só no SENTIDO de
+        # nunca quebrarem consumidor antigo que os ignora — nunca ausentes).
+        assert "ff_play_count" in item
+        assert "motion_hz" in item
+    assert por_jogador[1]["ff_play_count"] == 7
+    assert por_jogador[1]["motion_hz"] == pytest.approx(248.3)
+    assert por_jogador[2]["ff_play_count"] == 3
+    assert por_jogador[2]["motion_hz"] == pytest.approx(120.0)
+    # Agregado de compat segue somando os dois (não é o que este teste cobre,
+    # só confirma que a introdução do per-vpad não o quebrou).
+    async with IpcClient.connect(socket_path) as client:
+        result = await client.call("daemon.state_full")
+    assert result["rumble_ff"]["plays"] == 10
 
 
 # ---------------------------------------------------------------------------
