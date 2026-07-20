@@ -18,9 +18,16 @@
 # kernel (colisão possível), sem regressão de input. Por isso a regra e a
 # coordenação de LED entram JUNTAS.
 #
-# MECANISMO (dois níveis, igual à 77-dualsense-leds): TAG+="uaccess" (ACL para
-# a sessão ativa) + RUN chmod 0666 (fallback; LED é inócuo). Reaplicado a cada
-# replug/reconexão (ACTION=="add").
+# MECANISMO (igual à 77-dualsense-leds): RUN chmod 0666 garante a gravabilidade
+# (LED é inócuo). Reaplicado a cada replug/reconexão (ACTION=="add").
+#
+# ONDA-R (2026-07-19): TAG+="uaccess" foi REMOVIDA — este arquivo é
+# 79-external-controller-leds.rules (regra ≥73), e systemd-logind só converte
+# "uaccess" em ACL para regras numeradas < 73 (feito pelo 73-seat-late.rules do
+# próprio systemd; ver reference_udev_uaccess_ordem_73 na memória do projeto).
+# Numa regra ≥73 a TAG nunca vira ACL: era morta/inerte, sem efeito funcional
+# (o chmod 0666 abaixo já cobre 100% do acesso). Removida para não sugerir uma
+# garantia que a ordem de carga do udev não entrega.
 #
 # MODO DS4 (8BitDo por BLUETOOTH): o 8BitDo pareado por Bluetooth se apresenta
 # como DualShock4 (054C:05C4, driver hid-playstation) e NÃO tem barra de player
@@ -30,9 +37,9 @@
 # para NÃO tocar LEDs de outros devices; o DualSense usa `:rgb:indicator`
 # (coberto pela 77), então não casa aqui. Cobre o pedido "atender BT também".
 
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:green:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:blue:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:red", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:green", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:blue", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:global", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:green:player-*", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*057E:*:blue:player-*", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:red", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:green", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:blue", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", DRIVERS=="playstation", KERNEL=="input*:global", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"

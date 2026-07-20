@@ -16,12 +16,18 @@
 # caminho pydualsense — sem regressão, mas a cor por BT volta a falhar. Por isso a
 # regra e o código sysfs entram JUNTOS.
 #
-# MECANISMO (dois níveis, belt-and-suspenders):
-#   1. TAG+="uaccess": dá ACL ao usuário da sessão ativa (systemd-logind) — o jeito
-#      moderno e por-sessão.
-#   2. RUN+= chmod 0666: garante gravabilidade mesmo em ambientes sem uaccess para
-#      sysfs (LED é inócuo; world-writable aqui não é risco). Reaplicado a cada
-#      replug/reconexão (ACTION=="add").
+# MECANISMO: RUN+= chmod 0666 garante gravabilidade dos nós de LED (LED é
+# inócuo; world-writable aqui não é risco). Reaplicado a cada replug/reconexão
+# (ACTION=="add").
+#
+# ONDA-R (2026-07-19): TAG+="uaccess" foi REMOVIDA desta regra — este arquivo
+# é instalado como 77-dualsense-leds.rules, e systemd-logind só converte a TAG
+# "uaccess" em ACL para regras numeradas < 73 (é o 73-seat-late.rules, do
+# próprio systemd, quem faz essa conversão — ver reference_udev_uaccess_ordem_73
+# na memória do projeto). Numa regra ≥73 a TAG fica presente no device mas
+# nunca vira ACL: era morta/inerte desde sempre nesta máquina, sem efeito
+# funcional (o chmod 0666 abaixo já cobre 100% do acesso). Removida para não
+# sugerir uma garantia que a ordem de carga do udev não entrega.
 
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:rgb:indicator", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/multi_intensity /sys/class/leds/%k/brightness"
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:white:player-*", TAG+="uaccess", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:rgb:indicator", RUN+="/bin/chmod 0666 /sys/class/leds/%k/multi_intensity /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*:white:player-*", RUN+="/bin/chmod 0666 /sys/class/leds/%k/brightness"
