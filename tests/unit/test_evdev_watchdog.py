@@ -4,7 +4,8 @@ replug) em que o read_loop zumbi não recebe ENODEV — controle "morto" sem err
 
 Cobre os três níveis:
   - EvdevReader.is_stale(): só True por TROCA real de node (idle-safe).
-  - EvdevReader.request_reopen(): zera o path e fecha o fd ativo.
+  - EvdevReader.request_reopen(): zera o path e SINALIZA a thread dona (HANG-01,
+    2026-07-19: não fecha mais o fd de fora — ver test_evdev_reader.py).
   - PyDualSenseController.heal_evdev_if_stale(): cola os dois com cross-check.
 """
 from __future__ import annotations
@@ -51,7 +52,12 @@ def test_is_stale_true_quando_node_mudou(monkeypatch: pytest.MonkeyPatch) -> Non
 # --- request_reopen --------------------------------------------------------
 
 
-def test_request_reopen_zera_path_e_fecha_dev() -> None:
+def test_request_reopen_zera_path_e_sinaliza_sem_fechar_dev() -> None:
+    """HANG-01 (2026-07-19): `request_reopen()` NÃO fecha mais o `InputDevice`
+    de fora (era o `dev.close()` cross-thread do HEAD 27b51d5, o mesmo padrão
+    de risco do `stop()`/M4) — zera o path em cache e só SINALIZA (flag de
+    reopen + wake do self-pipe); quem larga o device é sempre a THREAD DONA,
+    no `finally` do `_run` (padrão GYRO-FD-01/PhysicalReportReader)."""
     r = EvdevReader(device_path=Path("/dev/input/event20"))
     closed: list[bool] = []
 
@@ -62,7 +68,8 @@ def test_request_reopen_zera_path_e_fecha_dev() -> None:
     r._active_dev = _Dev()
     r.request_reopen("test")
     assert r._device_path is None  # próximo ciclo re-localiza o node certo
-    assert closed == [True]  # fd fechado → desbloqueia o read_loop preso
+    assert closed == []  # HANG-01: fd NÃO fechado daqui — só sinalizado
+    assert r._reopen_flag.is_set()  # é a thread dona quem atende o sinal
 
 
 def test_request_reopen_sem_dev_ativo_nao_quebra() -> None:

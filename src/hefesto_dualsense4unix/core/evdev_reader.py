@@ -13,6 +13,8 @@ Thread dedicada lê eventos e atualiza um snapshot protegido por RLock.
 from __future__ import annotations
 
 import contextlib
+import os
+import select
 import threading
 import time
 from dataclasses import dataclass, field
@@ -40,23 +42,48 @@ class EvdevSnapshot:
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
 
 
+def _read_input_attr(device_dir: str, attr: str) -> str:
+    """Atributo (`phys`/`uniq`) do input device no sysfs ("" se ilegível)."""
+    try:
+        with open(f"{device_dir}/{attr}", encoding="utf-8", errors="replace") as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
 def _is_virtual_evdev(event_path: str) -> bool:
-    """True se o evdev é um device VIRTUAL (uinput), não o controle físico.
+    """True se o evdev é virtual NOSSO (vpad/teclado) ou de uinput, não físico.
 
     FEAT-DSX-GAMEPAD-FLAVOR-01 — CRÍTICO: o gamepad virtual com máscara DualSense
     tem o MESMO VID/PID/nome/caps do controle real, então sem este filtro o
     `find_dualsense_evdev` poderia retornar o PRÓPRIO device virtual do daemon
     (feedback loop: o daemon lendo a própria saída). Devices uinput vivem sob
-    `/sys/devices/virtual/input/`; os reais, sob caminhos de USB/Bluetooth.
+    `/sys/devices/virtual/input/` — esses seguem SEMPRE virtuais (Steam Input,
+    teclado do daemon).
+
+    BLUEZ-UHID-01 (2026-07-19): a subárvore `/devices/virtual/misc/uhid/` deixou
+    de implicar "nosso vpad" — com BlueZ ≥5.73 (UserspaceHID default) o
+    bluetoothd cria os HIDs dos controles BT FÍSICOS via /dev/uhid, no mesmo
+    lugar. Nela, quem decide é a IDENTIDADE do vpad: phys `hefesto-vpad`
+    (blueprint) ou uniq com o prefixo do MAC forjado 02:fe. Atributos ilegíveis
+    → True (na dúvida, o risco maior é o feedback loop de auto-adoção).
     """
     import os
 
     try:
         name = os.path.basename(event_path)  # ex.: "event12"
         link = os.path.realpath(f"/sys/class/input/{name}/device")
-        return "/devices/virtual/" in link
     except Exception:
         return False
+    if "/devices/virtual/" not in link:
+        return False
+    if "/misc/uhid/" not in link:
+        return True  # uinput puro (Steam Input, teclado do daemon)
+    phys = _read_input_attr(link, "phys")
+    uniq = _read_input_attr(link, "uniq").lower().replace(":", "")
+    if not phys and not uniq:
+        return True
+    return phys.startswith("hefesto-vpad") or uniq.startswith("02fe")
 
 
 def _event_num(path: Path) -> int:
@@ -322,12 +349,81 @@ class _EvdevReconnectLoop:
     _device_path: Path | None
     _stop_flag: threading.Event
     _thread: threading.Thread | None
+    # HANG-01: self-pipe de wake + flag de reopen — ver `__init__` abaixo.
+    _reopen_flag: threading.Event
+    _wake_lock: threading.Lock
+    _wake_r: int
+    _wake_w: int
     # InputDevice atualmente aberto pelo loop (ou None). Permite grab/ungrab
     # em runtime de fora da thread (FEAT-DSX-GAMEPAD-FLAVOR-01).
     _active_dev: Any = None
     # Watch barato de /dev/input para o is_stale (lazy; PERF-MULTI-CONTROLLER-01).
     _stale_watch: Any = None
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
+    #: HANG-01: teto de latência do select por iteração do loop de leitura —
+    #: sem isto, `_stop_flag`/`_reopen_flag` só seriam vistos quando o
+    #: self-pipe acordasse; com o timeout, mesmo um wake perdido/atrasado é
+    #: recuperado em ≤ este intervalo (mesma constante do PhysicalReportReader,
+    #: `_SELECT_TIMEOUT_S`).
+    _SELECT_TIMEOUT_S: ClassVar[float] = 0.5
+
+    def __init__(self) -> None:
+        """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader).
+
+        Chamado pelas subclasses via `super().__init__()` antes dos campos
+        próprios. `request_reopen()`/`stop()` NUNCA fecham o `InputDevice` de
+        fora — fechar de outra thread enquanto a THREAD DONA está em
+        select/read no mesmo fd libera o número com ela ainda presa nele; um
+        open concorrente (retarget, novo device, watchdog) recicla o número e
+        o loop passaria a ler um fd ALHEIO (o wedge de GIL do incidente de
+        16:08 nasceu de um close cross-thread num cenário correlato). Aqui os
+        dois só SINALIZAM (flag + 1 byte no self-pipe); quem fecha é sempre a
+        própria thread, no `finally` do `_run`.
+        """
+        self._reopen_flag = threading.Event()
+        self._wake_lock = threading.Lock()
+        self._wake_r, self._wake_w = self._novo_wake_pipe()
+
+    @staticmethod
+    def _novo_wake_pipe() -> tuple[int, int]:
+        r, w = os.pipe()
+        os.set_blocking(r, False)
+        os.set_blocking(w, False)
+        return r, w
+
+    def _wake(self) -> None:
+        """1 byte no self-pipe: acorda o select da thread dona na hora."""
+        with self._wake_lock:
+            if self._wake_w >= 0:
+                with contextlib.suppress(OSError):
+                    os.write(self._wake_w, b"w")
+
+    def _drain_wake(self) -> None:
+        """Esvazia o self-pipe (não-bloqueante; bytes velhos não acumulam)."""
+        with contextlib.suppress(OSError):
+            while os.read(self._wake_r, 64):
+                pass
+
+    def _close_wake_pipe(self) -> None:
+        with self._wake_lock:
+            for attr in ("_wake_r", "_wake_w"):
+                fd = getattr(self, attr, -1)
+                if fd >= 0:
+                    with contextlib.suppress(OSError):
+                        os.close(fd)
+                    setattr(self, attr, -1)
+
+    def _wait_ready(self, dev: Any) -> list[Any]:
+        """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos.
+
+        Extraído em método próprio (em vez de `select.select` inline) para os
+        testes conseguirem simular prontidão/timeout sem precisar de fds
+        reais — só esta chamada toca o `select` de verdade.
+        """
+        ready, _, _ = select.select(
+            [dev.fd, self._wake_r], [], [], self._SELECT_TIMEOUT_S
+        )
+        return list(ready)
 
     def _find_device(self) -> Path | None:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -393,18 +489,17 @@ class _EvdevReconnectLoop:
         return current != held
 
     def request_reopen(self, reason: str = "watchdog") -> None:
-        """Força o loop a largar o device atual e reabrir o canônico.
+        """Pede à thread dona que largue o device atual e reabra o canônico.
 
-        Zera o path em cache (próximo ciclo re-localiza o node certo) e fecha o
-        fd ativo — fechar de outra thread desbloqueia o read_loop preso, que cai
-        no handler de OSError → _reset_on_disconnect + reabre. Best-effort.
+        HANG-01: NÃO fecha mais o fd de fora (era o `dev.close()` cross-thread
+        do HEAD) — zera o path em cache (próximo ciclo re-localiza o node
+        certo) e só SINALIZA (`_reopen_flag` + wake do self-pipe); é a própria
+        thread do `_run` que larga o device, no `finally` dela. Best-effort.
         """
         logger.info(f"{self._log_prefix()}_reopen_requested", reason=reason)
         self._device_path = None
-        dev = self._active_dev
-        if dev is not None:
-            with contextlib.suppress(Exception):
-                dev.close()
+        self._reopen_flag.set()
+        self._wake()
 
     def start(self) -> bool:
         if not self.is_available():
@@ -415,29 +510,68 @@ class _EvdevReconnectLoop:
         if self._thread is not None and self._thread.is_alive():
             return True
         self._stop_flag.clear()
+        self._reopen_flag.clear()
+        if self._wake_r < 0 or self._wake_w < 0:
+            # Um stop() anterior fechou o self-pipe — recria para esta vida.
+            self._wake_r, self._wake_w = self._novo_wake_pipe()
         self._thread = threading.Thread(target=self._run, name=self._THREAD_NAME, daemon=True)
         self._thread.start()
         return True
 
     def stop(self) -> None:
+        """Para a thread; idempotente.
+
+        HANG-01: não fecha mais o fd ativo de fora (M4 fazia isto para
+        desbloquear o `read_loop` de um controle OCIOSO — daí o teardown do
+        co-op via IPC congelar o input do P1 por 2-6s). Agora só sinaliza
+        (`_stop_flag` + wake do self-pipe), que acorda o select da PRÓPRIA
+        thread na hora — o mesmo ganho de latência do M4, sem o risco do
+        close cross-thread (padrão GYRO-FD-01). Quem fecha o `InputDevice`
+        continua sendo só a thread dona, no `finally` do `_run`.
+        """
         self._stop_flag.set()
-        # M4 (auditoria): o read_loop bloqueia em select() no fd até chegar um
-        # evento — com o controle OCIOSO, o `_stop_flag.is_set()` só é visto após
-        # o próximo input, e o join abaixo esperava os 2s inteiros. Como o teardown
-        # do co-op roda NO event loop (IPC gamepad.emulation.set), trocar a máscara
-        # com P2/P3 parados congelava o input do P1 por 2-6s. Fechar o fd de outra
-        # thread (idêntico a request_reopen) desbloqueia o read_loop na hora → sai
-        # imediatamente. Best-effort: fd já fechado / ausente é no-op.
-        dev = self._active_dev
-        if dev is not None:
-            with contextlib.suppress(Exception):
-                dev.close()
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
+        self._wake()
+        thread = self._thread
+        if thread is not None:
+            thread.join(timeout=2.0)
             self._thread = None
+            if not thread.is_alive():
+                # Thread morta de verdade: o self-pipe pode ir sem risco de
+                # reciclagem (start() recria se este reader voltar a subir).
+                self._close_wake_pipe()
+        else:
+            self._close_wake_pipe()
+
+    def _read_until_signaled(self, dev: Any, ecodes: Any) -> str:
+        """Lê eventos do `dev` até stop/reopen pedido; devolve o motivo.
+
+        HANG-01: substitui o `dev.read_loop()` da lib evdev (select interno
+        SEM timeout nem self-pipe — só sai por leitura real ou por um close()
+        de fora) por um select PRÓPRIO que vigia TAMBÉM o wake do self-pipe.
+        `stop()`/`request_reopen()` acordam esta leitura na hora sem nunca
+        tocar o fd (GYRO-FD-01/PhysicalReportReader) — quem fecha o device é
+        sempre o `finally` de `_run`, na mesma thread deste método. Um ENODEV
+        real (unplug) propaga a OSError normalmente; o chamador trata.
+        """
+        while True:
+            if self._stop_flag.is_set():
+                return "stop"
+            if self._reopen_flag.is_set():
+                self._reopen_flag.clear()
+                return "reopen"
+            ready = self._wait_ready(dev)
+            if self._wake_r in ready:
+                self._drain_wake()
+                continue  # byte de wake atendido — reavalia as flags no topo
+            if not ready:
+                continue  # timeout do select — reavalia as flags no topo
+            for event in dev.read():
+                if self._stop_flag.is_set():
+                    return "stop"
+                self._handle_event(event, ecodes)
 
     def _run(self) -> None:
-        """Loop com auto-reconnect; OSError no read_loop dispara reset + reabrir."""
+        """Loop com auto-reconnect; ENODEV/erro real dispara reset + reabrir."""
         try:
             from evdev import InputDevice, ecodes
         except ImportError:
@@ -447,6 +581,12 @@ class _EvdevReconnectLoop:
         prefix = self._log_prefix()
         backoff = 0.5
         while not self._stop_flag.is_set():
+            # HANG-01: um reopen pedido ANTES desta iteração já está atendido
+            # por ela (o finder resolve o node canônico agora); um pedido que
+            # chegar DEPOIS deste clear é novo e derruba o fd já na 1ª volta
+            # do select em `_read_until_signaled` (mesmo padrão do
+            # `PhysicalReportReader._run`).
+            self._reopen_flag.clear()
             path = self._device_path or self._find_device()
             if path is None:
                 if prefix == "evdev":
@@ -475,28 +615,24 @@ class _EvdevReconnectLoop:
             # (BUG-COOP-GRAB-SILENT-FAIL-01).
             self._reapply_grab(dev)
             try:
-                for event in dev.read_loop():
-                    if self._stop_flag.is_set():
-                        break
-                    self._handle_event(event, ecodes)
+                reason = self._read_until_signaled(dev, ecodes)
             except OSError as exc:
-                if self._stop_flag.is_set():
-                    # MISC-08 item 4 (2026-07-18): teardown INTENCIONAL —
-                    # `stop()` fecha o fd de outra thread justamente para
-                    # desbloquear este read_loop (M4), e o EBADF resultante é
-                    # o mecanismo do stop, não uma perda de device. Ao vivo,
-                    # cada teardown de jogador do co-op cuspia um warning
-                    # `evdev_read_lost EBADF` falso-alarmante no journal.
-                    logger.debug(f"{prefix}_read_stopped", path=str(path))
-                else:
-                    logger.warning(
-                        f"{prefix}_read_lost", err=str(exc), path=str(path)
-                    )
-                    self._reset_on_disconnect()
+                logger.warning(f"{prefix}_read_lost", err=str(exc), path=str(path))
+                self._reset_on_disconnect()
                 self._device_path = None
             except Exception as exc:
                 logger.warning(f"{prefix}_loop_error", err=str(exc))
                 self._reset_on_disconnect()
+            else:
+                if reason == "stop":
+                    # HANG-01: teardown INTENCIONAL (sem exceção nenhuma —
+                    # antes era um EBADF do close cross-thread, MISC-08 item
+                    # 4) — nunca alarma como perda de device.
+                    logger.debug(f"{prefix}_read_stopped", path=str(path))
+                else:  # "reopen"
+                    logger.debug(f"{prefix}_reopen_applied", path=str(path))
+                    self._reset_on_disconnect()
+                    self._device_path = None
             finally:
                 self._active_dev = None
                 with contextlib.suppress(Exception):
@@ -543,6 +679,7 @@ class EvdevReader(_EvdevReconnectLoop):
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
 
     def __init__(self, device_path: Path | None = None, target_uniq: str | None = None) -> None:
+        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
         # FEAT-DSX-CONTROLLER-IDENTITY-01: quando `_target_uniq` está setado, o
         # finder resolve o node PELO MAC (identidade estável) em vez de "menor
         # node" — com 2+ controles, "menor node" e "primário do backend" podem
@@ -838,6 +975,7 @@ class TouchpadReader(_EvdevReconnectLoop):
     _THREAD_NAME: ClassVar[str] = "hefesto-touchpad"
 
     def __init__(self, device_path: Path | None = None) -> None:
+        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
         self._device_path = device_path or find_dualsense_touchpad_evdev()
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None

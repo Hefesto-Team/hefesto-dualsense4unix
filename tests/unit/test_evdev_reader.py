@@ -1,6 +1,7 @@
 """Testes do EvdevReader (HOTFIX-2)."""
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -95,7 +96,8 @@ def test_reader_start_com_device_fake(tmp_path, monkeypatch: pytest.MonkeyPatch)
 
     fake_device = MagicMock()
     fake_device.name = "fake"
-    fake_device.read_loop.return_value = iter(
+    fake_device.fd = 0  # HANG-01: não é um fd de verdade — _wait_ready é mockado abaixo
+    fake_device.read.return_value = iter(
         [
             fake_event(3, fake_ecodes.ABS_Z, 180),  # L2
             fake_event(3, fake_ecodes.ABS_RZ, 255),  # R2
@@ -105,6 +107,7 @@ def test_reader_start_com_device_fake(tmp_path, monkeypatch: pytest.MonkeyPatch)
     )
 
     import sys
+    import time
 
     fake_mod = MagicMock()
     fake_mod.InputDevice = lambda *_a, **_kw: fake_device
@@ -112,10 +115,16 @@ def test_reader_start_com_device_fake(tmp_path, monkeypatch: pytest.MonkeyPatch)
 
     monkeypatch.setitem(sys.modules, "evdev", fake_mod)
 
-    reader.start()
-    # Esgota o read_loop iterator rápido
-    import time
+    # HANG-01: bypassa o select() real (o fake device não tem fd de verdade)
+    # — sempre "pronto", com um respiro pra não girar a CPU à toa no teste.
+    def _sempre_pronto(dev: object) -> list[object]:
+        time.sleep(0.01)
+        return [fake_device.fd]
 
+    monkeypatch.setattr(reader, "_wait_ready", _sempre_pronto)
+
+    reader.start()
+    # Esgota o read() fake rápido
     time.sleep(0.1)
 
     snap = reader.snapshot()
@@ -287,6 +296,44 @@ def test_discover_nao_adota_o_vpad_uinput_0df2(monkeypatch: pytest.MonkeyPatch):
     )
 
 
+def test_is_virtual_evdev_bluez_uhid_fisico_nao_e_virtual(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """BLUEZ-UHID-01: com BlueZ ≥5.73 (UserspaceHID default) o bluetoothd cria
+    os HIDs dos controles BT FÍSICOS via /dev/uhid — os evdevs deles moram sob
+    /devices/virtual/misc/uhid, a MESMA morada do vpad. Medido ao vivo em
+    2026-07-19 (backport 5.85): os 4 controles BT da mesa sumiram do daemon.
+    Na subárvore uhid quem decide é a identidade (phys/uniq), não a morada."""
+    from hefesto_dualsense4unix.core import evdev_reader as er
+
+    monkeypatch.setattr(
+        "os.path.realpath",
+        lambda _p: (
+            "/sys/devices/virtual/misc/uhid/0005:057E:2009.0016/input/input95"
+        ),
+    )
+    attrs = {"phys": "aa:bb:cc:00:00:05", "uniq": "aa:bb:cc:00:00:03"}
+    monkeypatch.setattr(er, "_read_input_attr", lambda _d, a: attrs.get(a, ""))
+
+    assert er._is_virtual_evdev("/dev/input/event95") is False, (
+        "físico BT via bluetoothd-uhid filtrado como vpad — BLUEZ-UHID-01"
+    )
+
+    # O NOSSO vpad segue virtual (phys do blueprint decide).
+    attrs = {"phys": "hefesto-vpad", "uniq": "02:fe:00:00:00:01"}
+    assert er._is_virtual_evdev("/dev/input/event96") is True
+
+    # Atributos ilegíveis sob o subtree uhid: na dúvida, virtual (anti-loop).
+    attrs = {}
+    assert er._is_virtual_evdev("/dev/input/event98") is True
+
+    # uinput puro (fora de misc/uhid) segue SEMPRE virtual.
+    monkeypatch.setattr(
+        "os.path.realpath", lambda _p: "/sys/devices/virtual/input/input99"
+    )
+    assert er._is_virtual_evdev("/dev/input/event97") is True
+
+
 def test_reset_buttons_on_disconnect_limpa_pressed():
     """HOTFIX-3: botoes pressionados somem quando device cai."""
     reader = EvdevReader(device_path=None)
@@ -303,11 +350,13 @@ def test_reset_buttons_on_disconnect_limpa_pressed():
 
 
 def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """HOTFIX-3: se read_loop levanta OSError, reader tenta reabrir.
+    """HOTFIX-3: se a leitura levanta OSError, reader tenta reabrir.
 
     1a tentativa levanta OSError (device sumiu); 2a entrega eventos.
     Após tempo suficiente, snapshot reflete evento da segunda conexao.
     """
+    import time
+
     device_path = tmp_path / "fake_event"
     device_path.touch()
 
@@ -334,11 +383,13 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
 
     first_device = MagicMock()
     first_device.name = "first"
-    first_device.read_loop.side_effect = OSError(19, "No such device")
+    first_device.fd = 1
+    first_device.read.side_effect = OSError(19, "No such device")
 
     second_device = MagicMock()
     second_device.name = "second"
-    second_device.read_loop.return_value = iter([
+    second_device.fd = 2
+    second_device.read.return_value = iter([
         fake_event(3, fake_ecodes.ABS_Z, 200),
     ])
 
@@ -348,7 +399,8 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
         if devices:
             return devices.pop(0)
         later = MagicMock()
-        later.read_loop.return_value = iter([])
+        later.fd = 3
+        later.read.return_value = iter([])
         return later
 
     import sys
@@ -363,9 +415,15 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     from hefesto_dualsense4unix.core import evdev_reader as er_mod
     monkeypatch.setattr(er_mod, "find_dualsense_evdev", lambda: device_path)
 
-    reader.start()
-    import time
+    # HANG-01: bypassa o select() real — sempre "pronto", com respiro contra
+    # busy-loop (os fakes não têm fd de verdade).
+    def _sempre_pronto(dev: object) -> list[object]:
+        time.sleep(0.01)
+        return [dev.fd]
 
+    monkeypatch.setattr(reader, "_wait_ready", _sempre_pronto)
+
+    reader.start()
     time.sleep(0.8)
 
     snap = reader.snapshot()
@@ -378,37 +436,38 @@ def test_auto_reconnect_apos_oserror(tmp_path, monkeypatch: pytest.MonkeyPatch) 
 def test_stop_nao_loga_read_lost_no_teardown_intencional(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """MISC-08 item 4 (2026-07-18): `stop()` fecha o fd de outra thread para
-    desbloquear o select (M4) — o EBADF resultante é o MECANISMO do stop, não
-    perda de device. Ao vivo, cada teardown de jogador do co-op cuspia um
-    warning `evdev_read_lost EBADF` falso-alarmante; agora vira debug
-    `evdev_read_stopped` e NÃO dispara `_reset_on_disconnect`."""
+    """MISC-08 item 4 (2026-07-18) + HANG-01 (2026-07-19): `stop()` não fecha
+    mais o fd de outra thread (o EBADF cross-thread do HEAD 27b51d5) — sinaliza
+    (`_stop_flag` + wake do self-pipe) e a PRÓPRIA thread larga o device,
+    retornando limpo (sem OSError nenhum). O device fica OCIOSO de verdade
+    (fd real nunca escrito) até o wake acordar o select; o retorno vira debug
+    `evdev_read_stopped`, nunca o warning `evdev_read_lost` nem
+    `_reset_on_disconnect`."""
+    import os
     import sys
-    import threading
     import time
     from pathlib import Path
     from unittest.mock import MagicMock
 
     from hefesto_dualsense4unix.core import evdev_reader as er_mod
 
-    fechado = threading.Event()
+    idle_r, idle_w = os.pipe()  # nunca escrito: select() real nunca o dá pronto
 
-    class _DevPreso:
-        name = "DualSense fake preso no select"
+    class _DevOcioso:
+        name = "DualSense fake ocioso"
+        fd = idle_r
 
-        def read_loop(self):  # bloqueia como um controle OCIOSO
-            fechado.wait(timeout=5.0)
-            raise OSError(9, "Bad file descriptor")
+        def read(self) -> Any:
+            return iter([])
 
-        def close(self) -> None:
-            fechado.set()
+        def close(self) -> None: ...
 
         def grab(self) -> None: ...
 
         def ungrab(self) -> None: ...
 
     fake_mod = MagicMock()
-    fake_mod.InputDevice = lambda *_a, **_kw: _DevPreso()
+    fake_mod.InputDevice = lambda *_a, **_kw: _DevOcioso()
     fake_mod.ecodes = MagicMock()
     monkeypatch.setitem(sys.modules, "evdev", fake_mod)
 
@@ -416,9 +475,13 @@ def test_stop_nao_loga_read_lost_no_teardown_intencional(
     spy = MagicMock()
     monkeypatch.setattr(er_mod, "logger", spy)
 
-    assert reader.start() is True
-    time.sleep(0.2)  # thread entra no read_loop e fica presa (idle)
-    reader.stop()
+    try:
+        assert reader.start() is True
+        time.sleep(0.2)  # thread entra no select() real e fica ociosa
+        reader.stop()
+    finally:
+        os.close(idle_r)
+        os.close(idle_w)
 
     warnings = [c.args[0] for c in spy.warning.call_args_list]
     assert "evdev_read_lost" not in warnings, (
@@ -426,6 +489,59 @@ def test_stop_nao_loga_read_lost_no_teardown_intencional(
     )
     debugs = [c.args[0] for c in spy.debug.call_args_list]
     assert "evdev_read_stopped" in debugs
+
+
+def test_close_do_device_acontece_so_na_thread_dona(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HANG-01 (Sprint 2026-07-19): `stop()` nunca fecha o `InputDevice` de
+    fora — fechar de outra thread enquanto a THREAD DONA está em select/read
+    no mesmo fd libera o número com ela ainda presa nele (o mecanismo do wedge
+    de GIL do incidente de 16:08: um open concorrente reciclaria o número e o
+    loop passaria a ler um fd ALHEIO). Prova que `close()` só roda dentro da
+    thread `hefesto-evdev`, nunca na MainThread que chama `stop()`."""
+    import os
+    import sys
+    import threading
+    import time
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    idle_r, idle_w = os.pipe()
+    closed_from: list[str] = []
+
+    class _DevInstrumentado:
+        name = "DualSense fake instrumentado"
+        fd = idle_r
+
+        def read(self) -> Any:
+            return iter([])
+
+        def close(self) -> None:
+            closed_from.append(threading.current_thread().name)
+
+        def grab(self) -> None: ...
+
+        def ungrab(self) -> None: ...
+
+    fake_mod = MagicMock()
+    fake_mod.InputDevice = lambda *_a, **_kw: _DevInstrumentado()
+    fake_mod.ecodes = MagicMock()
+    monkeypatch.setitem(sys.modules, "evdev", fake_mod)
+
+    reader = EvdevReader(device_path=Path("/dev/input/event260"))
+    try:
+        assert reader.start() is True
+        time.sleep(0.2)  # thread entra no select() real
+        reader.stop()  # MainThread pede — não pode ser ela a fechar o fd
+    finally:
+        os.close(idle_r)
+        os.close(idle_w)
+
+    assert closed_from == ["hefesto-evdev"], (
+        "close() rodou fora da thread dona — reabre o risco do wedge de GIL"
+    )
+    assert threading.current_thread().name != closed_from[0]
 
 
 def test_read_lost_real_continua_com_warning_e_reset(
@@ -442,9 +558,10 @@ def test_read_lost_real_continua_com_warning_e_reset(
 
     class _DevMorto:
         name = "DualSense fake que morre"
+        fd = 0
 
-        def read_loop(self):
-            raise OSError(19, "No such device")
+        def read(self) -> Any:
+            return iter([])
 
         def close(self) -> None: ...
 
@@ -463,6 +580,13 @@ def test_read_lost_real_continua_com_warning_e_reset(
     reader = EvdevReader(device_path=Path("/dev/input/event259"))
     spy = MagicMock()
     monkeypatch.setattr(er_mod, "logger", spy)
+
+    # HANG-01: simula o ENODEV vindo do select (fd morreu debaixo do reader)
+    # — `_wait_ready` é o único ponto que toca o select de verdade.
+    def _boom(_dev: object) -> list[object]:
+        raise OSError(19, "No such device")
+
+    monkeypatch.setattr(reader, "_wait_ready", _boom)
 
     assert reader.start() is True
     time.sleep(0.2)

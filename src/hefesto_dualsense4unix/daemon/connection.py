@@ -428,6 +428,12 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     if daemon._executor is not None:
         daemon._executor.shutdown(wait=False, cancel_futures=True)
         daemon._executor = None
+    # HANG-01: pool DEDICADO do tick de externos (isolado de `_executor`
+    # desde a correção pós-auditoria 20/07) — mesmo trade-off de shutdown
+    # não-bloqueante (uma thread wedged não impede o processo de encerrar).
+    if daemon._external_executor is not None:
+        daemon._external_executor.shutdown(wait=False, cancel_futures=True)
+        daemon._external_executor = None
     daemon._tasks.clear()
     logger.info("daemon_stopped")
 

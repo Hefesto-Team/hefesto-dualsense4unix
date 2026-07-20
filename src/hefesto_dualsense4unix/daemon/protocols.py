@@ -48,6 +48,9 @@ class DaemonProtocol(Protocol):
     # Ciclo de vida
     _stop_event: asyncio.Event | None
     _executor: ThreadPoolExecutor | None
+    # HANG-01: pool DEDICADO e ISOLADO do tick de LED dos externos — ver
+    # `Daemon._external_executor` em `daemon/lifecycle.py` pro porquê.
+    _external_executor: ThreadPoolExecutor | None
     _tasks: list[asyncio.Task[Any]]
     _reconnect_task: asyncio.Task[Any] | None
 
