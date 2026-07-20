@@ -1134,6 +1134,41 @@ class PyDualSenseController(IController):
                     if send_release_leds(handle.device):
                         logger.info("lightbar_reset_enviado", key=_key)
 
+        # LIGHTBAR-BT-RESET-02 (Onda L): o 0x08 acima só cobre handles NOVOS. Um
+        # wake/resume BT que NÃO reabre o handle também derruba o claim do
+        # firmware (o kernel reseta a classe LED para KERNEL_DEFAULT_BLUE, mesmo
+        # indicator_dir, logo NÃO é new_key — caso medido 2026-07-20 17:28).
+        # Reenvia o 0x08 SÓ na assinatura do wake (nó sysfs voltou ao default do
+        # kernel com o desired resolvido diferente); o reassert logo abaixo
+        # re-cola cor E player LEDs. Nunca por timer — evita flicker de quem tem
+        # o claim intacto. Snapshot sob lock, I/O de nó/handle fora dele (padrão
+        # do reassert). Best-effort: falha = sintoma antigo, sem regressão.
+        new_keys = {k for k, _ in new_handles}
+        with self._io_lock:
+            reclaim_candidates = [
+                (
+                    key,
+                    handle,
+                    self._sysfs.get(key),
+                    self._merged_desired_for_key(key),
+                    self._detect_transport(handle),
+                )
+                for key, handle in self._handles.items()
+                if key not in new_keys
+            ]
+        for key, handle, node, desired, transport in reclaim_candidates:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.core.lightbar_reset import (
+                    send_release_leds,
+                    should_reclaim_on_wake,
+                )
+
+                current = node.get_rgb() if node is not None else None
+                if should_reclaim_on_wake(
+                    transport, desired.led, current, KERNEL_DEFAULT_BLUE
+                ) and send_release_leds(handle.device):
+                    logger.info("lightbar_reset_reenviado_wake", key=key)
+
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
         # registra com atraso após o hidraw; re-afirma a cor/player ativos nos
