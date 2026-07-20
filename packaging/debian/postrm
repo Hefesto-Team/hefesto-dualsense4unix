@@ -55,6 +55,26 @@ case "$1" in
             depmod -a 2>/dev/null || true
         fi
         rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+        # Onda W: belt do purge para o modulo DKMS hefesto-rtw88-usb (mesma
+        # logica do hid-nintendo acima) — se o prerm foi interrompido, o
+        # patchado nao pode sobreviver ao purge registrado no DKMS. NUNCA
+        # descarrega modulo em uso (o WiFi cairia).
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+            dkms status hefesto-rtw88-usb 2>/dev/null \
+                | sed -n 's|^hefesto-rtw88-usb/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-rtw88-usb/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-rtw88-usb-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+            # belt (simetrico ao uninstall.sh nativo): desarma o reset
+            # agressivo a quente se o patchado ainda estiver carregado.
+            if [ -e /sys/module/rtw88_usb/parameters/hang_reset ]; then
+                printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || true
+            fi
+        fi
         ;;
     upgrade|failed-upgrade|abort-install|abort-upgrade|disappear) ;;
 esac

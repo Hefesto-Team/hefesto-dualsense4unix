@@ -136,6 +136,12 @@ install -Dm644 scripts/dkms_lib.sh \
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo
 cp -a assets/dkms/hid-nintendo/. \
     %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo/
+# Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+# port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
+# Onda T: o install-host-udev.sh roda o dkms add/build/install no host.
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb
+cp -a assets/dkms/rtw88-usb/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb/
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 
@@ -180,8 +186,9 @@ install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/systemd/ \
 cat <<MSG
 Broker root hide-hidraw (BROKER-01 — esconde o controle FISICO do jogo,
 cura de raiz do duplicado; requer sessao de usuario, NUNCA root puro) e
-modulo DKMS hid-nintendo patchado (Onda T — cura de raiz do probe BT dos
-controles Nintendo/8BitDo; requer dkms + kernel-devel):
+modulos DKMS patchados hid-nintendo (Onda T — cura de raiz do probe BT dos
+controles Nintendo/8BitDo) e rtw88_usb (Onda W — cura de raiz do fantasma
+USB do dongle WiFi; requer dkms + kernel-devel):
   sudo %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 MSG
 
@@ -218,6 +225,28 @@ if [ $1 -eq 0 ]; then
         depmod -a >/dev/null 2>&1 || :
     fi
     rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+    # Onda W: o modulo DKMS hefesto-rtw88-usb tambem nasce FORA do manifesto
+    # do rpm (install-host-udev.sh) — mesma simetria: sem este bloco, dnf
+    # remove deixava o patchado registrado vencendo o in-tree para sempre.
+    # NUNCA descarrega modulo em uso (o WiFi cairia); o in-tree volta
+    # sozinho no proximo boot.
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+        dkms status hefesto-rtw88-usb 2>/dev/null \
+            | sed -n 's|^hefesto-rtw88-usb/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-rtw88-usb/${_v}" --all >/dev/null 2>&1 || :
+                rm -rf "/usr/src/hefesto-rtw88-usb-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || :
+        # belt (simetrico ao uninstall.sh nativo): desarma o reset agressivo a
+        # quente se o patchado ainda estiver carregado (o modulo em uso nunca
+        # e descarregado — o WiFi cairia).
+        if [ -e /sys/module/rtw88_usb/parameters/hang_reset ]; then
+            printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || :
+        fi
+    fi
 fi
 
 %postun
@@ -258,6 +287,7 @@ fi
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 %{_datadir}/%{app_id}/scripts/dkms_lib.sh
 %{_datadir}/%{app_id}/dkms/hid-nintendo/
+%{_datadir}/%{app_id}/dkms/rtw88-usb/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket

@@ -221,6 +221,15 @@ install -Dm644 scripts/dkms_lib.sh \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
 cp -a assets/dkms/hid-nintendo/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
+# Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
+# port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
+# Onda T: as fontes viajam no pacote e o install-host-udev.sh (que o
+# postinst documenta) roda o dkms add/build/install no host. Sem isto a
+# cura ficava reservada a quem roda ./install.sh de um checkout git.
+echo "Copiando fontes DKMS do rtw88-usb patchado (Onda W) ..."
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
+cp -a assets/dkms/rtw88-usb/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"

@@ -70,7 +70,30 @@
 #                         controles em uso) — vale no próximo boot/replug se
 #                         o módulo estiver descarregado. Vale para TODO
 #                         formato. Opt-out: --no-dkms (CI/sem hardware/kernel
-#                         sem headers, como --no-udev).
+#                         sem headers, como --no-udev; desliga AMBOS os
+#                         módulos DKMS — hid-nintendo e rtw88_usb, abaixo).
+#   (DEFAULT) DKMS rtw88_usb patchado (Onda W — cura de raiz do fantasma USB
+#                         do dongle WiFi/RTL8822BU: quando um port-status-change
+#                         se perde no xHCI, o driver in-tree nunca detecta que o
+#                         device sumiu e segue tentando I/O contra hardware
+#                         ausente — só unbind manual ou reboot recicla o device,
+#                         medido 13h de fantasma em 20/07): módulo out-of-tree
+#                         via DKMS (assets/dkms/rtw88-usb/) que substitui o
+#                         in-tree (vence por precedência updates/dkms; NUNCA
+#                         remove o in-tree). Detecta -ENODEV/-ESHUTDOWN
+#                         (device sumiu de verdade) ou 5 -EPROTO consecutivos
+#                         sem NENHUM sucesso no meio (zera a cada sucesso) e
+#                         enfileira usb_queue_reset_device — gate: module
+#                         param hang_reset (default Y; N desliga só o reset,
+#                         a detecção/silenciamento continua). Fail-safe
+#                         total: dkms/headers ausentes, kernel fora do pino
+#                         BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou
+#                         build falho = aviso honesto, o in-tree segue
+#                         valendo, o install NUNCA aborta. Ativação NUNCA
+#                         recarrega um módulo já carregado (derrubaria o
+#                         WiFi ao vivo) — vale no próximo boot/replug do
+#                         dongle. Vale para TODO formato. Opt-out: --no-dkms
+#                         (mesma flag do hid-nintendo, acima).
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -179,7 +202,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,99p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,122p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -516,6 +539,66 @@ install_dkms_hid_nintendo_host() {
     return 0
 }
 
+# Onda W (desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md):
+# módulo rtw88_usb patchado (device-gone + queue de port reset — cura do
+# fantasma USB do dongle WiFi) via a MESMA lib genérica scripts/dkms_lib.sh
+# (2ª instância — hid-nintendo é a 1ª; ZERO ajuste na lib). DEFAULT ON (regra
+# da casa: install SEM FLAGS aplica), mesmo gate NO_DKMS do hid-nintendo
+# acima (--no-dkms desliga AMBOS). Compartilhada entre o passo 3j (native) e
+# o bloco dos formatos de pacote (mesmo padrão do broker/hid-nintendo acima)
+# — DKMS é mudança de SISTEMA/kernel, ortogonal ao formato do app. Contrato
+# fail-safe fica TODO dentro de dkms_lib.sh: esta função só decide SE chama
+# (flag/sudo) e a mensagem de ativação, nunca recarrega/descarrega o módulo.
+#
+# Diferente do hid-nintendo (sem conf de /etc/modprobe.d): o gate da parte
+# agressiva do patch (usb_queue_reset_device) É o próprio module param
+# `hang_reset`, com default Y JÁ embutido no .ko (assets/dkms/rtw88-usb/
+# usb.c) — não há arquivo externo a instalar/remover para ativá-lo.
+install_dkms_rtw88_usb_host() {
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — patch DKMS do rtw88_usb NÃO instalado (driver in-tree continua, fail-safe)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — patch DKMS do rtw88_usb pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_install_patched_module hefesto-rtw88-usb 1.0.0 \
+        "${ROOT_DIR}/assets/dkms/rtw88-usb" rtw88_usb
+    # Mesmo achado #5 do hid-nintendo: dkms_install_patched_module é
+    # fail-safe POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de
+    # "staged de verdade" é o modinfo resolver p/ updates/dkms.
+    if ! dkms_module_from_updates rtw88_usb; then
+        warn "patch DKMS do rtw88_usb NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); sem device-gone/port-reset, o fantasma USB do dongle (device retido após disconnect perdido) segue possível"
+        return 0
+    fi
+    # ATIVAÇÃO FAIL-SAFE (mesmo princípio do hid-nintendo acima): NUNCA
+    # recarregamos um módulo em uso — a mantenedora depende do WiFi AGORA, e
+    # substituir o módulo carregado o derrubaria. Diferente do hid_nintendo
+    # (0 params no in-tree), o rtw88_usb in-tree JÁ expõe `switch_usb_mode`
+    # — a presença do diretório parameters/ sozinha NÃO distingue patchado
+    # de in-tree. O marcador é o PARÂMETRO NOVO `hang_reset` (só o patch
+    # tem). Nota de precisão (igual ao hid-nintendo): substituição de módulo
+    # NÃO pega em replug do dongle — se o in-tree está CARREGADO, o replug
+    # o re-liga a ele mesmo; só o próximo BOOT troca. "Entra no próximo
+    # plug" só é verdade quando o módulo está DESCARREGADO agora (3º ramo).
+    if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
+        printf '      módulo patchado JÁ carregado (hang_reset visível em /sys/module/rtw88_usb/parameters)\n'
+    elif [[ -d /sys/module/rtw88_usb ]]; then
+        printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria o WiFi ao vivo);\n'
+        printf '      o patchado vale no próximo boot (replug NÃO troca módulo carregado)\n'
+    else
+        printf '      rtw88_usb descarregado — o patchado entra sozinho no próximo plug do dongle\n'
+    fi
+    return 0
+}
+
 format_flatpak() {
     step "flatpak" "build + flatpak install --user (GNOME//47)"
     require flatpak
@@ -605,6 +688,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     # do fluxo native. Opt-out: --no-dkms.
     step "dkms" "DKMS hid-nintendo patchado (Onda T — DEFAULT em todo formato)"
     install_dkms_hid_nintendo_host
+    # Onda W (mesmo achado equivalente ao #7 do broker): rtw88_usb patchado é
+    # a 2ª instância da mesma mudança de SISTEMA/kernel — mesma função do
+    # passo 3j do fluxo native. Opt-out compartilhado: --no-dkms.
+    step "dkms-w" "DKMS rtw88_usb patchado (Onda W — DEFAULT em todo formato)"
+    install_dkms_rtw88_usb_host
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
@@ -1253,6 +1341,25 @@ fi
 # o in-tree segue valendo, o install NUNCA aborta por causa disto.
 step "3i" "Onda T: hid-nintendo patchado via DKMS (probe BT resiliente + module params)"
 install_dkms_hid_nintendo_host
+
+# ---------------------------------------------------------------------------
+# 3j. DKMS rtw88_usb patchado (Onda W) — DEFAULT, opt-out --no-dkms (compartilhado)
+# ---------------------------------------------------------------------------
+# Cura de RAIZ do fantasma USB do dongle WiFi (TP-Link Archer T3U/RTL8822BU):
+# quando um port-status-change se perde no xHCI, o driver in-tree nunca detecta
+# que o device sumiu e segue fazendo I/O contra hardware ausente — só um
+# `unbind` manual ou reboot recicla o device (medido 20/07: 13h de fantasma).
+# Módulo out-of-tree via DKMS (device-gone + queue de port reset, modelo
+# rtw89 v7.0.11: RTW89_FLAG_UNPLUGGED + continual_io_error>4; reset imediato
+# só em -ENODEV/-ESHUTDOWN, -EPROTO exige 5 falhas CONSECUTIVAS sem sucesso
+# no meio) via a MESMA lib genérica scripts/dkms_lib.sh (Onda T é a 1ª
+# instância; ZERO ajuste na lib). Desenho completo:
+# docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md.
+# Contrato fail-safe: dkms/headers ausentes, kernel fora do pino
+# BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou build falho = aviso
+# honesto, o in-tree segue valendo, o install NUNCA aborta por causa disto.
+step "3j" "Onda W: rtw88_usb patchado via DKMS (fantasma USB + teardown limpo)"
+install_dkms_rtw88_usb_host
 
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher

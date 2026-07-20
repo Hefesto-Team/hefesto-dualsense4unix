@@ -87,6 +87,21 @@
 #     install SEM FLAGS). O in-tree volta sozinho no próximo BOOT (replug
 #     NÃO troca módulo carregado) — NUNCA descarregamos um módulo em uso
 #     (mesma regra do broker/btusb); os params vivos voltam a 0 a quente.
+#
+# Onda W (2026-07-20, DKMS rtw88_usb patchado — fantasma USB do dongle WiFi,
+# ver docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md):
+#   - módulo out-of-tree rtw88_usb (hefesto-rtw88-usb/1.0.0): removido por
+#     DEFAULT via `dkms remove --all` (mesma scripts/dkms_lib.sh, 2ª
+#     instância). Sem flag nova (simétrico ao install SEM FLAGS). O in-tree
+#     volta sozinho no próximo BOOT (replug do dongle NÃO troca módulo
+#     carregado) — NUNCA descarregamos um módulo em uso (o WiFi cairia).
+#     Diferente do hid-nintendo, não há conf em /etc/modprobe.d/ (o gate da
+#     parte agressiva é o module param `hang_reset`, default Y já embutido
+#     no .ko) — se o patchado estiver CARREGADO, devolvemos hang_reset a 0
+#     a quente (desliga só o reset; a detecção/silenciamento continua até o
+#     módulo sair de fato no próximo boot). Também remove, se presente, o
+#     conf.d de powersave do NetworkManager (W2, opt-in/gateado por
+#     evidência) — sem flag nova, simetria "se instalado, some".
 
 set -euo pipefail
 
@@ -211,6 +226,14 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 command -v dkms >/dev/null 2>&1 \
     && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q . \
     && _NEEDS_SUDO=1
+# Onda W: DKMS rtw88_usb patchado (fantasma USB) — dkms remove é root; sem
+# conf em /etc/modprobe.d (mesma observação da Onda T: `dkms status` sem
+# sudo já lista o registro, então só a REMOÇÃO precisa de credencial). O
+# conf.d de powersave do NM (W2) também precisa root para remover.
+command -v dkms >/dev/null 2>&1 \
+    && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q . \
+    && _NEEDS_SUDO=1
+[[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]] && _NEEDS_SUDO=1
 acquire_sudo
 
 log "parando daemon hefesto-dualsense4unix (se ativo)"
@@ -617,6 +640,51 @@ if [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]]; then
     else
         log "sudo indisponível — /etc/modprobe.d/hefesto-hid-nintendo.conf NÃO removido"
         log "  sudo rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Onda W (2026-07-20, DKMS rtw88_usb patchado — fantasma USB do dongle WiFi,
+# ver docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md): removido
+# por DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
+# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
+# /usr/src/<pkg>-<ver>. O in-tree volta SOZINHO no próximo BOOT (dkms remove
+# já roda depmod; replug do dongle NÃO troca módulo carregado) — até lá, se
+# o patchado estiver CARREGADO, ele continua rodando. Diferente da Onda T,
+# não há conf em /etc/modprobe.d/ para apagar (hang_reset é module param com
+# default Y embutido no .ko, não uma opção externa) — para o módulo ficar
+# menos agressivo até o boot, devolvemos SÓ o hang_reset a 0 via /sys (0644,
+# sem reload): desliga o usb_queue_reset_device; a detecção/silenciamento de
+# device-gone continua (== comportamento rtw89 vanilla, documentado como
+# troca consciente no README do patch).
+# ---------------------------------------------------------------------------
+if command -v dkms >/dev/null 2>&1 \
+        && dkms status hefesto-rtw88-usb 2>/dev/null | grep -q .; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo patch DKMS do rtw88_usb (Onda W): dkms remove --all"
+        # shellcheck source=scripts/dkms_lib.sh
+        source "${ROOT_DIR}/scripts/dkms_lib.sh"
+        dkms_remove_patched_module hefesto-rtw88-usb 1.0.0
+        if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
+            printf '0' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
+            log "hang_reset do rtw88_usb devolvido a 0 (sem reset agressivo até o boot; detecção/silenciamento seguem ativos)"
+        fi
+    else
+        log "sudo indisponível — patch DKMS do rtw88_usb NÃO removido"
+        log "  sudo dkms remove hefesto-rtw88-usb/1.0.0 --all"
+    fi
+fi
+# Conf.d de powersave do WiFi (W2 — opt-in/gateado por evidência, NÃO
+# instalado por default pelo install.sh hoje): removido SE presente, sem
+# flag nova (simetria "se instalado, some" — mesmo padrão do storm.conf).
+# Só rm de um arquivo .conf: NUNCA chamamos nmcli/rfkill aqui.
+if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo conf de powersave do WiFi (/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf)"
+        sudo rm -f /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf
+    else
+        log "sudo indisponível — /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf NÃO removido"
+        log "  sudo rm -f /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
     fi
 fi
 
