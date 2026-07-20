@@ -720,6 +720,39 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         else
             printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — FastConnectable pulado\n'
         fi
+
+        # JustWorksRepairing (Onda R) — mesmo mecanismo do FastConnectable
+        # acima (drop-in OU bloco apensado com sentinela própria), pelo mesmo
+        # motivo: main.conf é conffile do dpkg, então SEMPRE com backup antes.
+        # Sem isso, re-parear um controle com bond já existente (pós-migração
+        # do backport bluez 5.85 — ONDA-R "BlueZ resiliente" abaixo — ou o
+        # bond "meio-salvo" Paired-sem-Bonded) pode ser rejeitado pelo BlueZ
+        # até timeout. Ver estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4.
+        JUSTWORKS_SENTINEL='# >>> hefesto JustWorksRepairing >>>'
+        if [[ -d /etc/bluetooth/main.conf.d ]]; then
+            if sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.conf" \
+                    /etc/bluetooth/main.conf.d/hefesto-justworks.conf 2>/dev/null; then
+                printf '      JustWorksRepairing via drop-in main.conf.d (vale no próximo boot/restart do bluetoothd)\n'
+            else
+                warn "drop-in do JustWorksRepairing falhou"
+            fi
+        elif [[ -f /etc/bluetooth/main.conf ]]; then
+            if sudo grep -qF "${JUSTWORKS_SENTINEL}" /etc/bluetooth/main.conf 2>/dev/null; then
+                printf '      JustWorksRepairing já aplicado (bloco marcado presente) — nada a fazer\n'
+            else
+                _bt_backup_jw="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
+                if sudo cp /etc/bluetooth/main.conf "${_bt_backup_jw}" 2>/dev/null \
+                   && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.block"; } \
+                        | sudo tee -a /etc/bluetooth/main.conf >/dev/null 2>&1; then
+                    printf '      JustWorksRepairing apensado ao main.conf (backup: %s)\n' "${_bt_backup_jw}"
+                    printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
+                else
+                    warn "não consegui apensar o bloco JustWorksRepairing ao /etc/bluetooth/main.conf"
+                fi
+            fi
+        else
+            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — JustWorksRepairing pulado\n'
+        fi
     fi
 fi
 
@@ -832,6 +865,164 @@ PYEOF
             esac
         done <<<"${_cmdline_plan}"
         [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3f. ONDA-R: BlueZ resiliente (backport local 5.85 do resolute) — DEFAULT
+# ---------------------------------------------------------------------------
+# Estudo docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md: o
+# bluez 5.72-0ubuntu5.5 do noble crashou 6x em 5 dias (heap corruption/SEGV em
+# hidp_add_connection/control_connect_cb — sempre em sessão com controles BT
+# ativos); o 6º crash CHEGOU A COMER um bond recém-pareado. Nenhum SRU do
+# noble toca esse subsistema. O rebuild do source package do resolute (26.04
+# LTS, 5.85) traz ~10 fixes de crash de input/uhid ausentes no 5.72 (família
+# upstream #815 + fixes de HIDP core).
+#
+# Este passo só CONSOME um build feito à parte (dget + dch --local +
+# mk-build-deps + dpkg-buildpackage — ver o estudo §3 item 1): .debs
+# versionados em ~/.cache/hefesto-dualsense4unix/bluez-backport/ com
+# SHA256SUMS. Sem o cache, avisamos como gerar e seguimos SEM falhar o
+# install (o backport é conveniência de resiliência, não requisito de
+# funcionamento — o controle já funciona no 5.72).
+#
+# EFEITO COLATERAL MEDIDO (documentado, não escondido):
+#   (a) o postinst do PRÓPRIO pacote bluez reinicia o bluetoothd ao trocar de
+#       versão — a ÚNICA exceção à regra de nunca reiniciar o serviço, porque
+#       é o próprio dpkg quem faz, não este script (idempotente: com a versão
+#       já nossa, é no-op e o postinst nem roda de novo);
+#   (b) a migração DESCARTA os bonds antigos no 1º start pós-troca (medido ao
+#       vivo) — reparear uma vez resolve; bonds NOVOS (pareados já em 5.85)
+#       persistem em restarts seguintes (também medido);
+#   (c) ≥5.73 muda o input BT para a via uhid (bluetoothd passa a ser dono do
+#       /dev/uhid do controle) — contingência documentada se aparecer
+#       regressão: UserspaceHID=false em /etc/bluetooth/input.conf.
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
+   && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
+    step "3f" "ONDA-R: BlueZ resiliente (backport 5.85 — cura crashes crônicos do bluetoothd)"
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
+    else
+        _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
+        if [[ -z "${_bz_cur}" ]]; then
+            printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
+        elif dpkg --compare-versions "${_bz_cur}" ge 5.79 2>/dev/null; then
+            # (e) no-op: já ≥5.79, sem o histórico de crash de input/uhid do 5.72.
+            printf '      bluez %s já ≥5.79 — nada a fazer\n' "${_bz_cur}"
+        else
+            printf '      bluez %s < 5.79 (crashes crônicos de input/HIDP documentados no estudo)\n' "${_bz_cur}"
+            _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
+            _bz_sums="${_bz_dir}/SHA256SUMS"
+            _bz_deb_bluez="$(ls -t "${_bz_dir}"/bluez_*.deb 2>/dev/null | head -1)"
+            _bz_deb_cups="$(ls -t "${_bz_dir}"/bluez-cups_*.deb 2>/dev/null | head -1)"
+            _bz_deb_libbt="$(ls -t "${_bz_dir}"/libbluetooth3_*.deb 2>/dev/null | head -1)"
+            if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
+                # (d) .debs ausentes: NÃO falha o install, só orienta o build.
+                warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"
+                printf '      como gerar: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3 item 1\n'
+            else
+                # SHA256SUMS por basename (portátil — o arquivo pode ter sido
+                # gerado com caminho absoluto de outra máquina/usuário).
+                _bz_ok=1
+                while read -r _bz_sum _bz_path; do
+                    [[ -z "${_bz_sum}" ]] && continue
+                    _bz_bn="$(basename "${_bz_path}")"
+                    _bz_actual="$(sha256sum "${_bz_dir}/${_bz_bn}" 2>/dev/null | awk '{print $1}')"
+                    if [[ -z "${_bz_actual}" || "${_bz_actual}" != "${_bz_sum}" ]]; then
+                        _bz_ok=0
+                        break
+                    fi
+                done < "${_bz_sums}"
+                if [[ "${_bz_ok}" -eq 0 ]]; then
+                    warn "SHA256SUMS não bateu em ${_bz_dir} — backport ABORTADO (nunca instalo .deb não verificado)"
+                else
+                    # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
+                    # tem Enter=sim (mesma filosofia de default-apply do install),
+                    # mas o texto dá ao usuário a chance de recusar vendo o custo.
+                    printf '\n      >>> AVISO: aplicar o backport bluez 5.85 REINICIA o bluetoothd\n'
+                    printf '          (os controles BT caem até reconectar) e a migração DESCARTA os\n'
+                    printf '          bonds antigos — reparei UMA VEZ os controles BT depois (PS+Create\n'
+                    printf '          no DualSense). É a ÚNICA exceção à regra de nunca reiniciar o\n'
+                    printf '          serviço: quem reinicia é o postinst do PRÓPRIO pacote bluez.\n\n'
+                    ask_yn "aplicar o backport agora?" "${AUTO_YES}" "y"
+                    if [[ "${REPLY,,}" =~ ^y ]]; then
+                        # (b) grava a versão anterior ANTES de trocar, SE ainda não
+                        # registrada (idempotente — não sobrescreve um registro que
+                        # já exista de uma execução anterior do install).
+                        if [[ ! -f "${_bz_dir}/VERSOES-ANTERIORES.txt" ]]; then
+                            # Arquitetura via dpkg --print-architecture (nunca hardcoded):
+                            # numa arquitetura != amd64 o "libbluetooth3:amd64" fixo faria
+                            # o dpkg-query falhar silenciosamente (stderr descartado, ||
+                            # true) e o registro sairia incompleto, deixando o restore do
+                            # uninstall sem cobrir libbluetooth3.
+                            _bz_arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+                            dpkg-query -W -f='${Package}\t${Version}\n' bluez bluez-cups "libbluetooth3:${_bz_arch}" \
+                                > "${_bz_dir}/VERSOES-ANTERIORES.txt" 2>/dev/null || true
+                            printf '      versões anteriores gravadas em %s\n' "${_bz_dir}/VERSOES-ANTERIORES.txt"
+                        fi
+                        # DEBIAN_FRONTEND=noninteractive + --force-confdef/--force-confold:
+                        # /etc/bluetooth/main.conf é conffile do dpkg e a esta altura JÁ
+                        # ESTÁ modificado por nós (bloco FastConnectable/JustWorks apensado
+                        # no passo 3d) — sem forçar, um dpkg interativo perguntaria o que
+                        # fazer com o conffile local; sob --yes (ou sem tty) isso pode travar
+                        # esperando resposta. Forçamos manter a versão atual (a nossa).
+                        if sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades \
+                                -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+                                "${_bz_deb_libbt}" "${_bz_deb_bluez}" "${_bz_deb_cups}" >/dev/null 2>&1; then
+                            printf '      backport aplicado — reparei os controles BT UMA VEZ (bonds antigos foram descartados)\n'
+                        else
+                            warn "apt-get install do backport falhou — rode manualmente com os .debs em ${_bz_dir}"
+                        fi
+                    else
+                        printf '      pulado a pedido — bluetoothd 5.72 crônico segue ativo\n'
+                    fi
+                fi
+            fi
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3g. ONDA-R: agente de pareamento BT persistente — DEFAULT (bond meio-salvo)
+# ---------------------------------------------------------------------------
+# "No agent available for request type 2" = nenhum agente de pareamento D-Bus
+# registrado no momento em que o BlueZ pede confirmação → autenticação nunca
+# completa → nasce o bond "meio-salvo" (Paired: yes / Bonded: no), que trava o
+# controle até um re-pareamento manual. Cura: bt-agent (pacote bluez-tools do
+# noble) como serviço de SISTEMA persistente com --capability=NoInputNoOutput
+# (aceita automaticamente pareamentos sem PIN/senha — o caso do DualSense/
+# 8BitDo/Nintendo Pro). Ver estudo §4. `--now` aqui é seguro: habilita/inicia
+# SÓ o agente, nunca mexe no bluetoothd.
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+    step "3g" "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — agente de pareamento pulado (re-execute ./install.sh)"
+    else
+        if ! command -v bt-agent >/dev/null 2>&1; then
+            printf '      bluez-tools ausente (fornece bt-agent) — instalando (sudo)\n'
+            if run_apt bluez-tools; then
+                printf '      bluez-tools instalado\n'
+            else
+                warn "não consegui instalar bluez-tools — instale manualmente: sudo apt install bluez-tools"
+            fi
+        else
+            printf '      bluez-tools já presente (bt-agent em %s)\n' "$(command -v bt-agent)"
+        fi
+        if command -v bt-agent >/dev/null 2>&1; then
+            if sudo install -Dm644 "${ROOT_DIR}/assets/systemd/hefesto-bt-agent.service" \
+                    /etc/systemd/system/hefesto-bt-agent.service 2>/dev/null; then
+                sudo systemctl daemon-reload >/dev/null 2>&1 || true
+                if sudo systemctl enable --now hefesto-bt-agent.service >/dev/null 2>&1; then
+                    printf '      hefesto-bt-agent.service habilitado (agente NoInputNoOutput persistente)\n'
+                else
+                    warn "enable --now do hefesto-bt-agent.service falhou — habilite manualmente"
+                fi
+            else
+                warn "não consegui gravar /etc/systemd/system/hefesto-bt-agent.service"
+            fi
+        else
+            warn "bt-agent ainda ausente — agente de pareamento NÃO habilitado"
+        fi
     fi
 fi
 

@@ -11,6 +11,12 @@
 # 3 sintomas clássicos: touchpad move cursor, mic muting spam, botões em
 # background. No Windows o driver Sony nativo evita esse caminho.
 #
+# Onda R (2026-07-19) — SteamController_SwitchSupport: mesmo mecanismo, mas
+# para os controles Nintendo/8BitDo em modo Switch (co-op misto, 8BIT-02). Com
+# "Nintendo Switch Controller Support" em "Always enabled" (=2), a Steam pega
+# o hidraw do controle Switch do mesmo jeito e o mesmo conflito com o daemon
+# se aplica. Tratado JUNTO do PSSupport (mesmo grep/sed/status) desde então.
+#
 # As keys ficam em `localconfig.vdf` per-user em Steam moderno (não no
 # config.vdf global como nas versões antigas). Por padrão este script
 # itera por TODOS os installs de Steam conhecidos (.deb, Flatpak, Snap,
@@ -24,8 +30,8 @@
 #                   (loga e sai 0) sem fechar a Steam. Usado pelo guard (path/timer)
 #                   para nunca matar a Steam no meio de um jogo — a reescrita
 #                   acontece quando a Steam já saiu (que é quando ela grava o vdf).
-#     --status      só relata o estado atual (PSSupport / UseSteamControllerConfig)
-#                   em cada .vdf. Não modifica nada.
+#     --status      só relata o estado atual (PSSupport / SwitchSupport /
+#                   UseSteamControllerConfig) em cada .vdf. Não modifica nada.
 #     --restore     reverte o último backup (.bak.steam-input-<ts>) de cada .vdf.
 #
 # Backups: `<localconfig.vdf>.bak.steam-input-<unix-ts>`. Idempotente.
@@ -78,21 +84,25 @@ if [[ "${#VDFS[@]}" -eq 0 ]]; then
     exit 0
 fi
 
-# Retorna 0 se o vdf tem PSSupport ou UseSteamControllerConfig em "1" OU "2";
-# 1 caso contrário. "[12]" pega tanto o "Always enabled" (=2) quanto o per-game
-# "1" que o legado aurora-steam-input-fix escrevia (e que antes escapava daqui).
+# Retorna 0 se o vdf tem PSSupport, SwitchSupport ou UseSteamControllerConfig
+# em "1" OU "2"; 1 caso contrário. "[12]" pega tanto o "Always enabled" (=2)
+# quanto o per-game "1" que o legado aurora-steam-input-fix escrevia (e que
+# antes escapava daqui). SwitchSupport (Onda R) replica exatamente o padrão
+# do PSSupport para os controles Nintendo/8BitDo em modo Switch.
 needs_fix() {
     local vdf="$1"
-    grep -qE '"(SteamController_PSSupport|UseSteamControllerConfig)"[[:space:]]+"[12]"' "$vdf" 2>/dev/null
+    grep -qE '"(SteamController_PSSupport|SteamController_SwitchSupport|UseSteamControllerConfig)"[[:space:]]+"[12]"' "$vdf" 2>/dev/null
 }
 
 # Lê e mostra contagem por arquivo.
 report_state() {
-    local vdf="$1" pss uscc
+    local vdf="$1" pss sws uscc
     pss="$(grep -E '"SteamController_PSSupport"[[:space:]]+"[12]"' "$vdf" 2>/dev/null | wc -l)"
+    sws="$(grep -E '"SteamController_SwitchSupport"[[:space:]]+"[12]"' "$vdf" 2>/dev/null | wc -l)"
     uscc="$(grep -E '"UseSteamControllerConfig"[[:space:]]+"[12]"' "$vdf" 2>/dev/null | wc -l)"
     printf '  %s\n' "$vdf"
     printf '    SteamController_PSSupport="1"|"2": %s\n' "$pss"
+    printf '    SteamController_SwitchSupport="1"|"2": %s\n' "$sws"
     printf '    UseSteamControllerConfig="1"|"2": %s\n' "$uscc"
 }
 
@@ -156,6 +166,7 @@ reopen_steam() {
 # Edita um único .vdf inplace, com backup. Idempotente.
 # Trocas:
 #   "SteamController_PSSupport"\t\t"2"    -> "0"
+#   "SteamController_SwitchSupport"\t\t"2"-> "0"
 #   "UseSteamControllerConfig"\t\t"2"     -> "0"
 # (Steam usa tabs literais entre key e value no VDF; preservamos exatamente.)
 apply_vdf() {
@@ -176,6 +187,7 @@ apply_vdf() {
     local tab=$'\t'
     if ! sed -i.tmp \
             -e "s/\"SteamController_PSSupport\"${tab}${tab}\"[12]\"/\"SteamController_PSSupport\"${tab}${tab}\"0\"/g" \
+            -e "s/\"SteamController_SwitchSupport\"${tab}${tab}\"[12]\"/\"SteamController_SwitchSupport\"${tab}${tab}\"0\"/g" \
             -e "s/\"UseSteamControllerConfig\"${tab}${tab}\"[12]\"/\"UseSteamControllerConfig\"${tab}${tab}\"0\"/g" \
             -- "$vdf"; then
         log "ERRO: sed falhou em $vdf — restaurando do backup"
@@ -214,7 +226,7 @@ case "${MODE}" in
         if [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
         else
-            log "tudo limpo — Steam Input PSSupport não está em modo 2 em nenhum arquivo"
+            log "tudo limpo — PSSupport/SwitchSupport não estão em modo 1|2 em nenhum arquivo"
         fi
         ;;
     restore)
