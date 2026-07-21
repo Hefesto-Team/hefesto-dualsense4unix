@@ -219,9 +219,25 @@ _check_node_gravavel() {
         return
     fi
     if [[ -w "${node}" ]]; then
-        pass "${node} presente e gravável (${para_que})"
+        _vpad09_qualifica_acesso "${node}" "${para_que}"
     else
         fail "${node} existe mas SEM permissão para o seu usuário — ${para_que} não vai funcionar. Rode: sudo bash scripts/install_udev.sh"
+    fi
+}
+
+# VPAD-09: gravável AGORA pode ser só a ACL do uaccess, que o logind aplica NO
+# LOGIN — depois do daemon de sessão subir (corrida perdida ao vivo em 21/07:
+# EACCES no boot, vpad nenhum). O acesso determinístico é o dono de grupo
+# 'hefesto' (regras 71-*), aplicado na criação do nó, antes de qualquer login.
+_vpad09_qualifica_acesso() {
+    local node="$1" para_que="$2" grp
+    grp="$(stat -c '%G' "${node}" 2>/dev/null || true)"
+    if [[ "${grp}" != "hefesto" ]]; then
+        warn "${node} gravável só pela ACL do login — no boot o daemon pode perder a corrida contra o logind (VPAD-09). Rode: sudo bash scripts/install_udev.sh"
+    elif id -nG 2>/dev/null | tr ' ' '\n' | grep -qx hefesto; then
+        pass "${node} presente e gravável (${para_que}; grupo hefesto ativo — sem corrida no boot)"
+    else
+        info "${node} com grupo hefesto, mas sua sessão ainda não está no grupo (vale no próximo login) — até lá o acesso é a ACL do login (VPAD-09)"
     fi
 }
 
@@ -238,7 +254,7 @@ check_uhid() {
         return
     fi
     if [[ -w /dev/uhid ]]; then
-        pass "/dev/uhid presente e gravável (vibração nas duas máscaras)"
+        _vpad09_qualifica_acesso /dev/uhid "vibração nas duas máscaras"
     else
         warn "/dev/uhid existe mas SEM permissão para o seu usuário — a vibração só vai funcionar com a máscara Xbox 360. Rode: sudo bash scripts/install_udev.sh"
     fi

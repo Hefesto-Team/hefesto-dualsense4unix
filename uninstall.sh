@@ -456,6 +456,12 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         # Regras 81 (PLAT-03): SÓ rm + reload, de propósito — o power/control
         # "on" atual dos devices/hosts NÃO é revertido a quente (é inócuo; o
         # kernel volta ao default no próximo boot/replug sem as regras).
+        # VPAD-09: grupo dedicado dono dos nós 71-* — simetria com o install
+        # (que faz groupadd + usermod -aG). Best-effort: o groupdel falha
+        # inofensivamente se o grupo for primário de alguém ou não existir.
+        log "removendo grupo 'hefesto' (dono de /dev/uhid e /dev/uinput)"
+        sudo gpasswd -d "$(id -un)" hefesto >/dev/null 2>&1 || true
+        sudo groupdel hefesto 2>/dev/null || true
     fi
 else
     log "udev rules preservadas (--keep-udev). Para remover depois:"

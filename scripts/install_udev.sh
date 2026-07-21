@@ -41,6 +41,27 @@ for f in \
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
 done
 
+# VPAD-09 (2026-07-21): grupo dedicado dono de /dev/uhid e /dev/uinput. A ACL
+# do uaccess é aplicada pelo systemd-logind NO LOGIN — mesmo instante em que o
+# daemon de sessão sobe: corrida real (perdida ao vivo em 21/07: EACCES nos
+# dois nós no boot → vpad nenhum → Sony some da GUI e o jogo vê o físico cru).
+# O GROUP= das regras 71-* é aplicado pelo udev na CRIAÇÃO do nó, antes de
+# qualquer login — determinístico. O grupo entra nos processos da usuária no
+# PRÓXIMO login; até lá o uaccess cobre (e o daemon tem o revive VPAD-09).
+echo "[0/3] grupo dedicado 'hefesto' (dono de /dev/uhid e /dev/uinput)..."
+sudo groupadd -f -r hefesto
+_HEFESTO_USER="${SUDO_USER:-$(id -un)}"
+if [[ "${_HEFESTO_USER}" != "root" ]]; then
+    if id -nG -- "${_HEFESTO_USER}" | tr ' ' '\n' | grep -qx hefesto; then
+        echo "  ${_HEFESTO_USER} já pertence ao grupo hefesto"
+    else
+        sudo usermod -aG hefesto "${_HEFESTO_USER}"
+        echo "  ${_HEFESTO_USER} adicionada ao grupo hefesto (vale a partir do PRÓXIMO login)"
+    fi
+else
+    echo "  aviso: usuário da sessão resolveu root — adicione manualmente: sudo usermod -aG hefesto SEU_USUARIO"
+fi
+
 echo "[1/3] copiando udev rules para /etc/udev/rules.d/..."
 sudo install -Dm644 "$ASSETS/70-ps5-controller.rules"             /etc/udev/rules.d/70-ps5-controller.rules
 sudo install -Dm644 "$ASSETS/71-uinput.rules"                     /etc/udev/rules.d/71-uinput.rules

@@ -232,6 +232,18 @@ echo ""
 # Define como string para reuso em ambos os caminhos sem duplicar lógica.
 _build_install_cmd() {
     local cmd=""
+    # VPAD-09: grupo dedicado dono dos nós 71-* (racional na 71-uhid.rules) —
+    # criado ANTES de copiar as regras, senão o GROUP= cai no fallback
+    # uaccess-only (udev ignora grupo inexistente). A usuária entra no grupo
+    # a partir do PRÓXIMO login; até lá o uaccess cobre a sessão atual.
+    cmd+="groupadd -f -r hefesto; "
+    if [[ "${BROKER_SESSION_UID}" != "0" ]]; then
+        local _vpad_user
+        _vpad_user="$(id -un -- "${BROKER_SESSION_UID}" 2>/dev/null || true)"
+        if [[ -n "${_vpad_user}" && "${_vpad_user}" != "root" ]]; then
+            cmd+="usermod -aG hefesto '${_vpad_user}'; "
+        fi
+    fi
     for regra in "${RULES[@]}"; do
         cmd+="install -Dm644 '${RULES_SRC}/${regra}' '${RULES_DEST}/${regra}'; "
     done

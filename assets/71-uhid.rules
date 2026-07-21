@@ -14,4 +14,13 @@
 # usuário da sessão local pelo mesmo mecanismo da 71-uinput.rules (uaccess).
 # Reverter: remover este arquivo e recarregar udev (o daemon volta ao uinput
 # sozinho, avisando que a vibração da máscara DualSense não vai funcionar).
-KERNEL=="uhid", SUBSYSTEM=="misc", MODE="0660", TAG+="uaccess"
+#
+# VPAD-09 (2026-07-21): GROUP="hefesto" além do uaccess. A ACL do uaccess é
+# aplicada pelo systemd-logind NO LOGIN — o mesmo instante em que o daemon de
+# sessão sobe: corrida real, perdida ao vivo (EACCES no boot → vpad nenhum).
+# O GROUP= é aplicado pelo udev NA CRIAÇÃO do nó, antes de qualquer login —
+# determinístico. Grupo DEDICADO de propósito: nunca o "input" (membro de
+# input lê todos os /dev/input/event* = primitiva de keylogger). O install
+# cria o grupo e adiciona a usuária; sem o grupo no sistema o udev ignora o
+# GROUP= e a regra degrada para o comportamento uaccess-only anterior.
+KERNEL=="uhid", SUBSYSTEM=="misc", MODE="0660", GROUP="hefesto", TAG+="uaccess"
