@@ -311,15 +311,28 @@ async def reconnect_loop(
             # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
             # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
             # udev) e é re-escondido aqui (o broker re-aplica o fs mesmo para
-            # nó já rastreado, lição 2). No executor de propósito: o cliente
-            # do broker faz I/O de socket com timeout de 2 s e não pode morar
-            # no event loop. Best-effort: falha nunca derruba o probe.
+            # nó já rastreado, lição 2). Corretor final (interação S x HANG-01,
+            # achado #6): no executor DEDICADO do broker ('hefesto-broker',
+            # 1 worker FIFO), NUNCA no pool compartilhado 'hefesto-hid' de
+            # `_run_blocking` — o cliente do broker faz I/O de socket com
+            # timeout de 2 s por chamada (até ~8s com 4 nós de co-op e broker
+            # degradado), e ocupar 1 dos 2 workers de 'hefesto-hid' enfileira
+            # read_state/_gather_game_signal_inputs/heal atrás dele (o padrão
+            # que o HANG-01 baniu ao isolar `_sync_external_leds`). O await
+            # preserva o backpressure: um broker travado atrasa só ESTE loop,
+            # sem acumular rehides na fila. Best-effort: falha nunca derruba
+            # o probe.
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                     rehide_physical_hidraw,
                 )
+                from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                    broker_executor_for,
+                )
 
-                await daemon._run_blocking(rehide_physical_hidraw, daemon)
+                await asyncio.get_running_loop().run_in_executor(
+                    broker_executor_for(daemon), rehide_physical_hidraw, daemon
+                )
             # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
             # observando /dev/input — hotplug antecipa a reconciliação (o
             # connect() da próxima iteração) sem esperar o fallback de 30s.

@@ -311,20 +311,55 @@ class TestUninstallSimetrico:
 
 
 class TestPowersaveGateadoPorEvidencia:
-    def test_conf_do_nm_nao_e_aplicada_por_default(self) -> None:
-        # (g) do contrato: o asset assets/NetworkManager/*.conf NÃO entra no
-        # install por default — só vira default quando a medição W2 provar
-        # ganho. Hoje: NENHUM caminho de código do install toca o conf.
-        codigo = _sem_comentarios(INSTALL)
-        if "hefesto-wifi-powersave" not in codigo:
-            return  # gateado por ausência: o install não toca o conf.d do NM
-        # Se um dia entrar, TEM de ser opt-in explícito nascendo desligado.
+    """Corretor final (achado #5): a via de PROMOÇÃO documentada no asset e no
+    desenho da Onda W (`./install.sh --wifi-powersave-off`) não existia — o
+    parser só avisava "argumento desconhecido" e seguia com exit 0, e a
+    operadora podia concluir que a cura foi aplicada quando nada mudou.
+    Falha-sem/passa-com: a flag TEM de existir, opt-in, nascendo desligada."""
+
+    def test_flag_opt_in_existe_e_nasce_desligada(self) -> None:
         assert re.search(r"^WIFI_POWERSAVE_OFF=0$", INSTALL, re.MULTILINE), (
-            "o conf de powersave só pode entrar atrás de flag opt-in default 0"
+            "a flag --wifi-powersave-off precisa existir com default 0 (opt-in)"
         )
         assert re.search(r"--wifi-powersave-off\)\s+WIFI_POWERSAVE_OFF=1", INSTALL), (
             "a flag opt-in precisa existir no parse (--wifi-powersave-off)"
         )
+
+    def test_conf_do_nm_so_entra_atras_da_flag(self) -> None:
+        # O sudo install do conf existe (a via de promoção é real)…
+        copias = re.findall(
+            r"sudo install -Dm644[^\n]*hefesto-wifi-powersave\.conf", INSTALL
+        )
+        # (2 linhas: a cópia real + a instrução do warn sem sudo — nenhuma fora
+        # do bloco gateado.)
+        assert copias, "a via de promoção precisa copiar o conf para /etc"
+        # …e mora DENTRO do bloco gateado pela flag (nunca no caminho default).
+        gate = INSTALL.index('if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]')
+        fim_bloco = INSTALL.index("# 3e. Cmdline", gate)
+        bloco = INSTALL[gate:fim_bloco]
+        for linha in copias:
+            assert linha in bloco, (
+                "cópia do conf de powersave FORA do gate --wifi-powersave-off"
+            )
+        # O caminho sem a flag continua sem tocar o conf.d do NM.
+        sem_bloco = INSTALL[:gate] + INSTALL[fim_bloco:]
+        assert NM_CONF_ETC not in _sem_comentarios(sem_bloco), (
+            "o conf.d do NM só pode ser tocado atrás da flag opt-in"
+        )
+
+    def test_help_aceita_a_flag_sem_aviso_de_desconhecido(self) -> None:
+        # Execução REAL do parser: antes do fix, `--wifi-powersave-off` caía no
+        # `*)` e imprimia "argumento desconhecido" (e nada mais acontecia).
+        result = subprocess.run(
+            [BASH, str(INSTALL_PATH), "--wifi-powersave-off", "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert "argumento desconhecido" not in result.stdout + result.stderr
+        # E o --help documenta a flag (o range do sed cobre as linhas novas).
+        assert "--wifi-powersave-off" in result.stdout
 
     def test_install_nunca_chama_nmcli_ou_rfkill(self) -> None:
         codigo = _sem_comentarios(INSTALL)

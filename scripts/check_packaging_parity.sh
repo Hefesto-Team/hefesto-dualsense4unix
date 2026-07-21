@@ -186,8 +186,22 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
         || missing+=("flatpak/*.yml")
     grep -qF "dkms_install_patched_module" scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
+    # Corretor final (interação T×W): a REMOÇÃO era gateada só para o irmão
+    # rtw88-usb — apagar o `dkms remove` do hid-nintendo de um hook de pacote
+    # passava verde (falso-verde reproduzido) e o purge deixava o módulo
+    # `hefesto-hid-nintendo` órfão registrado no DKMS para sempre. Mesmo
+    # contrato do bloco rtw88-usb abaixo: remoção desregistra em TODO formato.
+    for hook in packaging/debian/prerm packaging/debian/postrm \
+                packaging/arch/hefesto-dualsense4unix.install \
+                packaging/fedora/hefesto-dualsense4unix.spec; do
+        { grep -qF "dkms remove" "${hook}" 2>/dev/null \
+            && grep -qF "hefesto-hid-nintendo" "${hook}" 2>/dev/null; } \
+            || missing+=("${hook}(remoção)")
+    done
+    grep -qF "hefesto-hid-nintendo" uninstall.sh 2>/dev/null \
+        || missing+=("uninstall.sh")
     if [[ "${#missing[@]}" -eq 0 ]]; then
-        echo "[ OK ] dkms hid-nintendo: fontes+lib em todos os formatos e o helper roda o DKMS"
+        echo "[ OK ] dkms hid-nintendo: fontes+lib em todos os formatos, o helper roda o DKMS e a remoção desregistra"
     else
         echo "[FAIL] dkms hid-nintendo: FALTANDO em: ${missing[*]}"
         rc=1

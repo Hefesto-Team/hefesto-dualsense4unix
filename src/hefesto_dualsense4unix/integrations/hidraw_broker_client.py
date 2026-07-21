@@ -361,7 +361,7 @@ def broker_client_for(daemon: Any) -> Any:
     return client
 
 
-def _broker_executor_for(daemon: Any) -> ThreadPoolExecutor:
+def broker_executor_for(daemon: Any) -> ThreadPoolExecutor:
     """Executor DEDICADO (1 worker) das operações do broker, lazy por daemon.
 
     Achados Onda S #5/#6/#10: 1 worker de propósito — a fila FIFO preserva a
@@ -371,6 +371,13 @@ def _broker_executor_for(daemon: Any) -> ThreadPoolExecutor:
     `cancel_futures=True` antes de fechar a lease). Daemon exótico sem
     atributo gravável cai num fallback de módulo (nunca um executor novo por
     chamada — vazaria uma thread por hide).
+
+    PÚBLICO desde o corretor final (interação S x HANG-01, achado #6): o
+    `rehide_physical_hidraw` do reconnect_loop também precisa rodar AQUI —
+    despachá-lo no pool compartilhado 'hefesto-hid' (2 workers) deixava um
+    broker lento (até ~8s por nó) ocupando o pool do qual read_state/
+    _gather_game_signal_inputs/heal dependem, o mesmo padrão que o HANG-01
+    baniu ao isolar `_sync_external_leds`.
     """
     global _FALLBACK_EXECUTOR
     executor = getattr(daemon, "_hidraw_broker_executor", None)
@@ -425,7 +432,7 @@ def broker_call_nonblocking(daemon: Any, call: Callable[[], object]) -> None:
             call()
 
     try:
-        _broker_executor_for(daemon).submit(_run)
+        broker_executor_for(daemon).submit(_run)
     except Exception:
         logger.debug("hidraw_broker_call_descartada", exc_info=True)
 
@@ -463,5 +470,6 @@ __all__ = [
     "HidrawBrokerClient",
     "broker_call_nonblocking",
     "broker_client_for",
+    "broker_executor_for",
     "make_broker_opener",
 ]

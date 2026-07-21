@@ -1124,7 +1124,14 @@ class PyDualSenseController(IController):
         # reads) e ANTES do reassert de cor — a próxima escrita sysfs volta a
         # colar. Só BT (USB não tem o claim) e best-effort (falha = sintoma
         # antigo, sem regressão).
-        for _key, handle in new_handles:
+        # FEAT-NATIVE-OUTPUT-MUTE-01: em Modo Nativo (output mutado) o JOGO é
+        # dono do hidraw — não enviar o 0x08 na adoção (mesmo gate do irmão
+        # RESET-02 abaixo). Sem isso, um drop+reconnect BT com jogo em foco
+        # (handle reaberto → cai em new_handles, a key/MAC é estável) escrevia
+        # um report cru por baixo do jogo, violando o contrato de zero write.
+        with self._io_lock:
+            adopt_candidates = [] if self._output_mute else list(new_handles)
+        for _key, handle in adopt_candidates:
             with contextlib.suppress(Exception):
                 if self._detect_transport(handle) == "bt":
                     from hefesto_dualsense4unix.core.lightbar_reset import (
@@ -1145,17 +1152,24 @@ class PyDualSenseController(IController):
         # do reassert). Best-effort: falha = sintoma antigo, sem regressão.
         new_keys = {k for k, _ in new_handles}
         with self._io_lock:
-            reclaim_candidates = [
-                (
-                    key,
-                    handle,
-                    self._sysfs.get(key),
-                    self._merged_desired_for_key(key),
-                    self._detect_transport(handle),
-                )
-                for key, handle in self._handles.items()
-                if key not in new_keys
-            ]
+            # Modo Nativo (output mutado): o JOGO é dono do LED — não reenviar o
+            # 0x08 (mesmo gate do reassert, que é no-op sob mute). Sem isso, um
+            # wake em nativo escreveria no firmware por baixo do jogo.
+            reclaim_candidates = (
+                []
+                if self._output_mute
+                else [
+                    (
+                        key,
+                        handle,
+                        self._sysfs.get(key),
+                        self._merged_desired_for_key(key),
+                        self._detect_transport(handle),
+                    )
+                    for key, handle in self._handles.items()
+                    if key not in new_keys
+                ]
+            )
         for key, handle, node, desired, transport in reclaim_candidates:
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.core.lightbar_reset import (
