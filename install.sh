@@ -252,9 +252,18 @@ ask_yn() {
     if [[ "$auto" -eq 1 ]]; then
         REPLY="$default"; return
     fi
+    # INSTALL-HEADLESS-01 (auditoria 21/07): sem TTY (stdin não é terminal —
+    # CI, pipe, execução headless), NÃO travar o `set -euo pipefail` no EOF do
+    # `read`. Antes, `./install.sh` sem -y e sem TTY MORRIA no 1o prompt (passo
+    # 4, atalho/launcher) com rc=1 e pulava os passos seguintes. Sem TTY usamos
+    # o mesmo default seguro que o -y usaria (o valor recomendado); o `|| REPLY`
+    # é cinto extra caso o `read` retorne não-zero por outro motivo.
+    if [[ ! -t 0 ]]; then
+        REPLY="$default"; return
+    fi
     local indicator
     if [[ "$default" == "y" ]]; then indicator="[Y/n]"; else indicator="[y/N]"; fi
-    read -r -n 1 -p "      $prompt $indicator " REPLY
+    read -r -n 1 -p "      $prompt $indicator " REPLY || REPLY="$default"
     echo
     REPLY="${REPLY:-$default}"
 }
@@ -350,6 +359,14 @@ acquire_sudo() {
         return 0
     fi
     [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
+    # INSTALL-HEADLESS-01 (auditoria 21/07): com SUDO_ASKPASS setado (execução
+    # não-interativa — CI/headless), valida a credencial pelo helper (-A), SEM
+    # exigir TTY. Assim `./install.sh` sem flags roda os passos root num
+    # ambiente sem terminal, bastando exportar SUDO_ASKPASS=<helper>.
+    if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
+        _start_sudo_keepalive
+        return 0
+    fi
     printf '\n>>> Alguns passos precisam de sudo (udev, cura do storm, applet COSMIC).\n'
     printf '    Vou pedir sua senha UMA vez; os passos seguintes reusam a credencial.\n'
     if sudo -v; then
