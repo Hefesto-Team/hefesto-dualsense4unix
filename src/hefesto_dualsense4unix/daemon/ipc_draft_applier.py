@@ -45,8 +45,22 @@ class DraftApplier:
         # reativava o perfil salvo no próximo tick com troca de foco de
         # janela e apagava a edição recém-aplicada ("perfil eterno", U3/U4/
         # U9/U11). `apply_draft` É sempre edição manual explícita — arma
-        # incondicional, independente de quais seções vieram no payload.
-        self.store.mark_manual_trigger_active()
+        # ANTES de aplicar, POR CATEGORIA das seções presentes (F1, auditoria
+        # 21/07); payload sem seção mapeável (ex.: só `mouse`) arma as três,
+        # preservando o incondicional da cura original.
+        secoes_para_categorias = {
+            "leds": {"led"},
+            "triggers": {"trigger"},
+            "rumble": {"rumble"},
+            # Overrides por-controle podem carregar cor/gatilho/rumble.
+            "controllers": {"led", "trigger", "rumble"},
+        }
+        categorias: set[str] = set()
+        for secao, cats in secoes_para_categorias.items():
+            if params.get(secao) is not None:
+                categorias |= cats
+        for categoria in sorted(categorias or {"led", "trigger", "rumble"}):
+            self.store.mark_manual_trigger_active(categoria)
         applied: list[str] = []
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)

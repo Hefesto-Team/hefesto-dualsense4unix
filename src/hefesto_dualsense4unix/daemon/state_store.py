@@ -30,6 +30,11 @@ from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 # manualmente, ele respeitou". Não-objetivo desta sprint torná-lo configurável.
 MANUAL_PROFILE_LOCK_SEC: float = 30.0
 
+# ONDA-U F1/F2 (auditoria 21/07): categorias válidas do override manual —
+# a trava deixou de ser um booleano único para que limpar uma categoria
+# (ex.: fim do "Testar motores" → "rumble") não apague as demais.
+MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset({"trigger", "led", "rumble"})
+
 
 @dataclass(frozen=True)
 class StoreSnapshot:
@@ -56,14 +61,18 @@ class StateStore:
         self._active_profile: str | None = None
         self._last_battery_pct: int | None = None
         self._counters: dict[str, int] = {}
-        # BUG-MOUSE-TRIGGERS-01: quando o usuário aplica um efeito de gatilho
-        # manualmente (via aba Gatilhos ou IPC trigger.set), marcamos override
-        # ativo. Enquanto estiver ativo, o AutoSwitcher NÃO reaplica perfis
-        # por mudança de janela — evita que o fallback pise no trigger manual
-        # ao ligar o mouse (cursor move → foco muda → autoswitch reavalia).
-        # Flag só zera em: trigger.reset, profile.switch explícito, ou
-        # clear_manual_trigger_active() programático.
-        self._manual_trigger_active: bool = False
+        # BUG-MOUSE-TRIGGERS-01 + ONDA-U F1/F2 (auditoria 21/07): quando o
+        # usuário aplica um efeito manualmente (trigger.set, led.set,
+        # led.player_set, rumble.set/stop, apply_draft), marcamos override
+        # ativo POR CATEGORIA ("trigger" | "led" | "rumble"). Enquanto houver
+        # categoria armada, o AutoSwitcher NÃO reaplica o perfil ATIVO por
+        # mudança de janela — evita que o fallback pise na edição manual.
+        # Era um booleano único: o fim do "Testar motores" (passthrough)
+        # limpava a trava INTEIRA e apagava overrides de LED/gatilho (F1).
+        # Limpeza: trigger.reset e profile.switch explícito limpam TUDO;
+        # rumble.passthrough limpa SÓ "rumble"; jogo com perfil próprio
+        # (steam_app_*) limpa tudo ao ativar (F2, ver AutoSwitcher._activate).
+        self._manual_override_categories: set[str] = set()
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): timestamp absoluto
         # (`time.monotonic`) até quando o autoswitch deve suspender por
         # escolha manual de perfil. 0.0 → lock inativo. Setado pelo handler
@@ -120,24 +129,33 @@ class StateStore:
         with self._lock:
             self._counters.clear()
 
-    def mark_manual_trigger_active(self) -> None:
-        """Sinaliza que o usuário aplicou um trigger manualmente.
+    def mark_manual_trigger_active(self, category: str = "trigger") -> None:
+        """Arma o override manual da `category` ("trigger" | "led" | "rumble").
 
-        Usado pelo `IpcServer` quando processa `trigger.set`. Enquanto este
-        flag estiver ligado, o `AutoSwitcher` NÃO reaplica perfil por mudança
-        de janela (respeita override do usuário).
+        Usado pelo `IpcServer` nos IPCs de aplicação (trigger.set → "trigger",
+        led.set/led.player_set → "led", rumble.set/stop → "rumble") e pelo
+        `DraftApplier` (categorias das seções aplicadas). Enquanto QUALQUER
+        categoria estiver armada, o `AutoSwitcher` NÃO reaplica o perfil
+        ativo por mudança de janela (respeita override do usuário).
+        """
+        if category not in MANUAL_OVERRIDE_CATEGORIES:
+            raise ValueError(f"categoria de override desconhecida: {category!r}")
+        with self._lock:
+            self._manual_override_categories.add(category)
+
+    def clear_manual_trigger_active(self, category: str | None = None) -> None:
+        """Limpa o override manual — tudo (None) ou SÓ a `category` dada.
+
+        Tudo: `trigger.reset`, `profile.switch` explícito, hotkey de ciclo e
+        a ativação de perfil de JOGO pelo autoswitch (F2). Categoria única:
+        `rumble.passthrough` limpa só "rumble" (F1 — o fim do "Testar
+        motores" não pode apagar um LED/gatilho deliberado de outra aba).
         """
         with self._lock:
-            self._manual_trigger_active = True
-
-    def clear_manual_trigger_active(self) -> None:
-        """Limpa o override manual de trigger.
-
-        Chamado em `trigger.reset` e `profile.switch` (usuário escolheu um
-        perfil explícito, recuperando controle ao autoswitch).
-        """
-        with self._lock:
-            self._manual_trigger_active = False
+            if category is None:
+                self._manual_override_categories.clear()
+            else:
+                self._manual_override_categories.discard(category)
 
     def set_native_mode_active(
         self, active: bool, origin: str | None = None
@@ -265,8 +283,15 @@ class StateStore:
 
     @property
     def manual_trigger_active(self) -> bool:
+        """True se QUALQUER categoria de override manual está armada."""
         with self._lock:
-            return self._manual_trigger_active
+            return bool(self._manual_override_categories)
+
+    @property
+    def manual_override_categories(self) -> frozenset[str]:
+        """Snapshot das categorias armadas (telemetria/decisões finas)."""
+        with self._lock:
+            return frozenset(self._manual_override_categories)
 
     @property
     def native_mode_active(self) -> bool:
@@ -343,11 +368,12 @@ class StateStore:
                 active_profile=self._active_profile,
                 last_battery_pct=self._last_battery_pct,
                 counters=dict(self._counters),
-                manual_trigger_active=self._manual_trigger_active,
+                manual_trigger_active=bool(self._manual_override_categories),
             )
 
 
 __all__ = [
+    "MANUAL_OVERRIDE_CATEGORIES",
     "MANUAL_PROFILE_LOCK_SEC",
     "StateStore",
     "StoreSnapshot",

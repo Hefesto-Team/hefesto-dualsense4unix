@@ -60,6 +60,17 @@ _LIGHTBAR_READ_TTL_SEC = 1.0
 #: conter. `asyncio.wait_for` devolve erro ao IPC em vez de pendurar o loop.
 _IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
 
+
+class _RenumberAuthorityChangedError(Exception):
+    """F3: um jogo abriu enquanto o renumber esperava os locks — abortar.
+
+    Levantada por `_renumber_locked` (na thread do `to_thread`) quando a
+    re-checagem de autoridade pós-acquire vê `display_authority == 'game'`.
+    No caminho normal vira `{"ok": False, "reason": "sessao_de_jogo_aberta"}`;
+    na thread-zumbi de um `lock_timeout` já respondido, morre silenciosa —
+    que é exatamente o objetivo (o compact atrasado não roda).
+    """
+
 #: GUI-05 item 3: TTL (s) da leitura do marker `last_run` do wrapper no
 #: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
@@ -362,7 +373,7 @@ class IpcHandlersMixin:
         # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
         # Marca override para o autoswitch não sobrescrever (especialmente
         # ao ligar emulação de mouse, cujo movimento muda foco de janela).
-        self.store.mark_manual_trigger_active()
+        self.store.mark_manual_trigger_active("trigger")
         return {"status": "ok"}
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -416,8 +427,9 @@ class IpcHandlersMixin:
             reassert()
         # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
         # AutoSwitcher reescrevia a cor no próximo tick de troca de foco
-        # ("perfil eterno", U9).
-        self.store.mark_manual_trigger_active()
+        # ("perfil eterno", U9). Categoria "led" (F1): o fim do "Testar
+        # motores" limpa só "rumble" e esta cor sobrevive.
+        self.store.mark_manual_trigger_active("led")
         return {"status": "ok"}
 
     async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -443,8 +455,8 @@ class IpcHandlersMixin:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
-        # ONDA-U (Causa A): mesma trava de trigger.set (U9).
-        self.store.mark_manual_trigger_active()
+        # ONDA-U (Causa A): mesma trava de trigger.set (U9), categoria "led".
+        self.store.mark_manual_trigger_active("led")
         return {"status": "ok", "bits": list(bits)}
 
     # --- identidade (numeração) -------------------------------------------
@@ -529,10 +541,28 @@ class IpcHandlersMixin:
             else None
         )
 
+        # F3 (auditoria 21/07): `asyncio.to_thread` não é cancelável — no
+        # timeout o handler responde `lock_timeout`, mas a thread segue presa
+        # no acquire() e o compact RODAVA depois (minutos, se preciso) mesmo
+        # com jogo já aberto, repintando LEDs no meio da partida. A autoridade
+        # é re-checada DENTRO dos locks, pela própria thread, no instante em
+        # que ela finalmente vai compactar — o zumbi vira abort limpo.
+        daemon = self.daemon
+
+        def _authority_now() -> str:
+            return (
+                getattr(daemon, "display_authority", "unknown")
+                if daemon is not None
+                else "unknown"
+            )
+
         try:
             renumbered = await asyncio.wait_for(
                 asyncio.to_thread(
-                    self._renumber_locked, identity_registry, external_registry
+                    self._renumber_locked,
+                    identity_registry,
+                    external_registry,
+                    authority_check=_authority_now,
                 ),
                 timeout=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
             )
@@ -542,6 +572,9 @@ class IpcHandlersMixin:
                 timeout_sec=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
             )
             return {"ok": False, "reason": "lock_timeout"}
+        except _RenumberAuthorityChangedError:
+            logger.info("identity_renumber_abortado_por_jogo")
+            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
 
         if not renumbered:
             return {"ok": True, "renumbered": {}}
@@ -561,20 +594,29 @@ class IpcHandlersMixin:
 
     @staticmethod
     def _renumber_locked(
-        identity_registry: Any, external_registry: Any
+        identity_registry: Any,
+        external_registry: Any,
+        authority_check: Callable[[], str] | None = None,
     ) -> dict[str, int]:
         """Corpo BLOQUEANTE de `identity.renumber` — só via `asyncio.to_thread`.
 
         Extraído para nunca mais rodar direto no event loop (fix MEDIUM
         cross-cutting 2026-07-20, ver docstring do chamador). Devolve
         ``{}`` quando não há controle nenhum registrado (no-op seguro,
-        idêntico ao HEAD).
+        idêntico ao HEAD). `authority_check` (F3): re-checagem da autoridade
+        de exibição APÓS adquirir os locks — se um jogo abriu enquanto a
+        thread esperava (inclusive a thread-zumbi de um `lock_timeout` já
+        respondido), aborta com `_RenumberAuthorityChangedError` em vez de
+        repintar LEDs no meio da partida.
         """
         with contextlib.ExitStack() as locks:
             for reg in (identity_registry, external_registry):
                 acquire = getattr(reg, "lock_for_renumber", None)
                 if callable(acquire):
                     locks.enter_context(acquire())
+
+            if callable(authority_check) and authority_check() == "game":
+                raise _RenumberAuthorityChangedError()
 
             entries: list[tuple[int, str, Any]] = []
             if identity_registry is not None:
@@ -1552,8 +1594,8 @@ class IpcHandlersMixin:
         self.controller.set_rumble(weak=eff_weak, strong=eff_strong)
         # ONDA-U (Causa A): mesma trava de trigger.set — sem ela o
         # AutoSwitcher reescrevia o rumble no próximo tick de troca de foco
-        # (U11).
-        self.store.mark_manual_trigger_active()
+        # (U11). Categoria "rumble".
+        self.store.mark_manual_trigger_active("rumble")
         return {"status": "ok", "weak": weak, "strong": strong}
 
     async def _handle_rumble_stop(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1568,8 +1610,9 @@ class IpcHandlersMixin:
         if daemon_cfg is not None:
             daemon_cfg.rumble_active = (0, 0)
         self.controller.set_rumble(weak=0, strong=0)
-        # ONDA-U (Causa A): mesma trava de trigger.set (U11).
-        self.store.mark_manual_trigger_active()
+        # ONDA-U (Causa A): mesma trava de trigger.set (U11), categoria
+        # "rumble".
+        self.store.mark_manual_trigger_active("rumble")
         return {"status": "ok"}
 
     async def _handle_rumble_passthrough(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1604,7 +1647,11 @@ class IpcHandlersMixin:
             daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
             if daemon_cfg is not None:
                 daemon_cfg.rumble_active = None
-            self.store.clear_manual_trigger_active()
+            # F1 (auditoria 21/07): limpa SÓ a categoria "rumble" — o fim do
+            # "Testar motores" não pode apagar um LED/gatilho deliberado
+            # aplicado em outra aba (a trava era booleano único e o clear
+            # aqui desarmava tudo).
+            self.store.clear_manual_trigger_active("rumble")
         return {"status": "ok", "passthrough": enabled}
 
     async def _handle_rumble_policy_set(self, params: dict[str, Any]) -> dict[str, Any]:

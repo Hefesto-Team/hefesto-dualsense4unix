@@ -22,6 +22,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -241,16 +242,36 @@ class AutoSwitcher:
             and getattr(self.store, "native_mode_origin", None) != "profile"
         ):
             return
-        # BUG-MOUSE-TRIGGERS-01: se o usuário tem um trigger manual aplicado
-        # via aba Gatilhos, autoswitch suspende até o override ser limpo por
-        # trigger.reset ou profile.switch explícito. Sem isso, ao ligar a aba
-        # Mouse (que move o cursor e muda o foco de janela), o autoswitch
+        # BUG-MOUSE-TRIGGERS-01: se o usuário tem um override manual aplicado
+        # (gatilho/LED/rumble), autoswitch suspende até o override ser limpo
+        # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a
+        # aba Mouse (que move o cursor e muda o foco de janela), o autoswitch
         # reaplicaria o fallback e zeraria o trigger recém-aplicado.
+        # F2 (auditoria 21/07): EXCEÇÃO única — perfil de JOGO. A janela em
+        # foco casando `steam_app_*` com perfil PRÓPRIO (candidato diferente
+        # do perfil ativo) vence o override: a trava não pode silenciar a
+        # troca de perfil por jogo para sempre (um `led.set` de manhã
+        # bloqueava o perfil do jogo à noite, sem indicador). Ao ceder, as
+        # categorias são limpas — o perfil do jogo reescreve tudo mesmo.
+        # Reaplicação do perfil ATIVO (o "perfil eterno" da Causa A) e
+        # regras de janela comuns seguem suprimidas como sempre.
         if self.store is not None and self.store.manual_trigger_active:
-            self._log_suppressed_once(
-                "autoswitch_suppressed_by_manual_override", name, info
+            candidato_de_jogo = (
+                steam_appid_from_wm_class(str(info.get("wm_class") or ""))
+                is not None
             )
-            return
+            if candidato_de_jogo and name != self.store.active_profile:
+                self.store.clear_manual_trigger_active()
+                logger.info(
+                    "autoswitch_manual_override_cedeu_ao_jogo",
+                    candidate=name,
+                    wm_class=info.get("wm_class", ""),
+                )
+            else:
+                self._log_suppressed_once(
+                    "autoswitch_suppressed_by_manual_override", name, info
+                )
+                return
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): respeita lock manual armado
         # por `profile.switch` IPC. Lock dura `MANUAL_PROFILE_LOCK_SEC` (30s)
         # e expira sozinho — não exige reset.
