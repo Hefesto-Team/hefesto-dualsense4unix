@@ -21,7 +21,9 @@
 # Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §5.
 [Unit]
 Description=Hefesto — broker root que esconde o hidraw do DualSense físico do jogo (BROKER-01)
-Documentation=file:docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
+# Sem Documentation=: o formato file: exige caminho absoluto (o relativo do
+# repo gerava warning no boot) e URL do fork carrega identidade (sanitizer).
+# O desenho está referenciado no comentário do cabeçalho acima.
 # O serviço só faz sentido com o socket; se o socket cair, o serviço para junto.
 Requires=hefesto-hidraw-broker.socket
 After=hefesto-hidraw-broker.socket

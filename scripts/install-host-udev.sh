@@ -275,27 +275,35 @@ _build_install_cmd() {
     # o .service sobe na 1ª conexão do daemon, ativação por socket). Guarda
     # pós-render (lição 6): placeholder __SESSION_* sobrando ABORTA só o
     # broker (nunca as regras udev já instaladas acima).
+    # S-1 (auditoria 21/07): o render acontece num mktemp -d PRIVADO criado
+    # DENTRO do comando elevado (0700 de root) — caminho fixo em /tmp era
+    # pré-criável por outro usuário local: com fs.protected_regular o sed de
+    # root falhava em silêncio e o root instalava a unit DO ATACANTE.
     if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
         cmd+="install -Dm755 '${BROKER_BIN_SRC}/hidraw_broker.py' "
         cmd+="/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker; "
-        cmd+="sed 's/__SESSION_UID__/${BROKER_SESSION_UID}/' "
+        cmd+="_hbr=\$(mktemp -d /tmp/hefesto-broker-render.XXXXXXXX) "
+        cmd+="&& sed 's/__SESSION_UID__/${BROKER_SESSION_UID}/' "
         cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.service' "
-        cmd+="> /tmp/hefesto-hidraw-broker.service.render; "
-        cmd+="sed 's/__SESSION_GROUP__/${BROKER_SESSION_GROUP}/' "
+        cmd+="> \"\${_hbr}/hefesto-hidraw-broker.service\" "
+        cmd+="&& sed 's/__SESSION_GROUP__/${BROKER_SESSION_GROUP}/' "
         cmd+="'${BROKER_UNITS_SRC}/hefesto-hidraw-broker.socket' "
-        cmd+="> /tmp/hefesto-hidraw-broker.socket.render; "
-        cmd+="if grep -q '__SESSION_' /tmp/hefesto-hidraw-broker.service.render "
-        cmd+="/tmp/hefesto-hidraw-broker.socket.render 2>/dev/null; then "
+        cmd+="> \"\${_hbr}/hefesto-hidraw-broker.socket\" "
+        cmd+="|| { echo 'ERRO: render do broker falhou — broker NAO instalado' >&2; "
+        cmd+="[ -n \"\${_hbr:-}\" ] && rm -rf \"\${_hbr}\"; _hbr=; }; "
+        cmd+="if [ -n \"\${_hbr:-}\" ]; then "
+        cmd+="if grep -q '__SESSION_' \"\${_hbr}/hefesto-hidraw-broker.service\" "
+        cmd+="\"\${_hbr}/hefesto-hidraw-broker.socket\" 2>/dev/null; then "
         cmd+="echo 'ERRO: render do broker deixou placeholder __SESSION_* — broker NAO instalado' >&2; "
-        cmd+="rm -f /tmp/hefesto-hidraw-broker.service.render /tmp/hefesto-hidraw-broker.socket.render; "
         cmd+="else "
-        cmd+="install -Dm644 /tmp/hefesto-hidraw-broker.service.render "
+        cmd+="install -Dm644 \"\${_hbr}/hefesto-hidraw-broker.service\" "
         cmd+="/etc/systemd/system/hefesto-hidraw-broker.service; "
-        cmd+="install -Dm644 /tmp/hefesto-hidraw-broker.socket.render "
+        cmd+="install -Dm644 \"\${_hbr}/hefesto-hidraw-broker.socket\" "
         cmd+="/etc/systemd/system/hefesto-hidraw-broker.socket; "
-        cmd+="rm -f /tmp/hefesto-hidraw-broker.service.render /tmp/hefesto-hidraw-broker.socket.render; "
         cmd+="systemctl daemon-reload; "
         cmd+="systemctl enable --now hefesto-hidraw-broker.socket; "
+        cmd+="fi; "
+        cmd+="rm -rf \"\${_hbr}\"; "
         cmd+="fi; "
     fi
     # Recarrega udev e re-dispara eventos para dispositivos PS5 já presentes,

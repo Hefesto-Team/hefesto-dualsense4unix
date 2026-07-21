@@ -991,12 +991,52 @@ def _manual_listen_socket(path: str) -> socket.socket:
     return sock
 
 
+#: Unit instalada — fonte do uid para o belt quando a env não veio (S-3).
+DEFAULT_UNIT_PATH = "/etc/systemd/system/hefesto-hidraw-broker.service"
+
+
+def _parse_allowed_uid_from_unit(unit_path: str) -> int | None:
+    """Extrai o uid da linha `Environment=HEFESTO_BROKER_ALLOWED_UID=N` da unit.
+
+    Fallback do belt `--restore-all-and-exit` (S-3, auditoria 21/07): os
+    callers de uninstall/prerm/postrm chamam o binário SEM a env (só a unit a
+    tem) — sem este parse o belt saía 1 `allowed_uid_missing` engolido por
+    `|| true` e nunca restaurou nada. Regex estrito (linha inteira, só
+    dígitos); unit ausente/ilegível → None (o caller decide falhar).
+    """
+    try:
+        with open(unit_path, encoding="utf-8", errors="replace") as fh:
+            texto = fh.read()
+    except OSError:
+        return None
+    match = re.search(
+        rf"^Environment={ALLOWED_UID_ENV}=(\d+)\s*$", texto, flags=re.MULTILINE
+    )
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--restore-all-and-exit",
         action="store_true",
         help="restaura todo DualSense físico não-exposto e sai (baseline/stop)",
+    )
+    parser.add_argument(
+        "--allowed-uid",
+        type=int,
+        default=None,
+        help=(
+            "uid da sessão para o modo --restore-all-and-exit quando a env "
+            f"{ALLOWED_UID_ENV} não está presente (belt de uninstall/purge)"
+        ),
+    )
+    parser.add_argument(
+        "--unit-path",
+        default=DEFAULT_UNIT_PATH,
+        help="unit instalada de onde parsear o uid no belt (fallback final)",
     )
     parser.add_argument(
         "--socket-path",
@@ -1006,21 +1046,41 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     uid_raw = os.environ.get(ALLOWED_UID_ENV)
-    if uid_raw is None or not uid_raw.isdigit():
+    allowed_uid: int | None = None
+    if uid_raw is not None and uid_raw.isdigit():
+        allowed_uid = int(uid_raw)
+
+    if args.restore_all_and_exit:
+        # S-3 (auditoria 21/07): o belt aceita uid de 3 fontes, nesta ordem —
+        # env (ExecStartPre/ExecStopPost da unit), --allowed-uid (caller
+        # explícito) e parse da unit instalada (uninstall/prerm/postrm chamam
+        # o binário pelado; a unit renderizada é a fonte da verdade que o
+        # install gravou). Sem NENHUMA: exit 1 explícito, como antes.
+        if allowed_uid is None:
+            allowed_uid = args.allowed_uid
+        if allowed_uid is None:
+            allowed_uid = _parse_allowed_uid_from_unit(args.unit_path)
+            if allowed_uid is not None:
+                _log("allowed_uid_from_unit", unit=args.unit_path, uid=allowed_uid)
+        if allowed_uid is None:
+            _log("allowed_uid_missing", env=ALLOWED_UID_ENV)
+            return 1
+        if allowed_uid == 0:
+            _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
+            return 1
+        restored = restore_all_physical(uid=allowed_uid)
+        _log("restore_all_done", count=len(restored))
+        return 0
+
+    if allowed_uid is None:
         _log("allowed_uid_missing", env=ALLOWED_UID_ENV)
         return 1
-    allowed_uid = int(uid_raw)
     if allowed_uid == 0:
         # Lição 6: uid 0 renderizado = install rodado errado (sem sessão).
         # O broker autorizaria ROOT e nenhum daemon de usuária conectaria —
         # falha explícita em vez de serviço mudo/inútil.
         _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
         return 1
-
-    if args.restore_all_and_exit:
-        restored = restore_all_physical(uid=allowed_uid)
-        _log("restore_all_done", count=len(restored))
-        return 0
 
     # Baseline em processo também (idempotente; ExecStartPre já cobriu, mas
     # execução manual/debug fica igualmente segura).

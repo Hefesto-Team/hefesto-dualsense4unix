@@ -220,7 +220,10 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
         nodes.add(node)
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None) or {}
-    for identity, player in players.items():
+    # S-6 (auditoria 21/07): snapshot — esta função roda no executor do broker
+    # enquanto o coop.sync (event loop) pode mutar o dict; iterar a view viva
+    # é RuntimeError engolido pelo suppress do caller = rehide do ciclo perdido.
+    for identity, player in list(players.items()):
         # Achado Onda S #1: VIDA do vpad do jogador, não existência — um uhid
         # derrubado por UHID_STOP (`_started=False`) com o objeto Python vivo
         # NÃO autoriza esconder o físico dele (lição 6/#17, agora para P2+).
