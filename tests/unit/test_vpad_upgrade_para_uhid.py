@@ -47,11 +47,13 @@ def _controller(*, backend_real: bool = True) -> Any:
 
 
 class _FakeDaemon:
-    def __init__(self, device: Any, *, backend_real: bool = True) -> None:
+    def __init__(
+        self, device: Any, *, backend_real: bool = True, emulacao_desejada: bool = True
+    ) -> None:
         self._gamepad_device = device
         self.controller = _controller(backend_real=backend_real)
         self.config = type("_Cfg", (), {"gamepad_flavor": "dualsense",
-                                        "gamepad_emulation_enabled": True})()
+                                        "gamepad_emulation_enabled": emulacao_desejada})()
 
 
 @pytest.fixture()
@@ -113,11 +115,15 @@ class TestPromocao:
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
         assert sem_efeitos["stop"] == 0
 
-    def test_sem_gamepad_ligado_nao_mexe(self, sem_efeitos: dict[str, Any]) -> None:
-        daemon = _FakeDaemon(None)
+    def test_emulacao_desligada_por_escolha_nao_mexe(
+        self, sem_efeitos: dict[str, Any]
+    ) -> None:
+        """Sem device E sem desejo na config = usuária desligou; nada a reviver."""
+        daemon = _FakeDaemon(None, emulacao_desejada=False)
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
         assert sem_efeitos["stop"] == 0
+        assert sem_efeitos["start"] == []
 
     def test_vpad_que_ja_e_uhid_nao_e_recriado(
         self, sem_efeitos: dict[str, Any]
@@ -157,6 +163,51 @@ class TestPromocao:
 
         assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
         assert sem_efeitos["stop"] == 1
+
+
+class TestReviveFalhaTotal:
+    """VPAD-09: `_gamepad_device is None` com emulação desejada = o start do
+    boot falhou INTEIRO (nem uhid nem uinput — ex.: a ACL uaccess chegou depois
+    do daemon no login). A borda de conexão revive pela factory completa."""
+
+    def test_revive_quando_emulacao_desejada_e_sem_device(
+        self, sem_efeitos: dict[str, Any]
+    ) -> None:
+        daemon = _FakeDaemon(None)
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
+        # Factory completa com o flavor da config (start sem flavor explícito);
+        # não há device para parar.
+        assert sem_efeitos["start"] == [None]
+        assert sem_efeitos["stop"] == 0
+
+    def test_revive_nao_exige_uhid_disponivel(
+        self, monkeypatch: pytest.MonkeyPatch, sem_efeitos: dict[str, Any]
+    ) -> None:
+        """Sem device funcionando não há o que proteger: se só o uinput voltou
+        (uhid segue sem ACL), um vpad uinput é melhor que nenhum."""
+        monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: False)
+        daemon = _FakeDaemon(None)
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
+        assert sem_efeitos["start"] == [None]
+
+    def test_revive_respeita_o_cooldown(self, sem_efeitos: dict[str, Any]) -> None:
+        """Reconexão BT em rajada não pode virar spam de start falhando."""
+        daemon = _FakeDaemon(None)
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is True
+        daemon._gamepad_device = None  # o start seguiu falhando
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
+        assert sem_efeitos["start"] == [None]  # só a 1ª borda tentou
+
+    def test_backend_fake_nao_revive(self, sem_efeitos: dict[str, Any]) -> None:
+        """VPAD-08 vale também para o revive: o smoke não planta device real."""
+        daemon = _FakeDaemon(None, backend_real=False)
+
+        assert gp.upgrade_primary_vpad_to_uhid(daemon) is False
+        assert sem_efeitos["start"] == []
 
 
 def test_o_lifecycle_promove_quando_o_controle_conecta() -> None:
