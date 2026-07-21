@@ -488,6 +488,11 @@ class Daemon:
             # (dormente até aqui). Ao contrário dos dois acima, nasce SEMPRE
             # (ver docstring de `_wire_game_signal`).
             self._wire_game_signal()
+            # S-5: opener broker-aware da leitura de calibração 0x05 — sem ele
+            # o `read_calibration` dá EACCES no hidraw ESCONDIDO (promoção
+            # VPAD-02, respawn de coop) e o vpad herda calibração canônica
+            # (drift do gyro). Mesmo gate de backend real dos wirings acima.
+            self._wire_feature_opener()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: tentativa inicial best-effort.
             # No caminho real, se o controle estiver ausente, o backend
             # PyDualSenseController.connect() trata "No device detected" em
@@ -1963,6 +1968,27 @@ class Daemon:
             logger.info("game_signal_wired")
         except Exception as exc:
             logger.warning("game_signal_wire_failed", err=str(exc))
+
+    def _wire_feature_opener(self) -> None:
+        """S-5: injeta o opener broker-aware no backend p/ a calibração 0x05.
+
+        Gate por `hasattr` (FakeController não tem o setter → no-op, testes
+        herméticos). `make_broker_opener` tenta o broker (fd root via
+        SCM_RIGHTS, funciona com o nó ESCONDIDO) e cai no `os.open` por
+        caminho quando o broker está ausente. Best-effort: falha aqui loga e
+        o backend segue com `os.open` (comportamento histórico).
+        """
+        if not hasattr(self.controller, "set_feature_opener"):
+            return
+        try:
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                make_broker_opener,
+            )
+
+            self.controller.set_feature_opener(make_broker_opener(self))
+            logger.info("feature_opener_wired")
+        except Exception as exc:
+            logger.warning("feature_opener_wire_failed", err=str(exc))
 
     def _any_game_session_open(self) -> bool:
         """Agregado `game_open` de TODOS os vpads (P1 + co-op, NUMA-01).

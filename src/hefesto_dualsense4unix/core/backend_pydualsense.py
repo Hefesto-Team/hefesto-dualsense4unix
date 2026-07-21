@@ -87,7 +87,12 @@ _CALIBRATION_FEATURE_ID = 0x05
 _CALIBRATION_FEATURE_SIZE = 41
 
 
-def _read_feature_via_hidraw(path: str, report_id: int, size: int) -> bytes:
+def _read_feature_via_hidraw(
+    path: str,
+    report_id: int,
+    size: int,
+    opener: Callable[[str], int] | None = None,
+) -> bytes:
     """GET_REPORT de feature via HIDIOCGFEATURE num fd efêmero (GYRO-01).
 
     Espelho do `_hidiocgfeature` de `uhid_gamepad.py` (caminho VALIDADO ao
@@ -96,8 +101,13 @@ def _read_feature_via_hidraw(path: str, report_id: int, size: int) -> bytes:
     report id e o payload começa em ``data[1]`` (`hidraw_get_report` +
     `hid_hw_raw_request`). Propaga OSError (EIO do BT ocioso, permissão) para
     o chamador decidir o fallback.
+
+    S-5 (auditoria 21/07): `opener` injetável (broker-aware). Sem ele, o
+    `os.open(path)` dá EACCES quando o broker ESCONDE o hidraw (0600 root) —
+    e a calibração cai no canônico (DRIFT do gyro). O opener do broker serve
+    um fd root via SCM_RIGHTS, que funciona com o nó escondido. None = os.open.
     """
-    fd = os.open(path, os.O_RDWR)
+    fd = opener(path) if opener is not None else os.open(path, os.O_RDWR)
     try:
         buf = bytearray(size)
         buf[0] = report_id
@@ -582,6 +592,14 @@ class PyDualSenseController(IController):
         # `_merged_desired_for_key`, SOB `_io_lock` — o provider DEVE ser
         # barato e sem I/O.
         self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
+        # S-5 (auditoria 21/07): opener broker-aware da leitura da feature 0x05
+        # (calibração). Sem ele, `read_calibration` abre por `os.open(path)` e,
+        # quando o broker ESCONDE o hidraw (0600 root — promoção VPAD-02 com
+        # release_grab=False, respawn de coop), dá EACCES → calibração canônica
+        # → DRIFT do gyro (o que o GYRO-01 quis evitar). O daemon injeta
+        # `make_broker_opener` (fd root via SCM_RIGHTS, funciona com o nó
+        # escondido); None = `os.open` por caminho (comportamento histórico).
+        self._feature_opener: Callable[[str], int] | None = None
         # REPLICA-03: camada GAME do desejado — o que o JOGO escreveu no vpad
         # deste controle (lightbar/player-LED), replicado pelo daemon. É o TOPO
         # do merge de `_merged_desired_for_key` (jogo vence override, auto e
@@ -744,7 +762,10 @@ class PyDualSenseController(IController):
                 return None  # path de libusb: sem nó hidraw para o ioctl
             try:
                 data = _read_feature_via_hidraw(
-                    path, _CALIBRATION_FEATURE_ID, _CALIBRATION_FEATURE_SIZE
+                    path,
+                    _CALIBRATION_FEATURE_ID,
+                    _CALIBRATION_FEATURE_SIZE,
+                    opener=self._feature_opener,
                 )
             except OSError as exc:
                 logger.info("calibration_read_failed", key=key, err=str(exc))
@@ -835,6 +856,18 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             self._auto_output_provider = fn
+
+    def set_feature_opener(self, fn: Callable[[str], int] | None) -> None:
+        """Injeta (ou remove, com None) o opener broker-aware da feature 0x05.
+
+        S-5 — espelho de `set_auto_output_provider`: o daemon injeta
+        `make_broker_opener(daemon)` (broker primeiro, `os.open` de fallback)
+        para que `read_calibration` obtenha um fd mesmo com o hidraw ESCONDIDO
+        pelo broker (0600 root), evitando o EACCES → calibração canônica →
+        drift do gyro. Consultado dentro de `read_calibration` sob `_io_lock`.
+        """
+        with self._io_lock:
+            self._feature_opener = fn
 
     def set_game_authority_provider(
         self, fn: Callable[[], str] | None

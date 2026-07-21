@@ -55,8 +55,15 @@ def hidraw(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """Dubla `_read_feature_via_hidraw` — payload por path ou exceção."""
     estado: dict[str, Any] = {"pedidos": []}
 
-    def _fake(path: str, report_id: int, size: int) -> bytes:
+    def _fake(
+        path: str,
+        report_id: int,
+        size: int,
+        opener: Any = None,
+    ) -> bytes:
+        # S-5: registra o opener injetado (o call site passa `opener=` sempre).
         estado["pedidos"].append((path, report_id, size))
+        estado["openers"] = [*estado.get("openers", []), opener]
         payload = estado.get(path, estado.get("payload"))
         if isinstance(payload, Exception):
             raise payload
@@ -162,3 +169,33 @@ class TestIoctlHelper:
         assert chamadas["closed"] == 99  # fd efêmero sempre fecha
         # _IOC(READ|WRITE, 'H', 0x07, 41)
         assert chamadas["request"] == (3 << 30) | (41 << 16) | (ord("H") << 8) | 0x07
+
+
+class TestS5FeatureOpener:
+    """S-5 (auditoria 21/07): a calibração 0x05 vai pelo opener broker-aware
+    (fd root via SCM_RIGHTS) quando injetado — sem ele, o `os.open` do hidraw
+    ESCONDIDO (0600 root) dava EACCES → calibração canônica → drift do gyro."""
+
+    def test_opener_injetado_e_repassado(self, hidraw: dict[str, Any]) -> None:
+        hidraw["payload"] = _CALIB_USB
+        backend = _backend(_FakeHandle())
+        sentinela = object()
+        backend.set_feature_opener(sentinela)  # type: ignore[arg-type]
+        assert backend.read_calibration() == _CALIB_USB
+        # O MESMO opener injetado chegou ao _read_feature_via_hidraw.
+        assert hidraw["openers"] == [sentinela]
+
+    def test_sem_opener_passa_none(self, hidraw: dict[str, Any]) -> None:
+        # Default (backend sem fiação/broker): opener None => os.open histórico.
+        hidraw["payload"] = _CALIB_USB
+        backend = _backend(_FakeHandle())
+        assert backend.read_calibration() == _CALIB_USB
+        assert hidraw["openers"] == [None]
+
+    def test_set_feature_opener_none_reverte(self, hidraw: dict[str, Any]) -> None:
+        hidraw["payload"] = _CALIB_USB
+        backend = _backend(_FakeHandle())
+        backend.set_feature_opener(lambda _p: 7)
+        backend.set_feature_opener(None)
+        backend.read_calibration()
+        assert hidraw["openers"] == [None]
