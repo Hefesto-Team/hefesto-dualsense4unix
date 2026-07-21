@@ -571,6 +571,15 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     - recria o device, então o jogo aberto PERDE o vpad por um instante. É
       aceitável porque a janela real é a recuperação de uma degradação que já
       tirou a vibração do jogo de qualquer forma.
+
+    VPAD-09 (falha TOTAL): `_gamepad_device is None` com a emulação desejada na
+    config = o boot perdeu a corrida da ACL uaccess de /dev/uhid E /dev/uinput
+    contra o logind (visto ao vivo em 21/07: daemon de sessão sobe no login,
+    logind aplica a ACL instantes depois; sem retry o vpad só voltava com
+    restart manual). Aqui a borda de conexão REVIVE a emulação pela factory
+    completa (uhid→uinput, flavor da config) — sem precheck `uhid_available()`
+    (não há device funcionando para proteger; qualquer backend é melhor que
+    nenhum), mas sob o MESMO cooldown (reconexão BT em rajada não vira spam).
     """
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         UhidDualSense,
@@ -578,12 +587,28 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     )
 
     device = getattr(daemon, "_gamepad_device", None)
-    if device is None or isinstance(device, UhidDualSense):
-        return False
-    if getattr(device, "flavor", None) != "dualsense":
+    if isinstance(device, UhidDualSense):
         return False
     if not controller_allows_uhid(daemon):
         return False  # backend fake: nunca registrar um Edge real (VPAD-08)
+    if device is None:
+        # VPAD-09: sem device NENHUM. Se a emulação está desligada por escolha,
+        # não há o que reviver; se está ligada na config, o start do boot
+        # falhou inteiro (ex.: EACCES na race da ACL) e ninguém mais tenta.
+        if not getattr(daemon.config, "gamepad_emulation_enabled", False):
+            return False
+        now = time.monotonic()
+        if _rebackend_em_cooldown(daemon, now):
+            logger.info("rebackend_suprimido_por_cooldown", origem="revive")
+            return False
+        daemon._last_rebackend_ts = now
+        logger.info(
+            "vpad_revivendo_pos_falha_total",
+            flavor=getattr(daemon.config, "gamepad_flavor", None),
+        )
+        return start_gamepad_emulation(daemon)
+    if getattr(device, "flavor", None) != "dualsense":
+        return False
     if not uhid_available():
         return False  # uhid segue quebrado: derrubar o uinput seria só input drop
     now = time.monotonic()
