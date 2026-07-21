@@ -1178,9 +1178,29 @@ class PyDualSenseController(IController):
                 )
 
                 current = node.get_rgb() if node is not None else None
-                if should_reclaim_on_wake(
+                reclamar = should_reclaim_on_wake(
                     transport, desired.led, current, KERNEL_DEFAULT_BLUE
-                ) and send_release_leds(handle.device):
+                )
+                # L-01 (auditoria 21/07): instrumentação do gate humano de
+                # suspend/wake. A eficácia do RESET-02 depende de o kernel ter
+                # reescrito a CLASSE sysfs para o azul-default no resume — o
+                # estudo W12 sugere que ele NÃO reescreve em parte dos casos,
+                # então a assinatura pode nunca casar. Este DEBUG (silencioso
+                # em produção) mostra, por candidato, transport/current/desired
+                # e a decisão — sem ele, um wake que não acende a lightbar é
+                # indistinguível de "gatilho disparou mas falhou". Migrar o
+                # gatilho (detector de suspend / nó recriado em handle BT
+                # existente) fica para DEPOIS do gate humano, com este dado.
+                logger.debug(
+                    "lightbar_reclaim_avaliado",
+                    key=key,
+                    transport=transport,
+                    current=current,
+                    desired=desired.led,
+                    kernel_default=KERNEL_DEFAULT_BLUE,
+                    reclamar=reclamar,
+                )
+                if reclamar and send_release_leds(handle.device):
                     logger.info("lightbar_reset_reenviado_wake", key=key)
 
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
