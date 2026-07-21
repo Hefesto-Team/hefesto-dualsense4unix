@@ -895,10 +895,13 @@ static int joycon_enforce_subcmd_rate(struct joycon_ctlr *ctlr)
 		 * causes bluetooth controller disconnections, so optionally
 		 * tell the caller to skip this transmission instead of
 		 * making a degraded link worse. Opt-in: the default keeps
-		 * the historical behavior of transmitting anyway.
+		 * the exact historical behavior of returning here (the
+		 * caller transmits anyway), without updating the timestamp
+		 * and without the TX offset sleep below.
 		 */
 		if (skip_tx_on_rate_exceeded)
 			return -EAGAIN;
+		return 0;
 	}
 
 	ctlr->last_subcmd_sent_msecs = current_ms;

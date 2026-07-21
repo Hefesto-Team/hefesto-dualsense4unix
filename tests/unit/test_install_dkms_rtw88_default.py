@@ -156,11 +156,13 @@ class TestFuncaoContrato:
 
     def test_usa_a_lib_generica_com_pkg_versao_e_assets_certos(self) -> None:
         # 2ª instância da infra da Onda T: ZERO ajuste na lib, só argumentos.
+        # PKG-3 (auditoria 21/07): versão via dkms_pkg_version, não literal.
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in FN
-        versao = _versao_dkms_conf()
+        assert '_rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"' in FN
+        assert _versao_dkms_conf()
         assert re.search(
-            rf"dkms_install_patched_module hefesto-rtw88-usb {re.escape(versao)}\s*\\\s*"
-            rf'"\$\{{ROOT_DIR\}}/assets/dkms/rtw88-usb" rtw88_usb',
+            r"dkms_install_patched_module hefesto-rtw88-usb\s*\\\s*"
+            r'"\$\(dkms_pkg_version "\$\{_rtw_src\}"\)" "\$\{_rtw_src\}" rtw88_usb',
             FN,
         ), "pkg/versão/src/builtname precisam bater com assets/dkms/rtw88-usb"
 
@@ -264,9 +266,14 @@ class TestFuncaoComportamental:
 
 class TestUninstallSimetrico:
     def test_remove_via_lib_com_a_mesma_versao_do_dkms_conf(self) -> None:
-        versao = _versao_dkms_conf()
+        # PKG-3: remove parseia a versão do dkms.conf (mesma fonte do install).
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in UNINSTALL
-        assert f"dkms_remove_patched_module hefesto-rtw88-usb {versao}" in UNINSTALL
+        assert re.search(
+            r"dkms_remove_patched_module hefesto-rtw88-usb\s*\\\s*"
+            r'"\$\(dkms_pkg_version "\$\{ROOT_DIR\}/assets/dkms/rtw88-usb"\)"',
+            UNINSTALL,
+        )
+        assert _versao_dkms_conf()
 
     def test_sem_flag_nova_simetria_por_default(self) -> None:
         assert "keep-dkms" not in UNINSTALL

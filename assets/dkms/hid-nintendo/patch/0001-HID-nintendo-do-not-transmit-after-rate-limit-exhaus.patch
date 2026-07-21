@@ -127,7 +127,7 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
 
  	do {
  		joycon_wait_for_input_report(ctlr);
-@@ -847,11 +885,20 @@
+@@ -847,11 +885,23 @@
  	} while ((consecutive_valid_deltas < JC_SUBCMD_VALID_DELTA_REQ ||
  		  subcmd_delta < JC_SUBCMD_RATE_LIMITER_MS(ctlr)) &&
  		 ctlr->ctlr_state == JOYCON_CTLR_STATE_READ &&
@@ -144,14 +144,17 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
 +		 * causes bluetooth controller disconnections, so optionally
 +		 * tell the caller to skip this transmission instead of
 +		 * making a degraded link worse. Opt-in: the default keeps
-+		 * the historical behavior of transmitting anyway.
++		 * the exact historical behavior of returning here (the
++		 * caller transmits anyway), without updating the timestamp
++		 * and without the TX offset sleep below.
 +		 */
 +		if (skip_tx_on_rate_exceeded)
 +			return -EAGAIN;
++		return 0;
  	}
 
  	ctlr->last_subcmd_sent_msecs = current_ms;
-@@ -863,20 +910,31 @@
+@@ -863,20 +913,31 @@
  	 * the rate of disconnections.
  	 */
  	msleep(JC_SUBCMD_TX_OFFSET_MS);
@@ -185,7 +188,7 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
 
  		ret = __joycon_hid_send(ctlr->hdev, data, len);
  		if (ret < 0) {
-@@ -1795,7 +1853,10 @@
+@@ -1795,7 +1856,10 @@
  	if (++ctlr->subcmd_num > 0xF)
  		ctlr->subcmd_num = 0;
 
@@ -197,7 +200,7 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
 
  	ret = __joycon_hid_send(ctlr->hdev, (u8 *)&rumble_output,
  				sizeof(rumble_output));
-@@ -1815,9 +1876,13 @@
+@@ -1815,9 +1879,13 @@
  		ret = joycon_send_rumble_data(ctlr);
  		mutex_unlock(&ctlr->output_mutex);
 
@@ -213,7 +216,7 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
  		    ctlr->ctlr_state != JOYCON_CTLR_STATE_REMOVED)
  			hid_warn(ctlr->hdev, "Failed to set rumble; e=%d", ret);
 
-@@ -2420,7 +2485,8 @@
+@@ -2420,7 +2488,8 @@
  	struct joycon_input_report *report;
 
  	req.subcmd_id = JC_SUBCMD_REQ_DEV_INFO;
@@ -223,7 +226,7 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
  	if (ret) {
  		hid_err(ctlr->hdev, "Failed to get joycon info; ret=%d\n", ret);
  		return ret;
-@@ -2686,6 +2752,28 @@
+@@ -2686,6 +2755,28 @@
  	hid_device_io_start(hdev);
 
  	ret = joycon_init(hdev);
@@ -252,5 +255,3 @@ Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.nore
  	if (ret) {
  		hid_err(hdev, "Failed to initialize controller; ret=%d\n", ret);
  		goto err_close;
---
-2.43.0
