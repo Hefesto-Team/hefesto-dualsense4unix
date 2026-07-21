@@ -181,6 +181,13 @@ acquire_sudo() {
         return 0
     fi
     [[ "${_NEEDS_SUDO:-1}" -eq 1 ]] || return 0          # nenhum passo com root pedido
+    # INSTALL-HEADLESS-01 (auditoria 21/07): simétrico ao install — com
+    # SUDO_ASKPASS setado, valida pelo helper (-A) sem exigir TTY, para o
+    # uninstall headless remover de fato os passos root (broker, DKMS, udev).
+    if [[ -n "${SUDO_ASKPASS:-}" ]] && sudo -A -v 2>/dev/null; then
+        _start_sudo_keepalive
+        return 0
+    fi
     printf '[uninstall] Alguns passos precisam de sudo (udev, cura do storm, applet COSMIC).\n'
     printf '[uninstall] Vou pedir sua senha UMA vez; os passos seguintes reusam a credencial.\n'
     if sudo -v; then
