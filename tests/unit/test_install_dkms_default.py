@@ -145,12 +145,17 @@ class TestFuncaoContrato:
 
     def test_usa_a_lib_generica_com_pkg_versao_e_assets_certos(self) -> None:
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in FN
-        versao = _versao_dkms_conf()
+        # PKG-3 (auditoria 21/07): a versão NÃO é mais literal — vem do
+        # dkms.conf via `dkms_pkg_version` (fonte da verdade). Confere que a
+        # invocação usa o helper com o src certo, e que a versão parseada
+        # equivale à do dkms.conf.
         assert re.search(
-            rf"dkms_install_patched_module hefesto-hid-nintendo {re.escape(versao)}\s*\\\s*"
-            rf'"\$\{{ROOT_DIR\}}/assets/dkms/hid-nintendo" hid-nintendo',
+            r"dkms_install_patched_module hefesto-hid-nintendo\s*\\\s*"
+            r'"\$\(dkms_pkg_version "\$\{_hidn_src\}"\)" "\$\{_hidn_src\}" hid-nintendo',
             FN,
-        ), "pkg/versão/src/builtname precisam bater com assets/dkms/hid-nintendo"
+        ), "pkg/versão(dkms_pkg_version)/src/builtname precisam bater com o asset"
+        assert '_hidn_src="${ROOT_DIR}/assets/dkms/hid-nintendo"' in FN
+        assert _versao_dkms_conf()  # dkms.conf parseável (a fonte da verdade existe)
 
     def test_instala_a_conf_da_cura_em_etc_modprobe_d(self) -> None:
         assert "install -Dm644" in FN
@@ -239,9 +244,14 @@ class TestFuncaoComportamental:
 
 class TestUninstallSimetrico:
     def test_remove_via_lib_com_a_mesma_versao_do_dkms_conf(self) -> None:
-        versao = _versao_dkms_conf()
+        # PKG-3: o remove parseia a versão do dkms.conf (mesma fonte do install).
         assert 'source "${ROOT_DIR}/scripts/dkms_lib.sh"' in UNINSTALL
-        assert f"dkms_remove_patched_module hefesto-hid-nintendo {versao}" in UNINSTALL
+        assert re.search(
+            r"dkms_remove_patched_module hefesto-hid-nintendo\s*\\\s*"
+            r'"\$\(dkms_pkg_version "\$\{ROOT_DIR\}/assets/dkms/hid-nintendo"\)"',
+            UNINSTALL,
+        )
+        assert _versao_dkms_conf()
 
     def test_remove_a_conf_da_cura(self) -> None:
         assert f"sudo rm -f {CONF_ETC}" in UNINSTALL

@@ -41,6 +41,33 @@ _dkms_warn() {
     fi
 }
 
+# PKG-1 (auditoria 21/07): com Secure Boot enforcing e a chave MOK do DKMS
+# não enrolada, o kernel RECUSA o .ko de updates/dkms no boot e NÃO cai no
+# in-tree (modules.dep aponta um caminho só) — a máquina ficaria sem
+# hid-nintendo/WiFi. Best-effort, idempotente (avisa 1x por execução), NUNCA
+# aborta o install. Só fala se mokutil existe e reporta SB habilitado.
+_DKMS_SB_WARNED=0
+dkms_warn_secureboot_once() {
+    [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
+    command -v mokutil >/dev/null 2>&1 || return 0
+    if mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled'; then
+        _DKMS_SB_WARNED=1
+        _dkms_warn "Secure Boot ATIVO: o módulo DKMS só CARREGA se a chave MOK do dkms estiver enrolada (se não estiver, o kernel recusa o .ko no boot e NÃO volta ao in-tree sozinho). Se um controle Nintendo/WiFi sumir após o próximo boot, enrole a chave: sudo mokutil --import /var/lib/dkms/mok.pub (nvidia-DKMS funcionando indica que já está resolvido)."
+    fi
+    return 0
+}
+
+# PKG-3 (auditoria 21/07): a versão do pacote é o PACKAGE_VERSION do dkms.conf
+# (fonte da verdade — o install-host-udev.sh já parseava assim). Fallback ao
+# literal recebido para NUNCA quebrar o caminho (dkms.conf ilegível/ausente).
+dkms_pkg_version() {
+    local _src="$1" _fallback="${2:-1.0.0}" _ver=""
+    if [[ -f "${_src}/dkms.conf" ]]; then
+        _ver="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${_src}/dkms.conf")"
+    fi
+    printf '%s' "${_ver:-${_fallback}}"
+}
+
 # O módulo que o modprobe resolveria HOJE vem de updates/dkms (vence o in-tree)?
 dkms_module_from_updates() {
     local _path

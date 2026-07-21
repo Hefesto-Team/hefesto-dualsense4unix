@@ -1783,6 +1783,41 @@ check_hid_nintendo_bt_cascade() {
 readonly HEFESTO_DKMS_HID_NINTENDO_PKG="hefesto-hid-nintendo"
 readonly HEFESTO_DKMS_HID_NINTENDO_VER="1.0.0"
 
+# T-2/PKG-1 (auditoria 21/07): kernel contra o qual os patches T e W foram
+# escritos/testados (KERNEL_TESTED dos dois BASELINE — hoje o mesmo). Num
+# upgrade de kernel em que o .c ainda COMPILE, o DKMS de safra antiga mascara
+# para sempre o in-tree mais novo (fixes/devices novos) e o doctor daria pass.
+readonly HEFESTO_DKMS_KERNEL_TESTED="7.0.11-76070011-generic"
+
+# Guard idempotente do aviso de Secure Boot (PKG-1): as duas seções DKMS
+# chamam o helper, mas o aviso sai UMA vez por execução do doctor.
+_DKMS_SB_WARNED=0
+
+# T-2: WARN (não fail) quando o kernel atual difere do KERNEL_TESTED — o
+# módulo patchado de safra antiga pode estar mascarando um in-tree mais novo.
+_check_dkms_kernel_drift() {
+    local kver
+    kver="$(uname -r)"
+    if [[ "${kver}" != "${HEFESTO_DKMS_KERNEL_TESTED}" ]]; then
+        warn "kernel atual (${kver}) != kernel testado dos patches DKMS (${HEFESTO_DKMS_KERNEL_TESTED}) — se o build passou, o módulo do hefesto pode estar MASCARANDO um in-tree mais novo (fixes/suporte a devices); confira o rebase do BASELINE antes de confiar na cura, ou 'sudo dkms remove' para voltar ao in-tree"
+    fi
+}
+
+# PKG-1: com Secure Boot enforcing e MOK não enrolado, o load do .ko de
+# updates/dkms FALHA e NÃO há fallback automático ao in-tree (modules.dep
+# aponta um caminho só) — a máquina ficaria sem hid-nintendo E/OU WiFi no
+# boot seguinte. Só avisa se mokutil existe, SB está ON e há .ko do hefesto.
+_check_dkms_secureboot() {
+    [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return
+    command -v mokutil >/dev/null 2>&1 || return
+    mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled' || return
+    local kver; kver="$(uname -r)"
+    if compgen -G "/lib/modules/${kver}/updates/dkms/*.ko*" >/dev/null 2>&1; then
+        _DKMS_SB_WARNED=1
+        warn "Secure Boot ATIVO + módulos DKMS em updates/dkms — se a chave MOK do DKMS não estiver enrolada, o kernel RECUSA o .ko no boot e NÃO cai no in-tree (máquina sem hid-nintendo/WiFi): enrole a chave (sudo mokutil --import /var/lib/dkms/mok.pub) ou assine os módulos; nvidia-DKMS funcionando é bom sinal de que já está resolvido"
+    fi
+}
+
 # Onda T (assinatura complementar à cascata de check_hid_nintendo_bt_cascade
 # acima): "exceeded max attempts" DENSO mas SEM a cascata de timeouts que o
 # gate `_hid_nintendo_cascade_scan` exige (>=10) aponta para OUTRA coisa —
@@ -1863,9 +1898,11 @@ check_hefesto_hid_nintendo_dkms() {
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
         pass "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER} construído p/ o kernel atual (${kver})"
+        _check_dkms_kernel_drift
     else
         warn "DKMS ${HEFESTO_DKMS_HID_NINTENDO_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente, in-tree em uso; status: ${status}"
     fi
+    _check_dkms_secureboot
 
     # Próximo carregamento: NUNCA usar srcversion (armadilha do estudo — não
     # distingue in-tree de DKMS); modinfo -F filename aponta o caminho real.
@@ -1920,9 +1957,11 @@ check_hefesto_rtw88_usb_dkms() {
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
         pass "DKMS ${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER} construído p/ o kernel atual (${kver})"
+        _check_dkms_kernel_drift
     else
         warn "DKMS ${HEFESTO_DKMS_RTW88_PKG} instalado mas NÃO p/ o kernel atual (${kver}) — rebase pendente OU kernel fora do pino BUILD_EXCLUSIVE_KERNEL (7.0.y é EOL, série nova precisa de rebase do BASELINE), in-tree em uso; status: ${status}"
     fi
+    _check_dkms_secureboot
 
     # Próximo carregamento: NUNCA usar srcversion (mesma armadilha do estudo
     # da Onda T — não distingue in-tree de DKMS); modinfo -F filename aponta

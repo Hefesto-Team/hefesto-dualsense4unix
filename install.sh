@@ -517,8 +517,11 @@ install_dkms_hid_nintendo_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_install_patched_module hefesto-hid-nintendo 1.0.0 \
-        "${ROOT_DIR}/assets/dkms/hid-nintendo" hid-nintendo
+    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
+    # PKG-3: versão do dkms.conf (fonte da verdade), não literal hardcoded.
+    local _hidn_src="${ROOT_DIR}/assets/dkms/hid-nintendo"
+    dkms_install_patched_module hefesto-hid-nintendo \
+        "$(dkms_pkg_version "${_hidn_src}")" "${_hidn_src}" hid-nintendo
     if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-nintendo.conf" \
             /etc/modprobe.d/hefesto-hid-nintendo.conf 2>/dev/null; then
         printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-nintendo.conf (bt_probe_retries=3 + skip_tx_on_rate_exceeded=1)\n'
@@ -581,8 +584,11 @@ install_dkms_rtw88_usb_host() {
     fi
     # shellcheck source=scripts/dkms_lib.sh
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
-    dkms_install_patched_module hefesto-rtw88-usb 1.0.0 \
-        "${ROOT_DIR}/assets/dkms/rtw88-usb" rtw88_usb
+    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
+    # PKG-3: versão do dkms.conf (fonte da verdade), não literal hardcoded.
+    local _rtw_src="${ROOT_DIR}/assets/dkms/rtw88-usb"
+    dkms_install_patched_module hefesto-rtw88-usb \
+        "$(dkms_pkg_version "${_rtw_src}")" "${_rtw_src}" rtw88_usb
     # Mesmo achado #5 do hid-nintendo: dkms_install_patched_module é
     # fail-safe POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de
     # "staged de verdade" é o modinfo resolver p/ updates/dkms.

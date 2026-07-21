@@ -603,6 +603,26 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
     fi
 fi
 
+# PKG-2 (auditoria 21/07): se o binário `dkms` sumiu do sistema mas ficou
+# módulo/src órfão do hefesto, os blocos abaixo (gateados por `command -v
+# dkms`) passariam MUDOS — e o .ko em updates/dkms continua vencendo o
+# in-tree para sempre (na Onda W, com hang_reset=Y). Avisa explícito.
+if ! command -v dkms >/dev/null 2>&1; then
+    _orfaos=""
+    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb; do
+        compgen -G "/usr/src/${_pkg}-*" >/dev/null 2>&1 && _orfaos="${_orfaos} ${_pkg}(src)"
+    done
+    for _ko in hid-nintendo rtw88_usb; do
+        compgen -G "/lib/modules/$(uname -r)/updates/dkms/${_ko}.ko*" >/dev/null 2>&1 \
+            && _orfaos="${_orfaos} ${_ko}(.ko)"
+    done
+    if [[ -n "${_orfaos}" ]]; then
+        log "AVISO: dkms ausente, mas há artefato DKMS do hefesto órfão:${_orfaos}"
+        log "  o .ko em updates/dkms segue vencendo o in-tree — instale o dkms e re-rode ./uninstall.sh,"
+        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb}.ko* && sudo depmod -a"
+    fi
+fi
+
 # ---------------------------------------------------------------------------
 # Onda T (2026-07-20, DKMS hid-nintendo patchado — probe BT resiliente, ver
 # docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md): removido por
@@ -620,7 +640,9 @@ if command -v dkms >/dev/null 2>&1 \
         log "removendo patch DKMS do hid-nintendo (Onda T): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
-        dkms_remove_patched_module hefesto-hid-nintendo 1.0.0
+        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
+        dkms_remove_patched_module hefesto-hid-nintendo \
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-nintendo")"
     else
         log "sudo indisponível — patch DKMS do hid-nintendo NÃO removido"
         log "  sudo dkms remove hefesto-hid-nintendo/1.0.0 --all"
@@ -664,7 +686,9 @@ if command -v dkms >/dev/null 2>&1 \
         log "removendo patch DKMS do rtw88_usb (Onda W): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
-        dkms_remove_patched_module hefesto-rtw88-usb 1.0.0
+        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
+        dkms_remove_patched_module hefesto-rtw88-usb \
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/rtw88-usb")"
         if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
             printf '0' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
             log "hang_reset do rtw88_usb devolvido a 0 (sem reset agressivo até o boot; detecção/silenciamento seguem ativos)"
