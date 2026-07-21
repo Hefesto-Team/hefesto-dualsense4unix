@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import fcntl
 import json
 import os
 import re
@@ -91,6 +92,29 @@ VPAD_PHYS_PREFIX = "hefesto-vpad"
 VPAD_UNIQ_PREFIX = "02fe"
 
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
+
+# S-4 (auditoria 21/07): identidade RACE-FREE do fd servido. O check
+# rdev(fd)==sysfs(base) prova nó==base, NÃO a identidade do device — no
+# minor-reuse (o nome `base` reciclado para OUTRO device com o mesmo
+# major:minor entre validar e abrir) o broker serviria um fd O_RDWR de ROOT de
+# um hidraw ALHEIO (ex.: teclado BT = primitiva de keylogger) a um processo do
+# mesmo uid. HIDIOCGRAWINFO lê bustype/vendor/product do PRÓPRIO fd, direto do
+# kernel: à prova de corrida. _IOR('H', 0x03, struct hidraw_devinfo{__u32
+# bustype; __s16 vendor; __s16 product;}) == 0x80084803 (8 bytes).
+_HIDIOCGRAWINFO = 0x80084803
+_HIDRAW_DEVINFO_FMT = "=Ihh"  # bustype u32, vendor s16, product s16
+
+
+def _hidraw_devinfo_identity_ok(vendor: int, product: int) -> bool:
+    """True sse (vendor, product) do devinfo é o DualSense físico 054c:0ce6.
+
+    Mesma identidade que `validate_physical_node` aceita — NUNCA o vpad 0df2
+    (VPAD_PRODUCT) nem device alheio. vendor/product vêm do kernel como __s16
+    assinado; a máscara 0xFFFF normaliza a representação.
+    """
+    return (vendor & 0xFFFF, product & 0xFFFF) == (PHYS_VENDOR, PHYS_PRODUCT)
+
+
 #: Formato REAL (zero-preenchido) do valor de HID_ID no uevent do kernel:
 #: BUS:0000VVVV:0000PPPP — ex.: 0003:0000054C:00000CE6 (USB),
 #: 0005:0000054C:00000CE6 (BT, inclusive via uhid do BlueZ ≥5.73).
@@ -341,6 +365,33 @@ class FsAclOps:
         except (OSError, ValueError):
             return None
 
+    def _sysfs_hid_identity_ok(self, base: str) -> bool:
+        """True sse o pai HID de `base` é DualSense 054c:0ce6, OU o uevent é
+        ILEGÍVEL. Cinto do S-4 contra minor-reuse no hide/restore (o fd O_PATH
+        do _pin não faz HIDIOCGRAWINFO): re-lê o HID_ID do uevent; identidade
+        legível e != DualSense ⇒ False (gone, nunca chmod/ACL num device
+        alheio). Ilegível ⇒ True: esconder/apagar o uevent exige root, e um
+        atacante não-root (a ameaça do minor-reuse) nunca chega a esse estado.
+        """
+        try:
+            with open(
+                f"{self._sys_class_hidraw}/{base}/device/uevent", encoding="ascii"
+            ) as fh:
+                text = fh.read()
+        except OSError:
+            return True
+        for linha in text.splitlines():
+            key, sep, val = linha.partition("=")
+            if key == "HID_ID" and sep:
+                match = _HID_ID_VALUE_RE.match(val.strip())
+                if match is None:
+                    return False
+                return (int(match.group(2), 16), int(match.group(3), 16)) == (
+                    PHYS_VENDOR,
+                    PHYS_PRODUCT,
+                )
+        return False  # sem HID_ID = não é o DualSense validado
+
     def _pin(self, node: str, base: str) -> int | None:
         """O_PATH no nó + fstat cruzado com o sysfs. None = sumiu/reciclado (gone)."""
         try:
@@ -352,6 +403,12 @@ class FsAclOps:
             os.major(st.st_rdev),
             os.minor(st.st_rdev),
         ):
+            os.close(fd)
+            return None
+        # S-4: o rdev==sysfs prova que o inode pinado É o que o `base` aponta
+        # AGORA, mas `base` pode ter sido reciclado para outro device entre o
+        # _validate do chamador e aqui — re-checa a identidade pelo uevent.
+        if not self._sysfs_hid_identity_ok(base):
             os.close(fd)
             return None
         return fd
@@ -409,6 +466,21 @@ class FsAclOps:
             os.major(st.st_rdev),
             os.minor(st.st_rdev),
         ):
+            os.close(fd)
+            raise StaleNodeError(node)
+        # S-4: identidade do PRÓPRIO fd, não só rdev==sysfs. Um nó reciclado
+        # para outro device no mesmo minor passaria o check de rdev; o
+        # HIDIOCGRAWINFO prova que o fd É o DualSense 054c:0ce6 (à prova de
+        # corrida — lê do kernel, não do sysfs por nome). Falha do ioctl (ex.:
+        # não é hidraw) ⇒ stale, fd fechado (nenhum caminho vaza fd).
+        try:
+            buf = bytearray(struct.calcsize(_HIDRAW_DEVINFO_FMT))
+            fcntl.ioctl(fd, _HIDIOCGRAWINFO, buf, True)
+            _bus, vendor, product = struct.unpack(_HIDRAW_DEVINFO_FMT, bytes(buf))
+        except OSError:
+            os.close(fd)
+            raise StaleNodeError(node) from None
+        if not _hidraw_devinfo_identity_ok(vendor, product):
             os.close(fd)
             raise StaleNodeError(node)
         return fd
