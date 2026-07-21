@@ -1,3 +1,6 @@
 # Hefesto — acesso a /dev/uinput via systemd-logind.
 # Usado pela emulação de gamepad virtual (Xbox360/DS4) em W6.3.
-KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", TAG+="uaccess"
+# VPAD-09 (2026-07-21): GROUP="hefesto" além do uaccess — a ACL do logind só
+# chega no login (corrida com o daemon de sessão, perdida ao vivo); o GROUP=
+# vale desde a criação do nó no boot. Racional completo na 71-uhid.rules.
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="hefesto", TAG+="uaccess"
