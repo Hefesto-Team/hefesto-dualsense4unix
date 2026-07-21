@@ -127,3 +127,166 @@ class TestOndaLFiadaNoBackend:
         ).read_text(encoding="utf-8")
         assert "should_reclaim_on_wake" in fonte
         assert "lightbar_reset_reenviado_wake" in fonte
+
+    def test_reclaim_de_wake_gateado_por_modo_nativo(self) -> None:
+        # O laço de reclaim NÃO pode reenviar o 0x08 em Modo Nativo (output
+        # mutado = o jogo é dono do LED). O gate `_output_mute` precisa estar
+        # no bloco do reclaim, antes de montar os candidatos.
+        import re
+        from pathlib import Path
+
+        fonte = Path(
+            "src/hefesto_dualsense4unix/core/backend_pydualsense.py"
+        ).read_text(encoding="utf-8")
+        bloco = fonte[fonte.index("reclaim_candidates") :][:600]
+        assert re.search(r"self\._output_mute", bloco), (
+            "o reclaim de wake precisa ser no-op sob _output_mute (Modo Nativo)"
+        )
+
+
+class _FakeBtHandle:
+    """Stub de handle pydualsense BT com `device` gravador (para o 0x08)."""
+
+    class _Trigger:
+        def __init__(self) -> None:
+            self.mode: object = None
+            self.forces: list[int] = [0] * 7
+
+        def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+            self.forces[idx] = value
+
+    class _Light:
+        def __init__(self) -> None:
+            self.colors: list[tuple[int, int, int]] = []
+            self.playerNumber: object = None
+
+        def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+            self.colors.append((r, g, b))
+
+    class _Audio:
+        def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802 — API pydualsense
+            pass
+
+    def __init__(self) -> None:
+        self.connected = True
+        self.triggerL = self._Trigger()
+        self.triggerR = self._Trigger()
+        self.light = self._Light()
+        self.audio = self._Audio()
+        self.conType = type("CT", (), {"name": "BT"})()
+        self.device = _FakeDevice()
+        self.closed = False
+
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+        pass
+
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+        pass
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class TestReset01AdocaoSobModoNativo:
+    """LIGHTBAR-BT-RESET-01 x FEAT-NATIVE-OUTPUT-MUTE-01: a adoção de handle
+    BT novo NÃO pode enviar o 0x08 com o output mutado (Modo Nativo = o jogo é
+    dono do hidraw; contrato de ZERO write nosso). Falha-sem: um drop+reconnect
+    BT com jogo em foco reabre o handle (key/MAC estável → cai em new_handles)
+    e o write cru saía por baixo do jogo — mesmo gate que o irmão RESET-02
+    (wake) já tinha."""
+
+    @staticmethod
+    def _connect_um_bt_novo(*, mute: bool) -> _FakeBtHandle:
+        from unittest.mock import patch
+
+        from hefesto_dualsense4unix.core.backend_pydualsense import (
+            PyDualSenseController,
+        )
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        reader = EvdevReader(device_path=None)
+        reader._device_path = None
+        inst = PyDualSenseController(evdev_reader=reader)
+        inst._output_mute = mute
+        handle = _FakeBtHandle()
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[("AA:BB:CC:00:00:01", b"/dev/hidraw9", False)],
+        ), patch.object(PyDualSenseController, "_open_one", return_value=handle):
+            inst.connect()
+        return handle
+
+    def test_modo_nativo_nao_escreve_o_0x08_na_adocao(self) -> None:
+        handle = self._connect_um_bt_novo(mute=True)
+        assert handle.device.reports == [], (
+            "adoção sob _output_mute escreveu report cru no hidraw do jogo"
+        )
+
+    def test_sem_mute_o_0x08_continua_saindo(self) -> None:
+        # Não-regressão da cura original (adoção derrubava o claim BT): sem
+        # Modo Nativo o Reset LED state precisa continuar sendo enviado.
+        handle = self._connect_um_bt_novo(mute=False)
+        assert build_bt_release_leds_report() in handle.device.reports
+
+
+class _FakeNode:
+    """Nó sysfs LED fake: devolve a cor pedida e aceita escritas."""
+
+    def __init__(self, rgb: tuple[int, int, int]) -> None:
+        self._rgb = rgb
+
+    def get_rgb(self) -> tuple[int, int, int]:
+        return self._rgb
+
+    def set_rgb(self, r: int, g: int, b: int) -> bool:
+        return True
+
+    def set_players(self, players: object) -> bool:
+        return True
+
+
+class TestReset02WakeSobModoNativo:
+    """LIGHTBAR-BT-RESET-02 x FEAT-NATIVE-OUTPUT-MUTE-01 (comportamental): o
+    reclaim de wake (handle EXISTENTE cujo nó voltou ao default do kernel) não
+    pode escrever o 0x08 sob Modo Nativo — e precisa continuar escrevendo sem
+    ele. Cobre o gate por execução real do connect(), não só por texto-fonte."""
+
+    @staticmethod
+    def _connect_com_wake(*, mute: bool) -> _FakeBtHandle:
+        from unittest.mock import patch
+
+        from hefesto_dualsense4unix.core.backend_pydualsense import (
+            PyDualSenseController,
+        )
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        reader = EvdevReader(device_path=None)
+        reader._device_path = None
+        inst = PyDualSenseController(evdev_reader=reader)
+        handle = _FakeBtHandle()
+        key = "AA:BB:CC:00:00:01"
+        inst._handles = {key: handle}  # type: ignore[dict-item]
+        inst._primary_key = key
+        inst.set_led((255, 0, 0))  # desired ≠ default do kernel
+        handle.device.reports.clear()  # só interessa o que o connect() escrever
+        # Assinatura do wake: o kernel resetou a classe LED para o default.
+        inst._sysfs = {key: _FakeNode(_KDEF)}  # type: ignore[dict-item]
+        inst._output_mute = mute
+        with patch.object(
+            PyDualSenseController,
+            "_enumerate_device_keys",
+            return_value=[(key, b"/dev/hidraw9", False)],
+        ):
+            inst.connect()  # handle já presente → NÃO é new_handle → rota wake
+        return handle
+
+    def test_wake_em_nativo_nao_reenvia_o_0x08(self) -> None:
+        handle = self._connect_com_wake(mute=True)
+        assert handle.device.reports == [], (
+            "reclaim de wake sob _output_mute escreveu por baixo do jogo"
+        )
+
+    def test_wake_sem_mute_reenvia_o_0x08(self) -> None:
+        handle = self._connect_com_wake(mute=False)
+        assert build_bt_release_leds_report() in handle.device.reports

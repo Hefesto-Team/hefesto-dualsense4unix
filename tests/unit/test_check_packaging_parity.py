@@ -326,3 +326,144 @@ def test_broker_parity_do_repo_real_esta_verde() -> None:
     broker_section = result.stdout.split("== paridade do broker hide-hidraw", 1)
     assert len(broker_section) == 2, "seção do broker ausente na saída do script"
     assert "[FAIL]" not in broker_section[1].split("═", 1)[0].split("─", 1)[0]
+
+
+# --- Corretor final (interação T x W): remoção do DKMS hid-nintendo ------------
+#
+# O bloco da Onda W (rtw88-usb) gateia a REMOÇÃO (prerm/postrm/.install/%preun
+# /uninstall), mas o bloco irmão da Onda T (hid-nintendo) não gateava — apagar
+# o `dkms remove` do hid-nintendo de um hook de pacote passava verde
+# (falso-verde reproduzido ao vivo) e o `apt purge` deixava o módulo
+# `hefesto-hid-nintendo` órfão registrado no DKMS para sempre. Estes testes
+# pinam o contrato simétrico ao do rtw88-usb.
+
+_DKMS_REMOVE_NINTENDO = 'dkms remove "hefesto-hid-nintendo/1.0.0" --all\n'
+
+
+@pytest.fixture
+def fake_repo_dkms_nintendo(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+
+    for d in (
+        "scripts",
+        "assets/dkms/hid-nintendo",
+        "packaging/arch",
+        "packaging/debian",
+        "packaging/fedora",
+        "flatpak",
+    ):
+        (tmp_path / d).mkdir(parents=True)
+
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+
+    # Asset que ARMA a seção (a presença basta; o conteúdo real é da Onda T).
+    (tmp_path / "assets" / "dkms" / "hid-nintendo" / "dkms.conf").write_text(
+        "# dkms de teste\n", encoding="utf-8"
+    )
+    # Fontes + lib em todos os formatos.
+    fontes = "# dkms/hid-nintendo + dkms_lib.sh\n"
+    (tmp_path / "scripts" / "build_deb.sh").write_text(fontes, encoding="utf-8")
+    (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(
+        fontes, encoding="utf-8"
+    )
+    (tmp_path / "flatpak" / "fake-dkms.yml").write_text(fontes, encoding="utf-8")
+    (tmp_path / "scripts" / "install-host-udev.sh").write_text(
+        "dkms_install_patched_module hefesto-hid-nintendo\n", encoding="utf-8"
+    )
+    # Remoção desregistra em todos os hooks de pacote + uninstall nativo.
+    (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        fontes + _DKMS_REMOVE_NINTENDO, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "debian" / "prerm").write_text(
+        _DKMS_REMOVE_NINTENDO, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "debian" / "postrm").write_text(
+        _DKMS_REMOVE_NINTENDO, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "arch" / "hefesto-dualsense4unix.install").write_text(
+        _DKMS_REMOVE_NINTENDO, encoding="utf-8"
+    )
+    (tmp_path / "uninstall.sh").write_text(
+        _DKMS_REMOVE_NINTENDO, encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_dkms_nintendo_coberto_em_todos_passa(fake_repo_dkms_nintendo: Path) -> None:
+    result = run_check(fake_repo_dkms_nintendo)
+    assert result.returncode == 0, result.stdout
+    assert "[ OK ] dkms hid-nintendo" in result.stdout
+
+
+def test_dkms_nintendo_sem_remocao_no_postrm_falha(
+    fake_repo_dkms_nintendo: Path,
+) -> None:
+    """O falso-verde reproduzido: postrm sem o `dkms remove` do hid-nintendo
+    passava enquanto a mutação idêntica no rtw88-usb falhava."""
+    (fake_repo_dkms_nintendo / "packaging" / "debian" / "postrm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_dkms_nintendo)
+    assert result.returncode == 1
+    assert "[FAIL] dkms hid-nintendo" in result.stdout
+    assert "packaging/debian/postrm(remoção)" in result.stdout
+
+
+def test_dkms_nintendo_sem_remocao_no_prerm_falha(
+    fake_repo_dkms_nintendo: Path,
+) -> None:
+    (fake_repo_dkms_nintendo / "packaging" / "debian" / "prerm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_dkms_nintendo)
+    assert result.returncode == 1
+    assert "packaging/debian/prerm(remoção)" in result.stdout
+
+
+def test_dkms_nintendo_sem_remocao_no_install_arch_falha(
+    fake_repo_dkms_nintendo: Path,
+) -> None:
+    (
+        fake_repo_dkms_nintendo
+        / "packaging"
+        / "arch"
+        / "hefesto-dualsense4unix.install"
+    ).write_text("# nada\n", encoding="utf-8")
+    result = run_check(fake_repo_dkms_nintendo)
+    assert result.returncode == 1
+    assert "packaging/arch/hefesto-dualsense4unix.install(remoção)" in result.stdout
+
+
+def test_dkms_nintendo_fora_do_uninstall_falha(
+    fake_repo_dkms_nintendo: Path,
+) -> None:
+    (fake_repo_dkms_nintendo / "uninstall.sh").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_dkms_nintendo)
+    assert result.returncode == 1
+    assert "uninstall.sh" in result.stdout
+
+
+def test_dkms_nintendo_parity_do_repo_real_esta_verde() -> None:
+    """No repo REAL, a seção do hid-nintendo não pode ter [FAIL] — regressão."""
+    repo_root = Path(__file__).resolve().parents[2]
+    if not (repo_root / SCRIPT_REL_PATH).exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    result = subprocess.run(
+        ["bash", SCRIPT_REL_PATH],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    secao = result.stdout.split(
+        "== paridade da cura DKMS (assets/dkms/hid-nintendo", 1
+    )
+    assert len(secao) == 2, "seção do dkms hid-nintendo ausente na saída"
+    assert "[FAIL]" not in secao[1].split("== ", 1)[0]

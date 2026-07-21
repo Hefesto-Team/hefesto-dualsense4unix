@@ -192,8 +192,10 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     uaccess re-aplicados pelo udev) — o broker re-aplica o fs mesmo para nó
     já rastreado (lição 2: idempotência só em memória mentiria), então chamar
     isto a cada reconciliação online do `reconnect_loop` converge sozinho.
-    SEMPRE via executor (o cliente do broker faz I/O de socket com timeout de
-    2 s — nunca no event loop). Gates espelham o hide do grab: emulação
+    SEMPRE via executor DEDICADO do broker (`broker_executor_for`, corretor
+    final achado #6): o cliente faz I/O de socket com timeout de 2 s por nó —
+    nunca no event loop E nunca no pool compartilhado 'hefesto-hid' de
+    read_state (o padrão que o HANG-01 baniu). Gates espelham o hide do grab: emulação
     ligada, vpad VIVO (não só existente), fora do Modo Nativo, backend com
     `hidraw_path`. Jogador de co-op sem vpad vivo ou externo (`path:*`) NUNCA
     autoriza hide do próprio nó.

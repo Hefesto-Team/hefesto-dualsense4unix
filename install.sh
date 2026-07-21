@@ -94,6 +94,12 @@
 #                         WiFi ao vivo) — vale no próximo boot/replug do
 #                         dongle. Vale para TODO formato. Opt-out: --no-dkms
 #                         (mesma flag do hid-nintendo, acima).
+#   --wifi-powersave-off  OPT-IN (W2 — gateado por evidência): instala
+#                         assets/NetworkManager/hefesto-wifi-powersave.conf em
+#                         /etc/NetworkManager/conf.d/ (wifi.powersave=2). Use
+#                         SÓ depois que scripts/medir_w2_lps.sh provar ganho
+#                         com margem clara. NUNCA chama nmcli/rfkill — vale na
+#                         próxima (re)conexão do NM. uninstall.sh remove.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a cópia da unit do daemon.
@@ -171,6 +177,11 @@ NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 KEEP_STEAM_INPUT=0
 FORCE_XWAYLAND=0
+# W2 (corretor final, achado #5): a flag documentada no asset e no desenho da
+# Onda W nunca tinha sido implementada — o parser só avisava "argumento
+# desconhecido" e a operadora podia achar que a cura foi aplicada. Opt-in,
+# nasce desligada; só vira default quando a medição do medir_w2_lps.sh provar.
+WIFI_POWERSAVE_OFF=0
 AUTO_YES=0
 FORMAT=""
 
@@ -194,6 +205,7 @@ for arg in "$@"; do
         --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
+        --wifi-powersave-off) WIFI_POWERSAVE_OFF=1 ;;
         --force-xwayland)     FORCE_XWAYLAND=1 ;;
         --format=*)           FORMAT="${arg#*=}" ;;
         --native)             FORMAT="native" ;;
@@ -202,7 +214,7 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,122p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            sed -n '2,128p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -1035,6 +1047,32 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         else
             printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — JustWorksRepairing pulado\n'
         fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3d-bis. Powersave do WiFi desligado (Onda W2) — OPT-IN, gateado por evidência
+# ---------------------------------------------------------------------------
+# SÓ com --wifi-powersave-off: instala o conf.d do NetworkManager que põe
+# wifi.powersave=2 (disable) — a via de PROMOÇÃO documentada no próprio asset
+# para quando a medição A/B do scripts/medir_w2_lps.sh provar ganho (o LPS
+# raso do firmware rtw88 em dongle USB tem histórico de 'failed to leave lps
+# state'/beacon loss). NUNCA chamamos nmcli/rfkill aqui: só a cópia do conf —
+# vale na próxima (re)conexão gerida pelo NM. Remoção: uninstall.sh (simétrico,
+# "se instalado, some") ou sudo rm do conf. doctor.sh reporta o estado.
+if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]; then
+    step "3d-bis" "powersave do WiFi OFF (conf.d do NetworkManager — opt-in W2)"
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
+    elif ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+        warn "sudo indisponível/recusado — conf de powersave NÃO instalado; re-execute:"
+        warn "  sudo install -Dm644 assets/NetworkManager/hefesto-wifi-powersave.conf /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
+    elif sudo install -Dm644 "${ROOT_DIR}/assets/NetworkManager/hefesto-wifi-powersave.conf" \
+            /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf 2>/dev/null; then
+        printf '      conf instalado em /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf (wifi.powersave=2)\n'
+        printf '      vale na próxima (re)conexão do NM — nada foi tocado no rádio agora\n'
+    else
+        warn "não consegui gravar /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
     fi
 fi
 

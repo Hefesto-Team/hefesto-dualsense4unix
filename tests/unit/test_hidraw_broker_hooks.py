@@ -301,19 +301,28 @@ class TestRehideHotplug:
 
 
 class TestReconnectLoopRehide:
-    def test_reconciliacao_online_chama_o_rehide_no_executor(
+    def test_reconciliacao_online_chama_o_rehide_no_executor_do_broker(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """§2.2: cada tick online do `reconnect_loop` re-esconde via executor."""
+        """§2.2 + corretor final (interação S x HANG-01, achado #6): cada tick
+        online do `reconnect_loop` re-esconde no executor DEDICADO do broker
+        ('hefesto-broker', 1 worker) — NUNCA no pool compartilhado
+        'hefesto-hid' de `_run_blocking`, do qual read_state/_gather/heal
+        dependem (um broker degradado segurava até ~8s por tick 1 dos 2
+        workers do pool de input; o padrão que o HANG-01 baniu)."""
+        import threading
+
         from hefesto_dualsense4unix.daemon import connection
 
         chamadas: list[Any] = []
+        threads_do_rehide: list[str] = []
 
         def _spy_rehide(daemon: Any) -> None:
             chamadas.append(daemon)
+            threads_do_rehide.append(threading.current_thread().name)
 
         monkeypatch.setattr(gp, "rehide_physical_hidraw", _spy_rehide)
-        executadas_no_executor: list[Any] = []
+        executadas_no_pool_compartilhado: list[Any] = []
 
         parada = iter([False, True, True, True])
         stop_event = asyncio.Event()
@@ -333,7 +342,7 @@ class TestReconnectLoopRehide:
         )
 
         async def _run_blocking(fn: Any, *args: Any) -> Any:
-            executadas_no_executor.append(fn)
+            executadas_no_pool_compartilhado.append(fn)
             return fn(*args)
 
         daemon._run_blocking = _run_blocking
@@ -341,8 +350,18 @@ class TestReconnectLoopRehide:
 
         asyncio.run(connection.reconnect_loop(daemon, input_watch=watch))
         assert chamadas == [daemon]
-        # E foi via `_run_blocking` (I/O de socket nunca no event loop).
-        assert _spy_rehide in executadas_no_executor
+        # No executor dedicado do broker (thread própria 'hefesto-broker'),
+        # nunca inline no event loop nem no pool compartilhado.
+        assert threads_do_rehide and all(
+            nome.startswith("hefesto-broker") for nome in threads_do_rehide
+        ), f"rehide rodou fora do executor do broker: {threads_do_rehide}"
+        assert _spy_rehide not in executadas_no_pool_compartilhado, (
+            "rehide não pode ocupar o pool 'hefesto-hid' de read_state"
+        )
+        # O executor lazy ficou pendurado no daemon (o shutdown o desliga).
+        executor = getattr(daemon, "_hidraw_broker_executor", None)
+        assert executor is not None
+        executor.shutdown(wait=True)
 
 
 class TestCoopHooks:
