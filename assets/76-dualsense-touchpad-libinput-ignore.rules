@@ -4,4 +4,15 @@
 # brigando com a emulação analógica (cursor "engasgado"). Ignora-o como ponteiro
 # libinput — o hefesto vira a única fonte de cursor. O click do touchpad segue
 # lido pelo hefesto via evdev (bindings de tecla). Reverter: remover este arquivo.
-ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Sony Interactive Entertainment DualSense Wireless Controller Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+#
+# TOUCHPAD-76-BT-VPAD-01 (2026-07-21): o match exato por nome USB ("Sony
+# Interactive Entertainment ...") NUNCA pegava as outras encarnações do mesmo
+# touchpad — medido ao vivo (udevadm sem LIBINPUT_IGNORE_DEVICE):
+#   - BT/uhid: o input chama só "DualSense Wireless Controller Touchpad"
+#     (o BlueZ nomeia sem o prefixo do fabricante);
+#   - vpad:    "Hefesto Virtual DualSense P1 Touchpad" (P1..P4) — e o espelho
+#     de report copia o touchpad físico pro vpad, então cada toque movia o
+#     cursor EM DOBRO dentro do jogo ("modo jogo" com mousepad vivo).
+# O wildcard cobre USB, BT, Edge e os vpads numa linha só; a flag continua
+# valendo só no (re)add do device — replug/reboot é o garantido.
+ACTION=="add|change", KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="*DualSense*Touchpad", ENV{LIBINPUT_IGNORE_DEVICE}="1"
