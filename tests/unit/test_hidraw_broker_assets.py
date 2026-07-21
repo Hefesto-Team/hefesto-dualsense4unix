@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SERVICE = REPO_ROOT / "assets" / "systemd" / "hefesto-hidraw-broker.service"
 SOCKET = REPO_ROOT / "assets" / "systemd" / "hefesto-hidraw-broker.socket"
 BROKER_PY = REPO_ROOT / "src" / "hefesto_dualsense4unix" / "broker" / "hidraw_broker.py"
+HOST_UDEV = REPO_ROOT / "scripts" / "install-host-udev.sh"
 
 
 @pytest.fixture(scope="module")
@@ -183,10 +184,19 @@ class TestBrokerStandalone:
         assert "import pydualsense" not in texto
 
     def test_executa_standalone_e_recusa_sem_uid(self, tmp_path: Path) -> None:
-        # Rodado FORA do pacote (cwd neutro), sem HEFESTO_BROKER_ALLOWED_UID:
-        # falha explícita (exit 1) — install quebrado nunca vira broker mudo.
+        # Rodado FORA do pacote (cwd neutro), sem HEFESTO_BROKER_ALLOWED_UID
+        # e SEM unit instalada (--unit-path aponta para o vazio — na máquina
+        # da mantenedora a unit REAL existe e o fallback S-3 resolveria um
+        # uid de verdade): falha explícita (exit 1) — install quebrado nunca
+        # vira broker mudo.
         resultado = subprocess.run(
-            [sys.executable, str(BROKER_PY), "--restore-all-and-exit"],
+            [
+                sys.executable,
+                str(BROKER_PY),
+                "--restore-all-and-exit",
+                "--unit-path",
+                str(tmp_path / "inexistente.service"),
+            ],
             capture_output=True,
             text=True,
             cwd=str(tmp_path),
@@ -209,6 +219,59 @@ class TestBrokerStandalone:
         )
         assert resultado.returncode == 1
         assert "allowed_uid_root_recusado" in resultado.stdout
+
+    def test_belt_parseia_uid_da_unit_instalada(self, tmp_path: Path) -> None:
+        # S-3 (auditoria 21/07): uninstall/prerm/postrm chamam o belt SEM a
+        # env — o uid tem de vir da unit renderizada. Uid 0 na unit prova o
+        # parse: a recusa é `allowed_uid_root_recusado` (leu a unit) e nunca
+        # `allowed_uid_missing` (comportamento antigo, belt no-op).
+        unit = tmp_path / "hefesto-hidraw-broker.service"
+        unit.write_text(
+            "[Service]\nEnvironment=HEFESTO_BROKER_ALLOWED_UID=0\n",
+            encoding="utf-8",
+        )
+        resultado = subprocess.run(
+            [
+                sys.executable,
+                str(BROKER_PY),
+                "--restore-all-and-exit",
+                "--unit-path",
+                str(unit),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env={"PATH": "/usr/bin:/bin"},
+            timeout=30,
+        )
+        assert resultado.returncode == 1
+        assert "allowed_uid_from_unit" in resultado.stdout
+        assert "allowed_uid_root_recusado" in resultado.stdout
+
+    def test_belt_flag_allowed_uid_vence_o_parse_da_unit(
+        self, tmp_path: Path
+    ) -> None:
+        # --allowed-uid explícito tem precedência sobre a unit (que aqui nem
+        # existe); 0 é recusado como sempre (lição 6).
+        resultado = subprocess.run(
+            [
+                sys.executable,
+                str(BROKER_PY),
+                "--restore-all-and-exit",
+                "--allowed-uid",
+                "0",
+                "--unit-path",
+                str(tmp_path / "inexistente.service"),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env={"PATH": "/usr/bin:/bin"},
+            timeout=30,
+        )
+        assert resultado.returncode == 1
+        assert "allowed_uid_root_recusado" in resultado.stdout
+        assert "allowed_uid_from_unit" not in resultado.stdout
 
     def test_help_funciona(self, tmp_path: Path) -> None:
         resultado = subprocess.run(
@@ -238,3 +301,57 @@ class TestPlaceholders:
         assert sum("__SESSION_GROUP__" in v for v in valores_socket) == 1
         assert not any("__SESSION_GROUP__" in v for v in valores_service)
         assert not any("__SESSION_UID__" in v for v in valores_socket)
+
+
+class TestParseAllowedUidDaUnit:
+    """S-3 (auditoria 21/07): parse do uid na unit instalada (fallback do belt)."""
+
+    def test_uid_valido(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.broker.hidraw_broker import (
+            _parse_allowed_uid_from_unit,
+        )
+
+        unit = tmp_path / "u.service"
+        unit.write_text(
+            "[Unit]\nDescription=x\n[Service]\n"
+            "Environment=HEFESTO_BROKER_ALLOWED_UID=1000\n",
+            encoding="utf-8",
+        )
+        assert _parse_allowed_uid_from_unit(str(unit)) == 1000
+
+    def test_arquivo_inexistente(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.broker.hidraw_broker import (
+            _parse_allowed_uid_from_unit,
+        )
+
+        assert _parse_allowed_uid_from_unit(str(tmp_path / "nada.service")) is None
+
+    def test_linha_ausente_ou_malformada(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.broker.hidraw_broker import (
+            _parse_allowed_uid_from_unit,
+        )
+
+        unit = tmp_path / "u.service"
+        # Placeholder não-renderizado (install quebrado) NÃO pode virar uid.
+        unit.write_text(
+            "[Service]\nEnvironment=HEFESTO_BROKER_ALLOWED_UID=__SESSION_UID__\n",
+            encoding="utf-8",
+        )
+        assert _parse_allowed_uid_from_unit(str(unit)) is None
+        unit.write_text("[Service]\nExecStart=/bin/true\n", encoding="utf-8")
+        assert _parse_allowed_uid_from_unit(str(unit)) is None
+
+
+class TestRenderSeguroHostUdev:
+    """S-1 (auditoria 21/07): o render das units no comando elevado do
+    install-host-udev.sh acontece num mktemp -d privado — caminho FIXO em
+    /tmp era pré-criável por outro usuário local (com fs.protected_regular o
+    sed de root falhava em silêncio e o root instalava a unit do atacante)."""
+
+    def test_render_usa_mktemp_e_nao_caminho_fixo_de_tmp(self) -> None:
+        texto = HOST_UDEV.read_text(encoding="utf-8")
+        assert "mktemp -d" in texto
+        assert "> /tmp/hefesto-hidraw-broker.service.render" not in texto
+        assert "> /tmp/hefesto-hidraw-broker.socket.render" not in texto
+        # Nenhum redirect para caminho fixo /tmp/* sobrou no script inteiro.
+        assert not re.search(r">\s*/tmp/[^\"$]", texto)

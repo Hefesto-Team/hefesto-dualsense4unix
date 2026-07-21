@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
@@ -179,11 +180,64 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             )
 
 
+def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:
+    """Restaura hidraws escondidos pelo broker cujo nó AINDA EXISTE no disco.
+
+    S-2 (auditoria 21/07, viola "duplicado > zero controles"): o backend
+    pydualsense reabre por CAMINHO (hidapi não abre por fd) — se um handle
+    morreu sem re-enumeração do nó (EIO transitório, hiccup USB), o reopen
+    encontra o nó ainda 0600 do hide e leva PermissionError para TODOS os
+    controles, em backoff eterno (a lease está viva, o rehide só re-esconde e
+    ninguém restaurava). Este helper roda SÓ no caminho de recuperação: expõe
+    o físico pelo tempo de um reconnect (o rehide da reconciliação online
+    re-esconde) — duplicado transitório > zero controles, que é lei. Nó
+    escondido que NÃO existe mais (unplug real) é pulado: restaurar seria
+    no-op barulhento a cada probe de 5s. Best-effort como todo o cliente.
+    """
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+        broker_client_for,
+    )
+
+    client = broker_client_for(daemon)
+    response = client.status()
+    hidden = response.get("hidden") if isinstance(response, dict) else None
+    restored: list[str] = []
+    for node in hidden or []:
+        if not isinstance(node, str) or not os.path.exists(node):
+            continue
+        if client.restore(node):
+            restored.append(node)
+    return restored
+
+
+async def _restore_hidden_before_reopen(daemon: DaemonProtocol) -> None:
+    """Agenda o `_broker_restore_for_recovery` no executor DEDICADO do broker.
+
+    Mesma disciplina do rehide (HANG-01): I/O de socket com timeout de 2s por
+    chamada nunca roda no event loop nem no pool compartilhado 'hefesto-hid'.
+    Falha nunca derruba o caminho de reconexão (best-effort).
+    """
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_executor_for,
+        )
+
+        restored = await asyncio.get_running_loop().run_in_executor(
+            broker_executor_for(daemon), _broker_restore_for_recovery, daemon
+        )
+        if restored:
+            logger.info("hidraw_broker_restore_recovery", nodes=restored)
+
+
 async def reconnect(daemon: DaemonProtocol) -> None:
     """Desconecta e tenta reconectar com backoff."""
     with contextlib.suppress(Exception):
         await daemon._run_blocking(daemon.controller.disconnect)
     await asyncio.sleep(daemon.config.reconnect_backoff_sec)
+    # S-2: handles fechados; se algum nó físico segue escondido pelo broker,
+    # o reopen por caminho falharia com PermissionError para TODOS — restaura
+    # antes (o rehide pós-reconexão re-esconde).
+    await _restore_hidden_before_reopen(daemon)
     await connect_with_retry(daemon)
     # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rearma o settling assim que
     # reconectamos. Cobre a janela em que o poll loop chama reconnect()
@@ -242,6 +296,10 @@ async def reconnect_loop(
             # (permissão hidraw, USB transitório). Loga em DEBUG para não
             # poluir; próxima iteração tenta de novo.
             logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
+            # S-2: a classe "permissão hidraw" inclui o nó AINDA ESCONDIDO
+            # pelo broker após um handle morrer sem re-enumeração — sem o
+            # restore aqui o probe falharia para sempre (zero controles).
+            await _restore_hidden_before_reopen(daemon)
             await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
             continue
 

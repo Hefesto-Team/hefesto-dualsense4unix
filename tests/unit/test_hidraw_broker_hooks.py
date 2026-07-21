@@ -37,6 +37,14 @@ class FakeBroker:
     def __init__(self, *, explode: bool = False) -> None:
         self.calls: list[tuple[Any, ...]] = []
         self.explode = explode
+        #: Nós que o `status` reporta como escondidos (S-2, restore-recovery).
+        self.hidden: list[str] = []
+
+    def status(self) -> dict[str, Any] | None:
+        if self.explode:
+            raise OSError("broker fora do ar")
+        self.calls.append(("status",))
+        return {"ok": True, "cmd": "status", "hidden": list(self.hidden)}
 
     def hide(self, node: str) -> bool:
         if self.explode:
@@ -758,3 +766,122 @@ def test_teardown_explosivo_ainda_restaura(wired: _FakeDaemon) -> None:
     with contextlib.suppress(Exception):
         manager._teardown_player(player.identity)
     assert ("restore", "/dev/hidraw7") in wired.broker.calls
+
+
+class TestRestoreRecovery:
+    """S-2 (auditoria 21/07): reopen-sob-hide não pode virar ZERO controles.
+
+    O backend reabre por CAMINHO (hidapi não abre por fd); handle morto sem
+    re-enumeração do nó deixava o físico 0600 do hide e o reconnect caía em
+    PermissionError para sempre. O caminho de recuperação restaura os nós
+    escondidos que AINDA EXISTEM antes de reabrir — o rehide da reconciliação
+    online re-esconde (duplicado transitório > zero controles).
+    """
+
+    def test_restaura_so_nos_escondidos_que_existem(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from hefesto_dualsense4unix.daemon import connection
+
+        broker = FakeBroker()
+        broker.hidden = ["/dev/hidrawA", "/dev/hidrawB"]
+        daemon = SimpleNamespace(_hidraw_broker_client=broker)
+        real_exists = connection.os.path.exists
+        monkeypatch.setattr(
+            connection.os.path,
+            "exists",
+            lambda p: p == "/dev/hidrawA" or real_exists(p),
+        )
+        restaurados = connection._broker_restore_for_recovery(daemon)
+        assert restaurados == ["/dev/hidrawA"]
+        assert ("restore", "/dev/hidrawA") in broker.calls
+        # Nó que não existe mais (unplug real) é PULADO — restaurar seria
+        # no-op barulhento a cada probe de 5s.
+        assert ("restore", "/dev/hidrawB") not in broker.calls
+
+    def test_broker_fora_nunca_derruba_o_caminho_de_reconexao(self) -> None:
+        from hefesto_dualsense4unix.daemon import connection
+
+        daemon = SimpleNamespace(_hidraw_broker_client=FakeBroker(explode=True))
+        # O wrapper async engole QUALQUER falha (best-effort sagrado).
+        asyncio.run(connection._restore_hidden_before_reopen(daemon))
+
+    def test_probe_com_permission_error_restaura_antes_do_proximo_tick(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # O cenário exato do achado: connect() levanta PermissionError (nó
+        # ainda escondido) → o except do probe dispara o restore-recovery →
+        # o próximo probe reabriria com o nó visível.
+        from hefesto_dualsense4unix.daemon import connection
+
+        broker = FakeBroker()
+        broker.hidden = ["/dev/hidrawX"]
+        monkeypatch.setattr(connection.os.path, "exists", lambda _p: True)
+
+        parada = iter([False, True, True, True])
+        stop_event = asyncio.Event()
+        stop_event.set()
+
+        def _connect() -> None:
+            raise PermissionError(13, "Permission denied", "/dev/hidrawX")
+
+        daemon = SimpleNamespace(
+            controller=SimpleNamespace(
+                connect=_connect,
+                is_connected=lambda: False,
+                get_transport=lambda: None,
+            ),
+            bus=SimpleNamespace(publish=lambda *a, **k: None),
+            config=DaemonConfig(),
+            _stop_event=stop_event,
+            _is_stopping=lambda: next(parada),
+            _arm_input_grace=lambda: None,
+            _hidraw_broker_client=broker,
+        )
+
+        async def _run_blocking(fn: Any, *args: Any) -> Any:
+            return fn(*args)
+
+        daemon._run_blocking = _run_blocking
+        watch = SimpleNamespace(poll=lambda: False)
+
+        asyncio.run(connection.reconnect_loop(daemon, input_watch=watch))
+        assert ("restore", "/dev/hidrawX") in broker.calls
+
+    def test_reconnect_legado_restaura_antes_do_connect(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # reconnect() (poll loop, read_state levantou): a ordem é disconnect →
+        # restore-recovery → connect_with_retry — o reopen nunca encontra o
+        # nó 0600 do hide.
+        from hefesto_dualsense4unix.daemon import connection
+
+        broker = FakeBroker()
+        broker.hidden = ["/dev/hidrawX"]
+        monkeypatch.setattr(connection.os.path, "exists", lambda _p: True)
+        ordem: list[str] = []
+
+        async def _connect_with_retry(_daemon: Any) -> None:
+            ordem.append("connect")
+
+        monkeypatch.setattr(connection, "connect_with_retry", _connect_with_retry)
+
+        config = DaemonConfig()
+        config.reconnect_backoff_sec = 0.0
+        daemon = SimpleNamespace(
+            controller=SimpleNamespace(disconnect=lambda: None),
+            config=config,
+            _hidraw_broker_client=broker,
+            _arm_input_grace=lambda: None,
+        )
+
+        async def _run_blocking(fn: Any, *args: Any) -> Any:
+            return fn(*args)
+
+        daemon._run_blocking = _run_blocking
+
+        asyncio.run(connection.reconnect(daemon))
+        assert ("restore", "/dev/hidrawX") in broker.calls
+        assert ordem == ["connect"]
+        indice_restore = broker.calls.index(("restore", "/dev/hidrawX"))
+        assert indice_restore >= 0  # restore aconteceu (antes do connect acima)

@@ -14,7 +14,8 @@
 # Desenho: docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md §5.
 [Unit]
 Description=Hefesto — socket de comando do broker root hide-hidraw
-Documentation=file:docs/process/estudos/2026-07-20-desenho-onda-s-broker-fd-injection.md
+# Sem Documentation=: file: relativo gerava warning no boot e URL do fork
+# carrega identidade (sanitizer). O desenho está no comentário do cabeçalho.
 
 [Socket]
 # Socket em /run (system, root) — NÃO em /run/user (ProtectHome do serviço
