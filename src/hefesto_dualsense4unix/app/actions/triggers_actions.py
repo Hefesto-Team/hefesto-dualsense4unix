@@ -494,33 +494,41 @@ class TriggersActionsMixin(WidgetAccessMixin):
         # perda silenciosa de TODAS as intensidades ao salvar/aplicar perfil.
         self._persist_params_to_draft(side)
 
+        # PERFIL-05: com um controle selecionado, o MAC viaja no pedido.
+        # getattr defensivo: hosts de teste parciais montam o mixin sem o
+        # seletor (sem `_edit_uniq`) — segue global, como antes.
+        uniq = getattr(self, "_edit_uniq", lambda: None)()
         if isinstance(args, dict):
             # Custom e MultiPosition_* usam dict; IPC espera posicional
             # no formato aceito por build_from_name nomeado.
-            ok, motivo = self._send_trigger_named(side, preset_id, args)
+            ok, motivo = self._send_trigger_named(side, preset_id, args, uniq=uniq)
         else:
-            ok, motivo = trigger_set_checked(side, preset_id, args)
+            ok, motivo = trigger_set_checked(side, preset_id, args, uniq=uniq)
 
         self._toast_trigger(side, preset_id, ok, motivo=motivo, spec=spec)
 
     def _send_trigger_named(
-        self, side: str, preset_id: str, kwargs: dict[str, object]
+        self,
+        side: str,
+        preset_id: str,
+        kwargs: dict[str, object],
+        uniq: str | None = None,
     ) -> tuple[bool, str | None]:
         """Formato alternativo pra presets com kwargs (custom, multi_pos)."""
         if preset_id == "Custom":
             mode_val = int(kwargs.get("mode", 0) or 0)  # type: ignore[call-overload]
             forces_obj = kwargs.get("forces", ())
             forces = list(forces_obj) if isinstance(forces_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, [mode_val, *forces])
+            return trigger_set_checked(side, preset_id, [mode_val, *forces], uniq=uniq)
         if preset_id == "MultiPositionFeedback":
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, strengths)
+            return trigger_set_checked(side, preset_id, strengths, uniq=uniq)
         if preset_id == "MultiPositionVibration":
             freq = int(kwargs.get("frequency", 0) or 0)  # type: ignore[call-overload]
             strengths_obj = kwargs.get("strengths", [])
             strengths = list(strengths_obj) if isinstance(strengths_obj, (list, tuple)) else []
-            return trigger_set_checked(side, preset_id, [freq, *strengths])
+            return trigger_set_checked(side, preset_id, [freq, *strengths], uniq=uniq)
         return False, f"preset sem formato nomeado conhecido: {preset_id}"
 
     def _reset_trigger(self, side: str) -> None:

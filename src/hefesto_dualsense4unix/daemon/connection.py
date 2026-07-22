@@ -111,6 +111,38 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     if getattr(daemon, "_native_mode", False):
         logger.info("last_profile_restore_skipped_native_mode", name=name)
         return
+
+    def _escopado_a_janela(nome: str) -> bool:
+        """True quando o perfil só faz sentido com a janela/processo dele vivo.
+
+        RESTORE-ESCOPO-01 (22/07): o restore de boot reativava QUALQUER nome
+        persistido — um perfil de jogo/regex (caso medido: "FPS", marker de
+        19/07) voltava a cada boot/reconexão, pintava a lightbar e suprimia a
+        paleta automática sem NENHUMA janela correspondente aberta (e, com a
+        detecção de janela morta, ficava preso para sempre — o autoswitch não
+        tem caminho de reversão, por design UX-01). Perfil com match por
+        janela/título/processo pertence ao AUTOSWITCH, que o ativa quando a
+        janela existir; o restore de boot fica só com os perfis "sempre"
+        (MatchAny). Falha de leitura = não-escopado (comportamento antigo).
+        """
+        try:
+            from hefesto_dualsense4unix.profiles.loader import load_profile
+            from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+            match = load_profile(nome).match
+        except Exception:
+            return False
+        if isinstance(match, MatchCriteria):
+            return bool(
+                match.window_class
+                or match.window_title_regex
+                or match.process_name
+            )
+        return False
+
+    if _escopado_a_janela(name):
+        logger.info("last_profile_restore_pulado_perfil_de_janela", name=name)
+        return
     # FEAT-POINT-AND-CLICK-01 (fix A-06/A8): provider lazy + appliers — o
     # restore pode rodar antes/depois do keyboard subir e após reconexão
     # (device recriado); resolver na ativação cobre todos os casos.
@@ -165,6 +197,13 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         # sem perfil nenhum.
         fallback = load_last_profile()
         if not fallback or fallback == name:
+            return
+        # RESTORE-ESCOPO-01: mesma regra do nome principal — perfil de
+        # janela não volta no boot pelo caminho de fallback.
+        if _escopado_a_janela(fallback):
+            logger.info(
+                "last_profile_restore_pulado_perfil_de_janela", name=fallback
+            )
             return
         logger.info(
             "last_profile_seed_marker_invalido", marker=name, fallback=fallback

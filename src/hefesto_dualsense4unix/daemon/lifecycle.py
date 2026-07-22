@@ -130,9 +130,14 @@ class DaemonConfig:
     # Mutuamente exclusivo com mouse_emulation: ligar o gamepad desliga o mouse
     # (jogar = controle vai pro jogo, não pro cursor). flavor: dualsense|xbox.
     gamepad_emulation_enabled: bool = False
-    # SPRINT-GAME-RUMBLE-01: default xbox (a máscara que faz a vibração in-game
-    # funcionar e evita o controle duplicado — ver uinput_gamepad.DEFAULT_FLAVOR).
-    gamepad_flavor: str = "xbox"
+    # HARMONIA-MASK-01 (22/07, decisão da mantenedora): default dualsense — o
+    # vpad é DualSense Edge por arquitetura (UHID-04) e a máscara dualsense
+    # foi validada em jogo real (Sackboy/Mad King/Pragmata). Este default só
+    # governa instalação nova/flag ausente: `gamepad_emulation.flag` persiste
+    # a escolha da usuária e vence sempre (load_gamepad_emulation, abaixo).
+    # (Histórico: era "xbox" desde SPRINT-GAME-RUMBLE-01, de antes da máscara
+    # dualsense vibrar — superado pela validação da Onda Harmonia.)
+    gamepad_flavor: str = "dualsense"
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
     # player" (broadcast). OFF por default (preserva o uso de reserva/troca de

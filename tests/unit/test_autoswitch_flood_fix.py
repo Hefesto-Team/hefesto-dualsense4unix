@@ -126,3 +126,71 @@ def test_ensure_display_env_noop_quando_ja_presente(
     monkeypatch.setattr("subprocess.run", called)
     autoswitch._ensure_display_env()
     called.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# AUTOSWITCH-HEAL-01 (22/07) — o backend Null se recupera quando o env aparece
+# ---------------------------------------------------------------------------
+
+
+def test_maybe_recover_troca_backend_quando_env_aparece(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Daemon nasceu sem DISPLAY (race de login) -> NullBackend. Quando o env
+    gráfico aparece, `maybe_recover()` re-detecta e troca o backend em-place —
+    antes o backend era fixado UMA vez e o autoswitch ficava morto a sessão
+    inteira (medido 22/07: `window_detect_diag_seeded backend=null` com o env
+    presente no systemd --user minutos depois)."""
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    reader = window_detect.build_window_reader()
+    assert reader.backend_name == "null"
+    # Env segue ausente: nada a recuperar.
+    assert reader.maybe_recover() is False
+    assert reader.backend_name == "null"
+
+    monkeypatch.setenv("DISPLAY", ":9")
+    assert reader.maybe_recover() is True
+    assert reader.backend_name == "xlib"
+
+
+def test_maybe_recover_nao_toca_backend_saudavel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DISPLAY", ":9")
+    reader = window_detect.build_window_reader()
+    assert reader.backend_name == "xlib"
+    assert reader.maybe_recover() is False
+    assert reader.backend_name == "xlib"
+
+
+def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Integração do heal no reader instrumentado: a PRÓPRIA leitura do poll
+    re-tenta a detecção (rate-limitada) e re-semeia o diagnóstico do store
+    quando o backend sai do Null — sem restart do daemon."""
+    from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
+        _build_diag_window_reader,
+    )
+
+    class _FakeStore:
+        def __init__(self) -> None:
+            self.seeds: list[tuple[Any, bool]] = []
+            self.reads: list[tuple[Any, Any]] = []
+
+        def set_window_detect_backend(self, name: Any, healthy: bool) -> None:
+            self.seeds.append((name, healthy))
+
+        def record_window_detect_read(self, name: Any, wm_class: Any) -> None:
+            self.reads.append((name, wm_class))
+
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    store = _FakeStore()
+    read = _build_diag_window_reader(store)  # type: ignore[arg-type]
+    assert store.seeds == [("null", False)]
+
+    # Env aparece (compositor exportou) — a leitura seguinte recupera.
+    monkeypatch.setenv("DISPLAY", ":9")
+    read()
+    assert ("xlib", True) in store.seeds
+    assert store.reads[-1][0] == "xlib"

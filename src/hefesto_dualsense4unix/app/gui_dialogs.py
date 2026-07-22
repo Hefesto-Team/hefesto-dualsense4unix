@@ -338,9 +338,8 @@ def show_external_controller(
     intro = Gtk.Label()
     intro.set_markup(
         _(
-            "<b>Este controle funciona</b> — pelo Linux e pela Steam. O Hefesto "
-            "só o mostra aqui; não mexe nele (nada de cor, gatilho ou co-op "
-            "virtual: isso é exclusivo do DualSense)."
+            "<b>Este controle funciona</b> — gerenciado pelo Linux e pela "
+            "Steam; o Hefesto não mexe nele."
         )
     )
     intro.set_line_wrap(True)

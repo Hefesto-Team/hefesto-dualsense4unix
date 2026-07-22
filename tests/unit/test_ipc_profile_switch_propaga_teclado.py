@@ -27,6 +27,7 @@ from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
+    MatchAny,
     MatchCriteria,
     Profile,
     TriggerConfig,
@@ -192,9 +193,15 @@ async def test_boot_restore_nao_aplica_secao_mouse(
     usuária a CADA boot. A supressão AINDA é restaurada (applier presente)."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
+    # RESTORE-ESCOPO-01 (22/07): o default do helper é MatchCriteria por
+    # janela — e perfil de janela agora NÃO volta no restore de boot. O
+    # assunto DESTE teste é a seção mouse, então o perfil vira MatchAny
+    # (perfil "sempre", que o restore continua reativando).
     save_profile(
         _mk_profile(
-            "mouseprof", mouse={"enabled": True, "speed": 8, "scroll_speed": 2}
+            "mouseprof",
+            match=MatchAny(),
+            mouse={"enabled": True, "speed": 8, "scroll_speed": 2},
         )
     )
     daemon = _FakeDaemon()

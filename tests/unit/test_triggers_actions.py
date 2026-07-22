@@ -290,7 +290,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
     calls: list[tuple[str, str, list[int]]] = []
 
     def fake_trigger_set(
-        side: str, mode: str, params: list[int]
+        side: str, mode: str, params: list[int], uniq: str | None = None
     ) -> tuple[bool, str | None]:
         calls.append((side, mode, list(params)))
         return True, None

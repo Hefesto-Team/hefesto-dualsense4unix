@@ -21,7 +21,12 @@ from gi.repository import GObject, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
-from hefesto_dualsense4unix.app.ipc_bridge import call_async, run_in_thread
+from hefesto_dualsense4unix.app.ipc_bridge import (
+    active_profile_name,
+    call_async,
+    profile_switch,
+    run_in_thread,
+)
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
@@ -613,7 +618,23 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return
         self._duplicate_source = None  # duplicação concluída
         self._reload_profiles_store(select_name=profile.name)
-        self._toast_profile(f"Perfil salvo: {profile.name}")
+        # PERFIL-SAVE-APPLY-01 (22/07): o daemon NÃO relê JSON de perfil por
+        # conta própria (sem watch de arquivo) — salvar o perfil que está
+        # ATIVO agora reaplica na hora via `profile.switch` (relê o disco).
+        # Sem isso, "Salvar" só gravava o arquivo e nada mudava no controle,
+        # lido pela usuária como "não está salvando". Best-effort: daemon
+        # offline segue o fluxo antigo (o boot reaplica).
+        reaplicado = False
+        try:
+            if active_profile_name() == profile.name:
+                reaplicado = profile_switch(profile.name)
+        except Exception:
+            reaplicado = False
+        self._toast_profile(
+            f"Perfil salvo e reaplicado no controle: {profile.name}"
+            if reaplicado
+            else f"Perfil salvo: {profile.name}"
+        )
         # DEDUP-04: perfil novo/editado pode ter steam_app_<id> no match — o
         # daemon rematerializa a antecipação por appid do launch_env AGORA
         # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).

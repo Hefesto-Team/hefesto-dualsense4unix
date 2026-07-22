@@ -165,14 +165,88 @@ reopen_steam() {
 
 # Edita um único .vdf inplace, com backup. Idempotente.
 # Trocas:
-#   "SteamController_PSSupport"\t\t"2"    -> "0"
-#   "SteamController_SwitchSupport"\t\t"2"-> "0"
-#   "UseSteamControllerConfig"\t\t"2"     -> "0"
+#   "SteamController_PSSupport"\t\t"2"    -> "0"   (global, sempre)
+#   "SteamController_SwitchSupport"\t\t"2"-> "0"   (global, sempre)
+#   "UseSteamControllerConfig"\t\t"2"     -> "0"   (EXCETO apps da allowlist)
 # (Steam usa tabs literais entre key e value no VDF; preservamos exatamente.)
+#
+# STEAM-INPUT-ALLOWLIST-01 (22/07): há jogos cuja via OFICIAL de DualSense é
+# o Steam Input per-app — ex.: Mullet Mad Jack (AppID 2111190) chama
+# SetDualSenseTriggerEffect da API Steamworks, que SÓ funciona com o Steam
+# Input do jogo ligado (o badge "DualSense Controller" da página é essa via).
+# O guard antigo revertia o opt-in per-app silenciosamente e matava o caminho.
+# Agora o `UseSteamControllerConfig` dentro de `apps/<appid>` é PRESERVADO
+# quando o appid está na allowlist (uma linha por appid; '#' comenta):
+ALLOWLIST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_input_apps.txt"
+
+# stdin -> stdout: aplica as trocas respeitando a allowlist por-app (pilha de
+# blocos do VDF: uma linha `"nome"` seguida de `{` abre um bloco; o appid do
+# bloco corrente decide se o UseSteamControllerConfig dele fica em paz).
+_transform_vdf() {
+    awk -v allowfile="${ALLOWLIST_FILE}" '
+    BEGIN {
+        if (allowfile != "") {
+            while ((getline linha < allowfile) > 0) {
+                sub(/#.*$/, "", linha)
+                gsub(/[[:space:]]/, "", linha)
+                if (linha != "") allow[linha] = 1
+            }
+            close(allowfile)
+        }
+        depth = 0
+        pending = ""
+    }
+    {
+        line = $0
+        if (line ~ /^[[:space:]]*"[^"]*"[[:space:]]*$/) {
+            nome = line
+            gsub(/^[[:space:]]*"/, "", nome)
+            gsub(/"[[:space:]]*$/, "", nome)
+            pending = nome
+            print line
+            next
+        }
+        if (line ~ /^[[:space:]]*\{[[:space:]]*$/) {
+            depth++
+            stack[depth] = pending
+            pending = ""
+            print line
+            next
+        }
+        if (line ~ /^[[:space:]]*\}[[:space:]]*$/) {
+            if (depth > 0) { delete stack[depth]; depth-- }
+            print line
+            next
+        }
+        gsub(/"SteamController_PSSupport"\t\t"[12]"/, "\"SteamController_PSSupport\"\t\t\"0\"", line)
+        gsub(/"SteamController_SwitchSupport"\t\t"[12]"/, "\"SteamController_SwitchSupport\"\t\t\"0\"", line)
+        if (line ~ /"UseSteamControllerConfig"\t\t"[12]"/) {
+            if (!(depth > 0 && (stack[depth] in allow))) {
+                gsub(/"UseSteamControllerConfig"\t\t"[12]"/, "\"UseSteamControllerConfig\"\t\t\"0\"", line)
+            }
+        }
+        print line
+    }'
+}
+
 apply_vdf() {
     local vdf="$1"
     if ! needs_fix "$vdf"; then
         log "ok (nada a fazer): $vdf"
+        return 0
+    fi
+    local tmp="${vdf}.hefesto-tmp"
+    if ! _transform_vdf < "$vdf" > "$tmp"; then
+        log "ERRO: transformação falhou em $vdf"
+        rm -f -- "$tmp"
+        return 1
+    fi
+    # Idempotência real: com um appid da allowlist ligado, o needs_fix acusa
+    # "[12]" para sempre — o cmp decide se há edição DE VERDADE (sem ele o
+    # guard geraria backup novo + rewrite a cada rodada).
+    if cmp -s -- "$vdf" "$tmp"; then
+        log "ok (restante é allowlist per-app, preservada): $vdf"
+        rm -f -- "$tmp"
         return 0
     fi
     local ts bak
@@ -180,21 +254,17 @@ apply_vdf() {
     bak="${vdf}.bak.steam-input-${ts}"
     if ! cp -a -- "$vdf" "$bak"; then
         log "ERRO: cp falhou ao criar backup: $bak"
+        rm -f -- "$tmp"
         return 1
     fi
-    # sed com $'\t' garante tab literal (não a string literal "\t").
-    # -i.tmp evita perda em filesystem sem inplace nativo; removemos o .tmp depois.
-    local tab=$'\t'
-    if ! sed -i.tmp \
-            -e "s/\"SteamController_PSSupport\"${tab}${tab}\"[12]\"/\"SteamController_PSSupport\"${tab}${tab}\"0\"/g" \
-            -e "s/\"SteamController_SwitchSupport\"${tab}${tab}\"[12]\"/\"SteamController_SwitchSupport\"${tab}${tab}\"0\"/g" \
-            -e "s/\"UseSteamControllerConfig\"${tab}${tab}\"[12]\"/\"UseSteamControllerConfig\"${tab}${tab}\"0\"/g" \
-            -- "$vdf"; then
-        log "ERRO: sed falhou em $vdf — restaurando do backup"
+    # `cat > vdf` (e não mv) preserva dono/permissões/inode do original.
+    if ! cat -- "$tmp" > "$vdf"; then
+        log "ERRO: escrita falhou em $vdf — restaurando do backup"
         cp -a -- "$bak" "$vdf" || true
+        rm -f -- "$tmp"
         return 1
     fi
-    rm -f -- "${vdf}.tmp"
+    rm -f -- "$tmp"
     log "editado (backup em $bak): $vdf"
 }
 

@@ -303,6 +303,63 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
 
 
 @pytest.mark.asyncio
+async def test_boot_nao_restaura_perfil_escopado_a_janela(
+    isolated_config: Path, isolated_profiles: Path
+) -> None:
+    """RESTORE-ESCOPO-01 (22/07): perfil com match por janela/título/processo
+    NÃO volta no restore de boot — ele pertence ao autoswitch, que o ativa
+    quando a janela existir. Caso medido: marker "FPS" (regex de títulos,
+    gravado dias antes) reativado a cada boot/reconexão, pintando a lightbar
+    e suprimindo a paleta automática sem NENHUMA janela correspondente
+    aberta (e, com a detecção de janela morta, preso para sempre — o
+    AutoSwitcher não tem caminho de reversão, por design UX-01)."""
+    from hefesto_dualsense4unix.daemon.connection import restore_last_profile
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+    from hefesto_dualsense4unix.testing import FakeController
+
+    save_profile(
+        Profile(
+            name="FPS",
+            match=MatchCriteria(window_title_regex=".*(Doom|Control).*"),
+            priority=60,
+        )
+    )
+    save_active_marker("FPS")
+
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    daemon = _BootDaemon(controller=fc, store=store)
+    await restore_last_profile(daemon)  # type: ignore[arg-type]
+    # O restore PULOU o perfil de janela — nada ativado no boot.
+    assert store.active_profile is None
+
+
+@pytest.mark.asyncio
+async def test_boot_restaura_perfil_match_any_normalmente(
+    isolated_config: Path, isolated_profiles: Path
+) -> None:
+    """Par do RESTORE-ESCOPO-01: perfil "sempre" (MatchAny) segue voltando."""
+    from hefesto_dualsense4unix.daemon.connection import restore_last_profile
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.testing import FakeController
+
+    save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=0))
+    save_active_marker("meu_perfil")
+
+    fc = FakeController()
+    fc.connect()
+    store = StateStore()
+    daemon = _BootDaemon(controller=fc, store=store)
+    await restore_last_profile(daemon)  # type: ignore[arg-type]
+    assert store.active_profile == "meu_perfil"
+
+
+@pytest.mark.asyncio
 async def test_aceite_boot_seed_pos_update_ativa_a_intencao_manual(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:

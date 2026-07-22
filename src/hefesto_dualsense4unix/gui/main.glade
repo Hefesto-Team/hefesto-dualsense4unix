@@ -779,17 +779,25 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">5 indicadores inferiores do controle.</property>
+                            <property name="label" translatable="yes">Escolha o jogador — o desenho dos 5 LEDs é o padrão oficial do PS5.</property>
                             <property name="xalign">0</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
 
                         <child>
+                          <!-- LEDS-SO-PLAYER-01 (22/07, pedido da mantenedora): a seleção
+                               LED a LED confundia — "player 1 acende o LED 3" parecia bug,
+                               mas é o padrão oficial do PS5. Os checkboxes ficam OCULTOS
+                               (no-show-all) e seguem sendo o estado interno que os presets
+                               de player escrevem e o "Aplicar LEDs" lê — só a superfície
+                               de UI mudou; nenhum handler/fluxo foi alterado. -->
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
                             <property name="homogeneous">True</property>
+                            <property name="visible">False</property>
+                            <property name="no-show-all">True</property>
                             <child><object class="GtkCheckButton" id="player_led_1"><property name="label" translatable="yes">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
                             <child><object class="GtkCheckButton" id="player_led_2"><property name="label" translatable="yes">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
                             <child><object class="GtkCheckButton" id="player_led_3"><property name="label" translatable="yes">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
@@ -823,24 +831,28 @@
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p1">
                                 <property name="label" translatable="yes">Player 1</property>
+                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 1 acende só o LED central (igual ao console)</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p1"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p2">
                                 <property name="label" translatable="yes">Player 2</property>
+                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 2 acende os 2 LEDs vizinhos do centro (igual ao console)</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p2"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p3">
                                 <property name="label" translatable="yes">Player 3</property>
+                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 3 acende 3 LEDs alternados (igual ao console)</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p3"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p4">
                                 <property name="label" translatable="yes">Player 4</property>
+                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 4 acende os 4 LEDs externos (igual ao console)</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p4"/>
                               </object>
                             </child>
@@ -1915,17 +1927,35 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado.</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox (ex.: Mullet Mad Jack) ignoram esta máscara — neles use "Xbox 360".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_xbox_button">
                         <property name="label" translatable="yes">Xbox 360</property>
-                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360 (recomendada para jogar): a vibração funciona em jogo e o controle não aparece duplicado. Os jogos mostram prompts de Xbox (A/B/X/Y).</property>
+                        <property name="tooltip-text" translatable="yes">Máscara Xbox 360: a vibração funciona em jogo e o controle não aparece duplicado. Os jogos mostram prompts de Xbox (A/B/X/Y). É a única máscara que jogos XInput-only entendem; nessa API não existe giroscópio.</property>
                         <signal name="clicked" handler="on_emulation_gamepad_xbox"/>
                       </object>
                     </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+
+                <!-- MMJ-01 (estudo 2026-07-21): cada jogo "fala uma língua" de
+                     controle. Jogos XInput-only (ex.: Mullet Mad Jack) não
+                     reconhecem a máscara DualSense — o vpad chega ao jogo, mas
+                     a engine ignora o PID Sony. Sem este aviso a usuária vê
+                     "controle morto" e caça defeito no lugar errado. -->
+                <child>
+                  <object class="GtkLabel" id="emulation_gamepad_hint_label">
+                    <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox (ex.: Mullet Mad Jack) ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo.</property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <property name="margin-start">10</property>
+                    <property name="margin-end">10</property>
+                    <property name="margin-top">4</property>
+                    <style><class name="dim-label"/></style>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>

@@ -208,6 +208,26 @@ class WindowReaderDiag:
             self.last_useful_class = wm_class
         return result
 
+    def maybe_recover(self) -> bool:
+        """Re-detecta o backend quando o atual é o NullBackend.
+
+        AUTOSWITCH-HEAL-01 (22/07): no login o daemon pode nascer ANTES de o
+        compositor exportar WAYLAND_DISPLAY/DISPLAY para o systemd --user —
+        o backend era fixado em Null UMA vez e o perfil-por-jogo ficava morto
+        a sessão inteira (medido: `window_detect_diag_seeded backend=null` no
+        boot com o env presente minutos depois). O poll chama este método
+        (rate-limitado no chamador) DEPOIS de re-importar o env; quando a
+        re-detecção sai do Null, o backend é trocado em-place e o autoswitch
+        volta à vida sem restart. Retorna True quando recuperou.
+        """
+        if not isinstance(self._backend, NullBackend):
+            return False
+        novo = detect_window_backend()
+        if isinstance(novo, NullBackend):
+            return False
+        self._backend = novo
+        return True
+
 
 def build_window_reader() -> WindowReaderDiag:
     """Cria um leitor de janela com o backend instanciado UMA vez.

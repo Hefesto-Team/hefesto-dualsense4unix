@@ -220,6 +220,21 @@ def profile_list() -> list[dict[str, Any]]:
         return []
 
 
+def active_profile_name() -> str | None:
+    """Nome do perfil ATIVO no daemon (``state_full.active_profile``) ou None.
+
+    PERFIL-SAVE-APPLY-01: usado pelo Salvar da aba Perfis para decidir se o
+    perfil recém-gravado precisa ser reaplicado na hora (daemon não relê
+    JSON de perfil por conta própria). Best-effort: offline = None.
+    """
+    ok, res = _safe_call("daemon.state_full", {})
+    if ok and isinstance(res, dict):
+        nome = res.get("active_profile")
+        if isinstance(nome, str) and nome:
+            return nome
+    return None
+
+
 def profile_switch(name: str) -> bool:
     ok, _ = _safe_call("profile.switch", {"name": name})
     return ok
@@ -267,15 +282,18 @@ def _call_checked(
 
 
 def trigger_set_checked(
-    side: str, mode: str, params: list[int]
+    side: str, mode: str, params: list[int], uniq: str | None = None
 ) -> tuple[bool, str | None]:
     """Aplica gatilho devolvendo o MOTIVO quando o daemon RECUSA (HARM-19).
 
     Recusa típica: Fim <= Início. Ver ``_call_checked`` para o contrato.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado no seletor — o daemon
+    aplica SÓ nele (override por-MAC); omitido = comportamento global clássico.
     """
-    return _call_checked(
-        "trigger.set", {"side": side, "mode": mode, "params": params}
-    )
+    payload: dict[str, Any] = {"side": side, "mode": mode, "params": params}
+    if uniq:
+        payload["uniq"] = uniq
+    return _call_checked("trigger.set", payload)
 
 
 def trigger_set(side: str, mode: str, params: list[int]) -> bool:
@@ -287,15 +305,19 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
 def led_set(
     rgb: tuple[int, int, int],
     brightness: float | None = None,
+    uniq: str | None = None,
 ) -> bool:
     """Aplica cor RGB (opcionalmente escalada) no lightbar via IPC.
 
     ``brightness`` (0.0-1.0) é repassado ao daemon quando fornecido; omitido
     preserva o contrato v1 (sem multiplicador). Ver FEAT-LED-BRIGHTNESS-01.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
     """
     payload: dict[str, Any] = {"rgb": list(rgb)}
     if brightness is not None:
         payload["brightness"] = float(brightness)
+    if uniq:
+        payload["uniq"] = uniq
     ok, _ = _safe_call("led.set", payload)
     return ok
 
@@ -358,13 +380,19 @@ def rumble_policy_custom(mult: float) -> bool:
     return ok
 
 
-def player_leds_set(bits: tuple[bool, bool, bool, bool, bool]) -> bool:
+def player_leds_set(
+    bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
+) -> bool:
     """Aplica bitmask de 5 LEDs de player no hardware via IPC (FEAT-PLAYER-LEDS-APPLY-01).
 
     ``bits[0]`` = LED 1 (extremo esquerdo), ``bits[4]`` = LED 5 (extremo direito).
     Retorna True se o daemon confirmou; False se offline ou erro.
+    ``uniq`` (PERFIL-05): MAC do controle selecionado — aplica SÓ nele.
     """
-    ok, _ = _safe_call("led.player_set", {"bits": list(bits)})
+    payload: dict[str, Any] = {"bits": list(bits)}
+    if uniq:
+        payload["uniq"] = uniq
+    ok, _ = _safe_call("led.player_set", payload)
     return ok
 
 
@@ -406,6 +434,7 @@ def mouse_emulation_set(
 
 
 __all__ = [
+    "active_profile_name",
     "apply_draft",
     "call_async",
     "daemon_state_full",
