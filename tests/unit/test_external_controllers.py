@@ -143,7 +143,9 @@ class TestAvisoBluetooth:
         aviso = nintendo_bt_warning(_8BITDO_BT)
         assert aviso is not None
         assert "cabo" in aviso  # aponta a saída estável
-        assert "Hefesto" in aviso  # deixa claro que a morte não é do Hefesto
+        assert "driver" in aviso  # deixa claro que a morte é do kernel
+        # HARM-GUI-01: aviso de UMA frase — a parede de texto foi vetada.
+        assert len(aviso) < 120
 
     def test_nintendo_cabo_nao_avisa(self) -> None:
         assert nintendo_bt_warning(_8BITDO_CABO) is None
@@ -183,7 +185,9 @@ class TestModo:
         atual, orient = guia
         assert atual == "Nintendo (modo Switch)"
         assert "Xbox" in orient  # aponta a raiz estável
-        assert "Bluetooth" in orient  # e por que o Switch trava
+        # HARM-GUI-01: trade-off em UMA frase; o risco de BT mora no aviso
+        # dedicado (nintendo_bt_warning), não repetido aqui.
+        assert len(orient) < 120
 
     def test_guidance_xbox_menciona_gyro(self) -> None:
         guia = mode_guidance(_XBOX)
@@ -326,6 +330,9 @@ class TestSlotLabel:
 
 
 class TestButtonLabelsForToleraSlotNone:
-    def test_none_vira_traco_no_rotulo(self) -> None:
+    def test_none_omite_o_slot_no_rotulo(self) -> None:
+        # SELETOR-UNO-01 (22/07): registry sem opinião ainda -> botão limpo
+        # "Nintendo · cabo" (o "Nintendo — · cabo" antigo parecia quebrado);
+        # o número entra no tick seguinte, quando o daemon numerar.
         entry = {**_8BITDO_CABO, "player_slot": None}
-        assert button_labels_for([entry], dualsense_count=2) == ["Nintendo — · cabo"]
+        assert button_labels_for([entry], dualsense_count=2) == ["Nintendo · cabo"]

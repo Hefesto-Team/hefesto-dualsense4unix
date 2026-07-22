@@ -188,13 +188,19 @@ def button_labels_for(
     """
     saida: list[str] = []
     for i, e in enumerate(externals):
-        rotulo_slot = slot_label(slot_of(e, dualsense_count, i))
+        slot = slot_of(e, dualsense_count, i)
         nome = brand_of(e)
         bus = str(e.get("bus") or "").lower()
         via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
-        saida.append(
-            f"{nome} {rotulo_slot} · {via}" if via else f"{nome} {rotulo_slot}"
-        )
+        if slot is None:
+            # SELETOR-UNO-01 (22/07): registry ainda sem opinião (primeiros
+            # segundos do boot) — o botão mostra só marca+via ("Nintendo · BT")
+            # em vez do "Nintendo — · BT" que parecia quebrado; o número entra
+            # sozinho no tick seguinte, quando o daemon numerar. O "—" honesto
+            # (NUMA-05) segue nos contextos de ficha/tooltip via slot_label.
+            saida.append(f"{nome} · {via}" if via else nome)
+        else:
+            saida.append(f"{nome} {slot} · {via}" if via else f"{nome} {slot}")
     return saida
 
 
@@ -208,9 +214,8 @@ def nintendo_bt_warning(entry: dict[str, Any]) -> str | None:
     bus = str(entry.get("bus") or "").lower()
     if vid in _NINTENDO_MODE_VIDS and bus in ("bluetooth", "bt"):
         return (
-            "Por Bluetooth, controles em modo Switch (8BitDo/Nintendo) costumam "
-            "travar sozinhos depois de um tempo — é o driver do Linux "
-            "desistindo, não o Hefesto. Para jogar sem sustos, use por cabo."
+            "Por Bluetooth o modo Switch pode travar (driver do kernel); "
+            "por cabo é estável."
         )
     return None
 
@@ -280,23 +285,11 @@ def mode_guidance(entry: dict[str, Any]) -> tuple[str, str] | None:
     modo = input_mode(entry)
     if modo == "nintendo":
         atual = "Nintendo (modo Switch)"
-        orient = (
-            "O jogo vê botões da Nintendo e você tem giroscópio — mas por "
-            "Bluetooth esse modo pode travar (é o driver do Linux desistindo, "
-            "não o Hefesto). Para o co-op à prova de travas, troque o controle "
-            "para o modo Xbox (X-input): ele vira um Xbox 360 de verdade e foge "
-            "do driver problemático. No 8BitDo isso é um combo ao ligar/conectar "
-            "(veja o manual do seu controle). Por cabo, o modo Xbox é o mais sólido."
-        )
+        orient = "Switch: tem giroscópio. Xbox (X-input): mais estável, sem giroscópio."
         return atual, orient
     if modo == "xbox":
         atual = "Xbox (X-input)"
-        orient = (
-            "Modo sólido: o jogo vê um Xbox 360 de verdade (driver xpad), sem o "
-            "problema do Bluetooth do modo Switch. Você perde o giroscópio — se "
-            "precisar de gyro, troque o controle para o modo Switch (combo ao "
-            "ligar), sabendo que por Bluetooth ele fica instável."
-        )
+        orient = "Xbox (X-input): mais estável, sem giroscópio. Switch: tem giroscópio."
         return atual, orient
     return None
 

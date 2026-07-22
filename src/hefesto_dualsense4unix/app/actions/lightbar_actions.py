@@ -269,7 +269,14 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 }
             )
         else:
-            ok = led_set(self._current_rgb, brightness=self._current_brightness)
+            # PERFIL-05 (22/07): com um controle selecionado, o MAC viaja no
+            # pedido — o daemon aplica SÓ nele (antes: caminho por índice que
+            # caía em broadcast quando desalinhava).
+            ok = led_set(
+                self._current_rgb,
+                brightness=self._current_brightness,
+                uniq=self._edit_uniq(),
+            )
         msg = (
             f"Cor aplicada no controle ({pct}% de brilho)"
             if ok
@@ -502,7 +509,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
         # dispara o D4 (mesma composição de toast do on_lightbar_apply).
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits)
+        ok = player_leds_set(bits, uniq=self._edit_uniq())
         descricao = self._descreve_player_leds(bits)
         msg = (
             f"LEDs de jogador aplicados — {descricao}"
@@ -529,7 +536,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits)
+        ok = player_leds_set(bits, uniq=self._edit_uniq())
         descricao = self._descreve_player_leds(bits)
         msg = (
             f"LEDs de jogador atualizados — {descricao}"
@@ -564,7 +571,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits)
+        ok = player_leds_set(bits, uniq=self._edit_uniq())
         descricao = self._descreve_player_leds(pattern)
         msg = (
             f"LEDs de jogador atualizados — {descricao}"

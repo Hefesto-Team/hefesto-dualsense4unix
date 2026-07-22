@@ -107,7 +107,33 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
         healthy=initial_healthy,
     )
 
+    # AUTOSWITCH-HEAL-01: próxima tentativa de recuperação do backend Null
+    # (monotonic; lista p/ mutação no closure). 0.0 = tenta já na 1ª leitura.
+    _recover_next = [0.0]
+
     def _read() -> dict[str, Any]:
+        # AUTOSWITCH-HEAL-01 (22/07): backend Null = o daemon nasceu antes do
+        # env gráfico (race de login; o import-environment do .service veio
+        # vazio). Re-tenta a detecção no máximo 1x/15s — re-importa o env do
+        # `systemctl --user show-environment` e re-roda a detecção — até sair
+        # do Null. Cura a sessão atual sem restart; custo zero quando o
+        # backend já é saudável.
+        recover = getattr(reader, "maybe_recover", None)
+        if callable(recover) and _backend_name() == "null":
+            import time
+
+            agora = time.monotonic()
+            if agora >= _recover_next[0]:
+                _recover_next[0] = agora + 15.0
+                _ensure_display_env()
+                if recover():
+                    nome = _backend_name()
+                    store.set_window_detect_backend(
+                        nome, healthy=(nome == "xlib")
+                    )
+                    logger.info(
+                        "window_detect_backend_recuperado", backend=nome
+                    )
         info = reader()
         wm_class = info.get("wm_class")
         store.record_window_detect_read(

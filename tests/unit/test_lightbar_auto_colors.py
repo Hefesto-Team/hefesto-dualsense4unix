@@ -328,7 +328,9 @@ def test_player_leds_em_todos_com_auto_on_dispara_d4(
     aqui). Exercita o caminho REAL do botão "Aplicar LEDs"
     (``on_player_leds_apply``), não só ``_persist_leds_update`` isolado — é o
     chamador quem compõe o toast."""
-    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    monkeypatch.setattr(
+        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+    )
     host, check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=True)))
     check.active = True  # espelho visual do draft
 
@@ -342,7 +344,9 @@ def test_player_leds_em_todos_com_auto_on_dispara_d4(
 def test_player_leds_em_todos_com_auto_off_nao_dispara_de_novo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    monkeypatch.setattr(
+        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+    )
     host, _check = _host_com_checkbox(DraftConfig.from_profile(_perfil(auto=False)))
 
     host.on_player_leds_apply(None)
@@ -355,7 +359,9 @@ def test_player_leds_com_alvo_selecionado_nao_dispara_d4(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Fluxo por-controle permanece como está: override, auto intacto."""
-    monkeypatch.setattr(lightbar_actions, "player_leds_set", lambda _bits: True)
+    monkeypatch.setattr(
+        lightbar_actions, "player_leds_set", lambda _bits, uniq=None: True
+    )
     host, _check = _host_com_checkbox(
         DraftConfig.from_profile(_perfil(auto=True)), uniq=UNIQ_2
     )
@@ -414,7 +420,10 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     monkeypatch.setattr(
         lightbar_actions,
         "led_set",
-        lambda rgb, brightness=None: chamadas.append((rgb, brightness)) or True,
+        lambda rgb, brightness=None, uniq=None: chamadas.append(
+            (rgb, brightness, uniq)
+        )
+        or True,
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
@@ -425,7 +434,8 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     host._current_brightness = 1.0
     host.on_lightbar_apply(None)
 
-    assert chamadas == [((10, 20, 30), 1.0)]
+    # PERFIL-05: o MAC do alvo viaja no pedido (aplicação por-controle real).
+    assert chamadas == [((10, 20, 30), 1.0, UNIQ_2)]
     assert host.draft.leds.auto_player_colors is True  # alvo não dispara D4
 
 

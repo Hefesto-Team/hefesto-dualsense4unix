@@ -417,14 +417,23 @@ class StatusActionsMixin(WidgetAccessMixin):
         # só daquele controle (janela read-only), sem trocar o alvo de edição.
         self._external_buttons = []
         externals = getattr(self, "_externals", [])
-        # Slot GLOBAL: continua a numeração dos DualSense (rows menos "Todos").
-        dualsense_count = max(0, len(self._target_buttons) - 1)
+        # Slot GLOBAL: continua a numeração dos DualSense. SELETOR-UNO-01: a
+        # contagem vem do refresh (len(conectados)) — derivar de len(botões)-1
+        # assumia a linha "Todos", que deixou de ser incondicional.
+        dualsense_count = getattr(
+            self, "_dualsense_count", max(0, len(self._target_buttons) - 1)
+        )
         rotulos = button_labels_for(externals, dualsense_count)
         for i, (ext, rotulo) in enumerate(zip(externals, rotulos, strict=False)):
             slot = slot_of(ext, dualsense_count, i)
+            titulo = (
+                f"Controle {slot_label(slot)}"
+                if slot is not None
+                else "Controle externo"
+            )
             eb = Gtk.Button.new_with_label(rotulo)
             eb.set_tooltip_text(
-                f"Controle {slot_label(slot)}: {friendly_type(ext)} — "
+                f"{titulo}: {friendly_type(ext)} — "
                 f"{transport_label(ext)} "
                 "(clique para ver; o Hefesto não mexe no que ele faz)"
             )
@@ -603,24 +612,44 @@ class StatusActionsMixin(WidgetAccessMixin):
         # getattr defensivo: Hosts de teste montam o seletor sem passar pelo
         # `_init_controller_target_combo` (que semeia `_externals`).
         externals = getattr(self, "_externals", [])
-        # 8BIT-02: o seletor aparece com 2+ controles NO TOTAL (DualSense +
-        # externos) — assim o 8BitDo/Nintendo entra no topo mesmo com 1 DualSense.
+        # SELETOR-UNO-01 (22/07, pedido da mantenedora): o seletor aparece com
+        # 1+ controle NO TOTAL — mesmo sozinho, o controle ganha o botão com
+        # número e via ("Sony 1 · BT"), no mesmo formato dos externos.
         total = len(conectados) + len(externals)
-        if total < 2:
+        # PERFIL-05: numeração dos externos usa a contagem REAL de DualSense
+        # (antes derivava de len(botões)-1, que assumia a linha "Todos").
+        self._dualsense_count = len(conectados)
+        if total < 1:
             self._sync_edit_target(None)
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
                 box.hide()
                 self._target_combo_visible = False
             return
         # Edição por-controle SÓ existe com 2+ DualSense (os externos não são
-        # alvo — o Hefesto não mexe neles). Com <2 DualSense, só "Todos".
+        # alvo — o Hefesto não mexe neles). Com <2 DualSense a edição segue
+        # global, mas o botão exibe o PRÓPRIO controle (sem "Todos" — com um
+        # único DualSense, "Todos" e ele são a mesma coisa; SELETOR-UNO-01).
         editavel = len(conectados) >= 2
         self._sync_edit_target(target_index if editavel else None)
-        rows: list[tuple[str, int | None]] = (
-            self._controller_target_rows(conectados)
-            if editavel
-            else [(_("Todos os controles"), None)]
-        )
+        if editavel:
+            rows: list[tuple[str, int | None]] = self._controller_target_rows(
+                conectados
+            )
+        elif len(conectados) == 1:
+            c = conectados[0]
+            transporte = (c.get("transport") or "?").upper()
+            rows = [
+                (
+                    _("Controle {n} — {t}").format(
+                        n=_display_slot(c), t=transporte
+                    ),
+                    None,
+                )
+            ]
+        else:
+            # Só externos conectados: nenhum radio (não há alvo de edição);
+            # os botões de externos entram no _rebuild normalmente.
+            rows = []
         ext_sig = tuple(external_key(e) for e in externals)
         labels = [label for label, _ in rows]
         rows_changed = (

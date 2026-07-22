@@ -358,6 +358,27 @@ class IpcHandlersMixin:
 
     # --- triggers --------------------------------------------------------
 
+    def _apply_por_uniq(self, params: dict[str, Any], **campos: Any) -> bool:
+        """Aplica ``campos`` SÓ no controle do MAC ``params["uniq"]``, se houver.
+
+        PERFIL-05 (22/07): alinha o eixo da escrita VIVA com o da persistência
+        (ambos por MAC, via ``apply_output_for`` — que registra o override
+        por-uniq e escreve só naquele controle). Retorna True quando aplicou;
+        False quando não há ``uniq`` no pedido ou o backend não expõe
+        ``apply_output_for`` (FakeController de teste) — nesse caso o chamador
+        segue o caminho clássico por índice/broadcast, intacto.
+        """
+        alvo = params.get("uniq")
+        if not isinstance(alvo, str) or not alvo:
+            return False
+        apply_for = getattr(self.controller, "apply_output_for", None)
+        if not callable(apply_for):
+            return False
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        apply_for(alvo, OutputSpec(**campos))
+        return True
+
     async def _handle_trigger_set(self, params: dict[str, Any]) -> dict[str, Any]:
         side = params.get("side")
         mode = params.get("mode")
@@ -369,7 +390,13 @@ class IpcHandlersMixin:
         if not isinstance(trigger_params, list):
             raise ValueError("trigger.set: params precisa ser lista")
         effect = build_from_name(mode, trigger_params)
-        self.controller.set_trigger(side, effect)
+        # PERFIL-05: `uniq` presente = gatilho por-MAC via apply_output_for
+        # (override registrado + escrita só no controle selecionado).
+        campos = (
+            {"trigger_left": effect} if side == "left" else {"trigger_right": effect}
+        )
+        if not self._apply_por_uniq(params, **campos):
+            self.controller.set_trigger(side, effect)
         # BUG-MOUSE-TRIGGERS-01: usuário aplicou trigger manual via GUI/IPC.
         # Marca override para o autoswitch não sobrescrever (especialmente
         # ao ligar emulação de mouse, cujo movimento muda foco de janela).
@@ -411,7 +438,14 @@ class IpcHandlersMixin:
         r = max(0, min(255, int(rgb[0] * brightness)))
         g = max(0, min(255, int(rgb[1] * brightness)))
         b = max(0, min(255, int(rgb[2] * brightness)))
-        self.controller.set_led((r, g, b))
+        # PERFIL-05 (22/07): com um controle selecionado no seletor, a GUI
+        # manda o MAC (`uniq`) e a escrita vai por `apply_output_for` —
+        # registra o override por-uniq (acima da paleta no merge, sobrevive
+        # a hotplug) e escreve SÓ naquele controle. Antes, o caminho vivo por
+        # índice (`_output_target_key`) caía em BROADCAST quando o alvo
+        # desalinhava — "configurei o controle 2 e mudou todos".
+        if not self._apply_por_uniq(params, led=(r, g, b)):
+            self.controller.set_led((r, g, b))
         # Fix cross-cutting U x N (2026-07-20, HIGH): `set_led` escreve CRU via
         # `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`) — sem
         # isto a cor do JOGO ficava sobrescrita na hora, e a trava manual
@@ -447,7 +481,10 @@ class IpcHandlersMixin:
         bits: tuple[bool, bool, bool, bool, bool] = (
             bits_raw[0], bits_raw[1], bits_raw[2], bits_raw[3], bits_raw[4]
         )
-        self.controller.set_player_leds(bits)
+        # PERFIL-05: mesmo contrato do led.set — `uniq` presente = escrita
+        # por-MAC via apply_output_for (só naquele controle).
+        if not self._apply_por_uniq(params, player_leds=bits):
+            self.controller.set_player_leds(bits)
         # Fix cross-cutting U x N (2026-07-20, HIGH) — mesmo raciocínio de
         # `_handle_led_set`: reassert imediato para o merge de N (jogo vence
         # sob `display_authority=='game'`) corrigir a escrita crua acima
