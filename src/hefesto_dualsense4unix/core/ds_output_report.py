@@ -70,6 +70,15 @@ VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10
 VALID_FLAG1_MOTOR_POWER = 0x40
 
 # --- bits de valid_flag2 (common[38]) --------------------------------------
+#: bit0 (pydualsense `LedOptions.PlayerLedBrightness`): habilita o controle de
+#: BRILHO da lightbar (common[42]).
+VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE = 0x01
+#: bit1 (pydualsense `LedOptions.UninterrumpableLed`; kernel
+#: `DS_OUTPUT_VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE`): habilita o SETUP da
+#: lightbar (common[41] = fade-in/fade-out). O kernel o usa UMA vez por
+#: conexão (opcode 2 = LIGHT_OUT) para tomar a barra; mantê-lo engatado em
+#: regime (keepalive) trava a exibição no firmware — ver LIGHTBAR-BT-KEEPALIVE-01.
+VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE = 0x02
 VALID_FLAG2_COMPATIBLE_VIBRATION2 = 0x04
 
 #: Offset do valid_flag2 dentro do common.
@@ -153,6 +162,8 @@ __all__ = [
     "VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE",
     "VALID_FLAG1_RELEASE_LEDS",
     "VALID_FLAG2_COMPATIBLE_VIBRATION2",
+    "VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE",
+    "VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE",
     "bt_crc32",
     "build_bt_report",
     "build_usb_report",

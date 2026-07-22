@@ -128,6 +128,27 @@ def test_supressao_de_led_continua_no_caminho_novo() -> None:
     assert descoberto[_USB_FLAG1] & led_bits == led_bits
 
 
+def test_supressao_zera_flag2_setup_da_lightbar() -> None:
+    """LIGHTBAR-BT-KEEPALIVE-01 (regressão do BTREPORT-02, forense da captura):
+    sob supressão o flag2 sai SEM os bits de setup/brilho da lightbar
+    (0x02|0x01), e os bytes de lightbar/player/setup (common[41..46]) ficam
+    ZERO. Falha-sem: o keepalive re-engatava a máquina de setup a 2 Hz com o
+    `ledOption=Both` (0x03) da pydualsense e o firmware travava a exibição
+    (sysfs mostra cor, barra apagada)."""
+    setup_bits = (
+        rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
+        | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
+    )
+    idx_flag2 = 1 + rep.COMMON_VALID_FLAG2
+    coberto = _make_inst(suppress=True).prepareReport()
+    assert coberto[idx_flag2] & setup_bits == 0
+    # common[41..46] = envelope USB desloca +1: report[42..47].
+    assert coberto[42:48] == [0, 0, 0, 0, 0, 0]
+    # Sem supressão, o setup segue ligado (o daemon é dono da lightbar).
+    descoberto = _make_inst(suppress=False).prepareReport()
+    assert descoberto[idx_flag2] & setup_bits == setup_bits
+
+
 # --- BTREPORT-02: envelope BT correto + seq por handle -----------------------
 
 
