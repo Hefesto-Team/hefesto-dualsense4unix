@@ -26,6 +26,71 @@ _STEAM_INPUT_RE = re.compile(
     r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
 )
 
+# STEAM-INPUT-ALLOWLIST-01 (22/07): alguns jogos entregam o suporte a DualSense
+# PELA Steam (API Steamworks — caso medido: Mullet Mad Jack chama
+# SetDualSenseTriggerEffect, que só funciona com o Steam Input do jogo LIGADO).
+# O opt-in per-app desses títulos é deliberado — os checks não devem acusá-lo
+# de conflito. Mesma allowlist do disable_steam_input.sh.
+_ALLOWLIST_PATH = (
+    Path.home() / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
+)
+_SI_KEY_RE = re.compile(
+    r'"(SteamController_PSSupport|SteamController_SwitchSupport|'
+    r'UseSteamControllerConfig)"\s+"[12]"'
+)
+_VDF_BLOCK_NAME_RE = re.compile(r'^\s*"([^"]*)"\s*$')
+
+
+def steam_input_allowlist(path: Path | None = None) -> set[str]:
+    """AppIDs com Steam Input per-app deliberado (uma linha por id; # comenta)."""
+    caminho = path or _ALLOWLIST_PATH
+    out: set[str] = set()
+    try:
+        for linha in caminho.read_text(encoding="utf-8").splitlines():
+            token = linha.split("#", 1)[0].strip()
+            if token:
+                out.add(token)
+    except OSError:
+        pass
+    return out
+
+
+def steam_input_on_fora_da_allowlist(text: str, allow: set[str]) -> bool:
+    """True se alguma chave de Steam Input em "1"/"2" está FORA da allowlist.
+
+    Anda a pilha de blocos do VDF (linha `"nome"` seguida de `{` abre bloco):
+    `UseSteamControllerConfig` dentro de `apps/<appid>` da allowlist é opt-in
+    deliberado e não conta; qualquer outra ocorrência (inclusive as chaves
+    GLOBAIS PSSupport/SwitchSupport) conta como ligado-conflitante.
+    """
+    stack: list[str] = []
+    pending = ""
+    for line in text.splitlines():
+        m = _VDF_BLOCK_NAME_RE.match(line)
+        if m:
+            pending = m.group(1)
+            continue
+        s = line.strip()
+        if s == "{":
+            stack.append(pending)
+            pending = ""
+            continue
+        if s == "}":
+            if stack:
+                stack.pop()
+            continue
+        km = _SI_KEY_RE.search(line)
+        if km is None:
+            continue
+        if (
+            km.group(1) == "UseSteamControllerConfig"
+            and stack
+            and stack[-1] in allow
+        ):
+            continue
+        return True
+    return False
+
 
 def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
     """O quirk anti-storm (DELAY_CTRL_MSG) está ativo? (preserva o áudio do controle)."""
@@ -69,12 +134,27 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
     vdfs = find_localconfig_vdfs(home)
     if not vdfs:
         return INFO, "Steam Input: nenhum localconfig.vdf encontrado (Steam instalada?)"
-    on = [v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))]
+    # STEAM-INPUT-ALLOWLIST-01: opt-in per-app deliberado (ex.: MMJ) não é
+    # conflito — só acusa o que a transformação do guard corrigiria.
+    allow = steam_input_allowlist()
+    on = [
+        v
+        for v in vdfs
+        if steam_input_on_fora_da_allowlist(_safe_read(v), allow)
+    ]
     if on:
         return (
             WARN,
-            f"Steam Input LIGADO em {len(on)} perfil(is) — "
+            f"Steam Input LIGADO em {len(on)} perfil(is) fora da allowlist — "
             "clique 'Reaplicar fixes seguros' para desligar",
+        )
+    excecoes = [
+        v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
+    ]
+    if excecoes:
+        return OK, (
+            "Steam Input desligado (exceções per-app da allowlist ativas — "
+            "ex.: jogos cujo DualSense é entregue pela Steam)"
         )
     return OK, "Steam Input desligado para o DualSense"
 

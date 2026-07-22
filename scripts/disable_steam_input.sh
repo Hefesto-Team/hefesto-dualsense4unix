@@ -285,18 +285,48 @@ restore_vdf() {
     fi
 }
 
+# STEAM-INPUT-ALLOWLIST-01: "precisa de correção DE VERDADE" = a transformação
+# (que preserva o opt-in per-app da allowlist) mudaria o arquivo. O needs_fix
+# clássico segue como pré-filtro rápido; este decide o veredito do --status —
+# sem ele, ligar o Steam Input do MMJ (deliberado) acusaria 'ação sugerida'
+# para sempre.
+needs_real_fix() {
+    local vdf="$1"
+    needs_fix "$vdf" || return 1
+    local tmp
+    tmp="$(mktemp)"
+    if ! _transform_vdf < "$vdf" > "$tmp" 2>/dev/null; then
+        rm -f -- "$tmp"
+        return 0
+    fi
+    if cmp -s -- "$vdf" "$tmp"; then
+        rm -f -- "$tmp"
+        return 1
+    fi
+    rm -f -- "$tmp"
+    return 0
+}
+
 case "${MODE}" in
     status)
         log "${#VDFS[@]} localconfig.vdf encontrado(s):"
         any_needs=0
+        any_allow=0
         for vdf in "${VDFS[@]}"; do
             report_state "$vdf"
-            if needs_fix "$vdf"; then any_needs=1; fi
+            if needs_real_fix "$vdf"; then
+                any_needs=1
+            elif needs_fix "$vdf"; then
+                any_allow=1
+            fi
         done
         if [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
         else
-            log "tudo limpo — PSSupport/SwitchSupport não estão em modo 1|2 em nenhum arquivo"
+            if [[ "${any_allow}" -eq 1 ]]; then
+                log "nota: Steam Input per-app ATIVO só em apps da allowlist (deliberado — ex.: MMJ)"
+            fi
+            log "tudo limpo — PSSupport/SwitchSupport não estão em modo 1|2 em nenhum arquivo (fora da allowlist)"
         fi
         ;;
     restore)

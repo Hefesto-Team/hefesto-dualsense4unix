@@ -543,24 +543,28 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     @staticmethod
     def _steam_input_is_on() -> bool | None:
-        """True/False se Steam Input PSSupport está ligado; None se indeterminado.
+        """True/False se Steam Input CONFLITANTE está ligado; None se indeterminado.
 
-        Lê os localconfig.vdf por-usuário: PSSupport/UseSteamControllerConfig em
-        "1" ou "2" = ligado (espelha o grep do disable_steam_input.sh).
+        STEAM-INPUT-ALLOWLIST-01: usa o mesmo walker de blocos do storm_doctor —
+        opt-in per-app deliberado (jogos cujo DualSense é entregue pela Steam,
+        ex.: MMJ na allowlist) NÃO conta como conflito; as chaves globais
+        (PSSupport/SwitchSupport) e per-app fora da allowlist contam.
         """
-        import re
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            steam_input_allowlist,
+            steam_input_on_fora_da_allowlist,
+        )
 
         vdfs = glob.glob(
             str(Path.home() / ".steam" / "steam" / "userdata" / "*" / "config" / "localconfig.vdf")
         )
         if not vdfs:
             return None
-        pat = re.compile(
-            r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
-        )
+        allow = steam_input_allowlist()
         for vdf in vdfs:
             with contextlib.suppress(OSError):
-                if pat.search(Path(vdf).read_text(encoding="utf-8", errors="ignore")):
+                texto = Path(vdf).read_text(encoding="utf-8", errors="ignore")
+                if steam_input_on_fora_da_allowlist(texto, allow):
                     return True
         return False
 
