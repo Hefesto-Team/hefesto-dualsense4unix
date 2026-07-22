@@ -290,3 +290,36 @@ class TestReset02WakeSobModoNativo:
     def test_wake_sem_mute_reenvia_o_0x08(self) -> None:
         handle = self._connect_com_wake(mute=False)
         assert build_bt_release_leds_report() in handle.device.reports
+
+
+class TestResetViaWriteReport:
+    """LIGHTBAR-BT-RESET-03 (22/07, regressão medida ao vivo): desde o
+    BTREPORT-02 todo 0x31 sai com nibble de sequência POR-HANDLE (writeReport
+    carimba e incrementa). O reset escrevia DIRETO no device com seq=0 — com o
+    keepalive já rodado, o firmware descartava o report como fora de sequência
+    e o claim nunca era devolvido (lightbar BT apagada, sintoma pré-cura).
+    Falha-sem: send_release_leds ignorava o writeReport do handle."""
+
+    def test_prefere_o_writereport_do_handle(self) -> None:
+        class _Handle:
+            def __init__(self) -> None:
+                self.device = _FakeDevice()
+                self.stamped: list[list[int]] = []
+
+            def writeReport(self, report: list[int]) -> None:  # noqa: N802
+                self.stamped.append(list(report))
+
+        h = _Handle()
+        assert send_release_leds(h) is True
+        # O report viajou pelo writeReport (que carimba seq+CRC na ordem real
+        # do fluxo) — NÃO pelo device cru.
+        assert len(h.stamped) == 1
+        assert bytes(h.stamped[0]) == build_bt_release_leds_report()
+        assert h.device.reports == []
+
+    def test_fallback_para_device_cru_segue_vivo(self) -> None:
+        # Objetos sem writeReport (testes/handles antigos) usam o caminho
+        # clássico — coberto também por TestSendReleaseLeds acima.
+        dev = _FakeDevice()
+        assert send_release_leds(dev) is True
+        assert dev.reports == [build_bt_release_leds_report()]

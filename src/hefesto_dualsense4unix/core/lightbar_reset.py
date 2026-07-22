@@ -50,16 +50,32 @@ def build_bt_release_leds_report(seq: int = 0) -> bytes:
     return bytes(build_bt_report(common, seq=seq))
 
 
-def send_release_leds(device: Any) -> bool:
-    """Envia o report de Reset LED state por um device hidapi já aberto.
+def send_release_leds(handle: Any) -> bool:
+    """Envia o report de Reset LED state pelo handle pydualsense já aberto.
 
-    ``device`` é o ``hidapi.Device`` do handle pydualsense (a adoção acabou de
-    abri-lo — reusar evita abrir o hidraw duas vezes). Best-effort: ``False``
-    em qualquer falha, nunca levanta (a adoção segue; sem a cura o sintoma é
-    só a lightbar apagada, o comportamento pré-fix).
+    LIGHTBAR-BT-RESET-03 (22/07, regressão MEDIDA ao vivo): desde o BTREPORT-02
+    (18/07) todo 0x31 nosso sai com o nibble de SEQUÊNCIA POR-HANDLE — o
+    ``writeReport`` do handle carimba ``seq`` + CRC e incrementa o contador. O
+    reset, porém, escrevia DIRETO no ``device`` com ``seq=0`` fixo: depois que
+    o keepalive/réplica já rodou (seq avançado), o firmware descarta o report
+    como fora de sequência e o claim NUNCA é devolvido — a lightbar BT volta a
+    ficar apagada com todas as escritas de cor ignoradas (o sintoma pré-cura;
+    journal 22/07 14:55: ``lightbar_reset_enviado`` + cor escrita e barra
+    escura). A cura de 17/07 funcionava porque na época TODOS os reports saíam
+    com seq 0. Agora o reset passa pelo MESMO ``writeReport`` (seq/CRC
+    corretos na ordem real do fluxo); ``device`` cru continua como fallback
+    (testes/objetos sem writeReport — comportamento antigo).
+
+    Best-effort: ``False`` em qualquer falha, nunca levanta (a adoção segue;
+    sem a cura o sintoma é só a lightbar apagada, o comportamento pré-fix).
     """
     try:
         report = build_bt_release_leds_report()
+        writer = getattr(handle, "writeReport", None)
+        if callable(writer):
+            writer(list(report))
+            return True
+        device = getattr(handle, "device", handle)
         written = device.write(report)
         ok = written is None or int(written) == len(report)
         if not ok:

@@ -1171,8 +1171,20 @@ class PyDualSenseController(IController):
                         send_release_leds,
                     )
 
-                    if send_release_leds(handle.device):
+                    if send_release_leds(handle):
                         logger.info("lightbar_reset_enviado", key=_key)
+                        # LIGHTBAR-BT-RESET-03: o 0x08 zera o estado de LED do
+                        # FIRMWARE — se o cache do nó sysfs ainda acredita na
+                        # última cor, o reassert seguinte seria PULADO
+                        # (skip_cache 2ms após o reset, journal 22/07) e a
+                        # barra ficaria apagada até a cor MUDAR. Reset enviado
+                        # ⇒ cache esquecido ⇒ o reassert do fim do connect()
+                        # reescreve de verdade.
+                        with self._io_lock:
+                            node = self._sysfs.get(_key)
+                        if node is not None:
+                            with contextlib.suppress(Exception):
+                                node.invalidate_cache()
 
         # LIGHTBAR-BT-RESET-02 (Onda L): o 0x08 acima só cobre handles NOVOS. Um
         # wake/resume BT que NÃO reabre o handle também derruba o claim do
@@ -1233,8 +1245,14 @@ class PyDualSenseController(IController):
                     kernel_default=KERNEL_DEFAULT_BLUE,
                     reclamar=reclamar,
                 )
-                if reclamar and send_release_leds(handle.device):
+                if reclamar and send_release_leds(handle):
                     logger.info("lightbar_reset_reenviado_wake", key=key)
+                    # LIGHTBAR-BT-RESET-03: mesmo racional do RESET-01 — sem
+                    # esquecer o cache, o reassert pós-wake seria pulado e o
+                    # 0x08 do wake devolveria o claim para ninguém escrever.
+                    if node is not None:
+                        with contextlib.suppress(Exception):
+                            node.invalidate_cache()
 
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
