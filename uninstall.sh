@@ -549,6 +549,67 @@ elif [[ -e /etc/bluetooth/main.conf.d/hefesto-justworks.conf ]] \
     log "   entre as sentinelas '# >>> hefesto JustWorksRepairing >>>' do main.conf)"
 fi
 
+# Bloco UNIFICADO do main.conf (camada 1 da sprint BlueZ 2026-07-21 — o
+# install idempotente escreve FastConnectable+JustWorksRepairing num bloco só;
+# os dois removedores legados acima seguem existindo para instalações antigas).
+if sudo -n true 2>/dev/null; then
+    if [[ -f /etc/bluetooth/main.conf ]] \
+       && sudo grep -qF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+        log "removendo bloco unificado hefesto do /etc/bluetooth/main.conf (backup antes)"
+        sudo cp /etc/bluetooth/main.conf \
+            "/etc/bluetooth/main.conf.bak.hefesto-uninstall-$(date +%s)" 2>/dev/null || true
+        sudo sed -i '/^# >>> hefesto bluetooth >>>$/,/^# <<< hefesto bluetooth <<<$/d' \
+            /etc/bluetooth/main.conf || log "  ERRO: sed do bloco unificado falhou — remova manualmente"
+        log "  (vale no próximo boot/restart do bluetoothd — não reiniciamos o serviço)"
+    fi
+elif grep -qsF '# >>> hefesto bluetooth >>>' /etc/bluetooth/main.conf 2>/dev/null; then
+    log "sudo indisponível — bloco unificado hefesto do main.conf não removido"
+fi
+
+# ONDA-R2: resiliência do bluetoothd (camada 2 — simétrico ao passo 3e-bis do
+# install). Remove timers/units, drop-ins (inclusive o de debug forense, se a
+# janela de captura ficou ligada), scripts e o diretório de snapshots de bonds.
+# ATENÇÃO deliberada: os snapshots contêm LinkKeys (credenciais) — remoção
+# default com aviso; quem quiser preservar copia antes.
+if sudo -n true 2>/dev/null; then
+    if [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
+          || -e /etc/systemd/system/hefesto-bt-health-watchdog.timer ]]; then
+        log "desabilitando timers de resiliência do bluetoothd (snapshot de bonds + watchdog)"
+        sudo systemctl disable --now hefesto-bt-bonds-snapshot.timer \
+            hefesto-bt-health-watchdog.timer >/dev/null 2>&1 || true
+    fi
+    sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
+        /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
+        /etc/systemd/system/hefesto-bt-health-watchdog.service \
+        /etc/systemd/system/hefesto-bt-health-watchdog.timer 2>/dev/null || true
+    if [[ -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
+          || -e /etc/systemd/system/bluetooth.service.d/90-hefesto-debug.conf ]]; then
+        log "removendo drop-ins do bluetooth.service (resiliência + debug forense)"
+        sudo rm -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
+            /etc/systemd/system/bluetooth.service.d/90-hefesto-debug.conf 2>/dev/null || true
+        sudo rmdir /etc/systemd/system/bluetooth.service.d 2>/dev/null || true
+    fi
+    if [[ -f /etc/sysctl.d/99-hefesto-bt-coredump.conf ]]; then
+        log "removendo captura forense do core_pattern (sysctl.d) e reaplicando defaults"
+        sudo rm -f /etc/sysctl.d/99-hefesto-bt-coredump.conf
+        sudo sysctl --system >/dev/null 2>&1 || true
+    fi
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh 2>/dev/null || true
+    if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
+        log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds"
+        log "  (contêm LinkKeys; se quiser preservar, copie ANTES de rodar o uninstall)"
+        sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
+        sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
+    fi
+    sudo systemctl daemon-reload >/dev/null 2>&1 || true
+elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
+        || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
+    log "sudo indisponível — resiliência do bluetoothd (timers/drop-ins/scripts) NÃO removida"
+fi
+
 # Agente de pareamento persistente (bt-agent --capability=NoInputNoOutput via
 # systemd system unit) — cura o bond "Paired sem Bonded" ("No agent available
 # for request type 2"). O pacote bluez-tools (dependência do bt-agent) NÃO é

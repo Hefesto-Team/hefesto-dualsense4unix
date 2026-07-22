@@ -85,6 +85,7 @@ PYEOF
         case "$line" in
             SDL_GAMECONTROLLER_IGNORE_DEVICES=*) printf '%s\n' "$line" ;;
             SDL_JOYSTICK_HIDAPI=*)               printf '%s\n' "$line" ;;
+            SDL_GAMECONTROLLER_USE_BUTTON_LABELS=*) printf '%s\n' "$line" ;;
             PROTON_DISABLE_HIDRAW=*)             printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE=*)            printf '%s\n' "$line" ;;
             __GL_SHADER_DISK_CACHE_SKIP_CLEANUP=*) printf '%s\n' "$line" ;;

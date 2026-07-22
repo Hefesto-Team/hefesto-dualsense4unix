@@ -79,6 +79,11 @@ module_param(skip_tx_on_rate_exceeded, bool, 0644);
 MODULE_PARM_DESC(skip_tx_on_rate_exceeded,
 		 "Skip a subcommand/rumble transmission when no safe TX window was found instead of transmitting anyway (default N = transmit, same as before)");
 
+static bool register_leds_on_set_failure;
+module_param(register_leds_on_set_failure, bool, 0644);
+MODULE_PARM_DESC(register_leds_on_set_failure,
+		 "Register LED class devices even when the initial LED set fails (e.g. -ETIMEDOUT on a congested bluetooth link), so a later brightness write can heal the controller instead of leaving it without player LEDs forever (default N = skip registration, same as before)");
+
 /*
  * Reference the url below for the following HID report defines:
  * https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering
@@ -2344,10 +2349,12 @@ static int joycon_leds_create(struct joycon_ctlr *ctlr)
 	mutex_lock(&ctlr->output_mutex);
 	ret = joycon_set_player_leds(ctlr, 0, led_val);
 	mutex_unlock(&ctlr->output_mutex);
-	if (ret) {
+	if (ret && !register_leds_on_set_failure) {
 		hid_warn(hdev, "Failed to set players LEDs, skipping registration; ret=%d\n", ret);
 		goto home_led;
 	}
+	if (ret)
+		hid_warn(hdev, "Failed to set players LEDs, registering anyway; ret=%d\n", ret);
 
 	for (i = 0; i < JC_NUM_LEDS; i++) {
 		led = &ctlr->leds[i];
@@ -2379,10 +2386,12 @@ home_led:
 		mutex_lock(&ctlr->output_mutex);
 		ret = joycon_set_home_led(ctlr, 0);
 		mutex_unlock(&ctlr->output_mutex);
-		if (ret) {
+		if (ret && !register_leds_on_set_failure) {
 			hid_warn(hdev, "Failed to set home LED, skipping registration; ret=%d\n", ret);
 			return 0;
 		}
+		if (ret)
+			hid_warn(hdev, "Failed to set home LED, registering anyway; ret=%d\n", ret);
 
 		ret = devm_led_classdev_register(&hdev->dev, led);
 		if (ret) {

@@ -60,6 +60,7 @@ logger = get_logger(__name__)
 ENV_ALLOWLIST = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
+    "SDL_GAMECONTROLLER_USE_BUTTON_LABELS",
     "PROTON_DISABLE_HIDRAW",
     "__GL_SHADER_DISK_CACHE",
     "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP",
@@ -349,6 +350,11 @@ def compose_env(
         # dualsense degradado (algum uinput) => sem IGNORE, de propósito.
     env["__GL_SHADER_DISK_CACHE"] = "1"
     env["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1"
+    # 8BIT-03: controles Nintendo (Pro/8BitDo modo Switch) mapeados por
+    # POSIÇÃO física, como o resto do ecossistema PC espera — sem isso o SDL
+    # segue as etiquetas Nintendo e A/B (e X/Y) chegam trocados ao jogo.
+    # Inócua para DualSense/Xbox; entra em toda variante, como o preload.
+    env["SDL_GAMECONTROLLER_USE_BUTTON_LABELS"] = "0"
     return env
 
 
