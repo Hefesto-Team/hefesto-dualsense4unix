@@ -44,6 +44,13 @@ HID_IDS_PATH = ASSET_DIR / "hid-ids.h"
 PATCH_PATH = (
     ASSET_DIR / "patch" / "0001-HID-nintendo-do-not-transmit-after-rate-limit-exhaus.patch"
 )
+# Fix 21/07: 0002 registra os LEDs mesmo com o SET inicial falho (-110 em BT
+# congestionado) — sem ele o controle fica sem LEDs de player pela conexão
+# inteira. O invariante de paridade passa a ser a SEQUÊNCIA dos dois patches.
+PATCH2_PATH = (
+    ASSET_DIR / "patch" / "0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch"
+)
+PATCH_PATHS = (PATCH_PATH, PATCH2_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-nintendo.conf"
 DESENHO_PATH = (
@@ -72,6 +79,8 @@ DKMS_CONF = _read(DKMS_CONF_PATH)
 MAKEFILE = _read(MAKEFILE_PATH)
 C = _read(C_PATH)
 PATCH = _read(PATCH_PATH)
+PATCH2 = _read(PATCH2_PATH)
+PATCHES = (PATCH, PATCH2)
 BASELINE = _read(BASELINE_PATH)
 MODPROBE_CONF = _read(MODPROBE_CONF_PATH)
 DESENHO = _read(DESENHO_PATH)
@@ -92,6 +101,16 @@ def _baseline() -> dict[str, str]:
     return dados
 
 
+def _baseline_patches() -> list[str]:
+    """Linhas PATCH= do BASELINE, NA ORDEM (o dict de `_baseline` colapsa
+    chaves repetidas; a ordem dos patches é parte do invariante)."""
+    return [
+        linha.strip().partition("=")[2]
+        for linha in BASELINE.splitlines()
+        if linha.strip().startswith("PATCH=")
+    ]
+
+
 def _funcao_c(assinatura: str) -> str:
     """Fatia do .c da assinatura dada até o início da próxima função
     top-level (`\\nstatic `) — suficiente para asserções de ordem."""
@@ -100,19 +119,33 @@ def _funcao_c(assinatura: str) -> str:
     return C[ini:fim]
 
 
-def _aplica_patch(cwd: Path, reverso: bool) -> subprocess.CompletedProcess[str]:
-    """Aplica o 0001-*.patch em cwd (contra hid-nintendo.c local), com
-    `patch` se existir, senão `git apply` — sem skip: sem nenhuma das duas
+def _aplica_um_patch(
+    cwd: Path, reverso: bool, patch_path: Path
+) -> subprocess.CompletedProcess[str]:
+    """Aplica UM .patch em cwd (contra hid-nintendo.c local), com `patch`
+    se existir, senão `git apply` — sem skip: sem nenhuma das duas
     ferramentas o teste FALHA (as duas são baseline de CI/dev)."""
     if shutil.which("patch"):
-        cmd = ["patch", "-p3", "-s", "-i", str(PATCH_PATH)]
+        cmd = ["patch", "-p3", "-s", "-i", str(patch_path)]
         if reverso:
             cmd.insert(1, "-R")
     else:
-        cmd = ["git", "apply", "-p3", str(PATCH_PATH)]
+        cmd = ["git", "apply", "-p3", str(patch_path)]
         if reverso:
             cmd.insert(2, "-R")
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=False)
+
+
+def _aplica_serie(cwd: Path, reverso: bool) -> subprocess.CompletedProcess[str]:
+    """Série completa: forward na ordem do BASELINE, reverso na inversa.
+    Para no primeiro erro (returncode != 0)."""
+    serie = tuple(reversed(PATCH_PATHS)) if reverso else PATCH_PATHS
+    resultado = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+    for patch_path in serie:
+        resultado = _aplica_um_patch(cwd, reverso, patch_path)
+        if resultado.returncode != 0:
+            return resultado
+    return resultado
 
 
 class TestLayout:
@@ -294,7 +327,9 @@ class TestBaselineEParidadeDoPatch:
         )
         for chave in ("SHA256_VANILLA_C", "SHA256_PATCHED_C", "SHA256_HID_IDS_H"):
             assert re.fullmatch(r"[0-9a-f]{64}", dados.get(chave, "")), f"{chave} inválido"
-        assert dados.get("PATCH") == PATCH_PATH.name
+        assert _baseline_patches() == [p.name for p in PATCH_PATHS], (
+            "as linhas PATCH= do BASELINE devem listar a série completa, na ordem"
+        )
 
     def test_sha_do_c_shipping_bate_com_o_baseline(self) -> None:
         assert _sha256(C_PATH) == _baseline()["SHA256_PATCHED_C"], (
@@ -312,24 +347,24 @@ class TestBaselineEParidadeDoPatch:
         trabalho.mkdir()
         alvo = trabalho / "hid-nintendo.c"
         shutil.copy2(C_PATH, alvo)
-        resultado = _aplica_patch(trabalho, reverso=True)
+        resultado = _aplica_serie(trabalho, reverso=True)
         assert resultado.returncode == 0, (
             f"patch -R não aplicou limpo: {resultado.stdout}{resultado.stderr}"
         )
         assert _sha256(alvo) == _baseline()["SHA256_VANILLA_C"], (
-            "reverter o patch não reproduz o vanilla v7.0.11 — o .c e o .patch "
+            "reverter a série não reproduz o vanilla v7.0.11 — o .c e os .patch "
             "divergiram (edite sempre os DOIS juntos)"
         )
 
     def test_patch_reaplicado_devolve_o_patchado_exato(self, tmp_path: Path) -> None:
-        # Os dois sentidos: vanilla + patch == shipping (rebase e upstream
+        # Os dois sentidos: vanilla + série == shipping (rebase e upstream
         # partem daqui).
         trabalho = tmp_path / "fwd"
         trabalho.mkdir()
         alvo = trabalho / "hid-nintendo.c"
         shutil.copy2(C_PATH, alvo)
-        assert _aplica_patch(trabalho, reverso=True).returncode == 0
-        resultado = _aplica_patch(trabalho, reverso=False)
+        assert _aplica_serie(trabalho, reverso=True).returncode == 0
+        resultado = _aplica_serie(trabalho, reverso=False)
         assert resultado.returncode == 0, (
             f"patch forward não aplicou limpo: {resultado.stdout}{resultado.stderr}"
         )
@@ -340,61 +375,81 @@ class TestFormatoDoPatchUpstream:
     """T2.4: o mesmo arquivo serve rebase DKMS e submissão a linux-input."""
 
     def test_formato_git_format_patch(self) -> None:
-        assert PATCH.startswith("From "), "precisa ser saída de git format-patch"
-        assert "Subject: [PATCH] HID: nintendo:" in PATCH
+        for corpo in PATCHES:
+            assert corpo.startswith("From "), "precisa ser saída de git format-patch"
+            assert "Subject: [PATCH] HID: nintendo:" in corpo
 
     def test_caminhos_do_kernel_tree(self) -> None:
-        assert "--- a/drivers/hid/hid-nintendo.c" in PATCH
-        assert "+++ b/drivers/hid/hid-nintendo.c" in PATCH
+        for corpo in PATCHES:
+            assert "--- a/drivers/hid/hid-nintendo.c" in corpo
+            assert "+++ b/drivers/hid/hid-nintendo.c" in corpo
 
     def test_signed_off_by_placeholder_anonimo(self) -> None:
         # Gate check_anonymity: o repo fica anônimo; a submissão real troca o
         # SoB (DCO exige pessoa) — decisão da mantenedora, fora do repo.
-        assert SOB_ANONIMO in PATCH
+        for corpo in PATCHES:
+            assert SOB_ANONIMO in corpo
 
     def test_adiciona_exatamente_os_cinco_module_param(self) -> None:
         adicionados = re.findall(r"^\+module_param\((\w+), uint, 0644\);$", PATCH, re.MULTILINE)
         assert sorted(adicionados) == sorted(PARAMS)
 
+    def test_0002_adiciona_o_param_bool_dos_leds(self) -> None:
+        assert re.search(
+            r"^\+module_param\(register_leds_on_set_failure, bool, 0644\);$",
+            PATCH2,
+            re.MULTILINE,
+        ), "0002 adiciona o opt-in register_leds_on_set_failure (default N == vanilla)"
+
     def test_nao_remove_a_string_exceeded(self) -> None:
-        for linha in PATCH.splitlines():
-            if linha.startswith("-") and not linha.startswith("---"):
-                assert "exceeded max attempts" not in linha, (
-                    "o patch não pode remover/alterar a string que o "
-                    "kernel-watch/doctor casam"
-                )
+        for corpo in PATCHES:
+            for linha in corpo.splitlines():
+                if linha.startswith("-") and not linha.startswith("---"):
+                    assert "exceeded max attempts" not in linha, (
+                        "o patch não pode remover/alterar a string que o "
+                        "kernel-watch/doctor casam"
+                    )
 
 
 class TestModprobeConf:
-    def test_cura_opt_in_bt_probe_retries_3_e_skip_tx(self) -> None:
-        # As DUAS pontas da cura são opt-in daqui (defaults do módulo ==
-        # vanilla): retry de probe BT + não-transmitir após exceeded
-        # (achado #1 do corretor: o skip deixou de ser incondicional).
+    def test_cura_opt_in_completa(self) -> None:
+        # As pontas da cura são opt-in daqui (defaults do módulo == vanilla):
+        # retry de probe BT + não-transmitir após exceeded + registrar LEDs
+        # com SET inicial falho (fix 21/07 — medido: -110 no probe deixava o
+        # Pro Controller sem LEDs de player pela conexão inteira).
         assert re.search(
-            r"^options hid_nintendo bt_probe_retries=3 skip_tx_on_rate_exceeded=1$",
+            r"^options hid_nintendo bt_probe_retries=3 skip_tx_on_rate_exceeded=1"
+            r" register_leds_on_set_failure=1"
+            r" sync_send_tries=4 input_report_wait_ms=500 probe_info_timeout_ms=4000$",
             MODPROBE_CONF,
             re.MULTILINE,
-        ), "a cura entra pela conf: bt_probe_retries=3 + skip_tx_on_rate_exceeded=1"
+        ), "a cura entra pela conf: retries + skip_tx + regleds + tuning BT medido"
 
     def test_conf_documenta_o_opt_out_a_quente_do_skip(self) -> None:
         assert "echo 0" in MODPROBE_CONF and "skip_tx_on_rate_exceeded" in MODPROBE_CONF, (
             "a conf documenta a reversão AO VIVO (validação A/B da onda usa esse knob)"
         )
 
-    def test_somente_a_cura_nada_de_tuning_extra(self) -> None:
+    def test_tuning_persistido_e_medido_e_documentado(self) -> None:
+        # Decisão 21/07 (supersede "só a cura, nada de tuning" da Onda T):
+        # com 4 controles BT o rádio congestionado derrubou o probe (13x
+        # timeout + -110); os limiares maiores SÃO parte da cura e ficam
+        # persistidos — mas cada um precisa estar JUSTIFICADO no comentário
+        # da conf (sem números órfãos) e reversível ao vivo via /sys.
         linhas_options = [
             linha
             for linha in MODPROBE_CONF.splitlines()
             if linha.strip().startswith("options ")
         ]
-        assert len(linhas_options) == 1, "uma única linha options (só a cura)"
-        for nome in PARAMS:
-            if nome == "bt_probe_retries":
-                continue
-            assert nome not in linhas_options[0], (
-                f"{nome} não entra na conf — demais params ficam nos defaults "
-                "(== vanilla); tuning de campo é via /sys, não persistido"
+        assert len(linhas_options) == 1, "uma única linha options"
+        for nome in ("sync_send_tries", "input_report_wait_ms", "probe_info_timeout_ms"):
+            assert nome in linhas_options[0], f"{nome} faz parte da cura BT medida"
+            assert MODPROBE_CONF.count(nome) >= 2, (
+                f"{nome} precisa de justificativa em comentário, não só o valor"
             )
+        assert "subcmd_rate_max_attempts" not in linhas_options[0], (
+            "subcmd_rate_max_attempts segue no default (== vanilla) — sem medição"
+        )
 
 
 class TestDesenhoClaimsCorrigidas:

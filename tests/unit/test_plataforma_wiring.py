@@ -154,7 +154,11 @@ class TestBtMaximoWiring:
     def test_install_decide_dropin_ou_bloco_marcado(self) -> None:
         assert "/etc/bluetooth/main.conf.d" in INSTALL
         assert "hefesto-fastconnectable.conf" in INSTALL
-        assert "hefesto-fastconnectable.block" in INSTALL
+        # ONDA-R2 (camada 1 da sprint BlueZ 2026-07-21): o bloco apensado ao
+        # main.conf virou o UNIFICADO (hefesto-bt.block), reescrito de forma
+        # idempotente — os .block legados só existem para o uninstall limpar
+        # instalações antigas.
+        assert "hefesto-bt.block" in INSTALL
 
     def test_install_faz_backup_do_conffile_antes_de_apensar(self) -> None:
         assert "main.conf.bak.hefesto-" in INSTALL

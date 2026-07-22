@@ -72,6 +72,22 @@ runtime_socket() {
     printf '%s/%s/%s.sock' "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" "${APP_ID}" "${APP_ID}"
 }
 
+# COMPAT BLUEZ-586-CTL-01 (medido 22/07 nesta máquina): o bluetoothctl 5.86
+# ficou MUDO no modo one-shot (`bluetoothctl list` imprime NADA, rc=0 — com
+# ou sem TTY, com ou sem --timeout), enquanto o modo interativo funciona e o
+# daemon está são no D-Bus. Esta função SOMBREIA o binário para todos os ~25
+# usos deste script: roda o comando via modo interativo, tira ANSI/prompt e
+# só emite o que vem DEPOIS do eco do próprio comando (o arranque imprime
+# eventos [NEW]/SupportedUUIDs que não são resposta). Sem bluetoothctl no
+# PATH, degrada para o comportamento antigo (command retorna 127 e os checks
+# tratam vazio como "sem dados", como sempre trataram).
+bluetoothctl() {
+    command -v bluetoothctl >/dev/null 2>&1 || return 127
+    printf '%s\nquit\n' "$*" | command timeout 8 bluetoothctl 2>/dev/null \
+        | sed -e $'s/\x1b\\[[0-9;]*[A-Za-z]//g' -e 's/\r//g' -e 's/^\[bluetoothctl\]> //' \
+        | awk -v cmd="$*" 'BEGIN{seen=0} $0==cmd{seen=1;next} !seen{next} $0=="quit"{exit} /^\[/{next} {print}'
+}
+
 check_daemon_installed() {
     local found
     found="$(command -v hefesto-dualsense4unix 2>/dev/null || true)"
@@ -1219,6 +1235,46 @@ check_bt_agent_service() {
     fi
 }
 
+# ONDA-R2 (sprint 2026-07-21 BlueZ, camada 2): resiliência do bluetoothd —
+# timers de snapshot de bonds + watchdog de saúde ativos e drop-in presente.
+check_bt_resilience() {
+    command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo a resiliência do bluetoothd"; return; }
+    local t1 t2
+    t1="$(systemctl is-active hefesto-bt-bonds-snapshot.timer 2>/dev/null || true)"
+    t2="$(systemctl is-active hefesto-bt-health-watchdog.timer 2>/dev/null || true)"
+    if [[ "${t1}" == "active" && "${t2}" == "active" ]]; then
+        pass "resiliência do bluetoothd ativa (snapshot de bonds 15min + watchdog de saúde 2min)"
+    elif systemctl cat hefesto-bt-bonds-snapshot.timer >/dev/null 2>&1; then
+        warn "timers de resiliência do bluetoothd instalados mas não ativos (snapshot=${t1:-?}, watchdog=${t2:-?}); ligue: sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer hefesto-bt-health-watchdog.timer"
+    else
+        warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup); rode ./install.sh (passo ONDA-R2 aplica por default)"
+    fi
+    if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
+        warn "drop-in 10-hefesto-resilience.conf ausente — sem WatchdogSec (hang sem crash fica invisível) e sem snapshot na parada do serviço"
+    fi
+}
+
+# ONDA-R2: bonds em disco vs cache — a assinatura medida em 22/07 do estado
+# "pareamentos que evaporam" é cache/ populado com ZERO diretórios de bond
+# (<MAC>/info) em /var/lib/bluetooth. Leitura exige root (árvore 700) —
+# best-effort: sem sudo -n, só informa como conferir.
+check_bt_bonds_persistidos() {
+    if ! sudo -n true 2>/dev/null; then
+        info "sem sudo sem senha — não leio /var/lib/bluetooth (confira à mão: sudo find /var/lib/bluetooth -name info)"
+        return
+    fi
+    local n_info n_cache
+    n_info="$(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | wc -l)"
+    n_cache="$(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -path '*/cache/*' 2>/dev/null | wc -l)"
+    if [[ "${n_info}" -gt 0 ]]; then
+        pass "bonds BT persistidos em disco: ${n_info} (cache com ${n_cache} devices vistos)"
+    elif [[ "${n_cache}" -gt 0 ]]; then
+        fail "ZERO bonds em disco com cache de ${n_cache} devices — pareamentos vivendo só em memória (evaporam no disconnect) ou destruídos por crash; re-pareie com Pair() explícito (bluetoothctl pair <MAC>) e confira Bonded: yes; se houver snapshot: sudo /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh --list"
+    else
+        info "nenhum bond nem cache em /var/lib/bluetooth — adaptador nunca pareou nada (ou árvore em outro lugar)"
+    fi
+}
+
 # Normaliza um MAC para minúsculo sem ':' — mesma forma usada para comparar
 # HID_UNIQ (sysfs) com o MAC do bluetoothctl (formatos diferem em caixa).
 _mac_norm() {
@@ -1933,10 +1989,11 @@ check_hefesto_hid_nintendo_dkms() {
     # Módulo CARREGADO agora: só o patchado expõe parameters/ (0 params no
     # in-tree — confirmado byte a byte no estudo de premissas).
     if [[ -d /sys/module/hid_nintendo/parameters ]]; then
-        local retries skiptx
+        local retries skiptx regleds
         retries="$(cat /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || echo '?')"
         skiptx="$(cat /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || echo '?')"
-        pass "módulo hid_nintendo CARREGADO é o patchado (bt_probe_retries=${retries}, skip_tx_on_rate_exceeded=${skiptx}; esperados 3/Y via /etc/modprobe.d/hefesto-hid-nintendo.conf)"
+        regleds="$(cat /sys/module/hid_nintendo/parameters/register_leds_on_set_failure 2>/dev/null || echo '?')"
+        pass "módulo hid_nintendo CARREGADO é o patchado (bt_probe_retries=${retries}, skip_tx_on_rate_exceeded=${skiptx}, register_leds_on_set_failure=${regleds}; esperados 3/Y/Y via /etc/modprobe.d/hefesto-hid-nintendo.conf — regleds '?' = módulo anterior ao fix 21/07, reinstale)"
     elif [[ -d /sys/module/hid_nintendo ]]; then
         warn "módulo hid_nintendo carregado é o in-tree (sem parameters/) — o patchado vale SÓ no próximo boot (replug NÃO troca módulo carregado: re-liga no driver residente; substituir módulo em uso derrubaria Pro Controller/8BitDo conectados)"
     else
@@ -2294,6 +2351,8 @@ main() {
     hdr "rádio e pareamento (G2)"
     check_bluez_backport_version
     check_bt_agent_service
+    check_bt_resilience
+    check_bt_bonds_persistidos
     check_bt_connected_sem_hidraw
     check_bt_paired_sem_bonded
     hdr "applet COSMIC"

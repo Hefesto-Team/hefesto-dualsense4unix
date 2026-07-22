@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+Date: Tue, 21 Jul 2026 22:00:00 -0300
+Subject: [PATCH] HID: nintendo: optionally register LEDs even when the
+ initial set fails
+
+On a bluetooth link degraded by 2.4GHz congestion (measured live with
+four controllers connected: the initial player-LED set fails with
+-ETIMEDOUT during probe), the driver skips LED class device
+registration entirely ("Failed to set players LEDs, skipping
+registration"). The controller then never gets player LEDs for its
+whole connection lifetime, even after the link recovers seconds later:
+userspace has no LED node to write to, so nothing can heal it short of
+a full reconnect.
+
+Registration itself is a local operation that cannot upset the
+controller; only the initial SET went missing. Add a
+register_leds_on_set_failure parameter (default N = historical
+behavior): when set, the player and home LED class devices are
+registered despite the failed initial set, and the next brightness
+write from userspace (e.g. a player-slot assignment) heals the LEDs
+over the recovered link.
+
+Observed in the field on a Pro Controller (bus 0005): probe at boot
+under congestion logged "Failed to set players LEDs, skipping
+registration; ret=-110" followed by 13x "timeout waiting for input
+report", leaving the controller permanently without player LEDs while
+otherwise functional.
+
+Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
+---
+ drivers/hid/hid-nintendo.c | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
+
+index 4bfa968..b40c4b3 100644
+--- a/drivers/hid/hid-nintendo.c
++++ b/drivers/hid/hid-nintendo.c
+@@ -79,6 +79,11 @@ module_param(skip_tx_on_rate_exceeded, bool, 0644);
+ MODULE_PARM_DESC(skip_tx_on_rate_exceeded,
+ 		 "Skip a subcommand/rumble transmission when no safe TX window was found instead of transmitting anyway (default N = transmit, same as before)");
+
++static bool register_leds_on_set_failure;
++module_param(register_leds_on_set_failure, bool, 0644);
++MODULE_PARM_DESC(register_leds_on_set_failure,
++		 "Register LED class devices even when the initial LED set fails (e.g. -ETIMEDOUT on a congested bluetooth link), so a later brightness write can heal the controller instead of leaving it without player LEDs forever (default N = skip registration, same as before)");
++
+ /*
+  * Reference the url below for the following HID report defines:
+  * https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering
+@@ -2344,10 +2349,12 @@ static int joycon_leds_create(struct joycon_ctlr *ctlr)
+ 	mutex_lock(&ctlr->output_mutex);
+ 	ret = joycon_set_player_leds(ctlr, 0, led_val);
+ 	mutex_unlock(&ctlr->output_mutex);
+-	if (ret) {
++	if (ret && !register_leds_on_set_failure) {
+ 		hid_warn(hdev, "Failed to set players LEDs, skipping registration; ret=%d\n", ret);
+ 		goto home_led;
+ 	}
++	if (ret)
++		hid_warn(hdev, "Failed to set players LEDs, registering anyway; ret=%d\n", ret);
+
+ 	for (i = 0; i < JC_NUM_LEDS; i++) {
+ 		led = &ctlr->leds[i];
+@@ -2379,10 +2386,12 @@ home_led:
+ 		mutex_lock(&ctlr->output_mutex);
+ 		ret = joycon_set_home_led(ctlr, 0);
+ 		mutex_unlock(&ctlr->output_mutex);
+-		if (ret) {
++		if (ret && !register_leds_on_set_failure) {
+ 			hid_warn(hdev, "Failed to set home LED, skipping registration; ret=%d\n", ret);
+ 			return 0;
+ 		}
++		if (ret)
++			hid_warn(hdev, "Failed to set home LED, registering anyway; ret=%d\n", ret);
+
+ 		ret = devm_led_classdev_register(&hdev->dev, led);
+ 		if (ret) {
+--
+2.43.0

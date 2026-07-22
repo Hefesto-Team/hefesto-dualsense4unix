@@ -1,0 +1,24 @@
+# >>> hefesto bluetooth >>>
+# hefesto-dualsense4unix — bloco ÚNICO gerenciado de /etc/bluetooth/main.conf.
+# Consolida o que antes eram dois blocos apensados (FastConnectable e
+# JustWorksRepairing) numa única seção [General], escrita de forma IDEMPOTENTE:
+# o install remove qualquer bloco hefesto anterior (este e os dois legados)
+# antes de apensar esta versão — nunca acumula seções repetidas
+# (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md, camada 1).
+#
+# FastConnectable=true  — page scan agressivo: o botão PS reconecta mais rápido
+#   (PLAT-04 item 3; estudo 2026-07-18-estudo-bt-maximo.md).
+# JustWorksRepairing=always — aceita re-pareamento de device que já tem bond
+#   (Onda R; estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4). ATENÇÃO
+#   (medido 22/07): o re-pair ENTRANTE aceito por esta opção pode viver só em
+#   memória (device temporário) — a persistência garantida do bond exige o
+#   Pair() explícito (bluetoothctl pair <MAC>); o hefesto-bt-health-watchdog
+#   vigia e promove quando possível.
+#
+# Vale no próximo start do bluetoothd — o install NUNCA reinicia o serviço por
+# causa deste bloco (derrubaria os controles BT conectados). Exceções: postinst
+# do próprio pacote bluez (backport) e o watchdog de estado doente.
+[General]
+FastConnectable=true
+JustWorksRepairing=always
+# <<< hefesto bluetooth <<<

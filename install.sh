@@ -1011,64 +1011,53 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         if [[ -e /sys/module/btusb/parameters/enable_autosuspend ]]; then
             printf '0' | sudo tee /sys/module/btusb/parameters/enable_autosuspend >/dev/null 2>&1 || true
         fi
-        # FastConnectable (decisão por suporte real do BlueZ da máquina).
-        FASTCONN_SENTINEL='# >>> hefesto FastConnectable >>>'
+        # Config do BlueZ (camada 1 da sprint 2026-07-21 BlueZ): UM bloco
+        # gerenciado (FastConnectable + JustWorksRepairing juntos), escrito de
+        # forma IDEMPOTENTE — o rewrite remove qualquer versão anterior (o
+        # bloco unificado, os DOIS blocos legados com sentinelas próprias E
+        # chaves soltas nossas fora de bloco) antes de apensar. Rodar o
+        # install N vezes nunca acumula seções (bug real medido em 21/07:
+        # main.conf com 3× [General] de appends empilhados).
+        # main.conf segue sendo conffile do dpkg: SEMPRE com backup antes.
+        # ARMADILHA respeitada: NUNCA reiniciamos o bluetoothd aqui.
         if [[ -d /etc/bluetooth/main.conf.d ]]; then
-            if sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf 2>/dev/null; then
-                printf '      FastConnectable via drop-in main.conf.d (vale no próximo boot/restart do bluetoothd)\n'
+            # BlueZ com main.conf.d: drop-ins dedicados (idempotentes por
+            # natureza — install -D sobrescreve no lugar, nunca acumula).
+            _bt_dropin_ok=1
+            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.conf" \
+                    /etc/bluetooth/main.conf.d/hefesto-fastconnectable.conf 2>/dev/null || _bt_dropin_ok=0
+            sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.conf" \
+                    /etc/bluetooth/main.conf.d/hefesto-justworks.conf 2>/dev/null || _bt_dropin_ok=0
+            if [[ "${_bt_dropin_ok}" -eq 1 ]]; then
+                printf '      FastConnectable + JustWorksRepairing via drop-ins main.conf.d (valem no próximo restart do bluetoothd)\n'
             else
-                warn "drop-in do FastConnectable falhou"
+                warn "drop-in de config do BlueZ falhou em main.conf.d"
             fi
         elif [[ -f /etc/bluetooth/main.conf ]]; then
-            if sudo grep -qF "${FASTCONN_SENTINEL}" /etc/bluetooth/main.conf 2>/dev/null; then
-                printf '      FastConnectable já aplicado (bloco marcado presente) — nada a fazer\n'
+            _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
+            _bt_tmp="$(mktemp)"
+            # O awk descarta: (a) os três blocos sentinelados (unificado +
+            # legados), (b) chaves nossas soltas fora de bloco (deixadas por
+            # edições manuais — só as NÃO comentadas; as comentadas do
+            # template upstream ficam).
+            if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
+               && sudo awk '
+                    /^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>/ { _skip=1; next }
+                    _skip && /^# <<< hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<</ { _skip=0; next }
+                    _skip { next }
+                    /^[[:space:]]*(FastConnectable|JustWorksRepairing)[[:space:]]*=/ { next }
+                    { print }
+                  ' /etc/bluetooth/main.conf > "${_bt_tmp}" \
+               && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-bt.block"; } >> "${_bt_tmp}" \
+               && sudo install -m644 -o root -g root "${_bt_tmp}" /etc/bluetooth/main.conf; then
+                printf '      bloco hefesto (FastConnectable + JustWorksRepairing) reescrito no main.conf (backup: %s)\n' "${_bt_backup}"
+                printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
             else
-                _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
-                if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
-                   && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-fastconnectable.block"; } \
-                        | sudo tee -a /etc/bluetooth/main.conf >/dev/null 2>&1; then
-                    printf '      FastConnectable apensado ao main.conf (backup: %s)\n' "${_bt_backup}"
-                    printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
-                else
-                    warn "não consegui apensar o bloco FastConnectable ao /etc/bluetooth/main.conf"
-                fi
+                warn "não consegui reescrever o bloco hefesto no /etc/bluetooth/main.conf"
             fi
+            rm -f "${_bt_tmp}"
         else
-            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — FastConnectable pulado\n'
-        fi
-
-        # JustWorksRepairing (Onda R) — mesmo mecanismo do FastConnectable
-        # acima (drop-in OU bloco apensado com sentinela própria), pelo mesmo
-        # motivo: main.conf é conffile do dpkg, então SEMPRE com backup antes.
-        # Sem isso, re-parear um controle com bond já existente (pós-migração
-        # do backport bluez 5.85 — ONDA-R "BlueZ resiliente" abaixo — ou o
-        # bond "meio-salvo" Paired-sem-Bonded) pode ser rejeitado pelo BlueZ
-        # até timeout. Ver estudo 2026-07-19-estudo-bluez-backport-onda-r.md §4.
-        JUSTWORKS_SENTINEL='# >>> hefesto JustWorksRepairing >>>'
-        if [[ -d /etc/bluetooth/main.conf.d ]]; then
-            if sudo install -Dm644 "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.conf" \
-                    /etc/bluetooth/main.conf.d/hefesto-justworks.conf 2>/dev/null; then
-                printf '      JustWorksRepairing via drop-in main.conf.d (vale no próximo boot/restart do bluetoothd)\n'
-            else
-                warn "drop-in do JustWorksRepairing falhou"
-            fi
-        elif [[ -f /etc/bluetooth/main.conf ]]; then
-            if sudo grep -qF "${JUSTWORKS_SENTINEL}" /etc/bluetooth/main.conf 2>/dev/null; then
-                printf '      JustWorksRepairing já aplicado (bloco marcado presente) — nada a fazer\n'
-            else
-                _bt_backup_jw="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
-                if sudo cp /etc/bluetooth/main.conf "${_bt_backup_jw}" 2>/dev/null \
-                   && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-justworks.block"; } \
-                        | sudo tee -a /etc/bluetooth/main.conf >/dev/null 2>&1; then
-                    printf '      JustWorksRepairing apensado ao main.conf (backup: %s)\n' "${_bt_backup_jw}"
-                    printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
-                else
-                    warn "não consegui apensar o bloco JustWorksRepairing ao /etc/bluetooth/main.conf"
-                fi
-            fi
-        else
-            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — JustWorksRepairing pulado\n'
+            printf '      sem /etc/bluetooth/main.conf (BlueZ ausente?) — config do BlueZ pulada\n'
         fi
     fi
 fi
@@ -1212,7 +1201,62 @@ PYEOF
 fi
 
 # ---------------------------------------------------------------------------
-# 3f. ONDA-R: BlueZ resiliente (backport local 5.85 do resolute) — DEFAULT
+# 3e-bis. ONDA-R2: resiliência do bluetoothd — DEFAULT (camada 2 da sprint
+#         2026-07-21-sprint-pesquisa-bluez-estabilidade.md)
+# ---------------------------------------------------------------------------
+# O crash de heap do bluetoothd destrói bonds e deixa o daemon renascido
+# "doente" (recusa devices pareados em loop — medido 21/07). Quatro entregas:
+#   1. scripts de sistema em /usr/local/lib/hefesto-dualsense4unix/ (mesma
+#      casa do broker root): snapshot/restore de bonds, watchdog de saúde e
+#      captura forense (esta última NUNCA ligada por default);
+#   2. drop-in do bluetooth.service: Restart=on-failure reafirmado (o template
+#      upstream traz comentado — bump futuro do pacote pode regredir) +
+#      WatchdogSec=30 (hang sem crash) + snapshot de bonds a cada parada;
+#   3. timer de snapshot (15min, deduplicado por conteúdo, NUNCA fotografa
+#      estado vazio) — restauração é MANUAL (bt_bonds_restore.sh; automática
+#      poderia restaurar chave que o controle rotacionou → loop de auth);
+#   4. timer do watchdog (2min): estado doente → restart rate-limitado (só com
+#      0 devices conectados); bond Paired-sem-Bonded (temporário, evapora no
+#      disconnect — medido 22/07) → promoção via Pair() explícito 1x/boot.
+# Ordem importa: este passo vem ANTES do 3f porque o postinst do backport
+# reinicia o bluetoothd — o drop-in precisa existir para armar nesse restart.
+if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
+    step "3e-bis" "ONDA-R2: resiliência do bluetoothd (watchdog + snapshot de bonds)"
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
+    else
+        _btres_ok=1
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh; do
+            sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
+                "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
+        done
+        sudo install -Dm644 "${ROOT_DIR}/assets/systemd/bluetooth-dropin-10-hefesto-resilience.conf" \
+            /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf 2>/dev/null || _btres_ok=0
+        for _btres_u in hefesto-bt-bonds-snapshot.service hefesto-bt-bonds-snapshot.timer \
+                        hefesto-bt-health-watchdog.service hefesto-bt-health-watchdog.timer; do
+            sudo install -Dm644 "${ROOT_DIR}/assets/systemd/${_btres_u}" \
+                "/etc/systemd/system/${_btres_u}" 2>/dev/null || _btres_ok=0
+        done
+        sudo install -d -m700 /var/lib/hefesto-dualsense4unix/bt-bonds 2>/dev/null || true
+        sudo systemctl daemon-reload >/dev/null 2>&1 || true
+        if sudo systemctl enable --now hefesto-bt-bonds-snapshot.timer \
+                hefesto-bt-health-watchdog.timer >/dev/null 2>&1; then
+            printf '      timers ativos: snapshot de bonds (15 em 15 min) + watchdog de saúde (2 em 2 min)\n'
+        else
+            warn "enable dos timers de resiliência falhou — habilite manualmente (systemctl enable --now hefesto-bt-*.timer)"
+            _btres_ok=0
+        fi
+        if [[ "${_btres_ok}" -eq 1 ]]; then
+            printf '      drop-in de resiliência instalado (Restart reafirmado + WatchdogSec=30 + snapshot na parada)\n'
+            printf '      vale no próximo restart do bluetoothd; captura forense é OPT-IN: bt_crash_capture.sh --on\n'
+        else
+            warn "resiliência do bluetoothd instalada PARCIALMENTE — confira as mensagens acima"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT
 # ---------------------------------------------------------------------------
 # Estudo docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md: o
 # bluez 5.72-0ubuntu5.5 do noble crashou 6x em 5 dias (heap corruption/SEGV em
@@ -1242,18 +1286,23 @@ fi
 #       regressão: UserspaceHID=false em /etc/bluetooth/input.conf.
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f" "ONDA-R: BlueZ resiliente (backport 5.85 — cura crashes crônicos do bluetoothd)"
+    step "3f" "ONDA-R: BlueZ resiliente (backport 5.86 — crashes crônicos + heap do loop de reconexão)"
     if ! sudo -n true 2>/dev/null; then
         warn "sudo recusado — passo do backport bluez pulado (re-execute ./install.sh)"
     else
+        # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
+        # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
+        # 17a227b7) — o retrato estrutural do gatilho do crash de heap medido
+        # em 21/07 no 5.85. 5.87 foi descartado (UAF novo em dev_disconnected,
+        # fix só em git HEAD sem release).
+        _BZ_TARGET="5.86"
         _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
         if [[ -z "${_bz_cur}" ]]; then
             printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
-        elif dpkg --compare-versions "${_bz_cur}" ge 5.79 2>/dev/null; then
-            # (e) no-op: já ≥5.79, sem o histórico de crash de input/uhid do 5.72.
-            printf '      bluez %s já ≥5.79 — nada a fazer\n' "${_bz_cur}"
+        elif dpkg --compare-versions "${_bz_cur}" ge "${_BZ_TARGET}" 2>/dev/null; then
+            printf '      bluez %s já ≥%s — nada a fazer\n' "${_bz_cur}" "${_BZ_TARGET}"
         else
-            printf '      bluez %s < 5.79 (crashes crônicos de input/HIDP documentados no estudo)\n' "${_bz_cur}"
+            printf '      bluez %s < alvo %s (5.72: crashes crônicos de input/HIDP; 5.85: heap corruption no loop de reconexão — ver sprint 2026-07-21)\n' "${_bz_cur}" "${_BZ_TARGET}"
             _bz_dir="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
             _bz_sums="${_bz_dir}/SHA256SUMS"
             _bz_deb_bluez="$(ls -t "${_bz_dir}"/bluez_*.deb 2>/dev/null | head -1)"
@@ -1282,7 +1331,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
                     # (c) AVISO ALTO pré-aplicação — sob --yes prossegue; interativo
                     # tem Enter=sim (mesma filosofia de default-apply do install),
                     # mas o texto dá ao usuário a chance de recusar vendo o custo.
-                    printf '\n      >>> AVISO: aplicar o backport bluez 5.85 REINICIA o bluetoothd\n'
+                    printf '\n      >>> AVISO: aplicar o backport do bluez REINICIA o bluetoothd\n'
                     printf '          (os controles BT caem até reconectar) e a migração DESCARTA os\n'
                     printf '          bonds antigos — reparei UMA VEZ os controles BT depois (PS+Create\n'
                     printf '          no DualSense). É a ÚNICA exceção à regra de nunca reiniciar o\n'

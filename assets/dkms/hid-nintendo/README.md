@@ -14,7 +14,14 @@ Nintendo/8BitDo sob interferência 2.4GHz (medida 3× nesta máquina: `-110` no
 - `hid-ids.h` = header local intocado do mesmo commit (único include local).
 - Código C em inglês (convenção do subsistema HID, visando o upstream).
 
-## O que o patch muda (3 alvos, detalhe no próprio patch)
+## O que os patches mudam (4 alvos, detalhe nos próprios patches)
+
+- **[D] Registrar LEDs mesmo com SET inicial falho** (`0002-*.patch`, opt-in
+  `register_leds_on_set_failure`): em BT congestionado o primeiro set de
+  player LEDs dá `-110` e o vanilla PULA o registro — o controle fica sem
+  LEDs de player pela conexão inteira (medido 21/07 com 4 controles BT).
+  Registrar é local; a próxima escrita de brightness (atribuição de player
+  do daemon) cura pelo link já recuperado. Default `N` == vanilla.
 
 - **[B] Não transmitir após esgotar o rate-limit**: hoje o driver esgota as 25
   tentativas ("exceeded max attempts") e transmite mesmo assim, sem ritmo —

@@ -1,0 +1,13 @@
+[Unit]
+Description=Hefesto — timer do snapshot dos bonds Bluetooth (15 em 15 min)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+# O script deduplica por conteúdo — rodar de 15 em 15 min não gera churn de
+# disco quando nada mudou.
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

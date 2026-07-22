@@ -1,11 +1,15 @@
-# Baseline do módulo DKMS hefesto-hid-nintendo (Onda T)
-# O hid-nintendo.c deste diretório == vanilla v7.0.11 + 0001-*.patch aplicado.
-# Paridade verificável: patch -R -p3 hid-nintendo.c < patch/0001-*.patch
+# Baseline do módulo DKMS hefesto-hid-nintendo (Onda T + fix 21/07)
+# O hid-nintendo.c deste diretório == vanilla v7.0.11 + patches aplicados
+# NA ORDEM da lista PATCH abaixo.
+# Paridade verificável (reverte na ordem INVERSA):
+#   patch -R -p3 hid-nintendo.c < patch/0002-*.patch
+#   patch -R -p3 hid-nintendo.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 KERNEL_BASE=v7.0.11
 KERNEL_TESTED=7.0.11-76070011-generic
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=6b71cb4925c9eea5f98d0f02c41bba85f6bb6bda242a6ee27d57ce2b79db2975
-SHA256_PATCHED_C=9d64febbf4c623ceac156016f4768aa2e6d7135808840473924338031e226e5f
+SHA256_PATCHED_C=73fc0b0e603453e467d918be945da874418c04f0db6bbd745b9d8e0a93f4d190
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
 PATCH=0001-HID-nintendo-do-not-transmit-after-rate-limit-exhaus.patch
+PATCH=0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch
