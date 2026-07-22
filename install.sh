@@ -1295,7 +1295,12 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
         # 17a227b7) — o retrato estrutural do gatilho do crash de heap medido
         # em 21/07 no 5.85. 5.87 foi descartado (UAF novo em dev_disconnected,
         # fix só em git HEAD sem release).
-        _BZ_TARGET="5.86"
+        # 24.04.2 (22/07): patch hefesto-0001 — mantém o bond no Virtual Cable
+        # Unplug (Pro/8BitDo evaporavam o bond a cada queda no caminho uhid;
+        # ver docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-*.md).
+        # Alvo é a VERSÃO COMPLETA (não "5.86") para o compare-versions detectar
+        # o upgrade .1→.2 — senão o "já ≥5.86" pularia o patch novo.
+        _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.2"
         _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
         if [[ -z "${_bz_cur}" ]]; then
             printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
