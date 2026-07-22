@@ -453,10 +453,20 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
           anterior e o rumble de terceiros sobrevive ao nosso keepalive;
         - supressão de LED (FEAT-DSX-LIGHTBAR-SYSFS-01): `_suppress_leds`
           limpa lightbar 0x04 + player 0x10 do flag1 (o kernel é o dono).
+        - LIGHTBAR-BT-KEEPALIVE-01 (22/07, forense da captura): sob supressão,
+          o flag2 também tem de sair ZERADO nos bits de SETUP/BRILHO da
+          lightbar (0x02|0x01). O `ledOption` da pydualsense nasce `Both`
+          (0x03) e vazava crus no keepalive a 2 Hz; o bit 0x02
+          (LIGHTBAR_SETUP_CONTROL) é o mesmo que o kernel usa UMA vez por
+          conexão para tomar a barra — reengatá-lo em regime trava a exibição
+          no firmware (o registrador aceita a cor, o sysfs mostra, mas a barra
+          fica apagada). Foi a regressão do BTREPORT-02: antes o keepalive era
+          malformado e o firmware o descartava.
         """
         from hefesto_dualsense4unix.core import ds_output_report as rep
 
         common = bytearray(rep.COMMON_LEN)
+        suppress_leds = bool(getattr(self, "_suppress_leds", False))
         flag0 = 0xFF  # upstream: vibração+gatilhos+áudio sempre autorizados
         flag1 = 0x01 | 0x02 | 0x04 | 0x10 | 0x40  # upstream: mic+LED+atenuação
         flag2 = int(self.light.ledOption.value)
@@ -466,10 +476,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             )
             flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
             flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
-        if getattr(self, "_suppress_leds", False):
+        if suppress_leds:
             flag1 &= ~(
                 rep.VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE
                 | rep.VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE
+            )
+            # LIGHTBAR-BT-KEEPALIVE-01: não tocar a máquina de setup/brilho da
+            # lightbar (o kernel é o dono) — o keepalive vira LED-neutro de fato.
+            flag2 &= ~(
+                rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
+                | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
             )
         common[0] = flag0
         common[1] = flag1
@@ -495,12 +511,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 common[22 + i] = int(self.triggerL.forces[i]) & 0xFF
             common[30] = int(self.triggerL.forces[6]) & 0xFF
         common[rep.COMMON_VALID_FLAG2] = flag2
-        common[41] = int(self.light.pulseOptions.value) & 0xFF
-        common[42] = int(self.light.brightness.value) & 0xFF
-        common[43] = int(self.light.playerNumber.value) & 0xFF
-        common[44] = int(self.light.TouchpadColor[0]) & 0xFF
-        common[45] = int(self.light.TouchpadColor[1]) & 0xFF
-        common[46] = int(self.light.TouchpadColor[2]) & 0xFF
+        if not suppress_leds:
+            common[41] = int(self.light.pulseOptions.value) & 0xFF
+            common[42] = int(self.light.brightness.value) & 0xFF
+            common[43] = int(self.light.playerNumber.value) & 0xFF
+            common[44] = int(self.light.TouchpadColor[0]) & 0xFF
+            common[45] = int(self.light.TouchpadColor[1]) & 0xFF
+            common[46] = int(self.light.TouchpadColor[2]) & 0xFF
+        # LIGHTBAR-BT-KEEPALIVE-01: sob supressão os bytes de lightbar/player/
+        # setup ficam ZERO (inertes — os flags que os validariam estão
+        # limpos) e estáveis para o dedup `_last_out_report`.
         return common
 
     def prepareReport(self) -> list[int]:  # noqa: N802 - override do nome do upstream
