@@ -42,6 +42,7 @@ SCRIPTS = [
     REPO_ROOT / "scripts" / "bt_bonds_restore.sh",
     REPO_ROOT / "scripts" / "bt_health_watchdog.sh",
     REPO_ROOT / "scripts" / "bt_crash_capture.sh",
+    REPO_ROOT / "scripts" / "bt_active_mode.sh",
 ]
 INSTALL = REPO_ROOT / "install.sh"
 UNINSTALL = REPO_ROOT / "uninstall.sh"
@@ -101,6 +102,38 @@ class TestDropinResilience:
             text,
             re.M,
         )
+
+    def test_dropin_aplica_modo_ativo_nintendo_no_start(self) -> None:
+        """BT-NINTENDO-ACTIVE-01: ExecStartPost aplica nome+link-policy a cada
+        (re)start do bluetoothd. "-" prefixado = não-fatal (adaptador pode não
+        estar pronto no start; o watchdog reafirma)."""
+        text = DROPIN.read_text(encoding="utf-8")
+        assert re.search(
+            r"^ExecStartPost=-/usr/local/lib/hefesto-dualsense4unix/bt_active_mode\.sh",
+            text,
+            re.M,
+        )
+
+    def test_active_mode_desliga_sniff_e_prefixa_nintendo(self) -> None:
+        """O script tira o SNIFF (link policy rswitch) e prefixa 'Nintendo' no
+        alias — as duas alavancas medidas na pesquisa 2026-07-22."""
+        text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
+        assert "lp rswitch" in text, "deve setar link policy sem SNIFF"
+        assert "Nintendo ${ALIAS_ATUAL}" in text, "deve prefixar 'Nintendo' no alias"
+
+    def test_watchdog_reafirma_modo_ativo(self) -> None:
+        """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que
+        resetou (rfkill/suspend zeram a link policy) e conexões novas."""
+        text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
+            encoding="utf-8"
+        )
+        assert "bt_active_mode.sh" in text
+
+    def test_uninstall_reverte_sniff_e_nome(self) -> None:
+        """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo."""
+        text = UNINSTALL.read_text(encoding="utf-8")
+        assert "lp rswitch hold sniff park" in text
+        assert "bt_active_mode.sh" in text
 
 
 class TestInvariantesDosScripts:
@@ -163,6 +196,12 @@ class TestSimetriaInstallUninstall:
 class TestAlvoBluez586:
     def test_install_aponta_para_o_alvo_586(self) -> None:
         text = INSTALL.read_text(encoding="utf-8")
-        assert re.search(r'_BZ_TARGET="5\.86"', text), (
+        # 22/07: o alvo virou a VERSÃO COMPLETA ~hefesto24.04.2 (patch BOND-KEEP-01)
+        # — o compare-versions precisa distinguir .1 de .2; um "5.86" nu pularia
+        # o upgrade. Aceita 5.86 base OU a versão hefesto completa.
+        assert re.search(r'_BZ_TARGET="5\.86', text), (
             "passo 3f deve mirar o BlueZ 5.86 (sprint 2026-07-21: retry-limit 17a227b7)"
+        )
+        assert "hefesto24.04.2" in text, (
+            "o alvo do 3f deve ser a versão hefesto completa .2 (patch BOND-KEEP-01)"
         )

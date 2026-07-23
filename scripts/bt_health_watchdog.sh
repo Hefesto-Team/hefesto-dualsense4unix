@@ -61,6 +61,14 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 install -d -m 700 "${STAMP_DIR}"
 
+# --- vigia 0: modo ativo p/ Nintendo (BT-NINTENDO-ACTIVE-01) ------------------
+# Reafirma nome "Nintendo*" + link policy sem SNIFF a cada tick (2 min): cobre
+# adaptador que resetou (rfkill/suspend zeram a link policy) e conexões novas.
+# Idempotente e barato; delega ao script dedicado. Antes das vigias de bond
+# porque um controle em modo ativo cai menos = menos churn de bond.
+_ACTIVE=/usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh
+[[ -x "${_ACTIVE}" ]] && "${_ACTIVE}" --quiet 2>/dev/null || true
+
 command -v bluetoothctl >/dev/null 2>&1 || { log "bluetoothctl ausente — nada a vigiar"; exit 0; }
 systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativo — nada a vigiar"; exit 0; }
 
