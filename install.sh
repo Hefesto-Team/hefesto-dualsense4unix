@@ -1305,7 +1305,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
         # ver docs/process/estudos/2026-07-22-pesquisa-pro-controller-bt-*.md).
         # Alvo é a VERSÃO COMPLETA (não "5.86") para o compare-versions detectar
         # o upgrade .1→.2 — senão o "já ≥5.86" pularia o patch novo.
-        _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.2"
+        _BZ_TARGET="5.86-0ubuntu0.1~hefesto24.04.3"
         _bz_cur="$(dpkg-query -W -f='${Version}' bluez 2>/dev/null || true)"
         if [[ -z "${_bz_cur}" ]]; then
             printf '      bluez não instalado via dpkg (sistema não-Debian?) — passo pulado\n'
