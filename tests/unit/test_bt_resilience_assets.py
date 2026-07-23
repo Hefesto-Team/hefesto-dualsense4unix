@@ -146,7 +146,11 @@ class TestInvariantesDosScripts:
     def test_restore_avisa_sobre_chave_rotacionada(self) -> None:
         text = (REPO_ROOT / "scripts" / "bt_bonds_restore.sh").read_text(encoding="utf-8")
         assert "bluetoothctl remove" in text
-        assert "systemctl stop bluetooth.service" in text
+        # RESTORE-MASK-01: o stop precisa sobreviver à bus-activation (clientes
+        # consultando org.bluez cancelavam o job e o restore abortava com o
+        # serviço vivo) — mask --runtime + job irreversível + gate pós-stop.
+        assert "mask --runtime" in text
+        assert "systemctl stop --job-mode=replace-irreversibly bluetooth.service" in text
 
     def test_watchdog_nunca_reinicia_com_device_conectado(self) -> None:
         text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(encoding="utf-8")
@@ -202,6 +206,7 @@ class TestAlvoBluez586:
         assert re.search(r'_BZ_TARGET="5\.86', text), (
             "passo 3f deve mirar o BlueZ 5.86 (sprint 2026-07-21: retry-limit 17a227b7)"
         )
-        assert "hefesto24.04.2" in text, (
-            "o alvo do 3f deve ser a versão hefesto completa .2 (patch BOND-KEEP-01)"
+        assert "hefesto24.04.3" in text, (
+            "o alvo do 3f deve ser a versão hefesto completa .3 (BOND-KEEP-02: "
+            "unplug não deixa device bonded temporário)"
         )

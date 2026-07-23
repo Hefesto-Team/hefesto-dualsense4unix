@@ -62,8 +62,23 @@ printf '>>> restaurando %s bond(s) de %s\n' "${N}" "${SNAP}"
 printf '>>> o bluetooth.service vai ser PARADO durante a cópia (controles BT caem)\n'
 printf '>>> se um controle recusar conexão depois: bluetoothctl remove <MAC> e re-pareie\n'
 
-systemctl stop bluetooth.service
-trap 'systemctl start bluetooth.service' EXIT
+# RESTORE-MASK-01 (23/07, medido ao vivo): o bluetooth.service é ativável por
+# D-Bus — qualquer cliente consultando org.bluez (GUI, applet, daemon) dispara
+# uma bus-activation que CANCELA o job de stop ("Job for bluetooth.service
+# canceled") e o restore aborta silencioso pelo set -e, com o serviço vivo e o
+# storage sendo mexido por baixo dele. O mask --runtime fecha a janela: com a
+# unit mascarada a activation falha na hora e o stop conclui de verdade.
+systemctl mask --runtime bluetooth.service >/dev/null 2>&1 || true
+trap 'systemctl unmask --runtime bluetooth.service >/dev/null 2>&1 || true; systemctl start bluetooth.service' EXIT
+systemctl stop --job-mode=replace-irreversibly bluetooth.service
+for _i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    systemctl is-active --quiet bluetooth.service || break
+    sleep 5
+done
+if systemctl is-active --quiet bluetooth.service; then
+    printf 'bt_bonds_restore.sh: bluetooth.service não parou (60s) — abortando sem mexer no storage\n' >&2
+    exit 1
+fi
 
 # Mescla sem destruir: copia adaptador/device do snapshot por cima; o que já
 # existe no destino e não existe no snapshot fica intocado.
