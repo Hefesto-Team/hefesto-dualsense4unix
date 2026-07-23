@@ -1,6 +1,12 @@
 app-id := "com.vitoriamaria.HefestoDualsense4Unix"
 bin := "hefesto-dualsense4unix-applet"
 
+# INSTALL-APPLET-HEADLESS-01: comando de elevação parametrizável. Default "sudo"
+# (uso interativo, prompt no TTY). Sob install.sh HEADLESS (sem TTY), o
+# invocador passa `sudo="sudo -A"` (askpass) — o `sudo` puro falhava sem
+# terminal e derrubava o `just install` na 1ª linha de instalação de arquivo.
+sudo := "sudo"
+
 # Compila o binário release (a 1ª build do libcosmic é longa — seja paciente).
 build-release:
     cargo build --release
@@ -12,27 +18,27 @@ check:
 
 # Instala binário, .desktop e ícones no sistema (precisa de sudo).
 install: build-release
-    sudo install -Dm755 target/release/{{bin}} /usr/local/bin/{{bin}}
-    sudo install -Dm644 data/{{app-id}}.desktop \
+    {{sudo}} install -Dm755 target/release/{{bin}} /usr/local/bin/{{bin}}
+    {{sudo}} install -Dm644 data/{{app-id}}.desktop \
         /usr/share/applications/{{app-id}}.desktop
-    sudo install -Dm644 \
+    {{sudo}} install -Dm644 \
         data/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg \
         /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
-    sudo install -Dm644 \
+    {{sudo}} install -Dm644 \
         data/icons/hicolor/256x256/apps/{{app-id}}.png \
         /usr/share/icons/hicolor/256x256/apps/{{app-id}}.png
-    sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
-    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+    {{sudo}} gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+    {{sudo}} update-desktop-database /usr/share/applications 2>/dev/null || true
     # cosmic-panel só relê a lista de applets ao reiniciar; sem isso o applet
     # fica fantasma em Miniaplicativos. Recarrega (a barra volta em ~1s).
     killall cosmic-panel 2>/dev/null || true
 
 # Remove os artefatos instalados pelo `install`.
 uninstall:
-    sudo rm -f /usr/local/bin/{{bin}}
-    sudo rm -f /usr/share/applications/{{app-id}}.desktop
-    sudo rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
-    sudo rm -f /usr/share/icons/hicolor/256x256/apps/{{app-id}}.png
-    sudo gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
-    sudo update-desktop-database /usr/share/applications 2>/dev/null || true
+    {{sudo}} rm -f /usr/local/bin/{{bin}}
+    {{sudo}} rm -f /usr/share/applications/{{app-id}}.desktop
+    {{sudo}} rm -f /usr/share/icons/hicolor/scalable/apps/{{app-id}}-symbolic.svg
+    {{sudo}} rm -f /usr/share/icons/hicolor/256x256/apps/{{app-id}}.png
+    {{sudo}} gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+    {{sudo}} update-desktop-database /usr/share/applications 2>/dev/null || true
     killall cosmic-panel 2>/dev/null || true

@@ -72,3 +72,40 @@ def test_o_applet_sai_do_nativo_antes_de_ligar_o_gamepad() -> None:
     ramo = _ramo_do_applet(MODE_GAMEPAD)
 
     assert ramo.index("set_native_mode") < ramo.index("set_gamepad_emulation")
+
+
+# --- INSTALL-APPLET-HEADLESS-01: o `just install` do applet precisa funcionar
+# sem TTY (install.sh headless via SUDO_ASKPASS). O `sudo` puro do justfile
+# falhava na 1a linha de instalação de arquivo e derrubava o passo 9. -----------
+
+_JUSTFILE = (
+    Path(__file__).resolve().parents[2] / "packaging" / "cosmic-applet" / "justfile"
+)
+_INSTALL_SH = Path(__file__).resolve().parents[2] / "install.sh"
+
+
+def test_justfile_usa_sudo_parametrizavel() -> None:
+    """O justfile declara `sudo := "sudo"` e usa {{sudo}} nas recipes install/
+    uninstall — nunca `sudo` puro (que falha headless)."""
+    text = _JUSTFILE.read_text(encoding="utf-8")
+    assert re.search(r'^sudo\s*:=\s*"sudo"', text, re.M), (
+        "justfile deve declarar a variável parametrizável `sudo := \"sudo\"`"
+    )
+    # Nenhuma linha de recipe pode chamar `sudo ` puro (fora da declaração e de
+    # comentários) — todas via {{sudo}}.
+    for ln in text.splitlines():
+        s = ln.strip()
+        if s.startswith("#") or s.startswith("sudo :="):
+            continue
+        assert not re.match(r"^sudo\s", s), f"recipe usa sudo puro (headless quebra): {ln!r}"
+    assert "{{sudo}} install -Dm755" in text
+
+
+def test_install_passa_askpass_ao_just_quando_headless() -> None:
+    """install.sh passa `--set sudo "sudo -A"` ao just quando SUDO_ASKPASS está
+    setado (headless) — senão o `sudo` puro do just falha sem TTY."""
+    text = _INSTALL_SH.read_text(encoding="utf-8")
+    assert '--set sudo "sudo -A"' in text, (
+        "install.sh deve passar --set sudo 'sudo -A' ao just no caminho headless"
+    )
+    assert 'SUDO_ASKPASS:-' in text

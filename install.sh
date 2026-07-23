@@ -1864,7 +1864,13 @@ install_cosmic_applet() {
         return 0
     fi
     printf '      compilando + instalando (1a build do libcosmic e LONGA, >10 min)\n'
-    if just -f "${applet_dir}/justfile" -d "${applet_dir}" install; then
+    # INSTALL-APPLET-HEADLESS-01: o `just install` usa {{sudo}} p/ copiar os
+    # arquivos como root. Interativo, "sudo" puro prompta no TTY; HEADLESS (sem
+    # TTY, SUDO_ASKPASS setado) o "sudo" puro FALHA — passamos "sudo -A" p/ o
+    # just usar o askpass (o `sudo -n` não herda o ticket sem TTY nesta máquina).
+    local _applet_sudo=()
+    [[ -n "${SUDO_ASKPASS:-}" ]] && _applet_sudo=(--set sudo "sudo -A")
+    if just "${_applet_sudo[@]}" -f "${applet_dir}/justfile" -d "${applet_dir}" install; then
         printf '      applet instalado — adicione em Config. > Paineis > Miniaplicativos\n'
     else
         warn "build/instalacao do applet falhou — veja o log acima"
