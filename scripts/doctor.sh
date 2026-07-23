@@ -1005,54 +1005,78 @@ check_bluez_fastconnectable() {
 # certamente um 8BitDo em modo D-input — o conselho é TROCAR O MODO/cabo, não
 # jogar fora. (054C:05C4 também é o PID do DS4 v1 legítimo; o journal
 # desempata: hw_version=0x00000000 denuncia o firmware clone.)
+# WATCHDOG-FP-01 (22/07): consultas de estado BT saem do D-Bus — o
+# bluetoothctl 5.86 one-shot é mudo (COMPAT BLUEZ-586-CTL-01) e `timeout N
+# bluetoothctl ...` invoca o BINÁRIO, pulando a função-sombra acima; foi
+# assim que a caça ao clone e o check de rádio ficaram cegos (4 controles
+# Trusted=false e nenhum aviso).
+_dbus_bt_device_paths() {
+    busctl tree org.bluez --list 2>/dev/null \
+        | grep -oE '/org/bluez/hci[0-9]+/dev_[0-9A-Fa-f_]+$' | sort -u || true
+}
+_dbus_bt_prop() {
+    # $1=path  $2=interface  $3=propriedade → valor cru sem aspas (vazio se n/d)
+    busctl get-property org.bluez "$1" "$2" "$3" 2>/dev/null \
+        | sed -e 's/^[a-z]* //' -e 's/^"//' -e 's/"$//' || true
+}
+
 check_bt_clone_ds4() {
-    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo a caça ao clone DS4"; return; }
-    local macs mac inf clone=0
-    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
-    if [[ -z "${macs}" ]]; then
+    command -v busctl >/dev/null 2>&1 || { info "busctl ausente — pulo a caça ao clone DS4"; return; }
+    local paths p mac modalias clone=0
+    paths="$(_dbus_bt_device_paths)"
+    if [[ -z "${paths}" ]]; then
         info "nenhum dispositivo Bluetooth pareado — sem clone DS4 possível"
         return
     fi
-    for mac in ${macs}; do
-        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
-        if printf '%s' "${inf}" | grep -q 'Modalias: usb:v054Cp05C4'; then
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        mac="${p##*dev_}"; mac="${mac//_/:}"
+        modalias="$(_dbus_bt_prop "${p}" org.bluez.Device1 Modalias)"
+        if printf '%s' "${modalias}" | grep -q 'usb:v054Cp05C4'; then
             clone=1
             warn "controle 'tipo DualShock 4' (054C:05C4) pareado (${mac}) — esse firmware não calcula a verificação de integridade e INUNDA o sistema de erros (já foram 211 mil numa noite), degradando o Bluetooth de TODOS os controles"
             info "  provavelmente é um 8BitDo em modo D-input: troque o modo (Switch) ou use no cabo"
             info "  para desparear: bluetoothctl remove ${mac}  (se for um DS4 v1 legítimo, o journal desempata: 'hw_version=0x00000000' = clone)"
         fi
-    done
+    done <<<"${paths}"
     [[ "${clone}" -eq 0 ]] && pass "nenhum clone DS4 (054C:05C4) pareado"
 }
 
 # Saúde do rádio 2.4 GHz: RSSI, Trusted, Discovering, contadores do adaptador
 # e IdleTimeout — os 5 checks do estudo BT §5/§6, todos read-only.
 check_bt_radio() {
-    command -v bluetoothctl >/dev/null 2>&1 || return 0
-    local macs mac inf nome rssi gamepad_conectado=0
-    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
-    for mac in ${macs}; do
-        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
-        printf '%s' "${inf}" | grep -qiE 'dualsense|wireless controller|pro controller|8bitdo|joy-con|xbox' || continue
-        nome="$(printf '%s\n' "${inf}" | sed -n 's/^[[:space:]]*Name: //p' | head -1)"
-        if printf '%s' "${inf}" | grep -q 'Connected: yes'; then
+    command -v busctl >/dev/null 2>&1 || return 0
+    local paths p mac alias connected trusted rssi disc gamepad_conectado=0
+    paths="$(_dbus_bt_device_paths)"
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        mac="${p##*dev_}"; mac="${mac//_/:}"
+        alias="$(_dbus_bt_prop "${p}" org.bluez.Device1 Alias)"
+        printf '%s' "${alias}" | grep -qiE 'dualsense|wireless controller|pro controller|8bitdo|joy-con|xbox' || continue
+        connected="$(_dbus_bt_prop "${p}" org.bluez.Device1 Connected)"
+        if [[ "${connected}" == "true" ]]; then
             gamepad_conectado=1
-            rssi="$(printf '%s\n' "${inf}" | awk '/RSSI:/{ for (i = 1; i <= NF; i++) if ($i ~ /^\(?-[0-9]+\)?$/) { gsub(/[()]/, "", $i); print $i; exit } }')"
+            # RSSI via D-Bus só existe durante discovery — mesmo limite do
+            # `bluetoothctl info` antigo; sem valor, sem veredito.
+            rssi="$(_dbus_bt_prop "${p}" org.bluez.Device1 RSSI)"
             if [[ -n "${rssi}" ]] && (( rssi < -70 )); then
-                warn "sinal fraco do ${nome:-controle} (${mac}): RSSI ${rssi} dBm (bom é > -60) — ponha o adaptador BT num extensor USB curto, fora da sombra do gabinete e a 20 cm ou mais dos receivers 2.4G"
+                warn "sinal fraco do ${alias:-controle} (${mac}): RSSI ${rssi} dBm (bom é > -60) — ponha o adaptador BT num extensor USB curto, fora da sombra do gabinete e a 20 cm ou mais dos receivers 2.4G"
             elif [[ -n "${rssi}" ]]; then
-                pass "sinal do ${nome:-controle}: RSSI ${rssi} dBm"
+                pass "sinal do ${alias:-controle}: RSSI ${rssi} dBm"
             fi
         fi
-        if printf '%s' "${inf}" | grep -q 'Trusted: no'; then
-            warn "${nome:-controle} (${mac}) pareado mas SEM confiança (Trusted: no) — a reconexão pelo botão PS pode depender de autorização; cura de 1 comando (reversível): bluetoothctl trust ${mac}"
+        trusted="$(_dbus_bt_prop "${p}" org.bluez.Device1 Trusted)"
+        if [[ "${trusted}" == "false" ]]; then
+            warn "${alias:-controle} (${mac}) pareado mas SEM confiança (Trusted: no) — a reconexão pelo botão PS pode depender de autorização; o watchdog corrige no próximo tick; na mão: busctl set-property org.bluez ${p} org.bluez.Device1 Trusted b true"
         fi
-    done
+    done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
     # a tela de Bluetooth do cosmic-settings aberta mantém Discovering=yes).
-    if [[ "${gamepad_conectado}" -eq 1 ]] \
-       && timeout 4 bluetoothctl show 2>/dev/null | grep -q 'Discovering: yes'; then
-        warn "adaptador em modo de busca (Discovering: yes) com controle BT conectado — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
+    if [[ "${gamepad_conectado}" -eq 1 ]]; then
+        disc="$(_dbus_bt_prop /org/bluez/hci0 org.bluez.Adapter1 Discovering)"
+        if [[ "${disc}" == "true" ]]; then
+            warn "adaptador em modo de busca (Discovering: yes) com controle BT conectado — feche a tela de Bluetooth (cosmic-settings) enquanto joga; a busca rouba banda do rádio"
+        fi
     fi
     # Contadores do adaptador (proxy não-intrusivo de rádio sujo — sem btmon).
     if command -v hciconfig >/dev/null 2>&1; then
@@ -1310,6 +1334,28 @@ _hidraw_uniqs() {
     done
 }
 
+# Sintetiza um "bloco info" mínimo via D-Bus com as linhas que as funções
+# puras abaixo consomem (Device/Icon/Connected/Paired/Bonded) — as puras e
+# seus testes ficam intactos enquanto a FONTE deixa de ser o bluetoothctl
+# 5.86 mudo (WATCHDOG-FP-01: "nenhum dispositivo pareado" com 4 em disco).
+_dbus_bt_info_bloco() {
+    local p="$1" mac icon conn paired bonded
+    mac="${p##*dev_}"; mac="${mac//_/:}"
+    icon="$(_dbus_bt_prop "${p}" org.bluez.Device1 Icon)"
+    conn="$(_dbus_bt_prop "${p}" org.bluez.Device1 Connected)"
+    paired="$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)"
+    bonded="$(_dbus_bt_prop "${p}" org.bluez.Device1 Bonded)"
+    printf 'Device %s (public)\n' "${mac}"
+    if [[ -n "${icon}" ]]; then printf '\tIcon: %s\n' "${icon}"; fi
+    printf '\tConnected: %s\n' "$([[ "${conn}" == "true" ]] && echo yes || echo no)"
+    printf '\tPaired: %s\n' "$([[ "${paired}" == "true" ]] && echo yes || echo no)"
+    # Bonded ausente na API (BlueZ < 5.65) fica FORA do bloco — igual ao
+    # bluetoothctl antigo, para a pura não acusar "meio-salvo" por engano.
+    if [[ -n "${bonded}" ]]; then
+        printf '\tBonded: %s\n' "$([[ "${bonded}" == "true" ]] && echo yes || echo no)"
+    fi
+}
+
 # Dado UM bloco de `bluetoothctl info <mac>` + a lista de HID_UNIQ vivos,
 # imprime o MAC quando o device é gamepad (Icon: input-gaming), está
 # Connected: yes, E nenhum hidraw bate com ele — senão nada (silencioso).
@@ -1327,22 +1373,23 @@ _bt_gamepad_missing_hidraw() {
 }
 
 check_bt_connected_sem_hidraw() {
-    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo o check de pareamento meio-salvo"; return; }
-    local macs mac inf hidraw_list resultado achou=0
-    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
-    if [[ -z "${macs}" ]]; then
+    command -v busctl >/dev/null 2>&1 || { info "busctl ausente — pulo o check de pareamento meio-salvo"; return; }
+    local paths p inf hidraw_list resultado achou=0
+    paths="$(_dbus_bt_device_paths)"
+    if [[ -z "${paths}" ]]; then
         info "nenhum dispositivo Bluetooth pareado — sem 'Connected sem hidraw' possível"
         return
     fi
     hidraw_list="$(_hidraw_uniqs)"
-    for mac in ${macs}; do
-        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        inf="$(_dbus_bt_info_bloco "${p}")"
         resultado="$(_bt_gamepad_missing_hidraw "${inf}" "${hidraw_list}")"
         if [[ -n "${resultado}" ]]; then
             achou=1
             fail "controle BT ${resultado} CONECTADO mas SEM hidraw correspondente (HID_UNIQ) — pareamento meio-salvo; despareie e repareie: bluetoothctl remove ${resultado} (depois PS no controle)"
         fi
-    done
+    done <<<"${paths}"
     [[ "${achou}" -eq 0 ]] && pass "todo device BT conectado (gamepad) tem hidraw correspondente"
 }
 
@@ -1359,21 +1406,22 @@ _bt_paired_sem_bonded() {
 }
 
 check_bt_paired_sem_bonded() {
-    command -v bluetoothctl >/dev/null 2>&1 || { info "bluetoothctl ausente — pulo o check de bond meio-salvo"; return; }
-    local macs mac inf resultado achou=0
-    macs="$(timeout 4 bluetoothctl devices 2>/dev/null | awk '{print $2}')"
-    if [[ -z "${macs}" ]]; then
+    command -v busctl >/dev/null 2>&1 || { info "busctl ausente — pulo o check de bond meio-salvo"; return; }
+    local paths p inf resultado achou=0
+    paths="$(_dbus_bt_device_paths)"
+    if [[ -z "${paths}" ]]; then
         info "nenhum dispositivo Bluetooth pareado — sem bond meio-salvo possível"
         return
     fi
-    for mac in ${macs}; do
-        inf="$(timeout 4 bluetoothctl info "${mac}" 2>/dev/null || true)"
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        inf="$(_dbus_bt_info_bloco "${p}")"
         resultado="$(_bt_paired_sem_bonded "${inf}")"
         if [[ -n "${resultado}" ]]; then
             achou=1
             fail "${resultado} Paired mas NÃO Bonded — bond meio-salvo ('No agent available for request type 2'); cura: bluetoothctl remove ${resultado} && repareie (PS no controle); confira o hefesto-bt-agent.service ativo acima"
         fi
-    done
+    done <<<"${paths}"
     [[ "${achou}" -eq 0 ]] && pass "nenhum device BT com bond meio-salvo (Paired sem Bonded)"
 }
 

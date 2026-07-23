@@ -191,7 +191,9 @@ class TestDoctorRadio:
     def test_rssi_discovering_trusted_e_idletimeout(self) -> None:
         assert "RSSI" in DOCTOR
         assert "Discovering: yes" in DOCTOR
-        assert "bluetoothctl trust" in DOCTOR
+        # WATCHDOG-FP-01: a cura de trust agora é ensinada via D-Bus (o
+        # bluetoothctl 5.86 one-shot é mudo; o watchdog corrige sozinho).
+        assert "Trusted b true" in DOCTOR
         assert "IdleTimeout" in DOCTOR
 
     def test_contadores_de_crc_como_termometro(self) -> None:

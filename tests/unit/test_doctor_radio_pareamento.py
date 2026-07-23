@@ -300,25 +300,31 @@ class TestBtPairedSemBonded:
 
 
 class TestCheckBtPairedSemBonded:
-    """Ponta-a-ponta com `bluetoothctl` FAKE (devices + info por MAC) — este
-    check NÃO depende de sysfs, então dá para cobrir os dois lados inteiros."""
+    """Ponta-a-ponta com `busctl` FAKE (tree + get-property) — a FONTE migrou
+    do bluetoothctl 5.86 (mudo no one-shot; WATCHDOG-FP-01) para o D-Bus. O
+    check NÃO depende de sysfs, então dá para cobrir os dois lados inteiros.
+    As funções puras seguem cobertas acima com fixtures de texto."""
 
-    def _fake_bluetoothctl(self, tmp_path: Path, mac: str, info: str) -> Path:
-        info_dir = tmp_path / "btinfo"
-        info_dir.mkdir(exist_ok=True)
-        (info_dir / mac).write_text(info, encoding="utf-8")
+    def _fake_busctl(self, tmp_path: Path, mac: str, paired: str, bonded: str) -> Path:
+        dev_path = "/org/bluez/hci0/dev_" + mac.replace(":", "_")
         corpo = f"""
 case "$1" in
-    devices) printf 'Device {mac} Fake\\n' ;;
-    info) cat "{info_dir}/$2" 2>/dev/null ;;
+    tree) printf '{dev_path}\\n' ;;
+    get-property)
+        case "$5" in
+            Icon) printf 's "input-gaming"\\n' ;;
+            Connected) printf 'b true\\n' ;;
+            Paired) printf 'b {paired}\\n' ;;
+            Bonded) printf 'b {bonded}\\n' ;;
+        esac ;;
 esac
 exit 0
 """
-        return _escrever_fake_bin(tmp_path, "bluetoothctl", corpo)
+        return _escrever_fake_bin(tmp_path, "busctl", corpo)
 
     def test_bond_meio_salvo_e_fail(self, tmp_path: Path) -> None:
         mac = "AA:BB:CC:13:EB:AB"
-        fake_bin = self._fake_bluetoothctl(tmp_path, mac, _INFO_MEIO_SALVO)
+        fake_bin = self._fake_busctl(tmp_path, mac, paired="true", bonded="false")
         saida = _rodar_check("check_bt_paired_sem_bonded", fake_bin)
         assert "[FAIL]" in saida
         assert mac in saida
@@ -326,14 +332,14 @@ exit 0
 
     def test_bond_ok_e_pass(self, tmp_path: Path) -> None:
         mac = "AA:BB:CC:13:EB:AB"
-        fake_bin = self._fake_bluetoothctl(tmp_path, mac, _INFO_BOND_OK)
+        fake_bin = self._fake_busctl(tmp_path, mac, paired="true", bonded="true")
         saida = _rodar_check("check_bt_paired_sem_bonded", fake_bin)
         assert "[ OK ]" in saida
         assert "[FAIL]" not in saida
 
     def test_sem_dispositivos_pareados_e_info_neutro(self, tmp_path: Path) -> None:
-        corpo = 'case "$1" in devices) printf "" ;; esac\nexit 0\n'
-        fake_bin = _escrever_fake_bin(tmp_path, "bluetoothctl", corpo)
+        corpo = 'case "$1" in tree) printf "" ;; esac\nexit 0\n'
+        fake_bin = _escrever_fake_bin(tmp_path, "busctl", corpo)
         saida = _rodar_check("check_bt_paired_sem_bonded", fake_bin)
         assert "[FAIL]" not in saida
         assert "[WARN]" not in saida
@@ -344,31 +350,34 @@ class TestCheckBtConnectedSemHidraw:
     """MAC exótico (impossível de colidir com HID_UNIQ real) => FAIL
     determinístico mesmo lendo o /sys/class/hidraw REAL da máquina (a leitura
     em si é read-only e não muda o veredito: nenhum hidraw real pode ter
-    este HID_UNIQ)."""
+    este HID_UNIQ). Fonte da lista de devices: `busctl` FAKE (WATCHDOG-FP-01)."""
 
     _MAC_EXOTICO = "AA:BB:CC:EF:00:99"
 
     def test_conectado_sem_hidraw_correspondente_e_fail(self, tmp_path: Path) -> None:
-        info = _INFO_CONECTADO_GAMEPAD.replace("AA:BB:CC:13:EB:AB", self._MAC_EXOTICO)
-        info_dir = tmp_path / "btinfo"
-        info_dir.mkdir()
-        (info_dir / self._MAC_EXOTICO).write_text(info, encoding="utf-8")
+        dev_path = "/org/bluez/hci0/dev_" + self._MAC_EXOTICO.replace(":", "_")
         corpo = f"""
 case "$1" in
-    devices) printf 'Device {self._MAC_EXOTICO} Fake\\n' ;;
-    info) cat "{info_dir}/$2" 2>/dev/null ;;
+    tree) printf '{dev_path}\\n' ;;
+    get-property)
+        case "$5" in
+            Icon) printf 's "input-gaming"\\n' ;;
+            Connected) printf 'b true\\n' ;;
+            Paired) printf 'b true\\n' ;;
+            Bonded) printf 'b true\\n' ;;
+        esac ;;
 esac
 exit 0
 """
-        fake_bin = _escrever_fake_bin(tmp_path, "bluetoothctl", corpo)
+        fake_bin = _escrever_fake_bin(tmp_path, "busctl", corpo)
         saida = _rodar_check("check_bt_connected_sem_hidraw", fake_bin)
         assert "[FAIL]" in saida
         assert self._MAC_EXOTICO in saida
         assert "meio-salvo" in saida
 
     def test_sem_dispositivos_pareados_e_info_neutro(self, tmp_path: Path) -> None:
-        corpo = 'case "$1" in devices) printf "" ;; esac\nexit 0\n'
-        fake_bin = _escrever_fake_bin(tmp_path, "bluetoothctl", corpo)
+        corpo = 'case "$1" in tree) printf "" ;; esac\nexit 0\n'
+        fake_bin = _escrever_fake_bin(tmp_path, "busctl", corpo)
         saida = _rodar_check("check_bt_connected_sem_hidraw", fake_bin)
         assert "[FAIL]" not in saida
         assert "[WARN]" not in saida

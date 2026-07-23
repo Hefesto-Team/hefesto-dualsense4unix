@@ -53,15 +53,30 @@ fi
 SIG="$(cat "${INFOS[@]}" 2>/dev/null | cat <(printf '%s\n' "${INFOS[@]}") - | sha256sum | awk '{print $1}')"
 
 install -d -m 700 "${DST_ROOT}"
+
+# SNAPSHOT-LOCK-01 (22/07): o ExecStopPost e outra instância (timer/watchdog)
+# podem disparar no MESMO segundo — medido 22/07 22:43:13: dois processos
+# colidiram no mesmo diretório-timestamp e o install falhou com "não foi
+# possível mudar as permissões ... Arquivo ou diretório inexistente".
+# Serializa por flock; o nome do diretório ganha o PID como sufixo único.
+exec 9>"${DST_ROOT}/.lock"
+if ! flock -w 30 9; then
+    log "outro snapshot em andamento há >30s — desisto (o timer cobre)"
+    exit 0
+fi
+
 LAST_SIG_FILE="${DST_ROOT}/.last-signature"
 if [[ -f "${LAST_SIG_FILE}" ]] && [[ "$(cat "${LAST_SIG_FILE}" 2>/dev/null)" == "${SIG}" ]]; then
     log "estado idêntico ao último snapshot — no-op"
     exit 0
 fi
 
-TS="$(date +%Y%m%d-%H%M%S)"
+TS="$(date +%Y%m%d-%H%M%S)-$$"
 DST="${DST_ROOT}/${TS}"
-install -d -m 700 "${DST}"
+if ! install -d -m 700 "${DST}" 2>/dev/null; then
+    log "não consegui criar ${DST} (ambiente restrito no stop?) — snapshot fica pro próximo timer"
+    exit 0
+fi
 
 # Copia cada adaptador SEM o cache/ (cp -a preserva modos; a poda do cache é
 # feita por exclusão manual porque cp não tem --exclude portável).
