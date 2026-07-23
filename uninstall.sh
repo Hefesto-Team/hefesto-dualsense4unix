@@ -597,7 +597,19 @@ if sudo -n true 2>/dev/null; then
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
-        /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh 2>/dev/null || true
+        /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
+    # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
+    # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
+    _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
+    if [[ -n "${_hci}" ]]; then
+        sudo hciconfig "${_hci}" lp rswitch hold sniff park 2>/dev/null || true
+        _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+        if [[ "${_alias}" == Nintendo\ * ]]; then
+            sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "${_alias#Nintendo }" 2>/dev/null || true
+            log "nome do adaptador revertido para '${_alias#Nintendo }' (tirado o prefixo Nintendo)"
+        fi
+    fi
     if [[ -d /var/lib/hefesto-dualsense4unix/bt-bonds ]]; then
         log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds"
         log "  (contêm LinkKeys; se quiser preservar, copie ANTES de rodar o uninstall)"

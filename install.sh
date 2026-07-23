@@ -1226,10 +1226,15 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
     else
         _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh; do
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh; do
             sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
                 "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
         done
+        # BT-NINTENDO-ACTIVE-01: aplica JÁ (nome "Nintendo*" + link policy sem
+        # SNIFF) — cura de raiz da queda do Pro/8BitDo sob carga (pesquisa
+        # 2026-07-22). Idempotente; o drop-in reaplica a cada start do
+        # bluetoothd e o watchdog reafirma a cada 2 min.
+        sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
         sudo install -Dm644 "${ROOT_DIR}/assets/systemd/bluetooth-dropin-10-hefesto-resilience.conf" \
             /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf 2>/dev/null || _btres_ok=0
         for _btres_u in hefesto-bt-bonds-snapshot.service hefesto-bt-bonds-snapshot.timer \

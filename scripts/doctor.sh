@@ -1252,6 +1252,21 @@ check_bt_resilience() {
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
         warn "drop-in 10-hefesto-resilience.conf ausente — sem WatchdogSec (hang sem crash fica invisível) e sem snapshot na parada do serviço"
     fi
+    # BT-NINTENDO-ACTIVE-01: nome "Nintendo*" + link policy sem SNIFF (cura da
+    # queda do Pro/8BitDo sob carga). Leitura via hciconfig/busctl (best-effort).
+    if command -v hciconfig >/dev/null 2>&1; then
+        local _hci _lp _alias
+        _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
+        if [[ -n "${_hci}" ]]; then
+            _lp="$(hciconfig "${_hci}" lp 2>/dev/null | grep -o 'SNIFF' || true)"
+            _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
+            if [[ -z "${_lp}" && "${_alias}" == Nintendo* ]]; then
+                pass "modo ativo p/ Nintendo (nome '${_alias}' + link policy sem SNIFF — Pro/8BitDo não caem no sniff frágil)"
+            else
+                warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}', SNIFF=${_lp:-off}); reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
+            fi
+        fi
+    fi
 }
 
 # ONDA-R2: bonds em disco vs cache — a assinatura medida em 22/07 do estado
