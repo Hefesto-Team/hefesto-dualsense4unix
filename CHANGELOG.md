@@ -5,6 +5,82 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [4.0.0] — 2026-07-24
+
+Auditoria por agentes de toda a interação GUI × perfis × config por-controle,
+com os 4 controles ligados (2 DualSense + Pro Controller Nintendo + 8BitDo).
+65 defeitos confirmados por verificação adversarial, agrupados em 24 causas-raiz
+— **todas corrigidas na raiz**. Mais a frente Bluetooth da mesma maratona.
+
+### Added
+
+- **"Não trocar de perfil sozinho ao abrir um jogo" (FEAT-AUTOSWITCH-LOCK-01).**
+  Um cadeado na aba Início: marcado, o perfil que você deixou ativo continua
+  valendo ao abrir Sackboy, Mullet Mad Jack ou qualquer jogo — o Hefesto não
+  troca de perfil por você. Diferente do Modo Nativo (que solta o controle) e do
+  pause (que para tudo): aqui só a decisão de perfil congela; gamepad, co-op e
+  rumble seguem. Persiste entre reinícios.
+- **Editor simples ganhou "Jogo da Steam" (R-12).** Dá para criar um perfil que
+  casa por AppID da Steam (`steam_app_<id>`) sem entrar no modo avançado — e ele
+  já sugere o AppID do jogo em foco. Perfis sem regra alcançável passam a mostrar
+  "Só manual (nunca ativa sozinho)" na coluna "Quando usar".
+
+### Fixed
+
+- **A config que você deixa passa a ser respeitada ao abrir o jogo.** Era a
+  queixa central. O rascunho da GUI só carregava no boot, então após o autoswitch
+  trocar de perfil as abas editavam e salvavam o perfil ERRADO; "Salvar" na aba
+  Perfis descartava o que as outras abas ajustaram; o rodapé reemitia a regra do
+  perfil errado; e um perfil catch-all (`vitoria`) era tratado como "o perfil do
+  jogo" ao abrir o Mullet Mad Jack, apagando seus ajustes. (R-01, R-02, R-08,
+  R-09, R-11.) O perfil do Sackboy agora aplica o MODO mas respeita cor/gatilho/
+  rumble que você travou na mão (PERFIL-MANUAL-VENCE-01).
+- **Edição controle-a-controle volta a funcionar.** O alvo de edição seguia a
+  CONTAGEM de controles, não o seu gesto — com um único DualSense no kernel, a
+  edição por-controle ficava desligada sem aviso, e a queda de um controle
+  apagava o override dos outros. Agora segue o gesto. "Apagar" da Lightbar passou
+  a mirar o controle certo, e "Aplicar" deixou de dizer "aplicado" quando não
+  aplicou nada. (R-16, R-17, R-18.)
+- **Player LEDs 1-2-3-4 sem duplicar.** Duas autoridades escreviam o mesmo LED
+  com números diferentes; a saída do backend foi reorganizada em camadas com dono
+  (jogo > co-op > seu override > automático > padrão), o co-op parou de brigar
+  com o reasserto periódico, e a numeração dos externos parou de colidir com a do
+  co-op. (R-13, R-14, R-15, R-20.)
+- **O modo do perfil deixa de ser descartado em silêncio.** Mexer na máscara e
+  abrir o jogo em menos de 30 s não perde mais o modo do perfil (ele é reaplicado
+  quando o lock manual expira); o perfil não desliga mais o vpad no meio da
+  partida; e a máscara que você escolheu para de ser reescrita no disco pelo
+  perfil do jogo. (R-03, R-05, R-07.)
+- **O botão "Desligar" dos gatilhos LIBERA a trava** em vez de re-armá-la — antes
+  o botão de "voltar ao normal" pausava a troca automática sem avisar. (R-19.)
+- **Renomear perfil não apaga mais outro sem querer.** A identidade do arquivo é
+  o slug: salvar "Navegacao" deixou de sobrescrever "Navegação" em silêncio, e o
+  rename migra de verdade. (R-10.)
+- **Sem travadas de segundos durante o jogo.** A leitura de calibração do co-op
+  saiu da thread do laço de input — não congela mais os 4 jogadores por segundos.
+  (R-22.)
+
+### Fixed — Bluetooth
+
+- **8BitDo por Bluetooth voltou a conectar (BT-SNIFF-PER-OUI-01).** O modo ativo
+  "sem sniff" que estabiliza o Pro Controller genuíno estava sendo aplicado ao
+  ADAPTADOR inteiro e quebrava a conexão do 8BitDo (clone) — regressão medida por
+  A/B ao vivo. Agora o "sem sniff" é aplicado só ao Pro Controller genuíno; o
+  8BitDo pega o sniff que precisa para conectar. (Por BT ele conecta mas ainda
+  cai sob carga — o cabo segue sendo a via confiável.)
+- **Controle "Conectado" mas sem responder curado (SDP-CACHE-01).** Um DualSense
+  podia aparecer conectado no sistema e não gerar controle nenhum, por causa de
+  um registro de serviço Bluetooth truncado. O snapshot de bonds passou a
+  preservar esse registro, o watchdog aprende a recuperá-lo, e o doctor distingue
+  "só a direção da conexão" (curável) de "o controle travou" (reset de hardware).
+- **O uninstall volta a desfazer o modo ativo Bluetooth.** O comando de reversão
+  usava a sintaxe errada (`hciconfig lp` exige vírgula, não espaço) e virava um
+  no-op silencioso — quem desinstalava ficava com o adaptador alterado.
+- **Watchdog Bluetooth: o `Trusted` deixa de depender de conexão
+  (WATCHDOG-TRUST-DEADLOCK-01).** Um controle sem trust é recusado ao reconectar,
+  e sem reconectar o watchdog nunca o alcançava — um deadlock. Agora o trust é
+  reaplicado a todo controle com bond, conectado ou não.
+
 ### Added
 
 - **Controles externos no seletor do topo (8BIT-02).** Os controles que NÃO são
