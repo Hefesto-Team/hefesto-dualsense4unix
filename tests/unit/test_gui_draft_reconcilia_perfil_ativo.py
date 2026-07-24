@@ -28,25 +28,45 @@ from typing import Any
 
 import pytest
 
-pytest.importorskip("gi")
 
-from hefesto_dualsense4unix.app.app import HefestoApp
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
+def _app_class() -> Any:
+    """`HefestoApp` — ou pula quando o GTK real falta (CI headless).
+
+    Padrão do repo (test_app_scroll_wrap): `app.app` importa
+    `from gi.repository import GdkPixbuf, Gtk` no TOPO, e o CI headless tem `gi`
+    mas não os typelibs. Importar aqui, dentro de um helper com try/except,
+    evita quebrar a COLETA — `importorskip` de submódulo conflitaria com o Gtk
+    4.0 já carregado.
+    """
+    try:
+        from hefesto_dualsense4unix.app.app import HefestoApp
+    except (ImportError, ValueError) as exc:  # pragma: no cover - ambiente
+        pytest.skip(f"gi/GdkPixbuf indisponível: {exc}")
+    return HefestoApp
+
+
+def _draft_default() -> Any:
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
+    return DraftConfig.default()
 
 
 class _AppFalsa:
-    """Superfície mínima que `_reconciliar_draft_com_perfil_ativo` toca."""
+    """Superfície mínima que `_reconciliar_draft_com_perfil_ativo` toca.
 
-    # Os três métodos sob teste vêm da classe real — é o código de produção
-    # que roda aqui, não uma reimplementação.
-    _reconciliar_draft_com_perfil_ativo = (
-        HefestoApp._reconciliar_draft_com_perfil_ativo
-    )
-    _tem_edicao_pendente = HefestoApp._tem_edicao_pendente
+    Os métodos sob teste vêm da classe REAL (`HefestoApp`) — é o código de
+    produção que roda aqui — mas ligados tarde, no `__init__`, para o import
+    só acontecer quando um teste roda (nunca na coleta).
+    """
 
     def __init__(self, ativo: str = "FPS") -> None:
-        self.draft = DraftConfig.default()
-        self._draft_baseline: DraftConfig | None = self.draft
+        app_cls = _app_class()
+        self._reconciliar_draft_com_perfil_ativo = (
+            app_cls._reconciliar_draft_com_perfil_ativo.__get__(self)
+        )
+        self._tem_edicao_pendente = app_cls._tem_edicao_pendente.__get__(self)
+        self.draft = _draft_default()
+        self._draft_baseline: Any = self.draft
         self._active_profile_name = ativo
         self._draft_reload_for: str | None = None
         self._draft_reload_inflight = False
