@@ -778,6 +778,8 @@ class IpcHandlersMixin:
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            # FEAT-AUTOSWITCH-LOCK-01: a GUI reflete o cadeado da troca de perfil.
+            "autoswitch_locked": bool(self.store.autoswitch_locked),
             "native_mode": bool(
                 self.daemon is not None and self.daemon.is_native_mode()
             ),
@@ -797,6 +799,26 @@ class IpcHandlersMixin:
         """Retoma o despacho de input (FEAT-DAEMON-PAUSE-RESUME-01)."""
         self.daemon.resume()
         return {"status": "ok", "paused": False}
+
+    async def _handle_autoswitch_lock(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Congela/descongela a troca AUTOMÁTICA de perfil (FEAT-AUTOSWITCH-LOCK-01).
+
+        Pedido da mantenedora (23/07): poder dizer "usa o que eu escolhi, não
+        troca sozinho" — para o Sackboy, o Mullet Mad Jack ou qualquer jogo. É o
+        oposto de aplicar o perfil do jogo por foco de janela.
+
+        `locked` opcional: ausente → toggle. Persiste em disco (sobrevive a
+        reboot) e vale no tick seguinte do autoswitch — não mexe em gamepad/
+        co-op/rumble, só na DECISÃO de perfil.
+        """
+        from hefesto_dualsense4unix.utils.session import save_autoswitch_locked
+
+        pedido = params.get("locked")
+        novo = not self.store.autoswitch_locked if pedido is None else bool(pedido)
+        self.store.set_autoswitch_locked(novo)
+        save_autoswitch_locked(novo)
+        logger.info("autoswitch_lock_set", locked=novo)
+        return {"status": "ok", "autoswitch_locked": novo}
 
     async def _handle_native_mode_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01).
@@ -882,6 +904,8 @@ class IpcHandlersMixin:
             "counters": snap.counters,
             # FEAT-DAEMON-PAUSE-RESUME-01: applet/GUI distinguem pausado de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
+            # FEAT-AUTOSWITCH-LOCK-01: applet/GUI refletem o cadeado da troca de perfil.
+            "autoswitch_locked": bool(self.store.autoswitch_locked),
             "native_mode": bool(
                 self.daemon is not None and self.daemon.is_native_mode()
             ),

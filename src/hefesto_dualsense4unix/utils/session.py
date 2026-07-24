@@ -172,6 +172,34 @@ def load_paused_state() -> bool:
         return False
 
 
+_AUTOSWITCH_LOCK_FLAG_FILE = "autoswitch_locked.flag"
+
+
+def save_autoswitch_locked(locked: bool) -> None:
+    """Persiste o cadeado da troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+
+    Arquivo-flag em config_dir (existe = congelado), no mesmo idioma do
+    `paused.flag`. Best-effort: nunca propaga exceção.
+    """
+    try:
+        flag = config_dir(ensure=True) / _AUTOSWITCH_LOCK_FLAG_FILE
+        if locked:
+            flag.write_text("1\n", encoding="utf-8")
+        else:
+            flag.unlink(missing_ok=True)
+        logger.debug("autoswitch_locked_saved", locked=locked)
+    except Exception as exc:
+        logger.debug("autoswitch_locked_save_failed", err=str(exc))
+
+
+def load_autoswitch_locked() -> bool:
+    """True se a troca automática foi deixada congelada na sessão anterior."""
+    try:
+        return (config_dir() / _AUTOSWITCH_LOCK_FLAG_FILE).exists()
+    except Exception:
+        return False
+
+
 _NATIVE_MODE_FLAG_FILE = "native_mode.flag"
 
 
@@ -452,6 +480,7 @@ def load_coop_enabled() -> bool:
 
 
 __all__ = [
+    "load_autoswitch_locked",
     "load_coop_enabled",
     "load_gamepad_emulation",
     "load_last_profile",
@@ -462,6 +491,7 @@ __all__ = [
     "read_active_marker",
     "resolve_boot_profile",
     "save_active_marker",
+    "save_autoswitch_locked",
     "save_coop_enabled",
     "save_gamepad_emulation",
     "save_last_profile",

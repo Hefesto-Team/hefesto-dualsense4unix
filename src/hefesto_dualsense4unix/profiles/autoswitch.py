@@ -114,6 +114,27 @@ class AutoSwitcher:
                     self._stop_event.wait(), timeout=self.poll_interval_sec
                 )
 
+    def travado(self) -> bool:
+        """True quando a troca automática de perfil está CONGELADA pela usuária.
+
+        FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07: "no sackboy a
+        ideia era ficar a seleção que eu marquei na interface... deixar na
+        interface a opção de escolha", e o mesmo para o Mullet Mad Jack).
+
+        É diferente de tudo que já existia:
+        - do PAUSE do daemon (`_paused`): aquele para TODA a emulação; este só
+          congela a DECISÃO de perfil — gamepad, co-op, rumble seguem vivos;
+        - da trava manual por categoria (`manual_override_categories`): aquela é
+          por-seção e some quando ela troca de perfil; esta é a escolha
+          explícita de "não troca de perfil sozinho, ponto".
+
+        Estado no StateStore (persistido pelo handler IPC), lido a cada tick —
+        ligar/desligar vale na hora. Sem store (testes legados) = nunca travado,
+        o comportamento histórico.
+        """
+        store = self.store
+        return store is not None and bool(getattr(store, "autoswitch_locked", False))
+
     def _tick(self, info: dict[str, Any], now: float) -> None:
         """Um ciclo de decisão do autoswitch (leitura já feita pelo caller).
 
@@ -121,6 +142,12 @@ class AutoSwitcher:
         wall-time e o buraco-do-debounce da UX-01 só é testável com `now`
         controlado.
         """
+        # FEAT-AUTOSWITCH-LOCK-01: congelamento explícito da troca de perfil.
+        # Fica ANTES de tudo — nem lê janela, nem mexe no debounge, nem no
+        # candidato. O perfil que estiver ativo (a escolha DELA) simplesmente
+        # fica. Desligar o cadeado retoma a decisão normal no tick seguinte.
+        if self.travado():
+            return
         # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
         # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
         # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,

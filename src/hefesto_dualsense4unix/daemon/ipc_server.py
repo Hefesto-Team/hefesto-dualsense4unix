@@ -110,6 +110,7 @@ class IpcServer(IpcHandlersMixin):
             "daemon.state_full": self._handle_daemon_state_full,
             "daemon.pause": self._handle_daemon_pause,
             "daemon.resume": self._handle_daemon_resume,
+            "autoswitch.lock": self._handle_autoswitch_lock,
             "native.mode.set": self._handle_native_mode_set,
             "controller.list": self._handle_controller_list,
             "controller.target.set": self._handle_controller_target_set,
