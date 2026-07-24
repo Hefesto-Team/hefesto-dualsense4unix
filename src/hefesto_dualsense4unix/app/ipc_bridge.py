@@ -178,6 +178,22 @@ def daemon_state_full() -> dict[str, Any] | None:
     return None
 
 
+def autoswitch_lock_set(locked: bool | None = None) -> bool | None:
+    """Congela/descongela a troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+
+    `locked=None` faz toggle no daemon. Devolve o estado resultante
+    (True=congelado), ou None se o daemon está offline.
+    """
+    params: dict[str, Any] = {}
+    if locked is not None:
+        params["locked"] = bool(locked)
+    ok, result = _safe_call("autoswitch.lock", params)
+    if ok and isinstance(result, dict):
+        estado = result.get("autoswitch_locked")
+        return bool(estado) if isinstance(estado, bool) else None
+    return None
+
+
 def daemon_status_basic() -> dict[str, Any] | None:
     """Retorna status básico via IPC; None se daemon offline."""
     ok, result = _safe_call("daemon.status")
@@ -472,6 +488,7 @@ def mouse_emulation_set(
 __all__ = [
     "active_profile_name",
     "apply_draft",
+    "autoswitch_lock_set",
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",

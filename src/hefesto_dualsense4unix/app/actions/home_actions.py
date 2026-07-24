@@ -426,6 +426,25 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_origin_label = origin
         mode_box.pack_start(origin, False, False, 0)
 
+        # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): o cadeado da
+        # troca automática de perfil. Marcado = "usa o perfil que EU escolhi,
+        # não troca sozinho quando eu abrir um jogo" — vale para Sackboy,
+        # Mullet Mad Jack ou qualquer app. Diferente do Modo Nativo (que solta
+        # o controle) e do pause (que para tudo): aqui só a DECISÃO de perfil
+        # congela; gamepad/co-op/rumble seguem. O estado vem do daemon no
+        # _render_home; o toggle persiste e vale na hora.
+        lock_check = Gtk.CheckButton(
+            label="Não trocar de perfil sozinho ao abrir um jogo"
+        )
+        lock_check.set_tooltip_text(
+            "Congela a troca automática: o perfil que você deixou ativo continua "
+            "valendo mesmo ao abrir Sackboy, Mullet Mad Jack ou qualquer jogo. "
+            "Desmarque para o Hefesto voltar a escolher o perfil por você."
+        )
+        lock_check.connect("toggled", self._on_home_autoswitch_lock_toggled)
+        self._home_autoswitch_lock = lock_check
+        mode_box.pack_start(lock_check, False, False, 0)
+
         frame_mode.add(mode_box)
         box.pack_start(frame_mode, False, False, 0)
 
@@ -569,10 +588,20 @@ class HomeActionsMixin(WidgetAccessMixin):
                 # atenda o IPC.
                 self._home_renumber_btn.set_sensitive(False)
                 self._home_renumber_hint.set_text("")
+                # FEAT-AUTOSWITCH-LOCK-01: sem daemon, o cadeado não tem estado.
+                _lock = getattr(self, "_home_autoswitch_lock", None)
+                if _lock is not None:
+                    _lock.set_sensitive(False)
                 return
             assert state is not None
             selector.set_sensitive(True)
             self._home_flavor_selector.set_sensitive(True)
+            # FEAT-AUTOSWITCH-LOCK-01: reflete o cadeado do daemon (sob guard —
+            # set_active emite "toggled", que reenviaria o IPC em loop).
+            _lock = getattr(self, "_home_autoswitch_lock", None)
+            if _lock is not None:
+                _lock.set_sensitive(True)
+                _lock.set_active(bool(state.get("autoswitch_locked", False)))
             self._home_session_label.set_text("")
             # ONDA-U (U1): online devolve o botão único ao estado "Desligar".
             self._home_offline = False
@@ -769,6 +798,39 @@ class HomeActionsMixin(WidgetAccessMixin):
             _done,
             _fail,
             timeout_s=_MODE_IPC_TIMEOUT_S,
+        )
+
+    def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
+        """FEAT-AUTOSWITCH-LOCK-01: liga/desliga o cadeado da troca automática.
+
+        Guard `_home_guard`: o `_render_home` chama `set_active` para refletir o
+        daemon, e isso emite "toggled" — sem o guard, cada tick reenviaria o IPC.
+        """
+        if getattr(self, "_home_guard", False):
+            return
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        desejado = bool(check.get_active())
+
+        def _fim(resultado: Any) -> bool:
+            # O daemon devolve o estado efetivo; se veio None (offline), a
+            # próxima renderização reconverge com o estado real.
+            if resultado is None:
+                self._status_toast(
+                    "home", "O Hefesto está desligado — o cadeado não foi aplicado."
+                )
+            else:
+                self._status_toast(
+                    "home",
+                    "Troca automática de perfil CONGELADA — o perfil que você "
+                    "escolheu fica." if resultado else
+                    "Troca automática de perfil LIBERADA — o Hefesto volta a "
+                    "escolher o perfil ao abrir cada jogo.",
+                )
+            return False
+
+        ipc_bridge.run_in_thread(
+            lambda: ipc_bridge.autoswitch_lock_set(desejado), on_success=_fim
         )
 
     def _on_home_renumber_clicked(self, _button: object) -> None:

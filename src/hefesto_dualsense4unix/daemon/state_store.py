@@ -73,6 +73,13 @@ class StateStore:
         # rumble.passthrough limpa SÓ "rumble"; jogo com perfil próprio
         # (steam_app_*) limpa tudo ao ativar (F2, ver AutoSwitcher._activate).
         self._manual_override_categories: set[str] = set()
+        # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): cadeado
+        # explícito da troca automática de perfil. Diferente do lock manual de
+        # 30 s acima (que expira) e do pause do daemon (que para toda a
+        # emulação): enquanto True, o AutoSwitcher NÃO troca de perfil por foco
+        # de janela — a escolha DELA fica —, mas gamepad/co-op/rumble seguem
+        # vivos. Persistido no disco pelo handler IPC (sobrevive a reboot).
+        self._autoswitch_locked: bool = False
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): timestamp absoluto
         # (`time.monotonic`) até quando o autoswitch deve suspender por
         # escolha manual de perfil. 0.0 → lock inativo. Setado pelo handler
@@ -286,6 +293,17 @@ class StateStore:
         """True se QUALQUER categoria de override manual está armada."""
         with self._lock:
             return bool(self._manual_override_categories)
+
+    @property
+    def autoswitch_locked(self) -> bool:
+        """True quando a troca automática de perfil está congelada (FEAT-AUTOSWITCH-LOCK-01)."""
+        with self._lock:
+            return self._autoswitch_locked
+
+    def set_autoswitch_locked(self, locked: bool) -> None:
+        """Liga/desliga o cadeado da troca automática de perfil."""
+        with self._lock:
+            self._autoswitch_locked = bool(locked)
 
     @property
     def manual_override_categories(self) -> frozenset[str]:

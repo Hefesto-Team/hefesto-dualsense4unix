@@ -473,6 +473,10 @@ class Daemon:
         # terminou pausada (o poll loop nasce respeitando _paused).
         from hefesto_dualsense4unix.utils.session import load_paused_state
         self._paused = load_paused_state()
+        # FEAT-AUTOSWITCH-LOCK-01: retoma congelada se a sessão anterior terminou
+        # assim (a escolha DELA de "não troca de perfil sozinho" atravessa reboot).
+        from hefesto_dualsense4unix.utils.session import load_autoswitch_locked
+        self.store.set_autoswitch_locked(load_autoswitch_locked())
         # FEAT-NATIVE-MODE-01: se a sessão anterior terminou em Modo Nativo, sobe
         # SOLTO — o controle fica com o jogo. Implica pausado e NÃO restaura
         # emulação nem re-aplica perfil (os `not self._native_mode` abaixo e o
