@@ -8,7 +8,11 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
+from gi.repository import GLib, Gtk, Pango
+
+#: Largura da coluna de rótulo dos sliders de parâmetro. Estreita de propósito:
+#: o que sobra vai para o slider, e a linha nunca passa de uma altura de texto.
+_PARAM_LABEL_WIDTH = 150
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.trigger_specs import (
@@ -450,9 +454,16 @@ class TriggersActionsMixin(WidgetAccessMixin):
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         row.set_homogeneous(False)
 
+        # Coluna de rótulo estreita e em UMA linha só. Eram 200px, e mesmo assim
+        # "Intensidade início (1-8)" quebrava em duas — cada linha extra some com
+        # espaço que a aba não tem. `ellipsize` garante que um rótulo maior corte
+        # com reticências em vez de voltar a crescer em altura.
         label = Gtk.Label(label=param.label)
         label.set_xalign(0)
-        label.set_size_request(200, -1)
+        label.set_size_request(_PARAM_LABEL_WIDTH, -1)
+        label.set_line_wrap(False)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_tooltip_text(param.label)
         row.pack_start(label, False, False, 0)
 
         adjust = Gtk.Adjustment(

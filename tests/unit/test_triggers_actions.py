@@ -97,12 +97,27 @@ class _Scale:
 class _Label:
     def __init__(self, *_a: Any, **kw: Any) -> None:
         self._text = kw.get("label", "")
+        # Espelham o que `_build_param_row` configura no rótulo do slider: uma
+        # linha só, com reticências se não couber (S3 — a coluna encolheu para
+        # 150px e "Intensidade início (1-8)" não pode voltar a quebrar linha).
+        self.line_wrap: bool | None = None
+        self.ellipsize: Any = None
+        self.tooltip: str | None = None
 
     def set_xalign(self, _x: float) -> None:
         pass
 
     def set_size_request(self, _w: int, _h: int) -> None:
         pass
+
+    def set_line_wrap(self, wrap: bool) -> None:
+        self.line_wrap = wrap
+
+    def set_ellipsize(self, mode: Any) -> None:
+        self.ellipsize = mode
+
+    def set_tooltip_text(self, texto: str) -> None:
+        self.tooltip = texto
 
     def set_text(self, t: str) -> None:
         self._text = t
