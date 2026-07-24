@@ -102,8 +102,11 @@
                 <property name="spacing">2</property>
                 <property name="valign">center</property>
                 <child>
+                  <!-- Wordmark colorido por trecho: rosa e a marca (Hefesto), o
+                       verde marca o "4" de "DualSense4Unix". As cores sao da
+                       paleta Dracula e nao devem divergir do theme.css. -->
                   <object class="GtkLabel" id="app_wordmark">
-                    <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;Hefesto - Dualsense4Unix&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;&lt;span foreground="#ff79c6"&gt;Hefesto&lt;/span&gt; &lt;span foreground="#6272a4"&gt;—&lt;/span&gt; &lt;span foreground="#f8f8f2"&gt;DualSense&lt;/span&gt;&lt;span foreground="#50fa7b"&gt;4&lt;/span&gt;&lt;span foreground="#f8f8f2"&gt;Unix&lt;/span&gt;&lt;/span&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -111,7 +114,7 @@
                 </child>
                 <child>
                   <object class="GtkLabel" id="app_subtitle">
-                    <property name="label" translatable="yes">&lt;span size="small" foreground="#888"&gt;daemon de gatilhos adaptativos para DualSense&lt;/span&gt;</property>
+                    <property name="label" translatable="yes">&lt;span size="small" foreground="#6272a4"&gt;Gerenciador DualSense para Linux&lt;/span&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                   </object>
@@ -122,7 +125,7 @@
             </child>
             <child>
               <object class="GtkLabel" id="header_connection">
-                <property name="label" translatable="yes">&lt;span foreground="#d33"&gt; Controle Desconectado&lt;/span&gt;</property>
+                <property name="label" translatable="yes">&lt;span foreground="#ff5555"&gt; Controle Desconectado&lt;/span&gt;</property>
                 <property name="use-markup">True</property>
                 <property name="valign">center</property>
               </object>

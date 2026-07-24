@@ -1,21 +1,68 @@
 /* Drácula palette aplicada ao Hefesto - Dualsense4Unix */
 /* Prioridade: GTK_STYLE_PROVIDER_PRIORITY_APPLICATION — sobrepõe tema do sistema. */
 
+/* ===========================================================================
+ * TOKENS — cada cor tem UM papel. Não usar hex solto fora daqui.
+ *
+ * As 11 cores base são o Drácula canônico; os 7 tokens de superfície dão os
+ * níveis de profundidade. Regras que valem para a interface inteira:
+ *
+ *   - ROSA é exclusivo da marca e da aba ativa. Não compete com o roxo.
+ *   - ROXO é seleção/acento. Nunca chapado em área grande: seleção é
+ *     borda roxa + fundo levemente tingido (@sel_bg / @sel_bg_hover).
+ *   - VERDE confirma, LARANJA alerta, VERMELHO destrói, CIANO informa.
+ *
+ * @sel_bg e @sel_bg_hover são o roxo a 16% e 24% JÁ COMPOSTO sobre o fundo
+ * do painel. Ficam sólidos de propósito: no COSMIC o tema GTK do sistema é
+ * claro e cor semi-transparente deixa o claro vazar por baixo
+ * (BUG-GUI-COSMIC-WIDGET-CONTRAST-01). Cor composta dá o mesmo resultado
+ * visual sem depender do que está atrás.
+ * =========================================================================== */
+@define-color bg           #282a36;  /* fundo dos painéis/cards */
+@define-color current_line #44475a;  /* contorno de campos, seleção neutra */
+@define-color fg           #f8f8f2;  /* texto principal */
+@define-color comment      #6272a4;  /* texto secundário, dicas */
+@define-color cyan         #8be9fd;  /* info, valores numéricos */
+@define-color green        #50fa7b;  /* sucesso, confirmar, ligado */
+@define-color orange       #ffb86c;  /* atenção, importar */
+@define-color pink         #ff79c6;  /* MARCA e aba ativa — só isso */
+@define-color purple       #bd93f9;  /* acento primário, seleção */
+@define-color red          #ff5555;  /* erro, remover */
+@define-color yellow       #f1fa8c;  /* alerta suave */
+
+@define-color app_bg       #21222c;  /* fundo da janela, mais fundo que os painéis */
+@define-color elevated     #2b2d3a;  /* trilha de slider, cabeçalho de tabela, botão */
+@define-color border_soft  #343746;  /* divisória entre seções */
+@define-color text_soft    #c8ccda;  /* rótulo */
+@define-color text_muted   #8b8fa8;  /* item não selecionado */
+@define-color sel_bg       #403b55;  /* purple 16% sobre @bg */
+@define-color sel_bg_hover #4a4363;  /* purple 24% sobre @bg */
+
+/* Tipografia do guia: Space Grotesk na interface, JetBrains Mono nos valores.
+   Nenhuma das duas costuma vir instalada — a cadeia cai para o que a
+   distribuição tiver. Instalá-las deixa a interface idêntica ao design; sem
+   elas nada quebra. */
+
 .hefesto-dualsense4unix-window {
-    background-color: #282a36;
-    color: #f8f8f2;
+    background-color: @bg;
+    color: @fg;
+    font-family: "Space Grotesk", Cantarell, "Fira Sans", "Noto Sans", sans-serif;
 }
 
-/* BUG-GUI-COSMIC-WIDGET-CONTRAST-01: fundo SÓLIDO escuro (não `transparent`).
-   Em COSMIC o tema GTK do sistema é claro; `transparent` deixava o botão exibir
-   o container claro atrás + texto branco => branco-sobre-branco. Fundo Drácula
-   sólido garante contraste independente do container/tema do sistema. */
+/* Botão em repouso é NEUTRO. Antes toda borda era roxa, o que gastava o acento
+   em tudo e deixava o item selecionado sem como se destacar — o roxo agora é
+   privilégio do :checked.
+
+   BUG-GUI-COSMIC-WIDGET-CONTRAST-01: o fundo é SÓLIDO escuro (não
+   `transparent`). Em COSMIC o tema GTK do sistema é claro; `transparent`
+   deixava o botão exibir o container claro atrás + texto branco =>
+   branco-sobre-branco. */
 .hefesto-dualsense4unix-window button {
     background-image: none;
-    background-color: #383a4a;
-    border: 1px solid #bd93f9;
+    background-color: @elevated;
+    border: 1px solid @current_line;
     border-radius: 4px;
-    color: #f8f8f2;
+    color: @fg;
     padding: 6px 12px;
 }
 /* BUG-GUI-HOVER-JITTER-01: hover NUNCA muda espessura de borda nem padding —
@@ -23,54 +70,56 @@
    botão e voltar => interface inteira balançando em loop (todas as abas).
    Ênfase de hover é só COR (borda rosa + fundo), dimensões idênticas. */
 .hefesto-dualsense4unix-window button:hover {
-    background-color: #44475a;
-    border-color: #ff79c6;
+    background-color: @current_line;
+    border-color: @comment;
 }
 .hefesto-dualsense4unix-window button:active {
-    background-color: #6272a4;
-    border-color: #bd93f9;
+    background-color: @comment;
+    border-color: @purple;
 }
-/* Toggle ativo (política de rumble): accent roxo sólido + texto escuro pra
-   indicar inequivocamente qual política está selecionada. Inclui :hover do
-   :checked para não "apagar" o destaque ao passar o mouse. */
+/* SELEÇÃO — o padrão de toda a interface: borda roxa + fundo levemente tingido
+   e texto claro. O roxo chapado com texto escuro que existia aqui dominava
+   qualquer área maior que um botão e brigava com o rosa da marca. Peso 600
+   (não bold) porque negrito muda a métrica do texto e faz o botão renegociar
+   largura no hover — o mesmo mecanismo do BUG-GUI-HOVER-JITTER-01. */
 .hefesto-dualsense4unix-window button:checked {
-    background-color: #bd93f9;
-    border-color: #bd93f9;
-    color: #282a36;
-    font-weight: bold;
+    background-color: @sel_bg;
+    border-color: @purple;
+    color: @fg;
+    font-weight: 600;
 }
 .hefesto-dualsense4unix-window button:checked:hover {
-    background-color: #caa3fb;
-    border-color: #ff79c6;
-    color: #282a36;
+    background-color: @sel_bg_hover;
+    border-color: @purple;
+    color: @fg;
 }
 /* Realce do modo ativo num grupo de GtkButton de ação (seletor de gamepad).
    GtkButton não tem :checked; o código aplica .hefesto-active-mode no botão do
    modo atual. Mesmo visual do :checked p/ consistência com a política de rumble. */
 .hefesto-dualsense4unix-window button.hefesto-active-mode {
-    background-color: #bd93f9;
-    border-color: #bd93f9;
-    color: #282a36;
-    font-weight: bold;
+    background-color: @sel_bg;
+    border-color: @purple;
+    color: @fg;
+    font-weight: 600;
 }
 .hefesto-dualsense4unix-window button.hefesto-active-mode:hover {
-    background-color: #caa3fb;
-    border-color: #ff79c6;
-    color: #282a36;
+    background-color: @sel_bg_hover;
+    border-color: @purple;
+    color: @fg;
 }
 .hefesto-dualsense4unix-window button:disabled {
-    background-color: #2f313d;
-    border-color: #44475a;
-    color: #6272a4;
+    background-color: @app_bg;
+    border-color: @border_soft;
+    color: @comment;
 }
 /* GUI-05/P4: segmentado READ-ONLY (ficha do controle externo) — o modo
    DETECTADO continua destacado em roxo mesmo com o widget insensitive; sem
    esta regra o :disabled acima apagava o :checked e nada parecia marcado. */
 .hefesto-dualsense4unix-window button:checked:disabled {
-    background-color: #bd93f9;
-    border-color: #bd93f9;
-    color: #282a36;
-    font-weight: bold;
+    background-color: @sel_bg;
+    border-color: @purple;
+    color: @text_soft;
+    font-weight: 600;
 }
 
 .hefesto-dualsense4unix-window combobox,
@@ -89,7 +138,7 @@
    contra o background Dracula (#282a36). Forçamos cor do foreground em todos
    os filhos relevantes.
    BUG-GUI-COSMIC-WIDGET-CONTRAST-01: o `button` interno do combobox NÃO deve
-   herdar o fundo sólido #383a4a do botão genérico nem o `transparent` antigo
+   herdar o fundo sólido @elevated do botão genérico nem o `transparent` antigo
    (que vazava o tema claro do COSMIC). Padroniza o display fechado para casar
    com `entry`: fundo #282a36, sem borda interna dupla, seta roxa. */
 .hefesto-dualsense4unix-window combobox button,
@@ -104,7 +153,7 @@
 .hefesto-dualsense4unix-window combobox button:hover,
 .hefesto-dualsense4unix-window combobox button:active,
 .hefesto-dualsense4unix-window combobox button:checked {
-    background-color: #383a4a;
+    background-color: @elevated;
     border: none;
     padding: 4px 8px;
 }
@@ -212,7 +261,7 @@ messagedialog label {
 }
 messagedialog button {
     background-image: none;
-    background-color: #383a4a;
+    background-color: @elevated;
     border: 1px solid #bd93f9;
     border-radius: 4px;
     color: #f8f8f2;
@@ -317,12 +366,17 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window notebook > header > tabs > tab {
     background: transparent;
     border: none;
-    color: #6272a4;
+    color: @text_muted;
     padding: 8px 14px;
 }
+/* A aba ativa é o único lugar da interface, além da marca, onde o rosa aparece.
+   Era roxa e disputava a atenção com todo item selecionado da tela. */
 .hefesto-dualsense4unix-window notebook > header > tabs > tab:checked {
-    color: #f8f8f2;
-    border-bottom: 2px solid #bd93f9;
+    color: @fg;
+    border-bottom: 2px solid @pink;
+}
+.hefesto-dualsense4unix-window notebook > header > tabs > tab:hover {
+    color: @text_soft;
 }
 
 /* Cards internos (ex.: log systemctl, mapeamento mouse) */
@@ -334,13 +388,13 @@ messagedialog button:active {
 }
 
 .hefesto-dualsense4unix-log textview {
-    background-color: #2a2a2a;
+    background-color: @app_bg;
     color: #f8f8f2;
     font-family: "JetBrains Mono", "Fira Code", monospace;
     font-size: 11px;
 }
 .hefesto-dualsense4unix-log textview text {
-    background-color: #2a2a2a;
+    background-color: @app_bg;
 }
 
 .hefesto-dualsense4unix-status-ok     { color: #50fa7b; }
@@ -356,40 +410,51 @@ messagedialog button:active {
    BUG-GUI-COSMIC-WIDGET-CONTRAST-01: prefixados por .hefesto-dualsense4unix-window
    (especificidade 0,2,0) para vencer a regra base de `button` (0,1,1) — que
    agora seta `background-image: none` + fundo sólido. Cada `.btn-*` reafirma o
-   fundo escuro sólido #383a4a sob o gradiente; antes o gradiente alpha-baixo
+   fundo escuro sólido @elevated sob o gradiente; antes o gradiente alpha-baixo
    pintava sobre `transparent` => sumia no claro do COSMIC. */
 
-.hefesto-dualsense4unix-window button.btn-apply {   /* Aplicar — verde (commit/ação positiva) */
-    background-color: #383a4a;
-    border-left: 3px solid #50fa7b;
-    background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.12), rgba(80, 250, 123, 0.06));
-}
-.hefesto-dualsense4unix-window button.btn-apply:hover  { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.22), rgba(80, 250, 123, 0.12)); }
-.hefesto-dualsense4unix-window button.btn-apply:active { background-image: linear-gradient(to bottom, rgba(80, 250, 123, 0.32), rgba(80, 250, 123, 0.18)); }
+/* Uma ação primária (Aplicar, preenchida) e três secundárias (contornadas).
+   Antes as quatro tinham o mesmo peso visual — borda lateral + gradiente — e
+   nada dizia qual era a ação que efetiva a mudança.
+   Os `:hover`/`:active` mexem só em cor, nunca em borda ou padding
+   (BUG-GUI-HOVER-JITTER-01). */
 
-.hefesto-dualsense4unix-window button.btn-save {    /* Salvar Perfil — ciano (persistência) */
-    background-color: #383a4a;
-    border-left: 3px solid #8be9fd;
-    background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.12), rgba(139, 233, 253, 0.06));
+.hefesto-dualsense4unix-window button.btn-apply {   /* Aplicar — a ação primária */
+    background-image: none;
+    background-color: @green;
+    border: 1px solid @green;
+    color: @app_bg;
+    font-weight: 600;
 }
-.hefesto-dualsense4unix-window button.btn-save:hover   { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.22), rgba(139, 233, 253, 0.12)); }
-.hefesto-dualsense4unix-window button.btn-save:active  { background-image: linear-gradient(to bottom, rgba(139, 233, 253, 0.32), rgba(139, 233, 253, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-apply:hover  { background-color: #6ffb90; border-color: #6ffb90; }
+.hefesto-dualsense4unix-window button.btn-apply:active { background-color: #3ee066; border-color: #3ee066; }
 
-.hefesto-dualsense4unix-window button.btn-import {  /* Importar — laranja (cautela: conteúdo externo) */
-    background-color: #383a4a;
-    border-left: 3px solid #ffb86c;
-    background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.12), rgba(255, 184, 108, 0.06));
+.hefesto-dualsense4unix-window button.btn-save {    /* Salvar Perfil — persistência */
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @purple;
+    color: @purple;
 }
-.hefesto-dualsense4unix-window button.btn-import:hover  { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.22), rgba(255, 184, 108, 0.12)); }
-.hefesto-dualsense4unix-window button.btn-import:active { background-image: linear-gradient(to bottom, rgba(255, 184, 108, 0.32), rgba(255, 184, 108, 0.18)); }
+.hefesto-dualsense4unix-window button.btn-save:hover   { background-color: @sel_bg; }
+.hefesto-dualsense4unix-window button.btn-save:active  { background-color: @sel_bg_hover; }
 
-.hefesto-dualsense4unix-window button.btn-restore { /* Restaurar Default — cinza (reset neutro) */
-    background-color: #383a4a;
-    border-left: 3px solid #6272a4;
-    background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.18), rgba(98, 114, 164, 0.08));
+.hefesto-dualsense4unix-window button.btn-import {  /* Importar — cautela: conteúdo externo */
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @orange;
+    color: @orange;
 }
-.hefesto-dualsense4unix-window button.btn-restore:hover  { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.30), rgba(98, 114, 164, 0.18)); }
-.hefesto-dualsense4unix-window button.btn-restore:active { background-image: linear-gradient(to bottom, rgba(98, 114, 164, 0.42), rgba(98, 114, 164, 0.28)); }
+.hefesto-dualsense4unix-window button.btn-import:hover  { background-color: #3d3630; }
+.hefesto-dualsense4unix-window button.btn-import:active { background-color: #4a4136; }
+
+.hefesto-dualsense4unix-window button.btn-restore { /* Restaurar Default — reset neutro */
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @comment;
+    color: @text_muted;
+}
+.hefesto-dualsense4unix-window button.btn-restore:hover  { background-color: @elevated; color: @text_soft; }
+.hefesto-dualsense4unix-window button.btn-restore:active { background-color: @current_line; }
 
 /* UI-PROFILES-RIGHT-PANEL-REBALANCE-01 — preview JSON do perfil */
 .hefesto-dualsense4unix-profile-preview {
