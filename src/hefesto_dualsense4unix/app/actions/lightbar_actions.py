@@ -341,7 +341,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 }
             )
         else:
-            ok = led_set((0, 0, 0))
+            # R-17 (auditoria 23/07): o "Apagar" era o ÚNICO output da GUI que
+            # não mandava o `uniq` do alvo — o "Aplicar" logo ao lado manda. Sem
+            # ele o pedido cai na rota GLOBAL (broadcast) que o PERFIL-05
+            # abandonou: apagava a lightbar dos QUATRO controles quando ela
+            # pediu para apagar a de UM, e ainda derrubava o override por-MAC
+            # dos outros.
+            ok = led_set((0, 0, 0), uniq=self._edit_uniq())
         msg = "Lightbar apagada" if ok else "Falha (daemon offline?)"
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
