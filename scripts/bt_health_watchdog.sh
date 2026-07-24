@@ -249,10 +249,47 @@ if [[ "${RECUSAS}" -ge "${LIMIAR_RECUSAS}" ]]; then
     fi
 fi
 
+# --- vigia 2b: TRUST em device com bond, CONECTADO OU NÃO --------------------
+# WATCHDOG-TRUST-DEADLOCK-01 (23/07, medido ao vivo): esta vigia estava DENTRO
+# do laço da vigia 2, atrás do gate `Connected == true`. Isso a tornava
+# inalcançável exatamente para quem mais precisa dela — um deadlock:
+#
+#   device sem trust  ->  BlueZ RECUSA a reconexão entrante
+#                         ("Refusing connection from <MAC>: unknown device")
+#   device recusado   ->  nunca fica Connected
+#   nunca Connected   ->  a vigia 2b nunca o alcança  ->  segue sem trust
+#
+# Medido em 23/07 22h58: 8BitDo e Pro Nintendo com Bonded=true e Trusted=false,
+# ambos desconectados, o log martelando "unknown device" a cada toque no botão
+# de sync. A mantenedora descreveu como "a conexão automática voltou e assim ele
+# nunca conecta". Nenhum tick do watchdog resolvia, por construção.
+#
+# Trust é idempotente, não mexe no link e não depende de conexão — então roda
+# no seu próprio laço, sobre TODO device com bond. É o pré-requisito para o
+# controle conseguir voltar sozinho.
+while IFS= read -r OBJ; do
+    [[ -z "${OBJ}" ]] && continue
+    # Só device com bond de verdade: dar trust a um device meramente visto num
+    # scan seria autorizar quem nunca foi pareado.
+    [[ "$(_dbus_device_prop "${OBJ}" Bonded)" == "true" ]] || continue
+    [[ "$(_dbus_device_prop "${OBJ}" Trusted)" == "false" ]] || continue
+    MAC_TRUST="${OBJ##*dev_}"
+    MAC_TRUST="${MAC_TRUST//_/:}"
+    if busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
+        log "device ${MAC_TRUST} tinha bond mas estava SEM trust (reconexão entrante recusada como 'unknown device') — Trusted=true aplicado"
+    else
+        log "falha ao aplicar Trusted=true em ${MAC_TRUST} — o doctor vai apontar"
+    fi
+done <<<"${DEVICE_PATHS}"
+
 # --- vigia 2: bond temporário (Paired sem Bonded em device conectado) --------
 # Fonte da lista: D-Bus (WATCHDOG-FP-01). A lista via bluetoothctl vinha VAZIA
 # no 5.86 e as vigias 2/2b passavam sem olhar device nenhum (medido 22/07:
 # 4 controles conectados, todos Trusted=false, vigia 2b inerte a sessão toda).
+#
+# Esta vigia (promoção de bond temporário) SEGUE exigindo `Connected` — ao
+# contrário do trust, promover bond precisa do link vivo (o Pair() explícito
+# corre sobre a conexão).
 while IFS= read -r OBJ; do
     [[ -z "${OBJ}" ]] && continue
     [[ "$(_dbus_device_prop "${OBJ}" Connected)" == "true" ]] || continue
@@ -260,19 +297,6 @@ while IFS= read -r OBJ; do
     MAC="${MAC_U//_/:}"
     PAIRED="$(_dbus_device_prop "${OBJ}" Paired)"
     BONDED="$(_dbus_device_prop "${OBJ}" Bonded)"
-    # --- vigia 2b: bond são mas SEM trust (medido 22/07: roxo Bonded=true e
-    # Trusted=false após promoção — o pair explícito NÃO seta trust, e sem
-    # trust o BlueZ não autoriza a reconexão ENTRANTE do controle; o botão
-    # PS/SYNC vira "não conecta"). Trust é idempotente e não mexe no link,
-    # então corrige direto via D-Bus (busctl — imune ao bluetoothctl mudo).
-    TRUSTED="$(_dbus_device_prop "${OBJ}" Trusted)"
-    if [[ "${TRUSTED}" == "false" ]]; then
-        if busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
-            log "device ${MAC} estava sem trust (reconexão entrante bloqueada) — Trusted=true aplicado"
-        else
-            log "falha ao aplicar Trusted=true em ${MAC} — o doctor vai apontar"
-        fi
-    fi
     # Bonded ausente na API (BlueZ < 5.65) => não dá para vigiar; pula.
     [[ -z "${BONDED}" ]] && continue
     if [[ "${BONDED}" == "false" ]]; then
