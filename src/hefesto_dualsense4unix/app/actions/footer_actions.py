@@ -250,6 +250,11 @@ class FooterActionsMixin(WidgetAccessMixin):
             logger.info("footer_save_profile_ok", nome=nome, path=str(path))
             # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
             self._active_profile_name = nome
+            # R-08: o que estava em memória virou o que está em disco — a
+            # edição deixa de ser "pendente". Sem zerar a linha de base aqui, o
+            # draft ficaria sujo para sempre e a reconciliação com o perfil
+            # ativo nunca mais voltaria a rodar nesta sessão.
+            self._draft_baseline = draft
             refresh = getattr(self, "_reload_profiles_store", None)
             if refresh is not None:
                 refresh(select_name=nome)
@@ -424,7 +429,19 @@ class FooterActionsMixin(WidgetAccessMixin):
         def _on_restored(novo_draft: Any) -> bool:
             if novo_draft is not None:
                 self.draft = novo_draft
-                logger.info("footer_restore_default_draft_recarregado")
+                # R-08/C9: draft e NOME trocam como unidade. Sem isto, o
+                # "Salvar Perfil" ao lado (mesmo rodapé) vinha pré-preenchido
+                # com o perfil ANTERIOR e gravava o conteúdo INTEIRO de
+                # meu_perfil por cima dele — destruindo o perfil ativo sem que
+                # nada tivesse dito "você trocou de perfil".
+                # A atribuição fica DENTRO do `if`: quando o reload falha, o
+                # draft antigo continua válido e o nome antigo continua certo.
+                self._active_profile_name = _MEU_PERFIL_NOME
+                self._draft_baseline = novo_draft
+                logger.info(
+                    "footer_restore_default_draft_recarregado",
+                    perfil_ativo_agora=_MEU_PERFIL_NOME,
+                )
             destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
             self._footer_toast(
                 _("meu_perfil restaurado para {destino}").format(destino=destino)
