@@ -641,6 +641,13 @@ class Daemon:
             # janela de respeito dos toggles de emulação — um perfil (autoswitch)
             # não liga/desliga o nativo por 30s após a usuária mexer na mão.
             self._emu_manual_ts = time.monotonic()
+            # R-02/C6: a POSSE do eixo de modo passa para a usuária aqui, ANTES
+            # do early-return de idempotência abaixo. A limpeza que já existia
+            # no fim da função é inalcançável quando `enabled` não muda — e aí
+            # o flag "modo veio de perfil" ficava pendurado: passados os 30 s do
+            # carimbo, o primeiro perfil sem `mode` revertia o que ela ligou na
+            # mão. Carimbo e posse andam juntos, sempre.
+            self._mode_from_profile = None
         if enabled == self._native_mode:
             return self._native_mode
         if enabled:
@@ -960,6 +967,14 @@ class Daemon:
 
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
+            # R-02/C6: gesto manual toma a POSSE do eixo de modo — paridade com
+            # `_suppress_from_profile` (set_emulation_suppressed) e
+            # `_rumble_policy_from_profile` (mark_rumble_policy_manual), que já
+            # faziam isso. Sem esta linha, o carimbo protegia por só 30 s: depois
+            # o primeiro perfil sem seção `mode` — quase todos os dela — chamava
+            # `set_gamepad_emulation(False, origin="profile")` sobre um vpad que
+            # ela tinha ligado na mão.
+            self._mode_from_profile = None
         # BUG-EMU-DEVICE-RACE-01: mesma serialização do set_mouse_emulation.
         with self._emu_lock:
             if enabled:
@@ -1003,7 +1018,11 @@ class Daemon:
                 return ok
             # HARM-16: o zero dos motores vem de dentro do stop (parar o vpad é
             # o que deixa o motor sem dono), não de um passo extra aqui.
-            stop_gamepad_emulation(self)
+            # R-07: só gesto manual apaga a preferência em disco. Um perfil sem
+            # seção `mode` desligando o gamepad fazia `flag.unlink()` — e no
+            # boot seguinte não nascia vpad nenhum, obrigando a religar tudo na
+            # mão. O runtime continua desligando; a PREFERÊNCIA sobrevive.
+            stop_gamepad_emulation(self, persist=(origin == "manual"))
             return True
 
     def set_coop_enabled(
@@ -1021,6 +1040,9 @@ class Daemon:
         self.config.coop_enabled = bool(enabled)
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
+            # R-02/C6: idem `set_gamepad_emulation` — o co-op é parte do mesmo
+            # eixo (`mode.coop`), então ligá-lo na mão também toma a posse.
+            self._mode_from_profile = None
             # FEAT-COOP-DEFAULT-ON-01: só gesto MANUAL persiste a escolha —
             # perfil ligando/desligando co-op não pode virar opt-out da usuária.
             with contextlib.suppress(Exception):
@@ -1080,7 +1102,9 @@ class Daemon:
         notify_emulation_suppressed(new_state)
         return new_state
 
-    def apply_profile_suppression(self, desired: bool) -> None:
+    def apply_profile_suppression(
+        self, desired: bool, *, profile: Any | None = None
+    ) -> None:
         """Aplica `suppress_desktop_emulation` de um perfil recém-ativado.
 
         FEAT-POINT-AND-CLICK-01. Injetado como `suppression_applier` do
@@ -1125,6 +1149,25 @@ class Daemon:
                 self.set_emulation_suppressed(True, origin="profile")
             self._suppress_from_profile = True
         elif self._emulation_suppressed and self._suppress_from_profile:
+            # R-02: mesma regra do modo — LIBERAR a supressão é uma decisão, e
+            # um catch-all não tem autoridade para tomá-la. Sem esta guarda, o
+            # `vitoria` (suppress=False, o default) soltava a emulação de
+            # desktop dentro do jogo: o mouse/teclado emulado voltava a
+            # disputar com o jogo enquanto ela jogava.
+            if not self._perfil_tem_opiniao(profile):
+                logger.info(
+                    "profile_suppression_revert_skipped",
+                    motivo="catch_all_sem_opiniao",
+                    profile=getattr(profile, "name", None),
+                )
+                return
+            if self._janela_de_jogo_em_foco():
+                logger.info(
+                    "profile_suppression_revert_skipped",
+                    motivo="janela_de_jogo_em_foco",
+                    profile=getattr(profile, "name", None),
+                )
+                return
             self.set_emulation_suppressed(False, origin="profile")
             self._suppress_from_profile = False
 
@@ -1177,7 +1220,44 @@ class Daemon:
             enabled, speed, scroll_speed, origin="profile"
         )
 
-    def apply_profile_mode(self, mode: Any | None) -> None:
+    def _perfil_tem_opiniao(self, profile: Any | None) -> bool:
+        """False quando o perfil é catch-all (`MatchAny` ou criteria vazio).
+
+        R-02 (auditoria 23/07). Um catch-all não é "o perfil deste app": é o
+        que sobra quando NENHUMA regra casou. Tratar a ausência de opinião dele
+        como ordem de reverter era o que desligava o vpad no meio da partida do
+        Mullet Mad Jack — jogo sem perfil próprio cai no `vitoria`, que tem
+        `mode=null`, e o ramo de reversão executava
+        `set_gamepad_emulation(False, origin="profile")` com o jogo em foco.
+
+        `getattr` defensivo: os dublês de teste injetam appliers e perfis
+        parciais, e a ausência do atributo não pode virar exceção no meio de
+        uma ativação. Na dúvida (sem `match` legível) o perfil é tratado como
+        SEM opinião — fail-safe: não derruba o modo da usuária.
+        """
+        if profile is None:
+            return False
+        e_catch_all = getattr(profile, "e_catch_all", None)
+        if e_catch_all is None:
+            return False
+        return not e_catch_all
+
+    def _janela_de_jogo_em_foco(self) -> bool:
+        """True quando a janela em foco AGORA é de um jogo Steam.
+
+        R-02, decisão 3 do plano: leitura CRUA da janela, deliberadamente
+        diferente do `display_authority` (que é sticky por 30 s). Aqui a
+        pergunta é "reverter para desktop agora seria absurdo?", e para isso o
+        sinal sticky congelaria a reversão legítima ao sair do jogo. O sinal
+        sticky continua sendo o certo para operação DESTRUTIVA (recriar/parar
+        vpad), onde fail-safe é não destruir.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
+
+        wm_class = getattr(self.store, "window_detect_current_class", None)
+        return steam_appid_from_wm_class(str(wm_class or "")) is not None
+
+    def apply_profile_mode(self, mode: Any | None, *, profile: Any | None = None) -> None:
         """Aplica a seção `mode` de um perfil recém-ativado (FEAT-PROFILE-MODE-01).
 
         Injetado como `mode_applier` nas rotas de ativação (IPC switch,
@@ -1229,6 +1309,33 @@ class Daemon:
         )
 
         if kind is None:
+            # R-02 (auditoria 23/07): "sem opinião" NÃO é ordem de reverter
+            # quando quem chegou é um catch-all. Jogo sem perfil próprio cai no
+            # `vitoria` (MatchAny, mode=null) e o ramo abaixo desligava o vpad
+            # COM O JOGO EM FOCO — zero controles no meio da partida. Duas
+            # guardas independentes, ambas fail-safe:
+            #   1. catch-all nunca reverte (ausência de regra ≠ ordem);
+            #   2. com janela de jogo em foco, nenhum perfil reverte modo —
+            #      cobre o caso em que uma regra específica casa por engano
+            #      (ex.: regex solto) enquanto ela joga.
+            # Reversão legítima continua acontecendo: perfil `criteria` de
+            # desktop (Navegação no Firefox) e `kind="desktop"` explícito.
+            if not self._perfil_tem_opiniao(profile):
+                logger.info(
+                    "profile_mode_revert_skipped",
+                    motivo="catch_all_sem_opiniao",
+                    profile=getattr(profile, "name", None),
+                    mode_from_profile=self._mode_from_profile,
+                )
+                return
+            if self._janela_de_jogo_em_foco():
+                logger.info(
+                    "profile_mode_revert_skipped",
+                    motivo="janela_de_jogo_em_foco",
+                    profile=getattr(profile, "name", None),
+                    mode_from_profile=self._mode_from_profile,
+                )
+                return
             # Perfil sem opinião: reverte só o que veio de perfil.
             if self._mode_from_profile == "native" and self._native_mode:
                 # restore_stash: devolve o gamepad/co-op que a usuária tinha
@@ -1521,10 +1628,19 @@ class Daemon:
         stop_mouse_emulation(self)
 
     def _start_gamepad_emulation(self) -> bool:
-        """Thin wrapper — gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
+        """Thin wrapper — gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
+
+        R-07: `origin="profile"` de propósito. Este é o restore do BOOT — ele
+        LÊ a flag persistida e a reaplica; não é gesto novo da usuária. Com o
+        default "manual" ele regravaria em disco o que acabou de ler (inócuo
+        hoje, mas é a mesma confusão de origem que fazia o perfil apagar a
+        escolha dela).
+        """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import start_gamepad_emulation
 
-        return start_gamepad_emulation(self, flavor=self.config.gamepad_flavor)
+        return start_gamepad_emulation(
+            self, flavor=self.config.gamepad_flavor, origin="profile"
+        )
 
     def _stop_gamepad_emulation(self) -> None:
         """Thin wrapper — para o gamepad virtual e libera o grab."""

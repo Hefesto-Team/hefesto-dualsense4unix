@@ -895,10 +895,19 @@ def start_gamepad_emulation(
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.gamepad_flavor = key
     _set_controller_grab(daemon, True)
-    with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
+    # R-07 (auditoria 23/07): SÓ gesto manual persiste a preferência em disco.
+    # A regra já estava escrita em dois lugares deste mesmo módulo/eixo —
+    # HARM-06 no mouse ("a preferência da usuária sobrevive ao modo jogo") e
+    # FEAT-COOP-DEFAULT-ON-01 no co-op ("perfil ligando/desligando não pode
+    # virar opt-out da usuária") — mas o gamepad gravava sem olhar o `origin`.
+    # Efeito medido: ela escolhia Xbox, abria o Sackboy (cujo perfil pede
+    # dualsense) e a flag em disco virava `dualsense`; a escolha dela sumia sem
+    # ela ter tocado em nada, e voltava assim no boot seguinte.
+    if origin == "manual":
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
-        save_gamepad_emulation(True, key)
+            save_gamepad_emulation(True, key)
     # DEDUP-04: gatilho "transição de backend/máscara" da materialização — o
     # wrapper hefesto-launch decide as envs pelo que fica gravado aqui.
     _materialize_launch_env(daemon)

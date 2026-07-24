@@ -89,7 +89,10 @@ class _FakeDaemon:
     ) -> None:
         self.mouse_calls.append((enabled, int(speed), int(scroll_speed)))
 
-    def apply_profile_suppression(self, desired: bool) -> None:
+    def apply_profile_suppression(
+        self, desired: bool, *, profile: Any = None
+    ) -> None:
+        # R-02: o applier recebe QUEM mandou (o dublê só registra o valor).
         self.suppression_calls.append(desired)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
