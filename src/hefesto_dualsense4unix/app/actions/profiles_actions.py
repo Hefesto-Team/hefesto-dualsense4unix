@@ -474,6 +474,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
 
     def on_profile_new(self, _btn: Gtk.Button | None) -> None:
         self._duplicate_source = None  # perfil novo parte de defaults, não de cópia
+        # R-09: marca a intenção "perfil NOVO" para o build não cair no
+        # `selected_source` (que existe para rename/duplicação). Sem esta flag,
+        # criar um perfil com "Navegação" selecionado fazia o arquivo novo
+        # nascer com os overrides por-MAC e o `suppress_desktop_emulation` dele.
+        # `unselect_all()` seria o caminho óbvio e está DESCARTADO: dispara
+        # repopulação do editor e apagaria o que ela acabou de digitar.
+        self._new_profile = True
         self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
@@ -510,6 +517,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # _build_profile_from_editor copie triggers/lightbar/LEDs/etc — antes a
         # cópia só mudava o nome e o resto virava default (perda da config real).
         self._duplicate_source = self._find_cached_profile(name)
+        # R-09: duplicar É partir de uma fonte — sai do estado "perfil novo".
+        self._new_profile = False
         current = self._get("profile_name_entry").get_text()
         self._get("profile_name_entry").set_text(f"{current} (cópia)")
         self._toast_profile("Editor preenchido com cópia completa; ajuste o nome e Salvar")
@@ -617,6 +626,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             self._toast_profile(f"Falha ao salvar: {exc}")
             return
         self._duplicate_source = None  # duplicação concluída
+        # R-09: salvo em disco, o perfil deixa de ser "novo" — o próximo Salvar
+        # sobre ele é edição normal e deve reusar a config gravada.
+        self._new_profile = False
         self._reload_profiles_store(select_name=profile.name)
         # PERFIL-SAVE-APPLY-01 (22/07): o daemon NÃO relê JSON de perfil por
         # conta própria (sem watch de arquivo) — salvar o perfil que está
@@ -814,6 +826,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         """
         # Selecionar um perfil existente cancela qualquer duplicação em curso.
         self._duplicate_source = None
+        # R-09: e também cancela o estado "perfil novo" — o editor passou a
+        # mostrar um perfil que existe.
+        self._new_profile = False
         self._get("profile_name_entry").set_text(profile.name)
         prio = max(0, min(100, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
@@ -918,10 +933,53 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             )
         except Exception:
             selected_source = None
-        source = existing or self._duplicate_source or selected_source
-        base: dict[str, Any] = (
-            source.model_dump(mode="python") if source else {}
-        )
+        # R-09 item 3 (auditoria 23/07): "Novo perfil" NÃO herda o perfil
+        # selecionado na lista. `selected_source` existe para o RENAME
+        # (BUG-RENAME-DROPS-CONFIG-01) e para a DUPLICAÇÃO; num perfil novo ele
+        # fazia o arquivo nascer clonando overrides por-MAC e
+        # `suppress_desktop_emulation` de outro perfil, sem nada dizendo isso.
+        if getattr(self, "_new_profile", False):
+            source = existing or self._duplicate_source
+        else:
+            source = existing or self._duplicate_source or selected_source
+
+        # R-09 item 1 (auditoria 23/07): quando o perfil sendo editado é o que
+        # o DRAFT representa, a base é o draft — não o disco.
+        #
+        # As abas Lightbar/Gatilhos/Rumble/Mouse/Teclado gravam EXCLUSIVAMENTE
+        # em `self.draft`, e este módulo não lia o draft em nenhuma linha. Salvar
+        # pela aba Perfis descartava tudo que ela tinha ajustado nas outras abas
+        # — e é pior que perder o arquivo: `on_profile_save` chama
+        # `profile_switch` quando o perfil salvo é o ativo, então o daemon relia
+        # o JSON velho e REVERTIA no hardware a cor/gatilho que ela acabara de
+        # ver funcionando. Daí a conclusão dela: "as configs que eu faço não
+        # impactam".
+        draft = getattr(self, "draft", None)
+        ativo = getattr(self, "_active_profile_name", "") or ""
+        base: dict[str, Any]
+        if draft is not None and ativo and name == ativo:
+            try:
+                do_draft = draft.to_profile(name)
+            except Exception as exc:  # draft inconsistente não pode travar o save
+                logger.warning("profile_build_draft_falhou", erro=str(exc))
+                do_draft = None
+            if do_draft is not None:
+                base = do_draft.model_dump(mode="python")
+                base["controllers"] = do_draft.controllers
+                source = do_draft
+            else:
+                base = source.model_dump(mode="python") if source else {}
+        else:
+            base = source.model_dump(mode="python") if source else {}
+        # R-09 item 2: `model_dump` DENSIFICA — os defaults do schema saem
+        # marcados como explícitos e o `model_fields_set` original se perde. Num
+        # override por-controle parcial (ex.: só brilho), isso vira
+        # `lightbar:[0,0,0]` e APAGA a lightbar daquele controle, além de matar
+        # a herança do global para sempre. `draft_config.to_profile` já tem essa
+        # guarda (reinjetar as INSTÂNCIAS validadas, que pydantic com
+        # `revalidate_instances="never"` preserva); aqui faltava.
+        if source is not None:
+            base["controllers"] = source.controllers
 
         # FEAT-LED-BRIGHTNESS-03: brightness pendente do slider só é aplicado
         # quando o perfil-base NÃO tem brilho próprio. BUG-PROFILE-BRIGHTNESS-OVERWRITE-01:
