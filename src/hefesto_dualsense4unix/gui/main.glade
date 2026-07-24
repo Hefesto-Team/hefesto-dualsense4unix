@@ -2069,11 +2069,23 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label" translatable="yes">Emulação</property></object>
             </child>
 
-            <!-- Aba Mouse (somente emulação de mouse — Teclado é aba separada) -->
+            <!-- Aba "Navegação DSX" — Mouse e Teclado lado a lado.
+                 As duas ja viveram numa aba só ("Mouse e Teclado") e foram
+                 SEPARADAS de propósito: empilhadas, a soma de mapeamento +
+                 treeview inflava a altura mínima, e o GtkNotebook adota o MAIOR
+                 mínimo entre as páginas — ou seja, engordava todas as outras.
+                 Voltam juntas em DUAS COLUNAS: a altura passa a ser a da coluna
+                 mais alta, não a soma. Os ids `tab_mouse` e `tab_keyboard`
+                 seguem nos boxes internos. -->
+            <child>
+              <object class="GtkBox" id="tab_navegacao_dsx">
+                <property name="orientation">horizontal</property>
+                <property name="margin">12</property>
+                <property name="spacing">16</property>
+                <property name="homogeneous">True</property>
             <child>
               <object class="GtkBox" id="tab_mouse">
                 <property name="orientation">vertical</property>
-                <property name="margin">12</property>
                 <property name="spacing">10</property>
 
                 <child>
@@ -2317,19 +2329,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <packing><property name="expand">False</property></packing>
                 </child>
               </object>
+              <packing><property name="expand">True</property><property name="fill">True</property></packing>
             </child>
-            <child type="tab">
-              <object class="GtkLabel"><property name="label" translatable="yes">Mouse</property></object>
-            </child>
-
-            <!-- Aba Teclado (FEAT-KEYBOARD-UI-01 separada de Mouse para
-                 enxugar min-size do notebook — antes ambas viviam numa única
-                 aba "Mouse e Teclado" e a soma de mapeamento + treeview
-                 inflava a altura natural de todas as outras abas). -->
             <child>
               <object class="GtkBox" id="tab_keyboard">
                 <property name="orientation">vertical</property>
-                <property name="margin">12</property>
                 <property name="spacing">10</property>
                 <child>
                   <object class="GtkLabel">
@@ -2395,9 +2399,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <packing><property name="expand">False</property></packing>
                 </child>
               </object>
+              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+            </child>
+              </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label" translatable="yes">Teclado</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Navegação DSX</property></object>
             </child>
 
           </object>
