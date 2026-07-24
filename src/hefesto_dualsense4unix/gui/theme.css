@@ -300,13 +300,30 @@ messagedialog button:active {
    selecionada/hover usa accent Drácula em vez do azul default do sistema. */
 .hefesto-dualsense4unix-window treeview,
 .hefesto-dualsense4unix-window treeview.view {
-    background-color: #282a36;
-    color: #f8f8f2;
+    background-color: @bg;
+    color: @fg;
 }
+/* Linha selecionada usa o mesmo tingido roxo dos botões :checked — antes era
+   cinza neutro e não se lia como "selecionado", só como "linha diferente". */
 .hefesto-dualsense4unix-window treeview.view:selected,
 .hefesto-dualsense4unix-window treeview.view:selected:focus {
-    background-color: #44475a;
-    color: #f8f8f2;
+    background-color: @sel_bg;
+    color: @fg;
+}
+/* Cabeçalho das colunas (Nome/Prioridade/Quando usar): superfície elevada e
+   rótulo roxo, para separar o cabeçalho do corpo sem precisar de moldura. */
+.hefesto-dualsense4unix-window treeview header button {
+    background-color: @elevated;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid @border_soft;
+    color: @purple;
+    font-weight: 600;
+    padding: 6px 8px;
+}
+.hefesto-dualsense4unix-window treeview header button:hover {
+    background-color: @current_line;
+    color: @purple;
 }
 
 /* Labels gerais — herdam color via .hefesto-dualsense4unix-window mas em alguns
@@ -455,19 +472,6 @@ messagedialog button:active {
 }
 .hefesto-dualsense4unix-window button.btn-restore:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-restore:active { background-color: @current_line; }
-
-/* UI-PROFILES-RIGHT-PANEL-REBALANCE-01 — preview JSON do perfil */
-.hefesto-dualsense4unix-profile-preview {
-    font-family: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace;
-    font-size: 11px;
-    color: #f8f8f2;
-    background-color: rgba(40, 42, 54, 0.55);
-}
-
-.hefesto-dualsense4unix-profile-preview-error {
-    color: #ff5555;
-    font-style: italic;
-}
 
 /* ===========================================================================
  * FEAT-A11Y-HIGH-CONTRAST-01 (v3.4.0): palette aumentada para a11y.

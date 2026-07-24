@@ -11,7 +11,6 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 from __future__ import annotations
 
 import contextlib
-import json
 from typing import Any
 
 import gi
@@ -231,10 +230,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     _mode_kind_selector: Any = None
     _mode_flavor_selector: Any = None
     _mode_gamepad_opts: Any = None
-    # Guard anti-loop: True enquanto _set_mode_editor preenche os widgets
-    # programaticamente (set_active_id emite "changed"; sem o guard cada
-    # populate dispararia _refresh_preview em cascata).
-    _suppress_mode_signals: bool = False
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -278,27 +273,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             sel.show_all()
         self._aplica_a = sel
         sel.connect("changed", self._on_aplica_a_changed)
-        sel.connect("changed", lambda _c: self._refresh_preview())
         sel.set_active_id("any")
 
         # FEAT-PROFILE-MODE-GUI-01: seção "Modo" (o que o perfil liga ao ativar).
         self._install_mode_section()
-
-        # UI-PROFILES-RIGHT-PANEL-REBALANCE-01: preview JSON atualiza em tempo real
-        # conforme inputs do editor. Reutiliza _build_profile_from_editor.
-        for entry_id, signal in (
-            ("profile_name_entry", "changed"),
-            ("profile_simple_custom_name", "changed"),
-            ("profile_window_class_entry", "changed"),
-            ("profile_title_regex_entry", "changed"),
-            ("profile_process_name_entry", "changed"),
-        ):
-            widget = self._get(entry_id)
-            if widget is not None:
-                widget.connect(signal, lambda _w: self._refresh_preview())
-        scale = self._get("profile_priority_scale")
-        if scale is not None:
-            scale.connect("value-changed", lambda _w: self._refresh_preview())
 
         # Estado inicial do toggle a partir das preferências persistidas
         prefs = load_gui_prefs()
@@ -382,14 +360,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # SegmentedSelector é emitido SEM argumentos — o handler recebe só o
         # seletor e lê get_active_id().
         kind_sel.connect("changed", self._on_mode_kind_changed)
-        flavor_sel.connect("changed", self._on_mode_flavor_changed)
 
-        self._suppress_mode_signals = True
-        try:
-            kind_sel.set_active_id("none")
-            flavor_sel.set_active_id("xbox")
-        finally:
-            self._suppress_mode_signals = False
+        kind_sel.set_active_id("none")
+        flavor_sel.set_active_id("xbox")
         self._sync_mode_options_visibility("none")
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
@@ -405,37 +378,25 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         opts.set_sensitive(is_gamepad)
 
     def _on_mode_kind_changed(self, selector: Any) -> None:
-        """Handler do kind: sincroniza visibilidade das opções + preview."""
+        """Handler do kind: sincroniza a visibilidade das opções do modo."""
         kind = selector.get_active_id() or "none"
         self._sync_mode_options_visibility(kind)
-        if self._suppress_mode_signals:
-            return
-        self._refresh_preview()
-
-    def _on_mode_flavor_changed(self, _selector: Any) -> None:
-        """Handler da máscara: só reflete a escolha no preview JSON."""
-        if self._suppress_mode_signals:
-            return
-        self._refresh_preview()
 
     def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
         """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
 
-        Roda sob guard: os set_active_id/set_active programáticos não devem
-        disparar _refresh_preview em cascata durante o populate.
+        O único handler de modo que sobrou (`_on_mode_kind_changed`) apenas
+        sincroniza visibilidade — é idempotente, então o populate programático
+        pode dispará-lo à vontade e o guard anti-loop deixou de ser necessário.
         """
         kind_sel = self._mode_kind_selector
         if kind_sel is None:
             return
         kind = mode.kind if mode is not None else "none"
         flavor = (mode.gamepad_flavor if mode is not None else None) or "xbox"
-        self._suppress_mode_signals = True
-        try:
-            kind_sel.set_active_id(kind)
-            if self._mode_flavor_selector is not None:
-                self._mode_flavor_selector.set_active_id(flavor)
-        finally:
-            self._suppress_mode_signals = False
+        kind_sel.set_active_id(kind)
+        if self._mode_flavor_selector is not None:
+            self._mode_flavor_selector.set_active_id(flavor)
         # set_active_id só emite quando o id muda — sincroniza explicitamente
         # para a visibilidade ficar certa mesmo sem emissão.
         self._sync_mode_options_visibility(kind)
@@ -608,7 +569,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 if self._selected_simple_choice() != "steam_game":
                     return False
                 alvo.set_text(appid)
-                self._refresh_preview()
                 self._toast_profile(f"Jogo em foco detectado: appid {appid}")
             except Exception as exc:
                 logger.debug("prefill_appid_falhou", err=str(exc))
@@ -961,46 +921,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         target_id = choice if choice in _RADIO_IDS else "any"
         combo.set_active_id(target_id)
 
-    def _refresh_preview(self) -> None:
-        """Atualiza o preview JSON do perfil em tempo real.
-
-        UI-PROFILES-RIGHT-PANEL-REBALANCE-01. Reutiliza
-        `_build_profile_from_editor` como fonte de verdade. Falha graciosa:
-        se o editor estiver parcialmente preenchido e `_build_profile_from_editor`
-        levantar `ValidationError`, mostra mensagem em vez de crashar.
-        """
-        label = self._get("profile_preview_label")
-        if label is None:
-            return
-        try:
-            profile = self._build_profile_from_editor()
-        except ValidationError as exc:
-            # Resume primeira violação para evitar diálogo enorme.
-            first = exc.errors()[0] if exc.errors() else {"msg": str(exc)}
-            msg = first.get("msg", str(exc))
-            label.set_text(f"<perfil inválido: {msg}>")
-            return
-        except ValueError as exc:
-            # R-12 item 2: alvo obrigatório em branco levanta com FRASE DE
-            # GENTE (antes virava MatchAny em silêncio). No preview isso é o
-            # estado normal enquanto ela digita — mostra a frase, não um
-            # "<preview indisponível: ...>" que parece defeito do programa.
-            # (ValidationError é subclasse de ValueError: a ordem importa.)
-            label.set_text(str(exc))
-            return
-        except Exception as exc:  # preview não pode crashar GUI
-            logger.debug("preview_build_falhou", err=str(exc))
-            label.set_text(f"<preview indisponível: {exc}>")
-            return
-
-        try:
-            payload = profile.model_dump(mode="json", exclude_none=True)
-            pretty = json.dumps(payload, indent=2, ensure_ascii=False)
-        except Exception as exc:
-            label.set_text(f"<erro serializando perfil: {exc}>")
-            return
-        label.set_text(pretty)
-
     def _selected_profile_name(
         self,
         selection: Gtk.TreeSelection | None = None,
@@ -1186,8 +1106,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             custom = self._get("profile_simple_custom_name").get_text().strip() or None
             match = from_simple_choice(choice=choice, custom_name=custom)
 
-        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache (este método roda no
-        # _refresh_preview a cada tecla/slider; reler o disco aqui travava a UI).
+        # PERF-GUI-PROFILE-LOAD-NONBLOCKING-01: usa o cache — este método roda a
+        # cada montagem do perfil, e reler o disco aqui travava a thread GTK.
         existing = self._find_cached_profile(name)
         # BUG-DUPLICATE-NO-CONFIG-COPY-01: numa duplicação o nome novo ainda não
         # existe no cache -> sem o perfil-fonte a config viraria default. Usa a

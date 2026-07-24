@@ -254,15 +254,9 @@ class TestSalvarPerfilDoJogo:
         assert ed.toasts and "número do jogo na Steam" in ed.toasts[-1], (
             "o toast tem de dizer O QUE falta, não 'Revise os campos do perfil'"
         )
-
-    def test_preview_mostra_a_frase_em_vez_de_erro_de_programa(self) -> None:
-        ed = _Editor()
-        ed._aplica_a.set_active_id("steam_game")
-        # `_refresh_preview` real (o stub o substitui) — chama o do mixin.
-        pa.ProfilesActionsMixin._refresh_preview(ed)
-        texto = ed._get("profile_preview_label").get_text()
-        assert "número do jogo na Steam" in texto
-        assert "preview indisponível" not in texto
+        # Este toast é o canal que sobrou para a frase de gente do R-12: o
+        # preview JSON ("Detalhes técnicos") que também a exibia saiu no
+        # redesign 1.0.0.
 
 
 class TestRoundTripNoEditor:

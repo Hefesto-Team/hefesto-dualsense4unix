@@ -204,13 +204,9 @@ class _EditorStub(ProfilesActionsMixin):
         self._duplicate_source = None
         self._mode_advanced = False
         self._aplica_a = _FakeSelector("any")
-        self.preview_calls = 0
 
     def _get(self, widget_id: str) -> Any:  # sem Gtk.Builder nos testes
         return self._widgets.get(widget_id)
-
-    def _refresh_preview(self) -> None:  # conta chamadas (testa o guard)
-        self.preview_calls += 1
 
     def com_secao_mode(self) -> _EditorStub:
         """Equivale ao _install_mode_section: widgets fake + handlers ligados."""
@@ -218,7 +214,6 @@ class _EditorStub(ProfilesActionsMixin):
         self._mode_flavor_selector = _FakeSelector("dualsense")
         self._mode_gamepad_opts = _FakeBox()
         self._mode_kind_selector.connect("changed", self._on_mode_kind_changed)
-        self._mode_flavor_selector.connect("changed", self._on_mode_flavor_changed)
         self._sync_mode_options_visibility("none")
         return self
 
@@ -397,15 +392,25 @@ class TestModeOptionsVisibility:
         assert opts.sensitive is False
         assert opts.no_show_all is True
 
-    def test_clique_da_usuaria_atualiza_preview(self) -> None:
+    def test_clique_da_usuaria_sincroniza_visibilidade(self) -> None:
+        """O clique no kind reflete na visibilidade das opções de gamepad."""
         stub = _EditorStub().com_secao_mode()
+
+        stub._mode_kind_selector.set_active_id("gamepad")
+
+        assert stub._mode_gamepad_opts.visible is True
 
         stub._mode_kind_selector.set_active_id("desktop")
 
-        assert stub.preview_calls == 1
+        assert stub._mode_gamepad_opts.visible is False
 
-    def test_populate_programatico_nao_dispara_preview(self) -> None:
-        """Guard anti-loop: _set_mode_editor preenche sem refresh em cascata."""
+    def test_populate_programatico_sincroniza_visibilidade(self) -> None:
+        """_set_mode_editor deixa a visibilidade certa sem depender de emissão.
+
+        `set_active_id` só emite "changed" quando o id MUDA, então o populate
+        chama `_sync_mode_options_visibility` explicitamente. O handler é
+        idempotente — não existe mais cascata a proteger com guard.
+        """
         original = _profile_com_mode(
             "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": True}
         )
@@ -413,8 +418,6 @@ class TestModeOptionsVisibility:
 
         stub._set_mode_editor(original.mode)
 
-        assert stub.preview_calls == 0
-        # Mas a visibilidade das opções foi sincronizada mesmo sob guard.
         assert stub._mode_gamepad_opts.visible is True
 
 
