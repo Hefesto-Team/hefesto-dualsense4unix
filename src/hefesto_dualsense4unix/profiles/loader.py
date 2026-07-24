@@ -110,6 +110,22 @@ _DEFAULT_SEED_SOURCE_DIRS: tuple[Path, ...] = (
 _seed_attempted: bool = False
 
 
+def _seed_source_file(
+    fname: str, source_dirs: Sequence[Path] | None = None
+) -> Path | None:
+    """Resolve um asset de preset no primeiro diretório-fonte existente.
+
+    Mesma cascata de `seed_default_presets` (repo editable → prefix → /usr).
+    None se nenhum diretório existe ou o arquivo não está em nenhum deles.
+    """
+    candidates = _DEFAULT_SEED_SOURCE_DIRS if source_dirs is None else tuple(source_dirs)
+    for base in candidates:
+        p = base / fname
+        if p.is_file():
+            return p
+    return None
+
+
 def seed_default_presets(
     dest_dir: Path | None = None,
     source_dirs: Sequence[Path] | None = None,
@@ -223,6 +239,83 @@ def migrate_game_presets_to_xbox(dest_dir: Path | None = None) -> list[str]:
     return migrated
 
 
+#: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
+#: coop_local. O preset de fábrica de 14/07 saiu com `MatchCriteria` de campos
+#: TODOS vazios — `matches()` devolve False sem condição alguma (schema.py:52),
+#: então o autoswitch NUNCA o escolhe. O asset novo tem o regex de jogos de
+#: co-op; `seed_default_presets` não sobrescreve (está no `.seeded_presets`),
+#: então o arquivo LOCAL de quem já tinha o preset velho fica preso — por isso
+#: esta migração one-shot.
+_COOP_LOCAL_MATCH_MIGRATION_MARKER = ".coop_local_match_migrated"
+
+
+def migrate_coop_local_match(dest_dir: Path | None = None) -> list[str]:
+    """One-shot: dá um `match` alcançável ao coop_local que veio VAZIO de fábrica.
+
+    R-12 (auditoria 23/07). Só reescreve quando o preset ainda está EXATAMENTE
+    no estado inalcançável de fábrica — `MatchCriteria` com os três campos
+    vazios/ausentes E `mode.kind == "gamepad"` com `coop: true` (isto é:
+    intocado pela usuária). Qualquer edição dela = não toca. Copia `match` e
+    `priority` do ASSET (a fonte da verdade), sem mexer em cor/gatilho/mode.
+
+    Idempotente via marker próprio. Best-effort: falha loga e segue. Retorna
+    os arquivos migrados.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _COOP_LOCAL_MATCH_MIGRATION_MARKER
+    if marker.exists():
+        return []
+    migrated: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return []
+        path = directory / "coop_local.json"
+        asset = _seed_source_file("coop_local.json")
+        if path.is_file() and asset is not None:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                asset_data = json.loads(asset.read_text(encoding="utf-8"))
+            except Exception:
+                data = asset_data = None
+            if data is not None and _coop_local_intocado(data):
+                data["match"] = asset_data.get("match", data.get("match"))
+                data["priority"] = asset_data.get("priority", data.get("priority"))
+                with contextlib.suppress(Exception):
+                    path.write_text(
+                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    migrated.append("coop_local.json")
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    if migrated:
+        logger.info("coop_local_match_migrated", files=migrated)
+    return migrated
+
+
+def _coop_local_intocado(data: dict[str, object]) -> bool:
+    """True quando o coop_local ainda está no estado de fábrica inalcançável.
+
+    Match `criteria` com os três campos vazios/ausentes E `mode.kind=="gamepad"`
+    com `coop: true`. Qualquer desvio = a usuária mexeu, e a migração recua.
+    """
+    match = data.get("match")
+    if not isinstance(match, dict) or match.get("type") != "criteria":
+        return False
+    if (
+        match.get("window_class")
+        or match.get("window_title_regex")
+        or match.get("process_name")
+    ):
+        return False
+    mode = data.get("mode")
+    return (
+        isinstance(mode, dict)
+        and mode.get("kind") == "gamepad"
+        and bool(mode.get("coop", False))
+    )
+
+
 #: LEIGO-01: marker da migração do default de `mode.coop` (False -> True).
 _COOP_DEFAULT_MIGRATION_MARKER = ".coop_default_on_migrated"
 
@@ -299,6 +392,10 @@ def _maybe_seed_presets() -> None:
         # LEIGO-01: apaga o `coop: false` que o default antigo gravou (one-shot).
         with contextlib.suppress(Exception):
             migrate_profiles_coop_default()
+        # R-12: dá um match alcançável ao coop_local que veio vazio de fábrica
+        # (o preset de 14/07 era inalcançável pelo autoswitch). One-shot.
+        with contextlib.suppress(Exception):
+            migrate_coop_local_match()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
@@ -527,6 +624,7 @@ __all__ = [
     "delete_profile",
     "load_all_profiles",
     "load_profile",
+    "migrate_coop_local_match",
     "migrate_game_presets_to_xbox",
     "migrate_profiles_coop_default",
     "save_profile",
