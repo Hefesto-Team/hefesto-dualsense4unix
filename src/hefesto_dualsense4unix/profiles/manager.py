@@ -364,15 +364,32 @@ class ProfileManager:
                 )
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
-        """Escolhe perfil de maior prioridade cujo match case com a janela.
+        """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.
 
         Se nenhum perfil casa (inclusive fallback), retorna None. Chamado pelo
         autoswitch em W6.2.
+
+        R-01 (auditoria 23/07): a ordenação era só por `priority`, e por isso um
+        perfil catch-all podia vencer a regra própria do jogo. É o caso medido
+        no disco da usuária: `vitoria` (MatchAny, prio 5) vencia qualquer perfil
+        de jogo recém-criado, que nasce com prioridade 0 — ou seja, criar o
+        perfil do jogo pela GUI **não resolvia** o problema que ela tentava
+        resolver.
+
+        Agora **especificidade vem antes de prioridade**: qualquer perfil que
+        casou por critério real vence qualquer catch-all. Entre perfis de mesma
+        especificidade a prioridade continua decidindo, o que preserva o tuning
+        50-80 dos presets (Navegação 50 < FPS 60 < Aventura 70 < Sackboy 80).
+
+        Deliberadamente NÃO se introduz uma escada `window_class > regex`: isso
+        reordenaria perfis de critério hoje empatados e mudaria comportamento já
+        validado. A distinção fina entre "casou por regex solto" e "é a regra do
+        jogo" mora em `perfil_e_regra_de_jogo`, usada por quem precisa dela.
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
         if not candidates:
             return None
-        candidates.sort(key=lambda p: p.priority, reverse=True)
+        candidates.sort(key=lambda p: (not p.e_catch_all, p.priority), reverse=True)
         return candidates[0]
 
 

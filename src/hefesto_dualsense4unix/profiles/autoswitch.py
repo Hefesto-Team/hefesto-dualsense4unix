@@ -22,9 +22,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import Profile, perfil_e_regra_de_jogo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -174,7 +174,9 @@ class AutoSwitcher:
         if not self._suppression_active():
             self._suppress_log_key = None
         if stable and candidate and candidate != self._current_profile:
-            self._activate(candidate, info)
+            # R-01: o objeto Profile já está aqui — propagá-lo evita que o
+            # `_activate` tenha de adivinhar POR QUE o candidato casou.
+            self._activate(candidate, info, profile)
 
     @staticmethod
     def _tick_sem_informacao(info: dict[str, Any]) -> bool:
@@ -228,7 +230,9 @@ class AutoSwitcher:
             return True
         return self.store.manual_profile_lock_active(time.monotonic())
 
-    def _activate(self, name: str, info: dict[str, Any]) -> None:
+    def _activate(
+        self, name: str, info: dict[str, Any], profile: Profile | None = None
+    ) -> None:
         # FEAT-NATIVE-MODE-01: em Modo Nativo MANUAL o controle está SOLTO para
         # o jogo — o autoswitch NÃO ativa perfil (que re-escreveria gatilhos por
         # cima) até a usuária desligar. Silencioso (estado estável).
@@ -255,11 +259,14 @@ class AutoSwitcher:
         # categorias são limpas — o perfil do jogo reescreve tudo mesmo.
         # Reaplicação do perfil ATIVO (o "perfil eterno" da Causa A) e
         # regras de janela comuns seguem suprimidas como sempre.
+        # R-01 (auditoria 23/07): a exceção só vale para a regra PRÓPRIA do
+        # jogo. Antes bastava "a janela em foco é steam_app_*", sem checar se o
+        # perfil candidato casou POR CAUSA dela — e com três catch-all no disco
+        # e nenhum perfil para o Mullet Mad Jack, quem entrava era o `vitoria`
+        # (genérico de desktop). A trava manual era apagada e o genérico pisava
+        # na configuração recém-feita: exatamente o "nunca é respeitado".
         if self.store is not None and self.store.manual_trigger_active:
-            candidato_de_jogo = (
-                steam_appid_from_wm_class(str(info.get("wm_class") or ""))
-                is not None
-            )
+            candidato_de_jogo = perfil_e_regra_de_jogo(profile, info)
             if candidato_de_jogo and name != self.store.active_profile:
                 self.store.clear_manual_trigger_active()
                 logger.info(

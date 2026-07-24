@@ -102,6 +102,56 @@ def test_select_for_window_retorna_maior_prioridade(isolated_profiles_dir: Path)
     assert picked.name == "shooter"  # maior priority
 
 
+def test_criteria_vence_catch_all_de_prioridade_maior(isolated_profiles_dir: Path):
+    """R-01 (auditoria 23/07): especificidade vem ANTES de prioridade.
+
+    Estado medido no disco da usuária: `vitoria` é MatchAny com prioridade 5, e
+    um perfil de jogo criado pela GUI nasce com prioridade 0. Ordenando só por
+    prioridade, o catch-all genérico de desktop vencia a regra própria do jogo
+    — ou seja, **criar o perfil do jogo não resolvia** o problema que ela
+    tentava resolver criando o perfil.
+    """
+    save_profile(
+        _mk_profile(
+            "mad_jack",
+            priority=0,
+            match=MatchCriteria(window_class=["steam_app_2111190"]),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    picked = manager.select_for_window({"wm_class": "steam_app_2111190"})
+    assert picked is not None
+    assert picked.name == "mad_jack"
+
+
+def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
+    isolated_profiles_dir: Path,
+):
+    """A especificidade não pode atropelar o tuning 50-80 dos presets."""
+    save_profile(
+        _mk_profile(
+            "navegacao", priority=50, match=MatchCriteria(window_class=["steam"])
+        )
+    )
+    save_profile(
+        _mk_profile(
+            "sackboy", priority=80, match=MatchCriteria(window_class=["steam"])
+        )
+    )
+    save_profile(Profile(name="fallback", match=MatchAny(), priority=0))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    picked = manager.select_for_window({"wm_class": "steam"})
+    assert picked is not None
+    assert picked.name == "sackboy"
+
+
 def test_select_for_window_fallback(isolated_profiles_dir: Path):
     save_profile(
         _mk_profile("shooter", match=MatchCriteria(window_class=["DoomEternal"]))
