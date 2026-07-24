@@ -767,6 +767,25 @@ class CoopManager:
         except Exception as exc:
             logger.warning("coop_player_led_discover_falhou", err=str(exc))
             return
+        # R-13 item 4 (auditoria 23/07): SEM SECUNDÁRIO NÃO HÁ CO-OP.
+        #
+        # `should_be_active()` liga o co-op pela preferência persistida
+        # (`coop_enabled.flag`, que é 1 na configuração dela), não pela
+        # contagem de controles — a docstring do módulo promete um gate de
+        # "2+ controles" que nunca existiu. Resultado: com um único DualSense,
+        # o co-op cravava player-LED 1 nele.
+        #
+        # Isso alimenta a queixa dos números duplicados: o Pro Nintendo tem
+        # slot 1 no registry de externos e o DualSense primário recebia 1 do
+        # co-op — dois "player 1" acesos ao mesmo tempo.
+        #
+        # A correção é no EFEITO, não no gate: mexer em `should_be_active()`
+        # exigiria enumerar `/dev/input` por tick, que é justamente o que o
+        # PERF-MULTI-CONTROLLER-01 removeu, e faria o co-op piscar a cada blip
+        # de link.
+        if not self._players:
+            logger.debug("coop_sem_secundario_nao_escreve_player_led")
+            return
         targets: list[tuple[str, int]] = []
         primary = self._primary_identity()
         if primary is not None:
