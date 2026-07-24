@@ -438,11 +438,30 @@ def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
     return out
 
 
+
+def _permite_uhid(daemon: Any) -> bool:
+    """Gate VPAD-08 da factory, tolerante a dublês (R-05).
+
+    `controller_allows_uhid` mora em `subsystems.gamepad`; importar no topo
+    criaria ciclo, e um daemon dublado em teste pode não ter a superfície que
+    ele espera. Na dúvida, False = prognóstico conservador.
+    """
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            controller_allows_uhid,
+        )
+
+        return bool(controller_allows_uhid(daemon))
+    except Exception:
+        return False
+
+
 def _env_for_profile(
     profile: Any,
     *,
     flavor_atual: str,
     backends: list[str],
+    permite_uhid: bool = False,
 ) -> tuple[dict[str, str], str] | None:
     """(env, motivo) antecipando o modo que o perfil impõe; None = sem opinião.
 
@@ -483,12 +502,42 @@ def _env_for_profile(
                 ),
                 "perfil gamepad xbox",
             )
+        # R-05 (auditoria 23/07): quando o perfil pede uma máscara DIFERENTE da
+        # vigente, os `backends` recebidos são os do vpad ATUAL — que é de outro
+        # flavor e não descreve o que vai existir quando o perfil ativar.
+        #
+        # Caso medido: máscara global em `xbox` (vpad uinput) e o Sackboy com
+        # perfil `dualsense`. O `steam_app_1599660.env` saía SEM
+        # `SDL_GAMECONTROLLER_IGNORE_DEVICES` e SEM `PROTON_DISABLE_HIDRAW`,
+        # porque "uinput" não autoriza o dedup — ou seja, o arquivo por-appid
+        # ficava estritamente PIOR que o `default.env`, e o jogo abria vendo o
+        # DualSense físico junto com o virtual (o controle duplicado).
+        #
+        # A correção é PROGNOSTICAR o backend com os MESMOS gates da factory,
+        # em vez de herdar o do vpad de outro flavor.
+        #
+        # A assimetria de risco favorece o prognóstico: se ele errar, o vpad cai
+        # para uinput Edge `0x0DF2`, que NÃO está na lista do IGNORE
+        # (`0x054c/0x0ce6`) — o pior caso é mapeamento SDL menos validado, nunca
+        # "zero controles".
+        backends_efetivos = backends
+        motivo = "perfil gamepad dualsense (backends reais)"
+        if flavor != flavor_atual or not backends:
+            from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
+
+            prognostico_uhid = uhid_available() and permite_uhid
+            backends_efetivos = ["uhid"] if prognostico_uhid else backends
+            motivo = (
+                "perfil gamepad dualsense (prognóstico uhid)"
+                if prognostico_uhid
+                else "perfil gamepad dualsense (prognóstico conservador)"
+            )
         return (
             compose_env(
                 native_mode=False, emulation_enabled=True,
-                flavor=flavor, backends=backends,
+                flavor=flavor, backends=backends_efetivos,
             ),
-            "perfil gamepad dualsense (backends reais)",
+            motivo,
         )
     return None
 
@@ -558,7 +607,13 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         desired = {"default.env"}
         for appid, profile in _steam_profiles(daemon):
             per_profile = _env_for_profile(
-                profile, flavor_atual=flavor, backends=backends
+                profile,
+                flavor_atual=flavor,
+                backends=backends,
+                # R-05: o prognóstico do backend precisa do MESMO gate que a
+                # factory usa (VPAD-08 — o modo fake não pode plantar um Edge
+                # real no kernel).
+                permite_uhid=_permite_uhid(daemon),
             )
             if per_profile is None:
                 continue
