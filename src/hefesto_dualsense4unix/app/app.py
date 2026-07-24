@@ -223,6 +223,24 @@ class HefestoApp(
         # Nome do perfil ativo (preenchido pelo bootstrap do draft). Usado pelo
         # rodapé "Salvar Perfil" para pré-preencher o nome — BUG-FOOTER-ACTIVE-NAME-01.
         self._active_profile_name: str = ""
+        # R-08 (auditoria 23/07): reconciliação do draft com o perfil ATIVO.
+        # O bootstrap só rodava em show()/run(), e o perfil muda por quatro
+        # caminhos que a GUI conhece (botão Ativar, tray, hotkey PS+D-pad e o
+        # AUTOSWITCH ao abrir o jogo). Sem recarregar, as abas passavam a
+        # editar e salvar o perfil ERRADO — e o "Aplicar" do rodapé empurrava
+        # as seções do perfil antigo por cima do perfil do jogo.
+        #
+        # `_draft_reload_for` guarda o nome pelo qual o último recarregamento
+        # foi DISPARADO, e é marcado ANTES do disparo. Deliberadamente separado
+        # de `_active_profile_name`: aquele só é escrito quando o draft carrega
+        # com sucesso, então um perfil ativo que não existe em disco o deixaria
+        # stale e o tick de 2 Hz redispararia IPC+I/O para sempre.
+        self._draft_reload_for: str | None = None
+        self._draft_reload_inflight: bool = False
+        # Snapshot do draft como ele veio do disco. `draft != baseline` é a
+        # definição de "edição pendente" — o gate que impede a reconciliação de
+        # jogar fora o trabalho dela sem avisar.
+        self._draft_baseline: DraftConfig | None = None
 
         self.builder.connect_signals(self._signal_handlers())
 
@@ -341,6 +359,10 @@ class HefestoApp(
         propaga exceção — um defeito no lembrete não pode quebrar o render.
         """
         super()._render_slow_state(state)
+        # R-08: o perfil ativo muda por fora da GUI (autoswitch/tray/hotkey) —
+        # o draft precisa acompanhar, senão as abas editam o perfil errado.
+        with contextlib.suppress(Exception):
+            self._reconciliar_draft_com_perfil_ativo(state)
         self._maybe_prompt_wrapper_dialog(state)
 
     # --- banner ---
@@ -665,17 +687,69 @@ class HefestoApp(
         from hefesto_dualsense4unix.app.actions.footer_actions import _refresh_all_tabs
 
         def _apply(result: tuple[DraftConfig | None, str]) -> bool:
+            self._draft_reload_inflight = False
             draft, active_name = result
             if draft is not None:
                 self.draft = draft
                 self._active_profile_name = active_name
+                # R-08: a linha de base do "sujo" acompanha o que veio do disco.
+                self._draft_baseline = draft
                 _refresh_all_tabs(self)
             return False  # GLib.idle_add não repete
 
+        def _falhou(_exc: BaseException) -> bool:
+            # Sem isto, um erro no worker deixaria `_draft_reload_inflight`
+            # preso em True e a reconciliação morreria em silêncio pelo resto
+            # da sessão.
+            self._draft_reload_inflight = False
+            return False
+
+        self._draft_reload_inflight = True
         ipc_bridge.run_in_thread(
             self._compute_draft_from_active_profile,
             on_success=_apply,
+            on_failure=_falhou,
         )
+
+    def _tem_edicao_pendente(self) -> bool:
+        """True quando o draft em memória diverge do que veio do disco (R-08)."""
+        baseline = self._draft_baseline
+        return baseline is not None and self.draft != baseline
+
+    def _reconciliar_draft_com_perfil_ativo(self, state: dict[str, Any]) -> None:
+        """Recarrega o draft quando o perfil ativo muda por fora da GUI.
+
+        R-08 (auditoria 23/07). Roda no tick lento que já existe — zero timers
+        novos, e o `state` já traz `active_profile`.
+
+        Com edição pendente NÃO troca em silêncio: avisa e espera. Recarregar
+        por baixo de uma edição é perda de trabalho, que é justamente a queixa
+        que este conjunto de correções ataca — trocar um jeito de perder
+        alterações por outro não seria correção.
+        """
+        ativo = state.get("active_profile")
+        if not isinstance(ativo, str) or not ativo:
+            return
+        if ativo == self._active_profile_name:
+            return
+        if self._draft_reload_inflight or self._draft_reload_for == ativo:
+            return
+        if self._tem_edicao_pendente():
+            self._status_toast(
+                "draft-reload",
+                f"O perfil ativo virou '{ativo}', mas suas alterações são de "
+                f"'{self._active_profile_name or '—'}'. Salve ou use "
+                "'Restaurar Padrão' para acompanhar o perfil novo.",
+            )
+            return
+        # Marcado ANTES do disparo: o tick roda a 2 Hz e o worker é assíncrono.
+        self._draft_reload_for = ativo
+        logger.info(
+            "gui_draft_reconciliado",
+            de=self._active_profile_name or None,
+            para=ativo,
+        )
+        self._bootstrap_draft_async()
 
     def _on_notebook_switch_page(
         self, _notebook: object, _page: object, page_num: int
