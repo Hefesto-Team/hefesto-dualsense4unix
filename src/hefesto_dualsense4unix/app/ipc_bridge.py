@@ -424,10 +424,26 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
 
     Retorna True se o daemon confirmou aplicação (status ok). False se daemon
     offline, erro de transporte ou resposta inesperada.
+
+    R-18 (auditoria 23/07): `status` é SEMPRE "ok" — o handler responde isso
+    mesmo quando o applier não aplicou seção nenhuma, e a GUI toastava "aplicado"
+    para um no-op. Agora exigimos também que o daemon diga o que aplicou: uma
+    resposta com `applied` vazio é um no-op honesto, não sucesso.
+
+    O `status:"ok"` foi mantido de propósito (em vez de "partial"/"failed"): a
+    GUI atual traduz status != "ok" como "daemon offline?", e essa mensagem
+    mandaria a usuária caçar o problema no lugar errado. A honestidade entra
+    pelo campo `applied`, que já viajava na resposta e ninguém lia.
     """
     ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
     if ok and isinstance(result, dict):
-        return result.get("status") == "ok"
+        if result.get("status") != "ok":
+            return False
+        aplicado = result.get("applied")
+        if isinstance(aplicado, list):
+            return bool(aplicado)
+        # Daemon antigo, sem o campo: preserva o contrato v1.
+        return True
     return False
 
 
