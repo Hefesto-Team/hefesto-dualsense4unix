@@ -17,8 +17,6 @@ mapeamento SDL menos validado, nunca "zero controles".
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from hefesto_dualsense4unix.daemon import launch_env as le
@@ -106,7 +104,7 @@ class TestPrognosticoDeBackend:
 
     def test_xbox_segue_intocado(self) -> None:
         """Invariante VPAD-06: o vpad Xbox é uinput 045e por design."""
-        env, motivo = le._env_for_profile(
+        _env, motivo = le._env_for_profile(
             _perfil("xbox"), flavor_atual="dualsense", backends=["uhid"]
         )
         assert motivo == "perfil gamepad xbox"
