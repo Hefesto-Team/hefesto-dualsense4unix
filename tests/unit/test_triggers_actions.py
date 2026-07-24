@@ -296,6 +296,16 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
         return True, None
 
     monkeypatch.setattr(triggers_actions, "trigger_set_checked", fake_trigger_set)
+
+    # R-19: o botão "Desligar" passou a usar `trigger.reset` (LIBERA a trava)
+    # em vez de mandar outro `trigger.set` (que a RE-ARMAVA).
+    resets: list[str | None] = []
+
+    def fake_trigger_reset(side: str | None = None) -> tuple[bool, str | None]:
+        resets.append(side)
+        return True, None
+
+    monkeypatch.setattr(triggers_actions, "trigger_reset", fake_trigger_reset)
     # FEAT-DSX-COMBO-TO-SEGMENTED-01: install_triggers_tab instancia o
     # SegmentedSelector real (precisa de display). Troca pelo stub headless.
     monkeypatch.setattr(
@@ -329,6 +339,7 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
 
     inst = _FakeTriggersMixin()
     inst._trigger_set_calls = calls  # type: ignore[attr-defined]
+    inst._trigger_reset_calls = resets  # type: ignore[attr-defined]
 
     for name in (
         "install_triggers_tab",
@@ -475,7 +486,14 @@ def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:
     mixin.on_trigger_left_reset(None)
 
     assert combo.get_active_id() == "Off"
-    assert mixin._trigger_set_calls == [("left", "Off", [])]
+    # R-19: o "Desligar" tem de LIBERAR a trava manual, não re-armá-la. Antes
+    # ele mandava `trigger.set` modo "Off", e `trigger.set` arma
+    # `mark_manual_trigger_active` — o botão de "voltar ao normal" era mais um
+    # jeito de PAUSAR a troca automática de perfil, sem nada dizendo isso.
+    assert mixin._trigger_reset_calls == ["left"]
+    assert mixin._trigger_set_calls == [], (
+        "trigger.set aqui re-armaria a trava que o botão deveria soltar"
+    )
 
 
 def test_on_preset_changed_feedback_popula_sliders(

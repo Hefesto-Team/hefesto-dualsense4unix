@@ -18,7 +18,7 @@ from hefesto_dualsense4unix.app.actions.trigger_specs import (
     preset_to_factory_args,
     preset_to_positional_params,
 )
-from hefesto_dualsense4unix.app.ipc_bridge import trigger_set_checked
+from hefesto_dualsense4unix.app.ipc_bridge import trigger_reset, trigger_set_checked
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
 from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
@@ -532,12 +532,20 @@ class TriggersActionsMixin(WidgetAccessMixin):
         return False, f"preset sem formato nomeado conhecido: {preset_id}"
 
     def _reset_trigger(self, side: str) -> None:
+        """Botão "Desligar" — LIBERA a trava, não a re-arma (R-19).
+
+        Mandava `trigger.set` com modo "Off", e `trigger.set` ARMA
+        `mark_manual_trigger_active`. Ou seja: o botão que a usuária usa para
+        "voltar ao normal" era mais um jeito de PAUSAR a troca automática de
+        perfil, sem nada na tela dizendo isso. O RPC `trigger.reset` já existia
+        e já estava roteado — faltava a GUI usá-lo.
+        """
         combo = self._trigger_mode.get(side)
         if combo is not None:
             combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
-        trigger_set_checked(side, "Off", [])
-        self._toast_trigger(side, "Off", True)
+        ok, _motivo = trigger_reset(side)
+        self._toast_trigger(side, "Off", ok)
 
     def _toast_trigger(
         self,

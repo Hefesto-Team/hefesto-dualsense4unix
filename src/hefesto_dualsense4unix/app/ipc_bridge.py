@@ -302,6 +302,26 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
     return ok
 
 
+def trigger_reset(side: str | None = None) -> tuple[bool, str | None]:
+    """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
+
+    R-19 (auditoria 23/07): o RPC já existia e já estava roteado
+    (`ipc_server.py:102`), mas a GUI não o expunha — então o botão "Desligar" da
+    aba Gatilhos mandava outro `trigger.set` com modo "Off". A diferença é
+    decisiva: `trigger.set` **ARMA** `mark_manual_trigger_active`, então o botão
+    que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
+    troca automática de perfil. É a queixa "estado armado que nunca é liberado".
+
+    O clear total do `trigger.reset` (as três categorias) é contrato
+    deliberado e testado — ver `test_onda_u_trava_por_categoria.py`; estreitá-lo
+    por categoria seria outra decisão, não um detalhe desta correção.
+    """
+    payload: dict[str, Any] = {}
+    if side:
+        payload["side"] = side
+    return _call_checked("trigger.reset", payload)
+
+
 def led_set(
     rgb: tuple[int, int, int],
     brightness: float | None = None,
@@ -451,6 +471,7 @@ __all__ = [
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
+    "trigger_reset",
     "trigger_set",
     "trigger_set_checked",
 ]
