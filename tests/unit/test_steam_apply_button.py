@@ -25,6 +25,7 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     DaemonActionsMixin,
     format_apply_wrapper_result,
 )
+from tests.conftest import skip_sem_gtk_response
 
 # ---------------------------------------------------------------------------
 # format_apply_wrapper_result — pura, o miolo do toast
@@ -207,6 +208,7 @@ class _FakeDialog:
         self.destroyed = True
 
 
+@skip_sem_gtk_response
 class TestConfirmacao:
     def _stub_com_worker_gravado(self) -> _Stub:
         stub = _Stub()
