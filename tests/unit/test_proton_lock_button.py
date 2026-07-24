@@ -27,6 +27,8 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import skip_sem_gtk_response
+
 
 def _install_gi_stubs() -> None:
     # GATE-SKIP-MASK-01: com o PyGObject real disponível, NÃO instala stubs —
@@ -337,6 +339,7 @@ class _FakeDialog:
         self.destroyed = True
 
 
+@skip_sem_gtk_response
 class TestConfirmacao:
     def _stub_com_worker_gravado(self) -> _Stub:
         stub = _Stub()

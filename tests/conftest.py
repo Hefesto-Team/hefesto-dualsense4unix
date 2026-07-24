@@ -6,6 +6,55 @@ from pathlib import Path
 import pytest
 
 
+def _gtk_response_type_ausente() -> bool:
+    """True quando `Gtk.ResponseType` NÃO existe (GTK parcial no CI headless).
+
+    Os runners do GitHub têm o `gi` do sistema mas sem os typelibs completos do
+    GTK — `from gi.repository import Gtk` funciona, mas `Gtk.ResponseType` (e
+    outros enums de widget) estoura `AttributeError`. Testes que exercitam
+    handlers de diálogo com o enum real precisam pular nesse ambiente, em vez de
+    derrubar o release (a v4.0.0 falhou por isso). Em máquina de dev com GTK
+    completo, devolve False e os testes rodam de verdade.
+
+    Roda num SUBPROCESSO limpo de propósito: importar o Gtk aqui, no conftest
+    (avaliado cedo, na coleta), competiria com a versão que outro teste já
+    carregou no processo principal — o repo mistura Gtk 3.0 (produção) e 4.0
+    (fixtures), e "Namespace already loaded" derruba a coleta. O subprocesso
+    não tem esse estado e responde só a pergunta que importa.
+    """
+    import subprocess
+    import sys
+
+    codigo = (
+        "import gi\n"
+        "try:\n"
+        "    gi.require_version('Gtk', '3.0')\n"
+        "except Exception:\n"
+        "    pass\n"
+        "from gi.repository import Gtk\n"
+        "import sys\n"
+        "sys.exit(0 if hasattr(Gtk, 'ResponseType') else 1)\n"
+    )
+    try:
+        r = subprocess.run(
+            [sys.executable, "-c", codigo],
+            capture_output=True,
+            timeout=30,
+        )
+    except Exception:
+        return True
+    # exit 0 = ResponseType presente (não pular). Qualquer outra coisa = ausente.
+    return r.returncode != 0
+
+
+#: Marker reusável: pula quando o GTK do ambiente não expõe os enums de widget.
+#: Avaliado UMA vez, na importação do conftest (o subprocesso é barato).
+skip_sem_gtk_response = pytest.mark.skipif(
+    _gtk_response_type_ausente(),
+    reason="Gtk.ResponseType indisponível (GTK parcial — CI headless)",
+)
+
+
 @pytest.fixture(scope="session")
 def repo_root():
     return Path(__file__).resolve().parents[1]
