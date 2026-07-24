@@ -127,7 +127,9 @@ class _Spy:
         self.mouse_calls.append((enabled, speed, scroll))
         return True
 
-    def suppression(self, desired: bool) -> None:
+    def suppression(self, desired: bool, *, profile: object = None) -> None:
+        # R-02: o applier recebe QUEM mandou, para distinguir "o perfil do
+        # desktop liberou" de "caiu num catch-all".
         self.suppression_calls.append(desired)
 
 

@@ -59,13 +59,16 @@ class ProfileManager:
     # FEAT-POINT-AND-CLICK-01: applier da supressão de emulação (modo-jogo)
     # por perfil. Os callsites injetam `daemon.apply_profile_suppression`, que
     # concentra a política (origem perfil vs. toggle manual + lock de 30s).
-    # Recebe `profile.suppress_desktop_emulation` a cada ativação.
-    suppression_applier: Callable[[bool], object] | None = None
+    # Recebe `profile.suppress_desktop_emulation` a cada ativação, mais o
+    # `profile=` por keyword (R-02: o applier precisa saber se quem mandou tem
+    # opinião ou é um catch-all).
+    suppression_applier: Callable[..., object] | None = None
     # FEAT-PROFILE-MODE-01: applier da seção `mode` do perfil (nativo/gamepad/
     # desktop + co-op). Os callsites injetam `daemon.apply_profile_mode` —
     # recebe `profile.mode` (inclusive None: perfil sem opinião reverte só modo
-    # ligado por OUTRO perfil). None = seção ignorada (CLI/testes sem daemon).
-    mode_applier: Callable[[object], object] | None = None
+    # ligado por OUTRO perfil) mais o `profile=` por keyword (R-02).
+    # None = seção ignorada (CLI/testes sem daemon).
+    mode_applier: Callable[..., object] | None = None
     # FEAT-RUMBLE-POLICY-PROFILE-01: applier da política de rumble do perfil
     # (seção `rumble.policy`/`rumble.custom_mult`). Os callsites injetam
     # `daemon.apply_profile_rumble_policy` — recebe (policy, custom_mult) a
@@ -308,7 +311,12 @@ class ProfileManager:
                 )
         if self.suppression_applier is not None:
             try:
-                self.suppression_applier(profile.suppress_desktop_emulation)
+                # R-02: o applier precisa saber SE o perfil tem opinião — um
+                # catch-all liberando a supressão de desktop dentro do jogo é
+                # ausência de regra sendo executada como ordem.
+                self.suppression_applier(
+                    profile.suppress_desktop_emulation, profile=profile
+                )
             except Exception as exc:
                 logger.warning(
                     "profile_suppression_apply_failed",
@@ -322,7 +330,11 @@ class ProfileManager:
         # nativo" não re-aplique nada por cima dos triggers/LEDs já aplicados.
         if self.mode_applier is not None:
             try:
-                self.mode_applier(getattr(profile, "mode", None))
+                # R-02: junto com a seção vai QUEM a mandou. Sem isso o applier
+                # não distingue "o perfil do jogo mandou voltar ao desktop" de
+                # "caiu num catch-all porque este jogo não tem perfil" — e a
+                # segunda hipótese desligava o vpad no meio da partida.
+                self.mode_applier(getattr(profile, "mode", None), profile=profile)
             except Exception as exc:
                 logger.warning(
                     "profile_mode_apply_failed",

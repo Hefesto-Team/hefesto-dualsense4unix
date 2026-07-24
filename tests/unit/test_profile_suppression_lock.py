@@ -8,6 +8,10 @@ Semântica sob teste (docstring do método é a fonte canônica):
     a supressão nas duas direções (relógio fake).
   - Lock expirado: perfil ADOTA supressão manual antiga (desired=True) e passa
     a poder liberá-la; desired=False sem adoção não reverte o gesto manual.
+  - R-02 (23/07): LIBERAR é uma decisão, e um catch-all não tem autoridade para
+    tomá-la. Sem essa guarda, o `vitoria` (MatchAny, suppress=False por default)
+    soltava a emulação de desktop DENTRO do jogo — mouse/teclado emulado
+    voltando a disputar com o jogo enquanto ela jogava. Mesma regra do modo.
 """
 from __future__ import annotations
 
@@ -63,6 +67,17 @@ def daemon() -> Daemon:
     return Daemon(controller=FakeController())
 
 
+def _perfil(*, catch_all: bool = False) -> Any:
+    """Perfil de teste — específico por default (R-02)."""
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
+
+    return Profile(
+        name="teste_supressao",
+        match=MatchAny() if catch_all else MatchCriteria(window_class=["firefox"]),
+        priority=10,
+    )
+
+
 def test_perfil_liga_supressao(clock: _FakeClock, daemon: Daemon) -> None:
     daemon.apply_profile_suppression(True)
     assert daemon._emulation_suppressed is True
@@ -72,8 +87,8 @@ def test_perfil_liga_supressao(clock: _FakeClock, daemon: Daemon) -> None:
 def test_perfil_sem_campo_libera_supressao_de_perfil(
     clock: _FakeClock, daemon: Daemon
 ) -> None:
-    daemon.apply_profile_suppression(True)
-    daemon.apply_profile_suppression(False)
+    daemon.apply_profile_suppression(True, profile=_perfil())
+    daemon.apply_profile_suppression(False, profile=_perfil())
     assert daemon._emulation_suppressed is False
     assert daemon._suppress_from_profile is False
 
@@ -128,9 +143,9 @@ def test_lock_expira_e_perfil_adota_supressao_manual(
     perfil seguinte (sem o campo) pode liberá-lo (UX do autoswitch dono)."""
     daemon.set_emulation_suppressed(True)
     clock.advance(MANUAL_PROFILE_LOCK_SEC + 1.0)
-    daemon.apply_profile_suppression(True)
+    daemon.apply_profile_suppression(True, profile=_perfil())
     assert daemon._suppress_from_profile is True
-    daemon.apply_profile_suppression(False)
+    daemon.apply_profile_suppression(False, profile=_perfil())
     assert daemon._emulation_suppressed is False
 
 
@@ -246,3 +261,28 @@ def test_apply_profile_mouse_recupera_config_stale_sem_device(
     assert len(set_calls) == 1  # (re)ligou de verdade
     assert set_calls[0][0] == (True, 8, 1)
     assert speed_calls == []  # não caiu no ramo idempotente
+
+
+def test_catch_all_nao_libera_supressao_de_perfil(
+    clock: _FakeClock, daemon: Daemon
+) -> None:
+    """R-02: o perfil do jogo suprimiu; o catch-all não pode soltar.
+
+    Cenário medido: ela abre o Sackboy (perfil com suppress=True), alt-tabeia
+    ou abre o Mullet Mad Jack (sem perfil) → o catch-all `vitoria` entrava com
+    suppress=False e liberava a emulação de desktop no meio do jogo.
+    """
+    daemon.apply_profile_suppression(True, profile=_perfil())
+    daemon.apply_profile_suppression(False, profile=_perfil(catch_all=True))
+    assert daemon._emulation_suppressed is True
+    assert daemon._suppress_from_profile is True
+
+
+def test_janela_de_jogo_em_foco_congela_a_liberacao(
+    clock: _FakeClock, daemon: Daemon
+) -> None:
+    """2ª guarda: nem perfil específico solta a supressão com jogo em foco."""
+    daemon.apply_profile_suppression(True, profile=_perfil())
+    daemon.store.record_window_detect_read("teste", "steam_app_2111190")
+    daemon.apply_profile_suppression(False, profile=_perfil())
+    assert daemon._emulation_suppressed is True
