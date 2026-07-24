@@ -288,6 +288,14 @@ class DraftConfig(BaseModel):
     # gravam via ``with_controller_leds``/``with_controller_triggers``
     # (entradas não tocadas seguem passthrough byte-idêntico).
     source_controllers: Any | None = None
+    # R-11 (auditoria 23/07): DE QUAL perfil os `source_*` acima vieram.
+    # `to_profile` reemitia `match`/`priority`/`mode` do snapshot do BOOT para
+    # QUALQUER nome — então "Salvar Perfil" com um nome NOVO produzia um perfil
+    # com a regra de casamento e a prioridade de OUTRO perfil, e salvar por cima
+    # do ativo depois de mexer no Modo pela aba Perfis APAGAVA a seção `mode`
+    # recém-configurada (o snapshot ainda era o do boot, com mode=None).
+    # Reemitir só faz sentido quando o alvo é o MESMO perfil de onde vieram.
+    source_name: str | None = None
 
     # --- construtores ---
 
@@ -348,6 +356,7 @@ class DraftConfig(BaseModel):
             source_suppress=profile.suppress_desktop_emulation,
             source_priority=profile.priority,
             source_controllers=profile.controllers,
+            source_name=profile.name,
         )
 
     def to_profile(self, name: str, priority: int = 5) -> Profile:
@@ -393,14 +402,36 @@ class DraftConfig(BaseModel):
             else None
         )
 
+        # R-11: os `source_*` só valem para o perfil DE ONDE VIERAM.
+        #
+        # Salvando por cima do MESMO perfil, reemitir preserva as seções que o
+        # draft não edita — é exatamente o que BUG-FOOTER-SAVE-DROPS-SECTIONS-01
+        # quis proteger, e continua valendo.
+        #
+        # Com um nome NOVO, reemitir é o defeito: o perfil nasce com a regra de
+        # casamento e a prioridade de outro perfil. Medido: com o FPS ativo,
+        # "Salvar Perfil" como "MadJack" produzia um perfil com o regex de
+        # título do FPS e prioridade 60 — e nenhuma regra para o jogo dela.
+        #
+        # `MatchAny()` para nome novo é deliberado e casa com o contrato do
+        # diálogo do rodapé, que não tem campo de regra: o perfil nasce
+        # "sempre", e a regra específica é definida na aba Perfis. Não nasce
+        # com a regra ERRADA, que é o ponto.
+        mesmo_perfil = self.source_name is not None and name == self.source_name
         profile = Profile(
             name=name,
             priority=(
-                self.source_priority if self.source_priority is not None else priority
+                self.source_priority
+                if (mesmo_perfil and self.source_priority is not None)
+                else priority
             ),
-            match=self.source_match if self.source_match is not None else MatchAny(),
-            mode=self.source_mode,
-            suppress_desktop_emulation=self.source_suppress,
+            match=(
+                self.source_match
+                if (mesmo_perfil and self.source_match is not None)
+                else MatchAny()
+            ),
+            mode=self.source_mode if mesmo_perfil else None,
+            suppress_desktop_emulation=self.source_suppress if mesmo_perfil else False,
             triggers=_triggers_draft_to_config(self.triggers),
             # COR-04: a seção GLOBAL emite auto_player_colors explicitamente
             # (round-trip do toggle "Cores automáticas por controle").
@@ -412,6 +443,14 @@ class DraftConfig(BaseModel):
             ),
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
+            # R-11: `controllers` NÃO entra no gate de `mesmo_perfil`, ao
+            # contrário de match/priority/mode. A distinção é o que a coisa É:
+            # match/priority/mode são REGRA (identidade do perfil, de onde ele
+            # veio); os overrides por-controle são CONFIGURAÇÃO dela, e este
+            # campo — único entre os `source_*` — a GUI edita de verdade
+            # (`with_controller_leds`/`with_controller_triggers`). "Salvar
+            # Perfil" com nome novo significa "guarde o que eu tenho agora",
+            # então a config vai junto; a regra do outro perfil, não.
             controllers=self.source_controllers,
         )
         # Revalida para garantir round-trip (captura regressoes de schema).
