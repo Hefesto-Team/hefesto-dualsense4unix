@@ -18,7 +18,7 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 import gi
 
@@ -751,49 +751,64 @@ class HefestoApp(
         )
         self._bootstrap_draft_async()
 
+    #: Aba (id do Glade) -> nomes dos refreshers a chamar quando ela é exibida.
+    #: Identificar pelo WIDGET, não pelo índice: a fusão de "Mouse" e "Teclado"
+    #: na aba "Navegação DSX" renumerou as páginas, e um mapa por índice teria
+    #: passado a chamar o refresher errado em silêncio — sem exceção, sem log,
+    #: só a aba mostrando dado velho. Mesma lição do EST-10 em
+    #: `_wrap_notebook_pages_in_scroll`: o id do Glade não muda quando a ordem
+    #: ou o rótulo mudam.
+    _REFRESH_POR_ABA: ClassVar[dict[str, tuple[str, ...]]] = {
+        # FEAT-GUI-HOME-TAB-01: comutador de modo reconcilia ao ser exibido.
+        "tab_home_box": ("_refresh_home_tab",),
+        "tab_triggers_box": ("_refresh_triggers_from_draft",),
+        "tab_lightbar_box": ("_refresh_lightbar_from_draft",),
+        "tab_rumble_box": ("_refresh_rumble_from_draft",),
+        # BUG-PROFILES-ACTIVE-STALE-01: autoswitch/hotkey trocam o perfil sem
+        # passar pela GUI — re-marcar o ativo (negrito) ao exibir a aba.
+        "profiles_paned": ("_sync_selection_with_active_profile",),
+        # BUG-DAEMON-TAB-STALE-01: status do daemon re-renderiza ao entrar na
+        # aba (o daemon pode ter subido/caído por fora, via CLI ou systemd).
+        # M7 (auditoria): também reavalia o cartão anti-storm.
+        "daemon_box": ("_refresh_daemon_tab_on_show",),
+        # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): se o daemon subiu após o boot, a
+        # aba ficava em "—"/offline até alguém entrar nela.
+        "emulation_box": ("_refresh_emulation_tab",),
+        # A aba unificada roda os DOIS refreshers que antes eram de uma aba cada:
+        # BUG-MOUSE-GUI-SYNC-01 (A1) sincroniza com o estado vivo do daemon e
+        # BUG-KEYBOARD-TAB-NO-REFRESH-01 recarrega os bindings do draft.
+        "tab_navegacao_dsx": (
+            "_refresh_mouse_tab",
+            "_refresh_key_bindings_from_draft",
+        ),
+    }
+
     def _on_notebook_switch_page(
-        self, _notebook: object, _page: object, page_num: int
+        self, notebook: Any, page: Any, _page_num: int
     ) -> None:
-        """Dispara refresh de widgets da aba destino ao trocar de aba.
+        """Dispara o refresh dos widgets da aba destino ao trocar de aba.
 
-        Cada mixin implementa ``_refresh_widgets_from_draft()``; a chamada e
-        protegida por ``_guard_refresh`` internamente para evitar loop.
-        A correspondencia entre page_num e o mixin e baseada na ordem das abas
-        no GtkNotebook definida no Glade.
+        Cada mixin implementa o seu ``_refresh_*``; a chamada é protegida por
+        ``_guard_refresh`` internamente para evitar loop. A aba é identificada
+        pelo id do Glade (ver ``_REFRESH_POR_ABA``), não pela posição.
 
-        Páginas (indice zero, ordem do notebook — FEAT-GUI-HOME-TAB-01
-        acrescentou "Início" como página 0, deslocando as demais):
-          0 = Início, 1 = Status, 2 = Triggers, 3 = Lightbar, 4 = Rumble,
-          5 = Perfis, 6 = Sistema, 7 = Emulacao, 8 = Mouse, 9 = Teclado
+        ``page`` pode ser o ``GtkScrolledWindow`` que
+        ``_wrap_notebook_pages_in_scroll`` colocou em volta da página — nesse
+        caso o id está no filho.
         """
-        refresh_map = {
-            # FEAT-GUI-HOME-TAB-01: comutador de modo reconcilia ao ser exibido.
-            0: getattr(self, "_refresh_home_tab", None),
-            2: getattr(self, "_refresh_triggers_from_draft", None),
-            3: getattr(self, "_refresh_lightbar_from_draft", None),
-            4: getattr(self, "_refresh_rumble_from_draft", None),
-            # BUG-PROFILES-ACTIVE-STALE-01: autoswitch/hotkey trocam o perfil
-            # sem passar pela GUI — re-marcar o ativo (negrito) ao exibir a aba.
-            5: getattr(self, "_sync_selection_with_active_profile", None),
-            # BUG-DAEMON-TAB-STALE-01: status do daemon re-renderiza ao entrar
-            # na aba (daemon pode ter subido/caído por fora via CLI/systemd).
-            # M7 (auditoria): também reavalia o cartão anti-storm ao exibir a aba.
-            6: getattr(self, "_refresh_daemon_tab_on_show", None),
-            # BUG-EMULATION-TAB-NO-REFRESH-01 (T3): a aba Emulação se
-            # reconcilia ao ser exibida — se o daemon subiu após o boot, a aba
-            # deixava de mostrar "—"/offline só ao entrar nela. _refresh_emulation_tab
-            # é criado em emulation_actions.py (Sprint 4); getattr é seguro se ausente.
-            7: getattr(self, "_refresh_emulation_tab", None),
-            # BUG-MOUSE-GUI-SYNC-01 (A1): a aba Mouse sincroniza também com o
-            # estado VIVO do daemon (draft imediato + state_full assíncrono).
-            8: getattr(self, "_refresh_mouse_tab", None),
-            # BUG-KEYBOARD-TAB-NO-REFRESH-01: aba Teclado também precisa
-            # re-sincronizar os bindings do draft ao ser exibida.
-            9: getattr(self, "_refresh_key_bindings_from_draft", None),
-        }
-        fn = refresh_map.get(page_num)
-        if fn is not None:
-            fn()
+        alvo = page
+        if isinstance(page, Gtk.ScrolledWindow):
+            filho = page.get_child()
+            # O ScrolledWindow pode inserir um GtkViewport entre ele e a página.
+            if isinstance(filho, Gtk.Viewport):
+                filho = filho.get_child()
+            if filho is not None:
+                alvo = filho
+        nome = Gtk.Buildable.get_name(alvo) if alvo is not None else None
+        for atributo in self._REFRESH_POR_ABA.get(nome or "", ()):
+            fn = getattr(self, atributo, None)
+            if fn is not None:
+                fn()
 
     # --- run ---
 
