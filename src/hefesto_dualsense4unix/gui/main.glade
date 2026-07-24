@@ -429,6 +429,7 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
+                                <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em L2</property>
                                 <signal name="clicked" handler="on_trigger_left_apply"/>
                               <child internal-child="accessible">
@@ -441,6 +442,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_left_reset">
+                                <style><class name="btn-trigger-off"/></style>
                                 <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_left_reset"/>
                               <child internal-child="accessible">
@@ -551,6 +553,7 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
+                                <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em R2</property>
                                 <signal name="clicked" handler="on_trigger_right_apply"/>
                               <child internal-child="accessible">
@@ -563,6 +566,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_right_reset">
+                                <style><class name="btn-trigger-off"/></style>
                                 <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_right_reset"/>
                               <child internal-child="accessible">

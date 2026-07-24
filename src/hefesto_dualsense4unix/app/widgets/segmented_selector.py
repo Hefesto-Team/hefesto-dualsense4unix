@@ -29,6 +29,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, ClassVar
 
+#: Colunas da grade no modo ``wrap`` (19 modos de gatilho → 7 linhas).
+_WRAP_COLUNAS = 3
+#: Largura de referência do rótulo antes de quebrar linha, em caracteres. Com 3
+#: colunas em ~480px, cada botão tem ~150px — cerca de 16 caracteres.
+_WRAP_MAX_CHARS = 16
+
 
 class _SegmentedLogic:
     """Lógica por-ID compartilhada (sem GTK).
@@ -157,35 +163,28 @@ if _GTK_DISPONIVEL:
             self._group_founder: Gtk.RadioButton | None = None
             self.set_valign(Gtk.Align.CENTER)
             if wrap:
-                flow = Gtk.FlowBox()
-                flow.set_selection_mode(Gtk.SelectionMode.NONE)
-                # UX-TRIGGERS-COMPACT-01: teto de 3 por linha + botões compactos
-                # (classe CSS) — os 19 modos viravam um paredão de 2 colunas de
-                # botões ENORMES que engolia a aba inteira e empurrava sliders/
-                # Aplicar para fora da dobra (visto ao vivo 2026-07-13). Com 3
-                # colunas compactas a grade cabe em ~7 linhas curtas.
-                flow.set_max_children_per_line(3)
-                flow.set_min_children_per_line(1)
-                flow.set_homogeneous(True)
-                flow.set_row_spacing(2)
-                flow.set_column_spacing(2)
+                # UX-TRIGGERS-COMPACT-01 / S3: grade de 3 colunas FIXAS.
+                #
+                # Aqui havia um GtkFlowBox (max 3 por linha, min 1) dentro de um
+                # GtkScrolledWindow. O FlowBox decide quantas colunas usar a
+                # partir da largura que RECEBE, e o ScrolledWindow lhe oferece a
+                # largura mínima — a de UM botão. Resultado: ele reportava a
+                # altura de 19 botões EMPILHADOS, 606px, e o mesmo 606px para
+                # qualquer largura de janela. Como o GtkNotebook adota o maior
+                # mínimo entre as páginas, esse número virava o piso da aba
+                # inteira e a barra de rolagem era inevitável.
+                #
+                # Um GtkGrid não negocia: 19 itens em 3 colunas são sempre 7
+                # linhas (~190px). O `column_homogeneous` mantém as colunas do
+                # mesmo tamanho e o label com `wrap` deixa "Feedback em rampa"
+                # ocupar duas linhas dentro do botão em vez de esticá-lo.
+                grid = Gtk.Grid()
+                grid.set_column_homogeneous(True)
+                grid.set_row_spacing(2)
+                grid.set_column_spacing(2)
                 self.get_style_context().add_class("hefesto-segmented-compact")
-                # M2: com min_children_per_line=1 e 19 botões de rótulo largo, o
-                # FlowBox exige a largura do botão mais largo como mínimo; sob o
-                # scroller-pai da aba Gatilhos (hscroll=NEVER) isso estoura em
-                # `Gtk-WARNING: Negative content width` + coluna larga. Envolver o
-                # FlowBox num ScrolledWindow (h=AUTOMATIC, v=NEVER) dá a largura de
-                # referência: o ScrolledWindow reporta mínimo pequeno, então o
-                # FlowBox NUNCA é alocado com largura negativa (rola em vez disso).
-                # propagate_natural_height mantém a altura natural (sem cortar).
-                scroller = Gtk.ScrolledWindow()
-                scroller.set_policy(
-                    Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER
-                )
-                scroller.set_propagate_natural_height(True)
-                scroller.add(flow)
-                self._container: Any = flow
-                self.pack_start(scroller, True, True, 0)
+                self._container: Any = grid
+                self.pack_start(grid, True, True, 0)
             else:
                 self.get_style_context().add_class("linked")
                 self._container = self
@@ -211,14 +210,25 @@ if _GTK_DISPONIVEL:
             self._buttons = []
             # group=None → este botão funda o grupo; não é empacotado → invisível.
             self._group_founder = Gtk.RadioButton()
-            for the_id, label in items:
+            for indice, (the_id, label) in enumerate(items):
                 btn = Gtk.RadioButton.new_with_label_from_widget(
                     self._group_founder, label
                 )
                 btn.set_mode(False)  # toggle button (sem a bolinha de radio)
                 btn.connect("toggled", self._on_button_toggled, the_id)
                 if self._wrap:
-                    self._container.add(btn)
+                    # Rótulo quebra dentro do botão em vez de alargá-lo: com 3
+                    # colunas fixas, "Feedback em rampa" precisa caber em duas
+                    # linhas curtas, senão empurra a largura de toda a coluna.
+                    filho = btn.get_child()
+                    if isinstance(filho, Gtk.Label):
+                        filho.set_line_wrap(True)
+                        filho.set_justify(Gtk.Justification.CENTER)
+                        filho.set_max_width_chars(_WRAP_MAX_CHARS)
+                    btn.set_hexpand(True)
+                    self._container.attach(
+                        btn, indice % _WRAP_COLUNAS, indice // _WRAP_COLUNAS, 1, 1
+                    )
                 else:
                     self._container.pack_start(btn, False, False, 0)
                 self._buttons.append(btn)

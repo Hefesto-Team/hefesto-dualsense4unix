@@ -198,3 +198,55 @@ def test_widget_real_smoke(wrap: bool) -> None:
     assert sel.get_active_id() == "rigid"
     assert ev == ["custom", "rigid"]
     assert sum(b.get_active() for b in sel._buttons) == 1
+
+
+@pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
+def test_wrap_dispoe_em_grade_de_3_colunas_e_nao_empilha() -> None:
+    """S3: o modo ``wrap`` não pode reportar a altura de tudo empilhado.
+
+    Havia um ``GtkFlowBox`` dentro de um ``GtkScrolledWindow``. O FlowBox escolhe
+    o número de colunas pela largura que RECEBE, e o ScrolledWindow lhe oferecia
+    a largura mínima — a de um botão. Ele então reportava a altura dos 19 modos
+    EM COLUNA ÚNICA (606px medidos), e o mesmo valor para qualquer largura de
+    janela. Como o ``GtkNotebook`` adota o maior mínimo entre as páginas, esse
+    número virava o piso da aba inteira e a barra de rolagem era inevitável.
+
+    O contrato agora: grade de 3 colunas, altura proporcional ao número de
+    linhas e sensível à largura disponível.
+    """
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk
+
+    itens = [(f"m{i}", f"Modo {i}") for i in range(19)]
+    sel = SegmentedSelector(wrap=True)
+    sel.set_items(itens)
+
+    assert isinstance(sel._container, Gtk.Grid), (
+        "o modo wrap precisa de um container que NÃO renegocie colunas pela "
+        "largura recebida (era GtkFlowBox, que empilhava tudo)"
+    )
+    # 19 itens em 3 colunas: colunas 0..2 e linhas 0..6.
+    posicoes = {
+        (
+            sel._container.child_get_property(b, "left-attach"),
+            sel._container.child_get_property(b, "top-attach"),
+        )
+        for b in sel._buttons
+    }
+    assert len(posicoes) == 19, "cada botão ocupa uma célula própria"
+    assert max(c for c, _ in posicoes) == 2, "no máximo 3 colunas"
+    assert max(r for _, r in posicoes) == 6, "19 itens em 3 colunas = 7 linhas"
+
+    win = Gtk.OffscreenWindow()
+    win.add(sel)
+    win.show_all()
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    _, altura = sel.get_preferred_height_for_width(480)
+    assert altura < 300, (
+        f"altura {altura}px: a grade de 7 linhas deve ficar MUITO abaixo dos "
+        "606px que o FlowBox empilhado reportava"
+    )

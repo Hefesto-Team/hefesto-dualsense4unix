@@ -559,6 +559,27 @@ messagedialog button:active {
     min-height: 0;
 }
 
+/* Ações de dentro do card de gatilho. São secundárias em relação ao "Aplicar"
+   do rodapé global (que é preenchido), então ficam contornadas: o verde diz
+   "envia ao controle" e o neutro diz "volta ao Off". */
+.hefesto-dualsense4unix-window button.btn-trigger-apply {
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @green;
+    color: @green;
+}
+.hefesto-dualsense4unix-window button.btn-trigger-apply:hover  { background-color: #2c3a32; }
+.hefesto-dualsense4unix-window button.btn-trigger-apply:active { background-color: #35473b; }
+
+.hefesto-dualsense4unix-window button.btn-trigger-off {
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @comment;
+    color: @text_muted;
+}
+.hefesto-dualsense4unix-window button.btn-trigger-off:hover  { background-color: @elevated; color: @text_soft; }
+.hefesto-dualsense4unix-window button.btn-trigger-off:active { background-color: @current_line; }
+
 /* FEAT-GUI-HOME-TAB-01: cards de controle da aba Inicio. */
 .hefesto-dualsense4unix-card {
     padding: 8px;
