@@ -27,7 +27,7 @@ import fcntl
 import os
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from pydualsense import pydualsense
@@ -247,6 +247,30 @@ class _DesiredOutput:
 
 #: Campos de `_DesiredOutput`/`OutputSpec` — a ordem é a de aplicação no HID.
 _OUTPUT_FIELDS = ("trigger_left", "trigger_right", "led", "player_leds", "mic_led")
+
+#: R-20 (auditoria 23/07): CAMADAS do override por-uniq, com DONO declarado.
+#:
+#: A saída era resolvida por SUBSTITUIÇÃO: `reset_output_overrides` trocava o
+#: mapa `_desired_by_uniq` INTEIRO. Como o autoswitch ativa um perfil a CADA
+#: troca de janela, todo ajuste por-controle que a usuária tinha acabado de
+#: fazer era apagado segundos depois (achado C5, queixa "as configs que eu faço
+#: não impactam controle a controle"). Agora cada CAMPO de cada uniq tem dono:
+#: a ativação de perfil substitui só o que é DELA e nunca pisa (nem apaga) o
+#: campo que a usuária ajustou na mão.
+#:
+#: Ordem (baixa → alta): `perfil` < `usuaria`. Regra de escrita derivada dela:
+#: o perfil só ocupa campo VAGO (depois de soltar o que era dele) — o que
+#: sobrou com valor pertence a uma camada mais alta.
+_LAYER_PROFILE = "perfil"
+_LAYER_USER = "usuaria"
+
+#: R-13 item 1 + R-20: o CO-OP fica FORA de `_desired_by_uniq`, em mapa próprio
+#: (`_desired_coop_by_uniq`), acima da camada da usuária. Motivo medido: o
+#: co-op é TRANSITÓRIO (publica ao ligar, revoga ao desligar) e o revert dele
+#: precisa reencontrar o padrão configurado INTACTO embaixo — se ele gravasse
+#: no mesmo slot, `resolved_player_leds_for` devolveria o padrão do próprio
+#: co-op e o revert restauraria o número do jogador para sempre.
+_COOP_LAYER_FIELDS = ("player_leds",)
 
 
 def _spec_fields(spec: OutputSpec) -> dict[str, Any]:
@@ -604,6 +628,27 @@ class PyDualSenseController(IController):
         # hotplug-in re-aplica o MERGE POR CAMPO dos dois no controle certo.
         self._desired_default = _DesiredOutput()
         self._desired_by_uniq: dict[str, _DesiredOutput] = {}
+        # R-20: DONO de cada campo de cada override (`{uniq: {campo: camada}}`).
+        # O mapa de valores continua sendo UM só (`_desired_by_uniq`) — o
+        # merge por campo do PERFIL-01/04/05, provado ao vivo no hotplug, não
+        # muda em nada. O que passa a existir é a procedência, para a ativação
+        # de perfil soltar só a camada dela.
+        self._desired_owner_by_uniq: dict[str, dict[str, str]] = {}
+        # R-13 item 1: camada do CO-OP (padrão de player-LED por jogador).
+        # Antes o co-op escrevia sysfs CRU, fora do estado desejado — e o
+        # `reassert_resolved_outputs`, que roda em TODO `connect()` (≤30 s),
+        # repintava o padrão do perfil por cima: pisca-pisca sem fim, com os
+        # números duplicados que ela vê. Publicada aqui, a mesma reafirmação
+        # passa a reafirmar o valor DO CO-OP.
+        self._desired_coop_by_uniq: dict[str, _DesiredOutput] = {}
+        # R-20 item 2: escala de brilho POR CONTROLE, aplicada DEPOIS do merge.
+        # Um override que só mexia no brilho materializava a cor GLOBAL no
+        # slot por-uniq (`_controllers_to_specs` resolvia `lightbar` do global
+        # para poder escalar) — e, como o override vence a camada automática,
+        # isso MATAVA a cor do slot daquele controle. Guardado como fator, o
+        # brilho escala a cor RESOLVIDA (automática inclusive) sem opinar
+        # sobre qual cor é.
+        self._led_scale_by_uniq: dict[str, float] = {}
         # COR-03: provider da camada AUTOMÁTICA do desejado (cor do slot +
         # player-LED do número do controle), injetado pelo daemon via
         # `set_auto_output_provider` (injeção de dependência — core/ nunca
@@ -923,15 +968,23 @@ class PyDualSenseController(IController):
             logger.debug("game_authority_provider_falhou", err=str(exc))
             return True
 
-    def _merged_desired_for_key(self, key: str) -> _DesiredOutput:
-        """Desired efetivo do controle `key`: MERGE POR CAMPO em 4 camadas.
+    def _merged_desired_for_key(
+        self, key: str, *, incluir_coop: bool = True
+    ) -> _DesiredOutput:
+        """Desired efetivo do controle `key`: MERGE POR CAMPO em 5 camadas.
 
         Precedência (D5, POR CAMPO): camada GAME (REPLICA-03 — o que o jogo
-        escreveu no vpad, viva só durante a sessão uhid) > override explícito
-        por-uniq > camada AUTOMÁTICA do provider (COR-03) > default global do
-        perfil. Chamar sob `_io_lock` (lê o mapa por-uniq; o provider é
-        chamado aqui dentro — barato e sem I/O por contrato de
-        `set_auto_output_provider`).
+        escreveu no vpad, viva só durante a sessão uhid) > camada CO-OP
+        (R-13: o número do jogador enquanto o co-op está ligado) > override
+        explícito por-uniq (perfil/usuária, arbitrados por dono — R-20) >
+        camada AUTOMÁTICA do provider (COR-03) > default global do perfil.
+        Chamar sob `_io_lock` (lê o mapa por-uniq; o provider é chamado aqui
+        dentro — barato e sem I/O por contrato de `set_auto_output_provider`).
+
+        R-20 item 2: a escala de brilho por-uniq entra DEPOIS do merge das
+        camadas do daemon e ANTES da camada GAME — o brilho é da usuária, a
+        cor do jogo é do jogo (escalar o que o jogo pinta seria mentir sobre
+        o que ele pediu).
 
         Key sem MAC (fallback por path) não tem override NEM camada
         automática possível — devolve o default puro (o controle segue só o
@@ -959,6 +1012,12 @@ class PyDualSenseController(IController):
             if auto is not None:
                 base = _merge_desired(base, auto)
         resolved = _merge_desired(base, override)
+        if uniq is not None:
+            if incluir_coop:
+                resolved = _merge_desired(
+                    resolved, self._desired_coop_by_uniq.get(uniq)
+                )
+            resolved = self._scaled_led(uniq, resolved)
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         # NUMA-02 (gate de exibição em ponto ÚNICO): sob autoridade 'daemon' a
         # camada GAME não entra no merge — este if governa de uma vez o
@@ -969,6 +1028,62 @@ class PyDualSenseController(IController):
         if game is not None and self._game_wins():
             resolved = _merge_desired(resolved, game)
         return resolved
+
+    def _scaled_led(self, uniq: str, desired: _DesiredOutput) -> _DesiredOutput:
+        """Aplica a escala de brilho por-uniq (R-20 item 2). Sob `_io_lock`.
+
+        Devolve SEMPRE um objeto novo quando escala — `_merge_desired` pode
+        ter devolvido o próprio `_desired_default` (quando não há override
+        nem camada automática), e mutá-lo corromperia o padrão broadcast de
+        todo mundo.
+        """
+        fator = self._led_scale_by_uniq.get(uniq)
+        if fator is None or desired.led is None:
+            return desired
+        return replace(
+            desired,
+            led=tuple(  # type: ignore[arg-type]
+                max(0, min(255, int(canal * fator))) for canal in desired.led
+            ),
+        )
+
+    def _clear_layer_locked(self, layer: str) -> None:
+        """Solta os campos cuja procedência é `layer`. Sob `_io_lock` (R-20).
+
+        Cada camada é limpa pelo SEU dono — é o que impede a ativação de
+        perfil (que roda a cada troca de janela) de apagar o ajuste manual, e
+        o "Aplicar" da GUI de apagar o que veio do perfil sem gesto dela.
+        """
+        for uniq, donos in list(self._desired_owner_by_uniq.items()):
+            override = self._desired_by_uniq.get(uniq)
+            for campo, dono in list(donos.items()):
+                if dono != layer:
+                    continue
+                del donos[campo]
+                if override is not None:
+                    setattr(override, campo, None)
+        self._prune_overrides_locked()
+
+    def _stamp_owner_locked(self, uniq: str, campos: Any, layer: str) -> None:
+        """Carimba a procedência dos campos escritos. Sob `_io_lock` (R-20)."""
+        donos = self._desired_owner_by_uniq.setdefault(uniq, {})
+        for campo in campos:
+            donos[campo] = layer
+
+    def _prune_overrides_locked(self) -> None:
+        """Poda overrides/carimbos que ficaram vazios. Sob `_io_lock`.
+
+        Mantém a invariante que os testes do PERFIL-01 travam ("entrada vazia
+        é podada do mapa") agora que a limpeza acontece campo a campo.
+        """
+        self._desired_by_uniq = {
+            uniq: override
+            for uniq, override in self._desired_by_uniq.items()
+            if any(getattr(override, name) is not None for name in _OUTPUT_FIELDS)
+        }
+        self._desired_owner_by_uniq = {
+            uniq: donos for uniq, donos in self._desired_owner_by_uniq.items() if donos
+        }
 
     def _record_desired_locked(self, target_key: str | None, fields: dict[str, Any]) -> None:
         """Grava campos do estado desejado no escopo CERTO. Chamar sob `_io_lock`.
@@ -995,17 +1110,23 @@ class PyDualSenseController(IController):
             override = self._desired_by_uniq.setdefault(uniq, _DesiredOutput())
             for name, value in fields.items():
                 setattr(override, name, value)
+            # R-20: escrita mirada da GUI = camada da USUÁRIA. É este carimbo
+            # que faz o ajuste dela sobreviver à próxima ativação de perfil.
+            self._stamp_owner_locked(uniq, fields, _LAYER_USER)
             return
         for name, value in fields.items():
             setattr(self._desired_default, name, value)
             for override in self._desired_by_uniq.values():
                 setattr(override, name, None)
+            # R-20: "Todos" é gesto explícito de nivelar — solta o campo em
+            # TODAS as camadas do mapa por-uniq (a do perfil inclusive), senão
+            # o override do perfil continuaria vencendo o azul que ela acabou
+            # de mandar para todo mundo. A camada do co-op fica de fora: ela
+            # tem dono próprio e some no `disable()`.
+            for donos in self._desired_owner_by_uniq.values():
+                donos.pop(name, None)
         # Poda overrides que ficaram sem nenhum campo (mapa limpo p/ debug).
-        self._desired_by_uniq = {
-            uniq: override
-            for uniq, override in self._desired_by_uniq.items()
-            if any(getattr(override, name) is not None for name in _OUTPUT_FIELDS)
-        }
+        self._prune_overrides_locked()
 
     # --- enumeração + abertura ------------------------------------------
 
@@ -1976,6 +2097,11 @@ class PyDualSenseController(IController):
         DESCONECTADO: o override fica REGISTRADO no mapa em memória (o hotplug
         lê o mapa, não o JSON do perfil, e aplica quando ele chegar) — só a
         escrita de hardware é pulada.
+
+        R-20: esta é a porta da camada da USUÁRIA — os chamadores são o
+        `led.set`/`trigger.set`/`player.set` com `uniq` (gesto na GUI) e o
+        "Aplicar" do rodapé. A ativação de perfil tem porta própria
+        (`reset_profile_overrides`), justamente para que ela não pise aqui.
         """
         fields = _spec_fields(spec)
         if not fields:
@@ -1990,6 +2116,7 @@ class PyDualSenseController(IController):
             override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
             for name, value in fields.items():
                 setattr(override, name, value)
+            self._stamp_owner_locked(alvo, fields, _LAYER_USER)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -2008,24 +2135,216 @@ class PyDualSenseController(IController):
     def reset_output_overrides(
         self, overrides: Mapping[str, OutputSpec] | None = None
     ) -> None:
-        """SUBSTITUI o mapa de overrides por-uniq inteiro (ativação de perfil).
+        """SUBSTITUI o mapa de overrides por-uniq inteiro (gesto da usuária).
 
-        Ciclo de vida explícito do PERFIL-01: sem a substituição, o override
-        do perfil ANTERIOR ressuscitaria no hotplug sob o perfil novo (e o
-        autoswitch troca de perfil o dia inteiro). Overrides de controles
-        DESCONECTADOS também entram no mapa (o hotplug lê o mapa em memória).
-        Nenhuma escrita de hardware aqui — o chamador aplica na sequência
-        (`apply_output_defaults` + `apply_output_for` por controle conectado).
+        Ciclo de vida explícito do PERFIL-01. Hoje o único chamador é o
+        "Aplicar" da GUI (`ipc_draft_applier`), que manda o conjunto COMPLETO
+        de overrides do draft: substituir o mapa é o que faz um ajuste que ela
+        TIROU de um controle sumir de fato. Por isso o mapa novo entra
+        carimbado como camada da USUÁRIA — foi ela quem mandou.
+
+        R-20: a ativação de perfil NÃO usa mais este caminho (usava, e era o
+        C5: toda troca de janela apagava o ajuste por-controle dela). Ela usa
+        `reset_profile_overrides`, que substitui só a camada do perfil. A
+        camada do co-op (`_desired_coop_by_uniq`) não é tocada aqui: quem a
+        publica e revoga é o `CoopManager`.
+
+        Overrides de controles DESCONECTADOS também entram no mapa (o hotplug
+        lê o mapa em memória). Nenhuma escrita de hardware aqui — o chamador
+        aplica na sequência (`apply_output_defaults` + `apply_output_for`).
         """
         novo: dict[str, _DesiredOutput] = {}
+        donos: dict[str, dict[str, str]] = {}
         for uniq, spec in (overrides or {}).items():
             alvo = self._key_to_uniq(uniq)
             if alvo is None:
                 logger.warning("override_por_controle_sem_mac_ignorado", uniq=uniq)
                 continue
-            novo[alvo] = _DesiredOutput(**_spec_fields(spec))
+            campos = _spec_fields(spec)
+            novo[alvo] = _DesiredOutput(**campos)
+            if campos:
+                donos[alvo] = dict.fromkeys(campos, _LAYER_USER)
         with self._io_lock:
             self._desired_by_uniq = novo
+            self._desired_owner_by_uniq = donos
+
+    def reset_profile_overrides(
+        self, overrides: Mapping[str, OutputSpec] | None = None
+    ) -> None:
+        """Republica a camada do PERFIL e escreve nos conectados (R-20).
+
+        Substitui APENAS o que pertence ao perfil, em três passos:
+
+        1. solta todo campo carimbado como `perfil` (a camada está sendo
+           republicada — sem isso o override do perfil anterior ressuscitaria
+           no hotplug sob o perfil novo, que é a razão de existir do
+           `reset_output_overrides`);
+        2. escreve os campos do perfil novo **só onde o slot ficou VAGO**. O
+           que sobrou com valor depois do passo 1 é, por construção, de uma
+           camada mais alta — o ajuste que a usuária fez na mão. É esta linha
+           que conserta o C5: o autoswitch reativa perfil a cada troca de
+           janela e não apaga mais o que ela acabou de ajustar;
+        3. converge no hardware dos conectados que têm QUALQUER override o
+           estado RESOLVIDO por-controle. Não são só os campos que este
+           perfil aplicou: o `apply_output_defaults` (broadcast do global)
+           roda ANTES desta chamada no manager e pinta o global por cima do
+           por-uniq de todo mundo — sem repintar o resolvido aqui, o ajuste
+           manual dela ficaria só na MEMÓRIA e o hardware mostraria o global.
+           Espelha o laço `apply_output_for` que o manager fazia (que
+           repintava cada override), agora com o valor resolvido para também
+           reparar o campo que a usuária tinha travado. Desconectado fica só
+           registrado, como sempre.
+
+        Escape hatch documentado: um gesto explícito dela — trocar de perfil
+        na GUI (`origin="manual"`, ver `ProfileManager.apply`) ou aplicar uma
+        cor em "Todos" — solta a camada da usuária, e aí o perfil volta a
+        mandar. Sem esse par, a camada alta viraria "estado armado que nunca
+        é liberado" (a queixa 5).
+        """
+        novo: dict[str, dict[str, Any]] = {}
+        for uniq, spec in (overrides or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.warning("override_por_controle_sem_mac_ignorado", uniq=uniq)
+                continue
+            campos = _spec_fields(spec)
+            if campos:
+                novo[alvo] = campos
+        escritas: list[tuple[Any, Any, _DesiredOutput]] = []
+        adiados: dict[str, list[str]] = {}
+        with self._io_lock:
+            self._clear_layer_locked(_LAYER_PROFILE)
+            muted = self._output_mute
+            for alvo, campos in novo.items():
+                override = self._desired_by_uniq.setdefault(alvo, _DesiredOutput())
+                for nome, valor in campos.items():
+                    if getattr(override, nome) is not None:
+                        adiados.setdefault(alvo, []).append(nome)
+                        continue
+                    setattr(override, nome, valor)
+                    self._stamp_owner_locked(alvo, (nome,), _LAYER_PROFILE)
+            self._prune_overrides_locked()
+            # Converge o hardware dos conectados COM override ao resolvido
+            # (passo 3 da docstring). Um controle sem override nenhum já ficou
+            # certo com o broadcast global anterior; o auto/sysfs dele é do
+            # `reassert_resolved_outputs` que o manager chama em seguida.
+            for alvo in list(self._desired_by_uniq):
+                key = self._key_for_uniq(alvo)
+                if key is None:
+                    continue
+                handle = self._handles.get(key)
+                if handle is None:
+                    continue
+                escritas.append(
+                    (handle, self._sysfs.get(key), self._merged_desired_for_key(key))
+                )
+        for handle, node, out in escritas:
+            self._write_partial_output(
+                handle, node, muted, out, what="reset_profile_overrides"
+            )
+        if adiados:
+            # Observabilidade da precedência (o doctor/journal precisam poder
+            # explicar "por que o perfil não pintou aquele controle").
+            logger.info(
+                "override_do_perfil_cedeu_ao_ajuste_manual",
+                controles={uniq: sorted(campos) for uniq, campos in adiados.items()},
+            )
+
+    def clear_user_output_overrides(self) -> None:
+        """Solta a camada da USUÁRIA no mapa por-uniq (R-20).
+
+        Chamado pelo gesto EXPLÍCITO de trocar de perfil (`origin="manual"`):
+        escolher um perfil na GUI é mais novo que o slider que ela arrastou
+        antes, e é o botão de soltar que impede a camada alta de virar estado
+        preso. Ativação AUTOMÁTICA (autoswitch, restore de boot) nunca chama —
+        é justamente dela que a camada precisa se defender.
+
+        Só muda estado: quem escreve o hardware é a ativação que vem logo em
+        seguida (`reset_profile_overrides` + `reassert_resolved_outputs`).
+        """
+        with self._io_lock:
+            self._clear_layer_locked(_LAYER_USER)
+
+    def set_led_scales(self, scales: Mapping[str, float] | None = None) -> None:
+        """SUBSTITUI o mapa de escala de brilho por-uniq (R-20 item 2).
+
+        Camada do PERFIL (é do JSON dele que vem), aplicada DEPOIS do merge
+        sobre a cor RESOLVIDA — inclusive a automática do slot. Antes, um
+        override que só escrevia `lightbar_brightness` era convertido em cor
+        materializada (o RGB global escalado) e, como override vence a camada
+        automática, o controle perdia a cor do slot para sempre.
+
+        Fator ≤ 0 é aceito (apaga a lightbar daquele controle, que é o que
+        brilho 0 significa); ausência de entrada = sem opinião. Sem escrita de
+        hardware: o `reassert_resolved_outputs` da ativação converge.
+        """
+        novo: dict[str, float] = {}
+        for uniq, fator in (scales or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.warning("escala_de_brilho_sem_mac_ignorada", uniq=uniq)
+                continue
+            novo[alvo] = float(fator)
+        with self._io_lock:
+            self._led_scale_by_uniq = novo
+
+    def set_coop_outputs(
+        self, outputs: Mapping[str, OutputSpec] | None = None
+    ) -> None:
+        """SUBSTITUI a camada do CO-OP e converge os controles afetados (R-13).
+
+        O co-op deixou de escrever sysfs cru: ele publica aqui `{uniq: spec}`
+        com o padrão de player-LED de cada jogador. Ganho medido no desenho:
+        o `reassert_resolved_outputs`, que roda em TODO `connect()` (≤30 s) e
+        antes repintava o padrão do PERFIL por cima do co-op, agora reafirma o
+        MESMO valor — acaba o pisca-pisca entre as duas autoridades.
+
+        Vocabulário restrito a `player_leds` (`_COOP_LAYER_FIELDS`): co-op é
+        sobre QUEM é cada jogador, não sobre a paleta. Campo fora disso é
+        ignorado com log — evitaria que um chamador futuro sequestrasse a cor
+        por uma camada que ninguém revoga.
+
+        Escreve no hardware dos conectados cujo resolvido MUDOU (entrou, saiu
+        ou trocou de padrão), pela mesma rota do resto do backend (sysfs com
+        fallback pydualsense). `None`/vazio revoga a camada inteira.
+        """
+        novo: dict[str, _DesiredOutput] = {}
+        for uniq, spec in (outputs or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.debug("coop_output_sem_mac_ignorado", uniq=uniq)
+                continue
+            campos = {
+                nome: valor
+                for nome, valor in _spec_fields(spec).items()
+                if nome in _COOP_LAYER_FIELDS
+            }
+            if not campos:
+                logger.debug("coop_output_sem_campo_valido", uniq=alvo)
+                continue
+            novo[alvo] = _DesiredOutput(**campos)
+        escritas: list[tuple[Any, Any, _DesiredOutput]] = []
+        with self._io_lock:
+            antigo = self._desired_coop_by_uniq
+            if antigo == novo:
+                return
+            self._desired_coop_by_uniq = novo
+            muted = self._output_mute
+            for alvo in set(antigo) | set(novo):
+                key = self._key_for_uniq(alvo)
+                handle = self._handles.get(key) if key is not None else None
+                if key is None or handle is None:
+                    continue
+                bits = self._merged_desired_for_key(key).player_leds
+                if bits is None:
+                    continue
+                escritas.append(
+                    (handle, self._sysfs.get(key), _DesiredOutput(player_leds=bits))
+                )
+        for handle, node, out in escritas:
+            self._write_partial_output(
+                handle, node, muted, out, what="set_coop_outputs"
+            )
 
     def set_rumble_for(self, uniq: str, weak: int, strong: int) -> bool:
         """Rumble mirado no controle de MAC `uniq`, SEM tocar no seletor global.
@@ -2300,9 +2619,14 @@ class PyDualSenseController(IController):
         segue só o global, regra do sprint). None = nenhum perfil/GUI setou
         player-LED ainda — o chamador não escreve nada. Não toca hardware
         nem muta estado.
+
+        R-13: a camada do CO-OP fica FORA deste resolvedor de propósito —
+        quem lê isto é o revert do co-op, perguntando "para qual padrão eu
+        devolvo este controle". Incluir a própria camada dele faria o revert
+        restaurar o número do jogador e o co-op nunca mais sair de cena.
         """
         with self._io_lock:
-            return self._merged_desired_for_key(uniq).player_leds
+            return self._merged_desired_for_key(uniq, incluir_coop=False).player_leds
 
     def resolved_led_for(self, uniq: str) -> tuple[int, int, int] | None:
         """Cor de lightbar RESOLVIDA do controle `uniq` (leitura pura).

@@ -85,14 +85,21 @@ class _FakeDaemon:
         self.suppression_calls: list[bool] = []
 
     def apply_profile_mouse(
-        self, enabled: bool, speed: int, scroll_speed: int
+        self,
+        enabled: bool,
+        speed: int,
+        scroll_speed: int,
+        *,
+        origin: str = "autoswitch",
     ) -> None:
+        # R-03: o applier recebe a ORIGEM da ativação (o dublê só registra).
         self.mouse_calls.append((enabled, int(speed), int(scroll_speed)))
 
     def apply_profile_suppression(
-        self, desired: bool, *, profile: Any = None
+        self, desired: bool, *, profile: Any = None, origin: str = "autoswitch"
     ) -> None:
         # R-02: o applier recebe QUEM mandou (o dublê só registra o valor).
+        # R-03: e de ONDE veio a ativação.
         self.suppression_calls.append(desired)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:
@@ -135,7 +142,9 @@ async def test_boot_real_ipc_switch_propaga_teclado(
 
     result = await daemon._ipc_server._handle_profile_switch({"name": "kbdprof"})
 
-    assert result == {"active_profile": "kbdprof"}
+    # R-03: resposta aditiva (`mode_aplicado`/`secoes`); o que este teste
+    # garante é a propagação dos bindings.
+    assert result["active_profile"] == "kbdprof"
     kbd.set_bindings.assert_called_once()
     assert kbd.set_bindings.call_args[0][0] == {"triangle": ("KEY_V",)}
 

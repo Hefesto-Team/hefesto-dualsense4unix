@@ -171,12 +171,19 @@ class DaemonProtocol(Protocol):
         """
         ...
 
-    def apply_profile_suppression(self, desired: bool) -> None:
+    def apply_profile_suppression(
+        self, desired: bool, *, profile: Any | None = None, origin: str = "autoswitch"
+    ) -> str:
         """Aplica `suppress_desktop_emulation` de um perfil (FEAT-POINT-AND-CLICK-01).
 
         Respeita o toggle manual recente (janela de MANUAL_PROFILE_LOCK_SEC) e
         só libera supressão que veio de perfil. Injetado como
         `suppression_applier` do ProfileManager pelos callsites.
+
+        R-02: `profile` diz QUEM mandou (catch-all não reverte). R-03: `origin`
+        é a origem da ATIVAÇÃO ("manual" fura o lock) e o retorno é o estado da
+        seção (`"aplicado"`/`"adiado_lock_manual"`/`"ignorado_*"`) — antes tudo
+        era `None` e a seção descartada sumia sem rastro.
         """
         ...
 
@@ -189,22 +196,33 @@ class DaemonProtocol(Protocol):
         ...
 
     def apply_profile_mouse(
-        self, enabled: bool, speed: int, scroll_speed: int
-    ) -> None:
+        self,
+        enabled: bool,
+        speed: int,
+        scroll_speed: int,
+        *,
+        origin: str = "autoswitch",
+    ) -> str:
         """Aplica a seção `mouse` de um perfil (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01).
 
         Respeita o lock manual recente da emulação (não sequestra um gamepad
         ligado na mão) e é idempotente. Injetado como `mouse_applier` do
         ProfileManager nas rotas de ativação (IPC switch, autoswitch, hotkey).
+        R-03: `origin`/retorno — ver `apply_profile_suppression`.
         """
         ...
 
-    def apply_profile_mode(self, mode: Any | None) -> None:
+    def apply_profile_mode(
+        self, mode: Any | None, *, profile: Any | None = None, origin: str = "autoswitch"
+    ) -> str:
         """Aplica a seção `mode` de um perfil (FEAT-PROFILE-MODE-01).
 
         Nativo/gamepad/desktop + co-op por perfil, com lock manual de 30s e
         origem rastreada. Injetado como `mode_applier` do ProfileManager nas
         rotas de ativação (IPC switch, autoswitch, hotkey).
+
+        R-03: com ``origin="manual"`` fura o lock; com origem automática devolve
+        `"adiado_lock_manual"` e agenda a pendência que o poll loop drena.
         """
         ...
 

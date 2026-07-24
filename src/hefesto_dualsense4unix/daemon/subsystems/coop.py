@@ -39,6 +39,7 @@ DAQUELE jogador (targeting por MAC via `apply_game_rumble`); o
 from __future__ import annotations
 
 import contextlib
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -60,6 +61,42 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.integrations.virtual_pad import VirtualPad
 
 logger = get_logger(__name__)
+
+#: R-22: prazo máximo (s) que a promoção de UM jogador espera pela calibração
+#: antes de nascer com o 0x05 canônico. Medido: no caminho quente (USB, ou BT
+#: com o report_thread mantendo o link vivo) o `HIDIOCGFEATURE` volta em ~1ms e
+#: a promoção acontece no tick seguinte; o prazo só existe para o caminho
+#: patológico (broker mudo = 2s de timeout por tentativa; BT ocioso = 5s até o
+#: EIO do hidp). Esperar além disso não traz calibração nenhuma — só deixaria o
+#: jogador sem vpad. Fail-safe: na dúvida o jogador NASCE (drift leve de gyro é
+#: tolerável; "sem controle" não é).
+_CALIB_PRAZO_S = 2.0
+
+
+def calibration_cache(daemon: Any) -> dict[str, bytes]:
+    """Cache de calibração 0x05 POR MAC, vivo no daemon (R-22).
+
+    O feature 0x05 é imutável por unidade (bias/sensibilidade de fábrica da
+    IMU daquele controle), então cachear por MAC é correto por construção — a
+    chave é a identidade estável do jogador, nunca o node/handle volátil.
+
+    Mora no daemon (`_calibration_by_uniq`) de propósito: o P1
+    (`gamepad.read_primary_calibration`) e os secundários do co-op leem o
+    MESMO controle quando a usuária troca de primário, e uma leitura já paga
+    não deve ser paga de novo pelo outro caminho.
+
+    Degradação (dublê/objeto que recusa setattr): devolve um dicionário novo a
+    cada chamada — sem cache, mas TAMBÉM sem I/O no event loop (a promoção
+    adia uma vez e nasce com o 0x05 canônico). O invariante do R-22 é sobre a
+    thread do loop, não sobre o hit rate.
+    """
+    cache = getattr(daemon, "_calibration_by_uniq", None)
+    if isinstance(cache, dict):
+        return cache
+    cache = {}
+    with contextlib.suppress(Exception):
+        daemon._calibration_by_uniq = cache
+    return cache
 
 
 @dataclass
@@ -116,10 +153,26 @@ class CoopManager:
         # FEAT-COOP-PLAYER-LED-01: True quando o co-op sobrescreveu algum
         # player-LED — gate para restaurar o padrão do perfil só quando preciso.
         self._leds_overridden = False
+        # R-13 item 1 (auditoria 23/07): espelho da CAMADA publicada no backend
+        # (`{mac: padrão}`). Vazio = nada publicado — ou o backend não tem a API
+        # de camadas (fakes/legado) e o caminho sysfs cru segue valendo, ou o
+        # co-op ainda não escreveu nada. É o que permite revogar UM jogador
+        # (republicar sem ele) sem perguntar nada ao backend.
+        self._camada_coop: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
         # BUG-COOP-GRAB-PENDING-VPAD-01: True quando `_promote_pending` derrubou
         # um jogador (grab "failed"); força o próximo sync a rodar o ciclo cheio
         # e respawnar (retry), mesmo sem mudança em /dev/input.
         self._retry_spawn = False
+        # R-22 (auditoria 23/07): identidade -> instante (monotonic) em que a
+        # promoção para de esperar a calibração. Presença = leitura JÁ agendada
+        # fora do loop; é o que impede reagendar o mesmo MAC a cada tick.
+        self._calib_prazo: dict[str, float] = {}
+        # R-22: identidades cuja leitura de calibração já foi tentada e não
+        # rendeu bytes (externo sem handle, BT ocioso com EIO, CRC corrompido).
+        # Negativo NÃO vai para o cache do daemon — lá só entra o que é
+        # imutável de verdade. `_teardown_player` limpa a marca, então replug/
+        # respawn ganham uma tentativa nova sem nunca repetir o custo por tick.
+        self._calib_sem_leitura: set[str] = set()
 
     # -- estado / gate --------------------------------------------------
 
@@ -381,6 +434,11 @@ class CoopManager:
             player_index=self._next_player_index(),
         )
         self._players[identity] = player
+        # R-22: esquenta o cache do 0x05 assim que o jogador é registrado —
+        # normalmente o grab só confirma um tick depois, então a leitura (que
+        # roda fora do loop) já terminou quando a promoção precisar dela e o
+        # adiamento nem chega a acontecer.
+        self._prefetch_calibration(identity)
         if reader.grab_state == "held":
             self._promote_player(player)
         else:
@@ -488,6 +546,20 @@ class CoopManager:
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
         from hefesto_dualsense4unix.integrations.virtual_pad import make_virtual_pad
 
+        # R-22: a calibração vem do CACHE — nenhuma leitura de hidraw/socket
+        # acontece nesta thread. Enquanto ela não resolve, a promoção ADIA (o
+        # jogador segue sem vpad, exatamente como no grab pendente) e o
+        # `_promote_pending` do próximo tick tenta de novo; nunca há
+        # `make_virtual_pad` com calibração de outra unidade.
+        calib_pronta, calib = self._calibration_pronta(player.identity)
+        if not calib_pronta:
+            logger.debug(
+                "coop_player_calibracao_pendente",
+                identity=player.identity,
+                player=player.player_index,
+            )
+            return
+
         # SPRINT-UHID-VPAD-01 + VPAD-03: `player_index` não é detalhe — no
         # backend uhid o índice vira o MAC do vpad (02:fe:00:00:00:0N), e MAC
         # repetido faz o probe do 2º jogador em diante morrer com -EEXIST (co-op
@@ -503,7 +575,7 @@ class CoopManager:
             allow_uhid=controller_allows_uhid(self._daemon),
             # GYRO-01: 0x05 do físico DESTE jogador calibra o motion espelhado
             # (None para externos/sem MAC → canônico, fail-safe).
-            calibration_0x05=self._read_player_calibration(player.identity),
+            calibration_0x05=calib,
             # REPLICA-03: o output do jogo (gatilhos/lightbar/player-LED)
             # replica no físico DESTE jogador; CLOSE devolve perfil/paleta.
             **self._make_player_replica_sinks(player.identity),
@@ -560,22 +632,133 @@ class CoopManager:
     def _read_player_calibration(self, identity: str) -> bytes | None:
         """Feature 0x05 do físico de UM jogador (GYRO-01), ou None = canônico.
 
-        Identidade sem MAC ("path:...") e controles fora do backend pydualsense
-        (externos: 8BitDo/Nintendo) não têm handle por-uniq → None, fail-safe.
+        Vista fail-safe de `_calibration_pronta`: "ainda não resolveu" vira
+        None (o 0x05 canônico que o contrato do vpad já prevê). Quem PODE
+        adiar — só a promoção — chama `_calibration_pronta` direto.
+        """
+        return self._calibration_pronta(identity)[1]
+
+    def _calibration_pronta(self, identity: str) -> tuple[bool, bytes | None]:
+        """`(resolvida?, calibração)` do jogador pelo CACHE — R-22.
+
+        `resolvida=False` significa "ainda não sei, tente no próximo tick";
+        nunca "não tem" (isso é `(True, None)` = 0x05 canônico).
+
+        R-22 (auditoria 23/07) — I/O BLOQUEANTE na thread do event loop. A
+        leitura do 0x05 é cara em dois pontos e AMBOS rodavam aqui dentro, no
+        poll loop: o `open` do socket do broker (2s de timeout por tentativa,
+        até 2 tentativas) e o `HIDIOCGFEATURE` no hidraw (BT ocioso segura até
+        o timeout de 5s do hidp antes do EIO). Enquanto isso o loop não
+        despacha `forward_all` — o input dos QUATRO jogadores e o IPC da GUI
+        congelam por segundos, sem uma linha de log dizendo por quê (é o "bug
+        não notado" da queixa 5).
+
+        A cura é de raiz, não paliativa (encurtar o timeout do broker não
+        cobriria o ioctl): a leitura sai do loop e o loop passa a consumir só
+        cache. Três estados:
+
+        - HIT — `(True, bytes)` na hora, custo zero;
+        - MISS — agenda a leitura no executor DEDICADO do broker
+          (`broker_call_nonblocking`, 1 worker FIFO: nunca o pool 'hefesto-hid'
+          do `read_state` que o HANG-01 baniu) e devolve `(False, None)`;
+        - resolvido-sem-bytes / prazo estourado — `(True, None)` (canônico).
+
+        Por que ADIAR em vez de nascer com o canônico no primeiro miss: o 0x05
+        é carimbado no blueprint na CRIAÇÃO do uhid e não tem como ser
+        retrofitado depois; promover no miss trocaria o congelamento do loop
+        por gyro permanentemente calibrado com a unidade errada (drift na mira
+        — o que o GYRO-01 existe para curar). O adiamento custa um tick,
+        `_promote_pending` já roda a cada `forward_all`, e o jogador ainda nem
+        aparecia para o jogo. `_CALIB_PRAZO_S` é o teto: passou dele, o vpad
+        nasce canônico — ninguém fica sem controle esperando um rádio mudo.
+
+        Fora do event loop (testes, shutdown síncrono, qualquer caminho que já
+        venha de `_run_blocking`) o `broker_call_nonblocking` executa INLINE:
+        o cache preenche na mesma chamada e o retorno é o `bytes` — o
+        comportamento síncrono de antes, preservado onde ele nunca foi problema.
+        """
+        # Identidade sem MAC ("path:...") e controles fora do backend
+        # pydualsense (externos: 8BitDo/Nintendo) não têm handle por-uniq →
+        # None, fail-safe, sem nem tocar no cache.
+        if identity.startswith("path:"):
+            return True, None
+        cache = calibration_cache(self._daemon)
+        hit = cache.get(identity)
+        if hit is not None:
+            return True, hit
+        if identity in self._calib_sem_leitura:
+            return True, None
+        prazo = self._calib_prazo.get(identity)
+        if prazo is None:
+            self._schedule_calibration(identity)
+            # Fora do loop a linha acima rodou INLINE — reconsulta antes de
+            # mandar adiar (senão o chamador síncrono perderia a leitura que
+            # acabou de pagar).
+            hit = cache.get(identity)
+            if hit is not None or identity in self._calib_sem_leitura:
+                self._calib_prazo.pop(identity, None)
+                return True, hit
+            return False, None
+        if time.monotonic() < prazo:
+            return False, None
+        # Prazo estourado: a leitura ainda pode voltar depois (e o cache a
+        # aproveita num respawn futuro), mas ESTE jogador nasce agora.
+        self._calib_prazo.pop(identity, None)
+        logger.warning("coop_calibracao_prazo_estourado", identity=identity)
+        return True, None
+
+    def _prefetch_calibration(self, identity: str) -> None:
+        """Esquenta o cache do 0x05 de um jogador recém-registrado (R-22).
+
+        Só age no miss frio: já cacheado, já tentado sem sucesso ou já agendado
+        não fazem nada. Não consome o prazo nem loga o estouro — isso é
+        decisão da promoção, não do spawn.
         """
         if identity.startswith("path:"):
-            return None
+            return
+        if identity in self._calib_sem_leitura or identity in self._calib_prazo:
+            return
+        if calibration_cache(self._daemon).get(identity) is not None:
+            return
+        self._schedule_calibration(identity)
+
+    def _schedule_calibration(self, identity: str) -> None:
+        """Agenda (fora do event loop) a leitura do 0x05 deste MAC — R-22.
+
+        Idempotente por identidade enquanto o prazo estiver armado. O
+        `broker_call_nonblocking` é o mesmo despachante que o `hide`/`restore`
+        do co-op já usam: no event loop agenda no executor dedicado do broker e
+        retorna na hora; fora dele executa inline.
+        """
+        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+            broker_call_nonblocking,
+        )
+
+        self._calib_prazo[identity] = time.monotonic() + _CALIB_PRAZO_S
+        broker_call_nonblocking(self._daemon, lambda: self._fill_calibration(identity))
+
+    def _fill_calibration(self, identity: str) -> None:
+        """Lê o 0x05 e preenche o cache. Roda NA THREAD DO EXECUTOR (R-22).
+
+        Publicação segura sem lock: `dict.__setitem__` e `set.add` são atômicos
+        sob o GIL e o leitor (`_calibration_pronta`, no event loop) só faz `get`/
+        `in` — nunca há estado meio-escrito para ele enxergar. O `read_calibration`
+        do backend já serializa com o report_thread pelo `_io_lock` dele.
+        """
+        data: Any = None
         fn = getattr(self._daemon.controller, "read_calibration", None)
-        if not callable(fn):
-            return None
-        try:
-            data = fn(identity)
-        except Exception as exc:
-            logger.warning(
-                "coop_calibration_read_failed", identity=identity, err=str(exc)
-            )
-            return None
-        return data if isinstance(data, bytes) else None
+        if callable(fn):
+            try:
+                data = fn(identity)
+            except Exception as exc:
+                logger.warning(
+                    "coop_calibration_read_failed", identity=identity, err=str(exc)
+                )
+                data = None
+        if isinstance(data, bytes) and data:
+            calibration_cache(self._daemon)[identity] = data
+        else:
+            self._calib_sem_leitura.add(identity)
 
     def _start_player_motion_reader(self, player: _SecondaryPlayer) -> None:
         """Espelho de motion por jogador (GYRO-01 co-op): hidraw dele → vpad dele.
@@ -718,6 +901,12 @@ class CoopManager:
         player = self._players.pop(identity, None)
         if player is None:
             return
+        # R-22: o jogador está saindo — limpa o prazo e a marca de "leitura sem
+        # bytes" desta identidade. Um replug/respawn merece tentativa nova (a
+        # falha típica é transitória: BT ocioso, broker reiniciando); o cache
+        # POSITIVO fica, porque o 0x05 é imutável por unidade.
+        self._calib_prazo.pop(identity, None)
+        self._calib_sem_leitura.discard(identity)
         # BROKER-01: restore do físico ANTES de soltar grab/reader/vpad — o
         # jogador está saindo e o nó dele não pode ficar 0600 sem dono.
         self._broker_restore_player(identity)
@@ -748,25 +937,24 @@ class CoopManager:
     def _apply_coop_player_leds(self) -> None:
         """Acende em cada controle o padrão canônico do SEU jogador.
 
-        Rota sysfs do kernel (`sysfs_leds`, a mesma da lightbar BT): escreve
-        nos nós `*:white:player-N` do controle certo, casado por MAC — o
-        backend não tem escrita por-controle de player-LED (`set_player_leds`
-        é broadcast) e fica intocado. Requer a regra udev
-        `77-dualsense-leds.rules` (a mesma que a lightbar sysfs já usa); sem
-        nó/permissão (ex.: BT sem driver novo), loga warning e segue —
-        best-effort, o co-op continua funcional.
+        R-13 item 1 (auditoria 23/07) — ESCRITOR ÚNICO. Até aqui o co-op
+        escrevia sysfs CRU (`*:white:player-N` casado por MAC), fora do estado
+        desejado do backend. O `reassert_resolved_outputs` roda em TODO
+        `connect()` (a cada ≤30 s) e repintava o padrão do PERFIL por cima —
+        um repintava o outro, num pisca-pisca sem fim que é metade da queixa
+        dos números duplicados. Agora o co-op PUBLICA seu padrão como camada
+        por-uniq no backend (`set_coop_outputs`, acima da automática e da
+        usuária) e o mesmo reassert passa a reafirmar o valor DO CO-OP.
 
-        Limitação documentada: um broadcast do perfil/GUI DURANTE o co-op
-        (trocar perfil, "Aplicar LEDs") sobrescreve os padrões até o próximo
-        ciclo cheio de sync (ativação/hotplug/força).
+        A publicação depende do R-20: com a substituição antiga do mapa
+        (`reset_output_overrides`), a camada do co-op seria apagada na
+        ativação de perfil seguinte — os dois são um par.
+
+        Backend sem a API de camadas (fakes/legado) cai no caminho sysfs cru
+        histórico. Ele requer a regra udev `77-dualsense-leds.rules` (a mesma
+        da lightbar sysfs); sem nó/permissão loga warning e segue — o co-op
+        continua funcional.
         """
-        from hefesto_dualsense4unix.core import sysfs_leds
-
-        try:
-            nodes = sysfs_leds.discover()
-        except Exception as exc:
-            logger.warning("coop_player_led_discover_falhou", err=str(exc))
-            return
         # R-13 item 4 (auditoria 23/07): SEM SECUNDÁRIO NÃO HÁ CO-OP.
         #
         # `should_be_active()` liga o co-op pela preferência persistida
@@ -785,23 +973,76 @@ class CoopManager:
         # de link.
         if not self._players:
             logger.debug("coop_sem_secundario_nao_escreve_player_led")
+            # Se havia camada publicada (o último secundário acabou de sair),
+            # revoga: o revert por-jogador do teardown já cuidou dos LEDs, mas
+            # a camada no backend não pode ficar pendurada sem jogador.
+            if self._camada_coop:
+                self._publicar_camada_coop({})
             return
         targets: list[tuple[str, int]] = []
         primary = self._primary_identity()
         if primary is not None:
             targets.append((primary, 1))
         targets.extend((mac, p.player_index) for mac, p in self._players.items())
+        padroes: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
         for mac, index in targets:
             if mac.startswith("path:"):
-                # Sem MAC não há como casar o nó sysfs — controle segue com o
-                # padrão broadcast (não deveria acontecer com DualSense real).
+                # Sem MAC não há como casar o controle — segue com o padrão
+                # broadcast (não deveria acontecer com DualSense real).
                 logger.debug("coop_player_led_sem_mac", identity=mac, player=index)
                 continue
+            padroes[mac] = player_led_pattern(index)
+        if self._publicar_camada_coop(padroes):
+            return
+        # Caminho sysfs cru (backend sem camadas): comportamento histórico.
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        try:
+            nodes = sysfs_leds.discover()
+        except Exception as exc:
+            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+            return
+        for mac, bits in padroes.items():
             node = nodes.get(mac)
-            if node is None or not node.set_players(player_led_pattern(index)):
-                logger.warning("coop_player_led_indisponivel", identity=mac, player=index)
+            if node is None or not node.set_players(bits):
+                logger.warning("coop_player_led_indisponivel", identity=mac)
                 continue
             self._leds_overridden = True
+
+    def _publicar_camada_coop(
+        self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]]
+    ) -> bool:
+        """Publica (ou revoga, com `{}`) a camada do co-op no backend (R-13).
+
+        Devolve True quando o backend tem a API de camadas e a publicação
+        rodou — é o sinal para `_apply_coop_player_leds` NÃO cair no sysfs
+        cru. False = backend legado/fake (sem `set_coop_outputs`): o chamador
+        segue pelo caminho histórico. Idempotente: republicar o mesmo mapa é
+        um no-op barato do lado do backend (compara antes de escrever).
+        """
+        ctrl = getattr(self._daemon, "controller", None)
+        publicar = getattr(ctrl, "set_coop_outputs", None)
+        if not callable(publicar):
+            return False
+        if padroes == self._camada_coop:
+            return True
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        try:
+            publicar(
+                {mac: OutputSpec(player_leds=bits) for mac, bits in padroes.items()}
+                or None
+            )
+        except Exception as exc:
+            logger.warning("coop_publicar_camada_falhou", err=str(exc))
+            return True
+        self._camada_coop = dict(padroes)
+        # A camada tem dono próprio no backend; o revert por-uniq do teardown
+        # é desnecessário para os controles cobertos por ela, mas manter o
+        # flag preserva o gate do sync (`disable()` quando não deveria estar
+        # ativo) e o caminho legado.
+        self._leds_overridden = bool(padroes)
+        return True
 
     def _profile_player_leds(self) -> tuple[bool, bool, bool, bool, bool] | None:
         """Último padrão de player-LED aplicado pelo perfil/GUI (broadcast).
@@ -870,7 +1111,15 @@ class CoopManager:
         onde não) — nunca o global cego por cima do override. Em Modo
         Nativo (output_mute) não escreve: o jogo é dono do LED e o unmute do
         backend re-aplica o resolvido (D12).
+
+        R-13: com a API de camadas, este revert por-controle é DESNECESSÁRIO
+        — o jogador sai da camada no próximo `_apply_coop_player_leds` (fim
+        do mesmo sync) e o `set_coop_outputs` reescreve o resolvido dele sem
+        o co-op. Curto-circuito para não escrever sysfs cru duas vezes.
         """
+        if callable(getattr(getattr(self._daemon, "controller", None),
+                            "set_coop_outputs", None)):
+            return
         if not self._leds_overridden or mac.startswith("path:"):
             return
         if self._backend_output_muted():
@@ -920,6 +1169,13 @@ class CoopManager:
         ctrl = getattr(self._daemon, "controller", None)
         if ctrl is None:
             logger.debug("coop_player_led_revert_sem_padrao")
+            return
+        # R-13: com camadas, reverter = REVOGAR a camada. O backend recalcula
+        # o resolvido de cada controle afetado SEM o co-op (override por-uniq
+        # onde há, default onde não — a mesma promessa do PERFIL-06) e escreve
+        # sozinho. Não passa pelo broadcast + correção por-uniq abaixo, que
+        # existe só para backends sem estado por-controle.
+        if self._camada_coop and self._publicar_camada_coop({}):
             return
         bits = self._profile_player_leds()
         if not callable(getattr(ctrl, "resolved_player_leds_for", None)):
@@ -1092,6 +1348,9 @@ def get_coop_manager(daemon: DaemonProtocol) -> CoopManager:
 
 __all__ = [
     "CoopManager",
+    # R-22: público de propósito — o caminho do P1 (`gamepad`) compartilha o
+    # MESMO cache por MAC, para que trocar de primário não repague a leitura.
+    "calibration_cache",
     "get_coop_manager",
     "player_led_pattern",
     "resolve_player_numbers",

@@ -53,9 +53,12 @@ class ProfileManager:
     keyboard_device_provider: Callable[[], object | None] | None = None
     # FEAT-POINT-AND-CLICK-01: applier da seção `mouse` do perfil. Os callsites
     # injetam `daemon.set_mouse_emulation` (retorna bool — por isso o retorno é
-    # `object`, não `None`). Assinatura: (enabled, speed, scroll_speed).
+    # `object`, não `None`). Assinatura: (enabled, speed, scroll_speed) mais o
+    # `origin=` por keyword (R-03: o applier precisa saber se a ativação é gesto
+    # manual dela — que fura o lock — ou automática). `Callable[..., object]`
+    # pelo mesmo motivo dos outros: a assinatura tem keyword-only.
     # None = seção mouse do perfil é ignorada (CLI/testes sem daemon).
-    mouse_applier: Callable[[bool, int, int], object] | None = None
+    mouse_applier: Callable[..., object] | None = None
     # FEAT-POINT-AND-CLICK-01: applier da supressão de emulação (modo-jogo)
     # por perfil. Os callsites injetam `daemon.apply_profile_suppression`, que
     # concentra a política (origem perfil vs. toggle manual + lock de 30s).
@@ -73,9 +76,10 @@ class ProfileManager:
     # (seção `rumble.policy`/`rumble.custom_mult`). Os callsites injetam
     # `daemon.apply_profile_rumble_policy` — recebe (policy, custom_mult) a
     # cada ativação, inclusive (None, None) para perfil sem opinião (reverte
-    # só política aplicada por OUTRO perfil; política manual fica). None =
-    # seção ignorada (CLI/testes sem daemon).
-    rumble_policy_applier: Callable[[str | None, float | None], None] | None = None
+    # só política aplicada por OUTRO perfil; política manual fica), mais o
+    # `origin=` por keyword (R-03). None = seção ignorada (CLI/testes sem
+    # daemon).
+    rumble_policy_applier: Callable[..., object] | None = None
     # SPRINT-GAME-RUMBLE-01: applier da seção `rumble.passthrough` do perfil.
     # Os callsites injetam `daemon.apply_profile_rumble_passthrough` — recebe o
     # bool a cada ativação. passthrough=True (default de TODO perfil) solta o
@@ -123,7 +127,13 @@ class ProfileManager:
         except ValueError:
             return active == name
 
-    def activate(self, name: str, *, origin: str = "manual") -> Profile:
+    def activate(
+        self,
+        name: str,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> Profile:
         """Carrega, aplica triggers + LEDs + teclado + emulação e marca como ativo.
 
         PERFIL-03 (autoload): `origin` separa o GESTO MANUAL da usuária das
@@ -144,11 +154,21 @@ class ProfileManager:
         silencia um gesto real da usuária. NÃO confundir com o `origin`
         do latch de `start_gamepad_emulation` ("manual"/"profile") — são
         contratos distintos.
+
+        R-03 (auditoria 23/07): o `origin` também SEGUE até os appliers de
+        emulação — é lá que ele decide se o lock de gesto manual (30 s) é
+        furado (ativação manual dela) ou vira pendência de retry (autoswitch).
+        `relatorio`, quando passado, é preenchido com `seção → estado`
+        (`"aplicado"`, `"adiado_lock_manual"`, `"ignorado_*"`, `"falhou"`) para
+        quem precisa contar a verdade — hoje o `profile.switch` do IPC. É um
+        out-param em vez de estado no manager de propósito: sem ele, o
+        resultado de uma ativação disparada pela hotkey (thread do executor)
+        poderia ser lido como se fosse o de outra.
         """
         profile = load_profile(name)
-        self.apply(profile)
+        self.apply(profile, origin=origin)
         self.apply_keyboard(profile)
-        self.apply_emulation(profile)
+        self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
         self.store.bump("profile.activated")
         logger.info(
@@ -171,7 +191,7 @@ class ProfileManager:
             pass
         return profile
 
-    def apply(self, profile: Profile) -> None:
+    def apply(self, profile: Profile, *, origin: str = "auto") -> None:
         """Aplica triggers e LEDs do perfil em TODOS os controles (sem marcar ativo).
 
         PERFIL-01 (4P-01): a seção global vai por `apply_output_defaults` —
@@ -182,14 +202,33 @@ class ProfileManager:
         O brilho passa pelo MESMO caminho de escala do histórico
         (`LedSettings.apply_brightness`, paridade com `apply_led_settings`).
 
-        Na sequência, a ativação SUBSTITUI o mapa de overrides por-controle
-        (`reset_output_overrides`): nada do perfil anterior ressuscita num
-        replug sob o perfil novo. PERFIL-04: as entradas de
-        `profile.controllers` (mapa por-MAC no JSON) entram no reset e cada
-        uma é aplicada via `apply_output_for` — controle conectado recebe na
-        hora, desconectado fica REGISTRADO no mapa em memória do backend (o
-        hotplug o aplica quando ele chegar; é o teste de fogo do PERFIL-05c).
-        O brilho do override escala pelo MESMO caminho da seção global.
+        Na sequência, a ativação republica a CAMADA DO PERFIL no mapa de
+        overrides por-controle (`reset_profile_overrides`): nada do perfil
+        anterior ressuscita num replug sob o perfil novo. PERFIL-04: as
+        entradas de `profile.controllers` (mapa por-MAC no JSON) entram na
+        camada — controle conectado recebe na hora, desconectado fica
+        REGISTRADO no mapa em memória do backend (o hotplug o aplica quando
+        ele chegar; é o teste de fogo do PERFIL-05c). O brilho do override
+        escala pelo MESMO caminho da seção global.
+
+        R-20 (auditoria 23/07) — por que CAMADA e não substituição do mapa:
+        `reset_output_overrides` trocava o mapa por-uniq INTEIRO, e o
+        autoswitch ativa perfil a CADA troca de janela. Resultado medido no
+        achado C5: o ajuste por-controle que ela acabava de fazer na GUI era
+        apagado segundos depois — "as configs que eu faço não impactam
+        controle a controle". Agora a ativação substitui só o que é do perfil
+        e cede o campo que a usuária ajustou na mão.
+
+        O `origin` é o botão de soltar dessa precedência: ativação MANUAL
+        (ela escolhendo o perfil na GUI/CLI) é gesto mais novo que o slider
+        que ela arrastou antes, então limpa a camada da usuária; ativação
+        automática (autoswitch, restore de boot) nunca limpa — é dela que a
+        camada precisa se defender. Default `"auto"` de propósito: caller
+        novo que esqueça o parâmetro PRESERVA o ajuste dela (o erro seguro).
+
+        Backends sem a API de camadas (FakeController e dublês de teste) caem
+        no caminho histórico (`reset_output_overrides` + `apply_output_for`),
+        que continua correto para quem não tem estado por-controle.
 
         COR-03: a ativação também configura o estado do AUTOMÁTICO (cores por
         controle) no registro de identidade — `enabled` vem de
@@ -204,23 +243,74 @@ class ProfileManager:
         (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01): jamais colateral de
         profile switch.
         """
+        # PERFIL-MANUAL-VENCE-01 (pedido da mantenedora, 23/07: "o sackboy
+        # deveria ser trava manual também").
+        #
+        # Até aqui, o perfil do JOGO limpava as três categorias de override
+        # manual e reescrevia tudo. Isso está certo para o MODO (ela precisa do
+        # gamepad+co-op para jogar Sackboy a 4) e ERRADO para a aparência: a
+        # cor/gatilho/rumble que ela acabou de ajustar sumia ao abrir o jogo —
+        # a queixa "a config que eu deixo nunca é respeitada".
+        #
+        # Os eixos são independentes e passam a ser tratados assim: o `mode`
+        # continua aplicando sempre (é o que faz o jogo funcionar); as seções
+        # que ela travou NA MÃO sobrevivem à ativação.
+        #
+        # Categoria travada = ela mexeu e o daemon carimbou
+        # (`mark_manual_trigger_active`). Trocar de perfil pela GUI, o
+        # `trigger.reset` ou o botão "Desligar" limpam o carimbo — então isso
+        # NÃO é um estado do qual ela não consiga sair.
+        # R-20: gesto MANUAL de trocar de perfil solta a camada por-controle
+        # da usuária (ver a docstring). É o único caminho que a solta, e é o
+        # que impede a precedência "manual vence perfil" de virar estado preso.
+        if origin == "manual":
+            soltar = getattr(self.controller, "clear_user_output_overrides", None)
+            if callable(soltar):
+                soltar()
+
+        travadas: frozenset[str] = frozenset()
+        store = getattr(self, "store", None)
+        if store is not None:
+            travadas = frozenset(getattr(store, "manual_override_categories", ()) or ())
+        if travadas:
+            logger.info(
+                "profile_apply_respeita_override_manual",
+                profile=profile.name,
+                categorias=sorted(travadas),
+            )
+
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
         effective = settings.apply_brightness(settings.brightness_level)
         self._configure_auto_player_colors(profile)
+        # `None` num campo do OutputSpec = "não mexe nele" (o backend resolve
+        # por camadas). É assim que a seção travada atravessa a ativação.
         self.controller.apply_output_defaults(
             OutputSpec(
-                trigger_left=left,
-                trigger_right=right,
-                led=effective.lightbar,
-                player_leds=settings.player_leds,
+                trigger_left=None if "trigger" in travadas else left,
+                trigger_right=None if "trigger" in travadas else right,
+                led=None if "led" in travadas else effective.lightbar,
+                player_leds=None if "led" in travadas else settings.player_leds,
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
-        self.controller.reset_output_overrides(overrides or None)
-        for uniq, spec in overrides.items():
-            self.controller.apply_output_for(uniq, spec)
+        # R-20 item 2: o brilho por-controle vira ESCALA (aplicada depois do
+        # merge), nunca cor materializada — publicado ANTES da camada para o
+        # reassert do fim já convergir com ele.
+        escalas = _controllers_to_led_scales(profile.controllers, profile.leds)
+        escalar = getattr(self.controller, "set_led_scales", None)
+        if callable(escalar):
+            escalar(escalas or None)
+        publicar = getattr(self.controller, "reset_profile_overrides", None)
+        if callable(publicar):
+            publicar(overrides or None)
+        else:
+            # Caminho histórico (backend sem camadas): substitui o mapa e
+            # escreve um a um. Correto para quem não tem estado por-controle.
+            self.controller.reset_output_overrides(overrides or None)
+            for uniq, spec in overrides.items():
+                self.controller.apply_output_for(uniq, spec)
         # COR-03 (fix de integração, 2026-07-17): o broadcast acima escreve o
         # GLOBAL nos conectados — sem este reassert, a paleta automática só
         # apareceria no próximo replug (boot com controles presentes ficava
@@ -281,7 +371,13 @@ class ProfileManager:
                 err=str(exc),
             )
 
-    def apply_emulation(self, profile: Profile) -> None:
+    def apply_emulation(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> dict[str, str]:
         """Aplica a seção `mouse` e a supressão de modo-jogo do perfil.
 
         FEAT-POINT-AND-CLICK-01. Best-effort (falha loga warning, não aborta a
@@ -295,15 +391,30 @@ class ProfileManager:
           trocar para um perfil sem o campo LIBERE a supressão ligada por outro
           perfil). A política de "não reverter toggle manual" mora no applier
           (`Daemon.apply_profile_suppression`).
+
+        R-03 (auditoria 23/07): `origin` (a origem da ATIVAÇÃO — "manual",
+        "autoswitch", "system") vai junto a cada applier, e o retorno de cada um
+        é registrado em `relatorio` como `seção → estado`. Sem esse relatório, a
+        seção que o lock de gesto manual descartava sumia sem rastro: a ativação
+        era commitada, o IPC respondia sucesso e a GUI mostrava o perfil ativo
+        com a máscara errada. Devolve o relatório (o mesmo dict, quando passado).
+
+        Applier de dublê que devolve `None` conta como "aplicado" — só o daemon
+        real sabe adiar, e um dublê nunca deve fabricar um adiamento.
         """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
         if self.mouse_applier is not None and profile.mouse is not None:
             try:
-                self.mouse_applier(
-                    profile.mouse.enabled,
-                    profile.mouse.speed,
-                    profile.mouse.scroll_speed,
+                resultado["mouse"] = _estado_da_secao(
+                    self.mouse_applier(
+                        profile.mouse.enabled,
+                        profile.mouse.speed,
+                        profile.mouse.scroll_speed,
+                        origin=origin,
+                    )
                 )
             except Exception as exc:
+                resultado["mouse"] = "falhou"
                 logger.warning(
                     "profile_mouse_apply_failed",
                     profile=profile.name,
@@ -314,10 +425,15 @@ class ProfileManager:
                 # R-02: o applier precisa saber SE o perfil tem opinião — um
                 # catch-all liberando a supressão de desktop dentro do jogo é
                 # ausência de regra sendo executada como ordem.
-                self.suppression_applier(
-                    profile.suppress_desktop_emulation, profile=profile
+                resultado["suppression"] = _estado_da_secao(
+                    self.suppression_applier(
+                        profile.suppress_desktop_emulation,
+                        profile=profile,
+                        origin=origin,
+                    )
                 )
             except Exception as exc:
+                resultado["suppression"] = "falhou"
                 logger.warning(
                     "profile_suppression_apply_failed",
                     profile=profile.name,
@@ -334,8 +450,15 @@ class ProfileManager:
                 # não distingue "o perfil do jogo mandou voltar ao desktop" de
                 # "caiu num catch-all porque este jogo não tem perfil" — e a
                 # segunda hipótese desligava o vpad no meio da partida.
-                self.mode_applier(getattr(profile, "mode", None), profile=profile)
+                resultado["mode"] = _estado_da_secao(
+                    self.mode_applier(
+                        getattr(profile, "mode", None),
+                        profile=profile,
+                        origin=origin,
+                    )
+                )
             except Exception as exc:
+                resultado["mode"] = "falhou"
                 logger.warning(
                     "profile_mode_apply_failed",
                     profile=profile.name,
@@ -349,11 +472,15 @@ class ProfileManager:
         if self.rumble_policy_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
-                self.rumble_policy_applier(
-                    getattr(rumble_cfg, "policy", None),
-                    getattr(rumble_cfg, "custom_mult", None),
+                resultado["rumble_policy"] = _estado_da_secao(
+                    self.rumble_policy_applier(
+                        getattr(rumble_cfg, "policy", None),
+                        getattr(rumble_cfg, "custom_mult", None),
+                        origin=origin,
+                    )
                 )
             except Exception as exc:
+                resultado["rumble_policy"] = "falhou"
                 logger.warning(
                     "profile_rumble_policy_apply_failed",
                     profile=profile.name,
@@ -374,6 +501,7 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
+        return resultado
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.
@@ -403,6 +531,18 @@ class ProfileManager:
             return None
         candidates.sort(key=lambda p: (not p.e_catch_all, p.priority), reverse=True)
         return candidates[0]
+
+
+def _estado_da_secao(valor: object) -> str:
+    """Normaliza o retorno de um applier de perfil (R-03).
+
+    O daemon real devolve o vocabulário de `daemon.lifecycle`
+    (`"aplicado"`, `"adiado_lock_manual"`, `"ignorado_*"`). Dublês de teste,
+    a CLI e appliers de terceiros devolvem `None`/bool — e nesse caso a leitura
+    honesta é "aplicado": quem não sabe adiar não pode fabricar um adiamento no
+    relatório que a GUI vai mostrar.
+    """
+    return valor if isinstance(valor, str) else "aplicado"
 
 
 def resolve_key_bindings(
@@ -453,12 +593,19 @@ def _controllers_to_specs(
     a resolução-por-objeto refutada pelo sprint doc, um nível abaixo.
 
     Cor e brilho formam UM campo no backend (o RGB pré-escalado); quando o
-    override escreve só um dos dois, o outro é resolvido de ``global_leds``
-    (a seção global do perfil) AQUI na borda. O brilho escala o RGB pelo
-    MESMO caminho da seção global (`LedSettings.apply_brightness`): o que
-    fica registrado no mapa do backend — e reaplicado no hotplug — é a cor
-    JÁ escalada, em paridade com o broadcast. Entradas sem nenhum campo
-    escrito são puladas.
+    override escreve a COR, o brilho é resolvido de ``global_leds`` (a seção
+    global do perfil) AQUI na borda e escala o RGB pelo MESMO caminho da
+    seção global (`LedSettings.apply_brightness`): o que fica registrado no
+    mapa do backend — e reaplicado no hotplug — é a cor JÁ escalada, em
+    paridade com o broadcast. Entradas sem nenhum campo escrito são puladas.
+
+    R-20 item 2 (auditoria 23/07): override que escreve SÓ o brilho deixou
+    de virar cor. Antes ele resolvia `lightbar` do global só para poder
+    escalar — e, como o override por-uniq vence a camada AUTOMÁTICA, ajustar
+    o brilho de um controle MATAVA a cor do slot dele (o achado
+    `brilho-por-controle-materializa-cor-global`). Esse caso sai daqui e vai
+    para `_controllers_to_led_scales`, que registra um FATOR aplicado depois
+    do merge, sobre a cor resolvida — automática inclusive.
     """
     out: dict[str, OutputSpec] = {}
     for uniq, cfg in (controllers or {}).items():
@@ -478,7 +625,7 @@ def _controllers_to_specs(
         player_leds: tuple[bool, bool, bool, bool, bool] | None = None
         if cfg.leds is not None:
             campos = cfg.leds.model_fields_set
-            if "lightbar" in campos or "lightbar_brightness" in campos:
+            if "lightbar" in campos or _brilho_materializa_cor(cfg, global_leds):
                 rgb = (
                     cfg.leds.lightbar
                     if "lightbar" in campos or global_leds is None
@@ -511,6 +658,60 @@ def _controllers_to_specs(
     return out
 
 
+def _brilho_materializa_cor(
+    cfg: ControllerOverrides, global_leds: LedsConfig | None
+) -> bool:
+    """True quando o brilho por-controle ainda precisa virar cor (R-20 item 2).
+
+    Só no caso degenerado: a escala relativa é `brilho_do_controle /
+    brilho_global`, e com brilho global 0 (ou sem seção global para comparar)
+    a cor resolvida JÁ é preta — não há o que escalar de volta. Aí materializar
+    é a única forma honesta de honrar o pedido dela, e o custo (perder a cor
+    automática daquele controle) é o comportamento antigo, restrito a um canto
+    que ninguém alcança sem zerar o brilho do perfil inteiro.
+    """
+    if cfg.leds is None or "lightbar_brightness" not in cfg.leds.model_fields_set:
+        return False
+    return global_leds is None or float(global_leds.lightbar_brightness) <= 0.0
+
+
+def _controllers_to_led_scales(
+    controllers: dict[str, ControllerOverrides] | None,
+    global_leds: LedsConfig | None = None,
+) -> dict[str, float]:
+    """Escala de brilho POR CONTROLE do perfil (R-20 item 2).
+
+    Devolve `{uniq: fator}` para os overrides que escreveram SÓ
+    `lightbar_brightness` (sem `lightbar`). O fator é RELATIVO ao brilho
+    global — `brilho_do_controle / brilho_global` — porque a cor que chega ao
+    merge (broadcast do perfil ou paleta automática do slot) já vem escalada
+    pelo global; multiplicar de novo pelo absoluto escureceria duas vezes.
+
+    Override que escreve a COR (com ou sem brilho) não entra: ali o brilho já
+    foi aplicado na borda, em paridade com o broadcast. Fator 1.0 também não
+    entra — é "sem opinião", e uma entrada inócua no mapa só custaria uma
+    cópia de `_DesiredOutput` a cada resolução.
+    """
+    out: dict[str, float] = {}
+    if global_leds is None:
+        return out
+    base = float(global_leds.lightbar_brightness)
+    if base <= 0.0:
+        # Degenerado: `_brilho_materializa_cor` cobre esse caso na outra ponta.
+        return out
+    for uniq, cfg in (controllers or {}).items():
+        if cfg.leds is None:
+            continue
+        campos = cfg.leds.model_fields_set
+        if "lightbar" in campos or "lightbar_brightness" not in campos:
+            continue
+        fator = float(cfg.leds.lightbar_brightness) / base
+        if fator == 1.0:
+            continue
+        out[uniq] = fator
+    return out
+
+
 def _to_led_settings(leds: LedsConfig) -> LedSettings:
     """Converte `LedsConfig` (schema de perfil) em `LedSettings` (camada de hardware).
 
@@ -533,7 +734,9 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
 
 __all__ = [
     "ProfileManager",
+    "_controllers_to_led_scales",
     "_controllers_to_specs",
+    "_estado_da_secao",
     "_to_key_bindings",
     "_to_led_settings",
     "resolve_key_bindings",

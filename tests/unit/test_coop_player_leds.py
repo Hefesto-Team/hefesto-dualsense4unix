@@ -292,9 +292,19 @@ def test_jogador_desconectado_tem_o_por_uniq_dele_restaurado(
 
     assert MAC2 not in mgr._players
     assert nodes[MAC2].patterns[-1] == OVERRIDE_BITS
-    # O primário continua jogador 1 (co-op segue ativo com 1 secundário a
-    # menos) — o LED dele não regride ao padrão do perfil.
-    assert nodes[MAC1].patterns[-1] == player_led_pattern(1)
+    # R-20/R-13 item 4 (auditoria 23/07): CONTRATO MUDADO DE PROPÓSITO.
+    #
+    # Antes, quando o último secundário saía, o primário ficava PRESO no
+    # padrão player-1 (o `if not self._players: return` só parava de escrever,
+    # sem reverter). O plano nomeia isso como bug ("SEM SECUNDÁRIO NÃO HÁ
+    # CO-OP... deixa o primário preso em P1"): um único DualSense com o Pro
+    # Nintendo no slot 1 do registry acendia DOIS "player 1".
+    #
+    # Com a camada de saída (R-20), esvaziar `_players` REVOGA a camada do
+    # co-op inteira, e o backend reescreve cada controle para o resolvido SEM
+    # o co-op. O primário, sem override, volta ao DEFAULT do perfil — não fica
+    # mais fingindo ser jogador 1 sozinho.
+    assert nodes[MAC1].patterns[-1] == DEFAULT_BITS
 
 
 # --- (d) regressão: sem override nenhum, o revert broadcast permanece --------

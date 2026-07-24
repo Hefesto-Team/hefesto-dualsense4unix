@@ -171,6 +171,74 @@ class DaemonConfig:
 
 
 # ---------------------------------------------------------------------------
+# R-03 — resultado de cada seção de perfil e pendência de modo
+# ---------------------------------------------------------------------------
+
+#: R-03 (auditoria 23/07): vocabulário ÚNICO devolvido pelos appliers de perfil
+#: (`apply_profile_mouse`, `apply_profile_suppression`, `apply_profile_mode`,
+#: `apply_profile_rumble_policy`). Até aqui todos devolviam `None` e engoliam a
+#: seção em silêncio quando o lock de gesto manual estava ativo — a ativação era
+#: commitada, o IPC respondia sucesso e NADA reaplicava depois. O retorno é o
+#: canal por onde `ProfileManager.activate` monta o relatório e o
+#: `profile.switch` conta a verdade para a GUI.
+#:
+#:   - ``"aplicado"``            — a seção foi honrada (inclusive o no-op
+#:                                 idempotente: o estado pedido já valia);
+#:   - ``"adiado_lock_manual"``  — o lock de gesto manual (30 s) barrou AGORA;
+#:                                 só a seção `mode` agenda pendência de retry;
+#:   - ``"ignorado_catch_all"``  — R-02: catch-all não tem autoridade para
+#:                                 reverter (ausência de regra ≠ ordem);
+#:   - ``"ignorado_janela_de_jogo"`` — R-02: reverter modo/supressão com jogo em
+#:                                 foco é absurdo, seja qual for o perfil;
+#:   - ``"falhou"``              — o applier levantou (o manager carimba).
+APLICADO = "aplicado"
+ADIADO_LOCK_MANUAL = "adiado_lock_manual"
+IGNORADO_CATCH_ALL = "ignorado_catch_all"
+IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
+FALHOU = "falhou"
+
+
+@dataclass
+class ModoAdiado:
+    """Pendência ÚNICA da seção `mode` adiada pelo lock de gesto manual (R-03).
+
+    Sempre SOBRESCRITA, nunca enfileirada: se dois perfis forem ativados dentro
+    da mesma janela de lock, quem vale é o último — enfileirar aplicaria um modo
+    que já não corresponde ao perfil ativo.
+
+    A variante "não gravar `_current_profile` no autoswitch para ele tentar de
+    novo" foi REJEITADA na consolidação da auditoria: com o poll de 2 Hz ela
+    faria `_activate` rodar ~60x em 30 s, reescrevendo gatilhos/LEDs e
+    `reset_output_overrides` a cada tick — exatamente o flap que o MISC-08
+    removeu. Aqui a ativação é commitada normalmente e só o `mode` fica
+    pendente, drenado UMA vez pelo `_poll_loop`.
+
+    Por que SÓ o `mode` tem pendência (e mouse/supressão/política de rumble
+    apenas REPORTAM o adiamento): `mode` é o eixo que a usuária sente — máscara
+    do vpad e co-op, o que faz o jogo funcionar a 4 — e o único cuja perda dura
+    a sessão inteira. Um retry por eixo multiplicaria os caminhos assíncronos
+    capazes de mexer no estado do controle sem gesto dela; os outros três voltam
+    a ser avaliados na próxima ativação de perfil, que é barata e frequente.
+
+    Campos:
+      - `carimbo_manual` — valor de `_emu_manual_ts` na criação. Se o carimbo
+        MUDAR, houve gesto manual NOVO (mais recente que o perfil) e a pendência
+        é descartada: a última palavra é dela, não do perfil de meia hora atrás.
+      - `nao_antes_de` — `carimbo_manual + MANUAL_PROFILE_LOCK_SEC`; antes disso
+        o lock ainda protege o gesto dela.
+      - `esperando_jogo` — dedupe do log de espera (o dreno roda a ~1 Hz).
+    """
+
+    mode: Any
+    profile: Any
+    profile_name: str | None
+    origin: str
+    carimbo_manual: float
+    nao_antes_de: float
+    esperando_jogo: bool = False
+
+
+# ---------------------------------------------------------------------------
 # Daemon (orquestrador)
 # ---------------------------------------------------------------------------
 
@@ -248,6 +316,10 @@ class Daemon:
     # emulação dentro de MANUAL_PROFILE_LOCK_SEC após um gesto manual — não
     # sequestra um gamepad virtual ligado na mão no meio do jogo.
     _emu_manual_ts: float = field(default=float("-inf"))
+    # R-03 (auditoria 23/07): seção `mode` que o lock acima adiou, aguardando o
+    # dreno do `_poll_loop` (`_drenar_modo_pendente`). UMA só, sempre
+    # sobrescrita — ver `ModoAdiado`. None = nada pendente.
+    _mode_pendente: ModoAdiado | None = None
     # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
     # persiste no dataclass — é restaurado do flag no boot. O poll loop gateia o
     # dispatch por este flag (independente de pause/resume).
@@ -1103,8 +1175,12 @@ class Daemon:
         return new_state
 
     def apply_profile_suppression(
-        self, desired: bool, *, profile: Any | None = None
-    ) -> None:
+        self,
+        desired: bool,
+        *,
+        profile: Any | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
         """Aplica `suppress_desktop_emulation` de um perfil recém-ativado.
 
         FEAT-POINT-AND-CLICK-01. Injetado como `suppression_applier` do
@@ -1129,13 +1205,30 @@ class Daemon:
            (`_suppress_from_profile`). Supressão de origem manual (lock já
            expirado, sem perfil que a adotasse) permanece intocada: quem ligou
            na mão, desliga na mão.
+
+        R-03 (auditoria 23/07): `origin` é a origem da ATIVAÇÃO do perfil
+        (`ProfileManager.activate`), não a do toggle. Com ``origin="manual"``
+        (profile.switch pela GUI/CLI ou PS+D-pad) o item 1 é FURADO e o carimbo
+        é consumido: escolher um perfil na mão é gesto MAIS NOVO que o modo-jogo
+        que ela alternou segundos antes. Retorno: ver o vocabulário em
+        `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`.
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
 
         now = time.monotonic()
-        if now - self._suppress_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+        if origin == "manual":
+            if now - self._suppress_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+                logger.info(
+                    "profile_suppression_lock_furado_por_gesto_manual",
+                    desired=desired,
+                    profile=getattr(profile, "name", None),
+                )
+            # Consome o carimbo: sem isto, a supressão que ESTE perfil vai
+            # ligar/liberar travaria o perfil seguinte por mais 30 s.
+            self._suppress_manual_ts = float("-inf")
+        elif now - self._suppress_manual_ts < MANUAL_PROFILE_LOCK_SEC:
             logger.info(
                 "profile_suppression_skipped_manual_lock",
                 desired=desired,
@@ -1143,7 +1236,7 @@ class Daemon:
                     MANUAL_PROFILE_LOCK_SEC - (now - self._suppress_manual_ts), 1
                 ),
             )
-            return
+            return ADIADO_LOCK_MANUAL
         if desired:
             if not self._emulation_suppressed:
                 self.set_emulation_suppressed(True, origin="profile")
@@ -1160,20 +1253,55 @@ class Daemon:
                     motivo="catch_all_sem_opiniao",
                     profile=getattr(profile, "name", None),
                 )
-                return
+                return IGNORADO_CATCH_ALL
             if self._janela_de_jogo_em_foco():
                 logger.info(
                     "profile_suppression_revert_skipped",
                     motivo="janela_de_jogo_em_foco",
                     profile=getattr(profile, "name", None),
                 )
-                return
+                return IGNORADO_JANELA_DE_JOGO
             self.set_emulation_suppressed(False, origin="profile")
             self._suppress_from_profile = False
+        return APLICADO
+
+    def _furar_lock_de_emulacao(self, secao: str, *, agora: float) -> None:
+        """R-03: consome o carimbo de gesto manual da EMULAÇÃO (`_emu_manual_ts`).
+
+        Chamado pelos appliers quando a ativação veio com ``origin="manual"`` —
+        `profile.switch` (GUI/CLI/applet) ou o ciclo por PS+D-pad. A regra é de
+        ORDEM, não de hierarquia: o lock existe para o perfil não sequestrar o
+        que ela acabou de fazer na mão; quando o gesto mais novo é justamente
+        "ative este perfil", o perfil É a vontade dela e furar o lock é o certo.
+
+        Zerar o carimbo (em vez de só ignorá-lo) é a segunda metade da cura: o
+        perfil que acabou de entrar mexe na máscara/co-op via
+        `set_*(origin="profile")` — que não re-carimba —, mas um carimbo VELHO
+        sobrevivente continuaria bloqueando o PRÓXIMO perfil (o autoswitch ao
+        abrir o jogo, por exemplo) por até 30 s. Um log por ativação: quem furar
+        primeiro zera, os appliers seguintes já veem `-inf`.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        restante = MANUAL_PROFILE_LOCK_SEC - (agora - self._emu_manual_ts)
+        if restante > 0:
+            logger.info(
+                "profile_lock_manual_furado",
+                secao=secao,
+                restante_sec=round(restante, 1),
+            )
+        self._emu_manual_ts = float("-inf")
 
     def apply_profile_mouse(
-        self, enabled: bool, speed: int, scroll_speed: int
-    ) -> None:
+        self,
+        enabled: bool,
+        speed: int,
+        scroll_speed: int,
+        *,
+        origin: str = "autoswitch",
+    ) -> str:
         """Aplica a seção `mouse` de um perfil recém-ativado (BUG-PROFILE-MOUSE-
         KILLS-GAMEPAD-01). Injetado como `mouse_applier` nas rotas de ativação
         (IPC switch, autoswitch, hotkey de ciclo). NÃO é usado no restore do
@@ -1189,14 +1317,21 @@ class Daemon:
            muda; com o mouse já no estado desejado e ligado, atualiza apenas as
            velocidades (evita destruir/recriar o device a cada tick do
            autoswitch e o tear-down repetido do gamepad).
-        3. `origin="profile"` — não re-carimba o lock manual.
+        3. `origin="profile"` — não re-carimba o lock manual. (O `origin` do
+           parâmetro é outro eixo: é a origem da ATIVAÇÃO do perfil — R-03.)
+
+        R-03: ativação com ``origin="manual"`` FURA o item 1 e consome o carimbo
+        (`_furar_lock_de_emulacao`). Retorno: vocabulário `APLICADO`/
+        `ADIADO_LOCK_MANUAL`.
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
 
         now = time.monotonic()
-        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+        if origin == "manual":
+            self._furar_lock_de_emulacao("mouse", agora=now)
+        elif now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
             logger.info(
                 "profile_mouse_skipped_manual_lock",
                 enabled=enabled,
@@ -1204,7 +1339,7 @@ class Daemon:
                     MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
                 ),
             )
-            return
+            return ADIADO_LOCK_MANUAL
         # BUG-PROFILE-MOUSE-IDEMPOTENT-STALE-CONFIG-01: o estado REAL de "ligado"
         # é config E device vivo. No boot, run() seta config=True do flag ANTES do
         # start; se start_mouse_emulation falha (uinput indisponível no boot),
@@ -1215,10 +1350,11 @@ class Daemon:
         if enabled == actual_on:
             if enabled:
                 self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
-            return
+            return APLICADO
         self.set_mouse_emulation(
             enabled, speed, scroll_speed, origin="profile"
         )
+        return APLICADO
 
     def _perfil_tem_opiniao(self, profile: Any | None) -> bool:
         """False quando o perfil é catch-all (`MatchAny` ou criteria vazio).
@@ -1257,7 +1393,13 @@ class Daemon:
         wm_class = getattr(self.store, "window_detect_current_class", None)
         return steam_appid_from_wm_class(str(wm_class or "")) is not None
 
-    def apply_profile_mode(self, mode: Any | None, *, profile: Any | None = None) -> None:
+    def apply_profile_mode(
+        self,
+        mode: Any | None,
+        *,
+        profile: Any | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
         """Aplica a seção `mode` de um perfil recém-ativado (FEAT-PROFILE-MODE-01).
 
         Injetado como `mode_applier` nas rotas de ativação (IPC switch,
@@ -1286,6 +1428,18 @@ class Daemon:
 
         Idempotente por checagem de estado antes de cada setter (autoswitch
         re-ativa o mesmo perfil sem flap).
+
+        R-03 (auditoria 23/07) — o item 1 deixou de ser um buraco negro:
+
+        - ``origin="manual"`` (profile.switch / PS+D-pad) **fura** o lock e
+          consome o carimbo: o gesto mais novo dela é "ative este perfil".
+        - Origem automática (autoswitch/system) **adia**: a ativação segue
+          commitada normalmente — nada de flap a 2 Hz — e a seção fica numa
+          pendência ÚNICA (`ModoAdiado`) que o `_poll_loop` drena UMA vez,
+          quando o lock vencer. Era esta a queixa medida: ela mexia na máscara,
+          abria o Sackboy em menos de 30 s, o `mode` do perfil era pulado em
+          silêncio e a máscara ficava errada a SESSÃO INTEIRA, com a GUI
+          mostrando o perfil ativo como se tudo tivesse valido.
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
@@ -1293,7 +1447,9 @@ class Daemon:
 
         kind = getattr(mode, "kind", None) if mode is not None else None
         now = time.monotonic()
-        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+        if origin == "manual":
+            self._furar_lock_de_emulacao("mode", agora=now)
+        elif now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
             if kind is not None:
                 logger.info(
                     "profile_mode_skipped_manual_lock",
@@ -1302,7 +1458,12 @@ class Daemon:
                         MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
                     ),
                 )
-            return
+            self._agendar_modo_adiado(mode, profile, origin, agora=now)
+            return ADIADO_LOCK_MANUAL
+
+        # Passou do lock: ESTA aplicação é mais nova que qualquer pendência
+        # guardada antes (inclusive a que estamos drenando agora mesmo).
+        self._mode_pendente = None
 
         gamepad_on = (
             self.config.gamepad_emulation_enabled and self._gamepad_device is not None
@@ -1327,7 +1488,7 @@ class Daemon:
                     profile=getattr(profile, "name", None),
                     mode_from_profile=self._mode_from_profile,
                 )
-                return
+                return IGNORADO_CATCH_ALL
             if self._janela_de_jogo_em_foco():
                 logger.info(
                     "profile_mode_revert_skipped",
@@ -1335,7 +1496,7 @@ class Daemon:
                     profile=getattr(profile, "name", None),
                     mode_from_profile=self._mode_from_profile,
                 )
-                return
+                return IGNORADO_JANELA_DE_JOGO
             # Perfil sem opinião: reverte só o que veio de perfil.
             if self._mode_from_profile == "native" and self._native_mode:
                 # restore_stash: devolve o gamepad/co-op que a usuária tinha
@@ -1352,13 +1513,13 @@ class Daemon:
             elif self._mode_from_profile == "gamepad" and gamepad_on:
                 self.set_gamepad_emulation(False, origin="profile")
             self._mode_from_profile = None
-            return
+            return APLICADO
 
         if kind == "native":
             if not self._native_mode:
                 self.set_native_mode(True, origin="profile")
             self._mode_from_profile = "native"
-            return
+            return APLICADO
 
         if kind == "gamepad":
             if self._native_mode:
@@ -1376,7 +1537,7 @@ class Daemon:
             if want_coop != bool(self.config.coop_enabled):
                 self.set_coop_enabled(want_coop, origin="profile")
             self._mode_from_profile = "gamepad"
-            return
+            return APLICADO
 
         # kind == "desktop": declaração explícita — limpa qualquer modo.
         # LEIGO-01: o co-op fica de fora da limpeza pelo mesmo motivo do ramo
@@ -1388,10 +1549,138 @@ class Daemon:
         if gamepad_on:
             self.set_gamepad_emulation(False, origin="profile")
         self._mode_from_profile = None
+        return APLICADO
+
+    def _agendar_modo_adiado(
+        self, mode: Any | None, profile: Any | None, origin: str, *, agora: float
+    ) -> None:
+        """Guarda a pendência ÚNICA de `mode` adiada pelo lock (R-03).
+
+        Sobrescreve sempre: dentro de uma mesma janela de 30 s o autoswitch pode
+        passar por vários perfis (alt-tab), e aplicar os intermediários depois
+        seria pior que não aplicar nada. O nome do perfil vem do OBJETO — neste
+        ponto `store.active_profile` ainda é o perfil ANTERIOR, porque
+        `ProfileManager.activate` só o grava depois de `apply_emulation`.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        anterior = self._mode_pendente
+        pendencia = ModoAdiado(
+            mode=mode,
+            profile=profile,
+            profile_name=getattr(profile, "name", None),
+            origin=origin,
+            carimbo_manual=self._emu_manual_ts,
+            nao_antes_de=self._emu_manual_ts + MANUAL_PROFILE_LOCK_SEC,
+        )
+        self._mode_pendente = pendencia
+        logger.info(
+            "profile_mode_deferred",
+            kind=getattr(mode, "kind", None),
+            profile=pendencia.profile_name,
+            origin=origin,
+            expira_em_sec=round(max(0.0, pendencia.nao_antes_de - agora), 1),
+            substituiu=(anterior.profile_name if anterior is not None else None),
+        )
+
+    def _modo_seria_destrutivo(self, mode: Any | None) -> bool:
+        """True se aplicar `mode` AGORA pararia/recriaria o vpad do P1.
+
+        R-03/R-04: recriar vpad com o jogo rodando invalida os handles que ele
+        já abriu (medido ao vivo — a Steam nunca reabre o hidraw do vpad P1), e
+        é o pior desfecho possível para o dreno da pendência. Por isso o dreno
+        usa o sinal STICKY (`display_authority`) e não a janela crua: para
+        operação destrutiva, fail-safe é NÃO destruir; para reverter modo ao
+        desktop, o sinal certo é a leitura crua (`_janela_de_jogo_em_foco`,
+        R-02, decisão 3 do plano).
+
+        Não é destrutivo: ligar o gamepad do zero, re-aplicar o MESMO flavor
+        (`start_gamepad_emulation` já é no-op por (flavor, backend)) e mexer só
+        no co-op/gatilhos/LEDs.
+        """
+        kind = getattr(mode, "kind", None) if mode is not None else None
+        gamepad_on = (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        )
+        if kind == "gamepad":
+            flavor = getattr(mode, "gamepad_flavor", None)
+            flavor_atual = getattr(self._gamepad_device, "flavor", None)
+            return bool(gamepad_on and flavor is not None and flavor != flavor_atual)
+        # kind None (reversão), "desktop" e "native" derrubam o que estiver de pé.
+        return bool(gamepad_on or self._native_mode)
+
+    def _drenar_modo_pendente(self) -> None:
+        """Aplica — UMA vez — a seção `mode` que o lock manual adiou (R-03).
+
+        Chamado pelo `_poll_loop` a ~1 Hz (uma comparação de float por tick
+        quando não há pendência). Quatro guardas, nesta ordem:
+
+          1. o lock ainda protege o gesto dela → espera;
+          2. o carimbo MUDOU → houve gesto manual novo, mais recente que o
+             perfil: a pendência morre (a última palavra é dela);
+          3. o perfil ativo já não é o que originou a pendência → morre
+             (aplicar modo de perfil obsoleto é o risco declarado do retry);
+          4. o jogo está com a autoridade de exibição e a aplicação seria
+             destrutiva → segura a pendência até a primeira borda em que a
+             autoridade sair de "game" (log 1x, senão sairiam ~1 linha/s).
+        """
+        pendencia = self._mode_pendente
+        if pendencia is None:
+            return
+        agora = time.monotonic()
+        if agora < pendencia.nao_antes_de:
+            return
+        if self._emu_manual_ts != pendencia.carimbo_manual:
+            self._mode_pendente = None
+            logger.info(
+                "profile_mode_pendencia_descartada",
+                motivo="gesto_manual_novo",
+                profile=pendencia.profile_name,
+            )
+            return
+        ativo = self.store.active_profile
+        if pendencia.profile_name is not None and ativo != pendencia.profile_name:
+            self._mode_pendente = None
+            logger.info(
+                "profile_mode_pendencia_descartada",
+                motivo="perfil_ativo_mudou",
+                profile=pendencia.profile_name,
+                ativo=ativo,
+            )
+            return
+        if self.display_authority == "game" and self._modo_seria_destrutivo(
+            pendencia.mode
+        ):
+            if not pendencia.esperando_jogo:
+                pendencia.esperando_jogo = True
+                logger.info(
+                    "profile_mode_pendencia_aguardando_jogo",
+                    profile=pendencia.profile_name,
+                    kind=getattr(pendencia.mode, "kind", None),
+                )
+            return
+        # Limpa ANTES de aplicar: `apply_profile_mode` só re-agenda se o lock
+        # estiver ativo de novo (não está — guarda 1), então nada reentra aqui.
+        self._mode_pendente = None
+        logger.info(
+            "profile_mode_pendencia_aplicada",
+            profile=pendencia.profile_name,
+            kind=getattr(pendencia.mode, "kind", None),
+            origin=pendencia.origin,
+        )
+        self.apply_profile_mode(
+            pendencia.mode, profile=pendencia.profile, origin="pendencia"
+        )
 
     def apply_profile_rumble_policy(
-        self, policy: str | None, custom_mult: float | None = None
-    ) -> None:
+        self,
+        policy: str | None,
+        custom_mult: float | None = None,
+        *,
+        origin: str = "autoswitch",
+    ) -> str:
         """Aplica a política de rumble de um perfil recém-ativado
         (FEAT-RUMBLE-POLICY-PROFILE-01). Injetado como `rumble_policy_applier`
         nas rotas de ativação (IPC switch, autoswitch, hotkey de ciclo e
@@ -1417,13 +1706,18 @@ class Daemon:
 
         Idempotente: re-ativação do mesmo perfil (tick do autoswitch) não
         re-aplica nem loga de novo.
+
+        R-03: ativação com ``origin="manual"`` fura o item 1 e consome o carimbo
+        (`_furar_lock_de_emulacao`) — mesma regra de ordem dos outros appliers.
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
 
         now = time.monotonic()
-        if now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+        if origin == "manual":
+            self._furar_lock_de_emulacao("rumble_policy", agora=now)
+        elif now - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
             if policy is not None:
                 logger.info(
                     "profile_rumble_policy_skipped_manual_lock",
@@ -1432,7 +1726,7 @@ class Daemon:
                         MANUAL_PROFILE_LOCK_SEC - (now - self._emu_manual_ts), 1
                     ),
                 )
-            return
+            return ADIADO_LOCK_MANUAL
 
         if policy is None:
             # Perfil sem opinião: reverte só política que veio de perfil.
@@ -1450,13 +1744,13 @@ class Daemon:
                 self._rumble_policy_before_profile = None
                 self._seed_rumble_mult_observability()
                 self._reapply_rumble_policy_to_active()
-            return
+            return APLICADO
 
         if policy not in RUMBLE_POLICIES:
             # Defensivo: o schema do perfil já rejeita, mas o applier é
             # público — política desconhecida não pode corromper a config.
             logger.warning("profile_rumble_policy_invalida", policy=policy)
-            return
+            return FALHOU
         policy_lit = cast("RumblePolicy", policy)
 
         if not self._rumble_policy_from_profile:
@@ -1496,6 +1790,7 @@ class Daemon:
                 custom_mult=desired_mult,
             )
             self._reapply_rumble_policy_to_active()
+        return APLICADO
 
     def apply_profile_rumble_passthrough(self, passthrough: bool) -> None:
         """Aplica `rumble.passthrough` de um perfil recém-ativado (SPRINT-GAME-RUMBLE-01).
@@ -2271,6 +2566,12 @@ class Daemon:
         # antes do gate de conexão — o marker do wrapper e a janela do jogo
         # independem do controle estar plugado neste instante.
         game_signal_next_at: float = 0.0
+        # R-03: dreno da pendência de `mode` adiada pelo lock de gesto manual.
+        # ~1 Hz (o lock é de 30 s — precisão de segundo basta) e TAMBÉM antes do
+        # gate de conexão: um blip de link BT não pode fazer o modo do perfil
+        # sumir de vez, que é justamente a queixa que o R-03 cura. Custo por
+        # tick sem pendência: uma comparação de float.
+        mode_pending_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
@@ -2291,6 +2592,13 @@ class Daemon:
             if tick_started >= game_signal_next_at:
                 game_signal_next_at = tick_started + 2.0
                 await self._sync_game_signal()
+            if tick_started >= mode_pending_next_at:
+                mode_pending_next_at = tick_started + 1.0
+                # R-03: DEPOIS do `_sync_game_signal` de propósito — a guarda de
+                # "jogo com a autoridade" tem de ler a autoridade deste tick, não
+                # a de dois segundos atrás.
+                with contextlib.suppress(Exception):
+                    self._drenar_modo_pendente()
             # BUG-DAEMON-NO-DEVICE-FATAL-01: se o controller ainda não está
             # conectado (boot sem hardware ou pós-unplug), pula o tick
             # silenciosamente. O `reconnect_loop` cuida de retentar; quando

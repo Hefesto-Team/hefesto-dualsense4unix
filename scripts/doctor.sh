@@ -1877,6 +1877,53 @@ check_steam_input() {
     fi
 }
 
+# R-06 (auditoria 23/07): a allowlist per-app do Steam Input
+# (`steam_input_apps.txt`) era INERTE fora do guard de VDF — nada no caminho de
+# lançamento a consultava e o broker escondia o hidraw do físico do mesmo jeito,
+# então o jogo cujo DualSense vem PELA Steam (medido: Mullet Mad Jack, 2111190)
+# não achava controle nenhum. Este check separa as duas perguntas que viviam
+# coladas: a exceção está CONFIGURADA? e ela está EFETIVA (o .env por appid
+# nasceu sem dedup)? "Efetiva agora" no hidraw só faz sentido com o jogo aberto,
+# então aqui o veredito é sobre o que dá para afirmar sem o jogo rodando.
+check_steam_input_allowlist() {
+    local arquivo="${XDG_CONFIG_HOME:-$HOME/.config}/hefesto-dualsense4unix/steam_input_apps.txt"
+    if [[ ! -f "${arquivo}" ]]; then
+        info "sem allowlist per-app do Steam Input (${arquivo} ausente) — nenhum jogo pediu exceção"
+        return
+    fi
+    local appids
+    appids="$(sed 's/#.*$//' "${arquivo}" 2>/dev/null | tr -d '[:space:]' | grep -E '^[0-9]+$' || true)"
+    if [[ -z "${appids}" ]]; then
+        info "allowlist per-app do Steam Input vazia (${arquivo})"
+        return
+    fi
+    local envdir="${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
+    local appid arquivo_env faltando=0 envenenado=0
+    while IFS= read -r appid; do
+        [[ -n "${appid}" ]] || continue
+        arquivo_env="${envdir}/steam_app_${appid}.env"
+        if [[ ! -f "${arquivo_env}" ]]; then
+            faltando=$((faltando + 1))
+            continue
+        fi
+        # A exceção só é EFETIVA se o .env daquele appid não carrega o dedup —
+        # com IGNORE/PROTON_DISABLE_HIDRAW o físico segue escondido do jogo e a
+        # allowlist volta a ser decorativa.
+        if grep -qE '^(SDL_GAMECONTROLLER_IGNORE_DEVICES|PROTON_DISABLE_HIDRAW)=' "${arquivo_env}" 2>/dev/null; then
+            envenenado=$((envenenado + 1))
+        fi
+    done <<< "${appids}"
+    local total
+    total="$(printf '%s\n' "${appids}" | grep -c . || true)"
+    if [[ "${envenenado}" -gt 0 ]]; then
+        fail "allowlist do Steam Input com ${envenenado} appid(s) cujo .env ainda esconde o físico (IGNORE/PROTON_DISABLE_HIDRAW) — a exceção NÃO vale; reinicie o daemon para regravar: systemctl --user restart hefesto-dualsense4unix"
+    elif [[ "${faltando}" -gt 0 ]]; then
+        warn "allowlist do Steam Input com ${faltando}/${total} appid(s) sem .env materializado — o jogo cai no default.env (com dedup) e a exceção não vale; reinicie o daemon para regravar"
+    else
+        pass "allowlist do Steam Input efetiva: ${total} appid(s) com .env próprio SEM dedup (o jogo enxerga o controle físico)"
+    fi
+}
+
 check_controller() {
     local h hidraw=0
     for h in /dev/hidraw*; do [[ -e "$h" ]] && hidraw=1; done
@@ -2471,6 +2518,7 @@ main() {
     check_audio_sink_muted
     hdr "Steam Input"
     check_steam_input
+    check_steam_input_allowlist
     hdr "controle no jogo (duplicação / wrapper de launch)"
     check_launch_wrapper
     check_vdf_poison

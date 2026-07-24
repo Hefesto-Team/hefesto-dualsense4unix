@@ -275,9 +275,12 @@ def test_manager_repassa_mode_ao_applier() -> None:
     received: list[Any] = []
     quem: list[Any] = []
 
-    def applier(mode: Any, *, profile: Any = None) -> None:
+    origens: list[str] = []
+
+    def applier(mode: Any, *, profile: Any = None, origin: str = "autoswitch") -> None:
         received.append(mode)
         quem.append(profile)
+        origens.append(origin)
 
     mgr = ProfileManager(
         controller=FakeController(),
@@ -285,7 +288,7 @@ def test_manager_repassa_mode_ao_applier() -> None:
         mode_applier=applier,
     )
     mgr.apply_emulation(_profile({"kind": "native"}))
-    mgr.apply_emulation(_profile(None))
+    mgr.apply_emulation(_profile(None), origin="autoswitch")
 
     assert len(received) == 2
     assert received[0] is not None and received[0].kind == "native"
@@ -293,6 +296,9 @@ def test_manager_repassa_mode_ao_applier() -> None:
     # R-02: junto com a seção vai QUEM a mandou — sem isso o applier não
     # distingue "o perfil do desktop mandou reverter" de "caiu num catch-all".
     assert [getattr(p, "name", None) for p in quem] == ["teste_modo"] * 2
+    # R-03: e vai também de ONDE veio a ativação — é o que decide entre furar o
+    # lock de gesto manual (gesto dela) e adiar com pendência (autoswitch).
+    assert origens == ["manual", "autoswitch"]
 
 
 class TestR02CatchAllNaoReverte:

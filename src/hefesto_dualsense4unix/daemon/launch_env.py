@@ -91,6 +91,18 @@ _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$")
 #: appid, ou ausente = o jogo NÃO passou pelo `hefesto-launch`.
 WRAPPER_MARKER_WINDOW_SEC = 900.0
 
+#: R-04 (auditoria 23/07): idade MÁXIMA, em segundos, do marker `last_run` para
+#: ele contar como "launch ACONTECENDO AGORA" e disparar o arming do modo do
+#: perfil. NÃO confundir com `WRAPPER_MARKER_WINDOW_SEC` (15 min), que responde
+#: outra pergunta ("esta JANELA já aberta veio de um launch nosso?") e por isso
+#: é generosa. Aqui a pergunta é "este marker é de um jogo SUBINDO agora?" — e a
+#: resposta tem de ser curta, senão um `daemon.status` da CLI meia hora depois
+#: rearmaria o perfil de um jogo que ela já fechou. O wrapper grava o marker e,
+#: milissegundos depois, pede o ping de vida; a reconciliação do daemon roda a
+#: 1 Hz. 60 s cobre com folga (inclusive um restart do daemon no meio do
+#: carregamento) sem virar "arming retroativo".
+LAUNCH_ARM_WINDOW_SEC = 60.0
+
 
 def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
     """Appid do jogo a partir da wm_class (`steam_app_N`), ou None."""
@@ -305,6 +317,200 @@ def wrapper_used_state(
     if marker_appid != appid:
         return False
     return (first_seen_epoch - marker_epoch) <= window_sec
+
+
+def steam_input_appids(path: Path | None = None) -> set[int]:
+    """AppIDs da allowlist do Steam Input (`steam_input_apps.txt`) — R-06.
+
+    A allowlist é opt-in EXPLÍCITO da usuária: jogos cuja via oficial de
+    DualSense é o Steam Input per-app (medido: Mullet Mad Jack, appid 2111190,
+    chama `SetDualSenseTriggerEffect` da API Steamworks, que só funciona com o
+    Steam Input DAQUELE jogo ligado). Até aqui o arquivo só era lido pelo guard
+    de VDF (`disable_steam_input.sh`/`storm_doctor`) — o caminho de LANÇAMENTO
+    e o broker o ignoravam por completo, então o Hefesto continuava escondendo
+    o hidraw do controle físico e a exceção que ela configurou era inerte.
+
+    A leitura reusa `storm_doctor.steam_input_allowlist` (fonte única do
+    formato: uma linha por appid, `#` comenta) e converte para int — appid é
+    número; token não-numérico no arquivo é ignorado em vez de virar erro.
+
+    O caminho default sai de `config_dir()` (XDG), como no
+    `disable_steam_input.sh`, e não do `Path.home()` fixo do `storm_doctor` —
+    assim os testes ficam herméticos com `XDG_CONFIG_HOME` e a leitura segue a
+    convenção do resto do projeto.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            steam_input_allowlist,
+        )
+        from hefesto_dualsense4unix.utils.xdg_paths import config_dir
+
+        tokens = steam_input_allowlist(
+            path if path is not None else config_dir() / "steam_input_apps.txt"
+        )
+    except Exception:  # arquivo ilegível/import quebrado: allowlist vazia
+        logger.debug("steam_input_allowlist_indisponivel", exc_info=True)
+        return set()
+    out: set[int] = set()
+    for token in tokens:
+        limpo = str(token).strip()
+        if limpo.isdigit():
+            out.add(int(limpo))
+    return out
+
+
+def launch_session_appid(
+    *, base_dir: Path | None = None, now: float | None = None
+) -> int | None:
+    """Appid do jogo lançado PELO WRAPPER que ainda está rodando, ou None.
+
+    Reusa a decisão pura `wrapper_game_running` (NUMA-01) — marker fresco +
+    pid vivo + sem `last_exit` correlacionado — em vez de reinventar o
+    critério: o mesmo sinal que já sustenta `game_signal` é o que decide se a
+    exceção do R-06 continua valendo. Sobrevive a alt-tab (o critério é o PID
+    do jogo, não o foco) e a restart do daemon (o marker é do disco).
+    """
+    marker = read_last_run_marker(base_dir)
+    if marker is None:
+        return None
+    marker_pid = read_last_run_pid(base_dir)
+    vivo = wrapper_game_running(
+        marker=marker,
+        exit_marker=read_last_exit_marker(base_dir),
+        pid_alive=pid_is_alive(marker_pid),
+        marker_pid=marker_pid,
+        exit_pid=read_last_exit_pid(base_dir),
+        now=now,
+    )
+    return marker[0] if vivo else None
+
+
+def steam_input_exception_appid(
+    daemon: Any | None = None,
+    *,
+    base_dir: Path | None = None,
+    now: float | None = None,
+    allowlist: set[int] | None = None,
+) -> int | None:
+    """Appid da allowlist com sessão ATIVA agora (R-06), ou None.
+
+    Duas evidências, nesta ordem — a mesma dupla que o plano pede
+    ("marker `last_run` **ou** janela"):
+
+    1. **marker do wrapper** (`launch_session_appid`): autoritativo e imune a
+       alt-tab, mas só existe para jogo lançado pelo wrapper;
+    2. **janela em foco** (`window_detect_current_class`): cobre o jogo aberto
+       sem as LaunchOptions do Hefesto. Leitura CRUA de propósito: aqui a
+       pergunta é "o jogo da allowlist está na frente agora?", e usar o sinal
+       sticky faria a exceção sobreviver 30 s depois do alt-tab — tempo em que
+       o físico ficaria exposto ao desktop sem motivo.
+
+    `allowlist` é injetável para o chamador que já a leu (evita reler o
+    arquivo em cada gate). Allowlist vazia ⇒ None sem tocar em disco de novo.
+    """
+    appids = allowlist if allowlist is not None else steam_input_appids()
+    if not appids:
+        return None
+    sessao = launch_session_appid(base_dir=base_dir, now=now)
+    if sessao is not None and sessao in appids:
+        return sessao
+    store = getattr(daemon, "store", None)
+    wm_class = getattr(store, "window_detect_current_class", None)
+    foco = steam_appid_from_wm_class(wm_class if isinstance(wm_class, str) else None)
+    if foco is not None and foco in appids:
+        return foco
+    return None
+
+
+def arm_launch_profile(
+    daemon: DaemonProtocol,
+    *,
+    base_dir: Path | None = None,
+    now: float | None = None,
+) -> dict[str, Any] | None:
+    """Aplica o modo do perfil do jogo NO LAUNCH, não quando a janela aparece.
+
+    R-04 (auditoria 23/07). O modo do perfil só existia quando o autoswitch
+    via a JANELA — ou seja, com o jogo JÁ RODANDO e com a env dele já congelada
+    no `exec` do wrapper. Duas consequências medidas:
+
+    - a troca de máscara chegava tarde e DESTRUÍA/RECRIAVA os vpads com o jogo
+      aberto, invalidando os handles que ele abriu (a Steam nunca reabre o
+      hidraw do vpad do P1) — "o modo de jogar nunca é respeitado";
+    - com o gate destrutivo do R-04 em `subsystems/gamepad.py`, essa troca
+      tardia passa a ser RECUSADA — logo o arming não é enfeite: é o que faz o
+      perfil valer desde o primeiro frame em vez de não valer nunca.
+
+    O gatilho é o marker `last_run`, que o wrapper grava ANTES de qualquer
+    outra coisa (inclusive antes do gate de vida por IPC) e ANTES do `exec`.
+    O arming é idempotente por `(appid, epoch)`: um mesmo launch arma UMA vez,
+    por mais vezes que a reconciliação rode.
+
+    Ordem deliberada: a `.env` por appid NÃO depende deste arming — ela já é
+    materializada com a opinião do perfil (e, desde o R-05, com o backend
+    PROGNOSTICADO). Por isso o arming pode ser assíncrono ao ping do wrapper
+    sem risco: o que ele conserta é a MÁSCARA, que o jogo só consulta segundos
+    depois, ao enumerar os controles.
+
+    Appid da allowlist do Steam Input NÃO é armado (contradição 11 do plano): a
+    allowlist é opt-in explícito de "o Hefesto sai de cena neste jogo", e impor
+    a máscara de um perfil ali seria contradizer a própria exceção.
+    """
+    marker = read_last_run_marker(base_dir)
+    if marker is None:
+        return None
+    appid, epoch = marker
+    moment = now if now is not None else time.time()
+    if (moment - epoch) > LAUNCH_ARM_WINDOW_SEC:
+        return None
+    if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
+        return None
+    daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
+
+    if appid in steam_input_appids():
+        logger.info("launch_arm_pulado_allowlist_steam_input", appid=appid)
+        return {"appid": appid, "armado": False, "motivo": "allowlist_steam_input"}
+
+    profile = None
+    for candidato_appid, candidato in _steam_profiles(daemon):
+        if candidato_appid == appid:
+            profile = candidato
+            break
+    if profile is None:
+        logger.info("launch_arm_sem_perfil", appid=appid)
+        return {"appid": appid, "armado": False, "motivo": "sem_perfil"}
+
+    mode = getattr(profile, "mode", None)
+    if mode is None:
+        # Perfil sem seção `mode` é ausência de opinião (R-02) — nada a armar.
+        logger.info(
+            "launch_arm_perfil_sem_modo", appid=appid,
+            profile=getattr(profile, "name", None),
+        )
+        return {"appid": appid, "armado": False, "motivo": "perfil_sem_modo"}
+
+    applier = getattr(daemon, "apply_profile_mode", None)
+    if not callable(applier):
+        return {"appid": appid, "armado": False, "motivo": "daemon_sem_applier"}
+    logger.info(
+        "launch_arm_modo_do_perfil",
+        appid=appid,
+        profile=getattr(profile, "name", None),
+        kind=getattr(mode, "kind", None),
+    )
+    # `origin="launch"`: NÃO fura o lock manual (R-03) — se ela mexeu na
+    # máscara nos últimos 30 s, o gesto dela é mais novo que o perfil e o
+    # applier guarda a pendência sozinho. Só o gesto DELA fura o lock.
+    resultado = applier(mode, profile=profile, origin="launch")
+    # A máscara pode ter mudado: regrava as envs para o `default.env` refletir
+    # o estado real (o arquivo por appid já vinha certo pelo `_env_for_profile`).
+    materialize_launch_env(daemon)
+    return {
+        "appid": appid,
+        "armado": True,
+        "profile": getattr(profile, "name", None),
+        "resultado": resultado,
+    }
 
 
 def compose_env(
@@ -621,6 +827,32 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             name = f"steam_app_{appid}.env"
             _write_atomic(target / name, _render(env, f"{motivo} | {estado}"))
             desired.add(name)
+        # R-06 (auditoria 23/07): a allowlist do Steam Input é fonte de verdade
+        # do launch — e VENCE (contradição 11 do plano). Ela é opt-in EXPLÍCITO
+        # da usuária para "neste jogo o DualSense é entregue pela Steam"; nesse
+        # caso esconder o físico (IGNORE do SDL + PROTON_DISABLE_HIDRAW) mata
+        # exatamente a via que ela pediu. O arquivo nasce mesmo SEM perfil
+        # (antes o jogo caía no `default.env`, que carrega o dedup) e sobrescreve
+        # de propósito o arquivo derivado de perfil do mesmo appid — daí este
+        # laço vir DEPOIS do de perfis.
+        #
+        # `native_mode=True` aqui não liga o Modo Nativo do daemon: é só o ramo
+        # de `compose_env` que produz "nenhuma env de hidraw", que é exatamente
+        # a semântica pedida (o preload de shaders e o rótulo de botões seguem,
+        # como em toda variante).
+        for appid in sorted(steam_input_appids()):
+            name = f"steam_app_{appid}.env"
+            env_allow = compose_env(
+                native_mode=True,
+                emulation_enabled=False,
+                flavor=flavor,
+                backends=[],
+            )
+            _write_atomic(
+                target / name,
+                _render(env_allow, f"allowlist Steam Input (sem dedup) | {estado}"),
+            )
+            desired.add(name)
         for stale in target.glob("steam_app_*.env"):
             if stale.name not in desired:
                 with contextlib.suppress(OSError):
@@ -639,8 +871,11 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
 
 __all__ = [
     "ENV_ALLOWLIST",
+    "LAUNCH_ARM_WINDOW_SEC",
     "WRAPPER_MARKER_WINDOW_SEC",
+    "arm_launch_profile",
     "compose_env",
+    "launch_session_appid",
     "materialize_launch_env",
     "pid_is_alive",
     "read_last_exit_marker",
@@ -648,6 +883,8 @@ __all__ = [
     "read_last_run_marker",
     "read_last_run_pid",
     "steam_appid_from_wm_class",
+    "steam_input_appids",
+    "steam_input_exception_appid",
     "wrapper_game_running",
     "wrapper_used_state",
 ]

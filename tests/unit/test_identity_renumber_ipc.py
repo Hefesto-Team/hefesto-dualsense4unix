@@ -9,7 +9,10 @@ Contrato (fixado entre os agentes GUI/daemon do sprint):
     `external_identity.py`) para 1..N preservando a ORDEM RELATIVA atual,
     regrava `controllers.json` sob o `CONTROLLERS_FILE_LOCK` (NUMA-04) e
     re-pinta os LEDs;
-  - retorno `{ok: True, renumbered: {uniq: novo_slot, ...}}`.
+  - retorno `{ok: True, renumbered: {uniq: novo_slot, ...}}` — R-15
+    (auditoria 23/07): só as chaves que MUDARAM entram no mapa, e os
+    CONECTADOS têm precedência sobre as reservas offline na faixa 1..N
+    (ver `test_identity_numeracao_r14_r15.py`).
 
 Cenário-mãe da triagem: 2 DualSense com slots {1, 4} (herdados da tempestade)
 + 1 externo no 5 → compacta para {1, 2, 3} preservando a ordem (o slot 1
@@ -141,8 +144,12 @@ class TestCompactacaoGlobal:
         resultado = await server._handle_identity_renumber({})
 
         assert resultado["ok"] is True
+        # R-15 (auditoria 23/07) — CONTRATO TROCADO DE PROPÓSITO: `renumbered`
+        # passa a trazer só as chaves que MUDARAM. O roxo já estava no 1 e
+        # continua no 1; contá-lo inflava o toast da GUI ("N controle(s)
+        # renumerado(s)" conta as chaves), que é justamente a mentira do
+        # achado `renumerar-inclui-desconectados`.
         assert resultado["renumbered"] == {
-            UNIQ_ROXO: 1,
             UNIQ_BRANCO: 2,
             MAC_EXTERNO: 3,
         }
@@ -195,11 +202,19 @@ class TestCompactacaoGlobal:
     async def test_ja_compacto_e_no_op_idempotente(
         self, isolated_config: Path
     ) -> None:
-        """Rodar duas vezes seguidas não muda nada na segunda (já é 1..N)."""
+        """Rodar duas vezes seguidas não muda nada na segunda (já é 1..N).
+
+        R-15 — CONTRATO TROCADO DE PROPÓSITO: antes as duas respostas eram
+        IGUAIS (o plano inteiro voltava sempre), e a GUI toastava "3
+        controle(s) renumerado(s)" numa passagem que não mexeu em nada. Agora
+        a segunda volta VAZIA, e é o que faz o rodapé dizer "Numeração já
+        estava compacta" (`home_actions._ok`, ramo `n == 0`).
+        """
         server, ds, ext = _server_com_registros(isolated_config)
         primeiro = await server._handle_identity_renumber({})
         segundo = await server._handle_identity_renumber({})
-        assert primeiro["renumbered"] == segundo["renumbered"]
+        assert primeiro["renumbered"] == {UNIQ_BRANCO: 2, MAC_EXTERNO: 3}
+        assert segundo["renumbered"] == {}
         assert ds.snapshot() == {UNIQ_ROXO: 1, UNIQ_BRANCO: 2}
         assert ext.snapshot() == {MAC_EXTERNO: 3}
 

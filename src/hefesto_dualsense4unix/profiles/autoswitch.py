@@ -295,12 +295,19 @@ class AutoSwitcher:
         # (BUG-AUTOSWITCH-LOG-KEY-STUCK-01). Manter ambos cobre chamadas diretas.
         self._suppress_log_key = None
         from_profile = self._current_profile
+        # R-03 (auditoria 23/07): o relatório da ativação diz QUAIS seções o lock
+        # de gesto manual adiou. O perfil segue COMMITADO (`_current_profile`
+        # abaixo) mesmo assim — a variante "não commitar para tentar de novo no
+        # próximo tick" foi rejeitada: com o poll de 2 Hz ela reescreveria
+        # gatilhos/LEDs ~60x em 30 s. O retry mora na pendência de `mode` do
+        # daemon, drenada UMA vez pelo poll loop.
+        relatorio: dict[str, str] = {}
         try:
             # PERFIL-03: troca AUTOMÁTICA por janela — origin="autoswitch" NÃO
             # grava session.json. Era o bug provado do autoload: o autoswitch
             # reescrevia a intenção manual da usuária a cada troca de janela e
             # o boot restaurava "Navegação" em vez do perfil que ela escolheu.
-            self.manager.activate(name, origin="autoswitch")
+            self.manager.activate(name, origin="autoswitch", relatorio=relatorio)
         except Exception as exc:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return
@@ -311,6 +318,13 @@ class AutoSwitcher:
             to=name,
             wm_class=info.get("wm_class", ""),
             wm_name=info.get("wm_name", ""),
+            # Sem isto, "perfil trocou mas a máscara não" não tinha rastro
+            # nenhum no journal — era preciso adivinhar.
+            adiado=sorted(
+                secao
+                for secao, estado in relatorio.items()
+                if estado.startswith("adiado")
+            ),
         )
 
     def _log_suppressed_once(

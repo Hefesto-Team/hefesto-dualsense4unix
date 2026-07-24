@@ -365,11 +365,47 @@ class TestProviderDoDaemon:
         assert out2.led == player_slot_color(2)  # brilho 1.0 = cor pura
         assert out2.player_leds == player_led_pattern(2)
 
-    def test_auto_desligado_devolve_none(self) -> None:
+    def test_cor_desligada_mantem_numero_e_atribui_slot(self) -> None:
+        """R-14 (auditoria 23/07) — CONTRATO TROCADO DE PROPÓSITO.
+
+        Este caso assertava ``provider(...) is None`` com o automático
+        desligado (`test_auto_desligado_devolve_none`), o que acoplava TRÊS
+        coisas num flag só: a cor, o NÚMERO do controle e — via reserva de
+        slot — a numeração dos EXTERNOS (`_ds_reserve` lê este registro).
+        Com o `fps.json` dela salvo com ``auto_player_colors:false``, o
+        DualSense não ganhava sequer entrada no registro e o 8BitDo recebia um
+        número que outro controle já exibia ("dois player 1, dois player 2").
+
+        Agora: cor desligada = sem ``led``; o padrão do número continua, e o
+        slot é ATRIBUÍDO de qualquer jeito.
+        """
         registry = ControllerIdentityRegistry()
         registry.configure(enabled=False)
         provider = make_auto_output_provider(registry)
+        out = provider(UNIQ_1)
+        assert out is not None
+        assert out.led is None  # a paleta calou
+        assert out.player_leds == player_led_pattern(1)  # o número não
+        assert registry.snapshot() == {UNIQ_1: 1}  # atribuição aconteceu
+
+    def test_numero_desligado_mantem_a_cor(self) -> None:
+        """R-14: o eixo NUMERAÇÃO é independente do eixo COR."""
+        registry = ControllerIdentityRegistry()
+        registry.configure(numbers=False)
+        provider = make_auto_output_provider(registry)
+        out = provider(UNIQ_1)
+        assert out is not None
+        assert out.led == player_slot_color(1)
+        assert out.player_leds is None
+
+    def test_os_dois_eixos_desligados_devolvem_none(self) -> None:
+        """Sem nenhum eixo não há opinião — o merge cai no global (D5)."""
+        registry = ControllerIdentityRegistry()
+        registry.configure(enabled=False, numbers=False)
+        provider = make_auto_output_provider(registry)
         assert provider(UNIQ_1) is None
+        # ...mas o slot foi atribuído mesmo assim (identidade ≠ aparência).
+        assert registry.snapshot() == {UNIQ_1: 1}
 
     def test_vpad_e_uniq_invalido_devolvem_none(self) -> None:
         """D9/D10: vpad nunca; uniq vazio/inválido não tem identidade."""
@@ -417,8 +453,12 @@ class TestPontaAPonta:
         assert inst.resolved_player_leds_for(UNIQ_1) == player_led_pattern(1)
         # O 2º controle resolve o slot 2 LAZY na própria leitura (D1).
         assert inst.resolved_player_leds_for(UNIQ_2) == player_led_pattern(2)
-        # Auto desligado → volta ao global do perfil (comportamento histórico).
+        # R-14 — CONTRATO TROCADO: desligar a COR não pode mais apagar o
+        # NÚMERO (era o acoplamento que congelava a numeração de todo mundo).
         registry.configure(enabled=False)
+        assert inst.resolved_player_leds_for(UNIQ_2) == player_led_pattern(2)
+        # Quem manda no número é o eixo próprio; aí sim volta ao global.
+        registry.configure(numbers=False)
         assert inst.resolved_player_leds_for(UNIQ_2) == (
             True, True, True, True, False,
         )
