@@ -18,7 +18,7 @@ import typer
 
 app = typer.Typer(
     name="hefesto-dualsense4unix",
-    help="Daemon de gatilhos adaptativos para DualSense no Linux.",
+    help="Gerenciador DualSense para Linux.",
     add_completion=True,
     no_args_is_help=True,
 )

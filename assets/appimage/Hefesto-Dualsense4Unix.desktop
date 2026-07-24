@@ -2,7 +2,7 @@
 Type=Application
 Name=Hefesto-Dualsense4Unix
 GenericName=Hefesto - Dualsense4Unix
-Comment=Daemon Linux de gatilhos adaptativos para DualSense
+Comment=Gerenciador DualSense para Linux
 Exec=hefesto-dualsense4unix
 Icon=Hefesto-Dualsense4Unix
 Categories=Utility;HardwareSettings;

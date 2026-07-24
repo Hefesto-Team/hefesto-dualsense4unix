@@ -663,7 +663,7 @@ format_appimage() {
 Type=Application
 Name=Hefesto - Dualsense4Unix
 GenericName=DualSense Controller
-Comment=Daemon de gatilhos adaptativos para DualSense no Linux
+Comment=Gerenciador DualSense para Linux
 Exec=${target} --gui
 Icon=${APP_ID}
 Categories=Settings;HardwareSettings;
@@ -1597,7 +1597,7 @@ cat > "${DESKTOP_TARGET}" <<DESKTOP
 Type=Application
 Name=Hefesto - Dualsense4Unix
 GenericName=DualSense Controller
-Comment=Daemon de gatilhos adaptativos para DualSense no Linux
+Comment=Gerenciador DualSense para Linux
 Exec=${_EXEC_LINE}
 Icon=${APP_ID}
 Categories=Settings;HardwareSettings;

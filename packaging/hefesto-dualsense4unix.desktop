@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Hefesto - Dualsense4Unix
-Comment=Daemon de gatilhos adaptativos para DualSense
+Comment=Gerenciador DualSense para Linux
 Exec=/usr/bin/hefesto-dualsense4unix-gui
 Icon=hefesto
 Terminal=false

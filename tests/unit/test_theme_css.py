@@ -24,6 +24,35 @@ SELECTORS_ESPERADOS = [
 ]
 
 
+def _tokens_definidos(conteúdo: str) -> dict[str, str]:
+    """Mapa `nome -> hex` de todo `@define-color` do arquivo."""
+    return {
+        nome: cor
+        for nome, cor in re.findall(
+            r"@define-color\s+(\w+)\s+(#[0-9a-fA-F]{3,8})\s*;", conteúdo
+        )
+    }
+
+
+def _cor_de_fundo_sólida(corpo: str, conteúdo: str) -> str | None:
+    """Hex do `background-color` de um corpo de regra, resolvendo token.
+
+    As cores da interface passaram a ser declaradas por `@define-color` (para
+    cada uma ter UM papel documentado), então a regra escreve `@elevated` em vez
+    do hex. O que os testes garantem continua sendo o mesmo: a cor é SÓLIDA —
+    `transparent` deixa o tema claro do COSMIC vazar por baixo
+    (BUG-GUI-COSMIC-WIDGET-CONTRAST-01). Um token só conta se estiver de fato
+    definido; token inexistente no GTK3 vira cor indefinida, não um fallback.
+    """
+    m = re.search(r"background-color:\s*(#[0-9a-fA-F]{3,8}|@\w+)\s*;", corpo)
+    if m is None:
+        return None
+    valor = m.group(1)
+    if valor.startswith("#"):
+        return valor
+    return _tokens_definidos(conteúdo).get(valor[1:])
+
+
 def test_theme_css_existe() -> None:
     """Arquivo theme.css deve existir no diretório gui/."""
     assert CSS_PATH.exists(), f"theme.css não encontrado em {CSS_PATH}"
@@ -89,8 +118,8 @@ def test_botao_tem_fundo_solido_nao_transparente() -> None:
     assert "transparent" not in corpo, (
         "button não deve usar background-color: transparent (vaza tema claro do COSMIC)"
     )
-    assert re.search(r"background-color:\s*#[0-9a-fA-F]{3,6}", corpo), (
-        "button deve ter background-color sólido (hex) na regra base"
+    assert _cor_de_fundo_sólida(corpo, conteúdo) is not None, (
+        "button deve ter background-color sólido (hex ou token @define-color) na regra base"
     )
 
 
@@ -170,7 +199,7 @@ def test_messagedialog_botoes_cobertos() -> None:
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
     m = re.search(r"messagedialog\s+button\s*\{([^}]*)\}", conteúdo)
     assert m is not None, "Regra 'messagedialog button' ausente"
-    assert re.search(r"background-color:\s*#[0-9a-fA-F]{3,6}", m.group(1)), (
+    assert _cor_de_fundo_sólida(m.group(1), conteúdo) is not None, (
         "messagedialog button deve ter fundo sólido escuro"
     )
 
@@ -185,7 +214,9 @@ def test_segmentado_read_only_mantem_o_destaque() -> None:
         conteúdo,
     )
     assert m is not None, "Regra button:checked:disabled ausente"
-    assert "#bd93f9" in m.group(1), (
+    corpo = m.group(1)
+    roxo = _tokens_definidos(conteúdo).get("purple", "#bd93f9")
+    assert "@purple" in corpo or roxo in corpo, (
         "o destaque do modo detectado deve manter o accent roxo"
     )
 

@@ -120,7 +120,7 @@ class MainScreen(Screen[None]):
         with Vertical():
             yield Label(
                 f"[bold cyan]Hefesto - Dualsense4Unix[/] [dim]v{__version__}[/] — "
-                "daemon de gatilhos adaptativos para DualSense",
+                "Gerenciador DualSense para Linux",
                 id="title",
             )
             with Horizontal():

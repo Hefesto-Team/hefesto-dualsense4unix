@@ -1,4 +1,4 @@
-"""Hefesto - Dualsense4Unix — daemon Linux de gatilhos adaptativos para DualSense."""
+"""Hefesto - Dualsense4Unix — gerenciador DualSense para Linux."""
 
 from importlib.metadata import PackageNotFoundError, version
 
