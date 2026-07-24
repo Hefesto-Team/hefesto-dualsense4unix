@@ -1500,39 +1500,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="expand">False</property></packing>
                     </child>
 
-                    <!-- Preview JSON — UI-PROFILES-RIGHT-PANEL-REBALANCE-01
-                         Mostra o Profile que seria salvo, em tempo real.
-                         Reutiliza o `_build_profile_from_editor` como fonte de
-                         verdade. Ocupa o espaço vazio criado após o combo da
-                         sprint 77 (~450px antes, ~280px agora com preview). -->
-                    <child>
-                      <object class="GtkFrame">
-                        <property name="label" translatable="yes">Detalhes técnicos</property>
-                        <property name="margin-top">8</property>
-                        <child>
-                          <object class="GtkScrolledWindow">
-                            <property name="hscrollbar-policy">automatic</property>
-                            <property name="vscrollbar-policy">automatic</property>
-                            <property name="min-content-height">180</property>
-                            <property name="propagate-natural-height">True</property>
-                            <child>
-                              <object class="GtkLabel" id="profile_preview_label">
-                                <property name="label" translatable="yes">(selecione um perfil para ver o preview)</property>
-                                <property name="xalign">0</property>
-                                <property name="yalign">0</property>
-                                <property name="wrap">True</property>
-                                <property name="selectable">True</property>
-                                <property name="margin">8</property>
-                                <style>
-                                  <class name="hefesto-profile-preview"/>
-                                </style>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
-                    </child>
+                    <!-- O bloco "Detalhes técnicos" (preview do JSON do perfil,
+                         UI-PROFILES-RIGHT-PANEL-REBALANCE-01) saiu no redesign
+                         1.0.0: mostrava a serialização crua para quem só quer
+                         escolher um perfil, e comia ~180px de altura mínima que
+                         o editor precisa para caber sem rolagem. O código que o
+                         alimentava (`_atualizar_preview_perfil`) saiu junto. -->
 
                     <!-- Rodapé: botão Salvar -->
                     <child>
