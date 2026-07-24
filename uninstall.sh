@@ -603,7 +603,13 @@ if sudo -n true 2>/dev/null; then
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
     _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
     if [[ -n "${_hci}" ]]; then
-        sudo hciconfig "${_hci}" lp rswitch hold sniff park 2>/dev/null || true
+        # ATENÇÃO: `hciconfig lp` exige a lista separada por VÍRGULA. Com
+        # espaços ele lê só o primeiro token e a reversão vira NO-OP
+        # silencioso — medido ao vivo 23/07: "lp rswitch hold sniff park"
+        # deixou a policy em RSWITCH, e só "rswitch,hold,sniff,park"
+        # devolveu RSWITCH HOLD SNIFF PARK. O uninstall estava deixando o
+        # adaptador sem SNIFF para sempre.
+        sudo hciconfig "${_hci}" lp rswitch,hold,sniff,park 2>/dev/null || true
         _alias="$(busctl get-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias 2>/dev/null | sed -E 's/^s "?//; s/"?$//' || true)"
         if [[ "${_alias}" == Nintendo\ * ]]; then
             sudo busctl set-property org.bluez "/org/bluez/${_hci}" org.bluez.Adapter1 Alias s "${_alias#Nintendo }" 2>/dev/null || true

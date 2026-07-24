@@ -114,12 +114,45 @@ class TestDropinResilience:
             re.M,
         )
 
-    def test_active_mode_desliga_sniff_e_prefixa_nintendo(self) -> None:
-        """O script tira o SNIFF (link policy rswitch) e prefixa 'Nintendo' no
-        alias — as duas alavancas medidas na pesquisa 2026-07-22."""
+    def test_active_mode_prefixa_nintendo_no_alias(self) -> None:
+        """O NOME é do adaptador — vale para todos os controles.
+
+        Medido em 23/07: com o alias aplicado e o SNIFF devolvido, o 8BitDo
+        probou normalmente. Ou seja, o nome não atrapalha o clone.
+        """
         text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
-        assert "lp rswitch" in text, "deve setar link policy sem SNIFF"
         assert "Nintendo ${ALIAS_ATUAL}" in text, "deve prefixar 'Nintendo' no alias"
+
+    def test_no_sniff_e_por_dispositivo_nao_do_adaptador(self) -> None:
+        """BT-SNIFF-PER-OUI-01 (23/07) — o escopo do no-sniff é POR CONTROLE.
+
+        Os dois da linhagem Nintendo têm requisitos INCOMPATÍVEIS e nenhum
+        ajuste global satisfaz os dois:
+
+            SNIFF permitido -> Pro cai sob carga  | 8BitDo FUNCIONA
+            SNIFF recusado  -> Pro ESTÁVEL        | 8BitDo probe morre (-110)
+
+        Aplicar como default do adaptador (o que fb5e3ad fazia) quebrava a
+        probe do clone: 4 falhas / 0 sucessos, sempre em
+        `Failed to get joycon info; ret=-110`. Devolvido o sniff, ele probou em
+        54 s na primeira tentativa.
+        """
+        text = (REPO_ROOT / "scripts" / "bt_active_mode.sh").read_text(encoding="utf-8")
+        codigo = "\n".join(
+            linha for linha in text.splitlines() if not linha.lstrip().startswith("#")
+        )
+        # O default do adaptador PRECISA manter o SNIFF (é o que o clone usa).
+        assert "lp rswitch,hold,sniff,park" in codigo, (
+            "o default do adaptador tem de permitir SNIFF — sem ele o 8BitDo "
+            "não completa a probe"
+        )
+        assert "lp rswitch 2" not in codigo and "lp rswitch\n" not in codigo, (
+            "no-sniff como default do ADAPTADOR é a regressão medida em 23/07"
+        )
+        # E o no-sniff por-conexão tem de ser filtrado pela OUI do Pro genuíno.
+        assert "OUI_NINTENDO_REAL" in codigo
+        assert "E0:F6:B5" in codigo, "a OUI é a fonte da verdade, nunca VID/PID"
+        assert 'hcitool lp "${MAC}" RSWITCH' in codigo
 
     def test_watchdog_reafirma_modo_ativo(self) -> None:
         """O watchdog (2 min) delega ao bt_active_mode.sh — cobre adaptador que
@@ -130,9 +163,24 @@ class TestDropinResilience:
         assert "bt_active_mode.sh" in text
 
     def test_uninstall_reverte_sniff_e_nome(self) -> None:
-        """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo."""
+        """Uninstall simétrico: volta o SNIFF default e tira o prefixo Nintendo.
+
+        A lista do `hciconfig lp` tem de ir separada por VÍRGULA. Com espaços
+        ele lê só o primeiro token e a reversão vira NO-OP silencioso — medido
+        ao vivo em 23/07: `lp rswitch hold sniff park` deixou a policy em
+        RSWITCH, e só `rswitch,hold,sniff,park` devolveu RSWITCH HOLD SNIFF
+        PARK. O uninstall estava deixando o adaptador sem SNIFF para sempre.
+        """
         text = UNINSTALL.read_text(encoding="utf-8")
-        assert "lp rswitch hold sniff park" in text
+        assert "lp rswitch,hold,sniff,park" in text
+        # Só linhas de CÓDIGO — os comentários citam a sintaxe errada de
+        # propósito, para explicar o que foi consertado.
+        codigo = "\n".join(
+            linha for linha in text.splitlines() if not linha.lstrip().startswith("#")
+        )
+        assert "lp rswitch hold sniff park" not in codigo, (
+            "sintaxe com espaços não reverte nada (hciconfig lê só o 1º token)"
+        )
         assert "bt_active_mode.sh" in text
 
 
