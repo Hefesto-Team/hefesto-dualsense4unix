@@ -211,6 +211,45 @@ class TestInvariantesDosScripts:
         assert "_btctl_lento 25 pair" in text
         assert "COMPAT BLUEZ-586-CTL-01" in text
 
+    def test_trust_nao_depende_de_conexao(self) -> None:
+        """WATCHDOG-TRUST-DEADLOCK-01 (23/07) — o deadlock do trust.
+
+        A vigia 2b vivia DENTRO do laço da vigia 2, atrás do gate
+        `Connected == true`, e por isso era inalcançável justamente para quem
+        mais precisa dela:
+
+            sem trust    -> BlueZ RECUSA a reconexão entrante
+                            ("Refusing connection from <MAC>: unknown device")
+            recusado     -> nunca fica Connected
+            não conectado-> a vigia nunca o alcança -> segue sem trust
+
+        Medido ao vivo em 23/07 22h58: 8BitDo e Pro Nintendo com Bonded=true e
+        Trusted=false, ambos desconectados, o log martelando "unknown device" a
+        cada toque no sync. Nenhum tick resolvia, por construção.
+
+        Trust é idempotente e não depende do link — tem de rodar sobre TODO
+        device com bond. Já a promoção de bond temporário (vigia 2) SEGUE
+        exigindo conexão: o Pair() explícito corre sobre o link vivo.
+        """
+        text = (REPO_ROOT / "scripts" / "bt_health_watchdog.sh").read_text(
+            encoding="utf-8"
+        )
+        bloco = text.split("vigia 2b:", 1)[1].split("vigia 2: bond temporário", 1)[0]
+        codigo = "\n".join(
+            linha for linha in bloco.splitlines() if not linha.lstrip().startswith("#")
+        )
+        assert 'Connected' not in codigo, (
+            "o trust não pode ficar atrás do gate de conexão — é o deadlock"
+        )
+        assert '_dbus_device_prop "${OBJ}" Bonded' in codigo, (
+            "só device COM BOND ganha trust (dar trust a quem só apareceu num "
+            "scan seria autorizar quem nunca foi pareado)"
+        )
+        assert "Trusted b true" in codigo
+        # E a vigia 2 (promoção de bond) segue exigindo conexão.
+        vigia2 = text.split("vigia 2: bond temporário", 1)[1]
+        assert '"${OBJ}" Connected)" == "true" ]] || continue' in vigia2
+
     def test_crash_capture_e_opt_in_simetrico(self) -> None:
         text = (REPO_ROOT / "scripts" / "bt_crash_capture.sh").read_text(encoding="utf-8")
         for flag in ("--on", "--off", "--status"):
