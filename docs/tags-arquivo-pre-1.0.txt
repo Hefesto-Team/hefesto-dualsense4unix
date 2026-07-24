@@ -1,0 +1,58 @@
+# Registro das tags antes da renumeração para 1.0.0
+# Gerado em 2026-07-24. NÃO APAGAR: é o único mapa para reverter a renumeração.
+# Uso: git tag <nome> <sha> recria a tag apagada.
+
+## FORK — [REDACTED]/hefesto-dualsense4unix (tags locais)
+v0.1.0	db6b5e21e68e543a4b602a98f8a88ab9c266c007	2026-04-20	Hefesto v0.1.0 — primeira release alpha
+v1.0.0	2d9611eba3de03a34788f78f9a0e76c0ac43149e	2026-04-21	Hefesto v1.0.0 - primeira release estavel
+v1.1.0	b8c91255efa62dd64259afd907a761940b1ab3fa	2026-04-22	Hefesto v1.1.0 — estabilidade + polish UX
+v1.2.0	cb6a4f3abb532e1c77e2aed5bb4679b36764253a	2026-04-22	Hefesto v1.2.0 — plataforma (.deb, Flatpak, BT, Wayland)
+v2.0.0	8466cb267c06525a5681e64cc0c5bfea59d03e54	2026-04-23	Hefesto v2.0.0 — infra + MIC + subsystems + metrics + plugins
+v2.1.0	8694446552838aca7ef07dd67506b2d381cb8f3b	2026-04-23	Hefesto v2.1.0 — polish release (9 sprints)
+v2.2.0	7345065d321f0c1c6bc5349ee76a2c100ec4a3bc	2026-04-23	release: v2.2.0 — polish pós-v2.1.0, mypy gate rígido, 19 sprints MERGED
+v2.2.1	bb716d916e88f6c369bd27de53bf71bbacd7414f	2026-04-23	release v2.2.1 — patch pós-v2.2.0 (6 sprints + 3 colaterais)
+v2.2.2	272913c57447a25b8ffe14cef9d5d42b7f7094d7	2026-04-23	release v2.2.2 — 7ª iteração (typer>=0.12 + subcomando version)
+v2.3.0	476b0197fb4ecc1bd8f5e502017869006be5409c	2026-04-23	v2.3.0 — keyboard feature (DualSense → teclado virtual + OSK + touchpad)
+v2.4.0	0d512c7929ac24c7a196cf7ef4042b7eacfd63b4	2026-04-24	Hefesto v2.4.0 — 14 sprints auditoria + fixes flatpak/COSMIC/single-instance
+v2.4.1	d51676839afdc1fb6b98c919f5d9a788cc0eb9de	2026-04-24	Hefesto v2.4.1 — WlrctlBackend + install auto wlrctl/XWayland + fix flaky test
+v3.0.0	9b3ce7033147da9e3b247ca141037a03f4432771	2026-04-27	Hefesto - Dualsense4Unix v3.0.0
+v3.1.0	8c54d1d9b408c190fbd79aa4057778134b9bb064	2026-05-16	Hefesto - Dualsense4Unix v3.1.0 — Hardening COSMIC
+v3.1.1	69da0fa0a1578d30aae5fce3305566c80ba7dc64	2026-05-16	Hefesto - Dualsense4Unix v3.1.1 — Patch + 5 sprints adicionais
+v3.2.0	5644a1eba8e97e28de19fc0f1b2b8ab4c7ce2963	2026-05-16	v3.2.0 - Wave V3.2 (auditoria + polish)
+v3.3.0	cd16863e17aba9d9b8551ae40468ab59581eaad3	2026-05-16	v3.3.0 - tray fallback COSMIC + production-ready docs
+v3.3.1	20508b9125290f758d995a0526561862d95d31c8	2026-05-16	v3.3.1 - install perfeito (udev sempre + simetria Flatpak)
+v3.4.0	4b398d4c6908e216cd16f02363d38a6e77234a6d	2026-05-16	v3.4.0 — i18n EN + a11y + packaging multi-distro + CI matrix
+v3.4.1	55db6f21cedab92a378e8068eca63c4c37143737	2026-05-17	v3.4.1 — fix Flatpak locale pt_BR (runtime symlink override)
+v3.4.2	7585060de909b12d590acc767aac1c807ce682d1	2026-05-17	v3.4.2 — polish patch: icone multi-res + theme CSS + uninstall fixes
+v3.4.3	c454e8a328369c7ecc154d8d9709222105677404	2026-05-17	v3.4.3 — fix icone (PNG real) + WM_CLASS dock
+v3.5.0	70a31cc78e7c838908dc5bcd23c2bc5be8678143	2026-05-21	Hefesto - Dualsense4Unix v3.5.0
+v3.7.0	1de10ff56fc7e2f32e8f3304c201288dbaadfde9	2026-05-22	v3.7.0 — recuperacao de instalacao + audio COSMIC (waves V3.6 + V3.7)
+v3.8.0	f2225e5488093e0284e1d42ac87e70c4c6b517da	2026-05-22	v3.8.0 — controle de ativacao, robustez (doctor everywhere) e applet visivel (Wave V3.8)
+v3.8.1	610c9edeec775715e0403cf1586e113b3f1415ed	2026-05-22	v3.8.1: GUI saudavel (busy-loop 100% CPU eliminado), perfis async, dropdown legivel, modo jogo, hotplug do evdev
+v3.8.2	40cadad45cd5a569e5f14b0f9ff5535f373d74bd	2026-05-23	v3.8.2 — boot saudavel: destrava daemon D-state + GUI imkillable + spam de notificacoes
+v3.8.3	59c264b6e877c1ccd35b613125ef059ef917ff1a	2026-06-26	v3.8.3 — fix do storm -71 + review da GUI + 7 testes verdes + pin do ruff
+v3.9.0	f9f7dc08905cf239b5ac40ef7f984dca2bc0e962	2026-06-27	Hefesto - Dualsense4Unix v3.9.0
+v3.10.0	6751a09a21278c6b0bbf0f3b36b9dc43d30f56da	2026-06-28	v3.10.0
+v3.11.0	c4a4aaa3c1b5c0bf6b4890b4459a32e89a974ebe	2026-07-09	Hefesto - Dualsense4Unix v3.11.0
+v3.12.0	ee1b309d424ed9ac1ad4ada5c5ee77084eb17f1b	2026-07-13	chore(release): v3.12.0
+v3.13.0	24ae0cb61d9b872638c676304bbfff62dd16874b	2026-07-14	v3.13.0 — cura de raiz do storm + rumble in-game + fim do controle duplicado
+v3.13.1	ad4f47aeee9e82e176aa5c9fd47d9ef5c1bc70fc	2026-07-14	v3.13.1 — correções da auditoria (M4-M14) + review adversarial
+v3.13.2	ed006f158ab616eb82cc0b5d20d7f7e050f03ebd	2026-07-14	v3.13.2 — remove o launcher dsx (teoria HW refutada) + fix visual do applet
+v3.13.3	fbc82641f587ac2406096922e9c8ae8e039a05f9	2026-07-14	Hefesto - Dualsense4Unix v3.13.3 — fixes do instalador (sudo cacheado, venv[dev] default, applet default-on) + uninstall/steam
+v3.14.0	2a6e6349b2dc73a425a816b33f72c5b5b3f7575a	2026-07-17	v3.14.0 — auditoria + correcoes UX (CI GUI guards)
+v4.0.0	90062d20036a1489e6af999dfaeb29e937dd4646	2026-07-24	v4.0.0 — auditoria GUI × perfis × 4 controles + Bluetooth
+
+## UPSTREAM — AndreBFarias/hefesto-dualsense4unix (tags remotas)
+v0.1.0	db6b5e21e68e543a4b602a98f8a88ab9c266c007
+v1.0.0	2d9611eba3de03a34788f78f9a0e76c0ac43149e
+v1.1.0	b8c91255efa62dd64259afd907a761940b1ab3fa
+v1.2.0	cb6a4f3abb532e1c77e2aed5bb4679b36764253a
+v2.0.0	8466cb267c06525a5681e64cc0c5bfea59d03e54
+v2.1.0	8694446552838aca7ef07dd67506b2d381cb8f3b
+v2.2.0	7345065d321f0c1c6bc5349ee76a2c100ec4a3bc
+v2.2.1	bb716d916e88f6c369bd27de53bf71bbacd7414f
+v2.2.2	272913c57447a25b8ffe14cef9d5d42b7f7094d7
+v2.3.0	476b0197fb4ecc1bd8f5e502017869006be5409c
+v2.4.0	0d512c7929ac24c7a196cf7ef4042b7eacfd63b4
+v2.4.1	d51676839afdc1fb6b98c919f5d9a788cc0eb9de
+v3.0.0	9b3ce7033147da9e3b247ca141037a03f4432771
