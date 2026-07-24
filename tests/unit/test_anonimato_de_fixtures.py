@@ -49,6 +49,12 @@ _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
         # wifi: rtw89 — modelo do contador continual_io_error portado no
         # 0002 (proveniência gravada no BASELINE e no limiar do teste).
         "2135c28be6a8",
+        # Bluetooth Base UUID (Bluetooth Core Spec, Vol 3 Part B 2.5.1): todo
+        # UUID de 16 bits vira 0000xxxx-0000-1000-8000-00805F9B34FB. Os 12 hex
+        # finais são CONSTANTE PÚBLICA do SIG, não identidade de hardware —
+        # aparecem em qualquer fixture que reproduza o `Services=` do BlueZ
+        # (test_bt_sdp_cache.py). Mesma natureza dos hashes upstream acima.
+        "00805f9b34fb",
     }
 )
 

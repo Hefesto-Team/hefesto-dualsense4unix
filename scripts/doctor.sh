@@ -1314,6 +1314,48 @@ check_bt_bonds_persistidos() {
     fi
 }
 
+# SDP-CACHE-01 (23/07, medido ao vivo): o registro SDP do perfil HID mora em
+# /var/lib/bluetooth/<adapter>/cache/<MAC>, seção [ServiceRecords], e é dele que
+# o BlueZ tira o descritor HID (profiles/input/device.c:hidp_add_connection).
+# Uma entrada SEM essa seção acompanha o controle ZUMBI: bond íntegro, ACL
+# AUTH+ENCRYPT vivo, "Conectado" na GUI — e zero hidraw, zero input.
+#
+# Medido: 46 bytes (só [General] Name=) no controle quebrado, contra 1124..1433
+# bytes COM [ServiceRecords] nos três sãos.
+#
+# Este check aponta o SINTOMA, que tem duas causas possíveis (o próprio check
+# não as distingue; a mensagem cobre as duas):
+#   (a) só a direção da conexão — o controle reconecta ENTRANTE (PS/SYNC) e esse
+#       caminho não dispara SDP browse; um Connect() iniciado pelo HOST resolve
+#       (o watchdog faz isso sozinho, e o BlueZ coopera: sem [ServiceRecords] ele
+#       marca svc_resolved=false, src/device.c:4415);
+#   (b) o controle parou de responder SDP — aí o cache truncado é consequência,
+#       não causa, e nem Connect() nem re-pareamento resolvem. Confirme com
+#       `sudo sdptool browse <MAC>`: controle são responde em <1 s; travado
+#       estoura o timeout. Cura: reset de hardware do controle.
+check_bt_sdp_cache_envenenado() {
+    if ! sudo -n true 2>/dev/null; then
+        info "sem sudo sem senha — não leio o cache SDP (confira: sudo grep -L ServiceRecords /var/lib/bluetooth/*/cache/*)"
+        return
+    fi
+    local achou=0 info_f devdir mac adpdir cache
+    while IFS= read -r info_f; do
+        [[ -z "${info_f}" ]] && continue
+        devdir="$(dirname "${info_f}")"
+        mac="$(basename "${devdir}")"
+        adpdir="$(dirname "${devdir}")"
+        cache="${adpdir}/cache/${mac}"
+        # Só device de perfil HID (0x1124 = HumanInterfaceDevice).
+        sudo -n grep -qi '^Services=.*00001124-0000-1000-8000-00805f9b34fb' "${info_f}" 2>/dev/null || continue
+        # Cache ausente é SÃO: o BlueZ refaz o browse na próxima conexão.
+        sudo -n test -f "${cache}" 2>/dev/null || continue
+        sudo -n grep -q '^\[ServiceRecords\]' "${cache}" 2>/dev/null && continue
+        achou=1
+        fail "cache SDP de ${mac} SEM [ServiceRecords] — o perfil HID não sobe (controle 'Conectado' e sem input). Primeiro confira QUAL das duas causas é: 'sudo sdptool browse ${mac}' — se responder em <1 s, é só a direção da conexão e o watchdog cura sozinho no próximo tick (Connect() pelo host, sem desparear); se ESTOURAR o timeout, o stack do controle travou e nem re-parear resolve: reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
+    done < <(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | sort)
+    [[ "${achou}" -eq 0 ]] && pass "cache SDP íntegro em todos os controles com bond (todos têm [ServiceRecords])"
+}
+
 # Normaliza um MAC para minúsculo sem ':' — mesma forma usada para comparar
 # HID_UNIQ (sysfs) com o MAC do bluetoothctl (formatos diferem em caixa).
 _mac_norm() {
@@ -1387,7 +1429,7 @@ check_bt_connected_sem_hidraw() {
         resultado="$(_bt_gamepad_missing_hidraw "${inf}" "${hidraw_list}")"
         if [[ -n "${resultado}" ]]; then
             achou=1
-            fail "controle BT ${resultado} CONECTADO mas SEM hidraw correspondente (HID_UNIQ) — pareamento meio-salvo; despareie e repareie: bluetoothctl remove ${resultado} (depois PS no controle)"
+            fail "controle BT ${resultado} CONECTADO mas SEM hidraw correspondente (HID_UNIQ) — controle ZUMBI; veja o check de cache SDP logo abaixo ANTES de desparear (na maioria dos casos a causa é cache SDP envenenado e o bond não precisa ser destruído)"
         fi
     done <<<"${paths}"
     [[ "${achou}" -eq 0 ]] && pass "todo device BT conectado (gamepad) tem hidraw correspondente"
@@ -2417,6 +2459,7 @@ main() {
     check_bt_resilience
     check_bt_bonds_persistidos
     check_bt_connected_sem_hidraw
+    check_bt_sdp_cache_envenenado
     check_bt_paired_sem_bonded
     hdr "applet COSMIC"
     check_applet
