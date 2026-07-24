@@ -221,9 +221,15 @@ def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
 def test_seletor_com_um_controle_mostra_botao_proprio(monkeypatch: Any) -> None:
     """SELETOR-UNO-01 (22/07, pedido da mantenedora): com UM DualSense o
     seletor NÃO some — mostra o botão do próprio controle com número e via
-    (chip "Sony 1 · USB" via ``_short_target_label``), SEM a linha "Todos"
-    (com um único controle, "Todos" e ele são a mesma coisa). Índice None =
-    edição global, semântica antiga preservada."""
+    (chip "Sony 1 · USB" via ``_short_target_label``), SEM a linha "Todos".
+
+    R-16 (auditoria 23/07): a UI segue exatamente como ela pediu; o que mudou é
+    o ÍNDICE que a linha carrega. Era ``None`` (= broadcast global), sob a
+    premissa "com um controle só, Todos e ele são a mesma coisa". Não são: o
+    override por-MAC sobrevive ao replug e à troca de perfil, a escrita global
+    não. Era essa premissa que deixava a edição por-controle DESLIGADA quando
+    só um DualSense tinha nó no kernel (estado medido em 23/07, com o roxo sem
+    uhid) — sem nenhuma mensagem dizendo isso."""
     obj, rebuilds, _actives = _mixin_with_selector(monkeypatch)
     state = _state(
         {"index": 0, "connected": True, "transport": "usb", "is_primary": True}
@@ -231,7 +237,7 @@ def test_seletor_com_um_controle_mostra_botao_proprio(monkeypatch: Any) -> None:
     obj._refresh_controller_target_combo(state)
     assert obj._target_combo.shown == 1
     assert obj._target_combo_visible is True
-    assert rebuilds[-1] == [("Controle 1 — USB", None)]
+    assert rebuilds[-1] == [("Controle 1 — USB", 0)]
 
 
 def test_seletor_some_sem_nenhum_controle(monkeypatch: Any) -> None:

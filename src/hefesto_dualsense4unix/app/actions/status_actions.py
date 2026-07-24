@@ -553,6 +553,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         if target_index is not None:
             uniq = getattr(self, "_target_uniq_by_index", {}).get(target_index)
             label = getattr(self, "_target_label_by_index", {}).get(target_index)
+            # R-16: o controle escolhido caiu, mas o índice ainda é o alvo dela.
+            # Zerar aqui trocaria o destino da PRÓXIMA escrita em silêncio: o
+            # badge sumia e o "Aplicar no controle" seguinte ia pela rota
+            # global, apagando o override por-MAC dos outros. Mantemos o alvo e
+            # deixamos o rótulo dizer a verdade.
+            if uniq is None and label is None and self._edit_target_uniq is not None:
+                logger.debug(
+                    "edit_target_alvo_sumiu_do_estado_mantendo",
+                    indice=target_index,
+                )
+                return
             if uniq is None and label is not None:
                 # Alvo sem MAC estável (regra do sprint): edita o global,
                 # com trilha em vez de silêncio.
@@ -625,27 +636,54 @@ class StatusActionsMixin(WidgetAccessMixin):
                 box.hide()
                 self._target_combo_visible = False
             return
-        # Edição por-controle SÓ existe com 2+ DualSense (os externos não são
-        # alvo — o Hefesto não mexe neles). Com <2 DualSense a edição segue
-        # global, mas o botão exibe o PRÓPRIO controle (sem "Todos" — com um
-        # único DualSense, "Todos" e ele são a mesma coisa; SELETOR-UNO-01).
-        editavel = len(conectados) >= 2
-        self._sync_edit_target(target_index if editavel else None)
+        # R-16 (auditoria 23/07): o alvo de edição segue o GESTO dela, não a
+        # CONTAGEM de controles.
+        #
+        # Antes: `editavel = len(conectados) >= 2` e, abaixo do limiar,
+        # `_sync_edit_target(None)` FORÇAVA a escrita global — e este método
+        # roda no tick de 2 Hz, sem guarda de aba visível. Dois estragos:
+        #
+        #   1. com um único DualSense com nó no kernel (o estado medido em
+        #      23/07: o roxo estava sem uhid), `_edit_target_uniq` ficava
+        #      permanentemente None e a edição "controle a controle" estava
+        #      literalmente DESLIGADA — sem nenhuma mensagem dizendo isso;
+        #   2. um controle caindo no meio da edição zerava o alvo por baixo das
+        #      abas: o badge sumia e o "Aplicar no controle" seguinte ia pela
+        #      rota global, apagando o override dos outros.
+        #
+        # Override por-MAC é o valor CERTO mesmo com um controle só (ele
+        # sobrevive ao replug e ao perfil). `None` passa a significar
+        # exclusivamente "ela clicou em Todos".
+        editavel = len(conectados) >= 1
         if editavel:
-            rows: list[tuple[str, int | None]] = self._controller_target_rows(
-                conectados
-            )
-        elif len(conectados) == 1:
-            c = conectados[0]
-            transporte = (c.get("transport") or "?").upper()
-            rows = [
-                (
-                    _("Controle {n} — {t}").format(
-                        n=_display_slot(c), t=transporte
-                    ),
-                    None,
-                )
-            ]
+            # Só sincroniza quando há um alvo derivado do estado; a ausência de
+            # `target_index` não é ordem de ir para global.
+            if target_index is not None:
+                self._sync_edit_target(target_index)
+            if len(conectados) == 1:
+                # SELETOR-UNO-01 (decisão da mantenedora, 22/07): com UM
+                # DualSense o seletor mostra só o botão do próprio controle,
+                # sem a linha "Todos". A UI segue igual.
+                #
+                # O que muda com o R-16 é o ÍNDICE que essa linha carrega: era
+                # `None` (= broadcast global), sob a premissa de que "com um
+                # controle só, Todos e ele são a mesma coisa". Não são: o
+                # override por-MAC sobrevive ao replug e à troca de perfil; a
+                # escrita global, não. Era essa premissa que deixava a edição
+                # por-controle desligada quando só um DualSense tinha nó no
+                # kernel — o estado medido em 23/07.
+                c = conectados[0]
+                transporte = (c.get("transport") or "?").upper()
+                rows: list[tuple[str, int | None]] = [
+                    (
+                        _("Controle {n} — {t}").format(
+                            n=_display_slot(c), t=transporte
+                        ),
+                        int(c.get("index", 0)),
+                    )
+                ]
+            else:
+                rows = self._controller_target_rows(conectados)
         else:
             # Só externos conectados: nenhum radio (não há alvo de edição);
             # os botões de externos entram no _rebuild normalmente.
