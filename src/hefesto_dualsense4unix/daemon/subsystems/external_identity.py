@@ -525,16 +525,45 @@ class ExternalLedSync:
         self._imu_enabler = ExternalImuEnabler()
 
     def _ds_reserve(self) -> int:
-        """Maior slot dos DualSense (conectados + reservas) — piso dos externos."""
+        """Piso dos externos: maior slot DualSense **ou** o alcance do co-op.
+
+        R-13 item 2 (auditoria 23/07): considerar só os slots do registry
+        deixava os externos colidirem com a numeração que o CO-OP acende.
+
+        O co-op numera 1..N sobre os DualSense (primário = 1, secundários
+        2..N) e escreve isso direto nos nós sysfs de player-LED. Se o piso dos
+        externos ignora esse alcance, um Pro Nintendo ou 8BitDo pode receber um
+        número que o co-op também está acendendo em outro controle — os "dois
+        player 1 / dois player 2" que ela vê.
+
+        Tomar o máximo dos dois empurra os externos para depois do último
+        jogador de co-op. `player_count()` é leitura de um dict em memória
+        (`1 + len(self._players)`), sem I/O — barato para o tick.
+
+        NOTA: isto governa atribuições NOVAS. Números já persistidos em
+        `controllers.json` só mudam com "Renumerar agora" — a numeração é
+        deliberadamente estável entre replugs (COR-01/D6).
+        """
+        piso = 0
         registry = getattr(self._daemon, "identity_registry", None)
         snap = getattr(registry, "snapshot", None) if registry is not None else None
-        if not callable(snap):
-            return 0
+        if callable(snap):
+            with contextlib.suppress(Exception):
+                slots = snap()
+                if isinstance(slots, dict) and slots:
+                    piso = max(int(v) for v in slots.values())
         with contextlib.suppress(Exception):
-            slots = snap()
-            if isinstance(slots, dict) and slots:
-                return max(int(v) for v in slots.values())
-        return 0
+            from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+            coop = get_coop_manager(self._daemon)
+            # `player_count()` = 1 + secundários; só conta quando há SECUNDÁRIO
+            # de verdade (com um DualSense só, o co-op não acende nada — R-13
+            # item 4), senão o piso subiria para 1 sem ninguém usando o número.
+            if coop is not None and coop.should_be_active():
+                jogadores = int(coop.player_count())
+                if jogadores >= 2:
+                    piso = max(piso, jogadores)
+        return piso
 
     def _display_authority(self) -> str:
         """Autoridade CORRENTE ('game'/'daemon'/'unknown'), com fail-safe.
