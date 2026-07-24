@@ -32,6 +32,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 
@@ -190,6 +191,15 @@ class TestF2AutoswitchCedeAoJogo:
         manager.activate.assert_not_called()
         assert store.manual_trigger_active is True
 
+    @staticmethod
+    def _perfil_de_jogo(nome: str = "perfil_do_jogo") -> Profile:
+        """Perfil que É a regra própria do jogo (window_class do appid)."""
+        return Profile(
+            name=nome,
+            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            priority=80,
+        )
+
     def test_perfil_de_jogo_vence_o_override_e_limpa_categorias(self) -> None:
         # F2: janela steam_app_* com perfil PRÓPRIO ativa mesmo com a trava
         # armada — e limpa as categorias (o perfil do jogo reescreve tudo).
@@ -197,11 +207,74 @@ class TestF2AutoswitchCedeAoJogo:
         store.set_active_profile("fallback")
         store.mark_manual_trigger_active("led")
         switcher, manager = self._switcher(store)
-        switcher._activate("perfil_do_jogo", {"wm_class": "steam_app_1599660"})
+        switcher._activate(
+            "perfil_do_jogo",
+            {"wm_class": "steam_app_1599660"},
+            self._perfil_de_jogo(),
+        )
         manager.activate.assert_called_once_with(
             "perfil_do_jogo", origin="autoswitch"
         )
         assert store.manual_trigger_active is False
+
+    def test_catch_all_em_janela_de_jogo_nao_cede(self) -> None:
+        """R-01 (auditoria 23/07) — o buraco que fazia "nunca é respeitado".
+
+        A exceção F2 checava só "a janela em foco é ``steam_app_*``", sem
+        verificar se o candidato casou POR CAUSA dela. Com três perfis
+        catch-all no disco da usuária e NENHUM perfil para o Mullet Mad Jack, o
+        vencedor era o ``vitoria`` (MatchAny, prio 5) — um genérico de desktop
+        tratado como "o perfil do jogo": a trava das três categorias era
+        apagada e ele entrava por cima da configuração recém-feita.
+
+        Catch-all em janela de jogo é ausência de regra, não regra do jogo.
+        """
+        store = StateStore()
+        store.set_active_profile("fallback")
+        store.mark_manual_trigger_active("led")
+        switcher, manager = self._switcher(store)
+        catch_all = Profile(name="vitoria", match=MatchAny(), priority=5)
+        switcher._activate(
+            "vitoria", {"wm_class": "steam_app_2111190"}, catch_all
+        )
+        manager.activate.assert_not_called()
+        assert store.manual_trigger_active is True
+
+    def test_criteria_vazio_tambem_nao_e_regra_de_jogo(self) -> None:
+        """O ``coop_local`` de fábrica tem criteria com TODOS os campos vazios.
+
+        Ele não casa com nada (``MatchCriteria.matches`` devolve ``False`` sem
+        condição alguma), mas se algum caminho o entregasse como candidato ele
+        também não pode passar por regra de jogo — a checagem é por
+        especificidade, não pelo rótulo ``type``.
+        """
+        store = StateStore()
+        store.set_active_profile("fallback")
+        store.mark_manual_trigger_active("trigger")
+        switcher, manager = self._switcher(store)
+        vazio = Profile(name="coop_local", match=MatchCriteria(), priority=0)
+        switcher._activate(
+            "coop_local", {"wm_class": "steam_app_1599660"}, vazio
+        )
+        manager.activate.assert_not_called()
+        assert store.manual_trigger_active is True
+
+    def test_perfil_de_jogo_de_outro_appid_nao_cede(self) -> None:
+        """Regra de jogo é do jogo EM FOCO, não de qualquer jogo."""
+        store = StateStore()
+        store.set_active_profile("fallback")
+        store.mark_manual_trigger_active("led")
+        switcher, manager = self._switcher(store)
+        outro = Profile(
+            name="sackboy_nativo",
+            match=MatchCriteria(window_class=["steam_app_1599660"]),
+            priority=80,
+        )
+        switcher._activate(
+            "sackboy_nativo", {"wm_class": "steam_app_2111190"}, outro
+        )
+        manager.activate.assert_not_called()
+        assert store.manual_trigger_active is True
 
     def test_jogo_reaplicando_o_proprio_perfil_ativo_nao_cede(self) -> None:
         # Candidato == ativo mesmo em janela de jogo = reaplicação, não troca;

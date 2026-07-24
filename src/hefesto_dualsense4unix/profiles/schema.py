@@ -464,6 +464,67 @@ class Profile(BaseModel):
     def matches(self, window_info: dict[str, Any]) -> bool:
         return self.match.matches(window_info)
 
+    @property
+    def e_catch_all(self) -> bool:
+        """True quando o perfil casa com QUALQUER janela.
+
+        R-01 (auditoria 23/07): há duas formas de catch-all, e as duas
+        precisam ser tratadas igual na hora de decidir especificidade —
+        ``MatchAny`` explícito (``vitoria``, ``fallback``, ``meu_perfil``) e
+        um ``MatchCriteria`` com todos os campos vazios (o preset
+        ``coop_local`` de fábrica). O segundo na prática nunca casa
+        (``MatchCriteria.matches`` devolve ``False`` sem condição alguma),
+        mas ele TAMBÉM não é uma regra específica — então some dos dois
+        lados da comparação pelo mesmo predicado.
+        """
+        if isinstance(self.match, MatchAny):
+            return True
+        criteria = self.match
+        return not (
+            criteria.window_class
+            or criteria.window_title_regex
+            or criteria.process_name
+        )
+
+
+def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any]) -> bool:
+    """True quando o perfil é a regra PRÓPRIA do jogo em foco.
+
+    R-01 (auditoria 23/07). Antes, o autoswitch tratava como "perfil do jogo"
+    qualquer candidato que aparecesse enquanto uma janela ``steam_app_*``
+    estivesse em foco — sem checar se o perfil casou POR CAUSA dela. Com três
+    perfis catch-all no disco e nenhum perfil para o Mullet Mad Jack, o
+    vencedor era o ``vitoria`` (genérico de desktop): a trava manual das três
+    categorias era apagada e o genérico entrava por cima da configuração que a
+    usuária tinha acabado de fazer.
+
+    Ser regra de jogo exige as duas coisas:
+
+    1. ``match.type == "criteria"`` com critério de verdade (catch-all não é
+       regra de jogo, nem o ``MatchAny`` nem o criteria vazio);
+    2. a ``wm_class`` ``steam_app_<id>`` em foco estar listada em
+       ``match.window_class``.
+
+    Regex de título **não** conta: o ``fps.json`` da usuária tem ``|Control)``
+    e ``|Metro)`` sem âncora — deixá-lo valer como regra de jogo reabriria o
+    mesmo buraco por outra porta. (Hoje o ``fps.json`` também preenche
+    ``process_name``, e o ``matches`` é AND, então na prática ele não dispara
+    em "Painel de Controle"; mas a regra aqui não pode depender disso.)
+
+    A checagem é por ESTRUTURA, não pelo rótulo ``match.type``: um
+    ``MatchCriteria`` com ``window_class`` preenchido já é, por definição, não
+    catch-all. Isso também mantém o predicado tolerante a dublês de teste
+    (``getattr`` defensivo), no mesmo idioma de
+    ``lifecycle._profile_rule_matches_game``.
+    """
+    match = getattr(profile, "match", None)
+    if not isinstance(match, MatchCriteria) or not match.window_class:
+        return False
+    wm_class = str(window_info.get("wm_class") or "")
+    if not wm_class.startswith("steam_app_"):
+        return False
+    return wm_class in match.window_class
+
 
 __all__ = [
     "ControllerOverrides",
@@ -476,4 +537,5 @@ __all__ = [
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",
+    "perfil_e_regra_de_jogo",
 ]
