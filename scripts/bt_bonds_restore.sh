@@ -87,8 +87,25 @@ while IFS= read -r -d '' ADAPTER; do
     install -d -m 700 "${DST}/${BASE}"
     find "${ADAPTER}" -mindepth 1 -maxdepth 1 -type f -exec cp -a {} "${DST}/${BASE}/" \;
     while IFS= read -r -d '' DEVDIR; do
+        [[ "$(basename "${DEVDIR}")" == "cache" ]] && continue
         cp -a "${DEVDIR}" "${DST}/${BASE}/"
     done < <(find "${ADAPTER}" -mindepth 1 -maxdepth 1 -type d -print0)
+    # cache/ (SDP-CACHE-01): restaurar o registro SDP é o que faz o perfil HID
+    # subir sem re-pareamento. Mas NUNCA sobrescrever um registro bom com um
+    # envenenado — uma entrada sem [ServiceRecords] é exatamente o estado que
+    # produz o controle zumbi (ACL vivo, zero hidraw). Snapshots feitos antes
+    # do SDP-CACHE-01 não têm cache nenhum: aí este bloco é no-op.
+    if [[ -d "${ADAPTER}/cache" ]]; then
+        install -d -m 700 "${DST}/${BASE}/cache"
+        while IFS= read -r -d '' ENTRY; do
+            MAC="$(basename "${ENTRY}")"
+            if ! grep -q '^\[ServiceRecords\]' "${ENTRY}" 2>/dev/null; then
+                printf '   cache SDP de %s no snapshot está sem [ServiceRecords] — não restaurado\n' "${MAC}"
+                continue
+            fi
+            cp -a "${ENTRY}" "${DST}/${BASE}/cache/"
+        done < <(find "${ADAPTER}/cache" -mindepth 1 -maxdepth 1 -type f -print0)
+    fi
 done < <(find "${SNAP}" -mindepth 1 -maxdepth 1 -type d -print0)
 
 chmod -R go-rwx "${DST}"

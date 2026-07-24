@@ -373,7 +373,13 @@ exit 0
         saida = _rodar_check("check_bt_connected_sem_hidraw", fake_bin)
         assert "[FAIL]" in saida
         assert self._MAC_EXOTICO in saida
-        assert "meio-salvo" in saida
+        assert "ZUMBI" in saida
+        # SDP-CACHE-01 (23/07): a causa medida do "conectado sem hidraw" é cache
+        # SDP sem [ServiceRecords], e ela se cura SEM destruir o bond. Este
+        # check é o do SINTOMA — ele não pode mais mandar desparear de cara,
+        # senão a usuária re-pareia 4 controles à toa (a dor que o projeto cura).
+        assert "ANTES de desparear" in saida
+        assert "bluetoothctl remove" not in saida
 
     def test_sem_dispositivos_pareados_e_info_neutro(self, tmp_path: Path) -> None:
         corpo = 'case "$1" in tree) printf "" ;; esac\nexit 0\n'
