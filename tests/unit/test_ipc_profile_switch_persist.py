@@ -114,7 +114,9 @@ async def test_profile_switch_grava_active_marker(running_server: Any) -> None:
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.switch", {"name": "shooter"})
 
-    assert result == {"active_profile": "shooter"}
+    # R-03: campos aditivos na resposta (`mode_aplicado`/`secoes`) — o marker,
+    # que é o que este teste garante, não mudou.
+    assert result["active_profile"] == "shooter"
     assert marker.exists()
     assert marker.read_text(encoding="utf-8").strip() == "shooter"
 

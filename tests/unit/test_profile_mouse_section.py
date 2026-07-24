@@ -123,13 +123,24 @@ class _Spy:
         self.mouse_calls: list[tuple[bool, int, int]] = []
         self.suppression_calls: list[bool] = []
 
-    def mouse(self, enabled: bool, speed: int, scroll: int) -> bool:
+    def mouse(
+        self, enabled: bool, speed: int, scroll: int, *, origin: str = "autoswitch"
+    ) -> bool:
+        # R-03: o applier recebe a ORIGEM da ativação ("manual" fura o lock de
+        # gesto manual; automática adia). O dublê só registra o efeito pedido.
         self.mouse_calls.append((enabled, speed, scroll))
         return True
 
-    def suppression(self, desired: bool, *, profile: object = None) -> None:
+    def suppression(
+        self,
+        desired: bool,
+        *,
+        profile: object = None,
+        origin: str = "autoswitch",
+    ) -> None:
         # R-02: o applier recebe QUEM mandou, para distinguir "o perfil do
-        # desktop liberou" de "caiu num catch-all".
+        # desktop liberou" de "caiu num catch-all". R-03: e de ONDE veio a
+        # ativação.
         self.suppression_calls.append(desired)
 
 
@@ -202,7 +213,10 @@ def test_activate_applier_que_levanta_nao_aborta(
     """Best-effort: falha no applier loga warning e a ativação completa."""
     save_profile(_mk_profile("pnc", mouse={"enabled": True}))
 
-    def boom(*_a: object) -> None:
+    def boom(*_a: object, **_kw: object) -> None:
+        # R-03: `**_kw` para o dublê engolir `profile=`/`origin=` e levantar o
+        # RuntimeError do teste — sem isso o que estouraria seria um TypeError
+        # de assinatura, e o teste passaria pelo motivo errado.
         raise RuntimeError("uinput indisponível")
 
     fc = FakeController()

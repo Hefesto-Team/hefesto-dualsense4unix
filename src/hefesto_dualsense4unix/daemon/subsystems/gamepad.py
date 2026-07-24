@@ -52,6 +52,14 @@ logger = get_logger(__name__)
 #: por origem automática em `_deve_promover_backend`.
 REBACKEND_COOLDOWN_SEC = 30.0
 
+#: R-04/R-06 (auditoria 23/07): período (s) da reconciliação de LAUNCH que o
+#: `dispatch_gamepad` dispara — arming do modo do perfil pelo marker do wrapper
+#: e liga/desliga da exceção de Steam Input. Custo por tick sem vencimento: uma
+#: comparação de float (o mesmo padrão dos throttles do `_poll_loop`). 1 Hz é a
+#: cadência do dreno de pendência do R-03 e é folgada para o que se mede aqui:
+#: o wrapper grava o marker segundos antes de o jogo enumerar controles.
+LAUNCH_RECONCILE_INTERVAL_SEC = 1.0
+
 
 class GamepadSubsystem:
     """Subsystem que gerencia o gamepad virtual. Espelha MouseSubsystem."""
@@ -98,29 +106,50 @@ def _materialize_launch_env(daemon: DaemonProtocol) -> None:
         materialize_launch_env(daemon)
 
 
-def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
-    """Grab/ungrab do evdev do controle físico, com resultado OBSERVÁVEL.
+def _set_evdev_grab(daemon: DaemonProtocol, grab: bool) -> None:
+    """Só o EVIOCGRAB do evdev físico, com resultado OBSERVÁVEL.
 
-    Sem isso, o jogo veria o controle cru (js0) + o virtual = input dobrado. O
-    grab faz o daemon ser o leitor exclusivo do evdev real (ele já é o leitor),
-    escondendo o controle cru dos clientes evdev (SDL2). Nunca propaga exceção:
-    em FAKE mode / sem device / sem suporte, o gamepad ainda funciona. Falha de
-    EVIOCGRAB deixa de ser silenciosa (BUG-COOP-GRAB-SILENT-FAIL-01): loga
-    warning e conta no store — a GUI/doctor podem apontar "input dobrado".
+    Extraído de `_set_controller_grab` (R-06): a exceção de Steam Input por
+    appid precisa soltar/retomar o grab SEM passar pela composição
+    grab+broker do caller (lá o `restore_all` do broker é chamado com
+    `grab=False`, o que é o que queremos ao ENTRAR na exceção mas não ao SAIR
+    dela). Nunca propaga exceção: em FAKE mode / sem device / sem suporte, o
+    gamepad ainda funciona. Falha de EVIOCGRAB deixa de ser silenciosa
+    (BUG-COOP-GRAB-SILENT-FAIL-01): loga warning e conta no store — a
+    GUI/doctor podem apontar "input dobrado".
     """
     controller = getattr(daemon, "controller", None)
     evdev = getattr(controller, "_evdev", None)
     setter = getattr(evdev, "set_grab", None)
-    if setter is not None:
-        with contextlib.suppress(Exception):
-            ok = setter(grab)
-            state = getattr(evdev, "grab_state", None)
-            logger.info("gamepad_controller_grab", grab=grab, ok=ok, state=state)
-            if grab and ok is False:
-                store = getattr(daemon, "store", None)
-                if store is not None:
-                    with contextlib.suppress(Exception):
-                        store.bump("gamepad.grab.failed")
+    if setter is None:
+        return
+    with contextlib.suppress(Exception):
+        ok = setter(grab)
+        state = getattr(evdev, "grab_state", None)
+        logger.info("gamepad_controller_grab", grab=grab, ok=ok, state=state)
+        if grab and ok is False:
+            store = getattr(daemon, "store", None)
+            if store is not None:
+                with contextlib.suppress(Exception):
+                    store.bump("gamepad.grab.failed")
+
+
+def _set_controller_grab(daemon: DaemonProtocol, grab: bool) -> None:
+    """Grab/ungrab do evdev do controle físico + hide/restore do hidraw.
+
+    Sem isso, o jogo veria o controle cru (js0) + o virtual = input dobrado. O
+    grab faz o daemon ser o leitor exclusivo do evdev real (ele já é o leitor),
+    escondendo o controle cru dos clientes evdev (SDL2).
+
+    R-06: com a exceção de Steam Input ATIVA (appid da allowlist rodando), o
+    grab de entrada é PULADO — a exceção existe justamente para o jogo ver o
+    controle físico. O ungrab nunca é pulado: expor nunca é errado (mesma
+    assimetria já documentada no `_broker_sync_grab`).
+    """
+    if grab and steam_input_excecao_ativa(daemon):
+        logger.info("gamepad_grab_pulado_steam_input", motivo="excecao_por_appid")
+    else:
+        _set_evdev_grab(daemon, grab)
     # BROKER-01: hide/restore do hidraw colado ao EVIOCGRAB — fora do
     # suppress acima (falha de grab não silencia o broker) e com o próprio
     # suppress lá dentro. A colocação aqui dá DE GRAÇA a regra da troca de
@@ -158,11 +187,86 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
         if grab:
             if daemon.is_native_mode():
                 return
+            if steam_input_excecao_ativa(daemon):
+                # R-06: esconder o hidraw do físico é exatamente o que tornava
+                # a allowlist inerte — a Steam precisa LER o hidraw para
+                # entregar o DualSense pela API dela (SetDualSenseTriggerEffect).
+                logger.info("broker_hide_pulado_steam_input", motivo="excecao_por_appid")
+                return
             node = hidraw_fn()
             if isinstance(node, str) and node:
                 broker_call_nonblocking(daemon, lambda: client.hide(node))
         else:
             broker_call_nonblocking(daemon, client.restore_all)
+
+
+def steam_input_excecao_ativa(daemon: Any) -> bool:
+    """True enquanto a exceção de Steam Input por appid estiver valendo (R-06).
+
+    Leitura de um flag em memória (`_steam_input_excecao`), NUNCA de disco: esta
+    função é gate de caminhos quentes (grab, hide, rehide) e não pode pagar I/O.
+    Quem lê o marker/janela e move o flag é `sync_steam_input_exception`, na
+    reconciliação throttada de 1 Hz.
+    """
+    return bool(getattr(daemon, "_steam_input_excecao", False))
+
+
+def sync_steam_input_exception(
+    daemon: DaemonProtocol, *, now: float | None = None
+) -> bool:
+    """Liga/desliga a exceção de Steam Input por appid. True = ativa (R-06).
+
+    Achado: a allowlist (`steam_input_apps.txt`, com o 2111190 do Mullet Mad
+    Jack) era INERTE — o guard de VDF a respeitava, mas o daemon continuava
+    fazendo EVIOCGRAB no evdev e mandando o broker esconder o hidraw do
+    controle físico. Resultado medido: o jogo cujo suporte a DualSense vem PELA
+    Steam não achava controle nenhum da Sony, e a exceção que ela configurou
+    não mudava nada.
+
+    A cura é o "Modo Nativo por appid": enquanto um jogo da allowlist está em
+    sessão, o físico volta a ficar visível (ungrab + restore do broker) e, ao
+    sair, o estado canônico é retomado. O preço é explícito e aceito no plano:
+    para esses appids o jogo passa a ver o físico E o vpad — é o que "opt-in"
+    significa; a alternativa (continuar escondendo) é a exceção não existir.
+
+    Só age nas BORDAS (o flag em memória guarda o estado anterior): sem borda,
+    a função é uma comparação e nada de I/O de grab/broker.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import steam_input_exception_appid
+
+    appid = steam_input_exception_appid(daemon, now=now)
+    ativa = appid is not None
+    anterior = steam_input_excecao_ativa(daemon)
+    if ativa == anterior:
+        return ativa
+    daemon._steam_input_excecao = ativa  # type: ignore[attr-defined]
+    if ativa:
+        logger.info("steam_input_excecao_ativada", appid=appid)
+        _set_evdev_grab(daemon, False)
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                broker_call_nonblocking,
+                broker_client_for,
+            )
+
+            client = broker_client_for(daemon)
+            broker_call_nonblocking(daemon, client.restore_all)
+        return True
+    logger.info("steam_input_excecao_encerrada")
+    # Saída da exceção: retoma o estado canônico SÓ se ele valeria agora — os
+    # mesmos gates do rehide (emulação ligada, vpad VIVO, fora do Modo Nativo).
+    # Sem isso, fechar o jogo da allowlist com a emulação desligada grabaria um
+    # controle que ninguém pediu.
+    if daemon.is_native_mode():
+        return False
+    if not getattr(daemon.config, "gamepad_emulation_enabled", False):
+        return False
+    if not _vpad_vivo(daemon):
+        return False
+    _set_evdev_grab(daemon, True)
+    with contextlib.suppress(Exception):
+        rehide_physical_hidraw(daemon)
+    return False
 
 
 def vpad_vivo(device: Any) -> bool:
@@ -201,6 +305,11 @@ def rehide_physical_hidraw(daemon: DaemonProtocol) -> None:
     autoriza hide do próprio nó.
     """
     if daemon.is_native_mode():
+        return
+    if steam_input_excecao_ativa(daemon):
+        # R-06: sem este gate a reconciliação online (a cada ≤30 s) desfaria a
+        # exceção sozinha no meio do jogo da allowlist — o físico voltaria a
+        # 0600 e a Steam perderia o hidraw que ela acabou de ganhar.
         return
     if not getattr(daemon.config, "gamepad_emulation_enabled", False):
         return
@@ -535,6 +644,99 @@ def controller_allows_uhid(daemon: DaemonProtocol) -> bool:
     return callable(getattr(daemon.controller, "hidraw_path", None))
 
 
+def _autoridade_do_jogo(daemon: Any) -> bool:
+    """True SÓ quando o sinal STICKY diz que o jogo tem a autoridade (R-04).
+
+    Contradição 3 da §5 do plano — são DOIS sinais para DUAS decisões, e
+    fundi-los quebra um dos dois lados:
+
+    - **operação destrutiva** (recriar/parar vpad) lê `display_authority`, que
+      é sticky por ~30 s: fail-safe aqui é NÃO destruir, então segurar o gesto
+      por mais alguns segundos depois de o jogo perder o foco é exatamente o
+      erro que queremos cometer;
+    - **reversão de modo para desktop** lê a janela CRUA
+      (`lifecycle._janela_de_jogo_em_foco`, R-02): lá o sticky congelaria a
+      reversão legítima ao fechar o jogo.
+
+    Ausência do atributo (dublês de teste, daemon antigo) e qualquer leitura
+    não-`"game"` NÃO bloqueiam: o risco declarado do R-04 é o gate largo demais
+    fazer o perfil não valer NUNCA — que agrava a queixa que ele veio curar.
+    """
+    return getattr(daemon, "display_authority", "unknown") == "game"
+
+
+def _recriacao_bloqueada_por_jogo(
+    daemon: DaemonProtocol, *, origin: str, motivo: str
+) -> bool:
+    """True quando destruir/recriar o vpad AGORA arrancaria o controle do jogo.
+
+    R-04 (auditoria 23/07). Medido ao vivo: recriar o vpad com o jogo já
+    rodando invalida os handles que ele abriu — a Steam nunca reabre o hidraw
+    do vpad do P1 — e o resultado é "abri o jogo e os controles morreram no
+    meio da partida". Quem dispara essa recriação sem ela pedir é o caminho
+    automático (perfil/autoswitch/hotplug), e é só ele que este gate segura:
+
+    - ``origin == "manual"`` NUNCA é bloqueado. Trocar de máscara com o jogo
+      aberto é uma escolha legítima dela (o botão de força do VPAD-02 vive
+      disso); a última palavra é sempre da usuária;
+    - com o R-04 completo o caso praticamente some: o modo do perfil passa a
+      ser armado NO LAUNCH (`launch_env.arm_launch_profile`), antes de o jogo
+      executar, e a aplicação tardia vira no-op por idempotência.
+
+    Nunca silencioso: warning no journal + contador no store, para o gesto
+    recusado ter rastro (a mesma disciplina do `rebackend_suprimido_por_*`).
+    """
+    if origin == "manual":
+        return False
+    if not _autoridade_do_jogo(daemon):
+        return False
+    logger.warning("vpad_recriacao_bloqueada_por_jogo", motivo=motivo, origem=origin)
+    store = getattr(daemon, "store", None)
+    if store is not None:
+        with contextlib.suppress(Exception):
+            store.bump("gamepad.recreate.blocked_by_game")
+    return True
+
+
+def _reconciliar_launch(daemon: DaemonProtocol) -> None:
+    """Reconciliação de LAUNCH throttada a 1 Hz (R-04 arming + R-06 exceção).
+
+    Chamada do `dispatch_gamepad` — ou seja, do poll loop, ao lado do dreno de
+    pendência do R-03 e com a mesma disciplina de throttle. Duas coisas, ambas
+    best-effort e nenhuma delas podendo derrubar o dispatch do controle:
+
+    1. `arm_launch_profile` — aplica o modo do perfil quando o marker do
+       wrapper mostra um launch em curso (R-04), idempotente por `(appid,
+       epoch)`;
+    2. `sync_steam_input_exception` — liga/desliga a exceção por appid (R-06).
+
+    Decisão registrada: o lugar canônico deste par é a cadência do `_poll_loop`
+    (`lifecycle.py`), junto de `_drenar_modo_pendente`. Ele mora aqui porque é
+    o ponto de 1 Hz alcançável a partir deste subsystem; a semântica é a mesma
+    e o custo por tick sem vencimento é uma comparação de float.
+    """
+    try:
+        agora = time.monotonic()
+        if agora < getattr(daemon, "_launch_reconcile_next_at", 0.0):
+            return
+        daemon._launch_reconcile_next_at = (  # type: ignore[attr-defined]
+            agora + LAUNCH_RECONCILE_INTERVAL_SEC
+        )
+    except Exception:
+        # Daemon dublado/imutável (ou carimbo corrompido): sem throttle não há
+        # reconciliação — e o dispatch do controle, que é a ROTA do jogo, NUNCA
+        # pode cair por causa de um extra. Mesma disciplina do `_materialize_
+        # launch_env`: falha aqui vira ausência de recurso, nunca input morto.
+        logger.debug("launch_reconcile_throttle_indisponivel", exc_info=True)
+        return
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.daemon.launch_env import arm_launch_profile
+
+        arm_launch_profile(daemon)
+    with contextlib.suppress(Exception):
+        sync_steam_input_exception(daemon)
+
+
 def _rebackend_em_cooldown(daemon: DaemonProtocol, now: float) -> bool:
     """True se a última tentativa de rebackend está a menos de um cooldown.
 
@@ -611,6 +813,15 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
         return False
     if not uhid_available():
         return False  # uhid segue quebrado: derrubar o uinput seria só input drop
+    # R-04: a promoção abaixo destrói e recria o vpad. A docstring desta função
+    # sempre admitiu que "o jogo aberto PERDE o vpad por um instante" e julgou
+    # o preço aceitável; a medição de 23/07 mostrou que não é um instante — a
+    # Steam não reabre o handle e o jogo fica sem controle o resto da sessão.
+    # Com o jogo na autoridade, a recuperação de uma degradação (que no pior
+    # caso custa vibração) não pode custar o controle inteiro. Fora do jogo a
+    # promoção segue igual, e o hotplug seguinte tenta de novo.
+    if _recriacao_bloqueada_por_jogo(daemon, origin="hotplug", motivo="promocao_uhid"):
+        return False
     now = time.monotonic()
     if _rebackend_em_cooldown(daemon, now):
         # A tentativa anterior (desta borda OU da re-seleção na GUI — o
@@ -823,6 +1034,20 @@ def start_gamepad_emulation(
             daemon, existing, key, origin
         ):
             return True
+        # R-04: daqui para baixo o vpad VIVO seria destruído e recriado. Com o
+        # jogo segurando a autoridade de exibição isso arranca o controle da
+        # mão dela no meio da partida — e é o desfecho que a queixa "abro o
+        # jogo e a config nunca é respeitada" descreve pelo avesso. Vpad já
+        # MORTO (uhid derrubado por UHID_STOP) não entra: não há o que perder,
+        # e recriar é a única chance de o jogo ter controle.
+        if vpad_vivo(existing) and _recriacao_bloqueada_por_jogo(
+            daemon,
+            origin=origin,
+            motivo=f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{key}",
+        ):
+            # True porque a emulação SEGUE ativa (com a máscara anterior) — o
+            # contrato de retorno é "ativo ao final", não "aplicou o pedido".
+            return True
         # Flavor mudou — ou mesma máscara com backend degradado e uhid de
         # volta (VPAD-02): recria sem repersistir/regrab intermediário.
         stop_gamepad_emulation(daemon, persist=False, release_grab=False)
@@ -968,7 +1193,13 @@ def dispatch_gamepad(
 
     Chamado pelo poll loop a cada tick quando _gamepad_device != None.
     Não relança exceções — falhas viram warning.
+
+    R-04/R-06: a reconciliação de launch roda ANTES do forward e o `device` é
+    lido DEPOIS dela de propósito — o arming pode ter recriado o vpad (troca de
+    máscara pedida pelo perfil do jogo, ainda sem janela e portanto sem o gate
+    destrutivo), e despachar no objeto antigo escreveria num fd já fechado.
     """
+    _reconciliar_launch(daemon)
     device = daemon._gamepad_device
     if device is None:
         return
@@ -993,6 +1224,7 @@ def dispatch_gamepad(
 
 
 __all__ = [
+    "LAUNCH_RECONCILE_INTERVAL_SEC",
     "REBACKEND_COOLDOWN_SEC",
     "GamepadSubsystem",
     "apply_game_lightbar",
@@ -1009,8 +1241,10 @@ __all__ = [
     "rehide_physical_hidraw",
     "start_gamepad_emulation",
     "start_motion_reader",
+    "steam_input_excecao_ativa",
     "stop_gamepad_emulation",
     "stop_motion_reader",
+    "sync_steam_input_exception",
     "upgrade_primary_vpad_to_uhid",
     "vpad_vivo",
 ]

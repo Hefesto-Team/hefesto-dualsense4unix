@@ -817,6 +817,53 @@ class BrokerState:
         return restored
 
 
+def physical_nodes_exposure(
+    uid: int,
+    *,
+    dev_root: str = "/dev",
+    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    ops: Any | None = None,
+    validator: Callable[[str], str | None] | None = None,
+) -> dict[str, bool]:
+    """{nó hidraw do DualSense FÍSICO: está exposto ao `uid`?} — só leitura.
+
+    R-06 item 3 (auditoria 23/07): a exceção de Steam Input por appid tinha
+    duas noções sendo confundidas numa só frase — "configurada" (o appid está
+    no `steam_input_apps.txt`) e "EFETIVA" (o hidraw do físico é de fato
+    legível pelo uid da usuária agora). A allowlist ficou inerte por meses
+    justamente porque ninguém media a segunda; um status honesto precisa das
+    duas, e é isto que a GUI e o `doctor.sh` passam a consultar.
+
+    Espelho read-only de `restore_all_physical` (mesma varredura, mesmo
+    validador, mesmo critério de exposição), sem root, sem mutar nada e sem
+    falar com o broker — quem chama roda como a usuária, e é a permissão DELA
+    que decide. Nunca levanta: sysfs ilegível devolve `{}`.
+    """
+    fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
+    out: dict[str, bool] = {}
+    try:
+        entries = sorted(os.listdir(sys_class_hidraw))
+    except OSError:
+        return out
+    for base in entries:
+        node = f"{dev_root}/{base}"
+        valid = (
+            validator(node)
+            if validator is not None
+            else validate_physical_node(
+                node,
+                dev_root=dev_root,
+                sys_class_hidraw=sys_class_hidraw,
+                sys_class_bluetooth=sys_class_bluetooth,
+            )
+        )
+        if valid is None:
+            continue
+        out[node] = bool(fs_ops.is_exposed_to(node, uid))
+    return out
+
+
 def restore_all_physical(
     *,
     uid: int,

@@ -36,9 +36,39 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggerConfig,
     TriggersConfig,
 )
+from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
 
 app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - Dualsense4Unix.", no_args_is_help=True)  # noqa: E501
 console = Console()
+
+
+def _guarda_slug(name: str, *, force: bool) -> None:
+    """Recusa gravar por cima de OUTRO perfil que já ocupa o mesmo arquivo.
+
+    R-10 (auditoria 23/07): o filename é `<slugify(name)>.json`, então
+    "Navegacao" e "Navegação" são o MESMO arquivo. `save_profile` sobrescreve
+    sem perguntar — na GUI isso virou perda silenciosa, e no CLI era pior
+    ainda: `profile create "Navegacao"` apagava a "Navegação" da usuária e
+    imprimia "perfil criado" em verde. Só recusa quando o ocupante tem outro
+    nome de exibição (mesmo nome = edição in-place, comportamento de sempre).
+    """
+    if force:
+        return
+    ocupante = find_by_slug(name, load_all_profiles())
+    if ocupante is None or ocupante.name == name:
+        return
+    try:
+        arquivo = f"{slugify(name)}.json"
+    except ValueError:  # nome sem slug nem chega aqui (o schema recusa antes)
+        arquivo = "?"
+    console.print(
+        f"[red]'{name}' e '{ocupante.name}' são o MESMO arquivo[/red] ({arquivo}) "
+        f"— salvar assim apagaria '{ocupante.name}'."
+    )
+    console.print(
+        "[dim]escolha outro nome ou repita com --force para sobrescrever.[/dim]"
+    )
+    raise typer.Exit(code=1)
 
 
 @app.command("list")
@@ -129,8 +159,13 @@ def cmd_create(
         default_factory=list, help="Basename de exe (repetir)."
     ),
     fallback: bool = typer.Option(False, "--fallback", help="Perfil com MatchAny (prioridade 0)."),
+    force: bool = typer.Option(
+        False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
+    ),
 ) -> None:
     """Cria um perfil mínimo (triggers Off, leds apagados). Edite o JSON depois."""
+    # R-10: "Navegacao" e "Navegação" são o mesmo .json — não criar por cima.
+    _guarda_slug(name, force=force)
     match: Match
     if fallback:
         match = MatchAny()
@@ -182,6 +217,9 @@ def cmd_apply(
         True, "--save/--no-save",
         help="Se gravar o perfil no diretório XDG antes de ativar (default: sim).",
     ),
+    force: bool = typer.Option(
+        False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
+    ),
 ) -> None:
     """Valida um JSON de perfil, salva no disco e ativa via daemon (se online).
 
@@ -203,6 +241,9 @@ def cmd_apply(
         raise typer.Exit(code=1) from None
 
     if save:
+        # R-10: um JSON exportado com o nome sem acento não pode comer o perfil
+        # acentuado que já ocupa o arquivo.
+        _guarda_slug(profile.name, force=force)
         path = save_profile(profile)
         console.print(f"[green]perfil salvo:[/green] {path}")
     else:
@@ -225,6 +266,9 @@ def cmd_save(
     from_active: bool = typer.Option(
         False, "--from-active",
         help="Clona o perfil ativo (marker XDG) com o novo nome.",
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
     ),
 ) -> None:
     """Cria um perfil clonando o ativo (snapshot do que está em uso)."""
@@ -251,9 +295,21 @@ def cmd_save(
         )
         raise typer.Exit(code=1) from None
 
+    # R-10: clonar para um nome que cai no MESMO arquivo de outro perfil
+    # apagaria aquele perfil e imprimiria "perfil clonado" em verde.
+    _guarda_slug(name, force=force)
+
     # Clone imutável via pydantic: serializa, troca o nome, revalida.
+    # R-09 (mesmo defeito da GUI, `profiles_actions`): `model_dump` DENSIFICA —
+    # os defaults do schema saem marcados como explícitos e o
+    # `model_fields_set` das entradas de `controllers` se perde. Um override
+    # por-controle PARCIAL (só brilho) vira `lightbar:[0,0,0]` e APAGA a
+    # lightbar daquele controle no clone. Reinjetar as instâncias validadas é a
+    # mesma guarda de `draft_config.to_profile`.
     payload = source.model_dump(mode="json")
     payload["name"] = name
+    if source.controllers:
+        payload["controllers"] = source.controllers
     try:
         clone = Profile.model_validate(payload)
     except ValidationError as exc:

@@ -21,7 +21,7 @@ autoridade agora é re-checada DENTRO dos locks (`_RenumberAuthorityChangedError
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import ANY, MagicMock, PropertyMock
 
 import pytest
 
@@ -212,8 +212,12 @@ class TestF2AutoswitchCedeAoJogo:
             {"wm_class": "steam_app_1599660"},
             self._perfil_de_jogo(),
         )
+        # R-03 (auditoria 23/07): o autoswitch passou a mandar também o
+        # `relatorio` (out-param com o estado de cada seção — é assim que
+        # "perfil trocou mas a máscara foi adiada" deixa rastro no journal).
+        # O que este teste garante segue sendo o par (nome, origin).
         manager.activate.assert_called_once_with(
-            "perfil_do_jogo", origin="autoswitch"
+            "perfil_do_jogo", origin="autoswitch", relatorio=ANY
         )
         assert store.manual_trigger_active is False
 

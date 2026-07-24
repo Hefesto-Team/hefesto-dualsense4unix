@@ -65,17 +65,33 @@ class TestRoundtripSimplePresets:
         assert isinstance(reloaded.match, MatchCriteria)
         assert reloaded.match.process_name == ["eldenring"]
 
-    def test_game_nome_maiusculo_normalizado(self, tmp_dir: Path) -> None:
+    def test_game_nome_maiusculo_sobrevive_ao_roundtrip(self, tmp_dir: Path) -> None:
+        """CONTRATO MUDADO de propósito (R-12 item 3, auditoria 23/07).
+
+        O teste antigo congelava a normalização para minúsculas, que era o
+        defeito: o matcher compara com o basename CRU de `/proc/PID/exe`
+        (`EldenRing.exe`), então o `.lower()` do helper garantia o não-casamento.
+        """
         profile = _build_simple_profile("jogo_caps", 5, "game", custom_name="EldenRing")
         reloaded = _save_and_reload(profile, tmp_dir)
         assert isinstance(reloaded.match, MatchCriteria)
-        assert reloaded.match.process_name == ["eldenring"]
+        assert reloaded.match.process_name == ["EldenRing"]
 
-    def test_game_sem_custom_vira_any(self, tmp_dir: Path) -> None:
-        profile = _build_simple_profile("sem_nome", 0, "game", custom_name=None)
+    def test_game_sem_custom_nao_nasce_perfil_nenhum(self, tmp_dir: Path) -> None:
+        """CONTRATO MUDADO de propósito (R-12 item 2): antes virava MatchAny."""
+        with pytest.raises(ValueError, match="nome do programa"):
+            _build_simple_profile("sem_nome", 0, "game", custom_name=None)
+
+    def test_steam_game_roundtrip(self, tmp_dir: Path) -> None:
+        """R-12 item 1: a opção que faltava — perfil DO jogo da Steam."""
+        profile = _build_simple_profile("MadJack", 70, "steam_game", custom_name="2111190")
         reloaded = _save_and_reload(profile, tmp_dir)
-        # game sem custom_name → MatchAny; detect retorna "any"
-        assert detect_simple_preset(reloaded.match) == "any"
+        assert isinstance(reloaded.match, MatchCriteria)
+        assert reloaded.match.window_class == ["steam_app_2111190"]
+        assert detect_simple_preset(reloaded.match) == "steam_game", (
+            "sem a detecção, reabrir o perfil jogaria a usuária no editor "
+            "avançado e o round-trip do editor simples estaria quebrado"
+        )
 
 
 class TestRoundtripCriterioComplexo:

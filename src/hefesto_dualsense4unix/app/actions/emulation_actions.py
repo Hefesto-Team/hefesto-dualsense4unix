@@ -568,21 +568,64 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     return True
         return False
 
+    @staticmethod
+    def _steam_input_excecao_status() -> tuple[list[int], bool | None]:
+        """(appids da allowlist, exceção EFETIVA agora) — R-06 item 3.
+
+        "Configurada" e "efetiva" são coisas diferentes e a confusão entre elas
+        é o que deixou a allowlist inerte por meses: o appid estava no arquivo,
+        o guard de VDF o respeitava, e mesmo assim o daemon seguia escondendo o
+        hidraw do controle físico — o jogo não via DualSense nenhum. Aqui:
+
+        - **configurada** = appids em `steam_input_apps.txt`;
+        - **efetiva** = TODO hidraw de DualSense físico está legível por ESTE
+          uid agora (é a permissão da usuária que decide, e a GUI roda como
+          ela). `None` quando não há físico visível no sysfs — não dá para
+          afirmar nem negar, e mentir aqui seria repetir o erro original.
+        """
+        from hefesto_dualsense4unix.broker.hidraw_broker import (
+            physical_nodes_exposure,
+        )
+        from hefesto_dualsense4unix.daemon.launch_env import steam_input_appids
+
+        appids = sorted(steam_input_appids())
+        exposicao: dict[str, bool] = {}
+        with contextlib.suppress(Exception):
+            exposicao = physical_nodes_exposure(os.getuid())
+        if not exposicao:
+            return appids, None
+        return appids, all(exposicao.values())
+
     def _refresh_steam_input_status(self) -> None:
         label = self._get("emulation_steam_input_status_label")
         if label is None:
             return
 
-        def _check() -> bool | None:
-            return self._steam_input_is_on()
+        def _check() -> tuple[bool | None, list[int], bool | None]:
+            return (self._steam_input_is_on(), *self._steam_input_excecao_status())
 
-        def _on_ok(on: bool | None) -> bool:
+        def _on_ok(dados: tuple[bool | None, list[int], bool | None]) -> bool:
+            on, appids, efetiva = dados
             if on is None:
-                label.set_markup('<span foreground="#999">Steam não encontrado</span>')
+                markup = '<span foreground="#999">Steam não encontrado</span>'
             elif on:
-                label.set_markup('<span foreground="#c90">ligado (conflita!)</span>')
+                markup = '<span foreground="#c90">ligado (conflita!)</span>'
             else:
-                label.set_markup('<span foreground="#2d8">desligado (ok)</span>')
+                markup = '<span foreground="#2d8">desligado (ok)</span>'
+            if appids:
+                # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
+                # só se está escrito no arquivo.
+                if efetiva is None:
+                    extra = "sem controle físico visível"
+                elif efetiva:
+                    extra = "controle liberado agora"
+                else:
+                    extra = "só valendo durante o jogo"
+                markup += (
+                    f' <span foreground="#999">· exceção per-app: '
+                    f'{len(appids)} jogo(s) — {extra}</span>'
+                )
+            label.set_markup(markup)
             return False
 
         run_in_thread(_check, on_success=_on_ok)

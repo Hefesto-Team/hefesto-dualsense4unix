@@ -46,6 +46,9 @@ MAC_DS = "aa:bb:cc:00:00:01"
 MAC_DS_B = "aa:bb:cc:00:00:02"
 MAC_DS_C = "aa:bb:cc:00:00:03"
 
+#: Forma CANÔNICA (12-hex, sem separadores) de MAC_A — a key do registro.
+_KEY_A = MAC_A.replace(":", "")
+
 BOOT = "boot-atual"
 
 
@@ -549,26 +552,76 @@ def test_queda_game_para_daemon_reacende_incondicionalmente(
     assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)]
 
 
-def test_auto_player_colors_off_para_de_escrever_e_limpa_cache(
+def test_auto_numbers_off_para_de_escrever_e_limpa_cache(
     monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
 ) -> None:
     """NUMA-03.4(c): simetria com o provider DualSense — OFF para de afirmar
     (zero escritas) e limpa o cache; achado ao vivo sem o fix: o externo
-    continuava aceso com o DualSense já apagado. OFF->ON reescreve."""
+    continuava aceso com o DualSense já apagado. OFF->ON reescreve.
+
+    R-14 (auditoria 23/07) — o EIXO mudou de propósito: o gate deste tick era
+    ``auto_enabled`` (o ``auto_player_colors`` do perfil), mas o que se
+    escreve aqui é ``apply_player_number``, o NÚMERO do jogador. Agora quem
+    manda é ``auto_numbers_enabled``; a simetria "OFF para de afirmar" é a
+    mesma, só que no flag certo. O par deste caso é
+    ``test_auto_colors_off_nao_congela_a_numeracao_dos_externos``.
+    """
     sync = _sync(monkeypatch, [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")])
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 1)]
 
-    sync._daemon.identity_registry.auto_enabled = False
+    sync._daemon.identity_registry.auto_numbers_enabled = False
     sync.tick(now=1.0)
     assert led_escritas == [("/dev/hidraw6", 1)], "OFF: zero escritas novas"
     assert sync._last_value == {}, "cache limpo enquanto OFF"
 
-    sync._daemon.identity_registry.auto_enabled = True
+    sync._daemon.identity_registry.auto_numbers_enabled = True
     sync.tick(now=1.5)
     assert led_escritas == [("/dev/hidraw6", 1), ("/dev/hidraw6", 1)], (
         "OFF->ON reescreve"
     )
+
+
+def test_auto_colors_off_nao_congela_a_numeracao_dos_externos(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """R-14: desligar a COR não pode calar o número do 8BitDo/Pro Nintendo.
+
+    Falha-sem: com o gate no ``auto_enabled``, o ``fps.json`` dela (salvo com
+    ``auto_player_colors:false`` por um clique de cor em "Todos") deixava o
+    externo sem escrita NENHUMA — e, pior, sem sequer receber slot no
+    registro, porque o ``slot_for`` morava depois do early-return.
+    """
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        ds_slots={"m1": 1, "m2": 2},
+        auto_enabled=False,
+    )
+    sync.tick(now=0.0)
+    assert led_escritas == [("/dev/hidraw6", 3)], "cor OFF não cala o número"
+    assert sync._registry.snapshot() == {_KEY_A: 3}
+
+
+def test_numeracao_off_ainda_atribui_o_slot(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """R-14 §1: ATRIBUIR é identidade — o flag governa só a ESCRITA.
+
+    Falha-sem: o ``slot_for`` rodava DEPOIS do early-return, então com o
+    automático desligado o externo ficava fora do registro; o espaço de
+    numeração global (que o lado DualSense também consulta) ganhava um buraco
+    e a colisão nascia na próxima atribuição.
+    """
+    sync = _sync(
+        monkeypatch,
+        [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+        ds_slots={"m1": 1},
+    )
+    sync._daemon.identity_registry.auto_numbers_enabled = False
+    sync.tick(now=0.0)
+    assert led_escritas == [], "numeração OFF: nenhuma escrita de LED"
+    assert sync._registry.snapshot() == {_KEY_A: 2}, "mas o slot foi atribuído"
 
 
 # --- fiação do lifecycle: hermeticidade com backend fake ----------------------

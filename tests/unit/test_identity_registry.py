@@ -5,12 +5,15 @@ Aceites do sprint 2026-07-16-sprint-cores-e-led-automaticos:
   - desconectar A e reconectar → A volta ao 1 (reserva de sessão — D2);
   - restart do daemon com controles presentes preserva os slots
     (persistência atômica em controllers.json, keyed pelo boot_id);
-  - sessão nova só-com-B → B vira slot 1 (reservas expiram ao esvaziar E
-    arquivo de outro boot é sessão morta — D2);
+  - sessão nova só-com-B → B vira slot 1 — R-15 (auditoria 23/07): a única
+    renumeração AUTOMÁTICA é por BOOT (arquivo de outro boot é sessão morta).
+    A expiração por "sessão esvaziou" foi REMOVIDA de propósito: era
+    assimétrica (o registro dos externos nunca expirou) e fazia a cor/número
+    trocarem de dono conforme a ordem de wake;
   - vpad (MAC forjado 02:fe:...) JAMAIS ganha slot (D9);
   - key sem MAC 12-hex (path:...) ganha slot VOLÁTIL, nunca persistido (D9);
-  - `sync_connected` expira as reservas ao esvaziar (e só ele — flap entre
-    ticks não derruba reserva).
+  - `sync_connected` apenas RECONCILIA e persiste: nem ele nem o
+    `mark_disconnected` derrubam reserva (R-15).
 
 Herméticos: `config_dir` é monkeypatchado em `utils.xdg_paths` (o registro o
 importa LAZY, padrão `save_active_marker`) e o boot_id é fixado por
@@ -104,20 +107,42 @@ class TestReservaDeSessao:
         reg.sync_connected({UNIQ_B})  # A desconectou (reserva)
         assert reg.slot_for(UNIQ_C) == 3  # 1 está reservado a A
 
-    def test_sync_expira_ao_esvaziar(self, isolated_config: Path) -> None:
-        """Zero controles conectados = sessão esvaziou → reservas expiram (D2)."""
+    def test_sessao_esvaziar_nao_expira_dentro_do_boot(
+        self, isolated_config: Path
+    ) -> None:
+        """R-15: dentro do boot, número é do MAC — ninguém expira.
+
+        TROCA DELIBERADA de contrato (auditoria 23/07). Este caso ASSERTAVA a
+        expiração por "sessão esvaziou" (`test_sync_expira_ao_esvaziar`), que
+        era o defeito: (a) assimétrica — só este registro expirava, o dos
+        externos (`ExternalIdentityRegistry`) nunca expirou nada, então
+        DualSense e externos renumeravam em momentos diferentes sobre o MESMO
+        espaço de numeração; (b) o resultado dependia da ORDEM DE WAKE, não do
+        MAC: desligar os dois DualSense para jantar e religar o roxo primeiro
+        dava a ele o slot 1 (a cor e o número do branco). Quem renumera é o
+        BOOT (o `boot_id` do arquivo) ou o gesto explícito "Renumerar agora".
+
+        Cenário exato da queixa: os dois somem juntos e voltam em ORDEM
+        INVERTIDA — cada um recupera o próprio número.
+        """
         reg = ControllerIdentityRegistry()
-        reg.slot_for(UNIQ_A)
-        reg.slot_for(UNIQ_B)
-        reg.sync_connected(set())  # sessão esvaziou
-        assert reg.snapshot() == {}
-        # "Sessão nova só-com-B → B=1" (o aceite literal do sprint).
-        assert reg.slot_for(UNIQ_B) == 1
+        assert reg.slot_for(UNIQ_A) == 1
+        assert reg.slot_for(UNIQ_B) == 2
+        reg.sync_connected(set())  # os dois desligaram (nada expira)
+        assert reg.snapshot() == {UNIQ_A: 1, UNIQ_B: 2}
+        # Voltam na ordem INVERTIDA (B primeiro): ninguém rouba o 1.
+        assert reg.slot_for(UNIQ_B) == 2
+        assert reg.slot_for(UNIQ_A) == 1
 
     def test_mark_disconnected_sozinho_nao_expira(
         self, isolated_config: Path
     ) -> None:
-        """A expiração é do sync (tick lento) — flap entre ticks preserva."""
+        """Desconectar RESERVA o slot; nada aqui renumera (R-15).
+
+        Antes do R-15 a reserva vivia "até o sync ver a sessão vazia"; agora
+        vive o boot inteiro. O caso segue valendo como guarda de que o
+        caminho quente por evento não mexe no mapa.
+        """
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.mark_disconnected(UNIQ_A)
@@ -128,7 +153,9 @@ class TestReservaDeSessao:
         self, isolated_config: Path
     ) -> None:
         """O sync do boot (antes de o backend abrir handles) não pode expirar
-        as entradas recém-carregadas do disco — só a TRANSIÇÃO para vazio."""
+        as entradas recém-carregadas do disco — o caso que motivou o antigo
+        `_saw_connected` e que R-15 resolve por construção (ninguém expira).
+        """
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
@@ -224,18 +251,46 @@ class TestPersistencia:
         assert reg2.snapshot() == {}
         assert reg2.slot_for(UNIQ_B) == 1  # sessão nova renumera do 1
 
-    def test_expiracao_regrava_o_arquivo_vazio(self, isolated_config: Path) -> None:
-        """A sessão esvaziar em runtime também limpa o disco — um restart
-        posterior não ressuscita nada."""
+    def test_sessao_esvaziada_sobrevive_ao_restart_e_so_o_boot_renumera(
+        self, isolated_config: Path
+    ) -> None:
+        """R-15: quem renumera é o BOOT — não "todo mundo desligou".
+
+        TROCA DELIBERADA de contrato (par do caso acima; este slot era o
+        `test_expiracao_regrava_o_arquivo_vazio`, que assertava o arquivo
+        virar `{}` quando a sessão esvaziava). Agora: com todos desligados o
+        arquivo CONTINUA com os slots, um restart do daemon os restaura, e só
+        um `boot_id` diferente (máquina reiniciada) devolve a numeração ao 1.
+        """
         reg = ControllerIdentityRegistry()
         reg.slot_for(UNIQ_A)
         reg.slot_for(UNIQ_B)
         reg.sync_connected({UNIQ_A, UNIQ_B})
-        reg.sync_connected(set())  # esvaziou
-        assert _arquivo(isolated_config)["slots"] == {}
+        reg.sync_connected(set())  # todos desligados — reserva de boot
+        assert _arquivo(isolated_config)["slots"] == {UNIQ_A: 1, UNIQ_B: 2}
 
+        reg2 = ControllerIdentityRegistry()  # daemon reiniciou no MESMO boot
+        reg2.load()
+        assert reg2.slot_for(UNIQ_B) == 2  # o número é do MAC, não da ordem
+
+    def test_boot_novo_renumera_do_1(
+        self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """R-15 (par do anterior): a renumeração automática é POR BOOT.
+
+        Reboot da máquina = sessão morta (`boot_id` diferente) → a próxima
+        sessão começa do 1, que é a promessa D2 que a expiração por
+        "sessão esvaziou" tentava (mal) implementar dentro do boot.
+        """
+        reg = ControllerIdentityRegistry()
+        reg.slot_for(UNIQ_A)
+        reg.slot_for(UNIQ_B)
+        reg.sync_connected({UNIQ_A, UNIQ_B})
+
+        monkeypatch.setattr(identity, "_read_boot_id", lambda: "boot-teste-2")
         reg2 = ControllerIdentityRegistry()
         reg2.load()
+        assert reg2.snapshot() == {}
         assert reg2.slot_for(UNIQ_B) == 1
 
     def test_boot_id_ilegivel_nao_restaura(

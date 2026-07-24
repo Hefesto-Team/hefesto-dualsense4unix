@@ -10,6 +10,7 @@ gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 # ruff: noqa: E402
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import Any
 
@@ -40,15 +41,44 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (
+    MENSAGENS_DE_GENTE,
     detect_simple_preset,
     from_simple_choice,
+    simple_extra,
 )
+from hefesto_dualsense4unix.profiles.slug import find_by_slug, mesmo_slug
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 # Mapeamento radio-id -> chave de preset
-_RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game")
+# R-12 (auditoria 23/07): "steam_game" entrou porque o editor simples não tinha
+# como expressar "este perfil é DESTE jogo da Steam" — e é a única regra que o
+# autoswitch reconhece como regra de jogo (R-01, `perfil_e_regra_de_jogo` exige
+# `window_class` com a `steam_app_<id>` em foco) e a única chave do `.env` por
+# appid do launch_env.
+_RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game", "steam_game")
+
+#: R-12: ids do seletor que exigem o campo livre preenchido.
+_IDS_COM_CAMPO_LIVRE = ("game", "steam_game")
+
+#: R-12: placeholder/tooltip do campo livre por escolha — o glade tem um só
+#: rótulo ("Nome do jogo:") para dois significados MUITO diferentes. Sem isto,
+#: "Jogo específico" continuaria pedindo em silêncio o basename do executável,
+#: que em jogo Proton é o binário do wine e nunca é o nome do jogo.
+_CAMPO_LIVRE_DICAS: dict[str, tuple[str, str]] = {
+    "game": (
+        "ex.: eldenring",
+        "Nome do programa Linux do jogo (o basename de /proc/PID/exe). "
+        "Em jogo da Steam/Proton isso costuma ser o binário do wine — nesse "
+        "caso use \"Jogo da Steam\".",
+    ),
+    "steam_game": (
+        "ex.: 1599660",
+        "Número do jogo na Steam (o da URL da loja). Com o jogo aberto, o "
+        "campo é preenchido sozinho.",
+    ),
+}
 
 # FEAT-DSX-COMBO-TO-SEGMENTED-01: itens do seletor "Aplica a:" (id, rótulo curto).
 # Antes vinham do `<items>` do GtkComboBoxText no Glade; agora alimentam o
@@ -61,6 +91,7 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
     ("terminal", "Terminal"),
     ("editor", "Editor"),
     ("game", "Jogo"),
+    ("steam_game", "Jogo da Steam"),
 ]
 
 # FEAT-PROFILE-MODE-GUI-01: itens da seção "Modo" do editor (id, rótulo curto).
@@ -91,14 +122,86 @@ _MATCH_LABELS: dict[str, str] = {
     "criteria": "Só neste programa",
 }
 
+#: R-12 item 5: o que a coluna diz de um `criteria` SEM nenhum campo.
+LABEL_SO_MANUAL = "Só manual (nunca ativa sozinho)"
 
-def _match_label(match_type: object) -> str:
+
+def _match_label(match: object) -> str:
     """Rótulo da coluna "Quando usar" (função pura — testável sem GTK).
 
-    Um tipo desconhecido (perfil gravado por uma versão mais nova) cai no
-    próprio valor: melhor a usuária ver algo estranho do que uma célula vazia.
+    Aceita o OBJETO ``profile.match`` (contrato novo, R-12) ou o discriminador
+    cru em string (contrato antigo — mantido porque é o que os testes de
+    vocabulário e qualquer chamador de fora usam, e porque um perfil gravado
+    por uma versão mais nova continua caindo no próprio valor em vez de deixar
+    a célula vazia).
+
+    R-12 (auditoria 23/07): ``MatchCriteria`` com TODOS os campos vazios é o
+    caso do preset ``coop_local`` de fábrica — ``MatchCriteria.matches``
+    devolve ``False`` sem condição alguma (schema.py:52), então o perfil é
+    INALCANÇÁVEL pelo autoswitch. A coluna dizia "Só neste programa", o que é
+    falso duas vezes: não há programa nenhum, e ele nunca entra sozinho.
     """
-    return _MATCH_LABELS.get(str(match_type), str(match_type))
+    tipo = getattr(match, "type", None)
+    if tipo == "criteria" and not (
+        getattr(match, "window_class", None)
+        or getattr(match, "window_title_regex", None)
+        or getattr(match, "process_name", None)
+    ):
+        return LABEL_SO_MANUAL
+    if tipo is not None:
+        return _MATCH_LABELS.get(str(tipo), str(tipo))
+    return _MATCH_LABELS.get(str(match), str(match))
+
+
+#: R-10: respostas do diálogo de rename (ids positivos não colidem com os
+#: `Gtk.ResponseType` nativos, que são negativos — mesmo padrão do
+#: `launch_wrapper_dialog`).
+_RESP_RENOMEAR = 201
+_RESP_COPIA = 202
+
+
+def dialogo_renomear_ou_copiar(
+    parent: Any, antigo: str, novo: str
+) -> str | None:
+    """"Renomear" ou "Salvar como cópia" — devolve "renomear"/"copia"/None.
+
+    R-10 (auditoria 23/07): trocar o nome no campo Nome e clicar Salvar
+    gravava `<slug(novo)>.json` e DEIXAVA `<slug(antigo)>.json` no disco. Os
+    dois nascem com o mesmo `match` e a mesma prioridade, então passam a
+    disputar as mesmas janelas e o perfil "que ela renomeou" continua
+    ativando sozinho. Nenhuma das duas leituras possíveis ("quis renomear" ou
+    "quis criar uma variante") pode ser adivinhada — logo, pergunta.
+
+    Mora aqui, e não em `app.gui_dialogs`, para esta correção não colidir com
+    o outro trabalho em curso naquele módulo; a assinatura segue o padrão de
+    lá (parent + strings, run/destroy, sem IPC).
+    """
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        text=f"Renomear '{antigo}' para '{novo}'?",
+    )
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+    dialog.format_secondary_text(
+        f"'Renomear' apaga o perfil '{antigo}'. 'Salvar como cópia' mantém "
+        f"os dois — e os dois vão disputar as mesmas janelas."
+    )
+    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+    dialog.add_button("Salvar como cópia", _RESP_COPIA)
+    dialog.add_button("Renomear", _RESP_RENOMEAR)
+    dialog.set_default_response(_RESP_RENOMEAR)
+
+    response = dialog.run()
+    dialog.destroy()
+    if response == _RESP_RENOMEAR:
+        return "renomear"
+    if response == _RESP_COPIA:
+        return "copia"
+    return None
 
 
 class ProfilesActionsMixin(WidgetAccessMixin):
@@ -436,19 +539,88 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         return False  # retorno False = deixa o GTK atualizar o estado visual
 
     def _on_aplica_a_changed(self, combo: Any) -> None:
-        """Mostra entry "Jogo específico" só quando o seletor == "game".
+        """Mostra o campo livre nas escolhas que exigem alvo ("game"/"steam_game").
 
         ``combo`` é o ``SegmentedSelector`` (FEAT-DSX-COMBO-TO-SEGMENTED-01);
         mantém a mesma API por-ID do GtkComboBoxText anterior.
+
+        R-12: as duas escolhas compartilham o mesmo widget mas pedem coisas
+        MUITO diferentes (basename do executável e appid da Steam) — o
+        placeholder e o tooltip são trocados aqui, porque o rótulo do glade
+        ("Nome do jogo:") serve para as duas e sozinho não desambigua.
         """
         active_id = combo.get_active_id() or "any"
+        entry = self._get("profile_simple_custom_name")
+        dica = _CAMPO_LIVRE_DICAS.get(active_id)
+        if entry is not None and dica is not None:
+            placeholder, tooltip = dica
+            # Widgets fake dos testes não têm as duas APIs — a dica é cosmética
+            # e não pode derrubar a troca de contexto.
+            with contextlib.suppress(Exception):
+                entry.set_placeholder_text(placeholder)
+            with contextlib.suppress(Exception):
+                entry.set_tooltip_text(tooltip)
         box: Gtk.Box = self._get("profile_game_entry_box")
         if box is None:
             return
-        if active_id == "game":
+        if active_id in _IDS_COM_CAMPO_LIVRE:
             box.show()
         else:
             box.hide()
+        if active_id == "steam_game":
+            self._prefill_steam_appid()
+
+    def _prefill_steam_appid(self) -> None:
+        """Preenche o appid a partir do jogo em foco (R-12 item 1).
+
+        A usuária não tem como saber o appid de cabeça, e digitá-lo errado
+        produz um perfil que nunca entra — exatamente a queixa "o perfil do
+        jogo nunca é respeitado". O daemon já publica a última ``wm_class``
+        útil em ``window_detect_last_class``; com o jogo aberto (ou recém
+        fechado) isso é ``steam_app_<id>``.
+
+        Só preenche campo VAZIO: sobrescrever o que ela digitou seria pior que
+        não ajudar. Best-effort e assíncrono — daemon offline é silêncio.
+        """
+        entry = self._get("profile_simple_custom_name")
+        if entry is None:
+            return
+        try:
+            if (entry.get_text() or "").strip():
+                return
+        except Exception:
+            return
+
+        def _on_state(result: Any) -> bool:
+            try:
+                if not isinstance(result, dict):
+                    return False
+                from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
+                    extract_steam_appid,
+                )
+
+                appid = extract_steam_appid(result.get("window_detect_last_class"))
+                if not appid:
+                    return False
+                alvo = self._get("profile_simple_custom_name")
+                if alvo is None or (alvo.get_text() or "").strip():
+                    return False
+                if self._selected_simple_choice() != "steam_game":
+                    return False
+                alvo.set_text(appid)
+                self._refresh_preview()
+                self._toast_profile(f"Jogo em foco detectado: appid {appid}")
+            except Exception as exc:
+                logger.debug("prefill_appid_falhou", err=str(exc))
+            return False
+
+        call_async(
+            method="daemon.state_full",
+            params=None,
+            on_success=_on_state,
+            on_failure=lambda _exc: False,
+            timeout_s=0.5,
+        )
 
     # --- handlers da lista ---
 
@@ -591,22 +763,64 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             # para uma frase que o usuário entende e sabe o que fazer.
             self._toast_profile(self._humanize_profile_error(exc))
             return
-        # BUG-PROFILE-SAVE-SILENT-OVERWRITE-01: avisa ao gravar por cima de OUTRO
-        # perfil existente (não no caso de edição in-place do próprio selecionado).
         selected = self._selected_profile_name()
-        cache_names = {p.name for p in getattr(self, "_profiles_cache", [])}
-        if profile.name in cache_names and profile.name != selected:
+        # R-10 (auditoria 23/07): a identidade do arquivo é o SLUG
+        # (`save_profile` grava `<slugify(name)>.json`), e as duas guardas
+        # comparavam NOME DE EXIBIÇÃO. Com "Navegação" no disco, salvar
+        # "Navegacao" caía fora das duas e substituía `navegacao.json` sem
+        # aviso nenhum. Daqui para baixo quem responde "quem vou sobrescrever?"
+        # é `find_by_slug`, e o diálogo cita o perfil REALMENTE afetado.
+        cache: list[Profile] = getattr(self, "_profiles_cache", [])
+        selecionado = find_by_slug(selected, cache) if selected else None
+        e_novo = bool(getattr(self, "_new_profile", False))
+        duplicando = self._duplicate_source is not None
+
+        # R-10: RENAME. Trocar o nome no campo Nome gerava um arquivo NOVO e
+        # deixava o antigo em disco — dois perfis com o mesmo `match` e a mesma
+        # prioridade disputando as mesmas janelas, e o "removido" voltando a
+        # ativar sozinho. Pergunta explicitamente o que ela quis dizer.
+        renomeando_de: str | None = None
+        if (
+            not e_novo
+            and not duplicando
+            and selecionado is not None
+            and not mesmo_slug(selecionado.name, profile.name)
+        ):
+            escolha = self._prompt_rename_or_copy(selecionado.name, profile.name)
+            if escolha is None:
+                self._toast_profile("Operação cancelada.")
+                return
+            if escolha == "renomear":
+                renomeando_de = selecionado.name
+
+        # BUG-PROFILE-SAVE-SILENT-OVERWRITE-01 + R-10: avisa ao gravar por cima
+        # de OUTRO perfil (não na edição in-place do próprio selecionado). Um
+        # perfil NOVO/duplicado nunca é edição in-place, mesmo com uma linha
+        # selecionada na lista — era por aí que "Novo perfil" chamado
+        # "Navegacao" comia a "Navegação" dela em silêncio.
+        alvo = find_by_slug(profile.name, cache)
+        editando_em_lugar = (
+            not e_novo
+            and not duplicando
+            and alvo is not None
+            and selecionado is not None
+            and mesmo_slug(alvo.name, selecionado.name)
+        )
+        if alvo is not None and not editando_em_lugar:
             from hefesto_dualsense4unix.app import gui_dialogs
 
             window = self._get("main_window")
-            if not gui_dialogs.prompt_overwrite_existing(parent=window, name=profile.name):
+            # `alvo.name` e não `profile.name`: quem some é o perfil do disco.
+            if not gui_dialogs.prompt_overwrite_existing(parent=window, name=alvo.name):
                 self._toast_profile("Operação cancelada.")
                 return
         # COR-A: salvar um perfil que ANTES valia só num programa específico
         # (MatchCriteria) como MatchAny apaga o alvo em silêncio — o caminho
         # clássico é o leigo desligar o "Modo avançado" (a página simples herda
         # 'Qualquer'/Sempre) e clicar Salvar sem perceber. Confirma a perda.
-        original = self._find_cached_profile(profile.name)
+        # R-10: num rename, o "antes" é o perfil sendo RENOMEADO, não quem
+        # ocupa o slug de destino.
+        original = selecionado if renomeando_de is not None else alvo
         if (
             isinstance(profile.match, MatchAny)
             and original is not None
@@ -616,15 +830,36 @@ class ProfilesActionsMixin(WidgetAccessMixin):
 
             window = self._get("main_window")
             if not gui_dialogs.confirm_downgrade_match_to_any(
-                parent=window, name=profile.name
+                parent=window, name=original.name
             ):
                 self._toast_profile("Operação cancelada.")
                 return
+        # R-10: quem estava ativo ANTES do save — é com esse nome que o daemon
+        # conhece o perfil renomeado. Lido aqui (e não depois do delete) porque
+        # o `profile.switch` de migração precisa da foto anterior.
+        try:
+            ativo_antes = active_profile_name()
+        except Exception:
+            ativo_antes = None
         try:
             save_profile(profile)
         except OSError as exc:
             self._toast_profile(f"Falha ao salvar: {exc}")
             return
+        # R-10: rename é MOVER, não copiar — o antigo só morre DEPOIS do save
+        # bem-sucedido (o `delete_profile` de um preset é definitivo: o marker
+        # `.seeded_presets` respeita a deleção e ele não volta a ser semeado).
+        if renomeando_de is not None:
+            try:
+                delete_profile(renomeando_de)
+            except (FileNotFoundError, OSError, ValueError) as exc:
+                logger.warning(
+                    "profile_rename_delete_falhou", antigo=renomeando_de, err=str(exc)
+                )
+                self._toast_profile(
+                    f"Salvo como {profile.name}, mas o antigo "
+                    f"'{renomeando_de}' não pôde ser removido: {exc}"
+                )
         self._duplicate_source = None  # duplicação concluída
         # R-09: salvo em disco, o perfil deixa de ser "novo" — o próximo Salvar
         # sobre ele é edição normal e deve reusar a config gravada.
@@ -636,23 +871,46 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # Sem isso, "Salvar" só gravava o arquivo e nada mudava no controle,
         # lido pela usuária como "não está salvando". Best-effort: daemon
         # offline segue o fluxo antigo (o boot reaplica).
+        #
+        # R-10: no rename, o daemon continua com o nome ANTIGO marcado como
+        # ativo — e o arquivo dele acabou de ser apagado. Sem migrar o marker,
+        # o boot seguinte procuraria um perfil que não existe mais e cairia no
+        # fallback (catch-all), que é justamente o cenário da queixa (1).
         reaplicado = False
         try:
-            if active_profile_name() == profile.name:
+            if ativo_antes is not None and (
+                ativo_antes == profile.name or ativo_antes == renomeando_de
+            ):
                 reaplicado = profile_switch(profile.name)
         except Exception:
             reaplicado = False
-        self._toast_profile(
-            f"Perfil salvo e reaplicado no controle: {profile.name}"
-            if reaplicado
-            else f"Perfil salvo: {profile.name}"
-        )
+        if renomeando_de is not None:
+            self._toast_profile(
+                f"Perfil renomeado: {renomeando_de} → {profile.name}"
+                + (" (reaplicado no controle)" if reaplicado else "")
+            )
+        else:
+            self._toast_profile(
+                f"Perfil salvo e reaplicado no controle: {profile.name}"
+                if reaplicado
+                else f"Perfil salvo: {profile.name}"
+            )
         # DEDUP-04: perfil novo/editado pode ter steam_app_<id> no match — o
         # daemon rematerializa a antecipação por appid do launch_env AGORA
         # (sem isso, o primeiro launch do jogo cairia no default.env rançoso).
         self._notify_launch_env_refresh()
 
     # --- helpers internos ---
+
+    def _prompt_rename_or_copy(self, antigo: str, novo: str) -> str | None:
+        """Ponte para o diálogo de rename (R-10) — ponto único de override.
+
+        Método (e não chamada direta) para os testes decidirem a resposta sem
+        subir GTK, do mesmo jeito que o resto da aba faz com `gui_dialogs`.
+        """
+        return dialogo_renomear_ou_copiar(
+            self._get("main_window"), antigo, novo
+        )
 
     def _notify_launch_env_refresh(self) -> None:
         """Avisa o daemon que o conjunto de perfis mudou (`launch_env.refresh`).
@@ -722,6 +980,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             msg = first.get("msg", str(exc))
             label.set_text(f"<perfil inválido: {msg}>")
             return
+        except ValueError as exc:
+            # R-12 item 2: alvo obrigatório em branco levanta com FRASE DE
+            # GENTE (antes virava MatchAny em silêncio). No preview isso é o
+            # estado normal enquanto ela digita — mostra a frase, não um
+            # "<preview indisponível: ...>" que parece defeito do programa.
+            # (ValidationError é subclasse de ValueError: a ordem importa.)
+            label.set_text(str(exc))
+            return
         except Exception as exc:  # preview não pode crashar GUI
             logger.debug("preview_build_falhou", err=str(exc))
             label.set_text(f"<preview indisponível: {exc}>")
@@ -785,7 +1051,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 [
                     profile.name,
                     profile.priority,
-                    _match_label(profile.match.type),
+                    # R-12: o OBJETO, não o discriminador — só ele distingue
+                    # "criteria com alvo" de "criteria vazio" (só manual).
+                    _match_label(profile.match),
                     weight,
                 ]
             )
@@ -842,10 +1110,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if preset_key is not None:
             # Match reconhecido como preset simples — usa modo simples
             self._select_radio(preset_key)
-            # Se for "game", preenche o entry com o process_name
-            if preset_key == "game" and isinstance(match, MatchCriteria):
-                custom = match.process_name[0] if match.process_name else ""
-                self._get("profile_simple_custom_name").set_text(custom)
+            # R-12: o campo livre serve "game" (nome do programa) E
+            # "steam_game" (appid) — `simple_extra` é quem sabe extrair cada
+            # um. Sem isso o round-trip de um perfil da Steam mostraria o campo
+            # vazio e salvar por cima levantaria "diga o número do jogo".
+            if preset_key in _IDS_COM_CAMPO_LIVRE:
+                self._get("profile_simple_custom_name").set_text(simple_extra(match))
             else:
                 self._get("profile_simple_custom_name").set_text("")
             # Vai para página simples sem alterar a preferência persistida
@@ -1019,6 +1289,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         Mapeia os casos comuns; só cai no texto genérico quando não reconhece.
         """
         text = str(exc)
+        # R-12 item 2: as frases do editor simples já são para gente — traduzi-las
+        # de novo viraria o genérico "Revise os campos", que não diz O QUE falta.
+        if text in MENSAGENS_DE_GENTE:
+            return text
         if "name não pode ser vazio" in text:
             return "Dê um nome ao perfil."
         if "caractere inválido" in text:

@@ -216,6 +216,17 @@ class ExternalIdentityRegistry:
         with self._lock:
             return dict(self._slots)
 
+    def snapshot_connected(self) -> set[str]:
+        """Keys presentes no último ``sync_connected``. Leitura pura (R-15).
+
+        Espelho de ``ControllerIdentityRegistry.snapshot_connected``: o
+        "Renumerar agora" compacta os CONECTADOS em 1..N e só depois anexa as
+        reservas offline — sem isto, o 8BitDo dormindo num slot baixo tornava
+        a compactação um no-op que ainda toastava sucesso.
+        """
+        with self._lock:
+            return set(self._connected)
+
     def lock_for_renumber(self) -> threading.RLock:
         """Expõe o `RLock` de instância — SÓ para `identity.renumber` (fix TOCTOU).
 
@@ -505,9 +516,13 @@ class ExternalLedSync:
     - queda para ``daemon``: re-arm (caches limpos) — o próximo tick
       reacende os slots do daemon.
 
-    Simetria ``auto_player_colors`` (o MESMO flag do provider DualSense):
-    OFF ⇒ PARA DE AFIRMAR (zero escritas, sem apagar ativamente — simétrico
-    ao provider que devolve None) + cache limpo; OFF→ON reescreve os slots.
+    Simetria com o provider DualSense, agora no eixo CERTO (R-14): quem
+    governa este LED é ``auto_numbers_enabled`` (numeração), não
+    ``auto_player_colors`` (cor) — o que se escreve aqui é o NÚMERO do
+    jogador. OFF ⇒ PARA DE AFIRMAR (zero escritas, sem apagar ativamente —
+    simétrico ao provider, que deixa de emitir ``player_leds``) + cache
+    limpo; OFF→ON reescreve os slots. A ATRIBUIÇÃO de slot roda sempre,
+    antes do gate.
     """
 
     def __init__(self, daemon: Any, registry: ExternalIdentityRegistry) -> None:
@@ -575,18 +590,25 @@ class ExternalLedSync:
         valor = getattr(self._daemon, "display_authority", "unknown")
         return valor if valor in ("game", "daemon", "unknown") else "unknown"
 
-    def _auto_player_colors_enabled(self) -> bool:
-        """Espelha o MESMO flag do provider DualSense (NUMA-03c).
+    def _auto_numbers_enabled(self) -> bool:
+        """Eixo NUMERAÇÃO do automático (R-14) — é o que rege o LED daqui.
 
-        ``identity_registry.auto_enabled`` — ausência do registro/atributo
-        (FakeController, daemon sem fiação) preserva o default ``True`` do
-        próprio ``ControllerIdentityRegistry`` (identity.py:152): fail-safe,
-        sem o registro nada muda.
+        O LED que este tick escreve é ``apply_player_number``: o NÚMERO do
+        jogador, não uma cor. Ele era gateado por ``auto_enabled``
+        (``auto_player_colors``), então um clique de cor na GUI — que desliga
+        aquele flag — congelava a numeração dos externos junto com a paleta
+        dos DualSense (a queixa "dois player 1, dois player 2", com o
+        ``fps.json`` dela salvo com ``auto_player_colors:false``). Agora lê
+        ``identity_registry.auto_numbers_enabled``.
+
+        Ausência do registro/atributo (FakeController, daemon sem fiação,
+        registro de versão anterior) preserva o default ``True`` do próprio
+        ``ControllerIdentityRegistry``: fail-safe, sem o registro nada muda.
         """
         registry = getattr(self._daemon, "identity_registry", None)
         if registry is None:
             return True
-        return bool(getattr(registry, "auto_enabled", True))
+        return bool(getattr(registry, "auto_numbers_enabled", True))
 
     def tick(self, *, now: float | None = None) -> None:
         """Enumera, reconcilia o registro e aplica LEDs (com cache/rate-limit).
@@ -615,11 +637,31 @@ class ExternalLedSync:
             e["uniq"] for e in inventory if isinstance(e.get("uniq"), str)
         )
 
+        # R-14 §1 (auditoria 23/07): ATRIBUIÇÃO antes de qualquer flag. O
+        # `slot_for` morava lá embaixo, DEPOIS do early-return do automático —
+        # com o auto desligado o externo não recebia sequer um número no
+        # registro. Ele voltava a nascer sem slot no tick seguinte a religar o
+        # flag, e enquanto isso o espaço de numeração global tinha um buraco
+        # (o `used` do lado DualSense também consulta estas reservas). Numerar
+        # é identidade; o flag governa APARÊNCIA (escrever no LED).
+        atribuidos: list[tuple[str | None, str | None, int]] = []
+        for entry in inventory:
+            uniq_raw = entry.get("uniq")
+            uniq = uniq_raw if isinstance(uniq_raw, str) and uniq_raw else None
+            hidraw_raw = entry.get("hidraw")
+            hidraw = hidraw_raw if isinstance(hidraw_raw, str) and hidraw_raw else None
+            # Identidade volátil (sem MAC): o evdev_path vale pela sessão.
+            identity = uniq or f"path:{entry.get('evdev_path')}"
+            slot = self._registry.slot_for(identity, reserve=reserve)
+            if slot is None:
+                continue
+            atribuidos.append((uniq, hidraw, slot))
+
         # GYRO-02/fix MEDIUM cross-cutting (2026-07-20): enable-IMU do
-        # Nintendo Pro REAL continua INDEPENDENTE do flag `auto_player_colors`
+        # Nintendo Pro REAL continua INDEPENDENTE dos flags do automático
         # e da autoridade de exibição (nunca levanta) — mas agora roda no
         # `finally`, DEPOIS do laço de repintura/numeração de LED abaixo (e
-        # também depois do `return` antecipado do auto-colors OFF), nunca
+        # também depois do `return` antecipado do automático OFF), nunca
         # ANTES. `enable_imu` escreve CRU no hidraw (`os.write` sem timeout
         # próprio); rodando antes do laço, um travamento nessa escrita para
         # UM Nintendo Pro prendia o único worker do pool `hefesto-ext` sem
@@ -637,24 +679,20 @@ class ExternalLedSync:
                 self._last_write_at.clear()
             self._last_authority = autoridade
 
-            if not self._auto_player_colors_enabled():
+            if not self._auto_numbers_enabled():
                 # NUMA-03c: automático OFF ⇒ PARA DE AFIRMAR (zero escritas,
                 # sem apagar ativamente) + cache limpo — OFF->ON reescreve tudo
                 # no primeiro tick seguinte (cache vazio = "nunca escrito").
+                # R-14: o gate agora é o eixo NUMERAÇÃO; a ATRIBUIÇÃO de slot
+                # já rodou acima e não é pulada por flag nenhum.
                 if self._last_value or self._last_write_at:
                     self._last_value.clear()
                     self._last_write_at.clear()
                 return
 
             vivos: set[tuple[str, str]] = set()
-            for entry in inventory:
-                uniq = entry.get("uniq")
-                uniq = uniq if isinstance(uniq, str) and uniq else None
-                hidraw = entry.get("hidraw")
-                # Identidade volátil (sem MAC): o evdev_path vale pela sessão.
-                identity = uniq or f"path:{entry.get('evdev_path')}"
-                slot = self._registry.slot_for(identity, reserve=reserve)
-                if slot is None or not isinstance(hidraw, str) or not hidraw:
+            for uniq, hidraw, slot in atribuidos:
+                if hidraw is None:
                     continue
                 key = (uniq or "", hidraw)
                 vivos.add(key)

@@ -3,11 +3,9 @@
   "version": 1,
   "match": {
     "type": "criteria",
-    "window_class": [],
-    "window_title_regex": null,
-    "process_name": []
+    "window_title_regex": ".*(Sackboy|Overcooked|It Takes Two|Split Fiction|Cuphead|Moving Out|Unravel Two|LEGO |Rayman Legends|Broforce|Castle Crashers|TowerFall|Gang Beasts|Human Fall Flat|Ultimate Chicken Horse|Streets of Rage|Trine|Portal 2|Stardew Valley|Nine Parchments|Heave Ho|Pico Park|Boomerang Fu).*"
   },
-  "priority": 0,
+  "priority": 45,
   "triggers": {
     "left":  {"mode": "Off", "params": []},
     "right": {"mode": "Off", "params": []}

@@ -31,6 +31,30 @@ class LightbarActionsMixin(WidgetAccessMixin):
     # Guard para bloquear o handler durante refresh programático do slider.
     _refresh_guard: bool = False
 
+    def _uniqs_conectados(self) -> list[str]:
+        """MACs dos controles CONECTADOS, na ordem do índice (R-14).
+
+        Fonte: ``_target_uniq_by_index``, o mapa que a aba Status recalcula do
+        ``state_full`` a cada tick (só controles conectados entram). Controle
+        sem MAC estável (handle por path) fica de fora — para ele não existe
+        override por-controle, e a escrita dele continua sendo a global.
+
+        Lista vazia = a GUI ainda não sabe quem está na mesa (nenhum tick do
+        daemon, host parcial de teste). Os chamadores tratam isso como
+        "escopo desconhecido" e caem no caminho global de sempre, nunca em
+        broadcast disfarçado de por-controle.
+        """
+        mapa = getattr(self, "_target_uniq_by_index", None)
+        if not isinstance(mapa, dict):
+            return []
+        vistos: set[str] = set()
+        saida: list[str] = []
+        for _idx, uniq in sorted(mapa.items(), key=lambda kv: kv[0]):
+            if isinstance(uniq, str) and uniq and uniq not in vistos:
+                vistos.add(uniq)
+                saida.append(uniq)
+        return saida
+
     def _edit_uniq(self) -> str | None:
         """MAC do controle em edição (PERFIL-04); None = edição global.
 
@@ -92,28 +116,58 @@ class LightbarActionsMixin(WidgetAccessMixin):
         funciona". Devolve True quando o D4 desligou o automático AGORA (o
         chamador compõe o aviso ``_AVISO_D4`` no toast — visível, nunca
         popup); o checkbox da aba é sincronizado aqui mesmo, sob guard.
+
+        R-14 (auditoria 23/07) — o D4 vira EXCEÇÃO, não regra. Desligar
+        ``auto_player_colors`` é o martelo mais pesado que a aba tem: além da
+        paleta, o flag governava a numeração dos DualSense E a dos externos
+        (Pro Nintendo/8BitDo paravam de receber número), e o valor ainda ia
+        para o JSON do perfil — um clique de cor em "Todos" apagava a
+        identidade automática de todo mundo, para sempre. Com os controles
+        CONECTADOS conhecidos, o mesmo desejo ("esta cor/este padrão em todo
+        mundo") é expresso como OVERRIDE POR-MAC em cada um deles: override
+        vence a camada automática no merge por campo do backend (D5), então a
+        cor única aparece **sem** desligar nada e a numeração continua viva.
+        A ordem importa: os overrides são escritos ANTES de o global mudar,
+        porque ``with_controller_leds`` só guarda o que DIVERGE do global — se
+        o global já tivesse o valor novo, o override seria podado e a paleta
+        automática voltaria a vencer (a cor "não pegaria").
         """
         draft = getattr(self, "draft", None)
         if draft is None:
             return False
         uniq = self._edit_uniq()
         if uniq is None:
-            campos_update = dict(update)
-            d4_disparou = bool(
-                ("lightbar_rgb" in campos_update or "player_leds" in campos_update)
-                and draft.leds.auto_player_colors
-            )
-            if d4_disparou:
-                campos_update["auto_player_colors"] = False
-            new_leds = draft.leds.model_copy(update=campos_update)
-            draft = draft.model_copy(update={"leds": new_leds})
             campos: set[str] = set()
             if "lightbar_rgb" in update or "lightbar_brightness" in update:
                 campos |= {"lightbar", "lightbar_brightness"}
             if "player_leds" in update:
                 campos.add("player_leds")
+            # Campos "de opinião" (cor e padrão de player-LED) são os que
+            # disputam com a camada automática; brilho apenas ESCALA a paleta
+            # (D11) e nunca disputou.
+            disputa_com_o_auto = "lightbar_rgb" in update or "player_leds" in update
+            alvos = self._uniqs_conectados() if disputa_com_o_auto else []
+            campos_update = dict(update)
+            d4_disparou = bool(
+                disputa_com_o_auto and draft.leds.auto_player_colors and not alvos
+            )
+            if d4_disparou:
+                # Escopo desconhecido (a GUI não sabe quem está conectado): sem
+                # alvo para o override, o único jeito de a cor única aparecer
+                # continua sendo desligar a paleta. Caminho degradado, honesto
+                # e avisado — nunca o caminho normal.
+                campos_update["auto_player_colors"] = False
             if campos:
+                # Tira o valor VELHO de todos os overrides (inclusive dos
+                # desconectados, que ressuscitariam na próxima ativação).
                 draft = draft.with_override_fields_cleared("leds", campos)
+            for alvo in alvos:
+                base = draft.effective_leds_for(alvo)
+                draft = draft.with_controller_leds(
+                    alvo, base.model_copy(update=update)
+                )
+            new_leds = draft.leds.model_copy(update=campos_update)
+            draft = draft.model_copy(update={"leds": new_leds})
             self.draft = draft
             if d4_disparou:
                 self._sync_auto_checkbox(False)
@@ -245,19 +299,30 @@ class LightbarActionsMixin(WidgetAccessMixin):
     def on_lightbar_apply(self, _btn: Gtk.Button) -> None:
         """Envia a cor da tela ao hardware.
 
-        COR-04: em "Todos", a cor viaja JUNTO com o toggle do automático num
-        único ``profile.apply_draft`` parcial (seção ``leds``) — o ``led.set``
-        clássico gravaria só o default e a paleta automática (se ligada no
-        daemon) venceria no próximo reassert ("apliquei e voltou colorido").
-        O D4 roda antes: auto ligado é desligado no draft, com aviso composto
-        no toast. Com um controle selecionado (ou sem draft — hosts parciais
-        de teste), o fluxo por-controle clássico permanece: ``led.set``
-        respeita o alvo do seletor e não mexe no toggle.
+        R-14 (auditoria 23/07): em "Todos" com os controles CONECTADOS
+        conhecidos, a cor vai por MAC para cada um (``led.set`` com ``uniq``)
+        — o override por-uniq vence a camada automática no merge por campo do
+        backend (D5), então a cor única aparece sem desligar a paleta (e sem
+        levar junto a numeração e os externos, que o mesmo flag governava).
+
+        COR-04 (caminho degradado, só quando a GUI ainda não sabe quem está
+        conectado): a cor viaja JUNTO com o toggle do automático num único
+        ``profile.apply_draft`` parcial (seção ``leds``) — o ``led.set``
+        clássico gravaria só o default e a paleta automática venceria no
+        próximo reassert ("apliquei e voltou colorido"). Com um controle
+        selecionado (ou sem draft — hosts parciais de teste), o fluxo
+        por-controle clássico permanece: ``led.set`` respeita o alvo do
+        seletor e não mexe no toggle.
         """
         pct = round(self._current_brightness * 100)
         draft = getattr(self, "draft", None)
         d4_disparou = False
-        if self._edit_uniq() is None and draft is not None:
+        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
+        if self._edit_uniq() is None and alvos:
+            ok = self._enviar_led_em_todos(
+                self._current_rgb, self._current_brightness, alvos
+            )
+        elif self._edit_uniq() is None and draft is not None:
             d4_disparou = self._d4_disable_auto_for_single_color()
             ok = ipc_bridge.apply_draft(
                 {
@@ -331,7 +396,12 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if preview is not None:
             preview.queue_draw()
         draft = getattr(self, "draft", None)
-        if self._edit_uniq() is None and draft is not None:
+        alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
+        if self._edit_uniq() is None and alvos:
+            # R-14: apagar é aplicar a cor única preta — mesma rota por-MAC do
+            # "Aplicar", sem desligar a paleta automática de ninguém.
+            ok = self._enviar_led_em_todos((0, 0, 0), None, alvos)
+        elif self._edit_uniq() is None and draft is not None:
             ok = ipc_bridge.apply_draft(
                 {
                     "leds": {
@@ -447,6 +517,50 @@ class LightbarActionsMixin(WidgetAccessMixin):
             "ou salve o perfil para valer"
         )
 
+    def _enviar_led_em_todos(
+        self,
+        rgb: tuple[int, int, int],
+        brightness: float | None,
+        alvos: list[str],
+    ) -> bool:
+        """``led.set`` por MAC em cada controle conectado (R-14).
+
+        "Todos" deixa de ser um broadcast sem dono: cada controle recebe o
+        pedido com o próprio ``uniq``, e o daemon grava override por-uniq
+        (``_record_desired_locked`` com alvo) em vez de escrever o default
+        global e limpar os overrides. É o que faz a cor única vencer a paleta
+        automática SEM desligar o automático — e é a mesma disciplina do
+        R-17 ("todo output da GUI leva ``uniq``").
+
+        Sucesso só quando TODOS aceitaram: um controle que ficou de fora é
+        falha visível, não silêncio. Sem curto-circuito — o `and` preguiçoso
+        pularia os controles seguintes na primeira falha.
+        """
+        resultados = [
+            bool(led_set(rgb, brightness=brightness, uniq=alvo)) for alvo in alvos
+        ]
+        return all(resultados)
+
+    def _enviar_player_leds(
+        self, bits: tuple[bool, bool, bool, bool, bool]
+    ) -> bool:
+        """Envia o padrão de player-LED ao alvo certo (R-14/R-17).
+
+        Alvo selecionado → só ele. "Todos" com os conectados conhecidos → um
+        pedido POR MAC (override por-uniq vence a numeração automática no
+        merge do backend; era o que o desligar-o-flag do U9 tentava obter
+        pelo caminho destrutivo). "Todos" sem saber quem está conectado →
+        rota global de sempre.
+        """
+        uniq = self._edit_uniq()
+        if uniq is not None:
+            return bool(player_leds_set(bits, uniq=uniq))
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return bool(player_leds_set(bits, uniq=None))
+        resultados = [bool(player_leds_set(bits, uniq=alvo)) for alvo in alvos]
+        return all(resultados)
+
     def _d4_disable_auto_for_single_color(self) -> bool:
         """D4 fora do ``_persist_leds_update``: desliga o auto no draft.
 
@@ -515,7 +629,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
         # dispara o D4 (mesma composição de toast do on_lightbar_apply).
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits, uniq=self._edit_uniq())
+        ok = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = (
             f"LEDs de jogador aplicados — {descricao}"
@@ -542,7 +656,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits, uniq=self._edit_uniq())
+        ok = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = (
             f"LEDs de jogador atualizados — {descricao}"
@@ -577,7 +691,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = player_leds_set(bits, uniq=self._edit_uniq())
+        ok = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(pattern)
         msg = (
             f"LEDs de jogador atualizados — {descricao}"

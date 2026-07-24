@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Any, ClassVar
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 
@@ -46,7 +46,16 @@ class _RecordingManager:
     def list_profiles(self) -> list[SimpleNamespace]:
         return [SimpleNamespace(name=n) for n in ("a", "b", "c")]
 
-    def activate(self, name: str, *, origin: str = "manual") -> SimpleNamespace:
+    def activate(
+        self,
+        name: str,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+    ) -> SimpleNamespace:
+        # R-03 (auditoria 23/07): `relatorio` é out-param opcional preenchido
+        # com o estado de cada seção (aplicado/adiado/ignorado). O dublê o
+        # aceita e ignora — o que este arquivo testa é a fiação do `origin`.
         _RecordingManager.activations.append((name, origin))
         if self.store is not None:
             self.store.active_profile = name
@@ -92,8 +101,11 @@ async def test_ipc_profile_switch_ativa_com_origin_manual(
 
     await host._handle_profile_switch({"name": "vitoria"})
 
+    # R-03: o handler passou a mandar também o `relatorio` (out-param) para
+    # responder a VERDADE sobre as seções. O contrato deste teste — origin
+    # "manual" no gesto da GUI/CLI — continua o mesmo.
     host.profile_manager.activate.assert_called_once_with(
-        "vitoria", origin="manual"
+        "vitoria", origin="manual", relatorio=ANY
     )
 
 
@@ -154,7 +166,10 @@ def test_autoswitch_ativa_com_origin_autoswitch() -> None:
 
     sw._activate("navegacao", {"wm_class": "firefox"})
 
-    mgr.activate.assert_called_once_with("navegacao", origin="autoswitch")
+    # R-03: idem — `relatorio` acompanha toda ativação; o origin é o contrato.
+    mgr.activate.assert_called_once_with(
+        "navegacao", origin="autoswitch", relatorio=ANY
+    )
 
 
 # ---------------------------------------------------------------------------

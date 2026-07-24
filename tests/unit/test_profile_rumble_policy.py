@@ -271,7 +271,15 @@ def test_manager_repassa_politica_ao_applier() -> None:
 
     received: list[tuple[str | None, float | None]] = []
 
-    def applier(policy: str | None, custom_mult: float | None) -> None:
+    def applier(
+        policy: str | None,
+        custom_mult: float | None,
+        *,
+        origin: str = "autoswitch",
+    ) -> None:
+        # R-03 (auditoria 23/07): o applier passou a receber a ORIGEM da
+        # ativação — "manual" (profile.switch/hotkey) fura o lock de gesto
+        # manual em vez de descartar a seção em silêncio.
         received.append((policy, custom_mult))
 
     mgr = ProfileManager(

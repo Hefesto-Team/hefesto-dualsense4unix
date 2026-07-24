@@ -292,11 +292,21 @@ class IpcHandlersMixin:
         ``MANUAL_PROFILE_LOCK_SEC`` segundos no `StateStore` para suprimir
         autoswitch enquanto o usuário "respira" — autoswitch volta ao normal
         quando o lock expira.
+
+        R-03 (auditoria 23/07): a resposta passou a contar a VERDADE. Antes ela
+        era `{"active_profile": nome}` mesmo quando o lock de gesto manual fazia
+        os appliers descartarem `mode`/`mouse`/supressão — a GUI dizia "perfil
+        ativo" com a máscara errada e nada reaplicava depois. Campos ADITIVOS
+        (`secoes`, `mode_aplicado`, `motivo`, `expira_em_sec`): GUI antiga com
+        daemon novo continua lendo só `active_profile`.
         """
         name = params.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
-        profile = self.profile_manager.activate(name, origin="manual")
+        relatorio: dict[str, str] = {}
+        profile = self.profile_manager.activate(
+            name, origin="manual", relatorio=relatorio
+        )
         # Bug B: paridade do marker da CLI legada com session.json.
         from hefesto_dualsense4unix.utils.session import save_active_marker
         save_active_marker(profile.name)
@@ -323,7 +333,32 @@ class IpcHandlersMixin:
                 )
 
                 materialize_launch_env(self.daemon)
-        return {"active_profile": profile.name}
+        # R-03: `mode` é a seção que a usuária SENTE (máscara do vpad + co-op).
+        # Ausente no relatório = não havia applier de modo fiado (CLI/testes) —
+        # aí não há o que desmentir, e o estado honesto é "aplicado".
+        estado_modo = relatorio.get("mode", "aplicado")
+        resposta: dict[str, Any] = {
+            "active_profile": profile.name,
+            "mode_aplicado": estado_modo == "aplicado",
+            "secoes": dict(relatorio),
+        }
+        if estado_modo != "aplicado":
+            resposta["motivo"] = estado_modo
+            if estado_modo.startswith("adiado"):
+                # Segundos até o dreno da pendência poder rodar (R-03). Só faz
+                # sentido no adiamento por lock; `getattr` + isinstance porque o
+                # daemon aqui pode ser um dublê (MagicMock devolve mock para
+                # qualquer atributo).
+                deadline = getattr(
+                    getattr(self.daemon, "_mode_pendente", None), "nao_antes_de", None
+                )
+                if isinstance(deadline, int | float):
+                    import time as _t
+
+                    resposta["expira_em_sec"] = round(
+                        max(0.0, float(deadline) - _t.monotonic()), 1
+                    )
+        return resposta
 
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
         profiles = self.profile_manager.list_profiles()
@@ -630,6 +665,25 @@ class IpcHandlersMixin:
         return {"ok": True, "renumbered": renumbered}
 
     @staticmethod
+    def _connected_keys(registry: Any) -> set[str]:
+        """Keys CONECTADAS de um registro de identidade (R-15), com fallback.
+
+        Registro sem ``snapshot_connected`` (dublê de teste, versão anterior)
+        devolve o ``snapshot()`` inteiro: todo mundo conta como conectado e o
+        plano degrada para a compactação global do HEAD — nunca levanta e
+        nunca perde controle do plano.
+        """
+        if registry is None:
+            return set()
+        fn = getattr(registry, "snapshot_connected", None)
+        if callable(fn):
+            with contextlib.suppress(Exception):
+                return {str(key) for key in fn()}
+        with contextlib.suppress(Exception):
+            return {str(key) for key in registry.snapshot()}
+        return set()
+
+    @staticmethod
     def _renumber_locked(
         identity_registry: Any,
         external_registry: Any,
@@ -645,6 +699,25 @@ class IpcHandlersMixin:
         thread esperava (inclusive a thread-zumbi de um `lock_timeout` já
         respondido), aborta com `_RenumberAuthorityChangedError` em vez de
         repintar LEDs no meio da partida.
+
+        R-15 (auditoria 23/07), duas correções no PLANO da compactação:
+
+        1. **Conectado primeiro.** Compactar o mapa inteiro incluía RESERVA
+           de controle offline: com o 8BitDo desligado segurando um slot
+           baixo, o "Renumerar agora" era um no-op — os conectados nunca
+           desciam para a faixa 1..N porque a reserva já ocupava. Agora os
+           CONECTADOS (``snapshot_connected``) descem para 1..N na ordem
+           relativa atual e as reservas ausentes vão para N+1..M no MESMO
+           mapping. A reserva não é dropada (a promessa D2 do sprint
+           cores-e-led continua: replug recupera o número), só perde a fila.
+           Registro sem ``snapshot_connected`` (dublê antigo) degrada para o
+           comportamento anterior — todo mundo tratado como conectado.
+        2. **Só o que mudou volta em ``renumbered``.** O retorno era o plano
+           INTEIRO, então uma numeração já compacta respondia "4 controle(s)
+           renumerado(s)" à GUI (que conta as chaves) — sucesso ruidoso de um
+           no-op. O ``compact`` de cada registro já ignora chave sem mudança;
+           aqui o relatório passa a dizer a mesma verdade, e o chamador pula
+           o repaint/reassert quando nada mudou.
         """
         with contextlib.ExitStack() as locks:
             for reg in (identity_registry, external_registry):
@@ -655,26 +728,32 @@ class IpcHandlersMixin:
             if callable(authority_check) and authority_check() == "game":
                 raise _RenumberAuthorityChangedError()
 
-            entries: list[tuple[int, str, Any]] = []
-            if identity_registry is not None:
+            entries: list[tuple[bool, int, str, Any]] = []
+            for registry in (identity_registry, external_registry):
+                if registry is None:
+                    continue
+                conectados = IpcHandlersMixin._connected_keys(registry)
                 entries.extend(
-                    (slot, key, identity_registry)
-                    for key, slot in identity_registry.snapshot().items()
-                )
-            if external_registry is not None:
-                entries.extend(
-                    (slot, key, external_registry)
-                    for key, slot in external_registry.snapshot().items()
+                    # R-15: a 1ª chave da ordenação é "está offline?" — False
+                    # ordena antes, então os conectados ocupam 1..N e as
+                    # reservas seguem em N+1..M preservando a ordem relativa.
+                    (key not in conectados, slot, key, registry)
+                    for key, slot in registry.snapshot().items()
                 )
             if not entries:
                 return {}
 
-            entries.sort(key=lambda entry: entry[0])
+            entries.sort(key=lambda entry: (entry[0], entry[1]))
             renumbered: dict[str, int] = {}
             identity_map: dict[str, int] = {}
             external_map: dict[str, int] = {}
-            for new_slot, (_old_slot, key, registry) in enumerate(entries, start=1):
-                renumbered[key] = new_slot
+            for new_slot, (_offline, old_slot, key, registry) in enumerate(
+                entries, start=1
+            ):
+                if old_slot != new_slot:
+                    # R-15: relatório só do que MUDOU (a GUI conta as chaves
+                    # para dizer quantos controles renumerou).
+                    renumbered[key] = new_slot
                 if registry is identity_registry:
                     identity_map[key] = new_slot
                 else:

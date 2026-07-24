@@ -98,7 +98,12 @@ async def test_profile_switch_ativa_e_retorna_nome(running_server):
     server, socket_path, fc = running_server
     async with IpcClient.connect(socket_path) as client:
         result = await client.call("profile.switch", {"name": "shooter"})
-    assert result == {"active_profile": "shooter"}
+    # R-03 (auditoria 23/07): a resposta ganhou campos ADITIVOS
+    # (`mode_aplicado`/`secoes`) — antes ela dizia só o nome, mesmo quando o
+    # lock de gesto manual tinha descartado o modo do perfil. Asserção deixa de
+    # ser de igualdade para não congelar o contrato aditivo.
+    assert result["active_profile"] == "shooter"
+    assert result["mode_aplicado"] is True
     assert server.store.active_profile == "shooter"
 
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]

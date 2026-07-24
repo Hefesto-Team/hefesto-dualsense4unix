@@ -11,10 +11,18 @@ slot ESTÁVEL DE SESSÃO, keyed pelo MAC normalizado (12 hex — o mesmo
   certa no MESMO tick de hotplug em que o backend abre o handle (D1);
 - desconectar RESERVA o slot ao MAC dentro da sessão — replug recupera o
   mesmo número (D2). Sem roubo LRU (cortado: YAGNI);
-- quando NENHUM controle está conectado, a sessão esvaziou: as reservas
-  expiram e a próxima sessão renumera do 1 (D2 — o PS5 numera por sessão).
-  Quem observa o esvaziamento é ``sync_connected`` (tick lento ~2s do
-  daemon), nunca o caminho quente por evento;
+- R-15 (auditoria 23/07): DENTRO de um boot, número é do MAC e NINGUÉM
+  expira. A expiração por "sessão esvaziou" (o ramo ``_saw_connected`` do
+  ``sync_connected``) foi REMOVIDA: ela era assimétrica (só o lado
+  DualSense expirava; o registro dos externos nunca expirou) e trocava
+  cor/número de dono conforme a ORDEM DE WAKE — desligar os dois DualSense
+  e religar em ordem invertida devolvia o 1 ao que voltasse primeiro. Pior:
+  entre a expiração e a reatribuição, ``_ds_reserve()`` (external_identity)
+  lia piso 0 no meio do tick externo e abria janela de DUPLICATA — a queixa
+  "dois player 1, dois player 2". Quem renumera é o BOOT: o
+  ``controllers.json`` carrega o ``boot_id`` e um arquivo de outro boot é
+  sessão morta (ver Persistência abaixo). Renumerar dentro do boot continua
+  possível, mas só por GESTO explícito ("Renumerar agora" → ``compact``);
 - o vpad (MAC forjado ``02:fe:...``) NUNCA ganha slot (D9) — o filtro
   existe aqui além do filtro de enumeração do backend, porque outros
   chamadores (describe/co-op) também consultam;
@@ -35,8 +43,8 @@ Persistência (``controllers.json`` no config do app, escrita atômica
 mkstemp+os.replace — padrão ``utils/session.py``): cobre APENAS o restart do
 daemon com controles ainda presentes. O arquivo carrega o ``boot_id`` da
 máquina: um arquivo de outro boot é sessão MORTA e é ignorado no load (a
-próxima sessão renumera do 1, D2). A expiração em runtime regrava o arquivo
-vazio. O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
+próxima sessão renumera do 1, D2) — depois de R-15, o boot é o ÚNICO ponto
+de renumeração automática. O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
 o ponto de monkeypatch dos testes (``xdg_paths.config_dir``), padrão
 ``save_active_marker``. O arquivo é COMPARTILHADO com o registro dos
 externos (``external_identity.py``, namespace ``externals``): ``load`` e
@@ -48,6 +56,25 @@ Config do automático (COR-03): o registro também guarda o estado vigente do
 toggle ``auto_player_colors`` e do brilho do perfil ativo (D11), configurados
 pelo ``ProfileManager.apply`` a cada ativação e consultados pelo provider de
 cor injetado no backend (``make_auto_output_provider``).
+
+R-14 (auditoria 23/07) — o automático são DUAS coisas, não uma:
+
+- **ATRIBUIÇÃO de slot** (quem é o Controle N) acontece SEMPRE, com o
+  automático ligado ou desligado. Antes, o provider fazia o early-return do
+  flag ANTES de ``slot_for`` e o DualSense simplesmente não ganhava número
+  enquanto o perfil tivesse ``auto_player_colors:false`` (o ``fps.json``
+  dela) — sem número no registro, o piso dos externos (``_ds_reserve``)
+  também mentia e a numeração global congelava. Atribuir é identidade;
+  desligar o automático é uma opinião sobre APARÊNCIA.
+- **APARÊNCIA** tem dois eixos independentes: ``auto_colors`` (a paleta da
+  lightbar) e ``auto_numbers`` (o padrão de player-LED do NÚMERO do
+  controle, e o LED de número dos externos). Eram o MESMO flag, então um
+  clique de cor na GUI apagava a numeração de todo mundo — inclusive a dos
+  externos. ``configure(enabled=…)`` mapeia o campo ANTIGO do perfil
+  (``auto_player_colors``) para o eixo COR apenas; ``auto_numbers`` nasce
+  ``True`` e só muda por ``configure(numbers=…)``. É a migração de default
+  compatível: perfil salvo com ``auto_player_colors:false`` perde a paleta,
+  nunca a numeração.
 """
 from __future__ import annotations
 
@@ -131,12 +158,10 @@ class ControllerIdentityRegistry:
         #: keys de slots VOLÁTEIS (sem MAC 12-hex) — nunca persistidas (D9).
         self._volatile: set[str] = set()
         #: keys atualmente conectadas (subset das que reportaram presença).
+        #: R-15: lido por ``snapshot_connected`` (o "Renumerar agora" compacta
+        #: os CONECTADOS em 1..N e só depois anexa as reservas offline) —
+        #: antes era escrito e nunca lido.
         self._connected: set[str] = set()
-        #: True depois de observar ≥1 controle conectado NESTA execução —
-        #: arma a expiração por esvaziamento. Sem isto, o sync vazio do boot
-        #: (antes de o backend abrir os handles) expiraria as entradas
-        #: recém-carregadas do disco e mataria o caso restart-com-controles.
-        self._saw_connected = False
         #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
@@ -149,7 +174,11 @@ class ControllerIdentityRegistry:
         #: FakeController) = comportamento histórico, hermético.
         self._extra_reserved: Callable[[], set[int]] | None = None
         # -- estado do automático (COR-03, configurado pelo ProfileManager) --
-        self._auto_enabled = True
+        # R-14: dois eixos INDEPENDENTES (ver docstring do módulo). Cor é o
+        # campo antigo do perfil; numeração nasce ligada e não tem campo no
+        # schema ainda — quem quiser desligá-la usa ``configure(numbers=…)``.
+        self._auto_colors = True
+        self._auto_numbers = True
         self._auto_brightness = 1.0
 
     # ------------------------------------------------------------------
@@ -161,10 +190,16 @@ class ControllerIdentityRegistry:
         *,
         enabled: bool | None = None,
         brightness: float | None = None,
+        numbers: bool | None = None,
     ) -> None:
         """Configura o estado vigente do automático (chamado na ativação de perfil).
 
-        ``enabled`` = ``profile.leds.auto_player_colors``; ``brightness`` =
+        ``enabled`` = ``profile.leds.auto_player_colors`` — R-14: mapeia SÓ o
+        eixo COR (o campo do schema é literalmente sobre cor; o acoplamento
+        com a numeração era o defeito). ``numbers`` é o eixo da NUMERAÇÃO
+        (padrão de player-LED do DualSense e LED de número dos externos): sem
+        campo no schema ainda, fica ``True`` até alguém pedir o contrário —
+        default compatível com todo perfil já salvo. ``brightness`` =
         ``profile.leds.lightbar_brightness`` (a cor automática respeita o
         brilho do perfil — D11). ``None`` preserva o valor atual (chamada
         parcial). Perfil SEM seção ``leds`` no JSON valida com os defaults do
@@ -173,15 +208,33 @@ class ControllerIdentityRegistry:
         """
         with self._lock:
             if enabled is not None:
-                self._auto_enabled = bool(enabled)
+                self._auto_colors = bool(enabled)
+            if numbers is not None:
+                self._auto_numbers = bool(numbers)
             if brightness is not None:
                 self._auto_brightness = max(0.0, min(1.0, float(brightness)))
 
     @property
     def auto_enabled(self) -> bool:
-        """True quando as cores automáticas por controle estão ligadas."""
+        """True quando as cores automáticas por controle estão ligadas.
+
+        Nome histórico (``auto_player_colors``) mantido: é o que o resto do
+        código e os testes leem. Depois de R-14 ele significa exatamente o
+        eixo COR — para a numeração existe ``auto_numbers_enabled``.
+        """
         with self._lock:
-            return self._auto_enabled
+            return self._auto_colors
+
+    @property
+    def auto_numbers_enabled(self) -> bool:
+        """True quando a NUMERAÇÃO automática (player-LED) está ligada (R-14).
+
+        Independente da cor: desligar a paleta não pode apagar o número do
+        controle nem congelar a numeração dos externos — era exatamente o que
+        acontecia com o flag único ("dois player 1, dois player 2").
+        """
+        with self._lock:
+            return self._auto_numbers
 
     @property
     def auto_brightness(self) -> float:
@@ -253,7 +306,6 @@ class ControllerIdentityRegistry:
             if slot is not None:
                 if assign:
                     self._connected.add(key)
-                    self._saw_connected = True
                 return slot
             if not assign:
                 return None
@@ -274,7 +326,6 @@ class ControllerIdentityRegistry:
             else:
                 self._volatile.add(key)
             self._connected.add(key)
-            self._saw_connected = True
             logger.info(
                 "identity_slot_atribuido",
                 uniq=key,
@@ -286,10 +337,10 @@ class ControllerIdentityRegistry:
     def mark_disconnected(self, uniq: str | None) -> None:
         """Marca ``uniq`` desconectado — o slot fica RESERVADO ao MAC (D2).
 
-        Replug dentro da sessão recupera o mesmo número. A EXPIRAÇÃO (sessão
-        esvaziou → renumera do 1) não acontece aqui: é o ``sync_connected``
-        (tick lento) quem observa o conjunto — assim um flap rápido de BT
-        entre dois ticks nem chega a derrubar a reserva.
+        Replug dentro da sessão recupera o mesmo número. R-15: a reserva vale
+        pelo BOOT inteiro — nada aqui (nem no ``sync_connected``) expira slot
+        por sessão esvaziada, então flap de BT, suspend e "desliguei os dois
+        controles pra jantar" devolvem o MESMO número a cada MAC.
         """
         if not uniq or not isinstance(uniq, str):
             return
@@ -301,12 +352,17 @@ class ControllerIdentityRegistry:
         """Reconcilia com o conjunto de uniqs CONECTADOS agora (tick ~2s).
 
         - quem saiu do conjunto vira RESERVA (slot preso ao MAC — D2);
-        - conjunto vazio APÓS a sessão ter tido alguém conectado = sessão
-          esvaziou → TODAS as reservas (e voláteis) expiram e o arquivo é
-          regravado vazio — a próxima sessão renumera do 1 (D2);
         - persiste (atômico) quando o mapa mudou desde o último save. É o
           ÚNICO ponto de escrita em disco fora do ``load()`` — nunca no
           caminho quente por evento.
+
+        R-15 (auditoria 23/07): o ramo de EXPIRAÇÃO por sessão esvaziada saiu
+        daqui. Ele existia só deste lado (o registro dos externos nunca
+        expirou nada), e a assimetria era medível: com os dois DualSense
+        desligados, o primeiro a acordar levava o slot 1 — cor e número
+        trocavam de dono. Dentro do boot o número é do MAC; entre boots o
+        ``boot_id`` do arquivo já renumera; e renumerar por vontade dela
+        continua sendo o ``compact`` do "Renumerar agora".
         """
         vivos: set[str] = set()
         for uniq in uniqs:
@@ -317,20 +373,7 @@ class ControllerIdentityRegistry:
                 continue  # D9: vpad não é controle
             vivos.add(key)
         with self._lock:
-            self._connected = {k for k in self._connected if k in vivos} | vivos
-            if vivos:
-                self._saw_connected = True
-            elif self._saw_connected:
-                # Transição observada para ZERO conectados: sessão esvaziou.
-                if self._slots:
-                    logger.info(
-                        "identity_sessao_esvaziou_reservas_expiradas",
-                        slots=dict(self._slots),
-                    )
-                    self._slots.clear()
-                    self._volatile.clear()
-                    self._dirty = True
-                self._saw_connected = False
+            self._connected = vivos
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
@@ -339,6 +382,18 @@ class ControllerIdentityRegistry:
         """Cópia do mapa key→slot atual (conectados + reservas). Leitura pura."""
         with self._lock:
             return dict(self._slots)
+
+    def snapshot_connected(self) -> set[str]:
+        """Keys CONECTADAS agora (subconjunto de ``snapshot()``). Leitura pura.
+
+        R-15: o "Renumerar agora" compactava sobre o mapa inteiro — incluindo
+        reserva de controle OFFLINE. Com o 8BitDo desligado segurando um slot
+        baixo, a compactação era um no-op que ainda respondia "4 controle(s)
+        renumerado(s)". Quem está na mesa desce para 1..N; a reserva vai para
+        o fim da fila sem ser dropada (a promessa D2 continua de pé).
+        """
+        with self._lock:
+            return set(self._connected)
 
     def lock_for_renumber(self) -> threading.RLock:
         """Expõe o `RLock` de instância — SÓ para `identity.renumber` (fix TOCTOU).
@@ -505,13 +560,23 @@ def make_auto_output_provider(
     ``_io_lock``, portanto ele é barato e sem I/O de disco (o ``slot_for``
     lazy só toca memória; a persistência fica com o ``sync_connected``).
 
-    Devolve um ``_DesiredOutput`` com APENAS ``led`` (cor do slot, escalada
-    pelo brilho vigente — D11, pelo MESMO caminho do global:
-    ``LedSettings.apply_brightness``) e ``player_leds`` (padrão canônico do
-    NÚMERO DO CONTROLE — D7; o co-op vence por construção, reescrevendo por
-    cima via sysfs no ciclo dele). ``None`` = sem opinião (auto desligado,
-    uniq sem slot, vpad) → o merge cai no default global (comportamento
-    histórico, D5).
+    Devolve um ``_DesiredOutput`` com ``led`` (cor do slot, escalada pelo
+    brilho vigente — D11, pelo MESMO caminho do global:
+    ``LedSettings.apply_brightness``) e/ou ``player_leds`` (padrão canônico
+    do NÚMERO DO CONTROLE — D7). ``None`` = sem opinião (uniq sem slot,
+    vpad, ou os DOIS eixos do automático desligados) → o merge cai no default
+    global (comportamento histórico, D5).
+
+    R-14 (auditoria 23/07), duas mudanças de ordem/granularidade:
+
+    1. ``slot_for`` roda ANTES de qualquer teste de flag — ATRIBUIR número é
+       identidade, não aparência. Com o early-return antigo, um perfil com
+       ``auto_player_colors:false`` deixava o DualSense sem entrada no
+       registro, e o piso que os externos leem (``_ds_reserve``) passava a
+       mentir: o 8BitDo ganhava um número que outro controle já exibia.
+    2. Os campos saem SEPARADOS: cor sob ``auto_enabled``, padrão de número
+       sob ``auto_numbers_enabled``. Desligar a paleta não pode apagar o
+       número do controle.
     """
     from hefesto_dualsense4unix.core.backend_pydualsense import _DesiredOutput
     from hefesto_dualsense4unix.core.led_control import (
@@ -521,19 +586,22 @@ def make_auto_output_provider(
     )
 
     def provider(uniq: str) -> _DesiredOutput | None:
-        if not registry.auto_enabled:
-            return None
+        # R-14 §1: a ATRIBUIÇÃO acontece sempre (ver docstring).
         slot = registry.slot_for(uniq)
         if slot is None:
             return None
-        brilho = registry.auto_brightness
-        settings = LedSettings(
-            lightbar=player_slot_color(slot), brightness_level=brilho
-        )
-        return _DesiredOutput(
-            led=settings.apply_brightness(brilho).lightbar,
-            player_leds=player_led_pattern(slot),
-        )
+        campos: dict[str, Any] = {}
+        if registry.auto_enabled:
+            brilho = registry.auto_brightness
+            settings = LedSettings(
+                lightbar=player_slot_color(slot), brightness_level=brilho
+            )
+            campos["led"] = settings.apply_brightness(brilho).lightbar
+        if registry.auto_numbers_enabled:
+            campos["player_leds"] = player_led_pattern(slot)
+        if not campos:
+            return None  # os dois eixos desligados = sem opinião nenhuma
+        return _DesiredOutput(**campos)
 
     return provider
 
