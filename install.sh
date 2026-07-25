@@ -907,6 +907,7 @@ else
             81-hefesto-usb-power.rules) rules_desc='controles e adaptadores BT nunca dormem (USB)' ;;
             81-hefesto-usb-host-power.rules) rules_desc='hosts USB (xHCI) sem economia que derruba o barramento' ;;
             82-nintendo-pro-nosniff.rules) rules_desc='Pro Controller sai do sniff na borda da conexão (BT)' ;;
+            83-hefesto-bond-snapshot.rules) rules_desc='snapshot dos bonds BT na borda da conexão' ;;
             *)    rules_desc='' ;;
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"

@@ -37,6 +37,7 @@ for f in \
     "$ASSETS/81-hefesto-usb-power.rules" \
     "$ASSETS/81-hefesto-usb-host-power.rules" \
     "$ASSETS/82-nintendo-pro-nosniff.rules" \
+    "$ASSETS/83-hefesto-bond-snapshot.rules" \
     "$ASSETS/hefesto-dualsense4unix.conf" \
 ; do
     [[ -f "$f" ]] || { echo "ERRO: asset ausente: $f" >&2; exit 1; }
@@ -102,6 +103,7 @@ sudo install -Dm644 "$ASSETS/81-hefesto-usb-power.rules" /etc/udev/rules.d/81-he
 # juntos, visto em maio/2026). PLAT-03 item 3.
 sudo install -Dm644 "$ASSETS/81-hefesto-usb-host-power.rules" /etc/udev/rules.d/81-hefesto-usb-host-power.rules
 sudo install -Dm644 "$ASSETS/82-nintendo-pro-nosniff.rules" /etc/udev/rules.d/82-nintendo-pro-nosniff.rules
+sudo install -Dm644 "$ASSETS/83-hefesto-bond-snapshot.rules" /etc/udev/rules.d/83-hefesto-bond-snapshot.rules
 # 73/74 (GUI auto-spawn no hotplug) DESCONTINUADAS 2026-06-23 (abriam o controle
 # via hidraw a cada ACTION=="add", amplificando a re-enumeração do storm -71) e
 # REMOVIDAS do repo em 2026-07-18. O rm compensatório fica por 1 release para

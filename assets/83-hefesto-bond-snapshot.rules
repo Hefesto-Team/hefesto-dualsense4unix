@@ -1,0 +1,26 @@
+# BOND-SNAPSHOT-BORDA-01 (2026-07-24)
+#
+# Dispara o snapshot dos bonds quando um controle Bluetooth aparece, em vez de
+# esperar o próximo tick do timer de 15 minutos.
+#
+# POR QUÊ: o `bluetoothd` crasha com corrupção de heap (sem fix upstream
+# conhecido para a via kernel-HIDP) e o crash APAGA bonds do disco. Medido em
+# 24/07: crash às 20:31 levou 2 dos 3 bonds. Com snapshot só de 15 em 15 min, o
+# pareamento feito logo depois de um snapshot e perdido no crash seguinte
+# desaparece sem cópia — foi o que aconteceu com o Pro genuíno, re-pareado às
+# 21:24 e sumido às 21:54.
+#
+# A BORDA CERTA: o bond é gravado no pareamento, e o device HID nasce logo em
+# seguida, na primeira conexão. Fotografar aqui pega o bond novo em segundos, em
+# vez de em até um quarto de hora.
+#
+# ESCOPO: qualquer device HID com `HID_UNIQ` preenchido — o kernel só o preenche
+# com endereço Bluetooth do peer, então devices USB não disparam nada. Não é
+# específico de marca de propósito: o crash come os bonds de todos.
+#
+# CUSTO: o `bt_bonds_snapshot.sh` deduplica por conteúdo, então conexão repetida
+# sem bond novo não gera escrita. `--no-block` é obrigatório: o udev não pode
+# ficar esperando o systemd, sob pena de segurar a criação do device.
+#
+# Reverter: remover este arquivo e `udevadm control --reload`.
+ACTION=="add", SUBSYSTEM=="hid", ENV{HID_UNIQ}=="?*", TAG+="systemd", RUN+="/usr/bin/systemctl start --no-block hefesto-bt-bonds-snapshot.service"

@@ -439,6 +439,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/81-hefesto-usb-host-power.rules \
                    /etc/udev/rules.d/71-uhid.rules \
                    /etc/udev/rules.d/82-nintendo-pro-nosniff.rules \
+                   /etc/udev/rules.d/83-hefesto-bond-snapshot.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         # hefesto-dualsense-storm.conf NÃO entra nesta lista de propósito — ver
