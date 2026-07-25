@@ -567,7 +567,8 @@ class SourceVirtualPipeWire:
     """Uma source de captura publicada no PipeWire, alimentada por um fifo.
 
     `nome` é o `source_name` (o que aparece em `pactl list sources short`);
-    `descricao` é o rótulo legível que a bandeja de som mostra.
+    `descricao` é o rótulo legível que a bandeja de som mostra.  (noqa-acento:
+    nomes dos parâmetros, não texto)
     """
 
     def __init__(

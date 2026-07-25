@@ -90,7 +90,7 @@ jobs:
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
               libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
-        run: pip install -e ".[dev]" PyGObject pycairo
+        run: pip install -e ".[dev]" "PyGObject<3.51" pycairo
       - name: Verificar tamanho de HID captures
         run: |
           OVERSIZE=$(find tests/fixtures -name "*.bin" -size +5M 2>/dev/null)
@@ -272,16 +272,16 @@ jobs:
             experimental: true
             # evdev compila do sdist: precisa de gcc + Python.h (python3-devel) +
             # linux/input.h (kernel-headers). pydantic-core tem wheel p/ o 3.12.
-            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers
+            install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers xorg-x11-server-Xvfb
           - distro: archlinux
             image: archlinux:latest
             experimental: true
             # Python 3.14: instala evdev/pydantic-core compilados pelo próprio Arch
             # (sem wheel no PyPI p/ 3.14) + gcc/linux-api-headers de fallback p/ o sdist.
-            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core gcc linux-api-headers
+            install_cmd: pacman -Syu --noconfirm python python-pip python-gobject gtk3 hidapi libnotify python-evdev python-pydantic python-pydantic-core gcc linux-api-headers xorg-server-xvfb
           - distro: debian-12
             image: debian:12
-            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin xvfb
     container:
       image: ${{ matrix.image }}
     steps:
@@ -316,18 +316,22 @@ jobs:
       - name: Smoke pytest (unit)
         run: |
           python3 -m pip install --break-system-packages pytest pytest-asyncio
+          # CI-SMOKE-SEGFAULT-SEM-DISPLAY-01: estas imagens TÊM o GTK de
+          # verdade (python3-gi + gir1.2-gtk-3.0), então os testes de
+          # interface não pulam — eles rodam e o GTK segfalta por não achar
+          # display (exit 139/133). O `|| echo "::warning::"` que existia aqui
+          # vinha escondendo exatamente isso. Um Xvfb descartável dá o display
+          # que falta e o passo volta a medir o que promete.
           # CI-TEATRO-01: este passo não valia nada e dizia que valia.
-          # Eram três furos somados:
           #   1. `-m "not requires_gtk and not requires_display"` filtrava por
-          #      markers que NUNCA foram definidos (zero ocorrências no repo) —
-          #      não selecionava nada, só dava a impressão de recorte cuidadoso.
+          #      markers que NUNCA foram definidos (zero ocorrências no repo).
           #   2. `--ignore=tests/unit/app` apontava para um diretório que não
           #      existe (os testes de GUI moram em tests/unit/, sem subpasta).
           #   3. `|| echo "::warning::"` ENGOLIA a falha: a suíte inteira podia
           #      quebrar e o job seguia verde. Um gate que não reprova não é
           #      gate — e era ele que carimbava os releases.
-          # Quem precisa de GTK real já se protege sozinho, com
-          # `pytest.importorskip("gi"/"cairo")` no topo do arquivo: sem
-          # PyGObject esses testes PULAM (visível no relatório), e o resto
-          # roda de verdade. Agora falha quando tem que falhar.
-          python3 -m pytest tests/unit -q
+          if command -v xvfb-run >/dev/null 2>&1; then
+            xvfb-run -a python3 -m pytest tests/unit -q
+          else
+            python3 -m pytest tests/unit -q
+          fi

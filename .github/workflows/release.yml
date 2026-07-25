@@ -35,12 +35,20 @@ jobs:
       - name: Instalar build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+          # CI-TYPELIB-PARCIAL-01: o runner traz um `gi` PELA METADE — `import
+          # gi` e `from gi.repository import Gtk` funcionam, mas GdkPixbuf e
+          # Pango estouram `ImportError: unknown location`. Como isso acontece
+          # na COLETA do pytest, não vira skip: derruba a suíte com "errors
+          # during collection" e reprovou o release da v0.1.1. Instalar as
+          # typelibs resolve melhor do que pular: em vez de fingir que os
+          # testes de interface rodaram, eles rodam de verdade.
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
+              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0
       - name: Verificar anonimato
         run: bash scripts/check_anonymity.sh
       - name: Instalar e testar
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" "PyGObject<3.51" pycairo
           ruff check src/ tests/
           pytest tests/unit -v
       - name: Build wheel + sdist
