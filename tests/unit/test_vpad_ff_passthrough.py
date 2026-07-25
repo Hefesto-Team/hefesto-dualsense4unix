@@ -18,7 +18,10 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
-from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
+from hefesto_dualsense4unix.integrations.uinput_gamepad import (
+    FF_TETO_SEM_DURACAO_S,
+    UinputGamepad,
+)
 
 MAC_1 = "aabbcc001100"
 MAC_2 = "aabbcc001122"
@@ -236,6 +239,59 @@ class TestVpadFF:
         clock[0] += 0.060  # 110ms > 100ms — venceu
         gp.pump_ff()
         assert sink == [(0, 0x40), (0, 0)]
+
+    def test_duracao_zero_tem_teto_de_seguranca(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Duração 0 = "toca até mandar parar" — mas não para sempre.
+
+        O deadline era `math.inf`: só o jogo podia parar o motor, e se ele
+        fechasse no meio de uma vibração, travasse, ou o stop se perdesse, o
+        controle vibrava indefinidamente. Foi o "não parava por nada" relatado
+        ao vivo — e a saída foi o botão "Parar", que trava o rumble em silêncio
+        e cria o problema seguinte.
+        """
+        gp, dev, sink, clock = _make_vpad(monkeypatch)
+        dev.game_uploads(
+            _rumble_effect(0, strong=0x8000, weak=0, duration_ms=0), request_id=1
+        )
+        dev.game_plays(0)
+        gp.pump_ff()
+        assert sink == [(0, 0x80)]
+
+        clock[0] += FF_TETO_SEM_DURACAO_S - 1  # ainda dentro do teto
+        gp.pump_ff()
+        assert sink == [(0, 0x80)], "o teto não pode cortar antes da hora"
+
+        clock[0] += 2  # passou do teto sem o jogo pedir mais nada
+        gp.pump_ff()
+        assert sink == [(0, 0x80), (0, 0)], "o motor tem de parar sozinho"
+
+    def test_teto_e_renovado_por_novo_play(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Vibração contínua legítima não é cortada.
+
+        Uma cena que vibra sem parar fica remandando play; cada um renova o
+        prazo. O teto só age quando ninguém está mais pedindo nada.
+        """
+        gp, dev, sink, clock = _make_vpad(monkeypatch)
+        dev.game_uploads(
+            _rumble_effect(0, strong=0x8000, weak=0, duration_ms=0), request_id=1
+        )
+        dev.game_plays(0)
+        gp.pump_ff()
+
+        # O jogo segue pedindo, pertinho de vencer o prazo.
+        for _ in range(3):
+            clock[0] += FF_TETO_SEM_DURACAO_S - 1
+            dev.game_plays(0)
+            gp.pump_ff()
+
+        assert sink == [(0, 0x80)], (
+            "o efeito deve seguir tocando: cada play renova o teto "
+            f"(sink={sink})"
+        )
 
     def test_play_com_repeticoes_estica_o_deadline(self, monkeypatch: pytest.MonkeyPatch) -> None:
         gp, dev, sink, clock = _make_vpad(monkeypatch)

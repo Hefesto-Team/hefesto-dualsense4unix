@@ -47,6 +47,9 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     vpad_degradation_text,
     wrapper_banner_text,
 )
+from hefesto_dualsense4unix.app.actions.rumble_actions import (
+    BTN_GIVE_BACK_TO_GAME,
+)
 from hefesto_dualsense4unix.app.constants import (
     LIVE_POLL_INTERVAL_MS,
     RECONNECT_FAIL_THRESHOLD,
@@ -143,6 +146,8 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
     _edit_badge: Any = None
+    #: Badge do banner que denuncia rumble travado em silêncio.
+    _rumble_badge: Any = None
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e prepara o container dos cards.
@@ -366,6 +371,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         badge.hide()
         header_bar.pack_end(badge, False, False, 6)
         self._edit_badge = badge
+        # A vibração pode ficar TRAVADA em silêncio (botão "Parar"): o estado
+        # sobrevive a troca de perfil, reconexão e abertura de jogo, e só sai
+        # pelo "Devolver ao jogo". O aviso existia apenas na aba Rumble — quem
+        # está jogando não tem essa aba aberta e conclui que a vibração quebrou.
+        # Aqui ele fica no banner, visível de qualquer aba.
+        rumble_badge = Gtk.Label()
+        rumble_badge.set_use_markup(True)
+        rumble_badge.set_no_show_all(True)
+        rumble_badge.hide()
+        header_bar.pack_end(rumble_badge, False, False, 6)
+        self._rumble_badge = rumble_badge
 
     @staticmethod
     def _short_target_label(label: str) -> str:
@@ -580,6 +596,34 @@ class StatusActionsMixin(WidgetAccessMixin):
             badge.show()
         else:
             badge.hide()
+
+    def _update_rumble_badge(self, state: dict[str, Any]) -> None:
+        """Denuncia no banner que a vibração está travada pela GUI.
+
+        Só (0,0) — o silêncio do botão "Parar" — e valores fixos não-zero
+        merecem aviso: nos dois o FF do jogo é ignorado. Em passthrough
+        (`rumble_active is None`, o normal para jogar) o badge some.
+        """
+        badge = getattr(self, "_rumble_badge", None)
+        if badge is None:
+            return
+        ativo = state.get("rumble_active")
+        if not isinstance(ativo, (list, tuple)) or len(ativo) != 2:
+            badge.hide()
+            return
+        if tuple(ativo) == (0, 0):
+            texto = "vibração em silêncio"
+        else:
+            texto = f"vibração fixa em {ativo[0]}/{ativo[1]}"
+        badge.set_markup(
+            f'<span foreground="#ffb86c">{texto}</span>'
+        )
+        badge.set_tooltip_text(
+            "A vibração está travada pela aba Rumble e o jogo não consegue "
+            "mexer nela. Para devolver ao jogo: aba Rumble → "
+            f"“{BTN_GIVE_BACK_TO_GAME}”."
+        )
+        badge.show()
 
     def _refresh_target_tabs(self) -> None:
         """Re-popula as abas por-controle para exibir os valores do alvo novo."""
@@ -1037,6 +1081,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         # 8BIT-02: inventário de externos (opt-in, caro) atualizado no tick lento
         # com throttle próprio — alimenta os botões de externos do seletor.
         self._maybe_fetch_externals()
+        self._update_rumble_badge(state)
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")

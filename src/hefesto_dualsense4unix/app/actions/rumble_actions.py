@@ -70,7 +70,11 @@ _LABEL_AUTO = (
 #: RUM-01: o texto dos toasts/estado mandava clicar "Devolver ao jogo" — botão
 #: que NÃO existe. O botão real (main.glade) tem este rótulo; um único dono aqui
 #: impede a dessincronia de voltar. Ao mexer no rótulo do glade, mexa aqui.
-_BTN_GIVE_BACK_TO_GAME = "Deixar o jogo controlar a vibração"
+#: Rótulo do botão que devolve a vibração ao jogo. Público porque o banner
+#: (status_actions) manda clicar nele — as duas telas não podem divergir no
+#: nome do botão.
+BTN_GIVE_BACK_TO_GAME = "Deixar o jogo controlar a vibração"
+_BTN_GIVE_BACK_TO_GAME = BTN_GIVE_BACK_TO_GAME
 
 #: JARG-01/LB-02: "daemon offline?" vaza jargão + palpite. O resto do app já
 #: fala "ligue na aba Sistema" — a fronteira da GUI traduz aqui também.
