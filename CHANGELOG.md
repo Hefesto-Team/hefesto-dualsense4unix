@@ -5,6 +5,57 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-07-24
+
+**Primeiro lançamento público, em alfa.** A numeração recomeça em 0.1.0: as
+versões 0.1.0…4.0.0 anteriores foram desenvolvimento interno, e o número novo diz
+o que o software é hoje — funcional no dia a dia da mantenedora, ainda não
+validado em outras máquinas. O histórico daquelas versões continua na tabela ao
+fim deste arquivo.
+
+### Added
+
+- **Sensores na aba Status**: giroscópio (três eixos em graus/s, lidos do node de
+  movimento do kernel), microfone (selo ativo/mudo e medidor de nível) e touchpad
+  (posição do toque). A captura de áudio só roda com a aba visível.
+- **Identidade visual nova**: logo própria, paleta Drácula com um papel por cor, e
+  a interface inteira alinhada a ela.
+- **"Navegação DSX"**: as abas Mouse e Teclado viraram uma só, em duas colunas.
+- **Perfis manuais-only** ganham representação própria no schema, em vez de
+  dependerem de um critério que nunca casa.
+- **Snapshot de bond do Bluetooth na borda da conexão**, além do periódico.
+
+### Changed
+
+- A janela abre com a altura que o conteúdo pede: nenhuma aba precisa de barra de
+  rolagem. A aba Gatilhos caiu de 606 para 180px na grade de modos, e a Emulação
+  de 674 para 403px.
+- A aba Perfis perdeu o bloco "Detalhes técnicos" (o JSON cru).
+- README de 717 para 252 linhas; o detalhe migrou para `docs/usage/`.
+- O subtítulo passa a ser "Gerenciador DualSense para Linux".
+
+### Fixed
+
+- **Vibração que não parava.** Efeito de duração infinita só podia ser encerrado
+  pelo jogo; se ele fechasse no meio, travasse ou perdesse o comando de parada, o
+  motor ficava ligado. Agora há um teto de segurança, renovado a cada novo pedido
+  do jogo — vibração contínua legítima não é cortada.
+- **Rumble travado sem aviso.** O botão "Parar" fixa o silêncio e nada o desfazia;
+  o aviso existia só dentro da aba Rumble. Agora aparece no cabeçalho, de
+  qualquer aba.
+- **Um controle, dois números.** A aba Início numerava pela posição na lista
+  enquanto o resto usava o identificador de sessão: a mesma janela dizia
+  "Controle 1" e "Sony 3" sobre o mesmo controle.
+- **Comparação de perfil sem diferenciar maiúsculas**, sem alterar o dado gravado.
+- 43 cores fora da paleta, escondidas em marcação dentro do código Python.
+
+### Known issues
+
+- O `bluetoothd` tem um defeito de corrupção de memória, **sem correção upstream
+  conhecida**, que pode derrubar os pareamentos de controles da linhagem Nintendo.
+  Mitigado com snapshot na borda; ver a seção de limitações do README.
+- As capturas de tela da interface ainda não foram feitas.
+
 ## [4.0.0] — 2026-07-24
 
 Auditoria por agentes de toda a interação GUI × perfis × config por-controle,
