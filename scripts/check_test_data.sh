@@ -8,7 +8,23 @@ set -euo pipefail
 # Padrão generico: sequencia de 3+ letras capitalizadas que não seja palavra técnica conhecida.
 FORBIDDEN_EMAILS='[a-zA-Z0-9._%+-]+@(gmail|outlook|hotmail|yahoo|icloud)\.(com|com\.br|net|org)'
 FORBIDDEN_MAC='([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}'
-ALLOWED_MAC='00:00:00:00:00:00|FF:FF:FF:FF:FF:FF|aa:bb:cc:dd:ee:ff'
+
+# BUG-GATE-TEST-DATA-CONTRADIZ-O-GATE-DE-ANONIMATO-01 (25/07): este gate
+# reprovava exatamente a convenção que o OUTRO gate do projeto EXIGE. O
+# `tests/unit/test_docs_mac_anonimato.py` manda mascarar MAC como
+# `OUI:00:00:NN` (preserva o fabricante, apaga o aparelho), e aqui esse padrão
+# caía como "dado pessoal". Dois gates do mesmo repositório em contradição — e
+# o desempate foi desligar este, que não roda em workflow NENHUM. Um gate que
+# ninguém pode satisfazer não protege nada; só ensina a ignorá-lo.
+#
+# A allowlist agora cobre as três famílias sintéticas legítimas:
+#   OUI:00:00:NN  — a máscara da casa, imposta pelo gate de anonimato;
+#   02:fe:*       — o vpad do hefesto, MAC localmente administrado por
+#                   construção (bit 1 do primeiro octeto), não existe em
+#                   hardware de ninguém;
+#   aa:bb:cc:*    — faixa de documentação já usada nos testes.
+# Qualquer MAC fora dessas famílias continua reprovando, que é o ponto.
+ALLOWED_MAC='00:00:00:00:00:00|FF:FF:FF:FF:FF:FF|([0-9a-fA-F]{2}:){2}[0-9a-fA-F]{2}:00:00:[0-9a-fA-F]{2}|02:[fF][eE]:|[aA][aA]:[bB][bB]:[cC][cC]:'
 
 HITS=""
 
