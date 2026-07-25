@@ -88,7 +88,7 @@ jobs:
           # sobre uma suíte que nunca tinha exercitado a interface, justo a
           # área de onde vinham os bugs que a usuária relatava.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
-              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0
+              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0 xvfb
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
         run: pip install -e ".[dev]" "PyGObject<3.51" pycairo
       - name: Verificar tamanho de HID captures
@@ -102,11 +102,12 @@ jobs:
       - name: Ruff
         run: ruff check src/ tests/
       - name: Pytest unit
-        run: pytest tests/unit -v --cov=hefesto_dualsense4unix
+        # Xvfb pelo mesmo motivo do smoke: com typelib, GTK roda de verdade.
+        run: xvfb-run -a pytest tests/unit -v --cov=hefesto_dualsense4unix
       # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
       # NENHUM job — existia no repo e nunca reprovava nada.
       - name: Pytest core
-        run: pytest tests/core -v
+        run: xvfb-run -a pytest tests/core -v
 
   typecheck:
     name: Mypy (gate rígido)
