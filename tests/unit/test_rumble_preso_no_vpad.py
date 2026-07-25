@@ -226,17 +226,31 @@ def test_fim_de_sessao_limpa_o_relogio(bancada) -> None:
     assert vpad._last_sent == (0, 0)
 
 
-def test_teto_e_generoso_o_bastante_para_efeito_de_jogo() -> None:
-    """O número tem de ser defensável, não um palpite.
+def test_teto_veio_de_medicao_e_nao_de_palpite() -> None:
+    """A faixa aceitável do teto, e por que ela mudou.
 
-    Efeito de jogo (impacto, tiro, motor de carro) é reafirmado em bem menos de
-    um segundo. O teto existe para o caso patológico, e a assimetria é
-    deliberada: cortar uma vibração longa é aborrecimento, motor girando até a
-    bateria acabar é desgaste de aparelho.
+    A primeira versão deste teste exigia ``>= 5.0`` — prudência escrita antes de
+    haver qualquer dado. Noventa minutos de jogo real (25/07) produziram 17
+    disparos da rede de segurança e desmentiram a premissa: a perda do stop não é
+    caso de canto, e sete dos dezessete passavam de 30 em algum motor, ou seja,
+    eram SENTIDOS. Com o teto antigo, cada um desses segurava o motor por seis
+    segundos — um travamento perceptível a cada treze minutos.
+
+    O piso caiu para o que a evidência sustenta. Um jogo reafirma a vibração
+    muitas vezes por segundo enquanto o efeito está vivo (é o que produz a escada
+    255 → 127 → 51 → 14 → 3 → 1 medida no log), então um silêncio de segundos no
+    meio de uma vibração ativa já é anomalia. O teto continua sendo uma rede de
+    segurança, não um cronômetro de efeito.
+
+    O limite de cima segue existindo pelo motivo original: o custo assimétrico.
+    Cortar vibração legítima é aborrecimento; motor girando até a bateria acabar
+    é desgaste de aparelho.
     """
-    assert uhid._RUMBLE_STALE_SEC >= 5.0, (
-        "teto curto demais corta vibração legítima de jogo"
+    assert uhid._RUMBLE_STALE_SEC >= 2.0, (
+        "abaixo disto a rede deixa de ser rede e vira cronômetro de efeito — "
+        "passaria a cortar vibração sustentada legítima"
     )
-    assert uhid._RUMBLE_STALE_SEC <= 15.0, (
-        "teto longo demais deixa o motor preso tempo suficiente para incomodar"
+    assert uhid._RUMBLE_STALE_SEC <= 6.0, (
+        "medido em 25/07: com 6 s, sete travamentos perceptíveis em 90 min de "
+        "jogo seguravam o motor pelo teto inteiro"
     )

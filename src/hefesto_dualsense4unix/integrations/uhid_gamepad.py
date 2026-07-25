@@ -166,17 +166,34 @@ _VIBRATION_FLAGS = 0x03
 #: chance de o stop se perder.
 #:
 #: A rede de segurança é ASSIMÉTRICA de propósito. Cortar uma vibração longa e
-#: legítima aos 6 s é um aborrecimento; um motor girando até a bateria acabar
-#: desgasta o aparelho e obriga a desligar o controle no meio da partida. O teto
-#: é generoso o bastante para não alcançar efeito nenhum de jogo (impacto, tiro
-#: e motor de carro são re-enviados muito antes disso) e curto o bastante para o
-#: pior caso virar incômodo em vez de dano.
+#: legítima é um aborrecimento; um motor girando até a bateria acabar desgasta o
+#: aparelho e obriga a desligar o controle no meio da partida.
 #:
 #: A condição de disparo exige que o jogo esteja VIVO e falando: só conta o
 #: silêncio de vibração enquanto OUTROS reports continuam chegando. Jogo parado
 #: (que não manda nada) não tem o rumble cortado por este caminho — quem cuida
 #: disso é o `_silence_rumble` do fim de sessão.
-_RUMBLE_STALE_SEC = 6.0
+#:
+#: O NÚMERO veio de medição, não de palpite. A primeira versão usou 6,0 s por
+#: prudência, e 90 minutos de jogo real (25/07, Stray) mostraram 17 disparos —
+#: prova de que a perda do stop é frequente, e não um caso de canto. Os valores
+#: presos desenham o mecanismo: (1,1) (3,3) (4,4) (10,10) (12,12) (14,14) ao
+#: lado de (127,127) e (0,255). A cauda de valores mínimos é a assinatura de um
+#: FADE-OUT cujo último passo — o zero — se perde; a de valores altos é o pulso
+#: que nunca recebeu parada. Sete dos dezessete passavam de 30 em algum motor,
+#: isto é, seriam SENTIDOS: um travamento perceptível a cada ~13 minutos,
+#: segurando o motor pelo teto inteiro.
+#:
+#: 3,0 s corta essa dor pela metade sem chegar perto da cadência real do jogo
+#: (que reafirma a vibração muitas vezes por segundo enquanto o efeito está
+#: vivo — é o que produz a escada de valores acima). Continua sendo uma rede,
+#: não um cronômetro de efeito: um silêncio de 3 s no meio de uma vibração ativa
+#: já é anomalia.
+#:
+#: Isto é MITIGAÇÃO, não a cura. A cura seria descobrir por que o stop se perde,
+#: e isso exige capturar os bytes que o jogo escreve — o log de expiração agora
+#: carrega o silêncio medido, que é o dado que falta para fechar a questão.
+_RUMBLE_STALE_SEC = 3.0
 
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
@@ -1222,13 +1239,20 @@ class UhidDualSense:
         """
         if self._last_sent == (0, 0) or self._rumble_visto_em is None:
             return
-        if self.time_fn() - self._rumble_visto_em < _RUMBLE_STALE_SEC:
+        silencio = self.time_fn() - self._rumble_visto_em
+        if silencio < _RUMBLE_STALE_SEC:
             return
         logger.warning(
             "uhid_rumble_preso_expirado",
             player=self.player,
             ultimo=self._last_sent,
             teto_s=_RUMBLE_STALE_SEC,
+            # O silêncio MEDIDO é o dado que falta para decidir o teto por
+            # evidência em vez de prudência: se ele se concentrar logo acima do
+            # teto, o stop está chegando atrasado e o número pode cair mais; se
+            # for sempre muito maior, o stop não chega nunca e o teto só decide
+            # quão cedo a rede age.
+            silencio_s=round(silencio, 2),
         )
         self._rumble_visto_em = None
         self._last_sent = (0, 0)
