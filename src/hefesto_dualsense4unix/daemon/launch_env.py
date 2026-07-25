@@ -33,6 +33,20 @@ de a janela existir, então o autoswitch ainda não ativou o perfil — o
 arquivo antecipa o modo que ele vai impor). Perfil sem opinião => sem
 arquivo => o wrapper cai no `default.env` (máscara/backend globais atuais).
 Resolução no MÍNIMO, sem UI de biblioteca de jogos.
+
+JOGO-01 (25/07): o ramo da allowlist do Steam Input rotulava-se "sem dedup" e
+era literalmente isso — omitia `SDL_GAMECONTROLLER_IGNORE_DEVICES` e
+`PROTON_DISABLE_HIDRAW` e não fazia mais nada. Só que omitir o dedup COM o
+gamepad virtual de pé é o próprio duplicado: medido ao vivo com UM DualSense
+no cabo, o Mullet Mad Jack (2111190) enxergava js0=vpad e js2=físico (mais os
+dois pads que o Steam Input cria), atribuía jogador 1 a um e jogador 2 ao
+outro e metade dos comandos dela ia para o controle que o jogo não estava
+lendo. O invariante que faltava, e que agora vale nos dois lados desta
+fronteira: **um controle físico produz exatamente UM dispositivo de jogo**. A
+allowlist muda QUAL dispositivo (o físico, falando com a Steam), nunca
+QUANTOS — quem retira o vpad de cena enquanto o jogo da allowlist está em
+sessão é `subsystems.gamepad.sync_steam_input_exception`, a partir do mesmo
+appid que `steam_input_exception_appid` decide aqui.
 """
 from __future__ import annotations
 
@@ -102,6 +116,14 @@ WRAPPER_MARKER_WINDOW_SEC = 900.0
 #: 1 Hz. 60 s cobre com folga (inclusive um restart do daemon no meio do
 #: carregamento) sem virar "arming retroativo".
 LAUNCH_ARM_WINDOW_SEC = 60.0
+
+#: JOGO-01: rótulo do `estado:` gravado no `steam_app_<appid>.env` dos jogos da
+#: allowlist. O texto antigo ("allowlist Steam Input (sem dedup)") descrevia com
+#: precisão o que o ramo fazia — e era exatamente o defeito: "sem dedup" com o
+#: vpad de pé é o controle duplicado. O rótulo agora diz a REGRA que passou a
+#: valer, porque este arquivo é a primeira coisa que se lê ao diagnosticar um
+#: jogo que "enxerga quatro controles onde existe um".
+ESTADO_ALLOWLIST_STEAM_INPUT = "allowlist Steam Input (físico é o único dispositivo)"
 
 
 def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
@@ -407,6 +429,13 @@ def steam_input_exception_appid(
 
     `allowlist` é injetável para o chamador que já a leu (evita reler o
     arquivo em cada gate). Allowlist vazia ⇒ None sem tocar em disco de novo.
+
+    JOGO-01: este appid deixou de decidir só "solto o grab e exponho o hidraw"
+    e passou a decidir também "retiro o gamepad virtual de cena" (ver
+    `gamepad.suspend_vpads_for_steam_input`). Por isso as duas evidências
+    continuam sendo exatamente estas, e não uma janela mais folgada: enquanto
+    esta função disser um appid, a usuária está SEM vpad — o sinal tem de
+    apagar assim que o jogo sai da frente, não 30 s depois.
     """
     appids = allowlist if allowlist is not None else steam_input_appids()
     if not appids:
@@ -893,6 +922,14 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         # de `compose_env` que produz "nenhuma env de hidraw", que é exatamente
         # a semântica pedida (o preload de shaders e o rótulo de botões seguem,
         # como em toda variante).
+        #
+        # JOGO-01: a env continua a MESMA — e agora ela é honesta. Omitir o
+        # IGNORE só está certo porque o gamepad virtual sai de cena enquanto o
+        # jogo da allowlist estiver em sessão (`gamepad.sync_steam_input_
+        # exception`): o físico passa a ser o único dispositivo, e escondê-lo
+        # aqui seria zero controles. Enquanto o par não era par — env sem dedup
+        # + vpad de pé — cada metade estava certa isoladamente e o resultado era
+        # o duplicado que o jogo dividia entre dois jogadores.
         for appid in sorted(steam_input_appids()):
             name = f"steam_app_{appid}.env"
             env_allow = compose_env(
@@ -903,7 +940,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             )
             _write_atomic(
                 target / name,
-                _render(env_allow, f"allowlist Steam Input (sem dedup) | {estado}"),
+                _render(env_allow, f"{ESTADO_ALLOWLIST_STEAM_INPUT} | {estado}"),
             )
             desired.add(name)
         for stale in target.glob("steam_app_*.env"):
@@ -924,6 +961,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
 
 __all__ = [
     "ENV_ALLOWLIST",
+    "ESTADO_ALLOWLIST_STEAM_INPUT",
     "LAUNCH_ARM_WINDOW_SEC",
     "WRAPPER_MARKER_WINDOW_SEC",
     "arm_launch_profile",

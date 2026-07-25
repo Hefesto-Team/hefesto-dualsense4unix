@@ -13,8 +13,16 @@ Contradição 11 da §5 do plano: R-05 empurra o dedup para os `.env` por appid;
 R-06 exige `.env` SEM dedup para os appids da allowlist. A allowlist é opt-in
 EXPLÍCITO e VENCE para os appids listados; para todos os outros vale o R-05.
 
-Preço aceito e documentado: para esses appids o jogo passa a ver o físico E o
-vpad. É o que "opt-in" significa; a alternativa é a exceção não existir.
+SUPERADO em 25/07 pela JOGO-01 — este arquivo dizia aqui que o preço aceito era
+"para esses appids o jogo passa a ver o físico E o vpad". Não era preço, era o
+defeito: medido com UM DualSense no cabo, o Mullet Mad Jack enumerava js0=vpad
+e js2=físico, dava jogador 1 a um e jogador 2 ao outro, e metade dos comandos
+dela ia para o controle que o jogo não lia. "Opt-in" não significa dois
+dispositivos onde existe um controle — significa trocar QUAL dispositivo o jogo
+vê. As travas deste arquivo seguem valendo palavra por palavra (a env sem dedup,
+o grab solto, o hidraw exposto, o rehide que não desfaz a exceção); o que mudou
+é que a exceção passou a retirar TAMBÉM o gamepad virtual de cena — ver
+`test_jogo01_um_dispositivo_por_controle.py`, que trava esse outro lado.
 """
 
 from __future__ import annotations

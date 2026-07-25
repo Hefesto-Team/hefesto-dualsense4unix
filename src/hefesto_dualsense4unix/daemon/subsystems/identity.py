@@ -1,16 +1,16 @@
-"""Registro de identidade MAC→slot de SESSÃO (COR-01, sprint cores-e-led).
+"""Registro de identidade MAC→posição na mesa (COR-01, sprint cores-e-led).
 
 O "Controle N" que a usuária vê (rótulos, cor automática da lightbar, LED do
 número do controle) era a POSIÇÃO no dict de handles do backend (+1) — replug
 reinsere no fim e o número embaralhava. Este registro dá a cada DualSense um
-slot ESTÁVEL DE SESSÃO, keyed pelo MAC normalizado (12 hex — o mesmo
+lugar ESTÁVEL na fila, keyed pelo MAC normalizado (12 hex — o mesmo
 ``norm_mac`` do backend, estável entre USB e BT):
 
-- 1ª aparição de um MAC → MENOR slot livre (1..N), atribuição LAZY na
-  primeira consulta (``slot_for``) — é isto que faz a cor automática nascer
-  certa no MESMO tick de hotplug em que o backend abre o handle (D1);
-- desconectar RESERVA o slot ao MAC dentro da sessão — replug recupera o
-  mesmo número (D2). Sem roubo LRU (cortado: YAGNI);
+- 1ª aparição de um MAC → entra no FIM da ordem de preferência, atribuição
+  LAZY na primeira consulta (``slot_for``) — é isto que faz a cor automática
+  nascer certa no MESMO tick de hotplug em que o backend abre o handle (D1);
+- desconectar mantém o lugar do MAC na fila — replug recupera o mesmo
+  número (D2). Sem roubo LRU (cortado: YAGNI);
 - R-15 (auditoria 23/07): DENTRO de um boot, número é do MAC e NINGUÉM
   expira. A expiração por "sessão esvaziou" (o ramo ``_saw_connected`` do
   ``sync_connected``) foi REMOVIDA: ela era assimétrica (só o lado
@@ -39,8 +39,28 @@ slot ESTÁVEL DE SESSÃO, keyed pelo MAC normalizado (12 hex — o mesmo
   1 no primeiro tick de externo e os DualSense herdavam 2 e 3 (o "não
   existe Controle 1" medido ao vivo). Agora ``sync_connected`` (tick lento,
   que roda ANTES do tick dos externos no mesmo laço do lifecycle) ATRIBUI
-  slot a todo DualSense conectado que ainda não tem — quem está na mesa
+  lugar a todo DualSense conectado que ainda não tem — quem está na mesa
   ocupa 1..N antes de qualquer externo pedir número;
+- NUM-01 (25/07): **o que se persiste deixa de ser um número absoluto**.
+  R-15 e R-23 curaram a instabilidade ("cor e número trocavam de dono")
+  prendendo o NÚMERO ao endereço para sempre; o preço apareceu medido no
+  ``controllers.json`` dela: com um só DualSense ligado, ele exibia 2 —
+  porque o 1 estava RESERVADO a um endereço que não estava na mesa
+  ("ninguém aceita ser o jogador 2 de si mesmo"). Os dois requisitos são
+  verdadeiros ao mesmo tempo, e a saída é separar os dois conceitos que
+  eram o MESMO inteiro:
+
+  - IDENTIDADE é o endereço, e o que fica gravado dele é o LUGAR NA FILA
+    (a ordem de preferência: A vem antes de B) — permanente, estável entre
+    sessões e entre boots, exatamente como R-15/R-23 exigem;
+  - POSIÇÃO NA MESA é 1..N entre QUEM ESTÁ PRESENTE AGORA — derivada a cada
+    consulta (``slot_for``), nunca persistida como número.
+
+  Com os dois na mesa, a fila ``[A, B]`` dá A=1 e B=2 (estabilidade); com só
+  o B ligado, a MESMA fila dá B=1 (naturalidade), e quando A volta cada um
+  recupera o seu. Fechar a lacuna deixa de ser um gesto e passa a ser
+  aritmética. O critério que resume: **nunca existe um jogador 2 sem um
+  jogador 1**;
 - o vpad (MAC forjado ``02:fe:...``) NUNCA ganha slot (D9) — o filtro
   existe aqui além do filtro de enumeração do backend, porque outros
   chamadores (describe/co-op) também consultam;
@@ -66,25 +86,50 @@ mkstemp+os.replace — padrão ``utils/session.py``): cobre o restart do daemon
 E o reboot da máquina (R-23). O que governa o load é o
 :data:`CONTROLLERS_SCHEMA_VERSION` do arquivo, não mais o ``boot_id``:
 
-- versão IGUAL → o mapa MAC→slot é restaurado INTEIRO. Entradas voláteis
-  (sem MAC 12-hex) nunca chegam ao disco (D9), então "descartar o volátil"
-  é invariante do save, não trabalho do load;
+- versão IGUAL → a ORDEM DE PREFERÊNCIA (campo :data:`ORDER_FIELD`) é
+  restaurada INTEIRA. Entradas voláteis (sem MAC 12-hex) nunca chegam ao
+  disco (D9), então "descartar o volátil" é invariante do save, não
+  trabalho do load;
 - versão DIFERENTE/ausente → arquivo escrito por uma versão que numerava
   por outra regra; é descartado UMA vez e a sessão seguinte renumera. É o
   que cura, sozinha, a numeração torta já gravada na máquina dela (o
-  externo segurando o slot 1 enquanto os dois DualSense exibiam 2 e 3);
+  externo segurando o slot 1 enquanto os dois DualSense exibiam 2 e 3, e
+  depois o ``{"a0fa…": 1, "143a…": 2}`` que fazia o controle sozinho na
+  mesa nascer jogador 2 — NUM-01);
 - o ``boot_id`` continua GRAVADO, agora como âncora de diagnóstico
   (:func:`_session_anchor`, resiliente: boot_id → machine-id → ``None``).
   Ele não pode mais decidir nada sozinho — foi exatamente a fragilidade
   que renumerava tudo onde ``/proc/sys/kernel/random/boot_id`` não existe.
 
+NUM-01: o arquivo tem UMA fila só, não duas paralelas. O campo
+:data:`ORDER_FIELD` é uma LISTA ordenada de ``{"addr", "kind", "rank"}``
+onde ``kind`` diz de qual registro é a entrada (:data:`KIND_DUALSENSE` /
+:data:`KIND_EXTERNAL`) e ``rank`` é o lugar na fila GLOBAL — os dois lados
+dividem um espaço de postos único (era esse compartilhamento que os campos
+``slots``/``externals`` do schema 2 escondiam, e é dele que sai a garantia
+de nunca haver dois "Controle 1"). Cada save é read-modify-write: preserva
+as entradas do OUTRO ``kind`` byte a byte (:func:`merged_order_payload`) e
+reescreve só as suas. O ``rank`` é GRAVADO, nunca inferido da posição na
+lista: se cada save recompactasse os postos, o lado que não salvou ficaria
+com valores obsoletos e a ordem RELATIVA entre um DualSense e um externo
+podia inverter sozinha entre dois saves.
+
 O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
 o ponto de monkeypatch dos testes (``xdg_paths.config_dir``), padrão
 ``save_active_marker``. O arquivo é COMPARTILHADO com o registro dos
-externos (``external_identity.py``, namespace ``externals``): ``load`` e
-``_save_locked`` dos DOIS lados adquirem o mesmo ``CONTROLLERS_FILE_LOCK``
-(NUMA-04) em volta do read→``os.replace`` — fecha o lost-update dos dois
-escritores independentes sem unificar os dois registros.
+externos (``external_identity.py``): ``load`` e ``_save_locked`` dos DOIS
+lados adquirem o mesmo ``CONTROLLERS_FILE_LOCK`` (NUMA-04) em volta do
+read→``os.replace`` — fecha o lost-update dos dois escritores
+independentes sem unificar os dois registros.
+
+Hierarquia de locks (NUM-01 tornou-a explícita porque agora há travessia
+nos DOIS sentidos): ``ControllerIdentityRegistry._lock`` → ``External
+IdentityRegistry._lock`` → ``CONTROLLERS_FILE_LOCK``. Este registro CHAMA
+os providers do lado externo segurando o próprio lock (``_assign_locked``,
+``_posicao_locked``); o lado externo, por isso, é PROIBIDO de consultar
+este registro segurando o dele — ``ExternalIdentityRegistry`` resolve o que
+precisa daqui ANTES de adquirir o próprio ``_lock``. Inverter isso fecha um
+ciclo com o ``identity.renumber``, que toma os dois na ordem canônica.
 
 Config do automático (COR-03): o registro também guarda o estado vigente do
 toggle ``auto_player_colors`` e do brilho do perfil ativo (D11), configurados
@@ -141,14 +186,32 @@ _CONTROLLERS_FILE = "controllers.json"
 #: dela: externo com o slot 1, DualSense em 2 e 3) sobreviveria para sempre,
 #: justamente porque agora o mapa NÃO morre mais no reboot.
 #: 2 = R-23/R-24 (slot sobrevive ao boot + espaço de numeração único).
-CONTROLLERS_SCHEMA_VERSION = 2
+#: 3 = NUM-01 (o que se grava é a ORDEM DE PREFERÊNCIA, não o número): o
+#: arquivo da mantenedora, com ``{"slots": {"a0fa…": 1, "143a…": 2}}``, fazia
+#: o único controle ligado exibir 2 para sempre. O bump é o que descarta
+#: aquele estado UMA vez — a fila renasce na ordem de chegada da sessão
+#: seguinte, e daí em diante ela é que sobrevive a restart/reboot.
+CONTROLLERS_SCHEMA_VERSION = 3
+
+#: NUM-01: campo do ``controllers.json`` que carrega a FILA — uma lista só,
+#: com os dois registros dentro (ver docstring do módulo). Os campos
+#: ``slots``/``externals`` do schema 2 não são mais lidos nem escritos: eram
+#: dois mapas MAC→número absoluto, e é justamente essa forma que não consegue
+#: representar "quem está na mesa é 1..N".
+ORDER_FIELD = "order"
+
+#: NUM-01: valores do campo ``kind`` de cada entrada da fila — dizem a qual
+#: registro a entrada pertence, para que o read-modify-write de um lado
+#: preserve (e nunca reinterprete) as entradas do outro.
+KIND_DUALSENSE = "dualsense"
+KIND_EXTERNAL = "external"
 
 #: R-23: teto defensivo de entradas restauradas do disco. Como nada expira
 #: mais (nem no reboot), um casal que passe anos trocando de controle veria o
 #: arquivo crescer sem fim e a numeração começar cada vez mais alto. 16 é
 #: ordens de magnitude acima de qualquer setup real (4 no co-op + externos);
-#: acima disso, as entradas de slot MAIS ALTO caem (são as menos
-#: estabelecidas — quem tem slot baixo é quem a casa usa).
+#: acima disso, caem as entradas do FIM DA FILA (NUM-01: são as menos
+#: estabelecidas — quem está na frente é quem a casa usa).
 _MAX_PERSISTED_SLOTS = 16
 
 #: R-23: fallbacks da âncora de sessão quando ``/proc`` não está montado
@@ -168,8 +231,8 @@ _VPAD_MAC_PREFIX = "02fe"
 
 #: Lock de MÓDULO (NUMA-04, sprint 2026-07-19): protege TODO acesso
 #: read→``os.replace`` ao ``controllers.json`` COMPARTILHADO pelos dois
-#: registros independentes — este (namespace ``slots``) e o dos externos
-#: (``external_identity.py``, namespace ``externals``). Cada registro tinha
+#: registros independentes — este (entradas ``kind`` :data:`KIND_DUALSENSE`
+#: da fila) e o dos externos (``external_identity.py``). Cada registro tinha
 #: só o próprio ``RLock`` de INSTÂNCIA, que não protege contra o OUTRO objeto
 #: fazendo read-modify-write ao MESMO tempo — um lost-update latente (um dos
 #: dois namespaces podia sumir quando o tick do externo e o sync do DualSense
@@ -213,6 +276,71 @@ def _read_machine_id() -> str | None:
     return None
 
 
+def order_entries(data: Any) -> list[tuple[str, str, int]]:
+    """Entradas ``(endereço, kind, rank)`` da fila do arquivo, por rank (NUM-01).
+
+    FONTE ÚNICA de leitura do campo :data:`ORDER_FIELD` — os DOIS registros a
+    usam (o dos externos importa esta função, nunca escreve a sua). Toda
+    entrada malformada é IGNORADA em silêncio, sem derrubar o load: arquivo
+    editado à mão, truncado por queda de energia ou escrito por uma versão
+    futura não pode custar a numeração da casa inteira (o pior caso é a
+    sessão renumerar, que é o que o bump de schema já faz de propósito).
+
+    Ordenar aqui por ``rank`` é contrato, não conveniência: quem carrega
+    aplica o teto :data:`_MAX_PERSISTED_SLOTS` cortando pelo FIM da fila, e
+    "o fim" só existe se a lista chegar ordenada.
+    """
+    if not isinstance(data, dict):
+        return []
+    bruto = data.get(ORDER_FIELD)
+    if not isinstance(bruto, list):
+        return []
+    entradas: list[tuple[str, str, int]] = []
+    for item in bruto:
+        if not isinstance(item, dict):
+            continue
+        addr = item.get("addr")
+        kind = item.get("kind")
+        rank = item.get("rank")
+        if not isinstance(addr, str) or not addr:
+            continue
+        if kind not in (KIND_DUALSENSE, KIND_EXTERNAL):
+            continue
+        if not isinstance(rank, int) or isinstance(rank, bool) or rank < 1:
+            continue
+        entradas.append((addr, kind, rank))
+    entradas.sort(key=lambda e: (e[2], 0 if e[1] == KIND_DUALSENSE else 1, e[0]))
+    return entradas
+
+
+def merged_order_payload(
+    existente: Any, kind: str, ranks: dict[str, int]
+) -> list[dict[str, Any]]:
+    """Fila nova: as entradas do OUTRO ``kind`` preservadas + as minhas (NUM-01).
+
+    O read-modify-write que os dois registros já faziam por namespace
+    (``slots`` e ``externals``), agora sobre a fila única. ``existente`` é o
+    JSON lido do disco (``None``/lixo = fila vazia — o chamador só o passa
+    quando a versão do arquivo BATE, senão estaria recarimbando com selo de
+    válida uma numeração que o ``load`` acabou de recusar — R-23).
+
+    Empate de ``rank`` entre os dois lados só pode vir de corrupção herdada;
+    a desempate é a MESMA regra do cross-check do load — DualSense primeiro —
+    para que a ordem gravada e a ordem exibida nunca discordem. Endereço
+    repetido nos dois ``kind`` (arquivo degenerado) fica com o dono desta
+    escrita: quem está salvando é quem tem o estado vivo.
+    """
+    meus = {str(addr): int(rank) for addr, rank in ranks.items()}
+    juntos: list[tuple[str, str, int]] = [
+        (addr, k, rank)
+        for addr, k, rank in order_entries(existente)
+        if k != kind and addr not in meus
+    ]
+    juntos.extend((addr, kind, rank) for addr, rank in meus.items())
+    juntos.sort(key=lambda e: (e[2], 0 if e[1] == KIND_DUALSENSE else 1, e[0]))
+    return [{"addr": addr, "kind": k, "rank": rank} for addr, k, rank in juntos]
+
+
 def _session_anchor() -> str | None:
     """Âncora de sessão RESILIENTE: boot_id → machine-id → ``None`` (R-23).
 
@@ -236,7 +364,14 @@ def _session_anchor() -> str | None:
 
 
 class ControllerIdentityRegistry:
-    """MAC normalizado → slot de exibição (1..N), com reserva de SESSÃO (D2).
+    """MAC normalizado → lugar na FILA; a exibição é 1..N entre os presentes.
+
+    NUM-01: o mapa que este objeto guarda (``_ordem``) é a ORDEM DE
+    PREFERÊNCIA — "o endereço A vem antes do endereço B" —, e é ela que
+    atravessa sessão e boot (D2/R-15/R-23). O número que a usuária vê sai de
+    ``slot_for``, que CONTA só quem está presente: é por isso que um controle
+    sozinho na mesa é o jogador 1 mesmo que a fila tenha outro endereço à
+    frente dele.
 
     Thread-safe (RLock próprio): o provider de cor consulta ``slot_for`` sob
     o ``_io_lock`` do backend (thread do executor) enquanto ``sync_connected``
@@ -249,27 +384,39 @@ class ControllerIdentityRegistry:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        #: key canônica (MAC 12-hex, ou a key volátil crua) → slot. Contém
-        #: conectados E reservados — a reserva É a permanência aqui (D2).
-        self._slots: dict[str, int] = {}
-        #: keys de slots VOLÁTEIS (sem MAC 12-hex) — nunca persistidas (D9).
+        #: NUM-01: key canônica (MAC 12-hex, ou a key volátil crua) → RANK,
+        #: o lugar na fila GLOBAL (compartilhada com os externos). Contém
+        #: presentes E ausentes — a permanência do lugar É a promessa D2.
+        #: NÃO é o número exibido: esse é ``slot_for`` (conta os presentes).
+        self._ordem: dict[str, int] = {}
+        #: keys de lugares VOLÁTEIS (sem MAC 12-hex) — nunca persistidas (D9).
         self._volatile: set[str] = set()
         #: keys atualmente conectadas (subset das que reportaram presença).
-        #: R-15: lido por ``snapshot_connected`` (o "Renumerar agora" compacta
-        #: os CONECTADOS em 1..N e só depois anexa as reservas offline) —
-        #: antes era escrito e nunca lido.
+        #: R-15: lido por ``snapshot_connected`` (o "Renumerar agora" põe os
+        #: CONECTADOS na frente da fila e só depois anexa os ausentes).
+        #: NUM-01: passou a governar também a EXIBIÇÃO — é este conjunto que
+        #: decide quem conta para a contagem 1..N.
         self._connected: set[str] = set()
         #: mapa mudou desde o último save (o sync persiste no tick lento).
         self._dirty = False
         self._loaded = False
         #: vpads já logados (evita spam — o provider consulta a cada reassert).
         self._vpad_logged: set[str] = set()
-        #: provider OPCIONAL dos slots já reservados pelos EXTERNOS (EXT-04):
-        #: o espaço de numeração é ÚNICO entre DualSense e externos, então a
-        #: atribuição une essas reservas ao ``used`` — um DualSense que entra
-        #: DEPOIS de um externo numerado pula o slot dele. None (não fiado /
+        #: provider OPCIONAL dos lugares já ocupados pelos EXTERNOS (EXT-04):
+        #: a fila é ÚNICA entre DualSense e externos, então a atribuição une
+        #: esses lugares ao ``ocupados`` — um DualSense que entra DEPOIS de um
+        #: externo numerado entra atrás dele. None (não fiado /
         #: FakeController) = comportamento histórico, hermético.
         self._extra_reserved: Callable[[], set[int]] | None = None
+        #: NUM-01: provider OPCIONAL dos lugares dos externos PRESENTES agora.
+        #: A contagem 1..N é global (um externo na mesa ocupa um número que
+        #: nenhum DualSense pode exibir), mas ``_extra_reserved`` não sabe
+        #: quem está ligado — usá-lo para exibir devolveria o defeito que esta
+        #: frente cura (um ausente empurrando o presente para cima). Sem o
+        #: provider a contagem cai no ``_extra_reserved``, que é
+        #: CONSERVADOR: no pior caso deixa um buraco na numeração, nunca dois
+        #: controles com o mesmo número.
+        self._external_present: Callable[[], set[int]] | None = None
         # -- estado do automático (COR-03, configurado pelo ProfileManager) --
         # R-14: dois eixos INDEPENDENTES (ver docstring do módulo). Cor é o
         # campo antigo do perfil; numeração nasce ligada e não tem campo no
@@ -360,27 +507,56 @@ class ControllerIdentityRegistry:
     def set_external_reserve_provider(
         self, provider: Callable[[], set[int]] | None
     ) -> None:
-        """Injeta o provider dos slots já detidos pelos EXTERNOS (EXT-04).
+        """Injeta o provider dos lugares já detidos pelos EXTERNOS (EXT-04).
 
-        A numeração global é um espaço ÚNICO: os externos já leem o piso dos
-        DualSense (``reserve``) ao numerar; este provider fecha o laço no
-        sentido inverso — a atribuição de um DualSense NOVO une os slots
-        reservados pelos externos ao ``used``, para não colidir com um externo
-        que numerou antes. Fiado por ``lifecycle._wire_external_registry`` só
-        no backend real; ``None`` (FakeController) preserva o comportamento
-        histórico. NÃO renumera quem já tem slot — só evita colisões NOVAS.
+        A fila é um espaço ÚNICO: os externos já leem o piso dos DualSense
+        (``reserve``) ao entrar; este provider fecha o laço no sentido
+        inverso — a atribuição de um DualSense NOVO une os lugares dos
+        externos aos ``ocupados``, para não colidir com um externo que entrou
+        antes. Fiado por ``lifecycle._wire_external_registry`` só no backend
+        real; ``None`` (FakeController) preserva o comportamento histórico.
+        NÃO reordena quem já tem lugar — só evita colisões NOVAS.
         """
         with self._lock:
             self._extra_reserved = provider
 
+    def set_external_presence_provider(
+        self, provider: Callable[[], set[int]] | None
+    ) -> None:
+        """Injeta o provider dos lugares dos externos PRESENTES agora (NUM-01).
+
+        Irmão presença-consciente do ``set_external_reserve_provider``, e a
+        razão de serem DOIS: ``_extra_reserved`` responde "que lugares da fila
+        estão tomados" (serve para ATRIBUIR sem colidir, e por isso precisa
+        incluir quem está desligado); a EXIBIÇÃO precisa da outra pergunta,
+        "quem está na mesa agora à minha frente", porque contar um ausente é
+        exatamente o defeito que NUM-01 cura.
+
+        Fiado por ``ExternalLedSync`` (o único componente que enxerga os dois
+        registros). ``None`` = sem fiação: a contagem cai no
+        ``_extra_reserved``, conservador — pode deixar um buraco, nunca
+        duplica um número.
+        """
+        with self._lock:
+            self._external_present = provider
+
     def slot_for(self, uniq: str | None, *, assign: bool = True) -> int | None:
-        """Slot do controle ``uniq`` — atribui o MENOR livre na 1ª consulta.
+        """Número EXIBIDO do controle ``uniq`` — 1..N entre os PRESENTES.
+
+        NUM-01: o que se guarda de ``uniq`` é o lugar dele na fila; o que se
+        devolve aqui é a COLOCAÇÃO desse lugar contando só quem está presente
+        (incluindo os externos, via provider — a mesa é uma só). Um controle
+        cujo lugar na fila é o terceiro exibe 1 quando é o único ligado, e
+        volta a exibir 3 quando os dois da frente acordam. Era o mesmo
+        inteiro até a versão 2 do schema, e é por isso que o único DualSense
+        ligado da mantenedora nascia jogador 2.
 
         LAZY por decisão (D1): a primeira consulta de um uniq válido (feita
         pelo provider de cor dentro do reconcile do backend, ou por quem
-        rotula) é o que atribui o slot — a cor/número nascem certos no MESMO
-        tick de hotplug. ``assign=False`` só consulta (leitura pura: não
-        atribui, não marca conectado).
+        rotula) é o que dá o lugar na fila — a cor/número nascem certos no
+        MESMO tick de hotplug. ``assign=False`` só consulta (leitura pura:
+        não atribui, não marca conectado) e, para um uniq AUSENTE que já tem
+        lugar, devolve a colocação que ele teria se estivesse na mesa.
 
         Guardas: ``None``/vazio → None; MAC de vpad (``02:fe:...``) → None
         com log (D9 — o vpad jamais é "Controle N"). SEM I/O de disco — o
@@ -399,56 +575,107 @@ class ControllerIdentityRegistry:
                     logger.warning("identity_slot_vpad_ignorado", uniq=key)
             return None
         with self._lock:
-            slot = self._slots.get(key)
-            if slot is not None:
-                if assign:
-                    self._connected.add(key)
-                return slot
-            if not assign:
-                return None
-            slot = self._assign_locked(key, persistable)
-            self._connected.add(key)
-            return slot
+            if key not in self._ordem:
+                if not assign:
+                    return None
+                self._assign_locked(key, persistable)
+            if assign:
+                self._connected.add(key)
+            return self._posicao_locked(key)
 
     def _assign_locked(self, key: str, persistable: bool) -> int:
-        """MENOR slot livre para ``key`` (já sob ``self._lock``). Fonte ÚNICA.
+        """Põe ``key`` no FIM da fila (já sob ``self._lock``). Fonte ÚNICA.
 
         Extraída de ``slot_for`` no R-24 porque ``sync_connected`` passou a
-        atribuir também: duas cópias da regra "menor livre" seriam duas
-        chances de divergir do espaço de numeração global (o defeito que esta
-        onda inteira existe para matar).
+        atribuir também: duas cópias da regra seriam duas chances de divergir
+        da fila global (o defeito que aquela onda existe para matar).
+
+        NUM-01 trocou "MENOR lugar livre" por "FIM da fila". O menor-livre
+        fazia sentido quando o inteiro ERA o número exibido — reaproveitar um
+        buraco era o que evitava exibir 1 e 3 sem 2. Agora o buraco não
+        aparece mais na exibição (a contagem é dos presentes), e reaproveitar
+        um lugar vago passaria a significar outra coisa: enfiar um controle
+        NOVO na frente de um que já estava na casa. Ordem de chegada é o que
+        a fila promete.
         """
-        used = set(self._slots.values())
+        ocupados = set(self._ordem.values())
         prov = self._extra_reserved
         if prov is not None:
-            # EXT-04: numeração global ÚNICA — pula os slots que os externos
-            # já detêm (um DualSense que conecta DEPOIS de um externo
-            # numerado não pode reivindicar o slot dele).
+            # EXT-04: fila global ÚNICA — entra depois do último lugar que os
+            # externos detêm (um DualSense que conecta DEPOIS de um externo
+            # numerado não pode ocupar o lugar dele).
             with contextlib.suppress(Exception):
-                used |= {int(s) for s in prov()}
-        slot = 1
-        while slot in used:
-            slot += 1
-        self._slots[key] = slot
+                ocupados |= {int(s) for s in prov()}
+        rank = max(ocupados) + 1 if ocupados else 1
+        self._ordem[key] = rank
         if persistable:
             self._dirty = True
         else:
             self._volatile.add(key)
         logger.info(
-            "identity_slot_atribuido",
+            "identity_lugar_atribuido",
             uniq=key,
-            slot=slot,
+            rank=rank,
             volatil=not persistable,
         )
-        return slot
+        return rank
+
+    def _external_present_ranks_locked(self) -> set[int]:
+        """Lugares dos externos que contam para a exibição (já sob o lock).
+
+        NUM-01: com o provider de presença fiado, são os externos LIGADOS —
+        a contagem 1..N é da mesa inteira. Sem ele, degrada para
+        ``_extra_reserved`` (todos os lugares de externo, ligados ou não):
+        conservador de propósito, porque a falha aceitável é um buraco na
+        numeração e a inaceitável é dois controles exibindo o mesmo número.
+
+        Lugares que ESTE registro também detém são descontados: os dois lados
+        dividem a fila, então uma sobreposição só pode ser corrupção ou um
+        dublê de teste — e contá-la empurraria um DualSense para cima sem
+        ninguém do outro lado na mesa.
+        """
+        bruto: set[int] = set()
+        for prov in (self._external_present, self._extra_reserved):
+            if prov is None:
+                continue
+            with contextlib.suppress(Exception):
+                bruto = {int(s) for s in prov()}
+                break
+        return bruto - set(self._ordem.values())
+
+    def _posicao_locked(self, key: str) -> int | None:
+        """Colocação de ``key`` entre os PRESENTES (já sob ``self._lock``).
+
+        O coração do NUM-01: 1 + quantos controles presentes têm lugar ANTES
+        do dele na fila global. Empate de lugar com um externo (só possível
+        por corrupção do arquivo) resolve a favor do DualSense — a MESMA
+        regra do cross-check do ``load`` e da gravação da fila, para que a
+        ordem exibida nunca discorde da ordem gravada.
+        """
+        rank = self._ordem.get(key)
+        if rank is None:
+            return None
+        antes = sum(
+            1
+            for outra in self._connected
+            if outra != key and self._ordem.get(outra, rank + 1) < rank
+        )
+        antes += sum(1 for r in self._external_present_ranks_locked() if r < rank)
+        return antes + 1
 
     def mark_disconnected(self, uniq: str | None) -> None:
-        """Marca ``uniq`` desconectado — o slot fica RESERVADO ao MAC (D2).
+        """Marca ``uniq`` desconectado — o LUGAR NA FILA fica com o MAC (D2).
 
-        Replug dentro da sessão recupera o mesmo número. R-15: a reserva vale
-        pelo BOOT inteiro — nada aqui (nem no ``sync_connected``) expira slot
-        por sessão esvaziada, então flap de BT, suspend e "desliguei os dois
-        controles pra jantar" devolvem o MESMO número a cada MAC.
+        Replug dentro da sessão recupera o mesmo número. R-15: o lugar vale
+        pelo BOOT inteiro — nada aqui (nem no ``sync_connected``) o expira por
+        sessão esvaziada, então flap de BT, suspend e "desliguei os dois
+        controles pra jantar" devolvem a MESMA colocação a cada MAC.
+
+        NUM-01 não revogou nada disso; mudou o que a permanência CUSTA. Antes,
+        o ausente segurava um NÚMERO, e era essa reserva que fazia o controle
+        sozinho na mesa exibir 2. Agora ele segura só o LUGAR NA FILA: quem
+        está presente conta 1..N sem ele e, quando ele volta, cada um recupera
+        a sua colocação. As duas promessas passam a caber juntas.
         """
         if not uniq or not isinstance(uniq, str):
             return
@@ -459,9 +686,11 @@ class ControllerIdentityRegistry:
     def sync_connected(self, uniqs: Iterable[str]) -> None:
         """Reconcilia com os uniqs CONECTADOS agora e ATRIBUI quem falta (~2s).
 
-        - quem chegou SEM slot ganha o menor livre, na ORDEM em que o
+        - quem chegou SEM lugar entra no fim da fila, na ORDEM em que o
           chamador entrega (R-24 — ver abaixo);
-        - quem saiu do conjunto vira RESERVA (slot preso ao MAC — D2);
+        - quem saiu do conjunto mantém o LUGAR (D2), e a exibição dos que
+          ficaram fecha a lacuna sozinha (NUM-01 — a "compactação automática"
+          não é um passo, é consequência de contar só os presentes);
         - persiste (atômico) quando o mapa mudou desde o último save. É o
           ÚNICO ponto de escrita em disco fora do ``load()`` — nunca no
           caminho quente por evento.
@@ -500,16 +729,38 @@ class ControllerIdentityRegistry:
         with self._lock:
             self._connected = vistos
             for key, persistable in vivos:
-                if key not in self._slots:
+                if key not in self._ordem:
                     self._assign_locked(key, persistable)
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
 
     def snapshot(self) -> dict[str, int]:
-        """Cópia do mapa key→slot atual (conectados + reservas). Leitura pura."""
+        """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
+
+        NUM-01: o valor NÃO é o número exibido — é o posto na ordem de
+        preferência global (ver docstring da classe). Quem quer o número que a
+        usuária vê chama ``slot_for``. Os três consumidores deste snapshot
+        querem mesmo o posto: o piso dos externos (``_ds_reserve``), o
+        provider de reserva fiado no lifecycle e o plano do "Renumerar agora".
+        """
         with self._lock:
-            return dict(self._slots)
+            return dict(self._ordem)
+
+    def present_ranks(self) -> set[int]:
+        """Lugares da fila ocupados por controles PRESENTES agora (NUM-01).
+
+        É o que o registro dos EXTERNOS consome para contar 1..N na mesa
+        inteira (via provider injetado por ``ExternalLedSync``) — a pergunta
+        "quem está à minha frente AGORA", que ``snapshot()`` não responde
+        porque inclui os ausentes.
+        """
+        with self._lock:
+            return {
+                rank
+                for key, rank in self._ordem.items()
+                if key in self._connected
+            }
 
     def snapshot_connected(self) -> set[str]:
         """Keys CONECTADAS agora (subconjunto de ``snapshot()``). Leitura pura.
@@ -517,8 +768,11 @@ class ControllerIdentityRegistry:
         R-15: o "Renumerar agora" compactava sobre o mapa inteiro — incluindo
         reserva de controle OFFLINE. Com o 8BitDo desligado segurando um slot
         baixo, a compactação era um no-op que ainda respondia "4 controle(s)
-        renumerado(s)". Quem está na mesa desce para 1..N; a reserva vai para
-        o fim da fila sem ser dropada (a promessa D2 continua de pé).
+        renumerado(s)". Quem está na mesa vai para a frente da fila; o ausente
+        segue atrás sem ser dropado (a promessa D2 continua de pé).
+
+        NUM-01: este conjunto passou a ser também a fonte da EXIBIÇÃO — é ele
+        que ``slot_for`` conta para dizer 1..N.
         """
         with self._lock:
             return set(self._connected)
@@ -541,25 +795,29 @@ class ControllerIdentityRegistry:
         return self._lock
 
     def compact(self, mapping: dict[str, int]) -> None:
-        """Reatribui slots conforme ``mapping`` (``identity.renumber``, ONDA-U/U2).
+        """Reordena a FILA conforme ``mapping`` (``identity.renumber``, ONDA-U).
 
         Distinta da atribuição LAZY de ``slot_for``: é uma reescrita
         EXPLÍCITA, disparada só pelo handler IPC (gate de sessão vazia é
         responsabilidade do CHAMADOR — este método não sabe de
         ``display_authority``). Só reescreve chaves que já existem NESTE
-        registro — o chamador monta ``mapping`` a partir de um
-        ``snapshot()`` deste mesmo objeto (a compactação é GLOBAL entre
-        DualSense e externos, cada registro aplica só a fatia que é dele).
-        Não mexe em reserva/expiração/voláteis (``_volatile`` continua
-        intocado — ``_save_locked`` já filtra por ele); só troca o número do
-        slot. Persiste sob ``CONTROLLERS_FILE_LOCK`` via ``_save_locked``
-        (mesmo NUMA-04 do save do tick lento) quando algo de fato mudou.
+        registro — o chamador monta ``mapping`` a partir de um ``snapshot()``
+        deste mesmo objeto (a reordenação é GLOBAL entre DualSense e externos,
+        cada registro aplica só a fatia que é dele). Não mexe em
+        presença/voláteis (``_volatile`` continua intocado — ``_save_locked``
+        já filtra por ele). Persiste sob ``CONTROLLERS_FILE_LOCK`` via
+        ``_save_locked`` (mesmo NUMA-04 do save do tick lento) quando algo de
+        fato mudou.
+
+        NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
+        exibidos. Escrever aqui não repinta ninguém sozinho — muda a ordem de
+        quem exibe o quê quando estiver na mesa.
         """
         with self._lock:
             changed = False
-            for key, new_slot in mapping.items():
-                if key in self._slots and self._slots[key] != new_slot:
-                    self._slots[key] = new_slot
+            for key, novo_rank in mapping.items():
+                if key in self._ordem and self._ordem[key] != novo_rank:
+                    self._ordem[key] = novo_rank
                     changed = True
             if changed:
                 self._dirty = True
@@ -571,11 +829,11 @@ class ControllerIdentityRegistry:
     # ------------------------------------------------------------------
 
     def load(self) -> None:
-        """Carrega ``controllers.json`` — o mapa MAC→slot ATRAVESSA o boot (R-23).
+        """Carrega ``controllers.json`` — a FILA ATRAVESSA o boot (R-23/NUM-01).
 
         Chamado UMA vez na fiação do daemon (fora do caminho quente).
-        Entradas carregadas entram como RESERVAS: o primeiro reconcile com
-        controles presentes as reivindica. O gate NÃO é mais o ``boot_id``
+        Entradas carregadas entram como AUSENTES: o primeiro reconcile com
+        controles presentes as marca vivas. O gate NÃO é mais o ``boot_id``
         (era ele que renumerava a casa inteira a cada reboot — e a cada
         restart do daemon onde ``/proc`` não existe): é o
         :data:`CONTROLLERS_SCHEMA_VERSION`. Idempotente; nunca propaga
@@ -601,15 +859,21 @@ class ControllerIdentityRegistry:
                 # R-23: única renumeração AUTOMÁTICA que sobrou. Arquivo
                 # escrito por uma versão com outra regra de numeração (ou
                 # anterior ao campo) não pode congelar a regra velha para
-                # sempre, agora que nada mais expira.
+                # sempre, agora que nada mais expira. NUM-01 é exatamente um
+                # desses casos: o schema 2 gravava NÚMERO ABSOLUTO, e é dele
+                # que vem o "sozinho na mesa e mesmo assim jogador 2".
                 logger.info(
                     "identity_arquivo_de_schema_antigo_descartado",
                     versao_arquivo=data.get("version"),
                     versao_atual=CONTROLLERS_SCHEMA_VERSION,
                 )
                 return
-            slots = data.get("slots")
-            if not isinstance(slots, dict):
+            entradas = [
+                (addr, rank)
+                for addr, kind, rank in order_entries(data)
+                if kind == KIND_DUALSENSE
+            ]
+            if not entradas:
                 return
             anchor = _session_anchor()
             if anchor is not None and data.get("boot_id") != anchor:
@@ -620,31 +884,24 @@ class ControllerIdentityRegistry:
                     arquivo_boot=data.get("boot_id"),
                 )
             usados: set[int] = set()
-            # Slot mais baixo primeiro: se o teto podar, quem cai é a entrada
-            # menos estabelecida (slot alto), nunca quem a casa usa todo dia.
-            candidatos = sorted(
-                slots.items(),
-                key=lambda kv: kv[1] if isinstance(kv[1], int) else 0,
-            )
-            for raw_key, raw_slot in candidatos:
-                if not isinstance(raw_key, str) or not isinstance(raw_slot, int):
-                    continue
-                if isinstance(raw_slot, bool) or raw_slot < 1:
-                    continue
+            # `order_entries` já devolve do começo da fila para o fim: se o
+            # teto podar, quem cai é a entrada menos estabelecida (o fim da
+            # fila), nunca quem a casa usa todo dia.
+            for raw_key, raw_rank in entradas:
                 key, persistable = self._canonical(raw_key)
                 if not persistable or key.startswith(_VPAD_MAC_PREFIX):
                     continue  # voláteis/vpad jamais deveriam estar no disco
-                if key in self._slots or raw_slot in usados:
+                if key in self._ordem or raw_rank in usados:
                     continue  # arquivo degenerado: 1º ganha, sem duplicatas
-                if len(self._slots) >= _MAX_PERSISTED_SLOTS:
+                if len(self._ordem) >= _MAX_PERSISTED_SLOTS:
                     logger.warning(
                         "identity_slots_truncados", teto=_MAX_PERSISTED_SLOTS
                     )
                     break
-                self._slots[key] = raw_slot
-                usados.add(raw_slot)
-            if self._slots:
-                logger.info("identity_slots_restaurados", slots=dict(self._slots))
+                self._ordem[key] = raw_rank
+                usados.add(raw_rank)
+            if self._ordem:
+                logger.info("identity_fila_restaurada", ordem=dict(self._ordem))
 
     @staticmethod
     def _path() -> Path:
@@ -659,46 +916,52 @@ class ControllerIdentityRegistry:
         return config_dir(ensure=True) / _CONTROLLERS_FILE
 
     def _save_locked(self) -> None:
-        """Grava o mapa persistível (atômico: mkstemp + os.replace). Sob lock.
+        """Grava a fila persistível (atômico: mkstemp + os.replace). Sob lock.
 
         Só entradas com MAC 12-hex (voláteis ficam de fora — D9). Nunca
         propaga exceção (paridade com ``utils.session``): perder um save
         significa, no pior caso, renumerar no próximo boot — inócuo.
 
-        EXT-04: o arquivo é COMPARTILHADO com o registro dos externos
-        (namespace ``externals`` — ``subsystems/external_identity.py``);
-        read-modify-write para preservar o namespace do outro lado. NUMA-04:
-        o span INTEIRO read→``os.replace`` roda sob ``CONTROLLERS_FILE_LOCK``
-        — fecha o lost-update entre os dois escritores independentes (cada
-        um só tinha o próprio RLock de instância, que não protegia o outro).
+        EXT-04/NUM-01: o arquivo é COMPARTILHADO com o registro dos externos
+        (``subsystems/external_identity.py``), que grava as entradas de
+        ``kind`` :data:`KIND_EXTERNAL` da MESMA fila; read-modify-write via
+        :func:`merged_order_payload` para preservar as do outro lado.
+        NUMA-04: o span INTEIRO read→``os.replace`` roda sob
+        ``CONTROLLERS_FILE_LOCK`` — fecha o lost-update entre os dois
+        escritores independentes (cada um só tinha o próprio RLock de
+        instância, que não protegia o outro).
         """
         try:
             with CONTROLLERS_FILE_LOCK:
                 path = self._path()
-                payload: dict[str, Any] = {}
+                existente: Any = None
                 with contextlib.suppress(Exception):
-                    existente = json.loads(path.read_text(encoding="utf-8"))
-                    # R-23: só se carrega o namespace do OUTRO quando o
-                    # arquivo é do MESMO schema. Preservá-lo às cegas num
+                    bruto = json.loads(path.read_text(encoding="utf-8"))
+                    # R-23: só se aproveitam as entradas do OUTRO lado quando
+                    # o arquivo é do MESMO schema. Preservá-las às cegas num
                     # bump de versão re-carimbava a versão nova sobre a
-                    # numeração VELHA do outro lado: o `externals` do regime
-                    # antigo (na máquina dela, o Pro segurando o slot 1)
-                    # ressuscitava com selo de válido no boot seguinte.
+                    # numeração VELHA do outro lado: o regime antigo (na
+                    # máquina dela, o Pro segurando o slot 1) ressuscitava com
+                    # selo de válido no boot seguinte.
                     if (
-                        isinstance(existente, dict)
-                        and existente.get("version") == CONTROLLERS_SCHEMA_VERSION
-                        and isinstance(existente.get("externals"), dict)
+                        isinstance(bruto, dict)
+                        and bruto.get("version") == CONTROLLERS_SCHEMA_VERSION
                     ):
-                        payload["externals"] = existente["externals"]
+                        existente = bruto
+                payload: dict[str, Any] = {}
                 # R-23: a VERSÃO é o que o load consulta; o boot_id vira
                 # anotação (âncora resiliente — nunca mais um gate).
                 payload["version"] = CONTROLLERS_SCHEMA_VERSION
                 payload["boot_id"] = _session_anchor()
-                payload["slots"] = {
-                    key: slot
-                    for key, slot in self._slots.items()
-                    if key not in self._volatile
-                }
+                payload[ORDER_FIELD] = merged_order_payload(
+                    existente,
+                    KIND_DUALSENSE,
+                    {
+                        key: rank
+                        for key, rank in self._ordem.items()
+                        if key not in self._volatile
+                    },
+                )
                 data = json.dumps(payload, ensure_ascii=False)
                 fd, tmp = tempfile.mkstemp(
                     dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
@@ -708,7 +971,7 @@ class ControllerIdentityRegistry:
                 finally:
                     os.close(fd)
                 os.replace(tmp, path)
-                logger.debug("identity_slots_salvos", slots=payload["slots"])
+                logger.debug("identity_fila_salva", ordem=payload[ORDER_FIELD])
         except Exception as exc:
             logger.debug("identity_save_falhou", err=str(exc))
 
@@ -800,8 +1063,13 @@ def reset_identity_registry() -> None:
 __all__ = [
     "CONTROLLERS_FILE_LOCK",
     "CONTROLLERS_SCHEMA_VERSION",
+    "KIND_DUALSENSE",
+    "KIND_EXTERNAL",
+    "ORDER_FIELD",
     "ControllerIdentityRegistry",
     "get_identity_registry",
     "make_auto_output_provider",
+    "merged_order_payload",
+    "order_entries",
     "reset_identity_registry",
 ]

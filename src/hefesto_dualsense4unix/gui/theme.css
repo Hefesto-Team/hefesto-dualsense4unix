@@ -83,14 +83,31 @@
  *   .hefesto-rotulo-longo   11.5    400   rótulo largo que não pode quebrar
  *   .hefesto-subtitulo        11    400   subtítulo do cabeçalho (mono)
  *   .hefesto-dica             11    400   dica, nota de rodapé de bloco
- *   .hefesto-micro            10    400   micro-rótulo (eixos, X/Y)
- *   .hefesto-selo              9    600   selo ATIVO/MUDO (mono)
+ *   .hefesto-micro            11    400   micro-rótulo (eixos, X/Y)
+ *   .hefesto-selo             11    600   selo ATIVO/MUDO (mono)
  *   .hefesto-valor-mono       12    400   valor numérico (mono)
  *   .hefesto-valor-mono-peq   11    400   valor numérico compacto (mono)
  *
  * Só o TAMANHO (e o peso/família quando o papel exige) mora aqui — a COR sai
  * dos tokens e das classes de estado, para um rótulo poder ser pequeno sem ser
  * obrigatoriamente apagado.
+ *
+ * LEGIBILIDADE-01 — duas coisas mudaram aqui, e a segunda é a que importa:
+ *
+ *  1. O PISO da escala é 11px. `.hefesto-selo` estava em 9 e `.hefesto-micro`
+ *     em 10; com a escala global em +3 eles entregavam 12 e 13px, e o selo
+ *     MUDO/ATIVO do microfone era o menor texto da interface justamente sendo
+ *     informação de estado do controle. Em 11 nenhum degrau chega à tela
+ *     abaixo de 14px.
+ *  2. Os degraus deixaram de ser CÓDIGO MORTO. Onze das catorze classes não
+ *     tinham NENHUM uso: a interface inteira herdava os 13,33px do Pango, e
+ *     mexer na escala não mudava nada na tela. O texto que estava fora do
+ *     alcance do tema (atributo `size="small"` do Pango, `set_font_size` do
+ *     Cairo) passou a usar estas classes — ver `controller_card.py` e
+ *     `sensor_widgets.py`.
+ *
+ * O tamanho FINAL na tela é este número + a escala global de `app/theme.py`,
+ * que reescreve cada `font-size: Npx` deste arquivo em memória.
  * =========================================================================== */
 .hefesto-titulo          { font-size: 21px;   font-weight: 700; }
 .hefesto-titulo-painel   { font-size: 15px;   font-weight: 700; }
@@ -113,10 +130,10 @@
     font-size: 11px;
 }
 .hefesto-dica            { font-size: 11px; }
-.hefesto-micro           { font-size: 10px; }
+.hefesto-micro           { font-size: 11px; }
 .hefesto-selo {
     font-family: "JetBrains Mono", "Fira Code", monospace;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 600;
 }
 .hefesto-valor-mono {
@@ -129,10 +146,18 @@
 }
 /* A COR dos degraus que têm cor de nascença precisa vencer
    `.hefesto-dualsense4unix-window label { color: @fg }` (0,1,1) — que casa o
-   label DIRETAMENTE. Por isso vem escopada na window (0,2,1), não solta. */
+   label DIRETAMENTE. Por isso vem escopada na window (0,2,1), não solta.
+
+   LEGIBILIDADE-01 — @comment saiu daqui. Ele é cor de BORDA: como TEXTO
+   reprova o WCAG AA sobre TODAS as superfícies do aplicativo (3,03:1 no card,
+   3,20:1 no cromo, 3,36:1 na janela). O kicker fica em @text_soft porque é
+   rótulo de faixa e pode morar dentro de card, onde @text_muted dá 4,47:1 —
+   a regra da casa passou a ser: dentro de card o degrau apagado é @text_soft;
+   sobre a janela e o cromo, @text_muted. O subtítulo é o único uso da classe
+   e vive no cabeçalho (@chrome), onde @text_muted dá 4,72:1. */
 .hefesto-dualsense4unix-window label.hefesto-rotulo-secao { color: @text_soft; }
-.hefesto-dualsense4unix-window label.hefesto-kicker       { color: @comment; }
-.hefesto-dualsense4unix-window label.hefesto-subtitulo    { color: @comment; }
+.hefesto-dualsense4unix-window label.hefesto-kicker       { color: @text_soft; }
+.hefesto-dualsense4unix-window label.hefesto-subtitulo    { color: @text_muted; }
 
 /* Botão em repouso é NEUTRO. Antes toda borda era roxa, o que gastava o acento
    em tudo e deixava o item selecionado sem como se destacar — o roxo agora é
@@ -152,6 +177,13 @@
     border-radius: 8px;
     color: @fg;
     padding: 6px 12px;
+    /* LEGIBILIDADE-01 — o piso de alvo clicável passa a ser NOSSO. Sem esta
+       linha o piso vinha do tema do sistema (o Adwaita declara 24px), e num
+       tema que não declarasse nada o botão encolheria até o texto. 24px de
+       caixa de conteúdo + 12px de padding + 2px de borda = 38px na tela, bem
+       acima do mínimo de 32px de alvo. O número é da CAIXA DE CONTEÚDO: o GTK3
+       soma padding e borda por fora dele (medido, não suposto). */
+    min-height: 24px;
 }
 /* BUG-GUI-HOVER-JITTER-01: hover NUNCA muda espessura de borda nem padding —
    borda 2px fazia o botão crescer, o layout renegociar, o mouse "sair" do
@@ -161,8 +193,12 @@
     background-color: @current_line;
     border-color: @comment;
 }
+/* LEGIBILIDADE-01: o fundo do pressionado era @comment, e o rótulo branco em
+   cima dava 4,41:1 — abaixo do piso de 4,5:1, no estado em que a usuária está
+   justamente olhando para confirmar que o clique pegou. @sel_bg_hover é o
+   mesmo roxo tingido do :checked um degrau acima, e dá 8,75:1. */
 .hefesto-dualsense4unix-window button:active {
-    background-color: @comment;
+    background-color: @sel_bg_hover;
     border-color: @purple;
 }
 /* SELEÇÃO — o padrão de toda a interface: borda roxa + fundo levemente tingido
@@ -195,10 +231,13 @@
     border-color: @purple;
     color: @fg;
 }
+/* Desabilitado é isento do piso do WCAG (1.4.3 dispensa componente INATIVO),
+   mas a usuária continua tendo de LER o que está indisponível: @comment dava
+   3,36:1 e @text_muted dá 4,96:1 sobre o mesmo fundo. */
 .hefesto-dualsense4unix-window button:disabled {
     background-color: @app_bg;
     border-color: @border_soft;
-    color: @comment;
+    color: @text_muted;
 }
 /* GUI-05/P4: segmentado READ-ONLY (ficha do controle externo) — o modo
    DETECTADO continua destacado em roxo mesmo com o widget insensitive; sem
@@ -321,7 +360,7 @@ menu menuitem:checked label {
 }
 menu menuitem:disabled,
 menu menuitem:disabled label {
-    color: #6272a4;
+    color: @text_muted;
 }
 menu separator {
     background-color: #44475a;
@@ -359,8 +398,10 @@ messagedialog button:hover {
     background-color: #44475a;
     border-color: #ff79c6;
 }
+/* LEGIBILIDADE-01: #6272a4 sob o rótulo branco dava 4,41:1. #4a4363
+   (@sel_bg_hover) é o mesmo passo do botão da janela e dá 8,75:1. */
 messagedialog button:active {
-    background-color: #6272a4;
+    background-color: #4a4363;
     border-color: #bd93f9;
 }
 /* BUG-GUI-COSMIC-WIDGET-CONTRAST-01: containers internos vazando tema claro.
@@ -414,8 +455,13 @@ messagedialog button:active {
     font-weight: 600;
     padding: 6px 8px;
 }
+/* LEGIBILIDADE-01: o hover clareava para @current_line e o rótulo roxo caía
+   para 3,79:1. Aqui o cabeçalho AFUNDA para o fundo da janela em vez de
+   clarear (6,54:1) — a alternativa seria trocar a cor do texto, e ela não
+   chegaria: `treeview header button label` casa o label diretamente e vence
+   por valor especificado (o mesmo mecanismo do BUG-GUI-FOOTER-LABEL-BRANCO-01). */
 .hefesto-dualsense4unix-window treeview header button:hover {
-    background-color: @current_line;
+    background-color: @app_bg;
     color: @purple;
 }
 
@@ -425,7 +471,7 @@ messagedialog button:active {
     color: #f8f8f2;
 }
 .hefesto-dualsense4unix-window label:disabled {
-    color: #6272a4;
+    color: @text_muted;
 }
 /* Frame headers (legend) — usar accent purple pra destacar do corpo */
 .hefesto-dualsense4unix-window frame > border + label,
@@ -467,8 +513,10 @@ messagedialog button:active {
    40-80 px, ela sumia. Pior: o GtkProgressBar nasce com `show-text=True`
    (main.glade:269) e o percentual, que é a informação que a usuária de fato
    procura, era pintado com a cor de texto do tema do sistema e não aparecia.
-   Altura de 10 px (o degrau `.hefesto-micro` da escala) e cor de texto
-   explícita resolvem os dois. */
+   Altura de 10 px e cor de texto explícita resolvem os dois.
+   LEGIBILIDADE-01: a PORCENTAGEM subiu para o degrau `.hefesto-micro` (11px,
+   14px na tela com a escala global). Ela é uma das quatro leituras de estado
+   do controle que a mantenedora não conseguia ler. */
 .hefesto-dualsense4unix-window progressbar trough {
     background-color: @elevated;
     border: none;
@@ -484,7 +532,7 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window progressbar text,
 .hefesto-dualsense4unix-window progressbar > text {
     color: @text_soft;
-    font-size: 10px;
+    font-size: 11px;
 }
 .hefesto-dualsense4unix-window switch {
     background-color: @elevated;
@@ -677,8 +725,11 @@ textview.hefesto-dualsense4unix-log text selection,
     border: 1px solid @purple;
     color: @purple;
 }
-.hefesto-dualsense4unix-window button.btn-save:hover   { background-color: @sel_bg; }
-.hefesto-dualsense4unix-window button.btn-save:active  { background-color: @sel_bg_hover; }
+/* Os tingidos do Salvar são ESCUROS, na mesma receita do Importar (laranja) e
+   do Enviar ao controle (verde). @sel_bg/@sel_bg_hover, que estavam aqui,
+   clareiam na direção do próprio roxo do rótulo: davam 4,41:1 e 3,83:1. */
+.hefesto-dualsense4unix-window button.btn-save:hover   { background-color: #332e42; }
+.hefesto-dualsense4unix-window button.btn-save:active  { background-color: #3d3651; }
 
 .hefesto-dualsense4unix-window button.btn-import {  /* Importar — cautela: conteúdo externo */
     background-image: none;
@@ -689,11 +740,13 @@ textview.hefesto-dualsense4unix-log text selection,
 .hefesto-dualsense4unix-window button.btn-import:hover  { background-color: #3d3630; }
 .hefesto-dualsense4unix-window button.btn-import:active { background-color: #4a4136; }
 
+/* O texto é @text_soft, não @text_muted: o fundo aqui é o card (@bg), onde o
+   apagado dá 4,47:1. A BORDA continua em @comment — é o papel dele. */
 .hefesto-dualsense4unix-window button.btn-restore { /* Restaurar Default — reset neutro */
     background-image: none;
     background-color: @bg;
     border: 1px solid @comment;
-    color: @text_muted;
+    color: @text_soft;
 }
 .hefesto-dualsense4unix-window button.btn-restore:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-restore:active { background-color: @current_line; }
@@ -713,7 +766,7 @@ textview.hefesto-dualsense4unix-log text selection,
 .hefesto-dualsense4unix-window button.btn-apply   label { color: @purple_deep; }
 .hefesto-dualsense4unix-window button.btn-save    label { color: @purple; }
 .hefesto-dualsense4unix-window button.btn-import  label { color: @orange; }
-.hefesto-dualsense4unix-window button.btn-restore label { color: @text_muted; }
+.hefesto-dualsense4unix-window button.btn-restore label { color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-restore:hover label { color: @text_soft; }
 
 /* ===========================================================================
@@ -828,7 +881,33 @@ textview.hefesto-dualsense4unix-log text selection,
        6px é o raio do mockup para o grid de modos (botão comum 8px, card 10px). */
     font-size: 12px;
     border-radius: 6px;
-    min-height: 0;
+    /* LEGIBILIDADE-01: aqui havia `min-height: 0`, que anulava o piso do tema
+       do sistema e deixava estes botões com 24px de altura na tela. Entre eles
+       está o SELETOR DE MODO DA ABA INÍCIO — a decisão mais importante da
+       interface — com o menor alvo de clique da janela. 24px de caixa de
+       conteúdo + 6px de padding + 2px de borda = 32px, o piso de alvo. */
+    min-height: 24px;
+}
+
+/* Botão de controle EXTERNO na fita de chips do cabeçalho
+   (`status_actions.py` aplica esta classe; ela não existia no CSS e o botão
+   herdava o `button` genérico, ficando indistinguível dos chips de alvo —
+   que são rádios e trocam o alvo de edição, enquanto este só abre uma ficha
+   somente-leitura). Chip neutro: contorno @comment (papel de BORDA, onde ele
+   é legítimo) e rótulo @text_soft, que se lê sobre o @elevated do botão. */
+.hefesto-dualsense4unix-window button.hefesto-external-btn {
+    background-image: none;
+    background-color: @elevated;
+    border: 1px solid @comment;
+    border-radius: 8px;
+    color: @text_soft;
+    padding: 4px 10px;
+    min-height: 24px;
+}
+/* Só COR no hover — nunca borda nem padding (BUG-GUI-HOVER-JITTER-01). */
+.hefesto-dualsense4unix-window button.hefesto-external-btn:hover {
+    background-color: @current_line;
+    color: @fg;
 }
 
 /* Linha de parâmetro do gatilho: 4 por card, 2 cards por aba. O GtkScale
@@ -847,10 +926,14 @@ textview.hefesto-dualsense4unix-log text selection,
 .hefesto-param-row scale highlight {
     background-color: @purple;
 }
+/* LEGIBILIDADE-01: o cursor tinha 16px — abaixo do piso de 24px que a casa
+   passou a exigir de controle deslizante. A margem negativa acompanha (o
+   cursor cresce para FORA da linha, não para dentro), então a linha continua
+   pedindo os mesmos 24px de altura: o alvo de arrasto cresce 50% de graça. */
 .hefesto-param-row scale slider {
-    min-height: 16px;
-    min-width: 16px;
-    margin: -6px;
+    min-height: 24px;
+    min-width: 24px;
+    margin: -10px;
     background-color: @fg;
     border: none;
 }
@@ -867,11 +950,12 @@ textview.hefesto-dualsense4unix-log text selection,
 .hefesto-dualsense4unix-window button.btn-trigger-apply:hover  { background-color: #2c3a32; }
 .hefesto-dualsense4unix-window button.btn-trigger-apply:active { background-color: #35473b; }
 
+/* Mesma regra do btn-restore: o fundo é card, então o texto é @text_soft. */
 .hefesto-dualsense4unix-window button.btn-trigger-off {
     background-image: none;
     background-color: @bg;
     border: 1px solid @comment;
-    color: @text_muted;
+    color: @text_soft;
 }
 .hefesto-dualsense4unix-window button.btn-trigger-off:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-trigger-off:active { background-color: @current_line; }
@@ -915,10 +999,20 @@ textview.hefesto-dualsense4unix-log text selection,
    opinião…") pedia ~830px e sobravam ~680: cortava com "…" em toda aba que a
    mostrava. No degrau `.hefesto-dica` (11px) ela cabe inteira.
    BUG-GUI-RODAPE-TRUNCADO-01. */
+/* LEGIBILIDADE-01: era o PIOR caso da interface — 11px em @comment sobre o
+   cromo, 3,20:1: texto minúsculo E com o menor contraste da janela. É a linha
+   que responde "o que aconteceu com o que eu acabei de clicar", e a
+   mantenedora tinha de se aproximar da tela para lê-la. @text_muted sobre
+   @chrome dá 4,72:1.
+   O TAMANHO fica nos 11px do degrau `.hefesto-dica` de propósito: quem o
+   levanta é a escala global (`app/theme.py`), que soma 3px e o entrega com
+   14px na tela. Subir o degrau aqui somaria com a escala e reabriria o
+   BUG-GUI-RODAPE-TRUNCADO-01 — este rótulo tem ellipsize fixado no código do
+   GTK e corta em silêncio, sem teste que pegue. */
 .hefesto-dualsense4unix-window statusbar,
 .hefesto-dualsense4unix-window statusbar label {
     background-color: transparent;
-    color: @comment;
+    color: @text_muted;
     font-size: 11px;
 }
 
@@ -937,22 +1031,28 @@ textview.hefesto-dualsense4unix-log text selection,
    chegam na tela. `opacity: 1` é obrigatório — sem ele o tema do sistema
    continua apagando por cima da cor certa.
    A variante solta cobre diálogos e menus; a escopada na window vence
-   `.hefesto-dualsense4unix-window label { color: @fg }` (0,1,1). */
+   `.hefesto-dualsense4unix-window label { color: @fg }` (0,1,1).
+
+   LEGIBILIDADE-01: a cor é @text_soft, não @text_muted. A maioria dos 20 usos
+   está DENTRO de card (rótulo de sensor do ControllerCard, legenda de bloco),
+   e ali @text_muted dá 4,47:1 — reprovado por três centésimos, no rótulo que
+   diz qual sensor é qual. @text_soft dá 8,89:1 no card e 9,85:1 na janela, e
+   continua um degrau abaixo do @fg: o rótulo segue lendo como secundário. */
 .dim-label {
-    color: @text_muted;
+    color: @text_soft;
     opacity: 1;
     font-size: 12px;
 }
 .hefesto-dualsense4unix-window .dim-label,
 .hefesto-dualsense4unix-window label.dim-label {
-    color: @text_muted;
+    color: @text_soft;
     opacity: 1;
     font-size: 12px;
 }
 /* Um `.dim-label` desabilitado desce mais um degrau em vez de ficar
    transparente (que no COSMIC deixava o tema claro vazar). */
 .hefesto-dualsense4unix-window label.dim-label:disabled {
-    color: @comment;
+    color: @text_muted;
     opacity: 1;
 }
 

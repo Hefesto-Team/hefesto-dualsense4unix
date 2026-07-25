@@ -11,19 +11,31 @@ e 4 à noite sem ninguém pedir).
 
 A cura, em três peças:
 
-1. :class:`ExternalIdentityRegistry` — slots ESTÁVEIS por ``uniq`` (MAC),
-   análogo ao ``ControllerIdentityRegistry`` dos DualSense: menor slot livre
-   ACIMA da reserva dos DualSense, slot RESERVADO no disconnect (replug
-   recupera o número), persistência que ATRAVESSA O BOOT (R-23 — era "por
-   boot", e o reboot renumerando era metade da queixa "nunca sei o que é o
-   quê") no MESMO ``controllers.json``
-   (namespace separado ``externals`` — cada registro preserva o namespace do
-   outro no read-modify-write, serializado pelo ``CONTROLLERS_FILE_LOCK``
+1. :class:`ExternalIdentityRegistry` — lugares ESTÁVEIS por ``uniq`` (MAC),
+   análogo ao ``ControllerIdentityRegistry`` dos DualSense: entra no FIM da
+   fila, sempre ACIMA da reserva dos DualSense; o lugar FICA com o uniq no
+   disconnect (replug recupera o número), com persistência que ATRAVESSA O
+   BOOT (R-23 — era "por boot", e o reboot renumerando era metade da queixa
+   "nunca sei o que é o quê") no MESMO ``controllers.json`` (as entradas de
+   ``kind`` ``external`` da fila ÚNICA — cada registro preserva as do outro
+   no read-modify-write, serializado pelo ``CONTROLLERS_FILE_LOCK``
    COMPARTILHADO de ``identity.py`` — NUMA-04, fecha o lost-update entre os
    dois escritores independentes). Cross-check UNILATERAL no ``load``:
-   colisão de SLOT entre ``slots``/``externals`` no mesmo arquivo (corrupção
+   colisão de LUGAR entre os dois ``kind`` do mesmo arquivo (corrupção
    por lost-update pretérito) é resolvida a favor do DualSense — a entrada
    externa colidente é DROPADA, nunca realocada.
+
+   NUM-01 (25/07): o número EXIBIDO deixou de ser esse lugar. Ele passa a ser
+   a colocação do externo entre os controles PRESENTES da mesa — DualSense
+   inclusive, porque a contagem 1..N é uma só. O lugar na fila continua sendo
+   o que sobrevive ao desligar; o que ele já não faz é segurar um número
+   enquanto o aparelho está fora (era assim que o controle sozinho na mesa
+   exibia 2). A parte DualSense dessa contagem chega por
+   :meth:`ExternalIdentityRegistry.set_dualsense_presence_provider`, fiado
+   por :class:`ExternalLedSync` — o único componente que enxerga os dois
+   registros. HIERARQUIA DE LOCKS (ver ``identity.py``): este lado resolve
+   tudo o que precisa do lado DualSense ANTES de adquirir o próprio
+   ``_lock``, porque o lado de lá chama providers daqui já segurando o dele.
 2. :class:`ExternalLedSync` — o LED é aplicado pelo TICK do daemon (poll
    lento ~2s do lifecycle), com cache por-VALOR (escreve SÓ em mudança) +
    rate-limit de ``LED_MIN_INTERVAL_SEC`` por dispositivo + telemetria INFO
@@ -72,12 +84,17 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     CONTROLLERS_FILE_LOCK,
     CONTROLLERS_SCHEMA_VERSION,
+    KIND_DUALSENSE,
+    KIND_EXTERNAL,
+    ORDER_FIELD,
     _read_machine_id,
+    merged_order_payload,
+    order_entries,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
 logger = get_logger(__name__)
 
@@ -171,6 +188,44 @@ def _is_synthesized_mac(key: str) -> bool:
     octeto ``02`` exato. Recebe a key JÁ canônica (minúscula, sem separadores).
     """
     return key[:2] == _SYNTHESIZED_MAC_FIRST_OCTET
+
+
+def _present_ranks_of(registry: Any) -> set[int]:
+    """Lugares da fila ocupados AGORA por um registro qualquer (NUM-01).
+
+    Usado para ler o lado DualSense sem acoplar a classe concreta (dublês de
+    teste entregam ``SimpleNamespace``). Ordem de degradação:
+
+    1. ``present_ranks()`` — a resposta exata (só os presentes);
+    2. ``snapshot()`` + ``snapshot_connected()`` — a mesma conta feita fora;
+    3. só ``snapshot()`` — registro de versão anterior, que não sabe dizer
+       quem está ligado: conta TODOS. Conservador de propósito (buraco na
+       numeração é aceitável; dois controles com o mesmo número, não).
+
+    Nunca levanta: sem nada legível devolve conjunto vazio.
+    """
+    fn = getattr(registry, "present_ranks", None)
+    if callable(fn):
+        with contextlib.suppress(Exception):
+            return {int(r) for r in fn()}
+    snap = getattr(registry, "snapshot", None)
+    if not callable(snap):
+        return set()
+    mapa: dict[str, int] = {}
+    with contextlib.suppress(Exception):
+        bruto = snap()
+        if isinstance(bruto, dict):
+            mapa = {
+                str(k): int(v)
+                for k, v in bruto.items()
+                if isinstance(v, int) and not isinstance(v, bool)
+            }
+    conectados = getattr(registry, "snapshot_connected", None)
+    if callable(conectados):
+        with contextlib.suppress(Exception):
+            vivos = {str(k) for k in conectados()}
+            return {rank for key, rank in mapa.items() if key in vivos}
+    return set(mapa.values())
 
 
 def _session_anchor() -> str | None:
@@ -295,7 +350,9 @@ class ExternalIdentityRegistry:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        self._slots: dict[str, int] = {}
+        #: NUM-01: key canônica → LUGAR NA FILA global (não o número
+        #: exibido; esse sai de ``slot_for``, que conta os presentes).
+        self._ordem: dict[str, int] = {}
         self._volatile: set[str] = set()
         self._connected: set[str] = set()
         #: MODO-01: key VOLÁTIL → nº de ``sync_connected`` consecutivos sem
@@ -304,6 +361,15 @@ class ExternalIdentityRegistry:
         self._volatile_absences: dict[str, int] = {}
         self._dirty = False
         self._loaded = False
+        #: NUM-01: provider OPCIONAL dos lugares dos DualSense PRESENTES —
+        #: a metade da contagem 1..N que mora do outro lado. ``None`` (sem
+        #: fiação, dublê de teste) degrada para o ``reserve`` mais recente,
+        #: que superestima: pode abrir um buraco na numeração, nunca dá o
+        #: mesmo número a dois controles.
+        self._ds_presence: Callable[[], set[int]] | None = None
+        #: Último ``reserve`` visto — é o piso que ``peek`` usa quando não há
+        #: provider de presença (a rota IPC não tem de onde tirar um).
+        self._ultimo_piso = 0
 
     @staticmethod
     def _canonical(uniq: str) -> tuple[str, bool]:
@@ -324,10 +390,96 @@ class ExternalIdentityRegistry:
             return key, not _is_synthesized_mac(key)
         return value, False
 
+    def set_dualsense_presence_provider(
+        self, provider: Callable[[], set[int]] | None
+    ) -> None:
+        """Injeta os lugares dos DualSense PRESENTES agora (NUM-01).
+
+        A contagem 1..N é da MESA, não de cada registro: se dois DualSense
+        estão ligados, o primeiro externo é o jogador 3. Antes de NUM-01 esse
+        deslocamento vinha embutido no próprio número gravado (o externo
+        nascia acima da reserva e ficava lá); agora ele é recalculado a cada
+        consulta, senão um DualSense desligado continuaria empurrando o
+        externo para cima — o mesmo defeito, do outro lado da mesa.
+
+        Fiado por :class:`ExternalLedSync`. ``None`` = sem fiação: cai no
+        último ``reserve`` visto (ver :meth:`_ds_present_ranks`).
+        """
+        with self._lock:
+            self._ds_presence = provider
+
+    def present_ranks(self) -> set[int]:
+        """Lugares da fila ocupados por externos PRESENTES agora (NUM-01).
+
+        Espelho de ``ControllerIdentityRegistry.present_ranks`` — é o que o
+        lado DualSense consome para contar a mesa inteira.
+        """
+        with self._lock:
+            return {
+                rank
+                for key, rank in self._ordem.items()
+                if key in self._connected
+            }
+
+    def _ds_present_ranks(self, reserve: int = 0) -> set[int]:
+        """Lugares dos DualSense que contam na exibição (NUM-01).
+
+        NUNCA chamar com ``self._lock`` tomado: esta função consulta o
+        registro dos DualSense, e a hierarquia de locks é DualSense →
+        externos → arquivo (ver docstring de ``identity.py``). Inverter aqui
+        fecharia um ciclo com o ``identity.renumber``, que toma os dois na
+        ordem canônica.
+
+        Sem provider de presença, o piso é o ``reserve`` mais recente (o
+        maior lugar que os DualSense detêm, vindo de ``_ds_reserve``): supõe
+        que todos os lugares até ele estão na mesa. É a suposição
+        CONSERVADORA — deixa um buraco na numeração quando um DualSense está
+        desligado, em vez de arriscar dois controles com o mesmo número.
+        Lugares que são DESTE registro saem da conta: a fila é uma só, então
+        sobreposição é corrupção (ou dublê), nunca gente de verdade à frente.
+        """
+        prov = self._ds_presence
+        brutos: set[int] | None = None
+        if prov is not None:
+            with contextlib.suppress(Exception):
+                brutos = {int(r) for r in prov()}
+        with self._lock:
+            if reserve and int(reserve) > 0:
+                self._ultimo_piso = int(reserve)
+            piso = self._ultimo_piso
+            meus = set(self._ordem.values())
+        if brutos is None:
+            brutos = set(range(1, piso + 1))
+        return brutos - meus
+
+    def _posicao_locked(self, key: str, ds_presentes: set[int]) -> int | None:
+        """Colocação de ``key`` entre os PRESENTES da mesa (sob ``self._lock``).
+
+        Empate de lugar com um DualSense (só possível por corrupção) resolve
+        a favor do DualSense — mesma regra do cross-check do ``load`` e da
+        gravação da fila, para a ordem exibida nunca discordar da gravada.
+        """
+        rank = self._ordem.get(key)
+        if rank is None:
+            return None
+        antes = sum(
+            1
+            for outra in self._connected
+            if outra != key and self._ordem.get(outra, rank + 1) < rank
+        )
+        antes += sum(1 for r in ds_presentes if r <= rank)
+        return antes + 1
+
     def slot_for(
         self, uniq: str | None, *, reserve: int = 0, assign: bool = True
     ) -> int | None:
-        """Slot do externo ``uniq``; atribui o menor livre > ``reserve`` na 1ª vez.
+        """Número EXIBIDO do externo ``uniq``; entra no FIM da fila na 1ª vez.
+
+        NUM-01: o que se guarda é o lugar na fila (sempre acima de
+        ``reserve``, o piso dos DualSense — EXT-04); o que se devolve é a
+        colocação entre os controles PRESENTES da mesa, DualSense inclusive.
+        Com dois DualSense ligados o primeiro externo exibe 3; com um deles
+        desligado, exibe 2 — sem que o lugar dele na fila mude.
 
         ``assign=False`` é leitura pura (não atribui, não marca conectado) —
         é o modo da rota IPC. SEM I/O de disco (a persistência fica com
@@ -338,35 +490,33 @@ class ExternalIdentityRegistry:
         key, persistable = self._canonical(uniq)
         if not key:
             return None
+        # Hierarquia de locks: o lado DualSense é consultado ANTES de tomar
+        # o lock deste registro (ver `_ds_present_ranks`).
+        ds_presentes = self._ds_present_ranks(reserve)
         with self._lock:
-            slot = self._slots.get(key)
-            if slot is not None:
-                if assign:
-                    self._connected.add(key)
-                return slot
-            if not assign:
-                return None
-            used = set(self._slots.values())
-            slot = max(1, int(reserve) + 1)
-            while slot in used:
-                slot += 1
-            self._slots[key] = slot
-            if persistable:
-                self._dirty = True
-            else:
-                self._volatile.add(key)
-            self._connected.add(key)
-            logger.info(
-                "external_slot_atribuido",
-                uniq=key,
-                slot=slot,
-                reserva_dualsense=reserve,
-                volatil=not persistable,
-            )
-            return slot
+            if key not in self._ordem:
+                if not assign:
+                    return None
+                ocupados = set(self._ordem.values())
+                rank = max([*ocupados, int(reserve), 0]) + 1
+                self._ordem[key] = rank
+                if persistable:
+                    self._dirty = True
+                else:
+                    self._volatile.add(key)
+                logger.info(
+                    "external_lugar_atribuido",
+                    uniq=key,
+                    rank=rank,
+                    reserva_dualsense=reserve,
+                    volatil=not persistable,
+                )
+            if assign:
+                self._connected.add(key)
+            return self._posicao_locked(key, ds_presentes)
 
     def peek(self, uniq: str | None) -> int | None:
-        """Leitura PURA do slot (rota IPC): nunca atribui, nunca persiste."""
+        """Leitura PURA do número exibido (rota IPC): nunca atribui/persiste."""
         return self.slot_for(uniq, assign=False)
 
     def sync_connected(self, uniqs: Iterable[str]) -> None:
@@ -426,15 +576,21 @@ class ExternalIdentityRegistry:
                 continue
             self._volatile_absences.pop(key, None)
             self._volatile.discard(key)
-            slot = self._slots.pop(key, None)
+            rank = self._ordem.pop(key, None)
             logger.info(
-                "external_slot_volatil_liberado", uniq=key, slot=slot
+                "external_lugar_volatil_liberado", uniq=key, rank=rank
             )
 
     def snapshot(self) -> dict[str, int]:
-        """Cópia do mapa key→slot (conectados + reservas). Leitura pura."""
+        """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
+
+        NUM-01: o valor NÃO é o número exibido (esse é ``slot_for``/``peek``,
+        que contam os presentes) — é o posto na fila global compartilhada com
+        os DualSense. Quem consome: o plano do "Renumerar agora" e o
+        cross-check de colisão.
+        """
         with self._lock:
-            return dict(self._slots)
+            return dict(self._ordem)
 
     def snapshot_connected(self) -> set[str]:
         """Keys presentes no último ``sync_connected``. Leitura pura (R-15).
@@ -460,7 +616,7 @@ class ExternalIdentityRegistry:
         return self._lock
 
     def compact(self, mapping: dict[str, int]) -> None:
-        """Reatribui slots conforme ``mapping`` (``identity.renumber``, ONDA-U/U2).
+        """Reordena a FILA conforme ``mapping`` (``identity.renumber``, ONDA-U).
 
         Espelho do ``ControllerIdentityRegistry.compact`` — mesma
         justificativa (reescrita EXPLÍCITA, gate de sessão vazia é do
@@ -468,39 +624,43 @@ class ExternalIdentityRegistry:
         ``ExternalLedSync.tick()`` seguinte repinta o LED sozinho: o cache
         por-valor (``_last_value``) compara contra ``slot_for``, que passa a
         devolver o número novo já aqui — sem precisar limpar cache.
+
+        NUM-01: os valores de ``mapping`` são LUGARES NA FILA, não números
+        exibidos (o exibido pode nem mudar — ele já contava só os presentes).
         """
         with self._lock:
             changed = False
-            for key, new_slot in mapping.items():
-                if key in self._slots and self._slots[key] != new_slot:
-                    self._slots[key] = new_slot
+            for key, novo_rank in mapping.items():
+                if key in self._ordem and self._ordem[key] != novo_rank:
+                    self._ordem[key] = novo_rank
                     changed = True
             if changed:
                 self._dirty = True
                 self._save_locked()
                 self._dirty = False
 
-    # -- persistência (namespace ``externals`` do controllers.json) -------
+    # -- persistência (entradas ``external`` da fila do controllers.json) --
 
     def load(self) -> None:
-        """Carrega o namespace ``externals`` — ATRAVESSA o boot (R-23).
+        """Carrega as entradas EXTERNAS da fila — ATRAVESSA o boot (R-23).
 
         Espelha ponto a ponto o ``ControllerIdentityRegistry.load``: o gate
         deixou de ser o ``boot_id`` (que renumerava o 8BitDo/Pro a cada
         reboot, e a cada restart do daemon sem ``/proc``) e passou a ser o
         :data:`CONTROLLERS_SCHEMA_VERSION`. A simetria é obrigatória — os
-        dois lados dividem um espaço de numeração só (R-24); se um
-        restaurasse e o outro não, o que sobrasse escolheria slots por cima
-        de reservas invisíveis e nasceriam as duplicatas de novo.
+        dois lados dividem uma fila só (R-24/NUM-01); se um restaurasse e o
+        outro não, o que sobrasse escolheria lugares por cima de reservas
+        invisíveis e nasceriam as duplicatas de novo.
 
         NUMA-04: a leitura roda sob ``CONTROLLERS_FILE_LOCK`` (compartilhado
-        com ``identity.py``). Cross-check UNILATERAL contra o namespace
-        ``slots`` do MESMO arquivo: um SLOT que aparece nos DOIS namespaces
-        só pode ter chegado lá por um lost-update pretérito (o bug que o
-        lock agora fecha) — o DualSense VENCE, a entrada externa colidente é
-        DROPADA (nunca realocada, nunca poda o lado DualSense) + log WARN
-        ``controllers_json_colisao_descartada``; o externo ganha slot novo
-        na próxima atribuição, ainda com a sessão vazia (D2 permite).
+        com ``identity.py``). Cross-check UNILATERAL contra as entradas
+        ``kind`` :data:`KIND_DUALSENSE` da MESMA fila: um LUGAR que aparece
+        nos dois lados só pode ter chegado lá por um lost-update pretérito (o
+        bug que o lock agora fecha) — o DualSense VENCE, a entrada externa
+        colidente é DROPADA (nunca realocada, nunca poda o lado DualSense) +
+        log WARN ``controllers_json_colisao_descartada``; o externo ganha
+        lugar novo na próxima atribuição, ainda com a sessão vazia (D2
+        permite).
         """
         with self._lock:
             if self._loaded:
@@ -523,30 +683,21 @@ class ExternalIdentityRegistry:
                     versao_atual=CONTROLLERS_SCHEMA_VERSION,
                 )
                 return
-            externals = data.get("externals")
-            if not isinstance(externals, dict):
+            entradas = order_entries(data)
+            if not entradas:
                 return
-            slots_dualsense = data.get("slots")
-            slots_em_uso_pelo_dualsense: set[int] = set()
-            if isinstance(slots_dualsense, dict):
-                for raw_slot_ds in slots_dualsense.values():
-                    if (
-                        isinstance(raw_slot_ds, int)
-                        and not isinstance(raw_slot_ds, bool)
-                        and raw_slot_ds >= 1
-                    ):
-                        slots_em_uso_pelo_dualsense.add(raw_slot_ds)
+            lugares_do_dualsense = {
+                rank for _addr, kind, rank in entradas if kind == KIND_DUALSENSE
+            }
             usados: set[int] = set()
             descartadas = 0
-            for raw_key, raw_slot in externals.items():
-                if not isinstance(raw_key, str) or not isinstance(raw_slot, int):
+            for raw_key, kind, raw_rank in entradas:
+                if kind != KIND_EXTERNAL:
                     continue
-                if isinstance(raw_slot, bool) or raw_slot < 1:
-                    continue
-                if raw_slot in slots_em_uso_pelo_dualsense:
+                if raw_rank in lugares_do_dualsense:
                     logger.warning(
                         "controllers_json_colisao_descartada",
-                        slot=raw_slot,
+                        rank=raw_rank,
                         externo=raw_key,
                     )
                     continue
@@ -560,24 +711,23 @@ class ExternalIdentityRegistry:
                         "external_identidade_nao_persistivel_descartada", uniq=key
                     )
                     continue
-                if key in self._slots or raw_slot in usados:
+                if key in self._ordem or raw_rank in usados:
                     continue
-                self._slots[key] = raw_slot
-                usados.add(raw_slot)
+                self._ordem[key] = raw_rank
+                usados.add(raw_rank)
             if descartadas:
-                # MODO-01: a MIGRAÇÃO. `_save_locked` reescreve o namespace
-                # `externals` INTEIRO a partir de `_slots`, então marcar sujo
+                # MODO-01: a MIGRAÇÃO. `_save_locked` reescreve as entradas
+                # externas INTEIRAS a partir de `_ordem`, então marcar sujo
                 # aqui faz o próximo `sync_connected` (tick lento) limpar o
                 # disco sozinho. Sem isto o fantasma ficava inerte no arquivo
                 # até que outra coisa sujasse o registro — inofensivo (o load
                 # já o ignora), mas ninguém entenderia por que ele continua
-                # lá. Não há bump de `CONTROLLERS_SCHEMA_VERSION`: bumpar
-                # renumeraria TODO mundo (inclusive os DualSense que já estão
-                # certos) para expulsar uma entrada só.
+                # lá. Não havia bump de `CONTROLLERS_SCHEMA_VERSION` na época:
+                # bumpar renumeraria TODO mundo para expulsar uma entrada só.
                 self._dirty = True
-            if self._slots:
+            if self._ordem:
                 logger.info(
-                    "external_slots_restaurados", slots=dict(self._slots)
+                    "external_fila_restaurada", ordem=dict(self._ordem)
                 )
 
     @staticmethod
@@ -588,24 +738,27 @@ class ExternalIdentityRegistry:
         return config_dir(ensure=True) / _CONTROLLERS_FILE
 
     def _save_locked(self) -> None:
-        """Read-modify-write atômico: grava ``externals`` preservando o resto.
+        """Read-modify-write atômico: grava a fatia EXTERNA da fila (NUM-01).
 
-        O ``ControllerIdentityRegistry`` (DualSense) grava ``boot_id`` +
-        ``slots`` no mesmo arquivo — cada lado preserva o namespace do outro.
-        Nunca propaga exceção: perder um save = renumerar no próximo boot.
-        NUMA-04: o span INTEIRO read→``os.replace`` roda sob o
-        ``CONTROLLERS_FILE_LOCK`` de ``identity.py`` (importado, nunca um
-        lock novo) — fecha o lost-update com o save do lado DualSense.
+        O ``ControllerIdentityRegistry`` (DualSense) grava ``boot_id`` + as
+        entradas ``kind`` :data:`KIND_DUALSENSE` do MESMO campo
+        :data:`ORDER_FIELD` — cada lado preserva as entradas do outro via
+        :func:`merged_order_payload`. Nunca propaga exceção: perder um save =
+        renumerar no próximo boot. NUMA-04: o span INTEIRO
+        read→``os.replace`` roda sob o ``CONTROLLERS_FILE_LOCK`` de
+        ``identity.py`` (importado, nunca um lock novo) — fecha o
+        lost-update com o save do lado DualSense.
         """
         try:
             with CONTROLLERS_FILE_LOCK:
                 path = self._path()
                 data: dict[str, Any] = {}
+                existente: Any = None
                 with contextlib.suppress(Exception):
                     loaded = json.loads(path.read_text(encoding="utf-8"))
                     # R-23 (espelho do lado DualSense): arquivo de OUTRO
-                    # schema é descartado inteiro, não só o namespace deste
-                    # registro — carregar o `slots` velho e recarimbá-lo com
+                    # schema é descartado inteiro, não só a fatia deste
+                    # registro — carregar a fila velha e recarimbá-la com
                     # a versão nova daria selo de válido a uma numeração que
                     # o `load` acabou de recusar.
                     if (
@@ -613,15 +766,20 @@ class ExternalIdentityRegistry:
                         and loaded.get("version") == CONTROLLERS_SCHEMA_VERSION
                     ):
                         data = loaded
+                        existente = loaded
                 # R-23: mesma dupla (versão decide, âncora só anota) do lado
                 # DualSense — os dois escrevem os MESMOS dois campos.
                 data["version"] = CONTROLLERS_SCHEMA_VERSION
                 data["boot_id"] = _session_anchor()
-                data["externals"] = {
-                    key: slot
-                    for key, slot in self._slots.items()
-                    if key not in self._volatile
-                }
+                data[ORDER_FIELD] = merged_order_payload(
+                    existente,
+                    KIND_EXTERNAL,
+                    {
+                        key: rank
+                        for key, rank in self._ordem.items()
+                        if key not in self._volatile
+                    },
+                )
                 payload = json.dumps(data, ensure_ascii=False)
                 fd, tmp = tempfile.mkstemp(
                     dir=os.path.dirname(os.fspath(path)), prefix=".controllers_"
@@ -631,9 +789,7 @@ class ExternalIdentityRegistry:
                 finally:
                     os.close(fd)
                 os.replace(tmp, path)
-                logger.debug(
-                    "external_slots_salvos", externals=data["externals"]
-                )
+                logger.debug("external_fila_salva", ordem=data[ORDER_FIELD])
         except Exception as exc:
             logger.debug("external_identity_save_falhou", err=str(exc))
 
@@ -790,6 +946,7 @@ class ExternalLedSync:
     def __init__(self, daemon: Any, registry: ExternalIdentityRegistry) -> None:
         self._daemon = daemon
         self._registry = registry
+        self._wire_presence_providers()
         #: (uniq-ou-vazio, hidraw) → último slot ESCRITO com sucesso.
         self._last_value: dict[tuple[str, str], int] = {}
         #: (uniq-ou-vazio, hidraw) → monotonic da última TENTATIVA de escrita.
@@ -800,6 +957,38 @@ class ExternalLedSync:
         #: GYRO-02: reusa o MESMO inventário deste tick para o enable-IMU do
         #: Nintendo Pro REAL (fase 1, USB) — sem enumeração extra.
         self._imu_enabler = ExternalImuEnabler()
+
+    def _wire_presence_providers(self) -> None:
+        """Casa os DOIS registros na EXIBIÇÃO — mão dupla de presença (NUM-01).
+
+        A contagem "1..N entre quem está na mesa" é global, mas cada registro
+        só enxerga a própria metade; este objeto é o ÚNICO que segura os dois
+        (é ele que já lê o ``identity_registry`` para calcular o piso em
+        :meth:`_ds_reserve`), então é aqui que a ponte é feita — nos dois
+        sentidos, porque as duas metades precisam contar a outra.
+
+        Não confundir com o provider de RESERVA que o lifecycle injeta
+        (``set_external_reserve_provider``): aquele responde "que lugares da
+        fila estão tomados" e por isso conta os ausentes, o que é certo para
+        ATRIBUIR e errado para EXIBIR.
+
+        Best-effort de ponta a ponta (``getattr`` + ``suppress``): daemon sem
+        ``identity_registry`` (FakeController) ou registro de outra versão
+        seguem sem a ponte, com a degradação conservadora documentada em
+        :meth:`ExternalIdentityRegistry._ds_present_ranks`.
+        """
+        ds = getattr(self._daemon, "identity_registry", None)
+        if ds is None:
+            return
+        externo = self._registry
+        set_ext = getattr(ds, "set_external_presence_provider", None)
+        if callable(set_ext):
+            with contextlib.suppress(Exception):
+                set_ext(externo.present_ranks)
+        set_ds = getattr(externo, "set_dualsense_presence_provider", None)
+        if callable(set_ds):
+            with contextlib.suppress(Exception):
+                set_ds(lambda: _present_ranks_of(ds))
 
     def _ds_reserve(self) -> int:
         """Piso dos externos: maior slot DualSense **ou** o alcance do co-op.
@@ -827,10 +1016,16 @@ class ExternalLedSync:
         medido no `controllers.json` dela. A ordem daquele laço é, portanto,
         parte do contrato desta função.
 
-        NOTA: isto governa atribuições NOVAS. Números já persistidos em
-        `controllers.json` só mudam com "Renumerar agora" — a numeração é
+        NOTA: isto governa atribuições NOVAS. Lugares já persistidos em
+        `controllers.json` só mudam com "Renumerar agora" — a fila é
         deliberadamente estável entre replugs (COR-01/D6) e agora também
         entre BOOTS (R-23).
+
+        NUM-01: o que este piso devolve é o maior LUGAR NA FILA que os
+        DualSense detêm — incluindo os desligados, e é isso mesmo: o piso
+        serve para ATRIBUIR sem colidir, e um lugar reservado a quem está
+        fora continua ocupado. Quem conta a EXIBIÇÃO é outro caminho
+        (`_wire_presence_providers`), que só olha para quem está na mesa.
         """
         piso = 0
         registry = getattr(self._daemon, "identity_registry", None)

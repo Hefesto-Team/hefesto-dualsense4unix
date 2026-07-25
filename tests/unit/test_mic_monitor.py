@@ -120,7 +120,10 @@ def test_muted_de_saida(saida: str, esperado: bool | None) -> None:
 
 def test_selo_ativo_e_mudo_usam_as_cores_do_guia() -> None:
     assert selo_mic(False) == ("ATIVO", "#50fa7b", "#21222c")
-    assert selo_mic(True) == ("MUDO", "#2b2d3a", "#6272a4")
+    # LEGIBILIDADE-01: o texto do selo MUDO era `#6272a4` sobre a trilha
+    # `#2b2d3a` — 2,85:1, o pior par da interface, e justamente a palavra que
+    # diz se o microfone está aberto. Passou a `#c8ccda` (8,51:1).
+    assert selo_mic(True) == ("MUDO", "#2b2d3a", "#c8ccda")
 
 
 def test_selo_sem_mute_lido_nao_afirma_ativo() -> None:

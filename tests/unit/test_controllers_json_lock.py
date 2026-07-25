@@ -76,6 +76,50 @@ def _arquivo(tmp: Path) -> dict[str, Any]:
     return json.loads((tmp / "controllers.json").read_text(encoding="utf-8"))
 
 
+def _fila_no_disco(tmp: Path, kind: str) -> dict[str, int]:
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
+
+    Os namespaces ``slots``/``externals`` viraram UMA fila só, com o ``kind``
+    de cada entrada dizendo de quem ela é. O lock e o cross-check continuam
+    valendo palavra por palavra — o que mudou foi a forma do que se grava.
+    """
+    return {
+        str(e["addr"]): int(e["rank"])
+        for e in _arquivo(tmp)[id_mod.ORDER_FIELD]
+        if isinstance(e, dict) and e.get("kind") == kind
+    }
+
+
+def _gravar_fila(
+    tmp: Path,
+    *,
+    dualsense: dict[str, int] | None = None,
+    externos: dict[str, int] | None = None,
+) -> None:
+    """Escreve um ``controllers.json`` no schema vigente (NUM-01)."""
+    entradas: list[dict[str, Any]] = [
+        {"addr": addr, "kind": id_mod.KIND_DUALSENSE, "rank": rank}
+        for addr, rank in (dualsense or {}).items()
+    ]
+    entradas += [
+        {"addr": addr, "kind": id_mod.KIND_EXTERNAL, "rank": rank}
+        for addr, rank in (externos or {}).items()
+    ]
+    (tmp / "controllers.json").write_text(
+        json.dumps(
+            {
+                # R-23: é a VERSÃO que autoriza o load (o boot_id virou
+                # anotação) — arquivo de outra versão é descartado antes de
+                # qualquer cross-check.
+                "version": CONTROLLERS_SCHEMA_VERSION,
+                "boot_id": BOOT,
+                id_mod.ORDER_FIELD: entradas,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 class TestLockCompartilhado:
     """``external_identity.py`` IMPORTA o lock de ``identity.py`` — nunca cria
     o seu (a fiação exigida pela spec, não um acidente de nomes iguais)."""
@@ -231,9 +275,12 @@ class TestRmwIntercaladoAmbosNamespacesSobrevivem:
         assert not t_ext.is_alive(), "thread do externo travou"
         assert erros == []
 
-        data = _arquivo(isolated_config)
-        assert data["slots"] == {UNIQ_DS_A: 1}, "namespace do DualSense sumiu"
-        assert data["externals"] == {MAC_EXT_A: 1}, "namespace externo sumiu"
+        assert _fila_no_disco(isolated_config, id_mod.KIND_DUALSENSE) == {
+            UNIQ_DS_A: 1
+        }, "as entradas do DualSense sumiram da fila"
+        assert _fila_no_disco(isolated_config, id_mod.KIND_EXTERNAL) == {
+            MAC_EXT_A: 1
+        }, "as entradas do externo sumiram da fila"
 
 
 class TestColisaoNoLoad:
@@ -243,22 +290,13 @@ class TestColisaoNoLoad:
     duas explicitamente — juízes 1/3 e juiz 2)."""
 
     def _grava_arquivo_colidido(self, tmp: Path) -> None:
-        (tmp / "controllers.json").write_text(
-            json.dumps(
-                {
-                    # R-23: é a VERSÃO que autoriza o load (o boot_id virou
-                    # anotação) — arquivo sem ela é de outra regra e é
-                    # descartado antes de qualquer cross-check.
-                    "version": CONTROLLERS_SCHEMA_VERSION,
-                    "boot_id": BOOT,
-                    "slots": {UNIQ_DS_A: 1},
-                    "externals": {
-                        MAC_EXT_A: 1,  # COLIDE com o slot 1 do DualSense
-                        MAC_EXT_B: 2,  # não colide — sobrevive intacto
-                    },
-                }
-            ),
-            encoding="utf-8",
+        _gravar_fila(
+            tmp,
+            dualsense={UNIQ_DS_A: 1},
+            externos={
+                MAC_EXT_A: 1,  # COLIDE com o lugar 1 do DualSense
+                MAC_EXT_B: 2,  # não colide — sobrevive intacto
+            },
         )
 
     def test_entrada_externa_colidente_e_dropada_com_warn(
@@ -282,7 +320,7 @@ class TestColisaoNoLoad:
 
         assert ext.snapshot() == {MAC_EXT_B: 2}, "o colidente deveria sumir"
         assert eventos == [
-            ("controllers_json_colisao_descartada", {"slot": 1, "externo": MAC_EXT_A})
+            ("controllers_json_colisao_descartada", {"rank": 1, "externo": MAC_EXT_A})
         ]
 
     def test_dualsense_fica_intacto_sem_realocacao(
@@ -319,30 +357,29 @@ class TestColisaoNoLoad:
         ext = ExternalIdentityRegistry()
         ext.load()
         # Nova atribuição para marcar sujo e disparar o save (reserve=1
-        # espelha `_ds_reserve()` em produção: o DualSense detém o slot 1).
-        assert ext.slot_for("aabbcc001234", reserve=1) == 3
+        # espelha `_ds_reserve()` em produção: o DualSense detém o lugar 1).
+        # NUM-01: o LUGAR é o 3 (fim da fila, atrás do externo B que dorme no
+        # 2); o número EXIBIDO é 2, porque B não está na mesa. A asserção
+        # antiga era sobre o retorno de `slot_for`, que naquele schema ainda
+        # era o lugar.
+        assert ext.slot_for("aabbcc001234", reserve=1) == 2
+        assert ext.snapshot()["aabbcc001234"] == 3
         ext.sync_connected([MAC_EXT_B, "aabbcc001234"])
 
-        data = _arquivo(isolated_config)
-        assert MAC_EXT_A not in data["externals"], "colidente ressuscitou no save"
-        assert data["externals"] == {MAC_EXT_B: 2, "aabbcc001234": 3}
-        assert data["slots"] == {UNIQ_DS_A: 1}, "save externo preservou o outro lado"
+        externos = _fila_no_disco(isolated_config, id_mod.KIND_EXTERNAL)
+        assert MAC_EXT_A not in externos, "colidente ressuscitou no save"
+        assert externos == {MAC_EXT_B: 2, "aabbcc001234": 3}
+        assert _fila_no_disco(isolated_config, id_mod.KIND_DUALSENSE) == {
+            UNIQ_DS_A: 1
+        }, "save externo preservou o outro lado"
 
     def test_sem_colisao_carrega_normalmente(
         self, isolated_config: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Falha-sem inverso: sem sobreposição de slot nenhum, o cross-check
         não descarta nada nem loga o WARN (regressão do comportamento são)."""
-        (isolated_config / "controllers.json").write_text(
-            json.dumps(
-                {
-                    "version": CONTROLLERS_SCHEMA_VERSION,
-                    "boot_id": BOOT,
-                    "slots": {UNIQ_DS_A: 1},
-                    "externals": {MAC_EXT_A: 2},
-                }
-            ),
-            encoding="utf-8",
+        _gravar_fila(
+            isolated_config, dualsense={UNIQ_DS_A: 1}, externos={MAC_EXT_A: 2}
         )
         eventos: list[tuple[str, dict[str, Any]]] = []
 

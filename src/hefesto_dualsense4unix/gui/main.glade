@@ -68,14 +68,20 @@
 
   <object class="GtkWindow" id="main_window">
     <property name="title" translatable="yes">Hefesto - Dualsense4Unix</property>
-    <property name="default-width">1100</property>
+    <!-- LEGIBILIDADE-01: 1100x760 para 1180x830. A janela cresceu 80x70 para
+         a fonte poder crescer 3px sem barra de rolagem em aba nenhuma. Medido
+         com a fonte já em +3 e a realocação feita: o conteúdo pede 1112px de
+         largura (a aba Lightbar é a mais larga) e 803px de altura. Antes da
+         realocação o mesmo +3 exigia 1332px — a linha de quatro botões do
+         Rumble, sozinha, respondia por 1004px daquele total. -->
+    <property name="default-width">1180</property>
     <!-- 680px não davam conta do conteúdo (a aba mais alta pedia mais que
          isso, e o GtkNotebook adota o maior mínimo entre as páginas: a barra
          de rolagem aparecia em TODAS). O conteúdo foi enxugado até 712px e a
          janela abre com a altura que ele pede — em 1080p sobra espaço de
          sobra, e espremer mais só cortaria texto de ajuda que existe para
          quem não conhece os termos. -->
-    <property name="default-height">760</property>
+    <property name="default-height">830</property>
     <!-- Largura/altura mínimas: garantem o espaço do rodapé (4 botões) em janela
          flutuante. Sob tiling do COSMIC (que ignora min-size) o GtkFlowBox do
          rodapé + os ScrolledWindow das abas são a rede de segurança. BUG-FOOTER-CORTADO. -->
@@ -89,14 +95,30 @@
 
         <!-- Banner: logo + wordmark + subtitle, status de conexao no canto direito -->
         <child>
+          <!-- LEGIBILIDADE-01/R5: o cabeçalho é VERTICAL e a marca mora numa
+               linha própria (`header_top_row`). O que o código pendura aqui
+               com `pack_end` — a fita de chips de controle-alvo, o badge de
+               edição e o aviso de vibração travada — ganha FAIXA PRÓPRIA em
+               vez de disputar a linha da marca.
+               Medido: com quatro controles e os dois avisos acesos, a linha
+               única exigia 1597px de largura mínima (1893px com a fonte em
+               +3) — mais que qualquer tela de projeto, e sem escape, porque a
+               largura mínima do cabeçalho sobe intacta até a janela. Em
+               faixas, cada uma pede só o seu conteúdo.
+               Quem empacota continua sendo `status_actions.py`, sem mudança:
+               `pack_end` numa caixa vertical empilha para baixo. -->
           <object class="GtkBox" id="header_bar">
-            <property name="orientation">horizontal</property>
-            <property name="spacing">14</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">6</property>
             <!-- Os recuos viraram PADDING no theme.css (.hefesto-barra-titulo).
                  Margin fica FORA da caixa de fundo: com margin, o gradiente da
                  barra de título não encostava nas bordas da janela e o cromo
                  aparecia como um retângulo flutuando. -->
             <style><class name="hefesto-barra-titulo"/></style>
+            <child>
+          <object class="GtkBox" id="header_top_row">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">14</property>
             <child>
               <object class="GtkImage" id="app_logo">
                 <property name="valign">center</property>
@@ -145,6 +167,9 @@
                 <property name="valign">center</property>
               </object>
               <packing><property name="expand">False</property><property name="pack-type">end</property></packing>
+            </child>
+          </object>
+              <packing><property name="expand">False</property></packing>
             </child>
           </object>
           <packing><property name="expand">False</property></packing>
@@ -758,10 +783,14 @@
                         <!-- COR-04: desfazer cor explícita (por alvo e em lote).
                              Sem <signal>: fiação em código (install_lightbar_tab). -->
                         <child>
+                          <!-- LEGIBILIDADE-01/R3: sem `homogeneous`. Distribuição
+                               homogênea dá a TODOS os botões da linha a largura do
+                               MAIOR rótulo — aqui, "Voltar todos ao automático" —
+                               e a linha inteira passa a pedir o dobro do que
+                               precisa. Cada botão volta a pedir só o seu texto. -->
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="lightbar_auto_reset_target">
                                 <property name="label" translatable="yes">Voltar ao automático</property>
@@ -1138,10 +1167,19 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
 
                         <child>
+                          <!-- LEGIBILIDADE-01/R1: sem `homogeneous`. Esta linha
+                               era a maior consumidora de largura da janela
+                               INTEIRA: os quatro botões recebiam a largura do
+                               maior rótulo ("Deixar o jogo controlar a
+                               vibração"), e sozinha ela respondia por 1004 dos
+                               1066px de largura mínima. Sem a distribuição
+                               homogênea cada botão pede só o próprio texto, e é
+                               essa largura devolvida que paga o aumento da
+                               fonte (a rolagem horizontal é `never`: o mínimo
+                               de largura sobe intacto até a janela). -->
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="rumble_test_500ms">
                                 <property name="label" translatable="yes">Testar por 500 ms</property>
@@ -2220,11 +2258,16 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                  mais alta, não a soma. Os ids `tab_mouse` e `tab_keyboard`
                  seguem nos boxes internos. -->
             <child>
+              <!-- LEGIBILIDADE-01/R2: sem `homogeneous`. As duas colunas
+                   recebiam a largura da MAIS LARGA, então a coluna estreita
+                   (Mouse) passava a pedir a largura da larga (Teclado) e a aba
+                   custava o dobro da coluna maior. Cada coluna volta a pedir o
+                   próprio conteúdo; o `expand`/`fill` do empacotamento continua
+                   dividindo a sobra em partes iguais quando ela existe. -->
               <object class="GtkBox" id="tab_navegacao_dsx">
                 <property name="orientation">horizontal</property>
                 <property name="margin">12</property>
                 <property name="spacing">16</property>
-                <property name="homogeneous">True</property>
             <child>
               <object class="GtkBox" id="tab_mouse">
                 <property name="orientation">vertical</property>

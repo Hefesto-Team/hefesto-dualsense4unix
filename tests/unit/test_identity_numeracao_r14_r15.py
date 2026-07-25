@@ -106,12 +106,12 @@ class TestRenumerarNaoPresoNaReservaOffline:
         um no-op perfeito que ainda respondia "3 controle(s) renumerado(s)".
         """
         ds = ControllerIdentityRegistry()
-        ds._slots[UNIQ_BRANCO] = 2
-        ds._slots[UNIQ_ROXO] = 3
+        ds._ordem[UNIQ_BRANCO] = 2
+        ds._ordem[UNIQ_ROXO] = 3
         ds.sync_connected({UNIQ_BRANCO, UNIQ_ROXO})
 
         ext = ExternalIdentityRegistry()
-        ext._slots[MAC_8BITDO] = 1
+        ext._ordem[MAC_8BITDO] = 1
         ext.sync_connected([])  # dormindo: só RESERVA
 
         server = _server(isolated_config, ds, ext)

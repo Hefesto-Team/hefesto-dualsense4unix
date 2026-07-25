@@ -28,12 +28,19 @@ COR_GYRO_Y: Final[str] = "#50fa7b"
 COR_GYRO_Z: Final[str] = "#8be9fd"
 COR_CONTORNO: Final[str] = "#44475a"
 COR_TOQUE: Final[str] = "#8be9fd"
-COR_TEXTO_FRACO: Final[str] = "#6272a4"
+#: LEGIBILIDADE-01 — estes dois eram `#6272a4` (@comment), que é cor de BORDA:
+#: como TEXTO ele reprova o WCAG AA sobre qualquer fundo da interface. Aqui
+#: doía duas vezes, porque nenhum dos dois passa pelo CSS (um é desenhado em
+#: Cairo, o outro é markup de Pango) e o teste de contraste do tema não os
+#: enxerga: os números do giroscópio davam 3,03:1 sobre o card e o selo MUDO,
+#: 2,85:1 sobre a trilha — o pior par da interface inteira, na palavra que diz
+#: se o microfone está aberto. `@text_soft` dá 8,89:1 e 8,51:1.
+COR_TEXTO_FRACO: Final[str] = "#c8ccda"
 COR_TRILHA: Final[str] = "#2b2d3a"
 COR_SELO_ATIVO_FUNDO: Final[str] = "#50fa7b"
 COR_SELO_ATIVO_TEXTO: Final[str] = "#21222c"
 COR_SELO_MUDO_FUNDO: Final[str] = "#2b2d3a"
-COR_SELO_MUDO_TEXTO: Final[str] = "#6272a4"
+COR_SELO_MUDO_TEXTO: Final[str] = "#c8ccda"
 
 #: Faixas de amplitude do medidor de microfone (mockup `Telas Hefesto.dc.html`,
 #: `micBars`): pico em verde, fala em ciano, silêncio no cinza do contorno.
@@ -199,6 +206,19 @@ _LINHA_GYRO_PX: Final[int] = 12
 #: Largura reservada à letra do eixo e ao número (campo fixo — sem reflow).
 _ROTULO_GYRO_PX: Final[int] = 12
 _VALOR_GYRO_PX: Final[int] = 54
+#: Corpo dos rótulos do giroscópio (a letra do eixo e o número), em px.
+#:
+#: LEGIBILIDADE-01 — era o MENOR texto da interface: 9,0px, e fora do alcance
+#: de qualquer ajuste de tema, porque quem desenha é o Cairo, que não passa
+#: nem pelo CSS nem pelo Pango. O degrau subiu para o piso da escala (11px) e
+#: passou a acompanhar a escala global, somando o mesmo delta que o CSS.
+#: A LINHA e a largura reservada ao número crescem junto: fonte maior numa
+#: linha de altura fixa faria um eixo escrever por cima do outro.
+_FONTE_GYRO_PX: Final[int] = 11
+#: Quanto a largura reservada ao número cresce por px de escala. O campo tem 7
+#: caracteres em mono ("+412.0"), e mono cresce ~0,6px de avanço por px de
+#: corpo — 7 x 0,6 arredondado para cima.
+_LARGURA_POR_PX_DE_ESCALA: Final[int] = 5
 #: Tamanho do painel do touchpad (proporção 16:9 do sensor real). Encolheu de
 #: 88x50 quando os cinco blocos passaram a dividir UMA linha só.
 _TOUCHPAD_PX: Final[tuple[int, int]] = (76, 42)
@@ -211,6 +231,10 @@ _SPEAKER_PX: Final[tuple[int, int]] = (60, 12)
 
 
 if _GTK_DISPONIVEL:
+    # A escala de fonte da sessão. Mora em `app.theme`, o dono único do tema —
+    # importado aqui dentro porque este ramo já exige GTK e o stub abaixo não
+    # pode depender dele.
+    from hefesto_dualsense4unix.app.theme import escala_fonte
 
     class GyroBars(Gtk.DrawingArea):  # type: ignore[misc]
         """Três barras horizontais bidirecionais (X/Y/Z) com origem no centro.
@@ -223,7 +247,11 @@ if _GTK_DISPONIVEL:
         def __init__(self) -> None:
             super().__init__()
             self._valores: tuple[float, float, float] = (0.0, 0.0, 0.0)
-            self.set_size_request(-1, _LINHA_GYRO_PX * 3 + 4)
+            delta = escala_fonte()
+            self._fonte_px = _FONTE_GYRO_PX + delta
+            self._linha_px = _LINHA_GYRO_PX + delta
+            self._valor_px = _VALOR_GYRO_PX + delta * _LARGURA_POR_PX_DE_ESCALA
+            self.set_size_request(-1, self._linha_px * 3 + 4)
             self.connect("draw", self._on_draw)
 
         def set_valores(self, x: float, y: float, z: float) -> None:
@@ -238,19 +266,19 @@ if _GTK_DISPONIVEL:
         def _on_draw(self, _widget: Any, ctx: Any) -> bool:
             largura = self.get_allocated_width()
             ctx.select_font_face("monospace")
-            ctx.set_font_size(9)
+            ctx.set_font_size(self._fonte_px)
             cores = (COR_GYRO_X, COR_GYRO_Y, COR_GYRO_Z)
             trilha = hex_para_rgb(COR_TRILHA)
             contorno = hex_para_rgb(COR_CONTORNO)
             fraco = hex_para_rgb(COR_TEXTO_FRACO)
             inicio_barra = _ROTULO_GYRO_PX
-            fim_barra = max(inicio_barra + 10, largura - _VALOR_GYRO_PX)
+            fim_barra = max(inicio_barra + 10, largura - self._valor_px)
             meio = (inicio_barra + fim_barra) / 2
             metade = (fim_barra - inicio_barra) / 2
 
             for indice, (letra, cor_hex) in enumerate(zip("XYZ", cores, strict=True)):
-                topo = indice * _LINHA_GYRO_PX + 2
-                centro_y = topo + _LINHA_GYRO_PX / 2 - 1
+                topo = indice * self._linha_px + 2
+                centro_y = topo + self._linha_px / 2 - 1
 
                 ctx.set_source_rgb(*fraco)
                 ctx.move_to(0, centro_y + 3)

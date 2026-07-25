@@ -566,27 +566,36 @@ class IpcHandlersMixin:
     # --- identidade (numeração) -------------------------------------------
 
     async def _handle_identity_renumber(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Compacta os slots de exibição (DualSense + externos) p/ 1..N (ONDA-U/U2/U10).
+        """Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01.
 
-        Cura o "sony 1 / sony 4" com só 2 controles: slots de sessões
-        anteriores ficam RESERVADOS (D2) e nunca encolhem sozinhos enquanto
-        a sessão não esvazia de vez. Gate: recusa com uma sessão de jogo
-        ABERTA (``display_authority == 'game'``) — repintar o LED do
-        controle que o jogo está usando NO MEIO da partida é o mesmo erro
-        que o NUMA-03 já resolveu para o tick automático; aqui é uma ação
-        EXPLÍCITA da usuária, então o gate é o mesmo critério, não uma cópia
-        frouxa.
+        Cura o "sony 1 / sony 4" com só 2 controles: lugares de sessões
+        anteriores continuam do MAC (D2) e nunca encolhem sozinhos. Gate:
+        recusa com uma sessão de jogo ABERTA (``display_authority ==
+        'game'``) — repintar o LED do controle que o jogo está usando NO
+        MEIO da partida é o mesmo erro que o NUMA-03 já resolveu para o tick
+        automático; aqui é uma ação EXPLÍCITA da usuária, então o gate é o
+        mesmo critério, não uma cópia frouxa.
 
-        A numeração é um espaço ÚNICO entre DualSense (``identity.py``) e
-        externos (``external_identity.py`` — EXT-04), então a compactação é
-        GLOBAL: junta os dois ``snapshot()``, ordena pelo slot ATUAL
-        (preserva a ORDEM RELATIVA — quem já era o menor continua na
-        frente) e reatribui 1..N: cada registro só recebe de volta a fatia
-        de chaves que é dele (``ControllerIdentityRegistry.compact`` /
+        A fila é ÚNICA entre DualSense (``identity.py``) e externos
+        (``external_identity.py`` — EXT-04), então a reordenação é GLOBAL:
+        junta os dois ``snapshot()``, ordena pelo lugar ATUAL (preserva a
+        ORDEM RELATIVA — quem já estava na frente continua na frente) e
+        reescreve 1..N: cada registro só recebe de volta a fatia de chaves
+        que é dele (``ControllerIdentityRegistry.compact`` /
         ``ExternalIdentityRegistry.compact``, ambos sob o
         ``CONTROLLERS_FILE_LOCK`` de NUMA-04 via ``_save_locked``). Sem
         controle nenhum registrado (nenhum dos dois registros fiado, ou
         ambos vazios) devolve ``renumbered`` vazio — no-op seguro.
+
+        NUM-01 mudou o SIGNIFICADO deste botão sem mudar o algoritmo, e é
+        essa distinção que importa: o que ele reescreve deixou de ser o
+        NÚMERO de cada controle e passou a ser o LUGAR NA FILA. O estrago
+        antigo era exatamente esse acoplamento — com um DualSense desligado,
+        o gesto que consertava o controle na mesa carimbava o ausente como
+        "o segundo" para sempre, porque lugar e número eram o mesmo inteiro
+        (foi assim que o ``controllers.json`` dela apareceu invertido no
+        mesmo dia). Hoje o ausente só perde a fila; o número dele volta a
+        ser calculado quando ele voltar para a mesa.
 
         Repintura: ``reassert_resolved_outputs`` (getattr defensivo, mesmo
         padrão do apply_draft) reafirma o LED do DualSense já com o slot
@@ -605,8 +614,21 @@ class IpcHandlersMixin:
         o estado AINDA não-compactado entre as duas chamadas e reivindicar
         exatamente o slot-alvo que o ``compact()`` estava prestes a devolver
         a outro controle — dois "Controle 1" simultâneos. Ordem de aquisição
-        fixa (identity antes de external, sempre) evita deadlock; nenhum
-        outro caminho do código toma os dois locks ao mesmo tempo. Getattr
+        fixa (identity antes de external, sempre) evita deadlock.
+
+        CORREÇÃO NUM-01 de uma invariante MORTA: esta docstring afirmava que
+        "nenhum outro caminho do código toma os dois locks ao mesmo tempo".
+        Isso deixou de ser verdade quando o provider de reserva foi
+        introduzido (EXT-04) — ``identity._assign_locked`` chama o provider
+        dos externos JÁ segurando o próprio ``_lock``, e NUM-01 acrescentou o
+        provider de presença pelo mesmo caminho. O que protege de deadlock
+        não é a exclusividade (que não existe), é a HIERARQUIA, hoje
+        documentada nos dois módulos: ``identity._lock`` → ``external
+        _identity._lock`` → ``CONTROLLERS_FILE_LOCK``. Este handler a
+        respeita; o lado externo é proibido de consultar o lado DualSense
+        segurando o próprio lock (``_ds_present_ranks`` resolve antes de
+        adquirir). Invariante documentada e morta é pior que invariante
+        ausente: era ela que dizia "pode chamar de qualquer lugar". Getattr
         defensivo: fakes/backends antigos sem o método seguem sem a trava
         (mesmo risco de HEAD, nunca pior).
 
@@ -750,6 +772,17 @@ class IpcHandlersMixin:
            no-op. O ``compact`` de cada registro já ignora chave sem mudança;
            aqui o relatório passa a dizer a mesma verdade, e o chamador pula
            o repaint/reassert quando nada mudou.
+
+        NUM-01 (25/07) manteve as duas e trocou o que os inteiros SIGNIFICAM:
+        o plano ordena e reescreve LUGARES NA FILA, não números de jogador.
+        A consequência é que o item 1 deixou de ter efeito colateral. Antes,
+        empurrar o ausente para N+1..M era rebaixá-lo de verdade — ele
+        exibiria aquele número no replug, e era assim que "o gesto que
+        conserta um controle estraga o outro" (o arquivo dela invertido
+        dentro da mesma sessão). Agora empurrar o ausente só o põe atrás na
+        fila: quem está na mesa conta 1..N sem ele, e quando ele voltar o
+        número dele sai da contagem de novo. O algoritmo é o MESMO; o estrago
+        morreu com a separação entre identidade e posição.
         """
         with contextlib.ExitStack() as locks:
             for reg in (identity_registry, external_registry):
@@ -779,17 +812,20 @@ class IpcHandlersMixin:
             renumbered: dict[str, int] = {}
             identity_map: dict[str, int] = {}
             external_map: dict[str, int] = {}
-            for new_slot, (_offline, old_slot, key, registry) in enumerate(
+            for novo_lugar, (_offline, lugar_atual, key, registry) in enumerate(
                 entries, start=1
             ):
-                if old_slot != new_slot:
+                if lugar_atual != novo_lugar:
                     # R-15: relatório só do que MUDOU (a GUI conta as chaves
-                    # para dizer quantos controles renumerou).
-                    renumbered[key] = new_slot
+                    # para dizer quantos controles renumerou). NUM-01: o valor
+                    # é o LUGAR NA FILA — para quem está na mesa ele coincide
+                    # com o número exibido (os presentes ocupam 1..N), e para
+                    # quem está fora é a posição na espera.
+                    renumbered[key] = novo_lugar
                 if registry is identity_registry:
-                    identity_map[key] = new_slot
+                    identity_map[key] = novo_lugar
                 else:
-                    external_map[key] = new_slot
+                    external_map[key] = novo_lugar
 
             if identity_registry is not None and identity_map:
                 identity_registry.compact(identity_map)
