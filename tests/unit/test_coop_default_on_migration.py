@@ -132,7 +132,7 @@ class TestMigracaoDosPerfisJaSalvos:
     def test_json_corrompido_nao_derruba_a_migracao(self) -> None:
         """Um perfil quebrado não pode impedir a cura dos demais."""
         d = Path(tempfile.mkdtemp())
-        (d / "quebrado.json").write_text("{ nao é json", encoding="utf-8")
+        (d / "quebrado.json").write_text("{ nao é json", encoding="utf-8")  # (noqa-acento)
         _escrever(d, "meu_jogo", {"kind": "gamepad", "coop": False})
 
         assert migrate_profiles_coop_default(d) == ["meu_jogo.json"]

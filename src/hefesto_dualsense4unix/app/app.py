@@ -251,7 +251,7 @@ class HefestoApp(
             # aqui: FEAT-DSX-COMBO-TO-SEGMENTED-01 troca o combo por SegmentedSelector
             # e conecta "changed" no código (install_triggers_tab), não pelo Glade.
             # FIX-GUI-COSMIC-REMEDIATION-01 (B3): on_trigger_left/right_preset_changed
-            # removidos daqui — o glade não os referencia e a ligação é feita em
+            # removidos daqui — o glade não os referencia e a ligação é feita em  # (noqa-acento)
             # código (triggers_actions.py), então as entradas estavam mortas.
             "on_trigger_left_apply": self.on_trigger_left_apply,
             "on_trigger_right_apply": self.on_trigger_right_apply,

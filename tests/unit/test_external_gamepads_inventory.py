@@ -463,8 +463,11 @@ async def test_controller_list_external_roda_fora_do_event_loop(
 
     assert len(result["external"]) == 1
     ext = dict(result["external"][0])
-    slot = ext.pop("player_slot")  # 8BIT-02: número GLOBAL de co-op, sempre >= 1
-    assert isinstance(slot, int) and slot >= 1
+    # 8BIT-02: número GLOBAL de co-op. R-24: sem registry (o `ipc_server` do
+    # teste não tem daemon fiado) o campo é `None` — o posicional legado, que
+    # devolvia um número inventado aqui, era um SEGUNDO espaço de numeração.
+    slot = ext.pop("player_slot")
+    assert slot is None or (isinstance(slot, int) and slot >= 1)
     assert ext == sentinela[0]
     assert result["controllers"], "o shape legado continua presente"
     assert visto["thread"] != loop_thread, (
@@ -563,18 +566,18 @@ def test_holders_merge_e_degradacao(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", explode)
     inventario = ih_mod._external_inventory()
-    # Degrada em silêncio: SEM `holders` (sonda quebrada), mas o `player_slot`
-    # (8BIT-02) segue exposto — é independente da sonda.
+    # Degrada em silêncio: SEM `holders` (sonda quebrada), mas a CHAVE
+    # `player_slot` (8BIT-02) segue exposta — é independente da sonda. R-24:
+    # sem `slot_resolver` o valor é `None` (null honesto), nunca o posicional.
     assert "holders" not in inventario[0]
-    assert inventario[0] == {**base, "player_slot": 1}
+    assert inventario[0] == {**base, "player_slot": None}
 
 
 def test_external_inventory_e_leitura_pura_sem_escrita_de_led(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """EXT-04 item 1: listar externos NUNCA escreve LED (a escrita a cada poll
-    de 4s da GUI matou o 8BitDo BT ao vivo — `joycon_enforce_subcmd_rate`).
-    Sem resolver, o `player_slot` cai no posicional dualsense_count+índice+1."""
+    de 4s da GUI matou o 8BitDo BT ao vivo — `joycon_enforce_subcmd_rate`)."""
     import hefesto_dualsense4unix.core.external_leds as leds_mod
 
     n1 = {
@@ -597,10 +600,12 @@ def test_external_inventory_e_leitura_pura_sem_escrita_de_led(
     monkeypatch.setattr(leds_mod, "write_player_number", bomba_led)
     monkeypatch.setattr(leds_mod, "write_lightbar_slot", bomba_led)
 
-    # Com 2 DualSense (slots 1 e 2), os externos exibem 3 e 4 (fallback).
+    # R-24: sem registry não existe número — `None` nos dois (o posicional
+    # `dualsense_count+índice+1`, que devolvia [3, 4] aqui, era um segundo
+    # espaço de numeração escrevendo no mesmo campo que a GUI exibe).
     inventario = ih_mod._external_inventory(dualsense_count=2)
 
-    assert [e["player_slot"] for e in inventario] == [3, 4]
+    assert [e["player_slot"] for e in inventario] == [None, None]
 
 
 def test_external_inventory_prefere_o_slot_do_registry(
@@ -647,14 +652,23 @@ def test_external_inventory_prefere_o_slot_do_registry(
     assert [e["player_slot"] for e in inventario] == [None, None]
 
 
-def test_external_inventory_posicional_so_sobrevive_sem_resolver(
+def test_posicional_legado_nao_existe_mais_em_caminho_nenhum(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """NUMA-05 bloco 11 (POSICIONAL): `player_slot=None` (resolver presente
-    sem opinião) é ESTÁVEL sob a troca de `dualsense_count` 1 -> 0 — no HEAD
-    pré-NUMA-05, o posicional reembaralhava a numeração a cada mudança de
-    `ds_count`. Sem resolver nenhum (compat, daemon antes do 8BIT-02), o
-    posicional legado segue vivo e SEGUE a troca de `ds_count` (esperado)."""
+    """R-24 (25/07) — TROCA DELIBERADA de contrato.
+
+    Este caso era `test_external_inventory_posicional_so_sobrevive_sem_
+    resolver` e CONGELAVA o posicional (`player_slot == [2]` com ds_count=1,
+    `== [1]` com ds_count=0) como "compat do daemon antes do 8BIT-02". Três
+    testes acima, o mesmo arquivo já chamava o posicional de causa raiz do
+    incidente de 14:42 — congelar a causa raiz como compat é o que a mantinha
+    viva. Ele era um SEGUNDO espaço de numeração escrevendo no MESMO campo que
+    a GUI e a CLI exibem: mudar `ds_count` deslocava todos os externos e o
+    número exibido divergia do LED aceso.
+
+    Agora `player_slot` é ESTÁVEL sob a troca de `ds_count` em todos os
+    caminhos — com resolver mudo E sem resolver nenhum.
+    """
     n1 = {
         "name": "Nintendo Co., Ltd. Pro Controller",
         "vid": "057e", "pid": "2009", "bus": "usb",
@@ -677,9 +691,8 @@ def test_external_inventory_posicional_so_sobrevive_sem_resolver(
     assert [e["player_slot"] for e in com_ds_count_1] == [None]
     assert [e["player_slot"] for e in com_ds_count_0] == [None]
 
-    # Compat: SEM resolver nenhum, o posicional legado segue a troca de
-    # ds_count (comportamento intocado do daemon fake/antigo).
+    # SEM resolver nenhum: `None` também — e IGUAL sob qualquer `ds_count`.
     sem_resolver_1 = ih_mod._external_inventory(dualsense_count=1)
     sem_resolver_0 = ih_mod._external_inventory(dualsense_count=0)
-    assert [e["player_slot"] for e in sem_resolver_1] == [2]
-    assert [e["player_slot"] for e in sem_resolver_0] == [1]
+    assert [e["player_slot"] for e in sem_resolver_1] == [None]
+    assert [e["player_slot"] for e in sem_resolver_0] == [None]

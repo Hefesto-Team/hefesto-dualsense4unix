@@ -11,6 +11,7 @@ Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -33,6 +34,13 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+#: R-21 (auditoria 24/07): a wm_class que a Steam dá a TODA janela de jogo
+#: lançado por ela. Mesma forma reconhecida por `perfil_e_regra_de_jogo`
+#: (schema) e por `lifecycle._janela_de_jogo_em_foco` — a doutrina do
+#: "catch_all_sem_opiniao" precisa da MESMA noção de "isto é um jogo" nos três
+#: lugares, senão a divergência entre os predicados vira o buraco de sempre.
+_STEAM_APP_WM_CLASS_RE = re.compile(r"^steam_app_\d+$", re.IGNORECASE)
 
 
 @dataclass
@@ -88,6 +96,10 @@ class ProfileManager:
     # travado e o FF do jogo era ignorado mesmo com a máscara certa. None =
     # seção ignorada (CLI/testes sem daemon).
     rumble_passthrough_applier: Callable[[bool], None] | None = None
+    # R-21: última `wm_class` de jogo cujo veto ao catch-all já foi logado. O
+    # `select_for_window` roda a 2 Hz (poll do autoswitch): sem esta chave o
+    # veto viraria ~7 mil linhas/hora no journal enquanto ela joga.
+    _ultimo_veto_catch_all: str | None = field(default=None, repr=False)
 
     def list_profiles(self) -> list[Profile]:
         return load_all_profiles()
@@ -105,7 +117,7 @@ class ProfileManager:
         # BUG-PROFILE-DELETE-ACTIVE-SLUG-01: `activate()` grava o DISPLAY NAME em
         # `active_profile`, mas `delete()` aceita slug OU display name. Comparar
         # as strings cruas deixava o active "preso" quando o delete vinha por
-        # slug (ex.: active="Ação", name="acao" — slugs iguais, strings não).
+        # slug (ex.: active="Ação", name="acao" — slugs iguais, strings não).  # (noqa-acento)
         # Normalizamos AMBOS via slugify antes de comparar.
         if active is not None and self._refers_same_profile(active, name):
             self.store.set_active_profile(None)
@@ -525,10 +537,39 @@ class ProfileManager:
         reordenaria perfis de critério hoje empatados e mudaria comportamento já
         validado. A distinção fina entre "casou por regex solto" e "é a regra do
         jogo" mora em `perfil_e_regra_de_jogo`, usada por quem precisa dela.
+
+        R-21 (auditoria 24/07): o R-01 acertou a ORDEM mas não a AUTORIDADE. Com
+        a janela de um jogo em foco e nenhuma regra específica para ele (o caso
+        medido: Mullet Mad Jack, `steam_app_2111190`, sem perfil próprio), a
+        ordenação continuava elegendo o melhor dos catch-all — o `vitoria`
+        (MatchAny, prio 5). Basta alternar para a janela `steam` (que casa
+        `Navegação`, prio 50) e voltar para ter o ping-pong do journal de
+        22-23/07, com lightbar/gatilhos/rumble diferentes a cada 18-28 s.
+
+        Um genérico de DESKTOP não tem autoridade sobre uma janela de JOGO:
+        quando a `wm_class` em foco é `steam_app_<id>` e os ÚNICOS candidatos são
+        catch-all, a resposta honesta é None ("nenhum perfil opina sobre este
+        jogo") — e o autoswitch retém o perfil corrente em vez de trocar. É
+        exatamente a doutrina do `catch_all_sem_opiniao` de
+        `lifecycle.apply_profile_suppression`, aplicada um nível acima: lá o
+        catch-all não pode REVERTER a supressão; aqui ele não pode ENTRAR.
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
         if not candidates:
             return None
+        wm_class = str(window_info.get("wm_class") or "")
+        if _STEAM_APP_WM_CLASS_RE.match(wm_class) and all(
+            p.e_catch_all for p in candidates
+        ):
+            if self._ultimo_veto_catch_all != wm_class:
+                self._ultimo_veto_catch_all = wm_class
+                logger.info(
+                    "profile_select_catch_all_sem_autoridade_em_jogo",
+                    wm_class=wm_class,
+                    candidatos=sorted(p.name for p in candidates),
+                )
+            return None
+        self._ultimo_veto_catch_all = None
         candidates.sort(key=lambda p: (not p.e_catch_all, p.priority), reverse=True)
         return candidates[0]
 

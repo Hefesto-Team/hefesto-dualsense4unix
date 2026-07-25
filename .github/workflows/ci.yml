@@ -82,9 +82,15 @@ jobs:
       - name: Instalar deps do sistema
         run: |
           sudo apt-get update
-          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+          # CI-GUI-PULAVA-CALADO-01: sem PyGObject/cairo os ~210 testes de GUI
+          # caíam no `pytest.importorskip("gi"/"cairo")` e PULAVAM em silêncio —
+          # o extra `dev` do pyproject não os traz. O relatório dizia "passou"
+          # sobre uma suíte que nunca tinha exercitado a interface, justo a
+          # área de onde vinham os bugs que a usuária relatava.
+          sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
+              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0
       - name: Instalar Hefesto - Dualsense4Unix em modo dev
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev]" PyGObject pycairo
       - name: Verificar tamanho de HID captures
         run: |
           OVERSIZE=$(find tests/fixtures -name "*.bin" -size +5M 2>/dev/null)
@@ -97,6 +103,10 @@ jobs:
         run: ruff check src/ tests/
       - name: Pytest unit
         run: pytest tests/unit -v --cov=hefesto_dualsense4unix
+      # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
+      # NENHUM job — existia no repo e nunca reprovava nada.
+      - name: Pytest core
+        run: pytest tests/core -v
 
   typecheck:
     name: Mypy (gate rígido)
@@ -303,12 +313,21 @@ jobs:
           assert _('Aplicar') == 'Apply', f\"esperado 'Apply', recebido {_('Aplicar')!r}\"
           print('i18n EN OK:', _('Aplicar'))
           "
-      - name: Smoke pytest (unit subset sem GTK real)
+      - name: Smoke pytest (unit)
         run: |
           python3 -m pip install --break-system-packages pytest pytest-asyncio
-          # Roda apenas testes que não precisam de GTK/X display real.
-          # Markers: -m "not requires_gtk and not requires_display".
-          python3 -m pytest tests/unit -q \
-              --ignore=tests/unit/app \
-              -m "not requires_gtk and not requires_display" \
-              || echo "::warning::pytest subset falhou (esperado em distros sem fixtures GTK)"
+          # CI-TEATRO-01: este passo não valia nada e dizia que valia.
+          # Eram três furos somados:
+          #   1. `-m "not requires_gtk and not requires_display"` filtrava por
+          #      markers que NUNCA foram definidos (zero ocorrências no repo) —
+          #      não selecionava nada, só dava a impressão de recorte cuidadoso.
+          #   2. `--ignore=tests/unit/app` apontava para um diretório que não
+          #      existe (os testes de GUI moram em tests/unit/, sem subpasta).
+          #   3. `|| echo "::warning::"` ENGOLIA a falha: a suíte inteira podia
+          #      quebrar e o job seguia verde. Um gate que não reprova não é
+          #      gate — e era ele que carimbava os releases.
+          # Quem precisa de GTK real já se protege sozinho, com
+          # `pytest.importorskip("gi"/"cairo")` no topo do arquivo: sem
+          # PyGObject esses testes PULAM (visível no relatório), e o resto
+          # roda de verdade. Agora falha quando tem que falhar.
+          python3 -m pytest tests/unit -q

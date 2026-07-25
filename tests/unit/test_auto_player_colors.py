@@ -99,9 +99,22 @@ class TestPaletaCanonica:
         assert player_slot_color(2) == (255, 0, 0)  # vermelho
         assert player_slot_color(3) == (0, 255, 0)  # verde
         assert player_slot_color(4) == (255, 0, 128)  # rosa
-        # 5+ = branco (fallback neutro, sem cor oficial no PS5).
-        assert player_slot_color(5) == (255, 255, 255)
+        # R-25: 5..8 ganharam cor PRÓPRIA. Antes todos caíam no branco, e com
+        # o espaço de numeração único (R-24) o slot 5+ é alcançável — dois
+        # controles ficavam da MESMA cor, que é a colisão que a paleta existe
+        # para evitar. Só ≥9 (inatingível na prática) cai no branco.
+        assert player_slot_color(5) == (255, 255, 0)  # amarelo
         assert player_slot_color(9) == (255, 255, 255)
+
+    def test_cores_de_slot_nunca_se_repetem(self) -> None:
+        """R-25: a paleta 1..8 é uma BIJEÇÃO — nenhuma cor serve a dois slots.
+
+        Falha-sem: com o fallback branco para tudo acima de 4, os slots 5..8
+        eram indistinguíveis entre si (a queixa "nunca sei o que é o quê", no
+        eixo cor).
+        """
+        cores = [player_slot_color(n) for n in range(1, 9)]
+        assert len(set(cores)) == len(cores)
 
     def test_padroes_de_player_led_movidos_com_reexport(self) -> None:
         """O dono agora é o led_control; o import histórico de coop segue vivo."""
@@ -112,7 +125,20 @@ class TestPaletaCanonica:
         assert via_coop is player_led_pattern
         assert player_led_pattern(1) == (False, False, True, False, False)
         assert player_led_pattern(4) == (True, True, False, True, True)
-        assert player_led_pattern(7) == (True, True, True, True, True)
+        # R-25: 5..8 têm padrão próprio (antes 5,6,7… acendiam TODOS os LEDs,
+        # indistinguíveis uns dos outros).
+        assert player_led_pattern(5) == (True, True, True, True, True)
+        assert player_led_pattern(7) == (False, True, True, True, False)
+
+    def test_padroes_de_player_led_nunca_se_repetem(self) -> None:
+        """R-25: 1..8 são padrões DISTINTOS — a barra do DualSense identifica.
+
+        Falha-sem: `player_led_pattern` só tinha 1..4 na tabela e devolvia
+        "os 5 acesos" para qualquer outro índice; slots 5, 6 e 7 acendiam a
+        MESMA coisa.
+        """
+        padroes = [player_led_pattern(n) for n in range(1, 9)]
+        assert len(set(padroes)) == len(padroes)
 
 
 class TestMergeTresCamadas:

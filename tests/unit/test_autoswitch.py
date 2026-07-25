@@ -626,3 +626,160 @@ def test_janela_propria_matcher():
     ]
     for info in alheias:
         assert not AutoSwitcher._janela_propria(info), info
+
+
+# ---------------------------------------------------------------------------
+# UX-04 (auditoria 24/07) — debounce ASSIMÉTRICO.
+#
+# A terceira causa do ping-pong medido: poll 0,5 s + debounce 0,5 s ⇒ DOIS ticks
+# (1 s) já trocavam de perfil, e a histerese UX-01 só cobre leitura SEM
+# informação — entre duas janelas CONHECIDAS não havia cooldown nenhum. Journal
+# 22-23/07: `vitoria``Navegação` a cada 18-28 s, o controle mudando de cor e de
+# comportamento no meio da partida.
+#
+# A cura é assimétrica de propósito: ENTRAR num perfil específico segue barato
+# (é o que faz o perfil do jogo valer desde o começo); SAIR dele rumo a um
+# CATCH-ALL custa `DEFAULT_DEBOUNCE_SAIDA_SEC`. Uma pausa curta (overlay da
+# Steam, um guia no navegador, notificação que rouba o foco) não é "ela saiu do
+# jogo", e errar para o lado de FICAR custa zero.
+# ---------------------------------------------------------------------------
+
+
+def _sw_assimetrico(manager: ProfileManager) -> AutoSwitcher:
+    return AutoSwitcher(
+        manager=manager,
+        window_reader=lambda: {},
+        debounce_sec=0.5,
+        debounce_saida_sec=12.0,
+    )
+
+
+def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "firefox"}, 0.0)
+    sw._tick({"wm_class": "firefox"}, 0.6)
+    assert sw._current_profile == "vitoria"
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 1.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 1.6)
+    assert sw._current_profile == "madjack"  # ~0,5 s, como sempre
+
+
+def test_sair_do_perfil_de_jogo_para_catch_all_exige_o_debounce_longo(
+    isolated_profiles_dir: Path,
+):
+    """O cenário exato do journal: alt-tab do jogo para uma janela que só casa
+    o genérico. Antes trocava em 1 s; agora precisa de estabilidade REAL."""
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+    assert sw._current_profile == "madjack"
+
+    # 11 s de foco no navegador: NÃO troca (o debounce de saída é 12 s).
+    for t in (10.0, 10.5, 11.0, 11.4):
+        sw._tick({"wm_class": "firefox"}, t)
+    assert sw._current_profile == "madjack"
+
+    sw._tick({"wm_class": "firefox"}, 22.1)  # agora sim, estabilidade real
+    assert sw._current_profile == "vitoria"
+
+
+def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
+    """Ping-pong de 18-28 s do journal, reproduzido: com o debounce de saída,
+    nenhuma das idas ao genérico se consolida."""
+    save_profile(
+        _mk_profile(
+            "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.0)
+    sw._tick({"wm_class": "steam_app_2111190"}, 0.6)
+
+    t = 1.0
+    for _ in range(6):  # 6 alt-tabs de ~2 s cada
+        for _ in range(4):
+            sw._tick({"wm_class": "firefox"}, t)
+            t += 0.5
+        for _ in range(4):
+            sw._tick({"wm_class": "steam_app_2111190"}, t)
+            t += 0.5
+
+    assert sw._current_profile == "madjack"
+    assert manager.store.counter("profile.activated") == 1
+
+
+def test_troca_entre_dois_perfis_especificos_segue_no_debounce_curto(
+    isolated_profiles_dir: Path,
+):
+    """A assimetria é só para a VOLTA ao genérico — trocar de um jogo para
+    outro (ou para um app com regra própria) não pode ficar lento."""
+    save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
+    save_profile(_mk_profile("driving", match=MatchCriteria(window_class=["Forza"])))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "Doom"}, 0.0)
+    sw._tick({"wm_class": "Doom"}, 0.6)
+    assert sw._current_profile == "shooter"
+
+    sw._tick({"wm_class": "Forza"}, 1.0)
+    sw._tick({"wm_class": "Forza"}, 1.6)
+    assert sw._current_profile == "driving"
+
+
+def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
+    isolated_profiles_dir: Path,
+):
+    """Só perfil ESPECÍFICO arma o lado lento: quem já está no genérico não tem
+    nada de valioso a proteger."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(
+        _mk_profile("leitura", priority=50, match=MatchCriteria(window_class=["zathura"]))
+    )
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    sw = _sw_assimetrico(manager)
+
+    sw._tick({"wm_class": "firefox"}, 0.0)
+    sw._tick({"wm_class": "firefox"}, 0.6)
+    assert sw._current_profile == "vitoria"
+    assert sw._current_especifico is False
+
+    sw._tick({"wm_class": "zathura"}, 1.0)
+    sw._tick({"wm_class": "zathura"}, 1.6)
+    assert sw._current_profile == "leitura"
+    assert sw._current_especifico is True

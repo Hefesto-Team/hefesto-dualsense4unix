@@ -153,7 +153,7 @@ echo "Copiando regras udev ..."
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
                   assets/76-*.rules assets/77-*.rules assets/78-*.rules \
                   assets/79-*.rules assets/80-*.rules assets/81-*.rules \
-                  assets/82-*.rules assets/83-*.rules; do
+                  assets/82-*.rules assets/83-*.rules assets/84-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 

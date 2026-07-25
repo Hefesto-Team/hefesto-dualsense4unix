@@ -3,9 +3,15 @@
 O co-op precisa de um número DISTINTO por controle. O Hefesto já dá 1..N aos
 DualSense (via o LED próprio deles); aqui ele continua a contagem nos externos
 (o 1º externo = slot N+1) escrevendo o LED de player que o kernel expõe:
-``/sys/class/leds/<inst-hid>:green:player-{1..4}`` (atributo ``brightness``;
-o Nintendo usa VERDE — o DualSense usa branco). Assim o LED físico bate com o
-número da GUI.
+``/sys/class/leds/<inst-hid>:green:player-{1..4}`` MAIS o 5º
+``<inst-hid>:blue:player-5`` (atributo ``brightness``; o Nintendo usa VERDE +
+o azul do 5º — o DualSense usa branco). Assim o LED físico bate com o número
+da GUI.
+
+R-25 (auditoria 25/07): o azul entrou na conta como bit "+5" (ver
+:data:`_BLUE_PLAYER_LED`). Com só os 4 verdes, o slot 7 acendia o MESMO padrão
+do 4 — dois controles idênticos na barra, que é a queixa "nunca sei o que é o
+quê" chegando ao hardware.
 
 SÓ LED, nunca input: o Hefesto não adota esses controles (o input segue pelo
 kernel/Steam). A regra udev ``79-external-controller-leds`` torna esses nós
@@ -33,8 +39,23 @@ LEDS_ROOT: str = os.environ.get(
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT", "/sys/class/leds"
 )
 
-#: Co-op numera 1..4 nos LEDs verdes; o 5º (azul) fica fora do padrão de player.
+#: LEDs VERDES de player expostos pelo hid-nintendo (``:green:player-1..4``).
 _MAX_PLAYER_LEDS = 4
+
+#: R-25 (auditoria 25/07): o 5º LED (AZUL, ``:blue:player-5``) deixou de ser
+#: "sempre apagado" e virou o bit "+5" da numeração.
+#:
+#: Antes, `write_player_number` capava o slot em 4: com 5+ controles na mesa
+#: (2 DualSense + Pro Nintendo + 8BitDo + …) o slot 7 acendia EXATAMENTE o
+#: mesmo padrão do slot 4 e a numeração única (R-24) morria na última
+#: polegada — no LED. O hardware medido nesta máquina (`/sys/class/leds/
+#: 0003:057E:2009.*`) tem os 4 verdes MAIS o azul player-5, então o azul dá
+#: 5 slots a mais de graça: azul aceso = "some 5 aos verdes acesos".
+#:
+#: 1..4 = N verdes à esquerda (padrão Nintendo, INTOCADO — é o que a usuária
+#: já reconhece); 5 = só o azul; 6..9 = azul + 1..4 verdes.
+_BLUE_PLAYER_LED = 5
+_MAX_SLOT_WITH_BLUE = _MAX_PLAYER_LEDS + _BLUE_PLAYER_LED  # 9
 
 
 def hid_instance_for_hidraw(hidraw_dev: str | None) -> str | None:
@@ -69,24 +90,47 @@ def _set_brightness(path: str, value: int) -> bool:
         return False
 
 
+def _blue_node(root: str, hid_instance: str) -> str:
+    """Caminho do ``brightness`` do 5º LED (azul) — o bit "+5" do R-25."""
+    return f"{root}/{hid_instance}:blue:player-{_BLUE_PLAYER_LED}/brightness"
+
+
 def write_player_number(
     hid_instance: str, number: int, leds_root: str | None = None
 ) -> bool:
-    """Acende os LEDs verdes 1..``number`` do controle, apaga os demais.
+    """Acende o padrão DISTINGUÍVEL do slot ``number`` na barra de player.
 
-    ``number`` capado em [1, 4] (padrão de player estilo Nintendo: N LEDs à
-    esquerda). O 5º (azul) é apagado. Devolve True se escreveu em ao menos um
-    nó — False quando nenhum nó existe/é gravável (sem a regra udev, sem
-    regressão). Nunca levanta.
+    R-25: 1..4 = N verdes à esquerda (padrão Nintendo, intocado); 5 = só o
+    azul ``player-5``; 6..9 = azul + (número menos 5) verdes. Dois slots
+    diferentes NUNCA acendem o mesmo padrão — era o buraco do capping em 4
+    (slot 7 idêntico ao 4), a última polegada em que a numeração única (R-24)
+    se perdia.
+
+    Hardware SEM o nó azul (firmware clone, modo sem a 5ª lâmpada) não tem
+    como exibir 5+: cai no capping histórico em 4 e loga — é limite FÍSICO,
+    não decisão nossa, e degradar é melhor que apagar a barra inteira (que é
+    o que "5 = só o azul" faria num controle sem azul).
+
+    Devolve True se escreveu em ao menos um nó — False quando nenhum nó
+    existe/é gravável (sem a regra udev, sem regressão). Nunca levanta.
     """
     root = leds_root if leds_root is not None else LEDS_ROOT
-    n = max(1, min(_MAX_PLAYER_LEDS, int(number)))
+    azul_path = _blue_node(root, hid_instance)
+    tem_azul = os.path.exists(azul_path)
+    n = max(1, min(_MAX_SLOT_WITH_BLUE, int(number)))
+    if n > _MAX_PLAYER_LEDS and not tem_azul:
+        logger.debug(
+            "external_led_sem_azul_capa_em_4", inst=hid_instance, slot=n
+        )
+        n = _MAX_PLAYER_LEDS
+    azul = n > _MAX_PLAYER_LEDS
+    verdes = n - _BLUE_PLAYER_LED if azul else n
     escreveu = False
     for i in range(1, _MAX_PLAYER_LEDS + 1):
         alvo = f"{root}/{hid_instance}:green:player-{i}/brightness"
-        escreveu = _set_brightness(alvo, 1 if i <= n else 0) or escreveu
-    # co-op usa 1..4; garante o 5º (azul) apagado se existir.
-    _set_brightness(f"{root}/{hid_instance}:blue:player-5/brightness", 0)
+        escreveu = _set_brightness(alvo, 1 if i <= verdes else 0) or escreveu
+    # Slot ≤4 apaga o azul (é o "sem bit +5"); slot ≥5 o acende.
+    escreveu = _set_brightness(azul_path, 1 if azul else 0) or escreveu
     return escreveu
 
 
@@ -151,19 +195,29 @@ def enable_imu(hidraw_dev: str | None, *, packet_num: int = 0) -> bool:
 def read_player_pattern(
     hid_instance: str, leds_root: str | None = None
 ) -> int | None:
-    """Lê o padrão de player ACESO na barra verde do externo (PURA, NUMA-03).
+    """Lê o padrão de player ACESO na barra do externo (PURA, NUMA-03).
 
-    Espelho de leitura de :func:`write_player_number`: lê o ``brightness``
-    dos nós ``<inst>:green:player-1..4`` e decodifica o padrão. Retorno:
+    Espelho de leitura de :func:`write_player_number` — e tem de acompanhá-la
+    bit a bit (R-25): se o writer passa a usar o azul como "+5" e o reader
+    continua só nos verdes, todo controle em slot ≥5 é lido como um número
+    diferente do que está escrito, o tick o declara "escritor estrangeiro" e
+    repinta o mesmo LED de 2 em 2 segundos para sempre — exatamente o
+    bombardeio de subcomando que o EXT-04 existe para não repetir.
 
-    - ``1..4`` — padrão canônico (LEDs 1..n acesos em prefixo, resto apagado),
-      o que o próprio daemon escreve;
-    - ``0`` — todos apagados (kernel default ou apagão de terceiro);
-    - ``-1`` — padrão NÃO-canônico (buracos — assinatura de escritor
-      estrangeiro, ex.: o "player 1+3" que a Steam pinta);
-    - ``None`` — algum nó ausente/ilegível (device sumiu, modo DS4 sem barra
-      verde) — o chamador trata como "sem leitura" (skip, comportamento de
-      hoje), NUNCA como padrão apagado.
+    Retorno:
+
+    - ``1..9`` — padrão canônico (verdes 1..n em prefixo + azul = +5), o que
+      o próprio daemon escreve;
+    - ``0`` — tudo apagado (kernel default ou apagão de terceiro);
+    - ``-1`` — padrão NÃO-canônico (buracos nos verdes — assinatura de
+      escritor estrangeiro, ex.: o "player 1+3" que a Steam pinta);
+    - ``None`` — algum nó VERDE ausente/ilegível (device sumiu, modo DS4 sem
+      barra verde) — o chamador trata como "sem leitura" (skip, comportamento
+      de hoje), NUNCA como padrão apagado.
+
+    O nó AZUL é opcional na leitura (ausente/ilegível = apagado): controle sem
+    a 5ª lâmpada é o mesmo hardware em que o writer capa em 4, então ler
+    "sem +5" ali é a verdade, não um chute.
 
     Leitura de classe LED é memória do kernel: ZERO subcomando BT (EXT-04 —
     o inventário segue 100% puro; foi subcomando em excesso que matou o
@@ -181,7 +235,13 @@ def read_player_pattern(
     acesos = bits.count(True)
     if bits != [i < acesos for i in range(_MAX_PLAYER_LEDS)]:
         return -1  # buracos: alguém escreveu um padrão que não é nosso
-    return acesos
+    azul = False
+    try:
+        with open(_blue_node(root, hid_instance), encoding="ascii") as fh:
+            azul = int(fh.read().strip() or "0") > 0
+    except (OSError, ValueError):
+        azul = False
+    return acesos + _BLUE_PLAYER_LED if azul else acesos
 
 
 def _hid_device_dir(hidraw_dev: str | None) -> str | None:

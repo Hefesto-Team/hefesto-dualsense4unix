@@ -8,6 +8,7 @@ aceite do sprint doc exige testá-la verbatim.
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -553,3 +554,320 @@ def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
         {"vdf": str(vdf), "appid": "", "reason": "sandbox"}
     ]
     assert vdf.read_text(encoding="utf-8") == original
+
+
+# ---------------------------------------------------------------------------
+# HONESTIDADE-STEAM-01: o CORPO de stop_steam + a janela with_steam_closed
+# ---------------------------------------------------------------------------
+# Débito coberto aqui: `stop_steam` só aparecia em teste MOCKADO INTEIRO
+# (`monkeypatch.setattr(slo, "stop_steam", lambda: ...)`), então o corpo real —
+# loop `range(15)` de `sleep(2)`, fallback `pkill -TERM`/`-KILL`, `return not
+# steam_running()` — nunca rodava. E é justamente esse corpo que MATA processo
+# da usuária: ele precisa de rede de segurança antes de a GUI passar a
+# chamá-lo. Relógio e subprocess falsos: nenhum processo real é tocado, e a
+# suíte não paga os 30 s do loop.
+
+
+class _RelogioFalso:
+    """`time` falso: `sleep` não dorme, só registra quanto FOI pedido."""
+
+    def __init__(self) -> None:
+        self.dormido: list[float] = []
+
+    def sleep(self, segundos: float) -> None:
+        self.dormido.append(segundos)
+
+    def time(self) -> float:
+        return 1000.0 + sum(self.dormido)
+
+
+class _SubprocessFalso:
+    """`subprocess` falso: registra Popen/run e nunca executa nada."""
+
+    SubprocessError = Exception
+    DEVNULL = -3  # mesmo sentinela do stdlib; só é repassado adiante
+
+    def __init__(self) -> None:
+        self.popen: list[list[str]] = []
+        self.run_args: list[list[str]] = []
+
+    def Popen(self, args, **_kwargs):  # noqa: N802 - espelha a API do stdlib
+        self.popen.append(list(args))
+        return None
+
+    def run(self, args, **_kwargs):
+        self.run_args.append(list(args))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+
+def _prepara_stop_steam(monkeypatch, *, vivo_por: int, com_steam_no_path=True):
+    """Instala os dublês e devolve (relogio, subproc, contador de checagens).
+
+    `vivo_por` = quantas consultas a `steam_running()` ainda devolvem True
+    antes de a Steam "sair" (a primeira consulta é a do gate de entrada).
+    """
+    relogio = _RelogioFalso()
+    subproc = _SubprocessFalso()
+    estado = {"restantes": vivo_por, "consultas": 0}
+
+    def _steam_running() -> bool:
+        estado["consultas"] += 1
+        if estado["restantes"] > 0:
+            estado["restantes"] -= 1
+            return True
+        return False
+
+    monkeypatch.setattr(slo, "time", relogio)
+    monkeypatch.setattr(slo, "subprocess", subproc)
+    monkeypatch.setattr(slo, "steam_running", _steam_running)
+    monkeypatch.setattr(
+        slo,
+        "shutil",
+        SimpleNamespace(
+            which=lambda _n: "/usr/bin/steam" if com_steam_no_path else None
+        ),
+    )
+    return relogio, subproc, estado
+
+
+def test_stop_steam_sem_steam_viva_e_no_op(monkeypatch):
+    relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=0)
+    assert slo.stop_steam() is True
+    assert subproc.popen == []
+    assert subproc.run_args == []
+    assert relogio.dormido == []  # nem o `sleep(2)` de margem
+
+
+def test_stop_steam_usa_shutdown_e_nao_escala_para_pkill(monkeypatch):
+    """Caminho feliz: `steam -shutdown` resolve, o pkill NUNCA é cogitado."""
+    relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=1)
+
+    assert slo.stop_steam() is True
+
+    assert subproc.popen == [["steam", "-shutdown"]]
+    assert subproc.run_args == []  # zero pkill
+    # 1 volta do loop (2 s) + a margem de 2 s para a Steam gravar o vdf.
+    assert relogio.dormido == [2, 2]
+
+
+def test_stop_steam_escala_para_pkill_term_depois_kill(monkeypatch):
+    """A Steam resiste às 15 voltas: TERM primeiro, KILL depois — e o
+    webhelper SEMPRE por nome exato (-x), nunca -f (o falso-positivo do
+    earlyoom, que o pkill mataria)."""
+    relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=100)
+
+    assert slo.stop_steam() is False  # honesto: não fechou
+
+    assert subproc.popen == [["steam", "-shutdown"]]
+    assinaturas = [" ".join(a) for a in subproc.run_args]
+    assert "pkill -TERM -f steamrt64/steam" in assinaturas
+    assert "pkill -TERM -x steamwebhelper" in assinaturas
+    assert "pkill -KILL -f steamrt64/steam" in assinaturas
+    assert "pkill -KILL -x steamwebhelper" in assinaturas
+    assert not any("-f steamwebhelper" in a for a in assinaturas)
+    # 15 voltas de 2 s + 2 escalações de 3 s + margem final de 2 s.
+    assert relogio.dormido == [2] * 15 + [3, 3, 2]
+
+
+def test_stop_steam_para_no_term_quando_ele_resolve(monkeypatch):
+    _, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=17)
+
+    assert slo.stop_steam() is True
+
+    assinaturas = [" ".join(a) for a in subproc.run_args]
+    assert "pkill -TERM -f steamrt64/steam" in assinaturas
+    assert not any("-KILL" in a for a in assinaturas)
+
+
+def test_stop_steam_sem_binario_steam_vai_direto_ao_pkill(monkeypatch):
+    """Steam Flatpak/Snap sem `steam` no PATH: não há shutdown gracioso."""
+    _, subproc, _ = _prepara_stop_steam(
+        monkeypatch, vivo_por=100, com_steam_no_path=False
+    )
+
+    assert slo.stop_steam() is False
+
+    assert subproc.popen == []  # nada de `steam -shutdown`
+    assert subproc.run_args  # o fallback rodou
+
+
+# --- with_steam_closed: a janela consentida que a GUI usa -------------------
+
+
+def test_with_steam_closed_recusa_com_jogo_aberto_antes_de_tudo(monkeypatch):
+    """Ordem inegociável: o gate de JOGO vem ANTES de qualquer decisão sobre a
+    Steam — `steam -shutdown` com jogo aberto MATA o jogo."""
+    chamadas = {"stop": 0, "reopen": 0, "executou": 0}
+    monkeypatch.setattr(slo, "steam_game_running", lambda: True)
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(
+        slo, "stop_steam", lambda: chamadas.__setitem__("stop", chamadas["stop"] + 1)
+    )
+    monkeypatch.setattr(
+        slo,
+        "reopen_steam",
+        lambda: chamadas.__setitem__("reopen", chamadas["reopen"] + 1),
+    )
+
+    status, resultado = slo.with_steam_closed(
+        lambda: chamadas.__setitem__("executou", 1)
+    )
+
+    assert status == slo.STEAM_JANELA_JOGO_ABERTO
+    assert resultado is None
+    assert chamadas == {"stop": 0, "reopen": 0, "executou": 0}
+
+
+def test_with_steam_closed_steam_ja_fechada_nao_fecha_nem_reabre(monkeypatch):
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_running", lambda: False)
+    monkeypatch.setattr(slo, "stop_steam", lambda: pytest.fail("não devia fechar"))
+    monkeypatch.setattr(slo, "reopen_steam", lambda: pytest.fail("não devia reabrir"))
+
+    status, resultado = slo.with_steam_closed(lambda: "feito")
+
+    assert (status, resultado) == (slo.STEAM_JANELA_OK, "feito")
+
+
+def test_with_steam_closed_fecha_roda_e_reabre(monkeypatch):
+    ordem: list[str] = []
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(
+        slo, "stop_steam", lambda: (ordem.append("stop"), True)[1]
+    )
+    monkeypatch.setattr(slo, "reopen_steam", lambda: ordem.append("reopen"))
+
+    status, resultado = slo.with_steam_closed(
+        lambda: (ordem.append("executou"), 42)[1]
+    )
+
+    assert (status, resultado) == (slo.STEAM_JANELA_OK, 42)
+    assert ordem == ["stop", "executou", "reopen"]
+
+
+def test_with_steam_closed_steam_teimosa_nao_edita_nada(monkeypatch):
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(slo, "stop_steam", lambda: False)
+    monkeypatch.setattr(slo, "reopen_steam", lambda: pytest.fail("não reabre o que não fechou"))
+
+    status, resultado = slo.with_steam_closed(lambda: pytest.fail("não devia rodar"))
+
+    assert status == slo.STEAM_JANELA_NAO_FECHOU
+    assert resultado is None
+
+
+def test_with_steam_closed_reabre_mesmo_com_excecao_na_acao(monkeypatch):
+    """A usuária não pode ficar SEM Steam porque a nossa ação estourou."""
+    ordem: list[str] = []
+    monkeypatch.setattr(slo, "steam_game_running", lambda: False)
+    monkeypatch.setattr(slo, "steam_running", lambda: True)
+    monkeypatch.setattr(slo, "stop_steam", lambda: True)
+    monkeypatch.setattr(slo, "reopen_steam", lambda: ordem.append("reopen"))
+
+    def _explode():
+        raise OSError("disco sumiu")
+
+    with pytest.raises(OSError):
+        slo.with_steam_closed(_explode)
+
+    assert ordem == ["reopen"]
+
+
+# ---------------------------------------------------------------------------
+# STEAM-INPUT-ALLOWLIST-01: a allowlist ganhou um ESCRITOR
+# ---------------------------------------------------------------------------
+# O arquivo era lido por três lados (guard em bash, storm_doctor, launch_env) e
+# escrito por NINGUÉM — editar `~/.config/.../steam_input_apps.txt` na mão era a
+# única via, ou seja, a usuária final nunca a tinha. O botão "Este jogo não
+# funciona" escreve aqui; estas travas cobrem as três armadilhas do formato.
+
+
+def test_allowlist_path_respeita_xdg(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    assert slo.steam_input_allowlist_path() == (
+        tmp_path / "hefesto-dualsense4unix" / "steam_input_apps.txt"
+    )
+
+
+def test_allowlist_nasce_com_cabecalho_quando_nao_existe(tmp_path):
+    alvo = tmp_path / "sub" / "steam_input_apps.txt"
+
+    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
+
+    texto = alvo.read_text(encoding="utf-8")
+    assert texto.startswith("# hefesto-dualsense4unix")
+    assert slo.parse_steam_input_allowlist(texto) == ["2111190"]
+
+
+def test_allowlist_preserva_cabecalho_e_comentarios_existentes(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    original = "# cabeçalho da usuária\n# não me apague\n2111190\n"
+    alvo.write_text(original, encoding="utf-8")
+
+    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "adicionado"
+
+    texto = alvo.read_text(encoding="utf-8")
+    assert texto.startswith(original)  # byte a byte, só append
+    assert slo.parse_steam_input_allowlist(texto) == ["2111190", "620"]
+
+
+def test_allowlist_nao_duplica(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n2111190\n", encoding="utf-8")
+    antes = alvo.read_text(encoding="utf-8")
+
+    assert slo.add_appid_to_steam_input_allowlist("2111190", path=alvo) == "ja_estava"
+
+    assert alvo.read_text(encoding="utf-8") == antes  # nem reescreve
+
+
+def test_allowlist_appid_apenas_comentado_e_readicionado(tmp_path):
+    """`# 620` é comentário, não presença — a linha morta não pode fazer o
+    botão dizer "já estava" enquanto o guard segue revertendo o jogo."""
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
+
+    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "adicionado"
+
+    assert "620" in slo.parse_steam_input_allowlist(
+        alvo.read_text(encoding="utf-8")
+    )
+
+
+def test_allowlist_sem_quebra_de_linha_final_nao_gruda_appids(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n2111190", encoding="utf-8")  # sem \n final
+
+    slo.add_appid_to_steam_input_allowlist(620, path=alvo)
+
+    assert slo.parse_steam_input_allowlist(
+        alvo.read_text(encoding="utf-8")
+    ) == ["2111190", "620"]
+
+
+@pytest.mark.parametrize("torto", ["", "abc", "12a", None])
+def test_allowlist_recusa_appid_nao_numerico(tmp_path, torto):
+    alvo = tmp_path / "steam_input_apps.txt"
+    assert (
+        slo.add_appid_to_steam_input_allowlist(torto, path=alvo) == "appid_invalido"
+    )
+    assert not alvo.exists()
+
+
+def test_allowlist_erro_de_io_nao_levanta(tmp_path, monkeypatch):
+    """É um clique de botão: falha vira status, nunca traceback."""
+    alvo = tmp_path / "steam_input_apps.txt"
+    monkeypatch.setattr(
+        Path, "read_text", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
+    )
+    assert slo.add_appid_to_steam_input_allowlist(620, path=alvo) == "erro"
+
+
+def test_allowlist_grava_a_nota_como_comentario(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    slo.add_appid_to_steam_input_allowlist(620, path=alvo, nota="marcado pela GUI")
+    texto = alvo.read_text(encoding="utf-8")
+    assert "# marcado pela GUI\n620\n" in texto
+    assert slo.parse_steam_input_allowlist(texto) == ["620"]

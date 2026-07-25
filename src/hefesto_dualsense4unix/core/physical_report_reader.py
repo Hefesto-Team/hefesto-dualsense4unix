@@ -80,10 +80,30 @@ _READ_LEN = 128
 _SELECT_TIMEOUT_S = 0.25
 
 #: Silêncio máximo com o fd aberto antes de declarar o físico mudo e reabrir.
-#: Um DualSense vivo emite SEMPRE (250-765 Hz); 1 s de silêncio = link morto
-#: ou nó obsoleto — larga o fd, desliga o streaming (fail-safe p/ 60 Hz) e
-#: re-resolve o path (o provider aponta o primário ATUAL).
-_SILENCE_REOPEN_S = 1.0
+#: Larga o fd, desliga o streaming (fail-safe p/ 60 Hz) e re-resolve o path
+#: (o provider aponta o primário ATUAL).
+#:
+#: GYRO-BT-SILENCIO-01: o teto é POR TRANSPORTE porque a premissa "um
+#: DualSense vivo emite SEMPRE (250-765 Hz)" só vale NO CABO. Em Bluetooth o
+#: firmware emudece quando o controle está em repouso — o mesmo fato que o
+#: projeto já tinha medido em outro contexto ("firmware BT ocioso emudece",
+#: achado do veneno do launch option). Com 1 s valendo para os dois, um
+#: DualSense parado em BT caía num ciclo eterno a ~1 Hz: silêncio -> larga o
+#: fd -> `set_motion_streaming(False)` -> reabre pelo broker -> streaming
+#: True -> silêncio de novo. Isso queimava um round-trip de SCM_RIGHTS por
+#: segundo, piscava o motion do vpad na mesma cadência e enchia o journal
+#: (~1.600 linhas em 45 min só desse laço).
+#:
+#: No cabo o valor antigo continua: 1 s mudo com 250 Hz nominais É link morto.
+#: Em BT o silêncio não é evidência de nada, então o teto vira só uma rede de
+#: segurança para o nó obsoleto que não deu ENODEV — 30 s custa um reopen a
+#: cada meio minuto no pior caso, contra 30 no arranjo anterior.
+_SILENCE_REOPEN_USB_S = 1.0
+_SILENCE_REOPEN_BT_S = 30.0
+
+#: Bus HID do `HID_ID` no sysfs (`BUS_USB` / `BUS_BLUETOOTH` do kernel).
+_BUS_USB = 0x03
+_BUS_BLUETOOTH = 0x05
 
 #: Backoff de reconexão (mesma curva do `_EvdevReconnectLoop`).
 _BACKOFF_START_S = 0.5
@@ -122,6 +142,40 @@ def _novo_wake_pipe() -> tuple[int, int]:
     os.set_blocking(lado_r, False)
     os.set_blocking(lado_w, False)
     return lado_r, lado_w
+
+
+def silence_budget_for(path: str | None) -> float:
+    """Teto de silêncio (s) do nó `path`, decidido pelo BUS do sysfs.
+
+    GYRO-BT-SILENCIO-01. O bus sai de `/sys/class/hidraw/<nó>/device/uevent`
+    (`HID_ID=000<bus>:<vendor>:<product>`) — o mesmo campo que o resto do
+    projeto já usa para separar cabo de rádio, e um fato do kernel, não uma
+    inferência sobre o conteúdo dos reports. Decidir pelo primeiro report
+    lido não serviria: o caso que interessa é justamente o do controle que
+    NUNCA emitiu.
+
+    Desconhecido cai no teto de BT (o generoso): errar para o lado do cabo
+    devolveria o laço a 1 Hz, enquanto errar para o lado do rádio custa no
+    máximo meio minuto a mais para largar um nó já morto — e o ENODEV do
+    hotplug continua sendo o caminho normal de saída nos dois transportes.
+    """
+    if not path:
+        return _SILENCE_REOPEN_BT_S
+    nome = os.path.basename(path)
+    if not nome.startswith("hidraw"):
+        return _SILENCE_REOPEN_BT_S
+    try:
+        with open(f"/sys/class/hidraw/{nome}/device/uevent", encoding="utf-8") as fh:
+            for linha in fh:
+                if not linha.startswith("HID_ID="):
+                    continue
+                bus = int(linha.split("=", 1)[1].split(":", 1)[0], 16)
+                if bus == _BUS_USB:
+                    return _SILENCE_REOPEN_USB_S
+                return _SILENCE_REOPEN_BT_S
+    except (OSError, ValueError) as exc:
+        logger.debug("motion_reader_bus_indeterminado", path=path, err=str(exc))
+    return _SILENCE_REOPEN_BT_S
 
 
 def extract_motion_window(report: bytes) -> bytes | None:
@@ -370,7 +424,7 @@ class PhysicalReportReader:
             with contextlib.suppress(Exception):
                 self._vpad.set_motion_streaming(True)
             try:
-                self._read_until_lost(fd)
+                self._read_until_lost(fd, silence_budget_for(path))
             finally:
                 self._close_fd("read_lost")
                 # Fail-safe: sem fonte de motion o vpad volta ao ritmo do poll
@@ -388,8 +442,13 @@ class PhysicalReportReader:
             return None
         return path if isinstance(path, str) and path else None
 
-    def _read_until_lost(self, fd: int) -> None:
+    def _read_until_lost(
+        self, fd: int, silencio_max: float = _SILENCE_REOPEN_BT_S
+    ) -> None:
         """Lê reports até o fd morrer (ENODEV), silêncio longo ou sinal de fora.
+
+        `silencio_max` vem do transporte (`silence_budget_for`) — ver
+        GYRO-BT-SILENCIO-01 na constante.
 
         GYRO-FD-01: o select vigia TAMBÉM o self-pipe — `stop()` e
         `request_reopen()` acordam a thread na hora sem nunca fechar o fd
@@ -419,10 +478,13 @@ class PhysicalReportReader:
             if not pronto:
                 silencio += _SELECT_TIMEOUT_S
                 self._flush_pending()
-                if silencio >= _SILENCE_REOPEN_S:
-                    # Um DualSense vivo NUNCA silencia por 1 s — nó obsoleto ou
-                    # link morto. Larga e re-resolve (o provider re-aponta).
-                    logger.info("motion_reader_silencio_reabrindo")
+                if silencio >= silencio_max:
+                    # No cabo isto é nó obsoleto/link morto; em BT é só o teto
+                    # de segurança do controle em repouso. Larga e re-resolve
+                    # (o provider re-aponta).
+                    logger.info(
+                        "motion_reader_silencio_reabrindo", limite_s=silencio_max
+                    )
                     return
                 continue
             silencio = 0.0

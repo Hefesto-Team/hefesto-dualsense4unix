@@ -14,7 +14,9 @@ A cura, em três peças:
 1. :class:`ExternalIdentityRegistry` — slots ESTÁVEIS por ``uniq`` (MAC),
    análogo ao ``ControllerIdentityRegistry`` dos DualSense: menor slot livre
    ACIMA da reserva dos DualSense, slot RESERVADO no disconnect (replug
-   recupera o número), persistência POR BOOT no MESMO ``controllers.json``
+   recupera o número), persistência que ATRAVESSA O BOOT (R-23 — era "por
+   boot", e o reboot renumerando era metade da queixa "nunca sei o que é o
+   quê") no MESMO ``controllers.json``
    (namespace separado ``externals`` — cada registro preserva o namespace do
    outro no read-modify-write, serializado pelo ``CONTROLLERS_FILE_LOCK``
    COMPARTILHADO de ``identity.py`` — NUMA-04, fecha o lost-update entre os
@@ -53,7 +55,11 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hefesto_dualsense4unix.daemon.subsystems.identity import CONTROLLERS_FILE_LOCK
+from hefesto_dualsense4unix.daemon.subsystems.identity import (
+    CONTROLLERS_FILE_LOCK,
+    CONTROLLERS_SCHEMA_VERSION,
+    _read_machine_id,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -96,13 +102,28 @@ IMU_ENABLE_BACKOFF_SEC = 2.0
 
 
 def _read_boot_id() -> str | None:
-    """boot_id do kernel (None se ilegível) — sessão morta se difere no load."""
+    """boot_id do kernel (None se ilegível). R-23: anotação, não mais gate."""
     try:
         with open("/proc/sys/kernel/random/boot_id", encoding="utf-8") as fh:
             value = fh.read().strip()
         return value or None
     except OSError:
         return None
+
+
+def _session_anchor() -> str | None:
+    """Âncora resiliente boot_id → machine-id (R-23) — espelho de ``identity``.
+
+    Os dois registros gravam o MESMO campo ``boot_id`` do MESMO arquivo; se
+    calculassem a âncora por regras diferentes, cada save sobrescreveria o do
+    outro com um valor divergente. Por isso o 2º degrau é literalmente a
+    função do ``identity`` (``_read_machine_id``), não uma cópia.
+    """
+    valor = _read_boot_id()
+    if valor:
+        return valor
+    machine_id = _read_machine_id()
+    return f"machine:{machine_id}" if machine_id else None
 
 
 class ExternalIdentityRegistry:
@@ -263,7 +284,15 @@ class ExternalIdentityRegistry:
     # -- persistência (namespace ``externals`` do controllers.json) -------
 
     def load(self) -> None:
-        """Carrega o namespace ``externals`` — só se do MESMO boot da máquina.
+        """Carrega o namespace ``externals`` — ATRAVESSA o boot (R-23).
+
+        Espelha ponto a ponto o ``ControllerIdentityRegistry.load``: o gate
+        deixou de ser o ``boot_id`` (que renumerava o 8BitDo/Pro a cada
+        reboot, e a cada restart do daemon sem ``/proc``) e passou a ser o
+        :data:`CONTROLLERS_SCHEMA_VERSION`. A simetria é obrigatória — os
+        dois lados dividem um espaço de numeração só (R-24); se um
+        restaurasse e o outro não, o que sobrasse escolheria slots por cima
+        de reservas invisíveis e nasceriam as duplicatas de novo.
 
         NUMA-04: a leitura roda sob ``CONTROLLERS_FILE_LOCK`` (compartilhado
         com ``identity.py``). Cross-check UNILATERAL contra o namespace
@@ -286,10 +315,14 @@ class ExternalIdentityRegistry:
                 except Exception as exc:  # defensivo — load jamais derruba
                     logger.debug("external_identity_load_falhou", err=str(exc))
                     return
-            boot_id = _read_boot_id()
             if not isinstance(data, dict):
                 return
-            if not boot_id or data.get("boot_id") != boot_id:
+            if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
+                logger.info(
+                    "external_arquivo_de_schema_antigo_descartado",
+                    versao_arquivo=data.get("version"),
+                    versao_atual=CONTROLLERS_SCHEMA_VERSION,
+                )
                 return
             externals = data.get("externals")
             if not isinstance(externals, dict):
@@ -352,9 +385,20 @@ class ExternalIdentityRegistry:
                 data: dict[str, Any] = {}
                 with contextlib.suppress(Exception):
                     loaded = json.loads(path.read_text(encoding="utf-8"))
-                    if isinstance(loaded, dict):
+                    # R-23 (espelho do lado DualSense): arquivo de OUTRO
+                    # schema é descartado inteiro, não só o namespace deste
+                    # registro — carregar o `slots` velho e recarimbá-lo com
+                    # a versão nova daria selo de válido a uma numeração que
+                    # o `load` acabou de recusar.
+                    if (
+                        isinstance(loaded, dict)
+                        and loaded.get("version") == CONTROLLERS_SCHEMA_VERSION
+                    ):
                         data = loaded
-                data["boot_id"] = _read_boot_id()
+                # R-23: mesma dupla (versão decide, âncora só anota) do lado
+                # DualSense — os dois escrevem os MESMOS dois campos.
+                data["version"] = CONTROLLERS_SCHEMA_VERSION
+                data["boot_id"] = _session_anchor()
                 data["externals"] = {
                     key: slot
                     for key, slot in self._slots.items()
@@ -555,9 +599,20 @@ class ExternalLedSync:
         jogador de co-op. `player_count()` é leitura de um dict em memória
         (`1 + len(self._players)`), sem I/O — barato para o tick.
 
+        R-24 (auditoria 25/07) — quem garante que este piso não seja 0 no
+        primeiro tick: o `ControllerIdentityRegistry.sync_connected` passou a
+        ATRIBUIR slot a todo DualSense conectado, e o poll loop o chama ANTES
+        de agendar este tick no MESMO ciclo. Antes, a atribuição do lado
+        DualSense era só LAZY (via provider de cor), o registro estava vazio
+        no boot e o piso lido aqui era 0: o Pro Nintendo USB abocanhava o
+        slot 1 e os dois DualSense nasciam 2 e 3 — "não existe Controle 1",
+        medido no `controllers.json` dela. A ordem daquele laço é, portanto,
+        parte do contrato desta função.
+
         NOTA: isto governa atribuições NOVAS. Números já persistidos em
         `controllers.json` só mudam com "Renumerar agora" — a numeração é
-        deliberadamente estável entre replugs (COR-01/D6).
+        deliberadamente estável entre replugs (COR-01/D6) e agora também
+        entre BOOTS (R-23).
         """
         piso = 0
         registry = getattr(self._daemon, "identity_registry", None)

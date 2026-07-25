@@ -1,7 +1,8 @@
 """Auto-switch de perfil conforme janela X11 ativa.
 
-Poll a 2Hz (`poll_interval_sec=0.5`), debounce de 500ms para evitar flicker
-em alt-tab, aplica via ProfileManager.activate quando escolha muda.
+Poll a 2Hz (`poll_interval_sec=0.5`), debounce ASSIMÉTRICO (UX-04): 500ms para
+ENTRAR num perfil específico, `DEFAULT_DEBOUNCE_SAIDA_SEC` para SAIR dele rumo
+a um catch-all. Aplica via ProfileManager.activate quando a escolha muda.
 
 UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese — leitura SEM INFORMAÇÃO
 ("não sei qual janela está em foco") pula o tick inteiro e retém o perfil
@@ -31,6 +32,22 @@ logger = get_logger(__name__)
 
 DEFAULT_POLL_INTERVAL_SEC = 0.5
 DEFAULT_DEBOUNCE_SEC = 0.5
+
+#: UX-04 (auditoria 24/07): debounce ASSIMÉTRICO. ENTRAR num perfil específico
+#: (a regra do jogo que ela abriu) continua custando ~0,5 s — é o que faz o
+#: modo/lightbar/gatilhos valerem desde o começo da partida. SAIR de um perfil
+#: específico rumo a um CATCH-ALL custa isto aqui.
+#:
+#: O porquê está medido: com poll de 0,5 s e debounce de 0,5 s, DOIS ticks
+#: bastavam para trocar de perfil, e a histerese UX-01 só cobre leitura SEM
+#: informação — entre duas janelas CONHECIDAS não havia cooldown nenhum. No
+#: journal de 22-23/07 isso virou `vitoria``Navegação` a cada 18-28 s, com o
+#: controle mudando de cor e de comportamento no meio do jogo ("controles
+#: malucos"). A assimetria é a forma certa: uma pausa de 12 s no jogo (overlay
+#: da Steam, navegador para ver um guia, notificação que rouba o foco) não é
+#: "ela saiu do jogo", e o custo de errar para o lado de ficar é zero — o
+#: perfil só volta ao genérico quando ela REALMENTE ficou fora.
+DEFAULT_DEBOUNCE_SAIDA_SEC = 12.0
 
 #: MISC-08 item 2 (2026-07-18): wm_class da PRÓPRIA GUI/applet do hefesto.
 #: Focar a nossa janela não é evidência de "saiu do jogo" — ao vivo (journal
@@ -62,6 +79,10 @@ class AutoSwitcher:
     window_reader: WindowReader
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC
     debounce_sec: float = DEFAULT_DEBOUNCE_SEC
+    # UX-04: o lado LENTO do debounce assimétrico (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
+    # Só vale para SAIR de um perfil específico rumo a um catch-all; qualquer
+    # outra transição usa `debounce_sec`.
+    debounce_saida_sec: float = DEFAULT_DEBOUNCE_SAIDA_SEC
     # BUG-MOUSE-TRIGGERS-01: opcional para permitir testes legados que
     # instanciam AutoSwitcher sem store. Em produção, o Daemon injeta o
     # store compartilhado para respeitar override de trigger manual.
@@ -88,6 +109,15 @@ class AutoSwitcher:
     # debounce é wall-time: sem o reset, o tempo pulado contaria como
     # estabilidade e um glitch idêntico ao de antes do gap ativaria na hora).
     _info_gap_active: bool = False
+    # UX-04: o perfil CORRENTE é uma regra específica (não catch-all)? É o que
+    # arma o lado lento do debounce assimétrico. Guardado no commit da ativação
+    # porque `_current_profile` é só o NOME — reconsultar o disco a cada tick
+    # para descobrir a especificidade do que já está ativo seria I/O a 2 Hz.
+    _current_especifico: bool = False
+    # FEAT-AUTOSWITCH-LOCK-01: chave (evento, candidato) do último log do
+    # cadeado. Mesmo motivo do `_suppress_log_key` — o cadeado é avaliado a
+    # 2 Hz e ficou LIGADO por 90 min na máquina dela.
+    _cadeado_log_key: tuple[str, str] | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -131,6 +161,11 @@ class AutoSwitcher:
         Estado no StateStore (persistido pelo handler IPC), lido a cada tick —
         ligar/desligar vale na hora. Sem store (testes legados) = nunca travado,
         o comportamento histórico.
+
+        LOCK-CEDE-01 (decisão da mantenedora, 24/07): travado NÃO é mais "não
+        acontece nada". Ver o gate em `_tick` — o cadeado cede para a regra
+        PRÓPRIA do jogo. Este predicado segue respondendo só "o cadeado está
+        ligado?"; a política de quem fura mora no chamador.
         """
         store = self.store
         return store is not None and bool(getattr(store, "autoswitch_locked", False))
@@ -142,12 +177,6 @@ class AutoSwitcher:
         wall-time e o buraco-do-debounce da UX-01 só é testável com `now`
         controlado.
         """
-        # FEAT-AUTOSWITCH-LOCK-01: congelamento explícito da troca de perfil.
-        # Fica ANTES de tudo — nem lê janela, nem mexe no debounge, nem no
-        # candidato. O perfil que estiver ativo (a escolha DELA) simplesmente
-        # fica. Desligar o cadeado retoma a decisão normal no tick seguinte.
-        if self.travado():
-            return
         # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
         # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
         # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,
@@ -183,6 +212,40 @@ class AutoSwitcher:
         profile = self.manager.select_for_window(info)
         candidate = profile.name if profile else None
 
+        # FEAT-AUTOSWITCH-LOCK-01 + LOCK-CEDE-01 (decisão da mantenedora,
+        # 24/07): o cadeado saiu da PRIMEIRA linha do tick para cá, DEPOIS do
+        # select. O motivo é medido: com a flag ligada (mtime 24/07 20:42) o
+        # `return` na entrada matava tudo — inclusive a regra própria do jogo —
+        # e o modo jogo nunca ligava (zero `profile_autoswitch` em 90 min).
+        #
+        # A política nova é a que ela pediu, sem perder o que ela pediu antes:
+        # continua NÃO trocando de perfil por janela comum de desktop (é o
+        # "não troca sozinho"), mas CEDE quando o perfil casado é a regra
+        # ESPECÍFICA do jogo em foco. É a mesma exceção, pelo mesmo predicado
+        # (`perfil_e_regra_de_jogo`), que o override manual já tinha em
+        # `_activate` (F2/R-01): um genérico de desktop nunca fura, a regra do
+        # jogo sempre fura.
+        if self.travado():
+            if not perfil_e_regra_de_jogo(profile, info):
+                self._log_cadeado_uma_vez(
+                    "autoswitch_congelado_pelo_cadeado", candidate, info
+                )
+                # Zera o candidato: enquanto o cadeado segura, o relógio do
+                # debounce não pode acumular "estabilidade". Sem isto, destravar
+                # depois de horas na mesma janela ativaria o perfil no MESMO
+                # tick — a mesma armadilha do buraco-do-debounce da UX-01.
+                self._last_candidate = None
+                # Idem BUG-AUTOSWITCH-LOG-KEY-STUCK-01: o retorno antecipado não
+                # pode deixar a chave de supressão presa.
+                if not self._suppression_active():
+                    self._suppress_log_key = None
+                return
+            self._log_cadeado_uma_vez(
+                "autoswitch_cadeado_cedeu_a_regra_de_jogo", candidate, info
+            )
+        else:
+            self._cadeado_log_key = None
+
         if candidate != self._last_candidate or resumed:
             # `resumed`: primeira leitura útil após um gap reinicia o relógio
             # do debounce — o tempo pulado não conta como estabilidade
@@ -191,7 +254,12 @@ class AutoSwitcher:
             self._last_candidate = candidate
             self._candidate_since = now
 
-        stable = now - self._candidate_since >= self.debounce_sec
+        # UX-04: debounce assimétrico — barato para ENTRAR, caro para SAIR
+        # rumo a um genérico (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
+        limite = self.debounce_sec
+        if self._saida_para_catch_all(profile):
+            limite = max(self.debounce_sec, self.debounce_saida_sec)
+        stable = now - self._candidate_since >= limite
         # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
         # a supressão CESSA, independente de haver ativação. Antes a chave só
         # zerava dentro de `_activate` (que só roda com candidate != current),
@@ -204,6 +272,45 @@ class AutoSwitcher:
             # R-01: o objeto Profile já está aqui — propagá-lo evita que o
             # `_activate` tenha de adivinhar POR QUE o candidato casou.
             self._activate(candidate, info, profile)
+
+    def _saida_para_catch_all(self, profile: Profile | None) -> bool:
+        """True quando a troca é SAÍDA de um perfil específico rumo a um genérico.
+
+        UX-04: é o único caso que paga o debounce lento. Exige as três coisas —
+        há perfil corrente, ele é ESPECÍFICO (casou por regra de verdade) e o
+        candidato é OUTRO perfil, catch-all. Entrar num específico, trocar entre
+        específicos e reentrar no mesmo perfil seguem no debounce curto: só a
+        volta ao genérico é a decisão cara de desfazer no meio da partida.
+
+        `getattr` com default True (= "trate como catch-all") mantém o predicado
+        tolerante a dublês de teste sem inventar atrito: na dúvida, o debounce
+        que vale é o curto de sempre — dúvida não pode virar regressão de UX.
+        """
+        if profile is None or not self._current_especifico:
+            return False
+        if self._current_profile is None or profile.name == self._current_profile:
+            return False
+        return bool(getattr(profile, "e_catch_all", True))
+
+    def _log_cadeado_uma_vez(
+        self, evento: str, candidate: str | None, info: dict[str, Any]
+    ) -> None:
+        """Loga o estado do cadeado 1x por (motivo, candidato).
+
+        FEAT-AUTOSWITCH-LOCK-01: o cadeado é avaliado a 2 Hz e na máquina dela
+        ficou ligado por 90 min — sem dedup seriam ~650 mil linhas. Mesmo padrão
+        (e mesma razão) do `_log_suppressed_once`.
+        """
+        key = (evento, candidate or "")
+        if self._cadeado_log_key == key:
+            return
+        self._cadeado_log_key = key
+        logger.info(
+            evento,
+            candidate=candidate or "",
+            wm_class=info.get("wm_class", ""),
+            current=self._current_profile or "",
+        )
 
     @staticmethod
     def _tick_sem_informacao(info: dict[str, Any]) -> bool:
@@ -339,6 +446,11 @@ class AutoSwitcher:
             logger.warning("autoswitch_activate_failed", name=name, err=str(exc))
             return
         self._current_profile = name
+        # UX-04: carimba a especificidade do que ACABOU de entrar — é o que
+        # decide, na próxima troca, se o debounce de saída se aplica.
+        self._current_especifico = profile is not None and not bool(
+            getattr(profile, "e_catch_all", True)
+        )
         logger.info(
             "profile_autoswitch",
             from_=from_profile,
@@ -372,6 +484,7 @@ class AutoSwitcher:
 
 
 __all__ = [
+    "DEFAULT_DEBOUNCE_SAIDA_SEC",
     "DEFAULT_DEBOUNCE_SEC",
     "DEFAULT_POLL_INTERVAL_SEC",
     "OWN_GUI_WM_CLASSES",

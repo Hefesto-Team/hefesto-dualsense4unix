@@ -480,7 +480,10 @@ class TestOpenFdAnomalias:
 
         def _lixo(conn: socket.socket, _req: dict[str, Any]) -> None:
             packed = struct.pack("i", escrita)
-            conn.sendmsg([b"isto nao e json\n"], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, packed)])
+            lixo = b"isto nao e json\n"  # (noqa-acento: malformado de propósito)
+            conn.sendmsg(
+                [lixo], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, packed)]
+            )
             os.close(escrita)
 
         servidor = _ServidorRoteirizado(sock_path, {"open": _lixo})

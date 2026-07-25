@@ -109,7 +109,10 @@ class TestOpenerNosGatilhosDeReopen:
         # Sem nenhum byte no fd, o limiar de silêncio derruba e reabre — e o
         # reopen TAMBÉM passa pelo opener (o caminho que dava EACCES na v1).
         monkeypatch.setattr(prr, "_SELECT_TIMEOUT_S", 0.05)
-        monkeypatch.setattr(prr, "_SILENCE_REOPEN_S", 0.1)
+        # GYRO-BT-SILENCIO-01: o teto passou a vir do transporte do nó. Aqui o
+        # path é sintético (não existe no sysfs), então o orçamento é fixado
+        # direto — o que este teste cobre é o REOPEN passar pelo opener.
+        monkeypatch.setattr(prr, "silence_budget_for", lambda _path: 0.1)
         opener = _PipeOpener()
         vpad = _FakeVpad()
         reader = PhysicalReportReader(
@@ -336,3 +339,60 @@ class TestGrepProvaPontaAPonta:
             monkeypatch.undo()
             os.close(escrita)
             os.close(lido)
+
+
+class TestOrcamentoDeSilencioPorTransporte:
+    """GYRO-BT-SILENCIO-01 — o teto de silêncio sai do BUS, não de um palpite.
+
+    A premissa antiga ("um DualSense vivo emite SEMPRE") vale no cabo e é
+    falsa em Bluetooth: parado, o firmware emudece. Com um teto único de 1 s
+    isso virava um ciclo eterno largar-fd/reabrir a ~1 Hz, com um round-trip
+    de SCM_RIGHTS e um pisca-pisca de `set_motion_streaming` por segundo.
+    """
+
+    def test_bus_usb_mantem_o_teto_curto(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    ) -> None:
+        no = tmp_path / "hidraw9" / "device"
+        no.mkdir(parents=True)
+        (no / "uevent").write_text(
+            "DRIVER=playstation\nHID_ID=0003:0000054C:00000CE6\n", encoding="utf-8"
+        )
+        real_open = open
+
+        def fake_open(caminho: Any, *a: Any, **kw: Any) -> Any:
+            if str(caminho) == "/sys/class/hidraw/hidraw9/device/uevent":
+                return real_open(no / "uevent", *a, **kw)
+            return real_open(caminho, *a, **kw)
+
+        monkeypatch.setattr("builtins.open", fake_open)
+        assert prr.silence_budget_for("/dev/hidraw9") == prr._SILENCE_REOPEN_USB_S
+
+    def test_bus_bluetooth_ganha_o_teto_generoso(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    ) -> None:
+        no = tmp_path / "hidraw6" / "device"
+        no.mkdir(parents=True)
+        (no / "uevent").write_text(
+            "DRIVER=playstation\nHID_ID=0005:0000054C:00000CE6\n", encoding="utf-8"
+        )
+        real_open = open
+
+        def fake_open(caminho: Any, *a: Any, **kw: Any) -> Any:
+            if str(caminho) == "/sys/class/hidraw/hidraw6/device/uevent":
+                return real_open(no / "uevent", *a, **kw)
+            return real_open(caminho, *a, **kw)
+
+        monkeypatch.setattr("builtins.open", fake_open)
+        assert prr.silence_budget_for("/dev/hidraw6") == prr._SILENCE_REOPEN_BT_S
+
+    def test_no_desconhecido_erra_para_o_lado_do_radio(self) -> None:
+        # Sem sysfs legível o teto é o GENEROSO: errar para o lado do cabo
+        # devolveria o laço a 1 Hz — o bug que esta mudança fecha.
+        assert prr.silence_budget_for(None) == prr._SILENCE_REOPEN_BT_S
+        assert prr.silence_budget_for("") == prr._SILENCE_REOPEN_BT_S
+        assert (
+            prr.silence_budget_for("/dev/hidraw-inexistente-999")
+            == prr._SILENCE_REOPEN_BT_S
+        )
+        assert prr.silence_budget_for("/dev/uhid") == prr._SILENCE_REOPEN_BT_S

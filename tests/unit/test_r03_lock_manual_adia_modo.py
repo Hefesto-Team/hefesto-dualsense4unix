@@ -401,16 +401,55 @@ class TestRelatorio:
         save_profile(_perfil({"kind": "gamepad", "gamepad_flavor": "dualsense"}))
         manager = _manager(daemon, daemon.store)
 
+        # PREMISSA EXPLÍCITA (auditoria 24/07): o lock deste arquivo é o de
+        # GESTO MANUAL da máscara (`_emu_manual_ts`), NÃO o cadeado da troca
+        # automática (`autoswitch_locked`, FEAT-AUTOSWITCH-LOCK-01). São dois
+        # mecanismos com nomes parecidos e políticas opostas, e confundi-los já
+        # custou uma leitura errada desta asserção: aqui a troca de perfil é
+        # deliberadamente COMMITADA (só a seção `mode` é adiada); o cadeado, por
+        # sua vez, impede a troca acontecer — e quem o cobre é
+        # `test_autoswitch_lock.py`. Fixar a premissa no próprio teste evita a
+        # confusão voltar.
+        assert daemon.store.autoswitch_locked is False
+
         relatorio: dict[str, str] = {}
         manager.activate(
             "sackboy_nativo", origin="autoswitch", relatorio=relatorio
         )
 
         # A ativação é COMMITADA (nada de flap a 2 Hz) e o relatório conta o que
-        # ficou pendente — antes disso a seção sumia sem rastro nenhum.
+        # ficou pendente — antes disso a seção sumia sem rastro nenhum. A
+        # variante "não commitar para tentar de novo" segue REJEITADA (rodaria
+        # `_activate` ~60x em 30 s); o retry mora na pendência de `mode`.
         assert daemon.store.active_profile == "sackboy_nativo"
         assert relatorio["mode"] == "adiado_lock_manual"
         assert daemon._mode_pendente is not None
+
+    def test_o_cadeado_e_o_lock_de_gesto_manual_sao_mecanismos_distintos(
+        self,
+        daemon: Daemon,
+        relogio: _Relogio,
+        monkeypatch: pytest.MonkeyPatch,
+        isolated_profiles_dir: Path,
+    ) -> None:
+        """LOCK-CEDE-01: com o CADEADO ligado, quem nem chega ao `activate` é o
+        autoswitch — o `manager.activate` chamado direto (IPC/hotkey/restore)
+        continua valendo como sempre.
+
+        Este teste existe para travar a fronteira: o cadeado mora no
+        `AutoSwitcher._tick`, não no `ProfileManager`. Enfiar o gate aqui
+        quebraria `profile.switch` da GUI, o ciclo por PS+D-pad e o restore de
+        boot — todos gestos DELA, que o cadeado nunca prometeu congelar.
+        """
+        setters = _Setters(daemon)
+        setters.bind(monkeypatch)
+        save_profile(_perfil({"kind": "gamepad", "gamepad_flavor": "dualsense"}))
+        daemon.store.set_autoswitch_locked(True)
+        manager = _manager(daemon, daemon.store)
+
+        manager.activate("sackboy_nativo", origin="manual")
+
+        assert daemon.store.active_profile == "sackboy_nativo"
 
     def test_ativacao_manual_aplica_o_modo_mesmo_com_a_mascara_recem_mexida(
         self,

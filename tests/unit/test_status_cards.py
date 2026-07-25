@@ -102,8 +102,10 @@ class _Builder:
 
     def __init__(self) -> None:
         self._w: dict[str, Any] = {
-            "status_players_slot": Gtk.Box(
-                orientation=Gtk.Orientation.VERTICAL, spacing=12
+            # STATUS-GRID-2COL-01: o slot é um GtkGrid (2 colunas), não mais
+            # um GtkBox vertical — empilhado, 2 controles forçavam rolagem.
+            "status_players_slot": Gtk.Grid(
+                row_spacing=12, column_spacing=12, column_homogeneous=True
             ),
         }
 
@@ -122,7 +124,20 @@ class _Host(StatusActionsMixin):
         return self.builder.get_object("status_players_slot")
 
     def cards(self) -> list[Any]:
-        return list(self.slot.get_children())
+        """Cards na ordem de LEITURA (esq→dir, cima→baixo).
+
+        `Gtk.Grid.get_children()` devolve na ordem INVERSA de inserção, então
+        a posição real (`left-attach`/`top-attach`) é a única ordem confiável
+        — e é a que o usuário enxerga.
+        """
+        grid = self.slot
+        return sorted(
+            grid.get_children(),
+            key=lambda w: (
+                grid.child_get_property(w, "top-attach"),
+                grid.child_get_property(w, "left-attach"),
+            ),
+        )
 
 
 @pytest.fixture()

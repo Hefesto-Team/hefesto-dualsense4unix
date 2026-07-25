@@ -452,9 +452,20 @@ def arm_launch_profile(
     sem risco: o que ele conserta é a MÁSCARA, que o jogo só consulta segundos
     depois, ao enumerar os controles.
 
-    Appid da allowlist do Steam Input NÃO é armado (contradição 11 do plano): a
-    allowlist é opt-in explícito de "o Hefesto sai de cena neste jogo", e impor
-    a máscara de um perfil ali seria contradizer a própria exceção.
+    Appid da allowlist do Steam Input NÃO tem a MÁSCARA armada (contradição 11
+    do plano): a allowlist é opt-in explícito de "o Hefesto sai de cena neste
+    jogo", e impor a máscara de um perfil ali seria contradizer a própria
+    exceção.
+
+    ALLOWLIST-SUPRESSAO-01 (auditoria 24/07): "sair de cena" era largo demais e
+    engolia o que NÃO disputa nada com o jogo. O `return` antecipado da
+    allowlist vinha ANTES de olhar o perfil, então o
+    `suppress_desktop_emulation` — o "modo jogo", que só PARA o mouse/teclado
+    emulados do desktop — nunca era aplicado nesses appids. O que a allowlist
+    existe para evitar é o Hefesto ROUBAR o controle (máscara/grab/vpad); parar
+    de mexer o cursor enquanto ela joga não rouba nada de ninguém. Agora a
+    allowlist pula SÓ a seção `mode`; a supressão do perfil é aplicada
+    normalmente.
     """
     marker = read_last_run_marker(base_dir)
     if marker is None:
@@ -467,9 +478,7 @@ def arm_launch_profile(
         return None
     daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
 
-    if appid in steam_input_appids():
-        logger.info("launch_arm_pulado_allowlist_steam_input", appid=appid)
-        return {"appid": appid, "armado": False, "motivo": "allowlist_steam_input"}
+    na_allowlist = appid in steam_input_appids()
 
     profile = None
     for candidato_appid, candidato in _steam_profiles(daemon):
@@ -477,8 +486,52 @@ def arm_launch_profile(
             profile = candidato
             break
     if profile is None:
-        logger.info("launch_arm_sem_perfil", appid=appid)
-        return {"appid": appid, "armado": False, "motivo": "sem_perfil"}
+        logger.info(
+            "launch_arm_pulado_allowlist_steam_input"
+            if na_allowlist
+            else "launch_arm_sem_perfil",
+            appid=appid,
+        )
+        return {
+            "appid": appid,
+            "armado": False,
+            "motivo": "allowlist_steam_input" if na_allowlist else "sem_perfil",
+        }
+
+    # ALLOWLIST-SUPRESSAO-01: a supressão vem ANTES do desvio da allowlist —
+    # ela vale para os dois caminhos. `origin="launch"` não fura o lock manual
+    # (R-03): se ela alternou o modo jogo na mão nos últimos 30 s, o gesto dela
+    # é mais novo que o perfil e o applier guarda/ignora sozinho.
+    supressao: object | None = None
+    aplicar_supressao = getattr(daemon, "apply_profile_suppression", None)
+    if callable(aplicar_supressao):
+        try:
+            supressao = aplicar_supressao(
+                bool(getattr(profile, "suppress_desktop_emulation", False)),
+                profile=profile,
+                origin="launch",
+            )
+        except Exception as exc:
+            logger.warning(
+                "launch_arm_supressao_falhou",
+                appid=appid,
+                profile=getattr(profile, "name", None),
+                err=str(exc),
+            )
+
+    if na_allowlist:
+        logger.info(
+            "launch_arm_pulado_allowlist_steam_input",
+            appid=appid,
+            profile=getattr(profile, "name", None),
+            supressao=supressao,
+        )
+        return {
+            "appid": appid,
+            "armado": False,
+            "motivo": "allowlist_steam_input",
+            "supressao": supressao,
+        }
 
     mode = getattr(profile, "mode", None)
     if mode is None:

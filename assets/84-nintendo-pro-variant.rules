@@ -1,0 +1,68 @@
+# hefesto-dualsense4unix — quem é quem entre os dois "Pro Controller" do USB.
+# NINTENDO-VARIANT-01 (2026-07-25).
+#
+# O PROBLEMA: o 8BitDo Pro em modo Switch se apresenta com o MESMO
+# `057E:2009` E o MESMO `serial`/`HID_UNIQ` (`000000000001`) do Nintendo Switch
+# Pro Controller genuíno. Colidem em VID, PID, serial, `HID_NAME`
+# ("Nintendo Co., Ltd. Pro Controller") e `MODALIAS`. Para o kernel, para o
+# udev e para o hefesto os dois são literalmente o mesmo device — daí o
+# "nunca sei o que é o quê", e daí "os dois viram um só".
+#
+# O DISCRIMINADOR: `bcdDevice`. Medido nesta máquina, estável, textual e
+# legível ANTES da probe do driver (é descritor USB, não depende de driver
+# nenhum ter dado certo):
+#
+#     bcdDevice=0210  ->  Nintendo Pro GENUÍNO   (endpoint OUT ep_01)
+#     bcdDevice=0200  ->  8BitDo Pro CLONE       (endpoint OUT ep_02)
+#
+# O endpoint OUT também difere, mas não serve de chave: não é um atributo
+# casável direto, é o nome de um filho do device. E o CAMINHO USB (`3-1`,
+# `1-4`) está proibido de propósito — ela troca de porta, e o genuíno já
+# migrou de `3-2` para `1-4` dentro de uma mesma sessão.
+#
+# POR QUE `ATTRS{}` E NÃO `ENV{HID_UNIQ}`: por USB o `HID_UNIQ` é o serial, que
+# COLIDE (a `82-nintendo-pro-nosniff.rules` já sabe da colisão e se vira com a
+# OUI, mas isso só existe no link Bluetooth). `ATTRS{}` sobe a cadeia de pais
+# até o `usb_device`, onde `idVendor`, `idProduct` e `bcdDevice` vivem no MESMO
+# device — requisito do udev para casar vários `ATTRS{}` numa regra só.
+#
+# O QUE ENTREGA:
+#   1. `HEFESTO_CONTROLLER_VARIANT` = `nintendo-pro` | `8bitdo-pro-clone`, no
+#      device USB, no device `hid`, no `hidraw` e no `input`. Sobrevive ao
+#      device NÃO ter driver: hoje a probe do clone morre em `-110` e o device
+#      fica pelado (`modalias power report_descriptor subsystem uevent`), mas a
+#      marca no nível USB/hid continua lá — dá para diagnosticar o estado
+#      QUEBRADO, não só o curado.
+#   2. `/dev/hefesto/nintendo-pro` e `/dev/hefesto/8bitdo-pro-clone`: nomes
+#      estáveis para o hidraw de cada um (`ls -l /dev/hefesto/`). Só aparecem
+#      quando a probe conclui — no clone, isso depende do patch 0003 do DKMS
+#      (`usb_cmd_pad_to_report`), então a AUSÊNCIA do link é ela mesma o sinal
+#      de que a cura ainda não pegou.
+#
+# LIMITE HONESTO: dois clones idênticos plugados juntos colidiriam no symlink
+# (o último a chegar ganha) — são indistinguíveis até no serial. A marca
+# `HEFESTO_CONTROLLER_VARIANT` continua correta nos dois.
+#
+# NÃO MEXE EM INPUT, LED NEM ENERGIA: a `81-hefesto-usb-power.rules` (todo
+# `057e` nunca dorme) e a `79-external-controller-leds.rules` (todo
+# `*057E:*:*:player-*` gravável) devem MESMO pegar os dois controles — o
+# tratamento ali é idêntico para genuíno e clone. Esta regra só nomeia.
+#
+# Reverter: remover este arquivo e `sudo udevadm control --reload`. Nada aqui
+# escreve em atributo de device; só define propriedade e symlink.
+
+# --- device USB (marca mais precoce possível; independe de driver) ---
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", ATTR{idProduct}=="2009", ATTR{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
+ACTION=="add|change", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="057e", ATTR{idProduct}=="2009", ATTR{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"
+
+# --- device HID (existe mesmo com a probe do driver falhando) ---
+ACTION=="add|change", SUBSYSTEM=="hid", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
+ACTION=="add|change", SUBSYSTEM=="hid", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"
+
+# --- hidraw: marca + nome estável em /dev/hefesto/ ---
+ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro", SYMLINK+="hefesto/nintendo-pro"
+ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone", SYMLINK+="hefesto/8bitdo-pro-clone"
+
+# --- input: para quem enumera por evdev/joydev ver a mesma marca ---
+ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0210", ENV{HEFESTO_CONTROLLER_VARIANT}="nintendo-pro"
+ACTION=="add|change", SUBSYSTEM=="input", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="2009", ATTRS{bcdDevice}=="0200", ENV{HEFESTO_CONTROLLER_VARIANT}="8bitdo-pro-clone"

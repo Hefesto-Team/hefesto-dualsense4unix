@@ -159,16 +159,32 @@ def test_nao_falsa_em_llama_cpp(fake_repo: Path) -> None:
     assert result.returncode == 0, result.stdout
 
 
-def test_nao_falsa_em_magnum_opus(fake_repo: Path) -> None:
-    """'opus' está na lista por ser nome de modelo. Casa o termo isolado.
+def test_nao_falsa_no_codec_opus(fake_repo: Path) -> None:
+    """ANONIMATO-FALSO-POSITIVO-OPUS-01: `opus` sozinho NÃO reprova mais.
 
-    Se no futuro houver contexto legítimo tipo 'magnum opus', vai precisar
-    mover pra whitelist de arquivo ou reformular. Este teste documenta
-    o comportamento atual: opus isolado disparar.
+    O "contexto legítimo" que a versão anterior deste teste previa como
+    hipotético chegou: Opus é o codec de áudio da IETF (RFC 6716), e é o que
+    o DualSense usa para o microfone e o fone por Bluetooth. A palavra virou
+    vocabulário obrigatório do projeto — barrá-la reprovava código honesto e
+    empurrava a documentação do protocolo para eufemismo.
+
+    O gate não perdeu alcance: o uso que ele existe para barrar é o de NOME DE
+    MODELO, e esse nunca vem sozinho.
     """
-    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# opus\n")
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# frame do codec Opus: 71 bytes, mono, 48 kHz\n"
+    )
     result = run_check(fake_repo)
-    assert result.returncode == 1  # comportamento esperado atual
+    assert result.returncode == 0, result.stdout
+
+
+def test_ainda_pega_o_modelo_composto(fake_repo: Path) -> None:
+    """A contraparte: liberar o codec não pode abrir a porta para o modelo."""
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# escrito com Claude Opus\n"
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1, result.stdout
 
 
 def test_nao_falsa_em_termos_tecnicos_en(fake_repo: Path) -> None:

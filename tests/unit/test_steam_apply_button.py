@@ -8,8 +8,26 @@ função stubada nos testes (a lane pode ainda não ter aterrissado):
 
 - diálogo de confirmação TEMADO e NÃO-bloqueante ANTES de tocar em qualquer
   arquivo (a ação agora mexe em TODOS os jogos);
-- Steam aberta → instrui e NÃO toca em nada;
 - resposta fora do contrato → recusa honesta, nunca "Pronto".
+
+HONESTIDADE-STEAM-01 (25/07) — POLÍTICA NOVA, e este arquivo era a muralha da
+antiga. Ele congelava, com `slo_fake["chamadas"] == 0` + a string "feche-a",
+que a GUI NUNCA poderia fechar a Steam: com ela aberta, o único desfecho
+possível era mandar a usuária embora. Só que a usuária clica no Hefesto
+JUSTAMENTE com a Steam aberta, e a maquinaria de fechar/reabrir já existia e
+era exercitada pelo `install.sh --migrate --stop-steam`.
+
+A política nova mantém o que era certo e troca o que era parede:
+
+- JOGO da Steam aberto ⇒ RECUSA, sempre (fechar mataria o jogo). Continua
+  proibido tocar em qualquer coisa;
+- só a Steam aberta ⇒ a GUI PERGUNTA ("preciso fechar por ~20 s; pause
+  downloads") e só age com o sim. Sem consentimento, `stop_steam()` (que
+  escala para `pkill -TERM/-KILL` depois de 30 s) nunca roda;
+- Steam fechada ⇒ aplica direto, sem diálogo nenhum.
+
+Os asserts abaixo travam a política NOVA — inclusive a parte que não mudou:
+o zero-toque com jogo aberto e o zero-fechamento sem sim explícito.
 """
 from __future__ import annotations
 
@@ -115,15 +133,32 @@ def slo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     `raising=False` no setattr da função de massa: ela nasce em lane paralela
     e o teste do CONTRATO não pode depender de ela já existir no módulo.
+
+    `parou`/`reabriu` contam o fechamento REAL da Steam — é por eles que os
+    testes provam que nada foi derrubado sem consentimento.
     """
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     caixa: dict[str, Any] = {
         "running": False,
+        "jogo": False,
         "result": {"applied": 2, "skipped": 0, "errors": 0},
         "chamadas": 0,
+        "parou": 0,
+        "reabriu": 0,
     }
     monkeypatch.setattr(slo, "steam_running", lambda: caixa["running"])
+    monkeypatch.setattr(slo, "steam_game_running", lambda: caixa["jogo"])
+
+    def fake_stop() -> bool:
+        caixa["parou"] += 1
+        caixa["running"] = False
+        return True
+
+    monkeypatch.setattr(slo, "stop_steam", fake_stop)
+    monkeypatch.setattr(
+        slo, "reopen_steam", lambda: caixa.__setitem__("reabriu", caixa["reabriu"] + 1)
+    )
 
     def fake_apply() -> Any:
         caixa["chamadas"] += 1
@@ -138,18 +173,122 @@ def slo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return caixa
 
 
+@pytest.fixture()
+def dialogo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """Intercepta o consentimento de fechar a Steam sem subir widget real."""
+    capturado: dict[str, Any] = {}
+
+    def _build(_parent: Any, **kwargs: Any) -> Any:
+        capturado.update(kwargs)
+        capturado["montado"] = capturado.get("montado", 0) + 1
+        return SimpleNamespace(show_all=lambda: None)
+
+    monkeypatch.setattr(
+        daemon_actions, "build_steam_close_consent_dialog", _build
+    )
+    return capturado
+
+
 class TestWorker:
-    def test_steam_aberta_instrui_e_nao_toca(
-        self, sincrono: None, slo_fake: dict[str, Any]
+    def test_jogo_aberto_recusa_e_nao_fecha_a_steam(
+        self,
+        sincrono: None,
+        slo_fake: dict[str, Any],
+        dialogo_fake: dict[str, Any],
     ) -> None:
+        """A recusa que NÃO virou pergunta: com jogo aberto, `steam -shutdown`
+        mataria o jogo (progresso não salvo perdido). Nem aplica, nem fecha,
+        nem sequer pergunta."""
         slo_fake["running"] = True
+        slo_fake["jogo"] = True
         stub = _Stub()
 
         stub._steam_apply_launch_worker()
 
         assert slo_fake["chamadas"] == 0  # NÃO tocou em nada
-        assert any("Steam está aberta" in t for t in stub.toasts)
-        assert any("feche-a" in t for t in stub.toasts)
+        assert slo_fake["parou"] == 0  # NÃO derrubou a Steam
+        assert not dialogo_fake.get("montado")  # nem ofereceu fechar
+        assert any("jogo aberto" in t for t in stub.toasts)
+        assert any("progresso" in t for t in stub.toasts)
+
+    def test_steam_aberta_pergunta_e_nao_fecha_sozinha(
+        self,
+        sincrono: None,
+        slo_fake: dict[str, Any],
+        dialogo_fake: dict[str, Any],
+    ) -> None:
+        """A parede virou pergunta — mas até o sim, nada acontece."""
+        slo_fake["running"] = True
+        stub = _Stub()
+
+        stub._steam_apply_launch_worker()
+
+        assert dialogo_fake.get("montado") == 1
+        assert "20 segundos" in dialogo_fake["titulo"]
+        assert "pause os downloads" in dialogo_fake["corpo"].lower()
+        assert slo_fake["chamadas"] == 0
+        assert slo_fake["parou"] == 0
+
+    @skip_sem_gtk_response
+    def test_cancelar_o_fechamento_nao_muda_nada(
+        self,
+        sincrono: None,
+        slo_fake: dict[str, Any],
+        dialogo_fake: dict[str, Any],
+    ) -> None:
+        from gi.repository import Gtk
+
+        slo_fake["running"] = True
+        stub = _Stub()
+        stub._steam_apply_launch_worker()
+
+        dialogo_fake["on_response"](
+            _FakeDialog(), int(Gtk.ResponseType.CANCEL)
+        )
+
+        assert slo_fake["chamadas"] == 0
+        assert slo_fake["parou"] == 0
+        assert any("Nada foi mudado" in t for t in stub.toasts)
+
+    @skip_sem_gtk_response
+    def test_consentimento_fecha_aplica_e_reabre(
+        self,
+        sincrono: None,
+        slo_fake: dict[str, Any],
+        dialogo_fake: dict[str, Any],
+    ) -> None:
+        from gi.repository import Gtk
+
+        slo_fake["running"] = True
+        stub = _Stub()
+        stub._steam_apply_launch_worker()
+
+        dialogo_fake["on_response"](_FakeDialog(), int(Gtk.ResponseType.OK))
+
+        assert slo_fake["parou"] == 1
+        assert slo_fake["chamadas"] == 1
+        assert slo_fake["reabriu"] == 1
+        assert any("2 jogo(s)" in t for t in stub.toasts)
+
+    def test_steam_que_nao_fecha_nao_edita_nada(
+        self,
+        sincrono: None,
+        slo_fake: dict[str, Any],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """`with_steam_closed` devolvendo 'nao_fechou': recusa honesta, zero
+        edição (editar com a Steam viva é edição perdida)."""
+        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+        monkeypatch.setattr(slo, "stop_steam", lambda: False)
+        slo_fake["running"] = True
+        stub = _Stub()
+
+        stub._steam_apply_launch_fechando()
+
+        assert slo_fake["chamadas"] == 0
+        assert any("não fechou" in t for t in stub.toasts)
+        assert not any("Pronto" in t for t in stub.toasts)
 
     def test_steam_fechada_aplica_e_ecoa_o_contrato(
         self, sincrono: None, slo_fake: dict[str, Any]
@@ -254,7 +393,12 @@ class TestDialogoDeConfirmacaoPorFonte:
         assert 'connect("response"' in compacto  # nunca run() (imkillable)
         assert ".run()" not in src
         assert "preservadas" in src  # promessa do PATH-06 no texto
-        assert "FECHADA" in src  # o pré-requisito da Steam explícito
+        # HONESTIDADE-STEAM-01: o texto dizia "A Steam precisa estar
+        # FECHADA — se estiver aberta, eu aviso e não mexo em nada". O
+        # botão passou a saber fechá-la COM consentimento, então o que o
+        # diálogo tem de prometer agora é a PERMISSÃO, não a parede.
+        assert "permissão" in src
+        assert "20 segundos" in src
 
     def test_worker_importa_lazy_dentro_do_handler(self) -> None:
         src = inspect.getsource(DaemonActionsMixin._steam_apply_launch_worker)
@@ -289,7 +433,8 @@ class TestDialogoGtkReal:
             assert "hefesto-launch" in (dlg.get_property("text") or "")
             corpo = dlg.get_property("secondary-text") or ""
             assert "preservadas" in corpo
-            assert "FECHADA" in corpo
+            assert "permissão" in corpo
+            assert "20 segundos" in corpo
             for response in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK):
                 assert dlg.get_widget_for_response(response) is not None
         finally:

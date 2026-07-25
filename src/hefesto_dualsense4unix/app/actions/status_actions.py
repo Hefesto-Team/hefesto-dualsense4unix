@@ -6,9 +6,12 @@ três estados visuais — `online`, `reconnecting`, `offline`. O polling rápido
 dos widgets de live-state é independente e preserva a fluidez da aba Status.
 
 Redesign STATUS-02 (aba Status vira 1 card por controle):
-  - O Glade da aba tem só o frame "Estado" + um GtkScrolledWindow com o box
+  - O Glade da aba tem só o frame "Estado" + um GtkScrolledWindow com o GRID
     `status_players_slot`; os cards (`ControllerCard`) são montados por
     código, um por controle CONECTADO do bloco `controllers` do state_full.
+    STATUS-GRID-2COL-01: o slot é um GtkGrid de DUAS colunas (era um box
+    vertical). Empilhados, dois controles somavam altura e a aba só cabia
+    com rolagem; lado a lado eles dividem a mesma faixa vertical.
   - Reconstrução de cards SÓ quando o conjunto `(index, uniq)` muda
     (2 ticks com o mesmo conjunto = os MESMOS widgets, sem rebuild); a
     entrada-placeholder offline é filtrada por `connected`
@@ -280,7 +283,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         offline existente da aba (UI-STATUS-OFFLINE-FALLBACK-01).
         """
         slot = self._get("status_players_slot")
-        if slot is None or not hasattr(slot, "pack_start"):
+        if slot is None or not hasattr(slot, "attach"):
             # Builder fake de testes de outras áreas (ou Glade antigo em
             # upgrade parcial): sem slot real, a aba segue sem cards.
             return
@@ -315,7 +318,14 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _rebuild_status_cards(
         self, slot: Any, keys: list[tuple[Any, ...]]
     ) -> None:
-        """Recria os cards — o conjunto de controles mudou."""
+        """Recria os cards — o conjunto de controles mudou.
+
+        STATUS-GRID-2COL-01: os cards vão para um GtkGrid em DUAS colunas, não
+        mais empilhados. Empilhado, cada controle somava a própria altura e
+        dois já estouravam a janela — a aba só respondia com rolagem. Lado a
+        lado, dois controles ocupam a MESMA faixa vertical de um (e quatro
+        viram 2x2, que é o teto real: 4 jogadores no co-op).
+        """
         for child in list(slot.get_children()):
             slot.remove(child)
             child.destroy()
@@ -324,10 +334,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         # 2+ cards → sticks de 90px (compact); card único mantém o layout
         # equivalente ao da aba antiga (sticks 120px).
         compact = len(keys) >= 2
-        for key in keys:
+        colunas = 2 if compact else 1
+        for pos, key in enumerate(keys):
             card = ControllerCard(compact=compact)
             self._status_cards[key] = card
-            slot.pack_start(card, False, False, 0)
+            # `hexpand` + column-homogeneous do Glade: as colunas dividem a
+            # largura em partes iguais em vez de a 1ª tomar tudo e a 2ª ficar
+            # espremida (o card tem conteúdo de largura natural bem diferente
+            # conforme os sensores presentes).
+            card.set_hexpand(True)
+            card.set_valign(Gtk.Align.START)
+            slot.attach(card, pos % colunas, pos // colunas, 1, 1)
             card.show_all()
 
     def _clear_status_cards(self) -> None:

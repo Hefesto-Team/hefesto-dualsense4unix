@@ -13,6 +13,14 @@
 # LED de player do controle — para o LED físico bater com o número da GUI.
 # Só LED, nunca input: o Hefesto não adota esses controles.
 #
+# R-25 (2026-07-25): o 5º LED (AZUL, `:blue:player-5`) NÃO é mais "sempre
+# apagado" — ele virou o bit "+5" da numeração (azul aceso = some 5 aos verdes
+# acesos), o que estende a barra de 4 para 9 números DISTINGUÍVEIS. Com o
+# capping antigo em 4, o slot 7 acendia exatamente o mesmo padrão do slot 4 e
+# dois controles ficavam idênticos na mesa. A regra do azul abaixo, que já
+# existia, passa portanto a ser FUNCIONAL (antes só servia para apagá-lo):
+# sem ela, controles em slot >= 5 caem no capping em 4 e voltam a colidir.
+#
 # Sem esta regra, os nós ficam root:root e o daemon (que roda como usuário,
 # sudo-zero) NÃO consegue escrever — a numeração do LED cai no default do
 # kernel (colisão possível), sem regressão de input. Por isso a regra e a

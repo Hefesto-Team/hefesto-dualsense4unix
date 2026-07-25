@@ -440,6 +440,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/71-uhid.rules \
                    /etc/udev/rules.d/82-nintendo-pro-nosniff.rules \
                    /etc/udev/rules.d/83-hefesto-bond-snapshot.rules \
+                   /etc/udev/rules.d/84-nintendo-pro-variant.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         # hefesto-dualsense-storm.conf NÃO entra nesta lista de propósito — ver
@@ -752,6 +753,12 @@ if [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]]; then
         if [[ -d /sys/module/hid_nintendo/parameters ]]; then
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
             printf '0' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
+            # Clone USB 057E:2009 (patch 0003): estes três são lidos NA PROBE,
+            # então zerar aqui só vale do próximo plug em diante — que é
+            # exatamente o comportamento vanilla que o uninstall promete.
+            printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
+            printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_send_conn_status >/dev/null 2>&1 || true
+            printf '0' | sudo tee /sys/module/hid_nintendo/parameters/usb_probe_degrade >/dev/null 2>&1 || true
             log "params vivos do hid_nintendo devolvidos a 0 (comportamento vanilla até o boot)"
         fi
     else

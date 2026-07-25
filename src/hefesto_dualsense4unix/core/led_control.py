@@ -95,21 +95,39 @@ def player_bitmask(leds: tuple[bool, bool, bool, bool, bool]) -> int:
 #: `daemon.subsystems.coop` até o COR-03; agora vivem aqui (camada core, sem
 #: dependência de daemon) porque a cor automática por controle usa o MESMO
 #: padrão fora do co-op (D7 — "número do controle"). O coop reexporta.
+#:
+#: R-25 (auditoria 25/07): a tabela vai até 8. Antes ela ia até 4 e TODO
+#: índice ≥5 caía no mesmo "acende os 5" — dois controles em slots 5 e 6
+#: exibiam o MESMO padrão, que é exatamente a colisão que a numeração única
+#: (R-24) existe para matar. Os padrões 6..8 são escolhas desta casa, com um
+#: único critério: serem distinguíveis A OLHO dos canônicos 1..5 e entre si
+#: (extremos / três centrais / três à esquerda).
 _PLAYER_LED_PATTERNS: dict[int, tuple[bool, bool, bool, bool, bool]] = {
     1: (False, False, True, False, False),
     2: (False, True, False, True, False),
     3: (True, False, True, False, True),
     4: (True, True, False, True, True),
+    5: (True, True, True, True, True),
+    6: (True, False, False, False, True),
+    7: (False, True, True, True, False),
+    8: (True, True, True, False, False),
 }
+
+#: R-25: padrão de "slot fora da tabela" (≥9). Distinto de TODOS os de cima,
+#: então nunca é confundido com um número real; só colide consigo mesmo, e
+#: para isso a casa precisaria de nove controles ligados ao mesmo tempo.
+_PLAYER_LED_OVERFLOW = (True, False, True, True, False)
 
 
 def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
     """Padrão canônico de player-LED do jogador/controle `index`.
 
-    P5+ não tem padrão oficial no DualSense: acende os 5 LEDs (fallback
-    inequívoco — nunca colide com P1..P4).
+    1..4 são os padrões do PS5. 5..8 são extensões desta casa (R-25) — o
+    espaço de numeração é ÚNICO entre DualSense, externos e co-op (R-24), e
+    um DualSense pode legitimamente cair no slot 5+ quando há externos
+    numerados antes dele. ≥9 cai no padrão de overflow, distinto dos oito.
     """
-    return _PLAYER_LED_PATTERNS.get(index, (True, True, True, True, True))
+    return _PLAYER_LED_PATTERNS.get(index, _PLAYER_LED_OVERFLOW)
 
 
 #: COR-03 — paleta automática de lightbar por controle, estilo PS5 (cores por
@@ -120,19 +138,28 @@ def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
 #: baixo. A cor daqui é a IDENTIDADE (pré-brilho, D8); quem escala pelo
 #: `lightbar_brightness` do perfil é o provider (D11), pelo mesmo caminho do
 #: global (`LedSettings.apply_brightness`).
+#:
+#: R-25: 5..8 seguem o MESMO motivo da tabela de padrões acima — com o espaço
+#: de numeração único (R-24) o slot 5+ é alcançável, e "branco para todo mundo
+#: acima de 4" fazia dois controles ficarem da mesma cor. Amarelo/ciano/laranja
+#: fecham o círculo cromático sem chegar perto do azul-em-brilho-baixo.
 _PLAYER_SLOT_COLORS: dict[int, RGB] = {
     1: (0, 0, 255),  # azul (P1 no PS5)
     2: (255, 0, 0),  # vermelho (P2)
     3: (0, 255, 0),  # verde (P3)
     4: (255, 0, 128),  # rosa (P4)
+    5: (255, 255, 0),  # amarelo
+    6: (0, 255, 255),  # ciano
+    7: (255, 128, 0),  # laranja
+    8: (128, 0, 255),  # roxo
 }
 
 
 def player_slot_color(slot: int) -> RGB:
     """Cor canônica de lightbar do controle `slot` (1=azul, 2=vermelho, 3=verde, 4=rosa).
 
-    Slot 5+ não tem cor oficial no PS5: branco (fallback neutro e distinguível
-    das quatro colunas canônicas).
+    5..8 são extensões desta casa (R-25, ver tabela). Slot ≥9 cai no branco —
+    fallback neutro, distinguível das oito cores acima.
     """
     return _PLAYER_SLOT_COLORS.get(slot, (255, 255, 255))
 

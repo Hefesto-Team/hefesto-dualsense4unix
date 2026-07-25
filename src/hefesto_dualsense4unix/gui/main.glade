@@ -316,10 +316,22 @@
                     <child>
                       <object class="GtkViewport">
                         <property name="shadow-type">none</property>
+                        <!-- STATUS-GRID-2COL-01: GtkGrid, não GtkBox vertical.
+                             Empilhado, cada card somava a própria altura e
+                             dois controles já estouravam a janela — a aba só
+                             respondia com rolagem, justamente o que as
+                             sprints S3/S5 tiraram das outras abas. Em duas
+                             colunas os 2 controles dividem a MESMA faixa
+                             vertical (4 viram 2x2). Grid e não FlowBox: o
+                             FlowBox é quem dropou 3 dos 4 botões do rodapé
+                             com "Negative content width"
+                             (FIX-GUI-COSMIC-REMEDIATION-01) — aqui a
+                             geometria é explícita. -->
                         <child>
-                          <object class="GtkBox" id="status_players_slot">
-                            <property name="orientation">vertical</property>
-                            <property name="spacing">12</property>
+                          <object class="GtkGrid" id="status_players_slot">
+                            <property name="row-spacing">12</property>
+                            <property name="column-spacing">12</property>
+                            <property name="column-homogeneous">True</property>
                           </object>
                         </child>
                       </object>
@@ -1686,6 +1698,61 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="wrap">True</property>
                       </object>
                     </child>
+                    <!-- FEAT-STEAM-SIMPLES-01: os dois botões que a usuária
+                         final usa. Ficam ANTES dos avançados de propósito:
+                         "tem jogos que precisamos ativar entrada steam,
+                         outros que temos que colocar comandos de
+                         inicialização — é uma confusão real". Aqui ela não
+                         escolhe entre os dois mecanismos; ela diz o que quer.
+                         Sem <signal>: os handlers são ligados em código
+                         (daemon_actions._wire_steam_simple_buttons) porque o
+                         app conecta por dict literal em _signal_handlers(). -->
+                    <child>
+                      <object class="GtkLabel" id="steam_simples_label">
+                        <property name="label" translatable="yes">&lt;b&gt;Jogos da Steam&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                        <property name="margin-top">6</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox" id="steam_simples_box">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <child>
+                          <object class="GtkButton" id="btn_steam_ready">
+                            <property name="label" translatable="yes">Deixar tudo pronto</property>
+                            <property name="tooltip-text" translatable="yes">Ajusta de uma vez tudo que costuma brigar com o controle nos jogos da Steam. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos (e abro de novo). Com um jogo aberto, não faço nada.</property>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Deixar tudo pronto</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Prepara todos os jogos da Steam para funcionarem com o controle, sem você precisar escolher como</property>
+                            </object>
+                          </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="btn_steam_game_broken">
+                            <property name="label" translatable="yes">Este jogo não funciona</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue direto pela Steam e o Hefesto sai da frente. Use quando um jogo específico ignora o controle. Não fecha a Steam e dá para desfazer.</property>
+                          <child internal-child="accessible">
+                            <object class="AtkObject">
+                              <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam</property>
+                            </object>
+                          </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="steam_avancado_label">
+                        <property name="label" translatable="yes">&lt;b&gt;Avançado&lt;/b&gt; &lt;span foreground="#8b8fa8"&gt;— só se você quiser controlar cada passo&lt;/span&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                        <property name="margin-top">6</property>
+                      </object>
+                    </child>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">horizontal</property>
@@ -1693,7 +1760,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <child>
                           <object class="GtkButton" id="btn_storm_fix_safe">
                             <property name="label" translatable="yes">Aplicar correções</property>
-                            <property name="tooltip-text" translatable="yes">Não pede senha: desliga o Steam Input (se a Steam não estiver aberta) e ajusta o áudio do controle.</property>
+                            <property name="tooltip-text" translatable="yes">Não pede senha e NUNCA fecha a Steam: ajusta o áudio do controle e, só se a Steam estiver fechada, desliga o Steam Input — com ela aberta eu aviso que adiei, não finjo que apliquei.</property>
                             <signal name="clicked" handler="on_storm_fix_safe"/>
                           </object>
                         </child>
@@ -1707,7 +1774,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <child>
                           <object class="GtkButton" id="btn_steam_apply_launch">
                             <property name="label" translatable="yes">Aplicar aos jogos da Steam</property>
-                            <property name="tooltip-text" translatable="yes">Troca as opções antigas do Hefesto pela linha nova do launcher em todos os jogos que as tinham — sem apagar as suas outras opções. Pede a Steam fechada e faz backup antes.</property>
+                            <property name="tooltip-text" translatable="yes">Troca as opções antigas do Hefesto pela linha nova do launcher em todos os jogos que as tinham — sem apagar as suas outras opções. Se a Steam estiver aberta, eu peço sua permissão antes de fechá-la por uns 20 segundos. Faz backup antes.</property>
                             <signal name="clicked" handler="on_steam_apply_launch"/>
                           </object>
                         </child>
@@ -2074,7 +2141,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_steam_input_disable_button">
                         <property name="label" translatable="yes">Desligar Steam Input</property>
-                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input PSSupport (fecha e reabre a Steam). Evita o conflito com o daemon.</property>
+                        <property name="tooltip-text" translatable="yes">Desliga o Steam Input, que sequestra o controle e briga com o Hefesto. Se a Steam estiver aberta, eu PEÇO sua permissão antes de fechá-la por uns 20 segundos — e abro de novo depois. Com um jogo aberto, não faço nada.</property>
                         <signal name="clicked" handler="on_emulation_steam_input_disable"/>
                       </object>
                     </child>

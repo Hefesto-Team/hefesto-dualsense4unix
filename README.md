@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.1.0 (alfa — primeiro lançamento público)
+Versão: 0.1.1 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT
 ```

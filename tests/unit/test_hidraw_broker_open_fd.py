@@ -76,7 +76,7 @@ def _validator(node: str) -> str | None:
 
 def make_state(tmp_path: Path) -> tuple[BrokerState, FakeOpenOps, str]:
     target = tmp_path / "alvo-do-fd"
-    target.write_bytes(b"conteudo do hidraw fake")
+    target.write_bytes(b"conteudo do hidraw fake")  # (noqa-acento)
     ops = FakeOpenOps(str(target))
     state = BrokerState(
         allowed_uid=UID,

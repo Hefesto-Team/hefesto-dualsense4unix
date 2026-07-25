@@ -63,9 +63,63 @@ class TestWritePlayerNumber:
             "1",
         ]
 
-    def test_capa_acima_de_4(self, tmp_path: Path) -> None:
-        # co-op passa slot GLOBAL (pode ser 5, 6...); o LED de player capa em 4.
+    def test_slot_5_acende_so_o_azul(self, tmp_path: Path) -> None:
+        """R-25: o 5º LED (azul) é o bit "+5" — slot 5 = azul sozinho."""
         _mk_player_nodes(tmp_path, _INST)
+        external_leds.write_player_number(_INST, 5, leds_root=str(tmp_path))
+        assert [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] == [
+            "0",
+            "0",
+            "0",
+            "0",
+        ]
+        assert _read(tmp_path, _INST, "blue", 5) == "1"
+
+    def test_slot_7_nao_pode_ser_igual_ao_4(self, tmp_path: Path) -> None:
+        """R-25 — TROCA DELIBERADA de contrato (`test_capa_acima_de_4`).
+
+        Este caso assertava que o slot 7 acendia EXATAMENTE o mesmo padrão do
+        slot 4 (capping em 4). Com o espaço de numeração único (R-24) o slot
+        7 é alcançável de verdade (2 DualSense + Pro + 8BitDo + …), e dois
+        controles idênticos na barra é a queixa "nunca sei o que é o quê"
+        chegando ao hardware. Agora 7 = azul + 2 verdes.
+        """
+        _mk_player_nodes(tmp_path, _INST)
+        external_leds.write_player_number(_INST, 7, leds_root=str(tmp_path))
+        sete = [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] + [
+            _read(tmp_path, _INST, "blue", 5)
+        ]
+        assert sete == ["1", "1", "0", "0", "1"]
+
+        external_leds.write_player_number(_INST, 4, leds_root=str(tmp_path))
+        quatro = [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] + [
+            _read(tmp_path, _INST, "blue", 5)
+        ]
+        assert quatro != sete
+
+    def test_padroes_de_1_a_9_sao_todos_distintos(self, tmp_path: Path) -> None:
+        """R-25: a barra (4 verdes + azul) codifica 9 números SEM repetir.
+
+        Falha-sem: com o capping em 4, os slots 4..9 escreviam o mesmo padrão
+        — seis controles indistinguíveis.
+        """
+        _mk_player_nodes(tmp_path, _INST)
+        vistos: list[tuple[str, ...]] = []
+        for slot in range(1, 10):
+            external_leds.write_player_number(_INST, slot, leds_root=str(tmp_path))
+            vistos.append(
+                tuple(
+                    [_read(tmp_path, _INST, "green", i) for i in range(1, 5)]
+                    + [_read(tmp_path, _INST, "blue", 5)]
+                )
+            )
+        assert len(set(vistos)) == 9
+
+    def test_sem_o_azul_capa_em_4_por_limite_fisico(self, tmp_path: Path) -> None:
+        """Hardware sem a 5ª lâmpada não tem como exibir 5+: capa em 4 (o
+        histórico), nunca apaga a barra inteira (que é o que "5 = só o azul"
+        faria num controle sem azul)."""
+        _mk_player_nodes(tmp_path, _INST, blue5=False)
         external_leds.write_player_number(_INST, 7, leds_root=str(tmp_path))
         assert [_read(tmp_path, _INST, "green", i) for i in range(1, 5)] == [
             "1",
@@ -84,8 +138,9 @@ class TestWritePlayerNumber:
             "0",
         ]
 
-    def test_apaga_o_5_azul(self, tmp_path: Path) -> None:
-        # o azul (player-5) começa aceso; o co-op 1..4 deve apagá-lo.
+    def test_slot_ate_4_apaga_o_5_azul(self, tmp_path: Path) -> None:
+        # R-25: o azul é o bit "+5" — slot ≤4 tem de apagá-lo, senão o 2 seria
+        # lido como 7 (e o tick repintaria o mesmo LED de 2 em 2 segundos).
         _mk_player_nodes(tmp_path, _INST, blue5=True)
         external_leds.write_player_number(_INST, 2, leds_root=str(tmp_path))
         assert _read(tmp_path, _INST, "blue", 5) == "0"
@@ -107,6 +162,55 @@ class TestWritePlayerNumber:
             "0",
             "0",
         ]
+
+
+class TestReadPlayerPattern:
+    """R-25: o reader tem de decodificar EXATAMENTE o que o writer escreve.
+
+    Se o writer usa o azul como "+5" e o reader ignora o azul, todo controle
+    em slot ≥5 é lido como um número diferente do escrito, o tick o declara
+    "escritor estrangeiro" (NUMA-03) e repinta o MESMO LED a cada 2 s — o
+    bombardeio de subcomando que matou o 8BitDo ao vivo (EXT-04).
+    """
+
+    def _escreve(self, tmp: Path, slot: int) -> None:
+        external_leds.write_player_number(_INST, slot, leds_root=str(tmp))
+
+    def test_ida_e_volta_de_1_a_9(self, tmp_path: Path) -> None:
+        _mk_player_nodes(tmp_path, _INST)
+        for slot in range(1, 10):
+            self._escreve(tmp_path, slot)
+            assert (
+                external_leds.read_player_pattern(_INST, leds_root=str(tmp_path))
+                == slot
+            ), f"slot {slot} não sobreviveu ao round-trip"
+
+    def test_tudo_apagado_e_zero(self, tmp_path: Path) -> None:
+        _mk_player_nodes(tmp_path, _INST)
+        (tmp_path / f"{_INST}:blue:player-5" / "brightness").write_text(
+            "0", encoding="ascii"
+        )
+        assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) == 0
+
+    def test_buraco_nos_verdes_e_estrangeiro(self, tmp_path: Path) -> None:
+        """O 'player 1+3' que a Steam pinta segue sendo -1 (não é padrão nosso)."""
+        _mk_player_nodes(tmp_path, _INST)
+        for i, aceso in enumerate(["1", "0", "1", "0"], start=1):
+            (tmp_path / f"{_INST}:green:player-{i}" / "brightness").write_text(
+                aceso, encoding="ascii"
+            )
+        assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) == -1
+
+    def test_sem_o_azul_le_como_sem_mais_5(self, tmp_path: Path) -> None:
+        """Nó azul ausente = "sem +5" (é o mesmo hardware em que o writer capa
+        em 4) — nunca `None`, que congelaria a defesa de repintura."""
+        _mk_player_nodes(tmp_path, _INST, blue5=False)
+        self._escreve(tmp_path, 3)
+        assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) == 3
+
+    def test_verde_ausente_e_none(self, tmp_path: Path) -> None:
+        """Barra verde inexistente (device sumiu, modo DS4) = sem leitura."""
+        assert external_leds.read_player_pattern(_INST, leds_root=str(tmp_path)) is None
 
 
 class TestHidInstanceForHidraw:

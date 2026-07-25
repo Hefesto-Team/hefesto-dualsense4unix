@@ -405,6 +405,9 @@ WHITELIST_PATTERNS: list[str] = [
     r"^scripts/check_anonymity\.sh$",
     # O teste do validador usa fixtures com texto sem acento propositalmente.
     r"^tests/unit/test_validar_acentuacao\.py$",
+    # Registro histórico: são as mensagens de tag como foram escritas na época.
+    # Reescrevê-las falsificaria o histórico — o arquivo é arquivo, não texto vivo.
+    r"^docs/tags-arquivo-pre-1\.0\.txt$",
     r"\.json$",
     r"\.lock$",
     r"^\.git/.*",
@@ -564,6 +567,62 @@ def _mascara_inline_code_md(linha: str) -> str:
     return _INLINE_CODE_MD.sub(_sub, linha)
 
 
+def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
+    """Em ``.py``, apaga tudo que NÃO é comentário/string antes da varredura.
+
+    BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: o validador cobrava acento de
+    NOMES DE VARIÁVEL. `producao`, `modulo`, `sessao`, `padrao`, `conteudo`,
+    `acao` — em Python identificador não leva acento, então a "correção"
+    pedida ia da má prática ao erro de sintaxe em alguns casos. Resultado: o
+    gate ficou vermelho de forma permanente, com dezenas de apontamentos que
+    ninguém podia atender, e um gate que sempre reprova deixa de ser lido.
+
+    As heurísticas que já existiam (`_esta_em_identificador_snake`,
+    `_is_uppercase_snake_token`) cobriam só parte: pegavam `foo_acao_bar` e
+    `def acao(`, mas não `producao: None`, `for modulo in ...` nem
+    `sessao = ...`. Em vez de empilhar mais casos especiais, a regra passa a
+    ser a que sempre foi a intenção: **acentuação é sobre TEXTO**, e num
+    arquivo Python o texto mora em comentário, docstring e literal de string.
+    O `tokenize` do próprio Python responde isso com exatidão, sem adivinhar.
+
+    Arquivo que não tokeniza (sintaxe inválida, encoding exótico) volta
+    inteiro para a varredura antiga — degradar para o comportamento anterior
+    é preferível a deixar de checar o arquivo.
+    """
+    import io
+    import tokenize
+
+    try:
+        tokens = list(tokenize.generate_tokens(io.StringIO(conteudo).readline))
+    except (tokenize.TokenError, SyntaxError, IndentationError, ValueError):
+        return linhas
+
+    # Começa tudo em branco e devolve só os trechos de texto, preservando as
+    # colunas — as heurísticas seguintes usam os índices da linha original.
+    mascarado = [" " * len(linha) for linha in linhas]
+    for tok in tokens:
+        if tok.type not in (tokenize.COMMENT, tokenize.STRING):
+            continue
+        (lin_ini, col_ini), (lin_fim, col_fim) = tok.start, tok.end
+        for n in range(lin_ini, lin_fim + 1):
+            i = n - 1
+            if not 0 <= i < len(linhas):
+                continue
+            original = linhas[i]
+            inicio = col_ini if n == lin_ini else 0
+            # `fim` importa: numa linha como `assert "x" not in codigo`, a
+            # string ocupa só um pedaço e `codigo` é identificador. Copiar até
+            # o fim da linha traria o código junto de volta.
+            fim = col_fim if n == lin_fim else len(original)
+            fim = min(fim, len(original))
+            mascarado[i] = (
+                mascarado[i][:inicio]
+                + original[inicio:fim]
+                + mascarado[i][fim:]
+            )
+    return mascarado
+
+
 def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     """Retorna lista de (linha, palavra_errada, palavra_correta, texto_da_linha)."""
     try:
@@ -587,6 +646,10 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
     eh_markdown = path.suffix.lower() == ".md"
     if eh_markdown:
         pular_idx = _linhas_markdown_codigo(linhas)
+    # BUG-VALIDAR-ACENTUACAO-IDENTIFICADOR-PY-01: em .py, só comentário e
+    # string são texto — o resto é código e não leva acento.
+    eh_python = path.suffix.lower() == ".py"
+    linhas_texto = _mascara_codigo_python(conteudo, linhas) if eh_python else linhas
 
     violacoes: list[tuple[int, str, str, str]] = []
     for idx, linha in enumerate(linhas):
@@ -594,7 +657,12 @@ def checar_arquivo(path: Path, raiz: Path) -> list[tuple[int, str, str, str]]:
             continue
         if "noqa-acento" in linha or "noqa: acentuacao" in linha:
             continue
-        linha_busca = _mascara_inline_code_md(linha) if eh_markdown else linha
+        if eh_markdown:
+            linha_busca = _mascara_inline_code_md(linha)
+        elif eh_python:
+            linha_busca = linhas_texto[idx]
+        else:
+            linha_busca = linha
         for errada, correta in _CORRECOES.items():
             pat = _PATTERNS[errada]
             for m in pat.finditer(linha_busca):
@@ -671,7 +739,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
         # normalizacao Unicode externa), a linha sai intocada para
         # `novas_linhas`. Custo de falso negativo (palavra sem acento na linha
         # do glyph) e infinitamente menor que o custo da regressao reportada
-        # 3x: arquivos com strip silencioso de "●○◐△□↑↓←→".
+        # 3x: arquivos com strip silencioso de "□↑↓←→".
         if _contem_glyph_protegido(linha):
             novas_linhas.append(linha_com_sep)
             continue
@@ -701,7 +769,7 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
         # BUG-VALIDAR-ACENTUACAO-FIX-GLYPHS-02 camada 1: rejeita qualquer
         # substituição cuja faixa original contém glyph protegido por ADR-011.
         # Aplica em modo --fix estritamente — se um par mal-formado em _PARES
-        # colocasse "●" como "errada", este filtro impede remoção silenciosa.
+        # colocasse "" como "errada", este filtro impede remoção silenciosa.
         if subs:
             filtrados = [
                 (s, e, r) for s, e, r in subs

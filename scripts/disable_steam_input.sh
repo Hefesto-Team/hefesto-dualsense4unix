@@ -35,8 +35,29 @@
 #     --restore     reverte o último backup (.bak.steam-input-<ts>) de cada .vdf.
 #
 # Backups: `<localconfig.vdf>.bak.steam-input-<unix-ts>`. Idempotente.
-# Exit 0 se nada precisava ser feito, 0 se ação aplicada com sucesso,
-# != 0 em erro (sed/cp falham, Steam não fechou, etc.).
+#
+# HONESTIDADE-STEAM-01 (25/07) — contrato de SAÍDA legível por máquina.
+# O bug curado: a GUI mostrava "desligando Steam Input (fecha e reabre a
+# Steam)…", rodava `--apply-quiet` (que por contrato NUNCA fecha a Steam: se
+# ela está viva, ADIA e sai 0) e em seguida anunciava "Steam Input desligado"
+# incondicionalmente — afirmava sucesso sobre um no-op. Agora toda execução
+# que mexe (ou que decide NÃO mexer) termina numa linha canônica
+#
+#     [steam-input] resultado=<tag>
+#
+# com tag em: nada-a-fazer | aplicado | adiado-steam-aberta |
+#             recusado-jogo-aberto | steam-nao-fechou | erro |
+#             restaurado | precisa-corrigir
+#
+# Exit codes:
+#     0  nada a fazer, ação aplicada com sucesso, OU adiado no --apply-quiet
+#        (o "adiado" sai 0 DE PROPÓSITO: o guard do systemd
+#        hefesto-steam-input-guard.service é Type=oneshot e trataria != 0 como
+#        unit FAILED — e adiar com a Steam viva é o caminho NORMAL dele. Quem
+#        precisa distinguir "adiado" de "aplicado" lê a tag `resultado=`.)
+#     1  erro (sed/cp/awk falharam num .vdf)
+#     4  recusado: há um JOGO da Steam aberto (fechar a Steam o MATARIA)
+#     5  a Steam não fechou — nada foi editado (edição com ela viva é perdida)
 
 set -uo pipefail   # sem -e: cada usuário tem o seu vdf, falha de um não derruba os outros.
 
@@ -48,7 +69,10 @@ for arg in "$@"; do
         --status)      MODE="status" ;;
         --restore)     MODE="restore" ;;
         -h|--help)
-            sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            # HONESTIDADE-STEAM-01: o range acompanha o cabeçalho (que cresceu
+            # com o contrato `resultado=`/exit codes) — help truncado no meio
+            # da tabela de códigos seria mais uma mentira pequena.
+            sed -n '2,60p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
         *) printf '[steam-input] aviso: argumento desconhecido: %s\n' "$arg" ;;
@@ -56,6 +80,12 @@ for arg in "$@"; do
 done
 
 log() { printf '[steam-input] %s\n' "$*"; }
+
+# HONESTIDADE-STEAM-01: ÚLTIMA linha de toda execução que muda (ou recusa
+# mudar) o estado. É o único jeito de um chamador distinguir "apliquei" de
+# "adiei sem tocar em nada" quando os dois saem 0 — a ambiguidade que fazia a
+# GUI cantar vitória sobre um no-op. Sempre a última linha, sempre uma só.
+resultado() { printf '[steam-input] resultado=%s\n' "$1"; }
 
 # Globs de localconfig.vdf cobrindo formatos comuns de Steam no Linux.
 # Bash globbing: matches que não existem são removidos via nullglob.
@@ -81,6 +111,7 @@ shopt -u nullglob
 
 if [[ "${#VDFS[@]}" -eq 0 ]]; then
     log "nenhum localconfig.vdf encontrado — Steam pode não estar instalada ou nunca foi logada"
+    resultado "nada-a-fazer"
     exit 0
 fi
 
@@ -119,6 +150,21 @@ report_state() {
 # aparece em listas de nomes-a-evitar.
 steam_running() {
     pgrep -af 'steamrt64/steam' >/dev/null 2>&1 || pgrep -x steamwebhelper >/dev/null 2>&1
+}
+
+# HONESTIDADE-STEAM-01: espelho EXATO de
+# integrations/steam_launch_options.steam_game_running(). O `--apply` fechava a
+# Steam sem nunca perguntar se havia um JOGO aberto — e `steam -shutdown` com
+# jogo aberto MATA o jogo (progresso não salvo perdido; é o mesmo risco que o
+# DEDUP-05 já tratava do lado Python, e que a GUI passa a checar antes de
+# clicar). O gate mora AQUI também porque install.sh/purge.sh chamam `--apply`
+# direto: a recusa não pode depender de quem chama lembrar de checar.
+#
+# O `pgrep -f` é seguro aqui: a string `SteamLaunch AppId=` só aparece em
+# cmdline de launch REAL da Steam. O falso-positivo histórico
+# (BUG-STEAM-DETECT-EARLYOOM-FALSE-POSITIVE-01) era com NOMES de processo.
+steam_game_running() {
+    pgrep -f 'SteamLaunch AppId=' >/dev/null 2>&1
 }
 
 stop_steam() {
@@ -322,28 +368,50 @@ case "${MODE}" in
         done
         if [[ "${any_needs}" -eq 1 ]]; then
             log "ação sugerida: scripts/disable_steam_input.sh --apply"
+            resultado "precisa-corrigir"
         else
             if [[ "${any_allow}" -eq 1 ]]; then
                 log "nota: Steam Input per-app ATIVO só em apps da allowlist (deliberado — ex.: MMJ)"
             fi
             log "tudo limpo — PSSupport/SwitchSupport não estão em modo 1|2 em nenhum arquivo (fora da allowlist)"
+            resultado "nada-a-fazer"
         fi
         ;;
     restore)
+        # HONESTIDADE-STEAM-01: o restore também fecha a Steam — logo também
+        # precisa do gate de JOGO aberto (antes ele derrubaria o jogo junto).
+        if steam_game_running; then
+            log "RECUSADO: há um JOGO da Steam em execução — fechar a Steam agora o MATARIA"
+            resultado "recusado-jogo-aberto"
+            exit 4
+        fi
         log "revertendo do backup mais recente em cada arquivo"
         was_running=0
         steam_running && was_running=1
         if [[ "${was_running}" -eq 1 ]]; then
-            stop_steam || exit 1
+            if ! stop_steam; then
+                resultado "steam-nao-fechou"
+                exit 5
+            fi
         fi
         rc=0
         for vdf in "${VDFS[@]}"; do
             restore_vdf "$vdf" || rc=1
         done
         [[ "${was_running}" -eq 1 ]] && reopen_steam
+        if [[ "${rc}" -eq 0 ]]; then resultado "restaurado"; else resultado "erro"; fi
         exit "${rc}"
         ;;
     apply)
+        # HONESTIDADE-STEAM-01: gate de JOGO aberto ANTES de qualquer decisão
+        # sobre a Steam (mesma ordem do steam_launch_options.main). Sem ele o
+        # `--apply` do install/purge/GUI mataria um jogo em andamento.
+        if steam_game_running; then
+            log "RECUSADO: há um JOGO da Steam em execução — fechar a Steam agora o MATARIA"
+            log "  feche o jogo e rode de novo (nada foi tocado)"
+            resultado "recusado-jogo-aberto"
+            exit 4
+        fi
         # Pré-flight: alguém precisa fix? Se ninguém, evita fechar Steam à toa.
         any_needs=0
         for vdf in "${VDFS[@]}"; do
@@ -351,24 +419,32 @@ case "${MODE}" in
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
+            resultado "nada-a-fazer"
             exit 0
         fi
         was_running=0
         steam_running && was_running=1
         if [[ "${was_running}" -eq 1 ]]; then
-            stop_steam || exit 1
+            if ! stop_steam; then
+                resultado "steam-nao-fechou"
+                exit 5
+            fi
         fi
         rc=0
         for vdf in "${VDFS[@]}"; do
             apply_vdf "$vdf" || rc=1
         done
         [[ "${was_running}" -eq 1 ]] && reopen_steam
+        if [[ "${rc}" -eq 0 ]]; then resultado "aplicado"; else resultado "erro"; fi
         exit "${rc}"
         ;;
     apply-quiet)
         # Nunca fecha a Steam. Se ela está viva, adia (a reescrita pega quando sair).
         if steam_running; then
             log "Steam rodando — adiado (não vou fechar; reaplico quando a Steam sair)"
+            # Sai 0 (contrato do guard oneshot) mas DIZ que adiou: é esta tag
+            # que impede a GUI de anunciar "Steam Input desligado" sobre um no-op.
+            resultado "adiado-steam-aberta"
             exit 0
         fi
         any_needs=0
@@ -377,6 +453,7 @@ case "${MODE}" in
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
+            resultado "nada-a-fazer"
             exit 0
         fi
         rc=0
@@ -384,6 +461,7 @@ case "${MODE}" in
             apply_vdf "$vdf" || rc=1
         done
         # Steam não estava rodando — nada a reabrir.
+        if [[ "${rc}" -eq 0 ]]; then resultado "aplicado"; else resultado "erro"; fi
         exit "${rc}"
         ;;
 esac

@@ -174,7 +174,19 @@ def test_identidade_sem_mac_e_volatil_nunca_persistida(tmp_path: Path) -> None:
 # --- persistência: namespace `externals` no MESMO controllers.json -----------
 
 
-def test_persistencia_por_boot_e_restauracao(tmp_path: Path) -> None:
+def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
+    tmp_path: Path,
+) -> None:
+    """R-23 (25/07): o número do externo sobrevive ao REBOOT.
+
+    TROCA DELIBERADA de contrato: este caso era
+    `test_persistencia_por_boot_e_restauracao` e assertava que um arquivo com
+    `boot_id` diferente devolvia `peek() is None` (sessão morta). Simetria
+    obrigatória com o lado DualSense — os dois dividem UM espaço de numeração
+    (R-24); se um restaurasse e o outro não, o que sobrasse escolheria slots
+    por cima de reservas invisíveis e as duplicatas voltariam. Quem renumera
+    agora é o SCHEMA.
+    """
     r = ExternalIdentityRegistry()
     r.slot_for(MAC_A, reserve=2)
     r.sync_connected([MAC_A])
@@ -183,13 +195,82 @@ def test_persistencia_por_boot_e_restauracao(tmp_path: Path) -> None:
     novo.load()
     assert novo.peek(MAC_A) == 3, "restart do daemon preserva o número"
 
-    # Arquivo de OUTRO boot é sessão morta.
+    # Reboot da máquina (âncora diferente): o número CONTINUA sendo do MAC.
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     data["boot_id"] = "boot-antigo"
+    _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
+    outro_boot = ExternalIdentityRegistry()
+    outro_boot.load()
+    assert outro_boot.peek(MAC_A) == 3
+
+    # Só um SCHEMA diferente (outra regra de numeração) descarta.
+    data["version"] = 0
     _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
     frio = ExternalIdentityRegistry()
     frio.load()
     assert frio.peek(MAC_A) is None
+
+
+def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
+    tmp_path: Path,
+) -> None:
+    """R-23: bump de schema descarta o arquivo INTEIRO, não meio arquivo.
+
+    Falha-sem (achado ao simular o `controllers.json` real dela): cada
+    `_save_locked` faz read-modify-write PRESERVANDO o namespace do outro
+    registro. Num bump de versão, o primeiro save carimbava `version` NOVA
+    por cima do namespace VELHO do outro lado — a numeração que o `load`
+    acabara de recusar voltava com selo de válida no boot seguinte, e o
+    externo reaparecia segurando o slot 1 na frente dos DualSense.
+    """
+    _arquivo(tmp_path).parent.mkdir(parents=True, exist_ok=True)
+    _arquivo(tmp_path).write_text(
+        json.dumps(
+            {  # sem `version`: escrito pelo regime anterior ao R-23
+                "boot_id": BOOT,
+                "slots": {MAC_DS.replace(":", ""): 2},
+                "externals": {_KEY_A: 1},  # o externo à frente dos DualSense
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    ds = id_mod.ControllerIdentityRegistry()
+    ds.load()
+    ext = ExternalIdentityRegistry()
+    ext.load()
+    assert ds.snapshot() == {} and ext.snapshot() == {}, "schema velho recusado"
+
+    ds.sync_connected([MAC_DS])  # 1º save: carimba a versão nova
+    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
+    assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
+    assert "externals" not in data, "o namespace velho não pode ser recarimbado"
+
+    # Boot seguinte: só a numeração NOVA sobrevive; o externo numera acima.
+    ds2 = id_mod.ControllerIdentityRegistry()
+    ds2.load()
+    ext2 = ExternalIdentityRegistry()
+    ext2.load()
+    assert ds2.snapshot() == {MAC_DS.replace(":", ""): 1}
+    assert ext2.snapshot() == {}
+    assert ext2.slot_for(MAC_A, reserve=1) == 2
+
+
+def test_os_dois_registros_gravam_a_mesma_versao_de_schema(tmp_path: Path) -> None:
+    """R-23: DualSense e externos escrevem o MESMO arquivo — um save do lado
+    externo não pode deixar o arquivo sem a versão que o outro lado exige (o
+    load do DualSense o descartaria no boot seguinte)."""
+    ext = ExternalIdentityRegistry()
+    ext.slot_for(MAC_A, reserve=0)
+    ext.sync_connected([MAC_A])
+    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
+    assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
+
+    ds = id_mod.ControllerIdentityRegistry()
+    ds.sync_connected([MAC_DS])
+    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
+    assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
+    assert data["externals"] == {_KEY_A: 1}, "namespace do outro preservado"
 
 
 def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
@@ -398,6 +479,43 @@ def test_externo_sem_mac_gui_bate_com_led_do_tick(
         dualsense_count=1, slot_resolver=sync._registry.peek
     )
     assert inv[0]["player_slot"] == 3, "GUI deve exibir o MESMO número do LED"
+
+
+def test_externo_nao_rouba_o_slot_1_dos_dualsense_presentes(
+    monkeypatch: pytest.MonkeyPatch, led_escritas: list[tuple[str, int]]
+) -> None:
+    """R-24: reproduz o "não existe Controle 1" MEDIDO no controllers.json dela.
+
+    Estado ao vivo (25/07): `externals: {<Pro>: 1}` e `slots: {<DS>: 2, <DS>:
+    3}` — o Pro Nintendo USB segurava o slot 1 e os dois DualSense exibiam 2 e
+    3, sem nenhum "Controle 1" na listagem. A causa não era o piso dos
+    externos: era o registro dos DualSense estar VAZIO no primeiro tick
+    (atribuição só-lazy, via provider de cor), então `_ds_reserve()` lia 0.
+
+    Aqui os DOIS registros são os reais e a ordem é a do poll loop
+    (`_sync_identity_registry` ANTES de `_schedule_external_tick`). Falha-sem:
+    com `sync_connected` só reconciliando, `ds.snapshot()` fica `{}`, o
+    externo recebe 1 e os DualSense herdam 2 e 3.
+    """
+    ds = id_mod.ControllerIdentityRegistry()
+    ext = ExternalIdentityRegistry()
+    ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
+    monkeypatch.setattr(
+        er_mod,
+        "discover_external_gamepads",
+        lambda: [_entry(MAC_A, "/dev/hidraw6", "/dev/input/event261")],
+    )
+    sync = ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
+
+    ds.sync_connected([MAC_DS, MAC_DS_B])  # tick lento numera quem está na mesa
+    sync.tick(now=0.0)  # só então o tick dos externos pede número
+
+    assert ds.snapshot() == {
+        MAC_DS.replace(":", ""): 1,
+        MAC_DS_B.replace(":", ""): 2,
+    }, "os DualSense ocupam 1..N — existe Controle 1"
+    assert ext.snapshot() == {_KEY_A: 3}, "o externo CONTINUA a contagem"
+    assert led_escritas == [("/dev/hidraw6", 3)], "o LED bate com o número"
 
 
 def test_tick_enumeracao_quebrada_nao_derruba(

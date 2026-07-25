@@ -417,7 +417,7 @@ if _GTK_DISPONIVEL:
             self._update_inputs(entry.get("inputs"))
             self._update_gyro(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
-            self._update_mic(mic)
+            self._update_mic(mic, str(entry.get("transport") or ""))
 
         def reset_inputs(self) -> None:
             """IPC sem resposta: mostra "—" — nunca o último valor como vivo."""
@@ -790,10 +790,10 @@ if _GTK_DISPONIVEL:
             self._touch_box.show()
             self._sincronizar_linha_sensores()
 
-        def _update_mic(self, mic: Any) -> None:
+        def _update_mic(self, mic: Any, transporte: str = "") -> None:
             nivel = getattr(mic, "nivel", None) if mic is not None else None
             muted = getattr(mic, "muted", None) if mic is not None else None
-            chave = (nivel, muted)
+            chave = (nivel, muted, transporte)
             if chave == self._last_mic:
                 return
             self._last_mic = chave
@@ -801,6 +801,7 @@ if _GTK_DISPONIVEL:
                 self._mic_box.hide()
                 self._sincronizar_linha_sensores()
                 return
+            self._mic_meter.show()
             self._mic_meter.set_nivel(float(nivel))
             selo = selo_mic(muted)
             if selo is None:
