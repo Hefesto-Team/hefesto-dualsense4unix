@@ -884,9 +884,16 @@
                   <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
 
+                <!-- PLAYER-01 (25/07): a moldura chamava-se "LEDs de Jogador" e
+                     dizia "Escolha o jogador". Ela clicava aqui esperando trocar
+                     a IDENTIDADE do controle (o número do cabeçalho) e só trocava
+                     a APARÊNCIA das 5 luzinhas. Quem atribui número é o seletor
+                     "Número deste controle" do cabeçalho (IPC
+                     `identity.number.set`); aqui é desenho, e o nome passa a
+                     dizer isso. -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label" translatable="yes">LEDs de Jogador</property>
+                    <property name="label" translatable="yes">Desenho das 5 luzes</property>
                     <property name="hexpand">True</property>
                     <child>
                       <object class="GtkBox">
@@ -896,8 +903,9 @@
 
                         <child>
                           <object class="GtkLabel">
-                            <property name="label" translatable="yes">Escolha o jogador — o desenho dos 5 LEDs é o padrão oficial do PS5.</property>
+                            <property name="label" translatable="yes">Escolha o desenho das luzes. Isto muda só a aparência — o número do controle continua sendo o do cabeçalho.</property>
                             <property name="xalign">0</property>
+                            <property name="wrap">True</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -934,50 +942,72 @@
                           <packing><property name="expand">False</property></packing>
                         </child>
 
+                        <!-- PLAYER-01: os seis botões estavam numa ÚNICA linha
+                             homogênea. "Player 1" cabia; "Desenho do P1" não —
+                             a distribuição homogênea dá a TODOS a largura do
+                             maior rótulo, e a linha sozinha passou de 540px para
+                             882px, estourando o orçamento de largura da janela
+                             (test_layout_orcamento_altura, que não tem rolagem
+                             horizontal para onde fugir). Duas faixas: os quatro
+                             desenhos de jogador em cima, homogêneos entre si, e
+                             os dois atalhos ("Todos"/"Nenhum") embaixo, cada um
+                             pedindo só o próprio texto. -->
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">6</property>
                             <property name="homogeneous">True</property>
                             <child>
-                              <object class="GtkButton" id="player_leds_preset_all">
-                                <property name="label" translatable="yes">Todos</property>
-                                <signal name="clicked" handler="on_player_leds_preset_all"/>
-                              </object>
-                            </child>
-                            <child>
                               <object class="GtkButton" id="player_leds_preset_p1">
-                                <property name="label" translatable="yes">Player 1</property>
-                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 1 acende só o LED central (igual ao console)</property>
+                                <property name="label" translatable="yes">Desenho do P1</property>
+                                <property name="tooltip_text" translatable="yes">Desenho oficial do PS5 para o jogador 1: acende só a luz central. Não muda o número deste controle — para isso use "Número deste controle", no cabeçalho.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p1"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p2">
-                                <property name="label" translatable="yes">Player 2</property>
-                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 2 acende os 2 LEDs vizinhos do centro (igual ao console)</property>
+                                <property name="label" translatable="yes">Desenho do P2</property>
+                                <property name="tooltip_text" translatable="yes">Desenho oficial do PS5 para o jogador 2: acende as 2 luzes vizinhas do centro. Não muda o número deste controle — para isso use "Número deste controle", no cabeçalho.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p2"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p3">
-                                <property name="label" translatable="yes">Player 3</property>
-                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 3 acende 3 LEDs alternados (igual ao console)</property>
+                                <property name="label" translatable="yes">Desenho do P3</property>
+                                <property name="tooltip_text" translatable="yes">Desenho oficial do PS5 para o jogador 3: acende 3 luzes alternadas. Não muda o número deste controle — para isso use "Número deste controle", no cabeçalho.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p3"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p4">
-                                <property name="label" translatable="yes">Player 4</property>
-                                <property name="tooltip_text" translatable="yes">Padrão oficial do PS5: o Player 4 acende os 4 LEDs externos (igual ao console)</property>
+                                <property name="label" translatable="yes">Desenho do P4</property>
+                                <property name="tooltip_text" translatable="yes">Desenho oficial do PS5 para o jogador 4: acende as 4 luzes externas. Não muda o número deste controle — para isso use "Número deste controle", no cabeçalho.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_p4"/>
                               </object>
                             </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">6</property>
+                            <child>
+                              <object class="GtkButton" id="player_leds_preset_all">
+                                <property name="label" translatable="yes">Todas acesas</property>
+                                <property name="tooltip_text" translatable="yes">Acende as 5 luzes. Não é desenho de jogador nenhum — é só um atalho.</property>
+                                <signal name="clicked" handler="on_player_leds_preset_all"/>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
                             <child>
                               <object class="GtkButton" id="player_leds_preset_none">
-                                <property name="label" translatable="yes">Nenhum</property>
+                                <property name="label" translatable="yes">Todas apagadas</property>
+                                <property name="tooltip_text" translatable="yes">Apaga as 5 luzes deste controle. Sem escolha sua, volta a valer o desenho do número do controle.</property>
                                 <signal name="clicked" handler="on_player_leds_preset_none"/>
                               </object>
+                              <packing><property name="expand">False</property></packing>
                             </child>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -990,13 +1020,13 @@
                             <property name="margin-top">8</property>
                             <child>
                               <object class="GtkButton" id="player_leds_apply">
-                                <property name="label" translatable="yes">Aplicar LEDs</property>
-                                <property name="tooltip-text" translatable="yes">Reenvia o padrão atual dos 5 checkboxes ao controle via daemon.</property>
+                                <property name="label" translatable="yes">Aplicar o desenho</property>
+                                <property name="tooltip-text" translatable="yes">Reenvia ao controle o desenho que está escolhido aqui. PLAYER-01: o texto antigo falava de "5 checkboxes" que estão ocultos desde a LEDS-SO-PLAYER-01 — quem escolhe são os botões de desenho acima.</property>
                                 <signal name="clicked" handler="on_player_leds_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
-                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar LEDs de jogador</property>
-                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia o padrao atual dos 5 LEDs ao controle</property>
+                                  <property name="AtkObject::accessible-name" translatable="yes">Aplicar o desenho das luzes</property>
+                                  <property name="AtkObject::accessible-description" translatable="yes">Reenvia ao controle o desenho das 5 luzes escolhido acima</property>
                                 </object>
                               </child>
                               </object>
@@ -1006,9 +1036,37 @@
                           <packing><property name="expand">False</property></packing>
                         </child>
 
+                        <!-- PLAYER-01 entrega 5: LEITURA DE VOLTA. A moldura só
+                             sabia mostrar o RASCUNHO, e a camada automática nunca
+                             entra nele — num perfil recém-criado ela via "nada
+                             escolhido" aqui enquanto o controle exibia três luzes
+                             acesas. Este rótulo é escrito por
+                             `_refresh_lightbar_from_draft` com o desenho que está
+                             ACESO de verdade, dizendo de quem é a última palavra
+                             (automático, escolha dela ou co-op). -->
+                        <child>
+                          <object class="GtkLabel" id="player_leds_estado">
+                            <property name="label" translatable="yes">Aceso agora: consultando…</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="margin-top">8</property>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+
+                        <!-- PLAYER-01: os dois rótulos abaixo estavam FACTUALMENTE
+                             ERRADOS. O primeiro falava de "checkboxes" que estão
+                             ocultos desde a LEDS-SO-PLAYER-01; o segundo dizia
+                             que "os interruptores manuais valem com as cores
+                             automáticas desligadas", falso desde o R-14 por dois
+                             motivos independentes: a escolha manual vence a
+                             automática POR CAMPO com a automática ligada (o
+                             override por MAC do merge do backend, D5), e a caixa
+                             "Cores automáticas por controle" governa só a COR —
+                             a numeração deixou de morar nela. -->
                         <child>
                           <object class="GtkLabel" id="player_leds_note">
-                            <property name="label" translatable="yes">&lt;i&gt;Checkboxes e presets enviam imediatamente ao hardware. Use &quot;Aplicar LEDs&quot; para reenviar o padrão atual (útil após reconectar o controle ou trocar de perfil). As marcações ficam salvas no perfil ativo.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;Cada botão de desenho envia na hora ao controle e fica salvo no perfil ativo. &quot;Aplicar o desenho&quot; só reenvia o que já está escolhido — útil depois de reconectar o controle ou trocar de perfil.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
@@ -1017,11 +1075,9 @@
                           <packing><property name="expand">False</property></packing>
                         </child>
 
-                        <!-- COR-04: com o automático ligado, o LED do número
-                             do controle vence os interruptores manuais. -->
                         <child>
                           <object class="GtkLabel" id="player_leds_auto_note">
-                            <property name="label" translatable="yes">&lt;i&gt;Os interruptores manuais valem com as cores automáticas desligadas.&lt;/i&gt;</property>
+                            <property name="label" translatable="yes">&lt;i&gt;O desenho que você escolhe aqui vence o automático neste controle, mesmo com as cores automáticas ligadas. Sem escolha sua, vale o desenho do número do controle. Com o co-op ligado, quem manda no desenho é o co-op.&lt;/i&gt;</property>
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>

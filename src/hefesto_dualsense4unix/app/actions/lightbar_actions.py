@@ -18,6 +18,93 @@ from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
 #: backend) — então o fluxo desliga o toggle e avisa, nunca em popup.
 _AVISO_D4 = "Cores automáticas desligadas para aplicar uma cor única"
 
+#: PLAYER-01 entrega 6: recusa do envio de desenho SEM destinatário. Quando a
+#: janela ainda não sabe quem está na mesa (nenhum tique do daemon), o pedido
+#: saía sem ``uniq`` e o daemon o gravava no default GLOBAL — uma camada ABAIXO
+#: da automática no merge por campo do backend (D5). O automático o desfazia no
+#: reforço seguinte, e era esse o "volta sozinho" que ela relatou. Recusar é a
+#: única resposta honesta: escrever numa camada que será sobrescrita é pior que
+#: não escrever, porque parece ter funcionado por meio segundo.
+_AVISO_SEM_DESTINATARIO = (
+    "ainda não sei quais controles estão na mesa — espere um instante e "
+    "tente de novo (mandar sem destinatário seria desfeito pela numeração "
+    "automática)"
+)
+
+#: PLAYER-01: desenho vazio = SEM opinião. Um ``player_leds`` todo apagado no
+#: perfil nunca chega ao hardware — a camada automática (o padrão do NÚMERO do
+#: controle) vence o default global no merge por campo, e um override por-MAC
+#: idêntico ao global é podado por ``with_controller_leds``. Então "tudo
+#: apagado no rascunho" significa, com certeza, "quem manda é o automático" —
+#: e é isso que a moldura passa a dizer, em vez de mostrar nada escolhido
+#: enquanto o controle exibe três luzes acesas.
+_DESENHO_VAZIO: tuple[bool, bool, bool, bool, bool] = (False,) * 5
+
+
+def nome_do_desenho(bits: tuple[bool, ...] | list[bool]) -> str | None:
+    """"desenho do P3" quando ``bits`` é um padrão canônico; ``None`` se não.
+
+    Os padrões vêm de ``core.led_control.player_led_pattern`` — a MESMA fonte
+    que o daemon usa para acender, para a janela nunca batizar de "P3" um
+    desenho que o hardware não chamaria assim. A varredura vai até 8 porque o
+    espaço de numeração é único entre DualSense, externos e co-op (R-24/R-25)
+    e um DualSense pode legitimamente cair no 5 ou acima.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    alvo = tuple(bool(b) for b in bits)
+    for numero in range(1, 9):
+        if tuple(player_led_pattern(numero)) == alvo:
+            return f"desenho do P{numero}"
+    return None
+
+
+def texto_do_desenho_aceso(
+    player_leds: tuple[bool, ...] | list[bool],
+    slot: int | None,
+    *,
+    coop_ligado: bool = False,
+    descricao_livre: str = "",
+) -> str:
+    """Frase da LEITURA DE VOLTA do desenho das 5 luzes (PLAYER-01 entrega 5).
+
+    Função PURA: a moldura só sabia mostrar o RASCUNHO, e a camada automática
+    nunca entra nele — num perfil recém-criado ela via "nada escolhido"
+    enquanto o controle exibia três luzes acesas. Aqui a janela responde a
+    pergunta que ela de fato faz olhando para o controle: *o que está aceso
+    agora, e por ordem de quem?*
+
+    As três respostas possíveis, na ordem em que o backend resolve:
+
+    1. **co-op ligado** — a camada de co-op sobrescreve o desenho ACIMA da
+       escolha manual, por construção. Com ele ativo, escolher desenho aqui
+       não adianta, e a tela diz isso em vez de deixá-la descobrir sozinha;
+    2. **escolha dela** — qualquer desenho não-vazio no rascunho vence a
+       camada automática por campo (D5), com as cores automáticas ligadas ou
+       desligadas;
+    3. **automático** — rascunho vazio: vale o desenho do NÚMERO do controle.
+       Sem número conhecido (registro ainda sem opinião), a frase diz apenas
+       que o automático manda, sem inventar um número.
+    """
+    if coop_ligado:
+        return (
+            "Aceso agora: o desenho do co-op — com o co-op ligado, é ele que "
+            "manda nas 5 luzes."
+        )
+    bits = tuple(bool(b) for b in player_leds)
+    if bits != _DESENHO_VAZIO:
+        nome = nome_do_desenho(bits) or descricao_livre or "desenho próprio"
+        return f"Aceso agora: {nome} — escolha sua."
+    if isinstance(slot, int) and slot >= 1:
+        return (
+            f"Aceso agora: desenho do P{slot} — automático, do número deste "
+            "controle."
+        )
+    return (
+        "Aceso agora: o desenho automático do número do controle (nenhuma "
+        "escolha sua)."
+    )
+
 
 class LightbarActionsMixin(WidgetAccessMixin):
     """Controla a aba Lightbar + Player LEDs."""
@@ -258,12 +345,41 @@ class LightbarActionsMixin(WidgetAccessMixin):
                 checkbox: Gtk.CheckButton = self._get(f"player_led_{i}")
                 if checkbox is not None:
                     checkbox.set_active(bool(state))
+            # PLAYER-01 entrega 5: leitura de volta do que está ACESO. Os
+            # checkboxes acima seguem sendo o RASCUNHO (e não podem virar o
+            # resolvido: "Aplicar o desenho" os lê, e congelar a numeração
+            # automática num override por-MAC seria o defeito que o R-14
+            # desfez). O estado resolvido vive neste rótulo.
+            self._atualizar_estado_das_luzes(leds.player_leds)
             # Repinta preview
             preview: Gtk.DrawingArea = self._get("lightbar_preview")
             if preview is not None:
                 preview.queue_draw()
         finally:
             self._refresh_guard = False
+
+    def _atualizar_estado_das_luzes(
+        self, player_leds: tuple[bool, ...] | list[bool]
+    ) -> None:
+        """Escreve no rótulo ``player_leds_estado`` o desenho ACESO (PLAYER-01).
+
+        O número do alvo (``_edit_target_slot``) e o estado do co-op
+        (``_coop_ligado``) são mantidos pela aba Status a partir do
+        ``state_full`` — ``getattr`` defensivo porque os mixins só convivem de
+        fato na instância composta, nunca isolados nos testes. Sem os dois, a
+        frase degrada para "o automático manda", que continua sendo verdade.
+        """
+        rotulo = self._get("player_leds_estado")
+        if rotulo is None:
+            return
+        rotulo.set_text(
+            texto_do_desenho_aceso(
+                player_leds,
+                getattr(self, "_edit_target_slot", None),
+                coop_ligado=bool(getattr(self, "_coop_ligado", False)),
+                descricao_livre=self._descreve_player_leds(list(player_leds)),
+            )
+        )
 
     def install_lightbar_tab(self) -> None:
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
@@ -560,23 +676,37 @@ class LightbarActionsMixin(WidgetAccessMixin):
 
     def _enviar_player_leds(
         self, bits: tuple[bool, bool, bool, bool, bool]
-    ) -> bool:
-        """Envia o padrão de player-LED ao alvo certo (R-14/R-17).
+    ) -> tuple[bool, str | None]:
+        """Envia o desenho das 5 luzes ao alvo certo (R-14/R-17/PLAYER-01).
+
+        Devolve ``(ok, motivo)``: ``motivo`` preenchido é uma recusa NOSSA,
+        com explicação própria — o chamador a mostra em vez da frase genérica
+        "o Hefesto pode estar desligado", que mandaria a usuária caçar o
+        problema no lugar errado.
 
         Alvo selecionado → só ele. "Todos" com os conectados conhecidos → um
         pedido POR MAC (override por-uniq vence a numeração automática no
         merge do backend; era o que o desligar-o-flag do U9 tentava obter
-        pelo caminho destrutivo). "Todos" sem saber quem está conectado →
-        rota global de sempre.
+        pelo caminho destrutivo).
+
+        PLAYER-01 entrega 6 — "Todos" SEM saber quem está conectado deixou de
+        cair na rota global. O pedido sem ``uniq`` era gravado pelo daemon no
+        default GLOBAL, que fica ABAIXO da camada automática no merge por
+        campo (D5): o próximo reforço do automático o desfazia, e a escolha
+        dela "voltava sozinha". Era um sucesso mentiroso — o IPC respondia
+        ``ok``, o toast dizia que aplicou, e meio segundo depois o controle
+        voltava ao desenho anterior. Recusar com motivo é a única resposta
+        honesta; o mapa de conectados chega no próximo tique do daemon e o
+        clique seguinte funciona.
         """
         uniq = self._edit_uniq()
         if uniq is not None:
-            return bool(player_leds_set(bits, uniq=uniq))
+            return bool(player_leds_set(bits, uniq=uniq)), None
         alvos = self._uniqs_conectados()
         if not alvos:
-            return bool(player_leds_set(bits, uniq=None))
+            return False, _AVISO_SEM_DESTINATARIO
         resultados = [bool(player_leds_set(bits, uniq=alvo)) for alvo in alvos]
-        return all(resultados)
+        return all(resultados), None
 
     def _d4_disable_auto_for_single_color(self) -> bool:
         """D4 fora do ``_persist_leds_update``: desliga o auto no draft.
@@ -646,12 +776,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # ONDA-U (U9): player-LEDs em "Todos" com o automático ligado também
         # dispara o D4 (mesma composição de toast do on_lightbar_apply).
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = self._enviar_player_leds(bits)
+        ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = (
-            f"LEDs de jogador aplicados — {descricao}"
+            f"Desenho das luzes aplicado — {descricao}"
             if ok
-            else "não consegui aplicar os LEDs de jogador — o Hefesto pode "
+            else motivo
+            or "não consegui aplicar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:
@@ -673,12 +804,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): idem — player-LEDs em "Todos" com auto ligado dispara D4.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = self._enviar_player_leds(bits)
+        ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(bits)
         msg = (
-            f"LEDs de jogador atualizados — {descricao}"
+            f"Desenho das luzes atualizado — {descricao}"
             if ok
-            else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
+            else motivo
+            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:
@@ -708,17 +840,22 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft (global ou override do alvo — PERFIL-04)
         # ONDA-U (U9): presets também disparam o D4 em "Todos" com auto ligado.
         d4_disparou = self._persist_leds_update({"player_leds": bits})
-        ok = self._enviar_player_leds(bits)
+        ok, motivo = self._enviar_player_leds(bits)
         descricao = self._descreve_player_leds(pattern)
         msg = (
-            f"LEDs de jogador atualizados — {descricao}"
+            f"Desenho das luzes atualizado — {descricao}"
             if ok
-            else "não consegui atualizar os LEDs de jogador — o Hefesto pode "
+            else motivo
+            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)
+        # PLAYER-01: o rótulo de leitura de volta acompanha o preset na hora —
+        # o `_refresh_lightbar_from_draft` não roda neste caminho (ele é o
+        # sentido inverso: draft → widgets).
+        self._atualizar_estado_das_luzes(bits)
 
     def get_current_player_leds(self) -> tuple[bool, bool, bool, bool, bool]:
         states: list[bool] = []

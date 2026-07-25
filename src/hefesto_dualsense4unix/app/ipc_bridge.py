@@ -426,6 +426,56 @@ def rumble_policy_custom(mult: float) -> bool:
     return ok
 
 
+#: PLAYER-01: motivos de recusa do ``identity.number.set`` traduzidos para a
+#: frase que a janela mostra. Mapa explícito (não f-string do ``reason``) para
+#: a usuária nunca ler um identificador do protocolo na barra de status.
+_MOTIVOS_NUMERO: dict[str, str] = {
+    "sessao_de_jogo_aberta": (
+        "feche o jogo antes de trocar o número — trocar agora repintaria "
+        "o controle no meio da partida"
+    ),
+    "controle_ausente": (
+        "este controle não está na mesa agora — só quem está ligado tem número"
+    ),
+    "numero_fora_da_mesa": (
+        "esse número é maior do que a quantidade de controles ligados"
+    ),
+    "lock_timeout": "o Hefesto está ocupado — tente de novo em um instante",
+}
+
+
+def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
+    """Atribui o NÚMERO EXIBIDO do controle ``uniq`` (PLAYER-01, 25/07).
+
+    O comando que faltava no projeto inteiro: até 25/07 não havia forma
+    nenhuma de dizer "este controle é o 2". Só existia ``identity.renumber``,
+    que compacta TODOS preservando a ordem relativa e mora na aba Início — e
+    era por isso que a expectativa dela ("escolho o player e o cabeçalho
+    acompanha") não tinha como se realizar: ela clicava num controle de
+    APARÊNCIA (o desenho das 5 luzes) esperando mudar IDENTIDADE.
+
+    Devolve ``(ok, motivo)``. ``motivo`` só vem preenchido quando o daemon
+    RESPONDEU e RECUSOU — cada ``reason`` do protocolo já traduzido para a
+    frase da janela (:data:`_MOTIVOS_NUMERO`). Daemon offline volta como
+    ``(False, None)``: a distinção existe porque a tela precisa dizer coisas
+    diferentes em "o Hefesto está desligado" e "o jogo está aberto".
+
+    ``number`` é 1..N entre os controles PRESENTES (NUM-01: o número exibido
+    é a colocação entre quem está na mesa). Não confundir com o número de
+    JOGADOR do co-op — ver ``app/actions/base.py:26``.
+    """
+    ok, result = _safe_call(
+        "identity.number.set", {"uniq": uniq, "number": int(number)}
+    )
+    if not ok or not isinstance(result, dict):
+        return False, None
+    if result.get("ok"):
+        return True, None
+    reason = result.get("reason")
+    motivo = _MOTIVOS_NUMERO.get(reason) if isinstance(reason, str) else None
+    return False, motivo or "não consegui trocar o número — tente de novo"
+
+
 def player_leds_set(
     bits: tuple[bool, bool, bool, bool, bool], uniq: str | None = None
 ) -> bool:
@@ -585,6 +635,7 @@ __all__ = [
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",
+    "identity_number_set",
     "led_set",
     "mic_set",
     "mouse_emulation_set",

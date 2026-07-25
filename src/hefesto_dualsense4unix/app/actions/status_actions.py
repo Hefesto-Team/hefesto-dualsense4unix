@@ -34,6 +34,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
+from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import (
     WidgetAccessMixin,
     numero_do_controle,
@@ -149,6 +150,28 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
     _edit_badge: Any = None
+    # PLAYER-01 (25/07): o seletor "Número deste controle" — a ENTREGA
+    # PRINCIPAL da sprint. A fita de chips do cabeçalho MOSTRA o número de
+    # identidade mas nunca teve como MUDÁ-LO: não existia, em lugar nenhum do
+    # projeto, comando que atribuísse um número a um controle (só o
+    # `identity.renumber`, que compacta todos e mora na aba Início). Estes
+    # botões falam com o `identity.number.set`, criado nesta mesma sprint.
+    # `_edit_target_slot` é o número de identidade do alvo, mantido em sync
+    # pelo tick lento — separado do `_edit_target_uniq` (o endereço) e do
+    # índice de enumeração, que são as outras duas coisas que o chip carrega.
+    _target_strip: Any = None
+    _numero_faixa: Any = None
+    _numero_box: Any = None
+    _numero_botoes: list[Any]
+    _numero_total: int = 0
+    _numero_updating: bool = False
+    _numero_visivel: bool = False
+    _edit_target_slot: int | None = None
+    _target_slot_by_index: dict[int, int | None]
+    #: PLAYER-01: co-op ligado = a camada de co-op manda no desenho das 5
+    #: luzes, ACIMA da escolha manual. Lido do `state_full` aqui e consumido
+    #: pela aba Lightbar (que não tem poller próprio).
+    _coop_ligado: bool = False
     #: Badge do banner que denuncia rumble travado em silêncio.
     _rumble_badge: Any = None
     # S2: monitor do microfone (nível + mute). Lazy e DESLIGADO por padrão —
@@ -362,6 +385,39 @@ class StatusActionsMixin(WidgetAccessMixin):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _por_numero_de_identidade(
+        conectados: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Conectados na ordem do NÚMERO exibido (PLAYER-01, absorve UI-SELETOR-01).
+
+        O seletor mostrava "Sony 2 · BT | Sony 1 · BT | ..." — os números
+        estavam certos, quem estava errada era a ORDEM. A causa é a separação
+        que dá nome a esta sprint: o laço percorria os conectados na ordem em
+        que o daemon os devolve (ordem de ENUMERAÇÃO/conexão) e usava o número
+        de identidade apenas no RÓTULO. Como o número é estável por MAC entre
+        replugs e a ordem de conexão não é, os dois divergem sempre que alguém
+        liga os controles fora de ordem — que é o caso normal.
+
+        A separação é o ponto: aqui muda só a ORDEM DE EXIBIÇÃO. O índice
+        0-based de enumeração continua viajando dentro de cada linha, porque é
+        ele que o ``controller.target.set`` espera — reordenar o índice junto
+        seria um defeito pior que o atual (a usuária clicaria no chip do 1 e
+        editaria outro controle).
+
+        Quem não tem ``player_slot`` (registro sem opinião ainda, controle sem
+        MAC) vai para o FIM preservando a ordem relativa — ``sorted`` é
+        estável, então o desempate é a ordem de enumeração de sempre.
+        """
+
+        def _chave(entry: dict[str, Any]) -> tuple[int, int]:
+            slot = entry.get("player_slot")
+            if isinstance(slot, int) and not isinstance(slot, bool):
+                return (0, slot)
+            return (1, 0)
+
+        return sorted(conectados, key=_chave)
+
+    @staticmethod
     def _controller_target_rows(
         conectados: list[dict[str, Any]],
     ) -> list[tuple[str, int | None]]:
@@ -374,9 +430,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         posição 1-based quando não há slot. O índice CARREGADO na linha segue o
         ``index`` 0-based do bloco ``controllers`` (o mesmo que o IPC
         ``controller.target.set`` espera). FEAT-DSX-CONTROLLER-SELECTOR-01.
+
+        PLAYER-01 (absorve UI-SELETOR-01): a ORDEM das linhas passa a ser a do
+        número de identidade (``_por_numero_de_identidade``); o índice que cada
+        linha CARREGA segue o da enumeração. São dois campos — eram um só,
+        usado para as duas coisas.
         """
         rows: list[tuple[str, int | None]] = [(_("Todos os controles"), None)]
-        for c in conectados:
+        for c in StatusActionsMixin._por_numero_de_identidade(conectados):
             idx = int(c.get("index", 0))
             transporte = (c.get("transport") or "?").upper()
             rows.append(
@@ -423,6 +484,17 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_uniq_by_index = {}
         self._target_label_by_index = {}
         self._edit_badge = None
+        # PLAYER-01: estado do seletor "Número deste controle" (ver
+        # `_refresh_numero_selector`).
+        self._numero_faixa = None
+        self._numero_box = None
+        self._numero_botoes = []
+        self._numero_total = 0
+        self._numero_updating = False
+        self._numero_visivel = False
+        self._edit_target_slot = None
+        self._target_slot_by_index = {}
+        self._target_strip = None
         header_bar = self._get("header_bar")
         if header_bar is None:
             self._target_combo = None
@@ -434,10 +506,27 @@ class StatusActionsMixin(WidgetAccessMixin):
             "Controle alvo das ações (lightbar, gatilhos, LEDs, rumble). "
             "'Todos' aplica a todos os controles."
         )
-        box.set_no_show_all(True)
-        box.hide()
-        header_bar.pack_end(box, False, False, 0)
         self._target_combo = box
+        # PLAYER-01 entrega 3: o chip carregava TRÊS papéis e só um estava
+        # dito — ele MOSTRA o número de identidade, ENVIA o índice de
+        # enumeração e SIGNIFICA "alvo das edições". O terceiro, que é o único
+        # que muda o que os botões das outras abas fazem, vivia num tooltip
+        # (invisível até alguém parar o ponteiro em cima). Vira legenda fixa
+        # ao lado da fita, e a fita ganha faixa própria com ela.
+        faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        faixa.set_valign(Gtk.Align.CENTER)
+        legenda = Gtk.Label(label=_("Ajustes vão para:"))
+        with contextlib.suppress(Exception):
+            legenda.get_style_context().add_class("dim-label")
+        faixa.pack_start(legenda, False, False, 0)
+        faixa.pack_start(box, False, False, 0)
+        legenda.show()
+        box.show()
+        faixa.set_no_show_all(True)
+        faixa.hide()
+        header_bar.pack_end(faixa, False, False, 0)
+        self._target_strip = faixa
+        self._montar_numero_selector(header_bar)
         # PERFIL-04: badge "Editando: Controle N (BT)" — rótulo inline no
         # banner (nunca popup — cosmic-epoch#2497), visível só quando um
         # controle com MAC está selecionado. Deixa explícito que as abas
@@ -592,26 +681,214 @@ class StatusActionsMixin(WidgetAccessMixin):
         if 0 <= pos < len(self._target_buttons):
             self._target_buttons[pos].set_active(True)
 
+    def _set_target_strip_visible(self, visivel: bool) -> None:
+        """Mostra/esconde a fita de chips (legenda inclusa) — PLAYER-01.
+
+        A visibilidade migrou do ``box`` dos chips para a FAIXA que o embrulha
+        junto com a legenda "Ajustes vão para:" — esconder só o box deixaria a
+        legenda órfã no cabeçalho. Fallback para o próprio box quando não há
+        faixa: hosts parciais de teste montam o seletor injetando
+        ``_target_combo`` direto, sem passar por
+        ``_init_controller_target_combo``.
+        """
+        alvo = getattr(self, "_target_strip", None) or getattr(
+            self, "_target_combo", None
+        )
+        if alvo is None:
+            return
+        if visivel:
+            alvo.show()
+        else:
+            alvo.hide()
+
+    # ------------------------------------------------------------------
+    # "Número deste controle" (PLAYER-01) — a entrega principal da sprint
+    # ------------------------------------------------------------------
+
+    def _montar_numero_selector(self, header_bar: Any) -> None:
+        """Cria a faixa "Número deste controle: [1][2][3][4]" no cabeçalho.
+
+        BOTÕES segmentados, nunca dropdown — o cosmic-comp fecha popups de
+        combo em ~40-95% dos cliques (cosmic-epoch#2497), e a fita de alvo ao
+        lado existe nessa forma pelo mesmo motivo. Fica ao lado do chip de
+        propósito: a queixa é justamente que "a escolha do player não
+        sincroniza com o botão superior que informa o controle e o player" —
+        o lugar de trocar o número é encostado no lugar que o mostra.
+
+        Só aparece com um controle escolhido E dois ou mais na mesa (ver
+        ``_refresh_numero_selector``): com um controle só, o único número
+        possível é 1 e um seletor de uma opção é ruído.
+        """
+        faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        faixa.set_valign(Gtk.Align.CENTER)
+        legenda = Gtk.Label(label=_("Número deste controle:"))
+        with contextlib.suppress(Exception):
+            legenda.get_style_context().add_class("dim-label")
+        caixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        caixa.get_style_context().add_class("linked")
+        caixa.set_valign(Gtk.Align.CENTER)
+        caixa.set_tooltip_text(
+            "Muda o NÚMERO deste controle — o do cabeçalho, dos cartões e do "
+            "LED de número. Não é o desenho das 5 luzes da aba Lightbar, que "
+            "é só aparência."
+        )
+        faixa.pack_start(legenda, False, False, 0)
+        faixa.pack_start(caixa, False, False, 0)
+        legenda.show()
+        caixa.show()
+        faixa.set_no_show_all(True)
+        faixa.hide()
+        header_bar.pack_end(faixa, False, False, 0)
+        self._numero_faixa = faixa
+        self._numero_box = caixa
+
+    def _rebuild_numero_buttons(self, caixa: Any, total: int) -> None:
+        """Recria os botões 1..``total`` do seletor de número (PLAYER-01)."""
+        for child in list(caixa.get_children()):
+            caixa.remove(child)
+            child.destroy()
+        self._numero_botoes = []
+        grupo = None
+        for numero in range(1, total + 1):
+            btn = Gtk.RadioButton.new_with_label_from_widget(grupo, str(numero))
+            if grupo is None:
+                grupo = btn
+            btn.set_mode(False)  # toggle (visual de segmented control)
+            btn.set_tooltip_text(
+                f"Faz deste o controle número {numero}. "
+                "Os outros deslizam para abrir lugar."
+            )
+            btn.connect("toggled", self._on_numero_button_toggled, numero)
+            btn.show()
+            caixa.pack_start(btn, False, False, 0)
+            self._numero_botoes.append(btn)
+
+    def _refresh_numero_selector(self, total: int) -> None:
+        """Sincroniza o seletor de número com o alvo e a mesa (PLAYER-01).
+
+        ``total`` é quantos controles estão na mesa AGORA (DualSense adotados
+        + externos numerados) — o espaço de numeração é ÚNICO entre os dois
+        (R-24/NUM-01), então oferecer só a contagem de DualSense esconderia
+        números legítimos.
+
+        Aparece com um controle de endereço estável escolhido e 2+ na mesa;
+        some fora disso. IDEMPOTENTE: só reconstrói quando a contagem muda, e
+        o ``_numero_updating`` impede que a marcação programática do botão
+        dispare um pedido de troca (o eco que faria a janela mandar um
+        ``identity.number.set`` a cada tique de 2 Hz).
+        """
+        faixa = getattr(self, "_numero_faixa", None)
+        caixa = getattr(self, "_numero_box", None)
+        if faixa is None or caixa is None:
+            return
+        uniq = getattr(self, "_edit_target_uniq", None)
+        slot = getattr(self, "_edit_target_slot", None)
+        if not uniq or total < 2:
+            if self._numero_visivel:
+                faixa.hide()
+                self._numero_visivel = False
+            return
+        if total != self._numero_total:
+            self._rebuild_numero_buttons(caixa, total)
+            self._numero_total = total
+        self._numero_updating = True
+        try:
+            if isinstance(slot, int) and 1 <= slot <= len(self._numero_botoes):
+                self._numero_botoes[slot - 1].set_active(True)
+        finally:
+            self._numero_updating = False
+        if not self._numero_visivel:
+            faixa.show()
+            self._numero_visivel = True
+
+    def _on_numero_button_toggled(self, button: Any, numero: int) -> None:
+        """Pede ao daemon que este controle passe a ser o número ``numero``.
+
+        Só o botão que ficou ATIVO age (o grupo emite ``toggled`` também no
+        que desliga), e a marcação programática do sync é ignorada pelo
+        ``_numero_updating`` — sem isso, cada tique de 2 Hz reenviaria o
+        pedido.
+
+        Nada é escrito na janela por conta própria: quem repinta o chip, os
+        cartões e o LED é o PRÓXIMO ``state_full``, que traz o ``player_slot``
+        recalculado pelo daemon. É deliberado — a janela pintar o número novo
+        antes de o daemon confirmar é como se cria a terceira verdade que esta
+        sprint existe para matar ("três superfícies, dois números, o mesmo
+        controle").
+        """
+        if getattr(self, "_numero_updating", False):
+            return
+        if not button.get_active():
+            return
+        uniq = getattr(self, "_edit_target_uniq", None)
+        if not uniq:
+            self._status_toast(
+                "numero",
+                "escolha um controle no cabeçalho antes de trocar o número",
+            )
+            return
+
+        def _fim(resultado: Any) -> bool:
+            ok, motivo = resultado
+            if ok:
+                self._status_toast(
+                    "numero", f"Pronto — este controle agora é o {numero}."
+                )
+            else:
+                self._status_toast(
+                    "numero",
+                    motivo
+                    or "não consegui trocar o número — o Hefesto pode estar "
+                    "desligado (ligue na aba Sistema)",
+                )
+            return False
+
+        ipc_bridge.run_in_thread(
+            lambda: ipc_bridge.identity_number_set(uniq, numero), on_success=_fim
+        )
+
     # ------------------------------------------------------------------
     # Alvo de edição por-controle (PERFIL-04)
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _edit_badge_text(label: str | None) -> str:
-        """Texto do badge de edição por-controle; vazio = badge escondido."""
+    def _edit_badge_text(label: str | None, *, com_endereco: bool = True) -> str:
+        """Texto do badge de edição por-controle; vazio = badge escondido.
+
+        PLAYER-01 entrega 3: o selo "Editando: Controle 3" já dizia METADE do
+        que o chip significa (que ele é um seletor de ALVO, não só um mostrador
+        de número) — mas só aparecia quando havia endereço estável, que é
+        justamente o caso em que a informação é menos surpreendente. Com
+        ``com_endereco=False`` (controle sem MAC, handle por path) ele passa a
+        aparecer TAMBÉM, dizendo a verdade incômoda: a edição daquele alvo cai
+        na rota global e vale para todos.
+        """
         if not label:
             return ""
-        return _("Editando: {alvo}").format(alvo=label)
+        if com_endereco:
+            return _("Editando: {alvo}").format(alvo=label)
+        return _("Editando: {alvo} — sem endereço fixo, vale para todos").format(
+            alvo=label
+        )
 
     def _update_target_maps(self, conectados: list[dict[str, Any]]) -> None:
-        """Recalcula index→uniq e index→rótulo a partir do ``state_full``.
+        """Recalcula index→uniq, index→rótulo e index→NÚMERO do ``state_full``.
 
         O ``uniq`` (MAC normalizado, estável entre USB e BT) vem do bloco
         ``controllers`` que o daemon já expõe. Controle sem MAC (key por
         path) fica com uniq None — a edição dele segue GLOBAL, como hoje.
+
+        PLAYER-01: o mapa index→NÚMERO é novo e é o terceiro campo que o chip
+        confundia num só. Ele guarda o ``player_slot`` CRU (``None`` quando o
+        registro ainda não tem opinião) — de propósito diferente do
+        ``_display_slot`` usado no rótulo, que cai na posição 1-based quando
+        não há slot. Para EXIBIR, o palpite ajuda; para MANDAR TROCAR o
+        número, palpite é mentira: sem slot de verdade não há o que permutar,
+        e o seletor de número some em vez de oferecer uma escolha falsa.
         """
         uniq_by_index: dict[int, str | None] = {}
         label_by_index: dict[int, str] = {}
+        slot_by_index: dict[int, int | None] = {}
         for c in conectados:
             idx = int(c.get("index", 0))
             raw_uniq = c.get("uniq")
@@ -622,8 +899,15 @@ class StatusActionsMixin(WidgetAccessMixin):
             label_by_index[idx] = _("Controle {n} ({t})").format(
                 n=_display_slot(c), t=transporte
             )
+            slot_cru = c.get("player_slot")
+            slot_by_index[idx] = (
+                slot_cru
+                if isinstance(slot_cru, int) and not isinstance(slot_cru, bool)
+                else None
+            )
         self._target_uniq_by_index = uniq_by_index
         self._target_label_by_index = label_by_index
+        self._target_slot_by_index = slot_by_index
 
     def _sync_edit_target(self, target_index: int | None) -> None:
         """Deriva o alvo de EDIÇÃO (uniq) do índice do seletor.
@@ -631,9 +915,21 @@ class StatusActionsMixin(WidgetAccessMixin):
         Idempotente: só atualiza badge e re-popula as abas por-controle
         (lightbar/gatilhos) quando o alvo efetivamente muda. ``None`` =
         "Todos" (edição global, badge some).
+
+        PLAYER-01: o NÚMERO do alvo (``_edit_target_slot``) é atualizado
+        ANTES do curto-circuito de idempotência. Hoje o rótulo carrega o
+        número dentro dele ("Controle 2 (BT)"), então na prática os dois
+        mudam juntos — mas amarrar a leitura do número à igualdade do TEXTO
+        do rótulo é exatamente o tipo de acoplamento que esta sprint está
+        desfazendo. Atualizar antes custa uma atribuição e não tem como
+        divergir.
         """
         uniq: str | None = None
         label: str | None = None
+        slot: int | None = None
+        if target_index is not None:
+            slot = getattr(self, "_target_slot_by_index", {}).get(target_index)
+        self._edit_target_slot = slot
         if target_index is not None:
             uniq = getattr(self, "_target_uniq_by_index", {}).get(target_index)
             label = getattr(self, "_target_label_by_index", {}).get(target_index)
@@ -662,18 +958,44 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._refresh_target_tabs()
 
     def _update_edit_badge(self) -> None:
-        """Mostra/esconde o badge conforme o alvo de edição atual."""
+        """Mostra/esconde o badge conforme o alvo de edição atual.
+
+        PLAYER-01: o selo aparece SEMPRE que há um alvo escolhido — antes ele
+        exigia endereço estável, e o caso sem endereço (a edição vai pela rota
+        global e vale para todos) era justamente o que mais merecia ser dito.
+        """
         badge = getattr(self, "_edit_badge", None)
         if badge is None:
             return
         texto = self._edit_badge_text(
-            self._edit_target_label if self._edit_target_uniq else None
+            self._edit_target_label,
+            com_endereco=bool(self._edit_target_uniq),
         )
         if texto:
             badge.set_text(texto)
             badge.show()
         else:
             badge.hide()
+
+    def _sync_coop_governa_luzes(self, state: dict[str, Any]) -> None:
+        """Publica ``_coop_ligado`` para a aba Lightbar (PLAYER-01 entrega 5).
+
+        A camada de co-op sobrescreve o desenho das 5 luzes ACIMA da escolha
+        manual, por construção: com o co-op ativo, escolher desenho na aba
+        Lightbar não adianta. Quem lê o ``state_full`` é esta aba, então é
+        daqui que o dado sai — e só se repinta a moldura na TRANSIÇÃO do
+        flag, nunca a 2 Hz (o ``_refresh_lightbar_from_draft`` refaz a aba
+        inteira e não tem por que rodar sem motivo).
+        """
+        coop = state.get("coop")
+        ligado = bool(coop.get("enabled")) if isinstance(coop, dict) else False
+        if ligado == bool(getattr(self, "_coop_ligado", False)):
+            return
+        self._coop_ligado = ligado
+        refresh = getattr(self, "_refresh_lightbar_from_draft", None)
+        if callable(refresh):
+            with contextlib.suppress(Exception):
+                refresh()
 
     def _update_rumble_badge(self, state: dict[str, Any]) -> None:
         """Denuncia no banner que a vibração está travada pela GUI.
@@ -744,8 +1066,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._dualsense_count = len(conectados)
         if total < 1:
             self._sync_edit_target(None)
+            # PLAYER-01: sem controle nenhum não há número para escolher.
+            self._refresh_numero_selector(0)
             if self._target_combo_visible:  # só esconde na TRANSIÇÃO
-                box.hide()
+                self._set_target_strip_visible(False)
                 self._target_combo_visible = False
             return
         # R-16 (auditoria 23/07): o alvo de edição segue o GESTO dela, não a
@@ -800,6 +1124,12 @@ class StatusActionsMixin(WidgetAccessMixin):
             # Só externos conectados: nenhum radio (não há alvo de edição);
             # os botões de externos entram no _rebuild normalmente.
             rows = []
+        # PLAYER-01: o seletor de NÚMERO sincroniza ANTES do curto-circuito de
+        # idempotência abaixo. Ele depende do alvo e da contagem da mesa, não
+        # dos rótulos dos chips: com os mesmos chips e a mesma posição ativa (o
+        # caso comum, que é onde o early-return dispara), um controle entrando
+        # ou saindo mudaria a faixa de números e nada a atualizaria.
+        self._refresh_numero_selector(total)
         ext_sig = tuple(external_key(e) for e in externals)
         labels = [label for label, _ in rows]
         rows_changed = (
@@ -822,7 +1152,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._set_target_active(want_pos)
             self._target_combo_active = want_pos
             if not self._target_combo_visible:
-                box.show()
+                self._set_target_strip_visible(True)
                 self._target_combo_visible = True
         finally:
             self._target_combo_updating = False
@@ -1114,8 +1444,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         # não chega ao box.show() e o seletor some pra sempre.
         combo = getattr(self, "_target_combo", None)
         if combo is not None:
-            combo.hide()
+            self._set_target_strip_visible(False)
             self._target_combo_visible = False
+        # PLAYER-01: sem daemon não há número para trocar — a faixa some junto.
+        self._refresh_numero_selector(0)
         # PERFIL-04: sem daemon não há alvo de edição por-controle — a edição
         # volta ao global e o badge some (idempotente se já estava global).
         self._sync_edit_target(None)
@@ -1160,6 +1492,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         # com throttle próprio — alimenta os botões de externos do seletor.
         self._maybe_fetch_externals()
         self._update_rumble_badge(state)
+        self._sync_coop_governa_luzes(state)
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         battery = state.get("battery_pct")

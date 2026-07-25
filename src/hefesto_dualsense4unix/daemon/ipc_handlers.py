@@ -71,6 +71,32 @@ class _RenumberAuthorityChangedError(Exception):
     que é exatamente o objetivo (o compact atrasado não roda).
     """
 
+
+class _NumeroAlvoAusenteError(Exception):
+    """PLAYER-01: pediram um número para um controle que não está na mesa.
+
+    O número EXIBIDO só existe para quem está presente (NUM-01: é a
+    colocação entre os presentes). Atribuir número a um ausente seria
+    ressuscitar o defeito que a NUM-01 curou — um endereço desligado
+    segurando um número e empurrando quem está jogando para cima. Vira
+    ``{"ok": False, "reason": "controle_ausente"}``: falha VISÍVEL, nunca
+    escrita silenciosa.
+    """
+
+
+class _NumeroForaDaMesaError(Exception):
+    """PLAYER-01: pediram um número maior do que a quantidade de presentes.
+
+    Carrega o teto real para a resposta poder dizê-lo (a janela pode ter
+    desenhado quatro botões um instante antes de um controle cair). Vira
+    ``{"ok": False, "reason": "numero_fora_da_mesa", "max": N}``.
+    """
+
+    def __init__(self, maximo: int) -> None:
+        super().__init__(f"numero fora da mesa (max={maximo})")
+        self.maximo = maximo
+
+
 #: GUI-05 item 3: TTL (s) da leitura do marker `last_run` do wrapper no
 #: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
@@ -742,6 +768,250 @@ class IpcHandlersMixin:
             schedule_external_tick()
 
         return {"ok": True, "renumbered": renumbered}
+
+    async def _handle_identity_number_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07).
+
+        O comando que faltava. Até aqui, o projeto inteiro não tinha nenhuma
+        forma de dizer "este controle é o 2": só existia o
+        ``identity.renumber``, que COMPACTA todo mundo preservando a ordem
+        relativa e mora na aba Início. A mantenedora clicava em "Player 2" na
+        moldura de LEDs — que é APARÊNCIA, o desenho das 5 luzinhas —
+        esperando trocar a IDENTIDADE, e o rótulo da tela prometia isso. Sem
+        este handler, renomear o rótulo apenas pararia de prometer o que não
+        existe; com ele, a expectativa dela ("escolho o número e o cabeçalho
+        acompanha") passa a ser realizável.
+
+        Nome: fica no namespace ``identity.`` porque escreve exatamente o
+        mesmo estado que o ``identity.renumber`` (a fila de preferência dos
+        dois registros, sob a mesma hierarquia de locks). E é ``number``, não
+        ``player``, de propósito: ``app/actions/base.py:26`` adverte que
+        "jogador" é OUTRO número — o do co-op, que o daemon aloca por vpad e
+        que a aba Status exibe LADO A LADO com este. Batizar o comando de
+        ``player`` seria acrescentar um sexto sentido à mesma palavra, que é
+        o defeito de fundo que esta sprint existe para fechar.
+
+        Params:
+            uniq: MAC normalizado do controle (o mesmo campo ``uniq`` que o
+                ``state_full`` publica e que ``led.set``/``trigger.set`` já
+                aceitam como alvo).
+            number: número desejado, 1..N entre os PRESENTES.
+
+        Retorno ``{"ok": True, "number": N, "changed": {key: lugar}}`` ou
+        ``{"ok": False, "reason": ...}``. ``changed`` traz só quem MUDOU de
+        lugar na fila (mesma disciplina do R-15 no ``renumber``: relatório
+        que não infla um no-op).
+
+        O que ele escreve (NUM-01): a fila de preferência, nunca um "número
+        absoluto". O número exibido é a COLOCAÇÃO do lugar entre quem está
+        presente, então atribuir o número 2 a um controle é PERMUTAR os
+        lugares que os presentes já ocupam — ver ``_set_number_locked``. Os
+        lugares de quem está AUSENTE ficam intocados: diferente do
+        "Renumerar agora", este gesto não rebaixa ninguém que não está na
+        mesa.
+
+        Gate de jogo aberto, teto de lock, offload em ``asyncio.to_thread`` e
+        re-checagem de autoridade DENTRO dos locks: os quatro são os mesmos
+        do ``identity.renumber`` e pelas mesmas razões (ver a docstring
+        dele). Repintar o LED do controle que o jogo está usando no meio da
+        partida é o mesmo erro do NUMA-03; e um ``acquire()`` sem teto neste
+        método ``async`` penduraria o ÚNICO event loop do daemon, que é a
+        classe de incidente do HANG-01.
+        """
+        uniq_raw = params.get("uniq")
+        if not isinstance(uniq_raw, str) or not uniq_raw.strip():
+            raise ValueError("identity.number.set: 'uniq' precisa ser string não vazia")
+        numero = params.get("number")
+        if not isinstance(numero, int) or isinstance(numero, bool) or numero < 1:
+            raise ValueError(
+                "identity.number.set: 'number' precisa ser inteiro >= 1"
+            )
+        # A key do registro é canônica (12-hex minúsculo). Um handle sem MAC
+        # estável (fallback por path) não normaliza — cai no valor cru, que é
+        # exatamente a key VOLÁTIL que o registro usa para ele.
+        alvo = _norm_uniq(uniq_raw) or uniq_raw.strip()
+
+        authority = (
+            getattr(self.daemon, "display_authority", "unknown")
+            if self.daemon is not None
+            else "unknown"
+        )
+        if authority == "game":
+            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
+
+        identity_registry = (
+            getattr(self.daemon, "identity_registry", None)
+            if self.daemon is not None
+            else None
+        )
+        external_registry = (
+            getattr(self.daemon, "external_registry", None)
+            if self.daemon is not None
+            else None
+        )
+        daemon = self.daemon
+
+        def _authority_now() -> str:
+            return (
+                getattr(daemon, "display_authority", "unknown")
+                if daemon is not None
+                else "unknown"
+            )
+
+        try:
+            changed = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._set_number_locked,
+                    identity_registry,
+                    external_registry,
+                    alvo,
+                    numero,
+                    authority_check=_authority_now,
+                ),
+                timeout=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "identity_number_set_lock_timeout",
+                timeout_sec=_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC,
+            )
+            return {"ok": False, "reason": "lock_timeout"}
+        except _RenumberAuthorityChangedError:
+            logger.info("identity_number_set_abortado_por_jogo")
+            return {"ok": False, "reason": "sessao_de_jogo_aberta"}
+        except _NumeroAlvoAusenteError:
+            logger.info("identity_number_set_alvo_ausente", uniq=alvo)
+            return {"ok": False, "reason": "controle_ausente"}
+        except _NumeroForaDaMesaError as exc:
+            logger.info(
+                "identity_number_set_numero_fora_da_mesa",
+                uniq=alvo,
+                pedido=numero,
+                maximo=exc.maximo,
+            )
+            return {
+                "ok": False,
+                "reason": "numero_fora_da_mesa",
+                "max": exc.maximo,
+            }
+
+        if changed:
+            # Mesma repintura do renumber: o DualSense reafirma o output já
+            # com o número novo; os externos são repintados pelo tick lento,
+            # adiantado aqui para não esperar o intervalo cheio do poll.
+            reassert = getattr(self.controller, "reassert_resolved_outputs", None)
+            if callable(reassert):
+                reassert()
+            schedule_external_tick = (
+                getattr(self.daemon, "_schedule_external_tick", None)
+                if self.daemon is not None
+                else None
+            )
+            if callable(schedule_external_tick):
+                schedule_external_tick()
+
+        return {"ok": True, "number": numero, "changed": changed}
+
+    @staticmethod
+    def _set_number_locked(
+        identity_registry: Any,
+        external_registry: Any,
+        alvo: str,
+        numero: int,
+        authority_check: Callable[[], str] | None = None,
+    ) -> dict[str, int]:
+        """Corpo BLOQUEANTE do ``identity.number.set`` — só via ``to_thread``.
+
+        A regra, em uma frase: **permutar os lugares que os PRESENTES já
+        ocupam**, pondo o alvo na posição pedida.
+
+        Por que permutar em vez de reescrever 1..N (que é o que o
+        ``identity.renumber`` faz): o conjunto de lugares dos presentes é
+        deixado EXATAMENTE como estava — só muda quem ocupa qual. Assim, os
+        lugares de quem está ausente não são tocados nem invadidos, e o gesto
+        "quero que este seja o 2" não rebaixa em silêncio um controle que
+        está guardado na gaveta (o efeito colateral que o "Renumerar agora"
+        tem por construção, e que a mantenedora já mediu).
+
+        Passo a passo, com os dois registros juntos (a fila é ÚNICA entre
+        DualSense e externos — EXT-04/NUM-01, e é dessa unicidade que sai a
+        garantia de nunca haver dois "Controle 1"):
+
+        1. junta os PRESENTES dos dois registros como ``(lugar, key,
+           registro)`` e ordena por lugar — esta é, por definição de
+           ``slot_for``, a ordem em que eles exibem 1..N;
+        2. tira o alvo dessa lista e o reinsere no índice ``numero - 1``;
+        3. redistribui os MESMOS lugares, na ordem crescente, para a lista
+           reordenada;
+        4. entrega a cada registro só a fatia de keys que é dele
+           (``compact``, que persiste sob o ``CONTROLLERS_FILE_LOCK``).
+
+        Empate de lugar entre os dois lados (só possível por corrupção do
+        arquivo) desempata a favor do DualSense — a MESMA regra do
+        cross-check do ``load``, do ``merged_order_payload`` e do
+        ``_posicao_locked``, para a ordem gravada e a exibida nunca
+        discordarem.
+
+        Erros (todos ANTES de qualquer escrita): alvo fora dos presentes →
+        :class:`_NumeroAlvoAusenteError`; número acima da quantidade de
+        presentes → :class:`_NumeroForaDaMesaError`. ``authority_check`` é a
+        re-checagem F3 pós-acquire, idêntica à do ``_renumber_locked``.
+        """
+        with contextlib.ExitStack() as locks:
+            for reg in (identity_registry, external_registry):
+                acquire = getattr(reg, "lock_for_renumber", None)
+                if callable(acquire):
+                    locks.enter_context(acquire())
+
+            if callable(authority_check) and authority_check() == "game":
+                raise _RenumberAuthorityChangedError()
+
+            presentes: list[tuple[int, int, str, Any]] = []
+            for ordem_kind, registry in enumerate(
+                (identity_registry, external_registry)
+            ):
+                if registry is None:
+                    continue
+                conectados = IpcHandlersMixin._connected_keys(registry)
+                presentes.extend(
+                    (lugar, ordem_kind, key, registry)
+                    for key, lugar in registry.snapshot().items()
+                    if key in conectados
+                )
+            presentes.sort(key=lambda e: (e[0], e[1], e[2]))
+
+            indice_atual = next(
+                (pos for pos, e in enumerate(presentes) if e[2] == alvo), None
+            )
+            if indice_atual is None:
+                raise _NumeroAlvoAusenteError()
+            if numero > len(presentes):
+                raise _NumeroForaDaMesaError(len(presentes))
+
+            lugares = [e[0] for e in presentes]
+            nova_ordem = list(presentes)
+            movido = nova_ordem.pop(indice_atual)
+            nova_ordem.insert(numero - 1, movido)
+
+            mudou: dict[str, int] = {}
+            por_registro: dict[int, dict[str, int]] = {}
+            for pos, (lugar_atual, ordem_kind, key, registry) in enumerate(
+                nova_ordem
+            ):
+                novo_lugar = lugares[pos]
+                if novo_lugar != lugar_atual:
+                    mudou[key] = novo_lugar
+                por_registro.setdefault(ordem_kind, {})[key] = novo_lugar
+                del registry  # a fatia é escolhida pelo índice, não pelo objeto
+
+            if identity_registry is not None and por_registro.get(0):
+                identity_registry.compact(por_registro[0])
+            if external_registry is not None and por_registro.get(1):
+                external_registry.compact(por_registro[1])
+
+            return mudou
 
     @staticmethod
     def _connected_keys(registry: Any) -> set[str]:
