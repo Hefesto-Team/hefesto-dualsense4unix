@@ -44,9 +44,20 @@ class _Adjustment:
         self.value = value
 
 
+class _StyleContext:
+    """Guarda as classes CSS aplicadas, para os testes poderem afirmá-las."""
+
+    def __init__(self) -> None:
+        self.classes: set[str] = set()
+
+    def add_class(self, nome: str) -> None:
+        self.classes.add(nome)
+
+
 class _Box:
     def __init__(self, *_a: Any, **_kw: Any) -> None:
         self._children: list[Any] = []
+        self._style = _StyleContext()
 
     def pack_start(self, child: Any, *_a: Any, **_kw: Any) -> None:
         self._children.append(child)
@@ -62,6 +73,9 @@ class _Box:
 
     def set_homogeneous(self, _v: bool) -> None:
         pass
+
+    def get_style_context(self) -> _StyleContext:
+        return self._style
 
     def set_visible(self, _v: bool) -> None:
         pass

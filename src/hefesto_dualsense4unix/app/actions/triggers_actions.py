@@ -453,6 +453,10 @@ class TriggersActionsMixin(WidgetAccessMixin):
     def _build_param_row(self, param: TriggerParamSpec) -> Gtk.Box:
         row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         row.set_homogeneous(False)
+        # A classe deixa o CSS encolher a trilha e o cursor do slider: são 4
+        # linhas por gatilho e a altura padrão do GtkScale (~40px cada) era o
+        # segundo maior bloco da aba, atrás só da grade de modos.
+        row.get_style_context().add_class("hefesto-param-row")
 
         # Coluna de rótulo estreita e em UMA linha só. Eram 200px, e mesmo assim
         # "Intensidade início (1-8)" quebrava em duas — cada linha extra some com
