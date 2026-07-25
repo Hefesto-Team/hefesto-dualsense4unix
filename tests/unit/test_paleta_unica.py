@@ -15,12 +15,17 @@ RAIZ = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 GUI = RAIZ / "gui"
 APP = RAIZ / "app"
 
-#: As 11 do Drácula + os 7 tokens de superfície do guia de identidade.
+#: As 11 do Drácula + os 8 tokens de superfície do guia de identidade.
 PALETA = {
     "#282a36", "#44475a", "#f8f8f2", "#6272a4", "#8be9fd", "#50fa7b",
     "#ffb86c", "#ff79c6", "#bd93f9", "#ff5555", "#f1fa8c",
     "#21222c", "#2b2d3a", "#343746", "#c8ccda", "#8b8fa8",
     "#403b55", "#4a4363",
+    # @chrome — barra de título, tira de abas e rodapé. É o degrau que faltava
+    # entre o fundo da janela (#21222c) e o card (#282a36): sem ele o cromo
+    # ficava do mesmo tom do card e a tela inteira era um chapado só. Sai do
+    # mockup (`novo-layout/Telas Hefesto.dc.html`, title bar/tab bar/footer).
+    "#242630",
     # BUG-GUI-FOOTER-LABEL-BRANCO-01: roxo ESCURO (@purple_deep), o único
     # roxo que se lê sobre um fundo claro. O @purple #bd93f9 é claro demais:
     # sobre o @green do botão Aplicar dá 1.8:1. Este dá 9.6:1 e continua

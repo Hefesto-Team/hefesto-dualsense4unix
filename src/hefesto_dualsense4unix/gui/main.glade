@@ -92,10 +92,11 @@
           <object class="GtkBox" id="header_bar">
             <property name="orientation">horizontal</property>
             <property name="spacing">14</property>
-            <property name="margin-top">10</property>
-            <property name="margin-bottom">8</property>
-            <property name="margin-start">14</property>
-            <property name="margin-end">14</property>
+            <!-- Os recuos viraram PADDING no theme.css (.hefesto-barra-titulo).
+                 Margin fica FORA da caixa de fundo: com margin, o gradiente da
+                 barra de título não encostava nas bordas da janela e o cromo
+                 aparecia como um retângulo flutuando. -->
+            <style><class name="hefesto-barra-titulo"/></style>
             <child>
               <object class="GtkImage" id="app_logo">
                 <property name="valign">center</property>
@@ -112,17 +113,25 @@
                        verde marca o "4" de "DualSense4Unix". As cores sao da
                        paleta Dracula e nao devem divergir do theme.css. -->
                   <object class="GtkLabel" id="app_wordmark">
-                    <property name="label" translatable="yes">&lt;span size="xx-large" weight="bold"&gt;&lt;span foreground="#ff79c6"&gt;Hefesto&lt;/span&gt; &lt;span foreground="#6272a4"&gt;—&lt;/span&gt; &lt;span foreground="#f8f8f2"&gt;DualSense&lt;/span&gt;&lt;span foreground="#50fa7b"&gt;4&lt;/span&gt;&lt;span foreground="#f8f8f2"&gt;Unix&lt;/span&gt;&lt;/span&gt;</property>
+                    <!-- Tamanho/peso saem da escala tipográfica (.hefesto-titulo
+                         = 21px/700, o valor do mockup). O `size="xx-large"` que
+                         estava aqui era RELATIVO à fonte da distribuição: o
+                         mesmo wordmark saía de tamanho diferente em cada
+                         máquina. As cores por trecho continuam no markup. -->
+                    <property name="label" translatable="yes">&lt;span foreground="#ff79c6"&gt;Hefesto&lt;/span&gt; &lt;span foreground="#6272a4"&gt;—&lt;/span&gt; &lt;span foreground="#f8f8f2"&gt;DualSense&lt;/span&gt;&lt;span foreground="#50fa7b"&gt;4&lt;/span&gt;&lt;span foreground="#f8f8f2"&gt;Unix&lt;/span&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
+                    <style><class name="hefesto-titulo"/></style>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="app_subtitle">
-                    <property name="label" translatable="yes">&lt;span size="small" foreground="#6272a4"&gt;Gerenciador DualSense para Linux&lt;/span&gt;</property>
-                    <property name="use-markup">True</property>
+                    <!-- .hefesto-subtitulo = 11px em JetBrains Mono + @comment,
+                         exatamente o subtítulo do mockup. -->
+                    <property name="label" translatable="yes">Gerenciador DualSense para Linux</property>
                     <property name="xalign">0</property>
+                    <style><class name="hefesto-subtitulo"/></style>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -141,16 +150,16 @@
           <packing><property name="expand">False</property></packing>
         </child>
 
-        <child>
-          <object class="GtkSeparator"/>
-          <packing><property name="expand">False</property></packing>
-        </child>
+        <!-- O GtkSeparator que ficava aqui saiu: a barra de título agora tem
+             `border-bottom` própria (.hefesto-barra-titulo) e os dois juntos
+             desenhavam DUAS linhas coladas. -->
 
-        <!-- Notebook com abas -->
+        <!-- Notebook com abas. Sem `margin`: a tira de abas é cromo e precisa
+             encostar nas bordas da janela (o recuo do mockup virou padding no
+             theme.css). Cada página já tem margem própria. -->
         <child>
           <object class="GtkNotebook" id="main_notebook">
             <property name="scrollable">True</property>
-            <property name="margin">8</property>
 
             <!-- ABA INICIO (FEAT-GUI-HOME-TAB-01): comutador de modo do sistema
                  + cards por controle + desligar de verdade. Conteudo dinamico
@@ -1792,9 +1801,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 </child>
                 <child>
                   <object class="GtkLabel">
-                    <property name="label" translatable="yes">&lt;b&gt;Detalhes técnicos&lt;/b&gt;</property>
-                    <property name="use-markup">True</property>
+                    <property name="label" translatable="yes">Detalhes técnicos</property>
                     <property name="xalign">0</property>
+                    <style><class name="hefesto-rotulo-secao"/></style>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -2552,10 +2561,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
           <object class="GtkBox" id="footer_box">
             <property name="orientation">horizontal</property>
             <property name="spacing">6</property>
-            <property name="margin-start">4</property>
-            <property name="margin-end">6</property>
-            <property name="margin-top">2</property>
-            <property name="margin-bottom">2</property>
+            <!-- Recuos viraram padding em .hefesto-rodape (mesmo motivo da
+                 barra de título: margin fica fora da caixa de fundo). -->
+            <style><class name="hefesto-rodape"/></style>
 
             <!-- Statusbar ocupa espaco flexivel a esquerda -->
             <child>
