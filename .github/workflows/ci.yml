@@ -342,10 +342,10 @@ jobs:
           set -e
           python3 -c "
           import hefesto_dualsense4unix as h
-          print('import OK, versao', h.__version__)
+          print('import OK, versao', h.__version__)  # noqa-acento
           from hefesto_dualsense4unix.core import ds_output_report  # noqa: F401
           from hefesto_dualsense4unix.profiles import schema  # noqa: F401
-          print('modulos de dominio importam OK')
+          print('modulos de dominio importam OK')  # noqa-acento
           "
           hefesto-dualsense4unix --help > /dev/null
           hefesto-dualsense4unix doctor --help > /dev/null
