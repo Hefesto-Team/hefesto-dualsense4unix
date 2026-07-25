@@ -185,6 +185,7 @@ RULES=(
     # 81 (hosts): controladores USB PCI (classe 0x0c03*) em power/control=on —
     # a economia no HOST derruba o barramento inteiro. PLAT-03 item 3.
     "81-hefesto-usb-host-power.rules"
+    "82-nintendo-pro-nosniff.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

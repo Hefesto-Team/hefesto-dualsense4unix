@@ -148,9 +148,12 @@ fi
 # ficam de fora (alimentavam a re-enumeração do storm -71); a 75 (disable-usb-
 # audio) é a genuinamente opt-in.
 echo "Copiando regras udev ..."
+# Glob por prefixo, uma faixa por linha: acrescentar uma regra nova exige
+# lembrar de vir aqui — o `check_packaging_parity.sh` cobra.
 for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
                   assets/76-*.rules assets/77-*.rules assets/78-*.rules \
-                  assets/79-*.rules assets/80-*.rules assets/81-*.rules; do
+                  assets/79-*.rules assets/80-*.rules assets/81-*.rules \
+                  assets/82-*.rules; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
