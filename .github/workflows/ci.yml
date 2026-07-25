@@ -15,6 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/check_anonymity.sh
+      # BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07): o check_test_data.sh existia,
+      # reprovava, e NÃO era executado por workflow nenhum — o único jeito de
+      # descobrir era rodá-lo à mão. Ele reprovava porque contradizia o gate de
+      # anonimato (exigia MAC neutro onde a convenção da casa manda OUI:00:00:NN);
+      # corrigida a contradição, ele volta a valer aqui, ao lado do irmão.
+      - run: bash scripts/check_test_data.sh
 
   acentuacao:
     name: Acentuação PT-BR estrita
