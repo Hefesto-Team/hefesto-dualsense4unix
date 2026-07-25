@@ -20,6 +20,9 @@ _gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE  # noqa: E402
+from hefesto_dualsense4unix.app.widgets.controller_card import (  # noqa: E402
+    ControllerCard,
+)
 
 
 def _dimensao_da_janela(nome: str) -> int:
@@ -59,6 +62,59 @@ def _gtk_pronto() -> bool:
 pytestmark = pytest.mark.skipif(
     not _gtk_pronto(), reason="sem GTK/display utilizável"
 )
+
+
+#: Um controle com TODOS os módulos de sensor presentes — é o card mais alto
+#: que a aba consegue produzir, e é ele que o orçamento tem de suportar.
+_INPUTS_COMPLETOS = {
+    "lx": 60,
+    "ly": 200,
+    "rx": 180,
+    "ry": 90,
+    "l2_raw": 200,
+    "r2_raw": 40,
+    "buttons": ["cross"],
+    "gyro": {"x": 143.2, "y": -412.0, "z": 22.8},
+    "touchpad": {
+        "touching": True,
+        "x": 1440,
+        "y": 270,
+        "width": 1920,
+        "height": 1080,
+    },
+    "speaker": {"volume": 180, "muted": False},
+}
+_ENTRY_COMPLETO = {
+    "index": 0,
+    "connected": True,
+    "transport": "bt",
+    "is_primary": True,
+    "uniq": "aa:bb:cc:00:00:01",
+    "battery_pct": 80,
+    "player": 1,
+    "player_slot": 1,
+    "lightbar_rgb": [255, 121, 198],
+    "lightbar_on": True,
+    "lightbar_source": "sysfs",
+    "inputs": _INPUTS_COMPLETOS,
+    "vpad_backend": "uhid",
+    "vpad_motivo": None,
+}
+_ESTADO_COMPLETO = {
+    "native_mode": False,
+    "rumble_ff": {
+        "per_vpad": [
+            {"player": 1, "motion_streaming": True, "motion_hz": 250.0}
+        ]
+    },
+}
+
+
+class _LeituraMic:
+    """Dublê da `LeituraMic` — o card só lê `nivel` e `muted`."""
+
+    nivel = 0.6
+    muted = False
 
 
 def _montar() -> tuple[Gtk.Builder, Gtk.Widget]:
@@ -121,4 +177,75 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
         f"abas acima do teto de {teto_por_aba}px: {', '.join(gordas)}. "
         "Lembre que o notebook adota o MAIOR mínimo — uma aba gorda empurra "
         "todas as outras para a rolagem."
+    )
+
+
+def test_card_de_controle_cabe_na_faixa_que_a_aba_status_da() -> None:
+    """O card de UM controle tem de caber na altura que a aba Status lhe dá.
+
+    Os cards não estão no glade (nascem em `_sync_status_cards`), então os
+    dois testes acima não os enxergam — e foi por aí que a aba voltou a
+    precisar de rolagem: empilhado em seis blocos de largura total, o card
+    pedia 457px para uma faixa de ~429px, e giroscópio e touchpad ficavam
+    abaixo do corte em toda sessão com 2 controles (o caso normal desta casa).
+    A medida é feita com TODOS os módulos de sensor acesos, que é o card mais
+    alto que a aba consegue produzir.
+    """
+    builder, root = _montar()
+    slot = builder.get_object("status_players_slot")
+    card = ControllerCard(compact=True)  # compact = 2+ controles, lado a lado
+    card.set_hexpand(True)
+    card.set_valign(Gtk.Align.START)
+    slot.attach(card, 0, 0, 1, 1)
+    # A janela é forçada ao tamanho com que ABRE: é essa alocação — e não a
+    # altura natural do conteúdo — que decide quanto sobra para os cards.
+    janela = root.get_toplevel()
+    janela.set_size_request(LARGURA, ALTURA_JANELA)
+    janela.show_all()
+    janela.resize(LARGURA, ALTURA_JANELA)
+    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    faixa = builder.get_object("status_players_scroll").get_allocated_height()
+    pedido = card.get_preferred_height_for_width(LARGURA // 2)[0]
+
+    assert pedido <= faixa, (
+        f"o card pede {pedido}px e a aba Status só tem {faixa}px de faixa "
+        f"({pedido - faixa}px a mais): o rodapé do card (giroscópio, "
+        "touchpad, botões) volta a ficar abaixo do corte da janela"
+    )
+
+
+def test_card_de_um_controle_so_tambem_cabe_na_faixa() -> None:
+    """O MESMO orçamento vale para o card sozinho — e ele é o mais alto.
+
+    O teste acima mede o card `compact=True`, que só existe quando há 2+
+    controles lado a lado. Com UM controle o slot vira uma coluna só e o card
+    passa a usar `STICK_SIZE_SINGLE`, ficando mais alto que o compacto — o
+    caminho mais comum de quem tem um controle só era justamente o que
+    ninguém aferia, e a aba voltava a cortar os botões abaixo da dobra.
+    """
+    builder, root = _montar()
+    slot = builder.get_object("status_players_slot")
+    card = ControllerCard(compact=False)  # compact=False = UM controle
+    card.set_hexpand(True)
+    card.set_valign(Gtk.Align.START)
+    slot.attach(card, 0, 0, 1, 1)
+    janela = root.get_toplevel()
+    janela.set_size_request(LARGURA, ALTURA_JANELA)
+    janela.show_all()
+    janela.resize(LARGURA, ALTURA_JANELA)
+    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    faixa = builder.get_object("status_players_scroll").get_allocated_height()
+    # Um controle só ocupa a largura inteira do slot, não a metade.
+    pedido = card.get_preferred_height_for_width(LARGURA)[0]
+
+    assert pedido <= faixa, (
+        f"com UM controle o card pede {pedido}px e a aba Status só tem "
+        f"{faixa}px ({pedido - faixa}px a mais): os botões voltam a ficar "
+        "abaixo do corte da janela"
     )

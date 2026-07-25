@@ -28,14 +28,22 @@ from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ControllerCard,
     gyro_do_inputs,
+    speaker_do_entry,
     touchpad_do_inputs,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    COR_MIC_FALA,
+    COR_MIC_PICO,
+    COR_MIC_SILENCIO,
     ESCALA_GYRO_GRAUS_S,
+    MIC_AMOSTRAS,
+    cor_da_barra_do_mic,
     fracao_do_eixo,
+    historico_deslizante,
     posicao_normalizada,
     texto_eixo,
     texto_toques,
+    texto_volume,
 )
 
 
@@ -267,6 +275,181 @@ def test_sem_leitor_de_inputs_apaga_tambem_os_sensores(card: Any) -> None:
     assert card._mic_box.get_visible() is False
     assert card._gyro_bars._valores == (0.0, 0.0, 0.0)
     assert card._touch_view._toque is None
+
+
+# ---------------------------------------------------------------------------
+# Medidor do microfone: onda de amplitude, não escada fixa
+# ---------------------------------------------------------------------------
+
+
+def test_cor_da_barra_do_mic_tem_tres_faixas() -> None:
+    """A cor sai da amplitude DAQUELA barra. Na escada fixa antiga, todas as
+    barras acesas usavam a mesma cor e o verde de pico não aparecia nunca."""
+    assert cor_da_barra_do_mic(0.9) == COR_MIC_PICO
+    assert cor_da_barra_do_mic(0.61) == COR_MIC_PICO
+    assert cor_da_barra_do_mic(0.6) == COR_MIC_FALA
+    assert cor_da_barra_do_mic(0.31) == COR_MIC_FALA
+    assert cor_da_barra_do_mic(0.3) == COR_MIC_SILENCIO
+    assert cor_da_barra_do_mic(0.0) == COR_MIC_SILENCIO
+
+
+def test_historico_deslizante_mantem_o_tamanho_e_a_ordem() -> None:
+    """Amostra nova entra na direita; a mais velha cai fora pela esquerda."""
+    janela = tuple([0.0] * MIC_AMOSTRAS)
+    for valor in (0.2, 0.9):
+        janela = historico_deslizante(janela, valor)
+
+    assert len(janela) == MIC_AMOSTRAS
+    assert janela[-2:] == (0.2, 0.9)
+    assert janela[0] == 0.0
+
+
+def test_historico_deslizante_grampeia_a_amostra() -> None:
+    janela = historico_deslizante((), 5.0)
+
+    assert janela[-1] == 1.0
+    assert historico_deslizante((), -3.0)[-1] == 0.0
+
+
+def test_medidor_do_mic_muda_de_forma_a_cada_leitura(card: Any) -> None:
+    """A forma é o dado: níveis diferentes têm de deixar barras diferentes.
+    Antes, o desenho era sempre a mesma escada e só mudava quantas acendiam."""
+    for nivel in (0.1, 0.8, 0.35):
+        card.update(_entry(), _ESTADO, LeituraMic(nivel=nivel, muted=False))
+
+    assert card._mic_meter._historico[-3:] == pytest.approx((0.1, 0.8, 0.35))
+    assert len(set(card._mic_meter._historico)) > 1
+
+
+def test_mic_que_some_leva_a_onda_junto(card: Any) -> None:
+    """Reaparecer com o traço da última captura seria mostrar áudio que não
+    está mais entrando."""
+    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.7, muted=False))
+
+    card.update(_entry(), _ESTADO, None)
+
+    assert not any(card._mic_meter._historico)
+
+
+# ---------------------------------------------------------------------------
+# Lightbar como BARRA na linha de baixo (mesma fonte do swatch do título)
+# ---------------------------------------------------------------------------
+
+
+def test_lightbar_com_cor_conhecida_vira_barra_e_hex(card: Any) -> None:
+    card.update(_entry(lightbar_rgb=[255, 121, 198]), _ESTADO, None)
+
+    assert card._lightbar_box.get_visible() is True
+    assert card._lightbar_bar._rgb == (255, 121, 198)
+    assert card._lightbar_hex.get_text() == "#ff79c6"
+
+
+def test_lightbar_sem_cor_conhecida_esconde_a_barra(card: Any) -> None:
+    """"Não sei" e "apagada" não podem desenhar a mesma faixa preta."""
+    card.update(_entry(lightbar_rgb=None), _ESTADO, None)
+
+    assert card._lightbar_box.get_visible() is False
+
+
+# ---------------------------------------------------------------------------
+# Alto-falante: consumo defensivo enquanto o backend não existe
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "entrada",
+    [
+        {"speaker": {"volume": 180, "muted": False}},
+        {"inputs": _inputs(speaker={"volume": 180, "muted": False})},
+    ],
+)
+def test_speaker_lido_do_entry_ou_do_inputs(entrada: dict[str, Any]) -> None:
+    """Quem publica é o daemon; o widget não pode quebrar por causa de ONDE
+    a chave mora."""
+    assert speaker_do_entry(entrada) == (180, False)
+
+
+@pytest.mark.parametrize(
+    "entrada",
+    [
+        None,
+        {},
+        {"speaker": "lixo"},
+        {"speaker": {}},
+        {"speaker": {"volume": "alto"}},
+        {"speaker": {"volume": True}},
+    ],
+)
+def test_speaker_ausente_ou_malformado_vira_none(entrada: Any) -> None:
+    assert speaker_do_entry(entrada) is None
+
+
+def test_speaker_sem_mute_no_payload_nao_chuta() -> None:
+    assert speaker_do_entry({"speaker": {"volume": 255}}) == (255, None)
+
+
+def test_bloco_do_speaker_some_sem_a_chave(card: Any) -> None:
+    """A FRENTE D ainda está construindo o backend: sem a chave, o módulo não
+    aparece — nunca uma barra em zero fingindo volume no mínimo."""
+    card.update(_entry(), _ESTADO, None)
+
+    assert card._speaker_box.get_visible() is False
+
+
+def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
+    card.update(
+        _entry(speaker={"volume": 128, "muted": False}), _ESTADO, None
+    )
+
+    assert card._speaker_box.get_visible() is True
+    assert card._speaker_bar._fracao == pytest.approx(128 / 255)
+    assert card._speaker_label.get_text() == "50 %"
+
+
+def test_speaker_mudo_diz_mudo_em_vez_de_porcentagem(card: Any) -> None:
+    card.update(_entry(speaker={"volume": 200, "muted": True}), _ESTADO, None)
+
+    assert card._speaker_bar._muted is True
+    assert card._speaker_label.get_text() == "mudo"
+
+
+def test_texto_volume_sem_mute_lido_mostra_so_a_porcentagem() -> None:
+    assert texto_volume(255, None) == "100 %"
+    assert texto_volume(0, None) == "0 %"
+
+
+# ---------------------------------------------------------------------------
+# Arranjo em 3 linhas (STATUS-3-LINHAS-01)
+# ---------------------------------------------------------------------------
+
+
+def test_botoes_ficam_na_linha_de_baixo_mesmo_sem_mic_nem_touchpad(
+    card: Any,
+) -> None:
+    """A armadilha do reagrupamento: se os botões morassem DENTRO de
+    `_sensores_linha`, sumiriam junto com ela no caso mais comum — controle
+    sem microfone atribuível e com o dedo fora do touchpad."""
+    card.update(_entry(), _ESTADO, None)
+
+    assert card._sensores_linha.get_visible() is False
+    assert card._linha_inferior.get_visible() is True
+    assert card._glyph_grid.get_visible() is True
+
+
+def test_gyro_oculto_nao_devolve_a_largura_toda_aos_gatilhos(card: Any) -> None:
+    """O giroscópio nasce oculto e aparece quando há sensor. Num `Gtk.Box` os
+    gatilhos pulariam para a largura inteira e voltariam para metade — reflow
+    visível. O grid homogêneo guarda a coluna pelo `_gyro_slot`, que fica
+    visível mesmo com o módulo escondido."""
+    card.update(_entry(), _ESTADO, None)
+
+    assert card._gyro_box.get_visible() is False
+    assert card._gyro_slot.get_visible() is True
+
+    grid = card._gyro_slot.get_parent()
+    assert grid.get_column_homogeneous() is True
+    assert grid.child_get_property(card._gyro_slot, "left-attach") == 1
+    assert grid.child_get_property(card._l2_bar.get_parent(), "left-attach") == 0
 
 
 def test_barras_de_gyro_convivem_com_a_linha_texto_motion(card: Any) -> None:

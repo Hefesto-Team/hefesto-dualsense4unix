@@ -8,6 +8,17 @@ controle (barras L2/R2, dois ``StickPreviewGtk`` e o grid 4x4 de
 ``ensure_min_contrast`` (decisão D8: o swatch mostra a cor crua; só os TRAÇOS
 recebem a ajustada).
 
+O corpo do card ocupa TRÊS linhas (STATUS-3-LINHAS-01), montadas em código —
+não no Glade::
+
+    [ L2 / R2 .................. | Giroscópio ..................... ]
+    [ Analógico Esquerdo (L3) .. | Analógico Direito (R3) ......... ]
+    [ Touchpad | Microfone | Lightbar | Alto-falante | botões (4x4) ]
+
+Antes eram seis blocos de largura total, empilhados: o card pedia 457px de
+altura e o giroscópio caía abaixo do corte da janela. Emparelhado, o que
+somava altura passou a dividir a mesma faixa.
+
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
 * Rótulo da lightbar pela FONTE (``lightbar_source`` do ``state_full``):
@@ -38,11 +49,15 @@ from typing import Any, Final
 
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
+    LightbarBar,
     MicMeter,
+    SpeakerBar,
     TouchpadView,
+    fracao_do_volume,
     posicao_normalizada,
     selo_mic,
     texto_toques,
+    texto_volume,
 )
 from hefesto_dualsense4unix.gui.widgets import (
     BUTTON_GLYPH_LABELS,
@@ -76,14 +91,23 @@ ALL_BUTTONS: Final[list[str]] = [b for linha in GRID_BOTOES for b in linha]
 #: Threshold para considerar L2/R2 analógicos "pressionados" no glyph.
 L2_R2_THRESHOLD: Final[int] = 30
 
-#: Tamanho dos glyphs no card (o layout single antigo usava 40px; com um
-#: card por controle, 28px mantém o grid legível sem estourar a largura).
-GLYPH_SIZE: Final[int] = 28
+#: Tamanho dos glyphs no card (o layout single antigo usava 40px; com um card
+#: por controle e o grid dividindo a linha de baixo com os quatro blocos de
+#: sensor, 20px mantém o glifo legível sem estourar largura nem altura).
+GLYPH_SIZE: Final[int] = 20
 
-#: Sticks: 120px com card único (paridade com o layout antigo da aba);
-#: 90px quando há 2+ cards (dois controles cabem sem rolagem infinita).
-STICK_SIZE_SINGLE: Final[int] = 120
-STICK_SIZE_COMPACT: Final[int] = 90
+#: Sticks: 88px com card único; 70px quando há 2+ cards. Os dois encolheram
+#: junto com o reagrupamento em três linhas. Estes números NÃO são chute: o
+#: teto vem medido em `test_card_de_controle_cabe_na_faixa_que_a_aba_status_da`
+#: (a faixa que o `status_players_scroll` recebe com a janela no tamanho com
+#: que ela abre), e é esse teste que manda aqui.
+#: O caminho de UM controle é o card mais ALTO (usa o stick maior) e era o
+#: único sem teste: com 104px ele pedia 411px para uma faixa de 397px e voltava
+#: a esconder os botões abaixo da dobra — o caso mais comum de quem tem um
+#: controle só. `test_card_de_um_controle_so_tambem_cabe_na_faixa` agora tranca
+#: os DOIS caminhos.
+STICK_SIZE_SINGLE: Final[int] = 88
+STICK_SIZE_COMPACT: Final[int] = 70
 
 #: Campo de largura fixa dos labels X/Y (BUG-STATUS-LABEL-REFLOW-01): sem o
 #: padding, o texto muda de largura ao cruzar dígitos e o re-layout a 10 Hz
@@ -301,6 +325,37 @@ def touchpad_do_inputs(inputs: Any) -> tuple[bool, float, float] | None:
     return (bool(bloco.get("touching")), fx, fy)
 
 
+def speaker_do_entry(entry: Any) -> tuple[int, bool | None] | None:
+    """``(volume 0-255, muted)`` do alto-falante; ``None`` = sem dado.
+
+    A chave ``speaker`` é OPCIONAL e pode chegar no ``entry`` do controle ou
+    dentro de ``inputs`` — o card aceita as duas posições porque quem publica
+    é o daemon, e o widget não pode quebrar por causa de onde o dado mora.
+    Ausente nos dois lugares, o módulo inteiro SOME: a mesma regra do
+    giroscópio (uma barra em zero diria "o volume está no mínimo", e o que
+    queremos dizer é "eu não sei").
+
+    ``muted`` fica ``None`` quando o payload traz volume mas não traz mute —
+    o rótulo mostra a porcentagem sem afirmar que o som está saindo.
+    """
+    bloco: Any = None
+    if isinstance(entry, dict):
+        bloco = entry.get("speaker")
+        if not isinstance(bloco, dict):
+            inputs = entry.get("inputs")
+            bloco = inputs.get("speaker") if isinstance(inputs, dict) else None
+    if not isinstance(bloco, dict):
+        return None
+    volume = bloco.get("volume")
+    if isinstance(volume, bool) or not isinstance(volume, (int, float)):
+        return None
+    muted = bloco.get("muted")
+    return (
+        max(0, min(255, round(volume))),
+        muted if isinstance(muted, bool) else None,
+    )
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -385,10 +440,11 @@ if _GTK_DISPONIVEL:
             self._l3_pressed = False
             self._r3_pressed = False
             self._glyphs: dict[str, ButtonGlyph] = {}
-            # S2 — caches de diff dos três módulos de sensor.
+            # S2 — caches de diff dos módulos de sensor.
             self._last_gyro: Any = _SENTINELA
             self._last_touch: Any = _SENTINELA
             self._last_mic: Any = _SENTINELA
+            self._last_speaker: Any = _SENTINELA
             self._montar_ui()
 
         # ------------------------------------------------------------------
@@ -418,6 +474,7 @@ if _GTK_DISPONIVEL:
             self._update_gyro(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
             self._update_mic(mic, str(entry.get("transport") or ""))
+            self._update_speaker(entry)
 
         def reset_inputs(self) -> None:
             """IPC sem resposta: mostra "—" — nunca o último valor como vivo."""
@@ -442,9 +499,9 @@ if _GTK_DISPONIVEL:
             header.show_all()
             self.set_label_widget(header)
 
-            corpo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-            corpo.set_margin_top(12)
-            corpo.set_margin_bottom(12)
+            corpo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            corpo.set_margin_top(10)
+            corpo.set_margin_bottom(10)
             corpo.set_margin_start(12)
             corpo.set_margin_end(12)
             corpo.get_style_context().add_class("hefesto-dualsense4unix-card")
@@ -506,17 +563,42 @@ if _GTK_DISPONIVEL:
             self._sem_leitor_label = sem_leitor
             corpo.pack_start(sem_leitor, False, False, 0)
 
-            area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             self._inputs_area = area
             corpo.pack_start(area, False, False, 0)
-            area.pack_start(self._montar_gatilhos(), False, False, 0)
-            area.pack_start(self._montar_sticks_e_glyphs(), False, False, 0)
-            # S2 — ordem do guia §4: … botões -> Giroscópio -> Microfone +
-            # Touchpad. Os três nascem escondidos (`no_show_all`) e só
-            # aparecem quando há sensor de verdade: um `show_all` do card não
-            # pode acender um módulo vazio.
-            area.pack_start(self._montar_gyro(), False, False, 0)
-            area.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
+            # STATUS-3-LINHAS-01 — o card ocupa TRÊS linhas, não seis blocos
+            # empilhados de largura total:
+            #
+            #   1) [ L2/R2 ............. | Giroscópio ............. ]
+            #   2) [ Analógico L3 ...... | Analógico R3 .......... ]
+            #   3) [ Touchpad | Microfone | Lightbar | Alto-falante | botões ]
+            #
+            # Lado a lado, o que antes somava altura passa a dividir a mesma
+            # faixa — é o que tira o giroscópio de baixo do corte da janela.
+            area.pack_start(self._montar_gatilhos_e_gyro(), False, False, 0)
+            area.pack_start(self._montar_sticks(), False, False, 0)
+            area.pack_start(self._montar_linha_inferior(), False, False, 0)
+
+        def _montar_gatilhos_e_gyro(self) -> Any:
+            """Linha 1: gatilhos à esquerda, giroscópio à direita.
+
+            `Gtk.Grid` homogêneo e NÃO um `Gtk.Box`: o giroscópio nasce oculto
+            e só aparece quando há sensor. Num box, os gatilhos tomariam a
+            largura toda enquanto o gyro estivesse escondido e encolheriam
+            para metade no instante em que ele aparecesse — reflow visível a
+            cada troca de controle. O grid guarda a metade direita porque a
+            coluna tem um `_gyro_slot` SEMPRE visível; quem se esconde é o
+            módulo dentro dele (que é o que os testes observam).
+            """
+            grid = Gtk.Grid()
+            grid.set_column_spacing(16)
+            grid.set_column_homogeneous(True)
+            grid.attach(self._montar_gatilhos(), 0, 0, 1, 1)
+            slot = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            slot.pack_start(self._montar_gyro(), False, False, 0)
+            self._gyro_slot = slot
+            grid.attach(slot, 1, 0, 1, 1)
+            return grid
 
         def _montar_gatilhos(self) -> Any:
             grid = Gtk.Grid()
@@ -572,34 +654,65 @@ if _GTK_DISPONIVEL:
             self._esconder_modulo(caixa)
             return caixa
 
-        def _montar_mic_e_touchpad(self) -> Any:
-            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        def _montar_linha_inferior(self) -> Any:
+            """Linha 3: touchpad, microfone, lightbar, alto-falante e botões.
 
-            mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
-            corpo_mic = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            medidor = MicMeter()
-            medidor.set_valign(Gtk.Align.CENTER)
-            corpo_mic.pack_start(medidor, False, False, 0)
-            selo = Gtk.Label()
-            selo.set_valign(Gtk.Align.CENTER)
-            corpo_mic.pack_start(selo, False, False, 0)
-            mic.pack_start(corpo_mic, False, False, 0)
-            self._mic_meter = medidor
-            self._mic_selo = selo
-            self._mic_box = mic
-            linha.pack_start(mic, False, False, 0)
+            `_sensores_linha` continua sendo SÓ touchpad + microfone, com a
+            semântica de sempre (some inteira quando nenhum dos dois existe —
+            é o que `_sincronizar_linha_sensores` decide e o que os testes
+            travam). A lightbar, o alto-falante e o grid de botões entram num
+            container EXTERNO: se morassem dentro dela, sumiriam junto no caso
+            comum de um controle sem mic atribuível e sem dedo no touchpad.
+            """
+            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            linha.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
+            linha.pack_start(self._montar_lightbar(), False, False, 0)
+            linha.pack_start(self._montar_speaker(), False, False, 0)
+            # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
+            # vem antes: microfone e alto-falante aparecem e somem conforme o
+            # controle, e o grid de 16 glyphs não pode dançar de lugar a cada
+            # vez que um módulo de sensor entra ou sai.
+            glyphs = self._montar_glyphs()
+            glyphs.set_halign(Gtk.Align.END)
+            linha.pack_end(glyphs, False, False, 0)
+            self._linha_inferior = linha
+            return linha
+
+        def _montar_mic_e_touchpad(self) -> Any:
+            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
             touch = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            touch.pack_start(self._rotulo_secao("Touchpad"), False, False, 0)
+            cab_touch = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            cab_touch.pack_start(
+                self._rotulo_secao("Touchpad"), False, False, 0
+            )
+            rotulo = self._rotulo_secao(texto_toques(0))
+            # "sem toque" ao LADO do título, não embaixo do painel: economiza
+            # uma linha inteira de altura na faixa mais apertada do card (e é
+            # o arranjo do mockup, título à esquerda e estado à direita).
+            cab_touch.pack_end(rotulo, False, False, 0)
+            touch.pack_start(cab_touch, False, False, 0)
             painel = TouchpadView()
             touch.pack_start(painel, False, False, 0)
-            rotulo = self._rotulo_secao(texto_toques(0))
-            touch.pack_start(rotulo, False, False, 0)
             self._touch_view = painel
             self._touch_label = rotulo
             self._touch_box = touch
             linha.pack_start(touch, False, False, 0)
+
+            mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            cabecalho = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            cabecalho.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
+            selo = Gtk.Label()
+            selo.set_valign(Gtk.Align.CENTER)
+            cabecalho.pack_start(selo, False, False, 0)
+            mic.pack_start(cabecalho, False, False, 0)
+            medidor = MicMeter()
+            medidor.set_valign(Gtk.Align.CENTER)
+            mic.pack_start(medidor, False, False, 0)
+            self._mic_meter = medidor
+            self._mic_selo = selo
+            self._mic_box = mic
+            linha.pack_start(mic, False, False, 0)
 
             self._esconder_modulo(linha)
             for modulo in (mic, touch, selo):
@@ -607,6 +720,47 @@ if _GTK_DISPONIVEL:
                 modulo.hide()
             self._sensores_linha = linha
             return linha
+
+        def _montar_lightbar(self) -> Any:
+            """Bloco "Lightbar": a cor que já chega no card, agora como BARRA.
+
+            Mesma fonte do swatch do título (``entry.lightbar_rgb``) — nada de
+            consultar o daemon outra vez. Sem cor conhecida o bloco some: o
+            rótulo "Lightbar: cor desconhecida" do corpo já responde, e uma
+            faixa preta ali seria "apagada" dita sem prova.
+            """
+            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            caixa.pack_start(self._rotulo_secao("Lightbar"), False, False, 0)
+            barra = LightbarBar()
+            barra.set_valign(Gtk.Align.CENTER)
+            caixa.pack_start(barra, False, False, 0)
+            hexa = self._rotulo_secao("")
+            caixa.pack_start(hexa, False, False, 0)
+            self._lightbar_bar = barra
+            self._lightbar_hex = hexa
+            self._lightbar_box = caixa
+            self._esconder_modulo(caixa)
+            return caixa
+
+        def _montar_speaker(self) -> Any:
+            """Bloco "Alto-falante": volume do speaker embutido do controle.
+
+            Consumo defensivo (a chave ``speaker`` é opcional): sem ela no
+            payload, o módulo nem aparece — nunca uma barra em zero fingindo
+            que o volume está no mínimo.
+            """
+            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            caixa.pack_start(self._rotulo_secao("Alto-falante"), False, False, 0)
+            barra = SpeakerBar()
+            barra.set_valign(Gtk.Align.CENTER)
+            caixa.pack_start(barra, False, False, 0)
+            valor = self._rotulo_secao("")
+            caixa.pack_start(valor, False, False, 0)
+            self._speaker_bar = barra
+            self._speaker_label = valor
+            self._speaker_box = caixa
+            self._esconder_modulo(caixa)
+            return caixa
 
         def _montar_capsula_stick(
             self, titulo: str, rotulo_stick: str, tamanho: int
@@ -630,7 +784,8 @@ if _GTK_DISPONIVEL:
             caps.pack_start(label_xy, False, False, 0)
             return caps, preview, label_titulo, label_xy
 
-        def _montar_sticks_e_glyphs(self) -> Any:
+        def _montar_sticks(self) -> Any:
+            """Linha 2: os dois analógicos, cada um em metade da largura."""
             tamanho = (
                 STICK_SIZE_COMPACT if self._compact else STICK_SIZE_SINGLE
             )
@@ -658,10 +813,13 @@ if _GTK_DISPONIVEL:
             self._stick_right_title = titulo_dir
             self._stick_right_xy = xy_dir
             grid.attach(caps_dir, 1, 0, 1, 1)
+            return grid
 
+        def _montar_glyphs(self) -> Any:
+            """Grid 4x4 dos 16 botões — o bloco da direita na linha de baixo."""
             glyph_grid = Gtk.Grid()
-            glyph_grid.set_row_spacing(6)
-            glyph_grid.set_column_spacing(6)
+            glyph_grid.set_row_spacing(2)
+            glyph_grid.set_column_spacing(2)
             glyph_grid.set_halign(Gtk.Align.CENTER)
             glyph_grid.set_valign(Gtk.Align.CENTER)
             for row, linha in enumerate(GRID_BOTOES):
@@ -672,8 +830,8 @@ if _GTK_DISPONIVEL:
                     )
                     self._glyphs[nome] = glyph
                     glyph_grid.attach(glyph, col, row, 1, 1)
-            grid.attach(glyph_grid, 2, 0, 1, 1)
-            return grid
+            self._glyph_grid = glyph_grid
+            return glyph_grid
 
         # ------------------------------------------------------------------
         # Seções do update (cada uma com o próprio diff)
@@ -716,6 +874,8 @@ if _GTK_DISPONIVEL:
                 self._swatch_rgb = cru
                 self._swatch.queue_draw()
 
+            self._aplicar_lightbar_bar(cru)
+
             if rotulo:
                 self._lightbar_label.set_text(rotulo)
                 self._lightbar_label.show()
@@ -733,6 +893,21 @@ if _GTK_DISPONIVEL:
                 tintar_progressbar(self._l2_bar, accent)
                 tintar_progressbar(self._r2_bar, accent)
                 self._pintar_titulos_sticks()
+
+        def _aplicar_lightbar_bar(self, cru: RGB | None) -> None:
+            """Bloco "Lightbar" da linha de baixo: a faixa e o hex, ou nada.
+
+            Cor desconhecida (o caso do 0,0,0 sem escrita nossa) esconde o
+            bloco em vez de pintar preto: "não sei" e "apagada" não podem
+            desenhar a mesma faixa.
+            """
+            if cru is None:
+                self._lightbar_bar.set_cor(None)
+                self._lightbar_box.hide()
+                return
+            self._lightbar_bar.set_cor(cru)
+            self._lightbar_hex.set_text(rgb_para_hex(cru))
+            self._lightbar_box.show()
 
         def _update_degradacao(self, entry: dict[str, Any]) -> None:
             texto = texto_degradacao(entry)
@@ -798,6 +973,9 @@ if _GTK_DISPONIVEL:
                 return
             self._last_mic = chave
             if nivel is None:
+                # A onda também vai embora: reaparecer com o traço da última
+                # captura seria mostrar áudio que não está mais entrando.
+                self._mic_meter.limpar()
                 self._mic_box.hide()
                 self._sincronizar_linha_sensores()
                 return
@@ -819,8 +997,27 @@ if _GTK_DISPONIVEL:
             self._mic_box.show()
             self._sincronizar_linha_sensores()
 
+        def _update_speaker(self, entry: dict[str, Any]) -> None:
+            dados = speaker_do_entry(entry)
+            if dados == self._last_speaker:
+                return
+            self._last_speaker = dados
+            if dados is None:
+                self._speaker_box.hide()
+                return
+            volume, muted = dados
+            self._speaker_bar.set_volume(fracao_do_volume(volume), muted)
+            self._speaker_label.set_text(texto_volume(volume, muted))
+            self._speaker_box.show()
+
         def _sincronizar_linha_sensores(self) -> None:
-            """A linha "Microfone + Touchpad" só existe se algum dos dois existe."""
+            """A linha "Touchpad + Microfone" só existe se algum dos dois existe.
+
+            Ela é só o PAR de sensores — a lightbar, o alto-falante e os
+            botões moram no container externo (`_linha_inferior`) justamente
+            para não sumirem junto no caso comum de um controle sem microfone
+            atribuível e com o dedo fora do touchpad.
+            """
             if self._mic_box.get_visible() or self._touch_box.get_visible():
                 self._sensores_linha.show()
             else:
@@ -977,11 +1174,14 @@ if _GTK_DISPONIVEL:
             self._gyro_box.hide()
             self._touch_view.set_toque(None)
             self._touch_box.hide()
+            self._mic_meter.limpar()
             self._mic_box.hide()
             self._sensores_linha.hide()
+            self._speaker_box.hide()
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
             self._last_mic = _SENTINELA
+            self._last_speaker = _SENTINELA
 
         # ------------------------------------------------------------------
         # Swatch (cor CRUA — decisão D8: a identidade da cor fica aqui)
@@ -1029,6 +1229,7 @@ else:
             self.touchpad: tuple[bool, float, float] | None = None
             self.mic_selo: tuple[str, str, str] | None = None
             self.mic_nivel: float | None = None
+            self.speaker: tuple[int, bool | None] | None = None
 
         def update(
             self,
@@ -1049,6 +1250,7 @@ else:
             self.mic_selo = selo_mic(
                 getattr(mic, "muted", None) if mic is not None else None
             )
+            self.speaker = speaker_do_entry(entry)
 
         def reset_inputs(self) -> None:
             """IPC sem resposta → "—" (mesmo contrato do widget real)."""
@@ -1073,6 +1275,7 @@ __all__ = [
     "accent_do_card",
     "gyro_do_inputs",
     "rotulo_lightbar",
+    "speaker_do_entry",
     "texto_degradacao",
     "texto_motion",
     "titulo_do_card",
