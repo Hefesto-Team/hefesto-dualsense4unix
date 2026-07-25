@@ -205,7 +205,10 @@ class TestValidateAceita:
             f"{HID_ID_USB}\n"
             "HID_NAME=Sony Interactive Entertainment DualSense Wireless Controller\n"
             "HID_PHYS=usb-0000:2d:00.3-4/input3\n"
-            "HID_UNIQ=e8:47:3a:aa:bb:cc\n"
+            # Máscara da casa (OUI:00:00:NN): preserva o fabricante e apaga o
+            # aparelho. É a convenção que o test_docs_mac_anonimato impõe e que
+            # o scripts/check_test_data.sh confere.
+            "HID_UNIQ=e8:47:3a:00:00:01\n"
             "MODALIAS=hid:b0003g0001v0000054Cp00000CE6\n"
         )
         node, kwargs = _make_tree(tmp_path, uevent=uevent)

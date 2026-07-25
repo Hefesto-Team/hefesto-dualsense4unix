@@ -58,12 +58,40 @@ def test_led_sem_brightness_via_ipc(ipc_calls: list[tuple[str, dict[str, Any]]])
 
 
 def test_led_com_brightness_via_ipc(ipc_calls: list[tuple[str, dict[str, Any]]]) -> None:
+    """A CLI fala PORCENTAGEM com a usuária e FRAÇÃO com o daemon.
+
+    BUG-CLI-BRIGHTNESS-UNIDADE-01: este teste travava `brightness: 50` — o
+    valor cru, em porcentagem — e passava verde enquanto o produto não
+    funcionava. O handler `led.set` valida `0.0 <= brightness <= 1.0`
+    (`ipc_handlers.py:482`), então 50 era RECUSADO: o comando caía no fallback
+    de hardware sem avisar, e `--brightness 1` virava 100%.
+    A muralha era o próprio teste: ele afirmava o que a CLI mandava, nunca o
+    que o daemon aceitava. Agora afere o contrato dos DOIS lados.
+    """
     result = runner.invoke(app, ["led", "--color", "#ff8800", "--brightness", "50"])
     assert result.exit_code == 0, result.output
     assert ipc_calls == [
-        ("led.set", {"rgb": [255, 136, 0], "brightness": 50})
+        ("led.set", {"rgb": [255, 136, 0], "brightness": 0.5})
     ]
+    # O que o daemon recebe tem de passar na validação dele.
+    enviado = ipc_calls[0][1]["brightness"]
+    assert 0.0 <= enviado <= 1.0, "led.set recusa brightness fora de [0.0, 1.0]"
+    # A usuária continua vendo porcentagem.
     assert "brightness=50" in result.output
+
+
+def test_led_brightness_1_por_cento_nao_vira_100(
+    ipc_calls: list[tuple[str, dict[str, Any]]],
+) -> None:
+    """`--brightness 1` é 1%, não 100%.
+
+    Era o caso mais traiçoeiro do BUG-CLI-BRIGHTNESS-UNIDADE-01: `1` passava na
+    validação de fração como `1.0` e acendia a lightbar no MÁXIMO — o oposto
+    exato do que foi pedido, sem erro nenhum.
+    """
+    result = runner.invoke(app, ["led", "--color", "#ff8800", "--brightness", "1"])
+    assert result.exit_code == 0, result.output
+    assert ipc_calls[0][1]["brightness"] == 0.01
 
 
 def test_led_brightness_invalido_baixo() -> None:

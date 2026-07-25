@@ -116,15 +116,24 @@ def cmd_led(
 def _apply_via_ipc(rgb: tuple[int, int, int], brightness: int | None) -> bool:
     """Tenta enviar `led.set` via IPC; retorna True em sucesso, False em falha.
 
-    O daemon atual ignora o parâmetro `brightness` (params extras são
-    descartados pelo handler). FEAT-LED-BRIGHTNESS-01 ligará a fiação.
+    BUG-CLI-BRIGHTNESS-UNIDADE-01 (25/07): a CLI expõe `--brightness` em
+    PORCENTAGEM (0-100, `min=0, max=100` no typer) e mandava o número cru; o
+    handler `led.set` valida FRAÇÃO (`0.0 <= brightness <= 1.0`,
+    `ipc_handlers.py:482`). O resultado eram dois erros silenciosos:
+    `--brightness 50` fazia o IPC recusar e o comando caía no fallback de
+    hardware sem dizer nada, e `--brightness 1` passava na validação como
+    `1.0` — ou seja, era aplicado como **100%**, o oposto do pedido.
+    A conversão mora aqui porque a unidade amigável é da CLI: a GUI já manda
+    fração (`app/ipc_bridge.py:341` `led_set`), que é o contrato do daemon.
+    (O docstring antigo dizia que o daemon "ignora" o parâmetro; ele valida e
+    aplica desde a FEAT-LED-BRIGHTNESS-01.)
     """
     from hefesto_dualsense4unix.app.ipc_bridge import _run_call
     from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     params: dict[str, object] = {"rgb": list(rgb)}
     if brightness is not None:
-        params["brightness"] = int(brightness)
+        params["brightness"] = max(0, min(100, int(brightness))) / 100.0
     try:
         _run_call("led.set", params, timeout=0.5)
     except (IpcError, FileNotFoundError, ConnectionError, OSError):
