@@ -109,12 +109,25 @@ GLYPH_SIZE: Final[int] = 20
 STICK_SIZE_SINGLE: Final[int] = 88
 STICK_SIZE_COMPACT: Final[int] = 70
 
+#: Largura de referência do título do analógico antes de quebrar linha, em
+#: caracteres. O rótulo tem de caber na largura do DESENHO do analógico
+#: (`STICK_SIZE_*`), não o contrário — ver `_montar_capsula_stick`.
+_TITULO_STICK_MAX_CHARS: Final[int] = 10
+
 #: Campo de largura fixa dos labels X/Y (BUG-STATUS-LABEL-REFLOW-01): sem o
 #: padding, o texto muda de largura ao cruzar dígitos e o re-layout a 10 Hz
 #: faz o painel "respirar".
-_XY_MARKUP: Final[str] = (
-    '<span font_family="monospace" size="small">X: {x:>3}  Y: {y:>3}</span>'
-)
+#:
+#: LEGIBILIDADE-01 — duas linhas, e o tamanho saiu do markup. O `size="small"`
+#: que estava aqui era RELATIVO à fonte que a distribuição tivesse configurado
+#: (rendia 11,1px nesta máquina) e ficava FORA do alcance de qualquer ajuste de
+#: tema — a escala global reescreve `font-size` do CSS, não atributo de Pango.
+#: Agora o degrau vem da classe `.hefesto-valor-mono` (12px, mono), que cresce
+#: junto com o resto. Empilhar X e Y corta a largura do rótulo pela metade, e
+#: é essa largura que paga a mudança dos analógicos para a faixa de baixo: numa
+#: linha só, o rótulo — e não o desenho do analógico — é quem dizia a largura
+#: da cápsula.
+_XY_MARKUP: Final[str] = "X: {x:>3}\nY: {y:>3}"
 
 # ---------------------------------------------------------------------------
 # BT-03 — motivos de degradação em palavras leigas
@@ -566,17 +579,20 @@ if _GTK_DISPONIVEL:
             area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             self._inputs_area = area
             corpo.pack_start(area, False, False, 0)
-            # STATUS-3-LINHAS-01 — o card ocupa TRÊS linhas, não seis blocos
-            # empilhados de largura total:
+            # LEGIBILIDADE-01/R4 — o card ocupa DUAS linhas. Eram três, com os
+            # analógicos numa faixa só deles:
             #
             #   1) [ L2/R2 ............. | Giroscópio ............. ]
-            #   2) [ Analógico L3 ...... | Analógico R3 .......... ]
-            #   3) [ Touchpad | Microfone | Lightbar | Alto-falante | botões ]
+            #   2) [ Touchpad  Microfone | L3 | R3 | botões (4x4) ]
+            #      [ Lightbar Alto-fal.  |    |    |              ]
             #
-            # Lado a lado, o que antes somava altura passa a dividir a mesma
-            # faixa — é o que tira o giroscópio de baixo do corte da janela.
+            # O pedido da mantenedora: "os analógicos no Status deveriam ficar
+            # ao lado do microfone e lightbar e entre os botões. Eles estão
+            # acima." Ela tem razão pelo motivo do desenho e pelo do orçamento:
+            # microfone, lightbar, alto-falante, touchpad e analógicos são
+            # todos LEITURA DE ESTADO AO VIVO e pertencem à mesma faixa; e a
+            # faixa só deles gastava a largura que falta para a fonte crescer.
             area.pack_start(self._montar_gatilhos_e_gyro(), False, False, 0)
-            area.pack_start(self._montar_sticks(), False, False, 0)
             area.pack_start(self._montar_linha_inferior(), False, False, 0)
 
         def _montar_gatilhos_e_gyro(self) -> Any:
@@ -655,19 +671,34 @@ if _GTK_DISPONIVEL:
             return caixa
 
         def _montar_linha_inferior(self) -> Any:
-            """Linha 3: touchpad, microfone, lightbar, alto-falante e botões.
+            """A faixa de leitura ao vivo: sensores, analógicos e botões.
 
             `_sensores_linha` continua sendo SÓ touchpad + microfone, com a
             semântica de sempre (some inteira quando nenhum dos dois existe —
             é o que `_sincronizar_linha_sensores` decide e o que os testes
-            travam). A lightbar, o alto-falante e o grid de botões entram num
-            container EXTERNO: se morassem dentro dela, sumiriam junto no caso
-            comum de um controle sem mic atribuível e sem dedo no touchpad.
+            travam). A lightbar, o alto-falante, os analógicos e o grid de
+            botões entram em containers EXTERNOS: se morassem dentro dela,
+            sumiriam junto no caso comum de um controle sem mic atribuível e
+            sem dedo no touchpad.
+
+            Os quatro módulos de sensor ficam em DUAS linhas de dois em vez de
+            uma de quatro (LEGIBILIDADE-01/R4). É o que abre a coluna para os
+            analógicos sem alargar o card: numa fileira única de seis módulos,
+            dois cards lado a lado passavam de 1300px de largura mínima, e a
+            aba Status não tem rolagem horizontal para onde fugir.
             """
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            linha.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
-            linha.pack_start(self._montar_lightbar(), False, False, 0)
-            linha.pack_start(self._montar_speaker(), False, False, 0)
+
+            sensores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            sensores.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
+            saida = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            saida.pack_start(self._montar_lightbar(), False, False, 0)
+            saida.pack_start(self._montar_speaker(), False, False, 0)
+            self._modulos_saida = saida
+            sensores.pack_start(saida, False, False, 0)
+            linha.pack_start(sensores, False, False, 0)
+
+            linha.pack_start(self._montar_sticks(), False, False, 0)
             # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
             # vem antes: microfone e alto-falante aparecem e somem conforme o
             # controle, e o grid de 16 glyphs não pode dançar de lugar a cada
@@ -681,34 +712,41 @@ if _GTK_DISPONIVEL:
         def _montar_mic_e_touchpad(self) -> Any:
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
+            # LEGIBILIDADE-01/R4 — o estado de cada módulo desceu para BAIXO do
+            # desenho. Ao lado do título ele economizava uma linha de altura,
+            # que era o recurso escasso quando os cinco blocos dividiam UMA
+            # fileira. Agora a altura da faixa é ditada pelos analógicos (a
+            # cápsula é o bloco mais alto) e sobra folga vertical de sobra; o
+            # que ficou escasso é a LARGURA, porque dois cards lado a lado
+            # somam direto no mínimo da janela e a aba Status não tem rolagem
+            # horizontal. Com "sem toque" ao lado do título, a coluna do
+            # touchpad pedia 105px para desenhar um painel de 76.
             touch = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            cab_touch = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            cab_touch.pack_start(
-                self._rotulo_secao("Touchpad"), False, False, 0
-            )
-            rotulo = self._rotulo_secao(texto_toques(0))
-            # "sem toque" ao LADO do título, não embaixo do painel: economiza
-            # uma linha inteira de altura na faixa mais apertada do card (e é
-            # o arranjo do mockup, título à esquerda e estado à direita).
-            cab_touch.pack_end(rotulo, False, False, 0)
-            touch.pack_start(cab_touch, False, False, 0)
+            touch.pack_start(self._rotulo_secao("Touchpad"), False, False, 0)
             painel = TouchpadView()
             touch.pack_start(painel, False, False, 0)
+            rotulo = self._rotulo_secao(texto_toques(0))
+            touch.pack_start(rotulo, False, False, 0)
             self._touch_view = painel
             self._touch_label = rotulo
             self._touch_box = touch
             linha.pack_start(touch, False, False, 0)
 
             mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            cabecalho = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            cabecalho.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
-            selo = Gtk.Label()
-            selo.set_valign(Gtk.Align.CENTER)
-            cabecalho.pack_start(selo, False, False, 0)
-            mic.pack_start(cabecalho, False, False, 0)
+            mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
             medidor = MicMeter()
             medidor.set_valign(Gtk.Align.CENTER)
             mic.pack_start(medidor, False, False, 0)
+            selo = Gtk.Label()
+            selo.set_valign(Gtk.Align.CENTER)
+            selo.set_halign(Gtk.Align.START)
+            # LEGIBILIDADE-01: o degrau vem da escala (`.hefesto-selo`), não do
+            # `font_size="x-small"` que estava no markup. Aquele atributo era
+            # RELATIVO à fonte da distribuição — rendia 9,3px nesta máquina, o
+            # MENOR texto da interface — e nenhum ajuste de tema o alcançava,
+            # porque a escala global reescreve o CSS, não markup de Pango.
+            selo.get_style_context().add_class("hefesto-selo")
+            mic.pack_start(selo, False, False, 0)
             self._mic_meter = medidor
             self._mic_selo = selo
             self._mic_box = mic
@@ -771,6 +809,16 @@ if _GTK_DISPONIVEL:
             label_titulo = Gtk.Label()
             label_titulo.set_markup(titulo)
             label_titulo.set_xalign(0.5)
+            # O título QUEBRA em vez de alargar a cápsula: na faixa de baixo
+            # quem manda na largura tem de ser o desenho do analógico, não o
+            # rótulo. Sem isso, "Analógico Esquerdo (L3)" pedia 156px numa
+            # cápsula de 70 e alargava o card inteiro. O peso visual passa a
+            # ser o dos módulos vizinhos (`dim-label`), que é o que eles são
+            # agora: pares na mesma faixa de leitura ao vivo.
+            label_titulo.set_line_wrap(True)
+            label_titulo.set_justify(Gtk.Justification.CENTER)
+            label_titulo.set_max_width_chars(_TITULO_STICK_MAX_CHARS)
+            label_titulo.get_style_context().add_class("dim-label")
             caps.pack_start(label_titulo, False, False, 0)
             preview = StickPreviewGtk(label=rotulo_stick)
             preview.set_size_request(tamanho, tamanho)
@@ -781,18 +829,22 @@ if _GTK_DISPONIVEL:
             label_xy = Gtk.Label()
             label_xy.set_markup(_XY_MARKUP.format(x=128, y=128))
             label_xy.set_xalign(0.5)
+            label_xy.set_justify(Gtk.Justification.CENTER)
+            # O degrau de tamanho e a família mono saem da escala do CSS, não
+            # de atributo de Pango — é o que deixa a escala global alcançá-los.
+            label_xy.get_style_context().add_class("hefesto-valor-mono")
             caps.pack_start(label_xy, False, False, 0)
             return caps, preview, label_titulo, label_xy
 
         def _montar_sticks(self) -> Any:
-            """Linha 2: os dois analógicos, cada um em metade da largura."""
+            """Os dois analógicos, lado a lado, dentro da faixa de baixo."""
             tamanho = (
                 STICK_SIZE_COMPACT if self._compact else STICK_SIZE_SINGLE
             )
-            grid = Gtk.Grid()
-            grid.set_column_spacing(16)
-            grid.set_row_spacing(0)
-            grid.set_column_homogeneous(True)
+            # Caixa e não mais `Gtk.Grid` homogêneo: a grade dava às duas
+            # cápsulas a largura da MAIOR, e a maior era a do rótulo. Aqui cada
+            # uma pede o próprio desenho.
+            faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
             caps_esq, stick_esq, titulo_esq, xy_esq = (
                 self._montar_capsula_stick(
@@ -802,7 +854,7 @@ if _GTK_DISPONIVEL:
             self._stick_left = stick_esq
             self._stick_left_title = titulo_esq
             self._stick_left_xy = xy_esq
-            grid.attach(caps_esq, 0, 0, 1, 1)
+            faixa.pack_start(caps_esq, False, False, 0)
 
             caps_dir, stick_dir, titulo_dir, xy_dir = (
                 self._montar_capsula_stick(
@@ -812,8 +864,9 @@ if _GTK_DISPONIVEL:
             self._stick_right = stick_dir
             self._stick_right_title = titulo_dir
             self._stick_right_xy = xy_dir
-            grid.attach(caps_dir, 1, 0, 1, 1)
-            return grid
+            faixa.pack_start(caps_dir, False, False, 0)
+            self._faixa_sticks = faixa
+            return faixa
 
         def _montar_glyphs(self) -> Any:
             """Grid 4x4 dos 16 botões — o bloco da direita na linha de baixo."""
@@ -990,8 +1043,8 @@ if _GTK_DISPONIVEL:
             else:
                 texto, fundo, cor = selo
                 self._mic_selo.set_markup(
-                    f'<span background="{fundo}" foreground="{cor}"'
-                    f' font_size="x-small"> {texto} </span>'
+                    f'<span background="{fundo}" foreground="{cor}">'
+                    f" {texto} </span>"
                 )
                 self._mic_selo.show()
             self._mic_box.show()

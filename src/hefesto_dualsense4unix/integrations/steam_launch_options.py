@@ -818,6 +818,79 @@ def add_appid_to_steam_input_allowlist(
         return "erro"
 
 
+def remove_appid_from_steam_input_allowlist(
+    appid: int | str,
+    *,
+    path: Path | None = None,
+) -> str:
+    """Tira um appid da allowlist — o gêmeo do `add`. Status para o toast.
+
+    Status: ``"removido"`` | ``"nao_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Nunca levanta — quem chama é um clique de botão.
+
+    JOGO-01 (Entrega 3): a allowlist tinha escritor só para um lado. Pôr um jogo
+    nela é um clique ("Este jogo não funciona"); tirar exigia abrir
+    `~/.config/hefesto-dualsense4unix/steam_input_apps.txt` num editor de texto —
+    ou seja, na prática o opt-in era irreversível para quem não mexe em arquivo
+    de configuração. E ele PRECISA ser reversível: entrar na allowlist mudou de
+    preço com a JOGO-01 (o Hefesto retira o gamepad virtual daquele jogo), então
+    um jogo marcado por engano deixa de ter cor, gatilhos e co-op do Hefesto até
+    ser desmarcado.
+
+    Regras (espelham as três armadilhas do `add`, pelo avesso):
+
+    - **só linha VIVA conta**: `# 620` é comentário, não presença — appid apenas
+      comentado devolve ``"nao_estava"`` (idêntico ao critério de duplicata do
+      `add`, que re-adiciona um appid comentado);
+    - **comentário inline sai junto**: `620 # marcado pela GUI` é UMA linha cujo
+      appid é 620; remover metade dela deixaria lixo sintático;
+    - **comentários NÃO são adivinhados**: o `add` escreve a nota como linha `#`
+      logo acima do appid, mas o arquivo é dela e pode ter anotações próprias
+      (a instalação nasce com um cabeçalho de sete linhas de comentário coladas
+      no primeiro appid). Apagar "o comentário de cima" acertaria a nota nossa
+      e o cabeçalho dela com a mesma facilidade, então preservamos TUDO: o preço
+      é uma nota órfã, que não muda o comportamento de leitor nenhum;
+    - **arquivo ausente** é allowlist vazia ⇒ ``"nao_estava"``, sem criar nada
+      (criar um arquivo para dizer que ele não tem o appid seria absurdo).
+
+    Escrita atômica pelo mesmo motivo do `add`: o guard (path unit) pode estar
+    lendo o arquivo neste instante, e meia leitura viraria allowlist vazia.
+
+    Superfície pendente (a GUI está com outro dono nesta sprint): quem for ligar
+    o botão chama esta função no mesmo lugar em que `on_steam_game_broken`
+    (`app/actions/daemon_actions.py`) chama `add_appid_to_steam_input_allowlist`
+    — inclusive com o mesmo `_recarregar_apos_allowlist` depois, que é o que faz
+    a mudança valer sem reiniciar nada (o daemon rematerializa o
+    `steam_app_<appid>.env` no `launch_env.refresh`). Falta só o gatilho e a
+    frase do toast; a decisão e a escrita moram aqui.
+    """
+    alvo = str(appid).strip()
+    if not alvo.isdigit():
+        return "appid_invalido"
+    destino = path if path is not None else steam_input_allowlist_path()
+    try:
+        try:
+            atual = destino.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return "nao_estava"
+        if alvo not in parse_steam_input_allowlist(atual):
+            return "nao_estava"
+        # `keepends` preserva byte a byte o que fica (inclusive um arquivo sem
+        # `\n` final, que o `add` também tolera).
+        mantidas = [
+            linha
+            for linha in atual.splitlines(keepends=True)
+            if linha.split("#", 1)[0].strip() != alvo
+        ]
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        tmp = destino.with_name(destino.name + ".hefesto-tmp")
+        tmp.write_text("".join(mantidas), encoding="utf-8")
+        tmp.replace(destino)
+        return "removido"
+    except OSError:
+        return "erro"
+
+
 def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, str]:
     """Transforma UM vdf com backup ao lado. Retorna (linhas alteradas, diff).
 

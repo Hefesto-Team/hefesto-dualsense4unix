@@ -74,6 +74,53 @@ def _arquivo(tmp_path: Path) -> Path:
     return tmp_path / "config" / "controllers.json"
 
 
+def _fila_no_disco(tmp_path: Path, kind: str) -> dict[str, int]:
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
+
+    Os dois registros gravam UMA fila só (lista de ``{addr, kind, rank}``) em
+    vez dos mapas ``slots``/``externals`` de número absoluto: era essa forma
+    que não conseguia dizer "quem está na mesa é 1..N".
+    """
+    dados = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
+    return {
+        str(e["addr"]): int(e["rank"])
+        for e in dados[id_mod.ORDER_FIELD]
+        if isinstance(e, dict) and e.get("kind") == kind
+    }
+
+
+def _gravar_fila(
+    tmp_path: Path,
+    *,
+    dualsense: dict[str, int] | None = None,
+    externos: dict[str, int] | None = None,
+    version: object = None,
+    boot: str = BOOT,
+) -> None:
+    """Escreve um ``controllers.json`` no schema vigente (NUM-01)."""
+    entradas: list[dict[str, object]] = [
+        {"addr": addr, "kind": id_mod.KIND_DUALSENSE, "rank": rank}
+        for addr, rank in (dualsense or {}).items()
+    ]
+    entradas += [
+        {"addr": addr, "kind": id_mod.KIND_EXTERNAL, "rank": rank}
+        for addr, rank in (externos or {}).items()
+    ]
+    _arquivo(tmp_path).parent.mkdir(parents=True, exist_ok=True)
+    _arquivo(tmp_path).write_text(
+        json.dumps(
+            {
+                "version": (
+                    id_mod.CONTROLLERS_SCHEMA_VERSION if version is None else version
+                ),
+                "boot_id": boot,
+                id_mod.ORDER_FIELD: entradas,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 # --- registry: numeração e reserva -------------------------------------------
 
 
@@ -158,8 +205,7 @@ def test_compact_persiste_no_disco_quando_muda(tmp_path: Path) -> None:
     r.sync_connected([MAC_A])  # save inicial
     key_a = MAC_A.replace(":", "")
     r.compact({key_a: 7})
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["externals"] == {key_a: 7}
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {key_a: 7}
 
 
 def test_identidade_sem_mac_e_volatil_nunca_persistida(tmp_path: Path) -> None:
@@ -167,8 +213,9 @@ def test_identidade_sem_mac_e_volatil_nunca_persistida(tmp_path: Path) -> None:
     assert r.slot_for("path:/dev/input/event9", reserve=0) == 1
     r.slot_for(MAC_A, reserve=0)
     r.sync_connected([MAC_A])  # persiste os sujos
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert list(data["externals"]) == [MAC_A.replace(":", "")]
+    assert list(_fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL)) == [
+        MAC_A.replace(":", "")
+    ]
 
 
 # --- persistência: namespace `externals` no MESMO controllers.json -----------
@@ -193,21 +240,27 @@ def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
 
     novo = ExternalIdentityRegistry()
     novo.load()
-    assert novo.peek(MAC_A) == 3, "restart do daemon preserva o número"
+    # NUM-01 precisou o que "preserva o número" quer dizer: o que atravessa o
+    # restart é o LUGAR NA FILA (3). O número exibido é recalculado — com os
+    # dois DualSense de volta na mesa ele volta a ser 3; sem nenhum deles
+    # ligado o externo é o jogador 1, que é a cura desta frente.
+    assert novo.snapshot() == {_KEY_A: 3}, "restart do daemon preserva o lugar"
+    assert novo.slot_for(MAC_A, reserve=2) == 3
 
-    # Reboot da máquina (âncora diferente): o número CONTINUA sendo do MAC.
+    # Reboot da máquina (âncora diferente): o lugar CONTINUA sendo do MAC.
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     data["boot_id"] = "boot-antigo"
     _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
     outro_boot = ExternalIdentityRegistry()
     outro_boot.load()
-    assert outro_boot.peek(MAC_A) == 3
+    assert outro_boot.snapshot() == {_KEY_A: 3}
 
     # Só um SCHEMA diferente (outra regra de numeração) descarta.
     data["version"] = 0
     _arquivo(tmp_path).write_text(json.dumps(data), encoding="utf-8")
     frio = ExternalIdentityRegistry()
     frio.load()
+    assert frio.snapshot() == {}
     assert frio.peek(MAC_A) is None
 
 
@@ -223,16 +276,13 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
     acabara de recusar voltava com selo de válida no boot seguinte, e o
     externo reaparecia segurando o slot 1 na frente dos DualSense.
     """
-    _arquivo(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    _arquivo(tmp_path).write_text(
-        json.dumps(
-            {  # sem `version`: escrito pelo regime anterior ao R-23
-                "boot_id": BOOT,
-                "slots": {MAC_DS.replace(":", ""): 2},
-                "externals": {_KEY_A: 1},  # o externo à frente dos DualSense
-            }
-        ),
-        encoding="utf-8",
+    _gravar_fila(
+        tmp_path,
+        # Schema 2 (o que a máquina dela tinha): mapas de NÚMERO ABSOLUTO,
+        # com o externo à frente dos DualSense.
+        dualsense={MAC_DS.replace(":", ""): 2},
+        externos={_KEY_A: 1},
+        version=2,
     )
 
     ds = id_mod.ControllerIdentityRegistry()
@@ -244,7 +294,9 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
     ds.sync_connected([MAC_DS])  # 1º save: carimba a versão nova
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
-    assert "externals" not in data, "o namespace velho não pode ser recarimbado"
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {}, (
+        "a fila velha do outro registro não pode ser recarimbada"
+    )
 
     # Boot seguinte: só a numeração NOVA sobrevive; o externo numera acima.
     ds2 = id_mod.ControllerIdentityRegistry()
@@ -270,7 +322,9 @@ def test_os_dois_registros_gravam_a_mesma_versao_de_schema(tmp_path: Path) -> No
     ds.sync_connected([MAC_DS])
     data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
     assert data["version"] == id_mod.CONTROLLERS_SCHEMA_VERSION
-    assert data["externals"] == {_KEY_A: 1}, "namespace do outro preservado"
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {_KEY_A: 1}, (
+        "as entradas do outro registro foram preservadas"
+    )
 
 
 def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
@@ -284,18 +338,24 @@ def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
     ext.slot_for(MAC_A, reserve=1)
     ext.sync_connected([MAC_A])  # grava `externals` preservando `slots`
 
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["slots"] == {MAC_DS.replace(":", ""): 1}
-    assert data["externals"] == {MAC_A.replace(":", ""): 2}
+    assert _fila_no_disco(tmp_path, id_mod.KIND_DUALSENSE) == {
+        MAC_DS.replace(":", ""): 1
+    }
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {
+        MAC_A.replace(":", ""): 2
+    }
 
-    # E o save do lado DualSense preserva `externals` (read-modify-write).
+    # E o save do lado DualSense preserva as entradas externas (RMW).
     ds2 = id_mod.ControllerIdentityRegistry()
     ds2.load()
     ds2.slot_for(MAC_DS)
     ds2.sync_connected([MAC_DS])
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["externals"] == {MAC_A.replace(":", ""): 2}
-    assert data["slots"] == {MAC_DS.replace(":", ""): 1}
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {
+        MAC_A.replace(":", ""): 2
+    }
+    assert _fila_no_disco(tmp_path, id_mod.KIND_DUALSENSE) == {
+        MAC_DS.replace(":", ""): 1
+    }
 
 
 # --- ExternalLedSync: cache por-valor + rate-limit + telemetria ---------------
@@ -557,8 +617,7 @@ def test_identidade_sintetizada_ganha_numero_mas_nunca_vai_ao_disco(
     r.slot_for(MAC_A, reserve=2)
     r.sync_connected([MAC_SINTETIZADO, MAC_A])
 
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["externals"] == {_KEY_A: 4}, (
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {_KEY_A: 4}, (
         "só MAC de hardware persiste; o sintético fica na sessão"
     )
 
@@ -572,17 +631,10 @@ def test_load_expulsa_identidade_sintetizada_ja_gravada(tmp_path: Path) -> None:
     `CONTROLLERS_SCHEMA_VERSION` — bumpar renumeraria TODO mundo (inclusive os
     dois DualSense que estão certos) para consertar uma entrada só.
     """
-    _arquivo(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    _arquivo(tmp_path).write_text(
-        json.dumps(
-            {
-                "version": id_mod.CONTROLLERS_SCHEMA_VERSION,
-                "boot_id": BOOT,
-                "slots": {MAC_DS.replace(":", ""): 1, MAC_DS_B.replace(":", ""): 2},
-                "externals": {_KEY_A: 3, _KEY_SINTETIZADO: 4},
-            }
-        ),
-        encoding="utf-8",
+    _gravar_fila(
+        tmp_path,
+        dualsense={MAC_DS.replace(":", ""): 1, MAC_DS_B.replace(":", ""): 2},
+        externos={_KEY_A: 3, _KEY_SINTETIZADO: 4},
     )
 
     ext = ExternalIdentityRegistry()
@@ -600,12 +652,11 @@ def test_load_expulsa_identidade_sintetizada_ja_gravada(tmp_path: Path) -> None:
     # E o disco é limpo pelo PRIMEIRO save (o `load` marca sujo ao descartar):
     # sem isso o fantasma ficava inerte no arquivo, inofensivo mas inexplicável.
     ext.sync_connected([MAC_A])
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["externals"] == {_KEY_A: 3}
-    assert data["slots"] == {
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {_KEY_A: 3}
+    assert _fila_no_disco(tmp_path, id_mod.KIND_DUALSENSE) == {
         MAC_DS.replace(":", ""): 1,
         MAC_DS_B.replace(":", ""): 2,
-    }, "o namespace do outro registro sobrevive à migração"
+    }, "as entradas do outro registro sobrevivem à migração"
 
 
 def test_identidade_sintetizada_ausente_solta_o_slot() -> None:
@@ -640,8 +691,13 @@ def test_poda_nao_toca_reserva_de_mac_de_hardware() -> None:
     assert r.slot_for(MAC_A, reserve=2) == 3
     for _ in range(20):
         r.sync_connected([])
-    assert r.peek(MAC_A) == 3, "MAC de hardware ausente segue reservado"
-    assert r.slot_for(MAC_B, reserve=2) == 4, "e ninguém herda o número dele"
+    assert r.snapshot() == {_KEY_A: 3}, "MAC de hardware ausente mantém o lugar"
+    # NUM-01: o que ninguém herda é o LUGAR (B entra no 4). O NÚMERO exibido
+    # de B é 3 justamente porque A não está na mesa — antes desta frente o
+    # ausente segurava o número e empurrava o presente para cima, que é o
+    # defeito relatado ("ligo sozinho e sou o player 2").
+    assert r.slot_for(MAC_B, reserve=2) == 3
+    assert r.snapshot()[MAC_B.replace(":", "")] == 4, "ninguém herda o lugar"
 
 
 def test_dois_aparelhos_do_mesmo_oui_nunca_se_fundem() -> None:
@@ -657,8 +713,10 @@ def test_dois_aparelhos_do_mesmo_oui_nunca_se_fundem() -> None:
     assert r.slot_for(MAC_A, reserve=2) == 3
     r.sync_connected([MAC_A])
     r.sync_connected([])  # o primeiro dorme
-    assert r.slot_for(MAC_B, reserve=2) == 4, "o segundo NÃO herda o slot 3"
-    assert r.peek(MAC_A) == 3
+    assert r.slot_for(MAC_B, reserve=2) == 3, "B é o 3 porque A não está na mesa"
+    assert r.snapshot() == {_KEY_A: 3, MAC_B.replace(":", ""): 4}, (
+        "o segundo NÃO herda o lugar 3 do primeiro"
+    )
 
 
 def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
@@ -676,17 +734,10 @@ def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
     Falha-sem: o fantasma volta do disco segurando o 4 e o `slot_for` do
     controle presente acha o menor livre em 5.
     """
-    _arquivo(tmp_path).parent.mkdir(parents=True, exist_ok=True)
-    _arquivo(tmp_path).write_text(
-        json.dumps(
-            {
-                "version": id_mod.CONTROLLERS_SCHEMA_VERSION,
-                "boot_id": BOOT,
-                "slots": {MAC_DS.replace(":", ""): 1, MAC_DS_B.replace(":", ""): 2},
-                "externals": {_KEY_A: 3, _KEY_SINTETIZADO: 4},
-            }
-        ),
-        encoding="utf-8",
+    _gravar_fila(
+        tmp_path,
+        dualsense={MAC_DS.replace(":", ""): 1, MAC_DS_B.replace(":", ""): 2},
+        externos={_KEY_A: 3, _KEY_SINTETIZADO: 4},
     )
 
     ds = id_mod.ControllerIdentityRegistry()
@@ -716,8 +767,10 @@ def test_quatro_controles_e_o_fantasma_do_outro_modo_ninguem_no_slot_5(
 
     # E o arquivo sai curado: o fantasma não volta no próximo boot.
     sync.tick(now=LED_MIN_INTERVAL_SEC * 2)
-    data = json.loads(_arquivo(tmp_path).read_text(encoding="utf-8"))
-    assert data["externals"] == {_KEY_A: 3, MAC_B.replace(":", ""): 4}
+    assert _fila_no_disco(tmp_path, id_mod.KIND_EXTERNAL) == {
+        _KEY_A: 3,
+        MAC_B.replace(":", ""): 4,
+    }
 
 
 def test_externo_sem_mac_conta_como_conectado(

@@ -77,6 +77,20 @@ def _arquivo(tmp: Path) -> dict[str, Any]:
     return json.loads((tmp / "controllers.json").read_text(encoding="utf-8"))
 
 
+def _fila_no_disco(tmp: Path, kind: str) -> dict[str, int]:
+    """Endereço → lugar na fila, do campo ``order`` (NUM-01, schema 3).
+
+    Os dois registros passaram a gravar UMA fila só (``order``), em vez dos
+    mapas ``slots``/``externals`` de número absoluto — ver a docstring de
+    ``identity.py``.
+    """
+    return {
+        str(e["addr"]): int(e["rank"])
+        for e in _arquivo(tmp)[id_mod.ORDER_FIELD]
+        if isinstance(e, dict) and e.get("kind") == kind
+    }
+
+
 def _server_com_registros(
     tmp_path: Path, *, authority: str = "daemon"
 ) -> tuple[IpcServer, ControllerIdentityRegistry, ExternalIdentityRegistry]:
@@ -85,10 +99,10 @@ def _server_com_registros(
     ds.slot_for(UNIQ_ROXO)  # 1
     # Força o slot 4 diretamente (simula a herança da tempestade — o slot_for
     # lazy não pularia direto pro 4 sem reservas intermediárias).
-    ds._slots[UNIQ_BRANCO] = 4
+    ds._ordem[UNIQ_BRANCO] = 4
 
     ext = ExternalIdentityRegistry()
-    ext._slots[MAC_EXTERNO] = 5
+    ext._ordem[MAC_EXTERNO] = 5
 
     fc = FakeController(transport="usb")
     fc.connect()
@@ -166,15 +180,19 @@ class TestCompactacaoGlobal:
 
         await server._handle_identity_renumber({})
 
-        data = _arquivo(isolated_config)
-        assert data["slots"] == {UNIQ_ROXO: 1, UNIQ_BRANCO: 2}
-        assert data["externals"] == {MAC_EXTERNO: 3}
+        assert _fila_no_disco(isolated_config, id_mod.KIND_DUALSENSE) == {
+            UNIQ_ROXO: 1,
+            UNIQ_BRANCO: 2,
+        }
+        assert _fila_no_disco(isolated_config, id_mod.KIND_EXTERNAL) == {
+            MAC_EXTERNO: 3
+        }
 
     @pytest.mark.asyncio
     async def test_sem_controle_nenhum_e_noop(self, isolated_config: Path) -> None:
         server, ds, ext = _server_com_registros(isolated_config)
-        ds._slots.clear()
-        ext._slots.clear()
+        ds._ordem.clear()
+        ext._ordem.clear()
 
         resultado = await server._handle_identity_renumber({})
         assert resultado == {"ok": True, "renumbered": {}}
@@ -270,13 +288,19 @@ class TestConcorrenciaTOCTOU:
         assert thread_terminou.wait(timeout=1.0), "hotplug concorrente nunca rodou"
         assert resultado["ok"] is True
 
-        slot_do_hotplug = resultado_thread["slot"]
-        slots_compactados = set(ds.snapshot().values()) | set(ext.snapshot().values())
-        # Nenhuma colisão: o hotplug só pode ter recebido um slot LIVRE em
-        # relação ao estado JÁ compactado — nunca um dos slots-alvo que o
-        # compact atribuiu (1, 2 ou 3 no cenário-mãe).
-        assert slot_do_hotplug not in (resultado["renumbered"].values())
-        assert slot_do_hotplug not in slots_compactados - {slot_do_hotplug}
+        # NUM-01: o que a corrida disputa é o LUGAR NA FILA (o número exibido
+        # é derivado dele + de quem está na mesa), então é sobre lugares que a
+        # ausência de colisão se afirma. A asserção anterior comparava o
+        # RETORNO de `slot_for` — que virou número exibido — com os valores do
+        # plano, que são lugares: grandezas diferentes desde o schema 3.
+        assert resultado_thread["slot"] is not None
+        lugar_do_hotplug = ds.snapshot()[novo_uniq]
+        lugares = list(ds.snapshot().values()) + list(ext.snapshot().values())
+        # O hotplug só pode ter recebido um lugar LIVRE em relação ao estado
+        # JÁ reordenado — nunca um dos lugares-alvo que o compact distribuiu
+        # (1, 2 ou 3 no cenário-mãe).
+        assert lugar_do_hotplug not in set(resultado["renumbered"].values())
+        assert len(lugares) == len(set(lugares)), "dois controles no mesmo lugar"
 
     @pytest.mark.asyncio
     async def test_lock_for_renumber_bloqueia_slot_for_de_outra_thread(

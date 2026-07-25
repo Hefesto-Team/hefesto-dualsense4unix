@@ -209,7 +209,7 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
         monkeypatch.setattr(ih_mod, "_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC", 0.2)
 
         ext = ExternalIdentityRegistry()
-        ext._slots["aabbcc0000fe"] = 1
+        ext._ordem["aabbcc0000fe"] = 1
 
         fc = FakeController(transport="usb")
         fc.connect()
@@ -282,7 +282,7 @@ class TestIdentityRenumberNaoPenduraOEventLoop:
         monkeypatch.setattr(ih_mod, "_IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC", 2.0)
 
         ext = ExternalIdentityRegistry()
-        ext._slots["aabbcc0000fe"] = 5
+        ext._ordem["aabbcc0000fe"] = 5
 
         fc = FakeController(transport="usb")
         fc.connect()

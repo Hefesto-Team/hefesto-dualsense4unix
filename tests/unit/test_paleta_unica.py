@@ -42,6 +42,11 @@ PERMITIDAS = {
     # Variações de hover dos botões preenchidos (verde mais claro/escuro e os
     # fundos tingidos de laranja), derivadas das cores da paleta.
     "#6ffb90", "#3ee066", "#3d3630", "#4a4136", "#2c3a32", "#35473b",
+    # LEGIBILIDADE-01: os tingidos ESCUROS do roxo, para o Salvar Perfil. O
+    # hover/pressionado dele usava @sel_bg/@sel_bg_hover, que clareiam na
+    # direção do próprio roxo do rótulo e davam 4,41:1 e 3,83:1 — abaixo do
+    # piso WCAG AA. Mesma receita dos tingidos de laranja e verde acima.
+    "#332e42", "#3d3651",
 }
 
 #: Hex de cor. O `(?<![\w&])` descarta dois vizinhos que se parecem com cor:

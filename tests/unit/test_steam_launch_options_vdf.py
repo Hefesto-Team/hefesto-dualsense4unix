@@ -871,3 +871,113 @@ def test_allowlist_grava_a_nota_como_comentario(tmp_path):
     texto = alvo.read_text(encoding="utf-8")
     assert "# marcado pela GUI\n620\n" in texto
     assert slo.parse_steam_input_allowlist(texto) == ["620"]
+
+
+# ---------------------------------------------------------------------------
+# JOGO-01 (Entrega 3): o botão que PÕE ganhou o gêmeo que TIRA
+# ---------------------------------------------------------------------------
+# A allowlist só tinha escritor para um lado: marcar um jogo era um clique,
+# desmarcar exigia editar `~/.config/.../steam_input_apps.txt` num editor de
+# texto — na prática, irreversível para quem não mexe em arquivo de config. E o
+# opt-in ficou mais caro com a JOGO-01: nele o Hefesto retira o gamepad virtual
+# daquele jogo, então um appid marcado por engano custa cor, gatilhos e co-op.
+
+
+def test_allowlist_remove_o_appid_e_preserva_cabecalho_e_comentarios(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text(
+        "# cabeçalho da usuária\n# não me apague\n2111190\n620\n", encoding="utf-8"
+    )
+
+    assert slo.remove_appid_from_steam_input_allowlist(2111190, path=alvo) == "removido"
+
+    texto = alvo.read_text(encoding="utf-8")
+    assert texto == "# cabeçalho da usuária\n# não me apague\n620\n"
+
+
+def test_allowlist_remove_leva_o_comentario_inline_junto(tmp_path):
+    """`620 # marcado pela GUI` é UMA linha cujo appid é 620."""
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n620 # marcado pela GUI\n", encoding="utf-8")
+
+    assert slo.remove_appid_from_steam_input_allowlist("620", path=alvo) == "removido"
+
+    assert alvo.read_text(encoding="utf-8") == "# topo\n"
+
+
+def test_allowlist_remove_deixa_a_nota_orfa_de_proposito(tmp_path):
+    """Adivinhar "qual comentário era nosso" acertaria a nota do `add` e uma
+    anotação dela com a mesma facilidade — o cabeçalho da instalação nasce
+    colado no primeiro appid. Nota órfã não muda o comportamento de leitor
+    nenhum; anotação apagada não volta."""
+    alvo = tmp_path / "steam_input_apps.txt"
+    slo.add_appid_to_steam_input_allowlist(620, path=alvo, nota="marcado pela GUI")
+
+    slo.remove_appid_from_steam_input_allowlist(620, path=alvo)
+
+    texto = alvo.read_text(encoding="utf-8")
+    assert "# marcado pela GUI" in texto
+    assert slo.parse_steam_input_allowlist(texto) == []
+
+
+def test_allowlist_remove_appid_ausente_nao_reescreve(tmp_path):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n2111190\n", encoding="utf-8")
+    antes = alvo.read_text(encoding="utf-8")
+
+    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+
+    assert alvo.read_text(encoding="utf-8") == antes
+
+
+def test_allowlist_remove_appid_so_comentado_e_nao_estava(tmp_path):
+    """Simetria com o `add`, que RE-ADICIONA um appid comentado: linha morta
+    não é presença nem para um lado nem para o outro."""
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n# 620 desliguei este\n", encoding="utf-8")
+
+    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+
+    assert "# 620 desliguei este" in alvo.read_text(encoding="utf-8")
+
+
+def test_allowlist_remove_sem_arquivo_nao_cria_nada(tmp_path):
+    alvo = tmp_path / "sub" / "steam_input_apps.txt"
+
+    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "nao_estava"
+
+    assert not alvo.exists()
+
+
+@pytest.mark.parametrize("torto", ["", "abc", "12a", None])
+def test_allowlist_remove_recusa_appid_nao_numerico(tmp_path, torto):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n620\n", encoding="utf-8")
+
+    assert (
+        slo.remove_appid_from_steam_input_allowlist(torto, path=alvo)
+        == "appid_invalido"
+    )
+    assert alvo.read_text(encoding="utf-8") == "# topo\n620\n"
+
+
+def test_allowlist_remove_erro_de_io_nao_levanta(tmp_path, monkeypatch):
+    alvo = tmp_path / "steam_input_apps.txt"
+    alvo.write_text("# topo\n620\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Path, "write_text", lambda *a, **k: (_ for _ in ()).throw(OSError("boom"))
+    )
+    assert slo.remove_appid_from_steam_input_allowlist(620, path=alvo) == "erro"
+
+
+def test_allowlist_ida_e_volta_devolve_o_arquivo_ao_estado_util(tmp_path):
+    """O ciclo completo do botão: marcar, desmarcar, marcar de novo."""
+    alvo = tmp_path / "steam_input_apps.txt"
+
+    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
+    assert slo.remove_appid_from_steam_input_allowlist(2111190, path=alvo) == "removido"
+    assert slo.parse_steam_input_allowlist(alvo.read_text(encoding="utf-8")) == []
+    assert slo.add_appid_to_steam_input_allowlist(2111190, path=alvo) == "adicionado"
+    assert slo.parse_steam_input_allowlist(alvo.read_text(encoding="utf-8")) == [
+        "2111190"
+    ]

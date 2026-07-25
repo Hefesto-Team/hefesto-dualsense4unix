@@ -294,28 +294,76 @@ def test_escala_tipografica_existe() -> None:
     mockup (`novo-layout/Telas Hefesto.dc.html`).
     """
     conteúdo = CSS_PATH.read_text(encoding="utf-8")
-    esperado = {
-        ".hefesto-titulo": "21px",
-        ".hefesto-titulo-painel": "15px",
-        ".hefesto-titulo-secao": "14px",
-        ".hefesto-corpo": "13px",
-        ".hefesto-rotulo": "12px",
-        ".hefesto-rotulo-secao": "12px",
-        ".hefesto-rotulo-longo": "11.5px",
-        ".hefesto-subtitulo": "11px",
-        ".hefesto-dica": "11px",
-        ".hefesto-micro": "10px",
-        ".hefesto-selo": "9px",
-        ".hefesto-valor-mono": "12px",
-        ".hefesto-valor-mono-peq": "11px",
-    }
-    for classe, tamanho in esperado.items():
+    #: LEGIBILIDADE-01: os degraus deixaram de ser travados no valor EXATO do
+    #: mockup. O que este teste guarda agora é a ORDEM (nenhum degrau menor
+    #: passa na frente de um maior) e o PISO — que é o contrato que a mantenedora
+    #: cobrou: "fontes minúsculas e em cores que não permitem leitura".
+    #:
+    #: Os números do mockup vieram de uma tela de projeto, não de leitura em uso.
+    #: Travá-los tornou o teste guardião do defeito: `.hefesto-micro` a 10px e
+    #: `.hefesto-selo` a 9px eram, medidos, o menor texto da janela — e o selo
+    #: MUDO/ATIVO do microfone é justamente informação de estado que ela olha o
+    #: tempo todo. Um teste que reprova quando o texto fica legível está do lado
+    #: errado. Ele foi REESCRITO, não removido: o que protegia de útil (todo
+    #: degrau existe, é absoluto em px, e a hierarquia entre eles é estável)
+    #: continua aqui.
+    ordem_decrescente = [
+        ".hefesto-titulo",
+        ".hefesto-titulo-painel",
+        ".hefesto-titulo-secao",
+        ".hefesto-corpo",
+        ".hefesto-rotulo",
+        ".hefesto-rotulo-longo",
+        ".hefesto-dica",
+        ".hefesto-selo",
+    ]
+    #: Piso em PIXEL DE ARQUIVO. O tamanho final na tela é este valor mais a
+    #: escala global de `app/theme.py` (padrão +3), então 11px aqui chegam a
+    #: 14px em uso. O piso do arquivo é deliberadamente menor que o piso de
+    #: leitura: quem garante o segundo é a escala, e travar os dois no mesmo
+    #: número faria o arquivo mentir sobre o que é entregue.
+    piso_px = 11.0
+
+    def _tamanho_do_degrau(classe: str) -> float:
         m = re.search(
-            r"^" + re.escape(classe) + r"\s*\{([^}]*)\}", conteúdo, re.MULTILINE
+            r"^" + re.escape(classe) + r"[^{]*\{([^}]*)\}", conteúdo, re.MULTILINE
         )
         assert m is not None, f"degrau {classe} ausente da escala tipográfica"
-        assert f"font-size: {tamanho}" in m.group(1), (
-            f"{classe} deveria ser {tamanho}; corpo: {m.group(1).strip()!r}"
+        tam = re.search(r"font-size:\s*([0-9]+(?:\.[0-9]+)?)px", m.group(1))
+        assert tam is not None, (
+            f"{classe} precisa de `font-size` ABSOLUTO em px — tamanho relativo "
+            f"de Pango depende da fonte da distribuição; corpo: "
+            f"{m.group(1).strip()!r}"
+        )
+        return float(tam.group(1))
+
+    #: Os degraus que não entram na cadeia de ordem (monoespaçados e o subtítulo
+    #: têm família própria e vivem em outra régua), mas respondem pelo piso.
+    fora_da_cadeia = [
+        ".hefesto-rotulo-secao",
+        ".hefesto-subtitulo",
+        ".hefesto-micro",
+        ".hefesto-kicker",
+        ".hefesto-valor-mono",
+        ".hefesto-valor-mono-peq",
+    ]
+
+    anterior: float | None = None
+    for classe in ordem_decrescente:
+        atual = _tamanho_do_degrau(classe)
+        if anterior is not None:
+            assert atual <= anterior, (
+                f"a escala inverteu: {classe} ({atual}px) é MAIOR que o degrau "
+                f"acima dele ({anterior}px)"
+            )
+        anterior = atual
+
+    for classe in ordem_decrescente + fora_da_cadeia:
+        tamanho = _tamanho_do_degrau(classe)
+        assert tamanho >= piso_px, (
+            f"{classe} está em {tamanho}px, abaixo do piso de {piso_px}px. "
+            f"Foi assim que o selo do microfone chegou a 9px e a mantenedora "
+            f"parou de conseguir ler o estado do controle (LEGIBILIDADE-01)."
         )
 
 
