@@ -1203,14 +1203,24 @@ def dispatch_gamepad(
     device = daemon._gamepad_device
     if device is None:
         return
+    # UDP-TRIGGER-THRESHOLD-01: a deadzone que um mod DSX pediu na porta 6969
+    # (`TriggerThreshold`) vale AQUI — na fronteira entre o controle físico e o
+    # pad emulado, o mesmo ponto em que o DSX a aplica. Corte seco, sem
+    # reescala: abaixo do limiar o jogo lê zero, no limiar em diante o valor
+    # bruto passa intacto. 0/0 (o padrão) é passagem direta, byte a byte igual
+    # ao que era antes. getattr defensivo: daemon/store de teste sem o campo
+    # degradam para "sem deadzone" em vez de derrubar o dispatch.
+    limiar_l, limiar_r = getattr(
+        getattr(daemon, "store", None), "udp_trigger_thresholds", (0, 0)
+    )
     try:
         device.forward_analog(
             lx=state.raw_lx,
             ly=state.raw_ly,
             rx=state.raw_rx,
             ry=state.raw_ry,
-            l2=state.l2_raw,
-            r2=state.r2_raw,
+            l2=state.l2_raw if state.l2_raw >= limiar_l else 0,
+            r2=state.r2_raw if state.r2_raw >= limiar_r else 0,
         )
         device.forward_buttons(buttons_pressed)
         # FEAT-VPAD-FF-PASSTHROUGH-01: drena o FF (rumble do jogo) do vpad e
