@@ -180,10 +180,19 @@ class AutoswitchSubsystem:
         )
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
         # saúde/última wm_class útil no store a cada leitura do poll.
+        # MODO-01/B3: o par do modo jogo padrão — o modo que liga quando é um
+        # jogo e NENHUM perfil específico opina. `getattr` com default None
+        # mantém o autoswitch funcional sem daemon (CLI/testes).
         self._autoswitch = AutoSwitcher(
             manager=manager,
             window_reader=_build_diag_window_reader(ctx.store),
             store=ctx.store,
+            modo_jogo_padrao_applier=getattr(
+                daemon, "aplicar_modo_jogo_padrao", None
+            ),
+            modo_jogo_padrao_reverter=getattr(
+                daemon, "reverter_modo_jogo_padrao", None
+            ),
         )
         if not self._autoswitch.disabled():
             self._autoswitch.start()
@@ -228,10 +237,15 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
     )
     # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
     # saúde/última wm_class útil no store a cada leitura do poll.
+    # MODO-01/B3: idem `AutoswitchSubsystem.start` — o modo jogo padrão precisa
+    # existir nas DUAS rotas de subida (esta é a utilitária, usada quando o
+    # Daemon sobe o autoswitch direto).
     daemon._autoswitch = AutoSwitcher(
         manager=manager,
         window_reader=_build_diag_window_reader(daemon.store),
         store=daemon.store,
+        modo_jogo_padrao_applier=getattr(daemon, "aplicar_modo_jogo_padrao", None),
+        modo_jogo_padrao_reverter=getattr(daemon, "reverter_modo_jogo_padrao", None),
     )
     if not daemon._autoswitch.disabled():
         daemon._autoswitch.start()

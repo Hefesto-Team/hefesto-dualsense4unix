@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchManual,
     Profile,
     ProfileModeConfig,
+    normalizar_gamepad_flavor,
 )
 from hefesto_dualsense4unix.profiles.simple_match import (
     MENSAGENS_DE_GENTE,
@@ -534,8 +535,87 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             box.show()
         else:
             box.hide()
+        # MODO-01/B1: escolher "jogo"/"jogo da Steam" num perfil NOVO já
+        # pré-seleciona o modo jogo. O gate de "perfil novo" fica visível AQUI
+        # (e não só dentro do helper) porque é ele que explica por que trocar o
+        # "Aplica a" de um perfil salvo não mexe no modo dele.
+        if active_id in _IDS_COM_CAMPO_LIVRE and getattr(self, "_new_profile", False):
+            self._prefill_modo_de_jogo()
         if active_id == "steam_game":
             self._prefill_steam_appid()
+
+    def _prefill_modo_de_jogo(self) -> None:
+        """Perfil NOVO de jogo nasce com o modo jogo pré-selecionado (MODO-01/B1).
+
+        Era o maior dos defeitos da sprint: o fluxo simples montava o critério de
+        janela certinho e deixava o modo em `"none"` — *"Não mexer no modo"*. Ela
+        criava o perfil do jogo, ele entrava, e não ligava nada. O caminho que a
+        interface oferece como solução não solucionava.
+
+        Regras, deliberadamente estreitas:
+
+        - só em perfil NOVO (`_new_profile`). Trocar o "Aplica a" de um perfil
+          JÁ SALVO não pode reescrever a escolha de modo que ela fez antes;
+        - só quando o modo está em `"none"`. Um `desktop`/`native` escolhido à
+          mão é opinião dela, não um campo em branco;
+        - a máscara é a CORRENTE do daemon (`gamepad_emulation.flavor`), lida em
+          segundo plano: pré-selecionar uma máscara diferente da que está de pé
+          faria o perfil recriar o vpad ao entrar — e recriar vpad com o jogo
+          aberto invalida os handles que ele já abriu.
+
+        Best-effort: sem widgets de modo (dublê de teste/glade antigo) é no-op;
+        daemon offline mantém a máscara que o seletor já mostra.
+        """
+        if not getattr(self, "_new_profile", False):
+            return
+        kind_sel = getattr(self, "_mode_kind_selector", None)
+        if kind_sel is None:
+            return
+        with contextlib.suppress(Exception):
+            if (kind_sel.get_active_id() or "none") != "none":
+                return
+        # Preserva a máscara que o seletor já mostra até a resposta do daemon
+        # chegar — `_set_mode_editor(None)` a deixaria em "xbox" e uma troca
+        # visível para a máscara real logo depois pareceria bug.
+        bruto: object = None
+        flavor_sel = getattr(self, "_mode_flavor_selector", None)
+        if flavor_sel is not None:
+            with contextlib.suppress(Exception):
+                bruto = flavor_sel.get_active_id()
+        self._set_mode_editor(
+            ProfileModeConfig(
+                kind="gamepad", gamepad_flavor=normalizar_gamepad_flavor(bruto)
+            )
+        )
+
+        def _on_state(result: Any) -> bool:
+            try:
+                if not isinstance(result, dict):
+                    return False
+                gamepad = result.get("gamepad_emulation")
+                flavor = (gamepad or {}).get("flavor") if isinstance(gamepad, dict) else None
+                if flavor not in ("dualsense", "xbox"):
+                    return False
+                seletor = getattr(self, "_mode_flavor_selector", None)
+                kind_atual = getattr(self, "_mode_kind_selector", None)
+                if seletor is None or kind_atual is None:
+                    return False
+                # A resposta pode chegar depois de ela mexer no editor — só
+                # escreve se o modo AINDA é o gamepad que acabamos de propor.
+                if (kind_atual.get_active_id() or "none") != "gamepad":
+                    return False
+                seletor.set_active_id(flavor)
+            except Exception as exc:
+                logger.debug("prefill_modo_jogo_falhou", err=str(exc))
+            return False
+
+        call_async(
+            method="daemon.state_full",
+            params=None,
+            on_success=_on_state,
+            on_failure=lambda _exc: False,
+            timeout_s=0.5,
+        )
 
     def _prefill_steam_appid(self) -> None:
         """Preenche o appid a partir do jogo em foco (R-12 item 1).

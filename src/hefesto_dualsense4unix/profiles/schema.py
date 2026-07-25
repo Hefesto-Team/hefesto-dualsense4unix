@@ -642,6 +642,66 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     return _casa_sem_caixa(wm_class, match.window_class)
 
 
+def normalizar_gamepad_flavor(valor: object) -> Literal["dualsense", "xbox"] | None:
+    """Converte uma máscara CRUA na forma fechada que `ProfileModeConfig` aceita.
+
+    MODO-01. A máscara viaja como `str` solto por todo o daemon
+    (`DaemonConfig.gamepad_flavor` nasce de um flag em disco) e como `Literal`
+    fechado no schema de perfil. Quem constrói um `ProfileModeConfig` a partir do
+    estado vivo — o modo jogo padrão do daemon e o editor de perfis da GUI —
+    precisa atravessar essa fronteira; um `cast` em cada callsite mentiria para o
+    verificador de tipos sobre um valor que vem de arquivo.
+
+    Desconhecido vira `None`, que no applier significa "mantém a máscara atual"
+    — o fail-safe certo: um flag corrompido não pode recriar o vpad no meio do
+    jogo, que invalida os handles que o jogo já abriu.
+    """
+    if valor == "dualsense":
+        return "dualsense"
+    if valor == "xbox":
+        return "xbox"
+    return None
+
+
+def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
+    """True quando o perfil DIZ, no próprio arquivo, que serve para jogar.
+
+    MODO-01/B2 (sprint 25/07). O cadeado de autoswitch prometia uma coisa só —
+    *"não trocar de perfil sozinho ao abrir um jogo"* — e congelava muito mais
+    do que isso, porque o único jeito de ceder a ele era o
+    `perfil_e_regra_de_jogo`, que exige critério por ``window_class`` COM uma
+    ``steam_app_<id>`` em foco. Duas vítimas medidas:
+
+    - o preset ``coop_local``, que **tem** ``mode: gamepad`` mas casa por TÍTULO
+      de janela (Sackboy, Overcooked, It Takes Two, Cuphead) — ficava congelado;
+    - todo jogo fora da Steam (GOG, Heroic, itch, nativo) com perfil próprio,
+      pelo mesmo motivo.
+
+    O predicado aqui é o complemento honesto: o perfil **não é catch-all** (não
+    chegou por acidente — casou por regra de verdade) e **declara** ``mode.kind``
+    em ``{gamepad, native}``. Isso é o perfil dizendo "eu sou de jogo" sem
+    depender da Steam ter carimbado a janela.
+
+    Por que é uma função NOVA em vez de afrouxar `perfil_e_regra_de_jogo`: o
+    predicado estrito tem um segundo consumidor, o furo da trava manual em
+    `AutoSwitcher._activate` (F2/R-01), onde afrouxar reabriria por outra porta
+    o buraco que a R-01 fechou — ali um regex de título solto (``|Control)``,
+    ``|Metro)`` do ``fps.json``) passaria a apagar a configuração que ela acabou
+    de fazer na mão. O cadeado e a trava manual protegem coisas diferentes e
+    agora podem ceder por critérios diferentes.
+
+    `getattr` defensivo (mesmo idioma do resto do módulo): dublê de teste sem
+    `mode`/`e_catch_all` responde False — na dúvida o cadeado continua segurando,
+    que é o comportamento histórico.
+    """
+    if profile is None:
+        return False
+    if bool(getattr(profile, "e_catch_all", True)):
+        return False
+    kind = getattr(getattr(profile, "mode", None), "kind", None)
+    return kind in ("gamepad", "native")
+
+
 __all__ = [
     "ControllerOverrides",
     "LedsConfig",
@@ -655,5 +715,7 @@ __all__ = [
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",
+    "normalizar_gamepad_flavor",
+    "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
 ]

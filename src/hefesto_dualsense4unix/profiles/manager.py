@@ -42,6 +42,25 @@ logger = get_logger(__name__)
 #: lugares, senão a divergência entre os predicados vira o buraco de sempre.
 _STEAM_APP_WM_CLASS_RE = re.compile(r"^steam_app_\d+$", re.IGNORECASE)
 
+#: MODO-01 (B3, sprint 25/07): vocabulário do MOTIVO devolvido por
+#: `select_for_window_ex`. Até aqui a seleção respondia só `Profile | None`, e o
+#: `None` era ambíguo entre duas coisas que pedem reações OPOSTAS:
+#:
+#:   - `MOTIVO_SEM_CANDIDATO` — nenhum perfil casou com esta janela. Nada a
+#:     fazer: o autoswitch retém o perfil corrente, como sempre fez.
+#:   - `MOTIVO_JOGO_SEM_PERFIL_PROPRIO` — é uma janela de JOGO e nenhum perfil
+#:     ESPECÍFICO opina sobre ela (o veto R-21 abaixo, ou nem candidato houve).
+#:     Aqui o silêncio não é "não faça nada": o daemon SABE que há um jogo e
+#:     precisa ligar o modo jogo padrão sem trocar de perfil
+#:     (`Daemon.aplicar_modo_jogo_padrao`).
+#:
+#: Era exatamente o buraco medido: a R-21 trocou "o catch-all entra num jogo"
+#: por "NINGUÉM entra num jogo" e não pôs nada no lugar — o modo jogo deixou de
+#: ligar sozinho para quem não administra um perfil por jogo.
+MOTIVO_SELECIONADO = "selecionado"
+MOTIVO_SEM_CANDIDATO = "sem_candidato"
+MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
+
 
 @dataclass
 class ProfileManager:
@@ -521,6 +540,25 @@ class ProfileManager:
         Se nenhum perfil casa (inclusive fallback), retorna None. Chamado pelo
         autoswitch em W6.2.
 
+        MODO-01 (B3): a assinatura histórica é PRESERVADA — quem só precisa do
+        perfil (o `_profile_rule_matches_game` do lifecycle, a CLI, os dublês de
+        teste) continua chamando isto. Quem precisa saber POR QUE a resposta foi
+        `None` usa `select_for_window_ex`, que carrega o motivo junto.
+        """
+        profile, _motivo = self.select_for_window_ex(window_info)
+        return profile
+
+    def select_for_window_ex(
+        self, window_info: dict[str, object]
+    ) -> tuple[Profile | None, str]:
+        """Como `select_for_window`, mas devolve `(perfil, motivo)`.
+
+        O motivo é um dos `MOTIVO_*` do topo do módulo. É a metade que faltava
+        da R-21 (MODO-01/B3): sem ele, o autoswitch não tinha como distinguir
+        "nada casou com esta janela de desktop" de "é um JOGO e ninguém opina
+        sobre ele" — e a segunda é a única em que existe algo a fazer sem trocar
+        de perfil (ligar o modo jogo padrão).
+
         R-01 (auditoria 23/07): a ordenação era só por `priority`, e por isso um
         perfil catch-all podia vencer a regra própria do jogo. É o caso medido
         no disco da usuária: `vitoria` (MatchAny, prio 5) vencia qualquer perfil
@@ -553,14 +591,24 @@ class ProfileManager:
         exatamente a doutrina do `catch_all_sem_opiniao` de
         `lifecycle.apply_profile_suppression`, aplicada um nível acima: lá o
         catch-all não pode REVERTER a supressão; aqui ele não pode ENTRAR.
+
+        MODO-01 (B3): o veto CONTINUA valendo — ele tinha razão própria e não é
+        revogado aqui. O que muda é que ele deixou de ser mudo: em vez de um
+        `None` indistinguível de "nada casou", devolve
+        `MOTIVO_JOGO_SEM_PERFIL_PROPRIO`, e é o chamador que decide o que fazer
+        com a informação (ligar o modo jogo padrão, sem trocar de perfil).
+        Também cobre o caso vizinho que o veto nunca alcançou: janela de jogo com
+        ZERO candidatos (nem catch-all no disco) é o mesmo silêncio, pelo mesmo
+        motivo.
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
-        if not candidates:
-            return None
         wm_class = str(window_info.get("wm_class") or "")
-        if _STEAM_APP_WM_CLASS_RE.match(wm_class) and all(
-            p.e_catch_all for p in candidates
-        ):
+        e_janela_de_jogo = bool(_STEAM_APP_WM_CLASS_RE.match(wm_class))
+        if not candidates:
+            if e_janela_de_jogo:
+                return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
+            return None, MOTIVO_SEM_CANDIDATO
+        if e_janela_de_jogo and all(p.e_catch_all for p in candidates):
             if self._ultimo_veto_catch_all != wm_class:
                 self._ultimo_veto_catch_all = wm_class
                 logger.info(
@@ -568,10 +616,10 @@ class ProfileManager:
                     wm_class=wm_class,
                     candidatos=sorted(p.name for p in candidates),
                 )
-            return None
+            return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
         self._ultimo_veto_catch_all = None
         candidates.sort(key=lambda p: (not p.e_catch_all, p.priority), reverse=True)
-        return candidates[0]
+        return candidates[0], MOTIVO_SELECIONADO
 
 
 def _estado_da_secao(valor: object) -> str:
@@ -774,6 +822,9 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
 
 
 __all__ = [
+    "MOTIVO_JOGO_SEM_PERFIL_PROPRIO",
+    "MOTIVO_SELECIONADO",
+    "MOTIVO_SEM_CANDIDATO",
     "ProfileManager",
     "_controllers_to_led_scales",
     "_controllers_to_specs",

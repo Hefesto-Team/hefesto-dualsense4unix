@@ -372,6 +372,81 @@ def migrate_profiles_coop_default(dest_dir: Path | None = None) -> list[str]:
     return migrated
 
 
+#: MODO-01: marker da migração que leva a seção `mode` aos presets de jogo já
+#: semeados, junto com a prioridade nova do co-op.
+_MODO_JOGO_MIGRATION_MARKER = ".modo_jogo_nos_presets_migrated"
+
+#: MODO-01: os presets de gênero que ganharam `mode: gamepad`. `coop_local` fica
+#: de fora porque já nasce com modo — dele só muda a prioridade.
+_PRESETS_DE_JOGO = ("fps", "aventura", "acao", "corrida", "esportes")
+
+
+def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:
+    """One-shot: leva `mode` e prioridade novos aos presets JÁ instalados (MODO-01).
+
+    Sem isto a sprint MODO-01 conserta só quem instalar do zero. A semeadura
+    (`seed_default_presets`) não sobrescreve arquivo existente — de propósito,
+    é o que impede o projeto de apagar a configuração da usuária —, então na
+    máquina de quem já usa o Hefesto os presets de gênero continuariam com
+    ``mode: null`` e o `coop_local` com a prioridade que perde para o perfil de
+    navegação. Medido na máquina de desenvolvimento em 25/07: 11 dos 13 perfis
+    sem `mode`, e `coop_local` em 45 contra `navegacao` em 50 — abrir um jogo de
+    co-op pela Steam entregava o perfil de navegação.
+
+    A regra de recuo é a mesma das migrações irmãs, e é o que torna isto seguro:
+    só escreve onde o campo ainda está no estado de fábrica. Preset com `mode`
+    já definido (por ela ou por migração anterior) não é tocado; prioridade
+    diferente da de fábrica antiga significa que ela mexeu, e aí também recua.
+
+    Idempotente por marker próprio. Best-effort: falha loga e segue.
+    """
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _MODO_JOGO_MIGRATION_MARKER
+    if marker.exists():
+        return []
+    migrated: list[str] = []
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return []
+        for nome in (*_PRESETS_DE_JOGO, "coop_local"):
+            arquivo = f"{nome}.json"
+            path = directory / arquivo
+            asset = _seed_source_file(arquivo)
+            if not path.is_file() or asset is None:
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                asset_data = json.loads(asset.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(data, dict) or not isinstance(asset_data, dict):
+                continue
+            mudou = False
+            # `mode` só entra onde ainda não há NENHUM — nunca por cima do dela.
+            if nome in _PRESETS_DE_JOGO and data.get("mode") in (None, {}):
+                modo_asset = asset_data.get("mode")
+                if isinstance(modo_asset, dict):
+                    data["mode"] = modo_asset
+                    mudou = True
+            # A prioridade sobe só se ainda for a de fábrica ANTIGA: qualquer
+            # outro número é escolha dela e vence a migração.
+            if nome == "coop_local" and data.get("priority") == 45:
+                data["priority"] = asset_data.get("priority", 75)
+                mudou = True
+            if mudou:
+                with contextlib.suppress(Exception):
+                    path.write_text(
+                        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    migrated.append(arquivo)
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    if migrated:
+        logger.info("modo_jogo_nos_presets_migrated", files=migrated)
+    return migrated
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga.
 
@@ -396,6 +471,11 @@ def _maybe_seed_presets() -> None:
         # (o preset de 14/07 era inalcançável pelo autoswitch). One-shot.
         with contextlib.suppress(Exception):
             migrate_coop_local_match()
+        # MODO-01: leva `mode: gamepad` aos presets de gênero já instalados e
+        # tira o co-op de trás do perfil de navegação. Sem isto a sprint
+        # conserta só quem instalar do zero. One-shot.
+        with contextlib.suppress(Exception):
+            migrate_modo_jogo_nos_presets()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
