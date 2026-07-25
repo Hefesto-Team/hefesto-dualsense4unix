@@ -31,11 +31,71 @@ com ele, escrevem SÓ naquele controle, registrando o override por-MAC —
 comportamento global clássico ("Todos"). É o eixo que a persistência já usava:
 sem ele, o pedido cai em broadcast e "configurei o Controle 2 e mudou todos".
 
+`mic.set` e `speaker.set` também aceitam `uniq`, com uma diferença que vale
+registrar: neles, omitir NÃO é broadcast — é o controle **primário**. O áudio
+mora num handle só (`_handle_for`), não numa lista, então nunca houve o risco de
+"mexi num e mudou todos" que os outros quatro tinham.
+
 `trigger.reset` foi o último a ganhar o parâmetro (ABAS-06, 25/07) — o botão
 "Desligar" da aba Gatilhos zerava o gatilho dos quatro enquanto o "Aplicar" ao
 lado mandava para um só. Ele também é o único que LIBERA a trava manual de 30 s,
 e libera apenas a categoria `trigger` (ABAS-05): desligar um gatilho não pode
 destravar o LED nem a vibração que ela ajustou em outra aba.
+
+### `mic.set` / `speaker.set` — o áudio do controle (D4 / MIC-USB-01)
+
+| Método        | Parâmetros                                      | Retorno                                        |
+|---------------|-------------------------------------------------|------------------------------------------------|
+| `mic.set`     | `{muted: bool\|null, uniq?: str}`               | `{status, audio, mic_mudo_desejado}`           |
+| `speaker.set` | `{volume?: 0-255, muted?: bool, uniq?: str}`    | `{status, speaker}`                            |
+
+Os dois escrevem no MESMO bloco de posse do report de saída (`common[4..9]`,
+AUDIO-OWNER-01) e seguem a mesma disciplina: o hefesto só toca o campo depois de
+alguém pedir, e o que não tem dono sai com o bit de validação apagado — o
+firmware conserva o que tinha.
+
+**`mic.set` tem TRÊS estados, e `false` não é "não mexer":**
+
+- `muted: true` — muta no firmware;
+- `muted: false` — **desmuta**. É uma ordem: enquanto vigorar, nós somos os
+  donos do registrador e o botão físico do controle não manda mais;
+- `muted: null` — **devolve a posse** ao `hid-playstation`, que volta a alternar
+  o mudo na borda do botão físico. É o default de fábrica.
+
+A chave `muted` é **obrigatória** (omiti-la é erro `-32003`, não um `false`
+silencioso). Confundir `false` com `null` foi o defeito dos dois escritores do
+byte de mute (`3d9bb7e`): o keepalive do upstream mandava `common[9]=0x00` a
+60 Hz por cima do kernel, e o botão de microfone do controle parecia não
+funcionar.
+
+`status` é `"ok"` quando algum controle recebeu o pedido e `"sem_controle"`
+quando não havia handle para o `uniq` (ou nenhum controle conectado). O campo
+`audio` da resposta é a **leitura** do byte de estado do report de INPUT e pode
+vir um report atrás da escrita — não é o eco do que foi mandado.
+
+**Estado em `daemon.state_full`**, por controle, dentro de `audio`:
+
+- `mic_mudo` — o que o firmware **declara** agora (leitura de verdade);
+- `mic_mudo_desejado` — **quem manda**: `true`/`false` = o hefesto está
+  afirmando esse valor em todo report; `null` = a posse é do kernel. A chave só
+  aparece quando o backend sabe respondê-la. Sem ela a tela não tem como
+  escolher entre "aperte o botão do controle" e "desmute pela janela" — as duas
+  frases descrevem `mic_mudo: true`, e só uma resolve.
+
+`speaker` só entra no payload **depois** de um `speaker.set`: o DualSense não
+devolve o volume (não há report de input nem feature report que o leia), então
+antes disso qualquer número seria chute.
+
+**O que o IPC NÃO alcança.** O mudo do firmware é só a **camada 3** das três que
+deixavam o microfone mudo em 25/07. As outras duas são do WirePlumber e se curam
+por fora — `scripts/doctor.sh --fix-mic`:
+
+1. `"mute":true` persistido por **rota** em
+   `~/.local/state/wireplumber/default-routes`, restaurado a cada conexão sem
+   nada no log;
+2. perfil da placa preso em `input:iec958-stereo` (S/PDIF, **sem sinal**) porque
+   o WirePlumber marca a entrada analógica indisponível sem fone plugado — mas o
+   microfone embutido usa esse mesmo caminho.
 
 ### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
 

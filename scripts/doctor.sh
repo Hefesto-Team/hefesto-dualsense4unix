@@ -25,9 +25,13 @@
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
-# Uso: scripts/doctor.sh [--fix] [--quiet] [--watch-dropout] [--suggest-port]
-#   --fix             aplica correções seguras: reaplica udev e instala/reseta o
-#                     fix de áudio do WirePlumber.
+# Uso: scripts/doctor.sh [--fix] [--fix-mic] [--quiet] [--watch-dropout] [--suggest-port]
+#   --fix             aplica correções seguras: reaplica udev, instala/reseta o
+#                     fix de áudio do WirePlumber e cura as camadas 1 e 2 do
+#                     microfone mudo (MIC-USB-01: mute persistido por rota e
+#                     perfil da placa preso na entrada digital sem sinal).
+#   --fix-mic         SÓ o microfone (camadas 1 e 2) — cura, mostra o veredito
+#                     das duas e sai. Rota curta de quem quer o mic de volta.
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
 #                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
@@ -51,9 +55,11 @@ DO_FIX=0
 QUIET=0
 WATCH_DROPOUT=0
 SUGGEST_PORT=0
+FIX_MIC=0
 for arg in "$@"; do
     case "$arg" in
         --fix)            DO_FIX=1 ;;
+        --fix-mic)        FIX_MIC=1 ;;
         --quiet)          QUIET=1 ;;
         --watch-dropout)  WATCH_DROPOUT=1 ;;
         --suggest-port)   SUGGEST_PORT=1 ;;
@@ -500,6 +506,224 @@ check_audio_sink_muted() {
             info "não consegui ler o volume do sink padrão (wpctl get-volume vazio) — WirePlumber parado?"
             ;;
     esac
+}
+
+# --- MIC-USB-01: as três camadas de mudo empilhadas -------------------------
+#
+# Medido ao vivo em 25/07, com o controle no cabo: o microfone estava mudo por
+# TRÊS motivos diferentes, em três donos diferentes, e cada cura revelava o de
+# baixo. A aba Status dizia a verdade o tempo todo — o medidor era a única coisa
+# funcionando. Duas dessas camadas são do WirePlumber e cabem aqui:
+#
+#   camada 1 — MUTE PERSISTIDO POR ROTA. O WirePlumber guarda mute e volume por
+#     ROTA de placa em ~/.local/state/wireplumber/default-routes e restaura
+#     fielmente a cada conexão, SEM NADA NO LOG. Sobrevive a reboot, replug e
+#     reinstalação. Foi diagnosticado à mão uma vez e VOLTOU — a prova de que um
+#     conserto que não é código não é conserto, é adiamento. Por isso ele está
+#     aqui.
+#   camada 2 — PERFIL DA PLACA NA ENTRADA SEM SINAL. O DualSense expõe
+#     `input:analog-stereo` (onde o microfone realmente vive, marcado
+#     `available: no`) e `input:iec958-stereo` (S/PDIF, `available: yes` e SEM
+#     SINAL). O WirePlumber escolhe por disponibilidade e marca a analógica como
+#     indisponível porque a detecção de jack não vê fone plugado — a porta se
+#     chama `analog-input-headset-mic`. Mas o microfone EMBUTIDO usa esse mesmo
+#     caminho: no mixer ALSA o controle de captura se chama literalmente
+#     `Headset`. Resultado: sem fone plugado o perfil cai no S/PDIF e a gravação
+#     dá pico 0.
+#   camada 3 — o mudo no FIRMWARE do controle. Não é do WirePlumber e não se vê
+#     por aqui: vive no `daemon.state_full` (`audio.mic_mudo`) e agora tem cura
+#     pelo `mic.set` do IPC (`hefesto-dualsense4unix mic unmute`).
+#
+# Nada aqui hardcoda o nome do card ou da source: eles carregam o nome do
+# produto e o sufixo da porta USB, e mudam de máquina para máquina.
+
+# Rotas do DualSense com `"mute":true` no estado persistido do WirePlumber.
+# Imprime a CHAVE de cada rota muda (uma por linha); silêncio = nada a fazer.
+# Função PURA: recebe o arquivo, não escreve nada, não chama pactl.
+_dualsense_rotas_mudas() {
+    local arquivo="${1:-${HOME}/.local/state/wireplumber/default-routes}"
+    [[ -r "${arquivo}" ]] || return 0
+    # `|| true`: silêncio é a resposta NORMAL (nada mudo) e grep sai 1 nesse
+    # caso — deixar o 1 escapar faria o chamador confundir "está tudo bem" com
+    # "o check quebrou".
+    grep -iE '^[^=]*dual[[:alnum:]_]*sense[^=]*=.*"mute":[[:space:]]*true' \
+        "${arquivo}" 2>/dev/null | sed -E 's/=.*$//' || true
+}
+
+# Nome da source de CAPTURA do DualSense em `pactl list sources short` (arquivo
+# ou stdin). Só `alsa_input.*` — o `.monitor` do sink também casa "DualSense" no
+# nome mas é o loopback da SAÍDA, não o microfone. Função PURA.
+_dualsense_source_nome() {
+    awk 'tolower($2) ~ /^alsa_input\..*dualsense/ { print $2; exit }' "${1:--}"
+}
+
+# Interpreta a saída do `pactl get-source-mute` (texto do pactl, LC_ALL=C).
+# Imprime muted | unmuted | unknown. Função PURA (espelha _wpctl_volume_muted).
+_source_mute_veredito() {
+    local out="$1"
+    if [[ -z "${out}" ]]; then
+        printf 'unknown\n'
+    elif printf '%s' "${out}" | grep -qiE 'mute:[[:space:]]*(yes|sim)'; then
+        printf 'muted\n'
+    elif printf '%s' "${out}" | grep -qiE 'mute:[[:space:]]*(no|não)'; then
+        printf 'unmuted\n'
+    else
+        printf 'unknown\n'
+    fi
+}
+
+# Camada 2, em uma linha: `card<TAB>perfil_ativo<TAB>perfil_alvo` a partir de um
+# `pactl list cards` (arquivo ou stdin). `perfil_alvo` vazio = o perfil ativo já
+# leva a entrada ANALÓGICA (nada a fazer). Silêncio total = não há DualSense.
+#
+# O alvo PRESERVA a parte de saída do perfil ativo e troca só a entrada — trocar
+# para um perfil só-de-entrada emudeceria o alto-falante/fone do controle e o
+# canal de haptic-de-áudio junto. A busca NÃO filtra por `available`: a entrada
+# analógica é exatamente a que o WirePlumber marca indisponível, e é essa que o
+# `pactl set-card-profile` aceita e que faz a source nascer RUNNING.
+# Função PURA: só parsing, nenhuma escrita.
+_dualsense_perfil_status() {
+    awk '
+        /^[[:space:]]+Name: alsa_card\./ {
+            nome = substr($0, index($0, ": ") + 2)
+            alvo = (tolower(nome) ~ /dualsense/)
+            if (alvo) { card = nome }
+            secao = ""
+            next
+        }
+        !alvo { next }
+        /^[[:space:]]+Profiles:/ { secao = "perfis"; next }
+        /^[[:space:]]+Active Profile: / {
+            ativo = substr($0, index($0, ": ") + 2); secao = ""; next
+        }
+        /^\t[A-Za-z]/ { secao = ""; next }
+        secao == "perfis" {
+            linha = $0
+            sub(/^[[:space:]]+/, "", linha)
+            pos = index(linha, ": ")
+            if (pos < 2) next
+            chave = substr(linha, 1, pos - 1)
+            if (chave ~ /[[:space:]]/) next
+            perfis[chave] = 1
+            if (chave ~ /input:analog-stereo/) {
+                if (chave ~ /^output:/) reserva = chave
+                else if (reserva == "") reserva = chave
+            }
+            next
+        }
+        END {
+            if (card == "") exit 0
+            escolhido = ""
+            if (ativo ~ /input:iec958/) {
+                saida = ativo
+                sub(/\+?input:[^+]*$/, "", saida)
+                candidato = (saida == "") ? "input:analog-stereo" \
+                                          : saida "+input:analog-stereo"
+                if (candidato in perfis) escolhido = candidato
+                else escolhido = reserva
+            }
+            printf "%s\t%s\t%s\n", card, ativo, escolhido
+        }
+    ' "${1:--}"
+}
+
+# CAMADA 1 — mute guardado por rota (arquivo) e mute vivo na source (pactl).
+check_mic_mute_persistido() {
+    local rotas="${HOME}/.local/state/wireplumber/default-routes"
+    local mudas r
+    mudas="$(_dualsense_rotas_mudas "${rotas}")"
+    if [[ -n "${mudas}" ]]; then
+        fail "microfone do DualSense MUDO por estado PERSISTIDO do WirePlumber (camada 1) — rode: scripts/doctor.sh --fix"
+        while read -r r; do
+            [[ -n "${r}" ]] && info "  rota muda: ${r}"
+        done <<< "${mudas}"
+        info "  o mute vive por ROTA em ${rotas} e é restaurado a cada conexão sem nada no log"
+    elif [[ -r "${rotas}" ]]; then
+        pass "nenhuma rota do DualSense com mute persistido (camada 1)"
+    else
+        info "sem ${rotas} — o WirePlumber ainda não gravou estado de rota"
+    fi
+
+    command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo o mudo VIVO da source"; return; }
+    local src veredito
+    src="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+    if [[ -z "${src}" ]]; then
+        info "sem source de captura do DualSense agora (controle fora do cabo, ou mic suprimido pelo drop-in 52)"
+        return
+    fi
+    veredito="$(_source_mute_veredito "$(LC_ALL=C pactl get-source-mute "${src}" 2>/dev/null || true)")"
+    case "${veredito}" in
+        muted)   fail "a source do DualSense está MUDA agora (${src}) — rode: scripts/doctor.sh --fix" ;;
+        unmuted) pass "source do DualSense não está muda (${src})" ;;
+        *)       info "não consegui ler o mudo de ${src} (PipeWire parado?)" ;;
+    esac
+}
+
+# CAMADA 2 — perfil da placa apontando para a entrada digital, que não tem sinal.
+check_mic_perfil_sem_sinal() {
+    command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo o perfil da placa do DualSense"; return; }
+    local linha card ativo alvo
+    linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
+    if [[ -z "${linha}" ]]; then
+        info "nenhuma placa de áudio do DualSense agora (controle fora do cabo — por BT não existe placa)"
+        return
+    fi
+    IFS=$'\t' read -r card ativo alvo <<< "${linha}"
+    if [[ -z "${alvo}" ]]; then
+        pass "perfil da placa do DualSense leva a entrada analógica (${ativo:-<vazio>})"
+        return
+    fi
+    fail "perfil da placa do DualSense está no S/PDIF, que NÃO carrega sinal (camada 2): ${ativo} — rode: scripts/doctor.sh --fix"
+    info "  o mic embutido vive na entrada ANALÓGICA (porta analog-input-headset-mic; no mixer ALSA o controle se chama 'Headset')"
+    info "  cura: pactl set-card-profile ${card} \"${alvo}\""
+}
+
+# Cura das camadas 1 e 2. Chamada pelo --fix (junto das demais) e pelo --fix-mic
+# (sozinha, para quem só quer o microfone de volta agora). Idempotente: cada
+# passo confere antes de escrever e cala a boca quando não há o que fazer.
+fix_mic_dualsense() {
+    # Camada 1: o desmute das rotas mora no fix_wireplumber_default_source.sh,
+    # que é o dono das escritas no estado do WirePlumber (ele para o serviço
+    # antes de editar — com o WirePlumber vivo, o arquivo seria reescrito no
+    # shutdown por cima da nossa edição).
+    if [[ -n "$(_dualsense_rotas_mudas)" ]]; then
+        if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --unmute-routes >/dev/null 2>&1; then
+            pass "mute persistido das rotas do DualSense removido (camada 1)"
+        else
+            warn "falha ao remover o mute persistido das rotas do DualSense"
+        fi
+    fi
+
+    command -v pactl >/dev/null 2>&1 || return 0
+
+    # Camada 2: perfil da placa de volta para a entrada analógica.
+    local linha card ativo alvo
+    linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
+    if [[ -n "${linha}" ]]; then
+        IFS=$'\t' read -r card ativo alvo <<< "${linha}"
+        if [[ -n "${alvo}" ]]; then
+            if pactl set-card-profile "${card}" "${alvo}" 2>/dev/null; then
+                pass "perfil da placa do DualSense trocado para ${alvo} (camada 2)"
+            else
+                warn "falha ao trocar o perfil da placa do DualSense para ${alvo}"
+            fi
+        fi
+    fi
+
+    # Camada 1, face viva: a source pode estar muda sem que o arquivo diga —
+    # o WirePlumber só grava o estado ao sair. Roda DEPOIS da troca de perfil,
+    # porque é ela que faz a source analógica existir.
+    local src veredito
+    src="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+    [[ -z "${src}" ]] && return 0
+    veredito="$(_source_mute_veredito "$(LC_ALL=C pactl get-source-mute "${src}" 2>/dev/null || true)")"
+    if [[ "${veredito}" == "muted" ]]; then
+        if pactl set-source-mute "${src}" 0 2>/dev/null; then
+            pass "source do DualSense desmutada (${src})"
+        else
+            warn "falha ao desmutar ${src}"
+        fi
+    fi
 }
 
 # Duplicação no jogo — DEDUP-04/UX-05: o doctor PAROU de recomendar a env
@@ -2585,11 +2809,28 @@ apply_fixes() {
             warn "disable_steam_input.sh falhou"
         fi
     fi
+    # MIC-USB-01: camadas 1 e 2 do microfone mudo. Depois do fix de áudio acima,
+    # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
+    # e o mute da source precisam ser conferidos com o serviço já de pé.
+    fix_mic_dualsense
 }
 
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
+    # MIC-USB-01: rota curta para quem só quer o microfone de volta agora —
+    # cura as camadas 1 e 2, mostra o veredito das duas e sai. É também o que o
+    # `fix_wireplumber_default_source.sh --promote-source` chama, para a cura
+    # das camadas ter UM dono só e não virar dois códigos que divergem.
+    if [[ "${FIX_MIC}" -eq 1 ]]; then
+        hdr "microfone do DualSense (MIC-USB-01 — camadas 1 e 2)"
+        fix_mic_dualsense
+        check_mic_mute_persistido
+        check_mic_perfil_sem_sinal
+        info "camada 3 (mudo no firmware do controle): hefesto-dualsense4unix mic unmute"
+        [[ "${FAILS}" -eq 0 ]]
+        exit $?
+    fi
     [[ "${DO_FIX}" -eq 1 ]] && apply_fixes
     hdr "daemon"
     check_daemon_installed
@@ -2633,6 +2874,8 @@ main() {
     check_wireplumber_source
     check_dualsense_sink_disabled
     check_audio_sink_muted
+    check_mic_mute_persistido
+    check_mic_perfil_sem_sinal
     hdr "Steam Input"
     check_steam_input
     check_steam_input_allowlist

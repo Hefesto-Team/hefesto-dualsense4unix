@@ -21,6 +21,24 @@ DualSense não fala A2DP/HFP/HSP e manda o áudio como Opus dentro dos reports
 HID. Aí não há política a ajustar — é preciso IMPLEMENTAR o transporte. É o que
 `bt` faz, subindo a ponte de `integrations/dualsense_bt_audio.py` (BT-MIC-01);
 `bt-status` mostra as pré-condições sem mexer em nada.
+
+MIC-USB-01 (25/07) — AS TRÊS CAMADAS DE MUDO. Medido ao vivo com o controle no
+cabo: o microfone estava mudo por três motivos empilhados, em três donos
+diferentes, e cada cura revelava o de baixo. Este módulo agora alcança os três:
+
+1. **rota do WirePlumber** — `mute:true` persistido por ROTA de placa em
+   `~/.local/state/wireplumber/default-routes`, restaurado a cada conexão sem
+   nada no log. Cura: `scripts/doctor.sh --fix` (ou `--enable-mic` aqui);
+2. **perfil da placa** — preso em `input:iec958-stereo`, que é S/PDIF e não
+   carrega sinal, porque o WirePlumber marca a entrada analógica indisponível
+   sem fone plugado. Mas o mic EMBUTIDO usa esse caminho (no mixer ALSA o
+   controle de captura se chama `Headset`). Cura: `scripts/doctor.sh --fix`;
+3. **firmware do controle** — o mesmo estado que o botão físico de mic alterna
+   e que acende o LED. Cura: `mute`/`unmute`/`release` daqui, pelo `mic.set` do
+   IPC. Até esta sprint só o botão físico o alcançava.
+
+`promote`/`demote` são de uma quarta pergunta, que não é de mudo e sim de
+POLÍTICA: quem é o microfone PADRÃO do sistema.
 """
 from __future__ import annotations
 
@@ -40,6 +58,22 @@ _ACTION_FLAG = {
     "on": "--enable-mic",
     "off": "--disable-source",
     "status": "--status",
+    # MIC-USB-01 (entrega 3): promoção EXPLÍCITA do mic do controle a entrada
+    # padrão do sistema, e a volta. O drop-in 51 rebaixa a prioridade da fonte
+    # para o DualSense não ser eleito sozinho — o que é correto e nunca foi o
+    # culpado do mute —, mas rebaixar também tirava dela o direito de ESCOLHER:
+    # o `set-default-source` era sobrescrito de volta para o monitor da saída.
+    "promote": "--promote-source",
+    "demote": "--install",
+}
+
+#: Ações que mexem no mudo do FIRMWARE do controle (camada 3), pelo `mic.set`
+#: do IPC. Os três estados são pedidos DIFERENTES e explícitos: `unmute` não é
+#: `release`. Ver `_mic_firmware`.
+_ACOES_FIRMWARE: dict[str, bool | None] = {
+    "mute": True,
+    "unmute": False,
+    "release": None,
 }
 
 #: Ações que NÃO passam pelo script do WirePlumber (são a ponte por BT).
@@ -64,19 +98,25 @@ def _find_script() -> Path | None:
     return None
 
 
-def mic_cmd(action: str = "status") -> None:
+def mic_cmd(action: str = "status", uniq: str | None = None) -> None:
     """Liga (on) / desliga (off) / consulta (status) o mic do DualSense.
 
     `bt` sobe a ponte do microfone por Bluetooth; `bt-status` diagnostica.
+    `mute`/`unmute`/`release` mexem no mudo do FIRMWARE do controle
+    (MIC-USB-01, camada 3); `promote`/`demote` na política de microfone padrão.
+    `uniq` (MAC normalizado) escolhe o controle nas ações de firmware.
     """
     action = action.lower()
     if action in _ACOES_BT:
         raise typer.Exit(code=_mic_bt(status_apenas=action == "bt-status"))
+    if action in _ACOES_FIRMWARE:
+        raise typer.Exit(code=_mic_firmware(_ACOES_FIRMWARE[action], uniq=uniq))
 
     flag = _ACTION_FLAG.get(action)
     if flag is None:
         console.print(
-            f"[red]ação inválida: {action}[/red] — use: on | off | status | bt | bt-status"
+            f"[red]ação inválida: {action}[/red] — use: on | off | status | "
+            "promote | demote | mute | unmute | release | bt | bt-status"
         )
         raise typer.Exit(code=2)
 
@@ -93,6 +133,82 @@ def mic_cmd(action: str = "status") -> None:
     if action == "off" and rc == 2:
         rc = 0
     raise typer.Exit(code=rc)
+
+
+# ---------------------------------------------------------------------------
+# Mudo no FIRMWARE do controle (MIC-USB-01, camada 3)
+# ---------------------------------------------------------------------------
+
+
+def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
+    """Manda `mic.set` ao daemon e imprime o que o controle passou a declarar.
+
+    MIC-USB-01. Este é o PRIMEIRO chamador do `mic.set` — o método nasceu nesta
+    sprint porque o backend tinha `set_microphone_mute` desde o AUDIO-OWNER-01 e
+    ele não estava exposto em superfície nenhuma: para desmutar o microfone só
+    existia o botão físico do controle.
+
+    Os três pedidos são diferentes e nenhum é "não mexer":
+
+    - ``True``  — muta, e a partir daí NÓS somos os donos do registrador;
+    - ``False`` — desmuta, e o botão físico deixa de valer enquanto durar;
+    - ``None``  — devolve a posse ao `hid-playstation`, que volta a alternar o
+      mudo na borda do botão físico. É o único que "solta" o controle.
+
+    O que sai impresso é a LEITURA do byte de estado do report de INPUT, que
+    pode vir um report atrás da escrita — por isso a linha diz o que o firmware
+    DECLARA agora, e não o eco do que acabamos de mandar.
+    """
+    import asyncio
+
+    from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
+
+    payload: dict[str, object] = {"muted": muted}
+    if uniq:
+        payload["uniq"] = uniq
+
+    async def _chamar() -> dict[str, object] | None:
+        try:
+            async with IpcClient.connect() as client:
+                resposta = await client.call("mic.set", payload)
+        except (FileNotFoundError, ConnectionError, IpcError, OSError):
+            return None
+        return resposta if isinstance(resposta, dict) else {}
+
+    resultado = asyncio.run(_chamar())
+    if resultado is None:
+        console.print(
+            "[red]daemon offline[/red] — o mudo do firmware só se altera pelo "
+            "daemon (inicie com 'hefesto-dualsense4unix daemon start'), ou "
+            "aperte o botão de microfone do controle."
+        )
+        return 1
+    if resultado.get("status") != "ok":
+        console.print(
+            "[yellow]nenhum controle recebeu o pedido[/yellow] — conecte o "
+            "DualSense (ou confira o MAC passado em uniq)."
+        )
+        return 1
+
+    pedido = {True: "MUDO", False: "ATIVO", None: "posse devolvida ao kernel"}[muted]
+    console.print(f"  microfone do firmware .... {pedido}")
+    audio = resultado.get("audio")
+    if isinstance(audio, dict):
+        declarado = audio.get("mic_mudo")
+        selo = "MUDO" if declarado else "ativo"
+        console.print(f"  o controle declara ....... {selo}")
+        if declarado:
+            console.print(
+                "  [dim]ainda mudo? o firmware pode levar um report para "
+                "convergir. Se o medidor seguir parado, o resto é WirePlumber: "
+                "rode `scripts/doctor.sh --fix`.[/dim]"
+            )
+    else:
+        console.print(
+            "  [dim]o controle ainda não entregou um report de estado — o selo "
+            "aparece no próximo tick.[/dim]"
+        )
+    return 0
 
 
 # ---------------------------------------------------------------------------
