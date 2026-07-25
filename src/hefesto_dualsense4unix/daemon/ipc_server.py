@@ -21,6 +21,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
+    speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -116,6 +117,9 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
+            # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
+            # bytes de volume do report — ver `_handle_speaker_set`).
+            "speaker.set": self._handle_speaker_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,

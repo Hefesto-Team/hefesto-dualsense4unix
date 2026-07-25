@@ -100,6 +100,8 @@ class DaemonProtocol(Protocol):
     _suppress_from_profile: bool
     # FEAT-DAEMON-RESILIENT-SUBSYSTEMS-01: subsystems que falharam ao iniciar.
     _failed_subsystems: dict[str, str]
+    # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth (opt-in) ou None.
+    _bt_mic_subsystem: Any
 
     # FEAT-KEYBOARD-EMULATOR-01: attrs adicionados em runtime pelo subsystem
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.

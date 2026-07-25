@@ -244,6 +244,14 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
                 continue
             if payload.get("button") != "mic_btn":
                 continue
+            # MIC-EXPOSE-01: o flag é consultado AQUI, a cada evento, e não só
+            # no boot — assim a seção `mic` do perfil/draft vale no próximo
+            # toque do botão sem restart do daemon. Desligado, o botão não
+            # mexe no mute do sistema (nem no LED); o kernel segue dono do
+            # mudo de microfone do próprio controle.
+            if not getattr(daemon.config, "mic_button_toggles_system", True):
+                logger.debug("mic_hotkey_desligado_por_config")
+                continue
             audio = daemon._audio
             if audio is None:
                 continue

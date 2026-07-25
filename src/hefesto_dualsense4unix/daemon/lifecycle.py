@@ -161,8 +161,16 @@ class DaemonConfig:
     # FEAT-RUMBLE-POLICY-01
     rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
-    # FEAT-HOTKEY-MIC-01
+    # FEAT-HOTKEY-MIC-01 — o botão de mic do controle alterna o mute do
+    # microfone PADRÃO DO SISTEMA (wpctl/pactl) e acompanha o LED do mic.
+    # Desligado, o botão vira só um botão (o kernel segue mudando o mic do
+    # próprio controle — isso é dele, não nosso).
     mic_button_toggles_system: bool = True
+    # BT-MIC-REGISTRY-01 — ponte de microfone por Bluetooth (Opus tunelado em
+    # HID). OPT-IN por privacidade e por banda de rádio: ver o cabeçalho de
+    # `daemon/subsystems/bt_mic.py`. Também aceita
+    # `HEFESTO_DUALSENSE4UNIX_BT_MIC=1` (o subsystem consulta os dois).
+    bt_mic_enabled: bool = False
     # FEAT-METRICS-01
     metrics_enabled: bool = False
     metrics_port: int = 9090
@@ -355,6 +363,10 @@ class Daemon:
     # FEAT-METRICS-01: MetricsSubsystem (servidor HTTP Prometheus) ou None.
     # Instanciado por `_start_metrics` quando metrics_enabled; None até o 1º uso.
     _metrics_subsystem: Any = None
+    # BT-MIC-REGISTRY-01: BtMicSubsystem (ponte de microfone por Bluetooth) ou
+    # None. OPT-IN — só é instanciado quando `bt_mic_enabled`/a env var estão
+    # ligadas; um microfone que sobe sozinho com o daemon é inaceitável.
+    _bt_mic_subsystem: Any = None
     # BUG-DAEMON-NO-DEVICE-FATAL-01 — task de probe de conexão em background
     # (substitui connect_with_retry bloqueante no boot). Cancelada em shutdown.
     _reconnect_task: asyncio.Task[Any] | None = None
@@ -545,6 +557,11 @@ class Daemon:
             await self._safe_start("hotkey", lambda: start_hotkey_manager(self))
             if self.config.mic_button_toggles_system:
                 await self._safe_start("mic_hotkey", lambda: start_mic_hotkey(self))
+            # BT-MIC-REGISTRY-01: ponte de microfone por Bluetooth. O gate de
+            # opt-in vive DENTRO do starter (`is_enabled`) — desligado, ele
+            # devolve sem instanciar nada. Sobe aqui, ao lado do resto do
+            # mundo de microfone e antes dos plugins (código de usuário).
+            await self._safe_start("bt_mic", self._start_bt_mic)
             await self._safe_start("plugins", self._start_plugins)
             # FEAT-METRICS-01: sobe o servidor de métricas Prometheus (gate
             # interno respeita metrics_enabled). Antes nunca era iniciado —
@@ -2057,6 +2074,46 @@ class Daemon:
         )
         await ms.start(ctx)
         self._metrics_subsystem = ms
+
+    async def _start_bt_mic(self) -> None:
+        """Sobe o BtMicSubsystem se o opt-in estiver ligado (BT-MIC-REGISTRY-01).
+
+        A ponte de microfone por Bluetooth existia inteira
+        (`integrations/dualsense_bt_audio.py`, validada ao vivo gravando WAV) e
+        o subsystem que a embrulha existia — mas NINGUÉM o iniciava: o
+        `SUBSYSTEM_REGISTRY` é declarativo e é este `run()` que sobe as coisas.
+        O gate documentado (`HEFESTO_DUALSENSE4UNIX_BT_MIC=1`) portanto não
+        ligava nada no daemon, e a ponte só existia pelo CLI `mic bt`.
+
+        Espelha `_start_metrics`/`_start_plugins`: monta o `DaemonContext`,
+        respeita `is_enabled(config)` e devolve INERTE (sem thread, sem
+        `pactl`, sem importar libopus) quando o opt-in está desligado — que é
+        o default. Um erro aqui vira `_failed_subsystems["bt_mic"]` pelo
+        `_safe_start` do chamador; o boot segue.
+        """
+        from hefesto_dualsense4unix.daemon.context import DaemonContext
+        from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
+
+        bm = BtMicSubsystem()
+        if not bm.is_enabled(self.config):
+            return
+
+        ctx = DaemonContext(
+            controller=self.controller,
+            bus=self.bus,
+            store=self.store,
+            config=self.config,
+            executor=self._executor,
+        )
+        await bm.start(ctx)
+        self._bt_mic_subsystem = bm
+
+    async def _stop_bt_mic(self) -> None:
+        """Para o BtMicSubsystem (DESLIGA o mic de cada controle). Idempotente."""
+        if self._bt_mic_subsystem is not None:
+            subsystem = self._bt_mic_subsystem
+            self._bt_mic_subsystem = None
+            await subsystem.stop()
 
     async def _stop_metrics(self) -> None:
         """Para o MetricsSubsystem de forma limpa. Idempotente."""

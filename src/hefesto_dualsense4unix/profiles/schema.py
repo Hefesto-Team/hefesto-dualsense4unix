@@ -319,6 +319,33 @@ class ProfileMouseConfig(BaseModel):
     scroll_speed: int = Field(default=1, ge=1, le=5)
 
 
+class ProfileMicConfig(BaseModel):
+    """Seção opcional de MICROFONE por perfil (MIC-EXPOSE-01, 25/07).
+
+    Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse`:
+    perfil sem a seção não tem opinião e ativá-lo NÃO mexe no comportamento
+    do botão de mic.
+
+    `button_toggles_system` espelha `DaemonConfig.mic_button_toggles_system`,
+    que até aqui era um campo SECRETO: existia no dataclass do lifecycle,
+    gateava o subsystem `mic_hotkey` no boot e não aparecia em lugar nenhum —
+    nem na GUI, nem no draft, nem no perfil. Ligado (default do daemon), o
+    botão de mic do controle alterna o mute do microfone PADRÃO DO SISTEMA
+    (wpctl/pactl) e acende o LED do mic junto. Desligado, o botão não mexe no
+    áudio do sistema — é o que se quer num perfil de gravação/live, em que o
+    mute é do OBS/da mesa e um toque acidental no controle não pode derrubar
+    a captura.
+
+    NÃO confundir com o mudo de microfone do FIRMWARE (`common[9]` do report
+    de saída): esse é do kernel e o hefesto deixou de disputá-lo
+    (AUDIO-OWNER-01).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    button_toggles_system: bool
+
+
 class ProfileModeConfig(BaseModel):
     """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
 
@@ -403,6 +430,9 @@ class Profile(BaseModel):
     # - Preenchida = ativar o perfil liga/desliga a emulação com as velocidades
     #   dadas (via `mouse_applier` injetado no ProfileManager).
     mouse: ProfileMouseConfig | None = None
+    # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
+    # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
+    mic: ProfileMicConfig | None = None
     # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
     # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
     mode: ProfileModeConfig | None = None
@@ -620,6 +650,7 @@ __all__ = [
     "MatchCriteria",
     "MatchManual",
     "Profile",
+    "ProfileMicConfig",
     "ProfileMouseConfig",
     "RumbleConfig",
     "TriggerConfig",

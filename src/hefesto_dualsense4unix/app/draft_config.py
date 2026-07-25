@@ -137,6 +137,28 @@ class EmulationDraft(BaseModel):
     xbox360_enabled: bool = False
 
 
+class MicDraft(BaseModel):
+    """Draft do MICROFONE (MIC-EXPOSE-01, 25/07).
+
+    ``button_toggles_system`` espelha ``DaemonConfig.mic_button_toggles_system``
+    e ``ProfileMicConfig.button_toggles_system``: o botão de mic do controle
+    alterna (ou não) o mute do microfone PADRÃO DO SISTEMA. O campo existia só
+    dentro do dataclass do daemon — nenhuma superfície o mostrava nem o
+    editava, e o único jeito de mudá-lo era editar código.
+
+    ``dirty``/``in_profile`` seguem a mesma disciplina do ``MouseDraft``:
+    ``to_ipc_dict`` só emite a seção quando a usuária mexeu nela (dirty), e
+    ``to_profile`` só a persiste quando ela foi mexida OU o perfil de origem
+    já a tinha — perfis legados fazem round-trip sem ganhar seção fantasma.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    button_toggles_system: bool = True
+    dirty: bool = False
+    in_profile: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Conversores sub-draft <-> schema (compartilhados por from_profile/to_profile
 # e pelos overrides por-controle do PERFIL-04)
@@ -263,6 +285,8 @@ class DraftConfig(BaseModel):
     rumble: RumbleDraft = Field(default_factory=RumbleDraft)
     mouse: MouseDraft = Field(default_factory=MouseDraft)
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
+    # MIC-EXPOSE-01: comportamento do botão de mic (ver `MicDraft`).
+    mic: MicDraft = Field(default_factory=MicDraft)
     # FEAT-KEYBOARD-UI-01: bindings de teclado do perfil em edição.
     # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
     # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
@@ -344,11 +368,24 @@ class DraftConfig(BaseModel):
         # Emulacao (xbox360) — não presente no Profile v1; defaults
         emulation = EmulationDraft()
 
+        # Mic — MIC-EXPOSE-01, mesmo contrato do `mouse`: seção presente no
+        # perfil vira draft com `in_profile=True` (para o round-trip do
+        # "Salvar Perfil" não a descartar); ausente mantém o default.
+        if profile.mic is not None:
+            mic = MicDraft(
+                button_toggles_system=profile.mic.button_toggles_system,
+                dirty=False,
+                in_profile=True,
+            )
+        else:
+            mic = MicDraft()
+
         return cls(
             triggers=triggers,
             leds=leds,
             rumble=rumble,
             mouse=mouse,
+            mic=mic,
             emulation=emulation,
             key_bindings=profile.key_bindings,
             source_match=profile.match,
@@ -388,6 +425,7 @@ class DraftConfig(BaseModel):
         from hefesto_dualsense4unix.profiles.schema import (
             MatchAny,
             Profile,
+            ProfileMicConfig,
             ProfileMouseConfig,
             RumbleConfig,
         )
@@ -399,6 +437,11 @@ class DraftConfig(BaseModel):
                 scroll_speed=self.mouse.scroll_speed,
             )
             if (self.mouse.dirty or self.mouse.in_profile)
+            else None
+        )
+        mic_cfg = (
+            ProfileMicConfig(button_toggles_system=self.mic.button_toggles_system)
+            if (self.mic.dirty or self.mic.in_profile)
             else None
         )
 
@@ -443,6 +486,7 @@ class DraftConfig(BaseModel):
             ),
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
+            mic=mic_cfg,
             # R-11: `controllers` NÃO entra no gate de `mesmo_perfil`, ao
             # contrário de match/priority/mode. A distinção é o que a coisa É:
             # match/priority/mode são REGRA (identidade do perfil, de onde ele
@@ -813,6 +857,14 @@ class DraftConfig(BaseModel):
                 if self.mouse.dirty
                 else None
             ),
+            # MIC-EXPOSE-01: só quando a usuária mexeu na seção (mesma regra
+            # do `mouse`) — um "Aplicar" de outra aba não pode religar/desligar
+            # o botão de mic pelas costas dela. Daemon antigo ignora a chave.
+            "mic": (
+                {"button_toggles_system": self.mic.button_toggles_system}
+                if self.mic.dirty
+                else None
+            ),
             "keyboard": {
                 "key_bindings": (
                     {b: list(tokens) for b, tokens in self.key_bindings.items()}
@@ -832,6 +884,7 @@ __all__ = [
     "DraftConfig",
     "EmulationDraft",
     "LedsDraft",
+    "MicDraft",
     "MouseDraft",
     "RumbleDraft",
     "TriggerDraft",

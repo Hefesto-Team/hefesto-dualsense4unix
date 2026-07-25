@@ -74,6 +74,8 @@ class DraftApplier:
         self._apply_section(
             applied, params.get("keyboard"), "keyboard", self._apply_keyboard
         )
+        # MIC-EXPOSE-01: seção `mic` (botão de mic  mute do sistema).
+        self._apply_section(applied, params.get("mic"), "mic", self._apply_mic)
         return applied
 
     @staticmethod
@@ -368,6 +370,28 @@ class DraftApplier:
             speed=speed,
             scroll_speed=scroll_speed,
         )
+
+    def _apply_mic(self, mic_raw: Any) -> None:
+        """Aplica a seção mic do draft (MIC-EXPOSE-01).
+
+        Único campo: ``button_toggles_system`` — se o botão de mic do controle
+        alterna o mute do microfone PADRÃO DO SISTEMA. Escreve na config VIVA
+        do daemon; o laço `mic_button_loop` consulta o flag a cada evento, então
+        a mudança vale já no próximo toque do botão, sem restart e sem
+        derrubar/recriar task nenhuma (o laço é um assinante de bus barato e
+        fica de pé independente do flag).
+        """
+        if not isinstance(mic_raw, dict):
+            raise ValueError("mic deve ser objeto")
+        if "button_toggles_system" not in mic_raw:
+            return
+        valor = mic_raw.get("button_toggles_system")
+        if not isinstance(valor, bool):
+            raise ValueError("mic.button_toggles_system deve ser booleano")
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar o botão de mic")
+        self.daemon.config.mic_button_toggles_system = valor
+        logger.info("mic_button_toggles_system_aplicado", enabled=valor)
 
     def _apply_keyboard(self, keyboard_raw: Any) -> None:
         """Aplica os key_bindings editados ao device de teclado virtual vivo.

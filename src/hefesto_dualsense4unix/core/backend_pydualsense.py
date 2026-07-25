@@ -223,6 +223,28 @@ REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 #: cobre perda de report e glitch de link sem martelar o USB.
 OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 
+#: AUDIO-STATUS-01: índice do byte de estado de áudio dentro do `states`
+#: NORMALIZADO da pydualsense (o mesmo em USB e BT — ver
+#: `_PinnedPyDualSense._captura_status_audio`). Um a mais que o índice de
+#: bateria que a própria pydualsense usa (`states[53]`).
+_INPUT_AUDIO_STATUS_IDX = 54
+
+#: AUDIO-OWNER-01: bit de validação (flag0) e offset no common de cada byte de
+#: áudio, na ORDEM de `_PinnedPyDualSense._volumes_audio`
+#: (fone, alto-falante, microfone, roteamento).
+_AUDIO_FLAG0_BITS = (0x10, 0x20, 0x40, 0x80)
+_AUDIO_COMMON_OFFSETS = (4, 5, 6, 7)
+
+
+def _clamp_u8(valor: Any, default: int) -> int:
+    """Coerção defensiva para byte de report: 0..255, ou `default` se None/lixo."""
+    if valor is None:
+        return int(default) & 0xFF
+    try:
+        return max(0, min(255, int(valor)))
+    except (TypeError, ValueError):
+        return int(default) & 0xFF
+
 
 @dataclass
 class _DesiredOutput:
@@ -390,6 +412,33 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # posse do perfil (caminho DSTrigger histórico).
         self._raw_trigger_right: bytes | None = None
         self._raw_trigger_left: bytes | None = None
+        # AUDIO-OWNER-01 — os DOIS campos de áudio que o upstream autorizava em
+        # TODO report sem nunca escrever valor nenhum. Enquanto estes ficarem
+        # None, os bits de validação correspondentes saem ZERADOS e o firmware
+        # mantém o que já tinha (mesma disciplina do keepalive neutro de
+        # vibração/LED que já mora em `_build_common`).
+        #
+        # `_mic_mute_desejado` (common[9], flag1 0x02): o DONO no Linux é o
+        # KERNEL. O `hid-playstation` alterna `ds->mic_muted` na borda do botão
+        # de mute e só então liga `POWER_SAVE_CONTROL_ENABLE` com o bit
+        # `MIC_MUTE`. Nós mandávamos `common[9]=0x00` COM o enable ligado a até
+        # 60 Hz — ou seja, "desmuta" reescrito por cima da decisão do kernel a
+        # cada 16 ms. É o suspeito nº 1 registrado em
+        # `integrations/dualsense_bt_audio.py` (BT-MIC-GATING-01).
+        # `_volumes_audio` (common[4..7], flag0 0x10..0x80): idem, mandando
+        # volume ZERO em todo report. Ver `set_audio_volumes`.
+        self._mic_mute_desejado: bool | None = None
+        #: 4 posições (fone, alto-falante, mic, roteamento). Cada uma é
+        #: independente: `None` = não somos donos DAQUELE byte e o bit de
+        #: validação dele sai apagado. Isso importa no byte 7 (roteamento de
+        #: áudio / seleção de microfone), que não sabemos ler e cujo valor
+        #: neutro NÃO é 0 — autorizá-lo junto do volume seria adivinhar.
+        self._volumes_audio: list[int | None] = [None, None, None, None]
+        # AUDIO-STATUS-01 — último byte de estado de áudio visto no report de
+        # INPUT (fone plugado / mic externo / mic MUDO pelo firmware). Custo
+        # zero: a pydualsense já guarda o report cru em `self.states` a cada
+        # leitura; aqui só copiamos UM byte no mesmo laço que já roda.
+        self._audio_status: int | None = None
 
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
@@ -413,6 +462,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             try:
                 in_report = self.device.read(self.input_report_length)
                 self.readInput(in_report)
+                self._captura_status_audio()
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
@@ -441,6 +491,71 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             except AttributeError:
                 self.connected = False
                 break
+
+    # --- AUDIO-STATUS-01 / AUDIO-OWNER-01 --------------------------------
+
+    def _captura_status_audio(self) -> None:
+        """Copia o byte de estado de áudio do último report de INPUT lido.
+
+        A pydualsense guarda o report cru NORMALIZADO em `self.states` dentro
+        do `readInput` (por USB são os bytes do report; por BT ela descarta o
+        byte de seq/flags do envelope). Nos dois casos o índice do byte de
+        áudio é o MESMO 54 — é o offset 53 do `USBGetStateData`, um a mais que
+        o byte de bateria que a própria pydualsense lê em `states[53]`.
+
+        Custo: uma indexação de lista por report já lido. NÃO abrimos fd novo,
+        NÃO fazemos leitura extra — o report de input já estava na mão.
+        """
+        estados = getattr(self, "states", None)
+        if isinstance(estados, list) and len(estados) > _INPUT_AUDIO_STATUS_IDX:
+            valor = estados[_INPUT_AUDIO_STATUS_IDX]
+            if isinstance(valor, int):
+                self._audio_status = valor & 0xFF
+
+    def set_microphone_mute(self, muted: bool | None) -> None:
+        """Assume (ou devolve) a POSSE do mudo de microfone do firmware.
+
+        `True`/`False` = o hefesto passa a mandar `common[9]` com o bit
+        `MIC_MUTE` ligado/desligado E o `POWER_SAVE_CONTROL_ENABLE` do flag1
+        asserido — a partir daí somos o dono do campo em todo report.
+        `None` (default de fábrica) = DEVOLVE a posse: o bit de validação some
+        do report e quem manda volta a ser o kernel (`hid-playstation` alterna
+        `ds->mic_muted` na borda do botão de mute do controle).
+
+        Não existe caminho de leitura: o firmware não devolve este registrador.
+        Por isso "não somos donos" é representado por None, e não por False —
+        False é uma ORDEM ("desmuta"), que é exatamente o que o keepalive
+        fazia sem querer.
+        """
+        self._mic_mute_desejado = None if muted is None else bool(muted)
+
+    def set_audio_volumes(
+        self,
+        *,
+        headphone: int | None = None,
+        speaker: int | None = None,
+        microphone: int | None = None,
+        audio_path: int | None = None,
+    ) -> None:
+        """Assume a posse dos bytes de volume que forem passados (common[4..7]).
+
+        Cada byte tem o SEU bit de validação no flag0 (fone 0x10, alto-falante
+        0x20, microfone 0x40, roteamento 0x80), então a posse é por byte:
+        quem passa só `speaker` autoriza só o alto-falante e o resto do bloco
+        continua com o firmware. Argumento omitido mantém o que já estava
+        (inclusive "sem dono").
+
+        `set_audio_volumes(...)` é a ÚNICA porta: sem ela `_build_common`
+        mantém os bits de áudio do flag0 zerados e os quatro bytes em 0
+        (inertes — o firmware ignora byte cujo bit de validação está apagado).
+        """
+        for pos, valor in enumerate((headphone, speaker, microphone, audio_path)):
+            if valor is not None:
+                self._volumes_audio[pos] = _clamp_u8(valor, 0)
+
+    def release_audio_volumes(self) -> None:
+        """Devolve a posse de common[4..7] (volta ao neutro). Idempotente."""
+        self._volumes_audio = [None, None, None, None]
 
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
         super().setLeftMotor(intensity)
@@ -486,14 +601,34 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
           no firmware (o registrador aceita a cor, o sysfs mostra, mas a barra
           fica apagada). Foi a regressão do BTREPORT-02: antes o keepalive era
           malformado e o firmware o descartava.
+        - AUDIO-OWNER-01 (25/07): o mesmo princípio aplicado ao ÁUDIO, que era
+          o último escritor sem dono do report. O upstream manda `flag0=0xFF`,
+          o que autoriza common[4..7] (volumes de fone/alto-falante/mic e o
+          byte de roteamento) — mas NINGUÉM nunca escreveu esses bytes, então
+          saía "volume 0" a cada report; e mandava `POWER_SAVE_CONTROL_ENABLE`
+          com `common[9]=0x00`, ou seja "desmuta o microfone", por cima do
+          kernel, que é quem alterna o mudo na borda do botão físico. Agora os
+          dois blocos só ganham autorização quando ALGUÉM deste projeto
+          escreveu um valor (`set_audio_volumes` / `set_microphone_mute`);
+          sem dono, os bits saem zerados e o firmware conserva o que tinha.
         """
         from hefesto_dualsense4unix.core import ds_output_report as rep
 
         common = bytearray(rep.COMMON_LEN)
         suppress_leds = bool(getattr(self, "_suppress_leds", False))
+        volumes = getattr(self, "_volumes_audio", None) or [None, None, None, None]
+        mic_mute = getattr(self, "_mic_mute_desejado", None)
         flag0 = 0xFF  # upstream: vibração+gatilhos+áudio sempre autorizados
         flag1 = 0x01 | 0x02 | 0x04 | 0x10 | 0x40  # upstream: mic+LED+atenuação
         flag2 = int(self.light.ledOption.value)
+        # AUDIO-OWNER-01: os bits de áudio do flag0 caem TODOS e só voltam,
+        # um a um, para os bytes de que alguém assumiu a posse.
+        flag0 &= ~rep.VALID_FLAG0_AUDIO_MASK
+        for bit, valor in zip(_AUDIO_FLAG0_BITS, volumes, strict=False):
+            if valor is not None:
+                flag0 |= bit
+        if mic_mute is None:
+            flag1 &= ~rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
         if not rumble_asserted:
             flag0 &= ~(
                 rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
@@ -515,8 +650,15 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         common[1] = flag1
         common[2] = int(self.rightMotor) & 0xFF
         common[3] = int(self.leftMotor) & 0xFF
+        for offset, valor in zip(_AUDIO_COMMON_OFFSETS, volumes, strict=False):
+            if valor is not None:
+                common[offset] = int(valor) & 0xFF
         common[8] = int(self.audio.microphone_led) & 0xFF
-        common[9] = 0x10 if self.audio.microphone_mute else 0x00
+        # `audio.microphone_mute` da pydualsense continua sendo o valor de
+        # fato mandado — mas só quando temos a posse (ver AUDIO-OWNER-01).
+        if mic_mute is not None:
+            self.audio.microphone_mute = mic_mute
+            common[9] = rep.POWER_SAVE_MIC_MUTE if mic_mute else 0x00
         # REPLICA-03: bloco cru do jogo (se em posse) vence o estado DSTrigger.
         raw_r = getattr(self, "_raw_trigger_right", None)
         if raw_r is not None and len(raw_r) == GAME_TRIGGER_BLOCK_LEN:
@@ -1996,6 +2138,149 @@ class PyDualSenseController(IController):
             what="set_mic_led",
             record={"mic_led": flag},
         )
+
+    # --- Áudio do controle (AUDIO-STATUS-01 / AUDIO-OWNER-01) -------------
+
+    def audio_status_for(self, uniq: str | None = None) -> dict[str, bool] | None:
+        """Estado de áudio LIDO do controle, ou None se ainda não foi visto.
+
+        Decodifica o byte de estado que vem no report de INPUT (o mesmo que a
+        ponte de mic por BT já lia e consumia internamente — aqui ele SOBE):
+
+          - ``fone_plugado`` — há headset no P2 do controle;
+          - ``mic_externo`` — o microfone do headset está presente;
+          - ``mic_mudo``    — o firmware declara o microfone MUDO.
+
+        `uniq` seleciona o controle (MAC normalizado); None = o primário.
+        Devolve None quando não há handle, quando ele nunca leu um report ou
+        quando o MAC não corresponde a controle nenhum — ausência é resposta,
+        e a GUI esconde o bloco em vez de desenhar "não plugado" adivinhado.
+        """
+        status = self._audio_status_byte(uniq)
+        if status is None:
+            return None
+        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+            STATUS_FONE_PLUGADO,
+            STATUS_MIC_EXTERNO,
+            STATUS_MIC_MUDO,
+        )
+
+        return {
+            "fone_plugado": bool(status & STATUS_FONE_PLUGADO),
+            "mic_externo": bool(status & STATUS_MIC_EXTERNO),
+            "mic_mudo": bool(status & STATUS_MIC_MUDO),
+        }
+
+    def speaker_state_for(self, uniq: str | None = None) -> dict[str, Any] | None:
+        """`{"volume": 0-255, "muted": bool}` do alto-falante, ou None.
+
+        HONESTIDADE DO CAMPO (AUDIO-OWNER-01): o DualSense **não devolve** o
+        volume — não existe report de input nem feature report que o leia. A
+        única forma de SABER o volume é ter sido nós a mandá-lo. Por isso:
+
+          - ninguém chamou `set_speaker_volume` ⇒ devolve **None** e a chave
+            `speaker` nem entra no payload (a GUI esconde o módulo);
+          - depois de um `set_speaker_volume`, devolve o valor EM VIGOR, que
+            é o que o firmware recebe em todo report enquanto formos donos.
+
+        `muted` é derivado: mudo = volume efetivo 0. O bloco de volume do
+        report não tem bit de mute próprio.
+        """
+        handle = self._handle_for(uniq)
+        if handle is None:
+            return None
+        volumes = getattr(handle, "_volumes_audio", None)
+        if not volumes or volumes[1] is None:
+            return None
+        preferido = getattr(handle, "_speaker_volume_pref", None)
+        efetivo = int(volumes[1])
+        base = int(preferido) if isinstance(preferido, int) else efetivo
+        return {"volume": max(0, min(255, base)), "muted": efetivo == 0}
+
+    def set_speaker_volume(
+        self,
+        volume: int | None = None,
+        *,
+        muted: bool | None = None,
+        uniq: str | None = None,
+    ) -> bool:
+        """Assume a posse do volume de alto-falante/fone e o aplica.
+
+        A partir da 1ª chamada o hefesto passa a mandar os bytes de volume em
+        todo report (com os bits de validação ligados) — antes disso o
+        firmware é o dono e nós não tocamos no bloco.
+
+        `volume` 0-255 (None mantém o vigente); `muted=True` manda 0 sem
+        perder o volume preferido (guardado em `_speaker_volume_pref`), e
+        `muted=False` o restaura. Aplica o MESMO valor ao alto-falante interno
+        e ao fone: para quem usa o controle é UM volume só, e qual dos dois
+        toca depende do headset estar plugado (que é o `fone_plugado` do
+        `audio_status_for`). O byte de ROTEAMENTO (common[7]) NÃO é tocado —
+        não sabemos o valor neutro dele e chutar mudaria o caminho do áudio.
+
+        Retorna True se algum handle recebeu o pedido.
+        """
+        alvo = self._handle_for(uniq)
+        handles = [alvo] if alvo is not None else []
+        if not handles:
+            logger.debug("output_offline_noop", op="set_speaker_volume")
+            return False
+        ok = False
+        for handle in handles:
+            try:
+                pref = getattr(handle, "_speaker_volume_pref", None)
+                if volume is not None:
+                    pref = max(0, min(255, int(volume)))
+                if pref is None:
+                    pref = 0
+                handle._speaker_volume_pref = pref
+                efetivo = 0 if muted else pref
+                handle.set_audio_volumes(headphone=efetivo, speaker=efetivo)
+                ok = True
+            except Exception as exc:
+                logger.warning(
+                    "output_handle_failed", op="set_speaker_volume", err=str(exc)
+                )
+        logger.info("speaker_volume_set", volume=volume, muted=bool(muted), ok=ok)
+        return ok
+
+    def set_microphone_mute(self, muted: bool | None, *, uniq: str | None = None) -> None:
+        """Assume (ou devolve) a posse do mudo de microfone do FIRMWARE.
+
+        `None` = devolve a posse ao kernel (`hid-playstation`), que é quem
+        alterna o mudo na borda do botão físico do controle — é o default e
+        foi o que o keepalive do upstream vinha atropelando a 60 Hz
+        (AUDIO-OWNER-01). Não confundir com o mute do microfone do SISTEMA,
+        que é do `integrations/audio_control.py` e continua sendo o caminho do
+        botão de mic.
+        """
+        alvo = self._handle_for(uniq)
+        handles = [alvo] if alvo is not None else []
+        for handle in handles:
+            with contextlib.suppress(Exception):
+                handle.set_microphone_mute(muted)
+
+    def _audio_status_byte(self, uniq: str | None) -> int | None:
+        """Byte cru de estado de áudio do handle escolhido (ou None)."""
+        handle = self._handle_for(uniq)
+        if handle is None:
+            return None
+        valor = getattr(handle, "_audio_status", None)
+        return valor if isinstance(valor, int) else None
+
+    def _handle_for(self, uniq: str | None) -> Any:
+        """Handle do controle `uniq` (MAC normalizado) ou o primário se None."""
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        alvo = norm_mac(uniq) if uniq else None
+        with self._io_lock:
+            if alvo is None:
+                key = self._primary_key
+                return self._handles.get(key) if key is not None else None
+            for key, handle in self._handles.items():
+                if self._key_to_uniq(key) == alvo:
+                    return handle
+        return None
 
     def set_player_leds(self, bits: tuple[bool, bool, bool, bool, bool]) -> None:
         """Aplica bitmask de 5 LEDs de player em TODOS os controles.
