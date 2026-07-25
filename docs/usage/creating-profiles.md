@@ -80,8 +80,8 @@ Notas para o Grim Fandango Remastered:
   no Linux (bug conhecido desde 2019) e quebra o controle dentro do jogo.
 - Rota alternativa de **gamepad nativo** (jogos de gamepad com SDL antigo): o
   `controllerdef.txt` embarcado não conhece o DualSense, mas conhece o X360 —
-  ligue o gamepad virtual com máscara xbox360 (`hefesto-dualsense4unix emulate
-  --flavor xbox` ou aba Emulação) e abra o jogo **depois** de o device virtual
+  ligue o gamepad virtual com máscara xbox360 (`hefesto-dualsense4unix gamepad
+  on --flavor xbox` ou aba Emulação) e abra o jogo **depois** de o device virtual
   existir (SDL 2.0.3 só enumera na inicialização). Não é o caminho preferido
   para o Grim; fica registrado para títulos sem suporte a mouse.
 
@@ -191,9 +191,11 @@ O diagnóstico do storm -71 e os fixes seguros também vivem no CLI:
 ```
 hefesto-dualsense4unix doctor              # inclui o bloco "anti-storm / sistema"
 hefesto-dualsense4unix doctor --fix-safe   # SEM sudo: Steam Input OFF + WirePlumber
-hefesto-dualsense4unix doctor --reapply-all # PEDE SENHA: reaplica tudo via dsx.sh
+hefesto-dualsense4unix doctor --fix        # aplica os fixes do doctor.sh
+hefesto-dualsense4unix doctor --quiet      # só o resumo
 ```
 
-O `--reapply-all` invoca o `dsx.sh` (o motor privilegiado, que mexe em udev/power
-— domínio compartilhado com o ritual-Aurora). O kernel cmdline (quirk anti-storm)
-e as regras `99-usb` continuam da Aurora; o `doctor` só REPORTA o estado delas.
+> **`--reapply-all` não existe mais.** Ele invocava um `scripts/dsx.sh` que
+> também não existe mais no repositório. A cura do storm `-71` migrou para o
+> quirk do `snd_usb_audio` — instalado por padrão e reaplicável por `--fix-safe`.
+> Se você tem esse comando na memória muscular, o substituto é `--fix-safe`.

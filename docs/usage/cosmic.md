@@ -4,19 +4,23 @@ Guia de uso do Hefesto - Dualsense4Unix no ambiente COSMIC, o desktop Wayland na
 
 ---
 
-## Estado atual do suporte (v3.8.1)
+## Estado atual do suporte
+
+Medido na alfa 0.1.1 (Pop!\_OS 24.04 + COSMIC + Wayland, a máquina de
+desenvolvimento). As referências a versões `v3.x` abaixo são históricas: a
+numeração recomeçou em 0.1.0 em 24/07/2026 (ver [CHANGELOG](../../CHANGELOG.md)).
 
 | Recurso | Estado | Observação |
 |---|---|---|
-| Deteccao DualSense USB/BT | OK | evdev, independente de display |
-| Polling de botoes/eixos | OK | hidraw, independente de display |
-| Hotkeys globais | OK | /dev/input, independente de display; long-press do PS = modo jogo (v3.8.1) |
-| Mouse emulado (uinput) | OK | nivel kernel; suprimível pelo modo jogo |
+| Detecção DualSense USB/BT | OK | evdev, independente de display |
+| Polling de botões/eixos | OK | hidraw, independente de display |
+| Hotkeys globais | OK | /dev/input, independente de display |
+| Mouse emulado (uinput) | OK | nível kernel; suprimível pelo modo jogo |
 | Autoswitch de perfil | Parcial | XWayland OK; Wayland puro depende do portal — ver seção abaixo |
-| GUI GTK3 | OK via XWayland | dropdown Drácula legível (v3.8.1); sem busy-loop de CPU (v3.8.1) |
+| GUI GTK3 | OK via XWayland | dropdown Drácula legível; sem busy-loop de CPU |
 | Tray AppIndicator | OK via XWayland | Ayatana funciona em XWayland |
-| **Applet nativo COSMIC panel** | **OK** | Rust + libcosmic (v3.6); aparece em Miniaplicativos com `X-HostWaylandDisplay=true` + PNG 256x256 (v3.8.0) |
-| **Modo jogo (long-press PS)** | **OK (v3.8.1)** | Segurar PS ~1s alterna a supressão da emulação mouse/teclado mantendo hotkeys |
+| **Applet nativo COSMIC panel** | **OK** | Rust + libcosmic; aparece em Miniaplicativos com `X-HostWaylandDisplay=true` + PNG 256x256 |
+| **Modo jogo** | **OK, pelo combo PS + Options** | O gesto de long-press do PS existe no código mas vem **desligado** (`ps_long_press_ms = 0`): ele causava modo-jogo acidental quando o toque de abrir a Steam passava de ~1 s. Ver [`hotkeys.md`](hotkeys.md) |
 
 ---
 
@@ -47,11 +51,11 @@ COSMIC 1.0+ e GNOME 46+).
 Para que o portal funcione, instale uma das bibliotecas opcionais:
 
 ```bash
-# Opcao A: jeepney (puro Python, recomendado)
-.venv/bin/pip install jeepney
+# Opção A: jeepney (puro Python, recomendado — é o extra [cosmic] do projeto)
+venv/bin/pip install jeepney
 
-# Opcao B: dbus-fast (assincrono)
-.venv/bin/pip install dbus-fast
+# Opção B: dbus-fast (assíncrono)
+venv/bin/pip install dbus-fast
 ```
 
 Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso
@@ -66,23 +70,31 @@ O Hefesto - Dualsense4Unix inicia em modo silencioso. Daemon e polling funcionam
 ## Instalação no COSMIC
 
 ```bash
-# Clone do repositório (veja a página principal para a URL atual)
+# Clone do repositório (veja a caixa "Onde esta versão mora" no README)
 cd hefesto-dualsense4unix
-./install.sh --yes --enable-cosmic-applet --with-wireplumber-fix --enable-hotplug-gui
+./install.sh --yes --with-wireplumber-fix --enable-hotplug-gui
 ```
 
 Flags relevantes no COSMIC:
 
-- `--enable-cosmic-applet` — compila e instala o applet nativo em Rust/libcosmic. Sem isso, o
-  Hefesto fica acessível só pela GUI GTK3 (XWayland) e pelo tray Ayatana (se o
-  `cosmic-applet-status-area` estiver habilitado em Configurações > Painel > Miniaplicativos).
+- `--enable-cosmic-applet` — **não é mais necessária em COSMIC**: o applet nativo
+  em Rust/libcosmic passou a ser default-on quando a sessão é COSMIC (ou quando
+  ele já está instalado). A flag continua valendo para **forçar** a compilação
+  fora do COSMIC; `--no-cosmic-applet` é o opt-out. Sem o applet, o Hefesto fica
+  acessível pela GUI GTK3 (XWayland) e pelo tray Ayatana (se o
+  `cosmic-applet-status-area` estiver habilitado em Configurações > Painel >
+  Miniaplicativos). A primeira compilação do libcosmic passa de 10 minutos, e se
+  faltar `cargo`/`just` o instalador **avisa e segue** — não falha.
 - `--with-wireplumber-fix` — instala o drop-in que impede o DualSense de virar o microfone padrão
   (problema clássico do `wireplumber.conf` ao plugar o controle).
 - `--keep-steam-input` — opt-out do desligamento default de `SteamController_PSSupport`. Sem essa
   flag, o install zera as toggles do Steam Input nos `localconfig.vdf` para evitar conflito Steam
   Input vs daemon. Vide [troubleshooting seção 12](troubleshooting.md).
-- `--enable-hotplug-gui` — copia a unit `hefesto-dualsense4unix-gui-hotplug.service` que abre a
-  GUI automaticamente ao plugar/parear o controle.
+- `--enable-hotplug-gui` — copia e habilita a unit
+  `hefesto-dualsense4unix-gui-hotplug.service`. Apesar do nome, ela abre a
+  janela **no início da sessão gráfica**, não ao plugar o controle: as regras
+  udev de hotplug foram retiradas em 2026. Detalhe em
+  [`hotplug.md`](hotplug.md). É opt-in — o padrão do instalador é não instalar.
 
 Após instalar o applet, recarregue o painel: `killall cosmic-panel`. Ele reaparece no segundo
 seguinte e o Hefesto deve aparecer em **Configurações > Painel > Miniaplicativos**.

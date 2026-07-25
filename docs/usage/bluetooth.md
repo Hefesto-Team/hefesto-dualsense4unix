@@ -81,10 +81,22 @@ kernel-HIDP. Nós não temos como consertar isso a partir daqui.
   autenticação — a mesma classe de gatilho do crash. Quem decide restaurar é você.
 - Se acontecer, re-parear pelo `bluetoothctl` sempre resolve.
 
-## Limitação conhecida: 8BitDo por Bluetooth
+## 8BitDo por Bluetooth: use o modo DirectInput/PS4
 
-O 8BitDo SN30 Pro conecta, mas cai sob carga sustentada por Bluetooth. O caminho
-confiável para ele hoje é **o cabo**. O histórico da investigação está em
+Em **modo Switch** o 8BitDo se apresenta como `057e:2009`, cai no
+`hid-nintendo` e cede sob carga sustentada por Bluetooth — isso continua
+verdade e continua sem cura.
+
+**Em modo DirectInput/PS4 ele funciona.** Vira `054c:05c4`, o `hid-playstation`
+assume e conecta de primeira — validado em 25/07/2026 com **quatro controles por
+Bluetooth ao mesmo tempo**, um por jogador.
+
+Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
+hefesto registra os dois como controles diferentes — use "Renumerar agora" na
+aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
+porque o DualShock 4 usa a lightbar no lugar deles.
+
+Detalhes, medições e a tabela completa de modos em
 [`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md).
 
 ## Fora de escopo

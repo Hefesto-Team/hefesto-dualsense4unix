@@ -1,10 +1,28 @@
 # Firmware DualSense — survey bibliográfico 2026-04-23
 
-> **Documento em expansão.** Esta é a primeira versão; seções sinalizadas **WIP** serão preenchidas em commits sucessivos desta sessão.
+> ##  PESQUISA EXPLORATÓRIA — NÃO HÁ IMPLEMENTAÇÃO
 >
-> Complementação ao `firmware-update-protocol.md` (PHASE1, 304 linhas, 2026-04-23). Este survey agrega achados de WebSearch/WebFetch obtidos via pesquisa direta na sessão 11e7e66d. Não reescreve o doc PHASE1; acrescenta.
+> **O Hefesto não atualiza firmware.** Conferido no HEAD em 25/07/2026: nenhum
+> código de firmware em `src/`, nenhum comando de CLI, nenhuma aba de GUI, e
+> zero referências a `dualsensectl` em qualquer parte executável do projeto.
 >
-> Sprint de destino: FEAT-FIRMWARE-UPDATE-PHASE2-01 (research/BLOCKED-ON-HARDWARE) como material de preparação para captura real quando hardware estiver disponível.
+> As marcas **WIP** e a "sprint de destino PHASE2" abaixo são de abril de 2026 e
+> **não descrevem trabalho em andamento**: o survey parou onde está, e nenhuma
+> fase seguinte começou. Nada aqui é promessa de recurso — é levantamento
+> bibliográfico, e fica publicado porque poupa a próxima pessoa de refazer a
+> busca. Companheiro do
+> [`firmware-update-protocol.md`](firmware-update-protocol.md), que traz a
+> mesma ressalva.
+>
+> Uma nota sobre o "achado game-changer" logo abaixo: ele diz que o
+> `dualsensectl` upstream implementou o update em dezembro de 2025 e que isso
+> tornaria a captura em hardware desnecessária. **Isso continua sendo uma
+> leitura de fontes de terceiros feita em abril de 2026** — não foi verificada
+> contra o repositório upstream depois disso, nem testada em controle real
+> aqui.
+>
+> Complementação ao `firmware-update-protocol.md` (PHASE1, 2026-04-23): agrega
+> achados de pesquisa na web, sem reescrever o doc PHASE1.
 
 ## Sumário executivo
 

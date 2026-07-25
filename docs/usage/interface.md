@@ -3,14 +3,17 @@
 A janela principal tem nove abas. Esta página diz o que cada uma faz e o que se
 ajusta nela.
 
-> **Capturas pendentes.** As imagens desta página serão adicionadas quando houver
-> hardware conectado e tela livre para prints do aplicativo já redesenhado. Os
-> arquivos vão para `docs/usage/assets/` com os nomes indicados em cada seção; o
-> lugar da imagem está marcado em comentário HTML logo abaixo de cada título.
+> **Sobre as capturas.** Foram feitas em 25/07/2026, com a interface já
+> redesenhada e **quatro controles conectados por Bluetooth ao mesmo tempo** —
+> dois DualSense, um Nintendo Pro e um 8BitDo em modo DirectInput/PS4 —, que é o
+> cenário de co-op que o projeto persegue. Na aba Sistema, o bloco "Detalhes
+> técnicos" aparece borrado de propósito: o log traz o endereço Bluetooth real
+> dos controles desta máquina, e os gates de anonimato do projeto não varrem
+> imagens.
 
 ## Início
 
-<!-- ![Aba Início](assets/readme_inicio.png) -->
+![Aba Início](assets/readme_inicio.png)
 
 A aba de decisão. Tem o seletor **"O que o controle faz agora"** com os três
 modos (Controlar o PC · Jogar pelo Hefesto · Jogar direto (Sony)), o seletor de
@@ -23,7 +26,7 @@ Detalhe dos modos em [`modos.md`](modos.md).
 
 ## Status
 
-<!-- ![Aba Status](assets/readme_status.png) -->
+![Aba Status](assets/readme_status.png)
 
 O painel ao vivo. Conexão, transporte (USB ou Bluetooth), bateria, perfil ativo e
 estado do Hefesto; barras de L2 e R2 de 0 a 255; os dois sticks analógicos; e a
@@ -39,7 +42,7 @@ o sensor. Nunca aparece um zero fingindo repouso.
 
 ## Gatilhos
 
-<!-- ![Aba Gatilhos](assets/readme_gatilhos.png) -->
+![Aba Gatilhos](assets/readme_gatilhos.png)
 
 Configura o efeito adaptativo de L2 e R2, cada um do seu lado. Por gatilho: o
 **Modo** (19 disponíveis — Rigid, Pulse, Galloping, Machine, Bow, Automatic Gun e
@@ -50,7 +53,7 @@ Referência dos modos e dos parâmetros brutos em
 
 ## Lightbar
 
-<!-- ![Aba Lightbar](assets/readme_lightbar.png) -->
+![Aba Lightbar](assets/readme_lightbar.png)
 
 Cor da barra de LED e LEDs de jogador. Tem seletor de cor com prévia, slider de
 luminosidade, **Aplicar no controle** e **Apagar**.
@@ -66,7 +69,7 @@ do console.
 
 ## Rumble
 
-<!-- ![Aba Rumble](assets/readme_rumble.png) -->
+![Aba Rumble](assets/readme_rumble.png)
 
 A intensidade da vibração dos jogos: **Economia** (0,3×), **Balanceado** (0,7×),
 **Máximo** (1,0×) ou **Auto** (suaviza quando a bateria cai). O multiplicador
@@ -78,7 +81,7 @@ controlar a vibração** devolve o comando.
 
 ## Perfis
 
-<!-- ![Aba Perfis](assets/readme_perfis.png) -->
+![Aba Perfis](assets/readme_perfis.png)
 
 Lista de perfis salvos com **Novo**, **Duplicar**, **Remover**, **Ativar** e
 **Recarregar**. O editor tem dois modos: **Simples** (você diz o nome do jogo) e
@@ -92,7 +95,7 @@ Como escrever um perfil do zero: [`creating-profiles.md`](creating-profiles.md).
 
 ## Sistema
 
-<!-- ![Aba Sistema](assets/readme_sistema.png) -->
+![Aba Sistema](assets/readme_sistema.png)
 
 O painel de manutenção. **Ligar** / **Desligar o Hefesto** (desligado, o controle
 continua funcionando — só sem luzes, gatilhos e seus ajustes), **Reiniciar**, e
@@ -109,7 +112,7 @@ relato de problema.
 
 ## Emulação
 
-<!-- ![Aba Emulação](assets/readme_emulacao.png) -->
+![Aba Emulação](assets/readme_emulacao.png)
 
 A visão técnica do que a aba Início resume: qual máscara está ativa, o estado do
 modo jogo, o Steam Input, o microfone do DualSense e o teste de criação do device
@@ -118,7 +121,7 @@ jogo.
 
 ## Navegação DSX
 
-<!-- ![Aba Navegação DSX](assets/readme_navegacao_dsx.png) -->
+![Aba Navegação DSX](assets/readme_navegacao_dsx.png)
 
 Mouse e teclado lado a lado, em duas colunas. À esquerda, a emulação de mouse:
 liga/desliga, velocidade, rolagem, escolha entre stick e touchpad. À direita, o

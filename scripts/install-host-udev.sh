@@ -102,6 +102,22 @@ for candidate in \
     fi
 done
 
+# Contenção BT (2026-07-25): idem para a conf do hid-playstation patchado
+# (feature_retries=2 — cura do 2º DualSense que perde o canal de controle
+# quando vários pareiam juntos). Mesmo fail-safe: sem o módulo DKMS o in-tree
+# só ignora o parâmetro, então instalar a conf é sempre seguro.
+HIDPLAYSTATION_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/modprobe.d" \
+    "/usr/share/hefesto-dualsense4unix/modprobe.d" \
+    "${SCRIPT_DIR}/../assets/modprobe.d" \
+; do
+    if [[ -f "${candidate}/hefesto-hid-playstation.conf" ]]; then
+        HIDPLAYSTATION_SRC="${candidate}"
+        break
+    fi
+done
+
 # BROKER-01 (Onda S — fd-injection): broker root que esconde o hidraw FÍSICO
 # do DualSense do JOGO e serve fd O_RDWR ao daemon via SCM_RIGHTS (cmd
 # `open`) para o giroscópio nunca morrer, mesmo com o nó escondido. Resolve o
@@ -226,6 +242,9 @@ fi
 if [[ -n "${HIDNINTENDO_SRC}" ]]; then
     echo "  - hefesto-hid-nintendo.conf (probe BT resiliente do hid-nintendo patchado)"
 fi
+if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
+    echo "  - hefesto-hid-playstation.conf (retry de feature report do hid-playstation patchado)"
+fi
 if [[ "${BROKER_INSTALL_OK}" -eq 1 ]]; then
     echo "  - hefesto-hidraw-broker (broker root hide-hidraw, BROKER-01; uid ${BROKER_SESSION_UID}, grupo ${BROKER_SESSION_GROUP})"
 elif [[ -n "${BROKER_BIN_SRC}" && -n "${BROKER_UNITS_SRC}" ]]; then
@@ -286,6 +305,15 @@ _build_install_cmd() {
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-nintendo.conf'; "
         cmd+="printf '3' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
         cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
+    fi
+    # Contenção BT: conf persistente do hid-playstation patchado + parâmetro a
+    # quente. feature_retries é lido A CADA probe, então escrever aqui já vale
+    # na próxima CONEXÃO do controle — sem reload (proibido: derrubaria os
+    # DualSense por BT) e sem replug dos que já estão em uso.
+    if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
+        cmd+="install -Dm644 '${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf' "
+        cmd+="'${SNDQUIRK_DEST}/hefesto-hid-playstation.conf'; "
+        cmd+="printf '2' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true; "
     fi
     # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
     # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —
@@ -489,6 +517,64 @@ else
     echo ""
     echo "AVISO: fontes DKMS do rtw88-usb não encontradas neste formato — sem o módulo"
     echo "       patchado o fantasma USB do dongle WiFi segue possível (in-tree continua)."
+fi
+
+# -----------------------------------------------------------------------------
+# Contenção BT (2026-07-25) — cura de RAIZ da perda de um DualSense inteiro
+# quando vários controles pareiam quase juntos no mesmo adaptador (o cenário
+# NORMAL do alvo: 4 por Bluetooth, um por jogador). O GET_REPORT do 2º expira
+# no BlueZ (REPORT_REQ_TIMEOUT = 3 s), o uhid achata o ETIMEDOUT em -EIO e a
+# probe morre. Mesmo caminho OFICIAL dos formatos empacotados dos blocos acima:
+# sem este bloco, usuário de pacote nunca ganharia o módulo. Fail-safe TOTAL
+# (contrato do dkms_lib.sh); NUNCA recarrega o módulo — recarregar o
+# hid_playstation derrubaria TODOS os DualSense, inclusive os por BT.
+# -----------------------------------------------------------------------------
+HIDPS_DKMS_SRC=""
+for candidate in \
+    "/app/share/hefesto-dualsense4unix/dkms/hid-playstation" \
+    "/usr/share/hefesto-dualsense4unix/dkms/hid-playstation" \
+    "${SCRIPT_DIR}/../assets/dkms/hid-playstation" \
+; do
+    if [[ -f "${candidate}/dkms.conf" ]]; then
+        HIDPS_DKMS_SRC="${candidate}"
+        break
+    fi
+done
+if [[ -n "${HIDPS_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
+    # A versão vem do dkms.conf (fonte da verdade) — nunca hardcoded aqui.
+    HIDPS_DKMS_VER="$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' "${HIDPS_DKMS_SRC}/dkms.conf")"
+    if [[ -n "${HIDPS_DKMS_VER}" ]]; then
+        # Mesmo shim dos blocos acima: rodando já como root sem o binário sudo.
+        if [[ "$(id -u)" -eq 0 ]] && ! command -v sudo >/dev/null 2>&1; then
+            sudo() { "$@"; }
+        fi
+        echo ""
+        echo "Cura de raiz da contenção BT: módulo DKMS hid-playstation patchado ..."
+        # shellcheck source=dkms_lib.sh
+        source "${DKMS_LIB_SH}"
+        dkms_install_patched_module hefesto-hid-playstation "${HIDPS_DKMS_VER}" \
+            "${HIDPS_DKMS_SRC}" hid-playstation
+        if dkms_module_from_updates hid-playstation; then
+            echo "  módulo patchado staged (vence o in-tree no próximo boot — NUNCA recarregamos com DualSense em uso)"
+        else
+            echo "  módulo patchado NÃO staged (avisos acima) — driver in-tree continua (fail-safe)"
+        fi
+    fi
+else
+    echo ""
+    echo "AVISO: fontes DKMS do hid-playstation não encontradas neste formato — sem o"
+    echo "       módulo patchado, o 2º DualSense segue podendo se perder na probe."
+fi
+
+# INITRAMFS-01 (2026-07-25): os blocos DKMS acima gravam em updates/dkms, mas o
+# initramfs leva uma CÓPIA do .ko e não é regenerado pelo dkms — sem isto o boot
+# seguinte carrega o módulo da geração ANTERIOR (e, como os params novos não
+# existem nele, o kernel descarta a conf de options inteira). Roda UMA vez para
+# todos os módulos marcados acima; no-op se nenhum ficou staged.
+if [[ -n "${DKMS_LIB_SH}" ]]; then
+    # shellcheck source=dkms_lib.sh
+    source "${DKMS_LIB_SH}"
+    dkms_flush_initramfs
 fi
 
 echo ""

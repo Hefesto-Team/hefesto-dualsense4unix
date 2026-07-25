@@ -33,10 +33,16 @@ sudo pacman -S python-gobject gtk3 libappindicator-gtk3 hidapi \
 ## 2. Instalar
 
 ```bash
-git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
+git clone -b sprint/harmonia-uhid \
+  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
 ./install.sh
 ```
+
+> A branch importa. A alfa 0.1.1 ainda não está no `main` de nenhum dos dois
+> repositórios — o `main` de `AndreBFarias/hefesto-dualsense4unix` está na
+> v3.0.0 (abril/2026). Ver a caixa "Onde esta versão mora" no
+> [`README.md`](../../README.md).
 
 Sem flags o instalador mostra um seletor de formato (native · flatpak ·
 appimage · deb), pede a senha de administrador uma vez e conduz os passos com
@@ -54,9 +60,14 @@ Abra pelo menu de aplicativos (ou `hefesto-dualsense4unix-gui` no terminal). A
 janela tem nove abas: **Início, Status, Gatilhos, Lightbar, Rumble, Perfis,
 Sistema, Emulação, Navegação DSX**.
 
-Plugue o DualSense por USB ou pareie por Bluetooth — a janela abre sozinha no
-hotplug. A aba **Status** mostra conexão, transporte, bateria, perfil ativo,
-sticks, gatilhos e a grade de botões ao vivo.
+Plugue o DualSense por USB ou pareie por Bluetooth. A aba **Status** mostra
+conexão, transporte, bateria, perfil ativo, sticks, gatilhos e a grade de botões
+ao vivo.
+
+> A janela **não** abre sozinha ao plugar o controle: as regras udev que faziam
+> isso foram retiradas (elas abriam o controle via `hidraw` a cada evento e
+> pioravam o storm `-71`). O que existe hoje é uma unit opcional que abre a
+> janela no **início da sessão gráfica** — ver [`hotplug.md`](hotplug.md).
 
 O que cada aba faz, uma a uma: [`interface.md`](interface.md).
 Pareamento Bluetooth: [`bluetooth.md`](bluetooth.md).

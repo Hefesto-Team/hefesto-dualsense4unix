@@ -6,31 +6,36 @@ em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado*
 
 ---
 
-## Habilitando as métricas
+## Habilitando as métricas — o estado real hoje
 
-### Via arquivo de configuração do daemon
+> **Não há caminho de usuário para ligar isto.** Versões anteriores desta página
+> ensinavam duas receitas — um bloco `[daemon]` no `daemon.toml` e a variável
+> `HEFESTO_DUALSENSE4UNIX_METRICS=1`. **Nenhuma das duas funciona, e nenhuma
+> nunca funcionou.** Conferido no código em 25/07/2026:
+>
+> - O daemon **não lê `daemon.toml`** (o arquivo é referência; ele mesmo diz
+>   isso no cabeçalho que a GUI escreve).
+> - `HEFESTO_DUALSENSE4UNIX_METRICS` **não existe** no código: zero ocorrências
+>   em `src/`.
+> - `daemon/main.py` constrói o `DaemonConfig` com três parâmetros —
+>   `poll_hz`, `auto_reconnect` e `ps_long_press_ms`. `metrics_enabled` fica no
+>   default `False` e nada o alcança.
+> - O `MetricsSubsystem` só é instanciado **na subida** do daemon
+>   (`_start_metrics`, na sequência de start). O `reload_config` não o
+>   reinicia — então nem o `daemon.reload` via IPC, que aceita
+>   `config_overrides` com qualquer campo do `DaemonConfig`, sobe o servidor
+>   num daemon que já está rodando.
 
-Edite (ou crie) `~/.config/hefesto-dualsense4unix/daemon.toml`:
+Consequência honesta: **subir o endpoint hoje exige mexer no código** — passar
+`metrics_enabled=True` na construção do `DaemonConfig` em
+`daemon/main.py` — e reiniciar o daemon. Tudo o que vem abaixo (formato,
+métricas, scraping, dashboard) descreve corretamente o que o
+`MetricsSubsystem` faz **quando ele sobe**; só a chave de ligar é que falta.
 
-```toml
-[daemon]
-metrics_enabled = true
-metrics_port    = 9090   # padrão; altere se houver conflito
-```
-
-Reinicie o daemon:
-
-```bash
-systemctl --user restart hefesto-dualsense4unix.service
-```
-
-### Via variável de ambiente (temporário)
-
-```bash
-HEFESTO_DUALSENSE4UNIX_METRICS=1 hefesto-dualsense4unix daemon start
-```
-
-> A variável `HEFESTO_DUALSENSE4UNIX_METRICS=1` equivale a `metrics_enabled=true` com porta padrão.
+O que falta para isto virar recurso de usuário é pequeno e está identificado:
+uma variável de ambiente lida em `daemon/main.py` (como as outras três já são),
+ou o `reload_config` passando a parar/subir o `MetricsSubsystem` quando
+`metrics_enabled` muda. Nenhum dos dois foi feito.
 
 ---
 
@@ -91,8 +96,9 @@ de tick crescem ~3600/min. Intervalos menores que 5s oferecem pouco benefício
 extra e aumentam o custo de parse.
 
 > **Nota de porta:** a porta padrão 9090 é usada por muitos componentes
-> Prometheus. Se houver conflito, altere `metrics_port` na config do daemon
-> e ajuste o `targets` acima.
+> Prometheus. Se houver conflito, altere `metrics_port` no `DaemonConfig` —
+> vale a mesma ressalva da seção "Habilitando": esse campo também não tem
+> hoje chave de usuário.
 
 ---
 
@@ -126,7 +132,9 @@ Um dashboard básico pode ser construído com os painéis:
 4. **IPC por método** — `rate(hefesto_ipc_requests_total[5m])` agrupado por `method`.
 5. **UDP aceito vs limitado** — `rate(hefesto_udp_packets_total[5m])` por `result`.
 
-Dashboard Grafana preparado (JSON) sera adicionado em `docs/grafana/` em sprint futura.
+Não há JSON de dashboard pronto no repositório. `docs/grafana/` foi anunciado em
+versões anteriores desta página como algo que viria "em sprint futura" e nunca
+existiu — os cinco painéis acima são a receita para montar o seu.
 
 ---
 

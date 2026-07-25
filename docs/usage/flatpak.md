@@ -34,9 +34,11 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 ### Construir localmente a partir do código-fonte
 
 ```bash
-# Clonar o repositório
-git clone https://github.com/AndreBFarias/hefesto.git
-cd hefesto
+# Clonar o repositório (ver a caixa "Onde esta versão mora" no README —
+# a alfa 0.1.1 está na branch sprint/harmonia-uhid do fork, não no main)
+git clone -b sprint/harmonia-uhid \
+  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+cd hefesto-dualsense4unix
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install
@@ -60,13 +62,25 @@ de administrador:
 flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
 ```
 
-O script copia três arquivos para `/etc/udev/rules.d/`:
+O script copia o mesmo conjunto canônico que o `install_udev.sh` do código-fonte
+— hoje **14 regras** — para `/etc/udev/rules.d/`, mais o `modules-load` de
+`uinput`/`uhid` e os drop-ins de `modprobe` do BlueZ e dos módulos HID. As
+principais:
 
 | Arquivo                               | Finalidade                                          |
 |---------------------------------------|-----------------------------------------------------|
-| `70-ps5-controller.rules`             | Acesso a `/dev/hidraw*` sem root para o grupo input |
+| `70-ps5-controller.rules`             | Acesso a `/dev/hidraw*` sem root (grupo `hefesto` + ACL por `uaccess`) |
 | `71-uinput.rules`                     | Acesso a `/dev/uinput` para emulação de mouse       |
+| `71-uhid.rules`                       | Acesso a `/dev/uhid` — o controle virtual como DualSense de verdade |
 | `72-ps5-controller-autosuspend.rules` | Previne autosuspend USB que derruba a conexão       |
+| `77-dualsense-leds.rules`             | Torna graváveis os nós de LED (lightbar e jogador)  |
+| `81-hefesto-usb-power.rules`          | Controles e adaptadores BT nunca dormem no USB      |
+
+A lista completa, item por item, está em
+[`instalacao.md`](instalacao.md#o-que-o-instalador-mexe-no-sistema). O
+`scripts/check_packaging_parity.sh` existe justamente para travar a paridade
+entre os três caminhos de instalação — se uma regra entra no `install_udev.sh`
+e não no helper do Flatpak, o gate reprova.
 
 Após a instalação, desconecte e reconecte o controle DualSense.
 
