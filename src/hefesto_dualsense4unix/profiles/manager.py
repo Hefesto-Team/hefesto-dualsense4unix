@@ -288,9 +288,12 @@ class ProfileManager:
         # que ela travou NA MÃO sobrevivem à ativação.
         #
         # Categoria travada = ela mexeu e o daemon carimbou
-        # (`mark_manual_trigger_active`). Trocar de perfil pela GUI, o
-        # `trigger.reset` ou o botão "Desligar" limpam o carimbo — então isso
-        # NÃO é um estado do qual ela não consiga sair.
+        # (`mark_manual_trigger_active`). Trocar de perfil pela GUI limpa as
+        # TRÊS categorias — então isso NÃO é um estado do qual ela não consiga
+        # sair. ABAS-05 (25/07): o `trigger.reset` (botão "Desligar" da aba
+        # Gatilhos) também solta, mas SÓ a categoria "trigger"; antes soltava
+        # as três, e desligar um gatilho reabria a troca automática para
+        # reescrever a cor que a aba Lightbar tinha acabado de aplicar.
         # R-20: gesto MANUAL de trocar de perfil solta a camada por-controle
         # da usuária (ver a docstring). É o único caminho que a solta, e é o
         # que impede a precedência "manual vence perfil" de virar estado preso.

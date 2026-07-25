@@ -554,12 +554,20 @@ class TriggersActionsMixin(WidgetAccessMixin):
         "voltar ao normal" era mais um jeito de PAUSAR a troca automática de
         perfil, sem nada na tela dizendo isso. O RPC `trigger.reset` já existia
         e já estava roteado — faltava a GUI usá-lo.
+
+        ABAS-06 (25/07): o MAC do controle escolhido no seletor viaja no pedido,
+        como já viajava no "Aplicar" ao lado (PERFIL-05) e no "Apagar" da aba
+        Lightbar (R-17). Este era o último comando de saída da janela que ia em
+        broadcast: com "Controle 2" selecionado, "Desligar" zerava o gatilho dos
+        QUATRO. `getattr` defensivo pelo mesmo motivo do `_apply_trigger` —
+        hosts de teste parciais montam o mixin sem o seletor.
         """
         combo = self._trigger_mode.get(side)
         if combo is not None:
             combo.set_active_id("Off")
         self._rebuild_params(side, "Off")
-        ok, _motivo = trigger_reset(side)
+        uniq = getattr(self, "_edit_uniq", lambda: None)()
+        ok, _motivo = trigger_reset(side, uniq=uniq)
         self._toast_trigger(side, "Off", ok)
 
     def _toast_trigger(

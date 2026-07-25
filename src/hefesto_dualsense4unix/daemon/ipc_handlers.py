@@ -471,15 +471,40 @@ class IpcHandlersMixin:
         return {"status": "ok"}
 
     async def _handle_trigger_reset(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19).
+
+        ABAS-06 (25/07): ``uniq`` presente = reset por-MAC, pela mesma rota do
+        ``trigger.set`` (``apply_output_for``). Era o ÚNICO comando de saída da
+        janela que ainda ia em broadcast: com "Controle 2" escolhido no seletor,
+        "Desligar" zerava o gatilho dos QUATRO enquanto o "Aplicar" logo ao lado
+        mandava para um só. O mesmo defeito já tinha sido corrigido no "Apagar"
+        da aba Lightbar (R-17) e não fora replicado aqui.
+
+        ABAS-05 (25/07): a trava manual é limpa SÓ na categoria ``trigger``. O
+        clear sem categoria apagava ``led`` e ``rumble`` junto — desligar UM
+        gatilho reabria a troca automática de perfil para reescrever a cor que a
+        aba Lightbar tinha acabado de aplicar. É a queixa histórica "a config
+        que eu deixo não fica", e a granularidade por categoria (ONDA-U/F1)
+        existe exatamente para isso não acontecer: o próprio ``state_store``
+        documenta que o fim do "Testar motores" não pode apagar o LED de outra
+        aba — não havia razão para o botão "Desligar" dos gatilhos poder.
+
+        Quem quer soltar TUDO de uma vez continua tendo o caminho explícito e
+        rotulado: ativar um perfil (``profile.switch``), que limpa as três.
+        """
         target = params.get("side", "both")
         if target not in ("left", "right", "both"):
             raise ValueError("trigger.reset: side deve ser left|right|both")
+        campos: dict[str, Any] = {}
         if target in ("left", "both"):
-            self.controller.set_trigger("left", trigger_off())
+            campos["trigger_left"] = trigger_off()
         if target in ("right", "both"):
-            self.controller.set_trigger("right", trigger_off())
-        # Reset explícito libera autoswitch de volta (BUG-MOUSE-TRIGGERS-01).
-        self.store.clear_manual_trigger_active()
+            campos["trigger_right"] = trigger_off()
+        if not self._apply_por_uniq(params, **campos):
+            for lado in ("left", "right"):
+                if f"trigger_{lado}" in campos:
+                    self.controller.set_trigger(lado, campos[f"trigger_{lado}"])
+        self.store.clear_manual_trigger_active("trigger")
         return {"status": "ok"}
 
     # --- leds ------------------------------------------------------------

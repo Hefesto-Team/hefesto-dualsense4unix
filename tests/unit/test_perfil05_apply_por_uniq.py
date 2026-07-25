@@ -150,3 +150,42 @@ async def test_uniq_sem_apply_output_for_no_backend_cai_no_classico(
     )
     resultado = await server._handle_led_set({"rgb": [1, 2, 3], "uniq": UNIQ})
     assert resultado["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# ABAS-06 (sprint 2026-07-25) — o "Desligar" era o último comando sem alvo
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_trigger_reset_com_uniq_vai_por_apply_output_for(
+    server_fc: tuple[IpcServer, _FakeComApplyFor, StateStore],
+) -> None:
+    """`trigger.reset` não tinha parâmetro de controle.
+
+    Com "Controle 2" selecionado no seletor, o botão "Desligar" da aba Gatilhos
+    zerava o gatilho dos QUATRO controles enquanto o "Aplicar" logo ao lado
+    mandava para um só (PERFIL-05). Era o ÚNICO comando de saída da janela que
+    ainda ia em broadcast — o mesmo defeito corrigido no "Apagar" da Lightbar
+    (R-17) e não replicado aqui.
+    """
+    server, fc, _store = server_fc
+    resultado = await server._handle_trigger_reset({"side": "right", "uniq": UNIQ})
+    assert resultado["status"] == "ok"
+    assert len(fc.apply_for_calls) == 1
+    uniq, spec = fc.apply_for_calls[0]
+    assert uniq == UNIQ
+    assert spec.trigger_right is not None
+    assert spec.trigger_left is None, "'right' não pode zerar o gatilho esquerdo"
+    assert fc.classic_trigger_calls == [], "o broadcast pegaria os quatro"
+
+
+@pytest.mark.asyncio
+async def test_trigger_reset_sem_uniq_segue_o_caminho_classico(
+    server_fc: tuple[IpcServer, _FakeComApplyFor, StateStore],
+) -> None:
+    """Alvo em "Todos" (ou host sem seletor): comportamento global de sempre."""
+    server, fc, _store = server_fc
+    await server._handle_trigger_reset({})
+    assert fc.apply_for_calls == []
+    assert fc.classic_trigger_calls == ["left", "right"]

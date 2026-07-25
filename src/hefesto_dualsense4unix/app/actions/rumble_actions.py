@@ -358,15 +358,55 @@ class RumbleActionsMixin(WidgetAccessMixin):
         self._toast_rumble(f"Testando por meio segundo (fraca={weak}, forte={strong})")
         self._rumble_test_source = GLib.timeout_add(500, self._rumble_test_stop)
 
+    def _zerar_rumble_no_rascunho(self, *, passthrough: bool | None = None) -> None:
+        """Baixa ``weak``/``strong`` do rascunho — e, opcionalmente, ``passthrough``.
+
+        ABAS-04 (25/07): "Parar" e "Deixar o jogo controlar a vibração" zeravam
+        os controles deslizantes e mandavam o IPC, mas NÃO escreviam no
+        rascunho. As consequências, as duas medidas:
+
+        1. o rascunho seguia com os valores antigos, e ``to_ipc_dict`` emite a
+           seção ``rumble`` SEMPRE — então o próximo "Aplicar" de QUALQUER aba
+           (mexer no brilho já basta) re-travava a vibração que ela acabara de
+           mandar parar;
+        2. voltar à aba Rumble chamava ``_refresh_rumble_from_draft``, que
+           repinta os deslizantes a partir do rascunho — os valores antigos
+           reapareciam. A aba MENTIA sobre o estado parado.
+
+        ``passthrough`` só é escrito com ``True``, e deliberadamente. O campo é
+        persistido no perfil (``RumbleConfig.passthrough``) e, na ativação,
+        ``True`` é o que SOLTA um rumble fixado em valor não-zero — a segunda
+        metade da cura do "testei os motores e o jogo não vibra mais"
+        (SPRINT-GAME-RUMBLE-01) e a rede de segurança do RUMBLE-PRESO-01.
+        Gravar ``False`` a partir do "Aplicar"/"Parar" congelaria a trava no
+        JSON e ressuscitaria as duas queixas; o silêncio deliberado do "Parar"
+        já sobrevive à ativação por conta própria (o applier preserva ``(0,0)``,
+        M2 da auditoria), então não precisa desse campo para nada.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        update: dict[str, Any] = {"weak": 0, "strong": 0}
+        if passthrough is not None:
+            update["passthrough"] = passthrough
+        self.draft = draft.model_copy(
+            update={"rumble": draft.rumble.model_copy(update=update)}
+        )
+
     def on_rumble_stop(self, _btn: Gtk.Button) -> None:
         """Para rumble via rumble.stop (BUG-RUMBLE-APPLY-IGNORED-01).
 
         Usa rumble_stop() em vez de rumble_set(0, 0) para que o daemon
         persista (0, 0) e o poll loop re-afirme silêncio continuamente,
         evitando que write HID residual reative os motores.
+
+        ABAS-04: zera o rascunho junto — sem isso o próximo "Aplicar" de
+        qualquer aba re-travava a vibração parada (ver
+        ``_zerar_rumble_no_rascunho``).
         """
         self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
+        self._zerar_rumble_no_rascunho()
         rumble_stop()
         self._toast_rumble(
             f"Vibração parada (travada em silêncio) — clique "
@@ -381,9 +421,17 @@ class RumbleActionsMixin(WidgetAccessMixin):
         antídoto do 'Parar' (que fixa silêncio). Sem este botão, depois de 'Parar'
         só dava pra devolver o rumble pela CLI — a auditoria flagou a lacuna de
         auto-suficiência.
+
+        ABAS-04: é o único gesto da janela que diz "o JOGO manda na vibração",
+        e é aqui que ``RumbleDraft.passthrough`` finalmente é escrito — o campo
+        existia desde a v1 do perfil e NENHUMA superfície o editava, apesar de
+        o botão estar na tela. Num perfil que trazia ``passthrough: false``, o
+        clique não sobrevivia ao "Salvar Perfil": a ativação seguinte
+        re-travava a vibração.
         """
         self._cancel_rumble_test_timer()
         self._set_scales(0, 0)
+        self._zerar_rumble_no_rascunho(passthrough=True)
         ok = rumble_passthrough(True)
         self._toast_rumble(
             "Pronto — agora o jogo controla a vibração"
@@ -478,10 +526,15 @@ class RumbleActionsMixin(WidgetAccessMixin):
         # só passa com rumble_active is None) até a usuária clicar "Devolver ao
         # jogo" na mão — era a origem do "testei os motores e aí o jogo não
         # vibra mais". rumble_stop() zera o motor primeiro; passthrough solta.
+        # ABAS-04: o fim do teste também escreve no rascunho. Ele termina em
+        # passthrough, então é o mesmo gesto do botão "Deixar o jogo controlar
+        # a vibração" — e sem isto o "Aplicar" seguinte reenviava os 160/220
+        # do teste como se fossem escolha dela.
         self._rumble_test_source = None  # o timer disparou; não há o que cancelar
         rumble_stop()
         rumble_passthrough(True)
         self._set_scales(0, 0)
+        self._zerar_rumble_no_rascunho(passthrough=True)
         self._toast_rumble("Teste encerrado — vibração devolvida ao jogo")
         return False
 

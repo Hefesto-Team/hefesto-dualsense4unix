@@ -69,9 +69,12 @@ class StateStore:
         # mudança de janela — evita que o fallback pise na edição manual.
         # Era um booleano único: o fim do "Testar motores" (passthrough)
         # limpava a trava INTEIRA e apagava overrides de LED/gatilho (F1).
-        # Limpeza: trigger.reset e profile.switch explícito limpam TUDO;
-        # rumble.passthrough limpa SÓ "rumble"; jogo com perfil próprio
-        # (steam_app_*) limpa tudo ao ativar (F2, ver AutoSwitcher._activate).
+        # Limpeza: profile.switch explícito limpa TUDO; rumble.passthrough
+        # limpa SÓ "rumble"; trigger.reset limpa SÓ "trigger" (ABAS-05, 25/07 —
+        # limpava tudo, então desligar UM gatilho reabria a troca automática
+        # para reescrever a cor que a aba Lightbar acabara de aplicar); jogo com
+        # perfil próprio (steam_app_*) limpa tudo ao ativar (F2, ver
+        # AutoSwitcher._activate).
         self._manual_override_categories: set[str] = set()
         # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): cadeado
         # explícito da troca automática de perfil. Diferente do lock manual de
@@ -190,10 +193,16 @@ class StateStore:
     def clear_manual_trigger_active(self, category: str | None = None) -> None:
         """Limpa o override manual — tudo (None) ou SÓ a `category` dada.
 
-        Tudo: `trigger.reset`, `profile.switch` explícito, hotkey de ciclo e
-        a ativação de perfil de JOGO pelo autoswitch (F2). Categoria única:
-        `rumble.passthrough` limpa só "rumble" (F1 — o fim do "Testar
-        motores" não pode apagar um LED/gatilho deliberado de outra aba).
+        Tudo: `profile.switch` explícito, hotkey de ciclo e a ativação de
+        perfil de JOGO pelo autoswitch (F2) — os três são "troquei de perfil",
+        onde soltar as três categorias é o que a usuária pediu.
+
+        Categoria única: `rumble.passthrough` limpa só "rumble" (F1 — o fim do
+        "Testar motores" não pode apagar um LED/gatilho deliberado de outra
+        aba) e, desde o ABAS-05 (25/07), `trigger.reset` limpa só "trigger"
+        pela MESMA razão: desligar um gatilho apagava a trava de LED e de
+        vibração e reabria a troca automática para reescrever a cor que a aba
+        Lightbar tinha acabado de aplicar.
         """
         with self._lock:
             if category is None:
