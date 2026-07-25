@@ -22,6 +22,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
     speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
+    mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
 
@@ -120,6 +121,12 @@ class IpcServer(IpcHandlersMixin):
             # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
             # bytes de volume do report — ver `_handle_speaker_set`).
             "speaker.set": self._handle_speaker_set,
+            # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
+            # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2
+            # (mute persistido por rota e perfil S/PDIF sem sinal) são do
+            # WirePlumber e moram no `doctor --fix`; esta é a única do
+            # controle, e até 25/07 só o botão físico a alcançava.
+            "mic.set": self._handle_mic_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,

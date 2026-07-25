@@ -1517,6 +1517,15 @@ class IpcHandlersMixin:
           controle (o mesmo que a ponte de mic por BT já decodificava e
           consumia internamente sem nunca publicar). Ausente enquanto nenhum
           report tiver sido lido daquele controle.
+        - ``audio.mic_mudo_desejado`` (MIC-USB-01) = QUEM MANDA no mudo do
+          firmware, e não o que está valendo. ``true``/``false`` = o hefesto é
+          o dono e está afirmando esse valor em todo report (veio de um
+          `mic.set`); ``null`` = a posse é do `hid-playstation`, que alterna o
+          mudo na borda do botão físico. A chave só entra quando o backend sabe
+          responder (`microphone_mute_for`) — daemon/dublê sem o método deixa a
+          ausência falar, como o resto do bloco. Sem ela a aba Status não tem
+          como escolher entre "aperte o botão do controle" e "desmute pela
+          janela": as duas frases descrevem `mic_mudo: true`, e só uma resolve.
         - ``speaker`` = ``{volume: 0-255, muted: bool}`` (+ as chaves de
           ``audio``, quando conhecidas). **Só aparece quando o hefesto é o dono
           do volume**, e a razão é dura: o DualSense NÃO devolve o volume — não
@@ -1534,6 +1543,18 @@ class IpcHandlersMixin:
             with contextlib.suppress(Exception):
                 status = status_fn(uniq)
         if isinstance(status, dict):
+            # MIC-USB-01: a posse do mudo do firmware viaja DENTRO de `audio`
+            # (é a mesma pergunta, vista do outro lado) e só quando o backend
+            # sabe respondê-la — `getattr` defensivo pelo mesmo motivo dos
+            # demais: FakeController e daemon antigo não têm o método.
+            dono_fn = getattr(self.controller, "microphone_mute_for", None)
+            if callable(dono_fn):
+                desejado: Any = None
+                with contextlib.suppress(Exception):
+                    desejado = dono_fn(uniq)
+                status["mic_mudo_desejado"] = (
+                    bool(desejado) if isinstance(desejado, bool) else None
+                )
             entry["audio"] = status
 
         speaker: Any = None
@@ -2195,6 +2216,79 @@ class IpcHandlersMixin:
         return {
             "status": "ok" if ok else "sem_controle",
             "speaker": estado if isinstance(estado, dict) else None,
+        }
+
+    async def _handle_mic_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01).
+
+        Params: ``{muted: bool|null, uniq?: str}``. `uniq` escolhe o controle
+        (MAC normalizado, mesmo roteamento por-uniq de `led.set`/`rumble.set`);
+        omitido = o primário.
+
+        POR QUE ESTE MÉTODO EXISTE. Em 25/07 o microfone da mantenedora estava
+        mudo por TRÊS camadas empilhadas, e a aba Status dizia a verdade o
+        tempo todo. Curadas as duas primeiras (o `mute:true` persistido por
+        rota no estado do WirePlumber e o perfil da placa preso no S/PDIF sem
+        sinal, ambas agora no `doctor --fix`), sobrou a terceira: o firmware do
+        controle. O backend já tinha `set_microphone_mute` desde o
+        AUDIO-OWNER-01, mas ele NÃO estava exposto em lugar nenhum — entre os
+        31 métodos do IPC havia `speaker.set` e não havia `mic.set`. O único
+        jeito de desmutar era apertar o botão físico do controle.
+
+        OS TRÊS ESTADOS, e por que `False` não é "não mexer":
+
+          - ``muted: true``  — MUTA: passamos a mandar o bit `MIC_MUTE` ligado,
+            com o `POWER_SAVE_CONTROL_ENABLE` asserido, em todo report;
+          - ``muted: false`` — DESMUTA: mandamos o mesmo campo com o bit
+            apagado. É uma ORDEM, e enquanto ela vigorar o botão físico não
+            manda mais — nós somos os donos do registrador;
+          - ``muted: null``  — DEVOLVE A POSSE ao `hid-playstation`, que é
+            quem alterna o mudo na borda do botão físico. O bit de validação
+            sai apagado do report e o firmware conserva o que tinha.
+
+        Confundir o segundo com o terceiro foi exatamente o defeito dos dois
+        escritores do byte de mute (commit `3d9bb7e`): o keepalive do upstream
+        mandava `common[9]=0x00` — ou seja, "desmuta" — a 60 Hz por cima do
+        kernel, e o botão do controle parecia não funcionar. Por isso a chave
+        `muted` é OBRIGATÓRIA aqui: omiti-la levanta erro em vez de virar um
+        `False` silencioso. Quem chama tem de dizer o que quer.
+
+        A resposta traz o estado LIDO (`audio`, do byte que vem no report de
+        INPUT) e a posse (`mic_mudo_desejado`). O `audio` pode estar um report
+        atrás da escrita — ele é a leitura do que o firmware DECLARA, não o eco
+        do que acabamos de mandar; a aba Status converge no tick seguinte.
+
+        PONTO DE FIAÇÃO DA GUI (deliberadamente não fiado nesta sprint): o
+        botão de microfone da aba Status deve chamar
+        `app.ipc_bridge.mic_set(...)` de dentro de
+        `app/actions/status_actions.py`, no mesmo lugar em que o medidor de
+        `app/mic_monitor.py` já é montado, e reler `daemon.state_full` para
+        pintar o selo — nunca guardar o valor mandado como se fosse leitura.
+        """
+        if "muted" not in params:
+            raise ValueError(
+                "mic.set: 'muted' é obrigatório — true muta, false desmuta, "
+                "null devolve a posse ao kernel"
+            )
+        muted = params.get("muted")
+        uniq = params.get("uniq")
+        if muted is not None and not isinstance(muted, bool):
+            raise ValueError("mic.set: 'muted' precisa ser boolean ou null")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("mic.set: 'uniq' precisa ser string ou omitido")
+        setter = getattr(self.controller, "set_microphone_mute", None)
+        if not callable(setter):
+            raise ValueError("backend sem suporte a mudo de microfone")
+        ok = bool(setter(muted, uniq=uniq))
+        estado: Any = None
+        leitor = getattr(self.controller, "audio_status_for", None)
+        if callable(leitor):
+            with contextlib.suppress(Exception):
+                estado = leitor(uniq)
+        return {
+            "status": "ok" if ok else "sem_controle",
+            "audio": estado if isinstance(estado, dict) else None,
+            "mic_mudo_desejado": muted,
         }
 
     async def _handle_mouse_emulation_set(

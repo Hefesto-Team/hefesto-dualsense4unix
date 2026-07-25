@@ -16,6 +16,11 @@
 #     --reset-only      só reelege a fonte padrão e reinicia (sem (re)instalar drop-in).
 #     --enable-mic      REMOVE os drop-ins de supressão e deixa o mic do DualSense
 #                       utilizável/elegível como padrão (o oposto de --install).
+#     --promote-source  PROMOÇÃO EXPLÍCITA (MIC-USB-01): faz o mic do controle ser
+#                       o microfone PADRÃO e persiste a escolha. É o --enable-mic
+#                       mais a cura das camadas 1 e 2 e a eleição de fato.
+#     --unmute-routes   SÓ tira o `"mute":true` persistido das rotas do DualSense
+#                       (camada 1) — sem mexer em drop-in nem em fonte padrão.
 #     --status          mostra a fonte padrão atual e sai.
 #
 #   Env: HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED=1 faz --install/--disable
@@ -50,6 +55,8 @@ for arg in "$@"; do
         --disable-source) MODE="disable" ;;
         --reset-only)     MODE="reset" ;;
         --enable-mic)     MODE="enable-mic" ;;
+        --promote-source) MODE="promote" ;;
+        --unmute-routes)  MODE="unmute-routes" ;;
         --status)         MODE="status" ;;
         *) printf '[wp-fix] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
@@ -298,6 +305,78 @@ enable_mic_dualsense() {
     restart_wireplumber
 }
 
+# ID da fonte de CAPTURA do DualSense no `wpctl status` (vazio se não houver).
+# Espelho de pick_target_source_id com o critério invertido, e com o mesmo
+# cuidado: o '.monitor' do sink também casa "DualSense" no nome, mas é o
+# loopback da SAÍDA — elegê-lo como microfone é o bug clássico "gravei o som do
+# sistema em vez da minha voz".
+pick_dualsense_source_id() {
+    wpctl status 2>/dev/null | awk '
+        /Sources:/ {insrc=1; next}
+        insrc && (/Filters:/ || /Sinks:/ || /Streams:/ || /Video/) {insrc=0}
+        insrc {
+            if (match($0, /[0-9]+\./)) {
+                id = substr($0, RSTART, RLENGTH - 1)
+                desc = substr($0, RSTART + RLENGTH)
+                if (desc ~ /[Dd]ual[Ss]ense/ && desc !~ /[Mm]onitor/) {
+                    if (first == "") first = id
+                }
+            }
+        }
+        END { print first }
+    '
+}
+
+# MIC-USB-01 (entrega 3) — PROMOÇÃO EXPLÍCITA do mic do controle a padrão.
+#
+# O drop-in 51 REBAIXA a prioridade da fonte (priority.session = 50) para o
+# DualSense não virar microfone padrão sozinho ao conectar. Isso está CERTO e
+# nunca foi o culpado do mute — a queixa "o controle fica mexendo no microfone"
+# é exatamente o que ele resolve. Mas rebaixar por default e não oferecer a
+# subida transformou uma política em uma proibição: com o 51 no lugar, o
+# `set-default-source` da usuária era sobrescrito de volta para o monitor da
+# saída no próximo settle, e não havia caminho nenhum de escolher o DualSense.
+#
+# Promover é um gesto EXPLÍCITO, então ele desfaz explicitamente as três coisas
+# que segurariam o microfone: os drop-ins de supressão (51/52/53), as camadas 1
+# e 2 do mudo (delegadas ao `doctor.sh --fix-mic`, que é o dono dessa cura) e a
+# ausência de eleição. O caminho de volta é o `--install` de sempre.
+promote_source_dualsense() {
+    # Reusa o enable-mic inteiro: remove 51/52/53, desmuta as rotas, avisa sobre
+    # o quirk de áudio USB e reinicia o WirePlumber.
+    enable_mic_dualsense
+    # Camadas 1 e 2 têm UM dono: o doctor. Promover uma fonte cujo perfil está no
+    # S/PDIF seria promover silêncio — o pior resultado possível para este modo,
+    # porque a usuária veria "DualSense é o microfone padrão" e pico 0.
+    if [[ -x "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+        bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet || true
+    fi
+    if ! command -v wpctl >/dev/null 2>&1; then
+        log "wpctl ausente — não consegui eleger o DualSense como fonte padrão"
+        return 1
+    fi
+    # Settle: o restart do WirePlumber + a troca de perfil recriam o nó, e o ID
+    # muda junto. Eleger o ID velho falha calado.
+    local i alvo=""
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        alvo="$(pick_dualsense_source_id || true)"
+        [[ -n "${alvo}" ]] && break
+        sleep 0.3
+    done
+    if [[ -z "${alvo}" ]]; then
+        log "nenhuma fonte de captura do DualSense apareceu — o controle está no cabo?"
+        log "  (por Bluetooth não existe fonte para promover: o áudio vem como Opus"
+        log "   dentro dos reports HID e precisa da ponte — 'hefesto-dualsense4unix mic bt')"
+        return 1
+    fi
+    if wpctl set-default "${alvo}" 2>/dev/null; then
+        log "mic do DualSense promovido a fonte padrão (id ${alvo}) e persistido"
+    else
+        log "aviso: 'wpctl set-default ${alvo}' falhou"
+        return 1
+    fi
+}
+
 case "${MODE}" in
     status)
         show_status
@@ -305,6 +384,19 @@ case "${MODE}" in
     enable-mic)
         enable_mic_dualsense
         show_status
+        ;;
+    unmute-routes)
+        # MIC-USB-01 camada 1, isolada: o doctor --fix chama por aqui para não
+        # duplicar o sed (e o stop/start do WirePlumber que ele exige) do lado
+        # de lá. NÃO toca em drop-in nem em fonte padrão — a política que a
+        # usuária escolheu continua exatamente como estava.
+        unmute_dualsense_routes
+        restart_wireplumber
+        ;;
+    promote)
+        rc=0; promote_source_dualsense || rc=$?
+        show_status
+        exit "${rc}"
         ;;
     reset)
         reset_default_source

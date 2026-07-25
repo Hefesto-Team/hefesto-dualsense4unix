@@ -2244,7 +2244,9 @@ class PyDualSenseController(IController):
         logger.info("speaker_volume_set", volume=volume, muted=bool(muted), ok=ok)
         return ok
 
-    def set_microphone_mute(self, muted: bool | None, *, uniq: str | None = None) -> None:
+    def set_microphone_mute(
+        self, muted: bool | None, *, uniq: str | None = None
+    ) -> bool:
         """Assume (ou devolve) a posse do mudo de microfone do FIRMWARE.
 
         `None` = devolve a posse ao kernel (`hid-playstation`), que é quem
@@ -2253,12 +2255,63 @@ class PyDualSenseController(IController):
         (AUDIO-OWNER-01). Não confundir com o mute do microfone do SISTEMA,
         que é do `integrations/audio_control.py` e continua sendo o caminho do
         botão de mic.
+
+        MIC-USB-01 (25/07): passou a devolver `bool` — True quando ALGUM
+        handle recebeu o pedido. O `mic.set` do IPC precisa distinguir "mandei"
+        de "não havia controle para mandar", exatamente como o `speaker.set`
+        já fazia com `set_speaker_volume`; antes o retorno era `None` e o
+        chamador não tinha como saber que a ordem caiu no vazio.
+
+        Esta é a CAMADA 3 do achado das três camadas de mudo empilhadas: o
+        firmware do controle guarda o próprio mute, e nem desmutar a rota do
+        WirePlumber nem trocar o perfil da placa o alcançam. Até 25/07 o único
+        caminho para mexer nele era o botão físico do controle.
         """
         alvo = self._handle_for(uniq)
         handles = [alvo] if alvo is not None else []
+        if not handles:
+            logger.debug("output_offline_noop", op="set_microphone_mute")
+            return False
+        ok = False
         for handle in handles:
-            with contextlib.suppress(Exception):
+            try:
                 handle.set_microphone_mute(muted)
+                ok = True
+            except Exception as exc:
+                logger.warning(
+                    "output_handle_failed", op="set_microphone_mute", err=str(exc)
+                )
+        logger.info("microphone_mute_set", muted=muted, uniq=uniq, ok=ok)
+        return ok
+
+    def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
+        """Valor de mudo que o HEFESTO afirma no firmware, ou None (MIC-USB-01).
+
+        Contraparte de leitura do `set_microphone_mute`, no mesmo espírito
+        honesto do `speaker_state_for`: o DualSense **não devolve** este
+        registrador, então a única coisa que dá para saber é o que NÓS estamos
+        mandando. Três respostas, e as três significam coisas diferentes:
+
+          - ``True``  — estamos mandando "mudo" em todo report;
+          - ``False`` — estamos mandando "não mudo" em todo report;
+          - ``None``  — NÃO somos donos do campo: o bit de validação sai
+            apagado e quem manda é o `hid-playstation`, que alterna o mute na
+            borda do botão físico.
+
+        A distinção entre `False` e `None` é a lição cara do AUDIO-OWNER-01
+        (commit `3d9bb7e`): `False` é uma ORDEM ("desmuta"), não um "não
+        mexer". Foi confundir os dois que fez o keepalive atropelar o kernel a
+        60 Hz. O estado LIDO de verdade (o que o firmware declara) continua
+        sendo o `mic_mudo` do `audio_status_for` — este método diz quem MANDA,
+        não o que está valendo.
+
+        Sem handle para o `uniq` pedido, devolve None (ausência é resposta).
+        """
+        handle = self._handle_for(uniq)
+        if handle is None:
+            return None
+        valor = getattr(handle, "_mic_mute_desejado", None)
+        return bool(valor) if isinstance(valor, bool) else None
 
     def _audio_status_byte(self, uniq: str | None) -> int | None:
         """Byte cru de estado de áudio do handle escolhido (ou None)."""

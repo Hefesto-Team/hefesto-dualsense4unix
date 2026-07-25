@@ -473,6 +473,89 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
     return False
 
 
+def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
+    """Muta/desmuta o microfone no FIRMWARE do controle (MIC-USB-01).
+
+    ``muted=True`` muta, ``muted=False`` DESMUTA e ``muted=None`` devolve a
+    posse do registrador ao `hid-playstation` (o botão físico do controle volta
+    a mandar). Os três são pedidos EXPLÍCITOS e diferentes: ``False`` não é "não
+    mexer" — é a ordem "desmuta", e enquanto ela vigorar o botão físico deixa de
+    valer. Confundir os dois foi o defeito dos dois escritores do byte de mute
+    (`3d9bb7e`), então o parâmetro não tem default: quem chama declara.
+
+    Esta é a CAMADA 3 do achado de 25/07. As outras duas (o ``mute:true``
+    persistido por rota em ``~/.local/state/wireplumber/default-routes`` e o
+    perfil da placa preso em ``input:iec958-stereo``, que é S/PDIF e não carrega
+    sinal nenhum) são do WirePlumber, não do controle, e se curam pelo
+    ``scripts/doctor.sh --fix``. Nenhum ``mic_set`` do mundo as alcança — se o
+    medidor continuar parado depois de desmutar aqui, é uma delas.
+
+    PONTO EXATO DE FIAÇÃO (deixado pronto, não fiado — a GUI está sendo mexida
+    por outra frente): o botão de microfone da aba Status, ao lado do medidor
+    montado por ``app/mic_monitor.py``, chamando daqui via
+    ``app/actions/status_actions.py``. Depois do pedido, RELER
+    ``daemon.state_full`` e pintar o selo a partir de ``audio.mic_mudo``
+    (leitura do firmware) + ``audio.mic_mudo_desejado`` (quem manda) — jamais
+    guardar o valor mandado como se fosse leitura, que é justamente o hábito que
+    fez a tela parecer mentirosa quando ela nunca mentiu.
+
+    Retorna True se o daemon confirmou; False se offline ou sem controle.
+    """
+    payload: dict[str, Any] = {"muted": muted}
+    if uniq:
+        payload["uniq"] = uniq
+    ok, result = _safe_call("mic.set", payload)
+    if not ok or not isinstance(result, dict):
+        return False
+    return result.get("status") == "ok"
+
+
+def speaker_set(
+    volume: int | None = None,
+    muted: bool | None = None,
+    uniq: str | None = None,
+) -> bool:
+    """Volume/mudo do alto-falante e do fone do controle (D4 / MIC-USB-01).
+
+    DECISÃO DA MIC-USB-01, registrada aqui de propósito: o ``speaker.set``
+    existia no IPC desde a D4 **sem um único chamador no produto** — método de
+    protocolo que ninguém chama é dívida com aparência de recurso, e a sprint
+    deu duas saídas, ganhar superfície ou sair. Ele FICA, e ganha superfície
+    junto com o microfone, por uma razão de substância e não de simpatia: mic e
+    alto-falante do DualSense são o MESMO bloco de posse do report de saída
+    (``common[4..9]``, AUDIO-OWNER-01). Expor só metade deixaria a outra metade
+    como um escritor sem dono à espera de virar o próximo bug dos dois
+    escritores — que é exatamente a classe de defeito que a MIC-USB-01 foi
+    fechar. Sair custaria uma quebra de protocolo e apagaria a única forma de
+    baixar o alto-falante do controle, que é alto de fábrica.
+
+    ``volume`` 0-255 (None mantém o vigente); ``muted=True`` manda 0 sem perder
+    o volume preferido e ``muted=False`` o restaura. A primeira chamada faz o
+    hefesto assumir a posse dos bytes de volume: o DualSense não devolve esse
+    registrador, então ``daemon.state_full`` só passa a trazer a chave
+    ``speaker`` DEPOIS de um ``speaker.set`` — antes disso publicar um número
+    seria inventá-lo.
+
+    PONTO EXATO DE FIAÇÃO: o mesmo bloco de áudio da aba Status onde entra o
+    botão de microfone — um slider de volume do controle ao lado do medidor,
+    ligado por ``app/actions/status_actions.py``, escondido enquanto
+    ``state_full`` não trouxer a chave ``speaker`` (ausência é resposta).
+
+    Retorna True se o daemon confirmou; False se offline ou sem controle.
+    """
+    payload: dict[str, Any] = {}
+    if volume is not None:
+        payload["volume"] = int(volume)
+    if muted is not None:
+        payload["muted"] = bool(muted)
+    if uniq:
+        payload["uniq"] = uniq
+    ok, result = _safe_call("speaker.set", payload)
+    if not ok or not isinstance(result, dict):
+        return False
+    return result.get("status") == "ok"
+
+
 def mouse_emulation_set(
     enabled: bool | None,
     speed: int | None = None,
@@ -503,6 +586,7 @@ __all__ = [
     "daemon_state_full",
     "daemon_status_basic",
     "led_set",
+    "mic_set",
     "mouse_emulation_set",
     "player_leds_set",
     "profile_list",
@@ -514,6 +598,7 @@ __all__ = [
     "rumble_set",
     "rumble_stop",
     "run_in_thread",
+    "speaker_set",
     "trigger_reset",
     "trigger_set",
     "trigger_set_checked",
