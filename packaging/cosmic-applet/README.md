@@ -11,10 +11,10 @@ Miniaplicativos, com botão **"Adicionar"**. É o "tray de verdade" no COSMIC.
 
 ## O que ele faz
 
-- **Ícone no painel** refletindo o estado do daemon:
-  - daemon offline / socket ausente → ícone "indisponível" (apagado);
-  - bateria < 15% → ícone de alerta de bateria;
-  - controle conectado → ícone do app (martelo).
+- **Ícone no painel**: SEMPRE a logo do app (a bigorna com o martelo de
+  `assets/hefesto-logo.svg`), em qualquer estado. Trocar o glifo conforme o
+  daemon fazia a logo "sumir" da barra nas transições — o estado (offline,
+  bateria, perfil) é mostrado DENTRO do popover, não no ícone.
 - **Clique → popover** com:
   - bateria (% + transporte USB/Bluetooth);
   - perfil ativo;
@@ -68,14 +68,17 @@ Ambos instalam:
 |---|---|
 | binário | `/usr/local/bin/hefesto-dualsense4unix-applet` |
 | `.desktop` | `/usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop` |
-| ícone | `/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg` |
+| ícone colorido | `/usr/share/icons/hicolor/256x256/apps/com.vitoriamaria.HefestoDualsense4Unix.png` |
+| ícone symbolic | `/usr/share/icons/hicolor/scalable/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg` |
 
 Depois rodam `gtk-update-icon-cache` e `update-desktop-database` (este último é
 necessário para o COSMIC listar o applet em *Miniaplicativos*).
 
-> O `.desktop` declara o ícone como `…-symbolic` (mesmo padrão dos applets
-> nativos do COSMIC); sem o sufixo o ícone não resolve e o applet pode não
-> aparecer na lista.
+> Os dois ícones saem da MESMA identidade: o PNG é `assets/hefesto-logo.svg`
+> rasterizado (`rsvg-convert -w 256 -h 256`) e o `-symbolic.svg` é a bigorna em
+> silhueta — symbolic no COSMIC é monocromático e recolorido pelo tema, então
+> não é o colorido reduzido. O `.desktop` pede `Icon=` sem sufixo (resolve no
+> PNG); o symbolic atende quem pedir a variante monocromática.
 
 Para remover: `just uninstall` (ou `./uninstall.sh`, que agora também limpa o
 applet COSMIC).
