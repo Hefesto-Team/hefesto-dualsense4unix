@@ -172,7 +172,7 @@ class CompactWindow:
         self._status_label = Gtk.Label()
         # Glyph U+25CB (white circle) via NCR + texto inicial.
         self._status_label.set_markup(
-            '<span foreground="#888">&#9675; ' + _("Iniciando...") + "</span>"
+            '<span foreground="#8b8fa8">&#9675; ' + _("Iniciando...") + "</span>"
         )
         self._status_label.set_xalign(0.0)
         line1.pack_start(self._status_label, True, True, 0)
@@ -271,7 +271,7 @@ class CompactWindow:
             return
         if state is None or not isinstance(state, dict):
             self._status_label.set_markup(
-                '<span foreground="#d33">&#9675; '
+                '<span foreground="#ff5555">&#9675; '
                 + _("Daemon offline")
                 + "</span>"
             )
@@ -296,11 +296,11 @@ class CompactWindow:
                 )
         if connected:
             self._status_label.set_markup(
-                f'<span foreground="#2d8">&#9679; {transport} · {active}</span>'
+                f'<span foreground="#50fa7b">&#9679; {transport} · {active}</span>'
             )
         else:
             self._status_label.set_markup(
-                '<span foreground="#d33">&#9675; '
+                '<span foreground="#ff5555">&#9675; '
                 + _("Controle desconectado")
                 + "</span>"
             )

@@ -836,7 +836,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             # globais de sanitização strippam o literal, mas Pango respeita
             # a entidade `&#9675;`.
             header.set_markup(
-                '<span foreground="#d33">'
+                '<span foreground="#ff5555">'
                 "&#9675; Desconectado — abra a aba Sistema e clique em \"Ligar o Hefesto\""
                 "</span>"
             )
@@ -936,16 +936,16 @@ class StatusActionsMixin(WidgetAccessMixin):
                     for c in conectados
                 )
                 header.set_markup(
-                    f'<span foreground="#2d8">&#9679; {len(conectados)} controles: '
+                    f'<span foreground="#50fa7b">&#9679; {len(conectados)} controles: '
                     f"{partes}</span>"
                 )
             elif connected:
                 header.set_markup(
-                    f'<span foreground="#2d8">&#9679; Conectado Via {transport.upper()}</span>'
+                    f'<span foreground="#50fa7b">&#9679; Conectado Via {transport.upper()}</span>'
                 )
             else:
                 header.set_markup(
-                    '<span foreground="#d33">&#9675; Controle Desconectado</span>'
+                    '<span foreground="#ff5555">&#9675; Controle Desconectado</span>'
                 )
         self._set_label("status_daemon", "Ligado")
 
@@ -958,7 +958,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
-                '<span foreground="#d90">&#9680; Tentando Reconectar...</span>'
+                '<span foreground="#ffb86c">&#9680; Tentando Reconectar...</span>'
             )
         self._set_label("status_daemon", "Reconectando")
 
@@ -966,7 +966,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         header = self._get("header_connection")
         if header is not None:
             header.set_markup(
-                '<span foreground="#d33">'
+                '<span foreground="#ff5555">'
                 "&#9675; Hefesto desligado — abra a aba Sistema e clique em "
                 "\"Ligar o Hefesto\""
                 "</span>"

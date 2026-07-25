@@ -170,7 +170,7 @@ def test_render_state_online_pinta_glyph_verde_e_transport() -> None:
     assert cw._status_label is not None
     markup = cw._status_label.markup or ""
     assert "&#9679;" in markup  # U+25CF NCR
-    assert "#2d8" in markup
+    assert "#50fa7b" in markup
     assert "BT" in markup
     assert "fps" in markup
     assert cw._battery_label is not None
@@ -183,7 +183,7 @@ def test_render_state_offline_pinta_glyph_vermelho() -> None:
     assert cw._status_label is not None
     markup = cw._status_label.markup or ""
     assert "&#9675;" in markup  # U+25CB NCR
-    assert "#d33" in markup
+    assert "#ff5555" in markup
     assert "offline" in markup.lower()
 
 

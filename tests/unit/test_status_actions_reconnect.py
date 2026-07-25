@@ -149,7 +149,7 @@ def test_ipc_success_keeps_online_and_zeroes_counter(host: _Host) -> None:
     header = host.builder.get_object("header_connection")
     assert header.markup is not None
     assert "Conectado Via" in header.markup
-    assert "#2d8" in header.markup  # verde canônico
+    assert "#50fa7b" in header.markup  # verde canônico
 
 
 def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
@@ -161,7 +161,7 @@ def test_first_failure_moves_to_reconnecting(host: _Host) -> None:
     # ADR-011: U+25D0 emitido como NCR `&#9680;` para escapar do sanitizer
     # global de glyphs.
     assert "&#9680;" in header.markup
-    assert "#d90" in header.markup  # laranja canônico
+    assert "#ffb86c" in header.markup  # laranja canônico
 
 
 def test_threshold_failures_moves_to_offline(host: _Host) -> None:
@@ -173,7 +173,7 @@ def test_threshold_failures_moves_to_offline(host: _Host) -> None:
     assert "Hefesto desligado" in header.markup
     # U+25CB via NCR `&#9675;`.
     assert "&#9675;" in header.markup
-    assert "#d33" in header.markup  # vermelho canônico
+    assert "#ff5555" in header.markup  # vermelho canônico
 
 
 def test_reconnecting_to_online_recovers(host: _Host) -> None:
@@ -234,7 +234,7 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
     # Hefesto"); o header aponta para os nomes que existem na tela.
     assert "aba Sistema" in header.markup
     assert "Ligar o Hefesto" in header.markup
-    assert "#d33" in header.markup
+    assert "#ff5555" in header.markup
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")
     # _set_label chama set_text (não set_markup).
@@ -245,7 +245,7 @@ def test_initial_poll_fallback_no_op_quando_poll_ja_sucedeu(host: _Host) -> None
     """Se algum poll já foi OK, o fallback não sobrescreve o header."""
     host._first_poll_succeeded = True
     header = host.builder.get_object("header_connection")
-    header.markup = "<span foreground='#2d8'> Conectado Via USB</span>"
+    header.markup = "<span foreground='#50fa7b'> Conectado Via USB</span>"
 
     result = host._check_initial_poll_fallback()
 

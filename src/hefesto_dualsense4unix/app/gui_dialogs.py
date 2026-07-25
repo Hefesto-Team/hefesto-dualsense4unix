@@ -388,7 +388,7 @@ def show_external_controller(
         warn = Gtk.Label()
         # &#9888; (WARNING SIGN) via NCR — sobrevive ao sanitizer de emojis.
         warn.set_markup(
-            f'<span foreground="#e0a020">&#9888; {_escape_markup(aviso)}</span>'
+            f'<span foreground="#ffb86c">&#9888; {_escape_markup(aviso)}</span>'
         )
         warn.set_line_wrap(True)
         warn.set_xalign(0.0)
