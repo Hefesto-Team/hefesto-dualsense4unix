@@ -141,6 +141,34 @@ KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apag
 KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
 KEEP_BLUEZ=0             # Onda R: restaura o bluez do noble por default (opt-out --keep-bluez)
 AUTO_YES=0
+
+# BUG-UNINSTALL-HELP-DESINSTALA-01: não havia `--help`, e argumento desconhecido
+# só imprimia um aviso e SEGUIA desinstalando. Ou seja: `./uninstall.sh --help`
+# — o reflexo de qualquer pessoa diante de um script novo — apagava a instalação
+# inteira. Agora `--help` mostra o uso e SAI 0, e argumento desconhecido ABORTA
+# com 2 sem tocar em nada. Um desinstalador é destrutivo por natureza: na dúvida
+# sobre o que a pessoa quis dizer, a resposta certa é não fazer nada.
+uso() {
+    cat <<'FIM'
+Uso: ./uninstall.sh [opções]
+
+Remove o Hefesto - Dualsense4Unix (serviços, binários, regras udev, módulos
+DKMS, drop-ins). Por padrão PRESERVA sua configuração e seus perfis.
+
+Opções:
+  --keep-udev           preserva as regras udev + modules-load
+  --remove-usb-quirk    remove também o quirk da cmdline (sensível; exige reboot)
+  --purge-config        APAGA config e perfis (destrutivo; o padrão é preservar)
+  --keep-config         preserva config e perfis (padrão)
+  --keep-steam-input    não mexe no PSSupport do Steam Input
+  --keep-bluez          preserva o BlueZ do hefesto (o padrão RESTAURA o da distro)
+  --yes, -y             não pergunta nada (necessário sem TTY)
+  --help, -h            mostra esta ajuda e sai
+
+Nada é removido enquanto esta ajuda estiver sendo exibida.
+FIM
+}
+
 for arg in "$@"; do
     case "$arg" in
         --keep-udev)         REMOVE_UDEV=0 ;;
@@ -151,7 +179,12 @@ for arg in "$@"; do
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
         --keep-bluez)        KEEP_BLUEZ=1 ;;
         --yes|-y)            AUTO_YES=1 ;;
-        *) printf '[uninstall] aviso: argumento desconhecido: %s\n' "$arg" ;;
+        --help|-h)           uso; exit 0 ;;
+        *)
+            printf '[uninstall] argumento desconhecido: %s\n' "$arg" >&2
+            printf '[uninstall] nada foi removido. Use --help para ver as opções.\n' >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -230,6 +263,11 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 # (leitura de /var/lib/dkms), então a checagem de presença aqui não precisa
 # de credencial — só a REMOÇÃO precisa.
 [[ -e /etc/modprobe.d/hefesto-hid-nintendo.conf ]] && _NEEDS_SUDO=1
+# Contenção BT: DKMS hid-playstation patchado — mesma justificativa da Onda T.
+[[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]] && _NEEDS_SUDO=1
+command -v dkms >/dev/null 2>&1 \
+    && dkms status hefesto-hid-playstation 2>/dev/null | grep -q . \
+    && _NEEDS_SUDO=1
 command -v dkms >/dev/null 2>&1 \
     && dkms status hefesto-hid-nintendo 2>/dev/null | grep -q . \
     && _NEEDS_SUDO=1
@@ -296,6 +334,13 @@ else
     log "ausente: ${STORM_UNIT_TARGET}"
 fi
 rm -f "${STORM_SCRIPT_TARGET}"
+# BUG-UNINSTALL-SCRIPTS-DIR-ORPHAN-01 (25/07): o storm_watch.sh saía mas o
+# diretório ~/.local/share/hefesto-dualsense4unix/scripts/ (criado pelo passo 7b
+# do install) ficava vazio — e, por ficar, segurava o diretório-pai, anulando o
+# BUG-UNINSTALL-SHARE-DIR-ORPHAN-01 mais abaixo, que só remove o pai se ele
+# estiver VAZIO. Resultado medido: ~/.local/share/hefesto-dualsense4unix/
+# sobrevivia ao wipe. `rmdir` sem -p e best-effort: se alguém pôs algo lá, fica.
+rmdir "${HOME}/.local/share/hefesto-dualsense4unix/scripts" 2>/dev/null || true
 if [[ -L "${HOME}/.local/state/hefesto-dualsense4unix/storm.log" ]]; then
     log "removendo symlink de compat storm.log→kernel.log (o kernel.log fica — é seu histórico)"
     rm -f "${HOME}/.local/state/hefesto-dualsense4unix/storm.log"
@@ -602,7 +647,8 @@ if sudo -n true 2>/dev/null; then
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
-        /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh 2>/dev/null || true
+        /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh 2>/dev/null || true
     # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
     _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
@@ -699,23 +745,34 @@ if [[ -e "${BROKER_SERVICE}" || -e "${BROKER_SOCKET}" || -e "${BROKER_BIN}" ]]; 
     fi
 fi
 
+# BUG-UNINSTALL-USR-LOCAL-LIB-DIR-ORPHAN-01 (25/07): /usr/local/lib/
+# hefesto-dualsense4unix/ é criado pelo install (passo 3e-bis, os 7 bt_*.sh, e
+# passo 3h, o binário do broker). Os ARQUIVOS saíam um a um, mas o diretório
+# ficava vazio em /usr/local — rastro do hefesto num sistema "desinstalado".
+# Fora dos dois `if` de sudo acima de propósito: o diretório sobra tendo saído
+# só os bt_*.sh, só o broker, ou os dois. `rmdir` puro (nunca -r/-f): se
+# houver qualquer arquivo dentro que não seja nosso, ele falha e o dir fica.
+if [[ -d /usr/local/lib/hefesto-dualsense4unix ]] && sudo -n true 2>/dev/null; then
+    sudo rmdir /usr/local/lib/hefesto-dualsense4unix 2>/dev/null || true
+fi
+
 # PKG-2 (auditoria 21/07): se o binário `dkms` sumiu do sistema mas ficou
 # módulo/src órfão do hefesto, os blocos abaixo (gateados por `command -v
 # dkms`) passariam MUDOS — e o .ko em updates/dkms continua vencendo o
 # in-tree para sempre (na Onda W, com hang_reset=Y). Avisa explícito.
 if ! command -v dkms >/dev/null 2>&1; then
     _orfaos=""
-    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb; do
+    for _pkg in hefesto-hid-nintendo hefesto-rtw88-usb hefesto-hid-playstation; do
         compgen -G "/usr/src/${_pkg}-*" >/dev/null 2>&1 && _orfaos="${_orfaos} ${_pkg}(src)"
     done
-    for _ko in hid-nintendo rtw88_usb; do
+    for _ko in hid-nintendo rtw88_usb hid-playstation; do
         compgen -G "/lib/modules/$(uname -r)/updates/dkms/${_ko}.ko*" >/dev/null 2>&1 \
             && _orfaos="${_orfaos} ${_ko}(.ko)"
     done
     if [[ -n "${_orfaos}" ]]; then
         log "AVISO: dkms ausente, mas há artefato DKMS do hefesto órfão:${_orfaos}"
         log "  o .ko em updates/dkms segue vencendo o in-tree — instale o dkms e re-rode ./uninstall.sh,"
-        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb}.ko* && sudo depmod -a"
+        log "  ou remova à mão: sudo rm -rf /usr/src/hefesto-* /lib/modules/\$(uname -r)/updates/dkms/{hid-nintendo,rtw88_usb,hid-playstation}.ko* && sudo depmod -a && sudo update-initramfs -u"
     fi
 fi
 
@@ -737,8 +794,13 @@ if command -v dkms >/dev/null 2>&1 \
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
         # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
+        # 3º arg (INITRAMFS-01): nome do módulo construído — marca o initramfs
+        # para regeneração, senão a CÓPIA do .ko removido continua nele e o
+        # boot seguinte ainda sobe o hid-nintendo do hefesto (desinstalado no
+        # disco, vivo no boot). O flush roda uma vez, mais abaixo.
         dkms_remove_patched_module hefesto-hid-nintendo \
-            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-nintendo")"
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-nintendo")" \
+            hid-nintendo
     else
         log "sudo indisponível — patch DKMS do hid-nintendo NÃO removido"
         log "  sudo dkms remove hefesto-hid-nintendo/1.0.0 --all"
@@ -789,8 +851,11 @@ if command -v dkms >/dev/null 2>&1 \
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
         # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
+        # 3º arg (INITRAMFS-01): idem Onda T — sem ele a cópia do .ko removido
+        # sobreviveria dentro do initramfs.
         dkms_remove_patched_module hefesto-rtw88-usb \
-            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/rtw88-usb")"
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/rtw88-usb")" \
+            rtw88_usb
         if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
             printf '0' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
             log "hang_reset do rtw88_usb devolvido a 0 (sem reset agressivo até o boot; detecção/silenciamento seguem ativos)"
@@ -799,6 +864,63 @@ if command -v dkms >/dev/null 2>&1 \
         log "sudo indisponível — patch DKMS do rtw88_usb NÃO removido"
         log "  sudo dkms remove hefesto-rtw88-usb/1.0.0 --all"
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# Contenção BT (2026-07-25, DKMS hid-playstation patchado — retry de feature
+# report na probe, ver assets/dkms/hid-playstation/README.md): removido por
+# DEFAULT, sem flag nova (install é SEM FLAGS; uninstall é simétrico).
+# `dkms remove --all` desregistra o pkg/versão de TODOS os kernels e apaga
+# /usr/src/<pkg>-<ver>; a options do modprobe.d sai junto. O in-tree volta
+# SOZINHO no próximo BOOT.
+#  NUNCA recarregamos o hid_playstation aqui: derrubaria TODOS os DualSense,
+# e os por Bluetooth perderiam o link. Até o boot, se o patchado estiver
+# carregado ele continua rodando — devolvemos só o feature_retries a 0 via
+# /sys (0644), que é lido a cada probe, então a próxima conexão já é vanilla.
+# ---------------------------------------------------------------------------
+if command -v dkms >/dev/null 2>&1 \
+        && dkms status hefesto-hid-playstation 2>/dev/null | grep -q .; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo patch DKMS do hid-playstation (contenção BT): dkms remove --all"
+        # shellcheck source=scripts/dkms_lib.sh
+        source "${ROOT_DIR}/scripts/dkms_lib.sh"
+        # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
+        # 3º arg (INITRAMFS-01): idem Onda T/W.
+        dkms_remove_patched_module hefesto-hid-playstation \
+            "$(dkms_pkg_version "${ROOT_DIR}/assets/dkms/hid-playstation")" \
+            hid-playstation
+    else
+        log "sudo indisponível — patch DKMS do hid-playstation NÃO removido"
+        log "  sudo dkms remove hefesto-hid-playstation/1.0.0 --all"
+    fi
+fi
+if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
+    if sudo -n true 2>/dev/null; then
+        log "removendo opções do hid-playstation patchado (/etc/modprobe.d/hefesto-hid-playstation.conf)"
+        sudo rm -f /etc/modprobe.d/hefesto-hid-playstation.conf
+        if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
+            printf '0' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
+            log "feature_retries do hid_playstation devolvido a 0 (vanilla já na próxima conexão; NUNCA recarregamos o módulo)"
+        fi
+    else
+        log "sudo indisponível — /etc/modprobe.d/hefesto-hid-playstation.conf NÃO removido"
+        log "  sudo rm -f /etc/modprobe.d/hefesto-hid-playstation.conf"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# INITRAMFS-01 (25/07) — simetria do passo 3l do install
+# ---------------------------------------------------------------------------
+# `dkms remove --all` limpa /lib/modules e roda depmod, mas o initramfs guarda
+# uma CÓPIA do .ko: sem regenerar, o boot seguinte AINDA carrega o
+# hid-nintendo/rtw88_usb do hefesto — desinstalado no disco e vivo no boot,
+# que é exatamente o tipo de assimetria que este uninstall existe para evitar.
+# Roda UMA vez para todos os módulos removidos acima (a lib coalesce) e é
+# no-op se nada foi removido. Fail-safe: falha vira aviso, nunca aborta.
+if command -v dkms >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_flush_initramfs
 fi
 # Conf.d de powersave do WiFi (W2 — opt-in/gateado por evidência, NÃO
 # instalado por default pelo install.sh hoje): removido SE presente, sem
