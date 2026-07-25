@@ -4,7 +4,7 @@
 /* ===========================================================================
  * TOKENS — cada cor tem UM papel. Não usar hex solto fora daqui.
  *
- * As 11 cores base são o Drácula canônico; os 7 tokens de superfície dão os
+ * As 11 cores base são o Drácula canônico; os 8 tokens de superfície dão os
  * níveis de profundidade. Regras que valem para a interface inteira:
  *
  *   - ROSA é exclusivo da marca e da aba ativa. Não compete com o roxo.
@@ -30,7 +30,18 @@
 @define-color red          #ff5555;  /* erro, remover */
 @define-color yellow       #f1fa8c;  /* alerta suave */
 
-@define-color app_bg       #21222c;  /* fundo da janela, mais fundo que os painéis */
+/* PROFUNDIDADE — a tela tem QUATRO níveis, não dois. Do fundo para a frente:
+ *
+ *   @app_bg  #21222c  fundo da janela e dos SUB-PAINÉIS dentro de um card
+ *   @chrome  #242630  cromo: barra de título, tira de abas, rodapé
+ *   @bg      #282a36  card / painel (o que "flutua" sobre a janela)
+ *   @elevated #2b2d3a trilha de slider, cabeçalho de tabela
+ *
+ * Até o redesign 1.1 os dois primeiros níveis estavam TROCADOS (janela #282a36,
+ * card #21222c) e o cromo nem existia: a interface inteira eram dois tons
+ * chapados e nada parecia estar em cima de nada. */
+@define-color app_bg       #21222c;  /* fundo da janela e dos sub-painéis */
+@define-color chrome       #242630;  /* barra de título, tira de abas, rodapé */
 @define-color elevated     #2b2d3a;  /* trilha de slider, cabeçalho de tabela, botão */
 @define-color border_soft  #343746;  /* divisória entre seções */
 @define-color text_soft    #c8ccda;  /* rótulo */
@@ -44,14 +55,84 @@
 
 /* Tipografia do guia: Space Grotesk na interface, JetBrains Mono nos valores.
    Nenhuma das duas costuma vir instalada — a cadeia cai para o que a
-   distribuição tiver. Instalá-las deixa a interface idêntica ao design; sem
-   elas nada quebra. */
+   distribuição tiver. `scripts/install_fonts.sh` instala as duas (pacote da
+   distro quando existe, senão release oficial em ~/.local/share/fonts);
+   sem elas nada quebra, só deixa de ficar idêntico ao design. */
 
 .hefesto-dualsense4unix-window {
-    background-color: @bg;
+    background-color: @app_bg;
     color: @fg;
     font-family: "Space Grotesk", Cantarell, "Fira Sans", "Noto Sans", sans-serif;
 }
+
+/* ===========================================================================
+ * ESCALA TIPOGRÁFICA — os tamanhos são os do mockup (`novo-layout/Telas
+ * Hefesto.dc.html`), em px, e cada degrau tem UM papel. Antes não havia escala
+ * nenhuma: quatro tamanhos RELATIVOS de Pango (`size="small"`, `xx-large`,
+ * `92%`, `11px`) espalhados pelo código, cada um dependendo do que a
+ * distribuição tivesse configurado como fonte padrão.
+ *
+ *   classe                    px    peso  papel
+ *   .hefesto-titulo           21    700   wordmark do cabeçalho
+ *   .hefesto-titulo-painel    15    700   nome do card (controle, bloco)
+ *   .hefesto-titulo-secao     14    700   título de painel ("Perfis salvos")
+ *   .hefesto-corpo            13    400   abas, botões do rodapé, campos
+ *   .hefesto-rotulo           12    400   texto corrente e rótulo de linha
+ *   .hefesto-rotulo-secao     12    600   rótulo de sub-painel ("Giroscópio")
+ *   .hefesto-kicker           12    400   faixa maiúscula espaçada (mono)
+ *   .hefesto-rotulo-longo   11.5    400   rótulo largo que não pode quebrar
+ *   .hefesto-subtitulo        11    400   subtítulo do cabeçalho (mono)
+ *   .hefesto-dica             11    400   dica, nota de rodapé de bloco
+ *   .hefesto-micro            10    400   micro-rótulo (eixos, X/Y)
+ *   .hefesto-selo              9    600   selo ATIVO/MUDO (mono)
+ *   .hefesto-valor-mono       12    400   valor numérico (mono)
+ *   .hefesto-valor-mono-peq   11    400   valor numérico compacto (mono)
+ *
+ * Só o TAMANHO (e o peso/família quando o papel exige) mora aqui — a COR sai
+ * dos tokens e das classes de estado, para um rótulo poder ser pequeno sem ser
+ * obrigatoriamente apagado.
+ * =========================================================================== */
+.hefesto-titulo          { font-size: 21px;   font-weight: 700; }
+.hefesto-titulo-painel   { font-size: 15px;   font-weight: 700; }
+.hefesto-titulo-secao    { font-size: 14px;   font-weight: 700; }
+.hefesto-corpo           { font-size: 13px; }
+.hefesto-rotulo          { font-size: 12px; }
+.hefesto-rotulo-secao    { font-size: 12px;   font-weight: 600; }
+/* O mockup faz o kicker em maiúsculas com `text-transform` + `letter-spacing`.
+   O parser CSS do GTK3 não conhece nenhuma das duas e FALHA A CARGA INTEIRA do
+   arquivo ("is not a valid property name") — o mesmo mecanismo que proíbe a
+   at-rule de query aqui. Então o CAIXA-ALTA vem do texto do rótulo e o
+   espaçamento, quando fizer falta, de markup Pango (`letter_spacing`). */
+.hefesto-kicker {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 12px;
+}
+.hefesto-rotulo-longo    { font-size: 11.5px; }
+.hefesto-subtitulo {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 11px;
+}
+.hefesto-dica            { font-size: 11px; }
+.hefesto-micro           { font-size: 10px; }
+.hefesto-selo {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 9px;
+    font-weight: 600;
+}
+.hefesto-valor-mono {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 12px;
+}
+.hefesto-valor-mono-peq {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 11px;
+}
+/* A COR dos degraus que têm cor de nascença precisa vencer
+   `.hefesto-dualsense4unix-window label { color: @fg }` (0,1,1) — que casa o
+   label DIRETAMENTE. Por isso vem escopada na window (0,2,1), não solta. */
+.hefesto-dualsense4unix-window label.hefesto-rotulo-secao { color: @text_soft; }
+.hefesto-dualsense4unix-window label.hefesto-kicker       { color: @comment; }
+.hefesto-dualsense4unix-window label.hefesto-subtitulo    { color: @comment; }
 
 /* Botão em repouso é NEUTRO. Antes toda borda era roxa, o que gastava o acento
    em tudo e deixava o item selecionado sem como se destacar — o roxo agora é
@@ -65,7 +146,10 @@
     background-image: none;
     background-color: @elevated;
     border: 1px solid @current_line;
-    border-radius: 4px;
+    /* 8px é o raio do mockup para botão (o de card é 10px, o do grid compacto
+       de modos é 6px). Os 4px anteriores liam como "widget de sistema", não
+       como a superfície arredondada do design. */
+    border-radius: 8px;
     color: @fg;
     padding: 6px 12px;
 }
@@ -130,9 +214,9 @@
 .hefesto-dualsense4unix-window entry,
 .hefesto-dualsense4unix-window spinbutton {
     background-image: none;
-    background-color: #282a36;
+    background-color: #21222c;
     border: 1px solid #bd93f9;
-    border-radius: 4px;
+    border-radius: 8px;
     color: #f8f8f2;
     padding: 4px 8px;
 }
@@ -144,13 +228,13 @@
    BUG-GUI-COSMIC-WIDGET-CONTRAST-01: o `button` interno do combobox NÃO deve
    herdar o fundo sólido @elevated do botão genérico nem o `transparent` antigo
    (que vazava o tema claro do COSMIC). Padroniza o display fechado para casar
-   com `entry`: fundo #282a36, sem borda interna dupla, seta roxa. */
+   com `entry`: fundo #21222c, sem borda interna dupla, seta roxa. */
 .hefesto-dualsense4unix-window combobox button,
 .hefesto-dualsense4unix-window combobox button label,
 .hefesto-dualsense4unix-window combobox cellview,
 .hefesto-dualsense4unix-window combobox box {
     background-image: none;
-    background-color: #282a36;
+    background-color: #21222c;
     border: none;
     color: #f8f8f2;
 }
@@ -267,7 +351,7 @@ messagedialog button {
     background-image: none;
     background-color: @elevated;
     border: 1px solid #bd93f9;
-    border-radius: 4px;
+    border-radius: 8px;
     color: #f8f8f2;
     padding: 6px 12px;
 }
@@ -284,9 +368,12 @@ messagedialog button:active {
    tinham regra nossa => no COSMIC herdavam o claro do sistema, e botões
    `transparent` (antes do fix) exibiam esse claro. Tornamos transparentes para
    revelar o fundo escuro #282a36 da window.
-   `:not(.hefesto-dualsense4unix-card)` preserva os cards (#21222c) — o seletor
+   `:not(.hefesto-dualsense4unix-card)` preserva os cards (@bg) — o seletor
    simplesmente não casa neles, então a regra .hefesto-dualsense4unix-card vence.
-   `:not(.hefesto-dualsense4unix-log)` idem para as áreas de log. */
+   `:not(.hefesto-dualsense4unix-log)` idem para as áreas de log.
+   O cromo (barra de título, rodapé) e os sub-painéis vencem por seletor mais
+   específico/posterior, no fim do arquivo — não por mais um `:not()`, que já
+   estava virando lista. */
 .hefesto-dualsense4unix-window box:not(.hefesto-dualsense4unix-card),
 .hefesto-dualsense4unix-window frame:not(.hefesto-dualsense4unix-card),
 .hefesto-dualsense4unix-window grid:not(.hefesto-dualsense4unix-card),
@@ -295,9 +382,11 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window stack:not(.hefesto-dualsense4unix-card) {
     background-color: transparent;
 }
-/* Frame border (a moldura em si) — linha sutil escura, não o claro do sistema. */
+/* Frame border (a moldura em si) — divisória entre seções, então @border_soft
+   (#343746). O #44475a de antes é o token de CONTORNO DE CAMPO interativo:
+   usá-lo aqui dava à moldura de seção o mesmo peso de um input. */
 .hefesto-dualsense4unix-window frame > border {
-    border-color: #44475a;
+    border-color: @border_soft;
 }
 /* Corpo de TreeView (lista de perfis, bindings de teclado): sem regra nossa,
    herdava o branco do tema claro do COSMIC. Casa com a window. A linha
@@ -361,6 +450,71 @@ messagedialog button:active {
     border: 1px solid #bd93f9;
     border-radius: 50%;
 }
+/* BUG-GUI-ACENTO-AZUL-VAZANDO-01: o AZUL do tema do sistema (#3584e4) aparecia
+   em tudo que o GTK pinta com a cor de acento e nós não tínhamos coberto — a
+   parte preenchida de todo GtkScale, a barra de bateria, o switch ligado e o
+   check marcado. Era a única cor da tela fora da paleta Drácula, e chegava
+   justamente nos controles que a usuária mais olha. O acento é @purple; o
+   trilho vazio é @elevated (o degrau "elevado" das superfícies).
+   Mesma família do BUG-GUI-ABA-ATIVA-AZUL-01 na aba ativa. */
+.hefesto-dualsense4unix-window scale highlight,
+.hefesto-dualsense4unix-window scale fill {
+    background-color: @purple;
+    border-radius: 4px;
+}
+/* BUG-GUI-BATERIA-FIO-INVISIVEL-01: a barra de bateria herdava a altura do
+   Adwaita (~3 px) e virava um fio — no card do controle, ao lado de blocos de
+   40-80 px, ela sumia. Pior: o GtkProgressBar nasce com `show-text=True`
+   (main.glade:269) e o percentual, que é a informação que a usuária de fato
+   procura, era pintado com a cor de texto do tema do sistema e não aparecia.
+   Altura de 10 px (o degrau `.hefesto-micro` da escala) e cor de texto
+   explícita resolvem os dois. */
+.hefesto-dualsense4unix-window progressbar trough {
+    background-color: @elevated;
+    border: none;
+    border-radius: 5px;
+    min-height: 10px;
+}
+.hefesto-dualsense4unix-window progressbar progress {
+    background-color: @purple;
+    border: none;
+    border-radius: 5px;
+    min-height: 10px;
+}
+.hefesto-dualsense4unix-window progressbar text,
+.hefesto-dualsense4unix-window progressbar > text {
+    color: @text_soft;
+    font-size: 10px;
+}
+.hefesto-dualsense4unix-window switch {
+    background-color: @elevated;
+    border: 1px solid @border_soft;
+}
+.hefesto-dualsense4unix-window switch:checked {
+    background-color: @purple;
+    border-color: @purple;
+}
+.hefesto-dualsense4unix-window switch slider {
+    background-color: @fg;
+    border: none;
+}
+.hefesto-dualsense4unix-window switch:checked slider {
+    background-color: @app_bg;
+}
+.hefesto-dualsense4unix-window check,
+.hefesto-dualsense4unix-window radio {
+    background-image: none;
+    background-color: @app_bg;
+    border: 1px solid @current_line;
+}
+.hefesto-dualsense4unix-window check:checked,
+.hefesto-dualsense4unix-window check:indeterminate,
+.hefesto-dualsense4unix-window radio:checked {
+    background-image: none;
+    background-color: @purple;
+    border-color: @purple;
+    color: @app_bg;
+}
 
 /* H4 — headers do TreeView (aba Perfis e outras) em accent Drácula purple
    para diferenciar das linhas. Sem accent, "Nome/Prio/Match" somem no branco. */
@@ -373,49 +527,116 @@ messagedialog button:active {
 /* Fundo do notebook + header das abas. Sem isto, a tira de abas herda o tema
    claro do sistema (Yaru/Adwaita) e fica BRANCA contra o corpo Drácula.
    BUG-GUI-NOTEBOOK-HEADER-WHITE-01 (COSMIC). As abas em si (regras abaixo)
-   ficam transparentes sobre este header escuro. */
+   ficam transparentes sobre este header escuro.
+
+   O corpo do notebook é o FUNDO DA JANELA (@app_bg): é sobre ele que os cards
+   (@bg) flutuam. A tira de abas é CROMO (@chrome) — meio tom acima da janela,
+   meio abaixo do card — separada do corpo por uma divisória @border_soft.
+   Antes os três eram o mesmo #282a36 do card e nada se destacava de nada. */
 .hefesto-dualsense4unix-window notebook,
+.hefesto-dualsense4unix-window notebook > stack {
+    background-color: @app_bg;
+}
 .hefesto-dualsense4unix-window notebook > header,
 .hefesto-dualsense4unix-window notebook > header.top,
-.hefesto-dualsense4unix-window notebook > header.bottom,
-.hefesto-dualsense4unix-window notebook > stack {
-    background-color: #282a36;
+.hefesto-dualsense4unix-window notebook > header.bottom {
+    background-color: @chrome;
 }
+/* A tira de abas encosta nas bordas da janela (o `margin` do GtkNotebook saiu
+   do glade para o cromo poder sangrar); o recuo do mockup vira padding daqui. */
 .hefesto-dualsense4unix-window notebook > header {
-    border-color: #44475a;
+    border-color: @border_soft;
+    border-bottom: 1px solid @border_soft;
+    padding: 0 14px;
 }
 .hefesto-dualsense4unix-window notebook > header > tabs > tab {
     background: transparent;
     border: none;
+    box-shadow: none;
     color: @text_muted;
+    font-size: 13px;
     padding: 8px 14px;
 }
 /* A aba ativa é o único lugar da interface, além da marca, onde o rosa aparece.
-   Era roxa e disputava a atenção com todo item selecionado da tela. */
+   Era roxa e disputava a atenção com todo item selecionado da tela.
+
+   BUG-GUI-ABA-ATIVA-AZUL-01: o rosa nunca aparecia. O Adwaita marca a aba ativa
+   com `box-shadow: inset 0 -3px <accent>` — 3px do AZUL #3584e4 desenhados por
+   cima, sobrando 1px do nosso rosa embaixo. `border-bottom` não briga com
+   box-shadow: são camadas diferentes. Desligar a sombra é o que faz a marca do
+   design chegar na tela. */
 .hefesto-dualsense4unix-window notebook > header > tabs > tab:checked {
     color: @fg;
+    box-shadow: none;
     border-bottom: 2px solid @pink;
 }
 .hefesto-dualsense4unix-window notebook > header > tabs > tab:hover {
     color: @text_soft;
 }
 
-/* Cards internos (ex.: log systemctl, mapeamento mouse) */
+/* Cards internos (ex.: log systemctl, mapeamento mouse, ficha de controle).
+   DECLARAÇÃO ÚNICA: existiam duas (esta e uma cópia no fim do arquivo, da
+   FEAT-GUI-HOME-TAB-01), e a segunda sobrescrevia padding e raio desta — quem
+   editasse aqui não via efeito nenhum e ia atrás de especificidade que não era
+   o problema.
+
+   O card é o nível que FLUTUA: fundo @bg sobre a janela @app_bg. Estava ao
+   contrário (card #21222c mais escuro que a janela #282a36), o que fazia o
+   card parecer um buraco em vez de uma superfície. A borda é @border_soft
+   (divisória), não @current_line (que é contorno de campo interativo). */
 .hefesto-dualsense4unix-card {
-    background-color: #21222c;
-    border: 1px solid #44475a;
-    border-radius: 6px;
-    padding: 12px;
+    background-color: @bg;
+    border: 1px solid @border_soft;
+    border-radius: 10px;
+    padding: 9px 14px;
 }
 
-.hefesto-dualsense4unix-log textview {
+/* SUB-PAINEL — o bloco de dentro do card (Giroscópio, Microfone, Touchpad,
+   Lightbar, alto-falante, analógicos, painel de botões). Volta ao @app_bg da
+   janela: é um recorte AFUNDADO no card, o que dá o quarto nível de
+   profundidade sem inventar cor. Use em GtkBox/GtkFrame/GtkGrid.
+   As variantes escopadas na window existem para vencer a regra genérica de
+   container (`box:not(.card) { background: transparent }`) mais abaixo. */
+.hefesto-subpainel,
+.hefesto-dualsense4unix-window box.hefesto-subpainel,
+.hefesto-dualsense4unix-window frame.hefesto-subpainel,
+.hefesto-dualsense4unix-window grid.hefesto-subpainel {
+    background-color: @app_bg;
+    border: 1px solid @border_soft;
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+/* Área de log (Detalhes técnicos da aba Sistema, saída do systemctl).
+   BUG-GUI-LOG-TEXTVIEW-BRANCO-01: o seletor era `.hefesto-dualsense4unix-log
+   textview` — DESCENDENTE. Mas a classe está no PRÓPRIO GtkTextView
+   (main.glade), não num container em volta, então a regra nunca casava e o
+   textview herdava o branco do tema do sistema: uma caixa BRANCA no meio de
+   uma interface escura. Agora casa o nó direto (`textview.classe`) e o nó
+   filho `text`, que é onde o GTK3 pinta o fundo do texto de verdade. A forma
+   descendente fica junto para quem aplicar a classe num container. */
+.hefesto-dualsense4unix-log,
+textview.hefesto-dualsense4unix-log,
+.hefesto-dualsense4unix-log textview,
+.hefesto-dualsense4unix-window textview.hefesto-dualsense4unix-log,
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-log textview {
     background-color: @app_bg;
     color: #f8f8f2;
     font-family: "JetBrains Mono", "Fira Code", monospace;
     font-size: 11px;
 }
-.hefesto-dualsense4unix-log textview text {
+textview.hefesto-dualsense4unix-log text,
+.hefesto-dualsense4unix-log textview text,
+.hefesto-dualsense4unix-window textview.hefesto-dualsense4unix-log text,
+.hefesto-dualsense4unix-window .hefesto-dualsense4unix-log textview text {
     background-color: @app_bg;
+    color: #f8f8f2;
+}
+/* A seleção dentro do log também vinha do tema do sistema (azul claro). */
+textview.hefesto-dualsense4unix-log text selection,
+.hefesto-dualsense4unix-log textview text selection {
+    background-color: @sel_bg;
+    color: #f8f8f2;
 }
 
 .hefesto-dualsense4unix-status-ok     { color: #50fa7b; }
@@ -597,7 +818,16 @@ messagedialog button:active {
  * engolir a aba; a fonte levemente reduzida mantem a leitura. */
 .hefesto-segmented-compact button {
     padding: 3px 8px;
-    font-size: 92%;
+    /* O `92%` de antes era RELATIVO à fonte que a distribuição tivesse
+       configurado: o mesmo botão saía de tamanho diferente em cada máquina.
+       Vira o degrau `.hefesto-rotulo` (12px) e não os 11px do mockup porque
+       esta classe não pega só o grid de gatilhos — pega TODO SegmentedSelector
+       em grade, inclusive o seletor de modo da aba Início, que é o controle
+       mais importante da interface. 11px encolhia a decisão principal para
+       ganhar espaço numa aba que já sobra espaço.
+       6px é o raio do mockup para o grid de modos (botão comum 8px, card 10px). */
+    font-size: 12px;
+    border-radius: 6px;
     min-height: 0;
 }
 
@@ -646,8 +876,104 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window button.btn-trigger-off:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-trigger-off:active { background-color: @current_line; }
 
-/* FEAT-GUI-HOME-TAB-01: cards de controle da aba Inicio. */
-.hefesto-dualsense4unix-card {
-    padding: 8px;
-    border-radius: 6px;
+/* FEAT-GUI-HOME-TAB-01: os cards de controle da aba Início usavam esta segunda
+   declaração de `.hefesto-dualsense4unix-card` só para apertar o padding. Ela
+   sobrescrevia (por ordem) o padding e o raio da declaração de verdade, lá em
+   cima — duas fontes da mesma verdade. Unificada: a regra única já nasce
+   compacta (9px 14px) e com o raio 10px do mockup. */
+
+/* ===========================================================================
+ * CROMO DA JANELA — barra de título, tira de abas e rodapé.
+ *
+ * Estes três são a moldura fixa em volta do conteúdo e ficam em @chrome
+ * (#242630): meio tom acima do fundo da janela, meio tom abaixo do card. É o
+ * que faz o conteúdo parecer estar DENTRO de um app em vez de solto numa
+ * superfície única. Nenhum deles tinha regra nossa — herdavam o fundo da
+ * window e a tela inteira era um chapado só.
+ *
+ * As regras vêm no FIM do arquivo e escopadas na window de propósito: a regra
+ * genérica de container (`box:not(.card) { background: transparent }`) tem a
+ * mesma especificidade, e aqui o desempate por ordem tem de cair para este
+ * lado. Mexer de lugar quebra o cromo sem erro nenhum aparecer.
+ * =========================================================================== */
+.hefesto-dualsense4unix-window box.hefesto-barra-titulo {
+    background-image: linear-gradient(to bottom, @bg, @chrome);
+    background-color: @chrome;
+    border-bottom: 1px solid @border_soft;
+    padding: 10px 14px 8px 14px;
+}
+.hefesto-dualsense4unix-window box.hefesto-rodape {
+    background-color: @chrome;
+    border-top: 1px solid @border_soft;
+    padding: 6px 14px;
+}
+
+/* A nota do rodapé é um GtkStatusbar, e o GtkLabel de dentro dele nasce com
+   ellipsize END fixado no código do GTK — não dá para desligar por CSS nem
+   pelo Glade. Com a fonte herdada (11pt do sistema) a frase mais longa da
+   interface ("Política exibida = estado atual do daemon; o perfil não tem
+   opinião…") pedia ~830px e sobravam ~680: cortava com "…" em toda aba que a
+   mostrava. No degrau `.hefesto-dica` (11px) ela cabe inteira.
+   BUG-GUI-RODAPE-TRUNCADO-01. */
+.hefesto-dualsense4unix-window statusbar,
+.hefesto-dualsense4unix-window statusbar label {
+    background-color: transparent;
+    color: @comment;
+    font-size: 11px;
+}
+
+/* Divisórias (GtkSeparator entre cabeçalho e notebook) na cor de divisória. */
+.hefesto-dualsense4unix-window separator {
+    background-color: @border_soft;
+    min-height: 1px;
+    min-width: 1px;
+}
+
+/* `.dim-label` é a classe de "texto secundário" do GTK e a interface usa em 20
+   lugares (18 no Python, 2 no glade) — mas NUNCA foi definida aqui. Sem
+   definição ela caía no `.dim-label { opacity: 0.55 }` do tema do sistema:
+   o rótulo virava o @fg branco a 55%, um cinza que não é nenhum dos tokens de
+   texto do design. Definida, os degraus @text_muted/@text_soft finalmente
+   chegam na tela. `opacity: 1` é obrigatório — sem ele o tema do sistema
+   continua apagando por cima da cor certa.
+   A variante solta cobre diálogos e menus; a escopada na window vence
+   `.hefesto-dualsense4unix-window label { color: @fg }` (0,1,1). */
+.dim-label {
+    color: @text_muted;
+    opacity: 1;
+    font-size: 12px;
+}
+.hefesto-dualsense4unix-window .dim-label,
+.hefesto-dualsense4unix-window label.dim-label {
+    color: @text_muted;
+    opacity: 1;
+    font-size: 12px;
+}
+/* Um `.dim-label` desabilitado desce mais um degrau em vez de ficar
+   transparente (que no COSMIC deixava o tema claro vazar). */
+.hefesto-dualsense4unix-window label.dim-label:disabled {
+    color: @comment;
+    opacity: 1;
+}
+
+/* Contraparte HighContrast das superfícies novas (FEAT-A11Y-HIGH-CONTRAST-01):
+   sem isto o cromo e os sub-painéis manteriam os cinzas Drácula dentro do modo
+   preto-e-amarelo, que é justamente o que o modo existe para eliminar. Vêm
+   depois das regras normais para vencer o desempate por ordem. */
+.hefesto-dualsense4unix-high-contrast box.hefesto-barra-titulo,
+.hefesto-dualsense4unix-high-contrast box.hefesto-rodape,
+.hefesto-dualsense4unix-high-contrast box.hefesto-subpainel,
+.hefesto-dualsense4unix-high-contrast frame.hefesto-subpainel,
+.hefesto-dualsense4unix-high-contrast grid.hefesto-subpainel,
+.hefesto-dualsense4unix-high-contrast .hefesto-dualsense4unix-card,
+.hefesto-dualsense4unix-high-contrast notebook > header {
+    background-image: none;
+    background-color: #000;
+    border-color: #ff0;
+}
+.hefesto-dualsense4unix-high-contrast .dim-label,
+.hefesto-dualsense4unix-high-contrast label.dim-label,
+.hefesto-dualsense4unix-high-contrast statusbar label {
+    color: #fff;
+    opacity: 1;
 }
