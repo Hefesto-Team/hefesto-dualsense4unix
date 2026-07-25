@@ -60,6 +60,44 @@ BT_FEATURE_CRC_SEED = 0xA3
 # --- bits de valid_flag0 (common[0]) ---------------------------------------
 VALID_FLAG0_COMPATIBLE_VIBRATION = 0x01
 VALID_FLAG0_HAPTICS_SELECT = 0x02
+#: 0x04/0x08 habilitam o bloco de efeito de gatilho DIREITO/ESQUERDO
+#: (common[10..20] / common[21..31]) — esses NÓS controlamos (perfis).
+VALID_FLAG0_RIGHT_TRIGGER_FFB = 0x04
+VALID_FLAG0_LEFT_TRIGGER_FFB = 0x08
+#: 0x10..0x80 habilitam os QUATRO bytes de áudio common[4..7] — volume do
+#: fone (4), volume do alto-falante interno (5), volume do microfone (6) e o
+#: byte de roteamento/caminho de áudio (7). O kernel (`hid-playstation`)
+#: declara common[4..7] como `reserved[4]` e NUNCA os escreve; a nomenclatura
+#: por bit vem da documentação de comunidade do report 0x02 (Nielk1 / DS5
+#: wiki), que é a única fonte que os descreve — por isso o mapeamento
+#: bitbyte está documentado como PROVÁVEL, não como medido.
+VALID_FLAG0_HEADPHONE_VOLUME = 0x10
+VALID_FLAG0_SPEAKER_VOLUME = 0x20
+VALID_FLAG0_MIC_VOLUME = 0x40
+VALID_FLAG0_AUDIO_PATH = 0x80
+
+#: AUDIO-OWNER-01: máscara dos bits de flag0 que autorizam o firmware a
+#: adotar common[4..7]. Enquanto o hefesto não tiver um valor de volume para
+#: mandar, esta máscara sai ZERADA — asserir autoridade sobre um campo que
+#: escrevemos como 0x00 a 60 Hz é mandar "volume zero" com cara de keepalive
+#: (é a MESMA classe de defeito do keepalive de vibração do GUERRA-01, que já
+#: zerava o rumble de terceiros neste projeto).
+VALID_FLAG0_AUDIO_MASK = (
+    VALID_FLAG0_HEADPHONE_VOLUME
+    | VALID_FLAG0_SPEAKER_VOLUME
+    | VALID_FLAG0_MIC_VOLUME
+    | VALID_FLAG0_AUDIO_PATH
+)
+
+#: Offsets dos bytes de áudio dentro do common (os que a máscara acima valida).
+COMMON_HEADPHONE_VOLUME = 4
+COMMON_SPEAKER_VOLUME = 5
+COMMON_MIC_VOLUME = 6
+COMMON_AUDIO_PATH = 7
+
+#: Bit de MUDO do microfone dentro de `common[9]` (power_save_control) —
+#: `DS_OUTPUT_POWER_SAVE_CONTROL_MIC_MUTE` do `hid-playstation`.
+POWER_SAVE_MIC_MUTE = 0x10
 
 # --- bits de valid_flag1 (common[1]) ---------------------------------------
 VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE = 0x01
@@ -149,12 +187,24 @@ __all__ = [
     "BT_REPORT_ID",
     "BT_REPORT_LEN",
     "BT_TAG",
+    "COMMON_AUDIO_PATH",
+    "COMMON_HEADPHONE_VOLUME",
     "COMMON_LEN",
+    "COMMON_MIC_VOLUME",
+    "COMMON_SPEAKER_VOLUME",
     "COMMON_VALID_FLAG2",
+    "POWER_SAVE_MIC_MUTE",
     "USB_REPORT_ID",
     "USB_REPORT_LEN",
+    "VALID_FLAG0_AUDIO_MASK",
+    "VALID_FLAG0_AUDIO_PATH",
     "VALID_FLAG0_COMPATIBLE_VIBRATION",
     "VALID_FLAG0_HAPTICS_SELECT",
+    "VALID_FLAG0_HEADPHONE_VOLUME",
+    "VALID_FLAG0_LEFT_TRIGGER_FFB",
+    "VALID_FLAG0_MIC_VOLUME",
+    "VALID_FLAG0_RIGHT_TRIGGER_FFB",
+    "VALID_FLAG0_SPEAKER_VOLUME",
     "VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE",
     "VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE",
     "VALID_FLAG1_MOTOR_POWER",

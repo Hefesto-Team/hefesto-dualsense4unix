@@ -489,6 +489,15 @@ async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
 async def shutdown(daemon: DaemonProtocol) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
+    # BT-MIC-REGISTRY-01: a ponte de microfone é a PRIMEIRA a cair — parar as
+    # pontes é o que manda o report 0x32 de "desliga o mic" para cada
+    # controle. Deixar isso para o fim do shutdown (ou perder para uma exceção
+    # de outro subsystem) deixaria o microfone LIGADO no firmware depois que o
+    # daemon já morreu, e ninguém o desligaria até o controle desligar.
+    parar_bt_mic = getattr(daemon, "_stop_bt_mic", None)
+    if getattr(daemon, "_bt_mic_subsystem", None) is not None and callable(parar_bt_mic):
+        with contextlib.suppress(Exception):
+            await parar_bt_mic()
     # Plugins: stop antes dos outros subsystems (on_unload pode usar controller).
     if daemon._plugins_subsystem is not None:
         with contextlib.suppress(Exception):
