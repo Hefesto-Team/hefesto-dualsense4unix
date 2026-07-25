@@ -87,7 +87,7 @@ def _montar() -> tuple[Gtk.Builder, Gtk.Widget]:
 
 
 def test_janela_cabe_sem_rolagem() -> None:
-    """Header + abas + rodapé têm de caber nos 680px que a janela abre."""
+    """Header + abas + rodapé têm de caber na altura com que a janela abre."""
     _builder, root = _montar()
 
     altura, _ = root.get_preferred_height_for_width(LARGURA)
