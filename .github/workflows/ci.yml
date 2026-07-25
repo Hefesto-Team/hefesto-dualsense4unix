@@ -60,7 +60,7 @@ jobs:
           fi
           if [ "$PYPROJECT_VERSION" != "$FALLBACK_VERSION" ]; then
             echo "::error::Fallback desatualizado: __init__.py=$FALLBACK_VERSION mas pyproject.toml=$PYPROJECT_VERSION"
-            echo "::error::Bump ambos juntos no release. Ver docs/process/sprints/CHORE-VERSION-SYNC-GATE-01.md"
+            echo "::error::Bump ambos juntos no release (sprint CHORE-VERSION-SYNC-GATE-01, no arquivo de processo)."
             exit 1
           fi
           echo "Sync OK: ambos em $PYPROJECT_VERSION"

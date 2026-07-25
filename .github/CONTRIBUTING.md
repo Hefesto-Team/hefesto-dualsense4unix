@@ -6,7 +6,7 @@ Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de d
 
 ## Natureza do projeto
 
-Hefesto - Dualsense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas (ver `docs/process/SPRINT_ORDER.md`) com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
+Hefesto - Dualsense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
 
 **Contribuições externas de pessoas desconhecidas passam por revisão manual antes do merge.** Não há prazo garantido de resposta, mas toda PR bem documentada será lida.
 
@@ -74,11 +74,14 @@ Se algum falhar, corrija antes de seguir. Não use `--no-verify` para bypassar h
 
 ## Fluxo de sprint
 
-O projeto organiza trabalho em **sprints** rastreadas em `docs/process/SPRINT_ORDER.md`. Cada sprint tem:
+O projeto organiza trabalho em **sprints**. Cada sprint tem:
 
 - ID canônico (`FEAT-*`, `BUG-*`, `REFACTOR-*`, `CHORE-*`, `DOCS-*`, `INFRA-*`, `AUDIT-*`).
-- Spec em `docs/process/sprints/<ID>.md` com contexto, decisão, critérios de aceite e proof-of-work.
+- Spec própria com contexto, decisão, critérios de aceite e proof-of-work.
 - Status: `PLANNED`, `READY`, `IN_PROGRESS`, `MERGED`, `PROTOCOL_READY`, `SUPERSEDED`.
+
+As specs e o índice de status vivem no arquivo de processo, fora da `main` (ver
+"Arquivo de processo" no fim deste documento).
 
 Para contribuir:
 
@@ -87,7 +90,7 @@ Para contribuir:
 3. Implemente seguindo o spec; não expanda escopo sem registrar achado colateral.
 4. Se tocar runtime (HID, daemon, IPC), prove via smoke real: `./run.sh --smoke`.
 5. Se tocar UI/TUI/GUI, anexe screenshot + sha256 + descrição multimodal.
-6. Se descobrir algo não-óbvio, registre em `docs/process/discoveries/`.
+6. Se descobrir algo não-óbvio, registre: ADR em `docs/adr/` quando muda arquitetura, nota em `docs/research/` quando é medição.
 
 ---
 
@@ -211,10 +214,23 @@ ficam com `msgstr ""` ou `#, fuzzy`.
 
 Abra uma issue com o template `question` ou consulte:
 
-- `AGENTS.md` — protocolo do repo.
-- `docs/process/HEFESTO_DECISIONS_V2.md` e `HEFESTO_DECISIONS_V3.md` — decisões consolidadas.
 - `docs/adr/` — Architecture Decision Records.
 - `docs/usage/quickstart.md` — uso da ferramenta.
+- `docs/research/` — pesquisas e medições.
+
+---
+
+## Arquivo de processo
+
+Sprints, estudos, diário de descobertas, decisões V1/V2/V3 e roadmap interno
+**não ficam na `main`** — são material de processo, preservado inteiro na tag
+`arquivo/processo-pre-1.0`. Todo caminho `docs/process/...` citado em
+comentários, docstrings ou docs deste repositório se resolve por ali:
+
+```bash
+git show arquivo/processo-pre-1.0:docs/process/SPRINT_ORDER.md
+git checkout arquivo/processo-pre-1.0 -- docs/process
+```
 
 ---
 

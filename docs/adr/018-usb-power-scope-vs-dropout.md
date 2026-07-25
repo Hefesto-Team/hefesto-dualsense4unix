@@ -6,7 +6,7 @@ Supply Idle Control, não há alavanca de software, recomendar trocar de porta o
 Bluetooth) foi **SUPERADA**: a causa-raiz do `-71` nesta plataforma é a
 **enumeração do áudio USB do DualSense** (port-independente, não C-state/BIOS) e
 **há duas alavancas de software** suportadas pelo Hefesto. Doc canônico:
-`docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
+`arquivo/processo-pre-1.0:docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
 
 ## Emenda (2026-06-26): a causa-raiz do `-71` é a enumeração do áudio USB — e há alavancas de software
 

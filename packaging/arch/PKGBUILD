@@ -1,8 +1,8 @@
 # Maintainer: Vitoria Maria <[REDACTED]>
 # Contributor: Andre Farias <noreply@example.com>
 #
-# PKGBUILD para o Hefesto - Dualsense4Unix (daemon de gatilhos adaptativos
-# para DualSense no Linux). v3.4.0 (FEAT-PACKAGING-ARCH-01).
+# PKGBUILD para o Hefesto - Dualsense4Unix (gerenciador DualSense para
+# Linux). FEAT-PACKAGING-ARCH-01.
 #
 # Strategy: o pacote consolida deps Python via `pip install --root --prefix
 # /usr` para cobrir pydualsense (sem pacote oficial em repos Arch), e usa
@@ -13,7 +13,7 @@
 pkgname=hefesto-dualsense4unix
 pkgver=4.0.0
 pkgrel=1
-pkgdesc="Linux adaptive trigger daemon for the PS5 DualSense controller (GTK3 GUI + CLI + TUI)"
+pkgdesc="DualSense controller manager for Linux (GTK3 GUI + CLI + TUI)"
 arch=('any')
 url="https://github.com/AndreBFarias/hefesto-dualsense4unix"
 license=('MIT')

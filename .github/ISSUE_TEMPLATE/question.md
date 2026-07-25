@@ -11,7 +11,7 @@ Descreva de forma clara e específica o que você quer entender.
 ## Contexto
 
 - O que você está tentando fazer?
-- Onde já procurou a resposta? (`README.md`, `docs/usage/quickstart.md`, `AGENTS.md`, issues fechadas)
+- Onde já procurou a resposta? (`README.md`, `docs/usage/`, issues fechadas)
 - O que já tentou?
 
 ## Ambiente (se aplicável)

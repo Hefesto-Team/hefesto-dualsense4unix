@@ -166,17 +166,30 @@ hefesto-dualsense4unix test led --color '#ff0000' --brightness 40
 hefesto-dualsense4unix test rumble --weak 128 --strong 64
 ```
 
-## `hefesto-dualsense4unix emulate`
+## `hefesto-dualsense4unix gamepad` (o controle virtual)
+
+Substituiu o antigo `emulate xbox360`, que subia um processo avulso e abria um
+**segundo** leitor do mesmo controle (double input). Agora quem cria o controle
+virtual é o daemon:
 
 ```bash
-hefesto-dualsense4unix emulate xbox360           # cria gamepad virtual Xbox360 via uinput
-hefesto-dualsense4unix emulate xbox360 --off
+hefesto-dualsense4unix gamepad on                     # máscara padrão
+hefesto-dualsense4unix gamepad on --flavor xbox       # o jogo vê um Xbox
+hefesto-dualsense4unix gamepad on --flavor dualsense  # o jogo vê um DualSense
+hefesto-dualsense4unix gamepad off
+hefesto-dualsense4unix gamepad status
 ```
 
 ## Demais comandos
 
 - `hefesto-dualsense4unix status` — estado do daemon via IPC (fallback local se offline).
+- `hefesto-dualsense4unix doctor` — diagnóstico ponta a ponta (`--fix`, `--fix-safe`, `--quiet`).
 - `hefesto-dualsense4unix battery` — percentual de bateria.
+- `hefesto-dualsense4unix mic on|off|status` — microfone embutido do DualSense.
+- `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
+- `hefesto-dualsense4unix coop on|off|status` — co-op local (cada controle = um jogador).
+- `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
+- `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.
 - `hefesto-dualsense4unix tray` — abre o tray GTK3 (extra `[tray]`).
 - `hefesto-dualsense4unix version` — versão instalada.

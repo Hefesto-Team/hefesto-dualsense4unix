@@ -40,7 +40,7 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
 >   `sudo bash scripts/install_udev.sh --disable-usb-audio`.
 >
 > Detalhe e A/B completo:
-> `docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
+> `arquivo/processo-pre-1.0:docs/process/discoveries/2026-06-26-storm-audio-pesquisa-profunda-quirk-vs-audiooff.md`.
 
 **Fix**:
 
@@ -118,8 +118,8 @@ busctl --user list | grep -i StatusNotifierWatcher  # provavelmente vazio
    env | grep COMPACT_WINDOW          # esperado: vazio (default ligado)
    ```
 2. **Habilitar cosmic-applets de status**: aguardando lançamento do
-   `cosmic-applet-status-area` no Pop!_OS estável. Acompanhe
-   [ROADMAP v3.4](../process/ROADMAP.md) para applet Rust nativo.
+   `cosmic-applet-status-area` no Pop!_OS estável. O projeto já traz um applet
+   COSMIC nativo em Rust (`packaging/cosmic-applet/`), instalado por padrão.
 3. **Desativar janela compacta** se preferir só GUI principal:
    `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0 hefesto-dualsense4unix-gui`.
 
@@ -266,7 +266,7 @@ O `.deb` empacota um virtualenv com pydantic 2.x em
 
 ## 9. Cursor voador / mouse emulado fora de controle
 
-**Sintoma**: ao ativar emulação de mouse (aba Mouse), o cursor sai
+**Sintoma**: ao ativar emulação de mouse (aba Navegação DSX), o cursor sai
 voando ou pula para o canto da tela.
 
 **Diagnóstico**:
@@ -277,9 +277,9 @@ hefesto-dualsense4unix mouse status   # confirma toggle on/off
 
 **Fix**:
 
-1. **Recalibrar deadzone do giroscópio**: aba Mouse → slider "Deadzone"
+1. **Recalibrar deadzone do giroscópio**: aba Navegação DSX → slider "Deadzone"
    → aumente para 8-12%.
-2. **Desativar mouse via giroscópio**: a aba Mouse permite só pad ou só
+2. **Desativar mouse via giroscópio**: a aba Navegação DSX permite só pad ou só
    giroscópio. Pad é mais previsível.
 3. **`uinput` permission denied**: `sudo modprobe uinput && sudo chmod
    0660 /dev/uinput`. O `install_udev.sh` cuida disso via regra
@@ -300,7 +300,7 @@ systemctl --user is-active hefesto-dualsense4unix.service
 
 **Fix**:
 
-Desde v3.2.0, a GUI mostra "Desconectado — abra a aba Daemon e clique
+Desde v3.2.0, a GUI mostra "Desconectado — abra a aba Sistema e clique
 em Iniciar" após 5s sem resposta IPC (UI-STATUS-OFFLINE-FALLBACK-01).
 Se ainda vê "Consultando..." indefinidamente, está rodando uma versão
 antiga — atualize via:
@@ -590,9 +590,11 @@ adição mínima — mas resolve o sintoma sem reinstalar o daemon.
 ## Recursos
 
 - [README principal](../../README.md) — instalação e uso
-- [Quickstart visual](quickstart.md) — primeiros passos com screenshots
+- [Quickstart](quickstart.md) — primeiros passos
+- [A janela, aba por aba](interface.md) — o que cada aba faz
 - [8BitDo SN30 Pro](troubleshooting-8bitdo.md) — modos, identificação e a morte por Bluetooth (controle não gerenciado pelo hefesto)
-- [ROADMAP](../process/ROADMAP.md) — o que vem nas próximas releases
 - [ADR-014](../adr/014-cosmic-wayland-support.md) — decisão técnica COSMIC/Wayland
-- [Diário de descobertas](../process/discoveries/) — bugs encontrados e fixes
 - [CHANGELOG](../../CHANGELOG.md) — histórico completo
+
+O diário de descobertas e o roadmap interno ficam no arquivo de processo, fora
+da `main` (`git show arquivo/processo-pre-1.0:docs/process/ROADMAP.md`).
