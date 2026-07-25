@@ -1,0 +1,26 @@
+# Baseline do módulo DKMS hefesto-hid-playstation (contenção BT 25/07)
+# O hid-playstation.c deste diretório == vanilla v7.0.11 + patches aplicados
+# NA ORDEM da lista PATCH abaixo.
+# Paridade verificável (reverte na ordem INVERSA):
+#   patch -R -p3 hid-playstation.c < patch/0001-*.patch
+# deve reproduzir exatamente SHA256_VANILLA_C.
+#
+# Proveniência do vanilla: baixado de
+#   raw.githubusercontent.com/pop-os/linux/<POP_LINUX_COMMIT>/drivers/hid/hid-playstation.c
+# O MESMO commit forneceu o hid-ids.h, que bateu byte a byte com o já
+# vendorado em assets/dkms/hid-nintendo/ (SHA256_HID_IDS_H idêntico nos dois
+# pacotes) — é essa coincidência que prova que o commit é o certo.
+#
+# NÃO use `srcversion` para conferir proveniência: ele NÃO é reprodutível
+# entre build in-tree e build out-of-tree. Controle feito em 25/07 — o
+# hid-nintendo vanilla, revertido dos patches e com sha256 batendo o
+# SHA256_VANILLA_C do pacote vizinho, compilou para srcversion
+# E510116794E5943C26F761D contra 098AB755D743D99788D82ED do in-tree do Pop.
+# O juiz de identidade do fonte é o sha256 do .c, e só ele.
+KERNEL_BASE=v7.0.11
+KERNEL_TESTED=7.0.11-76070011-generic
+POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
+SHA256_VANILLA_C=bdb6ed1d1e0dc27f10a7e25ec758c1cc45eaf0ef00f026fe733aafc6f0f09db2
+SHA256_PATCHED_C=e487e55c2322f41f4de8222d8155e7ca03ed8ab8cbafb759476a51467c1b3df4
+SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
+PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch

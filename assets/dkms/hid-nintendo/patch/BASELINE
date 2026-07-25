@@ -2,6 +2,7 @@
 # O hid-nintendo.c deste diretório == vanilla v7.0.11 + patches aplicados
 # NA ORDEM da lista PATCH abaixo.
 # Paridade verificável (reverte na ordem INVERSA):
+#   patch -R -p3 hid-nintendo.c < patch/0004-*.patch
 #   patch -R -p3 hid-nintendo.c < patch/0003-*.patch
 #   patch -R -p3 hid-nintendo.c < patch/0002-*.patch
 #   patch -R -p3 hid-nintendo.c < patch/0001-*.patch
@@ -10,8 +11,9 @@ KERNEL_BASE=v7.0.11
 KERNEL_TESTED=7.0.11-76070011-generic
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=6b71cb4925c9eea5f98d0f02c41bba85f6bb6bda242a6ee27d57ce2b79db2975
-SHA256_PATCHED_C=37349772bd36f497990baefa307e7e81ea6bb1bc5a4b2bb63a342e5110a50751
+SHA256_PATCHED_C=8fa3ae00eed5c2a769acc5f8fe5a716e0c02e40c05c2e675db315e83d9151dae
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
 PATCH=0001-HID-nintendo-do-not-transmit-after-rate-limit-exhaus.patch
 PATCH=0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch
 PATCH=0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch
+PATCH=0004-HID-nintendo-stop-waiting-on-a-controller-that-has-g.patch

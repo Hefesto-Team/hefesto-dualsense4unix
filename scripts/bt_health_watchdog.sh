@@ -3,7 +3,8 @@
 # persistência dos bonds (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md,
 # camada 2). Roda pelo hefesto-bt-health-watchdog.timer (a cada 2 min), root.
 #
-# Duas vigias independentes:
+# Vigias independentes (as duas primeiras dão nome ao script; as demais
+# entraram depois e estão documentadas no corpo, cada uma com sua medição):
 #
 # 1. ESTADO DOENTE pós-crash: o bluetoothd renascido recusa devices com
 #    "Refusing connection ... unknown device" / "error updating services" em
@@ -26,6 +27,14 @@
 #    o doctor exibe e o humano decide (remove + re-pair físico).
 #    2b (medido 22/07): device com bond são mas Trusted=false não autoriza
 #    reconexão ENTRANTE — o watchdog aplica Trusted=true via D-Bus (idempotente).
+#
+# 4. CONTROLE ÓRFÃO por probe perdida (REBIND-PROBE-01, medido 25/07): com dois
+#    controles subindo quase juntos, o segundo perde o canal de controle L2CAP,
+#    o GET_REPORT expira no BlueZ (REPORT_REQ_TIMEOUT = 3 s), o uhid entrega
+#    -EIO e a probe morre — device sem driver, sem hidraw, sem input, sem LED.
+#    É transiente: um rebind no driver VANILLA ressuscita (provado ao vivo).
+#    Delegado a scripts/bt_rebind_orphans.sh (escopo estreito + guarda contra
+#    laço). Vale ouro no alvo de 4 controles por Bluetooth ao mesmo tempo.
 set -euo pipefail
 
 JANELA_MIN=10
@@ -321,4 +330,31 @@ done <<<"${DEVICE_PATHS}"
 
 
 vigia_sdp_cache
+
+# --- vigia 4: controle ÓRFÃO por probe perdida (REBIND-PROBE-01, 25/07) ------
+# Quando dois controles sobem quase juntos no mesmo adaptador, o segundo pode
+# perder o canal de controle L2CAP: o GET_REPORT expira no BlueZ
+# (REPORT_REQ_TIMEOUT = 3 s), o uhid entrega -EIO ao driver e a probe morre. O
+# device fica em /sys/bus/hid/devices SEM driver — sem hidraw, sem input, sem
+# LED. É contenção TRANSIENTE: passada a janela, um rebind no driver VANILLA
+# ressuscita o controle (provado ao vivo 25/07 12:06). Com o alvo de 4
+# controles por Bluetooth, isso deixa de ser exceção.
+# A lógica (escopo estreito + guarda contra laço) fica toda no script
+# dedicado; aqui só chamamos. --quiet: em passagem normal não há órfão e o
+# watchdog não deve virar ruído de 2 em 2 min.
+vigia_rebind_orfaos() {
+    local _s
+    for _s in \
+        /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh \
+        "$(dirname "$(readlink -f "$0")")/bt_rebind_orphans.sh" \
+    ; do
+        if [[ -x "${_s}" ]]; then
+            "${_s}" --quiet || true
+            return 0
+        fi
+    done
+    return 0
+}
+
+vigia_rebind_orfaos
 exit 0

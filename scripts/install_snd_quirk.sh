@@ -19,7 +19,19 @@
 #
 # Idempotente (rodar 2x = no-op). Reversível (--remove). O módulo snd_usb_audio
 # carrega tarde (do root real, quando o áudio do controle é detectado) — NÃO está
-# no initramfs, então update-initramfs é desnecessário.
+# no initramfs, então update-initramfs é desnecessário AQUI.
+#
+# ATENÇÃO — esta dispensa vale SÓ para este arquivo, e a generalização dela
+# custou caro (INITRAMFS-01, 25/07). Para MÓDULO no initramfs a regra é a
+# oposta: o hid-nintendo entra na geração do initramfs (é driver de gamepad/
+# teclado USB) e o `dkms install` NÃO o regenera, então o boot continuava
+# carregando o .ko da geração anterior. Pior: como o módulo velho não tinha os
+# parâmetros do patch novo, o kernel descartava o /etc/modprobe.d/
+# hefesto-hid-nintendo.conf INTEIRO ("unknown parameter"), derrubando junto as
+# curas que já funcionavam. Quem mexe em módulo DKMS deve usar o
+# dkms_mark_initramfs_stale/dkms_flush_initramfs do scripts/dkms_lib.sh.
+# Confira se um módulo está no initramfs com:
+#   lsinitramfs /boot/initrd.img-$(uname -r) | grep NOME-DO-MODULO
 #
 # Uso:
 #   scripts/install_snd_quirk.sh            instala o drop-in (default; requer root)
