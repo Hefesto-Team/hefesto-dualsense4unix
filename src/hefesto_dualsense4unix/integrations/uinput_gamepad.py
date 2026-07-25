@@ -40,7 +40,6 @@ FEAT-VPAD-FF-PASSTHROUGH-01 — force-feedback (rumble do JOGO):
 from __future__ import annotations
 
 import contextlib
-import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -97,6 +96,18 @@ MAX_FF_EFFECTS = 16
 #: Cap de eventos FF drenados por tick — proteção contra flood no fd (jogo
 #: emitindo play/stop em rajada); o excedente fica para o próximo tick.
 _FF_MAX_EVENTS_PER_PUMP = 64
+
+#: Teto de segurança para efeito de duração 0 ("toca até mandar parar").
+#:
+#: Sem ele o deadline é infinito e SÓ o jogo pode parar o motor — se ele fecha
+#: no meio de uma vibração, trava, ou o evento de stop se perde, o controle
+#: vibra indefinidamente (relatado ao vivo: "não parava por nada", e a saída
+#: foi o botão "Parar", que por sua vez trava o rumble em silêncio).
+#:
+#: 30 s é generoso de propósito: qualquer novo play do mesmo efeito RENOVA o
+#: prazo, então uma cena que vibra continuamente segue vibrando enquanto o jogo
+#: mantiver o pedido. O teto só age quando ninguém está mais pedindo nada.
+FF_TETO_SEM_DURACAO_S = 30.0
 
 # Catálogo de flavors. `name`/`vendor`/`product` definem a máscara.
 # VPAD-04: a entrada dualsense usa o Edge (0x0df2) — NUNCA o 0x0ce6 do físico.
@@ -243,7 +254,8 @@ class UinputGamepad:
     _ff_supported: bool = False
     #: id do efeito → (weak16, strong16, duração_ms) do último upload.
     _ff_effects: dict[int, tuple[int, int, int]] = field(default_factory=dict)
-    #: id do efeito em reprodução → deadline monotônico (math.inf = sem fim).
+    #: id do efeito em reprodução → deadline monotônico. Efeito sem duração
+    #: recebe `FF_TETO_SEM_DURACAO_S` em vez de infinito (ver a constante).
     _ff_playing: dict[int, float] = field(default_factory=dict)
     #: Ganho global (FF_GAIN, 0.0-1.0); SDL manda 0xFFFF (1.0) por padrão.
     _ff_gain: float = 1.0
@@ -542,7 +554,17 @@ class UinputGamepad:
             return  # play de efeito nunca uploadado — ignora
         duration_ms = params[2]
         if duration_ms <= 0:
-            deadline = math.inf  # sem duração = toca até stop/erase
+            # Duração 0 significa "toca até o jogo mandar parar" (semântica do
+            # kernel). O deadline era `math.inf`, então o ÚNICO jeito de o motor
+            # parar era o jogo enviar stop/erase — e se ele fecha no meio de uma
+            # vibração, trava, ou o evento se perde, o controle fica vibrando
+            # para sempre. Relatado ao vivo: "não parava por nada".
+            #
+            # O teto não corta vibração legítima: qualquer novo play do MESMO
+            # efeito renova o prazo, e jogos que vibram continuamente ficam
+            # remandando efeito enquanto a cena dura. Ele só age quando o jogo
+            # PAROU de pedir sem dizer que parou.
+            deadline = self.time_fn() + FF_TETO_SEM_DURACAO_S
         else:
             deadline = self.time_fn() + (duration_ms * max(1, repeats)) / 1000.0
         self._ff_playing[effect_id] = deadline

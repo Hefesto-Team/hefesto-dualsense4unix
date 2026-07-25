@@ -960,7 +960,7 @@
                 <!-- Card 1: Intensidade da vibração -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label" translatable="yes">Intensidade da vibração</property>
+                    <property name="label" translatable="yes">Intensidade da vibração dos jogos</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>
@@ -1019,6 +1019,15 @@
                               <packing><property name="expand">False</property></packing>
                             </child>
                             <child>
+                              <object class="GtkLabel">
+                                <property name="label" translatable="yes">&lt;i&gt;Multiplica a vibração que o JOGO pede — é aqui que se aumenta ou diminui a força sem tirar o controle dele.&lt;/i&gt;</property>
+                                <property name="use-markup">True</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
                               <object class="GtkScale" id="rumble_policy_slider">
                                 <property name="hexpand">True</property>
                                 <property name="draw-value">True</property>
@@ -1056,7 +1065,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                 <!-- Card 2: Testar motores -->
                 <child>
                   <object class="GtkFrame">
-                    <property name="label" translatable="yes">Testar motores</property>
+                    <property name="label" translatable="yes">Testar motores (enquanto testa, o jogo não controla a vibração)</property>
                     <child>
                       <object class="GtkBox">
                         <property name="orientation">vertical</property>

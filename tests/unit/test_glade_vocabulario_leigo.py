@@ -101,7 +101,13 @@ def test_vibracao_fala_de_vibracao_e_nao_de_motor() -> None:
     textos = _textos_visiveis()
     assert "Vibração leve" in textos
     assert "Vibração forte" in textos
-    assert "Intensidade da vibração" in textos
+    # Começa com — e não é igual a — "Intensidade da vibração": o título ganhou
+    # "dos jogos" para dizer SOBRE O QUE ela age. É o controle que a usuária
+    # procura quando quer vibrar mais ou menos, e ela estava indo nos sliders
+    # de teste, que em vez de ajustar a força tiram a vibração do jogo.
+    assert any(t.startswith("Intensidade da vibração") for t in textos), (
+        "a seção da política precisa se chamar 'Intensidade da vibração...'"
+    )
 
 
 def test_botao_de_passthrough_fala_do_jogo() -> None:
