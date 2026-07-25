@@ -261,7 +261,7 @@ def test_install_daemon_tab_com_daemon_ativo_pinta_online(
 
     host.install_daemon_tab()
 
-    assert "#2d8" in host._label.markup, (
+    assert "#50fa7b" in host._label.markup, (
         f"esperava cor verde (#2d8) para online_systemd; markup={host._label.markup!r}"
     )
     # LEIGO-03: o label deixou de dizer "Online (systemd + auto-start)" — o
@@ -298,7 +298,7 @@ def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
 
     host.install_daemon_tab()
 
-    assert "#d33" in host._label.markup, (
+    assert "#ff5555" in host._label.markup, (
         f"esperava cor vermelha (#d33) para offline; markup={host._label.markup!r}"
     )
     assert "Desligado" in host._label.markup
@@ -342,7 +342,7 @@ def test_consulting_placeholder_aparece_antes_do_worker(
     assert "Verificando" in host._label.markup, (
         f"esperava o placeholder 'Verificando…'; markup={host._label.markup!r}"
     )
-    assert "#888" in host._label.markup, (
+    assert "#8b8fa8" in host._label.markup, (
         f"esperava cor cinza (#888) no placeholder; markup={host._label.markup!r}"
     )
     assert "Desligado" not in host._label.markup

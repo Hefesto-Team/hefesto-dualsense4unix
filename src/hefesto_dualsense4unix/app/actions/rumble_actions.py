@@ -496,16 +496,16 @@ class RumbleActionsMixin(WidgetAccessMixin):
         ff = state.get("rumble_ff") if isinstance(state.get("rumble_ff"), dict) else {}
         plays = ff.get("plays", 0) if isinstance(ff, dict) else 0
         if passthrough is True:
-            estado = '<span foreground="#2d8">o JOGO controla a vibração</span>'
+            estado = '<span foreground="#50fa7b">o JOGO controla a vibração</span>'
         elif isinstance(active, list) and len(active) == 2:
             if active == [0, 0]:
                 estado = (
-                    '<span foreground="#e0a020">travada em silêncio '
+                    '<span foreground="#ffb86c">travada em silêncio '
                     f'(clique “{_BTN_GIVE_BACK_TO_GAME}”)</span>'
                 )
             else:
                 estado = (
-                    f'<span foreground="#e0a020">travada em fraca={active[0]}, '
+                    f'<span foreground="#ffb86c">travada em fraca={active[0]}, '
                     f'forte={active[1]} (clique “{_BTN_GIVE_BACK_TO_GAME}” '
                     "para jogar)</span>"
                 )

@@ -279,7 +279,7 @@ def test_online_systemd_com_enabled_diz_que_liga_sozinho(
 
     host._set_daemon_status_markup("online_systemd", "enabled")
 
-    assert "#2d8" in host._label.markup
+    assert "#50fa7b" in host._label.markup
     assert "Funcionando" in host._label.markup
     assert "liga sozinho" in host._label.markup
 
@@ -289,7 +289,7 @@ def test_online_systemd_sem_enabled_nao_promete_ligar_sozinho() -> None:
     host = _Host()
     host._set_daemon_status_markup("online_systemd", "disabled")
 
-    assert "#2d8" in host._label.markup
+    assert "#50fa7b" in host._label.markup
     assert "Funcionando" in host._label.markup
     assert "liga sozinho" not in host._label.markup
 
@@ -299,7 +299,7 @@ def test_offline_label_vermelho(monkeypatch: pytest.MonkeyPatch) -> None:
     host = _Host()
     host._set_daemon_status_markup("offline", "disabled")
 
-    assert "#d33" in host._label.markup
+    assert "#ff5555" in host._label.markup
     assert "Desligado" in host._label.markup
 
 
@@ -308,7 +308,7 @@ def test_online_avulso_label_amarelo(monkeypatch: pytest.MonkeyPatch) -> None:
     host = _Host()
     host._set_daemon_status_markup("online_avulso", "disabled")
 
-    assert "#ca0" in host._label.markup
+    assert "#ffb86c" in host._label.markup
     assert "improvisado" in host._label.markup
 
 

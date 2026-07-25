@@ -209,7 +209,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
             except Exception as exc:
                 logger.warning("storm_diag_falhou", erro=str(exc))
                 return
-            colors = {"[ OK ]": "#2d8", "[WARN]": "#e0a020", "[INFO]": "#888"}
+            colors = {"[ OK ]": "#50fa7b", "[WARN]": "#ffb86c", "[INFO]": "#8b8fa8"}
 
             def _esc(text: str) -> str:
                 return (
@@ -219,7 +219,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 )
 
             lines = [
-                f'<span foreground="{colors.get(tag, "#ccc")}">{_esc(tag)}</span> '
+                f'<span foreground="{colors.get(tag, "#c8ccda")}">{_esc(tag)}</span> '
                 f"{_esc(msg)}"
                 for tag, msg in rows
             ]
@@ -610,7 +610,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         label = self._get("daemon_status_label")
         if label is None:
             return
-        label.set_markup('<span foreground="#888"> Verificando…</span>')
+        label.set_markup('<span foreground="#8b8fa8"> Verificando…</span>')
         label.set_tooltip_text("Verificando se o Hefesto está rodando. Aguarde.")
 
     def _refresh_daemon_view_async(self) -> None:
@@ -1194,9 +1194,9 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """Pinta o label de status com cor e tooltip PT-BR conforme estado canônico.
 
         Cores:
-          verde (#2d8)  — online_systemd
-          amarelo (#ca0) — online_avulso, iniciando
-          vermelho (#d33) — offline
+          verde (#50fa7b)  — online_systemd
+          laranja (#ffb86c) — online_avulso, iniciando
+          vermelho (#ff5555) — offline
         """
         label = self._get("daemon_status_label")
         if label is None:
@@ -1208,27 +1208,27 @@ class DaemonActionsMixin(WidgetAccessMixin):
         # o que o systemd acha da unit.
         status_map: dict[DaemonStatus, tuple[str, str, str]] = {
             "online_systemd": (
-                "#2d8",
+                "#50fa7b",
                 " Funcionando (liga sozinho com o computador)"
                 if enabled == "enabled"
                 else " Funcionando",
                 "O Hefesto está rodando. Se travar, ele volta sozinho.",
             ),
             "online_avulso": (
-                "#ca0",
+                "#ffb86c",
                 " Funcionando (modo improvisado)",
                 "O Hefesto está rodando, mas de um jeito improvisado: não liga "
                 "sozinho com o computador nem volta sozinho se travar. "
                 "Clique em 'Corrigir modo de execução'.",
             ),
             "iniciando": (
-                "#ca0",
+                "#ffb86c",
                 " Ligando...",
                 "O Hefesto está terminando de ligar. Aguarde alguns segundos e "
                 "clique em Atualizar.",
             ),
             "offline": (
-                "#d33",
+                "#ff5555",
                 " Desligado",
                 "O Hefesto não está rodando — o controle funciona, mas sem "
                 "luzes, gatilhos nem os seus ajustes. "
