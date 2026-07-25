@@ -246,6 +246,50 @@ class ModoAdiado:
     esperando_jogo: bool = False
 
 
+#: MODO-01/B3: origem da ativação de modo que veio do SINAL DE JOGO — nenhum
+#: perfil mandou, o daemon é que reconheceu o jogo. Vocabulário próprio (e não
+#: "autoswitch") porque é isso que aparece no journal e é por ele que se
+#: distingue, meses depois, "o perfil do jogo ligou o modo" de "ninguém tinha
+#: perfil e o daemon ligou o modo padrão".
+ORIGEM_GAME_SIGNAL = "game_signal"
+
+#: MODO-01/B3: dois estados que só o modo jogo PADRÃO produz, no dialeto
+#: `IGNORADO_*` do vocabulário acima. Não entram naquele conjunto porque nunca
+#: aparecem no relatório de ativação de um perfil — este eixo não tem perfil.
+#:
+#:   - ``IGNORADO_SEM_JOGO`` — a autoridade de exibição não é `game`. Não é
+#:     recusa: é "ainda não" (o sinal leva até ~2 s para virar) ou "não é jogo".
+#:   - ``IGNORADO_GESTO_DELA`` — a decisão já é dela e é mais específica que um
+#:     default (Modo Nativo manual).
+IGNORADO_SEM_JOGO = "ignorado_sem_jogo"
+IGNORADO_GESTO_DELA = "ignorado_gesto_dela"
+
+
+@dataclass
+class ModoJogoPadrao:
+    """O modo jogo que o SINAL DE JOGO ligou, sem perfil nenhum (MODO-01/B3).
+
+    Existe para que soltar o modo ao sair do jogo seja EXATO — desligar só o
+    que este daemon ligou, e devolver o eixo de modo a quem era dono antes.
+    Sem esta memória a cura viraria a próxima queixa: na máquina dela o gamepad
+    virtual já vive LIGADO (flag em disco), e um "reverter" ingênuo o desligaria
+    ao fechar o jogo, deixando-a sem controle nenhum no desktop.
+
+    Campos:
+      - `ligou_gamepad` — o vpad estava DESLIGADO e fomos nós que o ligamos. Só
+        neste caso a saída do jogo o desliga de volta.
+      - `dono_anterior` — valor de `_mode_from_profile` antes de nós. Aplicar o
+        modo jogo padrão carimba `"gamepad"` nesse campo (é o mesmo applier de
+        perfil), e deixá-lo carimbado depois daria a um perfil de desktop
+        qualquer a autoridade de reverter um modo que nenhum perfil ligou.
+      - `wm_class` — a janela que motivou o pedido; só para o journal.
+    """
+
+    ligou_gamepad: bool
+    dono_anterior: str | None
+    wm_class: str
+
+
 # ---------------------------------------------------------------------------
 # Daemon (orquestrador)
 # ---------------------------------------------------------------------------
@@ -328,6 +372,17 @@ class Daemon:
     # dreno do `_poll_loop` (`_drenar_modo_pendente`). UMA só, sempre
     # sobrescrita — ver `ModoAdiado`. None = nada pendente.
     _mode_pendente: ModoAdiado | None = None
+    # MODO-01/B3: o modo jogo que o SINAL DE JOGO ligou, sem perfil nenhum.
+    # None = não há modo jogo padrão de pé. Ver `ModoJogoPadrao`.
+    _modo_jogo_padrao: ModoJogoPadrao | None = None
+    # MODO-01/B3: último estado LOGADO de `aplicar_modo_jogo_padrao`. O
+    # autoswitch pede a 2 Hz enquanto o jogo está em foco; sem esta chave, os
+    # ~30 s de espera do lock de gesto manual virariam 60 linhas no journal.
+    _modo_jogo_padrao_log: str = ""
+    # MODO-01/B5: `ProfileManager` de LEITURA, cacheado. Ver
+    # `_manager_de_selecao` — a instância nova a cada tique zerava a dedup do
+    # veto R-21 e o journal levava 1 linha a cada 2 s.
+    _profile_selector: Any = None
     # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
     # persiste no dataclass — é restaurado do flag no boot. O poll loop gateia o
     # dispatch por este flag (independente de pause/resume).
@@ -1485,6 +1540,13 @@ class Daemon:
         # Passou do lock: ESTA aplicação é mais nova que qualquer pendência
         # guardada antes (inclusive a que estamos drenando agora mesmo).
         self._mode_pendente = None
+        # MODO-01/B3: um PERFIL mexendo no modo toma a posse do eixo — o modo
+        # jogo padrão (que existe só para quando ninguém opina) deixa de ter o
+        # que soltar. Sem esta linha, `reverter_modo_jogo_padrao` desfaria mais
+        # tarde uma decisão que passou a ser do perfil.
+        if origin != ORIGEM_GAME_SIGNAL:
+            self._modo_jogo_padrao = None
+            self._modo_jogo_padrao_log = ""
 
         gamepad_on = (
             self.config.gamepad_emulation_enabled and self._gamepad_device is not None
@@ -1571,6 +1633,178 @@ class Daemon:
             self.set_gamepad_emulation(False, origin="profile")
         self._mode_from_profile = None
         return APLICADO
+
+    def aplicar_modo_jogo_padrao(self, *, wm_class: str = "") -> str:
+        """Liga o MODO JOGO PADRÃO — é um jogo e nenhum perfil opina (MODO-01/B3).
+
+        A cura do buraco desta sprint. A regra R-21 (`ProfileManager
+        .select_for_window`) recusa dar autoridade a um perfil catch-all sobre
+        janela de jogo — e tinha razão própria: um genérico de DESKTOP entrando
+        num jogo era o ping-pong `vitoria``Navegação` a cada 18-28 s, com
+        lightbar/gatilhos/rumble mudando no meio da partida. O que faltava é que
+        ela trocou *"o catch-all entra num jogo"* por *"NINGUÉM entra num jogo"*
+        e não pôs nada no lugar: o daemon registrava `game_signal_transition
+        de=daemon para=game` e não fazia nada com isso. Esta função ACRESCENTA a
+        metade que faltava — o veto continua de pé, e o modo jogo liga sozinho
+        **sem trocar de perfil**.
+
+        Chamada pelo `AutoSwitcher` a cada tique enquanto o motivo da seleção for
+        `MOTIVO_JOGO_SEM_PERFIL_PROPRIO`; por isso todas as guardas são baratas e
+        silenciosas, e o log é deduplicado por estado (`_modo_jogo_padrao_log`).
+        Na ordem:
+
+        1. **autoridade de exibição** — só com `display_authority == "game"`. É o
+           sinal que já correlaciona janela + marker do wrapper + pid vivo
+           (NUMA-01); a `wm_class` sozinha não basta para ligar vpad.
+        2. **já aplicado** — idempotente: um pedido por episódio de jogo.
+        3. **lock de gesto manual (30 s)** — invariante forte do projeto: gesto
+           dela cria trava de 30 s e nada reverte nesse período. Aqui o pedido
+           só ESPERA (o autoswitch repete a 2 Hz e o modo entra quando o lock
+           vencer); deliberadamente NÃO usa a pendência `ModoAdiado`, que é o
+           canal do modo de um PERFIL e morre quando o perfil ativo muda.
+
+        O cadeado de autoswitch (`autoswitch_locked`) não é consultado — nem
+        aqui nem no chamador — e isso é a decisão, não um esquecimento: ele
+        congela a decisão de PERFIL ("não trocar de perfil sozinho ao abrir um
+        jogo"), e ela o mantém ligado justamente para o perfil dela ficar de pé.
+        Modo é outro eixo.
+
+        Retorno: o vocabulário de `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+        from hefesto_dualsense4unix.profiles.schema import (
+            ProfileModeConfig,
+            normalizar_gamepad_flavor,
+        )
+
+        if self.display_authority != "game":
+            return self._log_modo_jogo_padrao(
+                IGNORADO_SEM_JOGO, "sem_autoridade_de_jogo", wm_class
+            )
+        if self._modo_jogo_padrao is not None:
+            return APLICADO
+        if time.monotonic() - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            return self._log_modo_jogo_padrao(
+                ADIADO_LOCK_MANUAL, "gesto_manual_recente", wm_class
+            )
+        # Modo Nativo MANUAL ("Jogar direto (Sony)") já É a resposta dela para
+        # "como quero jogar": o controle está SOLTO para o jogo, de propósito.
+        # Sem esta guarda, o modo jogo padrão o derrubaria assim que o lock de
+        # 30 s vencesse — trocando a escolha explícita dela por um default. É a
+        # mesma exceção, pelo mesmo predicado, que o `AutoSwitcher._activate` já
+        # fazia; nativo ligado por PERFIL não conta (aquele é automatismo, não
+        # gesto).
+        if (
+            self.store.native_mode_active
+            and getattr(self.store, "native_mode_origin", None) != "profile"
+        ):
+            return self._log_modo_jogo_padrao(
+                IGNORADO_GESTO_DELA, "modo_nativo_manual", wm_class
+            )
+        gamepad_antes = (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        )
+        dono_anterior = self._mode_from_profile
+        estado = self.apply_profile_mode(
+            ProfileModeConfig(
+                kind="gamepad",
+                gamepad_flavor=normalizar_gamepad_flavor(self.config.gamepad_flavor),
+            ),
+            origin=ORIGEM_GAME_SIGNAL,
+        )
+        if estado != APLICADO:
+            return self._log_modo_jogo_padrao(estado, "applier_recusou", wm_class)
+        gamepad_agora = (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        )
+        self._modo_jogo_padrao = ModoJogoPadrao(
+            ligou_gamepad=(gamepad_agora and not gamepad_antes),
+            dono_anterior=dono_anterior,
+            wm_class=wm_class,
+        )
+        self._modo_jogo_padrao_log = APLICADO
+        logger.info(
+            "profile_mode_aplicado",
+            origin=ORIGEM_GAME_SIGNAL,
+            kind="gamepad",
+            flavor=self.config.gamepad_flavor,
+            wm_class=wm_class,
+            ligou_gamepad=self._modo_jogo_padrao.ligou_gamepad,
+        )
+        return APLICADO
+
+    def reverter_modo_jogo_padrao(self, *, wm_class: str = "") -> str:
+        """Solta o modo jogo padrão ao sair do jogo (MODO-01/B3).
+
+        Chamada pelo `AutoSwitcher` quando há EVIDÊNCIA POSITIVA de outra janela
+        — não quando o sinal sticky decai. A diferença importa: o `game_signal`
+        cai de `game` para `daemon` ~30 s depois com o jogo ainda aberto (o gate
+        de foco do B4, registrado e não corrigido nesta sprint), e desligar o
+        vpad por causa disso seria o pior desfecho possível.
+
+        Desliga o gamepad SÓ se fomos nós que o ligamos (`ligou_gamepad`), e
+        devolve `_mode_from_profile` a quem era dono antes. Na máquina dela o
+        vpad já vive ligado por flag em disco: reverter "o modo" ali significa
+        soltar a POSSE do eixo, não derrubar o controle dela.
+
+        O lock de gesto manual de 30 s vale aqui também — se ela mexeu no modo
+        agora, a última palavra é dela e o daemon apenas abre mão da posse.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+
+        padrao = self._modo_jogo_padrao
+        if padrao is None:
+            return APLICADO
+        self._modo_jogo_padrao = None
+        self._modo_jogo_padrao_log = ""
+        if time.monotonic() - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            logger.info(
+                "modo_jogo_padrao_solto",
+                motivo="gesto_manual_recente",
+                wm_class=wm_class,
+            )
+            return ADIADO_LOCK_MANUAL
+        gamepad_on = (
+            self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        )
+        desligou = False
+        if padrao.ligou_gamepad and gamepad_on:
+            self.set_gamepad_emulation(False, origin="profile")
+            desligou = True
+        # Devolve o eixo de modo a quem era dono antes de nós: sem isto, o
+        # `"gamepad"` que o applier carimbou daria a um perfil de desktop
+        # qualquer autoridade para reverter um modo que nenhum perfil ligou.
+        if self._mode_from_profile == "gamepad":
+            self._mode_from_profile = padrao.dono_anterior
+        logger.info(
+            "modo_jogo_padrao_solto",
+            motivo="janela_fora_do_jogo",
+            wm_class=wm_class,
+            de=padrao.wm_class,
+            desligou_gamepad=desligou,
+        )
+        return APLICADO
+
+    def _log_modo_jogo_padrao(self, estado: str, motivo: str, wm_class: str) -> str:
+        """Loga o estado do pedido de modo jogo padrão 1x por episódio (B3/B5).
+
+        O pedido chega a 2 Hz (poll do autoswitch); só a MUDANÇA de estado vira
+        linha no journal. Mesmo padrão — e mesma razão — do
+        `AutoSwitcher._log_cadeado_uma_vez` e do veto R-21 no `ProfileManager`.
+        """
+        if self._modo_jogo_padrao_log != estado:
+            self._modo_jogo_padrao_log = estado
+            logger.info(
+                "modo_jogo_padrao_adiado",
+                estado=estado,
+                motivo=motivo,
+                wm_class=wm_class,
+            )
+        return estado
 
     def _agendar_modo_adiado(
         self, mode: Any | None, profile: Any | None, origin: str, *, agora: float
@@ -2495,6 +2729,27 @@ class Daemon:
                     vpads.append(vpad)
         return any(bool(getattr(vpad, "game_open", False)) for vpad in vpads)
 
+    def _manager_de_selecao(self) -> Any:
+        """`ProfileManager` de LEITURA do daemon, cacheado (MODO-01/B5).
+
+        Era uma instância NOVA a cada tique do sinal de jogo (~2 s). Como a
+        deduplicação do veto R-21 é um campo de INSTÂNCIA
+        (`_ultimo_veto_catch_all`), ela nascia zerada toda vez e o
+        `profile_select_catch_all_sem_autoridade_em_jogo` saía a 0,5 Hz — 12
+        linhas idênticas, exatamente 2,00 s de intervalo, medidas no journal com
+        o jogo aberto. A dedup existia e nunca valia.
+
+        Só leitura: nenhum applier é injetado de propósito. Este manager escolhe
+        perfil para RESPONDER uma pergunta (`_profile_rule_matches_game`), nunca
+        para ativar — quem ativa é o manager do subsystem de autoswitch, com os
+        appliers todos fiados.
+        """
+        if self._profile_selector is None:
+            from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+            self._profile_selector = ProfileManager(controller=self.controller)
+        return self._profile_selector
+
     def _profile_rule_matches_game(self, wm_class: str | None) -> bool:
         """NUMA-01 evidência #2: `wm_class` corrente casa regra de jogo do
         autoswitch (`mode.kind == "gamepad"`, match ESPECÍFICO — não o
@@ -2507,10 +2762,9 @@ class Daemon:
         """
         if not wm_class:
             return False
-        from hefesto_dualsense4unix.profiles.manager import ProfileManager
-
-        manager = ProfileManager(controller=self.controller)
-        profile = manager.select_for_window({"wm_class": wm_class})
+        profile = self._manager_de_selecao().select_for_window(
+            {"wm_class": wm_class}
+        )
         if profile is None:
             return False
         mode = getattr(profile, "mode", None)

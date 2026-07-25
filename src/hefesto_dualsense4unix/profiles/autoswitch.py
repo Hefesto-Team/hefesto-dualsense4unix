@@ -24,8 +24,16 @@ from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.daemon.state_store import StateStore
-from hefesto_dualsense4unix.profiles.manager import ProfileManager
-from hefesto_dualsense4unix.profiles.schema import Profile, perfil_e_regra_de_jogo
+from hefesto_dualsense4unix.profiles.manager import (
+    MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
+    MOTIVO_SEM_CANDIDATO,
+    ProfileManager,
+)
+from hefesto_dualsense4unix.profiles.schema import (
+    Profile,
+    perfil_declara_modo_de_jogo,
+    perfil_e_regra_de_jogo,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -87,6 +95,16 @@ class AutoSwitcher:
     # instanciam AutoSwitcher sem store. Em produção, o Daemon injeta o
     # store compartilhado para respeitar override de trigger manual.
     store: StateStore | None = None
+    # MODO-01/B3: par de callables do daemon para o MODO JOGO PADRÃO — o modo
+    # que liga quando é um jogo e NENHUM perfil específico opina sobre ele. Os
+    # callsites injetam `daemon.aplicar_modo_jogo_padrao` /
+    # `daemon.reverter_modo_jogo_padrao` (assinatura `(*, wm_class: str)`).
+    # None = sem daemon (CLI/testes legados): o autoswitch segue byte-idêntico
+    # ao comportamento anterior. O autoswitch só reporta o FATO ("é jogo e
+    # ninguém opina" / "não é mais isso"); toda a política — autoridade de
+    # exibição, lock de gesto manual de 30 s, idempotência — mora no daemon.
+    modo_jogo_padrao_applier: Callable[..., object] | None = None
+    modo_jogo_padrao_reverter: Callable[..., object] | None = None
 
     _last_candidate: str | None = None
     _candidate_since: float = 0.0
@@ -209,8 +227,14 @@ class AutoSwitcher:
         resumed = self._info_gap_active
         self._info_gap_active = False
 
-        profile = self.manager.select_for_window(info)
+        profile, motivo = self._selecionar_com_motivo(info)
         candidate = profile.name if profile else None
+
+        # MODO-01/B3: ANTES do cadeado, de propósito — o cadeado congela a
+        # decisão de PERFIL, não a de MODO. Ela deixou `autoswitch_locked.flag`
+        # ligado desde 24/07 e AINDA ASSIM quer que o modo jogo ligue sozinho;
+        # eram duas perguntas diferentes respondidas pelo mesmo `return`.
+        self._sincronizar_modo_jogo_padrao(motivo, info)
 
         # FEAT-AUTOSWITCH-LOCK-01 + LOCK-CEDE-01 (decisão da mantenedora,
         # 24/07): o cadeado saiu da PRIMEIRA linha do tick para cá, DEPOIS do
@@ -226,7 +250,16 @@ class AutoSwitcher:
         # `_activate` (F2/R-01): um genérico de desktop nunca fura, a regra do
         # jogo sempre fura.
         if self.travado():
-            if not perfil_e_regra_de_jogo(profile, info):
+            # MODO-01/B2: o cadeado cede à regra própria do jogo (LOCK-CEDE-01,
+            # inalterado) E também ao perfil que DECLARA ser de jogo — não
+            # catch-all, com `mode.kind` em {gamepad, native}. Sem a segunda
+            # metade, o preset `coop_local` (que tem `mode: gamepad` e casa por
+            # TÍTULO de janela) e todo jogo fora da Steam ficavam congelados por
+            # um cadeado que só prometia não trocar de perfil "ao abrir um jogo".
+            if not (
+                perfil_e_regra_de_jogo(profile, info)
+                or perfil_declara_modo_de_jogo(profile)
+            ):
                 self._log_cadeado_uma_vez(
                     "autoswitch_congelado_pelo_cadeado", candidate, info
                 )
@@ -272,6 +305,76 @@ class AutoSwitcher:
             # R-01: o objeto Profile já está aqui — propagá-lo evita que o
             # `_activate` tenha de adivinhar POR QUE o candidato casou.
             self._activate(candidate, info, profile)
+
+    def _selecionar_com_motivo(
+        self, info: dict[str, Any]
+    ) -> tuple[Profile | None, str]:
+        """Seleciona o perfil da janela e traz junto o MOTIVO (MODO-01/B3).
+
+        Prefere `ProfileManager.select_for_window_ex`, que responde o par
+        `(perfil, motivo)`. A leitura do motivo é OPCIONAL por construção: um
+        `manager` que não tenha o método novo — ou que devolva outra coisa
+        (dublê de teste, `MagicMock`, integração de terceiros) — cai no
+        `select_for_window` histórico e o motivo vira `MOTIVO_SEM_CANDIDATO`,
+        que não dispara nada. Nunca vale derrubar o tick por causa do motivo:
+        ele é informação EXTRA, e sem ele o autoswitch precisa seguir exatamente
+        como seguia antes desta sprint.
+        """
+        seletor = getattr(self.manager, "select_for_window_ex", None)
+        if callable(seletor):
+            resultado = seletor(info)
+            if isinstance(resultado, tuple) and len(resultado) == 2:
+                perfil, motivo = resultado
+                return perfil, str(motivo)
+        perfil_legado = self.manager.select_for_window(info)
+        return perfil_legado, MOTIVO_SEM_CANDIDATO
+
+    def _sincronizar_modo_jogo_padrao(
+        self, motivo: str, info: dict[str, Any]
+    ) -> None:
+        """Liga/solta o MODO JOGO PADRÃO conforme o motivo da seleção (B3).
+
+        MODO-01. O daemon já SABIA que havia um jogo (registrou
+        `game_signal_transition de=daemon para=game` com o Mullet Mad Jack
+        aberto) e não fazia nada com isso em termos de modo: todo o automatismo
+        dependia de ela ter criado, à mão, um perfil com seção `mode` para
+        AQUELE jogo. Aqui o fato vira ação.
+
+        Só o FATO mora neste método, e ele é lido do motivo da seleção:
+
+        - `MOTIVO_JOGO_SEM_PERFIL_PROPRIO` → "é um jogo e ninguém opina": pede o
+          modo jogo padrão. Chamado a cada tique de propósito — o applier do
+          daemon é idempotente e barato (checa autoridade de exibição, lock de
+          gesto manual e se já aplicou), e é ele que sabe quando o pedido pode
+          finalmente ser honrado (a autoridade demora até ~2 s para virar
+          `game`, e um gesto manual dela adia por 30 s);
+        - qualquer outro motivo → há EVIDÊNCIA POSITIVA de outra janela (o tick
+          sem informação já saiu lá em cima, pela histerese UX-01): solta o
+          modo jogo padrão. O gatilho é a janela lida, não a queda do sinal
+          sticky — o sinal cai sozinho 30 s depois com o jogo ainda aberto
+          (defeito B4, registrado e NÃO corrigido nesta sprint), e desligar o
+          vpad no meio da partida por causa disso seria o pior desfecho
+          possível.
+
+        Best-effort dos dois lados: falha do daemon vira log e o tick segue.
+        """
+        wm_class = str(info.get("wm_class") or "")
+        if motivo == MOTIVO_JOGO_SEM_PERFIL_PROPRIO:
+            applier = self.modo_jogo_padrao_applier
+            if applier is None:
+                return
+            try:
+                applier(wm_class=wm_class)
+            except Exception as exc:
+                logger.warning("modo_jogo_padrao_falhou", err=str(exc))
+            return
+        reverter = self.modo_jogo_padrao_reverter
+        if reverter is None:
+            return
+        try:
+            reverter(wm_class=wm_class)
+        except Exception as exc:
+            logger.warning("modo_jogo_padrao_revert_falhou", err=str(exc))
 
     def _saida_para_catch_all(self, profile: Profile | None) -> bool:
         """True quando a troca é SAÍDA de um perfil específico rumo a um genérico.

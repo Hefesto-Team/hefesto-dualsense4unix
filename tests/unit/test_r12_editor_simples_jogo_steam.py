@@ -183,12 +183,25 @@ class TestPresetCoopLocalDeFabrica:
         assert p.matches({"wm_name": "Sackboy: A Big Adventure"})
 
     def test_perde_para_o_perfil_do_proprio_jogo(self) -> None:
-        """`sackboy_nativo` (prio 80, `steam_app_1599660`) continua vencendo;
-        e a prioridade fica ABAIXO da `Navegação` (50) porque o título da
-        janela do CLIENTE Steam também pode citar um jogo de co-op."""
+        """`sackboy_nativo` (prio 80, `steam_app_1599660`) continua vencendo.
+
+        MODO-01 (sprint 25/07) SUPERA a segunda metade da decisão do R-12. Ela
+        era "prioridade ABAIXO da `Navegação` (50) porque o título da janela do
+        CLIENTE Steam também pode citar um jogo de co-op" — e o preço medido foi
+        alto demais: o `coop_local` é o ÚNICO preset de fábrica com `mode:
+        gamepad` que casa por TÍTULO, isto é, o único que faz o modo jogo ligar
+        em jogo de co-op fora da Steam, e perder para a `Navegação` o mantinha
+        atrás de um perfil de navegador. A colisão que o R-12 temia é estreita
+        (exige a janela do cliente Steam com um título citando um jogo de co-op)
+        e o custo de errar para o lado do modo jogo é baixo; o custo de errar
+        para o outro lado é a queixa desta sprint.
+
+        Fica travado o que NÃO mudou: o perfil do PRÓPRIO jogo (prio 80) segue
+        ganhando do genérico de co-op.
+        """
         p = self._asset()
-        assert p.priority < 50
         assert p.priority < 80
+        assert p.priority >= 75
 
     def test_o_modo_de_coop_esta_intacto(self) -> None:
         p = self._asset()
