@@ -194,6 +194,46 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
                 <property name="margin">12</property>
+
+                <!-- AUTO-01.2: o co-op local (quatro jogadores) e a
+                     funcionalidade central do projeto e ate aqui NAO existia na
+                     janela - so por linha de comando (`coop on`). Este e o
+                     unico widget da aba montado em Glade: ele e o atalho de um
+                     clique para o que antes eram varias abas, e por isso vem
+                     ANTES do resto no arquivo. O install_home_tab() o reposiciona
+                     logo abaixo dos dois banners (que sao montados em codigo) e
+                     conecta o clique; rotulo e dica sao reescritos a cada
+                     _render_home com o numero de jogadores que o daemon reporta. -->
+                <child>
+                  <object class="GtkFrame" id="home_coop_frame">
+                    <property name="label" translatable="yes">Jogar acompanhada</property>
+                    <child>
+                      <object class="GtkBox" id="home_coop_box">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin">10</property>
+                        <child>
+                          <object class="GtkButton" id="home_coop_prep_btn">
+                            <property name="label" translatable="yes">Preparar co-op</property>
+                            <property name="halign">start</property>
+                            <property name="tooltip-text" translatable="yes">Deixa tudo pronto para jogar em dupla (ou em quatro): entra no modo de jogo, dá um jogador para cada controle e arruma a numeração. Um clique no lugar de várias abas.</property>
+                            <style><class name="suggested-action"/></style>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="home_coop_prep_hint">
+                            <property name="wrap">True</property>
+                            <property name="xalign">0</property>
+                            <style><class name="dim-label"/></style>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
               </object>
             </child>
             <child type="tab">

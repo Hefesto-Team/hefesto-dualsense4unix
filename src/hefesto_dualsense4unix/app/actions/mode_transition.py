@@ -23,6 +23,12 @@ from hefesto_dualsense4unix.app.ipc_bridge import call_async
 # redefinido: um `DEFAULT_FLAVOR = "xbox"` aqui seria um segundo dono do valor —
 # exatamente o defeito que este módulo existe para curar. O `uinput_gamepad` não
 # puxa evdev no topo (só dentro das funções), então importá-lo aqui é barato.
+#
+# AUTO-01.3: este valor deixou de ser INJETADO no plano — ver
+# `plan_mode_transition`. Ele segue sendo o piso de compatibilidade do projeto
+# (o default dos presets e o fallback do `normalize_flavor`) e continua
+# reexportado aqui para quem precisa exibi-lo; o que não pode voltar a existir é
+# a GUI escolher uma máscara por conta própria quando ninguém escolheu.
 from hefesto_dualsense4unix.integrations.uinput_gamepad import DEFAULT_FLAVOR
 
 #: BUG-HOME-IPC-TIMEOUT-01: trocar de modo cria uinput + grab — bem mais que os
@@ -62,18 +68,32 @@ def plan_mode_transition(
     depender em silêncio da versão do daemon do outro lado do socket (um .deb
     antigo traria o defeito de volta). Custa uma chamada idempotente.
 
+    AUTO-01.3 — **um dono só para a máscara, e ele é o daemon.** Sem `flavor`
+    explícito o passo sai SEM o campo, e o daemon preserva a máscara que já
+    está configurada (contrato do `ipc_handlers._handle_gamepad_emulation_set`:
+    "flavor é opcional; mantém o atual se ausente"). Antes injetávamos
+    ``DEFAULT_FLAVOR`` aqui, e isso fazia o MESMO gesto entregar máscaras
+    DIFERENTES conforme a porta de entrada: `gamepad on` pela linha de comando
+    preservava a máscara do daemon (`dualsense` numa instalação nova, por
+    HARMONIA-MASK-01) enquanto "Jogar pelo Hefesto" impunha `xbox`. E a máscara
+    decide se o jogo reconhece o controle — o `DEFAULT_FLAVOR` da GUI era um
+    segundo dono do valor, dentro do módulo criado para acabar com eles. A CLI
+    já fazia certo desde o HARM-08 (`test_cli_gamepad`); agora as duas portas
+    dizem a mesma coisa. Escolha explícita dela (o seletor de máscara) continua
+    indo no campo, intacta.
+
     Levanta ``ValueError`` em modo desconhecido — um modo novo tem que passar
     por aqui em vez de virar um terceiro dono.
     """
     if mode_id == MODE_NATIVE:
         return [("native.mode.set", {"enabled": True})]
     if mode_id == MODE_GAMEPAD:
+        ligar: dict[str, Any] = {"enabled": True}
+        if flavor:
+            ligar["flavor"] = flavor
         return [
             ("native.mode.set", {"enabled": False}),
-            (
-                "gamepad.emulation.set",
-                {"enabled": True, "flavor": flavor or DEFAULT_FLAVOR},
-            ),
+            ("gamepad.emulation.set", ligar),
         ]
     if mode_id == MODE_DESKTOP:
         # FEAT-COOP-DEFAULT-ON-01: NÃO desliga o co-op — desligar o gamepad já
@@ -144,6 +164,72 @@ def apply_mode(
             )
 
 
+#: AUTO-01.2: o passo do plano de co-op cujo resultado a usuária vê. É o
+#: `coop.set`: entrar no modo jogo é PREPARO (e já tem toast próprio quando ela
+#: usa o comutador) e a renumeração é ACABAMENTO — nenhum dos dois responde a
+#: pergunta "vai dar co-op?". Mesmo desenho do `reported_step_index`.
+COOP_PREP_REPORTED_METHOD = "coop.set"
+
+
+def plan_coop_prep(flavor: str | None = None) -> list[tuple[str, dict[str, Any]]]:
+    """Sequência IPC de "Preparar co-op" — função pura (AUTO-01.2).
+
+    O co-op local é a funcionalidade central do projeto (quatro jogadores) e
+    ``grep -ci coop gui/main.glade`` devolvia **zero**: ele só existia por linha
+    de comando (`hefesto-dualsense4unix coop on`). O próprio código já admitia o
+    buraco — a migração do `utils/session.migrate_coop_optout` existe porque,
+    sem ela, o co-op ficaria desligado *"sem nenhum caminho de volta na
+    interface"*.
+
+    Nada aqui é implementação nova: todo o IPC já existia. O que faltava era a
+    LIGAÇÃO — um clique em vez de dez. Os três passos, em ordem FIFO:
+
+    1. o modo jogo (`plan_mode_transition`) — sem gamepad virtual de pé o gate
+       do co-op (`CoopManager.should_be_active`) nunca abre, e é ele que faz o
+       P1 existir para os P2+ nascerem ao lado;
+    2. ``coop.set`` — cada controle físico vira um jogador com vpad próprio, em
+       vez de todos alimentarem o mesmo;
+    3. ``identity.renumber`` — compacta a numeração para 1..N. É o acabamento
+       que faz os LEDs de jogador baterem com o que o jogo vê ("sony 1 / sony
+       4" com dois controles na mesa era a queixa). O daemon RECUSA renumerar
+       com jogo aberto (`sessao_de_jogo_aberta`), e por isso este passo vem por
+       último: uma recusa aqui não desfaz nada do que os dois primeiros já
+       entregaram.
+
+    ``flavor`` segue a regra do AUTO-01.3: só vai no IPC quando ela escolheu
+    uma máscara; ausente, quem decide é o daemon.
+    """
+    return [
+        *plan_mode_transition(MODE_GAMEPAD, flavor),
+        ("coop.set", {"enabled": True}),
+        ("identity.renumber", {}),
+    ]
+
+
+def apply_coop_prep(
+    *,
+    flavor: str | None = None,
+    on_done: Callable[[Any], bool],
+    on_fail: Callable[[Exception], bool],
+) -> None:
+    """Dispara a sequência de "Preparar co-op" (AUTO-01.2).
+
+    Só o passo `COOP_PREP_REPORTED_METHOD` reporta para a UI; os demais são
+    preparo/acabamento e falham em silêncio (a renumeração recusada com jogo
+    aberto não pode virar "falhou ao preparar o co-op" com o co-op JÁ de pé —
+    seria a UI mentindo, o mesmo defeito que o `reported_step_index` cura na
+    troca de modo). Todos levam ``MODE_IPC_TIMEOUT_S``: cada um cria ou
+    desmonta uinput/grab.
+    """
+    for method, params in plan_coop_prep(flavor):
+        if method == COOP_PREP_REPORTED_METHOD:
+            call_async(method, params, on_done, on_fail, timeout_s=MODE_IPC_TIMEOUT_S)
+        else:
+            call_async(
+                method, params, _ignore_ok, _ignore_err, timeout_s=MODE_IPC_TIMEOUT_S
+            )
+
+
 def mode_of_state(state: dict[str, Any] | None) -> str | None:
     """Modo VIVO segundo o ``daemon.state_full``; ``None`` se offline.
 
@@ -162,6 +248,7 @@ def mode_of_state(state: dict[str, Any] | None) -> str | None:
 
 
 __all__ = [
+    "COOP_PREP_REPORTED_METHOD",
     "DEFAULT_FLAVOR",
     "MODES",
     "MODE_DESKTOP",
@@ -169,8 +256,10 @@ __all__ = [
     "MODE_IPC_TIMEOUT_S",
     "MODE_NATIVE",
     "STATE_IPC_TIMEOUT_S",
+    "apply_coop_prep",
     "apply_mode",
     "mode_of_state",
+    "plan_coop_prep",
     "plan_mode_transition",
     "reported_step_index",
 ]
