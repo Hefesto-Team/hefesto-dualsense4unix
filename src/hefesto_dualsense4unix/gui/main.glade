@@ -407,10 +407,17 @@
                         </child>
 
                         <child>
+                          <!-- min-content-height era 220px FIXOS, reservados
+                               mesmo quando o modo tem menos parâmetros (ou
+                               nenhum). Com as linhas de slider compactas
+                               (~24px), os 4 parâmetros do modo mais cheio
+                               cabem em ~110px; o que passar disso rola, que é
+                               justamente o papel deste scroller. -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
-                            <property name="min-content-height">220</property>
+                            <property name="min-content-height">110</property>
+                            <property name="propagate-natural-height">True</property>
                             <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_left_params_box">
@@ -531,10 +538,17 @@
                         </child>
 
                         <child>
+                          <!-- min-content-height era 220px FIXOS, reservados
+                               mesmo quando o modo tem menos parâmetros (ou
+                               nenhum). Com as linhas de slider compactas
+                               (~24px), os 4 parâmetros do modo mais cheio
+                               cabem em ~110px; o que passar disso rola, que é
+                               justamente o papel deste scroller. -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
-                            <property name="min-content-height">220</property>
+                            <property name="min-content-height">110</property>
+                            <property name="propagate-natural-height">True</property>
                             <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_right_params_box">
@@ -1730,9 +1744,20 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
             <!-- Aba Emulação -->
             <child>
               <object class="GtkBox" id="emulation_box">
-                <property name="orientation">vertical</property>
+                <property name="orientation">horizontal</property>
                 <property name="margin">12</property>
-                <property name="spacing">10</property>
+                <property name="spacing">16</property>
+                <property name="homogeneous">True</property>
+                <!-- Duas colunas: a aba pedia 674px de altura minima e o
+                     GtkNotebook adota o MAIOR minimo entre as paginas, entao
+                     era ela que forcava a barra de rolagem em TODAS as abas —
+                     inclusive nas ja enxugadas. Esquerda = diagnostico (o que
+                     esta valendo agora), direita = escolhas (o que o jogo ve).
+                     Nada foi removido. -->
+                <child>
+                  <object class="GtkBox" id="emulation_col_diagnostico">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">10</property>
                 <child>
                   <object class="GtkGrid" id="emulation_info_grid">
                     <property name="row-spacing">6</property>
@@ -1879,6 +1904,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                </child>
+                <child>
+                  <object class="GtkBox" id="emulation_col_escolhas">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">10</property>
                 <child>
                   <object class="GtkBox" id="emulation_gamepad_box">
                     <property name="orientation">horizontal</property>
@@ -1921,12 +1953,6 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
-
-                <!-- MMJ-01 (estudo 2026-07-21): cada jogo "fala uma língua" de
-                     controle. Jogos XInput-only (ex.: Mullet Mad Jack) não
-                     reconhecem a máscara DualSense — o vpad chega ao jogo, mas
-                     a engine ignora o PID Sony. Sem este aviso a usuária vê
-                     "controle morto" e caça defeito no lugar errado. -->
                 <child>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
                     <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox (ex.: Mullet Mad Jack) ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo.</property>
@@ -2062,6 +2088,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-end">10</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
+                </child>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
               </object>
             </child>

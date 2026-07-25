@@ -559,6 +559,30 @@ messagedialog button:active {
     min-height: 0;
 }
 
+/* Linha de parâmetro do gatilho: 4 por card, 2 cards por aba. O GtkScale
+   padrão pede ~40px de altura cada, e a soma era o segundo maior bloco da aba
+   (atrás só da grade de modos). Trilha fina e cursor menor derrubam a linha
+   para ~24px sem tirar a área de clique do cursor. */
+.hefesto-param-row scale {
+    min-height: 24px;
+    margin: 0;
+    padding: 0;
+}
+.hefesto-param-row scale trough {
+    min-height: 4px;
+    background-color: @elevated;
+}
+.hefesto-param-row scale highlight {
+    background-color: @purple;
+}
+.hefesto-param-row scale slider {
+    min-height: 16px;
+    min-width: 16px;
+    margin: -6px;
+    background-color: @fg;
+    border: none;
+}
+
 /* Ações de dentro do card de gatilho. São secundárias em relação ao "Aplicar"
    do rodapé global (que é preenchido), então ficam contornadas: o verde diz
    "envia ao controle" e o neutro diz "volta ao Off". */
