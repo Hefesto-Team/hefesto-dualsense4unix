@@ -43,6 +43,8 @@ from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 from hefesto_dualsense4unix.app.widgets import controller_card as cc_mod
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     MOTIVOS_DEGRADACAO_LEIGOS,
+    STICK_SIZE_COMPACT,
+    STICK_SIZE_SINGLE,
     rotulo_lightbar,
     texto_degradacao,
     titulo_do_card,
@@ -680,15 +682,21 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tamanho dos sticks: 90px com 2+ cards, 120px com 1 (layout equivalente)
+# Tamanho dos sticks: o compacto com 2+ cards, o cheio com 1
 # ---------------------------------------------------------------------------
 
 
-def test_sticks_90px_com_dois_cards_e_120px_com_um(host: _Host) -> None:
+def test_sticks_encolhem_com_dois_cards(host: _Host) -> None:
+    """O número exato vem das constantes — travá-lo aqui só travaria o ajuste
+    de altura da aba, que é justamente o que elas existem para permitir. O que
+    o teste garante é a REGRA: 2+ cards usam o tamanho compacto, e ele é menor.
+    """
+    assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE
+
     host._render_live_state(_state(_entry()))
     card_solo = host.cards()[0]
     largura, altura = card_solo._stick_left.get_size_request()
-    assert (largura, altura) == (120, 120)
+    assert (largura, altura) == (STICK_SIZE_SINGLE, STICK_SIZE_SINGLE)
 
     host._render_live_state(
         _state(
@@ -698,7 +706,7 @@ def test_sticks_90px_com_dois_cards_e_120px_com_um(host: _Host) -> None:
     )
     for card in host.cards():
         largura, altura = card._stick_left.get_size_request()
-        assert (largura, altura) == (90, 90)
+        assert (largura, altura) == (STICK_SIZE_COMPACT, STICK_SIZE_COMPACT)
 
 
 def test_swatch_guarda_a_cor_crua_nao_a_ajustada(host: _Host) -> None:

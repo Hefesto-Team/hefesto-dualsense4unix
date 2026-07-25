@@ -1,10 +1,10 @@
-"""sensor_widgets.py — giroscópio, microfone e touchpad do card (S2).
+"""sensor_widgets.py — giroscópio, microfone, touchpad, lightbar e alto-falante.
 
-Os três módulos de sensor que o guia de identidade pediu para a aba Status,
-cada um com a mesma anatomia do resto da casa: as REGRAS moram em funções
-puras (testáveis sem toolkit) e o desenho, num `Gtk.DrawingArea` que só
-pinta o que a função pura decidiu. Ambiente sem GTK cai num stub que guarda
-o mesmo estado — é o que deixa a suíte rodar em CI sem display.
+Os módulos de sensor que o guia de identidade pediu para a aba Status, cada
+um com a mesma anatomia do resto da casa: as REGRAS moram em funções puras
+(testáveis sem toolkit) e o desenho, num `Gtk.DrawingArea` que só pinta o que
+a função pura decidiu. Ambiente sem GTK cai num stub que guarda o mesmo
+estado — é o que deixa a suíte rodar em CI sem display.
 
 Nenhum widget daqui agenda timer: quem os alimenta é o tick de 10 Hz que a
 mixin de status JÁ tinha (o gate de timers do STATUS-02 continua valendo).
@@ -34,6 +34,12 @@ COR_SELO_ATIVO_FUNDO: Final[str] = "#50fa7b"
 COR_SELO_ATIVO_TEXTO: Final[str] = "#21222c"
 COR_SELO_MUDO_FUNDO: Final[str] = "#2b2d3a"
 COR_SELO_MUDO_TEXTO: Final[str] = "#6272a4"
+
+#: Faixas de amplitude do medidor de microfone (mockup `Telas Hefesto.dc.html`,
+#: `micBars`): pico em verde, fala em ciano, silêncio no cinza do contorno.
+COR_MIC_PICO: Final[str] = "#50fa7b"
+COR_MIC_FALA: Final[str] = "#8be9fd"
+COR_MIC_SILENCIO: Final[str] = "#44475a"
 
 
 def hex_para_rgb(valor: str) -> RGB:
@@ -88,6 +94,66 @@ def selo_mic(muted: bool | None) -> tuple[str, str, str] | None:
     return ("ATIVO", COR_SELO_ATIVO_FUNDO, COR_SELO_ATIVO_TEXTO)
 
 
+#: Quantas amostras o medidor de microfone mostra ao mesmo tempo (mockup).
+MIC_AMOSTRAS: Final[int] = 14
+
+#: Piso da altura de uma barra do medidor. Sem ele, silêncio absoluto apagaria
+#: o medidor inteiro e ficaria idêntico a "não tenho microfone" — que é o
+#: estado em que o módulo SOME. Com o piso, silêncio é uma linha baixa e
+#: contínua: dá para ver que o medidor está vivo e não tem nada entrando.
+MIC_PISO_BARRA: Final[float] = 0.08
+
+
+def cor_da_barra_do_mic(amplitude: float) -> str:
+    """Cor de UMA barra do medidor, pela amplitude DAQUELA amostra.
+
+    Três faixas (mockup `micBars`): acima de 60% é pico (verde), acima de 30%
+    é fala (ciano), o resto é o cinza de silêncio. A cor acompanha a barra,
+    não o nível global — é o que faz o pico aparecer no instante em que
+    acontece, em vez de nunca (a escada fixa antiga só acendia mais barras da
+    MESMA cor).
+    """
+    if amplitude > 0.60:
+        return COR_MIC_PICO
+    if amplitude > 0.30:
+        return COR_MIC_FALA
+    return COR_MIC_SILENCIO
+
+
+def historico_deslizante(
+    historico: tuple[float, ...], amostra: float, tamanho: int = MIC_AMOSTRAS
+) -> tuple[float, ...]:
+    """Empurra ``amostra`` na direita e descarta a mais velha da esquerda.
+
+    O medidor é uma janela do PASSADO RECENTE: a altura de cada barra é uma
+    amostra de amplitude, e o conjunto forma a onda que anda para a esquerda.
+    Histórico curto demais (ou longo demais) não é problema: a função sempre
+    devolve exatamente ``tamanho`` amostras, completando com zeros à esquerda.
+    """
+    if tamanho <= 0:
+        return ()
+    valor = max(0.0, min(1.0, float(amostra)))
+    janela = list(historico)[-(tamanho - 1) :] if tamanho > 1 else []
+    faltam = (tamanho - 1) - len(janela)
+    return tuple([0.0] * faltam + janela + [valor])
+
+
+def fracao_do_volume(volume: int) -> float:
+    """Volume bruto 0-255 do alto-falante -> fração 0.0-1.0 da barra."""
+    return max(0.0, min(1.0, volume / 255))
+
+
+def texto_volume(volume: int, muted: bool | None) -> str:
+    """Rótulo do alto-falante: "mudo" ou a porcentagem do volume.
+
+    ``muted`` None = o daemon mandou volume mas não mandou mute; o rótulo
+    mostra só a porcentagem em vez de cravar que o som está saindo.
+    """
+    if muted:
+        return "mudo"
+    return f"{round(fracao_do_volume(volume) * 100)} %"
+
+
 def texto_toques(quantidade: int) -> str:
     """Rótulo do touchpad: "sem toque" ou "N toque"/"N toques"."""
     if quantidade <= 0:
@@ -129,15 +195,19 @@ except (ImportError, ValueError):
 
 
 #: Altura de uma linha de eixo do giroscópio, em px.
-_LINHA_GYRO_PX: Final[int] = 13
+_LINHA_GYRO_PX: Final[int] = 12
 #: Largura reservada à letra do eixo e ao número (campo fixo — sem reflow).
 _ROTULO_GYRO_PX: Final[int] = 12
 _VALOR_GYRO_PX: Final[int] = 54
-#: Tamanho do painel do touchpad (proporção 16:9 do sensor real).
-_TOUCHPAD_PX: Final[tuple[int, int]] = (88, 50)
-#: Medidor do mic: barras verticais, como o guia pediu.
-_MIC_PX: Final[tuple[int, int]] = (78, 22)
-_MIC_BARRAS: Final[int] = 13
+#: Tamanho do painel do touchpad (proporção 16:9 do sensor real). Encolheu de
+#: 88x50 quando os cinco blocos passaram a dividir UMA linha só.
+_TOUCHPAD_PX: Final[tuple[int, int]] = (76, 42)
+#: Medidor do mic: 14 barras verticais de amplitude (mockup).
+_MIC_PX: Final[tuple[int, int]] = (72, 26)
+#: Barra da lightbar e barra de volume do alto-falante — a mesma pegada de
+#: "faixa fina" da barra de LED do DualSense.
+_LIGHTBAR_PX: Final[tuple[int, int]] = (60, 12)
+_SPEAKER_PX: Final[tuple[int, int]] = (60, 12)
 
 
 if _GTK_DISPONIVEL:
@@ -215,39 +285,120 @@ if _GTK_DISPONIVEL:
             return False
 
     class MicMeter(Gtk.DrawingArea):  # type: ignore[misc]
-        """Medidor de nível do microfone em barras verticais (guia §4)."""
+        """Onda de amplitude do microfone: 14 amostras deslizantes (mockup).
+
+        A versão anterior era uma ESCADA FIXA: as barras tinham sempre as
+        mesmas alturas e o nível só decidia QUANTAS acendiam — a forma nunca
+        mudava e o verde de pico, que dependia de uma barra ultrapassar 60%,
+        não aparecia nunca. Agora cada barra É uma amostra: a altura conta o
+        que entrou naquele instante e a cor sai de :func:`cor_da_barra_do_mic`.
+        """
 
         def __init__(self) -> None:
             super().__init__()
             self._nivel = 0.0
+            self._historico: tuple[float, ...] = (0.0,) * MIC_AMOSTRAS
             self.set_size_request(*_MIC_PX)
             self.connect("draw", self._on_draw)
 
         def set_nivel(self, nivel: float) -> None:
+            """Empurra mais uma amostra na onda (a mais velha cai fora)."""
             valor = max(0.0, min(1.0, float(nivel)))
-            # Quantiza na resolução do próprio desenho: variação menor que
-            # uma barra não muda um pixel, e repintar por ela seria puro
-            # desperdício a 10 Hz.
-            if round(valor * _MIC_BARRAS) != round(self._nivel * _MIC_BARRAS):
-                self._nivel = valor
+            self._nivel = valor
+            self._historico = historico_deslizante(self._historico, valor)
+            self.queue_draw()
+
+        def limpar(self) -> None:
+            """Zera a onda — o mic sumiu e o traço dele não pode ficar na tela."""
+            if any(self._historico) or self._nivel:
+                self._nivel = 0.0
+                self._historico = (0.0,) * MIC_AMOSTRAS
                 self.queue_draw()
 
         def _on_draw(self, _widget: Any, ctx: Any) -> bool:
             largura = self.get_allocated_width()
             altura = self.get_allocated_height()
-            passo = largura / _MIC_BARRAS
-            acesas = round(self._nivel * _MIC_BARRAS)
-            trilha = hex_para_rgb(COR_TRILHA)
-            cheia = hex_para_rgb(COR_TOQUE)
-            for indice in range(_MIC_BARRAS):
-                # Barras crescem em altura da esquerda para a direita: dá
-                # forma de medidor mesmo sem cor, para quem não distingue
-                # aceso de apagado.
-                fracao_altura = 0.35 + 0.65 * (indice / max(1, _MIC_BARRAS - 1))
-                h = altura * fracao_altura
-                ctx.set_source_rgb(*(cheia if indice < acesas else trilha))
+            passo = largura / MIC_AMOSTRAS
+            for indice, amostra in enumerate(self._historico):
+                fracao = max(MIC_PISO_BARRA, amostra)
+                h = altura * fracao
+                ctx.set_source_rgb(*hex_para_rgb(cor_da_barra_do_mic(amostra)))
                 ctx.rectangle(indice * passo, altura - h, max(1.0, passo - 2), h)
                 ctx.fill()
+            return False
+
+    class LightbarBar(Gtk.DrawingArea):  # type: ignore[misc]
+        """Faixa horizontal com a cor CRUA da lightbar daquele controle.
+
+        Cor crua de propósito (mesma decisão D8 do swatch do título): quem
+        precisa de contraste é o TRAÇO da interface, não a amostra da cor —
+        ajustar aqui mostraria uma cor que o controle não está emitindo.
+        """
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._rgb: tuple[int, int, int] | None = None
+            self.set_size_request(*_LIGHTBAR_PX)
+            self.connect("draw", self._on_draw)
+
+        def set_cor(self, rgb: tuple[int, int, int] | None) -> None:
+            if rgb != self._rgb:
+                self._rgb = rgb
+                self.queue_draw()
+
+        def _on_draw(self, _widget: Any, ctx: Any) -> bool:
+            largura = self.get_allocated_width()
+            altura = self.get_allocated_height()
+            # Trilha embaixo: com a lightbar apagada, a faixa continua
+            # visível como faixa (apagada é um estado, não um sumiço).
+            ctx.set_source_rgb(*hex_para_rgb(COR_TRILHA))
+            ctx.rectangle(0, 0, largura, altura)
+            ctx.fill()
+            if self._rgb is not None:
+                ctx.set_source_rgb(*(canal / 255 for canal in self._rgb))
+                ctx.rectangle(1, 1, largura - 2, altura - 2)
+                ctx.fill()
+            ctx.set_source_rgb(*hex_para_rgb(COR_CONTORNO))
+            ctx.set_line_width(1)
+            ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
+            ctx.stroke()
+            return False
+
+    class SpeakerBar(Gtk.DrawingArea):  # type: ignore[misc]
+        """Barra de volume do alto-falante do controle (0-255 -> fração)."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._fracao = 0.0
+            self._muted = False
+            self.set_size_request(*_SPEAKER_PX)
+            self.connect("draw", self._on_draw)
+
+        def set_volume(self, fracao: float, muted: bool | None) -> None:
+            valor = max(0.0, min(1.0, float(fracao)))
+            mudo = bool(muted)
+            if (valor, mudo) != (self._fracao, self._muted):
+                self._fracao = valor
+                self._muted = mudo
+                self.queue_draw()
+
+        def _on_draw(self, _widget: Any, ctx: Any) -> bool:
+            largura = self.get_allocated_width()
+            altura = self.get_allocated_height()
+            ctx.set_source_rgb(*hex_para_rgb(COR_TRILHA))
+            ctx.rectangle(0, 0, largura, altura)
+            ctx.fill()
+            if self._fracao > 0:
+                # Mudo mantém o DESENHO do volume (o valor não some ao mutar),
+                # só troca a cor para o cinza de "não está saindo som".
+                cor = COR_CONTORNO if self._muted else COR_TOQUE
+                ctx.set_source_rgb(*hex_para_rgb(cor))
+                ctx.rectangle(1, 1, max(0.0, (largura - 2) * self._fracao), altura - 2)
+                ctx.fill()
+            ctx.set_source_rgb(*hex_para_rgb(COR_CONTORNO))
+            ctx.set_line_width(1)
+            ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
+            ctx.stroke()
             return False
 
     class TouchpadView(Gtk.DrawingArea):  # type: ignore[misc]
@@ -307,13 +458,51 @@ else:
             """No-op no stub."""
 
     class MicMeter:  # type: ignore[no-redef]
-        """Stub sem GTK do medidor de nível."""
+        """Stub sem GTK do medidor de nível (guarda a onda deslizante)."""
 
         def __init__(self) -> None:
             self._nivel = 0.0
+            self._historico: tuple[float, ...] = (0.0,) * MIC_AMOSTRAS
 
         def set_nivel(self, nivel: float) -> None:
             self._nivel = max(0.0, min(1.0, float(nivel)))
+            self._historico = historico_deslizante(self._historico, self._nivel)
+
+        def limpar(self) -> None:
+            self._nivel = 0.0
+            self._historico = (0.0,) * MIC_AMOSTRAS
+
+        def set_size_request(self, *_args: object) -> None:
+            """No-op no stub."""
+
+        def show(self) -> None:
+            """No-op no stub."""
+
+    class LightbarBar:  # type: ignore[no-redef]
+        """Stub sem GTK da faixa da lightbar."""
+
+        def __init__(self) -> None:
+            self._rgb: tuple[int, int, int] | None = None
+
+        def set_cor(self, rgb: tuple[int, int, int] | None) -> None:
+            self._rgb = rgb
+
+        def set_size_request(self, *_args: object) -> None:
+            """No-op no stub."""
+
+        def show(self) -> None:
+            """No-op no stub."""
+
+    class SpeakerBar:  # type: ignore[no-redef]
+        """Stub sem GTK da barra de volume do alto-falante."""
+
+        def __init__(self) -> None:
+            self._fracao = 0.0
+            self._muted = False
+
+        def set_volume(self, fracao: float, muted: bool | None) -> None:
+            self._fracao = max(0.0, min(1.0, float(fracao)))
+            self._muted = bool(muted)
 
         def set_size_request(self, *_args: object) -> None:
             """No-op no stub."""
@@ -341,14 +530,24 @@ __all__ = [
     "COR_GYRO_X",
     "COR_GYRO_Y",
     "COR_GYRO_Z",
+    "COR_MIC_FALA",
+    "COR_MIC_PICO",
+    "COR_MIC_SILENCIO",
     "ESCALA_GYRO_GRAUS_S",
+    "MIC_AMOSTRAS",
     "GyroBars",
+    "LightbarBar",
     "MicMeter",
+    "SpeakerBar",
     "TouchpadView",
+    "cor_da_barra_do_mic",
     "fracao_do_eixo",
+    "fracao_do_volume",
     "hex_para_rgb",
+    "historico_deslizante",
     "posicao_normalizada",
     "selo_mic",
     "texto_eixo",
     "texto_toques",
+    "texto_volume",
 ]
