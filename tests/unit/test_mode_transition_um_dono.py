@@ -140,10 +140,33 @@ def test_plano_do_nativo_so_liga_o_nativo() -> None:
     ]
 
 
-def test_plano_sem_flavor_usa_o_default_unico() -> None:
-    """HARM-08: um único default de máscara — Xbox (vibra, não duplica)."""
+def test_plano_sem_flavor_nao_escolhe_mascara_nenhuma() -> None:
+    """AUTO-01.3: sem escolha dela, quem decide a máscara é o DAEMON.
+
+    Este teste TROCOU de contrato de propósito. Ele travava o oposto (a GUI
+    injetava ``DEFAULT_FLAVOR``), e era esse o defeito: `gamepad on` pela linha
+    de comando preservava a máscara do daemon — `dualsense` numa instalação
+    nova, por HARMONIA-MASK-01 — enquanto "Jogar pelo Hefesto" impunha `xbox`.
+    O MESMO gesto entregava máscaras diferentes conforme a porta de entrada, e
+    a máscara decide se o jogo reconhece o controle.
+
+    O `DEFAULT_FLAVOR` segue existindo e segue com um dono só (é o piso dos
+    presets e o fallback do `normalize_flavor`); o que acabou foi a GUI
+    escolher por ela.
+    """
     plan = mode_transition.plan_mode_transition("gamepad", None)
-    assert plan[-1] == ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"})
+    assert plan[-1] == ("gamepad.emulation.set", {"enabled": True})
+    assert "flavor" not in plan[-1][1]
+
+
+def test_plano_com_flavor_explicito_manda_o_campo() -> None:
+    """A escolha dela no seletor de máscara continua chegando intacta."""
+    plan = mode_transition.plan_mode_transition("gamepad", "dualsense")
+
+    assert plan[-1] == (
+        "gamepad.emulation.set",
+        {"enabled": True, "flavor": "dualsense"},
+    )
 
 
 def test_modo_desconhecido_falha_alto() -> None:

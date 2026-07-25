@@ -33,6 +33,7 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
     STATE_IPC_TIMEOUT_S,
+    apply_coop_prep,
     apply_mode,
     mode_of_state,
 )
@@ -330,6 +331,69 @@ def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
     return f"{len(controllers)} controles = {len(players)} jogadores"
 
 
+# AUTO-01.2: rótulo base do botão de co-op. Sem contagem enquanto não há dois
+# controles — prometer "(2 jogadores)" com um controle na mesa seria a interface
+# afirmando o que o jogo não vai confirmar (mesma regra do `_format_players_hint`).
+COOP_PREP_LABEL_BASE = "Preparar co-op"
+
+# AUTO-01.2: as três frases do botão. Elas existem porque o co-op tinha efeito
+# visível e caminho invisível: a única forma de ligá-lo era `coop on` no
+# terminal. Cada uma responde "o que acontece se eu clicar agora?".
+COOP_PREP_HINT_UM_CONTROLE = (
+    "Ligue o segundo controle (cabo ou Bluetooth) para jogar acompanhada — "
+    "cada controle vira um jogador."
+)
+COOP_PREP_HINT_PRONTO = (
+    "Tudo pronto: cada controle já é um jogador. Clique de novo se algum "
+    "controle entrou depois."
+)
+COOP_PREP_HINT_CONVITE = (
+    "Um clique faz tudo: entra no modo de jogo, dá um jogador para cada "
+    "controle e arruma a numeração."
+)
+
+
+def coop_prep_label(controllers: list[dict[str, Any]]) -> str:
+    """Rótulo do botão "Preparar co-op" — função pura (AUTO-01.2).
+
+    A contagem sai dos controles CONECTADOS (é quantos jogadores o co-op vai
+    criar), não dos jogadores que já existem: o botão promete o depois, não
+    descreve o agora. Com menos de dois, some a contagem — ver
+    `COOP_PREP_LABEL_BASE`.
+    """
+    n = len(controllers)
+    if n < 2:
+        return COOP_PREP_LABEL_BASE
+    return f"{COOP_PREP_LABEL_BASE} ({n} jogadores)"
+
+
+def coop_prep_hint(state: dict[str, Any] | None, controllers: list[dict[str, Any]]) -> str:
+    """Frase abaixo do botão de co-op — função pura (AUTO-01.2).
+
+    Três estados, na ordem em que a usuária os encontra: falta um segundo
+    controle; já está tudo de pé (o botão vira "conferir/reaplicar", que é o
+    gesto certo quando alguém entra no meio da partida); e o convite, que é o
+    caso da instalação nova. Offline devolve vazio — sem daemon não há nada a
+    afirmar (mesma regra do `autoswitch_lock_text`).
+    """
+    if not isinstance(state, dict):
+        return ""
+    if len(controllers) < 2:
+        return COOP_PREP_HINT_UM_CONTROLE
+    coop = state.get("coop")
+    jogadores = coop.get("players") if isinstance(coop, dict) else None
+    ligado = bool(coop.get("enabled")) if isinstance(coop, dict) else False
+    if (
+        ligado
+        and mode_of_state(state) == MODE_GAMEPAD
+        and isinstance(jogadores, int)
+        and not isinstance(jogadores, bool)
+        and jogadores >= 2
+    ):
+        return COOP_PREP_HINT_PRONTO
+    return COOP_PREP_HINT_CONVITE
+
+
 def _format_controller_title(entry: dict[str, Any]) -> str:
     """Título do card: "Controle 2 — P3" (função pura).
 
@@ -396,6 +460,24 @@ class HomeActionsMixin(WidgetAccessMixin):
         wrapper_banner.set_visible(False)
         self._home_wrapper_banner = wrapper_banner
         box.pack_start(wrapper_banner, False, False, 0)
+
+        # --- AUTO-01.2: "Preparar co-op" (o único widget vindo do Glade) ----
+        # O co-op local — quatro jogadores, a funcionalidade central do projeto
+        # — só existia por linha de comando. O botão vive no `main.glade` (é
+        # conteúdo fixo, não um card gerado por controle) e aqui ele é
+        # RE-POSICIONADO: no arquivo ele precede tudo, mas na tela tem de ficar
+        # abaixo dos dois banners (aviso primeiro, ação depois). Tolerante a
+        # ausência: Glade antigo/dublê de teste sem os widgets não quebra a aba.
+        self._home_coop_prep_btn = self._get("home_coop_prep_btn")
+        self._home_coop_prep_hint = self._get("home_coop_prep_hint")
+        coop_frame = self._get("home_coop_frame")
+        if self._home_coop_prep_btn is not None:
+            self._home_coop_prep_btn.connect(
+                "clicked", self._on_home_coop_prep_clicked
+            )
+        if coop_frame is not None:
+            with contextlib.suppress(Exception):
+                box.reorder_child(coop_frame, 2)
 
         # --- Frame: modo do sistema ---------------------------------------
         from hefesto_dualsense4unix.app.widgets.segmented_selector import (
@@ -640,6 +722,9 @@ class HomeActionsMixin(WidgetAccessMixin):
                 # atenda o IPC.
                 self._home_renumber_btn.set_sensitive(False)
                 self._home_renumber_hint.set_text("")
+                # AUTO-01.2: idem para "Preparar co-op" — os três passos são
+                # IPC, e sem daemon nenhum deles chega a lugar nenhum.
+                self._render_coop_prep(None, [])
                 # FEAT-AUTOSWITCH-LOCK-01: sem daemon, o cadeado não tem estado.
                 _lock = getattr(self, "_home_autoswitch_lock", None)
                 if _lock is not None:
@@ -692,8 +777,17 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._home_gamepad_opts.set_visible(mode == "gamepad")
             self._home_gamepad_opts.set_no_show_all(mode != "gamepad")
 
-            flavor = gamepad.get("flavor") or "xbox"
-            self._home_flavor_selector.set_active_id(str(flavor))
+            # AUTO-01.3: o dono da máscara é o DAEMON — a GUI só ECOA o que ele
+            # reporta (`gamepad_emulation.flavor`, presente sempre que o daemon
+            # está vivo). O `or "xbox"` que estava aqui era um segundo dono do
+            # valor: com o campo ausente a aba mostrava Xbox e, no clique
+            # seguinte, MANDAVA Xbox — trocando a máscara do daemon por causa de
+            # um payload incompleto. Sem valor conhecido, o seletor fica como
+            # está e o plano de transição sai sem o campo (ver
+            # `plan_mode_transition`), preservando a máscara vigente.
+            flavor = gamepad.get("flavor")
+            if isinstance(flavor, str) and flavor:
+                self._home_flavor_selector.set_active_id(flavor)
 
             # UX-03: banner de degradação do vpad — visível SÓ quando a máscara
             # DualSense caiu no backend uinput (função pura decide; backend
@@ -731,6 +825,9 @@ class HomeActionsMixin(WidgetAccessMixin):
                 if isinstance(c, dict) and c.get("connected")
             ]
             self._home_players_hint.set_text(_format_players_hint(connected))
+            # AUTO-01.2: o botão de co-op fala a partir dos MESMOS controles
+            # conectados que os cards mostram — uma fonte só para a contagem.
+            self._render_coop_prep(state, connected)
             self._render_home_controllers(
                 connected,
                 grab_state=state.get("primary_grab_state"),
@@ -741,6 +838,24 @@ class HomeActionsMixin(WidgetAccessMixin):
             _ = Gtk
         finally:
             self._home_guard = False
+
+    def _render_coop_prep(
+        self, state: dict[str, Any] | None, controllers: list[dict[str, Any]]
+    ) -> None:
+        """Reconcilia o botão "Preparar co-op" com o estado vivo (AUTO-01.2).
+
+        Rótulo e frase saem das funções puras (`coop_prep_label`/
+        `coop_prep_hint`); aqui só há widget. `getattr` defensivo pelo mesmo
+        motivo do cadeado de autoswitch: os dublês de teste do `_render_home` e
+        um Glade sem os widgets novos não podem derrubar a aba inteira.
+        """
+        btn = getattr(self, "_home_coop_prep_btn", None)
+        hint = getattr(self, "_home_coop_prep_hint", None)
+        if btn is not None:
+            btn.set_label(coop_prep_label(controllers))
+            btn.set_sensitive(state is not None)
+        if hint is not None:
+            hint.set_text(coop_prep_hint(state, controllers))
 
     def _render_home_controllers(
         self,
@@ -863,6 +978,48 @@ class HomeActionsMixin(WidgetAccessMixin):
             _done,
             _fail,
             timeout_s=_MODE_IPC_TIMEOUT_S,
+        )
+
+    def _on_home_coop_prep_clicked(self, _button: object) -> None:
+        """AUTO-01.2: um clique prepara o co-op inteiro.
+
+        O que ela fazia até aqui para jogar acompanhada: escolher "Jogar pelo
+        Hefesto" na Início, abrir um terminal para `coop on` (o co-op não tinha
+        botão nenhum) e voltar para renumerar os controles. Agora é um botão, e
+        a sequência tem dono único (`mode_transition.plan_coop_prep`) — a mesma
+        regra do HARM-01 para a troca de modo.
+
+        Só o passo do co-op reporta (ver `apply_coop_prep`): a renumeração é
+        recusada pelo daemon com jogo aberto e não pode virar "falha ao
+        preparar o co-op" quando os jogadores já subiram. O refresh no fim é o
+        que faz os cards e a frase contarem a verdade sem esperar o poller.
+        """
+
+        def _done(resultado: Any) -> bool:
+            jogadores = (
+                resultado.get("players") if isinstance(resultado, dict) else None
+            )
+            if isinstance(jogadores, int) and not isinstance(jogadores, bool):
+                self._status_toast(
+                    "home", f"Co-op pronto — {jogadores} jogador(es)."
+                )
+            else:
+                self._status_toast("home", "Co-op pronto.")
+            self._refresh_home_tab()
+            return False
+
+        def _fail(_exc: Exception) -> bool:
+            self._status_toast(
+                "home",
+                "Não consegui preparar o co-op — o Hefesto pode estar desligado.",
+            )
+            self._refresh_home_tab()
+            return False
+
+        apply_coop_prep(
+            flavor=self._home_flavor_selector.get_active_id(),
+            on_done=_done,
+            on_fail=_fail,
         )
 
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
@@ -1036,11 +1193,17 @@ class HomeActionsMixin(WidgetAccessMixin):
 
 
 __all__ = [
+    "COOP_PREP_HINT_CONVITE",
+    "COOP_PREP_HINT_PRONTO",
+    "COOP_PREP_HINT_UM_CONTROLE",
+    "COOP_PREP_LABEL_BASE",
     "HOME_POLL_INTERVAL_MS",
     "RENUMBER_GAME_OPEN_TEXT",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
+    "coop_prep_hint",
+    "coop_prep_label",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]

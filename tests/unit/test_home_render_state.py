@@ -45,6 +45,10 @@ class _FakeWidget:
         self.style = _StyleCtx()
         self.sensitive = True
         self.visible = True
+        # AUTO-01.3: o seletor de máscara precisa GUARDAR o que o render pediu —
+        # o `set_active_id` era um no-op e "a aba não reescreve o seletor" não
+        # tinha como ser observado.
+        self.active_id: str | None = None
 
     def get_style_context(self) -> _StyleCtx:
         return self.style
@@ -82,8 +86,8 @@ class _FakeWidget:
     def set_active(self, _value: bool) -> None:
         pass
 
-    def set_active_id(self, _value: str) -> None:
-        pass
+    def set_active_id(self, value: str) -> None:
+        self.active_id = value
 
     def pack_start(self, child: _FakeWidget, *_args: object) -> None:
         self.children.append(child)
@@ -101,6 +105,9 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
+    # AUTO-01.2: o botão "Preparar co-op" é reconciliado pelo `_render_home`
+    # como qualquer outro widget da aba.
+    _render_coop_prep = HomeActionsMixin._render_coop_prep
     _refresh_home_tab = HomeActionsMixin._refresh_home_tab
 
     def __init__(self) -> None:
@@ -125,6 +132,9 @@ class _HomeStub:
         # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
         self._home_renumber_btn = _FakeWidget()
         self._home_renumber_hint = _FakeWidget()
+        # AUTO-01.2: botão "Preparar co-op" + frase (vêm do Glade).
+        self._home_coop_prep_btn = _FakeWidget()
+        self._home_coop_prep_hint = _FakeWidget()
 
 
 @pytest.fixture()
@@ -512,3 +522,62 @@ class TestRenumberClickHandler:
         HomeActionsMixin._on_home_renumber_clicked(host, object())  # type: ignore[arg-type]
 
         assert any("desligado" in t for t in host.toasts)  # type: ignore[attr-defined]
+
+
+class TestMascaraTemUmDonoSo:
+    """AUTO-01.3 — a janela ECOA a máscara do daemon; nunca escolhe por ela.
+
+    O `_render_home` tinha ``flavor = gamepad.get("flavor") or "xbox"``: um
+    SEGUNDO dono do valor. Com o campo ausente no payload, a aba passava a
+    exibir Xbox e — pior — o clique seguinte MANDAVA Xbox, trocando a máscara
+    vigente do daemon por causa de um payload incompleto. A máscara decide se o
+    jogo reconhece o controle.
+    """
+
+    def test_reflete_a_mascara_que_o_daemon_reporta(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        estado = _state([])
+        estado["gamepad_emulation"] = {"enabled": True, "flavor": "dualsense"}
+        host._render_home(estado)
+
+        assert host._home_flavor_selector.active_id == "dualsense"
+
+    def test_payload_sem_mascara_nao_reescreve_o_seletor(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+        host._home_flavor_selector.active_id = "dualsense"
+
+        estado = _state([])
+        estado["gamepad_emulation"] = {"enabled": True}
+        host._render_home(estado)
+
+        assert host._home_flavor_selector.active_id == "dualsense"
+
+
+class TestBotaoDeCoopNaAbaInicio:
+    """AUTO-01.2 — o co-op passou a existir na janela (era só linha de comando)."""
+
+    def test_conta_os_jogadores_que_o_clique_vai_criar(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(
+            _state(
+                [
+                    {"index": 0, "connected": True, "transport": "usb",
+                     "is_primary": True, "player": 1},
+                    {"index": 1, "connected": True, "transport": "usb",
+                     "is_primary": False, "player": 2},
+                ]
+            )
+        )
+
+        assert host._home_coop_prep_btn.label == "Preparar co-op (2 jogadores)"
+        assert host._home_coop_prep_btn.sensitive is True
+
+    def test_daemon_desligado_desabilita_o_botao(self, fake_gtk: None) -> None:
+        host = _HomeStub()
+
+        host._render_home(None)
+
+        assert host._home_coop_prep_btn.sensitive is False
+        assert host._home_coop_prep_hint.label == ""

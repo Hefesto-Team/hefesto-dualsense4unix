@@ -570,6 +570,18 @@ install_dkms_hid_nintendo_host() {
     # mesmo; só o próximo BOOT troca. Mensagem honesta nos dois ramos.
     if [[ -d /sys/module/hid_nintendo/parameters ]]; then
         printf '      módulo patchado JÁ carregado (params visíveis em /sys/module/hid_nintendo/parameters)\n'
+        # AUTO-01.7: com o patchado carregado, escreve os params A QUENTE —
+        # paridade com o caminho de instalação por PACOTE
+        # (scripts/install-host-udev.sh), que já fazia isto e o install.sh não.
+        # Os dois são lidos A CADA PROBE, então a cura vale no próximo PLUG do
+        # controle, sem esperar reboot; e é a única janela possível, porque
+        # recarregar o módulo é proibido (derrubaria Pro/8BitDo em uso).
+        # Best-effort: param read-only ou sudo expirado não interrompe nada.
+        if [[ -w /sys/module/hid_nintendo/parameters/bt_probe_retries ]]; then
+            printf '3' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
+            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
+            printf '      params aplicados a quente (valem no próximo plug, sem reboot)\n'
+        fi
     elif [[ -d /sys/module/hid_nintendo ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria Pro/8BitDo conectados);\n'
         printf '      o patchado vale no próximo boot (replug re-liga no módulo já carregado)\n'
@@ -626,6 +638,15 @@ install_dkms_hid_playstation_host() {
     # params, então o diretório parameters/ sequer existe nele).
     if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
         printf '      módulo patchado JÁ carregado (feature_retries visível em /sys/module/hid_playstation/parameters)\n'
+        # AUTO-01.7: param A QUENTE — paridade com o caminho por PACOTE
+        # (scripts/install-host-udev.sh). `feature_retries` é lido A CADA
+        # PROBE, e o probe roda a cada CONEXÃO do controle: escrever aqui faz a
+        # cura do "segundo DualSense que some" valer no próximo pareamento, sem
+        # reboot e sem reload (proibido: derrubaria os DualSense por BT).
+        if [[ -w /sys/module/hid_playstation/parameters/feature_retries ]]; then
+            printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
+            printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
+        fi
     elif [[ -d /sys/module/hid_playstation ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria os DualSense, inclusive os por BT);\n'
         printf '      o patchado vale no próximo boot (reconectar NÃO troca módulo carregado)\n'

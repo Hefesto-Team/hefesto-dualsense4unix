@@ -143,7 +143,15 @@ def tray() -> None:
 def mic(
     action: str = typer.Argument(
         "status",
-        help="on | off | status | bt | bt-status — mic embutido do DualSense.",
+        help=(
+            "on | off | status | promote | demote | mute | unmute | release | "
+            "bt | bt-status — mic embutido do DualSense."
+        ),
+    ),
+    uniq: str = typer.Option(
+        "",
+        "--uniq",
+        help="MAC normalizado do controle nas ações mute/unmute/release.",
     ),
 ) -> None:
     """Liga/desliga o microfone embutido do DualSense.
@@ -151,7 +159,15 @@ def mic(
     NO CABO (via WirePlumber): por padrão o mic vem suprimido (sem virar
     microfone padrão / sem spam). `mic on` libera o mic quando você for jogar
     algo que precise dele; `mic off` volta a suprimir. Mesmo caminho usado pelo
-    botão na GUI e no applet COSMIC.
+    botão na GUI e no applet COSMIC. `mic promote` vai além do `on`: elege o mic
+    do controle como entrada PADRÃO do sistema e persiste a escolha; `mic
+    demote` devolve a prioridade rebaixada de sempre (MIC-USB-01).
+
+    NO FIRMWARE DO CONTROLE (MIC-USB-01): `mic mute` / `mic unmute` mexem no
+    mesmo mudo que o botão físico do controle alterna e que acende o LED —
+    exige o daemon rodando. `mic release` devolve esse registrador ao kernel,
+    que é quem alterna o mudo na borda do botão; sem ele, o valor que você
+    mandou continua valendo e o botão do controle não responde mais.
 
     EM BLUETOOTH (BT-MIC-01): o controle não fala A2DP/HFP — o áudio vem como
     Opus dentro dos reports HID e precisa de uma ponte. `mic bt` sobe essa ponte
@@ -160,7 +176,7 @@ def mic(
     """
     from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
 
-    mic_cmd(action)
+    mic_cmd(action, uniq=uniq or None)
 
 
 @app.command()

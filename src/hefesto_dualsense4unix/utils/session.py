@@ -371,6 +371,17 @@ def load_mouse_emulation_enabled() -> bool:
 
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
 
+#: AUTO-01.1: OPT-OUT explícito do gamepad virtual — "ela desligou de propósito".
+#: Até aqui o desligar era gravado APAGANDO o `gamepad_emulation.flag`, o que
+#: conflatava dois estados muito diferentes: *nunca configurado* (instalação
+#: nova) e *desligado a pedido dela*. A automação que liga a emulação com dois
+#: ou mais controles na mesa (`Daemon.aplicar_gamepad_para_multiplos_controles`)
+#: precisa distinguir os dois, senão religaria em ~2 s o vpad que ela acabou de
+#: desligar — a pior classe de bug possível (o produto brigando com a usuária).
+#: Mesmo desenho do `coop_disabled.flag` (FEAT-COOP-DEFAULT-ON-01) e da chave
+#: `enabled` do flag de mouse (HARM-06): grava-se a decisão, não a ausência.
+_GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
+
 
 def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
     """Persiste o estado do gamepad virtual (FEAT-DSX-GAMEPAD-FLAVOR-01).
@@ -378,32 +389,68 @@ def save_gamepad_emulation(enabled: bool, flavor: str | None = None) -> None:
     Flag-file em config_dir cujo conteúdo é o flavor (`dualsense`/`xbox`) quando
     ligado; o arquivo é removido quando desligado. Assim o daemon restaura tanto
     o liga/desliga quanto a máscara após restart/reboot. Best-effort.
+
+    AUTO-01.1: o desligar passou a gravar TAMBÉM o opt-out
+    (`gamepad_disabled.flag`), e o ligar a apagá-lo. O contrato de leitura
+    antigo (`load_gamepad_emulation`) não muda em nada — quem quer saber se ela
+    JÁ DECIDIU alguma coisa usa `load_gamepad_preference`. Só o gesto manual
+    chega aqui (R-07: `stop_gamepad_emulation(persist=origin == "manual")`), que
+    é exatamente a decisão que a automação tem de respeitar.
     """
     try:
-        flag = config_dir(ensure=True) / _GAMEPAD_EMULATION_FLAG_FILE
+        cfg = config_dir(ensure=True)
+        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
+        optout = cfg / _GAMEPAD_DISABLED_FLAG_FILE
         if enabled:
             flag.write_text(f"{(flavor or 'dualsense').strip()}\n", encoding="utf-8")
+            optout.unlink(missing_ok=True)
         else:
             flag.unlink(missing_ok=True)
+            optout.write_text("1\n", encoding="utf-8")
         logger.debug("gamepad_emulation_state_saved", enabled=enabled, flavor=flavor)
     except Exception as exc:
         logger.debug("gamepad_emulation_state_save_failed", err=str(exc))
+
+
+def load_gamepad_preference() -> tuple[bool | None, str | None]:
+    """Preferência PERSISTIDA do gamepad virtual: ``(ligado|None, flavor)``.
+
+    AUTO-01.1 — o primeiro campo tem TRÊS valores, e é essa a razão de existir:
+
+      - ``True``  — ela deixou ligado (flag presente; o flavor é o conteúdo);
+      - ``False`` — ela DESLIGOU de propósito (opt-out gravado). Nada de
+        automação pode religar por conta própria;
+      - ``None``  — **nunca decidiu** (instalação nova, ou versão anterior a
+        esta que apagava o flag ao desligar). Só neste caso o daemon pode ligar
+        a emulação sozinho ao ver dois controles na mesa.
+
+    Espelha `load_mouse_preference` (HARM-06), que resolveu o mesmo problema no
+    eixo do mouse. Best-effort: erro de I/O vira "nunca decidiu" — o fail-safe
+    aqui é deixar a automação agir, porque o efeito dela (dois controles = dois
+    jogadores) é o que a usuária espera quando não disse nada.
+    """
+    try:
+        cfg = config_dir()
+        flag = cfg / _GAMEPAD_EMULATION_FLAG_FILE
+        if flag.exists():
+            return True, (flag.read_text(encoding="utf-8").strip() or None)
+        if (cfg / _GAMEPAD_DISABLED_FLAG_FILE).exists():
+            return False, None
+        return None, None
+    except Exception:
+        return None, None
 
 
 def load_gamepad_emulation() -> tuple[bool, str | None]:
     """Retorna (ligado, flavor) do gamepad virtual da sessão anterior.
 
     `(False, None)` se a flag não existir. Se existir mas vazia, assume ligado
-    com flavor None (o caller normaliza para o default).
+    com flavor None (o caller normaliza para o default). Quem precisa
+    distinguir "desligado de propósito" de "nunca configurado" usa
+    `load_gamepad_preference` (AUTO-01.1).
     """
-    try:
-        flag = config_dir() / _GAMEPAD_EMULATION_FLAG_FILE
-        if not flag.exists():
-            return False, None
-        flavor = flag.read_text(encoding="utf-8").strip() or None
-        return True, flavor
-    except Exception:
-        return False, None
+    enabled, flavor = load_gamepad_preference()
+    return bool(enabled), flavor
 
 
 #: FEAT-COOP-DEFAULT-ON-01: co-op local é o PADRÃO (cada controle = um
@@ -483,6 +530,7 @@ __all__ = [
     "load_autoswitch_locked",
     "load_coop_enabled",
     "load_gamepad_emulation",
+    "load_gamepad_preference",
     "load_last_profile",
     "load_mouse_emulation",
     "load_mouse_emulation_enabled",

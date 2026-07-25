@@ -264,6 +264,12 @@ ORIGEM_GAME_SIGNAL = "game_signal"
 IGNORADO_SEM_JOGO = "ignorado_sem_jogo"
 IGNORADO_GESTO_DELA = "ignorado_gesto_dela"
 
+#: AUTO-01.1: o auto-ligar da emulação não agiu porque não há segundo controle
+#: na mesa. Estado próprio (e não `IGNORADO_SEM_JOGO`) porque é o caso NORMAL de
+#: quem joga sozinho — nada aconteceu de errado, simplesmente não há co-op a
+#: preparar. Ver `Daemon.aplicar_gamepad_para_multiplos_controles`.
+IGNORADO_UM_CONTROLE_SO = "ignorado_um_controle_so"
+
 
 @dataclass
 class ModoJogoPadrao:
@@ -379,6 +385,10 @@ class Daemon:
     # autoswitch pede a 2 Hz enquanto o jogo está em foco; sem esta chave, os
     # ~30 s de espera do lock de gesto manual virariam 60 linhas no journal.
     _modo_jogo_padrao_log: str = ""
+    # AUTO-01.1: último estado LOGADO de
+    # `aplicar_gamepad_para_multiplos_controles` (o tick lento pede a cada 2 s).
+    # Mesma dedup, mesma razão do campo acima.
+    _gamepad_multi_log: str = ""
     # MODO-01/B5: `ProfileManager` de LEITURA, cacheado. Ver
     # `_manager_de_selecao` — a instância nova a cada tique zerava a dedup do
     # veto R-21 e o journal levava 1 linha a cada 2 s.
@@ -1210,6 +1220,142 @@ class Daemon:
             players=coop.player_count(),
         )
         return self.config.coop_enabled
+
+    def contar_controles_fisicos(self) -> int:
+        """Quantos controles FÍSICOS o backend enxerga conectados agora (AUTO-01.1).
+
+        Fonte: `describe_controllers` do backend — os mesmos getattrs baratos
+        (sem HID I/O, sem varrer /dev/input) que o `_sync_identity_registry` já
+        consome no tick lento. `discover_dualsense_evdevs` daria a mesma
+        resposta e custaria 10-40 ms de enumeração por chamada: é justamente o
+        que o PERF-MULTI-CONTROLLER-01 tirou do event loop.
+
+        Controles EXTERNOS (8BitDo, Pro Controller) NÃO entram na conta, e isso
+        é decisão: eles já chegam ao jogo como gamepad nativo (8BIT-02) e não
+        dependem de gamepad virtual nenhum — a emulação existe para o DualSense,
+        que sem ela alimenta o cursor em vez do jogo.
+
+        Backend sem a API (fake/legado) ou payload estranho devolve 0: na
+        dúvida, não há segundo controle e nada liga sozinho.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return 0
+        try:
+            infos = describe()
+        except Exception as exc:  # nunca derrubar o poll loop
+            logger.debug("contagem_de_controles_falhou", err=str(exc))
+            return 0
+        if not isinstance(infos, list):
+            return 0
+        return sum(
+            1
+            for info in infos
+            if isinstance(info, dict) and bool(info.get("connected"))
+        )
+
+    def aplicar_gamepad_para_multiplos_controles(self) -> str:
+        """Liga a emulação de gamepad quando há DOIS ou mais controles (AUTO-01.1).
+
+        A queixa que isto cura: numa instalação nova, quatro DualSense plugados
+        alimentam **um cursor só**. `DaemonConfig.gamepad_emulation_enabled`
+        nasce `False`, o gate do co-op (`CoopManager.should_be_active`) exige o
+        vpad do P1 de pé, e por isso o `coop_enabled=True` do boot era
+        decorativo: sem emulação não existe jogador 2. O caminho para os quatro
+        jogadores passava por abrir um terminal ou caçar a aba certa.
+
+        Um segundo controle na mesa é a declaração de intenção mais clara que
+        existe — ninguém pluga dois DualSense para os dois moverem o mesmo
+        cursor. Então o daemon liga a emulação sozinho, UMA vez, e só nas
+        condições em que isso não pisa em decisão de ninguém. Na ordem
+        (todas as guardas são baratas: isto roda no tick lento, ~2 s):
+
+        1. **já ligada** — idempotente e é a saída do estado normal (um `and`
+           por tique depois que a automação agiu ou que ela mesma ligou);
+        2. **preferência persistida** — `load_gamepad_preference` distingue
+           "nunca decidiu" de "DESLIGOU de propósito" (AUTO-01.1 no
+           `utils.session`). Qualquer decisão gravada — ligada ou desligada —
+           tira a automação de cena para sempre; ela existe só para quem nunca
+           disse nada. Sem essa distinção, o "Controlar o PC" que ela acabou de
+           escolher voltaria a ser "Jogar pelo Hefesto" em ~2 s;
+        3. **lock de gesto manual (30 s)** — invariante forte do projeto: gesto
+           dela cria trava de 30 s e nada reverte nesse período. Aqui o pedido
+           apenas ESPERA (o tick lento repete, e ele entra quando o lock
+           vencer), como no `aplicar_modo_jogo_padrao`;
+        4. **Modo Nativo** — o controle está SOLTO para o jogo de propósito;
+        5. **emulação de mouse VIVA** — ela está usando o controle como mouse
+           agora (modo desktop, ou perfil com seção `mouse`). Ligar o vpad aqui
+           derrubaria o mouse pela exclusão mútua e, no tique seguinte, o perfil
+           o religaria: um flap sem fim entre cursor e vpad. Dois controles na
+           mesa não são autorização para arrancar o cursor da mão dela;
+        6. **um controle só** — nada a fazer.
+
+        Chama com `origin="profile"` de propósito: NÃO é gesto dela, então não
+        carimba `_emu_manual_ts` (não trava perfil nenhum por 30 s) e **não
+        persiste** preferência (R-07 — só o gesto manual escreve em disco). A
+        automação fica fora do disco por construção: se ela desligar depois, o
+        opt-out vale para sempre; se nunca mexer, o daemon reavalia a cada boot.
+
+        Retorno: o vocabulário de `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`,
+        com o log deduplicado por estado (`_gamepad_multi_log`) — o pedido chega
+        a cada 2 s e não pode virar enxurrada no journal.
+        """
+        from hefesto_dualsense4unix.daemon.state_store import (
+            MANUAL_PROFILE_LOCK_SEC,
+        )
+        from hefesto_dualsense4unix.utils.session import load_gamepad_preference
+
+        if self.config.gamepad_emulation_enabled and self._gamepad_device is not None:
+            return APLICADO
+        preferencia, _flavor = load_gamepad_preference()
+        if preferencia is not None:
+            return self._log_gamepad_multi(
+                IGNORADO_GESTO_DELA,
+                "ligada" if preferencia else "desligada_de_proposito",
+                0,
+            )
+        if time.monotonic() - self._emu_manual_ts < MANUAL_PROFILE_LOCK_SEC:
+            return self._log_gamepad_multi(
+                ADIADO_LOCK_MANUAL, "gesto_manual_recente", 0
+            )
+        if self._native_mode or self.store.native_mode_active:
+            return self._log_gamepad_multi(IGNORADO_GESTO_DELA, "modo_nativo", 0)
+        if self._mouse_device is not None:
+            return self._log_gamepad_multi(IGNORADO_GESTO_DELA, "mouse_em_uso", 0)
+        controles = self.contar_controles_fisicos()
+        if controles < 2:
+            return self._log_gamepad_multi(
+                IGNORADO_UM_CONTROLE_SO, "menos_de_dois_controles", controles
+            )
+        ok = self.set_gamepad_emulation(True, origin="profile")
+        if not ok:
+            return self._log_gamepad_multi(FALHOU, "start_recusou", controles)
+        self._gamepad_multi_log = APLICADO
+        logger.info(
+            "gamepad_ligado_por_multiplos_controles",
+            controles=controles,
+            flavor=self.config.gamepad_flavor,
+            coop=self.config.coop_enabled,
+        )
+        return APLICADO
+
+    def _log_gamepad_multi(self, estado: str, motivo: str, controles: int) -> str:
+        """Loga o estado do auto-ligar do gamepad 1x por episódio (AUTO-01.1).
+
+        Mesmo padrão — e mesma razão — do `_log_modo_jogo_padrao`: o pedido roda
+        no tick lento (~2 s) e, sem a dedup, uma espera de 30 s pelo lock de
+        gesto manual viraria 15 linhas no journal, e "ela desligou de propósito"
+        viraria uma linha a cada 2 s para sempre.
+        """
+        if self._gamepad_multi_log != estado:
+            self._gamepad_multi_log = estado
+            logger.info(
+                "gamepad_multiplos_controles_adiado",
+                estado=estado,
+                motivo=motivo,
+                controles=controles,
+            )
+        return estado
 
     def set_emulation_suppressed(
         self,
@@ -2907,6 +3053,16 @@ class Daemon:
             if tick_started >= identity_sync_next_at:
                 identity_sync_next_at = tick_started + 2.0
                 self._sync_identity_registry()
+                # AUTO-01.1: dois controles na mesa ligam a emulação sozinhos —
+                # sem ela o co-op não existe e os quatro DualSense viram um
+                # cursor só. Aqui, no MESMO tique do reconcile de identidade,
+                # porque as duas coisas leem a mesma fonte barata
+                # (`describe_controllers`) e porque isto TAMBÉM precisa rodar
+                # antes do gate de conexão: é o segundo controle que interessa,
+                # e a leitura do backend não depende do primário estar lendo
+                # estado neste instante. Nunca derruba o poll loop.
+                with contextlib.suppress(Exception):
+                    self.aplicar_gamepad_para_multiplos_controles()
             if tick_started >= external_led_next_at:
                 external_led_next_at = tick_started + 2.0
                 # HANG-01: nunca mais `await` inline — só AGENDA a task (o
