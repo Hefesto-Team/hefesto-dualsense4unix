@@ -97,6 +97,43 @@ por fora — `scripts/doctor.sh --fix-mic`:
    o WirePlumber marca a entrada analógica indisponível sem fone plugado — mas o
    microfone embutido usa esse mesmo caminho.
 
+### `identity.renumber` / `identity.number.set` — o número do controle
+
+| Método                | Parâmetros              | Retorno                                                   |
+|-----------------------|-------------------------|-----------------------------------------------------------|
+| `identity.renumber`   | `{}`                    | `{ok: true, renumbered: {addr: lugar}}` \| `{ok: false, reason}` |
+| `identity.number.set` | `{uniq: str, number: int}` | `{ok: true, number, changed: {addr: lugar}}` \| `{ok: false, reason}` |
+
+Os dois escrevem o MESMO estado — a **fila de preferência** do
+`controllers.json` (schema 3, campo `order`), compartilhada entre DualSense e
+externos. Desde a NUM-01 o que se grava é o **lugar na fila**, nunca um número
+absoluto: o número que a janela mostra é a *colocação desse lugar entre quem está
+presente agora*. É por isso que um controle sozinho na mesa é sempre o 1.
+
+- `identity.renumber` **compacta todo mundo** para 1..N preservando a ordem
+  relativa, e empurra quem está ausente para o fim da fila. É o "Renumerar
+  agora" da aba Início — um gesto de faxina.
+- `identity.number.set` (PLAYER-01, 25/07) atribui o número de **UM** controle:
+  permuta entre si os lugares que os PRESENTES já ocupam, pondo o alvo na
+  posição pedida. Os lugares de quem está ausente ficam intocados — este gesto
+  não rebaixa ninguém que está na gaveta.
+
+Ele é `number` e não `player` de propósito: "jogador" já nomeia OUTRO número
+neste projeto — o do co-op, alocado por vpad, que a aba Status exibe lado a lado
+com este (`app/actions/base.py:26` adverte não confundir os dois).
+
+**Recusas** (nenhuma escreve nada):
+
+| `reason`                | quando                                                      |
+|-------------------------|-------------------------------------------------------------|
+| `sessao_de_jogo_aberta` | `display_authority == "game"` — repintar o LED do controle que o jogo está usando no meio da partida é o erro que o NUMA-03 fechou |
+| `controle_ausente`      | o `uniq` não está entre os presentes; número exibido só existe para quem está na mesa |
+| `numero_fora_da_mesa`   | `number` maior que a quantidade de presentes (a resposta traz `max`) |
+| `lock_timeout`          | os `RLock` dos registros não vieram em 5 s (mesmo teto do renumber) |
+
+`changed` traz apenas os endereços cujo lugar MUDOU — a mesma disciplina do R-15
+no renumber, para a interface não anunciar sucesso de um no-op.
+
 ### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
 
 "Release total" do controle: solta o DualSense para o jogo usar os gatilhos

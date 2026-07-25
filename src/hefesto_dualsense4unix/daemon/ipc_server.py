@@ -10,6 +10,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     led.set              {rgb}                 -> {status}
     led.player_set       {bits: [bool]*5}      -> {status, bits}
     identity.renumber    {}          -> {ok, renumbered: {uniq: slot}} | {ok: false, reason}
+    identity.number.set  {uniq, number} -> {ok, number, changed} | {ok: false, reason}
     rumble.set           {weak, strong}        -> {status, weak, strong}
     rumble.stop          {}                    -> {status}
     rumble.passthrough   {enabled: bool}       -> {status}
@@ -135,6 +136,10 @@ class IpcServer(IpcHandlersMixin):
             "led.player_set": self._handle_led_player_set,
             # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.
             "identity.renumber": self._handle_identity_renumber,
+            # PLAYER-01 (25/07): atribuir o NÚMERO EXIBIDO de UM controle. Era
+            # o comando que faltava — só existia o renumber, que compacta todo
+            # mundo; não havia como dizer "este é o 2".
+            "identity.number.set": self._handle_identity_number_set,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
         }

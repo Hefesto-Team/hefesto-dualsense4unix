@@ -163,13 +163,23 @@ def test_sync_edit_target_todos_esconde_badge() -> None:
 
 
 def test_sync_edit_target_alvo_sem_mac_edita_global() -> None:
-    """Controle sem MAC estável (key por path): edição segue GLOBAL, sem
-    badge — regra do sprint (fora do mapa, com trilha em vez de silêncio)."""
+    """Controle sem MAC estável (key por path): edição segue GLOBAL.
+
+    PLAYER-01 (25/07) TROCOU o contrato do selo de propósito. Antes o badge
+    ficava ESCONDIDO neste caso — e este era justamente o caso em que ela mais
+    precisava do aviso: ela escolhe "Controle 1" no cabeçalho, mexe na cor, e a
+    mexida vale para TODOS, sem nada na tela dizendo isso. O selo agora aparece
+    e diz a verdade incômoda ("sem endereço fixo, vale para todos"); o alvo de
+    edição continua ``None`` (rota global), que é a parte que não mudou.
+    """
     inst = _status_instance()
     inst._update_target_maps([_conectado_com_uniq(0, "usb", None)])
     inst._sync_edit_target(0)
     assert inst._edit_target_uniq is None
-    assert not inst._edit_badge.visible
+    assert inst._edit_badge.visible
+    assert inst._edit_badge.text == (
+        "Editando: Controle 1 (USB) — sem endereço fixo, vale para todos"
+    )
 
 
 def test_sync_edit_target_repopula_abas_por_controle() -> None:
