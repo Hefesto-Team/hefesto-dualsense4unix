@@ -186,6 +186,7 @@ RULES=(
     # a economia no HOST derruba o barramento inteiro. PLAT-03 item 3.
     "81-hefesto-usb-host-power.rules"
     "82-nintendo-pro-nosniff.rules"
+    "83-hefesto-bond-snapshot.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.
