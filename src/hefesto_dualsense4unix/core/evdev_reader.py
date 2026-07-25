@@ -137,6 +137,15 @@ def discover_dualsense_evdevs() -> dict[str, Path]:
     legível (não deveria acontecer com hid_playstation) usam o próprio path
     como chave-fallback, prefixado com "path:" para nunca colidir com um MAC.
 
+    Aqui o MAC pode ser tratado como identidade — diferente do inventário de
+    externos, que precisa de `_external_dedup_key`. O endereço SINTÉTICO que
+    colide entre aparelhos nasce no `hid-nintendo` degradado, e esta função é
+    fechada em `DUALSENSE_VENDOR`/`DUALSENSE_PIDS`: quem chega até o
+    `setdefault` passou pelo `hid_playstation`, cujo patch DKMS (0001, retry de
+    feature report) não fabrica endereço nenhum — sem MAC do firmware o probe
+    falha e o device nem aparece. Vale igual para
+    `_discover_dualsense_por_nome`, que tem o mesmo filtro de vendor.
+
     Filtra devices virtuais (uinput, ver `_is_virtual_evdev`) e nodes sem caps
     de gamepad (touchpad/motion sensors ficam de fora).
     """
@@ -272,6 +281,101 @@ def _external_device_sysfs(event_path: str) -> tuple[str | None, str | None]:
     return _sysfs_driver_hidraw(device_dir)
 
 
+def _is_synthetic_uniq(uniq_raw: str | None, vendor: int, product: int) -> bool:
+    """True se o `uniq` é o endereço SINTÉTICO do `hid-nintendo`, não o do aparelho.
+
+    O patch `0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch`
+    (parâmetro `usb_probe_degrade`) FABRICA um endereço quando o controle não
+    responde ao `REQ_DEV_INFO` no cabo — o caso dos clones. A receita é
+    `02` + VID + PID + número do barramento: o `02` marca "administrado
+    localmente" (nunca colide com OUI de fabricante) e o resto é só a tupla
+    VID/PID/bus. Não há um bit do APARELHO ali, e o próprio comentário do patch
+    admite: "two identical clones plugged at once would share it".
+
+    Casamos só os cinco primeiros octetos (`02` + VID + PID). O sexto é o
+    `hdev->bus` visto pelo hid-core, que não temos como reproduzir com garantia
+    a partir do `bustype` do evdev — exigi-lo faria a detecção falhar em
+    SILÊNCIO, que é exatamente o modo de falha que este código existe para
+    impedir. Um endereço real que casasse esse prefixo por acaso teria de ser
+    localmente administrado E carregar o próprio VID/PID: não acontece.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    hexs = norm_mac(uniq_raw)
+    if hexs is None or len(hexs) != 12:
+        return False
+    return hexs[:10] == f"02{vendor:04x}{product:04x}"
+
+
+def _evdev_owner_dir(event_path: str) -> str | None:
+    """Diretório sysfs do APARELHO dono deste node evdev (None se irresolvível).
+
+    `/sys/class/input/<eventN>/device` cai em `<dono>/input/inputN`; o dono é a
+    instância HID (`0005:054C:0CE6.0008`) para tudo que passa pelo hid-core —
+    USB e Bluetooth — ou a interface USB (`3-1:1.0`) para o `xpad`, que não é
+    HID. Serve de identidade de aparelho por duas propriedades observadas no
+    sysfs vivo:
+
+    - é ÚNICO por construção: o hid-core numera as instâncias em sequência, então
+      dois clones idênticos ligados juntos caem em dirs diferentes
+      (`...:2009.0001` contra `...:2009.0006`);
+    - é COMPARTILHADO pelos vários nodes evdev do MESMO aparelho — gamepad, IMU,
+      touchpad e headset jack são todos filhos da mesma instância HID. É isso que
+      mantém a deduplicação colapsando um controle numa entrada só.
+
+    Deliberadamente NÃO usamos `phys` para este papel: nos controles por
+    Bluetooth (que o BlueZ cria via /dev/uhid) ele vem VAZIO — e é justamente aí
+    que costuma haver mais de um aparelho ao mesmo tempo.
+    """
+    import os
+
+    try:
+        name = os.path.basename(event_path)
+        device_dir = os.path.realpath(f"/sys/class/input/{name}/device")
+    except Exception:
+        return None
+    if not device_dir:
+        return None
+    parent = os.path.dirname(device_dir)
+    if os.path.basename(parent) == "input":
+        # Layout canônico `<dono>/input/inputN`: sobe os dois níveis.
+        return os.path.dirname(parent) or None
+    # Layout inesperado: fica no dir do próprio input device, que ainda é
+    # por-aparelho (só que mais fino — pode não colapsar nodes irmãos).
+    return device_dir
+
+
+def _external_dedup_key(
+    event_path: str, uniq_raw: str, vendor: int, product: int
+) -> str:
+    """Chave de IDENTIDADE DE APARELHO para deduplicar o inventário de externos.
+
+    Ordem de preferência:
+
+    1. o MAC (`uniq`) QUANDO ele identifica o aparelho — é a identidade universal
+       do projeto (FEAT-DSX-CONTROLLER-IDENTITY-01): sobrevive a replug e casa a
+       sessão USB com a sessão Bluetooth do MESMO controle;
+    2. o dono no sysfs (`dev:<instância HID>`) quando o `uniq` falta ou é o
+       endereço sintético do `hid-nintendo` degradado — que é a MESMA string para
+       dois clones idênticos (ver `_is_synthetic_uniq`). Sem esta perna o segundo
+       clone era ENGOLIDO pelo `setdefault` e sumia do inventário inteiro: não
+       aparecia na GUI, não recebia número de jogador, sem uma linha de log. Com
+       o alvo de quatro controles simultâneos e dois aparelhos Nintendo-class
+       (Pro genuíno + 8BitDo, ambos 057e:2009), isso é rotina, não borda;
+    3. o próprio node (`path:`), último recurso quando nem o sysfs responde.
+
+    Os três espaços são disjuntos por prefixo: um MAC normalizado é só dígito hex
+    minúsculo, então nunca colide com `dev:` nem com `path:`.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    mac = norm_mac(uniq_raw)
+    if mac is not None and not _is_synthetic_uniq(uniq_raw, vendor, product):
+        return mac
+    dono = _evdev_owner_dir(event_path)
+    return f"dev:{dono}" if dono else f"path:{event_path}"
+
+
 def discover_external_gamepads() -> list[dict[str, Any]]:
     """Inventário READ-ONLY de gamepads físicos NÃO-DualSense (8BIT-01).
 
@@ -292,8 +396,12 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     None), driver do kernel (readlink no sysfs, tolerante a ausência),
     evdev_path e hidraw irmão (quando resolvível). Tudo JSON-serializável.
 
-    Dedup como no `discover_dualsense_evdevs`: 1º node (ordem estável por
-    número) vence por `uniq`; sem uniq, o path é a chave (nunca colide).
+    Dedup pela IDENTIDADE DE APARELHO (`_external_dedup_key`): 1º node vence
+    (ordem estável por número de node). A chave é o MAC quando ele identifica o
+    aparelho e o dono no sysfs quando não identifica — `uniq` ausente, ou o
+    endereço SINTÉTICO que o `hid-nintendo` degradado fabrica, igual para dois
+    clones idênticos. Colapsar os vários nodes de um controle (gamepad, IMU,
+    touchpad) numa entrada só continua sendo requisito: os dois lados têm teste.
 
     CUSTO (lição PERF-MULTI-CONTROLLER-01): abre TODOS os nodes de /dev/input
     (open + ioctls + close, ~10-40 ms) — PROIBIDO no event loop do daemon e
@@ -304,7 +412,6 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
         from evdev import InputDevice, ecodes, list_devices
     except ImportError:
         return []
-    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     found: dict[str, dict[str, Any]] = {}
     for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
@@ -334,7 +441,7 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
                     "evdev_path": str(path),
                     "hidraw": hidraw,
                 }
-                key = norm_mac(uniq_raw) or f"path:{path}"
+                key = _external_dedup_key(path, uniq_raw, vendor, product)
                 found.setdefault(key, entry)
             finally:
                 dev.close()

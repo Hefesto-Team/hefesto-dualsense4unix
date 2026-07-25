@@ -35,6 +35,20 @@ Hermeticidade: a fiação do daemon (`_wire_external_registry`) só liga isto
 quando o ``identity_registry`` dos DualSense existe (backend real) — com o
 FakeController nada de /dev/input é enumerado e nenhum LED é tocado.
 
+MODO-01 (2026-07-25) — um controle, DUAS identidades. O 8BitDo Pro se
+apresenta conforme o MODO em que é ligado: em modo Switch no cabo o
+``hid-nintendo`` degrada (``usb_probe_degrade``) e SINTETIZA um "MAC"
+``0x02`` + VID + PID + bus; em modo PS4 por Bluetooth ele chega pelo
+``hid-playstation`` com o MAC de verdade. O kernel vê dois aparelhos e o
+registro também via: as duas entradas foram parar no ``controllers.json``, e
+a do modo ausente segurava um slot — com 4 jogadores na mesa, o controle
+CONECTADO caiu no slot 5 (medido ao vivo; o DualSense só tem 5 LEDs de
+player, então empurrar alguém para lá é bug visível). A cura NÃO é adivinhar
+que os dois são o mesmo plástico (não há nada em comum entre eles: OUI,
+VID/PID e driver diferem) — é reconhecer que a identidade sintética não é
+identidade: ver :data:`_SYNTHESIZED_MAC_FIRST_OCTET` e
+:meth:`ExternalIdentityRegistry._prune_volatile_locked`.
+
 GYRO-02 (2026-07-19, FASEADO): :class:`ExternalImuEnabler` reusa o MESMO
 tick/inventário para ligar a IMU do Nintendo Pro REAL (OUI
 :data:`NINTENDO_REAL_OUI`), que o hid-nintendo deixa em STANDBY. Mesmo
@@ -76,6 +90,45 @@ _MAC_RE = re.compile(
     r"^(?:[0-9a-fA-F]{12}|(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2})$"
 )
 
+#: MODO-01 (25/07): primeiro octeto dos endereços que NÓS MESMOS sintetizamos
+#: — unicast administrado LOCALMENTE (bit 0x02 do 1º octeto, IEEE 802). Duas
+#: fontes do projeto escrevem exatamente aqui:
+#:
+#: - o vpad uhid, que forja ``02:fe:...`` por jogador (``uhid_gamepad``);
+#: - o ``usb_probe_degrade`` do nosso DKMS do ``hid-nintendo``: com o
+#:   ``REQ_DEV_INFO`` mudo no cabo, o driver SINTETIZA a identidade em vez de
+#:   perder o device — ``mac_addr[0] = 0x02``, depois VID (2 bytes), PID (2
+#:   bytes) e bus (1 byte), ver ``patch/0003-*``.
+#:
+#: A segunda é a raiz do bug desta frente. Esse "MAC" não carrega NENHUM bit
+#: do aparelho: é a tupla (VID, PID, bus) fantasiada de endereço. O 8BitDo Pro
+#: ligado em modo Switch no cabo nasce com essa identidade sintética; o MESMO
+#: plástico em modo PS4 por Bluetooth nasce com o MAC de verdade. O registro
+#: guardava as DUAS como se fossem dois aparelhos, e a AUSENTE segurava um
+#: slot: com 4 jogadores na mesa, o controle CONECTADO foi empurrado para o
+#: slot 5 (medido ao vivo em 25/07, e o DualSense só tem 5 LEDs de player).
+#: Pior que o fantasma: como o valor sai de (VID, PID, bus), dois controles
+#: Nintendo-class DIFERENTES degradados no cabo recebem o MESMO endereço — o
+#: próprio comentário do patch admite ("two identical clones plugged at once
+#: would share it"). Persistir isso é gravar em disco uma FUSÃO de aparelhos.
+#:
+#: Por isso um endereço destes vale como identidade de SESSÃO (o controle
+#: precisa de número enquanto está na mesa) e NUNCA como identidade
+#: persistida. O critério é o octeto ``02`` EXATO, não "qualquer bit 0x02
+#: ligado": a faixa forjada das fixtures (``aa:bb:cc:*``) e os endereços BLE
+#: random-static (1º octeto ≥ 0xC0) também têm o bit ligado sem serem síntese
+#: nossa, e um MAC de hardware com OUI atribuído nunca começa com ``02``.
+_SYNTHESIZED_MAC_FIRST_OCTET = "02"
+
+#: MODO-01: quantos ``sync_connected`` CONSECUTIVOS sem ver uma identidade
+#: VOLÁTIL antes de soltar o slot dela. Uma ausência bastaria para o caso real
+#: (trocar o 8BitDo de modo leva segundos), mas ``discover_external_gamepads``
+#: engole exceção POR DEVICE (``except Exception: continue``) — um ``open`` que
+#: falhe faz o controle sumir do inventário por um ciclo só. Exigir DUAS
+#: ausências seguidas (~4 s no poll lento) troca "o fantasma some um tick
+#: depois" por "um hiccup de enumeração não renumera ninguém".
+VOLATILE_ABSENCE_LIMIT = 2
+
 #: Rate-limit mínimo entre escritas de LED no MESMO dispositivo (EXT-04c).
 #: O hid-nintendo tem enforcement de taxa de subcomando BT
 #: (``joycon_enforce_subcmd_rate``) e firmware clone estoura fácil — 2s por
@@ -111,6 +164,15 @@ def _read_boot_id() -> str | None:
         return None
 
 
+def _is_synthesized_mac(key: str) -> bool:
+    """True quando a key 12-hex é endereço SINTETIZADO por software (MODO-01).
+
+    Ver :data:`_SYNTHESIZED_MAC_FIRST_OCTET` para o porquê do critério ser o
+    octeto ``02`` exato. Recebe a key JÁ canônica (minúscula, sem separadores).
+    """
+    return key[:2] == _SYNTHESIZED_MAC_FIRST_OCTET
+
+
 def _session_anchor() -> str | None:
     """Âncora resiliente boot_id → machine-id (R-23) — espelho de ``identity``.
 
@@ -126,6 +188,85 @@ def _session_anchor() -> str | None:
     return f"machine:{machine_id}" if machine_id else None
 
 
+#: CLONE-01 (25/07): campo em que uma entrada do inventário de externos CARREGA
+#: a identidade de aparelho JÁ calculada (ver :func:`identity_for_entry`). Quem
+#: enumerou o aparelho é quem sabe resolvê-la — o cálculo depende do sysfs vivo
+#: —, então ela viaja no payload em vez de ser recalculada por cada consumidor.
+#: É por este campo que a GUI (outro PROCESSO, do outro lado do JSON-RPC) recebe
+#: a mesma string que o daemon usou para numerar, sem tocar em ``/sys``.
+EXTERNAL_IDENTITY_FIELD = "identity"
+
+
+def _vid_pid_de(entry: dict[str, Any]) -> tuple[int, int] | None:
+    """``(vendor, product)`` inteiros da entrada, ou ``None`` se ilegíveis.
+
+    O inventário publica ``vid``/``pid`` como hex de 4 dígitos minúsculo
+    (``"057e"``); a detecção do endereço sintético precisa deles como INTEIRO
+    (a fórmula do kernel é literalmente ``02`` + VID + PID + bus). Entrada
+    montada à mão sem esses campos (dublê de teste, payload de daemon antigo)
+    devolve ``None`` — o chamador degrada, nunca levanta.
+    """
+    try:
+        return int(str(entry["vid"]), 16), int(str(entry["pid"]), 16)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def identity_for_entry(entry: dict[str, Any]) -> str:
+    """Identidade de APARELHO de uma entrada do inventário de externos.
+
+    FONTE ÚNICA da string com que este projeto numera um controle externo. Os
+    consumidores são três e precisam enxergar exatamente a MESMA coisa, senão o
+    número que a GUI exibe deixa de ser o número que o LED acende:
+
+    - :meth:`ExternalLedSync.tick` — quem ATRIBUI o slot e acende o LED;
+    - ``ipc_handlers._external_inventory`` — quem responde o ``player_slot`` à
+      GUI (leitura pura, via ``peek``);
+    - ``app.actions.external_controllers.external_key`` — quem casa o botão do
+      seletor com a entrada, do outro lado do JSON-RPC.
+
+    Ordem de resolução:
+
+    1. o campo :data:`EXTERNAL_IDENTITY_FIELD`, quando a entrada já o carrega —
+       calcular DE NOVO é o que faz duas camadas divergirem, e a GUI nem teria
+       como (o cálculo lê o sysfs do aparelho, que é do daemon, não dela);
+    2. :func:`~hefesto_dualsense4unix.core.evdev_reader._external_dedup_key` —
+       a MESMA função com que a enumeração deduplica o inventário: MAC quando
+       ele identifica o aparelho, ``dev:<instância HID>`` quando o ``uniq``
+       falta ou é o endereço SINTÉTICO que o ``hid-nintendo`` degradado fabrica
+       (``02`` + VID + PID + bus, igual para dois clones — CLONE-01), e
+       ``path:<node>`` de último recurso;
+    3. sem VID/PID legíveis não há como julgar se o ``uniq`` é sintético (a
+       fórmula do kernel É o VID+PID): vale o MAC canônico e, sem ele, o node.
+
+    CLONE-01 é o motivo de o degrau 2 não ser mais "``uniq`` ou ``path:``": dois
+    Nintendo-class degradados no cabo (Pro genuíno + 8BitDo, ambos 057e:2009)
+    entregam o MESMO ``uniq`` ao kernel. Os dois já APARECEM no inventário desde
+    a correção da enumeração, mas aqui recebiam a mesma chave — logo o mesmo
+    slot e o mesmo LED de jogador. Com o dono no sysfs eles são dois.
+
+    A identidade continua VOLÁTIL nesse caso (``dev:``/``path:`` não casam com
+    :data:`_MAC_RE`, e o endereço sintético que sobreviva ao degrau 3 casa
+    :func:`_is_synthesized_mac`): ganha número na sessão, some do disco na
+    ausência. O que muda é que agora são DOIS voláteis distintos, não um.
+    """
+    pronta = entry.get(EXTERNAL_IDENTITY_FIELD)
+    if isinstance(pronta, str) and pronta:
+        return pronta
+
+    from hefesto_dualsense4unix.core.evdev_reader import _external_dedup_key
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    bruto_path = entry.get("evdev_path")
+    caminho = bruto_path if isinstance(bruto_path, str) else ""
+    bruto_uniq = entry.get("uniq")
+    uniq = bruto_uniq if isinstance(bruto_uniq, str) else ""
+    par = _vid_pid_de(entry)
+    if par is None:
+        return norm_mac(uniq) or f"path:{caminho}"
+    return _external_dedup_key(caminho, uniq, par[0], par[1])
+
+
 class ExternalIdentityRegistry:
     """``uniq`` de externo → slot GLOBAL de co-op, com reserva de sessão.
 
@@ -136,8 +277,10 @@ class ExternalIdentityRegistry:
       externos continuam a contagem (1º externo = reserva+1) — mas um slot já
       atribuído NUNCA é renumerado quando a reserva muda depois (estabilidade
       vence: é o fim do "LED muda sozinho");
-    - sem expiração por sessão-esvaziou: a persistência é POR BOOT (o load
-      ignora arquivo de outro boot) e o disconnect apenas RESERVA o slot.
+    - sem expiração por sessão-esvaziou: a persistência ATRAVESSA o boot
+      (R-23) e o disconnect apenas RESERVA o slot — para MAC de HARDWARE.
+      MODO-01: identidade VOLÁTIL (endereço sintetizado, key ``path:...``)
+      não ganha essa promessa; ausente, ela solta o slot.
 
     Thread-safety: os métodos são chamados pelo tick do lifecycle (via
     executor) e pela leitura IPC (``asyncio.to_thread``) — RLock próprio.
@@ -155,15 +298,30 @@ class ExternalIdentityRegistry:
         self._slots: dict[str, int] = {}
         self._volatile: set[str] = set()
         self._connected: set[str] = set()
+        #: MODO-01: key VOLÁTIL → nº de ``sync_connected`` consecutivos sem
+        #: ela. Só identidade volátil entra aqui — reserva de MAC de hardware
+        #: não expira nunca (D2/R-15).
+        self._volatile_absences: dict[str, int] = {}
         self._dirty = False
         self._loaded = False
 
     @staticmethod
     def _canonical(uniq: str) -> tuple[str, bool]:
-        """``(key, persistível)`` — MAC 12-hex canônico ou key volátil crua."""
+        """``(key, persistível)`` — MAC 12-hex canônico ou key volátil crua.
+
+        MODO-01: persistível = MAC de HARDWARE. Um endereço SINTETIZADO
+        (:func:`_is_synthesized_mac`) é bem-formado, mas não é identidade de
+        aparelho nenhum — entra como VOLÁTIL, na mesma classe da key
+        ``path:...`` de firmware sem serial. Isto sozinho já expulsa do disco a
+        entrada fantasma que o :meth:`load` encontrar (o filtro
+        ``if not persistable: continue`` já existia lá): não há migração de
+        schema a escrever, e nenhum controle de verdade perde o número por
+        causa de um bump de versão que não precisou acontecer.
+        """
         value = uniq.strip()
         if _MAC_RE.match(value):
-            return value.lower().replace(":", "").replace("-", ""), True
+            key = value.lower().replace(":", "").replace("-", "")
+            return key, not _is_synthesized_mac(key)
         return value, False
 
     def slot_for(
@@ -219,6 +377,12 @@ class ExternalIdentityRegistry:
         sessão-esvaziou: um externo BT que dorme não pode perder o número
         (era exatamente o sintoma). ÚNICO ponto de escrita em disco fora do
         ``load()``.
+
+        MODO-01 (25/07): a reserva eterna vale para MAC de HARDWARE. Uma
+        identidade VOLÁTIL ausente solta o slot (ver
+        :meth:`_prune_volatile_locked`) — ela não é aparelho nenhum, então
+        não há promessa de estabilidade a honrar, e segurar slot era
+        exatamente o que empurrava o controle CONECTADO para o número 5.
         """
         vivos: set[str] = set()
         for uniq in uniqs:
@@ -228,9 +392,44 @@ class ExternalIdentityRegistry:
             vivos.add(key)
         with self._lock:
             self._connected = vivos
+            self._prune_volatile_locked(vivos)
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
+
+    def _prune_volatile_locked(self, vivos: set[str]) -> None:
+        """Solta o slot de identidade VOLÁTIL ausente (já sob ``self._lock``).
+
+        MODO-01 — a assimetria é deliberada e é a cura:
+
+        - MAC de HARDWARE ausente segue RESERVADO para sempre (D2/R-15): "o
+          controle que eu deixo desligado tem que voltar com o mesmo número"
+          é requisito antigo, e nada aqui o toca;
+        - identidade VOLÁTIL (endereço sintetizado pelo ``usb_probe_degrade``,
+          key ``path:...`` de firmware sem serial) não identifica aparelho
+          nenhum, então "replug recupera o número" não significa nada para
+          ela — mas o slot que ela segurava significava, e muito: era ele que
+          fazia o 8BitDo CONECTADO cair no slot 5 enquanto a identidade do
+          modo Switch, DESCONECTADA, ocupava o 4.
+
+        Ausência é contada, não instantânea (:data:`VOLATILE_ABSENCE_LIMIT`)
+        — a enumeração pode perder um device por um ciclo sem ele ter saído.
+        Nunca marca ``_dirty``: chave volátil jamais esteve no disco.
+        """
+        for key in list(self._volatile):
+            if key in vivos:
+                self._volatile_absences.pop(key, None)
+                continue
+            faltas = self._volatile_absences.get(key, 0) + 1
+            if faltas < VOLATILE_ABSENCE_LIMIT:
+                self._volatile_absences[key] = faltas
+                continue
+            self._volatile_absences.pop(key, None)
+            self._volatile.discard(key)
+            slot = self._slots.pop(key, None)
+            logger.info(
+                "external_slot_volatil_liberado", uniq=key, slot=slot
+            )
 
     def snapshot(self) -> dict[str, int]:
         """Cópia do mapa key→slot (conectados + reservas). Leitura pura."""
@@ -338,6 +537,7 @@ class ExternalIdentityRegistry:
                     ):
                         slots_em_uso_pelo_dualsense.add(raw_slot_ds)
             usados: set[int] = set()
+            descartadas = 0
             for raw_key, raw_slot in externals.items():
                 if not isinstance(raw_key, str) or not isinstance(raw_slot, int):
                     continue
@@ -352,11 +552,29 @@ class ExternalIdentityRegistry:
                     continue
                 key, persistable = self._canonical(raw_key)
                 if not persistable:
+                    # MODO-01: identidade SINTETIZADA (ou volátil) que uma
+                    # versão anterior gravou. Não volta — e o arquivo é
+                    # reescrito sem ela no primeiro save (ver `_dirty` abaixo).
+                    descartadas += 1
+                    logger.info(
+                        "external_identidade_nao_persistivel_descartada", uniq=key
+                    )
                     continue
                 if key in self._slots or raw_slot in usados:
                     continue
                 self._slots[key] = raw_slot
                 usados.add(raw_slot)
+            if descartadas:
+                # MODO-01: a MIGRAÇÃO. `_save_locked` reescreve o namespace
+                # `externals` INTEIRO a partir de `_slots`, então marcar sujo
+                # aqui faz o próximo `sync_connected` (tick lento) limpar o
+                # disco sozinho. Sem isto o fantasma ficava inerte no arquivo
+                # até que outra coisa sujasse o registro — inofensivo (o load
+                # já o ignora), mas ninguém entenderia por que ele continua
+                # lá. Não há bump de `CONTROLLERS_SCHEMA_VERSION`: bumpar
+                # renumeraria TODO mundo (inclusive os DualSense que já estão
+                # certos) para expulsar uma entrada só.
+                self._dirty = True
             if self._slots:
                 logger.info(
                     "external_slots_restaurados", slots=dict(self._slots)
@@ -635,6 +853,24 @@ class ExternalLedSync:
                     piso = max(piso, jogadores)
         return piso
 
+    @staticmethod
+    def _identity_for(entry: dict[str, Any]) -> str:
+        """Identidade com que ESTE tick numera o externo — FONTE ÚNICA (MODO-01).
+
+        Delega a :func:`identity_for_entry`, que é a fonte única do PROJETO
+        inteiro (tick, rota IPC e GUI). Existia como método porque os DOIS
+        consumidores do inventário DENTRO do tick precisam enxergar a MESMA
+        string: o ``sync_connected`` (quem está presente) e o laço de atribuição
+        (quem recebe número). Eles divergiam — o ``sync_connected`` recebia só
+        as entradas com ``uniq`` string, então um externo sem MAC nunca entrava
+        no conjunto de CONECTADOS. Consequências: o "Renumerar agora" já o
+        tratava como offline e o jogava para o fim da fila
+        (``snapshot_connected``), e a poda de identidade volátil o derrubaria a
+        cada tick. Hoje o tick resolve a identidade UMA vez por entrada (ver
+        :meth:`tick`) e passa a MESMA lista para os dois.
+        """
+        return identity_for_entry(entry)
+
     def _display_authority(self) -> str:
         """Autoridade CORRENTE ('game'/'daemon'/'unknown'), com fail-safe.
 
@@ -688,9 +924,14 @@ class ExternalLedSync:
             return
         agora = time.monotonic() if now is None else now
         reserve = self._ds_reserve()
-        self._registry.sync_connected(
-            e["uniq"] for e in inventory if isinstance(e.get("uniq"), str)
-        )
+        # CLONE-01: UMA resolução por entrada, reusada pelos dois consumidores
+        # abaixo. Resolver duas vezes não seria só desperdício de um `realpath`:
+        # o degrau `dev:<instância HID>` lê o sysfs VIVO, então um aparelho que
+        # se despedisse ENTRE as duas chamadas entraria no `sync_connected` com
+        # uma chave e receberia slot com outra — exatamente o buraco de
+        # divergência que esta função existe para fechar.
+        identidades = [identity_for_entry(entry) for entry in inventory]
+        self._registry.sync_connected(identidades)
 
         # R-14 §1 (auditoria 23/07): ATRIBUIÇÃO antes de qualquer flag. O
         # `slot_for` morava lá embaixo, DEPOIS do early-return do automático —
@@ -700,13 +941,11 @@ class ExternalLedSync:
         # (o `used` do lado DualSense também consulta estas reservas). Numerar
         # é identidade; o flag governa APARÊNCIA (escrever no LED).
         atribuidos: list[tuple[str | None, str | None, int]] = []
-        for entry in inventory:
+        for entry, identity in zip(inventory, identidades, strict=True):
             uniq_raw = entry.get("uniq")
             uniq = uniq_raw if isinstance(uniq_raw, str) and uniq_raw else None
             hidraw_raw = entry.get("hidraw")
             hidraw = hidraw_raw if isinstance(hidraw_raw, str) and hidraw_raw else None
-            # Identidade volátil (sem MAC): o evdev_path vale pela sessão.
-            identity = uniq or f"path:{entry.get('evdev_path')}"
             slot = self._registry.slot_for(identity, reserve=reserve)
             if slot is None:
                 continue
@@ -799,11 +1038,14 @@ class ExternalLedSync:
 
 
 __all__ = [
+    "EXTERNAL_IDENTITY_FIELD",
     "IMU_ENABLE_BACKOFF_SEC",
     "IMU_ENABLE_MAX_ATTEMPTS",
     "LED_MIN_INTERVAL_SEC",
     "NINTENDO_REAL_OUI",
+    "VOLATILE_ABSENCE_LIMIT",
     "ExternalIdentityRegistry",
     "ExternalImuEnabler",
     "ExternalLedSync",
+    "identity_for_entry",
 ]

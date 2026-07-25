@@ -3,8 +3,8 @@
 Lógica PURA (testável sem GTK) para a superfície read-only dos controles que o
 Hefesto VÊ mas NÃO adota (8BitDo, Nintendo, Xbox, etc.). Consome o inventário
 do IPC ``controller.list {external: true}`` (8BIT-01): cada entrada tem
-``name, vid, pid, bus, uniq, driver, evdev_path, hidraw`` e, opcionalmente,
-``holders``.
+``name, vid, pid, bus, uniq, driver, evdev_path, hidraw, identity,
+player_slot`` e, opcionalmente, ``holders``.
 
 Regra de ouro desta frente (escopo ditado pela mantenedora): "só uma aba pra
 ver como os controles aparecem, não uma super central". Aqui NÃO se controla
@@ -15,6 +15,13 @@ armadilha conhecida (o Nintendo/8BitDo por Bluetooth morre — é o driver
 from __future__ import annotations
 
 from typing import Any
+
+#: CLONE-01: campo do payload que traz a identidade de APARELHO já resolvida
+#: pelo daemon (a mesma com que ele numerou o controle e acendeu o LED). É
+#: contrato de FIO, então o nome vive dos dois lados como literal — a definição
+#: canônica é ``daemon.subsystems.external_identity.EXTERNAL_IDENTITY_FIELD``;
+#: importá-la aqui acoplaria a GUI a um módulo do daemon por uma string.
+_IDENTITY_FIELD = "identity"
 
 #: VID:PID → tipo amigável. Chave "vvvv:pppp" minúsculo; fallback só por VID.
 _TYPE_BY_VIDPID: dict[str, str] = {
@@ -318,11 +325,26 @@ def detail_rows(entry: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def external_key(entry: dict[str, Any]) -> str:
-    """Chave estável do controle externo (uniq quando há; senão evdev_path).
+    """Chave estável do controle externo — o `identity` que o daemon carimbou.
 
     Usada para casar o botão do seletor com a entrada do inventário sem
     depender da posição na lista (que muda a cada replug).
+
+    CLONE-01: a chave é o campo `identity` do payload — a MESMA identidade de
+    aparelho com que o daemon atribuiu o slot e acendeu o LED de jogador. Ela
+    vem PRONTA de propósito: resolvê-la exige ler o sysfs do aparelho, coisa
+    que a GUI não tem por que fazer (outro processo, a cada repintura de
+    botão) e que ela nem sempre conseguiria fazer igual.
+
+    Sem o campo (daemon anterior a esta leva) cai no comportamento antigo —
+    `uniq`, senão `evdev_path`. É exatamente aí que dois Nintendo-class
+    degradados no cabo colidiam: o `hid-nintendo` sintetiza o MESMO `uniq`
+    para os dois (`02` + VID + PID + bus), então os dois botões respondiam
+    pela mesma entrada e mostravam o mesmo número de jogador.
     """
+    identity = entry.get(_IDENTITY_FIELD)
+    if isinstance(identity, str) and identity:
+        return identity
     uniq = entry.get("uniq")
     if isinstance(uniq, str) and uniq:
         return uniq

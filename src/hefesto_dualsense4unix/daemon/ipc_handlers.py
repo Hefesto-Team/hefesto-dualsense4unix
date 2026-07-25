@@ -195,6 +195,13 @@ def _external_inventory(
     segurando aquele hidraw ({"steam_pids": [...]}); sonda falha/vazia =
     campo ausente, sem erro (não é critério de aceite do 8BIT-01).
 
+    CLONE-01 — o campo `identity` (:data:`EXTERNAL_IDENTITY_FIELD`) é
+    SEMPRE carimbado: é a identidade de APARELHO com que o daemon numerou
+    aquele controle, resolvida aqui (com o sysfs à mão) e levada pronta à
+    GUI. Sem ela, dois clones Nintendo-class degradados no cabo — que o
+    kernel entrega com o MESMO `uniq` sintético — eram indistinguíveis do
+    outro lado do JSON-RPC: mesmo botão no seletor, mesmo número.
+
     EXT-04 — leitura PURA: esta função NUNCA MAIS escreve LED (a escrita a
     cada poll de 4s da GUI bombardeava o firmware clone do 8BitDo até o
     hid-nintendo desregistrá-lo — `joycon_enforce_subcmd_rate` ao vivo).
@@ -216,6 +223,10 @@ def _external_inventory(
     assinatura só para não quebrar chamadores; não é mais lido.
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
+    from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
+        EXTERNAL_IDENTITY_FIELD,
+        identity_for_entry,
+    )
 
     inventory = discover_external_gamepads()
     holders: dict[str, list[int]] = {}
@@ -225,14 +236,22 @@ def _external_inventory(
         hidraw = entry.get("hidraw")
         if holders and isinstance(hidraw, str) and hidraw in holders:
             entry["holders"] = {"steam_pids": holders[hidraw]}
+        # EXT-04: a MESMA identidade que o tick usa para numerar/acender o LED
+        # (`ExternalLedSync.tick`) — hoje resolvida pela função ÚNICA
+        # `identity_for_entry`. Um externo SEM MAC era resolvido por uniq=None
+        # (sempre None) e caía no posicional, exibindo número != do LED aceso
+        # quando havia slot de DualSense reservado.
+        #
+        # CLONE-01: ela é CARIMBADA no payload. Aqui é o único ponto do sistema
+        # que a resolve com o sysfs do aparelho à mão E fala com a GUI; deixar a
+        # GUI recalcular seria pedir a ela um `realpath` em `/sys` a cada
+        # repintura de botão — de outro processo, sobre um aparelho que pode já
+        # ter saído — para chegar (na melhor das hipóteses) na mesma string.
+        identity = identity_for_entry(entry)
+        entry[EXTERNAL_IDENTITY_FIELD] = identity
         slot: int | None = None
         if slot_resolver is not None:
-            # EXT-04: a MESMA identidade que o tick usa para numerar/acender o
-            # LED (`ExternalLedSync.tick`) — uniq ou `path:<evdev_path>`. Um
-            # externo SEM MAC era resolvido por uniq=None (sempre None) e caía
-            # no posicional, exibindo número != do LED aceso quando havia slot
-            # de DualSense reservado. `peek` continua assign=False (leitura pura).
-            identity = entry.get("uniq") or f"path:{entry.get('evdev_path')}"
+            # `peek` continua assign=False (leitura pura).
             with contextlib.suppress(Exception):
                 raw = slot_resolver(identity)
                 if isinstance(raw, int) and not isinstance(raw, bool):
@@ -1125,6 +1144,22 @@ class IpcHandlersMixin:
                 # player_count() devolver um mock não-serializável.
                 "players": players_raw if isinstance(players_raw, int) else 1,
             }
+            # EXT-COUNT-01 (25/07): quantos controles EXTERNOS (Nintendo Pro,
+            # 8BitDo…) o daemon numerou mas NÃO adota. `coop.players` conta só
+            # quem tem vpad do hefesto — com 2 DualSense e 2 Pro vivos ele diz
+            # "2", e quem lê de fora conclui que só há 2 controles. Os
+            # externos são read-only POR DECISÃO DE PRODUTO (numerar e acender
+            # o LED certo ≠ adotar o controle), então o número certo não é
+            # inflar `players`: é dizer os dois. Leitura de um `set` em
+            # memória mantido pelo tick lento — ZERO enumeração de /dev/input
+            # neste caminho (o state_full roda a 10 Hz).
+            registro_ext = getattr(self.daemon, "external_registry", None)
+            conectados = getattr(registro_ext, "snapshot_connected", None)
+            if callable(conectados):
+                with contextlib.suppress(Exception):
+                    vistos = conectados()
+                    if isinstance(vistos, (set, frozenset)):
+                        result["coop"]["externals"] = len(vistos)
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
             # L1: a observabilidade vem da ORIGEM VIVA — `daemon._last_auto_mult`,
             # o multiplicador auto mais recente, atualizado pela política que de
@@ -1225,6 +1260,36 @@ class IpcHandlersMixin:
                 "last_strong": ff_last[1],
                 "vpads": len(vpads),
                 "per_vpad": per_vpad,
+            }
+            # HOTKEY-EXPOSE-01 (25/07): a aba Emulação mostrava o buffer do
+            # combo e o passthrough como TEXTO FIXO escrito uma vez na
+            # construção do widget (`DEFAULT_BUFFER_MS` e "Não") — nunca o
+            # valor em vigor. Nenhum dos dois subia no payload, então a GUI não
+            # tinha como dizer a verdade nem se quisesse. A fonte é o
+            # `HotkeyManager` VIVO (`daemon._hotkey_manager.config`), não os
+            # defaults do módulo: `start_hotkey_manager` monta a config a
+            # partir de `daemon.config` e é ela que governa o gesto.
+            hotkey_cfg = getattr(
+                getattr(self.daemon, "_hotkey_manager", None), "config", None
+            )
+            if hotkey_cfg is not None:
+                buffer_ms = getattr(hotkey_cfg, "buffer_ms", None)
+                passthrough = getattr(hotkey_cfg, "passthrough_in_emulation", None)
+                if isinstance(buffer_ms, int) and not isinstance(buffer_ms, bool):
+                    result["hotkey"] = {
+                        "buffer_ms": buffer_ms,
+                        "passthrough_in_emulation": bool(passthrough),
+                    }
+            # MIC-EXPOSE-01: o botão de mic deixa de ser campo secreto do
+            # lifecycle — a GUI/CLI leem o estado efetivo daqui.
+            result["mic_button_toggles_system"] = bool(
+                getattr(daemon_cfg, "mic_button_toggles_system", True)
+            )
+            # BT-MIC-REGISTRY-01: ponte de mic por BT — se o subsystem está de
+            # pé AGORA (não só se a env var existe).
+            result["bt_mic"] = {
+                "enabled": bool(getattr(daemon_cfg, "bt_mic_enabled", False)),
+                "running": getattr(self.daemon, "_bt_mic_subsystem", None) is not None,
             }
             rumble_active = getattr(daemon_cfg, "rumble_active", None)
             result["rumble_passthrough"] = rumble_active is None
@@ -1341,6 +1406,7 @@ class IpcHandlersMixin:
             else:
                 entry["inputs"] = None
             self._merge_sensores(entry, uniq)
+            self._merge_audio(entry, uniq)
 
             backend, motivo = (None, None)
             if entry.get("is_primary") and gp_dev is not None:
@@ -1378,6 +1444,60 @@ class IpcHandlersMixin:
             leitura = hub.leitura(uniq)
         if isinstance(leitura, dict):
             inputs.update(leitura)
+
+    def _merge_audio(self, entry: dict[str, Any], uniq: str | None) -> None:
+        """Acrescenta `audio` e `speaker` a ESTE controle (AUDIO-STATUS-01 / D4).
+
+        Duas chaves independentes, as duas OPCIONAIS (a GUI esconde o bloco em
+        vez de desenhar valor inventado — mesma disciplina do `gyro`/`touchpad`):
+
+        - ``audio`` = ``{fone_plugado, mic_externo, mic_mudo}``. É LEITURA de
+          verdade: sai do byte de estado que vem em todo report de INPUT do
+          controle (o mesmo que a ponte de mic por BT já decodificava e
+          consumia internamente sem nunca publicar). Ausente enquanto nenhum
+          report tiver sido lido daquele controle.
+        - ``speaker`` = ``{volume: 0-255, muted: bool}`` (+ as chaves de
+          ``audio``, quando conhecidas). **Só aparece quando o hefesto é o dono
+          do volume**, e a razão é dura: o DualSense NÃO devolve o volume — não
+          há report de input nem feature report que o leia. Só sabemos o volume
+          que NÓS mandamos. Antes de o primeiro `speaker.set` acontecer, o dono
+          é o firmware e qualquer número que publicássemos aqui seria chute.
+
+        `_enrich_controllers_per_controller` já roda dentro de um `suppress`,
+        mas cada leitura é defensiva por conta própria (controller dublado em
+        teste, backend sem os métodos).
+        """
+        status: Any = None
+        status_fn = getattr(self.controller, "audio_status_for", None)
+        if callable(status_fn):
+            with contextlib.suppress(Exception):
+                status = status_fn(uniq)
+        if isinstance(status, dict):
+            entry["audio"] = status
+
+        speaker: Any = None
+        speaker_fn = getattr(self.controller, "speaker_state_for", None)
+        if callable(speaker_fn):
+            with contextlib.suppress(Exception):
+                speaker = speaker_fn(uniq)
+        if not isinstance(speaker, dict):
+            return
+        volume = speaker.get("volume")
+        if not isinstance(volume, int) or isinstance(volume, bool):
+            return
+        bloco: dict[str, Any] = {
+            "volume": max(0, min(255, volume)),
+            "muted": bool(speaker.get("muted")),
+        }
+        if isinstance(status, dict):
+            bloco.update(status)
+        entry["speaker"] = bloco
+        # Espelha em `inputs` para a GUI achar a chave onde quer que ela leia
+        # (o card lê ora `entry`, ora `entry["inputs"]`). MESMO dicionário de
+        # origem, copiado — nunca duas verdades.
+        inputs = entry.get("inputs")
+        if isinstance(inputs, dict):
+            inputs["speaker"] = dict(bloco)
 
     def _lightbar_for_uniq(
         self,
@@ -1976,6 +2096,45 @@ class IpcHandlersMixin:
 
         materialize_launch_env(self.daemon)
         return {"status": "ok"}
+
+    async def _handle_speaker_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`speaker.set` — volume/mudo do alto-falante do DualSense (D4).
+
+        Params: ``{volume?: 0-255, muted?: bool, uniq?: str}``. `uniq` escolhe
+        o controle (MAC normalizado); omitido = o primário.
+
+        Escrever é o ÚNICO jeito de o volume ser conhecido: o controle não tem
+        caminho de leitura para esse registrador. A primeira chamada faz o
+        hefesto assumir a posse dos bytes de volume do report de saída — antes
+        dela o firmware é o dono e o daemon não toca no bloco (AUDIO-OWNER-01).
+        Por isso `daemon.state_full` só passa a trazer a chave `speaker` DEPOIS
+        de um `speaker.set`: até lá, publicar um número seria inventá-lo.
+        """
+        volume = params.get("volume")
+        muted = params.get("muted")
+        uniq = params.get("uniq")
+        if volume is not None:
+            if not isinstance(volume, int) or isinstance(volume, bool):
+                raise ValueError("speaker.set: 'volume' precisa ser int 0-255")
+            if not 0 <= volume <= 255:
+                raise ValueError("speaker.set: 'volume' fora de 0-255")
+        if muted is not None and not isinstance(muted, bool):
+            raise ValueError("speaker.set: 'muted' precisa ser boolean ou omitido")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
+        setter = getattr(self.controller, "set_speaker_volume", None)
+        if not callable(setter):
+            raise ValueError("backend sem suporte a volume de alto-falante")
+        ok = bool(setter(volume, muted=muted, uniq=uniq))
+        estado: Any = None
+        leitor = getattr(self.controller, "speaker_state_for", None)
+        if callable(leitor):
+            with contextlib.suppress(Exception):
+                estado = leitor(uniq)
+        return {
+            "status": "ok" if ok else "sem_controle",
+            "speaker": estado if isinstance(estado, dict) else None,
+        }
 
     async def _handle_mouse_emulation_set(
         self, params: dict[str, Any]
