@@ -438,6 +438,7 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
                    /etc/udev/rules.d/81-hefesto-usb-power.rules \
                    /etc/udev/rules.d/81-hefesto-usb-host-power.rules \
                    /etc/udev/rules.d/71-uhid.rules \
+                   /etc/udev/rules.d/82-nintendo-pro-nosniff.rules \
                    /etc/modules-load.d/hefesto-dualsense4unix.conf \
                    /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf
         # hefesto-dualsense-storm.conf NÃO entra nesta lista de propósito — ver
@@ -598,7 +599,8 @@ if sudo -n true 2>/dev/null; then
         /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
-        /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh 2>/dev/null || true
+        /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
+        /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh 2>/dev/null || true
     # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
     _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"

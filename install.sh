@@ -906,6 +906,7 @@ else
             80-*) rules_desc='motion sensors fora da API js legada' ;;
             81-hefesto-usb-power.rules) rules_desc='controles e adaptadores BT nunca dormem (USB)' ;;
             81-hefesto-usb-host-power.rules) rules_desc='hosts USB (xHCI) sem economia que derruba o barramento' ;;
+            82-nintendo-pro-nosniff.rules) rules_desc='Pro Controller sai do sniff na borda da conexão (BT)' ;;
             *)    rules_desc='' ;;
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"
@@ -1226,7 +1227,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
     else
         _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh; do
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh; do
             sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
                 "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
         done
