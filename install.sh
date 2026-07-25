@@ -1323,7 +1323,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
             if [[ ! -f "${_bz_sums}" || -z "${_bz_deb_bluez}" || -z "${_bz_deb_cups}" || -z "${_bz_deb_libbt}" ]]; then
                 # (d) .debs ausentes: NÃO falha o install, só orienta o build.
                 warn "backport não encontrado em ${_bz_dir} — bluetoothd 5.72 crônico segue ativo"
-                printf '      como gerar: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3 item 1\n'
+                printf '      como gerar: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3 item 1\n'
             else
                 # SHA256SUMS por basename (portátil — o arquivo pode ter sido
                 # gerado com caminho absoluto de outra máquina/usuário).

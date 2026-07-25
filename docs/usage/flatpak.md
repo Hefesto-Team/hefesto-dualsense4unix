@@ -154,7 +154,7 @@ Por que path próprio (e não `/app/share/locale/`): o runtime
 sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
 (incluindo pt_BR). Para sobreviver a essa intercepção, instalamos em
 `/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
-Detalhe técnico em `docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
+Detalhe técnico em `arquivo/processo-pre-1.0:docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
 
 Para adicionar um novo idioma (ES, FR, DE, etc.), ver
 `.github/CONTRIBUTING.md` seção "Contribuir traduções".

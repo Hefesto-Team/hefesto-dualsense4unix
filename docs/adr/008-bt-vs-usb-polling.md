@@ -14,5 +14,9 @@
 - `FakeController` tem dois replays determinísticos: `tests/fixtures/hid_capture_usb.bin` e `tests/fixtures/hid_capture_bt.bin`. Gravação via `scripts/record_hid_capture.py --script captures/script_default.yaml` (V3-8) garante equivalência byte-a-byte para partes determinísticas do protocolo. Testes W1.3 cobrem ambos.
 - Debounce de battery no evento (V2-17): dispara `battery_change` se `abs(delta_pct) >= 1` OU `elapsed_since_last >= 5.0s`, com rate ceiling de 100ms entre eventos consecutivos. Vale para ambos transportes.
 
+## Medição
+Os números de USB acima vêm de `docs/research/2026-04-20-polling-usb.csv` (6
+frequências alvo, controle físico, gerado por `scripts/benchmark_polling.py`).
+
 ## Consequências
 BT vê latência 16–32ms maior — aceitável para gatilhos, não para competitivo. `poll_hz` é configurável em `daemon.toml` se alguém reclamar. Event bus não é inundado em USB (battery reportada a cada 16ms sem debounce = spam).

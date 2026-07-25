@@ -1329,7 +1329,7 @@ check_bluez_backport_version() {
             pass "bluez ${ver} >= 5.79 (sem os crashes crônicos de input/HIDP do 5.72)"
             ;;
         old)
-            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os: docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3)"
+            fail "bluez ${ver} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: ./install.sh (passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os: git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-19-estudo-bluez-backport-onda-r.md §3)"
             ;;
         *)
             info "bluez não instalado via dpkg (ou versão ilegível) — pulo o check de versão"

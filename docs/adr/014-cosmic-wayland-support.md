@@ -78,7 +78,7 @@ Validação empírica em Pop!_OS 24.04 + COSMIC 1.0.0 (2026-05-16):
   manter `DISPLAY=:1` (XWayland) ativo — Pop!_OS 24.04 vem com XWayland por
   padrão. `XlibBackend` cobre janelas XWayland (Steam, Proton, browsers Xorg)
   e o autoswitch funciona para esses (caso primário do projeto: jogos via Proton).
-- Documentado em `docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`.
+- Documentado em `arquivo/processo-pre-1.0:docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`.
 
 ### Camada 4 — Tray fallback notification (v3.1.0)
 
@@ -130,10 +130,10 @@ retorna `true` e o tray do Hefesto passa a renderizar normalmente.
   (GNOME < 46, Sway, Hyprland, e — confirmado empiricamente — COSMIC 1.0.0).
   Nesses ambientes o cascade tenta wlrctl em seguida.
 - COSMIC 1.0.0 também não expõe `wlr-foreign-toplevel-management` ainda —
-  ver `docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`. Workaround
+  ver `arquivo/processo-pre-1.0:docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`. Workaround
   efetivo é manter XWayland ativo.
 - Validação manual em Pop!_OS 24.04 + COSMIC 1.0.0 real concluída em
-  `docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`.
+  `arquivo/processo-pre-1.0:docs/process/discoveries/2026-05-15-cosmic-1.0-validation.md`.
 
 ## Alternativas consideradas
 

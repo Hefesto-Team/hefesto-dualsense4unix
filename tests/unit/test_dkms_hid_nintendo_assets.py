@@ -1,7 +1,8 @@
 """Onda T (T2.2/T2.3) — assets DKMS do hid-nintendo patchado.
 
-Desenho: docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
-Premissas: docs/process/estudos/2026-07-20-estudo-premissas-onda-t-hid-nintendo.md.
+Desenho e premissas vivem no arquivo de processo, fora da `main`:
+``git show arquivo/processo-pre-1.0:docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md``
+(e ``…-estudo-premissas-onda-t-hid-nintendo.md``).
 
 Contrato dos assets (falha-sem/passa-com; SEM root, SEM kernel vivo — só
 arquivos e ferramentas de usuário):
@@ -21,10 +22,12 @@ arquivos e ferramentas de usuário):
   SHA256_VANILLA_C — o invariante `.c == vanilla + 0001-*.patch` pega
   qualquer edição manual que não passou pelo .patch (e vice-versa);
 - conf do modprobe.d com a cura opt-in (bt_probe_retries=3 +
-  skip_tx_on_rate_exceeded=1) e NADA mais;
-- desenho da onda com as claims corrigidas pelo corretor (achados #2, #3 e
-  #10: precedente do resume, escopo HZ=1000 e manifesto com o lote
-  packaging).
+  skip_tx_on_rate_exceeded=1) e NADA mais.
+
+As claims corrigidas do desenho (achados #2, #3 e #10 do corretor: precedente
+do resume, escopo HZ=1000 e manifesto com o lote packaging) eram travadas aqui
+por leitura do .md; com o processo fora da `main` o documento é imutável na tag
+de arquivo e a trava não tem mais o que guardar.
 """
 
 from __future__ import annotations
@@ -53,9 +56,6 @@ PATCH2_PATH = (
 PATCH_PATHS = (PATCH_PATH, PATCH2_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-nintendo.conf"
-DESENHO_PATH = (
-    REPO_ROOT / "docs" / "process" / "estudos" / "2026-07-20-desenho-onda-t-patch-dkms.md"
-)
 
 SOB_ANONIMO = (
     "Signed-off-by: Hefesto DualSense4Unix Project "
@@ -83,7 +83,6 @@ PATCH2 = _read(PATCH2_PATH)
 PATCHES = (PATCH, PATCH2)
 BASELINE = _read(BASELINE_PATH)
 MODPROBE_CONF = _read(MODPROBE_CONF_PATH)
-DESENHO = _read(DESENHO_PATH)
 
 
 def _sha256(path: Path) -> str:
@@ -450,46 +449,3 @@ class TestModprobeConf:
         assert "subcmd_rate_max_attempts" not in linhas_options[0], (
             "subcmd_rate_max_attempts segue no default (== vanilla) — sem medição"
         )
-
-
-class TestDesenhoClaimsCorrigidas:
-    """Achados #2/#3/#10 do corretor: claims do desenho que eram falsas ou
-    generalizadas demais — corrigidas ANTES de qualquer submissão upstream."""
-
-    def test_desenho_existe(self) -> None:
-        assert DESENHO, "desenho da Onda T ausente"
-
-    def test_precedente_do_resume_corrigido_para_bt(self) -> None:
-        # Achado #2: o resume vanilla re-chama joycon_init() SÓ no ramo USB;
-        # em BT é no-op explícito — o precedente citado p/ justificar o retry
-        # BT não existia. O desenho precisa carregar o argumento corrigido.
-        assert "SÓ NO RAMO USB" in DESENHO, (
-            "a justificativa de idempotência não pode citar o resume como "
-            "precedente BT (nintendo_hid_resume é no-op para bluetooth)"
-        )
-        assert "no-op resume for bt ctlr" in DESENHO, (
-            "o desenho cita a evidência literal do no-op BT do resume"
-        )
-
-    def test_claim_de_equivalencia_escopada_a_hz_1000(self) -> None:
-        # Achado #3: msecs_to_jiffies arredonda p/ CIMA e HZ/4 trunca — em
-        # HZ=250 o input_report_wait diverge 1 jiffy do vanilla. A claim de
-        # equivalência exata vale SÓ p/ HZ=1000 e o desenho diz isso.
-        assert "VÁLIDA SÓ PARA HZ=1000" in DESENHO
-        assert "HZ=250" in DESENHO, (
-            "o desenho documenta a divergência de arredondamento p/ HZ != 1000 "
-            "(reuso do padrão pela Onda W exige re-verificação por kernel)"
-        )
-
-    def test_manifesto_inclui_o_lote_packaging(self) -> None:
-        # Achado #10: a implementação tocou 5 arquivos de packaging fora do
-        # manifesto original (exigência do gate check_packaging_parity.sh).
-        for trecho in (
-            "check_packaging_parity.sh",
-            "packaging/fedora/hefesto-dualsense4unix.spec",
-            "scripts/install-host-udev.sh",
-            "flatpak/br.andrefarias.Hefesto.yml",
-            "packaging/arch/PKGBUILD",
-            "scripts/build_deb.sh",
-        ):
-            assert trecho in DESENHO, f"manifesto do desenho sem o arquivo tocado: {trecho}"

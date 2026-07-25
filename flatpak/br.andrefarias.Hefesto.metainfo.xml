@@ -5,7 +5,7 @@
   <id>br.andrefarias.Hefesto</id>
 
   <name>Hefesto - Dualsense4Unix</name>
-  <summary>Daemon de gatilhos adaptativos para controle DualSense no Linux</summary>
+  <summary>Gerenciador DualSense para Linux</summary>
 
   <!-- Metadados de lançamento -->
   <launchable type="desktop-id">br.andrefarias.Hefesto.desktop</launchable>

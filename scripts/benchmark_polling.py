@@ -11,7 +11,7 @@ controle físico em várias frequências alvo. Produz CSV com:
 
 Uso:
     python scripts/benchmark_polling.py --duration 3 \\
-        --output benchmarks/2026-04-20-polling.csv
+        --output docs/research/2026-04-20-polling-usb.csv
     python scripts/benchmark_polling.py --frequencies 60,120,250,1000
 """
 from __future__ import annotations

@@ -65,31 +65,37 @@ custom_command = []
   daemon não mata a Steam.
 - stdin/stdout/stderr vão para `/dev/null` — nada vaza nos logs do daemon.
 
-## Long-press do PS — modo jogo (FEAT-EMULATION-GAMEMODE-LONGPRESS-01, v3.8.1)
+## Modo jogo — combo PS + Options
 
-Segurar o **botão PS por ~1 segundo** sem combo dispara o "modo jogo": alterna a supressão da
-emulação de mouse/teclado virtual do daemon, mantendo os **hotkeys** (combos de troca de perfil)
-**ativos** — para que o próprio gesto continue funcionando para reativar a emulação.
+O "modo jogo" alterna a supressão da emulação de mouse/teclado do daemon,
+mantendo os **combos de troca de perfil ativos** — para o gesto continuar
+funcionando e conseguir reativar a emulação depois.
 
 | Gesto | Ação |
 |-------|------|
 | PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
-| PS (~1s segurando) | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
+| **PS + Options** | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
 | PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
 
-**Diferenças entre os 3 gestos PS:**
+**Por que não é mais o long-press.** O gesto original era segurar o PS por ~1 s
+(FEAT-EMULATION-GAMEMODE-LONGPRESS-01, v3.8.1). Ele provocava modo jogo
+**acidental**: o toque de abrir a Steam que passasse de um segundo alternava o
+modo sem ninguém pedir. Hoje o padrão é `ps_long_press_ms = 0` — o gesto vem
+**desligado** — e o modo jogo é o combo deliberado PS + Options
+(FEAT-EMULATION-GAMEMODE-COMBO-01).
+
+**Diferenças entre os gestos do PS:**
 
 - O combo (PS + outro botão) dispara primeiro — long-press e PS solo ficam suprimidos.
-- O long-press dispara **uma vez** assim que o threshold é atingido (default 1000 ms); soltar
-  depois disso **não** abre a Steam.
-- O PS solo só dispara no release, e só se nem combo nem long-press já dispararam.
+- O PS solo só dispara no release, e só se nenhum combo já tiver disparado.
 
 **Configuração:**
 
 ```toml
 [hotkey]
-# Threshold do long-press do PS (ms). Padrão 1000 (1 segundo).
-ps_long_press_ms = 1000
+# Threshold do long-press do PS (ms). Padrão 0 = gesto desligado.
+# Valor > 0 traz o gesto de volta, com o risco de acionamento acidental.
+ps_long_press_ms = 0
 ```
 
 **Estado do modo jogo via IPC** (útil para GUI/applet/CLI custom):
@@ -119,5 +125,5 @@ restart do daemon.
   pelo `HotkeyManager`).
 - Para desativar temporariamente o PS solo, use `action = "none"` e recarregue
   o daemon com `hefesto-dualsense4unix daemon reload` (V1.2+).
-- O long-press do PS sempre funciona — ele é independente do `action` configurado
-  para o PS solo.
+- O combo PS + Options é independente do `action` configurado para o PS solo —
+  ele funciona mesmo com `action = "none"`.
