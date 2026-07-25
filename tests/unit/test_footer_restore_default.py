@@ -49,7 +49,17 @@ def _sync_run_in_thread(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def asset_content() -> dict:  # type: ignore[type-arg]
-    """Conteúdo canônico do asset meu_perfil.json."""
+    """Conteúdo canônico do asset meu_perfil.json.
+
+    CI-SMOKE-SEM-ASSETS-01: o caminho é resolvido a partir do `__file__` do
+    PACOTE, então no smoke multi-distro — onde o hefesto vem de um wheel
+    instalado em `/usr/local/lib/...` e os `assets/` não são empacotados — o
+    arquivo não existe e o teste morria com `FileNotFoundError` em vez de
+    pular. Sem o asset do repositório não há contrato a verificar aqui: o que
+    este teste trava é que o restore devolve EXATAMENTE o conteúdo do asset.
+    """
+    if not _MEU_PERFIL_ASSET.is_file():
+        pytest.skip(f"asset do repositório ausente: {_MEU_PERFIL_ASSET}")
     return json.loads(_MEU_PERFIL_ASSET.read_text(encoding="utf-8"))
 
 
