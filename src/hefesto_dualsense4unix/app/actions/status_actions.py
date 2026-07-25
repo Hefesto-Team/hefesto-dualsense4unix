@@ -31,7 +31,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.base import (
+    WidgetAccessMixin,
+    numero_do_controle,
+)
 from hefesto_dualsense4unix.app.actions.external_controllers import (
     button_labels_for,
     external_key,
@@ -66,22 +69,9 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def _display_slot(entry: dict[str, Any]) -> int:
-    """Numero de exibicao de um controle na GUI.
-
-    Usa o ``player_slot`` de sessão — a identidade ESTÁVEL que sobrevive a
-    desconectar/reconectar (o MESMO numero mostrado nos cards, na linha de
-    comando e no applet), para o seletor e o card nunca discordarem sobre qual
-    controle e o "Controle 1". Sem slot (controle sem MAC / registro ausente),
-    cai na posicao 1-based (``index + 1``).
-    """
-    slot = entry.get("player_slot")
-    if isinstance(slot, int) and not isinstance(slot, bool):
-        return slot
-    idx = entry.get("index")
-    if isinstance(idx, int) and not isinstance(idx, bool):
-        return idx + 1
-    return 1
+#: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
+#: para as telas não divergirem; o nome antigo segue como alias do módulo.
+_display_slot = numero_do_controle
 
 
 class StatusActionsMixin(WidgetAccessMixin):

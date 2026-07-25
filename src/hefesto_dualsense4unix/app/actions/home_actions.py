@@ -25,7 +25,10 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.base import (
+    WidgetAccessMixin,
+    numero_do_controle,
+)
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
@@ -303,16 +306,23 @@ def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
     return f"{len(controllers)} controles = {len(players)} jogadores"
 
 
-def _format_controller_title(position: int, player: object) -> str:
+def _format_controller_title(entry: dict[str, Any]) -> str:
     """Título do card: "Controle 2 — P3" (função pura).
 
-    LEIGO-01b: `position` (1-based) é só a ordem na lista — a identificação
-    física do card. O número do JOGADOR vem do daemon e pode divergir da ordem
-    (índices são reusados quando alguém sai e outro entra). Sem número de
-    jogador (modo desktop/nativo, jogador ainda subindo) o card só se identifica,
-    em vez de inventar um "P" que o jogo não confirma.
+    Recebe a ENTRY inteira, não o número já resolvido: o defeito que isto
+    corrige não estava na formatação e sim em quem chamava — o call site
+    passava a posição no loop (`idx + 1`), e com um controle só a aba Início
+    dizia "Controle 1" enquanto o cabeçalho dizia "Sony 3" sobre esse mesmo
+    controle. Com a entry aqui dentro, a origem do número entra no contrato da
+    função e o teste cobre os dois.
+
+    LEIGO-01b: o número do JOGADOR vem do daemon e pode divergir do número do
+    controle (índices são reusados quando alguém sai e outro entra). Sem número
+    de jogador (modo desktop/nativo, jogador ainda subindo) o card só se
+    identifica, em vez de inventar um "P" que o jogo não confirma.
     """
-    name = f"Controle {position}"
+    name = f"Controle {numero_do_controle(entry)}"
+    player = entry.get("player")
     if isinstance(player, int) and not isinstance(player, bool):
         return f"{name} — P{player}"
     return name
@@ -696,15 +706,16 @@ class HomeActionsMixin(WidgetAccessMixin):
             box.pack_start(empty, False, False, 0)
             box.show_all()
             return
-        for idx, ctrl in enumerate(controllers):
+        for ctrl in controllers:
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             card.get_style_context().add_class("hefesto-dualsense4unix-card")
             card.set_margin_end(6)
             is_primary = bool(ctrl.get("is_primary"))
             title = Gtk.Label()
-            # LEIGO-01b: o número do jogador vem do daemon (`player`), NUNCA de
-            # idx+1 — a posição na lista não é o que o jogo vê.
-            name = _format_controller_title(idx + 1, ctrl.get("player"))
+            # LEIGO-01b: nem o número do jogador nem o do controle saem da
+            # posição na lista — o primeiro vem do daemon, o segundo do slot de
+            # sessão, o mesmo que o resto da GUI mostra.
+            name = _format_controller_title(ctrl)
             title.set_markup(f"<b>{name}</b>" if is_primary else name)
             title.set_xalign(0.0)
             card.pack_start(title, False, False, 0)

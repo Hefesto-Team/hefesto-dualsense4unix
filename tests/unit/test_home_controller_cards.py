@@ -95,19 +95,30 @@ class TestLabelsDosToasts:
 
 
 class TestFormatControllerTitle:
-    """LEIGO-01b: o "P" do card é o número do daemon, nunca a posição na lista."""
+    """LEIGO-01b: o "P" do card é o número do daemon, nunca a posição na lista.
 
-    def test_posicao_e_jogador_podem_divergir(self) -> None:
-        # 2º controle da lista sendo o jogador 3 é real: índices são reusados
-        # quando um jogador sai e outro entra.
-        assert _format_controller_title(2, 3) == "Controle 2 — P3"
+    A função passou a receber a ENTRY inteira: o número do controle sai do
+    `player_slot` de sessão, não da posição no loop — era essa divergência que
+    fazia o card dizer "Controle 1" e o cabeçalho "Sony 3" sobre o mesmo
+    controle. Ver `test_numero_do_controle_unico.py`.
+    """
+
+    def test_numero_do_controle_e_jogador_podem_divergir(self) -> None:
+        # Controle 2 sendo o jogador 3 é real: índices de jogador são reusados
+        # quando um sai e outro entra.
+        assert (
+            _format_controller_title({"player_slot": 2, "player": 3})
+            == "Controle 2 — P3"
+        )
 
     def test_sem_numero_de_jogador_o_card_so_se_identifica(self) -> None:
         """Modo desktop/nativo, ou jogador ainda subindo: não inventa um "P"."""
-        assert _format_controller_title(1, None) == "Controle 1"
+        assert _format_controller_title({"player_slot": 1}) == "Controle 1"
 
     def test_bool_nao_vira_numero_de_jogador(self) -> None:
-        assert _format_controller_title(1, True) == "Controle 1"
+        assert _format_controller_title({"player_slot": 1, "player": True}) == (
+            "Controle 1"
+        )
 
 
 class TestFormatPlayersHint:
