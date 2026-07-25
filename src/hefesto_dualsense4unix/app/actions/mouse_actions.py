@@ -35,22 +35,6 @@ MODE_GATE_HINT = (
     "os jogadores do co-op no meio da partida."
 )
 
-MAPPING_LEGEND = (
-    # ADR-011: glyphs Geometric Shape via NCR (&#...;) — o sanitizer de
-    # anonimato strippa o literal /; a entidade Pango renderiza igual.
-    "<b>Mapeamento:</b>\n"
-    "Cruz (X) ou L2 → botão esquerdo\n"
-    "Triângulo (&#9651;) ou R2 → botão direito\n"
-    "R3 (clique no analógico direito) → botão do meio\n"
-    "Círculo (&#9675;) → Enter\n"
-    "Quadrado (&#9633;) → Esc\n"
-    "D-pad (↑↓←→) → setas do teclado\n"
-    "Analógico esquerdo → movimento do cursor\n"
-    "Analógico direito → rolagem vertical e horizontal\n"
-    "\n"
-    "<b>Modo jogo:</b> segure o botão PS para suspender a emulação de "
-    "mouse/teclado (e segure de novo para retomar)."
-)
 
 
 class MouseActionsMixin(WidgetAccessMixin):
@@ -92,11 +76,12 @@ class MouseActionsMixin(WidgetAccessMixin):
             self._mouse_guard_refresh = False
 
     def install_mouse_tab(self) -> None:
-        # mouse_legend_label foi substituído por GtkFrame estático (UI-MOUSE-CLEANUP-01).
-        # Mantém compatibilidade caso o widget ainda exista em alguma versão do GLADE.
-        legend = self._get("mouse_legend_label")
-        if legend is not None:
-            legend.set_markup(MAPPING_LEGEND)
+        # A legenda de mapeamento virou um GtkFrame estático no Glade
+        # (UI-MOUSE-CLEANUP-01). O `mouse_legend_label` não existe em nenhuma
+        # versão do arquivo, então o branch de compatibilidade que vivia aqui
+        # nunca era alcançado e mantinha viva uma constante de 16 linhas que
+        # duplicava o texto do Glade — duas fontes da verdade para a mesma
+        # tabela, uma delas invisível.
         self._refresh_mouse_view()
         # T6: popula os widgets a partir do draft já no bootstrap. Sem isto, se o
         # daemon estiver offline no install, a aba mostra os defaults do glade em
@@ -397,6 +382,6 @@ class MouseActionsMixin(WidgetAccessMixin):
         self._status_toast("mouse", msg)
 
 
-__all__ = ["MAPPING_LEGEND", "UINPUT_DEV", "MouseActionsMixin"]
+__all__ = ["UINPUT_DEV", "MouseActionsMixin"]
 
 # "Conhece-te a ti mesmo." — Sócrates

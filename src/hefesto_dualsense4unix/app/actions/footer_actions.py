@@ -459,17 +459,15 @@ class FooterActionsMixin(WidgetAccessMixin):
         ipc_bridge.run_in_thread(_restore, on_success=_on_restored, on_failure=_on_err)
 
     # ------------------------------------------------------------------
-    # Instalação (documentação de ponto canônico)
+    # Instalação
     # ------------------------------------------------------------------
-
-    def install_footer_actions(self) -> None:
-        """Ponto de instalação documentado dos handlers do rodapé.
-
-        O builder.connect_signals() em HefestoApp.__init__ já registra os
-        handlers via _signal_handlers; este método existe como referência
-        canônica e para testes que injetam botões programaticamente.
-        """
-        pass
+    # Os handlers do rodapé são registrados pelo builder.connect_signals()
+    # em HefestoApp.__init__ (via _signal_handlers), como todos os demais.
+    # Havia aqui um `install_footer_actions` que era só `pass` e se dizia
+    # "referência canônica e ponto para testes que injetam botões" — nenhum
+    # teste o chamava e nenhum call site existia. Um stub vazio que se
+    # apresenta como ponto de extensão é pior que nada: quem procura onde
+    # ligar um botão novo do rodapé para aqui em vez de ir ao Glade.
 
 
 # ------------------------------------------------------------------
@@ -492,6 +490,13 @@ def _refresh_all_tabs(mixin: Any) -> None:
         # Default (e qualquer recarga via _refresh_all_tabs) deixava os bindings
         # stale, podendo reverter o restore ao editar.
         "_refresh_key_bindings_from_draft",
+        # BUG-RESTORE-DEFAULT-DEIXA-INICIO-E-EMULACAO-STALE-01: as abas Início e
+        # Emulação ficavam de fora desta lista, então após "Restaurar Default"
+        # elas só voltavam à verdade quando o poller passasse ou quando a
+        # usuária trocasse de aba — até lá, mostravam o modo/máscara antigos.
+        # Ambos os agregadores são idempotentes e read-only (IPC state_full).
+        "_refresh_home_tab",
+        "_refresh_emulation_tab",
     ):
         fn = getattr(mixin, method_name, None)
         if fn is not None:

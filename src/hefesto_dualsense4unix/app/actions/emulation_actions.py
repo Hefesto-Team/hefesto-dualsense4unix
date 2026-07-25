@@ -148,8 +148,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._get("emulation_combo_prev_label").set_markup(
             "PS + ↓ (D-pad) — perfil anterior"
         )
-        self._get("emulation_combo_buffer_label").set_text(str(DEFAULT_BUFFER_MS))
-        self._get("emulation_passthrough_label").set_text("Não")
+        # BUG-EMULATION-HOTKEY-CARD-FIXO-01: estas duas linhas escreviam a
+        # CONSTANTE de compilação uma única vez e ninguém mais as tocava — a
+        # tela afirmava "buffer 150" e "Passthrough: Não" como se fossem estado
+        # lido do daemon, mesmo com o daemon offline. Agora saem rotuladas como
+        # padrão e o `_sync_hotkey_card` as substitui pelo valor efetivo assim
+        # que o `state_full` traz o bloco `hotkey`.
+        self._sync_hotkey_card(None)
         self._refresh_emulation_view()
         self._refresh_mic_status()
         self._refresh_gamepad_and_gamemode()
@@ -182,6 +187,36 @@ class EmulationActionsMixin(WidgetAccessMixin):
             fn = getattr(self, name, None)
             if callable(fn):
                 fn()
+
+    def _sync_hotkey_card(self, state: Any) -> None:
+        """Atualiza buffer e passthrough com o valor EFETIVO do daemon.
+
+        Contrato: o `daemon.state_full` traz (ou não) um bloco ``hotkey`` com
+        ``buffer_ms`` e ``passthrough_in_emulation``. Quando o bloco não vem —
+        daemon offline, versão antiga do daemon ou campo ausente — a tela NÃO
+        finge conhecer o estado: mostra o padrão de fábrica com o sufixo
+        "(padrão)", que é a verdade disponível. É a mesma disciplina do cartão
+        UINPUT (BUG-EMULATION-UINPUT-CARD-STALE-02): sem estado, nada de
+        afirmar número.
+        """
+        bloco = state.get("hotkey") if isinstance(state, dict) else None
+        bloco = bloco if isinstance(bloco, dict) else {}
+
+        buffer_lbl = self._get("emulation_combo_buffer_label")
+        if buffer_lbl is not None:
+            valor = bloco.get("buffer_ms")
+            if isinstance(valor, int) and not isinstance(valor, bool):
+                buffer_lbl.set_text(str(valor))
+            else:
+                buffer_lbl.set_text(f"{DEFAULT_BUFFER_MS} (padrão)")
+
+        pass_lbl = self._get("emulation_passthrough_label")
+        if pass_lbl is not None:
+            ativo = bloco.get("passthrough_in_emulation")
+            if isinstance(ativo, bool):
+                pass_lbl.set_text("Sim" if ativo else "Não")
+            else:
+                pass_lbl.set_text("Não (padrão)")
 
     def _sync_uinput_card(self, active_key: str | None) -> None:
         """Atualiza device/VID:PID do cartão UINPUT conforme a máscara REAL."""
@@ -239,8 +274,12 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def on_emulation_open_toml(self, _btn: Gtk.Button) -> None:
         # BUG-DAEMON-TOML-DEAD-01: o daemon NÃO lê daemon.toml (config vem de
         # variáveis de ambiente + IPC daemon.reload). O arquivo é só referência;
-        # deixamos isso explícito no cabeçalho e não escrevemos chaves mortas
-        # (next_profile/prev_profile estão disabled_until_wired no daemon).
+        # deixamos isso explícito no cabeçalho.
+        # Nota (25/07): a ressalva antiga sobre `next_profile`/`prev_profile`
+        # estarem `disabled_until_wired` ficou obsoleta — os combos PS+D-pad
+        # foram ligados em subsystems/hotkey.py (FEAT-HOTKEY-PROFILE-CYCLE-01).
+        # Eles seguem fora deste arquivo por serem fixos no daemon, não por
+        # estarem desligados.
         path = config_dir(ensure=True) / "daemon.toml"
         if not path.exists():
             path.write_text(
@@ -501,6 +540,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             # a máscara real em DualSense — informação contraditória na mesma
             # tela. Reflete o device/VID:PID do vpad REALMENTE ativo.
             self._sync_uinput_card(active_key)
+            self._sync_hotkey_card(state)
             gm_label = self._get("emulation_gamemode_status_label")
             if gm_label is not None and isinstance(state, dict):
                 # BUG-GAMEMODE-LABEL-AMBIGUO-01: o label dizia "ativo" quando o
@@ -528,6 +568,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             sync_card = getattr(self, "_sync_uinput_card", None)
             if sync_card is not None:
                 sync_card(None)
+            # Offline o buffer/passthrough voltam a ser "padrão", não o último
+            # valor lido — a mesma regra do cartão UINPUT logo acima.
+            sync_hotkey = getattr(self, "_sync_hotkey_card", None)
+            if sync_hotkey is not None:
+                sync_hotkey(None)
             # HARM-03: sem estado não dá para saber se "Modo jogo" faz sentido;
             # oferecê-lo às cegas pode cair no caso que mata o controle.
             self._sync_gamemode_button(None)
