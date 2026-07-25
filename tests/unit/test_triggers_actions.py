@@ -347,10 +347,13 @@ def _build_mixin(monkeypatch: pytest.MonkeyPatch) -> _FakeTriggersMixin:
 
     # R-19: o botão "Desligar" passou a usar `trigger.reset` (LIBERA a trava)
     # em vez de mandar outro `trigger.set` (que a RE-ARMAVA).
-    resets: list[str | None] = []
+    # ABAS-06: o "Desligar" passou a levar o `uniq` do alvo, como o "Aplicar".
+    resets: list[tuple[str | None, str | None]] = []
 
-    def fake_trigger_reset(side: str | None = None) -> tuple[bool, str | None]:
-        resets.append(side)
+    def fake_trigger_reset(
+        side: str | None = None, uniq: str | None = None
+    ) -> tuple[bool, str | None]:
+        resets.append((side, uniq))
         return True, None
 
     monkeypatch.setattr(triggers_actions, "trigger_reset", fake_trigger_reset)
@@ -538,9 +541,33 @@ def test_reset_trigger_envia_off(monkeypatch: pytest.MonkeyPatch) -> None:
     # ele mandava `trigger.set` modo "Off", e `trigger.set` arma
     # `mark_manual_trigger_active` — o botão de "voltar ao normal" era mais um
     # jeito de PAUSAR a troca automática de perfil, sem nada dizendo isso.
-    assert mixin._trigger_reset_calls == ["left"]
+    assert mixin._trigger_reset_calls == [("left", None)]
     assert mixin._trigger_set_calls == [], (
         "trigger.set aqui re-armaria a trava que o botão deveria soltar"
+    )
+
+
+def test_reset_trigger_leva_o_controle_escolhido(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ABAS-06 (25/07) — "Desligar" era o último comando da janela em broadcast.
+
+    Com "Controle 2" selecionado no seletor do banner, o "Aplicar" ao lado
+    mandava o MAC (PERFIL-05) e o "Desligar" não — então ele zerava o gatilho
+    dos QUATRO controles. O mesmo defeito já tinha sido corrigido no "Apagar"
+    da aba Lightbar (R-17) e não fora replicado aqui.
+    """
+    mixin = _build_mixin(monkeypatch)
+    mixin.install_triggers_tab()
+    # É o que o seletor do banner mantém (StatusActionsMixin._edit_target_uniq,
+    # lido pelo `_edit_uniq` que os dois botões da aba consultam).
+    mixin._edit_target_uniq = "aabbcc000002"  # type: ignore[attr-defined]
+    mixin._edit_uniq = lambda: mixin._edit_target_uniq  # type: ignore[attr-defined]
+
+    mixin.on_trigger_right_reset(None)
+
+    assert mixin._trigger_reset_calls == [("right", "aabbcc000002")], (
+        "sem o MAC, desligar o gatilho de UM controle desligava o dos quatro"
     )
 
 

@@ -378,7 +378,7 @@ _MODO_JOGO_MIGRATION_MARKER = ".modo_jogo_nos_presets_migrated"
 
 #: MODO-01: os presets de gênero que ganharam `mode: gamepad`. `coop_local` fica
 #: de fora porque já nasce com modo — dele só muda a prioridade.
-_PRESETS_DE_JOGO = ("fps", "aventura", "acao", "corrida", "esportes")
+_PRESETS_DE_JOGO = ("fps", "aventura", "acao", "corrida", "esportes")  # (noqa-acento)
 
 
 def migrate_modo_jogo_nos_presets(dest_dir: Path | None = None) -> list[str]:

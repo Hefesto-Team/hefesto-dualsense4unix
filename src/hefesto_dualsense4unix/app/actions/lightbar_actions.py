@@ -131,6 +131,21 @@ class LightbarActionsMixin(WidgetAccessMixin):
         porque ``with_controller_leds`` só guarda o que DIVERGE do global — se
         o global já tivesse o valor novo, o override seria podado e a paleta
         automática voltaria a vencer (a cor "não pegaria").
+
+        ABAS-02 (25/07) — a limpeza é do campo EDITADO, e só dele. Cor e brilho
+        saíam JUNTOS dos overrides (formam um único campo no estado desejado do
+        backend: o RGB pré-escalado), mas o brilho não tem alvo para re-semear
+        (ele não disputa com o automático, então ``alvos`` fica vazio neste
+        ramo). Efeito medido: com o alvo em "Todos", arrastar o controle de
+        brilho UM PIXEL apagava o campo de cor de TODOS os ajustes por controle
+        — Controle 1 azul e Controle 2 vermelho viravam nada — e o evento
+        dispara a cada movimento do arraste, então bastava encostar. Limpando
+        só o campo editado, o brilho global passa a valer em todo mundo (que é
+        o que "Todos" quer dizer) e a cor própria de cada controle sobrevive: a
+        emissão por campo de ``_controllers_to_ipc`` resolve o brilho do GLOBAL
+        quando o override fala só de cor, e o merge por campo do backend faz o
+        mesmo na ativação. A recíproca também melhora — editar a COR em "Todos"
+        deixa de apagar o brilho próprio de quem tem um.
         """
         draft = getattr(self, "draft", None)
         if draft is None:
@@ -138,8 +153,10 @@ class LightbarActionsMixin(WidgetAccessMixin):
         uniq = self._edit_uniq()
         if uniq is None:
             campos: set[str] = set()
-            if "lightbar_rgb" in update or "lightbar_brightness" in update:
-                campos |= {"lightbar", "lightbar_brightness"}
+            if "lightbar_rgb" in update:
+                campos.add("lightbar")
+            if "lightbar_brightness" in update:
+                campos.add("lightbar_brightness")
             if "player_leds" in update:
                 campos.add("player_leds")
             # Campos "de opinião" (cor e padrão de player-LED) são os que

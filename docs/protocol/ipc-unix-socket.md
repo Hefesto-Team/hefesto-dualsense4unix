@@ -23,6 +23,20 @@ NDJSON UTF-8 (V2-3): uma requisição ou resposta por linha, terminada por `\n`.
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |
 | `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
 
+### `uniq` — o alvo por controle (PERFIL-05 / R-17 / ABAS-06)
+
+Os comandos de SAÍDA aceitam um `uniq` opcional (o MAC normalizado, 12 hex) e,
+com ele, escrevem SÓ naquele controle, registrando o override por-MAC —
+`trigger.set`, `trigger.reset`, `led.set` e `led.player_set`. Omitido, vale o
+comportamento global clássico ("Todos"). É o eixo que a persistência já usava:
+sem ele, o pedido cai em broadcast e "configurei o Controle 2 e mudou todos".
+
+`trigger.reset` foi o último a ganhar o parâmetro (ABAS-06, 25/07) — o botão
+"Desligar" da aba Gatilhos zerava o gatilho dos quatro enquanto o "Aplicar" ao
+lado mandava para um só. Ele também é o único que LIBERA a trava manual de 30 s,
+e libera apenas a categoria `trigger` (ABAS-05): desligar um gatilho não pode
+destravar o LED nem a vibração que ela ajustou em outra aba.
+
 ### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
 
 "Release total" do controle: solta o DualSense para o jogo usar os gatilhos

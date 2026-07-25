@@ -111,13 +111,47 @@ class TestF1PassthroughNaoApagaOutrasCategorias:
         assert store.manual_trigger_active is True
 
     @pytest.mark.asyncio
-    async def test_trigger_reset_segue_limpando_tudo(
+    async def test_trigger_reset_limpa_so_o_gatilho(
         self, server_store: tuple[IpcServer, StateStore]
     ) -> None:
+        """ABAS-05 (25/07) SUPERA o contrato antigo, que era "limpa tudo".
+
+        Este teste pinava o clear TOTAL do `trigger.reset` como deliberado — e
+        era ele que travava a cura. A auditoria das abas mediu o efeito: o
+        botão "Desligar" de UM gatilho apagava também as travas de `led` e
+        `rumble`, então a troca automática voltava a reescrever a cor que a aba
+        Lightbar tinha acabado de aplicar. É a queixa histórica "a config que
+        eu deixo não fica", e contradizia o próprio F1 logo acima — a
+        granularidade por categoria existe exatamente para isto.
+
+        Quem quer soltar as três continua tendo o gesto explícito e rotulado:
+        ativar um perfil (`profile.switch`).
+        """
         server, store = server_store
         await server._handle_led_set({"rgb": [10, 20, 30]})
         await server._handle_trigger_set({"side": "left", "mode": "Off", "params": []})
+        assert store.manual_override_categories == frozenset({"led", "trigger"})
+
         await server._handle_trigger_reset({})
+
+        assert store.manual_override_categories == frozenset({"led"}), (
+            "desligar um gatilho não pode destravar o LED que ela aplicou "
+            "noutra aba"
+        )
+        assert store.manual_trigger_active is True
+
+    @pytest.mark.asyncio
+    async def test_ativar_perfil_segue_limpando_as_tres(
+        self, server_store: tuple[IpcServer, StateStore]
+    ) -> None:
+        """A saída explícita continua existindo — e é a rotulada."""
+        server, store = server_store
+        await server._handle_led_set({"rgb": [10, 20, 30]})
+        await server._handle_trigger_set({"side": "left", "mode": "Off", "params": []})
+        await server._handle_rumble_set({"weak": 100, "strong": 100})
+
+        store.clear_manual_trigger_active()  # o que `profile.switch` chama
+
         assert store.manual_trigger_active is False
 
 

@@ -509,6 +509,44 @@ class DraftConfig(BaseModel):
         payload["controllers"] = profile.controllers
         return Profile.model_validate(payload)
 
+    # --- identidade do perfil de origem (ABAS-01) ---
+
+    def with_profile_identity(self, profile: Any) -> DraftConfig:
+        """Rascunho reapontado para ``profile``, o perfil ACABADO DE GRAVAR.
+
+        ABAS-01 (sprint "as abas brigam pelo mesmo estado", 25/07). Os campos
+        ``source_*`` são a FOTOGRAFIA do perfil de onde o rascunho veio — e
+        quem os tirava era só o bootstrap, no boot da janela. Duas superfícies
+        gravam perfil sem passar por ali (a aba Perfis, que escreve ``mode``,
+        ``match``, ``priority`` e ``suppress_desktop_emulation`` direto no
+        disco, e o "Salvar Perfil" do rodapé, que grava com um nome NOVO), e
+        nenhuma das duas atualizava a fotografia. O resultado medido:
+
+        - aba Perfis → Modo = "Jogar pelo Hefesto" → Salvar *(grava certo)* →
+          aba Lightbar → muda a cor → rodapé "Salvar Perfil" com o MESMO nome
+          → a seção ``mode`` SOME do arquivo, porque ``to_profile`` reemitiu o
+          ``source_mode`` do boot (que era ``None``);
+        - rodapé "Salvar Perfil" como "MadJack" → ``source_name`` continuava
+          apontando para o perfil anterior, então o SEGUNDO "Salvar Perfil"
+          com o mesmo "MadJack" caía no ramo "nome novo" de ``to_profile`` e
+          zerava regra, prioridade e modo do perfil que ela acabara de criar.
+
+        Reapontar aqui fecha os dois: depois de gravar, o rascunho descreve o
+        que está em DISCO, e o ``mesmo_perfil`` de ``to_profile`` volta a
+        responder a verdade. As seções que a GUI edita (leds, gatilhos, rumble,
+        mouse, teclado e os overrides por-controle) não são tocadas — elas já
+        são a fonte do que foi gravado.
+        """
+        return self.model_copy(
+            update={
+                "source_name": profile.name,
+                "source_match": profile.match,
+                "source_mode": profile.mode,
+                "source_priority": profile.priority,
+                "source_suppress": bool(profile.suppress_desktop_emulation),
+            }
+        )
+
     # --- overrides por-controle (PERFIL-04) ---
 
     def controller_override(self, uniq: str | None) -> Any | None:

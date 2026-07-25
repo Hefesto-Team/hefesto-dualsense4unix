@@ -318,7 +318,9 @@ def trigger_set(side: str, mode: str, params: list[int]) -> bool:
     return ok
 
 
-def trigger_reset(side: str | None = None) -> tuple[bool, str | None]:
+def trigger_reset(
+    side: str | None = None, uniq: str | None = None
+) -> tuple[bool, str | None]:
     """LIBERA a trava manual e devolve o gatilho ao perfil (`trigger.reset`).
 
     R-19 (auditoria 23/07): o RPC já existia e já estava roteado
@@ -328,13 +330,21 @@ def trigger_reset(side: str | None = None) -> tuple[bool, str | None]:
     que a usuária usa para "voltar ao normal" era mais um jeito de PAUSAR a
     troca automática de perfil. É a queixa "estado armado que nunca é liberado".
 
-    O clear total do `trigger.reset` (as três categorias) é contrato
-    deliberado e testado — ver `test_onda_u_trava_por_categoria.py`; estreitá-lo
-    por categoria seria outra decisão, não um detalhe desta correção.
+    ABAS-06 (25/07): `uniq` — MAC do controle escolhido no seletor. Este era o
+    ÚNICO comando de saída da janela sem alvo: com "Controle 2" selecionado,
+    "Desligar" zerava o gatilho dos QUATRO, enquanto o "Aplicar" ao lado
+    mandava para um só. Omitido = comportamento global clássico.
+
+    ABAS-05 (25/07): o clear das TRÊS categorias (documentado aqui como
+    "contrato deliberado" até 24/07) foi estreitado para a categoria `trigger`
+    — desligar um gatilho apagava a trava de LED e de vibração de outras abas e
+    reabria a troca automática para reescrever a cor recém-aplicada.
     """
     payload: dict[str, Any] = {}
     if side:
         payload["side"] = side
+    if uniq:
+        payload["uniq"] = uniq
     return _call_checked("trigger.reset", payload)
 
 

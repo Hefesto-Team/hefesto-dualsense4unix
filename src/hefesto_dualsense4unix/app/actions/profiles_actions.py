@@ -910,6 +910,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # R-09: salvo em disco, o perfil deixa de ser "novo" — o próximo Salvar
         # sobre ele é edição normal e deve reusar a config gravada.
         self._new_profile = False
+        # ABAS-01: o disco mudou; o rascunho tem de saber. Sem esta linha, o
+        # "Salvar Perfil" do rodapé reemitia a fotografia do BOOT e apagava a
+        # seção `mode` (e a regra, e a prioridade) recém-gravada aqui.
+        self._reconciliar_rascunho_com_perfil_salvo(profile, renomeando_de)
         self._reload_profiles_store(select_name=profile.name)
         # PERFIL-SAVE-APPLY-01 (22/07): o daemon NÃO relê JSON de perfil por
         # conta própria (sem watch de arquivo) — salvar o perfil que está
@@ -1168,6 +1172,93 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 self._suppress_advanced_toggle = False
             self._mode_advanced = True
 
+    def _edita_o_perfil_do_rascunho(self, name: str) -> bool:
+        """O "Salvar" em curso está gravando o perfil que o RASCUNHO representa?
+
+        ABAS-03 (25/07). A mesclagem com o rascunho só acontecia quando o nome
+        digitado batia com o do perfil ativo — o que exclui justamente o
+        RENAME, onde o nome já mudou. Nesse caminho a base vinha do disco e, em
+        seguida, `on_profile_save` apagava o perfil antigo: toda a edição de
+        cor, gatilho, vibração e teclado feita na sessão evaporava, sem aviso e
+        sem chance de desfazer (o arquivo de origem já não existia).
+
+        Quem responde "qual perfil o rascunho é" é `_active_profile_name`, não
+        o campo Nome. Então a resposta é sim quando:
+
+        - o nome digitado ocupa o MESMO ARQUIVO do perfil ativo — comparação
+          por SLUG, a lição do R-10: "Navegacao" e "Navegação" são o mesmo
+          `navegacao.json`, e comparar nome de exibição deixava a edição do
+          próprio perfil ativo cair no ramo do disco; ou
+        - a LINHA SELECIONADA na lista é o perfil ativo e este save não é
+          "Novo perfil" nem duplicação — ou seja, é o rename dele.
+
+        As duas exclusões são as mesmas do R-09: "Novo perfil" parte de
+        defaults (não pode clonar overrides por-MAC de quem estava
+        selecionado) e a duplicação parte da fonte guardada.
+        """
+        ativo = getattr(self, "_active_profile_name", "") or ""
+        if not ativo:
+            return False
+        if name == ativo or mesmo_slug(name, ativo):
+            return True
+        if getattr(self, "_new_profile", False):
+            return False
+        if getattr(self, "_duplicate_source", None) is not None:
+            return False
+        try:
+            selecionado = self._selected_profile_name() or ""
+        except Exception:
+            return False
+        return bool(selecionado) and mesmo_slug(selecionado, ativo)
+
+    def _reconciliar_rascunho_com_perfil_salvo(
+        self, profile: Profile, renomeando_de: str | None
+    ) -> None:
+        """Reaponta o rascunho para o perfil ACABADO DE GRAVAR (ABAS-01).
+
+        A aba Perfis é a única superfície que edita e persiste perfil, e ela
+        nunca escrevia de volta em `self.draft` — não havia uma única
+        atribuição a ele no arquivo. As seções que só ela edita (`mode`,
+        `match`, `priority`, `suppress_desktop_emulation`) iam direto para o
+        disco, enquanto o rascunho seguia com a fotografia tirada no boot da
+        janela. Aí o "Salvar Perfil" do rodapé, que reemite essa fotografia,
+        desfazia o trabalho:
+
+            aba Perfis → Modo = "Jogar pelo Hefesto" → Salvar *(grava certo)*
+            → aba Lightbar → muda a cor → rodapé "Salvar Perfil" →
+            a seção `mode` SOME do arquivo.
+
+        É o mesmo estrago do MODO-01 visto de outro ângulo: ela faz tudo certo
+        e o modo do perfil evapora. Vale igual para regra de janela,
+        prioridade e supressão.
+
+        Só reaponta quando o perfil gravado É o do rascunho (mesmo arquivo que
+        o ativo, ou o rename dele) — salvar OUTRO perfil pela aba Perfis não
+        pode mexer no que as demais abas estão editando. No rename, o nome do
+        perfil ativo migra junto: sem isso a reconciliação do tick de 2 Hz
+        veria o `profile.switch` de migração como "trocaram de perfil por fora"
+        e recarregaria o rascunho por baixo dela.
+
+        A linha de base do "há edição pendente" (R-08) também acompanha: o que
+        estava em memória acabou de virar disco, então a sessão volta a ficar
+        limpa e a reconciliação com o perfil ativo continua funcionando pelo
+        resto dela.
+        """
+        draft = getattr(self, "draft", None)
+        if draft is None:
+            return
+        ativo = getattr(self, "_active_profile_name", "") or ""
+        if not ativo:
+            return
+        e_do_rascunho = mesmo_slug(profile.name, ativo) or (
+            renomeando_de is not None and mesmo_slug(renomeando_de, ativo)
+        )
+        if not e_do_rascunho:
+            return
+        self.draft = draft.with_profile_identity(profile)
+        self._active_profile_name = profile.name
+        self._draft_baseline = self.draft
+
     def _build_profile_from_editor(self) -> Profile:
         """Constrói Profile a partir do editor (modo simples ou avançado)."""
         name = self._get("profile_name_entry").get_text().strip()
@@ -1243,9 +1334,16 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         ativo = getattr(self, "_active_profile_name", "") or ""
         base: dict[str, Any]
-        if draft is not None and ativo and name == ativo:
+        if draft is not None and ativo and self._edita_o_perfil_do_rascunho(name):
             try:
-                do_draft = draft.to_profile(name)
+                # ABAS-03: `to_profile(ativo)`, não `to_profile(name)`. Num
+                # RENAME o nome já mudou, e `to_profile` só reemite as seções
+                # que o rascunho não edita (`suppress_desktop_emulation` entre
+                # elas) quando o nome pedido é o do perfil de ORIGEM — pedir
+                # pelo nome novo faria o perfil renomeado nascer sem elas.
+                # Nome, prioridade, regra e modo vêm do EDITOR logo abaixo,
+                # então renomear continua sendo renomear.
+                do_draft = draft.to_profile(ativo)
             except Exception as exc:  # draft inconsistente não pode travar o save
                 logger.warning("profile_build_draft_falhou", erro=str(exc))
                 do_draft = None
