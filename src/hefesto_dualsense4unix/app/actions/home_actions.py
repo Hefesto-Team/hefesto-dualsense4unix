@@ -462,8 +462,8 @@ class HomeActionsMixin(WidgetAccessMixin):
 
         # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): o cadeado da
         # troca automática de perfil. Marcado = "usa o perfil que EU escolhi,
-        # não troca sozinho quando eu abrir um jogo" — vale para Sackboy,
-        # Mullet Mad Jack ou qualquer app. Diferente do Modo Nativo (que solta
+        # não troca sozinho quando eu abrir um jogo" — vale para qualquer
+        # app. Diferente do Modo Nativo (que solta
         # o controle) e do pause (que para tudo): aqui só a DECISÃO de perfil
         # congela; gamepad/co-op/rumble seguem. O estado vem do daemon no
         # _render_home; o toggle persiste e vale na hora.
@@ -472,7 +472,7 @@ class HomeActionsMixin(WidgetAccessMixin):
         )
         lock_check.set_tooltip_text(
             "Congela a troca automática: o perfil que você deixou ativo continua "
-            "valendo mesmo ao abrir Sackboy, Mullet Mad Jack ou qualquer jogo. "
+            "valendo mesmo ao abrir qualquer jogo. "
             "Desmarque para o Hefesto voltar a escolher o perfil por você."
         )
         lock_check.connect("toggled", self._on_home_autoswitch_lock_toggled)

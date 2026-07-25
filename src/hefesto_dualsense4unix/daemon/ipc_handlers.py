@@ -836,7 +836,7 @@ class IpcHandlersMixin:
         """Congela/descongela a troca AUTOMÁTICA de perfil (FEAT-AUTOSWITCH-LOCK-01).
 
         Pedido da mantenedora (23/07): poder dizer "usa o que eu escolhi, não
-        troca sozinho" — para o Sackboy, o Mullet Mad Jack ou qualquer jogo. É o
+        troca sozinho" — para qualquer jogo. É o
         oposto de aplicar o perfil do jogo por foco de janela.
 
         `locked` opcional: ausente → toggle. Persiste em disco (sobrevive a
