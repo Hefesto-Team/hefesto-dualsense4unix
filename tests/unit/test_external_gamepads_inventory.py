@@ -271,6 +271,223 @@ def test_inventario_dedup_por_uniq_primeiro_node_vence(
     assert inventario[0]["bus"] == "usb"
 
 
+# --- dedup quando o `uniq` NÃO identifica o aparelho (endereço sintético) ----
+#
+# O DKMS `hid-nintendo` deste projeto (patch 0003, parâmetro `usb_probe_degrade`)
+# FABRICA um endereço quando o clone não responde ao `REQ_DEV_INFO` no cabo:
+# `02` + VID + PID + número do barramento. Não há um bit do aparelho ali — dois
+# clones idênticos recebem a MESMA string, como o próprio comentário do patch
+# admite. Nunca escrevemos esse endereço como literal (o guarda de anonimato
+# `test_anonimato_de_fixtures` reprova qualquer MAC-forma fora das faixas da
+# casa, e com razão): ele é DERIVADO da mesma fórmula do kernel, o que de quebra
+# documenta a fórmula aqui.
+
+VID_NINTENDO = 0x057E
+PID_PRO_CONTROLLER = 0x2009
+BUS_USB = 0x03
+
+
+def _uniq_sintetico(vid: int, pid: int, bus: int) -> str:
+    """Reproduz o endereço que o `hid-nintendo` degradado sintetiza.
+
+    Espelho fiel de `joycon_read_mac` no patch 0003: `mac_addr[0] = 0x02`
+    (unicast administrado localmente), `[1..2]` = VID, `[3..4]` = PID e
+    `[5]` = barramento — formatado em maiúsculas como o `devm_kasprintf` do
+    kernel faz.
+    """
+    octetos = (0x02, vid >> 8, vid & 0xFF, pid >> 8, pid & 0xFF, bus)
+    return ":".join(f"{b:02X}" for b in octetos)
+
+
+def test_dois_clones_com_uniq_sintetico_igual_sao_dois_aparelhos(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pro genuíno + 8BitDo (ambos 057e:2009) degradados no mesmo barramento.
+
+    O kernel entrega o MESMO `uniq` sintético para os dois. Antes da correção o
+    `setdefault` engolia o segundo e ele sumia do inventário INTEIRO — sem GUI,
+    sem número de jogador, sem uma linha de log. Cada um tem a SUA instância HID
+    no sysfs (`.0001` contra `.0006`), e é ela que os separa.
+    """
+    uniq = _uniq_sintetico(VID_NINTENDO, PID_PRO_CONTROLLER, BUS_USB)
+
+    pro_path = "/dev/input/event30"
+    clone_path = "/dev/input/event34"
+    pro_dir = _arvore_hid(
+        tmp_path, "usb1/1-2/1-2:1.0/0003:057E:2009.0001", "nintendo", "hidraw2"
+    )
+    clone_dir = _arvore_hid(
+        tmp_path, "usb1/1-6/1-6:1.0/0003:057E:2009.0006", "nintendo", "hidraw5"
+    )
+    spec = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": VID_NINTENDO,
+        "pid": PID_PRO_CONTROLLER,
+        "bus": BUS_USB,
+        "uniq": uniq,
+        "caps": _caps_gamepad(),
+    }
+    _instalar_evdev_fake(
+        monkeypatch, {pro_path: dict(spec), clone_path: dict(spec)}
+    )
+    _instalar_realpath_fake(
+        monkeypatch,
+        {
+            "/sys/class/input/event30/device": pro_dir,
+            "/sys/class/input/event34/device": clone_dir,
+        },
+    )
+
+    inventario = discover_external_gamepads()
+
+    caminhos = sorted(e["evdev_path"] for e in inventario)
+    assert caminhos == [pro_path, clone_path], (
+        "dois aparelhos distintos que só COMPARTILHAM o endereço sintetizado "
+        "pelo kernel têm de aparecer os DOIS no inventário"
+    )
+    # O `uniq` segue sendo o que o kernel reporta — o inventário não inventa
+    # identidade, só deixa de tratar o endereço sintético como se fosse uma.
+    assert {e["uniq"] for e in inventario} == {uniq}
+    assert {e["hidraw"] for e in inventario} == {"/dev/hidraw2", "/dev/hidraw5"}
+
+
+def test_um_clone_com_uniq_sintetico_e_varios_nodes_colapsa_em_um(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O outro lado da moeda, que a correção não pode quebrar.
+
+    UM controle publica vários nodes evdev com caps de gamepad (é o que o
+    `hid_playstation` faz com gamepad/touchpad/motion, e o que um relatório HID
+    com duas coleções faz em qualquer driver). Todos são filhos da MESMA
+    instância HID no sysfs, então continuam colapsando numa entrada só — vence o
+    de menor número de node.
+    """
+    uniq = _uniq_sintetico(VID_NINTENDO, PID_PRO_CONTROLLER, BUS_USB)
+
+    primeiro = "/dev/input/event41"
+    irmao = "/dev/input/event42"
+    # Mesmo dono: `_arvore_hid` cria `<base>/input/inputN`, e a identidade de
+    # aparelho é a `<base>` — o dir da instância HID.
+    dono = "usb1/1-2/1-2:1.0/0003:057E:2009.0001"
+    base = tmp_path / "sys" / "devices" / dono
+    (base / "hidraw" / "hidraw2").mkdir(parents=True)
+    input_a = base / "input" / "input70"
+    input_b = base / "input" / "input71"
+    input_a.mkdir(parents=True)
+    input_b.mkdir(parents=True)
+
+    spec = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": VID_NINTENDO,
+        "pid": PID_PRO_CONTROLLER,
+        "bus": BUS_USB,
+        "uniq": uniq,
+        "caps": _caps_gamepad(),
+    }
+    _instalar_evdev_fake(monkeypatch, {irmao: dict(spec), primeiro: dict(spec)})
+    _instalar_realpath_fake(
+        monkeypatch,
+        {
+            "/sys/class/input/event41/device": str(input_a),
+            "/sys/class/input/event42/device": str(input_b),
+        },
+    )
+
+    inventario = discover_external_gamepads()
+
+    assert len(inventario) == 1, (
+        "nodes irmãos do MESMO aparelho não podem virar dois controles"
+    )
+    assert inventario[0]["evdev_path"] == primeiro
+
+
+def test_dedup_por_mac_real_ignora_a_instancia_hid(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Com MAC de verdade, o MAC continua mandando — mesmo em instâncias HID
+    diferentes (é o caso do replug e o da sessão USB + Bluetooth ao mesmo
+    tempo, em que o kernel cria dois HIDs para o mesmo aparelho)."""
+    a_path = "/dev/input/event12"
+    b_path = "/dev/input/event45"
+    a_dir = _arvore_hid(
+        tmp_path, "usb1/1-2/1-2:1.0/0003:057E:2009.0002", "nintendo", "hidraw1"
+    )
+    b_dir = _arvore_hid(
+        tmp_path, "bt/hci0/hci0:512/0005:057E:2009.0007", "nintendo", "hidraw8"
+    )
+    spec = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": VID_NINTENDO,
+        "pid": PID_PRO_CONTROLLER,
+        "uniq": MAC_8BITDO_FORJADO,
+        "caps": _caps_gamepad(),
+    }
+    _instalar_evdev_fake(
+        monkeypatch,
+        {a_path: {**spec, "bus": BUS_USB}, b_path: {**spec, "bus": 0x05}},
+    )
+    _instalar_realpath_fake(
+        monkeypatch,
+        {
+            "/sys/class/input/event12/device": a_dir,
+            "/sys/class/input/event45/device": b_dir,
+        },
+    )
+
+    inventario = discover_external_gamepads()
+
+    assert len(inventario) == 1
+    assert inventario[0]["evdev_path"] == a_path
+
+
+def test_uniq_sintetico_e_reconhecido_so_com_o_proprio_vid_pid() -> None:
+    """A detecção do endereço sintético é fechada: exige `02` + o VID e o PID
+    DO PRÓPRIO aparelho. Um MAC forjado qualquer, ou o mesmo endereço lido de um
+    aparelho com outro VID/PID, não passa por sintético — senão o remédio viraria
+    o veneno oposto (um controle com MAC legítimo deixando de deduplicar)."""
+    uniq = _uniq_sintetico(VID_NINTENDO, PID_PRO_CONTROLLER, BUS_USB)
+
+    assert er_mod._is_synthetic_uniq(uniq, VID_NINTENDO, PID_PRO_CONTROLLER)
+    # Mesma string, outro aparelho: não é o endereço sintético DELE.
+    assert not er_mod._is_synthetic_uniq(uniq, 0x045E, 0x028E)
+    # MAC de verdade (faixa forjada da casa), ausente e malformado.
+    assert not er_mod._is_synthetic_uniq(
+        MAC_8BITDO_FORJADO, VID_NINTENDO, PID_PRO_CONTROLLER
+    )
+    assert not er_mod._is_synthetic_uniq(None, VID_NINTENDO, PID_PRO_CONTROLLER)
+    assert not er_mod._is_synthetic_uniq("", VID_NINTENDO, PID_PRO_CONTROLLER)
+    assert not er_mod._is_synthetic_uniq(
+        "nao-e-mac", VID_NINTENDO, PID_PRO_CONTROLLER
+    )
+
+
+def test_owner_dir_degrada_para_o_path_quando_o_sysfs_nao_responde(
+    monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem dono resolvível o inventário cai no node (`path:`) e segue read-only:
+    dois aparelhos com o mesmo `uniq` sintético continuam sendo dois."""
+    uniq = _uniq_sintetico(VID_NINTENDO, PID_PRO_CONTROLLER, BUS_USB)
+    a_path = "/dev/input/event80"
+    b_path = "/dev/input/event81"
+    spec = {
+        "name": "Nintendo Co., Ltd. Pro Controller",
+        "vid": VID_NINTENDO,
+        "pid": PID_PRO_CONTROLLER,
+        "bus": BUS_USB,
+        "uniq": uniq,
+        "caps": _caps_gamepad(),
+    }
+    _instalar_evdev_fake(monkeypatch, {a_path: dict(spec), b_path: dict(spec)})
+    monkeypatch.setattr(er_mod, "_evdev_owner_dir", lambda _p: None)
+    # Hermético: sem este dublê a subida do sysfs sairia de um caminho
+    # inexistente e acabaria varrendo o /sys REAL da máquina de teste.
+    monkeypatch.setattr(er_mod, "_external_device_sysfs", lambda _p: (None, None))
+
+    inventario = discover_external_gamepads()
+
+    assert sorted(e["evdev_path"] for e in inventario) == [a_path, b_path]
+
+
 # --- exclusões dedicadas -----------------------------------------------------
 
 
@@ -468,6 +685,10 @@ async def test_controller_list_external_roda_fora_do_event_loop(
     # devolvia um número inventado aqui, era um SEGUNDO espaço de numeração.
     slot = ext.pop("player_slot")
     assert slot is None or (isinstance(slot, int) and slot >= 1)
+    # CLONE-01: o payload carrega a identidade de APARELHO já resolvida pelo
+    # daemon — com MAC de verdade ela é o MAC canônico (a MESMA key do
+    # registry), e é dela que a GUI tira a chave do botão do seletor.
+    assert ext.pop("identity") == MAC_8BITDO_FORJADO.replace(":", "")
     assert ext == sentinela[0]
     assert result["controllers"], "o shape legado continua presente"
     assert visto["thread"] != loop_thread, (
@@ -566,11 +787,16 @@ def test_holders_merge_e_degradacao(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", explode)
     inventario = ih_mod._external_inventory()
-    # Degrada em silêncio: SEM `holders` (sonda quebrada), mas a CHAVE
-    # `player_slot` (8BIT-02) segue exposta — é independente da sonda. R-24:
-    # sem `slot_resolver` o valor é `None` (null honesto), nunca o posicional.
+    # Degrada em silêncio: SEM `holders` (sonda quebrada), mas as CHAVES
+    # `player_slot` (8BIT-02) e `identity` (CLONE-01) seguem expostas — são
+    # independentes da sonda. R-24: sem `slot_resolver` o slot é `None` (null
+    # honesto), nunca o posicional.
     assert "holders" not in inventario[0]
-    assert inventario[0] == {**base, "player_slot": None}
+    assert inventario[0] == {
+        **base,
+        "identity": MAC_8BITDO_FORJADO.replace(":", ""),
+        "player_slot": None,
+    }
 
 
 def test_external_inventory_e_leitura_pura_sem_escrita_de_led(
@@ -631,7 +857,10 @@ def test_external_inventory_prefere_o_slot_do_registry(
     )
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
 
-    slots = {MAC_8BITDO_FORJADO: 4}  # replug preservou o 4 (reserva)
+    # CLONE-01: o resolver é consultado pela IDENTIDADE (`identity_for_entry`),
+    # que com MAC de verdade é o MAC CANÔNICO — a mesma key do registry real
+    # (`ExternalIdentityRegistry._canonical`), não a string crua do kernel.
+    slots = {MAC_8BITDO_FORJADO.replace(":", ""): 4}  # replug preservou o 4
 
     inventario = ih_mod._external_inventory(
         dualsense_count=1, slot_resolver=lambda uniq: slots.get(uniq or "")
