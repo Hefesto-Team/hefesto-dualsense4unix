@@ -151,7 +151,14 @@ def _install_gi_stubs() -> None:
             import gi
 
             gi.require_version("Gtk", "3.0")
-            from gi.repository import Gtk  # noqa: F401
+            # CI-TYPELIB-PARCIAL-01: checar só o Gtk deixava passar um `gi`
+            # PELA METADE. No runner do GitHub o Gtk importa e o Pango não
+            # ("unknown location"), então este early-return dispensava os
+            # stubs e o import de `triggers_actions` — que usa Pango —
+            # estourava na COLETA, derrubando a suíte e reprovando o release.
+            # A pergunta certa não é "existe gi?", é "existe TUDO o que o
+            # módulo sob teste importa?".
+            from gi.repository import GLib, Gtk, Pango  # noqa: F401
 
             return
         except Exception:  # pragma: no cover — ambientes sem GTK
@@ -189,13 +196,25 @@ def _install_gi_stubs() -> None:
     glib_mod.idle_add = lambda fn, *a, **kw: fn(*a, **kw)  # type: ignore[attr-defined]
     glib_mod.source_remove = lambda *_a, **_kw: None  # type: ignore[attr-defined]
 
+    # `triggers_actions` importa Pango junto de Gtk/GLib; sem o stub o import
+    # do módulo sob teste falha mesmo com os outros dois no lugar.
+    pango_mod = sys.modules.get("gi.repository.Pango") or types.ModuleType(
+        "gi.repository.Pango"
+    )
+    if not hasattr(pango_mod, "EllipsizeMode"):
+        pango_mod.EllipsizeMode = type(  # type: ignore[attr-defined]
+            "EllipsizeMode", (), {"NONE": 0, "START": 1, "MIDDLE": 2, "END": 3}
+        )
+
     repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
     repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
+    repo_mod.Pango = pango_mod  # type: ignore[attr-defined]
 
     sys.modules["gi"] = gi_mod
     sys.modules["gi.repository"] = repo_mod
     sys.modules["gi.repository.Gtk"] = gtk_mod
     sys.modules["gi.repository.GLib"] = glib_mod
+    sys.modules["gi.repository.Pango"] = pango_mod
 
 
 _install_gi_stubs()

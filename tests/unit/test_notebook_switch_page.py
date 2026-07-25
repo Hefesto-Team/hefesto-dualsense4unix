@@ -11,6 +11,16 @@ import pytest
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
+# CI-TYPELIB-PARCIAL-01: `importorskip("gi")` não basta. O módulo `gi` pode
+# existir sem as TYPELIBS que o app usa — é o estado do runner do GitHub, onde
+# `import gi` funciona e `from gi.repository import GdkPixbuf` estoura
+# `ImportError: unknown location`. Como o erro acontece na COLETA, ele não vira
+# skip: derruba a suíte inteira com "errors during collection" e reprovou o
+# release da v0.1.1. Pular exige checar a typelib que este módulo puxa de
+# verdade, e `app.py` importa GdkPixbuf.
+pytest.importorskip(
+    "gi.repository.GdkPixbuf", reason="precisa da typelib GdkPixbuf"
+)
 from gi.repository import Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.app import HefestoApp  # noqa: E402
