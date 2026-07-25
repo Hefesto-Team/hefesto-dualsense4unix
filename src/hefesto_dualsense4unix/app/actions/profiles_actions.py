@@ -34,8 +34,10 @@ from hefesto_dualsense4unix.profiles.loader import (
     save_profile,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+    Match,
     MatchAny,
     MatchCriteria,
+    MatchManual,
     Profile,
     ProfileModeConfig,
 )
@@ -116,13 +118,17 @@ _MODE_FLAVOR_ITEMS: list[tuple[str, str]] = [
 # LEIGO-06: a coluna "Quando usar" mostrava o valor CRU do schema ("any",
 # "criteria") — o nome do campo, não uma resposta. `MatchAny` é o fallback que
 # vale sempre; `MatchCriteria` casa por janela/processo.
+#: R-12 item 5: o que a coluna diz de um `criteria` SEM nenhum campo.
+LABEL_SO_MANUAL = "Só manual (nunca ativa sozinho)"
+
 _MATCH_LABELS: dict[str, str] = {
     "any": "Sempre",
     "criteria": "Só neste programa",
+    # R-12 item 3: o sentinel `MatchManual` diz a MESMA coisa que o criteria
+    # vazio, só que de propósito — logo, a mesma frase. A coluna não é o lugar
+    # de ensinar a diferença entre intenção e acidente (isso é o doctor).
+    "manual": LABEL_SO_MANUAL,
 }
-
-#: R-12 item 5: o que a coluna diz de um `criteria` SEM nenhum campo.
-LABEL_SO_MANUAL = "Só manual (nunca ativa sozinho)"
 
 
 def _match_label(match: object) -> str:
@@ -1087,7 +1093,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         name = self._get("profile_name_entry").get_text().strip()
         priority = int(self._get("profile_priority_scale").get_value())
 
-        match: MatchAny | MatchCriteria
+        match: Match
         if self._mode_advanced:
             wc = self._split_csv(
                 self._get("profile_window_class_entry").get_text()
@@ -1096,11 +1102,21 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             pn = self._split_csv(
                 self._get("profile_process_name_entry").get_text()
             )
-            match = MatchCriteria(
-                window_class=wc,
-                window_title_regex=regex,
-                process_name=pn,
-            )
+            if not wc and not regex and not pn:
+                # R-12 item 3: avançado com os TRÊS campos vazios é a única
+                # forma de dizer "só ativo na mão" pela GUI — grava o sentinel
+                # em vez do `MatchCriteria` vazio. Os dois nunca casam, mas só
+                # o sentinel diz que foi de propósito: o criteria vazio fica
+                # reservado ao ACIDENTE, que é o que o doctor denuncia. Também
+                # é o que fecha o round-trip do perfil manual, que abre no
+                # avançado justamente com os três campos em branco.
+                match = MatchManual()
+            else:
+                match = MatchCriteria(
+                    window_class=wc,
+                    window_title_regex=regex,
+                    process_name=pn,
+                )
         else:
             choice = self._selected_simple_choice()
             custom = self._get("profile_simple_custom_name").get_text().strip() or None

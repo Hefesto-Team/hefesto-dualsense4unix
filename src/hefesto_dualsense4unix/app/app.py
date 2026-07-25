@@ -397,6 +397,13 @@ class HefestoApp(
         """
         if self._quitting:
             return False
+        # S2: janela indo para o tray é janela sem aba Status à vista — a
+        # captura do microfone morre junto (o `switch-page` não dispara ao
+        # esconder a janela, então este é o único ponto que fecha a janela
+        # de "capturando com ninguém olhando").
+        parar_mic = getattr(self, "set_status_tab_visivel", None)
+        if parar_mic is not None:
+            parar_mic(False)
         # Esconde pro tray apenas se há acesso persistente REAL (ícone de
         # bandeja utilizável OU janela compacta opt-in ativa). Sem isso,
         # fechar = encerrar — senão o app ficaria órfão e invisível no COSMIC
@@ -441,6 +448,13 @@ class HefestoApp(
         processo sempre encerra mesmo se o cleanup nunca retornar.
         """
         self._quitting = True
+        # S2: mata as threads/subprocessos de captura do microfone ANTES do
+        # main_quit — são threads daemon, mas um `parec` órfão continuaria
+        # segurando o microfone da usuária até o processo morrer.
+        parar_mic = getattr(self, "parar_mic_monitor", None)
+        if parar_mic is not None:
+            with contextlib.suppress(Exception):
+                parar_mic()
         Gtk.main_quit()
         threading.Thread(target=self._shutdown_backend, daemon=True).start()
 
@@ -751,6 +765,10 @@ class HefestoApp(
         )
         self._bootstrap_draft_async()
 
+    #: Id do Glade da aba Status. Único consumidor: o gate da captura de
+    #: microfone no `switch-page` (S2) — o refresh dela já é por timer.
+    _ABA_STATUS: ClassVar[str] = "tab_status_box"
+
     #: Aba (id do Glade) -> nomes dos refreshers a chamar quando ela é exibida.
     #: Identificar pelo WIDGET, não pelo índice: a fusão de "Mouse" e "Teclado"
     #: na aba "Navegação DSX" renumerou as páginas, e um mapa por índice teria
@@ -805,6 +823,12 @@ class HefestoApp(
             if filho is not None:
                 alvo = filho
         nome = Gtk.Buildable.get_name(alvo) if alvo is not None else None
+        # S2: a captura de áudio do microfone existe SÓ enquanto a aba Status
+        # está à vista — entrar liga, sair desliga. É o mesmo id de Glade que
+        # o mapa abaixo usa; a página nunca é identificada por posição.
+        visivel = getattr(self, "set_status_tab_visivel", None)
+        if visivel is not None:
+            visivel(nome == self._ABA_STATUS)
         for atributo in self._REFRESH_POR_ABA.get(nome or "", ()):
             fn = getattr(self, atributo, None)
             if fn is not None:

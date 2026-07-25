@@ -61,7 +61,6 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
     except (FileNotFoundError, ConnectionError, OSError):
         # Daemon offline: carrega perfis direto do disco.
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
-        from hefesto_dualsense4unix.profiles.schema import MatchAny
 
         try:
             profiles_raw = load_all_profiles()
@@ -69,7 +68,9 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
                 {
                     "name": p.name,
                     "priority": p.priority,
-                    "match_type": "any" if isinstance(p.match, MatchAny) else "criteria",
+                    # R-12 item 3: discriminador cru — o mesmo contrato do
+                    # `profile.list` do daemon, que agora pode dizer "manual".
+                    "match_type": p.match.type,
                 }
                 for p in profiles_raw
             ]

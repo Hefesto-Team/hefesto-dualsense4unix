@@ -28,6 +28,11 @@ logger = get_logger(__name__)
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PIDS = {0x0CE6, 0x0DF2}  # DualSense + DualSense Edge
 
+#: Unidades evdev por grau/s do giroscópio (`DS_GYRO_RES_PER_DEG_S` do
+#: `hid-playstation.c`). É só o FALLBACK: a escala real vem do `absinfo` do
+#: node aberto — ver `MotionSensorReader._on_device_opened`.
+DUALSENSE_GYRO_RES_PER_DEG_S = 1024
+
 
 @dataclass
 class EvdevSnapshot:
@@ -437,6 +442,17 @@ class _EvdevReconnectLoop:
     def _reapply_grab(self, dev: Any) -> None:
         """Hook de (re)aplicação de grab ao abrir o device. No-op na base."""
 
+    def _on_device_opened(self, dev: Any) -> None:
+        """Hook genérico "o device acabou de abrir". No-op na base.
+
+        Existe separado do `_reapply_grab` porque nem toda subclasse quer
+        grab, mas várias precisam ler METADADOS do node recém-aberto — o
+        `MotionSensorReader` lê aqui a `resolution` do absinfo (é ela que
+        converte o valor cru em graus/s, e ela muda quando o kernel recria
+        o node). Ler isso de dentro de `_handle_event` custaria um ioctl
+        por evento a 250-765 Hz; ler no open custa um por conexão.
+        """
+
     def _log_prefix(self) -> str:  # pragma: no cover - abstract
         raise NotImplementedError
 
@@ -614,6 +630,7 @@ class _EvdevReconnectLoop:
             # NÃO é silenciosa: `_reapply_grab` registra estado + warning
             # (BUG-COOP-GRAB-SILENT-FAIL-01).
             self._reapply_grab(dev)
+            self._on_device_opened(dev)
             try:
                 reason = self._read_until_signaled(dev, ecodes)
             except OSError as exc:
@@ -907,21 +924,29 @@ class EvdevReader(_EvdevReconnectLoop):
         return EvdevSnapshot(**values)
 
 
-def find_dualsense_touchpad_evdev() -> Path | None:
-    """Retorna path do evdev do touchpad do DualSense; None se ausente.
+def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
+    """MAC normalizado -> node evdev dos DualSense cujo nome contém `marcador`.
 
-    O touchpad é exposto pelo kernel `hid_playstation` como um event
-    device separado do gamepad principal: mesmo vendor/product Sony
-    DualSense, mas nome contendo "Touchpad" (ex: "Sony Interactive
-    Entertainment DualSense Wireless Controller Touchpad").
+    Mesma mecânica de `discover_dualsense_evdevs` (que casa por CAPS de
+    gamepad), mas para os nodes AUXILIARES que o `hid_playstation` cria com
+    o mesmo vendor/product e um sufixo no nome: "… Touchpad" e "… Motion
+    Sensors". Chave por MAC (`uniq`) porque `eventN` é volátil — o mesmo
+    contrato de identidade do resto do projeto (FEAT-DSX-CONTROLLER-IDENTITY-01);
+    node sem `uniq` legível cai em "path:<caminho>", que nunca colide com MAC.
 
-    INFRA-EVDEV-TOUCHPAD-01 — validação empírica 2026-04-24.
+    Devices virtuais ficam de fora (`_is_virtual_evdev`): os vpads uhid do
+    daemon publicam nodes com ESTES MESMOS nomes ("Hefesto Virtual DualSense
+    P1 Motion Sensors"), e adotar um deles seria o daemon lendo a própria
+    saída.
     """
     try:
         from evdev import InputDevice, list_devices
     except ImportError:
-        return None
-    for path in list_devices():
+        return {}
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    found: dict[str, Path] = {}
+    for path in sorted(list_devices(), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
         try:
@@ -930,14 +955,70 @@ def find_dualsense_touchpad_evdev() -> Path | None:
                 if (
                     dev.info.vendor == DUALSENSE_VENDOR
                     and dev.info.product in DUALSENSE_PIDS
-                    and "Touchpad" in dev.name
+                    and marcador in dev.name
                 ):
-                    return Path(path)
+                    key = norm_mac(getattr(dev, "uniq", None)) or f"path:{path}"
+                    found.setdefault(key, Path(path))
             finally:
                 dev.close()
         except Exception:
             continue
-    return None
+    return found
+
+
+def discover_dualsense_touchpad_evdevs() -> dict[str, Path]:
+    """MAC normalizado -> node evdev do TOUCHPAD de cada DualSense físico."""
+    return _discover_dualsense_por_nome("Touchpad")
+
+
+def discover_dualsense_motion_evdevs() -> dict[str, Path]:
+    """MAC normalizado -> node evdev dos SENSORES DE MOVIMENTO de cada DualSense.
+
+    É o node que `assets/78-dualsense-motion-not-joystick.rules` nomeia para
+    tirá-lo da lista de joysticks. Diferente do espelho de motion do vpad
+    (`core/physical_report_reader.py`), ele entrega o gyro JÁ DECODIFICADO
+    pelo kernel e existe em TODOS os modos — inclusive com a emulação
+    desligada, quando não há vpad nenhum para o espelho alimentar.
+    """
+    return _discover_dualsense_por_nome("Motion Sensors")
+
+
+def find_dualsense_touchpad_evdev(target_uniq: str | None = None) -> Path | None:
+    """Retorna path do evdev do touchpad do DualSense; None se ausente.
+
+    O touchpad é exposto pelo kernel `hid_playstation` como um event
+    device separado do gamepad principal: mesmo vendor/product Sony
+    DualSense, mas nome contendo "Touchpad" (ex: "Sony Interactive
+    Entertainment DualSense Wireless Controller Touchpad").
+
+    Com `target_uniq` (MAC normalizado) resolve o touchpad DAQUELE controle;
+    sem ele, o primeiro por número de node — o comportamento histórico, que
+    o caminho de cursor/teclado usa (lá só existe o primário).
+
+    INFRA-EVDEV-TOUCHPAD-01 — validação empírica 2026-04-24.
+    """
+    mapa = discover_dualsense_touchpad_evdevs()
+    if target_uniq is not None:
+        return mapa.get(target_uniq)
+    ordenados = sorted(mapa.values(), key=_event_num)
+    return ordenados[0] if ordenados else None
+
+
+@dataclass(frozen=True)
+class TouchState:
+    """Estado de toque do touchpad num instante (leitura NÃO-destrutiva).
+
+    Coordenadas nas unidades absolutas do kernel (`largura`/`altura` viajam
+    junto para quem desenha não precisar hardcodar 1920x1080). Sem dedo
+    apoiado, `x`/`y` guardam a ÚLTIMA posição vista — quem renderiza só deve
+    desenhar o ponto quando `touching` for True.
+    """
+
+    touching: bool = False
+    x: int = 0
+    y: int = 0
+    largura: int = 1920
+    altura: int = 1080
 
 
 class TouchpadReader(_EvdevReconnectLoop):
@@ -968,19 +1049,45 @@ class TouchpadReader(_EvdevReconnectLoop):
     # Largura do touchpad em unidades absolutas do kernel hid_playstation
     # (empírico, DualSense USB 054c:0ce6 com kernel 6.x):
     _TOUCHPAD_WIDTH: ClassVar[int] = 1920
+    _TOUCHPAD_HEIGHT: ClassVar[int] = 1080
     # Limites de região (terços): [0, 640) esquerda; [640, 1280) meio;
     # [1280, 1920) direita.
     _REGION_LEFT_LIMIT: ClassVar[int] = 640
     _REGION_RIGHT_LIMIT: ClassVar[int] = 1280
     _THREAD_NAME: ClassVar[str] = "hefesto-touchpad"
 
-    def __init__(self, device_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        device_path: Path | None = None,
+        target_uniq: str | None = None,
+        *,
+        acumular_movimento: bool = True,
+    ) -> None:
+        """Reader do touchpad de UM controle.
+
+        `target_uniq` (MAC normalizado) fixa DE QUEM é este touchpad; sem
+        ele vale o primeiro node por número (o caminho histórico de
+        cursor/teclado, que só conhece o primário).
+
+        `acumular_movimento=False` desliga o acúmulo de delta do
+        `consume_motion`. É OBRIGATÓRIO para qualquer leitor que só OBSERVE
+        o touchpad (o painel da aba Status): o mesmo node aceita vários fds
+        e o kernel replica os eventos para todos, então um segundo reader
+        acumulando delta que ninguém drena faria `_accum_dx/dy` crescer a
+        sessão inteira — exatamente o salto de cursor que o poll loop já
+        aprendeu a evitar drenando o reader do mouse a cada tick. Sem
+        acúmulo, este reader é puro observador e não tem como roubar (nem
+        inflar) o movimento do cursor.
+        """
         super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
-        self._device_path = device_path or find_dualsense_touchpad_evdev()
+        self._target_uniq = target_uniq
+        self._acumular_movimento = acumular_movimento
+        self._device_path = device_path or find_dualsense_touchpad_evdev(target_uniq)
         self._lock = threading.RLock()
         self._thread: threading.Thread | None = None
         self._stop_flag = threading.Event()
         self._last_abs_x: int = self._TOUCHPAD_WIDTH // 2  # centro por default
+        self._last_abs_y: int = self._TOUCHPAD_HEIGHT // 2
         self._regions: frozenset[str] = frozenset()
         # Movimento do cursor (B4): dedo presente + posição de referência por
         # eixo (None = ainda sem âncora; o primeiro frame só seeda, não move) +
@@ -994,6 +1101,24 @@ class TouchpadReader(_EvdevReconnectLoop):
     def regions_pressed(self) -> frozenset[str]:
         with self._lock:
             return self._regions
+
+    def touch_state(self) -> TouchState:
+        """Dedo presente + última posição, SEM consumir nada (STATUS-S2).
+
+        Deliberadamente separado do `consume_motion()`: aquele DRENA o delta
+        acumulado para o cursor do mouse, então chamá-lo aqui roubaria o
+        movimento de quem é dono dele (o poll loop). Este devolve uma cópia
+        imutável do estado sob lock — pode ser chamado a 10 Hz pelo painel da
+        aba Status sem interferir em nada.
+        """
+        with self._lock:
+            return TouchState(
+                touching=self._touching,
+                x=self._last_abs_x,
+                y=self._last_abs_y,
+                largura=self._TOUCHPAD_WIDTH,
+                altura=self._TOUCHPAD_HEIGHT,
+            )
 
     def consume_motion(self) -> tuple[int, int]:
         """Retorna e zera o delta acumulado do dedo (unidades do touchpad).
@@ -1020,7 +1145,7 @@ class TouchpadReader(_EvdevReconnectLoop):
     # Hooks do loop base ------------------------------------------------
 
     def _find_device(self) -> Path | None:
-        return find_dualsense_touchpad_evdev()
+        return find_dualsense_touchpad_evdev(self._target_uniq)
 
     def _log_prefix(self) -> str:
         return "touchpad_reader"
@@ -1034,6 +1159,7 @@ class TouchpadReader(_EvdevReconnectLoop):
                     self._accumulate_axis_x(int(event.value))
             elif event.code == ecodes.ABS_Y:
                 with self._lock:
+                    self._last_abs_y = int(event.value)
                     self._accumulate_axis_y(int(event.value))
         elif event.type == ecodes.EV_KEY:
             if event.code == ecodes.BTN_LEFT:
@@ -1054,12 +1180,20 @@ class TouchpadReader(_EvdevReconnectLoop):
 
     def _accumulate_axis_x(self, value: int) -> None:
         """Acumula delta de X se há dedo e âncora; senão só seeda a âncora."""
-        if self._touching and self._motion_last_x is not None:
+        if (
+            self._acumular_movimento
+            and self._touching
+            and self._motion_last_x is not None
+        ):
             self._accum_dx += value - self._motion_last_x
         self._motion_last_x = value
 
     def _accumulate_axis_y(self, value: int) -> None:
-        if self._touching and self._motion_last_y is not None:
+        if (
+            self._acumular_movimento
+            and self._touching
+            and self._motion_last_y is not None
+        ):
             self._accum_dy += value - self._motion_last_y
         self._motion_last_y = value
 
@@ -1073,14 +1207,140 @@ class TouchpadReader(_EvdevReconnectLoop):
             self._accum_dy = 0
 
 
+@dataclass(frozen=True)
+class GyroSnapshot:
+    """Velocidade angular dos três eixos do giroscópio, em GRAUS POR SEGUNDO."""
+
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+
+
+def graus_por_segundo(valor: int, resolucao: int) -> float:
+    """Converte o valor CRU de um eixo de giroscópio evdev em graus/s.
+
+    O `hid_playstation` publica a escala do sensor no próprio node, em
+    `absinfo.resolution` — "unidades por grau/s" (`DS_GYRO_RES_PER_DEG_S`,
+    1024 no kernel atual). Dividir pelo que o node declara é o único jeito
+    que sobrevive a uma mudança de escala do kernel; hardcodar 1024 daria
+    um número silenciosamente errado no dia em que ela mudasse.
+
+    Resolução ausente/zero/negativa (node atípico, dublê de teste) cai no
+    default do kernel — é melhor que devolver o valor cru, que a interface
+    leria como dezenas de milhares de graus/s.
+    """
+    escala = resolucao if resolucao > 0 else DUALSENSE_GYRO_RES_PER_DEG_S
+    return valor / escala
+
+
+class MotionSensorReader(_EvdevReconnectLoop):
+    """Lê o giroscópio de UM DualSense pelo node evdev "… Motion Sensors".
+
+    Por que este caminho e não o `PhysicalReportReader` (GYRO-01): aquele
+    fatia a janela de motion do report CRU e a repassa OPACA ao vpad — os
+    bytes nunca viram número — e só existe enquanto há vpad ativo. Este lê o
+    node que o kernel já decodifica, existe com a emulação desligada e
+    entrega graus/s direto. São consumidores diferentes do mesmo sensor: um
+    alimenta o jogo, o outro alimenta a interface.
+
+    O eixo é mapeado por `ABS_RX/RY/RZ` (gyro) — `ABS_X/Y/Z` no mesmo node
+    são o ACELERÔMETRO e não entram aqui. A escala vem do `absinfo` lido no
+    open (ver `_on_device_opened`), não de constante.
+    """
+
+    _THREAD_NAME: ClassVar[str] = "hefesto-motion-sensors"
+
+    def __init__(
+        self, device_path: Path | None = None, target_uniq: str | None = None
+    ) -> None:
+        super().__init__()  # HANG-01: self-pipe de wake (request_reopen/stop)
+        self._target_uniq = target_uniq
+        self._device_path = device_path or self._locate()
+        self._lock = threading.RLock()
+        self._thread: threading.Thread | None = None
+        self._stop_flag = threading.Event()
+        self._eixos: dict[str, float] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        #: Nome do eixo -> resolução declarada pelo node (preenchido no open).
+        self._resolucoes: dict[str, int] = {}
+
+    def snapshot(self) -> GyroSnapshot:
+        """Última velocidade angular conhecida (cópia sob lock)."""
+        with self._lock:
+            return GyroSnapshot(
+                x=self._eixos["x"], y=self._eixos["y"], z=self._eixos["z"]
+            )
+
+    # Hooks do loop base ------------------------------------------------
+
+    def _locate(self) -> Path | None:
+        mapa = discover_dualsense_motion_evdevs()
+        if self._target_uniq is not None:
+            return mapa.get(self._target_uniq)
+        ordenados = sorted(mapa.values(), key=_event_num)
+        return ordenados[0] if ordenados else None
+
+    def _find_device(self) -> Path | None:
+        return self._locate()
+
+    def _log_prefix(self) -> str:
+        return "motion_sensors"
+
+    def _on_device_opened(self, dev: Any) -> None:
+        """Lê a escala de cada eixo do `absinfo` do node recém-aberto.
+
+        Falha aqui NÃO é fatal: sem resolução, `graus_por_segundo` cai no
+        default do kernel e o painel segue mostrando um número plausível em
+        vez de sumir (degradação silenciosa, como o tema sem CSS).
+        """
+        resolucoes: dict[str, int] = {}
+        try:
+            from evdev import ecodes
+        except ImportError:  # pragma: no cover - sem evdev não há loop
+            return
+        for eixo, nome in (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ")):
+            code = getattr(ecodes, nome, None)
+            if code is None:
+                continue
+            with contextlib.suppress(Exception):
+                info = dev.absinfo(code)
+                resolucoes[eixo] = int(getattr(info, "resolution", 0) or 0)
+        with self._lock:
+            self._resolucoes = resolucoes
+
+    def _reset_on_disconnect(self) -> None:
+        """Controle sumiu: zera os eixos — gyro congelado mentiria movimento."""
+        with self._lock:
+            self._eixos = {"x": 0.0, "y": 0.0, "z": 0.0}
+            self._resolucoes = {}
+
+    def _handle_event(self, event: Any, ecodes: Any) -> None:
+        if event.type != ecodes.EV_ABS:
+            return
+        for eixo, nome in (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ")):
+            code = getattr(ecodes, nome, None)
+            if code is not None and code == event.code:
+                with self._lock:
+                    self._eixos[eixo] = graus_por_segundo(
+                        int(event.value), self._resolucoes.get(eixo, 0)
+                    )
+                return
+
+
 __all__ = [
+    "DUALSENSE_GYRO_RES_PER_DEG_S",
     "DUALSENSE_PIDS",
     "DUALSENSE_VENDOR",
     "EvdevReader",
     "EvdevSnapshot",
+    "GyroSnapshot",
+    "MotionSensorReader",
+    "TouchState",
     "TouchpadReader",
+    "discover_dualsense_motion_evdevs",
+    "discover_dualsense_touchpad_evdevs",
     "discover_external_gamepads",
     "find_all_dualsense_evdevs",
     "find_dualsense_evdev",
     "find_dualsense_touchpad_evdev",
+    "graus_por_segundo",
 ]

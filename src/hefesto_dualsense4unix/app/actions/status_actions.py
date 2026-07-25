@@ -148,6 +148,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     _edit_badge: Any = None
     #: Badge do banner que denuncia rumble travado em silêncio.
     _rumble_badge: Any = None
+    # S2: monitor do microfone (nível + mute). Lazy e DESLIGADO por padrão —
+    # quem o liga é o gancho de troca de aba (`set_status_tab_visivel`). Ele
+    # é o único sensor do card que não vem pelo IPC: capturar áudio é da
+    # sessão gráfica, não do daemon.
+    _mic_monitor: Any = None
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e prepara o container dos cards.
@@ -192,6 +197,46 @@ class StatusActionsMixin(WidgetAccessMixin):
         # subiu no boot — usuário precisa do passo de Daemon > Start).
         self._first_poll_succeeded = False
         GLib.timeout_add_seconds(5, self._check_initial_poll_fallback)
+
+    # ------------------------------------------------------------------
+    # Microfone: a captura só existe com a aba Status à vista (S2)
+    # ------------------------------------------------------------------
+
+    def set_status_tab_visivel(self, visivel: bool) -> None:
+        """Liga/desliga a captura de áudio do microfone dos controles.
+
+        Chamado pelo `switch-page` do notebook (que identifica a aba pelo id
+        do Glade, não pela posição). Sair da aba MATA o `parec` de cada
+        controle: manter um processo capturando o microfone da usuária com a
+        janela em outra aba — ou minimizada — seria custo e intromissão sem
+        ninguém olhando o medidor.
+
+        O monitor nasce na primeira vez que a aba é aberta; antes disso não
+        existe thread nenhuma. Falha de import/inicialização é silenciosa
+        (mesma linha do tema sem CSS): a aba abre, os outros dois sensores
+        continuam, e o módulo de microfone simplesmente não aparece.
+        """
+        monitor = self._mic_monitor
+        if monitor is None:
+            if not visivel:
+                return
+            try:
+                from hefesto_dualsense4unix.app.mic_monitor import MicMonitor
+            except Exception as exc:
+                logger.debug("mic_monitor_indisponivel", err=str(exc))
+                return
+            monitor = MicMonitor()
+            self._mic_monitor = monitor
+        with contextlib.suppress(Exception):
+            monitor.set_ativo(visivel)
+
+    def parar_mic_monitor(self) -> None:
+        """Encerra o monitor do microfone (fechamento da janela)."""
+        monitor = self._mic_monitor
+        self._mic_monitor = None
+        if monitor is not None:
+            with contextlib.suppress(Exception):
+                monitor.stop()
 
     # ------------------------------------------------------------------
     # Cards por controle (STATUS-02)
@@ -246,10 +291,26 @@ class StatusActionsMixin(WidgetAccessMixin):
         keys = self._status_card_keys_for(conectados)
         if keys != self._status_card_keys:
             self._rebuild_status_cards(slot, keys)
+        monitor = self._mic_monitor
+        if monitor is not None:
+            monitor.set_controles(
+                tuple(
+                    str(c.get("uniq"))
+                    for c in conectados
+                    if isinstance(c.get("uniq"), str) and c.get("uniq")
+                )
+            )
         for key, entry in zip(keys, conectados, strict=True):
             card = self._status_cards.get(key)
-            if card is not None:
-                card.update(entry, state)
+            if card is None:
+                continue
+            uniq = entry.get("uniq")
+            leitura = (
+                monitor.leitura(uniq)
+                if monitor is not None and isinstance(uniq, str) and uniq
+                else None
+            )
+            card.update(entry, state, leitura)
 
     def _rebuild_status_cards(
         self, slot: Any, keys: list[tuple[Any, ...]]

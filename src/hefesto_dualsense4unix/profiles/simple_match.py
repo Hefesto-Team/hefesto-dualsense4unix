@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
+from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
 
 #: R-12: ``wm_class`` de jogo Steam (Proton ou nativo). Mesmo formato que
 #: `app.actions.launch_wrapper_dialog._STEAM_APP_RE` reconhece no state_full.
@@ -112,7 +112,7 @@ def from_simple_choice(
 
 
 def detect_simple_preset(
-    match: MatchCriteria | MatchAny,
+    match: Match,
 ) -> str | None:
     """Detecta se match corresponde a algum preset simples.
 
@@ -124,9 +124,21 @@ def detect_simple_preset(
     LEITURA É TOLERANTE (risco de regressão anotado no plano): um perfil já
     salvo com critério vazio continua carregando — só devolve ``None`` e cai no
     editor avançado. Quem recusa é a ESCRITA (`from_simple_choice`).
+
+    ``MatchManual`` (R-12 item 3) também cai em ``None``: o seletor "Aplica a"
+    não tem — nem deve ter — um botão para "nunca". O perfil manual abre no
+    editor avançado com os três campos vazios, que é exatamente a forma que o
+    `_build_profile_from_editor` volta a gravar como manual; o round-trip
+    fecha sem inventar alvo nenhum.
     """
     if isinstance(match, MatchAny):
         return "any"
+    # R-12 item 3: qualquer sentinel sem campos de critério (hoje
+    # `MatchManual`) sai aqui. Sem esta guarda o laço abaixo chamaria
+    # `_criteria_equal`, que lê `window_class`/`process_name` do objeto e
+    # estouraria com AttributeError ao abrir o perfil na aba Perfis.
+    if not isinstance(match, MatchCriteria):
+        return None
     # R-12: jogo da Steam ANTES dos presets fixos — `steam_app_<id>` é um
     # window_class como outro qualquer, e sem esta checagem o round-trip
     # (salvar → reabrir) jogaria o perfil no editor avançado.
@@ -148,7 +160,7 @@ def detect_simple_preset(
     return None
 
 
-def simple_extra(match: MatchCriteria | MatchAny) -> str:
+def simple_extra(match: Match) -> str:
     """Texto que acompanha o preset detectado no campo livre do editor.
 
     "game" → o nome do programa; "steam_game" → o appid; o resto → "".
@@ -168,7 +180,7 @@ def simple_extra(match: MatchCriteria | MatchAny) -> str:
     return ""
 
 
-def _detect_steam_appid(match: MatchCriteria | MatchAny) -> str | None:
+def _detect_steam_appid(match: Match) -> str | None:
     """Appid quando o match é EXATAMENTE "um jogo da Steam", senão None.
 
     Exige window_class com um único ``steam_app_<id>`` e nenhum outro campo:

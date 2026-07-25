@@ -36,6 +36,14 @@ from __future__ import annotations
 
 from typing import Any, Final
 
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    GyroBars,
+    MicMeter,
+    TouchpadView,
+    posicao_normalizada,
+    selo_mic,
+    texto_toques,
+)
 from hefesto_dualsense4unix.gui.widgets import (
     BUTTON_GLYPH_LABELS,
     ButtonGlyph,
@@ -246,6 +254,53 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     return None
 
 
+def gyro_do_inputs(inputs: Any) -> tuple[float, float, float] | None:
+    """``(x, y, z)`` em graus/s do bloco ``inputs.gyro``; None = sem sensor.
+
+    S2 — o campo é OPCIONAL no payload: daemon antigo (ou controle sem node
+    de "Motion Sensors") simplesmente não o manda, e ``None`` faz o módulo
+    inteiro sumir do card. Devolver ``(0, 0, 0)`` seria pior que não
+    mostrar nada: três barras paradas no centro dizem "o controle está em
+    repouso", e não "eu não sei".
+    """
+    if not isinstance(inputs, dict):
+        return None
+    bloco = inputs.get("gyro")
+    if not isinstance(bloco, dict):
+        return None
+    try:
+        return (
+            float(bloco["x"]),
+            float(bloco["y"]),
+            float(bloco["z"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def touchpad_do_inputs(inputs: Any) -> tuple[bool, float, float] | None:
+    """``(tocando, fx, fy)`` do bloco ``inputs.touchpad``; None = sem sensor.
+
+    ``fx``/``fy`` já normalizados 0..1 pelos limites que o PRÓPRIO payload
+    declara (``width``/``height``) — ver `posicao_normalizada`.
+    """
+    if not isinstance(inputs, dict):
+        return None
+    bloco = inputs.get("touchpad")
+    if not isinstance(bloco, dict):
+        return None
+    try:
+        fx, fy = posicao_normalizada(
+            int(bloco["x"]),
+            int(bloco["y"]),
+            int(bloco.get("width", 1920)),
+            int(bloco.get("height", 1080)),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+    return (bool(bloco.get("touching")), fx, fy)
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -330,6 +385,10 @@ if _GTK_DISPONIVEL:
             self._l3_pressed = False
             self._r3_pressed = False
             self._glyphs: dict[str, ButtonGlyph] = {}
+            # S2 — caches de diff dos três módulos de sensor.
+            self._last_gyro: Any = _SENTINELA
+            self._last_touch: Any = _SENTINELA
+            self._last_mic: Any = _SENTINELA
             self._montar_ui()
 
         # ------------------------------------------------------------------
@@ -337,15 +396,28 @@ if _GTK_DISPONIVEL:
         # ------------------------------------------------------------------
 
         def update(
-            self, entry: dict[str, Any], state_global: dict[str, Any]
+            self,
+            entry: dict[str, Any],
+            state_global: dict[str, Any],
+            mic: Any = None,
         ) -> None:
-            """Atualiza o card a partir de ``controllers[i]`` (diff interno)."""
+            """Atualiza o card a partir de ``controllers[i]`` (diff interno).
+
+            ``mic`` é a `LeituraMic` do `MicMonitor` da GUI (nível + mute) —
+            opcional porque o microfone é o único sensor que NÃO vem pelo
+            IPC: quem captura é a própria interface, só enquanto a aba Status
+            está visível. ``None`` = sem microfone atribuível a este controle,
+            e o módulo some.
+            """
             self._update_titulo(entry)
             self._update_bateria(entry)
             self._update_lightbar(entry, state_global)
             self._update_degradacao(entry)
             self._update_motion(entry, state_global)
             self._update_inputs(entry.get("inputs"))
+            self._update_gyro(entry.get("inputs"))
+            self._update_touchpad(entry.get("inputs"))
+            self._update_mic(mic)
 
         def reset_inputs(self) -> None:
             """IPC sem resposta: mostra "—" — nunca o último valor como vivo."""
@@ -439,6 +511,12 @@ if _GTK_DISPONIVEL:
             corpo.pack_start(area, False, False, 0)
             area.pack_start(self._montar_gatilhos(), False, False, 0)
             area.pack_start(self._montar_sticks_e_glyphs(), False, False, 0)
+            # S2 — ordem do guia §4: … botões -> Giroscópio -> Microfone +
+            # Touchpad. Os três nascem escondidos (`no_show_all`) e só
+            # aparecem quando há sensor de verdade: um `show_all` do card não
+            # pode acender um módulo vazio.
+            area.pack_start(self._montar_gyro(), False, False, 0)
+            area.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
 
         def _montar_gatilhos(self) -> Any:
             grid = Gtk.Grid()
@@ -459,6 +537,76 @@ if _GTK_DISPONIVEL:
                 else:
                     self._r2_bar = barra
             return grid
+
+        @staticmethod
+        def _rotulo_secao(texto: str) -> Any:
+            """Rótulo pequeno de seção (mesmo peso visual do `dim-label`)."""
+            label = Gtk.Label(label=texto)
+            label.set_xalign(0.0)
+            label.get_style_context().add_class("dim-label")
+            return label
+
+        @staticmethod
+        def _esconder_modulo(widget: Any) -> None:
+            """Deixa o módulo pronto para aparecer, mas apagado.
+
+            A ordem importa: `show_all()` ANTES marca os filhos como
+            visíveis, e só então `no_show_all` + `hide()` apagam o módulo
+            inteiro. Se o `no_show_all` viesse primeiro, o `show_all()` do
+            card seria ignorado no subwidget e um `show()` posterior
+            revelaria uma caixa vazia — o módulo existiria sem nada dentro.
+            """
+            widget.show_all()
+            widget.set_no_show_all(True)
+            widget.hide()
+
+        def _montar_gyro(self) -> Any:
+            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            caixa.pack_start(
+                self._rotulo_secao("Giroscópio (graus/s)"), False, False, 0
+            )
+            barras = GyroBars()
+            caixa.pack_start(barras, False, False, 0)
+            self._gyro_bars = barras
+            self._gyro_box = caixa
+            self._esconder_modulo(caixa)
+            return caixa
+
+        def _montar_mic_e_touchpad(self) -> Any:
+            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+
+            mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
+            corpo_mic = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            medidor = MicMeter()
+            medidor.set_valign(Gtk.Align.CENTER)
+            corpo_mic.pack_start(medidor, False, False, 0)
+            selo = Gtk.Label()
+            selo.set_valign(Gtk.Align.CENTER)
+            corpo_mic.pack_start(selo, False, False, 0)
+            mic.pack_start(corpo_mic, False, False, 0)
+            self._mic_meter = medidor
+            self._mic_selo = selo
+            self._mic_box = mic
+            linha.pack_start(mic, False, False, 0)
+
+            touch = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            touch.pack_start(self._rotulo_secao("Touchpad"), False, False, 0)
+            painel = TouchpadView()
+            touch.pack_start(painel, False, False, 0)
+            rotulo = self._rotulo_secao(texto_toques(0))
+            touch.pack_start(rotulo, False, False, 0)
+            self._touch_view = painel
+            self._touch_label = rotulo
+            self._touch_box = touch
+            linha.pack_start(touch, False, False, 0)
+
+            self._esconder_modulo(linha)
+            for modulo in (mic, touch, selo):
+                modulo.set_no_show_all(True)
+                modulo.hide()
+            self._sensores_linha = linha
+            return linha
 
         def _montar_capsula_stick(
             self, titulo: str, rotulo_stick: str, tamanho: int
@@ -611,6 +759,73 @@ if _GTK_DISPONIVEL:
                 self._motion_label.hide()
 
         # ------------------------------------------------------------------
+        # Sensores (S2) — cada um some inteiro quando não há dado
+        # ------------------------------------------------------------------
+
+        def _update_gyro(self, inputs: Any) -> None:
+            valores = gyro_do_inputs(inputs)
+            if valores == self._last_gyro:
+                return
+            self._last_gyro = valores
+            if valores is None:
+                self._gyro_bars.limpar()
+                self._gyro_box.hide()
+                return
+            self._gyro_bars.set_valores(*valores)
+            self._gyro_box.show()
+
+        def _update_touchpad(self, inputs: Any) -> None:
+            dados = touchpad_do_inputs(inputs)
+            if dados == self._last_touch:
+                return
+            self._last_touch = dados
+            if dados is None:
+                self._touch_view.set_toque(None)
+                self._touch_box.hide()
+                self._sincronizar_linha_sensores()
+                return
+            tocando, fx, fy = dados
+            self._touch_view.set_toque((fx, fy) if tocando else None)
+            self._touch_label.set_text(texto_toques(1 if tocando else 0))
+            self._touch_box.show()
+            self._sincronizar_linha_sensores()
+
+        def _update_mic(self, mic: Any) -> None:
+            nivel = getattr(mic, "nivel", None) if mic is not None else None
+            muted = getattr(mic, "muted", None) if mic is not None else None
+            chave = (nivel, muted)
+            if chave == self._last_mic:
+                return
+            self._last_mic = chave
+            if nivel is None:
+                self._mic_box.hide()
+                self._sincronizar_linha_sensores()
+                return
+            self._mic_meter.set_nivel(float(nivel))
+            selo = selo_mic(muted)
+            if selo is None:
+                # Mute ainda desconhecido: medidor sim, selo não. Cravar
+                # "ATIVO" aqui seria afirmar que o mic está aberto sem ter
+                # lido nada.
+                self._mic_selo.hide()
+            else:
+                texto, fundo, cor = selo
+                self._mic_selo.set_markup(
+                    f'<span background="{fundo}" foreground="{cor}"'
+                    f' font_size="x-small"> {texto} </span>'
+                )
+                self._mic_selo.show()
+            self._mic_box.show()
+            self._sincronizar_linha_sensores()
+
+        def _sincronizar_linha_sensores(self) -> None:
+            """A linha "Microfone + Touchpad" só existe se algum dos dois existe."""
+            if self._mic_box.get_visible() or self._touch_box.get_visible():
+                self._sensores_linha.show()
+            else:
+                self._sensores_linha.hide()
+
+        # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
         # ------------------------------------------------------------------
 
@@ -754,6 +969,18 @@ if _GTK_DISPONIVEL:
             self._last_buttons = None
             self._last_l2_lit = None
             self._last_r2_lit = None
+            # Sensores voltam ao "não sei" junto com o resto: um giroscópio
+            # congelado no último valor seria movimento inventado, e o
+            # medidor do mic parado, silêncio inventado.
+            self._gyro_bars.limpar()
+            self._gyro_box.hide()
+            self._touch_view.set_toque(None)
+            self._touch_box.hide()
+            self._mic_box.hide()
+            self._sensores_linha.hide()
+            self._last_gyro = _SENTINELA
+            self._last_touch = _SENTINELA
+            self._last_mic = _SENTINELA
 
         # ------------------------------------------------------------------
         # Swatch (cor CRUA — decisão D8: a identidade da cor fica aqui)
@@ -796,9 +1023,17 @@ else:
             self.degradacao: str | None = None
             self.motion: str | None = None
             self.sem_leitor: bool = False
+            # S2 — None em qualquer um deles = o módulo não apareceria.
+            self.gyro: tuple[float, float, float] | None = None
+            self.touchpad: tuple[bool, float, float] | None = None
+            self.mic_selo: tuple[str, str, str] | None = None
+            self.mic_nivel: float | None = None
 
         def update(
-            self, entry: dict[str, Any], state_global: dict[str, Any]
+            self,
+            entry: dict[str, Any],
+            state_global: dict[str, Any],
+            mic: Any = None,
         ) -> None:
             """Aplica as funções puras (mesma semântica do widget real)."""
             self.titulo = titulo_do_card(entry)
@@ -807,6 +1042,12 @@ else:
             self.degradacao = texto_degradacao(entry)
             self.motion = texto_motion(entry, state_global)
             self.sem_leitor = not isinstance(entry.get("inputs"), dict)
+            self.gyro = gyro_do_inputs(entry.get("inputs"))
+            self.touchpad = touchpad_do_inputs(entry.get("inputs"))
+            self.mic_nivel = getattr(mic, "nivel", None) if mic is not None else None
+            self.mic_selo = selo_mic(
+                getattr(mic, "muted", None) if mic is not None else None
+            )
 
         def reset_inputs(self) -> None:
             """IPC sem resposta → "—" (mesmo contrato do widget real)."""
@@ -829,8 +1070,10 @@ __all__ = [
     "STICK_SIZE_SINGLE",
     "ControllerCard",
     "accent_do_card",
+    "gyro_do_inputs",
     "rotulo_lightbar",
     "texto_degradacao",
     "texto_motion",
     "titulo_do_card",
+    "touchpad_do_inputs",
 ]

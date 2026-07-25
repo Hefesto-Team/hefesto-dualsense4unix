@@ -32,6 +32,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Match,
     MatchAny,
     MatchCriteria,
+    MatchManual,
     Profile,
     TriggerConfig,
     TriggersConfig,
@@ -159,6 +160,11 @@ def cmd_create(
         default_factory=list, help="Basename de exe (repetir)."
     ),
     fallback: bool = typer.Option(False, "--fallback", help="Perfil com MatchAny (prioridade 0)."),
+    manual: bool = typer.Option(
+        False,
+        "--manual",
+        help="Perfil só-manual: nunca ativa sozinho (sentinel {\"type\": \"manual\"}).",
+    ),
     force: bool = typer.Option(
         False, "--force", help="Sobrescreve o perfil que já ocupa o mesmo arquivo."
     ),
@@ -170,6 +176,10 @@ def cmd_create(
     if fallback:
         match = MatchAny()
         priority = 0
+    elif manual:
+        # R-12 item 3: dizer "só ativo na mão" sem depender do efeito colateral
+        # de um criteria vazio (que o doctor passa a acusar como inalcançável).
+        match = MatchManual()
     else:
         match = MatchCriteria(
             window_class=match_class or [],
@@ -189,6 +199,16 @@ def cmd_create(
     )
     path = save_profile(profile)
     console.print(f"[green]perfil criado: {path}[/green]")
+    if isinstance(match, MatchCriteria) and profile.e_catch_all:
+        # R-12: `create` sem nenhum critério grava um match que NUNCA casa, e
+        # até aqui saía só o "perfil criado" em verde — o perfil nascia morto
+        # para o autoswitch e nada dizia isso (foi assim que o preset
+        # `coop_local` de fábrica passou meses inalcançável).
+        console.print(
+            "[yellow]sem --match-class/--match-regex/--match-exe: este perfil "
+            "nunca ativa sozinho.[/yellow] Dê um alvo, ou recrie com --manual "
+            "para declarar que ele é só para ativar na mão."
+        )
 
 
 @app.command("delete")
@@ -362,6 +382,10 @@ def _describe_match(profile: Profile) -> str:
     m = profile.match
     if isinstance(m, MatchAny):
         return "[dim]any[/dim]"
+    # R-12 item 3: o sentinel não tem os campos de critério — sem este ramo o
+    # `profile list` estouraria com AttributeError num perfil só-manual.
+    if isinstance(m, MatchManual):
+        return "[dim]manual (nunca ativa sozinho)[/dim]"
     parts: list[str] = []
     if m.window_class:
         parts.append(f"class={','.join(m.window_class)}")

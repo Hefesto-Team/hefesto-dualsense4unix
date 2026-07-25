@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
-from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX, MatchAny
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -272,6 +272,13 @@ class IpcHandlersMixin:
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
 
+    #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
+    #: giroscópio/touchpad só nascem quando alguém pede o `state_full` e
+    #: morrem sozinhos quando param de ser pedidos. Mesmo padrão dos caches
+    #: acima: class attribute (o mixin não é dataclass) com shadow por
+    #: instância no primeiro uso.
+    _sensor_hub: Any = None
+
     # --- perfis ----------------------------------------------------------
 
     async def _handle_profile_switch(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -367,7 +374,11 @@ class IpcHandlersMixin:
                 {
                     "name": p.name,
                     "priority": p.priority,
-                    "match_type": "any" if isinstance(p.match, MatchAny) else "criteria",
+                    # R-12 item 3: o discriminador CRU, não um ternário — com o
+                    # sentinel `manual` no schema, "tudo que não é any é
+                    # criteria" faria a GUI escrever "Só neste programa" num
+                    # perfil que nunca ativa sozinho.
+                    "match_type": getattr(p.match, "type", "criteria"),
                 }
                 for p in profiles
             ]
@@ -1261,7 +1272,10 @@ class IpcHandlersMixin:
           exigiria refactor do estado desejado fora do escopo; a legibilidade
           de cor escura (objetivo do D8) é da GUI via
           `utils/color_contrast.ensure_min_contrast`.
-        - ``inputs``: ``{lx,ly,rx,ry,l2_raw,r2_raw,buttons}`` ou None. O
+        - ``inputs``: ``{lx,ly,rx,ry,l2_raw,r2_raw,buttons}`` — mais as chaves
+          OPCIONAIS ``gyro`` (``{x,y,z}`` em graus/s) e ``touchpad``
+          (``{touching,x,y,width,height}``) quando o controle tem os nodes
+          evdev correspondentes (S2, via `SensorHub`) — ou None. O
           PRIMÁRIO espelha o `state` do topo do payload (`daemon._last_state`
           — a MESMA fonte, nunca um snapshot evdev paralelo: armadilha A-09);
           secundários vêm de `CoopManager.live_snapshots()` (leitura
@@ -1324,6 +1338,7 @@ class IpcHandlersMixin:
                 entry["inputs"] = self._inputs_from_snapshot(snapshots[uniq])
             else:
                 entry["inputs"] = None
+            self._merge_sensores(entry, uniq)
 
             backend, motivo = (None, None)
             if entry.get("is_primary") and gp_dev is not None:
@@ -1332,6 +1347,35 @@ class IpcHandlersMixin:
                 backend, motivo = vpad_by_uniq[uniq]
             entry["vpad_backend"] = backend
             entry["vpad_motivo"] = motivo
+
+    def _merge_sensores(self, entry: dict[str, Any], uniq: str | None) -> None:
+        """Acrescenta `gyro`/`touchpad` ao `inputs` deste controle (S2).
+
+        Campos OPCIONAIS por contrato: quem não tem o node de motion (ou o do
+        touchpad) sai sem a chave, e uma GUI antiga que não conheça nenhuma
+        das duas continua lendo o `inputs` de sempre. O inverso também vale —
+        é por isso que a GUI nova trata a ausência como "sem sensor" em vez de
+        desenhar zero, que seria repouso mentiroso.
+
+        Só há o que mesclar quando este controle TEM leitor de inputs: sem
+        ele o card inteiro já mostra "—", e pendurar sensor num controle sem
+        input seria a mesma mentira com outro nome. Controle sem MAC (`uniq`
+        None) não tem como ser casado com um node e fica de fora.
+        """
+        inputs = entry.get("inputs")
+        if uniq is None or not isinstance(inputs, dict):
+            return
+        hub = self._sensor_hub
+        if hub is None:
+            from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
+
+            hub = SensorHub()
+            self._sensor_hub = hub
+        leitura: Any = None
+        with contextlib.suppress(Exception):
+            leitura = hub.leitura(uniq)
+        if isinstance(leitura, dict):
+            inputs.update(leitura)
 
     def _lightbar_for_uniq(
         self,
