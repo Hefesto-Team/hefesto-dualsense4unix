@@ -217,7 +217,15 @@ for arg in "$@"; do
             sed -n '2,128p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
             exit 0
             ;;
-        *) printf 'aviso: argumento desconhecido: %s\n' "$arg" ;;
+        # BUG-INSTALL-ARG-DESCONHECIDO-SILENCIOSO-01: um aviso solto rolava para
+        # fora da tela e o install seguia com os DEFAULTS — quem errou o nome de
+        # uma flag (ou usou uma que já foi renomeada) achava que tinha pedido
+        # algo e recebia outra coisa, sem jeito de perceber. Aborta.
+        *)
+            printf 'argumento desconhecido: %s\n' "$arg" >&2
+            printf 'nada foi instalado. Use --help para ver as opções.\n' >&2
+            exit 2
+            ;;
     esac
 done
 
@@ -571,6 +579,84 @@ install_dkms_hid_nintendo_host() {
     return 0
 }
 
+# Contenção BT (25/07): módulo hid-playstation patchado (retry opcional nos
+# feature reports da probe) via a MESMA lib genérica scripts/dkms_lib.sh (3ª
+# instância — hid-nintendo é a 1ª, rtw88_usb a 2ª; ZERO ajuste na lib).
+# DEFAULT ON (regra da casa: install SEM FLAGS aplica), mesmo gate NO_DKMS.
+# Motivo: com dois DualSense pareando com ~1 s de diferença, o 2º perde o
+# canal de controle L2CAP, o GET_REPORT expira no BlueZ (REPORT_REQ_TIMEOUT,
+# 3 s), o uhid entrega -EIO ao driver e o controle inteiro é perdido. Detalhe
+# completo em assets/dkms/hid-playstation/README.md.
+install_dkms_hid_playstation_host() {
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — patch DKMS do hid-playstation NÃO instalado (driver in-tree continua, fail-safe)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — patch DKMS do hid-playstation pulado (re-execute ./install.sh)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_warn_secureboot_once  # PKG-1: avisa (não aborta) se SB pode barrar o .ko
+    local _hidp_src="${ROOT_DIR}/assets/dkms/hid-playstation"
+    dkms_install_patched_module hefesto-hid-playstation \
+        "$(dkms_pkg_version "${_hidp_src}")" "${_hidp_src}" hid-playstation
+    if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-playstation.conf" \
+            /etc/modprobe.d/hefesto-hid-playstation.conf 2>/dev/null; then
+        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2)\n'
+    else
+        warn "não consegui gravar /etc/modprobe.d/hefesto-hid-playstation.conf"
+    fi
+    # Mesmo achado #5 do hid-nintendo: dkms_install_patched_module é fail-safe
+    # POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de "staged de
+    # verdade" é o modinfo resolver p/ updates/dkms.
+    if ! dkms_module_from_updates hid-playstation; then
+        warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored') e o 2º DualSense segue podendo se perder na probe"
+        return 0
+    fi
+    # ATIVAÇÃO FAIL-SAFE — aqui a regra é MAIS dura que a do hid-nintendo:
+    # recarregar o hid_playstation derruba TODOS os DualSense, e os por
+    # Bluetooth perdem o link. NUNCA recarregamos. O marcador de "patchado
+    # carregado" é o parâmetro NOVO feature_retries (o in-tree tem zero
+    # params, então o diretório parameters/ sequer existe nele).
+    if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
+        printf '      módulo patchado JÁ carregado (feature_retries visível em /sys/module/hid_playstation/parameters)\n'
+    elif [[ -d /sys/module/hid_playstation ]]; then
+        printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria os DualSense, inclusive os por BT);\n'
+        printf '      o patchado vale no próximo boot (reconectar NÃO troca módulo carregado)\n'
+    else
+        printf '      hid_playstation descarregado — o patchado entra sozinho na próxima conexão\n'
+    fi
+    return 0
+}
+
+# INITRAMFS-01 (25/07): fecha o furo entre `dkms install` e o BOOT. O initramfs
+# leva uma CÓPIA do .ko e não é regenerado pelo dkms — o boot seguia carregando
+# o módulo da geração anterior. Compartilhada entre o passo 3k (native) e o
+# bloco dos formatos de pacote, igual às duas funções DKMS acima; roda UMA vez
+# porque a lib coalesce (dkms_mark_initramfs_stale × dkms_flush_initramfs).
+# Silenciosa e no-op quando nenhum módulo DKMS ficou staged (--no-dkms, dkms
+# ausente, build falho): quem marca é só o ramo de sucesso da lib.
+flush_initramfs_host() {
+    if [[ "${NO_DKMS}" -eq 1 ]]; then
+        printf '      pulado (--no-dkms)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+        warn "sudo indisponível — initramfs NÃO regenerado; se um módulo DKMS mudou, o próximo boot ainda carrega a cópia antiga (rode: sudo update-initramfs -u)"
+        return 0
+    fi
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    dkms_flush_initramfs
+    return 0
+}
+
 # Onda W (desenho: docs/process/estudos/2026-07-20-desenho-onda-w-patch-dkms.md):
 # módulo rtw88_usb patchado (device-gone + queue de port reset — cura do
 # fantasma USB do dongle WiFi) via a MESMA lib genérica scripts/dkms_lib.sh
@@ -728,6 +814,15 @@ if [[ "${FORMAT}" != "native" ]]; then
     # passo 3j do fluxo native. Opt-out compartilhado: --no-dkms.
     step "dkms-w" "DKMS rtw88_usb patchado (Onda W — DEFAULT em todo formato)"
     install_dkms_rtw88_usb_host
+    # 3ª instância da mesma mudança de SISTEMA/kernel — mesma função do passo
+    # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
+    step "dkms-p" "DKMS hid-playstation patchado (contenção BT — DEFAULT em todo formato)"
+    install_dkms_hid_playstation_host
+    # INITRAMFS-01: um flush só, DEPOIS de todos os DKMS (regenerar por módulo
+    # custaria dezenas de segundos e ~140 MB de escrita cada). No-op se nenhum
+    # módulo ficou staged.
+    step "dkms-i" "regenerar initramfs se algum módulo DKMS mudou (INITRAMFS-01)"
+    flush_initramfs_host
     printf '\n─────────────────────────────────────────\n'
     printf ' Hefesto - Dualsense4Unix instalado (%s)\n' "${FORMAT}"
     printf ' Obs.: ajuste do microfone, desligar do Steam Input, preparo dos\n'
@@ -1064,26 +1159,50 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
                 warn "drop-in de config do BlueZ falhou em main.conf.d"
             fi
         elif [[ -f /etc/bluetooth/main.conf ]]; then
-            _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
             _bt_tmp="$(mktemp)"
             # O awk descarta: (a) os três blocos sentinelados (unificado +
             # legados), (b) chaves nossas soltas fora de bloco (deixadas por
             # edições manuais — só as NÃO comentadas; as comentadas do
-            # template upstream ficam).
-            if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
-               && sudo awk '
+            # template upstream ficam), (c) as linhas em branco do FIM do
+            # arquivo.
+            #
+            # BUG-INSTALL-MAIN-CONF-CRESCE-01 (25/07): o (c) é novo e é o que
+            # torna o passo REALMENTE idempotente. As sentinelas delimitam só o
+            # bloco; a linha em branco que o `printf '\n'` abaixo apensa como
+            # separador ficava FORA delas e sobrevivia ao awk — cada execução do
+            # install empurrava o bloco uma linha para baixo. Medido nesta
+            # máquina: 10 linhas em branco acumuladas entre o `[General]`
+            # upstream e a sentinela, e o arquivo crescendo 1 byte por install.
+            # Guardar os brancos e só imprimi-los quando vem conteúdo depois
+            # preserva os brancos INTERNOS e descarta os do fim.
+            if sudo awk '
                     /^# >>> hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>/ { _skip=1; next }
                     _skip && /^# <<< hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<</ { _skip=0; next }
                     _skip { next }
                     /^[[:space:]]*(FastConnectable|JustWorksRepairing)[[:space:]]*=/ { next }
-                    { print }
+                    /^[[:space:]]*$/ { _brancos++; next }
+                    { for (; _brancos > 0; _brancos--) print ""; print }
                   ' /etc/bluetooth/main.conf > "${_bt_tmp}" \
-               && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-bt.block"; } >> "${_bt_tmp}" \
-               && sudo install -m644 -o root -g root "${_bt_tmp}" /etc/bluetooth/main.conf; then
-                printf '      bloco hefesto (FastConnectable + JustWorksRepairing) reescrito no main.conf (backup: %s)\n' "${_bt_backup}"
-                printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
+               && { printf '\n'; cat "${ROOT_DIR}/assets/bluetooth/hefesto-bt.block"; } >> "${_bt_tmp}"; then
+                # BUG-INSTALL-MAIN-CONF-BACKUP-INFINITO-01 (25/07): o backup era
+                # feito ANTES de saber se havia mudança, com timestamp no nome —
+                # cada install deixava mais um `main.conf.bak.hefesto-<ts>` em
+                # /etc/bluetooth (22 acumulados nesta máquina). Agora comparamos
+                # primeiro: conteúdo idêntico = no-op honesto, sem backup novo.
+                if sudo cmp -s "${_bt_tmp}" /etc/bluetooth/main.conf; then
+                    printf '      bloco hefesto já está no main.conf, byte a byte — nada a reescrever (sem backup novo)\n'
+                else
+                    _bt_backup="/etc/bluetooth/main.conf.bak.hefesto-$(date +%s)"
+                    if sudo cp /etc/bluetooth/main.conf "${_bt_backup}" 2>/dev/null \
+                       && sudo install -m644 -o root -g root "${_bt_tmp}" /etc/bluetooth/main.conf; then
+                        printf '      bloco hefesto (FastConnectable + JustWorksRepairing) reescrito no main.conf (backup: %s)\n' "${_bt_backup}"
+                        printf '      vale no próximo boot/restart do bluetoothd — NÃO reiniciamos o serviço (derrubaria os controles BT)\n'
+                    else
+                        warn "não consegui reescrever o bloco hefesto no /etc/bluetooth/main.conf"
+                    fi
+                fi
             else
-                warn "não consegui reescrever o bloco hefesto no /etc/bluetooth/main.conf"
+                warn "não consegui preparar o bloco hefesto para o /etc/bluetooth/main.conf"
             fi
             rm -f "${_bt_tmp}"
         else
@@ -1256,7 +1375,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
         warn "sudo recusado — resiliência do bluetoothd pulada (re-execute ./install.sh)"
     else
         _btres_ok=1
-        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh; do
+        for _btres_s in bt_bonds_snapshot.sh bt_bonds_restore.sh bt_health_watchdog.sh bt_crash_capture.sh bt_active_mode.sh bt_nosniff_now.sh bt_rebind_orphans.sh; do
             sudo install -Dm755 "${ROOT_DIR}/scripts/${_btres_s}" \
                 "/usr/local/lib/hefesto-dualsense4unix/${_btres_s}" 2>/dev/null || _btres_ok=0
         done
@@ -1510,6 +1629,33 @@ install_dkms_hid_nintendo_host
 # honesto, o in-tree segue valendo, o install NUNCA aborta por causa disto.
 step "3j" "Onda W: rtw88_usb patchado via DKMS (fantasma USB + teardown limpo)"
 install_dkms_rtw88_usb_host
+
+# ---------------------------------------------------------------------------
+# 3k. DKMS hid-playstation patchado (contenção BT) — DEFAULT, opt-out --no-dkms
+# ---------------------------------------------------------------------------
+# Cura de RAIZ da perda de um DualSense inteiro quando vários controles pareiam
+# quase juntos no mesmo adaptador — o cenário NORMAL do alvo do projeto (4 por
+# Bluetooth, um por jogador). Medido em 25/07: o 2º DualSense perdeu o canal de
+# controle L2CAP, o GET_REPORT expirou no BlueZ (REPORT_REQ_TIMEOUT = 3 s), o
+# uhid achatou o ETIMEDOUT em -EIO e a probe morreu — device sem hidraw, sem
+# input, sem LED. Diagnóstico completo (as 3 medidas encadeadas) em
+# assets/dkms/hid-playstation/README.md.
+# Contrato fail-safe idêntico ao 3i/3j: nada aqui aborta o install.
+step "3k" "contenção BT: hid-playstation patchado via DKMS (retry de feature report)"
+install_dkms_hid_playstation_host
+
+# ---------------------------------------------------------------------------
+# 3l. Regenerar o initramfs (INITRAMFS-01) — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# `dkms install` grava em updates/dkms e roda depmod, mas NÃO regenera o
+# initramfs — e o initramfs carrega uma CÓPIA do hid-nintendo (é driver de
+# gamepad/teclado USB, entra na geração "most" do Ubuntu/Pop). Medido em
+# 25/07: initramfs de 23/07 contra DKMS de 25/07, boot subindo o módulo VELHO,
+# e como os params do patch novo não existiam nele o kernel descartava o
+# /etc/modprobe.d/hefesto-hid-nintendo.conf INTEIRO ("unknown parameter"),
+# levando junto curas que já funcionavam. Roda UMA vez para todos os módulos.
+step "3l" "INITRAMFS-01: regenerar o initramfs se algum módulo DKMS mudou"
+flush_initramfs_host
 
 # ---------------------------------------------------------------------------
 # 4. Ícone + .desktop + launcher
@@ -1777,7 +1923,15 @@ else
         printf '      desativado (abrir GUI manualmente pelo menu de aplicativos)\n'
     else
         readonly HOTPLUG_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix-gui-hotplug.service"
-        readonly USER_UNIT_DIR="${HOME}/.config/systemd/user"
+        # BUG-INSTALL-READONLY-USER-UNIT-DIR-01 (25/07): este nome NÃO pode ser
+        # `readonly`. O passo 11 (guard do Steam Input) reatribui a MESMA variável
+        # mais abaixo, e sob `set -euo pipefail` uma atribuição a variável somente
+        # leitura devolve rc=1 e MATA o install. Efeito medido: com o hotplug-gui
+        # habilitado (--enable-hotplug-gui ou "sim" no prompt), o install abortava
+        # em silêncio no passo 11 — sem o guard do Steam Input, sem a migração das
+        # Launch Options (11b), sem o pino do Proton (11c) e sem sequer imprimir o
+        # banner final. Nome genérico e compartilhado entre passos: assignment comum.
+        USER_UNIT_DIR="${HOME}/.config/systemd/user"
         readonly HOTPLUG_UNIT_TARGET="${USER_UNIT_DIR}/hefesto-dualsense4unix-gui-hotplug.service"
 
         if [[ ! -f "${HOTPLUG_UNIT_SRC}" ]]; then
@@ -1796,6 +1950,44 @@ else
                 warn "systemctl ausente — unit copiada mas não habilitada"
             fi
         fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 7a-bis. A UNIT DO DAEMON PRINCIPAL.
+#     BUG-INSTALL-NAO-INSTALA-A-UNIT-DO-DAEMON-01 (25/07): assimetria de
+#     primeira grandeza. O `uninstall.sh` para, desabilita e REMOVE
+#     ~/.config/systemd/user/hefesto-dualsense4unix.service (uninstall.sh:284-288),
+#     e o install NUNCA a instalava — `grep -c assets/hefesto-dualsense4unix.service
+#     install.sh` dava ZERO. A unit só existia nas máquinas onde tinha
+#     sobrevivido de uma instalação antiga; quem fizesse o ciclo completo
+#     (uninstall -> install) ficava SEM daemon, e portanto sem vpad, sem
+#     gatilhos, sem lightbar — com o install anunciando sucesso.
+#     Aqui a simetria é fechada: copia, habilita e SOBE (`--now`), como já se
+#     fazia para o kernel-watch e para o guard do Steam Input. Sem `--now` o
+#     daemon só nasceria no próximo login, e a instalação "bem-sucedida" não
+#     entregaria nada até lá.
+# ---------------------------------------------------------------------------
+step "7a/11" "daemon: unit do systemd (usuário)"
+DAEMON_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix.service"
+DAEMON_USER_UNIT_DIR="${HOME}/.config/systemd/user"
+DAEMON_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/hefesto-dualsense4unix.service"
+if [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
+    warn "unit do daemon ausente em assets/ — reinstale o repo"
+elif ! command -v systemctl >/dev/null 2>&1; then
+    warn "systemctl ausente — daemon não habilitado (inicie com: hefesto-dualsense4unix daemon start)"
+else
+    mkdir -p "${DAEMON_USER_UNIT_DIR}"
+    cp -f "${DAEMON_UNIT_SRC}" "${DAEMON_UNIT_TARGET}"
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    # `restart` e não `start`: numa reinstalação por cima, o daemon em memória
+    # é o binário ANTIGO — sem isso a pessoa roda o install, vê "sucesso" e
+    # segue usando o código anterior até relogar.
+    if systemctl --user enable hefesto-dualsense4unix.service >/dev/null 2>&1 \
+       && systemctl --user restart hefesto-dualsense4unix.service >/dev/null 2>&1; then
+        printf '      daemon habilitado e no ar\n'
+    else
+        warn "enable/restart do daemon falhou — suba com: systemctl --user enable --now hefesto-dualsense4unix.service"
     fi
 fi
 
