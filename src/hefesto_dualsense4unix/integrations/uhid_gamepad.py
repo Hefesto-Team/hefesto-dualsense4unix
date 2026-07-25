@@ -149,6 +149,35 @@ _RUMBLE_STRONG_OFFSET = 3
 #: 0x01 descartava TODO o rumble justamente no hardware alvo.
 _VIBRATION_FLAGS = 0x03
 
+#: RUMBLE-PRESO-01 — teto de silêncio do rumble do JOGO, em segundos.
+#:
+#: O gate de `_VIBRATION_FLAGS` acima está certo e cura um defeito real (report
+#: de lightbar/gatilho traz os motores zerados e forwardá-los matava a vibração
+#: em curso). Mas ele tem um custo que só aparece ao vivo: se o jogo liga o
+#: rumble e DEPOIS só manda report sem os bits de vibração, o pedido de parada
+#: nunca chega — e não é um pulso solto que fica pendurado. O report_thread do
+#: backend reafirma `rumble_asserted=self._rumble_active` em TODO report que
+#: monta (`core/backend_pydualsense.py`), então o motor não desacelera: ele gira
+#: para sempre, medido na máquina de desenvolvimento em 25/07 com o relato "fica
+#: tremendo sem parar, em todo jogo, em qualquer DualSense".
+#:
+#: O alvo mais provável é justamente o jogo bem-comportado: quem usa gatilhos
+#: adaptativos manda report de gatilho o tempo todo, e cada um deles é uma
+#: chance de o stop se perder.
+#:
+#: A rede de segurança é ASSIMÉTRICA de propósito. Cortar uma vibração longa e
+#: legítima aos 6 s é um aborrecimento; um motor girando até a bateria acabar
+#: desgasta o aparelho e obriga a desligar o controle no meio da partida. O teto
+#: é generoso o bastante para não alcançar efeito nenhum de jogo (impacto, tiro
+#: e motor de carro são re-enviados muito antes disso) e curto o bastante para o
+#: pior caso virar incômodo em vez de dano.
+#:
+#: A condição de disparo exige que o jogo esteja VIVO e falando: só conta o
+#: silêncio de vibração enquanto OUTROS reports continuam chegando. Jogo parado
+#: (que não manda nada) não tem o rumble cortado por este caminho — quem cuida
+#: disso é o `_silence_rumble` do fim de sessão.
+_RUMBLE_STALE_SEC = 6.0
+
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
@@ -518,6 +547,10 @@ class UhidDualSense:
     _fd: int | None = None
     _features: dict[int, bytes] = field(default_factory=dict)
     _last_sent: tuple[int, int] = (0, 0)
+    #: RUMBLE-PRESO-01: instante do último report do jogo que CARREGAVA bits de
+    #: vibração. `None` = nada pedido desde a última parada. É o relógio do teto
+    #: de silêncio — ver :data:`_RUMBLE_STALE_SEC`.
+    _rumble_visto_em: float | None = None
     _output_count: int = 0
     _rumble_count: int = 0
     _started: bool = False
@@ -810,6 +843,10 @@ class UhidDualSense:
         O vpad some e ninguém mais mandaria o stop — sem isto o DualSense fica
         vibrando para sempre (mesma proteção do UinputGamepad.stop).
         """
+        # RUMBLE-PRESO-01: o relógio do teto de silêncio morre junto com a
+        # sessão — a próxima vida do vpad nasce sem rumble pendurado, senão o
+        # primeiro pump dela cobraria um silêncio que é de outro jogo.
+        self._rumble_visto_em = None
         if self._last_sent == (0, 0) or self.rumble_sink is None:
             return
         with contextlib.suppress(Exception):
@@ -1082,6 +1119,10 @@ class UhidDualSense:
         # REPLICA-03: entrega o que o rate-limit reteve no tick anterior —
         # o pump roda a cada tick do poll loop, então a latência é ~1 tick.
         self._flush_replicas()
+        # RUMBLE-PRESO-01: antes de drenar, cobra o teto de silêncio do rumble
+        # que já está em vigor. Vem aqui (e não no fim) para que um motor preso
+        # pare mesmo num tique em que o jogo não mandou evento nenhum.
+        self._expirar_rumble_preso()
         for _ in range(_MAX_EVENTS_PER_PUMP):
             try:
                 data = os.read(fd, UHID_EVENT_SIZE)
@@ -1146,14 +1187,52 @@ class UhidDualSense:
         if len(body) <= _RUMBLE_STRONG_OFFSET:
             return
         if not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS:
+            # RUMBLE-PRESO-01: este report NÃO fala de vibração (é lightbar,
+            # gatilho ou mic) e os bytes 2-3 dele vêm zerados — encaminhá-los
+            # mataria a vibração em curso, que é o defeito que o gate cura.
+            # Mas o silêncio precisa ser CRONOMETRADO: enquanto o jogo segue
+            # falando de outras coisas com um rumble não-nulo pendurado, é o
+            # `_expirar_rumble_preso` (chamado do pump) que decide.
             return
         self._rumble_count += 1
         weak = body[_RUMBLE_WEAK_OFFSET]
         strong = body[_RUMBLE_STRONG_OFFSET]
+        # O carimbo vem ANTES do dedup: um jogo que reafirma o MESMO valor está
+        # dizendo "ainda quero vibrar", e isso tem de adiar o teto de silêncio
+        # mesmo sem haver o que reenviar ao hardware.
+        self._rumble_visto_em = self.time_fn() if (weak or strong) else None
         if (weak, strong) == self._last_sent:
             return
         self._last_sent = (weak, strong)
         self._emit_rumble(weak, strong)
+
+    def _expirar_rumble_preso(self) -> None:
+        """Zera um rumble do jogo que ficou pendurado além do teto de silêncio.
+
+        RUMBLE-PRESO-01. Chamado a cada tique do pump. Só age quando há um
+        rumble NÃO-NULO em vigor e o último report que falou de vibração é mais
+        velho que :data:`_RUMBLE_STALE_SEC` — o caso medido em 25/07 em que o
+        pedido de parada do jogo se perde num report sem os bits de vibração e o
+        motor gira indefinidamente, porque o report_thread do backend reafirma o
+        rumble em vigor a cada report que monta.
+
+        Deliberadamente NÃO mexe em `_rumble_visto_em` além de limpá-lo: se o
+        jogo voltar a pedir vibração depois da expiração, o caminho normal
+        (`_handle_output`) reabre a janela e o motor volta a girar.
+        """
+        if self._last_sent == (0, 0) or self._rumble_visto_em is None:
+            return
+        if self.time_fn() - self._rumble_visto_em < _RUMBLE_STALE_SEC:
+            return
+        logger.warning(
+            "uhid_rumble_preso_expirado",
+            player=self.player,
+            ultimo=self._last_sent,
+            teto_s=_RUMBLE_STALE_SEC,
+        )
+        self._rumble_visto_em = None
+        self._last_sent = (0, 0)
+        self._emit_rumble(0, 0)
 
     def _emit_rumble(self, weak: int, strong: int) -> None:
         if self.rumble_sink is None:
