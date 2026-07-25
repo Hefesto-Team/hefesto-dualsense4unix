@@ -4,7 +4,8 @@
 # Verifica daemon, serviço, socket IPC, regras udev (incluindo a consistência do
 # nome de unit do hotplug), uinput, a gravabilidade do nó de LED do DualSense
 # físico (cor por-controle via sysfs, regra 77), applet COSMIC (.desktop + ícone
-# resolvível), o detector de janela do autoswitch (perfil-por-jogo), o sequestro
+# resolvível), o detector de janela do autoswitch (perfil-por-jogo) e os perfis
+# INALCANÇÁVEIS por ele (sem critério de janela: nunca ativam sozinhos), o sequestro
 # do microfone pelo WirePlumber e o alcance do controle; a autoridade de
 # exibição do co-op (NUMA-05: quem manda em lightbar/numeração agora — jogo,
 # daemon ou "unknown" — e a CAUSA quando presa em unknown); reconhece também,
@@ -856,6 +857,102 @@ check_window_detect() {
         fail "veredito: CEGO — sem DISPLAY e sem WAYLAND_DISPLAY (nem no systemd --user). Se o daemon subiu antes do login gráfico, reinicie: systemctl --user restart ${APP_ID}.service"
     else
         fail "veredito: CEGO — há display no ambiente mas nenhum backend funciona (X inacessível, portal sem GetActiveWindow, wlrctl sem protocolo); o autoswitch ficará no fallback e perfil-por-jogo não muda sozinho"
+    fi
+}
+
+# Caminho dos perfis. É o mesmo que `utils.xdg_paths.profiles_dir` resolve
+# (platformdirs = XDG_CONFIG_HOME, com ~/.config de default) — lido do DISCO
+# de propósito: o diagnóstico dos perfis tem de funcionar com o daemon parado,
+# que é justamente quando a mantenedora vai olhar por que um perfil não entra.
+profiles_dir_path() {
+    printf '%s/%s/profiles' "${XDG_CONFIG_HOME:-${HOME}/.config}" "${APP_ID}"
+}
+
+# R-12 item 3 (débito da auditoria 23/07): classifica cada perfil do diretório
+# em uma linha `estado<TAB>arquivo<TAB>nome`. Função PURA (recebe o diretório,
+# só imprime) para ser exercitada por teste com um diretório sintético.
+#
+# Estados:
+#   inalcancavel — `criteria` com os TRÊS campos vazios. `MatchCriteria.matches`
+#                  devolve False sem condição alguma, então o autoswitch NUNCA
+#                  escolhe esse perfil. Foi assim que o preset `coop_local` de
+#                  fábrica passou meses sem nunca ativar, sem erro nenhum.
+#   manual       — sentinel `{"type": "manual"}`: a MESMA inércia, só que
+#                  declarada. Não é defeito, e por isso sai como informação.
+#   ilegivel     — JSON quebrado (o daemon já pula com WARN no boot; aqui é
+#                  para o item não sumir do relatório em silêncio).
+# Perfil `any` e `criteria` com alvo não saem: são os casos sãos.
+_perfis_inalcancaveis() {
+    local dir="${1:-}"
+    [[ -n "${dir}" ]] || dir="$(profiles_dir_path)"
+    [[ -d "${dir}" ]] || return 0
+    command -v python3 >/dev/null 2>&1 || return 0
+    python3 - "${dir}" <<'PYEOF' 2>/dev/null
+import json
+import sys
+from pathlib import Path
+
+for path in sorted(Path(sys.argv[1]).glob("*.json")):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"ilegivel\t{path.name}\t{type(exc).__name__}")
+        continue
+    if not isinstance(data, dict):
+        print(f"ilegivel\t{path.name}\tjson não é um objeto")
+        continue
+    nome = str(data.get("name") or path.stem)
+    match = data.get("match")
+    tipo = match.get("type") if isinstance(match, dict) else None
+    if tipo == "manual":
+        print(f"manual\t{path.name}\t{nome}")
+    elif tipo == "criteria" and not (
+        match.get("window_class")
+        or match.get("window_title_regex")
+        or match.get("process_name")
+    ):
+        print(f"inalcancavel\t{path.name}\t{nome}")
+PYEOF
+}
+
+# R-12 item 3: o relatório de linha de comando do que a GUI já mostra na coluna
+# "Quando usar" ("Só manual (nunca ativa sozinho)"). Um perfil sem alvo não
+# falha, não loga e não aparece em lugar nenhum — ele simplesmente nunca entra,
+# e a leitura de quem está do lado de cá é "o autoswitch está quebrado".
+check_perfis_inalcancaveis() {
+    local dir; dir="$(profiles_dir_path)"
+    if [[ ! -d "${dir}" ]]; then
+        info "sem diretório de perfis ainda (${dir}) — os presets nascem no primeiro boot do daemon"
+        return
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        warn "python3 ausente — não dá para ler os perfis"
+        return
+    fi
+    local linhas total mortos="" manuais="" ilegiveis=""
+    total="$(find "${dir}" -maxdepth 1 -name '*.json' -type f 2>/dev/null | wc -l)"
+    linhas="$(_perfis_inalcancaveis "${dir}")"
+    local estado arquivo nome
+    while IFS=$'\t' read -r estado arquivo nome; do
+        [[ -n "${estado}" ]] || continue
+        case "${estado}" in
+            inalcancavel) mortos+=" ${nome} (${arquivo})" ;;
+            manual)       manuais+=" ${nome}" ;;
+            ilegivel)     ilegiveis+=" ${arquivo} [${nome}]" ;;
+        esac
+    done <<< "${linhas}"
+
+    if [[ -n "${ilegiveis}" ]]; then
+        warn "perfil ilegível (o daemon pula com WARN no boot):${ilegiveis}"
+    fi
+    if [[ -n "${mortos}" ]]; then
+        warn "perfil INALCANÇÁVEL pelo autoswitch — nenhum critério de janela:${mortos}. Ele só entra se você ativar na mão. Cura: abra a aba Perfis e dê um alvo (programa, jogo da Steam ou título), ou declare de propósito com \"match\": {\"type\": \"manual\"} no JSON"
+    fi
+    if [[ -n "${manuais}" ]]; then
+        info "perfil só-manual por declaração (nunca ativa sozinho, e está certo assim):${manuais}"
+    fi
+    if [[ -z "${mortos}" && -z "${ilegiveis}" ]]; then
+        pass "perfis alcançáveis pelo autoswitch (${total} no disco, nenhum sem alvo por acidente)"
     fi
 }
 
@@ -2531,6 +2628,7 @@ main() {
     check_applet
     hdr "detector de janela (autoswitch / perfil-por-jogo)"
     check_window_detect
+    check_perfis_inalcancaveis
     hdr "áudio (microfone)"
     check_wireplumber_source
     check_dualsense_sink_disabled

@@ -21,6 +21,33 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
+def _casa_sem_caixa(valor: object, aceitos: list[str]) -> bool:
+    """Pertence-à-lista SEM diferenciar maiúsculas de minúsculas.
+
+    R-12 (auditoria 23/07), a metade que faltava. O editor simples aplicava um
+    ``.lower()`` no que a usuária digitava, e o matcher comparava com o dado
+    CRU do sistema — ``Cyberpunk2077.exe`` (basename de ``/proc/PID/exe``)
+    nunca casava com o ``cyberpunk2077.exe`` gravado. O agente do R-12 tirou o
+    ``.lower()`` (parar de corromper o dado guardado é o dano garantido); a
+    cura completa é esta: **guardar como veio, comparar sem caixa**.
+
+    Vale para os dois lados porque nenhum dos dois é confiável:
+
+    - ``wm_class`` chega do X/XWayland com a caixa que o toolkit escolheu
+      (``Steam`` vs. ``steam``, ``Firefox`` vs. ``firefox``), e a mesma janela
+      muda de grafia entre backends de detecção;
+    - o basename do executável é o que o jogo enviou (``Sackboy.exe``), e
+      ninguém digita isso à mão com a caixa certa.
+
+    Alvo vazio nunca casa: janela sem ``wm_class``/sem ``exe_basename`` é
+    ausência de evidência, não igualdade com uma entrada vazia do perfil.
+    """
+    alvo = str(valor or "").casefold()
+    if not alvo:
+        return False
+    return any(alvo == item.casefold() for item in aceitos)
+
+
 class MatchCriteria(BaseModel):
     """Casamento por critérios específicos (V2-8, V2-10).
 
@@ -30,6 +57,7 @@ class MatchCriteria(BaseModel):
     - `window_title_regex` usa `re.search` (V2-10); padrões com `.*`
       continuam válidos mas redundantes.
     - `process_name` casa com basename de `/proc/PID/exe` (V2-9).
+    - A comparação IGNORA maiúsculas/minúsculas nos três campos (R-12).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -42,13 +70,25 @@ class MatchCriteria(BaseModel):
     def matches(self, window_info: dict[str, Any]) -> bool:
         conditions: list[bool] = []
         if self.window_class:
-            conditions.append(window_info.get("wm_class", "") in self.window_class)
+            conditions.append(
+                _casa_sem_caixa(window_info.get("wm_class"), self.window_class)
+            )
         if self.window_title_regex:
             pattern = self.window_title_regex
             title = window_info.get("wm_name", "") or ""
-            conditions.append(bool(re.search(pattern, title)))
+            # R-12: `re.IGNORECASE` pela MESMA razão das listas — título de
+            # janela é texto de marketing ("Sackboy: A Big Adventure",
+            # "SACKBOY"), e um regex que só casa com a grafia exata é uma
+            # armadilha silenciosa (o perfil simplesmente nunca ativa, sem erro
+            # nenhum). Deixar só as listas tolerantes seria pior que os dois
+            # extremos: a mesma tela do editor teria dois campos com regras de
+            # caixa diferentes. Quem PRECISA de caixa exata continua tendo
+            # saída, com o grupo local `(?-i:...)` do próprio `re`.
+            conditions.append(bool(re.search(pattern, title, re.IGNORECASE)))
         if self.process_name:
-            conditions.append(window_info.get("exe_basename", "") in self.process_name)
+            conditions.append(
+                _casa_sem_caixa(window_info.get("exe_basename"), self.process_name)
+            )
         if not conditions:
             return False
         return all(conditions)
@@ -65,7 +105,39 @@ class MatchAny(BaseModel):
         return True
 
 
-Match = MatchCriteria | MatchAny
+class MatchManual(BaseModel):
+    """Sentinel explícito de perfil SÓ-MANUAL: nunca casa com janela nenhuma.
+
+    R-12 item 3 (débito da auditoria 23/07). Existia um jeito de escrever "este
+    perfil só entra quando eu mandar": um ``MatchCriteria`` com os três campos
+    vazios, que ``matches()`` reprova por falta de condição. O problema é que
+    esse estado é INDISTINGUÍVEL do acidente — foi exatamente assim que o
+    preset ``coop_local`` de fábrica saiu inalcançável e ninguém percebeu, e é
+    o que a GUI teve de adivinhar para escrever "Só manual (nunca ativa
+    sozinho)" na coluna "Quando usar".
+
+    Com o sentinel, intenção e acidente param de ter a mesma forma: quem
+    declara ``{"type": "manual"}`` está dizendo isso, e o
+    ``check_perfis_inalcancaveis`` do ``doctor.sh`` deixa de reclamar dele (e
+    continua reclamando do criteria vazio, que agora é só o acidente).
+
+    Retrocompatível: o tipo é ADITIVO na união discriminada — perfis já
+    gravados com ``any``/``criteria`` validam sem migração, e nada no código
+    escreve ``manual`` sozinho (só o editor avançado com os três campos
+    vazios e o ``profile create --manual``). ATENÇÃO downgrade, mesma nota do
+    ``auto_player_colors``: um perfil salvo com este tipo é rejeitado por
+    binário antigo, que não conhece o discriminador.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["manual"] = "manual"
+
+    def matches(self, window_info: dict[str, Any]) -> bool:
+        return False
+
+
+Match = MatchCriteria | MatchAny | MatchManual
 
 
 class TriggerConfig(BaseModel):
@@ -476,9 +548,19 @@ class Profile(BaseModel):
         (``MatchCriteria.matches`` devolve ``False`` sem condição alguma),
         mas ele TAMBÉM não é uma regra específica — então some dos dois
         lados da comparação pelo mesmo predicado.
+
+        ``MatchManual`` NÃO entra aqui, e a diferença é de propósito. Este
+        predicado responde "o perfil chegou por acidente?" — é o que segura a
+        reversão de modo/supressão em `lifecycle._perfil_tem_opiniao`. Um
+        catch-all chega quando nenhuma regra casou; um perfil manual só entra
+        porque a usuária o escolheu na mão, então ele tem a autoridade que o
+        catch-all não tem. Na seleção do autoswitch a distinção é inócua: o
+        manual nunca vira candidato (``matches`` é sempre False).
         """
         if isinstance(self.match, MatchAny):
             return True
+        if isinstance(self.match, MatchManual):
+            return False
         criteria = self.match
         return not (
             criteria.window_class
@@ -523,7 +605,11 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     wm_class = str(window_info.get("wm_class") or "")
     if not wm_class.startswith("steam_app_"):
         return False
-    return wm_class in match.window_class
+    # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
+    # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e
+    # não ser reconhecido como regra do jogo aqui — a divergência entre os dois
+    # predicados é justamente o buraco que este módulo existe para fechar.
+    return _casa_sem_caixa(wm_class, match.window_class)
 
 
 __all__ = [
@@ -532,6 +618,7 @@ __all__ = [
     "Match",
     "MatchAny",
     "MatchCriteria",
+    "MatchManual",
     "Profile",
     "ProfileMouseConfig",
     "RumbleConfig",

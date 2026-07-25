@@ -20,13 +20,18 @@ class _AppFalso:
     """Só o suficiente para exercitar `_on_notebook_switch_page` sem GUI real."""
 
     _REFRESH_POR_ABA = HefestoApp._REFRESH_POR_ABA
+    _ABA_STATUS = HefestoApp._ABA_STATUS
     _on_notebook_switch_page = HefestoApp._on_notebook_switch_page
 
     def __init__(self) -> None:
         self.chamados: list[str] = []
+        self.status_visivel: list[bool] = []
         for nomes in self._REFRESH_POR_ABA.values():
             for nome in nomes:
                 setattr(self, nome, lambda n=nome: self.chamados.append(n))
+
+    def set_status_tab_visivel(self, visivel: bool) -> None:
+        self.status_visivel.append(visivel)
 
 
 def _pagina(nome: str) -> Gtk.Widget:
@@ -66,6 +71,39 @@ def test_aba_sem_refresher_nao_quebra() -> None:
     app._on_notebook_switch_page(None, _pagina("tab_status_box"), 1)
 
     assert app.chamados == []
+
+
+def test_entrar_no_status_liga_a_captura_do_microfone() -> None:
+    """S2: o medidor de mic só captura com a aba Status à vista."""
+    app = _AppFalso()
+
+    app._on_notebook_switch_page(None, _pagina("tab_status_box"), 1)
+
+    assert app.status_visivel == [True]
+
+
+def test_sair_do_status_desliga_a_captura() -> None:
+    """Sem isto, um `parec` por controle seguiria segurando o microfone da
+    usuária com a janela em qualquer outra aba — o incidente de busy-loop da
+    v3.8.1 com outra roupa."""
+    app = _AppFalso()
+    app._on_notebook_switch_page(None, _pagina("tab_status_box"), 1)
+
+    app._on_notebook_switch_page(None, _pagina("tab_triggers_box"), 2)
+
+    assert app.status_visivel == [True, False]
+
+
+def test_id_da_aba_status_existe_no_glade() -> None:
+    """O gate do microfone casa por id de Glade; id errado erra em silêncio."""
+    import xml.etree.ElementTree as ET
+
+    from hefesto_dualsense4unix.app.constants import MAIN_GLADE
+
+    arvore = ET.parse(str(MAIN_GLADE))
+    ids = {obj.get("id") for obj in arvore.iter("object") if obj.get("id")}
+
+    assert HefestoApp._ABA_STATUS in ids
 
 
 def test_todo_id_do_mapa_existe_no_glade() -> None:
