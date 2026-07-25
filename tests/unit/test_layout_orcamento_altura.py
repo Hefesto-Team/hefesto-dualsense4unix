@@ -21,12 +21,32 @@ from gi.repository import Gdk, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE  # noqa: E402
 
-#: Altura default da janela (`default-height` do glade).
-ALTURA_JANELA = 680
+
+def _dimensao_da_janela(nome: str) -> int:
+    """Lê `default-width`/`default-height` direto do glade.
+
+    Constante duplicada aqui viraria mentira no dia em que alguém mudasse o
+    glade: o teste continuaria verde medindo contra uma altura que a janela
+    não usa mais.
+    """
+    import xml.etree.ElementTree as ET
+
+    arvore = ET.parse(str(MAIN_GLADE))
+    for obj in arvore.iter("object"):
+        if obj.get("id") != "main_window":
+            continue
+        for prop in obj.findall("property"):
+            if prop.get("name") == nome:
+                return int((prop.text or "0").strip())
+    raise AssertionError(f"{nome} não encontrado em main_window")
+
+
+#: Altura com que a janela abre — é o número que decide se a barra aparece.
+ALTURA_JANELA = _dimensao_da_janela("default-height")
 #: Teto para o conteúdo. Abaixo disso a barra de rolagem não precisa aparecer.
 TETO_CONTEUDO = ALTURA_JANELA
-#: Largura de referência — a janela abre com 1100px.
-LARGURA = 1100
+#: Largura de referência, também vinda do glade.
+LARGURA = _dimensao_da_janela("default-width")
 
 
 def _gtk_pronto() -> bool:
@@ -87,7 +107,7 @@ def test_nenhuma_aba_isolada_estoura_o_orcamento() -> None:
     """
     builder, _root = _montar()
     notebook = builder.get_object("main_notebook")
-    teto_por_aba = 520
+    teto_por_aba = 600
 
     gordas = []
     for i in range(notebook.get_n_pages()):

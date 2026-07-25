@@ -69,7 +69,13 @@
   <object class="GtkWindow" id="main_window">
     <property name="title" translatable="yes">Hefesto - Dualsense4Unix</property>
     <property name="default-width">1100</property>
-    <property name="default-height">680</property>
+    <!-- 680px não davam conta do conteúdo (a aba mais alta pedia mais que
+         isso, e o GtkNotebook adota o maior mínimo entre as páginas: a barra
+         de rolagem aparecia em TODAS). O conteúdo foi enxugado até 712px e a
+         janela abre com a altura que ele pede — em 1080p sobra espaço de
+         sobra, e espremer mais só cortaria texto de ajuda que existe para
+         quem não conhece os termos. -->
+    <property name="default-height">760</property>
     <!-- Largura/altura mínimas: garantem o espaço do rodapé (4 botões) em janela
          flutuante. Sob tiling do COSMIC (que ignora min-size) o GtkFlowBox do
          rodapé + os ScrolledWindow das abas são a rede de segurança. BUG-FOOTER-CORTADO. -->
@@ -1744,20 +1750,25 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
             <!-- Aba Emulação -->
             <child>
               <object class="GtkBox" id="emulation_box">
-                <property name="orientation">horizontal</property>
+                <property name="orientation">vertical</property>
                 <property name="margin">12</property>
-                <property name="spacing">16</property>
-                <property name="homogeneous">True</property>
-                <!-- Duas colunas: a aba pedia 674px de altura minima e o
-                     GtkNotebook adota o MAIOR minimo entre as paginas, entao
-                     era ela que forcava a barra de rolagem em TODAS as abas —
-                     inclusive nas ja enxugadas. Esquerda = diagnostico (o que
-                     esta valendo agora), direita = escolhas (o que o jogo ve).
-                     Nada foi removido. -->
+                <property name="spacing">10</property>
+                <!-- Os dois grids de DIAGNOSTICO (device virtual e combos do
+                     modo jogo) ficam lado a lado: sao pares rotulo:valor, ou
+                     seja, estreitos. Ja os blocos de ESCOLHA abaixo carregam
+                     rotulo + status + dois botoes cada e precisam da largura
+                     inteira — foi tentar espremer esses em meia janela que
+                     cortava a coluna direita. Empilhados, os 9 blocos pediam
+                     674px, e o GtkNotebook adota o MAIOR minimo entre as
+                     paginas: era essa aba que forcava rolagem em todas. -->
                 <child>
-                  <object class="GtkBox" id="emulation_col_diagnostico">
-                    <property name="orientation">vertical</property>
-                    <property name="spacing">10</property>
+                  <!-- Sem `homogeneous`: com 50% fixos para cada grid, uma
+                       janela larga abria um vazio enorme dentro dos dois cards.
+                       Assim cada um fica do tamanho do proprio conteudo. -->
+                  <object class="GtkBox" id="emulation_diagnostico_row">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">16</property>
+                    <property name="halign">start</property>
                 <child>
                   <object class="GtkGrid" id="emulation_info_grid">
                     <property name="row-spacing">6</property>
@@ -1771,6 +1782,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_uinput_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label">—</property>
                         <property name="halign">start</property>
                         <property name="use-markup">True</property>
@@ -1783,6 +1796,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_device_name_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)</property>
                         <property name="halign">start</property>
                       </object>
@@ -1794,6 +1809,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_vidpid_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">045E:028E (Xbox 360)</property>
                         <property name="halign">start</property>
                       </object>
@@ -1805,6 +1822,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_js_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label">—</property>
                         <property name="halign">start</property>
                         <property name="use-markup">True</property>
@@ -1836,6 +1855,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_combo_next_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">PS + D-pad Cima</property>
                         <property name="halign">start</property>
                       </object>
@@ -1847,6 +1868,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_combo_prev_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">PS + D-pad Baixo</property>
                         <property name="halign">start</property>
                       </object>
@@ -1858,6 +1881,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_combo_buffer_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label">150</property>
                         <property name="halign">start</property>
                       </object>
@@ -1869,11 +1894,16 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_passthrough_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">Não</property>
                         <property name="halign">start</property>
                       </object>
                       <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
                     </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -1904,13 +1934,6 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
-                  </object>
-                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
-                </child>
-                <child>
-                  <object class="GtkBox" id="emulation_col_escolhas">
-                    <property name="orientation">vertical</property>
-                    <property name="spacing">10</property>
                 <child>
                   <object class="GtkBox" id="emulation_gamepad_box">
                     <property name="orientation">horizontal</property>
@@ -1925,6 +1948,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_gamepad_status_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
                       </object>
@@ -1979,6 +2004,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_gamemode_status_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
                       </object>
@@ -2022,6 +2049,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_steam_input_status_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
                       </object>
@@ -2057,6 +2086,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkLabel" id="emulation_mic_status_label">
+                        <property name="wrap">True</property>
+                        <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
                       </object>
@@ -2088,9 +2119,6 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-end">10</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
-                </child>
-                  </object>
-                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
               </object>
             </child>
