@@ -20,21 +20,43 @@ Política:
 - Se o buffer expirar ou o D-pad nunca chegar, trata-se como **PS solo**
   (ver abaixo).
 
+## Onde a configuração dos hotkeys mora (leia antes)
+
+**O daemon não lê `daemon.toml`.** O arquivo que a aba Emulação abre no botão
+"Ver daemon.toml (referência)" é só isso — referência. Ele nasce com um
+cabeçalho dizendo exatamente o mesmo, e nada nele chega ao daemon.
+
+A configuração efetiva vem de duas fontes, e só delas:
+
+1. **Variáveis de ambiente lidas na subida do daemon** — hoje são três:
+   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`
+   e `HEFESTO_DUALSENSE4UNIX_NICE`.
+2. **O método IPC `daemon.reload`**, que aceita `config_overrides` com qualquer
+   subconjunto dos campos de `DaemonConfig` e aplica em tempo de execução:
+
+   ```bash
+   echo '{"jsonrpc":"2.0","id":1,"method":"daemon.reload",
+          "params":{"config_overrides":{"ps_button_action":"none"}}}' \
+     | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
+   ```
+
+   Overrides feitos assim são **transitórios**: valem até o daemon reiniciar.
+   Não há hoje persistência em disco para eles.
+
+Os nomes dos campos são os do `DaemonConfig` (`ps_button_action`,
+`ps_button_command`, `ps_long_press_ms`, …) — não os nomes de seção TOML que
+apareciam nas versões anteriores desta página.
+
 ## Botão PS isolado (FEAT-HOTKEY-STEAM-01)
 
 Quando `PS` é pressionado e solto sem que nenhum combo tenha disparado, o
-daemon executa a ação configurada em `[hotkey.ps_button]` do `daemon.toml`.
+daemon executa a ação de `ps_button_action`.
 
 ### Modos suportados
 
-```toml
-[hotkey.ps_button]
-# Valores: "steam" (padrão), "none", "custom"
-action = "steam"
-
-# Usado apenas quando action = "custom". Lista argv — nunca string shell.
-custom_command = []
-```
+`ps_button_action` aceita `"steam"` (padrão), `"none"` ou `"custom"`; com
+`"custom"`, `ps_button_command` é a lista argv a executar — nunca uma string de
+shell.
 
 - **`steam`** (padrão): abre a Steam se ela não estiver rodando;
   se estiver, foca a janela principal (`WM_CLASS = steam.Steam`).
@@ -43,7 +65,7 @@ custom_command = []
   execução em thread worker dedicada.
 - **`none`**: PS solo é ignorado (útil para quem quer preservar o botão
   home para outros usos via mapeamento externo).
-- **`custom`**: executa `ps_button_command` via `subprocess.Popen` com
+- **`custom`**: executa a lista `ps_button_command` via `subprocess.Popen` com
   `start_new_session=True` e stdio em `/dev/null`. Exemplo:
   `["xdg-open", "steam://open/bigpicture"]` abre o Big Picture Mode.
 
@@ -89,20 +111,24 @@ modo sem ninguém pedir. Hoje o padrão é `ps_long_press_ms = 0` — o gesto ve
 - O combo (PS + outro botão) dispara primeiro — long-press e PS solo ficam suprimidos.
 - O PS solo só dispara no release, e só se nenhum combo já tiver disparado.
 
-**Configuração:**
+**Configuração:** o limiar do long-press é `ps_long_press_ms` (ms). Padrão `0` =
+gesto desligado; valor maior que zero traz o gesto de volta, com o risco de
+acionamento acidental. É o único campo de hotkey com variável de ambiente
+própria:
 
-```toml
-[hotkey]
-# Threshold do long-press do PS (ms). Padrão 0 = gesto desligado.
-# Valor > 0 traz o gesto de volta, com o risco de acionamento acidental.
-ps_long_press_ms = 0
+```bash
+HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS=1000 \
+  systemctl --user restart hefesto-dualsense4unix.service
 ```
 
 **Estado do modo jogo via IPC** (útil para GUI/applet/CLI custom):
 
 ```bash
-# Consulta
-hefesto-dualsense4unix daemon status   # campo `emulation_suppressed` no JSON
+# Consulta — o campo `emulation_suppressed` vem do método IPC `daemon.status`.
+# Atenção: `hefesto-dualsense4unix daemon status` NÃO serve aqui — esse
+# subcomando imprime a saída do `systemctl --user`, não o JSON do daemon.
+echo '{"jsonrpc":"2.0","id":1,"method":"daemon.status","params":{}}' \
+  | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
 
 # Alternar (espelha o gesto)
 echo '{"jsonrpc":"2.0","id":1,"method":"daemon.emulation.suppress","params":{}}' \
@@ -123,7 +149,9 @@ restart do daemon.
   em menos de 150 ms sempre troca perfil, nunca abre a Steam.
 - O release do PS após um combo não dispara PS solo (suprimido internamente
   pelo `HotkeyManager`).
-- Para desativar temporariamente o PS solo, use `action = "none"` e recarregue
-  o daemon com `hefesto-dualsense4unix daemon reload` (V1.2+).
-- O combo PS + Options é independente do `action` configurado para o PS solo —
-  ele funciona mesmo com `action = "none"`.
+- Para desativar temporariamente o PS solo, mande
+  `{"ps_button_action":"none"}` em `config_overrides` do `daemon.reload` (ver a
+  primeira seção). **Não existe** `hefesto-dualsense4unix daemon reload` na
+  linha de comando — só o método IPC.
+- O combo PS + Options é independente da ação configurada para o PS solo — ele
+  funciona mesmo com `ps_button_action = "none"`.

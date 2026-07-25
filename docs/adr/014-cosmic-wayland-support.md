@@ -53,10 +53,14 @@ implementada em camadas:
 Se nenhuma biblioteca estiver disponível, retorna `None` sem erro. A dependência
 é **opcional** — não incluída em `pyproject.toml` como dep obrigatória.
 
-### Camada 3 — Applet nativo COSMIC (fora de escopo desta sprint)
+### Camada 3 — Applet nativo COSMIC
 
 Crate Rust `cosmic-applet-hefesto-dualsense4unix` para integração nativa com o painel COSMIC.
-Sprint futura em V3.4 (`FEAT-COSMIC-APPLET-RUST-01`).
+
+> **Entregue.** Era "sprint futura em V3.4" quando esta ADR foi escrita; o applet
+> existe em `packaging/cosmic-applet/` e o `install.sh` o compila e instala por
+> **padrão em sessões COSMIC** (`--enable-cosmic-applet` força fora do COSMIC,
+> `--no-cosmic-applet` desliga). Verificado em 25/07/2026.
 
 ### Camada 2.1 — Cascade portal → wlrctl (v3.1.0)
 

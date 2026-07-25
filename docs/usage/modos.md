@@ -45,7 +45,9 @@ Com dois ou mais controles no modo "Jogar pelo Hefesto", cada controle vira um
 jogador: um controle virtual por pessoa, LED de jogador de 1 a 4, numeração
 estável por endereço MAC (replugar recupera o mesmo número).
 
-Controles externos (Nintendo Pro, 8BitDo em modo Switch) entram na contagem como
+Controles externos (Nintendo Pro; 8BitDo em modo Switch no cabo ou em modo
+DirectInput/PS4 por Bluetooth — ver
+[`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md)) entram na contagem como
 jogadores e recebem número de LED próprio, acima da faixa reservada aos DualSense.
 
 Uma função continua sendo exclusiva do jogador 1: o **botão de microfone**. Ele é

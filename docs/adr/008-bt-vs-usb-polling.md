@@ -20,3 +20,10 @@ frequências alvo, controle físico, gerado por `scripts/benchmark_polling.py`).
 
 ## Consequências
 BT vê latência 16–32ms maior — aceitável para gatilhos, não para competitivo. `poll_hz` é configurável em `daemon.toml` se alguém reclamar. Event bus não é inundado em USB (battery reportada a cada 16ms sem debounce = spam).
+
+## Nota de verificação — 2026-07-25
+
+`poll_hz` **é** configurável, mas não por `daemon.toml` — esse arquivo não é
+lido pelo daemon. A chave real é a variável de ambiente
+`HEFESTO_DUALSENSE4UNIX_POLL_HZ`, lida em `daemon/main.py` na subida (ou o
+parâmetro `poll_hz` do `run_daemon`).

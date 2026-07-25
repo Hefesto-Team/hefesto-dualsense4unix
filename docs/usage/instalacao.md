@@ -26,8 +26,15 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 
 ## Do código-fonte
 
+A alfa 0.1.1 vive na branch `sprint/harmonia-uhid` do fork
+`[REDACTED]/hefesto-dualsense4unix`. O `main` do repositório de origem
+(`AndreBFarias/hefesto-dualsense4unix`) está na v3.0.0, de abril de 2026, e
+**não** contém o que esta página descreve — ver a caixa "Onde esta versão mora"
+no [`README.md`](../../README.md).
+
 ```bash
-git clone https://github.com/AndreBFarias/hefesto-dualsense4unix.git
+git clone -b sprint/harmonia-uhid \
+  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
 ./install.sh
 ```
@@ -45,7 +52,7 @@ Flags úteis:
 | `--format=native\|flatpak\|appimage\|deb` | pula o seletor |
 | `--force-xwayland` | grava `GDK_BACKEND=x11` no `.desktop` — recomendado em COSMIC |
 | `--no-udev` | pula as regras udev **e todos os passos que escrevem em `/etc`** |
-| `--no-dkms` | não instala os dois módulos de kernel |
+| `--no-dkms` | não instala os três módulos de kernel |
 | `--no-systemd` | não instala a unit do daemon |
 | `--no-proton-pin` | não trava a versão de Proton dos jogos |
 | `--keep-steam-input` | preserva o Steam Input (o padrão é desligá-lo) |
@@ -65,24 +72,31 @@ seu `$HOME`, com os padrões de fábrica:
 
 | Caminho | O que é |
 |---|---|
-| `/etc/udev/rules.d/` | 13 regras (permissão, autosuspend, LEDs, touchpad, motion, energia do USB) |
+| `/etc/udev/rules.d/` | 14 regras (permissão, autosuspend, LEDs, touchpad, motion, energia do USB, sniff e variante dos Nintendo-class, snapshot de bonds). Uma 15ª, a `75` que desliga o áudio USB do controle, só entra com `--disable-usb-audio` |
 | `/etc/modules-load.d/hefesto-dualsense4unix.conf` | carrega `uinput` e `uhid` no boot |
 | `/etc/modprobe.d/hefesto-dualsense-storm.conf` | a cura do travamento do USB (mantém mic e fone do controle) |
 | `/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf` | evita o adaptador BT dormir no meio do jogo |
 | `/etc/modprobe.d/hefesto-hid-nintendo.conf` | parâmetros do módulo de controles Nintendo-class |
+| `/etc/modprobe.d/hefesto-hid-playstation.conf` | parâmetros do módulo do DualSense (retry dos feature reports da probe) |
 | `/etc/bluetooth/main.conf.d/` | dois drop-ins do BlueZ (conexão rápida, re-pareamento) |
 | `/etc/systemd/system/` | broker de hidraw, agente Bluetooth, 2 timers de resiliência BT, drop-in do `bluetooth.service` |
 | `/usr/local/lib/hefesto-dualsense4unix/` | binário do broker + scripts de manutenção Bluetooth |
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
 | cmdline do kernel | `usbcore.autosuspend=-1` via kernelstub ou grub |
-| **DKMS** | `hefesto-hid-nintendo` e `hefesto-rtw88-usb` — dois módulos fora da árvore |
+| **DKMS** | `hefesto-hid-nintendo`, `hefesto-hid-playstation` e `hefesto-rtw88-usb` — três módulos fora da árvore |
 | configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado) |
 
-Sobre os dois módulos DKMS: eles **não apagam** os módulos originais do kernel —
+Sobre os três módulos DKMS: eles **não apagam** os módulos originais do kernel —
 entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug. Se
 o `dkms` ou os headers do kernel faltarem, ou se a compilação falhar, o instalador
 avisa e continua; o kernel segue com os módulos de fábrica. Para não instalá-los,
-use `--no-dkms`.
+use `--no-dkms` (a flag cobre os três de uma vez).
+
+O `hefesto-hid-playstation` existe por causa de um caso medido em julho de 2026:
+com dois DualSense pareando com cerca de um segundo de diferença, o segundo
+perdia o canal de controle L2CAP, o `GET_REPORT` estourava o tempo no BlueZ e o
+controle inteiro se perdia. O patch faz o driver repetir os feature reports que
+expiram durante a probe. Detalhe em `assets/dkms/hid-playstation/README.md`.
 
 O `hefesto-rtw88-usb` mexe no driver de um **dongle WiFi RTL8822BU** — ele existe
 porque esse dongle específico derrubava o Bluetooth do controle. Se você não tem

@@ -1,7 +1,15 @@
 # Solução de problemas
 
-Cobre os 10 problemas mais comuns relatados. Cada seção tem **sintoma**,
-**diagnóstico** (comandos para confirmar a causa) e **fix**.
+Cada seção tem **sintoma**, **diagnóstico** (comandos para confirmar a causa) e
+**fix**.
+
+> **Sobre os números de versão citados aqui.** Várias seções dizem "corrigido em
+> v3.8.1", "desde v3.2.0" e afins. Essa é a numeração **antiga**: em 24/07/2026
+> o projeto recomeçou em 0.1.0 para o primeiro lançamento público em alfa, e as
+> versões 0.1.0…4.0.0 anteriores foram desenvolvimento interno (ver
+> [CHANGELOG](../../CHANGELOG.md)). Se você está na 0.1.x, **todas** essas
+> correções já estão no seu código — as referências ficam porque explicam *o
+> que* era o bug, que é o que importa quando o sintoma reaparece.
 
 Para problemas não cobertos aqui, abra issue com a label `bug` no repositório
 ([AndreBFarias/hefesto-dualsense4unix](https://github.com/AndreBFarias/hefesto-dualsense4unix/issues))
@@ -58,8 +66,9 @@ groups $USER | grep -E 'input|plugdev'  # opcional, ACL via udev tag uaccess é 
    flatpak run --command=install-host-udev.sh br.andrefarias.Hefesto
    ```
 
-   Todos aplicam o mesmo conjunto canônico de 5 regras + uinput
-   modules-load (origem única em `assets/`). Após rodar, desplugue e
+   Todos aplicam o mesmo conjunto canônico — **14 regras** por padrão (mais a
+   `75`, que só entra com `--disable-usb-audio`) + o `modules-load` de
+   `uinput`/`uhid`, com origem única em `assets/`. Após rodar, desplugue e
    replugue o controle (USB) ou re-pareie (BT).
 
 2. **systemd-logind ausente** (Alpine/Void/Artix/Gentoo sem systemd): o
@@ -119,7 +128,10 @@ busctl --user list | grep -i StatusNotifierWatcher  # provavelmente vazio
    ```
 2. **Habilitar cosmic-applets de status**: aguardando lançamento do
    `cosmic-applet-status-area` no Pop!_OS estável. O projeto já traz um applet
-   COSMIC nativo em Rust (`packaging/cosmic-applet/`), instalado por padrão.
+   COSMIC nativo em Rust (`packaging/cosmic-applet/`), instalado por padrão
+   **em sessões COSMIC** (fora do COSMIC, só com `--enable-cosmic-applet`;
+   `--no-cosmic-applet` desliga). Se `cargo`/`just` faltarem, o instalador
+   avisa e segue sem o applet.
 3. **Desativar janela compacta** se preferir só GUI principal:
    `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0 hefesto-dualsense4unix-gui`.
 
@@ -229,10 +241,18 @@ journalctl --user -u hefesto-dualsense4unix.service | grep autoswitch | tail -10
    escolha. Espere ou troque para `fallback` para destravar.
 2. **X11 sem python-xlib**: `pip install --user python-xlib` se via
    fonte. Em `.deb` já vem como Recommends.
-3. **Wayland sem portal nem wlrctl**: `sudo apt install wlrctl` (Wayland
-   compositors com wlr-foreign-toplevel-management). No COSMIC, o portal
-   ainda não expõe a API; cascade cai em wlrctl. Veja
-   [ADR-014](../adr/014-cosmic-wayland-support.md).
+3. **Wayland sem portal nem wlrctl**: `sudo apt install wlrctl` resolve nos
+   compositores que implementam `wlr-foreign-toplevel-management` (Sway,
+   River, Wayfire).
+
+   **No COSMIC isso não resolve.** O `cosmic-comp` não implementa esse
+   protocolo — `wlrctl toplevel list --json` volta vazio — e o portal
+   `GetActiveWindow` também não está disponível. No COSMIC o autoswitch
+   funciona pelo **XWayland** (que é o padrão), via `XlibBackend`; para
+   janelas Wayland nativas ele não vê nada e você troca de perfil pela
+   janela, pela CLI ou pelo combo no controle. Veja
+   [ADR-014](../adr/014-cosmic-wayland-support.md) e
+   [`cosmic.md`](cosmic.md).
 
 ---
 
@@ -255,7 +275,7 @@ python3 -c "import pydantic; print(pydantic.VERSION)"
 
 ```bash
 pip install --user 'pydantic>=2'
-sudo apt install ./hefesto-dualsense4unix_3.3.0_amd64.deb
+sudo apt install ./dist/hefesto-dualsense4unix_<versão>_amd64_<pytag>.deb
 ```
 
 O `.deb` empacota um virtualenv com pydantic 2.x em
@@ -307,7 +327,7 @@ antiga — atualize via:
 
 ```bash
 # .deb
-sudo apt install --reinstall ./hefesto-dualsense4unix_3.3.0_amd64.deb
+sudo apt install --reinstall ./dist/hefesto-dualsense4unix_<versão>_amd64_<pytag>.deb
 
 # Flatpak
 flatpak update br.andrefarias.Hefesto
@@ -453,8 +473,8 @@ para manter o `timeout_add` vivo, e `GLib.idle_add(fn)` **reagenda `fn` enquanto
 **Verificação (precisa `py-spy` no venv):**
 
 ```bash
-.venv/bin/pip install py-spy
-sudo .venv/bin/py-spy dump --pid <PID_DA_GUI>
+venv/bin/pip install py-spy
+sudo venv/bin/py-spy dump --pid <PID_DA_GUI>
 # Se a MainThread mostrar call_async → _tick_live_state → main loop GTK em loop apertado,
 # é esse bug.
 ```
@@ -518,7 +538,7 @@ journalctl --user -u hefesto-dualsense4unix.service -n 30 --no-pager 2>/dev/null
 
 ---
 
-## 12. Steam Input intercepta o DualSense (touchpad vira mouse, mic spam, botões em janela em background)
+## 15. Steam Input intercepta o DualSense (touchpad vira mouse, mic spam, botões em janela em background)
 
 **Sintomas** (USB ou BT, com Steam rodando OU acabou de fechar):
 
@@ -592,9 +612,13 @@ adição mínima — mas resolve o sintoma sem reinstalar o daemon.
 - [README principal](../../README.md) — instalação e uso
 - [Quickstart](quickstart.md) — primeiros passos
 - [A janela, aba por aba](interface.md) — o que cada aba faz
-- [8BitDo SN30 Pro](troubleshooting-8bitdo.md) — modos, identificação e a morte por Bluetooth (controle não gerenciado pelo hefesto)
+- [8BitDo SN30 Pro](troubleshooting-8bitdo.md) — modos, identificação e qual usar
+  por Bluetooth (DirectInput/PS4) contra qual usar no cabo (Switch). Controle não
+  gerenciado pelo hefesto.
 - [ADR-014](../adr/014-cosmic-wayland-support.md) — decisão técnica COSMIC/Wayland
 - [CHANGELOG](../../CHANGELOG.md) — histórico completo
 
 O diário de descobertas e o roadmap interno ficam no arquivo de processo, fora
-da `main` (`git show arquivo/processo-pre-1.0:docs/process/ROADMAP.md`).
+da `main` (`git show arquivo/processo-pre-1.0:docs/process/ROADMAP.md`). Essa
+tag só existe no fork — se o comando acima disser "unknown revision", veja como
+buscá-la na seção final do [`README.md`](../../README.md).

@@ -213,6 +213,13 @@ install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     "${STAGING}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf"
 install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-nintendo.conf"
+# Contenção BT (2026-07-25): opções do hid-playstation patchado (feature_retries=2). Mesmos DOIS destinos e mesmo
+# fail-safe da Onda T: sem o módulo DKMS o in-tree só loga "unknown parameter
+# ignored" e sobe normal, então a conf viaja em todo formato (paridade).
+install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+    "${STAGING}/usr/lib/modprobe.d/hefesto-hid-playstation.conf"
+install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/modprobe.d/hefesto-hid-playstation.conf"
 # Onda T (corretor, achado #9): a conf acima é INERTE sem o MÓDULO DKMS — e o
 # módulo só nasce do source + dkms_lib.sh. Empacota os dois para o
 # install-host-udev.sh (o passo pós-instalação que o postinst documenta)
@@ -224,6 +231,11 @@ install -Dm644 scripts/dkms_lib.sh \
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo"
 cp -a assets/dkms/hid-nintendo/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-nintendo/"
+# Contenção BT (2026-07-25): fontes do hid-playstation patchado (retry de
+# feature report na probe) — mesma paridade da Onda T/W.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation"
+cp -a assets/dkms/hid-playstation/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/"
 # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
 # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
 # Onda T: as fontes viajam no pacote e o install-host-udev.sh (que o

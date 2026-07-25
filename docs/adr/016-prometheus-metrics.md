@@ -135,3 +135,18 @@ ataque desnecessária. Reverse proxy (nginx, caddy) é o caminho para scraping r
 - `src/hefesto/daemon/subsystems/metrics.py`
 - `docs/usage/metrics.md`
 - Sprint FEAT-METRICS-01
+
+## Nota de verificação — 2026-07-25
+
+A decisão diz "opt-in via config ou env". **Nenhuma das duas existe.** Não há
+variável de ambiente de métricas no código (`HEFESTO_DUALSENSE4UNIX_METRICS`
+tem zero ocorrências em `src/`), e o daemon não lê arquivo de configuração. O
+`DaemonConfig` é construído com três parâmetros (`poll_hz`, `auto_reconnect`,
+`ps_long_press_ms`), então `metrics_enabled` fica preso no default `False`. O
+`MetricsSubsystem` só é instanciado na sequência de start, e o `reload_config`
+não o reinicia — logo nem o `daemon.reload` via IPC liga o endpoint num daemon
+já rodando.
+
+Consequência prática: hoje o endpoint só sobe mexendo no código. O item
+"histograma de latência por tick, previsto para V2.1" também não foi feito, e
+não há trabalho em andamento. Detalhe em `docs/usage/metrics.md`.

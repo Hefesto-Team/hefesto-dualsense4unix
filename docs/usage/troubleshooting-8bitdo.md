@@ -1,10 +1,20 @@
 # 8BitDo SN30 Pro — modos, identificação e a morte por Bluetooth
 
 Uma página só, sobre UM controle: o 8BitDo SN30 Pro que convive com os DualSense
-nesta máquina. O hefesto **não gerencia** esse controle — o daemon só abre
-DualSense (filtro Sony `054c` no discovery) e é incapaz de tocar um device
-Nintendo (`057e`). Esta página existe porque o controle divide a máquina com o
-daemon e o `scripts/doctor.sh` sabe reconhecer a assinatura de morte dele.
+nesta máquina. O hefesto **não gerencia** esse controle em modo nenhum — ele
+entra na lista de **externos** (read-only), nunca é adotado.
+
+O filtro do discovery é por **VID *e* PID**, não só por fabricante:
+`DUALSENSE_VENDOR = 0x054C` com `DUALSENSE_PIDS = {0x0CE6, 0x0DF2}`
+(`core/evdev_reader.py:28-29`) — DualSense e DualSense Edge, e só. Isso importa
+desde 25/07: em **modo DirectInput/PS4 o 8BitDo é `054c:05c4`**, ou seja, tem o
+VID da Sony e mesmo assim **não** é adotado, porque `05c4` (DualShock 4) não está
+na lista. Verificado ao vivo: com os 4 controles conectados, o
+`controller.list {"external": true}` traz o 8BitDo, e o `controller.list` (os
+adotados) não.
+
+Esta página existe porque o controle divide a máquina com o daemon e o
+`scripts/doctor.sh` sabe reconhecer a assinatura de morte dele.
 
 Cada afirmação abaixo carrega o seu nível de prova: **PROVADO** (medido nesta
 máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
@@ -16,6 +26,7 @@ máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
 
 | Modo do controle | Identidade no kernel | Driver | Gyro | Nível de prova |
 |---|---|---|---|---|
+| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | ⭐ **PROVADO estável** (2026-07-25 — a via boa por Bluetooth) |
 | Switch **por cabo** | `057e:2009` (bus `0003`) | `hid-nintendo` | sim¹ | **PROVADO estável** (instância USB sem um único timeout) |
 | Switch por Bluetooth | `057e:2009` (bus `0005`) | `hid-nintendo` | sim¹ | **PROVADO instável** (mortes medidas em 2026-07-16, com e sem Steam) |
 | X-input **por cabo** | `045e:028e` | `xpad` | não² | Xbox 360 real; estabilidade esperada, não medida |
@@ -25,10 +36,88 @@ máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
 `Pro Controller (IMU)` com `ID_INPUT_ACCELEROMETER=1`) — mas só chega ao
 **jogo** com Steam Input ativo; veja o conflito com o guard abaixo.
 ² Limitação do protocolo XInput (não tem canal de motion), não do controle.
+³ Não verificado. O DualShock 4 real tem IMU; se o clone expõe a dele neste
+modo é **pergunta em aberto** — ninguém mediu.
 
-**A única configuração provadamente estável é modo Switch POR CABO.** Para
-entrar em X-input, liga-se o controle segurando `X+Start` (modo Switch:
-`Y+Start`, segundo o manual da 8BitDo).
+**Por Bluetooth, use o modo DirectInput/PS4.** Por cabo, o modo Switch é o
+provadamente estável. Para entrar em X-input, liga-se o controle segurando
+`X+Start` (modo Switch: `Y+Start`, segundo o manual da 8BitDo).
+
+---
+
+## ⭐ A cura do Bluetooth: trocar de modo, não consertar o driver (25/07/2026)
+
+Durante meses a conclusão registrada aqui foi *"por Bluetooth ele morre; o cabo
+é a via"*, e a caçada toda — patch DKMS, `bt_probe_retries`, análise do
+handshake USB — partia do pressuposto de que ele **tinha** que funcionar em modo
+Switch. Nesse modo ele se apresenta como `057e:2009`, cai no `hid-nintendo`, e
+morre.
+
+O pressuposto era o erro. **Em modo DirectInput/PS4 o controle vira um device
+Sony, o `hid-playstation` assume, e ele conecta de primeira.** Medido:
+
+```
+antes (modo Switch):   057e:2009  ->  driver nintendo    ->  morria no probe
+agora (modo PS4):      054c:05c4  ->  driver playstation ->  subiu direto
+```
+
+Placar do teste ao vivo, quatro controles por Bluetooth **ao mesmo tempo**, um
+por jogador — o cenário que o projeto persegue:
+
+```
+DualSense #1   14:3a:9a:...   event256  js3   slot 1
+DualSense #2   a0:fa:9c:...   event260  js0   slot 2
+Nintendo Pro   e0:f6:b5:...   event2     -    slot 3   (Switch por BT, driver nintendo)
+8BitDo Pro     e4:17:d8:...   event259  js8   slot 4   (PS4 por BT, driver playstation)
+```
+
+###  O MAC MUDA com o modo — e isso tem consequência
+
+O mesmo controle físico usa **endereços Bluetooth diferentes em cada modo**
+(medido: `...:1c:66:1a` em Switch, `...:1c:99:83` em PS4 — mesmo OUI `E4:17:D8`).
+Consequências práticas:
+
+- **São dois pareamentos distintos.** Trocar de modo não reaproveita o bond:
+  é preciso parear de novo, e o bond do outro modo continua no BlueZ.
+- **O hefesto registra os dois como controles diferentes.** No teste, o 8BitDo
+  em PS4 entrou no **slot 5** porque a identidade do modo Switch ainda ocupava o
+  4. Curou com `identity.renumber` (o botão **"Renumerar agora"** da aba Início),
+  mas a identidade fantasma do outro modo segue no `controllers.json`.
+
+### O que este modo custa
+
+O `hid-playstation` trata o controle como DualShock 4: **não há LEDs de player**
+(o DS4 usa a lightbar colorida). No teste, ele foi o único dos quatro sem LED de
+jogador aceso. Quem depende do LED para saber quem é quem perde essa pista.
+
+---
+
+##  Bond apagado sem crash: `Host is down (112)` (25/07/2026)
+
+O projeto já documenta a perda de bonds por **crash do `bluetoothd`**. Este é um
+modo **diferente**, medido no mesmo dia, e com o serviço vivo o tempo todo
+(`systemctl show bluetooth -p NRestarts` = **0**):
+
+```
+src/device.c:search_cb() E4:17:D8:00:00:1A: error updating services: Host is down (112)
+```
+
+Repetido de 12:14 a 12:21; no fim, o diretório do device tinha sumido de
+`/var/lib/bluetooth/<adaptador>/`.
+
+**O gatilho é corriqueiro:** o controle estava **pareado por Bluetooth e em uso
+pelo cabo**. Com o rádio dele desligado, o BlueZ insistiu em resolver os
+serviços, colecionou "Host is down" e removeu o device.
+
+Se acontecer, há duas saídas:
+
+1. **Re-parear do zero** (mais limpo, sem risco): botão de sync + o agente do
+   hefesto (`hefesto-bt-agent.service`) pareia sozinho.
+2. **Restaurar o snapshot**: `sudo scripts/bt_bonds_restore.sh --list` e depois
+   `--latest` ou o timestamp.  O restore **para o `bluetooth.service`** (derruba
+   quem está conectado) e, se o controle já rotacionou a própria chave, a
+   LinkKey antiga é rejeitada — loop de autenticação, que é a classe de gatilho
+   do crash de heap. Por isso o script é manual e o doctor só **sugere**.
 
 ---
 
@@ -73,6 +162,12 @@ isso. É contexto, não defeito a consertar.
 ---
 
 ## A morte por Bluetooth (o controle "morre sem desconectar")
+
+> **Esta seção descreve o modo SWITCH por Bluetooth — que continua sem cura.**
+> A saída não é consertar este caminho: é **usar o modo DirectInput/PS4**, onde
+> o controle nem chega perto do `hid-nintendo`. Veja
+> [A cura do Bluetooth](#-a-cura-do-bluetooth-trocar-de-modo-não-consertar-o-driver-25072026).
+> O que segue continua valendo como diagnóstico de quem insistir no modo Switch.
 
 **PROVADO**: por Bluetooth, em modo Switch, o firmware clone engasga com o
 protocolo de subcommands do `hid-nintendo`; o driver estoura o rate-limiter e
