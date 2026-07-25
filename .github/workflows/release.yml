@@ -43,14 +43,18 @@ jobs:
           # typelibs resolve melhor do que pular: em vez de fingir que os
           # testes de interface rodaram, eles rodam de verdade.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
-              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0
+              libgirepository1.0-dev libcairo2-dev gir1.2-gtk-3.0 xvfb
       - name: Verificar anonimato
         run: bash scripts/check_anonymity.sh
       - name: Instalar e testar
         run: |
           pip install -e ".[dev]" "PyGObject<3.51" pycairo
           ruff check src/ tests/
-          pytest tests/unit -v
+          # CI-SMOKE-SEGFAULT-SEM-DISPLAY-01: com as typelibs instaladas os
+          # testes de interface deixam de pular e rodam GTK DE VERDADE — que
+          # aborta sem display (exit 133/139). O Xvfb dá o display; sem ele a
+          # escolha seria voltar a pular, isto é, a não testar a interface.
+          xvfb-run -a pytest tests/unit -v
       - name: Build wheel + sdist
         run: |
           pip install build twine
