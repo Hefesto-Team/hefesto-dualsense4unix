@@ -12,3 +12,50 @@ Regras udev derivadas do projeto pydualsense (https://github.com/flok/pydualsens
 licenciado sob MIT License. Adaptações: adição do DualSense Edge (VID/PID
 054c:0df2) e substituição de MODE=0666 por MODE=0660 + TAG+="uaccess" para
 integração com systemd-logind.
+
+---
+
+O QUE ESTE PROJETO DELIBERADAMENTE **NÃO** INCORPOROU
+=====================================================
+
+Esta seção registra material de terceiros que foi encontrado, avaliado e
+**recusado**. Ela existe porque a ausência de uma decisão é indistinguível de
+descuido: sem registro, um projeto que não copiou fica na posição impossível de
+ter que provar uma negativa.
+
+Curvas de força dos modos "prontos" de gatilho do DSX
+-----------------------------------------------------
+
+**Status: NÃO incorporado. Decidido em 2026-07-25.**
+
+O protocolo do DualSenseX (DSX) define doze modos de gatilho identificados por
+nome — `Hard`, `Soft`, `Choppy`, `GameCube` e outros — cujo efeito depende de
+tabelas de bytes fixas, sem parâmetros. Elas foram localizadas transcritas no
+repositório `WujekFoliarz/DualSenseY-v2`, e copiá-las seria trabalho de minutos.
+
+Não foram copiadas porque aquele repositório **não declara licença alguma**:
+`"license": null` na API do GitHub, sem arquivo LICENSE, sem menção no README.
+Obra publicada sem licença permanece com todos os direitos reservados ao autor
+— publicar em uma plataforma pública não concede permissão de cópia. Não há,
+portanto, caminho lícito a partir daquele material.
+
+O que o Hefesto **usa** do ecossistema DSX, e por que é diferente:
+
+  - os ORDINAIS do enum de instruções (`TriggerThreshold = 4` e demais) são
+    fatos de interoperabilidade, necessários para que o servidor UDP entenda
+    pacotes de mods existentes. Foram conferidos em quatro implementações
+    independentes justamente porque divergem entre si, e a divergência está
+    documentada em docs/protocol/udp-schema.md;
+  - o FORMATO do report de saída do controle é do hardware da Sony, não de
+    nenhum desses projetos.
+
+Nenhum dos dois é código de terceiro. As curvas, sim, seriam.
+
+Consequência assumida: os doze modos "prontos" do DSX **não funcionam** no
+Hefesto. Isso está declarado no README e em docs/protocol/udp-schema.md, sem
+eufemismo. Um mod que chame `Instruction.Hard()` não produz efeito.
+
+O caminho escolhido para fechar essa lacuna é a criação de efeitos **próprios**,
+medidos no hardware, sob processo de sala limpa descrito em
+docs/process/CLEAN-ROOM.md. Os efeitos resultantes têm nomes próprios e
+proveniência registrada em docs/protocol/curvas-proprias.md.
