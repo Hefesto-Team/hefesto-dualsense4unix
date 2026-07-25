@@ -1,5 +1,9 @@
 # Os três modos do controle
 
+> **Qual máscara para qual jogo?** A lista de compatibilidade, com o que foi
+> medido em cada título, está em [jogos-e-mascaras.md](jogos-e-mascaras.md) —
+> é a fonte da verdade sobre jogos específicos.
+
 A aba **Início** tem um seletor chamado *"O que o controle faz agora"*. Ele decide
 quem fala com o DualSense. Escolher errado é a origem da maior parte dos
 "não funciona": o controle está no modo de mesa e o jogo não o vê, ou está solto
