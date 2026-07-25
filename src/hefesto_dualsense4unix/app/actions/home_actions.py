@@ -116,6 +116,30 @@ _BTN_LABEL_ONLINE = "Desligar Hefesto (voltar ao Linux puro)"
 _BTN_LABEL_OFFLINE = "Ligar o Hefesto"
 
 
+def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
+    """Frase do cadeado da troca de perfil — função PURA (UX-05).
+
+    Vazia quando destravado (nada a explicar: é o comportamento normal). Com o
+    cadeado ligado, diz as duas metades da política LOCK-CEDE-01, porque as
+    duas surpreendem quem só vê o efeito:
+
+    1. o que ela pediu — o perfil escolhido FICA, nada troca por janela;
+    2. o que continua valendo — o jogo que TEM perfil próprio ainda entra
+       (senão "o modo jogo não ativa" volta a ser um mistério sem causa).
+
+    O nome do perfil ativo entra quando o daemon o reporta: "o perfil não troca
+    sozinho" sem dizer QUAL perfil ficou é meia informação.
+    """
+    if not state or not state.get("autoswitch_locked"):
+        return ""
+    ativo = state.get("active_profile")
+    alvo = f" — vale o perfil “{ativo}”" if isinstance(ativo, str) and ativo else ""
+    return (
+        f"Cadeado ligado: o perfil não troca sozinho{alvo}. "
+        "Jogos com perfil próprio ainda entram; qualquer outra janela é ignorada."
+    )
+
+
 def _mode_label(mode_id: object) -> str:
     """Rótulo do modo como a usuária o lê no botão (LEIGO-02) — função pura.
 
@@ -455,6 +479,24 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_autoswitch_lock = lock_check
         mode_box.pack_start(lock_check, False, False, 0)
 
+        # UX-05 (auditoria 24/07): o cadeado tinha EFEITO visível e CAUSA
+        # invisível. Na máquina dela a flag estava ligada desde 24/07 20:42 e o
+        # que ela via era "o modo jogo não ativa" — o marcador do checkbox é uma
+        # caixinha de 16 px que ninguém relê depois de marcar. Esta linha diz,
+        # em texto, o que está acontecendo AGORA e o que continua acontecendo
+        # (a exceção da regra de jogo, LOCK-CEDE-01), preenchida no
+        # `_render_home` a partir do estado do daemon; some quando destravado.
+        lock_hint = Gtk.Label(label="")
+        lock_hint.set_xalign(0.0)
+        lock_hint.set_line_wrap(True)
+        lock_hint.get_style_context().add_class("dim-label")
+        # Mesmo desenho dos banners de vpad/wrapper: `no_show_all` para o
+        # `show_all()` do build não desfazer o estado que o `_render_home` manda.
+        lock_hint.set_no_show_all(True)
+        lock_hint.set_visible(False)
+        self._home_autoswitch_lock_hint = lock_hint
+        mode_box.pack_start(lock_hint, False, False, 0)
+
         frame_mode.add(mode_box)
         box.pack_start(frame_mode, False, False, 0)
 
@@ -602,6 +644,12 @@ class HomeActionsMixin(WidgetAccessMixin):
                 _lock = getattr(self, "_home_autoswitch_lock", None)
                 if _lock is not None:
                     _lock.set_sensitive(False)
+                # UX-05: idem para a frase — offline não é "destravado", é
+                # "não sei"; afirmar qualquer das duas coisas seria mentira.
+                _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
+                if _lock_hint is not None:
+                    _lock_hint.set_text("")
+                    _lock_hint.set_visible(False)
                 return
             assert state is not None
             selector.set_sensitive(True)
@@ -612,6 +660,12 @@ class HomeActionsMixin(WidgetAccessMixin):
             if _lock is not None:
                 _lock.set_sensitive(True)
                 _lock.set_active(bool(state.get("autoswitch_locked", False)))
+            # UX-05: a CAUSA fica visível junto do efeito, em texto.
+            _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
+            if _lock_hint is not None:
+                aviso_lock = autoswitch_lock_text(state)
+                _lock_hint.set_text(aviso_lock)
+                _lock_hint.set_visible(bool(aviso_lock))
             self._home_session_label.set_text("")
             # ONDA-U (U1): online devolve o botão único ao estado "Desligar".
             self._home_offline = False

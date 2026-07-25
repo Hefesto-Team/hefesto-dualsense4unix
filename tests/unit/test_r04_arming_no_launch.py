@@ -42,18 +42,22 @@ def _marker(tmp_path: Path, *, appid: int, epoch: int) -> Path:
     return tmp_path
 
 
-def _perfil(flavor: str = "dualsense") -> Profile:
+def _perfil(flavor: str = "dualsense", *, suprime: bool = False) -> Profile:
     return Profile(
         name="sackboy_nativo",
         match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
         priority=80,
         mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=flavor, coop=True),
+        suppress_desktop_emulation=suprime,
     )
 
 
 class _DaemonFalso:
     def __init__(self) -> None:
         self.aplicados: list[tuple[Any, Any, str]] = []
+        # ALLOWLIST-SUPRESSAO-01: a supressão é uma lane SEPARADA da máscara —
+        # é justamente a distinção que o `arm_launch_profile` não fazia.
+        self.suprimidos: list[tuple[bool, Any, str]] = []
         self.config = SimpleNamespace(
             gamepad_emulation_enabled=True, gamepad_flavor="xbox"
         )
@@ -68,6 +72,12 @@ class _DaemonFalso:
         self, mode: Any, *, profile: Any = None, origin: str = "autoswitch"
     ) -> str:
         self.aplicados.append((mode, profile, origin))
+        return "aplicado"
+
+    def apply_profile_suppression(
+        self, desired: bool, *, profile: Any = None, origin: str = "autoswitch"
+    ) -> str:
+        self.suprimidos.append((desired, profile, origin))
         return "aplicado"
 
 
@@ -195,6 +205,112 @@ class TestArmingPeloMarker:
         assert resultado is not None
         assert resultado["motivo"] == "allowlist_steam_input"
         assert daemon.aplicados == []
+
+
+class TestAllowlistPulaSoAMascara:
+    """ALLOWLIST-SUPRESSAO-01 (auditoria 24/07).
+
+    O `return` antecipado da allowlist vinha ANTES de olhar o perfil, então o
+    `suppress_desktop_emulation` — o "modo jogo", que só PARA o mouse/teclado
+    emulados do desktop — nunca era aplicado nesses appids. Foi um dos três
+    bloqueios do sintoma "modo jogo não ativa" no Mullet Mad Jack.
+
+    A allowlist existe para o Hefesto não ROUBAR o controle (máscara/grab/vpad);
+    parar de mexer o cursor enquanto ela joga não disputa nada com o jogo. Logo:
+    a allowlist pula a seção `mode` e SÓ ela.
+    """
+
+    def test_allowlist_aplica_a_supressao_do_perfil(
+        self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _marker(env_dir, appid=2111190, epoch=1000)
+        perfil = _perfil(suprime=True)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(2111190, perfil)])
+        daemon = _DaemonFalso()
+
+        resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
+
+        assert resultado is not None
+        assert resultado["motivo"] == "allowlist_steam_input"
+        # A MÁSCARA continua fora (é o que a allowlist promete)...
+        assert daemon.aplicados == []
+        # ...mas o modo jogo do perfil vale.
+        assert daemon.suprimidos == [(True, perfil, "launch")]
+
+    def test_supressao_vai_com_origin_launch(
+        self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`origin="launch"` NÃO fura o lock manual (R-03): se ela alternou o
+        modo jogo na mão nos últimos 30 s, o gesto dela é mais novo."""
+        _marker(env_dir, appid=APPID, epoch=1000)
+        perfil = _perfil(suprime=True)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, perfil)])
+        daemon = _DaemonFalso()
+
+        le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
+
+        assert daemon.suprimidos == [(True, perfil, "launch")]
+        assert daemon.aplicados and daemon.aplicados[0][2] == "launch"
+
+    def test_perfil_sem_modo_ainda_aplica_a_supressao(
+        self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Perfil só-de-cores com modo jogo ligado: nada a armar na máscara, mas
+        a supressão é opinião dele e vale."""
+        _marker(env_dir, appid=APPID, epoch=1000)
+        so_cores = Profile(
+            name="so_cores",
+            match=MatchCriteria(window_class=[f"steam_app_{APPID}"]),
+            priority=10,
+            suppress_desktop_emulation=True,
+        )
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, so_cores)])
+        daemon = _DaemonFalso()
+
+        resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
+
+        assert resultado is not None and resultado["motivo"] == "perfil_sem_modo"
+        assert daemon.suprimidos == [(True, so_cores, "launch")]
+
+    def test_jogo_da_allowlist_sem_perfil_nao_suprime(
+        self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem perfil não há opinião nenhuma a aplicar — nem máscara, nem
+        supressão (R-02: ausência não é ordem de reverter)."""
+        _marker(env_dir, appid=2111190, epoch=1000)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: {2111190})
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [])
+        daemon = _DaemonFalso()
+
+        resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
+
+        assert resultado is not None
+        assert resultado["motivo"] == "allowlist_steam_input"
+        assert daemon.suprimidos == []
+
+    def test_applier_que_explode_nao_derruba_o_arming(
+        self, env_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A supressão é best-effort: falhar nela não pode custar a máscara do
+        perfil (o arming roda no poll loop do daemon)."""
+        _marker(env_dir, appid=APPID, epoch=1000)
+        perfil = _perfil(suprime=True)
+        monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+        monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, perfil)])
+        daemon = _DaemonFalso()
+
+        def _explode(*a: Any, **kw: Any) -> str:
+            raise RuntimeError("supressão quebrou")
+
+        daemon.apply_profile_suppression = _explode  # type: ignore[assignment]
+
+        resultado = le.arm_launch_profile(daemon, base_dir=env_dir, now=1001.0)
+
+        assert resultado is not None and resultado["armado"] is True
+        assert len(daemon.aplicados) == 1
 
 
 class TestFiacaoNoPollLoop:

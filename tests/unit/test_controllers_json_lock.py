@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     CONTROLLERS_FILE_LOCK,
+    CONTROLLERS_SCHEMA_VERSION,
     ControllerIdentityRegistry,
 )
 
@@ -245,6 +246,10 @@ class TestColisaoNoLoad:
         (tmp / "controllers.json").write_text(
             json.dumps(
                 {
+                    # R-23: é a VERSÃO que autoriza o load (o boot_id virou
+                    # anotação) — arquivo sem ela é de outra regra e é
+                    # descartado antes de qualquer cross-check.
+                    "version": CONTROLLERS_SCHEMA_VERSION,
                     "boot_id": BOOT,
                     "slots": {UNIQ_DS_A: 1},
                     "externals": {
@@ -331,6 +336,7 @@ class TestColisaoNoLoad:
         (isolated_config / "controllers.json").write_text(
             json.dumps(
                 {
+                    "version": CONTROLLERS_SCHEMA_VERSION,
                     "boot_id": BOOT,
                     "slots": {UNIQ_DS_A: 1},
                     "externals": {MAC_EXT_A: 2},

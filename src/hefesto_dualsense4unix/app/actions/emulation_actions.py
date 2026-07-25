@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import glob
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, ClassVar
@@ -34,9 +35,100 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_PRODUCT,
     XBOX360_VENDOR,
 )
+from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
+logger = get_logger(__name__)
+
 UINPUT_DEV = "/dev/uinput"
+
+# --- HONESTIDADE-STEAM-01: contrato de saída do disable_steam_input.sh ------
+# O bug: o botão mostrava "desligando Steam Input (fecha e reabre a Steam)…",
+# rodava `--apply-quiet` (que por contrato NUNCA fecha a Steam — se ela está
+# viva, ADIA e sai 0) e em seguida anunciava "Steam Input desligado"
+# incondicionalmente (`check=False` + `contextlib.suppress` engoliam tudo).
+# Afirmação de sucesso sobre um no-op, com o tooltip mentindo junto.
+#
+# A cura tem três pernas: (1) o script passou a terminar com uma linha
+# `[steam-input] resultado=<tag>`; (2) a GUI lê a tag E o rc; (3) o veredito
+# final ainda é CONFERIDO relendo o vdf (`_steam_input_is_on`) — tag e rc
+# dizem o que o script achou que fez, a releitura diz o que de fato ficou.
+_RESULTADO_RE = re.compile(r"^\[steam-input\] resultado=(\S+)\s*$", re.MULTILINE)
+
+
+def steam_input_result_tag(saida: str) -> str | None:
+    """Tag `resultado=` da saída do script (a ÚLTIMA, se houver mais de uma).
+
+    `None` quando o script é antigo (instalação anterior a esta onda) e não
+    emite a linha — nesse caso a GUI cai no veredito por releitura do vdf, que
+    nunca depende do script.
+    """
+    achados = _RESULTADO_RE.findall(saida or "")
+    return achados[-1] if achados else None
+
+
+def format_steam_input_result(
+    *,
+    status: str,
+    rc: int = 0,
+    tag: str | None = None,
+    ainda_ligado: bool | None = None,
+) -> str:
+    """Toast do botão "Desligar Steam Input" — pura, o miolo testável.
+
+    Regra inegociável (HONESTIDADE-STEAM-01): NENHUM caminho devolve "Pronto"
+    sem evidência. "Evidência" aqui é a releitura do vdf (`ainda_ligado`), não
+    a palavra do script — script pode sair 0 tendo adiado.
+
+    `status` é o que a GUI decidiu ANTES de rodar: ``sem_script`` |
+    ``jogo_aberto`` | ``cancelado`` | ``nao_fechou`` | ``executado``.
+    """
+    if status == "sem_script":
+        return (
+            "Não encontrei o script que desliga o Steam Input nesta "
+            "instalação — rode ./install.sh para atualizar o Hefesto."
+        )
+    if status == "jogo_aberto" or tag == "recusado-jogo-aberto":
+        return (
+            "Tem um jogo aberto — não fecho a Steam agora (você perderia o "
+            "progresso não salvo). Feche o jogo e clique de novo. "
+            "Nada foi mudado."
+        )
+    if status == "cancelado":
+        return (
+            "Nada foi mudado — a Steam continua aberta. Clique de novo quando "
+            "puder deixá-la fechada por uns 20 segundos."
+        )
+    if status == "nao_fechou" or tag == "steam-nao-fechou":
+        return (
+            "A Steam não fechou — não mexi em nada. Com ela viva a mudança "
+            "seria perdida (a Steam regrava o arquivo ao sair). Feche-a pela "
+            "própria Steam e clique de novo."
+        )
+    if tag == "adiado-steam-aberta":
+        # O caminho que a GUI ESCONDIA: o script adiou e nada mudou.
+        return (
+            "A Steam está aberta — a correção foi ADIADA e nada mudou. "
+            "Feche a Steam e clique de novo."
+        )
+    if rc != 0 or tag == "erro":
+        return (
+            f"Não consegui desligar o Steam Input (o script terminou com "
+            f"erro {rc}) — veja os 'Detalhes técnicos'."
+        )
+    if ainda_ligado is True:
+        return (
+            "O script rodou sem erro, mas o Steam Input CONTINUA ligado — "
+            "nada foi desligado. Veja os 'Detalhes técnicos'."
+        )
+    if tag == "nada-a-fazer":
+        return "Nada a mudar — o Steam Input já estava desligado."
+    if ainda_ligado is False:
+        return "Pronto — Steam Input desligado."
+    return (
+        "O script rodou sem erro, mas não consegui conferir o resultado "
+        "(não achei os arquivos da Steam)."
+    )
 
 
 class EmulationActionsMixin(WidgetAccessMixin):
@@ -635,24 +727,160 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._toast_emulation("Steam Input verificado")
 
     def on_emulation_steam_input_disable(self, _btn: Gtk.Button) -> None:
+        """Desliga o Steam Input — com consentimento e com veredito conferido.
+
+        HONESTIDADE-STEAM-01. Antes: toast "desligando Steam Input (fecha e
+        reabre a Steam)…" → `--apply-quiet` (que NÃO fecha nada; com a Steam
+        viva ele ADIA) → toast "Steam Input desligado", incondicional. Duas
+        mentiras encadeadas — a promessa de fechar e a afirmação de sucesso.
+
+        Agora, no clique:
+
+        1. JOGO aberto ⇒ RECUSA. `steam -shutdown` mataria o jogo (progresso
+           não salvo perdido) — mesma decisão do DEDUP-05 no lado Python;
+        2. só a Steam aberta ⇒ DIÁLOGO pedindo permissão para fechá-la por
+           ~20 s (e avisando para pausar downloads). Sem sim explícito nada
+           acontece: `stop_steam()` escala para `pkill -TERM/-KILL` depois de
+           30 s, e isso jamais pode rodar às costas da usuária;
+        3. Steam fechada ⇒ aplica direto.
+
+        O toast final sai de `format_steam_input_result`, que exige EVIDÊNCIA
+        (releitura do vdf) antes de dizer "Pronto".
+
+        A SONDAGEM (dois `pgrep` com timeout de 5 s cada) roda em worker, não
+        na thread GTK: no clique, o pior caso seriam 10 s de janela congelada
+        — o mesmo modo de falha que BUG-GUI-DAEMON-STATUS-INITIAL-01 já pagou
+        na aba Sistema. O diálogo volta pela `GLib.idle_add` (widget só na
+        thread GTK).
+        """
         script = self._steam_input_script()
         if script is None:
-            self._toast_emulation("script disable_steam_input.sh não encontrado")
+            self._toast_emulation(format_steam_input_result(status="sem_script"))
             return
-        self._toast_emulation("desligando Steam Input (fecha e reabre a Steam)...")
+        self._toast_emulation("verificando a Steam…")
+
+        def _sondar() -> None:
+            from hefesto_dualsense4unix.integrations import (
+                steam_launch_options as slo,
+            )
+
+            try:
+                jogo = slo.steam_game_running()
+                steam = False if jogo else slo.steam_running()
+            except Exception as exc:  # pragma: no cover - sondagem best-effort
+                logger.warning("steam_input_sonda_falhou", erro=str(exc))
+                jogo, steam = False, False
+            GLib.idle_add(self._steam_input_decidir, script, jogo, steam)
+
+        _get_executor().submit(_sondar)
+
+    def _steam_input_decidir(self, script: Path, jogo: bool, steam: bool) -> bool:
+        """Decide na thread GTK: recusar, perguntar ou aplicar direto."""
+        if jogo:
+            self._toast_emulation(format_steam_input_result(status="jogo_aberto"))
+            return False
+        if not steam:
+            self._toast_emulation("desligando Steam Input…")
+            self._steam_input_apply_async(script, fechar_a_steam=False)
+            return False
+
+        # Steam viva: pede consentimento ANTES de qualquer coisa.
+        from hefesto_dualsense4unix.app.actions.daemon_actions import (
+            build_steam_close_consent_dialog,
+        )
+
+        def _resposta(dialog: Any, response: int) -> None:
+            with contextlib.suppress(Exception):
+                dialog.destroy()
+            if response != Gtk.ResponseType.OK:
+                self._toast_emulation(
+                    format_steam_input_result(status="cancelado")
+                )
+                return
+            self._toast_emulation("fechando a Steam para desligar o Steam Input…")
+            self._steam_input_apply_async(script, fechar_a_steam=True)
+
+        build_steam_close_consent_dialog(
+            getattr(self, "window", None),
+            titulo="Posso fechar a Steam por uns 20 segundos?",
+            corpo=(
+                "Para desligar o Steam Input eu preciso FECHAR a Steam e "
+                "abrir de novo — com ela viva, ela regrava o arquivo ao sair "
+                "e a mudança seria perdida.\n\n"
+                "Antes de continuar: pause os downloads. Fica um backup ao "
+                "lado de cada arquivo da Steam.\n\n"
+                "Se algum jogo estiver aberto eu não faço nada."
+            ),
+            rotulo_ok="Fechar e desligar",
+            on_response=_resposta,
+        ).show_all()
+        return False  # GLib.idle_add: não reagenda
+
+    def _steam_input_apply_async(self, script: Path, *, fechar_a_steam: bool) -> None:
+        """Roda o script em worker e devolve o veredito CONFERIDO à GUI.
+
+        Com `fechar_a_steam=True` o fechamento é nosso (`with_steam_closed`,
+        o mesmo fluxo provado do `install.sh --migrate --stop-steam`) e o
+        script roda em `--apply-quiet`: assim quem fecha/reabre a Steam é UM
+        só dono, e o script nunca precisa decidir sozinho matar processo.
+        """
+
+        def _rodar() -> tuple[int, str]:
+            proc = subprocess.run(
+                ["bash", str(script), "--apply-quiet"],
+                check=False,
+                timeout=180,
+                capture_output=True,
+                text=True,
+            )
+            return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
         def _worker() -> None:
-            with contextlib.suppress(OSError, subprocess.SubprocessError):
-                subprocess.run(
-                    ["bash", str(script), "--apply-quiet"], check=False, timeout=60
+            status = "executado"
+            rc, saida = 0, ""
+            try:
+                if fechar_a_steam:
+                    from hefesto_dualsense4unix.integrations import (
+                        steam_launch_options as slo,
+                    )
+
+                    janela, resultado = slo.with_steam_closed(_rodar)
+                    if janela == slo.STEAM_JANELA_JOGO_ABERTO:
+                        status = "jogo_aberto"
+                    elif janela == slo.STEAM_JANELA_NAO_FECHOU:
+                        status = "nao_fechou"
+                    else:
+                        rc, saida = resultado
+                else:
+                    rc, saida = _rodar()
+                tag = steam_input_result_tag(saida)
+                # Veredito por EVIDÊNCIA: relê os vdf em vez de crer no rc.
+                ainda_ligado = (
+                    self._steam_input_is_on() if status == "executado" else None
                 )
-            GLib.idle_add(self._on_steam_input_done)
+            except Exception as exc:
+                # `except Exception` largo DE PROPÓSITO: este worker roda no
+                # executor, onde exceção não propagada morre calada — e toast
+                # que nunca chega é a mesma doença do "Steam Input desligado"
+                # incondicional, só que ao contrário. Falha vira frase.
+                logger.warning("steam_input_script_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._on_steam_input_done,
+                    f"Não consegui rodar o script: {exc}",
+                )
+                return
+            GLib.idle_add(
+                self._on_steam_input_done,
+                format_steam_input_result(
+                    status=status, rc=rc, tag=tag, ainda_ligado=ainda_ligado
+                ),
+            )
 
         _get_executor().submit(_worker)
 
-    def _on_steam_input_done(self) -> bool:
+    def _on_steam_input_done(self, msg: str) -> bool:
         self._refresh_steam_input_status()
-        self._toast_emulation("Steam Input desligado")
+        self._toast_emulation(msg)
         return False
 
     def _toast_emulation(self, msg: str) -> None:

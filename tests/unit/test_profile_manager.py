@@ -176,6 +176,132 @@ def test_select_for_window_sem_match_sem_fallback(isolated_profiles_dir: Path):
     assert picked is None
 
 
+# ---------------------------------------------------------------------------
+# R-21 (auditoria 24/07) — catch-all NÃO tem autoridade sobre janela de jogo.
+#
+# O R-01 acertou a ORDEM (específico vence genérico) mas não a AUTORIDADE: sem
+# NENHUMA regra para o jogo, a ordenação ainda elegia o melhor dos catch-all. É
+# o caso medido: Mullet Mad Jack (steam_app_2111190) sem perfil próprio ⇒ vence
+# `vitoria` (MatchAny, prio 5); alt-tab para a janela `steam` ⇒ vence
+# `Navegação` (prio 50). Ping-pong a cada 18-28 s no journal de 22-23/07, com
+# lightbar/gatilhos/rumble diferentes dos dois lados.
+#
+# Mesma doutrina do `catch_all_sem_opiniao` de `lifecycle.apply_profile_
+# suppression`, um nível acima: lá o catch-all não pode REVERTER; aqui não pode
+# ENTRAR.
+# ---------------------------------------------------------------------------
+
+
+def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
+    isolated_profiles_dir: Path,
+):
+    """O caso medido: nenhum perfil opina sobre este jogo ⇒ None (e o
+    autoswitch retém o perfil corrente em vez de trocar)."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    assert manager.select_for_window({"wm_class": "steam_app_2111190"}) is None
+
+
+def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
+    """O veto é só quando os ÚNICOS candidatos são catch-all — havendo regra
+    específica, ela entra normalmente (o R-01 segue de pé)."""
+    save_profile(
+        _mk_profile(
+            "mad_jack",
+            priority=0,
+            match=MatchCriteria(window_class=["steam_app_2111190"]),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    picked = manager.select_for_window({"wm_class": "steam_app_2111190"})
+    assert picked is not None and picked.name == "mad_jack"
+
+
+def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
+    isolated_profiles_dir: Path,
+):
+    """Só CATCH-ALL é vetado. Um perfil que casou por título/processo opinou
+    de verdade sobre esta janela e continua valendo."""
+    save_profile(
+        _mk_profile(
+            "fps",
+            priority=60,
+            match=MatchCriteria(window_title_regex=r"(Doom|Control)"),
+        )
+    )
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    picked = manager.select_for_window(
+        {"wm_class": "steam_app_379720", "wm_name": "Doom Eternal"}
+    )
+    assert picked is not None and picked.name == "fps"
+
+
+def test_catch_all_segue_valendo_em_janela_comum(isolated_profiles_dir: Path):
+    """O veto é EXCLUSIVO de janela de jogo — no desktop o catch-all continua
+    sendo o fallback de sempre (senão a aba Mouse/Teclado ficaria sem perfil)."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    picked = manager.select_for_window({"wm_class": "firefox"})
+    assert picked is not None and picked.name == "vitoria"
+
+
+def test_wm_class_parecida_com_steam_app_nao_e_vetada(isolated_profiles_dir: Path):
+    """`steam_app_` sem número, ou com sufixo, NÃO é janela de jogo da Steam —
+    o predicado é o mesmo (ancorado) dos outros dois lugares que o usam."""
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    for wm in ("steam_app_", "steam_app_abc", "xsteam_app_1", "steam_app_1_x"):
+        picked = manager.select_for_window({"wm_class": wm})
+        assert picked is not None and picked.name == "vitoria", wm
+
+
+def test_veto_loga_uma_vez_por_jogo(
+    isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """`select_for_window` roda a 2 Hz — o veto não pode virar 7 mil linhas/h."""
+    from unittest.mock import MagicMock
+
+    from hefesto_dualsense4unix.profiles import manager as manager_mod
+
+    spy = MagicMock()
+    monkeypatch.setattr(manager_mod, "logger", spy)
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    for _ in range(10):
+        manager.select_for_window({"wm_class": "steam_app_2111190"})
+    # Volta ao desktop e ao jogo: episódio novo, log novo.
+    manager.select_for_window({"wm_class": "firefox"})
+    manager.select_for_window({"wm_class": "steam_app_2111190"})
+
+    eventos = [
+        c
+        for c in spy.info.call_args_list
+        if c[0][0] == "profile_select_catch_all_sem_autoridade_em_jogo"
+    ]
+    assert len(eventos) == 2
+
+
 def test_delete_do_ativo_reseta_active_profile(isolated_profiles_dir: Path):
     save_profile(_mk_profile("tmp"))
     fc = FakeController()
@@ -195,7 +321,7 @@ def test_delete_por_slug_limpa_active_gravado_como_display_name(
 
     `activate()` grava o DISPLAY NAME ("Ação") em `active_profile`, mas o
     arquivo vive como `acao.json` e o usuário (ou a GUI) pode deletar pelo slug
-    ("acao"). Comparar as strings cruas deixava o active preso; com normalização
+    ("acao"). Comparar as strings cruas deixava o active preso; com normalização  # (noqa-acento)
     por slugify a limpeza acontece.
     """
     save_profile(_mk_profile("Ação"))
@@ -207,7 +333,7 @@ def test_delete_por_slug_limpa_active_gravado_como_display_name(
     # active é gravado como display name (acentuado), não como slug.
     assert store.active_profile == "Ação"
     # delete pelo SLUG ainda deve limpar o active.
-    manager.delete("acao")
+    manager.delete("acao")  # (noqa-acento)
     assert store.active_profile is None
 
 

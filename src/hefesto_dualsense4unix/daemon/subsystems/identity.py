@@ -19,10 +19,28 @@ slot ESTÁVEL DE SESSÃO, keyed pelo MAC normalizado (12 hex — o mesmo
   e religar em ordem invertida devolvia o 1 ao que voltasse primeiro. Pior:
   entre a expiração e a reatribuição, ``_ds_reserve()`` (external_identity)
   lia piso 0 no meio do tick externo e abria janela de DUPLICATA — a queixa
-  "dois player 1, dois player 2". Quem renumera é o BOOT: o
-  ``controllers.json`` carrega o ``boot_id`` e um arquivo de outro boot é
-  sessão morta (ver Persistência abaixo). Renumerar dentro do boot continua
-  possível, mas só por GESTO explícito ("Renumerar agora" → ``compact``);
+  "dois player 1, dois player 2";
+- R-23 (auditoria 25/07): o número TAMBÉM sobrevive ao BOOT. Era aqui que a
+  queixa "ao abrir os jogos ou o perfil, os controles se reenumeram e nunca
+  sei o que é o quê" nascia: o ``load`` descartava o ``controllers.json``
+  inteiro quando o ``boot_id`` do arquivo diferia do da máquina, então TODO
+  reboot renumerava por ordem de conexão. Pior em contêiner/Flatpak, onde
+  ``/proc/sys/kernel/random/boot_id`` some: sem boot_id o load abortava e
+  bastava REINICIAR O DAEMON para renumerar tudo. O mapa é keyed por MAC —
+  e MAC não muda no reboot: ele é IDENTIDADE, não sessão. A única
+  renumeração automática que sobrou é a de SCHEMA (arquivo gravado por uma
+  versão que numerava de outro jeito, ver Persistência); renumerar por
+  vontade dela continua sendo o GESTO explícito ("Renumerar agora" →
+  ``compact``);
+- R-24 (auditoria 25/07): a atribuição deixou de ser SÓ lazy. ``slot_for``
+  só é chamado pelo provider de cor (caminho de output); enquanto nenhum
+  DualSense tivesse sido consultado, o registro ficava VAZIO e o piso que
+  os externos leem (``_ds_reserve``) valia 0 — o Pro Nintendo tomava o slot
+  1 no primeiro tick de externo e os DualSense herdavam 2 e 3 (o "não
+  existe Controle 1" medido ao vivo). Agora ``sync_connected`` (tick lento,
+  que roda ANTES do tick dos externos no mesmo laço do lifecycle) ATRIBUI
+  slot a todo DualSense conectado que ainda não tem — quem está na mesa
+  ocupa 1..N antes de qualquer externo pedir número;
 - o vpad (MAC forjado ``02:fe:...``) NUNCA ganha slot (D9) — o filtro
   existe aqui além do filtro de enumeração do backend, porque outros
   chamadores (describe/co-op) também consultam;
@@ -37,14 +55,30 @@ slot ESTÁVEL DE SESSÃO, keyed pelo MAC normalizado (12 hex — o mesmo
 Separação D3 (Refutado 2 do sprint): este slot é EXIBIÇÃO/LED. O índice de
 alocação do vpad do co-op (``_next_player_index`` + ``player=1`` do
 primário) fica intacto — slot repetido no MAC do vpad uhid mataria o probe
-com ``-EEXIST`` e degradaria o co-op em silêncio.
+com ``-EEXIST`` e degradaria o co-op em silêncio. R-24 precisou o limite: o
+índice do vpad é do JOGO (contíguo, reusado quando alguém sai) e o slot
+daqui é da EXIBIÇÃO; o que era defeito é que a LÂMPADA acendia o primeiro.
+Hoje ``CoopManager._numero_exibido`` lê ESTE registro para a barra de player
+e o índice do vpad nunca mais chega a um LED.
 
 Persistência (``controllers.json`` no config do app, escrita atômica
-mkstemp+os.replace — padrão ``utils/session.py``): cobre APENAS o restart do
-daemon com controles ainda presentes. O arquivo carrega o ``boot_id`` da
-máquina: um arquivo de outro boot é sessão MORTA e é ignorado no load (a
-próxima sessão renumera do 1, D2) — depois de R-15, o boot é o ÚNICO ponto
-de renumeração automática. O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
+mkstemp+os.replace — padrão ``utils/session.py``): cobre o restart do daemon
+E o reboot da máquina (R-23). O que governa o load é o
+:data:`CONTROLLERS_SCHEMA_VERSION` do arquivo, não mais o ``boot_id``:
+
+- versão IGUAL → o mapa MAC→slot é restaurado INTEIRO. Entradas voláteis
+  (sem MAC 12-hex) nunca chegam ao disco (D9), então "descartar o volátil"
+  é invariante do save, não trabalho do load;
+- versão DIFERENTE/ausente → arquivo escrito por uma versão que numerava
+  por outra regra; é descartado UMA vez e a sessão seguinte renumera. É o
+  que cura, sozinha, a numeração torta já gravada na máquina dela (o
+  externo segurando o slot 1 enquanto os dois DualSense exibiam 2 e 3);
+- o ``boot_id`` continua GRAVADO, agora como âncora de diagnóstico
+  (:func:`_session_anchor`, resiliente: boot_id → machine-id → ``None``).
+  Ele não pode mais decidir nada sozinho — foi exatamente a fragilidade
+  que renumerava tudo onde ``/proc/sys/kernel/random/boot_id`` não existe.
+
+O ``config_dir`` é importado LAZY dentro das funções de I/O — preserva
 o ponto de monkeypatch dos testes (``xdg_paths.config_dir``), padrão
 ``save_active_marker``. O arquivo é COMPARTILHADO com o registro dos
 externos (``external_identity.py``, namespace ``externals``): ``load`` e
@@ -99,6 +133,29 @@ logger = get_logger(__name__)
 #: Arquivo de persistência (no ``config_dir`` do app — padrão ``session.json``).
 _CONTROLLERS_FILE = "controllers.json"
 
+#: R-23: versão do SCHEMA de ``controllers.json``. É o que decide se o mapa
+#: gravado ainda vale — o ``boot_id`` deixou de decidir (ver docstring). Bump
+#: OBRIGATÓRIO sempre que a REGRA de numeração mudar: um arquivo de versão
+#: diferente é descartado UMA vez e a sessão seguinte renumera com a regra
+#: nova. Sem isso, a numeração torta gravada pela versão anterior (na máquina
+#: dela: externo com o slot 1, DualSense em 2 e 3) sobreviveria para sempre,
+#: justamente porque agora o mapa NÃO morre mais no reboot.
+#: 2 = R-23/R-24 (slot sobrevive ao boot + espaço de numeração único).
+CONTROLLERS_SCHEMA_VERSION = 2
+
+#: R-23: teto defensivo de entradas restauradas do disco. Como nada expira
+#: mais (nem no reboot), um casal que passe anos trocando de controle veria o
+#: arquivo crescer sem fim e a numeração começar cada vez mais alto. 16 é
+#: ordens de magnitude acima de qualquer setup real (4 no co-op + externos);
+#: acima disso, as entradas de slot MAIS ALTO caem (são as menos
+#: estabelecidas — quem tem slot baixo é quem a casa usa).
+_MAX_PERSISTED_SLOTS = 16
+
+#: R-23: fallbacks da âncora de sessão quando ``/proc`` não está montado
+#: (contêiner/Flatpak). machine-id não é por-boot, e tudo bem: depois do R-23
+#: a âncora é DIAGNÓSTICO, não gate — só precisa ser estável e barata.
+_MACHINE_ID_PATHS = ("/etc/machine-id", "/var/lib/dbus/machine-id")
+
 #: MAC "de verdade": 12 dígitos hex, com ou sem separadores ``:``/``-``.
 #: Mais estrito que o ``norm_mac`` do backend de propósito: um PATH exótico
 #: pode conter 12 chars hex espalhados e viraria um pseudo-MAC persistível.
@@ -126,9 +183,9 @@ CONTROLLERS_FILE_LOCK = threading.Lock()
 def _read_boot_id() -> str | None:
     """boot_id do kernel — identifica ESTE boot da máquina (None se ilegível).
 
-    Um ``controllers.json`` gravado noutro boot é sessão morta: os controles
-    foram desligados junto com a máquina, e restaurar os slots antigos
-    quebraria o D2 ("sessão nova renumera do 1"). Monkeypatchável nos testes.
+    R-23: NÃO é mais um gate. Depois que o mapa MAC→slot passou a sobreviver
+    ao reboot, o boot_id só ANOTA em que boot o arquivo foi escrito (útil no
+    log de diagnóstico). Monkeypatchável nos testes.
     """
     try:
         with open("/proc/sys/kernel/random/boot_id", encoding="utf-8") as fh:
@@ -136,6 +193,46 @@ def _read_boot_id() -> str | None:
         return value or None
     except OSError:
         return None
+
+
+def _read_machine_id() -> str | None:
+    """machine-id do host (None se ilegível) — 2º degrau da âncora (R-23).
+
+    Compartilhado com ``external_identity._session_anchor``: os dois
+    registros escrevem o MESMO ``controllers.json`` e não podem discordar do
+    valor do campo ``boot_id`` (um sobrescreveria o do outro a cada save).
+    """
+    for caminho in _MACHINE_ID_PATHS:
+        try:
+            with open(caminho, encoding="utf-8") as fh:
+                bruto = fh.read().strip()
+        except OSError:
+            continue
+        if bruto:
+            return bruto
+    return None
+
+
+def _session_anchor() -> str | None:
+    """Âncora de sessão RESILIENTE: boot_id → machine-id → ``None`` (R-23).
+
+    A âncora antiga era só o ``_read_boot_id``, e ela FALHAVA FECHADA: sem
+    ``/proc/sys/kernel/random/boot_id`` (contêiner/Flatpak, ``/proc`` não
+    montado) o ``load`` abortava e a numeração inteira renascia — bastava
+    reiniciar o daemon para os controles trocarem de número. Aqui a ausência
+    degrada em CASCATA e, no pior caso, devolve ``None`` sem nenhuma
+    consequência: quem decide o que restaurar é o
+    :data:`CONTROLLERS_SCHEMA_VERSION`, não a âncora.
+
+    Nunca levanta (todo caminho de I/O é ``OSError``-safe).
+    """
+    valor = _read_boot_id()
+    if valor:
+        return valor
+    machine_id = _read_machine_id()
+    # Prefixado para nunca ser confundido com um boot_id de verdade num
+    # arquivo antigo (e para o log dizer de onde veio).
+    return f"machine:{machine_id}" if machine_id else None
 
 
 class ControllerIdentityRegistry:
@@ -309,30 +406,41 @@ class ControllerIdentityRegistry:
                 return slot
             if not assign:
                 return None
-            used = set(self._slots.values())
-            prov = self._extra_reserved
-            if prov is not None:
-                # EXT-04: numeração global ÚNICA — pula os slots que os
-                # externos já detêm (um DualSense que conecta DEPOIS de um
-                # externo numerado não pode reivindicar o slot dele).
-                with contextlib.suppress(Exception):
-                    used |= {int(s) for s in prov()}
-            slot = 1
-            while slot in used:
-                slot += 1
-            self._slots[key] = slot
-            if persistable:
-                self._dirty = True
-            else:
-                self._volatile.add(key)
+            slot = self._assign_locked(key, persistable)
             self._connected.add(key)
-            logger.info(
-                "identity_slot_atribuido",
-                uniq=key,
-                slot=slot,
-                volatil=not persistable,
-            )
             return slot
+
+    def _assign_locked(self, key: str, persistable: bool) -> int:
+        """MENOR slot livre para ``key`` (já sob ``self._lock``). Fonte ÚNICA.
+
+        Extraída de ``slot_for`` no R-24 porque ``sync_connected`` passou a
+        atribuir também: duas cópias da regra "menor livre" seriam duas
+        chances de divergir do espaço de numeração global (o defeito que esta
+        onda inteira existe para matar).
+        """
+        used = set(self._slots.values())
+        prov = self._extra_reserved
+        if prov is not None:
+            # EXT-04: numeração global ÚNICA — pula os slots que os externos
+            # já detêm (um DualSense que conecta DEPOIS de um externo
+            # numerado não pode reivindicar o slot dele).
+            with contextlib.suppress(Exception):
+                used |= {int(s) for s in prov()}
+        slot = 1
+        while slot in used:
+            slot += 1
+        self._slots[key] = slot
+        if persistable:
+            self._dirty = True
+        else:
+            self._volatile.add(key)
+        logger.info(
+            "identity_slot_atribuido",
+            uniq=key,
+            slot=slot,
+            volatil=not persistable,
+        )
+        return slot
 
     def mark_disconnected(self, uniq: str | None) -> None:
         """Marca ``uniq`` desconectado — o slot fica RESERVADO ao MAC (D2).
@@ -349,8 +457,10 @@ class ControllerIdentityRegistry:
             self._connected.discard(key)
 
     def sync_connected(self, uniqs: Iterable[str]) -> None:
-        """Reconcilia com o conjunto de uniqs CONECTADOS agora (tick ~2s).
+        """Reconcilia com os uniqs CONECTADOS agora e ATRIBUI quem falta (~2s).
 
+        - quem chegou SEM slot ganha o menor livre, na ORDEM em que o
+          chamador entrega (R-24 — ver abaixo);
         - quem saiu do conjunto vira RESERVA (slot preso ao MAC — D2);
         - persiste (atômico) quando o mapa mudou desde o último save. É o
           ÚNICO ponto de escrita em disco fora do ``load()`` — nunca no
@@ -360,20 +470,38 @@ class ControllerIdentityRegistry:
         daqui. Ele existia só deste lado (o registro dos externos nunca
         expirou nada), e a assimetria era medível: com os dois DualSense
         desligados, o primeiro a acordar levava o slot 1 — cor e número
-        trocavam de dono. Dentro do boot o número é do MAC; entre boots o
-        ``boot_id`` do arquivo já renumera; e renumerar por vontade dela
-        continua sendo o ``compact`` do "Renumerar agora".
+        trocavam de dono. Renumerar por vontade dela é o ``compact`` do
+        "Renumerar agora"; por schema novo, o ``load``.
+
+        R-24 (auditoria 25/07) — por que ATRIBUIR aqui e não só no
+        ``slot_for`` lazy: o lazy é do PROVIDER DE COR, que só roda no
+        caminho de output do backend. Enquanto ele não rodava, o registro
+        ficava vazio e o piso lido pelos externos (``_ds_reserve``) valia 0 —
+        o Pro Nintendo USB tomava o slot 1 no primeiro tick de externo e os
+        dois DualSense herdavam 2 e 3 (o "não existe Controle 1" medido na
+        máquina dela). O lifecycle chama ESTE método ANTES de agendar o tick
+        dos externos no MESMO ciclo do poll loop, então quem está na mesa
+        ocupa 1..N primeiro. A ORDEM do iterável é significativa (o
+        lifecycle entrega em ordem de ``describe_controllers``, primário
+        primeiro) — nunca passar um ``set``, que numeraria por hash.
         """
-        vivos: set[str] = set()
+        vivos: list[tuple[str, bool]] = []
+        vistos: set[str] = set()
         for uniq in uniqs:
             if not uniq or not isinstance(uniq, str):
                 continue
             key, persistable = self._canonical(uniq)
+            if not key or key in vistos:
+                continue
             if persistable and key.startswith(_VPAD_MAC_PREFIX):
                 continue  # D9: vpad não é controle
-            vivos.add(key)
+            vistos.add(key)
+            vivos.append((key, persistable))
         with self._lock:
-            self._connected = vivos
+            self._connected = vistos
+            for key, persistable in vivos:
+                if key not in self._slots:
+                    self._assign_locked(key, persistable)
             if self._dirty:
                 self._save_locked()
                 self._dirty = False
@@ -443,16 +571,17 @@ class ControllerIdentityRegistry:
     # ------------------------------------------------------------------
 
     def load(self) -> None:
-        """Carrega ``controllers.json`` — só entradas do MESMO boot da máquina.
+        """Carrega ``controllers.json`` — o mapa MAC→slot ATRAVESSA o boot (R-23).
 
         Chamado UMA vez na fiação do daemon (fora do caminho quente).
         Entradas carregadas entram como RESERVAS: o primeiro reconcile com
-        controles presentes as reivindica (restart do daemon preserva os
-        números); um boot novo da máquina (boot_id difere) é sessão morta e
-        o arquivo é ignorado. Idempotente; nunca propaga exceção. NUMA-04: a
-        leitura roda sob ``CONTROLLERS_FILE_LOCK`` — o mesmo lock que
-        ``external_identity.py`` usa para o próprio load/save do MESMO
-        arquivo.
+        controles presentes as reivindica. O gate NÃO é mais o ``boot_id``
+        (era ele que renumerava a casa inteira a cada reboot — e a cada
+        restart do daemon onde ``/proc`` não existe): é o
+        :data:`CONTROLLERS_SCHEMA_VERSION`. Idempotente; nunca propaga
+        exceção. NUMA-04: a leitura roda sob ``CONTROLLERS_FILE_LOCK`` — o
+        mesmo lock que ``external_identity.py`` usa para o próprio load/save
+        do MESMO arquivo.
         """
         with self._lock:
             if self._loaded:
@@ -466,20 +595,38 @@ class ControllerIdentityRegistry:
                 except Exception as exc:  # defensivo — load jamais derruba o boot
                     logger.debug("identity_load_falhou", err=str(exc))
                     return
-            boot_id = _read_boot_id()
             if not isinstance(data, dict):
                 return
-            if not boot_id or data.get("boot_id") != boot_id:
-                logger.debug(
-                    "identity_arquivo_de_outro_boot_ignorado",
-                    arquivo_boot=data.get("boot_id"),
+            if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
+                # R-23: única renumeração AUTOMÁTICA que sobrou. Arquivo
+                # escrito por uma versão com outra regra de numeração (ou
+                # anterior ao campo) não pode congelar a regra velha para
+                # sempre, agora que nada mais expira.
+                logger.info(
+                    "identity_arquivo_de_schema_antigo_descartado",
+                    versao_arquivo=data.get("version"),
+                    versao_atual=CONTROLLERS_SCHEMA_VERSION,
                 )
                 return
             slots = data.get("slots")
             if not isinstance(slots, dict):
                 return
+            anchor = _session_anchor()
+            if anchor is not None and data.get("boot_id") != anchor:
+                # Só DIAGNÓSTICO (R-23): reboot não renumera mais. Fica no log
+                # para o dia em que alguém perguntar "de onde veio este número".
+                logger.info(
+                    "identity_slots_restaurados_de_outro_boot",
+                    arquivo_boot=data.get("boot_id"),
+                )
             usados: set[int] = set()
-            for raw_key, raw_slot in slots.items():
+            # Slot mais baixo primeiro: se o teto podar, quem cai é a entrada
+            # menos estabelecida (slot alto), nunca quem a casa usa todo dia.
+            candidatos = sorted(
+                slots.items(),
+                key=lambda kv: kv[1] if isinstance(kv[1], int) else 0,
+            )
+            for raw_key, raw_slot in candidatos:
                 if not isinstance(raw_key, str) or not isinstance(raw_slot, int):
                     continue
                 if isinstance(raw_slot, bool) or raw_slot < 1:
@@ -489,6 +636,11 @@ class ControllerIdentityRegistry:
                     continue  # voláteis/vpad jamais deveriam estar no disco
                 if key in self._slots or raw_slot in usados:
                     continue  # arquivo degenerado: 1º ganha, sem duplicatas
+                if len(self._slots) >= _MAX_PERSISTED_SLOTS:
+                    logger.warning(
+                        "identity_slots_truncados", teto=_MAX_PERSISTED_SLOTS
+                    )
+                    break
                 self._slots[key] = raw_slot
                 usados.add(raw_slot)
             if self._slots:
@@ -526,11 +678,22 @@ class ControllerIdentityRegistry:
                 payload: dict[str, Any] = {}
                 with contextlib.suppress(Exception):
                     existente = json.loads(path.read_text(encoding="utf-8"))
-                    if isinstance(existente, dict) and isinstance(
-                        existente.get("externals"), dict
+                    # R-23: só se carrega o namespace do OUTRO quando o
+                    # arquivo é do MESMO schema. Preservá-lo às cegas num
+                    # bump de versão re-carimbava a versão nova sobre a
+                    # numeração VELHA do outro lado: o `externals` do regime
+                    # antigo (na máquina dela, o Pro segurando o slot 1)
+                    # ressuscitava com selo de válido no boot seguinte.
+                    if (
+                        isinstance(existente, dict)
+                        and existente.get("version") == CONTROLLERS_SCHEMA_VERSION
+                        and isinstance(existente.get("externals"), dict)
                     ):
                         payload["externals"] = existente["externals"]
-                payload["boot_id"] = _read_boot_id()
+                # R-23: a VERSÃO é o que o load consulta; o boot_id vira
+                # anotação (âncora resiliente — nunca mais um gate).
+                payload["version"] = CONTROLLERS_SCHEMA_VERSION
+                payload["boot_id"] = _session_anchor()
                 payload["slots"] = {
                     key: slot
                     for key, slot in self._slots.items()
@@ -636,6 +799,7 @@ def reset_identity_registry() -> None:
 
 __all__ = [
     "CONTROLLERS_FILE_LOCK",
+    "CONTROLLERS_SCHEMA_VERSION",
     "ControllerIdentityRegistry",
     "get_identity_registry",
     "make_auto_output_provider",

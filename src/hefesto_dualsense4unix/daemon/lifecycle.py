@@ -2189,12 +2189,20 @@ class Daemon:
     def _sync_identity_registry(self) -> None:
         """Reconcilia o registro com os controles conectados (tick lento ~2s).
 
-        COR-01 (D2): marca desconectados (slot vira RESERVA do MAC) e expira
-        as reservas quando a sessão esvazia — por isso roda TAMBÉM offline
-        (o gate de `is_connected` do poll loop não pode engolir a transição
-        para zero controles). Fonte do conjunto: `describe_controllers` do
-        backend (getattrs baratos, sem HID I/O) — nunca no caminho quente
-        por evento. No-op sem registro (backend fake) ou sem a API.
+        COR-01 (D2): marca desconectados (slot vira RESERVA do MAC) — por isso
+        roda TAMBÉM offline (o gate de `is_connected` do poll loop não pode
+        engolir a transição para zero controles). Fonte do conjunto:
+        `describe_controllers` do backend (getattrs baratos, sem HID I/O) —
+        nunca no caminho quente por evento. No-op sem registro (backend fake)
+        ou sem a API.
+
+        R-24 (auditoria 25/07): a ORDEM importa agora. O `sync_connected`
+        passou a ATRIBUIR slot a quem chegou sem número (era só o provider de
+        cor que atribuía, e enquanto ele não rodava o piso lido pelos
+        EXTERNOS valia 0 — o Pro Nintendo abocanhava o slot 1 e os DualSense
+        nasciam 2 e 3). Isto aqui montava um `set`, que numeraria por hash;
+        agora entrega a ordem de `describe_controllers` (primário primeiro),
+        que é a mesma ordem que a GUI e a CLI listam.
         """
         registry = self.identity_registry
         if registry is None:
@@ -2204,13 +2212,13 @@ class Daemon:
             return
         try:
             infos = describe()
-            uniqs = {
+            uniqs = [
                 info["uniq"]
                 for info in infos
                 if isinstance(info, dict)
                 and info.get("connected")
                 and isinstance(info.get("uniq"), str)
-            }
+            ]
             registry.sync_connected(uniqs)
         except Exception as exc:  # nunca derrubar o poll loop
             logger.debug("identity_sync_falhou", err=str(exc))

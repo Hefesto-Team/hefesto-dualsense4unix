@@ -112,9 +112,13 @@ class _SecondaryPlayer:
     "pending"; `_promote_pending` cria o vpad SÓ quando `grab_state == "held"`.
     Nunca existe vpad sem grab confirmado — sem janela de input dobrado.
 
-    FEAT-COOP-PLAYER-LED-01: `player_index` é o número do jogador (2..N),
-    fixado na criação (menor índice livre — estável para quem segue vivo) e
-    usado para escolher o padrão de player-LED do controle.
+    FEAT-COOP-PLAYER-LED-01 / R-24: `player_index` é o número do jogador para
+    o JOGO (2..N), fixado na criação (menor índice livre, REUSADO quando
+    alguém sai — é ele que vira o MAC do vpad uhid `02:fe:00:00:00:0N`, e o
+    jogo quer P1..PN contíguos). NÃO é o número EXIBIDO: a barra de player e
+    os rótulos usam o slot do `identity_registry` (espaço de numeração único,
+    via `CoopManager._numero_exibido`). Acender este índice na lâmpada é o
+    que fazia "os dois controles aparecem como player 1".
     """
 
     identity: str
@@ -985,13 +989,16 @@ class CoopManager:
             targets.append((primary, 1))
         targets.extend((mac, p.player_index) for mac, p in self._players.items())
         padroes: dict[str, tuple[bool, bool, bool, bool, bool]] = {}
+        usados: set[int] = set()
         for mac, index in targets:
             if mac.startswith("path:"):
                 # Sem MAC não há como casar o controle — segue com o padrão
                 # broadcast (não deveria acontecer com DualSense real).
                 logger.debug("coop_player_led_sem_mac", identity=mac, player=index)
                 continue
-            padroes[mac] = player_led_pattern(index)
+            numero = self._numero_exibido(mac, index, usados)
+            usados.add(numero)
+            padroes[mac] = player_led_pattern(numero)
         if self._publicar_camada_coop(padroes):
             return
         # Caminho sysfs cru (backend sem camadas): comportamento histórico.
@@ -1008,6 +1015,47 @@ class CoopManager:
                 logger.warning("coop_player_led_indisponivel", identity=mac)
                 continue
             self._leds_overridden = True
+
+    def _numero_exibido(self, identity: str, fallback: int, usados: set[int]) -> int:
+        """Número que este controle ACENDE na barra de player (R-24).
+
+        A lâmpada tinha DOIS espaços de numeração disputando-a e essa era a
+        queixa literal ("os dois controles aparecem como player 1"):
+
+        - o registro de identidade (`identity_registry`) dá o "Controle N" que
+          a GUI, a CLI e a cor automática exibem — keyed por MAC, reservado no
+          disconnect, agora estável entre boots (R-23);
+        - o co-op tem o `player_index`, que é o número do JOGADOR para o jogo
+          (índice de alocação do vpad: vira o MAC `02:fe:00:00:00:0N` do uhid,
+          por isso 1..N contíguo e REUSADO quando alguém sai — VPAD-03).
+
+        São coisas diferentes e as duas estão certas no seu domínio; o erro
+        era acender o SEGUNDO na lâmpada. Com o primário cravado em 1 e o Pro
+        Nintendo segurando o slot 1 no registro de externos, dois controles
+        acendiam "player 1" ao mesmo tempo. E o `player_index` reusa o índice
+        de quem saiu: P2 sai, P4 entra e herda o 2 — se P2 volta, dois "player
+        2". Aqui a lâmpada passa a falar SÓ o espaço único.
+
+        `fallback` = o `player_index` do co-op, usado quando não há registro
+        (FakeController, backend legado, dublê de teste) — sem registro, nada
+        muda em relação ao histórico. `usados` garante a última linha de
+        defesa: número já tomado NESTA passada nunca acende duas vezes.
+        """
+        numero: int | None = None
+        registry = getattr(self._daemon, "identity_registry", None)
+        slot_for = getattr(registry, "slot_for", None) if registry is not None else None
+        if callable(slot_for):
+            with contextlib.suppress(Exception):
+                # `assign=False`: acender LED jamais aloca identidade (o dono
+                # da atribuição é o provider de cor / o `sync_connected`).
+                bruto = slot_for(identity, assign=False)
+                if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
+                    numero = bruto
+        if numero is None or numero in usados:
+            numero = fallback
+        while numero in usados:
+            numero += 1
+        return numero
 
     def _publicar_camada_coop(
         self, padroes: dict[str, tuple[bool, bool, bool, bool, bool]]

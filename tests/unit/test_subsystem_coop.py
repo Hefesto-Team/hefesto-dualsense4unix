@@ -129,6 +129,7 @@ def _make_daemon(
     primary_uniq: str | None = MAC_P1,
     primary_path: str | None = "/dev/input/event5",
     desired_leds: tuple[bool, bool, bool, bool, bool] | None = None,
+    slots: dict[str, int] | None = None,
 ) -> Any:
     evdev = SimpleNamespace(
         _device_path=Path(primary_path) if primary_path else None
@@ -142,12 +143,24 @@ def _make_daemon(
         _desired=SimpleNamespace(player_leds=desired_leds),
         set_player_leds=led_calls.append,
     )
+    # R-24: `slots` liga um `identity_registry` dublê — é dele que sai o
+    # número ACESO na barra de player (espaço de numeração ÚNICO). `None`
+    # (default) = daemon SEM registro, o caso do FakeController/backend
+    # legado, em que o co-op cai no `player_index` histórico.
+    identity_registry = (
+        SimpleNamespace(
+            slot_for=lambda uniq, assign=True: (slots or {}).get(uniq)
+        )
+        if slots is not None
+        else None
+    )
     return SimpleNamespace(
         config=SimpleNamespace(coop_enabled=coop, gamepad_flavor="dualsense"),
         _gamepad_device=object() if gamepad else None,
         controller=controller,
         _coop_manager=None,
         led_calls=led_calls,
+        identity_registry=identity_registry,
     )
 
 
@@ -523,10 +536,17 @@ def test_coop_aplica_padrao_canonico_por_jogador(
     assert nodes[MAC_P3].patterns[-1] == player_led_pattern(3)
 
 
-def test_indice_de_jogador_estavel_e_reusado_apos_saida(
+def test_indice_de_alocacao_do_vpad_e_estavel_e_reusado_apos_saida(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3, MAC_P4)
+    """`player_index` é o índice de ALOCAÇÃO do vpad — 1..N contíguo, reusado.
+
+    Ele vira o MAC do uhid (`02:fe:00:00:00:0N`, VPAD-03) e é o número que o
+    JOGO vê, então contiguidade e reuso são o comportamento CERTO aqui. R-24
+    tirou dele a única responsabilidade que não era sua: acender a lâmpada
+    (ver `test_lampada_usa_o_espaco_de_numeracao_unico` abaixo).
+    """
+    _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3, MAC_P4)
     _set_evdevs(
         monkeypatch,
         {
@@ -543,7 +563,8 @@ def test_indice_de_jogador_estavel_e_reusado_apos_saida(
     mgr.sync()
     assert mgr._players[MAC_P3].player_index == 3
 
-    # …e o próximo controle que entrar reusa o índice 2 (menor livre).
+    # …e o próximo controle que entrar reusa o índice 2 (menor livre) — o vpad
+    # do jogo precisa disso; a barra de player, não.
     _set_evdevs(
         monkeypatch,
         {
@@ -554,8 +575,86 @@ def test_indice_de_jogador_estavel_e_reusado_apos_saida(
     )
     mgr.sync()
     assert mgr._players[MAC_P4].player_index == 2
-    assert nodes[MAC_P4].patterns[-1] == player_led_pattern(2)
+
+
+def test_lampada_usa_o_espaco_de_numeracao_unico(
+    patched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R-24 (25/07) — TROCA DELIBERADA de contrato.
+
+    O caso acima assertava também `nodes[MAC_P4].patterns[-1] ==
+    player_led_pattern(2)`: o índice de alocação do vpad, REUSADO de quem
+    saiu, acendendo a barra. Com o registro de identidade reservando o 2 para
+    o MAC_P2 que saiu, bastava MAC_P2 voltar para haver dois "player 2"
+    acesos — a queixa literal. A lâmpada agora fala só o espaço único
+    (`identity_registry`); o `player_index` continua sendo o do jogo.
+    """
+    nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3, MAC_P4)
+    _set_evdevs(
+        monkeypatch,
+        {
+            MAC_P1: "/dev/input/event5",
+            MAC_P3: "/dev/input/event9",
+            MAC_P4: "/dev/input/event11",
+        },
+    )
+    # O registro reserva o 2 ao MAC_P2 (desligado agora) — o P4 é o Controle 4.
+    slots = {MAC_P1: 1, MAC_P2: 2, MAC_P3: 3, MAC_P4: 4}
+    mgr = CoopManager(_make_daemon(slots=slots))
+    mgr.sync()
+
+    # P2 nunca entrou nesta sessão de co-op: P3 e P4 alocaram os vpads 2 e 3
+    # (contíguos, como o jogo quer) — números que NÃO são os deles no registro.
+    assert mgr._players[MAC_P3].player_index == 2
+    assert mgr._players[MAC_P4].player_index == 3
+    assert nodes[MAC_P4].patterns[-1] == player_led_pattern(4), (
+        "a barra mostra o Controle 4, não o índice de vpad 3"
+    )
     assert nodes[MAC_P3].patterns[-1] == player_led_pattern(3)
+    assert nodes[MAC_P1].patterns[-1] == player_led_pattern(1)
+
+
+def test_primario_nao_crava_1_quando_o_registro_diz_outro_numero(
+    patched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R-24: o primário era `1` HARDCODED na barra de player.
+
+    Falha-sem: na máquina dela o Pro Nintendo segurava o slot 1 no registro
+    de externos e o DualSense primário acendia "player 1" pelo co-op — "os
+    dois controles aparecem como player 1", medido. Com o espaço único, o
+    primário acende o número que o registro deu a ELE.
+    """
+    nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2)
+    _set_evdevs(
+        monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"}
+    )
+    # Externo (fora do co-op) detém o 1; os DualSense ficaram com 2 e 3.
+    mgr = CoopManager(_make_daemon(slots={MAC_P1: 2, MAC_P2: 3}))
+    mgr.sync()
+
+    assert nodes[MAC_P1].patterns[-1] == player_led_pattern(2)
+    assert nodes[MAC_P2].patterns[-1] == player_led_pattern(3)
+
+
+def test_nunca_dois_controles_com_o_mesmo_padrao(
+    patched: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Última linha de defesa: registro degenerado (dois MACs no mesmo slot)
+    não pode acender dois controles iguais — o segundo desempata para cima."""
+    nodes = _set_led_nodes(monkeypatch, MAC_P1, MAC_P2, MAC_P3)
+    _set_evdevs(
+        monkeypatch,
+        {
+            MAC_P1: "/dev/input/event5",
+            MAC_P2: "/dev/input/event7",
+            MAC_P3: "/dev/input/event9",
+        },
+    )
+    mgr = CoopManager(_make_daemon(slots={MAC_P1: 1, MAC_P2: 1, MAC_P3: 1}))
+    mgr.sync()
+
+    acesos = [nodes[m].patterns[-1] for m in (MAC_P1, MAC_P2, MAC_P3)]
+    assert len(set(acesos)) == 3
 
 
 def test_desligar_coop_reverte_player_leds_do_perfil(

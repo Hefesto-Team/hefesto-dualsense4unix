@@ -230,7 +230,7 @@ async def test_diagnostico_nao_dict_e_ignorado(ipc_server: IpcServer) -> None:
         ipc_server,
         _FakeDaemon(
             display_authority="game",
-            _game_signal=SimpleNamespace(diagnostico=lambda: "nao e dict"),
+            _game_signal=SimpleNamespace(diagnostico=lambda: "nao e dict"),  # (noqa-acento)
         ),
     )
     result = await ipc_server._handle_daemon_state_full({})

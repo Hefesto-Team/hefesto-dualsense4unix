@@ -21,6 +21,12 @@ PALETA = {
     "#ffb86c", "#ff79c6", "#bd93f9", "#ff5555", "#f1fa8c",
     "#21222c", "#2b2d3a", "#343746", "#c8ccda", "#8b8fa8",
     "#403b55", "#4a4363",
+    # BUG-GUI-FOOTER-LABEL-BRANCO-01: roxo ESCURO (@purple_deep), o único
+    # roxo que se lê sobre um fundo claro. O @purple #bd93f9 é claro demais:
+    # sobre o @green do botão Aplicar dá 1.8:1. Este dá 9.6:1 e continua
+    # lendo como roxo, não como preto — é o acento da marca em versão
+    # legível, não uma cor nova solta.
+    "#3b1e6e",
 }
 
 #: Exceções conscientes, cada uma com motivo.

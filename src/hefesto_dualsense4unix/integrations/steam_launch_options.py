@@ -48,12 +48,15 @@ from __future__ import annotations
 import argparse
 import contextlib
 import difflib
+import os
 import re
 import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 #: Caminho estável do wrapper no $HOME (passo de USUÁRIO do install.sh, sem
 #: sudo, sem flag; uninstall simétrico). Mudar aqui exige mudar install.sh,
@@ -648,6 +651,171 @@ def reopen_steam() -> None:
         stdin=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+#: Status possíveis de `with_steam_closed` — contrato do chamador (a GUI faz
+#: o toast a partir daqui e NUNCA inventa "Pronto" sobre um destes).
+STEAM_JANELA_OK = "ok"
+STEAM_JANELA_JOGO_ABERTO = "jogo_aberto"
+STEAM_JANELA_NAO_FECHOU = "nao_fechou"
+
+
+def with_steam_closed(
+    tarefa: Callable[[], Any], *, reopen: bool = True
+) -> tuple[str, Any]:
+    """Roda `tarefa()` com a Steam garantidamente FECHADA e a reabre depois.
+
+    HONESTIDADE-STEAM-01 (25/07). A maquinaria de fechar/reabrir já existia e
+    era exercitada só pelo `install.sh --migrate --stop-steam`; a GUI, que é
+    onde a usuária clica, nunca a usava — os botões ou recusavam ("feche-a e
+    clique de novo") ou rodavam um `--apply-quiet` que ADIAVA em silêncio e
+    ainda assim anunciavam sucesso. Este helper é aquele MESMO fluxo provado,
+    numa função só, para que os três botões da GUI (desligar Steam Input,
+    aplicar o wrapper, "deixar tudo pronto") fechem a Steam UMA vez, façam
+    tudo, e reabram UMA vez — em vez de cada um brigar com a Steam por conta.
+
+    Ordem deliberada (idêntica à do `main()`): o gate de JOGO aberto vem
+    ANTES de qualquer decisão sobre a Steam — `steam -shutdown` com jogo
+    aberto MATA o jogo (progresso não salvo perdido). Só depois se avalia se
+    a Steam precisa ser fechada.
+
+    O consentimento NÃO mora aqui: quem chama tem de ter perguntado antes (a
+    GUI mostra um diálogo dizendo "preciso fechar a Steam por ~20 s"). Esta
+    função é o mecanismo, não a política — o `stop_steam()` escala para
+    `pkill -TERM/-KILL` depois de 30 s e isso jamais pode acontecer sem a
+    usuária ter dito sim.
+
+    Retorna ``(status, resultado_da_acao)``:
+
+    - ``("jogo_aberto", None)``   — recusado, NADA foi tocado;
+    - ``("nao_fechou", None)``    — a Steam resistiu, NADA foi tocado (editar
+      com ela viva é edição perdida: ela regrava o vdf ao sair);
+    - ``("ok", <retorno de tarefa()>)``.
+
+    A reabertura é `finally`: uma exceção na ação não pode deixar a usuária
+    sem Steam.
+    """
+    if steam_game_running():
+        return STEAM_JANELA_JOGO_ABERTO, None
+    estava_rodando = steam_running()
+    if estava_rodando and not stop_steam():
+        return STEAM_JANELA_NAO_FECHOU, None
+    try:
+        return STEAM_JANELA_OK, tarefa()
+    finally:
+        if estava_rodando and reopen:
+            reopen_steam()
+
+
+# --- allowlist do Steam Input per-app (STEAM-INPUT-ALLOWLIST-01) ------------
+# O arquivo existia e era LIDO por três lados (disable_steam_input.sh,
+# integrations/storm_doctor, daemon/launch_env) — e por NINGUÉM escrito. Editar
+# `~/.config/.../steam_input_apps.txt` na mão era a única via de "este jogo é
+# entregue pela Steam, sai da frente", o que na prática significa que a
+# usuária final nunca a tinha. O botão "Este jogo não funciona" escreve aqui.
+
+#: Caminho relativo ao diretório de config XDG (mesma convenção do
+#: `disable_steam_input.sh`, que resolve `${XDG_CONFIG_HOME:-$HOME/.config}`).
+STEAM_INPUT_ALLOWLIST_RELPATH = "hefesto-dualsense4unix/steam_input_apps.txt"
+
+#: Cabeçalho canônico — só é escrito quando o arquivo AINDA NÃO existe. Num
+#: arquivo existente, o cabeçalho (e os comentários da usuária) são preservados
+#: byte a byte: só acrescentamos linhas no fim.
+_ALLOWLIST_HEADER = """\
+# hefesto-dualsense4unix — allowlist do Steam Input per-app
+# (STEAM-INPUT-ALLOWLIST-01)
+#
+# AppIDs listados aqui NÃO têm o "UseSteamControllerConfig" revertido pelo
+# guard (disable_steam_input.sh), e o Hefesto NÃO esconde o controle físico
+# destes jogos. Use para jogos cuja via oficial de DualSense é o Steam Input.
+# Uma linha por AppID; '#' comenta.
+"""
+
+
+def steam_input_allowlist_path(config_home: Path | None = None) -> Path:
+    """Caminho do `steam_input_apps.txt` (XDG), sem tocar no disco.
+
+    Resolve `XDG_CONFIG_HOME` como o shell script faz — assim GUI, guard e
+    daemon apontam para o MESMO arquivo (e os testes ficam herméticos).
+    """
+    if config_home is not None:
+        base = config_home
+    else:
+        env = os.environ.get("XDG_CONFIG_HOME")
+        base = Path(env) if env else Path.home() / ".config"
+    return base / STEAM_INPUT_ALLOWLIST_RELPATH
+
+
+def parse_steam_input_allowlist(text: str) -> list[str]:
+    """AppIDs de um conteúdo de allowlist (uma linha por id; `#` comenta).
+
+    Mesmo formato do `storm_doctor.steam_input_allowlist` e do awk do
+    `disable_steam_input.sh` — repetido aqui (e não importado) porque este
+    módulo é 100% stdlib DE PROPÓSITO: o uninstall.sh o roda como script
+    avulso depois de o .venv já ter sido apagado.
+    """
+    out: list[str] = []
+    for linha in text.splitlines():
+        token = linha.split("#", 1)[0].strip()
+        if token and token not in out:
+            out.append(token)
+    return out
+
+
+def add_appid_to_steam_input_allowlist(
+    appid: int | str,
+    *,
+    path: Path | None = None,
+    nota: str = "",
+) -> str:
+    """Acrescenta um appid à allowlist. Retorna o status para o toast.
+
+    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"appid_invalido"`` |
+    ``"erro"``. Nunca levanta — quem chama é um clique de botão.
+
+    Regras (as três armadilhas do arquivo, todas com dono aqui):
+
+    - **duplicata**: o appid já presente devolve ``"ja_estava"`` sem reescrever
+      nada (o arquivo é lido por um awk a cada `--apply`; linha repetida não
+      quebra, mas o arquivo é da usuária e não vai virar lixão);
+    - **comentários**: `#` comenta — a checagem de duplicata ignora comentário,
+      então um appid comentado ("desliguei este") é RE-adicionado como linha
+      viva em vez de ser considerado presente;
+    - **cabeçalho**: preservado byte a byte num arquivo existente (só append);
+      escrito do zero apenas quando o arquivo não existe.
+    """
+    alvo = str(appid).strip()
+    if not alvo.isdigit():
+        return "appid_invalido"
+    destino = path if path is not None else steam_input_allowlist_path()
+    try:
+        try:
+            atual = destino.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            atual = ""
+        if alvo in parse_steam_input_allowlist(atual):
+            return "ja_estava"
+        # Arquivo existente: append puro (cabeçalho e comentários da usuária
+        # intactos), garantindo o \n final que um editor manual pode ter
+        # comido. Arquivo ausente: nasce com o cabeçalho canônico.
+        corpo = (
+            (atual if atual.endswith("\n") else atual + "\n")
+            if atual
+            else _ALLOWLIST_HEADER
+        )
+        if nota:
+            corpo += f"# {nota}\n"
+        corpo += f"{alvo}\n"
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        # Escrita atômica: o guard (path unit) pode estar lendo o arquivo neste
+        # instante — meio arquivo lido viraria allowlist vazia e o opt-in seria
+        # revertido justamente no clique que o criou.
+        tmp = destino.with_name(destino.name + ".hefesto-tmp")
+        tmp.write_text(corpo, encoding="utf-8")
+        tmp.replace(destino)
+        return "adicionado"
+    except OSError:
+        return "erro"
 
 
 def process_vdf(vdf: Path, mode: str, *, dry_run: bool = False) -> tuple[int, str]:

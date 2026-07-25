@@ -53,7 +53,14 @@ PATCH_PATH = (
 PATCH2_PATH = (
     ASSET_DIR / "patch" / "0002-HID-nintendo-register-leds-even-when-initial-set-fai.patch"
 )
-PATCH_PATHS = (PATCH_PATH, PATCH2_PATH)
+# 25/07: 0003 cura a morte de probe do CLONE USB (8BitDo Pro em modo Switch,
+# mesmo 057E:2009 e mesmo serial do genuíno) — comando USB no tamanho de report
+# que o próprio descritor declara, status de conexão antes do handshake, e
+# probe que degrada em vez de deixar o device sem driver nenhum.
+PATCH3_PATH = (
+    ASSET_DIR / "patch" / "0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch"
+)
+PATCH_PATHS = (PATCH_PATH, PATCH2_PATH, PATCH3_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-nintendo.conf"
 
@@ -80,7 +87,8 @@ MAKEFILE = _read(MAKEFILE_PATH)
 C = _read(C_PATH)
 PATCH = _read(PATCH_PATH)
 PATCH2 = _read(PATCH2_PATH)
-PATCHES = (PATCH, PATCH2)
+PATCH3 = _read(PATCH3_PATH)
+PATCHES = (PATCH, PATCH2, PATCH3)
 BASELINE = _read(BASELINE_PATH)
 MODPROBE_CONF = _read(MODPROBE_CONF_PATH)
 
@@ -314,6 +322,94 @@ class TestPatchAProbeResiliente:
         assert '"init over bluetooth failed (%d); retrying (%d left)\\n"' in C
 
 
+class TestPatchECloneUsb:
+    """[E] 0003: o clone 057E:2009 deixa de morrer na probe — sem tocar o genuíno.
+
+    A causa medida NÃO é timeout (4 tentativas x 4000 ms já falharam): o
+    handshake USB não é respondido, o driver cai no ramo "assume ble pro
+    controller" e pede REQ_DEV_INFO a um controle que nunca foi posto em modo
+    USB. O -110 é consequência.
+    """
+
+    PARAMS_USB = ("usb_cmd_pad_to_report", "usb_send_conn_status", "usb_probe_degrade")
+
+    def test_os_tres_params_sao_bool_default_vanilla_e_ajustaveis_a_quente(self) -> None:
+        for nome in self.PARAMS_USB:
+            # sem inicializador == false == vanilla (convenção do módulo)
+            assert re.search(rf"^static bool {nome};$", C, re.MULTILINE), (
+                f"{nome} precisa nascer FALSE (default == vanilla, zero regressão)"
+            )
+            assert re.search(rf"^module_param\({nome}, bool, 0644\);$", C, re.MULTILINE), (
+                f"{nome} precisa ser ajustável AO VIVO (0644) — o A/B é "
+                "escrever no /sys e REPLUGAR, sem reload (proibido com BT vivo)"
+            )
+            assert re.search(rf"^MODULE_PARM_DESC\({nome},$", C, re.MULTILINE)
+
+    def test_padding_usa_o_tamanho_declarado_pelo_descritor(self) -> None:
+        # O descritor do próprio controle declara 63 bytes de dados para o
+        # report 0x80 (95 3f) e o endpoint OUT é wMaxPacketSize=0x40: um
+        # comando é UM pacote cheio. O vanilla manda 2 bytes.
+        assert "#define JC_USB_CMD_REPORT_SIZE\t\t 64" in C
+        corpo = _funcao_c("static int joycon_send_usb")
+        assert "u8 buf[JC_USB_CMD_REPORT_SIZE] = {JC_OUTPUT_USB_CMD};" in corpo
+        assert "size_t len = usb_cmd_pad_to_report ? sizeof(buf) : 2;" in corpo, (
+            "com o gate DESLIGADO tem de sobrar exatamente o vanilla (2 bytes)"
+        )
+
+    def test_conn_status_limpa_o_buffer_antes_de_ler_o_mac(self) -> None:
+        # joycon_hid_send_sync só limpa input_buf em FALHA, e o receive path
+        # copia só o que chegou sem zerar a cauda: sem o memset, uma resposta
+        # curta deixaria lixo de um exchange anterior onde o MAC é lido.
+        corpo = _funcao_c("static void joycon_query_usb_conn_status")
+        assert "memset(ctlr->input_buf, 0, JC_MAX_RESP_SIZE);" in corpo
+        assert "JC_USB_CMD_CONN_STATUS" in corpo
+        assert "ctlr->usb_conn_mac_valid = true;" in corpo
+
+    def test_degrade_e_so_usb_nunca_bluetooth(self) -> None:
+        # Em BT a cura é o bt_probe_retries; fingir que o controle respondeu
+        # mascararia link degradado.
+        corpo = _funcao_c("static inline bool joycon_may_degrade")
+        assert "usb_probe_degrade && joycon_using_usb(ctlr)" in corpo
+
+    def test_identidade_sintetica_e_estavel_e_nao_finge_ser_real(self) -> None:
+        corpo = _funcao_c("static int joycon_synthesize_info")
+        # tipo pelo PID (sempre conhecido), nunca chute
+        assert "case USB_DEVICE_ID_NINTENDO_PROCON:" in corpo
+        assert "JOYCON_CTLR_TYPE_PRO;" in corpo
+        # CHRGGRIP fora: o tipo dele é ambíguo (segura dois joycons distintos)
+        assert "USB_DEVICE_ID_NINTENDO_CHRGGRIP" not in corpo, (
+            "o charging grip não pode ser adivinhado — tipo errado constrói "
+            "input device com os controles errados"
+        )
+        # MAC localmente administrado: nunca colide com OUI de fabricante
+        assert "ctlr->mac_addr[0] = 0x02;" in corpo
+        # estável entre replugs: nada de contador/porta USB na composição
+        assert "hdev->id" not in corpo, (
+            "hdev->id muda a cada replug — a numeração por-MAC do hefesto "
+            "precisa de um endereço ESTÁVEL"
+        )
+
+    def test_read_info_falho_nao_mata_mais_a_probe_usb(self) -> None:
+        corpo = _funcao_c("static int joycon_init")
+        assert "if (!joycon_may_degrade(ctlr)) {" in corpo
+        assert "ret = joycon_synthesize_info(ctlr);" in corpo
+        # com o gate desligado, o caminho vanilla (hid_err + goto) fica intacto
+        assert 'hid_err(hdev,\n\t\t\t\t"Failed to retrieve controller info; ret=%d\\n",' in corpo
+
+    def test_handshake_usb_falho_deixa_de_ser_silencioso(self) -> None:
+        # A linha que faltava para o bug ser auto-diagnosticável: o vanilla
+        # cai no ramo "assume ble" sem UMA palavra no log (joycon_send_usb só
+        # reporta em hid_dbg). Isso vale mesmo com todos os gates desligados.
+        corpo = _funcao_c("static int joycon_init")
+        assert "USB handshake got no reply" in corpo
+
+    def test_patch_carrega_os_gates_junto_com_o_c(self) -> None:
+        for nome in self.PARAMS_USB:
+            assert f"+module_param({nome}, bool, 0644);" in PATCH3, (
+                "o .patch precisa carregar o gate junto com o .c (invariante de rebase/upstream)"
+            )
+
+
 class TestBaselineEParidadeDoPatch:
     """Invariante de rebase: .c shipping == vanilla(BASELINE) + 0001-*.patch."""
 
@@ -415,14 +511,39 @@ class TestModprobeConf:
         # As pontas da cura são opt-in daqui (defaults do módulo == vanilla):
         # retry de probe BT + não-transmitir após exceeded + registrar LEDs
         # com SET inicial falho (fix 21/07 — medido: -110 no probe deixava o
-        # Pro Controller sem LEDs de player pela conexão inteira).
+        # Pro Controller sem LEDs de player pela conexão inteira) + as três
+        # do clone USB 057E:2009 (25/07 — o 8BitDo Pro clona VID:PID E serial
+        # do genuíno e morre na probe, deixando o device sem driver nenhum).
         assert re.search(
             r"^options hid_nintendo bt_probe_retries=3 skip_tx_on_rate_exceeded=1"
             r" register_leds_on_set_failure=1"
-            r" sync_send_tries=4 input_report_wait_ms=500 probe_info_timeout_ms=4000$",
+            r" sync_send_tries=4 input_report_wait_ms=500 probe_info_timeout_ms=4000"
+            r" usb_cmd_pad_to_report=1 usb_send_conn_status=1 usb_probe_degrade=1$",
             MODPROBE_CONF,
             re.MULTILINE,
-        ), "a cura entra pela conf: retries + skip_tx + regleds + tuning BT medido"
+        ), "a cura entra pela conf: retries + skip_tx + regleds + tuning BT + clone USB"
+
+    def test_degrade_usb_depende_do_register_leds(self) -> None:
+        # Armadilha real: com usb_probe_degrade=1 e register_leds_on_set_failure=0
+        # a probe do clone AINDA morreria, agora em joycon_leds_create — o
+        # degrade cobre read_info/IMU/report-mode/rumble, não os LEDs. Os dois
+        # andam juntos, e a conf tem que DIZER isso (senão alguém desliga um).
+        linha_options = next(
+            linha for linha in MODPROBE_CONF.splitlines() if linha.startswith("options ")
+        )
+        assert "usb_probe_degrade=1" in linha_options
+        assert "register_leds_on_set_failure=1" in linha_options
+        assert "register_leds_on_set_failure" in MODPROBE_CONF.split("options ")[0], (
+            "a dependência precisa estar explicada no comentário, não só implícita"
+        )
+
+    def test_params_do_clone_usb_documentados_com_o_porque(self) -> None:
+        # Números/flags órfãos são dívida: cada param do clone precisa de
+        # justificativa em comentário, além do valor na linha options.
+        for nome in ("usb_cmd_pad_to_report", "usb_send_conn_status", "usb_probe_degrade"):
+            assert MODPROBE_CONF.count(nome) >= 2, (
+                f"{nome} precisa de justificativa em comentário, não só o valor"
+            )
 
     def test_conf_documenta_o_opt_out_a_quente_do_skip(self) -> None:
         assert "echo 0" in MODPROBE_CONF and "skip_tx_on_rate_exceeded" in MODPROBE_CONF, (

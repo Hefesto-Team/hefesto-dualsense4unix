@@ -37,6 +37,10 @@
 @define-color text_muted   #8b8fa8;  /* item não selecionado */
 @define-color sel_bg       #403b55;  /* purple 16% sobre @bg */
 @define-color sel_bg_hover #4a4363;  /* purple 24% sobre @bg */
+/* Roxo ESCURO — o único roxo que se lê sobre um fundo claro (o verde do
+   Aplicar). O @purple #bd93f9 é claro: sobre @green dá 1.8:1, ilegível.
+   Este dá 9.6:1 (WCAG AAA) e continua lendo como roxo, não como preto. */
+@define-color purple_deep  #3b1e6e;
 
 /* Tipografia do guia: Space Grotesk na interface, JetBrains Mono nos valores.
    Nenhuma das duas costuma vir instalada — a cadeia cai para o que a
@@ -440,7 +444,7 @@ messagedialog button:active {
     background-image: none;
     background-color: @green;
     border: 1px solid @green;
-    color: @app_bg;
+    color: @purple_deep;
     font-weight: 600;
 }
 .hefesto-dualsense4unix-window button.btn-apply:hover  { background-color: #6ffb90; border-color: #6ffb90; }
@@ -472,6 +476,24 @@ messagedialog button:active {
 }
 .hefesto-dualsense4unix-window button.btn-restore:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-restore:active { background-color: @current_line; }
+
+/* BUG-GUI-FOOTER-LABEL-BRANCO-01: as quatro cores acima NUNCA chegavam ao
+   texto. `GtkButton` com a propriedade `label` cria um `GtkLabel` interno, e
+   `.hefesto-dualsense4unix-window label { color: #f8f8f2 }` (a regra que
+   força branco nos containers que o GTK pinta de cinza-disabled) casa esse
+   label DIRETAMENTE. Em CSS, valor especificado vence valor HERDADO qualquer
+   que seja a especificidade — então o `color` do botão nunca ganhava, e os
+   quatro rótulos saíam brancos. No Aplicar isso era branco sobre @green:
+   1.4:1, ilegível.
+
+   A cura é pintar o label pelo mesmo caminho: seletor que casa o label, não
+   o botão. Fica ao lado das regras dos botões de propósito — quem mexer numa
+   cor aqui vê a linha gêmea logo abaixo. */
+.hefesto-dualsense4unix-window button.btn-apply   label { color: @purple_deep; }
+.hefesto-dualsense4unix-window button.btn-save    label { color: @purple; }
+.hefesto-dualsense4unix-window button.btn-import  label { color: @orange; }
+.hefesto-dualsense4unix-window button.btn-restore label { color: @text_muted; }
+.hefesto-dualsense4unix-window button.btn-restore:hover label { color: @text_soft; }
 
 /* ===========================================================================
  * FEAT-A11Y-HIGH-CONTRAST-01 (v3.4.0): palette aumentada para a11y.
@@ -537,6 +559,26 @@ messagedialog button:active {
 .hefesto-dualsense4unix-high-contrast label,
 .hefesto-dualsense4unix-high-contrast frame > label {
     color: #fff;
+}
+/* BUG-GUI-FOOTER-LABEL-BRANCO-01 (contraparte HC): a cura acima pinta o
+   label dos btn-* por seletor direto, que venceria o HC — este casa só o
+   BOTÃO e chegava ao texto por herança. Aqui o HC volta a mandar: branco
+   sobre o preto do repouso, preto sobre o amarelo do hover/active. */
+.hefesto-dualsense4unix-high-contrast button.btn-apply   label,
+.hefesto-dualsense4unix-high-contrast button.btn-save    label,
+.hefesto-dualsense4unix-high-contrast button.btn-import  label,
+.hefesto-dualsense4unix-high-contrast button.btn-restore label {
+    color: #fff;
+}
+.hefesto-dualsense4unix-high-contrast button.btn-apply:hover    label,
+.hefesto-dualsense4unix-high-contrast button.btn-save:hover     label,
+.hefesto-dualsense4unix-high-contrast button.btn-import:hover   label,
+.hefesto-dualsense4unix-high-contrast button.btn-restore:hover  label,
+.hefesto-dualsense4unix-high-contrast button.btn-apply:active   label,
+.hefesto-dualsense4unix-high-contrast button.btn-save:active    label,
+.hefesto-dualsense4unix-high-contrast button.btn-import:active  label,
+.hefesto-dualsense4unix-high-contrast button.btn-restore:active label {
+    color: #000;
 }
 
 /* @media (prefers-contrast: more) NAO foi incluido aqui — GTK3 CSS parser

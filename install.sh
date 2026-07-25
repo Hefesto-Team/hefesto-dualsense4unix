@@ -832,6 +832,33 @@ if ! "${VENV_DIR}/bin/python" -c \
     fi
 fi
 
+# --- BT-MIC-01: microfone do DualSense por Bluetooth -------------------------
+# Em Bluetooth o DualSense NÃO fala A2DP/HFP: o áudio do microfone vem como
+# Opus dentro dos reports HID e a ponte (`mic bt`) o decodifica por ctypes
+# sobre a libopus DO SISTEMA — de propósito, para não precisar de binding pip
+# (regra do projeto: nada de pip ad-hoc; tudo replicável por script).
+# `pactl` (pulseaudio-utils) é quem publica o microfone no PipeWire.
+# Best-effort: sem isso o hefesto inteiro funciona, só o `mic bt` não sobe —
+# e ele já diz exatamente o que falta (`mic bt-status`).
+_btmic_faltando=()
+ldconfig -p 2>/dev/null | grep -q 'libopus\.so\.0' || _btmic_faltando+=(libopus0)
+command -v pactl >/dev/null 2>&1 || _btmic_faltando+=(pulseaudio-utils)
+if (( ${#_btmic_faltando[@]} )); then
+    printf '\n      Microfone por Bluetooth: faltam %s\n' "${_btmic_faltando[*]}"
+    ask_yn "instalar agora com sudo?" "${AUTO_YES}" "y"
+    if [[ "${REPLY,,}" =~ ^y ]]; then
+        if run_apt "${_btmic_faltando[@]}"; then
+            printf '      ok — `hefesto-dualsense4unix mic bt` disponível\n'
+        else
+            warn "não instalei ${_btmic_faltando[*]} — o mic por BT fica indisponível"
+        fi
+    else
+        printf '      pulando (mic por BT indisponível; instale depois: sudo apt install %s)\n' \
+            "${_btmic_faltando[*]}"
+    fi
+fi
+unset _btmic_faltando
+
 printf '      instalando pacote Python...\n'
 "${VENV_DIR}/bin/python" -m pip install \
     --quiet --disable-pip-version-check --upgrade pip packaging 2>/dev/null
@@ -908,6 +935,7 @@ else
             81-hefesto-usb-host-power.rules) rules_desc='hosts USB (xHCI) sem economia que derruba o barramento' ;;
             82-nintendo-pro-nosniff.rules) rules_desc='Pro Controller sai do sniff na borda da conexão (BT)' ;;
             83-hefesto-bond-snapshot.rules) rules_desc='snapshot dos bonds BT na borda da conexão' ;;
+            84-nintendo-pro-variant.rules) rules_desc='separa o Pro genuíno do 8BitDo clone (bcdDevice)' ;;
             *)    rules_desc='' ;;
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"

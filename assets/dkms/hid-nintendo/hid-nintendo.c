@@ -85,6 +85,28 @@ MODULE_PARM_DESC(register_leds_on_set_failure,
 		 "Register LED class devices even when the initial LED set fails (e.g. -ETIMEDOUT on a congested bluetooth link), so a later brightness write can heal the controller instead of leaving it without player LEDs forever (default N = skip registration, same as before)");
 
 /*
+ * Third-party controllers cloning the Pro Controller's USB IDs (057e:2009)
+ * are strict about things genuine hardware forgives. The three parameters
+ * below relax the USB init path for them; all default to the historical
+ * behavior, and all are read during probe, so an A/B is a sysfs write plus a
+ * replug (no reload, no reboot).
+ */
+static bool usb_cmd_pad_to_report;
+module_param(usb_cmd_pad_to_report, bool, 0644);
+MODULE_PARM_DESC(usb_cmd_pad_to_report,
+		 "Zero-pad USB commands (output report 0x80) to the full report length declared by the device instead of transmitting only the 2 meaningful bytes (default N = 2 bytes, same as before)");
+
+static bool usb_send_conn_status;
+module_param(usb_send_conn_status, bool, 0644);
+MODULE_PARM_DESC(usb_send_conn_status,
+		 "Ask for the USB connection status (0x80 0x01) before handshaking, like a real console does, and keep the MAC from the reply as a fallback (default N = don't ask, same as before)");
+
+static bool usb_probe_degrade;
+module_param(usb_probe_degrade, bool, 0644);
+MODULE_PARM_DESC(usb_probe_degrade,
+		 "Over USB, treat init failures after the transport step as advisory: synthesize the controller identity and keep going instead of failing probe and leaving the device with no driver at all (default N = fail probe, same as before)");
+
+/*
  * Reference the url below for the following HID report defines:
  * https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering
  */
@@ -146,6 +168,14 @@ MODULE_PARM_DESC(register_leds_on_set_failure,
 #define JC_USB_RESET			 0x06
 #define JC_USB_PRE_HANDSHAKE		 0x91
 #define JC_USB_SEND_UART		 0x92
+
+/*
+ * Full length of the 0x80 output report, report ID included. The controller's
+ * own report descriptor declares 63 data bytes for it (85 80 09 05 75 08 95 3f
+ * 91 83), and the interrupt OUT endpoint is wMaxPacketSize 0x40 - i.e. one
+ * command is meant to be exactly one full-size packet.
+ */
+#define JC_USB_CMD_REPORT_SIZE		 64
 
 /* Magic value denoting presence of user calibration */
 #define JC_CAL_USR_MAGIC_0		 0xB2
@@ -618,6 +648,15 @@ struct joycon_ctlr {
 	char *mac_addr_str;
 	enum joycon_ctlr_type ctlr_type;
 
+	/*
+	 * Reply to the USB connection status command, kept only as a fallback
+	 * identity for controllers that never answer JC_SUBCMD_REQ_DEV_INFO.
+	 * Never authoritative: joycon_read_info() overwrites mac_addr and
+	 * ctlr_type whenever it succeeds.
+	 */
+	u8 usb_conn_mac[6];
+	bool usb_conn_mac_valid;
+
 	/* The following members are used for synchronous sends/receives */
 	enum joycon_msg_type msg_type;
 	u8 subcmd_num;
@@ -974,15 +1013,83 @@ static int joycon_hid_send_sync(struct joycon_ctlr *ctlr, u8 *data, size_t len,
 static int joycon_send_usb(struct joycon_ctlr *ctlr, u8 cmd, u32 timeout)
 {
 	int ret;
-	u8 buf[2] = {JC_OUTPUT_USB_CMD};
+	/*
+	 * Historically only the two meaningful bytes are transmitted, even
+	 * though the device declares a 64 byte report and the endpoint is
+	 * 64 bytes wide. Genuine controllers accept the short transfer;
+	 * third-party clones sharing 057e:2009 have been observed to ignore
+	 * it entirely, so the handshake never happens, the driver silently
+	 * takes the "assume ble pro controller" path, and probe dies later in
+	 * joycon_read_info() with -ETIMEDOUT. Padding costs 62 zero bytes on
+	 * one 8ms interrupt frame per command, all of them during probe.
+	 */
+	u8 buf[JC_USB_CMD_REPORT_SIZE] = {JC_OUTPUT_USB_CMD};
+	size_t len = usb_cmd_pad_to_report ? sizeof(buf) : 2;
 
 	buf[1] = cmd;
 	ctlr->usb_ack_match = cmd;
 	ctlr->msg_type = JOYCON_MSG_TYPE_USB;
-	ret = joycon_hid_send_sync(ctlr, buf, sizeof(buf), timeout);
+	ret = joycon_hid_send_sync(ctlr, buf, len, timeout);
 	if (ret)
 		hid_dbg(ctlr->hdev, "send usb command failed; ret=%d\n", ret);
 	return ret;
+}
+
+/*
+ * Ask the controller for its USB connection status, which is what a console
+ * does before handshaking. The driver has always had the command defined and
+ * never sent it.
+ *
+ * Two reasons to send it: it is the exchange that some clone firmwares seem to
+ * expect before they leave their idle state, and its reply carries the MAC,
+ * which is the only identity we can still recover if REQ_DEV_INFO never
+ * answers. Best effort in both roles - a failure here is not fatal, the
+ * handshake that follows remains the decisive step.
+ */
+static void joycon_query_usb_conn_status(struct joycon_ctlr *ctlr)
+{
+	const u8 *resp = ctlr->input_buf;
+	int ret;
+	int i;
+
+	/*
+	 * joycon_hid_send_sync() only clears input_buf on failure, and the
+	 * receive path copies as many bytes as arrived without clearing the
+	 * tail. Clear it up front so a short reply cannot leave stale bytes
+	 * where the MAC is expected.
+	 */
+	memset(ctlr->input_buf, 0, JC_MAX_RESP_SIZE);
+
+	ret = joycon_send_usb(ctlr, JC_USB_CMD_CONN_STATUS, HZ);
+	if (ret) {
+		hid_dbg(ctlr->hdev,
+			"USB connection status request failed; ret=%d\n", ret);
+		return;
+	}
+
+	/*
+	 * Reply layout per the reverse engineering the rest of this file
+	 * already references (dekuNukem's USB HID notes):
+	 *   [0] 0x81  [1] 0x01  [2] 0x00  [3] device type  [4..9] MAC
+	 * The device type byte is deliberately ignored: a wrong type silently
+	 * strips inputs from the controller, while the PID is always right for
+	 * the fallback we need. Only the MAC is kept.
+	 */
+	if (resp[0] != JC_INPUT_USB_RESPONSE ||
+	    resp[1] != JC_USB_CMD_CONN_STATUS)
+		return;
+
+	for (i = 0; i < 6; i++) {
+		if (resp[4 + i])
+			break;
+	}
+	if (i == 6)
+		return; /* all-zero MAC: nothing usable was reported */
+
+	memcpy(ctlr->usb_conn_mac, resp + 4, sizeof(ctlr->usb_conn_mac));
+	ctlr->usb_conn_mac_valid = true;
+	hid_dbg(ctlr->hdev, "USB connection status MAC = %pM\n",
+		ctlr->usb_conn_mac);
 }
 
 static int joycon_send_subcmd(struct joycon_ctlr *ctlr,
@@ -2536,14 +2643,117 @@ static int joycon_read_info(struct joycon_ctlr *ctlr)
 	return 0;
 }
 
+/* Is this controller allowed to keep going after a failed init step? */
+static inline bool joycon_may_degrade(struct joycon_ctlr *ctlr)
+{
+	/*
+	 * USB only. Over bluetooth a failed exchange means a degraded link,
+	 * and the cure there is the retry loop in probe, not pretending the
+	 * controller answered.
+	 */
+	return usb_probe_degrade && joycon_using_usb(ctlr);
+}
+
+/*
+ * Identity of last resort for a controller that never answers REQ_DEV_INFO.
+ *
+ * Failing probe over that costs the user the whole device: HID leaves it with
+ * no driver, no hidraw, no input, no LEDs and no battery, and hid-generic will
+ * not step in because a specific driver matched. Everything REQ_DEV_INFO
+ * returns is recoverable from elsewhere, so recover it and let the controller
+ * exist.
+ */
+static int joycon_synthesize_info(struct joycon_ctlr *ctlr)
+{
+	struct hid_device *hdev = ctlr->hdev;
+
+	/*
+	 * The type comes from the product ID, which is always known. The two
+	 * PIDs the type byte disambiguates better than the PID does (the NSO
+	 * Genesis pad lying over bluetooth, and the charging grip holding two
+	 * different joycons) are deliberately left out: guessing wrong there
+	 * would build an input device with the wrong controls, which is worse
+	 * than the honest failure this function replaces.
+	 */
+	switch (hdev->product) {
+	case USB_DEVICE_ID_NINTENDO_PROCON:
+		ctlr->ctlr_type = JOYCON_CTLR_TYPE_PRO;
+		break;
+	case USB_DEVICE_ID_NINTENDO_JOYCONL:
+		ctlr->ctlr_type = JOYCON_CTLR_TYPE_JCL;
+		break;
+	case USB_DEVICE_ID_NINTENDO_JOYCONR:
+		ctlr->ctlr_type = JOYCON_CTLR_TYPE_JCR;
+		break;
+	case USB_DEVICE_ID_NINTENDO_SNESCON:
+		ctlr->ctlr_type = JOYCON_CTLR_TYPE_SNES;
+		break;
+	case USB_DEVICE_ID_NINTENDO_N64CON:
+		ctlr->ctlr_type = JOYCON_CTLR_TYPE_N64;
+		break;
+	default:
+		hid_err(hdev, "no fallback controller type for product 0x%04X\n",
+			hdev->product);
+		return -ENODEV;
+	}
+
+	if (ctlr->usb_conn_mac_valid) {
+		memcpy(ctlr->mac_addr, ctlr->usb_conn_mac,
+		       sizeof(ctlr->mac_addr));
+	} else {
+		/*
+		 * No MAC was reported by any route, so build one that is
+		 * stable across replugs (userspace keys per-controller
+		 * settings on it) and that cannot be mistaken for a real
+		 * address: bit 1 of the first octet marks it locally
+		 * administered, so it can never collide with a vendor OUI.
+		 * Two identical clones plugged at once would share it - they
+		 * are indistinguishable to the kernel anyway, right down to
+		 * the serial number.
+		 */
+		ctlr->mac_addr[0] = 0x02;
+		ctlr->mac_addr[1] = (u8)(hdev->vendor >> 8);
+		ctlr->mac_addr[2] = (u8)hdev->vendor;
+		ctlr->mac_addr[3] = (u8)(hdev->product >> 8);
+		ctlr->mac_addr[4] = (u8)hdev->product;
+		ctlr->mac_addr[5] = (u8)hdev->bus;
+	}
+
+	ctlr->mac_addr_str = devm_kasprintf(&hdev->dev, GFP_KERNEL,
+					    "%02X:%02X:%02X:%02X:%02X:%02X",
+					    ctlr->mac_addr[0],
+					    ctlr->mac_addr[1],
+					    ctlr->mac_addr[2],
+					    ctlr->mac_addr[3],
+					    ctlr->mac_addr[4],
+					    ctlr->mac_addr[5]);
+	if (!ctlr->mac_addr_str)
+		return -ENOMEM;
+
+	hid_info(hdev, "controller MAC = %s (%s), type = 0x%02X (from product ID)\n",
+		 ctlr->mac_addr_str,
+		 ctlr->usb_conn_mac_valid ? "USB connection status" :
+					    "synthesized",
+		 ctlr->ctlr_type);
+	return 0;
+}
+
 static int joycon_init(struct hid_device *hdev)
 {
 	struct joycon_ctlr *ctlr = hid_get_drvdata(hdev);
 	int ret = 0;
+	int hs_ret = -ENODEV; /* USB handshake; -ENODEV = never attempted */
 
 	mutex_lock(&ctlr->output_mutex);
+
+	if (joycon_using_usb(ctlr)) {
+		if (usb_send_conn_status)
+			joycon_query_usb_conn_status(ctlr);
+		hs_ret = joycon_send_usb(ctlr, JC_USB_CMD_HANDSHAKE, HZ);
+	}
+
 	/* if handshake command fails, assume ble pro controller */
-	if (joycon_using_usb(ctlr) && !joycon_send_usb(ctlr, JC_USB_CMD_HANDSHAKE, HZ)) {
+	if (joycon_using_usb(ctlr) && !hs_ret) {
 		hid_dbg(hdev, "detected USB controller\n");
 		/* set baudrate for improved latency */
 		ret = joycon_send_usb(ctlr, JC_USB_CMD_BAUDRATE_3M, HZ);
@@ -2569,14 +2779,37 @@ static int joycon_init(struct hid_device *hdev)
 		hid_err(hdev, "Failed charging grip handshake\n");
 		ret = -ETIMEDOUT;
 		goto out_unlock;
+	} else if (joycon_using_usb(ctlr)) {
+		/*
+		 * A USB controller that did not answer the handshake is now
+		 * treated as if it were on bluetooth: it was never switched
+		 * to USB mode, so every subcommand below is being sent to a
+		 * controller that is not listening. That is the actual root
+		 * cause of the -ETIMEDOUT reported one step later by
+		 * joycon_read_info(), and until now it left no trace at all
+		 * in the log - joycon_send_usb() only reports at hid_dbg.
+		 * Say it out loud; nothing else changes here.
+		 */
+		hid_warn(hdev,
+			 "USB handshake got no reply (ret=%d); the controller was never put in USB mode\n",
+			 hs_ret);
 	}
 
 	/* needed to retrieve the controller type */
 	ret = joycon_read_info(ctlr);
 	if (ret) {
-		hid_err(hdev, "Failed to retrieve controller info; ret=%d\n",
-			ret);
-		goto out_unlock;
+		if (!joycon_may_degrade(ctlr)) {
+			hid_err(hdev,
+				"Failed to retrieve controller info; ret=%d\n",
+				ret);
+			goto out_unlock;
+		}
+		hid_warn(hdev,
+			 "Failed to retrieve controller info (ret=%d); falling back to a synthesized identity\n",
+			 ret);
+		ret = joycon_synthesize_info(ctlr);
+		if (ret)
+			goto out_unlock;
 	}
 
 	if (joycon_has_joysticks(ctlr)) {
@@ -2605,24 +2838,49 @@ static int joycon_init(struct hid_device *hdev)
 		/* Enable the IMU */
 		ret = joycon_enable_imu(ctlr);
 		if (ret) {
-			hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
-			goto out_unlock;
+			if (!joycon_may_degrade(ctlr)) {
+				hid_err(hdev, "Failed to enable the IMU; ret=%d\n", ret);
+				goto out_unlock;
+			}
+			hid_warn(hdev,
+				 "Failed to enable the IMU (ret=%d); continuing without motion\n",
+				 ret);
+			ret = 0;
 		}
 	}
 
 	/* Set the reporting mode to 0x30, which is the full report mode */
 	ret = joycon_set_report_mode(ctlr);
 	if (ret) {
-		hid_err(hdev, "Failed to set report mode; ret=%d\n", ret);
-		goto out_unlock;
+		if (!joycon_may_degrade(ctlr)) {
+			hid_err(hdev, "Failed to set report mode; ret=%d\n", ret);
+			goto out_unlock;
+		}
+		/*
+		 * Only 0x30/0x21/0x31 reports are parsed, so a controller that
+		 * does not switch modes will produce input only if it streams
+		 * 0x30 on its own - which is exactly what makes these clones
+		 * usable under hid-generic. Worth trying; say what happened so
+		 * a silent gamepad is diagnosable from the log.
+		 */
+		hid_warn(hdev,
+			 "Failed to set report mode (ret=%d); continuing, input depends on the controller streaming full reports unprompted\n",
+			 ret);
+		ret = 0;
 	}
 
 	if (joycon_has_rumble(ctlr)) {
 		/* Enable rumble */
 		ret = joycon_enable_rumble(ctlr);
 		if (ret) {
-			hid_err(hdev, "Failed to enable rumble; ret=%d\n", ret);
-			goto out_unlock;
+			if (!joycon_may_degrade(ctlr)) {
+				hid_err(hdev, "Failed to enable rumble; ret=%d\n", ret);
+				goto out_unlock;
+			}
+			hid_warn(hdev,
+				 "Failed to enable rumble (ret=%d); continuing without force feedback\n",
+				 ret);
+			ret = 0;
 		}
 	}
 

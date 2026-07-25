@@ -187,6 +187,9 @@ RULES=(
     "81-hefesto-usb-host-power.rules"
     "82-nintendo-pro-nosniff.rules"
     "83-hefesto-bond-snapshot.rules"
+    # 84: separa o Pro genuíno do 8BitDo clone, que colidem em VID:PID E no
+    # serial — o discriminador é o bcdDevice (0210 x 0200). NINTENDO-VARIANT-01.
+    "84-nintendo-pro-variant.rules"
 )
 
 # Verificar se TODAS as rules existem na origem.

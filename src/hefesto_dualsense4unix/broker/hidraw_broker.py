@@ -631,7 +631,7 @@ class BrokerState:
             else:
                 # Achado Onda S #3: nó ÓRFÃO — a lease que o escondeu morreu
                 # com o restore de fs falho (`on_conn_closed` o manteve em
-                # `hidden`, mas nenhuma conexão viva o referencia). Adotar
+                # `hidden`, mas nenhuma conexão viva o referencia). Adotar  # (noqa-acento)
                 # SEM somar refcount: o baseline fantasma de 1 nunca seria
                 # descontado por ninguém e o `restore_all` da conexão nova
                 # pararia em refcount 1 para sempre (nó 0600 até reiniciar o
@@ -747,7 +747,7 @@ class BrokerState:
         Achado Onda S #3: é a fonte da verdade para distinguir "outra lease
         viva segura o nó" (refcount soma/decrementa normal) de "nó ÓRFÃO"
         (lease morreu com o restore de fs falho — `on_conn_closed` mantém o
-        nó em `hidden`, mas `by_conn` já não o referencia em lugar nenhum).
+        nó em `hidden`, mas `by_conn` já não o referencia em lugar nenhum).  # (noqa-acento)
         """
         return sum(1 for held in self.by_conn.values() if canon in held)
 
@@ -832,7 +832,7 @@ def physical_nodes_exposure(
     duas noções sendo confundidas numa só frase — "configurada" (o appid está
     no `steam_input_apps.txt`) e "EFETIVA" (o hidraw do físico é de fato
     legível pelo uid da usuária agora). A allowlist ficou inerte por meses
-    justamente porque ninguém media a segunda; um status honesto precisa das
+    justamente porque ninguém media a segunda; um status honesto precisa das  # (noqa-acento)
     duas, e é isto que a GUI e o `doctor.sh` passam a consultar.
 
     Espelho read-only de `restore_all_physical` (mesma varredura, mesmo

@@ -125,7 +125,7 @@ install_disable_dropin() {
     if [[ -f "${DROPIN_OUTPUT_SRC}" ]]; then
         cp -f "${DROPIN_OUTPUT_SRC}" "${DROPIN_OUTPUT_DST}"
         log "drop-in DISABLE-OUTPUT instalado: ${DROPIN_OUTPUT_DST}"
-        log "AVISO: o 53 desabilita tambem o SINK (saida) do DualSense — o"
+        log "AVISO: o 53 desabilita também o SINK (saida) do DualSense — o"
         log "       alto-falante e o fone no jack do controle ficam MUDOS, e o"
         log "       canal de haptic-de-audio some. O rumble do jogo NAO usa esse"
         log "       canal (vai por HID/vpad), entao a vibracao in-game continua."
@@ -228,6 +228,38 @@ restart_wireplumber() {
     fi
 }
 
+# BUG-MIC-MUDO-PERSISTIDO-01: tirar os drop-ins de supressão NÃO devolve o
+# microfone — ele volta MUDO.
+#
+# São dois estados diferentes, em dois arquivos diferentes, e o script só
+# conhecia um. `default-nodes` guarda QUEM é a fonte padrão (o que os drop-ins
+# e o reset governam); `default-routes` guarda o MUTE e o volume de cada rota
+# do card, e sobrevive a tudo. Medido na máquina da mantenedora:
+#
+#   alsa_card.usb-...DualSense...:input:iec958-stereo-input={"mute":true, ...}
+#   alsa_card.usb-...DualSense...:output:analog-output={"mute":true, ...}
+#
+# Com isso, `--enable-mic` removia os drop-ins, reiniciava o WirePlumber, e ele
+# restaurava fielmente o mute salvo: "o microfone sumiu" sem nada no log. Era o
+# elo que faltava entre "já funcionou antes" e "não funciona mais".
+#
+# A ordem importa: o WirePlumber GRAVA o estado ao sair, então editar com ele
+# vivo seria sobrescrito no shutdown. Paramos, saneamos, e deixamos o
+# `restart_wireplumber` subir lendo o arquivo já corrigido.
+unmute_dualsense_routes() {
+    local rotas="${HOME}/.local/state/wireplumber/default-routes"
+    [[ -f "$rotas" ]] || { log "sem default-routes — nada a desmutar"; return 0; }
+    grep -qiE 'dualsense.*"mute":true' "$rotas" || {
+        log "rotas do DualSense já sem mute"
+        return 0
+    }
+    command -v systemctl >/dev/null 2>&1 && systemctl --user stop wireplumber 2>/dev/null || true
+    cp -f "$rotas" "${rotas}.hefesto.bak" 2>/dev/null || true
+    # Só as linhas do DualSense: o mute dos OUTROS devices é escolha da usuária.
+    sed -i -E '/[Dd]ual[Ss]ense/ s/"mute":true/"mute":false/g' "$rotas"
+    log "mute persistido do DualSense removido (backup em ${rotas}.hefesto.bak)"
+}
+
 # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
 # (usbcore.quirks=054c:0ce6:gn) é o que segura o "storm -71" COM o mic ligado.
 # Só ATIVO (/proc/cmdline) ou armado em RUNTIME (sysfs) protege a SESSÃO ATUAL —
@@ -261,6 +293,8 @@ enable_mic_dualsense() {
         fi
     done
     [[ "$removed" -eq 0 ]] && log "nenhum drop-in de supressão presente (mic já livre)"
+    # BUG-MIC-MUDO-PERSISTIDO-01: sem isto o mic volta, mas volta MUDO.
+    unmute_dualsense_routes
     restart_wireplumber
 }
 

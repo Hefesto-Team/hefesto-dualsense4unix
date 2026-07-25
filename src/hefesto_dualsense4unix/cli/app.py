@@ -142,14 +142,21 @@ def tray() -> None:
 @app.command()
 def mic(
     action: str = typer.Argument(
-        "status", help="on | off | status — liga/desliga o mic embutido do DualSense."
+        "status",
+        help="on | off | status | bt | bt-status — mic embutido do DualSense.",
     ),
 ) -> None:
-    """Liga/desliga o microfone embutido do DualSense (via WirePlumber).
+    """Liga/desliga o microfone embutido do DualSense.
 
-    Por padrão o mic vem suprimido (sem virar microfone padrão / sem spam).
-    `mic on` libera o mic quando você for jogar algo que precise dele; `mic off`
-    volta a suprimir. Mesmo caminho usado pelo botão na GUI e no applet COSMIC.
+    NO CABO (via WirePlumber): por padrão o mic vem suprimido (sem virar
+    microfone padrão / sem spam). `mic on` libera o mic quando você for jogar
+    algo que precise dele; `mic off` volta a suprimir. Mesmo caminho usado pelo
+    botão na GUI e no applet COSMIC.
+
+    EM BLUETOOTH (BT-MIC-01): o controle não fala A2DP/HFP — o áudio vem como
+    Opus dentro dos reports HID e precisa de uma ponte. `mic bt` sobe essa ponte
+    e publica o microfone no PipeWire (Ctrl-C encerra e desliga o mic no
+    controle); `mic bt-status` só diagnostica as pré-condições.
     """
     from hefesto_dualsense4unix.cli.cmd_mic import mic_cmd
 

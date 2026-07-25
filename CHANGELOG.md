@@ -5,6 +5,81 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-07-25
+
+Uma leva de causas-raiz. O tema comum das correções abaixo é o mesmo: premissas
+que valiam **no cabo** estavam escritas como se valessem sempre, e a interface
+afirmava sucesso sem verificar.
+
+### Added
+
+- **"Deixar tudo pronto"** e **"Este jogo não funciona"** (aba Sistema): os dois
+  botões que dispensam entender a diferença entre Steam Input e opção de
+  inicialização. O primeiro fecha a Steam uma vez (com permissão), aplica tudo e
+  reabre; o segundo grava o AppID do jogo na allowlist e recarrega. Os quatro
+  botões antigos continuam, agora rotulados como "Avançado".
+- **Fechar/reabrir a Steam com consentimento** (`with_steam_closed`): jogo aberto
+  continua sendo recusa — nunca pergunta, nunca fecha.
+- O **cadeado do autoswitch aparece na tela**, com o que ele implica.
+- Descriminador de variante para Pro Controllers que colidem em VID:PID e serial
+  (`assets/84-nintendo-pro-variant.rules`, por `bcdDevice`).
+
+### Fixed
+
+- **O microfone voltava mudo.** São dois estados em dois arquivos e o projeto só
+  conhecia um: `default-nodes` guarda quem é a fonte padrão; `default-routes`
+  guarda o *mute*, e sobrevive a tudo. Ligar o mic removia os drop-ins e o
+  WirePlumber restaurava fielmente o mute salvo — sem nada no log.
+- **Laço eterno a ~1 Hz no daemon.** O leitor de movimento assumia que "um
+  DualSense vivo emite sempre (250-765 Hz)" — verdade no cabo, falsa em
+  Bluetooth, onde o firmware emudece em repouso. Um controle parado largava o
+  fd, desligava o streaming e reabria pelo broker uma vez por segundo, todo
+  segundo. O teto de silêncio agora vem do barramento lido no sysfs.
+- **Perfis alternando sozinhos.** Três causas: o backend X11 usava o foco real
+  apenas como portão e tirava o dado do `_NET_ACTIVE_WINDOW`, que fica rançoso no
+  cosmic-comp (medido: as duas fontes discordando ao vivo); um perfil catch-all
+  tinha autoridade sobre a janela de um jogo; e sair de um perfil custava os
+  mesmos 0,5 s de entrar. Agora o dado vem da janela do foco real, catch-all não
+  entra por cima de jogo, e sair exige 12 s.
+- **O modo jogo não ligava sozinho.** O cadeado do autoswitch barrava até a regra
+  específica do jogo; agora ele cede para ela, e continua barrando troca por
+  janela comum. A allowlist do Steam Input passa a pular só a máscara — a
+  supressão do perfil não disputa nada com o jogo.
+- **A interface afirmava sucesso sobre um no-op.** O botão de desligar Steam Input
+  executava um modo que nunca fecha a Steam, adia em silêncio e sai com sucesso —
+  e a interface toastava "Steam Input desligado" de qualquer jeito. Todo modo do
+  script agora termina numa linha de resultado canônica, e o toast só diz "Pronto"
+  relendo o arquivo. Os tooltips que prometiam o que o botão não fazia foram
+  corrigidos.
+- **`--apply`/`--restore` sem proteção de jogo aberto**, chamados direto pelo
+  instalador e pelo purge: `steam -shutdown` ali mataria o jogo em andamento.
+- **Numeração de controle instável entre boots.** O mapa MAC→slot era descartado
+  como "sessão morta" quando o `boot_id` mudava, e cada reinício renumerava por
+  ordem de conexão. A âncora agora degrada (`boot_id` → `machine-id` → nenhuma) e
+  quem decide o load é a versão de schema.
+- **"Os dois controles aparecem como Player 1"**: havia dois espaços de numeração
+  chegando à mesma lâmpada, e um alvo fixo em 1 para o primário.
+- **Padrões de player LED colidiam** acima de 4: o slot 7 acendia idêntico ao 4.
+  O LED azul virou bit "+5", dando nove padrões distinguíveis.
+- **Segundo Pro Controller não existia para o sistema.** Um clone que se identifica
+  como Nintendo falha o handshake USB e o driver aborta o probe: sem hidraw, sem
+  input, sem LEDs. O comando USB era transmitido com 2 bytes num endpoint de 64 —
+  o descritor do próprio controle declara 63 bytes de dados para esse report. O
+  módulo DKMS ganhou três curas opcionais (padrão = comportamento original) e um
+  aviso onde antes havia silêncio.
+
+### Changed
+
+- A **aba Status coloca os controles lado a lado** (duas colunas): empilhados,
+  dois já exigiam rolagem.
+- Os **rótulos dos botões do rodapé** recebiam branco de uma regra que atingia o
+  label interno, anulando a cor de cada botão — o "Aplicar" ficava branco sobre
+  verde. Cada um voltou à sua cor, com o Aplicar num roxo escuro legível.
+- **O CI deixou de carimbar verde sobre nada**: o passo de testes engolia a falha
+  com um aviso, filtrava por markers que nunca existiram e ignorava um diretório
+  inexistente. Os testes de interface pulavam calados por falta de PyGObject, e
+  `tests/core` não era executado por job nenhum.
+
 ## [0.1.0] — 2026-07-24
 
 **Primeiro lançamento público, em alfa.** A numeração recomeça em 0.1.0: as

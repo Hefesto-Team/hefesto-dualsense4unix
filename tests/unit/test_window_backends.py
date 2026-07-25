@@ -4,7 +4,8 @@
   mockado, zero ThreadPoolExecutor/asyncio.run por chamada, propagação de
   timeout nativo (sprint AUDIT-FINDING-WAYLAND-PORTAL-PERF-01).
 - XlibBackend: gate de foco X contra `_NET_ACTIVE_WINDOW` rançoso do
-  cosmic-comp (UX-02, SPRINT-UX-AUTOSWITCH-01).
+  cosmic-comp (UX-02, SPRINT-UX-AUTOSWITCH-01) e, desde o FOCO-01 (auditoria
+  24/07), o DADO derivado da janela do foco REAL — o gate sozinho não bastava.
 """
 from __future__ import annotations
 
@@ -670,3 +671,230 @@ def test_log_de_reconexao_e_um_por_episodio(
     backend.get_active_window_info()  # reconexão falha; ainda o mesmo episódio
 
     assert eventos.count("x11_reconnect_attempt") == 1
+
+
+# ---------------------------------------------------------------------------
+# FOCO-01 (auditoria 24/07) — o DADO vem da janela do FOCO REAL, não do
+# `_NET_ACTIVE_WINDOW`.
+#
+# O UX-02 acertou o GATE (pergunta ao servidor X quem tem o foco) mas deixou o
+# DADO vindo da propriedade que ele próprio documentou como rançosa. Medição ao
+# vivo em COSMIC, com a GUI do Hefesto em foco e NENHUMA janela Steam à frente:
+#
+#     get_input_focus().focus = 35651599   (sem WM_CLASS)
+#     _NET_ACTIVE_WINDOW      = 44040223   (steam)
+#
+# As duas fontes DISCORDAM e era a rançosa que o autoswitch obedecia — é a
+# primeira das três causas do ping-pong `vitoria``Navegação` a cada 18-28 s
+# (journal de 22-23/07). Agora: sobe-se a árvore a partir do foco até o
+# top-level com WM_CLASS; se ele discordar do `_NET_ACTIVE_WINDOW`, a resposta é
+# None ("não sei") e a histerese UX-01 retém o perfil corrente.
+# ---------------------------------------------------------------------------
+
+FOCO_MEDIDO = 35651599
+NET_ACTIVE_MEDIDO = 44040223
+ROOT_ID = 0x1
+
+
+class _FakeXWin:
+    """Janela do fake: id, WM_CLASS opcional, pai opcional, título e pid."""
+
+    def __init__(
+        self,
+        wid: int,
+        *,
+        wm_class: tuple[str, str] | None = None,
+        parent: Any = None,
+        title: str = "",
+        pid: int = 0,
+    ) -> None:
+        self.id = wid
+        self._wm_class = wm_class
+        self._parent = parent
+        self._title = title
+        self._pid = pid
+
+    def get_wm_class(self) -> tuple[str, str] | None:
+        return self._wm_class
+
+    def get_wm_name(self) -> str:
+        return self._title
+
+    def get_full_property(self, atom: int, _type: int) -> _FakeProperty | None:
+        return _FakeProperty([self._pid]) if self._pid else None
+
+    def query_tree(self) -> Any:
+        return types.SimpleNamespace(parent=self._parent)
+
+
+class _FakeRootWin(_FakeXWin):
+    """Raiz: guarda o `_NET_ACTIVE_WINDOW` que o backend consulta."""
+
+    def __init__(self, net_active: int) -> None:
+        super().__init__(ROOT_ID)
+        self._net_active = net_active
+
+    def get_full_property(self, atom: int, _type: int) -> _FakeProperty | None:
+        return _FakeProperty([self._net_active]) if self._net_active else None
+
+
+class _FakeArvoreDisplay:
+    """Display com árvore X de verdade (pais/filhos) e `_NET_ACTIVE_WINDOW`."""
+
+    def __init__(self, *, foco: int, janelas: dict[int, _FakeXWin], net_active: int):
+        self._foco = foco
+        self._janelas = janelas
+        self._root = _FakeRootWin(net_active)
+        self._janelas.setdefault(ROOT_ID, self._root)
+
+    def screen(self) -> Any:
+        return types.SimpleNamespace(root=self._root)
+
+    def intern_atom(self, name: str) -> int:
+        return 1
+
+    def create_resource_object(self, kind: str, wid: int) -> _FakeXWin:
+        return self._janelas[wid]
+
+    def get_input_focus(self) -> _FakeFocusReply:
+        return _FakeFocusReply(_FakeWindowHandle(self._foco))
+
+
+def _backend_arvore(display: _FakeArvoreDisplay) -> xlib.XlibBackend:
+    backend = xlib.XlibBackend()
+    backend._display = display
+    backend._connected = True
+    backend._init_attempted = True
+    return backend
+
+
+def test_foco_em_filha_sobe_ate_o_top_level(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O servidor X entrega o foco à janela-filha do toolkit, dentro do frame
+    reparentado pelo WM — quem tem WM_CLASS é o top-level, dois níveis acima."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "mmj-bin")
+    topo = _FakeXWin(
+        0x400001,
+        wm_class=("mmj", "steam_app_2111190"),
+        title="Mullet Mad Jack",
+        pid=4242,
+    )
+    frame = _FakeXWin(0x400002, parent=topo)
+    filha = _FakeXWin(0x400003, parent=frame)
+    display = _FakeArvoreDisplay(
+        foco=filha.id,
+        janelas={w.id: w for w in (topo, frame, filha)},
+        net_active=topo.id,
+    )
+    topo._parent = display._root
+
+    info = _backend_arvore(display).get_active_window_info()
+
+    assert info is not None
+    assert info.wm_class == "steam_app_2111190"
+    assert info.title == "Mullet Mad Jack"
+    assert info.pid == 4242
+    assert info.exe_basename == "mmj-bin"
+
+
+def test_desacordo_medido_ao_vivo_retorna_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O caso EXATO da medição: GUI do Hefesto com o foco, `_NET_ACTIVE_WINDOW`
+    ainda dizendo `steam`. Antes o autoswitch lia 'steam' e flipava para
+    `Navegação`; agora a leitura é None e a UX-01 retém o perfil."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "python3")
+    gui = _FakeXWin(
+        FOCO_MEDIDO, wm_class=("main.py", "Main.py"), title="Hefesto", pid=7
+    )
+    steam = _FakeXWin(NET_ACTIVE_MEDIDO, wm_class=("steam", "steam"), title="Steam")
+    display = _FakeArvoreDisplay(
+        foco=gui.id,
+        janelas={gui.id: gui, steam.id: steam},
+        net_active=steam.id,
+    )
+
+    assert _backend_arvore(display).get_active_window_info() is None
+
+
+def test_foco_sem_top_level_na_arvore_retorna_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Subida esgota a árvore sem achar WM_CLASS nenhum (janela override-redirect,
+    tooltip, ou a filha de uma janela X morta) — 'não sei' é a resposta certa."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
+    orfa = _FakeXWin(0x500001, parent=None)
+    display = _FakeArvoreDisplay(
+        foco=orfa.id, janelas={orfa.id: orfa}, net_active=0x400001
+    )
+
+    assert _backend_arvore(display).get_active_window_info() is None
+
+
+def test_net_active_ausente_retorna_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem `_NET_ACTIVE_WINDOW` não há corroboração — degrada para None, como
+    antes do FOCO-01 (comportamento histórico preservado de propósito)."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
+    topo = _FakeXWin(0x600001, wm_class=("a", "steam_app_1599660"))
+    display = _FakeArvoreDisplay(
+        foco=topo.id, janelas={topo.id: topo}, net_active=0
+    )
+
+    assert _backend_arvore(display).get_active_window_info() is None
+
+
+def test_subida_para_na_raiz(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A raiz não é janela de aplicação nenhuma: chegar nela é 'não sei',
+    nunca 'a raiz está em foco'."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
+    filha = _FakeXWin(0x700001)
+    display = _FakeArvoreDisplay(
+        foco=filha.id, janelas={filha.id: filha}, net_active=0x700001
+    )
+    filha._parent = display._root
+
+    assert _backend_arvore(display).get_active_window_info() is None
+
+
+def test_profundidade_maxima_barra_arvore_patologica(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cadeia sem fim (ou ciclo) não pode travar o tick de 2 Hz do autoswitch."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
+    a = _FakeXWin(0x800001)
+    b = _FakeXWin(0x800002, parent=a)
+    a._parent = b  # ciclo
+    display = _FakeArvoreDisplay(
+        foco=a.id, janelas={a.id: a, b.id: b}, net_active=0x800001
+    )
+
+    assert _backend_arvore(display).get_active_window_info() is None
+
+
+def test_log_do_desacordo_uma_vez_por_episodio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O poll é de 2 Hz e a GUI aberta em cima do jogo dura minutos — 1 log por
+    episódio, reabrindo quando a leitura volta a ser boa."""
+    monkeypatch.setattr(xlib, "_exe_basename_from_pid", lambda pid: "x")
+    eventos: list[str] = []
+    monkeypatch.setattr(xlib.logger, "info", lambda evt, **kw: eventos.append(evt))
+
+    gui = _FakeXWin(FOCO_MEDIDO, wm_class=("main.py", "Main.py"))
+    steam = _FakeXWin(NET_ACTIVE_MEDIDO, wm_class=("steam", "steam"))
+    janelas = {gui.id: gui, steam.id: steam}
+    discorda = _FakeArvoreDisplay(foco=gui.id, janelas=dict(janelas), net_active=steam.id)
+    concorda = _FakeArvoreDisplay(
+        foco=steam.id, janelas=dict(janelas), net_active=steam.id
+    )
+
+    backend = _backend_arvore(discorda)
+    for _ in range(4):  # episódio 1
+        backend.get_active_window_info()
+    backend._display = concorda
+    assert backend.get_active_window_info() is not None  # fecha o episódio
+    backend._display = discorda
+    backend.get_active_window_info()  # episódio 2
+
+    assert eventos.count("x11_foco_discorda_do_net_active") == 2

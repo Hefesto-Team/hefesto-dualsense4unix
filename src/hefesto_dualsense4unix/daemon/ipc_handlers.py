@@ -202,14 +202,18 @@ def _external_inventory(
     `player_slot` aqui vem do registry (via `slot_resolver`, leitura pura por
     uniq).
 
-    NUMA-05 (fim do posicional): com `slot_resolver` PRESENTE, a opinião dele
-    é a fonte ÚNICA de `player_slot` — inclusive quando a opinião é "nenhuma
-    ainda" (``None``, registry sem sessão pra aquele device ou exceção
-    suprimida). O posicional `dualsense_count + índice + 1` re-embaralhava a
-    GUI a cada mudança de `ds_count` (o ponto cego do incidente de 14:42:
-    um DualSense sumir do `ds_count` deslocava TODOS os externos exibidos) e
-    agora só sobrevive quando NÃO HÁ resolver nenhum (daemon fake/legado,
-    antes do 8BIT-02 — nunca opinou). Null honesto > número errado.
+    NUMA-05 (fim do posicional): a opinião do `slot_resolver` é a fonte ÚNICA
+    de `player_slot` — inclusive quando a opinião é "nenhuma ainda" (``None``,
+    registry sem sessão pra aquele device ou exceção suprimida).
+
+    R-24 (auditoria 25/07): o posicional `dualsense_count + índice + 1` foi
+    REMOVIDO até do caminho "sem resolver". Ele sobrevivia como compat do
+    daemon pré-8BIT-02, mas era um SEGUNDO espaço de numeração escrevendo no
+    MESMO campo que a GUI e a CLI exibem: um DualSense sumindo do `ds_count`
+    deslocava TODOS os externos de uma vez (o ponto cego do incidente de
+    14:42) e o número exibido divergia do LED aceso. Sem registro não existe
+    número — `None` (null honesto > número errado). `dualsense_count` fica na
+    assinatura só para não quebrar chamadores; não é mais lido.
     """
     from hefesto_dualsense4unix.core.evdev_reader import discover_external_gamepads
 
@@ -217,7 +221,7 @@ def _external_inventory(
     holders: dict[str, list[int]] = {}
     with contextlib.suppress(Exception):
         holders = _steam_hidraw_holders()
-    for index, entry in enumerate(inventory):
+    for entry in inventory:
         hidraw = entry.get("hidraw")
         if holders and isinstance(hidraw, str) and hidraw in holders:
             entry["holders"] = {"steam_pids": holders[hidraw]}
@@ -233,13 +237,11 @@ def _external_inventory(
                 raw = slot_resolver(identity)
                 if isinstance(raw, int) and not isinstance(raw, bool):
                     slot = raw
-            # NUMA-05: resolver PRESENTE = fonte ÚNICA, mesmo devolvendo None
-            # (sem opinião ainda) ou tendo levantado (suppress acima) — NUNCA
-            # mais cai no posicional aqui embaixo.
-            entry["player_slot"] = slot
-        else:
-            # Compat: só daemon SEM resolver (fake/legado) usa o posicional.
-            entry["player_slot"] = dualsense_count + index + 1
+        # NUMA-05/R-24: o resolver é a fonte ÚNICA, mesmo devolvendo None (sem
+        # opinião ainda) ou tendo levantado (suppress acima); SEM resolver o
+        # campo é `None`, nunca o posicional — não existe segundo espaço de
+        # numeração.
+        entry["player_slot"] = slot
     return inventory
 
 

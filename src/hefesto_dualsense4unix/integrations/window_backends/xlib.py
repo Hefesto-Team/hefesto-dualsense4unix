@@ -25,6 +25,14 @@ _MAX_QUERY_FAILURES = 3
 #: ainda não voltou seria I/O inútil a 2 Hz.
 _RECONNECT_BACKOFF_SEC = 30.0
 
+#: FOCO-01 (auditoria 24/07): profundidade máxima da subida na árvore X, do
+#: `focus` de `get_input_focus()` até o primeiro top-level com `WM_CLASS`. O
+#: foco quase nunca está NO top-level: ele fica numa janela-filha (a área de
+#: cliente do toolkit) e/ou dentro do frame que o WM reparenta por cima. Dois
+#: níveis bastam no caso normal; 8 dá folga para toolkits que empilham mais e
+#: ainda limita o custo do passeio no tick de 2 Hz (e barra ciclo patológico).
+_MAX_TREE_DEPTH = 8
+
 
 def _exe_basename_from_pid(pid: int) -> str:
     """Resolve basename do executável via /proc/<pid>/exe."""
@@ -57,6 +65,11 @@ class XlibBackend:
         self._query_failures: int = 0
         self._last_connect_fail: float = float("-inf")
         self._reconnect_pending: bool = False
+        # FOCO-01: episódio de DESACORDO entre o foco real e o
+        # `_NET_ACTIVE_WINDOW` (ou de foco sem top-level identificável) em
+        # curso — guarda o nome do evento para logar 1x por episódio, no mesmo
+        # padrão do gate UX-02 (o poll do autoswitch chama a 2 Hz).
+        self._desacordo_ativo: str | None = None
 
     def _ensure_connected(self) -> bool:
         """Conecta (ou RECONECTA, com backoff) ao display X11.
@@ -136,6 +149,67 @@ class XlibBackend:
         self._query_failures = 0
         self._last_connect_fail = float("-inf")
 
+    def _logar_desacordo_uma_vez(self, evento: str, **campos: Any) -> None:
+        """FOCO-01: 1 log por episódio de desacordo (o poll é de 2 Hz).
+
+        Mesmo padrão do `_focus_gate_active` do UX-02: o episódio é a
+        SEQUÊNCIA de ticks com o mesmo motivo; motivo diferente (ou uma leitura
+        boa, que zera o estado) reabre o log.
+        """
+        if self._desacordo_ativo == evento:
+            return
+        self._desacordo_ativo = evento
+        logger.info(evento, **campos)
+
+    def _janela_do_foco(self, focus_id: int) -> tuple[int, Any, Any] | None:
+        """Sobe a árvore X do foco REAL até o primeiro top-level com WM_CLASS.
+
+        FOCO-01 (auditoria 24/07). O gate UX-02 já perguntava ao servidor X
+        QUEM tem o foco — mas o DADO (wm_class/título/pid) continuava vindo do
+        `_NET_ACTIVE_WINDOW`, a propriedade que o próprio UX-02 documentou como
+        rançosa no cosmic-comp. A correção parou no gate e não chegou ao dado, e
+        o resultado foi medido ao vivo: com a GUI do Hefesto em foco e nenhuma
+        janela Steam à frente, `get_input_focus()` devolvia 35651599 (sem
+        WM_CLASS) enquanto o `_NET_ACTIVE_WINDOW` dizia 44040223 (`steam`) — as
+        duas fontes DISCORDAM, e era a rançosa que o autoswitch obedecia (o
+        ping-pong `vitoria``Navegação` a cada 18-28 s do journal de 22-23/07).
+
+        O foco quase nunca está NO top-level: o servidor X entrega o foco à
+        janela-filha do toolkit, dentro do frame que o WM reparenta. Por isso
+        sobe-se a árvore (`query_tree().parent`) até achar quem tem `WM_CLASS` —
+        essa é a janela de CLIENTE, a mesma entidade que o `_NET_ACTIVE_WINDOW`
+        aponta quando não está rançoso, o que torna os dois ids comparáveis.
+
+        Devolve `(id, janela, wm_class_tuple)` ou None quando a subida esgota a
+        árvore (chegou à raiz / sem pai / profundidade máxima) sem achar
+        WM_CLASS nenhum — "não sei qual janela é" é resposta honesta, e a
+        histerese UX-01 do autoswitch retém o perfil corrente nesse caso.
+        """
+        root_id = 0
+        with contextlib.suppress(Exception):
+            root_id = int(self._display.screen().root.id)
+
+        wid = int(focus_id)
+        win = self._display.create_resource_object("window", wid)
+        for _ in range(_MAX_TREE_DEPTH):
+            if root_id and wid == root_id:
+                # A raiz não é janela de aplicação nenhuma.
+                return None
+            wm_class_tuple = None
+            with contextlib.suppress(Exception):
+                wm_class_tuple = win.get_wm_class()
+            if wm_class_tuple:
+                return wid, win, wm_class_tuple
+            parent = None
+            with contextlib.suppress(Exception):
+                parent = win.query_tree().parent
+            parent_id = getattr(parent, "id", None)
+            if parent is None or not parent_id:
+                return None
+            wid = int(parent_id)
+            win = parent
+        return None
+
     def get_active_window_info(self) -> WindowInfo | None:
         """Retorna WindowInfo da janela ativa, ou None se indisponível."""
         if not self._ensure_connected():
@@ -163,6 +237,14 @@ class XlibBackend:
             # normaliza antes de comparar (comparar o objeto direto com
             # {0, 1} quebraria o caminho feliz).
             focus_id = getattr(focus, "id", focus)
+            # `None` NÃO é pego pelo teste abaixo (`None not in (0, 1)`), então
+            # vazaria inteiro para o `_janela_do_foco`, que espera um id. Sem
+            # foco é sem foco, venha como X.NONE ou como ausência do atributo.
+            if not isinstance(focus_id, int):
+                if not self._focus_gate_active:
+                    self._focus_gate_active = True
+                    logger.info("x11_focus_gate_sem_id", focus=repr(focus))
+                return None
             if focus_id in (X.NONE, X.PointerRoot):
                 if not self._focus_gate_active:
                     self._focus_gate_active = True
@@ -170,23 +252,42 @@ class XlibBackend:
                 return None
             self._focus_gate_active = False
 
+            # FOCO-01: o DADO passa a vir da janela do foco REAL, não da
+            # propriedade rançosa. Sem isto o gate acima só evitava o pior caso
+            # (nenhum foco X); com foco X válido numa janela QUALQUER, o
+            # autoswitch ainda lia a wm_class de outra — foi assim que o foco na
+            # nossa própria GUI virou "steam em foco" e o ping-pong de perfis
+            # trocou lightbar/gatilhos/rumble a cada 18-28 s.
+            resolvido = self._janela_do_foco(focus_id)
+            if resolvido is None:
+                self._logar_desacordo_uma_vez(
+                    "x11_foco_sem_top_level", focus=focus_id
+                )
+                return None
+            foco_wid, win, wm_class_tuple = resolvido
+
             root = self._display.screen().root
             net_active_window = self._display.intern_atom("_NET_ACTIVE_WINDOW")
             net_wm_pid = self._display.intern_atom("_NET_WM_PID")
 
             prop = root.get_full_property(net_active_window, X.AnyPropertyType)
-            if prop is None or not prop.value:
+            net_id = int(prop.value[0]) if (prop is not None and prop.value) else 0
+            # Discordância entre as duas fontes = NÃO SEI (None), nunca "confia
+            # na rançosa". `net_id == 0` (propriedade ausente/zerada) cai aqui
+            # pelo mesmo caminho, preservando o comportamento histórico de
+            # degradar para None sem corroboração. O reader vira 'unknown' e a
+            # histerese UX-01 retém o perfil corrente — a lição de sempre: o
+            # certo é reter, não adivinhar no meio da partida.
+            if net_id != foco_wid:
+                self._logar_desacordo_uma_vez(
+                    "x11_foco_discorda_do_net_active",
+                    focus=foco_wid,
+                    net_active=net_id,
+                )
                 return None
-            win_id = int(prop.value[0])
-            if win_id == 0:
-                return None
+            self._desacordo_ativo = None
 
-            win = self._display.create_resource_object("window", win_id)
-
-            wm_class_tuple: tuple[str, str] | None = None
-            with contextlib.suppress(Exception):
-                wm_class_tuple = win.get_wm_class()
-            wm_class = wm_class_tuple[1] if wm_class_tuple else ""
+            wm_class = wm_class_tuple[1] if len(wm_class_tuple) > 1 else ""
 
             title = ""
             with contextlib.suppress(Exception):

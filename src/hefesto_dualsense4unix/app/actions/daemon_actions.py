@@ -109,6 +109,220 @@ def format_apply_wrapper_result(result: object) -> str:
     return msg
 
 
+def build_steam_close_consent_dialog(
+    parent: Any,
+    *,
+    titulo: str,
+    corpo: str,
+    rotulo_ok: str,
+    on_response: Any,
+) -> Gtk.MessageDialog:
+    """Diálogo ÚNICO de "posso fechar a Steam?" — HONESTIDADE-STEAM-01.
+
+    Existe UM lugar que pede este consentimento porque a consequência é
+    pesada e não pode divergir entre botões: `stop_steam()` manda
+    `steam -shutdown` e, se a Steam não sair em 30 s, ESCALA para
+    `pkill -TERM` e depois `-KILL`. Matar processo da usuária às costas dela
+    é exatamente o que a auditoria proíbe — daí o sim explícito ser
+    pré-requisito de todo caminho que fecha a Steam (aba Sistema E aba
+    Emulação; a de Emulação importa esta função em vez de duplicar o texto).
+
+    Temado e NÃO-bloqueante (`connect("response")`, nunca `run()`), padrão de
+    `_build_proton_lock_confirm_dialog`/`gui_dialogs._apply_app_theme`.
+    """
+    dialog = Gtk.MessageDialog(
+        transient_for=parent,
+        flags=0,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        text=titulo,
+    )
+    with contextlib.suppress(Exception):
+        dialog.get_style_context().add_class("hefesto-dualsense4unix-window")
+    dialog.format_secondary_text(corpo)
+    dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
+    dialog.add_button(rotulo_ok, Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+    dialog.connect("response", on_response)
+    return dialog
+
+
+def format_steam_janela_recusa(janela: object) -> str | None:
+    """Recusa de `with_steam_closed`, ou None quando a ação chegou a rodar.
+
+    Traduz o status do contrato (`ok`/`jogo_aberto`/`nao_fechou`) para o toast.
+    Status desconhecido vira recusa honesta — nunca "Pronto" por omissão.
+    """
+    if janela == "ok":
+        return None
+    if janela == "jogo_aberto":
+        return (
+            "Tem um jogo aberto — não fecho a Steam agora (você perderia o "
+            "progresso não salvo). Feche o jogo e clique de novo. Nada foi "
+            "mudado."
+        )
+    if janela == "nao_fechou":
+        return (
+            "A Steam não fechou — não mexi em nada. Com ela viva a mudança "
+            "seria perdida, porque a Steam regrava o arquivo ao sair. "
+            "Feche-a pela própria Steam e clique de novo."
+        )
+    return (
+        "Não consegui mexer nos arquivos da Steam — resposta inesperada; "
+        "veja os 'Detalhes técnicos'."
+    )
+
+
+def _frase_steam_input(rc: int, tag: str | None) -> str:
+    """Meia-frase sobre o desligar do Steam Input, a partir de rc + tag.
+
+    Fonte da tag: a linha `[steam-input] resultado=<tag>` que o
+    `disable_steam_input.sh` passou a emitir (HONESTIDADE-STEAM-01). Sem ela
+    (script de instalação antiga) o texto DIZ que não houve confirmação, em
+    vez de fingir que houve.
+    """
+    if tag == "recusado-jogo-aberto":
+        return "NÃO mudou — havia um jogo aberto."
+    if tag == "adiado-steam-aberta":
+        return "NÃO mudou — a Steam continuou aberta."
+    if tag == "steam-nao-fechou":
+        return "NÃO mudou — a Steam não fechou."
+    if rc != 0 or tag == "erro":
+        return f"NÃO mudou — a correção falhou (erro {rc})."
+    if tag == "nada-a-fazer":
+        return "já estava do jeito certo."
+    if tag == "aplicado":
+        return "a Steam não sequestra mais o seu controle."
+    return "a correção rodou sem erro (versão antiga do script, sem confirmação)."
+
+
+def format_steam_ready_result(
+    *,
+    janela: object,
+    dados: object,
+    script_ok: bool = True,
+    wrapper_ok: bool = True,
+) -> str:
+    """Toast do botão "Deixar tudo pronto" — pura, o miolo testável.
+
+    Junta os dois passos que a usuária não deveria precisar distinguir
+    ("tem jogos que precisam ativar entrada steam, outros que precisam de
+    comandos de inicialização — é uma confusão real") num relato único, e
+    reporta cada perna pelo que ela DE FATO fez.
+    """
+    recusa = format_steam_janela_recusa(janela)
+    if recusa is not None:
+        return recusa
+    if not isinstance(dados, dict):
+        return (
+            "Não consegui deixar tudo pronto — resposta inesperada; veja os "
+            "'Detalhes técnicos'."
+        )
+    if not script_ok and not wrapper_ok:
+        return (
+            "Esta instalação está incompleta (faltam as peças que fazem o "
+            "ajuste) — rode ./install.sh para atualizar o Hefesto."
+        )
+    partes: list[str] = []
+    if script_ok:
+        bruto = dados.get("script")
+        if isinstance(bruto, tuple) and len(bruto) == 2:
+            rc, saida = bruto
+        else:
+            rc, saida = 1, ""
+        partes.append("Controle: " + _frase_steam_input(int(rc), _tag_do_script(saida)))
+    else:
+        partes.append(
+            "Controle: não encontrei o script desta correção nesta "
+            "instalação (rode ./install.sh)."
+        )
+    if wrapper_ok:
+        partes.append("Jogos: " + format_apply_wrapper_result(dados.get("wrapper")))
+    else:
+        partes.append(
+            "Jogos: esta instalação ainda não sabe ajustar todos de uma vez "
+            "— rode ./install.sh."
+        )
+    return " ".join(partes)
+
+
+def _tag_do_script(saida: object) -> str | None:
+    """`steam_input_result_tag` com import lazy (evita ciclo entre mixins)."""
+    from hefesto_dualsense4unix.app.actions.emulation_actions import (
+        steam_input_result_tag,
+    )
+
+    return steam_input_result_tag(saida if isinstance(saida, str) else "")
+
+
+def format_fix_safe_result(relatorio: object) -> str:
+    """Toast do botão "Aplicar correções" (sem senha) — pura, testável.
+
+    HONESTIDADE-STEAM-01. A versão anterior dizia "Correções aplicadas (sem
+    senha)" SEMPRE — inclusive quando o `--apply-quiet` tinha adiado tudo por
+    causa da Steam aberta (o caminho mais comum, já que a usuária clica no
+    Hefesto justamente enquanto joga). O relato agora separa o que rodou do
+    que foi adiado, e nomeia o botão que resolve o adiamento.
+    """
+    if not isinstance(relatorio, dict):
+        return (
+            "Não consegui aplicar as correções — resposta inesperada; veja "
+            "os 'Detalhes técnicos'."
+        )
+    if not relatorio.get("ran") and relatorio.get("missing"):
+        return "Não encontrei os scripts de correção nesta instalação."
+    partes = ["Correções aplicadas (sem senha)."]
+    bruto = relatorio.get("steam_input")
+    if isinstance(bruto, tuple) and len(bruto) == 2:
+        rc, saida = bruto
+        tag = _tag_do_script(saida)
+        if tag in ("adiado-steam-aberta", "recusado-jogo-aberto"):
+            partes.append(
+                "Só o Steam Input NÃO foi desligado: "
+                + _frase_steam_input(int(rc), tag)
+                + " Use o botão 'Deixar tudo pronto' — ele pede sua permissão "
+                "para fechar a Steam e faz o resto sozinho."
+            )
+        else:
+            partes.append("Steam Input: " + _frase_steam_input(int(rc), tag))
+    partes.append(
+        "A cura anti-storm do áudio já é persistente (install) — reconecte o "
+        "controle para ela pegar nesta sessão."
+    )
+    return " ".join(partes)
+
+
+def format_game_broken_result(*, status: str, appid: object = None) -> str:
+    """Toast do botão "Este jogo não funciona" — pura, testável.
+
+    Deliberadamente SEM os termos "Steam Input" e "opção de inicialização": a
+    usuária só declara que o jogo falhou, e o app troca de estratégia (o jogo
+    passa a ser entregue pela Steam e o Hefesto sai da frente dele).
+    """
+    if status == "sem_jogo":
+        return (
+            "Não descobri qual é o jogo. Abra o jogo pela Steam (de "
+            "preferência deixe-o aberto) e clique de novo."
+        )
+    if status == "appid_invalido":
+        return "Não consegui identificar o jogo — nada foi anotado."
+    if status == "erro":
+        return (
+            "Não consegui anotar este jogo — veja os 'Detalhes técnicos'."
+        )
+    resto = (
+        " Feche e abra o jogo de novo. Se mesmo assim ele não responder ao "
+        "controle, na Steam: botão direito no jogo → Propriedades → Controle "
+        "→ 'Ativar' (agora o Hefesto respeita essa escolha em vez de desfazê-la)."
+    )
+    if status == "ja_estava":
+        return f"O jogo {appid} já estava marcado — o Hefesto já sai da frente dele.{resto}"
+    return (
+        f"Anotei: o jogo {appid} passa a ser entregue direto pela Steam e o "
+        f"Hefesto sai da frente dele.{resto}"
+    )
+
+
 def format_proton_lock_result(result: object) -> str:
     """Mensagem pro leigo a partir do dict do ``lock_proton_for_all_games``.
 
@@ -177,6 +391,30 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._refresh_daemon_view_async()
         self._sync_restart_daemon_button_sensitivity()
         self._refresh_storm_diag()  # FEAT-DSX-UNIFY-01
+        self._wire_steam_simple_buttons()  # FEAT-STEAM-SIMPLES-01
+
+    def _wire_steam_simple_buttons(self) -> None:
+        """Liga os dois botões do modo simples em CÓDIGO, não pelo Glade.
+
+        Precedente explícito no `app.py` (FEAT-DSX-COMBO-TO-SEGMENTED-01): o
+        app conecta sinais por um dict literal em `_signal_handlers()`, então
+        um `<signal handler="...">` no Glade sem entrada nesse dict vira botão
+        MORTO (BUG-GUI-EMULATION-HANDLERS-UNWIRED-01 — "clico e não aplica").
+        Ligar aqui mantém dono único: o Glade descreve o widget, este mixin
+        (que já é o dono da aba Sistema) descreve o comportamento.
+
+        Tolerante a widget ausente: instalação com um main.glade mais antigo
+        simplesmente não tem os botões — nada a ligar, nada a quebrar.
+        """
+        for widget_id, handler in (
+            ("btn_steam_ready", self.on_steam_ready),
+            ("btn_steam_game_broken", self.on_steam_game_broken),
+        ):
+            botao = self._get(widget_id)
+            if botao is None:
+                continue
+            with contextlib.suppress(Exception):
+                botao.connect("clicked", handler)
 
     # --- anti-storm / sistema (FEAT-DSX-UNIFY-01) ------------------------
 
@@ -234,12 +472,18 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return False  # GLib.idle_add: não repete
 
     def on_storm_fix_safe(self, _btn: object) -> None:
-        """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber."""
+        """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber.
+
+        HONESTIDADE-STEAM-01: este botão NÃO fecha a Steam (é o botão do "sem
+        senha, sem susto") — o `--apply-quiet` continua adiando quando ela
+        está viva. O que mudou é que o toast passou a DIZER que adiou, em vez
+        de anunciar "Correções aplicadas" sobre um no-op, e a apontar o botão
+        que resolve ("Deixar tudo pronto", que pede permissão para fechar).
+        """
         self._toast_daemon("Aplicando correções (não pede senha)…")
 
         def _worker() -> None:
-            ran = 0
-            missing = 0
+            relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None}
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
@@ -254,30 +498,30 @@ class DaemonActionsMixin(WidgetAccessMixin):
             ):
                 script = self._find_repo_file(relpath)
                 if script is None:
-                    missing += 1
+                    relatorio["missing"] += 1
                     continue
                 with contextlib.suppress(Exception):
-                    subprocess.run(
-                        ["bash", str(script), *args], check=False, timeout=30
+                    proc = subprocess.run(
+                        ["bash", str(script), *args],
+                        check=False,
+                        timeout=30,
+                        capture_output=True,
+                        text=True,
                     )
-                    ran += 1
+                    relatorio["ran"] += 1
+                    if "disable_steam_input" in relpath:
+                        # rc + saída CRUA: o veredito honesto sai da tag
+                        # `resultado=` que o script emite, não do rc (o
+                        # "adiei" e o "apliquei" saem 0 os dois).
+                        relatorio["steam_input"] = (
+                            proc.returncode,
+                            (proc.stdout or "") + (proc.stderr or ""),
+                        )
             GLib.idle_add(self._refresh_storm_diag)
             # M9 (auditoria): toast FINAL — antes a statusbar congelava em
             # "Reaplicando..." para sempre. Distingue "rodou" de "scripts não
             # encontrados" (H3/M10 — instalação de pacote sem os scripts).
-            if ran == 0 and missing:
-                GLib.idle_add(
-                    self._toast_daemon,
-                    "Não encontrei os scripts de correção nesta instalação.",
-                )
-            else:
-                GLib.idle_add(
-                    self._toast_daemon,
-                    "Correções aplicadas (sem senha). Se a Steam estava aberta, "
-                    "feche-a e clique de novo para desligar o Steam Input. A cura "
-                    "anti-storm do áudio já é persistente (install) — reconecte o "
-                    "controle para ela pegar nesta sessão.",
-                )
+            GLib.idle_add(self._toast_daemon, format_fix_safe_result(relatorio))
 
         _get_executor().submit(_worker)
 
@@ -417,8 +661,13 @@ class DaemonActionsMixin(WidgetAccessMixin):
             "As opções que você já tem nos jogos são preservadas (o launcher "
             "entra na frente delas) e fica um backup ao lado de cada "
             "arquivo.\n\n"
-            "A Steam precisa estar FECHADA — se estiver aberta, eu aviso e "
-            "não mexo em nada."
+            # HONESTIDADE-STEAM-01: este parágrafo dizia "A Steam precisa
+            # estar FECHADA — se estiver aberta, eu aviso e não mexo em nada",
+            # que virou mentira no momento em que o botão passou a saber
+            # fechá-la. O texto agora descreve o que o botão faz de verdade.
+            "A edição só vale com a Steam fechada — se ela estiver aberta eu "
+            "peço a sua permissão antes de fechá-la por uns 20 segundos e "
+            "abro de novo em seguida. Com um jogo aberto eu não mexo em nada."
         )
         dialog.add_button("Cancelar", Gtk.ResponseType.CANCEL)
         dialog.add_button("Aplicar a todos", Gtk.ResponseType.OK)
@@ -439,11 +688,23 @@ class DaemonActionsMixin(WidgetAccessMixin):
     def _steam_apply_launch_worker(self) -> None:
         """Aplica o wrapper em massa (confirmado) — em thread worker.
 
-        Recusa honesta com a Steam aberta (ela regrava o vdf ao sair e a
-        edição seria perdida) — instrui e NÃO toca em nada. Sudo-zero: o vdf
-        é arquivo do usuário. Import lazy + `getattr`: a função nova é do
-        contrato PATH-06 (`{applied, skipped, errors}`); numa instalação
-        antiga sem ela, recusa com o caminho do install em vez de quebrar.
+        HONESTIDADE-STEAM-01. Antes este caminho SEMPRE recusava com a Steam
+        aberta ("feche-a e clique de novo") — e a usuária, que clica no
+        Hefesto justamente enquanto a Steam está aberta, batia nessa parede
+        toda vez. A maquinaria de fechar/reabrir existia (`stop_steam`/
+        `reopen_steam`, exercitada só pelo `install.sh --migrate
+        --stop-steam`) e era só a GUI que não a usava.
+
+        Agora a parede vira uma PERGUNTA:
+
+        - JOGO aberto ⇒ recusa (mantido; `steam -shutdown` mataria o jogo);
+        - só a Steam aberta ⇒ diálogo de consentimento e, com o sim, o fluxo
+          `with_steam_closed` (fecha uma vez, aplica, reabre uma vez);
+        - Steam fechada ⇒ aplica direto, sem diálogo nenhum.
+
+        Sudo-zero: o vdf é arquivo do usuário. Import lazy + `getattr`: a
+        função de massa é do contrato PATH-06 (`{applied, skipped, errors}`);
+        numa instalação antiga sem ela, recusa com o caminho do install.
         """
         self._toast_daemon("Verificando os arquivos da Steam…")
 
@@ -453,21 +714,35 @@ class DaemonActionsMixin(WidgetAccessMixin):
                     steam_launch_options as slo,
                 )
 
-                if slo.steam_running():
-                    GLib.idle_add(
-                        self._toast_daemon,
-                        "A Steam está aberta — feche-a e clique de novo. Não "
-                        "edito as Opções de Inicialização com a Steam viva "
-                        "porque ela regrava o arquivo ao sair e a mudança "
-                        "seria perdida.",
-                    )
-                    return
                 apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
                 if apply_fn is None:
                     GLib.idle_add(
                         self._toast_daemon,
                         "Esta instalação ainda não tem a aplicação em massa "
                         "— rode ./install.sh para atualizar o Hefesto.",
+                    )
+                    return
+                if slo.steam_game_running():
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        format_steam_janela_recusa("jogo_aberto"),
+                    )
+                    return
+                if slo.steam_running():
+                    # Consentimento SEMPRE na thread GTK (diálogo é widget).
+                    GLib.idle_add(
+                        self._pedir_para_fechar_a_steam,
+                        self._steam_apply_launch_fechando,
+                        "Nada foi mudado — a Steam continua aberta. Clique de "
+                        "novo quando puder deixá-la fechada por uns 20 segundos.",
+                        "Para ajustar as opções dos jogos eu preciso FECHAR a "
+                        "Steam por uns 20 segundos e abrir de novo — com ela "
+                        "viva, ela regrava o arquivo ao sair e a mudança seria "
+                        "perdida.\n\n"
+                        "Antes de continuar: pause os downloads. As suas opções "
+                        "são preservadas e fica um backup ao lado de cada "
+                        "arquivo.\n\n"
+                        "Se algum jogo estiver aberto eu não faço nada.",
                     )
                     return
                 result = apply_fn()
@@ -482,6 +757,288 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 )
 
         _get_executor().submit(_worker)
+
+    def _pedir_para_fechar_a_steam(
+        self,
+        prosseguir: Any,
+        cancelado_msg: str,
+        corpo: str,
+        titulo: str = "Posso fechar a Steam por uns 20 segundos?",
+        rotulo_ok: str = "Fechar e continuar",
+    ) -> bool:
+        """Mostra o consentimento e, com o sim, roda `prosseguir()` em worker.
+
+        Sempre chamado via `GLib.idle_add` a partir do worker (widget só na
+        thread GTK). Retorna False para o idle_add não reagendar.
+        """
+
+        def _resposta(dialog: Any, response: int) -> None:
+            with contextlib.suppress(Exception):
+                dialog.destroy()
+            if response != Gtk.ResponseType.OK:
+                self._toast_daemon(cancelado_msg)
+                return
+            _get_executor().submit(prosseguir)
+
+        build_steam_close_consent_dialog(
+            getattr(self, "window", None),
+            titulo=titulo,
+            corpo=corpo,
+            rotulo_ok=rotulo_ok,
+            on_response=_resposta,
+        ).show_all()
+        return False
+
+    def _steam_apply_launch_fechando(self) -> None:
+        """Aplica o wrapper com a Steam fechada por NÓS (já consentido)."""
+        GLib.idle_add(self._toast_daemon, "Fechando a Steam (uns 20 segundos)…")
+        try:
+            from hefesto_dualsense4unix.integrations import (
+                steam_launch_options as slo,
+            )
+
+            apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
+            if apply_fn is None:
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Esta instalação ainda não tem a aplicação em massa — "
+                    "rode ./install.sh para atualizar o Hefesto.",
+                )
+                return
+            janela, result = slo.with_steam_closed(apply_fn)
+            recusa = format_steam_janela_recusa(janela)
+            GLib.idle_add(
+                self._toast_daemon,
+                recusa if recusa is not None else format_apply_wrapper_result(result),
+            )
+        except Exception as exc:
+            logger.warning("steam_apply_launch_fechando_falhou", erro=str(exc))
+            GLib.idle_add(
+                self._toast_daemon,
+                "Não consegui aplicar — veja os 'Detalhes técnicos'.",
+            )
+
+    # --- Modo simples: dois botões que escondem os conceitos --------------
+    # FEAT-STEAM-SIMPLES-01 (25/07). Pedido literal da usuária final: "tem
+    # jogos que precisamos ativar entrada steam, outros que temos que colocar
+    # comandos de inicialização — é uma confusão real". Os dois mecanismos
+    # continuam existindo; o que sai da tela é a ESCOLHA entre eles.
+    #
+    #   "Deixar tudo pronto"     -> encadeia disable_steam_input + wrapper em
+    #                               todos os jogos, com UM consentimento só.
+    #   "Este jogo não funciona" -> marca o jogo ativo na allowlist do Steam
+    #                               Input: o Hefesto sai da frente DELE.
+    #
+    # Nenhum dos dois pronuncia "Steam Input" nem "opção de inicialização".
+
+    #: Corpo do diálogo do "Deixar tudo pronto". Um consentimento só (o de
+    #: fechar a Steam) porque é a única consequência que a usuária sente.
+    _STEAM_READY_CORPO = (
+        "Eu ajusto de uma vez as duas coisas que costumam brigar com o "
+        "controle: quem entrega o controle para o jogo e como cada jogo é "
+        "aberto.\n\n"
+        "Para isso a Steam precisa estar fechada — se ela estiver aberta eu "
+        "fecho por uns 20 segundos e abro de novo. Pause os downloads antes.\n\n"
+        "Se algum jogo estiver aberto eu não faço NADA (fechar a Steam mataria "
+        "o jogo). Fica um backup ao lado de cada arquivo da Steam."
+    )
+
+    def on_steam_ready(self, _btn: object = None) -> None:
+        """Botão "Deixar tudo pronto" — confirmação e depois o worker."""
+        self._build_steam_ready_confirm_dialog().show_all()
+
+    def _build_steam_ready_confirm_dialog(self) -> Gtk.MessageDialog:
+        """Monta o diálogo (sem exibir) — separado p/ testes."""
+        return build_steam_close_consent_dialog(
+            getattr(self, "window", None),
+            titulo="Deixar tudo pronto para jogar?",
+            corpo=self._STEAM_READY_CORPO,
+            rotulo_ok="Deixar tudo pronto",
+            on_response=self._on_steam_ready_response,
+        )
+
+    def _on_steam_ready_response(self, dialog: Any, response: int) -> None:
+        with contextlib.suppress(Exception):
+            dialog.destroy()
+        if response != Gtk.ResponseType.OK:
+            self._toast_daemon("Nada foi mudado.")
+            return
+        self._steam_ready_worker()
+
+    def _steam_ready_worker(self) -> None:
+        """Encadeia as duas correções com a Steam fechada UMA vez.
+
+        Ordem e dono do fechamento importam: quem fecha/reabre a Steam é o
+        `with_steam_closed` (um dono só), e o script roda em `--apply-quiet`
+        DENTRO dessa janela — assim ele nunca precisa decidir sozinho matar
+        processo, e as duas edições acontecem no mesmo intervalo em que a
+        Steam está garantidamente fora do caminho (ela regrava o
+        localconfig.vdf ao sair; duas janelas separadas seriam duas chances
+        de a edição ser pisada).
+        """
+        self._toast_daemon("Deixando tudo pronto…")
+
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import (
+                    steam_launch_options as slo,
+                )
+
+                script = self._find_repo_file("scripts/disable_steam_input.sh")
+                apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
+
+                def _acao() -> dict[str, Any]:
+                    saida: dict[str, Any] = {"script": None, "wrapper": None}
+                    if script is not None:
+                        proc = subprocess.run(
+                            ["bash", str(script), "--apply-quiet"],
+                            check=False,
+                            timeout=180,
+                            capture_output=True,
+                            text=True,
+                        )
+                        saida["script"] = (
+                            proc.returncode,
+                            (proc.stdout or "") + (proc.stderr or ""),
+                        )
+                    if apply_fn is not None:
+                        saida["wrapper"] = apply_fn()
+                    return saida
+
+                janela, dados = slo.with_steam_closed(_acao)
+                GLib.idle_add(self._refresh_storm_diag)
+                GLib.idle_add(
+                    self._toast_daemon,
+                    format_steam_ready_result(
+                        janela=janela,
+                        dados=dados,
+                        script_ok=script is not None,
+                        wrapper_ok=apply_fn is not None,
+                    ),
+                )
+            except Exception as exc:
+                logger.warning("steam_ready_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_daemon,
+                    "Não consegui deixar tudo pronto — veja os 'Detalhes "
+                    "técnicos'.",
+                )
+
+        _get_executor().submit(_worker)
+
+    @staticmethod
+    def _appid_do_jogo_ativo() -> int | None:
+        """Appid do jogo que a usuária tem em mente ao clicar, ou None.
+
+        Três evidências, nesta ordem — da mais forte para a mais tolerante:
+
+        1. `launch_session_appid()`: jogo lançado PELO wrapper e ainda vivo
+           (marker no disco + pid vivo). Autoritativo e imune a alt-tab — que
+           é exatamente o que acontece aqui: para clicar no Hefesto ela SAI do
+           jogo, então "janela em foco" nunca serviria sozinha;
+        2. `window_detect_last_class` do `state_full`: última wm_class ÚTIL
+           vista pelo daemon; só conta se casar `steam_app_<id>`. Cobre jogo
+           aberto sem o wrapper;
+        3. marker `last_run` cru: o ÚLTIMO jogo lançado pelo wrapper, mesmo já
+           fechado. É o caso real do botão — o jogo não funcionou, ela fechou,
+           e só então veio reclamar.
+        """
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            launch_session_appid,
+            read_last_run_marker,
+            steam_appid_from_wm_class,
+        )
+
+        with contextlib.suppress(Exception):
+            vivo = launch_session_appid()
+            if vivo is not None:
+                return vivo
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
+
+            state = daemon_state_full()
+            if isinstance(state, dict):
+                foco = steam_appid_from_wm_class(state.get("window_detect_last_class"))
+                if foco is not None:
+                    return foco
+        with contextlib.suppress(Exception):
+            marker = read_last_run_marker()
+            if marker is not None:
+                return marker[0]
+        return None
+
+    def on_steam_game_broken(self, _btn: object = None) -> None:
+        """Botão "Este jogo não funciona" — troca a estratégia DESTE jogo.
+
+        Sem diálogo de confirmação de propósito: a ação não fecha nada, não
+        edita arquivo da Steam e é reversível (uma linha num txt nosso). O
+        que ela custa é o Hefesto sair da frente do jogo — que é justamente o
+        que a usuária está pedindo ao clicar.
+        """
+        self._toast_daemon("Procurando qual jogo é…")
+
+        def _worker() -> None:
+            try:
+                from hefesto_dualsense4unix.integrations import (
+                    steam_launch_options as slo,
+                )
+
+                appid = self._appid_do_jogo_ativo()
+                if appid is None:
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        format_game_broken_result(status="sem_jogo"),
+                    )
+                    return
+                escrever = getattr(
+                    slo, "add_appid_to_steam_input_allowlist", None
+                )
+                if escrever is None:
+                    GLib.idle_add(
+                        self._toast_daemon,
+                        "Esta instalação ainda não sabe marcar jogos — rode "
+                        "./install.sh para atualizar o Hefesto.",
+                    )
+                    return
+                status = escrever(
+                    appid, nota="marcado pela GUI: 'este jogo não funciona'"
+                )
+                GLib.idle_add(self._recarregar_apos_allowlist)
+                GLib.idle_add(
+                    self._toast_daemon,
+                    format_game_broken_result(status=status, appid=appid),
+                )
+            except Exception as exc:
+                logger.warning("steam_game_broken_falhou", erro=str(exc))
+                GLib.idle_add(
+                    self._toast_daemon,
+                    format_game_broken_result(status="erro"),
+                )
+
+        _get_executor().submit(_worker)
+
+    def _recarregar_apos_allowlist(self) -> bool:
+        """Faz a marcação VALER agora, sem reiniciar nada.
+
+        A allowlist é relida do disco a cada consulta (guard em bash,
+        `storm_doctor`, `launch_env.steam_input_appids`) — nada a invalidar
+        ali. O que NÃO é relido é a materialização das envs de launch: o
+        `steam_app_<appid>.env` que faz o Hefesto sair da frente do jogo só
+        nasce quando `materialize_launch_env` roda. `launch_env.refresh` é o
+        mesmo aviso best-effort que a aba Perfis manda ao salvar um perfil
+        (daemon offline é normal — ele rematerializa sozinho no boot).
+        """
+        from hefesto_dualsense4unix.app import ipc_bridge
+
+        with contextlib.suppress(Exception):
+            ipc_bridge.call_async(
+                method="launch_env.refresh",
+                params={},
+                on_success=lambda _r: False,
+                on_failure=lambda _e: False,
+            )
+        self._refresh_storm_diag()
+        return False
 
     def on_proton_lock(self, _btn: object) -> None:
         """Botão "Travar Proton validado" (PLAT-01, aba Sistema).
