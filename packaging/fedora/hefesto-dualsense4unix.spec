@@ -128,6 +128,10 @@ install -Dm644 assets/modprobe.d/hefesto-btusb-no-autosuspend.conf \
 # Sem o módulo DKMS o in-tree ignora o parâmetro e sobe normal (fail-safe).
 install -Dm644 assets/modprobe.d/hefesto-hid-nintendo.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-hid-nintendo.conf
+# Contencao BT (2026-07-25): opcoes do hid-playstation patchado
+# (feature_retries=2). Mesmo fail-safe: sem o modulo DKMS o in-tree ignora.
+install -Dm644 assets/modprobe.d/hefesto-hid-playstation.conf \
+    %{buildroot}/usr/lib/modprobe.d/hefesto-hid-playstation.conf
 # Onda T (corretor, achado #9): a conf acima e INERTE sem o MODULO DKMS.
 # Empacota as fontes + a lib generica; o install-host-udev.sh (abaixo) roda
 # o dkms add/build/install no pos-instalacao (mesma instrucao do broker).
@@ -136,6 +140,11 @@ install -Dm644 scripts/dkms_lib.sh \
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo
 cp -a assets/dkms/hid-nintendo/. \
     %{buildroot}%{_datadir}/%{app_id}/dkms/hid-nintendo/
+# Contencao BT (2026-07-25): fontes do hid-playstation patchado (retry de
+# feature report na probe) — mesma paridade da Onda T/W.
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation
+cp -a assets/dkms/hid-playstation/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/hid-playstation/
 # Onda W (2026-07-20): fontes DKMS do rtw88_usb patchado (device-gone +
 # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota da
 # Onda T: o install-host-udev.sh roda o dkms add/build/install no host.
@@ -225,6 +234,7 @@ if [ $1 -eq 0 ]; then
         depmod -a >/dev/null 2>&1 || :
     fi
     rm -f /etc/modprobe.d/hefesto-hid-nintendo.conf
+    rm -f /etc/modprobe.d/hefesto-hid-playstation.conf
     # Onda W: o modulo DKMS hefesto-rtw88-usb tambem nasce FORA do manifesto
     # do rpm (install-host-udev.sh) — mesma simetria: sem este bloco, dnf
     # remove deixava o patchado registrado vencendo o in-tree para sempre.
@@ -246,6 +256,35 @@ if [ $1 -eq 0 ]; then
         if [ -e /sys/module/rtw88_usb/parameters/hang_reset ]; then
             printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || :
         fi
+    fi
+    # Contencao BT: o modulo DKMS hefesto-hid-playstation tambem nasce FORA do
+    # manifesto do rpm (install-host-udev.sh) — mesma simetria. NUNCA
+    # descarrega o modulo em uso: derrubaria TODOS os DualSense, inclusive os
+    # por Bluetooth; o in-tree volta sozinho no proximo boot.
+    if command -v dkms >/dev/null 2>&1 \
+            && dkms status hefesto-hid-playstation 2>/dev/null | grep -q .; then
+        dkms status hefesto-hid-playstation 2>/dev/null \
+            | sed -n 's|^hefesto-hid-playstation/\([^,: ]*\).*|\1|p' | sort -u \
+            | while read -r _v; do
+                [ -n "${_v}" ] || continue
+                dkms remove "hefesto-hid-playstation/${_v}" --all >/dev/null 2>&1 || :
+                rm -rf "/usr/src/hefesto-hid-playstation-${_v}"
+            done
+        depmod -a >/dev/null 2>&1 || :
+        # belt (simetrico ao uninstall.sh nativo): devolve o feature_retries a
+        # 0 se o patchado ainda estiver carregado. E lido a cada probe, entao
+        # a proxima conexao ja e vanilla — sem recarregar nada.
+        if [ -e /sys/module/hid_playstation/parameters/feature_retries ]; then
+            printf '0' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || :
+        fi
+    fi
+    # INITRAMFS-01: os `dkms remove` acima limpam /lib/modules, mas o initramfs
+    # guarda uma COPIA dos .ko e seguiria entregando os modulos do hefesto no
+    # boot. Regenera uma vez, best-effort (nunca falha a transacao do rpm).
+    if command -v dracut >/dev/null 2>&1; then
+        dracut --force >/dev/null 2>&1 || :
+    elif command -v update-initramfs >/dev/null 2>&1; then
+        update-initramfs -u >/dev/null 2>&1 || :
     fi
 fi
 
@@ -281,6 +320,7 @@ fi
 /usr/lib/modprobe.d/hefesto-dualsense-storm.conf
 /usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
 /usr/lib/modprobe.d/hefesto-hid-nintendo.conf
+/usr/lib/modprobe.d/hefesto-hid-playstation.conf
 %{_modulesloaddir}/hefesto-dualsense4unix.conf
 %{_userunitdir}/*.service
 %{_datadir}/locale/*/LC_MESSAGES/hefesto-dualsense4unix.mo

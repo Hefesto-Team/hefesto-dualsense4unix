@@ -60,7 +60,16 @@ PATCH2_PATH = (
 PATCH3_PATH = (
     ASSET_DIR / "patch" / "0003-HID-nintendo-pad-USB-commands-and-survive-no-dev-inf.patch"
 )
-PATCH_PATHS = (PATCH_PATH, PATCH2_PATH, PATCH3_PATH)
+# 25/07: 0004 corta o PREÇO de um controle mudo. O clone que sobe degradado
+# (0003) nunca responde subcomando, e como ele não gera "report deltas
+# válidos" o rate limiter roda sempre até o teto: 1 subcomando = 4 tries x 25
+# tentativas x 500 ms = 50 s segurando o output_mutex e 100 linhas de dmesg,
+# de novo a cada escrita de LED/rumble. Medido: 500 linhas a 1,99 linha/s por
+# 4 minutos; com subcmd_silence_streak_max=3 caiu para 3 linhas + 1 aviso.
+PATCH4_PATH = (
+    ASSET_DIR / "patch" / "0004-HID-nintendo-stop-waiting-on-a-controller-that-has-g.patch"
+)
+PATCH_PATHS = (PATCH_PATH, PATCH2_PATH, PATCH3_PATH, PATCH4_PATH)
 BASELINE_PATH = ASSET_DIR / "patch" / "BASELINE"
 MODPROBE_CONF_PATH = REPO_ROOT / "assets" / "modprobe.d" / "hefesto-hid-nintendo.conf"
 
@@ -88,7 +97,8 @@ C = _read(C_PATH)
 PATCH = _read(PATCH_PATH)
 PATCH2 = _read(PATCH2_PATH)
 PATCH3 = _read(PATCH3_PATH)
-PATCHES = (PATCH, PATCH2, PATCH3)
+PATCH4 = _read(PATCH4_PATH)
+PATCHES = (PATCH, PATCH2, PATCH3, PATCH4)
 BASELINE = _read(BASELINE_PATH)
 MODPROBE_CONF = _read(MODPROBE_CONF_PATH)
 
@@ -518,7 +528,8 @@ class TestModprobeConf:
             r"^options hid_nintendo bt_probe_retries=3 skip_tx_on_rate_exceeded=1"
             r" register_leds_on_set_failure=1"
             r" sync_send_tries=4 input_report_wait_ms=500 probe_info_timeout_ms=4000"
-            r" usb_cmd_pad_to_report=1 usb_send_conn_status=1 usb_probe_degrade=1$",
+            r" usb_cmd_pad_to_report=1 usb_send_conn_status=1 usb_probe_degrade=1"
+            r" subcmd_silence_streak_max=3$",
             MODPROBE_CONF,
             re.MULTILINE,
         ), "a cura entra pela conf: retries + skip_tx + regleds + tuning BT + clone USB"
