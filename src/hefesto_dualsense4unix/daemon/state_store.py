@@ -113,6 +113,13 @@ class StateStore:
         self._window_detect_current_class: str | None = None
         self._window_detect_read_monotonic: float | None = None
         self._game_window_seen_at: float | None = None
+        # UDP-TRIGGER-THRESHOLD-01: limiar (deadzone) do gatilho analógico
+        # pedido por mod DSX pela instrução UDP `TriggerThreshold`, por lado.
+        # 0 = sem deadzone, que é o padrão e o que valia antes desta sprint.
+        # Mora aqui — e não no `UdpHandler` — porque quem escreve (a porta
+        # 6969) e quem lê (o dispatch do gamepad virtual, a cada tick) são
+        # dois mundos que só se encontram pelo store.
+        self._udp_trigger_thresholds: dict[str, int] = {"left": 0, "right": 0}
 
     # --- escritas ------------------------------------------------------
 
@@ -135,6 +142,36 @@ class StateStore:
     def reset_counters(self) -> None:
         with self._lock:
             self._counters.clear()
+
+    # --- deadzone dos gatilhos pedida por mod DSX (UDP-TRIGGER-THRESHOLD-01) --
+
+    def set_udp_trigger_threshold(self, side: str, value: int) -> None:
+        """Grava o limiar do lado `side` ("left"|"right"), clampado em 0-255.
+
+        Semântica do DSX, preservada byte a byte: o valor bruto do gatilho só
+        chega ao gamepad virtual quando é **maior ou igual** ao limiar; abaixo
+        dele o jogo lê zero. Corte seco, sem reescala.
+        """
+        if side not in ("left", "right"):
+            raise ValueError(f"lado de gatilho desconhecido: {side!r}")
+        with self._lock:
+            self._udp_trigger_thresholds[side] = max(0, min(255, int(value)))
+
+    def clear_udp_trigger_thresholds(self) -> None:
+        """Volta os dois lados ao padrão "sem deadzone".
+
+        Chamado pelo `ResetToUserSettings` da porta 6969: a deadzone é parte do
+        que o mod mudou, e "voltar às configurações do usuário" a inclui.
+        """
+        with self._lock:
+            self._udp_trigger_thresholds = {"left": 0, "right": 0}
+
+    @property
+    def udp_trigger_thresholds(self) -> tuple[int, int]:
+        """Par `(esquerdo, direito)` dos limiares vigentes. Lido a cada tick."""
+        with self._lock:
+            atual = self._udp_trigger_thresholds
+            return (atual["left"], atual["right"])
 
     def mark_manual_trigger_active(self, category: str = "trigger") -> None:
         """Arma o override manual da `category` ("trigger" | "led" | "rumble").
