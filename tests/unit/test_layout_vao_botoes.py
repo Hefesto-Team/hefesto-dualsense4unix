@@ -31,17 +31,30 @@ Gatilhos em 292px enquanto a aba real pedia 538px, e por isso não viu que o
 modo `MultiPositionVibration` já pedia 646px para uma faixa de 630px, forçando
 rolagem. Medir sem a grade é medir outra aba.
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
 
 from collections.abc import Iterator
 
 import pytest
 
-_gi = pytest.importorskip("gi", reason="precisa de PyGObject")
-_gi.require_version("Gtk", "3.0")
-_gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk
+# Guarda de ambiente: na CI o `gi` IMPORTA mas os typelibs sao PARCIAIS — falta
+# `Pango`, falta `Gdk`, e `Gtk` vem sem `DrawingArea`. Nesse estado
+# `importorskip("gi")` NÃO protege: `require_version` levanta ValueError e o
+# `from gi.repository import ...` levanta ImportError, e os dois derrubam a
+# COLETA do módulo em vez de virar skip — a CI reprova em massa com erro que
+# não tem nada a ver com o teste. Por isso o preambulo inteiro entra num try.
+try:
+    import gi as _gi
+
+    _gi.require_version("Gtk", "3.0")
+    _gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, Gtk
+
+    if not hasattr(Gtk, "DrawingArea"):
+        raise ImportError("typelib do Gtk sem DrawingArea")
+except (ImportError, ValueError) as _exc:  # pragma: no cover
+    pytest.skip(f"typelib parcial: {_exc}", allow_module_level=True)
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 from hefesto_dualsense4unix.app.actions.triggers_actions import (

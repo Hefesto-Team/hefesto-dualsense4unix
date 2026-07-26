@@ -108,9 +108,20 @@ async def _state_full(socket_path: Path) -> dict[str, Any]:
     return resultado
 
 
-from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
-    StatusActionsMixin,
-)
+# O import fica no topo (antes de qualquer fixture trocar `gi.repository` por um
+# dublê), mas GUARDADO: na CI os typelibs são parciais e este módulo encosta em
+# Gtk de verdade. Sem a guarda, um typelib incompleto derrubaria a COLETA e
+# levaria junto os outros testes deste arquivo, que rodam com Gtk falso e não
+# precisam de toolkit nenhum. Falhou o import: só a classe que depende dele pula.
+try:
+    from hefesto_dualsense4unix.app.actions.status_actions import (
+        StatusActionsMixin,
+    )
+except (ImportError, ValueError) as _exc:  # pragma: no cover
+    StatusActionsMixin = None  # type: ignore[assignment,misc]
+    _MOTIVO_SEM_GTK = f"typelib parcial: {_exc}"
+else:
+    _MOTIVO_SEM_GTK = ""
 
 
 class TestExternosViramLista:
@@ -799,6 +810,7 @@ class TestGamepadsDoSistema:
         assert "nós em /dev/input/js*" in texto
 
 
+@pytest.mark.skipif(StatusActionsMixin is None, reason=_MOTIVO_SEM_GTK)
 class TestGradeDaAbaStatusMostraAMesaInteira:
     """O defeito visto NA TELA em 26/07, com os quatro controles ligados.
 

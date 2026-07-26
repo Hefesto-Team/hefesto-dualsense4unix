@@ -26,23 +26,32 @@ Tudo com GTK REAL e com o glade REAL: o defeito desta área é de LIGAÇÃO (a
 peça, o `MicMeter`, sempre funcionou), então testar a peça isolada não
 provaria nada.
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
 
 import threading
 from pathlib import Path
 from typing import Any
 
-import gi
-
-gi.require_version("Gtk", "3.0")
-
 import pytest
 
-# CI headless sem libcairo: os medidores da faixa são DrawingArea.
-pytest.importorskip("cairo")
+# Guarda de ambiente: na CI o `gi` IMPORTA mas os typelibs sao PARCIAIS — falta
+# `Pango`, falta `Gdk`, e `Gtk` vem sem `DrawingArea`. Nesse estado
+# `importorskip("gi")` NÃO protege: `require_version` levanta ValueError e o
+# `from gi.repository import ...` levanta ImportError, e os dois derrubam a
+# COLETA do módulo em vez de virar skip — a CI reprova em massa com erro que
+# não tem nada a ver com o teste. Por isso o preambulo inteiro entra num try.
+pytest.importorskip("cairo", reason="os medidores da faixa sao DrawingArea")
+try:
+    import gi
 
-from gi.repository import Gtk
+    gi.require_version("Gtk", "3.0")
+    from gi.repository import Gtk
+
+    if not hasattr(Gtk, "DrawingArea"):
+        raise ImportError("typelib do Gtk sem DrawingArea")
+except (ImportError, ValueError) as _exc:  # pragma: no cover
+    pytest.skip(f"typelib parcial: {_exc}", allow_module_level=True)
 
 from hefesto_dualsense4unix.app.actions.status_actions import (
     TEXTO_MIC_SEM_CONTROLE,
