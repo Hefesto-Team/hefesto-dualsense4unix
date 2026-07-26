@@ -101,6 +101,17 @@ class _NumeroForaDaMesaError(Exception):
 #: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
+#: CONTAGEM-01 (25/07): intervalo MÍNIMO (s) entre duas enumerações de
+#: `_external_inventory` disparadas pelo `state_full` para DESCREVER um
+#: externo (nome, VID/PID, via, driver). A enumeração custa 10-40 ms e é
+#: PROIBIDA no caminho quente — por isso ela nunca roda dentro do handler:
+#: roda numa tarefa de fundo, no máximo uma a cada este intervalo, e só
+#: quando há um externo presente cuja descrição ainda não está em cache.
+#: O valor casa com a cadência do tick de LED dos externos
+#: (`ExternalLedSync`), que já enumera nesse ritmo — assim o pior caso
+#: continua sendo "uma enumeração a cada 2 s", não uma a cada tick de GUI.
+_EXTERNAL_DESC_MIN_INTERVAL_SEC = 2.0
+
 
 def _norm_uniq(value: Any) -> str | None:
     """MAC 12-hex normalizado de uma key/serial do backend, ou None.
@@ -317,6 +328,18 @@ class IpcHandlersMixin:
     #: em foco (base da janela de ~120s). Mesmo padrão do cache acima: class
     #: attributes (o mixin não é dataclass) com shadow por instância no 1º uso.
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
+
+    #: CONTAGEM-01: descrição (nome, VID/PID, via, driver) de cada controle
+    #: EXTERNO, indexada pela identidade de aparelho. Mesmo padrão dos caches
+    #: acima — class attribute com shadow por instância no 1º uso. Ver
+    #: `_external_controllers_now` para o porquê de a PRESENÇA não vir daqui.
+    _external_desc_cache: dict[str, dict[str, Any]] | None = None
+    #: Monotonic da última enumeração DISPARADA (não da concluída) — é o que
+    #: o teto de `_EXTERNAL_DESC_MIN_INTERVAL_SEC` mede.
+    _external_desc_at: float = 0.0
+    #: Tarefa de enumeração em voo; `None` = nenhuma. Guarda de coalescência:
+    #: o `state_full` roda a 10-20 Hz e não pode empilhar enumerações.
+    _external_desc_task: asyncio.Task[Any] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
 
     #: S2 (sensores na aba Status): `SensorHub` lazy — os readers de
@@ -1183,6 +1206,156 @@ class IpcHandlersMixin:
         logger.info("autoswitch_lock_set", locked=novo)
         return {"status": "ok", "autoswitch_locked": novo}
 
+    # ------------------------------------------------------------------
+    # Controles externos no `state_full` — CONTAGEM-01, entrega 1
+    # ------------------------------------------------------------------
+
+    def _external_desc_refresh_if_needed(self, identidades: set[str]) -> None:
+        """Agenda (sem esperar) a enumeração que DESCREVE os externos novos.
+
+        O `state_full` roda a 10-20 Hz e `discover_external_gamepads` abre
+        todos os nós de `/dev/input` (10-40 ms) — enumerar aqui congelaria o
+        input no meio do jogo. Então esta função não enumera: ela AGENDA, e
+        só quando as três condições valem juntas:
+
+        1. há identidade presente que o cache ainda não descreve (aparelho
+           acabou de chegar) — sem isso não há nada a descobrir, porque a
+           identidade JÁ É o aparelho: enquanto ela não muda, nome, VID/PID e
+           via também não;
+        2. não há enumeração em voo (o `state_full` empilharia dezenas);
+        3. passou :data:`_EXTERNAL_DESC_MIN_INTERVAL_SEC` desde a última —
+           teto para o caso patológico de uma identidade que o registro
+           conhece e a enumeração nunca acha (aparelho que saiu entre as
+           duas leituras), que senão pediria enumeração a cada tick.
+
+        Sem event loop rodando (chamadas diretas em teste unitário) não há o
+        que agendar — e a descrição simplesmente fica ausente, que é o
+        degrau honesto: a PRESENÇA e o NÚMERO não dependem daqui.
+        """
+        cache = self._external_desc_cache or {}
+        if not identidades - set(cache):
+            return
+        task = self._external_desc_task
+        if task is not None and not task.done():
+            return
+        agora = time.monotonic()
+        if agora - self._external_desc_at < _EXTERNAL_DESC_MIN_INTERVAL_SEC:
+            return
+        self._external_desc_at = agora
+        with contextlib.suppress(RuntimeError):
+            self._external_desc_task = asyncio.get_running_loop().create_task(
+                self._external_desc_refresh(), name="external_desc_refresh"
+            )
+
+    async def _external_desc_refresh(self) -> None:
+        """Enumera FORA do event loop e reescreve o cache de descrições.
+
+        Nunca levanta: uma falha aqui só deixa os externos sem nome na
+        interface — a contagem e a numeração deles vêm do registro, não
+        daqui. O cache é SUBSTITUÍDO (não fundido) para que um aparelho que
+        saiu não deixe descrição órfã atrás de si.
+        """
+        try:
+            inventario = await asyncio.to_thread(_external_inventory)
+        except asyncio.CancelledError:  # daemon encerrando no meio da leitura
+            raise
+        except Exception as exc:
+            logger.debug("external_desc_refresh_falhou", err=str(exc))
+            return
+        novo: dict[str, dict[str, Any]] = {}
+        for entrada in inventario:
+            identidade = entrada.get("identity")
+            if not isinstance(identidade, str) or not identidade:
+                continue
+            novo[identidade] = {
+                campo: entrada.get(campo)
+                for campo in ("name", "vid", "pid", "bus", "uniq", "driver")
+            }
+        self._external_desc_cache = novo
+
+    def _external_controllers_now(self) -> list[dict[str, Any]] | None:
+        """Os controles EXTERNOS presentes, como LISTA (CONTAGEM-01, entrega 1).
+
+        `None` quando o daemon não tem registro de externos (backend fake,
+        versão antiga): a chave nem aparece no `state_full` e quem lê sabe
+        que o daemon não opinou — diferente de uma lista vazia, que afirma
+        "não há nenhum".
+
+        Duas fontes, e a divisão entre elas é o ponto desta função:
+
+        - **presença e número** saem do `external_registry`, que é memória
+          viva do daemon (`snapshot_connected` + `peek`, zero I/O). É a MESMA
+          fonte que já alimentava a contagem `coop.externals` e a MESMA com
+          que o tick acende o LED de jogador do aparelho — por isso o número
+          da tela e o número do LED não têm como divergir;
+        - **descrição** (nome, VID/PID, via, driver) sai do cache alimentado
+          por :meth:`_external_desc_refresh`, porque só a enumeração de
+          `/dev/input` sabe dizê-la, e ela é cara demais para este caminho.
+
+        Enquanto a descrição não chegou (primeiros ~2 s de um aparelho novo)
+        os campos vêm `None` e o controle já aparece com número: a interface
+        prefere "Controle 3" sem marca a esconder um controle que está na
+        mesa. Inverter isso — esperar a descrição para contar — seria
+        reintroduzir o defeito que esta sprint conserta, com outro atraso.
+
+        A ordem é a do número exibido (sem número por último, depois pela
+        identidade) para a lista não dançar entre um tick e outro: `set` não
+        tem ordem, e uma lista que embaralha faz a GUI reconstruir cartão a
+        cada 100 ms.
+        """
+        registro = getattr(self.daemon, "external_registry", None) if self.daemon else None
+        if registro is None:
+            return None
+        conectados = getattr(registro, "snapshot_connected", None)
+        if not callable(conectados):
+            return None
+        try:
+            vistos = conectados()
+        except Exception as exc:
+            logger.debug("external_snapshot_falhou", err=str(exc))
+            return None
+        if not isinstance(vistos, (set, frozenset)):
+            return None
+        identidades = {v for v in vistos if isinstance(v, str) and v}
+        self._external_desc_refresh_if_needed(identidades)
+        peek = getattr(registro, "peek", None)
+        cache = self._external_desc_cache or {}
+        lista: list[dict[str, Any]] = []
+        for identidade in identidades:
+            numero: int | None = None
+            if callable(peek):
+                with contextlib.suppress(Exception):
+                    bruto = peek(identidade)
+                    if isinstance(bruto, int) and not isinstance(bruto, bool):
+                        numero = bruto
+            desc = cache.get(identidade) or {}
+            lista.append(
+                {
+                    # `kind` separa, do lado de quem consome, o controle que o
+                    # Hefesto ADOTA (DualSense, com vpad e input ao vivo) do
+                    # que ele só VÊ e numera. As duas coisas contam como
+                    # controle na mesa; só uma delas tem jogador nosso.
+                    "kind": "external",
+                    "connected": True,
+                    "identity": identidade,
+                    "player_slot": numero,
+                    "name": _as_str_or_none(desc.get("name")),
+                    "vid": _as_str_or_none(desc.get("vid")),
+                    "pid": _as_str_or_none(desc.get("pid")),
+                    "bus": _as_str_or_none(desc.get("bus")),
+                    "uniq": _as_str_or_none(desc.get("uniq")),
+                    "driver": _as_str_or_none(desc.get("driver")),
+                }
+            )
+        lista.sort(
+            key=lambda e: (
+                e["player_slot"] is None,
+                e["player_slot"] if e["player_slot"] is not None else 0,
+                e["identity"],
+            )
+        )
+        return lista
+
     async def _handle_native_mode_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01).
 
@@ -1365,6 +1538,18 @@ class IpcHandlersMixin:
                         [c for c in controllers if isinstance(c, dict)], state
                     )
 
+        # CONTAGEM-01 (25/07), entrega 1: os controles EXTERNOS saem como
+        # LISTA, no MESMO payload e no MESMO tick em que saem os DualSense.
+        # Publicá-los só como contagem (`coop.externals`) era a raiz de a
+        # janela mostrar dois números para "quantos controles há na mesa": com
+        # a lista, cabeçalho, cartões, botão de co-op e chips passam a ler a
+        # MESMA linha do MESMO payload. Fora do bloco `daemon_cfg` de
+        # propósito — quem responde por isto é o registro de externos, não a
+        # config do daemon.
+        externos = self._external_controllers_now()
+        if externos is not None:
+            result["external_controllers"] = externos
+
         # FEAT-DSX-CONTROLLER-SELECTOR-01: índice do controle-alvo de output
         # (None = TODOS / broadcast). getattr defensivo: backends sem o método
         # (FakeController) ou controller MagicMock em teste → None.
@@ -1481,16 +1666,17 @@ class IpcHandlersMixin:
             # "2", e quem lê de fora conclui que só há 2 controles. Os
             # externos são read-only POR DECISÃO DE PRODUTO (numerar e acender
             # o LED certo ≠ adotar o controle), então o número certo não é
-            # inflar `players`: é dizer os dois. Leitura de um `set` em
-            # memória mantido pelo tick lento — ZERO enumeração de /dev/input
-            # neste caminho (o state_full roda a 10 Hz).
-            registro_ext = getattr(self.daemon, "external_registry", None)
-            conectados = getattr(registro_ext, "snapshot_connected", None)
-            if callable(conectados):
-                with contextlib.suppress(Exception):
-                    vistos = conectados()
-                    if isinstance(vistos, (set, frozenset)):
-                        result["coop"]["externals"] = len(vistos)
+            # inflar `players`: é dizer os dois.
+            #
+            # CONTAGEM-01 (25/07): esta contagem deixou de ser MEDIDA e passou
+            # a ser DERIVADA da lista publicada em `external_controllers`. Era
+            # a contagem que existia sozinha — e uma contagem sem a lista é
+            # exatamente o que impedia a interface de montar cartão e somar
+            # jogador, então ela virava um número que a janela mostrava sem
+            # conseguir explicar. Derivando, os dois campos não têm como
+            # discordar nem por um tick.
+            if externos is not None:
+                result["coop"]["externals"] = len(externos)
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
             # L1: a observabilidade vem da ORIGEM VIVA — `daemon._last_auto_mult`,
             # o multiplicador auto mais recente, atualizado pela política que de

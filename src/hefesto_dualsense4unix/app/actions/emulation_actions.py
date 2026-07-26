@@ -42,6 +42,140 @@ logger = get_logger(__name__)
 
 UINPUT_DEV = "/dev/uinput"
 
+# --- CONTAGEM-01, entrega 4: o campo dos "8 controles" ----------------------
+# O rótulo dizia "8 controles detectados pelo sistema" com QUATRO controles na
+# mesa, e a sprint deu duas saídas: dizer a verdade ou sumir. Medido nesta
+# máquina, em 25/07, o campo estava errado por DUAS razões independentes — e é
+# por isso que a saída escolhida foi dizer a verdade, não sumir: um diagnóstico
+# que revela as duas coisas vale mais que um campo a menos.
+#
+#   js0  Nintendo Pro                          uniq=<MAC A>     físico
+#   js1  DualSense (cabo)                      uniq=<MAC B>     físico
+#   js2  DualSense … Motion Sensors            uniq=<MAC B>     ← O MESMO
+#   js3  Hefesto Virtual DualSense P1          uniq=02:fe:…:01  nosso
+#   js4  Hefesto Virtual DualSense P1 Motion…  uniq=02:fe:…:01  ← O MESMO
+#   js5  DualSense (Bluetooth, via uhid)       uniq=<MAC C>     físico
+#   …  (nove nós no total, para três controles dela e dois vpads nossos)
+#
+# 1. cada controle da classe DualSense abre DOIS nós de joystick (o gamepad e
+#    os sensores de movimento) — contar nós é contar quase o dobro;
+# 2. o caminho no sysfs NÃO separa "nosso" de "dela": desde o BLUEZ-UHID-01,
+#    o BlueZ cria o HID dos controles BLUETOOTH FÍSICOS em
+#    `/devices/virtual/misc/uhid/`, exatamente onde mora o nosso vpad. Quem
+#    separa é a IDENTIDADE — o MAC forjado `02:fe:…` que o vpad carrega — e é
+#    o mesmo sinal que `core.evdev_reader._is_virtual_evdev` já usa para não
+#    se auto-adotar.
+#
+# Fica de fora o que não é mensurável daqui: o gamepad do Steam Input é um
+# uinput sob `/devices/virtual/input/`, e é assim que ele entra na terceira
+# coluna — sem afirmar que É da Steam quando pode ser de outro programa.
+
+#: Prefixo do MAC que o vpad do Hefesto forja por jogador (`uhid_gamepad`).
+#: Contrato de fio entre o vpad e quem o reconhece — replicado aqui pelo mesmo
+#: motivo do `_IDENTITY_FIELD` da GUI: importar do daemon acoplaria a aba a um
+#: módulo dele por causa de uma string.
+_VPAD_UNIQ_PREFIX = "02:fe:"
+
+#: Nome que o vpad publica no evdev ("Hefesto Virtual DualSense P1"). Segundo
+#: degrau, para o caso de um vpad em uinput (fallback) sem `uniq` legível.
+_VPAD_NAME_PREFIX = "Hefesto Virtual"
+
+#: Subárvore dos devices criados por uinput — Steam Input, teclado virtual do
+#: daemon, qualquer programa. NÃO inclui `/devices/virtual/misc/uhid/`, que
+#: hospeda tanto o nosso vpad quanto os controles BT físicos (BLUEZ-UHID-01).
+_UINPUT_SUBTREE = "/devices/virtual/input/"
+
+
+def _chave_do_aparelho(no: dict[str, str]) -> str:
+    """Identidade do APARELHO por trás de um nó de joystick.
+
+    O `uniq` (MAC) é o que colapsa "DualSense" e "DualSense Motion Sensors"
+    num controle só. Sem ele, cai no diretório do device HID — dois níveis
+    acima do `inputNN`, que é onde os nós irmãos se encontram.
+    """
+    uniq = no.get("uniq", "").strip().lower()
+    if uniq:
+        return uniq
+    sysfs = no.get("sys", "")
+    return os.path.dirname(os.path.dirname(os.path.dirname(sysfs))) or no.get("path", "")
+
+
+def classificar_joysticks(nos: list[dict[str, str]]) -> tuple[int, int, int]:
+    """`(físicos, nossos, de outros programas)` — APARELHOS, não nós.
+
+    Função pura (recebe os atributos já lidos do sysfs) porque é ela que
+    carrega o julgamento; a leitura de arquivo fica no chamador. Ver o bloco
+    de comentário de :data:`_VPAD_UNIQ_PREFIX` para a medição que motivou
+    cada uma das três regras.
+    """
+    por_aparelho: dict[str, dict[str, str]] = {}
+    for no in nos:
+        por_aparelho.setdefault(_chave_do_aparelho(no), no)
+    fisicos = nossos = outros = 0
+    for no in por_aparelho.values():
+        uniq = no.get("uniq", "").strip().lower()
+        nome = no.get("name", "").strip()
+        if uniq.startswith(_VPAD_UNIQ_PREFIX) or nome.startswith(_VPAD_NAME_PREFIX):
+            nossos += 1
+        elif _UINPUT_SUBTREE in no.get("sys", ""):
+            outros += 1
+        else:
+            fisicos += 1
+    return fisicos, nossos, outros
+
+
+def _atributos_do_joystick(caminho: str) -> dict[str, str]:
+    """Lê do sysfs o que :func:`classificar_joysticks` precisa julgar.
+
+    Tolerante a tudo: nó que sumiu entre o `glob` e a leitura, atributo que o
+    driver não publica, sysfs indisponível. Campo ilegível vira string vazia —
+    o aparelho cai em "físico", que é a leitura CONSERVADORA (contá-lo como
+    nosso inflaria o que dizemos ter criado).
+    """
+    nome_no = os.path.basename(caminho)
+    base = f"/sys/class/input/{nome_no}"
+    atributos = {"path": caminho, "name": "", "uniq": "", "sys": ""}
+    with contextlib.suppress(OSError):
+        atributos["sys"] = os.path.realpath(base)
+    for campo in ("name", "uniq"):
+        with contextlib.suppress(OSError), open(
+            f"{base}/device/{campo}", encoding="utf-8"
+        ) as fh:
+            atributos[campo] = fh.read().strip()
+    return atributos
+
+
+def rotulo_gamepads(fisicos: int, nossos: int, outros: int, nos: int) -> str:
+    """Texto do campo "Gamepads:" da aba Emulação (CONTAGEM-01, entrega 4).
+
+    Diz o que aquilo É — quantos APARELHOS, separados por dono — e termina
+    dizendo quantos NÓS de `/dev/input/js*` existem, que é o número cru que o
+    campo mostrava sozinho. Os dois juntos explicam a diferença em vez de
+    deixá-la parecendo erro: quatro controles na mesa podem render nove nós.
+    """
+    if nos <= 0:
+        return "Nenhum controle detectado pelo sistema"
+    partes: list[str] = []
+    if fisicos:
+        partes.append(
+            "1 controle físico" if fisicos == 1 else f"{fisicos} controles físicos"
+        )
+    if nossos:
+        partes.append(
+            "1 gamepad virtual do Hefesto"
+            if nossos == 1
+            else f"{nossos} gamepads virtuais do Hefesto"
+        )
+    if outros:
+        partes.append(
+            "1 gamepad virtual de outro programa (Steam Input)"
+            if outros == 1
+            else f"{outros} gamepads virtuais de outros programas (Steam Input)"
+        )
+    if not partes:
+        partes.append("nenhum aparelho reconhecido")
+    return f"{', '.join(partes)} — {nos} nós em /dev/input/js*"
+
 # --- HONESTIDADE-STEAM-01: contrato de saída do disable_steam_input.sh ------
 # O bug: o botão mostrava "desligando Steam Input (fecha e reabre a Steam)…",
 # rodava `--apply-quiet` (que por contrato NUNCA fecha a Steam — se ela está
@@ -338,9 +472,12 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
         js_nodes = sorted(glob.glob("/dev/input/js*"))
         if js_nodes:
-            n = len(js_nodes)
-            palavra = "controle detectado" if n == 1 else "controles detectados"
-            self._get("emulation_js_label").set_text(f"{n} {palavra} pelo sistema")
+            fisicos, nossos, outros = classificar_joysticks(
+                [_atributos_do_joystick(caminho) for caminho in js_nodes]
+            )
+            self._get("emulation_js_label").set_text(
+                rotulo_gamepads(fisicos, nossos, outros, len(js_nodes))
+            )
         else:
             self._get("emulation_js_label").set_markup(
                 '<i>Nenhum controle detectado pelo sistema</i>'
