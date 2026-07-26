@@ -902,6 +902,16 @@ if [[ -e /etc/modprobe.d/hefesto-hid-playstation.conf ]]; then
             printf '0' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
             log "feature_retries do hid_playstation devolvido a 0 (vanilla já na próxima conexão; NUNCA recarregamos o módulo)"
         fi
+        # Simetria com o install: os dois gates do clone no cabo voltam a N
+        # (caminhos literais, como no install.sh).
+        if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
+            printf 'N' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1 || true
+            log "ds4_short_pairing_info devolvido a N (vanilla na próxima conexão)"
+        fi
+        if [[ -e /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
+            printf 'N' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1 || true
+            log "ds4_synthetic_mac devolvido a N (vanilla na próxima conexão)"
+        fi
     else
         log "sudo indisponível — /etc/modprobe.d/hefesto-hid-playstation.conf NÃO removido"
         log "  sudo rm -f /etc/modprobe.d/hefesto-hid-playstation.conf"

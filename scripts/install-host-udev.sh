@@ -306,14 +306,18 @@ _build_install_cmd() {
         cmd+="printf '3' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
         cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
     fi
-    # Contenção BT: conf persistente do hid-playstation patchado + parâmetro a
-    # quente. feature_retries é lido A CADA probe, então escrever aqui já vale
-    # na próxima CONEXÃO do controle — sem reload (proibido: derrubaria os
-    # DualSense por BT) e sem replug dos que já estão em uso.
+    # Contenção BT: conf persistente do hid-playstation patchado + parâmetros a
+    # quente. Todos são lidos A CADA probe, então escrever aqui já vale na
+    # próxima CONEXÃO do controle — sem reload (proibido: derrubaria os
+    # DualSense por BT) e sem replug dos que já estão em uso. Os dois ds4_* são
+    # a cura do clone no cabo (pairing info de 9 bytes); ausentes no módulo
+    # antigo, e aí o redirect falha calado, que é o desejado.
     if [[ -n "${HIDPLAYSTATION_SRC}" ]]; then
         cmd+="install -Dm644 '${HIDPLAYSTATION_SRC}/hefesto-hid-playstation.conf' "
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-playstation.conf'; "
         cmd+="printf '2' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true; "
+        cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_short_pairing_info 2>/dev/null || true; "
+        cmd+="printf 'Y' > /sys/module/hid_playstation/parameters/ds4_synthetic_mac 2>/dev/null || true; "
     fi
     # BROKER-01 (Onda S — fd-injection): binário + units-template renderizadas
     # (__SESSION_UID__/__SESSION_GROUP__) + enable --now do .socket (só ele —

@@ -620,7 +620,7 @@ install_dkms_hid_playstation_host() {
         "$(dkms_pkg_version "${_hidp_src}")" "${_hidp_src}" hid-playstation
     if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-hid-playstation.conf" \
             /etc/modprobe.d/hefesto-hid-playstation.conf 2>/dev/null; then
-        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2)\n'
+        printf '      opções instaladas em /etc/modprobe.d/hefesto-hid-playstation.conf (feature_retries=2 + ds4_* do clone no cabo)\n'
     else
         warn "não consegui gravar /etc/modprobe.d/hefesto-hid-playstation.conf"
     fi
@@ -646,6 +646,20 @@ install_dkms_hid_playstation_host() {
         if [[ -w /sys/module/hid_playstation/parameters/feature_retries ]]; then
             printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
             printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
+        fi
+        # Mesma lógica para a cura do CLONE no cabo (pairing info de 9 bytes
+        # em vez de 16): lidos a cada probe, valem no próximo plug. Ausentes
+        # no módulo patchado antigo (só tinha feature_retries) — por isso cada
+        # um é decidido pelo seu próprio -w, sem avisar à toa. Caminhos
+        # LITERAIS de propósito: a paridade com o install-host-udev.sh é
+        # verificada por grep (AUTO-01.7).
+        if [[ -w /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
+            printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1 || true
+            printf '      ds4_short_pairing_info aplicado a quente (clone no cabo; vale no próximo plug)\n'
+        fi
+        if [[ -w /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
+            printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1 || true
+            printf '      ds4_synthetic_mac aplicado a quente (clone no cabo; vale no próximo plug)\n'
         fi
     elif [[ -d /sys/module/hid_playstation ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria os DualSense, inclusive os por BT);\n'
