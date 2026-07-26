@@ -238,11 +238,34 @@ _AVISO_SYSFS = (
 _HID_BUS_ROOT = "/sys/bus/hid/devices"
 
 
+#: Glifos do desenho de LED, escritos por CODEPOINT de propósito.
+#:
+#: BLACK CIRCLE (U+25CF) e WHITE CIRCLE (U+25CB) são **permitidos** pelo ADR-011
+#: — Geometric Shapes é interface textual funcional, não decoração. Mesmo assim
+#: eles não aparecem aqui como caractere literal, e a razão é um incidente
+#: medido: no commit `d1177c2` o higienizador de emojis do fluxo de commit
+#: apagou os dois glifos DESTE arquivo e do teste que os verificava. O resultado
+#: foi `"".join("" if b else "")` — os dois ramos vazios, função devolvendo
+#: string vazia para qualquer padrão — e o teste passou, porque o valor esperado
+#: dele foi apagado junto. É exatamente o modo de falha que o ADR-011 existe
+#: para impedir, e que ele já registrava de 21/04/2026 ("o teste foi adaptado
+#: para a regressão, escondendo o bug").
+#:
+#: `chr()` é imune a qualquer varredura de texto. O nome da constante carrega a
+#: intenção, então a legibilidade não se perde.
+_LED_ACESO = chr(0x25CF)
+_LED_APAGADO = chr(0x25CB)
+
+
 def _padrao(bits: Any) -> str:
-    """Desenha 5 LEDs de player (`` aceso, `` apagado); `—` sem leitura."""
+    """Desenha os 5 LEDs de player; `—` quando não há leitura.
+
+    Aceso é BLACK CIRCLE, apagado é WHITE CIRCLE — ver a nota de
+    :data:`_LED_ACESO` sobre por que eles são escritos por codepoint.
+    """
     if not isinstance(bits, (list, tuple)) or not bits:
         return "—"
-    return "".join("" if b else "" for b in list(bits)[:5])
+    return "".join(_LED_ACESO if b else _LED_APAGADO for b in list(bits)[:5])
 
 
 def _numero_do_padrao(bits: Any) -> str:
