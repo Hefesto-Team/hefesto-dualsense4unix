@@ -9,7 +9,7 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.1%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.2%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![Testes](https://img.shields.io/badge/testes-5256-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=sprint/harmonia-uhid)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.1.1 (alfa)
+Versão: 0.1.2 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT
 ```

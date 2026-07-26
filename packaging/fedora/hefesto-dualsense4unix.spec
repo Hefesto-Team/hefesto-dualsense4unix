@@ -10,7 +10,7 @@
 %global app_id    hefesto-dualsense4unix
 
 Name:           %{pypi_name}
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
