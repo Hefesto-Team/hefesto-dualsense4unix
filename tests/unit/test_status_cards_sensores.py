@@ -1,10 +1,17 @@
-"""Os três módulos de sensor DENTRO do card da aba Status (S2), com GTK real.
+"""Os módulos de sensor DENTRO do card da aba Status (S2), com GTK real.
 
-O contrato que estes testes travam é sempre o mesmo, em três lugares
-diferentes: **ausência de sensor não vira zero na tela**. Três barras de
-giroscópio paradas no centro, um medidor de mic vazio ou um touchpad sem
-ponto diriam "o controle está em repouso" — quando a verdade é "não tenho
-esse sensor". Cada módulo some inteiro em vez disso.
+O contrato que estes testes travam é sempre o mesmo, em cada lugar:
+**ausência de sensor não vira zero na tela**. Três barras de giroscópio
+paradas no centro ou um touchpad sem ponto diriam "o controle está em
+repouso" — quando a verdade é "não tenho esse sensor". Cada módulo some
+inteiro em vez disso.
+
+O MICROFONE saiu daqui na MIC-FAIXA-01 e virou faixa própria no rodapé da
+aba (`tests/unit/test_mic_faixa_status.py`). O motivo é a outra metade da
+mesma regra: para os sensores do card, sumir é a resposta honesta, porque a
+ausência é do SENSOR; para o microfone, o sensor existe sempre e o que falta
+é o caminho até ele — e aí sumir esconde a causa em vez de contá-la. Um
+teste aqui trava que ele não volte.
 
 Também travam a coexistência com a linha `texto_motion`, que já existia: ela
 diz se o giroscópio FLUI PARA O JOGO; as barras novas mostram o VALOR. São
@@ -24,7 +31,6 @@ import pytest
 # CI headless sem libcairo cai no stub do card (sem sub-widgets de desenho).
 pytest.importorskip("cairo")
 
-from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
 from hefesto_dualsense4unix.app.widgets.controller_card import (
     ControllerCard,
     gyro_do_inputs,
@@ -37,6 +43,7 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     COR_MIC_SILENCIO,
     ESCALA_GYRO_GRAUS_S,
     MIC_AMOSTRAS,
+    MicMeter,
     cor_da_barra_do_mic,
     fracao_do_eixo,
     historico_deslizante,
@@ -168,17 +175,32 @@ def test_texto_toques(n: int, esperado: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_sem_sensor_nenhum_os_tres_modulos_somem(card: Any) -> None:
-    card.update(_entry(), _ESTADO, None)
+def test_sem_sensor_nenhum_os_modulos_do_card_somem(card: Any) -> None:
+    card.update(_entry(), _ESTADO)
 
     assert card._gyro_box.get_visible() is False
-    assert card._mic_box.get_visible() is False
     assert card._touch_box.get_visible() is False
     assert card._sensores_linha.get_visible() is False
 
 
+def test_o_card_nao_tem_mais_medidor_de_microfone(card: Any) -> None:
+    """MIC-FAIXA-01: o microfone saiu do card e virou faixa no rodapé da aba.
+
+    Um fato, um dono. Enquanto o medidor morasse aqui DENTRO, ele continuaria
+    sumindo quando não houvesse source — e é esse sumiço que a faixa existe
+    para acabar. Este teste morde se alguém reintroduzir o módulo aqui: dois
+    lugares mostrando o mesmo microfone é o começo de dois lugares
+    discordando.
+    """
+    card.update(_entry(), _ESTADO)
+
+    assert not hasattr(card, "_mic_meter")
+    assert not hasattr(card, "_mic_box")
+    assert not hasattr(card, "_mic_selo")
+
+
 def test_gyro_no_payload_acende_as_barras(card: Any) -> None:
-    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
+    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO)
 
     assert card._gyro_box.get_visible() is True
     assert card._gyro_bars._valores == (143.2, -412.0, 22.8)
@@ -187,16 +209,16 @@ def test_gyro_no_payload_acende_as_barras(card: Any) -> None:
 def test_gyro_some_quando_o_daemon_para_de_mandar(card: Any) -> None:
     """Daemon reiniciado sem o node de motion não pode deixar o último valor
     na tela como se o controle ainda estivesse girando."""
-    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
+    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO)
 
-    card.update(_entry(), _ESTADO, None)
+    card.update(_entry(), _ESTADO)
 
     assert card._gyro_box.get_visible() is False
     assert card._gyro_bars._valores == (0.0, 0.0, 0.0)
 
 
 def test_touchpad_com_dedo_desenha_o_ponto(card: Any) -> None:
-    card.update(_entry(inputs=_inputs(touchpad=_TOUCH)), _ESTADO, None)
+    card.update(_entry(inputs=_inputs(touchpad=_TOUCH)), _ESTADO)
 
     assert card._touch_box.get_visible() is True
     assert card._touch_view._toque == pytest.approx((0.75, 0.25))
@@ -207,72 +229,31 @@ def test_touchpad_sem_dedo_apaga_o_ponto_mas_mantem_o_painel(card: Any) -> None:
     """O sensor existe (o retângulo fica); o que some é o ponto."""
     solto = dict(_TOUCH, touching=False)
 
-    card.update(_entry(inputs=_inputs(touchpad=solto)), _ESTADO, None)
+    card.update(_entry(inputs=_inputs(touchpad=solto)), _ESTADO)
 
     assert card._touch_box.get_visible() is True
     assert card._touch_view._toque is None
     assert card._touch_label.get_text() == "sem toque"
 
 
-def test_mic_sem_leitura_nao_mostra_modulo(card: Any) -> None:
-    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
-
-    assert card._mic_box.get_visible() is False
-    assert card._sensores_linha.get_visible() is False
-
-
-def test_mic_com_leitura_mostra_medidor_e_selo(card: Any) -> None:
-    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.62, muted=False))
-
-    assert card._mic_box.get_visible() is True
-    assert card._mic_meter._nivel == pytest.approx(0.62)
-    assert card._mic_selo.get_visible() is True
-    assert "ATIVO" in card._mic_selo.get_label()
-    assert "#50fa7b" in card._mic_selo.get_label()
-
-
-def test_mic_mudo_troca_o_selo(card: Any) -> None:
-    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.1, muted=True))
-
-    assert "MUDO" in card._mic_selo.get_label()
-    assert "#2b2d3a" in card._mic_selo.get_label()
-
-
-def test_mic_sem_mute_lido_mostra_medidor_sem_selo(card: Any) -> None:
-    """Medidor sim (o áudio está chegando), selo não: afirmar "ATIVO" sem ter
-    lido o mute seria dizer que o microfone está aberto por chute."""
-    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.4, muted=None))
-
-    assert card._mic_box.get_visible() is True
-    assert card._mic_selo.get_visible() is False
-
-
-def test_linha_de_sensores_acompanha_quem_sobrou(card: Any) -> None:
-    """A linha "Microfone + Touchpad" existe enquanto UM dos dois existir."""
-    card.update(_entry(inputs=_inputs(touchpad=_TOUCH)), _ESTADO, None)
+def test_linha_de_sensores_acompanha_o_touchpad(card: Any) -> None:
+    """Com o microfone fora do card, a linha de sensores é o touchpad."""
+    card.update(_entry(inputs=_inputs(touchpad=_TOUCH)), _ESTADO)
     assert card._sensores_linha.get_visible() is True
 
-    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.2, muted=False))
-    assert card._sensores_linha.get_visible() is True
-
-    card.update(_entry(), _ESTADO, None)
+    card.update(_entry(), _ESTADO)
     assert card._sensores_linha.get_visible() is False
 
 
 def test_sem_leitor_de_inputs_apaga_tambem_os_sensores(card: Any) -> None:
     """IPC mudo: o card inteiro vira "—". Sensor congelado seria movimento
     inventado, e o medidor parado, silêncio inventado."""
-    card.update(
-        _entry(inputs=_inputs(gyro=_GYRO, touchpad=_TOUCH)),
-        _ESTADO,
-        LeituraMic(nivel=0.5, muted=False),
-    )
+    card.update(_entry(inputs=_inputs(gyro=_GYRO, touchpad=_TOUCH)), _ESTADO)
 
     card.reset_inputs()
 
     assert card._gyro_box.get_visible() is False
     assert card._touch_box.get_visible() is False
-    assert card._mic_box.get_visible() is False
     assert card._gyro_bars._valores == (0.0, 0.0, 0.0)
     assert card._touch_view._toque is None
 
@@ -311,24 +292,27 @@ def test_historico_deslizante_grampeia_a_amostra() -> None:
     assert historico_deslizante((), -3.0)[-1] == 0.0
 
 
-def test_medidor_do_mic_muda_de_forma_a_cada_leitura(card: Any) -> None:
+def test_medidor_do_mic_muda_de_forma_a_cada_leitura() -> None:
     """A forma é o dado: níveis diferentes têm de deixar barras diferentes.
     Antes, o desenho era sempre a mesma escada e só mudava quantas acendiam."""
+    medidor = MicMeter()
     for nivel in (0.1, 0.8, 0.35):
-        card.update(_entry(), _ESTADO, LeituraMic(nivel=nivel, muted=False))
+        medidor.set_nivel(nivel)
 
-    assert card._mic_meter._historico[-3:] == pytest.approx((0.1, 0.8, 0.35))
-    assert len(set(card._mic_meter._historico)) > 1
+    assert medidor._historico[-3:] == pytest.approx((0.1, 0.8, 0.35))
+    assert len(set(medidor._historico)) > 1
 
 
-def test_mic_que_some_leva_a_onda_junto(card: Any) -> None:
+def test_mic_que_para_de_medir_leva_a_onda_junto() -> None:
     """Reaparecer com o traço da última captura seria mostrar áudio que não
     está mais entrando."""
-    card.update(_entry(), _ESTADO, LeituraMic(nivel=0.7, muted=False))
+    medidor = MicMeter()
+    medidor.set_nivel(0.7)
 
-    card.update(_entry(), _ESTADO, None)
+    medidor.set_inativo()
 
-    assert not any(card._mic_meter._historico)
+    assert not any(medidor._historico)
+    assert medidor._inativo is True
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +321,7 @@ def test_mic_que_some_leva_a_onda_junto(card: Any) -> None:
 
 
 def test_lightbar_com_cor_conhecida_vira_barra_e_hex(card: Any) -> None:
-    card.update(_entry(lightbar_rgb=[255, 121, 198]), _ESTADO, None)
+    card.update(_entry(lightbar_rgb=[255, 121, 198]), _ESTADO)
 
     assert card._lightbar_box.get_visible() is True
     assert card._lightbar_bar._rgb == (255, 121, 198)
@@ -346,7 +330,7 @@ def test_lightbar_com_cor_conhecida_vira_barra_e_hex(card: Any) -> None:
 
 def test_lightbar_sem_cor_conhecida_esconde_a_barra(card: Any) -> None:
     """"Não sei" e "apagada" não podem desenhar a mesma faixa preta."""
-    card.update(_entry(lightbar_rgb=None), _ESTADO, None)
+    card.update(_entry(lightbar_rgb=None), _ESTADO)
 
     assert card._lightbar_box.get_visible() is False
 
@@ -391,15 +375,13 @@ def test_speaker_sem_mute_no_payload_nao_chuta() -> None:
 def test_bloco_do_speaker_some_sem_a_chave(card: Any) -> None:
     """A FRENTE D ainda está construindo o backend: sem a chave, o módulo não
     aparece — nunca uma barra em zero fingindo volume no mínimo."""
-    card.update(_entry(), _ESTADO, None)
+    card.update(_entry(), _ESTADO)
 
     assert card._speaker_box.get_visible() is False
 
 
 def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
-    card.update(
-        _entry(speaker={"volume": 128, "muted": False}), _ESTADO, None
-    )
+    card.update(_entry(speaker={"volume": 128, "muted": False}), _ESTADO)
 
     assert card._speaker_box.get_visible() is True
     assert card._speaker_bar._fracao == pytest.approx(128 / 255)
@@ -407,7 +389,7 @@ def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
 
 
 def test_speaker_mudo_diz_mudo_em_vez_de_porcentagem(card: Any) -> None:
-    card.update(_entry(speaker={"volume": 200, "muted": True}), _ESTADO, None)
+    card.update(_entry(speaker={"volume": 200, "muted": True}), _ESTADO)
 
     assert card._speaker_bar._muted is True
     assert card._speaker_label.get_text() == "mudo"
@@ -429,7 +411,7 @@ def test_botoes_ficam_na_linha_de_baixo_mesmo_sem_mic_nem_touchpad(
     """A armadilha do reagrupamento: se os botões morassem DENTRO de
     `_sensores_linha`, sumiriam junto com ela no caso mais comum — controle
     sem microfone atribuível e com o dedo fora do touchpad."""
-    card.update(_entry(), _ESTADO, None)
+    card.update(_entry(), _ESTADO)
 
     assert card._sensores_linha.get_visible() is False
     assert card._linha_inferior.get_visible() is True
@@ -441,7 +423,7 @@ def test_gyro_oculto_nao_devolve_a_largura_toda_aos_gatilhos(card: Any) -> None:
     gatilhos pulariam para a largura inteira e voltariam para metade — reflow
     visível. O grid homogêneo guarda a coluna pelo `_gyro_slot`, que fica
     visível mesmo com o módulo escondido."""
-    card.update(_entry(), _ESTADO, None)
+    card.update(_entry(), _ESTADO)
 
     assert card._gyro_box.get_visible() is False
     assert card._gyro_slot.get_visible() is True
@@ -462,7 +444,7 @@ def test_barras_de_gyro_convivem_com_a_linha_texto_motion(card: Any) -> None:
         },
     }
 
-    card.update(_entry(inputs=_inputs(gyro=_GYRO)), estado, None)
+    card.update(_entry(inputs=_inputs(gyro=_GYRO)), estado)
 
     assert card._motion_label.get_visible() is True
     assert "fluindo para o jogo" in card._motion_label.get_text()

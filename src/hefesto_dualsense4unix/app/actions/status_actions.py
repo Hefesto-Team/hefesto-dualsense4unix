@@ -32,7 +32,7 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk
+from gi.repository import GLib, Gtk, Pango
 
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import (
@@ -65,6 +65,11 @@ from hefesto_dualsense4unix.app.constants import (
     STATE_POLL_INTERVAL_MS,
 )
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
+from hefesto_dualsense4unix.app.mic_monitor import (
+    DiagnosticoMic,
+    audio_do_entry,
+    diagnosticar_mic,
+)
 
 # GRID_BOTOES/ALL_BUTTONS/L2_R2_THRESHOLD moraram aqui até o STATUS-02;
 # re-exportados (ver __all__) para os consumidores históricos da mixin.
@@ -74,6 +79,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     L2_R2_THRESHOLD,
     ControllerCard,
 )
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import MicMeter, selo_mic
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -83,6 +89,97 @@ logger = get_logger(__name__)
 #: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
 #: para as telas não divergirem; o nome antigo segue como alias do módulo.
 _display_slot = numero_do_controle
+
+
+# ---------------------------------------------------------------------------
+# Faixa de microfone do rodapé (MIC-FAIXA-01)
+# ---------------------------------------------------------------------------
+
+#: Colunas da faixa. Com quatro controles são DUAS linhas, não quatro — a
+#: altura do rodapé é orçamento apertado (ver o comentário no glade).
+MIC_FAIXA_COLUNAS = 2
+
+#: Medidor da faixa: um pouco mais baixo que os 26px do mockup, pela mesma
+#: conta de altura. A largura é a do mockup — as 14 amostras continuam
+#: legíveis.
+_MIC_FAIXA_MEDIDOR_PX = (72, 22)
+
+#: O que a faixa diz quando não há UM controle com microfone na mesa. Ela
+#: continua na tela: o espaço do microfone é permanente, e "a faixa sumiu" foi
+#: justamente a queixa que abriu esta entrega.
+TEXTO_MIC_SEM_CONTROLE = (
+    "Nenhum controle com microfone na mesa — o medidor aparece aqui assim que "
+    "um DualSense conectar."
+)
+
+#: Selo de mute ainda não lido. Escrever "ATIVO" aqui afirmaria que o
+#: microfone está aberto sem ter lido nada (regra do `selo_mic`).
+_SELO_MIC_DESCONHECIDO = "—"
+
+
+class _LinhaMic:
+    """Uma linha da faixa: um controle, seu medidor e o porquê de não medir.
+
+    A linha NUNCA se esconde e nunca deixa de ser empacotada — nem sem source,
+    nem por Bluetooth, nem com o daemon calado. O que muda é o CONTEÚDO: com
+    captura viva o medidor desenha a onda; sem ela o medidor fica vazio (não
+    em zero: ver `MicMeter.set_inativo`) e o texto ao lado diz qual das causas
+    está segurando e qual é o gesto que a cura.
+    """
+
+    def __init__(self, rotulo: str) -> None:
+        self.box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        nome = Gtk.Label(label=rotulo)
+        nome.set_xalign(0.0)
+        self.box.pack_start(nome, False, False, 0)
+        medidor = MicMeter()
+        medidor.set_size_request(*_MIC_FAIXA_MEDIDOR_PX)
+        medidor.set_valign(Gtk.Align.CENTER)
+        self.medidor = medidor
+        self.box.pack_start(medidor, False, False, 0)
+        selo = Gtk.Label()
+        selo.set_valign(Gtk.Align.CENTER)
+        selo.get_style_context().add_class("hefesto-selo")
+        self.selo = selo
+        self.box.pack_start(selo, False, False, 0)
+        motivo = Gtk.Label()
+        motivo.set_xalign(0.0)
+        # Elipse em vez de quebra de linha: a faixa mora num orçamento de
+        # altura fixo, e um texto que quebra em duas linhas empurraria os
+        # cards para fora da janela. O texto inteiro fica no tooltip.
+        motivo.set_ellipsize(Pango.EllipsizeMode.END)
+        motivo.get_style_context().add_class("dim-label")
+        self.motivo = motivo
+        self.box.pack_start(motivo, True, True, 0)
+        self._ultimo: tuple[Any, ...] | None = None
+
+    def aplicar(self, diag: DiagnosticoMic) -> None:
+        """Pinta a linha a partir do diagnóstico (diff no que é texto).
+
+        O nível NÃO entra no diff de propósito: ele é o dado que muda a cada
+        bloco de 100 ms e é a onda andando que mostra que o medidor está vivo.
+        O resto (selo, motivo, cura) só é reescrito quando muda de verdade —
+        a 10 Hz, remarcar markup igual é trabalho puro de layout.
+        """
+        if diag.medindo:
+            self.medidor.set_nivel(diag.nivel or 0.0)
+        else:
+            self.medidor.set_inativo()
+        chave = (diag.motivo, diag.muted, diag.texto, diag.cura, diag.fonte)
+        if chave == self._ultimo:
+            return
+        self._ultimo = chave
+        selo = selo_mic(diag.muted)
+        if selo is None:
+            self.selo.set_markup(_SELO_MIC_DESCONHECIDO)
+        else:
+            texto, fundo, cor = selo
+            self.selo.set_markup(
+                f'<span background="{fundo}" foreground="{cor}"> {texto} </span>'
+            )
+        completo = " ".join(parte for parte in (diag.texto, diag.cura) if parte)
+        self.motivo.set_text(completo)
+        self.box.set_tooltip_text(completo or diag.fonte or None)
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -182,6 +279,10 @@ class StatusActionsMixin(WidgetAccessMixin):
     # é o único sensor do card que não vem pelo IPC: capturar áudio é da
     # sessão gráfica, não do daemon.
     _mic_monitor: Any = None
+    # MIC-FAIXA-01: linhas da faixa de microfone do rodapé, uma por controle
+    # com microfone. `None` em `_mic_faixa_keys` = nada montado ainda.
+    _mic_faixa_linhas: list[Any]
+    _mic_faixa_keys: tuple[tuple[str, str], ...] | None = None
 
     def install_status_polling(self) -> None:
         """Liga os timers da aba Status e prepara o container dos cards.
@@ -205,6 +306,8 @@ class StatusActionsMixin(WidgetAccessMixin):
         """
         self._status_cards = {}
         self._status_card_keys = []
+        self._mic_faixa_linhas = []
+        self._mic_faixa_keys = None
         self._init_controller_target_combo()
         GLib.timeout_add(LIVE_POLL_INTERVAL_MS, self._tick_live_state)
         GLib.timeout_add(STATE_POLL_INTERVAL_MS, self._tick_profile_state)
@@ -266,6 +369,155 @@ class StatusActionsMixin(WidgetAccessMixin):
         if monitor is not None:
             with contextlib.suppress(Exception):
                 monitor.stop()
+
+    # ------------------------------------------------------------------
+    # Faixa de microfone do rodapé (MIC-FAIXA-01)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _mic_faixa_chaves(
+        conectados: list[dict[str, Any]],
+    ) -> list[tuple[str, str]]:
+        """``[(uniq, rótulo)]`` — uma entrada por controle com microfone.
+
+        Só DualSense: os externos não têm microfone que o Hefesto saiba ler, e
+        uma linha para eles diria "sem microfone" onde a verdade é "esse
+        controle não tem". ``uniq`` ausente vira "" — a linha CONTINUA
+        existindo (o espaço é permanente), e o diagnóstico dirá que não dá
+        para atribuir uma source a um controle sem endereço.
+        """
+        chaves: list[tuple[str, str]] = []
+        for pos, entry in enumerate(conectados):
+            uniq = entry.get("uniq")
+            transporte = str(entry.get("transport") or "?").upper()
+            numero = _display_slot(entry) or (pos + 1)
+            chaves.append(
+                (
+                    uniq if isinstance(uniq, str) and uniq else "",
+                    f"Controle {numero} — {transporte}",
+                )
+            )
+        return chaves
+
+    @staticmethod
+    def _transportes_por_uniq(
+        conectados: list[dict[str, Any]],
+    ) -> dict[str, str]:
+        """``{uniq: "usb"|"bt"}`` — o que a atribuição de source precisa saber.
+
+        Uma source `alsa_*` só pode ser de um controle no cabo (por rádio o
+        DualSense não expõe placa de áudio). Sem este mapa, a mesa mista — um
+        no cabo e três por rádio, o caso normal desta casa — deixava a única
+        source ALSA com quatro candidatos e a faixa dizia "não dá para saber
+        de quem é" justamente para quem estava no cabo.
+        """
+        vias: dict[str, str] = {}
+        for entry in conectados:
+            uniq = entry.get("uniq")
+            via = str(entry.get("transport") or "").lower()
+            if isinstance(uniq, str) and uniq and via:
+                vias[uniq] = via
+        return vias
+
+    def _sync_mic_strip(self, state: dict[str, Any]) -> None:
+        """Monta/atualiza a faixa de microfone a partir do ``state_full``.
+
+        A faixa é PERMANENTE. Não há neste método um único caminho que
+        esconda, despacote ou deixe de criar a faixa: sem controle, sem
+        source, por rádio com a ponte desligada ou com o nome ambíguo, o que
+        muda é o TEXTO. A regra veio da mantenedora, e vale como contrato:
+        *"sabemos que não funciona sem cabo, mas o espaço deve estar sempre
+        presente"* — uma tela que muda de forma conforme o transporte não dá
+        onde olhar.
+        """
+        slot = self._get("status_mic_slot")
+        if slot is None or not hasattr(slot, "attach"):
+            # Builder fake de testes de outras áreas, ou glade antigo em
+            # upgrade parcial. Não é caminho de esconder — é ausência do
+            # widget, e aí não há o que pintar.
+            return
+        if getattr(self, "_mic_faixa_linhas", None) is None:
+            self._mic_faixa_linhas = []
+        conectados = self._connected_controllers(state)
+        chaves = self._mic_faixa_chaves(conectados)
+        if tuple(chaves) != self._mic_faixa_keys:
+            self._rebuild_mic_strip(slot, chaves)
+        if not chaves:
+            return
+
+        monitor = self._mic_monitor
+        fontes = None
+        portas: dict[str, bool] = {}
+        if monitor is not None:
+            with contextlib.suppress(Exception):
+                fontes = monitor.fontes()
+            with contextlib.suppress(Exception):
+                portas = monitor.portas()
+        uniqs = [uniq for uniq, _rotulo in chaves if uniq]
+        transportes = self._transportes_por_uniq(conectados)
+        # BT-MIC-REGISTRY-01: a ponte de áudio por Bluetooth está DE PÉ agora?
+        # Não basta a env var existir — o `state_full` publica o subsystem
+        # vivo, e é dele que sai a diferença entre "ligue a ponte" e "a ponte
+        # está ligada e mesmo assim não há source".
+        bt_mic = state.get("bt_mic")
+        ponte = bool(bt_mic.get("running")) if isinstance(bt_mic, dict) else False
+        for (uniq, _rotulo), entry, linha in zip(
+            chaves, conectados, self._mic_faixa_linhas, strict=False
+        ):
+            leitura = None
+            if monitor is not None and uniq:
+                with contextlib.suppress(Exception):
+                    leitura = monitor.leitura(uniq)
+            mic_mudo, mic_mudo_desejado = audio_do_entry(entry)
+            linha.aplicar(
+                diagnosticar_mic(
+                    fontes=fontes,
+                    uniq=uniq,
+                    uniqs_com_audio=uniqs,
+                    transporte=str(entry.get("transport") or ""),
+                    leitura=leitura,
+                    mic_mudo=mic_mudo,
+                    mic_mudo_desejado=mic_mudo_desejado,
+                    ponte_bt_ligada=ponte,
+                    portas=portas,
+                    transportes=transportes,
+                )
+            )
+
+    def _rebuild_mic_strip(
+        self, slot: Any, chaves: list[tuple[str, str]]
+    ) -> None:
+        """Recria as linhas da faixa — o conjunto de controles mudou.
+
+        Sem controle nenhum a faixa recebe UMA linha de texto explicando a
+        ausência, e não zero linhas: o rodapé continua ocupando o mesmo lugar
+        na tela, que é o ponto.
+        """
+        for child in list(slot.get_children()):
+            slot.remove(child)
+            child.destroy()
+        self._mic_faixa_linhas = []
+        self._mic_faixa_keys = tuple(chaves)
+        if not chaves:
+            vazio = Gtk.Label(label=TEXTO_MIC_SEM_CONTROLE)
+            vazio.set_xalign(0.0)
+            vazio.set_line_wrap(True)
+            with contextlib.suppress(Exception):
+                vazio.get_style_context().add_class("dim-label")
+            slot.attach(vazio, 0, 0, MIC_FAIXA_COLUNAS, 1)
+            vazio.show_all()
+            return
+        for pos, (_uniq, rotulo) in enumerate(chaves):
+            linha = _LinhaMic(rotulo)
+            self._mic_faixa_linhas.append(linha)
+            slot.attach(
+                linha.box,
+                pos % MIC_FAIXA_COLUNAS,
+                pos // MIC_FAIXA_COLUNAS,
+                1,
+                1,
+            )
+            linha.box.show_all()
 
     # ------------------------------------------------------------------
     # Cards por controle (STATUS-02)
@@ -348,19 +600,17 @@ class StatusActionsMixin(WidgetAccessMixin):
                     str(c.get("uniq"))
                     for c in conectados
                     if isinstance(c.get("uniq"), str) and c.get("uniq")
-                )
+                ),
+                # MIC-FAIXA-01: o transporte viaja junto porque é ele que
+                # decide quais sources podem ser deste controle — e o monitor
+                # tem de atribuir EXATAMENTE como a faixa diagnostica.
+                self._transportes_por_uniq(conectados),
             )
         for key, entry in zip(keys, conectados, strict=True):
             card = self._status_cards.get(key)
             if card is None:
                 continue
-            uniq = entry.get("uniq")
-            leitura = (
-                monitor.leitura(uniq)
-                if monitor is not None and isinstance(uniq, str) and uniq
-                else None
-            )
-            card.update(entry, state, leitura)
+            card.update(entry, state)
 
     def _card_de_identidade_externo(self, entry: dict[str, Any]) -> Any:
         """Card de um controle EXTERNO na aba Status: só identidade.
@@ -1567,6 +1817,9 @@ class StatusActionsMixin(WidgetAccessMixin):
         # rápido só distribui `controllers[i]` do state_full para o card de
         # cada controle — o diff por widget vive DENTRO do ControllerCard.
         self._sync_status_cards(state)
+        # MIC-FAIXA-01: a faixa do rodapé anda no tick RÁPIDO porque a onda do
+        # medidor é o dado que se move — a 2 Hz ela pareceria travada.
+        self._sync_mic_strip(state)
 
     def _render_slow_state(self, state: dict[str, Any]) -> None:
         # Mesma proteção do render vivo (BUG-COMBO-POPUP-FLICKER-02): não mexe nos
@@ -1639,6 +1892,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         # com a aba Status fora de foco o tick rápido pausa, e sem isto a
         # troca de aba mostraria cards do conjunto antigo por até 100 ms.
         self._sync_status_cards(state)
+        # MIC-FAIXA-01: e o conjunto de LINHAS da faixa junto, pelo mesmo
+        # motivo — a faixa tem de estar montada no instante em que a aba
+        # aparece, não 100 ms depois.
+        self._sync_mic_strip(state)
 
     def _set_battery_row_visible(self, visible: bool) -> None:
         """Mostra/esconde a linha de bateria do frame Estado (caption + barra)."""

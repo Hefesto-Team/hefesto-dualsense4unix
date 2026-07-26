@@ -800,8 +800,10 @@ class TestResolvePlayerNumbers:
     """A tradução "payload de controllers -> número por card"."""
 
     @staticmethod
-    def _ctrl(uniq: str | None, connected: bool = True) -> dict[str, Any]:
-        return {"uniq": uniq, "connected": connected}
+    def _ctrl(
+        uniq: str | None, connected: bool = True, *, is_primary: bool = False
+    ) -> dict[str, Any]:
+        return {"uniq": uniq, "connected": connected, "is_primary": is_primary}
 
     def test_sem_gamepad_virtual_ninguem_e_jogador(self) -> None:
         """Modo desktop/nativo: o controle mexe no PC ou fala direto com o jogo."""
@@ -809,28 +811,58 @@ class TestResolvePlayerNumbers:
 
         daemon = _make_daemon(gamepad=False)
         assert resolve_player_numbers(
-            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2)]
+            daemon, [self._ctrl(MAC_P1, is_primary=True), self._ctrl(MAC_P2)]
         ) == [None, None]
 
-    def test_coop_desligado_todos_sao_o_jogador_1(self) -> None:
-        """O que o jogo vê de verdade: um vpad só, alimentado pelo primário.
+    def test_coop_desligado_so_o_primario_e_jogador(self) -> None:
+        """SLOT-JOGADOR-01: sem co-op, o segundo controle não move nada.
 
-        Era exatamente aqui que a GUI mentia — rotulava P1/P2 por posição com o
-        co-op DESLIGADO, quando os dois controles moviam o mesmo personagem.
+        Este teste dizia o contrário (`[1, 1]`) com o argumento de que o jogo vê
+        um vpad só. O vpad único é verdade; "os dois são o jogador 1" não é —
+        `backend_pydualsense.read_state` lê SEMPRE o handle do primário, então
+        o segundo DualSense com o co-op desligado é um controle mudo. Rotulá-lo
+        "jogador 1" prometia um jogador inexistente e punha dois cartões com o
+        mesmo número na mesma tela.
         """
         from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
 
         daemon = _make_daemon(coop=False)
         assert resolve_player_numbers(
-            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2)]
-        ) == [1, 1]
+            daemon, [self._ctrl(MAC_P1, is_primary=True), self._ctrl(MAC_P2)]
+        ) == [1, None]
+
+    def test_coop_desligado_o_primario_pode_nao_ser_o_primeiro_da_lista(self) -> None:
+        """A posição não elege ninguém — quem elege é o carimbo do backend."""
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        daemon = _make_daemon(coop=False)
+        assert resolve_player_numbers(
+            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2, is_primary=True)]
+        ) == [None, 1]
+
+    def test_coop_desligado_sem_carimbo_cai_no_primary_uniq_do_backend(self) -> None:
+        """Payload de daemon antigo (sem `is_primary`): casa pelo MAC."""
+        from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
+
+        daemon = _make_daemon(coop=False, primary_uniq=MAC_P2)
+        assert resolve_player_numbers(
+            daemon,
+            [
+                {"uniq": MAC_P1, "connected": True},
+                {"uniq": MAC_P2, "connected": True},
+            ],
+        ) == [None, 1]
 
     def test_desconectado_nao_tem_numero(self) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.coop import resolve_player_numbers
 
         daemon = _make_daemon(coop=False)
         assert resolve_player_numbers(
-            daemon, [self._ctrl(MAC_P1), self._ctrl(MAC_P2, connected=False)]
+            daemon,
+            [
+                self._ctrl(MAC_P1, is_primary=True),
+                self._ctrl(MAC_P2, connected=False),
+            ],
         ) == [1, None]
 
     def test_coop_ligado_usa_o_numero_do_daemon(

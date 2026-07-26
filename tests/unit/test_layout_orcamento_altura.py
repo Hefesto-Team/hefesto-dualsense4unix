@@ -33,7 +33,15 @@ _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, Gtk  # noqa: E402
 
+from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
+    _LinhaMic,
+)
 from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE  # noqa: E402
+from hefesto_dualsense4unix.app.mic_monitor import (  # noqa: E402
+    CURA_PONTE_BT,
+    MOTIVO_PONTE_DESLIGADA,
+    DiagnosticoMic,
+)
 from hefesto_dualsense4unix.app.theme import (  # noqa: E402
     escala_fonte,
     escalar_css,
@@ -127,13 +135,6 @@ _ESTADO_COMPLETO = {
         ]
     },
 }
-
-
-class _LeituraMic:
-    """Dublê da `LeituraMic` — o card só lê `nivel` e `muted`."""
-
-    nivel = 0.6
-    muted = False
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -320,7 +321,7 @@ def test_card_de_controle_cabe_na_faixa_que_a_aba_status_da() -> None:
     janela.set_size_request(LARGURA, ALTURA_JANELA)
     janela.show_all()
     janela.resize(LARGURA, ALTURA_JANELA)
-    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
+    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO)
     while Gtk.events_pending():
         Gtk.main_iteration()
 
@@ -353,7 +354,7 @@ def test_card_de_um_controle_so_tambem_cabe_na_faixa() -> None:
     janela.set_size_request(LARGURA, ALTURA_JANELA)
     janela.show_all()
     janela.resize(LARGURA, ALTURA_JANELA)
-    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
+    card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO)
     while Gtk.events_pending():
         Gtk.main_iteration()
 
@@ -365,6 +366,63 @@ def test_card_de_um_controle_so_tambem_cabe_na_faixa() -> None:
         f"com UM controle o card pede {pedido}px e a aba Status só tem "
         f"{faixa}px ({pedido - faixa}px a mais): os botões voltam a ficar "
         "abaixo do corte da janela"
+    )
+
+
+def test_a_faixa_de_microfone_cheia_nao_come_a_faixa_dos_cards() -> None:
+    """MIC-FAIXA-01: a faixa do rodapé é permanente, então ela cobra altura.
+
+    E cobra a altura de QUEM: o `status_players_scroll` é o irmão que expande,
+    logo cada pixel da faixa sai da área dos cards. Com quatro controles são
+    duas linhas de faixa (grade de 2 colunas), e é essa a medida que este
+    teste trava — a versão vazia do glade não custa quase nada e esconderia
+    o problema.
+
+    Medido ao escrever: faixa de 48px, banda de 391px, card compacto de 382px.
+    O teste morde se a faixa engordar (um botão de 34px por linha, um título
+    em linha própria, texto que quebre em duas linhas) a ponto de o card não
+    caber — que é a rolagem que a LEGIBILIDADE-01 tirou da aba.
+    """
+    builder, root = _montar()
+    slot_mic = builder.get_object("status_mic_slot")
+    for pos in range(4):
+        linha = _LinhaMic(f"Controle {pos + 1} — BT")
+        linha.aplicar(
+            DiagnosticoMic(
+                motivo=MOTIVO_PONTE_DESLIGADA,
+                texto=(
+                    "Por rádio o DualSense não publica placa de áudio: o som "
+                    "dele vem em quadros Opus dentro dos reports HID."
+                ),
+                cura=CURA_PONTE_BT,
+            )
+        )
+        slot_mic.attach(linha.box, pos % 2, pos // 2, 1, 1)
+        linha.box.show_all()
+    slot = builder.get_object("status_players_slot")
+    cards = []
+    for pos in range(4):
+        card = ControllerCard(compact=True)
+        card.set_hexpand(True)
+        card.set_valign(Gtk.Align.START)
+        slot.attach(card, pos % 2, pos // 2, 1, 1)
+        cards.append(card)
+    janela = root.get_toplevel()
+    janela.set_size_request(LARGURA, ALTURA_JANELA)
+    janela.show_all()
+    janela.resize(LARGURA, ALTURA_JANELA)
+    for card in cards:
+        card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO)
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    faixa = builder.get_object("status_players_scroll").get_allocated_height()
+    pedido = cards[0].get_preferred_height_for_width(LARGURA // 2)[0]
+
+    assert pedido <= faixa, (
+        f"com a faixa de microfone cheia (4 controles) o card pede {pedido}px "
+        f"e a aba Status só tem {faixa}px ({pedido - faixa}px a mais): a "
+        "faixa do rodapé engordou além do que os cards têm para dar"
     )
 
 
@@ -390,7 +448,7 @@ def test_dois_cards_lado_a_lado_cabem_na_largura_da_janela() -> None:
         card.set_hexpand(True)
         card.set_valign(Gtk.Align.START)
         slot.attach(card, coluna, 0, 1, 1)
-        card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO, _LeituraMic())
+        card.update(_ENTRY_COMPLETO, _ESTADO_COMPLETO)
     janela = root.get_toplevel()
     janela.show_all()
     while Gtk.events_pending():

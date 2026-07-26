@@ -413,6 +413,53 @@
                   </object>
                   <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
+
+                <!-- MIC-FAIXA-01: a faixa do microfone, no RODAPÉ da aba.
+                     Ela é PERMANENTE — o espaço fica reservado com ou sem
+                     microfone medindo, em qualquer transporte. Nada aqui
+                     recebe `no-show-all`/`visible=False` de propósito: o
+                     defeito que esta faixa fecha é justamente o de um medidor
+                     que sumia, e "sumiu" é indistinguível de "não existe".
+                     As linhas (uma por controle com microfone) são montadas
+                     por código em `status_actions._sync_mic_strip`, num
+                     GtkGrid de 2 colunas — com quatro controles são duas
+                     linhas, não quatro.
+
+                     Fica FORA do `status_players_scroll` de propósito: com
+                     quatro controles a grade de cards já passa da faixa e
+                     rola, e uma faixa de microfone lá dentro ficaria abaixo
+                     do corte justamente no caso em que ela foi pedida.
+
+                     O rótulo "Microfone" fica ao LADO das linhas, não em cima
+                     (nem como label de GtkFrame): a altura aqui é orçamento
+                     apertado — o card de UM controle só pede 400px de uma
+                     faixa de ~446px —, e um título em linha própria custaria
+                     altura que os cards não têm para dar. Largura, esta aba
+                     tem de sobra. -->
+                <child>
+                  <object class="GtkBox" id="status_mic_frame">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">12</property>
+                    <child>
+                      <object class="GtkLabel" id="status_mic_titulo">
+                        <property name="label" translatable="yes">Microfone</property>
+                        <property name="xalign">0</property>
+                        <property name="valign">start</property>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkGrid" id="status_mic_slot">
+                        <property name="row-spacing">4</property>
+                        <property name="column-spacing">12</property>
+                        <property name="column-homogeneous">True</property>
+                        <property name="hexpand">True</property>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
               </object>
             </child>
             <child type="tab">

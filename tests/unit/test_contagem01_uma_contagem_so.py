@@ -535,7 +535,10 @@ class TestCartoesDaAbaInicio:
         host._render_home(_payload_quatro_controles())
 
         titulos = self._titulos(host)
-        assert titulos[0] == "<b>Controle 1 — P1</b>"
+        # SLOT-JOGADOR-01: o número NOSSO sai com a autoridade colada; o
+        # travessão do externo não muda — ali a autoridade é o jogo, e a
+        # frase do cartão (`EXTERNO_SEM_NUMERO_NOSSO`) já a nomeia.
+        assert titulos[0] == "<b>Controle 1 — P1 no co-op</b>"
         assert titulos[2] == "Controle 3 — P—"
         assert titulos[3] == "Controle 4 — P—"
 

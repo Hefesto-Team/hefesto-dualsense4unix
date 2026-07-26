@@ -28,6 +28,7 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions.base import (
     WidgetAccessMixin,
     numero_do_controle,
+    sufixo_de_jogador,
 )
 from hefesto_dualsense4unix.app.actions.external_controllers import (
     brand_of,
@@ -408,6 +409,12 @@ def numero_do_jogador(entry: dict[str, Any]) -> int | None:
     MÁSCARA-01 der gamepad virtual a um externo, o daemon passará a preencher
     `player` para ele e o travessão some sozinho — a regra segue o DADO, não
     uma segunda tabela que poderia discordar dele.
+
+    SLOT-JOGADOR-01: isto responde "há jogador?" e "quantos?", que é para o
+    que a frase de co-op usa. Quem RÓTULA o número na tela é
+    `base.sufixo_de_jogador` — lá o número vem com a autoridade colada, aqui
+    ele é só contado. Manter as duas coisas na mesma função foi o que deixou
+    um índice interno virar "Jogador N" no título do cartão.
     """
     player = entry.get("player")
     if isinstance(player, int) and not isinstance(player, bool):
@@ -564,7 +571,7 @@ def coop_prep_hint(state: dict[str, Any] | None, controllers: list[dict[str, Any
 
 
 def _format_controller_title(entry: dict[str, Any]) -> str:
-    """Título do card: "Controle 2 — P3" (função pura).
+    """Título do card: "Controle 2 — P3 no co-op" (função pura).
 
     Recebe a ENTRY inteira, não o número já resolvido: o defeito que isto
     corrige não estava na formatação e sim em quem chamava — o call site
@@ -578,6 +585,16 @@ def _format_controller_title(entry: dict[str, Any]) -> str:
     de jogador (modo desktop/nativo, jogador ainda subindo) o card só se
     identifica, em vez de inventar um "P" que o jogo não confirma.
 
+    SLOT-JOGADOR-01 — quem manda no título e o que o outro número virou. O
+    título é do "Controle N", porque é o número que o daemon ACENDE no
+    aparelho (R-24); ver `base.numero_do_controle`. O número do jogador
+    deixou de sair como um "P3" solto ao lado dele e passa pela regra ÚNICA de
+    `base.sufixo_de_jogador`, que cola a autoridade no número ("no jogo" /
+    "no co-op"). Medido nesta casa em 25/07: "Controle 2 · Jogador 1" e
+    "Controle 1 · Jogador 2" na mesma tela, sem nada dizendo que aqueles dois
+    números vinham de espaços diferentes — os dois estavam certos e a tela
+    fazia parecer que um deles estava errado.
+
     CONTAGEM-01, entrega 6 — o travessão do externo. Um controle que entra no
     jogo como ele mesmo TEM número de jogador (o jogo o numera); o que não
     existe é o número NOSSO. Aí o card escreve "P—": o travessão diz que a
@@ -587,9 +604,9 @@ def _format_controller_title(entry: dict[str, Any]) -> str:
     esconderia justamente a divergência que a sprint mandou mostrar.
     """
     name = f"Controle {slot_label(numero_na_mesa(entry))}"
-    player = numero_do_jogador(entry)
-    if player is not None:
-        return f"{name} — P{player}"
+    sufixo = sufixo_de_jogador(entry)
+    if sufixo is not None:
+        return f"{name} — {sufixo}"
     if e_externo(entry):
         return f"{name} — P—"
     return name

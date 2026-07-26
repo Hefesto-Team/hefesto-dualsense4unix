@@ -12,12 +12,16 @@ O corpo do card ocupa TRÊS linhas (STATUS-3-LINHAS-01), montadas em código —
 não no Glade::
 
     [ L2 / R2 .................. | Giroscópio ..................... ]
-    [ Analógico Esquerdo (L3) .. | Analógico Direito (R3) ......... ]
-    [ Touchpad | Microfone | Lightbar | Alto-falante | botões (4x4) ]
+    [ Touchpad ......... | Analógicos (L3/R3) | botões (4x4) ...... ]
+    [ Lightbar | Alto-falante |                                     ]
 
 Antes eram seis blocos de largura total, empilhados: o card pedia 457px de
 altura e o giroscópio caía abaixo do corte da janela. Emparelhado, o que
 somava altura passou a dividir a mesma faixa.
+
+O microfone NÃO está mais nesta lista (MIC-FAIXA-01): ele saiu do card e
+virou uma faixa própria e permanente no rodapé da aba Status, montada em
+`app/actions/status_actions.py`. Ver `update()` para o porquê.
 
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
@@ -47,15 +51,14 @@ from __future__ import annotations
 
 from typing import Any, Final
 
+from hefesto_dualsense4unix.app.actions.base import sufixo_de_jogador
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
     LightbarBar,
-    MicMeter,
     SpeakerBar,
     TouchpadView,
     fracao_do_volume,
     posicao_normalizada,
-    selo_mic,
     texto_toques,
     texto_volume,
 )
@@ -192,9 +195,16 @@ def titulo_do_card(entry: dict[str, Any]) -> str:
         slot = (indice + 1) if indice is not None else 1
     transporte = str(entry.get("transport") or "?").upper()
     titulo = f"Controle {slot} — {transporte}"
-    jogador = _int_ou_none(entry.get("player"))
-    if jogador is not None:
-        titulo += f" · Jogador {jogador}"
+    # SLOT-JOGADOR-01: o sufixo deixou de ser "Jogador {N}" cru e passou a ter
+    # a AUTORIDADE colada ("P1 no co-op" / "P4 no jogo"), com a regra num dono
+    # só (`base.sufixo_de_jogador`). Duas telas montavam este rótulo com duas
+    # implementações, e o número solto ao lado do "Controle N" lia-se como dois
+    # números para a mesma pergunta — o que a CONTAGEM-01 proibe. Sao duas
+    # perguntas: QUAL APARELHO é este (o número que acende na lâmpada dele) e
+    # QUE JOGADOR ele alimenta.
+    sufixo = sufixo_de_jogador(entry)
+    if sufixo is not None:
+        titulo += f" · {sufixo}"
     return titulo
 
 
@@ -456,7 +466,6 @@ if _GTK_DISPONIVEL:
             # S2 — caches de diff dos módulos de sensor.
             self._last_gyro: Any = _SENTINELA
             self._last_touch: Any = _SENTINELA
-            self._last_mic: Any = _SENTINELA
             self._last_speaker: Any = _SENTINELA
             self._montar_ui()
 
@@ -468,15 +477,16 @@ if _GTK_DISPONIVEL:
             self,
             entry: dict[str, Any],
             state_global: dict[str, Any],
-            mic: Any = None,
         ) -> None:
             """Atualiza o card a partir de ``controllers[i]`` (diff interno).
 
-            ``mic`` é a `LeituraMic` do `MicMonitor` da GUI (nível + mute) —
-            opcional porque o microfone é o único sensor que NÃO vem pelo
-            IPC: quem captura é a própria interface, só enquanto a aba Status
-            está visível. ``None`` = sem microfone atribuível a este controle,
-            e o módulo some.
+            MIC-FAIXA-01: o microfone SAIU do card. Ele era o único módulo
+            daqui cujo dado não vem do IPC, e o único que precisava dizer por
+            que não está medindo — dentro do card não havia espaço para essa
+            frase, então ele simplesmente sumia, e "sumiu" é indistinguível de
+            "não existe". Agora ele mora numa faixa própria no rodapé da aba,
+            permanente, montada por `status_actions._sync_mic_strip`. Um fato,
+            um dono: aqui não sobrou nenhum medidor de microfone.
             """
             self._update_titulo(entry)
             self._update_bateria(entry)
@@ -486,7 +496,6 @@ if _GTK_DISPONIVEL:
             self._update_inputs(entry.get("inputs"))
             self._update_gyro(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
-            self._update_mic(mic, str(entry.get("transport") or ""))
             self._update_speaker(entry)
 
         def reset_inputs(self) -> None:
@@ -673,24 +682,28 @@ if _GTK_DISPONIVEL:
         def _montar_linha_inferior(self) -> Any:
             """A faixa de leitura ao vivo: sensores, analógicos e botões.
 
-            `_sensores_linha` continua sendo SÓ touchpad + microfone, com a
-            semântica de sempre (some inteira quando nenhum dos dois existe —
-            é o que `_sincronizar_linha_sensores` decide e o que os testes
-            travam). A lightbar, o alto-falante, os analógicos e o grid de
+            `_sensores_linha` é SÓ o touchpad desde a MIC-FAIXA-01 (o
+            microfone virou faixa própria no rodapé da aba), e mantém a
+            semântica de sempre: some inteira quando não há touchpad no
+            payload. A lightbar, o alto-falante, os analógicos e o grid de
             botões entram em containers EXTERNOS: se morassem dentro dela,
-            sumiriam junto no caso comum de um controle sem mic atribuível e
-            sem dedo no touchpad.
+            sumiriam junto no caso comum de um controle com o dedo fora do
+            touchpad.
 
-            Os quatro módulos de sensor ficam em DUAS linhas de dois em vez de
-            uma de quatro (LEGIBILIDADE-01/R4). É o que abre a coluna para os
-            analógicos sem alargar o card: numa fileira única de seis módulos,
-            dois cards lado a lado passavam de 1300px de largura mínima, e a
-            aba Status não tem rolagem horizontal para onde fugir.
+            Os módulos de sensor ficam em DUAS linhas em vez de uma fileira só
+            (LEGIBILIDADE-01/R4). É o que abre a coluna para os analógicos sem
+            alargar o card: numa fileira única, dois cards lado a lado passavam
+            de 1300px de largura mínima, e a aba Status não tem rolagem
+            horizontal para onde fugir. Medido de novo depois que o microfone
+            saiu daqui (MIC-FAIXA-01): juntar o touchpad à lightbar e ao
+            alto-falante numa fileira só custa 2px a MAIS que a janela inteira
+            tem, e não devolve altura nenhuma — a altura do card é ditada pela
+            coluna dos analógicos, não por esta.
             """
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
             sensores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            sensores.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
+            sensores.pack_start(self._montar_touchpad(), False, False, 0)
             saida = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
             saida.pack_start(self._montar_lightbar(), False, False, 0)
             saida.pack_start(self._montar_speaker(), False, False, 0)
@@ -700,7 +713,7 @@ if _GTK_DISPONIVEL:
 
             linha.pack_start(self._montar_sticks(), False, False, 0)
             # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
-            # vem antes: microfone e alto-falante aparecem e somem conforme o
+            # vem antes: touchpad e alto-falante aparecem e somem conforme o
             # controle, e o grid de 16 glyphs não pode dançar de lugar a cada
             # vez que um módulo de sensor entra ou sai.
             glyphs = self._montar_glyphs()
@@ -709,7 +722,7 @@ if _GTK_DISPONIVEL:
             self._linha_inferior = linha
             return linha
 
-        def _montar_mic_e_touchpad(self) -> Any:
+        def _montar_touchpad(self) -> Any:
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
             # LEGIBILIDADE-01/R4 — o estado de cada módulo desceu para BAIXO do
@@ -732,30 +745,9 @@ if _GTK_DISPONIVEL:
             self._touch_box = touch
             linha.pack_start(touch, False, False, 0)
 
-            mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
-            medidor = MicMeter()
-            medidor.set_valign(Gtk.Align.CENTER)
-            mic.pack_start(medidor, False, False, 0)
-            selo = Gtk.Label()
-            selo.set_valign(Gtk.Align.CENTER)
-            selo.set_halign(Gtk.Align.START)
-            # LEGIBILIDADE-01: o degrau vem da escala (`.hefesto-selo`), não do
-            # `font_size="x-small"` que estava no markup. Aquele atributo era
-            # RELATIVO à fonte da distribuição — rendia 9,3px nesta máquina, o
-            # MENOR texto da interface — e nenhum ajuste de tema o alcançava,
-            # porque a escala global reescreve o CSS, não markup de Pango.
-            selo.get_style_context().add_class("hefesto-selo")
-            mic.pack_start(selo, False, False, 0)
-            self._mic_meter = medidor
-            self._mic_selo = selo
-            self._mic_box = mic
-            linha.pack_start(mic, False, False, 0)
-
             self._esconder_modulo(linha)
-            for modulo in (mic, touch, selo):
-                modulo.set_no_show_all(True)
-                modulo.hide()
+            touch.set_no_show_all(True)
+            touch.hide()
             self._sensores_linha = linha
             return linha
 
@@ -1018,38 +1010,6 @@ if _GTK_DISPONIVEL:
             self._touch_box.show()
             self._sincronizar_linha_sensores()
 
-        def _update_mic(self, mic: Any, transporte: str = "") -> None:
-            nivel = getattr(mic, "nivel", None) if mic is not None else None
-            muted = getattr(mic, "muted", None) if mic is not None else None
-            chave = (nivel, muted, transporte)
-            if chave == self._last_mic:
-                return
-            self._last_mic = chave
-            if nivel is None:
-                # A onda também vai embora: reaparecer com o traço da última
-                # captura seria mostrar áudio que não está mais entrando.
-                self._mic_meter.limpar()
-                self._mic_box.hide()
-                self._sincronizar_linha_sensores()
-                return
-            self._mic_meter.show()
-            self._mic_meter.set_nivel(float(nivel))
-            selo = selo_mic(muted)
-            if selo is None:
-                # Mute ainda desconhecido: medidor sim, selo não. Cravar
-                # "ATIVO" aqui seria afirmar que o mic está aberto sem ter
-                # lido nada.
-                self._mic_selo.hide()
-            else:
-                texto, fundo, cor = selo
-                self._mic_selo.set_markup(
-                    f'<span background="{fundo}" foreground="{cor}">'
-                    f" {texto} </span>"
-                )
-                self._mic_selo.show()
-            self._mic_box.show()
-            self._sincronizar_linha_sensores()
-
         def _update_speaker(self, entry: dict[str, Any]) -> None:
             dados = speaker_do_entry(entry)
             if dados == self._last_speaker:
@@ -1064,14 +1024,14 @@ if _GTK_DISPONIVEL:
             self._speaker_box.show()
 
         def _sincronizar_linha_sensores(self) -> None:
-            """A linha "Touchpad + Microfone" só existe se algum dos dois existe.
+            """A linha de sensores só existe se o touchpad existe.
 
-            Ela é só o PAR de sensores — a lightbar, o alto-falante e os
-            botões moram no container externo (`_linha_inferior`) justamente
-            para não sumirem junto no caso comum de um controle sem microfone
-            atribuível e com o dedo fora do touchpad.
+            Ela era o PAR touchpad + microfone; desde a MIC-FAIXA-01 o
+            microfone saiu daqui e sobrou o touchpad. A lightbar, o
+            alto-falante e os botões continuam no container externo
+            (`_linha_inferior`) para não sumirem junto com ele.
             """
-            if self._mic_box.get_visible() or self._touch_box.get_visible():
+            if self._touch_box.get_visible():
                 self._sensores_linha.show()
             else:
                 self._sensores_linha.hide()
@@ -1221,19 +1181,15 @@ if _GTK_DISPONIVEL:
             self._last_l2_lit = None
             self._last_r2_lit = None
             # Sensores voltam ao "não sei" junto com o resto: um giroscópio
-            # congelado no último valor seria movimento inventado, e o
-            # medidor do mic parado, silêncio inventado.
+            # congelado no último valor seria movimento inventado.
             self._gyro_bars.limpar()
             self._gyro_box.hide()
             self._touch_view.set_toque(None)
             self._touch_box.hide()
-            self._mic_meter.limpar()
-            self._mic_box.hide()
             self._sensores_linha.hide()
             self._speaker_box.hide()
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
-            self._last_mic = _SENTINELA
             self._last_speaker = _SENTINELA
 
         # ------------------------------------------------------------------
@@ -1278,17 +1234,15 @@ else:
             self.motion: str | None = None
             self.sem_leitor: bool = False
             # S2 — None em qualquer um deles = o módulo não apareceria.
+            # (O microfone saiu do card na MIC-FAIXA-01 — ver `update`.)
             self.gyro: tuple[float, float, float] | None = None
             self.touchpad: tuple[bool, float, float] | None = None
-            self.mic_selo: tuple[str, str, str] | None = None
-            self.mic_nivel: float | None = None
             self.speaker: tuple[int, bool | None] | None = None
 
         def update(
             self,
             entry: dict[str, Any],
             state_global: dict[str, Any],
-            mic: Any = None,
         ) -> None:
             """Aplica as funções puras (mesma semântica do widget real)."""
             self.titulo = titulo_do_card(entry)
@@ -1299,10 +1253,6 @@ else:
             self.sem_leitor = not isinstance(entry.get("inputs"), dict)
             self.gyro = gyro_do_inputs(entry.get("inputs"))
             self.touchpad = touchpad_do_inputs(entry.get("inputs"))
-            self.mic_nivel = getattr(mic, "nivel", None) if mic is not None else None
-            self.mic_selo = selo_mic(
-                getattr(mic, "muted", None) if mic is not None else None
-            )
             self.speaker = speaker_do_entry(entry)
 
         def reset_inputs(self) -> None:
