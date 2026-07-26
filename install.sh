@@ -577,10 +577,21 @@ install_dkms_hid_nintendo_host() {
         # controle, sem esperar reboot; e é a única janela possível, porque
         # recarregar o módulo é proibido (derrubaria Pro/8BitDo em uso).
         # Best-effort: param read-only ou sudo expirado não interrompe nada.
-        if [[ -w /sys/module/hid_nintendo/parameters/bt_probe_retries ]]; then
+        if [[ -e /sys/module/hid_nintendo/parameters/bt_probe_retries ]]; then
             printf '3' | sudo tee /sys/module/hid_nintendo/parameters/bt_probe_retries >/dev/null 2>&1 || true
             printf '1' | sudo tee /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded >/dev/null 2>&1 || true
             printf '      params aplicados a quente (valem no próximo plug, sem reboot)\n'
+        fi
+        # Os três do patch 0003 (handshake USB do clone): o uninstall os devolve
+        # a 0, e até 26/07 o install NUNCA os rearmava — quem rodasse o ciclo
+        # ficava sem a cura do Nintendo/8BitDo no cabo até o boot seguinte, sem
+        # nada dizendo isso. A simetria entre uninstall e install é cobrada por
+        # teste (o higienizador de emojis come seta, então nada de seta aqui).
+        if [[ -e /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report ]]; then
+            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report >/dev/null 2>&1 || true
+            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_send_conn_status >/dev/null 2>&1 || true
+            printf '1' | sudo tee /sys/module/hid_nintendo/parameters/usb_probe_degrade >/dev/null 2>&1 || true
+            printf '      handshake USB do clone rearmado a quente (vale no próximo plug)\n'
         fi
     elif [[ -d /sys/module/hid_nintendo ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria Pro/8BitDo conectados);\n'
@@ -643,21 +654,32 @@ install_dkms_hid_playstation_host() {
         # PROBE, e o probe roda a cada CONEXÃO do controle: escrever aqui faz a
         # cura do "segundo DualSense que some" valer no próximo pareamento, sem
         # reboot e sem reload (proibido: derrubaria os DualSense por BT).
-        if [[ -w /sys/module/hid_playstation/parameters/feature_retries ]]; then
+        if [[ -e /sys/module/hid_playstation/parameters/feature_retries ]]; then
             printf '2' | sudo tee /sys/module/hid_playstation/parameters/feature_retries >/dev/null 2>&1 || true
             printf '      feature_retries aplicado a quente (vale na próxima conexão, sem reboot)\n'
         fi
         # Mesma lógica para a cura do CLONE no cabo (pairing info de 9 bytes
         # em vez de 16): lidos a cada probe, valem no próximo plug. Ausentes
         # no módulo patchado antigo (só tinha feature_retries) — por isso cada
-        # um é decidido pelo seu próprio -w, sem avisar à toa. Caminhos
+        # um é decidido pela sua própria EXISTÊNCIA, sem avisar à toa. Caminhos
         # LITERAIS de propósito: a paridade com o install-host-udev.sh é
         # verificada por grep (AUTO-01.7).
-        if [[ -w /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
+        #
+        # O portão é `-e`, não `-w`, e isso já foi defeito medido (26/07): os
+        # arquivos em /sys/module são `root:root 0644`, então `-w` é SEMPRE
+        # falso para quem roda o install do jeito certo — sem sudo. A escrita
+        # logo abaixo é `sudo tee`, ou seja, o portão perguntava pela permissão
+        # de quem NÃO ia escrever, e o passo era pulado em silêncio. O sintoma
+        # aparecia só num ciclo completo: o uninstall devolve os params a `N`
+        # (e consegue, porque escreve com sudo sem portão), o install não os
+        # reaplicava, e a cura do 8BitDo no cabo ficava desligada até o boot
+        # seguinte. O caminho por pacote nunca teve o problema porque roda o
+        # bloco inteiro como root.
+        if [[ -e /sys/module/hid_playstation/parameters/ds4_short_pairing_info ]]; then
             printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info >/dev/null 2>&1 || true
             printf '      ds4_short_pairing_info aplicado a quente (clone no cabo; vale no próximo plug)\n'
         fi
-        if [[ -w /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
+        if [[ -e /sys/module/hid_playstation/parameters/ds4_synthetic_mac ]]; then
             printf 'Y' | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac >/dev/null 2>&1 || true
             printf '      ds4_synthetic_mac aplicado a quente (clone no cabo; vale no próximo plug)\n'
         fi
@@ -746,6 +768,13 @@ install_dkms_rtw88_usb_host() {
     # plug" só é verdade quando o módulo está DESCARREGADO agora (3º ramo).
     if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
         printf '      módulo patchado JÁ carregado (hang_reset visível em /sys/module/rtw88_usb/parameters)\n'
+        # O uninstall devolve `hang_reset` a 0 de propósito (deixa o driver
+        # menos agressivo até o boot), e até 26/07 o install nunca o rearmava:
+        # quem rodasse uninstall+install ficava sem o reset de porta do
+        # fantasma do dongle, com o default Y do .ko só voltando no próximo
+        # boot. O param é lido em tempo de execução, então escrever aqui vale
+        # agora. Simetria cobrada por teste.
+        printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
     elif [[ -d /sys/module/rtw88_usb ]]; then
         printf '      módulo in-tree em uso — NÃO recarregamos (derrubaria o WiFi ao vivo);\n'
         printf '      o patchado vale no próximo boot (replug NÃO troca módulo carregado)\n'

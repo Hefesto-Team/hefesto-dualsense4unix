@@ -373,3 +373,49 @@ class TestParidadePackaging:
             assert "modprobe -r" not in texto, (
                 f"{nome} NUNCA pode descarregar módulo em uso (controles cairiam)"
             )
+
+
+class TestParamsAQuenteSaoSimetricos:
+    """AUTO-01.7 prometia que as curas de conexão valem sem reboot.
+
+    Defeito medido em 26/07, num ciclo `uninstall` + `install` de verdade: os
+    parâmetros do patch do 8BitDo voltaram a `N` e ficaram assim. O portão do
+    instalador testava `-w` no arquivo de `/sys/module`, que é `root:root 0644`
+    — logo SEMPRE falso para quem roda o install do jeito certo, sem sudo. A
+    escrita logo abaixo é `sudo tee`: o portão perguntava pela permissão de quem
+    não ia escrever, e o passo era pulado em silêncio.
+
+    O sintoma só aparece no CICLO, nunca numa instalação isolada, porque quem
+    desarma é o uninstall. Por isso o teste que interessa é o de SIMETRIA.
+    """
+
+    def test_portao_de_param_nao_pergunta_permissao_do_usuario(self) -> None:
+        achados = re.findall(r"-w\s+(/sys/module/\S+)", INSTALL)
+        assert not achados, (
+            "portão `-w` em /sys/module: esses arquivos são root:root 0644 e a "
+            "escrita é feita com `sudo tee`, então `-w` é sempre falso rodando "
+            f"sem sudo e o passo vira silêncio. Use `-e`. Achados: {achados}"
+        )
+
+    def test_install_reaplica_todo_param_que_o_uninstall_desarma(self) -> None:
+        """A regra, e não o caso: o que o uninstall devolve ao padrão da distro,
+        o install tem de rearmar — senão o ciclo deixa a máquina pior que antes.
+        """
+        # Exceção única, com motivo: o quirk de áudio USB é gerido pela
+        # toolchain pessoal da usuária (cmdline), e o install DELIBERADAMENTE
+        # não mexe no cmdline — ele só imprime a recomendação. A limpeza do
+        # runtime pelo uninstall é higiene, não desarme de cura nossa.
+        assimetria_legitima = {"snd_usb_audio/parameters/quirk_flags"}
+        # Casa só a ESCRITA (`... | sudo tee /sys/module/...`), nunca a simples
+        # menção: a primeira versão deste teste casava o caminho em qualquer
+        # lugar e por isso NÃO mordia quando o `printf` sumia e o portão com o
+        # mesmo caminho ficava. Provado por mutação.
+        escrita = r"\|\s*sudo tee\s+/sys/module/(\w+/parameters/\w+)"
+        desarmados = set(re.findall(escrita, UNINSTALL)) - assimetria_legitima
+        rearmados = set(re.findall(escrita, INSTALL))
+        assert desarmados, "nenhum param encontrado no uninstall — regex quebrada?"
+        orfaos = sorted(desarmados - rearmados)
+        assert not orfaos, (
+            "o uninstall desarma estes params e o install nunca os rearma — "
+            f"o ciclo desliga cura em silêncio: {orfaos}"
+        )
