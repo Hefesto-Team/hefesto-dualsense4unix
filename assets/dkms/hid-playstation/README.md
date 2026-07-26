@@ -1,11 +1,20 @@
-# hefesto-hid-playstation (DKMS) — contenção de Bluetooth na probe
+# hefesto-hid-playstation (DKMS) — probe que não joga o controle fora
 
-Módulo `hid-playstation` patchado para curar a perda de um DualSense inteiro
-quando **dois ou mais controles pareiam quase ao mesmo tempo no mesmo
-adaptador**. Motivado pelo alvo do projeto: **quatro controles por Bluetooth
-simultâneos, um por jogador** — nesse cenário a disputa deixa de ser exceção.
+Módulo `hid-playstation` patchado contra **dois** modos de perder um controle
+inteiro na janela de probe. Os dois são independentes, cada um com o seu
+`patch/` e os seus module params:
 
-> ##  Leia primeiro: este DKMS é a cura de SEGUNDA linha
+| patch | defeito | transporte |
+|---|---|---|
+| `0001` | contenção do canal de controle quando **dois ou mais controles pareiam quase juntos** no mesmo adaptador | Bluetooth |
+| `0002` | **clone** que responde o pairing info **curto** e nunca completa (8BitDo Pro em modo DirectInput/PS4, `054c:05c4`) | USB |
+
+O `0001` é motivado pelo alvo do projeto — **quatro controles por Bluetooth
+simultâneos, um por jogador** —, cenário em que a disputa deixa de ser
+exceção. O `0002` é o mesmo controle do `0001` visto pelo outro lado: por
+Bluetooth ele sobe, no cabo ele morre.
+
+> ##  Leia primeiro: contra a contenção BT, este DKMS é a cura de SEGUNDA linha
 >
 > Existem **duas** curas para o mesmo problema, com **níveis de confiança
 > diferentes**. Elas não se misturam:
@@ -23,6 +32,11 @@ simultâneos, um por jogador** — nesse cenário a disputa deixa de ser exceç�
 > Este DKMS é a cura **estrutural** — evita a janela em que o controle fica
 > sem driver, em vez de consertar depois. É o certo a longo prazo, mas hoje
 > ainda é **hipótese fundamentada**, não fato medido.
+>
+> **Isso vale só para o `0001`.** Para o clone no cabo (`0002`) **não existe
+> cura de primeira linha**: o `bt_rebind_orphans.sh` só toca barramento `0005`
+> (Bluetooth), e rebind não ajudaria de qualquer forma — a resposta curta é
+> determinística, o próximo probe falha igual.
 
 ## Proveniência
 
@@ -183,7 +197,7 @@ transferência que não chegou inteira.
 gasta 3 tentativas × 3 s + 100 ms + 200 ms ≈ **9,3 s** de probe antes de
 desistir (contra 3,3 s hoje). Em workqueue, sem segurar nada crítico.
 
-## O que foi avaliado e REJEITADO
+## O que foi avaliado e REJEITADO (no `0001`)
 
 **Degradar como o `usb_probe_degrade` do `hid-nintendo`** — deixar o firmware
 info falhar e seguir com valores default. Rejeitado: o `update_version` que
@@ -194,6 +208,15 @@ diferente, e vibração é área com histórico de regressão neste projeto
 uma falha honesta e visível por um comportamento errado e mudo. Se no futuro
 ficar provado que a contenção sobrevive ao retry com 4 controles, a discussão
 volta — mas aí com medição, não por precaução.
+
+> **Por que o `0002` degrada, então?** Porque o que ele salva é outra coisa: o
+> **endereço**, não a versão de firmware. Nenhum comportamento do driver é
+> escolhido pelo endereço — ele vira `uniq`, nome da bateria e chave de
+> duplicata. Não há motor errado para ligar silenciosamente. E a alternativa
+> não é "falha honesta e visível": é o device sem driver nenhum, que é
+> justamente o estado mais mudo possível. No DualShock 4 o endereço é também
+> o **único** passo fatal que sobrou no cabo — firmware info e calibração já
+> degradam para aviso no vanilla.
 
 ## Limite honesto (o que este patch NÃO promete)
 
@@ -224,6 +247,107 @@ Se com 4 controles a contenção passar de 3 s mesmo com retries, o próximo
 degrau **não** é mais retry: é atacar o `REPORT_REQ_TIMEOUT` do BlueZ (o
 projeto já mantém um backport 5.86, então é alcançável) ou serializar a subida
 dos controles no daemon do hefesto.
+
+## O segundo defeito: o clone no cabo (patch `0002`)
+
+### O sintoma medido (25/07 ~21:02)
+
+8BitDo Pro clone em modo DirectInput/PS4, **no cabo**. Ele se anuncia com os
+IDs da Sony (`054c:05c4`), então cai neste driver:
+
+```
+usb 3-2: New USB device found, idVendor=054c, idProduct=05c4
+playstation 0003:054C:05C4.0012: hidraw9: USB HID v1.11 Gamepad [Sony Computer Entertainment Wireless Controller]
+playstation 0003:054C:05C4.0012: Invalid byte count transferred, expected 16 got 9
+playstation 0003:054C:05C4.0012: retrying feature reportID 18 in 100 ms (2 attempt(s) left)
+playstation 0003:054C:05C4.0012: Invalid byte count transferred, expected 16 got 9
+playstation 0003:054C:05C4.0012: retrying feature reportID 18 in 200 ms (1 attempt(s) left)
+playstation 0003:054C:05C4.0012: Invalid byte count transferred, expected 16 got 9
+playstation 0003:054C:05C4.0012: Failed to retrieve DualShock4 pairing info: -22
+playstation 0003:054C:05C4.0012: Failed to get MAC address from DualShock4
+playstation 0003:054C:05C4.0012: Failed to create dualshock4.
+playstation 0003:054C:05C4.0012: probe with driver playstation failed with error -22
+```
+
+Mesmo desfecho do outro defeito — device sem driver nenhum, sem `hidraw`, sem
+`input`, sem LED, sem bateria — por uma causa **oposta**.
+
+### A causa: resposta curta, não atraso
+
+O report `0x12` é o **pairing info**, e no cabo ele é a **única** fonte do
+endereço para o `dualshock4_get_mac_address()`. O clone responde **9 bytes**
+onde o driver pediu 16, o `__ps_get_report()` devolve `-EINVAL` e a probe
+desmonta.
+
+Três leituras que fecham o diagnóstico:
+
+1. **Não é timing.** As linhas `retrying feature reportID 18` são o
+   `feature_retries=2` do `0001` em ação: as três tentativas trouxeram **os
+   mesmos 9 bytes**. Resposta curta e determinística — esperar mais não muda
+   nada. (Preço: 300 ms por conexão, que é o que põe a prova no log.)
+2. **Dos 16 bytes o driver usa 7.** Report ID + 6 do endereço. O resto é o
+   endereço do **host** com quem o controle pareou por último, que este driver
+   nunca lê. Uma resposta de 9 bytes **pode** trazer tudo o que é usado.
+3. **Por Bluetooth esse report nem é lido.** Lá o endereço vem do `uniq` do
+   HIDP. É por isso que o **mesmo** controle sobe por BT e só morre no cabo —
+   e é a prova de que o aparelho está inteiro; o que falta é um campo de um
+   report que o firmware clone não implementa até o fim.
+
+### A cura (opt-in, defaults == vanilla)
+
+| param | o que faz | default |
+|---|---|---|
+| `ds4_short_pairing_info` | aceita a resposta curta **quando ela traz o endereço** (report ID certo + campo não-zerado) | `N` (exige os 16 bytes, == vanilla) |
+| `ds4_synthetic_mac` | quando não traz nada aproveitável, fabrica `02:VID:PID:bus` | `N` (falha a probe, == vanilla) |
+
+**Por que o report ID tem que bater.** Aplicações `hidraw` (a Steam, entre
+elas) emitem feature request próprios — é exatamente por isso que o
+`dualshock4_get_calibration_data()` do vanilla já retenta. Endereço tirado da
+resposta de **outro** report seria pior do que endereço nenhum.
+
+**Por que ler o buffer depois do erro é seguro.** Ele é `kzalloc`, e o
+transporte copia só os bytes que chegaram: o que está lá é o que o controle
+mandou, e o resto é zero. Se nem o transporte funcionou, o buffer segue zerado
+e o `buf[0]` não bate com `0x12` — cai no ramo do endereço sintetizado.
+
+**O endereço fabricado NÃO é identidade.** `02:05:4C:05:C4:03` = `02` + VID +
+PID + barramento: zero bits do aparelho. É a **mesma convenção** do
+`usb_probe_degrade` do `hid-nintendo`, de propósito — o hefesto já trata MAC
+começando em `02` como identidade **volátil** (ganha número na sessão, nunca
+vai ao disco) e cai para a instância HID na deduplicação. Divergir da
+convenção aqui desarmaria essa cura em silêncio.
+
+**Custo conhecido:** dois clones idênticos no mesmo barramento recebem o
+**mesmo** endereço, e o segundo é recusado pelo `ps_devices_list_add()` com
+`-EEXIST`. É **um** controle perdido onde hoje se perdem os dois — melhora
+estrita, não perfeição.
+
+**Por que não toca no DualShock 4 genuíno.** Ele responde os 16 bytes: o
+`if (ret)` nem é tomado, e nenhum dos dois ramos existe para ele. Com os dois
+params em `N` o desfecho é byte a byte o de hoje, inclusive as mensagens de
+erro. E os dois ramos vivem dentro do `if (hdev->bus == BUS_USB)`, então
+Bluetooth não é alcançado de forma alguma.
+
+### Limite honesto do `0002`
+
+**Medido (fato):** o sintoma acima; que os retries trazem sempre 9 bytes; que
+o mesmo controle sobe por Bluetooth; que o `.c` com o patch compila limpo
+contra `7.0.11-76070011-generic`, sem warning, e o `modinfo` do `.ko` mostra
+os dois params novos como `bool`.
+
+**NÃO medido (hipótese):**
+
+- **quais 9 bytes o clone manda.** Se os 6 do endereço vierem preenchidos,
+  quem cura é o `ds4_short_pairing_info`; se vierem zerados, é o
+  `ds4_synthetic_mac`. Os dois estão ligados na conf porque o segundo é o
+  fallback do primeiro — mas **qual dos dois de fato entra é o dmesg que vai
+  dizer**, na linha `DualShock4 MAC = ... (truncated pairing info)` ou
+  `(synthesized)`;
+- **que a probe completa depois do endereço.** É altamente plausível — os
+  passos seguintes já degradam para aviso no vanilla —, mas plausível não é
+  medido. Validar exige o módulo patchado carregado, e trocar o
+  `hid_playstation` em memória derruba todos os DualSense. **A validação é o
+  próximo boot.**
 
 ## Build / instalação
 
@@ -256,11 +380,25 @@ Bluetooth perdem o link. Rotas:
 ### Validar que a cura entrou (próximo boot)
 
 ```bash
-cat /sys/module/hid_playstation/parameters/feature_retries   # tem que ser > 0
-modinfo -F filename hid-playstation                          # tem que dizer updates/dkms
+cat /sys/module/hid_playstation/parameters/feature_retries          # tem que ser > 0
+cat /sys/module/hid_playstation/parameters/ds4_short_pairing_info   # tem que ser Y
+cat /sys/module/hid_playstation/parameters/ds4_synthetic_mac        # tem que ser Y
+modinfo -F filename hid-playstation                                 # tem que dizer updates/dkms
 ```
 
-Depois **conecte os controles por BT quase juntos** (é o gatilho) e leia:
+Para o clone no cabo (`0002`), o gatilho é **plugar o 8BitDo em modo
+DirectInput/PS4**; sucesso é o `probe ... failed with error -22` dar lugar a:
+
+```bash
+sudo dmesg -T | grep -E "DualShock4 MAC|Registered DualShock4"
+```
+
+A linha diz qual ramo entrou — `(truncated pairing info)` se os 9 bytes
+traziam o endereço, `(synthesized)` se não traziam. As duas contam como cura;
+a segunda avisa que o endereço é volátil e não vai ao disco.
+
+Para a contenção BT (`0001`), **conecte os controles por BT quase juntos** (é
+o gatilho) e leia:
 
 ```bash
 sudo dmesg -T | grep -iE "playstation|retrying feature"
@@ -279,13 +417,17 @@ echo 4 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
 
 ### Voltar atrás
 
-1. **Desligar a cura ao vivo** (vale na próxima conexão, sem reload):
+1. **Desligar as curas ao vivo** (valem na próxima conexão, sem reload):
    ```bash
    echo 0 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
+   echo N | sudo tee /sys/module/hid_playstation/parameters/ds4_short_pairing_info
+   echo N | sudo tee /sys/module/hid_playstation/parameters/ds4_synthetic_mac
    ```
-   Isso devolve o comportamento **vanilla** (uma tentativa).
-2. **Desligar no boot**: tirar `feature_retries=` de
-   `/etc/modprobe.d/hefesto-hid-playstation.conf`.
+   Isso devolve o comportamento **vanilla** em cada um dos três eixos, de
+   forma independente (é assim que se faz o A/B: um param por vez).
+2. **Desligar no boot**: tirar a `options` correspondente de
+   `/etc/modprobe.d/hefesto-hid-playstation.conf` — são **duas** linhas, uma
+   por cura, e o `kmod` concatena as duas.
 3. **Remover o módulo patchado** (volta ao in-tree):
    ```bash
    sudo dkms remove hefesto-hid-playstation/1.0.0 --all
@@ -294,8 +436,9 @@ echo 4 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
 
 ## Rebase (kernel novo)
 
-`patch/BASELINE` guarda kernel base, commit e os sha256. Rota: baixar o vanilla
-novo, `patch -p3 < patch/0001-*.patch`, resolver fuzz, atualizar BASELINE, e
+`patch/BASELINE` guarda kernel base, commit, os sha256 e a **ordem** da série
+(uma linha `PATCH=` por patch). Rota: baixar o vanilla novo, aplicar
+`0001` e depois `0002` com `patch -p3`, resolver fuzz, atualizar BASELINE, e
 re-provar o build. O `patch/` não entra no build (o helper DKMS o exclui do
 source copiado).
 
@@ -307,17 +450,26 @@ O `patch/*.patch` está em formato `git format-patch` (caminho
 projeto; a submissão real exige trocar o SoB por nome real de pessoa (DCO) —
 decisão da mantenedora, fora do repo.
 
-O caso upstream é bom: o commit message carrega a cadeia causal inteira
-medida (uhid achatando `ETIMEDOUT` em `-EIO`, os 3,26 s, e a linha do
+O caso upstream do `0001` é bom: o commit message carrega a cadeia causal
+inteira medida (uhid achatando `ETIMEDOUT` em `-EIO`, os 3,26 s, e a linha do
 `bluetoothd` nomeando o `REPORT_REQ_TIMEOUT`), que é justamente o que falta
 nos relatos de "DualSense não conecta às vezes". Vale considerar propor o
 retry **sem** o module param — "um GET_REPORT que expirou no canal de controle
 não é motivo para perder o device" é argumento forte o bastante sozinho.
 
-Antes de submeter, revalidar a paridade:
+O do `0002` é mais delicado, e a mensagem já diz por quê: o aparelho é um
+clone, e upstream costuma resistir a acomodar firmware de terceiro. Os dois
+argumentos que sobrevivem a isso: (a) o driver joga fora um device inteiro por
+um campo que ele consegue recuperar sozinho, e (b) por Bluetooth ele **já**
+funciona sem ler esse report — a assimetria é do driver, não do controle. O
+`hid-nintendo` tem a mesma classe de falha aberta há anos (issues 10, 16 e 51
+de `DanielOgorchock/linux`), o que ajuda a mostrar que não é caso isolado.
+
+Antes de submeter, revalidar a paridade da série (reverte na ordem INVERSA):
 
 ```bash
 cd assets/dkms/hid-playstation && cp hid-playstation.c /tmp/v.c
+patch -R -p3 /tmp/v.c < patch/0002-*.patch
 patch -R -p3 /tmp/v.c < patch/0001-*.patch
 sha256sum /tmp/v.c   # tem que bater com SHA256_VANILLA_C do patch/BASELINE
 ```
