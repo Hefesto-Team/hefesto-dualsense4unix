@@ -583,6 +583,23 @@ _source_mute_veredito() {
 # `pactl set-card-profile` aceita e que faz a source nascer RUNNING.
 # Função PURA: só parsing, nenhuma escrita.
 _dualsense_perfil_status() {
+    # Devolve "card<TAB>perfil_ativo<TAB>melhor_perfil_com_entrada_DISPONIVEL".
+    #
+    # ATENÇÃO — este decisor foi REESCRITO em 26/07/2026, e o motivo importa
+    # mais que o código. A versão anterior trocava o perfil sempre que a entrada
+    # ativa fosse `iec958`, mirando `input:analog-stereo` — porque a sprint
+    # MIC-USB-01 afirmava que o microfone "vive" na entrada analógica.
+    #
+    # Medido no hardware, com o controle no cabo: o perfil analógico estava
+    # marcado `available: no` pelo próprio ALSA, e forçá-lo produzia uma source
+    # SEM NENHUMA PORTA DE CAPTURA, que entrega 327.680 bytes de silêncio
+    # digital. O `iec958-stereo` — o que a sprint mandava evitar — gravou pico
+    # 4606. Ou seja: a "cura" silenciava o microfone de quem a rodasse.
+    #
+    # A regra nova não adivinha qual entrada é a boa: ela só considera perfis
+    # que (a) oferecem fonte de captura (`sources: >= 1`) e (b) o ALSA declara
+    # `available: yes`, e escolhe o de maior prioridade. Se o perfil ATIVO já
+    # satisfaz os dois, não há troca — devolve alvo vazio.
     awk '
         /^[[:space:]]+Name: alsa_card\./ {
             nome = substr($0, index($0, ": ") + 2)
@@ -593,10 +610,11 @@ _dualsense_perfil_status() {
         }
         !alvo { next }
         /^[[:space:]]+Profiles:/ { secao = "perfis"; next }
-        /^[[:space:]]+Active Profile: / {
-            ativo = substr($0, index($0, ": ") + 2); secao = ""; next
+        /^[[:space:]]+Active Profile:/ {
+            ativo = substr($0, index($0, ": ") + 2)
+            secao = ""
+            next
         }
-        /^\t[A-Za-z]/ { secao = ""; next }
         secao == "perfis" {
             linha = $0
             sub(/^[[:space:]]+/, "", linha)
@@ -604,27 +622,58 @@ _dualsense_perfil_status() {
             if (pos < 2) next
             chave = substr(linha, 1, pos - 1)
             if (chave ~ /[[:space:]]/) next
-            perfis[chave] = 1
-            if (chave ~ /input:analog-stereo/) {
-                if (chave ~ /^output:/) reserva = chave
-                else if (reserva == "") reserva = chave
+            # `sources: N` e `available: yes|no` saem do próprio pactl em
+            # LC_ALL=C. Sem fonte de captura o perfil não serve ao microfone;
+            # indisponivel, ele produz o no sem porta que silenciou a medicao.
+            temfonte = (linha ~ /sources: [1-9]/)
+            disponivel = (linha ~ /available: yes/)
+            prio = 0
+            if (match(linha, /priority: [0-9]+/)) {
+                prio = substr(linha, RSTART + 10, RLENGTH - 10) + 0
             }
+            if (temfonte && disponivel && prio > melhorprio) {
+                melhorprio = prio
+                melhor = chave
+            }
+            # Guardado por chave, e NAO comparado com `ativo` aqui: no
+            # `pactl` a linha `Active Profile:` vem DEPOIS da lista, entao
+            # neste ponto `ativo` ainda esta vazio. Comparar aqui fazia a
+            # guarda nunca ligar — defeito que o teste pegou.
+            serve[chave] = (temfonte && disponivel)
             next
         }
         END {
             if (card == "") exit 0
             escolhido = ""
-            if (ativo ~ /input:iec958/) {
-                saida = ativo
-                sub(/\+?input:[^+]*$/, "", saida)
-                candidato = (saida == "") ? "input:analog-stereo" \
-                                          : saida "+input:analog-stereo"
-                if (candidato in perfis) escolhido = candidato
-                else escolhido = reserva
-            }
+            # Alvo so quando o ativo NAO serve e ha alternativa de verdade.
+            if (!serve[ativo] && melhor != "" && melhor != ativo) escolhido = melhor
             printf "%s\t%s\t%s\n", card, ativo, escolhido
         }
     ' "${1:--}"
+}
+
+_dualsense_source_tem_porta() {
+    # 0 quando a source de captura do DualSense tem PORTA ATIVA.
+    #
+    # É este o critério honesto de "dá para captar", e não o nome do perfil:
+    # uma source sem porta abre o fluxo e entrega zeros, em qualquer perfil.
+    # Medido em 26/07 — ver a nota em `_dualsense_perfil_status`.
+    local nome="$1"
+    [[ -z "${nome}" ]] && return 1
+    LC_ALL=C pactl list sources 2>/dev/null | awk -v alvo="${nome}" '
+        /^[[:space:]]+Name: / {
+            atual = substr($0, index($0, ": ") + 2)
+            next
+        }
+        /^[[:space:]]+Active Port: / {
+            if (atual == alvo) {
+                porta = substr($0, index($0, ": ") + 2)
+                if (porta != "" && porta != "(null)") { achou = 1 }
+            }
+            next
+        }
+        END { exit (achou ? 0 : 1) }
+    '
 }
 
 # CAMADA 1 — mute guardado por rota (arquivo) e mute vivo na source (pactl).
@@ -669,8 +718,15 @@ check_mic_perfil_sem_sinal() {
         return
     fi
     IFS=$'\t' read -r card ativo alvo <<< "${linha}"
+    # A porta manda. Fonte com porta de captura capta — em qualquer perfil.
+    local src_atual
+    src_atual="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+    if _dualsense_source_tem_porta "${src_atual}"; then
+        pass "a entrada do DualSense tem porta de captura (${ativo:-<vazio>})"
+        return
+    fi
     if [[ -z "${alvo}" ]]; then
-        pass "perfil da placa do DualSense leva a entrada analógica (${ativo:-<vazio>})"
+        warn "a entrada do DualSense não tem porta de captura e não há perfil disponível melhor (${ativo:-<vazio>}) — sem porta, a gravação sai em silêncio digital"
         return
     fi
     fail "perfil da placa do DualSense está no S/PDIF, que NÃO carrega sinal (camada 2): ${ativo} — rode: scripts/doctor.sh --fix"
@@ -701,12 +757,21 @@ fix_mic_dualsense() {
     linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
     if [[ -n "${linha}" ]]; then
         IFS=$'\t' read -r card ativo alvo <<< "${linha}"
-        if [[ -n "${alvo}" ]]; then
+        local src_antes
+        src_antes="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+        if _dualsense_source_tem_porta "${src_antes}"; then
+            # NÃO TOCAR. Foi exatamente aqui que a versão anterior estragava a
+            # máquina: trocava um perfil que captava por outro que o ALSA marca
+            # indisponível, e a source nascia sem porta — silêncio digital.
+            pass "a entrada do DualSense já tem porta de captura (${ativo:-<vazio>}) — camada 2 sem nada a fazer"
+        elif [[ -n "${alvo}" ]]; then
             if pactl set-card-profile "${card}" "${alvo}" 2>/dev/null; then
-                pass "perfil da placa do DualSense trocado para ${alvo} (camada 2)"
+                pass "perfil da placa do DualSense trocado para ${alvo} (camada 2, disponível e com fonte)"
             else
                 warn "falha ao trocar o perfil da placa do DualSense para ${alvo}"
             fi
+        else
+            warn "sem porta de captura e sem perfil disponível melhor (${ativo:-<vazio>}) — o microfone não vai captar"
         fi
     fi
 
