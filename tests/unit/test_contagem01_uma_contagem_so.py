@@ -108,6 +108,11 @@ async def _state_full(socket_path: Path) -> dict[str, Any]:
     return resultado
 
 
+from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
+    StatusActionsMixin,
+)
+
+
 class TestExternosViramLista:
     """Entrega 1 — a fundação de que tudo o mais depende."""
 
@@ -308,6 +313,12 @@ class _FakeWidget:
     def set_show_text(self, _value: bool) -> None:
         pass
 
+    def set_hexpand(self, _value: bool) -> None:
+        pass
+
+    def set_valign(self, _value: object) -> None:
+        pass
+
     def pack_start(self, child: _FakeWidget, *_args: object) -> None:
         self.children.append(child)
 
@@ -328,6 +339,7 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
         Label=_FakeWidget,
         Box=_FakeWidget,
         Orientation=SimpleNamespace(VERTICAL=0, HORIZONTAL=1),
+        Align=SimpleNamespace(START=1, CENTER=2, END=3),
     )
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
@@ -394,10 +406,6 @@ class TestCabecalhoEAbaStatus:
     """Entrega 2 no caminho real: `state_full` -> rótulo do cabeçalho."""
 
     def _host(self) -> Any:
-        from hefesto_dualsense4unix.app.actions.status_actions import (
-            StatusActionsMixin,
-        )
-
         class _Builder:
             def __init__(self) -> None:
                 self._widgets: dict[str, Any] = {}
@@ -622,10 +630,6 @@ class TestChipsSemRotaPropria:
     """Entrega 5 — duas rotas de dados para a mesma pergunta divergem."""
 
     def _host(self) -> Any:
-        from hefesto_dualsense4unix.app.actions.status_actions import (
-            StatusActionsMixin,
-        )
-
         class _Builder:
             def __init__(self) -> None:
                 self._widgets: dict[str, Any] = {}
@@ -653,10 +657,6 @@ class TestChipsSemRotaPropria:
 
     def test_a_busca_propria_de_inventario_nao_existe_mais(self) -> None:
         """Enquanto houvesse duas rotas, elas voltariam a divergir."""
-        from hefesto_dualsense4unix.app.actions.status_actions import (
-            StatusActionsMixin,
-        )
-
         assert not hasattr(StatusActionsMixin, "_maybe_fetch_externals")
         assert not hasattr(StatusActionsMixin, "_on_externals_result")
 
@@ -794,3 +794,83 @@ class TestGamepadsDoSistema:
 
         assert "9 controles" not in texto
         assert "nós em /dev/input/js*" in texto
+
+
+class TestGradeDaAbaStatusMostraAMesaInteira:
+    """O defeito visto NA TELA em 26/07, com os quatro controles ligados.
+
+    O cabeçalho da aba Status dizia "Conectado (4 controles)" e a grade logo
+    abaixo desenhava DOIS cards. A primeira entrega desta sprint deixou o
+    externo fora da grade de propósito — não lemos input, bateria nem sensores
+    dele. O argumento vale para o CONTEÚDO do card e não para a existência
+    dele: a mesma tela afirmando quatro e desenhando dois é exatamente o que
+    esta sprint existe para matar, e nenhum teste pegou porque nenhum teste
+    olhava a grade e o cabeçalho JUNTOS.
+    """
+
+    def _host_com_grade(self, fake_gtk: None) -> tuple[Any, Any]:
+        class _Grade:
+            def __init__(self) -> None:
+                self.filhos: list[Any] = []
+
+            def attach(self, child: Any, *_args: Any) -> None:
+                self.filhos.append(child)
+
+            def get_children(self) -> list[Any]:
+                return list(self.filhos)
+
+            def remove(self, child: Any) -> None:
+                self.filhos.remove(child)
+
+        grade = _Grade()
+
+        class _Host(StatusActionsMixin):  # type: ignore[misc, valid-type]
+            def __init__(self) -> None:
+                self._status_cards: dict[Any, Any] = {}
+                self._status_card_keys: list[Any] = []
+                self._mic_monitor = None
+
+            def _get(self, nome: str) -> Any:
+                return grade if nome == "status_players_slot" else None
+
+        return _Host(), grade
+
+    def test_a_grade_tem_um_card_por_controle_da_mesa(
+        self, fake_gtk: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        host, grade = self._host_com_grade(fake_gtk)
+        # O card de DualSense é um widget pesado (gauges, sticks); aqui só
+        # interessa QUANTOS cards a grade recebe, então ele vira um dublê.
+        import hefesto_dualsense4unix.app.actions.status_actions as sa
+
+        class _CardDuble(_FakeWidget):  # type: ignore[misc, valid-type]
+            def set_hexpand(self, _v: bool) -> None:
+                pass
+
+            def set_valign(self, _v: Any) -> None:
+                pass
+
+            def update(self, *_args: Any) -> None:
+                pass
+
+        monkeypatch.setattr(sa, "ControllerCard", lambda **_kw: _CardDuble())
+        host._sync_status_cards(_payload_quatro_controles())
+        assert len(grade.filhos) == 4, (
+            "o cabeçalho conta a mesa inteira; a grade tem de desenhar a mesa "
+            f"inteira — vieram {len(grade.filhos)} cards para 4 controles"
+        )
+
+    def test_o_card_do_externo_diz_por_que_nao_tem_numero_nosso(
+        self, fake_gtk: None
+    ) -> None:
+        host, _grade = self._host_com_grade(fake_gtk)
+        externo = _payload_quatro_controles()["external_controllers"][0]
+        card = host._card_de_identidade_externo(externo)
+        textos = " ".join(
+            str(getattr(f, "label", "") or getattr(f, "markup", ""))
+            for f in card.children
+        )
+        assert "Jogador —" in textos, "o travessão do jogador tem de aparecer"
+        assert "quem numera é o jogo" in textos, (
+            "sem a explicação, o travessão vira defeito aparente"
+        )

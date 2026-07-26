@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.app.actions.base import (
     numero_do_controle,
 )
 from hefesto_dualsense4unix.app.actions.external_controllers import (
+    brand_of,
     button_labels_for,
     external_key,
     friendly_type,
@@ -317,8 +318,29 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._status_card_keys = []
         conectados = self._connected_controllers(state)
         keys = self._status_card_keys_for(conectados)
-        if keys != self._status_card_keys:
-            self._rebuild_status_cards(slot, keys)
+        # CONTAGEM-01 (fechamento do defeito visto na tela em 26/07): a aba
+        # dizia "Conectado (4 controles)" no topo e mostrava DOIS cards. A
+        # primeira entrega deixou o externo fora da grade de propósito — não
+        # lemos input, bateria nem sensores dele, e preencher aquelas áreas
+        # seria inventar dado. O argumento vale para o CONTEÚDO do card e não
+        # para a existência dele: a mesma tela afirmando quatro e desenhando
+        # dois é exatamente o que esta sprint existe para matar. O externo
+        # ganha um card de IDENTIDADE — quem é, por onde entrou, e por que não
+        # tem número nosso —, sem uma única área de dado fingido.
+        # Lido do payload aqui mesmo, e não de `self._externals`, para não
+        # depender da ORDEM em que os dois sincronizadores rodam no tique.
+        bruto_ext = state.get("external_controllers")
+        externos = (
+            [e for e in bruto_ext if isinstance(e, dict)]
+            if isinstance(bruto_ext, list)
+            else []
+        )
+        keys_ext: list[tuple[Any, ...]] = [
+            ("externo", e.get("uniq") or e.get("path") or pos)
+            for pos, e in enumerate(externos)
+        ]
+        if keys + keys_ext != self._status_card_keys:
+            self._rebuild_status_cards(slot, keys, externos)
         monitor = self._mic_monitor
         if monitor is not None:
             monitor.set_controles(
@@ -340,8 +362,45 @@ class StatusActionsMixin(WidgetAccessMixin):
             )
             card.update(entry, state, leitura)
 
+    def _card_de_identidade_externo(self, entry: dict[str, Any]) -> Any:
+        """Card de um controle EXTERNO na aba Status: só identidade.
+
+        CONTAGEM-01. Ele não tem gauge, stick, bateria nem giroscópio — e é
+        proposital: não lemos nada disso de um externo, e desenhar a moldura
+        vazia diria "sem sinal" onde a verdade é "não medimos". O card diz
+        quem é, por onde entrou e por que não tem número nosso; nada mais.
+        """
+        from gi.repository import Gtk
+
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            EXTERNO_SEM_NUMERO_NOSSO,
+        )
+
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        card.get_style_context().add_class("hefesto-dualsense4unix-card")
+        numero = numero_do_controle(entry)
+        titulo = Gtk.Label()
+        titulo.set_markup(
+            f"Controle {numero} — {transport_label(entry)} · Jogador —"
+        )
+        titulo.set_xalign(0.0)
+        card.pack_start(titulo, False, False, 0)
+        sub = Gtk.Label(label=f"{brand_of(entry)} · {friendly_type(entry)}")
+        sub.set_xalign(0.0)
+        sub.get_style_context().add_class("dim-label")
+        card.pack_start(sub, False, False, 0)
+        nota = Gtk.Label(label=EXTERNO_SEM_NUMERO_NOSSO)
+        nota.set_xalign(0.0)
+        nota.set_line_wrap(True)
+        nota.get_style_context().add_class("dim-label")
+        card.pack_start(nota, False, False, 0)
+        return card
+
     def _rebuild_status_cards(
-        self, slot: Any, keys: list[tuple[Any, ...]]
+        self,
+        slot: Any,
+        keys: list[tuple[Any, ...]],
+        externos: list[dict[str, Any]] | None = None,
     ) -> None:
         """Recria os cards — o conjunto de controles mudou.
 
@@ -351,14 +410,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         lado, dois controles ocupam a MESMA faixa vertical de um (e quatro
         viram 2x2, que é o teto real: 4 jogadores no co-op).
         """
+        externos = externos or []
         for child in list(slot.get_children()):
             slot.remove(child)
             child.destroy()
         self._status_cards = {}
-        self._status_card_keys = list(keys)
+        keys_ext: list[tuple[Any, ...]] = [
+            ("externo", e.get("uniq") or e.get("path") or pos)
+            for pos, e in enumerate(externos)
+        ]
+        self._status_card_keys = list(keys) + keys_ext
         # 2+ cards → sticks de 90px (compact); card único mantém o layout
-        # equivalente ao da aba antiga (sticks 120px).
-        compact = len(keys) >= 2
+        # equivalente ao da aba antiga (sticks 120px). O total conta os
+        # externos: com um DualSense e um Nintendo a grade já é de dois.
+        compact = len(keys) + len(externos) >= 2
         colunas = 2 if compact else 1
         for pos, key in enumerate(keys):
             card = ControllerCard(compact=compact)
@@ -371,6 +436,18 @@ class StatusActionsMixin(WidgetAccessMixin):
             card.set_valign(Gtk.Align.START)
             slot.attach(card, pos % colunas, pos // colunas, 1, 1)
             card.show_all()
+        # Os externos entram DEPOIS dos DualSense, na mesma grade e na mesma
+        # ordem da fita de chips e da aba Início — a tela toda conta a mesma
+        # mesa. Eles ficam fora de `_status_cards` de propósito: aquele dicionário
+        # é dos cards que recebem `update()` a 10 Hz, e o card de identidade não
+        # tem nada que mude a cada tique.
+        for pos_ext, entry in enumerate(externos):
+            pos = len(keys) + pos_ext
+            card_ext = self._card_de_identidade_externo(entry)
+            card_ext.set_hexpand(True)
+            card_ext.set_valign(Gtk.Align.START)
+            slot.attach(card_ext, pos % colunas, pos // colunas, 1, 1)
+            card_ext.show_all()
 
     def _clear_status_cards(self) -> None:
         """Remove todos os cards (daemon offline — nenhum controle conhecido)."""
