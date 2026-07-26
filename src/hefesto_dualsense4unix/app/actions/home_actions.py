@@ -29,6 +29,11 @@ from hefesto_dualsense4unix.app.actions.base import (
     WidgetAccessMixin,
     numero_do_controle,
 )
+from hefesto_dualsense4unix.app.actions.external_controllers import (
+    brand_of,
+    slot_label,
+    transport_label,
+)
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
@@ -311,6 +316,142 @@ def _format_controller_subtitle(
     return "  ·  ".join(parts)
 
 
+#: CONTAGEM-01, entrega 6: a explicação do travessão, no próprio card. Ela
+#: precisa estar VISÍVEL — um tooltip não conta, porque só aparece para quem já
+#: desconfiou e parou o ponteiro em cima. Diz o fato (o jogo numera) sem
+#: prometer cura: a escolha "como este controle aparece nos jogos" é a
+#: MÁSCARA-01, e enquanto ela não existir este é o único comportamento.
+EXTERNO_SEM_NUMERO_NOSSO = "Entra no jogo como ele mesmo — quem numera é o jogo."
+
+
+def via_curta(entry: dict[str, Any]) -> str:
+    """Como o controle chegou, em duas ou três letras: 'USB', 'BT' ou '?'.
+
+    O cabeçalho lista as vias de todos os controles da mesa lado a lado, e as
+    duas espécies guardam esse dado em campos diferentes — o DualSense adotado
+    em `transport` ("usb"/"bt", do backend), o externo em `bus`
+    ("usb"/"bluetooth", do evdev). A tradução mora aqui, numa função só, para
+    o cabeçalho não precisar saber a espécie de quem está contando.
+    """
+    if e_externo(entry):
+        bus = str(entry.get("bus") or "").lower()
+        if bus == "usb":
+            return "USB"
+        if bus in ("bluetooth", "bt"):
+            return "BT"
+        return bus.upper() or "?"
+    return str(entry.get("transport") or "?").upper()
+
+
+def _format_external_subtitle(entry: dict[str, Any]) -> str:
+    """Linha secundária do card de um controle EXTERNO (função pura).
+
+    Marca + como conectou ("8BitDo  ·  Cabo (USB)"). Não há bateria nem
+    "primário" a dizer: o Hefesto não adota esses controles, então não lê o
+    estado deles — e inventar um traço de bateria seria pior que não ter a
+    linha. Enquanto a descrição não chegou do daemon (os primeiros segundos de
+    um aparelho novo — ver `_external_controllers_now`), `brand_of` cai no
+    nome cru e `transport_label` em "desconhecido": o card aparece com o
+    número certo e o resto se completa sozinho no tick seguinte.
+    """
+    return f"{brand_of(entry)}  ·  {transport_label(entry)}"
+
+
+# CONTAGEM-01 (25/07): as duas espécies de controle na mesa. `external` é o
+# controle que o Hefesto VÊ, numera e acende o LED, mas não ADOTA (Nintendo
+# Pro, 8BitDo — read-only por decisão de produto); qualquer outra coisa é
+# DualSense adotado, com gamepad virtual nosso. A ausência da chave significa
+# "nosso": o bloco `controllers` do `state_full` vem do backend DualSense e
+# nunca carimba espécie — quem carimba é `controles_na_mesa`.
+KIND_EXTERNAL = "external"
+KIND_DUALSENSE = "dualsense"
+
+
+def e_externo(entry: dict[str, Any]) -> bool:
+    """`True` quando a entrada é um controle EXTERNO (não adotado)."""
+    return entry.get("kind") == KIND_EXTERNAL
+
+
+def numero_na_mesa(entry: dict[str, Any]) -> int | None:
+    """Número com que ESTE controle se identifica na mesa, ou ``None``.
+
+    Para o DualSense adotado a regra é a de sempre (`numero_do_controle`), que
+    tem fallback pela posição. Para o EXTERNO não há fallback: o número é o
+    `player_slot` que o daemon atribuiu — o MESMO que ele acendeu no LED de
+    jogador do aparelho — e, na falta dele (registro ainda sem opinião nos
+    primeiros segundos), a resposta é ``None``.
+
+    A assimetria é deliberada. O fallback posicional do DualSense existe
+    porque aquela lista é ordenada e completa; a dos externos vem de um
+    conjunto, e "o primeiro da lista é o 1" produziria um Controle 1 ao lado
+    do Controle 1 de verdade. Null honesto vale mais que número errado — a
+    mesma regra do `slot_of` (NUMA-05).
+    """
+    if e_externo(entry):
+        slot = entry.get("player_slot")
+        if isinstance(slot, int) and not isinstance(slot, bool):
+            return slot
+        return None
+    return numero_do_controle(entry)
+
+
+def numero_do_jogador(entry: dict[str, Any]) -> int | None:
+    """Número do JOGADOR que o jogo vê para este controle, ou ``None``.
+
+    ``None`` = não somos nós que numeramos este controle. Hoje isso vale para
+    TODO externo: sem gamepad virtual nosso, o jogo o enxerga como ele mesmo e
+    o numera pelo critério dele (é o "como ele mesmo" da MÁSCARA-01, que ainda
+    é o único modo que existe). Vale também para o DualSense fora do modo de
+    jogo, onde não há jogador nenhum a numerar.
+
+    Não há campo de máscara a consultar, e isso é de propósito: quando a
+    MÁSCARA-01 der gamepad virtual a um externo, o daemon passará a preencher
+    `player` para ele e o travessão some sozinho — a regra segue o DADO, não
+    uma segunda tabela que poderia discordar dele.
+    """
+    player = entry.get("player")
+    if isinstance(player, int) and not isinstance(player, bool):
+        return player
+    return None
+
+
+def controles_na_mesa(state: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """TODOS os controles de jogo presentes — a fonte ÚNICA da contagem.
+
+    Entrega 2 da CONTAGEM-01. Antes, cada canto da janela respondia "quantos
+    controles há?" por conta própria: o cabeçalho e a aba Status contavam
+    `controllers` (só DualSense), o botão de co-op contava a mesma lista, e a
+    fita de chips somava um inventário que buscava sozinha — por isso ela era
+    a única que dizia quatro. Agora todos chamam esta função, sobre o MESMO
+    `state_full`, e não têm como divergir.
+
+    Cada entrada sai carimbada com `kind` (ver :data:`KIND_EXTERNAL`) para que
+    quem desenha não precise adivinhar a espécie pela ausência de campos. As
+    entradas são CÓPIAS rasas: o carimbo não pode voltar para o payload que
+    outros consumidores leem no mesmo tick.
+
+    Ordem = o número exibido (sem número por último), que é o que a pessoa vê
+    escrito no LED de cada aparelho.
+    """
+    if not isinstance(state, dict):
+        return []
+    mesa: list[dict[str, Any]] = []
+    for bruto in state.get("controllers") or []:
+        if isinstance(bruto, dict) and bruto.get("connected"):
+            mesa.append({**bruto, "kind": KIND_DUALSENSE})
+    for bruto in state.get("external_controllers") or []:
+        if isinstance(bruto, dict):
+            mesa.append({**bruto, "kind": KIND_EXTERNAL})
+    mesa.sort(
+        key=lambda e: (
+            numero_na_mesa(e) is None,
+            numero_na_mesa(e) or 0,
+            str(e.get("identity") or e.get("uniq") or ""),
+        )
+    )
+    return mesa
+
+
 def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
     """Frase que substituiu o checkbox de co-op (LEIGO-01) — função pura.
 
@@ -318,17 +459,45 @@ def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
     responder. E só afirma "N jogadores" quando o daemon de fato numerou N
     jogadores distintos (campo `player`) — enquanto o segundo jogador não subiu,
     o jogo ainda vê um gamepad só e a frase seria mentira.
+
+    CONTAGEM-01, entrega 6 — honestidade acima de simetria. Com externo na
+    mesa os dois números divergem por MOTIVO LEGÍTIMO: "controles na mesa" são
+    quatro, "jogadores que nós numeramos" são dois, porque o Nintendo e o
+    8BitDo entram no jogo como eles mesmos e é o jogo quem os numera. A frase
+    passa a dizer as duas coisas em vez de escolher uma e calar a outra —
+    fingir que os números são um só era o defeito, não a cura.
     """
     if len(controllers) < 2:
         return ""
-    players = {
-        c.get("player")
-        for c in controllers
-        if isinstance(c.get("player"), int) and not isinstance(c.get("player"), bool)
-    }
-    if len(players) < 2:
-        return ""
-    return f"{len(controllers)} controles = {len(players)} jogadores"
+    externos = [c for c in controllers if e_externo(c)]
+    if not externos:
+        players = {
+            numero_do_jogador(c)
+            for c in controllers
+            if numero_do_jogador(c) is not None
+        }
+        if len(players) < 2:
+            return ""
+        return f"{len(controllers)} controles = {len(players)} jogadores"
+    total = len(controllers)
+    nossos = total - len(externos)
+    if nossos == 0:
+        return (
+            f"{total} controles na mesa — o Hefesto não numera nenhum deles: "
+            "cada um entra como ele mesmo e quem numera é o jogo."
+        )
+    nossa_parte = (
+        "1 jogador é numerado pelo Hefesto"
+        if nossos == 1
+        else f"{nossos} jogadores são numerados pelo Hefesto"
+    )
+    outra_parte = (
+        "o outro entra como ele mesmo e quem numera é o jogo"
+        if len(externos) == 1
+        else f"os outros {len(externos)} entram como eles mesmos e quem "
+        "numera é o jogo"
+    )
+    return f"{total} controles na mesa — {nossa_parte}; {outra_parte}."
 
 
 # AUTO-01.2: rótulo base do botão de co-op. Sem contagem enquanto não há dois
@@ -408,11 +577,21 @@ def _format_controller_title(entry: dict[str, Any]) -> str:
     controle (índices são reusados quando alguém sai e outro entra). Sem número
     de jogador (modo desktop/nativo, jogador ainda subindo) o card só se
     identifica, em vez de inventar um "P" que o jogo não confirma.
+
+    CONTAGEM-01, entrega 6 — o travessão do externo. Um controle que entra no
+    jogo como ele mesmo TEM número de jogador (o jogo o numera); o que não
+    existe é o número NOSSO. Aí o card escreve "P—": o travessão diz que a
+    pergunta tem resposta e que não somos nós que a damos — diferente do
+    DualSense fora do modo de jogo, onde não há jogador nenhum e o "P" some
+    inteiro. Omitir também no externo faria os quatro cards parecerem iguais e
+    esconderia justamente a divergência que a sprint mandou mostrar.
     """
-    name = f"Controle {numero_do_controle(entry)}"
-    player = entry.get("player")
-    if isinstance(player, int) and not isinstance(player, bool):
+    name = f"Controle {slot_label(numero_na_mesa(entry))}"
+    player = numero_do_jogador(entry)
+    if player is not None:
         return f"{name} — P{player}"
+    if e_externo(entry):
+        return f"{name} — P—"
     return name
 
 
@@ -818,18 +997,21 @@ class HomeActionsMixin(WidgetAccessMixin):
             # com connected=False quando não há nenhum controle — sem filtrar, a
             # aba inventava um card "Controle 1 — P1 · ?" com o cabo na mesa. A
             # aba Status (_connected_controllers) e o applet já filtravam; a
-            # Início era a única que não.
-            connected = [
-                c
-                for c in (state.get("controllers") or [])
-                if isinstance(c, dict) and c.get("connected")
-            ]
-            self._home_players_hint.set_text(_format_players_hint(connected))
+            # Início era a única que não. O filtro mora hoje dentro de
+            # `controles_na_mesa`, junto com a soma dos externos.
+            #
+            # CONTAGEM-01, entregas 2 e 3: a frase, o botão de co-op e os cards
+            # passam a falar da MESA INTEIRA — DualSense adotados MAIS Nintendo
+            # e 8BitDo. Era aqui que a janela dizia "2 controles" com quatro na
+            # mesa: esta lista era só o bloco `controllers`, que por construção
+            # nunca teve externo dentro.
+            mesa = controles_na_mesa(state)
+            self._home_players_hint.set_text(_format_players_hint(mesa))
             # AUTO-01.2: o botão de co-op fala a partir dos MESMOS controles
             # conectados que os cards mostram — uma fonte só para a contagem.
-            self._render_coop_prep(state, connected)
+            self._render_coop_prep(state, mesa)
             self._render_home_controllers(
-                connected,
+                mesa,
                 grab_state=state.get("primary_grab_state"),
                 gamepad_on=bool(gamepad.get("enabled")),
             )
@@ -879,7 +1061,8 @@ class HomeActionsMixin(WidgetAccessMixin):
             card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             card.get_style_context().add_class("hefesto-dualsense4unix-card")
             card.set_margin_end(6)
-            is_primary = bool(ctrl.get("is_primary"))
+            externo = e_externo(ctrl)
+            is_primary = bool(ctrl.get("is_primary")) and not externo
             title = Gtk.Label()
             # LEIGO-01b: nem o número do jogador nem o do controle saem da
             # posição na lista — o primeiro vem do daemon, o segundo do slot de
@@ -889,7 +1072,9 @@ class HomeActionsMixin(WidgetAccessMixin):
             title.set_xalign(0.0)
             card.pack_start(title, False, False, 0)
             sub = Gtk.Label(
-                label=_format_controller_subtitle(
+                label=_format_external_subtitle(ctrl)
+                if externo
+                else _format_controller_subtitle(
                     ctrl.get("transport"),
                     is_primary=is_primary,
                     battery_pct=ctrl.get("battery_pct"),
@@ -898,6 +1083,14 @@ class HomeActionsMixin(WidgetAccessMixin):
             sub.set_xalign(0.0)
             sub.get_style_context().add_class("dim-label")
             card.pack_start(sub, False, False, 0)
+            # CONTAGEM-01, entrega 6: o porquê do "P—" fica no card, em texto —
+            # ver `EXTERNO_SEM_NUMERO_NOSSO`.
+            if externo:
+                nota = Gtk.Label(label=EXTERNO_SEM_NUMERO_NOSSO)
+                nota.set_xalign(0.0)
+                nota.set_line_wrap(True)
+                nota.get_style_context().add_class("dim-label")
+                card.pack_start(nota, False, False, 0)
             # LEIGO-02: aqui saía o fim do MAC ("…c311f0"). Ele não serve a
             # nenhuma tarefa dela: o número não está gravado no controle
             # físico, então não há como casar card com aparelho por ele. Quem
@@ -1197,13 +1390,21 @@ __all__ = [
     "COOP_PREP_HINT_PRONTO",
     "COOP_PREP_HINT_UM_CONTROLE",
     "COOP_PREP_LABEL_BASE",
+    "EXTERNO_SEM_NUMERO_NOSSO",
     "HOME_POLL_INTERVAL_MS",
+    "KIND_DUALSENSE",
+    "KIND_EXTERNAL",
     "RENUMBER_GAME_OPEN_TEXT",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
+    "controles_na_mesa",
     "coop_prep_hint",
     "coop_prep_label",
+    "e_externo",
+    "numero_do_jogador",
+    "numero_na_mesa",
+    "via_curta",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]

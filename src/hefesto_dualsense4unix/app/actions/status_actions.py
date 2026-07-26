@@ -48,6 +48,9 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
+    controles_na_mesa,
+    e_externo,
+    via_curta,
     vpad_degradation_text,
     wrapper_banner_text,
 )
@@ -131,12 +134,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_active: int
     _target_buttons: list[Any]
     # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a ficha
-    # secreta que abre ao clicar. Cache do inventário (fetch com throttle) +
-    # botões próprios (fora do grupo de rádio dos DualSense).
+    # secreta que abre ao clicar. CONTAGEM-01/5: o cache do inventário deixou
+    # de ter fetch próprio (throttle + in-flight, que sumiram junto) — quem o
+    # alimenta é `_sync_externals_from_state`, com a lista do `state_full`.
     _external_buttons: list[Any]
     _externals: list[dict[str, Any]]
-    _externals_fetch_ts: float = 0.0
-    _externals_inflight: bool = False
     _externals_sig: tuple[str, ...] | None = None
     # PERFIL-04 (sprint perfis-por-controle): alvo de EDIÇÃO derivado do
     # seletor — o MAC normalizado (uniq) do controle selecionado, ou None em
@@ -471,12 +473,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._target_combo_active = -1
         self._target_buttons = []
         # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a
-        # "ficha secreta" que abre ao clicar num deles. Cache do inventário
-        # (fetch opt-in, caro — throttle no tick lento) + botões próprios.
+        # "ficha secreta" que abre ao clicar num deles. CONTAGEM-01/5: o cache
+        # vem do `state_full`, não mais de busca própria.
         self._external_buttons = []
         self._externals = []
-        self._externals_fetch_ts = 0.0
-        self._externals_inflight = False
         self._externals_sig = None
         # PERFIL-04: estado do alvo de edição por-controle.
         self._edit_target_uniq = None
@@ -617,42 +617,26 @@ class StatusActionsMixin(WidgetAccessMixin):
             box.pack_start(eb, False, False, 0)
             self._external_buttons.append(eb)
 
-    def _maybe_fetch_externals(self) -> None:
-        """Atualiza o inventário de externos (8BIT-01) com throttle (~4 s).
+    def _sync_externals_from_state(self, state: dict[str, Any]) -> None:
+        """Semeia os chips de externo a partir do `state_full` (CONTAGEM-01/5).
 
-        Caro (enumera evdev + sonda de holders — 10-40 ms + subprocess), então
-        NUNCA no caminho quente: só no tick lento, e no máximo a cada 4 s. O
-        resultado alimenta os botões de externos no próximo refresh do seletor.
+        Aqui morreu a SEGUNDA rota de dados. Até 25/07 esta mixin buscava o
+        inventário sozinha (`controller.list {external:true}` a cada 4 s, com
+        throttle e in-flight próprios) porque o `state_full` publicava os
+        externos só como CONTAGEM — não dava para montar chip com um número.
+        Com a lista no payload (entrega 1), a busca deixou de ter motivo, e
+        manter as duas era garantir que voltassem a divergir: a fita de chips
+        já mostrava quatro enquanto cabeçalho e cartões mostravam dois, e essa
+        janela de discordância era exatamente a diferença de tempo entre uma
+        rota e a outra.
 
-        No-op sem o seletor inicializado (`_init_controller_target_combo` não
-        rodou): cobre os testes de widget parciais e evita IPC fora da GUI real.
+        A chave AUSENTE (daemon anterior a esta leva, ou sem registro de
+        externos) preserva o que já estava na tela em vez de zerar a fita: não
+        saber não é o mesmo que "não há nenhum".
         """
-        if getattr(self, "_target_combo", None) is None:
-            return
-        now = GLib.get_monotonic_time() / 1_000_000.0
-        if self._externals_inflight or (now - self._externals_fetch_ts) < 4.0:
-            return
-        self._externals_fetch_ts = now
-        self._externals_inflight = True
-        call_async(
-            "controller.list",
-            {"external": True},
-            on_success=self._on_externals_result,
-            on_failure=lambda _e: self._on_externals_done(),
-            # O inventário externo enumera TODOS os /dev/input + sonda de
-            # holders (subprocess) — 10-40 ms + ~até 1 s. O default de 0.25 s
-            # do call_async estouraria; damos folga (é opt-in, tick lento).
-            timeout_s=3.0,
-        )
-
-    def _on_externals_result(self, result: Any) -> bool:
-        ext = result.get("external") if isinstance(result, dict) else None
-        self._externals = ext if isinstance(ext, list) else []
-        return self._on_externals_done()
-
-    def _on_externals_done(self) -> bool:
-        self._externals_inflight = False
-        return False
+        externos = state.get("external_controllers")
+        if isinstance(externos, list):
+            self._externals = [e for e in externos if isinstance(e, dict)]
 
     def _on_external_clicked(
         self, _button: Any, key: str, slot: int | None
@@ -1060,7 +1044,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         # SELETOR-UNO-01 (22/07, pedido da mantenedora): o seletor aparece com
         # 1+ controle NO TOTAL — mesmo sozinho, o controle ganha o botão com
         # número e via ("Sony 1 · BT"), no mesmo formato dos externos.
-        total = len(conectados) + len(externals)
+        #
+        # CONTAGEM-01: a soma sai da mesma função que o cabeçalho e os cartões
+        # usam, sobre o mesmo payload. Somar `len(conectados) + len(externals)`
+        # aqui dava o número certo por acaso — enquanto `_externals` viesse de
+        # outro lugar, era o quarto ponto da janela a contar por conta própria.
+        total = len(controles_na_mesa(state))
         # PERFIL-05: numeração dos externos usa a contagem REAL de DualSense
         # (antes derivava de len(botões)-1, que assumia a linha "Todos").
         self._dualsense_count = len(conectados)
@@ -1361,11 +1350,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         ]
 
     @staticmethod
-    def _controllers_transports(conectados: list[dict[str, Any]]) -> str:
-        """'BT + USB' (transportes em texto plano, primário primeiro)."""
-        return " + ".join(
-            (c.get("transport") or "?").upper() for c in conectados
-        )
+    def _controllers_transports(mesa: list[dict[str, Any]]) -> str:
+        """'BT + USB' (vias em texto plano, primário primeiro).
+
+        CONTAGEM-01: recebe a MESA (DualSense adotados + externos), não só a
+        lista de DualSense — senão a linha "Como conectou" listaria duas vias
+        embaixo de um cabeçalho que diz quatro controles. A tradução da via de
+        cada espécie mora em `via_curta` (dono único).
+        """
+        return " + ".join(via_curta(c) for c in mesa)
 
     def _render_online(self, state: dict[str, Any]) -> None:
         """Header canônico de estado ONLINE —  verde + transport.
@@ -1373,27 +1366,42 @@ class StatusActionsMixin(WidgetAccessMixin):
         Delega o pinta-completo-da-aba a `_render_live_state` e
         `_render_slow_state` (já chamados pelos ticks rápidos). Aqui só
         firma o header de forma idempotente.
+
+        CONTAGEM-01, entrega 2: o número do cabeçalho é o da MESA. Ele contava
+        `len(conectados)` — só DualSense — e era o "2 controles: USB + BT" que
+        aparecia por cima de uma fita de chips mostrando quatro. E a decisão
+        de "há controle?" também passou para a mesa: o `connected` do payload
+        fala só do DualSense primário, então com dois externos e nenhum
+        DualSense o cabeçalho afirmava "Controle Desconectado" com dois
+        controles ligados na frente dela.
         """
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
-        conectados = self._connected_controllers(state)
+        mesa = controles_na_mesa(state)
         if header is not None:
-            if connected and len(conectados) > 1:
+            if len(mesa) > 1:
                 # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
                 partes = " + ".join(
-                    f"<b>{(c.get('transport') or '?').upper()}</b>"
-                    if c.get("is_primary")
-                    else (c.get("transport") or "?").upper()
-                    for c in conectados
+                    f"<b>{via_curta(c)}</b>"
+                    if c.get("is_primary") and not e_externo(c)
+                    else via_curta(c)
+                    for c in mesa
                 )
                 header.set_markup(
-                    f'<span foreground="#50fa7b">&#9679; {len(conectados)} controles: '
+                    f'<span foreground="#50fa7b">&#9679; {len(mesa)} controles: '
                     f"{partes}</span>"
                 )
-            elif connected:
+            elif mesa or connected:
+                # `mesa` vazia com `connected` verdadeiro = payload sem o bloco
+                # `controllers` (daemon anterior ao multi-controle, dublê de
+                # teste). O transporte do topo ainda responde por ele — o
+                # caminho degradado de sempre, preservado de propósito.
+                via = via_curta(mesa[0]) if mesa else "?"
+                if via == "?" and transport != "—":
+                    via = str(transport).upper()
                 header.set_markup(
-                    f'<span foreground="#50fa7b">&#9679; Conectado Via {transport.upper()}</span>'
+                    f'<span foreground="#50fa7b">&#9679; Conectado Via {via}</span>'
                 )
             else:
                 header.set_markup(
@@ -1488,9 +1496,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # widgets enquanto um popup está aberto, para não fechá-lo via re-layout.
         if self._popup_is_open():
             return
-        # 8BIT-02: inventário de externos (opt-in, caro) atualizado no tick lento
-        # com throttle próprio — alimenta os botões de externos do seletor.
-        self._maybe_fetch_externals()
+        # CONTAGEM-01, entrega 5: os externos chegam pelo MESMO `state_full`
+        # que traz os DualSense. A busca própria e assíncrona
+        # (`controller.list {external:true}` a cada 4 s) foi removida: era ela
+        # que fazia a fita de chips enxergar quatro enquanto o resto da janela
+        # dizia dois — duas rotas de dados para a mesma pergunta divergem, é
+        # só questão de qual chega primeiro.
+        self._sync_externals_from_state(state)
         self._update_rumble_badge(state)
         self._sync_coop_governa_luzes(state)
         connected = bool(state.get("connected"))
@@ -1499,18 +1511,23 @@ class StatusActionsMixin(WidgetAccessMixin):
         active_profile = state.get("active_profile") or "Nenhum"
 
         conectados = self._connected_controllers(state)
-        if len(conectados) > 1:
-            self._set_label(
-                "status_connection", f"Conectado ({len(conectados)} controles)"
-            )
-            self._set_label("status_transport", self._controllers_transports(conectados))
+        # CONTAGEM-01, entrega 2: "Conectado (N controles)" conta a MESA. Este
+        # rótulo era o terceiro lugar a repetir `len(conectados)` — a aba
+        # Status dizia dois com quatro controles na mesa, pela mesma causa do
+        # cabeçalho. O ramo de baixo preserva o caminho degradado (payload sem
+        # o bloco `controllers`), pelo mesmo motivo do `_render_online`.
+        mesa = controles_na_mesa(state)
+        if len(mesa) > 1:
+            self._set_label("status_connection", f"Conectado ({len(mesa)} controles)")
+            self._set_label("status_transport", self._controllers_transports(mesa))
         else:
             self._set_label(
-                "status_connection", "Conectado" if connected else "Desconectado"
+                "status_connection", "Conectado" if (mesa or connected) else "Desconectado"
             )
-            self._set_label(
-                "status_transport", transport.upper() if transport != "—" else "—"
-            )
+            via = via_curta(mesa[0]) if mesa else "?"
+            if via == "?":
+                via = transport.upper() if transport != "—" else "—"
+            self._set_label("status_transport", via)
         self._set_label("status_active_profile", active_profile)
         self._set_label("status_daemon", "Ligado")
 
