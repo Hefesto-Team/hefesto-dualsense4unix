@@ -18,6 +18,7 @@ from collections.abc import Callable
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core.led_control import numero_do_padrao_de_jogador
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.core.trigger_effects import off as trigger_off
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
@@ -1832,6 +1833,20 @@ class IpcHandlersMixin:
           `identity_registry` do daemon — consulta DEFENSIVA com
           ``assign=False`` (ler estado nunca aloca slot). O registry é
           entregue por outra frente; ausente → None.
+        - ``player_game`` (SLOT-JOGADOR-01): o número de jogador que o JOGO
+          declarou para ESTE controle, decodificado dos cinco bits que ele
+          mesmo escreveu (``player_leds_game``) pela tabela canônica. É o
+          ÚNICO número de jogador do payload cuja autoridade não é nossa —
+          e por isso o único que a interface pode exibir dizendo "no jogo".
+          ``None`` = o jogo nunca escreveu número neste controle (nenhum jogo
+          aberto, ou jogo que não usa a barra de jogador). Não confundir com
+          ``player``, que é NOSSO (ver `resolve_player_numbers`): ele é o
+          índice de alocação de vpad do co-op, ancorado no PRIMÁRIO do
+          backend — e o primário é eleito por ordem de enumeração do hidapi
+          (`backend_pydualsense._recompute_primary`), que não tem relação
+          nenhuma com a fila de preferência que dá o ``player_slot``. É essa
+          falta de âncora comum que faz, nesta casa, o "Controle 2" ser o
+          jogador 1 do co-op.
         - ``lightbar_rgb``/``lightbar_on``/``lightbar_source``: a cor efetiva
           CONHECIDA (o que está/estaria aceso), decidida pelo DONO DA ESCRITA:
           * ``"sysfs"`` — nó gravável (mapa `_sysfs` do backend) E escrito por
@@ -1908,6 +1923,12 @@ class IpcHandlersMixin:
             uniq = uniq if isinstance(uniq, str) and uniq else None
 
             entry["player_slot"] = self._player_slot_for(uniq)
+            # SLOT-JOGADOR-01: o número que o JOGO declarou, decodificado dos
+            # bits que ele escreveu. Fica ao lado do `player_slot` de propósito
+            # — quem monta rótulo precisa poder dizer de QUEM é cada número.
+            entry["player_game"] = numero_do_padrao_de_jogador(
+                entry.get("player_leds_game")
+            )
 
             rgb, on, source = self._lightbar_for_uniq(
                 uniq, node_by_uniq, written_by_uniq

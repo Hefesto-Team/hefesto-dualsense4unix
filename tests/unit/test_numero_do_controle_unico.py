@@ -80,14 +80,16 @@ class TestTelasConcordam:
         """Divergir aqui é CORRETO: são coisas diferentes.
 
         O daemon reusa índices de jogador quando alguém sai e outro entra, então
-        o controle 2 pode legitimamente ser o jogador 3.
+        o controle 2 pode legitimamente ser o jogador 3. SLOT-JOGADOR-01: a
+        divergência fica LEGÍVEL — o número do jogador vem com a autoridade
+        colada ("no co-op"), então os dois não se leem como um só.
         """
         from hefesto_dualsense4unix.app.actions.home_actions import (
             _format_controller_title,
         )
 
         entry = {"player_slot": 2, "player": 3, "transport": "bt"}
-        assert _format_controller_title(entry) == "Controle 2 — P3"
+        assert _format_controller_title(entry) == "Controle 2 — P3 no co-op"
 
     def test_sem_jogador_o_card_so_se_identifica(self) -> None:
         """Fora do co-op o jogo vê um controle só — inventar "P" seria mentira."""

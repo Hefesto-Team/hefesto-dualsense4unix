@@ -105,10 +105,20 @@ class TestFormatControllerTitle:
 
     def test_numero_do_controle_e_jogador_podem_divergir(self) -> None:
         # Controle 2 sendo o jogador 3 é real: índices de jogador são reusados
-        # quando um sai e outro entra.
+        # quando um sai e outro entra. SLOT-JOGADOR-01: o número do jogador sai
+        # com a AUTORIDADE colada, para não ser lido como o número do aparelho.
         assert (
             _format_controller_title({"player_slot": 2, "player": 3})
-            == "Controle 2 — P3"
+            == "Controle 2 — P3 no co-op"
+        )
+
+    def test_numero_que_o_jogo_declarou_vence_o_do_coop(self) -> None:
+        """SLOT-JOGADOR-01: o jogo tendo dito o número encerra a discussão."""
+        assert (
+            _format_controller_title(
+                {"player_slot": 2, "player": 1, "player_game": 4}
+            )
+            == "Controle 2 — P4 no jogo"
         )
 
     def test_sem_numero_de_jogador_o_card_so_se_identifica(self) -> None:
@@ -293,8 +303,8 @@ def test_render_usa_o_jogador_do_daemon_e_nao_a_posicao(fake_gtk: None) -> None:
     )
 
     cards = host._home_controllers_box.get_children()
-    assert "<b>Controle 1 — P1</b>" in _card_texts(cards[0])
-    assert "Controle 2 — P3" in _card_texts(cards[1])
+    assert "<b>Controle 1 — P1 no co-op</b>" in _card_texts(cards[0])
+    assert "Controle 2 — P3 no co-op" in _card_texts(cards[1])
 
 
 def test_render_sem_jogador_omite_o_p(fake_gtk: None) -> None:

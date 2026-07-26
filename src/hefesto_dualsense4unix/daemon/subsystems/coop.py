@@ -204,6 +204,12 @@ class CoopManager:
         Só entra quem o jogo enxerga: um secundário ainda aguardando o grab não
         tem vpad — reservou o índice, mas não é jogador nenhum até ser promovido.
         Identidade sem MAC ("path:") fica de fora (não há como casar o card).
+
+        SLOT-JOGADOR-01: repare na âncora — o P1 é o PRIMÁRIO do backend, que
+        é eleito por ordem de enumeração do hidapi, não pela fila de
+        preferência que dá o "Controle N". Este número e aquele não têm como
+        coincidir a não ser por sorte; ver `resolve_player_numbers` para o
+        porquê de isso não ser mascarado aqui.
         """
         out: dict[str, int] = {}
         primary = self._primary_identity()
@@ -1345,24 +1351,77 @@ class CoopManager:
     stop_all = disable
 
 
+def _primarios(
+    daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
+) -> list[bool]:
+    """Máscara "esta entrada é o controle PRIMÁRIO?" (SLOT-JOGADOR-01).
+
+    Ordem das fontes, da mais direta para a mais frouxa — nunca duas ao mesmo
+    tempo, para não haver como divergirem:
+
+    1. o carimbo `is_primary` da própria entrada, que o backend escreve
+       comparando com o `_primary_key` (`describe_controllers`);
+    2. o `primary_uniq` do backend, casado por MAC — cobre payload de daemon
+       antigo e dublê de teste que não carimba o campo;
+    3. ninguém. Sem saber quem é o primário, a resposta é "nenhum jogador"
+       em vez de eleger o primeiro da lista: posição é justamente o chute que
+       a NUM-01 tirou de circulação.
+    """
+    marcados = [bool(c.get("is_primary")) for c in controllers]
+    if any(marcados):
+        return marcados
+    uniq_primario = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+    if not isinstance(uniq_primario, str) or not uniq_primario:
+        return [False] * len(controllers)
+    return [c.get("uniq") == uniq_primario for c in controllers]
+
+
 def resolve_player_numbers(
     daemon: DaemonProtocol, controllers: Sequence[Mapping[str, object]]
 ) -> list[int | None]:
-    """Número do jogador que o JOGO vê, para cada controle de `controllers`.
+    """Número do jogador que ESTE controle alimenta no jogo, ou `None`.
 
     LEIGO-01b: a fonte do número é o daemon, nunca a posição na lista. `None`
     significa "este controle não é um jogador agora" e a UI simplesmente não
-    mostra número — melhor calar que mentir. Acontece em três casos:
+    mostra número — melhor calar que mentir. Acontece em quatro casos:
 
     - sem gamepad virtual (modo desktop/nativo): não existe jogador — o controle
       mexe no PC ou fala direto com o jogo;
     - controle desconectado;
     - co-op ligado mas o jogador ainda não foi promovido (aguardando o grab), ou
-      controle sem MAC para casar.
+      controle sem MAC para casar;
+    - co-op DESLIGADO e o controle não é o primário (ver abaixo).
 
-    Com o gamepad ligado e o co-op DESLIGADO todos os controles conectados são o
-    jogador 1 — é literalmente o que o jogo vê (um vpad só, alimentado pelo
-    primário). Função de leitura pura: não toca no estado do co-op.
+    **SLOT-JOGADOR-01 — este número é NOSSO, e não é o "Controle N".** Ele é o
+    índice de alocação de vpad do co-op (o `player_index`, que vira o MAC
+    `02:fe:00:00:00:0N` do uhid e é REUSADO quando alguém sai), ancorado no
+    PRIMÁRIO do backend. E o primário é eleito por ordem de enumeração do
+    hidapi (`backend_pydualsense._recompute_primary`), enquanto o "Controle N"
+    exibido e ACESO na barra de jogador sai da fila de preferência do
+    `identity_registry` (NUM-01). São duas âncoras sem nada em comum: por isso
+    o controle que acende UMA luz pode ser o jogador 2 do co-op. Quem monta
+    rótulo tem de dizer de quem é cada número — ver
+    `app.actions.base.sufixo_de_jogador`.
+
+    **Co-op DESLIGADO: só o PRIMÁRIO é jogador.** Antes esta função devolvia 1
+    para TODOS os conectados, com o argumento de que o jogo vê um vpad só. O
+    argumento era meio verdadeiro e a consequência, falsa: o vpad único existe,
+    mas quem o alimenta é exclusivamente o primário —
+    `backend_pydualsense.read_state` abre com "INPUT vem SEMPRE do controle
+    PRIMÁRIO (`self._ds`)" e o evdev é re-atrelado ao `primary_uniq` a cada
+    troca de primário. Um segundo DualSense com o co-op desligado não move
+    nada no jogo; rotulá-lo "jogador 1" prometia à mantenedora um jogador que
+    não existe e ainda punha DOIS cartões com o mesmo número na mesma tela —
+    exatamente o que a CONTAGEM-01 proíbe. Agora ele fica sem número, que é a
+    resposta honesta: para ele virar jogador é preciso ligar o co-op.
+
+    O primário é identificado pelo campo `is_primary` da própria entrada (o
+    `describe_controllers` do backend o carimba a partir do `_primary_key` —
+    a MESMA verdade, sem segunda fonte). Payload sem o campo (daemon antigo,
+    dublê de teste) cai no `primary_uniq` do backend; sem os dois, ninguém é
+    numerado — null honesto em vez de chute posicional (NUM-01/R-24).
+
+    Função de leitura pura: não toca no estado do co-op.
     """
     if getattr(daemon, "_gamepad_device", None) is None:
         return [None] * len(controllers)
@@ -1370,7 +1429,11 @@ def resolve_player_numbers(
     coop_on = bool(getattr(getattr(daemon, "config", None), "coop_enabled", False))
     manager = getattr(daemon, "_coop_manager", None)
     if not coop_on or manager is None:
-        return [1 if ok else None for ok in connected]
+        primarios = _primarios(daemon, controllers)
+        return [
+            1 if (ok and eh) else None
+            for ok, eh in zip(connected, primarios, strict=True)
+        ]
     index_by_mac = manager.player_indexes()
     out: list[int | None] = []
     for ctrl, ok in zip(controllers, connected, strict=True):

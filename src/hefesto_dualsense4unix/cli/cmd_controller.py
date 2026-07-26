@@ -279,16 +279,18 @@ def _numero_do_padrao(bits: Any) -> str:
     Padrão fora da tabela não vira número: mostra-se o desenho e deixa-se a
     interpretação para quem lê. Inventar um número aqui seria repetir, na
     interface, o erro que a leitura de `/sys/class/leds` já causou uma vez.
+
+    SLOT-JOGADOR-01: a decodificação em si virou
+    `core.led_control.numero_do_padrao_de_jogador` — a inversa mora ao lado da
+    tabela, e o daemon publica o resultado dela no `state_full` para a GUI. Aqui
+    ficou só a formatação (número, ou o desenho quando não é da tabela).
     """
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+    from hefesto_dualsense4unix.core.led_control import numero_do_padrao_de_jogador
 
     if not isinstance(bits, (list, tuple)):
         return "—"
-    alvo = tuple(bool(b) for b in list(bits)[:5])
-    for numero in range(1, 9):
-        if player_led_pattern(numero) == alvo:
-            return str(numero)
-    return _padrao(bits)
+    numero = numero_do_padrao_de_jogador(list(bits)[:5])
+    return str(numero) if numero is not None else _padrao(bits)
 
 
 def _hid_devices_por_ordem_de_registro() -> list[tuple[str, str | None, bool]]:
@@ -449,7 +451,16 @@ def cmd_numbers(
             f"\n[bold]Controle {linha['controle']}[/bold] — "
             f"{(linha['transporte'] or '?').upper()}"
         )
-        console.print(f"  nosso número (daemon)........: {linha['nosso_numero'] or '—'}")
+        # SLOT-JOGADOR-01: a coluna se chamava "nosso número (daemon)" e isso
+        # foi o que fez a divergência parecer defeito de exibição. "Nosso
+        # número" é o do título ("Controle N", o que acendemos na barra de
+        # jogador do aparelho); ESTA linha é outra coisa — o jogador do co-op,
+        # ancorado no primário do backend. As duas são nossas e divergem por
+        # construção; a coluna agora diz qual é qual.
+        console.print(
+            f"  jogador no co-op (nosso).....: {linha['nosso_numero'] or '—'}"
+            f"   [dim](o título é o Controle {linha['controle']})[/dim]"
+        )
         console.print(
             f"  número do jogo (camada GAME).: {linha['numero_do_jogo'] or '—'}"
             f"   {_padrao(linha['player_leds_game'])}"

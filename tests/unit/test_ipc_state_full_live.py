@@ -236,12 +236,14 @@ class TestPlayerPorControle:
         # STATUS-01/COR-05/BT-03: além do `player`, cada entrada carrega os
         # campos por controle — aqui tudo None/"desconhecida" (FakeController
         # sem sysfs/desired, sem coop, sem registry, `_last_state` None).
+        # SLOT-JOGADOR-01 acrescentou `player_game` — o número que o JOGO
+        # declarou (None: nenhum jogo escreveu nada neste controle).
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
-             "player_slot": None, "lightbar_rgb": None, "lightbar_on": False,
-             "lightbar_source": "desconhecida", "inputs": None,
-             "vpad_backend": None, "vpad_motivo": None},
+             "player_slot": None, "player_game": None, "lightbar_rgb": None,
+             "lightbar_on": False, "lightbar_source": "desconhecida",
+             "inputs": None, "vpad_backend": None, "vpad_motivo": None},
         ]
 
     @pytest.mark.asyncio

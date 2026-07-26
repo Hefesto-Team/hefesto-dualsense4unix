@@ -3,7 +3,7 @@
 Exercita com GTK REAL (a suíte roda com display; 0 skips):
 
   * 2 controles no ``state_full`` → 2 ControllerCard com título e bateria
-    PRÓPRIOS ("Controle 1 — BT · Jogador 1" pelo ``player_slot``/``player``;
+    PRÓPRIOS ("Controle 1 — BT · P1 no co-op" pelo ``player_slot``/``player``;
     fallback ``index + 1`` sem slot; sem "Jogador" fora do co-op — D7);
   * 2 ticks com o MESMO conjunto → os MESMOS objetos de widget (``id()``,
     sem rebuild); conjunto novo → rebuild;
@@ -224,8 +224,11 @@ def test_dois_controles_criam_dois_cards_com_titulo_e_bateria_proprios(
 
     cards = host.cards()
     assert len(cards) == 2
-    assert cards[0]._title_label.get_text() == "Controle 1 — BT · Jogador 1"
-    assert cards[1]._title_label.get_text() == "Controle 2 — USB · Jogador 2"
+    # SLOT-JOGADOR-01: o sufixo ganhou a AUTORIDADE colada. "Jogador 2" cru,
+    # ao lado de "Controle 1", lia-se como dois numeros para a mesma pergunta;
+    # sao duas perguntas (qual aparelho e este x que jogador ele alimenta).
+    assert cards[0]._title_label.get_text() == "Controle 1 — BT · P1 no co-op"
+    assert cards[1]._title_label.get_text() == "Controle 2 — USB · P2 no co-op"
     assert cards[0]._battery_bar.get_text() == "80 %"
     assert cards[1]._battery_bar.get_text() == "55 %"
 
@@ -254,7 +257,7 @@ def test_titulo_fallback_index_mais_um_sem_slot_e_sem_jogador(
 
 def test_titulo_do_card_funcao_pura() -> None:
     assert titulo_do_card(_entry(player_slot=3, player=2)) == (
-        "Controle 3 — BT · Jogador 2"
+        "Controle 3 — BT · P2 no co-op"
     )
     assert titulo_do_card(_entry(index=1, transport="usb")) == "Controle 2 — USB"
     # bool não é int válido (payload malformado não vira número).

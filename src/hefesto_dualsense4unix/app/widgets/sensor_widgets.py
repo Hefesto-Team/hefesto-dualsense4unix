@@ -105,9 +105,10 @@ def selo_mic(muted: bool | None) -> tuple[str, str, str] | None:
 MIC_AMOSTRAS: Final[int] = 14
 
 #: Piso da altura de uma barra do medidor. Sem ele, silêncio absoluto apagaria
-#: o medidor inteiro e ficaria idêntico a "não tenho microfone" — que é o
-#: estado em que o módulo SOME. Com o piso, silêncio é uma linha baixa e
-#: contínua: dá para ver que o medidor está vivo e não tem nada entrando.
+#: o medidor inteiro e ficaria idêntico a "não estou medindo" — que agora é um
+#: estado DESENHADO (`MicMeter.set_inativo`), e não mais o sumiço do módulo.
+#: Com o piso, silêncio é uma linha baixa e contínua: dá para ver que o
+#: medidor está vivo e não tem nada entrando.
 MIC_PISO_BARRA: Final[float] = 0.08
 
 
@@ -320,12 +321,26 @@ if _GTK_DISPONIVEL:
         mudava e o verde de pico, que dependia de uma barra ultrapassar 60%,
         não aparecia nunca. Agora cada barra É uma amostra: a altura conta o
         que entrou naquele instante e a cor sai de :func:`cor_da_barra_do_mic`.
+
+        Dois estados de desenho, e a diferença entre eles é o contrato desta
+        casa (MIC-FAIXA-01):
+
+        * **medindo** — as 14 barras, com o piso de :data:`MIC_PISO_BARRA`
+          que faz o silêncio virar uma linha baixa e CONTÍNUA (dá para ver
+          que o medidor está vivo e nada entrando);
+        * **inativo** — só a trilha vazia e o contorno. Nasce assim. Sem
+          medição, aquelas mesmas barras no piso diriam "silêncio" onde a
+          verdade é "não estou medindo" — e é justamente o que a faixa do
+          rodapé escreve por extenso ao lado.
         """
 
         def __init__(self) -> None:
             super().__init__()
             self._nivel = 0.0
             self._historico: tuple[float, ...] = (0.0,) * MIC_AMOSTRAS
+            # Nasce INATIVO: nada foi medido ainda, e barras no piso antes da
+            # primeira amostra seriam silêncio afirmado sem prova.
+            self._inativo = True
             self.set_size_request(*_MIC_PX)
             self.connect("draw", self._on_draw)
 
@@ -334,18 +349,39 @@ if _GTK_DISPONIVEL:
             valor = max(0.0, min(1.0, float(nivel)))
             self._nivel = valor
             self._historico = historico_deslizante(self._historico, valor)
+            self._inativo = False
             self.queue_draw()
 
-        def limpar(self) -> None:
-            """Zera a onda — o mic sumiu e o traço dele não pode ficar na tela."""
-            if any(self._historico) or self._nivel:
+        def set_inativo(self) -> None:
+            """Sem medição: a área continua na tela, vazia — e a onda vai junto.
+
+            O widget NÃO é escondido: a faixa do microfone é permanente. O que
+            some é o dado, porque não existe.
+            """
+            if not self._inativo or any(self._historico) or self._nivel:
                 self._nivel = 0.0
                 self._historico = (0.0,) * MIC_AMOSTRAS
+                self._inativo = True
                 self.queue_draw()
+
+        def limpar(self) -> None:
+            """Alias histórico de :meth:`set_inativo` (o mic sumiu)."""
+            self.set_inativo()
 
         def _on_draw(self, _widget: Any, ctx: Any) -> bool:
             largura = self.get_allocated_width()
             altura = self.get_allocated_height()
+            if self._inativo:
+                # Trilha + contorno: o espaço do medidor fica desenhado como
+                # espaço, sem uma única barra que possa ser lida como nível.
+                ctx.set_source_rgb(*hex_para_rgb(COR_TRILHA))
+                ctx.rectangle(0, 0, largura, altura)
+                ctx.fill()
+                ctx.set_source_rgb(*hex_para_rgb(COR_CONTORNO))
+                ctx.set_line_width(1)
+                ctx.rectangle(0.5, 0.5, largura - 1, altura - 1)
+                ctx.stroke()
+                return False
             passo = largura / MIC_AMOSTRAS
             for indice, amostra in enumerate(self._historico):
                 fracao = max(MIC_PISO_BARRA, amostra)
@@ -491,14 +527,20 @@ else:
         def __init__(self) -> None:
             self._nivel = 0.0
             self._historico: tuple[float, ...] = (0.0,) * MIC_AMOSTRAS
+            self._inativo = True
 
         def set_nivel(self, nivel: float) -> None:
             self._nivel = max(0.0, min(1.0, float(nivel)))
             self._historico = historico_deslizante(self._historico, self._nivel)
+            self._inativo = False
 
-        def limpar(self) -> None:
+        def set_inativo(self) -> None:
             self._nivel = 0.0
             self._historico = (0.0,) * MIC_AMOSTRAS
+            self._inativo = True
+
+        def limpar(self) -> None:
+            self.set_inativo()
 
         def set_size_request(self, *_args: object) -> None:
             """No-op no stub."""

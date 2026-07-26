@@ -130,6 +130,33 @@ def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
     return _PLAYER_LED_PATTERNS.get(index, _PLAYER_LED_OVERFLOW)
 
 
+def numero_do_padrao_de_jogador(bits: object) -> int | None:
+    """INVERSA de :func:`player_led_pattern`: número que um padrão representa.
+
+    Existe porque o único número de jogador cuja AUTORIDADE é o jogo chega
+    até nós como cinco bits — o relatório de saída HID que o jogo escreve e
+    que o backend guarda em ``player_leds_game``. Sem esta tradução aquele
+    dado não vira número em lugar nenhum, e a interface fica só com o número
+    que NÓS inventamos.
+
+    Contar os LEDs acesos seria errado: no DualSense o jogador 1 acende o LED
+    do MEIO, não o primeiro. A tradução tem de ser pela tabela.
+
+    ``None`` para qualquer coisa fora da tabela (padrão desconhecido, lista de
+    tamanho errado, ausente). Inventar um número aqui repetiria, na
+    interface, o erro que a leitura de ``/sys/class/leds`` já causou uma vez
+    na investigação de 25/07 — a tabela do kernel é IDÊNTICA à nossa em 1..4,
+    então um padrão só diz "que número", nunca "quem escreveu".
+    """
+    if not isinstance(bits, (list, tuple)) or len(bits) != 5:
+        return None
+    alvo = tuple(bool(b) for b in bits)
+    for numero, padrao in _PLAYER_LED_PATTERNS.items():
+        if padrao == alvo:
+            return numero
+    return None
+
+
 #: COR-03 — paleta automática de lightbar por controle, estilo PS5 (cores por
 #: ordem de conexão). Valores canônicos desta casa (decisão documentada do
 #: sprint 2026-07-16-sprint-cores-e-led-automaticos): primárias puras + rosa
@@ -213,6 +240,7 @@ __all__ = [
     "LedSettings",
     "apply_led_settings",
     "hex_to_rgb",
+    "numero_do_padrao_de_jogador",
     "off",
     "player_bitmask",
     "player_led_pattern",
