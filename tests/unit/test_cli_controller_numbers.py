@@ -127,10 +127,30 @@ class TestColunasDeclaramProcedencia:
         assert cmd_controller._numero_do_padrao(P4) == "4"
 
     def test_padrao_fora_da_tabela_nao_vira_numero_inventado(self) -> None:
+        aceso, apagado = chr(0x25CF), chr(0x25CB)
         assert cmd_controller._numero_do_padrao([True, False, False, False, False]) == (
-            ""
+            aceso + apagado * 4
         )
         assert cmd_controller._numero_do_padrao(None) == "—"
+
+    def test_o_desenho_nao_pode_virar_string_vazia(self) -> None:
+        """Regressão do ADR-011, e desta vez com um culpado com nome.
+
+        No commit `d1177c2` o higienizador de emojis do fluxo de commit apagou
+        BLACK CIRCLE e WHITE CIRCLE do código E do valor esperado do teste
+        acima: `_padrao` passou a devolver `""` para qualquer entrada e a suíte
+        continuou verde, porque o assert virou `== ""`. O ADR-011 já registrava
+        esse mesmo modo de falha de 21/04/2026.
+
+        Este teste não compara com literal nenhum — ele cobra as PROPRIEDADES
+        que qualquer apagamento de glifo quebra: cinco posições, e aceso
+        diferente de apagado. Um higienizador que esvazie os dois lados derruba
+        aqui, mesmo que esvazie o teste anterior junto.
+        """
+        desenho = cmd_controller._padrao([True, False, False, False, False])
+        assert len(desenho) == 5, f"esperava 5 posições, veio {desenho!r}"
+        assert len(set(desenho)) == 2, f"aceso e apagado colidiram: {desenho!r}"
+        assert desenho.strip() != "", "o desenho não pode ser espaço nem vazio"
 
 
 class TestOrdemDoBarramentoHid:
