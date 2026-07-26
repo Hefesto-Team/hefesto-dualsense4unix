@@ -32,7 +32,20 @@ from typing import Any
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk, Pango
+from gi.repository import GLib, Gtk
+
+# MIC-FAIXA-01: o Pango entra OPCIONAL, e não no import direto, por uma
+# armadilha que este projeto já pagou: na CI o `gi` importa, mas os typelibs
+# são PARCIAIS — não há `Pango` nem `Gtk.DrawingArea`. Um `from gi.repository
+# import Pango` no topo não vira skip: derruba a COLETA de todo módulo de teste
+# que encoste aqui, e a CI reprova em massa com ImportError. É o mesmo motivo
+# pelo qual `sensor_widgets` mede `hasattr(Gtk, "DrawingArea")` em vez de
+# confiar no import. Sem Pango, o motivo da faixa simplesmente não elipsa — o
+# texto continua lá, e o tooltip completo também.
+try:
+    from gi.repository import Pango
+except ImportError:  # pragma: no cover — só em typelib parcial (CI headless)
+    Pango = None
 
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import (
@@ -147,7 +160,8 @@ class _LinhaMic:
         # Elipse em vez de quebra de linha: a faixa mora num orçamento de
         # altura fixo, e um texto que quebra em duas linhas empurraria os
         # cards para fora da janela. O texto inteiro fica no tooltip.
-        motivo.set_ellipsize(Pango.EllipsizeMode.END)
+        if Pango is not None:
+            motivo.set_ellipsize(Pango.EllipsizeMode.END)
         motivo.get_style_context().add_class("dim-label")
         self.motivo = motivo
         self.box.pack_start(motivo, True, True, 0)
