@@ -79,6 +79,48 @@ GAME_TRIGGER_BLOCK_LEN = 11
 #: não passa por este teto: já é rate-limitada pela histerese de 30s do sinal.
 DEFEND_DISPLAY_MIN_INTERVAL_S = 30.0
 
+#: PLAYER-LED-01 (entrega 2 — a decisão sobre o gate entre categorias).
+#:
+#: CAMPOS da camada GAME que o gate de autoridade de exibição (`_game_wins()`)
+#: tem permissão de RETER. É o único lugar do backend que responde "o gate vale
+#: para esta categoria?": luz, número e gatilhos adaptativos passam todos por
+#: `_game_gate_retem()`, que consulta ESTE conjunto. Antes havia duas rotas
+#: discordando sobre a existência de um jogo — luz e número consultavam o gate,
+#: gatilho escrevia sempre — e o journal de 25/07 mostrou as duas no MESMO
+#: instante (gatilho replicando enquanto o número era retido).
+#:
+#: A unificação foi feita no lugar onde a pergunta é uma só ("há jogo?") e a
+#: política ficou explícita por categoria, porque as categorias NÃO têm o mesmo
+#: custo de erro. Medido, e não suposto:
+#:
+#: * `led` (lightbar) CONTINUA no gate. O gate nasceu de um incidente medido
+#:   (14:42): o CLIENTE da Steam, sem jogo nenhum, abria sessão uhid e repintava
+#:   a paleta do perfil. A cor tem dono nosso e é ativamente defendida
+#:   (`defend_display`); aceitar a do cliente deixa o controle com a cor errada
+#:   até o UHID_CLOSE. Falso negativo do gate = dano visível e persistente.
+#: * `player_leds` (o NÚMERO) SAI do gate. Três razões, nesta ordem:
+#:   1. o falso POSITIVO do gate custa a função inteira. O sinal de jogo falha
+#:      reconhecidamente para jogo fora da Steam e em janela nativa; enquanto
+#:      ele diz 'daemon' durante um jogo real, o número do jogo não chega ao
+#:      controle E a repintura reescreve o nosso por cima — o flip-flop que a
+#:      mantenedora viu com quatro controles na mesa;
+#:   2. o falso NEGATIVO custa quase nada, e este repositório JÁ aceita esse
+#:      risco por escrito em `replay_retained_game_outputs`: "cliente e jogo
+#:      compartilham a numeração do Steam Input". Reter o número só ADIA um
+#:      valor que o replay entrega igual alguns segundos depois;
+#:   3. a intenção de projeto está declarada em `apply_game_player_leds`: "o
+#:      número NO CONTROLE passa a ser o número que o JOGO atribuiu, não o dos
+#:      nossos registros". Reter o número contradiz a própria docstring.
+#: * gatilhos adaptativos (`trigger_left`/`trigger_right`, aplicados por
+#:   `set_game_trigger_for`) ficam FORA — mas agora por decisão registrada, não
+#:   por omissão. Efeito de gatilho é transitório, não tem escritor nosso
+#:   disputando, e `end_game_session_for` o devolve ao perfil no CLOSE: não há
+#:   dano persistente a proteger.
+#:
+#: Mudar este conjunto muda o comportamento das TRÊS rotas de uma vez — que é
+#: exatamente o ponto de ele existir.
+_GAME_LAYER_GATED_FIELDS = frozenset({"led"})
+
 #: GYRO-01: feature report da calibração da IMU (`DS_FEATURE_REPORT_CALIBRATION`
 #: / `_SIZE` do hid-playstation.c). Lido POR UNIDADE em `read_calibration` para
 #: o vpad carimbar no blueprint — por BT os 4 últimos bytes são CRC-32 (seed
@@ -839,7 +881,19 @@ class PyDualSenseController(IController):
         self._retained_game_outputs: dict[str, dict[str, Any]] = {}
         # Log `game_output_retido_sem_jogo` 1x por episódio (re-armado no
         # replay — episódio = um período contínuo de autoridade 'daemon').
-        self._retained_log_armed = True
+        #
+        # PLAYER-LED-01 (defeito 1): a trava é POR CONTROLE. Era um campo
+        # único do backend, e com quatro controles na mesa o PRIMEIRO a ser
+        # retido silenciava o log dos outros três — o `uniq` que aparecia no
+        # journal não era o único afetado, e foi exatamente isso que
+        # desorientou a leitura ao vivo de 25/07 (a investigação procurou um
+        # defeito só no controle que apareceu no log). Ausente = armado.
+        self._retained_log_armed_by_uniq: dict[str, bool] = {}
+        # PLAYER-LED-01 (defeito 3): campos já anunciados como APLICADOS por
+        # controle nesta sessão (`game_output_aplicado`). O par honesto do
+        # `uhid_replica_ativa`, que é emitido antes do gate — este só sai
+        # quando a escrita aconteceu. Zerado no `end_game_session_for`.
+        self._applied_log_seen_by_uniq: dict[str, set[str]] = {}
         # NUMA-03: monotonic da última defesa de exibição (rate-limit da
         # defesa disparada por réplica retida).
         self._defend_last_at: float | None = None
@@ -1110,6 +1164,55 @@ class PyDualSenseController(IController):
             logger.debug("game_authority_provider_falhou", err=str(exc))
             return True
 
+    def _game_gate_retem(self, campo: str) -> bool:
+        """True quando o gate de exibição RETÉM `campo` da camada GAME.
+
+        PLAYER-LED-01 (entrega 2) — PONTO ÚNICO da pergunta "o gate vale para
+        esta categoria?". Chamar sob `_io_lock` (encosta em `_game_wins()`).
+        Toda rota de réplica do jogo passa por aqui: lightbar e player-LED
+        (`set_game_output_for`), gatilhos adaptativos (`set_game_trigger_for`)
+        e o merge do desejado (`_game_layer_admitida`). O argumento da política
+        está em :data:`_GAME_LAYER_GATED_FIELDS`; aqui só se lê o veredito.
+
+        A ordem dos operandos importa: campo fora da política nem consulta a
+        autoridade — o gatilho do jogo não paga o custo de uma decisão que não
+        muda o resultado dele.
+        """
+        return campo in _GAME_LAYER_GATED_FIELDS and not self._game_wins()
+
+    def _game_layer_admitida(self, game: _DesiredOutput) -> _DesiredOutput | None:
+        """A parte da camada GAME que o gate deixa entrar no merge. Sob `_io_lock`.
+
+        PLAYER-LED-01 (entregas 2 e 3). Antes o merge era tudo-ou-nada: sob
+        autoridade 'daemon' a camada do jogo INTEIRA saía, o topo voltava a ser
+        a camada do co-op — o NOSSO número — e a repintura (`defend_display` →
+        `reassert_resolved_outputs`) escrevia esse número por cima do que o
+        jogo tinha acabado de pedir. Era a repintura defendendo o número contra
+        quem o escreveu.
+
+        Agora o corte é POR CAMPO: só os campos de
+        :data:`_GAME_LAYER_GATED_FIELDS` saem. Consequência direta, e é o
+        objetivo: com o número FORA do gate, a repintura passa a reafirmar o
+        número DO JOGO em vez de sobrescrevê-lo — ela deixa de ser a causa do
+        flip-flop e vira a defesa do número do jogo contra escritor
+        estrangeiro. A cor segue defendida exatamente como antes.
+
+        None = a camada não tem nada admissível a contribuir (não mesclar é
+        diferente de mesclar um objeto vazio: `_merge_desired` com campos None
+        é no-op, mas devolver None deixa o chamador barato e explícito).
+        """
+        if self._game_wins():
+            return game
+        sobrando = {
+            name: valor
+            for name in _OUTPUT_FIELDS
+            if name not in _GAME_LAYER_GATED_FIELDS
+            and (valor := getattr(game, name)) is not None
+        }
+        if not sobrando:
+            return None
+        return _DesiredOutput(**sobrando)
+
     def _merged_desired_for_key(
         self, key: str, *, incluir_coop: bool = True
     ) -> _DesiredOutput:
@@ -1162,13 +1265,18 @@ class PyDualSenseController(IController):
             resolved = self._scaled_led(uniq, resolved)
         game = self._game_output_by_uniq.get(uniq) if uniq is not None else None
         # NUMA-02 (gate de exibição em ponto ÚNICO): sob autoridade 'daemon' a
-        # camada GAME não entra no merge — este if governa de uma vez o
-        # priming, o reassert de hotplug, `reassert_resolved_outputs` e o
-        # unmute. Consequência provada nos replays: camada STALE (cliente
-        # Steam segurando a sessão uhid sem UHID_CLOSE) é neutralizada no
-        # resolve, não defendida — fechar o jogo devolve a paleta em ≤ ~32s.
-        if game is not None and self._game_wins():
-            resolved = _merge_desired(resolved, game)
+        # camada GAME entra no merge SEM os campos que a política retém —
+        # este ponto governa de uma vez o priming, o reassert de hotplug,
+        # `reassert_resolved_outputs` e o unmute. Consequência provada nos
+        # replays: a COR stale (cliente Steam segurando a sessão uhid sem
+        # UHID_CLOSE) é neutralizada no resolve, não defendida — fechar o jogo
+        # devolve a paleta em ≤ ~32s. PLAYER-LED-01: o NÚMERO deixou de ser
+        # neutralizado junto (ver `_game_layer_admitida`) — era ele que a
+        # repintura reescrevia por cima do jogo.
+        if game is not None:
+            admitida = self._game_layer_admitida(game)
+            if admitida is not None:
+                resolved = _merge_desired(resolved, admitida)
         return resolved
 
     def _scaled_led(self, uniq: str, desired: _DesiredOutput) -> _DesiredOutput:
@@ -2720,6 +2828,14 @@ class PyDualSenseController(IController):
         o efeito). A posse fica registrada em `_game_triggers_by_uniq` — o
         hotplug re-pendura no handle novo e `end_game_session_for` devolve o
         perfil. False = sem identidade estável (MAC) ou bloco inválido.
+
+        PLAYER-LED-01 (entrega 2): o gatilho passou a CONSULTAR o mesmo gate
+        de luz e número (`_game_gate_retem`) em vez de simplesmente ignorá-lo.
+        O resultado prático não muda — a política
+        (:data:`_GAME_LAYER_GATED_FIELDS`) não retém gatilho —, mas a rota
+        deixou de ter opinião própria sobre "há jogo?". Era essa discordância
+        entre duas rotas do mesmo subsistema que o journal de 25/07 mostrou:
+        gatilho replicando no mesmo instante em que o número era retido.
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -2731,7 +2847,16 @@ class PyDualSenseController(IController):
             )
             return False
         lado = "left" if side == "left" else "right"
+        campo = "trigger_left" if lado == "left" else "trigger_right"
         with self._io_lock:
+            if self._game_gate_retem(campo):
+                # Inalcançável com a política vigente, e de propósito: o dia
+                # em que alguém acrescentar gatilho a `_GAME_LAYER_GATED_FIELDS`
+                # esta rota obedece sem precisar ser lembrada.
+                logger.info(
+                    "game_trigger_retido_sem_jogo", uniq=alvo, lado=lado
+                )
+                return True
             self._game_triggers_by_uniq.setdefault(alvo, {})[lado] = block_b
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
@@ -2769,10 +2894,20 @@ class PyDualSenseController(IController):
         de NÃO-jogo — no incidente 14:42, o escritor era o CLIENTE Steam) a
         réplica de exibição é RETIDA: não popula a camada GAME, não escreve
         hardware; `replay_retained_game_outputs()` entrega o valor mais
-        recente 1x na abertura do gate. A telemetria `uhid_replica_ativa`
-        do vpad segue intacta (é emitida antes de chegar aqui). Réplica
-        retida = prova de escritor ativo ⇒ dispara a defesa de exibição,
-        rate-limitada (NUMA-03).
+        recente 1x na abertura do gate. Réplica retida = prova de escritor
+        ativo ⇒ dispara a defesa de exibição, rate-limitada (NUMA-03).
+
+        PLAYER-LED-01: a retenção é POR CAMPO, e a política está em
+        :data:`_GAME_LAYER_GATED_FIELDS` — hoje só a COR é retida. O NÚMERO
+        do jogo é aplicado mesmo sob autoridade 'daemon', porque o falso
+        positivo do sinal (jogo fora da Steam, janela nativa) custava a
+        função inteira e o falso negativo custa um número que viria igual
+        pelo replay. Uma chamada com cor E número sob 'daemon' se parte: a
+        cor vai para a retenção, o número vai para o hardware.
+
+        A telemetria `uhid_replica_ativa` do vpad é emitida ANTES de chegar
+        aqui e por isso não prova escrita nenhuma; quem prova é o
+        `game_output_aplicado` emitido por `_log_game_output_aplicado`.
         """
         alvo = self._key_to_uniq(uniq)
         if alvo is None:
@@ -2786,45 +2921,120 @@ class PyDualSenseController(IController):
         if not fields:
             return True
         defender = False
+        handle: Any = None
+        node: Any = None
+        muted = False
         with self._io_lock:
             # Decisão de gate UMA vez, sob o lock — o sinal pode flipar no
-            # tick de outro thread e uma réplica não pode ser retida E
-            # aplicada ao mesmo tempo.
-            wins = self._game_wins()
-            if not wins:
+            # tick de outro thread e um MESMO campo não pode ser retido E
+            # aplicado ao mesmo tempo. PLAYER-LED-01: a decisão é POR CAMPO
+            # (`_game_gate_retem`), então uma réplica que traz cor E número
+            # sob autoridade 'daemon' se parte em dois — a cor é retida, o
+            # número segue para o hardware.
+            retidos = {
+                name: valor
+                for name, valor in fields.items()
+                if self._game_gate_retem(name)
+            }
+            aplicados = {
+                name: valor
+                for name, valor in fields.items()
+                if name not in retidos
+            }
+            if retidos:
                 retido = self._retained_game_outputs.setdefault(alvo, {})
-                retido.update(fields)  # retain-latest: 1 valor por categoria
-                if self._retained_log_armed:
+                retido.update(retidos)  # retain-latest: 1 valor por categoria
+                if self._retained_log_armed_by_uniq.get(alvo, True):
                     logger.info(
                         "game_output_retido_sem_jogo",
                         uniq=alvo,
-                        campos=sorted(fields),
+                        campos=sorted(retidos),
                     )
-                    self._retained_log_armed = False
+                    self._retained_log_armed_by_uniq[alvo] = False
                 agora = time.monotonic()
                 defender = (
                     self._defend_last_at is None
                     or (agora - self._defend_last_at)
                     >= DEFEND_DISPLAY_MIN_INTERVAL_S
                 )
-        if not wins:
-            if defender:
-                self.defend_display()
-            return True
-        with self._io_lock:
-            layer = self._game_output_by_uniq.setdefault(alvo, _DesiredOutput())
-            for name, value in fields.items():
-                setattr(layer, name, value)
-            key = self._key_for_uniq(alvo)
-            handle = self._handles.get(key) if key is not None else None
-            node = self._sysfs.get(key) if key is not None else None
-            muted = self._output_mute
-        if handle is None:
-            return True
-        self._write_partial_output(
-            handle, node, muted, _DesiredOutput(**fields), what="game_output_replica"
-        )
+            if aplicados:
+                layer = self._game_output_by_uniq.setdefault(alvo, _DesiredOutput())
+                for name, value in aplicados.items():
+                    setattr(layer, name, value)
+                key = self._key_for_uniq(alvo)
+                handle = self._handles.get(key) if key is not None else None
+                node = self._sysfs.get(key) if key is not None else None
+                muted = self._output_mute
+        if aplicados:
+            if handle is None:
+                # Registrado na camada GAME; o hotplug aplica quando voltar.
+                self._log_game_output_aplicado(
+                    alvo, aplicados, destino="registrado_sem_handle"
+                )
+            else:
+                self._write_partial_output(
+                    handle,
+                    node,
+                    muted,
+                    _DesiredOutput(**aplicados),
+                    what="game_output_replica",
+                )
+                self._log_game_output_aplicado(
+                    alvo,
+                    aplicados,
+                    destino=(
+                        "sysfs_preferido"
+                        if (node is not None and not muted)
+                        else "hidraw"
+                    ),
+                )
+        if defender:
+            # A defesa roda DEPOIS da escrita dos campos aplicados: ela
+            # reafirma o desejado RESOLVIDO, que já inclui o número do jogo.
+            self.defend_display()
         return True
+
+    def _log_game_output_aplicado(
+        self, alvo: str, campos: dict[str, Any], *, destino: str
+    ) -> None:
+        """Registra que a réplica do jogo CHEGOU ao controle (PLAYER-LED-01).
+
+        Defeito 3 do sprint: `uhid_replica_ativa` é emitido no vpad, quando o
+        report do jogo é DECODIFICADO — bem antes de o backend decidir se
+        aplica. Um log que diz "ativa" quando nada chegou ao hardware orientou
+        a investigação de 25/07 para o lugar errado. Este é o par honesto: sai
+        no ponto onde a escrita de fato aconteceu.
+
+        `destino` diz a ROTA ESCOLHIDA, e o nome de cada valor foi escolhido
+        para não prometer mais do que se sabe:
+
+        - `sysfs_preferido` — havia nó de classe LED gravável e não estamos em
+          Modo Nativo; `_write_partial_output` tenta o sysfs PRIMEIRO e, se o
+          nó recusar a escrita, cai em pydualsense por dentro, sem avisar. Daí
+          "preferido" e não "sysfs": esta camada não tem como provar qual das
+          duas rotas concluiu;
+        - `hidraw` — não há nó (ou o Modo Nativo desabilitou a rota sysfs), a
+          escrita foi pelo handle;
+        - `registrado_sem_handle` — controle desconectado: ficou na camada
+          GAME e o hotplug aplica quando ele voltar. NÃO é escrita.
+
+        1x por (uniq, campo) por sessão de jogo — o rearme mora no
+        `end_game_session_for`, junto com a purga das camadas. Sem essa trava
+        seria uma linha por report num caminho de 250 Hz.
+
+        Vale a mesma advertência de método que o resto desta sprint: NÃO se
+        confere isto lendo `/sys/class/leds` do gamepad virtual (ver o aviso em
+        `describe_controllers`). O log é a única testemunha do AUTOR.
+        """
+        with self._io_lock:
+            vistos = self._applied_log_seen_by_uniq.setdefault(alvo, set())
+            novos = sorted(name for name in campos if name not in vistos)
+            vistos.update(novos)
+        if not novos:
+            return
+        logger.info(
+            "game_output_aplicado", uniq=alvo, campos=novos, destino=destino
+        )
 
     def replay_retained_game_outputs(self) -> None:
         """Entrega as réplicas RETIDAS na abertura do gate (NUMA-02).
@@ -2842,7 +3052,10 @@ class PyDualSenseController(IController):
         with self._io_lock:
             retidos = self._retained_game_outputs
             self._retained_game_outputs = {}
-            self._retained_log_armed = True
+            # PLAYER-LED-01 (defeito 1): re-arma o log de TODOS os controles —
+            # a trava é por `uniq`, e o episódio que termina aqui é o mesmo
+            # para a mesa inteira (a autoridade é global).
+            self._retained_log_armed_by_uniq.clear()
         for alvo, campos in retidos.items():
             with contextlib.suppress(Exception):
                 self.set_game_output_for(alvo, **campos)
@@ -2875,6 +3088,11 @@ class PyDualSenseController(IController):
             game = self._game_output_by_uniq.pop(alvo, None)
             triggers = self._game_triggers_by_uniq.pop(alvo, None)
             retido = self._retained_game_outputs.pop(alvo, None)
+            # PLAYER-LED-01 (defeito 1): a trava de log deste controle morre
+            # com a sessão que a armou — a próxima retenção dele é episódio
+            # novo e merece uma linha nova, mesmo sem passar pelo replay.
+            self._retained_log_armed_by_uniq.pop(alvo, None)
+            self._applied_log_seen_by_uniq.pop(alvo, None)
             key = self._key_for_uniq(alvo)
             handle = self._handles.get(key) if key is not None else None
             node = self._sysfs.get(key) if key is not None else None
@@ -3008,23 +3226,63 @@ class PyDualSenseController(IController):
         identifica cada card e mostra a carga sem chamada IPC extra. Quando
         nenhum controle está conectado, devolve uma única entrada offline
         (preserva o contrato "ao menos um item" do handler legado).
+
+        PLAYER-LED-01 (entrega 5 — diagnóstico honesto): cada entrada carrega
+        também o que o JOGO pediu de número/cor para aquele controle e o que o
+        gate está retendo dele:
+
+        - ``player_leds_game``: os 5 bits que o jogo escreveu (camada GAME), ou
+          None se o jogo nunca escreveu número neste controle;
+        - ``lightbar_game``: o RGB que o jogo escreveu, ou None;
+        - ``game_output_retido``: nomes dos campos que o gate de autoridade
+          está segurando AGORA para este controle (lista vazia = nada retido).
+
+        **ARMADILHA DE MEDIÇÃO — leia antes de conferir isto pelo sysfs.**
+        `/sys/class/leds` de um gamepad virtual NÃO mostra o que o jogo
+        escreveu. O jogo escreve o padrão como relatório HID de saída, que o
+        nosso código intercepta em espaço de usuário; ele nunca chega à classe
+        de LED do kernel. O que o sysfs mostra é o número que o KERNEL deu ao
+        vpad no probe, por um contador que aloca o menor identificador livre
+        contando físicos e virtuais JUNTOS. E a tabela de padrões do kernel é
+        IDÊNTICA à nossa em 1..4 — logo o padrão aceso é ambíguo por
+        construção: pode ser nosso, do kernel ou do jogo. A única testemunha do
+        AUTOR é o log (`game_output_aplicado`) e estes campos. Isso custou uma
+        conclusão errada na investigação de 25/07.
+
+        Custo: três buscas em dicionário por controle, sob o lock que já é
+        tomado. Zero I/O — o contrato desta função (caminho quente do FF do
+        jogo) continua valendo.
         """
         with self._io_lock:
             items = list(self._handles.items())
             primary = self._primary_key
+            game_layers = dict(self._game_output_by_uniq)
+            retidos = {
+                alvo: sorted(campos)
+                for alvo, campos in self._retained_game_outputs.items()
+            }
         if not items:
             return [{"connected": False, "transport": None, "is_primary": False}]
         out: list[dict[str, object]] = []
         for idx, (key, handle) in enumerate(items):
             connected = bool(getattr(handle, "connected", False))
+            alvo = self._key_to_uniq(key)
+            camada = game_layers.get(alvo) if alvo is not None else None
+            bits = camada.player_leds if camada is not None else None
+            cor = camada.led if camada is not None else None
             out.append(
                 {
                     "index": idx,
                     "connected": connected,
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
-                    "uniq": self._key_to_uniq(key),
+                    "uniq": alvo,
                     "battery_pct": self._read_battery_opt(handle) if connected else None,
+                    "player_leds_game": list(bits) if bits is not None else None,
+                    "lightbar_game": list(cor) if cor is not None else None,
+                    "game_output_retido": (
+                        retidos.get(alvo, []) if alvo is not None else []
+                    ),
                 }
             )
         return out
@@ -3120,6 +3378,16 @@ class PyDualSenseController(IController):
         `_output_mute` (Modo Nativo: o jogo é o dono — nada escrito, nem
         repaint). Falha de um nó não aborta os demais (suppress por item do
         reassert).
+
+        PLAYER-LED-01 (defeito 4): esta repintura NÃO reescreve mais o nosso
+        número por cima do que o jogo pediu. A correção não mora aqui e sim no
+        merge (`_game_layer_admitida`): com o número FORA do gate, o desejado
+        resolvido que este método reafirma JÁ É o número do jogo, quando há
+        um. Defender a COR contra o cliente da Steam continua legítimo — nasceu
+        de um incidente medido; defender o NÚMERO contra o jogo que
+        acabou de atribuí-lo contradizia a docstring de
+        `apply_game_player_leds`. São coisas diferentes que compartilhavam o
+        mesmo caminho.
         """
         with self._io_lock:
             if self._output_mute:

@@ -286,23 +286,22 @@ class TestRetencaoNaoSobreviveAoClose:
     qualquer coisa."""
 
     def test_close_purga_a_retencao_do_cliente(self) -> None:
+        # PLAYER-LED-01: a categoria deste cenário mudou de `player_leds` para
+        # `led`. O NÚMERO deixou de ser retido (a política vive em
+        # `_GAME_LAYER_GATED_FIELDS`, com o argumento escrito lá) porque o
+        # falso positivo do sinal de jogo custava a função inteira; a COR
+        # continua retida, que é o dano do incidente 14:42 — e é a cor que
+        # este teste precisa: o fantasma que não pode sobreviver ao CLOSE.
         node = _FakeNode()
         ctl = _ctl_com(_fake_handle(), node)
         autoridade = {"valor": "daemon"}
         ctl.set_game_authority_provider(lambda: autoridade["valor"])
 
-        # Cliente Steam escreve player_leds sob 'daemon' (sem jogo): fica
-        # RETIDO, nunca chega ao físico (é o veto de drop-sem-retenção).
-        assert (
-            ctl.set_game_output_for(
-                MAC_1, player_leds=(False, False, True, False, False)
-            )
-            is True
-        )
-        assert ctl._retained_game_outputs[UNIQ_1] == {
-            "player_leds": (False, False, True, False, False)
-        }
-        assert node.player_calls == []
+        # Cliente Steam escreve a lightbar sob 'daemon' (sem jogo): fica
+        # RETIDA, nunca chega ao físico (é o veto de drop-sem-retenção).
+        assert ctl.set_game_output_for(MAC_1, led=(0, 255, 0)) is True
+        assert ctl._retained_game_outputs[UNIQ_1] == {"led": (0, 255, 0)}
+        assert node.rgb_calls == []
 
         # Cliente fecha a sessão (UHID_CLOSE) — o fantasma tem de sumir
         # JUNTO com as camadas GAME/triggers (que aqui nunca existiram).
@@ -313,10 +312,10 @@ class TestRetencaoNaoSobreviveAoClose:
         # com a sessão antiga abre: a autoridade sobe e o replay da
         # abertura do gate não pode entregar o valor do cliente morto.
         autoridade["valor"] = "game"
-        node.player_calls.clear()
+        node.rgb_calls.clear()
         ctl.replay_retained_game_outputs()
 
-        assert node.player_calls == []
+        assert node.rgb_calls == []
 
     def test_close_purga_a_retencao_mesmo_com_camada_game_presente(self) -> None:
         """Caso misto: o jogo já tinha escrito (camada GAME) e, além disso,

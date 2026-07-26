@@ -243,6 +243,24 @@ class SysfsLedNode:
         ilegível (replug/BT drop) — o chamador trata como "sem leitura", nunca
         como padrão apagado. Mesma ressalva do ``get_rgb``: escrita crua por
         hidraw não atualiza a classe, então isto é o último valor VIA CLASSE.
+
+        ARMADILHA DE MEDIÇÃO (PLAYER-LED-01, 25/07) — **este padrão não
+        identifica quem o escreveu.** São três razões que se somam, e cada uma
+        já bastaria:
+
+        1. o jogo escreve o padrão como *output report* HID, que nós
+           interceptamos em espaço de usuário; ele **nunca** chega à classe de
+           LED do kernel;
+        2. num gamepad VIRTUAL, o que o sysfs mostra é o número que o kernel
+           deu no probe, por um contador que aloca o menor identificador livre
+           **contando físicos e virtuais juntos**;
+        3. a tabela de padrões do kernel é **idêntica à nossa** em 1..4 — logo
+           o mesmo desenho pode ser nosso, do kernel ou do jogo.
+
+        Isso custou uma conclusão errada durante a investigação de 25/07. Para
+        saber QUEM escreveu, a testemunha é o log (``game_output_aplicado``),
+        nunca esta leitura. Diagnóstico pronto:
+        ``hefesto-dualsense4unix controller numbers``.
         """
         if not self.player_dirs:
             return None

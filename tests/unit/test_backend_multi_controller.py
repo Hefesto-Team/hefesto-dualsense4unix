@@ -332,6 +332,10 @@ class TestDescribeControllers:
         inst._primary_key = "AA:BB:CC:00:00:03"
 
         desc = inst.describe_controllers()
+        # PLAYER-LED-01 (entrega 5): as três chaves de diagnóstico da numeração
+        # entram SEMPRE (shape estável), com valor neutro quando o jogo não
+        # tocou o controle — a GUI/CLI distinguem "não escreveu" de "escreveu
+        # apagado" em vez de inventar.
         assert desc == [
             {
                 "index": 0,
@@ -340,6 +344,9 @@ class TestDescribeControllers:
                 "is_primary": True,
                 "uniq": "aabbcc000003",
                 "battery_pct": 87,
+                "player_leds_game": None,
+                "lightbar_game": None,
+                "game_output_retido": [],
             },
             {
                 "index": 1,
@@ -350,6 +357,9 @@ class TestDescribeControllers:
                 # _FakeHandle sem atributo battery -> firmware ainda não
                 # reportou -> None (não 0% falso).
                 "battery_pct": None,
+                "player_leds_game": None,
+                "lightbar_game": None,
+                "game_output_retido": [],
             },
         ]
 
