@@ -5,6 +5,88 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-07-26
+
+A leva da madrugada: duas sprints da validacao com quatro controles, tres
+consertos que so aparecem quando se OLHA a janela, e um defeito de instalador
+que so aparece quando se roda o ciclo inteiro.
+
+### Added
+
+- **Faixa de microfone permanente** no rodape da aba Status. Ela nunca some: sem
+  controle, sem source, por radio com a ponte desligada ou com o nome ambiguo, o
+  que muda e o TEXTO. Cada linha diz o motivo e o gesto — inclusive o aviso de
+  que desmutar pela linha de comando TOMA a posse do registrador e mata o botao
+  fisico do controle ate liberar.
+- **Card de identidade para controle externo** na aba Status: quem e, por onde
+  entrou, e por que nao tem numero nosso. Sem gauge, stick ou bateria — nao
+  medimos nada disso de um externo, e moldura vazia diria "sem sinal" onde a
+  verdade e "nao medimos".
+- **`controller numbers`**: diagnostico que mostra, por controle, o nosso numero
+  x o do jogo x o que o gate retem x o padrao aceso x o do kernel, com o aviso
+  de que o padrao do sysfs NAO identifica quem o escreveu.
+- **`player_game`** no `state_full` — o numero de jogador decodificado dos bits
+  que o JOGO escreveu, a unica autoridade externa que existe sobre isso.
+
+### Fixed
+
+- **A janela dizia "2 jogadores" com quatro controles na mesa.** O `state_full`
+  publicava os externos so como CONTAGEM, e os chips tinham rota de dados
+  propria. Agora ha uma fonte so, e a contagem inclui a mesa inteira.
+- **A aba Status dizia quatro e desenhava dois.** O cabecalho foi consertado
+  antes da grade, e a tela passou a se contradizer — pior que o defeito
+  original.
+- **O numero do jogo nao chegava ao controle.** O gate de exibicao descartava a
+  camada do jogo INTEIRA e a repintura reescrevia o nosso numero por cima. O
+  gate passou a ser por campo: a cor continua defendida, o numero sai. Efeito
+  colateral desejado: a repintura virou a DEFESA do numero do jogo.
+- **"Controle 1 — Jogador 2".** Sao duas ancoras que nunca se falaram: o titulo
+  vem da fila de preferencia (e e o numero que ACENDE no aparelho), o do co-op e
+  ancorado no primario do backend, que e a ordem crua de enumeracao. O titulo
+  passou a ser o da lampada, e o do co-op virou frase com autoridade colada.
+- **Com o co-op desligado, o daemon chamava TODOS os controles de "jogador 1"**,
+  inclusive o que nao move nada — o input vem sempre do primario.
+- **O ciclo uninstall+install desligava SEIS curas de modulo em silencio.** Um
+  portao `-w` testava a permissao de quem NAO ia escrever (a escrita e `sudo
+  tee`), e tres parametros o instalador nunca rearmava. Ha teste de simetria: o
+  que o uninstall desarma, o install rearma.
+- **Um modo de gatilho ja estourava a aba** — MultiPositionVibration pedia 646px
+  para uma faixa de 630px. O teste de orcamento nao via porque mede so o glade, e
+  a grade dos 19 modos nasce em runtime.
+- **A CI estava vermelha ha cinco commits** por uma palavra sem acento dentro de
+  uma f-string: o gate local e cego a f-string no Python 3.12 (PEP 701) e a CI
+  roda 3.11. Depois, typelib parcial na CI derrubava a COLETA de seis modulos de
+  teste em vez de virar skip.
+
+### Changed
+
+- **Os botoes ocupam o vao.** A grade dos 19 modos de gatilho vai de 268 para
+  448px sem parametros, e os botoes de 32-48 para 57-74px. Cresce por `expand`,
+  que consome so a sobra — `min-height` mexeria no minimo da aba e traria de
+  volta a rolagem que a LEGIBILIDADE-01 tirou.
+- **O medidor de microfone saiu do card** e virou a faixa. Dois lugares mostrando
+  o mesmo microfone seria o comeco de dois lugares discordando.
+
+### Documentado
+
+- **A premissa da camada 2 do microfone caiu por medicao.** A sprint MIC-USB-01
+  manda trocar `iec958-stereo` por `input:analog-stereo`, e o `doctor --fix-mic`
+  faz isso. Medido: no analogico a source nasce SEM PORTA DE CAPTURA e entrega
+  327.680 bytes de silencio digital; no `iec958-stereo` a gravacao deu pico 4606.
+  O criterio confiavel e a PORTA, nao o nome do perfil. **O script ainda nao foi
+  corrigido** — so o documento.
+- **AUTO-02, AUTO-03 e AUTO-04** materializadas: elas eram citadas pela AUTO-01 e
+  nunca tinham documento. O mapeamento original dos "29 pontos de friccao" nunca
+  foi escrito; as tres remedem do zero.
+
+### Sem validacao em hardware
+
+Quase tudo desta versao foi provado por mutacao (30+ mutacoes derrubando teste),
+nao por partida. O que foi visto na tela: a contagem de quatro e os quatro cards.
+O resto — numero do jogo no controle, numeracao, faixa de microfone e botoes —
+espera o gate humano. Ver `docs/process/sprints/2026-07-25-CHECKLIST-*`.
+
+
 ## [0.1.1] — 2026-07-25
 
 Uma leva de causas-raiz. O tema comum das correções abaixo é o mesmo: premissas
