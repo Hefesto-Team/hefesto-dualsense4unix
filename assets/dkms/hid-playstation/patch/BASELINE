@@ -1,7 +1,9 @@
-# Baseline do módulo DKMS hefesto-hid-playstation (contenção BT 25/07)
+# Baseline do módulo DKMS hefesto-hid-playstation (contenção BT 25/07 +
+# clone DualShock4 no cabo 25/07)
 # O hid-playstation.c deste diretório == vanilla v7.0.11 + patches aplicados
 # NA ORDEM da lista PATCH abaixo.
 # Paridade verificável (reverte na ordem INVERSA):
+#   patch -R -p3 hid-playstation.c < patch/0002-*.patch
 #   patch -R -p3 hid-playstation.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
@@ -21,6 +23,7 @@ KERNEL_BASE=v7.0.11
 KERNEL_TESTED=7.0.11-76070011-generic
 POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=bdb6ed1d1e0dc27f10a7e25ec758c1cc45eaf0ef00f026fe733aafc6f0f09db2
-SHA256_PATCHED_C=e487e55c2322f41f4de8222d8155e7ca03ed8ab8cbafb759476a51467c1b3df4
+SHA256_PATCHED_C=9258721726158ba909aaf7ccf1790898105a6504b6e4eb63e40d192fd54f2fb8
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
 PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch
+PATCH=0002-HID-playstation-survive-a-DualShock4-pairing-info-rep.patch

@@ -35,6 +35,25 @@ MODULE_PARM_DESC(feature_retries,
 /* Backoff before the first retry; doubled for each further attempt. */
 #define PS_FEATURE_RETRY_DELAY_MS	100
 
+/*
+ * Third-party controllers cloning the DualShock4's USB IDs (054c:05c4) answer
+ * the pairing info feature report short and never complete it, and over USB
+ * that report is the only place this driver gets the controller's address
+ * from. The two parameters below let probe survive that instead of throwing
+ * the device away. Both default to the historical behavior, and both are read
+ * during probe, so an A/B is a sysfs write plus a replug - never a reload,
+ * which would drop every connected controller.
+ */
+static bool ds4_short_pairing_info;
+module_param(ds4_short_pairing_info, bool, 0644);
+MODULE_PARM_DESC(ds4_short_pairing_info,
+		 "Take the MAC address from a DualShock4 pairing info report that arrived shorter than the driver asked for, as long as the address field itself is there, instead of failing probe and leaving the controller with no driver at all (default N = require the full report, same as before)");
+
+static bool ds4_synthetic_mac;
+module_param(ds4_synthetic_mac, bool, 0644);
+MODULE_PARM_DESC(ds4_synthetic_mac,
+		 "When no address at all can be read from a DualShock4 over USB, build one in the locally administered range from the IDs the kernel already knows, instead of failing probe; it describes the model and the bus, never the individual device (default N = fail probe, same as before)");
+
 /* List of connected playstation devices. */
 static DEFINE_MUTEX(ps_devices_lock);
 static LIST_HEAD(ps_devices_list);
@@ -356,6 +375,8 @@ struct dualsense_output_report {
 #define DS4_FEATURE_REPORT_FIRMWARE_INFO_SIZE	49
 #define DS4_FEATURE_REPORT_PAIRING_INFO		0x12
 #define DS4_FEATURE_REPORT_PAIRING_INFO_SIZE	16
+/* Offset of the controller's own address inside the pairing info report. */
+#define DS4_PAIRING_INFO_MAC_OFFSET		1
 
 /*
  * Status of a DualShock4 touch point contact.
@@ -2189,6 +2210,93 @@ err_free:
 	return ret;
 }
 
+/*
+ * Does a pairing info reply that ps_get_report() rejected still carry the
+ * controller's own address?
+ *
+ * The buffer is kzalloc'ed by the caller and the transport copies only the
+ * bytes that actually arrived, so whatever is in it is what the controller
+ * sent and the rest is zero. A reply that starts with the right report ID and
+ * has a non-zero address field therefore carries everything this driver takes
+ * from that report: the bytes that follow are the address of the host the
+ * controller was last paired to, which is never read.
+ *
+ * The report ID has to match, and not merely be plausible: hidraw applications
+ * issue feature requests of their own, and dualshock4_get_calibration_data()
+ * already retries for exactly that reason. An address lifted from somebody
+ * else's answer would be worse than no address at all.
+ */
+static bool dualshock4_pairing_info_has_mac(const u8 *buf, size_t mac_size)
+{
+	size_t i;
+
+	if (buf[0] != DS4_FEATURE_REPORT_PAIRING_INFO)
+		return false;
+
+	for (i = 0; i < mac_size; i++) {
+		if (buf[DS4_PAIRING_INFO_MAC_OFFSET + i])
+			return true;
+	}
+
+	return false;
+}
+
+/*
+ * Identity of last resort for a DualShock4 whose pairing info report never
+ * arrives complete over USB.
+ *
+ * Failing here costs the user the whole controller: HID leaves it with no
+ * driver, no hidraw, no input, no LEDs and no battery, and hid-generic does
+ * not step in because a specific driver matched. The address is the only thing
+ * that report is read for, and it is recoverable - either from the truncated
+ * reply itself, or from what the kernel already knows about the device.
+ *
+ * Returns 0 when base.mac_address ended up usable, and the caller's original
+ * error when it did not, so that the historical failure is what happens with
+ * both parameters off.
+ */
+static int dualshock4_degrade_mac(struct dualshock4 *ds4, const u8 *buf, int err)
+{
+	struct hid_device *hdev = ds4->base.hdev;
+	const size_t mac_size = sizeof(ds4->base.mac_address);
+	const char *source;
+
+	if (ds4_short_pairing_info &&
+	    dualshock4_pairing_info_has_mac(buf, mac_size)) {
+		memcpy(ds4->base.mac_address, &buf[DS4_PAIRING_INFO_MAC_OFFSET],
+		       mac_size);
+		source = "truncated pairing info";
+	} else if (ds4_synthetic_mac) {
+		/*
+		 * Nothing usable was reported, so build an address that cannot
+		 * be mistaken for a real one: bit 1 of the first octet marks it
+		 * locally administered, so it can never collide with a vendor
+		 * OUI. It is stable across replugs, which is what userspace
+		 * keying per-controller settings on it needs, and it describes
+		 * the model and the bus type only. Two identical clones plugged
+		 * at once would get the same address, and the second one would
+		 * then be turned away by ps_devices_list_add() as a duplicate -
+		 * one controller lost where today both are.
+		 *
+		 * mac_address is stored little endian and printed with %pMR,
+		 * so index 5 holds the first octet of the printed address.
+		 */
+		ds4->base.mac_address[5] = 0x02;
+		ds4->base.mac_address[4] = (u8)(hdev->vendor >> 8);
+		ds4->base.mac_address[3] = (u8)hdev->vendor;
+		ds4->base.mac_address[2] = (u8)(hdev->product >> 8);
+		ds4->base.mac_address[1] = (u8)hdev->product;
+		ds4->base.mac_address[0] = (u8)hdev->bus;
+		source = "synthesized";
+	} else {
+		return err;
+	}
+
+	hid_info(hdev, "DualShock4 MAC = %pMR (%s)\n", ds4->base.mac_address,
+		 source);
+	return 0;
+}
+
 static int dualshock4_get_mac_address(struct dualshock4 *ds4)
 {
 	struct hid_device *hdev = ds4->base.hdev;
@@ -2204,10 +2312,12 @@ static int dualshock4_get_mac_address(struct dualshock4 *ds4)
 				    DS4_FEATURE_REPORT_PAIRING_INFO_SIZE, false);
 		if (ret) {
 			hid_err(hdev, "Failed to retrieve DualShock4 pairing info: %d\n", ret);
+			ret = dualshock4_degrade_mac(ds4, buf, ret);
 			goto err_free;
 		}
 
-		memcpy(ds4->base.mac_address, &buf[1], sizeof(ds4->base.mac_address));
+		memcpy(ds4->base.mac_address, &buf[DS4_PAIRING_INFO_MAC_OFFSET],
+		       sizeof(ds4->base.mac_address));
 	} else {
 		/* Rely on HIDP for Bluetooth */
 		if (strlen(hdev->uniq) != 17)
