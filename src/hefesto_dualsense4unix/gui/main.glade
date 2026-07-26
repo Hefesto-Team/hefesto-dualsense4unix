@@ -483,13 +483,29 @@
                         <property name="spacing">8</property>
                         <property name="margin">12</property>
 
+                        <!-- VAO-01: esta linha passou a ser a ESPONJA vertical da
+                             coluna (era `expand=False`, e quem inchava era o
+                             scroller de parâmetros logo abaixo — vazio na maioria
+                             dos modos). O `expand`+`fill` aqui DECLARA a intenção;
+                             quem de fato estica é o `esticar=True` do
+                             SegmentedSelector, que põe `vexpand` nos 19 botões — e
+                             o GTK propaga esse pedido para cima, pelo container.
+                             Os dois dizem a mesma coisa de propósito: sem a linha
+                             marcada como esponja, o glade sugeriria que a sobra
+                             vai para outro filho. -->
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkLabel">
+                                <!-- Com a grade alta, o rótulo centrado ficava na
+                                     altura da 4ª linha de botões, longe do que
+                                     nomeia. Ancorado no topo, ele acompanha a
+                                     primeira linha. -->
                                 <property name="label" translatable="yes">Modo:</property>
+                                <property name="valign">start</property>
+                                <property name="margin-top">7</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -506,7 +522,7 @@
                               <packing><property name="expand">True</property></packing>
                             </child>
                           </object>
-                          <packing><property name="expand">False</property></packing>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -546,18 +562,27 @@
                         </child>
 
                         <child>
-                          <!-- min-content-height era 220px FIXOS, reservados
-                               mesmo quando o modo tem menos parâmetros (ou
-                               nenhum). Com as linhas de slider compactas
-                               (~24px), os 4 parâmetros do modo mais cheio
-                               cabem em ~110px; o que passar disso rola, que é
-                               justamente o papel deste scroller. -->
+                          <!-- VAO-01: este scroller era a esponja da coluna
+                               (`vexpand` + `expand`), e reservava 110px de piso
+                               MESMO vazio. Nos modos sem parâmetro isso somava
+                               226px de vão cinza entre a grade e o "Aplicar em
+                               L2" — o vão que a mantenedora apontou.
+
+                               Agora ele pede exatamente o que o conteúdo tem
+                               (`propagate-natural-height` com piso 0): zero
+                               quando não há parâmetro, e a altura das linhas
+                               quando há. O GtkBox serve a altura NATURAL de
+                               todos os filhos antes de repartir a sobra entre
+                               os que expandem, então os sliders continuam com a
+                               área de que precisam e só a folga real vai para a
+                               grade de modos. Como bônus, o mínimo da aba caiu
+                               110px — o modo de 11 parâmetros pedia 646px para
+                               uma faixa de 630px e forçava rolagem. -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
-                            <property name="min-content-height">110</property>
+                            <property name="min-content-height">0</property>
                             <property name="propagate-natural-height">True</property>
-                            <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_left_params_box">
                                 <property name="orientation">vertical</property>
@@ -565,7 +590,7 @@
                               </object>
                             </child>
                           </object>
-                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                          <packing><property name="expand">False</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -618,6 +643,7 @@
                         <property name="spacing">8</property>
                         <property name="margin">12</property>
 
+                        <!-- VAO-01: esponja vertical da coluna (espelha o L2). -->
                         <child>
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
@@ -625,6 +651,8 @@
                             <child>
                               <object class="GtkLabel">
                                 <property name="label" translatable="yes">Modo:</property>
+                                <property name="valign">start</property>
+                                <property name="margin-top">7</property>
                               </object>
                               <packing><property name="expand">False</property></packing>
                             </child>
@@ -638,7 +666,7 @@
                               <packing><property name="expand">True</property></packing>
                             </child>
                           </object>
-                          <packing><property name="expand">False</property></packing>
+                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -677,18 +705,14 @@
                         </child>
 
                         <child>
-                          <!-- min-content-height era 220px FIXOS, reservados
-                               mesmo quando o modo tem menos parâmetros (ou
-                               nenhum). Com as linhas de slider compactas
-                               (~24px), os 4 parâmetros do modo mais cheio
-                               cabem em ~110px; o que passar disso rola, que é
-                               justamente o papel deste scroller. -->
+                          <!-- VAO-01: espelha o L2 — pede a altura natural do
+                               conteúdo, com piso 0, em vez de reservar 110px
+                               vazios e engolir toda a sobra da coluna. -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
-                            <property name="min-content-height">110</property>
+                            <property name="min-content-height">0</property>
                             <property name="propagate-natural-height">True</property>
-                            <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_right_params_box">
                                 <property name="orientation">vertical</property>
@@ -696,7 +720,7 @@
                               </object>
                             </child>
                           </object>
-                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                          <packing><property name="expand">False</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -2242,7 +2266,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
+                  <!-- VAO-01: as QUATRO linhas de escolha desta aba (máscara,
+                       modo jogo, Steam Input, microfone) repartem entre si a
+                       folga vertical que sobrava empoçada no rodapé da aba. É
+                       `expand` e não altura fixa de propósito: `expand` consome
+                       só o que sobra e NÃO muda o mínimo — e esta é a aba mais
+                       alta do caderno (626px de mínimo para uma faixa de 630),
+                       ou seja, a que o orçamento de altura menos pode engordar.
+                       Medido: 28px de folga hoje, ~7px por linha. -->
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
@@ -2299,7 +2331,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
+                  <!-- VAO-01: divide a folga com as outras três linhas de escolha. -->
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="emulation_steam_input_box">
@@ -2336,7 +2369,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
+                  <!-- VAO-01: divide a folga com as outras três linhas de escolha. -->
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="emulation_mic_box">
@@ -2373,7 +2407,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">False</property></packing>
+                  <!-- VAO-01: divide a folga com as outras três linhas de escolha. -->
+                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkLabel" id="emulation_hint">
