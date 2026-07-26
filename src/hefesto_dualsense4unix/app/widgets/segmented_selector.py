@@ -18,6 +18,10 @@ app, para os call sites trocarem o combo por ele sem mudar a lógica:
   - ``connect("changed", cb)`` — sinal GObject nativo; ``cb`` recebe o widget
     como 1º argumento (como o handler de ``GtkComboBox::changed``).
 
+Além disso, ``esticar=True`` (opt-in, só faz sentido com ``wrap``) manda a grade
+OCUPAR a altura que a caixa-mãe lhe der, repartindo a sobra entre as linhas em
+vez de deixá-la como vão vazio. É o que a aba Gatilhos usa para os 19 modos.
+
 A lógica por-ID vive em ``_SegmentedLogic`` (puro Python, sem GTK — testável sem
 display). A classe concreta apenas implementa os 3 hooks que tocam o toolkit
 (criar botões, ativar um botão, emitir o sinal). Como ``button_glyph`` e
@@ -46,12 +50,14 @@ class _SegmentedLogic:
     """
 
     _wrap: bool
+    _esticar: bool
     _items: list[tuple[str, str]]
     _active_id: str | None
     _updating: bool
 
-    def _init_logic(self, wrap: bool) -> None:
+    def _init_logic(self, wrap: bool, esticar: bool = False) -> None:
         self._wrap = wrap
+        self._esticar = esticar
         self._items = []
         self._active_id = None
         # Guard: True enquanto marcamos botões programaticamente, para o handler
@@ -151,17 +157,22 @@ if _GTK_DISPONIVEL:
             "changed": (_RUN_FIRST, None, ()),
         }
 
-        def __init__(self, wrap: bool = False) -> None:
+        def __init__(self, wrap: bool = False, esticar: bool = False) -> None:
             Gtk.Box.__init__(
                 self, orientation=Gtk.Orientation.VERTICAL, spacing=0
             )
-            self._init_logic(wrap)
+            self._init_logic(wrap, esticar)
             self._buttons: list[Gtk.RadioButton] = []
             # Founder OCULTO do grupo de rádio (ver _create_buttons): permite que
             # TODOS os botões visíveis fiquem inativos ao mesmo tempo (estado
             # _active_id=None visualmente fiel ao GtkComboBox com active=-1).
             self._group_founder: Gtk.RadioButton | None = None
-            self.set_valign(Gtk.Align.CENTER)
+            # VAO-01: `esticar` faz a grade OCUPAR a altura que sobrar, em vez de
+            # ficar centrada no seu mínimo. É opt-in porque a maioria dos
+            # SegmentedSelector do app mora em linhas que não expandem — lá o
+            # FILL seria idêntico ao CENTER, mas o dia em que alguém puser um
+            # deles numa caixa expansível a diferença apareceria sem aviso.
+            self.set_valign(Gtk.Align.FILL if esticar else Gtk.Align.CENTER)
             if wrap:
                 # UX-TRIGGERS-COMPACT-01 / S3: grade de 3 colunas FIXAS.
                 #
@@ -226,6 +237,16 @@ if _GTK_DISPONIVEL:
                         filho.set_justify(Gtk.Justification.CENTER)
                         filho.set_max_width_chars(_WRAP_MAX_CHARS)
                     btn.set_hexpand(True)
+                    if self._esticar:
+                        # VAO-01: com `vexpand` em TODOS os botões, o GtkGrid
+                        # reparte a altura que sobra entre as 7 linhas — o alvo
+                        # de clique cresce sem que o MÍNIMO da grade mude (o
+                        # piso de 32px da LEGIBILIDADE-01 continua sendo o
+                        # mínimo, e é ele que o orçamento de altura mede).
+                        # Fosse `min-height` no CSS, o mínimo subiria junto e a
+                        # aba estouraria no modo de 11 parâmetros.
+                        btn.set_vexpand(True)
+                        btn.set_valign(Gtk.Align.FILL)
                     self._container.attach(
                         btn, indice % _WRAP_COLUNAS, indice // _WRAP_COLUNAS, 1, 1
                     )
@@ -268,8 +289,8 @@ else:
         registrados via ``connect``.
         """
 
-        def __init__(self, wrap: bool = False) -> None:
-            self._init_logic(wrap)
+        def __init__(self, wrap: bool = False, esticar: bool = False) -> None:
+            self._init_logic(wrap, esticar)
             self._handlers: list[Callable[[Any], None]] = []
 
         def connect(self, signal: str, callback: Callable[[Any], None]) -> None:

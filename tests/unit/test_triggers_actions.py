@@ -258,8 +258,14 @@ class _FakeSegmentedSelector:
     testes do próprio SegmentedSelector.
     """
 
-    def __init__(self, wrap: bool = False) -> None:
+    def __init__(self, wrap: bool = False, esticar: bool = False) -> None:
         self.wrap = wrap
+        # VAO-01: o stub precisa aceitar a MESMA assinatura do widget real,
+        # senão ele deixa de ser um dublê e vira uma barreira — foi o que
+        # aconteceu quando `esticar` entrou: 23 testes desta aba caíram com
+        # TypeError em vez de medirem o que testam. O valor é guardado (e não
+        # ignorado) para quem quiser afirmar sobre ele.
+        self.esticar = esticar
         self._items: list[tuple[str, str]] = []
         self._active_id: str | None = None
         self._visible = True

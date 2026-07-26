@@ -109,7 +109,11 @@ class TriggersActionsMixin(WidgetAccessMixin):
         for side in ("left", "right"):
             # FEAT-DSX-COMBO-TO-SEGMENTED-01: botões segmentados no lugar do combo.
             # wrap=True para os 19 modos quebrarem linha sem estourar a coluna.
-            sel = SegmentedSelector(wrap=True)
+            # VAO-01: `esticar` faz esses 19 botões ocuparem o vão que sobrava
+            # entre a grade e o rodapé "Aplicar em L2" — medido em 226px por
+            # coluna nos modos sem parâmetro. Quem consome esse vão hoje é o
+            # scroller de parâmetros, que fica VAZIO justamente nesses modos.
+            sel = SegmentedSelector(wrap=True, esticar=True)
             sel.set_items(mode_items)
             sel.connect("changed", mode_handlers[side])
             slot = self._get(f"trigger_{side}_mode_slot")
