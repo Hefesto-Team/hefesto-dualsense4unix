@@ -582,6 +582,13 @@ class UhidDualSense:
     _replica_last: dict[str, Any] = field(default_factory=dict)
     _replica_pending: dict[str, Any] = field(default_factory=dict)
     _replica_ts: dict[str, float] = field(default_factory=dict)
+    #: PLAYER-LED-01 (defeito 3): categorias cujo `uhid_replica_ativa` já foi
+    #: emitido NESTA sessão. Separado do `_replica_ts` de propósito: o carimbo
+    #: de tempo marca a TENTATIVA (é o relógio do rate-limit) e o log agora
+    #: marca a ENTREGA. Usar o mesmo dicionário para as duas coisas perderia a
+    #: linha quando a primeira tentativa não chega ao sink (sink ausente, sink
+    #: que levantou) e a segunda chega.
+    _replica_log_entregue: set[str] = field(default_factory=set)
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
@@ -1344,13 +1351,28 @@ class UhidDualSense:
             self._forward_replica(categoria, valor, primeira=primeira)
 
     def _forward_replica(self, categoria: str, valor: Any, *, primeira: bool) -> None:
-        """Entrega UMA réplica ao sink da categoria (contadores + telemetria)."""
-        if primeira:
-            # 1x por categoria por sessão: prova no journal que o output do
-            # jogo está chegando ao físico, sem flood a cada report.
-            logger.info(
-                "uhid_replica_ativa", categoria=categoria, player=self.player
-            )
+        """Entrega UMA réplica ao sink da categoria (contadores + telemetria).
+
+        PLAYER-LED-01 (defeito 3): a telemetria `uhid_replica_ativa` sai
+        DEPOIS de o sink rodar, e só quando o sink existe e não levantou.
+        Antes ela era emitida no topo do método — isto é, no instante em que o
+        report do jogo era DECODIFICADO — e por isso anunciava "ativa" até
+        quando não havia sink ligado nenhum. "A réplica ativou" nunca
+        significou "escreveu no controle": o gate de autoridade do backend
+        decide isso muito depois, e um log que promete hardware onde não houve
+        orienta a investigação para o lugar errado — orientou a de 25/07,
+        quando o journal mostrava `uhid_replica_ativa` no mesmo segundo em que
+        o número estava sendo retido.
+
+        O campo `estagio="entregue_ao_sink"` declara até onde ESTA camada
+        consegue testemunhar: o vpad não tem como saber se o backend aplicou.
+        Quem prova a escrita é o `game_output_aplicado`, emitido pelo backend
+        no ponto da escrita. Os dois eventos juntos datam "o jogo pediu" contra
+        "o controle recebeu" sem inferir nada do padrão de LED aceso — que é
+        ambíguo por construção (ver o aviso em
+        `backend_pydualsense.describe_controllers`).
+        """
+        entregue = False
         try:
             if categoria == "trigger_right":
                 if self.trigger_sink is None:
@@ -1358,24 +1380,28 @@ class UhidDualSense:
                 self._trigger_replicas += 1
                 self._game_dirty = True
                 self.trigger_sink("right", valor)
+                entregue = True
             elif categoria == "trigger_left":
                 if self.trigger_sink is None:
                     return
                 self._trigger_replicas += 1
                 self._game_dirty = True
                 self.trigger_sink("left", valor)
+                entregue = True
             elif categoria == "lightbar":
                 if self.lightbar_sink is None:
                     return
                 self._lightbar_replicas += 1
                 self._game_dirty = True
                 self.lightbar_sink(valor[0], valor[1], valor[2])
+                entregue = True
             elif categoria == "player_leds":
                 if self.player_led_sink is None:
                     return
                 self._player_led_replicas += 1
                 self._game_dirty = True
                 self.player_led_sink(valor)
+                entregue = True
         except Exception as exc:
             logger.warning(
                 "uhid_replica_sink_failed",
@@ -1383,6 +1409,17 @@ class UhidDualSense:
                 err=str(exc),
                 player=self.player,
             )
+        finally:
+            if entregue and categoria not in self._replica_log_entregue:
+                # 1x por categoria por sessão: sem flood a cada report.
+                self._replica_log_entregue.add(categoria)
+                logger.info(
+                    "uhid_replica_ativa",
+                    categoria=categoria,
+                    player=self.player,
+                    estagio="entregue_ao_sink",
+                    primeira_tentativa=primeira,
+                )
 
     def _end_game_session(self) -> None:
         """Fim da sessão (CLOSE/STOP/stop): devolve a posse do output ao perfil.
@@ -1396,6 +1433,9 @@ class UhidDualSense:
         self._replica_pending.clear()
         self._replica_last.clear()
         self._replica_ts.clear()
+        # PLAYER-LED-01: sessão nova re-arma o `uhid_replica_ativa` de cada
+        # categoria — a linha existe para datar o começo de UMA sessão.
+        self._replica_log_entregue.clear()
         if not self._game_dirty:
             return
         self._game_dirty = False

@@ -50,6 +50,16 @@ logger = get_logger(__name__)
 
 DEFAULT_POLL_HZ = 60
 
+#: PLAYER-LED-01 (entrega 4): intervalo do BATIMENTO da evidência do sinal de
+#: jogo (`_log_game_signal_evidencia`). O tick do sinal é de ~2 s; registrar a
+#: evidência a cada tique seria o laço de log a 1 Hz que este repositório já
+#: pagou caro para matar (1.600 linhas em 45 min). 60 s = ~1.440 linhas/dia no
+#: pior caso e, o que importa, uma REFERÊNCIA temporal a no máximo um minuto de
+#: qualquer queda de autoridade — o suficiente para datá-la sem procurar o
+#: sintoma. Mudança de evidência continua saindo na hora, sem esperar o
+#: batimento.
+_GAME_SIGNAL_EVIDENCIA_HEARTBEAT_S = 60.0
+
 #: Período de assentamento (settling/grace) pós-conexão em segundos
 #: (BUG-DAEMON-CONNECT-GHOST-INPUT-01). Enquanto ativo, o poll loop continua
 #: lendo estado/bateria e publicando STATE_UPDATE, mas NÃO despacha
@@ -511,6 +521,13 @@ class Daemon:
     # provider`) é gateada por `hasattr` — sem o método, o backend fica
     # byte-idêntico ao HEAD (fail-safe da síntese da Onda N).
     _game_signal: Any = None
+    # PLAYER-LED-01 (entrega 4 — telemetria mínima do sinal de jogo): última
+    # assinatura de EVIDÊNCIA já registrada e quando. Sem isto o journal só
+    # tinha linha na TRANSIÇÃO, e uma queda de autoridade no meio de um jogo
+    # (o buraco conhecido: jogo fora da Steam, janela nativa) só era descoberta
+    # pelo SINTOMA, sem hora. Com o batimento dá para datar a queda seguinte.
+    _game_signal_evidencia: tuple[Any, ...] | None = None
+    _game_signal_evidencia_em: float | None = None
 
     # ------------------------------------------------------------------
     # Ciclo de vida público
@@ -2978,6 +2995,9 @@ class Daemon:
         barata, direto no event loop. Callbacks de transição são
         best-effort (`contextlib.suppress`) — falha de um passo não aborta
         o tick nem o outro callback.
+
+        PLAYER-LED-01 (entrega 4): a EVIDÊNCIA é registrada também quando
+        não há transição — ver `_log_game_signal_evidencia`.
         """
         signal = self._game_signal
         if signal is None:
@@ -2985,6 +3005,7 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
 
         anterior = signal.authority
+        inputs: dict[str, Any] | None = None
         try:
             inputs = await self._run_blocking(self._gather_game_signal_inputs)
         except Exception as exc:
@@ -2994,6 +3015,9 @@ class Daemon:
             raw = classify(**inputs)
             signal.evaluate(raw, session_open=bool(inputs["session_open"]))
         novo = signal.authority
+        self._log_game_signal_evidencia(
+            inputs, autoridade=novo, transicao=(novo != anterior)
+        )
         if novo == anterior:
             return
         if novo == "daemon":
@@ -3006,6 +3030,81 @@ class Daemon:
                 replay = getattr(self.controller, "replay_retained_game_outputs", None)
                 if callable(replay):
                     replay()
+
+    def _log_game_signal_evidencia(
+        self,
+        inputs: dict[str, Any] | None,
+        *,
+        autoridade: str,
+        transicao: bool,
+    ) -> None:
+        """Registra a EVIDÊNCIA que sustenta a autoridade (PLAYER-LED-01, e. 4).
+
+        O sinal de jogo exige evidência POSITIVA (janela da Steam, regra de
+        perfil, marcador do wrapper com processo vivo) e sabidamente falha para
+        jogo fora da Steam ou em janela nativa. Até aqui o journal só ganhava
+        uma linha na TRANSIÇÃO — então, quando a autoridade caía no meio de uma
+        partida, não havia como datar a queda: ela era descoberta pelo sintoma
+        ("o número piscou"), horas depois, sem hora nem evidência ao lado.
+
+        Três gatilhos, nesta ordem de prioridade:
+
+        - `transicao`: a linha que já existia, agora com a evidência junto;
+        - mudança da evidência SEM transição (a histerese de 30 s do
+          `GameSignal` engole a maioria — é justamente o que estava invisível);
+        - batimento a cada :data:`_GAME_SIGNAL_EVIDENCIA_HEARTBEAT_S`, para
+          existir marco temporal mesmo com tudo parado.
+
+        `window_seen_age` fica FORA da assinatura de comparação (muda a cada
+        tique, viraria uma linha a cada 2 s — o repositório já pagou caro por
+        laço de log a 1 Hz) mas ENTRA no payload, arredondado: é ele que diz há
+        quanto tempo a janela do jogo não é vista.
+
+        `inputs=None` = o gather falhou (autoridade degradada para 'unknown');
+        registra-se a degradação, que é a evidência daquele instante.
+        """
+        agora = time.monotonic()
+        if inputs is None:
+            assinatura: tuple[Any, ...] = (autoridade, "gather_falhou")
+            payload: dict[str, Any] = {"evidencia": "gather_falhou"}
+        else:
+            assinatura = (
+                autoridade,
+                bool(inputs.get("window_healthy")),
+                inputs.get("window_class_current"),
+                bool(inputs.get("profile_rule_match")),
+                inputs.get("marker"),
+                bool(inputs.get("marker_pid_alive")),
+                bool(inputs.get("session_open")),
+            )
+            idade = inputs.get("window_seen_age")
+            payload = {
+                "janela_saudavel": bool(inputs.get("window_healthy")),
+                "janela_classe": inputs.get("window_class_current"),
+                "janela_vista_ha_s": (
+                    round(float(idade), 1) if isinstance(idade, int | float) else None
+                ),
+                "regra_de_perfil_casa": bool(inputs.get("profile_rule_match")),
+                "marcador_do_wrapper": inputs.get("marker"),
+                "processo_do_marcador_vivo": bool(inputs.get("marker_pid_alive")),
+                "sessao_uhid_aberta": bool(inputs.get("session_open")),
+            }
+        mudou = assinatura != self._game_signal_evidencia
+        batimento = (
+            self._game_signal_evidencia_em is None
+            or (agora - self._game_signal_evidencia_em)
+            >= _GAME_SIGNAL_EVIDENCIA_HEARTBEAT_S
+        )
+        if not (transicao or mudou or batimento):
+            return
+        self._game_signal_evidencia = assinatura
+        self._game_signal_evidencia_em = agora
+        logger.info(
+            "game_signal_evidencia",
+            autoridade=autoridade,
+            motivo=("transicao" if transicao else ("mudanca" if mudou else "batimento")),
+            **payload,
+        )
 
     # ------------------------------------------------------------------
     # Poll loop (permanece aqui: testes fazem monkeypatch de daemon._poll_loop)
