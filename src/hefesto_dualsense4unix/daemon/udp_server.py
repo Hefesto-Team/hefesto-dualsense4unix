@@ -235,9 +235,9 @@ def resolve_dsx_trigger_mode(
     prontos = DSX_CANNED_TRIGGER_MODES.get(ordinal)
     if prontos is not None:
         raise ValueError(
-            f"TriggerUpdate modo DSX {prontos!r} ({ordinal}) nao implementado: "
-            "e uma curva de forca fechada do DSX, sem parametros e sem tabela "
-            "de bytes publicada sob licenca utilizavel"
+            f"TriggerUpdate modo DSX {prontos!r} ({ordinal}) não implementado: "
+            "é uma curva de força fechada do DSX, sem parâmetros e sem tabela "
+            "de bytes publicada sob licença utilizável"
         )
     raise ValueError(f"TriggerUpdate modo DSX desconhecido: {ordinal}")
 
