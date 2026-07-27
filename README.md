@@ -9,8 +9,8 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.1%20alfa-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-5256-brightgreen.svg)](tests/)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.2.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Testes](https://img.shields.io/badge/testes-5529-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=sprint/harmonia-uhid)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.1.1 (alfa)
+Versão: 0.2.0 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT
 ```
@@ -71,25 +71,27 @@ Bluetooth) entram como jogadores adicionais.
 
 ## Instalação
 
-> **Onde esta versão mora.** Tudo o que esta página descreve — o redesign da
-> janela, a faxina do repositório, a alfa 0.1.1 — está na branch
-> `sprint/harmonia-uhid` do fork `[REDACTED]/hefesto-dualsense4unix`. O
-> repositório de origem `AndreBFarias/hefesto-dualsense4unix` **não tem este
-> código**: o `main` dele está no commit `398d3ed` e o último lançamento de lá é
-> a **v3.0.0, de 28/04/2026**. Clonar de lá hoje entrega o projeto anterior a
-> tudo isto. Medido em 25/07/2026; se o histórico já tiver sido unificado quando
-> você ler, esta caixa é o primeiro parágrafo a apagar.
+> **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
+> recomendado é a tag **`v0.2.0`**: é o checkpoint que rodou em hardware com
+> quatro controles e foi aprovado olhando a tela. Duas ressalvas antes de clonar:
+>
+> - **O `main` do fork está à frente da tag, e num ponto retirado.** Ele carrega
+>   a v0.1.2, cujas mudanças de interface foram reprovadas na validação de olho
+>   e desfeitas no mesmo dia (o porquê está no [CHANGELOG](CHANGELOG.md)). Clonar
+>   `main` hoje entrega essa versão.
+> - **O repositório de origem `AndreBFarias/hefesto-dualsense4unix` não tem este
+>   código**: o `main` dele está no commit `398d3ed` e o último lançamento de lá
+>   é a **v3.0.0, de 28/04/2026**. Clonar de lá entrega o projeto anterior a tudo
+>   isto.
+>
+> Medido em 26/07/2026.
 
 ```bash
-git clone -b sprint/harmonia-uhid \
-  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
+git checkout v0.2.0
 ./install.sh
 ```
-
-A branch é o ponto mais recente. Para a alfa exata, use a tag: `git checkout
-v0.1.1`. O `main` desse mesmo fork é um ponto **anterior** da mesma linha — não
-serve para instalar.
 
 O instalador mostra um seletor de formato, pede a senha de administrador uma vez
 e conduz o resto. As perguntas têm padrão seguro — dá para responder tudo com
