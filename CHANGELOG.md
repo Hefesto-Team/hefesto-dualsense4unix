@@ -5,6 +5,206 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-26
+
+**Checkpoint.** Esta versão é o ponto da árvore que rodou em hardware real e foi
+aprovada olhando a tela: quatro controles em co-op num jogo, numerados 1-2-3-4,
+sobrevivendo a reinício do daemon. É a leva das sete queixas — sete frases ditas
+em sequência, que viraram oito sprints entregues e mais quatro abertas pela
+própria validação.
+
+O tema comum das correções é sempre o mesmo, e vale escrito: **um nome para
+várias coisas.** "Modo jogo" eram seis conceitos distintos; "jogador" eram cinco
+números colididos em três widgets; o byte de mute do microfone tinha dois
+escritores brigando; a máscara do gamepad tinha dois donos que respondiam
+diferente conforme você usasse a janela ou o terminal. Nenhum desses defeitos
+aparece em teste unitário — todos aparecem quando alguém usa.
+
+**Sobre a validação:** os 5.529 testes desta versão passam, `mypy --strict` está
+limpo e os quatro gates do projeto foram lidos, não suprimidos. Isso não é o
+mesmo que dizer que funciona na sua mão — e o que a noite dos quatro controles
+provou está separado do que ela não provou, em
+`docs/research/2026-07-25-validacao-quatro-controles-e-a-numeracao-do-jogo.md`.
+
+### Added
+
+- **Co-op pela janela** (AUTO-01). A funcionalidade central do projeto só existia
+  por linha de comando: `grep -ci coop` no arquivo da interface dava **zero**. Um
+  botão "Preparar co-op (N jogadores)" encadeia modo jogo, ativação e
+  renumeração. Todo o IPC já existia — era ligação, não implementação. A
+  emulação de gamepad passa a nascer ligada quando há dois controles na mesa, com
+  flag de recusa persistida para distinguir "nunca decidiu" de "decidiu
+  desligar".
+- **Número de jogador editável** (`identity.number.set`, PLAYER-01). Não existia,
+  em lugar nenhum do projeto, comando que atribuísse um número a um controle — só
+  o "Renumerar agora", que compacta todos e mora em outra aba. Diferente dele,
+  o novo comando permuta apenas entre os controles **presentes** e não rebaixa
+  quem está na gaveta.
+- **Microfone com dono** (`mic.set`, MIC-USB-01), com três estados: mutar,
+  desmutar e **devolver a posse** ao driver. A chave é obrigatória — omiti-la
+  levanta erro em vez de virar um "desmuta" silencioso.
+- **`speaker.set`**, pelo mesmo bloco de posse do report de saída. A chave só
+  aparece no estado depois de uma escrita: o DualSense não devolve volume por
+  report nenhum, e publicar um número antes seria inventá-lo.
+- **O envelope real do DSX passa a ser aceito.** "Mods que já falam DSX funcionam
+  sem adaptação" era falso: o DSX real não manda o campo `version` e serializa
+  `type` como inteiro, então um pacote autêntico morria antes de qualquer
+  instrução ser lida. Medido na porta 6969 do daemon vivo — antes,
+  `udp.unsupported_version: 1`; depois, as seis instruções aplicadas.
+- **`TriggerThreshold` implementada de verdade.** Era aceita e descartada. Não é
+  efeito háptico: é corte no valor analógico entregue ao pad emulado, aplicado no
+  único ponto fiel — a fronteira controle físico → gamepad virtual.
+- **Modo jogo padrão** (MODO-01): quando a autoridade é de jogo e nenhum perfil
+  específico opina, o modo entra **sem trocar de perfil**. O cadeado congela a
+  decisão de *perfil*, não a de *modo* — essa distinção é o centro da sprint.
+  Acompanha migração dos presets já instalados, porque a semeadura não
+  sobrescreve arquivo existente e sem ela a cura só valeria em instalação nova.
+- **Rede de segurança contra rumble preso**: teto de silêncio que zera o motor
+  quando o pedido de parada se perde.
+- **DKMS `hefesto-hid-playstation`**, para a contenção de canal Bluetooth quando
+  dois controles pareiam com segundos de diferença, e patch do 8BitDo em modo PS4
+  pelo cabo (responde 9 bytes onde o driver pede 16; dos 16 o driver usa 7).
+  Ambos os interruptores nascem **desligados** — o módulo nunca muda de
+  comportamento sozinho.
+- **`scripts/install_fonts.sh`**: as duas fontes da identidade visual não estavam
+  instaladas (0 de 797 na máquina de desenvolvimento; o `fc-match` caía em Noto
+  Sans). Pacote da distro primeiro, download pinado por SHA-256 como plano B.
+- **Sala limpa**: `docs/process/CLEAN-ROOM.md` com quatro regras normativas, a
+  seção "O que este projeto deliberadamente NÃO incorporou" no `NOTICE`, e
+  `docs/protocol/curvas-proprias.md` — que nasce vazio de propósito, porque a
+  estrutura de proveniência precede o primeiro valor.
+- **`docs/usage/jogos-e-mascaras.md`**, declarado fonte da verdade sobre
+  compatibilidade de jogos: se outro texto do projeto divergir sobre um título, o
+  outro está errado.
+
+### Fixed
+
+- **O jogo enxergava quatro dispositivos onde existe um controle** (JOGO-01). A
+  allowlist do Steam Input desligava a deduplicação mas o gamepad virtual
+  continuava de pé, então o jogo pegava um como jogador 1 e outro como jogador 2,
+  e metade dos comandos ia para o controle que o jogo não lia. Agora a allowlist
+  retira o vpad. Trava honesta: se a vigia que reconcilia o ambiente não puder
+  ser armada, a suspensão é **abortada** com aviso — duplicado é melhor que ficar
+  sem controle até reiniciar.
+- **O controle sozinho na mesa nascia "jogador 2"** (NUM-01). A reserva de número
+  era permanente por endereço e nada reivindicava um número vago; "Renumerar
+  agora" rebaixava quem estivesse ausente — o gesto que consertava um controle
+  estragava o outro. O que se persiste passa a ser **ordem de preferência**, e a
+  posição exibida conta só quem está presente.
+- **A escala tipográfica era código morto** (LEGIBILIDADE-01): 11 das 14 classes
+  sem nenhum uso, e ~90% da tela herdava 13,33px do Pango — mexer nos degraus não
+  mudaria nada na tela. Entra mecanismo de escala com dono único; dez pares de
+  cor que reprovavam contraste AA foram corrigidos; o piso de área clicável
+  subiu.
+- **A configuração que você deixa parava de sumir** (ABAS-01 a ABAS-04). Quatro
+  defeitos com uma raiz só: a aba Perfis era a única superfície que editava e
+  persistia perfil sem nunca ler nem escrever o rascunho. Renomear perdia toda a
+  edição da sessão sem aviso; mover o brilho um pixel limpava os ajustes por
+  controle; "Parar" mentia sobre o estado parado.
+- **O motor girava para sempre quando o `stop` se perdia** (RUMBLE-PRESO-01). O
+  gate que ignora reports sem os bits de vibração está **certo** — sem ele, um
+  report de lightbar mataria a vibração em curso. A cura não é removê-lo: é o
+  teto de silêncio. A assimetria é deliberada — cortar uma vibração longa é
+  aborrecimento; motor girando até a bateria acabar é desgaste de aparelho.
+- **O byte de mute do microfone tinha dois escritores.** A/B no controle por
+  Bluetooth: mantendo o mute a 20 Hz, nove transições em dois segundos — um
+  segundo escritor desfazendo a cada ~0,44 s, a cadência exata do keepalive.
+  `microphone_mute` tinha uma única ocorrência no projeto: a leitura.
+- **Endereço sintetizado não é identidade.** O `usb_probe_degrade` fabrica um
+  endereço a partir de (VID, PID, barramento) — zero bits do aparelho. Dois
+  Nintendo-class degradados no mesmo barramento recebiam o **mesmo** endereço, e
+  o segundo desaparecia calado. Endereços começando em `02` viram identidade
+  volátil, e a deduplicação vira cascata.
+- **O initramfs carregava o módulo velho.** O DKMS dizia "installed", o reboot
+  tinha sido feito, e o 8BitDo continuava sem driver. O initramfs guardava uma
+  cópia e a carregava no boot; sem os parâmetros do patch, o kernel descartava o
+  `modprobe.d` **inteiro** com "unknown parameter", derrubando junto as curas que
+  já funcionavam.
+- **A unit do daemon nunca era instalada.** O `uninstall.sh` a removia e o
+  `install.sh` nunca a instalava — quem fizesse o ciclo completo ficava sem
+  daemon, sem vpad e sem gatilhos, com o instalador imprimindo o banner de
+  sucesso. No mesmo commit: `./uninstall.sh --help` **desinstalava tudo**, e um
+  `readonly` reatribuído encerrava o script em silêncio, fazendo perder o guard
+  do Steam Input, a migração das Launch Options e o pino do Proton.
+- **`led --brightness` da CLI.** Aceita 0–100 e mandava o número cru; o handler
+  valida fração. `--brightness 50` era recusado e caía no fallback de hardware
+  sem dizer nada; `--brightness 1` virava 100%. O teste travava exatamente o
+  valor que o daemon rejeita — verde enquanto o produto não funcionava.
+- **Dois gates do projeto se contradiziam.** Um exigia mascarar endereços como
+  `OUI:00:00:NN`; o outro reprovava exatamente esse padrão. O desempate tinha
+  sido desligar um deles, que não rodava em workflow nenhum. Um gate que ninguém
+  pode satisfazer não protege nada — só ensina a ignorá-lo.
+- **A hierarquia de profundidade da janela estava invertida** em relação ao
+  desenho, com dois tons chapados no lugar de quatro níveis; o log da aba Sistema
+  tinha fundo branco no meio do tema escuro; a aba ativa era azul, não rosa; o
+  acento do sistema vazava em quatro widgets.
+
+### Changed
+
+- **Teto de silêncio do rumble: 6 s → 3 s**, agora por medição. Noventa minutos
+  de jogo real desmentiram a premissa inicial — 17 disparos da rede de segurança,
+  sete deles com valores que seriam sentidos. O teste que travava o piso em 5 s
+  foi reescrito, não afrouxado: guardava um palpite, agora guarda o que a medição
+  sustenta.
+- **A máscara do gamepad tem dono único**, o daemon. `gamepad on` pelo terminal e
+  "Jogar pelo Hefesto" pela janela entregavam máscaras **diferentes**, e a
+  máscara decide se o jogo reconhece o controle.
+- **Aba Status reagrupada** em três linhas, com L2/R2 e giroscópio lado a lado.
+  Card de 457px para 372px contra uma faixa de 382px — o caminho de um controle
+  só, o mais comum, não era aferido por teste nenhum e pedia 411px.
+- **O README passou a dizer o que o projeto é.** Ele mandava clonar um
+  repositório que não tem este software, e **negava uma capacidade entregue** (a
+  ponte de microfone por Bluetooth, com 1.286 linhas no código). Números
+  conferidos em vez de copiados. Duas páginas documentavam mecanismos que não
+  existem.
+
+### Conhecido e em aberto
+
+Esta versão é um checkpoint honesto, não um produto fechado. O que a validação
+em hardware abriu está registrado como sprint, não como promessa:
+
+- **PLAYER-LED-01** — o número que o jogo atribui não chega ao controle físico
+  nos jogadores de co-op. O mecanismo existe para o jogador 1.
+- **CONTAGEM-01** — a janela exibe três contagens diferentes ao mesmo tempo
+  (2, 4 e 8) com quatro controles na mesa. Cada número está certo para a pergunta
+  que o próprio código faz; o erro só existe quando os três aparecem juntos.
+- **IDENT-01** — o 8BitDo troca de endereço ao trocar de modo e vira dois
+  controles no registro. A sprint **recusa** o palpite automático por prefixo, e
+  o motivo está escrito.
+- **MÁSCARA-01** — escolher, por controle, como ele aparece nos jogos.
+- **MIC-BT-01** — o medidor de microfone funciona no cabo e some no Bluetooth,
+  porque por rádio o DualSense não expõe placa de áudio nenhuma.
+- O patch DKMS do 8BitDo em modo PS4 pelo cabo **compila e nunca foi carregado**.
+- As seis sprints de sala limpa (CR-01 a CR-06) seguem abertas, e CR-02 bloqueia
+  qualquer curva de gatilho própria entrar no repositório.
+
+## [0.1.2] — RETIRADA
+
+**Publicada em 26/07/2026 e retirada no mesmo dia. Não instale esta versão.**
+
+A tag `v0.1.2` continua no repositório e continua apontando para os commits
+originais — o histórico não foi reescrito, por decisão registrada em
+`docs/process/CLEAN-ROOM.md`. O que mudou é o rótulo: esta versão não é
+recomendada, e a [0.2.0](#020--2026-07-26) é o ponto que a substitui.
+
+**Por que foi retirada.** A leva entrou de madrugada, com quinze commits e sem
+nenhuma validação em hardware. Pela manhã, a janela aberta mostrou o oposto do
+que fora pedido: o escopo autorizado era a faixa de baixo do card da aba Status,
+e a leva mexeu na aba inteira, mandou o microfone para o rodapé quando o pedido
+era colocá-lo **à direita** dos analógicos, e mudou coisas em abas que ninguém
+tinha mandado tocar. Três mudanças visuais entraram **sem documento de sprint e
+sem caixa de validação** — não havia como reprová-las item por item.
+
+**O que sobrevive dela volta pela porta certa**, com caixa escrita antes do
+código. A regra de método que este episódio deixou está em
+`docs/process/sprints/2026-07-26-INDICE-o-que-falta.md`: mudança que a pessoa vê
+na tela não entra sem caixa escrita **antes**. Um pedido que não está escrito é
+um pedido que a próxima leva vai extrapolar de novo.
+
+Correções úteis daquela leva que **não** se perderam: a simetria do instalador
+(o ciclo `uninstall`+`install` desligava seis curas de módulo em silêncio) e o
+conserto do `doctor --fix-mic` seguem em `main` e voltam avaliadas, uma a uma.
+
 ## [0.1.1] — 2026-07-25
 
 Uma leva de causas-raiz. O tema comum das correções abaixo é o mesmo: premissas
