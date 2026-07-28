@@ -19,6 +19,7 @@ fiação) não pode se repetir: os três asserts caem quando a cura é removida.
 # ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import gi
@@ -34,7 +35,13 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import theme as theme_mod
 from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
+from hefesto_dualsense4unix.app.widgets import controller_card as cc_mod
 from hefesto_dualsense4unix.app.widgets.controller_card import (
+    ROTULO_STICK_DIR,
+    ROTULO_STICK_ESQ,
+    TEXTO_MIC_AUSENTE,
+    TEXTO_MIC_SEM_MUTE,
+    TEXTO_SPEAKER_SEM_DADO,
     ControllerCard,
     glyph_size,
     gyro_do_inputs,
@@ -124,8 +131,10 @@ def test_gyro_ausente_ou_malformado_vira_none(inputs: Any) -> None:
 
 
 def test_touchpad_do_inputs_normaliza_pelos_limites_do_payload() -> None:
-    tocando, fx, fy = touchpad_do_inputs(_inputs(touchpad=_TOUCH))
+    lido = touchpad_do_inputs(_inputs(touchpad=_TOUCH))
 
+    assert lido is not None
+    tocando, fx, fy = lido
     assert tocando is True
     assert fx == pytest.approx(0.75)
     assert fy == pytest.approx(0.25)
@@ -135,8 +144,10 @@ def test_touchpad_com_limites_proprios_nao_usa_1920x1080() -> None:
     """Quem declara os limites é o kernel, no próprio payload."""
     bloco = {"touching": True, "x": 500, "y": 250, "width": 1000, "height": 500}
 
-    _tocando, fx, fy = touchpad_do_inputs(_inputs(touchpad=bloco))
+    lido = touchpad_do_inputs(_inputs(touchpad=bloco))
 
+    assert lido is not None
+    _tocando, fx, fy = lido
     assert (fx, fy) == pytest.approx((0.5, 0.5))
 
 
@@ -178,12 +189,23 @@ def test_texto_toques(n: int, esperado: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_sem_sensor_nenhum_os_tres_modulos_somem(card: Any) -> None:
+def test_sem_sensor_nenhum_o_gyro_e_o_touchpad_somem(card: Any) -> None:
+    """Giroscópio e touchpad continuam sumindo — o microfone, não.
+
+    A regra "ausência de sensor não vira zero na tela" vale para os dois
+    primeiros porque a ausência deles é do CONTROLE: um DualSense sem node de
+    motion não tem giroscópio nenhum, e três barras paradas no centro diriam
+    "em repouso". O microfone é outro caso e a MIC-PRESENTE-01 o separou:
+    todo DualSense tem microfone, o que falta é SINAL — e some é
+    indistinguível de "não existe" (ver
+    `test_a_faixa_nao_muda_de_lugar_quando_o_mic_muda_de_estado`, em
+    `test_status_faixa_blocos.py`).
+    """
     card.update(_entry(), _ESTADO, None)
 
     assert card._gyro_box.get_visible() is False
-    assert card._mic_box.get_visible() is False
     assert card._touch_box.get_visible() is False
+    assert card._mic_box.get_visible() is True
 
 
 def test_gyro_no_payload_acende_as_barras(card: Any) -> None:
@@ -223,10 +245,49 @@ def test_touchpad_sem_dedo_apaga_o_ponto_mas_mantem_o_painel(card: Any) -> None:
     assert card._touch_label.get_text() == "sem toque"
 
 
-def test_mic_sem_leitura_nao_mostra_modulo(card: Any) -> None:
+def test_mic_sem_leitura_fica_no_lugar_dizendo_sem_sinal(card: Any) -> None:
+    """MIC-PRESENTE-01 — *"o espaço do icon sempre fica lá"*.
+
+    O bloco não some, e o estado é DITO: um medidor mudo sem explicação
+    comunicaria a coisa errada (microfone aberto, em silêncio), que é
+    exatamente o que a sprint proíbe.
+    """
     card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
 
-    assert card._mic_box.get_visible() is False
+    assert card._mic_box.get_visible() is True
+    assert card._mic_selo.get_visible() is True
+    assert card._mic_selo.get_text() == TEXTO_MIC_AUSENTE
+
+
+def test_o_espaco_do_mic_e_reservado_por_construcao() -> None:
+    """A largura reservada não pode depender do texto que está no rótulo.
+
+    Duas peças garantem isso, e as duas são verificadas aqui: o campo fixo do
+    rótulo de estado (a frase mais longa mede o campo) e o `Gtk.SizeGroup`
+    horizontal que amarra o medidor ao rótulo. Sem elas, "sem sinal" e
+    " ATIVO " pedem larguras diferentes e o bloco respira a cada troca.
+    """
+    card = _card_montado()
+
+    grupo = card._grupo_largura_mic
+    assert grupo.get_mode() == Gtk.SizeGroupMode.HORIZONTAL
+    assert set(grupo.get_widgets()) == {card._mic_meter, card._mic_selo}
+    assert card._mic_selo.get_width_chars() == len(TEXTO_MIC_AUSENTE)
+    assert card._mic_selo.get_max_width_chars() == len(TEXTO_MIC_AUSENTE)
+
+
+def test_nenhum_caminho_esconde_o_bloco_do_microfone() -> None:
+    """MIC-PRESENTE-01/E3, segunda metade: nenhum `hide()` no bloco do mic.
+
+    Guarda de FONTE, e ela é deliberada: o teste de geometria acima pega o
+    pulo da faixa, mas só nos dois estados que ele exercita. Um `hide()` novo
+    num terceiro caminho (um `reset` futuro, um controle desconectado) voltaria
+    a sumir com o microfone sem cair em nenhum assert de largura.
+    """
+    fonte = Path(cc_mod.__file__).read_text(encoding="utf-8")
+
+    assert "_mic_box.hide()" not in fonte
+    assert "_esconder_modulo(mic)" not in fonte
 
 
 def test_mic_com_leitura_mostra_medidor_e_selo(card: Any) -> None:
@@ -246,27 +307,32 @@ def test_mic_mudo_troca_o_selo(card: Any) -> None:
     assert "#2b2d3a" in card._mic_selo.get_label()
 
 
-def test_mic_sem_mute_lido_mostra_medidor_sem_selo(card: Any) -> None:
-    """Medidor sim (o áudio está chegando), selo não: afirmar "ATIVO" sem ter
-    lido o mute seria dizer que o microfone está aberto por chute."""
+def test_mic_sem_mute_lido_diz_captando_e_nao_ativo(card: Any) -> None:
+    """Medidor sim (o áudio está chegando), selo colorido não: afirmar "ATIVO"
+    sem ter lido o mute seria dizer que o microfone está aberto por chute.
+
+    O rótulo continua no lugar — MIC-PRESENTE-01/E2, "nunca um medidor mudo
+    sem explicação" —, só que dizendo o que se sabe: está captando.
+    """
     card.update(_entry(), _ESTADO, LeituraMic(nivel=0.4, muted=None))
 
     assert card._mic_box.get_visible() is True
-    assert card._mic_selo.get_visible() is False
+    assert card._mic_selo.get_text() == TEXTO_MIC_SEM_MUTE
+    assert "ATIVO" not in card._mic_selo.get_label()
 
 
-def test_cada_modulo_some_sozinho_sem_arrastar_o_vizinho(card: Any) -> None:
+def test_o_touchpad_some_sozinho_sem_arrastar_o_microfone(card: Any) -> None:
     """STATUS-SIMETRIA-01 — microfone e touchpad deixaram de dividir uma linha.
 
     Antes eles moravam na mesma caixa (`_sensores_linha`), que sumia inteira
     quando nenhum dos dois existia. Agora o touchpad fica na coluna da esquerda
-    e o microfone ganhou coluna própria à DIREITA dos analógicos, então o que
-    tem de valer é mais forte: cada um aparece e some por conta própria, sem
-    levar o outro junto.
+    e o microfone ganhou bloco próprio à DIREITA dos analógicos, então o que
+    tem de valer é mais forte: o touchpad aparece e some por conta própria, e
+    o microfone não vai junto — ele nunca vai (MIC-PRESENTE-01).
     """
     card.update(_entry(inputs=_inputs(touchpad=_TOUCH)), _ESTADO, None)
     assert card._touch_box.get_visible() is True
-    assert card._mic_box.get_visible() is False
+    assert card._mic_selo.get_text() == TEXTO_MIC_AUSENTE
 
     card.update(_entry(), _ESTADO, LeituraMic(nivel=0.2, muted=False))
     assert card._touch_box.get_visible() is False
@@ -274,8 +340,8 @@ def test_cada_modulo_some_sozinho_sem_arrastar_o_vizinho(card: Any) -> None:
 
     card.update(_entry(), _ESTADO, None)
     assert card._touch_box.get_visible() is False
-    assert card._mic_box.get_visible() is False
-    # E a faixa de baixo continua de pé com os dois apagados (é onde moram a
+    assert card._mic_box.get_visible() is True
+    # E a faixa de baixo continua de pé com o touchpad apagado (é onde moram a
     # lightbar, o alto-falante, os analógicos e os botões).
     assert card._linha_inferior.get_visible() is True
 
@@ -293,9 +359,17 @@ def test_sem_leitor_de_inputs_apaga_tambem_os_sensores(card: Any) -> None:
 
     assert card._gyro_box.get_visible() is False
     assert card._touch_box.get_visible() is False
-    assert card._mic_box.get_visible() is False
     assert card._gyro_bars._valores == (0.0, 0.0, 0.0)
     assert card._touch_view._toque is None
+    # O microfone e o alto-falante APAGAM sem sumir: é o quarto estado da
+    # tabela da MIC-PRESENTE-01 ("controle desconectado: o espaço reservado,
+    # tudo apagado"), e a onda vai embora junto (reaparecer com o traço da
+    # última captura seria mostrar áudio que não está mais entrando).
+    assert card._mic_box.get_visible() is True
+    assert card._mic_selo.get_text() == TEXTO_MIC_AUSENTE
+    assert not any(card._mic_meter._historico)
+    assert card._speaker_box.get_visible() is True
+    assert card._speaker_label.get_text() == TEXTO_SPEAKER_SEM_DADO
 
 
 # ---------------------------------------------------------------------------
@@ -409,12 +483,24 @@ def test_speaker_sem_mute_no_payload_nao_chuta() -> None:
     assert speaker_do_entry({"speaker": {"volume": 255}}) == (255, None)
 
 
-def test_bloco_do_speaker_some_sem_a_chave(card: Any) -> None:
-    """A FRENTE D ainda está construindo o backend: sem a chave, o módulo não
-    aparece — nunca uma barra em zero fingindo volume no mínimo."""
+def test_bloco_do_speaker_fica_dizendo_que_ninguem_ajustou(card: Any) -> None:
+    """STATUS-SIMETRIA-02, entrega 4 — *"não tem a parte do som"*.
+
+    O bloco sumia por construção: o daemon só publica a chave ``speaker``
+    depois de um ``speaker.set`` nosso (o DualSense não devolve o volume), e
+    na sessão dela nunca houve um. Só que "não sei o volume" e "este controle
+    não tem alto-falante" não podem desenhar a mesma coisa — e desenhar nada
+    é dizer a segunda.
+
+    O que continua proibido é o número inventado: a barra fica em repouso e o
+    rótulo diz que ninguém ajustou, nunca um "0 %" fingindo volume no mínimo.
+    """
     card.update(_entry(), _ESTADO, None)
 
-    assert card._speaker_box.get_visible() is False
+    assert card._speaker_box.get_visible() is True
+    assert card._speaker_label.get_text() == TEXTO_SPEAKER_SEM_DADO
+    assert card._speaker_bar._fracao == 0.0
+    assert "%" not in card._speaker_label.get_text()
 
 
 def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
@@ -452,7 +538,6 @@ def test_botoes_ficam_na_linha_de_baixo_mesmo_sem_mic_nem_touchpad(
     comum — controle sem microfone atribuível e com o dedo fora do touchpad."""
     card.update(_entry(), _ESTADO, None)
 
-    assert card._mic_box.get_visible() is False
     assert card._touch_box.get_visible() is False
     assert card._linha_inferior.get_visible() is True
     assert card._glyph_grid.get_visible() is True
@@ -567,6 +652,47 @@ def test_os_dois_analogicos_desenham_na_mesma_altura() -> None:
         card._stick_left_title,
         card._stick_right_title,
     }
+
+
+@pytest.mark.parametrize("compact", [True, False])
+def test_as_duas_legendas_de_analogico_tem_o_mesmo_numero_de_linhas(
+    compact: bool,
+) -> None:
+    """STATUS-SIMETRIA-02, defeito 1 — *"um nome dos analógicos tem 3 linhas
+    outro dois"*.
+
+    O `Gtk.SizeGroup` vertical da entrega anterior igualou a ALTURA DO BLOCO e
+    deixou os círculos alinhados; o que ele não iguala é o número de LINHAS do
+    texto, e é isso que ela vê. A cura tem de ser por construção — a quebra
+    escrita no rótulo, e não decidida pela largura que sobrar —, então este
+    teste mede as duas coisas: quantas linhas o Pango renderizou de cada
+    legenda e a altura alocada de cada uma.
+
+    Roda nas DUAS larguras de card porque o defeito só aparecia na estreita: a
+    quebra automática dependia do espaço disponível, e o card de um controle
+    (mais largo) escondia o degrau que o de dois mostrava.
+
+    A mordida: devolver `(L3)`/`(R3)` ao texto do título e religar o
+    `line_wrap` faz a legenda da esquerda voltar a 3 linhas no card compacto e
+    este teste cai.
+    """
+    card = _card_montado(compact=compact)
+
+    linhas_esq = card._stick_left_title.get_layout().get_line_count()
+    linhas_dir = card._stick_right_title.get_layout().get_line_count()
+
+    assert linhas_esq == linhas_dir, (
+        f"a legenda do analógico esquerdo ocupa {linhas_esq} linhas e a do "
+        f"direito, {linhas_dir}: a quebra voltou a depender da largura"
+    )
+    assert (
+        card._stick_left_title.get_allocated_height()
+        == card._stick_right_title.get_allocated_height()
+    )
+    # E a lateral não sumiu do card: ela desceu para a linha dos números, que
+    # é onde ela cabe sem inventar uma terceira linha para ninguém.
+    assert card._stick_left_xy.get_text().startswith(ROTULO_STICK_ESQ)
+    assert card._stick_right_xy.get_text().startswith(ROTULO_STICK_DIR)
 
 
 def test_ordem_da_faixa_poe_o_microfone_a_direita_dos_analogicos() -> None:

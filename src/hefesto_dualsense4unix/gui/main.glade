@@ -42,9 +42,13 @@
     <property name="value">0</property>
   </object>
 
+  <!-- PERFIL-NASCE-CERTO-01: teto 100 -> 200. Com o teto em 100 e um perfil
+       "vale sempre" exatamente em 100, não existia número escolhível pela
+       janela que fizesse o perfil de um jogo vencer. Espelha
+       profiles_actions.PRIORIDADE_MAXIMA. -->
   <object class="GtkAdjustment" id="profile_priority_adj">
     <property name="lower">0</property>
-    <property name="upper">100</property>
+    <property name="upper">200</property>
     <property name="step-increment">5</property>
     <property name="page-increment">10</property>
     <property name="value">0</property>
@@ -282,6 +286,17 @@
                 <child>
                   <object class="GtkFrame" id="frame_status_estado">
                     <property name="label" translatable="yes">Estado</property>
+                    <!-- STATUS-SIMETRIA-02: a mesma largura do card de um
+                         controle (LARGURA_CARD_UNICO em controller_card.py,
+                         travada por test_status_faixa_blocos), centrada. Na
+                         tela maximizada este frame recebia 1870px para cinco
+                         linhas de rótulo, e a barra de bateria esticava 1730px
+                         para dizer "80 %" — o mesmo defeito apontado nas
+                         barras de L2/R2, no bloco logo acima delas. Com o
+                         teto, a aba passa a ter uma coluna de conteúdo só, e a
+                         sobra vira margem em vez de buraco. -->
+                    <property name="halign">center</property>
+                    <property name="width-request">960</property>
                     <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>
@@ -1614,11 +1629,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="digits">0</property>
                             <property name="value-pos">right</property>
                             <property name="hexpand">True</property>
-                            <property name="tooltip-text" translatable="yes">Quanto maior, mais prioritário que outros perfis (0-100)</property>
+                            <property name="tooltip-text" translatable="yes">Quanto maior, mais prioritário que outros perfis (0-200)</property>
                             <marks>
                               <mark value="0" position="bottom">0</mark>
-                              <mark value="50" position="bottom">50</mark>
                               <mark value="100" position="bottom">100</mark>
+                              <mark value="200" position="bottom">200</mark>
                             </marks>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>

@@ -10,10 +10,10 @@ recebem a ajustada).
 
 O corpo do card ocupa DUAS linhas, montadas em código — não no Glade::
 
-    [ L2 / R2 ............................ | Giroscópio ........... ]
-    [ Touchpad     |                                               ]
-    [ Lightbar     | L3 | R3 | Microfone | botões (4x4)            ]
-    [ Alto-falante |                                               ]
+    [ L2 / R2 ......  |  Giroscópio ......                        ]
+    [ Touchpad     |                                              ]
+    [ Lightbar     | L3 | R3 | Microfone |          botões (4x4)  ]
+    [ Alto-falante |                                              ]
 
 Antes eram seis blocos de largura total, empilhados: o card pedia 457px de
 altura e o giroscópio caía abaixo do corte da janela. Emparelhado, o que
@@ -29,6 +29,30 @@ mantenedora depois de olhar a tela:
   rótulo da esquerda quebrar em 3 linhas e o da direita em 2;
 * o **glifo dos botões derivado da escala de fonte** (:func:`glyph_size`), que
   era o único tamanho da interface fora do alcance do ajuste dela.
+
+STATUS-SIMETRIA-02 é o veredito dela sobre aquela entrega: *"só distanciou as
+coisas"*. Espalhar os módulos pela largura resolveu o amontoamento e não
+produziu leitura. As seis mudanças desta rodada, todas medidas na tela dela:
+
+* **o microfone não sai mais da faixa** (MIC-PRESENTE-01). Os dois ``hide()``
+  viraram estado apagado com o motivo em palavras, e a largura do bloco é
+  reservada por construção — campo fixo do rótulo mais ``Gtk.SizeGroup``
+  horizontal. Sumir era indistinguível de "não existe", e fazia os analógicos
+  pularem 42px a cada vez que o sinal ia e voltava (por Bluetooth, o tempo
+  todo);
+* **as duas legendas de analógico têm o mesmo número de linhas**, agora por
+  construção: a quebra está ESCRITA no rótulo e o ``(L3)``/``(R3)`` desceu
+  para a linha dos números. O ``SizeGroup`` vertical da rodada anterior
+  igualava a altura do bloco, não o número de linhas do texto;
+* **cada sensor tem bloco com moldura** no card de um controle — a coluna da
+  esquerda era uma lista de seis itens sem separação entre dois assuntos. No
+  card compacto a moldura não cabe na largura, e o motivo está em `_bloco`;
+* **o alto-falante existe na tela** mesmo sem ninguém ter ajustado o volume;
+* **as barras e o giroscópio ganharam teto de largura**, e o card de um
+  controle também (:data:`LARGURA_CARD_UNICO`): o vazio deixou de ser buraco
+  entre os módulos e virou margem em volta de uma coluna de conteúdo;
+* **a bateria aparece uma vez só**: com um controle, quem fala é o frame
+  "Estado"; com 2+, quem fala é cada card.
 
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
@@ -158,13 +182,108 @@ def glyph_size(escala: int | None = None) -> int:
 #: a esconder os botões abaixo da dobra — o caso mais comum de quem tem um
 #: controle só. `test_card_de_um_controle_so_tambem_cabe_na_faixa` agora tranca
 #: os DOIS caminhos.
-STICK_SIZE_SINGLE: Final[int] = 88
+#: STATUS-SIMETRIA-02: com UM controle o desenho subiu de 88 para 110px. A
+#: altura que ele consome vinha sobrando — a faixa que a aba dá ao card tinha
+#: 170px livres — e a metade de baixo da aba era vazio puro. Crescer o desenho
+#: usa esse vazio; espalhar os blocos por ele foi o que ela reprovou.
+STICK_SIZE_SINGLE: Final[int] = 110
 STICK_SIZE_COMPACT: Final[int] = 70
 
-#: Largura de referência do título do analógico antes de quebrar linha, em
-#: caracteres. O rótulo tem de caber na largura do DESENHO do analógico
-#: (`STICK_SIZE_*`), não o contrário — ver `_montar_capsula_stick`.
-_TITULO_STICK_MAX_CHARS: Final[int] = 10
+#: Os dois títulos de analógico, com a quebra ESCRITA no texto.
+#:
+#: STATUS-SIMETRIA-02, defeito 1 — *"um nome dos analógicos tem 3 linhas outro
+#: dois"*. A quebra automática dependia da largura disponível e do tamanho da
+#: fonte: `Analógico Esquerdo (L3)` (três palavras) caía em 3 linhas no card
+#: compacto e `Analógico Direito (R3)` em 2, e o `Gtk.SizeGroup` vertical da
+#: entrega anterior igualava a ALTURA do bloco sem igualar o número de linhas
+#: do texto — o desenho ficava alinhado e a legenda não.
+#:
+#: Com a quebra explícita e `line_wrap` desligado, os dois rótulos têm DUAS
+#: linhas por construção: não dependem mais da largura, da fonte nem da escala.
+#: O ``(L3)``/``(R3)`` saiu do título e desceu para a linha dos números, onde
+#: já havia texto: era ele a terceira palavra, e é a terceira palavra que
+#: fazia um rótulo quebrar em 3 linhas e o outro em 2. Sem ele, os dois viram
+#: "Analógico" + a lateral — e a linha mais larga passa a ser a mesma nos
+#: dois, o que também devolve a largura que a moldura dos blocos custa.
+_TITULO_STICK_ESQ: Final[str] = "Analógico\nesquerdo"
+_TITULO_STICK_DIR: Final[str] = "Analógico\ndireito"
+
+#: A lateral de cada analógico, agora ao lado do X/Y (ver `_markup_xy`).
+ROTULO_STICK_ESQ: Final[str] = "L3"
+ROTULO_STICK_DIR: Final[str] = "R3"
+
+#: Largura do card quando há UM controle só, em px.
+#:
+#: STATUS-SIMETRIA-02, defeito 4 — na tela maximizada o card recebia 1870px
+#: para ~700px de conteúdo, e a sobra virava DOIS buracos de 673px dentro da
+#: faixa (um antes dos analógicos, outro depois do microfone). Com um teto, a
+#: sobra sai de dentro do card e vira margem da página, com o card centrado:
+#: é a diferença entre "espaço vazio entre as coisas" e "margem em volta do
+#: bloco", que é o que a sprint pede.
+#:
+#: O número tem de caber na janela no MENOR tamanho em que ela abre (1062px de
+#: mínimo medido em `test_a_janela_inteira_cabe_na_largura_de_projeto`), porque
+#: a aba Status não tem rolagem horizontal para onde fugir.
+LARGURA_CARD_UNICO: Final[int] = 960
+
+#: Teto da barra de gatilho e do giroscópio no card de UM controle, em px.
+#:
+#: Medido na tela dela em 27/07: a barra do L2 recebia 881px para dizer um
+#: número de 0 a 255, com o "0 / 255" flutuando no meio do vazio, e o
+#: giroscópio recebia 914px — o "+1.6" do eixo X saía a ~880px do "X". Nada
+#: disso é informação: é o widget aceitando toda a largura que o card tem.
+#:
+#: O card compacto tem tetos MENORES, e não é preferência: um teto é um pedido
+#: MÍNIMO de largura, e com 2+ cards lado a lado cada px sobe direto para o
+#: mínimo da janela. Estes números vieram da folga medida na linha de cima do
+#: card compacto (a faixa de baixo é que manda na largura dele, e sobram ~140px
+#: na de cima) — cabem sem mexer no mínimo do card.
+LARGURA_BARRA_GATILHO_UNICO: Final[int] = 300
+LARGURA_GYRO_UNICO: Final[int] = 320
+LARGURA_BARRA_GATILHO_COMPACTO: Final[int] = 200
+LARGURA_GYRO_COMPACTO: Final[int] = 220
+
+#: Tamanhos dos desenhos no card de UM controle (o compacto usa os do
+#: `sensor_widgets`). Mesma troca do analógico: a altura sobrava e a metade de
+#: baixo da aba era vazia.
+_TOUCHPAD_PX_UNICO: Final[tuple[int, int]] = (140, 60)
+_MIC_METER_PX_UNICO: Final[tuple[int, int]] = (140, 44)
+_BARRA_FINA_PX_UNICO: Final[tuple[int, int]] = (120, 14)
+
+#: Estado do microfone dito em palavras, ao lado do medidor.
+#:
+#: MIC-PRESENTE-01/E2 — *"na aba status falta a presença permanente do
+#: microfone (mesmo que não esteja funcionando no bt, mas o espaço do icon
+#: sempre fica lá)"*. Um medidor mudo sem explicação comunica a coisa errada:
+#: parece microfone aberto em silêncio. São estados diferentes e a faixa
+#: precisa distingui-los em palavras.
+#: As duas frases são CURTAS de propósito: é o rótulo mais longo do bloco que
+#: decide a largura reservada, e a largura é a restrição dura desta aba (dois
+#: cards lado a lado somam direto no mínimo da janela, sem rolagem horizontal
+#: para absorver). Quem diz "microfone" é a moldura do bloco; estas dizem só o
+#: estado, e é assim que a linha inteira se lê: "Microfone / sem sinal".
+TEXTO_MIC_AUSENTE: Final[str] = "sem sinal"
+TEXTO_MIC_SEM_MUTE: Final[str] = "captando"
+
+#: Campo fixo do rótulo de estado do microfone, em caracteres: é o que impede
+#: a faixa de mudar de largura quando o texto troca de "sem sinal" para
+#: "ativo" (a mesma disciplina de campo fixo do `texto_eixo`).
+_MIC_ESTADO_CHARS: Final[int] = len(TEXTO_MIC_AUSENTE)
+
+#: Alto-falante sem volume conhecido. O DualSense NÃO devolve o volume — não
+#: há report de input nem feature report que o leia, e o daemon só publica a
+#: chave `speaker` depois de um `speaker.set` nosso (ipc_handlers). Então o
+#: bloco existe sempre, e diz que ninguém ajustou nada: um "0 %" ali seria
+#: volume inventado, e esconder o bloco seria dizer que o controle não tem
+#: alto-falante.
+TEXTO_SPEAKER_SEM_DADO: Final[str] = "não ajustado"
+
+#: Respiro entre blocos da faixa de leitura, em px. O card compacto (2+
+#: controles) usa o menor porque cada px dele soma na largura da janela; o de
+#: um controle usa o maior, porque ali o espaço é dele para gastar — e a
+#: moldura de cada bloco só se lê como bloco com ar em volta.
+_ESPACO_FAIXA_COMPACTO: Final[int] = 8
+_ESPACO_FAIXA_UNICO: Final[int] = 16
 
 #: Campo de largura fixa dos labels X/Y (BUG-STATUS-LABEL-REFLOW-01): sem o
 #: padding, o texto muda de largura ao cruzar dígitos e o re-layout a 10 Hz
@@ -179,7 +298,18 @@ _TITULO_STICK_MAX_CHARS: Final[int] = 10
 #: é essa largura que paga a mudança dos analógicos para a faixa de baixo: numa
 #: linha só, o rótulo — e não o desenho do analógico — é quem dizia a largura
 #: da cápsula.
-_XY_MARKUP: Final[str] = "X: {x:>3}\nY: {y:>3}"
+#:
+#: STATUS-SIMETRIA-02 — a lateral (``L3``/``R3``) mudou do título para cá. No
+#: título ela era a terceira palavra e mandava na quebra de linha (3 linhas de
+#: um lado, 2 do outro); aqui ela entra num campo que já é mono e de largura
+#: fixa, e a segunda linha recebe espaços do mesmo tamanho para o ``X`` e o
+#: ``Y`` continuarem alinhados um sob o outro.
+_XY_MARKUP: Final[str] = "{rot} X:{x:>3}\n{pad} Y:{y:>3}"
+
+
+def _markup_xy(rotulo: str, x: int, y: int) -> str:
+    """``"L3 X:128" / "   Y:128"`` — a lateral e o par de eixos, em mono."""
+    return _XY_MARKUP.format(rot=rotulo, pad=" " * len(rotulo), x=x, y=y)
 
 # ---------------------------------------------------------------------------
 # BT-03 — motivos de degradação em palavras leigas
@@ -480,6 +610,9 @@ if _GTK_DISPONIVEL:
         def __init__(self, *, compact: bool = False) -> None:
             super().__init__()
             self._compact = compact
+            self._espaco = (
+                _ESPACO_FAIXA_COMPACTO if compact else _ESPACO_FAIXA_UNICO
+            )
             # Caches de diff (sentinela onde None é valor válido).
             self._last_titulo: str | None = None
             self._last_battery: Any = _SENTINELA
@@ -550,6 +683,13 @@ if _GTK_DISPONIVEL:
         # ------------------------------------------------------------------
 
         def _montar_ui(self) -> None:
+            if not self._compact:
+                # Card de UM controle: largura com teto e centrado na aba.
+                # Sem isto ele estica pelos 1870px da tela maximizada e a
+                # sobra vira buraco DENTRO da faixa — o defeito 4 da
+                # STATUS-SIMETRIA-02, não margem de página.
+                self.set_size_request(LARGURA_CARD_UNICO, -1)
+                self.set_halign(Gtk.Align.CENTER)
             header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             swatch = Gtk.DrawingArea()
             swatch.set_size_request(14, 14)
@@ -574,6 +714,15 @@ if _GTK_DISPONIVEL:
 
             # Bateria DESTE controle (a barra do frame Estado só fala pelo
             # primário e some com 2+ controles — cada card tem a sua).
+            #
+            # STATUS-SIMETRIA-02, entrega 6 — a bateria aparecia DUAS vezes na
+            # tela dela: no frame "Estado" e no card, com o mesmo número. As
+            # duas regras já eram complementares e ninguém as tinha juntado:
+            # a linha do frame Estado só fica visível com 0 ou 1 controle
+            # (`_set_battery_row_visible`), e o card só é compacto com 2+. A
+            # linha do CARD é a que sai no caso de um controle só — a do frame
+            # Estado fica, porque é a que responde também quando não há
+            # controle nenhum, e o card nem existe.
             linha_bateria = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL, spacing=12
             )
@@ -586,7 +735,10 @@ if _GTK_DISPONIVEL:
             bateria.set_hexpand(True)
             self._battery_bar = bateria
             linha_bateria.pack_start(bateria, True, True, 0)
+            self._battery_row = linha_bateria
             corpo.pack_start(linha_bateria, False, False, 0)
+            if not self._compact:
+                self._esconder_modulo(linha_bateria)
 
             # Rótulo do estado da lightbar (apagada/desconhecida/nativo).
             rotulo = Gtk.Label()
@@ -668,10 +820,29 @@ if _GTK_DISPONIVEL:
             grid.attach(slot, 1, 0, 1, 1)
             return grid
 
+        def largura_da_barra_de_gatilho(self) -> int:
+            """Teto da barra de L2/R2 neste card, em px."""
+            if self._compact:
+                return LARGURA_BARRA_GATILHO_COMPACTO
+            return LARGURA_BARRA_GATILHO_UNICO
+
+        def largura_do_giroscopio(self) -> int:
+            """Teto do desenho do giroscópio neste card, em px."""
+            if self._compact:
+                return LARGURA_GYRO_COMPACTO
+            return LARGURA_GYRO_UNICO
+
         def _montar_gatilhos(self) -> Any:
+            """As duas barras de gatilho, com TETO de largura.
+
+            STATUS-SIMETRIA-02, defeito 4: com `hexpand` e sem teto, cada
+            barra recebia 881px na tela maximizada — para um valor de 0 a 255,
+            com o "0 / 255" flutuando no meio dela, longe do "L2" que a nomeia.
+            """
             grid = Gtk.Grid()
             grid.set_row_spacing(6)
             grid.set_column_spacing(12)
+            grid.set_valign(Gtk.Align.START)
             for linha, nome in enumerate(("L2", "R2")):
                 cap = Gtk.Label(label=nome)
                 cap.set_xalign(1.0)
@@ -680,7 +851,8 @@ if _GTK_DISPONIVEL:
                 barra = Gtk.ProgressBar()
                 barra.set_show_text(True)
                 barra.set_text("0 / 255")
-                barra.set_hexpand(True)
+                barra.set_size_request(self.largura_da_barra_de_gatilho(), -1)
+                barra.set_halign(Gtk.Align.START)
                 grid.attach(barra, 1, linha, 1, 1)
                 if nome == "L2":
                     self._l2_bar = barra
@@ -695,6 +867,45 @@ if _GTK_DISPONIVEL:
             label.set_xalign(0.0)
             label.get_style_context().add_class("dim-label")
             return label
+
+        def _bloco(self, titulo: str) -> tuple[Any, Any]:
+            """``(bloco, miolo)`` de UM assunto da faixa de leitura.
+
+            STATUS-SIMETRIA-02, defeito 2 — *"o touchpad não tem um espaço
+            próprio"*. Touchpad, o retângulo dele, "sem toque", Lightbar, a
+            barra de cor e o hex dela eram SEIS elementos empilhados numa
+            coluna única, sem nada separando os dois assuntos: lidos de cima
+            para baixo, pareciam uma lista só. A moldura é a separação que a
+            sprint pede ("cada um com moldura própria ou separação visível,
+            como o card do Estado já faz") — o mesmo recurso, um nível abaixo.
+            O rótulo vira o RÓTULO DA MOLDURA em vez de mais uma linha dentro
+            dela: o bloco ganha borda sem ganhar linha.
+
+            **A moldura só entra no card de UM controle, e o motivo é medido.**
+            Ela custa ~50px de largura por coluna (borda, margens e o respiro
+            do rótulo). Com 2+ controles os cards vão lado a lado e a largura
+            de cada um soma DIRETO no mínimo da janela, sem rolagem horizontal
+            para absorver: o orçamento inteiro da aba Status com dois cards é
+            de 26px (`test_dois_cards_lado_a_lado_cabem_na_largura_da_janela`,
+            1154px para 1180px). Não cabe, e forçar a moldura ali faria a
+            janela nascer maior que o projeto — o preço que a mantenedora não
+            pediu para pagar. No card único, que é a tela que ela mediu, a
+            largura sobra e a moldura entra.
+            """
+            if self._compact:
+                caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+                caixa.pack_start(self._rotulo_secao(titulo), False, False, 0)
+                return caixa, caixa
+            moldura = Gtk.Frame()
+            moldura.set_label_widget(self._rotulo_secao(titulo))
+            moldura.set_valign(Gtk.Align.START)
+            miolo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            miolo.set_margin_top(4)
+            miolo.set_margin_bottom(4)
+            miolo.set_margin_start(6)
+            miolo.set_margin_end(6)
+            moldura.add(miolo)
+            return moldura, miolo
 
         @staticmethod
         def _esconder_modulo(widget: Any) -> None:
@@ -711,12 +922,23 @@ if _GTK_DISPONIVEL:
             widget.hide()
 
         def _montar_gyro(self) -> Any:
-            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            caixa.pack_start(
-                self._rotulo_secao("Giroscópio (graus/s)"), False, False, 0
-            )
+            caixa, miolo = self._bloco("Giroscópio (graus/s)")
             barras = GyroBars()
-            caixa.pack_start(barras, False, False, 0)
+            # Teto de largura: o número do eixo é desenhado colado na borda
+            # DIREITA do widget (`fim_barra + 4`, em sensor_widgets), então a
+            # largura do widget É a distância entre o "X" e o "+143.2". Sem
+            # teto ela era de 914px na tela maximizada, com os rótulos
+            # apertados de um lado e os números do outro. A altura pedida pelo
+            # PRÓPRIO widget é preservada: ela deriva da escala de fonte, e
+            # trocá-la por -1 faria as três linhas do desenho se sobreporem.
+            _largura, altura = barras.get_size_request()
+            barras.set_size_request(self.largura_do_giroscopio(), altura)
+            barras.set_halign(Gtk.Align.START)
+            # O bloco acompanha o conteúdo em vez de esticar pela coluna
+            # inteira do grid: moldura larga com desenho estreito dentro
+            # devolveria o vazio para DENTRO do bloco.
+            caixa.set_halign(Gtk.Align.START)
+            miolo.pack_start(barras, False, False, 0)
             self._gyro_bars = barras
             self._gyro_box = caixa
             self._esconder_modulo(caixa)
@@ -750,7 +972,10 @@ if _GTK_DISPONIVEL:
             arrasta o vizinho, e nenhum deles leva os botões junto (a armadilha
             de LEGIBILIDADE-01, quando o grid morava dentro da linha que sumia).
             """
-            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            linha = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=self._espaco,
+            )
 
             linha.pack_start(self._montar_coluna_sensores(), False, False, 0)
             # O miolo — os dois analógicos e o microfone COLADO à direita deles,
@@ -760,7 +985,10 @@ if _GTK_DISPONIVEL:
             # card de um controle: 764px de vazio entre o fim dos analógicos e o
             # começo do grid). `fill=False` mantém os três blocos juntos —
             # esticar a caixa afastaria o microfone dos analógicos de novo.
-            miolo = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            miolo = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=self._espaco,
+            )
             miolo.pack_start(self._montar_sticks(), False, False, 0)
             miolo.pack_start(self._montar_mic(), False, False, 0)
             self._miolo_inferior = miolo
@@ -777,7 +1005,10 @@ if _GTK_DISPONIVEL:
 
         def _montar_coluna_sensores(self) -> Any:
             """Coluna da esquerda: touchpad, lightbar e alto-falante empilhados."""
-            coluna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            coluna = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL,
+                spacing=self._espaco // 2,
+            )
             coluna.pack_start(self._montar_touchpad(), False, False, 0)
             coluna.pack_start(self._montar_lightbar(), False, False, 0)
             coluna.pack_start(self._montar_speaker(), False, False, 0)
@@ -794,12 +1025,13 @@ if _GTK_DISPONIVEL:
             # somam direto no mínimo da janela e a aba Status não tem rolagem
             # horizontal. Com "sem toque" ao lado do título, a coluna do
             # touchpad pedia 105px para desenhar um painel de 76.
-            touch = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            touch.pack_start(self._rotulo_secao("Touchpad"), False, False, 0)
+            touch, miolo = self._bloco("Touchpad")
             painel = TouchpadView()
-            touch.pack_start(painel, False, False, 0)
+            if not self._compact:
+                painel.set_size_request(*_TOUCHPAD_PX_UNICO)
+            miolo.pack_start(painel, False, False, 0)
             rotulo = self._rotulo_secao(texto_toques(0))
-            touch.pack_start(rotulo, False, False, 0)
+            miolo.pack_start(rotulo, False, False, 0)
             self._touch_view = painel
             self._touch_label = rotulo
             self._touch_box = touch
@@ -807,35 +1039,47 @@ if _GTK_DISPONIVEL:
             return touch
 
         def _montar_mic(self) -> Any:
-            """Coluna PRÓPRIA do microfone, à direita dos dois analógicos."""
-            mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            # Topo alinhado com os títulos dos analógicos e com o do touchpad:
-            # sem isto a caixa estica na altura inteira da faixa e o rótulo
-            # "Microfone" fica flutuando no meio, sozinho na fileira.
-            mic.set_valign(Gtk.Align.START)
-            mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
+            """Bloco PRÓPRIO do microfone, à direita dos dois analógicos.
+
+            MIC-PRESENTE-01 — ele NUNCA se esconde. Esconder um widget de uma
+            faixa horizontal muda a largura de todos os vizinhos: além de o
+            microfone desaparecer (e sumir é indistinguível de "não existe"),
+            os analógicos e o grid de botões pulavam de lugar a cada vez que
+            ele entrava ou saía — e por Bluetooth ele sai quase sempre, porque
+            a captura é Opus tunelado em HID e é instável.
+
+            A largura fica reservada por construção, em dois pontos: o campo
+            fixo do rótulo de estado (`_MIC_ESTADO_CHARS`, medido pela mais
+            longa das frases) e um `Gtk.SizeGroup` HORIZONTAL amarrando o
+            medidor ao rótulo — os dois passam a ter a largura do maior, e
+            trocar de estado não mexe em nenhuma das duas.
+            """
+            mic, miolo = self._bloco("Microfone")
             medidor = MicMeter()
             medidor.set_valign(Gtk.Align.CENTER)
-            mic.pack_start(medidor, False, False, 0)
+            if not self._compact:
+                medidor.set_size_request(*_MIC_METER_PX_UNICO)
+            miolo.pack_start(medidor, False, False, 0)
             selo = Gtk.Label()
             selo.set_valign(Gtk.Align.CENTER)
             selo.set_halign(Gtk.Align.START)
+            selo.set_width_chars(_MIC_ESTADO_CHARS)
+            selo.set_max_width_chars(_MIC_ESTADO_CHARS)
             # LEGIBILIDADE-01: o degrau vem da escala (`.hefesto-selo`), não do
             # `font_size="x-small"` que estava no markup. Aquele atributo era
             # RELATIVO à fonte da distribuição — rendia 9,3px nesta máquina, o
             # MENOR texto da interface — e nenhum ajuste de tema o alcançava,
             # porque a escala global reescreve o CSS, não markup de Pango.
             selo.get_style_context().add_class("hefesto-selo")
-            mic.pack_start(selo, False, False, 0)
+            miolo.pack_start(selo, False, False, 0)
+            grupo = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+            grupo.add_widget(medidor)
+            grupo.add_widget(selo)
+            self._grupo_largura_mic = grupo
             self._mic_meter = medidor
             self._mic_selo = selo
             self._mic_box = mic
-            # `_esconder_modulo` faz o `show_all()` ANTES de apagar (senão o
-            # medidor nasceria sem os filhos marcados); o selo se apaga depois,
-            # porque ele tem regra própria (mute ainda desconhecido).
-            self._esconder_modulo(mic)
-            selo.set_no_show_all(True)
-            selo.hide()
+            self._aplicar_estado_mic(None, presente=False)
             return mic
 
         def _montar_lightbar(self) -> Any:
@@ -846,13 +1090,14 @@ if _GTK_DISPONIVEL:
             rótulo "Lightbar: cor desconhecida" do corpo já responde, e uma
             faixa preta ali seria "apagada" dita sem prova.
             """
-            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            caixa.pack_start(self._rotulo_secao("Lightbar"), False, False, 0)
+            caixa, miolo = self._bloco("Lightbar")
             barra = LightbarBar()
             barra.set_valign(Gtk.Align.CENTER)
-            caixa.pack_start(barra, False, False, 0)
+            if not self._compact:
+                barra.set_size_request(*_BARRA_FINA_PX_UNICO)
+            miolo.pack_start(barra, False, False, 0)
             hexa = self._rotulo_secao("")
-            caixa.pack_start(hexa, False, False, 0)
+            miolo.pack_start(hexa, False, False, 0)
             self._lightbar_bar = barra
             self._lightbar_hex = hexa
             self._lightbar_box = caixa
@@ -862,21 +1107,35 @@ if _GTK_DISPONIVEL:
         def _montar_speaker(self) -> Any:
             """Bloco "Alto-falante": volume do speaker embutido do controle.
 
-            Consumo defensivo (a chave ``speaker`` é opcional): sem ela no
-            payload, o módulo nem aparece — nunca uma barra em zero fingindo
-            que o volume está no mínimo.
+            STATUS-SIMETRIA-02, entrega 4 — *"não tem a parte do som"*. O
+            bloco sumia da tela dela por construção: o daemon só publica a
+            chave ``speaker`` DEPOIS de um ``speaker.set`` nosso, porque o
+            DualSense não devolve o volume (não há report de input nem feature
+            report que o leia — ver ``ipc_handlers``), e o card escondia o
+            módulo inteiro na ausência da chave. Só que sumir é
+            indistinguível de "este controle não tem alto-falante".
+
+            Agora o bloco fica, em LEITURA: a barra em repouso e o rótulo
+            dizendo ``não ajustado``. Nenhum controle novo entra aqui — pôr um
+            botão de volume que o daemon aceita mas cujo valor ninguém
+            consegue ler de volta seria inventar controle que não funciona.
             """
-            caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            caixa.pack_start(self._rotulo_secao("Alto-falante"), False, False, 0)
+            caixa, miolo = self._bloco("Alto-falante")
             barra = SpeakerBar()
             barra.set_valign(Gtk.Align.CENTER)
-            caixa.pack_start(barra, False, False, 0)
-            valor = self._rotulo_secao("")
-            caixa.pack_start(valor, False, False, 0)
+            if not self._compact:
+                barra.set_size_request(*_BARRA_FINA_PX_UNICO)
+            miolo.pack_start(barra, False, False, 0)
+            # Sem campo fixo aqui, ao contrário do microfone: quem manda na
+            # largura desta coluna é o rótulo "Alto-falante", que é maior que
+            # qualquer valor e não muda — trocar "não ajustado" por "50 %" não
+            # mexe em nada. Um `width_chars` seria 30px de largura cobrados por
+            # nada, e a largura é o que falta nesta aba.
+            valor = self._rotulo_secao(TEXTO_SPEAKER_SEM_DADO)
+            miolo.pack_start(valor, False, False, 0)
             self._speaker_bar = barra
             self._speaker_label = valor
             self._speaker_box = caixa
-            self._esconder_modulo(caixa)
             return caixa
 
         def _montar_capsula_stick(
@@ -888,15 +1147,17 @@ if _GTK_DISPONIVEL:
             label_titulo = Gtk.Label()
             label_titulo.set_markup(titulo)
             label_titulo.set_xalign(0.5)
-            # O título QUEBRA em vez de alargar a cápsula: na faixa de baixo
-            # quem manda na largura tem de ser o desenho do analógico, não o
-            # rótulo. Sem isso, "Analógico Esquerdo (L3)" pedia 156px numa
-            # cápsula de 70 e alargava o card inteiro. O peso visual passa a
-            # ser o dos módulos vizinhos (`dim-label`), que é o que eles são
-            # agora: pares na mesma faixa de leitura ao vivo.
-            label_titulo.set_line_wrap(True)
+            # A quebra é ESCRITA no texto e o `line_wrap` fica DESLIGADO.
+            #
+            # STATUS-SIMETRIA-02, defeito 1: com a quebra automática, quantas
+            # linhas cada rótulo ocupava dependia da largura sobrando e do
+            # tamanho da fonte — "Analógico Esquerdo (L3)" caía em 3 linhas e
+            # "Analógico Direito (R3)" em 2 no mesmo card, e ela viu isso na
+            # tela. Agora os dois têm DUAS linhas por construção, em qualquer
+            # largura e em qualquer escala de fonte. O peso visual continua o
+            # dos módulos vizinhos (`dim-label`): são pares na mesma faixa.
+            label_titulo.set_line_wrap(False)
             label_titulo.set_justify(Gtk.Justification.CENTER)
-            label_titulo.set_max_width_chars(_TITULO_STICK_MAX_CHARS)
             label_titulo.get_style_context().add_class("dim-label")
             # STATUS-SIMETRIA-01 — a CURA do degrau de 20px entre os dois
             # analógicos. "Analógico Esquerdo (L3)" quebra em 3 linhas e
@@ -915,7 +1176,7 @@ if _GTK_DISPONIVEL:
             slot.pack_start(preview, False, False, 0)
             caps.pack_start(slot, False, False, 0)
             label_xy = Gtk.Label()
-            label_xy.set_markup(_XY_MARKUP.format(x=128, y=128))
+            label_xy.set_markup(_markup_xy(rotulo_stick, 128, 128))
             label_xy.set_xalign(0.5)
             label_xy.set_justify(Gtk.Justification.CENTER)
             # O degrau de tamanho e a família mono saem da escala do CSS, não
@@ -937,11 +1198,14 @@ if _GTK_DISPONIVEL:
             # Caixa e não mais `Gtk.Grid` homogêneo: a grade dava às duas
             # cápsulas a largura da MAIOR, e a maior era a do rótulo. Aqui cada
             # uma pede o próprio desenho.
-            faixa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            faixa = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=self._espaco,
+            )
 
             caps_esq, stick_esq, titulo_esq, xy_esq = (
                 self._montar_capsula_stick(
-                    "Analógico Esquerdo (L3)", "L3", tamanho
+                    _TITULO_STICK_ESQ, ROTULO_STICK_ESQ, tamanho
                 )
             )
             self._stick_left = stick_esq
@@ -951,7 +1215,7 @@ if _GTK_DISPONIVEL:
 
             caps_dir, stick_dir, titulo_dir, xy_dir = (
                 self._montar_capsula_stick(
-                    "Analógico Direito (R3)", "R3", tamanho
+                    _TITULO_STICK_DIR, ROTULO_STICK_DIR, tamanho
                 )
             )
             self._stick_right = stick_dir
@@ -1124,40 +1388,63 @@ if _GTK_DISPONIVEL:
                 return
             self._last_mic = chave
             if nivel is None:
-                # A onda também vai embora: reaparecer com o traço da última
-                # captura seria mostrar áudio que não está mais entrando.
+                # A onda vai embora — reaparecer com o traço da última captura
+                # seria mostrar áudio que não está mais entrando —, mas o
+                # BLOCO fica (MIC-PRESENTE-01).
                 self._mic_meter.limpar()
-                self._mic_box.hide()
+                self._aplicar_estado_mic(None, presente=False)
                 return
-            self._mic_meter.show()
             self._mic_meter.set_nivel(float(nivel))
-            selo = selo_mic(muted)
+            self._aplicar_estado_mic(muted, presente=True)
+
+        def _aplicar_estado_mic(
+            self, muted: Any, *, presente: bool
+        ) -> None:
+            """Diz o estado do microfone em palavras — sem nunca esconder.
+
+            Quatro estados, um espaço só (a tabela da MIC-PRESENTE-01):
+            captando com mute lido vira o selo colorido ``ATIVO``/``MUDO``;
+            captando sem mute lido vira ``captando`` apagado (cravar "ATIVO"
+            sem ter lido o mute seria afirmar que o microfone está aberto por
+            chute); sem sinal nenhum vira ``sem sinal``, também apagado.
+            """
+            selo = selo_mic(muted) if presente else None
+            contexto = self._mic_selo.get_style_context()
             if selo is None:
-                # Mute ainda desconhecido: medidor sim, selo não. Cravar
-                # "ATIVO" aqui seria afirmar que o mic está aberto sem ter
-                # lido nada.
-                self._mic_selo.hide()
-            else:
-                texto, fundo, cor = selo
-                self._mic_selo.set_markup(
-                    f'<span background="{fundo}" foreground="{cor}">'
-                    f" {texto} </span>"
+                contexto.add_class("dim-label")
+                self._mic_selo.set_text(
+                    TEXTO_MIC_SEM_MUTE if presente else TEXTO_MIC_AUSENTE
                 )
-                self._mic_selo.show()
-            self._mic_box.show()
+                return
+            contexto.remove_class("dim-label")
+            texto, fundo, cor = selo
+            self._mic_selo.set_markup(
+                f'<span background="{fundo}" foreground="{cor}">'
+                f" {texto} </span>"
+            )
 
         def _update_speaker(self, entry: dict[str, Any]) -> None:
             dados = speaker_do_entry(entry)
             if dados == self._last_speaker:
                 return
             self._last_speaker = dados
+            self._aplicar_estado_speaker(dados)
+
+        def _aplicar_estado_speaker(
+            self, dados: tuple[int, bool | None] | None
+        ) -> None:
+            """Volume do alto-falante, ou a frase que diz que ninguém ajustou.
+
+            O bloco NUNCA se esconde: some é o que ela leu como "não tem a
+            parte do som".
+            """
             if dados is None:
-                self._speaker_box.hide()
+                self._speaker_bar.set_volume(0.0, None)
+                self._speaker_label.set_text(TEXTO_SPEAKER_SEM_DADO)
                 return
             volume, muted = dados
             self._speaker_bar.set_volume(fracao_do_volume(volume), muted)
             self._speaker_label.set_text(texto_volume(volume, muted))
-            self._speaker_box.show()
 
         # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
@@ -1191,12 +1478,16 @@ if _GTK_DISPONIVEL:
             ry = int(inputs.get("ry", 128))
             if lx != self._last_lx or ly != self._last_ly:
                 self._stick_left.update(lx, ly)
-                self._stick_left_xy.set_markup(_XY_MARKUP.format(x=lx, y=ly))
+                self._stick_left_xy.set_markup(
+                    _markup_xy(ROTULO_STICK_ESQ, lx, ly)
+                )
                 self._last_lx = lx
                 self._last_ly = ly
             if rx != self._last_rx or ry != self._last_ry:
                 self._stick_right.update(rx, ry)
-                self._stick_right_xy.set_markup(_XY_MARKUP.format(x=rx, y=ry))
+                self._stick_right_xy.set_markup(
+                    _markup_xy(ROTULO_STICK_DIR, rx, ry)
+                )
                 self._last_rx = rx
                 self._last_ry = ry
 
@@ -1244,14 +1535,10 @@ if _GTK_DISPONIVEL:
         def _pintar_titulos_sticks(self) -> None:
             """Títulos dos sticks: accent do CONTROLE quando pressionados."""
             self._pintar_titulo_stick(
-                self._stick_left_title,
-                "Analógico Esquerdo (L3)",
-                self._l3_pressed,
+                self._stick_left_title, _TITULO_STICK_ESQ, self._l3_pressed
             )
             self._pintar_titulo_stick(
-                self._stick_right_title,
-                "Analógico Direito (R3)",
-                self._r3_pressed,
+                self._stick_right_title, _TITULO_STICK_DIR, self._r3_pressed
             )
 
         def _pintar_titulo_stick(
@@ -1287,8 +1574,12 @@ if _GTK_DISPONIVEL:
             self._stick_left.set_l3_pressed(False)
             self._stick_right.update(128, 128)
             self._stick_right.set_l3_pressed(False)
-            self._stick_left_xy.set_markup(_XY_MARKUP.format(x=128, y=128))
-            self._stick_right_xy.set_markup(_XY_MARKUP.format(x=128, y=128))
+            self._stick_left_xy.set_markup(
+                _markup_xy(ROTULO_STICK_ESQ, 128, 128)
+            )
+            self._stick_right_xy.set_markup(
+                _markup_xy(ROTULO_STICK_DIR, 128, 128)
+            )
             for glyph in self._glyphs.values():
                 glyph.set_pressed(False)
             self._l3_pressed = False
@@ -1310,9 +1601,12 @@ if _GTK_DISPONIVEL:
             self._gyro_box.hide()
             self._touch_view.set_toque(None)
             self._touch_box.hide()
+            # Microfone e alto-falante voltam ao estado apagado — e NÃO se
+            # escondem: o espaço deles é reservado em todos os quatro estados
+            # (MIC-PRESENTE-01), inclusive neste, o de controle sem leitor.
             self._mic_meter.limpar()
-            self._mic_box.hide()
-            self._speaker_box.hide()
+            self._aplicar_estado_mic(None, presente=False)
+            self._aplicar_estado_speaker(None)
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
             self._last_mic = _SENTINELA
@@ -1404,9 +1698,19 @@ __all__ = [
     "GLYPH_SIZE_BASE",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
+    "LARGURA_BARRA_GATILHO_COMPACTO",
+    "LARGURA_BARRA_GATILHO_UNICO",
+    "LARGURA_CARD_UNICO",
+    "LARGURA_GYRO_COMPACTO",
+    "LARGURA_GYRO_UNICO",
     "MOTIVOS_DEGRADACAO_LEIGOS",
+    "ROTULO_STICK_DIR",
+    "ROTULO_STICK_ESQ",
     "STICK_SIZE_COMPACT",
     "STICK_SIZE_SINGLE",
+    "TEXTO_MIC_AUSENTE",
+    "TEXTO_MIC_SEM_MUTE",
+    "TEXTO_SPEAKER_SEM_DADO",
     "ControllerCard",
     "accent_do_card",
     "glyph_size",

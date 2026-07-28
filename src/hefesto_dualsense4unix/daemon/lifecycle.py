@@ -2889,11 +2889,20 @@ class Daemon:
         perfil para RESPONDER uma pergunta (`_profile_rule_matches_game`), nunca
         para ativar — quem ativa é o manager do subsystem de autoswitch, com os
         appliers todos fiados.
+
+        EMPATE-01 (27/07): o `store` do daemon vai junto. Ele nascia com um
+        `StateStore` próprio e VAZIO, então este seletor não sabia qual perfil
+        está ativo — e o desempate por incumbente
+        (`ProfileManager._melhor_candidato`) ficaria cego justo no caminho do
+        SINAL DE JOGO, que é onde a resposta importa. Passar o store é leitura:
+        nada aqui chama `activate()`, que é quem escreve nele.
         """
         if self._profile_selector is None:
             from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-            self._profile_selector = ProfileManager(controller=self.controller)
+            self._profile_selector = ProfileManager(
+                controller=self.controller, store=self.store
+            )
         return self._profile_selector
 
     def _profile_rule_matches_game(self, wm_class: str | None) -> bool:

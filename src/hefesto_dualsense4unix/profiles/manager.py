@@ -119,6 +119,12 @@ class ProfileManager:
     # `select_for_window` roda a 2 Hz (poll do autoswitch): sem esta chave o
     # veto viraria ~7 mil linhas/hora no journal enquanto ela joga.
     _ultimo_veto_catch_all: str | None = field(default=None, repr=False)
+    # EMPATE-01 (sprint 27/07): último empate já registrado no journal, como
+    # `(wm_class, nome do vencedor)`. Mesma razão do `_ultimo_veto_catch_all`
+    # acima: a seleção roda a 2 Hz e o empate medido no disco dela é
+    # PERMANENTE (três catch-all em prioridade 0), então logar sem dedup
+    # viraria ~7 mil linhas por hora no journal enquanto ela joga.
+    _ultimo_empate_logado: tuple[str, str] | None = field(default=None, repr=False)
 
     def list_profiles(self) -> list[Profile]:
         return load_all_profiles()
@@ -621,8 +627,84 @@ class ProfileManager:
                 )
             return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
         self._ultimo_veto_catch_all = None
-        candidates.sort(key=lambda p: (not p.e_catch_all, p.priority), reverse=True)
-        return candidates[0], MOTIVO_SELECIONADO
+        return self._melhor_candidato(candidates, wm_class), MOTIVO_SELECIONADO
+
+    @staticmethod
+    def _chave_de_selecao(profile: Profile) -> tuple[bool, int]:
+        """Chave HISTÓRICA da escolha: especificidade e, só depois, prioridade.
+
+        Preservada exatamente como era (R-01): `not e_catch_all` primeiro, para
+        que qualquer regra real vença qualquer catch-all, e a prioridade em
+        seguida. Maior tupla vence.
+        """
+        return (not profile.e_catch_all, profile.priority)
+
+    def _nome_do_incumbente(self) -> str | None:
+        """Nome do perfil que JÁ ESTÁ ATIVO, ou None quando não há.
+
+        EMPATE-01: a fonte é o `StateStore` — o mesmo objeto que
+        `activate()` escreve. Não se consulta `session.json` de propósito: ele
+        guarda a última escolha MANUAL dela, que não é necessariamente o perfil
+        vigente, e lê-lo aqui somaria I/O de disco a um caminho que roda a 2 Hz.
+        Quem quiser o incumbente num `ProfileManager` só-leitura injeta o store
+        do daemon (é o que `Daemon._manager_de_selecao` passou a fazer).
+
+        Tolerante a dublê: um store falso pode devolver qualquer coisa, e só
+        uma string não vazia é nome de perfil.
+        """
+        nome = getattr(self.store, "active_profile", None)
+        return nome if isinstance(nome, str) and nome else None
+
+    def _melhor_candidato(
+        self, candidates: list[Profile], wm_class: str
+    ) -> Profile:
+        """Elege UM candidato — e o terceiro termo do desempate é declarado.
+
+        EMPATE-01 (sprint 27/07). Até aqui a escolha era
+        `sort(key=(not catch_all, priority), reverse=True)` e nada mais. Como o
+        `sort` do Python é estável e o `load_all_profiles` entrega os arquivos
+        em `sorted(glob("*.json"))`, todo empate caía na ORDEM ALFABÉTICA DO
+        NOME DO ARQUIVO — que não é critério de ninguém, é acidente de `glob`.
+        Medido no disco dela: `pragmata.json` e `pragmata2.json` são idênticos
+        fora o campo `name`, ambos empatam em prioridade 5, e quem vencia era
+        `Pragmata` — enquanto o perfil que ela deixou ativo era o `Pragmata2`.
+        É um mecanismo direto para a queixa mais antiga desta casa, *"a config
+        que eu deixo nunca é respeitada"*.
+
+        O terceiro termo é o INCUMBENTE: em empate, o perfil que já está ativo
+        continua. É a escolha deliberadamente mais conservadora do leque —
+        não inventa hierarquia nova (nenhuma "data de modificação", nenhum
+        "perfil padrão" a mais para ela administrar), não muda nada quando não
+        há empate, e o que ele faz em uma frase é: **uma disputa sem critério
+        deixa de derrubar o que estava valendo**.
+
+        Quando o incumbente não está entre os empatados, o desempate segue
+        sendo o histórico (o primeiro da ordem de carga) — mudar isso mudaria
+        comportamento já validado sem que ninguém tenha pedido.
+        """
+        melhor = max(self._chave_de_selecao(p) for p in candidates)
+        empatados = [p for p in candidates if self._chave_de_selecao(p) == melhor]
+        if len(empatados) == 1:
+            return empatados[0]
+        incumbente = self._nome_do_incumbente()
+        vencedor = empatados[0]
+        if incumbente is not None:
+            for candidato in empatados:
+                if self._refers_same_profile(incumbente, candidato.name):
+                    vencedor = candidato
+                    break
+        chave_log = (wm_class, vencedor.name)
+        if self._ultimo_empate_logado != chave_log:
+            self._ultimo_empate_logado = chave_log
+            logger.info(
+                "profile_select_empate_resolvido",
+                wm_class=wm_class,
+                empatados=sorted(p.name for p in empatados),
+                vencedor=vencedor.name,
+                incumbente=incumbente,
+                prioridade=vencedor.priority,
+            )
+        return vencedor
 
 
 def _estado_da_secao(valor: object) -> str:
