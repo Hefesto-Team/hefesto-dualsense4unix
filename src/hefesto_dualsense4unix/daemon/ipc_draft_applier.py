@@ -2,8 +2,9 @@
 
 Extraído de `_handle_profile_apply_draft` em AUDIT-FINDING-IPC-SERVER-SPLIT-01.
 Cada seção (leds, triggers, controllers, rumble, mouse, keyboard) é aplicada
-de forma best-effort: falha em uma seção loga warning mas não bloqueia as
-demais. A ordem é leds -> triggers -> controllers -> rumble -> mouse ->
+de forma best-effort: falha em uma seção loga warning, fica registrada em
+``failed`` (APLICAR-VERDADE-01) e não bloqueia as demais. A ordem é leds
+-> triggers -> controllers -> rumble -> mouse ->
 keyboard (leds primeiro por ser menos transiente visualmente; controllers
 DEPOIS das seções globais para o override por-controle vencer no alvo —
 PERFIL-04).
@@ -36,6 +37,11 @@ class DraftApplier:
         self.controller = controller
         self.store = store
         self.daemon = daemon
+        # APLICAR-VERDADE-01: seção -> motivo curto das que NÃO entraram. O
+        # best-effort continua igual (uma seção que falha não bloqueia as
+        # outras), mas a falha para de morrer no warning do log: sobe junto
+        # com `applied` para quem chamou poder dizer a verdade na tela.
+        self.failed: dict[str, str] = {}
 
     def apply(self, params: dict[str, Any]) -> list[str]:
         # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
@@ -62,6 +68,9 @@ class DraftApplier:
         for categoria in sorted(categorias or {"led", "trigger", "rumble"}):
             self.store.mark_manual_trigger_active(categoria)
         applied: list[str] = []
+        # Cada `apply` conta a história dele: zera o registro de falhas antes
+        # de começar (o mesmo applier pode ser reusado).
+        self.failed = {}
         self._apply_section(applied, params.get("leds"), "leds", self._apply_leds)
         self._apply_section(applied, params.get("triggers"), "triggers", self._apply_triggers)
         # PERFIL-04: overrides por-controle DEPOIS das seções globais — o
@@ -78,8 +87,8 @@ class DraftApplier:
         self._apply_section(applied, params.get("mic"), "mic", self._apply_mic)
         return applied
 
-    @staticmethod
     def _apply_section(
+        self,
         applied: list[str],
         raw: Any,
         section: str,
@@ -92,6 +101,14 @@ class DraftApplier:
             applied.append(section)
         except Exception as exc:
             logger.warning(f"apply_draft_{section}_falhou", erro=str(exc))
+            # APLICAR-VERDADE-01: além do warning (que só a gente lê), a seção
+            # entra em `self.failed`. Sem isto a resposta do handler dizia
+            # apenas o que deu certo, e a GUI, sem nada que contradissesse o
+            # `status: "ok"`, anunciava "Perfil aplicado ao controle." mesmo
+            # com todas as seções fora. Motivo curto e cortado: serve de
+            # diagnóstico, não é o texto que a usuária lê.
+            motivo = str(exc) or type(exc).__name__
+            self.failed[section] = motivo[:120]
 
     @staticmethod
     def _scaled_rgb_from(leds_raw: dict[str, Any]) -> tuple[int, int, int] | None:

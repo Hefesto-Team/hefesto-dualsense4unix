@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,6 +21,12 @@ from typing import Any
 
 from hefesto_dualsense4unix.daemon.ipc_server import PROTOCOL_VERSION
 from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
+
+_LOG = logging.getLogger(__name__)
+
+# Prazo máximo (segundos) para o fechamento da conexão. Fechar é higiene, não
+# é o resultado da chamada: se o prazo estourar, registramos em log e seguimos.
+_CLOSE_TIMEOUT_S = 2.0
 
 
 class IpcError(RuntimeError):
@@ -70,10 +77,32 @@ class IpcClient:
         finally:
             await client.close()
 
-    async def close(self) -> None:
+    async def close(self, timeout: float | None = None) -> None:
+        """Fecha a conexão sem nunca ficar presa.
+
+        `writer.wait_closed()` pode não retornar nunca quando há escrita
+        pendente que o servidor não drena. Como fechar é higiene, e não o
+        resultado da chamada, o estouro do prazo vira registro em log em vez
+        de exceção que sobe para quem chamou.
+
+        Parameters
+        ----------
+        timeout:
+            Prazo máximo (segundos) para o fechamento. `None` usa o padrão
+            `_CLOSE_TIMEOUT_S`.
+        """
+        prazo = _CLOSE_TIMEOUT_S if timeout is None else timeout
         with contextlib.suppress(Exception):
             self.writer.close()
-            await self.writer.wait_closed()
+        try:
+            await asyncio.wait_for(self.writer.wait_closed(), timeout=prazo)
+        except (TimeoutError, asyncio.TimeoutError):
+            _LOG.debug(
+                "fechamento do IPC excedeu %.2fs; seguindo sem esperar",
+                prazo,
+            )
+        except Exception as exc:  # fechar nunca pode subir erro para quem chamou
+            _LOG.debug("erro ignorado ao fechar o IPC: %s", exc)
 
     async def call(
         self,
@@ -90,8 +119,9 @@ class IpcClient:
         params:
             Parâmetros da chamada (dicionário). `None` equivale a ``{}``.
         timeout:
-            Tempo máximo (segundos) para receber a resposta. `None` sem
-            limite. `TimeoutError` vira `IpcError(-1, "conexão timeout")`.
+            Tempo máximo (segundos) para o envio (drain) e para receber a
+            resposta, aplicado a cada etapa. `None` sem limite.
+            `TimeoutError` vira `IpcError(-1, "conexão timeout")`.
         """
         self._next_id += 1
         request = {
@@ -102,12 +132,13 @@ class IpcClient:
         }
         payload = json.dumps(request, ensure_ascii=False).encode("utf-8") + b"\n"
         self.writer.write(payload)
-        await self.writer.drain()
 
         try:
             if timeout is not None:
+                await asyncio.wait_for(self.writer.drain(), timeout=timeout)
                 raw = await asyncio.wait_for(self.reader.readline(), timeout=timeout)
             else:
+                await self.writer.drain()
                 raw = await self.reader.readline()
         except (TimeoutError, asyncio.TimeoutError) as exc:
             raise IpcError(-1, "conexão timeout") from exc

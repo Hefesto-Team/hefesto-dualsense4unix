@@ -439,7 +439,13 @@ class IpcHandlersMixin:
         Cada setor é aplicado de forma best-effort pelo `DraftApplier`: falha em
         um setor loga warning mas não bloqueia os demais. Retorna lista
         ``applied`` com setores que foram aplicados com sucesso
-        (FEAT-PROFILE-STATE-01).
+        (FEAT-PROFILE-STATE-01) e o mapa ``failed`` (setor -> motivo curto) com
+        os que NÃO entraram (APLICAR-VERDADE-01).
+
+        ``status`` continua sendo sempre ``"ok"`` de propósito: applet, CLI e
+        TUI decidem por ele e passariam a dizer "daemon offline" para uma
+        seção que simplesmente falhou. A verdade nova é ADITIVA — quem quiser
+        saber o que ficou de fora lê ``failed``.
         """
         applier = DraftApplier(
             controller=self.controller,
@@ -447,7 +453,7 @@ class IpcHandlersMixin:
             daemon=self.daemon,
         )
         applied = applier.apply(params)
-        return {"status": "ok", "applied": applied}
+        return {"status": "ok", "applied": applied, "failed": dict(applier.failed)}
 
     # --- triggers --------------------------------------------------------
 
