@@ -15,6 +15,22 @@ from textual.widgets import Static
 MAX_ANALOG = 255
 CENTER_STICK = 128
 
+# GATE-EMOJI-01 (27/07/2026): nenhum glifo deste módulo aparece desenhado no
+# arquivo — todos nascem de `chr()` sobre o codepoint. Os desenhos abaixo estão
+# nos blocos que o ADR-011 manda PRESERVAR (Geometric Shapes e Block Elements),
+# e mesmo assim o higienizador do ambiente os apaga. Escritos como caractere,
+# uma passada dele transformaria `_icon_for_level` em string vazia; escritos
+# como codepoint, ele não tem o que casar. Ver
+# docs/process/sprints/2026-07-27-GATE-EMOJI-01-*.md.
+_BLOCO_CHEIO = chr(0x2588)  # FULL BLOCK — parte preenchida da barra
+_BLOCO_VAZIO = chr(0x2591)  # LIGHT SHADE — parte vazia da barra
+_PILHA_CHEIA = chr(0x25AE)  # BLACK VERTICAL RECTANGLE — célula de bateria cheia
+_PILHA_VAZIA = chr(0x25AF)  # WHITE VERTICAL RECTANGLE — célula de bateria vazia
+_PONTO_GRADE = chr(0x00B7)  # MIDDLE DOT — fundo da grade do stick
+
+#: Quantas células a barra de bateria desenha.
+_CELULAS_BATERIA = 4
+
 
 def _color_for_trigger(value: int) -> str:
     if value <= 85:
@@ -35,7 +51,7 @@ def _color_for_battery(value: int) -> str:
 def _bar(value: int, max_value: int = MAX_ANALOG, width: int = 30) -> str:
     filled = int(value / max_value * width)
     filled = max(0, min(width, filled))
-    return "█" * filled + "░" * (width - filled)
+    return _BLOCO_CHEIO * filled + _BLOCO_VAZIO * (width - filled)
 
 
 class TriggerBar(Static):
@@ -86,15 +102,22 @@ class BatteryMeter(Static):
 
     @staticmethod
     def _icon_for_level(value: int) -> str:
+        """Desenho de 4 células: cheias à esquerda, vazias à direita.
+
+        As faixas são as mesmas de sempre (80/60/40/20); o que mudou é que o
+        desenho é montado a partir dos codepoints, não copiado de um literal.
+        """
         if value >= 80:
-            return "▮▮▮▮"
-        if value >= 60:
-            return "▮▮▮▯"
-        if value >= 40:
-            return "▮▮▯▯"
-        if value >= 20:
-            return "▮▯▯▯"
-        return "▯▯▯▯"
+            cheias = 4
+        elif value >= 60:
+            cheias = 3
+        elif value >= 40:
+            cheias = 2
+        elif value >= 20:
+            cheias = 1
+        else:
+            cheias = 0
+        return _PILHA_CHEIA * cheias + _PILHA_VAZIA * (_CELULAS_BATERIA - cheias)
 
 
 class StickPreview(Static):
@@ -134,7 +157,7 @@ class StickPreview(Static):
                 elif r == rows // 2 and c == cols // 2:
                     line += "[dim]+[/]"
                 else:
-                    line += "·"
+                    line += _PONTO_GRADE
             lines.append(line)
         return f"[bold]{self.label}[/]\n" + "\n".join(lines)
 

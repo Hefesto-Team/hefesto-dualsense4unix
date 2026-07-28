@@ -18,6 +18,7 @@ from typing import Any
 import typer
 from rich.console import Console
 
+from hefesto_dualsense4unix.cli.cmd_steam import app as steam_input_app
 from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
 app = typer.Typer(
@@ -26,6 +27,11 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+# BOTAO-QUE-NAO-MENTE-01 (entrega 2): a exceção do Steam Input decide QUEM
+# entrega o controle ao jogo — o gamepad virtual daqui ou a Steam. Por isso o
+# desfazer mora debaixo de `gamepad`.
+app.add_typer(steam_input_app, name="steam-input")
 
 
 def _call_sync(method: str, params: dict[str, Any] | None = None) -> Any:

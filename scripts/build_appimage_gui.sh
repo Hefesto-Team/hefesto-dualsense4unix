@@ -87,7 +87,10 @@ cp "$APPDIR/usr/share/applications/hefesto-dualsense4unix.desktop" "$APPDIR/hefe
 echo "[3/6] Criando venv embarcada no AppDir (com system-site-packages para gi)..."
 python3.12 -m venv --system-site-packages "$APPDIR/usr"
 "$APPDIR/usr/bin/python3" -m pip install --quiet --upgrade pip
-"$APPDIR/usr/bin/pip" install --quiet "$HERE[emulation,cosmic,tray]"
+# As chaves em "${HERE}" não são estilo: sem elas o shell lê "$HERE[...]" como
+# indice de array (shellcheck SC1087) e o portao de shellcheck reprova. O texto
+# produzido e identico -- o colchete continua sendo literal para o pip.
+"$APPDIR/usr/bin/pip" install --quiet "${HERE}[emulation,cosmic,tray]"
 
 # Copia catalogos .mo para AppDir/usr/share/locale/ — gettext acha via
 # XDG_DATA_DIRS exportado no AppRun (candidate path #3 do utils/i18n.py).

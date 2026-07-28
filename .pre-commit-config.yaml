@@ -1,3 +1,14 @@
+# AVISO MEDIDO (sprint PORTÃO-VIVO-01, bloco B): nesta máquina o
+# `core.hooksPath` global aponta para ~/.config/git/hooks, e com isso o git
+# NUNCA executa .git/hooks/* — a própria ferramenta `pre-commit` recusa
+# instalar. Ou seja: os hooks declarados aqui não rodam no caminho do commit
+# local. Pior, a MERA EXISTÊNCIA deste arquivo faz o hook global marcar
+# HAS_FRAMEWORK=true e DESLIGAR as checagens próprias dele, delegando a um
+# framework que não está instalado.
+#
+# Portanto: quem protege de verdade é o .github/workflows/ci.yml. Este arquivo
+# é a declaração de intenção e o que vale para quem clonar sem hooksPath
+# global. Não confie nele como rede.
 repos:
   - repo: local
     hooks:
@@ -7,6 +18,18 @@ repos:
         language: system
         types: [text]
         exclude: '^(tests/fixtures/|tests/unit/test_validar_acentuacao\.py$|docs/history/|docs/research/|LICENSE$|NOTICE$|CHANGELOG\.md$|VALIDATOR_BRIEF\.md$|AGENTS\.md$|scripts/validar-acentuacao\.py$|scripts/check_anonymity\.sh$)'
+      # PORTÃO-VIVO-01 bloco C / GATE-EMOJI-01: o higienizador do ambiente
+      # apaga glifo em silêncio e NÃO reprova — inclusive os glifos que o
+      # ADR-011 declara permitidos (Geometric Shapes, Box Drawing, Block
+      # Elements, Arrows). Este hook é o que reprova. As exclusões seguem o
+      # mesmo princípio do gate de acentuação: o próprio validador e o teste
+      # dele precisam conter os casos que detectam.
+      - id: glifos
+        name: Glifos (emoji proibido, forma geométrica preservada)
+        entry: python3 scripts/validar-glifos.py
+        language: system
+        types: [text]
+        exclude: '^(tests/fixtures/|tests/unit/test_validar_glifos\.py$|docs/history/|docs/research/|scripts/validar-glifos\.py$|CHANGELOG\.md$)'
       - id: anonimato
         name: Anonimato (sem menção a IA)
         entry: bash scripts/check_anonymity.sh

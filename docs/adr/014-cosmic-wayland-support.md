@@ -13,7 +13,7 @@ Com isso, o deferimento de Wayland documentado no ADR-007 precisa ser revisado.
 O principal ponto de ruptura é a detecção de janela ativa, que o Hefesto usa para
 o autoswitch de perfis:
 
-- `src/hefesto/integrations/xlib_window.py` depende de `python-xlib` + variável
+- `src/hefesto_dualsense4unix/integrations/xlib_window.py` depende de `python-xlib` + variável
   `DISPLAY`. Em Wayland puro (sem XWayland), não há servidor X; o módulo retornava
   `{"wm_class": "unknown"}` silenciosamente e o autoswitch ficava preso em
   `fallback.json`.
@@ -28,13 +28,13 @@ implementada em camadas:
 
 ### Camada 1 — Backends e factory (implementado nesta sprint)
 
-1. Pacote `src/hefesto/integrations/window_backends/`:
+1. Pacote `src/hefesto_dualsense4unix/integrations/window_backends/`:
    - `base.py` — `WindowInfo` (dataclass) e `WindowBackend` (Protocol).
    - `xlib.py` — `XlibBackend`: lógica X11 via `python-xlib`.
    - `wayland_portal.py` — `WaylandPortalBackend`: cliente D-Bus do portal XDG.
    - `null.py` — `NullBackend`: retorna sempre `None` (modo silencioso).
 
-2. `src/hefesto/integrations/window_detect.py` — factory `detect_window_backend()`:
+2. `src/hefesto_dualsense4unix/integrations/window_detect.py` — factory `detect_window_backend()`:
    - `WAYLAND_DISPLAY` + `DISPLAY` → `XlibBackend` (XWayland, preferido).
    - `WAYLAND_DISPLAY` sem `DISPLAY` → `WaylandPortalBackend`.
    - `DISPLAY` sem `WAYLAND_DISPLAY` → `XlibBackend`.

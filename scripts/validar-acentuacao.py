@@ -588,6 +588,23 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     Arquivo que não tokeniza (sintaxe inválida, encoding exótico) volta
     inteiro para a varredura antiga — degradar para o comportamento anterior
     é preferível a deixar de checar o arquivo.
+
+    PORTÃO-VIVO-01 Bloco A: a partir do Python 3.12 (PEP 701) o `tokenize`
+    deixou de devolver a f-string como um `STRING` único e passou a emitir
+    `FSTRING_START` / `FSTRING_MIDDLE` / `FSTRING_END`. Como o filtro só
+    aceitava `COMMENT` e `STRING`, **todo o texto de f-string virava espaço**
+    e o gate ficava cego justamente na forma de string mais usada no projeto.
+    Pior: o CI pinava 3.11, onde f-string ainda é `STRING` — a máquina dela
+    ficava verde e a `main` vermelha pelo mesmo arquivo.
+
+    O token aceito é o `FSTRING_MIDDLE`, e só ele, porque ele é exatamente a
+    parte **textual**: o que está dentro das chaves sai como `NAME`/`OP` e
+    continua mascarado. Aceitar `FSTRING_START`/`FSTRING_END` traria só as
+    aspas, e aceitar o miolo das chaves ressuscitaria o falso positivo em nome
+    de variável que este mascaramento existe para matar (`f"{producao}"` não
+    pode virar apontamento). Os nomes são buscados com `getattr` porque no
+    3.11 esses atributos não existem — assumi-los quebraria o gate na versão
+    que o CI ainda usa.
     """
     import io
     import tokenize
@@ -597,11 +614,16 @@ def _mascara_codigo_python(conteudo: str, linhas: list[str]) -> list[str]:
     except (tokenize.TokenError, SyntaxError, IndentationError, ValueError):
         return linhas
 
+    tipos_texto = {tokenize.COMMENT, tokenize.STRING}
+    fstring_middle = getattr(tokenize, "FSTRING_MIDDLE", None)
+    if fstring_middle is not None:
+        tipos_texto.add(fstring_middle)
+
     # Começa tudo em branco e devolve só os trechos de texto, preservando as
     # colunas — as heurísticas seguintes usam os índices da linha original.
     mascarado = [" " * len(linha) for linha in linhas]
     for tok in tokens:
-        if tok.type not in (tokenize.COMMENT, tokenize.STRING):
+        if tok.type not in tipos_texto:
             continue
         (lin_ini, col_ini), (lin_fim, col_fim) = tok.start, tok.end
         for n in range(lin_ini, lin_fim + 1):
@@ -828,18 +850,40 @@ def corrigir_arquivo(path: Path, raiz: Path) -> int:
 
 
 def listar_arquivos_git(raiz: Path) -> list[Path]:
+    """Lista os arquivos que o modo ``--all`` deve varrer.
+
+    PORTÃO-VIVO-01 Bloco A (bônus): `git ls-files -z` puro lista só o índice,
+    então `--all` era **cego a arquivo novo** ainda não adicionado — dava verde
+    exatamente no arquivo que ninguém revisou. `--others --exclude-standard`
+    traz o não rastreado sem trazer o ignorado, e `--cached` mantém explícito o
+    que já era varrido. Duplicata não ocorre: um caminho é `cached` ou `other`,
+    nunca os dois.
+    """
     try:
         out = subprocess.check_output(
-            ["git", "ls-files", "-z"], cwd=str(raiz), text=True
+            [
+                "git",
+                "ls-files",
+                "-z",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+            ],
+            cwd=str(raiz),
+            text=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
     arquivos: list[Path] = []
+    vistos: set[Path] = set()
     for nome in out.split("\x00"):
         if not nome:
             continue
         p = raiz / nome
+        if p in vistos:
+            continue
         if p.is_file() and p.suffix.lower() in EXTENSOES_ALVO:
+            vistos.add(p)
             arquivos.append(p)
     return arquivos
 
