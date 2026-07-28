@@ -64,6 +64,20 @@ _RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game", "steam_ga
 #: R-12: ids do seletor que exigem o campo livre preenchido.
 _IDS_COM_CAMPO_LIVRE = ("game", "steam_game")
 
+#: PERFIL-NASCE-CERTO-01 (entrega 2, item 1): teto da escala de prioridade.
+#: Era 100 aqui e no `profile_priority_adj` do glade — e o catch-all do disco
+#: dela está EXATAMENTE em 100. Não existia número escolhível pela janela que
+#: fizesse o perfil de um jogo vencer o dela; o conserto de 26/07 exigiu
+#: escrever 110 direto no JSON, um valor que a janela não aceitava digitar.
+#: Subir o teto não mexe em perfil nenhum já salvo: é só a faixa que a escala
+#: oferece. O glade tem de acompanhar (`upper` do adjustment).
+PRIORIDADE_MAXIMA = 200
+
+#: PERFIL-NASCE-CERTO-01 (entrega 1): folga com que um perfil recém-nascido de
+#: JOGO passa por cima do catch-all mais alto do disco. Dez pontos deixam
+#: espaço para ela ajustar para os dois lados sem empatar por acidente.
+_FOLGA_ACIMA_DO_CATCH_ALL = 10
+
 #: R-12: placeholder/tooltip do campo livre por escolha — o glade tem um só
 #: rótulo ("Nome do jogo:") para dois significados MUITO diferentes. Sem isto,
 #: "Jogo específico" continuaria pedindo em silêncio o basename do executável,
@@ -237,6 +251,25 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     _mode_kind_selector: Any = None
     _mode_flavor_selector: Any = None
     _mode_gamepad_opts: Any = None
+    # SALVAR-NAO-REBAIXA-01: fotografia do perfil que o editor está mostrando —
+    # o valor do DISCO e o que a tela conseguiu representar dele. `None` = o
+    # editor não mostra perfil nenhum do disco (perfil novo, dublê de teste),
+    # e aí o que está nos widgets é a fonte, como sempre foi.
+    _regra_do_disco: Match | None = None
+    _assinatura_da_regra_ao_abrir: tuple[object, ...] | None = None
+    _prioridade_do_disco: int | None = None
+    _prioridade_ao_abrir: int | None = None
+    # Gesto DELA sobre o seletor "Aplica a" desde a abertura do perfil. Existe
+    # porque comparar valores não basta: num perfil de match complexo a página
+    # simples já abre em "Qualquer", e escolher "Qualquer" precisa contar.
+    _regra_tocada: bool = False
+    # Mesmo motivo, na escala de prioridade. A escala tem teto, então um perfil
+    # com prioridade acima dele (escrita à mão no JSON) abre CLAMPADO: 250 no
+    # disco aparece como 200 na tela. Sem esta marca, arrastar a escala até 200
+    # de propósito seria indistinguível de não ter tocado, e o salvamento
+    # devolveria 250 ao disco — a guarda viraria o mesmo cadeado que ela existe
+    # para impedir, só que no outro sentido.
+    _prioridade_tocada: bool = False
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -281,6 +314,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._aplica_a = sel
         sel.connect("changed", self._on_aplica_a_changed)
         sel.set_active_id("any")
+
+        # SALVAR-NAO-REBAIXA-01: o gesto dela sobre a escala de prioridade. O
+        # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
+        # o `set_value` de abertura não conta como toque.
+        escala_prio = self._get("profile_priority_scale")
+        if escala_prio is not None:
+            with contextlib.suppress(Exception):
+                escala_prio.connect("value-changed", self._on_prioridade_tocada)
 
         # FEAT-PROFILE-MODE-GUI-01: seção "Modo" (o que o perfil liga ao ativar).
         self._install_mode_section()
@@ -518,6 +559,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         ("Nome do jogo:") serve para as duas e sozinho não desambigua.
         """
         active_id = combo.get_active_id() or "any"
+        # SALVAR-NAO-REBAIXA-01: trocar o "Aplica a" é um gesto DELA sobre a
+        # regra, e precisa contar mesmo quando o valor final coincide com a
+        # fotografia. O caso: um perfil de match complexo abre no editor
+        # avançado e a página simples mostra "Qualquer" sem ela ter escolhido
+        # nada; sem esta marca, escolher "Qualquer" de propósito seria
+        # indistinguível de não ter tocado, e a guarda viraria um cadeado.
+        # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
+        # a seleção programática de abertura não conta.
+        self._regra_tocada = True
         entry = self._get("profile_simple_custom_name")
         dica = _CAMPO_LIVRE_DICAS.get(active_id)
         if entry is not None and dica is not None:
@@ -699,6 +749,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # `unselect_all()` seria o caminho óbvio e está DESCARTADO: dispara
         # repopulação do editor e apagaria o que ela acabou de digitar.
         self._new_profile = True
+        # SALVAR-NAO-REBAIXA-01: não há valor de disco a preservar num perfil
+        # que ainda não existe — os widgets voltam a ser a única fonte.
+        self._esquecer_a_fotografia_do_editor()
         self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
@@ -725,6 +778,83 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             finally:
                 self._suppress_advanced_toggle = False
         self._toast_profile("Novo perfil: edite e clique Salvar")
+        # PERFIL-NASCE-CERTO-01: com um jogo em foco, criar um perfil JÁ É a
+        # declaração de intenção "quero que isto valha neste jogo".
+        self._nascer_com_o_jogo_em_foco()
+
+    def _nascer_com_o_jogo_em_foco(self) -> None:
+        """Pergunta ao daemon qual janela está em foco e nasce com a regra dela.
+
+        Assíncrono e best-effort, como os demais prefills desta aba: daemon
+        offline é silêncio, e o perfil nasce catch-all como sempre nasceu.
+        """
+        def _on_state(result: Any) -> bool:
+            self._aplicar_nascimento_com_jogo(result)
+            return False
+
+        call_async(
+            method="daemon.state_full",
+            params=None,
+            on_success=_on_state,
+            on_failure=lambda _exc: False,
+            timeout_s=0.5,
+        )
+
+    def _aplicar_nascimento_com_jogo(self, result: Any) -> bool:
+        """Aplica ao editor o nascimento com a regra do jogo em foco.
+
+        Separado do IPC para ser exercitável sem daemon. Devolve True quando
+        de fato mexeu no editor.
+
+        PERFIL-NASCE-CERTO-01 (entrega 1). Medido em 26/07, com ela jogando: o
+        perfil que ela criou para o Pragmata nasceu `match:any` e prioridade 0,
+        e por isso NUNCA valia no jogo — a regra R-21 nega autoridade a
+        catch-all em janela de jogo, e o catch-all dela (prioridade 100) vencia
+        em todo o resto. Ela não errou a configuração: a janela não tinha saída.
+
+        Guardas deliberadamente estreitas — este caminho só age sobre um
+        editor ainda intocado:
+
+        - só em perfil NOVO (`_new_profile`);
+        - só se o "Aplica a" ainda estiver em "Qualquer" (o default do nascer);
+        - só com o campo do alvo VAZIO. Se ela já escolheu ou digitou algo, a
+          resposta do daemon chegou tarde e não tem direito de atropelar.
+
+        Sem jogo em foco, nada acontece e o perfil continua nascendo catch-all
+        — que é o certo para um perfil de desktop.
+        """
+        try:
+            if not isinstance(result, dict):
+                return False
+            if not getattr(self, "_new_profile", False):
+                return False
+            from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
+                extract_steam_appid,
+            )
+
+            appid = extract_steam_appid(result.get("window_detect_last_class"))
+            if not appid:
+                return False
+            if self._selected_simple_choice() != "any":
+                return False
+            entry = self._get("profile_simple_custom_name")
+            if entry is not None and (entry.get_text() or "").strip():
+                return False
+            self._select_radio("steam_game")
+            if entry is not None:
+                entry.set_text(appid)
+            prioridade = self._prioridade_acima_dos_catch_all()
+            escala = self._get("profile_priority_scale")
+            if escala is not None:
+                escala.set_value(prioridade)
+            self._toast_profile(
+                f"Perfil novo para o jogo em foco (número {appid}), prioridade "
+                f"{prioridade} — acima dos perfis que valem sempre."
+            )
+            return True
+        except Exception as exc:
+            logger.debug("nascer_com_o_jogo_em_foco_falhou", err=str(exc))
+            return False
 
     def on_profile_duplicate(self, _btn: Gtk.Button | None) -> None:
         name = self._selected_profile_name()
@@ -1108,7 +1238,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # mostrar um perfil que existe.
         self._new_profile = False
         self._get("profile_name_entry").set_text(profile.name)
-        prio = max(0, min(100, profile.priority))
+        prio = max(0, min(PRIORIDADE_MAXIMA, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
         # FEAT-PROFILE-MODE-GUI-01: seção "Modo" reflete profile.mode
         # (None → "Não mexer no modo").
@@ -1171,6 +1301,115 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             finally:
                 self._suppress_advanced_toggle = False
             self._mode_advanced = True
+
+        # SALVAR-NAO-REBAIXA-01: a fotografia do que o editor MOSTRA agora, e o
+        # que o disco realmente diz. `_build_profile_from_editor` compara as
+        # duas para saber se ela MEXEU na regra/prioridade nesta edição —
+        # ver `_regra_foi_mexida` / `_prioridade_foi_mexida`.
+        self._regra_do_disco = profile.match
+        self._assinatura_da_regra_ao_abrir = self._assinatura_da_regra_no_editor()
+        self._prioridade_do_disco = profile.priority
+        self._prioridade_ao_abrir = prio
+        # Zeradas por ÚLTIMO: as seleções feitas acima são de abertura, não dela.
+        self._regra_tocada = False
+        self._prioridade_tocada = False
+
+    def _assinatura_da_regra_no_editor(self) -> tuple[object, ...]:
+        """Fotografia dos widgets que definem a REGRA de janela do perfil.
+
+        Duas fotografias iguais querem dizer "ela não tocou na regra" — e é só
+        isso que esta assinatura precisa responder. Tolerante a widget ausente
+        (dublê de teste, glade antigo): campo que não dá para ler entra vazio,
+        do mesmo jeito nas duas fotos.
+
+        O switch "Modo avançado" fica DE FORA de propósito: ele escolhe qual
+        página ela está olhando, não o que o perfil casa. Incluí-lo devolveria
+        o BUG-PROFILE-SIMPLE-STALE-01 pelo avesso — desligar o avançado para
+        conferir alguma coisa e clicar Salvar rebaixaria a regra do perfil para
+        "Qualquer", que é justamente o estrago que esta guarda existe para
+        impedir. Mudar de página e MEXER num campo continua contando, porque é
+        o campo que entra na fotografia.
+        """
+        def texto(widget_id: str) -> str:
+            widget = self._get(widget_id)
+            try:
+                return (widget.get_text() or "").strip()
+            except Exception:
+                return ""
+
+        return (
+            self._selected_simple_choice(),
+            texto("profile_simple_custom_name"),
+            texto("profile_window_class_entry"),
+            texto("profile_title_regex_entry"),
+            texto("profile_process_name_entry"),
+        )
+
+    def _on_prioridade_tocada(self, _escala: object = None) -> None:
+        """A escala de prioridade se mexeu — marca o gesto (SALVAR-NAO-REBAIXA-01)."""
+        self._prioridade_tocada = True
+
+    def _regra_foi_mexida(self) -> bool:
+        """Ela mudou a regra de janela desde que este perfil abriu no editor?
+
+        Sem fotografia guardada (perfil novo, duplicação de fonte externa,
+        dublê) a resposta é SIM: o comportamento histórico — gravar o que está
+        nos widgets — continua valendo em todo caminho que esta guarda não
+        conhece.
+        """
+        ao_abrir = self._assinatura_da_regra_ao_abrir
+        if ao_abrir is None:
+            return True
+        if self._regra_tocada:
+            return True
+        return self._assinatura_da_regra_no_editor() != ao_abrir
+
+    def _prioridade_foi_mexida(self) -> bool:
+        """Ela moveu a escala de prioridade desde que o perfil abriu no editor?
+
+        Duas respostas somadas: o gesto (`_prioridade_tocada`, marcado pelo
+        próprio widget) e a comparação de valor. O gesto cobre o caso em que o
+        valor volta a coincidir com o da abertura — inclusive o perfil clampado,
+        que abre mostrando o teto e cujo "arrastar até o teto" precisa contar.
+        """
+        if self._prioridade_tocada:
+            return True
+        ao_abrir = self._prioridade_ao_abrir
+        if ao_abrir is None:
+            return True
+        try:
+            return int(self._get("profile_priority_scale").get_value()) != int(ao_abrir)
+        except Exception:
+            return True
+
+    def _esquecer_a_fotografia_do_editor(self) -> None:
+        """Zera as fotografias — o editor deixou de mostrar um perfil do disco.
+
+        Chamado por "Novo perfil": ali não há valor de disco a preservar, e o
+        que está nos widgets É a intenção dela.
+        """
+        self._regra_do_disco = None
+        self._assinatura_da_regra_ao_abrir = None
+        self._prioridade_do_disco = None
+        self._prioridade_ao_abrir = None
+        self._regra_tocada = False
+        self._prioridade_tocada = False
+
+    def _prioridade_acima_dos_catch_all(self) -> int:
+        """Prioridade que vence TODO perfil "vale sempre" hoje em disco.
+
+        PERFIL-NASCE-CERTO-01: o perfil do jogo nascia em 0 e perdia até para
+        os presets de fábrica (50-80), quanto mais para o catch-all dela em
+        100. O número é CALCULADO, não digitado — ela não precisa saber que
+        existe prioridade para que o perfil do jogo dela valha no jogo.
+
+        Lê o cache em memória da lista (nunca o disco: este caminho roda na
+        thread do GTK). Sem cache, devolve a folga sozinha.
+        """
+        cache: list[Profile] = getattr(self, "_profiles_cache", None) or []
+        tetos = [p.priority for p in cache if p.e_catch_all]
+        base = max(tetos) if tetos else 0
+        return max(0, min(PRIORIDADE_MAXIMA, base + _FOLGA_ACIMA_DO_CATCH_ALL))
 
     def _edita_o_perfil_do_rascunho(self, name: str) -> bool:
         """O "Salvar" em curso está gravando o perfil que o RASCUNHO representa?
@@ -1381,11 +1620,34 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if self._mode_kind_selector is not None:
             base["mode"] = self._mode_section_from_editor()
 
+        # SALVAR-NAO-REBAIXA-01 (sprint 27/07): o `base.update` abaixo
+        # sobrescrevia `match` e `priority` SEMPRE, com o que estivesse nos
+        # widgets. Isso reduz todo salvamento a um rebaixamento silencioso do
+        # que ela consertou fora da janela — evidência datada no disco dela:
+        # `Pragmata` era regra de jogo com prioridade 100 em 26/07 às 23h40 e
+        # amanheceu catch-all em 27/07 às 23h04; o `vitoria` caiu de 100 para 0.
+        # O caminho é banal: a escala tinha teto 100 (uma prioridade 110 do
+        # disco já abria clampada) e o editor simples mostra "Qualquer" para
+        # todo match que ele não reconhece — salvar a cor pela aba Perfis
+        # gravava de volta a leitura empobrecida da tela.
+        #
+        # Agora regra e prioridade só são reescritas quando ela MEXEU nelas
+        # nesta edição. Mexer continua valendo na hora, e num perfil novo (sem
+        # fotografia) nada muda: os widgets seguem sendo a fonte.
+        prioridade_final = priority
+        prioridade_do_disco = self._prioridade_do_disco
+        if prioridade_do_disco is not None and not self._prioridade_foi_mexida():
+            prioridade_final = int(prioridade_do_disco)
+        regra_final = match
+        regra_do_disco = self._regra_do_disco
+        if regra_do_disco is not None and not self._regra_foi_mexida():
+            regra_final = regra_do_disco
+
         base.update(
             {
                 "name": name,
-                "priority": priority,
-                "match": match.model_dump(mode="python"),
+                "priority": prioridade_final,
+                "match": regra_final.model_dump(mode="python"),
             }
         )
         return Profile.model_validate(base)

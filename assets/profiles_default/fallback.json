@@ -8,7 +8,6 @@
     "right": {"mode": "Off", "params": []}
   },
   "leds": {
-    "lightbar": [40, 40, 40],
     "player_leds": [false, false, true, false, false],
     "lightbar_brightness": 1.0
   },

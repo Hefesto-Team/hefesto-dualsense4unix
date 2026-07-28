@@ -67,7 +67,13 @@ EXPECTED_PRESETS = {
         "priority": 0,
         "triggers_left_mode": "Off",
         "triggers_right_mode": "Off",
-        "lightbar": (40, 40, 40),
+        # EMPATE-01/E-1 (27/07): `None` aqui quer dizer "o preset NÃO opina
+        # sobre a cor". O `[40, 40, 40]` que estava neste lugar era a semente do
+        # repositório — num LED RGB, a olho nu, um controle APAGADO — e vencia,
+        # pelo alfabeto, o perfil que tinha opinião melhor. Sem o campo, vale a
+        # cor automática por jogador. O detalhe do porquê está em
+        # `test_empate01_a_cor_volta_a_ser_dela.py`.
+        "lightbar": None,
         "lightbar_brightness": 1.0,
     },
     "fps": {
@@ -164,6 +170,17 @@ class TestPresetValida:
     def test_lightbar_correto(self, preset_name: str) -> None:
         p = _load_preset(preset_name)
         expected = EXPECTED_PRESETS[preset_name]["lightbar"]
+        if expected is None:
+            # EMPATE-01/E-1: preset SEM opinião de cor — o que se trava aqui é
+            # a AUSÊNCIA do campo, não um valor. Comparar com (0, 0, 0) (o
+            # default do schema) deixaria passar um `"lightbar": [0, 0, 0]`
+            # escrito à mão, que é preto e não é "sem opinião".
+            assert "lightbar" not in p.leds.model_fields_set, (
+                f"{preset_name}: o preset voltou a opinar sobre a cor "
+                f"({tuple(p.leds.lightbar)}) — a cor automática por jogador "
+                "perde para ele"
+            )
+            return
         got = tuple(p.leds.lightbar)
         assert got == expected, (
             f"{preset_name}: lightbar esperado {expected}, obtido {got}"
