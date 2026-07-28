@@ -36,6 +36,25 @@ logger = get_logger(__name__)
 _MEU_PERFIL_ASSET = ROOT_DIR / "assets" / "profiles_default" / "meu_perfil.json"
 _MEU_PERFIL_NOME = "meu_perfil"
 
+# APLICAR-VERDADE-01: nome de cada seção do contrato IPC na língua da janela.
+# O daemon fala "leds"/"triggers"; o rodapé precisa dizer o que não entrou com
+# as palavras que ela lê nas abas. O dicionário guarda o PT-BR cru porque é
+# construído no import, antes de `init_locale()` — traduzir AQUI congelaria o
+# idioma errado. A tradução acontece no ponto de USO, em `_lista_de_secoes`.
+_NOMES_DE_SECAO: dict[str, str] = {
+    "leds": "luzes",
+    "triggers": "gatilhos",
+    "rumble": "vibração",
+    "mouse": "mouse",
+    "keyboard": "teclado",
+    "mic": "microfone",
+    "controllers": "ajustes por controle",
+}
+
+# A statusbar trunca com reticências em meia tela: acima disto a lista vira
+# "os três primeiros e mais N".
+_MAX_SECOES_NO_TEXTO = 3
+
 # Widgets congelados durante operação de aplicar draft.
 FROZEN_WIDGET_IDS: tuple[str, ...] = (
     "btn_footer_apply",
@@ -150,7 +169,7 @@ class FooterActionsMixin(WidgetAccessMixin):
             if ok:
                 self._clear_mouse_dirty()
             msg = (
-                _("Perfil aplicado ao controle.")
+                _mensagem_de_aplicacao(result)
                 if ok
                 else _("ERRO ao aplicar perfil (daemon offline?).")
             )
@@ -473,6 +492,54 @@ class FooterActionsMixin(WidgetAccessMixin):
 # ------------------------------------------------------------------
 # Helpers de módulo
 # ------------------------------------------------------------------
+
+
+def _lista_de_secoes(secoes: Any) -> str:
+    """Nomes legíveis das seções, curtos o bastante para a statusbar.
+
+    Aceita o mapa ``{seção: motivo}`` do daemon (APLICAR-VERDADE-01) e também
+    uma lista crua de nomes. Seção desconhecida (daemon mais novo que a GUI)
+    aparece com o nome técnico mesmo — melhor um termo estranho do que omitir
+    que algo ficou de fora.
+    """
+    if isinstance(secoes, dict):
+        chaves: list[Any] = list(secoes)
+    elif isinstance(secoes, list):
+        chaves = list(secoes)
+    else:
+        return ""
+    nomes = [_(_NOMES_DE_SECAO.get(str(s), str(s))) for s in chaves]
+    if not nomes:
+        return ""
+    if len(nomes) > _MAX_SECOES_NO_TEXTO:
+        return _("{primeiras} e mais {resto}").format(
+            primeiras=", ".join(nomes[:_MAX_SECOES_NO_TEXTO]),
+            resto=len(nomes) - _MAX_SECOES_NO_TEXTO,
+        )
+    return ", ".join(nomes)
+
+
+def _mensagem_de_aplicacao(result: Any) -> str:
+    """Texto do rodapé para uma resposta ACEITA de ``profile.apply_draft``.
+
+    APLICAR-VERDADE-01: o ``status`` da resposta é sempre ``"ok"``, inclusive
+    quando nenhuma seção entrou — decidir por ele fazia o rodapé anunciar
+    "Perfil aplicado ao controle." depois de nada ter chegado no controle.
+    Quem conta a verdade são ``applied`` (o que entrou) e ``failed`` (o que
+    não entrou).
+
+    Resposta sem esses campos — daemon antigo, ou o ``True`` cru do bridge —
+    mantém a mensagem de sucesso: sem informação não há do que desconfiar.
+    """
+    if not isinstance(result, dict):
+        return _("Perfil aplicado ao controle.")
+    aplicadas = result.get("applied")
+    if isinstance(aplicadas, list) and not aplicadas:
+        return _("Nada foi aplicado ao controle.")
+    nao_entraram = _lista_de_secoes(result.get("failed"))
+    if nao_entraram:
+        return _("Aplicado, menos: {secoes}.").format(secoes=nao_entraram)
+    return _("Perfil aplicado ao controle.")
 
 
 def _refresh_all_tabs(mixin: Any) -> None:

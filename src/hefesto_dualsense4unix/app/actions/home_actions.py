@@ -23,6 +23,7 @@ container) — padrão dos widgets dinâmicos, imune ao bug de popup do cosmic-c
 from __future__ import annotations
 
 import contextlib
+import time
 from typing import Any
 
 from hefesto_dualsense4unix.app.actions.base import (
@@ -44,6 +45,14 @@ logger = get_logger(__name__)
 
 #: Intervalo do poller da aba Início (só age com a aba visível).
 HOME_POLL_INTERVAL_MS = 2000
+
+#: AVISO-VIVO-01: prazo de validade do latch `_home_inflight` — três ticks do
+#: poller. O latch existe para não empilhar chamadas de estado, mas sem prazo
+#: uma chamada que NUNCA volta (daemon morto no meio do `state_full`) o prendia
+#: para sempre e a aba congelava em silêncio: sem erro, sem banner, só parada.
+#: Passado o prazo a chamada em voo é dada como perdida e uma nova sai. O prazo
+#: é conferido no próprio tick, por carimbo de tempo — sem thread nem timer novo.
+HOME_INFLIGHT_TIMEOUT_S = 3 * HOME_POLL_INTERVAL_MS / 1000.0
 
 #: HARM-01: a folga da troca de modo mora em `mode_transition` (dono único) —
 #: aqui ela vale também para o co-op e a máscara, que criam/desmontam os mesmos
@@ -429,6 +438,13 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_installed = True
         self._home_guard = False
         self._home_inflight = False
+        # AVISO-VIVO-01: quando a chamada em voo saiu (relógio monotônico) —
+        # é o que dá prazo de validade ao latch acima.
+        self._home_inflight_since = 0.0
+        # AVISO-VIVO-01: última frase de ESTADO que o rodapé recebeu desta aba.
+        # `None` = ainda não escrevemos nenhuma (não há afirmação nossa a
+        # desfazer); `""` = escrevemos e depois limpamos.
+        self._home_lock_toast: str | None = None
 
         # --- Banner: degradação do vpad (UX-03) -----------------------------
         # Rótulo simples e sempre inline no topo da aba — nada de popup nem
@@ -665,12 +681,31 @@ class HomeActionsMixin(WidgetAccessMixin):
         return True  # timer permanente
 
     def _refresh_home_tab(self) -> None:
-        """Reconcilia o comutador/cards com o estado VIVO do daemon."""
+        """Reconcilia o comutador/cards com o estado VIVO do daemon.
+
+        AVISO-VIVO-01: o latch `_home_inflight` tem PRAZO. Sem prazo, uma
+        chamada que nunca voltou o deixava ligado para sempre e a aba parava de
+        reconciliar em silêncio — foi o que fez uma reconciliação de 2 s levar
+        78 s na tela. Passado `HOME_INFLIGHT_TIMEOUT_S` a chamada anterior é
+        dada como perdida e uma nova sai; o relógio é lido aqui mesmo, no tick.
+
+        A resposta atrasada da chamada abandonada só desliga o latch de novo
+        (`_ok`/`_fail`), o que no pior caso adianta um refresh — nunca trava.
+        """
         if not getattr(self, "_home_installed", False):
             return
+        agora = time.monotonic()
         if getattr(self, "_home_inflight", False):
-            return
+            desde = getattr(self, "_home_inflight_since", 0.0)
+            if agora - desde < HOME_INFLIGHT_TIMEOUT_S:
+                return
+            logger.warning(
+                "aba Início: a leitura de estado não voltou em %.1fs — "
+                "soltando a trava e tentando de novo",
+                agora - desde,
+            )
         self._home_inflight = True
+        self._home_inflight_since = agora
 
         def _ok(state: Any) -> bool:
             self._home_inflight = False
@@ -690,6 +725,28 @@ class HomeActionsMixin(WidgetAccessMixin):
         from gi.repository import Gtk
 
         offline = state is None
+        # AVISO-VIVO-01: o rodapé passa a descrever o ESTADO, não o último
+        # clique. O toast do cadeado era o registro de "o que eu pedi uma vez" e
+        # sobrevivia ao estado: com o cadeado religado por fora da janela, o
+        # rodapé seguiu minutos escrito "Troca automática de perfil LIBERADA"
+        # enquanto o texto de causa, logo acima, dizia o contrário.
+        #
+        # Contexto "home" DE PROPÓSITO (e não um contexto próprio): é nele que
+        # o handler do cadeado deixa a frase, e na Gtk.Statusbar o `pop` de um
+        # contexto meu não apagaria a dele — apenas faria a mensagem antiga
+        # RESSURGIR de baixo da pilha. Para não comer o toast das outras ações
+        # ("Numeração compactada...", "Co-op pronto."), a escrita é por BORDA:
+        # só quando a frase de estado MUDA de valor — e nesse instante o que
+        # estava escrito ali já está velho de qualquer jeito.
+        aviso_estado = autoswitch_lock_text(state)
+        anterior = getattr(self, "_home_lock_toast", None)
+        if aviso_estado != anterior:
+            self._home_lock_toast = aviso_estado
+            # `getattr` defensivo pelo mesmo motivo do cadeado/co-op: os dublês
+            # de teste do `_render_home` não montam a statusbar inteira.
+            toast = getattr(self, "_status_toast", None)
+            if toast is not None and (aviso_estado or anterior):
+                toast("home", aviso_estado)
         selector = self._home_mode_selector
         self._home_guard = True
         try:

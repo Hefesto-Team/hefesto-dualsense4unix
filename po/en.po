@@ -1537,3 +1537,40 @@ msgstr "Restores the 'My Profile' profile to its original state"
 
 #~ msgid "Firmware"
 #~ msgstr "Firmware"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "Aplicado, menos: {secoes}."
+msgstr "Applied, except: {secoes}."
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "Nada foi aplicado ao controle."
+msgstr "Nothing was applied to the controller."
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "{primeiras} e mais {resto}"
+msgstr "{primeiras} and {resto} more"
+
+#. APLICAR-VERDADE-01: nomes das secoes do perfil, como a usuaria le nas abas.
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "luzes"
+msgstr "lights"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "gatilhos"
+msgstr "triggers"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "vibração"
+msgstr "rumble"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "teclado"
+msgstr "keyboard"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "microfone"
+msgstr "microphone"
+
+#: src/hefesto_dualsense4unix/app/actions/footer_actions.py
+msgid "ajustes por controle"
+msgstr "per-controller settings"
