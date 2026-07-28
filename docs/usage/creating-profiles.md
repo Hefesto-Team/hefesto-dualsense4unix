@@ -195,7 +195,7 @@ hefesto-dualsense4unix doctor --fix        # aplica os fixes do doctor.sh
 hefesto-dualsense4unix doctor --quiet      # só o resumo
 ```
 
-> **`--reapply-all` não existe mais.** Ele invocava um `scripts/dsx.sh` que
+> **`--reapply-all` não existe mais.** Ele invocava um `scripts/dsx.sh` que <!-- ref-externa: a ausência deste script é o assunto do aviso -->
 > também não existe mais no repositório. A cura do storm `-71` migrou para o
 > quirk do `snd_usb_audio` — instalado por padrão e reaplicável por `--fix-safe`.
 > Se você tem esse comando na memória muscular, o substituto é `--fix-safe`.

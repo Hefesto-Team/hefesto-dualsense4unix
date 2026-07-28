@@ -1,8 +1,23 @@
 name: CI
 
 on:
+  # PORTÃO-VIVO-01 bloco C: até aqui o `push` só disparava em `main`. Como o
+  # fluxo declarado da casa é merge direto em `main` sem PR
+  # (.github/CONTRIBUTING.md), o `pull_request:` abaixo nunca chegava a cobrir
+  # ramo nenhum — na prática NADA rodava até o código já estar na `main`.
+  # Medido em 27/07: o ramo `restauro/inicio-da-sessao` acumulou commits desde
+  # a v0.2.0 com ZERO workflow executado sobre eles.
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'restauro/**'
+      - 'sprint/**'
+      - 'onda/**'
+    # E as tags: o `release.yml` dispara em `v*`, mas o CI não — ou seja, o
+    # push da tag publicava um artefato que nenhum gate deste arquivo tinha
+    # visto. Agora a tag chama os dois.
+    tags:
+      - 'v*'
   pull_request:
   workflow_dispatch:
 
@@ -23,15 +38,103 @@ jobs:
       - run: bash scripts/check_test_data.sh
 
   acentuacao:
-    name: Acentuação PT-BR estrita
-    runs-on: ubuntu-22.04
+    name: Acentuação PT-BR estrita (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco A: este job era PINADO em 3.11, e a versão era o
+    # bug. A partir do Python 3.12 o `tokenize` quebra f-string em
+    # FSTRING_START/MIDDLE/END, tokens que o validador não olhava — então o
+    # mesmo erro de acentuação REPROVAVA no 3.11 do CI e PASSAVA no 3.12 da
+    # máquina dela. Verde na mesa, vermelho na main: foi essa assimetria que
+    # produziu seis commits corretivos em 29 minutos no dia 25/07.
+    #
+    # A mesma matriz do job `lint-test` é o ponto: as três versões têm de ver
+    # exatamente a mesma coisa. Se voltarem a divergir, divergem AQUI, num job
+    # que custa segundos, e não no meio de uma leva.
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
       - name: Varredura estrita
         run: python3 scripts/validar-acentuacao.py --all
+
+  glifos:
+    name: Glifos (emoji proibido, forma geométrica preservada)
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco C + sprint GATE-EMOJI-01: o higienizador do ambiente
+    # APAGA glifo em silêncio, inclusive os que o ADR-011 declara PERMITIDOS
+    # (Geometric Shapes, Box Drawing, Block Elements, Arrows) — já apagou o
+    # desenho dos LEDs do código e do valor esperado do teste no mesmo passe,
+    # deixando a suíte verde com a função quebrada. O que apaga não reprova; o
+    # que reprova é este job.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Varredura de glifos
+        run: python3 scripts/validar-glifos.py --all
+
+  referencias-docs:
+    name: Documento que cita arquivo inexistente
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco F. Nasceu informativo (continue-on-error) porque
+    # reprovava de propósito: a sprint exigiu que ele mordesse na árvore como
+    # ela estava, e ele achou 25 referências mortas — entre elas o
+    # `docs/adr/011-glyphs-vs-emojis.md`, que apoiava uma decisão arquitetural
+    # inteira num hook que nunca existiu, e três sprints linkadas no índice de
+    # 26/07 sem arquivo correspondente.
+    #
+    # DÍVIDA PAGA EM 27/07: as 25 foram corrigidas no documento (o ADR-011
+    # passou a citar `scripts/validar-glifos.py`, que existe e faz o que o nome
+    # imaginário prometia) e `--all` sai com código 0. O `continue-on-error`
+    # saiu junto: a partir daqui o job PROTEGE, não relata.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Varredura de referências
+        run: python3 scripts/validar-referencias-docs.py --all
+
+  shellcheck:
+    name: Shellcheck (severidade error)
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco E: cerca de 40 scripts rodam com `sudo` na máquina
+    # dela — o `doctor.sh` sozinho tem 150 KB — e NENHUM linter passava por
+    # eles. É a classe de furo do `uninstall.sh --help` que desinstalava tudo.
+    #
+    # Piso deliberado em `-S error` para não afogar em aviso de estilo. Quando
+    # o job nasceu havia UMA reprovação com shellcheck 0.9.0 nesta árvore, em
+    # `scripts/build_appimage_gui.sh` (SC1087), e por isso ele entrou
+    # informativo.
+    #
+    # DÍVIDA PAGA EM 27/07: o SC1087 foi corrigido pondo chaves na expansão
+    # (`"${HERE}[extras]"`), com o argumento entregue ao pip provado idêntico
+    # antes e depois. A varredura sai com código 0 e o `continue-on-error` saiu
+    # junto: a partir daqui o job PROTEGE, não relata.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versão do shellcheck (vem no runner)
+        run: shellcheck --version
+      - name: Varredura em severidade error
+        run: shellcheck -S error scripts/*.sh install.sh uninstall.sh
+
+  packaging-parity:
+    name: Paridade de empacotamento
+    runs-on: ubuntu-latest
+    # PORTÃO-VIVO-01 bloco E: 312 linhas de guarda contra regressão de
+    # empacotamento que não rodavam em workflow NENHUM. Travar agora é barato
+    # porque ele está VERDE hoje (rodado à mão em 27/07, exit 0, cobrindo 15
+    # regras udev, 4 arquivos de modprobe, 2 módulos DKMS e o broker); depois
+    # que alguém acrescentar uma regra nova, descobrir a divergência custa caro.
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check_packaging_parity.sh
 
   version-check:
     runs-on: ubuntu-latest

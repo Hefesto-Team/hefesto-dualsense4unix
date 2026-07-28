@@ -117,6 +117,17 @@ class LightbarActionsMixin(WidgetAccessMixin):
     _pending_brightness: float = 1.0
     # Guard para bloquear o handler durante refresh programático do slider.
     _refresh_guard: bool = False
+    # BOTÃO-QUE-NÃO-MENTE-01 (entrega 1): houve movimento no controle
+    # deslizante de brilho que ainda NÃO foi escrito no hardware. Cada pixel de
+    # arraste apenas marca isto; quem escreve é o soltar. Sem a marca, um
+    # clique no trilho que não muda valor mandaria uma escrita à toa.
+    _brilho_pendente: bool = False
+    # Idempotência da fiação do "aplicar ao soltar": ``install_lightbar_tab``
+    # tem DOIS pontos de chamada em ``app.py`` (janela normal e janela que
+    # nasce oculta na bandeja). Conectar duas vezes o mesmo sinal mandaria duas
+    # escritas por gesto — o dobro de tráfego na fila que o adiamento existe
+    # para poupar.
+    _soltar_fiado: bool = False
 
     def _uniqs_conectados(self) -> list[str]:
         """MACs dos controles CONECTADOS, na ordem do índice (R-14).
@@ -408,6 +419,87 @@ class LightbarActionsMixin(WidgetAccessMixin):
         reset_all: Gtk.Button = self._get("lightbar_auto_reset_all")
         if reset_all is not None:
             reset_all.connect("clicked", self.on_lightbar_auto_reset_all)
+        self._fiar_aplicar_ao_soltar()
+
+    def _fiar_aplicar_ao_soltar(self) -> None:
+        """Liga o "acende ao SOLTAR" da cor e do brilho (BOTÃO-QUE-NÃO-MENTE-01).
+
+        O defeito medido: escolher uma cor não acendia nada. O handler do
+        seletor gravava só no rascunho e o hardware só via a cor no SEGUNDO
+        clique, num botão trinta linhas de layout abaixo ("Aplicar no
+        controle"). Ela clicava, o controle não mudava, e concluía que a janela
+        era maquete. Estava funcionando — e não estava contando.
+
+        Adiar a escrita continua CERTO: aplicar a cada pixel de arraste do
+        controle deslizante saturaria a fila do rádio (por Bluetooth cada
+        escrita disputa a mesma fila dos relatórios de input, e são quatro
+        controles). O defeito nunca foi o adiamento: era o adiamento
+        SILENCIOSO. A cura mantém o adiamento e encurta a janela dele para um
+        gesto: escreve ao **soltar**, uma vez.
+
+        Os dois gestos, e por que cada sinal:
+
+        * **cor** — ``color-set`` do ``GtkColorButton`` já É o soltar: só
+          dispara quando ela confirma a cor no diálogo, nunca durante a
+          escolha. Um gesto, uma escrita;
+        * **brilho** — ``value-changed`` do ``GtkScale`` dispara a CADA pixel
+          do arraste, então ele continua sem tocar no hardware (só rascunho e
+          prévia) e quem escreve é ``button-release-event``. O
+          ``key-release-event`` cobre quem move o controle pelas setas do
+          teclado, que nunca solta botão de mouse nenhum.
+
+        A fiação é em CÓDIGO e não no glade de propósito: o dict de sinais do
+        ``app.py`` já leva ``color-set`` e ``value-changed`` aos handlers de
+        rascunho, e o Builder conecta ANTES desta instalação — a ordem garante
+        que o rascunho já esteja atualizado quando a escrita sai. É o mesmo
+        precedente do checkbox de cores automáticas acima.
+        """
+        if self._soltar_fiado:
+            return
+        botao_cor: Gtk.ColorButton = self._get("lightbar_color_button")
+        if botao_cor is not None:
+            botao_cor.connect("color-set", self._on_lightbar_cor_solta)
+        escala: Gtk.Scale = self._get("lightbar_brightness_scale")
+        if escala is not None:
+            escala.connect("button-release-event", self._on_lightbar_brilho_solto)
+            escala.connect("key-release-event", self._on_lightbar_brilho_solto)
+        self._soltar_fiado = True
+
+    def _on_lightbar_cor_solta(self, _botao: Any = None) -> None:
+        """Cor confirmada no diálogo -> acende no controle AGORA (entrega 1).
+
+        Roda depois do ``on_lightbar_color_set`` do Builder (ordem de conexão),
+        então ``_current_rgb`` e o rascunho já estão atualizados. Reusa o mesmo
+        caminho de escrita do botão "Aplicar no controle" — nada de rota
+        paralela, para a cor não passar a viajar por dois códigos diferentes
+        conforme quem a mandou.
+        """
+        if self._refresh_guard:
+            return
+        # O brilho da tela vai junto na mesma escrita (cor e brilho são um
+        # único campo no estado desejado do backend), então não fica pendente.
+        self._brilho_pendente = False
+        self._aplicar_cor_no_controle()
+
+    def _on_lightbar_brilho_solto(
+        self, _widget: Any = None, _evento: Any = None
+    ) -> bool:
+        """Soltou o controle deslizante de brilho -> UMA escrita (entrega 1).
+
+        Devolve ``False`` sempre: este handler observa o evento, não o consome.
+        Devolver ``True`` num ``button-release-event`` do ``GtkRange`` roubaria
+        o fim do arraste do próprio widget (o botão ficaria "preso").
+
+        Sem movimento pendente não há escrita: clicar no controle deslizante
+        sem mudar o valor não é um pedido de nada, e a fila do rádio é curta.
+        """
+        if self._refresh_guard:
+            return False
+        if not self._brilho_pendente:
+            return False
+        self._brilho_pendente = False
+        self._aplicar_cor_no_controle()
+        return False
 
     # --- signals lightbar ---
 
@@ -430,7 +522,23 @@ class LightbarActionsMixin(WidgetAccessMixin):
             preview.queue_draw()
 
     def on_lightbar_apply(self, _btn: Gtk.Button) -> None:
-        """Envia a cor da tela ao hardware.
+        """Botão "Aplicar no controle" — reenvia a cor da tela ao hardware.
+
+        Continua existindo depois da entrega 1 do BOTÃO-QUE-NÃO-MENTE-01 (a
+        cor já acende ao soltar o seletor): é o reenvio explícito, útil depois
+        de reconectar um controle ou trocar de alvo no seletor do banner, e é
+        o botão que os textos da tela citam. Um único caminho de escrita para
+        os dois gestos — ``_aplicar_cor_no_controle``.
+        """
+        self._aplicar_cor_no_controle()
+
+    def _aplicar_cor_no_controle(self) -> bool:
+        """Envia a cor da tela ao hardware. Devolve True quando todos aceitaram.
+
+        CAMINHO ÚNICO de escrita da cor: o botão "Aplicar no controle" e o
+        aplicar-ao-soltar (cor e brilho) entram os dois por aqui. Duplicar a
+        rota faria a cor viajar por códigos diferentes conforme o gesto — e as
+        regras abaixo (R-14, COR-04, PERFIL-05) valem para os dois.
 
         R-14 (auditoria 23/07): em "Todos" com os controles CONECTADOS
         conhecidos, a cor vai por MAC para cada um (``led.set`` com ``uniq``)
@@ -484,14 +592,20 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)
+        return bool(ok)
 
     def on_lightbar_brightness_changed(self, scale: Gtk.Scale) -> None:
-        """Slider 0-100 (%) -> atualiza luminosidade corrente e repinta prévia.
+        """Controle deslizante 0-100 (%) -> luminosidade corrente e prévia.
 
-        Não aplica no hardware automaticamente; o usuário confirma via botao
-        "Aplicar no controle". Assim evitamos flood de IPC durante arrasto.
-        Guard _refresh_guard previne loop quando _refresh_lightbar_from_draft
-        atualiza o slider programaticamente (FEAT-LED-BRIGHTNESS-03).
+        NÃO escreve no hardware: este sinal dispara a cada pixel do arraste, e
+        uma escrita por pixel saturaria a fila do rádio (por Bluetooth ela
+        disputa com os relatórios de input do próprio controle). O que o
+        movimento faz é marcar ``_brilho_pendente``; quem escreve, uma vez só,
+        é o soltar (``_on_lightbar_brilho_solto`` — BOTÃO-QUE-NÃO-MENTE-01
+        entrega 1). O guard ``_refresh_guard`` previne o laço quando
+        ``_refresh_lightbar_from_draft`` move o controle programaticamente
+        (FEAT-LED-BRIGHTNESS-03) — e é por isso que a marca de pendente fica
+        DEPOIS dele: repovoar a aba não é gesto dela, e não pode virar escrita.
         """
         if self._refresh_guard:
             return
@@ -503,6 +617,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         # Atualiza draft com novo valor de brightness (global ou override do
         # alvo — PERFIL-04).
         self._persist_leds_update({"lightbar_brightness": round(pct)})
+        self._brilho_pendente = True
         preview: Gtk.DrawingArea = self._get("lightbar_preview")
         if preview is not None:
             preview.queue_draw()

@@ -604,6 +604,37 @@ messagedialog button:active {
     color: @text_muted;
     font-size: 13px;
     padding: 8px 14px;
+    /* VÃO-01/E4 — o piso de alvo clicável do `button` (:186) deixava de fora
+       justamente o principal meio de navegação da janela: a tira de abas. Sem
+       declaração nossa, o piso da aba é o que o tema do sistema disser.
+
+       O NÚMERO NÃO É 24. A sprint pediu 24px, o mesmo da caixa de conteúdo do
+       botão, e a medição REFUTOU: nesta janela `min-height` não SOMA ao que a
+       aba já tem, ele SUBSTITUI o piso herdado, e o piso herdado aqui já é 30.
+       Varredura na tira de abas (altura da tira / teto por página / folga da
+       aba mais alta, a Emulação, que pede 626px):
+
+           sem declaração   62px   654px   28px   <- o de hoje
+           min-height 24    56px   660px   34px   <- ENCOLHE 6px o alvo
+           min-height 30    62px   654px   28px   <- idêntico ao de hoje
+           min-height 32    64px   652px   26px
+           min-height 40    72px   644px   18px
+           min-height 70   102px   614px  -12px   <- estoura o orçamento
+
+       Ou seja: escrever 24 aqui teria feito o CONTRÁRIO do que a entrega quer
+       — diminuiria o alvo da aba de 62px para 56px. O `cuidado declarado` da
+       sprint ("engordar a tira baixa o teto das nove páginas") está certo como
+       mecanismo e é o que a linha 40 mostra; só não era o que 24 faria.
+
+       Fica 30: é exatamente o piso herdado, então NADA muda na tela — e passa
+       a ser NOSSO, que é o objetivo da entrega. Um tema de sistema que não
+       declare nada deixa de poder encolher a aba. Aumentar além disso não tem
+       motivo medido: 62px de tira já é quase o dobro do mínimo de 32px de
+       alvo, e cada pixel a mais sai do teto das nove páginas.
+
+       Como o piso do botão, ele NÃO passa pela escala de fonte (`escalar_css`
+       só reescreve `font-size`) — é piso de ALVO, não de texto. */
+    min-height: 30px;
 }
 /* A aba ativa é o único lugar da interface, além da marca, onde o rosa aparece.
    Era roxa e disputava a atenção com todo item selecionado da tela.
@@ -959,6 +990,34 @@ textview.hefesto-dualsense4unix-log text selection,
 }
 .hefesto-dualsense4unix-window button.btn-trigger-off:hover  { background-color: @elevated; color: @text_soft; }
 .hefesto-dualsense4unix-window button.btn-trigger-off:active { background-color: @current_line; }
+
+/* VÃO-01/E3 — a parada de emergência da vibração ("Parar", aba Rumble). Ela
+   nasceu do incidente "tremendo sem parar" de 25/07 e era o TERCEIRO de quatro
+   botões idênticos, indistinguível inclusive do vizinho que desfaz o efeito
+   dela.
+
+   A ênfase é só COR, e por obrigação: LEGIBILIDADE-01/R1 documenta no glade
+   que aquela fileira está sem `homogeneous` de propósito, porque com
+   distribuição homogênea ela sozinha respondia por 1004 dos 1066px de largura
+   mínima da janela inteira — e a rolagem horizontal é `never`. Qualquer pixel
+   dado a este botão volta a subir intacto até a janela.
+
+   Por isso a regra é a MESMA CAIXA do `.btn-trigger-apply`: fundo de card,
+   borda de 1px, padding e raio herdados do `button`. Nenhuma dimensão muda —
+   é a regra do BUG-GUI-HOVER-JITTER-01 aplicada também ao repouso.
+
+   Laranja, não vermelho: pelo vocabulário do topo deste arquivo, VERMELHO
+   destrói e LARANJA alerta. "Parar" é reversível (o botão ao lado devolve a
+   vibração ao jogo), então ele alerta — não destrói. Medido: @orange sobre
+   @bg dá 8,4:1, bem acima do piso de 4,5:1. */
+.hefesto-dualsense4unix-window button.btn-rumble-stop {
+    background-image: none;
+    background-color: @bg;
+    border: 1px solid @orange;
+    color: @orange;
+}
+.hefesto-dualsense4unix-window button.btn-rumble-stop:hover  { background-color: @elevated; }
+.hefesto-dualsense4unix-window button.btn-rumble-stop:active { background-color: @current_line; }
 
 /* FEAT-GUI-HOME-TAB-01: os cards de controle da aba Início usavam esta segunda
    declaração de `.hefesto-dualsense4unix-card` só para apertar o padding. Ela

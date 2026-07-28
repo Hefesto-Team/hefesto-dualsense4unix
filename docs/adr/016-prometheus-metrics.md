@@ -132,7 +132,7 @@ ataque desnecessária. Reverse proxy (nginx, caddy) é o caminho para scraping r
 ## Referências
 
 - [Prometheus text exposition format 0.0.4](https://prometheus.io/docs/instrumenting/exposition_formats/)
-- `src/hefesto/daemon/subsystems/metrics.py`
+- `src/hefesto_dualsense4unix/daemon/subsystems/metrics.py`
 - `docs/usage/metrics.md`
 - Sprint FEAT-METRICS-01
 

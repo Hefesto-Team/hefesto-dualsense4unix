@@ -43,13 +43,37 @@ jobs:
           # puxa); instalar PyGObject pelo pip aqui foi tentado e revertido —
           # matava o interpretador no meio da suíte.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
+      # PORTÃO-VIVO-01 bloco D: "o workflow que produz o artefato é o que
+      # verifica menos". Até aqui a release rodava TRÊS gates —
+      # check_anonymity.sh, ruff e pytest tests/unit — enquanto o ci.yml rodava
+      # o dobro. E como o ci.yml não disparava em tag, o push da tag não
+      # chamava nem os que existiam lá: o pacote publicado nunca passou pelos
+      # gates de acentuação, tipo, dados de teste e consistência de versão.
+      #
+      # A v0.2.0 saiu exatamente por esse caminho. Os quatro passos abaixo são
+      # os mesmos do ci.yml (:23, :34, :43, :140), na mesma ordem de custo:
+      # primeiro o que só precisa de python3, depois o que precisa do venv.
       - name: Verificar anonimato
         run: bash scripts/check_anonymity.sh
+      - name: Verificar dados de teste neutros
+        run: bash scripts/check_test_data.sh
+      - name: Acentuação PT-BR estrita
+        run: python3 scripts/validar-acentuacao.py --all
+      # A prova de mordida do bloco D é este passo: dessincronizar de propósito
+      # o fallback __version__ do src/hefesto_dualsense4unix/__init__.py contra
+      # o pyproject.toml e tentar publicar tem de REPROVAR aqui.
+      - name: Consistência de versão entre os alvos versionados
+        run: python3 scripts/check_version_consistency.py
       - name: Instalar e testar
         run: |
           pip install -e ".[dev]"
           ruff check src/ tests/
           pytest tests/unit -v
+          # tests/core (12 testes) também não rodava aqui — mesma lacuna que o
+          # CI-TESTS-CORE-ORFAO-01 fechou do lado do ci.yml.
+          pytest tests/core -v
+      - name: Mypy (gate rígido, o mesmo do ci.yml)
+        run: mypy src/hefesto_dualsense4unix
       - name: Build wheel + sdist
         run: |
           pip install build twine

@@ -8,16 +8,27 @@ controle (barras L2/R2, dois ``StickPreviewGtk`` e o grid 4x4 de
 ``ensure_min_contrast`` (decisão D8: o swatch mostra a cor crua; só os TRAÇOS
 recebem a ajustada).
 
-O corpo do card ocupa TRÊS linhas (STATUS-3-LINHAS-01), montadas em código —
-não no Glade::
+O corpo do card ocupa DUAS linhas, montadas em código — não no Glade::
 
-    [ L2 / R2 .................. | Giroscópio ..................... ]
-    [ Analógico Esquerdo (L3) .. | Analógico Direito (R3) ......... ]
-    [ Touchpad | Microfone | Lightbar | Alto-falante | botões (4x4) ]
+    [ L2 / R2 ............................ | Giroscópio ........... ]
+    [ Touchpad     |                                               ]
+    [ Lightbar     | L3 | R3 | Microfone | botões (4x4)            ]
+    [ Alto-falante |                                               ]
 
 Antes eram seis blocos de largura total, empilhados: o card pedia 457px de
 altura e o giroscópio caía abaixo do corte da janela. Emparelhado, o que
 somava altura passou a dividir a mesma faixa.
+
+STATUS-SIMETRIA-01 fechou a faixa de baixo em três pontos, todos pedidos pela
+mantenedora depois de olhar a tela:
+
+* o **microfone à direita dos analógicos**, em coluna própria e DENTRO do card
+  (a madrugada de 26/07 o mandou para o rodapé da aba e foi revertida);
+* os **dois analógicos alinhados pelo desenho**, com um ``Gtk.SizeGroup``
+  vertical amarrando as duas linhas de título — o degrau de 20px nascia do
+  rótulo da esquerda quebrar em 3 linhas e o da direita em 2;
+* o **glifo dos botões derivado da escala de fonte** (:func:`glyph_size`), que
+  era o único tamanho da interface fora do alcance do ajuste dela.
 
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
@@ -91,10 +102,51 @@ ALL_BUTTONS: Final[list[str]] = [b for linha in GRID_BOTOES for b in linha]
 #: Threshold para considerar L2/R2 analógicos "pressionados" no glyph.
 L2_R2_THRESHOLD: Final[int] = 30
 
-#: Tamanho dos glyphs no card (o layout single antigo usava 40px; com um card
-#: por controle e o grid dividindo a linha de baixo com os quatro blocos de
-#: sensor, 20px mantém o glifo legível sem estourar largura nem altura).
-GLYPH_SIZE: Final[int] = 20
+#: Piso do glifo, em px, com a escala de fonte ZERADA (STATUS-SIMETRIA-01).
+#:
+#: O número que estava aqui (20px cru) era o ÚNICO tamanho da interface fora do
+#: alcance da escala de fonte: o A/B com escala 0 e escala 3 devolvia 20x20 nos
+#: dois casos, então o recurso que a mantenedora tem para enxergar melhor não
+#: tinha efeito nenhum sobre triângulo, X, bola e quadrado — justamente os
+#: menores desenhos do card. Agora o glifo deriva da escala pelo mesmo molde do
+#: `app/theme.py`: lá o delta é somado a cada `font-size` do CSS; aqui ele entra
+#: multiplicado, porque um glifo cresce nas DUAS dimensões e um degrau de 1px de
+#: fonte quase não se vê num quadrado de 20.
+GLYPH_SIZE_BASE: Final[int] = 24
+
+#: Quantos px o glifo ganha por degrau de escala de fonte. Com a escala 3 desta
+#: casa o glifo sai em 36px (era 20), e o grid 4x4 passa de 86 para 150px de
+#: largura — cabendo no orçamento medido da aba Status com dois cards.
+GLYPH_PX_POR_DEGRAU_DE_FONTE: Final[int] = 4
+
+
+def _escala_da_interface() -> int:
+    """Delta de fonte (px) que a interface está usando, ou 0 sem tema.
+
+    Import TARDIO de propósito: `app/theme.py` importa `gi` no topo, e este
+    módulo tem de continuar carregando no ambiente sem GTK (o stub do fim do
+    arquivo). Qualquer falha vira escala 0 — o glifo encolhe até o piso, mas a
+    janela nunca deixa de abrir por causa do tamanho de um desenho.
+    """
+    try:
+        from hefesto_dualsense4unix.app.theme import escala_fonte
+
+        return max(0, int(escala_fonte()))
+    except (ImportError, ValueError, TypeError, OSError):
+        return 0
+
+
+def glyph_size(escala: int | None = None) -> int:
+    """Tamanho do glifo em px, DERIVADO da escala de fonte da interface.
+
+    Chamada na MONTAGEM do grid (`_montar_glyphs`), nunca no import: é isso que
+    faz um card novo já nascer com o tamanho da escala vigente, e é isso que o
+    A/B de escala 0 contra escala 3 mede.
+    """
+    if escala is None:
+        escala = _escala_da_interface()
+    return GLYPH_SIZE_BASE + GLYPH_PX_POR_DEGRAU_DE_FONTE * max(0, int(escala))
+
 
 #: Sticks: 88px com card único; 70px quando há 2+ cards. Os dois encolheram
 #: junto com o reagrupamento em três linhas. Estes números NÃO são chute: o
@@ -671,34 +723,48 @@ if _GTK_DISPONIVEL:
             return caixa
 
         def _montar_linha_inferior(self) -> Any:
-            """A faixa de leitura ao vivo: sensores, analógicos e botões.
+            """A faixa de leitura ao vivo, na ordem que a mantenedora pediu.
 
-            `_sensores_linha` continua sendo SÓ touchpad + microfone, com a
-            semântica de sempre (some inteira quando nenhum dos dois existe —
-            é o que `_sincronizar_linha_sensores` decide e o que os testes
-            travam). A lightbar, o alto-falante, os analógicos e o grid de
-            botões entram em containers EXTERNOS: se morassem dentro dela,
-            sumiriam junto no caso comum de um controle sem mic atribuível e
-            sem dedo no touchpad.
+            STATUS-SIMETRIA-01 — *"a área do mic que deveria ficar à direita
+            dos analógicos"*::
 
-            Os quatro módulos de sensor ficam em DUAS linhas de dois em vez de
-            uma de quatro (LEGIBILIDADE-01/R4). É o que abre a coluna para os
-            analógicos sem alargar o card: numa fileira única de seis módulos,
-            dois cards lado a lado passavam de 1300px de largura mínima, e a
-            aba Status não tem rolagem horizontal para onde fugir.
+                [ Touchpad     ]                             [ ]  [ ]  [ ]  [ ]
+                [ Lightbar     ] [ L3 ] [ R3 ] [ Microfone ] [ ]  [ ]  [ ]  [ ]
+                [ Alto-falante ]                             [ ]  [ ]  [ ]  [ ]
+                                                             [ ]  [ ]  [ ]  [ ]
+
+            O microfone continua DENTRO do card — a madrugada de 26/07 o mandou
+            para o rodapé da aba, que é o oposto do pedido, e foi revertida.
+
+            Os três módulos que sobraram à esquerda ficam EMPILHADOS, e não em
+            duas fileiras de dois. É a troca que paga a coluna do microfone e o
+            glifo maior: em duas fileiras a coluna pedia 163px (a fileira
+            "lightbar + alto-falante" mandava na largura); empilhada ela pede
+            88px, e os 75px devolvidos são exatamente da ordem de grandeza da
+            coluna nova do microfone. A altura sobe ~30px, e altura é o que
+            sobra nesta faixa — a restrição dura aqui é LARGURA, porque dois
+            cards lado a lado somam direto no mínimo da janela e a aba Status
+            não tem rolagem horizontal para onde fugir.
+
+            Cada módulo se esconde SOZINHO quando não há sensor: nenhum deles
+            arrasta o vizinho, e nenhum deles leva os botões junto (a armadilha
+            de LEGIBILIDADE-01, quando o grid morava dentro da linha que sumia).
             """
             linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
 
-            sensores = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-            sensores.pack_start(self._montar_mic_e_touchpad(), False, False, 0)
-            saida = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            saida.pack_start(self._montar_lightbar(), False, False, 0)
-            saida.pack_start(self._montar_speaker(), False, False, 0)
-            self._modulos_saida = saida
-            sensores.pack_start(saida, False, False, 0)
-            linha.pack_start(sensores, False, False, 0)
-
-            linha.pack_start(self._montar_sticks(), False, False, 0)
+            linha.pack_start(self._montar_coluna_sensores(), False, False, 0)
+            # O miolo — os dois analógicos e o microfone COLADO à direita deles,
+            # que é o pedido ao pé da letra. Vai empacotado com
+            # `expand=True, fill=False`: a sobra de largura do card se reparte
+            # nos dois lados do miolo em vez de virar um buraco só (medido no
+            # card de um controle: 764px de vazio entre o fim dos analógicos e o
+            # começo do grid). `fill=False` mantém os três blocos juntos —
+            # esticar a caixa afastaria o microfone dos analógicos de novo.
+            miolo = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            miolo.pack_start(self._montar_sticks(), False, False, 0)
+            miolo.pack_start(self._montar_mic(), False, False, 0)
+            self._miolo_inferior = miolo
+            linha.pack_start(miolo, True, False, 0)
             # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
             # vem antes: microfone e alto-falante aparecem e somem conforme o
             # controle, e o grid de 16 glyphs não pode dançar de lugar a cada
@@ -709,9 +775,16 @@ if _GTK_DISPONIVEL:
             self._linha_inferior = linha
             return linha
 
-        def _montar_mic_e_touchpad(self) -> Any:
-            linha = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        def _montar_coluna_sensores(self) -> Any:
+            """Coluna da esquerda: touchpad, lightbar e alto-falante empilhados."""
+            coluna = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            coluna.pack_start(self._montar_touchpad(), False, False, 0)
+            coluna.pack_start(self._montar_lightbar(), False, False, 0)
+            coluna.pack_start(self._montar_speaker(), False, False, 0)
+            self._coluna_sensores = coluna
+            return coluna
 
+        def _montar_touchpad(self) -> Any:
             # LEGIBILIDADE-01/R4 — o estado de cada módulo desceu para BAIXO do
             # desenho. Ao lado do título ele economizava uma linha de altura,
             # que era o recurso escasso quando os cinco blocos dividiam UMA
@@ -730,9 +803,16 @@ if _GTK_DISPONIVEL:
             self._touch_view = painel
             self._touch_label = rotulo
             self._touch_box = touch
-            linha.pack_start(touch, False, False, 0)
+            self._esconder_modulo(touch)
+            return touch
 
+        def _montar_mic(self) -> Any:
+            """Coluna PRÓPRIA do microfone, à direita dos dois analógicos."""
             mic = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            # Topo alinhado com os títulos dos analógicos e com o do touchpad:
+            # sem isto a caixa estica na altura inteira da faixa e o rótulo
+            # "Microfone" fica flutuando no meio, sozinho na fileira.
+            mic.set_valign(Gtk.Align.START)
             mic.pack_start(self._rotulo_secao("Microfone"), False, False, 0)
             medidor = MicMeter()
             medidor.set_valign(Gtk.Align.CENTER)
@@ -750,14 +830,13 @@ if _GTK_DISPONIVEL:
             self._mic_meter = medidor
             self._mic_selo = selo
             self._mic_box = mic
-            linha.pack_start(mic, False, False, 0)
-
-            self._esconder_modulo(linha)
-            for modulo in (mic, touch, selo):
-                modulo.set_no_show_all(True)
-                modulo.hide()
-            self._sensores_linha = linha
-            return linha
+            # `_esconder_modulo` faz o `show_all()` ANTES de apagar (senão o
+            # medidor nasceria sem os filhos marcados); o selo se apaga depois,
+            # porque ele tem regra própria (mute ainda desconhecido).
+            self._esconder_modulo(mic)
+            selo.set_no_show_all(True)
+            selo.hide()
+            return mic
 
         def _montar_lightbar(self) -> Any:
             """Bloco "Lightbar": a cor que já chega no card, agora como BARRA.
@@ -819,6 +898,15 @@ if _GTK_DISPONIVEL:
             label_titulo.set_justify(Gtk.Justification.CENTER)
             label_titulo.set_max_width_chars(_TITULO_STICK_MAX_CHARS)
             label_titulo.get_style_context().add_class("dim-label")
+            # STATUS-SIMETRIA-01 — a CURA do degrau de 20px entre os dois
+            # analógicos. "Analógico Esquerdo (L3)" quebra em 3 linhas e
+            # "Analógico Direito (R3)" em 2; sem nada amarrando, essa diferença
+            # de altura de RÓTULO empurrava o desenho da esquerda 20px para
+            # baixo. O SizeGroup vertical dá aos dois títulos a altura do maior,
+            # e o alinhamento passa a não depender do texto: trocar uma palavra
+            # do rótulo amanhã não traz o degrau de volta. Encurtar o texto
+            # seria cinto de segurança, não cura.
+            self._grupo_titulos_stick.add_widget(label_titulo)
             caps.pack_start(label_titulo, False, False, 0)
             preview = StickPreviewGtk(label=rotulo_stick)
             preview.set_size_request(tamanho, tamanho)
@@ -840,6 +928,11 @@ if _GTK_DISPONIVEL:
             """Os dois analógicos, lado a lado, dentro da faixa de baixo."""
             tamanho = (
                 STICK_SIZE_COMPACT if self._compact else STICK_SIZE_SINGLE
+            )
+            # O grupo é POR CARD: amarrar títulos de cards diferentes faria um
+            # controle mudar de layout porque o vizinho apareceu.
+            self._grupo_titulos_stick = Gtk.SizeGroup(
+                mode=Gtk.SizeGroupMode.VERTICAL
             )
             # Caixa e não mais `Gtk.Grid` homogêneo: a grade dava às duas
             # cápsulas a largura da MAIOR, e a maior era a do rótulo. Aqui cada
@@ -869,7 +962,14 @@ if _GTK_DISPONIVEL:
             return faixa
 
         def _montar_glyphs(self) -> Any:
-            """Grid 4x4 dos 16 botões — o bloco da direita na linha de baixo."""
+            """Grid 4x4 dos 16 botões — o bloco da direita na linha de baixo.
+
+            O tamanho sai de `glyph_size()`, lido AQUI (na montagem) e não do
+            módulo: card montado com a escala 3 nasce com glifo de 36px, e com
+            a escala 0, de 24px.
+            """
+            tamanho = glyph_size()
+            self._glyph_size = tamanho
             glyph_grid = Gtk.Grid()
             glyph_grid.set_row_spacing(2)
             glyph_grid.set_column_spacing(2)
@@ -879,7 +979,7 @@ if _GTK_DISPONIVEL:
                 for col, nome in enumerate(linha):
                     tooltip = BUTTON_GLYPH_LABELS.get(nome, nome)
                     glyph = ButtonGlyph(
-                        nome, size=GLYPH_SIZE, tooltip_pt_br=tooltip
+                        nome, size=tamanho, tooltip_pt_br=tooltip
                     )
                     self._glyphs[nome] = glyph
                     glyph_grid.attach(glyph, col, row, 1, 1)
@@ -1010,13 +1110,11 @@ if _GTK_DISPONIVEL:
             if dados is None:
                 self._touch_view.set_toque(None)
                 self._touch_box.hide()
-                self._sincronizar_linha_sensores()
                 return
             tocando, fx, fy = dados
             self._touch_view.set_toque((fx, fy) if tocando else None)
             self._touch_label.set_text(texto_toques(1 if tocando else 0))
             self._touch_box.show()
-            self._sincronizar_linha_sensores()
 
         def _update_mic(self, mic: Any, transporte: str = "") -> None:
             nivel = getattr(mic, "nivel", None) if mic is not None else None
@@ -1030,7 +1128,6 @@ if _GTK_DISPONIVEL:
                 # captura seria mostrar áudio que não está mais entrando.
                 self._mic_meter.limpar()
                 self._mic_box.hide()
-                self._sincronizar_linha_sensores()
                 return
             self._mic_meter.show()
             self._mic_meter.set_nivel(float(nivel))
@@ -1048,7 +1145,6 @@ if _GTK_DISPONIVEL:
                 )
                 self._mic_selo.show()
             self._mic_box.show()
-            self._sincronizar_linha_sensores()
 
         def _update_speaker(self, entry: dict[str, Any]) -> None:
             dados = speaker_do_entry(entry)
@@ -1062,19 +1158,6 @@ if _GTK_DISPONIVEL:
             self._speaker_bar.set_volume(fracao_do_volume(volume), muted)
             self._speaker_label.set_text(texto_volume(volume, muted))
             self._speaker_box.show()
-
-        def _sincronizar_linha_sensores(self) -> None:
-            """A linha "Touchpad + Microfone" só existe se algum dos dois existe.
-
-            Ela é só o PAR de sensores — a lightbar, o alto-falante e os
-            botões moram no container externo (`_linha_inferior`) justamente
-            para não sumirem junto no caso comum de um controle sem microfone
-            atribuível e com o dedo fora do touchpad.
-            """
-            if self._mic_box.get_visible() or self._touch_box.get_visible():
-                self._sensores_linha.show()
-            else:
-                self._sensores_linha.hide()
 
         # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
@@ -1229,7 +1312,6 @@ if _GTK_DISPONIVEL:
             self._touch_box.hide()
             self._mic_meter.limpar()
             self._mic_box.hide()
-            self._sensores_linha.hide()
             self._speaker_box.hide()
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
@@ -1318,7 +1400,8 @@ else:
 
 __all__ = [
     "ALL_BUTTONS",
-    "GLYPH_SIZE",
+    "GLYPH_PX_POR_DEGRAU_DE_FONTE",
+    "GLYPH_SIZE_BASE",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
     "MOTIVOS_DEGRADACAO_LEIGOS",
@@ -1326,6 +1409,7 @@ __all__ = [
     "STICK_SIZE_SINGLE",
     "ControllerCard",
     "accent_do_card",
+    "glyph_size",
     "gyro_do_inputs",
     "rotulo_lightbar",
     "speaker_do_entry",

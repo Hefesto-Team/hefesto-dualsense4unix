@@ -16,7 +16,7 @@
 
 ## Decisão
 
-Quebrar `lifecycle.py` em um pacote `src/hefesto/daemon/subsystems/` com os seguintes módulos:
+Quebrar `lifecycle.py` em um pacote `src/hefesto_dualsense4unix/daemon/subsystems/` com os seguintes módulos:
 
 ```
 daemon/
@@ -65,7 +65,7 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
 
 ## Como adicionar um novo subsystem
 
-1. Criar `src/hefesto/daemon/subsystems/<nome>.py` implementando o protocolo `Subsystem`.
+1. Criar `src/hefesto_dualsense4unix/daemon/subsystems/<nome>.py` implementando o protocolo `Subsystem`.
 2. Adicionar o subsystem ao `SUBSYSTEM_REGISTRY` em `subsystems/__init__.py`.
 3. Adicionar a chamada condicional em `Daemon.run()` se o subsystem precisar de controle de habilitação via config.
 4. Criar testes unitários em `tests/unit/test_subsystem_<nome>.py` mockando `DaemonContext`.
@@ -73,7 +73,7 @@ Os métodos privados no `Daemon` são thin wrappers que delegam para as funçõe
 Exemplo mínimo:
 
 ```python
-# src/hefesto/daemon/subsystems/metrics.py
+# src/hefesto_dualsense4unix/daemon/subsystems/metrics.py
 class MetricsSubsystem:
     name = "metrics"
 

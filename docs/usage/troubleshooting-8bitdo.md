@@ -26,7 +26,7 @@ máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
 
 | Modo do controle | Identidade no kernel | Driver | Gyro | Nível de prova |
 |---|---|---|---|---|
-| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | ⭐ **PROVADO estável** (2026-07-25 — a via boa por Bluetooth) |
+| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | **RECOMENDADO - PROVADO estável** (2026-07-25 — a via boa por Bluetooth) |
 | Switch **por cabo** | `057e:2009` (bus `0003`) | `hid-nintendo` | sim¹ | **PROVADO estável** (instância USB sem um único timeout) |
 | Switch por Bluetooth | `057e:2009` (bus `0005`) | `hid-nintendo` | sim¹ | **PROVADO instável** (mortes medidas em 2026-07-16, com e sem Steam) |
 | X-input **por cabo** | `045e:028e` | `xpad` | não² | Xbox 360 real; estabilidade esperada, não medida |
@@ -45,7 +45,7 @@ provadamente estável. Para entrar em X-input, liga-se o controle segurando
 
 ---
 
-## ⭐ A cura do Bluetooth: trocar de modo, não consertar o driver (25/07/2026)
+## A cura do Bluetooth: trocar de modo, não consertar o driver (25/07/2026)
 
 Durante meses a conclusão registrada aqui foi *"por Bluetooth ele morre; o cabo
 é a via"*, e a caçada toda — patch DKMS, `bt_probe_retries`, análise do

@@ -504,13 +504,23 @@
                                nenhum). Com as linhas de slider compactas
                                (~24px), os 4 parâmetros do modo mais cheio
                                cabem em ~110px; o que passar disso rola, que é
-                               justamente o papel deste scroller. -->
+                               justamente o papel deste scroller.
+
+                               VAO-01/E1: o `vexpand` e o `expand` do packing
+                               SAIRAM. Sao duas propriedades, nao uma: no
+                               GtkBox do GTK3 o filho recebe a folga se
+                               `compute_expand` OU o packing for verdadeiro,
+                               entao tirar so o `vexpand` nao mudava nada.
+                               Este scroller quase sempre esta vazio e ficava
+                               com a folga vertical inteira da aba: eram 830px
+                               entre o rotulo `Modo:` e o `Aplicar em L2` que
+                               o obedece. Com `expand=False` ele passa a pedir
+                               o que o conteudo precisa, com piso de 110px. -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
                             <property name="min-content-height">110</property>
                             <property name="propagate-natural-height">True</property>
-                            <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_left_params_box">
                                 <property name="orientation">vertical</property>
@@ -518,7 +528,7 @@
                               </object>
                             </child>
                           </object>
-                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                          <packing><property name="expand">False</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -635,13 +645,18 @@
                                nenhum). Com as linhas de slider compactas
                                (~24px), os 4 parâmetros do modo mais cheio
                                cabem em ~110px; o que passar disso rola, que é
-                               justamente o papel deste scroller. -->
+                               justamente o papel deste scroller.
+
+                               VAO-01/E1: mesma cura do lado esquerdo — o
+                               `vexpand` e o `expand` do packing SAIRAM
+                               juntos, porque uma propriedade so nao bastava
+                               (o GtkBox aceita qualquer uma das duas como
+                               pedido de folga). -->
                           <object class="GtkScrolledWindow">
                             <property name="hscrollbar-policy">never</property>
                             <property name="vscrollbar-policy">automatic</property>
                             <property name="min-content-height">110</property>
                             <property name="propagate-natural-height">True</property>
-                            <property name="vexpand">True</property>
                             <child>
                               <object class="GtkBox" id="trigger_right_params_box">
                                 <property name="orientation">vertical</property>
@@ -649,7 +664,7 @@
                               </object>
                             </child>
                           </object>
-                          <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                          <packing><property name="expand">False</property><property name="fill">True</property></packing>
                         </child>
 
                         <child>
@@ -916,18 +931,48 @@
                                mas é o padrão oficial do PS5. Os checkboxes ficam OCULTOS
                                (no-show-all) e seguem sendo o estado interno que os presets
                                de player escrevem e o "Aplicar LEDs" lê — só a superfície
-                               de UI mudou; nenhum handler/fluxo foi alterado. -->
+                               de UI mudou; nenhum handler/fluxo foi alterado.
+
+                               BOTÃO-QUE-NÃO-MENTE-01 (entrega 4), MEDIDO:
+                               os `<signal name="toggled">` SAÍRAM — invisível
+                               que declara sinal é dívida, e aqui o sinal era
+                               provadamente inalcançável: a caixa é
+                               `visible=False`/`no-show-all`, então ninguém
+                               clica, e os DOIS únicos lugares que chamam
+                               `set_active` nestes widgets já se protegem
+                               (`_refresh_lightbar_from_draft` com
+                               `_refresh_guard`, `_set_player_leds` com
+                               `_player_leds_batch_guard`) — o
+                               `on_player_led_toggled` saía na primeira linha
+                               nos dois casos. Tirar o sinal muda ZERO
+                               comportamento; ele fica sem quem o chame no
+                               glade.
+
+                               As CAIXAS ficam, contra a letra da sprint, e
+                               isto é medição: elas ainda são o único lugar
+                               onde a GUI guarda o desenho escolhido.
+                               `get_current_player_leds`
+                               (lightbar_actions.py:860) lê `player_led_1..5`
+                               pelo id, e `builder.get_object` de um id que não
+                               existe devolve `None` — sem crash, mas com todos
+                               os bits em False. Sumir com elas agora faria o
+                               botão "Aplicar o desenho" APAGAR as cinco luzes
+                               e gravar "tudo apagado" no perfil dela logo
+                               depois de ela escolher "Desenho do P1": trocar
+                               dívida invisível por defeito visível. Elas saem
+                               no mesmo passe em que o Python passar a guardar
+                               esse estado fora dos widgets. -->
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
                             <property name="homogeneous">True</property>
                             <property name="visible">False</property>
                             <property name="no-show-all">True</property>
-                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label" translatable="yes">LED 1</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label" translatable="yes">LED 2</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label" translatable="yes">LED 3</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label" translatable="yes">LED 4</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label" translatable="yes">LED 5</property><signal name="toggled" handler="on_player_led_toggled"/></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label" translatable="yes">LED 1</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label" translatable="yes">LED 2</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label" translatable="yes">LED 3</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label" translatable="yes">LED 4</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label" translatable="yes">LED 5</property></object></child>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -1021,7 +1066,16 @@
                             <child>
                               <object class="GtkButton" id="player_leds_apply">
                                 <property name="label" translatable="yes">Aplicar o desenho</property>
-                                <property name="tooltip-text" translatable="yes">Reenvia ao controle o desenho que está escolhido aqui. PLAYER-01: o texto antigo falava de "5 checkboxes" que estão ocultos desde a LEDS-SO-PLAYER-01 — quem escolhe são os botões de desenho acima.</property>
+                                <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): o
+                                     tooltip anterior contava um refactor
+                                     interno para ela ("o texto antigo falava
+                                     de 5 checkboxes que estão ocultos desde a
+                                     LEDS-SO-PLAYER-01"), citando um código de
+                                     sprint e caixas que ela nunca viu na tela.
+                                     O texto novo fala do que está à vista: os
+                                     botões de desenho logo acima e o momento
+                                     em que reenviar é útil. -->
+                                <property name="tooltip-text" translatable="yes">Reenvia ao controle o desenho escolhido nos botões acima. Útil quando o controle se reconectou ou você trocou de perfil e quer ver as luzes voltarem ao desenho que está aqui. Não muda o número do controle.</property>
                                 <signal name="clicked" handler="on_player_leds_apply"/>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
@@ -1289,17 +1343,46 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkButton" id="rumble_stop">
-                                <property name="label" translatable="yes">Parar</property>
-                                <property name="tooltip-text" translatable="yes">Trava o controle em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
-                                <signal name="clicked" handler="on_rumble_stop"/>
-                              </object>
-                            </child>
-                            <child>
                               <object class="GtkButton" id="rumble_passthrough">
                                 <property name="label" translatable="yes">Deixar o jogo controlar a vibração</property>
                                 <property name="tooltip-text" translatable="yes">Devolve a vibração ao jogo. Use depois de 'Parar' para o jogo voltar a fazer o controle vibrar.</property>
                                 <signal name="clicked" handler="on_rumble_passthrough"/>
+                              </object>
+                            </child>
+                            <!-- VAO-01/E3: a parada de emergencia que nasceu do
+                                 incidente "tremendo sem parar" (25/07) era o
+                                 TERCEIRO de quatro botoes iguais, no meio da
+                                 fileira, e indistinguivel do vizinho que
+                                 DESFAZ o efeito dela.
+
+                                 Dar largura a ele esta PROIBIDO, e o proprio
+                                 comentario de LEGIBILIDADE-01/R1 logo acima
+                                 diz por que: com distribuicao homogenea esta
+                                 fileira sozinha respondia por 1004 dos 1066px
+                                 de largura minima da janela INTEIRA. A enfase
+                                 aqui custa ZERO pixel:
+
+                                 - COR: a classe `btn-rumble-stop` pinta a
+                                   borda e o texto de laranja (o token de
+                                   ALERTA da casa), com o mesmo padding, a
+                                   mesma borda de 1px e o mesmo raio do botao
+                                   comum — nenhuma dimensao muda, exatamente
+                                   como manda o BUG-GUI-HOVER-JITTER-01. O
+                                   precedente e o `btn-trigger-apply` da aba
+                                   Gatilhos, que ja distingue por contorno.
+                                 - ORDEM: ele passa a ser o ULTIMO da fileira.
+                                   Na borda o alvo efetivo e maior sem ganhar
+                                   um pixel (o ponteiro para no limite do
+                                   grupo), continua encostado no botao que o
+                                   desfaz, e o rotulo mais largo da fileira
+                                   passa a separar o que e rotina do que e
+                                   emergencia. -->
+                            <child>
+                              <object class="GtkButton" id="rumble_stop">
+                                <style><class name="btn-rumble-stop"/></style>
+                                <property name="label" translatable="yes">Parar</property>
+                                <property name="tooltip-text" translatable="yes">Trava o controle em silêncio: nada vibra, nem no jogo. Para o jogo voltar a comandar, clique em 'Deixar o jogo controlar a vibração'.</property>
+                                <signal name="clicked" handler="on_rumble_stop"/>
                               </object>
                             </child>
                           </object>
@@ -1359,11 +1442,28 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <packing><property name="expand">False</property></packing>
                     </child>
                     <child>
+                      <!-- VAO-01/E1: o `vexpand` e o `expand` do packing
+                           SAIRAM (as duas, porque o GtkBox honra qualquer uma
+                           das duas). A lista de perfis desta casa e curta e
+                           ficava com a folga vertical inteira do painel.
+
+                           No lugar deles entra uma FAIXA: `min-content-height`
+                           garante que a lista nunca colapse (um scroller sem
+                           piso e com `expand=False` pede zero e some), e
+                           `max-content-height` impede que uma lista longa
+                           empurre a aba para fora da janela. Aqui o
+                           `max-content-height` FUNCIONA porque o packing nao
+                           expande mais — com `expand=True` ele limitava so o
+                           pedido e a alocacao engolia a folga do mesmo jeito.
+                           O `hexpand` FICA: a restricao dura desta janela e a
+                           largura, e a lista divide a linha com o editor. -->
                       <object class="GtkScrolledWindow">
                         <property name="hscrollbar-policy">never</property>
                         <property name="vscrollbar-policy">automatic</property>
                         <property name="hexpand">True</property>
-                        <property name="vexpand">True</property>
+                        <property name="min-content-height">200</property>
+                        <property name="max-content-height">320</property>
+                        <property name="propagate-natural-height">True</property>
                         <child>
                           <!-- ONDA-U (U3-B): "row-activated" (duplo-clique)
                                foi REMOVIDO — atropelava edição em andamento
@@ -1377,7 +1477,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           </object>
                         </child>
                       </object>
-                      <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                      <packing><property name="expand">False</property><property name="fill">True</property></packing>
                     </child>
                     <child>
                       <object class="GtkBox" id="profiles_btnbox">
@@ -1702,8 +1802,16 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="layout-style">end</property>
                         <property name="spacing">6</property>
                         <child>
+                          <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): dois
+                               "Salvar" ficavam visíveis ao mesmo tempo com
+                               sentidos diferentes — este, que grava o perfil
+                               que está aberto no editor ao lado, e o
+                               "Salvar Perfil" do rodapé, que pede um nome e
+                               guarda o RASCUNHO inteiro da janela. Este ganha
+                               o "este perfil"; o do rodapé fica como está. -->
                           <object class="GtkButton" id="profile_save_button">
-                            <property name="label" translatable="yes">Salvar</property>
+                            <property name="label" translatable="yes">Salvar este perfil</property>
+                            <property name="tooltip-text" translatable="yes">Grava o perfil que está aberto aqui no editor, com o nome e as opções destes campos. Não confunda com o "Salvar Perfil" do rodapé, que pede um nome e guarda tudo que você ajustou nas outras abas.</property>
                             <signal name="clicked" handler="on_profile_save"/>
                           </object>
                         </child>
@@ -1875,13 +1983,26 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                           </object>
                         </child>
                         <child>
+                          <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): o tooltip
+                               terminava com "e dá para desfazer". NÃO DÁ. A
+                               função que desmarca existe
+                               (`remove_appid_from_steam_input_allowlist`,
+                               integrations/steam_launch_options.py:821) e tem
+                               ZERO chamadores em `src/` — nove em `tests/`.
+                               Não há superfície de remoção nenhuma: nem aqui,
+                               nem na linha de comando. Enquanto o desfazer não
+                               existir, o texto para de prometer e passa a
+                               dizer o custo, que está escrito no próprio
+                               código: o jogo marcado fica sem cor, gatilhos e
+                               co-op do Hefesto. Mentira na tela é pior que
+                               falta. -->
                           <object class="GtkButton" id="btn_steam_game_broken">
                             <property name="label" translatable="yes">Este jogo não funciona</property>
-                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue direto pela Steam e o Hefesto sai da frente. Use quando um jogo específico ignora o controle. Não fecha a Steam e dá para desfazer.</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue direto pela Steam e o Hefesto sai da frente. Use quando um jogo específico ignora o controle. Não fecha a Steam. Atenção: ainda não existe um botão para desmarcar — enquanto a marca estiver lá, esse jogo fica sem cor, gatilhos e co-op do Hefesto.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam. Ainda não existe um botão para desmarcar</property>
                             </object>
                           </child>
                           </object>
@@ -1942,11 +2063,27 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <packing><property name="expand">False</property></packing>
                 </child>
                 <child>
+                  <!-- VAO-01/E1: esta caixa de texto fica EM BRANCO ate
+                       alguem pedir diagnostico, e mesmo assim levava metade
+                       da aba Sistema. Sairam as DUAS propriedades de folga —
+                       o `vexpand` daqui e o `expand` do packing logo abaixo —
+                       porque no GtkBox qualquer uma das duas ja basta para o
+                       filho engolir o vao.
+
+                       Registrado para quem vier: `max-content-height`
+                       SOZINHO nao resolvia. Ele limita o PEDIDO, nao a
+                       ALOCACAO; com `expand=True` o filho continuava
+                       recebendo a folga inteira por cima do limite. So depois
+                       que o packing parou de expandir e que o par
+                       min/max-content-height passou a valer, virando a faixa
+                       em que o log pode crescer. -->
                   <object class="GtkScrolledWindow" id="daemon_log_scroll">
                     <property name="hscrollbar-policy">never</property>
                     <property name="vscrollbar-policy">automatic</property>
                     <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
+                    <property name="min-content-height">140</property>
+                    <property name="max-content-height">260</property>
+                    <property name="propagate-natural-height">True</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
                       <object class="GtkTextView" id="daemon_status_text">
@@ -1958,7 +2095,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                  <packing><property name="expand">False</property><property name="fill">True</property></packing>
                 </child>
               </object>
             </child>
@@ -2144,12 +2281,29 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <signal name="clicked" handler="on_emulation_refresh"/>
                       </object>
                     </child>
-                    <child>
-                      <object class="GtkButton" id="emulation_open_toml_button">
-                        <property name="label" translatable="yes">Ver daemon.toml (referência)</property>
-                        <signal name="clicked" handler="on_emulation_open_toml"/>
-                      </object>
-                    </child>
+                    <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 3): o botão
+                         "Ver daemon.toml (referência)" SAIU. Não é reparo, é
+                         remoção.
+
+                         O clique CRIAVA `~/.config/hefesto-dualsense4unix/
+                         daemon.toml` (com `[hotkey] buffer_ms=…`) e abria no
+                         editor dela — só que o Hefesto NÃO lê esse arquivo, e
+                         o próprio código admite isso em
+                         `app/actions/emulation_actions.py:275`
+                         (`BUG-DAEMON-TOML-DEAD-01`: a configuração efetiva vem
+                         de variáveis de ambiente e do canal `daemon.reload`).
+                         Ou seja: o botão fabricava, no diretório de
+                         configuração dela, um arquivo com cara de
+                         configuração que editar não muda nada. O
+                         "(referência)" do rótulo era a única defesa e não
+                         sobrevivia ao gesto.
+
+                         Volta quando (e se) existir arquivo de configuração de
+                         verdade — proposto no bloco C da
+                         PROMESSA-NÃO-CUMPRIDA-01. O handler
+                         `on_emulation_open_toml` fica sem quem o chame no
+                         glade; quem cuida do Python nesta leva decide se o
+                         código sai junto. -->
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -2166,8 +2320,28 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                     <child>
+                      <!-- VAO-01/E2: o `wrap` FICA. Os textos reais deste
+                           rotulo sao multi-palavra ("ligado — DualSense (PS)",
+                           "jogar direto (Sony) — o jogo fala direto com o
+                           controle"), e sem quebra a largura MINIMA da aba
+                           sobe — largura e a restricao dura desta janela, com
+                           rolagem horizontal `never`.
+
+                           O que entra e o PISO. Medido: um rotulo que quebra
+                           reporta minimo de 76px, ABAIXO da palavra mais longa
+                           que ele exibe; quando a linha aperta, o Pango parte
+                           a palavra no meio, e e esse o corte que ela ve.
+                           `width-chars` sobe o piso ate caber a palavra
+                           inteira. Aqui a mais longa e "DualSense" (9).
+
+                           `max-width-chars` foi medido e RECUSADO: ele corta a
+                           largura NATURAL, e este rotulo cabe em UMA linha nos
+                           1180px com que a janela abre. Limitar o natural o
+                           faria quebrar ja no tamanho normal, somando ~22px a
+                           uma aba que ja esta em 626 de 654. -->
                       <object class="GtkLabel" id="emulation_gamepad_status_label">
                         <property name="wrap">True</property>
+                        <property name="width-chars">9</property>
                         <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
@@ -2222,18 +2396,51 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                     <child>
+                      <!-- VAO-01/E2: mesmo piso, dimensionado pelo texto DESTE
+                           rotulo. A palavra mais longa que ele exibe e
+                           "mouse/teclado" (13), de "LIGADO — mouse/teclado
+                           suspensos". Sem o piso o minimo dele era 81px e a
+                           palavra saia partida; com 13 o piso vai a 117px e a
+                           frase cai de quatro linhas para tres. -->
                       <object class="GtkLabel" id="emulation_gamemode_status_label">
                         <property name="wrap">True</property>
+                        <property name="width-chars">13</property>
                         <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
                       </object>
                     </child>
                     <child>
+                      <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): este botão se
+                           chamava "Modo jogo" e NÃO liga o modo jogo — ele
+                           chama `daemon.emulation.suppress`, que suspende
+                           mouse e teclado. Quem liga o modo jogo é "Jogar pelo
+                           Hefesto", na aba Início, e esse é o conceito certo.
+                           Pior: este aqui NASCE CINZA justamente em
+                           "Controlar o PC", que é onde ela mais espera que
+                           funcione. O rótulo passa a dizer o que o clique faz.
+
+                           O `id` e o handler NÃO mudam: `emulation_pause_button`
+                           é lido por `_sync_gamemode_button`
+                           (emulation_actions.py:489) para ligar/desligar o
+                           botão conforme o modo.
+
+                           O rótulo da linha ("Modo jogo:") e o "Sair do modo
+                           jogo" FICAM: o texto ao lado é escrito pelo Python
+                           ("LIGADO — mouse/teclado suspensos",
+                           emulation_actions.py:551) e só faz frase depois do
+                           título da linha. Trocar um lado só, daqui do glade,
+                           partiria a frase no meio. -->
                       <object class="GtkButton" id="emulation_pause_button">
-                        <property name="label" translatable="yes">Modo jogo</property>
+                        <property name="label" translatable="yes">Suspender mouse e teclado</property>
                         <property name="tooltip-text" translatable="yes">Suspende a emulação de mouse/teclado (igual ao combo PS+Options). Só faz sentido jogando: em "Controlar o PC" o controle ficaria sem função nenhuma, por isso fica desabilitado nesse modo. Transitório — não sobrevive ao reboot.</property>
                         <signal name="clicked" handler="on_emulation_pause"/>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Suspender mouse e teclado</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Para a emulação de mouse e teclado enquanto você joga; o botão "Sair do modo jogo" desfaz</property>
+                        </object>
+                      </child>
                       </object>
                     </child>
                     <child>
@@ -2267,8 +2474,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                     <child>
+                      <!-- VAO-01/E2: piso pela palavra mais longa deste rotulo
+                           — "(conflita!)" (11), de "ligado (conflita!)"; o
+                           segundo pior e "encontrado" (10). O `wrap` fica: ele
+                           tambem recebe a emenda do opt-in por jogo ("so
+                           valendo durante o jogo"), que e frase inteira. -->
                       <object class="GtkLabel" id="emulation_steam_input_status_label">
                         <property name="wrap">True</property>
+                        <property name="width-chars">11</property>
                         <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>
@@ -2304,8 +2517,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                     <child>
+                      <!-- VAO-01/E2: piso pela palavra mais longa deste rotulo
+                           — "(suprimido)" (11), de "desligado (suprimido)"
+                           (`emulation_actions.py`). E exatamente o caso que a
+                           sprint usou para mostrar que remover o `wrap` seria
+                           a cura errada: o texto e multi-palavra. -->
                       <object class="GtkLabel" id="emulation_mic_status_label">
                         <property name="wrap">True</property>
+                        <property name="width-chars">11</property>
                         <property name="xalign">0</property>
                         <property name="label" translatable="yes">—</property>
                         <property name="margin-end">8</property>

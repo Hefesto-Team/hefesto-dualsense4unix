@@ -117,21 +117,21 @@ de plugins. Mudancas breaking exigirao bump de versão da API e nota de migracao
 ## Impacto no código
 
 Arquivos novos:
-- `src/hefesto/plugin_api/__init__.py`
-- `src/hefesto/plugin_api/plugin.py`
-- `src/hefesto/plugin_api/context.py`
-- `src/hefesto/plugin_api/loader.py`
-- `src/hefesto/daemon/subsystems/plugins.py`
-- `src/hefesto/cli/cmd_plugin.py`
+- `src/hefesto_dualsense4unix/plugin_api/__init__.py`
+- `src/hefesto_dualsense4unix/plugin_api/plugin.py`
+- `src/hefesto_dualsense4unix/plugin_api/context.py`
+- `src/hefesto_dualsense4unix/plugin_api/loader.py`
+- `src/hefesto_dualsense4unix/daemon/subsystems/plugins.py`
+- `src/hefesto_dualsense4unix/cli/cmd_plugin.py`
 - `examples/plugins/lightbar_rainbow.py`
 - `tests/unit/test_plugin_api.py`
 
 Arquivos modificados:
-- `src/hefesto/daemon/lifecycle.py` — `DaemonConfig.plugins_enabled`, slot `_plugins_subsystem`, wire-up
-- `src/hefesto/daemon/subsystems/__init__.py` — registro de `PluginsSubsystem`
-- `src/hefesto/daemon/subsystems/connection.py` — `shutdown()` chama `ps.stop()`
-- `src/hefesto/daemon/ipc_server.py` — handlers `plugin.list`, `plugin.reload`
-- `src/hefesto/cli/app.py` — registro do `plugin_app`
+- `src/hefesto_dualsense4unix/daemon/lifecycle.py` — `DaemonConfig.plugins_enabled`, slot `_plugins_subsystem`, wire-up
+- `src/hefesto_dualsense4unix/daemon/subsystems/__init__.py` — registro de `PluginsSubsystem`
+- `src/hefesto_dualsense4unix/daemon/connection.py` — `shutdown()` chama `ps.stop()`. O arquivo nasceu em `daemon/subsystems/` e foi movido para `daemon/` no commit `560a0b2` (REFACTOR-CONNECTION-FUNCTIONS-01, auditoria P2-02): é uma coleção de funções soltas, não uma classe com `start()`/`stop()` como os outros módulos de `subsystems/`
+- `src/hefesto_dualsense4unix/daemon/ipc_server.py` — handlers `plugin.list`, `plugin.reload`
+- `src/hefesto_dualsense4unix/cli/app.py` — registro do `plugin_app`
 
 ---
 
