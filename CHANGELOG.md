@@ -5,6 +5,75 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-28
+
+**A leva do que desfazia o trabalho dela.** Quatorze agentes leram o repositório
+inteiro e mediram a máquina em uso; o que saiu da leitura foram quatro defeitos
+críticos, três deles a mesma queixa antiga vista de ângulos diferentes: *"a
+config que eu deixo nunca é respeitada"*. Todos foram curados, cada um com teste
+provado por arrancamento e com validação na tela — a regra `PROVA-DE-TELA-01`,
+escrita em 27/07, foi aplicada pela primeira vez.
+
+O tema desta versão é **a janela parar de afirmar o que não aconteceu**. O
+rodapé dizia que aplicou com as sete seções falhando; o aviso do cadeado era o
+registro do que foi pedido uma vez, não do estado; o desempate entre perfis não
+era critério, era a ordem alfabética do nome do arquivo; e 737 testes de
+interface passavam contra um GTK de mentira.
+
+### Corrigido
+
+- **O desempate entre perfis deixou de ser o alfabeto.** Em empate de
+  especificidade e prioridade, o perfil que já está ativo vence — nos dois
+  seletores, o da aba e o do sinal de jogo. Antes, `sorted(glob())` mais um
+  `sort` estável faziam a ordem do nome do arquivo decidir qual configuração
+  valia.
+- **Salvar um perfil pela janela parou de rebaixá-lo.** `match` e `priority` só
+  são reescritos quando ela mexeu neles, e "mexeu" conta pelo gesto, não pela
+  coincidência de valor. Era o mecanismo que apagava conserto manual: um perfil
+  de jogo com prioridade 100 amanhecia catch-all com prioridade 0.
+- **O teto da escala de prioridade subiu de 100 para 200.** Com o catch-all da
+  mantenedora em 100, não existia número escolhível pela janela que vencesse.
+- **`profile.apply_draft` parou de responder sucesso incondicional.** As seções
+  que falham sobem em `failed` e o rodapé nomeia o que não entrou.
+- **O microfone parou de sumir da faixa** e ganhou botão que funciona — a função
+  do IPC existia desde 25/07 e nunca fora ligada a widget nenhum.
+- **O diagnóstico do microfone parou de dar falso positivo:** ele reprovava o
+  microfone por causa do alto-falante mudo, porque o grep casava qualquer rota
+  com "dualsense" no nome sem separar captura de saída.
+- **O instalador passou a chamar a cura do microfone** (`doctor --fix-mic`), que
+  existia e nunca era chamada.
+- **O medidor do microfone por Bluetooth voltou a aparecer:** ele procurava
+  fonte começando com `bluez`, e o nome publicado pelo próprio projeto é
+  `hefesto_dualsense_bt_<hex>`.
+- **O detector de janela pode adoecer.** A flag de saúde era um trinco de mão
+  única: nenhum caminho do código a devolvia para falso, e um detector cego para
+  sempre era indistinguível de um saudável. Agora ela cai e volta, o motivo da
+  cegueira sobe junto, e o IPC publica a leitura crua e a idade da última
+  leitura útil.
+- **`IpcClient.close()` não pode mais travar a janela inteira** — o
+  `wait_closed()` não tinha prazo e o executor da GUI tem um worker só.
+
+### Adicionado
+
+- **Aba Status reorganizada**, com os cinco defeitos que ela nomeou olhando a
+  tela: microfone sempre presente com largura reservada, títulos dos analógicos
+  com a mesma altura por construção, moldura por sensor, alto-falante visível e
+  o vazio redistribuído. Numa segunda passada, o alto-falante desceu para junto
+  do microfone, os glifos dos botões cresceram de 36 para 58 px e o card passou
+  a crescer com a janela em vez de travar num número fixo.
+- **Guarda de GTK real nos testes de interface.** `importorskip("gi")` aceitava
+  o stub que outro arquivo de teste plantava em `sys.modules`; a guarda nova
+  exige widget de verdade e torna o pulo visível. No cenário do CI, o projeto
+  saiu de 24 erros de coleta e 65 falhas para zero e zero.
+- **Sprints SOM-01 e JANELA-CEGA-01** documentadas — o alto-falante nunca tivera
+  documento próprio neste repositório.
+
+### Mudado
+
+- A aba "Navegação DSX" passou a se chamar **"Navegação"**. Os modos de gatilho
+  e seus parâmetros ganharam nomes em português; `start+1..8` saiu da tela.
+
+
 ## [0.2.0] — 2026-07-26
 
 **Checkpoint.** Esta versão é o ponto da árvore que rodou em hardware real e foi
