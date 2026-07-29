@@ -836,6 +836,40 @@ class HefestoApp(
 
     # --- run ---
 
+    def _envolver_estado_em_teto_elastico(self) -> None:
+        """Dá ao frame "Estado" o mesmo teto elástico do card (SOM-01).
+
+        O card de um controle cresce com a janela até um teto e centra a sobra.
+        O `frame_status_estado` vem do glade e não tem código nosso, então
+        ficava travado no piso — na tela maximizada, um frame de 1040px em cima
+        de um card de 1400px. Envolvê-lo na `CaixaDeTetoElastico` faz os dois
+        pararem no MESMO número, pelo MESMO mecanismo.
+
+        Idempotente: se o frame já está dentro da caixa, não faz nada. Tolerante
+        a glade sem o frame (dublê de teste) e a ambiente sem GTK.
+        """
+        from gi.repository import Gtk
+
+        from hefesto_dualsense4unix.app.widgets.controller_card import (
+            CaixaDeTetoElastico,
+        )
+
+        frame = self.builder.get_object("frame_status_estado")
+        if frame is None:
+            return
+        pai = frame.get_parent()
+        if pai is None or isinstance(pai, CaixaDeTetoElastico):
+            return
+        posicao = None
+        if isinstance(pai, Gtk.Box):
+            posicao = pai.child_get_property(frame, "position")
+        pai.remove(frame)
+        caixa = CaixaDeTetoElastico(frame)
+        caixa.show_all()
+        pai.add(caixa)
+        if posicao is not None and isinstance(pai, Gtk.Box):
+            pai.reorder_child(caixa, posicao)
+
     def _wrap_notebook_pages_in_scroll(self) -> None:
         """Torna as abas roláveis para o RODAPÉ nunca ser cortado (BUG-FOOTER-CORTADO).
 
@@ -851,6 +885,7 @@ class HefestoApp(
         principal já é um `GtkScrolledWindow` (o log) com auto-scroll — envolvê-la
         de novo quebraria essa rolagem; o mínimo dela já é pequeno. Idempotente.
         """
+        self._envolver_estado_em_teto_elastico()
         notebook = self.builder.get_object("main_notebook")
         if notebook is None:
             return

@@ -294,9 +294,31 @@
                          para dizer "80 %" — o mesmo defeito apontado nas
                          barras de L2/R2, no bloco logo acima delas. Com o
                          teto, a aba passa a ter uma coluna de conteúdo só, e a
-                         sobra vira margem em vez de buraco. -->
-                    <property name="halign">center</property>
-                    <property name="width-request">960</property>
+                         sobra vira margem em vez de buraco.
+
+                         SOM-01: o número subiu de 960 para 1040 junto com o
+                         PISO do card (os desenhos do card cresceram e o
+                         conteúdo dele passou a pedir ~1030px). Aqui ele
+                         continua fixo, e é decisão escrita: o card cresce
+                         acima do piso por um corte no `do_size_allocate`, e
+                         este frame — que é do glade e não tem código nosso —
+                         só poderia crescer por `width-request`, que é MÍNIMO.
+                         Um mínimo maior sobe intacto até a janela, e a aba
+                         Status já responde por 1064 dos 1180px com que a
+                         janela abre (test_nenhuma_aba_estoura_a_largura_da_
+                         janela).
+
+                         SOM-01 (segunda passada): o `halign` saiu de `center`
+                         para `fill`. Com `center` mais um mínimo declarado, o
+                         GTK3 trava o widget no número exato — era isso que
+                         deixava este frame em 1040px acima de um card que ia a
+                         1400px, visivelmente desalinhados. O TETO agora vem de
+                         fora, da `CaixaDeTetoElastico` que o `app.py` põe em
+                         volta na montagem: o mesmo mecanismo do card, e não um
+                         segundo. O `width-request` continua sendo o PISO. -->
+                    <property name="halign">fill</property>
+                    <property name="hexpand">True</property>
+                    <property name="width-request">1040</property>
                     <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>

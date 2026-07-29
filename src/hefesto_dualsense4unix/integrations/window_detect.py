@@ -36,6 +36,18 @@ logger = get_logger(__name__)
 # 'autoswitch_compositor_unsupported' quando não há display (ver detect_window_backend).
 _unsupported_warned: bool = False
 
+#: JANELA-CEGA-01 (28/07): motivos de leitura cega que nascem AQUI (os do
+#: backend X11 moram em `window_backends/xlib.py`).
+#: - cascata: portal e wlrctl desistiram no mesmo tick;
+#: - janela sem classe: o backend DEVOLVEU janela, mas sem `wm_class` — a
+#:   leitura não é útil e o motivo não pode virar "não sei por quê".
+#: - backend sem motivo: devolveu None e não expõe `last_failure_reason`
+#:   (dublê de teste, backend de terceiro) — "não sei por quê" DITO, que já é
+#:   melhor do que um None mudo.
+MOTIVO_CASCATA_SEM_LEITURA = "cascata_wayland_sem_leitura"
+MOTIVO_JANELA_SEM_CLASSE = "janela_sem_classe"
+MOTIVO_BACKEND_SEM_MOTIVO = "backend_sem_motivo"
+
 
 class _WaylandCascadeBackend:
     """Cascade: portal XDG → wlrctl → None.
@@ -62,6 +74,10 @@ class _WaylandCascadeBackend:
         self._portal = WaylandPortalBackend()
         self._wlrctl = WlrctlBackend()
         self._fallback_announced: bool = False
+        # JANELA-CEGA-01: motivo da última leitura cega da cascata. Um só,
+        # porque a cascata só falha de um jeito — os dois backends já
+        # desistiram; qual deles desistiu está em `backend_name`.
+        self.last_failure_reason: str | None = None
         # FEAT-WINDOW-DETECT-DIAG-01: fonte da última leitura ÚTIL da cascata
         # ("portal" | "wlrctl" | None). Alimenta `backend_name`.
         self._last_source: str | None = None
@@ -91,11 +107,13 @@ class _WaylandCascadeBackend:
         info = self._portal.get_active_window_info()
         if info is not None:
             self._last_source = "portal"
+            self.last_failure_reason = None
             return info
 
         info = self._wlrctl.get_active_window_info()
         if info is not None:
             self._last_source = "wlrctl"
+            self.last_failure_reason = None
             if not self._fallback_announced:
                 logger.info(
                     "wayland_backend_fallback_wlrctl",
@@ -107,6 +125,7 @@ class _WaylandCascadeBackend:
                 self._fallback_announced = True
             return info
 
+        self.last_failure_reason = MOTIVO_CASCATA_SEM_LEITURA
         return None
 
 
@@ -180,6 +199,14 @@ class WindowReaderDiag:
       useful_reads       -- total de leituras úteis desde a construção.
       last_useful_class  -- última wm_class útil vista (permite capturar o
                             wm_class de um jogo sem ler o journal).
+      last_reason        -- JANELA-CEGA-01: POR QUE a última leitura não foi
+                            útil ("sem_conexao_x", "sem_foco_x",
+                            "foco_discorda_do_net_active", ...); None quando a
+                            leitura foi útil. Sem ele, as seis causas de
+                            cegueira do backend X11 colapsavam num `None` só
+                            e ninguém conseguia distinguir "app Wayland
+                            nativo em foco" (normal) de "o XWayland caiu"
+                            (grave).
     """
 
     def __init__(self, backend: WindowBackend) -> None:
@@ -187,6 +214,7 @@ class WindowReaderDiag:
         self.last_read_useful: bool = False
         self.useful_reads: int = 0
         self.last_useful_class: str | None = None
+        self.last_reason: str | None = None
 
     @property
     def backend_name(self) -> str:
@@ -206,7 +234,27 @@ class WindowReaderDiag:
         if self.last_read_useful:
             self.useful_reads += 1
             self.last_useful_class = wm_class
+            self.last_reason = None
+        else:
+            self.last_reason = self._motivo_da_cegueira(info)
         return result
+
+    def _motivo_da_cegueira(self, info: WindowInfo | None) -> str:
+        """Motivo desta leitura não-útil (JANELA-CEGA-01).
+
+        Vem do backend quando ele soube dizer (`last_failure_reason`); backend
+        que devolveu janela SEM `wm_class` não falhou — a janela é que não se
+        identifica, e isso tem nome próprio. `getattr` porque o `Protocol`
+        `WindowBackend` continua exigindo só `get_active_window_info`: backend
+        de terceiro (ou dublê de teste) segue válido sem o campo, e aí o motivo
+        honesto é o genérico.
+        """
+        motivo = getattr(self._backend, "last_failure_reason", None)
+        if isinstance(motivo, str) and motivo:
+            return motivo
+        if info is not None:
+            return MOTIVO_JANELA_SEM_CLASSE
+        return MOTIVO_BACKEND_SEM_MOTIVO
 
     def maybe_recover(self) -> bool:
         """Re-detecta o backend quando o atual é o NullBackend.
@@ -253,6 +301,9 @@ def build_window_reader() -> WindowReaderDiag:
 
 
 __all__ = [
+    "MOTIVO_BACKEND_SEM_MOTIVO",
+    "MOTIVO_CASCATA_SEM_LEITURA",
+    "MOTIVO_JANELA_SEM_CLASSE",
     "WindowReaderDiag",
     "build_window_reader",
     "detect_window_backend",

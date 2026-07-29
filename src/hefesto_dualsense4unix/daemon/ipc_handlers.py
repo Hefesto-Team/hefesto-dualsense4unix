@@ -1157,6 +1157,62 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
+            # JANELA-CEGA-01: o `daemon.status` não expunha campo
+            # `window_detect_*` NENHUM — quem olhava o status não tinha como
+            # saber que o perfil-por-jogo estava cego. Mesmo bloco do
+            # `state_full`, para as duas respostas nunca divergirem.
+            **self._window_detect_payload(),
+        }
+
+    def _window_detect_payload(self) -> dict[str, Any]:
+        """Bloco `window_detect_*` publicado por `state_full` e `daemon.status`.
+
+        FEAT-WINDOW-DETECT-DIAG-01 (backend/healthy/last_class) + JANELA-CEGA-01
+        (current_class, useful_age_sec, seeing, reason). Os quatro novos existem
+        porque os três antigos, sozinhos, MENTIAM: medido ao vivo em 28/07, o
+        daemon publicava `last_class="Hefesto-Dualsense4Unix"` (a própria
+        janela) e `healthy=True` enquanto o backend devolvia `None` a 2 Hz, com
+        `get_input_focus()` em `X.NONE` nas 10 amostras. `last_class` é STICKY e
+        nunca decai; `healthy` é um trinco de mão única (ver a property no
+        `StateStore` para o porquê de ele NÃO poder cair ainda).
+
+        - `current_class`  -- a leitura CRUA do último tick (inclusive
+                              "unknown"/None): a classe que o detector vê AGORA;
+        - `useful_age_sec` -- há quantos segundos foi a última leitura ÚTIL
+                              (None = nunca houve): é ela que denuncia a
+                              cegueira ao lado do sticky;
+        - `seeing`         -- houve leitura útil dentro da janela de
+                              `WINDOW_DETECT_BLIND_AFTER_SEC` (decai e volta);
+        - `reason`         -- POR QUE a última leitura não foi útil.
+
+        `getattr` defensivo em tudo: store dublado em teste não precisa
+        conhecer os campos novos.
+        """
+        idade_fn = getattr(self.store, "window_detect_useful_age", None)
+        idade = idade_fn() if callable(idade_fn) else None
+        seeing_fn = getattr(self.store, "window_detect_seeing", None)
+        return {
+            "window_detect_backend": _as_str_or_none(
+                getattr(self.store, "window_detect_backend", None)
+            ),
+            "window_detect_healthy": bool(
+                getattr(self.store, "window_detect_healthy", False)
+            ),
+            "window_detect_last_class": _as_str_or_none(
+                getattr(self.store, "window_detect_last_class", None)
+            ),
+            "window_detect_current_class": _as_str_or_none(
+                getattr(self.store, "window_detect_current_class", None)
+            ),
+            "window_detect_useful_age_sec": (
+                round(float(idade), 1) if isinstance(idade, (int, float)) else None
+            ),
+            "window_detect_seeing": (
+                bool(seeing_fn()) if callable(seeing_fn) else False
+            ),
+            "window_detect_reason": _as_str_or_none(
+                getattr(self.store, "window_detect_reason", None)
+            ),
         }
 
     async def _handle_daemon_pause(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -1304,19 +1360,11 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
-            # FEAT-WINDOW-DETECT-DIAG-01: saúde do detector de janela do
-            # autoswitch — qual backend está ativo ("xlib"|"portal"|"wlrctl"|
-            # "null"|None), se já houve leitura útil, e a última wm_class útil
-            # vista (permite capturar o wm_class de um jogo sem ler journal).
-            "window_detect_backend": _as_str_or_none(
-                getattr(self.store, "window_detect_backend", None)
-            ),
-            "window_detect_healthy": bool(
-                getattr(self.store, "window_detect_healthy", False)
-            ),
-            "window_detect_last_class": _as_str_or_none(
-                getattr(self.store, "window_detect_last_class", None)
-            ),
+            # FEAT-WINDOW-DETECT-DIAG-01 + JANELA-CEGA-01: saúde do detector de
+            # janela do autoswitch (backend, sticky, leitura CRUA, idade da
+            # última leitura útil e motivo da cegueira) — ver
+            # `_window_detect_payload`.
+            **self._window_detect_payload(),
         }
         # DEDUP-06 (achado NOVO da revisão): físico primário em BT + Modo
         # Nativo é estruturalmente frágil — o SDL pode não enxergar o DualSense

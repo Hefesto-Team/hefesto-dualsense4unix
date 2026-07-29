@@ -160,21 +160,37 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         def _on_ok(result: Any) -> bool:
             self._freeze_ui(False)
+            # APLICAR-VERDADE-02: DUAS perguntas diferentes, que eram uma só.
+            # `aceita` = o daemon respondeu (não está offline nem recusou) e
+            # decide QUAL frase o rodapé usa. `aplicou` = alguma seção entrou
+            # de fato no controle, e é o que pode baixar o `dirty` e o que o
+            # journal registra. Enquanto foram a mesma variável, `ok` era
+            # SEMPRE True (o `status` do `apply_draft` é fixo em "ok" por
+            # contrato): o rodapé parou de mentir em e8f9060, mas a
+            # contabilidade continuava dizendo `ok=True` e baixando o `dirty`
+            # do mouse com as sete seções fora.
             if isinstance(result, bool):
-                ok = result
+                aceita = result
             elif isinstance(result, dict):
-                ok = result.get("status") == "ok"
+                aceita = result.get("status") == "ok"
             else:
-                ok = bool(result)
-            if ok:
+                aceita = bool(result)
+            aplicou = aceita and _algo_foi_aplicado(result)
+            # A pendência do mouse só acaba se a seção MOUSE entrou: com
+            # `applied=["leds"]` e `failed={"mouse": ...}` algo foi aplicado,
+            # mas a edição do mouse continua por aplicar — baixar o `dirty`
+            # aqui a perderia em silêncio.
+            if aplicou and _secao_aplicada(result, "mouse"):
                 self._clear_mouse_dirty()
             msg = (
                 _mensagem_de_aplicacao(result)
-                if ok
+                if aceita
                 else _("ERRO ao aplicar perfil (daemon offline?).")
             )
             self._footer_toast(msg)
-            logger.info("footer_apply_draft_resultado", ok=ok)
+            logger.info(
+                "footer_apply_draft_resultado", ok=aplicou, aceita=aceita
+            )
             return False  # GLib.idle_add não repete
 
         def _on_err(exc: Exception) -> bool:
@@ -517,6 +533,38 @@ def _lista_de_secoes(secoes: Any) -> str:
             resto=len(nomes) - _MAX_SECOES_NO_TEXTO,
         )
     return ", ".join(nomes)
+
+
+def _algo_foi_aplicado(result: Any) -> bool:
+    """Alguma seção entrou de fato no controle? (APLICAR-VERDADE-02).
+
+    Lê o ``applied`` do ``profile.apply_draft`` — o ``status`` não serve, é
+    fixo em ``"ok"`` por contrato do daemon (a resposta é "recebi", não
+    "apliquei"). Resposta SEM ``applied`` (daemon antigo, ou o ``True`` cru do
+    bridge) conta como aplicada: sem informação não há do que desconfiar, a
+    mesma regra que ``_mensagem_de_aplicacao`` já usa para o texto — as duas
+    não podem divergir.
+    """
+    if not isinstance(result, dict):
+        return True
+    aplicadas = result.get("applied")
+    if not isinstance(aplicadas, list):
+        return True
+    return bool(aplicadas)
+
+
+def _secao_aplicada(result: Any, secao: str) -> bool:
+    """A seção ``secao`` está no ``applied`` da resposta? (APLICAR-VERDADE-02).
+
+    Mesma regra de ausência de informação de ``_algo_foi_aplicado``: sem
+    ``applied`` no payload, assume-se que entrou.
+    """
+    if not isinstance(result, dict):
+        return True
+    aplicadas = result.get("applied")
+    if not isinstance(aplicadas, list):
+        return True
+    return secao in aplicadas
 
 
 def _mensagem_de_aplicacao(result: Any) -> str:
