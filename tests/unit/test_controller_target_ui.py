@@ -17,6 +17,14 @@ Sem display: instâncias parciais via ``__new__`` + widgets stubados.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("controller target ui")
+
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +35,7 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig, TriggerDraft
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 from hefesto_dualsense4unix.profiles.schema import (
+
     LedsConfig,
     MatchAny,
     Profile,

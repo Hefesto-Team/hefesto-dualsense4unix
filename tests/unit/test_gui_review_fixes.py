@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
 from hefesto_dualsense4unix.app.draft_config import (
     DraftConfig,
     TriggerDraft,
@@ -94,6 +95,7 @@ class TestDraftMultiPosRoundTrip:
         assert eff.mode == 1
 
 
+@skip_sem_gi_real
 def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
     from hefesto_dualsense4unix.app import gui_dialogs
 
@@ -101,6 +103,7 @@ def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
     assert "confirm_delete_profile" in gui_dialogs.__all__
 
 
+@skip_sem_gi_real
 def test_restore_dialog_nao_cita_navegacao() -> None:
     # BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não deve citar o asset
     # errado ('Navegação'). Checa a string passada a format_secondary_text.

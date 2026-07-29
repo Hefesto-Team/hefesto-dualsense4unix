@@ -20,8 +20,16 @@ Cobre o item COR-04 do sprint 2026-07-16-sprint-cores-e-led-automaticos:
 Sem display: instâncias parciais via construtor próprio + widgets fakes —
 mesmo padrão de tests/unit/test_controller_target_ui.py.
 """
-# ruff: noqa: E402  (imports após o pin de versão do gi — padrão da casa)
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("lightbar auto colors")
 
 from typing import Any
 from unittest.mock import MagicMock
@@ -43,6 +51,7 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.subsystems import identity
 from hefesto_dualsense4unix.profiles.schema import (
+
     ControllerOverrides,
     LedsConfig,
     MatchAny,

@@ -1004,7 +1004,7 @@ msgid "Não"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1883
-msgid "Testar criação de device virtual"
+msgid "Testar o controle virtual"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1895
@@ -1248,7 +1248,7 @@ msgid "Adicionar"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2409
-msgid "Restaurar defaults"
+msgid "Voltar ao padrão"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2420

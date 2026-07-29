@@ -13,8 +13,16 @@ Exercita com GTK REAL (a suíte roda com display; widgets são instanciados):
     (pixels amostrados de render offscreen), provider recriado SÓ quando a
     cor muda.
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("status tinting widgets")
 
 from collections.abc import Iterator
 from pathlib import Path
@@ -36,6 +44,7 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.gui.widgets import button_glyph as glyph_mod
 from hefesto_dualsense4unix.gui.widgets.stick_preview_gtk import StickPreviewGtk
 from hefesto_dualsense4unix.utils.color_contrast import (
+
     TROUGH_HEX,
     ensure_min_contrast,
     rgb_para_hex,

@@ -10,6 +10,14 @@ Não requer GTK instalado: usa mocks para todos os widgets e diálogos.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("footer actions")
+
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, call, patch
@@ -20,6 +28,7 @@ from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.footer_actions import FROZEN_WIDGET_IDS, FooterActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
 
 # ---------------------------------------------------------------------------
 # Fixtures

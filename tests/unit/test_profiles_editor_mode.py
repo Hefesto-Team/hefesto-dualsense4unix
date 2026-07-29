@@ -91,10 +91,10 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.profiles_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions.profiles_actions import (
     ProfilesActionsMixin,
 )
-from hefesto_dualsense4unix.profiles.schema import Profile  # noqa: E402
+from hefesto_dualsense4unix.profiles.schema import Profile
 
 # ---------------------------------------------------------------------------
 # Widgets fake (mesma API por-ID do SegmentedSelector; sem GTK real)

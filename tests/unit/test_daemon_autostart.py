@@ -72,10 +72,10 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-import pytest  # noqa: E402
+import pytest
 
-from hefesto_dualsense4unix.app.actions import daemon_actions as da  # noqa: E402
-from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions import daemon_actions as da
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
 
 class _SyncExecutor:

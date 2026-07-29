@@ -23,7 +23,12 @@ from typing import Any
 
 import pytest
 
-pytest.importorskip("gi")
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
+# stub que outro arquivo de teste planta em sys.modules — e por isso
+# deixava este módulo rodar contra um GTK de mentira.
+exigir_gi_real("R12 (editor simples)")
 
 
 def _install_gi_stubs() -> None:
@@ -69,8 +74,8 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import profiles_actions as pa  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile  # noqa: E402
+from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
 MMJ = "2111190"
 

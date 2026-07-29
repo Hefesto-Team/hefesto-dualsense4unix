@@ -7,6 +7,14 @@ mostrando dado velho. Estes testes trancam o contrato novo.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("notebook switch page")
+
 import pytest
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
@@ -21,9 +29,10 @@ _gi.require_version("Gtk", "3.0")
 pytest.importorskip(
     "gi.repository.GdkPixbuf", reason="precisa da typelib GdkPixbuf"
 )
-from gi.repository import Gtk  # noqa: E402
+from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.app import HefestoApp  # noqa: E402
+from hefesto_dualsense4unix.app.app import HefestoApp
+
 
 
 class _AppFalso:

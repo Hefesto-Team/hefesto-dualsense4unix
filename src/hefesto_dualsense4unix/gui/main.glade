@@ -553,6 +553,7 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
+                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em L2</property>
                                 <signal name="clicked" handler="on_trigger_left_apply"/>
@@ -566,6 +567,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_left_reset">
+                                <property name="tooltip-text" translatable="yes">Tira a resistência do L2: ele volta a ser um gatilho comum, solto.</property>
                                 <style><class name="btn-trigger-off"/></style>
                                 <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_left_reset"/>
@@ -689,6 +691,7 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
+                                <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
                                 <style><class name="btn-trigger-apply"/></style>
                                 <property name="label" translatable="yes">Aplicar em R2</property>
                                 <signal name="clicked" handler="on_trigger_right_apply"/>
@@ -702,6 +705,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="trigger_right_reset">
+                                <property name="tooltip-text" translatable="yes">Tira a resistência do R2: ele volta a ser um gatilho comum, solto.</property>
                                 <style><class name="btn-trigger-off"/></style>
                                 <property name="label" translatable="yes">Desligar</property>
                                 <signal name="clicked" handler="on_trigger_right_reset"/>
@@ -762,6 +766,7 @@
                             <property name="spacing">2</property>
                             <child>
                               <object class="GtkCheckButton" id="auto_player_colors_check">
+                                <property name="tooltip-text" translatable="yes">Dá uma cor diferente a cada controle conectado, na ordem dos jogadores. Desmarque para escolher a cor de cada um na mão.</property>
                                 <property name="label" translatable="yes">Cores automáticas por controle</property>
                               <child internal-child="accessible">
                                 <object class="AtkObject">
@@ -793,6 +798,7 @@
 
                             <child>
                               <object class="GtkColorButton" id="lightbar_color_button">
+                                <property name="tooltip-text" translatable="yes">Abre a paleta para escolher a cor da barra de luz. A cor só vai ao controle quando você clicar em Aplicar no controle.</property>
                                 <property name="title" translatable="yes">Selecione a cor</property>
                                 <property name="use-alpha">False</property>
                                 <signal name="color-set" handler="on_lightbar_color_set"/>
@@ -824,6 +830,7 @@
                             <property name="homogeneous">True</property>
                             <child>
                               <object class="GtkButton" id="lightbar_apply">
+                                <property name="tooltip-text" translatable="yes">Acende a barra de luz do controle selecionado com a cor e o brilho escolhidos aqui.</property>
                                 <property name="label" translatable="yes">Aplicar no controle</property>
                                 <signal name="clicked" handler="on_lightbar_apply"/>
                               <child internal-child="accessible">
@@ -836,6 +843,7 @@
                             </child>
                             <child>
                               <object class="GtkButton" id="lightbar_off">
+                                <property name="tooltip-text" translatable="yes">Apaga a barra de luz do controle selecionado. A cor continua guardada: Aplicar no controle acende de novo.</property>
                                 <property name="label" translatable="yes">Apagar</property>
                                 <signal name="clicked" handler="on_lightbar_off"/>
                               <child internal-child="accessible">
@@ -899,6 +907,7 @@
 
                         <child>
                           <object class="GtkScale" id="lightbar_brightness_scale">
+                            <property name="tooltip-text" translatable="yes">Quanto a barra de luz acende, de apagada até o brilho máximo. Vale na próxima vez que você aplicar a cor.</property>
                             <property name="draw-value">True</property>
                             <property name="digits">0</property>
                             <property name="value-pos">right</property>
@@ -983,11 +992,11 @@
                             <property name="homogeneous">True</property>
                             <property name="visible">False</property>
                             <property name="no-show-all">True</property>
-                            <child><object class="GtkCheckButton" id="player_led_1"><property name="label" translatable="yes">LED 1</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_2"><property name="label" translatable="yes">LED 2</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_3"><property name="label" translatable="yes">LED 3</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_4"><property name="label" translatable="yes">LED 4</property></object></child>
-                            <child><object class="GtkCheckButton" id="player_led_5"><property name="label" translatable="yes">LED 5</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_1"><property name="tooltip-text" translatable="yes">Acende ou apaga a primeira luzinha de jogador deste controle. Muda só o desenho das luzes, não o número do jogador.</property><property name="label" translatable="yes">LED 1</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_2"><property name="tooltip-text" translatable="yes">Acende ou apaga a segunda luzinha de jogador deste controle. Muda só o desenho das luzes, não o número do jogador.</property><property name="label" translatable="yes">LED 2</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_3"><property name="tooltip-text" translatable="yes">Acende ou apaga a terceira luzinha de jogador deste controle. Muda só o desenho das luzes, não o número do jogador.</property><property name="label" translatable="yes">LED 3</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_4"><property name="tooltip-text" translatable="yes">Acende ou apaga a quarta luzinha de jogador deste controle. Muda só o desenho das luzes, não o número do jogador.</property><property name="label" translatable="yes">LED 4</property></object></child>
+                            <child><object class="GtkCheckButton" id="player_led_5"><property name="tooltip-text" translatable="yes">Acende ou apaga a quinta luzinha de jogador deste controle. Muda só o desenho das luzes, não o número do jogador.</property><property name="label" translatable="yes">LED 5</property></object></child>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -1191,6 +1200,7 @@
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
+                                <property name="tooltip-text" translatable="yes">Vibração fraca em todos os jogos: poupa bateria e faz menos barulho.</property>
                                 <property name="label" translatable="yes">Economia</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_economia"/>
@@ -1198,6 +1208,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_balanceado">
+                                <property name="tooltip-text" translatable="yes">Vibração do jeito que o jogo pediu, sem aumentar nem diminuir. É o padrão.</property>
                                 <property name="label" translatable="yes">Balanceado</property>
                                 <property name="active">True</property>
                                 <signal name="toggled" handler="on_rumble_policy_balanceado"/>
@@ -1205,6 +1216,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_max">
+                                <property name="tooltip-text" translatable="yes">Vibração no máximo que o controle aguenta. Gasta bateria bem mais depressa.</property>
                                 <property name="label" translatable="yes">Máximo</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_max"/>
@@ -1212,6 +1224,7 @@
                             </child>
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_auto">
+                                <property name="tooltip-text" translatable="yes">O Hefesto escolhe a força sozinho, conforme a bateria do controle e o jogo aberto.</property>
                                 <property name="label" translatable="yes">Auto</property>
                                 <property name="active">False</property>
                                 <signal name="toggled" handler="on_rumble_policy_auto"/>
@@ -1244,6 +1257,7 @@
                             </child>
                             <child>
                               <object class="GtkScale" id="rumble_policy_slider">
+                                <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte.</property>
                                 <property name="hexpand">True</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
@@ -1301,6 +1315,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             </child>
                             <child>
                               <object class="GtkScale" id="rumble_weak_scale">
+                                <property name="tooltip-text" translatable="yes">Força do motor leve, o que faz o tremor fino. Vale no teste e no que você aplicar.</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
                                 <property name="value-pos">right</property>
@@ -1319,6 +1334,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             </child>
                             <child>
                               <object class="GtkScale" id="rumble_strong_scale">
+                                <property name="tooltip-text" translatable="yes">Força do motor pesado, o que faz o tremor grosso. Vale no teste e no que você aplicar.</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
                                 <property name="value-pos">right</property>
@@ -1347,12 +1363,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                             <property name="spacing">8</property>
                             <child>
                               <object class="GtkButton" id="rumble_test_500ms">
+                                <property name="tooltip-text" translatable="yes">Faz o controle vibrar por meio segundo com os valores acima, para você sentir antes de aplicar.</property>
                                 <property name="label" translatable="yes">Testar por 500 ms</property>
                                 <signal name="clicked" handler="on_rumble_test_500ms"/>
                               </object>
                             </child>
                             <child>
                               <object class="GtkButton" id="rumble_apply">
+                                <property name="tooltip-text" translatable="yes">Envia ao controle a vibração escolhida; passa a valer até você mudar de novo.</property>
                                 <property name="label" translatable="yes">Aplicar</property>
                                 <signal name="clicked" handler="on_rumble_apply"/>
                               </object>
@@ -1501,6 +1519,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="homogeneous">True</property>
                         <child>
                           <object class="GtkButton" id="profile_new_button">
+                            <property name="tooltip-text" translatable="yes">Cria um perfil em branco. Um perfil guarda os gatilhos, a cor e a vibração de um jogo.</property>
                             <property name="label" translatable="yes">Novo</property>
                             <signal name="clicked" handler="on_profile_new"/>
                           <child internal-child="accessible">
@@ -1513,12 +1532,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_duplicate_button">
+                            <property name="tooltip-text" translatable="yes">Faz uma cópia do perfil selecionado, para você mexer sem perder o original.</property>
                             <property name="label" translatable="yes">Duplicar</property>
                             <signal name="clicked" handler="on_profile_duplicate"/>
                           </object>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_remove_button">
+                            <property name="tooltip-text" translatable="yes">Apaga o perfil selecionado para sempre. Isso não tem volta.</property>
                             <property name="label" translatable="yes">Remover</property>
                             <signal name="clicked" handler="on_profile_remove"/>
                           <child internal-child="accessible">
@@ -1531,6 +1552,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_activate_button">
+                            <property name="tooltip-text" translatable="yes">Passa a usar o perfil selecionado agora: os gatilhos, a cor e a vibração dele vão para o controle.</property>
                             <property name="label" translatable="yes">Ativar</property>
                             <signal name="clicked" handler="on_profile_activate"/>
                           <child internal-child="accessible">
@@ -1543,6 +1565,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="profile_reload_button">
+                            <property name="tooltip-text" translatable="yes">Relê os perfis do disco e descarta as alterações que você ainda não salvou.</property>
                             <property name="label" translatable="yes">Recarregar</property>
                             <signal name="clicked" handler="on_profile_reload"/>
                           </object>
@@ -1608,6 +1631,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkEntry" id="profile_name_entry">
+                            <property name="tooltip-text" translatable="yes">Nome do perfil, o que aparece na lista ao lado. Escolha um que lembre o jogo.</property>
                             <property name="hexpand">True</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
@@ -1726,6 +1750,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_window_class_entry">
+                                    <property name="tooltip-text" translatable="yes">Nomes de janela que ligam este perfil sozinho, separados por vírgula. Vazio: nunca liga sozinho por aqui.</property>
                                     <property name="placeholder-text" translatable="yes">CSV: Steam,firefox</property>
                                     <property name="hexpand">True</property>
                                   </object>
@@ -1740,6 +1765,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_title_regex_entry">
+                                    <property name="tooltip-text" translatable="yes">Trecho do título da janela que liga este perfil sozinho. Aceita expressão regular.</property>
                                     <property name="placeholder-text" translatable="yes">regex (re.search)</property>
                                     <property name="hexpand">True</property>
                                   </object>
@@ -1754,6 +1780,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                 </child>
                                 <child>
                                   <object class="GtkEntry" id="profile_process_name_entry">
+                                    <property name="tooltip-text" translatable="yes">Nomes de programa que ligam este perfil sozinho, separados por vírgula.</property>
                                     <property name="placeholder-text" translatable="yes">CSV: doom.x86_64,celeste</property>
                                     <property name="hexpand">True</property>
                                   </object>
@@ -1873,6 +1900,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkSwitch" id="daemon_autostart_switch">
+                        <property name="tooltip-text" translatable="yes">Ligado, o Hefesto sobe sozinho toda vez que você liga o computador.</property>
                         <property name="halign">start</property>
                         <signal name="state-set" handler="on_daemon_autostart_toggled"/>
                       </object>
@@ -1888,6 +1916,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="homogeneous">True</property>
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
+                        <property name="tooltip-text" translatable="yes">Liga o Hefesto: luzes, gatilhos e os seus ajustes voltam a valer.</property>
                         <property name="label" translatable="yes">Ligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_start"/>
                       <child internal-child="accessible">
@@ -1900,6 +1929,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_stop_button">
+                        <property name="tooltip-text" translatable="yes">Desliga o Hefesto: o controle continua jogando, mas sem luzes, gatilhos nem os seus ajustes.</property>
                         <property name="label" translatable="yes">Desligar o Hefesto</property>
                         <signal name="clicked" handler="on_daemon_stop"/>
                       <child internal-child="accessible">
@@ -1912,6 +1942,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="daemon_refresh_button">
+                        <property name="tooltip-text" translatable="yes">Relê o estado do Hefesto e atualiza o que esta aba mostra. Não muda nada no controle.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_daemon_refresh"/>
                       </object>
@@ -2286,12 +2317,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-end">10</property>
                     <child>
                       <object class="GtkButton" id="emulation_test_button">
-                        <property name="label" translatable="yes">Testar criação de device virtual</property>
+                        <property name="tooltip-text" translatable="yes">Cria um controle virtual por um instante, só para conferir se o sistema deixa. Não interrompe o que estiver jogando.</property>
+                        <property name="label" translatable="yes">Testar o controle virtual</property>
                         <signal name="clicked" handler="on_emulation_test_device"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkButton" id="emulation_refresh_button">
+                        <property name="tooltip-text" translatable="yes">Relê o estado da emulação e atualiza o que esta aba mostra. Não muda nada no controle.</property>
                         <property name="label" translatable="yes">Atualizar</property>
                         <signal name="clicked" handler="on_emulation_refresh"/>
                       </object>
@@ -2579,7 +2612,10 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label" translatable="yes">Emulação</property></object>
             </child>
 
-            <!-- Aba "Navegação DSX" — Mouse e Teclado lado a lado.
+            <!-- Aba "Usar como mouse" (PALAVRA-01: chamava-se "Navegação DSX";
+                 DSX é nome de um programa de outra casa e não dizia o que a aba
+                 faz. O id `tab_navegacao_dsx` NÃO muda — perfil salvo e mapa de
+                 páginas continuam valendo) — Mouse e Teclado lado a lado.
                  As duas ja viveram numa aba só ("Mouse e Teclado") e foram
                  SEPARADAS de propósito: empilhadas, a soma de mapeamento +
                  treeview inflava a altura mínima, e o GtkNotebook adota o MAIOR
@@ -2617,6 +2653,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkSwitch" id="mouse_emulation_toggle">
+                        <property name="tooltip-text" translatable="yes">Liga o controle como mouse e teclado do computador. Só funciona no modo Controlar o PC.</property>
                         <property name="active">False</property>
                         <!-- HARM-05: nasce fechado e só abre quando o daemon
                              confirmar o modo "Controlar o PC" (o refresh da aba
@@ -2673,6 +2710,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_speed_scale">
+                        <property name="tooltip-text" translatable="yes">Quão rápido o cursor anda quando você empurra o analógico esquerdo.</property>
                         <property name="adjustment">mouse_speed_adj</property>
                         <property name="digits">0</property>
                         <property name="draw-value">True</property>
@@ -2691,6 +2729,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_scroll_speed_scale">
+                        <property name="tooltip-text" translatable="yes">Quão rápido a página rola quando você empurra o analógico direito.</property>
                         <property name="adjustment">mouse_scroll_speed_adj</property>
                         <property name="digits">0</property>
                         <property name="draw-value">True</property>
@@ -2891,6 +2930,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="homogeneous">False</property>
                     <child>
                       <object class="GtkButton" id="key_binding_add_btn">
+                        <property name="tooltip-text" translatable="yes">Cria um atalho novo: escolha um botão do controle e a tecla que ele vai apertar.</property>
                         <property name="label" translatable="yes">Adicionar</property>
                         <signal name="clicked" handler="on_key_binding_add"/>
                       </object>
@@ -2898,6 +2938,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="key_binding_remove_btn">
+                        <property name="tooltip-text" translatable="yes">Apaga o atalho selecionado na lista acima.</property>
                         <property name="label" translatable="yes">Remover</property>
                         <signal name="clicked" handler="on_key_binding_remove"/>
                       </object>
@@ -2905,7 +2946,8 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkButton" id="key_binding_restore_btn">
-                        <property name="label" translatable="yes">Restaurar defaults</property>
+                        <property name="tooltip-text" translatable="yes">Devolve todos os atalhos ao que vem de fábrica. As suas alterações se perdem.</property>
+                        <property name="label" translatable="yes">Voltar ao padrão</property>
                         <signal name="clicked" handler="on_key_binding_restore_defaults"/>
                       </object>
                       <packing><property name="expand">False</property></packing>
@@ -2919,7 +2961,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label" translatable="yes">Navegação DSX</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Usar como mouse</property></object>
             </child>
 
           </object>

@@ -55,7 +55,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import emulation_actions  # noqa: E402
+from hefesto_dualsense4unix.app.actions import emulation_actions
 
 Mixin = emulation_actions.EmulationActionsMixin
 

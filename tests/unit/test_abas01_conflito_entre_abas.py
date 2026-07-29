@@ -33,7 +33,12 @@ from typing import Any
 
 import pytest
 
-pytest.importorskip("gi")
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
+# stub que outro arquivo de teste planta em sys.modules — e por isso
+# deixava este módulo rodar contra um GTK de mentira.
+exigir_gi_real("ABAS-01 (abas Perfis/rodape)")
 
 
 def _install_gi_stubs() -> None:
@@ -90,12 +95,12 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import footer_actions as fa  # noqa: E402
-from hefesto_dualsense4unix.app.actions import lightbar_actions as la  # noqa: E402
-from hefesto_dualsense4unix.app.actions import profiles_actions as pa  # noqa: E402
-from hefesto_dualsense4unix.app.actions import rumble_actions as ra  # noqa: E402
-from hefesto_dualsense4unix.app.draft_config import DraftConfig  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions import footer_actions as fa
+from hefesto_dualsense4unix.app.actions import lightbar_actions as la
+from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+from hefesto_dualsense4unix.app.actions import rumble_actions as ra
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
+from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     LedsConfig,
     MatchAny,
@@ -103,7 +108,7 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
     Profile,
     RumbleConfig,
 )
-from hefesto_dualsense4unix.profiles.slug import slugify  # noqa: E402
+from hefesto_dualsense4unix.profiles.slug import slugify
 
 #: MACs forjados da faixa permitida (tests/unit/test_anonimato_de_fixtures.py).
 UNIQ_1 = "aabbcc000001"

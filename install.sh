@@ -2167,6 +2167,35 @@ else
     printf '      pulado (--keep-dualsense-mic): o DualSense pode virar o microfone padrão\n'
 fi
 
+# MIC-USB-01, entrega 7 — a cura das camadas 1 e 2 do microfone mudo, que
+# existia em `scripts/doctor.sh --fix-mic` e que NINGUÉM chamava. Medido em
+# 25/07: depois de um uninstall + install completos o perfil da placa voltou
+# sozinho para a entrada digital (`input:iec958-stereo`, que é S/PDIF e não
+# carrega sinal), e uma instalação limpa entregava o microfone mudo com a cura
+# pronta no repositório.
+#
+# As duas ações deste passo são complementares e não conflitam: o drop-in acima
+# decide QUEM é o microfone padrão do sistema; a cura abaixo garante que o
+# microfone FUNCIONA quando escolhido (perfil da placa na entrada analógica e
+# nenhum mute persistido por rota de captura).
+#
+# Não roda com `--with-wireplumber-disable-mic`: ali a source foi desabilitada
+# DE PROPÓSITO, e ressuscitá-la desfaria a escolha da usuária no mesmo passo.
+#
+# Best-effort, como o resto do instalador: o `if` impede o `set -e` de abortar,
+# e `--quiet` mantém a cura silenciosa quando não há DualSense presente na hora
+# da instalação (sem controle o doctor só emite linhas informativas). FAIL e
+# WARN continuam saindo — o silêncio é do sucesso, não do problema.
+if [[ "${WITH_WIREPLUMBER_DISABLE_MIC}" -ne 1 ]]; then
+    if [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+        warn "scripts/doctor.sh ausente — cura do microfone pulada"
+    elif bash "${ROOT_DIR}/scripts/doctor.sh" --fix-mic --quiet; then
+        printf '      microfone: camadas 1 e 2 conferidas (doctor.sh --fix-mic)\n'
+    else
+        printf '      microfone: cura incompleta — rode: bash scripts/doctor.sh --fix-mic\n'
+    fi
+fi
+
 # ---------------------------------------------------------------------------
 # 11. Steam Input: desligar PSSupport (default ON, opt-out --keep-steam-input)
 # ---------------------------------------------------------------------------

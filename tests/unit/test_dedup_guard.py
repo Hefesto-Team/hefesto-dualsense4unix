@@ -17,6 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+from tests.conftest import skip_sem_gi_real
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
 
 
@@ -161,6 +162,7 @@ class TestLaunchEnvRefreshHandler:
         fonte = Path(ipc_server.__file__).read_text(encoding="utf-8")
         assert '"launch_env.refresh": self._handle_launch_env_refresh' in fonte
 
+    @skip_sem_gi_real
     def test_gui_avisa_apos_save_delete_import_restore(self) -> None:
         """save/delete/import/restore de perfil notificam o daemon — sem isso
         o steam_app_<appid>.env fica rançoso na janela exata que ele existia

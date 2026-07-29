@@ -1050,8 +1050,8 @@ msgid "Não"
 msgstr "No"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1883
-msgid "Testar criação de device virtual"
-msgstr "Test virtual device creation"
+msgid "Testar o controle virtual"
+msgstr "Test the virtual controller"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1895
 msgid "Ver daemon.toml (referência)"
@@ -1322,8 +1322,8 @@ msgid "Adicionar"
 msgstr "Add"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2409
-msgid "Restaurar defaults"
-msgstr "Restore defaults"
+msgid "Voltar ao padrão"
+msgstr "Back to default"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:2420
 msgid "Teclado"

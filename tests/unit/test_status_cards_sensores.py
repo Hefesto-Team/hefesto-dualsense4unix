@@ -16,8 +16,16 @@ crescimento do glifo com a escala de fonte. Ela existe porque o precedente do
 rumble (teste que passou com a cura arrancada, porque chamava a peça e não a
 fiação) não pode se repetir: os três asserts caem quando a cura é removida.
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("status cards sensores")
 
 from pathlib import Path
 from typing import Any
@@ -49,6 +57,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     touchpad_do_inputs,
 )
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+
     COR_MIC_FALA,
     COR_MIC_PICO,
     COR_MIC_SILENCIO,

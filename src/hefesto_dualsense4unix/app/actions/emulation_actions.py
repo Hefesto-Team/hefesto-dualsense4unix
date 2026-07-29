@@ -404,9 +404,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if label is None:
             return
         if self._mic_is_on():
-            label.set_markup('<span foreground="#50fa7b">ligado</span>')
+            label.set_markup('<span foreground="#50fa7b">Ligado</span>')
         else:
-            label.set_markup('<span foreground="#ffb86c">desligado (suprimido)</span>')
+            label.set_markup('<span foreground="#ffb86c">Desligado (suprimido)</span>')
 
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()
@@ -520,7 +520,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 active_key = None
                 if gp_label is not None:
                     gp_label.set_markup(
-                        '<span foreground="#ffb86c">jogar direto (Sony) — o jogo '
+                        '<span foreground="#ffb86c">Jogar direto (Sony) — o jogo '
                         'fala direto com o controle</span>'
                     )
             elif isinstance(gp, dict) and gp.get("enabled"):
@@ -528,11 +528,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 active_key = "xbox" if flavor == "xbox" else "dualsense"
                 nice = "DualSense (PS)" if active_key == "dualsense" else "Xbox 360"
                 if gp_label is not None:
-                    gp_label.set_markup(f'<span foreground="#50fa7b">ligado — {nice}</span>')
+                    gp_label.set_markup(f'<span foreground="#50fa7b">Ligado — {nice}</span>')
             else:
                 active_key = "off"
                 if gp_label is not None:
-                    gp_label.set_markup('<span foreground="#8b8fa8">desligado</span>')
+                    gp_label.set_markup('<span foreground="#8b8fa8">Desligado</span>')
             self._highlight_gamepad(active_key)
             self._sync_gamemode_button(mode)
             # BUG-EMULATION-UINPUT-CARD-STALE-01: o cartão UINPUT mostrava
@@ -551,17 +551,19 @@ class EmulationActionsMixin(WidgetAccessMixin):
                         '<span foreground="#ffb86c">LIGADO — mouse/teclado suspensos</span>'
                     )
                 elif state.get("paused"):
-                    gm_label.set_markup('<span foreground="#ffb86c">daemon pausado</span>')
+                    gm_label.set_markup(
+                        '<span foreground="#ffb86c">O Hefesto está em pausa</span>'
+                    )
                 else:
                     gm_label.set_markup(
-                        '<span foreground="#50fa7b">desligado — emulação normal</span>'
+                        '<span foreground="#50fa7b">Desligado — emulação normal</span>'
                     )
             return False
 
         def _on_err(_exc: Exception) -> bool:
             lbl = self._get("emulation_gamepad_status_label")
             if lbl is not None:
-                lbl.set_markup('<span foreground="#8b8fa8">daemon offline</span>')
+                lbl.set_markup('<span foreground="#8b8fa8">O Hefesto está desligado</span>')
             self._highlight_gamepad(None)
             # BUG-EMULATION-UINPUT-CARD-STALE-02: offline, o cartão UINPUT não
             # pode seguir afirmando o device/VID:PID do último estado online.
@@ -746,9 +748,11 @@ class EmulationActionsMixin(WidgetAccessMixin):
             if on is None:
                 markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
             elif on:
-                markup = '<span foreground="#ffb86c">ligado (conflita!)</span>'
+                markup = (
+                    '<span foreground="#ffb86c">Ligado — conflita com o Hefesto</span>'
+                )
             else:
-                markup = '<span foreground="#50fa7b">desligado (ok)</span>'
+                markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
             if appids:
                 # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
                 # só se está escrito no arquivo.
@@ -759,7 +763,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                 else:
                     extra = "só valendo durante o jogo"
                 markup += (
-                    f' <span foreground="#8b8fa8">· exceção per-app: '
+                    f' <span foreground="#8b8fa8">· Exceção por jogo: '
                     f'{len(appids)} jogo(s) — {extra}</span>'
                 )
             label.set_markup(markup)

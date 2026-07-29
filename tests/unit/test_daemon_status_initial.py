@@ -81,10 +81,10 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-import pytest  # noqa: E402
+import pytest
 
-import hefesto_dualsense4unix.utils.single_instance as si_mod  # noqa: E402
-from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin  # noqa: E402
+import hefesto_dualsense4unix.utils.single_instance as si_mod
+from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
 # ---------------------------------------------------------------------------
 # Fakes mínimos (espelham test_daemon_status_matrix.py)

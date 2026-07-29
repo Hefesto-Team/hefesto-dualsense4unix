@@ -16,6 +16,14 @@ instância mínima do mixin com toasts/shows gravados, IPC/worker monkeypatchado
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("launch wrapper dialog")
+
 import contextlib
 import json
 from pathlib import Path
@@ -35,6 +43,7 @@ from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
     wrapper_dialog_decision,
 )
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
 
 APPID = "1599660"
 WM_JOGO = f"steam_app_{APPID}"

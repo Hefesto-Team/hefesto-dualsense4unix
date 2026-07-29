@@ -32,6 +32,14 @@ forjada ``aa:bb:cc:*`` — teste-guarda de anonimato.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("player01 um numero de jogador")
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,6 +62,7 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
+
 
 #: Os controles da casa (MACs forjados — faixa aa:bb:cc).
 UNIQ_A = "aabbcc000001"

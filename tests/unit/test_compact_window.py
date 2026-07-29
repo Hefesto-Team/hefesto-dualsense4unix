@@ -93,7 +93,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.compact_window import (  # noqa: E402
+from hefesto_dualsense4unix.app.compact_window import (
     ENV_OPT_OUT,
     CompactWindow,
     is_enabled,

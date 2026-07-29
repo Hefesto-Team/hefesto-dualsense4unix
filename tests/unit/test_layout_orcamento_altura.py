@@ -24,6 +24,14 @@ LEGIBILIDADE-01 acrescentou duas coisas:
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("layout orcamento altura")
+
 from collections.abc import Iterator
 
 import pytest
@@ -31,15 +39,16 @@ import pytest
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk  # noqa: E402
+from gi.repository import Gdk, Gtk
 
-from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE  # noqa: E402
-from hefesto_dualsense4unix.app.theme import (  # noqa: E402
+from hefesto_dualsense4unix.app.constants import GUI_DIR, MAIN_GLADE
+from hefesto_dualsense4unix.app.theme import (
     escala_fonte,
     escalar_css,
     escalar_nome_da_fonte,
 )
-from hefesto_dualsense4unix.app.widgets.controller_card import (  # noqa: E402
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+
     ControllerCard,
 )
 

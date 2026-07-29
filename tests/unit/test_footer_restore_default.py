@@ -11,6 +11,14 @@ Cenários:
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("footer restore default")
+
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -20,6 +28,7 @@ import pytest
 from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.footer_actions import _MEU_PERFIL_ASSET, FooterActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -45,7 +45,7 @@ except Exception:  # pragma: no cover — sem PyGObject
 # Gtk de verdade depende do ambiente de verdade: sem `DISPLAY` nem
 # `WAYLAND_DISPLAY`, o honesto é pular — e aparecer como `skipped`, não como
 # um job abortado sem explicação.
-import os as _os_probe  # noqa: E402
+import os as _os_probe
 
 if GTK_AVAILABLE and not (
     _os_probe.environ.get("DISPLAY") or _os_probe.environ.get("WAYLAND_DISPLAY")

@@ -53,11 +53,19 @@ def _install_gi_stubs() -> None:
 
     # --- Gtk ---
     gtk_mod = sys.modules.get("gi.repository.Gtk") or types.ModuleType("gi.repository.Gtk")
+    # GUARDA-GI-REAL-01: esta lista era INCOMPLETA de propósito — o docstring
+    # acima dizia "complementa stubs existentes", ou seja, contava com o stub
+    # que OUTRO arquivo de teste tivesse plantado antes dele no alfabeto.
+    # Faltava `Gtk.Box`, e sem ele o `SegmentedSelector` (que herda de Gtk.Box)
+    # derruba a coleta deste módulo. Agora a lista se basta sozinha.
     for _attr in (
         "Builder", "Window", "Button", "ComboBoxText", "Switch",
         "TextView", "TextBuffer", "Scale", "DrawingArea", "ColorButton",
         "CheckButton", "TreeView", "TreeSelection", "TreeViewColumn",
         "CellRendererText", "ListStore",
+        "Box", "Label", "Frame", "Entry", "RadioButton", "Stack", "TreePath",
+        "ToggleButton", "MessageDialog", "MessageType", "ButtonsType",
+        "ResponseType",
     ):
         if not hasattr(gtk_mod, _attr):
             setattr(gtk_mod, _attr, object)
@@ -104,11 +112,11 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 # Imports dependentes de gi abaixo da instalação dos stubs.
-from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin  # noqa: E402
-from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
-from hefesto_dualsense4unix.profiles import loader as loader_module  # noqa: E402
-from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile  # noqa: E402
+from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 
 # ---------------------------------------------------------------------------
 # Fixture: diretório isolado de perfis

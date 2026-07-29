@@ -14,8 +14,16 @@ diff a 10 Hz moram em ``ControllerCard._update_inputs``/``_refresh_glyphs``
   (g) ALL_BUTTONS continua com 16 entradas (grid 4x4).
   (h) reset_inputs apaga todos os glyphs e mostra o "—" (sem leitor).
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("status buttons glyphs")
 
 from typing import Any
 
@@ -30,6 +38,7 @@ import pytest
 pytest.importorskip("cairo")
 
 from hefesto_dualsense4unix.app.widgets.controller_card import (
+
     ALL_BUTTONS,
     L2_R2_THRESHOLD,
     ControllerCard,
