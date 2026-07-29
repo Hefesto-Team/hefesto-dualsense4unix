@@ -309,7 +309,14 @@ jobs:
             gir1.2-freedesktop gir1.2-notify-0.7 gir1.2-ayatanaappindicator3-0.1 \
             libgirepository-1.0-1 libgtk-3-0 libcairo2 libcairo-gobject2 \
             libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
-            xvfb dbus-x11
+            xvfb dbus-x11 \
+            librsvg2-2 librsvg2-common gir1.2-rsvg-2.0
+          # SVG NÃO é opcional aqui: os glifos dos botões (ButtonGlyph) são SVG
+          # carregados por `GdkPixbuf.new_from_file_at_scale`, e sem o loader do
+          # librsvg o pixbuf sai `None`. Medido na estreia da v0.3.0: quatro
+          # testes de tintura falhando com "NoneType has no get_pixels", e o
+          # card pedindo 431px de altura contra 357px na máquina real — o
+          # fallback sem pixbuf muda a geometria e derruba o orçamento.
       - name: Provar que a typelib está COMPLETA (antes de coletar qualquer teste)
         run: |
           # /usr/bin/python3 EXPLÍCITO: é o único que enxerga o
