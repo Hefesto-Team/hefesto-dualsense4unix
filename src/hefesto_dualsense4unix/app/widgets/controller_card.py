@@ -185,9 +185,14 @@ def _escala_da_interface() -> int:
 #: quadrado bola e triângulo e afins"*. Medido na tela dela: o grid 4x4 inteiro
 #: ocupava 150x150px no canto direito de um card de 960 — os quatro símbolos que
 #: ela nomeou cabiam num quadrado de 36px cada, com 2px entre eles. Cinco
-#: terços (13/8) leva o glifo de 36 para 58px e o grid para 262px, e é o que a
-#: largura devolvida pelo teto elástico paga.
-GLYPH_FATOR_UNICO_OITAVOS: Final[int] = 13
+#: terços (13/8) levava o glifo de 36 para 58px, mas o grid 4x4 manda também na
+#: ALTURA do card, e o orçamento da faixa é apertado: com 58px o card pedia
+#: 357px contra 369px disponíveis — 12px de folga, que a máquina do CI (sem as
+#: fontes do projeto, com métricas de fallback diferentes) estourou na estreia
+#: da v0.3.0, pedindo 431px. 12/8 leva o glifo a 54px e o grid a 246px, que é
+#: um aumento de 50% sobre os 36px de antes e devolve 16px de altura de folga.
+#: O teto de verdade é a altura, não a largura — a largura o teto elástico paga.
+GLYPH_FATOR_UNICO_OITAVOS: Final[int] = 12
 
 #: Respiro entre os glifos, em px: 2 no card compacto (o de hoje), 10 no de um
 #: controle. Colados, o grid lia como um bloco só; é a segunda metade do pedido
