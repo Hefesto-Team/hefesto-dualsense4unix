@@ -19,8 +19,16 @@ Exercita com GTK REAL (a suíte roda com display; 0 skips):
   * gate de timers: NENHUMA ocorrência nova de timeout/idle do GLib em
     relação ao baseline da mixin (o gate é diff, não contagem absoluta).
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("status cards")
 
 import re
 from pathlib import Path
@@ -50,6 +58,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     titulo_do_card,
 )
 from hefesto_dualsense4unix.utils.color_contrast import (
+
     ACCENT_NEUTRO,
     ensure_min_contrast,
     rgb_para_hex,

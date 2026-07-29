@@ -65,25 +65,38 @@ def _install_gi_stubs() -> None:
     glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.timeout_add_seconds = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
     glib_mod.idle_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
+    # GUARDA-GI-REAL-01: o Gdk faltava aqui, e o módulo só coletava porque
+    # OUTRO arquivo de teste (anterior no alfabeto) tinha plantado um. Com a
+    # poluição cortada entre arquivos, este stub tem de se bastar sozinho.
+    gdk_mod = types.ModuleType("gi.repository.Gdk")
+    gdk_mod.RGBA = object  # type: ignore[attr-defined]
+    gdk_mod.Screen = object  # type: ignore[attr-defined]
+    gdk_mod.Display = object  # type: ignore[attr-defined]
+    gtk_mod.CssProvider = object  # type: ignore[attr-defined]
+    gtk_mod.StyleContext = object  # type: ignore[attr-defined]
+    gtk_mod.STYLE_PROVIDER_PRIORITY_APPLICATION = 600  # type: ignore[attr-defined]
+    gtk_mod.Settings = object  # type: ignore[attr-defined]
     repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
     repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
+    repo_mod.Gdk = gdk_mod  # type: ignore[attr-defined]
 
     sys.modules["gi"] = gi_mod
     sys.modules["gi.repository"] = repo_mod
     sys.modules["gi.repository.Gtk"] = gtk_mod
     sys.modules["gi.repository.GLib"] = glib_mod
+    sys.modules["gi.repository.Gdk"] = gdk_mod
 
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.home_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions.home_actions import (
     NATIVE_BT_FRAGIL_TEXT,
     VPAD_COOP_DEGRADED_TEXT,
     VPAD_DEGRADED_TEXT,
     HomeActionsMixin,
     vpad_degradation_text,
 )
-from hefesto_dualsense4unix.app.actions.status_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions.status_actions import (
     StatusActionsMixin,
 )
 

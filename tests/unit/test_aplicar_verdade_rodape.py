@@ -17,6 +17,14 @@ antigo, sem os campos novos, continua sendo lida como sucesso.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("aplicar verdade rodape")
+
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -33,6 +41,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
+
 
 MSG_SUCESSO = "Perfil aplicado ao controle."
 

@@ -360,21 +360,21 @@ class MouseActionsMixin(WidgetAccessMixin):
 
         if module_ok and dev_writable:
             label.set_markup(
-                '<span foreground="#50fa7b">uinput disponível</span>'
+                '<span foreground="#50fa7b">Pronto para usar como mouse</span>'
             )
         elif module_ok and dev_exists:
             label.set_markup(
-                '<span foreground="#ff5555">o mouse virtual está sem permissão — '
+                '<span foreground="#ff5555">O mouse virtual está sem permissão — '
                 'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         elif module_ok:
             label.set_markup(
-                '<span foreground="#ffb86c">o mouse virtual ainda não está pronto — '
+                '<span foreground="#ffb86c">O mouse virtual ainda não está pronto — '
                 'abra a aba Sistema e clique em “Aplicar correções”</span>'
             )
         else:
             label.set_markup(
-                '<span foreground="#ff5555">falta um componente do mouse virtual — '
+                '<span foreground="#ff5555">Falta um componente do mouse virtual — '
                 'rode a instalação de novo (./install.sh)</span>'
             )
 

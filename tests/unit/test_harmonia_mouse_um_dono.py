@@ -14,6 +14,14 @@ config_dir redirecionado para tmp_path), sem uinput de verdade.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("harmonia mouse um dono")
+
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -36,6 +44,7 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gamepad_sub
 from hefesto_dualsense4unix.integrations import virtual_pad
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
+
 
 # ---------------------------------------------------------------------------
 # HARM-05 (a) — o switch da aba Mouse só existe em "Controlar o PC"

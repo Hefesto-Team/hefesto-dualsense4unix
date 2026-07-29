@@ -80,8 +80,9 @@ puro para ambiente sem GTK (testes/CI sem display).
 """
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import Any, Final, NamedTuple
 
+from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
     LightbarBar,
@@ -269,6 +270,37 @@ TEXTO_MIC_SEM_MUTE: Final[str] = "captando"
 #: a faixa de mudar de largura quando o texto troca de "sem sinal" para
 #: "ativo" (a mesma disciplina de campo fixo do `texto_eixo`).
 _MIC_ESTADO_CHARS: Final[int] = len(TEXTO_MIC_AUSENTE)
+
+#: Rótulos do BOTÃO do microfone (MIC-USB-01, entrega 2). Cada um diz o que o
+#: CLIQUE faz — não o estado, que quem diz é o rótulo acima. Curtos porque o
+#: botão herda a largura reservada do bloco (140px), e um rótulo mais largo que
+#: isso empurraria a coluna inteira.
+TEXTO_BOTAO_MIC_ATIVAR: Final[str] = "Ativar"
+TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
+TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Devolver"
+TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "sem dado"
+
+#: As dicas (tooltip) do botão. Elas carregam o que o rótulo curto não cabe —
+#: em especial o preço de mandar no mudo pela janela: enquanto o hefesto for o
+#: dono do registrador, o botão FÍSICO do controle para de valer. Esconder esse
+#: preço seria repetir o erro de "a config que eu deixo nunca é respeitada".
+DICA_MIC_ATIVAR: Final[str] = (
+    "O microfone está mudo no firmware do controle (camada 3). Desmutar daqui "
+    "faz o hefesto assumir o registrador — e o botão de microfone do controle "
+    "para de valer até você clicar em Devolver."
+)
+DICA_MIC_SILENCIAR: Final[str] = (
+    "O microfone está aberto e quem manda no mudo é o botão físico do "
+    "controle. Silenciar daqui faz o hefesto assumir o registrador."
+)
+DICA_MIC_DEVOLVER: Final[str] = (
+    "Quem manda no mudo agora é o hefesto, e por isso o botão de microfone do "
+    "controle não responde. Devolver a posse faz o botão físico voltar a valer."
+)
+DICA_MIC_SEM_LEITURA: Final[str] = (
+    "O daemon ainda não leu o estado do microfone deste controle. Sem saber "
+    "se ele está mudo, mandar mutar ou desmutar seria chute."
+)
 
 #: Alto-falante sem volume conhecido. O DualSense NÃO devolve o volume — não
 #: há report de input nem feature report que o leia, e o daemon só publica a
@@ -551,6 +583,69 @@ def speaker_do_entry(entry: Any) -> tuple[int, bool | None] | None:
     )
 
 
+class AcaoMic(NamedTuple):
+    """O que o botão do microfone diz e o que ele manda quando clicado.
+
+    ``valor`` é o argumento de ``ipc_bridge.mic_set``: ``True`` muta,
+    ``False`` desmuta e ``None`` DEVOLVE a posse do registrador ao
+    `hid-playstation` (o botão físico do controle volta a mandar). Os três
+    são pedidos explícitos e diferentes — ``False`` não é "não mexer".
+    """
+
+    rotulo: str
+    valor: bool | None
+    sensivel: bool
+    dica: str
+
+
+def acao_mic(entry: Any) -> AcaoMic:
+    """Estado do botão de microfone a partir de ``entry['audio']``.
+
+    MIC-USB-01, entrega 2 — a CAMADA 3 do mudo, a única que a janela alcança.
+    Duas chaves, publicadas pelo daemon em ``audio`` e que respondem coisas
+    diferentes (``daemon/ipc_handlers._merge_audio``):
+
+    * ``mic_mudo`` — o que o firmware DECLARA agora, lido do byte de estado
+      que vem em todo report de INPUT. Existe no cabo e no Bluetooth, e não
+      depende de PipeWire nenhum: é por isso que o botão funciona mesmo com
+      o medidor em "sem sinal", que é o normal por Bluetooth.
+    * ``mic_mudo_desejado`` — QUEM MANDA. ``None`` = a posse é do
+      `hid-playstation` e o botão físico alterna o mudo; ``True``/``False`` =
+      nós estamos afirmando esse valor em todo report, e o botão físico
+      deixou de valer enquanto durar.
+
+    O botão é UM só e o rótulo diz o que o clique faz, sempre. As três ações
+    formam um ciclo que passa por todos os estados, inclusive a devolução da
+    posse — sem ela, o primeiro clique tiraria o botão físico do controle da
+    mantenedora para sempre, que é o tipo de sequestro silencioso que esta
+    sprint foi fechar:
+
+    ==========================  ==================  ==============
+    estado                      rótulo              manda
+    ==========================  ==================  ==============
+    firmware mudo               Ativar              ``False``
+    ativo, posse nossa          Devolver            ``None``
+    ativo, posse do kernel      Silenciar           ``True``
+    sem leitura de ``audio``    sem dado            (insensível)
+    ==========================  ==================  ==============
+
+    Sem a chave ``audio`` o botão fica INSENSÍVEL em vez de sumir: sumir é
+    indistinguível de "este controle não tem microfone" (MIC-PRESENTE-01), e
+    mandar um pedido sem saber o estado atual seria chutar qual é o oposto.
+    """
+    audio = entry.get("audio") if isinstance(entry, dict) else None
+    if not isinstance(audio, dict):
+        return AcaoMic(TEXTO_BOTAO_MIC_SEM_LEITURA, None, False, DICA_MIC_SEM_LEITURA)
+    mudo = audio.get("mic_mudo")
+    if not isinstance(mudo, bool):
+        return AcaoMic(TEXTO_BOTAO_MIC_SEM_LEITURA, None, False, DICA_MIC_SEM_LEITURA)
+    if mudo:
+        return AcaoMic(TEXTO_BOTAO_MIC_ATIVAR, False, True, DICA_MIC_ATIVAR)
+    if isinstance(audio.get("mic_mudo_desejado"), bool):
+        return AcaoMic(TEXTO_BOTAO_MIC_DEVOLVER, None, True, DICA_MIC_DEVOLVER)
+    return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, DICA_MIC_SILENCIAR)
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -570,7 +665,7 @@ try:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk
+    from gi.repository import Gtk, Pango
 
     # Com um stub parcial de gi (testes antigos sem display), o import acima
     # passa mas faltam classes — o card cai no stub em vez de explodir.
@@ -579,6 +674,7 @@ try:
         for attr in (
             "Frame",
             "Box",
+            "Button",
             "Grid",
             "Label",
             "ProgressBar",
@@ -643,6 +739,11 @@ if _GTK_DISPONIVEL:
             self._last_touch: Any = _SENTINELA
             self._last_mic: Any = _SENTINELA
             self._last_speaker: Any = _SENTINELA
+            # MIC-USB-01: o MAC deste controle, para o `mic.set` ir SÓ nele —
+            # sem ele o daemon aplicaria no primário, e com quatro controles
+            # isso mutaria o microfone de outra pessoa.
+            self._uniq: str | None = None
+            self._mic_acao: AcaoMic | None = None
             self._montar_ui()
 
         # ------------------------------------------------------------------
@@ -663,6 +764,8 @@ if _GTK_DISPONIVEL:
             está visível. ``None`` = sem microfone atribuível a este controle,
             e o módulo some.
             """
+            uniq = entry.get("uniq")
+            self._uniq = uniq if isinstance(uniq, str) and uniq else None
             self._update_titulo(entry)
             self._update_bateria(entry)
             self._update_lightbar(entry, state_global)
@@ -672,6 +775,7 @@ if _GTK_DISPONIVEL:
             self._update_gyro(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
             self._update_mic(mic, str(entry.get("transport") or ""))
+            self._update_mic_botao(entry)
             self._update_speaker(entry)
 
         def reset_inputs(self) -> None:
@@ -1072,15 +1176,72 @@ if _GTK_DISPONIVEL:
             # porque a escala global reescreve o CSS, não markup de Pango.
             selo.get_style_context().add_class("hefesto-selo")
             miolo.pack_start(selo, False, False, 0)
+            # MIC-USB-01, entrega 2 — o BOTÃO. Ele estava escrito no IPC
+            # (`ipc_bridge.mic_set`, com o ponto de fiação documentado) e não
+            # tinha um único chamador na interface: o projeto sabia ler o mudo,
+            # sabia mostrá-lo e tinha a função para mudá-lo, e não oferecia o
+            # botão. O único caminho para desmutar era o botão físico.
+            #
+            # Ele entra ABAIXO do medidor porque o miolo do bloco é vertical:
+            # ali custa altura (que sobra — a coluna dos botões 4x4 é bem mais
+            # alta) e não largura, que é a restrição dura desta aba.
+            botao = Gtk.Button()
+            botao.set_halign(Gtk.Align.FILL)
+            # O rótulo é um Label NOSSO, e não o que `Gtk.Button(label=...)`
+            # fabrica, por uma razão medida: `set_label()` DESTRÓI e recria o
+            # label interno, e levaria o teto de largura junto no primeiro
+            # troca-troca de estado — o campo fixo duraria até o primeiro
+            # clique.
+            #
+            # Campo FIXO aqui pelo mesmo motivo do rótulo de estado: sem teto,
+            # o rótulo mais longo do botão decidiria a largura da coluna e
+            # trocar de estado moveria os vizinhos de lugar. Com dois cards
+            # lado a lado essa largura soma DIRETO no mínimo da janela — o
+            # orçamento inteiro da aba é de 26px
+            # (`test_dois_cards_lado_a_lado_cabem_na_largura_da_janela`).
+            rotulo_botao = Gtk.Label(label=TEXTO_BOTAO_MIC_SEM_LEITURA)
+            rotulo_botao.set_ellipsize(Pango.EllipsizeMode.END)
+            rotulo_botao.set_max_width_chars(_MIC_ESTADO_CHARS)
+            botao.add(rotulo_botao)
+            self._mic_botao_rotulo = rotulo_botao
+            botao.connect("clicked", self._on_mic_clicado)
+            miolo.pack_start(botao, False, False, 0)
+            # O botão fica FORA do SizeGroup de propósito: ele já tem teto
+            # próprio (o `max_width_chars` do rótulo acima) e amarrá-lo aqui
+            # faria o medidor e o selo herdarem a largura DELE — o oposto do
+            # que este grupo existe para fazer.
             grupo = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
             grupo.add_widget(medidor)
             grupo.add_widget(selo)
             self._grupo_largura_mic = grupo
             self._mic_meter = medidor
             self._mic_selo = selo
+            self._mic_botao = botao
             self._mic_box = mic
             self._aplicar_estado_mic(None, presente=False)
+            self._aplicar_acao_mic(acao_mic(None))
             return mic
+
+        def _on_mic_clicado(self, _botao: Any) -> None:
+            """Manda o pedido de mudo ao firmware — fora da thread GTK.
+
+            O IPC é bloqueante (``ipc_bridge.mic_set`` espera a resposta do
+            daemon), e bloquear a thread GTK num clique é como esta interface
+            já congelou antes. O callback de volta não pinta nada: quem repinta
+            é o tick de 10 Hz da aba, relendo ``daemon.state_full``. Guardar o
+            valor MANDADO como se fosse leitura é justamente o hábito que fez a
+            tela parecer mentirosa quando ela nunca mentiu.
+            """
+            acao = self._mic_acao
+            if acao is None or not acao.sensivel:
+                return
+            valor = acao.valor
+            uniq = self._uniq
+
+            def _pedir() -> bool:
+                return ipc_bridge.mic_set(valor, uniq)
+
+            ipc_bridge.run_in_thread(_pedir, lambda _ok: False)
 
         def _montar_lightbar(self) -> Any:
             """Bloco "Lightbar": a cor que já chega no card, agora como BARRA.
@@ -1397,6 +1558,23 @@ if _GTK_DISPONIVEL:
             self._mic_meter.set_nivel(float(nivel))
             self._aplicar_estado_mic(muted, presente=True)
 
+        def _update_mic_botao(self, entry: dict[str, Any]) -> None:
+            """Rótulo/sensibilidade do botão a partir de ``entry['audio']``.
+
+            Diffado como o resto: o tick é de 10 Hz e o estado do microfone
+            muda por gesto humano.
+            """
+            acao = acao_mic(entry)
+            if acao == self._mic_acao:
+                return
+            self._aplicar_acao_mic(acao)
+
+        def _aplicar_acao_mic(self, acao: AcaoMic) -> None:
+            self._mic_acao = acao
+            self._mic_botao_rotulo.set_text(acao.rotulo)
+            self._mic_botao.set_sensitive(acao.sensivel)
+            self._mic_botao.set_tooltip_text(acao.dica)
+
         def _aplicar_estado_mic(
             self, muted: Any, *, presente: bool
         ) -> None:
@@ -1606,6 +1784,10 @@ if _GTK_DISPONIVEL:
             # (MIC-PRESENTE-01), inclusive neste, o de controle sem leitor.
             self._mic_meter.limpar()
             self._aplicar_estado_mic(None, presente=False)
+            # O BOTÃO também volta ao "não sei": sem leitor não há como saber
+            # se o firmware está mudo, e um botão que continuasse dizendo
+            # "Silenciar" mandaria o oposto do estado real no primeiro clique.
+            self._aplicar_acao_mic(acao_mic(None))
             self._aplicar_estado_speaker(None)
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
@@ -1658,6 +1840,8 @@ else:
             self.touchpad: tuple[bool, float, float] | None = None
             self.mic_selo: tuple[str, str, str] | None = None
             self.mic_nivel: float | None = None
+            self.mic_acao: AcaoMic = acao_mic(None)
+            self.uniq: str | None = None
             self.speaker: tuple[int, bool | None] | None = None
 
         def update(
@@ -1679,6 +1863,9 @@ else:
             self.mic_selo = selo_mic(
                 getattr(mic, "muted", None) if mic is not None else None
             )
+            self.mic_acao = acao_mic(entry)
+            uniq = entry.get("uniq")
+            self.uniq = uniq if isinstance(uniq, str) and uniq else None
             self.speaker = speaker_do_entry(entry)
 
         def reset_inputs(self) -> None:
@@ -1694,6 +1881,10 @@ else:
 
 __all__ = [
     "ALL_BUTTONS",
+    "DICA_MIC_ATIVAR",
+    "DICA_MIC_DEVOLVER",
+    "DICA_MIC_SEM_LEITURA",
+    "DICA_MIC_SILENCIAR",
     "GLYPH_PX_POR_DEGRAU_DE_FONTE",
     "GLYPH_SIZE_BASE",
     "GRID_BOTOES",
@@ -1708,10 +1899,16 @@ __all__ = [
     "ROTULO_STICK_ESQ",
     "STICK_SIZE_COMPACT",
     "STICK_SIZE_SINGLE",
+    "TEXTO_BOTAO_MIC_ATIVAR",
+    "TEXTO_BOTAO_MIC_DEVOLVER",
+    "TEXTO_BOTAO_MIC_SEM_LEITURA",
+    "TEXTO_BOTAO_MIC_SILENCIAR",
     "TEXTO_MIC_AUSENTE",
     "TEXTO_MIC_SEM_MUTE",
     "TEXTO_SPEAKER_SEM_DADO",
+    "AcaoMic",
     "ControllerCard",
+    "acao_mic",
     "accent_do_card",
     "glyph_size",
     "gyro_do_inputs",

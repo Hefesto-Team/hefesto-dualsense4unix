@@ -25,6 +25,14 @@ escrita no ~/.config dela.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("empate01 a cor volta a ser dela")
+
 import json
 import sys
 import types
@@ -33,6 +41,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 import pytest
+
 
 pytest.importorskip("gi")
 
@@ -80,8 +89,8 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import profiles_actions as pa  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
     Profile,

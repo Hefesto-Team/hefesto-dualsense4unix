@@ -11,8 +11,16 @@ widget sem alocação devolve 1x1 em tudo, e um teste de geometria sobre ele
 passaria com qualquer layout. Cada um deles cai quando a cura correspondente é
 arrancada — está escrito no docstring de cada um qual é a mordida.
 """
-# ruff: noqa: E402 — gi.require_version precisa vir antes dos imports de gi
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("status faixa blocos")
 
 from itertools import pairwise
 from typing import Any
@@ -30,6 +38,7 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
 from hefesto_dualsense4unix.app.widgets.controller_card import (
+
     LARGURA_BARRA_GATILHO_UNICO,
     LARGURA_CARD_UNICO,
     LARGURA_GYRO_UNICO,

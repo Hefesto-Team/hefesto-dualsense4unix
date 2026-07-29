@@ -537,16 +537,34 @@ check_audio_sink_muted() {
 # Nada aqui hardcoda o nome do card ou da source: eles carregam o nome do
 # produto e o sufixo da porta USB, e mudam de máquina para máquina.
 
-# Rotas do DualSense com `"mute":true` no estado persistido do WirePlumber.
+# Rotas do DualSense com `"mute":true` no estado persistido do WirePlumber,
+# SEPARADAS POR DIREÇÃO. `$2` = `input` (captura — o microfone; é o default) ou
+# `output` (o alto-falante embutido do controle).
+#
+# A separação é a cura de um falso positivo MEDIDO em 28/07 nesta máquina. O
+# filtro antigo casava qualquer rota cujo nome tivesse "dualsense", e a única
+# rota muda do arquivo era `...:output:analog-output` — o ALTO-FALANTE. O
+# portão reprovava o MICROFONE por causa da caixa de som, e essa linha [FAIL]
+# levou dois levantamentos do mesmo dia a conclusões opostas. Só rota de
+# CAPTURA pode falar pelo microfone; o alto-falante mudo é escolha legítima da
+# usuária e vira INFO, nunca reprovação.
+#
+# A chave de rota é `<card>:<direção>:<porta>`, e a direção vem LOGO depois do
+# nome da placa: por isso o `[^=:]*` entre "sense" e a direção, que proíbe o
+# casamento de atravessar um `:`. Sem esse detalhe as entradas `:profile:` do
+# mesmo arquivo entrariam pela porta dos fundos — o nome do perfil é
+# `output:analog-surround-40+input:analog-stereo` e traz as duas palavras.
+#
 # Imprime a CHAVE de cada rota muda (uma por linha); silêncio = nada a fazer.
 # Função PURA: recebe o arquivo, não escreve nada, não chama pactl.
 _dualsense_rotas_mudas() {
     local arquivo="${1:-${HOME}/.local/state/wireplumber/default-routes}"
+    local direcao="${2:-input}"
     [[ -r "${arquivo}" ]] || return 0
     # `|| true`: silêncio é a resposta NORMAL (nada mudo) e grep sai 1 nesse
     # caso — deixar o 1 escapar faria o chamador confundir "está tudo bem" com
     # "o check quebrou".
-    grep -iE '^[^=]*dual[[:alnum:]_]*sense[^=]*=.*"mute":[[:space:]]*true' \
+    grep -iE "^[^=]*dual[[:alnum:]_]*sense[^=:]*:${direcao}:[^=]*=.*\"mute\":[[:space:]]*true" \
         "${arquivo}" 2>/dev/null | sed -E 's/=.*$//' || true
 }
 
@@ -630,8 +648,8 @@ _dualsense_perfil_status() {
 # CAMADA 1 — mute guardado por rota (arquivo) e mute vivo na source (pactl).
 check_mic_mute_persistido() {
     local rotas="${HOME}/.local/state/wireplumber/default-routes"
-    local mudas r
-    mudas="$(_dualsense_rotas_mudas "${rotas}")"
+    local mudas saida_mudas r
+    mudas="$(_dualsense_rotas_mudas "${rotas}" input)"
     if [[ -n "${mudas}" ]]; then
         fail "microfone do DualSense MUDO por estado PERSISTIDO do WirePlumber (camada 1) — rode: scripts/doctor.sh --fix"
         while read -r r; do
@@ -639,9 +657,20 @@ check_mic_mute_persistido() {
         done <<< "${mudas}"
         info "  o mute vive por ROTA em ${rotas} e é restaurado a cada conexão sem nada no log"
     elif [[ -r "${rotas}" ]]; then
-        pass "nenhuma rota do DualSense com mute persistido (camada 1)"
+        pass "nenhuma rota de CAPTURA do DualSense com mute persistido (camada 1)"
     else
         info "sem ${rotas} — o WirePlumber ainda não gravou estado de rota"
+    fi
+
+    # O alto-falante do controle mudo é um FATO sobre a saída, e a usuária pode
+    # tê-lo escolhido. Ele aparece porque some é pior — mas como INFO, do lado
+    # de fora do veredito do microfone.
+    saida_mudas="$(_dualsense_rotas_mudas "${rotas}" output)"
+    if [[ -n "${saida_mudas}" ]]; then
+        info "o ALTO-FALANTE do DualSense está mudo no estado persistido — isso NÃO afeta o microfone"
+        while read -r r; do
+            [[ -n "${r}" ]] && info "  rota de saída muda: ${r}"
+        done <<< "${saida_mudas}"
     fi
 
     command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo o mudo VIVO da source"; return; }
@@ -686,6 +715,10 @@ fix_mic_dualsense() {
     # que é o dono das escritas no estado do WirePlumber (ele para o serviço
     # antes de editar — com o WirePlumber vivo, o arquivo seria reescrito no
     # shutdown por cima da nossa edição).
+    #
+    # Sem segundo argumento a consulta é só de CAPTURA: uma cura de microfone
+    # não pode ser disparada pelo alto-falante mudo, que a usuária pode ter
+    # escolhido e que ninguém pediu para reativar.
     if [[ -n "$(_dualsense_rotas_mudas)" ]]; then
         if bash "${ROOT_DIR}/scripts/fix_wireplumber_default_source.sh" --unmute-routes >/dev/null 2>&1; then
             pass "mute persistido das rotas do DualSense removido (camada 1)"

@@ -13,6 +13,14 @@ do ipc_bridge é monkeypatchado para invocar os callbacks sincronamente
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("mouse actions gui sync")
+
 from typing import Any
 
 import pytest
@@ -23,6 +31,7 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.footer_actions import FROZEN_WIDGET_IDS
 from hefesto_dualsense4unix.app.actions.mouse_actions import MouseActionsMixin
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
+
 
 # ---------------------------------------------------------------------------
 # Stubs

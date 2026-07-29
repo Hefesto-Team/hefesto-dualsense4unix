@@ -27,7 +27,12 @@ from typing import Any
 
 import pytest
 
-pytest.importorskip("gi")
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: no lugar de `pytest.importorskip("gi")`, que ACEITA o
+# stub que outro arquivo de teste planta em sys.modules — e por isso
+# deixava este módulo rodar contra um GTK de mentira.
+exigir_gi_real("R10 (slug e rename)")
 
 
 def _install_gi_stubs() -> None:
@@ -74,13 +79,13 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import profiles_actions as pa  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions import profiles_actions as pa
+from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
     Profile,
 )
-from hefesto_dualsense4unix.profiles.slug import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.slug import (
     find_by_slug,
     mesmo_slug,
     slugify,

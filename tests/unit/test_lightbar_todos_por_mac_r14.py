@@ -16,8 +16,16 @@ avisado no toast.
 
 GUI: precisa de ``gi`` (padrão de ``test_mouse_actions_gui_sync.py``).
 """
-# ruff: noqa: E402  (imports após o pin de versão do gi — padrão da casa)
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("lightbar todos por mac r14")
 
 from typing import Any
 
@@ -37,6 +45,7 @@ from hefesto_dualsense4unix.app.actions.lightbar_actions import (
     LightbarActionsMixin,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+
     LedsConfig,
     MatchAny,
     Profile,

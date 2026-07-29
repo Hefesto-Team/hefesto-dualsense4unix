@@ -78,8 +78,8 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin  # noqa: E402
-from hefesto_dualsense4unix.app.constants import RECONNECT_FAIL_THRESHOLD  # noqa: E402
+from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+from hefesto_dualsense4unix.app.constants import RECONNECT_FAIL_THRESHOLD
 
 
 class _FakeLabel:

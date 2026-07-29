@@ -93,8 +93,8 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions import daemon_actions  # noqa: E402
-from hefesto_dualsense4unix.app.actions.daemon_actions import (  # noqa: E402
+from hefesto_dualsense4unix.app.actions import daemon_actions
+from hefesto_dualsense4unix.app.actions.daemon_actions import (
     DaemonActionsMixin,
     format_proton_lock_result,
 )

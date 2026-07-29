@@ -91,7 +91,7 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin  # noqa: E402
+from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
 # ---------------------------------------------------------------------------
 # Stubs de Gtk.ListStore / Gtk.TreeView para iteração de linhas.

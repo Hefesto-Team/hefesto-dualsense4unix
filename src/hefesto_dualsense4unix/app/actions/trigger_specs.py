@@ -47,11 +47,11 @@ def _force(lo: int = 0, hi: int = 255, default: int = 128) -> TriggerParamSpec:
 
 
 def _force_0_8(default: int = 4) -> TriggerParamSpec:
-    return TriggerParamSpec("force", "Força (0-8)", 0, 8, default)
+    return TriggerParamSpec("force", "Força", 0, 8, default)
 
 
 def _strength(default: int = 4) -> TriggerParamSpec:
-    return TriggerParamSpec("strength", "Intensidade (0-8)", 0, 8, default)
+    return TriggerParamSpec("strength", "Intensidade", 0, 8, default)
 
 
 def _frequency(default: int = 10) -> TriggerParamSpec:
@@ -71,19 +71,19 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "SimpleRigid", "Rígido simples",
         params=(_strength(6),),
-        description="Atalho de Rigid em escala 0-8.",
+        description="Atalho do Rígido, com uma só escala de 0 a 8.",
     ),
     TriggerPresetSpec(
         "Pulse", "Pulso", params=(),
         description="Pulso único.",
     ),
     TriggerPresetSpec(
-        "PulseA", "Pulso A",
+        "PulseA", "Pulso (curva A)",
         params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
         description="Pulso entre duas posições (curva A).",
     ),
     TriggerPresetSpec(
-        "PulseB", "Pulso B",
+        "PulseB", "Pulso (curva B)",
         params=(_start(0, 9, 2), _end(1, 9, 7), _force(0, 255, 180)),
         description="Pulso entre duas posições (curva B).",
     ),
@@ -97,8 +97,8 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
             TriggerParamSpec("end", "Fim", 1, 9, 7),
-            TriggerParamSpec("force", "Força arco (0-8)", 0, 8, 6),
-            TriggerParamSpec("snap", "Disparo (0-8)", 0, 8, 7),
+            TriggerParamSpec("force", "Força do arco", 0, 8, 6),
+            TriggerParamSpec("snap", "Disparo", 0, 8, 7),
         ),
         description="Tensão crescente com disparo ao soltar.",
     ),
@@ -107,8 +107,8 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 0),
             TriggerParamSpec("end", "Fim", 1, 9, 9),
-            TriggerParamSpec("first_foot", "Pata 1 (0-7)", 0, 7, 7),
-            TriggerParamSpec("second_foot", "Pata 2 (0-7)", 0, 7, 7),
+            TriggerParamSpec("first_foot", "Pata 1", 0, 7, 7),
+            TriggerParamSpec("second_foot", "Pata 2", 0, 7, 7),
             _frequency(10),
         ),
         description="Cadência de galope entre duas posições.",
@@ -116,8 +116,8 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "SemiAutoGun", "Arma semi-automática",
         params=(
-            TriggerParamSpec("start", "Início (2-7)", 2, 7, 3),
-            TriggerParamSpec("end", "Fim (start+1..8)", 3, 8, 6),
+            TriggerParamSpec("start", "Início", 2, 7, 3),
+            TriggerParamSpec("end", "Fim", 3, 8, 6),
             _force_0_8(5),
         ),
         description="Rebote curto de arma semi-auto.",
@@ -155,7 +155,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "Vibration", "Vibração",
-        params=(_pos(3), TriggerParamSpec("amplitude", "Amplitude (0-8)", 0, 8, 4), _frequency(40)),
+        params=(_pos(3), TriggerParamSpec("amplitude", "Amplitude", 0, 8, 4), _frequency(40)),
         description="Vibração contínua com amplitude e frequência.",
     ),
     TriggerPresetSpec(
@@ -163,8 +163,8 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         params=(
             _start(0, 9, 1),
             _end(1, 9, 8),
-            TriggerParamSpec("start_strength", "Intensidade início (1-8)", 1, 8, 2),
-            TriggerParamSpec("end_strength", "Intensidade fim (1-8)", 1, 8, 7),
+            TriggerParamSpec("start_strength", "Intensidade no início", 1, 8, 2),
+            TriggerParamSpec("end_strength", "Intensidade no fim", 1, 8, 7),
         ),
         description="Feedback com intensidade variando em rampa.",
     ),
@@ -172,7 +172,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         "MultiPositionFeedback", "Feedback por posição",
         params=tuple(
             TriggerParamSpec(
-                f"pos_{i}", f"Pos {i} (0-8)", 0, 8, 0
+                f"pos_{i}", f"Posição {i}", 0, 8, 0
             )
             for i in range(10)
         ),
@@ -184,7 +184,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
             _frequency(40),
             *(
                 TriggerParamSpec(
-                    f"pos_{i}", f"Pos {i} (0-8)", 0, 8, 0
+                    f"pos_{i}", f"Posição {i}", 0, 8, 0
                 )
                 for i in range(10)
             ),
@@ -192,17 +192,17 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração com perfil de amplitude por posição.",
     ),
     TriggerPresetSpec(
-        "Custom", "Custom (raw HID)",
+        "Custom", "Personalizado (avançado)",
         params=(
-            TriggerParamSpec("mode", "Mode HID (byte)", 0, 255, 0),
+            TriggerParamSpec("mode", "Modo (byte cru)", 0, 255, 0),
             *(
                 TriggerParamSpec(
-                    f"force_{i}", f"Force {i}", 0, 255, 0
+                    f"force_{i}", f"Força {i}", 0, 255, 0
                 )
                 for i in range(7)
             ),
         ),
-        description="Envia valores HID crus (mode + 7 forces).",
+        description="Envia os valores crus para o controle: 1 modo e 7 forças.",
     ),
 )
 

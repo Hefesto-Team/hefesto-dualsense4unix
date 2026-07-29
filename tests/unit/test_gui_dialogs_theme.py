@@ -16,12 +16,21 @@ camada pura vive em test_external_controllers; aqui ficam a montagem GTK real
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("gui dialogs theme")
+
 import contextlib
 import inspect
 import re
 from pathlib import Path
 
 import pytest
+
 
 _APP_DIR = (
     Path(__file__).resolve().parents[2]

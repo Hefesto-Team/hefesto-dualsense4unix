@@ -15,6 +15,14 @@ medir a segunda pergunta, não deduzi-la da primeira.
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("r06 status honesto")
+
 from typing import Any
 
 import pytest
@@ -23,6 +31,7 @@ pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.app.actions import emulation_actions as ea
 from hefesto_dualsense4unix.broker import hidraw_broker as hb
+
 
 
 class _OpsFalso:
@@ -108,8 +117,11 @@ class TestStatusDaAba:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         markup = self._refresh(monkeypatch, appids=[], exposicao={"/dev/hidraw0": True})
-        assert "desligado (ok)" in markup
-        assert "exceção" not in markup
+        # PALAVRA-01: o rótulo era "desligado (ok)" — minúsculo no meio da
+        # frase dela e com jargão ("per-app"). O que ela lê agora e o que
+        # este teste trava é a frase em português.
+        assert "Desligado — tudo certo" in markup
+        assert "xceção" not in markup
 
     def test_excecao_configurada_e_efetiva(
         self, monkeypatch: pytest.MonkeyPatch
@@ -117,7 +129,7 @@ class TestStatusDaAba:
         markup = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": True}
         )
-        assert "exceção per-app: 1 jogo(s)" in markup
+        assert "Exceção por jogo: 1 jogo(s)" in markup
         assert "controle liberado agora" in markup
 
     def test_excecao_configurada_mas_o_fisico_segue_escondido(
@@ -128,7 +140,7 @@ class TestStatusDaAba:
         markup = self._refresh(
             monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": False}
         )
-        assert "exceção per-app: 1 jogo(s)" in markup
+        assert "Exceção por jogo: 1 jogo(s)" in markup
         assert "só valendo durante o jogo" in markup
 
     def test_sem_fisico_visivel_nao_afirma_nada(

@@ -6,9 +6,15 @@
 # HAS_FRAMEWORK=true e DESLIGAR as checagens próprias dele, delegando a um
 # framework que não está instalado.
 #
-# Portanto: quem protege de verdade é o .github/workflows/ci.yml. Este arquivo
-# é a declaração de intenção e o que vale para quem clonar sem hooksPath
-# global. Não confie nele como rede.
+# DÍVIDA PAGA EM 28/07 (leva GUARDA-GI-REAL-01): enquanto o commit local
+# continua desviado pelo `hooksPath` global, estes quatro hooks deixaram de ser
+# decorativos — o job `pre-commit` do .github/workflows/ci.yml roda
+# `pre-commit run --all-files` a cada push, onde `hooksPath` de ninguém
+# alcança. Quatro portões declarados, quatro portões vivos.
+#
+# Continua valendo: no caminho do COMMIT desta máquina, quem protege é o CI, e
+# não este arquivo. Rode `pre-commit run --all-files` à mão antes de empurrar
+# se quiser a resposta sem esperar o runner.
 repos:
   - repo: local
     hooks:

@@ -26,8 +26,16 @@ a contagem de escritas ir a zero — reprova.
 
 GUI: precisa de ``gi`` (padrão de ``test_lightbar_todos_por_mac_r14.py``).
 """
-# ruff: noqa: E402  (imports após o pin de versão do gi — padrão da casa)
+
 from __future__ import annotations
+
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("lightbar aplica ao soltar")
 
 from typing import Any
 
@@ -44,6 +52,7 @@ from hefesto_dualsense4unix.app import draft_config as draft_mod
 from hefesto_dualsense4unix.app.actions import lightbar_actions
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
+
 
 #: MACs forjados (faixa aa:bb:cc — teste-guarda de anonimato).
 UNIQ_1 = "aabbcc000001"

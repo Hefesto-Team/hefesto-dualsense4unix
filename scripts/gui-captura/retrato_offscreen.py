@@ -9,6 +9,7 @@ uso: retrato_offscreen.py <diretório-de-saída>
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -17,8 +18,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-import os
-RAIZ = Path(os.environ.get("HEFESTO_RAIZ", "/home/vitoriamaria/Desenvolvimento/hefesto-dualsense4unix"))
+_RAIZ_PADRAO = "/home/vitoriamaria/Desenvolvimento/hefesto-dualsense4unix"
+RAIZ = Path(os.environ.get("HEFESTO_RAIZ", _RAIZ_PADRAO))
 sys.path.insert(0, str(RAIZ / "src"))
 
 GLADE = RAIZ / "src/hefesto_dualsense4unix/gui/main.glade"
@@ -83,7 +84,10 @@ def main(destino: str) -> int:
         pix.savev(str(nome), "png", [], [])
         aloc = página.get_allocation()
         nat = página.get_preferred_height()[1]
-        print(f"  {i} {rotulo:<16} recebe={aloc.height:>5}  natural={nat:>5}  vao={aloc.height - nat:>5}")
+        print(
+            f"  {i} {rotulo:<16} recebe={aloc.height:>5}  "
+            f"natural={nat:>5}  vao={aloc.height - nat:>5}"
+        )
 
     return 0
 

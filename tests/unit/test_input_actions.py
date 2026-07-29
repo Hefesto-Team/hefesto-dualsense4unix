@@ -7,6 +7,14 @@ widgets que imitam a API mínima requerida.
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# GUARDA-GI-REAL-01: vem antes de qualquer import de `gi` de propósito.
+# `pytest.importorskip("gi")` ACEITA o stub que outro arquivo planta em
+# sys.modules; e sem guarda nenhuma este módulo derruba a COLETA inteira
+# no CI headless, em vez de pular.
+exigir_gi_real("input actions")
+
 from typing import Any
 
 import pytest
@@ -18,6 +26,7 @@ import pytest
 pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
+
 
 
 class _FakeListStore:

@@ -45,6 +45,25 @@ _MARCADORES_DUALSENSE: tuple[str, ...] = (
     "dualsense",
 )
 
+#: Prefixo do nome que a ponte de mic por Bluetooth publica no PipeWire
+#: (``integrations/dualsense_bt_audio.py``): ``hefesto_dualsense_bt_<hex>``,
+#: onde ``<hex>`` são os SEIS últimos dígitos hex do MAC do controle.
+#:
+#: Ele já era descoberto por :func:`fontes_dualsense` (o nome contém
+#: "dualsense"), mas :func:`escolher_fonte` só sabia procurar MAC em nomes
+#: ``bluez_*`` — e por Bluetooth o DualSense NÃO publica placa ALSA nem source
+#: ``bluez`` (não fala A2DP/HFP; o áudio vem como Opus tunelado em HID). Com
+#: dois controles ou mais, nenhuma das duas regras casava e o medidor sumia
+#: justamente no cenário-alvo do projeto: quatro controles por Bluetooth.
+_PREFIXO_SOURCE_PONTE_BT = "hefesto_dualsense_bt_"
+
+#: Tamanho mínimo do sufixo hex aceito como identidade. Seis dígitos são os
+#: três últimos octetos do MAC — o que a ponte publica. Menos que isso não
+#: distingue controles, e a ponte tem um caminho de fallback (nó sem
+#: ``HID_UNIQ``) em que o sufixo é o nome do nó e não um MAC: por isso o
+#: sufixo também precisa ser hex INTEIRO para valer.
+_MIN_HEX_SUFIXO_BT = 6
+
 #: Formato da captura. 16 kHz mono s16le é mais que suficiente para um
 #: medidor de nível (não é gravação) e mantém o bloco pequeno: 100 ms = 3200
 #: bytes, um `read()` a cada 100 ms por controle.
@@ -106,15 +125,23 @@ def escolher_fonte(
 ) -> str | None:
     """Source atribuível ao controle `uniq` — ou None quando não dá para saber.
 
-    Duas regras, nesta ordem:
+    Três regras, nesta ordem:
 
-    1. **O nome carrega o MAC.** Sources de Bluetooth nascem como
+    1. **O nome carrega o MAC inteiro.** Sources de Bluetooth nascem como
        ``bluez_input.XX_XX_XX_XX_XX_XX``; ali o MAC está no nome e a
        atribuição é certa mesmo com vários controles. A busca por MAC é
        restrita a esses nomes DE PROPÓSITO: em nomes ALSA o "hex" que sobra
        ao filtrar letras é lixo de palavra ("Interactive" vira "eac"), e um
        casamento por acaso ali apontaria o mic do controle errado.
-    2. **Um para um.** Uma única source de DualSense e um único controle
+    2. **O nome carrega o RABO do MAC** (MIC-BT-01). A ponte de mic por
+       Bluetooth deste projeto publica ``hefesto_dualsense_bt_<hex6>``, e
+       esses seis dígitos são os três últimos octetos do MAC. O casamento é
+       por sufixo, e só quando o que vem depois do prefixo é hex INTEIRO com
+       ao menos :data:`_MIN_HEX_SUFIXO_BT` dígitos — a ponte tem um caminho
+       de fallback, para nó sem ``HID_UNIQ``, em que ali vai o nome do nó
+       (``hidraw3``) e não um MAC. Sem esta regra o medidor NUNCA aparecia
+       por Bluetooth com dois controles ou mais.
+    3. **Um para um.** Uma única source de DualSense e um único controle
        candidato: só pode ser ele.
 
     Fora disso devolve None. Dois DualSense no cabo publicam sources cujo
@@ -127,9 +154,31 @@ def escolher_fonte(
         for fonte in fontes:
             if fonte.lower().startswith("bluez") and alvo in _so_hex(fonte):
                 return fonte
+        for fonte in fontes:
+            sufixo = sufixo_da_ponte_bt(fonte)
+            if sufixo and alvo.endswith(sufixo):
+                return fonte
     if len(fontes) == 1 and len(uniqs_com_audio) == 1 and uniqs_com_audio[0] == uniq:
         return fontes[0]
     return None
+
+
+def sufixo_da_ponte_bt(fonte: str) -> str:
+    """Rabo hex do MAC no nome da source da ponte BT — "" se não for uma.
+
+    Recorta o prefixo ANTES de filtrar hex, e a ordem não é detalhe: o
+    próprio prefixo ``hefesto_dualsense_bt_`` é cheio de letras hex
+    (``e``, ``f``, ``d``, ``a``, ``b``), e passar o nome inteiro por
+    :func:`_so_hex` produziria um "MAC" com lixo do prefixo grudado na
+    frente — casamento por acaso, que é exatamente o que a regra 1 evita.
+    """
+    baixa = fonte.lower()
+    if not baixa.startswith(_PREFIXO_SOURCE_PONTE_BT):
+        return ""
+    resto = baixa[len(_PREFIXO_SOURCE_PONTE_BT) :]
+    if len(resto) < _MIN_HEX_SUFIXO_BT or _so_hex(resto) != resto:
+        return ""
+    return resto
 
 
 def _so_hex(valor: str) -> str:
@@ -519,4 +568,5 @@ __all__ = [
     "muted_de_saida",
     "nivel_para_fracao",
     "rms_de_pcm_s16le",
+    "sufixo_da_ponte_bt",
 ]
