@@ -406,8 +406,8 @@ class TestFiacaoDoBotaoNoCard:
 
 
 _PACTL_DOIS_CONTROLES_POR_BT = (
-    "40\thefesto_dualsense_bt_aabbcc\tPipeWire\ts16le 1ch 16000Hz\tIDLE\n"
-    "41\thefesto_dualsense_bt_112233\tPipeWire\ts16le 1ch 16000Hz\tIDLE\n"
+    "40\thefesto_dualsense_bt_112233\tPipeWire\ts16le 1ch 16000Hz\tIDLE\n"
+    "41\thefesto_dualsense_bt_445566\tPipeWire\ts16le 1ch 16000Hz\tIDLE\n"
     "42\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\tPipeWire\t-\tIDLE\n"
 )
 
@@ -415,25 +415,25 @@ _PACTL_DOIS_CONTROLES_POR_BT = (
 class TestFonteDaPonteBluetooth:
     def test_a_source_da_ponte_e_descoberta(self) -> None:
         assert fontes_dualsense(_PACTL_DOIS_CONTROLES_POR_BT) == [
-            "hefesto_dualsense_bt_aabbcc",
             "hefesto_dualsense_bt_112233",
+            "hefesto_dualsense_bt_445566",
         ]
 
     def test_cada_controle_casa_com_a_sua_propria_source(self) -> None:
         """O DEFEITO (D): com 2+ controles por BT o medidor nunca aparecia."""
         fontes = fontes_dualsense(_PACTL_DOIS_CONTROLES_POR_BT)
-        uniqs = ["e8:47:3a:aa:bb:cc", "e8:47:3a:11:22:33"]
+        uniqs = ["aa:bb:cc:11:22:33", "aa:bb:cc:44:55:66"]
         assert escolher_fonte(fontes, uniqs[0], uniqs) == (
-            "hefesto_dualsense_bt_aabbcc"
+            "hefesto_dualsense_bt_112233"
         )
         assert escolher_fonte(fontes, uniqs[1], uniqs) == (
-            "hefesto_dualsense_bt_112233"
+            "hefesto_dualsense_bt_445566"
         )
 
     def test_controle_sem_source_publicada_continua_sem_medidor(self) -> None:
         """Ausência é resposta: nada de apontar a source do vizinho."""
         fontes = fontes_dualsense(_PACTL_DOIS_CONTROLES_POR_BT)
-        uniqs = ["e8:47:3a:aa:bb:cc", "e8:47:3a:11:22:33", "e8:47:3a:99:88:77"]
+        uniqs = ["aa:bb:cc:11:22:33", "aa:bb:cc:44:55:66", "aa:bb:cc:77:88:99"]
         assert escolher_fonte(fontes, uniqs[2], uniqs) is None
 
     def test_o_prefixo_do_nome_nao_vira_mac_por_acidente(self) -> None:
@@ -443,8 +443,8 @@ class TestFonteDaPonteBluetooth:
         grudado na frente — casamento por acaso, que é o beco que a regra do
         `bluez_*` já evitava de propósito.
         """
-        assert sufixo_da_ponte_bt("hefesto_dualsense_bt_aabbcc") == "aabbcc"
-        assert mic_monitor._so_hex("hefesto_dualsense_bt_aabbcc") != "aabbcc"
+        assert sufixo_da_ponte_bt("hefesto_dualsense_bt_112233") == "112233"
+        assert mic_monitor._so_hex("hefesto_dualsense_bt_112233") != "aabbcc"
 
     @pytest.mark.parametrize(
         "nome",
@@ -453,7 +453,7 @@ class TestFonteDaPonteBluetooth:
             "hefesto_dualsense_bt_abc",  # curto demais para identificar
             "hefesto_dualsense_bt_",
             "alsa_input.usb-Sony_Interactive_Entertainment_DualSense-00.mono",
-            "bluez_input.E8_47_3A_AA_BB_CC",
+            "bluez_input.AA_BB_CC_11_22_33",
         ],
     )
     def test_nome_que_nao_carrega_mac_nao_vira_sufixo(self, nome: str) -> None:
@@ -462,15 +462,15 @@ class TestFonteDaPonteBluetooth:
     def test_o_fallback_sem_mac_nao_casa_com_controle_nenhum(self) -> None:
         """Dois controles e um nome sem MAC: o certo é não exibir nada."""
         fontes = ["hefesto_dualsense_bt_hidraw3", "hefesto_dualsense_bt_hidraw4"]
-        uniqs = ["e8:47:3a:aa:bb:cc", "e8:47:3a:11:22:33"]
+        uniqs = ["aa:bb:cc:11:22:33", "aa:bb:cc:44:55:66"]
         assert escolher_fonte(fontes, uniqs[0], uniqs) is None
 
     def test_o_bluez_continua_ganhando_quando_existe(self) -> None:
         """A regra do MAC inteiro vem primeiro e não foi mexida."""
-        fontes = ["hefesto_dualsense_bt_aabbcc", "bluez_input.E8_47_3A_AA_BB_CC"]
-        uniqs = ["e8:47:3a:aa:bb:cc", "e8:47:3a:11:22:33"]
+        fontes = ["hefesto_dualsense_bt_112233", "bluez_input.AA_BB_CC_11_22_33"]
+        uniqs = ["aa:bb:cc:11:22:33", "aa:bb:cc:44:55:66"]
         assert escolher_fonte(fontes, uniqs[0], uniqs) == (
-            "bluez_input.E8_47_3A_AA_BB_CC"
+            "bluez_input.AA_BB_CC_11_22_33"
         )
 
     def test_um_para_um_continua_valendo(self) -> None:

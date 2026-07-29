@@ -367,12 +367,23 @@ jobs:
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
         run: |
+          # SÓ os testes de INTERFACE, não a suíte inteira. A suíte completa já
+          # roda no `lint-test`, com o piso de cobertura; repeti-la aqui, sob
+          # Xvfb e com o GTK real carregado, custou 39% da coleta e a morte
+          # silenciosa do processo na estreia deste job (v0.3.0, 29/07) — sem
+          # traceback, que é a assinatura de OOM no runner.
+          #
+          # O critério de "teste de interface" é o mesmo da guarda: o arquivo
+          # chama `exigir_gi_real` ou usa o marcador `skip_sem_gi_real`. Assim a
+          # lista não precisa ser mantida à mão, e um arquivo novo entra sozinho
+          # no dia em que ganhar a guarda.
+          ALVOS=$(grep -rlE 'exigir_gi_real|skip_sem_gi_real' tests/unit \
+                  --include='*.py' | sort | tr '\n' ' ')
+          echo "arquivos de interface: $(echo $ALVOS | wc -w)"
+          test -n "$ALVOS" || { echo "::error::nenhum teste de interface encontrado"; exit 1; }
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
-            .venv/bin/python -m pytest tests/unit -v \
-              --continue-on-collection-errors \
-              --cov=hefesto_dualsense4unix \
-              --cov-report=term-missing \
-              --cov-fail-under=70
+            .venv/bin/python -m pytest $ALVOS -v \
+              --continue-on-collection-errors
 
   pre-commit:
     name: pre-commit run --all-files
