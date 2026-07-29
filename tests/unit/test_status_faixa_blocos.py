@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
 from hefesto_dualsense4unix.app.widgets.controller_card import (
 
     LARGURA_BARRA_GATILHO_UNICO,
+    LARGURA_CARD_ELASTICA,
     LARGURA_CARD_UNICO,
     LARGURA_GYRO_UNICO,
     TEXTO_SPEAKER_SEM_DADO,
@@ -195,18 +196,56 @@ def test_o_card_de_um_controle_nao_estica_pela_tela_inteira() -> None:
     de cada lado dos analógicos, medidos na captura maximizada). Com teto de
     largura e o card centrado, a mesma sobra vira margem da página.
 
-    A mordida: tirar o `set_size_request(LARGURA_CARD_UNICO, -1)` do card faz
-    a largura alocada saltar para a da janela e este teste cai.
+    SOM-01 trocou o teto RÍGIDO (960px fixos, com ~950px de margem morta na
+    tela dela) por um ELÁSTICO: o que este teste cobra agora é o teto de cima,
+    e o de baixo está no teste seguinte. Sem os dois lados a medida não vale —
+    um card travado em 960 passa por este assert e reprova no outro.
+
+    A mordida: tirar o corte do `do_size_allocate` faz a largura alocada saltar
+    para a da janela (1870) e este teste cai.
     """
     card = _card_na_tela_dela()
 
     largura = card.get_allocated_width()
 
-    assert largura <= LARGURA_CARD_UNICO, (
+    assert largura <= LARGURA_CARD_ELASTICA, (
         f"o card de um controle ocupa {largura}px numa tela de "
         f"{LARGURA_DA_TELA_DELA}px: ele voltou a esticar, e a sobra volta a "
         "ser buraco entre os blocos em vez de margem"
     )
+
+
+def test_o_card_de_um_controle_cresce_com_a_janela_larga() -> None:
+    """SOM-01, pedido 3 — *"permitir a expansão da janela"*.
+
+    O outro lado do teste acima, e o que ele sozinho não pega: com o teto
+    rígido de 960px o card ficava do mesmo tamanho numa janela de 1180 e numa
+    de 1920, e sobravam ~950px de margem morta na tela dela. A janela crescia
+    e o conteúdo não.
+
+    Mede o card nas DUAS larguras, e cobra as duas coisas: que ele seja maior
+    na tela larga, e que chegue ao teto elástico (crescer 10px também seria
+    "maior", e não é o que ela pediu).
+
+    A mordida: devolver `set_size_request(LARGURA_CARD_UNICO, -1)` com
+    `halign=CENTER` (o desenho da rodada anterior) faz as duas medidas
+    empatarem em 1040 e este teste cai.
+    """
+    largo = _card_na_tela_dela().get_allocated_width()
+    estreito = _card_na_tela_dela(largura=1180).get_allocated_width()
+
+    assert largo > estreito, (
+        f"o card mede {largo}px na tela de {LARGURA_DA_TELA_DELA}px e "
+        f"{estreito}px numa janela de 1180px: ele voltou a ficar travado num "
+        "número só, e a janela larga volta a ser margem morta"
+    )
+    assert largo == LARGURA_CARD_ELASTICA, (
+        f"o card devia usar o teto elástico inteiro ({LARGURA_CARD_ELASTICA}px)"
+        f" e usou {largo}px"
+    )
+    # E o piso continua valendo: numa janela estreita ele não encolhe abaixo
+    # do que o conteúdo pede, que é o número repetido no glade.
+    assert estreito >= LARGURA_CARD_UNICO
 
 
 def test_nenhum_vao_de_mais_de_200px_entre_os_blocos_da_faixa() -> None:
@@ -217,8 +256,16 @@ def test_nenhum_vao_de_mais_de_200px_entre_os_blocos_da_faixa() -> None:
     par de vizinhos. Antes da cura, o vão entre o microfone e o grid de botões
     era de 673px.
 
-    A mordida: sem o teto de largura do card, os dois vãos voltam aos 673px e
-    a mensagem de erro diz exatamente entre quais blocos.
+    **É este teste que impede o teto elástico da SOM-01 de desfazer a cura da
+    rodada anterior.** O card agora chega a 1400px na tela dela, e não a 960:
+    se o conteúdo não crescesse junto (glifos de 58px, analógicos de 140,
+    medidores maiores) e se a sobra não fosse repartida entre os TRÊS blocos da
+    faixa, os 440px a mais voltariam a ser buraco. Medido depois da leva:
+    143px de vão máximo, contra 112px antes dela e 673px antes da anterior.
+
+    A mordida: sem o teto elástico do `do_size_allocate`, os dois vãos voltam
+    aos 673px; devolvendo `expand=False` à coluna de sensores e ao grid de
+    botões, eles vão a ~215px. A mensagem de erro diz entre quais blocos.
     """
     card = _card_na_tela_dela()
 
@@ -321,6 +368,15 @@ def test_o_frame_estado_tem_a_mesma_largura_do_card() -> None:
 
     O número mora no `controller_card.py` e é repetido no glade; este teste é
     o que impede a repetição de virar mentira no dia em que um dos dois mudar.
+
+    SOM-01: o número compartilhado passou a ser o PISO dos dois (1040px, o que
+    o conteúdo do card pede depois de os desenhos crescerem).
+
+    SOM-01 (segunda passada): o `halign` do frame tem de ser `fill`. Com
+    `center` mais um mínimo declarado, o GTK3 trava o widget no número exato —
+    e o frame ficava em 1040px acima de um card que ia a 1400px, visivelmente
+    desalinhados na tela maximizada. O TETO dos dois passou a vir do MESMO
+    mecanismo: a `CaixaDeTetoElastico`, que o `app.py` põe em volta do frame.
     """
     import xml.etree.ElementTree as ET
 
@@ -333,7 +389,10 @@ def test_o_frame_estado_tem_a_mesma_largura_do_card() -> None:
         props = {
             p.get("name"): (p.text or "").strip() for p in obj.findall("property")
         }
-        assert props.get("halign") == "center"
+        assert props.get("halign") == "fill", (
+            "com halign=center o frame trava no mínimo declarado e para de "
+            "acompanhar o card — ver CaixaDeTetoElastico"
+        )
         assert props.get("width-request") == str(LARGURA_CARD_UNICO), (
             "o frame Estado e o card de um controle têm de ter a MESMA "
             f"largura: o glade pede {props.get('width-request')}px e o card, "
@@ -464,3 +523,42 @@ def test_a_bateria_do_card_sai_quando_o_frame_estado_ja_a_mostra() -> None:
     # E o valor continua sendo calculado nos dois — o card compacto é o que
     # responde pela bateria quando há 2+ controles.
     assert dois._battery_bar.get_text() == "80 %"
+
+
+def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> None:
+    """SOM-01 (segunda passada): os dois têm de casar na tela maximizada.
+
+    Este é o teste que MEDE — o de cima só lê o glade. Sem a
+    `CaixaDeTetoElastico` em volta do frame, o card vai a 1400px e o frame fica
+    no piso de 1040px: 360px de degrau, que é o que ela veria.
+    """
+    from gi.repository import Gtk
+
+    from hefesto_dualsense4unix.app.widgets.controller_card import (
+        LARGURA_CARD_ELASTICA,
+        CaixaDeTetoElastico,
+    )
+
+    frame = Gtk.Frame()
+    frame.set_halign(Gtk.Align.FILL)
+    frame.set_hexpand(True)
+    frame.set_size_request(LARGURA_CARD_UNICO, -1)
+
+    caixa = CaixaDeTetoElastico(frame)
+    janela = Gtk.OffscreenWindow()
+    caixa_externa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    caixa_externa.pack_start(caixa, False, False, 0)
+    janela.add(caixa_externa)
+    janela.set_default_size(1870, 400)
+    janela.show_all()
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    largura = frame.get_allocation().width
+    assert largura <= LARGURA_CARD_ELASTICA, (
+        f"o frame Estado esticou pela tela: {largura}px"
+    )
+    assert largura > LARGURA_CARD_UNICO, (
+        "o frame Estado ficou travado no piso e não acompanha o card: "
+        f"{largura}px, piso {LARGURA_CARD_UNICO}px"
+    )

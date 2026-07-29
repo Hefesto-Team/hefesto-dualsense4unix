@@ -136,9 +136,15 @@ def _build_diag_window_reader(store: StateStore) -> Callable[[], dict[str, Any]]
                     )
         info = reader()
         wm_class = info.get("wm_class")
+        # JANELA-CEGA-01: o MOTIVO da cegueira vem junto. Sem esta linha o
+        # campo `window_detect_reason` do IPC nasce morto — o backend calcula
+        # o motivo, o store sabe guardar, e ninguém os apresenta. `getattr`
+        # porque o reader legado (dublê de teste, callable puro) não tem o
+        # atributo, e um leitor sem diagnóstico não pode derrubar o tick.
         store.record_window_detect_read(
             _backend_name(),
             wm_class if isinstance(wm_class, str) else None,
+            reason=getattr(reader, "last_reason", None),
         )
         return info
 

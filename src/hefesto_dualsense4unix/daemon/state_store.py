@@ -30,6 +30,18 @@ from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 # manualmente, ele respeitou". Não-objetivo desta sprint torná-lo configurável.
 MANUAL_PROFILE_LOCK_SEC: float = 30.0
 
+# JANELA-CEGA-01 (28/07): tempo SEM NENHUMA leitura útil a partir do qual o
+# detector de janela passa a se declarar CEGO (`window_detect_seeing` cai; volta
+# a subir na primeira leitura útil seguinte). Cinco minutos, e não uma contagem
+# de leituras, porque a contagem mentiria: o poll é de 2 Hz e nesta máquina
+# (COSMIC/Wayland) o backend é sempre o `xlib`, que só enxerga XWayland — ficar
+# minutos com um app Wayland NATIVO em foco produz "unknown" honesto, não
+# defeito. 300 s = 600 ticks seguidos sem ver NADA: nem jogo Proton, nem Steam,
+# nem a própria GUI. Isso não acontece em uso normal; acontece quando o detector
+# está de fato cego. Escolhido curto o bastante para a cegueira aparecer no
+# estado dentro de um café, e longo o bastante para não piscar a cada leitura.
+WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
+
 # ONDA-U F1/F2 (auditoria 21/07): categorias válidas do override manual —
 # a trava deixou de ser um booleano único para que limpar uma categoria
 # (ex.: fim do "Testar motores" → "rumble") não apague as demais.
@@ -116,6 +128,13 @@ class StateStore:
         self._window_detect_current_class: str | None = None
         self._window_detect_read_monotonic: float | None = None
         self._game_window_seen_at: float | None = None
+        # JANELA-CEGA-01: carimbo (`time.monotonic`) da ÚLTIMA leitura ÚTIL e
+        # motivo da última leitura NÃO-útil. São eles que permitem a
+        # `window_detect_seeing` CAIR — a `window_detect_healthy` é um trinco de
+        # mão única por contrato (ver a property) e por isso não serve para
+        # dizer se o detector enxerga AGORA.
+        self._window_detect_last_useful_monotonic: float | None = None
+        self._window_detect_reason: str | None = None
         # UDP-TRIGGER-THRESHOLD-01: limiar (deadzone) do gatilho analógico
         # pedido por mod DSX pela instrução UDP `TriggerThreshold`, por lado.
         # 0 = sem deadzone, que é o padrão e o que valia antes desta sprint.
@@ -240,6 +259,12 @@ class StateStore:
         detector = novo episódio de observação) e, junto (NUMA-01), zera
         também a classe CRUA/monotonic/`game_window_seen_at` — um boot novo
         do detector não pode herdar o carimbo de jogo do episódio anterior.
+
+        JANELA-CEGA-01: zera igualmente o carimbo da última leitura útil e o
+        motivo da última leitura não-útil — episódio novo, contabilidade nova.
+        Detector recém-semeado ainda NÃO enxergou nada, então
+        `window_detect_seeing` nasce False mesmo com `healthy=True` (que é
+        presunção, não medição).
         """
         with self._lock:
             self._window_detect_backend = backend
@@ -248,6 +273,8 @@ class StateStore:
             self._window_detect_current_class = None
             self._window_detect_read_monotonic = None
             self._game_window_seen_at = None
+            self._window_detect_last_useful_monotonic = None
+            self._window_detect_reason = None
 
     def record_window_detect_read(
         self,
@@ -255,8 +282,17 @@ class StateStore:
         wm_class: str | None,
         *,
         now: float | None = None,
+        reason: str | None = None,
     ) -> None:
         """Registra uma leitura do detector de janela (poll do autoswitch).
+
+        JANELA-CEGA-01: `reason` é o MOTIVO de a leitura não ter sido útil,
+        vindo do backend (`XlibBackend.last_failure_reason` e irmãos, via
+        `WindowReaderDiag.last_reason`) — "sem conexão X" e "sem foco X" param
+        de colapsar no mesmo `None`. Guardado ao lado da leitura crua e
+        publicado em `window_detect_reason`; leitura ÚTIL o zera. Só é gravado
+        quando a leitura NÃO é útil: o motivo descreve a cegueira, não o
+        acerto.
 
         Semântica de `window_detect_healthy` (documentada de propósito):
         saudável = houve ao menos UMA leitura útil (wm_class != "unknown" e
@@ -288,6 +324,10 @@ class StateStore:
             if useful:
                 self._window_detect_healthy = True
                 self._window_detect_last_class = wm_class
+                self._window_detect_last_useful_monotonic = moment
+                self._window_detect_reason = None
+            else:
+                self._window_detect_reason = reason
             if steam_appid_from_wm_class(
                 wm_class if isinstance(wm_class, str) else None
             ) is not None:
@@ -383,9 +423,65 @@ class StateStore:
 
         True = ao menos 1 leitura útil desde o boot do autoswitch OU presunção
         do backend xlib (semântica completa em `record_window_detect_read`).
+
+        JANELA-CEGA-01 (28/07), AVISO EXPLÍCITO: esta flag é um TRINCO DE MÃO
+        ÚNICA — sobe e não desce dentro do mesmo episódio do detector. Isso
+        NÃO é descuido, é contrato: o único consumidor de decisão é
+        `game_signal.classify` (via `Daemon._gather_game_signal_inputs`), onde
+        `healthy=False` sem evidência de jogo classifica a autoridade de
+        exibição como `unknown` em vez de `daemon` — e a transição
+        `daemon -> unknown` dispara `replay_retained_game_outputs()`, que
+        REPINTA a lightbar com o que o jogo deixou retido. Fazer esta flag
+        decair aqui mudaria, em silêncio, a cor do controle dela no desktop.
+        Quem responde "o detector enxerga AGORA?" é `window_detect_seeing()`,
+        que decai e não decide nada. Trocar o consumidor do `game_signal` de
+        `healthy` para `seeing` é uma leva própria, com ela vendo.
         """
         with self._lock:
             return self._window_detect_healthy
+
+    def window_detect_useful_age(self, now: float | None = None) -> float | None:
+        """Idade, em segundos, da última leitura ÚTIL — None se nunca houve.
+
+        JANELA-CEGA-01. É o número que denuncia a cegueira: um detector que
+        nunca mais viu janela nenhuma tem idade que só cresce, enquanto
+        `window_detect_last_class` continua exibindo a classe sticky de
+        minutos atrás como se fosse notícia fresca. `now` injetável (monotonic)
+        para teste.
+        """
+        with self._lock:
+            carimbo = self._window_detect_last_useful_monotonic
+        if carimbo is None:
+            return None
+        momento = now if now is not None else time.monotonic()
+        return max(0.0, momento - carimbo)
+
+    def window_detect_seeing(self, now: float | None = None) -> bool:
+        """O detector enxergou janela nos últimos `WINDOW_DETECT_BLIND_AFTER_SEC`?
+
+        JANELA-CEGA-01: a resposta que `window_detect_healthy` não pode dar
+        (ver o aviso naquela property). CAI depois de
+        `WINDOW_DETECT_BLIND_AFTER_SEC` sem nenhuma leitura útil e VOLTA na
+        primeira leitura útil seguinte. Nasce False: detector recém-semeado
+        ainda não enxergou nada, e presunção não é medição. Puramente
+        observável — nenhuma decisão do daemon pende deste valor.
+        """
+        idade = self.window_detect_useful_age(now)
+        if idade is None:
+            return False
+        return idade < WINDOW_DETECT_BLIND_AFTER_SEC
+
+    @property
+    def window_detect_reason(self) -> str | None:
+        """Motivo da última leitura NÃO-útil do detector (JANELA-CEGA-01).
+
+        Vem do backend (ex.: "sem_conexao_x" x "sem_foco_x" x
+        "foco_discorda_do_net_active"): as seis causas distintas que viravam um
+        `None` só, indistinguíveis, param de se perder. None = leitura útil, ou
+        nenhum motivo registrado (chamador que ainda não repassa o `reason`).
+        """
+        with self._lock:
+            return self._window_detect_reason
 
     @property
     def window_detect_last_class(self) -> str | None:
@@ -439,6 +535,7 @@ class StateStore:
 __all__ = [
     "MANUAL_OVERRIDE_CATEGORIES",
     "MANUAL_PROFILE_LOCK_SEC",
+    "WINDOW_DETECT_BLIND_AFTER_SEC",
     "StateStore",
     "StoreSnapshot",
 ]

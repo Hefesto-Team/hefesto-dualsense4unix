@@ -707,11 +707,16 @@ def test_as_duas_legendas_de_analogico_tem_o_mesmo_numero_de_linhas(
 def test_ordem_da_faixa_poe_o_microfone_a_direita_dos_analogicos() -> None:
     """A ordem pedida, lida da ESQUERDA para a DIREITA no card montado::
 
-        [ Touchpad/Lightbar/Alto-falante | L3 | R3 | Microfone | 4x4 ]
+        [ Touchpad/Lightbar | L3 | R3 | Microfone+Alto-falante | 4x4 ]
 
     Era o oposto: o microfone nascia em x=116 e os analógicos em x=203. E ele
     tem de continuar DENTRO do card — a madrugada de 26/07 o mandou para o
     rodapé da aba, mais longe ainda do lugar pedido, e foi revertida.
+
+    SOM-01 mudou a última coluna: o microfone deixou de estar sozinho no miolo
+    e passou a dividir uma coluna de SOM com o alto-falante, que era o pedido
+    dela ("dava pra colocar o auto falante abaixo do microfone"). A ordem
+    horizontal não muda por causa disso, e é ela que este teste guarda.
     """
     card = _card_montado()
 
@@ -734,8 +739,9 @@ def test_ordem_da_faixa_poe_o_microfone_a_direita_dos_analogicos() -> None:
     )
     assert mic_fim <= grid_ini, "os botões fecham a faixa, depois do microfone"
     # Dentro do card, e não num rodapé da aba: o microfone é descendente do
-    # próprio card e mora na faixa de baixo.
-    assert card._mic_box.get_parent() is card._miolo_inferior
+    # próprio card e mora na faixa de baixo, agora pela coluna de som.
+    assert card._mic_box.get_parent() is card._coluna_audio
+    assert card._coluna_audio.get_parent() is card._miolo_inferior
     assert card._miolo_inferior.get_parent() is card._linha_inferior
 
 

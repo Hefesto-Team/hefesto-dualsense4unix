@@ -180,7 +180,11 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
         def set_window_detect_backend(self, name: Any, healthy: bool) -> None:
             self.seeds.append((name, healthy))
 
-        def record_window_detect_read(self, name: Any, wm_class: Any) -> None:
+        def record_window_detect_read(
+            self, name: Any, wm_class: Any, *, reason: Any = None
+        ) -> None:
+            # JANELA-CEGA-01: o call site de produção passa `reason=` desde
+            # 28/07 — o dublê acompanha a assinatura real do StateStore.
             self.reads.append((name, wm_class))
 
     monkeypatch.delenv("DISPLAY", raising=False)

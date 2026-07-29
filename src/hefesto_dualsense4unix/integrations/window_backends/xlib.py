@@ -25,6 +25,17 @@ _MAX_QUERY_FAILURES = 3
 #: ainda não voltou seria I/O inútil a 2 Hz.
 _RECONNECT_BACKOFF_SEC = 30.0
 
+#: JANELA-CEGA-01 (28/07): os SEIS motivos distintos pelos quais este backend
+#: devolve `None`. Antes colapsavam todos no mesmo `None` — e "sem foco X"
+#: (normal: app Wayland nativo em foco) ficava indistinguível de "backend
+#: morto" (grave: XWayland caiu). Publicados em `last_failure_reason`.
+MOTIVO_SEM_CONEXAO = "sem_conexao_x"
+MOTIVO_FOCO_SEM_ID = "foco_sem_id"
+MOTIVO_SEM_FOCO = "sem_foco_x"
+MOTIVO_FOCO_SEM_TOP_LEVEL = "foco_sem_top_level"
+MOTIVO_FOCO_DISCORDA = "foco_discorda_do_net_active"
+MOTIVO_ERRO_DE_CONSULTA = "erro_de_consulta"
+
 #: FOCO-01 (auditoria 24/07): profundidade máxima da subida na árvore X, do
 #: `focus` de `get_input_focus()` até o primeiro top-level com `WM_CLASS`. O
 #: foco quase nunca está NO top-level: ele fica numa janela-filha (a área de
@@ -70,6 +81,14 @@ class XlibBackend:
         # curso — guarda o nome do evento para logar 1x por episódio, no mesmo
         # padrão do gate UX-02 (o poll do autoswitch chama a 2 Hz).
         self._desacordo_ativo: str | None = None
+        # JANELA-CEGA-01: motivo da ÚLTIMA chamada que devolveu None (um dos
+        # MOTIVO_* acima); None depois de uma leitura bem-sucedida. Lido pelo
+        # `WindowReaderDiag` e daí para o `StateStore`/`state_full`.
+        self.last_failure_reason: str | None = None
+
+    def _sem_leitura(self, motivo: str) -> None:
+        """Marca o motivo desta leitura cega (JANELA-CEGA-01)."""
+        self.last_failure_reason = motivo
 
     def _ensure_connected(self) -> bool:
         """Conecta (ou RECONECTA, com backoff) ao display X11.
@@ -211,8 +230,13 @@ class XlibBackend:
         return None
 
     def get_active_window_info(self) -> WindowInfo | None:
-        """Retorna WindowInfo da janela ativa, ou None se indisponível."""
+        """Retorna WindowInfo da janela ativa, ou None se indisponível.
+
+        JANELA-CEGA-01: todo caminho que devolve None carimba antes o
+        `last_failure_reason` correspondente; o caminho feliz o limpa.
+        """
         if not self._ensure_connected():
+            self._sem_leitura(MOTIVO_SEM_CONEXAO)
             return None
 
         try:
@@ -244,11 +268,13 @@ class XlibBackend:
                 if not self._focus_gate_active:
                     self._focus_gate_active = True
                     logger.info("x11_focus_gate_sem_id", focus=repr(focus))
+                self._sem_leitura(MOTIVO_FOCO_SEM_ID)
                 return None
             if focus_id in (X.NONE, X.PointerRoot):
                 if not self._focus_gate_active:
                     self._focus_gate_active = True
                     logger.info("x11_focus_gate_no_x_focus", focus=focus_id)
+                self._sem_leitura(MOTIVO_SEM_FOCO)
                 return None
             self._focus_gate_active = False
 
@@ -263,6 +289,7 @@ class XlibBackend:
                 self._logar_desacordo_uma_vez(
                     "x11_foco_sem_top_level", focus=focus_id
                 )
+                self._sem_leitura(MOTIVO_FOCO_SEM_TOP_LEVEL)
                 return None
             foco_wid, win, wm_class_tuple = resolvido
 
@@ -284,6 +311,7 @@ class XlibBackend:
                     focus=foco_wid,
                     net_active=net_id,
                 )
+                self._sem_leitura(MOTIVO_FOCO_DISCORDA)
                 return None
             self._desacordo_ativo = None
 
@@ -301,6 +329,7 @@ class XlibBackend:
 
             exe_basename = _exe_basename_from_pid(pid) if pid else ""
 
+            self.last_failure_reason = None
             return WindowInfo(
                 wm_class=wm_class or "unknown",
                 pid=pid,
@@ -310,6 +339,7 @@ class XlibBackend:
             )
         except Exception as exc:
             logger.warning("x11_query_failed", err=str(exc))
+            self._sem_leitura(MOTIVO_ERRO_DE_CONSULTA)
             # Reconexão: erro de CONEXÃO derruba o Display morto na hora;
             # erro não-reconhecido só depois de N falhas consecutivas (um
             # BadWindow pontual não pode custar a conexão viva).
@@ -322,4 +352,12 @@ class XlibBackend:
             return None
 
 
-__all__ = ["XlibBackend"]
+__all__ = [
+    "MOTIVO_ERRO_DE_CONSULTA",
+    "MOTIVO_FOCO_DISCORDA",
+    "MOTIVO_FOCO_SEM_ID",
+    "MOTIVO_FOCO_SEM_TOP_LEVEL",
+    "MOTIVO_SEM_CONEXAO",
+    "MOTIVO_SEM_FOCO",
+    "XlibBackend",
+]

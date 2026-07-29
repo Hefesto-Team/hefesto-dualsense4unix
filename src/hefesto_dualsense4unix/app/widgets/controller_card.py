@@ -11,9 +11,8 @@ recebem a ajustada).
 O corpo do card ocupa DUAS linhas, montadas em código — não no Glade::
 
     [ L2 / R2 ......  |  Giroscópio ......                        ]
-    [ Touchpad     |                                              ]
-    [ Lightbar     | L3 | R3 | Microfone |          botões (4x4)  ]
-    [ Alto-falante |                                              ]
+    [ Touchpad     |                | Microfone     |             ]
+    [ Lightbar     | L3 | R3        | Alto-falante  | botões 4x4  ]
 
 Antes eram seis blocos de largura total, empilhados: o card pedia 457px de
 altura e o giroscópio caía abaixo do corte da janela. Emparelhado, o que
@@ -53,6 +52,25 @@ produziu leitura. As seis mudanças desta rodada, todas medidas na tela dela:
   entre os módulos e virou margem em volta de uma coluna de conteúdo;
 * **a bateria aparece uma vez só**: com um controle, quem fala é o frame
   "Estado"; com 2+, quem fala é cada card.
+
+SOM-01 é a terceira rodada, e vem dos três pedidos que ela fez olhando a v2
+("quase perfeito"): *"dava pra colocar o auto falante abaixo do microfone"*,
+*"aumentar e espaçar mais os botões do controle tipo x quadrado bola e
+triângulo e afins"* e *"permitir a expansão da janela"*. As três mudanças:
+
+* **o alto-falante mudou de coluna**: saiu de baixo da lightbar (coluna da
+  esquerda) e passou a ficar imediatamente ABAIXO do microfone, numa coluna de
+  som própria (:meth:`_montar_coluna_audio`). Os dois são o mesmo assunto — o
+  áudio do controle — e estavam em pontas opostas da faixa;
+* **os glifos dos botões cresceram e ganharam respiro** no card de UM controle
+  (:func:`glyph_size_unico`, :data:`GLYPH_ESPACO_UNICO`). No card compacto eles
+  ficam com o tamanho de hoje, e o motivo está em :func:`glyph_size_unico`:
+  com 2+ cards lado a lado cada px soma direto no mínimo da janela;
+* **o teto de largura virou ELÁSTICO**: o card cresce com a janela do piso
+  (:data:`LARGURA_CARD_UNICO`) até :data:`LARGURA_CARD_ELASTICA`, em vez de
+  ficar travado num número só. O que impede o vazio de voltar não é o teto e
+  sim o CONTEÚDO crescer junto — desenhos maiores e a sobra repartida entre os
+  três blocos da faixa, medida em ``test_status_faixa_blocos``.
 
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
@@ -161,16 +179,51 @@ def _escala_da_interface() -> int:
         return 0
 
 
+#: Quanto o glifo do card de UM controle é maior que o do compacto, em oitavos.
+#:
+#: SOM-01, pedido 2 — *"aumentar e espaçar mais os botões do controle tipo x
+#: quadrado bola e triângulo e afins"*. Medido na tela dela: o grid 4x4 inteiro
+#: ocupava 150x150px no canto direito de um card de 960 — os quatro símbolos que
+#: ela nomeou cabiam num quadrado de 36px cada, com 2px entre eles. Cinco
+#: terços (13/8) leva o glifo de 36 para 58px e o grid para 262px, e é o que a
+#: largura devolvida pelo teto elástico paga.
+GLYPH_FATOR_UNICO_OITAVOS: Final[int] = 13
+
+#: Respiro entre os glifos, em px: 2 no card compacto (o de hoje), 10 no de um
+#: controle. Colados, o grid lia como um bloco só; é a segunda metade do pedido
+#: ("e espaçar mais"), e ela custa 3x8=24px de largura, que só o card único tem.
+GLYPH_ESPACO_COMPACTO: Final[int] = 2
+GLYPH_ESPACO_UNICO: Final[int] = 10
+
+
 def glyph_size(escala: int | None = None) -> int:
     """Tamanho do glifo em px, DERIVADO da escala de fonte da interface.
 
     Chamada na MONTAGEM do grid (`_montar_glyphs`), nunca no import: é isso que
     faz um card novo já nascer com o tamanho da escala vigente, e é isso que o
     A/B de escala 0 contra escala 3 mede.
+
+    Este é o tamanho do card COMPACTO (2+ controles). O de um controle só sai
+    de :func:`glyph_size_unico`.
     """
     if escala is None:
         escala = _escala_da_interface()
     return GLYPH_SIZE_BASE + GLYPH_PX_POR_DEGRAU_DE_FONTE * max(0, int(escala))
+
+
+def glyph_size_unico(escala: int | None = None) -> int:
+    """Tamanho do glifo no card de UM controle — maior, e por quanto.
+
+    **Por que só aqui.** O glifo cresce onde há largura para pagá-lo. Com 2+
+    controles os cards vão lado a lado e a largura de cada um soma DIRETO no
+    mínimo da janela, sem rolagem horizontal para absorver (a folga da aba
+    inteira com dois cards é de 128px, medida em
+    `test_dois_cards_lado_a_lado_cabem_na_largura_da_janela`); no card de um
+    controle, o teto elástico devolve centenas de px, e é deles que sai o
+    tamanho novo. É a mesma decisão já escrita para a moldura dos blocos em
+    `_bloco`, aplicada ao grid de botões.
+    """
+    return glyph_size(escala) * GLYPH_FATOR_UNICO_OITAVOS // 8
 
 
 #: Sticks: 88px com card único; 70px quando há 2+ cards. Os dois encolheram
@@ -187,7 +240,11 @@ def glyph_size(escala: int | None = None) -> int:
 #: altura que ele consome vinha sobrando — a faixa que a aba dá ao card tinha
 #: 170px livres — e a metade de baixo da aba era vazio puro. Crescer o desenho
 #: usa esse vazio; espalhar os blocos por ele foi o que ela reprovou.
-STICK_SIZE_SINGLE: Final[int] = 110
+#: SOM-01: 110 -> 140 no card de um controle. O teto elástico devolve largura, e
+#: a regra desta leva é que quem cresce é o CONTEÚDO — sobra virando desenho
+#: maior, não vão entre os blocos. A altura continua cabendo: a faixa da aba
+#: tinha 140px livres antes desta rodada (medido em `orcamento`).
+STICK_SIZE_SINGLE: Final[int] = 140
 STICK_SIZE_COMPACT: Final[int] = 70
 
 #: Os dois títulos de analógico, com a quebra ESCRITA no texto.
@@ -225,7 +282,33 @@ ROTULO_STICK_DIR: Final[str] = "R3"
 #: O número tem de caber na janela no MENOR tamanho em que ela abre (1062px de
 #: mínimo medido em `test_a_janela_inteira_cabe_na_largura_de_projeto`), porque
 #: a aba Status não tem rolagem horizontal para onde fugir.
-LARGURA_CARD_UNICO: Final[int] = 960
+#:
+#: SOM-01: este número deixou de ser o teto e virou o PISO. Ele é repetido no
+#: `frame_status_estado` do glade (e a igualdade é travada por
+#: `test_status_faixa_blocos`), então continua sendo a largura da coluna de
+#: conteúdo da aba na janela do tamanho de projeto. Subiu de 960 para 1040 por
+#: uma razão medida: com os desenhos maiores desta leva o conteúdo do card pede
+#: ~1030px, e um piso ABAIXO do que o conteúdo pede não é piso nenhum — seria
+#: um número decorativo que o card ignora.
+LARGURA_CARD_UNICO: Final[int] = 1040
+
+#: Teto ELÁSTICO do card de um controle, em px.
+#:
+#: SOM-01, pedido 3 — *"permitir a expansão da janela"*. Na tela dela
+#: (maximizada em 1920) o card ficava travado nos 960px do piso e sobravam
+#: ~950px de vazio nas laterais: a janela crescia e o conteúdo não.
+#:
+#: O teto NÃO some, e o motivo é o defeito que a rodada anterior curou: sem
+#: teto nenhum o card estica pelos 1870px com ~1000px de conteúdo e a sobra vira
+#: buraco DENTRO da faixa (eram dois vãos de 673px). Elástico é o meio-termo
+#: medido: o card cresce com a janela até aqui, o conteúdo cresce junto (glifos,
+#: analógicos, medidores) e o que ainda sobra se reparte entre os três blocos da
+#: faixa em vez de virar um vão só — `test_status_faixa_blocos` cobra os 200px
+#: de vão máximo com a janela em 1920.
+#:
+#: O corte fica no `do_size_allocate`, e não num `set_size_request`: pedido de
+#: tamanho no GTK3 é MÍNIMO, não máximo — não existe "largura máxima" declarada.
+LARGURA_CARD_ELASTICA: Final[int] = 1400
 
 #: Teto da barra de gatilho e do giroscópio no card de UM controle, em px.
 #:
@@ -239,17 +322,26 @@ LARGURA_CARD_UNICO: Final[int] = 960
 #: mínimo da janela. Estes números vieram da folga medida na linha de cima do
 #: card compacto (a faixa de baixo é que manda na largura dele, e sobram ~140px
 #: na de cima) — cabem sem mexer no mínimo do card.
-LARGURA_BARRA_GATILHO_UNICO: Final[int] = 300
-LARGURA_GYRO_UNICO: Final[int] = 320
+#:
+#: SOM-01: os dois do card único subiram junto com o teto elástico (300 -> 400 e
+#: 320 -> 420). A linha de cima tem duas colunas homogêneas, então cada uma
+#: recebe metade da largura do card: com o card em 1400 elas passam a ter ~680px
+#: e os tetos antigos deixariam 380px de nada à direita de cada bloco. Os
+#: números novos continuam abaixo da metade do PISO ((1040-40)/2 = 500), que é o
+#: que impede a linha de cima de virar quem manda no mínimo do card.
+LARGURA_BARRA_GATILHO_UNICO: Final[int] = 400
+LARGURA_GYRO_UNICO: Final[int] = 420
 LARGURA_BARRA_GATILHO_COMPACTO: Final[int] = 200
 LARGURA_GYRO_COMPACTO: Final[int] = 220
 
 #: Tamanhos dos desenhos no card de UM controle (o compacto usa os do
 #: `sensor_widgets`). Mesma troca do analógico: a altura sobrava e a metade de
 #: baixo da aba era vazia.
-_TOUCHPAD_PX_UNICO: Final[tuple[int, int]] = (140, 60)
-_MIC_METER_PX_UNICO: Final[tuple[int, int]] = (140, 44)
-_BARRA_FINA_PX_UNICO: Final[tuple[int, int]] = (120, 14)
+#: SOM-01: cresceram de novo, e pelo mesmo motivo do teto elástico — a largura
+#: que a janela larga devolve tem de virar desenho, não vão.
+_TOUCHPAD_PX_UNICO: Final[tuple[int, int]] = (180, 80)
+_MIC_METER_PX_UNICO: Final[tuple[int, int]] = (180, 56)
+_BARRA_FINA_PX_UNICO: Final[tuple[int, int]] = (160, 18)
 
 #: Estado do microfone dito em palavras, ao lado do medidor.
 #:
@@ -786,14 +878,42 @@ if _GTK_DISPONIVEL:
         # Montagem da UI (uma vez, no __init__)
         # ------------------------------------------------------------------
 
+        def do_size_allocate(self, allocation: Any) -> None:
+            """Teto ELÁSTICO do card de um controle (SOM-01, pedido 3).
+
+            O GTK3 não tem largura máxima: `set_size_request` declara o
+            MÍNIMO, e `halign=CENTER` com um mínimo declarado trava o widget
+            naquele número exato — era assim que o card ficava em 960px com a
+            janela em 1920 e sobravam ~950px de margem morta.
+
+            Aqui o card aceita toda a largura que a aba der até
+            :data:`LARGURA_CARD_ELASTICA` e devolve o excedente como margem,
+            centrando-se. Abaixo do teto ele cresce junto com a janela, que é
+            o pedido; acima dele para de crescer, que é o que impede a sobra
+            de voltar a virar buraco entre os blocos.
+
+            A alocação recebida NÃO é mutada: ela é a variável local do
+            `gtk_widget_size_allocate` do pai, usada depois para o clip. O
+            corte vai numa CÓPIA (`.copy()` do próprio retângulo, que já é um
+            `Gdk.Rectangle` — sem import novo neste módulo).
+            """
+            if not self._compact and allocation.width > LARGURA_CARD_ELASTICA:
+                sobra = allocation.width - LARGURA_CARD_ELASTICA
+                cortado = allocation.copy()
+                cortado.x = allocation.x + sobra // 2
+                cortado.width = LARGURA_CARD_ELASTICA
+                allocation = cortado
+            Gtk.Frame.do_size_allocate(self, allocation)
+
         def _montar_ui(self) -> None:
             if not self._compact:
-                # Card de UM controle: largura com teto e centrado na aba.
-                # Sem isto ele estica pelos 1870px da tela maximizada e a
-                # sobra vira buraco DENTRO da faixa — o defeito 4 da
-                # STATUS-SIMETRIA-02, não margem de página.
+                # Card de UM controle: PISO de largura, e teto elástico no
+                # `do_size_allocate`. O `halign` fica em FILL de propósito —
+                # com CENTER o card recebe exatamente o mínimo pedido e para
+                # de crescer, que é o defeito que a SOM-01 veio curar.
                 self.set_size_request(LARGURA_CARD_UNICO, -1)
-                self.set_halign(Gtk.Align.CENTER)
+                self.set_halign(Gtk.Align.FILL)
+                self.set_hexpand(True)
             header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
             swatch = Gtk.DrawingArea()
             swatch.set_size_request(14, 14)
@@ -1052,49 +1172,48 @@ if _GTK_DISPONIVEL:
             """A faixa de leitura ao vivo, na ordem que a mantenedora pediu.
 
             STATUS-SIMETRIA-01 — *"a área do mic que deveria ficar à direita
-            dos analógicos"*::
+            dos analógicos"*; SOM-01 — *"dava pra colocar o auto falante abaixo
+            do microfone"*::
 
-                [ Touchpad     ]                             [ ]  [ ]  [ ]  [ ]
-                [ Lightbar     ] [ L3 ] [ R3 ] [ Microfone ] [ ]  [ ]  [ ]  [ ]
-                [ Alto-falante ]                             [ ]  [ ]  [ ]  [ ]
-                                                             [ ]  [ ]  [ ]  [ ]
+                [ Touchpad ]                 [ Microfone    ] [ ] [ ] [ ] [ ]
+                [ Lightbar ] [ L3 ] [ R3 ]   [ Alto-falante ] [ ] [ ] [ ] [ ]
+                                                              [ ] [ ] [ ] [ ]
+                                                              [ ] [ ] [ ] [ ]
 
             O microfone continua DENTRO do card — a madrugada de 26/07 o mandou
             para o rodapé da aba, que é o oposto do pedido, e foi revertida.
 
-            Os três módulos que sobraram à esquerda ficam EMPILHADOS, e não em
-            duas fileiras de dois. É a troca que paga a coluna do microfone e o
-            glifo maior: em duas fileiras a coluna pedia 163px (a fileira
-            "lightbar + alto-falante" mandava na largura); empilhada ela pede
-            88px, e os 75px devolvidos são exatamente da ordem de grandeza da
-            coluna nova do microfone. A altura sobe ~30px, e altura é o que
-            sobra nesta faixa — a restrição dura aqui é LARGURA, porque dois
-            cards lado a lado somam direto no mínimo da janela e a aba Status
-            não tem rolagem horizontal para onde fugir.
-
             Cada módulo se esconde SOZINHO quando não há sensor: nenhum deles
             arrasta o vizinho, e nenhum deles leva os botões junto (a armadilha
             de LEGIBILIDADE-01, quando o grid morava dentro da linha que sumia).
+
+            **A sobra de largura se reparte entre os TRÊS blocos da faixa.**
+            Os três filhos entram com ``expand=True, fill=False``: cada um
+            recebe um terço do excedente e fica CENTRADO no próprio pedaço, de
+            modo que o que sobra vira o mesmo respiro em toda a faixa. Com a
+            sobra indo só para o miolo (o que valia antes do teto elástico),
+            ela se acumulava em dois vãos — e com o card podendo chegar a
+            1400px seriam ~270px de nada de cada lado, acima do aceite de 200px
+            que `test_status_faixa_blocos` cobra. `fill=False` é o que mantém
+            os blocos com a largura do conteúdo: com `fill=True` a moldura de
+            cada um esticaria e o vazio voltaria para DENTRO dos blocos.
             """
             linha = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL,
                 spacing=self._espaco,
             )
 
-            linha.pack_start(self._montar_coluna_sensores(), False, False, 0)
-            # O miolo — os dois analógicos e o microfone COLADO à direita deles,
-            # que é o pedido ao pé da letra. Vai empacotado com
-            # `expand=True, fill=False`: a sobra de largura do card se reparte
-            # nos dois lados do miolo em vez de virar um buraco só (medido no
-            # card de um controle: 764px de vazio entre o fim dos analógicos e o
-            # começo do grid). `fill=False` mantém os três blocos juntos —
-            # esticar a caixa afastaria o microfone dos analógicos de novo.
+            linha.pack_start(self._montar_coluna_sensores(), True, False, 0)
+            # O miolo — os dois analógicos e a coluna do som COLADA à direita
+            # deles, que é o pedido ao pé da letra. `fill=False` mantém os
+            # blocos juntos: esticar a caixa afastaria o microfone dos
+            # analógicos de novo.
             miolo = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL,
                 spacing=self._espaco,
             )
             miolo.pack_start(self._montar_sticks(), False, False, 0)
-            miolo.pack_start(self._montar_mic(), False, False, 0)
+            miolo.pack_start(self._montar_coluna_audio(), False, False, 0)
             self._miolo_inferior = miolo
             linha.pack_start(miolo, True, False, 0)
             # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
@@ -1103,20 +1222,51 @@ if _GTK_DISPONIVEL:
             # vez que um módulo de sensor entra ou sai.
             glyphs = self._montar_glyphs()
             glyphs.set_halign(Gtk.Align.END)
-            linha.pack_end(glyphs, False, False, 0)
+            linha.pack_end(glyphs, True, False, 0)
             self._linha_inferior = linha
             return linha
 
         def _montar_coluna_sensores(self) -> Any:
-            """Coluna da esquerda: touchpad, lightbar e alto-falante empilhados."""
+            """Coluna da esquerda: touchpad e lightbar empilhados.
+
+            SOM-01: o alto-falante saiu daqui e foi para baixo do microfone
+            (`_montar_coluna_audio`). Ele estava nesta coluna por herança da
+            rodada que empilhou o que sobrava à esquerda, não porque o assunto
+            fosse esse: som e cor não têm relação, e o microfone — que é o par
+            dele — ficava do outro lado da faixa.
+            """
             coluna = Gtk.Box(
                 orientation=Gtk.Orientation.VERTICAL,
                 spacing=self._espaco // 2,
             )
             coluna.pack_start(self._montar_touchpad(), False, False, 0)
             coluna.pack_start(self._montar_lightbar(), False, False, 0)
-            coluna.pack_start(self._montar_speaker(), False, False, 0)
+            coluna.set_valign(Gtk.Align.START)
             self._coluna_sensores = coluna
+            return coluna
+
+        def _montar_coluna_audio(self) -> Any:
+            """Coluna do SOM: microfone e, logo abaixo dele, o alto-falante.
+
+            SOM-01, pedido 1 — *"dava pra colocar o auto falante abaixo do
+            microfone"*. Os dois são o mesmo assunto (o áudio do controle) e
+            estavam em pontas opostas da faixa: o alto-falante embaixo da
+            lightbar, na coluna da esquerda, e o microfone à direita dos
+            analógicos.
+
+            A coluna alinha pelo TOPO (`valign=START`) como as vizinhas: sem
+            isso o microfone desceria para o meio da faixa quando o grid de
+            botões — que é o bloco mais alto — crescesse, e os títulos das
+            molduras deixariam de se ler na mesma linha.
+            """
+            coluna = Gtk.Box(
+                orientation=Gtk.Orientation.VERTICAL,
+                spacing=self._espaco // 2,
+            )
+            coluna.pack_start(self._montar_mic(), False, False, 0)
+            coluna.pack_start(self._montar_speaker(), False, False, 0)
+            coluna.set_valign(Gtk.Align.START)
+            self._coluna_audio = coluna
             return coluna
 
         def _montar_touchpad(self) -> Any:
@@ -1392,12 +1542,22 @@ if _GTK_DISPONIVEL:
             O tamanho sai de `glyph_size()`, lido AQUI (na montagem) e não do
             módulo: card montado com a escala 3 nasce com glifo de 36px, e com
             a escala 0, de 24px.
+
+            SOM-01 — *"aumentar e espaçar mais os botões do controle tipo x
+            quadrado bola e triângulo e afins"*. No card de UM controle o
+            tamanho passa por `glyph_size_unico` (36 -> 58px na escala desta
+            casa) e o respiro sobe de 2 para 10px: o grid sai de 150x150 para
+            262x262. No compacto os dois números são os de hoje, e o motivo
+            medido está em `glyph_size_unico`.
             """
-            tamanho = glyph_size()
+            tamanho = glyph_size() if self._compact else glyph_size_unico()
+            espaco = (
+                GLYPH_ESPACO_COMPACTO if self._compact else GLYPH_ESPACO_UNICO
+            )
             self._glyph_size = tamanho
             glyph_grid = Gtk.Grid()
-            glyph_grid.set_row_spacing(2)
-            glyph_grid.set_column_spacing(2)
+            glyph_grid.set_row_spacing(espaco)
+            glyph_grid.set_column_spacing(espaco)
             glyph_grid.set_halign(Gtk.Align.CENTER)
             glyph_grid.set_valign(Gtk.Align.CENTER)
             for row, linha in enumerate(GRID_BOTOES):
@@ -1818,7 +1978,46 @@ if _GTK_DISPONIVEL:
             ctx.stroke()
             return False
 
+    class CaixaDeTetoElastico(Gtk.Bin):  # type: ignore[misc]
+        """Dá a um widget do glade o MESMO teto elástico do card.
+
+        SOM-01 deu ao card de um controle um teto que cresce com a janela até
+        :data:`LARGURA_CARD_ELASTICA`. O `frame_status_estado` do glade ficou
+        de fora — ele não tem código nosso, e a única alavanca de um widget de
+        glade é `width-request`, que é MÍNIMO e sobe intacto até a janela.
+        Resultado medido na captura de 1870px: um frame Estado de 1040px em
+        cima de um card de 1400px, visivelmente desalinhados.
+
+        Esta caixa resolve pelo mesmo mecanismo do card, em vez de por um
+        segundo: ela aceita toda a largura que a aba der, corta no teto e
+        devolve o excedente como margem, centrando o filho. Quem estiver
+        abaixo do teto cresce junto com a janela.
+        """
+
+        def __init__(self, filho: Any) -> None:
+            super().__init__()
+            self.set_halign(Gtk.Align.FILL)
+            self.set_hexpand(True)
+            self.add(filho)
+
+        def do_size_allocate(self, allocation: Any) -> None:
+            if allocation.width > LARGURA_CARD_ELASTICA:
+                sobra = allocation.width - LARGURA_CARD_ELASTICA
+                cortado = allocation.copy()
+                cortado.x = allocation.x + sobra // 2
+                cortado.width = LARGURA_CARD_ELASTICA
+                allocation = cortado
+            Gtk.Bin.do_size_allocate(self, allocation)
+
+
 else:
+
+    class CaixaDeTetoElastico:  # type: ignore[no-redef]
+        """Stub sem GTK3 — a caixa só existe para layout."""
+
+        def __init__(self, filho: Any) -> None:
+            self.filho = filho
+
 
     class ControllerCard:  # type: ignore[no-redef]
         """Stub para ambientes sem GTK3 (testes/CI sem display).
@@ -1885,12 +2084,16 @@ __all__ = [
     "DICA_MIC_DEVOLVER",
     "DICA_MIC_SEM_LEITURA",
     "DICA_MIC_SILENCIAR",
+    "GLYPH_ESPACO_COMPACTO",
+    "GLYPH_ESPACO_UNICO",
+    "GLYPH_FATOR_UNICO_OITAVOS",
     "GLYPH_PX_POR_DEGRAU_DE_FONTE",
     "GLYPH_SIZE_BASE",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
     "LARGURA_BARRA_GATILHO_COMPACTO",
     "LARGURA_BARRA_GATILHO_UNICO",
+    "LARGURA_CARD_ELASTICA",
     "LARGURA_CARD_UNICO",
     "LARGURA_GYRO_COMPACTO",
     "LARGURA_GYRO_UNICO",
@@ -1907,10 +2110,12 @@ __all__ = [
     "TEXTO_MIC_SEM_MUTE",
     "TEXTO_SPEAKER_SEM_DADO",
     "AcaoMic",
+    "CaixaDeTetoElastico",
     "ControllerCard",
     "acao_mic",
     "accent_do_card",
     "glyph_size",
+    "glyph_size_unico",
     "gyro_do_inputs",
     "rotulo_lightbar",
     "speaker_do_entry",
