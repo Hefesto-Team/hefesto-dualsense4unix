@@ -2612,9 +2612,9 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkLabel"><property name="label" translatable="yes">Emulação</property></object>
             </child>
 
-            <!-- Aba "Usar como mouse" (PALAVRA-01: chamava-se "Navegação DSX";
-                 DSX é nome de um programa de outra casa e não dizia o que a aba
-                 faz. O id `tab_navegacao_dsx` NÃO muda — perfil salvo e mapa de
+            <!-- Aba "Navegação" (PALAVRA-01: chamava-se "Navegação DSX"; DSX é
+                 nome de um programa de outra casa. Passou por "Usar como mouse"
+                 e ela pediu, em 28/07, o nome curto. O id `tab_navegacao_dsx` NÃO muda — perfil salvo e mapa de
                  páginas continuam valendo) — Mouse e Teclado lado a lado.
                  As duas ja viveram numa aba só ("Mouse e Teclado") e foram
                  SEPARADAS de propósito: empilhadas, a soma de mapeamento +
@@ -2961,7 +2961,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               </object>
             </child>
             <child type="tab">
-              <object class="GtkLabel"><property name="label" translatable="yes">Usar como mouse</property></object>
+              <object class="GtkLabel"><property name="label" translatable="yes">Navegação</property></object>
             </child>
 
           </object>

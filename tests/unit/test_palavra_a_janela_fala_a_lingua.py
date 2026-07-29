@@ -187,7 +187,7 @@ def test_nenhuma_aba_carrega_nome_de_produto_de_terceiro() -> None:
 
 
 def test_a_aba_do_mouse_diz_o_que_faz() -> None:
-    assert "Usar como mouse" in _rotulos_de_aba()
+    assert "Navegação" in _rotulos_de_aba()
 
 
 def test_nenhum_texto_visivel_da_janela_diz_dsx() -> None:
