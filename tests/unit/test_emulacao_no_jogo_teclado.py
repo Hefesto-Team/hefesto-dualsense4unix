@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from pathlib import Path
 from typing import Any, ClassVar
 from unittest.mock import MagicMock
@@ -39,6 +40,12 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import keyboard as kbd_mod
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session
+
+
+#: Tiques de poll que o cenário precisa completar para que o gate de despacho
+#: tenha sido exercitado de verdade. Baixo de propósito: o que importa é que o
+#: laço RODOU, não que rodou rápido.
+TIQUES_MINIMOS = 3
 
 
 @pytest.fixture()
@@ -456,10 +463,23 @@ async def _um_tique_com_r1(
     daemon._steam_input_vpad_suspenso = vpad_suspenso  # type: ignore[attr-defined]
 
     task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.06)
+    # ESPERA POR CONDIÇÃO, não por relógio. A primeira versão dormia 0,06 s fixo
+    # e conferia `poll.tick >= 3` depois — com 200 Hz isso "deveria" dar doze
+    # tiques. Passou aqui, passou no CI em 3.11 e 3.12, e REPROVOU em 3.10 no
+    # mesmo run da tag v0.4.0: runner carregado não garante fatia de CPU, e o
+    # agendamento de tasks do asyncio mudou entre as versões. Teste de gate de
+    # despacho não pode depender de quanto o runner estava ocupado.
+    limite = time.monotonic() + 5.0
+    while daemon.store.counter("poll.tick") < TIQUES_MINIMOS:
+        if time.monotonic() > limite:
+            break
+        await asyncio.sleep(0.002)
     daemon.stop()
     await task
-    assert daemon.store.counter("poll.tick") >= 3
+    assert daemon.store.counter("poll.tick") >= TIQUES_MINIMOS, (
+        "o poll loop não completou os tiques mínimos em 5 s — o cenário não "
+        "chegou a ser exercitado, então nada abaixo prova coisa alguma"
+    )
     return despachos
 
 
