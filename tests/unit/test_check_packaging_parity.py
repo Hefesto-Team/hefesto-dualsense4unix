@@ -20,6 +20,22 @@ SCRIPT_REL_PATH = "scripts/check_packaging_parity.sh"
 
 RULE = "79-teste-parity.rules"
 
+#: build_deb.sh fake no molde do real: UMA lista de globs consumida pelos DOIS
+#: destinos (diretório vivo /usr/lib/udev/rules.d + espelho
+#: /usr/share/hefesto-dualsense4unix/udev-rules).
+_BUILD_DEB_DOIS_DESTINOS = """\
+UDEV_RULES_GLOBS=(
+    assets/79-*.rules
+)
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
+    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
+done
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
+    install -Dm644 "$rules_file" \
+        "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/"
+done
+"""
+
 
 @pytest.fixture
 def fake_repo(tmp_path: Path) -> Path:
@@ -38,6 +54,8 @@ def fake_repo(tmp_path: Path) -> Path:
     (tmp_path / "scripts").mkdir()
     (tmp_path / "assets").mkdir()
     (tmp_path / "flatpak").mkdir()
+    (tmp_path / "packaging" / "arch").mkdir(parents=True)
+    (tmp_path / "packaging" / "fedora").mkdir(parents=True)
     dst_script = tmp_path / SCRIPT_REL_PATH
     shutil.copy2(src_script, dst_script)
     dst_script.chmod(0o755)
@@ -52,9 +70,20 @@ def fake_repo(tmp_path: Path) -> Path:
     (tmp_path / "scripts" / "install-host-udev.sh").write_text(
         f'RULES=("{RULE}")\n', encoding="utf-8"
     )
+    # BUG-DEB-MIRROR-RULES-INCOMPLETO-01: o .deb tem DOIS destinos (o
+    # diretório vivo e o espelho /usr/share/.../udev-rules, que o
+    # install-host-udev.sh prefere e exige completo). O contrato agora é uma
+    # lista ÚNICA (UDEV_RULES_GLOBS) consumida pelos dois laços.
     (tmp_path / "scripts" / "build_deb.sh").write_text(
-        'for rules_file in assets/79-*.rules; do cp "$rules_file" x; done\n',
-        encoding="utf-8",
+        _BUILD_DEB_DOIS_DESTINOS, encoding="utf-8"
+    )
+    # A cobertura de Arch e Fedora entrou no mesmo contrato (a ausência das
+    # 82/83/84 nesses dois nunca reprovava — eles ficavam fora do bloco).
+    (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(
+        f"    assets/{RULE} \\\n", encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        f"    assets/{RULE}\n", encoding="utf-8"
     )
     (tmp_path / "uninstall.sh").write_text(
         f"sudo rm -f /etc/udev/rules.d/{RULE}\n", encoding="utf-8"
@@ -100,6 +129,97 @@ def test_regra_fora_do_build_deb_falha(fake_repo: Path) -> None:
     result = run_check(fake_repo)
     assert result.returncode == 1
     assert "scripts/build_deb.sh" in result.stdout
+
+
+def test_regra_fora_do_pkgbuild_falha(fake_repo: Path) -> None:
+    """Arch ficava FORA do bloco udev — é por isso que a ausência das 82/83/84
+    no PKGBUILD nunca reprovou (o bloco de modprobe.d ao lado já o cobria)."""
+    (fake_repo / "packaging" / "arch" / "PKGBUILD").write_text(
+        "# sem nenhuma regra\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert f"[FAIL] {RULE}" in result.stdout
+    assert "packaging/arch/PKGBUILD" in result.stdout
+
+
+def test_regra_fora_do_spec_fedora_falha(fake_repo: Path) -> None:
+    """Idem para o spec do Fedora — mesma assimetria."""
+    (fake_repo / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        "# sem nenhuma regra\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert f"[FAIL] {RULE}" in result.stdout
+    assert "packaging/fedora/hefesto-dualsense4unix.spec" in result.stdout
+
+
+def test_espelho_do_deb_com_glob_proprio_defasado_falha(fake_repo: Path) -> None:
+    """O FURO REAL: o build_deb.sh copiava a regra para o diretório VIVO por um
+    glob e populava o ESPELHO (/usr/share/.../udev-rules, que o
+    install-host-udev.sh prefere e exige COMPLETO) por um segundo glob, que
+    parava na 81. O gate antigo só perguntava se "assets/NN-*.rules" aparecia em
+    ALGUM lugar do arquivo — o glob do diretório vivo satisfazia e o espelho
+    incompleto ficava invisível, enquanto a ativação inteira do .deb abortava.
+    """
+    (fake_repo / "scripts" / "build_deb.sh").write_text(
+        # Destino VIVO cobre a regra...
+        'for rules_file in assets/79-*.rules; do\n'
+        '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
+        "done\n"
+        # ...e o ESPELHO tem glob PRÓPRIO que a deixa de fora.
+        'for rules_file in assets/70-*.rules; do\n'
+        '    install -Dm644 "$rules_file" \\\n'
+        '        "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/"\n'
+        "done\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "[FAIL] scripts/build_deb.sh" in result.stdout
+    assert "UDEV_RULES_GLOBS" in result.stdout
+
+
+def test_espelho_do_deb_fora_da_lista_unica_falha(fake_repo: Path) -> None:
+    """Com a lista única declarada, o espelho ainda pode ser desligado dela —
+    e aí um dos dois destinos volta a andar sozinho. O gate cobra que os DOIS
+    laços consumam a MESMA lista."""
+    (fake_repo / "scripts" / "build_deb.sh").write_text(
+        "UDEV_RULES_GLOBS=(\n"
+        "    assets/79-*.rules\n"
+        ")\n"
+        'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
+        '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
+        "done\n"
+        'for rules_file in assets/70-*.rules; do\n'
+        '    install -Dm644 "$rules_file" \\\n'
+        '        "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/"\n'
+        "done\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "[FAIL] scripts/build_deb.sh" in result.stdout
+    assert "1x" in result.stdout
+
+
+def test_regra_so_no_espelho_sem_diretorio_vivo_falha(fake_repo: Path) -> None:
+    """Simetria do anterior: sumir com o espelho também reprova."""
+    (fake_repo / "scripts" / "build_deb.sh").write_text(
+        "UDEV_RULES_GLOBS=(\n"
+        "    assets/79-*.rules\n"
+        ")\n"
+        'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
+        '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
+        "done\n"
+        'for rules_file in "${UDEV_RULES_GLOBS[@]}"; do\n'
+        '    cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"\n'
+        "done\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 1
+    assert "espelho udev-rules ausente" in result.stdout
 
 
 def test_regra_fora_do_uninstall_falha(fake_repo: Path) -> None:
@@ -466,4 +586,252 @@ def test_dkms_nintendo_parity_do_repo_real_esta_verde() -> None:
         "== paridade da cura DKMS (assets/dkms/hid-nintendo", 1
     )
     assert len(secao) == 2, "seção do dkms hid-nintendo ausente na saída"
+    assert "[FAIL]" not in secao[1].split("== ", 1)[0]
+
+
+# --- Contencao BT: o TERCEIRO módulo DKMS (hid-playstation) -------------------
+#
+# Os dois blocos irmãos (hid-nintendo, rtw88-usb) gateiam fontes + helper +
+# REMOCAO em todo formato; o hid-playstation nunca ganhou o seu, e o furo era o
+# pior dos três: o dkms.conf dele tem AUTOINSTALL="yes", entao ele sobrevivia ao
+# `apt remove`/`pacman -R` REGISTRADO, se reconstruia a cada kernel novo e
+# vencia o in-tree para sempre. So o %preun do Fedora desregistrava.
+
+_DKMS_REMOVE_PLAYSTATION = 'dkms remove "hefesto-hid-playstation/1.0.0" --all\n'
+
+
+@pytest.fixture
+def fake_repo_dkms_playstation(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+
+    for d in (
+        "scripts",
+        "assets/dkms/hid-playstation",
+        "packaging/arch",
+        "packaging/debian",
+        "packaging/fedora",
+        "flatpak",
+    ):
+        (tmp_path / d).mkdir(parents=True)
+
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+
+    # Asset que ARMA a seção (a presença basta).
+    (tmp_path / "assets" / "dkms" / "hid-playstation" / "dkms.conf").write_text(
+        'AUTOINSTALL="yes"\n', encoding="utf-8"
+    )
+    fontes = "# dkms/hid-playstation + dkms_lib.sh\n"
+    (tmp_path / "scripts" / "build_deb.sh").write_text(fontes, encoding="utf-8")
+    (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(fontes, encoding="utf-8")
+    (tmp_path / "flatpak" / "fake-dkms.yml").write_text(fontes, encoding="utf-8")
+    (tmp_path / "scripts" / "install-host-udev.sh").write_text(
+        "dkms_install_patched_module hefesto-hid-playstation\n", encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        fontes + _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "debian" / "prerm").write_text(
+        _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "debian" / "postrm").write_text(
+        _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "arch" / "hefesto-dualsense4unix.install").write_text(
+        _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
+    )
+    (tmp_path / "uninstall.sh").write_text(
+        _DKMS_REMOVE_PLAYSTATION, encoding="utf-8"
+    )
+    return tmp_path
+
+
+def test_dkms_playstation_coberto_em_todos_passa(
+    fake_repo_dkms_playstation: Path,
+) -> None:
+    result = run_check(fake_repo_dkms_playstation)
+    assert result.returncode == 0, result.stdout
+    assert "[ OK ] dkms hid-playstation" in result.stdout
+
+
+def test_dkms_playstation_sem_asset_pula_sem_falhar(tmp_path: Path) -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    (tmp_path / "scripts").mkdir()
+    (tmp_path / "assets").mkdir()
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+    result = run_check(tmp_path)
+    secao = result.stdout.split(
+        "== paridade da cura DKMS (assets/dkms/hid-playstation", 1
+    )
+    assert len(secao) == 2, "seção do dkms hid-playstation ausente na saída"
+    assert "[FAIL]" not in secao[1].split("== ", 1)[0]
+
+
+def test_dkms_playstation_sem_remocao_no_prerm_falha(
+    fake_repo_dkms_playstation: Path,
+) -> None:
+    """O falso-verde: prerm do .deb sem `dkms remove` do hid-playstation passava
+    (o gate nunca ganhou o terceiro módulo) e o `apt remove` deixava o patchado
+    registrado, com AUTOINSTALL=yes, vencendo o in-tree para sempre."""
+    (fake_repo_dkms_playstation / "packaging" / "debian" / "prerm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_dkms_playstation)
+    assert result.returncode == 1
+    assert "[FAIL] dkms hid-playstation" in result.stdout
+    assert "packaging/debian/prerm(remoção)" in result.stdout
+
+
+def test_dkms_playstation_sem_remocao_no_postrm_falha(
+    fake_repo_dkms_playstation: Path,
+) -> None:
+    (fake_repo_dkms_playstation / "packaging" / "debian" / "postrm").write_text(
+        "# nada\n", encoding="utf-8"
+    )
+    result = run_check(fake_repo_dkms_playstation)
+    assert result.returncode == 1
+    assert "packaging/debian/postrm(remoção)" in result.stdout
+
+
+def test_dkms_playstation_sem_remocao_no_install_arch_falha(
+    fake_repo_dkms_playstation: Path,
+) -> None:
+    (
+        fake_repo_dkms_playstation
+        / "packaging"
+        / "arch"
+        / "hefesto-dualsense4unix.install"
+    ).write_text("# nada\n", encoding="utf-8")
+    result = run_check(fake_repo_dkms_playstation)
+    assert result.returncode == 1
+    assert "packaging/arch/hefesto-dualsense4unix.install(remoção)" in result.stdout
+
+
+def test_dkms_playstation_parity_do_repo_real_esta_verde() -> None:
+    """No repo REAL, a seção do hid-playstation não pode ter [FAIL]."""
+    repo_root = Path(__file__).resolve().parents[2]
+    if not (repo_root / SCRIPT_REL_PATH).exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    result = subprocess.run(
+        ["bash", SCRIPT_REL_PATH],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    secao = result.stdout.split(
+        "== paridade da cura DKMS (assets/dkms/hid-playstation", 1
+    )
+    assert len(secao) == 2, "seção do dkms hid-playstation ausente na saída"
+    assert "[FAIL]" not in secao[1].split("== ", 1)[0]
+
+
+# --- PACKAGING-ICON-NAME-MISMATCH-01: Icon= do .desktop do APLICATIVO ---------
+#
+# O bloco de Icon= do gate só olhava applet COSMIC: o
+# `grep -q '^X-CosmicApplet=true' || continue` PULAVA justamente o .desktop do
+# aplicativo principal. Resultado: ele pede `Icon=hefesto` e três dos cinco
+# formatos instalavam o PNG como hefesto-dualsense4unix.png — lancador sem
+# icone, e nenhum gate reprovava.
+
+_DESKTOP_APP = (
+    "[Desktop Entry]\n"
+    "Name=Hefesto - Dualsense4Unix\n"
+    "Exec=/usr/bin/hefesto-dualsense4unix-gui\n"
+    "Icon=hefesto\n"
+    "Type=Application\n"
+)
+
+
+@pytest.fixture
+def fake_repo_icone(tmp_path: Path) -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    src_script = repo_root / SCRIPT_REL_PATH
+    if not src_script.exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+
+    for d in ("scripts", "assets", "packaging/arch", "packaging/fedora", "packaging/nix"):
+        (tmp_path / d).mkdir(parents=True)
+    dst_script = tmp_path / SCRIPT_REL_PATH
+    shutil.copy2(src_script, dst_script)
+    dst_script.chmod(0o755)
+
+    (tmp_path / "packaging" / "hefesto-dualsense4unix.desktop").write_text(
+        _DESKTOP_APP, encoding="utf-8"
+    )
+    ok = "install -Dm644 icone.png /usr/share/icons/hicolor/256x256/apps/hefesto.png\n"
+    (tmp_path / "scripts" / "build_deb.sh").write_text(ok, encoding="utf-8")
+    (tmp_path / "packaging" / "arch" / "PKGBUILD").write_text(ok, encoding="utf-8")
+    (tmp_path / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        ok, encoding="utf-8"
+    )
+    (tmp_path / "packaging" / "nix" / "package.nix").write_text(ok, encoding="utf-8")
+    return tmp_path
+
+
+def test_icone_alinhado_em_todos_os_formatos_passa(fake_repo_icone: Path) -> None:
+    result = run_check(fake_repo_icone)
+    assert result.returncode == 0, result.stdout
+    assert "Icon=hefesto casa o PNG de todos os formatos" in result.stdout
+
+
+def test_icone_com_nome_diferente_no_pkgbuild_falha(fake_repo_icone: Path) -> None:
+    """O furo medido: PKGBUILD instalava apps/${pkgname}.png com o .desktop
+    pedindo Icon=hefesto."""
+    (fake_repo_icone / "packaging" / "arch" / "PKGBUILD").write_text(
+        "install -Dm644 icone.png "
+        "/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo_icone)
+    assert result.returncode == 1
+    assert "sem apps/hefesto.png" in result.stdout
+    assert "packaging/arch/PKGBUILD" in result.stdout
+
+
+def test_icone_com_nome_diferente_no_spec_falha(fake_repo_icone: Path) -> None:
+    (fake_repo_icone / "packaging" / "fedora" / "hefesto-dualsense4unix.spec").write_text(
+        "install -Dm644 icone.png "
+        "/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo_icone)
+    assert result.returncode == 1
+    assert "packaging/fedora/hefesto-dualsense4unix.spec" in result.stdout
+
+
+def test_icone_com_nome_diferente_no_nix_falha(fake_repo_icone: Path) -> None:
+    (fake_repo_icone / "packaging" / "nix" / "package.nix").write_text(
+        "install -Dm644 icone.png "
+        "$out/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png\n",
+        encoding="utf-8",
+    )
+    result = run_check(fake_repo_icone)
+    assert result.returncode == 1
+    assert "packaging/nix/package.nix" in result.stdout
+
+
+def test_icone_do_repo_real_esta_verde() -> None:
+    """No repo REAL, o Icon= do .desktop compartilhado casa o PNG dos formatos."""
+    repo_root = Path(__file__).resolve().parents[2]
+    if not (repo_root / SCRIPT_REL_PATH).exists():
+        pytest.skip(f"script {SCRIPT_REL_PATH} não encontrado no repo")
+    result = subprocess.run(
+        ["bash", SCRIPT_REL_PATH],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    secao = result.stdout.split("== Icon dos .desktop de aplicativo", 1)
+    assert len(secao) == 2, "seção de Icon do aplicativo ausente na saída"
     assert "[FAIL]" not in secao[1].split("== ", 1)[0]

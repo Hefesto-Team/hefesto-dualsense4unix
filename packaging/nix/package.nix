@@ -100,10 +100,31 @@ python3Packages.buildPythonApplication rec {
         $out/lib/udev/rules.d/71-uhid.rules
     install -Dm644 assets/72-ps5-controller-autosuspend.rules \
         $out/lib/udev/rules.d/72-ps5-controller-autosuspend.rules
-    install -Dm644 assets/73-ps5-controller-hotplug.rules \
-        $out/lib/udev/rules.d/73-ps5-controller-hotplug.rules
-    install -Dm644 assets/74-ps5-controller-hotplug-bt.rules \
-        $out/lib/udev/rules.d/74-ps5-controller-hotplug-bt.rules
+    # As 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS e REMOVIDAS do
+    # repositorio em 2026-07-18 — este postInstall continuava instalando as
+    # duas e o build quebrava aqui, antes mesmo do fakeSha256 do pydualsense.
+    # A lista abaixo e a canonica (mesma de install_udev.sh/build_deb.sh);
+    # a 75 (disable-usb-audio) fica de fora porque e opt-in.
+    install -Dm644 assets/76-dualsense-touchpad-libinput-ignore.rules \
+        $out/lib/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules
+    install -Dm644 assets/77-dualsense-leds.rules \
+        $out/lib/udev/rules.d/77-dualsense-leds.rules
+    install -Dm644 assets/78-dualsense-motion-not-joystick.rules \
+        $out/lib/udev/rules.d/78-dualsense-motion-not-joystick.rules
+    install -Dm644 assets/79-external-controller-leds.rules \
+        $out/lib/udev/rules.d/79-external-controller-leds.rules
+    install -Dm644 assets/80-motion-joydev-hide.rules \
+        $out/lib/udev/rules.d/80-motion-joydev-hide.rules
+    install -Dm644 assets/81-hefesto-usb-power.rules \
+        $out/lib/udev/rules.d/81-hefesto-usb-power.rules
+    install -Dm644 assets/81-hefesto-usb-host-power.rules \
+        $out/lib/udev/rules.d/81-hefesto-usb-host-power.rules
+    install -Dm644 assets/82-nintendo-pro-nosniff.rules \
+        $out/lib/udev/rules.d/82-nintendo-pro-nosniff.rules
+    install -Dm644 assets/83-hefesto-bond-snapshot.rules \
+        $out/lib/udev/rules.d/83-hefesto-bond-snapshot.rules
+    install -Dm644 assets/84-nintendo-pro-variant.rules \
+        $out/lib/udev/rules.d/84-nintendo-pro-variant.rules
     install -Dm644 assets/hefesto-dualsense4unix.conf \
         $out/lib/modules-load.d/hefesto-dualsense4unix.conf
 
@@ -117,6 +138,14 @@ python3Packages.buildPythonApplication rec {
     # Desktop entry + icone.
     install -Dm644 packaging/hefesto-dualsense4unix.desktop \
         $out/share/applications/hefesto-dualsense4unix.desktop
+    # PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
+    # `Icon=hefesto` do .desktop instalado logo acima (compartilhado por todos
+    # os formatos) — como hefesto-dualsense4unix.png o lancador ficava sem
+    # icone. Paridade com o build_deb.sh, que ja usava hefesto.png.
+    # Os DOIS nomes: o .desktop pede Icon=hefesto e o codigo pede o nome longo
+    # (app/main.py set_default_icon_name, app/tray.py TRAY_ICON_NAME).
+    install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
+        $out/share/icons/hicolor/256x256/apps/hefesto.png
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         $out/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 

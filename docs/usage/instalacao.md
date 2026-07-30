@@ -26,16 +26,18 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 
 ## Do código-fonte
 
-A alfa 0.1.1 vive na branch `sprint/harmonia-uhid` do fork
-`[REDACTED]/hefesto-dualsense4unix`. O `main` do repositório de origem
+A versão corrente é a alfa **0.3.0** (29/07/2026) e o ponto de instalação é a
+**tag `v0.3.0`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
+as branches de trabalho recebem commits durante a sessão e não são um ponto
+estável para instalar. O `main` do repositório de origem
 (`AndreBFarias/hefesto-dualsense4unix`) está na v3.0.0, de abril de 2026, e
 **não** contém o que esta página descreve — ver a caixa "Onde esta versão mora"
 no [`README.md`](../../README.md).
 
 ```bash
-git clone -b sprint/harmonia-uhid \
-  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
+git checkout v0.3.0
 ./install.sh
 ```
 
@@ -51,14 +53,15 @@ Flags úteis:
 | `--yes`, `-y` | responde sim a tudo e assume o formato `native` (sem TTY, use esta) |
 | `--format=native\|flatpak\|appimage\|deb` | pula o seletor |
 | `--force-xwayland` | grava `GDK_BACKEND=x11` no `.desktop` — recomendado em COSMIC |
-| `--no-udev` | pula as regras udev **e todos os passos que escrevem em `/etc`** |
-| `--no-dkms` | não instala os três módulos de kernel |
-| `--no-systemd` | não instala a unit do daemon |
+| `--no-udev` | pula as regras udev e a maioria dos passos que escrevem em `/etc` (cmdline, BlueZ, broker, `modprobe.d` do btusb e do storm). **Não** cobre os passos de DKMS: eles gravam `/etc/modprobe.d/hefesto-hid-nintendo.conf` e `hefesto-hid-playstation.conf` e só param com `--no-dkms` |
+| `--no-dkms` | não instala os três módulos de kernel (nem as duas `modprobe.d` que os configuram) |
+| `--no-systemd` | não instala a unit do daemon — nem no passo 6, nem no 7a (nada é copiado, habilitado ou iniciado) |
+| `--no-snd-quirk` | não grava `/etc/modprobe.d/hefesto-dualsense-storm.conf` (o quirk do `snd_usb_audio` que cura o travamento do USB e é padrão) |
 | `--no-proton-pin` | não trava a versão de Proton dos jogos |
 | `--keep-steam-input` | preserva o Steam Input (o padrão é desligá-lo) |
 | `--no-kernel-watch` | não instala a vigia do journal |
 | `--no-cosmic-applet` | não compila o applet COSMIC |
-| `--with-usb-quirk` | opt-in: grava `usbcore.quirks` no cmdline do kernel |
+| `--with-usb-quirk` | redundante hoje: os mesmos tokens `usbcore.quirks` já entram no cmdline por padrão (passo 3e). A flag só adianta o passo 3b |
 | `--wifi-powersave-off` | opt-in: desliga o powersave de WiFi do NetworkManager |
 | `--no-dev` | cria o ambiente virtual sem as ferramentas de desenvolvimento |
 
@@ -82,9 +85,36 @@ seu `$HOME`, com os padrões de fábrica:
 | `/etc/systemd/system/` | broker de hidraw, agente Bluetooth, 2 timers de resiliência BT, drop-in do `bluetooth.service` |
 | `/usr/local/lib/hefesto-dualsense4unix/` | binário do broker + scripts de manutenção Bluetooth |
 | `/var/lib/hefesto-dualsense4unix/bt-bonds/` | cópias de segurança dos pareamentos Bluetooth |
-| cmdline do kernel | `usbcore.autosuspend=-1` via kernelstub ou grub |
+| cmdline do kernel | `usbcore.autosuspend=-1` **e** `usbcore.quirks=054c:0ce6:gn,054c:0df2:gn`, via kernelstub ou grub (passo 3e, padrão). O passo funde o token de quirks que já existir em vez de somar um segundo, registra que a atribuição é do Hefesto e o `uninstall.sh` reverte só a nossa; um valor posto por terceiros é registrado e preservado |
 | **DKMS** | `hefesto-hid-nintendo`, `hefesto-hid-playstation` e `hefesto-rtw88-usb` — três módulos fora da árvore |
 | configuração da Steam | desliga o Steam Input, migra as Opções de Inicialização, trava o Proton (sempre com cópia de segurança ao lado) |
+
+Quatro curas de Bluetooth entram **por padrão** e merecem nome, porque mexem em
+serviço de sistema:
+
+- **Backport local do BlueZ (alvo 5.86)** — o `bluez` 5.72 do Ubuntu 24.04
+  travou seis vezes em cinco dias com controles BT em uso, e um dos travamentos
+  comeu um pareamento recém-feito. O instalador **não compila** nada: ele só
+  instala os `.deb` que já estiverem em
+  `~/.cache/hefesto-dualsense4unix/bluez-backport/`, conferindo o `SHA256SUMS`.
+  Sem esse cache, ele avisa como gerar e segue — nada falha. Se a troca de versão
+  acontecer, é o `postinst` do próprio `bluez` que reinicia o `bluetoothd`, e a
+  migração descarta os pareamentos antigos: parear de novo uma vez resolve.
+  `uninstall.sh --keep-bluez` preserva a versão instalada.
+- **Agente de pareamento persistente** — um serviço de sistema com `bt-agent`
+  (`--capability=NoInputNoOutput`) fica registrado no D-Bus para responder aos
+  pedidos de confirmação do BlueZ. Sem ele nasce o pareamento pela metade
+  (`Paired: yes` / `Bonded: no`), que trava o controle até um novo pareamento
+  manual. Exige o pacote `bluez-tools`; ausente, o passo só avisa.
+- **Dois timers de resiliência** — `hefesto-bt-bonds-snapshot.timer` (a cada 15
+  minutos) e `hefesto-bt-health-watchdog.timer` (a cada 2 minutos). O watchdog
+  reinicia o `bluetooth.service` apenas quando o estado está de fato doente, com
+  limite de frequência.
+- **Snapshot dos pareamentos** — cópias em
+  `/var/lib/hefesto-dualsense4unix/bt-bonds/`, tiradas pelo timer acima e também
+  na borda da conexão (regra udev `83`), com deduplicação por conteúdo. É a rede
+  de segurança para quando o `bluetoothd` perde um bond: o
+  `scripts/bt_bonds_restore.sh` devolve.
 
 Sobre os três módulos DKMS: eles **não apagam** os módulos originais do kernel —
 entram por precedência (`updates/dkms`) e só valem no próximo boot ou replug. Se

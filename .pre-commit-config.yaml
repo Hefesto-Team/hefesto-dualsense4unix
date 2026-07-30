@@ -18,6 +18,13 @@
 repos:
   - repo: local
     hooks:
+      # GATE-ACENTO-MULTIARQUIVO-01 (29/07): o `pre-commit` APENDA todos os
+      # arquivos staged a este entry. Até esta data `--check-file` aceitava um
+      # valor só: o argparse ficava com o primeiro nome e o script descartava
+      # os demais em silêncio — com N arquivos no commit, N-1 passavam sem
+      # checagem nenhuma. A flag agora aceita N caminhos e reprova se QUALQUER
+      # um falhar; regressão coberta por
+      # tests/unit/test_validar_acentuacao_multiplos_arquivos.py.
       - id: acentuacao-strict
         name: Acentuação PT-BR estrita
         entry: python3 scripts/validar-acentuacao.py --check-file

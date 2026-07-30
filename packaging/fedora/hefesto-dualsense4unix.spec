@@ -10,6 +10,11 @@
 %global app_id    hefesto-dualsense4unix
 
 Name:           %{pypi_name}
+# PACKAGING-EPOCH-DOWNGRADE-01: a numeracao voltou de 4.0.0 para 0.1.0 em
+# 2026-07-24. Para o rpm/dnf, 0.3.0 e DOWNGRADE de qualquer 3.x/4.0 ja
+# instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
+# o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
+Epoch:          1
 Version:        0.3.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
@@ -101,12 +106,22 @@ pip3 install --root=%{buildroot} \
 install -Dm644 packaging/hefesto-dualsense4unix.desktop \
     %{buildroot}%{_datadir}/applications/%{app_id}.desktop
 
-# Icone.
+# Icone. PACKAGING-ICON-NAME-MISMATCH-01: o nome do arquivo TEM de casar o
+# `Icon=hefesto` do packaging/hefesto-dualsense4unix.desktop (compartilhado por
+# todos os formatos) — instalar como %{app_id}.png deixava o lancador sem
+# icone. Paridade com o build_deb.sh, que ja usava hefesto.png.
+# Os DOIS nomes: o .desktop pede Icon=hefesto e o codigo pede o nome longo
+# (app/main.py set_default_icon_name, app/tray.py TRAY_ICON_NAME). So um deles
+# troca o lancador sem icone pela bandeja com joystick generico.
 install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
-    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/%{app_id}.png
+    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/hefesto.png
+install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
+    %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 
 # Udev rules — conjunto canônico (paridade com scripts/install_udev.sh).
 # 73/74 (hotplug-GUI) descontinuadas e removidas do repo em 2026-07-18.
+# As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
+# faltavam aqui: o install-host-udev.sh exige TODAS as 14 no pre-flight.
 install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/70-ps5-controller.rules \
     assets/71-uhid.rules \
@@ -118,7 +133,10 @@ install -Dm644 -t %{buildroot}%{_udevrulesdir} \
     assets/79-external-controller-leds.rules \
     assets/80-motion-joydev-hide.rules \
     assets/81-hefesto-usb-power.rules \
-    assets/81-hefesto-usb-host-power.rules
+    assets/81-hefesto-usb-host-power.rules \
+    assets/82-nintendo-pro-nosniff.rules \
+    assets/83-hefesto-bond-snapshot.rules \
+    assets/84-nintendo-pro-variant.rules
 # Onda PLATAFORMA 2026-07-18: modprobe.d (cura do storm + btusb sem autosuspend).
 install -Dm644 assets/modprobe/hefesto-dualsense-storm.conf \
     %{buildroot}/usr/lib/modprobe.d/hefesto-dualsense-storm.conf
@@ -305,7 +323,8 @@ fi
 %{python3_sitelib}/pydualsense/
 %{python3_sitelib}/pydualsense-*.dist-info/
 %{_datadir}/applications/%{app_id}.desktop
-%{_datadir}/icons/hicolor/256x256/apps/%{app_id}.png
+%{_datadir}/icons/hicolor/256x256/apps/hefesto.png
+%{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 %{_udevrulesdir}/70-ps5-controller.rules
 %{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
@@ -317,6 +336,9 @@ fi
 %{_udevrulesdir}/80-motion-joydev-hide.rules
 %{_udevrulesdir}/81-hefesto-usb-power.rules
 %{_udevrulesdir}/81-hefesto-usb-host-power.rules
+%{_udevrulesdir}/82-nintendo-pro-nosniff.rules
+%{_udevrulesdir}/83-hefesto-bond-snapshot.rules
+%{_udevrulesdir}/84-nintendo-pro-variant.rules
 /usr/lib/modprobe.d/hefesto-dualsense-storm.conf
 /usr/lib/modprobe.d/hefesto-btusb-no-autosuspend.conf
 /usr/lib/modprobe.d/hefesto-hid-nintendo.conf
@@ -327,12 +349,27 @@ fi
 %{_datadir}/%{app_id}/scripts/install-host-udev.sh
 %{_datadir}/%{app_id}/scripts/dkms_lib.sh
 %{_datadir}/%{app_id}/dkms/hid-nintendo/
+# Contencao BT (2026-07-25): as fontes do hid-playstation eram INSTALADAS no
+# %install e nao apareciam aqui — com %_unpackaged_files_terminate_build no
+# default o rpmbuild ABORTAVA com "Installed (but unpackaged) file(s) found",
+# ou seja o spec inteiro nao compilava.
+%{_datadir}/%{app_id}/dkms/hid-playstation/
 %{_datadir}/%{app_id}/dkms/rtw88-usb/
 %{_datadir}/%{app_id}/broker/hidraw_broker.py
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.service
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Wed Jul 29 2026 Vitoria Maria <[REDACTED]> - 1:0.3.0-1
+- Epoch 1: a numeracao voltou de 4.0.0 para 0.1.0 em 2026-07-24 e, sem epoch,
+  o dnf tratava 0.3.0 como downgrade de 3.4.0 e RECUSAVA o upgrade. O topo
+  deste changelog tambem estava em 3.4.0-1, acima do proprio Version do spec.
+- Regras udev 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone
+  8BitDo) empacotadas: o install-host-udev.sh exige todas as 14 no pre-flight.
+- dkms/hid-playstation listado na secao files — ele era instalado e nao
+  empacotado, e o rpmbuild abortava com "Installed (but unpackaged) file(s)".
+- Icone instalado como hefesto.png, casando o Icon= do .desktop compartilhado.
+
 * Sat May 16 2026 Vitoria Maria <[REDACTED]> - 3.4.0-1
 - v3.4.0: i18n EN baseline + a11y ATK + packaging multi-distro + CI matrix.
 - Initial RPM spec (FEAT-PACKAGING-FEDORA-01).

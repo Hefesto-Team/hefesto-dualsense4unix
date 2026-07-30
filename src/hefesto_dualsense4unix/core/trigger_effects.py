@@ -6,7 +6,10 @@ de `forces` no formato HID. Ver `docs/protocol/trigger-modes.md` para a
 tabela canônica e a distinção entre HID e presets.
 
 Todas as factories validam `ranges` e convertem amplitudes nomeadas (0-8)
-em bytes HID (0-255) multiplicando por `AMPLITUDE_SCALE`. Uso típico:
+em bytes HID (0-255) multiplicando por `AMPLITUDE_SCALE`. Exceção: os modos
+`multi_position_*` não têm um byte por posição — o report reserva 3 bits por
+posição, então o máximo real é 7 e o valor 8 satura em 7
+(`MULTI_POSITION_MAX_STRENGTH`). Uso típico:
 
     from hefesto_dualsense4unix.core.trigger_effects import galloping, machine
     controller.set_trigger("right", galloping(0, 9, 7, 7, 10))
@@ -20,8 +23,19 @@ from __future__ import annotations
 from enum import IntEnum
 
 from hefesto_dualsense4unix.core.controller import TriggerEffect
+from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 AMPLITUDE_SCALE = 32  # Normaliza 0-8 (DSX) -> 0-255 (HID byte)
+
+# BUG-TRIGGER-MULTIPOS-FORCA8-01: no bloco multi-position o report NÃO carrega
+# um byte por posição — carrega um campo de TRÊS BITS por posição (10 x 3 = 30
+# bits, os 4 bytes que `_pack_strengths_bits` monta). Logo o máximo REAL por
+# posição é 7, não 8. A escala nomeada (DSX) vai a 8 e continua aceita, mas 8
+# SATURA em 7 com log explícito; antes o `& 0x7` cru fazia 8 virar 0, isto é,
+# força máxima virava NENHUMA força — em silêncio.
+MULTI_POSITION_MAX_STRENGTH = 7
 
 
 class TriggerMode(IntEnum):
@@ -237,7 +251,12 @@ def slope_feedback(
 
 
 def multi_position_feedback(strengths: list[int]) -> TriggerEffect:
-    """Strength por posição (array de 10). Empacota em bits HID."""
+    """Strength por posição (array de 10). Empacota em bits HID.
+
+    Aceita 0-8 por posição, mas o campo do report tem 3 bits: 8 satura em 7
+    (`MULTI_POSITION_MAX_STRENGTH`) com WARNING. Ou seja, 7 e 8 produzem a
+    mesma força — a máxima.
+    """
     if len(strengths) != 10:
         raise ValueError(f"multi_position_feedback: precisa 10 strengths, recebeu {len(strengths)}")
     for idx, s in enumerate(strengths):
@@ -247,6 +266,11 @@ def multi_position_feedback(strengths: list[int]) -> TriggerEffect:
 
 
 def multi_position_vibration(frequency: int, strengths: list[int]) -> TriggerEffect:
+    """Frequency + strength por posição (array de 10).
+
+    Mesma regra de `multi_position_feedback`: 0-8 aceito, 8 satura em 7
+    porque o report reserva 3 bits por posição.
+    """
     if len(strengths) != 10:
         raise ValueError(
             f"multi_position_vibration: precisa 10 strengths, recebeu {len(strengths)}"
@@ -342,10 +366,26 @@ def _pack_strengths_bits(
 
     Cada posição usa 3 bits. 10 * 3 = 30 bits, cabe em 4 bytes. Restantes
     preenchidos com 0. Layout: bytes low-endian sequenciais.
+
+    Como o campo tem 3 bits, o máximo que o report expressa é
+    `MULTI_POSITION_MAX_STRENGTH` (7). Valor 8 — o topo da escala nomeada —
+    satura em 7 (força máxima real) e registra WARNING. Nunca truncar por
+    máscara: `8 & 0x7` é 0, e força máxima virando nenhuma força é o bug
+    BUG-TRIGGER-MULTIPOS-FORCA8-01.
     """
     bits = 0
     for i, s in enumerate(strengths):
-        bits |= (s & 0x7) << (i * 3)
+        nivel = s
+        if nivel > MULTI_POSITION_MAX_STRENGTH:
+            logger.warning(
+                "multi_position_strength_saturada",
+                posicao=i,
+                pedido=s,
+                aplicado=MULTI_POSITION_MAX_STRENGTH,
+                motivo="o report reserva 3 bits por posição (máximo 7)",
+            )
+            nivel = MULTI_POSITION_MAX_STRENGTH
+        bits |= (nivel & 0x7) << (i * 3)
     b0 = bits & 0xFF
     b1 = (bits >> 8) & 0xFF
     b2 = (bits >> 16) & 0xFF
@@ -446,6 +486,7 @@ def build_from_name(
 
 __all__ = [
     "AMPLITUDE_SCALE",
+    "MULTI_POSITION_MAX_STRENGTH",
     "PRESET_FACTORIES",
     "TriggerMode",
     "auto_gun",

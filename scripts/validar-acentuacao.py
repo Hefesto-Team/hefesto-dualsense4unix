@@ -9,6 +9,7 @@ escritas sem o acento canônico (ex.: ``funcao`` em vez de ``função``,
 Uso:
     scripts/validar-acentuacao.py --all
     scripts/validar-acentuacao.py --check-file caminho/arquivo.py
+    scripts/validar-acentuacao.py --check-file arquivo1.py arquivo2.md
     scripts/validar-acentuacao.py arquivo1.py arquivo2.md
     scripts/validar-acentuacao.py --show-whitelist
 
@@ -909,7 +910,8 @@ def main() -> int:
     grp.add_argument(
         "--check-file",
         metavar="PATH",
-        help="Varre um único arquivo (modo pre-commit)",
+        nargs="+",
+        help="Varre um ou mais arquivos (modo pre-commit)",
     )
     grp.add_argument(
         "--show-whitelist",
@@ -936,13 +938,22 @@ def main() -> int:
 
     raiz = descobrir_raiz()
 
-    if args.check_file:
-        alvos = [Path(args.check_file)]
-    elif args.all or (not args.paths and not args.check_file):
+    # GATE-ACENTO-MULTIARQUIVO-01: o `pre-commit` apenda TODOS os nomes de
+    # arquivo staged ao entry do hook. Enquanto `--check-file` aceitava um
+    # valor só, o argparse consumia o primeiro nome e jogava os demais no
+    # positional `paths`, que este bloco descartava em silêncio — com N
+    # arquivos staged, N-1 passavam sem checagem alguma. Agora `--check-file`
+    # aceita N caminhos E os positionais são somados aos alvos: nada que chega
+    # pela linha de comando fica sem ser lido, e basta um arquivo reprovar para
+    # o gate reprovar.
+    recebidos: list[Path] = [Path(p) for p in (args.check_file or [])]
+    recebidos.extend(args.paths)
+
+    if args.all or not recebidos:
         alvos = listar_arquivos_git(raiz)
     else:
         alvos = []
-        for p in args.paths:
+        for p in recebidos:
             if p.is_dir():
                 for ext in EXTENSOES_ALVO:
                     alvos.extend(p.rglob(f"*{ext}"))
