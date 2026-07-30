@@ -605,27 +605,43 @@ class DaemonActionsMixin(WidgetAccessMixin):
         Assíncrono (`call_async`) e read-only: só lê `daemon.state_full`. Falha
         de IPC não é engolida — vira a frase de "não consegui ler", que é a
         verdade disponível (mesma disciplina do cartão UINPUT).
+
+        DIAGNÓSTICO-NAO-DERRUBA-A-ABA-01 (30/07). Todo o corpo está dentro de um
+        `try`, e isso não é preguiça: esta função é chamada de DENTRO do refresh
+        da aba Sistema (`:519`), e uma linha informativa não pode levar a aba
+        junto quando falha. O caso que provou isso foi o CI reprovando a tag
+        v0.4.0: os imports abaixo puxam o `ipc_bridge`, que precisa de GLib, e no
+        runner headless — onde `test_daemon_status_initial.py` planta um Gtk
+        falso — a importação estourava e derrubava TRÊS testes do estado do
+        daemon, que nada têm a ver com detector de janela.
+
+        O `Exception` largo é deliberado e é o mesmo padrão do resto desta base
+        para trabalho decorativo: o que se perde no pior caso é uma frase na
+        tela; o que se protege é a aba inteira.
         """
-        from hefesto_dualsense4unix.app.actions.mode_transition import (
-            STATE_IPC_TIMEOUT_S,
-        )
-        from hefesto_dualsense4unix.app.ipc_bridge import call_async
+        try:
+            from hefesto_dualsense4unix.app.actions.mode_transition import (
+                STATE_IPC_TIMEOUT_S,
+            )
+            from hefesto_dualsense4unix.app.ipc_bridge import call_async
 
-        def _pintar(state: object) -> bool:
-            label = self._get("window_detect_diag_label")
-            if label is not None:
-                label.set_markup(descrever_deteccao_de_janela(state))
-            return False
+            def _pintar(state: object) -> bool:
+                label = self._get("window_detect_diag_label")
+                if label is not None:
+                    label.set_markup(descrever_deteccao_de_janela(state))
+                return False
 
-        call_async(
-            "daemon.state_full",
-            {},
-            on_success=_pintar,
-            on_failure=lambda _exc: _pintar(None),
-            # HARM-15: sem a folga a linha se pinta de "não consegui ler" com o
-            # daemon VIVO sempre que o `state_full` passa dos 0,25s default.
-            timeout_s=STATE_IPC_TIMEOUT_S,
-        )
+            call_async(
+                "daemon.state_full",
+                {},
+                on_success=_pintar,
+                on_failure=lambda _exc: _pintar(None),
+                # HARM-15: sem a folga a linha se pinta de "não consegui ler" com
+                # o daemon VIVO sempre que o `state_full` passa dos 0,25s default.
+                timeout_s=STATE_IPC_TIMEOUT_S,
+            )
+        except Exception as exc:  # pragma: no cover — rede de segurança da aba
+            logger.debug("window_detect_diag_indisponivel", err=str(exc))
 
     def on_storm_fix_safe(self, _btn: object) -> None:
         """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber.
