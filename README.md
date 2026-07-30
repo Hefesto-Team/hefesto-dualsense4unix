@@ -9,8 +9,8 @@
 [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
-[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.3.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-5783-brightgreen.svg)](tests/)
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.4.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
+[![Testes](https://img.shields.io/badge/testes-6089-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.3.0 (alfa)
+Versão: 0.4.0 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT
 ```
@@ -72,7 +72,7 @@ Bluetooth) entram como jogadores adicionais.
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag da versão corrente, hoje a **`v0.3.0`**. Duas ressalvas
+> recomendado é a tag da versão corrente, hoje a **`v0.4.0`**. Duas ressalvas
 > antes de clonar:
 >
 > - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
@@ -88,7 +88,7 @@ Bluetooth) entram como jogadores adicionais.
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.3.0
+git checkout v0.4.0
 ./install.sh
 ```
 
