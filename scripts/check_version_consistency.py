@@ -12,6 +12,16 @@ silêncio via makepkg/rpmbuild):
   - packaging/nix/package.nix        `version = "X.Y.Z";`
   - packaging/debian/control         `Version: X.Y.Z`
 
+Alvos acrescentados em 30/07 (VERSOES-RANCOSAS-01) — os três artefatos que
+ninguém checava e que estavam TODOS defasados ao mesmo tempo, cada um com uma
+sintaxe diferente:
+  - assets/appimage/entrypoint.sh    `HEFESTO_VERSION_FALLBACK="X.Y.Z"` (shell)
+  - flatpak/*.metainfo.xml           PRIMEIRA `<release version="X.Y.Z"`
+  - packaging/cosmic-applet/Cargo.toml `version = "X.Y.Z"` (semver simples)
+O entrypoint anunciava v3.0.0 e mandava instalar um .deb com nome que não existe
+mais; o metainfo anunciava 3.13.3 de 14/07 para a loja; o Cargo.toml do applet
+estava em 0.1.0. Nenhum era visível a portão nenhum.
+
 Uso (CI):
     python scripts/check_version_consistency.py
 """
@@ -41,6 +51,20 @@ _TARGETS: list[tuple[str, str, str]] = [
      r"^Version:\s*(\S+)"),
     ("nix package", "packaging/nix/package.nix", r'version\s*=\s*"([^"]+)";'),
     ("debian control", "packaging/debian/control", r"^Version:\s*(\S+)"),
+    # O banner do AppImage deriva a versão do metadata do pacote embutido; este
+    # literal é só o fallback de quando a consulta falha (mesmo papel do
+    # `__version__` do __init__.py). Ancorado em `^` para não casar comentário.
+    ("entrypoint AppImage (fallback)", "assets/appimage/entrypoint.sh",
+     r'^HEFESTO_VERSION_FALLBACK="([^"]+)"'),
+    # AppStream: a PRIMEIRA <release> do bloco é a que a loja mostra como atual.
+    # `re.search` para o primeiro casamento é exatamente o que se quer aqui.
+    ("metainfo Flatpak (release mais recente)",
+     "flatpak/br.andrefarias.Hefesto.metainfo.xml",
+     r'<release\s+version="([^"]+)"'),
+    # Cargo: `^version` ancorado no início da linha é obrigatório — sem a âncora
+    # o regex casaria o `version = "1"` do tokio dentro de [dependencies].
+    ("Cargo applet COSMIC", "packaging/cosmic-applet/Cargo.toml",
+     r'^version\s*=\s*"([^"]+)"'),
 ]
 
 

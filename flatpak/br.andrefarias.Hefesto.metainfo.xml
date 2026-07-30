@@ -10,184 +10,71 @@
   <!-- Metadados de lançamento -->
   <launchable type="desktop-id">br.andrefarias.Hefesto.desktop</launchable>
 
-  <!-- Versão atual -->
+  <!-- Versão atual.
+       METAINFO-VERSAO-RANCOSA-01 (30/07): a entrada mais recente aqui era a
+       3.13.3 de 14/07 e não havia NENHUMA 0.x — a loja anunciava uma versão
+       duas semanas mais velha que o pacote. A PRIMEIRA <release> deste bloco é
+       agora alvo do scripts/check_version_consistency.py, então o portão de
+       release reprova se ela ficar atrás do pyproject.toml. -->
   <releases>
-    <release version="3.13.3" date="2026-07-14">
+    <release version="0.3.0" date="2026-07-28">
       <description>
-        <p>Correções do instalador flagradas num ciclo desinstala+reinstala: o
-           install.sh agora pede a senha do sudo uma vez só no início e a mantém
-           viva, então a cura persistente do storm e o applet COSMIC param de
-           falhar em silêncio quando rodados sem terminal; o applet COSMIC passa
-           a ser instalado por padrão em sessões COSMIC (opt-out via
-           --no-cosmic-applet); e o ambiente Python nativo já vem com as
-           ferramentas de desenvolvimento por padrão.</p>
+        <p>A leva do que desfazia o trabalho dela. O tema é a janela parar de
+           afirmar o que não aconteceu: o desempate entre perfis deixou de ser a
+           ordem alfabética do nome do arquivo (em empate vence o perfil que já
+           está ativo); salvar um perfil pela janela parou de rebaixá-lo a
+           catch-all com prioridade zero; o teto da escala de prioridade subiu de
+           100 para 200, porque não existia número escolhível pela janela capaz
+           de vencer um catch-all em 100; e aplicar um rascunho de perfil parou
+           de responder sucesso com seções falhando — o rodapé nomeia o que não
+           entrou. O microfone voltou para a faixa com botão que funciona, o
+           diagnóstico dele parou de reprovar por causa do alto-falante mudo, e o
+           instalador passou a chamar a cura que existia e nunca era chamada. O
+           detector de janela pode adoecer e voltar (a marca de saúde era um
+           trinco de mão única). A aba Status foi reorganizada olhando a tela.</p>
       </description>
     </release>
-    <release version="3.13.2" date="2026-07-14">
+    <release version="0.2.0" date="2026-07-26">
       <description>
-        <p>Remove o launcher standalone "DualSense Fix (dsx)" e o dsx.sh — eram da
-           teoria de hardware já refutada; a cura de raiz do storm (no áudio USB)
-           está integrada e instalada por padrão. O cartão anti-storm e o watcher
-           de auto-recuperação continuam. Corrige a marca visual do item ativo no
-           applet COSMIC (o modo/máscara selecionado não recebia indicador).</p>
+        <p>Checkpoint validado em hardware real: quatro controles em co-op num
+           jogo, numerados 1-2-3-4, sobrevivendo a reinício do daemon. O co-op
+           passou a existir pela janela (a funcionalidade central do projeto só
+           existia por linha de comando), o microfone ganhou um dono único para o
+           byte de mudo, a máscara de gamepad deixou de responder diferente
+           conforme fosse pela janela ou pelo terminal, e "modo jogo" — que eram
+           seis conceitos com o mesmo nome — foi separado.</p>
       </description>
     </release>
-    <release version="3.13.1" date="2026-07-14">
+    <release version="0.1.1" date="2026-07-25">
       <description>
-        <p>Correções da auditoria pré-release: trocar a máscara não congela mais o
-           input do co-op; o botão PS volta a abrir a Steam no desktop; o teste de
-           vibração é cancelável; o cartão anti-storm é reavaliado ao abrir a aba;
-           a aba Rumble mostra se a vibração está com o jogo ou fixa. Paridade de
-           empacotamento: a cura de raiz e os scripts da GUI passam a ir também no
-           .deb e no pacote Arch, com as versões de todos os pacotes em sincronia.</p>
+        <p>A leva das causas-raiz: quatorze queixas de uso viraram defeito
+           medido. Entre elas, o initramfs servindo um módulo DKMS velho depois
+           do reboot (o instalador agora atualiza o initramfs), o microfone do
+           DualSense por Bluetooth (Opus tunelado em HID) e o controle 8BitDo em
+           modo PS4 subindo por Bluetooth de primeira.</p>
       </description>
     </release>
-    <release version="3.13.0" date="2026-07-14">
+    <release version="0.1.0" date="2026-07-24">
       <description>
-        <p>Cura de raiz do travamento do USB (storm -71): um ajuste do modulo
-           snd-usb-audio para o DualSense torna a sondagem do mixer tolerante e
-           espacada, acabando com as desconexoes no meio do jogo — e PRESERVANDO
-           o microfone e o fone do controle (instalado por padrao). A vibracao dos
-           jogos passa a funcionar de ponta a ponta no modo "Jogar pelo Hefesto"
-           com a mascara Xbox 360, e o controle deixa de aparecer duplicado no jogo
-           (a interface copia as Opcoes de Inicializacao da Steam num clique). A
-           mascara agora se propaga aos controles de co-op, os perfis devolvem a
-           vibracao ao jogo automaticamente, e o Modo Nativo nao pisa mais nos LEDs
-           que o jogo acende. Auditoria de paridade por modo documentada no README.</p>
+        <p>Reinício da numeração em 0.x: o projeto assumiu publicamente que ainda
+           não é 1.0. Redesenho da interface entregue e a causa-raiz das
+           desconexões de Bluetooth identificada — o bluetoothd travava e comia
+           os pareamentos.</p>
       </description>
     </release>
-    <release version="3.11.0" date="2026-07-09">
-      <description>
-        <p>Modo Nativo (solta o controle para os gatilhos adaptativos nativos da
-           Sony), modo point-and-click por perfil, cursor do mouse reescrito e
-           diagnostico anti-storm unificado no doctor/GUI. Remediacao de
-           estabilidade da GUI no COSMIC: rodape com os quatro botoes de volta,
-           fim da janela preta no boot sob XWayland+NVIDIA, politicas de rumble
-           mutuamente exclusivas, teclado para de apagar os atalhos de OSK, e fim
-           do jank de repaint. Isolamento automatico do socket em modo fake
-           (nunca sequestra o daemon de producao) e o .deb passa a empacotar as
-           regras udev 76/77 (touchpad + LEDs) em paridade com o install nativo.</p>
-      </description>
-    </release>
-    <release version="3.5.0" date="2026-05-21">
-      <description>
-        <p>Acabamento de UI no COSMIC + empacotamento. Abas e popups dos
-           dropdowns agora respeitam o tema escuro (fundo do header do
-           notebook + seletores menu/menuitem no CSS); a GUI roda sob
-           XWayland automaticamente em sessoes COSMIC, corrigindo os popups
-           de combobox que abriam mal-posicionados e fechavam sozinhos. A
-           janela compacta (surrogate de tray) ganhou WM_CLASS + icone e
-           fecha encerrando o app. A aba Firmware foi removida (risco de
-           brick; use o caminho oficial Sony). Flatpak: --socket=x11 para o
-           XWayland funcionar no sandbox + glyphs bundlados. install.sh
-           ganhou seletor de formato (native/flatpak/appimage/deb).</p>
-      </description>
-    </release>
-    <release version="3.4.3" date="2026-05-17">
-      <description>
-        <p>Patch para 2 bugs do ícone em uso real no Pop!_OS COSMIC:
-           (1) install.sh v3.4.2 gerava 11 PNGs a partir do SVG em
-           assets/appimage/Hefesto-Dualsense4Unix.svg, que era um
-           PLACEHOLDER simples (chama laranja + texto "HEFESTO") em vez
-           da logo real (martelo + gradiente roxo/azul/rosa no PNG
-           256x256). Fix: usa PNG real como source com Lanczos
-           downsample do ImageMagick para todas resolucoes. (2) janela
-           GTK setava WM_CLASS instance como "hefesto" mas o .desktop
-           e "hefesto-dualsense4unix.desktop" — dock COSMIC nao
-           associava a janela ao app, mostrando icone generico ao abrir.
-           Fix: WM_CLASS instance ajustada para "hefesto-dualsense4unix"
-           + GLib.set_prgname() + Gtk.Window.set_default_icon_name()
-           no entrypoint da GUI para derivar app_id Wayland correto.</p>
-      </description>
-    </release>
-    <release version="3.4.2" date="2026-05-17">
-      <description>
-        <p>Polish patch — 4 bugs achados em validacao manual pos-v3.4.1:
-           (1) icone do app aparecia generico em sizes nao-256
-           (16/22/32/48 do menu apps, 128 do grid) porque so havia o PNG
-           256x256; install.sh agora gera multi-res (11 PNGs + SVG
-           escalavel + pixmap legacy) via rsvg-convert. (2) theme.css
-           bloco @media (prefers-contrast: more) quebrava GTK3 CSS
-           parser inteiro com "unknown @ rule (1)" — substituido por
-           comentario forward-compat. (3) uninstall.sh morria com exit
-           144 quando rodado do diretorio do repo, pkill -f matchava o
-           proprio script. (4) catalogos .mo do install.sh step 4d
-           ficavam orfaos apos uninstall. Sem mudancas runtime.</p>
-      </description>
-    </release>
-    <release version="3.4.1" date="2026-05-17">
-      <description>
-        <p>Patch para o bug de localizacao no Flatpak v3.4.0: catalogo
-           pt_BR.mo nao chegava no app porque o runtime GNOME//47 injeta
-           symlinks de Locale Extension no deploy, sobrescrevendo
-           /app/share/locale/pt_BR/ apontando para o runtime read-only.
-           Solucao: instalar .mo em /app/share/hefesto-dualsense4unix/
-           locale/ (path proprio do app) e adicionar esse path ao
-           candidate list do utils/i18n.py (gettext.bindtextdomain).
-           Sem mudancas runtime; apenas distribuicao Flatpak.</p>
-      </description>
-    </release>
-    <release version="3.4.0" date="2026-05-16">
-      <description>
-        <p>i18n EN baseline: catalogo po/en.po com 232 strings traduzidas +
-           po/pt_BR.po identidade. Acessibilidade ATK em 15 botoes
-           criticos (Orca anuncia labels descritivas). High-contrast
-           CSS automatico quando tema do sistema casa HighContrast*.
-           Packaging multi-distro: PKGBUILD Arch (AUR-ready), RPM spec
-           Fedora (Copr-ready), Nix flake (NixOS/home-manager). CI smoke
-           matrix Docker (fedora:40, archlinux:latest, debian:12) com
-           cache pip. Locale bundlado em 5 destinos (install.sh, .deb,
-           AppImage, Flatpak, wheel).</p>
-      </description>
-    </release>
-    <release version="3.3.1" date="2026-05-16">
-      <description>
-        <p>Install perfeito: install.sh aplica TODAS as 5 regras udev
-           + modules-load uinput sem prompt (era opt-in; agora default).
-           install-host-udev.sh do bundle Flatpak sincronizado com o
-           caminho source (era só 3 regras; agora 5 + conf). Manifest
-           Flatpak bundla 73-hotplug.rules + 74-hotplug-bt.rules +
-           hefesto-dualsense4unix.conf. install.sh propaga regras para
-           Flatpak instalado se detectado. Idempotente em todos os
-           caminhos: source/.deb/Flatpak.</p>
-      </description>
-    </release>
-    <release version="3.3.0" date="2026-05-16">
-      <description>
-        <p>Janela compacta 320x90 sempre-on-top como surrogate de tray em
-           Pop!_OS COSMIC (cosmic-comp 1.0.x sem StatusNotifierWatcher).
-           Auto + opt-out via HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0.
-           Notificações D-Bus com botão "Abrir Hefesto" (controle
-           desconectado, bateria baixa). Documentação production-ready:
-           novo docs/usage/troubleshooting.md, docs/process/ROADMAP.md
-           público, matriz DE empírica honesta no README. Listener
-           ActionInvoked via jeepney sync em thread daemon.</p>
-      </description>
-    </release>
-    <release version="3.2.0" date="2026-05-16">
-      <description>
-        <p>Wave V3.2 (auditoria + polish): mensagens acionáveis no profile
-           loader, DaemonProtocol substitui daemon: Any em handlers críticos,
-           autoscroll do log da aba Daemon, fallback offline da aba Status
-           após 5s, live preview de gatilhos no combobox. Suporte completo a
-           COSMIC (Pop!_OS 24.04) + Bluetooth validado em hardware real.
-           Fix BUG-FLATPAK-PYGMENTS-MISSING-01: pygments adicionado às deps
-           Python (rich.markdown precisava transitivamente).</p>
-      </description>
-    </release>
-    <release version="3.1.1" date="2026-05-16">
-      <description>
-        <p>Hardening COSMIC + AppImage GUI bundlada + Bluetooth validation
-           end-to-end + notifications D-Bus opt-in + republish de tags
-           históricas no fork.</p>
-      </description>
-    </release>
-    <release version="1.1.0" date="2024-04-22">
-      <description>
-        <p>Primeira versão Flatpak. Daemon + GUI GTK3 empacotados com suporte a
-           emulação de mouse, troca de perfis e gatilhos adaptativos via DualSense.</p>
-      </description>
-    </release>
+    <!-- METAINFO-ORDEM-DAS-RELEASES-01 (30/07): as entradas de 3.13.3 a 1.1.0
+         foram RETIRADAS daqui. Duas razões, e a segunda é a que morde:
+         (1) o `appstreamcli validate` (portão do
+         .github/workflows/flatpak.yml) reprova com
+         `releases-not-in-order 0.1.0 << 3.13.3` — a numeração voltou para 0.x
+         em 24/07 e as duas linhas não convivem numa lista ordenada; medido:
+         com as 3.x aqui o portão saía com 3, sem elas sai com 0;
+         (2) o AppStream COMPARA versões: com a 3.13.3 na lista, uma loja
+         entende que o mais novo do projeto é 3.13.3 e nunca oferece a 0.3.0
+         como atualização. Manter a história aqui era o mesmo defeito que este
+         sprint cura, por outro caminho.
+         A história completa (3.x, 4.0.0 e as 0.x) está no CHANGELOG.md, que é
+         a fonte de verdade das notas de versão. -->
   </releases>
 
   <!-- Descrição PT-BR (principal) -->

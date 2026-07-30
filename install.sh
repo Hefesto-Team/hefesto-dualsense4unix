@@ -127,6 +127,14 @@
 #   --no-dev              cria o venv SEM o extra [dev] (ruff/mypy/pytest). Por
 #                         DEFAULT o venv já vem com os dev tools (gate local).
 #                         Use em CI/máquina enxuta que só precisa rodar o app.
+#   --no-fonts            pula as fontes da identidade visual (Space Grotesk +
+#                         JetBrains Mono, que o gui/theme.css pede). Por DEFAULT
+#                         elas são instaladas em best-effort pelo
+#                         scripts/install_fonts.sh — pacote da distro primeiro,
+#                         download PINADO + SHA-256 só se não houver pacote.
+#                         Nada quebra sem elas (o CSS tem fallback); o que muda é
+#                         a interface ser a do design e as medidas de texto
+#                         baterem com as do mockup.
 #   (DEFAULT) cura gentil do WirePlumber: REBAIXA o DualSense para não virar o
 #                         microfone padrão (drop-in 51, user-space) — simétrica com o
 #                         uninstall que a remove. Opt-out: --keep-dualsense-mic.
@@ -178,6 +186,13 @@ ENABLE_HOTPLUG_GUI=0
 ENABLE_COSMIC_APPLET=0
 DISABLE_COSMIC_APPLET=0
 NO_DEV=0
+# FONTE-PADRAO-01, item 3: DEFAULT ON. Medido em 29/07/2026 — `grep -c fonts
+# install.sh` dava 0: o scripts/install_fonts.sh existia e NINGUÉM o chamava.
+# Nesta máquina as duas famílias já estão instaladas, então o defeito é invisível
+# aqui e morde só em instalação nova: a interface cai no fallback do CSS sem
+# nada indicar, e as MEDIDAS de texto mudam com a fonte — foi a falta dessas
+# métricas que fez a CI pedir 431px de altura onde aqui cabia em 357.
+NO_FONTS=0
 # BUG-UNINSTALL-WP-ASYMMETRY: DEFAULT ON. O uninstall remove o drop-in 51 por
 # padrão, então o install tem de recolocá-lo por padrão (simetria) — senão o
 # ciclo uninstall→install deixa o DualSense virar o microfone padrão. É a cura
@@ -210,6 +225,7 @@ for arg in "$@"; do
         --enable-cosmic-applet) ENABLE_COSMIC_APPLET=1; DISABLE_COSMIC_APPLET=0 ;;
         --no-cosmic-applet|--disable-cosmic-applet) DISABLE_COSMIC_APPLET=1 ;;
         --no-dev)             NO_DEV=1 ;;
+        --no-fonts)           NO_FONTS=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
@@ -1918,6 +1934,41 @@ if [[ -d "${LOCALE_SRC}" ]]; then
         mkdir -p "${target_dir}"
         cp -f "${src_mo}" "${target_dir}/hefesto-dualsense4unix.mo"
     done
+fi
+
+# ---------------------------------------------------------------------------
+# 4e. Fontes da identidade visual (Space Grotesk + JetBrains Mono)
+# ---------------------------------------------------------------------------
+# FONTE-PADRAO-01, item 3. O `scripts/install_fonts.sh` existia, com download
+# pinado e SHA-256, e NINGUÉM o chamava: `grep -c fonts install.sh` dava 0. O
+# `gui/theme.css` pede "Space Grotesk" na interface e "JetBrains Mono" nos
+# valores/logs, e numa máquina limpa nenhuma das duas existe — o fontconfig
+# substitui EM SILÊNCIO e a interface nunca é a do design.
+#
+# Fica junto do passo 4 (atalho, glyphs, i18n) porque é a mesma natureza:
+# acabamento da GUI, no HOME da usuária, sem sudo obrigatório.
+#
+# BEST-EFFORT, no molde dos outros passos opcionais: o `if` impede o `set -e` de
+# abortar e o próprio script sai 0 mesmo quando não consegue instalar. Fonte é
+# acabamento, não requisito — fazer a instalação inteira falhar por causa disso
+# trocaria um problema cosmético por um problema real. `--yes` só quando ela já
+# disse sim a tudo; nunca forçamos `--no-download` aqui (o download é pinado num
+# commit e conferido por SHA-256, e é o único caminho em distro sem o pacote).
+if [[ "${NO_FONTS}" -eq 1 ]]; then
+    printf '      fontes: pulado (--no-fonts) — a interface usa o fallback do CSS\n'
+elif [[ ! -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
+    warn "scripts/install_fonts.sh ausente — fontes da identidade visual puladas"
+else
+    # `--yes` só quando ela já disse sim a tudo. Sem array vazio de propósito:
+    # `"${arr[@]}"` vazio sob `set -u` quebra em bash < 4.4, e este script roda
+    # em máquina de quem instala, não só na desta casa.
+    if [[ "${AUTO_YES}" -eq 1 ]]; then
+        bash "${ROOT_DIR}/scripts/install_fonts.sh" --yes \
+            || printf '      fontes: incompletas — rode: bash scripts/install_fonts.sh\n'
+    else
+        bash "${ROOT_DIR}/scripts/install_fonts.sh" \
+            || printf '      fontes: incompletas — rode: bash scripts/install_fonts.sh\n'
+    fi
 fi
 
 # ---------------------------------------------------------------------------

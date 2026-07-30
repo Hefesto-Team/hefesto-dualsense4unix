@@ -69,6 +69,34 @@ FN = (
 )
 
 
+def _roda_help() -> subprocess.CompletedProcess[str]:
+    """Executa o comando de ajuda EXTRAÍDO do install.sh e devolve a saída.
+
+    FALSO-VERDE-HELP-FAIXA-FIXA-01 (30/07): este arquivo lia a faixa do --help
+    com ``re.search(r"sed -n '2,(\\d+)p'", INSTALL)`` e usava o número capturado
+    como fim do cabeçalho. Depois da cura BUG-INSTALL-HELP-TRUNCADO-01 (o --help
+    virou `awk` sem número mágico), esse literal só existe DENTRO de um
+    comentário explicativo do install.sh: o teste continuava verde lendo um
+    COMENTÁRIO como se fosse o código de extração, e morria com "extração do
+    --help não encontrada" no dia em que alguém limpasse o comentário. O
+    contrato de verdade é o mesmo de test_install_respeita_o_nao_e_help_completo
+    (test_toda_flag_do_cabecalho_sai_no_help): RODAR a ajuda e cobrar a flag na
+    SAÍDA.
+    """
+    inicio = INSTALL.index("-h|--help)")
+    fim = INSTALL.index("exit 0", inicio)
+    corpo = INSTALL[inicio + len("-h|--help)") : fim]
+    corpo = corpo.replace('"${BASH_SOURCE[0]}"', f"'{INSTALL_PATH}'")
+    assert "BASH_SOURCE" not in corpo, "o corpo do --help ficou com BASH_SOURCE solto"
+    return subprocess.run(
+        [BASH, "-c", "set -euo pipefail\n" + corpo],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+
+
 def _roda_funcao(
     tmp_path: Path, prologo: str, path_extra: str | None = None
 ) -> subprocess.CompletedProcess[str]:
@@ -109,11 +137,29 @@ class TestDefaultOnOptOut:
         )
 
     def test_help_documenta_o_default_e_o_opt_out(self) -> None:
-        match = re.search(r"sed -n '2,(\d+)p'", INSTALL)
-        assert match is not None, "extração do --help não encontrada"
-        cabecalho = "\n".join(INSTALL.splitlines()[: int(match.group(1))])
-        assert "--no-dkms" in cabecalho, "o --help precisa documentar o opt-out"
-        assert "DKMS hid-nintendo" in cabecalho
+        # Contrato NOVO: não se lê o cabeçalho "por dentro" com uma faixa de
+        # linhas adivinhada do código — roda-se a ajuda e cobra-se a SAÍDA. É o
+        # que a operadora vê quando digita `./install.sh --help`.
+        resultado = _roda_help()
+        assert resultado.returncode == 0, resultado.stderr
+        assert "--no-dkms" in resultado.stdout, (
+            "o --help precisa documentar o opt-out (a operadora só tem essa tela)"
+        )
+        assert "DKMS hid-nintendo" in resultado.stdout, (
+            "o --help precisa dizer que o DKMS hid-nintendo entra por DEFAULT"
+        )
+        # E não é o código que escapou para dentro do help: a primeira linha
+        # executável do install.sh fica FORA da ajuda.
+        assert "set -euo pipefail" not in resultado.stdout
+
+    def test_help_nao_depende_de_faixa_de_linhas_adivinhada(self) -> None:
+        # A trava contra a volta do falso-verde: se o --help voltar a extrair o
+        # cabeçalho por número de linha, ele volta a truncar em silêncio quando o
+        # cabeçalho crescer (BUG-INSTALL-HELP-TRUNCADO-01, 29/07).
+        codigo = _sem_comentarios(INSTALL)
+        assert not re.search(r"sed -n '2,\d+p'", codigo), (
+            "o fim do cabeçalho no --help não pode ser número mágico"
+        )
 
 
 class TestWiringEmTodoFormato:
@@ -367,7 +413,13 @@ class TestParidadePackaging:
         }
         for nome, caminho in hooks.items():
             texto = caminho.read_text(encoding="utf-8")
-            assert "dkms remove" in texto and "hefesto-hid-nintendo" in texto, (
+            # FALSO-VERDE-GATE-DKMS-REMOVE-01 (30/07): era
+            # `"dkms remove" in texto and "hefesto-hid-nintendo" in texto` — dois
+            # testes independentes que passavam com ZERO remoção deste módulo,
+            # porque o hook cita `dkms remove` pelos módulos IRMÃOS e cita
+            # `hefesto-hid-nintendo` pela conf de modprobe.d. Padrão COMBINADO:
+            # o comando E o módulo na MESMA invocação.
+            assert 'dkms remove "hefesto-hid-nintendo/' in texto, (
                 f"{nome} não desregistra o módulo DKMS na remoção do pacote"
             )
             assert "modprobe -r" not in texto, (

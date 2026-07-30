@@ -1,8 +1,18 @@
 [package]
 name = "hefesto-dualsense4unix-applet"
-version = "0.1.0"
+# APPLET-VERSAO-RANCOSA-01 (30/07): ficou em 0.1.0 enquanto o projeto chegou à
+# 0.3.0 — o applet é o único artefato compilado da casa e anunciava versão
+# errada. Esta linha é ALVO do scripts/check_version_consistency.py: subir o
+# pyproject e esquecer aqui reprova a release. Ao mexer, subir também a entrada
+# `hefesto-dualsense4unix-applet` do Cargo.lock (o `cargo build` do justfile
+# reescreve sozinho, mas deixa a árvore suja no meio do release).
+version = "0.3.0"
 edition = "2021"
-authors = ["Vitória Maria <vitoriamaria.sds@gmail.com>"]
+# Redigido no mesmo padrão do packaging/arch/PKGBUILD (`Maintainer: Vitoria
+# Maria <[REDACTED]>`): havia um e-mail pessoal real aqui, e nem o
+# check_anonymity.sh (não procura e-mail) nem o check_test_data.sh (só varre
+# tests/) enxergam este arquivo.
+authors = ["Vitoria Maria <[REDACTED]>"]
 description = "Applet nativo COSMIC para gatilhos, perfis e bateria do DualSense (Hefesto - Dualsense4Unix)"
 license = "MIT"
 homepage = "https://github.com/vitoriamariadb/hefesto-dualsense4unix"

@@ -167,6 +167,21 @@ modules:
       - install -Dm644 -t /app/share/hefesto-dualsense4unix/glyphs/
           assets/glyphs/*.svg
 
+      # FIX-FLATPAK-PRESET-SEED-01 (30/07): presets default para a semeadura em
+      # tempo de execução. O profiles/loader.py procura em três lugares — o
+      # assets/ do repositório (dev), `sys.prefix/share/.../assets/
+      # profiles_default` (bundle) e /usr/share (.deb) — e o Flatpak não
+      # instalava em NENHUM deles: quem instalava pelo Flatpak nunca recebia
+      # coop_local, sackboy_nativo, fps, fallback e os outros, e abria a janela
+      # com a lista de perfis vazia. Dentro do sandbox sys.prefix é /app (o
+      # wheel é instalado com --prefix=/app), então este destino é exatamente o
+      # segundo candidato do loader.
+      # Espelha o FIX-APPIMAGE-PRESET-SEED-01 do scripts/build_appimage_gui.sh:
+      # o defeito foi diagnosticado e curado para o AppImage GUI em 25/07 e
+      # nunca havia sido portado para cá. Mesmo par que os glyphs acima.
+      - install -Dm644 -t /app/share/hefesto-dualsense4unix/assets/profiles_default/
+          assets/profiles_default/*.json
+
       # Instalar arquivo .desktop adaptado para o App ID Flatpak
       - install -Dm644 flatpak/br.andrefarias.Hefesto.desktop
           /app/share/applications/br.andrefarias.Hefesto.desktop

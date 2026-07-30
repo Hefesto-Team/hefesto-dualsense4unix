@@ -34,11 +34,12 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 ### Construir localmente a partir do código-fonte
 
 ```bash
-# Clonar o repositório (ver a caixa "Onde esta versão mora" no README —
-# a alfa 0.1.1 está na branch sprint/harmonia-uhid do fork, não no main)
-git clone -b sprint/harmonia-uhid \
-  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+# Clonar o repositório pela TAG da versão (ver a caixa "Onde esta versão mora"
+# no README). Esta página mandava clonar a branch sprint/harmonia-uhid até
+# 29/07/2026; aquela branch parou dois lançamentos atrás.
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
+git checkout v0.3.0
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install
@@ -183,11 +184,18 @@ O manifest `flatpak/br.andrefarias.Hefesto.yml` declara as seguintes permissões
 |--------------------------------------------|-----------------------------------------------------|
 | `--device=all`                             | Acesso a `/dev/hidraw*` (DualSense) e `/dev/uinput` |
 | `--socket=wayland`                         | Interface GTK3 nativa no COSMIC/GNOME Wayland       |
-| `--socket=fallback-x11`                    | Fallback para ambientes X11                         |
+| `--socket=x11`                             | X11 e XWayland — **não** é `fallback-x11`, ver nota  |
 | `--socket=session-bus`                     | D-Bus de sessão (portals, notificações)             |
 | `--filesystem=xdg-run/hefesto-dualsense4unix:create`      | Socket IPC entre GUI e daemon                       |
 | `--filesystem=xdg-config/hefesto-dualsense4unix:create`   | Leitura e escrita de perfis                         |
 | `--talk-name=org.freedesktop.portal.*`     | Portals do freedesktop (tray, background)           |
+
+> **Por que `--socket=x11` e não `--socket=fallback-x11`.** O `fallback-x11` só
+> monta o socket X11 quando **não** há Wayland — e no COSMIC há. Como esta
+> interface roda com XWayland forçado, o `fallback-x11` deixava o sandbox sem
+> socket nenhum e a janela não abria. O manifesto declara `--socket=x11` desde
+> então, com o motivo escrito ao lado da linha. Esta tabela dizia
+> `fallback-x11` até 29/07/2026: descrevia a versão que foi corrigida.
 
 ---
 

@@ -33,11 +33,13 @@ from hefesto_dualsense4unix.app.actions.base import (
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_GAMEPAD,
     MODE_IPC_TIMEOUT_S,
+    MODES,
     STATE_IPC_TIMEOUT_S,
     apply_coop_prep,
     apply_mode,
     mode_of_state,
 )
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -423,6 +425,121 @@ def _format_controller_title(entry: dict[str, Any]) -> str:
     if isinstance(player, int) and not isinstance(player, bool):
         return f"{name} — P{player}"
     return name
+
+
+# --- PERFIL-SALVA-TUDO-01/E3: o gesto de MODO chega ao RASCUNHO --------------
+#
+# A queixa dela, 29/07: *"temos o perfil do jogo tipo pragmata, aí em todas as
+# abas fiz alterações e salvei o perfil, aí essas configs de outras abas não
+# ficam salvas"*. A onda 2 construiu o lugar de guardar
+# (`DraftConfig.with_mode`/`with_suppress`) e deixou escrito que não havia UM
+# escritor: `grep -c 'self\.draft'` valia 0 nas abas Início e Emulação. Modo,
+# máscara, co-op e "modo jogo" iam só para o estado VIVO do daemon, e o
+# "Salvar Perfil" gravava `mode: null` em cima do trabalho dela
+# (`pragmata2.json`, medido no disco dela).
+#
+# A LINHA QUE NÃO PODE SER CRUZADA (HARM-05, e é a razão pela qual a onda 2
+# parou aqui de propósito): REGISTRAR não é APLICAR. Quem aplica o modo ao vivo
+# é `mode_transition.apply_mode` (e a supressão, `daemon.emulation.suppress`),
+# pelo gesto dela e só por ele. O miolo (`_coop_do_rascunho`, `rascunho_com_modo`)
+# é função PURA — não toca IPC nem widget — e o único ponto de escrita
+# (`registrar_modo_no_rascunho`) não faz nada além de trocar o rascunho da janela:
+# eles só anotam o que JÁ está de pé, para o "Salvar Perfil" do rodapé persistir.
+# Se um escritor destes disparar aplicação, um toque num gatilho (que também mexe
+# no rascunho) passa a poder recriar o vpad ou suspender a emulação no meio da
+# partida — exatamente o estrago que o HARM-05 documenta na seção `mouse` do
+# "Aplicar". O portão que tranca isso é
+# `tests/unit/test_perfil_salva_tudo_registrar_nao_e_aplicar.py`, por AST, para
+# valer também onde não há GTK.
+#
+# Por que aqui, e não na aba Emulação: a Início é a dona do MODO desde o HARM-01
+# (`mode_transition`); a Emulação importa daqui em vez de ter cópia própria.
+
+
+def _coop_do_rascunho(draft: DraftConfig | None) -> bool | None:
+    """O ``coop`` que o perfil de origem já dizia, ou ``None`` se ele não diz.
+
+    Sem isto, registrar o modo por causa de uma troca de MÁSCARA carimbaria o
+    default do esquema (``coop=True``) num perfil que dizia ``coop: false`` — a
+    aba não tem seletor de co-op, então ela nunca pediu essa mudança. É a mesma
+    disciplina do passthrough de ``controllers`` no ``to_profile``: o que a
+    janela não edita, ela não reescreve.
+    """
+    if draft is None:
+        return None
+    origem = draft.source_mode
+    if origem is None:
+        return None
+    valor = (
+        origem.get("coop")
+        if isinstance(origem, dict)
+        else getattr(origem, "coop", None)
+    )
+    return bool(valor) if isinstance(valor, bool) else None
+
+
+def rascunho_com_modo(
+    draft: DraftConfig | None,
+    *,
+    kind: str,
+    flavor: object = None,
+    coop: bool | None = None,
+) -> DraftConfig | None:
+    """Rascunho com o MODO dela registrado. Pura: NÃO aplica nada (E3).
+
+    ``kind`` é um dos ``mode_transition.MODES`` — os mesmos três ids dos botões
+    da Início, que por construção já são o vocabulário de
+    ``ProfileModeConfig.kind``. Id desconhecido devolve o rascunho INTACTO em vez
+    de levantar: um modo novo tem de passar por `plan_mode_transition` (que
+    levanta) antes de existir aqui, e registrar lixo no rascunho seria pior que
+    não registrar.
+
+    ``flavor`` só vale no modo gamepad e atravessa `normalizar_gamepad_flavor`
+    (MODO-01): máscara desconhecida vira ``None``, que no applier significa
+    "mantém a atual" — nunca recriar o vpad por causa de um id que ninguém
+    reconhece. ``coop=None`` preserva o que o perfil de origem dizia.
+    """
+    if draft is None or kind not in MODES:
+        return draft
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileModeConfig,
+        normalizar_gamepad_flavor,
+    )
+
+    secao: dict[str, Any] = {"kind": kind}
+    if kind == MODE_GAMEPAD:
+        secao["gamepad_flavor"] = normalizar_gamepad_flavor(flavor)
+    efetivo = coop if coop is not None else _coop_do_rascunho(draft)
+    if efetivo is not None:
+        secao["coop"] = efetivo
+    return draft.with_mode(ProfileModeConfig.model_validate(secao))
+
+
+def registrar_modo_no_rascunho(
+    janela: Any, kind: str, flavor: object = None, *, coop: bool | None = None
+) -> None:
+    """Anota na janela o modo que ela acabou de aplicar. Único ponto de escrita.
+
+    Função de MÓDULO, e não método de mixin, por duas medições desta base:
+
+    1. as duas abas precisam do MESMO escritor, e um método em cada mixin seria
+       dois donos — com os dois mixins na MESMA classe (`HefestoApp`), nomes
+       iguais se sombreariam pela MRO em silêncio;
+    2. chamada entre mixins quebra dublê PARCIAL de teste: a onda 2 pagou esse
+       preço e o `_HomeStub` de `test_auto01_um_clique_em_vez_de_dez` copia
+       handlers avulsos da Início, sem o resto da classe. Uma função não depende
+       da montagem do dublê.
+
+    ``getattr`` no rascunho pelo mesmo motivo dos outros escritores
+    (`mouse_actions`, `triggers_actions`): janela sem `draft` (dublê, bootstrap
+    ainda em voo) não pode virar `AttributeError` dentro do callback do IPC.
+    """
+    draft = getattr(janela, "draft", None)
+    if draft is None:
+        return
+    novo = rascunho_com_modo(draft, kind=kind, flavor=flavor, coop=coop)
+    if novo is not None:
+        janela.draft = novo
 
 
 class HomeActionsMixin(WidgetAccessMixin):
@@ -979,6 +1096,13 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_mode_desc.set_text(_MODE_DESCRIPTIONS.get(mode_id, ""))
 
         def _done(_result: Any) -> bool:
+            # PERFIL-SALVA-TUDO-01/E3: o modo que ela acabou de escolher entra no
+            # rascunho AQUI — depois de o daemon confirmar, e nunca antes: o
+            # rascunho descreve o que ficou de pé, não uma intenção que pode ter
+            # falhado. Registrar não aplica nada (ver `rascunho_com_modo`).
+            registrar_modo_no_rascunho(
+                self, mode_id, self._home_flavor_selector.get_active_id()
+            )
             # LEIGO-02: o toast dizia "Modo aplicado: gamepad" — o id interno,
             # uma palavra que não existe em botão nenhum. Ecoa o rótulo que ela
             # acabou de clicar.
@@ -1010,6 +1134,10 @@ class HomeActionsMixin(WidgetAccessMixin):
             return
 
         def _done(_result: Any) -> bool:
+            # PERFIL-SALVA-TUDO-01/E3: a máscara é a segunda metade da seção
+            # `mode` do perfil — o `kind` aqui é necessariamente "gamepad" (o
+            # gate logo acima já devolveu em qualquer outro modo).
+            registrar_modo_no_rascunho(self, MODE_GAMEPAD, flavor_id)
             # LEIGO-02: era "Máscara do gamepad: xbox" — jargão + id cru.
             self._status_toast(
                 "home", f"O jogo agora vê: {_flavor_label(flavor_id)}"
@@ -1053,6 +1181,16 @@ class HomeActionsMixin(WidgetAccessMixin):
         """
 
         def _done(resultado: Any) -> bool:
+            # PERFIL-SALVA-TUDO-01/E3: "Preparar co-op" é o ÚNICO gesto da janela
+            # que diz `coop` — os outros preservam o que o perfil já dizia. Aqui
+            # ela pediu co-op na mão, então o `True` é dela, não default do
+            # esquema (a distinção que o LEIGO-01 pagou para aprender).
+            registrar_modo_no_rascunho(
+                self,
+                MODE_GAMEPAD,
+                self._home_flavor_selector.get_active_id(),
+                coop=True,
+            )
             jogadores = (
                 resultado.get("players") if isinstance(resultado, dict) else None
             )

@@ -630,45 +630,99 @@ _CARD_DS = (
 
 
 class TestCamada2PerfilDaPlaca:
-    def test_detecta_o_spdif_e_propoe_o_analogico(self) -> None:
+    """REESCRITOS em 26/07/2026 — a regra que eles travavam foi REFUTADA.
+
+    Estes testes fixavam o comportamento original do `--fix-mic`: sempre que a
+    entrada ativa fosse `iec958`, trocar para `input:analog-stereo`, e — no caso
+    mais explicito — NAO filtrar por `available`. Um deles se chamava
+    literalmente `test_o_alvo_nao_e_filtrado_por_available`, com o argumento de
+    que filtrar "repetiria o erro do WirePlumber e deixaria o microfone embutido
+    inalcancavel para sempre".
+
+    Medido no hardware, com o controle no cabo: forcar o perfil analogico
+    (marcado `available: no` pelo ALSA) produz uma source SEM PORTA DE CAPTURA e
+    a gravacao sai com pico 0 — 327.680 bytes de silencio digital. No
+    `iec958-stereo` a mesma gravacao deu pico 4606 e RMS 374. A regra que estes
+    testes protegiam emudecia o microfone de quem rodasse a cura.
+
+    Não foram apagados: cada um vira o seu contrario, com o porque ao lado. E o
+    argumento antigo não era burrice — ele valia SE o analogico fosse alcancavel.
+    A medicao mostrou que, quando o ALSA diz `available: no`, ele não é.
+    """
+
+    def test_nao_propoe_o_analogico_indisponivel(self) -> None:
+        """Era `test_detecta_o_spdif_e_propoe_o_analogico`.
+
+        O ativo (`iec958`) oferece fonte e esta disponivel: não há o que trocar.
+        """
         saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_SPDIF)
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
         assert ativo == "output:analog-surround-40+input:iec958-stereo"
-        assert alvo == "output:analog-surround-40+input:analog-stereo"
-
-    def test_o_alvo_preserva_a_saida_do_perfil_ativo(self) -> None:
-        """Trocar para um perfil só-de-entrada emudeceria o alto-falante e o
-        fone do controle, e derrubaria o canal de haptic-de-áudio junto."""
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_SPDIF)
-        _card, _ativo, alvo = saida.split("\t")
-        assert alvo.startswith("output:analog-surround-40+")
-
-    def test_o_alvo_nao_e_filtrado_por_available(self) -> None:
-        """O perfil analógico é `available: no` — é exatamente esse o achado.
-        Filtrar por disponibilidade repetiria o erro do WirePlumber e deixaria
-        o microfone embutido inalcançável para sempre."""
-        assert "priority: 1265, available: no" in _CARDS_SPDIF
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_SPDIF)
-        assert saida.split("\t")[2].endswith("input:analog-stereo")
-
-    def test_sem_gemeo_exato_cai_num_perfil_com_saida(self) -> None:
-        """Perfil ativo cuja parte de saída não tem gêmeo analógico: a reserva
-        ainda prefere um perfil COM saída, para não emudecer o alto-falante."""
-        exotico = _CARDS_SPDIF.replace(
-            "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
-            "\tActive Profile: output:hdmi-stereo+input:iec958-stereo",
+        assert alvo == "", (
+            "o analogico esta `available: no` — propo-lo produz source sem "
+            f"porta e silencio digital. Veio alvo={alvo!r}"
         )
-        saida = _rodar_doctor("_dualsense_perfil_status", entrada=exotico)
-        alvo = saida.split("\t")[2]
-        assert alvo == "output:analog-surround-40+input:analog-stereo"
 
-    def test_perfil_ja_analogico_nao_pede_troca(self) -> None:
+    def test_quando_precisa_trocar_o_alvo_preserva_a_saida(self) -> None:
+        """Este contrato CONTINUA valendo, e por que ele foi escrito.
+
+        Trocar para um perfil so-de-entrada emudeceria o alto-falante e o fone
+        do controle, e derrubaria o canal de haptic-de-audio junto. So que agora
+        a troca so acontece quando o ativo NAO serve.
+        """
+        sem_fonte = _CARDS_SPDIF.replace(
+            "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
+            "\tActive Profile: output:analog-surround-40",
+        )
+        saida = _rodar_doctor("_dualsense_perfil_status", entrada=sem_fonte)
+        alvo = saida.split("\t")[2]
+        assert alvo.startswith("output:"), (
+            f"o alvo precisa manter uma saida; veio {alvo!r}"
+        )
+
+    def test_o_alvo_e_sim_filtrado_por_available(self) -> None:
+        """O CONTRARIO exato do teste que existia aqui.
+
+        O nome antigo era `test_o_alvo_nao_e_filtrado_por_available`. Filtrar
+        por disponibilidade e justamente o que impede a cura de escolher um
+        perfil que o ALSA sabe que não vai funcionar.
+        """
+        assert "priority: 1265, available: no" in _CARDS_SPDIF, (
+            "a fixture precisa manter o analogico como indisponivel — e o caso"
+        )
+        sem_fonte = _CARDS_SPDIF.replace(
+            "\tActive Profile: output:analog-surround-40+input:iec958-stereo",
+            "\tActive Profile: output:analog-surround-40",
+        )
+        alvo = _rodar_doctor(
+            "_dualsense_perfil_status", entrada=sem_fonte
+        ).split("\t")[2]
+        assert not alvo.endswith("input:analog-stereo"), (
+            f"perfil `available: no` nunca pode ser alvo; veio {alvo!r}"
+        )
+
+    def test_o_estado_que_a_cura_antiga_deixava_e_desfeito(self) -> None:
+        """Era `test_perfil_ja_analogico_nao_pede_troca`, e a inversao e o ponto.
+
+        `_CARDS_CURADO` e a maquina DEPOIS da cura antiga: perfil analogico
+        ativo. A fixture o descreve como `available: no` — e foi exatamente esse
+        o estado medido no hardware, onde a source nasce sem porta e a gravacao
+        sai com pico 0.
+
+        O teste antigo chamava isso de "curado" e exigia que nada fosse feito.
+        A regra nova reconhece o estado como ruim e propoe o perfil que o ALSA
+        declara disponivel: a cura passa a DESFAZER o estrago que ela mesma
+        causava antes.
+        """
         saida = _rodar_doctor("_dualsense_perfil_status", entrada=_CARDS_CURADO)
         card, ativo, alvo = saida.split("\t")
         assert card == _CARD_DS
         assert ativo == "output:analog-surround-40+input:analog-stereo"
-        assert alvo == ""
+        assert alvo.endswith("input:iec958-stereo"), (
+            "o ativo esta `available: no`; a cura tem de propor o disponivel "
+            f"em vez de declarar vitoria. Veio alvo={alvo!r}"
+        )
 
     def test_a_placa_onboard_nao_e_confundida(self) -> None:
         """A onboard também tem `iec958` no perfil ativo e NÃO é assunto nosso."""

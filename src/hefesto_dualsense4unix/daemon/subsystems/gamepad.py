@@ -326,6 +326,26 @@ def steam_input_vpad_suspenso(daemon: Any) -> bool:
     return bool(getattr(daemon, "_steam_input_vpad_suspenso", False))
 
 
+def steam_input_coop_derrubados(daemon: Any) -> int:
+    """Quantos jogadores de co-op a exceção de Steam Input derrubou (0 = nenhum).
+
+    CONTAGEM-E-COOP-01 (29/07). Conta SECUNDÁRIOS (P2, P3, P4) — o P1 não é
+    jogador do co-op, ele é o vpad primário, e a queda dele já tem observável
+    próprio (`steam_input_vpad_suspenso`). Somar os dois num número só faria
+    "co-op de três" virar "4" na tela.
+
+    Leitura de um inteiro em memória, como as duas irmãs deste módulo, e pelo
+    mesmo motivo (é consumida pelo `state_full`, que roda a 10 Hz). Vive
+    exatamente enquanto a suspensão vive: `suspend_vpads_for_steam_input`
+    escreve o valor medido e as DUAS saídas da suspensão (a borda de saída da
+    exceção e o gesto manual de religar a emulação) zeram junto com o flag —
+    um número pendurado depois de o co-op voltar mandaria a janela avisar de um
+    estrago que já acabou.
+    """
+    valor = getattr(daemon, "_steam_input_coop_derrubados", 0)
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
+
+
 async def _vigia_da_excecao_steam_input(daemon: DaemonProtocol) -> None:
     """Reconciliação de launch a 1 Hz enquanto o vpad está suspenso (JOGO-01).
 
@@ -475,16 +495,46 @@ def suspend_vpads_for_steam_input(
                 coop.disable()
         if device is not None:
             stop_gamepad_emulation(daemon, persist=False, release_grab=False)
+    # CONTAGEM-E-COOP-01 (29/07): o co-op caía EM SILÊNCIO. `coop.disable()`
+    # desmonta os secundários três linhas acima e o único vestígio era o campo
+    # `jogadores_coop` de um log cujo NOME fala de vpad — entrar na exceção de
+    # Steam Input de um jogo desligava dois ou três jogadores e nada, em lugar
+    # nenhum, dizia isso a ela. Agora o fato tem nome próprio no journal E sai
+    # publicado no `state_full` (`coop.derrubado_por_steam_input`), para a
+    # janela poder avisar. A LÓGICA da queda não mudou uma linha: mexer no
+    # gatilho encosta na exceção de Steam Input, que é o caminho do defeito do
+    # R1 curado na onda 2.
+    #
+    # Medido pelo RESIDUAL (antes menos o que sobrou), não por `n_jogadores`:
+    # `coop.disable()` roda sob `suppress(Exception)` e um teardown que estoura
+    # no meio deixa jogadores de pé — declarar "derrubei 3" nesse caso seria a
+    # mesma classe de mentira que o log de "jogadores_coop=0".
+    restantes = len(getattr(coop, "_players", None) or {}) if coop is not None else 0
+    derrubados = max(0, n_jogadores - restantes)
+    daemon._steam_input_coop_derrubados = derrubados  # type: ignore[attr-defined]
     logger.info(
         "steam_input_vpad_suspenso",
         appid=appid,
         flavor=flavor,
         jogadores_coop=n_jogadores,
     )
+    if derrubados:
+        # WARNING, não info: é perda de função que ela não pediu — três
+        # jogadores viram um. O `restantes` acusa o teardown parcial.
+        logger.warning(
+            "coop_derrubado_pela_excecao_steam_input",
+            appid=appid,
+            secundarios_derrubados=derrubados,
+            secundarios_restantes=restantes,
+        )
     store = getattr(daemon, "store", None)
     if store is not None:
         with contextlib.suppress(Exception):
             store.bump("gamepad.steam_input.vpad_suspenso")
+        if derrubados:
+            # `suppress` próprio: um bump que estoura não pode engolir o outro.
+            with contextlib.suppress(Exception):
+                store.bump("gamepad.steam_input.coop_derrubado")
     return True
 
 
@@ -512,6 +562,21 @@ def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
     flavor = getattr(daemon, "_steam_input_flavor_suspenso", None)
     daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
     daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
+    # CONTAGEM-E-COOP-01: o aviso do co-op derrubado morre com a suspensão, aqui
+    # e em TODAS as saídas dela — inclusive nas que devolvem antes do
+    # `coop.sync(force=True)` do fim (Modo Nativo, "não havia vpad"). Zerar só no
+    # caminho felizmente-completo deixaria a janela avisando de um estrago
+    # encerrado. Ver `steam_input_coop_derrubados`.
+    derrubados_antes = steam_input_coop_derrubados(daemon)
+    daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
+    if derrubados_antes:
+        # Nome do fato EXATO: o aviso acabou. "Devolvido" seria mentira nas
+        # saídas que não recriam o co-op (Modo Nativo, "não havia vpad") — quem
+        # recria é o `coop.sync(force=True)` do fim desta função.
+        logger.info(
+            "steam_input_coop_aviso_encerrado",
+            secundarios_derrubados=derrubados_antes,
+        )
     nativo = False
     with contextlib.suppress(Exception):
         nativo = bool(daemon.is_native_mode())
@@ -1333,6 +1398,17 @@ def start_gamepad_emulation(
             logger.info("steam_input_vpad_retomado", motivo="gesto_manual")
             daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
             daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
+            # CONTAGEM-E-COOP-01: a SEGUNDA saída da suspensão. O aviso do co-op
+            # derrubado tem de morrer aqui também — senão a janela seguiria
+            # avisando depois de ela mesma religar a emulação na mão.
+            coop_derrubado_antes = steam_input_coop_derrubados(daemon)
+            daemon._steam_input_coop_derrubados = 0  # type: ignore[attr-defined]
+            if coop_derrubado_antes:
+                logger.info(
+                    "steam_input_coop_aviso_encerrado",
+                    secundarios_derrubados=coop_derrubado_antes,
+                    motivo="gesto_manual",
+                )
 
     existing = daemon._gamepad_device
     if existing is not None:
@@ -1559,6 +1635,7 @@ __all__ = [
     "resume_vpads_after_steam_input",
     "start_gamepad_emulation",
     "start_motion_reader",
+    "steam_input_coop_derrubados",
     "steam_input_excecao_ativa",
     "steam_input_vpad_suspenso",
     "stop_gamepad_emulation",

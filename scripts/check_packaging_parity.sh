@@ -339,11 +339,20 @@ if [[ -f assets/dkms/hid-nintendo/dkms.conf ]]; then
     # passava verde (falso-verde reproduzido) e o purge deixava o módulo
     # `hefesto-hid-nintendo` órfão registrado no DKMS para sempre. Mesmo
     # contrato do bloco rtw88-usb abaixo: remoção desregistra em TODO formato.
+    #
+    # FALSO-VERDE-GATE-DKMS-REMOVE-01 (30/07): este loop nasceu com DOIS greps
+    # INDEPENDENTES ("dkms remove" em algum lugar do arquivo E o nome do módulo
+    # em algum lugar do arquivo) e por isso NÃO gateava nada — cada hook cita
+    # `dkms remove` pelos módulos IRMÃOS e cita `hefesto-hid-nintendo` pela conf
+    # de modprobe.d, então os dois greps casavam com ZERO remoção deste módulo.
+    # Foi reproduzido ao vivo na onda 1 (a mutação que arrancava o `dkms remove`
+    # do hid-playstation passou verde na primeira tentativa por este padrão).
+    # Agora é o padrão COMBINADO — o comando E o módulo na MESMA linha — igual
+    # ao bloco do hid-playstation, que nasceu certo.
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms remove" "${hook}" 2>/dev/null \
-            && grep -qF "hefesto-hid-nintendo" "${hook}" 2>/dev/null; } \
+        grep -qF 'dkms remove "hefesto-hid-nintendo/' "${hook}" 2>/dev/null \
             || missing+=("${hook}(remoção)")
     done
     grep -qF "hefesto-hid-nintendo" uninstall.sh 2>/dev/null \
@@ -377,11 +386,15 @@ if [[ -f assets/dkms/rtw88-usb/dkms.conf ]]; then
     grep -qF "dkms_install_patched_module hefesto-rtw88-usb" \
         scripts/install-host-udev.sh 2>/dev/null \
         || missing+=("scripts/install-host-udev.sh(não roda o DKMS)")
+    # FALSO-VERDE-GATE-DKMS-REMOVE-01 (30/07): mesma cura do bloco do
+    # hid-nintendo acima — dois greps independentes davam falso-verde porque
+    # cada hook já cita `dkms remove` (pelos módulos irmãos) e já cita
+    # `hefesto-rtw88-usb` (pela mensagem pós-instalação cobrada abaixo). Padrão
+    # COMBINADO: o comando E o módulo na MESMA linha.
     for hook in packaging/debian/prerm packaging/debian/postrm \
                 packaging/arch/hefesto-dualsense4unix.install \
                 packaging/fedora/hefesto-dualsense4unix.spec; do
-        { grep -qF "dkms remove" "${hook}" 2>/dev/null \
-            && grep -qF "hefesto-rtw88-usb" "${hook}" 2>/dev/null; } \
+        grep -qF 'dkms remove "hefesto-rtw88-usb/' "${hook}" 2>/dev/null \
             || missing+=("${hook}(remoção)")
     done
     grep -qF "hefesto-rtw88-usb" uninstall.sh 2>/dev/null \

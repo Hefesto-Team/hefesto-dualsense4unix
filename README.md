@@ -11,7 +11,7 @@
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.3.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
 [![Testes](https://img.shields.io/badge/testes-5783-brightgreen.svg)](tests/)
-[![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=sprint/harmonia-uhid)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
+[![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
 
@@ -72,26 +72,47 @@ Bluetooth) entram como jogadores adicionais.
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag **`v0.2.0`**: é o checkpoint que rodou em hardware com
-> quatro controles e foi aprovado olhando a tela. Duas ressalvas antes de clonar:
+> recomendado é a tag da versão corrente, hoje a **`v0.3.0`**. Duas ressalvas
+> antes de clonar:
 >
-> - **O `main` do fork está à frente da tag, e num ponto retirado.** Ele carrega
->   a v0.1.2, cujas mudanças de interface foram reprovadas na validação de olho
->   e desfeitas no mesmo dia (o porquê está no [CHANGELOG](CHANGELOG.md)). Clonar
->   `main` hoje entrega essa versão.
+> - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
+>   `-b sprint/harmonia-uhid` para pegar "a alfa 0.1.1"; aquela branch está
+>   parada dois lançamentos atrás. Tag, sempre.
 > - **O repositório de origem `AndreBFarias/hefesto-dualsense4unix` não tem este
 >   código**: o `main` dele está no commit `398d3ed` e o último lançamento de lá
 >   é a **v3.0.0, de 28/04/2026**. Clonar de lá entrega o projeto anterior a tudo
 >   isto.
 >
-> Medido em 26/07/2026.
+> Conferido em 30/07/2026 contra o `pyproject.toml`.
 
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.2.0
+git checkout v0.3.0
 ./install.sh
 ```
+
+### O controle precisa estar ligado no cabo?
+
+Não para instalar — o `install.sh` provisiona o sistema (regras udev, módulos,
+áudio, Bluetooth) e não fala com o controle. Mas **ligue o DualSense no cabo USB
+antes de abrir a janela pela primeira vez**: é assim que o Hefesto elege o
+controle principal, cria o gamepad virtual e liga a leitura de gatilhos, LEDs,
+toque, giroscópio e microfone. Só o cabo dá as duas coisas de uma vez: energia
+para o rádio interno e o caminho HID completo.
+
+O que muda entre cabo e rádio, medido neste projeto:
+
+| | USB (cabo) | Bluetooth |
+|---|---|---|
+| Envelope do relatório | `0x02`, sem checksum | `0x31`/`0x32` com CRC-32 e número de sequência |
+| Cor e luzes de jogador | pelo nó do kernel em `/sys` | idem, e o caminho da biblioteca é inerte por rádio |
+| Microfone | canal de captura direto | Opus tunelado dentro do próprio HID |
+| Custo de ligar o microfone | nenhum no caminho de input | cerca de **35% dos relatórios de input** — o áudio divide a mesma fila |
+
+Se o controle aparecer conectado e sem reagir, a página
+[Solução de problemas](docs/usage/troubleshooting.md) tem o roteiro; por rádio,
+comece pela [página de Bluetooth](docs/usage/bluetooth.md).
 
 O instalador mostra um seletor de formato, pede a senha de administrador uma vez
 e conduz o resto. As perguntas têm padrão seguro — dá para responder tudo com
