@@ -201,9 +201,9 @@ def test_github_release_depende_do_guarda_de_ci(
         for nome in release_workflow.get("jobs", {})
         if "ci.yml/runs" in _run_concatenado(release_workflow, nome)
     }
-    dependencias = set(_needs(release_workflow, JOB_PUBLICACAO))
-    assert guardas & dependencias, (
-        f"'{JOB_PUBLICACAO}' depende de {sorted(dependencias)} e de nenhum "
+    deps_do_job = set(_needs(release_workflow, JOB_PUBLICACAO))
+    assert guardas & deps_do_job, (
+        f"'{JOB_PUBLICACAO}' depende de {sorted(deps_do_job)} e de nenhum "
         f"guarda de CI (candidatos: {sorted(guardas)}). Um ci.yml vermelho "
         "publicaria a release."
     )
