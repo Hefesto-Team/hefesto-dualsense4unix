@@ -360,6 +360,14 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Thu Jul 30 2026 Vitoria Maria <[REDACTED]> - 1:0.4.0-1
+- Os tres automatismos: o R1 parou de virar Alt+Tab dentro do jogo, o perfil
+  passou a guardar as outras abas, e a fonte de captura padrao voltou a ser um
+  microfone de verdade em vez do monitor do alto-falante do proprio controle.
+- O caminho de ativacao do .deb estava morto (espelho de regras udev parava na
+  81 e o helper abortava exigindo as 14); hefesto-hid-playstation passou a ser
+  desregistrado na remocao; e o %files deixou de omitir o que o %install grava.
+
 * Wed Jul 29 2026 Vitoria Maria <[REDACTED]> - 1:0.3.0-1
 - Epoch 1: a numeracao voltou de 4.0.0 para 0.1.0 em 2026-07-24 e, sem epoch,
   o dnf tratava 0.3.0 como downgrade de 3.4.0 e RECUSAVA o upgrade. O topo

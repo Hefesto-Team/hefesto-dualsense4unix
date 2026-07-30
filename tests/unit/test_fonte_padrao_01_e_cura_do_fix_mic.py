@@ -582,14 +582,35 @@ class TestPortaoParaDeAprovarOSintoma:
 
 class TestCuraDaFontePadrao:
     def test_a_cura_elege_uma_entrada_de_verdade(self, cenario: Cenario) -> None:
+        """CORRIGIDO em 30/07 — este teste afirmava o contrário do próprio
+        comentário da fixture que ele usa.
+
+        A `SOURCES_LONGO` diz, três linhas acima dela: *"a onboard tem porta
+        ativa `not available` (nada plugado no jack); a do DualSense tem
+        `availability unknown` — e é ela que gravou pico 4606"*. O raciocínio
+        estava certo e a afirmação, errada: o teste exigia que a cura elegesse a
+        ONBOARD.
+
+        Provado na máquina dela em 30/07, depois de um `uninstall` + `install`
+        limpos: eleger a onboard não gruda. O `pactl set-default-source` aceita,
+        o WirePlumber não consegue honrar um nó sem porta usável, reelege
+        sozinho e volta para o MONITOR em segundos — com a cura tendo impresso
+        `[ OK ] fonte padrão trocada`. Relatório que mente é pior que cura que
+        não roda.
+
+        Com o filtro de porta ligado (o `_source_porta_ativa_indisponivel`, que
+        existia e não era chamado), a onboard sai da disputa e sobra o mic do
+        controle — que é o único microfone de verdade desta máquina.
+        """
         cenario.com_dropin(DROPIN_51)
         res = cenario.roda("fix_default_source_monitor")
         assert res.returncode == 0, res.stderr
         eleicoes = [
             c for c in cenario.chamadas() if c.startswith("set-default-source")
         ]
-        assert eleicoes == [f"set-default-source {SRC_ONBOARD}"], (
-            f"{eleicoes}\n{res.stdout}"
+        assert eleicoes == [f"set-default-source {SRC_DS}"], (
+            "a onboard tem as três portas `not available` — elegê-la é eleger "
+            f"silêncio, e o WirePlumber devolve o monitor.\n{eleicoes}\n{res.stdout}"
         )
 
     def test_com_opt_in_a_cura_elege_o_controle(self, cenario: Cenario) -> None:

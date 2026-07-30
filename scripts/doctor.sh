@@ -667,9 +667,42 @@ fix_default_source_monitor() {
     [[ "$(_default_source_classe "${cur}")" == "monitor" ]] || return 0
     local prefere=0 alvo
     _prefere_mic_do_dualsense && prefere=1
-    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null | _melhor_source_de_captura "${prefere}")"
+
+    # FONTE-PADRÃO-01, segunda metade — a fiação que faltava, medida em 30/07 num
+    # `uninstall` + `install` limpos na máquina da mantenedora.
+    #
+    # O `_source_porta_ativa_indisponivel` já existia, com a medição escrita ao
+    # lado dele, e NINGUÉM o chamava: o `_melhor_source_de_captura` escolhia a
+    # primeira entrada não-DualSense e pronto. Nesta máquina isso elegia a onboard
+    # `alsa_input.pci-...analog-stereo`, cujas TRÊS portas de captura estão
+    # `not available` (nada plugado no jack). O `pactl set-default-source` até
+    # aceita — e o WirePlumber, que não consegue honrar um nó sem porta usável,
+    # reelege sozinho e volta para o MONITOR. A cura reportava sucesso e o defeito
+    # continuava na tela, o que é pior do que não curar.
+    #
+    # Aqui a lista de candidatos é filtrada ANTES da escolha: fonte cuja porta
+    # ativa está explicitamente indisponível sai da disputa. `unknown` continua
+    # valendo — é o caso da entrada do DualSense, que grava de verdade (medido:
+    # pico 441 num quarto silencioso, contra pico 0 do silêncio digital).
+    local lista_curta lista_completa
+    lista_completa="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+    lista_curta=""
+    while IFS= read -r _linha; do
+        [[ -n "${_linha}" ]] || continue
+        local _nome
+        _nome="$(printf '%s\n' "${_linha}" | awk '{print $2}')"
+        if [[ -n "${_nome}" ]] \
+           && printf '%s\n' "${lista_completa}" \
+              | _source_porta_ativa_indisponivel "${_nome}"; then
+            info "  ${_nome}: porta de captura indisponível (nada plugado) — fora da disputa"
+            continue
+        fi
+        lista_curta+="${_linha}"$'\n'
+    done < <(LC_ALL=C pactl list sources short 2>/dev/null || true)
+
+    alvo="$(printf '%s' "${lista_curta}" | _melhor_source_de_captura "${prefere}")"
     if [[ -z "${alvo}" ]]; then
-        warn "a fonte padrão é um MONITOR (${cur}) e não há nenhuma fonte de captura para eleger"
+        warn "a fonte padrão é um MONITOR (${cur}) e não há nenhuma fonte de captura com porta usável para eleger"
         return 0
     fi
     if pactl set-default-source "${alvo}" 2>/dev/null; then
