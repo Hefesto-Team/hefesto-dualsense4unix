@@ -15,25 +15,47 @@ empate salvava. Isso é literalmente a queixa crônica dela — "a config que eu
 deixo nunca é respeitada" — reaparecendo num caminho que antes funcionava (o
 default anterior era 5, que empatava no topo e vencia pelo alfabeto).
 
-Estes testes NÃO abrem GTK: exercitam o mixin isolado com um dublê mínimo, que é
-o que permite rodá-los no CI headless.
+O módulo NÃO importa a GUI no topo, de propósito. `app.actions.profiles_actions`
+puxa `gi` na primeira linha útil, e importar isso aqui derrubava a COLETA inteira
+no CI headless — foi exatamente o que reprovou o `ci.yml` da tag v0.4.0 e, com
+ele, o guarda que impede publicar em cima de CI vermelho. A guarda
+`exigir_gi_real()` de módulo resolveria o erro e custaria caro: ela pula o
+arquivo TODO, e metade destes testes (os que leem o fonte) não precisa de GTK
+nenhum e é justamente a que protege a regressão.
+
+Então: o que precisa do mixin importa DENTRO do teste, atrás da guarda; o que lê
+o fonte roda em qualquer lugar.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.profiles_actions import (
-    _FOLGA_ACIMA_DO_CATCH_ALL,
-    ProfilesActionsMixin,
-)
+
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
 
 
-class _AppFake(ProfilesActionsMixin):
-    """Dublê com só o que o cálculo de prioridade toca."""
+def _mixin_e_folga() -> tuple[Any, int]:
+    """Importa a GUI só depois de exigir o PyGObject real (GUARDA-GI-REAL-01)."""
+    from tests.conftest import exigir_gi_real
 
-    def __init__(self, cache: list[Profile]) -> None:
-        self._profiles_cache = cache
+    exigir_gi_real("prioridade do Salvar do rodapé")
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        _FOLGA_ACIMA_DO_CATCH_ALL,
+        ProfilesActionsMixin,
+    )
+
+    return ProfilesActionsMixin, _FOLGA_ACIMA_DO_CATCH_ALL
+
+
+def _app_fake(cache: list[Profile]) -> Any:
+    """Dublê com só o que o cálculo de prioridade toca."""
+    base, _ = _mixin_e_folga()
+
+    class _AppFake(base):  # type: ignore[misc, valid-type]
+        def __init__(self, c: list[Profile]) -> None:
+            self._profiles_cache = c
+
+    return _AppFake(cache)
 
 
 def _catch_all(nome: str, prioridade: int) -> Profile:
@@ -62,7 +84,7 @@ DISCO_DELA = [
 
 
 def test_prioridade_calculada_vence_todo_catch_all_do_disco_dela() -> None:
-    app = _AppFake(list(DISCO_DELA))
+    app = _app_fake(list(DISCO_DELA))
     prioridade = app._prioridade_acima_dos_catch_all()
 
     catch_alls = [p.priority for p in DISCO_DELA if p.e_catch_all]
@@ -70,7 +92,8 @@ def test_prioridade_calculada_vence_todo_catch_all_do_disco_dela() -> None:
         f"perfil novo nasceria em {prioridade} e o maior catch-all dela é "
         f"{max(catch_alls)} — ele perderia a disputa que deveria ganhar"
     )
-    assert prioridade == max(catch_alls) + _FOLGA_ACIMA_DO_CATCH_ALL
+    _, folga = _mixin_e_folga()
+    assert prioridade == max(catch_alls) + folga
 
 
 def test_o_default_do_esquema_seria_pior_que_o_calculo() -> None:
@@ -93,14 +116,15 @@ def test_o_default_do_esquema_seria_pior_que_o_calculo() -> None:
 
 def test_sem_cache_o_calculo_nao_explode_e_da_a_folga() -> None:
     """Primeiro save da sessão, antes de a lista carregar: não pode estourar."""
-    app = _AppFake([])
-    assert app._prioridade_acima_dos_catch_all() == _FOLGA_ACIMA_DO_CATCH_ALL
+    app = _app_fake([])
+    _, folga = _mixin_e_folga()
+    assert app._prioridade_acima_dos_catch_all() == folga
 
 
 def test_regra_especifica_alta_nao_infla_a_prioridade_do_novo() -> None:
     """Só catch-all entra na conta — senão o `sackboy_nativo` (80) puxaria o novo
     perfil para 90 e ele passaria a vencer regras de jogo que não são dele."""
-    app = _AppFake(list(DISCO_DELA))
+    app = _app_fake(list(DISCO_DELA))
     prioridade = app._prioridade_acima_dos_catch_all()
     regras = [p.priority for p in DISCO_DELA if not p.e_catch_all]
     assert prioridade < min(regras), (
@@ -137,6 +161,9 @@ def test_o_piso_do_fallback_nao_pode_ser_zero() -> None:
     SILENCIOSO, porque nenhum caminho de erro é percorrido. O piso tem de vencer
     todo catch-all dela e perder para a regra de jogo mais baixa de fábrica.
     """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("piso do rodapé")
     from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 
     piso = FooterActionsMixin._PISO_ACIMA_DOS_CATCH_ALL
@@ -159,7 +186,11 @@ def test_o_metodo_de_calculo_segue_alcancavel_pelo_mixin_do_rodape() -> None:
     """`FooterActionsMixin` e `ProfilesActionsMixin` são irmãos no `HefestoApp`.
     Se alguém separar os dois, o rodapé perde o método em runtime — e o defeito
     só apareceria com a janela aberta, no gesto dela."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("composição dos mixins")
     from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
+    from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
     class _Composto(ProfilesActionsMixin, FooterActionsMixin):
         pass
