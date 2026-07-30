@@ -17,7 +17,7 @@
        agora alvo do scripts/check_version_consistency.py, então o portão de
        release reprova se ela ficar atrás do pyproject.toml. -->
   <releases>
-    <release version="0.3.0" date="2026-07-28">
+    <release version="0.4.0" date="2026-07-28">
       <description>
         <p>A leva do que desfazia o trabalho dela. O tema é a janela parar de
            afirmar o que não aconteceu: o desempate entre perfis deixou de ser a

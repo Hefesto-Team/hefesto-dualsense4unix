@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.3.0
+Version:        0.4.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 

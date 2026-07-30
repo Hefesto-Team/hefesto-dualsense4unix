@@ -5,6 +5,73 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-07-30
+
+Três levas conduzidas por agentes com arquivos particionados e um verificador
+independente com poder de reprovar — e ele reprovou duas delas.
+
+### O R1 parou de trocar de aplicativo dentro do jogo
+
+A queixa: *"inicio o jogo e ele quando aperto r1 muda de app ao invés de
+funcionar no jogo"*. `r1` é `Alt+Tab` no mapa de teclado emulado, e a emulação de
+teclado **não tinha interruptor**: nascia ligada, sem persistência e sem chave na
+janela, enquanto o interruptor que existia governava só o mouse.
+
+O que abria a porta dentro da partida era a própria proteção do Steam Input:
+quando um jogo da allowlist abre, o vpad é suspenso de propósito — e a exclusão
+mútua do laço lia essa **ausência como permissão** para a emulação de desktop
+entrar. Com o gate fechando enquanto o R1 estava segurado, o `KEY_LEFTALT` ficava
+preso (18 s e 33 s medidos no journal), e quem soltava era o clique dela no
+"modo jogo".
+
+- Interruptor próprio para o teclado emulado, com flag persistida e método IPC.
+- A exclusão mútua pergunta se há jogo no controle do desktop, e o predicado só
+  ESTREITA o gate — nunca o alarga.
+- Borda de episódio com flush: a tecla presa é solta na hora, e sair do jogo não
+  produz Alt+Tab fantasma.
+- Recusado com teste-cadeado: condicionar o gate ao `display_authority`, que é
+  sticky e cai sozinho ~30 s depois com o jogo ainda aberto.
+
+### O perfil passou a guardar as outras abas
+
+Modo, máscara, co-op e "modo jogo" iam só para o estado vivo do daemon; o Salvar
+reemitia a fotografia do boot por cima. Os cinco gestos das abas Início e
+Emulação agora registram no rascunho — **sem aplicar**, com portão por AST
+provando que nenhum escritor dispara IPC. Ligar o "modo jogo" em perfil
+"vale sempre" é recusado com aviso: seria alçapão de mão única.
+
+### O microfone voltou a gravar a voz, não o alto-falante
+
+`pactl get-default-source` devolvia o **monitor da saída do próprio controle**. O
+`doctor.sh` dava `pass` explícito para qualquer fonte com "monitor" no nome, e o
+`install.sh` reaplicava a cura **refutada** a cada instalação. Medido no
+hardware: o perfil analógico é `available: no` e forçá-lo dá source sem porta de
+captura — 327.680 bytes de silêncio digital, pico 0; no `iec958` a mesma gravação
+deu pico 4606.
+
+### Empacotamento e portões
+
+- O caminho de ativação do `.deb` estava **morto**: o espelho de regras udev
+  parava na 81 e o helper aborta exigindo as 14. Sem grupo, sem broker, sem DKMS.
+- `hefesto-hid-playstation` sobrevivia ao `apt remove` com `AUTOINSTALL=yes`.
+- Spec do Fedora não compilava; flake Nix quebrava nas regras 73/74, removidas.
+- Epoch nos três gerenciadores: 0.4.0 é downgrade de 4.0 e o upgrade era recusado.
+- Flatpak com versão no nome do bundle e semeando os perfis default.
+- `--default-branch` **não existe** no `flatpak build-bundle`: a release inteira
+  teria falhado.
+- O hook de acentuação checava **um** arquivo de N, em silêncio.
+- Força 8 do gatilho virava 0 (empacotamento de 3 bits), com teste tautológico.
+- `--no-systemd` atropelava a resposta dela; `--help` escondia flag real.
+- Blocos de paridade DKMS davam falso-verde com dois greps independentes.
+
+### Documentação
+
+README, quickstart e flatpak mandavam clonar uma branch parada dois lançamentos
+atrás. Agora apontam para a tag. Seção nova sobre o **controle no cabo USB**, com
+o que muda entre cabo e rádio — inclusive o custo medido de ~35% dos relatórios
+de input quando o microfone sobe por Bluetooth.
+
+
 ## [0.3.0] — 2026-07-28
 
 **A leva do que desfazia o trabalho dela.** Quatorze agentes leram o repositório
