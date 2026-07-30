@@ -33,16 +33,24 @@ sudo pacman -S python-gobject gtk3 libappindicator-gtk3 hidapi \
 ## 2. Instalar
 
 ```bash
-git clone -b sprint/harmonia-uhid \
-  https://github.com/[REDACTED]/hefesto-dualsense4unix.git
+git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
+git checkout v0.3.0
 ./install.sh
 ```
 
-> A branch importa. A alfa 0.1.1 ainda não está no `main` de nenhum dos dois
-> repositórios — o `main` de `AndreBFarias/hefesto-dualsense4unix` está na
-> v3.0.0 (abril/2026). Ver a caixa "Onde esta versão mora" no
+> **Clone pela tag, não por branch.** Esta página mandava, até 29/07/2026,
+> clonar `-b sprint/harmonia-uhid` para pegar "a alfa 0.1.1" — aquela branch
+> parou dois lançamentos atrás. E o `main` de
+> `AndreBFarias/hefesto-dualsense4unix` está na v3.0.0 (abril/2026), anterior a
+> tudo isto. Ver a caixa "Onde esta versão mora" no
 > [`README.md`](../../README.md).
+
+> **Ligue o DualSense no cabo USB antes de abrir a janela pela primeira vez.**
+> Instalar não precisa do controle; usar, sim. É pelo cabo que o Hefesto elege o
+> controle principal, cria o gamepad virtual e liga gatilhos, LEDs, toque,
+> giroscópio e microfone de uma vez. Por rádio, o microfone custa cerca de 35%
+> dos relatórios de input, porque o áudio divide a mesma fila do HID.
 
 Sem flags o instalador mostra um seletor de formato (native · flatpak ·
 appimage · deb), pede a senha de administrador uma vez e conduz os passos com

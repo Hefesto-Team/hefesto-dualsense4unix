@@ -27,6 +27,7 @@ Redesign STATUS-02 (aba Status vira 1 card por controle):
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
 from typing import Any
 
 import gi
@@ -79,6 +80,78 @@ logger = get_logger(__name__)
 #: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
 #: para as telas não divergirem; o nome antigo segue como alias do módulo.
 _display_slot = numero_do_controle
+
+
+@dataclass(frozen=True)
+class ContagemDeControles:
+    """A contagem de controles da janela — os DOIS espaços, num só lugar.
+
+    CONTAGEM-E-COOP-01 (29/07). A mesma tela dizia números diferentes para
+    "quantos controles": o cabeçalho e a linha "Conectado (N controles)"
+    contavam só os DualSense adotados, enquanto a fita de chips do topo e a
+    faixa "Número deste controle" contavam adotados + externos. Com dois
+    DualSense e dois externos vivos, o cabeçalho dizia "2 controles" ao lado
+    de quatro chips e de uma faixa oferecendo os números 1 a 4.
+
+    A resposta certa NÃO é somar tudo em um número só: os dois espaços são
+    reais e cada um tem razão histórica registrada —
+
+    - ``adotados`` — DualSense que o Hefesto governa (tem vpad, card, bateria,
+      alvo de edição). É a base da numeração dos externos (``_dualsense_count``
+      → `external_controllers.slot_of`) e o denominador dos cards
+      (`_status_card_keys_for`, filtrado por ``connected``);
+    - ``externos`` — Nintendo Pro, 8BitDo… que o daemon NUMERA mas não adota.
+      Read-only POR DECISÃO DE PRODUTO (EXT-COUNT-01, 25/07: "numerar e acender
+      o LED certo != adotar o controle"), então eles não têm card nem bateria —
+      mas dividem o MESMO espaço de numeração dos adotados (R-24/NUM-01), e é
+      por isso que a faixa de números tem de oferecer 1..``na_mesa``.
+
+    Inflar ``adotados`` com os externos regrediria as duas coisas: os cards
+    ganhariam entradas sem controle por trás e o rótulo dos externos deslizaria
+    (o ponto cego do incidente de 14:42 citado em `slot_of`).
+
+    A cura, então, é DERIVAR tudo daqui e NOMEAR cada número na tela — ver
+    :func:`texto_de_contagem`.
+    """
+
+    adotados: int
+    externos: int
+
+    @property
+    def na_mesa(self) -> int:
+        """Quantos controles estão na mesa — o espaço de numeração (R-24/NUM-01)."""
+        return self.adotados + self.externos
+
+
+def texto_de_contagem(contagem: ContagemDeControles) -> str:
+    """Frase NOMEADA da contagem, ou ``""`` quando não há plural a explicar.
+
+    CONTAGEM-E-COOP-01: quem lê a tela precisa saber de QUAL número se trata.
+    Três regimes:
+
+    - ``na_mesa <= 1``: string vazia — não há contagem a exibir e quem chama
+      segue pelo caminho single de sempre ("Conectado Via USB");
+    - sem externos: ``"3 controles"`` — o texto de sempre, e aqui ele não
+      mente: ``na_mesa == adotados``, nenhuma ambiguidade a desfazer (mantido
+      idêntico também para não crescer a largura do cabeçalho no caso comum,
+      lição dos 12px de folga da CI de 29/07);
+    - com externos: ``"2 do Hefesto + 2 externos"`` — o número do cabeçalho
+      passa a explicar por que a fita ao lado tem quatro chips.
+    """
+    adotados = contagem.adotados
+    externos = contagem.externos
+    if contagem.na_mesa <= 1:
+        return ""
+    if externos == 0:
+        return _("{n} controles").format(n=adotados)
+    parte_ext = (
+        _("1 externo") if externos == 1 else _("{n} externos").format(n=externos)
+    )
+    if adotados == 0:
+        # Defensivo: `state["connected"]` é do DualSense primário, então este
+        # regime não deveria alcançar a tela — mas "0 do Hefesto" seria pior.
+        return _("{ext} (nenhum do Hefesto)").format(ext=parte_ext)
+    return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -281,6 +354,11 @@ class StatusActionsMixin(WidgetAccessMixin):
         (handle keyed por path, sem MAC) é chave VÁLIDA: o índice
         desambigua. Duplicata exata (defensivo — não deveria existir) ganha
         um sufixo posicional para nunca colidir no dict de cards.
+
+        CONTAGEM-E-COOP-01: ``len(keys)`` é, por construção, o
+        ``ContagemDeControles.adotados`` — a mesma lista filtrada. Card de
+        externo NÃO existe (EXT-COUNT-01: read-only por decisão de produto), e é
+        por isso que os cards contam ``adotados`` e nunca ``na_mesa``.
         """
         keys: list[tuple[Any, ...]] = []
         vistos: dict[tuple[Any, Any], int] = {}
@@ -1057,13 +1135,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         # getattr defensivo: Hosts de teste montam o seletor sem passar pelo
         # `_init_controller_target_combo` (que semeia `_externals`).
         externals = getattr(self, "_externals", [])
+        # CONTAGEM-E-COOP-01: a conta vem da função única (era `len(conectados) +
+        # len(externals)` inline aqui — o denominador que divergia do cabeçalho).
+        contagem = self._contagem_de_controles(state)
         # SELETOR-UNO-01 (22/07, pedido da mantenedora): o seletor aparece com
         # 1+ controle NO TOTAL — mesmo sozinho, o controle ganha o botão com
         # número e via ("Sony 1 · BT"), no mesmo formato dos externos.
-        total = len(conectados) + len(externals)
+        total = contagem.na_mesa
         # PERFIL-05: numeração dos externos usa a contagem REAL de DualSense
         # (antes derivava de len(botões)-1, que assumia a linha "Todos").
-        self._dualsense_count = len(conectados)
+        self._dualsense_count = contagem.adotados
         if total < 1:
             self._sync_edit_target(None)
             # PLAYER-01: sem controle nenhum não há número para escolher.
@@ -1090,13 +1171,13 @@ class StatusActionsMixin(WidgetAccessMixin):
         # Override por-MAC é o valor CERTO mesmo com um controle só (ele
         # sobrevive ao replug e ao perfil). `None` passa a significar
         # exclusivamente "ela clicou em Todos".
-        editavel = len(conectados) >= 1
+        editavel = contagem.adotados >= 1
         if editavel:
             # Só sincroniza quando há um alvo derivado do estado; a ausência de
             # `target_index` não é ordem de ir para global.
             if target_index is not None:
                 self._sync_edit_target(target_index)
-            if len(conectados) == 1:
+            if contagem.adotados == 1:
                 # SELETOR-UNO-01 (decisão da mantenedora, 22/07): com UM
                 # DualSense o seletor mostra só o botão do próprio controle,
                 # sem a linha "Todos". A UI segue igual.
@@ -1360,6 +1441,24 @@ class StatusActionsMixin(WidgetAccessMixin):
             c for c in controllers if isinstance(c, dict) and c.get("connected")
         ]
 
+    def _contagem_de_controles(self, state: dict[str, Any]) -> ContagemDeControles:
+        """A ÚNICA contagem de controles da janela (CONTAGEM-E-COOP-01).
+
+        Todo lugar que precisa responder "quantos controles" passa por aqui —
+        cabeçalho, linha "Conectado", fita de chips, faixa de números, linha de
+        bateria e a base da numeração dos externos. Antes, cada um refazia a
+        conta inline (``len(conectados)`` em quatro pontos, ``len(conectados) +
+        len(externals)`` em um) e a mesma tela divergia.
+
+        ``getattr`` defensivo em ``_externals``: hosts parciais de teste montam
+        a mixin sem passar pelo ``_init_controller_target_combo`` (que semeia a
+        lista), e este caminho roda a 2 Hz.
+        """
+        return ContagemDeControles(
+            adotados=len(self._connected_controllers(state)),
+            externos=len(getattr(self, "_externals", [])),
+        )
+
     @staticmethod
     def _controllers_transports(conectados: list[dict[str, Any]]) -> str:
         """'BT + USB' (transportes em texto plano, primário primeiro)."""
@@ -1378,18 +1477,28 @@ class StatusActionsMixin(WidgetAccessMixin):
         transport = state.get("transport") or "—"
         header = self._get("header_connection")
         conectados = self._connected_controllers(state)
+        # CONTAGEM-E-COOP-01: a contagem do cabeçalho vem da MESMA função da
+        # fita de chips e da faixa de números. Antes era `len(conectados)` —
+        # que ignorava os externos e dizia "2 controles" com quatro chips ao
+        # lado. O gate também passou a ser `na_mesa`: com 1 DualSense + 1
+        # externo, o cabeçalho antigo caía no caminho single e não dizia uma
+        # palavra sobre o segundo controle da mesa.
+        contagem = self._contagem_de_controles(state)
+        texto_contagem = texto_de_contagem(contagem)
         if header is not None:
-            if connected and len(conectados) > 1:
+            if connected and texto_contagem:
                 # FEAT-DSX-MULTI-CONTROLLER-01: N controles — primário em negrito.
+                # Os transportes são dos ADOTADOS (só deles o daemon sabe a via);
+                # sem nenhum adotado, o corpo é só a contagem nomeada.
                 partes = " + ".join(
                     f"<b>{(c.get('transport') or '?').upper()}</b>"
                     if c.get("is_primary")
                     else (c.get("transport") or "?").upper()
                     for c in conectados
                 )
+                corpo = f"{texto_contagem}: {partes}" if partes else texto_contagem
                 header.set_markup(
-                    f'<span foreground="#50fa7b">&#9679; {len(conectados)} controles: '
-                    f"{partes}</span>"
+                    f'<span foreground="#50fa7b">&#9679; {corpo}</span>'
                 )
             elif connected:
                 header.set_markup(
@@ -1499,10 +1608,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         active_profile = state.get("active_profile") or "Nenhum"
 
         conectados = self._connected_controllers(state)
-        if len(conectados) > 1:
-            self._set_label(
-                "status_connection", f"Conectado ({len(conectados)} controles)"
-            )
+        # CONTAGEM-E-COOP-01: mesma função, mesmo texto NOMEADO do cabeçalho —
+        # as duas linhas da mesma tela não podem mais divergir.
+        contagem = self._contagem_de_controles(state)
+        texto_contagem = texto_de_contagem(contagem)
+        # `connected and` de propósito: sem DualSense conectado, `adotados` é 0 e
+        # o texto só existiria por causa dos externos — dizer "Conectado" ali
+        # seria mentira (a linha é do controle do Hefesto).
+        if connected and texto_contagem:
+            self._set_label("status_connection", f"Conectado ({texto_contagem})")
             self._set_label("status_transport", self._controllers_transports(conectados))
         else:
             self._set_label(
@@ -1518,9 +1632,12 @@ class StatusActionsMixin(WidgetAccessMixin):
         # linha do frame Estado (que só sabia falar do primário, com o
         # sufixo ambíguo "(Controle 1)" do UX-BATTERY-LABEL-01) some em vez
         # de duplicar/ambiguar a leitura.
-        self._set_battery_row_visible(len(conectados) <= 1)
+        # CONTAGEM-E-COOP-01: `adotados`, NÃO `na_mesa` — externo não tem card
+        # nem bateria lida pelo Hefesto (EXT-COUNT-01), então um externo na mesa
+        # não pode fazer a linha de bateria do primário desaparecer.
+        self._set_battery_row_visible(contagem.adotados <= 1)
         battery_bar = self._get("status_battery_bar")
-        if battery_bar is not None and len(conectados) <= 1:
+        if battery_bar is not None and contagem.adotados <= 1:
             # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL (show_text).
             with contextlib.suppress(Exception):
                 battery_bar.set_show_text(True)
@@ -1603,5 +1720,7 @@ __all__ = [
     "ALL_BUTTONS",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
+    "ContagemDeControles",
     "StatusActionsMixin",
+    "texto_de_contagem",
 ]

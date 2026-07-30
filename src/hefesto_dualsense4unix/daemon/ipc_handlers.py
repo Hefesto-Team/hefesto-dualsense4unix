@@ -1636,6 +1636,30 @@ class IpcHandlersMixin:
                     vistos = conectados()
                     if isinstance(vistos, (set, frozenset)):
                         result["coop"]["externals"] = len(vistos)
+            # CONTAGEM-E-COOP-01 (29/07): o co-op era derrubado EM SILÊNCIO.
+            # Quando um jogo da allowlist de Steam Input entra em sessão,
+            # `suspend_vpads_for_steam_input` chama `CoopManager.disable()` e
+            # dois ou três jogadores desaparecem sem uma palavra — `players`
+            # volta a 1 no tique seguinte e a janela não tinha como distinguir
+            # "ela desligou o co-op" de "o jogo derrubou o co-op".
+            #
+            # Duas chaves porque são duas perguntas: `derrubado_por_steam_input`
+            # é o gatilho do aviso; `secundarios_derrubados` é QUANTOS jogadores
+            # extras caíram (P2+; o P1 não é jogador do co-op e a queda dele já
+            # tem observável próprio em `steam_input.vpad_suspenso`). Vale
+            # exatamente enquanto a suspensão vale — as duas saídas dela zeram o
+            # contador (ver `subsystems/gamepad.steam_input_coop_derrubados`).
+            #
+            # Fora do bloco `steam_input` de propósito: aquele payload é
+            # travado por igualdade exata em teste de outra frente, e o fato é
+            # do co-op — o lugar dele é aqui, ao lado de `players`.
+            derrubados = getattr(self.daemon, "_steam_input_coop_derrubados", 0)
+            if not isinstance(derrubados, int) or isinstance(derrubados, bool):
+                # Blindagem de serialização (mesma do `players` acima): daemon
+                # dublado por MagicMock devolveria um mock não-serializável.
+                derrubados = 0
+            result["coop"]["derrubado_por_steam_input"] = derrubados > 0
+            result["coop"]["secundarios_derrubados"] = derrubados
             # FEAT-RUMBLE-POLICY-01: expõe política e mult efetivo ao estado.
             # L1: a observabilidade vem da ORIGEM VIVA — `daemon._last_auto_mult`,
             # o multiplicador auto mais recente, atualizado pela política que de

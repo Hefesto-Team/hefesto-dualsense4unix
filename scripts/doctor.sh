@@ -434,8 +434,20 @@ check_wireplumber_source() {
         return
     fi
     # O '.monitor' do sink do DualSense casa "DualSense" no nome mas é o loopback
-    # da saída, não o mic — inofensivo. Só o alsa_input (mic) é o sintoma real.
-    if [[ ! "${cur}" =~ [Dd]ual[Ss]ense ]] || [[ "${cur}" == *[Mm]onitor* ]]; then
+    # da saída, não o mic. O racional original está certo pela metade: monitor
+    # NÃO é o mic do controle, então este check (que pergunta "o mic do DualSense
+    # virou o padrão sozinho?") não tem o que reprovar aqui.
+    #
+    # O que ele NÃO podia continuar fazendo era chamar isso de "pass" e encerrar
+    # o assunto: medido nesta máquina em 29/07/2026, a fonte padrão do sistema
+    # ERA o monitor do alto-falante do próprio controle, e este [OK] era a única
+    # linha do diagnóstico sobre o assunto. Ser um MONITOR é defeito PRÓPRIO, e
+    # quem dá o veredito é `check_default_source_monitor`, logo abaixo.
+    if [[ "${cur}" == *[Mm]onitor* ]]; then
+        info "a fonte padrão é um MONITOR (${cur}) — não é o mic do DualSense; veredito em 'fonte de captura padrão'"
+        return
+    fi
+    if [[ ! "${cur}" =~ [Dd]ual[Ss]ense ]]; then
         pass "microfone ativo não é o mic do DualSense (${cur})"
         return
     fi
@@ -458,6 +470,212 @@ check_wireplumber_source() {
         fail "DualSense é o microfone ATIVO com outra fonte disponível — rode: scripts/doctor.sh --fix"
     else
         warn "DualSense é o microfone ATIVO por ser a única fonte — conecte mic/webcam, ou desligue de vez: fix_wireplumber_default_source.sh --disable-source"
+    fi
+}
+
+# --- FONTE-PADRAO-01: a fonte de captura padrão é um MONITOR ----------------
+#
+# MEDIDO nesta máquina em 29/07/2026, com o DualSense no cabo:
+#
+#   $ pactl get-default-source
+#   alsa_output.usb-...DualSense...analog-surround-40.monitor
+#
+# Monitor é o loopback da SAÍDA. Enquanto ele for a fonte padrão, todo
+# aplicativo que gravar sem escolher a fonte na mão capta o som que SAI do
+# controle — jogo, música, a chamada inteira — e nunca a voz de quem fala. Não é
+# "mic ausente": é mic TROCADO por um gravador de tela sonoro, e passa
+# despercebido porque o medidor mostra sinal.
+#
+# A causa está documentada no próprio drop-in 51, que o install instala por
+# DEFAULT: rebaixar o `alsa_input` do DualSense para ele não ser eleito padrão
+# sozinho é a política certa, mas o rebaixamento faz o monitor do SINK do mesmo
+# controle (que herda a prioridade alta da saída) ganhar a eleição. Somando a
+# isso, o `default.configured.audio.source` persistido aqui apontava para
+# `alsa_input...analog-stereo` — uma source que NÃO EXISTE neste perfil, rastro
+# da cura de camada 2 que a medição de 26/07 refutou. Configurado num fantasma,
+# o WirePlumber cai na eleição automática e o monitor vence.
+#
+# Classificação da fonte padrão. Função PURA: recebe o NOME e imprime
+# `monitor` | `captura` | `vazio`. No PipeWire todo monitor termina em
+# `.monitor` — o sufixo é do nó, não uma heurística de nome.
+_default_source_classe() {
+    local nome="$1"
+    if [[ -z "${nome}" ]]; then
+        printf 'vazio\n'
+    elif [[ "${nome}" == *.monitor ]] || [[ "${nome}" == *.[Mm]onitor ]]; then
+        printf 'monitor\n'
+    else
+        printf 'captura\n'
+    fi
+}
+
+# 0 quando o mic do DualSense PODE ser eleito fonte padrão do sistema.
+#
+# Três sinais EXPLÍCITOS, nenhum adivinhado — e a ordem é a hierarquia de quem
+# manda. Isto existe para a cura não desfazer escolha de ninguém: promover o
+# controle por conta própria reabriria a queixa que criou o drop-in 51 ("o
+# controle fica mexendo no microfone") e faria `check_wireplumber_source`
+# REPROVAR a máquina que acabamos de curar.
+_prefere_mic_do_dualsense() {
+    local conf="${HOME}/.config/wireplumber/wireplumber.conf.d"
+    # 1. Quem DESLIGOU de propósito vem antes de tudo: o drop-in 52
+    #    (`--disable-source` / `install --with-wireplumber-disable-mic`) é a
+    #    escolha explícita de "o controle é só-HID". Mesmo precedente do
+    #    `check_dualsense_sink_disabled` e do passo 10 do install.
+    [[ -f "${conf}/52-hefesto-dualsense-disable-source.conf" ]] && return 1
+    # 2. Opt-in explícito da usuária — a MESMA variável que
+    #    check_wireplumber_source, check_usb_audio_off e system_check.py
+    #    (_dualsense_mic_intended) já honram.
+    case "${HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED:-}" in
+        1|true|yes|TRUE|YES) return 0 ;;
+    esac
+    # 3. O drop-in 51 é a política DEFAULT do install: rebaixar. Enquanto ele
+    #    estiver no lugar, o controle é a ÚLTIMA opção — não a primeira. Sua
+    #    ausência (ex.: `fix_wireplumber_default_source.sh --promote-source`,
+    #    `mic promote`) é a promoção explícita.
+    [[ -f "${conf}/51-hefesto-dualsense-no-default-source.conf" ]] && return 1
+    return 0
+}
+
+# PURA: 0 quando a PORTA ATIVA da source `$1` está marcada `not available` pelo
+# ALSA, no texto de `LC_ALL=C pactl list sources` (`$2` ou stdin).
+#
+# Este é o segundo degrau do critério de porta, e ele foi medido nesta máquina em
+# 29/07/2026. Ter porta ativa não basta: a entrada analógica da onboard tem
+# `Active Port: analog-input-front-mic` e as TRÊS portas de captura dela estão
+# `not available` (nada plugado no jack). Ela é uma fonte de captura legítima e
+# vai gravar silêncio. A entrada do DualSense, no mesmo instante, tinha porta com
+# disponibilidade `unknown` e gravou pico 4606 na medição de 26/07 — por isso
+# `unknown` conta como USÁVEL e só o `not available` explícito reprova.
+#
+# Serve para DIZER a verdade, nunca para escolher escondido: quem decide quem é a
+# fonte padrão é `_prefere_mic_do_dualsense`, com os sinais explícitos dela.
+_source_porta_ativa_indisponivel() {
+    awk -v alvo="$1" '
+        /^[[:space:]]+Name: / {
+            atual = substr($0, index($0, ": ") + 2)
+            next
+        }
+        atual != alvo { next }
+        /^[[:space:]]+Active Port: / {
+            ativa = substr($0, index($0, ": ") + 2)
+            next
+        }
+        # Linha de porta: `<chave>: <descrição> (type: ..., not available)`.
+        # O `(` é o que separa porta de `Volume:`/`Latency:` e das propriedades
+        # (que usam ` = `, não `: `).
+        /^[[:space:]]+[A-Za-z0-9_-]+: .*\(/ {
+            linha = $0
+            sub(/^[[:space:]]+/, "", linha)
+            p = index(linha, ": ")
+            if (p < 2) next
+            chave = substr(linha, 1, p - 1)
+            if (chave ~ /[[:space:]]/) next
+            indisp[chave] = (linha ~ /not available/)
+            next
+        }
+        END { exit ((ativa != "" && indisp[ativa]) ? 0 : 1) }
+    ' "${2:--}"
+}
+
+# Melhor fonte de CAPTURA de verdade num `pactl list sources short` (arquivo ou
+# stdin). `$1` = 1 para preferir o DualSense, 0 para deixá-lo como último
+# recurso. Silêncio = não há nenhuma fonte de captura.
+#
+# Monitor NUNCA entra: é ele o defeito. E o DualSense nunca é DESCARTADO — um
+# mic de verdade, mesmo o do controle, é melhor que gravar o próprio
+# alto-falante; ele só perde a vez para outra entrada quando a política manda.
+# Função PURA: só parsing, nenhuma escrita.
+_melhor_source_de_captura() {
+    awk -v prefere="${1:-0}" '
+        tolower($2) ~ /\.monitor$/ { next }
+        $2 == "" { next }
+        {
+            if (tolower($2) ~ /dualsense/) { if (ds == "") ds = $2 }
+            else if (outro == "") outro = $2
+        }
+        END {
+            if (prefere == 1) { escolha = (ds != "") ? ds : outro }
+            else             { escolha = (outro != "") ? outro : ds }
+            if (escolha != "") print escolha
+        }
+    ' "${2:--}"
+}
+
+check_default_source_monitor() {
+    command -v pactl >/dev/null 2>&1 || { info "pactl ausente — não checo a fonte de captura padrão"; return; }
+    local cur classe
+    cur="$(pactl get-default-source 2>/dev/null || true)"
+    classe="$(_default_source_classe "${cur}")"
+    if [[ "${classe}" == "vazio" ]]; then
+        info "não consegui ler a fonte de captura padrão (PipeWire parado?)"
+        return
+    fi
+    if [[ "${classe}" != "monitor" ]]; then
+        pass "a fonte de captura padrão é uma entrada de verdade (${cur})"
+        # A METADE QUE FALTAVA. Sair daqui com [OK] e nada mais era como o
+        # "pass" que aprovava o monitor: a fonte pode ser uma entrada legítima e
+        # gravar silêncio, porque a porta ativa dela está `not available`. Medido
+        # em 29/07 nesta máquina: eleita a entrada da onboard, as três portas de
+        # captura estavam sem nada plugado, e o único mic que captava era o do
+        # controle. Isto é INFO, não reprovação — quem manda na promoção é ela.
+        local sources_txt
+        sources_txt="$(LC_ALL=C pactl list sources 2>/dev/null || true)"
+        if printf '%s\n' "${sources_txt}" | _source_porta_ativa_indisponivel "${cur}"; then
+            info "  mas a porta ativa dela está indisponível (nada plugado) — vai gravar silêncio"
+            local src_ds
+            src_ds="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+            if [[ -n "${src_ds}" ]] \
+               && ! printf '%s\n' "${sources_txt}" | _source_porta_ativa_indisponivel "${src_ds}"; then
+                info "  o mic do DualSense TEM porta usável agora — para elegê-lo: hefesto-dualsense4unix mic promote"
+            fi
+        fi
+        return
+    fi
+    fail "a fonte de captura padrão é um MONITOR (${cur}) — o que qualquer app gravar é o áudio de SAÍDA, não a voz; rode: scripts/doctor.sh --fix-mic"
+    local prefere=0 alvo
+    _prefere_mic_do_dualsense && prefere=1
+    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null | _melhor_source_de_captura "${prefere}")"
+    if [[ -n "${alvo}" ]]; then
+        info "  cura: pactl set-default-source ${alvo}"
+    else
+        info "  não há nenhuma fonte de CAPTURA nesta máquina para eleger — conecte um mic/webcam ou o DualSense"
+    fi
+    # O rastro que explica o sintoma: configurado num nó que não existe mais, o
+    # WirePlumber cai na eleição automática e o monitor ganha do mic rebaixado.
+    local estado cfg
+    estado="${HOME}/.local/state/wireplumber/default-nodes"
+    if [[ -r "${estado}" ]]; then
+        cfg="$(sed -n 's/^default\.configured\.audio\.source=//p' "${estado}" | head -n1)"
+        if [[ -n "${cfg}" ]] \
+           && ! LC_ALL=C pactl list sources short 2>/dev/null | awk -v n="${cfg}" '$2 == n { achou = 1 } END { exit (achou ? 0 : 1) }'; then
+            info "  a fonte configurada em ${estado} é um FANTASMA (${cfg}): não existe entre as sources de agora"
+        fi
+    fi
+}
+
+# Cura de FONTE-PADRAO-01. Chamada pelo `fix_mic_dualsense` (logo, pelo --fix e
+# pelo --fix-mic), DEPOIS da camada 2: é a troca de perfil que decide qual
+# `alsa_input` existe, e eleger antes elegeria o nó errado.
+fix_default_source_monitor() {
+    command -v pactl >/dev/null 2>&1 || return 0
+    local cur
+    cur="$(pactl get-default-source 2>/dev/null || true)"
+    # Só age no defeito. Fonte de captura de verdade — QUALQUER uma, inclusive
+    # uma que não seja a que escolheríamos — é escolha de quem usa a máquina, e
+    # não se mexe no que funciona.
+    [[ "$(_default_source_classe "${cur}")" == "monitor" ]] || return 0
+    local prefere=0 alvo
+    _prefere_mic_do_dualsense && prefere=1
+    alvo="$(LC_ALL=C pactl list sources short 2>/dev/null | _melhor_source_de_captura "${prefere}")"
+    if [[ -z "${alvo}" ]]; then
+        warn "a fonte padrão é um MONITOR (${cur}) e não há nenhuma fonte de captura para eleger"
+        return 0
+    fi
+    if pactl set-default-source "${alvo}" 2>/dev/null; then
+        pass "fonte padrão trocada do monitor para a entrada ${alvo} (FONTE-PADRAO-01)"
+    else
+        warn "falha ao eleger ${alvo} como fonte padrão (a padrão segue o monitor ${cur})"
     fi
 }
 
@@ -591,14 +809,27 @@ _source_mute_veredito() {
 }
 
 # Camada 2, em uma linha: `card<TAB>perfil_ativo<TAB>perfil_alvo` a partir de um
-# `pactl list cards` (arquivo ou stdin). `perfil_alvo` vazio = o perfil ativo já
-# leva a entrada ANALÓGICA (nada a fazer). Silêncio total = não há DualSense.
+# `pactl list cards` (arquivo ou stdin). `perfil_alvo` vazio = nada a trocar.
+# Silêncio total = não há DualSense.
 #
-# O alvo PRESERVA a parte de saída do perfil ativo e troca só a entrada — trocar
-# para um perfil só-de-entrada emudeceria o alto-falante/fone do controle e o
-# canal de haptic-de-áudio junto. A busca NÃO filtra por `available`: a entrada
-# analógica é exatamente a que o WirePlumber marca indisponível, e é essa que o
-# `pactl set-card-profile` aceita e que faz a source nascer RUNNING.
+# ATENÇÃO — este decisor foi REESCRITO em 26/07/2026, e o motivo importa mais
+# que o código. A versão anterior trocava o perfil sempre que a entrada ativa
+# fosse `iec958`, mirando `input:analog-stereo`, porque a sprint MIC-USB-01
+# afirmava que o microfone "vive" na entrada analógica.
+#
+# Medido no hardware, com o controle no cabo: o perfil analógico estava marcado
+# `available: no` pelo próprio ALSA, e forçá-lo produzia uma source SEM NENHUMA
+# PORTA DE CAPTURA, que entrega 327.680 bytes de silêncio digital. O
+# `iec958-stereo` — o que a sprint mandava evitar — gravou pico 4606 e RMS 374.
+# Ou seja: a "cura" SILENCIAVA o microfone de quem a rodasse.
+#
+# A regra nova não adivinha qual entrada é a boa. Ela só considera perfis que
+# (a) oferecem fonte de captura (`sources: >= 1`) e (b) o ALSA declara
+# `available: yes`, e escolhe o de maior prioridade entre esses. Se o perfil
+# ATIVO já satisfaz os dois, não há troca — devolve alvo vazio. O contrato de
+# preservar a SAÍDA continua valendo pela prioridade: os perfis com saída têm
+# prioridade muito maior que os só-de-entrada, então o eleito mantém o
+# alto-falante/fone do controle e o canal de haptic-de-áudio.
 # Função PURA: só parsing, nenhuma escrita.
 _dualsense_perfil_status() {
     awk '
@@ -611,10 +842,11 @@ _dualsense_perfil_status() {
         }
         !alvo { next }
         /^[[:space:]]+Profiles:/ { secao = "perfis"; next }
-        /^[[:space:]]+Active Profile: / {
-            ativo = substr($0, index($0, ": ") + 2); secao = ""; next
+        /^[[:space:]]+Active Profile:/ {
+            ativo = substr($0, index($0, ": ") + 2)
+            secao = ""
+            next
         }
-        /^\t[A-Za-z]/ { secao = ""; next }
         secao == "perfis" {
             linha = $0
             sub(/^[[:space:]]+/, "", linha)
@@ -622,27 +854,64 @@ _dualsense_perfil_status() {
             if (pos < 2) next
             chave = substr(linha, 1, pos - 1)
             if (chave ~ /[[:space:]]/) next
-            perfis[chave] = 1
-            if (chave ~ /input:analog-stereo/) {
-                if (chave ~ /^output:/) reserva = chave
-                else if (reserva == "") reserva = chave
+            # `sources: N` e `available: yes|no` saem do próprio pactl em
+            # LC_ALL=C. Sem fonte de captura o perfil não serve ao microfone;
+            # indisponível, ele produz o nó sem porta que silenciou a medição.
+            temfonte = (linha ~ /sources: [1-9]/)
+            disponivel = (linha ~ /available: yes/)
+            prio = 0
+            if (match(linha, /priority: [0-9]+/)) {
+                prio = substr(linha, RSTART + 10, RLENGTH - 10) + 0
             }
+            if (temfonte && disponivel && prio > melhorprio) {
+                melhorprio = prio
+                melhor = chave
+            }
+            # Guardado por chave, e NÃO comparado com `ativo` aqui: no `pactl`
+            # a linha `Active Profile:` vem DEPOIS da lista, então neste ponto
+            # `ativo` ainda está vazio. Comparar aqui fazia a guarda nunca
+            # ligar — defeito que o teste pegou.
+            serve[chave] = (temfonte && disponivel)
             next
         }
         END {
             if (card == "") exit 0
             escolhido = ""
-            if (ativo ~ /input:iec958/) {
-                saida = ativo
-                sub(/\+?input:[^+]*$/, "", saida)
-                candidato = (saida == "") ? "input:analog-stereo" \
-                                          : saida "+input:analog-stereo"
-                if (candidato in perfis) escolhido = candidato
-                else escolhido = reserva
-            }
+            # Alvo só quando o ativo NÃO serve e há alternativa de verdade.
+            if (!serve[ativo] && melhor != "" && melhor != ativo) escolhido = melhor
             printf "%s\t%s\t%s\n", card, ativo, escolhido
         }
     ' "${1:--}"
+}
+
+# PURA: 0 quando a source de nome `$1` tem PORTA ATIVA no texto de
+# `LC_ALL=C pactl list sources` lido de `$2` (arquivo) ou do stdin.
+#
+# É este o critério honesto de "dá para captar", e não o nome do perfil: uma
+# source sem porta abre o fluxo e entrega zeros, em qualquer perfil. Medido em
+# 26/07 — ver a nota em `_dualsense_perfil_status`.
+_source_tem_porta_ativa() {
+    awk -v alvo="$1" '
+        /^[[:space:]]+Name: / {
+            atual = substr($0, index($0, ": ") + 2)
+            next
+        }
+        /^[[:space:]]+Active Port: / {
+            if (atual == alvo) {
+                porta = substr($0, index($0, ": ") + 2)
+                if (porta != "" && porta != "(null)") { achou = 1 }
+            }
+            next
+        }
+        END { exit (achou ? 0 : 1) }
+    ' "${2:--}"
+}
+
+# Face viva do critério acima: pergunta ao pactl desta máquina.
+_dualsense_source_tem_porta() {
+    local nome="$1"
+    [[ -z "${nome}" ]] && return 1
+    LC_ALL=C pactl list sources 2>/dev/null | _source_tem_porta_ativa "${nome}"
 }
 
 # CAMADA 1 — mute guardado por rota (arquivo) e mute vivo na source (pactl).
@@ -698,12 +967,22 @@ check_mic_perfil_sem_sinal() {
         return
     fi
     IFS=$'\t' read -r card ativo alvo <<< "${linha}"
-    if [[ -z "${alvo}" ]]; then
-        pass "perfil da placa do DualSense leva a entrada analógica (${ativo:-<vazio>})"
+    # A PORTA manda. Fonte com porta de captura capta — em qualquer perfil, e
+    # inclusive no `iec958-stereo` que a sprint MIC-USB-01 mandava evitar (foi
+    # ele que gravou pico 4606 na medição de 26/07). Nome de perfil não é
+    # veredito: porta é.
+    local src_atual
+    src_atual="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+    if _dualsense_source_tem_porta "${src_atual}"; then
+        pass "a entrada do DualSense tem porta de captura (${ativo:-<vazio>})"
         return
     fi
-    fail "perfil da placa do DualSense está no S/PDIF, que NÃO carrega sinal (camada 2): ${ativo} — rode: scripts/doctor.sh --fix"
-    info "  o mic embutido vive na entrada ANALÓGICA (porta analog-input-headset-mic; no mixer ALSA o controle se chama 'Headset')"
+    if [[ -z "${alvo}" ]]; then
+        warn "a entrada do DualSense não tem porta de captura e não há perfil disponível melhor (${ativo:-<vazio>}) — sem porta, a gravação sai em silêncio digital"
+        return
+    fi
+    fail "a entrada do DualSense não tem porta de captura (camada 2): ${ativo} — rode: scripts/doctor.sh --fix"
+    info "  sem porta a source abre o fluxo e entrega zeros (medido: 327.680 bytes de silêncio digital)"
     info "  cura: pactl set-card-profile ${card} \"${alvo}\""
 }
 
@@ -729,19 +1008,33 @@ fix_mic_dualsense() {
 
     command -v pactl >/dev/null 2>&1 || return 0
 
-    # Camada 2: perfil da placa de volta para a entrada analógica.
+    # Camada 2: perfil da placa num nó que REALMENTE capta.
     local linha card ativo alvo
     linha="$(LC_ALL=C pactl list cards 2>/dev/null | _dualsense_perfil_status)"
     if [[ -n "${linha}" ]]; then
         IFS=$'\t' read -r card ativo alvo <<< "${linha}"
-        if [[ -n "${alvo}" ]]; then
+        local src_antes
+        src_antes="$(LC_ALL=C pactl list sources short 2>/dev/null | _dualsense_source_nome)"
+        if _dualsense_source_tem_porta "${src_antes}"; then
+            # NÃO TOCAR. Foi exatamente aqui que a versão anterior estragava a
+            # máquina: trocava um perfil que captava por outro que o ALSA marca
+            # indisponível, e a source nascia sem porta — silêncio digital.
+            pass "a entrada do DualSense já tem porta de captura (${ativo:-<vazio>}) — camada 2 sem nada a fazer"
+        elif [[ -n "${alvo}" ]]; then
             if pactl set-card-profile "${card}" "${alvo}" 2>/dev/null; then
-                pass "perfil da placa do DualSense trocado para ${alvo} (camada 2)"
+                pass "perfil da placa do DualSense trocado para ${alvo} (camada 2, disponível e com fonte)"
             else
                 warn "falha ao trocar o perfil da placa do DualSense para ${alvo}"
             fi
+        else
+            warn "sem porta de captura e sem perfil disponível melhor (${ativo:-<vazio>}) — o microfone não vai captar"
         fi
     fi
+
+    # FONTE-PADRAO-01: com o perfil já resolvido acima, decidir QUEM é a fonte
+    # padrão. Nesta ordem de propósito — é a troca de perfil que define qual
+    # `alsa_input` existe, e eleger antes elegeria um nó que vai desaparecer.
+    fix_default_source_monitor
 
     # Camada 1, face viva: a source pode estar muda sem que o arquivo diga —
     # o WirePlumber só grava o estado ao sair. Roda DEPOIS da troca de perfil,
@@ -2860,6 +3153,7 @@ main() {
         fix_mic_dualsense
         check_mic_mute_persistido
         check_mic_perfil_sem_sinal
+        check_default_source_monitor
         info "camada 3 (mudo no firmware do controle): hefesto-dualsense4unix mic unmute"
         [[ "${FAILS}" -eq 0 ]]
         exit $?
@@ -2905,6 +3199,7 @@ main() {
     check_perfis_inalcancaveis
     hdr "áudio (microfone)"
     check_wireplumber_source
+    check_default_source_monitor
     check_dualsense_sink_disabled
     check_audio_sink_muted
     check_mic_mute_persistido

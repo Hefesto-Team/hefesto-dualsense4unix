@@ -16,6 +16,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.home_actions import registrar_modo_no_rascunho
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_DESKTOP,
     MODE_GAMEPAD,
@@ -25,6 +26,7 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     mode_of_state,
 )
 from hefesto_dualsense4unix.app.constants import ROOT_DIR
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import (
     DEFAULT_BUFFER_MS,
@@ -189,6 +191,106 @@ def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
     # Motivo NOVO, vindo de um daemon mais novo que esta janela: dizer o código
     # cru é feio, mas é honesto — e é melhor que afirmar que está funcionando.
     return ligado, f"Ligado, em pausa agora (motivo: {bloqueio})."
+
+
+# --- PERFIL-SALVA-TUDO-01/E3: o "modo jogo" chega ao RASCUNHO ---------------
+#
+# Ela ESCLARECEU (29/07) que o "modo jogo" dela é suspender mouse e teclado. O
+# toggle desta aba só mandava `daemon.emulation.suppress` — o próprio comentário
+# do `on_emulation_pause` diz "NÃO persiste" — então o gesto morria com a sessão
+# e o "Salvar Perfil" gravava `suppress_desktop_emulation: false` por cima.
+#
+# REGISTRAR não é APLICAR: a mesma linha do HARM-05 que vale para o modo (ver o
+# cabeçalho de `rascunho_com_modo`, em home_actions). Quem suspende ao vivo é o
+# IPC, no clique dela; aqui só se anota o que ficou.
+
+
+#: Frase para o caso que este código RECUSA guardar. Ela precisa saber que o
+#: interruptor pegou AGORA e que o perfil não vai lembrar — silêncio aqui seria
+#: a janela mentindo a favor dela, que é o defeito-mãe desta sprint.
+MODO_JOGO_NAO_GUARDADO = (
+    "Modo jogo ligado — mouse e teclado suspensos agora. Não guardei no perfil: "
+    "ele vale para qualquer janela, e guardado ali suspenderia mouse e teclado "
+    "em toda ativação, até quando o Hefesto liga. Dê uma regra a ele na aba "
+    "Perfis."
+)
+
+
+def perfil_do_rascunho_tem_opiniao(draft: DraftConfig | None) -> bool:
+    """Espelha `lifecycle._perfil_tem_opiniao` para o perfil de ORIGEM do rascunho.
+
+    Pergunta o MESMO predicado do daemon (`Profile.e_catch_all`, dono único do
+    R-01: `MatchAny` e `MatchCriteria` vazio contam igual) sondando o `match` que
+    a fotografia do rascunho guardou. Sem `match` legível responde False — o
+    fail-safe daqui é NÃO guardar.
+    """
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    match = getattr(draft, "source_match", None)
+    if match is None:
+        return False
+    try:
+        sonda = Profile(name="sonda", match=match)
+    except Exception:
+        return False
+    return not sonda.e_catch_all
+
+
+def rascunho_com_modo_jogo(
+    draft: DraftConfig | None, ligado: bool
+) -> tuple[DraftConfig | None, bool]:
+    """(rascunho, guardei?) para o "modo jogo". Pura: NÃO aplica nada.
+
+    O ramo de DESLIGAR sempre entra no rascunho. É gesto dela e é seguro: `False`
+    é o default do esquema, e na ativação o applier só LIBERA quando a supressão
+    veio de perfil e o perfil tem opinião (R-02). Sem este ramo, salvar um perfil
+    que dizia `suppress: true` (o `sackboy_nativo` e o `coop_local` dela) ia
+    ressuscitar a supressão que ela acabou de desligar.
+
+    O ramo de LIGAR é RECUSADO em perfil catch-all, e isto foi MEDIDO em
+    `daemon/lifecycle.apply_profile_suppression`: o ramo ``if desired:`` liga sem
+    passar pelo `_perfil_tem_opiniao` — só o ramo de LIBERAR passa. Como os cinco
+    perfis "vale sempre" dela não têm opinião, um `suppress: true` gravado num
+    deles seria alçapão de mão única: liga em TODA ativação (inclusive no restauro
+    do último perfil no boot) e o caminho de volta está fechado justamente pelo
+    R-02 — mouse e teclado suspensos no desktop dela, sem ela pedir. Trocar a
+    perda de configuração por um desktop sem ponteiro não é cura.
+
+    Quando o gate do daemon existir no ramo de ligar (ver o contrato relatado
+    nesta entrega), esta recusa pode cair — e o teste que a trava vai apontar
+    exatamente para cá.
+    """
+    if draft is None:
+        return draft, False
+    if ligado and not perfil_do_rascunho_tem_opiniao(draft):
+        return draft, False
+    return draft.with_suppress(ligado), True
+
+
+def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
+    """Anota o "modo jogo" na janela; devolve se ele foi GUARDADO no rascunho.
+
+    Função de MÓDULO pela mesma razão de `registrar_modo_no_rascunho` (dono
+    único, e dublê parcial de teste não pode quebrar por causa da MRO).
+
+    O ``False`` não é erro: é a recusa deliberada de plantar `suppress: true`
+    num perfil catch-all (ver `rascunho_com_modo_jogo`). Quem chama usa a
+    resposta para dizer a VERDADE na barra de status — e o log fica, porque
+    "não guardei" precisa deixar rastro tanto quanto "guardei".
+    """
+    draft = getattr(janela, "draft", None)
+    if draft is None:
+        return False
+    novo, guardado = rascunho_com_modo_jogo(draft, ligado)
+    if guardado and novo is not None:
+        janela.draft = novo
+    elif ligado:
+        logger.info(
+            "modo_jogo_nao_guardado_no_perfil",
+            motivo="catch_all_sem_opiniao",
+            perfil=getattr(draft, "source_name", None),
+        )
+    return guardado
 
 
 class EmulationActionsMixin(WidgetAccessMixin):
@@ -673,6 +775,10 @@ class EmulationActionsMixin(WidgetAccessMixin):
         `mode_transition` mantém um dono só para a sequência e o timeout.
         """
         def _on_ok(_res: Any) -> bool:
+            # PERFIL-SALVA-TUDO-01/E3: o modo entra no rascunho DEPOIS da
+            # confirmação do daemon — o rascunho guarda o que ficou de pé, não a
+            # intenção. Registrar não aplica nada (`rascunho_com_modo`).
+            registrar_modo_no_rascunho(self, mode_id, flavor)
             self._refresh_gamepad_and_gamemode()
             self._toast_emulation(msg)
             return False
@@ -707,8 +813,15 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def _set_suppress(self, suppressed: bool, msg: str) -> None:
         def _on_ok(_res: Any) -> bool:
+            # PERFIL-SALVA-TUDO-01/E3: o "modo jogo" dela vira configuração do
+            # perfil — quando o perfil pode recebê-lo. A frase troca quando a
+            # resposta é "não guardei": a janela não pode ficar calada sobre o
+            # que ela vai perder no próximo boot.
+            guardado = registrar_modo_jogo_no_rascunho(self, suppressed)
             self._refresh_gamepad_and_gamemode()
-            self._toast_emulation(msg)
+            self._toast_emulation(
+                msg if (guardado or not suppressed) else MODO_JOGO_NAO_GUARDADO
+            )
             return False
 
         def _on_err(_exc: Exception) -> bool:
