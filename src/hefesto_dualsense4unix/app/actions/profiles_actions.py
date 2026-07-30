@@ -270,6 +270,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # devolveria 250 ao disco — a guarda viraria o mesmo cadeado que ela existe
     # para impedir, só que no outro sentido.
     _prioridade_tocada: bool = False
+    # PERFIL-SALVA-TUDO-01: gesto DELA sobre o seletor de Modo desde que o editor
+    # abriu este perfil. Mesma razão do `_regra_tocada`, agora com um segundo
+    # escritor em cena: o modo passou a ter dono no RASCUNHO (a aba Emulação
+    # escreve por `DraftConfig.with_mode`), e sem esta marca salvar pela aba
+    # Perfis reescreveria o modo com a leitura da tela — que abre com o valor do
+    # DISCO. Seria o SALVAR-NAO-REBAIXA-01 de novo, na seção `mode`: ela liga o
+    # modo jogo na aba Emulação, salva pela aba Perfis e o modo evapora.
+    _modo_tocado: bool = False
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -408,10 +416,16 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # SegmentedSelector é emitido SEM argumentos — o handler recebe só o
         # seletor e lê get_active_id().
         kind_sel.connect("changed", self._on_mode_kind_changed)
+        # PERFIL-SALVA-TUDO-01: a MÁSCARA também é gesto de modo. Sem este sinal,
+        # trocar só "o jogo vê o controle como" não contava como toque e o
+        # `mode` do rascunho venceria a escolha que ela acabou de fazer aqui.
+        flavor_sel.connect("changed", self._on_mode_flavor_changed)
 
         kind_sel.set_active_id("none")
         flavor_sel.set_active_id("xbox")
         self._sync_mode_options_visibility("none")
+        # Os dois `set_active_id` acima são montagem, não gesto dela.
+        self._modo_tocado = False
 
     def _sync_mode_options_visibility(self, kind: str) -> None:
         """Mostra/habilita a máscara apenas com kind == "gamepad"."""
@@ -428,7 +442,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     def _on_mode_kind_changed(self, selector: Any) -> None:
         """Handler do kind: sincroniza a visibilidade das opções do modo."""
         kind = selector.get_active_id() or "none"
+        # PERFIL-SALVA-TUDO-01: gesto no seletor conta. O populate programático
+        # (`_set_mode_editor`) também dispara este handler — ele BAIXA a marca
+        # depois, então o que sobra ligado aqui é toque dela.
+        self._modo_tocado = True
         self._sync_mode_options_visibility(kind)
+
+    def _on_mode_flavor_changed(self, _selector: Any = None) -> None:
+        """Handler da máscara: só marca o gesto (a visibilidade é do kind)."""
+        self._modo_tocado = True
 
     def _set_mode_editor(self, mode: ProfileModeConfig | None) -> None:
         """Preenche a seção "Modo" a partir de ``profile.mode`` (None → "none").
@@ -448,6 +470,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # set_active_id só emite quando o id muda — sincroniza explicitamente
         # para a visibilidade ficar certa mesmo sem emissão.
         self._sync_mode_options_visibility(kind)
+        # PERFIL-SALVA-TUDO-01: este caminho é o POPULATE (perfil aberto na
+        # lista, prefill do perfil novo). Os `set_active_id` acima acabaram de
+        # disparar os handlers de gesto — baixar a marca AQUI, no fim, é o que
+        # separa "a tela mostrou o que estava no disco" de "ela escolheu".
+        self._modo_tocado = False
 
     def _mode_section_from_editor(self) -> dict[str, Any] | None:
         """Monta o dict da seção ``mode`` a partir dos widgets do editor.
@@ -1573,6 +1600,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         draft = getattr(self, "draft", None)
         ativo = getattr(self, "_active_profile_name", "") or ""
         base: dict[str, Any]
+        # PERFIL-SALVA-TUDO-01: a base saiu do RASCUNHO? É o que decide se o
+        # `mode` dele pode vencer a leitura da tela mais abaixo.
+        base_veio_do_rascunho = False
         if draft is not None and ativo and self._edita_o_perfil_do_rascunho(name):
             try:
                 # ABAS-03: `to_profile(ativo)`, não `to_profile(name)`. Num
@@ -1590,6 +1620,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 base = do_draft.model_dump(mode="python")
                 base["controllers"] = do_draft.controllers
                 source = do_draft
+                base_veio_do_rascunho = True
             else:
                 base = source.model_dump(mode="python") if source else {}
         else:
@@ -1617,8 +1648,25 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # kind "none" (sem opinião) REMOVE a seção (mode=None). Sem a seção
         # montada (glade antigo), o mode do perfil-base sobrevive por herança,
         # como antes desta sprint.
+        #
+        # PERFIL-SALVA-TUDO-01: com uma exceção, do mesmo tamanho da do
+        # SALVAR-NAO-REBAIXA-01 logo abaixo. O `mode` ganhou um segundo escritor
+        # — a aba Emulação, por `DraftConfig.with_mode` — e o seletor daqui abre
+        # com o valor do DISCO. Reescrever sempre significaria: ela liga o modo
+        # jogo na aba Emulação, salva pela aba Perfis, e o modo evapora. Então o
+        # editor só reescreve quando ELA mexeu no seletor nesta edição
+        # (`_modo_tocado`) ou quando o rascunho não tem opinião pendente. A
+        # exceção só vale com a base VINDA DO RASCUNHO: em perfil novo/duplicação
+        # a base é o disco e o editor (inclusive o prefill do modo jogo) segue
+        # sendo a fonte, como antes.
         if self._mode_kind_selector is not None:
-            base["mode"] = self._mode_section_from_editor()
+            modo_do_rascunho_vence = (
+                base_veio_do_rascunho
+                and bool(getattr(draft, "mode_dirty", False))
+                and not self._modo_tocado
+            )
+            if not modo_do_rascunho_vence:
+                base["mode"] = self._mode_section_from_editor()
 
         # SALVAR-NAO-REBAIXA-01 (sprint 27/07): o `base.update` abaixo
         # sobrescrevia `match` e `priority` SEMPRE, com o que estivesse nos

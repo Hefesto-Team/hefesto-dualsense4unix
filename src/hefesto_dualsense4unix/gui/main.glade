@@ -1278,7 +1278,42 @@
                               <packing><property name="expand">False</property></packing>
                             </child>
                             <child>
+                              <!-- LARGURA-01/E1: teto de largura nas TRÊS barras
+                                   desta aba (esta e as duas de "Testar
+                                   motores"). Medido nesta bancada, numa
+                                   `Gtk.OffscreenWindow` de 1920px com o tema na
+                                   escala que sai: `rumble_weak_scale` e
+                                   `rumble_strong_scale` recebiam 1731px cada e
+                                   este slider 837px, todos para 58px de natural
+                                   — a barra atravessava a janela inteira para
+                                   dizer um número de 0 a 100. É o mesmo defeito
+                                   que ela apontou nas barras de L2/R2 DENTRO do
+                                   card, aqui fora dele.
+
+                                   O par é `halign=start` + `width-request`, e
+                                   NÃO só `width-request`: no GTK3 pedido de
+                                   tamanho é MÍNIMO, e o `hexpand` continuaria
+                                   esticando a barra. Com `halign=start` o
+                                   widget recebe o próprio natural (400px)
+                                   alinhado à esquerda; o `hexpand` FICA para a
+                                   coluna do grid seguir expandindo e os rótulos
+                                   não andarem de lugar. Precedente da casa:
+                                   `LARGURA_BARRA_GATILHO_UNICO = 400` e
+                                   `LARGURA_GYRO_UNICO = 420`
+                                   (`app/widgets/controller_card.py:337-339`),
+                                   que curaram este mesmo defeito dentro do card.
+
+                                   Custo MEDIDO em 1180px (o tamanho de projeto):
+                                   a largura mínima da aba Rumble vai de 684px
+                                   para 707px e a altura de 420px para 430px,
+                                   contra teto de 1180 e 654. Foi por esse
+                                   critério que só a aba Rumble entrou nesta leva:
+                                   ela é a que tem mais folga (473px). As demais
+                                   barras da lista da LARGURA-01 ficaram de fora
+                                   por escrito — ver o relatório da sprint. -->
                               <object class="GtkScale" id="rumble_policy_slider">
+                                <property name="halign">start</property>
+                                <property name="width-request">400</property>
                                 <property name="tooltip-text" translatable="yes">Multiplica a vibração que o jogo pede: abaixo de 100 sai mais fraca, acima de 100 sai mais forte.</property>
                                 <property name="hexpand">True</property>
                                 <property name="draw-value">True</property>
@@ -1336,7 +1371,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">0</property><property name="top-attach">0</property></packing>
                             </child>
                             <child>
+                              <!-- LARGURA-01/E1: teto de 400px. O "por que"
+                                   completo, com as medidas, está no
+                                   `rumble_policy_slider` acima. Aqui era o pior
+                                   esticão da janela inteira: 1731px de barra
+                                   para 58px de natural. -->
                               <object class="GtkScale" id="rumble_weak_scale">
+                                <property name="halign">start</property>
+                                <property name="width-request">400</property>
                                 <property name="tooltip-text" translatable="yes">Força do motor leve, o que faz o tremor fino. Vale no teste e no que você aplicar.</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
@@ -1355,7 +1397,11 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                             </child>
                             <child>
+                              <!-- LARGURA-01/E1: teto de 400px, o irmão da barra
+                                   de cima. Medidas no `rumble_policy_slider`. -->
                               <object class="GtkScale" id="rumble_strong_scale">
+                                <property name="halign">start</property>
+                                <property name="width-request">400</property>
                                 <property name="tooltip-text" translatable="yes">Força do motor pesado, o que faz o tremor grosso. Vale no teste e no que você aplicar.</property>
                                 <property name="draw-value">True</property>
                                 <property name="digits">0</property>
@@ -2017,6 +2063,39 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         <property name="wrap">True</property>
                       </object>
                     </child>
+                    <!-- JANELA-CEGA-01 (pendência declarada): a troca de perfil
+                         por jogo depende de o daemon saber QUAL janela está na
+                         frente, e neste computador (COSMIC/Wayland) ele só
+                         enxerga janelas do XWayland. Isso não aparecia em lugar
+                         nenhum da tela: o `state_full` publica
+                         `window_detect_backend/healthy/seeing/reason/...` desde
+                         28/07 e nenhuma aba lia. Sem esta linha, "o perfil não
+                         troca quando eu abro o jogo" não tinha como ser
+                         distinguido de "o perfil está errado".
+
+                         O texto é escrito por
+                         `daemon_actions.descrever_deteccao_de_janela`, que
+                         traduz os dez motivos de cegueira para português.
+
+                         O título vem DENTRO do rótulo, em negrito, e não como
+                         label irmão (que é o padrão das outras seções deste
+                         cartão). Medido nesta bancada, em 1180px: com título
+                         separado a aba Sistema ia a 612px, e com o título dentro
+                         do rótulo fica em 580px, contra teto de 654px. Ou seja, o
+                         label a mais custa 30px e derruba a folga de 74px para
+                         42px — e a frase, no runtime, ocupa DUAS ou TRÊS linhas
+                         (o glade só mede a de "consultando"). A frase é um fato
+                         só; cabe em texto corrido sob "Saúde do sistema", como o
+                         `storm_diag_label` logo acima. -->
+                    <child>
+                      <object class="GtkLabel" id="window_detect_diag_label">
+                        <property name="label" translatable="yes">&lt;b&gt;Trocar de perfil ao abrir o jogo:&lt;/b&gt; consultando…</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <property name="wrap">True</property>
+                      </object>
+                    </child>
                     <!-- FEAT-STEAM-SIMPLES-01: os dois botões que a usuária
                          final usa. Ficam ANTES dos avançados de propósito:
                          "tem jogos que precisamos ativar entrada steam,
@@ -2266,8 +2345,42 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="halign">start</property>
                     <style><class name="hefesto-dualsense4unix-card"/></style>
                     <child>
+                      <!-- EMULACAO-NO-JOGO-01/E2: esta linha ENSINAVA um gesto
+                           que não funciona. Dizia "segure o botão PS para
+                           suspender a emulação de mouse/teclado", e o hold do PS
+                           está desligado por padrão desde que se mediu que ele
+                           ligava modo jogo ACIDENTAL
+                           (`DEFAULT_PS_LONG_PRESS_MS = 0`,
+                           `integrations/hotkey_daemon.py`). Pior: a MESMA aba,
+                           no tooltip do botão "Suspender mouse e teclado" logo
+                           abaixo, já dizia que o caminho é PS+Options. Ela
+                           seguiu a tela e o gesto não fez nada.
+
+                           Agora a linha ensina o combo que FUNCIONA e diz, na
+                           mesma linha, que o hold vem desligado. O gesto NÃO foi
+                           religado — isso é decisão dela.
+
+                           Cuidado de geometria, medido nesta bancada: este
+                           rótulo NÃO quebra linha, então o comprimento dele é o
+                           mínimo de largura do `emulation_combo_grid` (654px com
+                           o texto antigo, 689px com este) e, pelo
+                           `emulation_diagnostico_row`, é o que define o mínimo da
+                           aba Emulação inteira (971px antes, 1006px agora, para
+                           uma janela que abre com 1180). Texto mais longo aqui =
+                           aba mais larga, e há teste cobrando o comprimento.
+
+                           Pôr `wrap` aqui foi MEDIDO e recusado, e o número é
+                           tentador: com quebra o mínimo da aba Emulação cai de
+                           1006px para 707px. O custo é altura — a soma dos dois
+                           cards pede 1293px naturais contra 1160 alocados, então
+                           o rótulo passa a quebrar já no tamanho de projeto e a
+                           aba vai de 626px para 648px contra um teto de 654px.
+                           SEIS pixels de folga não são folga: a CI mede com
+                           outras fontes e já pediu 431px onde esta máquina pedia
+                           357. Quem quiser essa troca precisa da medição da CI,
+                           não desta. -->
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">&lt;b&gt;Modo jogo&lt;/b&gt;: segure o botão PS para suspender a emulação de mouse/teclado</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Modo jogo&lt;/b&gt;: PS + Options suspende mouse e teclado. Segurar o PS vem desligado.</property>
                         <property name="use-markup">True</property>
                         <property name="halign">start</property>
                       </object>
@@ -2666,8 +2779,25 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="orientation">horizontal</property>
                     <property name="spacing">10</property>
                     <child>
+                      <!-- EMULACAO-NO-JOGO-01/E1: o rótulo dizia "Emular
+                           mouse+teclado" e o interruptor governa SÓ o mouse
+                           (`mouse.emulation.set`; o handler é
+                           `app/actions/mouse_actions.py:on_mouse_toggle_set`).
+                           O teclado emulado não tinha interruptor nenhum, e foi
+                           por isso que ela concluiu, com razão, que "estou com o
+                           modo mouse teclado desligado" e ainda levava Alt+Tab
+                           dentro do jogo: o Alt+Tab é do TECLADO, que este
+                           interruptor nunca alcançou.
+
+                           O rótulo passa a dizer só o que ele faz. O teclado
+                           ganhou interruptor próprio na coluna ao lado
+                           (`keyboard_emulation_toggle`, `tab_keyboard`). Não
+                           juntar os dois num só: o teclado emulado é também o
+                           teclado na tela (L3/R3) e as três regiões do
+                           touchpad — um interruptor único apagaria isso junto
+                           com o Alt+Tab, e são coisas diferentes. -->
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">&lt;b&gt;Emular mouse+teclado&lt;/b&gt;</property>
+                        <property name="label" translatable="yes">&lt;b&gt;Emular mouse&lt;/b&gt;</property>
                         <property name="use-markup">True</property>
                         <property name="xalign">0</property>
                       </object>
@@ -2675,7 +2805,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkSwitch" id="mouse_emulation_toggle">
-                        <property name="tooltip-text" translatable="yes">Liga o controle como mouse e teclado do computador. Só funciona no modo Controlar o PC.</property>
+                        <property name="tooltip-text" translatable="yes">Liga o controle como mouse do computador: cursor, cliques e rolagem. O teclado tem interruptor próprio, na coluna ao lado. Só funciona no modo Controlar o PC.</property>
                         <property name="active">False</property>
                         <!-- HARM-05: nasce fechado e só abre quando o daemon
                              confirmar o modo "Controlar o PC" (o refresh da aba
@@ -2911,6 +3041,64 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
               <object class="GtkBox" id="tab_keyboard">
                 <property name="orientation">vertical</property>
                 <property name="spacing">10</property>
+                <!-- EMULACAO-NO-JOGO-01/E1(b): o interruptor que o teclado
+                     emulado nunca teve. Espelha a linha do mouse na coluna ao
+                     lado, de propósito: são dois interruptores irmãos, e ver os
+                     dois juntos é o que desfaz a confusão de "desliguei o modo
+                     mouse teclado e o controle continuou apertando tecla".
+
+                     Nasce INSENSÍVEL e volta a ser clicável quando o daemon
+                     responde (mesma disciplina do HARM-05 no switch do mouse):
+                     sem o estado vivo não se sabe em que posição ele está, e
+                     oferecer um interruptor cuja posição você não conhece é o
+                     que mentia. O estado vem do bloco `keyboard_emulation` do
+                     `daemon.state_full` — NÃO do rascunho: o teclado não tem
+                     seção no perfil, e quem persiste a escolha é o daemon
+                     (`keyboard_emulation.flag`), a cada `keyboard.emulation.set`.
+
+                     `active=True` casa com o default do daemon
+                     (`DaemonConfig.keyboard_emulation_enabled`), para o primeiro
+                     frame não piscar na posição errada. -->
+                <child>
+                  <object class="GtkBox" id="keyboard_emulation_row">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">10</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label" translatable="yes">&lt;b&gt;Emular teclado&lt;/b&gt;</property>
+                        <property name="use-markup">True</property>
+                        <property name="xalign">0</property>
+                      </object>
+                      <packing><property name="expand">True</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="keyboard_emulation_toggle">
+                        <property name="tooltip-text" translatable="yes">Liga o controle como teclado do computador. Desligar tira TUDO o que o controle digita: os atalhos da lista abaixo, o teclado na tela em L3/R3 e as três regiões do touchpad (Backspace, Enter e Delete).</property>
+                        <property name="active">True</property>
+                        <property name="sensitive">False</property>
+                        <signal name="state-set" handler="on_keyboard_toggle_set"/>
+                      <child internal-child="accessible">
+                        <object class="AtkObject">
+                          <property name="AtkObject::accessible-name" translatable="yes">Emular teclado</property>
+                          <property name="AtkObject::accessible-description" translatable="yes">Liga ou desliga o controle como teclado do computador; desligar tira também o teclado na tela em L3 ou R3 e as três regiões do touchpad</property>
+                        </object>
+                      </child>
+                      </object>
+                      <packing><property name="expand">False</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="keyboard_emulation_hint_label">
+                    <property name="label"></property>
+                    <property name="wrap">True</property>
+                    <property name="xalign">0</property>
+                    <property name="no-show-all">True</property>
+                    <style><class name="dim-label"/></style>
+                  </object>
+                  <packing><property name="expand">False</property></packing>
+                </child>
                 <child>
                   <object class="GtkLabel">
                     <property name="label" translatable="yes">&lt;b&gt;Atalhos de teclado do perfil ativo&lt;/b&gt;</property>

@@ -157,6 +157,15 @@ class DaemonProtocol(Protocol):
         """Ajusta velocidades SEM ligar/desligar a emulação (BUG-MOUSE-GUI-SYNC-01)."""
         ...
 
+    def set_keyboard_emulation(self, enabled: bool, *, persist: bool = True) -> bool:
+        """Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01).
+
+        Desligar destrói o device virtual (o gate do poll loop fecha por
+        consequência) e persiste a escolha em `keyboard_emulation.flag`, salvo
+        `persist=False` (restore de boot / testes). Retorna o estado efetivo.
+        """
+        ...
+
     def set_gamepad_emulation(self, enabled: bool, flavor: str | None = None) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01)."""
         ...

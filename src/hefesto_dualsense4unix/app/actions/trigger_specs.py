@@ -58,6 +58,20 @@ def _frequency(default: int = 10) -> TriggerParamSpec:
     return TriggerParamSpec("frequency", "Frequência", 0, 255, default)
 
 
+# GATILHO-PALAVRA-01 (29/07/2026): dois campos, dois donos.
+#
+# O `name` é CONTRATO e não muda: ele está serializado no perfil no disco dela
+# (`triggers.left.mode`, validado contra PRESET_FACTORIES em
+# `profiles/schema.py:161`), no IPC (`daemon/ipc_handlers.py`, comando
+# `trigger.set`) e no protocolo DSX (`daemon/udp_server.py`). Trocar um `name`
+# faz os perfis que ela já salvou pararem de abrir.
+#
+# O `label` é só texto de tela — e tem teto MEDIDO de 22 caracteres. No piso de
+# 1040px a grade de três colunas dá 139px de texto por botão; o 23o caractere
+# quebra o rótulo em duas linhas e sobe o mínimo da grade de 306px para 357px,
+# que é o mecanismo da barra de rolagem descrito em
+# `app/widgets/segmented_selector.py:168-180`. O portão que cobra os dois
+# contratos é `tests/unit/test_gatilho_palavra_rotulos.py`.
 PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "Off", "Desligado", params=(),
@@ -144,9 +158,9 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Metralhadora com dois picos de amplitude.",
     ),
     TriggerPresetSpec(
-        "Feedback", "Feedback",
+        "Feedback", "Ponto duro",
         params=(_pos(5), _strength(4)),
-        description="Feedback simples em posição específica.",
+        description="Barreira a partir de uma posição, com força de 0 a 8.",
     ),
     TriggerPresetSpec(
         "Weapon", "Arma (Weapon)",
@@ -159,17 +173,17 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração contínua com amplitude e frequência.",
     ),
     TriggerPresetSpec(
-        "SlopeFeedback", "Feedback em rampa",
+        "SlopeFeedback", "Rampa de força",
         params=(
             _start(0, 9, 1),
             _end(1, 9, 8),
             TriggerParamSpec("start_strength", "Intensidade no início", 1, 8, 2),
             TriggerParamSpec("end_strength", "Intensidade no fim", 1, 8, 7),
         ),
-        description="Feedback com intensidade variando em rampa.",
+        description="Firmeza que varia em rampa entre duas posições.",
     ),
     TriggerPresetSpec(
-        "MultiPositionFeedback", "Feedback por posição",
+        "MultiPositionFeedback", "Curva de força",
         params=tuple(
             TriggerParamSpec(
                 f"pos_{i}", f"Posição {i}", 0, 8, 0

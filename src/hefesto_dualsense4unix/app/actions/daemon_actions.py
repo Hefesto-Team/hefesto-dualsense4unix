@@ -56,6 +56,131 @@ _SYSTEMCTL_FAIL_MSG: dict[str, str] = {
 }
 
 
+#: JANELA-CEGA-01: os dez motivos de leitura cega do detector de janela,
+#: traduzidos. As chaves são o vocabulário publicado em
+#: `window_detect_reason` — as constantes moram em
+#: `integrations/window_backends/xlib.py` (as seis do X11),
+#: `integrations/window_backends/null.py` e `integrations/window_detect.py`.
+#: Cada frase diz o que ACONTECEU com a janela dela, não o nome do mecanismo.
+MOTIVO_DA_CEGUEIRA_EM_PORTUGUES: dict[str, str] = {
+    # O caso desta máquina: em COSMIC/Wayland o detector só vê janelas abertas
+    # pelo XWayland, e a janela da frente costuma ser nativa do Wayland.
+    "sem_foco_x": (
+        "a janela da frente é nativa do Wayland, e o Hefesto só enxerga as que "
+        "passam pelo XWayland"
+    ),
+    "sem_conexao_x": "o Hefesto não conseguiu falar com o XWayland",
+    "foco_sem_id": "o sistema não disse qual janela está na frente",
+    "foco_sem_top_level": "a janela da frente não é a janela de um programa",
+    "foco_discorda_do_net_active": (
+        "o sistema deu duas respostas diferentes sobre qual janela está na frente"
+    ),
+    "erro_de_consulta": "deu erro ao perguntar qual janela está na frente",
+    "sem_backend": (
+        "neste sistema não há como perguntar qual janela está na frente"
+    ),
+    "cascata_wayland_sem_leitura": (
+        "o Wayland deste computador não conta qual janela está na frente"
+    ),
+    "janela_sem_classe": "a janela da frente não se identifica",
+    "backend_sem_motivo": "não sei dizer o motivo",
+}
+
+#: Nome do backend -> como ela chamaria a coisa. "xlib"/"portal"/"wlrctl"/"null"
+#: são os valores publicados em `window_detect_backend`.
+_BACKEND_EM_PORTUGUES: dict[str, str] = {
+    "xlib": "pelo XWayland",
+    "portal": "pelo portal do sistema",
+    "wlrctl": "pelo wlrctl",
+    "null": "por nenhum caminho",
+}
+
+#: O texto que abre a linha. Fica junto do valor porque a aba Sistema não tem
+#: folga de altura para um rótulo de título só dele (medido: 30px de custo,
+#: contra 74px de folga na aba).
+_PREFIXO_DETECCAO = "<b>Trocar de perfil ao abrir o jogo:</b> "
+
+
+def _escapar_markup(texto: str) -> str:
+    """Escapa `&`, `<` e `>` para o rótulo com `use-markup`.
+
+    Vale para QUALQUER coisa que venha do daemon: a wm_class e o motivo são
+    strings de fora, e um `&` numa delas fecha o parser do Pango — o rótulo
+    fica em branco e a linha honesta desaparece justamente quando o nome da
+    janela é estranho. Mesma escapada que `_refresh_storm_diag` já faz.
+    """
+    return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def descrever_deteccao_de_janela(state: object) -> str:
+    """Markup da linha do detector de janela na aba Sistema (JANELA-CEGA-01).
+
+    Pura de propósito. Lê os campos `window_detect_*` do `daemon.state_full`
+    (publicados por `daemon/ipc_handlers.py:_window_detect_payload`) e responde,
+    em linguagem de quem usa, à única pergunta que importa: **o perfil troca
+    sozinho quando ela abre o jogo, agora?**
+
+    Por que não basta ler `window_detect_healthy`: ele é um trinco de mão única
+    (nunca cai depois de subir) e `window_detect_last_class` é sticky. Medido ao
+    vivo em 28/07, os dois afirmavam saúde enquanto o backend devolvia `None` a
+    2 Hz. Quem denuncia a cegueira é `window_detect_seeing` (decai e volta) com
+    `window_detect_reason` ao lado — e é esse par que esta frase usa.
+    """
+    if not isinstance(state, dict) or "window_detect_backend" not in state:
+        return (
+            _PREFIXO_DETECCAO
+            + "não consegui ler — o Hefesto pode estar desligado."
+        )
+    backend = state.get("window_detect_backend")
+    if not isinstance(backend, str) or backend in ("", "null"):
+        return (
+            _PREFIXO_DETECCAO
+            + '<span foreground="#ffb86c">não funciona neste sistema</span> — o '
+            "Hefesto não tem como saber qual janela está na frente, então o "
+            "perfil não troca sozinho. Troque pela aba Perfis ou por PS + D-pad."
+        )
+    vendo = bool(state.get("window_detect_seeing"))
+    if vendo:
+        classe = state.get("window_detect_current_class")
+        if not isinstance(classe, str) or not classe or classe == "unknown":
+            classe = state.get("window_detect_last_class")
+        onde = (
+            f" (na frente agora: {_escapar_markup(classe)})"
+            if isinstance(classe, str) and classe and classe != "unknown"
+            else ""
+        )
+        return (
+            _PREFIXO_DETECCAO
+            + f'<span foreground="#50fa7b">funcionando</span>{onde}.'
+        )
+    motivo = state.get("window_detect_reason")
+    frase = (
+        MOTIVO_DA_CEGUEIRA_EM_PORTUGUES.get(motivo)
+        if isinstance(motivo, str)
+        else None
+    )
+    if frase is None and isinstance(motivo, str) and motivo:
+        # Motivo novo, vindo de um daemon mais novo que esta janela: dizer o
+        # código cru é feio e honesto; inventar explicação é o defeito antigo.
+        frase = f"motivo: {_escapar_markup(motivo)}"
+    if frase is None:
+        frase = MOTIVO_DA_CEGUEIRA_EM_PORTUGUES["backend_sem_motivo"]
+    # O "por onde o Hefesto procura" só entra quando o motivo NÃO nomeia o
+    # caminho: "a janela da frente é nativa do Wayland, e o Hefesto só enxerga
+    # as que passam pelo XWayland. O Hefesto procura pelo XWayland." dizia a
+    # mesma coisa duas vezes na frase que ela mais vai ler.
+    caminho = _BACKEND_EM_PORTUGUES.get(backend, f"por {_escapar_markup(backend)}")
+    nome_do_caminho = caminho.split(" ", 1)[-1]
+    onde_procura = (
+        "" if nome_do_caminho in frase else f" O Hefesto procura {caminho}."
+    )
+    return (
+        _PREFIXO_DETECCAO
+        + f'<span foreground="#ffb86c">sem ver a janela agora</span> — {frase}.'
+        f"{onde_procura} Enquanto está assim, o perfil não troca sozinho."
+    )
+
+
 def _apply_result_count(value: object) -> int:
     """Conta um campo do resultado de ``apply_wrapper_to_all_games``.
 
@@ -391,6 +516,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._refresh_daemon_view_async()
         self._sync_restart_daemon_button_sensitivity()
         self._refresh_storm_diag()  # FEAT-DSX-UNIFY-01
+        self._refresh_window_detect_diag()  # JANELA-CEGA-01
         self._wire_steam_simple_buttons()  # FEAT-STEAM-SIMPLES-01
 
     def _wire_steam_simple_buttons(self) -> None:
@@ -470,6 +596,36 @@ class DaemonActionsMixin(WidgetAccessMixin):
         if label is not None:
             label.set_markup(markup)
         return False  # GLib.idle_add: não repete
+
+    # --- detector de janela (JANELA-CEGA-01, a linha honesta) --------------
+
+    def _refresh_window_detect_diag(self) -> None:
+        """Pinta a linha "Trocar de perfil ao abrir o jogo" com o estado do daemon.
+
+        Assíncrono (`call_async`) e read-only: só lê `daemon.state_full`. Falha
+        de IPC não é engolida — vira a frase de "não consegui ler", que é a
+        verdade disponível (mesma disciplina do cartão UINPUT).
+        """
+        from hefesto_dualsense4unix.app.actions.mode_transition import (
+            STATE_IPC_TIMEOUT_S,
+        )
+        from hefesto_dualsense4unix.app.ipc_bridge import call_async
+
+        def _pintar(state: object) -> bool:
+            label = self._get("window_detect_diag_label")
+            if label is not None:
+                label.set_markup(descrever_deteccao_de_janela(state))
+            return False
+
+        call_async(
+            "daemon.state_full",
+            {},
+            on_success=_pintar,
+            on_failure=lambda _exc: _pintar(None),
+            # HARM-15: sem a folga a linha se pinta de "não consegui ler" com o
+            # daemon VIVO sempre que o `state_full` passa dos 0,25s default.
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
 
     def on_storm_fix_safe(self, _btn: object) -> None:
         """Reaplica os fixes SEGUROS (sem sudo): Steam Input OFF + WirePlumber.
@@ -1430,6 +1586,10 @@ class DaemonActionsMixin(WidgetAccessMixin):
         cartão anti-storm (que antes só era populado no bootstrap da aba)."""
         self._refresh_daemon_view_async()
         self._refresh_storm_diag()
+        # JANELA-CEGA-01: o detector CEGA e VOLTA a ver conforme a janela em
+        # foco (`window_detect_seeing` decai e volta), então esta linha tem de
+        # ser relida ao entrar na aba — senão ela mostra a foto do bootstrap.
+        self._refresh_window_detect_diag()
 
     def on_daemon_refresh(self, _btn: Gtk.Button) -> None:
         self._refresh_daemon_view_async()  # BUG-DAEMON-VIEW-SYNC-FREEZE-01: não bloquear GTK
@@ -1438,6 +1598,7 @@ class DaemonActionsMixin(WidgetAccessMixin):
         # seguros", então o diagnóstico ficava stale a sessão inteira (ex.: a
         # usuária instala a cura por fora e o WARN nunca somia).
         self._refresh_storm_diag()
+        self._refresh_window_detect_diag()  # JANELA-CEGA-01
         self._sync_restart_daemon_button_sensitivity()
 
     def on_daemon_service_restart(self, _btn: Gtk.Button) -> None:

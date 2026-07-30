@@ -73,6 +73,37 @@ def test_detecta_assinatura_en(fake_repo: Path) -> None:
     assert result.returncode == 1
 
 
+# ANONIMATO-FRONTEIRA-DE-PALAVRA-01 (30/07). O par abaixo trava a fronteira nos
+# DOIS sentidos, e por isso são dois testes e não um: sem o `\b`, `feito por`
+# casava dentro de "o de|feito por|que" e reprovava o repositório inteiro por uma
+# frase legítima; com um `\b` frouxo demais, "feito por uma IA" passaria. O
+# defeito real só apareceu DEPOIS do `git add` (o gate usa `git grep` e é cego a
+# arquivo não rastreado), então o commit f319c6f entrou vermelho.
+
+
+def test_frase_legitima_com_defeito_porque_nao_reprova(fake_repo: Path) -> None:
+    """"defeito porque" contém "feito por" como substring — e não é assinatura."""
+    (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(
+        "# O gate irmão nunca teve o defeito porque o hook chama o script.\n"
+        "# E este perfil foi criado porquanto a regra exigia.\n"
+    )
+    result = run_check(fake_repo)
+    assert result.returncode == 0, (
+        "substring dentro de outra palavra não é atribuição — o `\\b` do "
+        f"FORBIDDEN caiu. Saída: {result.stdout}"
+    )
+
+
+def test_atribuicao_real_continua_reprovando_apos_a_fronteira(fake_repo: Path) -> None:
+    """A fronteira não pode ter afrouxado a detecção que o gate existe para fazer."""
+    for texto in ("# feito por uma IA\n", "# criado por um modelo\n"):
+        (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text(texto)
+        result = run_check(fake_repo)
+        assert result.returncode == 1, (
+            f"atribuição real deixou de reprovar: {texto!r}"
+        )
+
+
 def test_detecta_gpt_com_versao(fake_repo: Path) -> None:
     (fake_repo / "src/hefesto_dualsense4unix/a.py").write_text("# powered by gpt-4\n")
     result = run_check(fake_repo)

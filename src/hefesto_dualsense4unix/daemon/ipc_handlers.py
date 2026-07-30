@@ -1157,11 +1157,94 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
+            # EMULACAO-NO-JOGO-01: estado do teclado emulado — o interruptor que
+            # ele nunca teve, mais o MOTIVO de estar calado. Mesmo bloco do
+            # `state_full` (mesma razão do `window_detect_*`: duas respostas que
+            # divergem são duas verdades).
+            "keyboard_emulation": self._keyboard_emulation_payload(),
             # JANELA-CEGA-01: o `daemon.status` não expunha campo
             # `window_detect_*` NENHUM — quem olhava o status não tinha como
             # saber que o perfil-por-jogo estava cego. Mesmo bloco do
             # `state_full`, para as duas respostas nunca divergirem.
             **self._window_detect_payload(),
+        }
+
+    def _keyboard_emulation_payload(self) -> dict[str, Any]:
+        """Bloco `keyboard_emulation` publicado por `state_full` e `daemon.status`.
+
+        EMULACAO-NO-JOGO-01. Ela desligou "o modo mouse teclado" e o teclado
+        continuou emitindo Alt+Tab dentro do jogo — porque aquele interruptor
+        governa só o mouse e o teclado não tinha interruptor NENHUM, nem chave
+        neste payload. As quatro chaves respondem, em ordem, às quatro perguntas
+        que a aba Emulação precisa fazer:
+
+        - `enabled`   -- o interruptor (`config.keyboard_emulation_enabled`,
+                         persistido em `keyboard_emulation.flag`);
+        - `device_ativo` -- o teclado virtual existe agora (`_keyboard_device`);
+        - `despachando`  -- ele emitiria tecla NESTE instante (é a conjunção
+                         completa do gate do poll loop);
+        - `bloqueio`  -- POR QUE não emitiria: `"desligada"`, `"sem_device"`,
+                         `"modo_jogo"` (a supressão que ela chama de modo jogo),
+                         `"vpad_suspenso_pelo_steam_input"` (o jogo assumiu — o
+                         defeito medido em 29/07) ou `null` quando emite.
+
+        `getattr` defensivo em tudo: daemon/config dublados em teste não precisam
+        conhecer os campos novos, e este handler roda a 10-20 Hz.
+        """
+        daemon = self.daemon
+        cfg = getattr(daemon, "config", None) if daemon is not None else None
+        enabled = bool(getattr(cfg, "keyboard_emulation_enabled", False))
+        device_ativo = bool(getattr(daemon, "_keyboard_device", None) is not None)
+        suprimido = bool(getattr(daemon, "_emulation_suppressed", False))
+        motivo_jogo: str | None = None
+        predicado = getattr(daemon, "_jogo_no_controle_do_desktop", None)
+        if callable(predicado):
+            with contextlib.suppress(Exception):
+                bruto = predicado()
+                motivo_jogo = bruto if isinstance(bruto, str) else None
+        bloqueio: str | None
+        if not enabled:
+            bloqueio = "desligada"
+        elif not device_ativo:
+            bloqueio = "sem_device"
+        elif suprimido:
+            bloqueio = "modo_jogo"
+        else:
+            bloqueio = motivo_jogo
+        return {
+            "enabled": enabled,
+            "device_ativo": device_ativo,
+            "despachando": bloqueio is None,
+            "bloqueio": bloqueio,
+        }
+
+    def _steam_input_payload(self) -> dict[str, bool]:
+        """O PAR "exceção ativa" + "vpad suspenso" (JOGO-01, Entrega 2).
+
+        A docstring de `subsystems/gamepad.steam_input_vpad_suspenso` já descrevia
+        este payload como pendência: quem for dizer à usuária por que a emulação
+        aparece desligada com o jogo aberto precisa dos DOIS valores, porque eles
+        distinguem os dois desfechos possíveis do opt-in —
+
+          - `excecao_ativa=True` + `vpad_suspenso=True`  → o jogo da allowlist
+            está rodando com o Hefesto fora do caminho (é o regime em que o R1
+            dela emitia Alt+Tab, e agora o que cala o desktop);
+          - `excecao_ativa=True` + `vpad_suspenso=False` → o jogo da allowlist
+            está rodando com o vpad DE PÉ porque a suspensão não pôde ser armada
+            (ver `suspend_vpads_for_steam_input`).
+
+        Publicado no `state_full` porque `mode_of_state` (app/actions) hoje chama
+        de "Controlar o PC" exatamente o primeiro caso — `stop_gamepad_emulation`
+        zera `config.gamepad_emulation_enabled` mesmo com `persist=False` — e
+        deixa CINZA o único botão que curava o problema dela. A correção mora na
+        GUI (dono diferente); o dado sai daqui para ela não precisar adivinhar.
+        """
+        daemon = self.daemon
+        return {
+            "excecao_ativa": bool(getattr(daemon, "_steam_input_excecao", False)),
+            "vpad_suspenso": bool(
+                getattr(daemon, "_steam_input_vpad_suspenso", False)
+            ),
         }
 
     def _window_detect_payload(self) -> dict[str, Any]:
@@ -1360,6 +1443,14 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
+            # EMULACAO-NO-JOGO-01: interruptor do teclado emulado + motivo de ele
+            # estar calado. Ver `_keyboard_emulation_payload` (mesmo bloco do
+            # `daemon.status`).
+            "keyboard_emulation": self._keyboard_emulation_payload(),
+            # JOGO-01 (Entrega 2, pendência da docstring de
+            # `steam_input_vpad_suspenso`): o par que explica "a emulação parece
+            # desligada com o jogo aberto". Ver `_steam_input_payload`.
+            "steam_input": self._steam_input_payload(),
             # FEAT-WINDOW-DETECT-DIAG-01 + JANELA-CEGA-01: saúde do detector de
             # janela do autoswitch (backend, sticky, leitura CRUA, idade da
             # última leitura útil e motivo da cegueira) — ver
@@ -2676,6 +2767,42 @@ class IpcHandlersMixin:
             return {"status": "failed", "enabled": False}
         enabled = bool(restore())
         return {"status": "ok", "enabled": enabled}
+
+    async def _handle_keyboard_emulation_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01).
+
+        Params:
+            enabled: bool (obrigatório)
+
+        Molde do `mouse.emulation.set`, e a razão de existir é a queixa dela de
+        29/07: ela desligou "o modo mouse teclado", o mouse obedeceu (tem flag em
+        disco desde o FEAT-MOUSE-PERSIST-01) e o teclado seguiu emitindo Alt+Tab
+        no R1 dentro da partida — não havia lugar nenhum onde desligá-lo.
+
+        Resposta: `{"status": "ok"|"failed", "enabled": bool, "keyboard_emulation":
+        {...}}` — o bloco é o MESMO de `daemon.status`/`daemon.state_full`
+        (`_keyboard_emulation_payload`), para a janela não precisar de uma segunda
+        chamada só para saber se o device subiu.
+
+        Aviso que a interface tem de repassar: desligar tira também o teclado
+        virtual do sistema em L3/R3 e as três regiões do touchpad.
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("keyboard.emulation.set exige 'enabled' boolean")
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para alterar o teclado emulado")
+        setter = getattr(self.daemon, "set_keyboard_emulation", None)
+        if not callable(setter):
+            raise ValueError("daemon sem suporte a alternar o teclado emulado")
+        ok = bool(setter(enabled))
+        return {
+            "status": "ok" if ok else "failed",
+            "enabled": bool(enabled and ok),
+            "keyboard_emulation": self._keyboard_emulation_payload(),
+        }
 
     async def _handle_gamepad_emulation_set(
         self, params: dict[str, Any]

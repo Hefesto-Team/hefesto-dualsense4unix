@@ -23,6 +23,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
+    keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
     speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
 
@@ -131,6 +132,10 @@ class IpcServer(IpcHandlersMixin):
             "mic.set": self._handle_mic_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
+            # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
+            # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
+            # mouse e o R1 seguia trocando de aplicativo dentro do jogo.
+            "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "coop.set": self._handle_coop_set,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
