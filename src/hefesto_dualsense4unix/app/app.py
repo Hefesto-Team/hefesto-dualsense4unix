@@ -333,6 +333,10 @@ class HefestoApp(
             "on_emulation_steam_input_disable": self.on_emulation_steam_input_disable,
             # Mouse (aba "Mouse e Teclado")
             "on_mouse_toggle_set": self.on_mouse_toggle_set,
+            # EMULACAO-NO-JOGO-01/E1: o interruptor do teclado emulado. Sem esta
+            # entrada o `<signal>` do glade vira botão MORTO em silêncio — é o
+            # BUG-GUI-EMULATION-HANDLERS-UNWIRED-01 ("clico e não aplica").
+            "on_keyboard_toggle_set": self.on_keyboard_toggle_set,
             "on_mouse_speed_changed": self.on_mouse_speed_changed,
             "on_mouse_scroll_speed_changed": self.on_mouse_scroll_speed_changed,
             # Teclado — key_bindings CRUD (FEAT-KEYBOARD-UI-01, lição 77.1)
@@ -795,6 +799,19 @@ class HefestoApp(
         # A aba unificada roda os DOIS refreshers que antes eram de uma aba cada:
         # BUG-MOUSE-GUI-SYNC-01 (A1) sincroniza com o estado vivo do daemon e
         # BUG-KEYBOARD-TAB-NO-REFRESH-01 recarrega os bindings do draft.
+        # EMULACAO-NO-JOGO-01/E1: `_refresh_keyboard_switch` NÃO entrou aqui, e
+        # a razão é medida. Ele seria o lugar certo — o interruptor do teclado
+        # vive nesta aba — mas hoje ele é o ÚNICO escritor da
+        # `keyboard_emulation.flag` em todo o projeto (`grep`: não há CLI nem
+        # applet chamando `keyboard.emulation.set`), então não existe caminho
+        # pelo qual a posição dele mude sem passar por esta janela: reconciliar
+        # ao entrar na aba não corrige staleness nenhuma HOJE. Ele é populado no
+        # bootstrap (`install_emulation_tab`) e reconciliado pelo
+        # `_refresh_emulation_tab`. Quando nascer um segundo escritor (a CLI
+        # `keyboard on/off`, o applet), o nome entra nesta tupla — e junto tem de
+        # entrar a linha correspondente em
+        # `tests/unit/test_notebook_switch_page.py`, que congela esta lista com
+        # `==` e reprova qualquer acréscimo.
         "tab_navegacao_dsx": (
             "_refresh_mouse_tab",
             "_refresh_key_bindings_from_draft",

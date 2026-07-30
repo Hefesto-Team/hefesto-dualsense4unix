@@ -144,8 +144,23 @@ class DaemonConfig:
     # controle). Só tem efeito com a emulação de gamepad ligada + 2+ controles.
     coop_enabled: bool = False
     # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
-    # do DualSense. Default True: infraestrutura já sobe com os bindings
-    # default (Options/Share/L1/R1). Sub-sprints futuras expõem UI+persist.
+    # do DualSense.
+    #
+    # EMULACAO-NO-JOGO-01 (29/07): o campo deixou de ser config MORTA. Até aqui
+    # nada o desligava — sem gate de criação no subsystem, sem flag em disco,
+    # sem IPC — e o R1 (Alt+Tab no mapa default) trocava de aplicativo dentro da
+    # partida dela; 9 de 9 pressionamentos medidos no journal caíram dentro de
+    # `steam_input_vpad_suspenso`. Agora: `subsystems/keyboard.py` recusa criar o
+    # device com o campo False (molde de `subsystems/mouse.py`),
+    # `keyboard_emulation.flag` persiste a escolha dela (lida no boot, abaixo em
+    # `run`) e `keyboard.emulation.set` alterna em runtime.
+    #
+    # O default fica True DE PROPÓSITO (decisão registrada na sprint): desligar o
+    # teclado desliga também o teclado virtual do sistema em L3/R3 e as três
+    # regiões do touchpad (`core/keyboard_mappings.py`) — quem usa o controle
+    # como teclado de acessibilidade perderia tudo isso num upgrade silencioso.
+    # A cura do sintoma dela não depende deste default: ela vem do gate de
+    # despacho por "jogo com autoridade" (ver `_jogo_no_controle_do_desktop`).
     keyboard_emulation_enabled: bool = True
     # FEAT-HOTKEY-STEAM-01
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
@@ -270,6 +285,16 @@ IGNORADO_GESTO_DELA = "ignorado_gesto_dela"
 #: preparar. Ver `Daemon.aplicar_gamepad_para_multiplos_controles`.
 IGNORADO_UM_CONTROLE_SO = "ignorado_um_controle_so"
 
+#: EMULACAO-NO-JOGO-01: por que a emulação de DESKTOP (mouse/teclado) está calada
+#: mesmo sem o modo jogo ligado. Vocabulário PÚBLICO — sai no journal e no bloco
+#: `keyboard_emulation.bloqueio` do `daemon.status`/`daemon.state_full`, e é por
+#: ele que a aba Emulação explica à usuária o que está acontecendo.
+#:
+#:   - ``CALADA_VPAD_SUSPENSO`` — a exceção do Steam Input tirou o vpad de cena
+#:     para este jogo (`subsystems/gamepad.steam_input_vpad_suspenso`). O jogo
+#:     assumiu o controle: emitir Alt+Tab aqui é o defeito medido de 29/07.
+CALADA_VPAD_SUSPENSO = "vpad_suspenso_pelo_steam_input"
+
 
 @dataclass
 class ModoJogoPadrao:
@@ -368,6 +393,16 @@ class Daemon:
     # campo só LIBERAM a supressão quando este flag é True — toggle manual da
     # usuária nunca é revertido por autoswitch/troca de perfil.
     _suppress_from_profile: bool = False
+    # EMULACAO-NO-JOGO-01: motivo pelo qual a emulação de DESKTOP está calada
+    # porque o JOGO tem o controle ("" = não está calada por jogo). É o estado do
+    # episódio: serve de dedup do log (o poll loop passa aqui a 60 Hz) e de borda
+    # para o flush/prime dos devices virtuais. Ver
+    # `_jogo_no_controle_do_desktop`.
+    _emu_calada_motivo: str = ""
+    # EMULACAO-NO-JOGO-01: já logamos, NESTE episódio, que havia botão
+    # pressionado com o jogo no controle. Sem esta dedup a linha sairia a cada
+    # tick enquanto ela segurasse R1 dentro da partida.
+    _emu_calada_botoes_logados: bool = False
     # BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01: instante (time.monotonic) do último
     # toggle MANUAL da EMULAÇÃO (mouse ou gamepad via IPC/GUI/CLI/hotkey). -inf =
     # nunca. Consultado por `apply_profile_mouse`: um perfil não liga/desliga a
@@ -588,6 +623,17 @@ class Daemon:
             if gp_flavor:
                 self.config.gamepad_flavor = gp_flavor
             self.config.mouse_emulation_enabled = False
+        # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado
+        # do mouse e do gamepad de propósito — é a superfície que faltava (o
+        # teclado era o único dos três sem flag em disco, e por isso o único que
+        # não tinha como ser desligado). Três valores: `None` = nunca configurada
+        # e o default da config vale (compat: continua ligado); `True`/`False` =
+        # decisão DELA e vence o default, inclusive um default vindo do env.
+        # Best-effort por construção (o load nunca levanta).
+        from hefesto_dualsense4unix.utils.session import load_keyboard_preference
+        kbd_pref = load_keyboard_preference()
+        if kbd_pref is not None:
+            self.config.keyboard_emulation_enabled = kbd_pref
         # FEAT-DSX-COOP-LOCAL-01: restaura o co-op local se a sessão anterior o
         # deixou ligado (só tem efeito com gamepad + 2+ controles; o poll loop
         # reconcilia via CoopManager.sync).
@@ -1091,6 +1137,55 @@ class Daemon:
                     scroll_speed=self.config.mouse_scroll_speed,
                 )
         return True
+
+    def set_keyboard_emulation(self, enabled: bool, *, persist: bool = True) -> bool:
+        """Liga/desliga a emulação de TECLADO. Usado pelo IPC `keyboard.emulation.set`.
+
+        EMULACAO-NO-JOGO-01. É o interruptor que o teclado nunca teve — e ele
+        tem dentes: desligar DESTRÓI o device virtual (via
+        `stop_keyboard_emulation`), então o gate do poll loop
+        (`_keyboard_device is not None`) fecha por consequência, do mesmo jeito
+        que o mouse dela já estava honestamente desligado. Retorna o estado
+        efetivo ao final (o pedido pode falhar por /dev/uinput).
+
+        `persist=False` existe para o restore do boot e para os testes: o
+        caminho normal (gesto dela) grava `keyboard_emulation.flag` para que a
+        escolha atravesse restart/reboot — era exatamente o que faltava, já que
+        o default da config é True e voltava a valer a cada boot.
+
+        NÃO carimba `_emu_manual_ts` (diferente de `set_mouse_emulation`): não há
+        applier de perfil para o teclado, então o carimbo só serviria para
+        congelar por 30 s a aplicação de modo/mouse de perfil por causa de um
+        toggle que nada tem a ver com eles.
+
+        Desligar aqui tira também o teclado virtual do sistema (L3/R3) e as três
+        regiões do touchpad — quem chama pela interface tem de dizer isso a ela.
+        """
+        # BUG-EMU-DEVICE-RACE-01: mesma serialização de set_mouse_emulation —
+        # o IPC roda no event loop e o boot/reload na thread do executor.
+        with self._emu_lock:
+            self.config.keyboard_emulation_enabled = bool(enabled)
+            if enabled:
+                self._start_keyboard_emulation()
+            else:
+                self._stop_keyboard_emulation()
+            if persist:
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.utils.session import (
+                        save_keyboard_emulation,
+                    )
+
+                    save_keyboard_emulation(bool(enabled))
+            ativo = self._keyboard_device is not None
+            logger.info(
+                "keyboard_emulation_set",
+                enabled=bool(enabled),
+                device_ativo=ativo,
+                persistido=bool(persist),
+            )
+            # Ligar só é "ok" com device de pé; desligar sempre alcança o estado
+            # pedido (`stop_keyboard_emulation` é idempotente e best-effort).
+            return ativo if enabled else True
 
     def set_gamepad_emulation(
         self,
@@ -1614,6 +1709,122 @@ class Daemon:
 
         wm_class = getattr(self.store, "window_detect_current_class", None)
         return steam_appid_from_wm_class(str(wm_class or "")) is not None
+
+    def _jogo_no_controle_do_desktop(self) -> str | None:
+        """Motivo para CALAR a emulação de desktop, ou None se ela pode falar.
+
+        EMULACAO-NO-JOGO-01 (a queixa de 29/07: *"inicio o jogo e ele quando
+        aperto r1 muda de app ao invés de funcionar no jogo"*).
+
+        Até aqui a exclusão mútua do poll loop era `if not gamepad_dispatched:` —
+        a AUSÊNCIA do vpad lida como PERMISSÃO para o mouse/teclado de desktop
+        entrar. Mas a exceção do Steam Input derruba o vpad DE PROPÓSITO
+        (`subsystems/gamepad.py`, `steam_input_vpad_suspenso`) quando um jogo da
+        allowlist abre — logo a proteção virava a porta de entrada do Alt+Tab
+        dentro da partida. Medido no journal dela: 9 de 9 pressionamentos de R1
+        em 7 dias caíram dentro de uma janela de suspensão, zero fora, com o
+        `_gamepad_device` em None por ~97 minutos num único dia.
+
+        A pergunta certa é "há jogo com autoridade?", e este predicado responde.
+        Hoje ele tem UM termo, e a escolha do sinal é o coração da sprint:
+
+        - ``steam_input_vpad_suspenso`` — **usado**. Leitura de flag em memória
+          (caminho quente), True pelo episódio INTEIRO, encerrada pelo vigia a
+          1 Hz. Cobre exatamente o regime medido.
+        - ``display_authority == "game"`` — **recusado**, e não por preguiça: o
+          sinal é sticky e tem defeito CONHECIDO E NÃO CORRIGIDO (cai de `game`
+          para `daemon` ~30 s depois com o jogo ainda aberto — ver
+          `reverter_modo_jogo_padrao`). Os R1 dela saíram 4,5 min depois da
+          suspensão: a queda religaria o Alt+Tab no meio da partida, isto é, a
+          cura falharia justamente no caso que a motivou. E na saída do jogo a
+          stickiness deixaria mouse/teclado mudos por até 30 s — ela sentiria
+          como "o controle morreu".
+        - ``_janela_de_jogo_em_foco`` (leitura CRUA) — **recusado por ora**. Ele
+          libera na hora e não decai, mas o ganho marginal é pequeno (com o vpad
+          de pé o `gamepad_dispatched` já exclui o desktop) e o custo é real:
+          calaria o `point_and_click` DENTRO de jogo Steam — o único perfil dela
+          com `key_bindings` próprio e `mouse.enabled: true`, cujo propósito é
+          justamente usar o controle como mouse/teclado num jogo. Não há medição
+          de que ela não o use assim; a decisão é dela.
+
+        Risco residual declarado: jogo nativo/Lutris/Heroic e jogo Steam FORA da
+        allowlist com o vpad desligado continuam descobertos. Nesses casos o vpad
+        de pé é o que exclui o desktop, e é o regime normal na máquina dela.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            steam_input_vpad_suspenso,
+        )
+
+        if steam_input_vpad_suspenso(self):
+            return CALADA_VPAD_SUSPENSO
+        return None
+
+    def _calar_emulacao_de_desktop(
+        self, motivo: str, buttons_pressed: frozenset[str]
+    ) -> None:
+        """Fecha o gate do desktop porque o jogo assumiu (EMULACAO-NO-JOGO-01).
+
+        Três coisas, todas de borda (o poll loop passa aqui a 60 Hz):
+
+        1. **Solta o que estiver preso.** Na primeira borda do episódio chama
+           `_flush_emulation_devices` — o MESMO motivo do flush de
+           `set_emulation_suppressed`: se o gate fechar com R1 segurado, o
+           `KEY_LEFTALT` fica preso porque ninguém mais envia o release. No
+           journal dela isso durou 18 s numa noite e 33 s na outra, e o que
+           soltou a tecla foi ela clicando no modo jogo.
+        2. **Drena o touchpad** (B4): sem despacho de mouse ninguém consome o
+           `_accum_dx/dy` e o cursor pularia ao religar.
+        3. **Deixa rastro NOMEADO** no journal, deduplicado por episódio. Antes
+           saía um `key_binding_emit` neutro que não dizia que era dentro do
+           jogo; agora sai `emulacao_de_desktop_calada_no_jogo` uma vez, e
+           `teclado_no_jogo_bloqueado` na primeira vez em que havia botão
+           pressionado de fato (a 60 Hz, sem a dedup, seriam 60 linhas/s).
+        """
+        if self._emu_calada_motivo != motivo:
+            self._emu_calada_motivo = motivo
+            self._emu_calada_botoes_logados = False
+            self._flush_emulation_devices()
+            logger.info(
+                "emulacao_de_desktop_calada_no_jogo",
+                motivo=motivo,
+                teclado_ativo=self._keyboard_device is not None,
+                mouse_ativo=self._mouse_device is not None,
+                modo_jogo=self._emulation_suppressed,
+            )
+        if (
+            not self._emu_calada_botoes_logados
+            and buttons_pressed
+            and self._keyboard_device is not None
+            and not self._emulation_suppressed
+        ):
+            self._emu_calada_botoes_logados = True
+            logger.info(
+                "teclado_no_jogo_bloqueado",
+                motivo=motivo,
+                botoes=sorted(buttons_pressed),
+            )
+        if self._touchpad_reader is not None:
+            from hefesto_dualsense4unix.daemon.subsystems.mouse import (
+                discard_touchpad_motion,
+            )
+
+            discard_touchpad_motion(self)
+
+    def _liberar_emulacao_de_desktop(self, buttons_pressed: frozenset[str]) -> None:
+        """Reabre o gate do desktop ao fim do episódio (EMULACAO-NO-JOGO-01).
+
+        Semeia o edge-tracker do teclado com o baseline ATUAL (`prime`, zero
+        emissão) antes de voltar a despachar: sem isso, um botão que ela já
+        estivesse segurando na borda de saída viraria um press NOVO — um Alt+Tab
+        fantasma no instante em que o jogo fecha. É a mesma cura do
+        BUG-DAEMON-CONNECT-GHOST-INPUT-01, reusada.
+        """
+        motivo = self._emu_calada_motivo
+        self._emu_calada_motivo = ""
+        self._emu_calada_botoes_logados = False
+        if self._keyboard_device is not None:
+            self._prime_keyboard_emulation(buttons_pressed)
+        logger.info("emulacao_de_desktop_liberada", motivo_anterior=motivo)
 
     def apply_profile_mode(
         self,
@@ -3262,8 +3473,24 @@ class Daemon:
             # Mouse/teclado de DESKTOP: gateados por emu_active (modo jogo) e só
             # quando o gamepad NÃO foi despachado (exclusão mútua — com o gamepad
             # ligado, o controle vai pro jogo, não pro cursor/teclado).
+            #
+            # EMULACAO-NO-JOGO-01: o `not gamepad_dispatched` NÃO basta, e nunca
+            # bastou. Ele lê a ausência do vpad como permissão, e a exceção do
+            # Steam Input derruba o vpad de propósito com o jogo aberto — a
+            # proteção virava a porta de entrada do Alt+Tab do R1 dentro da
+            # partida (9/9 episódios medidos no journal dela). O termo novo
+            # pergunta "há jogo com autoridade?" em vez de "o vpad despachou?".
+            # Ele apenas ESTREITA o predicado (nunca alarga: alargar reabriria o
+            # "real escondido + virtual mudo" registrado acima).
             emu_active = not self._emulation_suppressed
-            if not gamepad_dispatched:
+            motivo_jogo = (
+                self._jogo_no_controle_do_desktop() if not gamepad_dispatched else None
+            )
+            if motivo_jogo is not None:
+                self._calar_emulacao_de_desktop(motivo_jogo, emu_buttons)
+            elif self._emu_calada_motivo:
+                self._liberar_emulacao_de_desktop(emu_buttons)
+            if not gamepad_dispatched and motivo_jogo is None:
                 if self._mouse_device is not None and emu_active:
                     self._dispatch_mouse_emulation(state, emu_buttons)
                 elif self._touchpad_reader is not None:

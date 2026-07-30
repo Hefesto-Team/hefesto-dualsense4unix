@@ -97,6 +97,16 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         ps_long_press_ms=int(
             os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
         ),
+        # EMULACAO-NO-JOGO-01: até 29/07 este campo NUNCA era passado aqui — o
+        # default True da dataclass vencia sempre e não havia superfície nenhuma
+        # que o desligasse (nem env, nem arquivo, nem IPC), enquanto o R1 do mapa
+        # default emitia Alt+Tab dentro da partida dela.
+        # Precedência, do mais fraco ao mais forte: default da dataclass (True) <
+        # este env < `keyboard_emulation.flag` (a decisão DELA, lida no boot em
+        # `Daemon.run`). `=0` desliga; qualquer outro valor mantém ligado.
+        keyboard_emulation_enabled=(
+            os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
+        ),
     )
     daemon = Daemon(controller=controller, config=config)
 

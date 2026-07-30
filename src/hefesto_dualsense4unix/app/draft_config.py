@@ -302,6 +302,28 @@ class DraftConfig(BaseModel):
     source_mode: Any | None = None
     source_suppress: bool = False
     source_priority: int | None = None
+    # PERFIL-SALVA-TUDO-01 (29/07): `source_mode` e `source_suppress` deixam de
+    # ser SÓ-transporte e ganham dono — como já acontece com
+    # `source_controllers`, o único outro `source_*` que a janela edita.
+    #
+    # Medido na queixa dela ("fiz alterações em todas as abas e salvei o perfil,
+    # e essas configurações de outras abas não ficam salvas"): as abas Emulação e
+    # Início não tinham UMA linha escrevendo no rascunho
+    # (`grep -c 'self\.draft'` = 0 nas duas), então o modo/máscara/co-op e o
+    # "modo jogo" (suspender mouse e teclado) iam só para o estado VIVO do
+    # daemon. No "Salvar Perfil" do rodapé, `to_profile` reemitia a fotografia
+    # do boot — e com nome novo reescrevia `mode: null` e `suppress: false`. O
+    # daemon dela tinha `gamepad_emulation.flag = dualsense` de pé enquanto
+    # `pragmata2.json` dizia `"mode": null`.
+    #
+    # Estes dois flags são o "ela mexeu NESTA sessão", a mesma disciplina do
+    # `MouseDraft.dirty`/`MicDraft.dirty`: com o flag ligado, `to_profile`
+    # persiste o valor DELA mesmo com nome novo (é gesto dela, não a regra de
+    # outro perfil — a distinção que o R-11 protege). Sem o flag, nada muda: o
+    # passthrough segue gateado por `mesmo_perfil`. `with_profile_identity` os
+    # baixa (depois de gravar, o rascunho descreve o disco).
+    mode_dirty: bool = False
+    suppress_dirty: bool = False
     # PERFIL-02 (sprint perfis-por-controle): o mapa ``controllers`` do
     # perfil (overrides por MAC) atravessa o draft — ``to_profile`` reconstrói
     # o Profile do zero e o apagaria no primeiro "Salvar Perfil" (a mesma
@@ -396,7 +418,7 @@ class DraftConfig(BaseModel):
             source_name=profile.name,
         )
 
-    def to_profile(self, name: str, priority: int = 5) -> Profile:
+    def to_profile(self, name: str, priority: int | None = None) -> Profile:
         """Converte o draft em um Profile persistivel.
 
         Apenas os campos suportados pelo schema Profile v1 sao preenchidos.
@@ -419,6 +441,19 @@ class DraftConfig(BaseModel):
         PERFIL-02: o mapa ``controllers`` (overrides por MAC) é reemitido do
         perfil de origem pelo mesmo motivo — sem o passthrough, o primeiro
         "Salvar Perfil" apagaria os ajustes por-controle da usuária.
+        PERFIL-SALVA-TUDO-01: ``mode`` e ``suppress_desktop_emulation`` também
+        saem daqui quando ELA os editou nesta sessão (``mode_dirty`` /
+        ``suppress_dirty``) — nesse caso o valor vale mesmo com nome NOVO,
+        porque é gesto dela e não a regra herdada de outro perfil.
+
+        ``priority=None`` (default) significa "o chamador não tem opinião": o
+        número vem do perfil de ORIGEM quando é o mesmo perfil e, na falta dele,
+        do DEFAULT DO ESQUEMA. Nunca de um literal inventado aqui: o antigo
+        default 5 desta assinatura era a assinatura digital dos perfis dela
+        salvos pelo rodapé (``pragmata.json`` e ``pragmata2.json``, prioridade 5
+        sem ela ter tocado no slider, empatados entre si e com os outros
+        catch-all). Um portão de busca em
+        ``tests/unit/test_perfil_salva_tudo_rascunho.py`` impede a volta dele.
 
         Retorna instancia validada via ``Profile.model_validate``.
         """
@@ -429,6 +464,7 @@ class DraftConfig(BaseModel):
             ProfileMouseConfig,
             RumbleConfig,
         )
+        from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
         mouse_cfg = (
             ProfileMouseConfig(
@@ -460,21 +496,43 @@ class DraftConfig(BaseModel):
         # diálogo do rodapé, que não tem campo de regra: o perfil nasce
         # "sempre", e a regra específica é definida na aba Perfis. Não nasce
         # com a regra ERRADA, que é o ponto.
-        mesmo_perfil = self.source_name is not None and name == self.source_name
+        # R-10: a identidade de um perfil em disco é o SLUG, não o nome de
+        # exibição — `save_profile` grava `<slugify(name)>.json`. Comparar
+        # string crua aqui fazia "Navegação" (no disco) e "Navegacao" (digitado
+        # no diálogo do rodapé) caírem no ramo "nome novo": o MESMO arquivo era
+        # sobrescrito com regra, prioridade, modo e supressão zerados. O projeto
+        # já tem a comparação certa (`profiles/slug.mesmo_slug`, usada nas duas
+        # guardas da aba Perfis); este gate era o último que ainda não a usava.
+        mesmo_perfil = self.source_name is not None and (
+            name == self.source_name or mesmo_slug(name, self.source_name)
+        )
+        # PERFIL-SALVA-TUDO-01: sem número inventado. Origem > chamador >
+        # default do ESQUEMA (`Profile.priority`), lido do próprio esquema para
+        # não haver dois lugares dizendo qual é o default.
+        prioridade_final: int
+        if mesmo_perfil and self.source_priority is not None:
+            prioridade_final = int(self.source_priority)
+        elif priority is not None:
+            prioridade_final = int(priority)
+        else:
+            prioridade_final = int(Profile.model_fields["priority"].default)
         profile = Profile(
             name=name,
-            priority=(
-                self.source_priority
-                if (mesmo_perfil and self.source_priority is not None)
-                else priority
-            ),
+            priority=prioridade_final,
             match=(
                 self.source_match
                 if (mesmo_perfil and self.source_match is not None)
                 else MatchAny()
             ),
-            mode=self.source_mode if mesmo_perfil else None,
-            suppress_desktop_emulation=self.source_suppress if mesmo_perfil else False,
+            # PERFIL-SALVA-TUDO-01: `mode_dirty`/`suppress_dirty` = ela mexeu na
+            # aba Emulação/Início nesta sessão. Aí o valor é DELA e sobrevive ao
+            # nome novo; sem toque, segue o passthrough gateado pelo R-11.
+            mode=self.source_mode if (mesmo_perfil or self.mode_dirty) else None,
+            suppress_desktop_emulation=(
+                self.source_suppress
+                if (mesmo_perfil or self.suppress_dirty)
+                else False
+            ),
             triggers=_triggers_draft_to_config(self.triggers),
             # COR-04: a seção GLOBAL emite auto_player_colors explicitamente
             # (round-trip do toggle "Cores automáticas por controle").
@@ -544,7 +602,48 @@ class DraftConfig(BaseModel):
                 "source_mode": profile.mode,
                 "source_priority": profile.priority,
                 "source_suppress": bool(profile.suppress_desktop_emulation),
+                # PERFIL-SALVA-TUDO-01: o que estava pendente virou disco — os
+                # dois flags de edição baixam junto, senão um "Salvar Perfil"
+                # posterior com OUTRO nome levaria o modo deste perfil embora.
+                "mode_dirty": False,
+                "suppress_dirty": False,
             }
+        )
+
+    # --- modo e modo-jogo, editáveis pelas abas Emulação/Início ---
+
+    def with_mode(self, mode: Any | None) -> DraftConfig:
+        """Rascunho com o MODO do perfil trocado por gesto DELA.
+
+        PERFIL-SALVA-TUDO-01. ``mode`` é um ``ProfileModeConfig`` (ou ``None``
+        para "sem opinião") — a mesma seção que a aba Perfis grava por
+        ``_mode_section_from_editor``. Quem chama são as abas Emulação e Início,
+        DEPOIS de o daemon confirmar a mudança ao vivo: o rascunho registra o que
+        está de pé, e o "Salvar Perfil" do rodapé passa a persistir isso.
+
+        Marca ``mode_dirty``: é isso que faz o valor sobreviver a um save com
+        nome NOVO (gesto dela) sem reabrir o R-11 (regra herdada de outro perfil,
+        que continua gateada por ``mesmo_perfil``).
+        """
+        return self.model_copy(update={"source_mode": mode, "mode_dirty": True})
+
+    def with_suppress(self, suppress: bool) -> DraftConfig:
+        """Rascunho com o "modo jogo" (suspender mouse/teclado) trocado por ela.
+
+        PERFIL-SALVA-TUDO-01, mesma disciplina de ``with_mode``. Ela ESCLARECEU
+        que o "modo jogo" dela é suspender a emulação de mouse e teclado — hoje
+        o toggle da aba Emulação só manda ``daemon.emulation.suppress`` e o
+        próprio comentário do handler diz "NÃO persiste".
+
+        ATENÇÃO (declarado na sprint e MEDIDO aqui): ``suppress: true`` num perfil
+        CATCH-ALL é aplicado na ativação sem passar pelo gate R-02 — em
+        ``lifecycle.apply_profile_suppression`` o ``_perfil_tem_opiniao`` só
+        guarda o ramo de LIBERAR (``desired=False``), não o de ligar. Persistir
+        aqui é o que ela pediu; quem liga precisa saber que num catch-all isso
+        vale em TODA ativação, inclusive no restauro do último perfil no boot.
+        """
+        return self.model_copy(
+            update={"source_suppress": bool(suppress), "suppress_dirty": True}
         )
 
     # --- overrides por-controle (PERFIL-04) ---
@@ -839,6 +938,14 @@ class DraftConfig(BaseModel):
         (policy/custom_mult) também não entra aqui: ela já é aplicada na hora
         pelo IPC vivo (rumble.policy_set/policy_custom) ao mexer na aba e
         persiste via ``to_profile`` (FEAT-RUMBLE-POLICY-PROFILE-01).
+
+        PERFIL-SALVA-TUDO-01: ``mode`` e ``suppress_desktop_emulation`` seguem a
+        MESMA regra da política de rumble e NÃO viajam no "Aplicar". As abas
+        Emulação/Início já os aplicam ao vivo pelos handlers próprios
+        (``daemon.emulation.suppress``, ``apply_mode``) e o rascunho só guarda o
+        que ficou, para o "Salvar Perfil" persistir. Emiti-los aqui repetiria o
+        estrago do HARM-05 numa seção pior: um "Aplicar" disparado por ter mexido
+        num gatilho recriaria o vpad (ou suspenderia a emulação) no meio do jogo.
 
         A seção ``keyboard`` é SEMPRE emitida (mesmo com ``key_bindings`` None) —
         BUG-FOOTER-APPLY-IGNORA-KEYBINDINGS-01: antes ``to_ipc_dict`` omitia os

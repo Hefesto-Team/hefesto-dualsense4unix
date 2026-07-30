@@ -85,6 +85,13 @@ class FooterActionsMixin(WidgetAccessMixin):
     # Referência ao draft central (definida em HefestoApp.__init__).
     draft: Any  # DraftConfig — evita import circular; validado em runtime
 
+    #: Piso usado quando o cálculo do irmão não está alcançável — ver
+    #: `_persist_profile_async`. Vale mais que TODO catch-all medido no disco
+    #: dela em 30/07 (o maior era 5), então mesmo o caminho degradado nasce
+    #: vencendo; e vale MENOS que a regra de jogo mais baixa de fábrica (50),
+    #: então não atropela perfil de jogo alheio.
+    _PISO_ACIMA_DOS_CATCH_ALL = 15
+
     # ------------------------------------------------------------------
     # Controle de freeze
     # ------------------------------------------------------------------
@@ -274,11 +281,38 @@ class FooterActionsMixin(WidgetAccessMixin):
         ipc_bridge.run_in_thread(_existing_names, on_success=_on_checked)
 
     def _persist_profile_async(self, nome: str) -> None:
-        """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK)."""
+        """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK).
+
+        PERFIL-NASCE-CERTO-01, meia-entrega que faltava a este caminho: a
+        prioridade é CALCULADA e não herdada de default nenhum. O `to_profile`
+        passou a delegar ao default do esquema quando o chamador "não tem
+        opinião", e o default do esquema é ``0`` (``profiles/schema.py``) — o que
+        fazia um perfil novo salvo por aqui nascer ABAIXO dos "vale sempre" que
+        ela já tem em disco (medido em 30/07: ``fallback`` 0, ``vitoria`` 0,
+        ``meu_perfil`` 1, ``Pragmata`` 5, ``Pragmata2`` 5). Ou seja: o perfil que
+        ela acabou de salvar perdia para o Pragmata, que é exatamente a queixa
+        crônica dela — "a config que eu deixo nunca é respeitada".
+
+        O número sai de ``_prioridade_acima_dos_catch_all`` (o mesmo que a aba
+        Perfis usa, ``profiles_actions.py``): ``max(prioridade dos catch-all) +
+        folga``. Com o disco dela hoje isso dá 15, acima de todos. O cálculo é
+        lido do cache em memória — nunca do disco — porque este método corre na
+        thread do GTK.
+
+        O acesso é por `getattr` e não direto, pelo mesmo motivo que o resto
+        desta base usa `getattr` para falar com irmão de mixin: dublê de teste
+        (e qualquer composição degradada) monta só ESTE mixin, e uma chamada
+        direta viraria `AttributeError` no gesto de salvar. O piso do fallback
+        não é 0 de propósito — 0 é justamente o valor que reabria o defeito.
+        """
         draft = self.draft
+        calcula = getattr(self, "_prioridade_acima_dos_catch_all", None)
+        prioridade = (
+            int(calcula()) if callable(calcula) else self._PISO_ACIMA_DOS_CATCH_ALL
+        )
 
         def _save() -> Path:
-            return save_profile(draft.to_profile(nome))
+            return save_profile(draft.to_profile(nome, priority=prioridade))
 
         def _on_saved(path: Path) -> bool:
             self._footer_toast(_("Perfil salvo em {caminho}").format(caminho=path))

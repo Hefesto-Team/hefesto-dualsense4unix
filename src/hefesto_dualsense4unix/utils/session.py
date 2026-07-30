@@ -369,6 +369,77 @@ def load_mouse_emulation_enabled() -> bool:
     return load_mouse_emulation()[0]
 
 
+_KEYBOARD_EMULATION_FLAG_FILE = "keyboard_emulation.flag"
+
+
+def save_keyboard_emulation(enabled: bool) -> None:
+    """Persiste a PREFERÊNCIA de emulação de teclado (EMULACAO-NO-JOGO-01).
+
+    Molde exato do `save_mouse_emulation` (HARM-06): JSON com a chave
+    ``enabled``, gravado nos DOIS sentidos — o "off" é uma decisão dela e tem de
+    ficar escrito, não apagado. Até esta sprint o teclado emulado não tinha
+    lugar nenhum onde ser desligado: o default `True` de
+    `DaemonConfig.keyboard_emulation_enabled` vencia sempre, e o R1 (Alt+Tab no
+    mapa default) trocava de aplicativo dentro do jogo dela.
+
+    Não usa `session.json`: `save_last_profile` reescreve aquele arquivo inteiro.
+    Best-effort: nunca propaga exceção (o IPC/boot não pode cair por I/O).
+    """
+    try:
+        flag = config_dir(ensure=True) / _KEYBOARD_EMULATION_FLAG_FILE
+        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+        logger.debug("keyboard_emulation_state_saved", enabled=enabled)
+    except Exception as exc:
+        logger.debug("keyboard_emulation_state_save_failed", err=str(exc))
+
+
+def load_keyboard_preference() -> bool | None:
+    """Preferência persistida do teclado emulado: ``True``/``False``/``None``.
+
+    ``None`` = **nunca configurada** (arquivo ausente, que é o caso de toda
+    instalação anterior a esta sprint). Quem lê no boot mantém, nesse caso, o
+    default histórico da config — ver `load_keyboard_emulation_enabled`.
+
+    Tolerante a conteúdo legado/malformado do mesmo jeito que
+    `_read_mouse_flag`: arquivo vazio ou JSON inválido conta como "ligada" (era
+    o que existir-o-arquivo queria dizer), tipo errado em ``enabled`` também.
+    Erro de I/O vira ``None`` (nunca decidiu) — fail-safe é não mudar nada.
+    """
+    try:
+        flag = config_dir() / _KEYBOARD_EMULATION_FLAG_FILE
+        if not flag.exists():
+            return None
+        content = flag.read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+    if not content:
+        return True
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return True  # conteúdo legado "1\n" → arquivo existe = ligada
+    if not isinstance(data, dict):
+        return True
+    raw = data.get("enabled")
+    if isinstance(raw, bool):
+        return raw
+    return True
+
+
+def load_keyboard_emulation_enabled(*, default: bool = True) -> bool:
+    """True se o teclado emulado deve subir; ``default`` quando nunca configurada.
+
+    ASSIMETRIA DELIBERADA com `load_mouse_emulation` (que devolve False para
+    "nunca configurada"): o teclado emulado é ligado desde o
+    FEAT-KEYBOARD-EMULATOR-01 e carrega, além dos atalhos, o teclado virtual do
+    sistema em L3/R3 e as três regiões do touchpad. Um upgrade que o desligasse
+    em silêncio tiraria acessibilidade de quem já a usava. Quem quiser o
+    teclado opt-in passa ``default=False``.
+    """
+    pref = load_keyboard_preference()
+    return default if pref is None else pref
+
+
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
 
 #: AUTO-01.1: OPT-OUT explícito do gamepad virtual — "ela desligou de propósito".
@@ -531,6 +602,8 @@ __all__ = [
     "load_coop_enabled",
     "load_gamepad_emulation",
     "load_gamepad_preference",
+    "load_keyboard_emulation_enabled",
+    "load_keyboard_preference",
     "load_last_profile",
     "load_mouse_emulation",
     "load_mouse_emulation_enabled",
@@ -542,6 +615,7 @@ __all__ = [
     "save_autoswitch_locked",
     "save_coop_enabled",
     "save_gamepad_emulation",
+    "save_keyboard_emulation",
     "save_last_profile",
     "save_mouse_emulation",
     "save_mouse_emulation_enabled",

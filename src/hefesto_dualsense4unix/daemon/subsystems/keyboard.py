@@ -1,10 +1,19 @@
 """Subsystem Keyboard — emulação de teclado virtual via uinput.
 
 Introduzido em FEAT-KEYBOARD-EMULATOR-01. Encapsula criação, despacho e
-destruição do `UinputKeyboardDevice`. Ativado por padrão (não depende de
-toggle explícito como `mouse_emulation_enabled`): a instalação do daemon já
-espera que os 4 botões default (Options/Share/L1/R1) emitam teclas
+destruição do `UinputKeyboardDevice`. Ativado por padrão: a instalação do
+daemon já espera que os 4 botões default (Options/Share/L1/R1) emitam teclas
 correspondentes assim que o serviço sobe.
+
+EMULACAO-NO-JOGO-01 (29/07) corrigiu a assimetria que este cabeçalho declarava:
+o teclado NÃO tinha toggle explícito nenhum — nem gate de criação, nem flag em
+disco, nem IPC —, e por isso o R1 (Alt+Tab, `core/keyboard_mappings.py`)
+trocava de aplicativo no meio da partida dela. Agora `keyboard_emulation_enabled`
+é respeitado no gate de criação abaixo (molde de `subsystems/mouse.py`), a
+preferência é persistida em `keyboard_emulation.flag`
+(`utils/session.py:save_keyboard_emulation`) e o runtime alterna por
+`keyboard.emulation.set`. O default continua LIGADO — desligar tira também o
+teclado virtual do sistema (L3/R3) e as três regiões do touchpad.
 
 Wire-up no Daemon (armadilha A-07 — 3 pontos):
   1. Slot `_keyboard_device: Any = None` em `Daemon` (lifecycle.py).
@@ -131,9 +140,22 @@ def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:
     Retorna True se ativo ao final; False se falhou ao iniciar o device
     principal. O `TouchpadReader` é best-effort: se o device evdev do
     touchpad não existir (controle BT, kernel velho), não quebra o fluxo.
+
+    EMULACAO-NO-JOGO-01: o gate de `keyboard_emulation_enabled` mora AQUI,
+    espelhando `subsystems/mouse.py` (`if not cfg.mouse_emulation_enabled:
+    return`). É o que dá dentes ao interruptor: desligada, o device NÃO nasce,
+    e o gate de despacho do poll loop (`_keyboard_device is not None`) fecha
+    sozinho — a mesma mecânica que fazia o mouse dela estar honestamente
+    desligado enquanto o teclado emitia Alt+Tab dentro da partida. `getattr`
+    defensivo em dois níveis: dublê de teste sem `config` (ou sem o campo)
+    segue com o comportamento histórico (ligado).
     """
     if getattr(daemon, "_keyboard_device", None) is not None:
         return True
+    cfg = getattr(daemon, "config", None)
+    if cfg is not None and not getattr(cfg, "keyboard_emulation_enabled", True):
+        logger.debug("keyboard_emulation_desligada_device_nao_criado")
+        return False
     try:
         from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
 

@@ -131,6 +131,66 @@ def format_steam_input_result(
     )
 
 
+#: EMULACAO-NO-JOGO-01/E1(c): tradução do vocabulário FECHADO de ``bloqueio``,
+#: publicado pelo daemon no bloco ``keyboard_emulation`` do ``daemon.status`` e
+#: do ``daemon.state_full`` (``daemon/ipc_handlers.py:_keyboard_emulation_payload``;
+#: a constante do último caso mora em ``daemon/lifecycle.CALADA_VPAD_SUSPENSO``).
+#:
+#: Invariante que o daemon deixou por escrito e que estas frases respeitam: nos
+#: dois casos de PAUSA (``modo_jogo`` e ``vpad_suspenso_pelo_steam_input``) o
+#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele saiu da
+#: frente. Nenhuma dessas duas frases pode dizer "desligado".
+BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
+    "desligada": (
+        "Desligado: o controle não digita mais nada — nem os atalhos da lista "
+        "abaixo, nem o teclado na tela em L3/R3, nem as três regiões do "
+        "touchpad (Backspace, Enter e Delete)."
+    ),
+    "sem_device": (
+        "Ligado, mas o teclado virtual não subiu. Abra a aba Sistema e clique "
+        "em “Aplicar correções”."
+    ),
+    "modo_jogo": (
+        "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
+    ),
+    "vpad_suspenso_pelo_steam_input": (
+        "Ligado, em pausa agora: o jogo assumiu o controle. Não foi desligado — "
+        "volta sozinho quando você fechar o jogo."
+    ),
+}
+
+#: Sem o bloco não se sabe a posição do interruptor — e oferecer um interruptor
+#: cuja posição você não conhece é exatamente o que mentia no lado do mouse
+#: (HARM-05). A frase diz o que fazer, não o que faltou no protocolo.
+TECLADO_SEM_ESTADO = (
+    "Não consegui ler o estado do teclado emulado — o Hefesto pode estar "
+    "desligado. Veja a aba Sistema."
+)
+
+
+def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
+    """(posição do interruptor, frase embaixo dele) a partir do bloco do daemon.
+
+    Pura de propósito: é o miolo que decide o que ela vê, e ele precisa ter
+    teste sem montar janela. ``None`` na primeira posição significa "não sei" —
+    o interruptor fica insensível e nada é afirmado.
+    """
+    if not isinstance(bloco, dict) or not isinstance(bloco.get("enabled"), bool):
+        return None, TECLADO_SEM_ESTADO
+    ligado = bool(bloco["enabled"])
+    bloqueio = bloco.get("bloqueio")
+    if bloqueio is None:
+        return ligado, ""
+    if not isinstance(bloqueio, str):
+        return ligado, ""
+    texto = BLOQUEIO_DO_TECLADO_EM_PORTUGUES.get(bloqueio)
+    if texto is not None:
+        return ligado, texto
+    # Motivo NOVO, vindo de um daemon mais novo que esta janela: dizer o código
+    # cru é feio, mas é honesto — e é melhor que afirmar que está funcionando.
+    return ligado, f"Ligado, em pausa agora (motivo: {bloqueio})."
+
+
 class EmulationActionsMixin(WidgetAccessMixin):
     """Controla a aba Emulação."""
 
@@ -159,6 +219,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
         self._refresh_mic_status()
         self._refresh_gamepad_and_gamemode()
         self._refresh_steam_input_status()
+        # EMULACAO-NO-JOGO-01/E1: o interruptor do teclado vive na coluna
+        # Teclado da aba Navegação (ao lado do do mouse, que é o lugar onde ela
+        # o procurou), mas o dono do assunto "emulação" é este mixin. O
+        # bootstrap é chamado daqui porque `install_mouse_tab` tem outro dono; a
+        # releitura vai pelo `_refresh_emulation_tab` logo abaixo. Por que ele NÃO
+        # está no gancho da aba Navegação: ver `app._REFRESH_POR_ABA`.
+        self._refresh_keyboard_switch()
 
     # --- handlers ---
 
@@ -183,6 +250,12 @@ class EmulationActionsMixin(WidgetAccessMixin):
             "_refresh_gamepad_and_gamemode",
             "_refresh_mic_status",
             "_refresh_steam_input_status",
+            # EMULACAO-NO-JOGO-01/E1: o interruptor do teclado. Ele DESENHA na
+            # aba Navegação, mas o assunto é emulação e o dono é este mixin —
+            # e é por aqui que ele é relido no botão "Atualizar" e ao entrar na
+            # aba Emulação. Ver o comentário em `app._REFRESH_POR_ABA` para por
+            # que ele não entrou no gancho da aba Navegação.
+            "_refresh_keyboard_switch",
         ):
             fn = getattr(self, name, None)
             if callable(fn):
@@ -665,6 +738,126 @@ class EmulationActionsMixin(WidgetAccessMixin):
 
     def on_emulation_resume(self, _btn: Gtk.Button) -> None:
         self._set_suppress(False, "Modo jogo desligado: mouse/teclado retomados")
+
+    # --- interruptor do teclado emulado (EMULACAO-NO-JOGO-01/E1) -----------
+    # O teclado emulado não tinha interruptor NENHUM: o único switch da aba
+    # dizia "Emular mouse+teclado" e governava só o mouse. A cura do motor
+    # (`keyboard.emulation.set` + bloco `keyboard_emulation`) já está no daemon;
+    # aqui é a chave que a alcança.
+
+    #: Guard contra loop switch -> IPC -> refresh -> switch. Em GTK3
+    #: `set_active` reemite `state-set` SINCRONAMENTE — `return True` no handler
+    #: não evita (repro real do lado do mouse: 999 reentradas + RecursionError).
+    _keyboard_guard_refresh: bool = False
+
+    #: Última posição CONFIRMADA pelo daemon. É para ela que uma falha reverte,
+    #: e NÃO para `not enabled` capturado no clique: com dois cliques rápidos e
+    #: o daemon travado, o `not enabled` do segundo RPC deixava o interruptor
+    #: preso na posição errada (BUG-MOUSE-TOGGLE-STALE-REVERT-01, mesma classe).
+    _keyboard_confirmado: bool = True
+
+    def _refresh_keyboard_switch(self) -> None:
+        """Lê o bloco ``keyboard_emulation`` do ``state_full`` e pinta a chave.
+
+        O estado vem do DAEMON, não do rascunho: o teclado não tem seção no
+        perfil e quem persiste a escolha dela é o daemon
+        (``keyboard_emulation.flag``, gravado a cada ``keyboard.emulation.set``).
+        A janela não escreve arquivo nenhum aqui.
+        """
+        def _on_state(state: Any) -> bool:
+            bloco = state.get("keyboard_emulation") if isinstance(state, dict) else None
+            self._aplicar_keyboard_switch(bloco)
+            return False
+
+        def _on_err(_exc: Exception) -> bool:
+            self._aplicar_keyboard_switch(None)
+            return False
+
+        # HARM-15: a mesma folga do resto da casa para LER o `state_full` — sem
+        # ela a chave nasce cinza com o daemon VIVO sempre que ele passa dos
+        # 0,25s default (hotplug, co-op subindo).
+        call_async(
+            "daemon.state_full", {}, on_success=_on_state, on_failure=_on_err,
+            timeout_s=STATE_IPC_TIMEOUT_S,
+        )
+
+    def _aplicar_keyboard_switch(self, bloco: object) -> None:
+        """Põe o interruptor e a frase na tela. Tolerante a glade sem os widgets."""
+        ligado, dica = descrever_teclado_emulado(bloco)
+        switch = self._get("keyboard_emulation_toggle")
+        if switch is not None:
+            switch.set_sensitive(ligado is not None)
+            if ligado is not None:
+                self._keyboard_confirmado = ligado
+                anterior = self._keyboard_guard_refresh
+                self._keyboard_guard_refresh = True
+                try:
+                    switch.set_active(ligado)
+                finally:
+                    self._keyboard_guard_refresh = anterior
+        hint = self._get("keyboard_emulation_hint_label")
+        if hint is None:
+            return
+        hint.set_text(dica)
+        hint.set_visible(bool(dica))
+
+    def on_keyboard_toggle_set(self, switch: Gtk.Switch, _state: Any) -> bool:
+        """Liga/desliga o teclado emulado pelo IPC ``keyboard.emulation.set``.
+
+        O daemon devolve o bloco já atualizado no próprio resultado, então não
+        há segunda chamada de ``state_full`` para saber se pegou.
+        """
+        if self._keyboard_guard_refresh:
+            return False
+        ligado = bool(switch.get_active())
+
+        def _on_ok(result: Any) -> bool:
+            if not isinstance(result, dict) or result.get("status") != "ok":
+                return _on_err(RuntimeError("daemon respondeu status=failed"))
+            self._aplicar_keyboard_switch(result.get("keyboard_emulation"))
+            if ligado:
+                self._toast_keyboard("Teclado emulado ligado")
+            else:
+                # O custo de desligar NÃO é óbvio e foi medido: sai o teclado na
+                # tela (L3/R3) e as três regiões do touchpad, não só o Alt+Tab.
+                self._toast_keyboard(
+                    "Teclado emulado desligado — saem também o teclado na tela "
+                    "(L3/R3) e as três regiões do touchpad"
+                )
+            return False
+
+        def _on_err(_exc: Exception) -> bool:
+            self._toast_keyboard(
+                "Não consegui mudar o teclado emulado — o Hefesto pode estar "
+                "desligado. Veja a aba Sistema."
+            )
+            self._reverter_keyboard_switch(self._keyboard_confirmado)
+            return False
+
+        call_async(
+            "keyboard.emulation.set",
+            {"enabled": ligado},
+            on_success=_on_ok,
+            on_failure=_on_err,
+        )
+        # Otimista: o handler default do GtkSwitch aplica a posição; a falha
+        # reverte no callback.
+        return False
+
+    def _reverter_keyboard_switch(self, ativo: bool) -> None:
+        """Devolve a chave à posição confirmada SEM reentrar no handler."""
+        switch = self._get("keyboard_emulation_toggle")
+        if switch is None:
+            return
+        anterior = self._keyboard_guard_refresh
+        self._keyboard_guard_refresh = True
+        try:
+            switch.set_active(ativo)
+        finally:
+            self._keyboard_guard_refresh = anterior
+
+    def _toast_keyboard(self, msg: str) -> None:
+        self._status_toast("keyboard_emulation", msg)
 
     # --- Steam Input (FEAT-STEAM-INPUT-SELF-HEAL-01 via GUI) ---
     # Steam Input PSSupport ligado SEQUESTRA o controle e conflita com o daemon
