@@ -234,29 +234,134 @@ jobs:
         run: |
           pip3 install build
           python3 -m build --wheel --outdir dist/
+      # PACOTE-COM-NOME-01: o manifesto não declara `branch:`, então o
+      # flatpak-builder gravava o ref como `master` — nome herdado do git, que
+      # não diz nada sobre canal de distribuição. A branch passa a ser `stable`.
+      #
+      # ATENÇÃO, medido em 29/07: `--default-branch` existe SÓ no
+      # `flatpak-builder`. O `flatpak build-bundle` NÃO conhece essa flag
+      # (`man flatpak-build-bundle` aceita apenas --runtime, --arch, --repo-url,
+      # --runtime-repo, --gpg-keys, --gpg-homedir, --from-commit, --oci e os
+      # verbosos) e morreria com "Unknown option" na primeira tag — levando o
+      # `github-release`, que depende deste job, junto. No bundle a branch é o
+      # ÚLTIMO ARGUMENTO POSICIONAL, e é assim que ela viaja abaixo.
       - name: Construir Flatpak
         run: |
           flatpak-builder \
             --user \
             --force-clean \
+            --default-branch=stable \
             --repo=flatpak-repo \
             flatpak-build-dir \
             flatpak/br.andrefarias.Hefesto.yml
+      # PACOTE-COM-NOME-01: o bundle era o ÚNICO artefato sem versão no nome —
+      # o AppImage e os dois .deb já a carregam. Duas releases publicavam o
+      # mesmo `Hefesto-Dualsense4Unix.flatpak`, e quem baixasse não tinha como
+      # saber qual estava na mão.
       - name: Exportar bundle .flatpak
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           flatpak build-bundle \
             flatpak-repo \
-            Hefesto-Dualsense4Unix.flatpak \
-            br.andrefarias.Hefesto
+            "Hefesto-Dualsense4Unix-${VERSION}-x86_64.flatpak" \
+            br.andrefarias.Hefesto \
+            stable
       - name: Upload bundle
         uses: actions/upload-artifact@v4
         with:
           name: flatpak-${{ needs.build.outputs.version }}
-          path: Hefesto-Dualsense4Unix.flatpak
+          path: Hefesto-Dualsense4Unix-${{ needs.build.outputs.version }}-x86_64.flatpak
           if-no-files-found: error
 
+  # PACOTE-COM-NOME-01, acoplamento release/CI: o `ci.yml` já dispara na tag
+  # `v*` (bloco C do PORTÃO-VIVO-01), mas o `github-release` só dependia de
+  # jobs deste arquivo. Resultado medido: os nove portões que existem SÓ no
+  # ci.yml — packaging-parity, shellcheck, glifos, referencias-docs,
+  # version-sync, pre-commit, gtk-real, runtime-smoke, smoke-multi-distro —
+  # informavam e não impediam nada. Um ci.yml vermelho e uma release verde
+  # conviviam no mesmo commit.
+  #
+  # Das três saídas possíveis, esta é a que NÃO duplica lógica: em vez de
+  # copiar os portões para cá (que os faria divergir na primeira mudança) ou
+  # converter o ci.yml em `workflow_call` (que muda o gatilho de TODOS os
+  # eventos do arquivo mais crítico da casa, incluindo os PRs), o guarda
+  # apenas PERGUNTA qual foi a conclusão do ci.yml na MESMA SHA.
+  #
+  # A política de "o que é flaky" continua morando no ci.yml, onde já está
+  # declarada: fedora-40 e archlinux são `continue-on-error: true`, portanto a
+  # falha deles não muda a conclusão do run e não trava a release. Este guarda
+  # não mantém lista paralela nenhuma — se amanhã alguém marcar outro job como
+  # experimental, o guarda obedece sem ser editado.
+  guarda-ci:
+    name: Guarda — o ci.yml desta SHA tem de estar verde
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Exigir conclusão "success" do ci.yml na mesma SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # A SHA do que está sendo empacotado, não a do ref do run: em
+          # workflow_dispatch o `github.sha` é o da branch do dispatch, e a tag
+          # a republicar veio pelo input (mesma armadilha que o passo "Ler
+          # versão" já trata).
+          SHA="$(git rev-parse HEAD)"
+          echo "SHA sob julgamento: ${SHA}"
+
+          LIMITE_SEG=2700   # 45 min: o ci.yml roda em paralelo a este release
+          INTERVALO=30
+          GASTO=0
+          while :; do
+            # `|| true`: erro transitório da API não pode derrubar o guarda —
+            # cai no ramo "ausente" e tenta de novo até o limite.
+            LINHA="$(gh api \
+              "repos/${REPO}/actions/workflows/ci.yml/runs?head_sha=${SHA}&per_page=100" \
+              --jq '.workflow_runs | sort_by(.created_at) | reverse | .[0] // empty
+                    | "\(.status)|\(.conclusion)|\(.html_url)"' || true)"
+            if [ -z "${LINHA}" ]; then
+              STATUS="ausente"; CONCLUSAO=""; URL=""
+            else
+              STATUS="${LINHA%%|*}"
+              RESTO="${LINHA#*|}"
+              CONCLUSAO="${RESTO%%|*}"
+              URL="${RESTO##*|}"
+            fi
+            echo "ci.yml: status=${STATUS} conclusao=${CONCLUSAO} ${URL}"
+
+            if [ "${STATUS}" = "completed" ]; then
+              if [ "${CONCLUSAO}" = "success" ]; then
+                echo "CI verde nesta SHA — a release pode publicar."
+                exit 0
+              fi
+              echo "::error::O ci.yml desta SHA concluiu como '${CONCLUSAO}'."
+              echo "::error::Publicar agora entregaria pacote que os portões do ci.yml reprovaram: ${URL}"
+              exit 1
+            fi
+
+            if [ "${GASTO}" -ge "${LIMITE_SEG}" ]; then
+              if [ "${STATUS}" = "ausente" ]; then
+                echo "::error::Nenhum run do ci.yml para a SHA ${SHA} em ${LIMITE_SEG}s."
+                echo "::error::Rode o ci.yml nesta ref (workflow_dispatch) antes de republicar a tag."
+              else
+                echo "::error::O ci.yml desta SHA ainda está '${STATUS}' depois de ${LIMITE_SEG}s: ${URL}"
+              fi
+              exit 1
+            fi
+
+            sleep "${INTERVALO}"
+            GASTO=$((GASTO + INTERVALO))
+          done
+
   github-release:
-    needs: [build, appimage, deb, deb-install-smoke, flatpak]
+    needs: [build, appimage, deb, deb-install-smoke, flatpak, guarda-ci]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

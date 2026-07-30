@@ -1,5 +1,6 @@
 Package: hefesto-dualsense4unix
 Version: 0.3.0
+X-Hefesto-Deb-Epoch: 1
 Section: utils
 Priority: optional
 Architecture: amd64

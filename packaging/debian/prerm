@@ -8,7 +8,11 @@ case "$1" in
         # systemctl --user stop como root. O usuario deve executar
         # systemctl --user disable --now hefesto.service antes de remover,
         # ou o postrm emitira aviso.
-        pkill -TERM -f 'hefesto\.app\.main' 2>/dev/null || true
+        # PACKAGING-PRERM-PKILL-MODULO-ERRADO-01: o padrao era
+        # 'hefesto\.app\.main', que NUNCA casou — o modulo se chama
+        # hefesto_dualsense4unix.app.main desde o rebrand da v3.0.0. A GUI
+        # sobrevivia ao apt remove segurando arquivos ja apagados.
+        pkill -TERM -f 'hefesto_dualsense4unix\.app\.main' 2>/dev/null || true
         pkill -TERM -f 'hefesto-dualsense4unix daemon start' 2>/dev/null || true
         ;;
 esac
@@ -79,6 +83,31 @@ case "$1" in
                 printf '0' > /sys/module/rtw88_usb/parameters/hang_reset 2>/dev/null || true
             fi
         fi
+        # Contencao BT: o modulo DKMS hefesto-hid-playstation tambem nasce FORA
+        # do manifesto do dpkg (install-host-udev.sh) — e o dkms.conf dele tem
+        # AUTOINSTALL="yes", entao sem este bloco o `apt remove` deixava o
+        # patchado registrado, reconstruido a cada kernel novo e vencendo o
+        # in-tree para SEMPRE. NUNCA descarrega o modulo em uso: derrubaria
+        # TODOS os DualSense, inclusive os por Bluetooth; o in-tree volta
+        # sozinho no proximo boot. Mesmo molde do %preun do Fedora.
+        if command -v dkms >/dev/null 2>&1 \
+                && dkms status hefesto-hid-playstation 2>/dev/null | grep -q .; then
+            dkms status hefesto-hid-playstation 2>/dev/null \
+                | sed -n 's|^hefesto-hid-playstation/\([^,: ]*\).*|\1|p' | sort -u \
+                | while read -r _v; do
+                    [ -n "${_v}" ] || continue
+                    dkms remove "hefesto-hid-playstation/${_v}" --all 2>/dev/null || true
+                    rm -rf "/usr/src/hefesto-hid-playstation-${_v}"
+                done
+            depmod -a 2>/dev/null || true
+            # belt (simetrico ao uninstall.sh nativo): devolve o feature_retries
+            # a 0 se o patchado ainda estiver carregado. E lido a cada probe,
+            # entao a proxima conexao ja e vanilla — sem recarregar nada.
+            if [ -e /sys/module/hid_playstation/parameters/feature_retries ]; then
+                printf '0' > /sys/module/hid_playstation/parameters/feature_retries 2>/dev/null || true
+            fi
+        fi
+        rm -f /etc/modprobe.d/hefesto-hid-playstation.conf
         ;;
 esac
 

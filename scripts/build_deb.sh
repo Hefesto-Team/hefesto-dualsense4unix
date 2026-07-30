@@ -134,7 +134,12 @@ cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
 
 # Icone principal (usa o da pasta appimage que é o mais completo)
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then
+    # Os DOIS nomes, porque há DOIS consumidores e eles não concordam: o
+    # .desktop pede Icon=hefesto, e o código pede o nome longo em
+    # app/main.py (set_default_icon_name) e app/tray.py (TRAY_ICON_NAME).
+    # Instalar só o curto deixa a bandeja com o joystick genérico.
     cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto.png"
+    cp "assets/appimage/Hefesto-Dualsense4Unix.png" "${STAGING}/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
 fi
 
 # ---------------------------------------------------------------------------
@@ -148,12 +153,22 @@ fi
 # ficam de fora (alimentavam a re-enumeração do storm -71); a 75 (disable-usb-
 # audio) é a genuinamente opt-in.
 echo "Copiando regras udev ..."
+# BUG-DEB-MIRROR-RULES-INCOMPLETO-01: as regras viajam para DOIS destinos (o
+# diretório VIVO /usr/lib/udev/rules.d e o ESPELHO /usr/share/.../udev-rules,
+# que o install-host-udev.sh PREFERE como origem). O espelho tinha um glob
+# próprio, defasado, que parava na 81 — o pre-flight do helper exige TODAS as
+# 14 regras e ABORTAVA com exit 1, derrubando a ativação inteira do .deb
+# (sem grupo hefesto, sem broker, sem nenhum dos três módulos DKMS).
+# Agora existe UMA fonte de verdade: esta lista, consumida pelos dois laços.
 # Glob por prefixo, uma faixa por linha: acrescentar uma regra nova exige
-# lembrar de vir aqui — o `check_packaging_parity.sh` cobra.
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
-                  assets/76-*.rules assets/77-*.rules assets/78-*.rules \
-                  assets/79-*.rules assets/80-*.rules assets/81-*.rules \
-                  assets/82-*.rules assets/83-*.rules assets/84-*.rules; do
+# lembrar de vir aqui — o `check_packaging_parity.sh` cobra os DOIS destinos.
+UDEV_RULES_GLOBS=(
+    assets/70-*.rules assets/71-*.rules assets/72-*.rules
+    assets/76-*.rules assets/77-*.rules assets/78-*.rules
+    assets/79-*.rules assets/80-*.rules assets/81-*.rules
+    assets/82-*.rules assets/83-*.rules assets/84-*.rules
+)
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && cp "$rules_file" "${STAGING}/usr/lib/udev/rules.d/"
 done
 
@@ -246,11 +261,12 @@ mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
 cp -a assets/dkms/rtw88-usb/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
-# as regras vivas, mas o helper procura em /usr/share/.../udev-rules/).
+# as regras vivas, mas o helper procura em /usr/share/.../udev-rules/ E a
+# PREFERE como origem: o espelho tem de carregar a lista INTEIRA, senão o
+# pre-flight do install-host-udev.sh aborta. Mesma lista do laço vivo acima
+# (UDEV_RULES_GLOBS) — uma fonte de verdade só.
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules"
-for rules_file in assets/70-*.rules assets/71-*.rules assets/72-*.rules \
-                  assets/76-*.rules assets/77-*.rules assets/78-*.rules \
-                  assets/79-*.rules assets/80-*.rules assets/81-*.rules; do
+for rules_file in "${UDEV_RULES_GLOBS[@]}"; do
     [ -f "$rules_file" ] && install -Dm644 "$rules_file" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/udev-rules/$(basename "$rules_file")"
 done
@@ -339,9 +355,29 @@ chmod 755 "${STAGING}/usr/bin/hefesto-dualsense4unix-gui"
 echo "Preparando metadados DEBIAN/ ..."
 cp packaging/debian/control "${STAGING}/DEBIAN/control"
 
-# Injeta versão correta no control (caso difira do hardcoded)
+# PACKAGING-EPOCH-DOWNGRADE-01: a numeração voltou de 4.0.0 para 0.1.0 em
+# 2026-07-24, então para o apt qualquer 0.x é DOWNGRADE de um 3.x/4.0 já
+# instalado e o upgrade é RECUSADO. A cura no mundo Debian é o EPOCH, que vive
+# dentro do próprio campo Version (`1:0.3.0`) — e não pode ficar hardcoded no
+# packaging/debian/control porque o scripts/check_version_consistency.py cobra
+# `Version:` == versão canônica do pyproject.toml. Por isso o epoch é declarado
+# no control em campo próprio (X-Hefesto-Deb-Epoch) e COMPOSTO aqui; o campo
+# auxiliar é retirado do control final (o dpkg não o conhece).
+DEB_EPOCH="$(sed -n 's/^X-Hefesto-Deb-Epoch:[[:space:]]*//p' \
+    "${STAGING}/DEBIAN/control" | head -1)"
+if [ -z "${DEB_EPOCH}" ]; then
+    echo "Erro: packaging/debian/control sem X-Hefesto-Deb-Epoch." >&2
+    echo "      Sem epoch o apt RECUSA o upgrade de qualquer 3.x/4.0 instalado" >&2
+    echo "      (0.3.0 é downgrade). Declare o epoch no control." >&2
+    exit 1
+fi
+sed -i "/^X-Hefesto-Deb-Epoch:/d" "${STAGING}/DEBIAN/control"
+
+# Injeta versão correta no control (caso difira do hardcoded), com o epoch
+# na frente — `Version: <epoch>:<versão>`.
 if command -v sed >/dev/null 2>&1; then
-    sed -i "s/^Version: .*/Version: ${VERSION}/" "${STAGING}/DEBIAN/control"
+    sed -i "s/^Version: .*/Version: ${DEB_EPOCH}:${VERSION}/" \
+        "${STAGING}/DEBIAN/control"
 fi
 
 # Exigir a versão EXATA do Python contra a qual o venv foi linkado. Sem isto,

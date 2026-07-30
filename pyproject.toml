@@ -47,6 +47,14 @@ dev = [
     "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
+    # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portoes.py lê
+    # os workflows do GitHub com yaml.safe_load. Sem esta dep declarada, o
+    # `importorskip("yaml")` fazia os cinco testes SKIPAREM no CI (que instala
+    # com `pip install -e ".[dev]"`) e o portão existiria só na máquina da
+    # mantenedora — que é literalmente o defeito que a PORTÃO-VIVO-01 nomeia:
+    # portão que não roda no caminho do commit só avisa tarde.
+    "PyYAML>=6.0",
+    "types-PyYAML",
 ]
 emulation = [
     "python-uinput>=0.11",

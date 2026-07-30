@@ -21,6 +21,16 @@
 #                         kernel (NÃO é regra udev); ciente do bootloader
 #                         (kernelstub/grub), idempotente e reversível. O install
 #                         DEFAULT NÃO aplica (mudança de cmdline é sensível).
+#                         ATENÇÃO: o passo 3e (cmdline gerenciado, DEFAULT) já
+#                         grava esses MESMOS tokens de quirk — esta flag só
+#                         adianta o passo 3b e é redundante com o default.
+#   --no-snd-quirk        OPT-OUT do quirk do snd_usb_audio (DEFAULT ON, passo
+#                         3c): grava /etc/modprobe.d/hefesto-dualsense-storm.conf
+#                         com quirk_flags do DualSense (ignore_ctl_error e
+#                         ctl_msg_delay_1m) — a cura de raiz do storm -71 na
+#                         camada de ÁUDIO, que PRESERVA mic e fone (ao contrário
+#                         da regra 75). Use em CI/sem hardware; --no-udev também
+#                         pula este passo.
 #   --no-kernel-watch     OPT-OUT do kernel-watch (DEFAULT ON): serviço de
 #                         usuário que vigia o ecossistema USB/BT/xHCI no journal
 #                         (storm -71, rate-limit do 8BitDo BT, erros de hci/xHCI
@@ -102,7 +112,8 @@
 #                         próxima (re)conexão do NM. uninstall.sh remove.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
-#   --no-systemd          pula a cópia da unit do daemon.
+#   --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
+#                         nada é copiado, nada é habilitado, nada sobe.
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
 #   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
@@ -137,7 +148,11 @@
 #                         automaticamente se XDG_CURRENT_DESKTOP casa
 #                         COSMIC e o usuário confirma via prompt.
 #
-# Default: unit do daemon é COPIADA mas NÃO habilitada. Hotplug-GUI idem.
+# Default (sem flag nenhuma): a unit do daemon é COPIADA, HABILITADA no boot e
+# SOBE na hora. Quem manda é a sua resposta ao passo 6 ("habilitar auto-start do
+# daemon no boot?", default sim): responder "não" copia a unit e NÃO habilita
+# nem sobe o daemon; --no-systemd pula os dois passos (6 e 7a) por inteiro.
+# Hotplug-GUI continua opt-in (prompt com default NÃO).
 # udev rules SÃO aplicadas (incondicional desde v3.3.1 — sem elas o controle
 # não funciona em nenhum formato).
 #
@@ -214,7 +229,16 @@ for arg in "$@"; do
         --deb)                FORMAT="deb" ;;
         --yes|-y)             AUTO_YES=1 ;;
         -h|--help)
-            sed -n '2,128p' "${BASH_SOURCE[0]}" | sed 's/^# //; s/^#//'
+            # BUG-INSTALL-HELP-TRUNCADO-01 (29/07): era `sed -n '2,128p'` — uma
+            # faixa FIXA que envelheceu junto com o cabeçalho. Quando o bloco de
+            # comentário passou de 128 linhas, o --help calou flags REAIS: a
+            # --force-xwayland (a que a operadora precisa em COSMIC) simplesmente
+            # não aparecia, e quem lesse o --help concluía que ela não existia.
+            # Agora o fim NÃO é número: o awk imprime da linha 2 até a última
+            # linha do bloco de comentário (a primeira linha que não começa com
+            # '#' encerra), então o --help cresce sozinho com o cabeçalho.
+            awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' \
+                "${BASH_SOURCE[0]}"
             exit 0
             ;;
         # BUG-INSTALL-ARG-DESCONHECIDO-SILENCIOSO-01: um aviso solto rolava para
@@ -1070,7 +1094,13 @@ else
         esac
         printf '        %-45s %s\n' "${rules_base}" "${rules_desc}"
     done
-    printf '      (75 áudio-off é opt-in via --disable-usb-audio)\n'
+    # BUG-INSTALL-SUGERE-FLAG-INEXISTENTE-01 (29/07): a mensagem dizia
+    # "opt-in via --disable-usb-audio" como se fosse flag DESTE script. Não é:
+    # o parser aqui não a conhece e ABORTA com código 2 ("argumento
+    # desconhecido"), então quem seguisse a sugestão não instalava nada. A flag
+    # é do scripts/install_udev.sh — a mensagem passa a dizer o comando que
+    # funciona de verdade.
+    printf '      (75 áudio-off é opt-in: sudo bash scripts/install_udev.sh --disable-usb-audio)\n'
 
     if bash "${ROOT_DIR}/scripts/install_udev.sh" >/dev/null 2>&1; then
         printf '      regras aplicadas + udev recarregado + uinput carregado\n'
@@ -1905,15 +1935,22 @@ fi
 ok
 
 # ---------------------------------------------------------------------------
-# 6. Daemon systemd --user (copia sempre; auto-start é opt-in)
+# 6. Daemon systemd --user (copia sempre; auto-start segue a resposta dela)
 # ---------------------------------------------------------------------------
 step "6/11" "daemon systemd --user"
+
+# BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 (29/07): esta variável nasce AQUI,
+# fora do `if`, porque o passo 7a mais abaixo TAMBÉM a lê — ele escreve o mesmo
+# ~/.config/systemd/user/hefesto-dualsense4unix.service e antes fazia enable +
+# restart sem olhar nem a flag nem a resposta. Sob `set -u` uma variável só
+# definida dentro do ramo `else` mataria o install quando --no-systemd fosse
+# usado, então o default explícito (0) fica antes de qualquer ramo.
+enable_daemon=0
 
 if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
     printf '      pulado (--no-systemd)\n'
 else
     # Decide se habilita auto-start ANTES de chamar o CLI.
-    enable_daemon=0
     if [[ "${ENABLE_AUTOSTART}" -eq 1 ]]; then
         enable_daemon=1
     else
@@ -2002,12 +2039,30 @@ fi
 #     fazia para o kernel-watch e para o guard do Steam Input. Sem `--now` o
 #     daemon só nasceria no próximo login, e a instalação "bem-sucedida" não
 #     entregaria nada até lá.
+#
+#     BUG-INSTALL-ATROPELA-O-NAO-DO-AUTOSTART-01 (29/07): fechar a assimetria
+#     abriu o bug OPOSTO. Este passo escreve o MESMO arquivo do passo 6
+#     (~/.config/systemd/user/hefesto-dualsense4unix.service) e fazia `enable` +
+#     `restart` sem gate nenhum: nem --no-systemd, nem a resposta ao prompt do
+#     passo 6. Resultado medido: quem passava --no-systemd via o passo 6 dizer
+#     "pulado" e o 7a instalar e habilitar a unit três linhas depois; quem
+#     respondia "não" a "habilitar auto-start do daemon no boot?" via o passo 6
+#     dizer "auto-start desativado" e o 7a habilitar mesmo assim. O "não" dela
+#     era atropelado. Agora o passo 7a obedece aos dois:
+#       - --no-systemd  -> não copia, não habilita, não sobe (igual ao passo 6);
+#       - resposta "não" -> copia a unit (simetria com o uninstall preservada) e
+#         NÃO habilita nem sobe; um daemon que JÁ estivesse no ar só é
+#         reiniciado para não ficar rodando o binário antigo — nunca iniciado.
+#     O default SEM FLAGS continua o de sempre: copia, habilita e sobe.
 # ---------------------------------------------------------------------------
 step "7a/11" "daemon: unit do systemd (usuário)"
 DAEMON_UNIT_SRC="${ROOT_DIR}/assets/hefesto-dualsense4unix.service"
 DAEMON_USER_UNIT_DIR="${HOME}/.config/systemd/user"
 DAEMON_UNIT_TARGET="${DAEMON_USER_UNIT_DIR}/hefesto-dualsense4unix.service"
-if [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
+DAEMON_UNIT_NAME="hefesto-dualsense4unix.service"
+if [[ "${SKIP_SYSTEMD}" -eq 1 ]]; then
+    printf '      pulado (--no-systemd)\n'
+elif [[ ! -f "${DAEMON_UNIT_SRC}" ]]; then
     warn "unit do daemon ausente em assets/ — reinstale o repo"
 elif ! command -v systemctl >/dev/null 2>&1; then
     warn "systemctl ausente — daemon não habilitado (inicie com: hefesto-dualsense4unix daemon start)"
@@ -2015,14 +2070,28 @@ else
     mkdir -p "${DAEMON_USER_UNIT_DIR}"
     cp -f "${DAEMON_UNIT_SRC}" "${DAEMON_UNIT_TARGET}"
     systemctl --user daemon-reload >/dev/null 2>&1 || true
-    # `restart` e não `start`: numa reinstalação por cima, o daemon em memória
-    # é o binário ANTIGO — sem isso a pessoa roda o install, vê "sucesso" e
-    # segue usando o código anterior até relogar.
-    if systemctl --user enable hefesto-dualsense4unix.service >/dev/null 2>&1 \
-       && systemctl --user restart hefesto-dualsense4unix.service >/dev/null 2>&1; then
-        printf '      daemon habilitado e no ar\n'
+    if [[ "${enable_daemon}" -eq 1 ]]; then
+        # `restart` e não `start`: numa reinstalação por cima, o daemon em memória
+        # é o binário ANTIGO — sem isso a pessoa roda o install, vê "sucesso" e
+        # segue usando o código anterior até relogar.
+        if systemctl --user enable "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
+           && systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1; then
+            printf '      daemon habilitado e no ar\n'
+        else
+            warn "enable/restart do daemon falhou — suba com: systemctl --user enable --now hefesto-dualsense4unix.service"
+        fi
     else
-        warn "enable/restart do daemon falhou — suba com: systemctl --user enable --now hefesto-dualsense4unix.service"
+        # Ela respondeu "não" ao passo 6: nada de enable, nada de start. Só o
+        # daemon que JÁ estava no ar é reiniciado (senão a reinstalação deixaria
+        # o binário antigo rodando) — e isso não inicia nada que estivesse
+        # parado nem habilita o auto-start.
+        if systemctl --user is-active --quiet "${DAEMON_UNIT_NAME}"; then
+            systemctl --user restart "${DAEMON_UNIT_NAME}" >/dev/null 2>&1 \
+                || warn "restart do daemon já em execução falhou"
+            printf '      unit atualizada; auto-start NÃO habilitado (respeitando a resposta do passo 6)\n'
+        else
+            printf '      unit copiada; auto-start NÃO habilitado (respeitando a resposta do passo 6) — suba quando quiser: systemctl --user start hefesto-dualsense4unix.service\n'
+        fi
     fi
 fi
 
