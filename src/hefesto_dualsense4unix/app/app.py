@@ -66,7 +66,7 @@ logger = get_logger(__name__)
 DRAFT_RELOAD_INFLIGHT_TIMEOUT_S = 3.0
 
 
-class CaixaDeTetoDePagina(CaixaDeTetoElastico):  # type: ignore[misc,valid-type]
+class CaixaDeTetoDePagina(CaixaDeTetoElastico):
     """O teto elástico do card, com a ALTURA contada na largura cortada.
 
     LARGURA-01/E4-E5. A `CaixaDeTetoElastico` corta a alocação de largura e

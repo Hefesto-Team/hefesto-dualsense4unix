@@ -745,16 +745,23 @@ def test_alargar_o_touchpad_nao_muda_o_lugar_do_dedo() -> None:
         while Gtk.events_pending():
             Gtk.main_iteration()
 
-        superficie = janela.get_surface()
-        dados = superficie.get_data()
-        passo = superficie.get_stride()
+        # Pixbuf, e NÃO `get_surface().get_data()`: com backend X11 (o Xvfb do
+        # job "Interface com GTK REAL") a superfície é uma `cairo.XlibSurface`,
+        # que não tem `get_data` — o teste passava na máquina de
+        # desenvolvimento, onde a superfície é de imagem, e reprovava só no CI.
+        # O pixbuf sai em RGB(A) direto e é igual nos dois backends.
+        pixbuf = janela.get_pixbuf()
+        assert pixbuf is not None, "a OffscreenWindow não devolveu pixbuf"
+        dados = pixbuf.get_pixels()
+        passo = pixbuf.get_rowstride()
+        canais = pixbuf.get_n_channels()
         alvo = tuple(round(canal * 255) for canal in hex_para_rgb(COR_TOQUE))
         colunas = [
             x
             for y in range(painel.get_allocated_height())
             for x in range(painel.get_allocated_width())
             if all(
-                abs(dados[y * passo + x * 4 + canal] - alvo[2 - canal]) < 12
+                abs(dados[y * passo + x * canais + canal] - alvo[canal]) < 12
                 for canal in (0, 1, 2)
             )
         ]
