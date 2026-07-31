@@ -15,9 +15,36 @@
        3.13.3 de 14/07 e não havia NENHUMA 0.x — a loja anunciava uma versão
        duas semanas mais velha que o pacote. A PRIMEIRA <release> deste bloco é
        agora alvo do scripts/check_version_consistency.py, então o portão de
-       release reprova se ela ficar atrás do pyproject.toml. -->
+       release reprova se ela ficar atrás do pyproject.toml.
+
+       METAINFO-DATA-DA-RELEASE-01 (31/07): a entrada da 0.4.0 era a da 0.3.0
+       com o número trocado — mesma data, mesmo texto — e a 0.3.0 sumia da
+       série. O portão conferia só o NÚMERO, então trocar o número na entrada
+       que já existia era a menor edição que o deixava verde. A data da
+       primeira <release> é agora conferida contra a seção correspondente do
+       CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
-    <release version="0.4.0" date="2026-07-28">
+    <release version="0.4.0" date="2026-07-30">
+      <description>
+        <p>A leva conduzida por agentes com arquivos particionados e um
+           verificador independente com poder de reprovar. O R1 parou de trocar
+           de aplicativo dentro do jogo: a emulação de teclado não tinha
+           interruptor — nascia ligada, sem persistência e sem chave na janela —
+           e a exclusão mútua lia a suspensão do controle virtual pelo Steam
+           Input como permissão para a emulação de desktop entrar, deixando o
+           Alt esquerdo preso. Agora o teclado emulado tem interruptor próprio,
+           o predicado só estreita o portão, e a borda de episódio solta a tecla
+           presa na hora. O perfil passou a guardar as outras abas: modo,
+           máscara, co-op e "modo jogo" iam só para o estado vivo do daemon e o
+           Salvar reemitia a fotografia do boot por cima. O microfone voltou a
+           gravar a voz e não o monitor da saída do próprio controle. No
+           empacotamento, o caminho de ativação do .deb estava morto, o módulo
+           de kernel sobrevivia ao apt remove, e o comando que constrói o pacote
+           Flatpak usava uma opção que não existe — a release inteira teria
+           falhado.</p>
+      </description>
+    </release>
+    <release version="0.3.0" date="2026-07-28">
       <description>
         <p>A leva do que desfazia o trabalho dela. O tema é a janela parar de
            afirmar o que não aconteceu: o desempate entre perfis deixou de ser a

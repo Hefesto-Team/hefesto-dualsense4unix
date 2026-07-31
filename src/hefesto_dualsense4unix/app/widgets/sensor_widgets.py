@@ -236,6 +236,50 @@ if _GTK_DISPONIVEL:
     # pode depender dele.
     from hefesto_dualsense4unix.app.theme import escala_fonte
 
+    class DesenhoElastico(Gtk.DrawingArea):  # type: ignore[misc]
+        """`DrawingArea` com largura NATURAL maior que a mínima.
+
+        CARD-OCUPA-01 — *"tem muito espaço vazio aqui, dava pra aumentar a
+        largura do touchpad e lightbar e do microfone e alto falante pra
+        ocuparem os espaços laterais vazios"*.
+
+        Um `DrawingArea` nu tem natural IGUAL ao mínimo (o chain-up devolve
+        ``(0, 0)`` e quem vira piso dos dois é o `set_size_request`), então ele
+        fica parado no piso enquanto o card cresce até
+        `LARGURA_CARD_ELASTICA` — era isso que sobrava como vão lateral na
+        faixa. Aqui o mínimo continua exatamente o do `set_size_request` (o
+        piso de largura do card não sobe um pixel) e só o NATURAL cresce.
+
+        Quem faz o resto é a estrutura que a faixa já tem: os três blocos
+        entram com ``expand=True, fill=False``, e nessa combinação o GtkBox
+        aloca ``min(natural, fatia)``. Medido na bancada com três filhos de
+        mínimo 180 e natural 360: 1400px de caixa dá 360 a cada um, 900px dá
+        311, 800px dá 261 e 620px devolve os 180 do piso — o encolhimento é
+        contínuo e nunca transborda, que é o que permite subir o natural sem
+        tocar no mínimo da janela.
+        """
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._largura_natural: int | None = None
+
+        def definir_largura_natural(self, px: int | None) -> None:
+            """Teto de crescimento em px; ``None`` volta ao natural = mínimo."""
+            if px == self._largura_natural:
+                return
+            self._largura_natural = px
+            self.queue_resize()
+
+        def largura_natural(self) -> int | None:
+            """O teto declarado (o que o card mandou), para medição e teste."""
+            return self._largura_natural
+
+        def do_get_preferred_width(self) -> tuple[int, int]:
+            minimo, natural = Gtk.DrawingArea.do_get_preferred_width(self)
+            if self._largura_natural is None:
+                return (minimo, natural)
+            return (minimo, max(natural, self._largura_natural))
+
     class GyroBars(Gtk.DrawingArea):  # type: ignore[misc]
         """Três barras horizontais bidirecionais (X/Y/Z) com origem no centro.
 
@@ -312,7 +356,7 @@ if _GTK_DISPONIVEL:
                 ctx.show_text(texto_eixo(self._valores[indice]))
             return False
 
-    class MicMeter(Gtk.DrawingArea):  # type: ignore[misc]
+    class MicMeter(DesenhoElastico):  # type: ignore[misc]
         """Onda de amplitude do microfone: 14 amostras deslizantes (mockup).
 
         A versão anterior era uma ESCADA FIXA: as barras tinham sempre as
@@ -429,8 +473,14 @@ if _GTK_DISPONIVEL:
             ctx.stroke()
             return False
 
-    class TouchpadView(Gtk.DrawingArea):  # type: ignore[misc]
-        """Retângulo do touchpad com o ponto de toque (guia §4)."""
+    class TouchpadView(DesenhoElastico):  # type: ignore[misc]
+        """Retângulo do touchpad com o ponto de toque (guia §4).
+
+        Alargar não mente a posição do dedo: o toque é normalizado por FRAÇÃO
+        (``px = 2 + fx * (largura - 4)``), então o ponto continua no lugar
+        relativo certo em qualquer largura — o que muda é a proporção do
+        retângulo.
+        """
 
         def __init__(self) -> None:
             super().__init__()
@@ -467,6 +517,18 @@ if _GTK_DISPONIVEL:
 
 else:
 
+    class DesenhoElastico:  # type: ignore[no-redef]
+        """Stub sem GTK: guarda o teto de largura declarado pelo card."""
+
+        def __init__(self) -> None:
+            self._largura_natural: int | None = None
+
+        def definir_largura_natural(self, px: int | None) -> None:
+            self._largura_natural = px
+
+        def largura_natural(self) -> int | None:
+            return self._largura_natural
+
     class GyroBars:  # type: ignore[no-redef]
         """Stub sem GTK: guarda os valores para as asserções de contrato."""
 
@@ -485,10 +547,11 @@ else:
         def show(self) -> None:
             """No-op no stub."""
 
-    class MicMeter:  # type: ignore[no-redef]
+    class MicMeter(DesenhoElastico):  # type: ignore[no-redef]
         """Stub sem GTK do medidor de nível (guarda a onda deslizante)."""
 
         def __init__(self) -> None:
+            super().__init__()
             self._nivel = 0.0
             self._historico: tuple[float, ...] = (0.0,) * MIC_AMOSTRAS
 
@@ -538,10 +601,11 @@ else:
         def show(self) -> None:
             """No-op no stub."""
 
-    class TouchpadView:  # type: ignore[no-redef]
+    class TouchpadView(DesenhoElastico):  # type: ignore[no-redef]
         """Stub sem GTK do painel de touchpad."""
 
         def __init__(self) -> None:
+            super().__init__()
             self._toque: tuple[float, float] | None = None
 
         def set_toque(self, ponto: tuple[float, float] | None) -> None:
@@ -563,6 +627,7 @@ __all__ = [
     "COR_MIC_SILENCIO",
     "ESCALA_GYRO_GRAUS_S",
     "MIC_AMOSTRAS",
+    "DesenhoElastico",
     "GyroBars",
     "LightbarBar",
     "MicMeter",

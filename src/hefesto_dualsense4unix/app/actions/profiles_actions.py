@@ -17,7 +17,7 @@ import gi
 from pydantic import ValidationError
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GObject, Gtk
+from gi.repository import GObject, Gtk, Pango
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
@@ -173,6 +173,123 @@ def _match_label(match: object) -> str:
     return _MATCH_LABELS.get(str(match), str(match))
 
 
+# --- EMPATE-01 (E2): a coluna "Quando usar" diz que HÁ disputa e quem ganha --
+# `_match_label` traduz `MatchAny` para "Sempre" e a coluna termina aí. Medido
+# no disco dela em 31/07/2026 — QUATRO perfis dizem "Sempre" ao mesmo tempo:
+#
+#   fallback     prioridade 0     meu_perfil   prioridade 1
+#   vitoria      prioridade 0     Pragmata     prioridade 5
+#
+# (eram cinco até esta madrugada; o `pragmata2.json` virou regra do jogo —
+# `window_class: steam_app_3357650`, prioridade 85 — e saiu da disputa.)
+#
+# Quatro linhas idênticas na coluna, um vencedor, e nenhuma palavra sobre o
+# porquê. É o mecanismo direto da queixa mais antiga desta casa, *"a config que
+# eu deixo nunca é respeitada"*: ela troca a cor no `vitoria`, o `Pragmata`
+# ganha, e a tela não deu um sinal.
+#
+# O desempate REAL vive em `profiles/manager.py` e é o que estas funções
+# espelham — nunca reimplementam com critério próprio:
+#
+#   `_chave_de_selecao` (:632-640)  (not e_catch_all, priority), maior vence;
+#   `_melhor_candidato` (:668-706)  empate → INCUMBENTE; sem incumbente entre
+#                                   os empatados, o primeiro da ordem de carga
+#                                   (`sorted(glob("*.json"))` do loader:568 —
+#                                   a ordem alfabética do ARQUIVO, que não é
+#                                   critério de ninguém);
+#   o veto R-21          (:620-630) em janela de JOGO, se todos os candidatos
+#                                   forem catch-all, NÃO se troca de perfil.
+#
+# Daí a frase do tooltip sobre jogo ser verdade nos dois ramos: ou todos os
+# candidatos são "Sempre" e o veto recusa, ou existe um perfil com regra
+# própria — e aí ele vence qualquer "Sempre" pelo primeiro termo da chave.
+
+#: Quem entra na disputa: só o `MatchAny`. Um `MatchCriteria` vazio também é
+#: `e_catch_all` para o manager, mas `MatchCriteria.matches` devolve False sem
+#: condição alguma — ele nunca vira candidato, e a coluna já o chama de
+#: `LABEL_SO_MANUAL`. Somá-lo aqui inflaria o número da disputa com um perfil
+#: que não disputa nada.
+def perfis_em_disputa(perfis: list[Any]) -> list[Any]:
+    """Os perfis que dizem "Sempre" — os que casam com QUALQUER janela."""
+    return [p for p in perfis if getattr(getattr(p, "match", None), "type", None) == "any"]
+
+
+def vencedor_da_disputa(
+    disputantes: list[Any], incumbente: str | None = None
+) -> Any | None:
+    """Qual "Sempre" ganha — mesma ordem de desempate do `ProfileManager`.
+
+    Recebe a lista JÁ na ordem de carga do loader, porque o terceiro termo do
+    desempate é exatamente essa ordem. Devolve ``None`` para lista vazia.
+    """
+    if not disputantes:
+        return None
+    maior = max(int(getattr(p, "priority", 0)) for p in disputantes)
+    empatados = [p for p in disputantes if int(getattr(p, "priority", 0)) == maior]
+    if len(empatados) == 1 or not incumbente:
+        return empatados[0]
+    for candidato in empatados:
+        if mesmo_slug(incumbente, str(getattr(candidato, "name", ""))):
+            return candidato
+    return empatados[0]
+
+
+def rotulo_quando_usar(
+    profile: Any, perfis: list[Any], incumbente: str | None = None
+) -> str:
+    """Texto da coluna "Quando usar" — função pura, testável sem GTK.
+
+    Só o "Sempre" muda, e só quando há mais de um: com um catch-all no disco
+    não existe disputa, e a coluna continua dizendo a palavra de sempre (que
+    também é o caso do usuário recém-instalado, com o `fallback` sozinho).
+    """
+    base = _match_label(getattr(profile, "match", None))
+    if base != _MATCH_LABELS["any"]:
+        return base
+    disputantes = perfis_em_disputa(perfis)
+    if len(disputantes) < 2:
+        return base
+    vencedor = vencedor_da_disputa(disputantes, incumbente)
+    quantos = len(disputantes)
+    nome = str(getattr(vencedor, "name", ""))
+    if nome == str(getattr(profile, "name", "")):
+        return f"Sempre — {quantos} disputam, este vence"
+    return f"Sempre — {quantos} disputam, vence {nome}"
+
+
+def explicacao_da_disputa(
+    profile: Any, perfis: list[Any], incumbente: str | None = None
+) -> str:
+    """Tooltip da linha: a disputa inteira, com a ordem do desempate.
+
+    A coluna cabe em uma linha (o `hscrollbar-policy` da lista é ``never``:
+    texto largo empurra a aba inteira, lição da LARGURA-01), então o preço
+    completo vive aqui.
+    """
+    disputantes = perfis_em_disputa(perfis)
+    if getattr(getattr(profile, "match", None), "type", None) != "any":
+        return ""
+    if len(disputantes) < 2:
+        return (
+            "Este perfil vale para qualquer janela — é o que entra quando "
+            "nenhuma regra específica casa."
+        )
+    vencedor = vencedor_da_disputa(disputantes, incumbente)
+    nomes = ", ".join(str(getattr(p, "name", "")) for p in disputantes)
+    nome_vencedor = str(getattr(vencedor, "name", ""))
+    prioridade = int(getattr(vencedor, "priority", 0))
+    return (
+        f"{len(disputantes)} perfis dizem “Sempre” e disputam toda janela em "
+        f"que nenhuma regra específica casa: {nomes}.\n\n"
+        f"Hoje quem vence é “{nome_vencedor}” (prioridade {prioridade}). O "
+        "desempate, nesta ordem: um perfil com regra própria ganha de qualquer "
+        "“Sempre”; depois vence a maior prioridade; e em empate de prioridade "
+        "continua valendo o que já estava ativo.\n\n"
+        "Dentro de um jogo nenhum destes entra sozinho: com o jogo em foco o "
+        "Hefesto só troca de perfil por uma regra do próprio jogo."
+    )
+
+
 #: R-10: respostas do diálogo de rename (ids positivos não colidem com os
 #: `Gtk.ResponseType` nativos, que são negativos — mesmo padrão do
 #: `launch_wrapper_dialog`).
@@ -284,11 +401,14 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         tree: Gtk.TreeView = self._get("profiles_tree")
         # UX-PROFILES-ACTIVE-HIGHLIGHT-01: 4ª coluna (peso da fonte) marca o
         # perfil ATIVO em negrito — a lista não dizia qual estava valendo.
+        # EMPATE-01/E2: a 5ª coluna é o TOOLTIP da linha (nunca desenhada) —
+        # a explicação da disputa não cabe na célula sem empurrar a aba.
         store = Gtk.ListStore(
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
             GObject.TYPE_STRING,
             GObject.TYPE_INT,
+            GObject.TYPE_STRING,
         )
         tree.set_model(store)
         self._profiles_store = store
@@ -299,7 +419,20 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         for idx, title in ((0, "Nome"), (1, "Prioridade"), (2, "Quando usar")):
             renderer = Gtk.CellRendererText()
             column = Gtk.TreeViewColumn(title, renderer, text=idx, weight=3)
+            if idx == 2:
+                # EMPATE-01/E2: esta coluna passou a carregar a disputa e é a
+                # única que cresce com o NOME de outro perfil. O scroller da
+                # lista tem `hscrollbar-policy=never` (glade:1562), então
+                # largura demais aqui empurra a aba inteira — LARGURA-01. O
+                # teto + reticências seguram isso; o texto completo está no
+                # tooltip da linha, que nunca é cortado.
+                with contextlib.suppress(Exception):
+                    renderer.set_property("ellipsize", Pango.EllipsizeMode.END)
+                    column.set_resizable(True)
+                    column.set_max_width(320)
             tree.append_column(column)
+        with contextlib.suppress(Exception):
+            tree.set_tooltip_column(4)
 
         tree.get_selection().connect(
             "changed", self.on_profile_selection_changed
@@ -1220,8 +1353,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                     profile.priority,
                     # R-12: o OBJETO, não o discriminador — só ele distingue
                     # "criteria com alvo" de "criteria vazio" (só manual).
-                    _match_label(profile.match),
+                    # EMPATE-01/E2: `profiles` chega na ORDEM DE CARGA do
+                    # loader, e é dela que sai o terceiro termo do desempate —
+                    # reordenar esta lista mudaria o vencedor anunciado.
+                    rotulo_quando_usar(profile, profiles, active),
                     weight,
+                    explicacao_da_disputa(profile, profiles, active),
                 ]
             )
             if first_iter is None:
@@ -1233,15 +1370,32 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             self._get("profiles_tree").get_selection().select_iter(target)
 
     def _mark_active_profile_row(self, active: str | None) -> None:
-        """Realça (negrito) a linha do perfil ATIVO no ListStore, in-place."""
+        """Realça (negrito) a linha do perfil ATIVO no ListStore, in-place.
+
+        EMPATE-01/E2: o perfil ativo é também o INCUMBENTE, que é o terceiro
+        termo do desempate entre os "Sempre" — trocar de perfil pode trocar o
+        vencedor anunciado. Por isso as colunas da disputa (2 e 4) são
+        recalculadas aqui junto com o negrito, e não só na recarga do disco.
+        """
         self._active_profile_hint = active
         store = getattr(self, "_profiles_store", None)
         if store is None:
             return
+        cache: list[Profile] = list(getattr(self, "_profiles_cache", []) or [])
+        por_nome = {p.name: p for p in cache}
         row = store.get_iter_first()
         while row is not None:
             name = store.get_value(row, 0)
             store.set_value(row, 3, 700 if name == active else 400)
+            perfil = por_nome.get(name)
+            if perfil is not None:
+                with contextlib.suppress(Exception):
+                    store.set_value(
+                        row, 2, rotulo_quando_usar(perfil, cache, active)
+                    )
+                    store.set_value(
+                        row, 4, explicacao_da_disputa(perfil, cache, active)
+                    )
             row = store.iter_next(row)
 
     def _find_cached_profile(self, name: str) -> Profile | None:

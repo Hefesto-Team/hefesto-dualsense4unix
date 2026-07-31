@@ -3097,13 +3097,9 @@ check_usb_dropout() {
         info "o -71 deste boot NÃO é do DualSense -- provável outro device (ex: webcam). Valide o dsx abrindo a Steam com --watch-dropout."
     fi
 
-    # rede de segurança (watcher) — NÃO é a solução, só mitigação.
-    if systemctl is-enabled --quiet hefesto-dsx-recover.service 2>/dev/null \
-       || systemctl is-active --quiet hefesto-dsx-recover.service 2>/dev/null; then
-        info "watcher de auto-recuperação ativo (hefesto-dsx-recover.service)"
-    else
-        info "auto-recuperação NÃO instalada -- instale o watcher: sudo install -Dm755 scripts/dsx_recover.sh /usr/local/sbin/dsx_recover.sh && sudo install -Dm644 assets/hefesto-dsx-recover.service /etc/systemd/system/ && sudo systemctl enable --now hefesto-dsx-recover.service"
-    fi
+    # O watcher de auto-recuperação por authorized-toggle saiu do projeto: a
+    # auditoria do storm de 26/06 mediu que re-enumerar por software realimenta
+    # o próprio storm, e a cura de raiz é o quirk acima.
     info "ver em tempo real: scripts/doctor.sh --watch-dropout"
 }
 

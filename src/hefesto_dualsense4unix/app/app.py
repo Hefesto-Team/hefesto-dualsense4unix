@@ -29,7 +29,7 @@ from gi.repository import GdkPixbuf, Gtk
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
+from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin, id_da_pagina
 from hefesto_dualsense4unix.app.actions.input_actions import InputActionsMixin
 from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
     LaunchWrapperDialogMixin,
@@ -37,7 +37,7 @@ from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
 from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto_dualsense4unix.app.actions.rumble_actions import RumbleActionsMixin
-from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+from hefesto_dualsense4unix.app.actions.status_actions import ABA_STATUS, StatusActionsMixin
 from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsMixin
 from hefesto_dualsense4unix.app.compact_window import CompactWindow
 from hefesto_dualsense4unix.app.compact_window import is_enabled as compact_window_enabled
@@ -46,12 +46,65 @@ from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import profile_list, profile_switch
 from hefesto_dualsense4unix.app.theme import apply_theme
 from hefesto_dualsense4unix.app.tray import AppTray, _desktop_is_cosmic
+from hefesto_dualsense4unix.app.widgets.controller_card import (
+    LARGURA_CARD_ELASTICA,
+    CaixaDeTetoElastico,
+)
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+#: JANELA-FIEL-01/E1: prazo do latch `_draft_reload_inflight` — seis ticks do
+#: poller de 2 Hz. Mesma receita (e mesma lição) do `_home_inflight` da aba
+#: Início: sem prazo, um worker que NUNCA volta prende o latch para sempre e a
+#: janela para de reconciliar em silêncio, seguindo a editar e a salvar o perfil
+#: ANTERIOR pelo resto da sessão. O prazo é lido no próprio tick, por carimbo de
+#: tempo — sem thread nem timer novo.
+DRAFT_RELOAD_INFLIGHT_TIMEOUT_S = 3.0
+
+
+class CaixaDeTetoDePagina(CaixaDeTetoElastico):  # type: ignore[misc,valid-type]
+    """O teto elástico do card, com a ALTURA contada na largura cortada.
+
+    LARGURA-01/E4-E5. A `CaixaDeTetoElastico` corta a alocação de largura e
+    devolve o excedente como margem, mas continua respondendo à pergunta de
+    altura pela largura CHEIA — e a diferença entre as duas é conteúdo que
+    ninguém alcança.
+
+    Medido nesta bancada, aba Lightbar com a janela em 1920: a página informa
+    440px de altura (calculados sobre 1894px de largura) e o conteúdo, já
+    cortado em 1400px, precisa de 484px. Um parágrafo que cabia em duas linhas
+    na largura cheia passa a ocupar três na cortada; os 44px de diferença são
+    exatamente o custo em altura que a sprint mediu para esta aba.
+
+    Enquanto a janela é alta, ninguém vê. Numa janela larga e BAIXA — o caso
+    do tiling do COSMIC, que é a razão de as páginas serem roláveis
+    (BUG-FOOTER-CORTADO) — o rolador dimensiona a barra pelo número informado
+    e os 44px finais ficam abaixo do corte, sem barra que chegue até eles.
+
+    Só a pergunta muda; o corte da alocação continua sendo o da classe base,
+    que é o mecanismo que a SOM-01 mediu e que o card usa.
+    """
+
+    def do_get_preferred_height_for_width(self, largura: int) -> tuple[int, int]:
+        return Gtk.Bin.do_get_preferred_height_for_width(  # type: ignore[no-any-return]
+            self, min(largura, LARGURA_CARD_ELASTICA)
+        )
+
+
+class EstadoIndisponivelError(Exception):
+    """A leitura de `daemon.state_full` não voltou — dá para tentar de novo.
+
+    JANELA-FIEL-01/E1: `_compute_draft_from_active_profile` devolvia `(None, "")`
+    para duas coisas que não são a mesma: o daemon não ter respondido
+    (TRANSITÓRIO — o socket some quando ele cai ou reinicia, e o timeout é de
+    0,25 s) e o perfil ativo não existir em disco (PERMANENTE). Sem distinguir,
+    ou o latch de reconciliação ficava preso no primeiro caso, ou soltá-lo
+    reabria o loop de IPC+I/O a 2 Hz no segundo.
+    """
 
 
 def _activate_window_by_pid(predecessor_pid: int) -> None:
@@ -235,8 +288,15 @@ class HefestoApp(
         # de `_active_profile_name`: aquele só é escrito quando o draft carrega
         # com sucesso, então um perfil ativo que não existe em disco o deixaria
         # stale e o tick de 2 Hz redispararia IPC+I/O para sempre.
+        #
+        # JANELA-FIEL-01/E1: o latch só continua marcado quando a tentativa
+        # PROVOU que não adianta repetir (o daemon respondeu e o perfil não está
+        # em disco). Falha de leitura de estado — `EstadoIndisponivelError` — o
+        # solta, porque ali nada foi provado; e o `_draft_reload_inflight` tem
+        # prazo, para o caso de o worker não voltar nunca.
         self._draft_reload_for: str | None = None
         self._draft_reload_inflight: bool = False
+        self._draft_reload_inflight_since: float = 0.0
         # Snapshot do draft como ele veio do disco. `draft != baseline` é a
         # definição de "edição pendente" — o gate que impede a reconciliação de
         # jogar fora o trabalho dela sem avisar.
@@ -637,17 +697,30 @@ class HefestoApp(
         ``load_all_profiles``); NUNCA toca ``self.draft`` nem widgets — a thread
         GTK aplica o resultado em ``_bootstrap_draft_async`` via GLib.idle_add.
 
-        Retorna ``(draft, active_name)``; ``(None, "")`` se daemon offline ou
-        perfil não encontrado (o chamador mantém o default seguro).
+        Retorna ``(draft, active_name)`` quando leu tudo; ``(None, "")`` quando a
+        leitura foi BOA mas não há perfil a carregar (daemon sem perfil ativo, ou
+        perfil ativo que não existe em disco) — falha PERMANENTE, que tentar de
+        novo não cura.
+
+        Levanta ``EstadoIndisponivelError`` quando a leitura não voltou (daemon
+        caiu/reiniciou no instante da chamada, timeout de 0,25 s). Essa é a falha
+        TRANSITÓRIA, e distingui-la é o que permite ao chamador soltar o latch de
+        reconciliação sem reabrir o loop de IPC+I/O descrito no ``__init__``.
         """
         from hefesto_dualsense4unix.app.ipc_bridge import daemon_state_full
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 
         try:
             state = daemon_state_full()
-            active_name: str | None = None
-            if state is not None:
-                active_name = state.get("active_profile")
+        except Exception as exc:
+            logger.warning("draft_load_falhou", erro=str(exc))
+            raise EstadoIndisponivelError(str(exc)) from exc
+        if state is None:
+            logger.warning("draft_load_sem_resposta_do_daemon")
+            raise EstadoIndisponivelError("daemon.state_full não respondeu")
+
+        try:
+            active_name: str | None = state.get("active_profile")
 
             if active_name:
                 try:
@@ -667,7 +740,7 @@ class HefestoApp(
                     # o perfil (on/8). Para perfil COM seção, a aba mostra o valor do
                     # PERFIL (= o que será salvo); a edição explícita da aba (dirty)
                     # é o caminho para mudar a seção.
-                    me = state.get("mouse_emulation") if state is not None else None
+                    me = state.get("mouse_emulation")
                     if isinstance(me, dict) and not draft.mouse.in_profile:
                         try:
                             allowed = {"enabled", "speed", "scroll_speed"}
@@ -686,6 +759,10 @@ class HefestoApp(
                         perfil=active_name,
                     )
         except Exception as exc:
+            # Falha do lado do DISCO (listar/validar perfis), com a leitura de
+            # estado já confirmada. Não vira `EstadoIndisponivelError` de
+            # propósito: um perfil corrompido falharia igual a cada tentativa, e
+            # soltar o latch por causa dele reabriria o loop de I/O a 2 Hz.
             logger.warning("draft_load_falhou", erro=str(exc))
 
         logger.info("draft_usando_defaults_seguros")
@@ -715,14 +792,23 @@ class HefestoApp(
                 _refresh_all_tabs(self)
             return False  # GLib.idle_add não repete
 
-        def _falhou(_exc: BaseException) -> bool:
+        def _falhou(exc: BaseException) -> bool:
             # Sem isto, um erro no worker deixaria `_draft_reload_inflight`
             # preso em True e a reconciliação morreria em silêncio pelo resto
             # da sessão.
             self._draft_reload_inflight = False
+            if isinstance(exc, EstadoIndisponivelError):
+                # A leitura não voltou: o alvo continua por tentar, e prendê-lo
+                # aqui deixaria as abas editando o perfil ANTERIOR para sempre.
+                self._draft_reload_for = None
+                logger.warning(
+                    "gui_draft_reload_sem_estado",
+                    erro=str(exc),
+                )
             return False
 
         self._draft_reload_inflight = True
+        self._draft_reload_inflight_since = time.monotonic()
         ipc_bridge.run_in_thread(
             self._compute_draft_from_active_profile,
             on_success=_apply,
@@ -744,13 +830,31 @@ class HefestoApp(
         por baixo de uma edição é perda de trabalho, que é justamente a queixa
         que este conjunto de correções ataca — trocar um jeito de perder
         alterações por outro não seria correção.
+
+        JANELA-FIEL-01/E1: os dois latches param a reconciliação e por isso
+        nenhum dos dois é definitivo. O de voo (`_draft_reload_inflight`) tem
+        PRAZO — passado ele a chamada anterior é dada como perdida e uma nova
+        sai; a resposta atrasada da abandonada só desliga o latch de novo, o que
+        no pior caso adianta um recarregamento, nunca trava. O de alvo
+        (`_draft_reload_for`) só segura quem já provou que repetir não adianta:
+        falha de leitura de estado o solta em `_bootstrap_draft_async`.
         """
         ativo = state.get("active_profile")
         if not isinstance(ativo, str) or not ativo:
             return
         if ativo == self._active_profile_name:
             return
-        if self._draft_reload_inflight or self._draft_reload_for == ativo:
+        if self._draft_reload_inflight:
+            agora = time.monotonic()
+            atraso = agora - self._draft_reload_inflight_since
+            if atraso < DRAFT_RELOAD_INFLIGHT_TIMEOUT_S:
+                return
+            logger.warning(
+                "gui_draft_reload_em_voo_dado_por_perdido",
+                segundos=round(atraso, 1),
+                para=ativo,
+            )
+        elif self._draft_reload_for == ativo:
             return
         if self._tem_edicao_pendente():
             self._status_toast(
@@ -769,9 +873,10 @@ class HefestoApp(
         )
         self._bootstrap_draft_async()
 
-    #: Id do Glade da aba Status. Único consumidor: o gate da captura de
-    #: microfone no `switch-page` (S2) — o refresh dela já é por timer.
-    _ABA_STATUS: ClassVar[str] = "tab_status_box"
+    #: Id do Glade da aba Status. Consumido aqui pelo gate da captura de
+    #: microfone no `switch-page` (S2) e, em `status_actions`, pelo gate do tick
+    #: de 10 Hz — o valor é um só, de lá.
+    _ABA_STATUS: ClassVar[str] = ABA_STATUS
 
     #: Aba (id do Glade) -> nomes dos refreshers a chamar quando ela é exibida.
     #: Identificar pelo WIDGET, não pelo índice: a fusão de "Mouse" e "Teclado"
@@ -828,18 +933,11 @@ class HefestoApp(
         pelo id do Glade (ver ``_REFRESH_POR_ABA``), não pela posição.
 
         ``page`` pode ser o ``GtkScrolledWindow`` que
-        ``_wrap_notebook_pages_in_scroll`` colocou em volta da página — nesse
-        caso o id está no filho.
+        ``_wrap_notebook_pages_in_scroll`` colocou em volta da página — quem
+        desembrulha é ``id_da_pagina``, o MESMO desembrulho que os pollers de
+        Status e Início usam para saber qual aba está à vista.
         """
-        alvo = page
-        if isinstance(page, Gtk.ScrolledWindow):
-            filho = page.get_child()
-            # O ScrolledWindow pode inserir um GtkViewport entre ele e a página.
-            if isinstance(filho, Gtk.Viewport):
-                filho = filho.get_child()
-            if filho is not None:
-                alvo = filho
-        nome = Gtk.Buildable.get_name(alvo) if alvo is not None else None
+        nome = id_da_pagina(page)
         # S2: a captura de áudio do microfone existe SÓ enquanto a aba Status
         # está à vista — entrar liga, sair desliga. É o mesmo id de Glade que
         # o mapa abaixo usa; a página nunca é identificada por posição.
@@ -886,6 +984,90 @@ class HefestoApp(
         pai.add(caixa)
         if posicao is not None and isinstance(pai, Gtk.Box):
             pai.reorder_child(caixa, posicao)
+
+    #: Páginas (id do Glade) que recebem o MESMO teto elástico do card.
+    #:
+    #: LARGURA-01/E4 (Início e Rumble, coluna única) e E5 (Gatilhos, Lightbar,
+    #: Perfis e Navegação, duas colunas). Medido pela sprint com a janela em
+    #: 1920: cada página recebia ~1894px e nenhuma das nove precisa de mais de
+    #: 1166px — o resto virava vão sem dono. O custo em altura do teto, medido
+    #: na mesma bancada, é de 0px em quatro delas e no máximo 44px na Lightbar,
+    #: e no tamanho de projeto (1180px) ele nem entra em ação.
+    #:
+    #: A aba **Sistema** (`daemon_box`) fica de fora POR ESCRITO, e o motivo é
+    #: medido: a linha mais longa do log pede 1400px exatos, o
+    #: `daemon_log_scroll` tem `hscrollbar-policy: never` e o `daemon_status_text`
+    #: quebra por palavra — um teto de 1400px na página deixaria ~1370px úteis e
+    #: partiria essa linha em duas. A aba **Emulação** também fica: o vão dela é
+    #: ENTRE os dois cartões do topo, que já param no tamanho natural, e a
+    #: simulação em 1400 mediu os mesmos 715px (o teto não muda nada ali). A aba
+    #: **Status** já tem o seu, pelo `_envolver_estado_em_teto_elastico`.
+    _PAGINAS_COM_TETO_ELASTICO: ClassVar[tuple[str, ...]] = (
+        "tab_home_box",
+        "tab_rumble_box",
+        "tab_triggers_box",
+        "tab_lightbar_box",
+        "profiles_paned",
+        "tab_navegacao_dsx",
+    )
+
+    def _envolver_paginas_em_teto_elastico(self) -> None:
+        """Põe o teto elástico do card em volta do CONTEÚDO de seis abas.
+
+        A caixa entra DENTRO da página, e não em volta dela. A diferença não é
+        de estilo: `id_da_pagina` reconhece a aba pelo nome de Buildable do
+        widget que o notebook devolve, e um `Gtk.Bin` nosso não tem nome de
+        Buildable nenhum — medido, `Gtk.Buildable.get_name` devolve `None`
+        mesmo depois de `set_name`. Envolver a página por fora faria
+        `_on_notebook_switch_page` e os pollers de Início e Status deixarem de
+        reconhecer qualquer aba, **em silêncio**: sem exceção, sem log, só o
+        refresh que nunca mais roda. Por dentro, a página segue sendo a página.
+
+        Os filhos mudam de casa para um miolo novo, com a mesma orientação, o
+        mesmo espaçamento e as MESMAS propriedades de empacotamento — expandir,
+        preencher, espaço e ponta. Sem isso um filho com `expand` viraria um
+        filho sem, e a aba mudaria de desenho por um efeito colateral do teto.
+
+        Roda DEPOIS dos `install_*_tab`, e isso é requisito: a aba Início é
+        montada em código (`install_home_tab` empacota banners e frames direto
+        no `tab_home_box`), então um teto instalado antes ficaria com o miolo
+        vazio e o conteúdo real fora dele.
+
+        Idempotente. Tolerante a glade sem a página (dublê de teste).
+        """
+        for nome in self._PAGINAS_COM_TETO_ELASTICO:
+            pagina = self.builder.get_object(nome)
+            if not isinstance(pagina, Gtk.Box):
+                continue
+            filhos = pagina.get_children()
+            if len(filhos) == 1 and isinstance(filhos[0], CaixaDeTetoDePagina):
+                continue
+            miolo = Gtk.Box(
+                orientation=pagina.get_orientation(),
+                spacing=pagina.get_spacing(),
+            )
+            for filho in filhos:
+                empacotamento = {
+                    chave: pagina.child_get_property(filho, chave)
+                    for chave in ("expand", "fill", "padding", "pack-type")
+                }
+                pagina.remove(filho)
+                # `pack_start`/`pack_end` acrescentam na mesma lista, na ordem
+                # em que `get_children` a devolveu — a posição é preservada.
+                empacotar = (
+                    miolo.pack_end
+                    if empacotamento["pack-type"] == Gtk.PackType.END
+                    else miolo.pack_start
+                )
+                empacotar(
+                    filho,
+                    empacotamento["expand"],
+                    empacotamento["fill"],
+                    empacotamento["padding"],
+                )
+            caixa = CaixaDeTetoDePagina(miolo)
+            pagina.pack_start(caixa, True, True, 0)
+            caixa.show_all()
 
     def _wrap_notebook_pages_in_scroll(self) -> None:
         """Torna as abas roláveis para o RODAPÉ nunca ser cortado (BUG-FOOTER-CORTADO).
@@ -950,6 +1132,11 @@ class HefestoApp(
         self.install_daemon_tab()
         self.install_emulation_tab()
         self.install_input_tab()
+        # LARGURA-01/E4-E5: o teto elástico das seis páginas entra AQUI, e não
+        # junto com os roladores em `__init__`: a aba Início é montada em código
+        # pelo `install_home_tab` logo acima, e um teto instalado antes ficaria
+        # com o miolo vazio e o conteúdo dela do lado de fora.
+        self._envolver_paginas_em_teto_elastico()
         # Conecta switch-page do GtkNotebook para refresh de draft por aba.
         notebook = self.builder.get_object("main_notebook")
         if notebook is not None:
@@ -1035,6 +1222,9 @@ class HefestoApp(
             self.install_daemon_tab()
             self.install_emulation_tab()
             self.install_input_tab()
+            # LARGURA-01/E4-E5: pelo mesmo motivo do caminho visível — depois
+            # dos `install_*_tab`, porque a aba Início nasce em código.
+            self._envolver_paginas_em_teto_elastico()
             # Conecta switch-page do GtkNotebook para refresh de draft por aba.
             notebook = self.builder.get_object("main_notebook")
             if notebook is not None:

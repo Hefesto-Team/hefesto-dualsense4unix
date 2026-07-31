@@ -348,6 +348,40 @@ _TOUCHPAD_PX_UNICO: Final[tuple[int, int]] = (180, 80)
 _MIC_METER_PX_UNICO: Final[tuple[int, int]] = (180, 56)
 _BARRA_FINA_PX_UNICO: Final[tuple[int, int]] = (160, 18)
 
+#: Largura NATURAL do touchpad e do medidor do microfone no card de UM
+#: controle, em px. Os números acima continuam sendo o MÍNIMO — este é o teto
+#: até onde cada um cresce quando a janela larga devolve largura.
+#:
+#: CARD-OCUPA-01 — *"tem muito espaço vazio aqui, dava pra aumentar a largura
+#: do touchpad e lightbar e do microfone e alto falante pra ocuparem os espaços
+#: laterais vazios"*. Medido na bancada offscreen antes da cura, com a janela
+#: em 1870 e o card no teto elástico de 1400: touchpad e medidor parados em
+#: 180px, com 148px de vão de cada lado do miolo — os "espaços laterais" da
+#: foto de 01h34.
+#:
+#: **Por que não subir o `set_size_request`.** Pedido de tamanho no GTK3 é
+#: MÍNIMO: um número maior ali sobe direto para o mínimo do card (hoje
+#: 1040px, com ~1030px de conteúdo dentro) e daí para o mínimo da janela
+#: (1062px medidos, sem rolagem horizontal para onde fugir). O crescimento
+#: mora no NATURAL (`DesenhoElastico`), que só é pago quando há espaço.
+#:
+#: **De onde sai o 360.** A faixa pede, com os dois desenhos em L px,
+#: ``L + L + 618`` de natural (296 dos analógicos, 246 do grid de botões, 28
+#: das duas molduras e 48 dos três respiros de 16px) contra 1374px úteis do
+#: card no teto elástico. L = 360 fecha a conta com 36px de sobra, que vira o
+#: respiro entre os blocos (28px medidos de cada lado do miolo, contra 148px
+#: antes da cura); L = 378 zeraria o vão e colaria bloco em bloco. O
+#: dobro exato do piso também é o que mantém a leitura do retângulo do
+#: touchpad — 360x80 ainda é um retângulo deitado, e a altura NÃO muda nesta
+#: leva (o orçamento apertado do card é vertical).
+#:
+#: O mesmo número serve às duas colunas de propósito: a do touchpad e a do som
+#: são espelhos na faixa, e um número por coluna deixaria a simetria à mercê
+#: da próxima edição. As barras finas (lightbar e alto-falante) não têm teto
+#: próprio — elas preenchem a coluna em que vivem e acompanham o desenho de
+#: cima por construção.
+_DESENHO_NATURAL_PX_UNICO: Final[int] = 360
+
 #: Estado do microfone dito em palavras, ao lado do medidor.
 #:
 #: MIC-PRESENTE-01/E2 — *"na aba status falta a presença permanente do
@@ -1287,7 +1321,10 @@ if _GTK_DISPONIVEL:
             touch, miolo = self._bloco("Touchpad")
             painel = TouchpadView()
             if not self._compact:
+                # O piso é o de sempre; o teto de crescimento é o natural.
+                # CARD-OCUPA-01: subir o piso estouraria o mínimo do card.
                 painel.set_size_request(*_TOUCHPAD_PX_UNICO)
+                painel.definir_largura_natural(_DESENHO_NATURAL_PX_UNICO)
             miolo.pack_start(painel, False, False, 0)
             rotulo = self._rotulo_secao(texto_toques(0))
             miolo.pack_start(rotulo, False, False, 0)
@@ -1317,7 +1354,11 @@ if _GTK_DISPONIVEL:
             medidor = MicMeter()
             medidor.set_valign(Gtk.Align.CENTER)
             if not self._compact:
+                # Espelho do touchpad (CARD-OCUPA-01): piso igual, teto no
+                # natural. O `Gtk.SizeGroup` lá embaixo leva o teto ao selo
+                # junto — os dois passam a ter a largura da coluna.
                 medidor.set_size_request(*_MIC_METER_PX_UNICO)
+                medidor.definir_largura_natural(_DESENHO_NATURAL_PX_UNICO)
             miolo.pack_start(medidor, False, False, 0)
             selo = Gtk.Label()
             selo.set_valign(Gtk.Align.CENTER)

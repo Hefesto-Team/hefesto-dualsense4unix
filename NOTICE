@@ -3,6 +3,17 @@ Hefesto
 
 Este produto inclui arquivos derivados de outros projetos de código aberto.
 
+ESCOPO DESTE ARQUIVO
+--------------------
+
+O código próprio do Hefesto é MIT (ver LICENSE). A **árvore** não é toda MIT: ela
+carrega material de terceiros sob outras licenças, preservadas intactas. Este
+arquivo diz exatamente o quê, de onde, e sob que licença — para que um leitor
+externo reconstrua a cadeia de proveniência sem abrir o histórico do git.
+
+Auditoria de 2026-07-31 (sprint CR-05). Cada afirmação abaixo tem arquivo e
+linha; quem revisar pode conferir uma a uma.
+
 ---
 
 assets/70-ps5-controller.rules
@@ -12,6 +23,154 @@ Regras udev derivadas do projeto pydualsense (https://github.com/flok/pydualsens
 licenciado sob MIT License. Adaptações: adição do DualSense Edge (VID/PID
 054c:0df2) e substituição de MODE=0666 por MODE=0660 + TAG+="uaccess" para
 integração com systemd-logind.
+
+O arquivo aponta para cá na própria linha 2 ("Baseado em pydualsense (MIT) —
+ver NOTICE"). Nenhuma outra regra de assets/ é derivada: a varredura de
+2026-07-31 por marcas de atribuição em src/, scripts/ e assets/ não encontrou
+outra.
+
+---
+
+assets/dkms/ — três módulos de kernel derivados do Linux (GPL)
+--------------------------------------------------------------
+
+O Hefesto vendoriza três módulos de kernel com correções próprias aplicadas
+sobre o fonte original do Linux. São **código de terceiros sob licença própria**,
+e a licença de cada arquivo é a declarada no cabeçalho SPDX dele — não a do
+Hefesto. Os cabeçalhos estão intactos e é isso que torna o uso lícito; nenhum
+deles pode ser removido ou substituído pelo MIT.
+
+Origem comum dos três: árvore pop-os/linux, commit
+3af2f9de43174ce5063110f94b7b01226499ba13, base de kernel v7.0.11. O commit, o
+SHA-256 do fonte original, o SHA-256 do fonte com os patches e a ordem exata de
+aplicação estão registrados em assets/dkms/<módulo>/patch/BASELINE — é o que
+permite a qualquer pessoa reverter os patches e reproduzir o original byte a
+byte.
+
+  - assets/dkms/hid-nintendo/ — SPDX "GPL-2.0+" em hid-nintendo.c:1 e
+    "GPL-2.0-or-later" em hid-ids.h:1; MODULE_LICENSE("GPL") em
+    hid-nintendo.c:3299. Modificações próprias: quatro patches em patch/
+    (parar de transmitir após esgotar o limite de taxa; registrar os LEDs mesmo
+    quando a carga inicial falha; padding dos comandos USB e sobrevivência à
+    ausência de device info; parar de esperar por um controle que já sumiu).
+
+  - assets/dkms/hid-playstation/ — SPDX "GPL-2.0-or-later" em
+    hid-playstation.c:1 e em hid-ids.h:1; MODULE_LICENSE("GPL") em
+    hid-playstation.c:3132. Modificações próprias: dois patches em patch/
+    (repetir feature reports que expiram na probe; sobreviver a um relatório de
+    pareamento inválido de DualShock4).
+
+  - assets/dkms/rtw88-usb/ — SPDX "GPL-2.0 OR BSD-3-Clause" em usb.c:1 e nos
+    onze cabeçalhos vendorados; MODULE_LICENSE("Dual BSD/GPL") em usb.c:1504.
+    É licença **dupla**, não GPL pura: quem redistribui escolhe um dos dois
+    termos. Modificações próprias: dois patches em patch/ (vazamento de memória
+    em falha de escrita USB — retroportado do commit 6b964941bbfe do upstream;
+    e detecção de aparelho ausente com reset de porta enfileirado). Os dez
+    cabeçalhos além de usb.h são originais INTOCADOS — existem aqui só porque o
+    pacote linux-headers não os distribui e o usb.c os inclui.
+
+Os oito arquivos .patch de assets/dkms/**/patch/ não têm cabeçalho SPDX próprio:
+são diffs sobre os fontes acima e seguem a licença do arquivo que modificam.
+Isso foi conferido arquivo a arquivo em 2026-07-31.
+
+Por que MIT e GPL convivem aqui sem contaminar um ao outro
+-----------------------------------------------------------
+
+Os módulos **não são linkados** ao código Python do Hefesto. Eles são
+distribuídos como fonte separada, compilados no destino pelo DKMS, e carregados
+pelo kernel. O daemon fala com eles apenas pelas interfaces de espaço de usuário
+do próprio kernel — /dev/hidraw, udev e sysfs. São obras separadas distribuídas
+no mesmo meio, e cada uma mantém a sua licença.
+
+O vetor de redistribuição, medido — e uma correção
+---------------------------------------------------
+
+A sprint CR-05 foi aberta com a hipótese de que nenhum pacote publicado
+carregaria os fontes GPL. **A medição de 2026-07-31 refutou isso**, e o registro
+fica aqui porque a hipótese chegou a ser escrita:
+
+  - o sdist publicado (hefesto_dualsense4unix-<versão>.tar.gz) carrega os 36
+    arquivos de assets/dkms/ — medido pedindo ao próprio hatchling a lista de
+    arquivos incluídos;
+  - o tarball de fonte da tag v0.4.0 carrega os mesmos 36 (git archive v0.4.0);
+  - o .deb os copia em scripts/build_deb.sh:246-262, e o release.yml:155 constrói
+    esse .deb e o publica no release (release.yml:416-421);
+  - o bundle .flatpak os copia em flatpak/br.andrefarias.Hefesto.yml:256-263;
+  - o PKGBUILD do Arch os copia em packaging/arch/PKGBUILD:156-169 (a linha 56,
+    com optdepends 'dkms', é sobre a FERRAMENTA dkms, não sobre os fontes);
+  - o .spec do Fedora os copia em
+    packaging/fedora/hefesto-dualsense4unix.spec:158-171.
+
+Não carregam os fontes GPL: o wheel (o alvo tool.hatch.build.targets.wheel do
+pyproject empacota só src/ — medido, zero arquivos) e o AppImage
+(scripts/build_appimage.sh não menciona assets/dkms).
+
+O grep 'dkms' em .github/workflows/ sai vazio, e isso é um falso negativo: quem
+copia os fontes é o scripts/build_deb.sh chamado pelo workflow, não o workflow.
+
+Redistribuir estes fontes é **permitido** — é exatamente o que a GPL-2.0
+autoriza. O que ela exige em troca é o que está feito acima: preservar os avisos
+de licença intactos e declarar a origem. Os fontes seguem exatamente como
+vieram, mais os patches, com o SPDX no lugar.
+
+---
+
+Dependências Python
+-------------------
+
+Nenhuma delas é vendorada: o Hefesto as declara no pyproject.toml e quem as
+instala é o pip ou o gerenciador de pacotes da distribuição, cada uma com a sua
+própria licença e o seu próprio aviso. Ficam declaradas aqui porque a CR-05 pede
+a varredura completa, e porque duas delas não são permissivas.
+
+Licenças lidas dos metadados instalados em 2026-07-31 (importlib.metadata), não
+copiadas de memória:
+
+  - obrigatórias — pydualsense (MIT), textual (MIT), typer (MIT), pydantic
+    (MIT), evdev (BSD-3-Clause), structlog (MIT OR Apache-2.0), rich (MIT),
+    platformdirs (MIT), filelock (MIT);
+  - obrigatória e copyleft fraco — python-xlib (LGPL-2.0-or-later);
+  - extra [emulation] e copyleft forte — python-uinput (GPL-3.0-or-later);
+  - extra [tray] e copyleft fraco — PyGObject (LGPL-2.0-or-later);
+  - extra [cosmic] — jeepney (MIT);
+  - extra [metrics] — prometheus-client; não estava instalada no ambiente da
+    auditoria, então a licença dela NÃO foi medida e não é afirmada aqui.
+
+Uma ressalva que vale registrar em voz alta: o bundle Flatpak **embute** as
+dependências dentro de /app, incluindo python-uinput e python-xlib
+(flatpak/br.andrefarias.Hefesto.yml:82 e :86). Ou seja, o artefato .flatpak
+publicado redistribui código LGPL e GPL-3.0 junto com o código MIT do Hefesto —
+o que as duas licenças permitem, desde que os avisos delas sigam junto, e é o
+caso: o pip instala cada pacote com o seu próprio dist-info e o seu texto de
+licença. As demais formas de distribuição (wheel, sdist, .deb, AppImage, Arch,
+Fedora) não embutem dependência Python nenhuma.
+
+---
+
+Fontes tipográficas e glifos
+----------------------------
+
+  - As duas fontes da identidade visual (Space Grotesk e JetBrains Mono, ambas
+    OFL 1.1) **não estão no repositório**. O diretório assets/fonts não existe.
+    O scripts/install_fonts.sh prefere o pacote da distribuição e, se não
+    houver, baixa do repositório oficial com commit pinado e conferência por
+    SHA-256. A decisão de não vendorizar, e o custo de mudar de ideia, estão
+    escritos no cabeçalho daquele script (linhas 18 a 37).
+
+  - Os 38 SVG de assets/glyphs/ são desenho próprio do projeto; os sufixados
+    com _active são gerados por scripts/generate_glyph_active.py a partir dos
+    demais. Não há binário de terceiro em assets/.
+
+---
+
+Applet COSMIC
+-------------
+
+packaging/cosmic-applet/ é um crate Rust do próprio projeto, declarado MIT em
+Cargo.toml:17. Ele depende de libcosmic (pop-os/libcosmic) por referência git,
+resolvida no build de quem compilar — o crate não vendoriza aquele código, e o
+applet não é publicado em nenhum release (grep por 'cargo' em release.yml sai
+vazio).
 
 ---
 

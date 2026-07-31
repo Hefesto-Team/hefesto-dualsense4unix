@@ -3116,8 +3116,13 @@ class Daemon:
             )
         return self._profile_selector
 
-    def _profile_rule_matches_game(self, wm_class: str | None) -> bool:
-        """NUMA-01 evidência #2: `wm_class` corrente casa regra de jogo do
+    def _profile_rule_matches_game(
+        self,
+        wm_class: str | None,
+        wm_name: str | None = None,
+        exe_basename: str | None = None,
+    ) -> bool:
+        """NUMA-01 evidência #2: a janela corrente casa regra de jogo do
         autoswitch (`mode.kind == "gamepad"`, match ESPECÍFICO — não o
         `MatchAny` catch-all do perfil fallback). Cobre GOG/Heroic fora da
         Steam pelo MESMO mecanismo de seleção do autoswitch
@@ -3125,12 +3130,33 @@ class Daemon:
         ao carregar perfis do disco devolve False — o chamador
         (`_gather_game_signal_inputs`) já roda protegido por try/except no
         tick.
+
+        SINAL-DE-JOGO-01 (31/07): a pergunta passou a levar a janela INTEIRA.
+        Ela chegava aqui com `wm_class` e mais nada, e o `MatchCriteria` é um E
+        entre os campos preenchidos com alvo ausente reprovando por decisão
+        escrita (`profiles/schema.py`, `_casa_sem_caixa`) — então qualquer perfil
+        com `window_title_regex` ou `process_name` devolvia False SEMPRE, sem
+        erro nenhum. Medido nos 15 perfis do disco dela: dos seis perfis de jogo,
+        um só casava aqui, e por uma `wm_class` `steam_app_*` que a evidência
+        nº 1 já pegava sozinha — a evidência nº 2 era letra morta.
+
+        Tradeoff registrado (o mesmo que a AUTOMATISMO-MORTO-01 discute no
+        cadeado, por outra porta): com o título valendo, um regex solto de
+        título passa a poder declarar "é jogo" a partir de uma janela que não é
+        jogo — medido no disco dela, uma aba de navegador chamada "Portal 2"
+        casa o `coop_local` (prioridade 75, `mode: gamepad`, só título) e vence
+        o `Navegação` (prioridade 50). Aqui o consumidor é o sinal de EXIBIÇÃO,
+        não a troca de perfil; quem quiser fechar isso mexe no perfil, não neste
+        probe.
         """
-        if not wm_class:
+        if not (wm_class or wm_name or exe_basename):
             return False
-        profile = self._manager_de_selecao().select_for_window(
-            {"wm_class": wm_class}
-        )
+        janela: dict[str, object] = {"wm_class": wm_class or ""}
+        if wm_name:
+            janela["wm_name"] = wm_name
+        if exe_basename:
+            janela["exe_basename"] = exe_basename
+        profile = self._manager_de_selecao().select_for_window(janela)
         if profile is None:
             return False
         mode = getattr(profile, "mode", None)
@@ -3162,6 +3188,8 @@ class Daemon:
         mono_now = time.monotonic()
         window_healthy = self.store.window_detect_healthy
         window_class_current = self.store.window_detect_current_class
+        window_name_current = self.store.window_detect_current_name
+        window_exe_current = self.store.window_detect_current_exe
         seen_at = self.store.game_window_seen_at
         window_seen_age = (mono_now - seen_at) if seen_at is not None else None
         marker = read_last_run_marker()
@@ -3178,7 +3206,9 @@ class Daemon:
             "window_healthy": window_healthy,
             "window_class_current": window_class_current,
             "window_seen_age": window_seen_age,
-            "profile_rule_match": self._profile_rule_matches_game(window_class_current),
+            "profile_rule_match": self._profile_rule_matches_game(
+                window_class_current, window_name_current, window_exe_current
+            ),
             "marker": marker,
             "marker_pid_alive": marker_pid_alive,
             "marker_pid": marker_pid,

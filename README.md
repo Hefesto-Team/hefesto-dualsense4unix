@@ -6,11 +6,11 @@
 
 **Gerenciador DualSense para Linux**
 
-[![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+[![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT%20%2B%20GPL--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://www.python.org/)
 [![GTK](https://img.shields.io/badge/GTK-3.0-green.svg)](https://www.gtk.org/)
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.4.0%20alfa-6a3fb4.svg)](CHANGELOG.md)
-[![Testes](https://img.shields.io/badge/testes-6089-brightgreen.svg)](tests/)
+[![Testes](https://img.shields.io/badge/testes-6097-brightgreen.svg)](tests/)
 [![CI](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/[REDACTED]/hefesto-dualsense4unix/actions/workflows/ci.yml)
 
 </div>
@@ -20,7 +20,7 @@
 ```
 Versão: 0.4.0 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
-Licença: MIT
+Licença: MIT, exceto `assets/dkms/*` (GPL-2.0) — ver LICENSE e NOTICE
 ```
 
 > **Alfa — software em maturação.** O Hefesto funciona e é usado todo dia na
@@ -343,7 +343,18 @@ Relato de uso em distro fora da lista é especialmente bem-vindo: rode
 
 ## Licença
 
-MIT — veja [`LICENSE`](LICENSE).
+**MIT, exceto `assets/dkms/*`** — veja [`LICENSE`](LICENSE).
+
+Os três módulos de kernel vendorados em `assets/dkms/` são derivados do Linux e
+mantêm a licença própria declarada no cabeçalho SPDX de cada arquivo:
+`hid-nintendo` e `hid-playstation` são **GPL-2.0-or-later**; o `rtw88-usb` é
+**GPL-2.0 OR BSD-3-Clause** (licença dupla — quem redistribui escolhe um dos
+termos). Eles não são linkados ao código Python: são distribuídos como fonte
+separada e compilados no destino pelo DKMS.
+
+O [`NOTICE`](NOTICE) declara a proveniência inteira — origem, commit de base,
+o que foi modificado em cada módulo, as licenças de todas as dependências
+Python e o que o projeto avaliou e **recusou** incorporar.
 
 ---
 

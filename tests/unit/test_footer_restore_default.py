@@ -26,7 +26,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from hefesto_dualsense4unix.app.actions import footer_actions
-from hefesto_dualsense4unix.app.actions.footer_actions import _MEU_PERFIL_ASSET, FooterActionsMixin
+from hefesto_dualsense4unix.app.actions.footer_actions import (
+    FooterActionsMixin,
+    _meu_perfil_asset,
+)
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
 
@@ -66,10 +69,15 @@ def asset_content() -> dict:  # type: ignore[type-arg]
     arquivo não existe e o teste morria com `FileNotFoundError` em vez de
     pular. Sem o asset do repositório não há contrato a verificar aqui: o que
     este teste trava é que o restore devolve EXATAMENTE o conteúdo do asset.
+
+    JANELA-FIEL-01/E3: quem resolve o caminho passou a ser `_meu_perfil_asset()`
+    (a cascata do loader), então o skip pergunta a ELA — e não a uma constante
+    de módulo que só valia em instalação editável.
     """
-    if not _MEU_PERFIL_ASSET.is_file():
-        pytest.skip(f"asset do repositório ausente: {_MEU_PERFIL_ASSET}")
-    return json.loads(_MEU_PERFIL_ASSET.read_text(encoding="utf-8"))
+    asset = _meu_perfil_asset()
+    if asset is None:
+        pytest.skip("preset meu_perfil.json ausente em todos os candidatos")
+    return json.loads(asset.read_text(encoding="utf-8"))
 
 
 @pytest.fixture
@@ -237,13 +245,18 @@ class TestRestoreDefaultCasosDeBorda:
         profiles_dir_isolado: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Quando asset não existe, exibe toast e não lança exceção."""
-        import hefesto_dualsense4unix.app.actions.footer_actions as footer_mod
+        """Quando o preset não existe em candidato NENHUM, toast — sem exceção.
+
+        JANELA-FIEL-01/E3: a injeção é a cascata do loader, não mais uma
+        constante de módulo. Um diretório vazio como único candidato é
+        exatamente "não há preset em lugar nenhum".
+        """
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
 
         monkeypatch.setattr(
-            footer_mod,
-            "_MEU_PERFIL_ASSET",
-            profiles_dir_isolado / "nao_existe.json",
+            loader_mod,
+            "_DEFAULT_SEED_SOURCE_DIRS",
+            (profiles_dir_isolado / "sem_assets",),
         )
 
         stub_mixin.on_restore_default()
@@ -273,3 +286,81 @@ class TestRestoreDefaultCasosDeBorda:
             stub_mixin.on_restore_default()
 
         assert any("cancelad" in msg.lower() for msg in stub_mixin._toasted)
+
+
+# ---------------------------------------------------------------------------
+# JANELA-FIEL-01/E3 — o botão fora da máquina de quem programou
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreDefaultEmInstalacaoEmpacotada:
+    """O preset não mora só no repositório — e o botão tem de achá-lo lá.
+
+    `_MEU_PERFIL_ASSET` era `ROOT_DIR / "assets" / ...`, e `ROOT_DIR` é
+    `parents[3]` do módulo: a raiz do repositório SÓ em instalação editável
+    (`install.sh` instala com `-e`). Num `.deb` o pacote vive num venv em
+    `/opt/...`, o módulo em `.../site-packages/hefesto_dualsense4unix/app/`, e
+    `parents[3]` vira `.../venv/lib/python3.X` — um diretório onde `assets/`
+    nunca existiu. O botão desistia com o toast de indisponível numa máquina
+    onde o preset ESTÁ instalado: os três pacotes o embalam (`.deb` em
+    `/usr/share/...`, AppImage e Flatpak em `sys.prefix/share/...`).
+
+    MORDIDA: os testes abaixo põem o preset SÓ no segundo e no terceiro
+    candidato da cascata — nunca no primeiro, que é o do repositório. Com o
+    resolvedor de antes (um candidato só, o `ROOT_DIR`), os dois reprovam com o
+    toast de "não encontrado" e sem gravar nada.
+    """
+
+    @staticmethod
+    def _cascata_empacotada(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path, com_preset: int
+    ) -> Path:
+        """Planta o preset no candidato `com_preset` (1=prefixo, 2=/usr/share).
+
+        O candidato 0 (repositório) NÃO existe — é a instalação empacotada.
+        """
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
+
+        candidatos = [
+            tmp_path / "venv" / "lib" / "python3" / "assets" / "profiles_default",
+            tmp_path / "prefixo" / "share" / "hefesto" / "profiles_default",
+            tmp_path / "usr" / "share" / "hefesto" / "profiles_default",
+        ]
+        destino = candidatos[com_preset]
+        destino.mkdir(parents=True)
+        conteudo = _perfil_modificado()
+        conteudo["priority"] = 42
+        (destino / "meu_perfil.json").write_text(
+            json.dumps(conteudo), encoding="utf-8"
+        )
+        monkeypatch.setattr(
+            loader_mod, "_DEFAULT_SEED_SOURCE_DIRS", tuple(candidatos)
+        )
+        return destino
+
+    @pytest.mark.parametrize("candidato", [1, 2])
+    def test_restaura_com_o_preset_fora_do_repositorio(
+        self,
+        candidato: int,
+        stub_mixin: FooterActionsMixin,
+        profiles_dir_isolado: Path,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import hefesto_dualsense4unix.profiles.loader as loader_mod
+
+        self._cascata_empacotada(monkeypatch, tmp_path, candidato)
+        monkeypatch.setattr(
+            loader_mod, "profiles_dir", lambda ensure=False: profiles_dir_isolado
+        )
+
+        mock_dialogs = MagicMock()
+        mock_dialogs.confirm_restore_default.return_value = True
+
+        with patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs):
+            stub_mixin.on_restore_default()
+
+        destino = profiles_dir_isolado / "meu_perfil.json"
+        assert destino.is_file(), "o botão morre em instalação não-editável"
+        assert json.loads(destino.read_text(encoding="utf-8"))["priority"] == 42
+        assert not any("não encontrado" in msg for msg in stub_mixin._toasted)

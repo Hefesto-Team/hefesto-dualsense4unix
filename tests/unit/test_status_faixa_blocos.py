@@ -37,6 +37,7 @@ pytest.importorskip("cairo")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
+from hefesto_dualsense4unix.app.widgets import controller_card as cc_mod
 from hefesto_dualsense4unix.app.widgets.controller_card import (
 
     LARGURA_BARRA_GATILHO_UNICO,
@@ -45,6 +46,11 @@ from hefesto_dualsense4unix.app.widgets.controller_card import (
     LARGURA_GYRO_UNICO,
     TEXTO_SPEAKER_SEM_DADO,
     ControllerCard,
+)
+from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    COR_TOQUE,
+    TouchpadView,
+    hex_para_rgb,
 )
 
 #: A largura que a aba Status recebe na tela dela, maximizada em 1920x1080.
@@ -561,4 +567,211 @@ def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> N
     assert largura > LARGURA_CARD_UNICO, (
         "o frame Estado ficou travado no piso e não acompanha o card: "
         f"{largura}px, piso {LARGURA_CARD_UNICO}px"
+    )
+
+
+# ---------------------------------------------------------------------------
+# CARD-OCUPA-01 — o desenho ocupa o vão que o teto devolveu
+# ---------------------------------------------------------------------------
+
+#: Piso do aceite da CARD-OCUPA-01 para o touchpad e para o medidor do
+#: microfone na tela dela, em px. Sai da entrega E1 da sprint ("o touchpad
+#: recebe pelo menos 300px"); o número que a bancada mediu depois da cura é
+#: 360, e a folga entre os dois é de propósito — o teste cobra o ACEITE, não a
+#: constante, e continua valendo se a próxima medição mudar o teto.
+PISO_DO_DESENHO_NA_TELA_LARGA = 300
+
+
+def test_os_quatro_desenhos_ocupam_a_faixa_na_tela_larga() -> None:
+    """CARD-OCUPA-01, E1 e E2 — *"tem muito espaço vazio aqui, dava pra
+    aumentar a largura do touchpad e lightbar e do microfone e alto falante
+    pra ocuparem os espaços laterais vazios"*.
+
+    Medido na tela dela ANTES da cura, com a janela em tela cheia de 1920 e o
+    card no teto elástico de 1400: touchpad, lightbar, medidor do microfone e
+    alto-falante parados em 180px cada, e 148px de vão de cada lado do miolo.
+    O card cresceu na SOM-01 e os desenhos não foram junto.
+
+    As duas barras finas não têm teto próprio: elas preenchem a coluna em que
+    vivem, então medir "a barra tem a largura do desenho de cima" é medir que
+    a coluna se lê alinhada — uma lightbar curta debaixo de um touchpad largo
+    seria o vazio mudando de lugar, para dentro do bloco.
+
+    A mordida: tirar as duas chamadas de `definir_largura_natural` (a cura)
+    devolve os quatro a 180px e as quatro asserções caem — foi assim que este
+    teste foi conferido.
+    """
+    card = _card_na_tela_dela()
+
+    touch = card._touch_view.get_allocated_width()
+    mic = card._mic_meter.get_allocated_width()
+    lightbar = card._lightbar_bar.get_allocated_width()
+    speaker = card._speaker_bar.get_allocated_width()
+
+    assert touch >= PISO_DO_DESENHO_NA_TELA_LARGA, (
+        f"o touchpad mede {touch}px num card de "
+        f"{card.get_allocated_width()}px: ele voltou a ser um selo, e a "
+        "largura que a janela devolve volta a ser vão lateral"
+    )
+    assert mic >= PISO_DO_DESENHO_NA_TELA_LARGA, (
+        f"o medidor do microfone mede {mic}px num card de "
+        f"{card.get_allocated_width()}px"
+    )
+    assert lightbar == touch, (
+        f"a lightbar mede {lightbar}px debaixo de um touchpad de {touch}px: "
+        "a coluna deixou de se ler alinhada"
+    )
+    assert speaker == mic, (
+        f"o alto-falante mede {speaker}px debaixo de um medidor de {mic}px: "
+        "a coluna do som deixou de se ler alinhada"
+    )
+
+
+def test_o_piso_de_largura_do_card_nao_subiu_com_os_desenhos_maiores() -> None:
+    """A outra metade da cura, e a que impede a cura ERRADA.
+
+    `set_size_request` no GTK3 é MÍNIMO, não tamanho: um número maior ali
+    sobe direto para o mínimo do card e daí para o mínimo da janela inteira
+    (1062px medidos em `test_a_janela_inteira_cabe_na_largura_de_projeto`),
+    que não tem rolagem horizontal para onde fugir. É o defeito que o
+    comentário do piso do card documenta desde a SOM-01, e é a tentação mais
+    próxima de quem for mexer nestes desenhos de novo.
+
+    Por isso a medida é um PAR: o mínimo não pode subir e o natural TEM de
+    ser maior que ele — é no natural que o crescimento mora.
+
+    A mordida, nos dois sentidos: trocar a cura por
+    ``set_size_request(360, ...)`` leva o mínimo do card a 1400 e derruba a
+    primeira asserção; arrancar a cura inteira empata mínimo e natural em
+    1040 e derruba a segunda.
+    """
+    card = _card_na_tela_dela()
+
+    minimo, natural = card.get_preferred_width()
+
+    assert minimo <= LARGURA_CARD_UNICO, (
+        f"o card de um controle passou a pedir {minimo}px de MÍNIMO (o piso "
+        f"é {LARGURA_CARD_UNICO}px): o crescimento foi parar no "
+        "`set_size_request`, e o mínimo da janela sobe junto"
+    )
+    assert natural > minimo, (
+        f"o card pede {natural}px de natural para {minimo}px de mínimo: os "
+        "desenhos voltaram a ter natural igual ao piso e param de crescer "
+        "com a janela"
+    )
+    assert natural <= LARGURA_CARD_ELASTICA, (
+        f"o natural do card ({natural}px) passou do teto elástico "
+        f"({LARGURA_CARD_ELASTICA}px)"
+    )
+
+
+def test_com_a_janela_no_tamanho_de_projeto_os_desenhos_encolhem_sem_atropelo() -> None:
+    """O outro lado do elástico: apertado, ele volta para o piso.
+
+    O risco real de crescer o NATURAL numa faixa com ``expand=True,
+    fill=False`` é o filho receber o natural inteiro numa fatia menor que
+    ele e passar por cima do vizinho. Medido na bancada com três filhos de
+    mínimo 180 e natural 360: 1400px de caixa dá 360 a cada um, 900px dá 311,
+    800px dá 261 e 620px devolve os 180 do piso — o GtkBox aloca
+    ``min(natural, fatia)`` e o encolhimento é contínuo.
+
+    Aqui isso é medido no card montado, na largura em que a janela ABRE
+    (`default-width` do glade) e no MENOR tamanho em que ela existe: nenhum
+    vão pode ficar negativo (dois blocos ocupando o mesmo pixel) e o
+    touchpad nunca cai abaixo do piso de hoje nem passa do teto.
+
+    A mordida: sem a cura o desenho fica no piso em QUALQUER largura, e a
+    última asserção — o mesmo touchpad tem de ser maior na tela dela do que
+    na janela mínima — empata em 180x180 e cai.
+    """
+    for largura in (1180, 1062):
+        card = _card_na_tela_dela(largura=largura)
+        blocos = [
+            ("sensores", card._coluna_sensores),
+            ("analógico esquerdo", card._stick_left),
+            ("analógico direito", card._stick_right),
+            ("microfone", card._mic_box),
+            ("botões", card._glyph_grid),
+        ]
+        for (nome_a, wa), (nome_b, wb) in pairwise(blocos):
+            vao = _faixa(wb)[0] - _faixa(wa)[1]
+            assert vao >= 0, (
+                f"com a janela em {largura}px, {nome_a} e {nome_b} se "
+                f"atropelam em {-vao}px: o natural do desenho passou por "
+                "cima do vizinho"
+            )
+        touch = card._touch_view.get_allocated_width()
+        piso, _ = cc_mod._TOUCHPAD_PX_UNICO
+        assert piso <= touch <= cc_mod._DESENHO_NATURAL_PX_UNICO, (
+            f"com a janela em {largura}px o touchpad mede {touch}px, fora da "
+            f"faixa entre o piso ({piso}px) e o teto "
+            f"({cc_mod._DESENHO_NATURAL_PX_UNICO}px)"
+        )
+
+    apertado = _card_na_tela_dela(largura=1062)._touch_view.get_allocated_width()
+    folgado = _card_na_tela_dela()._touch_view.get_allocated_width()
+    assert folgado > apertado, (
+        f"o touchpad mede {folgado}px na tela de {LARGURA_DA_TELA_DELA}px e "
+        f"{apertado}px na janela mínima: ele voltou a ter um tamanho só, e a "
+        "largura que a janela larga devolve volta a ser vão"
+    )
+
+
+def test_alargar_o_touchpad_nao_muda_o_lugar_do_dedo() -> None:
+    """O aceite 3 da sprint, medido nos PIXELS que o Cairo pintou.
+
+    O `TouchpadView` normaliza o toque por fração
+    (``px = 2 + fx * (largura - 4)``), então o ponto continua no lugar
+    relativo certo em qualquer largura — mas isso é o que o código diz, e o
+    que ela vai olhar é a tela. Aqui o desenho é renderizado de verdade numa
+    `Gtk.OffscreenWindow`, e o ponto ciano é PROCURADO nos pixels: a fração
+    onde ele apareceu tem de ser a mesma no desenho estreito e no largo.
+
+    A mordida: trocar a fração por pixel absoluto no `_on_draw` (o jeito
+    "óbvio" de desenhar um toque) faz o ponto ficar parado no mesmo pixel
+    enquanto o retângulo dobra de largura, e as duas frações deixam de
+    bater.
+    """
+
+    def fracao_do_ponto(largura: int) -> float:
+        painel = TouchpadView()
+        painel.set_size_request(largura, 80)
+        janela = Gtk.OffscreenWindow()
+        janela.add(painel)
+        janela.show_all()
+        _janelas_vivas.append(janela)
+        painel.set_toque((0.75, 0.25))
+        janela.resize(largura, 80)
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+
+        superficie = janela.get_surface()
+        dados = superficie.get_data()
+        passo = superficie.get_stride()
+        alvo = tuple(round(canal * 255) for canal in hex_para_rgb(COR_TOQUE))
+        colunas = [
+            x
+            for y in range(painel.get_allocated_height())
+            for x in range(painel.get_allocated_width())
+            if all(
+                abs(dados[y * passo + x * 4 + canal] - alvo[2 - canal]) < 12
+                for canal in (0, 1, 2)
+            )
+        ]
+        assert colunas, (
+            f"o ponto do toque não foi pintado no desenho de {largura}px"
+        )
+        centro = (min(colunas) + max(colunas)) / 2
+        return (centro - 2) / (painel.get_allocated_width() - 4)
+
+    estreito = fracao_do_ponto(cc_mod._TOUCHPAD_PX_UNICO[0])
+    largo = fracao_do_ponto(cc_mod._DESENHO_NATURAL_PX_UNICO)
+
+    assert abs(estreito - largo) < 0.02, (
+        f"o dedo a 75% do touchpad aparece a {estreito:.1%} do desenho "
+        f"estreito e a {largo:.1%} do largo: alargar passou a mentir a "
+        "posição do toque"
+    )
+    assert abs(largo - 0.75) < 0.02, (
+        f"o dedo a 75% do touchpad aparece a {largo:.1%} do desenho largo"
     )

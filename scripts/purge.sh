@@ -28,13 +28,45 @@ AUTO_YES=0
 DRY_RUN=0
 WITH_CONFIG=0
 KEEP_STEAM_INPUT=0
+
+# Mesmo padrão do uninstall.sh (BUG-UNINSTALL-HELP-DESINSTALA-01): este script é
+# o mais destrutivo da casa — ele chama o uninstall.sh com --yes. Não havia
+# `--help`, e argumento desconhecido só avisava e SEGUIA: com `--yes` legítimo
+# mais um dedo torto (`--dry-rum` no lugar de `--dry-run`), o aviso rolava para
+# fora da tela e a descontaminação acontecia sem confirmação nenhuma. Na dúvida
+# sobre o que a pessoa quis dizer, a resposta certa é não fazer nada.
+uso() {
+    cat <<'FIM'
+Uso: scripts/purge.sh [opções]
+
+Descontaminação TOTAL do Hefesto - Dualsense4Unix: remove todas as formas de
+instalação que possam ter sido misturadas no mesmo host (nativo + .deb +
+Flatpak + AppImage + applet COSMIC). Por padrão PRESERVA a config do usuário
+(perfis/sessão/preferências) e faz um backup dela antes.
+
+Opções:
+  --yes, -y           não pergunta nada (assume sim)
+  --dry-run           só imprime o que faria, sem executar
+  --with-config       APAGA também a config do usuário (destrutivo)
+  --keep-steam-input  preserva o PSSupport do Steam Input
+  --help, -h          mostra esta ajuda e sai
+
+Nada é removido enquanto esta ajuda estiver sendo exibida.
+FIM
+}
+
 for arg in "$@"; do
     case "$arg" in
         --yes|-y)           AUTO_YES=1 ;;
         --dry-run)          DRY_RUN=1 ;;
         --with-config)      WITH_CONFIG=1 ;;
         --keep-steam-input) KEEP_STEAM_INPUT=1 ;;
-        *) printf '[purge] aviso: argumento desconhecido: %s\n' "$arg" ;;
+        --help|-h)          uso; exit 0 ;;
+        *)
+            printf '[purge] argumento desconhecido: %s\n' "$arg" >&2
+            printf '[purge] nada foi removido. Use --help para ver as opções.\n' >&2
+            exit 2
+            ;;
     esac
 done
 
