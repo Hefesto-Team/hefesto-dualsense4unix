@@ -356,7 +356,7 @@ if _GTK_DISPONIVEL:
                 ctx.show_text(texto_eixo(self._valores[indice]))
             return False
 
-    class MicMeter(DesenhoElastico):  # type: ignore[misc]
+    class MicMeter(DesenhoElastico):
         """Onda de amplitude do microfone: 14 amostras deslizantes (mockup).
 
         A versão anterior era uma ESCADA FIXA: as barras tinham sempre as
@@ -473,7 +473,7 @@ if _GTK_DISPONIVEL:
             ctx.stroke()
             return False
 
-    class TouchpadView(DesenhoElastico):  # type: ignore[misc]
+    class TouchpadView(DesenhoElastico):
         """Retângulo do touchpad com o ponto de toque (guia §4).
 
         Alargar não mente a posição do dedo: o toque é normalizado por FRAÇÃO

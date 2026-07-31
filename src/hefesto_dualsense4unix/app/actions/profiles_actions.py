@@ -17,7 +17,7 @@ import gi
 from pydantic import ValidationError
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GObject, Gtk, Pango
+from gi.repository import GObject, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
@@ -426,7 +426,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 # largura demais aqui empurra a aba inteira — LARGURA-01. O
                 # teto + reticências seguram isso; o texto completo está no
                 # tooltip da linha, que nunca é cortado.
+                # O `Pango` entra AQUI, e não no topo do módulo: os testes que
+                # plantam `gi` falso fornecem `Gtk` e `GObject` e mais nada, e um
+                # import de topo derruba a COLETA inteira desses módulos no
+                # runner sem PyGObject — cinco deles, medido no CI de 31/07.
                 with contextlib.suppress(Exception):
+                    from gi.repository import Pango
+
                     renderer.set_property("ellipsize", Pango.EllipsizeMode.END)
                     column.set_resizable(True)
                     column.set_max_width(320)
