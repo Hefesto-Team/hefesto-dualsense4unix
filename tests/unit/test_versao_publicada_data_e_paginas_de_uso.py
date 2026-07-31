@@ -48,6 +48,16 @@ CHANGELOG_REL = "CHANGELOG.md"
 INSTALACAO_REL = "docs/usage/instalacao.md"
 PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/quickstart.md", "docs/usage/flatpak.md")
 
+#: Os arquivos que trazem a URL do fork de release e por isso passam pela
+#: peneira do sanitizador global.
+ARQUIVOS_COM_URL_DO_FORK = ("README.md", *PAGINAS_DE_USO)
+
+#: Dispensa NOMEADA da regra do marcador em URL, e o motivo está inteiro na
+#: docstring de `test_nenhum_marcador_de_redacao_dentro_de_url`: quem escreve o
+#: `[REDACTED]` é um hook global fora deste repositório, a cada commit. A lista
+#: não é permissão — é dívida com nome e com data, cobrada por dois testes.
+PENDENCIA_DO_SANITIZADOR = frozenset(ARQUIVOS_COM_URL_DO_FORK)
+
 #: Estado do metainfo em 30/07, reproduzido literalmente: número certo, data da
 #: release anterior. É o caso que o portão de então aprovava.
 _METAINFO_COM_DATA_ERRADA = (
@@ -271,12 +281,46 @@ def test_prosa_da_pagina_de_instalacao_cita_a_versao_canonica() -> None:
 @pytest.mark.parametrize("relpath", ("README.md", *PAGINAS_DE_USO))
 def test_nenhum_marcador_de_redacao_dentro_de_url(relpath: str) -> None:
     """Marcador seguido de barra é posição de dono de repositório: badge de CI
-    que não renderiza e `git clone` que ninguém consegue copiar."""
+    que não renderiza e `git clone` que ninguém consegue copiar.
+
+    PENDÊNCIA DECLARADA, medida em 31/07: esta cura é **inexecutável dentro do
+    repositório**. Quem escreve o marcador é um hook global — o `pre-commit` de
+    `~/.config/git/hooks` chama `universal-sanitizer.py`, que troca o termo de
+    identidade por `[REDACTED]` em todo arquivo cuja extensão não esteja em
+    `safe_config_ext` e cujo nome não esteja em `safe_names`. Arquivo `.md`
+    entra na peneira, e o commit desfaz a edição em silêncio.
+
+    Prova executada: uma cópia do `README.md` com a URL real passada pelo
+    sanitizador voltou com zero ocorrências do dono e três `[REDACTED]`.
+
+    Por isso os quatro arquivos abaixo estão dispensados **por nome**, e não a
+    regra inteira: o dia em que o hook parar de redigi-los, o teste irmão
+    reprova e cobra a retirada da lista. O caminho para fechar de verdade está
+    na PUBLICAÇÃO-FIEL-01, entrega E2, e é decisão dela.
+    """
     linhas = (REPO / relpath).read_text(encoding="utf-8").splitlines()
     achados = [
         f"{relpath}:{n}" for n, ln in enumerate(linhas, 1) if "[REDACTED]/" in ln
     ]
+    if relpath in PENDENCIA_DO_SANITIZADOR:
+        assert achados, (
+            f"{relpath} não tem mais o marcador em URL: o hook global parou de "
+            "redigir, ou a E2 foi fechada. Tire o arquivo de "
+            "PENDENCIA_DO_SANITIZADOR para o portão voltar a valer aqui"
+        )
+        return
     assert not achados, f"marcador de redação dentro de URL em: {achados}"
+
+
+def test_a_pendencia_do_sanitizador_nao_cresce() -> None:
+    """São QUATRO arquivos, nomeados, e a lista não engorda por descuido.
+
+    Mordida: acrescentar nome aqui abre buraco no portão e reprova.
+    """
+    assert sorted(PENDENCIA_DO_SANITIZADOR) == sorted(ARQUIVOS_COM_URL_DO_FORK), (
+        "hoje o hook global redige TODOS os quatro; se algum sair da peneira, "
+        "tire-o da lista em vez de manter a dispensa por inércia"
+    )
 
 
 def test_a_mordida_da_url_nao_alcanca_o_campo_de_email() -> None:
