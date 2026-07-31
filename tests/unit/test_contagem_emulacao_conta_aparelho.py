@@ -17,11 +17,23 @@ atributos já lidos, e é ela que carrega o julgamento. O MAC real dela NÃO
 aparece em lugar nenhum deste arquivo — o portão de anonimato da casa proíbe,
 e a identidade do aparelho é o que importa, não o número.
 
-Sem GTK: as três funções são puras de propósito.
+As três funções são puras — mas o MÓDULO que as hospeda não é: importar
+``emulation_actions`` puxa o GTK no topo. Por isso a guarda abaixo. Medido no CI
+de 31/07: sem ela, este arquivo era o único que ainda derrubava a COLETA do job
+headless, e coleta que morre não vira skip visível, vira módulo sumido.
+
+O lugar certo destes casos passa a ser o job "Interface com GTK REAL", que
+seleciona exatamente os arquivos com ``exigir_gi_real``. Se um dia as três
+funções mudarem de casa para um módulo sem GTK, esta guarda sai junto — e aí a
+frase "sem GTK" deixa de ser intenção e vira fato.
 """
 from __future__ import annotations
 
 import pytest
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("classificar_joysticks vive em emulation_actions, que importa GTK")
 
 from hefesto_dualsense4unix.app.actions.emulation_actions import (
     _atributos_do_joystick,
