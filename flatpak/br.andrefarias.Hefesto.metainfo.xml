@@ -24,6 +24,22 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.5.0" date="2026-07-31">
+      <description>
+        <p>A leva da auditoria: treze agentes mediram o projeto inteiro e um
+           verificador independente reenquadrou tres dos oito achados graves. O
+           instalador voltou a rearmar as curas de modulo — quatro portoes
+           testavam permissao de escrita num arquivo de root, davam sempre falso
+           e o ciclo de desinstalar e instalar desligava seis curas em silencio
+           ate o proximo boot. Os desenhos da aba Status passaram a ocupar o vao
+           lateral que o teto elastico devolveu, e o teto chegou as seis abas que
+           faltavam. A janela parou de perder a reconciliacao quando o daemon
+           engasga, o botao Restaurar Padrao deixou de morrer em instalacao
+           empacotada, e salvar perfil passou a comparar por identidade de disco
+           em vez de texto digitado. O NOTICE parou de mentir por omissao: os
+           tres drivers de kernel GPL-2.0 embarcados agora estao declarados.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-07-30">
       <description>
         <p>A leva conduzida por agentes com arquivos particionados e um

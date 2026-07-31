@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.4.0
+Version:        0.5.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -360,6 +360,17 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Fri Jul 31 2026 Vitoria Maria <[REDACTED]> - 1:0.5.0-1
+- A leva da auditoria: treze agentes mediram o projeto e um verificador
+  independente reenquadrou tres dos oito achados graves.
+- O instalador voltou a rearmar as curas de modulo: quatro portoes testavam
+  permissao de escrita num arquivo de root, davam sempre falso, e o ciclo de
+  desinstalar e instalar desligava seis curas em silencio ate o proximo boot.
+- A aba Status passou a ocupar o vao lateral (desenhos de 180 para 360px) e o
+  teto elastico chegou as seis abas que faltavam.
+- A janela parou de perder a reconciliacao, o Restaurar Padrao deixou de morrer
+  em instalacao empacotada, e salvar perfil passou a comparar por slug.
+- O NOTICE declarou os tres drivers de kernel GPL-2.0 embarcados.
 * Thu Jul 30 2026 Vitoria Maria <[REDACTED]> - 1:0.4.0-1
 - Os tres automatismos: o R1 parou de virar Alt+Tab dentro do jogo, o perfil
   passou a guardar as outras abas, e a fonte de captura padrao voltou a ser um

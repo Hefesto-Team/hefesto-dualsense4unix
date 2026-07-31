@@ -5,6 +5,93 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-31
+
+A leva da auditoria. Ela pediu *"estude e audite o projeto, sua documentação,
+suas regras e afins"*, e no meio da rodada *"veja o que ficou pelo caminho em
+termos de sprints"*. Treze agentes mediram o projeto inteiro — nove auditores
+particionados por área e quatro verificadores independentes com poder de
+reprovar. Dos oito achados classificados como graves, o verificador confirmou
+cinco e **reenquadrou três**: nenhum era invenção, eram fatos reais com moldura
+errada.
+
+### O instalador voltou a rearmar as curas de módulo
+
+Quatro portões do `install.sh` testavam permissão de escrita (`-w`) num arquivo
+que pertence ao root. Como a regra desta casa é instalar **sem** sudo, o teste
+era sempre falso e os quatro blocos nunca rodavam. O efeito: o ciclo de
+desinstalar e instalar desligava seis curas de conexão em silêncio, até o
+próximo boot — foi o que ela sofreu em 26/07.
+
+A correção existia pronta num commit que vivia só na linhagem descartada, e foi
+portada por releitura, nunca por cherry-pick. **Provado no hardware dela:** o
+ciclo real `install → uninstall → install` rodou nesta máquina, e o log agora
+imprime as três linhas que antes nunca apareciam — `feature_retries`,
+`ds4_short_pairing_info` e `ds4_synthetic_mac` aplicados a quente.
+
+O mesmo ciclo mostrou a simetria fechada: as fontes, que o desinstalador nunca
+removia, saem; e a configuração dela fica, que é o certo.
+
+### A aba Status ocupa o espaço que sobrava
+
+Pedido dela, à 1h34 da manhã, olhando a janela maximizada: *"tem muito espaço
+vazio aqui, dava pra aumentar a largura do touchpad e lightbar e do microfone e
+alto falante pra ocuparem os espaços laterais vazios"*.
+
+O teto elástico já fazia o card crescer com a janela, mas os desenhos dentro
+dele continuavam parados no tamanho do piso. A cura separa mínimo de natural: o
+mínimo é o de sempre, e o natural cresce. Medido na tela — touchpad, lightbar,
+medidor do microfone e alto-falante saíram de 180 para 360 pixels, e o vão entre
+blocos caiu de 148 para 28. O piso do card não subiu um pixel e o card compacto
+ficou idêntico.
+
+O teto elástico também chegou às seis abas que faltavam, e a barra de bateria
+parou de pintar 1242 pixels para dizer dois dígitos.
+
+### A janela parou de mentir em quatro lugares
+
+A reconciliação do rascunho ficava presa para sempre se o daemon engasgasse no
+instante errado: as abas passavam a editar e o rodapé a salvar o perfil
+**anterior**, sem aviso nenhum. Os dois medidores mais quentes identificavam a
+aba por índice de página, contra a regra que a própria casa escreveu. O botão
+"Restaurar Padrão" estava morto em qualquer instalação empacotada. E salvar
+perfil comparava o nome digitado em vez da identidade em disco, então
+"Navegacao" sobrescrevia "Navegação" sem a pergunta que a interface promete.
+
+### O sinal de jogo ganhou de volta uma perna
+
+Medido ao vivo, com o jogo dela rodando: a autoridade de exibição se apoiava numa
+evidência só. O marcador do wrapper nunca é escrito, porque o jogo dela não passa
+pelo wrapper; e a regra de perfil não contava, porque o probe recebia apenas a
+classe da janela, enquanto os perfis dela casam por título. Agora o probe recebe
+o título e o executável, e perfil casado por título volta a valer como evidência.
+
+### A sala limpa saiu do papel
+
+O `NOTICE` parou de mentir por omissão: os três drivers de kernel GPL-2.0
+embarcados em `assets/dkms/` agora estão declarados, e o `LICENSE` e o `README`
+dizem "MIT, exceto `assets/dkms`". Entrou também a guarda que **recusa** valor de
+curva sem proveniência — com a mordida provada arrancando cada validador,
+rodando a suíte e restaurando com hash conferido.
+
+Os rótulos dos dezenove modos de gatilho perderam o nome em inglês entre
+parênteses, por decisão dela e pela regra R2. Dois ficaram, com exceção nomeada
+que não cresce nem envelhece: "Arco" e "Arma" sozinhos são ambíguos, e a palavra
+é dela.
+
+### Documentação
+
+As receitas que quebravam na primeira colagem foram corrigidas: o primeiro
+exemplo do guia de perfis ensinava um modo que o daemon rejeita, e as duas
+receitas de ligar plugin do ADR-017 eram vias mortas. O AppStream anunciava esta
+versão com a data e o texto da anterior, e a 0.3.0 havia sumido da série — as
+duas coisas curadas, com o verificador de versão passando a conferir também a
+**data**.
+
+Onze sprints novas, o estudo da auditoria e o índice das ondas — separado por
+quem precisa estar presente.
+
+
 ## [0.4.0] — 2026-07-30
 
 Três levas conduzidas por agentes com arquivos particionados e um verificador

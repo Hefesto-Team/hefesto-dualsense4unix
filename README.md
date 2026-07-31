@@ -18,7 +18,7 @@
 ---
 
 ```
-Versão: 0.4.0 (alfa)
+Versão: 0.5.0 (alfa)
 Alvo:   Linux com systemd-logind · Python 3.10+
 Licença: MIT, exceto `assets/dkms/*` (GPL-2.0) — ver LICENSE e NOTICE
 ```
@@ -72,7 +72,7 @@ Bluetooth) entram como jogadores adicionais.
 ## Instalação
 
 > **Onde esta versão mora — instale pela tag, não por branch nenhuma.** O ponto
-> recomendado é a tag da versão corrente, hoje a **`v0.4.0`**. Duas ressalvas
+> recomendado é a tag da versão corrente, hoje a **`v0.5.0`**. Duas ressalvas
 > antes de clonar:
 >
 > - **Não clone por branch.** As páginas de uso já mandaram, no passado, clonar
@@ -88,7 +88,7 @@ Bluetooth) entram como jogadores adicionais.
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.4.0
+git checkout v0.5.0
 ./install.sh
 ```
 
