@@ -34,3 +34,30 @@ OFFLINE -----(IPC ok)------> ONLINE
 (+) Botão de restart dá controle humano para quando o daemon entrou em estado patológico (hardware perdido, socket corrompido).
 (−) Polling constante custa ~1 chamada IPC a cada 2 s. Mensurado em < 1% CPU numa máquina Pop!_OS 22.04.
 (−) Threshold fixo de 3. Se algum dia o service demorar > 6 s para bootar, o usuário vê OFFLINE brevemente. Aceitável — melhor que thrashing.
+
+## Nota de verificação — 2026-07-31
+
+A máquina de 3 estados confere com o código: `RECONNECT_FAIL_THRESHOLD = 3` em
+`app/constants.py`, e o tick é `_tick_reconnect_state` em
+`app/actions/status_actions.py`, agendado com `RECONNECT_POLL_INTERVAL_S`.
+
+**Duas identificações da ADR estão erradas** e quem as copiar não acha nada:
+
+- O botão "Reiniciar daemon" roda `systemctl --user restart
+  hefesto-dualsense4unix.service`, não `hefesto.service` — o nome curto é o
+  layout legado do projeto. A unidade real está em `SERVICE_NORMAL`
+  (`daemon/service_install.py`) e é o que
+  `on_daemon_service_restart` (`app/actions/daemon_actions.py`) executa.
+- A regra de sensibilidade não é `detect_installed_units()` — função com esse
+  nome não existe em `src/`. Quem decide é
+  `ServiceInstaller().detect_installed_unit()` (singular, método de classe),
+  chamado por `_sync_restart_daemon_button_sensitivity`. Sem unidade
+  instalada, o botão fica cinza com tooltip mandando rodar o `install.sh` —
+  comportamento equivalente ao descrito, só o nome estava errado.
+
+Duas coisas que a ADR não previa e valem registro, ambas conferidas no mesmo
+arquivo: o restart roda em thread worker e devolve o resultado por
+`GLib.idle_add` (antes era `subprocess.run` síncrono na thread GTK, que
+congelava a janela por até 10 s —
+BUG-GUI-SYSTEMCTL-SYNC-NA-THREAD-GTK-01); e o botão "Reiniciar" redundante da
+aba Sistema foi removido, então este é o **caminho único** de restart pela GUI.
