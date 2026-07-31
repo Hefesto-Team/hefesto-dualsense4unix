@@ -49,6 +49,7 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     transport_label,
 )
 from hefesto_dualsense4unix.app.actions.home_actions import (
+    id_da_pagina_corrente,
     vpad_degradation_text,
     wrapper_banner_text,
 )
@@ -75,6 +76,11 @@ from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+#: Id do Glade da aba Status. Fonte única: `HefestoApp._ABA_STATUS` lê daqui, e
+#: é por ele que o tick de 10 Hz pergunta se a aba está à vista — nunca pelo
+#: número da página (EST-10).
+ABA_STATUS = "tab_status_box"
 
 
 #: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
@@ -152,6 +158,90 @@ def texto_de_contagem(contagem: ContagemDeControles) -> str:
         # regime não deveria alcançar a tela — mas "0 do Hefesto" seria pior.
         return _("{ext} (nenhum do Hefesto)").format(ext=parte_ext)
     return _("{n} do Hefesto + {ext}").format(n=adotados, ext=parte_ext)
+
+
+def _lista_de_jogadores(quantos: int) -> str:
+    """``"P2, P3 e P4"`` — quem saiu, por nome, a partir de P2.
+
+    O P1 NUNCA entra: ele não é jogador do co-op (o vpad dele tem observável
+    próprio, `steam_input.vpad_suspenso`), e o contador do daemon já conta só
+    os SECUNDÁRIOS (`gamepad.steam_input_coop_derrubados`).
+    """
+    nomes = [f"P{n}" for n in range(2, 2 + max(0, quantos))]
+    if len(nomes) <= 1:
+        return "".join(nomes)
+    return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+
+
+def texto_do_coop_derrubado(bloco_coop: object) -> str:
+    """Frase do banner quando o jogo derruba o co-op — ``""`` quando não há.
+
+    CONTAGEM-E-COOP-01 (E1a). O daemon publica o fato desde 29/07
+    (`ipc_handlers.py:1657-1662`: `coop.derrubado_por_steam_input` e
+    `coop.secundarios_derrubados`) e NENHUMA linha da janela o lia. Pior que
+    calada, a janela ficava enganosa: `CoopManager.disable()` não zera
+    `coop_enabled`, então o `state_full` segue publicando `coop.enabled=True`
+    com `coop.players=1` — de fora, indistinguível de "ela desligou o co-op".
+
+    A frase tem de dizer o PREÇO, não o fato, e as três partes são
+    obrigatórias porque cada uma desfaz uma mentira medida:
+
+    - o NÚMERO vem de ``secundarios_derrubados``, nunca de ``players``
+      (que já voltou a 1 no tique seguinte — é o defeito original);
+    - a NEGAÇÃO ("não foi você") desfaz a ambiguidade do `enabled=True`;
+    - a PROMESSA de volta é verdadeira: `resume_vpads_after_steam_input`
+      chama `coop.sync(force=True)` (`gamepad.py:598-608`), e mesmo pelo
+      caminho manual o ciclo normal recria os secundários porque `disable()`
+      não desligou `coop_enabled`.
+
+    Devolve ``""`` também quando o gatilho está aceso mas o número é zero: as
+    duas mortes do contador (`gamepad.py:565-579` e `:1401-1411`) existem para
+    o aviso não sobreviver ao retorno do co-op, e aviso pendurado sem número
+    seria a mentira nova que elas evitam.
+
+    QUEM saiu (``P2, P3 e P4``) fica só no tooltip, e é medição, não gosto: o
+    banner é uma linha só e os dois badges podem acender juntos. Medido no
+    `header_bar` do glade, com a janela dela em 953px de largura (a de agora):
+    banner limpo 397px, só o aviso 815px, só a vibração travada 548px — e os
+    DOIS juntos **966px**, 13px além da janela. Treze pixels não são folga
+    (lição da CI de 29/07, que mede com outras fontes), e tirar a lista de
+    jogadores da linha derruba o par para 890px — 63px de sobra. As três
+    partes obrigatórias — o número, a negação e a promessa de volta —
+    continuam todas aqui.
+    """
+    if not isinstance(bloco_coop, dict):
+        return ""
+    if not bool(bloco_coop.get("derrubado_por_steam_input")):
+        return ""
+    quantos = bloco_coop.get("secundarios_derrubados")
+    if not isinstance(quantos, int) or isinstance(quantos, bool) or quantos <= 0:
+        return ""
+    if quantos == 1:
+        return _("1 jogador saiu — não foi você; volta sozinho")
+    return _("{n} jogadores saíram — não foi você; voltam sozinhos").format(
+        n=quantos
+    )
+
+
+def tooltip_do_coop_derrubado(bloco_coop: object) -> str:
+    """O preço por extenso, para o tooltip do badge — ``""`` sem queda."""
+    if not isinstance(bloco_coop, dict) or not texto_do_coop_derrubado(bloco_coop):
+        return ""
+    quantos = int(bloco_coop["secundarios_derrubados"])
+    quem = _lista_de_jogadores(quantos)
+    if quantos == 1:
+        return _(
+            "O jogo assumiu o controle: o Hefesto saiu da frente dele, e por "
+            "isso {quem} saiu do co-op.\n\n"
+            "Você não desligou nada — ele volta sozinho quando você fechar o "
+            "jogo."
+        ).format(quem=quem)
+    return _(
+        "O jogo assumiu o controle: o Hefesto saiu da frente dele, e por isso "
+        "{quem} saíram do co-op.\n\n"
+        "Você não desligou nada — os {n} voltam sozinhos quando você fechar o "
+        "jogo."
+    ).format(quem=quem, n=quantos)
 
 
 class StatusActionsMixin(WidgetAccessMixin):
@@ -627,6 +717,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         rumble_badge.hide()
         header_bar.pack_end(rumble_badge, False, False, 6)
         self._rumble_badge = rumble_badge
+        # CONTAGEM-E-COOP-01 (E1a): o aviso de que o JOGO derrubou o co-op.
+        # Mora no banner pela MESMA razão escrita acima para o badge de
+        # vibração: quem está jogando não tem a aba Status aberta, e o co-op
+        # some sem uma palavra. Aqui ele é visível de qualquer aba.
+        coop_badge = Gtk.Label()
+        coop_badge.set_use_markup(True)
+        coop_badge.set_no_show_all(True)
+        coop_badge.hide()
+        header_bar.pack_end(coop_badge, False, False, 6)
+        self._coop_badge = coop_badge
 
     @staticmethod
     def _short_target_label(label: str) -> str:
@@ -1103,6 +1203,25 @@ class StatusActionsMixin(WidgetAccessMixin):
         )
         badge.show()
 
+    def _update_coop_badge(self, state: dict[str, Any]) -> None:
+        """Avisa no banner que o JOGO derrubou o co-op — e some quando ele volta.
+
+        CONTAGEM-E-COOP-01 (E1a). O ramo que ESCONDE é tão obrigatório quanto o
+        que mostra: as duas mortes do contador no daemon (`gamepad.py:565-579`
+        e `:1401-1411`) existem para o aviso não sobreviver ao retorno dos
+        jogadores, e um badge pendurado seria a mentira nova que elas evitam.
+        """
+        badge = getattr(self, "_coop_badge", None)
+        if badge is None:
+            return
+        texto = texto_do_coop_derrubado(state.get("coop"))
+        if not texto:
+            badge.hide()
+            return
+        badge.set_markup(f'<span foreground="#ff5555">{texto}</span>')
+        badge.set_tooltip_text(tooltip_do_coop_derrubado(state.get("coop")))
+        badge.show()
+
     def _refresh_target_tabs(self) -> None:
         """Re-popula as abas por-controle para exibir os valores do alvo novo."""
         for nome in ("_refresh_lightbar_from_draft", "_refresh_triggers_from_draft"):
@@ -1263,11 +1382,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     def _tick_live_state(self) -> bool:
         """Roda a 10 Hz: dispara RPC em thread worker; nunca bloqueia GTK."""
         # BUG-STATUS-TICK-HIDDEN-TAB-01: sticks/glyphs/gatilhos só existem na
-        # aba Status (página 1) — com outra aba visível, 10 Hz de state_full
-        # só saturam o worker compartilhado. O poller lento (2 Hz) segue vivo
-        # para header/reconnect.
+        # aba Status — com outra aba à vista, 10 Hz de state_full só saturam o
+        # worker compartilhado. O poller lento (2 Hz) segue vivo para
+        # header/reconnect.
         notebook = self._get("main_notebook")
-        if notebook is not None and notebook.get_current_page() != 1:
+        if notebook is not None and id_da_pagina_corrente(notebook) != ABA_STATUS:
             return True
         # BUG-LIVE-TICK-NO-INFLIGHT-GUARD-01: pula este tick se o anterior ainda
         # não retornou — evita acúmulo ilimitado no executor de 1 worker.
@@ -1601,6 +1720,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         # com throttle próprio — alimenta os botões de externos do seletor.
         self._maybe_fetch_externals()
         self._update_rumble_badge(state)
+        self._update_coop_badge(state)
         self._sync_coop_governa_luzes(state)
         connected = bool(state.get("connected"))
         transport = state.get("transport") or "—"
@@ -1717,10 +1837,13 @@ class StatusActionsMixin(WidgetAccessMixin):
 
 
 __all__ = [
+    "ABA_STATUS",
     "ALL_BUTTONS",
     "GRID_BOTOES",
     "L2_R2_THRESHOLD",
     "ContagemDeControles",
     "StatusActionsMixin",
     "texto_de_contagem",
+    "texto_do_coop_derrubado",
+    "tooltip_do_coop_derrubado",
 ]

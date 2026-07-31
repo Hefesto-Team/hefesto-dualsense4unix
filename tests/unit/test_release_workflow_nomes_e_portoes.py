@@ -17,6 +17,13 @@ release.yml, os dois invisíveis para qualquer teste desta casa até aqui:
     informavam e NÃO impediam a publicação: ci.yml vermelho e release verde
     conviviam.
 
+(C) medido em 31/07: o guarda entrou no `needs` do `github-release` e em mais
+    nenhum. O job `pypi` continuava com `needs: build`, e o `if` que o deixa
+    inerte (`vars.PYPI_PUBLISH`) esconde o buraco em vez de fechá-lo: no dia em
+    que a variável existir, o wheel sobe a um índice que não aceita reenvio da
+    mesma versão, com o ci.yml vermelho. Por isso o portão deixou de nomear um
+    job e passou a varrer TODO job que entrega para fora.
+
 Não há como rodar GitHub Actions da máquina de desenvolvimento, então a prova
 é estrutural: o YAML é LIDO e afirmado. É o mesmo espírito do
 tests/unit/test_check_packaging_parity.py — travar o que só se descobre em
@@ -36,6 +43,26 @@ RELEASE_YML = REPO_ROOT / ".github" / "workflows" / "release.yml"
 
 # O job do release.yml que efetivamente PUBLICA no GitHub.
 JOB_PUBLICACAO = "github-release"
+
+# Entregar PARA FORA é pôr o artefato na mão de quem não é este run. O
+# `upload-artifact` não conta: ele só passa arquivo de um job para outro dentro
+# do mesmo run, e some com a retenção.
+PUBLICACAO_EM_SHELL = (
+    "gh release create",
+    "gh release upload",
+    "gh release edit",
+    "twine upload",
+)
+PUBLICACAO_EM_USES = (
+    "pypi-publish",
+    "action-gh-release",
+    "release-action",
+)
+
+# Quem publica hoje. A lista não fecha o portão — o detector acima é que manda —
+# mas impede que ele fique mudo: se um destes deixar de ser reconhecido, o
+# detector quebrou e o portão passa a aprovar tudo em silêncio.
+PUBLICADORES_DE_HOJE = ("github-release", "pypi")
 
 
 @pytest.fixture(scope="module")
@@ -65,6 +92,50 @@ def _needs(workflow: dict[str, Any], job: str) -> list[str]:
     assert job in jobs, f"job '{job}' desapareceu do release.yml"
     bruto = jobs[job].get("needs", [])
     return [bruto] if isinstance(bruto, str) else list(bruto)
+
+
+def _needs_transitivos(workflow: dict[str, Any], job: str) -> set[str]:
+    """Fecho dos `needs`: no Actions o job só roda se TODO o fecho passar.
+
+    Depender do guarda por intermédio de outro job é tão válido quanto depender
+    dele direto — e é por isso que o portão olha o fecho, não a linha.
+    """
+    alcancados: set[str] = set()
+    fila = list(_needs(workflow, job))
+    while fila:
+        atual = fila.pop()
+        if atual in alcancados:
+            continue
+        alcancados.add(atual)
+        fila.extend(_needs(workflow, atual))
+    return alcancados
+
+
+def _guardas_de_ci(workflow: dict[str, Any]) -> set[str]:
+    return {
+        nome
+        for nome in workflow.get("jobs", {})
+        if "ci.yml/runs" in _run_concatenado(workflow, nome)
+    }
+
+
+def _publica_para_fora(workflow: dict[str, Any], job: str) -> bool:
+    dados = workflow.get("jobs", {}).get(job, {})
+    # `environment:` é declaração de deploy: quem tem ambiente entrega a alguém.
+    if dados.get("environment"):
+        return True
+    if any(marca in _run_concatenado(workflow, job) for marca in PUBLICACAO_EM_SHELL):
+        return True
+    usadas = " ".join(
+        str(passo.get("uses", "")) for passo in _passos_do_job(workflow, job)
+    )
+    return any(marca in usadas for marca in PUBLICACAO_EM_USES)
+
+
+def _jobs_que_publicam(workflow: dict[str, Any]) -> set[str]:
+    return {
+        nome for nome in workflow.get("jobs", {}) if _publica_para_fora(workflow, nome)
+    }
 
 
 # ── Defeito (A): versão no nome do bundle Flatpak ────────────────────────────
@@ -167,11 +238,7 @@ def test_existe_um_guarda_que_consulta_o_ci_da_mesma_sha(
 ) -> None:
     """Algum job do release.yml tem de PERGUNTAR a conclusão do ci.yml."""
     jobs = release_workflow.get("jobs", {})
-    guardas = [
-        nome
-        for nome in jobs
-        if "ci.yml/runs" in _run_concatenado(release_workflow, nome)
-    ]
+    guardas = sorted(_guardas_de_ci(release_workflow))
     assert guardas, (
         "nenhum job consulta os runs do ci.yml. Sem isso os nove portões que "
         "só existem no ci.yml informam e não impedem a publicação."
@@ -196,14 +263,52 @@ def test_github_release_depende_do_guarda_de_ci(
     release_workflow: dict[str, Any],
 ) -> None:
     """O job que publica tem de esperar o guarda — senão ele é decorativo."""
-    guardas = {
-        nome
-        for nome in release_workflow.get("jobs", {})
-        if "ci.yml/runs" in _run_concatenado(release_workflow, nome)
-    }
+    guardas = _guardas_de_ci(release_workflow)
     deps_do_job = set(_needs(release_workflow, JOB_PUBLICACAO))
     assert guardas & deps_do_job, (
         f"'{JOB_PUBLICACAO}' depende de {sorted(deps_do_job)} e de nenhum "
         f"guarda de CI (candidatos: {sorted(guardas)}). Um ci.yml vermelho "
         "publicaria a release."
+    )
+
+
+def test_todo_job_que_entrega_para_fora_depende_do_guarda_de_ci(
+    release_workflow: dict[str, Any],
+) -> None:
+    """Mordida: tirar o guarda do `needs` de QUALQUER publicador reprova.
+
+    O portão antigo nomeava só o `github-release`, e por isso não viu o `pypi`,
+    que entrega a um índice sem volta. Aqui não há nome de job: quem publica é
+    quem o detector achar, e todos têm de ter o guarda no fecho dos `needs`.
+    """
+    guardas = _guardas_de_ci(release_workflow)
+    assert guardas, "nenhum guarda de CI no release.yml"
+
+    desguardados = {
+        nome: sorted(_needs_transitivos(release_workflow, nome))
+        for nome in sorted(_jobs_que_publicam(release_workflow))
+        if not guardas & _needs_transitivos(release_workflow, nome)
+    }
+    assert desguardados == {}, (
+        "job que entrega artefato para fora sem depender do guarda de CI "
+        f"(guardas: {sorted(guardas)}): {desguardados}. Um ci.yml vermelho "
+        "publicaria por esse caminho."
+    )
+
+
+def test_o_detector_de_publicacao_enxerga_quem_publica_hoje(
+    release_workflow: dict[str, Any],
+) -> None:
+    """Detector cego aprova tudo: o teste acima não pode varrer conjunto vazio."""
+    jobs = release_workflow.get("jobs", {})
+    publicadores = _jobs_que_publicam(release_workflow)
+    assert publicadores, "o detector não achou publicador nenhum no release.yml"
+
+    invisiveis = [
+        nome for nome in PUBLICADORES_DE_HOJE if nome in jobs and nome not in publicadores
+    ]
+    assert invisiveis == [], (
+        f"o detector deixou de reconhecer {invisiveis} como publicação: as "
+        "marcas em PUBLICACAO_EM_SHELL/PUBLICACAO_EM_USES precisam acompanhar "
+        "o que o job passou a usar."
     )

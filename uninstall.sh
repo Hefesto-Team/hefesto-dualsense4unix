@@ -195,8 +195,8 @@ log() { printf '[uninstall] %s\n' "$*"; }
 # ---------------------------------------------------------------------------
 # Simétrico ao acquire_sudo do install.sh. Vários passos usam sudo (remoção das
 # udev rules + a cura do storm em /etc/modprobe.d, o applet COSMIC em /usr/local,
-# o watcher dsx-recover, o `apt remove`). Sem cachear a credencial no começo, cada
-# um pedia a senha por conta própria e, sem TTY, FALHAVA — deixando a cura .conf e
+# o `apt remove`). Sem cachear a credencial no começo, cada um pedia a senha por
+# conta própria e, sem TTY, FALHAVA — deixando a cura .conf e
 # o binário do applet para trás (o `sudo rm ... || true` do applet mascarava a
 # falha; o bloco udev abortava com "sudo recusado/sem TTY"). Aqui primamos uma vez
 # e mantemos a credencial viva durante todo o uninstall.
@@ -236,8 +236,8 @@ _cleanup_sudo_keepalive() {
 trap _cleanup_sudo_keepalive EXIT
 
 # Prime a credencial só se algum passo com root vai rodar: remoção de udev
-# (default), applet COSMIC instalado, watcher dsx-recover, pacote .deb ou os
-# artefatos de plataforma (FastConnectable do BlueZ / cmdline registrado).
+# (default), applet COSMIC instalado, pacote .deb ou os artefatos de plataforma
+# (FastConnectable do BlueZ / cmdline registrado).
 _NEEDS_SUDO=0
 [[ "${REMOVE_UDEV}" -eq 1 ]] && _NEEDS_SUDO=1
 # BUG-UNINSTALL-STORM-CONF-ORPHAN-KEEP-UDEV-01: storm.conf sai SEMPRE (mesmo
@@ -247,7 +247,6 @@ _NEEDS_SUDO=0
 grep -qsF '# >>> hefesto FastConnectable >>>' /etc/bluetooth/main.conf 2>/dev/null && _NEEDS_SUDO=1
 [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf" ]] && _NEEDS_SUDO=1
 [[ -e "${APPLET_BIN}" || -e "${APPLET_DESKTOP}" || -e "${APPLET_ICON}" || -e "${APPLET_ICON_PNG}" ]] && _NEEDS_SUDO=1
-[[ -e /etc/systemd/system/hefesto-dsx-recover.service ]] && _NEEDS_SUDO=1
 dpkg -l "${APP_ID}" >/dev/null 2>&1 && _NEEDS_SUDO=1
 # Onda R: bloco JustWorksRepairing (main.conf/drop-in), agente de pareamento
 # (unit de sistema) e restauração do bluez (apt) — todos pedem root.
@@ -354,14 +353,6 @@ rm -f "${HOME}/.config/systemd/user/hefesto-steam-input-guard.path" \
       "${HOME}/.config/systemd/user/hefesto-steam-input-guard.service"
 systemctl --user daemon-reload >/dev/null 2>&1 || true
 
-# Watcher de auto-recuperação (serviço de sistema/root) — FEAT-DSX-RECOVER-01
-if [[ -e /etc/systemd/system/hefesto-dsx-recover.service ]]; then
-    log "removendo watcher hefesto-dsx-recover.service (precisa sudo)"
-    sudo systemctl disable --now hefesto-dsx-recover.service >/dev/null 2>&1 || true
-    sudo rm -f /etc/systemd/system/hefesto-dsx-recover.service /usr/local/sbin/dsx_recover.sh || true
-    sudo systemctl daemon-reload >/dev/null 2>&1 || true
-fi
-
 # Launcher standalone "DualSense Fix (dsx)" — REMOVIDO do projeto (teoria de HW
 # refutada; a cura de raiz do storm está integrada). Limpa resíduos: o
 # --install-launcher gravava no ~/.local, e o .deb em /usr/share.
@@ -396,6 +387,16 @@ fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q "${HOME}/.local/share/applications" 2>/dev/null || true
+fi
+
+# Fontes da identidade visual (Space Grotesk + JetBrains Mono) — simétrico ao
+# passo 4e do install.sh, que chama o mesmo script sem flag. O `--remove` apaga
+# SÓ o diretório que este projeto criou (~/.local/share/fonts/hefesto-dualsense4unix):
+# família que veio de pacote da distribuição sai pelo gerenciador de pacotes,
+# nunca daqui — outra coisa pode depender dela.
+if [[ -r "${ROOT_DIR}/scripts/install_fonts.sh" ]]; then
+    log "removendo as fontes que o install instalou (best-effort)"
+    bash "${ROOT_DIR}/scripts/install_fonts.sh" --remove || true
 fi
 
 # Applet COSMIC nativo (Rust): instalado em /usr/local + /usr/share via sudo
@@ -465,8 +466,14 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
     # Falha visível se sudo não estiver disponível, com idempotência em rm -f.
     log "removendo udev rules + modules-load uinput (sudo)"
     if ! sudo -n true 2>/dev/null; then
+        # NUNCA sugerir rodar este script inteiro sob sudo: o HOME viraria
+        # /root, e os alvos da usuária são montados a partir de ${HOME} (units
+        # --user, atalho, wrapper, símbolo no PATH, drop-ins do WirePlumber). O
+        # /etc sairia limpo, o HOME real ficaria intacto e a tela diria que
+        # desinstalou.
         log "ERRO: sudo recusado/sem TTY — udev rules NÃO foram removidas."
-        log "      rode: sudo bash $0 ${*:-} (ou re-execute interativamente)"
+        log "      reexecute ./uninstall.sh ${*:-} nesta sessão, de forma interativa"
+        log "      (a senha é pedida uma vez), ou exporte SUDO_ASKPASS antes de rodar."
     else
         # 73/74 saíram do repo (2026-07-18) mas o rm fica: limpa instalações antigas.
         sudo rm -f /etc/udev/rules.d/70-ps5-controller.rules \
@@ -512,8 +519,14 @@ if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
         sudo groupdel hefesto 2>/dev/null || true
     fi
 else
+    # A lista abaixo é escrita por extenso, sem chaves de expansão do shell, para
+    # que cada regra apareça com o nome exato — a versão com {70,72,...} escondia
+    # as 82/83/84, que nunca foram citadas aqui.
     log "udev rules preservadas (--keep-udev). Para remover depois:"
-    log "  sudo rm /etc/udev/rules.d/{70,72,73,74,75}-*ps5*.rules /etc/udev/rules.d/7{6,7,8}-dualsense*.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    log "  sudo rm /etc/udev/rules.d/70-ps5-controller.rules /etc/udev/rules.d/71-uinput.rules /etc/udev/rules.d/71-uhid.rules /etc/udev/rules.d/72-ps5-controller-autosuspend.rules /etc/udev/rules.d/75-ps5-controller-disable-usb-audio.rules /etc/udev/rules.d/76-dualsense-touchpad-libinput-ignore.rules /etc/udev/rules.d/77-dualsense-leds.rules /etc/udev/rules.d/78-dualsense-motion-not-joystick.rules /etc/udev/rules.d/79-external-controller-leds.rules /etc/udev/rules.d/80-motion-joydev-hide.rules /etc/udev/rules.d/81-hefesto-usb-power.rules /etc/udev/rules.d/81-hefesto-usb-host-power.rules /etc/udev/rules.d/82-nintendo-pro-nosniff.rules /etc/udev/rules.d/83-hefesto-bond-snapshot.rules /etc/udev/rules.d/84-nintendo-pro-variant.rules /etc/modules-load.d/hefesto-dualsense4unix.conf /etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"
+    log "  as 82 e 83 chamam alvos por RUN+= — os alvos ficaram junto com elas."
+    log "  Ao remover as regras, remova também:"
+    log "  sudo rm /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh /etc/systemd/system/hefesto-bt-bonds-snapshot.service"
 fi
 
 # ---------------------------------------------------------------------------
@@ -619,6 +632,16 @@ fi
 # janela de captura ficou ligada), scripts e o diretório de snapshots de bonds.
 # ATENÇÃO deliberada: os snapshots contêm LinkKeys (credenciais) — remoção
 # default com aviso; quem quiser preservar copia antes.
+#
+# BUG-UNINSTALL-KEEP-UDEV-ALVO-ORFAO-01: as regras 82 e 83 são regras-cola —
+# existem só para chamar um alvo por RUN+= (bt_nosniff_now.sh e a unit de
+# snapshot). Este bloco apagava os dois alvos INCONDICIONALMENTE, inclusive com
+# --keep-udev, e as regras preservadas passavam a falhar o RUN+= a cada device
+# HID por Bluetooth — ruído permanente no journal, e as duas curas (o Pro sem
+# sniff, o snapshot de bonds na borda) morriam em silêncio. Alvo de regra
+# preservada segue a regra: sai quando ela sai, fica quando ela fica. O resto
+# desta camada (timers, drop-ins, watchdog, snapshots) tem ciclo de vida
+# próprio e continua saindo sempre.
 if sudo -n true 2>/dev/null; then
     if [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
           || -e /etc/systemd/system/hefesto-bt-health-watchdog.timer ]]; then
@@ -626,8 +649,7 @@ if sudo -n true 2>/dev/null; then
         sudo systemctl disable --now hefesto-bt-bonds-snapshot.timer \
             hefesto-bt-health-watchdog.timer >/dev/null 2>&1 || true
     fi
-    sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
-        /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
+    sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         /etc/systemd/system/hefesto-bt-health-watchdog.service \
         /etc/systemd/system/hefesto-bt-health-watchdog.timer 2>/dev/null || true
     if [[ -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
@@ -642,13 +664,21 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sysctl.d/99-hefesto-bt-coredump.conf
         sudo sysctl --system >/dev/null 2>&1 || true
     fi
-    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
-        /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_health_watchdog.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_crash_capture.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh \
-        /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh \
         /usr/local/lib/hefesto-dualsense4unix/bt_rebind_orphans.sh 2>/dev/null || true
+    # Os alvos das regras-cola 82 e 83, no mesmo gate das regras.
+    if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
+        sudo rm -f /etc/systemd/system/hefesto-bt-bonds-snapshot.service \
+            /usr/local/lib/hefesto-dualsense4unix/bt_bonds_snapshot.sh \
+            /usr/local/lib/hefesto-dualsense4unix/bt_nosniff_now.sh 2>/dev/null || true
+    else
+        log "alvos das regras 82/83 preservados (--keep-udev): bt_nosniff_now.sh,"
+        log "  bt_bonds_snapshot.sh e hefesto-bt-bonds-snapshot.service — sem eles as"
+        log "  regras que ficaram falhariam o RUN+= a cada device HID por Bluetooth."
+    fi
     # BT-NINTENDO-ACTIVE-01: reverter a link policy (volta o SNIFF default) e o
     # nome do adaptador (tira o prefixo "Nintendo"). Best-effort; vale já.
     _hci="$(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1; exit}')"
@@ -670,7 +700,14 @@ if sudo -n true 2>/dev/null; then
         log "removendo snapshots de bonds em /var/lib/hefesto-dualsense4unix/bt-bonds"
         log "  (contêm LinkKeys; se quiser preservar, copie ANTES de rodar o uninstall)"
         sudo rm -rf /var/lib/hefesto-dualsense4unix/bt-bonds
-        sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
+        # O diretório-pai só sai junto com a unit de snapshot: ela declara
+        # ReadWritePaths=/var/lib/hefesto-dualsense4unix sem o prefixo `-`, e o
+        # systemd RECUSA iniciar a unit se o caminho não existir. Preservada a
+        # unit (--keep-udev, alvo da regra 83), o pai fica — vazio, já sem as
+        # credenciais.
+        if [[ "${REMOVE_UDEV}" -eq 1 ]]; then
+            sudo rmdir /var/lib/hefesto-dualsense4unix 2>/dev/null || true
+        fi
     fi
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
 elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \

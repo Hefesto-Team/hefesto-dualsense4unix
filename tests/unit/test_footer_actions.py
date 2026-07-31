@@ -261,3 +261,130 @@ class TestOnSaveProfile:
             stub.on_save_profile()
 
         assert any("meu_novo" in msg for msg in stub._toasted)
+
+
+# ---------------------------------------------------------------------------
+# JANELA-FIEL-01/E4 — o conflito de perfil é por SLUG, não por nome cru
+# ---------------------------------------------------------------------------
+
+
+class TestSaveProfileConflitoPorSlug:
+    """R-10 (auditoria 23/07): a identidade de um perfil em disco é o SLUG.
+
+    `save_profile` grava `<slugify(name)>.json`, e o `slugify` tira acento e
+    baixa a caixa. O gate deste rodapé comparava STRING CRUA, então digitar
+    "Navegacao" com a "Navegação" dela em disco (prioridade 50, com regra de
+    janela e de processo) não casava: o diálogo de sobrescrita não aparecia e
+    `navegacao.json` era regravado em silêncio — com `MatchAny()` e prioridade
+    recalculada, virando um catch-all a mais, que é a doença da
+    AUTOMATISMO-MORTO-01. Cinco dos quinze perfis dela colidem por acento ou
+    por caixa.
+
+    MORDIDA: os testes de hoje só exercitavam nome IDÊNTICO ("existente" contra
+    "existente"), que passa com a cura arrancada. Aqui o par é acentuado contra
+    sem acento (e maiúscula contra minúscula): com `nome in existentes` de
+    volta, o diálogo nunca é chamado e o `save_profile` é — reprova nas duas.
+    """
+
+    @staticmethod
+    def _dialogos(resposta: bool) -> MagicMock:
+        mock_dialogs = MagicMock()
+        mock_dialogs.prompt_overwrite_existing.return_value = resposta
+        return mock_dialogs
+
+    @pytest.mark.parametrize(
+        ("em_disco", "digitado"),
+        [
+            ("Navegação", "Navegacao"),
+            ("Navegação", "navegação"),
+            ("FPS", "fps"),
+            ("Ação", "acao"),  # sem acento é o ponto do caso (noqa-acento)
+            ("Meu Perfil", "meu-perfil"),
+        ],
+    )
+    def test_pergunta_antes_de_sobrescrever_quem_disputa_o_arquivo(
+        self, em_disco: str, digitado: str
+    ) -> None:
+        stub = _make_stub()
+        mock_dialogs = self._dialogos(False)
+        mock_dialogs.prompt_profile_name.return_value = digitado
+
+        with (
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch(
+                "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
+                return_value=[_make_profile(em_disco)],
+            ),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile") as mock_save,
+        ):
+            stub.on_save_profile()
+
+        assert mock_dialogs.prompt_overwrite_existing.called, (
+            "o arquivo dela seria regravado sem uma pergunta"
+        )
+        assert not mock_save.called, "recusar a sobrescrita não pode gravar nada"
+
+    def test_o_dialogo_cita_o_perfil_do_disco_e_nao_o_digitado(self) -> None:
+        """Quem some é a "Navegação" dela — o diálogo tem de dizer o nome dela."""
+        stub = _make_stub()
+        mock_dialogs = self._dialogos(False)
+        mock_dialogs.prompt_profile_name.return_value = "Navegacao"
+
+        with (
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch(
+                "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
+                return_value=[_make_profile("Navegação")],
+            ),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile"),
+        ):
+            stub.on_save_profile()
+
+        _, kwargs = mock_dialogs.prompt_overwrite_existing.call_args
+        assert kwargs["name"] == "Navegação"
+
+    def test_nome_que_nao_disputa_arquivo_nenhum_salva_direto(self) -> None:
+        """Sem colisão de slug não há pergunta — o gate não pode virar pedágio."""
+        stub = _make_stub()
+        salvos: list[str] = []
+        mock_dialogs = self._dialogos(True)
+        mock_dialogs.prompt_profile_name.return_value = "Corrida"
+
+        def fake_save(profile: Profile) -> Path:
+            salvos.append(profile.name)
+            return Path(f"/tmp/{profile.name}.json")
+
+        with (
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch(
+                "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
+                return_value=[_make_profile("Navegação")],
+            ),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+        ):
+            stub.on_save_profile()
+
+        assert not mock_dialogs.prompt_overwrite_existing.called
+        assert salvos == ["Corrida"]
+
+    def test_confirmar_a_sobrescrita_grava(self) -> None:
+        stub = _make_stub()
+        salvos: list[str] = []
+        mock_dialogs = self._dialogos(True)
+        mock_dialogs.prompt_profile_name.return_value = "Navegacao"
+
+        def fake_save(profile: Profile) -> Path:
+            salvos.append(profile.name)
+            return Path(f"/tmp/{profile.name}.json")
+
+        with (
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.gui_dialogs", mock_dialogs),
+            patch(
+                "hefesto_dualsense4unix.app.actions.footer_actions.load_all_profiles",
+                return_value=[_make_profile("Navegação")],
+            ),
+            patch("hefesto_dualsense4unix.app.actions.footer_actions.save_profile", side_effect=fake_save),  # noqa: E501
+        ):
+            stub.on_save_profile()
+
+        assert salvos == ["Navegacao"]

@@ -274,9 +274,26 @@ class TestDocumentacaoHonesta:
     """(D) — docs/usage/instalacao.md não pode mentir nos pontos medidos."""
 
     def test_aponta_a_versao_corrente_e_nao_a_branch_antiga(self) -> None:
+        """A tag citada sai do `pyproject.toml`, não de um número escrito aqui.
+
+        Este teste já foi a muralha que ele existe para impedir: travava
+        `git checkout v0.3.0` como texto, então corrigir a página para a
+        release nova REPROVAVA — e o defeito que ele deveria pegar (a página
+        ficar uma release atrás) era exatamente o que ele protegia. Derivar a
+        versão da fonte única inverte isso.
+
+        Mordida: devolver `v0.3.0` à página, ou publicar a 0.5.0 sem tocar
+        nela, reprova aqui.
+        """
+        versao = re.search(
+            r'^version\s*=\s*"([^"]+)"',
+            (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        assert versao is not None, "pyproject.toml sem campo version"
         assert "sprint/harmonia-uhid" not in DOC
         assert "alfa 0.1.1" not in DOC
-        assert "git checkout v0.3.0" in DOC
+        assert f"git checkout v{versao.group(1)}" in DOC
 
     def test_no_udev_nao_promete_cobrir_todo_etc(self) -> None:
         assert "e todos os passos que escrevem em `/etc`" not in DOC, (

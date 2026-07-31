@@ -56,6 +56,57 @@ HOME_POLL_INTERVAL_MS = 2000
 #: é conferido no próprio tick, por carimbo de tempo — sem thread nem timer novo.
 HOME_INFLIGHT_TIMEOUT_S = 3 * HOME_POLL_INTERVAL_MS / 1000.0
 
+#: Id do Glade da aba Início. É por ele que o poller pergunta se está à vista —
+#: nunca pelo número da página (EST-10).
+ABA_INICIO = "tab_home_box"
+
+
+def id_da_pagina(pagina: Any) -> str | None:
+    """Id do Glade de uma página do notebook, desembrulhando o rolador.
+
+    ``_wrap_notebook_pages_in_scroll`` envolve oito das nove páginas num
+    ``GtkScrolledWindow``, que por sua vez pode inserir um ``GtkViewport`` entre
+    ele e a página — então o widget que o notebook devolve NÃO é a página do
+    Glade, e sem desembrulhar nenhuma aba seria reconhecida.
+
+    Devolve ``None`` para o que não é ``Gtk.Buildable`` (dublê de teste), em vez
+    de levantar.
+
+    Mora neste módulo por causa do grafo de import: ``status_actions`` importa
+    ``home_actions`` (nunca o contrário) e ``app.py`` importa os dois — é o
+    único ponto onde os três chegam sem ciclo.
+    """
+    from gi.repository import Gtk
+
+    alvo = pagina
+    if isinstance(alvo, Gtk.ScrolledWindow):
+        filho = alvo.get_child()
+        if isinstance(filho, Gtk.Viewport):
+            filho = filho.get_child()
+        if filho is not None:
+            alvo = filho
+    if not isinstance(alvo, Gtk.Buildable):
+        return None
+    nome = Gtk.Buildable.get_name(alvo)
+    return str(nome) if nome is not None else None
+
+
+def id_da_pagina_corrente(notebook: Any) -> str | None:
+    """Id do Glade da página à vista — o que os pollers têm de perguntar.
+
+    EST-10: identificar a aba pelo ÍNDICE passa a apontar para a aba errada, em
+    silêncio, no dia em que alguém inserir, remover ou reordenar uma página no
+    Glade — sem exceção, sem log, só o relógio errado rodando na aba errada. O
+    id do Glade não muda quando a ordem ou o rótulo mudam.
+    """
+    if notebook is None:
+        return None
+    indice = notebook.get_current_page()
+    if not isinstance(indice, int) or indice < 0:
+        return None
+    return id_da_pagina(notebook.get_nth_page(indice))
+
+
 #: HARM-01: a folga da troca de modo mora em `mode_transition` (dono único) —
 #: aqui ela vale também para o co-op e a máscara, que criam/desmontam os mesmos
 #: uinput e não cabem nos 0.25s default do call_async.
@@ -786,14 +837,14 @@ class HomeActionsMixin(WidgetAccessMixin):
         box.pack_start(frame_sess, False, False, 0)
         box.show_all()
 
-        # Poller: só age com a aba Início visível (página 0).
+        # Poller: só age com a aba Início à vista (identificada pelo id do Glade).
         GLib.timeout_add(HOME_POLL_INTERVAL_MS, self._tick_home_state)
 
     # --- refresh ----------------------------------------------------------
 
     def _tick_home_state(self) -> bool:
         notebook = self._get("main_notebook")
-        if notebook is not None and notebook.get_current_page() == 0:
+        if notebook is not None and id_da_pagina_corrente(notebook) == ABA_INICIO:
             self._refresh_home_tab()
         return True  # timer permanente
 
@@ -1388,6 +1439,7 @@ class HomeActionsMixin(WidgetAccessMixin):
 
 
 __all__ = [
+    "ABA_INICIO",
     "COOP_PREP_HINT_CONVITE",
     "COOP_PREP_HINT_PRONTO",
     "COOP_PREP_HINT_UM_CONTROLE",
@@ -1399,6 +1451,8 @@ __all__ = [
     "HomeActionsMixin",
     "coop_prep_hint",
     "coop_prep_label",
+    "id_da_pagina",
+    "id_da_pagina_corrente",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]

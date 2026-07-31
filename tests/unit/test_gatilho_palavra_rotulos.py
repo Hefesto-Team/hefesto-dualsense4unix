@@ -21,6 +21,10 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    `app/widgets/segmented_selector.py:168-180`, porque o `GtkNotebook` adota o
    maior mínimo entre as páginas.
 
+3. O rótulo não repete o `name` em inglês entre parênteses. Dos cinco que
+   repetiam, três já estão só em português; "Bow" e "Weapon" seguem nomeados em
+   `PENDENCIA_DE_PALAVRA` porque "Arco" e "Arma" sozinhos não servem.
+
 Não importa `gi` de propósito: tudo aqui é dado puro de `trigger_specs`, então
 o portão roda no CI headless sem GTK nenhum.
 """
@@ -65,9 +69,19 @@ PENDENCIA_DE_LARGURA = frozenset({"Custom"})
 
 # "Feedback" é nome da função `feedback()` em `core/trigger_effects.py:203` que
 # vazou para a tela: é a única palavra em inglês da grade que não serve para
-# achar o modo em guia de jogo nenhum (diferente de Rigid/Bow/Galloping/
-# Machine/Weapon, que o teste de PALAVRA-01 protege de propósito).
+# achar o modo em guia de jogo nenhum.
 PALAVRA_QUE_VAZOU = "Feedback"
+
+# Os cinco `name` que também eram lidos na tela, entre parênteses, ao lado do
+# português. O `name` segue em inglês porque é contrato; o rótulo é texto de
+# tela e fica na língua dela.
+TERMOS_DO_DSX = ("Rigid", "Bow", "Galloping", "Machine", "Weapon")
+
+# Os dois rótulos que seguem repetindo o termo, porque a palavra sozinha não
+# serve e escolher a nova é dela: "Arco" é ambíguo em português (arco de
+# círculo, arco elétrico) e "Arma" não separa de "Arma automática" nem de "Arma
+# semi-automática". A sprint GATILHO-PALAVRA-01 traz três opções para cada um.
+PENDENCIA_DE_PALAVRA = frozenset({"Bow", "Weapon"})
 
 
 def test_os_dezenove_names_sao_exatamente_os_de_hoje() -> None:
@@ -116,6 +130,45 @@ def test_nenhum_rotulo_nem_descricao_de_gatilho_ainda_diz_feedback() -> None:
     ]
     assert culpados == [], (
         f"'{PALAVRA_QUE_VAZOU}' é nome de função, não texto de tela: {culpados}"
+    )
+
+
+def test_nenhum_rotulo_repete_na_tela_o_nome_do_modo_em_ingles() -> None:
+    """Mordida: devolver "(Rigid)", "(Galloping)" ou "(Machine)" ao rótulo reprova.
+
+    O par `name`/`label` tem donos diferentes: o `name` é a chave em inglês e
+    fica; o rótulo é a palavra dela. Os dois campos são lidos aqui, e só o
+    segundo é cobrado.
+    """
+    culpados = [
+        (spec.name, spec.label, termo)
+        for spec in PRESETS
+        if spec.name not in PENDENCIA_DE_PALAVRA
+        for termo in TERMOS_DO_DSX
+        if termo in spec.label or termo in spec.description
+    ]
+    assert culpados == [], (
+        "rótulo de tela carregando o nome do modo em inglês: "
+        f"{culpados}. O termo em inglês mora no `name`."
+    )
+
+
+def test_a_pendencia_de_palavra_nao_cresce_nem_envelhece() -> None:
+    """A exceção são DUAS, nomeadas, e caem fora sozinhas quando ela decidir."""
+    assert sorted(PENDENCIA_DE_PALAVRA) == ["Bow", "Weapon"], (
+        "só 'Bow' e 'Weapon' seguem com o termo em inglês no rótulo, à espera "
+        "da palavra dela; acrescentar nome aqui é abrir buraco no portão"
+    )
+    por_nome = {spec.name: spec.label for spec in PRESETS}
+    ja_curados = {
+        nome: por_nome[nome]
+        for nome in PENDENCIA_DE_PALAVRA
+        if nome in por_nome
+        and not any(termo in por_nome[nome] for termo in TERMOS_DO_DSX)
+    }
+    assert ja_curados == {}, (
+        "o rótulo já está em português: tire o nome de PENDENCIA_DE_PALAVRA "
+        f"para o portão voltar a cobrá-lo: {ja_curados}"
     )
 
 

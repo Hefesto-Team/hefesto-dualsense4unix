@@ -421,8 +421,13 @@ jobs:
             dist/deb/*.deb \
             dist/flatpak/*.flatpak
 
+  # O `if` deixa este job inerte enquanto a variável não existir, mas inerte não
+  # é guardado: no dia em que ela existir, sem o `guarda-ci` aqui o wheel sobe
+  # ao PyPI — que é irreversível, o índice não aceita reenvio da mesma versão —
+  # com os portões do ci.yml vermelhos. Todo job que entrega para fora depende
+  # do guarda; quem cobra isso é `tests/unit/test_release_workflow_nomes_e_portoes.py`.
   pypi:
-    needs: build
+    needs: [build, guarda-ci]
     runs-on: ubuntu-latest
     environment: pypi
     if: ${{ vars.PYPI_PUBLISH == 'true' }}

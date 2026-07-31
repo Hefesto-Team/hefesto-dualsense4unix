@@ -367,10 +367,33 @@
                           <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
                         </child>
                         <child>
+                          <!-- LARGURA-01/E2: o teto da SOM-01 para no frame e
+                               não alcançava o miolo dele. Medido nesta bancada,
+                               com a janela em 1920 e o frame já em 1400: esta
+                               barra recebia 1242px para 150px de natural, com o
+                               "— %" desenhado no meio — o texto tem 26px, então
+                               sobravam 608px de barra vazia de cada lado de um
+                               número de dois dígitos.
+
+                               O `hexpand` era a causa dos DOIS defeitos, e não
+                               só do dela: num GtkGrid o `hexpand` de UM filho
+                               faz a COLUNA inteira expandir, então a coluna de
+                               valores (que tem 112px de maior tinta) também ia
+                               a 1242px. Tirá-lo cura os dois de uma vez.
+
+                               O par que fica é `halign=start` + `width-request`,
+                               a mesma receita já no ar nas três barras da aba
+                               Rumble (LARGURA-01/E1). E é par mesmo: no GTK3
+                               pedido de tamanho é MÍNIMO, nunca máximo — o
+                               `width-request` sozinho não segura nada, e com
+                               `halign=center` ele TRAVA o widget no número
+                               exato (a armadilha escrita em
+                               controller_card.py:314). -->
                           <object class="GtkProgressBar" id="status_battery_bar">
                             <property name="show-text">True</property>
                             <property name="text">— %</property>
-                            <property name="hexpand">True</property>
+                            <property name="halign">start</property>
+                            <property name="width-request">300</property>
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
                         </child>

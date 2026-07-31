@@ -1,15 +1,25 @@
-"""Janela compacta fallback quando o tray AppIndicator não funciona.
+"""Janela compacta OPT-IN, desligada por padrão.
 
 FEAT-COMPACT-WINDOW-FALLBACK-01 (v3.3.0): em Pop!_OS COSMIC e em sessões
 minimalistas, o `org.kde.StatusNotifierWatcher` D-Bus que o libayatana
 usa não existe, então o tray clássico fica oculto. Esta janela 320x90
-sempre-on-top serve como surrogate: mostra status conectado/perfil/
+sempre-on-top nasceu como surrogate: mostra status conectado/perfil/
 bateria + 3 botões essenciais (Painel / Trocar perfil / Sair).
 
-Gating (decisão UX 2026-05-16):
-- AUTO por default quando `AppTray.start()` retorna False (sem
-  AppIndicator) OU quando estamos em COSMIC sem StatusNotifierWatcher.
-- Opt-out via `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0`.
+Gating VIGENTE — leia `is_enabled()` logo abaixo, que é quem decide:
+- OPT-IN: a janela só sobe com
+  `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=1` no ambiente.
+- Default DESLIGADO. Sem a variável, `is_enabled()` devolve False e
+  `app/app.py` nem constrói a janela — nenhuma detecção automática de
+  tray ausente a liga, e `=0` não é o que a desliga (a ausência é).
+- Quem não tem bandeja no COSMIC é atendido pelo applet nativo do
+  painel, não por esta janela.
+
+Histórico, porque o cabeçalho contava a versão errada até 31/07/2026: o
+gating original (decisão UX 2026-05-16) era AUTO por default com opt-out
+via `...=0`. Ele foi invertido para opt-in — a janela flutuante
+sempre-on-top no COSMIC era intrusiva — e este texto ficou descrevendo o
+comportamento antigo, contradizendo o código quarenta linhas abaixo.
 
 Update model:
 - Tick a cada `COMPACT_REFRESH_SEC` reusa `ipc_bridge.call_async` via

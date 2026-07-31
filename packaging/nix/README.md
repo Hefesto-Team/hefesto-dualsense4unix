@@ -3,6 +3,16 @@
 Pacote Nix oficial para usuários NixOS / nix-darwin / nix em qualquer
 distro Linux (comunitario, mantido junto ao source do projeto).
 
+## Antes de rodar qualquer comando desta página
+
+O `sha256` do `pydualsense` ainda é o placeholder `lib.fakeSha256` em
+`packaging/nix/package.nix`, então **todo comando abaixo falha com
+hash-mismatch** até alguém gravar o hash real: rode
+`nix-prefetch-url https://pypi.org/packages/source/p/pydualsense/pydualsense-0.7.5.tar.gz`
+numa máquina com nix e substitua o `lib.fakeSha256` pelo hash impresso (o
+próprio erro do primeiro build também diz qual é). Sem isso não há caminho que
+funcione — nem `nix run`, que não tem árvore local para corrigir.
+
 ## Uso rapido
 
 ```bash
@@ -127,8 +137,8 @@ via `python3Packages.buildPythonPackage` + `fetchPypi`.
 
 ## Limitações conhecidas
 
-- `pydualsense` `sha256` esta como `lib.fakeSha256` no template — Nix vai
-  reclamar no primeiro build pedindo o hash real. Substituir uma vez.
+- O `sha256` placeholder do `pydualsense` está na seção do topo — é a que
+  impede qualquer comando desta página de funcionar.
 - Sem submissao a nixpkgs oficial ainda; aguarda saida de Alpha (v4.0).
 - Wayland backend `wlrctl` não bundlado; usuário instala via
   `environment.systemPackages = [ pkgs.wlrctl ];`.

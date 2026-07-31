@@ -128,6 +128,16 @@ class StateStore:
         self._window_detect_current_class: str | None = None
         self._window_detect_read_monotonic: float | None = None
         self._game_window_seen_at: float | None = None
+        # SINAL-DE-JOGO-01 (31/07): os outros dois campos da MESMA leitura de
+        # janela. O detector já os entrega (`WindowInfo.as_dict` devolve
+        # `wm_class`/`wm_name`/`pid`/`exe_basename`) e o matcher de perfil já os
+        # aceita (`MatchCriteria.matches`), mas o store só guardava a classe —
+        # então a evidência nº 2 do `game_signal` (regra de perfil) nascia
+        # SEMPRE falsa para todo perfil que casa por título ou por processo.
+        # Crus e regravados a CADA leitura, como o `current_class` e pelo mesmo
+        # motivo: precisam DECAIR junto com ela (sticky é vetado como evidência).
+        self._window_detect_current_name: str | None = None
+        self._window_detect_current_exe: str | None = None
         # JANELA-CEGA-01: carimbo (`time.monotonic`) da ÚLTIMA leitura ÚTIL e
         # motivo da última leitura NÃO-útil. São eles que permitem a
         # `window_detect_seeing` CAIR — a `window_detect_healthy` é um trinco de
@@ -271,6 +281,8 @@ class StateStore:
             self._window_detect_healthy = healthy
             self._window_detect_last_class = None
             self._window_detect_current_class = None
+            self._window_detect_current_name = None
+            self._window_detect_current_exe = None
             self._window_detect_read_monotonic = None
             self._game_window_seen_at = None
             self._window_detect_last_useful_monotonic = None
@@ -283,6 +295,8 @@ class StateStore:
         *,
         now: float | None = None,
         reason: str | None = None,
+        wm_name: str | None = None,
+        exe_basename: str | None = None,
     ) -> None:
         """Registra uma leitura do detector de janela (poll do autoswitch).
 
@@ -312,6 +326,18 @@ class StateStore:
         `steam_app_\\d+`, carimba `game_window_seen_at` com `now`
         (`time.monotonic()` por default, injetável para teste) — é dessa
         marca que `game_signal` deriva uma idade que DECAI.
+
+        SINAL-DE-JOGO-01 (31/07): `wm_name` e `exe_basename` são os outros dois
+        campos da MESMA leitura, guardados crus ao lado da classe para o probe
+        de perfil do `game_signal` (`Daemon._profile_rule_matches_game`) poder
+        perguntar ao matcher a pergunta inteira — o `MatchCriteria` é um E entre
+        os campos preenchidos e alvo ausente NUNCA casa, então um perfil que
+        declara `window_title_regex` ou `process_name` devolvia False sempre,
+        sem erro nenhum. Eles NÃO participam de `healthy`/`last_class`/
+        `game_window_seen_at`: quem define "leitura útil" continua sendo só a
+        `wm_class`, porque é ela que a JANELA-CEGA-01 mediu e é ela que a
+        evidência nº 1 consome. Opcionais para o chamador antigo continuar
+        válido — sem eles o comportamento é byte-idêntico ao de antes.
         """
         moment = now if now is not None else time.monotonic()
         useful = bool(wm_class) and wm_class != "unknown"
@@ -319,6 +345,14 @@ class StateStore:
             self._window_detect_backend = backend
             self._window_detect_current_class = (
                 wm_class if isinstance(wm_class, str) else None
+            )
+            self._window_detect_current_name = (
+                wm_name if isinstance(wm_name, str) and wm_name else None
+            )
+            self._window_detect_current_exe = (
+                exe_basename
+                if isinstance(exe_basename, str) and exe_basename
+                else None
             )
             self._window_detect_read_monotonic = moment
             if useful:
@@ -504,6 +538,31 @@ class StateStore:
         """
         with self._lock:
             return self._window_detect_current_class
+
+    @property
+    def window_detect_current_name(self) -> str | None:
+        """Título CRU da última leitura (SINAL-DE-JOGO-01) — None se vazio.
+
+        O par de `window_detect_current_class`, pela mesma regra: regravado a
+        cada leitura, sem sticky, para o probe de perfil do `game_signal` casar
+        os perfis que declaram `window_title_regex` (o `coop_local` dela é o
+        caso medido: prioridade 75, `mode: gamepad`, e casa SÓ por título).
+        """
+        with self._lock:
+            return self._window_detect_current_name
+
+    @property
+    def window_detect_current_exe(self) -> str | None:
+        """Basename do executável da última leitura (SINAL-DE-JOGO-01).
+
+        O terceiro campo do matcher (`process_name`). Sem ele, um perfil que
+        declara título E processo — cinco dos seis perfis de jogo dela — segue
+        falso mesmo com o título casando, porque `MatchCriteria` é um E entre os
+        campos preenchidos. Vem de `/proc/<pid>/exe` no backend `xlib`; vazio
+        nos backends Wayland, onde vira None e simplesmente não arma nada.
+        """
+        with self._lock:
+            return self._window_detect_current_exe
 
     @property
     def game_window_seen_at(self) -> float | None:

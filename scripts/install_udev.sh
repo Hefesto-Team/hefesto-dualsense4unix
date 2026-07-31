@@ -16,10 +16,36 @@ ASSETS="$HERE/assets"
 # storm -71 — desliga o áudio USB inteiro do controle (sem mic NEM fone do jack).
 # FEAT-DSX-DEFINITIVE-FIX-01 §7.5.
 DISABLE_USB_AUDIO=0
+
+# Mesmo padrão do uninstall.sh e do purge.sh: `--help` sai 0 e argumento
+# desconhecido ABORTA com 2 sem escrever nada em /etc. Aqui o pior caso é
+# inócuo (o script só reaplica regras), mas dois padrões de parser na mesma
+# pasta é o que faz o próximo script nascer com o frouxo.
+uso() {
+    cat <<'FIM'
+Uso: scripts/install_udev.sh [opções]
+
+Instala as regras udev + o modules-load do uinput (caminho source). Requer
+sudo. Idempotente: reexecutar é seguro.
+
+Opções:
+  --disable-usb-audio   instala também a regra 75 (opt-in): desliga o áudio USB
+                        do DualSense inteiro — sem microfone NEM fone do jack
+  --help, -h            mostra esta ajuda e sai
+
+Nada é instalado enquanto esta ajuda estiver sendo exibida.
+FIM
+}
+
 for arg in "$@"; do
     case "$arg" in
         --disable-usb-audio) DISABLE_USB_AUDIO=1 ;;
-        *) echo "aviso: argumento desconhecido: $arg" >&2 ;;
+        --help|-h)           uso; exit 0 ;;
+        *)
+            echo "argumento desconhecido: $arg" >&2
+            echo "nada foi instalado. Use --help para ver as opções." >&2
+            exit 2
+            ;;
     esac
 done
 

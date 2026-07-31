@@ -78,7 +78,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Sem resistência.",
     ),
     TriggerPresetSpec(
-        "Rigid", "Rígido (Rigid)",
+        "Rigid", "Rígido",
         params=(_pos(5), _force(0, 255, 200)),
         description="Barreira rígida numa posição fixa.",
     ),
@@ -117,7 +117,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Tensão crescente com disparo ao soltar.",
     ),
     TriggerPresetSpec(
-        "Galloping", "Galope (Galloping)",
+        "Galloping", "Galope",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 0),
             TriggerParamSpec("end", "Fim", 1, 9, 9),
@@ -146,7 +146,7 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração contínua de arma automática.",
     ),
     TriggerPresetSpec(
-        "Machine", "Metralhadora (Machine)",
+        "Machine", "Metralhadora",
         params=(
             _start(0, 9, 0),
             _end(1, 9, 9),

@@ -241,12 +241,14 @@ def test_gatilhos_nao_mostram_jargao_em_ingles() -> None:
     assert culpados == [], f"rótulo de gatilho ainda em jargão: {culpados}"
 
 
-def test_o_termo_tecnico_fica_so_onde_ajuda_a_achar_o_modo_em_guia() -> None:
-    """Rigid/Bow/Galloping/Machine/Weapon são como os guias de jogo chamam."""
-    rotulos = _rotulos_de_gatilho()
-    for termo in ("Rígido (Rigid)", "Arco (Bow)", "Galope (Galloping)",
-                  "Metralhadora (Machine)", "Arma (Weapon)"):
-        assert termo in rotulos, f"perdemos a pista para guias de jogo: {termo}"
+# Aqui morava `test_o_termo_tecnico_fica_so_onde_ajuda_a_achar_o_modo_em_guia`,
+# que EXIGIA "Rígido (Rigid)", "Arco (Bow)" e os irmãos no rótulo, para ela
+# reconhecer o modo que um guia em inglês cita. A decisão dela em 31/07 trocou
+# o lado — os parênteses saem, pela regra R2 do `docs/process/CLEAN-ROOM.md` —
+# e a regra inversa passou a morar em `test_gatilho_palavra_rotulos.py`, que
+# tem a exceção nomeada `PENDENCIA_DE_PALAVRA` para os dois rótulos cuja
+# palavra ainda é decisão dela ("Arco" e "Arma" sozinhos são ambíguos).
+# Repetir a cobrança aqui, sem a exceção, brigaria com aquele portão.
 
 
 def test_o_arquivo_de_gatilhos_nao_guarda_mais_o_texto_antigo() -> None:

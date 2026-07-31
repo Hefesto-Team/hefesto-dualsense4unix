@@ -24,8 +24,14 @@ from typing import Any
 
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
-from hefesto_dualsense4unix.app.constants import ROOT_DIR
-from hefesto_dualsense4unix.profiles.loader import load_all_profiles, load_profile, save_profile
+from hefesto_dualsense4unix.profiles.loader import (
+    _seed_source_file,
+    load_all_profiles,
+    load_profile,
+    save_profile,
+)
+from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.slug import find_by_slug
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
@@ -33,8 +39,28 @@ from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 logger = get_logger(__name__)
 
 # Asset canônico do perfil do usuário (FEAT-PROFILES-PRESET-06).
-_MEU_PERFIL_ASSET = ROOT_DIR / "assets" / "profiles_default" / "meu_perfil.json"
 _MEU_PERFIL_NOME = "meu_perfil"
+_MEU_PERFIL_ARQUIVO = f"{_MEU_PERFIL_NOME}.json"
+
+
+def _meu_perfil_asset() -> Path | None:
+    """Acha o preset `meu_perfil.json`; ``None`` quando não há em lugar nenhum.
+
+    JANELA-FIEL-01/E3: este caminho era `ROOT_DIR / "assets" / ...`, e
+    `ROOT_DIR` é `parents[3]` do módulo — a raiz do repositório SÓ em instalação
+    editável. Num `.deb`/AppImage/Flatpak o módulo vive dentro de um venv e
+    `parents[3]` cai num diretório onde `assets/` nunca existiu, então o botão
+    "Restaurar Padrão" desistia com o toast de indisponível numa máquina onde o
+    preset ESTÁ instalado — os três pacotes o embalam, em
+    `sys.prefix/share/...` ou em `/usr/share/...`.
+
+    Quem responde é a cascata do loader (`_seed_source_file`), a mesma que
+    semeia os presets em produção: repo editável → prefixo → `/usr/share`. Sem
+    caminho duplicado aqui, o botão passa a achar o arquivo onde ele realmente
+    está.
+    """
+    return _seed_source_file(_MEU_PERFIL_ARQUIVO)
+
 
 # APLICAR-VERDADE-01: nome de cada seção do contrato IPC na língua da janela.
 # O daemon fala "leds"/"triggers"; o rodapé precisa dizer o que não entrou com
@@ -265,20 +291,29 @@ class FooterActionsMixin(WidgetAccessMixin):
         if nome is None:
             return  # usuário cancelou
 
-        # Worker: lê os nomes existentes do disco (sem cache) p/ checar conflito.
-        def _existing_names() -> list[str]:
-            return [p.name for p in load_all_profiles()]
+        # Worker: lê os perfis do disco (sem cache) p/ checar conflito.
+        def _perfis_em_disco() -> list[Profile]:
+            return load_all_profiles()
 
-        def _on_checked(existentes: list[str]) -> bool:
-            if nome in existentes and not gui_dialogs.prompt_overwrite_existing(
-                parent=window, name=nome
+        def _on_checked(existentes: list[Profile]) -> bool:
+            # R-10 (auditoria 23/07): a identidade de um perfil em disco é o
+            # SLUG — `save_profile` grava `<slugify(name)>.json`. Este gate
+            # comparava NOME CRU, então "Navegacao" digitado aqui não casava com
+            # a "Navegação" dela em disco: o diálogo não aparecia e
+            # `navegacao.json` era regravado em silêncio, com prioridade e regra
+            # de janela recalculadas — um catch-all a mais no lugar do perfil.
+            # O diálogo cita `alvo.name` e não `nome`: quem some é o perfil do
+            # disco. Mesma guarda que a aba Perfis e a CLI já usam.
+            alvo = find_by_slug(nome, existentes)
+            if alvo is not None and not gui_dialogs.prompt_overwrite_existing(
+                parent=window, name=alvo.name
             ):
                 self._footer_toast(_("Operação cancelada."))
                 return False
             self._persist_profile_async(nome)
             return False
 
-        ipc_bridge.run_in_thread(_existing_names, on_success=_on_checked)
+        ipc_bridge.run_in_thread(_perfis_em_disco, on_success=_on_checked)
 
     def _persist_profile_async(self, nome: str) -> None:
         """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK).
@@ -461,17 +496,15 @@ class FooterActionsMixin(WidgetAccessMixin):
 
         window = self._get("main_window")
 
-        if not _MEU_PERFIL_ASSET.exists():
+        asset = _meu_perfil_asset()
+        if asset is None:
             self._footer_toast(
                 _(
                     "Asset 'meu_perfil.json' não encontrado — "
                     "Restaurar Default indisponível."
                 )
             )
-            logger.warning(
-                "footer_restore_default_asset_ausente",
-                path=str(_MEU_PERFIL_ASSET),
-            )
+            logger.warning("footer_restore_default_asset_ausente")
             return
 
         if not gui_dialogs.confirm_restore_default(parent=window):
@@ -482,9 +515,7 @@ class FooterActionsMixin(WidgetAccessMixin):
         # asset, gravar o perfil e recarregar o DraftConfig é I/O de disco — vai
         # para um worker; o resultado é aplicado no callback (GLib.idle_add).
         def _restore() -> Any:
-            from hefesto_dualsense4unix.profiles.schema import Profile
-
-            raw = json.loads(_MEU_PERFIL_ASSET.read_text(encoding="utf-8"))
+            raw = json.loads(asset.read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
             save_profile(profile)
             # Recarrega DraftConfig a partir do perfil restaurado (best-effort:
