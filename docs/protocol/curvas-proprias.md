@@ -13,6 +13,22 @@ se separam.
 > Este arquivo nascer antes dos dados é parte do ponto: a estrutura de
 > proveniência precede o primeiro valor.
 
+**Atualização de 2026-07-31 — o formato já existe, e ele recusa.** A
+[CR-02](../process/sprints/2026-07-25-CR-02-formato-e-proveniencia.md) foi
+entregue: `profiles/curva_propria.py` define `CurvaPropria`, e um efeito com
+`medido_por`, `controle` ou `nota` vazios **não instancia** — levanta erro, não
+aviso. A tabela da seção "Efeitos" sai da função `gerar_tabela_markdown`, a
+partir do catálogo, e não da mão de ninguém.
+
+Quem vai **preencher** esta tabela é a bancada de medição
+([CR-03](../process/sprints/2026-07-25-CR-03-bancada-de-medicao.md)), com a
+mantenedora sentindo o gatilho e nomeando o efeito
+([CR-04](../process/sprints/2026-07-25-CR-04-os-efeitos-da-casa.md)). Não há
+atalho por aqui, e a ausência de atalho é o produto: a regra R3 proíbe valor sem
+quem sentiu, e um número que não tem mão nem sensação entraria com os campos
+`Medido por`, `Controle` e `Nota` preenchidos com ficção — contaminando a defesa
+da tabela inteira, pela regra que o próprio processo escreveu.
+
 ## Como ler esta tabela
 
 | Campo | O que significa |

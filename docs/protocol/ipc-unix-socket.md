@@ -2,7 +2,25 @@
 
 ## Endpoint
 
-`$XDG_RUNTIME_DIR/hefesto-dualsense4unix.sock` (Unix socket, stream). Permissão `0600` (só o dono).
+`$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock` (Unix
+socket, stream). Permissão `0600` (só o dono). Repare no **diretório próprio**:
+o socket não fica solto na raiz do `XDG_RUNTIME_DIR`, e sim numa pasta com o
+nome do projeto, ao lado de `daemon.pid` e `gui.pid`.
+
+O caminho é montado por `utils/xdg_paths.py` (`ipc_socket_path`), fonte única —
+nada no código escreve esse caminho à mão:
+
+- **Diretório**: `runtime_dir()` = `$XDG_RUNTIME_DIR/hefesto-dualsense4unix/`.
+  Sem `XDG_RUNTIME_DIR` no ambiente, cai em `<cache>/runtime/`.
+- **Nome-base**: `ipc_socket_name()`, nesta ordem de precedência —
+  1. `HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME`, se explícita e sem `/`;
+  2. modo fake (`HEFESTO_DUALSENSE4UNIX_FAKE=1`) sem override →
+     `hefesto-dualsense4unix-fake.sock`, isolado do daemon real;
+  3. produção → `hefesto-dualsense4unix.sock`.
+
+O passo 2 é o que impede um daemon fake de sequestrar o socket de produção
+(BUG-FAKE-SOCKET-SYNC-01): quem for falar com o daemon deve **derivar** o
+caminho dessas funções, não concatenar a string.
 
 ## Formato de fio
 

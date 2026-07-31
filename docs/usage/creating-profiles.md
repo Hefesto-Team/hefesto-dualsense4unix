@@ -16,7 +16,7 @@ Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema 
   },
   "priority": 10,
   "triggers": {
-    "left":  {"mode": "Medium", "params": []},
+    "left":  {"mode": "Resistance", "params": [3, 5]},
     "right": {"mode": "Galloping", "params": [0, 9, 7, 7, 10]}
   },
   "leds": {
@@ -26,6 +26,12 @@ Perfis ficam em `~/.config/hefesto-dualsense4unix/profiles/<nome>.json`. Schema 
   "rumble": {"passthrough": true}
 }
 ```
+
+O `mode` de cada gatilho é validado na carga do perfil contra
+`PRESET_FACTORIES` (`src/hefesto_dualsense4unix/core/trigger_effects.py`), a
+fonte única dos nomes aceitos — 19 exatamente, listados na seção "Modos de
+trigger" abaixo. Nome fora dessa lista faz `Profile.model_validate` levantar
+`ValidationError` citando os válidos, e o perfil não carrega.
 
 Arquivo fallback com `match.type = "any"` e `priority: 0` é obrigatório para garantir que algum perfil sempre case.
 
@@ -166,6 +172,18 @@ Presets comuns:
 | `Vibration`  | 3     | `[3, 4, 40]` (pos, amp, freq)              |
 
 Valores fora de range levantam `ValueError` na carga do perfil.
+
+Os 19 nomes aceitos, como estão em `PRESET_FACTORIES`: `Off`, `Rigid`,
+`SimpleRigid`, `Pulse`, `PulseA`, `PulseB`, `Resistance`, `Bow`, `Galloping`,
+`SemiAutoGun`, `AutoGun`, `Machine`, `Feedback`, `Weapon`, `Vibration`,
+`SlopeFeedback`, `MultiPositionFeedback`, `MultiPositionVibration`, `Custom`.
+
+Cuidado com o vocabulário do DSX: `Medium`, `Soft`, `Hard`, `VeryHard`,
+`Hardest`, `Choppy`, `GameCube` e afins são nomes do enum `TriggerMode` do DSX,
+**não** presets do Hefesto — nenhum deles existe em `PRESET_FACTORIES` e um
+perfil que os use não carrega. O motivo de não estarem traduzidos (curvas de
+força fechadas, sem parâmetro, cuja única transcrição pública está num
+repositório sem licença) está em `docs/protocol/udp-schema.md`.
 
 ## Modo Nativo — jogar com os gatilhos nativos da Sony (Sackboy & cia)
 

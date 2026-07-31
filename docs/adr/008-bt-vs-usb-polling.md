@@ -27,3 +27,37 @@ BT vê latência 16–32ms maior — aceitável para gatilhos, não para competi
 lido pelo daemon. A chave real é a variável de ambiente
 `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, lida em `daemon/main.py` na subida (ou o
 parâmetro `poll_hz` do `run_daemon`).
+
+## Nota de verificação — 2026-07-31
+
+O terceiro item da Decisão fala em **dois** replays determinísticos. Só existe
+um. Conferido no repositório em 31/07/2026:
+
+- `tests/fixtures/hid_capture_usb.bin` — existe (2630 bytes).
+- `tests/fixtures/hid_capture_bt.bin` — **não existe**. O diretório
+  `tests/fixtures/` tem só o capture USB e o `__init__.py`.
+
+Nenhum teste aponta para o capture de BT: a única citação de fixture de capture
+na suíte é `tests/unit/test_fake_controller_capture.py`, e ela usa o arquivo
+USB. A frase "Testes W1.3 cobrem ambos" não se sustenta — o replay de
+BT nunca foi coberto porque o insumo nunca esteve aqui.
+
+A fixture **não foi inventada de propósito**. Ela só pode nascer de uma
+gravação num DualSense real emparelhado por Bluetooth; forjar bytes sintéticos
+daria um replay que passa e não representa o transporte — o oposto do que um
+capture determinístico serve para fazer. Fica registrada como ausência, e a
+gravação como trabalho aberto para quando houver o controle em BT à mão.
+
+O comando de gravação citado na mesma linha também não roda: `--script
+captures/script_default.yaml` não existe em `scripts/record_hid_capture.py`
+(zero ocorrências de `--script` no arquivo). O YAML existe em `captures/`, mas
+nenhum flag o consome. A invocação real, do `--help` do próprio script, exige
+`--transport` e `--output`:
+
+```bash
+python scripts/record_hid_capture.py --transport bt --guided \
+    --output tests/fixtures/hid_capture_bt.bin
+```
+
+`--guided` narra passo a passo o que apertar, que é o que dá a
+reprodutibilidade que a ADR atribuía ao YAML.

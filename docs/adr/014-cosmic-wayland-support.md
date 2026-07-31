@@ -44,6 +44,8 @@ implementada em camadas:
    `get_active_window_info` de `window_detect`. Código legado não precisa de
    alteração.
 
+   > **O shim não existe mais** — ver a nota de verificação no fim desta ADR.
+
 ### Camada 2 — Portal XDG (implementado nesta sprint)
 
 `WaylandPortalBackend` tenta (em ordem):
@@ -147,3 +149,39 @@ retorna `true` e o tray do Hefesto passa a renderizar normalmente.
   do usuário e exige dependência de um servidor X em paralelo.
 - **Substituir toda a stack por `pydbus`**: descartado pela dep nativa (libdbus-1);
   `jeepney` puro Python é mais portável.
+
+---
+
+## Nota de verificação — 2026-07-31
+
+A arquitetura de backends confere: `window_backends/` com `base`, `xlib`,
+`wayland_portal`, `wlr_toplevel` e `null`, e a factory em `window_detect.py`.
+
+**O item 3 da Camada 1 caducou.** O shim `integrations/xlib_window.py` foi
+retirado em 29/07 (CODIGO-MORTO-01) e o arquivo hoje é uma **lápide**: o módulo
+levanta `ImportError` já no import, com mensagem que aponta o substituto. Ele
+não re-exporta nada, e a frase "código legado não precisa de alteração" virou o
+oposto — código legado que importe `xlib_window` **quebra no import**, de
+propósito.
+
+O motivo não foi limpeza: a `XlibClient` que morava ali lia o
+`_NET_ACTIVE_WINDOW` da raiz **sem gate de foco**, exatamente o defeito que o
+UX-02 e o FOCO-01 curaram no backend vivo
+(`window_backends/xlib.py`, que só aceita a leitura quando `get_input_focus()`
+e `_NET_ACTIVE_WINDOW` concordam). Quem importasse o shim reintroduziria o
+ping-pong de perfil com a suíte verde — daí o erro alto no import, e não uma
+leitura errada e silenciosa a 2 Hz.
+
+Substitutos, e é o que a lápide manda usar:
+
+```python
+from hefesto_dualsense4unix.integrations.window_detect import build_window_reader
+
+ler_janela = build_window_reader()   # backend instanciado UMA vez
+info = ler_janela()                  # wm_class / wm_name / pid / exe_basename
+```
+
+Para leitura pontual (CLI, `doctor`), `window_detect.get_active_window_info()`
+mantém a assinatura do antigo `xlib_window.get_active_window_info`.
+
+O resto da ADR não foi reconferido nesta passagem — a nota cobre só a lápide.

@@ -2,7 +2,32 @@
 
 ## Endpoint
 
-`127.0.0.1:6969` (UDP). Configurável em `~/.config/hefesto-dualsense4unix/daemon.toml`.
+`127.0.0.1:6969` (UDP). **Fixo** — não há arquivo de configuração que mude isso.
+
+O daemon não lê `daemon.toml` (BUG-DAEMON-TOML-DEAD-01: o próprio código diz
+isso no cabeçalho que a GUI escreve no arquivo, `app/actions/emulation_actions.py`).
+Host e porta vivem em `DaemonConfig.udp_host` / `DaemonConfig.udp_port`
+(`daemon/lifecycle.py`), com o mesmo default do `daemon/udp_server.py`.
+
+Trocar a porta exige `daemon.reload` via IPC **e** um restart do daemon:
+`config_overrides` aceita `udp_port` e o campo muda na hora, mas o socket é
+aberto uma única vez na sequência de start (`_start_udp`) e o `reload_config`
+não reinicia subsistemas — sem o restart, o daemon segue escutando na 6969.
+
+### Quem pode mandar
+
+Qualquer processo local. **Não há autenticação, token ou allowlist**: quem
+alcança a porta manda gatilho, cor, player-LED e deadzone no controle dela. É
+compatibilidade com o DSX **por decisão** (ADR-003) — os mods de Cyberpunk,
+Forza e Assetto Corsa escrevem cru nessa porta e não têm onde carregar
+credencial.
+
+O que contém o estrago é o **bind em loopback**: `DEFAULT_HOST = "127.0.0.1"`,
+então a porta não é alcançável de fora da máquina. O rate limit (adiante) é
+proteção contra enxurrada, não contra intruso — ele limita o volume de quem já
+está autorizado por estar na máquina. Consequência prática a ter em mente: numa
+máquina compartilhada, ou com um jogo/mod não confiável rodando, esse processo
+tem autoridade total sobre o controle. Não mude `udp_host` para `0.0.0.0`.
 
 ## Dois envelopes, a mesma porta
 
