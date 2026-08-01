@@ -215,6 +215,29 @@ def _assentar(janela: Any, widget: Any) -> None:
             janela.get_surface()
         janela.queue_resize()
 
+    # ÚLTIMO RECURSO, e ele tem uma razão de existir que não é teimosia: as
+    # bancadas que montam a aba a partir do glade usam uma `Gtk.Window` de
+    # verdade, e não uma `OffscreenWindow`. Sob Xvfb **não há gerenciador de
+    # janelas**, e sem ele ninguém entrega o tamanho à janela: ela pode nunca
+    # ser mapeada e o filho fica em 1x1 para sempre, por mais que o laço rode.
+    # Foi o que reprovou o CI da tag v0.6.0 num teste que passara no push do
+    # branch minutos antes — a assinatura de corrida, não de desenho.
+    #
+    # Aqui a bancada faz o papel do gerenciador ausente: dá à janela o tamanho
+    # que ela mesma pediu. Isso NÃO falseia a medição — o que se mede depois é
+    # como o card REPARTE a largura que recebeu, e a largura que ele recebe é a
+    # de projeto, exatamente como na tela dela. O que se elimina é o caso em que
+    # ele não recebe largura nenhuma.
+    with contextlib.suppress(Exception):
+        janela.realize()
+        largura, altura = janela.get_size_request()
+        if largura > 1 and altura > 1:
+            aloc = Gdk.Rectangle()
+            aloc.x, aloc.y, aloc.width, aloc.height = 0, 0, largura, altura
+            janela.size_allocate(aloc)
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+
 
 def _entry_com(speaker: dict[str, Any] | None, **extra: Any) -> dict[str, Any]:
     """Uma entrada de ``state_full.controllers`` com (ou sem) a chave `speaker`.
