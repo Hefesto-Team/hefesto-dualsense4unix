@@ -185,6 +185,67 @@ class TestWrappersRetornamBool:
         with patch.object(ipc_bridge, "_run_call", return_value={"status": "erro"}):
             assert ipc_bridge.apply_draft({"triggers": {}}) is False
 
+
+class TestApplyDraftDetalhado:
+    """APLICAR-VERDADE-01/E2 — a ponte para de estreitar a verdade.
+
+    A ``apply_draft`` devolve ``bool`` e o mapa ``failed`` (quais seções NÃO
+    entraram) morria aqui: quem chamava recebia ``False`` e não tinha como
+    distinguir "o daemon está desligado" de "a seção de luzes falhou". A cura
+    foi ADITIVA — a ``apply_draft`` continua devolvendo ``bool`` (o valor-
+    verdade dela É o contrato R-18, e um ``dict`` no lugar seria sempre
+    verdadeiro num ``if``), e quem precisa dizer a verdade na tela chama a
+    detalhada.
+
+    Esta classe é a metade da E2 que NÃO precisa de GTK, então morde também no
+    CI headless; a metade da tela mora em
+    ``tests/unit/test_aplicar_verdade_ponte_lightbar.py``.
+    """
+
+    OFFLINE_EXC = FileNotFoundError("socket ausente")
+
+    def test_o_failed_atravessa_a_ponte(self):
+        """Falha-sem: o mapa de seções que caíram tem de CHEGAR ao chamador."""
+        resposta = {
+            "status": "ok",
+            "applied": [],
+            "failed": {"leds": "hidraw: Permission denied"},
+        }
+        with patch.object(ipc_bridge, "_run_call", return_value=resposta):
+            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) == resposta
+
+    def test_offline_devolve_none_e_nao_dicionario_vazio(self):
+        """``None`` quer dizer "não houve resposta" — é o que separa "o Hefesto
+        está desligado" de "a seção não entrou". Um ``{}`` no lugar apagaria a
+        distinção que a aba Lightbar usa para escolher a frase."""
+        with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
+            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
+
+    def test_resposta_que_nao_e_dicionario_e_tratada_como_ausencia(self):
+        with patch.object(ipc_bridge, "_run_call", return_value="ok"):
+            assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
+
+    def test_apply_draft_continua_bool(self):
+        """Compatibilidade: a assinatura exportada no ``__all__`` não mudou."""
+        resposta = {"status": "ok", "applied": [], "failed": {"leds": "x"}}
+        with patch.object(ipc_bridge, "_run_call", return_value=resposta):
+            assert ipc_bridge.apply_draft({"leds": {}}) is False
+        with patch.object(
+            ipc_bridge, "_run_call", return_value={"status": "ok", "applied": ["leds"]}
+        ):
+            assert ipc_bridge.apply_draft({"leds": {}}) is True
+
+    def test_aplicacao_confirmada_e_o_dono_unico_da_regra_r18(self):
+        """A mesma leitura do payload para os dois caminhos — sem ``failed``
+        vazio virando sucesso e sem daemon antigo virando falha."""
+        confirmada = ipc_bridge.aplicacao_confirmada
+        assert confirmada({"status": "ok", "applied": ["leds"]}) is True
+        assert confirmada({"status": "ok", "applied": []}) is False
+        assert confirmada({"status": "ok"}) is True  # daemon antigo
+        assert confirmada({"status": "erro", "applied": ["leds"]}) is False
+        assert confirmada(None) is False
+        assert confirmada(True) is False
+
     def test_daemon_state_full_offline_none(self):
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
             assert ipc_bridge.daemon_state_full() is None
@@ -219,6 +280,7 @@ class TestWrappersPropagandoBugs:
             (ipc_bridge.player_leds_set, ((True, True, False, False, False),)),
             (ipc_bridge.mouse_emulation_set, (True,)),
             (ipc_bridge.apply_draft, ({"x": 1},)),
+            (ipc_bridge.apply_draft_detalhado, ({"x": 1},)),
             (ipc_bridge.daemon_state_full, ()),
             (ipc_bridge.daemon_status_basic, ()),
         ],

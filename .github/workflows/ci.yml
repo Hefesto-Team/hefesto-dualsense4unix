@@ -80,7 +80,7 @@ jobs:
         run: python3 scripts/validar-glifos.py --all
 
   referencias-docs:
-    name: Documento que cita arquivo inexistente
+    name: Documento que cita arquivo, env ou método de IPC inexistente
     runs-on: ubuntu-latest
     # PORTÃO-VIVO-01 bloco F. Nasceu informativo (continue-on-error) porque
     # reprovava de propósito: a sprint exigiu que ele mordesse na árvore como
@@ -93,6 +93,17 @@ jobs:
     # passou a citar `scripts/validar-glifos.py`, que existe e faz o que o nome
     # imaginário prometia) e `--all` sai com código 0. O `continue-on-error`
     # saiu junto: a partir daqui o job PROTEGE, não relata.
+    #
+    # DOC-VERDADE-02 / E10 (01/08): o portão cobrava ARQUIVO, e só. Variável de
+    # ambiente e método de IPC não são arquivos, e foi por esse buraco que o
+    # ADR-017 sobreviveu meses ensinando `HEFESTO_PLUGINS_ENABLED` (a real é a
+    # longa) e o ADR-010 anunciando um socket em `$XDG_RUNTIME_DIR/hefesto/`.
+    # Duas regras novas entram aqui, restritas aos documentos que ENSINAM
+    # (`docs/usage/`, `docs/adr/`, `docs/protocol/`, `README.md`) e medidas
+    # contra a árvore ANTES de propostas: zero falso positivo. `docs/process/`
+    # fica fora por escrito — sprint propõe o que ainda não existe, e isso é o
+    # trabalho dela. O `README.md` passou a ser varrido: ficava de fora só por
+    # morar na raiz, sendo a página que mais gente copia e cola.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

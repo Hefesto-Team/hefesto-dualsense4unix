@@ -346,6 +346,54 @@ class ProfileMicConfig(BaseModel):
     button_toggles_system: bool
 
 
+class ProfileSpeakerConfig(BaseModel):
+    """Seção opcional de ALTO-FALANTE por perfil (SOM-02/E4, 29/07).
+
+    Aditiva ao schema v1 (sem bump de versão), mesmo contrato do `mouse` e do
+    `mic`: perfil SEM a seção não tem opinião e ativá-lo **não toca no volume
+    e não toma a posse** dos bytes de áudio do report de saída. Tomar posse
+    por um perfil que não pediu nada é exatamente o hábito que produziu a
+    queixa "a config que eu deixo nunca é respeitada".
+
+    POR QUE ``volume`` É OBRIGATÓRIO (e ``muted`` sozinho é recusado aqui).
+    Medido na SOM-02 (armadilha 1) com o `set_speaker_volume` real: uma
+    chamada sem `volume` e sem preferência guardada faz o `pref` cair para
+    `0`, o efetivo ir a `0` e o estado publicado virar
+    ``{'volume': 0, 'muted': True}`` — a posse é tomada E o alto-falante
+    tranca em zero, sem que o próprio mudo consiga soltá-lo (armadilha 2:
+    `muted=False` restaura a preferência, e a preferência é `0`).
+
+    Um perfil que trouxesse só ``muted`` cairia direto nessa armadilha na
+    ativação. A recusa é na BORDA do esquema, e não no applier, pela mesma
+    razão do ``custom_mult`` do rumble: o arquivo inválido é rejeitado no
+    load, com mensagem que explica, em vez de virar um comportamento errado
+    silencioso meses depois. Quem quer "mudo" escreve o volume que quer de
+    volta ao clicar em Ativar — que é o que o par
+    ``{"volume": 180, "muted": true}`` diz.
+
+    ``muted=True`` manda 0 ao firmware e guarda os 180 como preferência; o
+    ``muted=False`` posterior devolve os 180 (medido na sprint).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    volume: int = Field(ge=0, le=255)
+    muted: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def _volume_e_obrigatorio(cls, data: Any) -> Any:
+        """Mensagem que EXPLICA a armadilha 1 em vez do "field required" cru."""
+        if isinstance(data, dict) and "volume" not in data:
+            raise ValueError(
+                "speaker: 'volume' é obrigatório (0-255). Um perfil com "
+                "'muted' e sem 'volume' faria a ativação mandar volume ZERO "
+                "e tomar a posse do alto-falante — e o próprio mudo não "
+                "conseguiria soltá-lo (SOM-02, armadilhas 1 e 2)."
+            )
+        return data
+
+
 class ProfileModeConfig(BaseModel):
     """Seção opcional de MODO do sistema por perfil (FEAT-PROFILE-MODE-01).
 
@@ -433,6 +481,14 @@ class Profile(BaseModel):
     # MIC-EXPOSE-01: comportamento do botão de mic por perfil. None = sem
     # opinião (ativar o perfil não mexe no `mic_button_toggles_system`).
     mic: ProfileMicConfig | None = None
+    # SOM-02/E4: volume do ALTO-FALANTE por perfil. None = sem opinião — a
+    # ativação não escreve áudio nenhum e NÃO toma a posse dos bytes de
+    # volume (armadilha 1 da sprint). Preenchida = a ativação manda
+    # `{volume, muted}` pelo `speaker_applier` injetado no ProfileManager.
+    # A serialização em `save_profile` OMITE a chave quando None, pelo mesmo
+    # requisito de compatibilidade do `controllers` (extra="forbid" acima
+    # rejeitaria TODO perfil num binário antigo, não só os que usam a seção).
+    speaker: ProfileSpeakerConfig | None = None
     # FEAT-PROFILE-MODE-01: modo do sistema por perfil (nativo/gamepad/desktop
     # + co-op). None = sem opinião (libera só modo vindo de outro perfil).
     mode: ProfileModeConfig | None = None
@@ -712,6 +768,7 @@ __all__ = [
     "Profile",
     "ProfileMicConfig",
     "ProfileMouseConfig",
+    "ProfileSpeakerConfig",
     "RumbleConfig",
     "TriggerConfig",
     "TriggersConfig",

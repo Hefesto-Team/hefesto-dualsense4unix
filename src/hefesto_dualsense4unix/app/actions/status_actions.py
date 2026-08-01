@@ -366,6 +366,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._status_cards = {}
         self._status_card_keys = []
         self._init_controller_target_combo()
+        # SOM-04: o botão da rota de som. Ligado por CÓDIGO e não por `signal`
+        # do Glade, no molde do seletor de número: assim um Glade antigo (ou o
+        # builder dublado de um teste de outra área) não derruba a montagem da
+        # aba inteira por causa de um handler que não existe. Ele nasce
+        # insensível no Glade e só ganha rótulo e sentido depois da primeira
+        # leitura do `pactl`, que acontece fora da thread do GTK.
+        botao_rota = self._get("btn_som_no_controle")
+        if botao_rota is not None and hasattr(botao_rota, "connect"):
+            botao_rota.connect("clicked", self._on_rota_de_som_clicada)
         GLib.timeout_add(LIVE_POLL_INTERVAL_MS, self._tick_live_state)
         GLib.timeout_add(STATE_POLL_INTERVAL_MS, self._tick_profile_state)
         GLib.timeout_add_seconds(
@@ -428,6 +437,128 @@ class StatusActionsMixin(WidgetAccessMixin):
                 monitor.stop()
 
     # ------------------------------------------------------------------
+    # SOM-04, entrega 2: mandar o som do sistema para o controle (e desfazer)
+    # ------------------------------------------------------------------
+
+    #: Objeto da rota, criado na primeira leitura. Ele não guarda estado de
+    #: tela: o estado é lido do `pactl` a cada ciclo, e o único dado que
+    #: sobrevive é o sink anterior, que mora no `gui_preferences.json`.
+    _rota_de_som: Any = None
+    #: Guarda de reentrância, no molde do `_reconnect_inflight`: as leituras
+    #: são subprocessos e um ciclo não pode empilhar em cima do outro.
+    _rota_inflight: bool = False
+    #: Sink do controle resolvido pelo `mic_monitor` no último tique rápido.
+    #: "" = não dá para saber, e é o que deixa o botão parado.
+    _rota_sink: str = ""
+
+    def _sink_do_controle_para_a_rota(self, monitor: Any, uniqs: tuple[str, ...]) -> str:
+        """Sink que o botão da rota tem como alvo; "" quando não há certeza.
+
+        Quem resolve "qual sink é de qual controle" é o ``mic_monitor``, que já
+        é o leitor de PipeWire da janela — este método só ESCOLHE entre o que
+        ele resolveu, e nunca vai ao sistema por conta própria.
+
+        Com mais de um controle o ``escolher_sink`` já devolve "" para todos,
+        de propósito: o nome do sink não carrega identidade (o ``-00`` é
+        desempate posicional do PipeWire, não número de série). A conferência
+        de que os nomes resolvidos são um só é cinto de segurança sobre isso —
+        dois sinks distintos aqui seria a janela tendo de escolher por ela, e
+        a resposta honesta é não escolher.
+        """
+        if monitor is None:
+            return ""
+        nomes = set()
+        for uniq in uniqs:
+            with contextlib.suppress(Exception):
+                nome = monitor.sink_de(uniq)
+                if nome:
+                    nomes.add(nome)
+        return nomes.pop() if len(nomes) == 1 else ""
+
+    def _refresh_rota_de_som(self) -> None:
+        """Relê a rota e repinta o botão — leitura FORA da thread do GTK.
+
+        Roda a 0,5 Hz, de carona no tique de reconexão, e a carona é a
+        entrega: o gate de timers desta mixin trava o número de
+        ``GLib.timeout_add`` e o tique rápido é de 10 Hz — três `pactl` por
+        ciclo a 10 Hz seriam trinta subprocessos por segundo para responder a
+        uma pergunta que muda por gesto humano.
+        """
+        botao = self._get("btn_som_no_controle")
+        if botao is None or not hasattr(botao, "set_sensitive"):
+            return  # Glade antigo ou builder dublado: a aba segue sem o botão
+        if self._rota_inflight:
+            return
+        self._rota_inflight = True
+        rota = self._rota_de_som
+        if rota is None:
+            try:
+                from hefesto_dualsense4unix.app.audio_saida import RotaDeSaida
+            except Exception as exc:
+                logger.debug("rota_de_som_indisponivel", err=str(exc))
+                self._rota_inflight = False
+                return
+            rota = RotaDeSaida()
+            self._rota_de_som = rota
+        sink = self._rota_sink
+
+        def _ler() -> Any:
+            return rota.estado(sink)
+
+        ipc_bridge.run_in_thread(
+            _ler, self._on_rota_lida, self._on_rota_falhou
+        )
+
+    def _on_rota_lida(self, estado: Any) -> bool:
+        """Aplica rótulo, sensibilidade e dica — já na thread do GTK."""
+        self._rota_inflight = False
+        from hefesto_dualsense4unix.app.audio_saida import acao_da_rota
+
+        acao = acao_da_rota(estado)
+        botao = self._get("btn_som_no_controle")
+        if botao is not None and hasattr(botao, "set_sensitive"):
+            botao.set_label(acao.rotulo)
+            botao.set_sensitive(acao.sensivel)
+            botao.set_tooltip_text(acao.dica)
+        self._rota_acao = acao
+        return False  # contrato do GLib.idle_add
+
+    def _on_rota_falhou(self, _exc: Exception) -> bool:
+        self._rota_inflight = False
+        return False
+
+    def _on_rota_de_som_clicada(self, _botao: Any = None) -> None:
+        """O clique: troca a saída padrão do sistema, fora da thread do GTK.
+
+        Nunca decide o alvo aqui — quem decide é ``acao_da_rota``, e um alvo
+        vazio quer dizer que não há clique honesto a dar (mais de um controle,
+        ou som já no controle sem memória de quem o pôs lá). O botão já está
+        insensível nesses casos; esta guarda é a segunda tranca, para o dia em
+        que alguém dispare o `clicked` por teclado ou por teste.
+        """
+        acao = getattr(self, "_rota_acao", None)
+        if acao is None or not acao.sensivel or not acao.alvo:
+            return
+        rota = self._rota_de_som
+        if rota is None:
+            return
+        alvo = acao.alvo
+        volta = acao.alvo != self._rota_sink
+
+        def _trocar() -> bool:
+            if volta:
+                return bool(rota.voltar_ao_anterior())
+            return bool(rota.mandar_para_o_controle(alvo))
+
+        def _fim(_ok: Any) -> bool:
+            # Repinta na hora, sem esperar o tique de 2 s: o botão que acabou
+            # de ser clicado tem de dizer o que faz AGORA.
+            self._refresh_rota_de_som()
+            return False
+
+        ipc_bridge.run_in_thread(_trocar, _fim)
+
+    # ------------------------------------------------------------------
     # Cards por controle (STATUS-02)
     # ------------------------------------------------------------------
 
@@ -486,25 +617,41 @@ class StatusActionsMixin(WidgetAccessMixin):
         if keys != self._status_card_keys:
             self._rebuild_status_cards(slot, keys)
         monitor = self._mic_monitor
+        uniqs = tuple(
+            str(c.get("uniq"))
+            for c in conectados
+            if isinstance(c.get("uniq"), str) and c.get("uniq")
+        )
         if monitor is not None:
-            monitor.set_controles(
-                tuple(
-                    str(c.get("uniq"))
-                    for c in conectados
-                    if isinstance(c.get("uniq"), str) and c.get("uniq")
-                )
-            )
+            monitor.set_controles(uniqs)
+        # SOM-04: o alvo do botão de rota sai daqui, e é só uma consulta a
+        # dicionário — nada de subprocess a 10 Hz. Quem foi ao PipeWire foi o
+        # `mic_monitor`, na cadência de 3 s dele.
+        self._rota_sink = self._sink_do_controle_para_a_rota(monitor, uniqs)
         for key, entry in zip(keys, conectados, strict=True):
             card = self._status_cards.get(key)
             if card is None:
                 continue
             uniq = entry.get("uniq")
-            leitura = (
-                monitor.leitura(uniq)
-                if monitor is not None and isinstance(uniq, str) and uniq
-                else None
-            )
+            tem_uniq = monitor is not None and isinstance(uniq, str) and bool(uniq)
+            leitura = monitor.leitura(uniq) if tem_uniq else None
             card.update(entry, state, leitura)
+            # SOM-04, entrega 1: o sink de saída DESTE controle, para o som de
+            # confirmação do bloco "Alto-falante" sair no alto-falante certo e
+            # nunca no sink padrão (medido: `paplay --device=<inexistente>` sai
+            # com zero e toca no PADRÃO — com o dela no HDMI, a confirmação
+            # sairia pela televisão).
+            #
+            # Vai por método próprio, com guarda de existência, e não dentro da
+            # `LeituraMic`: o nome do sink é fato da SAÍDA e sobrevive à
+            # ausência de microfone — sem `parec` na máquina, ou por Bluetooth
+            # sem a ponte de mic, não há captura nenhuma e o alto-falante
+            # continua lá. A guarda existe porque a fiação do card é de outra
+            # leva: enquanto ela não entrar isto é inerte, e no dia em que
+            # entrar não é preciso tocar aqui.
+            definir_sink = getattr(card, "definir_sink_de_saida", None)
+            if definir_sink is not None:
+                definir_sink(monitor.sink_de(uniq) if tem_uniq else "")
 
     def _rebuild_status_cards(
         self, slot: Any, keys: list[tuple[Any, ...]]
@@ -1454,6 +1601,14 @@ class StatusActionsMixin(WidgetAccessMixin):
         """Roda a 0.5 Hz: coordena a máquina de estado do header via thread worker."""
         # R4: pula este tick se o anterior ainda não retornou (mesmo motivo do
         # guard de inflight dos ticks rápido e lento).
+        # SOM-04 pega CARONA neste tique, e a carona é decisão registrada: o
+        # gate de timers desta mixin (test_status_cards) trava o número de
+        # `GLib.timeout_add`, e a rota de som muda por gesto humano — 0,5 Hz é
+        # imperceptível e evita três `pactl` por ciclo a 10 Hz. Vem antes do
+        # guard de inflight do reconnect de propósito: são leituras
+        # independentes, e um IPC pendurado não pode congelar o botão de som.
+        with contextlib.suppress(Exception):
+            self._refresh_rota_de_som()
         if self._reconnect_inflight:
             return True
         self._reconnect_inflight = True

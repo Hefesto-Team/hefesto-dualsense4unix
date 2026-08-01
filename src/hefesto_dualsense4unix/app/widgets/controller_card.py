@@ -72,6 +72,15 @@ triângulo e afins"* e *"permitir a expansão da janela"*. As três mudanças:
   sim o CONTEÚDO crescer junto — desenhos maiores e a sobra repartida entre os
   três blocos da faixa, medida em ``test_status_faixa_blocos``.
 
+SOM-02 é a rodada em que o alto-falante deixou de ser só leitura. O bloco
+ganhou um controle deslizante de volume (E1), um botão de mudo cuja primeira
+linha é INSENSÍVEL (E2) e o botão de devolução da posse (E3, do lado do IPC), e
+a barra continuou sendo LEITURA — quem repinta é o tique de 10 Hz relendo
+``daemon.state_full``, nunca o valor mandado. A insensibilidade da primeira
+linha é entrega, não detalhe: sem volume conhecido, um ``muted`` tranca o
+alto-falante em zero e o próprio botão não tem como soltá-lo (armadilha 2 da
+sprint, medida no backend real).
+
 Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 
 * Rótulo da lightbar pela FONTE (``lightbar_source`` do ``state_full``):
@@ -90,17 +99,21 @@ Contratos honrados (sprint status-por-controle, itens 6-9 do desenho):
 * ``update()`` tem DIFF interno por seção (título/bateria/cor/degradação/
   inputs): repetir o mesmo estado a 10 Hz não re-renderiza nada.
 
-Sem timers próprios (zero timeout/idle do GLib aqui — quem agenda é a mixin
-de status, com os timers que ela JÁ tinha; o aceite do STATUS-02 é diff
-contra esse baseline) e sem popups (cosmic-epoch#2497): tudo inline, sempre
-visível. Como os demais widgets da casa, há a variante GTK real e um stub
-puro para ambiente sem GTK (testes/CI sem display).
+Sem timers RECORRENTES próprios (quem agenda o tique é a mixin de status, com
+os timers que ela JÁ tinha; o aceite do STATUS-02 é diff contra esse baseline)
+e sem popups (cosmic-epoch#2497): tudo inline, sempre visível. A ÚNICA exceção
+é o repouso do controle deslizante de volume (SOM-02/E1): um
+``GLib.timeout_add`` de UM disparo, armado por gesto humano e desarmado ao
+disparar ou ao soltar o botão do mouse — sem ele, arrastar o controle vira uma
+rajada de IPC bloqueante (um pedido por pixel). Como os demais widgets da casa,
+há a variante GTK real e um stub puro para ambiente sem GTK (testes/CI sem
+display).
 """
 from __future__ import annotations
 
 from typing import Any, Final, NamedTuple
 
-from hefesto_dualsense4unix.app import ipc_bridge
+from hefesto_dualsense4unix.app import audio_saida, ipc_bridge
 from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     GyroBars,
     LightbarBar,
@@ -108,10 +121,12 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     SpeakerBar,
     TouchpadView,
     fracao_do_volume,
+    percentual_do_volume,
     posicao_normalizada,
     selo_mic,
     texto_toques,
     texto_volume,
+    volume_do_percentual,
 )
 from hefesto_dualsense4unix.gui.widgets import (
     BUTTON_GLYPH_LABELS,
@@ -440,6 +455,104 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
 #: volume inventado, e esconder o bloco seria dizer que o controle não tem
 #: alto-falante.
 TEXTO_SPEAKER_SEM_DADO: Final[str] = "não ajustado"
+
+#: Rótulos dos DOIS botões do alto-falante (SOM-02, entregas 2 e 3). Cada um
+#: diz o que o CLIQUE faz, no mesmo desenho do botão do microfone.
+#:
+#: Por que DOIS botões e não um só como no microfone: lá as três ações cabem
+#: num ciclo porque o firmware DEVOLVE o estado do mudo, e "quem manda" é uma
+#: leitura (``mic_mudo_desejado``). Aqui não há leitura nenhuma — a chave
+#: ``speaker`` só existe quando a posse é NOSSA, então "posse do firmware" e
+#: "mudo por nossa ordem" nunca convivem no mesmo payload e um botão só
+#: alternaria eternamente entre Silenciar e Ativar, sem nunca oferecer a
+#: devolução. Com dois, mudo e devolução ficam disponíveis ao mesmo tempo, que
+#: é o que a sprint pede: a saída não pode depender de passar por um mudo.
+TEXTO_BOTAO_SPEAKER_ATIVAR: Final[str] = "Ativar"
+TEXTO_BOTAO_SPEAKER_SILENCIAR: Final[str] = "Silenciar"
+TEXTO_BOTAO_SPEAKER_DEVOLVER: Final[str] = "Devolver"
+TEXTO_BOTAO_SPEAKER_SEM_DADO: Final[str] = "sem dado"
+
+#: Campo fixo dos rótulos dos botões do alto-falante, em caracteres — medido
+#: pelo mais longo deles. Mesma disciplina do botão do microfone: sem teto, o
+#: rótulo mais largo decidiria a largura da coluna e trocar de estado moveria
+#: os vizinhos de lugar.
+_SPEAKER_BOTAO_CHARS: Final[int] = len(TEXTO_BOTAO_SPEAKER_SILENCIAR)
+
+#: O PREÇO do controle deslizante, na dica dele — as três verdades medidas na
+#: SOM-02, ditas antes do clique e não depois: (1) a posse passa a ser nossa,
+#: (2) ela vale para o alto-falante E para o fone (o backend manda o mesmo
+#: valor nos dois bytes, `common[4]` e `common[5]`), e (3) não há leitura, então
+#: quem manda continua sendo a janela até a devolução ou a desconexão.
+DICA_SPEAKER_ESCALA: Final[str] = (
+    "Mover isto faz o hefesto assumir o volume do alto-falante E do fone do "
+    "controle. O DualSense não devolve esse valor: depois disso, quem manda é "
+    "a janela até você clicar em Devolver ou desconectar o controle."
+)
+
+#: As dicas dos botões. A do estado sem dado explica o CAMINHO, e não só a
+#: recusa: sem volume conhecido o par mudo/desmudo tranca o alto-falante em
+#: zero (o `muted=False` restaura a preferência, e a preferência seria 0).
+DICA_SPEAKER_SILENCIAR: Final[str] = (
+    "O alto-falante está no volume que o hefesto mandou. Silenciar manda zero "
+    "sem perder esse volume — Ativar o devolve."
+)
+DICA_SPEAKER_ATIVAR: Final[str] = (
+    "O alto-falante está mudo por ordem nossa. Ativar devolve o mesmo volume "
+    "de antes do mudo."
+)
+DICA_SPEAKER_SEM_DADO: Final[str] = (
+    "ainda não há volume conhecido — use o controle deslizante primeiro"
+)
+DICA_SPEAKER_DEVOLVER: Final[str] = (
+    "Devolver faz o hefesto parar de mandar o volume. O que estiver valendo "
+    "continua até você desconectar o controle."
+)
+DICA_SPEAKER_DEVOLVER_SEM_POSSE: Final[str] = (
+    "não há posse para devolver: o volume ainda é do firmware do controle"
+)
+
+#: A linha de explicação no lugar do silêncio (SOM-02/E5), na dica do BLOCO.
+#: É a diferença entre "a janela não sabe" e "a janela está quebrada".
+DICA_BLOCO_SPEAKER: Final[str] = (
+    "o volume é do firmware do controle e ele não o devolve; mover o controle "
+    "deslizante passa a mandá-lo"
+)
+
+#: Selo da CAMADA 1 (SENSOR-VIVO-01/E5): com o sink do controle mudo no
+#: PipeWire, mover o volume do registrador HID não produz som nenhum. O selo é
+#: o que impede o bloco de parecer mentiroso — e ele só aparece quando a
+#: leitura da camada 1 DIZ isso. Sem leitura, nada: inventar "saída muda" a
+#: partir de ausência seria a mesma mentira, do outro lado.
+TEXTO_SELO_SAIDA_MUDA: Final[str] = "saída muda"
+
+#: Selo do SOM DE CONFIRMAÇÃO que não saiu (SOM-04, entrega 1, regra 4). Ele é
+#: CURTO por medição, não por estilo: o rótulo do selo não tem teto de largura
+#: próprio, e a primeira versão desta leva pôs a frase inteira ("sem
+#: confirmação: falta paplay ou pw-play na máquina") aqui — o mínimo do bloco
+#: saltou de 174 para 383px e o do card de 1040 para **1223**, estourando os
+#: 1180px com que a janela abre. No card compacto era pior: 550 para 827, o que
+#: com dois cards lado a lado pede 1690px.
+#:
+#: A cura é a mesma disciplina do card compacto, onde os rótulos dos botões
+#: truncam e "quem diz a ação por inteiro é a dica": o selo diz QUE não houve
+#: confirmação, e a dica do bloco diz POR QUÊ. Sete caracteres cabem dentro dos
+#: dez de ``saída muda``, que já passava no orçamento — o selo continua
+#: custando ZERO largura.
+TEXTO_SELO_SEM_SOM: Final[str] = "sem som"
+
+#: Teto de largura do selo, em caracteres, medido pelo mais longo dos dois
+#: textos acima. Sem ele, um texto novo amanhã volta a decidir a largura do
+#: bloco — e daí a da janela — sem ninguém perceber.
+_SELO_CHARS: Final[int] = max(
+    len(TEXTO_SELO_SAIDA_MUDA), len(TEXTO_SELO_SEM_SOM)
+)
+
+#: Repouso do controle deslizante antes de mandar o volume, em ms. Arrastar
+#: emite ``value-changed`` por pixel e o IPC é BLOQUEANTE: sem repouso, um
+#: arrasto de 2 cm vira dezenas de pedidos enfileirados no executor de uma
+#: thread só. 250 ms é abaixo do que se percebe como demora e acima da cadência
+#: de um arrasto.
+_SPEAKER_REPOUSO_MS: Final[int] = 250
 
 #: Respiro entre blocos da faixa de leitura, em px. O card compacto (2+
 #: controles) usa o menor porque cada px dele soma na largura da janela; o de
@@ -777,6 +890,130 @@ def acao_mic(entry: Any) -> AcaoMic:
     return AcaoMic(TEXTO_BOTAO_MIC_SILENCIAR, True, True, DICA_MIC_SILENCIAR)
 
 
+class AcaoSpeaker(NamedTuple):
+    """O que um botão do alto-falante diz e o que ele manda quando clicado.
+
+    ``muted`` é o argumento homônimo de ``ipc_bridge.speaker_set`` (``None`` =
+    não mexer no mudo) e ``release`` pede a DEVOLUÇÃO da posse. Nenhum dos dois
+    carrega volume: volume só sai do controle deslizante, e sempre explícito.
+    """
+
+    rotulo: str
+    muted: bool | None
+    release: bool
+    sensivel: bool
+    dica: str
+
+
+def acao_speaker_mudo(entry: Any) -> AcaoSpeaker:
+    """Estado do botão de MUDO do alto-falante (SOM-02, entrega 2).
+
+    A tabela, e cada linha vem de medição:
+
+    ==============================  ==========  ===================
+    estado                          rótulo      manda
+    ==============================  ==========  ===================
+    sem volume conhecido            sem dado    (insensível)
+    tocando, posse nossa            Silenciar   ``muted=True``
+    mudo por nossa ordem            Ativar      ``muted=False``
+    ==============================  ==========  ===================
+
+    **A primeira linha é INSENSÍVEL, e isso é a entrega.** A chave ``speaker``
+    só existe depois de um ``speaker.set`` nosso com volume; antes dela, um
+    ``muted=True`` faria o backend assumir a posse com preferência ZERO, e o
+    ``muted=False`` seguinte "restauraria" essa preferência — o par tranca o
+    alto-falante em ``{'volume': 0, 'muted': True}`` e o próprio botão não tem
+    como soltá-lo (armadilha 2 da SOM-02, executada contra o backend real).
+
+    O botão fica insensível em vez de sumir, pela mesma regra do microfone:
+    sumir muda a largura dos vizinhos e é indistinguível de "este controle não
+    tem alto-falante" (MIC-PRESENTE-01).
+    """
+    dados = speaker_do_entry(entry)
+    if dados is None:
+        return AcaoSpeaker(
+            TEXTO_BOTAO_SPEAKER_SEM_DADO, None, False, False, DICA_SPEAKER_SEM_DADO
+        )
+    _volume, muted = dados
+    if muted:
+        return AcaoSpeaker(
+            TEXTO_BOTAO_SPEAKER_ATIVAR, False, False, True, DICA_SPEAKER_ATIVAR
+        )
+    return AcaoSpeaker(
+        TEXTO_BOTAO_SPEAKER_SILENCIAR, True, False, True, DICA_SPEAKER_SILENCIAR
+    )
+
+
+def acao_speaker_devolucao(entry: Any) -> AcaoSpeaker:
+    """Estado do botão de DEVOLUÇÃO da posse (SOM-02, entrega 3).
+
+    Sensível exatamente quando há posse — que é o mesmo que dizer "quando a
+    chave ``speaker`` existe", porque o daemon só a publica enquanto o volume
+    for nosso. Sem posse não há o que devolver, e mandar ``release`` ali seria
+    pedir ao daemon que soltasse um byte que ele nunca tomou.
+
+    O rótulo não muda de estado: ele já diz o que o clique faz. O que muda é a
+    dica, e ela é HONESTA sobre o limite — devolver para de mandar o volume, e
+    o firmware fica com o ÚLTIMO valor que mandamos. Não existe leitura, logo
+    não existe restauração: prometer que o volume anterior volta seria a mesma
+    família de mentira que a SOM-01 recusou ao não publicar ``0 %``.
+    """
+    if speaker_do_entry(entry) is None:
+        return AcaoSpeaker(
+            TEXTO_BOTAO_SPEAKER_DEVOLVER,
+            None,
+            False,
+            False,
+            DICA_SPEAKER_DEVOLVER_SEM_POSSE,
+        )
+    return AcaoSpeaker(
+        TEXTO_BOTAO_SPEAKER_DEVOLVER, None, True, True, DICA_SPEAKER_DEVOLVER
+    )
+
+
+def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
+    """A CAMADA 1 (o sink do PipeWire) está muda? ``None`` = não dá para saber.
+
+    SENSOR-VIVO-01/E5 e SOM-02/E5, item 4 — são a mesma verdade vista dos dois
+    lados. Com o sink do controle mudo no PipeWire, mover o volume do
+    registrador HID (a camada 2, a única que a janela alcança nos dois
+    transportes) não produz som nenhum: o bloco ficaria dizendo uma
+    porcentagem enquanto nada sai.
+
+    Duas posições aceitas, nesta ordem, e nenhuma delas inventada aqui:
+
+    1. o PAYLOAD do daemon, em ``speaker.saida_muda`` ou ``audio.saida_muda`` —
+       é onde a leitura mora quando quem lê o PipeWire é o daemon;
+    2. a leitura do microfone da própria janela (``LeituraMic.saida_muda``), lida
+       por ``getattr`` defensivo — é onde ela mora se quem passar a ler o sink
+       for o ``app/mic_monitor.py``, que já é o leitor de PipeWire desta
+       interface e já roda fora da thread GTK.
+
+    **Hoje nenhuma das duas existe** (medido em 01/08/2026: o daemon publica
+    ``audio`` e ``speaker`` sem nenhuma chave de camada 1, e o ``MicMonitor`` lê
+    SOURCES, não sinks). A função devolve ``None`` e o selo não aparece — que é
+    o comportamento correto para "não há como saber", e não um placeholder:
+    ela é o ponto de encaixe, e o dia em que qualquer um dos dois lados
+    publicar a leitura, o selo acende sem tocar no card.
+
+    Só ``True`` acende o selo. ``False`` (a saída está aberta) e ``None`` (não
+    sabemos) mostram a mesma coisa — nada —, porque um selo "saída viva" seria
+    ruído em cima do que a barra já diz.
+    """
+    inputs = entry.get("inputs") if isinstance(entry, dict) else None
+    for dono in (entry, inputs):
+        if not isinstance(dono, dict):
+            continue
+        for bloco_nome in ("speaker", "audio"):
+            bloco = dono.get(bloco_nome)
+            if isinstance(bloco, dict):
+                valor = bloco.get("saida_muda")
+                if isinstance(valor, bool):
+                    return valor
+    valor = getattr(mic, "saida_muda", None)
+    return valor if isinstance(valor, bool) else None
+
+
 def accent_do_card(entry: dict[str, Any], state_global: dict[str, Any]) -> RGB:
     """Cor AJUSTADA dos traços do card (contraste mínimo garantido).
 
@@ -796,7 +1033,7 @@ try:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk, Pango
+    from gi.repository import GLib, Gtk, Pango
 
     # Com um stub parcial de gi (testes antigos sem display), o import acima
     # passa mas faltam classes — o card cai no stub em vez de explodir.
@@ -875,7 +1112,41 @@ if _GTK_DISPONIVEL:
             # isso mutaria o microfone de outra pessoa.
             self._uniq: str | None = None
             self._mic_acao: AcaoMic | None = None
+            # SOM-02 — o estado do COMANDO do alto-falante. Nenhum deles é
+            # leitura: `_speaker_volume_enviado` existe só para a guarda
+            # anti-rajada (o mesmo número duas vezes), e jamais é pintado.
+            self._speaker_acao_mudo: AcaoSpeaker | None = None
+            self._speaker_acao_devolucao: AcaoSpeaker | None = None
+            self._speaker_arrastando = False
+            self._speaker_pintando = False
+            self._speaker_repouso_id: int | None = None
+            self._speaker_volume_enviado: int | None = None
+            # SOM-04 — o som de confirmação. O DualSense não devolve o volume
+            # (SOM-02, o preço da camada 2): depois de um gesto, NADA na tela
+            # pode confirmar que ele valeu, porque o número exibido é o que nós
+            # mandamos. O som É a leitura que falta.
+            #
+            # `_speaker_sink` é o sink de SAÍDA deste controle, posto de fora
+            # por `definir_sink_de_saida`. "" = não dá para saber (nenhum sink
+            # publicado, ou mais de um DualSense — o `escolher_sink` recusa de
+            # propósito, porque o `-00` do nome é ordem de conexão e não número
+            # de série). Com "" não se toca: medido nesta bancada,
+            # `paplay --device=` vazio é ACEITO, sai com zero e cai no sink
+            # PADRÃO, que na máquina dela é o HDMI.
+            self._speaker_sink = ""
+            # O motivo pelo qual a última confirmação NÃO saiu. Nunca é leitura
+            # de sensor: é recado, e some no primeiro som que sair.
+            self._speaker_recado_do_som = ""
+            # A camada 1 (o sink do PipeWire) da última releitura, guardada
+            # porque o selo do bloco passou a ter DOIS informantes e o
+            # `_aplicar_selo_do_som` precisa dos dois para decidir a prioridade.
+            self._speaker_saida_muda: bool | None = None
             self._montar_ui()
+            # Um repouso pendente segura uma referência ao card e dispararia
+            # sobre um widget já destruído quando a aba recria os cards
+            # (`_rebuild_status_cards` destrói e refaz a cada troca de
+            # conjunto de controles).
+            self.connect("destroy", lambda _w: self._cancelar_repouso_do_volume())
 
         # ------------------------------------------------------------------
         # API pública
@@ -907,7 +1178,7 @@ if _GTK_DISPONIVEL:
             self._update_touchpad(entry.get("inputs"))
             self._update_mic(mic, str(entry.get("transport") or ""))
             self._update_mic_botao(entry)
-            self._update_speaker(entry)
+            self._update_speaker(entry, mic)
 
         def reset_inputs(self) -> None:
             """IPC sem resposta: mostra "—" — nunca o último valor como vivo."""
@@ -1462,7 +1733,7 @@ if _GTK_DISPONIVEL:
             return caixa
 
         def _montar_speaker(self) -> Any:
-            """Bloco "Alto-falante": volume do speaker embutido do controle.
+            """Bloco "Alto-falante": leitura EM CIMA, comando EMBAIXO.
 
             STATUS-SIMETRIA-02, entrega 4 — *"não tem a parte do som"*. O
             bloco sumia da tela dela por construção: o daemon só publica a
@@ -1470,30 +1741,486 @@ if _GTK_DISPONIVEL:
             DualSense não devolve o volume (não há report de input nem feature
             report que o leia — ver ``ipc_handlers``), e o card escondia o
             módulo inteiro na ausência da chave. Só que sumir é
-            indistinguível de "este controle não tem alto-falante".
+            indistinguível de "este controle não tem alto-falante". O bloco
+            NUNCA se esconde, em nenhum dos caminhos.
 
-            Agora o bloco fica, em LEITURA: a barra em repouso e o rótulo
-            dizendo ``não ajustado``. Nenhum controle novo entra aqui — pôr um
-            botão de volume que o daemon aceita mas cujo valor ninguém
-            consegue ler de volta seria inventar controle que não funciona.
+            SOM-02 põe o comando ao lado da leitura, e as duas peças têm
+            significados diferentes de propósito:
+
+            * **a barra e o rótulo são LEITURA** — repintados pelo tique de
+              10 Hz a partir de ``daemon.state_full``, jamais pelo valor que
+              mandamos. Sem posse, a barra fica vazia e o rótulo diz
+              ``não ajustado``;
+            * **o controle deslizante é COMANDO** — e fica em repouso (no
+              zero) enquanto não houver posse, sem afirmar posição. Pôr o
+              cursor no meio com o rótulo ``não ajustado`` seria desenhar 50 %
+              e negá-lo por escrito;
+            * **os dois botões** só ficam sensíveis com posse
+              (:func:`acao_speaker_mudo`, :func:`acao_speaker_devolucao`).
+
+            Tudo isso entra ABAIXO da barra pelo mesmo motivo que o botão do
+            microfone (`_montar_mic`): no miolo vertical do bloco o custo é de
+            ALTURA, que sobra, e não de largura, que é a restrição dura desta
+            aba. Medido nesta bancada com a fonte na escala 3: no card de um
+            controle o mínimo do bloco é 174px com posse e 200px sem ela, e o
+            do controle deslizante 34px; no compacto, 94px contra os mesmos
+            34px — o controle deslizante custa ZERO largura nos dois, pelo
+            mesmo teste que o botão do microfone passou.
+
+            SOM-03 arrumou a ORDEM das quatro peças, que era o que tornava o
+            controle deslizante inútil (30px de bolinha sem trilho na tela
+            dela). O desenho de agora, nos dois cards::
+
+                [============ barra ============]   leitura
+                [--------O---------------------]    comando
+                71 %             [Silenciar][Devolver]
+
+            O controle deslizante tem LINHA PRÓPRIA e nasce colado na barra que
+            comanda — as duas peças continuam sendo duas (E5), e ficarem uma
+            sobre a outra, do mesmo tamanho, é o que deixa ler de relance que
+            dizem a mesma grandeza. No card compacto o rótulo de valor fica na
+            linha dele e os botões na de baixo, porque fundi-los ali estouraria
+            a largura da aba — os números estão no bloco de comentários do
+            empacotamento, mais abaixo.
             """
             caixa, miolo = self._bloco("Alto-falante")
+            # SOM-02/E5, item 3: a linha de explicação no lugar do silêncio.
+            # Ela vive na dica do BLOCO (e não do controle deslizante) porque
+            # responde à pergunta que o bloco inteiro levanta — por que o
+            # normal aqui é "não ajustado".
+            caixa.set_tooltip_text(DICA_BLOCO_SPEAKER)
             barra = SpeakerBar()
             barra.set_valign(Gtk.Align.CENTER)
             if not self._compact:
                 barra.set_size_request(*_BARRA_FINA_PX_UNICO)
-            miolo.pack_start(barra, False, False, 0)
-            # Sem campo fixo aqui, ao contrário do microfone: quem manda na
-            # largura desta coluna é o rótulo "Alto-falante", que é maior que
-            # qualquer valor e não muda — trocar "não ajustado" por "50 %" não
-            # mexe em nada. Um `width_chars` seria 30px de largura cobrados por
-            # nada, e a largura é o que falta nesta aba.
+            # A ORDEM de empacotar está toda junta lá embaixo, depois que as
+            # peças existem: ela é o assunto desta leva e muda entre os dois
+            # cards, e espalhá-la pela função foi o que escondeu, na SOM-02,
+            # que o controle deslizante dividia a linha com 194px de botões.
+            # Sem campo fixo aqui, ao contrário do microfone. A razão escrita
+            # até a SOM-02 era que o rótulo da moldura seria sempre o mais
+            # largo — e a medição desta leva REFUTOU isso: no card compacto
+            # "Alto-falante" pede 80px e "não ajustado" pede 89, e é este quem
+            # dita o mínimo do bloco. O campo fixo continua fora por outro
+            # motivo, esse sim medido: ele reservaria a largura do MAIOR texto
+            # em todos os estados, e o estado com posse ("71 %", 28px) é o
+            # comum depois do primeiro gesto — pagaríamos 61px por card, em
+            # dobro na aba com dois cards, para não mover um rótulo que muda
+            # uma vez por sessão.
             valor = self._rotulo_secao(TEXTO_SPEAKER_SEM_DADO)
-            miolo.pack_start(valor, False, False, 0)
+            # O selo da CAMADA 1 nasce escondido e só aparece quando alguém
+            # souber dizer que o sink está mudo. `_esconder_modulo` (e não um
+            # `hide()` cru) porque o `show_all()` do card revelaria de volta
+            # qualquer filho apagado antes dele.
+            selo_saida = self._rotulo_secao(TEXTO_SELO_SAIDA_MUDA)
+            # O TETO de largura do selo (SOM-04). Ele não tinha nenhum: o texto
+            # do selo decidia o mínimo do bloco, e daí o do card e o da janela.
+            # Com a frase inteira do recado do som ali, o card de um controle
+            # ia a 1223px numa janela que abre com 1180. Os números estão em
+            # `_SELO_CHARS`.
+            selo_saida.set_ellipsize(Pango.EllipsizeMode.END)
+            selo_saida.set_max_width_chars(_SELO_CHARS)
+            escala = Gtk.Scale.new_with_range(
+                Gtk.Orientation.HORIZONTAL, 0, 100, 1
+            )
+            # O número já está no rótulo de leitura acima; desenhá-lo de novo
+            # aqui custaria 13px de largura mínima para repetir o que a linha
+            # de cima diz — e diria o valor MANDADO ao lado do valor LIDO, que
+            # é exatamente a confusão que este bloco existe para não criar.
+            escala.set_draw_value(False)
+            escala.set_valign(Gtk.Align.CENTER)
+            # **Nenhum piso de largura aqui, nos DOIS cards.** Não é
+            # esquecimento: o controle deslizante ocupa a LINHA INTEIRA do
+            # bloco (é o único filho dela), e um `set_size_request` é MÍNIMO —
+            # subiria direto para o mínimo do bloco e dali para o da janela.
+            # Medido: com o piso de 160px da barra fina, o mínimo do bloco vai
+            # de 174 para 258px no card de um controle e de 80 para 206px no
+            # compacto — 126px A MAIS por card, somados nos dois cards lado a
+            # lado (1148 + 252 = 1400px, contra os 1180 com que a janela abre).
+            # É o mesmo teste que o botão do microfone passou: o mínimo do
+            # controle novo (34px) tem de ficar ABAIXO do mínimo do bloco.
+            # Quem dá LARGURA a ele não é um piso: é a linha própria, que num
+            # `GtkBox` vertical entrega a largura inteira da caixa a cada filho
+            # independentemente do natural dele (SOM-03).
+            escala.set_hexpand(True)
+            escala.set_tooltip_text(DICA_SPEAKER_ESCALA)
+            escala.connect("value-changed", self._on_speaker_escala_mudou)
+            escala.connect("button-press-event", self._on_speaker_escala_pega)
+            escala.connect("button-release-event", self._on_speaker_escala_solta)
+            escala.connect("key-release-event", self._on_speaker_escala_solta)
+            botao_mudo = self._botao_de_acao(TEXTO_BOTAO_SPEAKER_SEM_DADO)
+            botao_mudo.connect("clicked", self._on_speaker_mudo_clicado)
+            botao_devolver = self._botao_de_acao(TEXTO_BOTAO_SPEAKER_DEVOLVER)
+            botao_devolver.connect(
+                "clicked", self._on_speaker_devolucao_clicada
+            )
+            # SOM-03 — *"a escala tem cerca de 30 pixels de largura, é só a
+            # bolinha, sem trilho"*. **O controle deslizante tem LINHA PRÓPRIA
+            # nos dois cards**, e quem paga a linha é o rótulo de valor, que
+            # sobe para a linha dos botões em vez de gastar uma só para si.
+            #
+            # A causa do defeito era de REQUISIÇÃO, não de alocação: dividindo
+            # a linha com os dois botões, o controle recebia o NATURAL dele
+            # (34px) e os botões, os deles (101 e 93px) — `GtkBox` reparte o
+            # excedente só depois de todo mundo chegar ao natural, e num bloco
+            # de 254px não havia excedente nenhum. A barra de leitura logo
+            # acima, essa sim sozinha na linha, recebia 240px para dizer a
+            # MESMA grandeza. Medido na janela de projeto (1180px), que é como
+            # ela abre: controle deslizante 38px contra uma barra de 240px.
+            #
+            # Num `GtkBox` VERTICAL o filho único de uma linha recebe a largura
+            # inteira da caixa, natural ou não — é por isso que a linha própria
+            # cura sem piso de largura, sem tocar no mínimo de ninguém e sem
+            # gastar um pixel dos 32 que a aba tem de folga.
+            #
+            # **De onde vieram os pixels de ALTURA.** Empilhar as três peças em
+            # linhas separadas (barra / valor / controle / botões) é o desenho
+            # óbvio e pedia 477px para uma faixa de 467 — 10px acima do corte.
+            # Fundir o rótulo de valor com a linha dos botões devolve os 20px
+            # da linha do rótulo mais os 2px do respiro dela, e a linha
+            # resultante não cresce: ela já tinha a altura do botão (38px), que
+            # é maior que a do rótulo (20px). Sobra a diferença entre o que o
+            # controle deslizante pede (34px) e o que o rótulo pedia (20px).
+            # As duas peças continuam sendo duas peças (E5): a leitura é a
+            # barra mais o número, o comando é o controle mais os botões.
+            #
+            # * card de UM controle: a altura é o recurso escasso e é dela que
+            #   esta cura gasta. O card pede 456px dos 467 da faixa (contra 442
+            #   com o controle espremido) e o controle deslizante passa de 38
+            #   para 240px na janela de projeto e para 360px na tela dela
+            #   maximizada — a mesma largura da barra que ele comanda;
+            # * card COMPACTO: a largura é o recurso escasso, e lá o controle
+            #   JÁ tinha linha própria desde a SOM-02 — recebe 113px com dois
+            #   cards na janela de projeto e 206px com a janela em 1870. Este
+            #   card NÃO funde o rótulo de valor com a linha dos botões, e o
+            #   motivo é medido: fundir levaria o mínimo do bloco de 94 para
+            #   186px, somados nos dois cards lado a lado, e estouraria os
+            #   1180px com que a janela abre. A altura dele fica onde estava
+            #   (449px dos 467), e o que muda é só a ORDEM — o controle passa
+            #   a nascer colado na barra que ele comanda, como no card único.
+            miolo.pack_start(barra, False, False, 0)
+            if self._compact:
+                miolo.pack_start(escala, False, False, 0)
+                miolo.pack_start(valor, False, False, 0)
+                # LIMITAÇÃO DECLARADA, com o preço medido: com dois cards na
+                # janela de projeto cada bloco recebe ~113px, e os dois botões
+                # lado a lado ficam com ~55px cada — os rótulos truncam para
+                # "Ativ..." e "Dev...", e quem diz a ação por inteiro é a dica.
+                # As saídas foram medidas e custam mais do que existe:
+                # empilhar os botões custa 40px de altura; fundir os botões com
+                # o rótulo de valor sobe o mínimo do bloco de 94 para 186px; e
+                # alargar o bloco sobe somado nos dois cards, contra 32px de
+                # folga na aba inteira. No card de um controle — a tela que ela
+                # usa com um DualSense — os dois rótulos aparecem inteiros
+                # sempre que há posse, que é quando eles funcionam.
+                linha_botoes = Gtk.Box(
+                    orientation=Gtk.Orientation.HORIZONTAL, spacing=4
+                )
+                linha_botoes.set_homogeneous(True)
+                linha_botoes.pack_start(botao_mudo, True, True, 0)
+                linha_botoes.pack_start(botao_devolver, True, True, 0)
+                miolo.pack_start(linha_botoes, False, False, 0)
+            else:
+                miolo.pack_start(escala, False, False, 0)
+                # O número à ESQUERDA e as ações à direita: o rótulo entra com
+                # `expand`/`fill` e empurra os dois botões para a borda da
+                # moldura. `xalign=0` (de `_rotulo_secao`) mantém o texto
+                # colado à esquerda enquanto a caixa dele estica.
+                #
+                # LIMITAÇÃO DECLARADA, com o preço medido nesta bancada: com a
+                # janela na largura de PROJETO (1180px) e SEM posse, esta linha
+                # quer 296px (o rótulo "não ajustado" pede 94, "sem dado" 101 e
+                # "Devolver" 93, mais 8 de respiro) e o bloco tem 243 — os dois
+                # botões encolhem para ~70px e os rótulos elipsam. É o único
+                # estado em que isso acontece, e é o estado em que os dois
+                # botões estão INSENSÍVEIS (sem volume conhecido não há mudo
+                # nem devolução a fazer — `acao_speaker_mudo`). Com posse, que
+                # é quando eles funcionam, a linha quer 223 dos mesmos 243 e os
+                # rótulos saem inteiros; com a janela em 1400 ou mais, saem
+                # inteiros nos dois estados.
+                #
+                # As duas saídas foram medidas e custam mais do que existe:
+                # devolver ao rótulo de valor a linha só dele leva o card a
+                # 478px contra os 467 da faixa (é o desenho "óbvio", 11px acima
+                # do corte); e alargar o bloco para 296 não tem de onde vir —
+                # na largura de projeto a faixa inteira já está comprimida
+                # (pede 1338px de natural e recebe 1098), e cada pixel do bloco
+                # do som sai do touchpad e do medidor do microfone, que a
+                # CARD-OCUPA-01 acabou de encher.
+                linha_legenda = Gtk.Box(
+                    orientation=Gtk.Orientation.HORIZONTAL, spacing=4
+                )
+                linha_legenda.pack_start(valor, True, True, 0)
+                linha_legenda.pack_start(botao_mudo, False, False, 0)
+                linha_legenda.pack_start(botao_devolver, False, False, 0)
+                miolo.pack_start(linha_legenda, False, False, 0)
+            # O selo da camada 1 fica por último nos dois cards: ele é a
+            # exceção (aparece só quando o sink do sistema está mudo) e é o
+            # único filho do bloco que entra e sai em tempo de execução. Numa
+            # linha compartilhada, cada aparição dele empurraria o mínimo do
+            # bloco — e daí o da janela — no meio da sessão.
+            miolo.pack_start(selo_saida, False, False, 0)
+            self._esconder_modulo(selo_saida)
             self._speaker_bar = barra
             self._speaker_label = valor
+            self._speaker_selo_saida = selo_saida
+            self._speaker_escala = escala
+            self._speaker_botao_mudo = botao_mudo
+            self._speaker_botao_devolver = botao_devolver
             self._speaker_box = caixa
+            self._aplicar_estado_speaker(None)
+            self._aplicar_acoes_speaker(
+                acao_speaker_mudo(None), acao_speaker_devolucao(None)
+            )
             return caixa
+
+        def _botao_de_acao(self, rotulo_inicial: str) -> Any:
+            """Botão de ação de bloco, no molde do botão do microfone.
+
+            O rótulo é um Label NOSSO, e não o que ``Gtk.Button(label=...)``
+            fabrica, pela razão medida em `_montar_mic`: ``set_label()``
+            DESTRÓI e recria o label interno e levaria o teto de largura junto
+            no primeiro troca-troca de estado. O campo fixo
+            (:data:`_SPEAKER_BOTAO_CHARS`) é o que impede o rótulo mais longo
+            de decidir a largura da coluna.
+            """
+            botao = Gtk.Button()
+            botao.set_halign(Gtk.Align.FILL)
+            rotulo = Gtk.Label(label=rotulo_inicial)
+            rotulo.set_ellipsize(Pango.EllipsizeMode.END)
+            rotulo.set_max_width_chars(_SPEAKER_BOTAO_CHARS)
+            botao.add(rotulo)
+            botao._rotulo_hefesto = rotulo
+            return botao
+
+        # ------------------------------------------------------------------
+        # Alto-falante: os pedidos (SOM-02, entregas 1 a 3)
+        # ------------------------------------------------------------------
+
+        def _on_speaker_escala_pega(self, _escala: Any, _evento: Any) -> bool:
+            """Botão do mouse APERTADO no controle: a mão dela assumiu.
+
+            Enquanto durar, o tique de 10 Hz para de reposicionar o cursor: sem
+            isto, a releitura do estado brigaria com o arrasto e o controle
+            pularia para trás no meio do gesto.
+            """
+            self._speaker_arrastando = True
+            return False
+
+        def _on_speaker_escala_solta(self, _escala: Any, _evento: Any) -> bool:
+            """Soltou o botão (ou a tecla): manda o volume AGORA.
+
+            É o fim do gesto, e mandar aqui é o que faz o pedido chegar sem
+            esperar o repouso. O repouso continua existindo para o que não tem
+            fim de gesto — a roda do mouse.
+            """
+            self._speaker_arrastando = False
+            self._enviar_volume_do_controle()
+            return False
+
+        def _on_speaker_escala_mudou(self, _escala: Any) -> None:
+            """Valor mudou: arma o repouso — nunca manda no ato.
+
+            ``value-changed`` dispara por pixel de arrasto, e o IPC é
+            BLOQUEANTE: mandar aqui viraria uma rajada de pedidos enfileirados
+            num executor de uma thread só. Quem manda é o fim do gesto
+            (`_on_speaker_escala_solta`) ou o repouso, o que vier primeiro.
+
+            A guarda do `_speaker_pintando` é a parte que não pode cair: sem
+            ela, o tique de 10 Hz que repinta o controle a partir do estado
+            dispararia um pedido de volta ao daemon — um laço de eco entre
+            leitura e comando.
+            """
+            if self._speaker_pintando:
+                return
+            self._agendar_envio_de_volume()
+
+        def _agendar_envio_de_volume(self) -> None:
+            """(Re)arma o disparo único do repouso."""
+            self._cancelar_repouso_do_volume()
+            self._speaker_repouso_id = GLib.timeout_add(
+                _SPEAKER_REPOUSO_MS, self._on_speaker_repouso
+            )
+
+        def _cancelar_repouso_do_volume(self) -> None:
+            fonte = self._speaker_repouso_id
+            self._speaker_repouso_id = None
+            if fonte is not None:
+                GLib.source_remove(fonte)
+
+        def _on_speaker_repouso(self) -> bool:
+            self._speaker_repouso_id = None
+            self._enviar_volume_do_controle()
+            return False  # disparo ÚNICO (contrato do GLib.timeout_add)
+
+        def _enviar_volume_do_controle(self) -> None:
+            """Manda o volume do controle deslizante — fora da thread GTK.
+
+            Três invariantes, cada uma paga com uma medição da SOM-02:
+
+            * **o valor vai SEMPRE explícito.** ``speaker.set`` sem ``volume``
+              não é consulta: o backend cai na preferência, que sem volume
+              anterior é ZERO, toma a posse e emudece o controle (armadilha 1);
+            * **nada de bloquear a thread do GTK**: o pedido vai por
+              ``run_in_thread``, como o botão do microfone. Esta interface já
+              congelou por IPC bloqueante num clique;
+            * **o valor mandado NÃO vira leitura.** O callback não pinta nada;
+              quem repinta é o tique de 10 Hz relendo ``daemon.state_full``. Um
+              número pintado a partir do que mandamos seria "a tela mentindo"
+              no dia em que o daemon recusasse o pedido.
+            """
+            self._cancelar_repouso_do_volume()
+            volume = volume_do_percentual(self._speaker_escala.get_value())
+            if volume == self._speaker_volume_enviado:
+                # Repouso disparando logo depois do fim do arrasto: o mesmo
+                # número duas vezes é rajada, não pedido.
+                return
+            self._speaker_volume_enviado = volume
+            uniq = self._uniq
+
+            def _pedir() -> Any:
+                ok = ipc_bridge.speaker_set(volume=volume, uniq=uniq)
+                return self._confirmar_com_som() if ok else None
+
+            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+
+        def _on_speaker_mudo_clicado(self, _botao: Any) -> None:
+            """Silenciar/Ativar — nunca a PRIMEIRA escrita (ver `acao_speaker_mudo`)."""
+            acao = self._speaker_acao_mudo
+            if acao is None or not acao.sensivel or acao.muted is None:
+                return
+            muted = acao.muted
+            uniq = self._uniq
+
+            def _pedir() -> Any:
+                ok = ipc_bridge.speaker_set(muted=muted, uniq=uniq)
+                return self._confirmar_com_som() if ok else None
+
+            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+
+        def _on_speaker_devolucao_clicada(self, _botao: Any) -> None:
+            """Devolver a posse dos bytes de volume (SOM-02, entrega 3)."""
+            acao = self._speaker_acao_devolucao
+            if acao is None or not acao.sensivel or not acao.release:
+                return
+            uniq = self._uniq
+
+            def _pedir() -> Any:
+                ok = ipc_bridge.speaker_set(release=True, uniq=uniq)
+                return self._confirmar_com_som() if ok else None
+
+            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+
+        # ------------------------------------------------------------------
+        # Alto-falante: o som que confirma (SOM-04, entrega 1)
+        # ------------------------------------------------------------------
+
+        def definir_sink_de_saida(self, sink: str) -> None:
+            """O sink de saída DESTE controle, para o som de confirmação.
+
+            Quem resolve "qual sink é de qual controle" é o ``mic_monitor``
+            (``escolher_sink``), que já é o leitor de PipeWire da janela e roda
+            fora da thread do GTK com cadência própria; quem repassa é a
+            ``status_actions``, no tique dos cards. **O card não vai ao sistema
+            por conta própria** — um segundo leitor de PipeWire aqui seria a
+            mesma classe de defeito dos três escritores de perfil.
+
+            ``""`` é resposta legítima e frequente: com mais de um DualSense o
+            ``escolher_sink`` recusa de propósito (o ``-00`` do nome é ordem de
+            conexão, não número de série). Com "" não se toca.
+            """
+            self._speaker_sink = sink or ""
+
+        def _confirmar_com_som(self) -> Any:
+            """Toca a confirmação — JÁ na thread worker, nunca na do GTK.
+
+            Chamado de DENTRO do mesmo ``_pedir`` do IPC, e de propósito: o som
+            é a confirmação daquele pedido, e emiti-lo antes de o daemon
+            responder confirmaria uma coisa que pode não ter acontecido.
+
+            Por que o som existe: o registrador de volume do DualSense não tem
+            leitura, e o número que o bloco mostra é o que NÓS mandamos. Sem o
+            som não há como saber se a mudança valeu — é o mesmo papel que o
+            "bip" de qualquer controle de volume de sistema operacional cumpre,
+            aqui por necessidade e não por costume.
+
+            A saída muda da camada 1 entra como argumento porque, com o sink do
+            sistema mudo, tocar gastaria um processo para produzir silêncio — e
+            ela leria o silêncio como defeito do controle, que é exatamente o
+            contrário do que a confirmação existe para dizer.
+
+            **Um som por gesto, não um por pixel.** Três camadas empilhadas, e
+            nenhuma delas mora aqui: o repouso de 250ms
+            (:data:`_SPEAKER_REPOUSO_MS`) e a deduplicação do mesmo volume, em
+            `_enviar_volume_do_controle`, e a trava de um som por vez do
+            `audio_saida`, para o caso de o gesto ser mais rápido que o tocador
+            (medido: 0,35s de ponta a ponta).
+            """
+            return audio_saida.tocar_confirmacao(
+                self._speaker_sink, saida_muda=self._speaker_saida_muda
+            )
+
+        def _on_som_de_confirmacao(self, resultado: Any) -> bool:
+            """Guarda o recado do som e repinta o selo (contrato do idle_add).
+
+            ``resultado`` é ``None`` quando o daemon recusou o pedido: aí não
+            houve som porque não houve mudança, e não há recado a dar — quem
+            responde por um pedido recusado é o tique de 10 Hz, que simplesmente
+            não vai mostrar o valor novo.
+            """
+            recado = getattr(resultado, "recado", "") if resultado is not None else ""
+            if recado != self._speaker_recado_do_som:
+                self._speaker_recado_do_som = recado
+                self._aplicar_selo_do_som()
+            return False
+
+        def _aplicar_selo_do_som(self) -> None:
+            """A linha de recado do bloco: camada 1, depois o som, depois nada.
+
+            SOM-04, regra 4: **se não houver como tocar, não finja — e não erre
+            calado.** Um clique que promete som e não entrega é pior que nenhum
+            som, e a diferença entre "a janela não sabe" e "a janela está
+            quebrada" é esta linha existir.
+
+            A prioridade não é arbitrária. ``saída muda`` ganha porque é um fato
+            PERSISTENTE do sistema, e porque quando ele vale o motivo da recusa
+            do som é exatamente esse — não há colisão entre os dois
+            informantes, há a mesma verdade dita uma vez só.
+
+            Reusa o rótulo que a SOM-02 já pôs aqui em vez de acrescentar um
+            widget, e a razão é medida: a aba Status abre com 116px de folga em
+            1180 e o card mais alto pede 463 de 467. Um rótulo a mais custaria
+            uma linha; este custa ZERO, porque só aparece quando tem o que
+            dizer — que é a mesma regra que ele já obedecia.
+
+            **O selo é curto e a razão mora na dica do bloco**, e isso também é
+            medição: a frase inteira no selo levava o card a 1223px numa janela
+            de 1180 (ver :data:`TEXTO_SELO_SEM_SOM`). O desenho é o mesmo que o
+            card compacto já usa nos botões — o rótulo diz QUE, a dica diz POR
+            QUÊ —, e a dica é o único lugar da interface que não custa pixel.
+            """
+            recado = self._speaker_recado_do_som
+            if self._speaker_saida_muda is True:
+                texto = TEXTO_SELO_SAIDA_MUDA
+            elif recado:
+                texto = TEXTO_SELO_SEM_SOM
+            else:
+                texto = ""
+            if texto:
+                self._speaker_selo_saida.set_text(texto)
+                self._speaker_selo_saida.show()
+            else:
+                self._speaker_selo_saida.hide()
+            # A dica do BLOCO carrega o porquê. Ela nunca perde a linha de
+            # explicação da SOM-02/E5: o recado ENTRA embaixo dela, porque as
+            # duas respondem a perguntas diferentes ("por que o normal aqui é
+            # não ajustado" e "por que não deu para confirmar agora").
+            dica = DICA_BLOCO_SPEAKER
+            if recado and self._speaker_saida_muda is not True:
+                dica = f"{DICA_BLOCO_SPEAKER}\n\n{recado}"
+            caixa = getattr(self, "_speaker_box", None)
+            if caixa is not None:
+                caixa.set_tooltip_text(dica)
 
         def _montar_capsula_stick(
             self, titulo: str, rotulo_stick: str, tamanho: int
@@ -1807,28 +2534,90 @@ if _GTK_DISPONIVEL:
                 f" {texto} </span>"
             )
 
-        def _update_speaker(self, entry: dict[str, Any]) -> None:
+        def _update_speaker(self, entry: dict[str, Any], mic: Any = None) -> None:
             dados = speaker_do_entry(entry)
-            if dados == self._last_speaker:
+            saida_muda = saida_muda_do_entry(entry, mic)
+            chave = (dados, saida_muda)
+            if chave == self._last_speaker:
                 return
-            self._last_speaker = dados
-            self._aplicar_estado_speaker(dados)
+            self._last_speaker = chave
+            self._aplicar_estado_speaker(dados, saida_muda=saida_muda)
+            self._aplicar_acoes_speaker(
+                acao_speaker_mudo(entry), acao_speaker_devolucao(entry)
+            )
 
         def _aplicar_estado_speaker(
-            self, dados: tuple[int, bool | None] | None
+            self,
+            dados: tuple[int, bool | None] | None,
+            *,
+            saida_muda: bool | None = None,
         ) -> None:
             """Volume do alto-falante, ou a frase que diz que ninguém ajustou.
 
             O bloco NUNCA se esconde: some é o que ela leu como "não tem a
             parte do som".
+
+            O controle deslizante acompanha a LEITURA (é o mesmo estado, e é
+            de onde o próximo gesto dela parte), com duas guardas: não repinta
+            embaixo da mão dela (``_speaker_arrastando``) e não dispara pedido
+            ao se mover (``_speaker_pintando``). Sem posse ele volta ao
+            repouso, no zero — não ao meio, que desenharia 50 % ao lado de um
+            rótulo dizendo que ninguém ajustou nada.
             """
+            # SOM-02/E5, item 4: o selo aparece SÓ quando a leitura da camada 1
+            # disser que o sink está mudo. Sem leitura, nada.
+            #
+            # SOM-04: quem decide o texto e a visibilidade passou a ser o
+            # `_aplicar_selo_do_som`, porque o rótulo ganhou um SEGUNDO
+            # informante — o motivo pelo qual a última confirmação sonora não
+            # saiu. A camada 1 continua tendo prioridade; a razão está lá.
+            self._speaker_saida_muda = saida_muda
+            self._aplicar_selo_do_som()
             if dados is None:
                 self._speaker_bar.set_volume(0.0, None)
                 self._speaker_label.set_text(TEXTO_SPEAKER_SEM_DADO)
+                self._pintar_escala_do_speaker(0)
+                # Sem posse, o próximo gesto dela é a PRIMEIRA escrita da
+                # sessão: esquecer o último valor mandado é o que impede a
+                # guarda anti-rajada de engolir esse gesto.
+                self._speaker_volume_enviado = None
                 return
             volume, muted = dados
             self._speaker_bar.set_volume(fracao_do_volume(volume), muted)
             self._speaker_label.set_text(texto_volume(volume, muted))
+            self._pintar_escala_do_speaker(percentual_do_volume(volume))
+
+        def _pintar_escala_do_speaker(self, percentual: int) -> None:
+            """Move o cursor SEM disparar pedido (e nunca durante o arrasto)."""
+            if self._speaker_arrastando:
+                return
+            self._speaker_pintando = True
+            try:
+                self._speaker_escala.set_value(percentual)
+            finally:
+                self._speaker_pintando = False
+
+        def _aplicar_acoes_speaker(
+            self, mudo: AcaoSpeaker, devolucao: AcaoSpeaker
+        ) -> None:
+            self._speaker_acao_mudo = mudo
+            self._speaker_acao_devolucao = devolucao
+            for botao, acao in (
+                (self._speaker_botao_mudo, mudo),
+                (self._speaker_botao_devolver, devolucao),
+            ):
+                botao._rotulo_hefesto.set_text(acao.rotulo)
+                botao.set_sensitive(acao.sensivel)
+                botao.set_tooltip_text(acao.dica)
+            # Dica do bloco: a linha de sempre e, sem posse, o CAMINHO. Botão
+            # insensível não recebe evento e por isso não mostra dica própria
+            # no GTK3 — a explicação de "sem dado" ficaria invisível justamente
+            # no estado em que ela é necessária.
+            self._speaker_box.set_tooltip_text(
+                DICA_BLOCO_SPEAKER
+                if mudo.sensivel
+                else f"{DICA_BLOCO_SPEAKER} ({DICA_SPEAKER_SEM_DADO})"
+            )
 
         # ------------------------------------------------------------------
         # Inputs ao vivo (a 10 Hz — tudo diffado)
@@ -1994,7 +2783,13 @@ if _GTK_DISPONIVEL:
             # se o firmware está mudo, e um botão que continuasse dizendo
             # "Silenciar" mandaria o oposto do estado real no primeiro clique.
             self._aplicar_acao_mic(acao_mic(None))
+            # O alto-falante volta ao "não sei" pelo mesmo motivo: sem leitor
+            # não há posse conhecida, e os dois botões voltam a insensíveis —
+            # um `Silenciar` clicável sem volume conhecido é a armadilha 2.
             self._aplicar_estado_speaker(None)
+            self._aplicar_acoes_speaker(
+                acao_speaker_mudo(None), acao_speaker_devolucao(None)
+            )
             self._last_gyro = _SENTINELA
             self._last_touch = _SENTINELA
             self._last_mic = _SENTINELA
@@ -2088,6 +2883,9 @@ else:
             self.mic_acao: AcaoMic = acao_mic(None)
             self.uniq: str | None = None
             self.speaker: tuple[int, bool | None] | None = None
+            self.speaker_acao_mudo: AcaoSpeaker = acao_speaker_mudo(None)
+            self.speaker_acao_devolucao: AcaoSpeaker = acao_speaker_devolucao(None)
+            self.speaker_saida_muda: bool | None = None
 
         def update(
             self,
@@ -2112,6 +2910,9 @@ else:
             uniq = entry.get("uniq")
             self.uniq = uniq if isinstance(uniq, str) and uniq else None
             self.speaker = speaker_do_entry(entry)
+            self.speaker_acao_mudo = acao_speaker_mudo(entry)
+            self.speaker_acao_devolucao = acao_speaker_devolucao(entry)
+            self.speaker_saida_muda = saida_muda_do_entry(entry, mic)
 
         def reset_inputs(self) -> None:
             """IPC sem resposta → "—" (mesmo contrato do widget real)."""
@@ -2126,10 +2927,17 @@ else:
 
 __all__ = [
     "ALL_BUTTONS",
+    "DICA_BLOCO_SPEAKER",
     "DICA_MIC_ATIVAR",
     "DICA_MIC_DEVOLVER",
     "DICA_MIC_SEM_LEITURA",
     "DICA_MIC_SILENCIAR",
+    "DICA_SPEAKER_ATIVAR",
+    "DICA_SPEAKER_DEVOLVER",
+    "DICA_SPEAKER_DEVOLVER_SEM_POSSE",
+    "DICA_SPEAKER_ESCALA",
+    "DICA_SPEAKER_SEM_DADO",
+    "DICA_SPEAKER_SILENCIAR",
     "GLYPH_ESPACO_COMPACTO",
     "GLYPH_ESPACO_UNICO",
     "GLYPH_FATOR_UNICO_OITAVOS",
@@ -2152,18 +2960,28 @@ __all__ = [
     "TEXTO_BOTAO_MIC_DEVOLVER",
     "TEXTO_BOTAO_MIC_SEM_LEITURA",
     "TEXTO_BOTAO_MIC_SILENCIAR",
+    "TEXTO_BOTAO_SPEAKER_ATIVAR",
+    "TEXTO_BOTAO_SPEAKER_DEVOLVER",
+    "TEXTO_BOTAO_SPEAKER_SEM_DADO",
+    "TEXTO_BOTAO_SPEAKER_SILENCIAR",
     "TEXTO_MIC_AUSENTE",
     "TEXTO_MIC_SEM_MUTE",
+    "TEXTO_SELO_SAIDA_MUDA",
+    "TEXTO_SELO_SEM_SOM",
     "TEXTO_SPEAKER_SEM_DADO",
     "AcaoMic",
+    "AcaoSpeaker",
     "CaixaDeTetoElastico",
     "ControllerCard",
     "acao_mic",
+    "acao_speaker_devolucao",
+    "acao_speaker_mudo",
     "accent_do_card",
     "glyph_size",
     "glyph_size_unico",
     "gyro_do_inputs",
     "rotulo_lightbar",
+    "saida_muda_do_entry",
     "speaker_do_entry",
     "texto_degradacao",
     "texto_motion",

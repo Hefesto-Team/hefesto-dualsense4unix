@@ -65,6 +65,7 @@ from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
     MIC_AMOSTRAS,
     cor_da_barra_do_mic,
     fracao_do_eixo,
+    fracao_do_volume,
     historico_deslizante,
     posicao_normalizada,
     texto_eixo,
@@ -513,13 +514,34 @@ def test_bloco_do_speaker_fica_dizendo_que_ninguem_ajustou(card: Any) -> None:
 
 
 def test_bloco_do_speaker_acende_com_a_chave(card: Any) -> None:
+    """O bloco reage à chave — e reage com a grandeza que o OUVIDO mede.
+
+    Este teste travava ``_fracao == 128 / 255`` e o rótulo em "50 %". A
+    SOM-03 mediu o registrador no hardware (tom de 1 kHz, o microfone do
+    próprio DualSense como instrumento) e **refutou a régua**: 102, 128 e 255
+    devolvem a mesma magnitude (8759, 8488, 8793). Um registrador em 128 é o
+    volume MÁXIMO, e "50 %" era a interface dizendo que havia o dobro de
+    volume disponível quando não havia mais nada.
+
+    O teste não foi apagado nem afrouxado: ele continua cobrando exatamente o
+    que protegia — que a chave ACENDE o bloco e que barra e rótulo saem da
+    mesma conta, e não de duas — só que agora contra a régua medida. Por isso
+    o valor esperado é DERIVADO de `fracao_do_volume` em vez de escrito à mão:
+    um número cravado aqui voltaria a travar a régua, que foi o defeito.
+
+    A mordida: devolver ``fracao_do_volume`` a ``bruto / 255`` derruba as duas
+    asserções de uma vez — a fração cai para 0,50 e o rótulo para "50 %".
+    """
     card.update(
         _entry(speaker={"volume": 128, "muted": False}), _ESTADO, None
     )
 
     assert card._speaker_box.get_visible() is True
-    assert card._speaker_bar._fracao == pytest.approx(128 / 255)
-    assert card._speaker_label.get_text() == "50 %"
+    assert card._speaker_bar._fracao == pytest.approx(fracao_do_volume(128))
+    assert card._speaker_label.get_text() == "100 %"
+    # A borda medida: daqui para cima nada mais muda no ouvido, e a tela para
+    # de prometer curso que não existe.
+    assert fracao_do_volume(128) == fracao_do_volume(255) == 1.0
 
 
 def test_speaker_mudo_diz_mudo_em_vez_de_porcentagem(card: Any) -> None:

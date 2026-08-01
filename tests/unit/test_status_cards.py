@@ -677,7 +677,19 @@ def test_render_offline_limpa_os_cards_e_restaura_a_bateria(
 def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     """Baseline da mixin: 2 periódicos em ms + 1 periódico em segundos +
     1 one-shot de 5 s (ambos via timeout_add_seconds) + 2 idle one-shot.
-    O card NÃO agenda nada. Qualquer timer novo estoura este diff.
+
+    O card agenda UMA coisa, e só uma: o repouso do controle deslizante de
+    volume (SOM-02/E1), que é um disparo ÚNICO armado por gesto humano. Até a
+    SOM-02 este gate cobrava ZERO ocorrências no card — e a linha que ele
+    protege não é "zero timers", é "nada de laço no card": foi um
+    ``idle_add`` devolvendo True que rendeu os 104% de CPU da v3.8.1, e um
+    periódico novo aqui roda por CARD, multiplicado pelos quatro controles.
+
+    O que continua reprovando, e por isso o gate segue mordendo: um segundo
+    ``timeout_add``, qualquer ``timeout_add_seconds``, qualquer ``idle_add``, e
+    um repouso que se re-arme sozinho (o retorno ``False`` do disparo único é
+    aferido no comportamento, com o card real, em
+    ``test_status_som_02_controle_de_volume``).
     """
     src_mixin = Path(sa_mod.__file__).read_text(encoding="utf-8")
     src_card = Path(cc_mod.__file__).read_text(encoding="utf-8")
@@ -686,8 +698,9 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
     assert len(re.findall(r"GLib\.timeout_add_seconds\(", src_mixin)) == 2
     assert len(re.findall(r"GLib\.idle_add\(", src_mixin)) == 2
 
-    assert re.search(r"GLib\.(timeout_add|idle_add)", src_card) is None
-    assert "from gi.repository import Gtk" in src_card  # sem GLib no card
+    assert len(re.findall(r"GLib\.timeout_add\(", src_card)) == 1
+    assert re.search(r"GLib\.timeout_add_seconds\(", src_card) is None
+    assert re.search(r"GLib\.idle_add\(", src_card) is None
 
 
 # ---------------------------------------------------------------------------

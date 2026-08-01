@@ -18,6 +18,20 @@ Três invariantes, cada uma paga com um incidente conhecido:
 
 Por que `LC_ALL=C` em tudo: a saída do `pactl` é TRADUZIDA (nesta máquina o
 mute sai como "Mudo: não"). Parsear texto localizado é bug esperando idioma.
+
+Uma carona declarada (SENSOR-VIVO-01/E5 e SOM-02/E5, item 4): além das sources
+de captura, este módulo lê o MUDO DO SINK de saída do controle — a "camada 1"
+do alto-falante, a única que decide se sai som. Não é assunto de microfone, e
+mora aqui por dois motivos medidos: este já é o leitor de PipeWire da janela,
+com cadência própria e fora da thread do GTK, e o card já sabe consumir o valor
+desta posição (``LeituraMic.saida_muda``) sem precisar de alteração nenhuma. A
+alternativa — o daemon publicar ``speaker.saida_muda`` — custaria pôr o daemon
+a falar com o PipeWire para dizer o que a janela já tem à mão.
+
+E uma disciplina copiada do `scripts/doctor.sh`, que já detecta a mesma
+condição: o alto-falante do controle mudo é um FATO sobre a saída, e a usuária
+pode tê-lo escolhido. **O selo informa e nunca conserta** — nada aqui escreve
+no PipeWire nem no estado do WirePlumber.
 """
 from __future__ import annotations
 
@@ -29,7 +43,7 @@ import shutil
 import subprocess
 import sys
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, ClassVar
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -81,16 +95,36 @@ _TIMEOUT_SUBPROCESS_S = 2.0
 
 @dataclass(frozen=True)
 class LeituraMic:
-    """O que o card mostra: quanto entra no mic e se ele está mudo.
+    """O que o card mostra: o mic (nível e mute) e o mudo da SAÍDA do controle.
 
     ``nivel`` é 0.0-1.0 já em escala de dB (ver `nivel_para_fracao`), pronto
-    para virar altura de barra. ``muted`` None = a source existe mas o estado
-    de mute ainda não foi lido — o selo espera em vez de chutar "ATIVO".
+    para virar altura de barra. ``None`` ali NÃO é o mesmo que ``0.0``: quer
+    dizer que não há captura nenhuma, e o card apaga o medidor em vez de
+    desenhar uma barra parada no zero fingindo silêncio. ``muted`` None = a
+    source existe mas o estado de mute ainda não foi lido — o selo espera em
+    vez de chutar "ATIVO".
+
+    ``saida_muda`` é a CAMADA 1 do alto-falante (o sink do PipeWire) e não diz
+    nada sobre o microfone; viaja junto porque este é o leitor de PipeWire da
+    janela e porque o card já lê o valor desta posição
+    (``controller_card.saida_muda_do_entry``). ``None`` = não deu para saber, o
+    que é diferente de "não está muda" — só ``True`` acende o selo.
+
+    ``sink`` é o NOME desse mesmo sink de saída, e viaja pela mesma carona e
+    pelo mesmo motivo (SOM-04): o som de confirmação e o botão de rota
+    (``app/audio_saida.py``) precisam mandar o áudio para o sink DO CONTROLE,
+    explicitamente, e quem resolve "qual sink é de qual controle" já é este
+    módulo. Publicar o nome aqui é o que evita um SEGUNDO leitor de PipeWire na
+    janela. ``""`` = não deu para casar com certeza — com dois DualSense no
+    cabo o ``escolher_sink`` recusa de propósito —, e quem recebe "" não toca e
+    não roteia, em vez de chutar.
     """
 
-    nivel: float = 0.0
+    nivel: float | None = 0.0
     muted: bool | None = None
     fonte: str = ""
+    saida_muda: bool | None = None
+    sink: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +148,32 @@ def fontes_dualsense(saida_pactl: str) -> list[str]:
         nome = partes[1].strip()
         alvo = nome.lower()
         if alvo.endswith(".monitor"):
+            continue
+        if any(marca in alvo for marca in _MARCADORES_DUALSENSE):
+            out.append(nome)
+    return out
+
+
+def sinks_dualsense(saida_pactl: str) -> list[str]:
+    """Nomes dos sinks de SAÍDA de DualSense em `pactl list sinks short`.
+
+    Mesmo formato tabulado da lista de sources (``índice\\tnome\\tdriver\\t...``,
+    não traduzido) e os mesmos marcadores de nome — o PipeWire monta os dois
+    lados a partir das mesmas strings USB do device.
+
+    Dois descartes, ambos defensivos contra receber a lista errada por engano:
+    ``.monitor`` (que é a saída vista de dentro, não um destino) e qualquer
+    nome ``alsa_input.`` (um nó de CAPTURA nunca é por onde sai som — tratá-lo
+    como sink faria o selo da saída falar do microfone).
+    """
+    out: list[str] = []
+    for linha in saida_pactl.splitlines():
+        partes = linha.split("\t")
+        if len(partes) < 2:
+            continue
+        nome = partes[1].strip()
+        alvo = nome.lower()
+        if alvo.endswith(".monitor") or alvo.startswith("alsa_input."):
             continue
         if any(marca in alvo for marca in _MARCADORES_DUALSENSE):
             out.append(nome)
@@ -163,6 +223,29 @@ def escolher_fonte(
     return None
 
 
+def escolher_sink(
+    sinks: list[str], uniq: str, uniqs_com_audio: list[str]
+) -> str | None:
+    """Sink de SAÍDA atribuível ao controle `uniq` — None quando não dá para saber.
+
+    Delega a :func:`escolher_fonte` porque o problema é literalmente o mesmo,
+    e a resposta conservadora dele é a que vale aqui também: dois DualSense no
+    cabo publicam sinks cujos nomes NÃO os distinguem. Medido nesta máquina em
+    01/08/2026, o nome do sink é
+    ``alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.analog-surround-40``
+    — o ``-00`` é o desempate posicional do PipeWire (a string USB de serial do
+    DualSense é a mesma em todos), não a identidade do controle. Acender "saída
+    muda" no card do controle errado é pior que não acender: seria a interface
+    culpando o PipeWire pelo silêncio do controle que está tocando.
+
+    A regra do prefixo da ponte BT (:func:`sufixo_da_ponte_bt`) vem junto e
+    hoje é INERTE do lado da saída: a ponte publica uma source (o mic chega
+    como Opus tunelado em HID) e nenhum sink começa com aquele prefixo. Fica
+    porque é a regra certa se um dia houver um sink com identidade no nome.
+    """
+    return escolher_fonte(sinks, uniq, uniqs_com_audio)
+
+
 def sufixo_da_ponte_bt(fonte: str) -> str:
     """Rabo hex do MAC no nome da source da ponte BT — "" se não for uma.
 
@@ -187,7 +270,9 @@ def _so_hex(valor: str) -> str:
 
 
 def muted_de_saida(saida: str) -> bool | None:
-    """Lê ``Mute: yes|no`` do `pactl get-source-mute`; None se ilegível.
+    """Lê ``Mute: yes|no`` do `pactl get-source-mute`/`get-sink-mute`; None se ilegível.
+
+    Os dois comandos respondem com a MESMA linha, então o parser é um só.
 
     Só funciona com `LC_ALL=C` (ver o cabeçalho do módulo). Saída inesperada
     vira None — o selo prefere esperar a mentir.
@@ -281,6 +366,14 @@ class MicMonitor:
         self._ativo = False
         self._controles: tuple[str, ...] = ()
         self._leituras: dict[str, LeituraMic] = {}
+        #: Camada 1 do alto-falante por controle. Só entra aqui o que foi LIDO
+        #: e casado com certeza; ausência = "não sei", nunca "não está mudo".
+        self._saidas_mudas: dict[str, bool] = {}
+        #: NOME do sink de saída por controle (SOM-04). Mesma regra: só entra o
+        #: que casou com certeza. Este mapa é o que evita um segundo leitor de
+        #: PipeWire na janela — ele existe mesmo quando o mudo do sink não deu
+        #: para ler, porque roteirizar e tocar dependem do NOME, não do mudo.
+        self._sinks: dict[str, str] = {}
         self._capturas: dict[str, _Captura] = {}
         self._acordar = threading.Event()
         self._parar = threading.Event()
@@ -307,9 +400,58 @@ class MicMonitor:
         self._acordar.set()
 
     def leitura(self, uniq: str) -> LeituraMic | None:
-        """Última leitura do mic deste controle; None = sem mic atribuível."""
+        """Leitura deste controle; None = nada a dizer sobre mic NEM sobre saída.
+
+        Duas fontes independentes se encontram aqui: a captura do microfone
+        (thread de `parec`) e o mudo do sink de saída (thread supervisora).
+        Uma pode existir sem a outra, e é por isso que a saída muda NÃO viaja
+        dentro da leitura publicada pela captura: por Bluetooth sem a ponte de
+        mic, ou sem `parec` na máquina, não há captura nenhuma — e o
+        alto-falante continua mudo do mesmo jeito.
+
+        Sem captura, o carona vira uma leitura própria com ``nivel=None``, que
+        o card desenha EXATAMENTE como desenha a ausência de microfone (o
+        bloco fica, o medidor some). E ela só nasce com ``saida_muda is True``:
+        materializar um objeto para dizer "a saída não está muda" seria
+        inventar presença de sensor para não dizer nada.
+        """
         with self._lock:
-            return self._leituras.get(uniq)
+            base = self._leituras.get(uniq)
+            saida_muda = self._saidas_mudas.get(uniq)
+            sink = self._sinks.get(uniq, "")
+        if base is not None:
+            if base.saida_muda is saida_muda and base.sink == sink:
+                return base
+            return replace(base, saida_muda=saida_muda, sink=sink)
+        if saida_muda is True:
+            return LeituraMic(
+                nivel=None, muted=None, fonte="", saida_muda=True, sink=sink
+            )
+        # SOM-04, decisão registrada: o NOME do sink **não** materializa a
+        # leitura. Ele é um fato sobre a SAÍDA e não sobre o microfone, e a
+        # regra desta função — não materializar um objeto para dizer nada sobre
+        # o mic — é de outra sprint e está travada em teste. Quem precisa do
+        # nome sem depender do microfone usa :meth:`sink_de`, que devolve o
+        # mesmo mapa sem fingir sensor nenhum.
+        return None
+
+    def sink_de(self, uniq: str) -> str:
+        """Nome do sink de SAÍDA deste controle; ``""`` = não dá para saber.
+
+        A porta que o som de confirmação e o botão de rota (SOM-04) usam, e a
+        razão de ela existir separada de :meth:`leitura`: o sink é um fato da
+        SAÍDA e sobrevive à ausência de microfone (sem `parec` na máquina, ou
+        por Bluetooth sem a ponte de mic, não há captura nenhuma e o
+        alto-falante continua lá).
+
+        ``""`` sai em dois casos que valem a mesma recusa: o sistema não
+        publicou sink nenhum para este controle, ou há mais de um DualSense e o
+        ``escolher_sink`` recusou de propósito — o ``-00`` do nome é desempate
+        posicional do PipeWire, não identidade. Quem recebe "" não toca e não
+        roteia.
+        """
+        with self._lock:
+            return self._sinks.get(uniq, "")
 
     def stop(self) -> None:
         """Encerra tudo. Idempotente (fechamento da janela)."""
@@ -345,7 +487,7 @@ class MicMonitor:
             self._acordar.clear()
 
     def reconciliar(self) -> None:
-        """Casa as capturas vivas com aba visível, controles e sources.
+        """Casa as capturas vivas com aba visível, controles, sources e sinks.
 
         Público para o teste exercitar o ciclo sem depender de temporização.
         """
@@ -356,6 +498,8 @@ class MicMonitor:
             self._derrubar_capturas(set())
             with self._lock:
                 self._leituras = {}
+                self._saidas_mudas = {}
+                self._sinks = {}
             return
 
         fontes = self._descobrir_fontes()
@@ -371,10 +515,53 @@ class MicMonitor:
             }
         for uniq, fonte in alvos.items():
             self._garantir_captura(uniq, fonte)
+        # Depois das capturas de propósito: o medidor não espera dois
+        # subprocessos a mais para aparecer, e o mudo da saída muda por gesto
+        # humano — 3 s de atraso ali é invisível.
+        saidas, nomes = self._descobrir_saidas(controles)
+        with self._lock:
+            self._saidas_mudas = saidas
+            self._sinks = nomes
 
     def _descobrir_fontes(self) -> list[str]:
         saida = self._runner(["pactl", "list", "sources", "short"])
         return fontes_dualsense(saida or "")
+
+    def _descobrir_saidas(
+        self, controles: tuple[str, ...]
+    ) -> tuple[dict[str, bool], dict[str, str]]:
+        """Sink de saída de cada controle que dá para casar COM CERTEZA.
+
+        Devolve DOIS mapas do mesmo casamento: o mudo (a camada 1, para o selo)
+        e o NOME (SOM-04, para tocar e rotear). Eles são separados porque não
+        empatam: o nome pode ser conhecido e o mudo, ilegível — e quem toca o
+        som de confirmação precisa do nome mesmo quando o `get-sink-mute` não
+        respondeu. Empacotar os dois num só faria a confirmação sonora depender
+        de uma leitura que ela não usa.
+
+        Os mapas são SUBSTITUÍDOS inteiros a cada ciclo e nunca ganham entrada
+        por chute: controle sem sink atribuível (dois DualSense no cabo) ou sem
+        `pactl` na máquina fica DE FORA — e ficar de fora é exatamente o que
+        mantém o selo apagado e o botão de rota parado.
+
+        Nenhuma escrita: `list sinks short` e `get-sink-mute` são leituras. O
+        mudo persistido é escolha da usuária (ver o cabeçalho do módulo).
+        """
+        saida = self._runner(["pactl", "list", "sinks", "short"])
+        sinks = sinks_dualsense(saida or "")
+        if not sinks:
+            return {}, {}
+        mudos: dict[str, bool] = {}
+        nomes: dict[str, str] = {}
+        for uniq in controles:
+            sink = escolher_sink(sinks, uniq, list(controles))
+            if sink is None:
+                continue
+            nomes[uniq] = sink
+            muda = muted_de_saida(self._runner(["pactl", "get-sink-mute", sink]) or "")
+            if muda is not None:
+                mudos[uniq] = muda
+        return mudos, nomes
 
     def _derrubar_capturas(self, manter: set[str]) -> None:
         with self._lock:
@@ -564,9 +751,11 @@ __all__ = [
     "LeituraMic",
     "MicMonitor",
     "escolher_fonte",
+    "escolher_sink",
     "fontes_dualsense",
     "muted_de_saida",
     "nivel_para_fracao",
     "rms_de_pcm_s16le",
+    "sinks_dualsense",
     "sufixo_da_ponte_bt",
 ]

@@ -28,9 +28,21 @@ cabeçalho dizendo exatamente o mesmo, e nada nele chega ao daemon.
 
 A configuração efetiva vem de duas fontes, e só delas:
 
-1. **Variáveis de ambiente lidas na subida do daemon** — hoje são três:
-   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`
-   e `HEFESTO_DUALSENSE4UNIX_NICE`.
+1. **Variáveis de ambiente lidas na subida do daemon** — hoje são seis, todas
+   em `daemon/main.py`:
+   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`,
+   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, `HEFESTO_DUALSENSE4UNIX_NICE`,
+   `HEFESTO_DUALSENSE4UNIX_FAKE` e `HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT`.
+
+   As duas últimas são o backend falso (teste e desenvolvimento, sem hardware),
+   não configuração de uso. A terceira,
+   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, nasceu em 29/07 com a
+   EMULACAO-NO-JOGO-01 e é o desligador do teclado emulado — `=0` desliga,
+   qualquer outro valor mantém ligado. Esta página a omitia até 01/08 e
+   afirmava "hoje são três" (DOC-VERDADE-02, E7). A precedência dela, do mais
+   fraco ao mais forte: default do `DaemonConfig` < esta variável <
+   `keyboard_emulation.flag`, que é a escolha registrada na janela e vence
+   sempre.
 2. **O método IPC `daemon.reload`**, que aceita `config_overrides` com qualquer
    subconjunto dos campos de `DaemonConfig` e aplica em tempo de execução:
 

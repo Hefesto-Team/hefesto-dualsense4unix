@@ -220,6 +220,13 @@ IGNORADO_CATCH_ALL = "ignorado_catch_all"
 IGNORADO_JANELA_DE_JOGO = "ignorado_janela_de_jogo"
 FALHOU = "falhou"
 
+#: SOM-02/E4: a seção não foi escrita porque NÃO HÁ controle para escrever
+#: (nenhum handle para o `uniq` pedido, ou nada conectado). Estado próprio, e
+#: não `FALHOU`, porque nada quebrou: o controle está fora da mesa. Distinguir
+#: importa no relatório que a GUI mostra — "falhou" mandaria procurar defeito
+#: onde só falta o cabo.
+IGNORADO_SEM_CONTROLE = "ignorado_sem_controle"
+
 
 @dataclass
 class ModoAdiado:
@@ -2436,6 +2443,89 @@ class Daemon:
         with contextlib.suppress(Exception):
             self.controller.set_rumble(weak=0, strong=0)
         logger.info("profile_rumble_passthrough_released")
+
+    def apply_profile_speaker(
+        self,
+        volume: int,
+        muted: bool = False,
+        *,
+        uniq: str | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
+        """Aplica a seção `speaker` de um perfil recém-ativado (SOM-02/E4).
+
+        Injetado como `speaker_applier` do `ProfileManager` nas rotas de
+        ativação (IPC `profile.switch`, autoswitch, ciclo por hotkey e restore
+        de boot) e consumido por `ProfileManager.apply_speaker` /
+        `reapply_speaker_on_connect`, que já decidiram, ANTES de chegar aqui,
+        que há opinião a aplicar: perfil sem a seção não chama este método (sem
+        opinião é silêncio, não ordem — tomar a posse dos bytes de áudio por um
+        perfil que não pediu nada é a queixa "a config que eu deixo nunca é
+        respeitada", do lado do som).
+
+        POR QUE ISTO FALA DIRETO COM O BACKEND, e não pelo `speaker.set` do IPC
+        (a armadilha desta entrega, e a razão de a chamada estar aqui e não lá):
+        o handler `_handle_speaker_set` arma a categoria manual `"audio"`
+        (`_marcar_audio_manual`, decisão da E3) — que é EXATAMENTE a trava que
+        `ProfileManager.apply_speaker` consulta para NÃO escrever. Um applier de
+        perfil que passasse por aquele caminho armaria a trava na primeira
+        ativação e todas as seguintes seriam descartadas em silêncio: o perfil
+        pararia de funcionar depois do primeiro uso. A trava é o registro de um
+        gesto DELA; perfil reaplicado não é gesto dela e não pode carimbá-la.
+
+        Pelo mesmo eixo, o lock de 30 s de `_emu_manual_ts` (mouse/modo/política
+        de rumble) NÃO é consultado aqui: o gesto manual de áudio tem trava
+        própria, por categoria, e ela já foi consultada rio acima. Empilhar o
+        lock de emulação faria mexer no mouse silenciar o volume do perfil por
+        meio minuto, sem que ninguém tivesse tocado no som.
+
+        `volume` é OBRIGATÓRIO e vai sempre junto do `muted` (armadilha 1,
+        medida: `set_speaker_volume` sem volume e sem preferência guardada toma
+        a posse e manda ZERO, publicando `{'volume': 0, 'muted': True}`). O
+        esquema do perfil já recusa a seção sem volume e o manager faz
+        `int(secao.volume)`; a guarda abaixo é a terceira cerca, para um dublê
+        ou um chamador novo não conseguirem produzir a chamada vazia.
+
+        Vocabulário de retorno (R-03): `APLICADO`, `IGNORADO_SEM_CONTROLE`
+        (nenhum handle para o `uniq` — nada foi escrito e ninguém mentiu
+        "aplicado") e `FALHOU`.
+        """
+        if volume is None:
+            # Nunca um `set_speaker_volume` sem volume — ver a docstring. A
+            # anotação diz `int`; a guarda existe para o chamador que não a lê.
+            logger.warning("profile_speaker_sem_volume_recusado", origin=origin)
+            return FALHOU
+        setter = getattr(self.controller, "set_speaker_volume", None)
+        if not callable(setter):
+            logger.debug("profile_speaker_backend_sem_suporte", origin=origin)
+            return IGNORADO_SEM_CONTROLE
+        alvo = max(0, min(255, int(volume)))
+        try:
+            ok = bool(setter(alvo, muted=bool(muted), uniq=uniq))
+        except Exception as exc:
+            logger.warning(
+                "profile_speaker_apply_failed",
+                volume=alvo,
+                muted=bool(muted),
+                uniq=uniq,
+                err=str(exc),
+            )
+            return FALHOU
+        if not ok:
+            # Sem handle para este `uniq` (controle ausente/desconectado). Não é
+            # falha: é a ausência do controle, dita com esse nome.
+            logger.debug(
+                "profile_speaker_sem_controle", uniq=uniq, origin=origin
+            )
+            return IGNORADO_SEM_CONTROLE
+        logger.info(
+            "profile_speaker_applied",
+            volume=alvo,
+            muted=bool(muted),
+            uniq=uniq,
+            origin=origin,
+        )
+        return APLICADO
 
     def mark_rumble_policy_manual(self) -> None:
         """Registra gesto MANUAL na política de rumble

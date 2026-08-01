@@ -60,6 +60,13 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
             transport = daemon.controller.get_transport()
             daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
             logger.info("controller_connected", transport=transport)
+            # SOM-02/E4 (armadilha 4): handle novo = posse do áudio zerada. Este
+            # é o caminho do `reconnect()` (o poll loop reabrindo o controle
+            # depois de um erro de leitura — a troca de cabo dela), e sem a
+            # reaplicação aqui o volume do perfil ativo volta ao do firmware sem
+            # dizer nada. Best-effort: nunca derruba a conexão.
+            with contextlib.suppress(Exception):
+                await reapply_speaker_after_connect(daemon)
             return
         except Exception as exc:
             logger.warning("controller_connect_failed", err=str(exc), exc_info=True)
@@ -76,6 +83,52 @@ async def connect_with_retry(daemon: DaemonProtocol) -> None:
                 await asyncio.sleep(backoff)
             # Backoff exponencial com teto.
             backoff = min(backoff * 2, BACKOFF_MAX_SEC)
+
+
+async def reapply_speaker_after_connect(
+    daemon: DaemonProtocol, *, uniq: str | None = None
+) -> None:
+    """Reaplica o volume do perfil ATIVO no (re)connect (SOM-02/E4, armadilha 4).
+
+    A posse dos bytes de áudio morre com o cabo: `_volumes_audio` nasce vazio em
+    cada handle e CADA conexão cria um handle novo. Sem este gancho, persistir o
+    volume por perfil resolveria só a primeira vez — trocar o cabo (ou o daemon
+    reabrir o handle depois de um EIO) devolveria o volume ao do firmware **em
+    silêncio**, com a janela voltando a dizer "não ajustado".
+
+    Toda a política mora em `ProfileManager.reapply_speaker_on_connect`, e por
+    isso ela vale aqui sem repetição: só escreve quando o perfil ativo TEM a
+    seção `speaker` (perfil sem opinião não retoma a posse a cada replug), e a
+    trava manual de áudio vence — se ela mexeu no volume na mão, a reconexão não
+    é ocasião para o perfil retomar o campo.
+
+    O applier vai DIRETO ao backend (`Daemon.apply_profile_speaker`), nunca pelo
+    `speaker.set` do IPC: aquele caminho arma a categoria manual `audio`, e uma
+    reconexão que armasse a trava faria a PRÓXIMA ativação de perfil ser
+    descartada por ela.
+
+    Best-effort de ponta a ponta: um daemon enxuto (testes, CLI) sem `store`/
+    `_run_blocking` simplesmente não reaplica, e falha nenhuma derruba o
+    caminho de conexão.
+    """
+    from functools import partial
+
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+    applier = getattr(daemon, "apply_profile_speaker", None)
+    store = getattr(daemon, "store", None)
+    if applier is None or store is None:
+        return
+    manager = ProfileManager(
+        controller=daemon.controller,
+        store=store,
+        speaker_applier=applier,
+    )
+    estado = await daemon._run_blocking(
+        partial(manager.reapply_speaker_on_connect, uniq)
+    )
+    if estado is not None:
+        logger.info("speaker_reaplicado_no_connect", estado=estado, uniq=uniq)
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
@@ -180,6 +233,14 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         rumble_passthrough_applier=getattr(
             daemon, "apply_profile_rumble_passthrough", None
         ),
+        # SOM-02/E4: o alto-falante vai injetado aqui pela MESMA razão da
+        # política de rumble (e ao contrário de mouse/mode): o volume não tem
+        # flag persistido próprio — o DualSense não devolve o valor que o
+        # firmware tem —, então o perfil é a única fonte para restaurá-lo no
+        # boot. Perfil sem a seção continua não escrevendo NADA (o manager nem
+        # chama o applier), então nenhum boot passa a tomar a posse do áudio
+        # por causa desta linha.
+        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
     )
     try:
         await daemon._run_blocking(
@@ -388,6 +449,16 @@ async def reconnect_loop(
                 with contextlib.suppress(Exception):
                     await _restore_last_profile(daemon)
                 restored = True
+            # SOM-02/E4 (armadilha 4): a posse dos bytes de áudio morre com o
+            # cabo — `_volumes_audio` nasce vazio em cada handle. Roda em TODA
+            # transição offline→online, inclusive na primeira (em que o restore
+            # acima já pode ter aplicado o volume): a reescrita é idempotente
+            # (os mesmos bytes) e o restore tem vários caminhos de desistência
+            # (Modo Nativo, perfil de janela, marker órfão) em que o volume do
+            # perfil ativo se perderia em silêncio. Preferimos a escrita repetida
+            # à perda calada.
+            with contextlib.suppress(Exception):
+                await reapply_speaker_after_connect(daemon)
             was_connected = True
         elif not is_connected and was_connected:
             # Transição online→offline detectada pelo probe (poll_loop também
@@ -594,6 +665,7 @@ __all__ = [
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
     "connect_with_retry",
+    "reapply_speaker_after_connect",
     "reconnect",
     "reconnect_loop",
     "restore_last_profile",

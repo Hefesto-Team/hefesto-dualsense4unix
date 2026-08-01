@@ -1574,3 +1574,10 @@ msgstr "microphone"
 #: src/hefesto_dualsense4unix/app/actions/footer_actions.py
 msgid "ajustes por controle"
 msgstr "per-controller settings"
+
+#. APLICAR-VERDADE-01/E2: a aba Lightbar dizia "o Hefesto pode estar desligado"
+#. para uma secao que caiu com o daemon VIVO. Os nomes das secoes sao os mesmos
+#. do rodape (msgid "luzes" acima) — uma superficie so, um vocabulario so.
+#: src/hefesto_dualsense4unix/app/actions/lightbar_actions.py
+msgid "o Hefesto está ligado, mas não entrou: {secoes}"
+msgstr "Hefesto is running, but this was not applied: {secoes}"

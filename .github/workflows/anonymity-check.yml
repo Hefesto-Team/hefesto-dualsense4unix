@@ -57,9 +57,45 @@ jobs:
           NOREPLY_RE='noreply@(anthropic|openai|github)\.com'
 
           FAIL=0
-          MAPFILE=$(git log --pretty=format:'%H' "$RANGE" 2>/dev/null || true)
+
+          # Fail-CLOSED (PUBLICAÇÃO-FIEL-01/E5). O idioma antigo era
+          # `MAPFILE=$(git log ... 2>/dev/null || true)` seguido de `exit 0` no
+          # vazio: ele engolia o código de saída, e um `git log` que FALHA (ref
+          # inválida, objeto ausente num clone raso, `before` órfão depois de
+          # force-push) ficava indistinguível de "não havia commit no
+          # intervalo". Os dois davam MAPFILE vazio, e o único portão de
+          # segurança desta casa saía 0 sem olhar commit nenhum — justamente no
+          # evento mais arriscado, que é o force-push (esta main já levou dois).
+          # A polaridade copiada é a do guarda de CI do release.yml: o que não
+          # dá para medir REPROVA. Daqui em diante o código de saída do git log
+          # e a saída vazia são fatos SEPARADOS.
+          #
+          # O `|| RC_GIT=$?` NÃO é o `|| true` de volta: ele GUARDA o código em
+          # vez de descartá-lo. Ele é obrigatório porque o runner roda todo
+          # `run:` com `bash -e`: sem o `||`, um git log que falha derruba o
+          # passo ali mesmo, antes da segunda tentativa e antes da mensagem que
+          # diz qual intervalo não pôde ser auditado. Reprovaria — mas mudo.
+          ERRO_GIT="$(mktemp)"
+          RC_GIT=0
+          MAPFILE="$(git log --pretty=format:'%H' "$RANGE" 2>"$ERRO_GIT")" || RC_GIT=$?
+          if [ "$RC_GIT" -ne 0 ]; then
+            # Segunda tentativa: auditar a partir do topo, o mesmo tratamento
+            # que o passo "Definir intervalo a auditar" já dá ao primeiro push.
+            # O topo é um SUPERconjunto do intervalo, então nada escapa.
+            RC_TOPO=1
+            if [ -n "${PUSH_AFTER:-}" ]; then
+              RC_TOPO=0
+              MAPFILE="$(git log --pretty=format:'%H' "$PUSH_AFTER" 2>>"$ERRO_GIT")" || RC_TOPO=$?
+            fi
+            if [ "$RC_TOPO" -ne 0 ]; then
+              echo "::error::não consegui auditar o intervalo '$RANGE' (git log saiu $RC_GIT). Isto NÃO é intervalo vazio: git log: $(tr '\n' ' ' <"$ERRO_GIT")"
+              exit 1
+            fi
+            echo "::warning::intervalo '$RANGE' não resolvível; auditando o topo '$PUSH_AFTER'."
+          fi
+
           if [ -z "$MAPFILE" ]; then
-            echo "Nada a auditar (intervalo vazio)."
+            echo "Nada a auditar: o git log resolveu o intervalo '$RANGE' e ele não tem commit."
             exit 0
           fi
 

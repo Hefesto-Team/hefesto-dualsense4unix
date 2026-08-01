@@ -48,6 +48,19 @@ repos:
         entry: bash scripts/check_anonymity.sh
         language: system
         pass_filenames: false
+      # DOC-VERDADE-02 / E10 (01/08): o portão de referências já tinha job
+      # próprio no CI (`referencias-docs`), mas era o ÚNICO dos quatro gates de
+      # documento fora daqui — quem rodasse `pre-commit run --all-files` à mão
+      # antes de empurrar recebia um verde que não incluía a documentação.
+      # Como ele varre a árvore inteira e não os arquivos staged, entra com
+      # `pass_filenames: false` e `--all`: passar só o que mudou deixaria
+      # passar a mentira que mora no documento que ninguém tocou, que é
+      # justamente como as três desta sprint sobreviveram.
+      - id: referencias-docs
+        name: Referências de documento (arquivo, env e método de IPC)
+        entry: python3 scripts/validar-referencias-docs.py --all
+        language: system
+        pass_filenames: false
       - id: ruff-check
         name: Ruff check
         entry: ruff check

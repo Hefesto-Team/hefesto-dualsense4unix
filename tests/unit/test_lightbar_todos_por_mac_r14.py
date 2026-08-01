@@ -230,7 +230,7 @@ def test_aplicar_em_todos_manda_led_set_por_mac(
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail("com conectados conhecidos é led.set por MAC"),
     )
     host = _host()
@@ -290,7 +290,7 @@ def test_apagar_em_todos_manda_preto_por_mac(
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail("com conectados conhecidos é led.set por MAC"),
     )
     host = _host()

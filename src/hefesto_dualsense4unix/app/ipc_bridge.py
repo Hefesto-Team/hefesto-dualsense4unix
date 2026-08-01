@@ -492,14 +492,46 @@ def player_leds_set(
     return ok
 
 
-def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
-    """Envia ``profile.apply_draft`` ao daemon via IPC (FEAT-PROFILE-STATE-01).
+def apply_draft_detalhado(draft_dict: dict) -> dict | None:  # type: ignore[type-arg]
+    """Envia ``profile.apply_draft`` e devolve a RESPOSTA INTEIRA do daemon.
+
+    APLICAR-VERDADE-01/E2. Esta é a função primitiva; a ``apply_draft`` abaixo
+    é um invólucro dela que estreita o resultado para ``bool``.
+
+    Por que uma função a mais em vez de trocar o tipo de retorno da
+    ``apply_draft`` (as duas formas estavam desenhadas na sprint): a
+    ``apply_draft`` está no ``__all__`` deste módulo e o valor-verdade dela É o
+    contrato R-18 — ``{"status": "ok", "applied": []}`` significa "nada entrou"
+    e tem de valer False. Um ``dict`` devolvido no lugar do ``bool`` é SEMPRE
+    verdadeiro num ``if``, então qualquer chamador que não fosse migrado na
+    mesma leva voltaria a dizer "aplicado" para um no-op — a cura de 23/07
+    desfeita em silêncio, que é justamente trocar uma mentira por outra.
+    Aditivo: ninguém quebra, e quem precisa da verdade inteira pede por ela.
 
     ``draft_dict`` segue o contrato definido em ``DraftConfig.to_ipc_dict()``:
     chaves triggers/leds/rumble/mouse.
 
-    Retorna True se o daemon confirmou aplicação (status ok). False se daemon
-    offline, erro de transporte ou resposta inesperada.
+    Devolve o dicionário da resposta — que carrega ``status`` (sempre ``"ok"``,
+    ver ``aplicacao_confirmada``), ``applied`` (as seções que entraram) e
+    ``failed`` (mapa ``seção -> motivo curto`` das que não entraram). Devolve
+    ``None`` quando NÃO HOUVE RESPOSTA utilizável: daemon offline, erro de
+    transporte, resposta que não é um dicionário. A distinção existe porque a
+    tela precisa dizer coisas diferentes em "o Hefesto está desligado" e "a
+    seção de luzes não entrou" — mandar procurar o daemon quando ele está vivo
+    é o defeito que esta sprint existe para eliminar.
+    """
+    ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
+    if ok and isinstance(result, dict):
+        return result
+    return None
+
+
+def aplicacao_confirmada(resposta: Any) -> bool:
+    """A resposta do ``profile.apply_draft`` confirma que algo entrou? (R-18).
+
+    Dono ÚNICO da regra de sucesso da aplicação — a ``apply_draft`` e os
+    chamadores que pedem a resposta detalhada decidem os dois por aqui, para
+    não nascerem duas leituras do mesmo payload.
 
     R-18 (auditoria 23/07): `status` é SEMPRE "ok" — o handler responde isso
     mesmo quando o applier não aplicou seção nenhuma, e a GUI toastava "aplicado"
@@ -511,16 +543,30 @@ def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
     mandaria a usuária caçar o problema no lugar errado. A honestidade entra
     pelo campo `applied`, que já viajava na resposta e ninguém lia.
     """
-    ok, result = _safe_call("profile.apply_draft", draft_dict, timeout=1.0)
-    if ok and isinstance(result, dict):
-        if result.get("status") != "ok":
-            return False
-        aplicado = result.get("applied")
-        if isinstance(aplicado, list):
-            return bool(aplicado)
-        # Daemon antigo, sem o campo: preserva o contrato v1.
-        return True
-    return False
+    if not isinstance(resposta, dict):
+        return False
+    if resposta.get("status") != "ok":
+        return False
+    aplicado = resposta.get("applied")
+    if isinstance(aplicado, list):
+        return bool(aplicado)
+    # Daemon antigo, sem o campo: preserva o contrato v1.
+    return True
+
+
+def apply_draft(draft_dict: dict) -> bool:  # type: ignore[type-arg]
+    """Envia ``profile.apply_draft`` ao daemon via IPC (FEAT-PROFILE-STATE-01).
+
+    Retorna True se o daemon confirmou aplicação. False se daemon offline, erro
+    de transporte, resposta inesperada ou nenhuma seção aplicada (R-18).
+
+    Invólucro de ``apply_draft_detalhado`` + ``aplicacao_confirmada``: quem só
+    precisa saber "deu ou não deu" continua com esta; quem precisa DIZER o que
+    não entrou chama a detalhada — este ``bool`` não tem como carregar o
+    ``failed``, e era por essa fronteira que a verdade morria antes de chegar
+    na aba Lightbar (APLICAR-VERDADE-01/E2).
+    """
+    return aplicacao_confirmada(apply_draft_detalhado(draft_dict))
 
 
 def mic_set(muted: bool | None, uniq: str | None = None) -> bool:
@@ -564,8 +610,9 @@ def speaker_set(
     volume: int | None = None,
     muted: bool | None = None,
     uniq: str | None = None,
+    release: bool = False,
 ) -> bool:
-    """Volume/mudo do alto-falante e do fone do controle (D4 / MIC-USB-01).
+    """Volume/mudo/devolução do alto-falante e do fone (D4 / MIC-USB-01 / SOM-02).
 
     DECISÃO DA MIC-USB-01, registrada aqui de propósito: o ``speaker.set``
     existia no IPC desde a D4 **sem um único chamador no produto** — método de
@@ -586,14 +633,33 @@ def speaker_set(
     ``speaker`` DEPOIS de um ``speaker.set`` — antes disso publicar um número
     seria inventá-lo.
 
-    PONTO EXATO DE FIAÇÃO: o mesmo bloco de áudio da aba Status onde entra o
-    botão de microfone — um slider de volume do controle ao lado do medidor,
-    ligado por ``app/actions/status_actions.py``, escondido enquanto
-    ``state_full`` não trouxer a chave ``speaker`` (ausência é resposta).
+    ``release=True`` (SOM-02/E3) DEVOLVE a posse: o hefesto PARA de mandar o
+    volume, os bits de áudio do report voltam a sair zerados e a chave
+    ``speaker`` some do ``daemon.state_full`` no tique seguinte. O que ele
+    devolve é o CONTROLE, não o valor — não existe leitura desse registrador,
+    então ninguém pode saber qual era o volume antes de nós; o firmware fica com
+    o ÚLTIMO número que mandamos. Prometer restauração na tela seria mentira.
+
+    ``release`` NÃO se mistura com ``volume``/``muted``: a combinação levanta
+    ``ValueError`` aqui e é erro de validação no daemon. "Pare de mandar E mande
+    isto" não tem significado honesto, e escolher um vencedor em silêncio
+    esconderia um chamador confuso.
+
+    NUNCA chamar sem ``volume``, ``muted`` ou ``release``: medido na SOM-02, a
+    chamada vazia toma a posse e manda ZERO (armadilha 1). "Assumir sem mudar
+    nada" seria uma chave nova e explícita, não o payload vazio.
 
     Retorna True se o daemon confirmou; False se offline ou sem controle.
     """
+    if release and (volume is not None or muted is not None):
+        raise ValueError(
+            "speaker_set: 'release' não combina com volume/muted — devolver a "
+            "posse e mandar um valor na mesma chamada não tem significado "
+            "honesto; faça duas chamadas"
+        )
     payload: dict[str, Any] = {}
+    if release:
+        payload["release"] = True
     if volume is not None:
         payload["volume"] = int(volume)
     if muted is not None:
@@ -630,7 +696,9 @@ def mouse_emulation_set(
 
 __all__ = [
     "active_profile_name",
+    "aplicacao_confirmada",
     "apply_draft",
+    "apply_draft_detalhado",
     "autoswitch_lock_set",
     "call_async",
     "daemon_state_full",

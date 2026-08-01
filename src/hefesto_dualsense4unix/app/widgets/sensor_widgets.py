@@ -144,10 +144,21 @@ def historico_deslizante(
     faltam = (tamanho - 1) - len(janela)
     return tuple([0.0] * faltam + janela + [valor])
 
-
-def fracao_do_volume(volume: int) -> float:
-    """Volume bruto 0-255 do alto-falante -> fração 0.0-1.0 da barra."""
-    return max(0.0, min(1.0, volume / 255))
+#: A régua de volume do alto-falante mora em `core/speaker_scale.py`, e não
+#: aqui. Ela é falada por TRÊS superfícies — a barra de leitura, o controle
+#: deslizante e o comando `speaker volume` da linha de comando — e enquanto
+#: viveu neste arquivo a linha de comando tinha uma cópia linear dela: os 60 %
+#: da janela e o `speaker volume 60` mandavam valores diferentes para o mesmo
+#: registrador. `app/widgets/` puxa GTK no import do pacote, então importá-la
+#: daqui fazia um comando de terminal carregar a interface inteira.
+#:
+#: Reexportado com os mesmos nomes para o código de tela continuar lendo como
+#: sempre leu. A curva medida, o método e as ressalvas estão lá.
+from hefesto_dualsense4unix.core.speaker_scale import (  # noqa: E402
+    fracao_do_volume,
+    percentual_do_volume,
+    volume_do_percentual,
+)
 
 
 def texto_volume(volume: int, muted: bool | None) -> str:
@@ -158,7 +169,7 @@ def texto_volume(volume: int, muted: bool | None) -> str:
     """
     if muted:
         return "mudo"
-    return f"{round(fracao_do_volume(volume) * 100)} %"
+    return f"{percentual_do_volume(volume)} %"
 
 
 def texto_toques(quantidade: int) -> str:
@@ -638,9 +649,11 @@ __all__ = [
     "fracao_do_volume",
     "hex_para_rgb",
     "historico_deslizante",
+    "percentual_do_volume",
     "posicao_normalizada",
     "selo_mic",
     "texto_eixo",
     "texto_toques",
     "texto_volume",
+    "volume_do_percentual",
 ]

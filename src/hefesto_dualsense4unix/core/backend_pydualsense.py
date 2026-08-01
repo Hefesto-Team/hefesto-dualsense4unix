@@ -2212,11 +2212,14 @@ class PyDualSenseController(IController):
 
         `volume` 0-255 (None mantém o vigente); `muted=True` manda 0 sem
         perder o volume preferido (guardado em `_speaker_volume_pref`), e
-        `muted=False` o restaura. Aplica o MESMO valor ao alto-falante interno
-        e ao fone: para quem usa o controle é UM volume só, e qual dos dois
-        toca depende do headset estar plugado (que é o `fone_plugado` do
-        `audio_status_for`). O byte de ROTEAMENTO (common[7]) NÃO é tocado —
-        não sabemos o valor neutro dele e chutar mudaria o caminho do áudio.
+        `muted=False` o restaura. Sem volume conhecido, `muted` é RECUSADO
+        (devolve False sem tomar a posse) — ver a guarda no laço abaixo.
+        Aplica o MESMO valor ao alto-falante interno e ao fone: para quem usa o
+        controle é UM volume só, e qual dos dois toca depende do headset estar
+        plugado (que é o `fone_plugado` do `audio_status_for`). O volume de
+        MICROFONE (common[6]) não é tocado, e o byte de ROTEAMENTO (common[7])
+        também não — não sabemos o valor neutro dele e chutar mudaria o caminho
+        do áudio.
 
         Retorna True se algum handle recebeu o pedido.
         """
@@ -2231,6 +2234,20 @@ class PyDualSenseController(IController):
                 pref = getattr(handle, "_speaker_volume_pref", None)
                 if volume is not None:
                     pref = max(0, min(255, int(volume)))
+                # SOM-02 (E3): `muted` é MODULAÇÃO de um volume conhecido, não
+                # uma primeira escrita. Sem volume nenhum na mão (nem no pedido
+                # nem na preferência), mandá-lo assumiria a posse e emudeceria o
+                # controle em ZERO — e o próprio "desmudo" não teria o que
+                # restaurar (armadilha 2, medida na sprint: o par mudo/desmudo
+                # tranca em `{'volume': 0, 'muted': True}` e não sai mais de
+                # lá). Recusar aqui é o que faz a DEVOLUÇÃO da posse valer: sem
+                # esta guarda, um `muted=False` depois do `release_speaker_volume`
+                # reabriria a posse sozinho.
+                if pref is None and muted is not None:
+                    logger.info(
+                        "speaker_mute_sem_volume_recusado", uniq=uniq, muted=muted
+                    )
+                    continue
                 if pref is None:
                     pref = 0
                 handle._speaker_volume_pref = pref
@@ -2242,6 +2259,48 @@ class PyDualSenseController(IController):
                     "output_handle_failed", op="set_speaker_volume", err=str(exc)
                 )
         logger.info("speaker_volume_set", volume=volume, muted=bool(muted), ok=ok)
+        return ok
+
+    def release_speaker_volume(self, *, uniq: str | None = None) -> bool:
+        """DEVOLVE a posse dos bytes de volume — o irmão do `mic release`.
+
+        SOM-02 (E3). O `release_audio_volumes` existia no handle desde o
+        AUDIO-OWNER-01 e não tinha porta nenhuma acima dele: nem serviço, nem
+        IPC, nem janela, nem linha de comando. Sem esta porta, o PRIMEIRO uso do
+        volume sequestrava o alto-falante até a próxima desconexão.
+
+        O que a devolução faz, dito por inteiro e sem promessa a mais:
+
+          - os quatro bytes de `common[4..7]` voltam a "sem dono" e os bits de
+            validação do flag0 saem ZERADOS em todo report seguinte — o firmware
+            volta a mandar no bloco;
+          - **não há restauração de valor.** O DualSense não devolve o volume
+            (não existe leitura), então ninguém pode saber qual era o número de
+            antes. O firmware conserva o ÚLTIMO valor que mandamos; o que a
+            devolução entrega de volta é o CONTROLE, não o valor;
+          - a PREFERÊNCIA (`_speaker_volume_pref`) morre junto, e isso é a
+            entrega, não a faxina: deixá-la viva faria um `muted=False` posterior
+            ressuscitar um volume antigo e RETOMAR a posse sem ninguém pedir —
+            exatamente o sequestro silencioso que esta entrega veio fechar.
+
+        Devolve True quando o handle escolhido por `uniq` recebeu o pedido;
+        False quando não há controle para o `uniq` (ou nenhum conectado).
+        Idempotente: devolver duas vezes é inofensivo.
+        """
+        alvo = self._handle_for(uniq)
+        if alvo is None:
+            logger.debug("output_offline_noop", op="release_speaker_volume")
+            return False
+        ok = False
+        try:
+            alvo.release_audio_volumes()
+            alvo._speaker_volume_pref = None
+            ok = True
+        except Exception as exc:
+            logger.warning(
+                "output_handle_failed", op="release_speaker_volume", err=str(exc)
+            )
+        logger.info("speaker_volume_released", uniq=uniq, ok=ok)
         return ok
 
     def set_microphone_mute(

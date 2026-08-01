@@ -237,5 +237,32 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def apply_profile_speaker(
+        self,
+        volume: int,
+        muted: bool = False,
+        *,
+        uniq: str | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
+        """Aplica a seção `speaker` de um perfil (SOM-02/E4).
+
+        Injetado como `speaker_applier` do ProfileManager nas rotas de ativação
+        (IPC switch, autoswitch, hotkey e restore de boot) e consumido por
+        `apply_speaker` / `reapply_speaker_on_connect`, que já decidiram antes
+        de chegar aqui que há opinião a aplicar — perfil sem a seção não chama
+        este método, porque tomar a posse dos bytes de áudio por um perfil que
+        não pediu nada é a queixa "a config que eu deixo nunca é respeitada".
+
+        Fala DIRETO com o backend, nunca pelo `speaker.set` do IPC: o handler
+        arma a categoria manual `"audio"`, que é a mesma trava que o
+        ProfileManager consulta para não escrever. Um applier que a armasse
+        faria o perfil funcionar uma vez e nunca mais, calado.
+
+        `volume` é sempre explícito (0-255): chamada sem volume toma a posse e
+        manda ZERO — a armadilha 1, medida na SOM-02.
+        """
+        ...
+
 
 __all__ = ["DaemonProtocol"]

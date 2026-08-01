@@ -43,9 +43,22 @@ def rodar(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+#: Regras 2 e 3 (DOC-VERDADE-02, E10). A variável real e a inventada; o método
+#: real e o inventado.
+ENV_REAL = "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED"
+ENV_FANTASMA = "HEFESTO_PLUGINS_ENABLED"
+METODO_REAL = "profile.switch"
+METODO_FANTASMA = "profile.trocar"
+
+
 @pytest.fixture
 def repo_falso(tmp_path: Path) -> Path:
-    """Repositório mínimo: um arquivo real e uma pasta docs/ vazia."""
+    """Repositório mínimo: um arquivo real e uma pasta docs/ vazia.
+
+    Desde a DOC-VERDADE-02 ele também carrega o mínimo que as regras 2 e 3
+    precisam para não se desligarem sozinhas: um módulo com o literal de uma
+    variável de ambiente e um `ipc_server.py` com o dicionário `_handlers`.
+    """
     (tmp_path / "docs").mkdir()
     (tmp_path / "scripts").mkdir()
     (tmp_path / "scripts" / "existe_de_verdade.sh").write_text(
@@ -54,11 +67,30 @@ def repo_falso(tmp_path: Path) -> Path:
     pacote = tmp_path / "src" / "pacote" / "gui"
     pacote.mkdir(parents=True)
     (pacote / "main.glade").write_text("<interface/>\n", encoding="utf-8")
+
+    daemon = tmp_path / "src" / "hefesto_dualsense4unix" / "daemon"
+    daemon.mkdir(parents=True)
+    (daemon / "ipc_server.py").write_text(
+        "class IPCServer:\n"
+        "    def __post_init__(self) -> None:\n"
+        "        self._handlers = {\n"
+        f'            "{METODO_REAL}": self._handle_profile_switch,\n'
+        '            "daemon.reload": self._handle_daemon_reload,\n'
+        "        }\n",
+        encoding="utf-8",
+    )
+    (daemon / "subsystems.py").write_text(
+        f'import os\n\nLIGADO = os.getenv("{ENV_REAL}") == "1"\n',
+        encoding="utf-8",
+    )
     return tmp_path
 
 
 def escrever_doc(raiz: Path, nome: str, texto: str) -> Path:
-    caminho = raiz / "docs" / nome
+    """Escreve em `docs/usage/` — o escopo onde as três regras valem."""
+    pasta = raiz / "docs" / "usage"
+    pasta.mkdir(parents=True, exist_ok=True)
+    caminho = pasta / nome
     caminho.write_text(texto, encoding="utf-8")
     return caminho
 
@@ -258,3 +290,275 @@ def test_caminho_absoluto_do_sistema_nao_e_cobrado(repo_falso: Path) -> None:
     proc = rodar("--root", str(repo_falso), "--all")
 
     assert proc.returncode == 0, proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# Regra 2 -- VARIÁVEL DE AMBIENTE (DOC-VERDADE-02, entrega E10).
+#
+# O buraco que deixou o ADR-017 ensinar `HEFESTO_PLUGINS_ENABLED` por meses:
+# variável de ambiente não é arquivo, e a regra 1 era cega a ela.
+# ---------------------------------------------------------------------------
+
+
+def test_variavel_de_ambiente_inexistente_reprova(repo_falso: Path) -> None:
+    """A mordida escrita na sprint, parte 1."""
+    escrever_doc(
+        repo_falso,
+        "plugins.md",
+        f"Ligue com `{ENV_FANTASMA}=1` na unit.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "o validador ACEITOU variável de ambiente que não existe no código.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert ENV_FANTASMA in proc.stdout
+    assert "variável de ambiente" in proc.stdout
+
+
+def test_variavel_de_ambiente_real_passa(repo_falso: Path) -> None:
+    """O outro lado: a variável que EXISTE no código não pode ser cobrada."""
+    escrever_doc(repo_falso, "ok-env.md", f"Ligue com `{ENV_REAL}=1`.\n")
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_documento_nao_alimenta_o_indice_de_variaveis(repo_falso: Path) -> None:
+    """Um documento não pode se autoautorizar citando a própria invenção.
+
+    Se `docs/` entrasse no índice de literais, bastaria a variável aparecer
+    duas vezes no mesmo documento para a regra 2 virar tautologia. Este teste
+    trava a construção que impede isso.
+    """
+    escrever_doc(
+        repo_falso,
+        "autoritaria.md",
+        f"A variável `{ENV_FANTASMA}` liga.\nE de novo: `{ENV_FANTASMA}`.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, proc.stdout
+    assert proc.stdout.count(ENV_FANTASMA) >= 2, proc.stdout
+
+
+def test_docs_process_fica_fora_da_regra_de_variavel(repo_falso: Path) -> None:
+    """Sprint PROPÕE — e propor o que não existe é o trabalho dela.
+
+    A própria DOC-VERDADE-02 cita 16 vezes as três variáveis mortas que mandou
+    matar. Cobrar de `docs/process/` seria cobrar o diagnóstico de conter o
+    diagnosticado.
+    """
+    pasta = repo_falso / "docs" / "process" / "sprints"
+    pasta.mkdir(parents=True)
+    (pasta / "2026-01-01-PROPOSTA-01.md").write_text(
+        f"Proponho `{ENV_FANTASMA}` e o método `{METODO_FANTASMA}`.\n",
+        encoding="utf-8",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# Regra 3 -- MÉTODO DE IPC (DOC-VERDADE-02, entrega E10).
+# ---------------------------------------------------------------------------
+
+
+def test_metodo_de_ipc_inexistente_reprova(repo_falso: Path) -> None:
+    """A mordida escrita na sprint, parte 2: `profile.trocar` reprova."""
+    escrever_doc(repo_falso, "ipc.md", f"Chame `{METODO_FANTASMA}` no socket.\n")
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "o validador ACEITOU método de IPC não registrado.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert METODO_FANTASMA in proc.stdout
+    assert "método de IPC" in proc.stdout
+
+
+def test_metodo_de_ipc_real_passa(repo_falso: Path) -> None:
+    """`profile.switch` está no `_handlers` e não pode ser cobrado."""
+    escrever_doc(repo_falso, "ok-ipc.md", f"Chame `{METODO_REAL}` no socket.\n")
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_renomear_metodo_no_codigo_sem_tocar_o_documento_reprova(
+    repo_falso: Path,
+) -> None:
+    """O cenário REAL da regra 3, e o motivo de ela existir.
+
+    A tabela do protocolo é digitada à mão; o registro é um `dict`. Renomear no
+    `ipc_server.py` e esquecer o documento é a forma exata como a tabela
+    envelheceu de 10-de-33 para 10-de-34.
+    """
+    escrever_doc(repo_falso, "protocolo.md", f"Chame `{METODO_REAL}`.\n")
+    assert rodar("--root", str(repo_falso), "--all").returncode == 0
+
+    servidor = repo_falso / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_server.py"
+    servidor.write_text(
+        servidor.read_text(encoding="utf-8").replace(METODO_REAL, "profile.select"),
+        encoding="utf-8",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, (
+        "renomear o método no código não derrubou o documento.\n"
+        f"saída: {proc.stdout}{proc.stderr}"
+    )
+    assert METODO_REAL in proc.stdout
+
+
+def test_token_que_nao_e_espaco_de_nomes_do_ipc_passa(repo_falso: Path) -> None:
+    """`ctx.controller` não é IPC — `ctx` não está no `_handlers`.
+
+    É o filtro que impede a regra 3 de virar chuva de falso positivo sobre
+    atributo de objeto, que é o que mais aparece em documentação técnica.
+    """
+    escrever_doc(
+        repo_falso,
+        "atributos.md",
+        "O plugin recebe `ctx.controller` e lê `info.wm_class`.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_nome_de_arquivo_com_cara_de_metodo_passa(repo_falso: Path) -> None:
+    """`daemon.pid`, `daemon.toml` e `daemon.log` não são métodos de IPC.
+
+    Os três têm espaço de nomes válido (`daemon.`) e cairiam na regra 3 sem o
+    filtro de extensão. `daemon.pid` é o caso medido na árvore real, em
+    `docs/protocol/ipc-unix-socket.md`.
+    """
+    escrever_doc(
+        repo_falso,
+        "arquivos.md",
+        "Ao lado de `daemon.pid` mora o `daemon.toml`, e o `daemon.log`.\n",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# O escape novo: a nota de verificação datada isenta o documento.
+# ---------------------------------------------------------------------------
+
+
+def test_nota_de_verificacao_isenta_o_documento(repo_falso: Path) -> None:
+    """O padrão de ADR desta casa não pode ser punido pelo portão.
+
+    Não se reescreve a decisão original: acrescenta-se a nota datada dizendo o
+    que caducou — e a nota PRECISA nomear o valor errado, que é a informação
+    inteira dela. Sem esta isenção o portão reprovaria justamente quem fez a
+    correção certa, e um gate que castiga a honestidade é pior que gate nenhum.
+    """
+    pasta = repo_falso / "docs" / "adr"
+    pasta.mkdir(parents=True)
+    (pasta / "099-decisao.md").write_text(
+        "# ADR-099\n"
+        "\n"
+        "## Decisão\n"
+        "\n"
+        f"Ativar por `{ENV_FANTASMA}=1` e chamar `{METODO_FANTASMA}`.\n"
+        "\n"
+        "## Nota de verificação — 2026-08-01\n"
+        "\n"
+        f"Os dois nomes acima caducaram: `{ENV_FANTASMA}` virou `{ENV_REAL}`, e\n"
+        f"`{METODO_FANTASMA}` virou `{METODO_REAL}`.\n",
+        encoding="utf-8",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+def test_sem_a_nota_o_mesmo_adr_reprova(repo_falso: Path) -> None:
+    """A contraprova da isenção anterior: arrancada a nota, o portão morde.
+
+    Sem este par, a isenção poderia ser larga demais e ninguém notaria.
+    """
+    pasta = repo_falso / "docs" / "adr"
+    pasta.mkdir(parents=True)
+    (pasta / "099-decisao.md").write_text(
+        "# ADR-099\n"
+        "\n"
+        "## Decisão\n"
+        "\n"
+        f"Ativar por `{ENV_FANTASMA}=1` e chamar `{METODO_FANTASMA}`.\n",
+        encoding="utf-8",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, proc.stdout
+    assert ENV_FANTASMA in proc.stdout
+    assert METODO_FANTASMA in proc.stdout
+
+
+def test_a_nota_isenta_so_o_nome_que_ela_cita(repo_falso: Path) -> None:
+    """A isenção é por TOKEN, não por documento inteiro.
+
+    Um ADR com nota datada não fica com salvo-conduto para inventar outros
+    nomes — só os que a nota assume como caducados passam.
+    """
+    pasta = repo_falso / "docs" / "adr"
+    pasta.mkdir(parents=True)
+    (pasta / "099-decisao.md").write_text(
+        "# ADR-099\n"
+        "\n"
+        "## Decisão\n"
+        "\n"
+        f"Ativar por `{ENV_FANTASMA}=1`. Depois chame `daemon.desligar`.\n"
+        "\n"
+        "## Nota de verificação — 2026-08-01\n"
+        "\n"
+        f"`{ENV_FANTASMA}` caducou; a real é `{ENV_REAL}`.\n",
+        encoding="utf-8",
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, proc.stdout
+    assert "daemon.desligar" in proc.stdout
+    assert ENV_FANTASMA not in proc.stdout, (
+        "a nota citou esta variável e ela ainda foi cobrada.\n" f"saída: {proc.stdout}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Desligamento seguro: sem índice, a regra não acusa TUDO.
+# ---------------------------------------------------------------------------
+
+
+def test_sem_ipc_server_a_regra_de_metodo_se_desliga(repo_falso: Path) -> None:
+    """Um portão que reprova tudo quando tropeça é pior que portão nenhum.
+
+    Sem o `ipc_server.py` não há como distinguir método morto de método novo;
+    a regra 3 se cala em vez de acusar todo token com ponto no meio.
+    """
+    (repo_falso / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_server.py").unlink()
+    escrever_doc(repo_falso, "ipc.md", f"Chame `{METODO_FANTASMA}`.\n")
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 0, proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# O README entrou na varredura com a DOC-VERDADE-02.
+# ---------------------------------------------------------------------------
+
+
+def test_readme_entra_na_varredura(repo_falso: Path) -> None:
+    """A página que mais gente copia ficava de fora só por morar na raiz."""
+    (repo_falso / "README.md").write_text(
+        f"Ligue os plugins com `{ENV_FANTASMA}=1`.\n", encoding="utf-8"
+    )
+    proc = rodar("--root", str(repo_falso), "--all")
+
+    assert proc.returncode == 1, proc.stdout
+    assert "README.md:1" in proc.stdout

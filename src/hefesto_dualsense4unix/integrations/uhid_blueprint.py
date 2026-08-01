@@ -40,10 +40,28 @@ derruba o probe com -EEXIST.
 
 Limitações aceitas (decisão dos sprints VPAD-03/BT-01)
 ------------------------------------------------------
-- **Congela a calibração (0x05) de UMA unidade e o firmware (0x20)**. Inócuo
-  hoje: o vpad emite motion neutro e não repassa gyro/accel do físico. **Se um
-  dia houver passthrough de gyro/touchpad, a calibração por unidade volta a
-  importar** — este blueprint terá de ser por-controle de novo.
+- **Congela a calibração (0x05) de UMA unidade e o firmware (0x20)** — e desde
+  a GYRO-01 o 0x05 daqui é só o PISO, não o que o vpad costuma responder. O
+  vpad **repassa** gyro, acelerômetro, `sensor_timestamp` e os dois pontos de
+  toque do físico: o `PhysicalReportReader` copia verbatim a fatia
+  `payload[15:40]` do report cru e a entrega em `forward_motion`, que a escreve
+  inteira no report 0x01 (`uhid_gamepad._MOTION_WINDOW`). São os int16 CRUS
+  daquela unidade — então a calibração por unidade **já importa**, e o projeto
+  **já a lê por jogador**: o `UhidDualSense.calibration_0x05` recebe o feature
+  0x05 do controle DAQUELE jogador (P1 por
+  `daemon/subsystems/gamepad.read_primary_calibration`; P2+ por
+  `CoopManager._fill_calibration`, por identidade) e o `_build_features`
+  substitui o canônico por ele quando o report é íntegro — 41 B com id 0x05. O
+  canônico abaixo fica valendo só no fallback (backend sem `read_calibration`,
+  leitura que falhou, controle externo sem handle), porque o invariante é que o
+  vpad sempre nasce. Calibrar a IMU de um controle com o bias/escala de outro
+  dá drift na mira, e é exatamente o que este fallback aceita como preço de não
+  deixar ninguém sem controle.
+- **A janela repassada NÃO carrega o clique do touchpad**: ele é um bit de
+  botão (`payload[9]`, `DS_BUTTONS2_TOUCHPAD`), fora do intervalo 15..39. O
+  mesmo reader o extrai por caminho próprio e o entrega em
+  `forward_touchpad_click` (TOUCH-CLICK-01) — quem procurar o clique dentro da
+  janela não vai achar.
 - **O firmware do 0x20 decide o modo de vibração do kernel**: update version
   `0x0630` (bytes 44-45, LE) ≥ `0x0215` liga `use_vibration_v2` no
   `hid_playstation` — é o caminho validado ao vivo nesta base (o parser do
