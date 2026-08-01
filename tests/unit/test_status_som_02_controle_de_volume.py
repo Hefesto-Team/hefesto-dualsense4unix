@@ -30,6 +30,7 @@ from tests.conftest import exigir_gi_real
 # no CI headless, em vez de pular.
 exigir_gi_real("status som 02 controle de volume")
 
+import contextlib
 from collections.abc import Iterator
 from typing import Any, Final
 
@@ -177,6 +178,43 @@ class _LeituraMic:
 #: 1x1 no meio da asserção.
 _janelas_vivas: list[Any] = []
 
+#: Quantas rodadas do laço de eventos esperar pela alocação antes de desistir.
+#: Generoso de propósito: o custo de uma rodada a mais é microssegundos, e o
+#: custo de desistir cedo é um teste de layout que mede 1x1.
+_CICLOS_ATE_ALOCAR: Final[int] = 200
+
+
+def _assentar(janela: Any, widget: Any) -> None:
+    """Roda o laço de eventos ATÉ o widget receber alocação de verdade.
+
+    POR QUE ISTO EXISTE, e é a lição da leva: um `while Gtk.events_pending()`
+    sozinho é uma aposta. Ele drena a fila que existe NAQUELE instante, e no
+    runner de 01/08 (Xvfb, `gtk-real`) a fila estava vazia antes de o GTK ter
+    feito a negociação de tamanho — o card saiu **1x1**, o `Gtk.Scale` devolveu
+    `range_rect.width == -1`, e a asserção reprovou com "-1px de trilho", que
+    descreve a bancada e não o desenho. Nesta máquina o mesmo código alocava,
+    porque a fila chegava preenchida: o teste passava aqui e reprovava lá.
+
+    Aqui a espera é pela CONDIÇÃO — alocação maior que 1x1 — e não por um número
+    de rodadas ou por um relógio. Espera por relógio seria a mesma aposta com
+    outra cara, e teste que depende de tempo é teste que reprova sozinho no dia
+    em que o runner estiver carregado.
+
+    Se a condição não vier em :data:`_CICLOS_ATE_ALOCAR` rodadas, a função
+    devolve mesmo assim: quem chama tem a guarda de bancada e é ela que sabe
+    dizer, com o nome certo, que a medida não pode ser lida.
+    """
+    for _ in range(_CICLOS_ATE_ALOCAR):
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+        if widget.get_allocated_width() > 1 and widget.get_allocated_height() > 1:
+            return
+        # `get_surface()` obriga a OffscreenWindow a renderizar, e a renderização
+        # obriga a negociação de tamanho que a fila vazia não tinha disparado.
+        with contextlib.suppress(Exception):
+            janela.get_surface()
+        janela.queue_resize()
+
 
 def _entry_com(speaker: dict[str, Any] | None, **extra: Any) -> dict[str, Any]:
     """Uma entrada de ``state_full.controllers`` com (ou sem) a chave `speaker`.
@@ -209,8 +247,7 @@ def _card(
     _janelas_vivas.append(janela)
     card.update(_entry_com(speaker), _ESTADO, mic if mic is not None else _LeituraMic())
     janela.resize(largura, 900)
-    while Gtk.events_pending():
-        Gtk.main_iteration()
+    _assentar(janela, card)
     return card
 
 
@@ -976,8 +1013,7 @@ def _aba_com_um_card(
     janela.show_all()
     janela.resize(largura, ALTURA_DE_PROJETO)
     card.update(_entry_com(speaker), _ESTADO_ALTO, _LeituraMic())
-    while Gtk.events_pending():
-        Gtk.main_iteration()
+    _assentar(janela, card)
     # GUARDA DE BANCADA, e não zelo: no runner de 01/08 este card saiu
     # **1x1** e o controle deslizante devolveu `range_rect.width == -1` —
     # medido nesta bancada, é exatamente o que um `Gtk.Scale` não alocado
@@ -1279,8 +1315,7 @@ def test_o_bloco_do_som_nao_gasta_linha_com_o_que_pode_dividir(
     card.update(
         _entry_com({"volume": 180, "muted": False}), _ESTADO, _LeituraMic()
     )
-    while Gtk.events_pending():
-        Gtk.main_iteration()
+    _assentar(janela, card)
 
     linhas = _linhas_do_bloco_do_som(card)
 
