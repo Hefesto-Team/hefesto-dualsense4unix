@@ -427,6 +427,63 @@
                           </object>
                           <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
                         </child>
+
+                        <!-- SOM-04, entrega 2: o botao que manda o som do
+                             SISTEMA para o alto-falante do controle, e que
+                             desfaz. Rotulo, sensibilidade e dica saem inteiros
+                             de `audio_saida.acao_da_rota`; quem os aplica e
+                             `status_actions._refresh_rota_de_som`.
+
+                             POR QUE AQUI, e nao no bloco "Alto-falante" do
+                             card, que e onde a sprint o pediu. Duas razoes, a
+                             primeira medida e a segunda de significado:
+
+                             1. NAO CABE la. Medido em 01/08/2026 com o card
+                                montado e alocado numa GtkOffscreenWindow, na
+                                escala de fonte +3 e na janela de projeto
+                                (1180px): um botao a mais no bloco custa +0px
+                                de largura e +36px de ALTURA, e leva o card de
+                                442 para 478px contra os 467px da faixa. Os
+                                11px de folga do card mais alto ja eram a folga
+                                mais fina da aba;
+                             2. a saida padrao do sistema NAO e um fato do
+                                controle — e do sistema. Com dois cards lado a
+                                lado haveria dois botoes para um unico
+                                interruptor global, e so um deles poderia estar
+                                certo. Este frame ja e o lugar dos fatos
+                                globais da aba (perfil ativo, daemon).
+
+                             O CUSTO AQUI, medido no mesmo dia: o minimo do
+                             grid sobe de 456 para 628px, e o frame tem
+                             width-request de 1040 — o minimo do grid continua
+                             MUITO abaixo do piso do frame, entao nada sobe
+                             para a janela. Altura: +0px. A folga horizontal do
+                             grid alocado era de 672px, e o botao ocupa parte
+                             de um vao que ja existia. -->
+                        <child>
+                          <object class="GtkButton" id="btn_som_no_controle">
+                            <property name="label" translatable="yes">Ouvir no controle</property>
+                            <!-- A dica INICIAL, antes da primeira leitura do
+                                 `pactl`. Ela e' copia fiel de
+                                 `audio_saida.DICA_ROTA_INICIAL`, e um teste
+                                 trava as duas juntas para nao derivarem. O
+                                 texto vale nos QUATRO estados do botao de
+                                 proposito: nos dois primeiros segundos a
+                                 janela ainda nao sabe onde o som esta, e
+                                 prometer a acao ali seria afirmar o que um
+                                 botao que pode nascer insensivel faria. -->
+                            <property name="tooltip-text" translatable="yes">Manda o som do sistema para o alto-falante do controle, e desfaz. O rótulo do botão diz o que o próximo clique faz, e a dica muda junto com ele assim que a janela ler a saída de áudio.</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <property name="hexpand">True</property>
+                            <property name="sensitive">False</property>
+                          </object>
+                          <packing>
+                            <property name="left-attach">2</property>
+                            <property name="top-attach">0</property>
+                            <property name="height">5</property>
+                          </packing>
+                        </child>
                       </object>
                     </child>
                   </object>

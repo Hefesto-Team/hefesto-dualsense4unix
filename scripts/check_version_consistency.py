@@ -22,6 +22,14 @@ O entrypoint anunciava v3.0.0 e mandava instalar um .deb com nome que não exist
 mais; o metainfo anunciava 3.13.3 de 14/07 para a loja; o Cargo.toml do applet
 estava em 0.1.0. Nenhum era visível a portão nenhum.
 
+Alvo acrescentado em 01/08 (item 1.15 da ONDA 1):
+  - README.md            o EMBLEMA `img.shields.io/badge/versão-X.Y.Z alfa`
+A régua abaixo só casava a linha em prosa (`Versão: X.Y.Z`) do mesmo arquivo, e
+o emblema — que é a primeira coisa que alguém vê na capa — passava por baixo
+dela: com a 0.5.0 publicada e a prosa já em 0.5.0, o emblema anunciava 0.4.0.
+Dois literais no mesmo arquivo exigem dois alvos, porque a régua é um regex por
+alvo.
+
 Alvo acrescentado em 31/07 (PUBLICAÇÃO-FIEL-01):
   - docs/usage/instalacao.md         `git checkout vX.Y.Z`
 Ela é a página canônica de instalação (o README aponta para ela duas vezes) e
@@ -59,6 +67,13 @@ PYPROJECT = ROOT / "pyproject.toml"
 #: (o alvo pode não existir em todos os checkouts); só falha em MISMATCH.
 _TARGETS: list[tuple[str, str, str]] = [
     ("README.md", "README.md", r"Versão:\s*(\S+)"),
+    # O emblema da capa. `versão` chega percent-encoded (`vers%C3%A3o`) e o
+    # número termina no `%20` de " alfa" — ou no `-` da cor, se um dia o sufixo
+    # sair. `[^%-]*` cobre as duas formas e para antes de qualquer uma delas.
+    # Emblema que mudar de sintaxe não casa nada, e não casar nada é MISMATCH
+    # (`actual is None`): a régua reprova alto em vez de aprovar calada.
+    ("README.md (emblema de versão)", "README.md",
+     r"shields\.io/badge/vers%C3%A3o-([0-9][^%-]*)"),
     ("__init__ fallback", "src/hefesto_dualsense4unix/__init__.py",
      r'__version__\s*=\s*"([^"]+)"'),
     ("PKGBUILD", "packaging/arch/PKGBUILD", r"^pkgver=(\S+)"),

@@ -159,6 +159,31 @@ class MicDraft(BaseModel):
     in_profile: bool = False
 
 
+class SpeakerDraft(BaseModel):
+    """Draft do ALTO-FALANTE do controle (SOM-02/E4, 29/07).
+
+    ``volume`` 0-255 (o range do protocolo, não a porcentagem da tela) e
+    ``muted`` espelham ``ProfileSpeakerConfig``. ``dirty``/``in_profile``
+    seguem a MESMA disciplina do ``MouseDraft``/``MicDraft``: ``to_profile``
+    só persiste a seção quando ela foi mexida OU o perfil de origem já a
+    tinha — perfil legado faz round-trip sem ganhar seção fantasma, que é
+    metade do critério de aceite da entrega.
+
+    ``volume=None`` = a seção NÃO existe no rascunho. É deliberado que o
+    default não seja um número: qualquer número aqui seria uma opinião que
+    ninguém deu, e persistir opinião não dada é tomar a posse do volume do
+    controle por conta própria (armadilha 1 da sprint — a chamada sem volume
+    manda ZERO e o mudo não a solta).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    volume: int | None = Field(default=None, ge=0, le=255)
+    muted: bool = False
+    dirty: bool = False
+    in_profile: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Conversores sub-draft <-> schema (compartilhados por from_profile/to_profile
 # e pelos overrides por-controle do PERFIL-04)
@@ -287,6 +312,8 @@ class DraftConfig(BaseModel):
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
     # MIC-EXPOSE-01: comportamento do botão de mic (ver `MicDraft`).
     mic: MicDraft = Field(default_factory=MicDraft)
+    # SOM-02/E4: volume do alto-falante do controle (ver `SpeakerDraft`).
+    speaker: SpeakerDraft = Field(default_factory=SpeakerDraft)
     # FEAT-KEYBOARD-UI-01: bindings de teclado do perfil em edição.
     # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
     # parcial = override explícito. Mapeia 1:1 para `Profile.key_bindings`.
@@ -402,12 +429,27 @@ class DraftConfig(BaseModel):
         else:
             mic = MicDraft()
 
+        # Alto-falante — SOM-02/E4, mesmo contrato do `mic`: seção presente
+        # vira draft com `in_profile=True` (o "Salvar Perfil" não a descarta);
+        # ausente mantém o default, que é a AUSÊNCIA de volume — perfil sem
+        # opinião não ganha uma opinião ao ser aberto na janela.
+        if profile.speaker is not None:
+            speaker = SpeakerDraft(
+                volume=profile.speaker.volume,
+                muted=profile.speaker.muted,
+                dirty=False,
+                in_profile=True,
+            )
+        else:
+            speaker = SpeakerDraft()
+
         return cls(
             triggers=triggers,
             leds=leds,
             rumble=rumble,
             mouse=mouse,
             mic=mic,
+            speaker=speaker,
             emulation=emulation,
             key_bindings=profile.key_bindings,
             source_match=profile.match,
@@ -462,6 +504,7 @@ class DraftConfig(BaseModel):
             Profile,
             ProfileMicConfig,
             ProfileMouseConfig,
+            ProfileSpeakerConfig,
             RumbleConfig,
         )
         from hefesto_dualsense4unix.profiles.slug import mesmo_slug
@@ -478,6 +521,19 @@ class DraftConfig(BaseModel):
         mic_cfg = (
             ProfileMicConfig(button_toggles_system=self.mic.button_toggles_system)
             if (self.mic.dirty or self.mic.in_profile)
+            else None
+        )
+        # SOM-02/E4: a seção só existe com VOLUME. O gate tem o `volume is not
+        # None` junto de propósito — um rascunho marcado (dirty/in_profile) mas
+        # sem número não pode virar uma seção pela metade: o esquema a recusa,
+        # e a razão é medida (perfil só com `muted` faria a ativação mandar
+        # ZERO e tomar a posse do alto-falante).
+        speaker_cfg = (
+            ProfileSpeakerConfig(volume=self.speaker.volume, muted=self.speaker.muted)
+            if (
+                self.speaker.volume is not None
+                and (self.speaker.dirty or self.speaker.in_profile)
+            )
             else None
         )
 
@@ -545,6 +601,7 @@ class DraftConfig(BaseModel):
             key_bindings=self.key_bindings,
             mouse=mouse_cfg,
             mic=mic_cfg,
+            speaker=speaker_cfg,
             # R-11: `controllers` NÃO entra no gate de `mesmo_perfil`, ao
             # contrário de match/priority/mode. A distinção é o que a coisa É:
             # match/priority/mode são REGRA (identidade do perfil, de onde ele
@@ -644,6 +701,31 @@ class DraftConfig(BaseModel):
         """
         return self.model_copy(
             update={"source_suppress": bool(suppress), "suppress_dirty": True}
+        )
+
+    def with_speaker(self, volume: int, *, muted: bool = False) -> DraftConfig:
+        """Rascunho com o volume do ALTO-FALANTE trocado por gesto DELA.
+
+        SOM-02/E4. Quem chama é a superfície que MANDOU o volume ao daemon
+        (o controle deslizante da E1), DEPOIS de o pedido ir — o rascunho
+        registra o que está de pé para o "Salvar Perfil" persistir, exatamente
+        como ``with_mode``/``with_suppress``.
+
+        ``volume`` é sempre explícito, 0-255: não existe caminho aqui para
+        marcar a seção sem número, porque não existe caminho no protocolo para
+        mandar mudo sem volume sem trancar o alto-falante em zero (SOM-02,
+        armadilhas 1 e 2). ``dirty`` liga porque é gesto dela — é o que faz o
+        valor sobreviver a um "Salvar Perfil" com nome NOVO.
+        """
+        return self.model_copy(
+            update={
+                "speaker": SpeakerDraft(
+                    volume=max(0, min(255, int(volume))),
+                    muted=bool(muted),
+                    dirty=True,
+                    in_profile=True,
+                )
+            }
         )
 
     # --- overrides por-controle (PERFIL-04) ---
@@ -954,6 +1036,14 @@ class DraftConfig(BaseModel):
         ``key_bindings`` (None → DEFAULT_BUTTON_BINDINGS; dict → override). Daemon
         antigo ignora a seção desconhecida (aditivo, sem quebra de contrato).
 
+        SOM-02/E4: a seção ``speaker`` NÃO viaja aqui, de propósito. Quem manda
+        o volume ao vivo é o ``speaker.set`` do IPC, disparado pela superfície
+        que a usuária tocou (o controle deslizante da E1) — o rascunho só
+        guarda o que ficou, para o "Salvar Perfil" persistir. Emiti-la no
+        "Aplicar" repetiria o estrago do HARM-05 numa seção com preço: um
+        Aplicar disparado por ter mexido num gatilho tomaria a posse dos bytes
+        de volume do controle sem ninguém ter pedido volume nenhum.
+
         A seção ``mouse`` é ``None`` quando não foi tocada nesta sessão
         (``MouseDraft.dirty`` False) — o DraftApplier pula seção None
         (BUG-MOUSE-GUI-SYNC-01 A2: "Aplicar" não desliga emulação viva).
@@ -1032,6 +1122,7 @@ __all__ = [
     "MicDraft",
     "MouseDraft",
     "RumbleDraft",
+    "SpeakerDraft",
     "TriggerDraft",
     "TriggersDraft",
 ]

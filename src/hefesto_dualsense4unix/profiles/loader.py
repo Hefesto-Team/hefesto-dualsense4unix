@@ -603,6 +603,21 @@ def audit_profiles() -> list[tuple[str, str]]:
     return invalid
 
 
+#: SOM-02/E4: seções OPCIONAIS do perfil que não são gravadas quando valem
+#: ``None`` — "sem opinião" é a AUSÊNCIA da chave no arquivo, nunca um `null`.
+#: Requisito de compatibilidade para trás (ver `save_profile`), não estética:
+#: um binário anterior a qualquer uma delas tem ``extra="forbid"`` no `Profile`
+#: e rejeitaria TODOS os perfis no downgrade, não só os que usam a seção.
+#: ``controllers`` tem tratamento próprio logo abaixo (mapa vazio também sai).
+_SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
+    "speaker",
+    "mouse",
+    "mic",
+    "mode",
+    "key_bindings",
+)
+
+
 def save_profile(profile: Profile) -> Path:
     """Grava perfil em `<slugify(profile.name)>.json` de forma atômica.
 
@@ -613,6 +628,26 @@ def save_profile(profile: Profile) -> Path:
     no downgrade; com a omissão, só perfis que USAM o mapa ficam
     incompatíveis, e perfis antigos seguem round-trip load→save sem ganhar
     a chave.
+
+    SOM-02/E4 (29/07): a seção ``speaker`` entra na MESMA omissão, e pelo
+    mesmo motivo medido. O ``model_dump`` emite todo campo declarado — um
+    perfil recém-criado já sai com ``"mouse": null, "mic": null,
+    "mode": null`` —, então acrescentar a seção faria TODO save gravar
+    ``"speaker": null`` e um binário anterior à sprint (``extra="forbid"``)
+    rejeitaria TODOS os perfis num downgrade, inclusive os que nunca ouviram
+    falar de alto-falante. Com a omissão, ``load → save`` de um perfil sem a
+    seção não acrescenta a chave ao arquivo.
+
+    E as OUTRAS seções opcionais entram junto — ``mouse``, ``mic``, ``mode`` e
+    ``key_bindings``. Elas tinham exatamente o mesmo defeito, só que já em
+    produção há semanas. Curar só a seção do dia e deixar as vizinhas doentes
+    seria escolher a estética em vez do requisito (o downgrade voltar a
+    funcionar). MEDIDO antes de entrar, com a suíte de unidade inteira: a
+    omissão ampliada não produz UM vermelho novo. O load é semanticamente
+    idêntico, porque chave ausente e chave ``null`` produzem o mesmo ``None``
+    no esquema; ``key_bindings`` ausente segue valendo "herda os defaults", e
+    o que muda comportamento lá é ``{}`` (teclado silencioso) — que não é
+    ``None`` e continua sendo gravado.
 
     Fix do review (2026-07-16, MED): as ENTRADAS do mapa são serializadas
     com ``exclude_unset`` — um override PARCIAL escrito à mão (só
@@ -627,6 +662,12 @@ def save_profile(profile: Profile) -> Path:
     """
     path = _profile_path(profile)
     payload = profile.model_dump(mode="json")
+    # SOM-02/E4: seção ausente é seção AUSENTE no arquivo (ver docstring).
+    # `is None` e não falsy: `key_bindings: {}` é a ordem "teclado silencioso"
+    # e tem de sobreviver ao save.
+    for secao in _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE:
+        if payload.get(secao) is None:
+            payload.pop(secao, None)
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:

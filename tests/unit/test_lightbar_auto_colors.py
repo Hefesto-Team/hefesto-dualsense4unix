@@ -390,11 +390,15 @@ def test_aplicar_no_controle_em_todos_leva_toggle_no_ipc(
     check.active = True
     payloads: list[dict[str, Any]] = []
 
-    def _spy(payload: dict[str, Any]) -> bool:
+    # APLICAR-VERDADE-01/E2: o dublê fala o contrato do daemon (a resposta
+    # inteira), não o `bool` que a ponte devolvia e que perdia o `failed`.
+    def _spy(payload: dict[str, Any]) -> dict[str, Any]:
         payloads.append(payload)
-        return True
+        return {"status": "ok", "applied": ["leds"]}
 
-    monkeypatch.setattr(lightbar_actions.ipc_bridge, "apply_draft", _spy)
+    monkeypatch.setattr(
+        lightbar_actions.ipc_bridge, "apply_draft_detalhado", _spy
+    )
     monkeypatch.setattr(
         lightbar_actions,
         "led_set",
@@ -436,7 +440,7 @@ def test_aplicar_no_controle_com_alvo_usa_led_set(
     )
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a: pytest.fail("com alvo o caminho é led.set (respeita o alvo)"),
     )
     host._current_rgb = (10, 20, 30)
@@ -470,8 +474,9 @@ def test_apagar_em_todos_leva_toggle_no_ipc(
     payloads: list[dict[str, Any]] = []
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
-        lambda payload: payloads.append(payload) or True,
+        "apply_draft_detalhado",
+        lambda payload: payloads.append(payload)
+        or {"status": "ok", "applied": ["leds"]},
     )
     host.on_lightbar_off(None)
 

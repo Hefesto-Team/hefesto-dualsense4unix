@@ -10,8 +10,19 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
+from hefesto_dualsense4unix.app.actions import footer_actions
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import led_set, player_leds_set
+from hefesto_dualsense4unix.utils.i18n import _
+
+#: APLICAR-VERDADE-01/E2: a frase de quando NÃO HOUVE RESPOSTA do daemon. Ela
+#: continua palavra por palavra a de sempre — a cura não pode trocar uma
+#: mentira por outra, e com o Hefesto realmente desligado a aba Sistema É o
+#: lugar certo para onde mandar.
+_AVISO_HEFESTO_DESLIGADO = (
+    "não consegui aplicar a cor — o Hefesto pode estar desligado "
+    "(ligue na aba Sistema)"
+)
 
 #: Aviso D4 (sprint cores-e-led-automaticos): cor única em "Todos" com o
 #: automático ligado seria INVISÍVEL (a paleta vence o global no merge do
@@ -39,6 +50,40 @@ _AVISO_SEM_DESTINATARIO = (
 #: e é isso que a moldura passa a dizer, em vez de mostrar nada escolhido
 #: enquanto o controle exibe três luzes acesas.
 _DESENHO_VAZIO: tuple[bool, bool, bool, bool, bool] = (False,) * 5
+
+
+def mensagem_de_secao_fora(resposta: Any) -> str | None:
+    """Frase honesta quando o daemon RESPONDEU e a cor não entrou (E2).
+
+    Devolve ``None`` quando NÃO houve resposta (``apply_draft_detalhado`` deu
+    ``None``: daemon offline ou erro de transporte) — aí quem fala é a frase de
+    sempre, a que manda ligar o Hefesto na aba Sistema. Esta função só tem
+    opinião sobre o caso oposto: o daemon está vivo, respondeu, e a seção não
+    entrou. Antes da APLICAR-VERDADE-01/E2 os dois casos chegavam aqui como o
+    mesmo ``False`` e a aba mandava caçar o problema no lugar errado.
+
+    O VOCABULÁRIO é emprestado do rodapé, não reinventado: os nomes das seções
+    saem de ``footer_actions._lista_de_secoes`` (o mesmo ``_NOMES_DE_SECAO`` que
+    traduz ``leds`` para "luzes"), e o caso "respondeu e nada entrou, sem dizer
+    o que falhou" é devolvido pelo próprio ``_mensagem_de_aplicacao``. Frase
+    copiada entre superfícies diverge — é o que a RADAR-01 mediu.
+
+    Por que NÃO usar ``_mensagem_de_aplicacao`` também no caso com ``failed``:
+    o payload da Lightbar tem uma seção só (``leds``), então uma falha dela
+    deixa ``applied`` vazio e o rodapé responderia "Nada foi aplicado ao
+    controle." — verdade, mas sem o nome da seção, que é exatamente a
+    informação que esta entrega existe para levar até a tela. A frase daqui diz
+    as duas coisas: que o Hefesto está ligado (logo, não adianta ir na aba
+    Sistema) e QUAL seção ficou de fora.
+    """
+    if not isinstance(resposta, dict) or resposta.get("status") != "ok":
+        return None
+    secoes = footer_actions._lista_de_secoes(resposta.get("failed"))
+    if secoes:
+        return _("o Hefesto está ligado, mas não entrou: {secoes}").format(
+            secoes=secoes
+        )
+    return footer_actions._mensagem_de_aplicacao(resposta)
 
 
 def nome_do_desenho(bits: tuple[bool, ...] | list[bool]) -> str | None:
@@ -558,6 +603,10 @@ class LightbarActionsMixin(WidgetAccessMixin):
         pct = round(self._current_brightness * 100)
         draft = getattr(self, "draft", None)
         d4_disparou = False
+        # APLICAR-VERDADE-01/E2: a resposta do daemon, quando houve uma. Fica
+        # `None` nos caminhos que não passam pelo `apply_draft` (led.set), e é
+        # o que separa "o Hefesto está desligado" de "a seção de luzes caiu".
+        resposta: Any = None
         alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
         if self._edit_uniq() is None and alvos:
             ok = self._enviar_led_em_todos(
@@ -565,7 +614,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             )
         elif self._edit_uniq() is None and draft is not None:
             d4_disparou = self._d4_disable_auto_for_single_color()
-            ok = ipc_bridge.apply_draft(
+            resposta = ipc_bridge.apply_draft_detalhado(
                 {
                     "leds": {
                         "lightbar_rgb": list(self._current_rgb),
@@ -574,6 +623,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
                     }
                 }
             )
+            ok = ipc_bridge.aplicacao_confirmada(resposta)
         else:
             # PERFIL-05 (22/07): com um controle selecionado, o MAC viaja no
             # pedido — o daemon aplica SÓ nele (antes: caminho por índice que
@@ -586,8 +636,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
         msg = (
             f"Cor aplicada no controle ({pct}% de brilho)"
             if ok
-            else "não consegui aplicar a cor — o Hefesto pode estar desligado "
-            "(ligue na aba Sistema)"
+            else (mensagem_de_secao_fora(resposta) or _AVISO_HEFESTO_DESLIGADO)
         )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
@@ -644,13 +693,17 @@ class LightbarActionsMixin(WidgetAccessMixin):
         if preview is not None:
             preview.queue_draw()
         draft = getattr(self, "draft", None)
+        # APLICAR-VERDADE-01/E2: ver o comentário homônimo em
+        # `_aplicar_cor_no_controle` — "Apagar" é aplicar a cor preta e mente
+        # pelo mesmo motivo.
+        resposta: Any = None
         alvos = self._uniqs_conectados() if self._edit_uniq() is None else []
         if self._edit_uniq() is None and alvos:
             # R-14: apagar é aplicar a cor única preta — mesma rota por-MAC do
             # "Aplicar", sem desligar a paleta automática de ninguém.
             ok = self._enviar_led_em_todos((0, 0, 0), None, alvos)
         elif self._edit_uniq() is None and draft is not None:
-            ok = ipc_bridge.apply_draft(
+            resposta = ipc_bridge.apply_draft_detalhado(
                 {
                     "leds": {
                         "lightbar_rgb": [0, 0, 0],
@@ -658,6 +711,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
                     }
                 }
             )
+            ok = ipc_bridge.aplicacao_confirmada(resposta)
         else:
             # R-17 (auditoria 23/07): o "Apagar" era o ÚNICO output da GUI que
             # não mandava o `uniq` do alvo — o "Aplicar" logo ao lado manda. Sem
@@ -666,7 +720,13 @@ class LightbarActionsMixin(WidgetAccessMixin):
             # pediu para apagar a de UM, e ainda derrubava o override por-MAC
             # dos outros.
             ok = led_set((0, 0, 0), uniq=self._edit_uniq())
-        msg = "Lightbar apagada" if ok else "Falha (daemon offline?)"
+        msg = (
+            "Lightbar apagada"
+            if ok
+            # E2: o "Falha (daemon offline?)" continua palavra por palavra para
+            # o daemon REALMENTE offline; com ele vivo, quem fala é a seção.
+            else (mensagem_de_secao_fora(resposta) or "Falha (daemon offline?)")
+        )
         if d4_disparou:
             msg = f"{_AVISO_D4} — {msg}"
         self._toast_light(msg)

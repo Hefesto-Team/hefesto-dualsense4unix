@@ -129,6 +129,10 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             rumble_passthrough_applier=getattr(
                 daemon, "apply_profile_rumble_passthrough", None
             ),
+            # SOM-02/E4: o ciclo PS+D-pad é gesto MANUAL dela — troca explícita
+            # de perfil, que limpa as categorias travadas (inclusive `audio`) e
+            # portanto aplica o volume do perfil que entra.
+            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
         )
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:

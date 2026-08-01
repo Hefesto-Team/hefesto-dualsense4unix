@@ -10,21 +10,28 @@ em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado*
 
 > **Não há caminho de usuário para ligar isto.** Versões anteriores desta página
 > ensinavam duas receitas — um bloco `[daemon]` no `daemon.toml` e a variável
-> `HEFESTO_DUALSENSE4UNIX_METRICS=1`. **Nenhuma das duas funciona, e nenhuma
-> nunca funcionou.** Conferido no código em 25/07/2026:
+> `HEFESTO_DUALSENSE4UNIX_METRICS=1`. <!-- ref-externa: a variável é citada aqui JUSTAMENTE por não existir; a ausência dela é o assunto do parágrafo -->
+> **Nenhuma das duas funciona, e nenhuma nunca funcionou.** Conferido no código
+> em 25/07/2026:
 >
 > - O daemon **não lê `daemon.toml`** (o arquivo é referência; ele mesmo diz
 >   isso no cabeçalho que a GUI escreve).
-> - `HEFESTO_DUALSENSE4UNIX_METRICS` **não existe** no código: zero ocorrências
->   em `src/`.
-> - `daemon/main.py` constrói o `DaemonConfig` com três parâmetros —
->   `poll_hz`, `auto_reconnect` e `ps_long_press_ms`. `metrics_enabled` fica no
->   default `False` e nada o alcança.
+> - `HEFESTO_DUALSENSE4UNIX_METRICS` **não existe** no código: zero ocorrências em `src/`. <!-- ref-externa: idem — a ausência é a informação -->
+> - `daemon/main.py` constrói o `DaemonConfig` com quatro parâmetros —
+>   `poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
+>   `keyboard_emulation_enabled`. `metrics_enabled` fica no default `False` e
+>   nada o alcança.
 > - O `MetricsSubsystem` só é instanciado **na subida** do daemon
 >   (`_start_metrics`, na sequência de start). O `reload_config` não o
 >   reinicia — então nem o `daemon.reload` via IPC, que aceita
 >   `config_overrides` com qualquer campo do `DaemonConfig`, sobe o servidor
 >   num daemon que já está rodando.
+>
+> **Recontagem de 01/08/2026 (DOC-VERDADE-02, E7):** o terceiro item dizia
+> "três" e listava só os três primeiros. Ficou falso em 29/07, quando
+> a EMULACAO-NO-JOGO-01 acrescentou `keyboard_emulation_enabled` à construção do
+> `DaemonConfig` — o campo que desliga o teclado emulado dentro da partida. A
+> confissão continua inteira; só a contagem mudou.
 
 Consequência honesta: **subir o endpoint hoje exige mexer no código** — passar
 `metrics_enabled=True` na construção do `DaemonConfig` em
@@ -33,7 +40,9 @@ métricas, scraping, dashboard) descreve corretamente o que o
 `MetricsSubsystem` faz **quando ele sobe**; só a chave de ligar é que falta.
 
 O que falta para isto virar recurso de usuário é pequeno e está identificado:
-uma variável de ambiente lida em `daemon/main.py` (como as outras três já são),
+uma variável de ambiente lida em `daemon/main.py` — como `poll_hz`,
+`ps_long_press_ms` e `keyboard_emulation_enabled` já são (`auto_reconnect` é o
+único dos quatro que vem do argumento da linha de comando, não do ambiente) —
 ou o `reload_config` passando a parar/subir o `MetricsSubsystem` quando
 `metrics_enabled` muda. Nenhum dos dois foi feito.
 

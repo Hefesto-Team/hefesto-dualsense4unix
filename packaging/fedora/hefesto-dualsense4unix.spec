@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.5.0
+Version:        0.6.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -360,6 +360,25 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.6.0-1
+- A leva do alto-falante: o bloco da aba Status ganhou controle deslizante,
+  botao de mudo e devolucao da posse, com o preco escrito na propria interface.
+- O controle deslizante percorre a faixa que o registrador de fato usa: medido
+  no hardware, os primeiros 15 por cento do curso emudecem e os ultimos 60 nao
+  mudam nada, entao a escala passou a ser remapeada para a faixa util.
+- O botao de mudo nasce insensivel enquanto nao ha volume conhecido: um mudo
+  como primeira escrita trancaria o alto-falante em zero sem o proprio botao
+  poder solta-lo.
+- Um selo avisa quando quem esta mudo e o sistema, e nao o registrador do
+  controle: sao duas verdades diferentes, e a que decide se sai som e a do
+  PipeWire.
+- O perfil ganhou secao propria de alto-falante, que fica de fora do arquivo
+  quando nao ha opiniao.
+- O clique do touchpad passou a chegar ao jogo: o leitor tinha o byte na mao e
+  o descartava.
+- O emblema de testes deixou de declarar contagem exata, que envelhecia a cada
+  leva, e o portao de anonimato deixou de aprovar quando nao conseguia auditar.
+
 * Fri Jul 31 2026 Vitoria Maria <[REDACTED]> - 1:0.5.0-1
 - A leva da auditoria: treze agentes mediram o projeto e um verificador
   independente reenquadrou tres dos oito achados graves.

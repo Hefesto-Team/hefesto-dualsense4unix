@@ -143,10 +143,15 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         if steam_input_on_fora_da_allowlist(_safe_read(v), allow)
     ]
     if on:
+        # STEAM-INPUT-01 (entrega 9): o rótulo citado aqui era 'Reaplicar fixes
+        # seguros', que não é o nome de widget nenhum. O botão que de fato roda
+        # o `disable_steam_input.sh --apply-quiet` chama-se "Aplicar correções"
+        # e mora na aba Sistema (`gui/main.glade`, id `btn_storm_fix_safe`,
+        # handler `on_storm_fix_safe` em `app/actions/daemon_actions.py`).
         return (
             WARN,
             f"Steam Input LIGADO em {len(on)} perfil(is) fora da allowlist — "
-            "clique 'Reaplicar fixes seguros' para desligar",
+            "clique 'Aplicar correções' na aba Sistema para desligar",
         )
     excecoes = [
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
@@ -210,10 +215,22 @@ def check_snd_quirk(
         return OK, "cura do travamento do USB ATIVA (mic e fone do controle preservados)"
     if persisted:
         return INFO, "cura do travamento agendada (reconecte o controle p/ ativar)"
+    # STEAM-INPUT-01 (entrega 9), com reenquadramento: a sprint mandou trocar o
+    # rótulo morto ('Reaplicar fixes seguros') pelo nome do botão real, e aqui
+    # isso seria uma mentira NOVA. O "Aplicar correções" (`on_storm_fix_safe`,
+    # em `app/actions/daemon_actions.py`) roda dois scripts — o
+    # `scripts/disable_steam_input.sh` e o
+    # `scripts/fix_wireplumber_default_source.sh` — e deixa o quirk de fora DE
+    # PROPÓSITO (BUG-C: escrevê-lo a quente era `sudo tee` no /sys, o único
+    # sudo em runtime da GUI, e falhava calado num botão que promete "não pede
+    # senha"). Quem instala esta cura é o `install.sh` (via
+    # `scripts/install_snd_quirk.sh`, em /etc/modprobe.d), e ela pega no
+    # próximo replug do controle. É esse o ponteiro honesto.
     return (
         WARN,
-        "cura do travamento do USB AUSENTE — clique 'Reaplicar fixes seguros' "
-        "(o controle pode desconectar no meio do jogo)",
+        "cura do travamento do USB AUSENTE — rode ./install.sh e reconecte o "
+        "controle (o botão 'Aplicar correções' não instala esta cura; sem ela "
+        "o controle pode desconectar no meio do jogo)",
     )
 
 

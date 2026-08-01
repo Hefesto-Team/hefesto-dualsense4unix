@@ -115,6 +115,21 @@ class ProfileManager:
     # travado e o FF do jogo era ignorado mesmo com a máscara certa. None =
     # seção ignorada (CLI/testes sem daemon).
     rumble_passthrough_applier: Callable[[bool], None] | None = None
+    # SOM-02/E4: applier da seção `speaker` do perfil (volume do alto-falante
+    # e do fone do controle). Assinatura: `(volume: int, muted: bool, *,
+    # uniq: str | None = None, origin: str)` — o par SEMPRE explícito, nunca
+    # um `speaker.set` sem `volume` (armadilha 1 da sprint: chamada sem
+    # volume toma a posse e manda ZERO).
+    #
+    # DIFERENÇA deliberada em relação a `mode_applier`/`rumble_policy_applier`,
+    # que recebem SEMPRE a seção (inclusive None, para reverter o que outro
+    # perfil ligou): aqui perfil sem a seção NÃO chama o applier. Reverter
+    # áudio custaria tomar a posse dos bytes de volume por um perfil que não
+    # pediu nada — o hábito que produziu "a config que eu deixo nunca é
+    # respeitada". Sem opinião é silêncio, não ordem.
+    #
+    # None = seção ignorada (CLI/testes sem daemon).
+    speaker_applier: Callable[..., object] | None = None
     # R-21: última `wm_class` de jogo cujo veto ao catch-all já foi logado. O
     # `select_for_window` roda a 2 Hz (poll do autoswitch): sem esta chave o
     # veto viraria ~7 mil linhas/hora no journal enquanto ela joga.
@@ -308,10 +323,7 @@ class ProfileManager:
             if callable(soltar):
                 soltar()
 
-        travadas: frozenset[str] = frozenset()
-        store = getattr(self, "store", None)
-        if store is not None:
-            travadas = frozenset(getattr(store, "manual_override_categories", ()) or ())
+        travadas = self._categorias_travadas()
         if travadas:
             logger.info(
                 "profile_apply_respeita_override_manual",
@@ -360,6 +372,19 @@ class ProfileManager:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
+
+    def _categorias_travadas(self) -> frozenset[str]:
+        """Categorias de override MANUAL armadas no store agora.
+
+        ONDA-U F1/F2: "trigger" | "led" | "rumble" — e "audio" desde a SOM-02,
+        que é a categoria que o alto-falante consome. Lido por `getattr` de
+        propósito: dublês de teste e o `ProfileManager` sem store continuam
+        funcionando, e o conjunto vazio significa "nada travado".
+        """
+        store = getattr(self, "store", None)
+        if store is None:
+            return frozenset()
+        return frozenset(getattr(store, "manual_override_categories", ()) or ())
 
     @staticmethod
     def _configure_auto_player_colors(profile: Profile) -> None:
@@ -441,6 +466,9 @@ class ProfileManager:
 
         Applier de dublê que devolve `None` conta como "aplicado" — só o daemon
         real sabe adiar, e um dublê nunca deve fabricar um adiamento.
+
+        SOM-02/E4: a seção `speaker` fecha a lista, com contrato PRÓPRIO —
+        perfil sem ela não chama applier nenhum (ver `apply_speaker`).
         """
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
         if self.mouse_applier is not None and profile.mouse is not None:
@@ -541,7 +569,118 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
+        # SOM-02/E4: o alto-falante entra POR ÚLTIMO e só quando o perfil tem
+        # opinião — ver `apply_speaker`.
+        self.apply_speaker(profile, origin=origin, relatorio=resultado)
         return resultado
+
+    def apply_speaker(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        uniq: str | None = None,
+        relatorio: dict[str, str] | None = None,
+    ) -> str | None:
+        """Aplica a seção `speaker` do perfil (SOM-02/E4). Devolve o estado.
+
+        As TRÊS guardas desta entrega, cada uma vinda de uma medição da sprint:
+
+        1. **perfil sem a seção não escreve NADA.** `speaker=None` é ausência
+           de opinião, e o applier nem é chamado — diferente do `mode` e da
+           política de rumble, que recebem `None` para reverter o que outro
+           perfil ligou. Aqui "reverter" custaria tomar a posse dos bytes de
+           volume: a primeira escrita nossa faz o hefesto mandar o volume do
+           alto-falante E do fone em todo report, e o DualSense não devolve o
+           valor que o firmware tinha. Um perfil que não pediu nada não pode
+           pagar esse preço (é a queixa "a config que eu deixo nunca é
+           respeitada", do lado do áudio).
+        2. **a trava manual de áudio vence o perfil.** Categoria `"audio"` do
+           `StateStore` (irmã de "trigger"/"led"/"rumble"): se ela acabou de
+           mexer no volume na mão, o autoswitch reaplicando o perfil a cada
+           troca de janela NÃO pisa o ajuste dela — a mesma disciplina do
+           PERFIL-MANUAL-VENCE-01, que trata cor e gatilho assim. Trocar de
+           perfil explicitamente limpa as categorias e solta a trava.
+        3. **o par vai SEMPRE completo.** `volume` e `muted` juntos, nunca um
+           `speaker.set` sem volume — medido: sem volume e sem preferência
+           guardada a chamada toma a posse e manda ZERO, publicando
+           `{'volume': 0, 'muted': True}`. O esquema já recusa a seção sem
+           `volume` (ver `ProfileSpeakerConfig`); aqui o `int(...)` explícito
+           é a segunda cerca, para um dublê ou um objeto parcial não
+           conseguirem produzir a chamada vazia.
+
+        Best-effort como os irmãos: falha do applier loga warning e não aborta
+        a ativação. `relatorio` recebe `"speaker" → estado` para a GUI poder
+        contar a verdade (inclusive `"ignorado_trava_manual"`, que sem o
+        registro sumiria sem rastro — o buraco que o R-03 fechou).
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        secao = getattr(profile, "speaker", None)
+        if self.speaker_applier is None or secao is None:
+            return None
+        if "audio" in self._categorias_travadas():
+            resultado["speaker"] = "ignorado_trava_manual"
+            logger.info(
+                "profile_speaker_ignorado_trava_manual",
+                profile=profile.name,
+                origin=origin,
+            )
+            return resultado["speaker"]
+        try:
+            estado = _estado_da_secao(
+                self.speaker_applier(
+                    int(secao.volume),
+                    bool(secao.muted),
+                    uniq=uniq,
+                    origin=origin,
+                )
+            )
+        except Exception as exc:
+            estado = "falhou"
+            logger.warning(
+                "profile_speaker_apply_failed",
+                profile=profile.name,
+                err=str(exc),
+            )
+        resultado["speaker"] = estado
+        return estado
+
+    def reapply_speaker_on_connect(self, uniq: str | None = None) -> str | None:
+        """Reaplica o volume do perfil ATIVO quando um controle (re)conecta.
+
+        SOM-02/E4, item 3 das medições da sprint — a armadilha 4: a posse dos
+        bytes de áudio morre com o cabo. `_volumes_audio` nasce vazio em cada
+        handle e CADA conexão cria um handle novo, então desconectar e
+        reconectar (ou reiniciar o daemon) apaga a posse e o volume: a chave
+        `speaker` some do estado e o rótulo volta a "não ajustado". Persistir
+        por perfil sem este gancho faria o volume voltar ao do firmware ao
+        trocar o cabo, em silêncio.
+
+        **Só reaplica quando o perfil ativo TEM a seção** — sem isso
+        voltaríamos a tomar posse sem pedido a cada replug, que é o defeito
+        que a E4 inteira existe para não cometer. Sem perfil ativo, sem seção
+        ou sem applier: devolve `None` e não escreve nada. Com a trava manual
+        de áudio armada devolve `"ignorado_trava_manual"` (e também não
+        escreve): se ela mexeu no volume na mão, quem manda é ela — a
+        reconexão não é ocasião para o perfil retomar o campo.
+
+        `origin="system"` de propósito: reconexão é o sistema reaplicando o
+        que já estava configurado, nunca um gesto novo dela (mesma leitura do
+        restore de boot).
+        """
+        nome = getattr(getattr(self, "store", None), "active_profile", None)
+        if not nome:
+            return None
+        try:
+            profile = load_profile(str(nome))
+        except Exception as exc:
+            logger.warning(
+                "profile_speaker_reapply_load_failed", name=str(nome), err=str(exc)
+            )
+            return None
+        if getattr(profile, "speaker", None) is None:
+            return None
+        return self.apply_speaker(profile, origin="system", uniq=uniq)
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.

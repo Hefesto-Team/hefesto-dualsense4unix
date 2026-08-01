@@ -180,6 +180,42 @@ def mic(
 
 
 @app.command()
+def speaker(
+    action: str = typer.Argument(
+        "status",
+        help=(
+            "status | volume <0-100> | mute | unmute | release — alto-falante "
+            "e fone do DualSense."
+        ),
+    ),
+    value: int = typer.Argument(
+        None, help="Porcentagem 0-100, só para `volume`."
+    ),
+    uniq: str = typer.Option(
+        "", "--uniq", help="MAC normalizado do controle (omitido = o primário)."
+    ),
+) -> None:
+    """Volume, mudo e DEVOLUÇÃO da posse do alto-falante do controle (SOM-02).
+
+    O volume mora no firmware do controle e ele NÃO o devolve: a única forma de
+    saber o valor é termos sido nós a mandá-lo. Por isso a primeira escrita
+    assume a posse dos bytes de volume — a partir dela o hefesto manda o volume
+    do alto-falante E do fone em todo report, até `speaker release` ou até o
+    controle desconectar.
+
+    `speaker release` é a saída sem a janela, o irmão do `mic release`: ele
+    devolve o CONTROLE, não o valor. Ninguém pode saber qual era o volume antes
+    de nós, então o firmware fica com o último número que mandamos.
+
+    `speaker mute` exige um volume conhecido — mudo como primeira escrita
+    trancaria o alto-falante em zero e o próprio mudo não o soltaria.
+    """
+    from hefesto_dualsense4unix.cli.cmd_speaker import speaker_cmd
+
+    speaker_cmd(action, value=value, uniq=uniq or None)
+
+
+@app.command()
 def version() -> None:
     """Mostra a versão instalada."""
     from hefesto_dualsense4unix import __version__

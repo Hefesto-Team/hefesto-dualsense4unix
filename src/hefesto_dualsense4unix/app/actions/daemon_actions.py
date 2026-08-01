@@ -435,10 +435,26 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
         return (
             "Não consegui anotar este jogo — veja os 'Detalhes técnicos'."
         )
+    # STEAM-INPUT-01 (entrega 1): aqui morava a única frase do produto que
+    # ENSINAVA o gesto de ligar a entrada da Steam pela janela da própria Steam
+    # (menu do jogo, aba do controle, "Ativar" — "agora o Hefesto respeita essa
+    # escolha em vez de desfazê-la"). Ela só era verdadeira para um appid JÁ na
+    # allowlist; como regra geral é falsa, e foi assim que ela a leu: a
+    # DUPLO-REGISTRO-01 mediu o Pragmata com `UseSteamControllerConfig "2"` no
+    # `localconfig.vdf` e AUSENTE do `steam_input_apps.txt` — o segundo
+    # cadastro, o único que o Hefesto consulta. Ligar pela Steam não escreve na
+    # allowlist, e o guarda (`scripts/disable_steam_input.sh`) zera o per-app de
+    # quem está fora dela. O texto novo responde à mesma pergunta legítima ("e
+    # se não funcionar?") sem mandar ninguém à Steam e sem prometer o que o
+    # clique não faz: ele NÃO liga a entrada da Steam em lugar nenhum — só tira
+    # o Hefesto da frente (ungrab + restore do broker + vpad suspenso, em
+    # `daemon/subsystems/gamepad.py`), e é isso que faz o jogo enxergar o
+    # DualSense físico direto.
     resto = (
-        " Feche e abra o jogo de novo. Se mesmo assim ele não responder ao "
-        "controle, na Steam: botão direito no jogo → Propriedades → Controle "
-        "→ 'Ativar' (agora o Hefesto respeita essa escolha em vez de desfazê-la)."
+        " Feche e abra o jogo de novo: ele passa a enxergar o controle "
+        "físico direto e você não precisa configurar nada na Steam — a marca "
+        "é do Hefesto e sobrevive a reiniciar a máquina. Se ainda assim o "
+        "jogo não responder, o guia é docs/usage/jogos-e-mascaras.md."
     )
     if status == "ja_estava":
         return f"O jogo {appid} já estava marcado — o Hefesto já sai da frente dele.{resto}"

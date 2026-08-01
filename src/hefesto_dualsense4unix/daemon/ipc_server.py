@@ -24,7 +24,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
-    speaker.set          {volume?: 0-255, muted?: bool, uniq?} -> {status, speaker}
+    speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
+                         -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
 
 Erros seguem JSON-RPC 2.0; códigos do domínio em `docs/protocol/ipc-unix-socket.md`.
@@ -122,7 +123,10 @@ class IpcServer(IpcHandlersMixin):
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
             # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
-            # bytes de volume do report — ver `_handle_speaker_set`).
+            # bytes de volume do report — ver `_handle_speaker_set`). Desde a
+            # SOM-02 (E3) o MESMO método também DEVOLVE a posse, por
+            # `release: true` — a saída que faltava, e sem a qual o primeiro
+            # uso do volume sequestrava o alto-falante até a desconexão.
             "speaker.set": self._handle_speaker_set,
             # MIC-USB-01: mudo do microfone no FIRMWARE do controle — a
             # CAMADA 3 das três que deixavam o mic mudo. As camadas 1 e 2

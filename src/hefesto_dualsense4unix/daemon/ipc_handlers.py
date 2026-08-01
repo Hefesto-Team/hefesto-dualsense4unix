@@ -1752,6 +1752,16 @@ class IpcHandlersMixin:
                                 and not isinstance(hz_raw, bool)
                                 else 0.0
                             ),
+                            # SENSOR-VIVO-01/E4: quantas vezes o clique do
+                            # touchpad do físico saiu no report 0x01 do vpad —
+                            # é o número que distingue "o dedo chega ao jogo"
+                            # (que já acontecia) de "o clique chega ao jogo".
+                            # Contador do vpad, e não do reader: o que importa
+                            # é o que foi ESCRITO no /dev/uhid, não o que foi
+                            # lido do físico.
+                            "touchpad_clicks": int(
+                                getattr(vp, "touchpad_click_count", 0) or 0
+                            ),
                         }
                     )
             result["rumble_ff"] = {
@@ -2619,10 +2629,10 @@ class IpcHandlersMixin:
         return {"status": "ok"}
 
     async def _handle_speaker_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """`speaker.set` — volume/mudo do alto-falante do DualSense (D4).
+        """`speaker.set` — volume/mudo/devolução do alto-falante (D4 + SOM-02).
 
-        Params: ``{volume?: 0-255, muted?: bool, uniq?: str}``. `uniq` escolhe
-        o controle (MAC normalizado); omitido = o primário.
+        Params: ``{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}``.
+        `uniq` escolhe o controle (MAC normalizado); omitido = o primário.
 
         Escrever é o ÚNICO jeito de o volume ser conhecido: o controle não tem
         caminho de leitura para esse registrador. A primeira chamada faz o
@@ -2630,9 +2640,28 @@ class IpcHandlersMixin:
         dela o firmware é o dono e o daemon não toca no bloco (AUDIO-OWNER-01).
         Por isso `daemon.state_full` só passa a trazer a chave `speaker` DEPOIS
         de um `speaker.set`: até lá, publicar um número seria inventá-lo.
+
+        `release: true` (SOM-02/E3) DEVOLVE a posse: os quatro bytes voltam a
+        "sem dono", os bits de áudio do flag0 saem zerados e a chave `speaker`
+        some do estado. O que ele devolve é o CONTROLE, não o valor — o firmware
+        conserva o último número que mandamos, porque ninguém pode ler qual era
+        o de antes.
+
+        POR QUE `release` É CHAVE PRÓPRIA, e não `muted: null` como no `mic.set`:
+        aqui `muted` é OPCIONAL e a ausência já significa "não mexer"; lá a
+        chave é obrigatória e a ausência é erro. Reaproveitar o `null` daria
+        DUAS leituras para o mesmo payload — o `{}` seria ao mesmo tempo "não
+        mexer no mudo" e "devolver a posse".
+
+        PRECEDÊNCIA (decidida na SOM-02, entrega 3): `release` junto de
+        `volume`/`muted` é ERRO DE VALIDAÇÃO, não uma ordem com vencedor. A
+        mistura não tem significado honesto — "pare de mandar E mande isto" —, e
+        escolher um vencedor em silêncio esconderia um chamador confuso. São
+        dois pedidos, e quem quer os dois manda dois.
         """
         volume = params.get("volume")
         muted = params.get("muted")
+        release = params.get("release")
         uniq = params.get("uniq")
         if volume is not None:
             if not isinstance(volume, int) or isinstance(volume, bool):
@@ -2641,21 +2670,99 @@ class IpcHandlersMixin:
                 raise ValueError("speaker.set: 'volume' fora de 0-255")
         if muted is not None and not isinstance(muted, bool):
             raise ValueError("speaker.set: 'muted' precisa ser boolean ou omitido")
+        if release is not None and not isinstance(release, bool):
+            raise ValueError("speaker.set: 'release' precisa ser boolean ou omitido")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
+        if release and (volume is not None or muted is not None):
+            raise ValueError(
+                "speaker.set: 'release' não combina com 'volume'/'muted' — "
+                "devolver a posse e mandar um valor na mesma chamada não tem "
+                "significado honesto; mande dois pedidos"
+            )
+
+        if release:
+            return await self._speaker_release(uniq)
+
+        # O suporte do backend vem ANTES da guarda abaixo: num backend que nem
+        # tem o método, "sem suporte" é a resposta verdadeira e "sem volume
+        # conhecido" seria uma consequência dela vestida de causa.
         setter = getattr(self.controller, "set_speaker_volume", None)
         if not callable(setter):
             raise ValueError("backend sem suporte a volume de alto-falante")
+
+        # SOM-02 (armadilha 2, medida): mudo como PRIMEIRA escrita tranca o
+        # alto-falante em zero e o próprio mudo não o solta — o `muted=False`
+        # restauraria uma preferência que vale 0. Sem volume conhecido, o pedido
+        # é recusado com o caminho dito por extenso, em vez de virar um
+        # `{'volume': 0, 'muted': True}` do qual não se sai. O backend recusa de
+        # novo, na raiz (`set_speaker_volume`); aqui a recusa vira MENSAGEM, que
+        # é o que o `status` sozinho não conseguiria dizer sem mentir
+        # "sem_controle" para um controle que está conectado.
+        sem_volume_conhecido = self._speaker_estado(uniq) is None
+        if muted is not None and volume is None and sem_volume_conhecido:
+            raise ValueError(
+                "speaker.set: 'muted' sem volume conhecido — mande um 'volume' "
+                "antes (mudo como primeira escrita tranca o alto-falante em "
+                "zero e o próprio mudo não o solta)"
+            )
         ok = bool(setter(volume, muted=muted, uniq=uniq))
-        estado: Any = None
-        leitor = getattr(self.controller, "speaker_state_for", None)
-        if callable(leitor):
-            with contextlib.suppress(Exception):
-                estado = leitor(uniq)
+        if ok:
+            self._marcar_audio_manual()
         return {
             "status": "ok" if ok else "sem_controle",
-            "speaker": estado if isinstance(estado, dict) else None,
+            "speaker": self._speaker_estado(uniq),
         }
+
+    async def _speaker_release(self, uniq: str | None) -> dict[str, Any]:
+        """Devolve a posse dos bytes de volume (SOM-02/E3) e relê o estado.
+
+        A releitura tem de sair `None`: `speaker_state_for` devolve None assim
+        que o byte do alto-falante fica sem dono, e o `_merge_audio` só publica
+        dicionário — é assim que a chave `speaker` SOME do `daemon.state_full` e
+        a janela volta a dizer "não ajustado" no tique seguinte.
+        """
+        soltar = getattr(self.controller, "release_speaker_volume", None)
+        if not callable(soltar):
+            raise ValueError("backend sem suporte a devolução do alto-falante")
+        ok = bool(soltar(uniq=uniq))
+        if ok:
+            self._marcar_audio_manual()
+        return {
+            "status": "ok" if ok else "sem_controle",
+            "speaker": self._speaker_estado(uniq),
+        }
+
+    def _speaker_estado(self, uniq: str | None) -> dict[str, Any] | None:
+        """Leitura tolerante do `speaker_state_for` (None = sem volume conhecido).
+
+        `getattr` defensivo pelo mesmo motivo do resto do bloco de áudio:
+        FakeController e daemon antigo não têm o método, e ausência é resposta.
+        """
+        leitor = getattr(self.controller, "speaker_state_for", None)
+        if not callable(leitor):
+            return None
+        estado: Any = None
+        with contextlib.suppress(Exception):
+            estado = leitor(uniq)
+        return estado if isinstance(estado, dict) else None
+
+    def _marcar_audio_manual(self) -> None:
+        """Arma a trava manual da categoria `audio` (SOM-02, decisão da E4).
+
+        Mesma disciplina de `trigger.set`/`led.set`/`rumble.set`: um ajuste
+        MANUAL dela não pode ser pisado pelo autoswitch reaplicando o perfil na
+        próxima troca de janela. A alternativa considerada — deixar o volume
+        fora da trava e fazer o aplicador de perfil rodar só em troca EXPLÍCITA
+        de perfil — deixaria o furo aberto para todo caminho que reaplica perfil
+        sem ser troca explícita. A razão está escrita junto da categoria em
+        `daemon/state_store.py`.
+
+        A devolução da posse também arma: parar de mandar é uma decisão dela
+        tanto quanto mandar, e um perfil reaplicado logo depois retomaria a
+        posse que ela acabou de soltar.
+        """
+        self.store.mark_manual_trigger_active("audio")
 
     async def _handle_mic_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`mic.set` — mudo do microfone no FIRMWARE do controle (MIC-USB-01).

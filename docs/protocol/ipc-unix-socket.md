@@ -62,15 +62,40 @@ destravar o LED nem a vibração que ela ajustou em outra aba.
 
 ### `mic.set` / `speaker.set` — o áudio do controle (D4 / MIC-USB-01)
 
-| Método        | Parâmetros                                      | Retorno                                        |
-|---------------|-------------------------------------------------|------------------------------------------------|
-| `mic.set`     | `{muted: bool\|null, uniq?: str}`               | `{status, audio, mic_mudo_desejado}`           |
-| `speaker.set` | `{volume?: 0-255, muted?: bool, uniq?: str}`    | `{status, speaker}`                            |
+| Método        | Parâmetros                                                       | Retorno                                        |
+|---------------|------------------------------------------------------------------|------------------------------------------------|
+| `mic.set`     | `{muted: bool\|null, uniq?: str}`                                | `{status, audio, mic_mudo_desejado}`           |
+| `speaker.set` | `{volume?: 0-255, muted?: bool, release?: bool, uniq?: str}`     | `{status, speaker}`                            |
 
-Os dois escrevem no MESMO bloco de posse do report de saída (`common[4..9]`,
+Os dois escrevem no MESMO bloco do report de saída (`common[4..9]`,
 AUDIO-OWNER-01) e seguem a mesma disciplina: o hefesto só toca o campo depois de
 alguém pedir, e o que não tem dono sai com o bit de validação apagado — o
 firmware conserva o que tinha.
+
+**A posse, porém, é por BYTE e por BIT — não é do bloco inteiro** (medido na
+SOM-02, 29/07). Este documento tratava `common[4..9]` como uma coisa só, e para
+efeito de disciplina isso está certo; para efeito de PREÇO, não:
+
+| Campo                    | Byte        | Bit de autoridade | Quem toma     |
+|--------------------------|-------------|-------------------|---------------|
+| volume do fone           | `common[4]` | `flag0 0x10`      | `speaker.set` |
+| volume do alto-falante   | `common[5]` | `flag0 0x20`      | `speaker.set` |
+| volume do microfone      | `common[6]` | `flag0 0x40`      | ninguém hoje  |
+| roteamento de áudio      | `common[7]` | `flag0 0x80`      | ninguém hoje  |
+| mudo do microfone        | `common[9]` | `flag1 0x02`      | `mic.set`     |
+
+Fontes: `core/ds_output_report.py:74-101`, a aplicação por byte em
+`core/backend_pydualsense.py` (`_build_common`) e o mudo do microfone em ramo
+separado, logo abaixo dela.
+
+**A consequência prática, que a tela precisa dizer do jeito certo: mexer no
+volume pela janela NÃO mata o botão de microfone do controle.** São bits
+diferentes. O que a MIC-USB-01 viveu — `mic unmute` toma a posse e o botão
+físico para de valer até `mic release` — vale para o MICROFONE. O alto-falante
+tem um preço próprio, menor e diferente: ele toma o volume do fone junto (é o
+mesmo valor nos dois bytes, de propósito), e não toca `common[6]` nem
+`common[7]` — o roteamento fica de fora porque não sabemos o valor neutro dele e
+chutar mudaria o caminho do áudio.
 
 **`mic.set` tem TRÊS estados, e `false` não é "não mexer":**
 
@@ -103,6 +128,41 @@ vir um report atrás da escrita — não é o eco do que foi mandado.
 `speaker` só entra no payload **depois** de um `speaker.set`: o DualSense não
 devolve o volume (não há report de input nem feature report que o leia), então
 antes disso qualquer número seria chute.
+
+**`speaker.set` tem uma quarta chave, `release` (SOM-02, 31/07):**
+
+- `release: true` — **devolve a posse** dos bytes de volume. Os bits de áudio do
+  `flag0` voltam a sair zerados, o firmware volta a mandar no bloco e a chave
+  `speaker` **some** do `daemon.state_full` no tique seguinte;
+- `release` **não se combina** com `volume`/`muted`: a mistura é erro `-32003`.
+  "Pare de mandar E mande isto" não tem significado honesto, e eleger um vencedor
+  em silêncio esconderia um chamador confuso — são dois pedidos;
+- por que uma chave nova, e não `muted: null` como no `mic.set`: aqui `muted` é
+  **opcional** e a ausência já quer dizer "não mexer"; lá a chave é obrigatória e
+  a ausência é erro. Reusar o `null` daria duas leituras para o mesmo payload.
+
+**O que a devolução faz, e o que ela não faz.** Ela devolve o CONTROLE, não o
+valor: como não existe leitura desse registrador, ninguém pode saber qual era o
+volume antes de nós, e o firmware fica com o ÚLTIMO número que mandamos até o
+controle desconectar. Nenhum texto do produto pode prometer restauração.
+
+`muted` **sem volume conhecido é recusado** (erro `-32003`), e isso é entrega, e
+não rigor: medido na SOM-02, mudo como PRIMEIRA escrita manda zero e guarda zero
+como preferência — o "desmudo" seguinte restaura zero e o próprio par
+mudo/desmudo não solta mais o alto-falante. Mande um `volume` antes. Pela mesma
+razão, nada no produto manda `speaker.set` **vazio**: a chamada sem `volume`
+toma a posse e manda ZERO.
+
+`speaker.set` arma a trava manual na categoria `audio` (a quarta, ao lado de
+`trigger`/`led`/`rumble`): volume é ajuste manual como qualquer outro, e o
+autoswitch não pode pisá-lo reaplicando o perfil na próxima troca de janela.
+`profile.switch` explícito continua limpando tudo.
+
+Fora da janela, a linha de comando cobre o mesmo caminho:
+`hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release`
+(`--uniq` escolhe o controle). O `release` é a saída de emergência sem GUI, o
+irmão do `mic release`; o `mute` do CLI traz a mesma guarda da janela e recusa
+quando não há volume conhecido.
 
 **O que o IPC NÃO alcança.** O mudo do firmware é só a **camada 3** das três que
 deixavam o microfone mudo em 25/07. As outras duas são do WirePlumber e se curam

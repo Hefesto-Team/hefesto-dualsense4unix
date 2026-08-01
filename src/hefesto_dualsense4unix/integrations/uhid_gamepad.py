@@ -294,6 +294,15 @@ _BUTTONS2_BITS: dict[str, int] = {
 #: Todos viram o MESMO bit de click do touchpad (0x02): a regionalização
 #: (esquerda/meio/direita) é invenção nossa para o modo mouse, o DualSense real
 #: só reporta "o touchpad foi clicado".
+#:
+#: TOUCH-CLICK-01: estes NOMES só chegam pelo caminho do TECLADO virtual — o
+#: `TouchpadReader` lê o nó separado do touchpad e o `_combine_with_touchpad`
+#: (`daemon/subsystems/keyboard.py`) os mescla ao conjunto de botões DE LÁ. O
+#: caminho do JOGO (`dispatch_gamepad` / `CoopManager.forward_all`) repassa o
+#: conjunto do nó PRINCIPAL, cujo `BUTTON_MAP` não tem entrada de touchpad —
+#: por isso o clique nunca acendia no report do vpad. O bit continua saindo
+#: daqui quando o nome aparece (remap/teste), mas a fonte do caminho do jogo é
+#: `forward_touchpad_click`, alimentada pelo report CRU do físico.
 _TOUCHPAD_BUTTONS = frozenset({
     "touchpad", "touchpad_press",
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
@@ -600,6 +609,14 @@ class UhidDualSense:
     _motion_streaming: bool = False
     #: Nº de janelas de motion EMITIDAS (telemetria GYRO-03: "o gyro flui?").
     _motion_count: int = 0
+    #: TOUCH-CLICK-01 — clique do touchpad vindo do report CRU do físico
+    #: (`PhysicalReportReader`), fora da janela de motion: ele mora no byte de
+    #: botões (payload[9]), que a janela 15..39 não cobre. Campo PRÓPRIO, e não
+    #: um nome enfiado em `_buttons`: o dono de `_buttons` é o poll loop, e
+    #: cada `forward_buttons` dele apagaria o clique no tick seguinte.
+    _touchpad_click: bool = False
+    #: Nº de PRESSIONADAS entregues ao jogo (telemetria/teste: "o clique flui?").
+    _touchpad_click_count: int = 0
     #: Anti-flood: janela de tamanho errado loga warning UMA vez por instância
     #: (o reader roda a até ~765 Hz — um bug de chamador viraria flood).
     _motion_invalid_logged: bool = False
@@ -937,8 +954,47 @@ class UhidDualSense:
             return
         with self._lock:
             self._motion_window = bytes(window)
-            if self._emit_if_changed(from_motion=True):
+            if self._emit_if_changed(from_reader=True):
                 self._motion_count += 1
+
+    def forward_touchpad_click(self, pressed: bool) -> None:
+        """Espelha o CLIQUE do touchpad do físico no report do vpad.
+
+        TOUCH-CLICK-01 — irmão de `forward_motion`, mesmo chamador (o
+        `PhysicalReportReader`, thread própria) e mesmo report cru; muda só a
+        fatia lida. O clique é `DS_BUTTONS2_TOUCHPAD` (bit 0x02 do payload[9]),
+        e a janela de motion do espelho começa no byte 15 — ele NUNCA viajava
+        junto. Sem isto, apertar o touchpad dentro do jogo não acende bit
+        nenhum: o conjunto de botões do caminho do jogo vem do nó evdev
+        PRINCIPAL, cujo `BUTTON_MAP` não tem touchpad (o nó do touchpad é
+        separado e só o teclado virtual o lê).
+
+        Entrega por BORDA e imediata: o clique não está na janela de motion,
+        então ele não pode depender de a janela mudar para sair — um controle
+        parado na mesa (BT em repouso, ou o teto de coalescência do throttle)
+        seguraria a pressionada. `from_reader=True` porque quem chama é o
+        mesmo relógio do motion: com `_motion_streaming` ligado, o gate de
+        `_emit_if_changed` só deixa o reader emitir.
+        """
+        if self._fd is None:
+            return
+        with self._lock:
+            alvo = bool(pressed)
+            if alvo == self._touchpad_click:
+                return
+            self._touchpad_click = alvo
+            if self._emit_if_changed(from_reader=True) and alvo:
+                self._touchpad_click_count += 1
+
+    @property
+    def touchpad_click(self) -> bool:
+        """True enquanto o clique espelhado do físico está pressionado."""
+        return self._touchpad_click
+
+    @property
+    def touchpad_click_count(self) -> int:
+        """Nº de PRESSIONADAS do touchpad entregues ao jogo (TOUCH-CLICK-01)."""
+        return self._touchpad_click_count
 
     def set_motion_streaming(self, on: bool) -> None:
         """Liga/desliga o modo "o reader é o relógio" (GYRO-01).
@@ -949,6 +1005,12 @@ class UhidDualSense:
         fail-safe — a janela volta ao NEUTRO e a emissão volta ao delta do
         poll loop. Voltar neutro importa: um último sample de gyro congelado
         no report viraria rotação fantasma infinita na mira do jogo.
+
+        TOUCH-CLICK-01: o clique do touchpad SOLTA no mesmo fail-safe, e pelo
+        mesmo motivo. Ele vem do mesmo reader e mora FORA da janela, então
+        zerar a janela não o alcança — sem esta linha, perder o físico com o
+        dedo apertado (hotplug, cabo puxado) deixaria o botão preso para
+        sempre no jogo, com o mapa/inventário abrindo e fechando sozinho.
         """
         with self._lock:
             alvo = bool(on)
@@ -958,6 +1020,7 @@ class UhidDualSense:
             logger.info("uhid_motion_streaming", on=alvo, player=self.player)
             if not alvo:
                 self._motion_window = _MOTION_NEUTRAL
+                self._touchpad_click = False
                 self._emit_if_changed()
 
     @property
@@ -970,20 +1033,23 @@ class UhidDualSense:
         """Nº de janelas de motion emitidas (telemetria GYRO-03)."""
         return self._motion_count
 
-    def _emit_if_changed(self, *, from_motion: bool = False) -> bool:
+    def _emit_if_changed(self, *, from_reader: bool = False) -> bool:
         """Emite o report 0x01 só quando o payload mudou.
 
         Espelha o delta do `UinputGamepad`: o forward roda a cada tick por vpad, e
         sem isto seriam ~250 writes/s por controle no /dev/uhid com tudo parado.
 
-        GYRO-01: com `_motion_streaming` ligado, só o caminho do reader
-        (`from_motion=True`) emite — os forwards do poll loop viram só-cache.
-        Sob `_lock`: o reader e o poll loop agora emitem de threads diferentes,
-        e `_last_body`/`_seq` precisam de UM dono por vez (o RLock deixa o
-        `send_report` reentrar sem deadlock).
+        GYRO-01: com `_motion_streaming` ligado, só o caminho do
+        `PhysicalReportReader` (`from_reader=True`) emite — os forwards do poll
+        loop viram só-cache. `from_reader` (e não "from_motion"): desde a
+        TOUCH-CLICK-01 o mesmo reader entrega DUAS coisas do report cru — a
+        janela de motion e o clique do touchpad — e as duas emitem no mesmo
+        relógio. Sob `_lock`: o reader e o poll loop emitem de threads
+        diferentes, e `_last_body`/`_seq` precisam de UM dono por vez (o RLock
+        deixa o `send_report` reentrar sem deadlock).
         """
         with self._lock:
-            if self._motion_streaming and not from_motion:
+            if self._motion_streaming and not from_reader:
                 return False
             body = self._encode_body()
             chave = bytes(body)
@@ -1014,7 +1080,11 @@ class UhidDualSense:
         body[_BUTTONS0_OFFSET] = self._dpad_hat(pressed) | _bitmask(pressed, _BUTTONS0_BITS)
         body[_BUTTONS1_OFFSET] = _bitmask(pressed, _BUTTONS1_BITS)
         buttons2 = _bitmask(pressed, _BUTTONS2_BITS)
-        if pressed & _TOUCHPAD_BUTTONS:
+        # TOUCH-CLICK-01: duas fontes, um bit. `_touchpad_click` é o espelho do
+        # report cru do físico (caminho do JOGO, o que faltava); os nomes em
+        # `_TOUCHPAD_BUTTONS` continuam valendo para quem os injeta pelo
+        # conjunto de botões (remap/teste). OU lógico, nunca substituição.
+        if self._touchpad_click or (pressed & _TOUCHPAD_BUTTONS):
             buttons2 |= _TOUCHPAD_BIT
         body[_BUTTONS2_OFFSET] = buttons2
         return body

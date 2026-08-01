@@ -24,6 +24,25 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.6.0" date="2026-08-01">
+      <description>
+        <p>A leva do alto-falante. O volume do controle tem tres camadas e a
+           janela so alcancava a do meio — justamente a unica sem leitura e com
+           preco. Agora o bloco Alto-falante tem controle deslizante, botao de
+           mudo e devolucao da posse, com o preco escrito na propria interface:
+           a partir do primeiro clique o Hefesto manda o volume em todo report,
+           e o DualSense nao devolve esse valor. O botao de mudo nasce
+           insensivel enquanto nao ha volume conhecido, porque um mudo como
+           primeira escrita trancaria o alto-falante em zero sem o proprio botao
+           poder solta-lo. Um selo avisa quando quem esta mudo e o sistema, e
+           nao o registrador do controle — sao duas verdades diferentes, e a que
+           decide se sai som e a do PipeWire. O perfil ganhou secao propria de
+           alto-falante, que fica de fora do arquivo quando nao ha opiniao. O
+           clique do touchpad passou a chegar ao jogo: o leitor tinha o byte na
+           mao e o descartava. E o emblema de testes deixou de declarar uma
+           contagem exata que envelhecia a cada leva.</p>
+      </description>
+    </release>
     <release version="0.5.0" date="2026-07-31">
       <description>
         <p>A leva da auditoria: treze agentes mediram o projeto inteiro e um

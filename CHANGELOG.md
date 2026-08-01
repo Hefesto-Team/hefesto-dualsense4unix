@@ -5,6 +5,163 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-08-01
+
+A leva do alto-falante. Ela pediu *"a ideia é concluirmos tudo que está pelo
+caminho de autofalante para demais restantes"*, e as duas sprints do som
+estavam paradas em PROPOSTA desde 29/07 — cinco entregas desenhadas, zero
+linhas de código. Onze agentes trabalharam com escopos de arquivo disjuntos, e
+três deles voltaram dizendo que a sprint estava errada.
+
+### O alto-falante ganhou controle, e o preço está escrito na tela
+
+O volume do controle tem **três camadas** e a janela só alcançava a do meio —
+justamente a única sem leitura e com preço. O bloco "Alto-falante" era uma
+barra e um rótulo que só sabia dizer `não ajustado`; a função que mandaria o
+volume estava exportada na ponte e **não tinha um único chamador no produto**.
+
+Agora ele tem controle deslizante, botão de mudo e devolução da posse. O preço
+fica na dica, antes do clique: a partir do primeiro ajuste o Hefesto manda o
+volume do alto-falante **e do fone** em todo report, e o DualSense não devolve
+esse valor — depois disso quem manda é a janela, até `Devolver` ou desconectar
+o controle.
+
+Três armadilhas medidas viraram guardas, e cada uma tem um teste que reprova se
+a guarda sair:
+
+- **chamada sem volume toma a posse e manda ZERO.** O estado publicado vira
+  `{'volume': 0, 'muted': True}` — por isso o valor é sempre explícito, em toda
+  a cadeia;
+- **o botão de mudo nasce insensível** enquanto não há volume conhecido. Um
+  mudo como primeira escrita trancaria o alto-falante em zero, e o próprio
+  botão não teria como soltá-lo, porque o desmudo restaura uma preferência que
+  vale zero;
+- **a devolução limpa a preferência** e recusa um mudo posterior. Sem isso, um
+  `Ativar` depois do `Devolver` ressuscitaria o volume antigo e retomaria a
+  posse sem ninguém pedir.
+
+Uma correção de fato ao que estava escrito no protocolo: a posse é por **byte e
+por bit**, não por bloco. Mexer no volume pela janela **não** mata o botão de
+microfone do controle — são bits diferentes.
+
+Há também `hefesto speaker` na linha de comando (`status`, `volume`, `mute`,
+`unmute`, `release`), com a mesma guarda da interface: sem volume conhecido, o
+mudo é recusado com a mensagem que diz o caminho.
+
+### O selo que diz quando é o sistema que está mudo
+
+Com o alto-falante do sistema mudo, mover o controle deslizante não produz som
+nenhum — e a tela não tinha como dizer isso. São duas verdades diferentes, e a
+que decide se sai som é a do PipeWire, não a do registrador do controle.
+
+O bloco agora acende um selo `saída muda` quando a leitura do sistema diz isso,
+e **nada** quando não há como saber — "não sei" nunca vira "está mudo". Com
+mais de um controle no cabo o selo não acende em ninguém, de propósito: o nome
+do dispositivo de áudio do DualSense não carrega identidade, e apontar o card
+errado seria pior que calar.
+
+O selo informa e nunca conserta, pela mesma disciplina do `doctor`: o
+alto-falante mudo pode ser escolha de quem usa.
+
+### O alto-falante por perfil, sem tomar posse de quem não pediu
+
+Seção `speaker` opcional no perfil, com volume obrigatório. Perfil sem a seção
+significa **sem opinião**: ativá-lo não toca no volume e, principalmente, não
+toma a posse — tomar posse por um perfil que não pediu nada é o hábito que
+produziu *"a config que eu deixo nunca é respeitada"*.
+
+Duas coisas que a entrega exigiu resolver antes de existir:
+
+- **as seções nulas saíram do arquivo salvo.** O gravador emitia
+  `"mouse": null, "mic": null, "mode": null` em todo perfil, e acrescentar mais
+  uma faria um binário antigo rejeitar **todos** os perfis num downgrade;
+- **a trava manual ganhou a categoria de áudio**, para o autoswitch não pisar o
+  ajuste feito à mão na troca de janela. O applier de perfil fala direto com o
+  backend justamente para **não** armar essa trava — se armasse, o perfil
+  funcionaria uma vez e nunca mais, em silêncio.
+
+### O clique do touchpad chega ao jogo
+
+A sprint dizia que faltava uma linha de fiação no controle virtual. Medido: o
+clique **já chegava ao processo** — o leitor do controle físico tinha o byte na
+mão e o descartava, porque copiava só a fatia do giroscópio.
+
+O clique agora é entregue por borda, e não de carona na janela do movimento:
+aquela janela deduplica e limita por taxa, e um controle parado engoliria a
+pressionada. As duas armadilhas do desenho seguem preservadas — o cursor não
+anda enquanto o dedo desliza dentro do jogo, e o nó do controle virtual segue
+fora do gerenciador de entrada do desktop.
+
+Nada precisou mudar no co-op: o leitor por jogador que o daemon já subia passou
+a carregar o clique de graça, e é por isso que o jogador 2 funciona com a
+janela do Hefesto fechada.
+
+### A capa do projeto parou de mentir
+
+O emblema de versão dizia `0.4.0` com a 0.5.0 publicada, e o de testes dizia
+uma contagem que envelhecia a cada leva. A causa era a mesma: dois literais
+pintados à mão que nenhum portão cobria.
+
+O emblema de versão virou alvo do verificador. O de testes **deixou de declarar
+contagem** e passou a declarar um piso — porque não existe um número: a coleta
+varia com o ambiente (um módulo que precisa de biblioteca ausente contribui
+zero), e um portão que comparasse com a coleta reprovaria no runner por estar
+num runner. O piso só reprova quando a suíte encolhe abaixo do que a capa
+promete, que é exatamente quando a capa passa a mentir.
+
+### O portão de anonimato deixou de aprovar no escuro
+
+O portão que audita mensagens de commit engolia o erro do `git log` e, com a
+saída vazia, aprovava. **Um comando que falha era indistinguível de "nada a
+auditar"** — e num push de branch nova ou force-push o intervalo já nasce
+degenerado.
+
+Agora "não havia o que auditar" e "não consegui auditar" são coisas diferentes,
+e a segunda reprova. O teste extrai o script do próprio arquivo do portão e o
+roda no mesmo interpretador do runner, contra um repositório de mentira.
+
+### A documentação parou de descrever outro programa
+
+O verificador de referências passou de uma regra para três: variáveis de
+ambiente e métodos de comunicação citados na documentação agora são conferidos
+contra os que **existem no código**, lidos da árvore sintática. Documentos de
+processo ficam fora do escopo de propósito — são foto datada, e cobrar deles
+seria cobrar o diagnóstico de conter o diagnosticado.
+
+Uma isenção por nota datada foi necessária: sem ela o portão reprovava
+justamente quem fez a correção certa, porque uma nota de verificação **precisa**
+nomear a coisa morta que está corrigindo.
+
+Junto vieram quatro contagens erradas em páginas de uso e em registros de
+decisão, e uma grafia de caminho que só sobrevivia num deles.
+
+### A aba Lightbar parou de culpar o daemon
+
+Quando uma seção falhava ao ser aplicada, a aba dizia *"o Hefesto pode estar
+desligado"* — mandando procurar o problema no lugar errado com o daemon vivo. A
+informação de qual seção caiu morria na ponte, que devolvia só sim ou não.
+
+A cura foi aditiva de propósito: o valor de sim-ou-não é contrato, e trocá-lo
+por um dicionário faria qualquer chamador não migrado voltar a dizer "aplicado"
+para um caso em que nada entrou.
+
+### Menores
+
+- A janela ensinava a ir configurar controle na Steam — instrução que deixou de
+  ser verdade quando o projeto passou a resolver isso sozinho. Dois avisos de
+  diagnóstico também apontavam para um botão que não existe mais com aquele
+  nome, e um terceiro mandava rodar um botão que **não** instala a cura de que
+  fala.
+- Um verificador novo compara o vocabulário das quatro superfícies de
+  interface, para a próxima renomeação não deixar três delas para trás. Ele já
+  nasceu com um achado: a divergência maior não é entre a janela e o painel, é
+  a **janela contra si mesma** — duas abas listam os mesmos modos em ordens
+  diferentes.
+- Dois identificadores de sprint citados de dentro do código-fonte, e que não
+  tinham documento, ganharam um.
+- A documentação do controle virtual afirmava que ele não repassa giroscópio, o
+  que é falso há várias levas.
+
 ## [0.5.0] — 2026-07-31
 
 A leva da auditoria. Ela pediu *"estude e audite o projeto, sua documentação,

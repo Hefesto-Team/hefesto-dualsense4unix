@@ -39,9 +39,15 @@ títulos têm suporte a DualSense de verdade, mas ele só funciona com o **Steam
 Input daquele jogo LIGADO**, e o jogo precisa enxergar o **controle físico**.
 
 Como o Hefesto normalmente esconde o hidraw do físico (para o jogo não ver o
-controle duplicado), esses jogos precisam de uma **exceção por jogo** — o
-opt-in em "Steam Input" na aba Emulação. Com a exceção ativa, enquanto o jogo
-está em sessão o físico volta a ficar visível.
+controle duplicado), esses jogos precisam de uma **exceção por jogo** — o botão
+**"Este jogo não funciona"**, na aba **Sistema**. Com a exceção ativa, enquanto
+o jogo está em sessão o físico volta a ficar visível (e o gamepad virtual sai
+de cena: nesse jogo vale só o controle 1, sem co-op).
+
+Para desfazer, ainda não há botão; a saída é pela linha de comando:
+`hefesto-dualsense4unix gamepad steam-input list` mostra os jogos marcados pelo
+nome, e `hefesto-dualsense4unix gamepad steam-input remove <nome ou appid>`
+tira a marca.
 
 **Caso medido: Mullet Mad Jack** (appid `2111190`). Ele **funciona nas três
 opções** — `Xbox 360`, `DualSense (PS)` e Modo Nativo. O suporte a DualSense

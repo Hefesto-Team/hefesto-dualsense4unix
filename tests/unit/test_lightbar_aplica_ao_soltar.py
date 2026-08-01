@@ -201,7 +201,7 @@ def escritas(monkeypatch: pytest.MonkeyPatch) -> _EspiaoDeEscrita:
     monkeypatch.setattr(lightbar_actions, "led_set", espiao.led_set)
     monkeypatch.setattr(
         lightbar_actions.ipc_bridge,
-        "apply_draft",
+        "apply_draft_detalhado",
         lambda *_a, **_kw: pytest.fail(
             "com controles conectados a rota é led.set por MAC (R-14)"
         ),

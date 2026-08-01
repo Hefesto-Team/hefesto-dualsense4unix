@@ -25,6 +25,7 @@ Complemento de scripts: tab-completion funciona em zsh e bash via
 | `hefesto-dualsense4unix daemon start/stop/restart/status/pause/resume/enable/disable/install-service/uninstall-service` | Ciclo do daemon. |
 | `hefesto-dualsense4unix gamepad on/off/status` | Controle virtual (substituiu o antigo `emulate xbox360`). |
 | `hefesto-dualsense4unix mic on/off/status/bt/bt-status` | Microfone do controle — no cabo (política) e por Bluetooth (ponte). |
+| `hefesto-dualsense4unix speaker status/volume/mute/unmute/release` | Alto-falante e fone do controle — inclusive a DEVOLUÇÃO da posse. |
 | `hefesto-dualsense4unix tui` / `hefesto-dualsense4unix tray` | Interfaces alternativas. |
 
 ---
@@ -216,6 +217,18 @@ hefesto-dualsense4unix gamepad status
   a **ponte** que decodifica o Opus tunelado nos relatórios HID e publica o
   microfone no PipeWire (Ctrl-C encerra); `bt-status` só diagnostica as
   pré-condições, sem mexer em nada. Ver [`bluetooth.md`](bluetooth.md).
+- `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release` —
+  alto-falante **e fone** do controle (é um volume só: o mesmo valor vai nos dois
+  bytes). Exige o daemon. O volume mora no firmware e o controle **não o
+  devolve**: a única forma de saber o valor é termos sido nós a mandá-lo, e por
+  isso a primeira escrita assume a posse — daí em diante o hefesto manda o volume
+  em todo report. `speaker release` é a saída, o irmão do `mic release`: devolve
+  o CONTROLE, não o valor (o firmware fica com o último número que mandamos até o
+  controle desconectar). `speaker mute` exige um volume conhecido — mudo como
+  primeira escrita trancaria o alto-falante em zero e o próprio mudo não o
+  soltaria. Se nenhum som sair mesmo com volume alto, o problema é a outra
+  camada: o sink do controle no PipeWire pode estar mudo (`scripts/doctor.sh`
+  reporta), e por Bluetooth não existe fluxo de áudio de saída nenhum.
 - `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
 - `hefesto-dualsense4unix coop on|off|status` — co-op local (cada controle = um jogador).
 - `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.

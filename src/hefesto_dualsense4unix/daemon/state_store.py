@@ -45,7 +45,19 @@ WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
 # ONDA-U F1/F2 (auditoria 21/07): categorias válidas do override manual —
 # a trava deixou de ser um booleano único para que limpar uma categoria
 # (ex.: fim do "Testar motores" → "rumble") não apague as demais.
-MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset({"trigger", "led", "rumble"})
+#
+# SOM-02 (E3/E4, 29-31/07): entra a QUARTA categoria, `audio` — armada pelo
+# `speaker.set` (volume, mudo e devolução da posse). A razão, escrita aqui
+# porque é aqui que ela vale: é o padrão da casa contra o autoswitch pisar o
+# ajuste manual dela na troca de janela. A alternativa considerada — deixar o
+# áudio fora da trava e fazer o aplicador de perfil rodar SÓ em troca explícita
+# de perfil — deixaria o furo aberto em todo caminho que reaplica o perfil ativo
+# sem ser troca explícita, que é justamente a classe de defeito de "a config que
+# eu deixo nunca é respeitada". A trava é o mecanismo que já existe para isso, e
+# volume é ajuste manual como qualquer outro.
+MANUAL_OVERRIDE_CATEGORIES: frozenset[str] = frozenset(
+    {"trigger", "led", "rumble", "audio"}
+)
 
 
 @dataclass(frozen=True)
@@ -206,13 +218,14 @@ class StateStore:
             return (atual["left"], atual["right"])
 
     def mark_manual_trigger_active(self, category: str = "trigger") -> None:
-        """Arma o override manual da `category` ("trigger" | "led" | "rumble").
+        """Arma o override manual (`"trigger"` | `"led"` | `"rumble"` | `"audio"`).
 
         Usado pelo `IpcServer` nos IPCs de aplicação (trigger.set → "trigger",
-        led.set/led.player_set → "led", rumble.set/stop → "rumble") e pelo
-        `DraftApplier` (categorias das seções aplicadas). Enquanto QUALQUER
-        categoria estiver armada, o `AutoSwitcher` NÃO reaplica o perfil
-        ativo por mudança de janela (respeita override do usuário).
+        led.set/led.player_set → "led", rumble.set/stop → "rumble",
+        speaker.set → "audio") e pelo `DraftApplier` (categorias das seções
+        aplicadas). Enquanto QUALQUER categoria estiver armada, o `AutoSwitcher`
+        NÃO reaplica o perfil ativo por mudança de janela (respeita override do
+        usuário).
         """
         if category not in MANUAL_OVERRIDE_CATEGORIES:
             raise ValueError(f"categoria de override desconhecida: {category!r}")
