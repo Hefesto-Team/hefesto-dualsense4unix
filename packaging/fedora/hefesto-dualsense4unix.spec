@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.6.0
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -360,6 +360,18 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.7.0-1
+- Aba Status alinhada: as duas linhas do card passam a dividir o mesmo
+  desenho, o frame Estado cai para tres linhas e a bateria ocupa a largura
+  inteira sem o numero boiando no meio da barra
+- Botao da rota de som mudou para o bloco Alto-falante do card; "sem dado"
+  saiu dos botoes de microfone e alto-falante
+- Mascara Xbox passa a dizer o que custa: sem giroscopio e sem touchpad no
+  jogo (a API do controle de Xbox nao tem os dois)
+- Metricas ganham chave de usuario (HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED
+  e _METRICS_PORT), cumprindo a decisao registrada na ADR-016
+- Quadrado vermelho ao lado dos interruptores curado (icone quebrado do GTK)
+
 * Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.6.0-1
 - A leva do alto-falante: o bloco da aba Status ganhou controle deslizante,
   botao de mudo e devolucao da posse, com o preco escrito na propria interface.

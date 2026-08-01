@@ -6,7 +6,7 @@ name = "hefesto-dualsense4unix-applet"
 # pyproject e esquecer aqui reprova a release. Ao mexer, subir também a entrada
 # `hefesto-dualsense4unix-applet` do Cargo.lock (o `cargo build` do justfile
 # reescreve sozinho, mas deixa a árvore suja no meio do release).
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 # Redigido no mesmo padrão do packaging/arch/PKGBUILD (`Maintainer: Vitoria
 # Maria <[REDACTED]>`): havia um e-mail pessoal real aqui, e nem o
