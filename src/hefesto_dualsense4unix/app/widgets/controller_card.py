@@ -439,7 +439,13 @@ _MIC_ESTADO_CHARS: Final[int] = len(TEXTO_MIC_AUSENTE)
 TEXTO_BOTAO_MIC_ATIVAR: Final[str] = "Ativar"
 TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
 TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Devolver"
-TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "sem dado"
+#: SOM-ROTULO-01 (01/08), a mesma cura do botão do alto-falante e pela mesma
+#: razão dela: *"não sei se faz sentido ter o 'sem dado'"*. Não fazia — não é
+#: rótulo de AÇÃO, é a janela escrevendo "não sei" dentro de um botão, no lugar
+#: onde deveria dizer o que o clique faz. O botão passa a se chamar sempre pela
+#: ação e nasce INSENSÍVEL enquanto não há leitura; quem explica o porquê é a
+#: dica (:data:`DICA_MIC_SEM_LEITURA`). Um botão cinza não promete nada.
+TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "Silenciar"
 
 #: As dicas (tooltip) do botão. Elas carregam o que o rótulo curto não cabe —
 #: em especial o preço de mandar no mudo pela janela: enquanto o hefesto for o
@@ -484,8 +490,22 @@ TEXTO_SPEAKER_SEM_DADO: Final[str] = "não ajustado"
 #: é o que a sprint pede: a saída não pode depender de passar por um mudo.
 TEXTO_BOTAO_SPEAKER_ATIVAR: Final[str] = "Ativar"
 TEXTO_BOTAO_SPEAKER_SILENCIAR: Final[str] = "Silenciar"
+#: SOM-ROTULO-01 (01/08, pedido dela: *"arruma os dois botões, não sei se faz
+#: sentido ter o 'sem dado' e o 'Devolver' — ou renomeia eles ou remove"*).
+#:
+#: `Devolver` FICA, e o motivo é medido, não preguiça: esta linha já é a mais
+#: apertada do card (sem posse ela quer 296px num bloco de 243 na janela de
+#: projeto) e agora recebe também o botão da rota. "Devolver ao controle"
+#: custaria ~90px a mais e faria os três rótulos elipsarem em 1180. Quem diz
+#: devolver O QUÊ a QUEM é a dica, que cabe inteira.
 TEXTO_BOTAO_SPEAKER_DEVOLVER: Final[str] = "Devolver"
-TEXTO_BOTAO_SPEAKER_SEM_DADO: Final[str] = "sem dado"
+#: E `sem dado` não era rótulo de ação, era ESTADO escrito dentro de um botão —
+#: a janela dizendo "não sei" no lugar onde deveria dizer o que o clique faz.
+#: O botão passa a se chamar sempre pela ação e nasce INSENSÍVEL enquanto não
+#: há volume conhecido; quem explica o porquê é a dica
+#: (:data:`DICA_SPEAKER_MUDO_SEM_DADO`), que é onde a explicação cabe sem
+#: mentir. Um botão cinza não promete nada.
+TEXTO_BOTAO_SPEAKER_SEM_DADO: Final[str] = "Silenciar"
 
 #: Campo fixo dos rótulos dos botões do alto-falante, em caracteres — medido
 #: pelo mais longo deles. Mesma disciplina do botão do microfone: sem teto, o
@@ -1360,13 +1380,41 @@ if _GTK_DISPONIVEL:
             módulo dentro dele (que é o que os testes observam).
             """
             grid = Gtk.Grid()
-            grid.set_column_spacing(16)
-            grid.set_column_homogeneous(True)
-            grid.attach(self._montar_gatilhos(), 0, 0, 1, 1)
+            grid.set_column_spacing(self._espaco)
+            # ALINHA-DUAS-LINHAS-01: o `column_homogeneous` SAIU, e a razão é
+            # que ela mediu de olho o que ele fazia. Homogêneo dá metade do
+            # card a cada coluna, e as duas metades da faixa de baixo NÃO são
+            # metades iguais — medido na tela dela: a esquerda (touchpad até o
+            # analógico direito) tem 698px e a direita (microfone até o último
+            # glifo) tem 648. Dividir 50/50 aqui em cima colocava as duas
+            # divisórias 25px fora do lugar, e era isso que fazia a linha de
+            # cima parecer de outro desenho.
+            #
+            # Quem manda na largura agora são os `Gtk.SizeGroup` abaixo: cada
+            # coluna desta linha pede exatamente o que a metade correspondente
+            # da faixa de baixo pede. O `_gyro_slot` continua SEMPRE visível
+            # (quem se esconde é o módulo dentro dele), então a coluna não
+            # colapsa quando não há giroscópio — que era o motivo de o grid
+            # existir em vez de um box.
+            gatilhos = self._montar_gatilhos()
+            grid.attach(gatilhos, 0, 0, 1, 1)
             slot = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             slot.pack_start(self._montar_gyro(), False, False, 0)
             self._gyro_slot = slot
             grid.attach(slot, 1, 0, 1, 1)
+
+            # Os dois grupos que amarram as duas linhas. Eles são criados aqui
+            # e recebem o segundo membro em `_montar_linha_inferior`, que roda
+            # logo depois (`_montar_ui`) — a ordem não importa para o
+            # `SizeGroup`, que só iguala o pedido de quem já está dentro.
+            self._grupo_coluna_esquerda = Gtk.SizeGroup(
+                mode=Gtk.SizeGroupMode.HORIZONTAL
+            )
+            self._grupo_coluna_esquerda.add_widget(gatilhos)
+            self._grupo_coluna_direita = Gtk.SizeGroup(
+                mode=Gtk.SizeGroupMode.HORIZONTAL
+            )
+            self._grupo_coluna_direita.add_widget(slot)
             return grid
 
         def largura_da_barra_de_gatilho(self) -> int:
@@ -1387,6 +1435,18 @@ if _GTK_DISPONIVEL:
             STATUS-SIMETRIA-02, defeito 4: com `hexpand` e sem teto, cada
             barra recebia 881px na tela maximizada — para um valor de 0 a 255,
             com o "0 / 255" flutuando no meio dela, longe do "L2" que a nomeia.
+
+            ALINHA-DUAS-LINHAS-01 (01/08) mudou o TETO, não a regra. Aquele
+            defeito era barra sem limite nenhum, esticando pelo card inteiro;
+            o limite agora é a metade esquerda da faixa de baixo — do touchpad
+            ao analógico direito — que é onde ela pediu que a linha terminasse.
+            Continua havendo teto, e ele continua sendo bem menor que o card:
+            698 dos 1400px medidos na tela dela.
+
+            `LARGURA_BARRA_GATILHO_UNICO` deixa de ser o teto e passa a ser o
+            PISO, que é o que `set_size_request` sempre foi no GTK3 — o
+            `halign=START` é que o transformava em teto de fato, e é ele que
+            sai. Com `FILL` a barra ocupa a coluna que o `SizeGroup` mediu.
             """
             grid = Gtk.Grid()
             grid.set_row_spacing(6)
@@ -1401,7 +1461,8 @@ if _GTK_DISPONIVEL:
                 barra.set_show_text(True)
                 barra.set_text("0 / 255")
                 barra.set_size_request(self.largura_da_barra_de_gatilho(), -1)
-                barra.set_halign(Gtk.Align.START)
+                barra.set_halign(Gtk.Align.FILL)
+                barra.set_hexpand(True)
                 grid.attach(barra, 1, linha, 1, 1)
                 if nome == "L2":
                     self._l2_bar = barra
@@ -1482,12 +1543,20 @@ if _GTK_DISPONIVEL:
             # trocá-la por -1 faria as três linhas do desenho se sobreporem.
             _largura, altura = barras.get_size_request()
             barras.set_size_request(self.largura_do_giroscopio(), altura)
-            barras.set_halign(Gtk.Align.START)
-            # O bloco acompanha o conteúdo em vez de esticar pela coluna
-            # inteira do grid: moldura larga com desenho estreito dentro
-            # devolveria o vazio para DENTRO do bloco.
-            caixa.set_halign(Gtk.Align.START)
-            miolo.pack_start(barras, False, False, 0)
+            # ALINHA-DUAS-LINHAS-01: o desenho e a moldura ESTICAM até a coluna
+            # que o `SizeGroup` mediu — do microfone ao último glifo, que é
+            # onde ela pediu que esta seção começasse e terminasse.
+            #
+            # O comentário que estava aqui dizia que a moldura acompanha o
+            # conteúdo "porque moldura larga com desenho estreito devolveria o
+            # vazio para DENTRO do bloco". A observação continua certa, e é por
+            # isso que os DOIS esticam juntos: quem cresce é o desenho, e a
+            # moldura só o acompanha. Uma moldura em FILL com o desenho em
+            # START seria exatamente o defeito que aquele comentário descreve.
+            barras.set_halign(Gtk.Align.FILL)
+            barras.set_hexpand(True)
+            caixa.set_halign(Gtk.Align.FILL)
+            miolo.pack_start(barras, True, True, 0)
             self._gyro_bars = barras
             self._gyro_box = caixa
             self._esconder_modulo(caixa)
@@ -1528,26 +1597,58 @@ if _GTK_DISPONIVEL:
                 spacing=self._espaco,
             )
 
-            linha.pack_start(self._montar_coluna_sensores(), True, False, 0)
-            # O miolo — os dois analógicos e a coluna do som COLADA à direita
-            # deles, que é o pedido ao pé da letra. `fill=False` mantém os
-            # blocos juntos: esticar a caixa afastaria o microfone dos
-            # analógicos de novo.
+            # ALINHA-DUAS-LINHAS-01 (01/08, pedido dela: *"alinha e estica a
+            # seção do giroscópio pra ficar entre o microfone e o triângulo;
+            # alinha a seção do L2 e R2 pra ficar entre o touchpad e o
+            # analógico direito"*).
+            #
+            # A faixa passa a ter DUAS METADES nomeadas, e não três blocos
+            # soltos. Elas existem para que a linha de CIMA (gatilhos e
+            # giroscópio) tenha em que se alinhar: sem um widget que vá do
+            # touchpad ao analógico direito, "alinhar com aquilo" não tem
+            # objeto — era por isso que a linha de cima dividia o card ao meio
+            # por conta própria e nada batia.
+            #
+            # Medido na tela dela (1870, card em 1400) antes desta leva:
+            #   metade esquerda  254 -> 952   |  L2/R2 ia de 281 a 681
+            #   metade direita   968 -> 1616  |  giroscópio ia de 943 a 1377
+            # As duas metades já eram os limites certos; faltava alguém que os
+            # carregasse.
+            #
+            # `fill=False` nos filhos DENTRO de cada metade continua valendo —
+            # é o que mantém o microfone colado nos analógicos e o vazio fora
+            # dos blocos.
+            esquerda = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=self._espaco,
+            )
+            esquerda.pack_start(self._montar_coluna_sensores(), True, False, 0)
+            esquerda.pack_end(self._montar_sticks(), True, False, 0)
+            self._metade_esquerda = esquerda
+            self._grupo_coluna_esquerda.add_widget(esquerda)
+            linha.pack_start(esquerda, True, True, 0)
+
+            # O miolo — a coluna do som COLADA à direita dos analógicos, que é
+            # o pedido ao pé da letra da SOM-01, mais o grid de glifos. Ele
+            # continua se chamando `_miolo_inferior` porque é a cadeia de pais
+            # que `test_status_cards_sensores` trava
+            # (`_mic_box -> _coluna_audio -> _miolo_inferior -> _linha_inferior`)
+            # e o microfone continua exatamente onde estava.
             miolo = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL,
                 spacing=self._espaco,
             )
-            miolo.pack_start(self._montar_sticks(), False, False, 0)
-            miolo.pack_start(self._montar_coluna_audio(), False, False, 0)
-            self._miolo_inferior = miolo
-            linha.pack_start(miolo, True, False, 0)
+            miolo.pack_start(self._montar_coluna_audio(), True, False, 0)
             # Botões ancorados à DIREITA (`pack_end`), não empurrados pelo que
             # vem antes: microfone e alto-falante aparecem e somem conforme o
             # controle, e o grid de 16 glyphs não pode dançar de lugar a cada
             # vez que um módulo de sensor entra ou sai.
             glyphs = self._montar_glyphs()
             glyphs.set_halign(Gtk.Align.END)
-            linha.pack_end(glyphs, True, False, 0)
+            miolo.pack_end(glyphs, True, False, 0)
+            self._miolo_inferior = miolo
+            self._grupo_coluna_direita.add_widget(miolo)
+            linha.pack_start(miolo, True, True, 0)
             self._linha_inferior = linha
             return linha
 
@@ -1799,6 +1900,10 @@ if _GTK_DISPONIVEL:
             empacotamento, mais abaixo.
             """
             caixa, miolo = self._bloco("Alto-falante")
+            # O rótulo da moldura vira o lugar do número (card único).
+            self._speaker_titulo = (
+                caixa.get_label_widget() if not self._compact else None
+            )
             # SOM-02/E5, item 3: a linha de explicação no lugar do silêncio.
             # Ela vive na dica do BLOCO (e não do controle deslizante) porque
             # responde à pergunta que o bloco inteiro levanta — por que o
@@ -1959,6 +2064,19 @@ if _GTK_DISPONIVEL:
                 linha_botoes.pack_start(botao_devolver, True, True, 0)
                 miolo.pack_start(linha_botoes, False, False, 0)
             else:
+                # SOM-ROTA-NO-CARD-01: a barra fica SOZINHA na linha, e o
+                # número vai para o rótulo da moldura (`_speaker_titulo`).
+                #
+                # As duas outras casas foram medidas e cada uma quebra uma
+                # regra que já estava paga:
+                #   * dividir a linha com a barra faz a barra medir 276px
+                #     debaixo de um medidor de microfone de 360 — a
+                #     CARD-OCUPA-01 exige os dois IGUAIS, e há teste;
+                #   * dividir a linha com a escala encurta o controle
+                #     deslizante abaixo da barra que ele comanda, e há teste
+                #     para isso também (SOM-03).
+                # O rótulo da moldura não custa altura nem largura: ele já
+                # existe, e "Alto-falante" tem folga de sobra na borda.
                 miolo.pack_start(barra, False, False, 0)
                 miolo.pack_start(escala, False, False, 0)
                 # O número à ESQUERDA e as ações à direita: o rótulo entra com
@@ -1986,13 +2104,38 @@ if _GTK_DISPONIVEL:
                 # (pede 1338px de natural e recebe 1098), e cada pixel do bloco
                 # do som sai do touchpad e do medidor do microfone, que a
                 # CARD-OCUPA-01 acabou de encher.
-                linha_legenda = Gtk.Box(
+                # SOM-ROTA-NO-CARD-01 (01/08, pedido dela: *"aquele botão de
+                # voltar ao anterior sai de lá de cima e fica no espaço onde
+                # tem 'não ajustado' no alto-falante"*).
+                #
+                # O rótulo de valor sobe para a linha da BARRA — é a mesma
+                # fusão que o card compacto já fazia — e o lugar que ele
+                # ocupava recebe o botão da rota de som. Duas consequências
+                # medidas, e as duas importam:
+                #
+                # 1. **custo de ALTURA zero.** A linha de ações já tinha a
+                #    altura de um botão (38px contra os 20 do rótulo), então
+                #    trocar o rótulo por um botão não a faz crescer. Era esse
+                #    o impedimento registrado na SOM-04 — *"um botão a mais no
+                #    bloco custa +36px e leva o card de 442 para 478 contra os
+                #    467 da faixa"* — e ele valia para ACRESCENTAR uma peça,
+                #    não para TROCAR. A linha de leitura, por sua vez, cresce
+                #    para a altura do rótulo, que é menor que a do botão.
+                # 2. **o botão continua sendo UM.** Ele é o widget do glade,
+                #    reparentado pela `status_actions` para o slot do card
+                #    PRIMÁRIO — a segunda razão da SOM-04 (a saída padrão do
+                #    sistema é um fato global, e dois cards não podem ter dois
+                #    botões para um interruptor só) continua de pé, e é por
+                #    isso que aqui há um SLOT vazio e não um botão novo.
+                linha_acoes = Gtk.Box(
                     orientation=Gtk.Orientation.HORIZONTAL, spacing=4
                 )
-                linha_legenda.pack_start(valor, True, True, 0)
-                linha_legenda.pack_start(botao_mudo, False, False, 0)
-                linha_legenda.pack_start(botao_devolver, False, False, 0)
-                miolo.pack_start(linha_legenda, False, False, 0)
+                slot_rota = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+                self._speaker_rota_slot = slot_rota
+                linha_acoes.pack_start(slot_rota, True, True, 0)
+                linha_acoes.pack_start(botao_mudo, False, False, 0)
+                linha_acoes.pack_start(botao_devolver, False, False, 0)
+                miolo.pack_start(linha_acoes, False, False, 0)
             # O selo da camada 1 fica por último nos dois cards: ele é a
             # exceção (aparece só quando o sink do sistema está mudo) e é o
             # único filho do bloco que entra e sai em tempo de execução. Numa
@@ -2614,7 +2757,7 @@ if _GTK_DISPONIVEL:
             self._aplicar_selo_do_som()
             if dados is None:
                 self._speaker_bar.set_volume(0.0, None)
-                self._speaker_label.set_text(TEXTO_SPEAKER_SEM_DADO)
+                self._escrever_valor_do_speaker(TEXTO_SPEAKER_SEM_DADO)
                 self._pintar_escala_do_speaker(0)
                 # Sem posse, o próximo gesto dela é a PRIMEIRA escrita da
                 # sessão: esquecer o último valor mandado é o que impede a
@@ -2623,8 +2766,27 @@ if _GTK_DISPONIVEL:
                 return
             volume, muted = dados
             self._speaker_bar.set_volume(fracao_do_volume(volume), muted)
-            self._speaker_label.set_text(texto_volume(volume, muted))
+            self._escrever_valor_do_speaker(texto_volume(volume, muted))
             self._pintar_escala_do_speaker(percentual_do_volume(volume))
+
+        def _escrever_valor_do_speaker(self, texto: str) -> None:
+            """O valor do alto-falante, no rótulo E no título da moldura.
+
+            SOM-ROTA-NO-CARD-01. O `_speaker_label` continua existindo e sendo
+            escrito: ele é o dono do texto, é o que os testes leem, e no card
+            COMPACTO ele é o que aparece na tela. O que mudou é o card único —
+            lá o rótulo saiu do empacotamento para o botão da rota caber no
+            lugar dele, e quem MOSTRA o valor passou a ser o rótulo da
+            moldura, que já existia e não custa pixel nenhum.
+
+            O título é montado aqui, e não guardado pronto, porque
+            "Alto-falante" é o nome do bloco e tem de sobreviver a qualquer
+            valor — inclusive a `None`, que é como o card nasce.
+            """
+            self._speaker_label.set_text(texto)
+            titulo = getattr(self, "_speaker_titulo", None)
+            if titulo is not None and hasattr(titulo, "set_text"):
+                titulo.set_text(f"Alto-falante · {texto}")
 
         def _pintar_escala_do_speaker(self, percentual: int) -> None:
             """Move o cursor SEM disparar pedido (e nunca durante o arrasto)."""

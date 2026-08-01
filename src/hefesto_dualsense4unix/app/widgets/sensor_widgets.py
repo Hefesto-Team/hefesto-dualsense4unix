@@ -326,8 +326,24 @@ if _GTK_DISPONIVEL:
             trilha = hex_para_rgb(COR_TRILHA)
             contorno = hex_para_rgb(COR_CONTORNO)
             fraco = hex_para_rgb(COR_TEXTO_FRACO)
-            inicio_barra = _ROTULO_GYRO_PX
-            fim_barra = max(inicio_barra + 10, largura - self._valor_px)
+            # ALINHA-DUAS-LINHAS-01 (01/08): o VALOR mudou de lado — ele agora
+            # fica logo depois da letra do eixo, e a barra ocupa todo o resto.
+            #
+            # Por quê: com o desenho esticando até a metade direita da faixa
+            # (640px na tela dela, contra 420 de antes), um valor ancorado na
+            # BORDA DIREITA ficaria a mais de meio card do "X" que o nomeia —
+            # a mesma queixa que `test_o_numero_do_giroscopio_fica_perto_do_
+            # nome_do_eixo` levantou quando a barra era larga demais. Aquele
+            # teste resolvia estreitando o desenho; isso deixou de ser opção
+            # quando ela pediu o desenho esticado, e a resposta certa era mover
+            # o número, não encolher a barra.
+            #
+            # Ganho de quebra: o par letra+número agora é uma coluna fixa à
+            # esquerda, então os três valores ficam alinhados entre si em
+            # qualquer largura — antes eles dançavam com o fim da barra.
+            inicio_valor = _ROTULO_GYRO_PX
+            inicio_barra = inicio_valor + self._valor_px
+            fim_barra = max(inicio_barra + 10, largura)
             meio = (inicio_barra + fim_barra) / 2
             metade = (fim_barra - inicio_barra) / 2
 
@@ -363,7 +379,7 @@ if _GTK_DISPONIVEL:
                     ctx.fill()
 
                 ctx.set_source_rgb(*fraco)
-                ctx.move_to(fim_barra + 4, centro_y + 3)
+                ctx.move_to(inicio_valor, centro_y + 3)
                 ctx.show_text(texto_eixo(self._valores[indice]))
             return False
 

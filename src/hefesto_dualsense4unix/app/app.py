@@ -377,7 +377,11 @@ class HefestoApp(
             # Emulação
             "on_emulation_refresh": self.on_emulation_refresh,
             "on_emulation_test_device": self.on_emulation_test_device,
-            "on_emulation_open_toml": self.on_emulation_open_toml,
+            # BOTÃO-QUE-NÃO-MENTE-01 (entregas 5 e 6): o
+            # "on_emulation_open_toml" saiu daqui junto com o método. O botão
+            # dele já tinha saído do glade na entrega 3; o nome sobrevivia
+            # neste mapa apontando para um handler que ninguém podia chamar.
+
             # Emulação — microfone do DualSense
             "on_emulation_mic_on": self.on_emulation_mic_on,
             "on_emulation_mic_off": self.on_emulation_mic_off,

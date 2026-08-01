@@ -269,8 +269,9 @@ Os plugins ligam por variável de ambiente
 (`HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`). Já o endpoint Prometheus depende
 de `metrics_enabled` no `DaemonConfig`, e **não existe hoje** variável de
 ambiente, flag de linha de comando nem arquivo de configuração que ligue esse
-campo: o daemon o constrói com três parâmetros só (`poll_hz`, `auto_reconnect`,
-`ps_long_press_ms`). Na prática, subir as métricas exige mexer no código. Ver
+campo: o daemon o constrói com quatro parâmetros só (`poll_hz`,
+`auto_reconnect`, `ps_long_press_ms`, `keyboard_emulation_enabled`). Na
+prática, subir as métricas exige mexer no código. Ver
 [docs/usage/metrics.md](docs/usage/metrics.md).
 
 ## Documentação

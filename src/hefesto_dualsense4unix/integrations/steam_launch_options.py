@@ -8,7 +8,7 @@ uma env ESTÁTICA colada por jogo e vira o wrapper `hefesto-launch %command%`
 Este módulo concentra:
 
 1. A string constante do wrapper (`WRAPPER_LAUNCH`) — consumida pelo botão
-   "Copiar opções p/ jogos" da GUI (`compose_launch`) e pela migração. Ela
+   "Copiar opções para os jogos" da GUI (`compose_launch`) e pela migração. Ela
    degrada sozinha: se o wrapper não existir no caminho, o `sh -c` cai em
    `exec env "$@"` e o jogo abre do mesmo jeito (pior caso: controle
    duplicado, nunca zero controles nem launch quebrado).

@@ -483,23 +483,46 @@ def test_o_numero_da_bateria_nao_boia_no_meio_da_barra(
 ) -> None:
     """A barra pintava 1242px para dizer dois dígitos.
 
-    O `— %` é desenhado centrado na barra, então a distância dele até cada
-    borda é metade do que sobra. Medido antes: 1242px de barra para 26px de
-    texto — 608px de vazio de cada lado.
+    O `— %` era desenhado CENTRADO na barra, então a distância dele até cada
+    borda era metade do que sobrava. Medido antes: 1242px de barra para 26px
+    de texto — 608px de vazio de cada lado.
 
-    Mordida: devolver `hexpand=True` (ou tirar o `halign=start`) devolve a barra
-    à largura da coluna e este número volta a estourar.
+    **ESTADO-TRES-LINHAS-01 (01/08) curou a causa, e a cura mudou o que este
+    teste tem de medir.** Ela pediu a barra ocupando a largura inteira, e com
+    o texto DENTRO isso é o defeito garantido: um GtkProgressBar centra o
+    texto, então quanto mais larga a barra, mais longe o número fica das duas
+    pontas. Encolher a barra deixou de ser opção.
+
+    O número saiu de dentro da barra e virou um rótulo ao lado
+    (`status_battery_pct`, espelhado por `_set_battery_text`). A distância que
+    importa passou a ser entre o FIM da barra e o número — e essa não cresce
+    com a janela, porque os dois são vizinhos numa GtkBox.
+
+    Mordida: devolver `show-text=True` à barra faz o texto voltar para o meio
+    dela e a primeira asserção cai; tirar o rótulo do glade faz cair a segunda.
     """
     barra = maximizada.get_object("status_battery_bar")
     assert barra is not None, "status_battery_bar saiu do main.glade"
-    largura = barra.get_allocation().width
-    texto = barra.create_pango_layout(barra.get_text()).get_pixel_size().width
-    ate_a_borda = (largura - texto) // 2
+    rotulo = maximizada.get_object("status_battery_pct")
+    assert rotulo is not None, (
+        "status_battery_pct saiu do main.glade: o número da bateria não tem "
+        "mais onde aparecer, porque a barra não desenha o próprio texto"
+    )
 
-    assert ate_a_borda < VAO_MAXIMO, (
-        f"o texto da bateria fica a {ate_a_borda}px de cada borda de uma barra "
-        f"de {largura}px (o vão máximo desta casa é {VAO_MAXIMO}px). É o mesmo "
+    assert barra.get_show_text() is False, (
+        "a barra voltou a desenhar o próprio texto. Centrado numa barra que "
+        "ocupa a largura toda, o número fica a ~600px de cada borda — o mesmo "
         "defeito que ela apontou nas barras de L2/R2 dentro do card."
+    )
+
+    fim_da_barra = barra.get_allocation().x + barra.get_allocation().width
+    inicio_do_numero = rotulo.get_allocation().x
+    distancia = inicio_do_numero - fim_da_barra
+
+    assert 0 <= distancia < VAO_MAXIMO, (
+        f"o número da bateria está a {distancia}px do fim da barra (o vão "
+        f"máximo desta casa é {VAO_MAXIMO}px): ele deixou de ler como o valor "
+        "daquela barra."
     )
 
 

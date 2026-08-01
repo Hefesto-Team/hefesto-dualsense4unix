@@ -549,6 +549,24 @@ messagedialog button:active {
 .hefesto-dualsense4unix-window switch:checked slider {
     background-color: @app_bg;
 }
+/* BUG-GUI-SWITCH-ICONE-QUEBRADO-01 (01/08/2026) — o quadrado VERMELHO ao lado
+   dos quatro interruptores da janela.
+   Medido: todo GtkSwitch do GTK 3.24 tem dois nos `image` internos, alem do
+   `slider`, que pedem `switch-on-symbolic`/`switch-off-symbolic`. Nenhum tema
+   de icones desta maquina resolve esses nomes (breeze-dark, Adwaita e hicolor
+   devolvem None no `IconTheme.lookup_icon`), entao o GTK cai no `image-missing`
+   do tema ativo — que no breeze-dark e um quadrado de borda vermelha. Nao e
+   defeito deste CSS: o experimento mostrou o quadrado com e SEM este arquivo
+   carregado, e ate com o tema stock Adwaita.
+   O adw-gtk3 tenta neutralizar com `switch image { color: transparent }`, e nao
+   alcanca: `color` so recolore icone SIMBOLICO, e o fallback e colorido. Pelo
+   mesmo motivo `-gtk-icon-source: none` e `opacity: 0` nao surtiram efeito.
+   `-gtk-icon-transform: scale(0)` zera o desenho sem depender de icone nenhum
+   existir — e nao ha perda visual, porque esses icones nunca deveriam aparecer.
+   Escopado na janela do Hefesto: nao vaza para outras janelas GTK. */
+.hefesto-dualsense4unix-window switch image {
+    -gtk-icon-transform: scale(0);
+}
 .hefesto-dualsense4unix-window check,
 .hefesto-dualsense4unix-window radio {
     background-image: none;
