@@ -147,9 +147,9 @@ def test_o_som_sai_no_sink_do_controle_explicitamente() -> None:
     Se o áudio for para o sink padrão, ela clica, não ouve nada, e conclui que
     o alto-falante quebrou.
 
-    Mordida: tirar o `--device=` do :func:`argv_do_tocador` (deixando
-    ``[binario, arquivo]`` (nomes do código, sem acento), que é o que um "toca esse arquivo" ingênuo faz) # noqa: acentuacao (nome de variável do código)
-    esvazia `sinks_usados` e derruba as duas asserções.
+    Mordida: tirar o `--device=` do :func:`argv_do_tocador`, deixando só o
+    par executável-e-arquivo — que é o que um "toca esse arquivo" ingênuo faz.
+    Isso esvazia `sinks_usados` e derruba as duas asserções.
     """
     tocador = _Tocador()
     resultado = _tocar(tocador=tocador)

@@ -500,9 +500,10 @@ def test_clique_sem_alvo_nao_escreve_nada(
 ) -> None:
     """Segunda tranca do botão insensível — para o clique por teclado ou teste.
 
-    Mordida: apagar o ``if acao is None or not acao.sensivel or not acao.alvo`` # noqa: acentuacao (nome de atributo do código)
-    de `_on_rota_de_som_clicada`. O clique passa a mandar "" ao `pactl`, que é
-    justamente o caminho do sink padrão.
+    Mordida: apagar a guarda de três termos que abre
+    `_on_rota_de_som_clicada` — a que exige ação presente, sensível e com alvo.
+    Sem ela o clique passa a mandar "" ao `pactl`, que é justamente o caminho
+    do sink padrão.
     """
     host, _botao, pactl, adiados = bancada[:4]
     host._rota_acao = None
