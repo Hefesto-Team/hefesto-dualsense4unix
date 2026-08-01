@@ -24,6 +24,32 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.7.0" date="2026-08-01">
+      <description>
+        <p>
+          A aba Status alinhada: as duas linhas do card passam a dividir o
+          mesmo desenho, o frame Estado cai de cinco para tres linhas e a
+          bateria ocupa a largura inteira com o numero ao lado da barra, e
+          nao mais boiando no meio dela.
+        </p>
+        <p>
+          O botao que manda o som para o controle mudou para o bloco
+          Alto-falante do card. Os rotulos "sem dado" sairam dos botoes de
+          microfone e alto-falante: um botao diz o que o clique faz, e nasce
+          cinza quando ainda nao ha leitura.
+        </p>
+        <p>
+          A mascara Xbox passa a dizer o que custa: nela o jogo nao recebe
+          giroscopio nem touchpad, porque o controle de Xbox nao tem esses
+          dois. Vibracao, microfone e alto-falante continuam funcionando.
+        </p>
+        <p>
+          As metricas Prometheus ganharam chave de usuario, cumprindo a
+          decisao registrada na ADR-016. E o quadrado vermelho ao lado dos
+          interruptores da janela — um icone quebrado do GTK — sumiu.
+        </p>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-08-01">
       <description>
         <p>A leva do alto-falante. O volume do controle tem tres camadas e a

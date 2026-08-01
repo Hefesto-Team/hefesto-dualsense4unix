@@ -5,6 +5,8 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-08-01
+
 ### A aba Status que ela chamou de feia
 
 Ela mandou o print e a frase: *"tá absolutamente muito feio"*. Eram duas linhas

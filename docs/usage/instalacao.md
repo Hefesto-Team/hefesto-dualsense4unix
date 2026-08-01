@@ -26,8 +26,8 @@ todas as formas de instalar, o que o instalador toca no sistema, e como reverter
 
 ## Do código-fonte
 
-A versão corrente é a alfa **0.6.0** (01/08/2026) e o ponto de instalação é a
-**tag `v0.6.0`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
+A versão corrente é a alfa **0.7.0** (01/08/2026) e o ponto de instalação é a
+**tag `v0.7.0`** do fork `[REDACTED]/hefesto-dualsense4unix` — tag, não branch:
 as branches de trabalho recebem commits durante a sessão e não são um ponto
 estável para instalar. O `main` do repositório de origem
 (`AndreBFarias/hefesto-dualsense4unix`) está na v3.0.0, de abril de 2026, e
@@ -37,7 +37,7 @@ no [`README.md`](../../README.md).
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.6.0
+git checkout v0.7.0
 ./install.sh
 ```
 
