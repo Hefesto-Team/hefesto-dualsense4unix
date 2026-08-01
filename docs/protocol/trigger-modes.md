@@ -1,6 +1,37 @@
 # Protocolo — Trigger Modes (dois níveis)
 
-> Fonte canônica: `pydualsense >= 0.7.5` (`.venv/lib/.../pydualsense/enums.py`) para HID e README do DSX Paliverse para presets de alto nível. Esta tabela é referência para W2.1.
+> ## ATENÇÃO: ATENÇÃO — esta página tem uma nota de verificação de 01/08/2026
+>
+> **A fonte canônica desta tabela MUDOU.** Ela passa a ser
+> [`dualsense-referencia-canonica.md`](dualsense-referencia-canonica.md), §4,
+> que decodifica os modos contra a **enum oficial da Sony** (redistribuída pela
+> Valve no Steamworks SDK) e contra três engenharias reversas independentes.
+>
+> A nomenclatura abaixo (`Rigid_A/B/AB`, `Pulse_A/B/AB`) vem de uma engenharia
+> reversa de 2020 e é **opaca**: ela não diz o que o firmware entende. Traduzida:
+>
+> | nome aqui | valor | o firmware entende |
+> |---|---|---|
+> | `Rigid_A` | 0x21 | **Feedback** (oficial) |
+> | `Rigid_B` | **0x05** | **OFF — não faz nada** |
+> | `Rigid_AB` | 0x25 | **Weapon** (oficial) |
+> | `Pulse_A` | 0x22 | Bow |
+> | `Pulse_B` | 0x06 | Simple_Vibration |
+> | `Pulse_AB` | 0x26 | **Vibration** (oficial) |
+> | `Calibration` | 0xFC | **Debug — CORROMPE o estado** |
+>
+> E os modos oficiais **não recebem posições cruas**: recebem bitmask de zonas
+> e forças de 3 bits com valor `força − 1`. O `AMPLITUDE_SCALE` desta árvore não
+> se aplica a eles.
+>
+> **Consequência a confirmar:** `rigid()`, `simple_rigid()` e `feedback()`
+> mandariam OFF. A medição está na sprint
+> [TRIGGER-CANON-01](../process/sprints/2026-08-01-TRIGGER-CANON-01-os-modos-de-gatilho-contra-a-enum-da-sony.md).
+>
+> O texto abaixo fica como registro do que se acreditava — não se reescreve
+> decisão tomada; ela ganha nota.
+
+> Fonte histórica (até 01/08/2026): `pydualsense >= 0.7.5` (`.venv/lib/.../pydualsense/enums.py`) para HID e README do DSX Paliverse para presets de alto nível. Esta tabela é referência para W2.1.
 
 ## Arquitetura em dois níveis
 

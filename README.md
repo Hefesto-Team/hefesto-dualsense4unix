@@ -288,6 +288,11 @@ prática, subir as métricas exige mexer no código. Ver
 - **Quando dá errado:** [docs/usage/troubleshooting.md](docs/usage/troubleshooting.md)
   · [8BitDo](docs/usage/troubleshooting-8bitdo.md)
 - **Decisões arquiteturais:** [docs/adr/](docs/adr/)
+- **O que o DualSense entende (a referência canônica):**
+  [docs/protocol/dualsense-referencia-canonica.md](docs/protocol/dualsense-referencia-canonica.md)
+  — o mapa dos 47 bytes do report de saída, os modos de gatilho contra a enum
+  oficial da Sony, a rota do áudio, os sensores e o que um gamepad virtual
+  precisa cumprir. Cada linha traz o grau de confiança da fonte.
 - **Protocolos (UDP, JSON-RPC, gatilhos):** [docs/protocol/](docs/protocol/)
 - **Pesquisas e medições:** [docs/research/](docs/research/)
 - **Histórico de versões:** [CHANGELOG.md](CHANGELOG.md)
