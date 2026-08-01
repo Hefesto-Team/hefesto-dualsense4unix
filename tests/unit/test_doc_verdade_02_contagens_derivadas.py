@@ -51,12 +51,13 @@ POR_EXTENSO = {
 
 #: As páginas que afirmam a contagem de parâmetros do `DaemonConfig`.
 #:
-#: O `README.md` afirma a MESMA frase em `README.md:272` e está fora desta
-#: lista por uma razão de processo, não de mérito: ele pertencia a outro agente
-#: na leva de 01/08 e não podia ser tocado. A frase dele continua dizendo
-#: "três parâmetros". Quando alguém a corrigir, o arquivo entra aqui e este
-#: teste passa a guardá-lo também.
+#: O `README.md` entrou em 01/08, fechando a isenção de processo que o deixara
+#: de fora: ele afirmava a MESMA frase e continuava dizendo "três parâmetros"
+#: porque pertencia a outro agente na leva daquele dia. Ele é a página de
+#: entrada do projeto — deixá-lo fora era guardar as três páginas internas e
+#: soltar a única que quase todo mundo lê.
 PAGINAS_DA_CONTAGEM = (
+    "README.md",
     "docs/usage/metrics.md",
     "docs/adr/016-prometheus-metrics.md",
 )
@@ -181,7 +182,7 @@ def test_o_daemon_config_e_construido_com_quatro_parametros() -> None:
     ], (
         "a construção do DaemonConfig em daemon/main.py mudou. Isso é legítimo "
         "— mas as páginas que afirmam a contagem precisam mudar junto: "
-        f"{', '.join(PAGINAS_DA_CONTAGEM)}, e ainda README.md:272."
+        f"{', '.join(PAGINAS_DA_CONTAGEM)}."
     )
 
 

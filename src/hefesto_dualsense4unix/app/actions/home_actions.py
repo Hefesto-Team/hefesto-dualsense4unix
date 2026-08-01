@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import contextlib
 import time
-from typing import Any
+from typing import Any, Final
 
 from hefesto_dualsense4unix.app.actions.base import (
     WidgetAccessMixin,
@@ -212,6 +212,38 @@ def _mode_label(mode_id: object) -> str:
     virar texto vazio.
     """
     return dict(_MODE_ITEMS).get(str(mode_id), str(mode_id))
+
+
+#: MASCARA-CUSTO-01 (01/08) — o que cada máscara CUSTA, em uma frase.
+#:
+#: Função pura, no padrão de `vpad_degradation_text`, para que a aba Início e
+#: a aba Emulação nunca digam coisas diferentes sobre o mesmo fato.
+#:
+#: O fato, medido pela auditoria de 01/08: com a máscara Xbox o gamepad virtual
+#: é uinput, que declara 8 eixos e 11 botões — **não há onde pôr giroscópio nem
+#: touchpad**, e `integrations/virtual_pad.py` recusa o uhid para qualquer
+#: sabor que não seja `dualsense`. Não é bug, é a API do Xbox 360; o que faltava
+#: era a tela dizer isso.
+#:
+#: Vibração, microfone e alto-falante NÃO estão na lista de perdas de propósito:
+#: a vibração funciona nas duas máscaras, e microfone e alto-falante nem passam
+#: pelo gamepad (são PipeWire, e seguem valendo em qualquer máscara).
+TEXTO_CUSTO_MASCARA_XBOX: Final[str] = (
+    "Nesta máscara o jogo não recebe giroscópio nem touchpad — o controle de "
+    "Xbox não tem esses dois, então não há onde eles caberem. Vibração, "
+    "microfone e alto-falante continuam funcionando. Escolha DualSense se o "
+    "jogo usa mira por movimento ou o touchpad como botão."
+)
+
+
+def texto_do_custo_da_mascara(flavor: object) -> str:
+    """A frase de preço da máscara; ``""`` quando não há preço a dizer.
+
+    Devolve vazio para `dualsense` (nada se perde) e para valor desconhecido
+    ou ausente — inventar um aviso a partir de payload incompleto seria a
+    mesma família de erro que o `or "xbox"` que esta casa já removeu daqui.
+    """
+    return TEXTO_CUSTO_MASCARA_XBOX if flavor == "xbox" else ""
 
 
 def _flavor_label(flavor_id: object) -> str:
@@ -717,6 +749,29 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_flavor_selector = flavor
         mask_row.pack_start(flavor, True, True, 0)
         opts.pack_start(mask_row, False, False, 0)
+
+        # MASCARA-CUSTO-01 (01/08): o preço da máscara, dito ANTES do clique.
+        #
+        # A pergunta dela, literal: *"não sei se o alto-falante, giroscópio,
+        # microfone e touchpad na hora de jogar um jogo na Steam vão estar
+        # funcionando. Elas precisam funcionar."* A auditoria respondeu com
+        # número: com a máscara Xbox o giroscópio e o touchpad **não existem
+        # na API** — o gamepad virtual vira uinput, que declara 8 eixos e 11
+        # botões e não tem onde pôr IMU nem dedo
+        # (`integrations/uinput_gamepad.py`; `virtual_pad.py` recusa o uhid
+        # para qualquer sabor que não seja `dualsense`).
+        #
+        # Isso não era um defeito escondido: era uma escolha sem etiqueta de
+        # preço. Seis dos oito perfis de jogo desta casa pediam Xbox, e nada na
+        # tela dizia o que se perdia. Agora diz, e diz no lugar do gesto.
+        custo = Gtk.Label(label="")
+        custo.set_xalign(0.0)
+        custo.set_line_wrap(True)
+        custo.set_max_width_chars(100)
+        custo.get_style_context().add_class("dim-label")
+        self._home_flavor_custo = custo
+        opts.pack_start(custo, False, False, 0)
+
         self._home_gamepad_opts = opts
         mode_box.pack_start(opts, False, False, 0)
 
@@ -1013,6 +1068,13 @@ class HomeActionsMixin(WidgetAccessMixin):
             flavor = gamepad.get("flavor")
             if isinstance(flavor, str) and flavor:
                 self._home_flavor_selector.set_active_id(flavor)
+            # MASCARA-CUSTO-01: o preço da máscara vigente, embaixo do seletor.
+            custo = getattr(self, "_home_flavor_custo", None)
+            if custo is not None:
+                texto = texto_do_custo_da_mascara(flavor)
+                custo.set_text(texto)
+                custo.set_visible(bool(texto))
+                custo.set_no_show_all(not texto)
 
             # UX-03: banner de degradação do vpad — visível SÓ quando a máscara
             # DualSense caiu no backend uinput (função pura decide; backend

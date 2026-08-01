@@ -451,6 +451,29 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: "" = não dá para saber, e é o que deixa o botão parado.
     _rota_sink: str = ""
 
+    def _set_battery_text(self, texto: str) -> None:
+        """Escreve o número da bateria na barra E no rótulo ao lado dela.
+
+        ESTADO-TRES-LINHAS-01. A barra deixou de desenhar o próprio texto
+        (`show-text=False` no glade) quando passou a ocupar a largura toda:
+        o GtkProgressBar centra o texto, e centrado numa barra de 1244px o
+        "75 %" ficava a 609px de cada borda — o defeito que ela apontou nas
+        barras de L2/R2, na mesma tela.
+
+        O `set_text` da barra CONTINUA sendo chamado de propósito: ele é o que
+        os testes e o `get_text()` leem, e é o dono do valor. Este método é o
+        único lugar que espelha esse valor no rótulo visível — dois escritores
+        derivariam, e esta casa já pagou por isso.
+        """
+        barra = self._get("status_battery_bar")
+        if barra is not None:
+            with contextlib.suppress(Exception):
+                barra.set_text(texto)
+        rotulo = self._get("status_battery_pct")
+        if rotulo is not None:
+            with contextlib.suppress(Exception):
+                rotulo.set_text(texto)
+
     def _sink_do_controle_para_a_rota(self, monitor: Any, uniqs: tuple[str, ...]) -> str:
         """Sink que o botão da rota tem como alvo; "" quando não há certeza.
 
@@ -684,6 +707,44 @@ class StatusActionsMixin(WidgetAccessMixin):
             card.set_valign(Gtk.Align.START)
             slot.attach(card, pos % colunas, pos // colunas, 1, 1)
             card.show_all()
+        self._alojar_botao_da_rota()
+
+    def _alojar_botao_da_rota(self) -> None:
+        """Muda o botão da rota de som para o bloco Alto-falante do 1º card.
+
+        SOM-ROTA-NO-CARD-01, pedido dela em 01/08: *"aquele botão de voltar ao
+        anterior sai de lá de cima e fica no espaço onde tem 'não ajustado' no
+        alto-falante"*.
+
+        O botão é o do GLADE, e continua sendo UM só. A segunda razão da
+        SOM-04 para ele morar no frame Estado — a saída padrão do sistema é um
+        fato do SISTEMA, e com dois cards haveria dois botões para um único
+        interruptor global — continua inteira. Por isso ele é REPARENTADO para
+        o card primário em vez de cada card ganhar o seu: com 2+ controles o
+        sink sequer é resolvido (`_sink_do_controle_para_a_rota` devolve "" de
+        propósito) e o botão nasce insensível, então um botão só, no primeiro
+        card, é também o mais honesto.
+
+        Idempotente: sai cedo se o botão já está no slot certo. Os cards são
+        reconstruídos a cada troca de conjunto, e o `Gtk.Container.remove` do
+        pai antigo é obrigatório — um widget com dois pais é erro de GTK, não
+        de desenho.
+        """
+        botao = self._get("btn_som_no_controle")
+        if botao is None or not hasattr(botao, "get_parent"):
+            return  # Glade antigo ou builder dublado: a aba segue sem o botão
+        primeiro = next(iter(self._status_cards.values()), None)
+        destino = getattr(primeiro, "_speaker_rota_slot", None)
+        if destino is None:
+            return  # card compacto ou sem bloco de som: o botão fica onde está
+        pai = botao.get_parent()
+        if pai is destino:
+            return
+        with contextlib.suppress(Exception):
+            if pai is not None:
+                pai.remove(botao)
+            destino.pack_start(botao, True, True, 0)
+            destino.show_all()
 
     def _clear_status_cards(self) -> None:
         """Remove todos os cards (daemon offline — nenhum controle conhecido)."""
@@ -1654,7 +1715,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         battery = self._get("status_battery_bar")
         if battery is not None:
             battery.set_fraction(0.0)
-            battery.set_text("— %")
+        self._set_battery_text("— %")
         # Mantém máquina de reconnect coerente.
         self._reconnect_state = "offline"
         self._consecutive_failures = max(
@@ -1816,7 +1877,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         bar = self._get("status_battery_bar")
         if bar is not None:
             bar.set_fraction(0.0)
-            bar.set_text("— %")
+        self._set_battery_text("— %")
         # STATUS-02: sem daemon não há controle conhecido — nenhum card
         # (o fallback offline da aba é o frame Estado + header, como sempre).
         self._clear_status_cards()
@@ -1913,15 +1974,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._set_battery_row_visible(contagem.adotados <= 1)
         battery_bar = self._get("status_battery_bar")
         if battery_bar is not None and contagem.adotados <= 1:
-            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL (show_text).
-            with contextlib.suppress(Exception):
-                battery_bar.set_show_text(True)
+            # UX-BATTERY-LABEL-01: o texto precisa estar VISÍVEL. Desde a
+            # ESTADO-TRES-LINHAS-01 quem o mostra é o rótulo ao lado da barra,
+            # e não a barra — ver `_set_battery_text`.
             if battery is None:
                 battery_bar.set_fraction(0.0)
-                battery_bar.set_text("— %")
+                self._set_battery_text("— %")
             else:
                 battery_bar.set_fraction(battery / 100)
-                battery_bar.set_text(f"{battery} %")
+                self._set_battery_text(f"{battery} %")
 
         # FEAT-DSX-CONTROLLER-SELECTOR-01: atualiza o seletor de controle-alvo
         # (aparece só com 2+ controles).
@@ -1939,8 +2000,18 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._sync_status_cards(state)
 
     def _set_battery_row_visible(self, visible: bool) -> None:
-        """Mostra/esconde a linha de bateria do frame Estado (caption + barra)."""
-        for widget_id in ("status_battery_caption", "status_battery_bar"):
+        """Mostra/esconde a linha de bateria do frame Estado.
+
+        São TRÊS widgets desde a ESTADO-TRES-LINHAS-01 — o rótulo "Bateria:",
+        a barra e o número ao lado dela. Esquecer o terceiro deixaria um
+        "75 %" órfão na tela com dois controles, que é justamente o caso em
+        que a linha some (cada card tem a própria bateria).
+        """
+        for widget_id in (
+            "status_battery_caption",
+            "status_battery_bar",
+            "status_battery_pct",
+        ):
             widget = self._get(widget_id)
             if widget is not None and hasattr(widget, "set_visible"):
                 widget.set_visible(visible)

@@ -577,15 +577,43 @@ def test_botoes_ficam_na_linha_de_baixo_mesmo_sem_mic_nem_touchpad(
 def test_gyro_oculto_nao_devolve_a_largura_toda_aos_gatilhos(card: Any) -> None:
     """O giroscópio nasce oculto e aparece quando há sensor. Num `Gtk.Box` os
     gatilhos pulariam para a largura inteira e voltariam para metade — reflow
-    visível. O grid homogêneo guarda a coluna pelo `_gyro_slot`, que fica
-    visível mesmo com o módulo escondido."""
+    visível a cada troca de controle.
+
+    **Este teste passou a medir o COMPORTAMENTO, e não o mecanismo.** Ele
+    afirmava `grid.get_column_homogeneous() is True`, que era o jeito de
+    guardar a coluna até 01/08. A ALINHA-DUAS-LINHAS-01 tirou o homogêneo —
+    ele dividia o card em duas metades IGUAIS, e as duas metades da faixa de
+    baixo não são iguais (698 contra 648 na tela dela), então as divisórias
+    das duas linhas nunca batiam. Agora quem guarda a coluna é o `SizeGroup`
+    que a amarra à metade direita da faixa, que existe sempre.
+
+    A propriedade que este teste protege é a mesma de antes, e continua
+    valendo: **os gatilhos não mudam de largura quando o giroscópio some.** É
+    isso que ele mede agora — arrancar o `SizeGroup` faz a largura pular e a
+    asserção cai, exatamente como caía ao arrancar o homogêneo.
+    """
+    card.update(_entry(inputs=_inputs(gyro=_GYRO)), _ESTADO, None)
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    assert card._gyro_box.get_visible() is True, (
+        "premissa deste teste: com giroscópio no payload o módulo aparece"
+    )
+    com_gyro = card._l2_bar.get_parent().get_allocated_width()
+
     card.update(_entry(), _ESTADO, None)
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    sem_gyro = card._l2_bar.get_parent().get_allocated_width()
 
     assert card._gyro_box.get_visible() is False
     assert card._gyro_slot.get_visible() is True
+    assert com_gyro == sem_gyro, (
+        f"os gatilhos mediam {com_gyro}px com o giroscópio à vista e "
+        f"{sem_gyro}px sem ele: a coluna deixou de ser guardada e a tela dá "
+        "um pulo a cada troca de controle"
+    )
 
     grid = card._gyro_slot.get_parent()
-    assert grid.get_column_homogeneous() is True
     assert grid.child_get_property(card._gyro_slot, "left-attach") == 1
     assert grid.child_get_property(card._l2_bar.get_parent(), "left-attach") == 0
 

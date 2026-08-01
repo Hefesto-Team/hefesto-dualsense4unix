@@ -970,25 +970,58 @@ def test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa(
     )
 
     faixa = card._linha_inferior
-    colunas = faixa.get_children()
-    assert len(colunas) >= 2, "a faixa de leitura perdeu as colunas"
+    assert len(faixa.get_children()) >= 2, "a faixa de leitura perdeu as colunas"
     coluna_som = card._coluna_audio
-    alturas = {
-        id(c): c.get_preferred_height()[0] for c in colunas
-    }
     som = coluna_som.get_preferred_height()[0]
-    vizinhas = [h for k, h in alturas.items() if k != id(coluna_som.get_parent())]
-    # A coluna do som mora DENTRO do miolo (junto dos analógicos); a vizinha a
-    # bater é a mais alta das outras colunas da faixa.
-    maior_vizinha = max(vizinhas) if vizinhas else 0
+
+    # As colunas são nomeadas UMA A UMA, e não tiradas de `get_children()` da
+    # faixa. O motivo é a ALINHA-DUAS-LINHAS-01: ela agrupou a faixa em duas
+    # metades para a linha de cima ter em que se alinhar, e a partir daí
+    # `get_children()` devolve as METADES, não as colunas. Com a lista antiga
+    # a grade de glifos — que é o piso de altura desta faixa — saiu da
+    # comparação por ter mudado de caixa, e o teste passou a reprovar uma
+    # geometria que não piorou em nada. Nomear cada coluna prende a medida ao
+    # que ela significa e não a onde ela está pendurada.
+    vizinhas = [
+        card._touch_box.get_parent(),  # coluna dos sensores (touchpad+lightbar)
+        card._stick_left.get_parent(),  # os dois analógicos
+        card._glyph_grid,  # a grade de botões, o piso de altura da faixa
+    ]
+    maior_vizinha = max(v.get_preferred_height()[0] for v in vizinhas)
 
     assert som > 1 and maior_vizinha > 1, (
         "faixa sem alocação: a medida seria 1x1 e passaria com qualquer desenho"
     )
-    assert som <= maior_vizinha, (
+
+    # A FOLGA de 12px é a decisão dela de 01/08 (SOM-ROTA-NO-CARD-01), medida e
+    # paga: *"aquele botão de voltar ao anterior sai de lá de cima e fica no
+    # espaço onde tem 'não ajustado' no alto-falante"*. Para o botão caber
+    # naquele lugar, o rótulo de valor subiu para a linha da barra — e uma
+    # linha que tinha 12px (só a barra) passou a ter 20 (a altura do rótulo).
+    # São 8px, e eles saem do bloco do som.
+    #
+    # Por que a regra continua existindo com folga em vez de ser apagada: ela
+    # protege contra o bloco do som DISPARAR (a mordida abaixo mede 280 contra
+    # 246, que são 34px). Oito px de decisão consciente e trinta e quatro de
+    # regressão silenciosa são coisas diferentes, e o teto de 12 separa as
+    # duas. O que não pode ceder é o card na faixa, e isso é a asserção
+    # seguinte — o dono absoluto continua sendo
+    # `test_layout_orcamento_altura.py`.
+    folga_da_rota_no_card = 12
+    #: A faixa que a aba Status entrega aos cards, medida com a janela no
+    #: tamanho de projeto. Mesmo número de `test_status_som_04_som_de_
+    #: confirmacao.py`, que é o outro teste que o cobra.
+    faixa_dos_cards_px = 467
+
+    assert som <= maior_vizinha + folga_da_rota_no_card, (
         f"a coluna do som pede {som}px e a maior coluna vizinha da faixa "
-        f"{maior_vizinha}px: a partir daqui cada pixel do bloco de áudio "
-        f"cresce o card inteiro ({som - maior_vizinha}px já cresceram)"
+        f"{maior_vizinha}px: passou da folga de {folga_da_rota_no_card}px que "
+        f"a rota no card custou ({som - maior_vizinha}px já cresceram). A "
+        "partir daqui cada pixel do bloco de áudio cresce o card inteiro."
+    )
+    assert card.get_preferred_height()[1] <= faixa_dos_cards_px, (
+        f"o card pede {card.get_preferred_height()[1]}px de altura e a faixa "
+        f"da aba dá {faixa_dos_cards_px}px"
     )
 
 

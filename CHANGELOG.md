@@ -5,6 +5,152 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### A aba Status que ela chamou de feia
+
+Ela mandou o print e a frase: *"tá absolutamente muito feio"*. Eram duas linhas
+de conteúdo que não conversavam — a de cima (gatilhos e giroscópio) dividia o
+card ao meio por conta própria, e a de baixo (touchpad, analógicos, microfone,
+glifos) tinha divisórias em outros lugares.
+
+A medição mostrou que **as divisórias certas já existiam**: a metade esquerda
+da faixa de baixo vai do touchpad ao analógico direito, e a direita vai do
+microfone ao último glifo. O que faltava era alguém que as carregasse. Agora a
+linha de cima herda essas duas metades, e o L2/R2 e o giroscópio esticam até
+elas — alinhamento **exato** na janela de projeto, e 4px na tela maximizada, que
+é a borda da moldura.
+
+O número do giroscópio mudou de lado no caminho: com o desenho esticado a
+640px, um valor ancorado na borda direita ficaria a meio card do "X" que o
+nomeia. Ele agora fica logo depois da letra do eixo, e os três valores ficam
+alinhados entre si em qualquer largura.
+
+**O botão de som mudou de casa**, a pedido dela: saiu do frame Estado e foi
+para o bloco "Alto-falante" do card, no lugar onde estava escrito "não
+ajustado" — que subiu para o título do bloco ("Alto-falante · 71 %"). Ele
+continua sendo UM botão, reparentado para o card do primeiro controle: a saída
+padrão do sistema é um fato global, e dois cards não podem ter dois botões para
+um interruptor só.
+
+**"sem dado" saiu dos dois botões** — o do alto-falante e o do microfone. Não
+era rótulo de ação: era a janela escrevendo "não sei" dentro de um botão, no
+lugar onde deveria dizer o que o clique faz. Agora eles se chamam pela ação e
+nascem cinzas enquanto não há leitura; a dica explica o porquê.
+
+**O frame Estado tem três linhas**, e a última é a bateria em largura inteira.
+Duas armadilhas apareceram na bancada e as duas estão curadas: o
+`GtkProgressBar` centra o próprio texto (numa barra de 1244px o "75 %" ficava a
+609px de cada borda — o mesmo defeito que ela apontou nas barras de L2/R2), e
+uma célula de grade nunca é mais larga que suas colunas, então pedir largura
+inteira de dentro da grade fazia a coluna de valores voltar aos 1242px que a
+LARGURA-01 tinha curado.
+
+### A máscara Xbox diz o que custa
+
+Ela perguntou se alto-falante, giroscópio, microfone e touchpad funcionam
+dentro de um jogo da Steam. A auditoria mediu, e a resposta tem duas metades.
+
+Microfone e alto-falante **não passam pelo gamepad virtual** — são PipeWire, e
+valem em qualquer máscara. Giroscópio e touchpad só chegam ao jogo pelo espelho
+do gamepad, e o espelho só existe no backend `uhid`: com a máscara **Xbox 360**
+eles **não existem na API**. Não é defeito, é o controle de Xbox não ter esses
+dois.
+
+O que faltava não era código de sensor, era etiqueta de preço — e seis dos oito
+perfis de jogo desta casa pedem máscara Xbox. Agora a aba Início diz, embaixo do
+seletor, o que se perde com Xbox e o que **continua** funcionando (vibração,
+microfone e alto-falante), porque a pergunta citou os quatro juntos e um aviso
+pela metade manda caçar problema no lugar errado.
+
+A leva da janela que respira, mais quatro pendências que atravessaram três
+releases. Ela pediu *"procure por melhorias de ui ux em cada aba da interface,
+conclua as próximas pendências em aberto"* — e o que a auditoria aba a aba
+encontrou não foi regra nova: foi a lista de regras que esta casa já tinha
+escrito e não tinha terminado de aplicar.
+
+### O quadrado vermelho ao lado dos interruptores sumiu
+
+Havia um pequeno quadrado vermelho grudado em cada um dos quatro `GtkSwitch` da
+janela — na aba Sistema, ao lado de "Ligar junto com o computador"; na aba
+Perfis, ao lado de "Modo avançado". Parecia sujeira do tema e era um ícone
+quebrado de verdade.
+
+Todo `GtkSwitch` do GTK3 tem dois nós internos que pedem os ícones
+`switch-on-symbolic` / `switch-off-symbolic`, e **nenhum tema de ícones desta
+máquina os resolve** — nem `breeze-dark`, nem `Adwaita`, nem `hicolor`. Falhando
+a busca, o GTK pinta o `image-missing` do tema ativo, que no breeze-dark é
+literalmente um quadrado de borda vermelha.
+
+O experimento que fechou o diagnóstico renderizou um switch com e **sem** o CSS
+do projeto, e com o tema stock: o quadrado aparece nos três casos. A cura
+(`-gtk-icon-transform: scale(0)`) foi a quarta tentada — `color: transparent`,
+`-gtk-icon-source: none` e `opacity: 0` não alcançam um ícone colorido. O teste
+que a trava **conta pixels vermelhos** numa renderização offscreen, nos dois
+estados do interruptor.
+
+### A janela devolveu a largura que os botões tomavam
+
+`homogeneous=True` numa fileira de botões dá a **todo** botão a largura do maior
+rótulo. A casa escreveu isso em 25/07, repetiu em 27/07 e de novo em 29/07,
+aplicou em três fileiras — e a propriedade sobrevivia em **sete**. O "Auto" da
+aba Rumble, quatro letras, recebia 459px. As sete caíram.
+
+Junto vieram as outras três regras que estavam pela metade: teto de comprimento
+de linha em seis parágrafos (o maior tinha **1869px** de linha, ~230 caracteres,
+na única aba sem teto de página), teto de largura nos cinco controles que a
+tabela da LARGURA-01 tinha deixado para trás, e a lista de atalhos da aba
+Navegação, que esticava 827px para seis linhas e largava os botões Adicionar e
+Remover no pé da janela.
+
+E a aba Gatilhos ganhou o que ela tinha pedido por escrito: os botões no rodapé
+das colunas, no lugar dos ~770px de vazio que sobravam dentro de cada moldura.
+
+**Uma medição corrigiu o próprio conserto.** O teto de linha sozinho não fez
+nada — o retrato "depois" mostrou o parágrafo de 1869px intacto. Em GTK3 essa
+propriedade limita o que o widget *pede*, e o pai segue esticando; é o
+`halign=start` que faz a alocação parar. Com os dois juntos, a linha caiu para
+~975px. Nenhuma leitura de código teria pego isso: foi a foto.
+
+### As métricas ganharam a chave que a decisão prometia
+
+O endpoint Prometheus dependia de `metrics_enabled`, e **não havia variável,
+flag ou arquivo que ligasse esse campo** — o daemon construía a configuração sem
+ele, então o default `False` vencia sempre e subir as métricas exigia editar o
+código. A ADR-016 tinha decidido "opt-in via config ou env" em 25/07; a metade
+"env" nunca foi escrita.
+
+Agora `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga, e
+`HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta — porque ligar sem poder
+escolher a porta seria meia-chave para quem já tem a 9090 ocupada. A gramática é
+a mesma dos plugins de propósito: só `"1"` liga, e porta inválida cai na
+configuração em vez de derrubar o daemon.
+
+### O botão que já tinha saído levou o código junto
+
+O handler `on_emulation_open_toml` continuava vivo e registrado, sem nada que o
+chamasse — o botão dele saiu do glade em 26/07 e a decisão sobre o Python ficou
+escrita ali, à espera de dono. Ele criava, no diretório de configuração dela, um
+`daemon.toml` com cara de configuração que o daemon não lê. Enquanto o código
+existisse, bastava reconectar o nome para o arquivo fantasma voltar a nascer.
+
+### A página de entrada parou de afirmar um número errado
+
+O `README.md` dizia que o daemon é construído com "três parâmetros" desde que o
+quarto nasceu, em 29/07. As outras três páginas que afirmavam o mesmo já tinham
+sido corrigidas; o README ficou de fora por processo, e o próprio teste
+registrava a isenção por escrito. Ele entrou na contagem — agora o teste o
+guarda também.
+
+### Achado registrado: reextrair as traduções destrói tradução manual
+
+Rodar `scripts/i18n_extract.sh`, que é o caminho documentado, foi medido nesta
+leva: das 37 traduções que saem, 34 são entradas que levas anteriores
+adicionaram **à mão** — entre elas as quatro que a janela usa para dizer
+*"Aplicado, menos: luzes, gatilhos."* Elas não passam por `_()` no ponto de
+declaração, então o `xgettext` não as vê e o merge as marca como obsoletas.
+
+Esta leva trocou as strings à mão nos três catálogos e deixou o achado escrito.
+O conserto de verdade é da faixa de i18n.
+
 ## [0.6.0] — 2026-08-01
 
 A leva do alto-falante. Ela pediu *"a ideia é concluirmos tudo que está pelo

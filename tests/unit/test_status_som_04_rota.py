@@ -163,15 +163,30 @@ def _janela_montada() -> tuple[Any, Any]:
 # ---------------------------------------------------------------------------
 
 
-def test_o_botao_mora_no_frame_estado_e_nasce_insensivel() -> None:
-    """Ele é um fato do SISTEMA e vive ao lado de "Perfil ativo" e "Hefesto".
+def test_o_botao_mora_no_bloco_do_alto_falante_e_nasce_insensivel() -> None:
+    """Ele mora no bloco "Alto-falante" do card do primeiro controle.
+
+    SOM-ROTA-NO-CARD-01, pedido dela em 01/08 olhando a tela: *"aquele botão
+    de voltar ao anterior sai de lá de cima e fica no espaço onde tem 'não
+    ajustado' no alto-falante"*.
+
+    **O que mudou e o que NÃO mudou.** Até aqui ele morava no grid do frame
+    Estado, e havia duas razões escritas. A primeira era medida — *"não cabe
+    lá, +36px de altura num card que já pede 442 de 467"* — e valia para
+    ACRESCENTAR uma peça ao bloco; aqui ele SUBSTITUI o rótulo de valor, que
+    subiu para a linha da barra, e o custo medido foi de 8px numa faixa com
+    100px de folga. A segunda razão continua inteira: a saída padrão do
+    sistema é um fato GLOBAL, e dois cards não podem ter dois botões para um
+    interruptor só. É por isso que ele continua sendo UM widget, o do Glade,
+    REPARENTADO para o slot do card primário — e não um botão por card.
 
     Nasce insensível no Glade de propósito: antes da primeira leitura do
     `pactl` a janela não sabe onde o som está nem para onde ele pode ir, e um
     botão clicável nesse intervalo prometeria uma troca que ninguém apurou.
 
-    Mordida: tirar o ``<property name="sensitive">False</property>``, ou mover
-    o botão para dentro do `status_players_scroll` (o container dos cards).
+    Mordida: tirar o ``<property name="sensitive">False</property>``; ou
+    arrancar o `_alojar_botao_da_rota` da `status_actions`, que deixa o botão
+    no frame Estado e a última asserção cai.
     """
     builder, _win = _janela_montada()
     botao = builder.get_object(ID_BOTAO)
@@ -192,13 +207,10 @@ def test_o_botao_mora_no_frame_estado_e_nasce_insensivel() -> None:
 
     grid = builder.get_object("status_grid")
     assert botao.get_parent() is grid, (
-        "o botão da rota mora no grid do frame Estado — o lugar dos fatos "
-        "GLOBAIS da aba. O bloco 'Alto-falante' do card não cabe (+36px de "
-        "altura num card que já pede 442 de 467) e é por controle, não por "
-        "sistema"
+        "no Glade o botão nasce no grid do frame Estado. Quem o muda de casa "
+        "é a `status_actions`, no momento em que os cards existem — antes "
+        "disso não há bloco de alto-falante nenhum para recebê-lo"
     )
-    scroll = builder.get_object("status_players_scroll")
-    assert not scroll.is_ancestor(botao) if hasattr(scroll, "is_ancestor") else True
 
 
 def test_o_botao_da_rota_custa_zero_do_orcamento_da_aba() -> None:
@@ -252,12 +264,20 @@ def test_o_botao_da_rota_custa_zero_do_orcamento_da_aba() -> None:
 
 
 def test_o_botao_ocupa_o_vao_horizontal_que_ja_existia() -> None:
-    """Ele não é de graça por acaso: ele mora num buraco já pago.
+    """Ele não é de graça por acaso: no berço dele, ele mora num buraco pago.
 
-    O grid do frame Estado tem cinco linhas de rótulo curto num frame com piso
-    de 1040px — sobravam ~670px de vão à direita. O botão entra numa terceira
-    coluna e atravessa as cinco linhas (``height=5``), que é o que impede o
+    O grid do frame Estado tem rótulos curtos num frame com piso de 1040px —
+    sobra vão à direita. O botão entra numa coluna DEPOIS dos dois pares
+    rótulo/valor e atravessa TODAS as linhas do grid, que é o que impede o
     grid de ganhar uma linha só para ele.
+
+    Os dois números mudaram em 01/08 e nenhum deles é arbitrário: a
+    ESTADO-TRES-LINHAS-01 levou o grid de cinco linhas para duas (a bateria
+    saiu para uma caixa própria, com largura inteira) e de duas colunas para
+    quatro (os pares que sobravam empilhados viraram pares lado a lado). Por
+    isso a coluna do botão é a 4 e o `height` é 2. O teste os DERIVA do grid
+    em vez de repetir os literais — assim ele continua valendo na próxima vez
+    que a forma mudar, e continua reprovando quem tirar o `height`.
 
     Mordida: tirar o ``height`` do empacotamento. O botão passa a ocupar uma
     linha só, a linha ganha a altura dele, e a asserção do intervalo cai.
@@ -266,11 +286,23 @@ def test_o_botao_ocupa_o_vao_horizontal_que_ja_existia() -> None:
     grid = builder.get_object("status_grid")
     botao = builder.get_object(ID_BOTAO)
 
-    assert grid.child_get_property(botao, "left-attach") == 2, (
-        "terceira coluna: as duas primeiras são o par rótulo/valor"
+    colunas_de_par = max(
+        grid.child_get_property(filho, "left-attach")
+        for filho in grid.get_children()
+        if filho is not botao
     )
-    assert grid.child_get_property(botao, "height") >= 2, (
-        "o botão atravessa as linhas em vez de criar uma"
+    linhas = 1 + max(
+        grid.child_get_property(filho, "top-attach")
+        for filho in grid.get_children()
+        if filho is not botao
+    )
+
+    assert grid.child_get_property(botao, "left-attach") > colunas_de_par, (
+        "o botão fica DEPOIS das colunas de par rótulo/valor: dentro delas "
+        "ele empurraria um valor para longe do rótulo que o nomeia"
+    )
+    assert grid.child_get_property(botao, "height") >= linhas, (
+        f"o botão atravessa as {linhas} linhas do grid em vez de criar uma"
     )
     assert botao.get_allocated_height() <= grid.get_allocated_height(), (
         "o botão não pode ser mais alto que o grid que o hospeda"

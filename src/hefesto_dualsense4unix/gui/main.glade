@@ -320,11 +320,36 @@
                     <property name="hexpand">True</property>
                     <property name="width-request">1040</property>
                     <child>
+                      <!-- ESTADO-TRES-LINHAS-01: entre o frame e o grid entrou
+                           uma caixa VERTICAL, e a razão é geométrica: a linha
+                           da bateria precisa da largura inteira, e uma célula
+                           de GtkGrid nunca é mais larga que as colunas que ela
+                           abrange. Pedir essa largura de dentro do grid fazia
+                           as quatro colunas expandirem juntas, e a coluna de
+                           valores voltava aos 1242px que a LARGURA-01/E2
+                           curou — há teste que reprova exatamente isso. Fora
+                           do grid, a barra estica sem contaminar ninguém.
+                           O `card` desceu do grid para esta caixa: é ela que
+                           passa a ser o retângulo desenhado. -->
+                      <object class="GtkBox" id="status_estado_box">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">6</property>
+                        <property name="margin">12</property>
+                        <style><class name="hefesto-dualsense4unix-card"/></style>
+                        <child>
                       <object class="GtkGrid" id="status_grid">
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">12</property>
-                        <property name="margin">12</property>
-                        <style><class name="hefesto-dualsense4unix-card"/></style>
+                        <!-- ESTADO-TRES-LINHAS-01: `halign=start`. Sem ele o
+                             grid preenche a caixa e o GTK3 despeja TODO o
+                             excedente na última coluna — medido: 1549px para
+                             "USB" e "Ligado". Não era `hexpand` de ninguém; era
+                             o grid esticado com colunas que não pedem nada.
+                             Com `start` as quatro colunas ficam no natural e a
+                             sobra fica à direita, fora delas, que é onde ela
+                             não incomoda. Quem estica é a linha da bateria,
+                             abaixo, que tem caixa própria. -->
+                        <property name="halign">start</property>
 
                         <child>
                           <object class="GtkLabel">
@@ -341,76 +366,52 @@
                           <packing><property name="left-attach">1</property><property name="top-attach">0</property></packing>
                         </child>
 
+                        <!-- ESTADO-TRES-LINHAS-01 (01/08, pedido dela: "na guia
+                             de estado temos 5 linhas. Isso deveria ser no
+                             máximo 3 linhas sendo a última a bateria e ela
+                             usaria 100% da largura horizontal").
+
+                             O grid passa de 2 colunas x 5 linhas para 4 colunas
+                             x 3 linhas. Os pares que sobravam empilhados viram
+                             pares lado a lado:
+
+                               linha 0:  Conexão: <valor>   Transporte: <valor>
+                               linha 1:  Perfil ativo: <v>  Hefesto:    <valor>
+                               linha 2:  Bateria:  [barra ocupando 1..3]
+
+                             Nenhum id muda — o Python escreve nos mesmos
+                             widgets, e o `status_battery_caption` continua
+                             sendo escondido junto com a barra quando há 2+
+                             controles (cada card tem a própria bateria). -->
                         <child>
                           <object class="GtkLabel">
                             <property name="label" translatable="yes">Transporte:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
+                          <packing><property name="left-attach">2</property><property name="top-attach">0</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_transport">
                             <property name="label">—</property>
                             <property name="xalign">0</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
+                          <packing><property name="left-attach">3</property><property name="top-attach">0</property></packing>
                         </child>
 
-                        <child>
-                          <!-- STATUS-02: id p/ a mixin esconder a linha junto
-                               com a barra quando há 2+ controles (cada card
-                               tem a própria bateria). -->
-                          <object class="GtkLabel" id="status_battery_caption">
-                            <property name="label" translatable="yes">Bateria:</property>
-                            <property name="xalign">1</property>
-                          </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">2</property></packing>
-                        </child>
-                        <child>
-                          <!-- LARGURA-01/E2: o teto da SOM-01 para no frame e
-                               não alcançava o miolo dele. Medido nesta bancada,
-                               com a janela em 1920 e o frame já em 1400: esta
-                               barra recebia 1242px para 150px de natural, com o
-                               "— %" desenhado no meio — o texto tem 26px, então
-                               sobravam 608px de barra vazia de cada lado de um
-                               número de dois dígitos.
-
-                               O `hexpand` era a causa dos DOIS defeitos, e não
-                               só do dela: num GtkGrid o `hexpand` de UM filho
-                               faz a COLUNA inteira expandir, então a coluna de
-                               valores (que tem 112px de maior tinta) também ia
-                               a 1242px. Tirá-lo cura os dois de uma vez.
-
-                               O par que fica é `halign=start` + `width-request`,
-                               a mesma receita já no ar nas três barras da aba
-                               Rumble (LARGURA-01/E1). E é par mesmo: no GTK3
-                               pedido de tamanho é MÍNIMO, nunca máximo — o
-                               `width-request` sozinho não segura nada, e com
-                               `halign=center` ele TRAVA o widget no número
-                               exato (a armadilha escrita em
-                               controller_card.py:314). -->
-                          <object class="GtkProgressBar" id="status_battery_bar">
-                            <property name="show-text">True</property>
-                            <property name="text">— %</property>
-                            <property name="halign">start</property>
-                            <property name="width-request">300</property>
-                          </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">2</property></packing>
-                        </child>
 
                         <child>
                           <object class="GtkLabel">
                             <property name="label" translatable="yes">Perfil ativo:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">3</property></packing>
+                          <packing><property name="left-attach">0</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
                           <object class="GtkLabel" id="status_active_profile">
                             <property name="label" translatable="yes">Nenhum</property>
                             <property name="xalign">0</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">3</property></packing>
+                          <packing><property name="left-attach">1</property><property name="top-attach">1</property></packing>
                         </child>
 
                         <child>
@@ -418,14 +419,21 @@
                             <property name="label" translatable="yes">Hefesto:</property>
                             <property name="xalign">1</property>
                           </object>
-                          <packing><property name="left-attach">0</property><property name="top-attach">4</property></packing>
+                          <packing><property name="left-attach">2</property><property name="top-attach">1</property></packing>
                         </child>
                         <child>
+                          <!-- ESTADO-TRES-LINHAS-01: este é o `hexpand` do grid,
+                               e é o ÚNICO. Ele mora na última coluna de
+                               propósito — é a coluna mais à direita e tem texto
+                               `xalign=0`, então o espaço extra cai depois do
+                               texto e nada se desloca. É o que faz a barra de
+                               bateria, que abrange 1..3, chegar na borda. -->
                           <object class="GtkLabel" id="status_daemon">
                             <property name="label" translatable="yes">Consultando...</property>
                             <property name="xalign">0</property>
+                            <property name="hexpand">True</property>
                           </object>
-                          <packing><property name="left-attach">1</property><property name="top-attach">4</property></packing>
+                          <packing><property name="left-attach">3</property><property name="top-attach">1</property></packing>
                         </child>
 
                         <!-- SOM-04, entrega 2: o botao que manda o som do
@@ -473,16 +481,94 @@
                                  prometer a acao ali seria afirmar o que um
                                  botao que pode nascer insensivel faria. -->
                             <property name="tooltip-text" translatable="yes">Manda o som do sistema para o alto-falante do controle, e desfaz. O rótulo do botão diz o que o próximo clique faz, e a dica muda junto com ele assim que a janela ler a saída de áudio.</property>
-                            <property name="halign">end</property>
+                            <!-- LARGURA-01, mesma causa que a E2 tirou da barra
+                                 de bateria: o par `halign=end` + `hexpand=True`
+                                 jogava o botao contra a borda direita do card e
+                                 ainda fazia a coluna de valores do grid
+                                 expandir. Medido: 1280px entre a ultima tinta
+                                 do grid e o botao — um botao de acao sem
+                                 vizinhanca nenhuma nao le como parte do card.
+                                 `start` sem `hexpand` o ancora logo depois dos
+                                 valores. -->
+                            <property name="halign">start</property>
                             <property name="valign">center</property>
-                            <property name="hexpand">True</property>
                             <property name="sensitive">False</property>
                           </object>
+                          <!-- SOM-ROTA-NO-CARD-01: este é o berço, não a
+                               casa. A `status_actions._alojar_botao_da_rota`
+                               muda o botão para o bloco "Alto-falante" do card
+                               primário assim que os cards existem. Ele nasce
+                               aqui porque o Glade é onde o rótulo, a dica e o
+                               `sensitive=False` inicial estão escritos — e
+                               atravessa a coluna 4, fora das duas colunas de
+                               par rótulo/valor, ocupando as DUAS linhas do
+                               grid para não criar uma terceira. -->
                           <packing>
-                            <property name="left-attach">2</property>
+                            <property name="left-attach">4</property>
                             <property name="top-attach">0</property>
-                            <property name="height">5</property>
+                            <property name="height">2</property>
                           </packing>
+                        </child>
+                      </object>
+                          <packing><property name="expand">False</property></packing>
+                        </child>
+                        <child>
+                          <!-- STATUS-02: id p/ a mixin esconder a linha junto
+                               com a barra quando há 2+ controles (cada card
+                               tem a própria bateria). -->
+                          <!-- ESTADO-TRES-LINHAS-01: a linha da bateria tem
+                               geometria PRÓPRIA — uma célula só, abrangendo as
+                               quatro colunas, com uma caixa horizontal dentro.
+
+                               Por que não usar as colunas do grid como as duas
+                               linhas de cima: para a barra chegar na borda,
+                               alguma coluna abrangida por ela teria de
+                               expandir, e num GtkGrid o `hexpand` de um filho
+                               expande a COLUNA INTEIRA — a de "Transporte:" e
+                               "Hefesto:" junto, afastando cada rótulo do valor
+                               que ele nomeia. É o mesmo mecanismo que a
+                               LARGURA-01/E2 já tinha diagnosticado aqui.
+                               Numa caixa própria, o `expand` fica na barra e
+                               não contamina ninguém. -->
+                          <object class="GtkBox" id="status_battery_row">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">12</property>
+                            <child>
+                              <object class="GtkLabel" id="status_battery_caption">
+                                <property name="label" translatable="yes">Bateria:</property>
+                                <property name="xalign">1</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                            <child>
+                              <!-- O `show-text` fica DESLIGADO: o
+                                   GtkProgressBar desenha o texto CENTRADO, e
+                                   numa barra que ocupa a largura toda o "75 %"
+                                   ficaria a ~600px de cada borda — exatamente
+                                   o defeito que ela apontou nas barras de
+                                   L2/R2 ("o valor flutuando no meio do
+                                   vazio"). O número vai para o rótulo ao lado,
+                                   colado no fim da barra. -->
+                              <object class="GtkProgressBar" id="status_battery_bar">
+                                <property name="show-text">False</property>
+                                <property name="text">— %</property>
+                                <property name="valign">center</property>
+                                <property name="width-request">300</property>
+                              </object>
+                              <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                            </child>
+                            <child>
+                              <!-- O número da bateria, espelhado do `set_text`
+                                   da barra por `_set_battery_text` — dono
+                                   único, para os dois não derivarem. -->
+                              <object class="GtkLabel" id="status_battery_pct">
+                                <property name="label">— %</property>
+                                <property name="xalign">0</property>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+                          </object>
+                          <packing><property name="expand">False</property></packing>
                         </child>
                       </object>
                     </child>
@@ -652,7 +738,21 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LARGURA-01/E9: a fileira de acao vai para o PE da
+                                 coluna. O frame recebe `expand=True` e o conteudo
+                                 era todo empacotado no topo, deixando ~770px de
+                                 vazio DENTRO da moldura, abaixo dos botoes — o
+                                 defeito que a VAO-01 registrou como nao resolvido
+                                 ("a folga saiu de entre o Modo: e o Aplicar, mas
+                                 foi para BAIXO dos botoes"). -->
+                            <property name="valign">end</property>
+                            <property name="vexpand">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_left_apply">
                                 <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho L2 (o de cima, do lado esquerdo).</property>
@@ -790,7 +890,21 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LARGURA-01/E9: a fileira de acao vai para o PE da
+                                 coluna. O frame recebe `expand=True` e o conteudo
+                                 era todo empacotado no topo, deixando ~770px de
+                                 vazio DENTRO da moldura, abaixo dos botoes — o
+                                 defeito que a VAO-01 registrou como nao resolvido
+                                 ("a folga saiu de entre o Modo: e o Aplicar, mas
+                                 foi para BAIXO dos botoes"). -->
+                            <property name="valign">end</property>
+                            <property name="vexpand">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="trigger_right_apply">
                                 <property name="tooltip-text" translatable="yes">Envia ao controle o modo e os ajustes escolhidos aqui, no gatilho R2 (o de cima, do lado direito).</property>
@@ -929,7 +1043,12 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">8</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="lightbar_apply">
                                 <property name="tooltip-text" translatable="yes">Acende a barra de luz do controle selecionado com a cor e o brilho escolhidos aqui.</property>
@@ -1009,6 +1128,12 @@
 
                         <child>
                           <object class="GtkScale" id="lightbar_brightness_scale">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">400</property>
                             <property name="tooltip-text" translatable="yes">Quanto a barra de luz acende, de apagada até o brilho máximo. Vale na próxima vez que você aplicar a cor.</property>
                             <property name="draw-value">True</property>
                             <property name="digits">0</property>
@@ -1047,6 +1172,13 @@
                             <property name="label" translatable="yes">Escolha o desenho das luzes. Isto muda só a aparência — o número do controle continua sendo o do cabeçalho.</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha (ver os outros
+                                 quatro paragrafos com a mesma nota). So age junto com o `wrap`. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
                         </child>
@@ -1127,7 +1259,12 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">6</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
                             <child>
                               <object class="GtkButton" id="player_leds_preset_p1">
                                 <property name="label" translatable="yes">Desenho do P1</property>
@@ -1250,6 +1387,15 @@
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                                 este paragrafo estica ate a largura da aba (medido: 1869px na
+                                 Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                                 junto com o `wrap` acima. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                             <property name="margin-top">8</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1261,6 +1407,15 @@
                             <property name="use-markup">True</property>
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
+                            <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                                 este paragrafo estica ate a largura da aba (medido: 1869px na
+                                 Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                                 junto com o `wrap` acima. -->
+                            <property name="max-width-chars">100</property>
+                            <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                                 acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                                 esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                            <property name="halign">start</property>
                             <property name="margin-top">4</property>
                           </object>
                           <packing><property name="expand">False</property></packing>
@@ -1298,7 +1453,12 @@
                           <object class="GtkBox">
                             <property name="orientation">horizontal</property>
                             <property name="spacing">6</property>
-                            <property name="homogeneous">True</property>
+                            <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                                 da a TODO botao a largura do maior rotulo da fileira — era assim
+                                 que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                                 regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                                 nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                                 :1509, que foram curadas antes e servem de referencia. -->
 
                             <child>
                               <object class="GtkToggleButton" id="rumble_policy_economia">
@@ -1664,7 +1824,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       <object class="GtkBox" id="profiles_btnbox">
                         <property name="orientation">horizontal</property>
                         <property name="spacing">4</property>
-                        <property name="homogeneous">True</property>
+                        <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                             da a TODO botao a largura do maior rotulo da fileira — era assim
+                             que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                             regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                             nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                             :1509, que foram curadas antes e servem de referencia. -->
                         <child>
                           <object class="GtkButton" id="profile_new_button">
                             <property name="tooltip-text" translatable="yes">Cria um perfil em branco. Um perfil guarda os gatilhos, a cor e a vibração de um jogo.</property>
@@ -1779,6 +1944,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkEntry" id="profile_name_entry">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">420</property>
                             <property name="tooltip-text" translatable="yes">Nome do perfil, o que aparece na lista ao lado. Escolha um que lembre o jogo.</property>
                             <property name="hexpand">True</property>
                           </object>
@@ -1796,6 +1967,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                                H6 (UI-PROFILES-LAYOUT-POLISH-01): marks 0/50/100 no
                                bottom dão referência visual dos extremos. -->
                           <object class="GtkScale" id="profile_priority_scale">
+                            <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                                 largura inteira da coluna (medido: 766px para 38px de natural) e o
+                                 valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                                 `width-request` sozinho nao segura, e `halign=center` trava. -->
+                            <property name="halign">start</property>
+                            <property name="width-request">400</property>
                             <property name="adjustment">profile_priority_adj</property>
                             <property name="draw-value">True</property>
                             <property name="digits">0</property>
@@ -2061,7 +2238,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <object class="GtkBox" id="daemon_btns">
                     <property name="orientation">horizontal</property>
                     <property name="spacing">4</property>
-                    <property name="homogeneous">True</property>
+                    <!-- LEGIBILIDADE-01/R1 + VAO-01/E3: sem `homogeneous`. A propriedade
+                         da a TODO botao a largura do maior rotulo da fileira — era assim
+                         que "Auto" (4 letras) recebia os mesmos 459px de uma frase. A
+                         regra ja valia desde 25/07 e sobrevivia em sete fileiras; caiu
+                         nas sete em 01/08. Precedente literal: as fileiras de :971 e
+                         :1509, que foram curadas antes e servem de referencia. -->
                     <child>
                       <object class="GtkButton" id="daemon_start_button">
                         <property name="tooltip-text" translatable="yes">Liga o Hefesto: luzes, gatilhos e os seus ajustes voltam a valer.</property>
@@ -2257,7 +2439,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <object class="GtkButton" id="btn_storm_copy_launch">
-                            <property name="label" translatable="yes">Copiar opções p/ jogos</property>
+                            <property name="label" translatable="yes">Copiar opções para os jogos</property>
                             <property name="tooltip-text" translatable="yes">Copia a Opção de Inicialização da Steam (sempre a mesma linha): o launcher do Hefesto decide na hora do jogo se esconde o controle físico — se o Hefesto estiver desligado, o jogo abre normal. Cole em: jogo → Propriedades → Opções de inicialização.</property>
                             <signal name="clicked" handler="on_storm_copy_launch"/>
                           </object>
@@ -2563,10 +2745,14 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
 
                          Volta quando (e se) existir arquivo de configuração de
                          verdade — proposto no bloco C da
-                         PROMESSA-NÃO-CUMPRIDA-01. O handler
-                         `on_emulation_open_toml` fica sem quem o chame no
-                         glade; quem cuida do Python nesta leva decide se o
-                         código sai junto. -->
+                         PROMESSA-NÃO-CUMPRIDA-01.
+
+                         Fechado em 01/08 (entregas 5 e 6): o handler
+                         `on_emulation_open_toml` saiu do Python junto — o
+                         método em `app/actions/emulation_actions.py` e o nome
+                         no mapa de sinais de `app/app.py`. Enquanto o código
+                         existisse, reconectar o nome aqui fazia o arquivo
+                         fantasma voltar a nascer no disco dela. -->
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -2579,7 +2765,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="margin-top">8</property>
                     <child>
                       <object class="GtkLabel">
-                        <property name="label" translatable="yes">Gamepad p/ jogos:</property>
+                        <property name="label" translatable="yes">Gamepad para os jogos:</property>
                       </object>
                     </child>
                     <child>
@@ -2620,7 +2806,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_dualsense_button">
                         <property name="label" translatable="yes">DualSense (PS)</property>
-                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
+                        <property name="tooltip-text" translatable="yes">O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) o controle também não aparece duplicado — layout PS sem o controle dobrado. Atenção: jogos que só entendem controle de Xbox ignoram esta máscara — neles use "Xbox 360".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_dualsense"/>
                       </object>
                     </child>
@@ -2638,6 +2824,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                   <object class="GtkLabel" id="emulation_gamepad_hint_label">
                     <property name="label" translatable="yes">Qual máscara para qual jogo? Jogos com suporte a DualSense (ex.: Sackboy, Pragmata, Mad King Redemption, Mullet Mad Jack) funcionam completos com "DualSense (PS)": vibração, giroscópio e lightbar. Jogos que só entendem controle de Xbox ignoram a máscara DualSense — neles escolha "Xbox 360" (vibração funciona; giroscópio não existe nessa API). Sinal típico de jogo Xbox-only: o controle navega na Steam, mas fica morto dentro do jogo. Quando o suporte a DualSense do jogo vem PELA Steam (é o caso do Mullet Mad Jack), o jogo precisa enxergar o controle físico: use a exceção por jogo em "Steam Input" na aba Emulação. Guia completo: docs/usage/jogos-e-mascaras.md</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                         este paragrafo estica ate a largura da aba (medido: 1869px na
+                         Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                         junto com o `wrap` acima. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                     <property name="xalign">0</property>
                     <property name="margin-start">10</property>
                     <property name="margin-end">10</property>
@@ -2816,6 +3011,15 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha. Sem ele,
+                         este paragrafo estica ate a largura da aba (medido: 1869px na
+                         Emulacao, ~230 caracteres) e vira parede de texto. So funciona
+                         junto com o `wrap` acima. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                     <property name="margin-start">10</property>
                     <property name="margin-end">10</property>
                   </object>
@@ -2942,6 +3146,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_speed_scale">
+                        <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                             largura inteira da coluna (medido: 766px para 38px de natural) e o
+                             valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                             `width-request` sozinho nao segura, e `halign=center` trava. -->
+                        <property name="halign">start</property>
+                        <property name="width-request">400</property>
                         <property name="tooltip-text" translatable="yes">Quão rápido o cursor anda quando você empurra o analógico esquerdo.</property>
                         <property name="adjustment">mouse_speed_adj</property>
                         <property name="digits">0</property>
@@ -2961,6 +3171,12 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     </child>
                     <child>
                       <object class="GtkScale" id="mouse_scroll_speed_scale">
+                        <!-- LARGURA-01/E1: teto de largura. Sem ele este controle recebia a
+                             largura inteira da coluna (medido: 766px para 38px de natural) e o
+                             valor ficava a meia tela do manipulo. `halign=start` vai JUNTO:
+                             `width-request` sozinho nao segura, e `halign=center` trava. -->
+                        <property name="halign">start</property>
+                        <property name="width-request">400</property>
                         <property name="tooltip-text" translatable="yes">Quão rápido a página rola quando você empurra o analógico direito.</property>
                         <property name="adjustment">mouse_scroll_speed_adj</property>
                         <property name="digits">0</property>
@@ -3111,6 +3327,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="use-markup">True</property>
                     <property name="xalign">0</property>
                     <property name="wrap">True</property>
+                    <!-- LARGURA-01/E3: teto de ~100 caracteres por linha (ver os outros
+                         quatro paragrafos com a mesma nota). So age junto com o `wrap`. -->
+                    <property name="max-width-chars">100</property>
+                    <!-- LARGURA-01/E3: `halign=start` vai JUNTO com o `max-width-chars`
+                         acima. Sozinho, o teto so limita a largura NATURAL e o pai segue
+                         esticando o rotulo — medido, sem efeito nenhum na tela. -->
+                    <property name="halign">start</property>
                   </object>
                   <packing><property name="expand">False</property></packing>
                 </child>
@@ -3202,6 +3425,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <property name="can-focus">True</property>
                     <property name="shadow-type">in</property>
                     <property name="min-content-height">160</property>
+                    <!-- VÃO-01: o teto que faltava. A lista tem faixa (160 a
+                         320px) em vez de crescer com a janela. Sem ele, a
+                         `max-content-height` ausente somada ao `expand=True`
+                         abaixo esticava a lista por 827px para seis linhas de
+                         atalho. -->
+                    <property name="max-content-height">320</property>
+                    <property name="propagate-natural-height">True</property>
                     <child>
                       <object class="GtkTreeView" id="key_bindings_treeview">
                         <property name="visible">True</property>
@@ -3211,7 +3441,13 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                       </object>
                     </child>
                   </object>
-                  <packing><property name="expand">True</property><property name="fill">True</property></packing>
+                  <!-- VÃO-01: `expand=False`. Este era o ÚLTIMO `expand`
+                       vertical do notebook — a tabela da sprint cobria quatro
+                       listas e esta escapou. Com ele, os botões Adicionar e
+                       Remover ficavam largados no pé da janela, a 800px da
+                       lista que comandam. Mesma cura já provada na lista de
+                       perfis. -->
+                  <packing><property name="expand">False</property><property name="fill">True</property></packing>
                 </child>
                 <child>
                   <object class="GtkBox" id="key_bindings_button_row">

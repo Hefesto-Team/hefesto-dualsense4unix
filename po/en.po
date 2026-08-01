@@ -948,7 +948,7 @@ msgid ""
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1693
-msgid "Copiar opções p/ jogos"
+msgid "Copiar opções para os jogos"
 msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1694
@@ -1059,7 +1059,7 @@ msgstr ""
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1911
 #, fuzzy
-msgid "Gamepad p/ jogos:"
+msgid "Gamepad para os jogos:"
 msgstr "Gamepads:"
 
 #: src/hefesto_dualsense4unix/gui/main.glade:1916
@@ -1088,7 +1088,7 @@ msgstr ""
 #: src/hefesto_dualsense4unix/gui/main.glade:1930
 msgid ""
 "O jogo mostra os botões de PlayStation (X, círculo, quadrado, triângulo) e a "
-"vibração funciona. Com o botão 'Copiar opções p/ jogos' (aba Sistema) o "
+"vibração funciona. Com o botão 'Copiar opções para os jogos' (aba Sistema) o "
 "controle também não aparece duplicado — layout PS sem o controle dobrado. "
 "Atenção: jogos que só entendem controle de Xbox (ex.: Mullet Mad Jack) "
 "ignoram esta máscara — neles use \"Xbox 360\"."

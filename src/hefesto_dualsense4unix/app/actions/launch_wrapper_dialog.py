@@ -436,7 +436,7 @@ class LaunchWrapperDialogMixin(WidgetAccessMixin):
     def _copy_wrapper_launch_to_clipboard() -> bool:
         """Copia a string constante do wrapper para o clipboard.
 
-        Mesmo caminho do botão "Copiar opções p/ jogos" da aba Sistema
+        Mesmo caminho do botão "Copiar opções para os jogos" da aba Sistema
         (``DaemonActionsMixin.on_storm_copy_launch``). True se o clipboard
         aceitou; falha silenciosa devolve False (o texto do diálogo continua
         selecionável).

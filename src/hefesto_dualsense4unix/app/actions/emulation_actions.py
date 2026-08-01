@@ -28,10 +28,7 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
 from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
-from hefesto_dualsense4unix.integrations.hotkey_daemon import (
-    DEFAULT_BUFFER_MS,
-    DEFAULT_PS_LONG_PRESS_MS,
-)
+from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DEVICE_NAME,
     DUALSENSE_EDGE_NAME,
@@ -40,7 +37,6 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     XBOX360_VENDOR,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
 logger = get_logger(__name__)
 
@@ -621,36 +617,26 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         self._refresh_emulation_view()
 
-    def on_emulation_open_toml(self, _btn: Gtk.Button) -> None:
-        # BUG-DAEMON-TOML-DEAD-01: o daemon NÃO lê daemon.toml (config vem de
-        # variáveis de ambiente + IPC daemon.reload). O arquivo é só referência;
-        # deixamos isso explícito no cabeçalho.
-        # Nota (25/07): a ressalva antiga sobre `next_profile`/`prev_profile`
-        # estarem `disabled_until_wired` ficou obsoleta — os combos PS+D-pad
-        # foram ligados em subsystems/hotkey.py (FEAT-HOTKEY-PROFILE-CYCLE-01).
-        # Eles seguem fora deste arquivo por serem fixos no daemon, não por
-        # estarem desligados.
-        path = config_dir(ensure=True) / "daemon.toml"
-        if not path.exists():
-            path.write_text(
-                "# REFERÊNCIA — o daemon NÃO lê este arquivo.\n"
-                "# Configuração efetiva: variáveis de ambiente + IPC daemon.reload.\n"
-                "[hotkey]\n"
-                f'buffer_ms = {DEFAULT_BUFFER_MS}\n'
-                f'ps_long_press_ms = {DEFAULT_PS_LONG_PRESS_MS}  # 0 = desliga o modo jogo\n'
-                "passthrough_in_emulation = false\n",
-                encoding="utf-8",
-            )
-        try:
-            subprocess.Popen(
-                ["xdg-open", str(path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except FileNotFoundError:
-            self._toast_emulation("Não consegui abrir o arquivo de referência.")
-            return
-        self._toast_emulation("Abri o arquivo de referência no seu editor.")
+    # BOTÃO-QUE-NÃO-MENTE-01 (entregas 5 e 6): o `on_emulation_open_toml` SAIU.
+    #
+    # A entrega 3 tirou do glade o botão "Ver daemon.toml (referência)" e
+    # deixou a decisão sobre o Python escrita ali (`gui/main.glade:2564-2569`):
+    # *"quem cuida do Python nesta leva decide se o código sai junto"*. Ele
+    # ficou — handler vivo, registrado em `app/app.py`, sem nada que o
+    # chamasse. Isto é o que sai agora.
+    #
+    # Por que remover em vez de deixar dormindo: o método CRIAVA
+    # `~/.config/hefesto-dualsense4unix/daemon.toml` no disco dela, um arquivo
+    # com cara de configuração que o daemon não lê
+    # (`BUG-DAEMON-TOML-DEAD-01` — a configuração efetiva vem de variáveis de
+    # ambiente e do canal `daemon.reload`). Enquanto o código existisse, bastava
+    # alguém reconectar o nome no glade para o arquivo fantasma voltar a
+    # nascer: armadilha carregada, que é o mesmo padrão que a CÓDIGO-MORTO-01
+    # descreveu no `xlib_window`.
+    #
+    # Volta quando (e se) existir arquivo de configuração de verdade — proposto
+    # no bloco C da PROMESSA-NÃO-CUMPRIDA-01. Aí o botão e o handler nascem
+    # juntos, apontando para um arquivo que o daemon lê de fato.
 
     # --- helpers ---
 
