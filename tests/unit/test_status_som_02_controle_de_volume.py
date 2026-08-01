@@ -857,64 +857,78 @@ def test_a_aba_status_com_dois_cards_continua_cabendo_na_janela(
     )
 
 
-@pytest.mark.parametrize("compact", [False, True])
-def test_o_card_continua_cabendo_na_faixa_da_aba_status(
-    compact: bool, _tema_na_escala_que_sai: None
+def test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa(
+    _tema_na_escala_que_sai: None,
 ) -> None:
-    """O orçamento de ALTURA, que é onde esta leva realmente gastou.
+    """O orçamento de ALTURA desta leva, medido em PROPORÇÃO e não em pixels.
 
-    REAFERIDO nesta bancada DEPOIS da SOM-03, com o card mais alto que a aba
-    consegue montar (todos os sensores acesos MAIS a linha de movimento): a
-    faixa mede 467px com a janela no tamanho de projeto; o card de um controle
-    pede **456px (11px de folga)** e o compacto **449px (18px)**. Histórico do
-    mesmo banco: 421/372 antes da SOM-02, 442/449 depois dela.
+    Este teste substitui uma asserção de pixels absolutos (``card <= faixa``)
+    que este arquivo duplicava de `test_layout_orcamento_altura.py`. A
+    duplicata foi REPROVADA pelo runner por um motivo que vale escrever: as
+    duas bancadas mediram a MESMA faixa como **431px lá e 383px aqui, no mesmo
+    processo** — 48px de diferença. Um orçamento absoluto cujo denominador
+    muda 48px entre dois arquivos do mesmo job não afere desenho, afere
+    ambiente. O dono único do teto absoluto passa a ser
+    `test_layout_orcamento_altura.py`, que é o arquivo com esse nome; aqui fica
+    o que é da SOM-02/03 e o que sobrevive a qualquer fonte.
 
-    **Os 14px que a SOM-03 gastou são o preço da linha própria do controle
-    deslizante**, e só o card de um controle pagou: lá o rótulo de valor subiu
-    para a linha dos botões (devolvendo os 20px da linha dele e os 2px do
-    respiro) para o controle poder descer para uma linha só sua, e sobra a
-    diferença entre o que o controle pede (34px) e o que o rótulo pedia (20px).
-    O compacto já tinha a linha própria desde a SOM-02 e não mexeu na altura.
+    **A grandeza estável.** A faixa de leitura tem três colunas (sensores,
+    miolo com analógicos e som, grade de glifos) e a altura do card é a da
+    MAIS ALTA. Enquanto a coluna do som não for a mais alta, cada pixel que o
+    comando do alto-falante ganha custa ZERO ao card — quem manda é outra
+    coluna. Isso é uma razão entre dois números que crescem JUNTOS com a
+    fonte, e por isso não depende de qual fonte o ambiente tem.
 
-    **A folga do card de um controle, 11px, passou a ser a mais fina da aba** —
-    era a do compacto (18px). É ela que decide se cabe mais alguma coisa aqui.
+    Medido nas duas pontas de fonte, sob Xvfb (`-screen 0 1280x1024x24`), card
+    de um controle:
 
-    A coluna do som é a mais alta da faixa nos dois cards (267px contra os 246
-    do grid de botões no card de um controle), o que significa que **todo pixel
-    que o bloco de áudio ganhar cresce o card** — o número não é enfeite.
+    ==========  ============  ==============  ==========
+    escala      coluna som    maior vizinha   card/faixa
+    ==========  ============  ==============  ==========
+    0 (Sans 10)    234px         246px         409/445
+    3 (12.25)      246px         246px         421/412
+    8 (Sans 16)    272px         272px         465/459
+    ==========  ============  ==============  ==========
 
-    A mordida: devolver ao rótulo de valor a linha só dele no card de um
-    controle (o desenho "óbvio", em quatro linhas: barra / valor / controle /
-    botões) leva o pedido a 477px contra os 467 da faixa e joga os botões
-    abaixo da dobra da janela de projeto. Conferido em 01/08: 477 contra 467,
-    10px a mais. **O estado tem de ser o mais alto** (`_ESTADO_ALTO`): com o
-    card curto sobram 20px e esta mordida passa despercebida — foi o que
-    aconteceu na primeira rodada deste arquivo.
+    ANTES desta rodada, na escala 3: coluna do som **280px** contra 246 — 34px
+    a mais, e os 34px iam direto para o card (455px, contra os 421 que ele
+    pedia antes da leva do som).
+
+    **Só o card de UM controle.** No compacto não existe grade de glifos por
+    baixo para servir de piso — a coluna do som é a mais alta por construção,
+    e cobrar dela uma vizinha maior seria cobrar o impossível. O que guarda o
+    compacto é o teste de LINHAS logo abaixo, que é a mesma regra dita de um
+    jeito que não depende de fonte nenhuma.
+
+    A mordida: devolver o medidor do microfone aos 56px de altura
+    (`_MIC_METER_PX_UNICO`) ou a barra fina do alto-falante aos 18
+    (`_BARRA_SPEAKER_PX_UNICO`) põe a coluna do som acima da vizinha e o card
+    volta a crescer — conferido em 01/08, 280 contra 246.
     """
-    builder, root = _aba_status_montada()
-    slot = builder.get_object("status_players_slot")
-    card = ControllerCard(compact=compact)
-    card.set_hexpand(True)
-    card.set_valign(Gtk.Align.START)
-    slot.attach(card, 0, 0, 1, 1)
-    janela = root.get_toplevel()
-    janela.set_size_request(LARGURA_DE_PROJETO, ALTURA_DE_PROJETO)
-    janela.show_all()
-    janela.resize(LARGURA_DE_PROJETO, ALTURA_DE_PROJETO)
-    card.update(
-        _entry_com({"volume": 180, "muted": False}), _ESTADO_ALTO, _LeituraMic()
+    card = _aba_com_um_card(
+        LARGURA_DE_PROJETO, speaker={"volume": 180, "muted": False}
     )
-    while Gtk.events_pending():
-        Gtk.main_iteration()
 
-    faixa = builder.get_object("status_players_scroll").get_allocated_height()
-    largura = LARGURA_DE_PROJETO // 2 if compact else LARGURA_DE_PROJETO
-    pedido = card.get_preferred_height_for_width(largura)[0]
+    faixa = card._linha_inferior
+    colunas = faixa.get_children()
+    assert len(colunas) >= 2, "a faixa de leitura perdeu as colunas"
+    coluna_som = card._coluna_audio
+    alturas = {
+        id(c): c.get_preferred_height()[0] for c in colunas
+    }
+    som = coluna_som.get_preferred_height()[0]
+    vizinhas = [h for k, h in alturas.items() if k != id(coluna_som.get_parent())]
+    # A coluna do som mora DENTRO do miolo (junto dos analógicos); a vizinha a
+    # bater é a mais alta das outras colunas da faixa.
+    maior_vizinha = max(vizinhas) if vizinhas else 0
 
-    assert pedido <= faixa, (
-        f"o card {'compacto' if compact else 'de um controle'} pede "
-        f"{pedido}px e a aba Status só tem {faixa}px ({pedido - faixa}px a "
-        "mais): o comando do alto-falante empurrou os botões abaixo da dobra"
+    assert som > 1 and maior_vizinha > 1, (
+        "faixa sem alocação: a medida seria 1x1 e passaria com qualquer desenho"
+    )
+    assert som <= maior_vizinha, (
+        f"a coluna do som pede {som}px e a maior coluna vizinha da faixa "
+        f"{maior_vizinha}px: a partir daqui cada pixel do bloco de áudio "
+        f"cresce o card inteiro ({som - maior_vizinha}px já cresceram)"
     )
 
 
@@ -964,6 +978,15 @@ def _aba_com_um_card(
     card.update(_entry_com(speaker), _ESTADO_ALTO, _LeituraMic())
     while Gtk.events_pending():
         Gtk.main_iteration()
+    # GUARDA DE BANCADA, e não zelo: no runner de 01/08 este card saiu
+    # **1x1** e o controle deslizante devolveu `range_rect.width == -1` —
+    # medido nesta bancada, é exatamente o que um `Gtk.Scale` não alocado
+    # devolve. A asserção de trilho então reprovava com "-1px de trilho", que
+    # descreve a bancada e não o desenho. Aqui a bancada falha com o nome dela.
+    assert card.get_allocated_width() > 1, (
+        "o card saiu SEM alocação (1x1): a medida que vem a seguir não é do "
+        "desenho, é da bancada — nenhum orçamento pode ser lido daqui"
+    )
     return card
 
 
@@ -1010,7 +1033,12 @@ def test_o_controle_deslizante_tem_um_pixel_de_trilho_por_ponto_percentual(
     o card curto.
     """
     card = _aba_com_um_card(largura, speaker={"volume": 180, "muted": False})
-    trilho = card._speaker_escala.get_range_rect().width
+    escala = card._speaker_escala
+    assert escala.get_allocated_width() > 1, (
+        "o controle deslizante saiu sem alocação: `get_range_rect()` devolve "
+        "-1 nesse estado, e -1 é defeito de bancada, não de desenho"
+    )
+    trilho = escala.get_range_rect().width
 
     assert trilho >= PISO_DO_TRILHO_PX, (
         f"em {apelido} ({largura}px) o controle deslizante do alto-falante tem "
@@ -1195,3 +1223,83 @@ def test_a_barra_que_le_e_o_controle_que_manda_nunca_se_contradizem() -> None:
         assert fracao_do_volume(bruto) * 100 == pytest.approx(
             percentual_do_volume(bruto), abs=0.5
         )
+
+
+
+def _linhas_do_bloco_do_som(card: Any) -> list[Any]:
+    """As linhas VISÍVEIS do miolo do bloco, sem o rótulo do próprio bloco.
+
+    No card de um controle o bloco é um `Gtk.Frame` (o título é o rótulo da
+    moldura, fora do miolo); no compacto é uma caixa cujo primeiro filho é o
+    título. Esta função devolve as duas coisas na mesma moeda.
+    """
+    caixa = card._speaker_box
+    filhos = caixa.get_children()
+    filhos = filhos[0].get_children() if not card._compact else filhos[1:]
+    return [f for f in filhos if f.get_visible()]
+
+
+@pytest.mark.parametrize("compact", [False, True])
+def test_o_bloco_do_som_nao_gasta_linha_com_o_que_pode_dividir(
+    compact: bool, _tema_na_escala_que_sai: None
+) -> None:
+    """A mesma regra de altura, dita sem um único pixel — e por isso estável.
+
+    A coluna do som é a mais alta do card compacto, e ali toda linha do bloco
+    é uma linha do CARD. O bloco tem três assuntos e portanto tem direito a
+    três linhas:
+
+    1. a LEITURA — a barra mais o número que ela desenha;
+    2. o COMANDO — o controle deslizante, sozinho na linha dele (é isso que
+       lhe dá trilho: `GtkBox` vertical entrega a largura inteira ao filho
+       único da linha);
+    3. as AÇÕES — silenciar e devolver.
+
+    Uma QUARTA linha é sempre o mesmo defeito: um rótulo de 19px ocupando
+    sozinho uma linha inteira que ele podia dividir. Era o que o card compacto
+    fazia — barra / controle / número / botões — e custava 21px de card em
+    todas as fontes.
+
+    Por que contar linhas e não pixels: o número de linhas não muda com a
+    fonte, com o tema, com o Xvfb nem com o runner. Foi um orçamento em pixels
+    absolutos que reprovou no CI medindo a mesma faixa como 431px num arquivo
+    e 383px noutro, no mesmo processo.
+
+    A mordida: devolver o rótulo de valor à linha só dele no card compacto
+    (``miolo.pack_start(valor, ...)`` entre o controle e os botões) faz o miolo
+    ir a quatro linhas e derruba o caso compacto — conferido em 01/08, com o
+    card compacto caindo de 434 para 448px de altura pedida.
+    """
+    card = ControllerCard(compact=compact)
+    janela = Gtk.OffscreenWindow()
+    janela.add(card)
+    janela.set_size_request(600 if compact else LARGURA_DA_TELA_DELA, 900)
+    janela.show_all()
+    _janelas_vivas.append(janela)
+    card.update(
+        _entry_com({"volume": 180, "muted": False}), _ESTADO, _LeituraMic()
+    )
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
+    linhas = _linhas_do_bloco_do_som(card)
+
+    assert len(linhas) <= 3, (
+        f"o bloco do alto-falante do card "
+        f"{'compacto' if compact else 'de um controle'} gasta "
+        f"{len(linhas)} linhas para três assuntos (leitura, comando, ações): "
+        "a linha a mais é altura de card em toda fonte"
+    )
+    # E as três continuam sendo as três: o controle deslizante SOZINHO na dele,
+    # que é o que lhe dá trilho.
+    linha_do_controle = card._speaker_escala.get_parent()
+    assert linha_do_controle is not None
+    irmaos = [
+        f for f in linha_do_controle.get_children() if f.get_visible()
+    ]
+    assert card._speaker_escala in irmaos
+    assert linha_do_controle.get_orientation() == Gtk.Orientation.VERTICAL, (
+        "o controle deslizante voltou a dividir a linha com alguém: numa caixa "
+        "horizontal ele recebe o natural dele (34px) e o resto vai para os "
+        "vizinhos, que era o defeito dos 30px"
+    )
