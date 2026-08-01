@@ -359,9 +359,24 @@ LARGURA_GYRO_COMPACTO: Final[int] = 220
 #: baixo da aba era vazia.
 #: SOM-01: cresceram de novo, e pelo mesmo motivo do teto elástico — a largura
 #: que a janela larga devolve tem de virar desenho, não vão.
+#:
+#: SOM-03, segunda rodada: a ALTURA parou de sobrar. O comando do alto-falante
+#: (controle deslizante numa linha própria mais os dois botões) custa ~74px de
+#: bloco, e a coluna do som passou a ser a MAIS ALTA da faixa — quando ela
+#: passa da grade de glifos, cada pixel dela vira pixel de card. A altura
+#: destes dois desenhos foi o que pagou, e o critério está medido em
+#: `test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa`: o medidor do microfone
+#: caiu de 56 para 28px e a barra fina do alto-falante de 18 para 12 (a mesma
+#: espessura que o card compacto sempre usou). A LARGURA dos dois não mudou —
+#: é ela que a CARD-OCUPA-01 mediu, e é ela que continua sendo cobrada.
 _TOUCHPAD_PX_UNICO: Final[tuple[int, int]] = (180, 80)
-_MIC_METER_PX_UNICO: Final[tuple[int, int]] = (180, 56)
+_MIC_METER_PX_UNICO: Final[tuple[int, int]] = (180, 28)
 _BARRA_FINA_PX_UNICO: Final[tuple[int, int]] = (160, 18)
+#: A barra fina do ALTO-FALANTE no card de um controle. Separada da lightbar
+#: (`_BARRA_FINA_PX_UNICO`) porque só ela vive na coluna que estoura: 12px é a
+#: espessura que `_SPEAKER_PX` já declara e que o card compacto sempre
+#: desenhou, então não é um tamanho novo — é o mesmo, aplicado onde custa.
+_BARRA_SPEAKER_PX_UNICO: Final[tuple[int, int]] = (160, 12)
 
 #: Largura NATURAL do touchpad e do medidor do microfone no card de UM
 #: controle, em px. Os números acima continuam sendo o MÍNIMO — este é o teto
@@ -1792,7 +1807,7 @@ if _GTK_DISPONIVEL:
             barra = SpeakerBar()
             barra.set_valign(Gtk.Align.CENTER)
             if not self._compact:
-                barra.set_size_request(*_BARRA_FINA_PX_UNICO)
+                barra.set_size_request(*_BARRA_SPEAKER_PX_UNICO)
             # A ORDEM de empacotar está toda junta lá embaixo, depois que as
             # peças existem: ela é o assunto desta leva e muda entre os dois
             # cards, e espalhá-la pela função foi o que escondeu, na SOM-02,
@@ -1898,10 +1913,33 @@ if _GTK_DISPONIVEL:
             #   1180px com que a janela abre. A altura dele fica onde estava
             #   (449px dos 467), e o que muda é só a ORDEM — o controle passa
             #   a nascer colado na barra que ele comanda, como no card único.
-            miolo.pack_start(barra, False, False, 0)
             if self._compact:
+                # SOM-03, segunda rodada: o número sobe para a linha da BARRA
+                # em vez de gastar uma linha só dele. Aqui a altura é o recurso
+                # escasso (a coluna do som é a mais alta do card compacto e não
+                # há grade de glifos por baixo para lhe servir de piso), e a
+                # largura não tem de onde vir — 32px de folga na aba inteira,
+                # somados nos dois cards.
+                #
+                # Esta é a ÚNICA fusão que sai de graça nos dois orçamentos, e
+                # os números são medidos: o rótulo entra elipsável, então o
+                # mínimo dele cai de 94 para ~20px e a linha inteira pede
+                # 60 (barra) + 20 + 4 = 84px — ABAIXO dos 94 que o bloco já
+                # custava. O bloco fica 21px mais baixo E 6px mais estreito.
+                # Fundir com a linha dos BOTÕES, que era o reflexo, pediria
+                # 112px e subiria a aba de 1148 para 1184 contra os 1180.
+                #
+                # O `get_text()` continua devolvendo o texto inteiro — elipse é
+                # desenho, não conteúdo — e no card de UM controle o rótulo
+                # segue sem elipse nenhuma, com a linha dos botões só para ele.
+                valor.set_ellipsize(Pango.EllipsizeMode.END)
+                linha_leitura = Gtk.Box(
+                    orientation=Gtk.Orientation.HORIZONTAL, spacing=4
+                )
+                linha_leitura.pack_start(barra, True, True, 0)
+                linha_leitura.pack_start(valor, False, False, 0)
+                miolo.pack_start(linha_leitura, False, False, 0)
                 miolo.pack_start(escala, False, False, 0)
-                miolo.pack_start(valor, False, False, 0)
                 # LIMITAÇÃO DECLARADA, com o preço medido: com dois cards na
                 # janela de projeto cada bloco recebe ~113px, e os dois botões
                 # lado a lado ficam com ~55px cada — os rótulos truncam para
@@ -1921,6 +1959,7 @@ if _GTK_DISPONIVEL:
                 linha_botoes.pack_start(botao_devolver, True, True, 0)
                 miolo.pack_start(linha_botoes, False, False, 0)
             else:
+                miolo.pack_start(barra, False, False, 0)
                 miolo.pack_start(escala, False, False, 0)
                 # O número à ESQUERDA e as ações à direita: o rótulo entra com
                 # `expand`/`fill` e empurra os dois botões para a borda da
