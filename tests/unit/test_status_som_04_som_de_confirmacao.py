@@ -484,9 +484,26 @@ def test_o_recado_do_som_nao_gasta_um_pixel_de_largura(pedidos: _Pedidos) -> Non
     Mordida B: pôr `self._speaker_recado_do_som` no texto do selo em vez de
     :data:`TEXTO_SELO_SEM_SOM` — cai a asserção do texto curto.
     Mordida A+B juntas: cai a asserção da largura, com o card em 1223px.
+
+    POR QUE O TETO É DERIVADO, E NÃO UM NÚMERO (corrigido em 01/08/2026, depois
+    de o runner reprovar): a primeira versão comparava com `1040` e `550`, os
+    valores medidos NESTA bancada. No job `gtk-real` a fonte é outra e o card
+    compacto pediu 556 contra os 550 literais — reprovando por 6px enquanto a
+    condição que importa continuava satisfeita, porque dois cards compactos com
+    556 pedem 1136 e a janela abre com 1180.
+
+    Um teto literal em pixels não sobrevive a uma troca de fonte, e esta casa já
+    mediu que a largura disponível nem sequer é monótona na escala da fonte. O
+    teto passa a ser a pergunta de verdade — "os cards cabem na janela em que a
+    aba vive?" —, derivada de `LARGURA_DE_PROJETO`, que por sua vez sai do
+    glade. A asserção `depois == antes`, que é a entrega real desta página (o
+    recado não gasta um pixel), não depende de fonte nenhuma e continua intacta.
     """
     pedidos.resultado = ResultadoDoSom.de(MOTIVO_SEM_TOCADOR, SINK_CONTROLE)
-    for compact, teto in ((False, 1040), (True, 550)):
+    #: Quantos cards daquele tipo a aba Status põe lado a lado antes de rolar:
+    #: o card largo é um só; os compactos vêm em dupla.
+    for compact, por_linha in ((False, 1), (True, 2)):
+        teto = LARGURA_DE_PROJETO // por_linha
         limpo = _card(compact=compact, speaker=POSSE)
         antes = limpo.get_preferred_width()[0]
 
