@@ -48,6 +48,30 @@ ARMADILHAS QUE ESTE ARQUIVO JÁ PAGOU (não as repita)
    inteira ser fotografada sem o objeto que ela mudava.
 4. **O tema tem de ser aplicado**, senão as cores saem do tema do sistema e a
    foto não é o produto.
+
+PRIVACIDADE — POR QUE ESTA FOTO É SEGURA, E O QUE A TORNARIA INSEGURA
+---------------------------------------------------------------------
+
+O `README.md` avisa que, numa foto antiga da aba Sistema, o bloco "Detalhes
+técnicos" **teve de ser borrado à mão** porque o log mostrava o endereço
+Bluetooth real dos controles — e que **os portões de anonimato não varrem
+imagens**.
+
+Este script não tem esse risco, e não por sorte: ele **nunca fala com o
+daemon**. Monta o `.glade` do zero e alimenta o card com os dublês da suíte,
+cujo MAC é falso por construção (`aa:bb:cc:...`). O painel de log da aba Sistema
+sai vazio porque não há daemon do outro lado.
+
+**O que tornaria inseguro**, e portanto o que NÃO fazer aqui:
+
+* pedir estado ao daemon vivo (`daemon.state_full`) para "deixar a foto mais
+  real" — traria MAC, nome de rede e caminho de arquivo da máquina dela;
+* fotografar a janela de verdade em vez de montar uma offscreen;
+* alimentar o card com um payload copiado de uma sessão real.
+
+Se algum dia isto mudar, **a foto passa a precisar de revisão humana antes de
+ir para o repositório** — e aí o script deixa de poder gravar direto em
+`docs/`.
 """
 from __future__ import annotations
 
