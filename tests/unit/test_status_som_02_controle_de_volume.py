@@ -457,7 +457,7 @@ def test_a_dica_do_controle_diz_o_preco_antes_do_clique() -> None:
     assert dica == DICA_SPEAKER_ESCALA
     assert "fone" in dica, "a dica não diz que o fone vai junto (armadilha 3)"
     assert "não devolve" in dica, "a dica não diz que não existe leitura"
-    assert "Devolver" in dica, "a dica não diz como sair"
+    assert "Soltar" in dica, "a dica não diz como sair"
 
 
 def test_o_volume_vai_sempre_explicito_e_fora_da_thread_do_gtk(

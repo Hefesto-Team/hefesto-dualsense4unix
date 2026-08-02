@@ -438,7 +438,16 @@ _MIC_ESTADO_CHARS: Final[int] = len(TEXTO_MIC_AUSENTE)
 #: isso empurraria a coluna inteira.
 TEXTO_BOTAO_MIC_ATIVAR: Final[str] = "Ativar"
 TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
-TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Devolver"
+#: SOLTAR-01 (01/08, decisão dela). Era "Devolver", e ela perguntou se não
+#: seria melhor "Resetar". A resposta foi NÃO, e o motivo vale ficar escrito:
+#: "Resetar" prometeria que o valor volta ao anterior — e ele NÃO volta. O
+#: DualSense não devolve o volume nem o estado do mute (não há report de
+#: leitura), então o que estiver valendo continua até desconectar. O botão
+#: devolve o CONTROLE, nunca o valor.
+#:
+#: "Soltar" diz isso e é mais curto que "Devolver ao controle", que custaria
+#: ~90px e faria os três rótulos da linha cortarem em 1180px (medido).
+TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Soltar"
 #: SOM-ROTULO-01 (01/08), a mesma cura do botão do alto-falante e pela mesma
 #: razão dela: *"não sei se faz sentido ter o 'sem dado'"*. Não fazia — não é
 #: rótulo de AÇÃO, é a janela escrevendo "não sei" dentro de um botão, no lugar
@@ -454,7 +463,7 @@ TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "Silenciar"
 DICA_MIC_ATIVAR: Final[str] = (
     "O microfone está mudo no firmware do controle (camada 3). Desmutar daqui "
     "faz o hefesto assumir o registrador — e o botão de microfone do controle "
-    "para de valer até você clicar em Devolver."
+    "para de valer até você clicar em Soltar."
 )
 DICA_MIC_SILENCIAR: Final[str] = (
     "O microfone está aberto e quem manda no mudo é o botão físico do "
@@ -462,7 +471,7 @@ DICA_MIC_SILENCIAR: Final[str] = (
 )
 DICA_MIC_DEVOLVER: Final[str] = (
     "Quem manda no mudo agora é o hefesto, e por isso o botão de microfone do "
-    "controle não responde. Devolver a posse faz o botão físico voltar a valer."
+    "controle não responde. Soltar faz o botão físico voltar a valer."
 )
 DICA_MIC_SEM_LEITURA: Final[str] = (
     "O daemon ainda não leu o estado do microfone deste controle. Sem saber "
@@ -493,12 +502,11 @@ TEXTO_BOTAO_SPEAKER_SILENCIAR: Final[str] = "Silenciar"
 #: SOM-ROTULO-01 (01/08, pedido dela: *"arruma os dois botões, não sei se faz
 #: sentido ter o 'sem dado' e o 'Devolver' — ou renomeia eles ou remove"*).
 #:
-#: `Devolver` FICA, e o motivo é medido, não preguiça: esta linha já é a mais
-#: apertada do card (sem posse ela quer 296px num bloco de 243 na janela de
-#: projeto) e agora recebe também o botão da rota. "Devolver ao controle"
-#: custaria ~90px a mais e faria os três rótulos elipsarem em 1180. Quem diz
-#: devolver O QUÊ a QUEM é a dica, que cabe inteira.
-TEXTO_BOTAO_SPEAKER_DEVOLVER: Final[str] = "Devolver"
+#: SOLTAR-01 (01/08, decisão dela) — mesma razão do irmão do microfone, acima.
+#: E o custo continua mandando: esta linha já é a mais apertada do card (sem
+#: posse ela quer 296px num bloco de 243 na janela de projeto) e agora recebe
+#: também o botão da rota. "Soltar" cabe onde "Devolver ao controle" não caberia.
+TEXTO_BOTAO_SPEAKER_DEVOLVER: Final[str] = "Soltar"
 #: E `sem dado` não era rótulo de ação, era ESTADO escrito dentro de um botão —
 #: a janela dizendo "não sei" no lugar onde deveria dizer o que o clique faz.
 #: O botão passa a se chamar sempre pela ação e nasce INSENSÍVEL enquanto não
@@ -521,7 +529,7 @@ _SPEAKER_BOTAO_CHARS: Final[int] = len(TEXTO_BOTAO_SPEAKER_SILENCIAR)
 DICA_SPEAKER_ESCALA: Final[str] = (
     "Mover isto faz o hefesto assumir o volume do alto-falante E do fone do "
     "controle. O DualSense não devolve esse valor: depois disso, quem manda é "
-    "a janela até você clicar em Devolver ou desconectar o controle."
+    "a janela até você clicar em Soltar ou desconectar o controle."
 )
 
 #: As dicas dos botões. A do estado sem dado explica o CAMINHO, e não só a
@@ -539,11 +547,12 @@ DICA_SPEAKER_SEM_DADO: Final[str] = (
     "ainda não há volume conhecido — use o controle deslizante primeiro"
 )
 DICA_SPEAKER_DEVOLVER: Final[str] = (
-    "Devolver faz o hefesto parar de mandar o volume. O que estiver valendo "
-    "continua até você desconectar o controle."
+    "Soltar faz o hefesto parar de mandar o volume, e o botão do controle volta "
+    "a valer. O que estiver valendo continua até você desconectar o controle — "
+    "o DualSense não devolve o volume anterior."
 )
 DICA_SPEAKER_DEVOLVER_SEM_POSSE: Final[str] = (
-    "não há posse para devolver: o volume ainda é do firmware do controle"
+    "não há o que soltar: o volume ainda é do firmware do controle"
 )
 
 #: A linha de explicação no lugar do silêncio (SOM-02/E5), na dica do BLOCO.
@@ -903,7 +912,7 @@ def acao_mic(entry: Any) -> AcaoMic:
     estado                      rótulo              manda
     ==========================  ==================  ==============
     firmware mudo               Ativar              ``False``
-    ativo, posse nossa          Devolver            ``None``
+    ativo, posse nossa          Soltar              ``None``
     ativo, posse do kernel      Silenciar           ``True``
     sem leitura de ``audio``    sem dado            (insensível)
     ==========================  ==================  ==============
