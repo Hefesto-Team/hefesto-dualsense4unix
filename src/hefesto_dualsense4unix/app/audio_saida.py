@@ -177,14 +177,14 @@ RECADOS: Final[dict[str, str]] = {
     MOTIVO_DESLIGADO: "",
     MOTIVO_OCUPADO: "",
     MOTIVO_SEM_SINK: (
-        "sem confirmação: o sistema não publica saída de áudio deste controle"
+        "Sem confirmação: o sistema não publica saída de áudio deste controle"
     ),
     MOTIVO_SAIDA_MUDA: (
-        "sem confirmação: a saída do controle está muda no sistema"
+        "Sem confirmação: a saída do controle está muda no sistema"
     ),
-    MOTIVO_SEM_ARQUIVO: "sem confirmação: nenhum som de sistema instalado",
-    MOTIVO_SEM_TOCADOR: "sem confirmação: falta paplay ou pw-play na máquina",
-    MOTIVO_FALHOU: "sem confirmação: o tocador de som falhou",
+    MOTIVO_SEM_ARQUIVO: "Sem confirmação: nenhum som de sistema instalado",
+    MOTIVO_SEM_TOCADOR: "Sem confirmação: falta paplay ou pw-play na máquina",
+    MOTIVO_FALHOU: "Sem confirmação: o tocador de som falhou",
 }
 
 

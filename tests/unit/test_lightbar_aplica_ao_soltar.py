@@ -346,7 +346,7 @@ def test_daemon_offline_nao_explode_e_conta_a_verdade(
     escala.disparar("button-release-event", escala, None)
 
     assert len(escritas.chamadas) == 1
-    assert any("não consegui aplicar" in t for t in host._toasts)
+    assert any("Não consegui aplicar" in t for t in host._toasts)
 
 
 def test_alvo_selecionado_recebe_sozinho(escritas: _EspiaoDeEscrita) -> None:

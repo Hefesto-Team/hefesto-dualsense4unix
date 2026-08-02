@@ -95,10 +95,19 @@ class _VpadDeBancada(uhid.UhidDualSense):
         self.pump_ff()
 
 
-def _evento_de_output(flag0: int, weak: int, strong: int) -> bytes:
-    """Monta um UHID_OUTPUT real: 4B de tipo + data[4096] + size + rtype."""
+def _evento_de_output(
+    flag0: int, weak: int, strong: int, flag1: int = 0
+) -> bytes:
+    """Monta um UHID_OUTPUT real: 4B de tipo + data[4096] + size + rtype.
+
+    O `flag1` entrou com a cura do furo 6 (BT-E-VPAD-01): o discriminador da
+    parada do SDL exige os DOIS flags zerados, e sem poder montar um report
+    com flag1 ligado não dá para provar que um report de LUZ continua sendo
+    descartado.
+    """
     corpo = bytearray(48)
     corpo[uhid._VALID_FLAG0_OFFSET] = flag0
+    corpo[uhid._VALID_FLAG1_OFFSET] = flag1
     corpo[uhid._RUMBLE_WEAK_OFFSET] = weak
     corpo[uhid._RUMBLE_STRONG_OFFSET] = strong
     report = bytes([uhid._OUTPUT_REPORT_USB]) + bytes(corpo)
@@ -261,3 +270,79 @@ def test_teto_veio_de_medicao_e_nao_de_palpite() -> None:
         "medido em 25/07: com 6 s, sete travamentos perceptíveis em 90 min de "
         "jogo seguravam o motor pelo teto inteiro"
     )
+
+
+# ---------------------------------------------------------------------------
+# BT-E-VPAD-01, furo 6 — a CURA, e não mais só a mitigação
+# ---------------------------------------------------------------------------
+
+
+def test_a_parada_do_sdl_e_honrada_em_vez_de_descartada(bancada) -> None:
+    """A causa-raiz do "tremendo sem parar", encontrada em 01/08/2026.
+
+    O comentário deste módulo dizia, desde 25/07: *"isto é MITIGAÇÃO, não a
+    cura. A cura seria descobrir por que o stop se perde"*. Descobriu-se, e
+    está no `SDL_hidapi_ps5.c`:
+
+        if (ctx->rumble_left || ctx->rumble_right) {
+            effects.ucEnableBits1 |= 0x02;   /* desliga haptics de áudio */
+        } else {
+            /* deixar os bits desligados restaura os haptics de áudio */
+        }
+
+    **Na parada, o SDL emite um report com `valid_flag0 == 0` e os motores
+    zerados** — e o gate de `_VIBRATION_FLAGS` descartava exatamente esse
+    report. O motor girava até alguém desligar o controle.
+
+    Repare no relógio: a parada chega SEM avanço de tempo nenhum. É isso que
+    separa a cura da mitigação — o teto de silêncio precisava de 3 segundos.
+
+    Mordida: apagar o ramo `_e_a_parada_do_sdl` do `_handle_output`.
+    """
+    vpad, _relogio = bancada
+
+    vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 200, 180))
+    assert vpad.recebido == [(200, 180)]
+
+    # A PARADA do jeito que o SDL a manda: tudo zerado, e na hora.
+    vpad._handle_output(_evento_de_output(0x00, 0, 0, flag1=0x00))
+
+    assert vpad.recebido == [(200, 180), (0, 0)], (
+        "a parada do SDL tem de chegar ao motor NA HORA — ela vem com todos "
+        "os flags zerados, e era descartada pelo gate de vibração"
+    )
+
+
+def test_o_report_de_gatilho_continua_sendo_descartado(bancada) -> None:
+    """E o gate continua certo pelo motivo certo — a cura não o afrouxa.
+
+    Um report de gatilho traz os motores zerados por construção. Encaminhá-lo
+    mataria a vibração em curso, que é o defeito que o gate cura. O
+    discriminador separa os dois casos pelos FLAGS: a parada do SDL tem tudo
+    zerado; o report de gatilho tem `flag0 & 0x0C` ligado.
+
+    Mordida: fazer `_e_a_parada_do_sdl` ignorar o `valid_flag0`.
+    """
+    vpad, _relogio = bancada
+
+    vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 150, 150))
+    vpad._handle_output(_evento_de_output(uhid._TRIGGER_FLAGS, 0, 0))
+
+    assert vpad.recebido == [(150, 150)], (
+        "o report de gatilho não pode matar a vibração em curso — é o defeito "
+        "que o gate de `_VIBRATION_FLAGS` cura, e ele continua de pé"
+    )
+
+
+def test_o_report_de_luz_tambem_continua_sendo_descartado(bancada) -> None:
+    """Idem para lightbar e player-LEDs, que moram no flag1.
+
+    Mordida: tirar o `body[_VALID_FLAG1_OFFSET]` do discriminador. O report de
+    luz passa a ser lido como parada e mata a vibração em curso.
+    """
+    vpad, _relogio = bancada
+
+    vpad._handle_output(_evento_de_output(_COM_VIBRACAO, 90, 90))
+    vpad._handle_output(_evento_de_output(0x00, 0, 0, flag1=uhid._LUZ_FLAGS))
+
+    assert vpad.recebido == [(90, 90)]

@@ -188,7 +188,7 @@ def test_posicao_normalizada_grampeia_fora_de_faixa() -> None:
 
 
 @pytest.mark.parametrize(
-    ("n", "esperado"), [(0, "sem toque"), (1, "1 toque"), (2, "2 toques")]
+    ("n", "esperado"), [(0, "Sem toque"), (1, "1 toque"), (2, "2 toques")]
 )
 def test_texto_toques(n: int, esperado: str) -> None:
     assert texto_toques(n) == esperado
@@ -252,7 +252,7 @@ def test_touchpad_sem_dedo_apaga_o_ponto_mas_mantem_o_painel(card: Any) -> None:
 
     assert card._touch_box.get_visible() is True
     assert card._touch_view._toque is None
-    assert card._touch_label.get_text() == "sem toque"
+    assert card._touch_label.get_text() == "Sem toque"
 
 
 def test_mic_sem_leitura_fica_no_lugar_dizendo_sem_sinal(card: Any) -> None:
@@ -548,7 +548,7 @@ def test_speaker_mudo_diz_mudo_em_vez_de_porcentagem(card: Any) -> None:
     card.update(_entry(speaker={"volume": 200, "muted": True}), _ESTADO, None)
 
     assert card._speaker_bar._muted is True
-    assert card._speaker_label.get_text() == "mudo"
+    assert card._speaker_label.get_text() == "Mudo"
 
 
 def test_texto_volume_sem_mute_lido_mostra_so_a_porcentagem() -> None:

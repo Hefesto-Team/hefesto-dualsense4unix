@@ -190,10 +190,43 @@ _VIBRATION_FLAGS = 0x03
 #: não um cronômetro de efeito: um silêncio de 3 s no meio de uma vibração ativa
 #: já é anomalia.
 #:
-#: Isto é MITIGAÇÃO, não a cura. A cura seria descobrir por que o stop se perde,
-#: e isso exige capturar os bytes que o jogo escreve — o log de expiração agora
-#: carrega o silêncio medido, que é o dado que falta para fechar a questão.
+#: **A CURA FOI ENCONTRADA em 01/08/2026 — BT-E-VPAD-01, furo 6.** O texto
+#: acima dizia "isto é MITIGAÇÃO, não a cura; a cura seria descobrir por que o
+#: stop se perde". Descobriu-se, e está no `SDL_hidapi_ps5.c`:
+#:
+#:     if (ctx->rumble_left || ctx->rumble_right) {
+#:         effects.ucEnableBits1 |= 0x02;   /* desliga haptics de áudio */
+#:     } else {
+#:         /* deixar os bits desligados restaura os haptics de áudio */
+#:     }
+#:
+#: Ou seja: **na PARADA, o SDL emite um report com `valid_flag0 == 0x00` e os
+#: motores zerados** — e o gate de `_VIBRATION_FLAGS` descarta exatamente esse
+#: report. É a receita do "tremendo sem parar".
+#:
+#: O gate continua CERTO pelo motivo certo (report de gatilho traz motores
+#: zerados). O que faltava era o discriminador, e ele é limpo:
+#:
+#:   - parada do SDL:      flag0 == 0 E flag1 == 0 E motores zerados;
+#:   - report de gatilho:  flag0 & 0x0C != 0;
+#:   - report de luz:      flag1 & 0x14 != 0.
+#:
+#: Ver `docs/protocol/dualsense-referencia-canonica.md` §8.
+#:
+#: **O teto de silêncio FICA**, e não é redundância: ele cobre o jogo que
+#: perde o stop por outro caminho que não o do SDL (o log de 25/07 registrou
+#: 17 disparos em 90 minutos, com valores presos que desenham um fade-out cujo
+#: último passo se perdeu). A cura tira a causa conhecida; a rede continua para
+#: as desconhecidas.
 _RUMBLE_STALE_SEC = 3.0
+
+#: Os bits que identificam um report de GATILHO no valid_flag0 (direito|esquerdo).
+#: Um report com eles ligados traz os motores zerados por construção, e é por
+#: isso que o gate de vibração existe.
+_TRIGGER_FLAGS = 0x0C
+
+#: E os que identificam um report de LUZ no valid_flag1 (lightbar|player LEDs).
+_LUZ_FLAGS = 0x14
 
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
@@ -398,6 +431,37 @@ _CALIBRATION_FEATURE_SIZE = 41
 #: carregando" (0x1F) é a mentira menos daninha — não dispara alerta.
 _STATUS_OFFSET = 52
 _STATUS_DESCONHECIDO = 0x1F
+
+#: BT-E-VPAD-01, furo 2 — o byte 53 do report de entrada (`status[1]`), que o
+#: vpad NUNCA escrevia.
+#:
+#: Ele carrega três bits, documentados no kernel 6.18 (patches do jack de
+#: áudio, Collabora):
+#:
+#:   bit0 HP_DETECT   — há fone plugado
+#:   bit1 MIC_DETECT  — há microfone plugado
+#:   bit2 MIC_MUTE    — o microfone está mudo
+#:
+#: Saindo sempre `0x00`, o vpad anunciava... exatamente o contrário do que
+#: parece: com os bits em zero, **nenhum** dispositivo é declarado. O problema
+#: é que o campo nunca acompanhava o físico — um jogo que decida rotear som
+#: para o alto-falante do controle SÓ quando não há fone estava lendo um valor
+#: fixo que não corresponde a nada.
+#:
+#: A cura é espelhar o byte do controle físico daquele jogador. O dado está
+#: FORA da janela de motion (15..39), então precisa de caminho próprio — o
+#: mesmo desenho que o clique do touchpad já usa.
+_STATUS1_OFFSET = 53
+
+#: O valor neutro do byte 53: nada plugado, nada mudo. É o que o vpad manda
+#: enquanto o físico não disser o contrário — e é honesto, porque "não sei" e
+#: "não há" levam o jogo à mesma decisão (usar o alto-falante do controle).
+_STATUS1_NEUTRO = 0x00
+
+#: Os três bits do byte 53 que este projeto conhece e encaminha. O resto é do
+#: firmware — repassar bit desconhecido é a mesma classe de erro que autorizar
+#: um campo de áudio sem escrever valor nele.
+_STATUS1_BITS_CONHECIDOS = 0x07
 _CHARGING_SHIFT = 4
 _BATTERY_MAX_NIBBLE = 0x0A
 
@@ -563,6 +627,34 @@ def uhid_available() -> bool:
     """True quando dá para abrir /dev/uhid para escrita (udev aplicado)."""
     return os.access(UHID_NODE, os.R_OK | os.W_OK)
 
+def _e_a_parada_do_sdl(body: bytes) -> bool:
+    """True quando o report é a PARADA de vibração que o SDL emite.
+
+    BT-E-VPAD-01, furo 6 — a causa-raiz do "tremendo sem parar", medida e
+    documentada na referência canônica do protocolo, §8.
+
+    O `SDL_hidapi_ps5.c` liga `ucEnableBits1 |= 0x02` (que desliga os haptics
+    de áudio) **só quando há rumble**; ao parar, ele deixa os bits desligados
+    para restaurar os haptics — e o report de parada sai com `valid_flag0 == 0`,
+    `valid_flag1 == 0` e os motores em zero. O gate de `_VIBRATION_FLAGS`
+    descartava exatamente esse report, e o motor girava até alguém desligar o
+    controle.
+
+    O discriminador exige as TRÊS condições, e nenhuma sobra:
+
+    * um report de GATILHO tem `flag0 & 0x0C` ligado;
+    * um report de LUZ tem `flag1 & 0x14` ligado;
+    * um report de vibração tem motor não-nulo (ou os bits de vibração).
+
+    Um report que não é nada disso, com tudo zerado, só pode ser a parada.
+    """
+    if len(body) <= _RUMBLE_STRONG_OFFSET:
+        return False
+    if body[_VALID_FLAG0_OFFSET] or body[_VALID_FLAG1_OFFSET]:
+        return False
+    return not (body[_RUMBLE_WEAK_OFFSET] or body[_RUMBLE_STRONG_OFFSET])
+
+
 
 @dataclass
 class UhidDualSense:
@@ -641,6 +733,8 @@ class UhidDualSense:
     _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
     _buttons: frozenset[str] = field(default_factory=frozenset)
     _status_byte: int = _STATUS_DESCONHECIDO
+    #: BT-E-VPAD-01, furo 2: espelho do byte 53 do físico (fone/mic/mudo).
+    _status1_byte: int = _STATUS1_NEUTRO
     #: GYRO-01: janela de motion (payload[15:40]) espelhada do físico pelo
     #: `PhysicalReportReader`. Nasce NEUTRA (= report idêntico ao histórico).
     _motion_window: bytes = _MOTION_NEUTRAL
@@ -717,7 +811,23 @@ class UhidDualSense:
 
     @property
     def name(self) -> str:
-        return f"Hefesto Virtual DualSense P{self.player}"
+        """O nome HID do vpad, com a substring que os jogos procuram.
+
+        BT-E-VPAD-01, furo 1. Ele era `Hefesto Virtual DualSense P1`, e sob
+        Proton esse nome vira o `FriendlyName` do lado Windows — **jogos casam
+        pela substring "Wireless Controller"** para achar o controle e o
+        device de áudio associado a ele.
+
+        Havia incoerência interna que denunciava o furo: o fallback uinput
+        acerta (`Sony Interactive Entertainment DualSense Edge Wireless
+        Controller`) e o uhid, que é o caminho bom, não.
+
+        A distinção humana fica — ela é o que separa este device do físico na
+        lista do sistema, e é o que ela vê. E nada quebra: o discriminador
+        real do daemon nunca foi o nome, é o `phys` (`hefesto-vpad`) e o
+        `uniq` (o MAC forjado por jogador).
+        """
+        return f"DualSense Wireless Controller (Hefesto P{self.player})"
 
     @property
     def flavor(self) -> str:
@@ -1156,6 +1266,9 @@ class UhidDualSense:
         # que sempre se emitiu (zeros + `_TOUCH_INACTIVE` em 32/36).
         body[_MOTION_WINDOW] = self._motion_window
         body[_STATUS_OFFSET] = self._status_byte
+        # BT-E-VPAD-01, furo 2: o byte 53 passa a acompanhar o físico em vez
+        # de sair fixo. Ver `_STATUS1_OFFSET`.
+        body[_STATUS1_OFFSET] = self._status1_byte
         body[0:6] = bytes(self._axes)
         pressed = self._buttons
         body[_BUTTONS0_OFFSET] = self._dpad_hat(pressed) | _bitmask(pressed, _BUTTONS0_BITS)
@@ -1169,6 +1282,27 @@ class UhidDualSense:
             buttons2 |= _TOUCHPAD_BIT
         body[_BUTTONS2_OFFSET] = buttons2
         return body
+
+    def forward_jack(self, status1: int) -> None:
+        """Espelha o byte 53 do físico (fone / microfone / mudo) no vpad.
+
+        BT-E-VPAD-01, furo 2. O vpad nunca escrevia este byte, e ele nunca
+        acompanhava o controle de verdade: um jogo que decida rotear som para
+        o alto-falante do controle **só quando não há fone plugado** estava
+        lendo um valor fixo.
+
+        Só os três bits documentados passam (`HP_DETECT`, `MIC_DETECT`,
+        `MIC_MUTE`). O resto do byte é do firmware e não é nosso para
+        encaminhar — mandar bits desconhecidos é a mesma classe de erro que
+        autorizar um campo de áudio sem escrever valor.
+
+        Segue o desenho do `forward_battery`: sai cedo quando nada muda, para
+        não sujar o caminho de emissão com report idêntico.
+        """
+        novo = int(status1) & _STATUS1_BITS_CONHECIDOS
+        if novo == self._status1_byte:
+            return
+        self._status1_byte = novo
 
     def forward_battery(self, percent: int | None, *, charging: bool = False) -> None:
         """Espelha a bateria do controle físico no vpad (opcional).
@@ -1360,6 +1494,18 @@ class UhidDualSense:
         if len(body) > _VALID_FLAG1_OFFSET:
             self._replicate_from_output(body)
         if len(body) <= _RUMBLE_STRONG_OFFSET:
+            return
+        if _e_a_parada_do_sdl(body):
+            # BT-E-VPAD-01, furo 6: a PARADA do SDL chega com todos os flags
+            # zerados e os motores em 0 — e o gate abaixo a descartava. Este
+            # ramo a deixa passar, e só ela: um report com flag de gatilho ou
+            # de luz não entra aqui, porque esses TÊM flags ligados.
+            self._carimbar(ATIVIDADE_RUMBLE)
+            self._rumble_visto_em = None
+            if self._last_sent != (0, 0):
+                self._last_sent = (0, 0)
+                self._emit_rumble(0, 0)
+                logger.info("uhid_parada_do_sdl_honrada", player=self.player)
             return
         if not body[_VALID_FLAG0_OFFSET] & _VIBRATION_FLAGS:
             # RUMBLE-PRESO-01: este report NÃO fala de vibração (é lightbar,

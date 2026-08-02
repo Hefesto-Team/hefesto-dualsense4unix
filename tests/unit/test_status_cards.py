@@ -440,7 +440,7 @@ def test_rotulo_nativo_o_jogo_e_dono_do_led(host: _Host) -> None:
     host._render_live_state(_state(_entry(), native_mode=True))
     card = host.cards()[0]
     assert card._lightbar_label.get_visible() is True
-    assert card._lightbar_label.get_text() == "em Nativo o jogo é dono do LED"
+    assert card._lightbar_label.get_text() == "Em Nativo o jogo é dono do LED"
     # Última cor conhecida segue nos traços (ajustada).
     assert card._accent == ensure_min_contrast(COR_A)
 
@@ -495,7 +495,7 @@ def test_cor_conhecida_e_acesa_sem_rotulo(host: _Host) -> None:
             {"lightbar_rgb": [16, 32, 72], "lightbar_on": True,
              "lightbar_source": "sysfs"},
             {"native_mode": True},
-            "em Nativo o jogo é dono do LED",
+            "Em Nativo o jogo é dono do LED",
         ),
         # cor conhecida acesa → sem rótulo.
         (
@@ -528,7 +528,7 @@ def test_badge_degradado_acende_com_uinput_e_motivo_e_some_com_uhid(
     card = host.cards()[0]
     assert card._degradacao_badge.get_visible() is True
     texto = card._degradacao_badge.get_text()
-    assert texto.startswith("emulação degradada (uinput): ")
+    assert texto.startswith("Emulação degradada (uinput): ")
     assert MOTIVOS_DEGRADACAO_LEIGOS["uhid_bind_falhou"] in texto
 
     # Promovido a uhid → o badge some (mesmo card, sem rebuild).
@@ -562,7 +562,7 @@ def test_frases_leigas_nunca_cravam_o_mecanismo_do_sono_bt(
         _entry(vpad_backend="uinput", vpad_motivo=motivo)
     )
     assert texto is not None
-    assert texto.startswith("emulação degradada (uinput): ")
+    assert texto.startswith("Emulação degradada (uinput): ")
     minusculo = texto.lower()
     for proibido in ("bluetooth", " bt", "sono", "dormiu", "adormec"):
         assert proibido not in minusculo, f"{motivo!r} crava mecanismo: {texto}"
@@ -574,7 +574,7 @@ def test_texto_degradacao_motivo_desconhecido_vira_legivel() -> None:
     texto = texto_degradacao(
         _entry(vpad_backend="uinput", vpad_motivo="motivo_novo_do_daemon")
     )
-    assert texto == "emulação degradada (uinput): motivo novo do daemon"
+    assert texto == "Emulação degradada (uinput): motivo novo do daemon"
 
 
 # ---------------------------------------------------------------------------

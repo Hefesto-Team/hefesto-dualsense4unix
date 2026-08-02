@@ -638,7 +638,7 @@ def test_silenciar_e_ativar_devolvem_o_mesmo_volume(
 
     card.update(_entry_com(backend.estado()), _ESTADO, _LeituraMic())
     assert backend.volumes[1] == 0, "o alto-falante não emudeceu"
-    assert card._speaker_label.get_text() == "mudo"
+    assert card._speaker_label.get_text() == "Mudo"
     assert (
         card._speaker_botao_mudo._rotulo_hefesto.get_text()
         == TEXTO_BOTAO_SPEAKER_ATIVAR

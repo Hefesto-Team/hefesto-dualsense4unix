@@ -578,7 +578,7 @@ def test_clique_no_numero_mostra_o_motivo_da_recusa(
     monkeypatch.setattr(
         sa.ipc_bridge,
         "identity_number_set",
-        lambda _uniq, _numero: (False, "feche o jogo antes de trocar o número"),
+        lambda _uniq, _numero: (False, "Feche o jogo antes de trocar o número"),
     )
     monkeypatch.setattr(
         sa.ipc_bridge,
@@ -590,7 +590,7 @@ def test_clique_no_numero_mostra_o_motivo_da_recusa(
     botao.set_active(True)
     inst._on_numero_button_toggled(botao, 3)
 
-    assert toasts == ["feche o jogo antes de trocar o número"]
+    assert toasts == ["Feche o jogo antes de trocar o número"]
 
 
 def test_marcacao_programatica_nao_dispara_pedido(
@@ -632,7 +632,7 @@ def test_ipc_bridge_traduz_o_motivo_da_recusa(
     )
     ok, motivo = ipc_bridge.identity_number_set(UNIQ_A, 2)
     assert ok is False
-    assert motivo is not None and "feche o jogo" in motivo
+    assert motivo is not None and "Feche o jogo" in motivo
 
     monkeypatch.setattr(ipc_bridge, "_safe_call", lambda *_a, **_k: (False, None))
     assert ipc_bridge.identity_number_set(UNIQ_A, 2) == (False, None)
@@ -824,7 +824,7 @@ def test_preset_sem_destinatario_recusa_em_vez_de_gravar_abaixo_do_automatico(
     assert enviados == [], "mandou um pedido sem destinatário"
     assert host.toasts
     assert "sem destinatário" in host.toasts[-1]
-    assert "ainda não sei quais controles estão na mesa" in host.toasts[-1]
+    assert "Ainda não sei quais controles estão na mesa" in host.toasts[-1]
 
 
 def test_aplicar_sem_destinatario_tambem_recusa(
@@ -845,7 +845,7 @@ def test_aplicar_sem_destinatario_tambem_recusa(
     host.on_player_leds_apply(None)
 
     assert enviados == []
-    assert "ainda não sei quais controles estão na mesa" in host.toasts[-1]
+    assert "Ainda não sei quais controles estão na mesa" in host.toasts[-1]
 
 
 def test_com_alvo_escolhido_o_pedido_vai_por_mac(

@@ -431,16 +431,16 @@ def rumble_policy_custom(mult: float) -> bool:
 #: a usuária nunca ler um identificador do protocolo na barra de status.
 _MOTIVOS_NUMERO: dict[str, str] = {
     "sessao_de_jogo_aberta": (
-        "feche o jogo antes de trocar o número — trocar agora repintaria "
+        "Feche o jogo antes de trocar o número — trocar agora repintaria "
         "o controle no meio da partida"
     ),
     "controle_ausente": (
-        "este controle não está na mesa agora — só quem está ligado tem número"
+        "Este controle não está na mesa agora — só quem está ligado tem número"
     ),
     "numero_fora_da_mesa": (
-        "esse número é maior do que a quantidade de controles ligados"
+        "Esse número é maior do que a quantidade de controles ligados"
     ),
-    "lock_timeout": "o Hefesto está ocupado — tente de novo em um instante",
+    "lock_timeout": "O Hefesto está ocupado — tente de novo em um instante",
 }
 
 
@@ -473,7 +473,7 @@ def identity_number_set(uniq: str, number: int) -> tuple[bool, str | None]:
         return True, None
     reason = result.get("reason")
     motivo = _MOTIVOS_NUMERO.get(reason) if isinstance(reason, str) else None
-    return False, motivo or "não consegui trocar o número — tente de novo"
+    return False, motivo or "Não consegui trocar o número — tente de novo"
 
 
 def player_leds_set(

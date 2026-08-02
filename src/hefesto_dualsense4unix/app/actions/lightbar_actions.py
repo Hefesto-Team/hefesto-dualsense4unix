@@ -20,7 +20,7 @@ from hefesto_dualsense4unix.utils.i18n import _
 #: mentira por outra, e com o Hefesto realmente desligado a aba Sistema É o
 #: lugar certo para onde mandar.
 _AVISO_HEFESTO_DESLIGADO = (
-    "não consegui aplicar a cor — o Hefesto pode estar desligado "
+    "Não consegui aplicar a cor — o Hefesto pode estar desligado "
     "(ligue na aba Sistema)"
 )
 
@@ -37,7 +37,7 @@ _AVISO_D4 = "Cores automáticas desligadas para aplicar uma cor única"
 #: única resposta honesta: escrever numa camada que será sobrescrita é pior que
 #: não escrever, porque parece ter funcionado por meio segundo.
 _AVISO_SEM_DESTINATARIO = (
-    "ainda não sei quais controles estão na mesa — espere um instante e "
+    "Ainda não sei quais controles estão na mesa — espere um instante e "
     "tente de novo (mandar sem destinatário seria desfeito pela numeração "
     "automática)"
 )
@@ -80,7 +80,7 @@ def mensagem_de_secao_fora(resposta: Any) -> str | None:
         return None
     secoes = footer_actions._lista_de_secoes(resposta.get("failed"))
     if secoes:
-        return _("o Hefesto está ligado, mas não entrou: {secoes}").format(
+        return _("O Hefesto está ligado, mas não entrou: {secoes}").format(
             secoes=secoes
         )
     return footer_actions._mensagem_de_aplicacao(resposta)
@@ -957,7 +957,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             f"Desenho das luzes aplicado — {descricao}"
             if ok
             else motivo
-            or "não consegui aplicar o desenho das luzes — o Hefesto pode "
+            or "Não consegui aplicar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:
@@ -985,7 +985,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             f"Desenho das luzes atualizado — {descricao}"
             if ok
             else motivo
-            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
+            or "Não consegui atualizar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:
@@ -1021,7 +1021,7 @@ class LightbarActionsMixin(WidgetAccessMixin):
             f"Desenho das luzes atualizado — {descricao}"
             if ok
             else motivo
-            or "não consegui atualizar o desenho das luzes — o Hefesto pode "
+            or "Não consegui atualizar o desenho das luzes — o Hefesto pode "
             "estar desligado (ligue na aba Sistema)"
         )
         if d4_disparou:

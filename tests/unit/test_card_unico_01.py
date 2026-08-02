@@ -63,18 +63,24 @@ pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utili
 _janelas_vivas: list[Any] = []
 
 
-def _card(*, compact: bool = False) -> Any:
+#: A tela dela maximizada. O número importa: ele é MAIOR que o
+#: `LARGURA_CARD_ELASTICA`, e é isso que permite medir o corte do teto. Numa
+#: janela do tamanho do teto, um teste de teto passa com ou sem o corte.
+LARGURA_DA_TELA_DELA = 1920
+
+
+def _card(*, compact: bool = False, largura: int = LARGURA_DA_TELA_DELA) -> Any:
     """Card montado e ALOCADO na largura da tela dela, com dados completos."""
     from hefesto_dualsense4unix.app.mic_monitor import LeituraMic
 
     card = ControllerCard(compact=compact)
     janela = Gtk.OffscreenWindow()
     janela.add(card)
-    janela.set_size_request(1400, 900)
+    janela.set_size_request(largura, 900)
     janela.show_all()
     _janelas_vivas.append(janela)
     card.update(_ENTRY, _ESTADO, LeituraMic(nivel=0.6, muted=False))
-    janela.resize(1400, 900)
+    janela.resize(largura, 900)
     while Gtk.events_pending():
         Gtk.main_iteration()
     return card
@@ -466,3 +472,77 @@ def test_o_botao_da_rota_volta_ao_berco_quando_nao_ha_card_para_recebe_lo() -> N
     # novo para o card.
     host.sincronizar(1)
     assert botao.get_parent() is not berco
+
+
+# ---------------------------------------------------------------------------
+# EMPILHA-01 (02/08/2026) — decisão dela, olhando a tela com dois controles
+# ---------------------------------------------------------------------------
+
+
+def test_os_cards_ficam_um_em_cima_do_outro_e_nao_lado_a_lado() -> None:
+    """*"os dois blocos não deveriam estar lado a lado mas um em cima do outro
+    de forma que o scroll surgisse pra comportar os diferentes controles"*.
+
+    Isto REVISA a STATUS-GRID-2COL-01, e a decisão antiga não é apagada: ela
+    dizia que "empilhado, cada card somava a própria altura e dois já
+    estouravam a janela — a aba só respondia com rolagem, justamente o que as
+    sprints S3/S5 tiraram das outras abas". A observação continua correta; o
+    que mudou foi o julgamento sobre ela, e é dela: a rolagem vertical AQUI é
+    aceitável, e ler dois controles lado a lado não é.
+
+    Um card por linha também é o que escala para os quatro jogadores do co-op
+    sem espremer nada.
+
+    Mordida: devolver o `colunas = 2 if compact else 1`.
+    """
+    host = _Host()
+    host.sincronizar(2)
+
+    cards = list(host._status_cards.values())
+    assert len(cards) == 2
+
+    esquerdo, direito = (c.get_allocation() for c in cards)
+    assert esquerdo.x == direito.x, (
+        f"os dois cards começam em x diferentes ({esquerdo.x} e {direito.x}): "
+        "eles voltaram a ficar lado a lado"
+    )
+    assert direito.y > esquerdo.y, "o segundo card fica ABAIXO do primeiro"
+
+
+def test_o_card_compacto_tambem_para_de_esticar_pela_tela_toda() -> None:
+    """Empilhado, cada card recebe a janela inteira — e precisa do teto.
+
+    Sem ele, um card de dois controles esticaria por 1900px com ~900px de
+    conteúdo: exatamente o buraco que o teto do card único veio curar, e o
+    mesmo defeito que ela apontou na STATUS-SIMETRIA-02.
+
+    Mordida: devolver o `not self._compact` ao `do_size_allocate`.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import (
+        LARGURA_CARD_ELASTICA,
+    )
+
+    assert LARGURA_DA_TELA_DELA > LARGURA_CARD_ELASTICA, (
+        "a bancada precisa de uma tela MAIOR que o teto: numa janela do "
+        "tamanho do teto, este teste passaria com ou sem o corte"
+    )
+    card = _card(compact=True)
+    assert card.get_allocated_width() == LARGURA_CARD_ELASTICA
+
+
+def test_a_bateria_do_card_compacto_tambem_nao_desenha_o_proprio_texto() -> None:
+    """O empilhamento trouxe de volta o número flutuando no vazio.
+
+    A barra do card compacto ficava com `show-text` LIGADO, e a justificativa
+    era medida: com dois cards dividindo a largura em duas colunas, a barra
+    era estreita e o texto centrado cabia. Numa coluna só ela ficou larga, e o
+    "80 %" voltou para o meio do nada — o defeito que ela apontou nas barras
+    de L2/R2.
+
+    Mordida: religar o `set_show_text(True)` para o compacto.
+    """
+    compacto = _card(compact=True)
+
+    assert compacto._battery_bar.get_show_text() is False
+    assert compacto._battery_pct_label is not None
+    assert compacto._battery_pct_label.get_text() == compacto._battery_bar.get_text()

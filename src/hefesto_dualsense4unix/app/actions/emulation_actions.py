@@ -211,7 +211,7 @@ def rotulo_gamepads(fisicos: int, nossos: int, outros: int, nos: int) -> str:
             else f"{outros} gamepads virtuais de outros programas (Steam Input)"
         )
     if not partes:
-        partes.append("nenhum aparelho reconhecido")
+        partes.append("Nenhum aparelho reconhecido")
     return f"{', '.join(partes)} — {nos} nós em /dev/input/js*"
 
 
@@ -775,9 +775,9 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _run_mic(self, flag: str, done_msg: str) -> None:
         script = self._mic_script()
         if script is None:
-            self._toast_emulation("script do WirePlumber não encontrado")
+            self._toast_emulation("Script do WirePlumber não encontrado")
             return
-        self._toast_emulation("aplicando no microfone...")
+        self._toast_emulation("Aplicando no microfone...")
 
         def _worker() -> None:
             with contextlib.suppress(OSError, subprocess.SubprocessError):
@@ -1301,7 +1301,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if script is None:
             self._toast_emulation(format_steam_input_result(status="sem_script"))
             return
-        self._toast_emulation("verificando a Steam…")
+        self._toast_emulation("Verificando a Steam…")
 
         def _sondar() -> None:
             from hefesto_dualsense4unix.integrations import (
@@ -1324,7 +1324,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             self._toast_emulation(format_steam_input_result(status="jogo_aberto"))
             return False
         if not steam:
-            self._toast_emulation("desligando Steam Input…")
+            self._toast_emulation("Desligando Steam Input…")
             self._steam_input_apply_async(script, fechar_a_steam=False)
             return False
 
@@ -1341,7 +1341,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     format_steam_input_result(status="cancelado")
                 )
                 return
-            self._toast_emulation("fechando a Steam para desligar o Steam Input…")
+            self._toast_emulation("Fechando a Steam para desligar o Steam Input…")
             self._steam_input_apply_async(script, fechar_a_steam=True)
 
         build_steam_close_consent_dialog(

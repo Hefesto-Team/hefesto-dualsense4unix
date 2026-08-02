@@ -264,7 +264,7 @@ class TestOTextoDoRotulo:
         assert "2 gamepads virtuais de outros programas" in rotulo_gamepads(0, 0, 2, 2)
 
     def test_nada_reconhecido_e_dito_em_vez_de_frase_vazia(self) -> None:
-        assert "nenhum aparelho reconhecido" in rotulo_gamepads(0, 0, 0, 3)
+        assert "Nenhum aparelho reconhecido" in rotulo_gamepads(0, 0, 0, 3)
 
 
 class TestALeituraDoSysfs:

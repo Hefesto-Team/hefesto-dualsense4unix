@@ -344,16 +344,27 @@ def test_o_piso_do_card_e_o_que_o_conteudo_pede() -> None:
     assert LARGURA_CARD_UNICO < LARGURA_CARD_ELASTICA
 
 
-def test_o_card_compacto_nao_ganha_teto_elastico() -> None:
-    """O corte é só do card de UM controle.
+def test_o_card_compacto_tambem_ganha_teto_elastico() -> None:
+    """O corte passou a valer para os DOIS modos — EMPILHA-01, 02/08/2026.
 
-    Com 2+ controles quem manda na largura é o `status_players_slot`, que os
-    põe em colunas homogêneas: um corte por card ali deixaria buraco ENTRE as
-    colunas, que é o defeito de origem desta série de sprints.
+    **A regra anterior estava certa para o desenho anterior**, e fica
+    registrada: com os cards em DUAS colunas homogêneas, quem mandava na
+    largura era o `status_players_slot`, e um corte por card deixaria buraco
+    ENTRE as colunas — o defeito de origem desta série de sprints.
 
-    A mordida: tirar o `not self._compact` do `do_size_allocate` faz o card
-    compacto parar de preencher a coluna e este teste cai.
+    O que mudou foi o desenho, e a decisão é dela, olhando a tela com dois
+    controles: *"os dois blocos não deveriam estar lado a lado mas um em cima
+    do outro de forma que o scroll surgisse pra comportar os diferentes
+    controles"*. Com UMA coluna, cada card recebe a janela inteira — e sem o
+    teto um card de dois controles esticaria por 1900px com ~900 de conteúdo,
+    que é exatamente o buraco que o teto do card único veio curar.
+
+    A mordida: devolver o `not self._compact` ao `do_size_allocate`. O card
+    compacto volta a esticar pela tela toda.
     """
     card = _card(compact=True, largura=LARGURA_DA_TELA_DELA)
 
-    assert card.get_allocated_width() == LARGURA_DA_TELA_DELA
+    assert LARGURA_DA_TELA_DELA > LARGURA_CARD_ELASTICA, (
+        "a bancada precisa de uma tela MAIOR que o teto para medir o corte"
+    )
+    assert card.get_allocated_width() == LARGURA_CARD_ELASTICA

@@ -1093,9 +1093,9 @@ class HomeActionsMixin(WidgetAccessMixin):
 
             origin_bits: list[str] = []
             if state.get("native_mode") and state.get("native_mode_origin") == "profile":
-                origin_bits.append("nativo ligado pelo perfil ativo")
+                origin_bits.append("Nativo ligado pelo perfil ativo")
             if state.get("mode_from_profile") == "gamepad":
-                origin_bits.append("gamepad ligado pelo perfil ativo")
+                origin_bits.append("Gamepad ligado pelo perfil ativo")
             # LEIGO-01: a contagem de jogadores saiu daqui — dizia "co-op: N
             # jogador(es)" (jargão) e agora mora na frase do próprio bloco do
             # gamepad, contada a partir dos jogadores que o daemon numerou.
@@ -1191,7 +1191,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             # distingue os controles na mesa é a COR da lightbar e o LED de
             # jogador — o card já mostra o número do jogador.
             if is_primary and gamepad_on and grab_state == "failed":
-                warn = Gtk.Label(label="grab falhou — input pode dobrar no jogo")
+                warn = Gtk.Label(label="Grab falhou — input pode dobrar no jogo")
                 warn.set_xalign(0.0)
                 warn.get_style_context().add_class("hefesto-dualsense4unix-status-err")
                 card.pack_start(warn, False, False, 0)
