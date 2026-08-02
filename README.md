@@ -194,16 +194,34 @@ Referência completa dos comandos em [docs/usage/cli.md](docs/usage/cli.md).
 
 ## Capturas de tela
 
-Feitas em 25/07/2026, com a interface redesenhada e **quatro controles
-conectados por Bluetooth ao mesmo tempo** — dois DualSense, um Nintendo Pro e um
-8BitDo em modo DirectInput/PS4. Uma por aba, em
-[docs/usage/interface.md](docs/usage/interface.md), com o que cada uma faz.
+As nove abas, na ordem em que aparecem na janela, na resolução em que ela usa a
+janela maximizada. São geradas por `scripts/gui-captura/retratar_abas.py` — um
+comando, sem clique nenhum — e por isso **acompanham a versão**: quem mexe na
+interface roda o script antes de commitar, e estas imagens deixam de poder
+envelhecer.
 
-[![Aba Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md)
+| | |
+|---|---|
+| **Início** — o que o controle faz agora | **Status** — tudo o que o controle está fazendo |
+| [![Início](docs/usage/assets/readme_inicio.png)](docs/usage/interface.md) | [![Status](docs/usage/assets/readme_status.png)](docs/usage/interface.md) |
+| **Gatilhos** — os dezenove modos de resistência | **Lightbar** — a cor e o desenho das cinco luzes |
+| [![Gatilhos](docs/usage/assets/readme_gatilhos.png)](docs/usage/interface.md) | [![Lightbar](docs/usage/assets/readme_lightbar.png)](docs/usage/interface.md) |
+| **Rumble** — a intensidade da vibração dos jogos | **Perfis** — um ajuste por jogo, que entra sozinho |
+| [![Rumble](docs/usage/assets/readme_rumble.png)](docs/usage/interface.md) | [![Perfis](docs/usage/assets/readme_perfis.png)](docs/usage/interface.md) |
+| **Sistema** — o serviço, a saúde e os jogos da Steam | **Emulação** — como o jogo vê o controle |
+| [![Sistema](docs/usage/assets/readme_sistema.png)](docs/usage/interface.md) | [![Emulação](docs/usage/assets/readme_emulacao.png)](docs/usage/interface.md) |
+| **Navegação** — o controle como mouse e teclado | |
+| [![Navegação](docs/usage/assets/readme_navegacao_dsx.png)](docs/usage/interface.md) | |
 
-Na aba Sistema, o bloco "Detalhes técnicos" está borrado de propósito: o log
-mostra o endereço Bluetooth real dos controles desta máquina, e os gates de
-anonimato do projeto não varrem imagens.
+O que cada uma faz, em detalhe, está em
+[docs/usage/interface.md](docs/usage/interface.md).
+
+**Por que estas fotos não têm dado real.** Elas nascem da própria interface
+montada do zero, alimentada pelos dublês da suíte de testes — o script **nunca
+fala com o daemon**. Isso não é cuidado de quem gerou: é regra travada por
+teste (`test_retrato_das_abas_nao_vaza_dado_real.py`), porque uma foto antiga
+desta seção precisou ser borrada à mão para esconder o endereço Bluetooth dos
+controles, e **os portões de anonimato deste projeto não varrem imagens**.
 
 ## Limitações conhecidas
 

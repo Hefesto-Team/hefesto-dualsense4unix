@@ -1776,14 +1776,29 @@ step "4/11" "atalho de aplicativo e launcher"
 # fallback generico em sizes nao-256 (chip 32x32 do menu apps, 128x128
 # do grid).
 #
-# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3 fix): v3.4.2 usava SVG como
-# source para o rsvg-convert. Mas assets/appimage/Hefesto-Dualsense4Unix.
-# svg eh um PLACEHOLDER simples (chama laranja + texto "HEFESTO"),
-# não a logo real (martelo + gradiente roxo/azul/rosa no PNG 256x256).
-# Resultado: app library mostrava chama laranja em vez do martelo.
-# Fix: source canonico eh o PNG 256x256 sempre, com Lanczos downsample
-# do ImageMagick para outras resolucoes. Sem SVG escalavel ate termos
-# um SVG real do martelo.
+# BUG-ICON-FROM-PLACEHOLDER-SVG-01 (v3.4.3): v3.4.2 usava um SVG que era
+# PLACEHOLDER (chama laranja + texto "HEFESTO"), e a app library mostrava
+# chama em vez do martelo. A cura da epoca foi eleger o PNG como fonte.
+#
+# NOTA DE VERIFICACAO — 01/08/2026. Este comentario CADUCOU, e por dois
+# motivos medidos:
+#
+#   1. o SVG deixou de ser placeholder. `assets/hefesto-logo.svg` TEM o
+#      martelo, a bigorna e a chama, e o `rsvg-convert` gera dele um PNG
+#      indistinguivel do que estava versionado. A troca aconteceu em algum
+#      momento e ninguem atualizou este texto — que passou a mentir com
+#      autoridade;
+#   2. o ICON_SRC apontava para `assets/appimage/Hefesto-Dualsense4Unix.png`,
+#      que NAO EXISTIA nesta arvore. O `cp -f` falhava em silencio e o icone
+#      que aparecia no sistema vinha, por acidente, do PNG do applet COSMIC.
+#      Havia dois caminhos, e o documentado era o quebrado.
+#
+# Agora ha UMA fonte: `assets/hefesto-logo.svg`. Os PNGs derivados sao
+# gerados por `scripts/gerar_icones.sh` e travados por
+# `tests/unit/test_icones_refletem_o_svg.py` — mexer no desenho sem regerar
+# reprova. O install continua consumindo o PNG (o Lanczos do ImageMagick da
+# downsample melhor que o rsvg em tamanhos pequenos), mas o PNG deixou de
+# ser fonte: virou derivado.
 ICON_HICOLOR_BASE="${HOME}/.local/share/icons/hicolor"
 ICON_SIZES="16 22 24 32 48 64 96 128 192 256 512"
 
