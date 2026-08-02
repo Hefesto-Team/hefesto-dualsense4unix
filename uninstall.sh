@@ -22,11 +22,14 @@
 #                        Simétrico ao install.sh — se sai sem desligar, o sintoma
 #                        "controle vira mouse / botões em background" volta na hora.
 #                        Reverter desligamento: scripts/disable_steam_input.sh --restore.
-#   --keep-bluez         PRESERVA o backport do bluez (default: RESTAURA as versões
-#                        originais do noble via VERSOES-ANTERIORES.txt do cache).
-#                        Onda R — remoção BRUTAL de propósito (reinicia o bluetoothd
-#                        e descarta os bonds outra vez); pede confirmação interativa
-#                        (--yes pula). Detalhe completo mais abaixo ("Onda R").
+#   --restore-bluez      DEVOLVE as versões originais do noble via
+#                        VERSOES-ANTERIORES.txt do cache. **Destrutivo**: reinicia
+#                        o bluetoothd (a ÚNICA exceção à regra "uninstall nunca
+#                        reinicia o bluetoothd") e descarta os bonds pareados
+#                        outra vez. Pede confirmação interativa (--yes pula).
+#   --keep-bluez         [no-op] o backport é PRESERVADO por padrão desde
+#                        02/08/2026 (BLUEZ-PADRAO-INVERTIDO-01) — desinstalar o
+#                        Hefesto não pode piorar o Bluetooth da máquina.
 #   --yes,-y             responde 'sim' para prompts.
 #
 # Onda PLATAFORMA (2026-07-18) — removidos por DEFAULT, simétricos ao install:
@@ -139,7 +142,31 @@ REMOVE_UDEV=1
 REMOVE_USB_QUIRK=0       # cmdline é sensível: só remove com --remove-usb-quirk explícito
 KEEP_CONFIG=1            # preserva config por padrão (perfis do user) — apagar exige --purge-config
 KEEP_STEAM_INPUT=0       # desliga Steam Input PSSupport por default (FEAT-DISABLE-STEAM-INPUT-PSSUPPORT-01)
-KEEP_BLUEZ=0             # Onda R: restaura o bluez do noble por default (opt-out --keep-bluez)
+# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026) — decisão DELA, e ela tem razão:
+# *"o uninstall deveria desfazer o negócio e deixar o bluez certo, não? e caso
+# usássemos flag é que deveria voltar o bluez pro original do pop os"*.
+#
+# O padrão era RESTAURAR o bluez do noble, com esta justificativa escrita:
+# *"ficar com um bluez de terceiro órfão, sem o doctor/pin/gerenciamento que o
+# justificava, é pior do que voltar ao 5.72 do noble"*. **A justificativa não
+# é falsa — ela é secundária diante de três coisas:**
+#
+# 1. **o downgrade é destrutivo, e o próprio código admite**: "REMOÇÃO BRUTAL
+#    de propósito, pois reinicia o bluetoothd — a ÚNICA exceção documentada à
+#    regra 'uninstall nunca reinicia o bluetoothd' — e descarta os bonds
+#    pareados outra vez". A regra desta casa é que o PADRÃO seja o menos
+#    destrutivo, e o gesto destrutivo seja o explícito;
+# 2. **o 5.72 tem defeito MEDIDO nesta máquina**: `bluetoothd` crashando
+#    cronicamente e comendo bonds (estudo de 19/07). Desinstalar um aplicativo
+#    não pode PIORAR o Bluetooth de quem o desinstalou;
+# 3. **precedente na mesma casa, no mesmo arquivo**: o `--remove-usb-quirk`
+#    não remove por padrão porque *"cmdline é sensível e pode ser mantido por
+#    toolchain externa"*. O BlueZ é mais sensível que o cmdline.
+#
+# E o backport não é software obscuro de terceiro: é o BlueZ upstream 5.86,
+# recompilado para o noble. A simetria que se perde é de PACOTE; a que se
+# ganha é de EFEITO — o sistema dela sai do uninstall funcionando como entrou.
+KEEP_BLUEZ=1             # preserva o backport por default; --restore-bluez desfaz
 AUTO_YES=0
 
 # BUG-UNINSTALL-HELP-DESINSTALA-01: não havia `--help`, e argumento desconhecido
@@ -161,7 +188,10 @@ Opções:
   --purge-config        APAGA config e perfis (destrutivo; o padrão é preservar)
   --keep-config         preserva config e perfis (padrão)
   --keep-steam-input    não mexe no PSSupport do Steam Input
-  --keep-bluez          preserva o BlueZ do hefesto (o padrão RESTAURA o da distro)
+  --restore-bluez       DEVOLVE o BlueZ original da distro (o padrão PRESERVA o
+                        backport). Destrutivo: reinicia o bluetoothd e descarta
+                        os bonds pareados.
+  --keep-bluez          [no-op] preservar já é o padrão desde 02/08/2026
   --yes, -y             não pergunta nada (necessário sem TTY)
   --help, -h            mostra esta ajuda e sai
 
@@ -177,7 +207,11 @@ for arg in "$@"; do
         --purge-config)      KEEP_CONFIG=0 ;;
         --keep-config)       KEEP_CONFIG=1 ;;
         --keep-steam-input)  KEEP_STEAM_INPUT=1 ;;
+        # `--keep-bluez` vira NO-OP: ela é o padrão desde a
+        # BLUEZ-PADRAO-INVERTIDO-01. Fica aceita para não quebrar quem já a
+        # escreveu num script ou num roteiro.
         --keep-bluez)        KEEP_BLUEZ=1 ;;
+        --restore-bluez)     KEEP_BLUEZ=0 ;;
         --yes|-y)            AUTO_YES=1 ;;
         --help|-h)           uso; exit 0 ;;
         *)
@@ -983,15 +1017,23 @@ if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     fi
 fi
 
-# Restauração do bluez (backport 5.85 → versões originais do noble). Por
-# DEFAULT o uninstall É simétrico: devolve o pacote ao estado pré-Hefesto —
-# ficar com um bluez de terceiro (~hefesto24.04.1) órfão, sem o
-# doctor/pin/gerenciamento que o justificava, é pior do que voltar ao
-# 5.72 do noble. --keep-bluez preserva o backport (opt-out explícito: é
-# REMOÇÃO BRUTAL de propósito, pois reinicia o bluetoothd — a ÚNICA exceção
-# documentada à regra "uninstall nunca reinicia o bluetoothd" — e descarta os
-# bonds pareados outra vez, os mesmos efeitos colaterais medidos na migração
-# de ida). Por isso pede confirmação interativa antes de aplicar (--yes pula).
+# Restauração do bluez (backport → versões originais do noble).
+#
+# BLUEZ-PADRAO-INVERTIDO-01 (02/08/2026): isto só acontece com
+# `--restore-bluez`. O REGISTRO da decisão anterior fica, porque ela era
+# defensável e é o que explica o código: *"o uninstall É simétrico: devolve o
+# pacote ao estado pré-Hefesto — ficar com um bluez de terceiro órfão, sem o
+# doctor/pin/gerenciamento que o justificava, é pior do que voltar ao 5.72 do
+# noble"*.
+#
+# O que a fez cair: o gesto é REMOÇÃO BRUTAL de propósito — reinicia o
+# bluetoothd (a ÚNICA exceção documentada à regra "uninstall nunca reinicia o
+# bluetoothd") e descarta os bonds pareados outra vez. Um gesto assim não pode
+# ser o que acontece por OMISSÃO, ainda mais quando a versão para a qual se
+# volta tem defeito medido nesta máquina (bluetoothd crashando e comendo
+# bonds, estudo de 19/07).
+#
+# Continua pedindo confirmação interativa antes de aplicar (--yes pula).
 BLUEZ_BACKPORT_CACHE="${HOME}/.cache/hefesto-dualsense4unix/bluez-backport"
 BLUEZ_VERSOES_FILE="${BLUEZ_BACKPORT_CACHE}/VERSOES-ANTERIORES.txt"
 if [[ "${KEEP_BLUEZ}" -eq 1 ]]; then

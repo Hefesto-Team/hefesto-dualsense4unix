@@ -174,6 +174,42 @@ def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untype
     card.definir_estado_global("Nenhum", "Ligado")
 
 
+def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
+    """Põe os 19 modos de gatilho na aba Gatilhos.
+
+    Mesmo motivo do card do Status: os botões são montados em CÓDIGO
+    (`triggers_actions.install_triggers_tab`), não no glade. Sem isto a aba sai
+    com "Modo:" e mais nada — e era assim que ela aparecia na documentação,
+    justamente na aba que a TRIGGER-CANON-01 inteira mexeu.
+
+    Os itens saem do `trigger_specs.PRESETS`, que é a mesma fonte que o
+    produto usa. Uma lista copiada aqui viraria um segundo dono dos rótulos, e
+    a foto passaria a mentir no dia em que um deles mudasse.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
+        from hefesto_dualsense4unix.app.widgets import SegmentedSelector
+    except Exception as exc:
+        return f"modos de gatilho não injetados ({exc})"
+
+    itens = [(spec.name, spec.label) for spec in PRESETS]
+    postos = 0
+    for lado in ("left", "right"):
+        slot = builder.get_object(f"trigger_{lado}_mode_slot")
+        if slot is None:
+            continue
+        sel = SegmentedSelector(wrap=True)
+        sel.set_items(itens)
+        # O primeiro é o "Desligado", e é o que a aba mostra ao abrir.
+        sel.set_active_id(itens[0][0])
+        slot.pack_start(sel, True, True, 0)
+        sel.show_all()
+        postos += 1
+    if not postos:
+        return "modos de gatilho não injetados (slots ausentes no glade)"
+    return f"{len(itens)} modos de gatilho injetados nos {postos} lados"
+
+
 def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe um card de controle vivo na aba Status.
 
@@ -265,6 +301,7 @@ def main(destino: str | None = None) -> int:
     janela.show_all()
     _assentar()
     print(f"  {_injetar_card(builder)}")
+    print(f"  {_injetar_modos_de_gatilho(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()

@@ -276,6 +276,23 @@ ATIVIDADE_OUTPUT = "output"
 #: continua não existindo, e é isso que a E2 da sprint decide, depois da
 #: medição — como está escrito lá: *"um código escrito contra uma premissa
 #: não medida é dívida"*.
+#:
+#: ---- A CORREÇÃO DE 02/08/2026, e ela veio da PRIMEIRA leitura ----
+#:
+#: A primeira versão deste carimbo saía em QUALQUER report com bits de áudio e
+#: byte não-nulo, e ele apareceu com **8 segundos de idade num daemon
+#: recém-reiniciado, sem jogo nenhum aberto**. A causa: o driver
+#: `hid-playstation` do kernel escreve os campos de áudio no PROBE do device —
+#: o kernel 6.18 manda rota, volume e pré-amp para fazer o alto-falante soar.
+#:
+#: Um instrumento que carimba na adoção pelo kernel responde "sim, alguém
+#: escreve áudio" TODA VEZ, e a pergunta da sprint é outra: *"algum JOGO
+#: escreve esses bytes?"*. Por isso o carimbo passou a exigir
+#: `_replicating()` — o MESMO gate que a REPLICA-03 usa para decidir se há
+#: sessão de jogo aberta (UHID_OPEN..UHID_CLOSE mais a graça pós-bind).
+#:
+#: Reusar aquele gate, em vez de escrever um segundo, é o que impede os dois
+#: de divergirem sobre o que é "durante um jogo".
 ATIVIDADE_AUDIO_DO_JOGO = "audio_do_jogo"
 
 #: Os quatro bits de `valid_flag0` que autorizam os bytes de áudio: fone
@@ -1527,6 +1544,7 @@ class UhidDualSense:
             len(body) > rep.COMMON_AUDIO_PATH
             and body[_VALID_FLAG0_OFFSET] & _AUDIO_FLAGS_DO_JOGO
             and any(body[rep.COMMON_HEADPHONE_VOLUME : rep.COMMON_AUDIO_PATH + 1])
+            and self._replicating()
         ):
             self._carimbar(ATIVIDADE_AUDIO_DO_JOGO)
         if len(body) > _VALID_FLAG1_OFFSET:
