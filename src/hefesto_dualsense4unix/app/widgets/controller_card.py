@@ -1469,9 +1469,35 @@ if _GTK_DISPONIVEL:
         ``state_full`` inteiro entra como contexto global (``native_mode``).
         """
 
-        def __init__(self, *, compact: bool = False) -> None:
+        def __init__(
+            self,
+            *,
+            compact: bool = False,
+            mostrar_estado_global: bool | None = None,
+        ) -> None:
             super().__init__()
             self._compact = compact
+            # EMPILHA-02 (02/08/2026) — o `compact` controlava DUAS coisas
+            # misturadas, e o empilhamento expôs isso na tela dela:
+            #
+            #   1. o TAMANHO dos desenhos (sticks de 90 vs 120px, glifos
+            #      menores) — que depende da LARGURA que o card recebe;
+            #   2. a presença do par global "Perfil ativo / Hefesto" — que
+            #      depende de haver OUTRO lugar mostrando os mesmos fatos.
+            #
+            # Enquanto os cards ficavam lado a lado, as duas andavam juntas por
+            # acidente: meia largura E frame Estado visível. Empilhados, cada
+            # card recebe a largura INTEIRA e continuava desenhando para meia —
+            # o conteúdo espremido à esquerda com um vazio à direita, que foi
+            # exatamente o que ela apontou no print de 02/08.
+            #
+            # `None` mantém o casamento antigo (o par aparece quando o card não
+            # é compacto), que é o que os testes e o card avulso esperam.
+            self._mostrar_estado_global = (
+                (not compact)
+                if mostrar_estado_global is None
+                else mostrar_estado_global
+            )
             self._espaco = (
                 _ESPACO_FAIXA_COMPACTO if compact else _ESPACO_FAIXA_UNICO
             )
@@ -1831,6 +1857,30 @@ if _GTK_DISPONIVEL:
             self._verdade_label = None
             if self._compact:
                 return
+
+            # A linha da VERDADE é por CONTROLE, e não global — ela diz o que
+            # chega ao jogo NAQUELE controle, com o hertz do giroscópio dele.
+            # Por isso ela é montada antes do par perfil/daemon, e não depende
+            # do `mostrar_estado_global`: com dois controles, cada card tem a
+            # sua.
+            #
+            # `line_wrap` LIGADO com `max_width_chars` e `halign=start`: os
+            # três juntos, e não um deles. Medido nesta casa em 01/08 — o
+            # `max-width-chars` sozinho limita a largura NATURAL (o que o
+            # widget PEDE) e o pai continua livre para alocar mais; um
+            # parágrafo de 1869px ficou intacto até o `halign=start` entrar.
+            verdade = Gtk.Label()
+            verdade.set_xalign(0.0)
+            verdade.set_halign(Gtk.Align.START)
+            verdade.set_line_wrap(True)
+            verdade.set_max_width_chars(_VERDADE_MAX_CHARS)
+            verdade.get_style_context().add_class("dim-label")
+            verdade.set_no_show_all(True)
+            verdade.hide()
+            self._verdade_label = verdade
+
+            if not self._mostrar_estado_global:
+                return
             linha = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL, spacing=6
             )
@@ -1870,18 +1920,9 @@ if _GTK_DISPONIVEL:
             # `max-width-chars` sozinho limita a largura NATURAL (o que o
             # widget pede) e o pai continua livre para alocar mais; um
             # parágrafo de 1869px ficou intacto até o `halign=start` entrar.
-            verdade = Gtk.Label()
-            verdade.set_xalign(0.0)
-            verdade.set_halign(Gtk.Align.START)
-            verdade.set_line_wrap(True)
-            verdade.set_max_width_chars(_VERDADE_MAX_CHARS)
-            verdade.get_style_context().add_class("dim-label")
-            verdade.set_no_show_all(True)
-            verdade.hide()
-            self._verdade_label = verdade
-            # Ela NÃO é empacotada aqui: o lugar dela é a faixa da linha 2, ao
-            # lado da bateria, e quem a empacota é o bloco do motion logo
-            # abaixo. Criá-la aqui é o que permite aquele bloco encontrá-la
+            # A linha da verdade NÃO é empacotada aqui: o lugar dela é a faixa
+            # da linha 2, ao lado da bateria, e quem a empacota é o bloco do
+            # motion. Criá-la acima é o que permite aquele bloco encontrá-la
             # pronta — a ordem de montagem do corpo é a ordem do desenho.
 
         def definir_estado_global(self, perfil: str, daemon: str) -> None:

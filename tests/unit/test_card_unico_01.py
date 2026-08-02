@@ -462,9 +462,15 @@ def test_o_botao_da_rota_volta_ao_berco_quando_nao_ha_card_para_recebe_lo() -> N
 
     host.sincronizar(2)
     assert botao.get_parent() is not None, (
-        "com 2+ controles o card compacto não tem bloco de som para recebê-lo "
-        "— e sem berço ele fica órfão, vivo e fora da tela"
+        "com 2+ controles o botão volta ao berço — e sem essa volta ele ficava "
+        "órfão, vivo e fora da tela"
     )
+    # EMPILHA-02: com 2+ controles o lugar dele é o frame "Estado", e agora
+    # isso é REGRA e não acidente. A rota de som é um fato do SISTEMA: pôr o
+    # botão no card do Controle 1 sugeriria que ele manda o som para AQUELE
+    # controle, e o interruptor é um só. Antes isto funcionava porque o card
+    # compacto não tinha bloco de som — o que deixou de ser verdade quando os
+    # cards passaram a ser todos do tamanho grande.
     assert botao.get_parent() is berco
     assert berco.child_get_property(botao, "left-attach") == COLUNA_BERCO_DA_ROTA
 

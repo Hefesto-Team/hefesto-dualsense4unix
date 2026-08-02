@@ -729,7 +729,15 @@ class StatusActionsMixin(WidgetAccessMixin):
         # jogadores do co-op sem espremer nada.
         colunas = 1
         for pos, key in enumerate(keys):
-            card = ControllerCard(compact=compact)
+            # EMPILHA-02: com UMA coluna, todo card recebe a largura inteira
+            # — então nenhum deles desenha no tamanho compacto. O que continua
+            # dependendo da quantidade é o par GLOBAL: com 2+ controles quem
+            # responde por perfil e daemon é o frame "Estado", que volta à
+            # tela, e repeti-lo em cada card seria a duplicação que a
+            # STATUS-SIMETRIA-02 curou na bateria.
+            card = ControllerCard(
+                compact=False, mostrar_estado_global=not compact
+            )
             self._status_cards[key] = card
             # `hexpand` + column-homogeneous do Glade: as colunas dividem a
             # largura em partes iguais em vez de a 1ª tomar tudo e a 2ª ficar
@@ -772,7 +780,28 @@ class StatusActionsMixin(WidgetAccessMixin):
         botao = self._get("btn_som_no_controle")
         if botao is None or not hasattr(botao, "get_parent"):
             return  # Glade antigo ou builder dublado: a aba segue sem o botão
-        primeiro = next(iter(self._status_cards.values()), None)
+        # EMPILHA-02 — a pergunta dela, olhando a tela com dois controles:
+        # *"o botão ouvir no controle faz sentido ali?"*.
+        #
+        # **Com 2+ controles, sim: o lugar dele é o frame "Estado".** A razão
+        # é a mesma da SOM-04 e não mudou: a saída padrão do sistema é um fato
+        # do SISTEMA, não daquele controle. Pôr o botão no card do Controle 1
+        # sugere que ele manda o som para AQUELE controle — e o interruptor é
+        # um só, global. O frame Estado é o lugar dos fatos globais da aba, e
+        # é onde ele já estava no print dela.
+        #
+        # Com UM controle é o contrário, e é o que ela pediu na
+        # SOM-ROTA-NO-CARD-01: não há ambiguidade possível, e o botão fica
+        # onde a ação acontece.
+        #
+        # Antes da EMPILHA-02 isto funcionava por ACIDENTE — o card compacto
+        # não tinha bloco de som, então o `destino` saía `None` com 2+
+        # controles. Agora todo card tem o bloco, e a regra precisa ser dita.
+        primeiro = (
+            next(iter(self._status_cards.values()), None)
+            if len(self._status_cards) == 1
+            else None
+        )
         destino = getattr(primeiro, "_speaker_rota_slot", None)
         if destino is None:
             # ROTA-ORFA-01 — sem destino, o botão VOLTA para o berço, e isto
