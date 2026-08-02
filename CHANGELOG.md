@@ -5,6 +5,118 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-08-02
+
+### Sete presets de gatilho que não faziam absolutamente nada
+
+Ela mediu pelo tato, na aba Gatilhos: *"rígido e desligado sem diferença"*,
+*"resistência nada também"*.
+
+Estava certa, e a causa era pior do que parecia. `RIGID_B` — o modo que três
+presets mandavam — vale `0x05`, que é **literalmente o OFF** do bloco de
+gatilho: eles mandavam o controle DESLIGAR o gatilho achando que o endureciam.
+Outros quatro mandavam um modo oficial correto **sem o bitmask de zonas
+ativas**, e o firmware honra isso fazendo nada.
+
+Os sete passaram a mandar o modo oficial certo, com as zonas e as forças no
+formato que o firmware espera (3 bits por zona, valor `força - 1`).
+
+**E os seis que ela aprovou não mudaram um byte.** Perguntada se Arco, Galope e
+Metralhadora eram iguais entre si, ela respondeu *"eles são bem diferentes
+viu"*, e depois: *"cara, as duas temos nomes perfeitos, pq essa é a sensação de
+usar ambas"*. Os parâmetros deles deixaram de ser implementação e viraram dado,
+travados byte a byte num teste — se uma refatoração reprovar ali, a refatoração
+está errada, não a sensação.
+
+O `CALIBRATION = 0xFC` saiu da enum e o preset "Personalizado" passou a recusar
+`0xFC`-`0xFE`: eles corrompem o estado do gatilho, e só sai desligando o
+controle.
+
+### A aba Status diz o que CHEGA ao jogo, e não o que existe
+
+A pergunta que abriu a leva: *"não sei se o alto-falante, giroscópio, microfone
+e touchpad — todas as features — na hora de jogar um jogo na Steam se elas vão
+estar funcionando"*.
+
+Até aqui a aba mostrava que o sensor EXISTE. Todos os contadores do payload
+eram cumulativos — um painel sobre eles diria "já funcionou uma vez" e ficaria
+verde para sempre depois do primeiro acerto.
+
+Cada gamepad virtual passou a carimbar **quando** cada coisa aconteceu pela
+última vez, e o card ganhou uma linha:
+
+```
+No jogo agora: giroscópio (~194 Hz), vibração, luz · sem pedido ainda: gatilho, clique do touchpad.
+```
+
+Com máscara Xbox ela **explica** em vez de parecer quebrada (*"o controle de
+Xbox não tem esses dois"*), e em Modo Nativo diz que o jogo fala direto com o
+controle. Nenhuma frase afirma que o jogo consumiu o dado — isso depende de
+qual SDL o jogo carregou, e há teste só para esse vocabulário.
+
+### O "tremendo sem parar" tem cura, e não só mitigação
+
+O comentário do código dizia, desde julho: *"isto é MITIGAÇÃO, não a cura"*.
+
+A cura estava no SDL: ele liga um bit de haptics só quando há rumble, e ao
+**parar** manda um report com todos os flags zerados — que era exatamente o
+report que o filtro de vibração descartava. O motor girava até alguém desligar
+o controle.
+
+O teto de silêncio continua lá: ele cobre as causas desconhecidas.
+
+### O alto-falante ganhou os 60% de curso que estavam inertes
+
+Ela mediu: mudo até 38, satura em 102. A causa não era ela quebrando nada — era
+o registrador de volume lutando contra um ganho de entrada no valor padrão. O
+kernel escreve **três** campos para o alto-falante soar; este projeto escrevia
+um.
+
+O pré-amplificador entrou, com a mesma disciplina de posse do volume (quem
+assume um assume o outro, e "Soltar" devolve os dois). E a **rota** foi
+exposta: `rota=2` manda o canal esquerdo para o fone/TV e o direito para o
+alto-falante do controle — o caso que ela descreveu com o Zelda, em um byte.
+
+### O botão do microfone parou de mutar o microfone de outro aparelho
+
+Com o controle no Bluetooth, o DualSense não tem placa de som nenhuma. A fonte
+padrão do sistema era outra coisa — nesta máquina, o microfone da placa-mãe — e
+o botão do controle alternava aquele, com o LED do controle refletindo um
+estado que não era dele.
+
+Agora ele só age quando a fonte padrão É o controle.
+
+### A escolha de máscara dela para de virar Xbox sozinha
+
+Um perfil pode dizer "mantém a máscara atual". O editor convertia isso em
+"Xbox" nas duas pontas: ela abria um perfil sem opinião sobre máscara, salvava
+qualquer outra coisa nele, e o perfil passava a **exigir** Xbox — apagando
+giroscópio e touchpad naquele jogo.
+
+E o preço do Xbox passou a aparecer **onde ela escolhe**: o mouse sobre o botão
+diz o que aquela máscara custa, com o texto que já existia na aba Início.
+
+### A aba Status, do jeito que ela pediu
+
+O frame "Estado" saiu da tela e o que sobrava dele entrou no card: perfil
+ativo, Hefesto e a bateria ao lado da linha do giroscópio. L3 e R3 saíram da
+linha de valores e viraram marca d'água no centro do analógico.
+
+Com dois controles, os cards ficam **um em cima do outro** com rolagem, e não
+lado a lado. E os textos da interface passaram a começar com maiúscula.
+
+### Miudezas que valem
+
+- o gamepad virtual passou a se chamar `DualSense Wireless Controller (Hefesto
+  P1)` — jogos casam por essa substring sob Proton;
+- o byte de detecção de fone/microfone passou a acompanhar o controle físico em
+  vez de sair fixo;
+- `test trigger --raw` recusa quando o daemon está no ar, em vez de imprimir
+  "trigger aplicado" sem ter aplicado;
+- o botão da rota de som parou de sumir da tela quando um segundo controle é
+  plugado.
+
+
 ## [0.7.0] — 2026-08-01
 
 ### A aba Status que ela chamou de feia

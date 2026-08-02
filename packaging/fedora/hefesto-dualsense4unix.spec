@@ -15,7 +15,7 @@ Name:           %{pypi_name}
 # instalado e o upgrade e RECUSADO. O Epoch vence a comparacao de Version e e
 # o unico jeito de a serie 0.x suceder a 4.0. Mesmo valor do .deb e do PKGBUILD.
 Epoch:          1
-Version:        0.7.0
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        Linux adaptive trigger daemon for the PS5 DualSense controller
 
@@ -360,6 +360,17 @@ fi
 %{_datadir}/%{app_id}/systemd/hefesto-hidraw-broker.socket
 
 %changelog
+* Sun Aug 02 2026 Vitoria Maria <[REDACTED]> - 1:0.8.0-1
+- Sete presets de gatilho nao faziam nada: tres mandavam o modo que vale OFF
+  no firmware e quatro mandavam modo oficial sem o bitmask de zonas ativas
+- Aba Status passou a dizer o que CHEGA ao jogo, e nao so o que existe
+- Cura do rumble preso: o report de parada do SDL vem com os flags zerados e
+  era descartado pelo filtro de vibracao
+- Alto-falante ganhou o pre-amplificador e a rota de saida (os 60% de curso
+  que estavam inertes)
+- Botao do microfone parou de mutar o microfone de outro aparelho no Bluetooth
+- A mascara escolhida no perfil parou de virar Xbox sozinha ao salvar
+
 * Sat Aug 01 2026 Vitoria Maria <[REDACTED]> - 1:0.7.0-1
 - Aba Status alinhada: as duas linhas do card passam a dividir o mesmo
   desenho, o frame Estado cai para tres linhas e a bateria ocupa a largura

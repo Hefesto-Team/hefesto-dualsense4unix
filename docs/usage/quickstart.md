@@ -35,7 +35,7 @@ sudo pacman -S python-gobject gtk3 libappindicator-gtk3 hidapi \
 ```bash
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.7.0
+git checkout v0.8.0
 ./install.sh
 ```
 
