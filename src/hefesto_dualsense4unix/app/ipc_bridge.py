@@ -611,6 +611,7 @@ def speaker_set(
     muted: bool | None = None,
     uniq: str | None = None,
     release: bool = False,
+    rota: int | None = None,
 ) -> bool:
     """Volume/mudo/devolução do alto-falante e do fone (D4 / MIC-USB-01 / SOM-02).
 
@@ -666,6 +667,11 @@ def speaker_set(
         payload["muted"] = bool(muted)
     if uniq:
         payload["uniq"] = uniq
+    if rota is not None:
+        # SOM-CANAL-01: a rota de SAÍDA (`OUTPUT_PATH_SEL`, byte 7). Ela vai
+        # junto do volume porque é o mesmo bloco de posse — e sozinha quando o
+        # seletor de canal muda sem mexer no número.
+        payload["rota"] = int(rota)
     ok, result = _safe_call("speaker.set", payload)
     if not ok or not isinstance(result, dict):
         return False

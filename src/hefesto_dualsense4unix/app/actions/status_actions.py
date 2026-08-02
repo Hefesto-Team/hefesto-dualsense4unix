@@ -569,6 +569,41 @@ class StatusActionsMixin(WidgetAccessMixin):
         self._rota_inflight = False
         return False
 
+    def _aplicar_rota_do_sistema(self, para_o_controle: bool) -> None:
+        """Manda (ou devolve) o som do SISTEMA, a pedido do seletor do card.
+
+        SOM-CANAL-01/E3. É a lógica que era do botão "Ouvir no controle",
+        agora chamada pelo estado "Todo o som do PC" do seletor.
+
+        **O caso sem desfazer honesto continua tratado**, e é o que a sprint
+        manda preservar: se o som já está no controle e não fomos NÓS que o
+        pusemos lá, não há sink anterior guardado — e `voltar_ao_anterior`
+        devolve False em vez de chutar um destino. O `acao_da_rota` continua
+        sendo o dono dessa decisão.
+        """
+        rota = self._rota_de_som
+        if rota is None:
+            return
+        sink = self._rota_sink
+        if para_o_controle:
+            if sink:
+                self._run_blocking_seguro(
+                    lambda: rota.mandar_para_o_controle(sink)
+                )
+        else:
+            self._run_blocking_seguro(rota.voltar_ao_anterior)
+
+    @staticmethod
+    def _run_blocking_seguro(fn: Any) -> None:
+        """Roda o `pactl` fora da thread do GTK, engolindo o que falhar.
+
+        O chamador já está numa thread de trabalho (`run_in_thread` do card),
+        então aqui é só a guarda: um `pactl` que falhe não pode derrubar o
+        clique dela.
+        """
+        with contextlib.suppress(Exception):
+            fn()
+
     def _on_rota_de_som_clicada(self, _botao: Any = None) -> None:
         """O clique: troca a saída padrão do sistema, fora da thread do GTK.
 
@@ -691,6 +726,12 @@ class StatusActionsMixin(WidgetAccessMixin):
             # continua lá. A guarda existe porque a fiação do card é de outra
             # leva: enquanto ela não entrar isto é inerte, e no dia em que
             # entrar não é preciso tocar aqui.
+            # SOM-CANAL-01: quem executa a camada 1 (o default sink) quando
+            # ela troca o canal no seletor do card. O card pede; a aba faz —
+            # a rota do sistema é um fato GLOBAL, e há um default sink só.
+            pedir = getattr(card, "definir_pedido_de_rota", None)
+            if pedir is not None:
+                pedir(self._aplicar_rota_do_sistema)
             definir_sink = getattr(card, "definir_sink_de_saida", None)
             if definir_sink is not None:
                 definir_sink(monitor.sink_de(uniq) if tem_uniq else "")

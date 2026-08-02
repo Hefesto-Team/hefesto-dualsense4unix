@@ -121,6 +121,26 @@ OUTPUT_PATH_SEL_MASK = 0x30
 #: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
 #: `0x2` é o valor que o kernel 6.18 escolhe, e é o que a E1 da SOM-ROTA-01
 #: passou a escrever.
+#: Os bits do MICROFONE dentro do `common[7]`, e o valor que preserva o
+#: microfone interno funcionando quando assumimos a posse do byte.
+#:
+#: SOM-CANAL-01, REGRESSÃO MEDIDA em 02/08/2026 e curada no mesmo dia: ao pedir
+#: uma rota de saída, o `common[7]` era escrito com base ZERO — porque ninguém
+#: tinha posse dele antes e não há como LER o valor que o firmware usava. O
+#: microfone do controle parou de captar: o `parec` passou de 131072 bytes para
+#: **zero**, e voltou assim que a posse foi devolvida.
+#:
+#: É exatamente a armadilha 2 da sprint dela — *"o common[7] carrega a rota E o
+#: caminho do microfone; escrever meio byte muda o outro meio"* — e o
+#: `_byte_da_rota` só preservava o outro meio quando JÁ havia posse.
+#:
+#: `FORCE_INTERNAL_MIC` (bit0) é a base segura: ele diz ao firmware para usar o
+#: microfone interno, que é o que o DualSense tem quando não há headset. Os
+#: demais bits (cancelamento de eco e de ruído, `INPUT_PATH`) ficam em zero, que
+#: é o neutro deles.
+AUDIO_CONTROL_FORCE_INTERNAL_MIC = 0x01
+AUDIO_CONTROL_BASE_SEGURA = AUDIO_CONTROL_FORCE_INTERNAL_MIC
+
 SP_PREAMP_GAIN_MASK = 0x07
 SP_PREAMP_GAIN_PADRAO = 0x02
 

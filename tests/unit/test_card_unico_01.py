@@ -35,7 +35,6 @@ import cairo
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.status_actions import (
-    COLUNA_BERCO_DA_ROTA,
     StatusActionsMixin,
 )
 from hefesto_dualsense4unix.app.constants import MAIN_GLADE
@@ -432,58 +431,40 @@ def test_o_tamanho_da_marca_dagua_acompanha_o_desenho() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_o_botao_da_rota_volta_ao_berco_quando_nao_ha_card_para_recebe_lo() -> None:
-    """O botão da rota de som sumia da tela com 2+ controles.
+def test_o_botao_da_rota_nao_migra_mais_para_o_card() -> None:
+    """SOM-CANAL-01/E3 (02/08/2026): o "Ouvir no controle" DEIXOU de migrar.
 
-    **Medido nesta árvore em 01/08/2026**, com GTK 3.24 e o glade real, antes
-    de qualquer cura: com um controle o botão é reparentado para o bloco
-    "Alto-falante" do card; plugar um segundo controle recria os cards, e o
-    `child.destroy()` do card antigo deixava o botão ÓRFÃO —
-    `get_parent() is None`. Ele continuava VIVO (o Builder o referência, e é
-    por isso que ele não é destruído de fato), mas fora da tela.
+    **O registro do que este teste travava antes fica**, porque foi um defeito
+    real e medido: com um controle o botão era reparentado para o bloco
+    "Alto-falante" do card, e plugar um segundo controle recriava os cards —
+    o `child.destroy()` do card antigo deixava o botão ÓRFÃO (`get_parent()
+    is None`), vivo mas fora da tela. Ela perdia o "desfazer" da rota no co-op.
 
-    O efeito para ela: a rota de som está LIGADA nesta máquina, com o som do
-    sistema saindo no controle. Ao entrar no co-op ela perdia o botão que
-    desfaz — e só o recuperava desplugando um controle.
+    O que mudou: o comando NASCE no card agora, como um dos dois estados do
+    seletor de canal. Ela pediu — *"ele deixa de existir como botão isolado.
+    Vira o estado 'Todo o som do PC' do seletor"* — e com isso o
+    reparenteamento inteiro deixou de fazer sentido: não há mais para onde
+    migrar, e o botão do glade fica no berço dele.
 
-    Mordida: apagar a chamada a `_devolver_botao_da_rota_ao_berco` do ramo
-    "sem destino" do `_alojar_botao_da_rota`.
+    Mordida: devolver o `_speaker_rota_slot` ao card. O botão volta a migrar,
+    e volta o risco de ficar órfão na troca de conjunto.
     """
     host = _Host()
     botao = host._get("btn_som_no_controle")
     berco = host._get("status_grid")
 
-    assert botao.get_parent() is berco, "no glade o botão nasce no berço"
+    for quantos in (1, 2, 1):
+        host.sincronizar(quantos)
+        assert botao.get_parent() is berco, (
+            f"com {quantos} controle(s) o botão fica no berço: ele não migra "
+            "mais para o card, porque o comando agora nasce lá"
+        )
 
+    # E o card NÃO oferece mais slot para ele — é isso que impede a migração
+    # de voltar por acidente.
     host.sincronizar(1)
-    assert botao.get_parent() is not berco, (
-        "com um controle ele muda de casa para o bloco Alto-falante do card"
-    )
-
-    host.sincronizar(2)
-    assert botao.get_parent() is not None, (
-        "com 2+ controles o botão volta ao berço — e sem essa volta ele ficava "
-        "órfão, vivo e fora da tela"
-    )
-    # EMPILHA-02: com 2+ controles o lugar dele é o frame "Estado", e agora
-    # isso é REGRA e não acidente. A rota de som é um fato do SISTEMA: pôr o
-    # botão no card do Controle 1 sugeriria que ele manda o som para AQUELE
-    # controle, e o interruptor é um só. Antes isto funcionava porque o card
-    # compacto não tinha bloco de som — o que deixou de ser verdade quando os
-    # cards passaram a ser todos do tamanho grande.
-    assert botao.get_parent() is berco
-    assert berco.child_get_property(botao, "left-attach") == COLUNA_BERCO_DA_ROTA
-
-    # E o caminho de volta continua valendo: desplugar um controle o traz de
-    # novo para o card.
-    host.sincronizar(1)
-    assert botao.get_parent() is not berco
-
-
-# ---------------------------------------------------------------------------
-# EMPILHA-01 (02/08/2026) — decisão dela, olhando a tela com dois controles
-# ---------------------------------------------------------------------------
-
+    card = next(iter(host._status_cards.values()))
+    assert card._speaker_rota_slot is None
 
 def test_os_cards_ficam_um_em_cima_do_outro_e_nao_lado_a_lado() -> None:
     """*"os dois blocos não deveriam estar lado a lado mas um em cima do outro

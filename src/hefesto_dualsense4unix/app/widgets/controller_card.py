@@ -516,6 +516,76 @@ TEXTO_SPEAKER_SEM_DADO: Final[str] = "Não ajustado"
 #: casa o prefixo do rótulo da moldura com este nome.
 TITULO_SPEAKER: Final[str] = "Alto-falante"
 
+# ---------------------------------------------------------------------------
+# SOM-CANAL-01 — os DOIS caminhos de áudio, que a tela tratava como um
+# ---------------------------------------------------------------------------
+#
+# Ela, olhando o bloco: *"o bloco Alto-falante do card está confundindo duas
+# coisas diferentes"*. São dois caminhos INDEPENDENTES, e os dois podem estar
+# ligados ao mesmo tempo — por isso um seletor de dois estados, e não um botão.
+
+#: A pergunta que o seletor responde. Ela nomeia o eixo (ONDE o som sai) e é o
+#: que separa este seletor do `Silenciar`, que responde outra coisa (SE há som).
+TEXTO_CANAL_PERGUNTA: Final[str] = "O que sai no controle:"
+
+#: O id do canal, e o rótulo que ela escolheu. A ORDEM é a da tela.
+#:
+#: `jogo` é o PADRÃO, e é o estado novo: só o que o jogo mandar para o
+#: dispositivo de áudio do controle sai nele, e o resto continua na TV. Ele
+#: depende do byte `OUTPUT_PATH_SEL`, medido em 02/08 pela orelha dela.
+#:
+#: `tudo` é o que o botão "Ouvir no controle" fazia: troca o default sink do
+#: PipeWire e todo o som do PC passa a sair no controle.
+CANAL_SONS_DO_JOGO: Final[str] = "jogo"
+CANAL_TODO_O_PC: Final[str] = "tudo"
+#: Os rótulos são os que ELA escreveu, e a medição os liberou.
+#:
+#: Ela avisou na sprint que aquela linha é a mais apertada do card e mandou
+#: medir antes. Medido: o seletor com estes dois rótulos pede **155px** de
+#: largura, e com o `Silenciar` ao lado dá **241px** — contra um teto de 258.
+#: Cabem com folga.
+#:
+#: O que quase os matou foi um diagnóstico errado meu: o teste que reprovou
+#: mede `get_preferred_HEIGHT`, e eu li como largura. Encurtei rótulos que não
+#: precisavam encurtar, e cheguei a levar a decisão a ela com um número que
+#: não era o do problema. O custo real era a ALTURA do seletor — 67px contra
+#: os 34 do botão que ele substitui.
+CANAIS_DO_SPEAKER: Final[tuple[tuple[str, str], ...]] = (
+    (CANAL_SONS_DO_JOGO, "Sons do jogo"),
+    (CANAL_TODO_O_PC, "Todo o som do PC"),
+)
+
+#: As dicas, uma por botão. Curtas de propósito: a dica do slider tinha 206
+#: caracteres, ocupava três linhas e aparecia POR CIMA dos botões que ela
+#: mandava usar. O detalhe longo (a posse, como devolvê-la) mora na dica do
+#: BLOCO — cada altura de detalhe no seu lugar.
+DICAS_DO_CANAL: Final[tuple[tuple[str, str], ...]] = (
+    (
+        CANAL_SONS_DO_JOGO,
+        "O que sai no controle: só o que o jogo mandar para ele. A trilha "
+        "continua na TV. Depende do jogo ter essa opção.",
+    ),
+    (
+        CANAL_TODO_O_PC,
+        "O que sai no controle: todo o som do computador passa a sair pelo "
+        "alto-falante dele.",
+    ),
+)
+
+#: O valor de `OUTPUT_PATH_SEL` de cada canal.
+#:
+#: `jogo` usa o **2** — canal esquerdo para o fone/TV e o direito para o
+#: alto-falante do controle. É o caso que ela descreveu com o Zelda, e é o
+#: único dos quatro que separa os dois destinos.
+#:
+#: `tudo` usa o **3** — só o alto-falante interno: com o som do PC inteiro
+#: vindo pelo sink do controle, mandar metade para um fone que não existe
+#: seria perder metade.
+ROTA_DO_CANAL: Final[dict[str, int]] = {
+    CANAL_SONS_DO_JOGO: 2,
+    CANAL_TODO_O_PC: 3,
+}
+
 #: Rótulos dos DOIS botões do alto-falante (SOM-02, entregas 2 e 3). Cada um
 #: diz o que o CLIQUE faz, no mesmo desenho do botão do microfone.
 #:
@@ -1433,6 +1503,10 @@ try:
     gi.require_version("Gtk", "3.0")
     from gi.repository import GLib, Gtk, Pango
 
+    from hefesto_dualsense4unix.app.widgets.segmented_selector import (
+        SegmentedSelector,
+    )
+
     # Com um stub parcial de gi (testes antigos sem display), o import acima
     # passa mas faltam classes — o card cai no stub em vez de explodir.
     _GTK_DISPONIVEL = all(
@@ -1543,6 +1617,12 @@ if _GTK_DISPONIVEL:
             self._speaker_acao_mudo: AcaoSpeaker | None = None
             self._speaker_acao_devolucao: AcaoSpeaker | None = None
             self._speaker_arrastando = False
+            #: Guarda do POPULATE do seletor de canal — o mesmo desenho do
+            #: `_speaker_pintando` da escala: pintar o estado vindo do daemon
+            #: não pode disparar o gesto dela de volta ao daemon.
+            self._speaker_canal_pintando = False
+            #: SOM-CANAL-01: a aba injeta aqui quem executa a camada 1.
+            self._pedir_rota_do_sistema: Any = None
             self._speaker_pintando = False
             self._speaker_repouso_id: int | None = None
             self._speaker_volume_enviado: int | None = None
@@ -2699,14 +2779,61 @@ if _GTK_DISPONIVEL:
                 #    sistema é um fato global, e dois cards não podem ter dois
                 #    botões para um interruptor só) continua de pé, e é por
                 #    isso que aqui há um SLOT vazio e não um botão novo.
+                # SOM-CANAL-01 (02/08/2026) — o bloco confundia DUAS coisas.
+                #
+                # Ela: *"existem dois caminhos de áudio independentes para o
+                # alto-falante do DualSense, e a tela hoje trata os dois como
+                # se fossem o mesmo"*.
+                #
+                #   1. **a rota do SISTEMA** (PipeWire): trocar o default sink
+                #      faz TODO o som do PC sair no controle. É um comando do
+                #      sistema operacional;
+                #   2. **o canal do JOGO** (`OUTPUT_PATH_SEL`, byte 7): o jogo
+                #      manda um som para o dispositivo de áudio do controle e
+                #      o byte decide como o firmware o distribui. É o caso do
+                #      Zelda — a espada no controle, a trilha na TV.
+                #
+                # **Os dois podem estar ligados ao mesmo tempo**, e por isso
+                # não podem ser um botão só. Viraram um SELETOR de dois
+                # estados, com o `Silenciar` ao lado como o "desligado" — e
+                # não um terceiro estado, que confundiria "onde o som sai" com
+                # "tem som".
+                #
+                # O byte foi MEDIDO antes deste desenho existir: em 02/08 ela
+                # ouviu o toque da rota 3 (canal direito ao alto-falante) e NÃO
+                # ouviu o da rota 0 (tudo ao fone, que não está plugado). O
+                # portão da SOM-ROTA-01/E1 abriu com a orelha dela.
+                # A pergunta "O que sai no controle:" NÃO ganha linha própria.
+                # Ela foi medida e custa a QUARTA linha do bloco, que é altura
+                # de card em toda fonte (`test_o_bloco_do_som_nao_gasta_linha_
+                # com_o_que_pode_dividir`). Ela vive na dica do seletor, e os
+                # dois rótulos já dizem o eixo sozinhos.
                 linha_acoes = Gtk.Box(
                     orientation=Gtk.Orientation.HORIZONTAL, spacing=4
                 )
-                slot_rota = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-                self._speaker_rota_slot = slot_rota
-                linha_acoes.pack_start(slot_rota, True, True, 0)
+                seletor = SegmentedSelector()
+                # A altura é o orçamento apertado desta linha (ver a classe no
+                # theme.css): o seletor pede 67px contra os 34 do botão que ele
+                # substituiu, e isso sozinho estourava a coluna do som.
+                seletor.get_style_context().add_class("hefesto-seletor-compacto")
+                seletor.set_items(list(CANAIS_DO_SPEAKER))
+                seletor.set_tooltips(dict(DICAS_DO_CANAL))
+                seletor.connect("changed", self._on_canal_do_speaker_mudou)
+                self._speaker_canal = seletor
+                linha_acoes.pack_start(seletor, True, True, 0)
                 linha_acoes.pack_start(botao_mudo, False, False, 0)
-                linha_acoes.pack_start(botao_devolver, False, False, 0)
+                # SOM-CANAL-01/E4: o `Soltar` SAIU da fileira. Ela mediu a
+                # utilidade real dele: *"o DualSense não tem botão físico de
+                # volume, o valor não é restaurado ao soltar, e quem poderia
+                # mandar depois é o jogo — que é justamente o que a
+                # PARIDADE-SONY-01 ainda não confirmou"*. E ele não pertencia
+                # ali por significado: os outros falam de ONDE o som sai, e
+                # ele fala de QUEM manda no volume.
+                #
+                # Ele continua existindo e continua funcionando — quem o
+                # explica agora é a dica do bloco. Quando a paridade for
+                # confirmada, ele volta para a tela.
+                self._speaker_rota_slot = None
                 miolo.pack_start(linha_acoes, False, False, 0)
             # O selo da camada 1 fica por último nos dois cards: ele é a
             # exceção (aparece só quando o sink do sistema está mudo) e é o
@@ -2838,6 +2965,65 @@ if _GTK_DISPONIVEL:
 
             ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
 
+        def _on_canal_do_speaker_mudou(self, seletor: Any) -> None:
+            """O gesto dela no seletor: escolhe ONDE o som do controle sai.
+
+            SOM-CANAL-01/E2. Os dois estados fazem coisas de CAMADAS
+            diferentes, e é por isso que eles não podiam ser um botão só:
+
+            * **Sons do jogo** mexe no byte `OUTPUT_PATH_SEL` (camada 2, o
+              firmware) e devolve o default sink do sistema para onde ele
+              estava. O jogo continua mandando som para o dispositivo de áudio
+              do controle; o byte decide que só o canal direito sai no
+              alto-falante e o esquerdo vai para o fone/TV;
+            * **Todo o som do PC** mexe no default sink (camada 1, o PipeWire)
+              E põe a rota em "só o alto-falante" — com o som inteiro do PC
+              vindo por aqui, mandar metade para um fone que não existe seria
+              perder metade.
+
+            **A camada 1 vence a camada 2** (armadilha 3 da sprint): volume e
+            rota perfeitos num sink mudo é trabalho invisível. Por isso o
+            estado "Todo o som do PC" mexe nas duas.
+
+            E ele TOCA o som de confirmação, que é ideia dela: *"ao clicar em
+            cada botão ele emite o som (...) tem que ajudar a entender o
+            conceito"*. O seletor não só configura — ele demonstra.
+            """
+            canal = seletor.get_active_id()
+            if canal is None or self._speaker_canal_pintando:
+                return
+            rota = ROTA_DO_CANAL.get(canal)
+            if rota is None:
+                return
+
+            # A camada 1 (o default sink do PipeWire) NÃO é chamada daqui: o
+            # card é um widget e não tem a `RotaDeSaida`, que vive na aba. Ele
+            # PEDE, e a aba executa — o mesmo desenho do `definir_sink_de_saida`
+            # que a `status_actions` já injeta aqui.
+            #
+            # A separação não é cerimônia: a rota do sistema é um fato GLOBAL
+            # (há um default sink só), e deixar cada card mexer nele
+            # diretamente é como ter dois botões para um interruptor.
+            pedir_rota_do_sistema = self._pedir_rota_do_sistema
+
+            def _pedir() -> Any:
+                ok = ipc_bridge.speaker_set(rota=rota)
+                if pedir_rota_do_sistema is not None:
+                    pedir_rota_do_sistema(canal == CANAL_TODO_O_PC)
+                return self._confirmar_com_som() if ok else None
+
+            ipc_bridge.run_in_thread(_pedir, self._on_som_de_confirmacao)
+
+        def definir_pedido_de_rota(self, callback: Any) -> None:
+            """Quem executa a camada 1 quando ela troca o canal.
+
+            Recebe `True` para "manda todo o som do PC para o controle" e
+            `False` para "devolve o som para onde ele estava". A aba injeta
+            isto na montagem dos cards; sem ele, o seletor ainda escreve o
+            byte da camada 2 e o card não fica mudo.
+            """
+            self._pedir_rota_do_sistema = callback
+
         def _on_speaker_mudo_clicado(self, _botao: Any) -> None:
             """Silenciar/Ativar — nunca a PRIMEIRA escrita (ver `acao_speaker_mudo`)."""
             acao = self._speaker_acao_mudo
@@ -2931,6 +3117,23 @@ if _GTK_DISPONIVEL:
         def _aplicar_selo_do_som(self) -> None:
             """A linha de recado do bloco: camada 1, depois o som, depois nada.
 
+            SOM-CANAL-01/E4 (02/08/2026) — decisão dela, olhando a tela:
+            *"essa parte do sem som faz sentido continuar na interface? o
+            slicer mostra isso"*.
+
+            **O `Sem som` saiu; o `Saída muda` FICOU**, e a diferença é o que
+            cada um responde:
+
+            * `Saída muda` é a CAMADA 1 — o sink do controle mudo no PipeWire.
+              O controle deslizante NÃO mostra isso, e é justamente a armadilha
+              que ela nomeou na sprint: *"volume perfeito num sink mudo no
+              PipeWire é trabalho invisível"*. Sem o selo, ela mexe no controle
+              deslizante e não sai som, sem saber por quê;
+            * `Sem som` era sobre a CONFIRMAÇÃO sonora (falta `paplay`/`pw-play`
+              na máquina), e não sobre o som do controle. Além de secundário,
+              o rótulo era ambíguo: lia como "o controle está sem som". Ele
+              continua existindo na DICA do bloco, que é onde cabe a explicação.
+
             SOM-04, regra 4: **se não houver como tocar, não finja — e não erre
             calado.** Um clique que promete som e não entrega é pior que nenhum
             som, e a diferença entre "a janela não sabe" e "a janela está
@@ -2953,13 +3156,14 @@ if _GTK_DISPONIVEL:
             card compacto já usa nos botões — o rótulo diz QUE, a dica diz POR
             QUÊ —, e a dica é o único lugar da interface que não custa pixel.
             """
+            # SOM-CANAL-01/E4: o selo mostra SÓ a camada 1. O recado de "não
+            # deu para confirmar" continua sendo lido — ele entra na DICA do
+            # bloco, logo abaixo, e é de lá que ela o lê quando quiser saber
+            # por que o bipe não tocou.
             recado = self._speaker_recado_do_som
-            if self._speaker_saida_muda is True:
-                texto = TEXTO_SELO_SAIDA_MUDA
-            elif recado:
-                texto = TEXTO_SELO_SEM_SOM
-            else:
-                texto = ""
+            texto = (
+                TEXTO_SELO_SAIDA_MUDA if self._speaker_saida_muda is True else ""
+            )
             if texto:
                 self._speaker_selo_saida.set_text(texto)
                 self._speaker_selo_saida.show()

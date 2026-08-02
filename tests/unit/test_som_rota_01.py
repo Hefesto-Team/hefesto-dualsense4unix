@@ -110,24 +110,36 @@ def test_a_rota_omitida_nao_toma_a_posse_do_byte_do_microfone() -> None:
 
 
 @pytest.mark.parametrize(
-    ("rota", "esperado"),
+    "rota",
     [
-        (rep.SAIDA_ESTEREO_NO_FONE, 0b0000_0000),
-        (rep.SAIDA_MONO_NO_FONE, 0b0001_0000),
-        (rep.SAIDA_L_FONE_R_ALTO_FALANTE, 0b0010_0000),
-        (rep.SAIDA_SO_NO_ALTO_FALANTE, 0b0011_0000),
+        rep.SAIDA_ESTEREO_NO_FONE,
+        rep.SAIDA_MONO_NO_FONE,
+        rep.SAIDA_L_FONE_R_ALTO_FALANTE,
+        rep.SAIDA_SO_NO_ALTO_FALANTE,
     ],
 )
-def test_a_rota_entra_nos_bits_4_e_5(rota: int, esperado: int) -> None:
+def test_a_rota_entra_nos_bits_4_e_5(rota: int) -> None:
     """Os quatro valores do `OUTPUT_PATH_SEL`, no lugar certo do byte.
 
     O caso do Zelda é o `2`: canal esquerdo para o fone/TV, canal direito para
     o alto-falante do controle. *"O speaker do controle faz os barulhos da
     espada do Link enquanto na tela tem o som normal do jogo"* — um byte.
 
+    **A asserção deixou de casar o byte INTEIRO**, e a razão é a regressão de
+    02/08: os literais que estavam aqui (`0b0000_0000` para a rota 0, etc.)
+    travavam justamente a base ZERO que matou o microfone dela. Um teste que
+    exige o resto do byte zerado é um teste que exige o `FORCE_INTERNAL_MIC`
+    apagado.
+
+    Agora ele afere o que é dele — os bits 4-5 — e o microfone tem teste
+    próprio (`test_a_rota_preserva_o_microfone_quando_assume_o_byte_do_zero`).
+
     Mordida: trocar o `OUTPUT_PATH_SEL_SHIFT` de 4 para 0.
     """
-    assert _byte_da_rota(_Handle(), rota) == esperado
+    novo = _byte_da_rota(_Handle(), rota)
+
+    assert novo is not None
+    assert (novo & rep.OUTPUT_PATH_SEL_MASK) >> rep.OUTPUT_PATH_SEL_SHIFT == rota
 
 
 def test_trocar_a_rota_preserva_o_caminho_do_microfone() -> None:
@@ -207,3 +219,33 @@ def test_a_devolucao_da_posse_leva_o_preamp_junto() -> None:
         bp._PinnedPyDualSense.release_audio_volumes
     )
     assert "self._preamp_audio = None" in fonte
+
+
+def test_a_rota_preserva_o_microfone_quando_assume_o_byte_do_zero() -> None:
+    """A REGRESSÃO de 02/08/2026, medida na máquina dela e curada no mesmo dia.
+
+    Ao pedir uma rota, o `common[7]` era escrito com base ZERO — porque
+    ninguém tinha posse dele antes. **O microfone do controle parou de
+    captar**: o `parec` passou de 131072 bytes para ZERO, e voltou assim que a
+    posse foi devolvida.
+
+    É exatamente a armadilha 2 que ela nomeou na sprint — *"o common[7] carrega
+    a rota E o caminho do microfone; escrever meio byte muda o outro meio"* — e
+    o `_byte_da_rota` só preservava o outro meio quando JÁ havia posse. Na
+    PRIMEIRA escrita, que é o caso real de quem nunca mexeu na rota, ele
+    zerava tudo.
+
+    Não há como ler o `common[7]` do firmware (não existe report de entrada nem
+    feature que o devolva), então a base é a mais conservadora que se pode
+    afirmar: o microfone INTERNO ligado.
+
+    Mordida: voltar `vigente = 0`.
+    """
+    novo = _byte_da_rota(_Handle(), rep.SAIDA_SO_NO_ALTO_FALANTE)
+
+    assert novo is not None
+    assert novo & rep.AUDIO_CONTROL_FORCE_INTERNAL_MIC, (
+        "sem o FORCE_INTERNAL_MIC na base, a primeira escrita da rota mata o "
+        "microfone do controle — medido"
+    )
+    assert (novo & rep.OUTPUT_PATH_SEL_MASK) >> rep.OUTPUT_PATH_SEL_SHIFT == 3

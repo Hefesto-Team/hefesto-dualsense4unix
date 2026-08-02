@@ -265,7 +265,16 @@ def _byte_da_rota(handle: Any, rota: int | None) -> int | None:
     """
     if rota is None:
         return None
-    vigente = 0
+    # SOM-CANAL-01, REGRESSÃO MEDIDA em 02/08: a base era ZERO quando ninguém
+    # tinha posse do byte — e zero apaga o `FORCE_INTERNAL_MIC`. O microfone do
+    # controle parou de captar (o `parec` foi de 131072 bytes para ZERO) e
+    # voltou assim que a posse foi devolvida.
+    #
+    # Não há como LER o `common[7]` que o firmware está usando: não existe
+    # report de entrada nem feature que o devolva. Então a base é a mais
+    # conservadora que se pode afirmar — o microfone INTERNO ligado, que é o
+    # que este controle tem quando não há headset.
+    vigente = rep.AUDIO_CONTROL_BASE_SEGURA
     volumes = getattr(handle, "_volumes_audio", None)
     if isinstance(volumes, list) and len(volumes) > 3 and volumes[3] is not None:
         vigente = int(volumes[3])

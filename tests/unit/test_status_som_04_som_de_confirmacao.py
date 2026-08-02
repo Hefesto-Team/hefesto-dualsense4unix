@@ -391,10 +391,19 @@ def test_quando_o_som_nao_sai_a_tela_diz_que_nao_saiu_e_por_que(
     card._on_speaker_mudo_clicado(None)
     pedidos.rodar()
 
-    assert card._speaker_selo_saida.get_visible(), (
-        "a tela tem de DIZER que não houve confirmação"
+    # SOM-CANAL-01/E4 (02/08/2026) — decisão dela: *"essa parte do sem som faz
+    # sentido continuar na interface? o slicer mostra isso"*. O selo passou a
+    # mostrar SÓ a camada 1 (`Saída muda`), e o recado do som vive na dica.
+    #
+    # **O custo fica registrado, e é real:** a regra 4 da SOM-04 diz "se não
+    # houver como tocar, não finja — e não erre calado", e uma dica exige
+    # passar o mouse. O que continua sendo travado aqui é o essencial: o
+    # recado é PRODUZIDO e CHEGA à dica. O que mudou foi onde ele aparece.
+    assert not card._speaker_selo_saida.get_visible(), (
+        "o selo mostra só a camada 1 desde a SOM-CANAL-01/E4"
     )
-    assert card._speaker_selo_saida.get_text() == TEXTO_SELO_SEM_SOM
+    # SOM-CANAL-01/E4: o recado saiu do selo e vive na dica do bloco.
+    assert TEXTO_SELO_SEM_SOM not in card._speaker_selo_saida.get_text()
     assert "paplay" in card._speaker_box.get_tooltip_text(), (
         "e a dica do bloco tem de dizer POR QUÊ — errar calado é a falha que "
         "esta leva não pode ter"
@@ -413,7 +422,9 @@ def test_o_som_que_sai_nao_deixa_recado_nenhum(pedidos: _Pedidos) -> None:
     card = _card(speaker=POSSE)
     card._on_speaker_mudo_clicado(None)
     pedidos.rodar()
-    assert card._speaker_selo_saida.get_visible()
+    # SOM-CANAL-01/E4: o recado do som deixou de acender o selo — ele
+    # vive na dica do bloco desde 02/08 (decisão dela).
+    assert not card._speaker_selo_saida.get_visible()
 
     pedidos.resultado = ResultadoDoSom.de(MOTIVO_TOCOU, SINK_CONTROLE)
     card._on_speaker_mudo_clicado(None)
@@ -534,7 +545,9 @@ def test_o_recado_do_som_nao_gasta_um_pixel_de_largura(pedidos: _Pedidos) -> Non
             f"recebido {selo.get_max_width_chars()}"
         )
         # Cura B — o texto do selo é o SELO, não a frase.
-        assert selo.get_text() == TEXTO_SELO_SEM_SOM, (
+        # SOM-CANAL-01/E4: o selo mostra SÓ a camada 1; o recado do som
+        # vive na DICA do bloco desde 02/08 (decisão dela).
+        assert TEXTO_SELO_SEM_SOM not in selo.get_text(), (
             "o selo diz QUE não houve confirmação; quem diz POR QUÊ é a dica "
             f"do bloco — recebido {selo.get_text()!r}"
         )
