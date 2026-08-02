@@ -2694,6 +2694,25 @@ class IpcHandlersMixin:
         muted = params.get("muted")
         release = params.get("release")
         uniq = params.get("uniq")
+        rota = params.get("rota")
+        if rota is not None:
+            # SOM-ROTA-01/E3 — o caso do Zelda em um byte: `rota=2` manda o
+            # canal esquerdo para o fone/TV e o DIREITO para o alto-falante do
+            # controle. Ela descreveu assim: *"o speaker do controle faz os
+            # barulhos da espada do Link enquanto na tela tem o som normal do
+            # jogo"*.
+            #
+            # A faixa é 0-3 e o erro é de VALIDAÇÃO, não clamp: os quatro
+            # valores significam coisas diferentes, e escolher um vizinho em
+            # silêncio mandaria o áudio para outro lugar que não o pedido.
+            if not isinstance(rota, int) or isinstance(rota, bool):
+                raise ValueError("speaker.set: 'rota' precisa ser int 0-3")
+            if not 0 <= rota <= 3:
+                raise ValueError(
+                    "speaker.set: 'rota' fora de 0-3 (0=estéreo no fone, "
+                    "1=mono no fone, 2=L no fone e R no alto-falante, "
+                    "3=só no alto-falante)"
+                )
         if volume is not None:
             if not isinstance(volume, int) or isinstance(volume, bool):
                 raise ValueError("speaker.set: 'volume' precisa ser int 0-255")
@@ -2705,7 +2724,7 @@ class IpcHandlersMixin:
             raise ValueError("speaker.set: 'release' precisa ser boolean ou omitido")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
-        if release and (volume is not None or muted is not None):
+        if release and (volume is not None or muted is not None or rota is not None):
             raise ValueError(
                 "speaker.set: 'release' não combina com 'volume'/'muted' — "
                 "devolver a posse e mandar um valor na mesma chamada não tem "
@@ -2737,7 +2756,18 @@ class IpcHandlersMixin:
                 "antes (mudo como primeira escrita tranca o alto-falante em "
                 "zero e o próprio mudo não o solta)"
             )
-        ok = bool(setter(volume, muted=muted, uniq=uniq))
+        # A `rota` só é repassada QUANDO VEIO, e o kwarg nem aparece na
+        # chamada sem ela. Duas razões, e a segunda é de contrato:
+        #
+        # 1. o backend trata `None` como "não tome a posse do common[7]", e é
+        #    assim que o caminho do microfone (que mora no mesmo byte)
+        #    continua intocado por omissão;
+        # 2. o backend é TROCÁVEL (ADR-001), e um parâmetro novo não pode
+        #    virar exigência retroativa para quem implementa a interface. Só
+        #    quem pede a rota precisa de um backend que a conheça — e aí o
+        #    `TypeError` é a resposta certa, não um silêncio.
+        extras: dict[str, Any] = {} if rota is None else {"rota": rota}
+        ok = bool(setter(volume, muted=muted, uniq=uniq, **extras))
         if ok:
             self._marcar_audio_manual()
         return {

@@ -32,6 +32,10 @@ from typing import TYPE_CHECKING, Any
 
 from pydualsense import pydualsense
 
+# SOM-ROTA-01: import no TOPO, e não tardio como as três ocorrências dentro de
+# funções deste arquivo. O `ds_output_report` só importa `zlib` — não há ciclo
+# a evitar, e os tetos de volume precisam ser resolvidos em tempo de módulo.
+from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.controller import (
     ControllerState,
     IController,
@@ -235,6 +239,39 @@ _INPUT_AUDIO_STATUS_IDX = 54
 _AUDIO_FLAG0_BITS = (0x10, 0x20, 0x40, 0x80)
 _AUDIO_COMMON_OFFSETS = (4, 5, 6, 7)
 
+#: SOM-ROTA-01: os TETOS de cada um, na mesma ordem. Eles não são 255 — o fone
+#: vai até 0x7F e o microfone até 0x40, e mandar mais é mandar lixo num campo
+#: que o firmware interpreta. O roteamento (`common[7]`) é um byte de bits e
+#: aceita a faixa inteira.
+_AUDIO_TETOS = (
+    rep.TETO_HEADPHONE_VOLUME,
+    rep.TETO_SPEAKER_VOLUME,
+    rep.TETO_MIC_VOLUME,
+    0xFF,
+)
+
+
+def _byte_da_rota(handle: Any, rota: int | None) -> int | None:
+    """O `common[7]` com a rota nova, preservando o caminho do microfone.
+
+    SOM-ROTA-01. `None` devolve `None`, e o chamador entende isso como "não
+    tome a posse deste byte" — que é o certo por omissão: o byte carrega a
+    rota de saída (`OUTPUT_PATH_SEL`, bits 4-5) E o caminho do microfone
+    (bits 0-3 e 6-7), e escrevê-lo inteiro com o número da rota apagaria o
+    resto em silêncio.
+
+    Com uma rota pedida, o valor VIGENTE do byte é a base — se já houver dono.
+    Sem dono, a base é zero, que é o estado neutro dos bits do microfone.
+    """
+    if rota is None:
+        return None
+    vigente = 0
+    volumes = getattr(handle, "_volumes_audio", None)
+    if isinstance(volumes, list) and len(volumes) > 3 and volumes[3] is not None:
+        vigente = int(volumes[3])
+    limpo = vigente & ~rep.OUTPUT_PATH_SEL_MASK
+    return limpo | ((int(rota) << rep.OUTPUT_PATH_SEL_SHIFT) & rep.OUTPUT_PATH_SEL_MASK)
+
 
 def _clamp_u8(valor: Any, default: int) -> int:
     """Coerção defensiva para byte de report: 0..255, ou `default` se None/lixo."""
@@ -434,6 +471,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         #: áudio / seleção de microfone), que não sabemos ler e cujo valor
         #: neutro NÃO é 0 — autorizá-lo junto do volume seria adivinhar.
         self._volumes_audio: list[int | None] = [None, None, None, None]
+        #: SOM-ROTA-01: o ganho do pré-amp (common[37] bits 0-2). `None` = sem
+        #: dono, e o byte sai zerado com o bit de autorização apagado — a
+        #: MESMA disciplina dos quatro de cima (AUDIO-OWNER-01): autorizar sem
+        #: escrever é mandar zero a 60 Hz com cara de keepalive.
+        self._preamp_audio: int | None = None
         # AUDIO-STATUS-01 — último byte de estado de áudio visto no report de
         # INPUT (fone plugado / mic externo / mic MUDO pelo firmware). Custo
         # zero: a pydualsense já guarda o report cru em `self.states` a cada
@@ -536,6 +578,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         speaker: int | None = None,
         microphone: int | None = None,
         audio_path: int | None = None,
+        preamp: int | None = None,
     ) -> None:
         """Assume a posse dos bytes de volume que forem passados (common[4..7]).
 
@@ -551,11 +594,27 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """
         for pos, valor in enumerate((headphone, speaker, microphone, audio_path)):
             if valor is not None:
-                self._volumes_audio[pos] = _clamp_u8(valor, 0)
+                # SOM-ROTA-01: o clamp é por CAMPO, e não 0-255 para todos.
+                self._volumes_audio[pos] = min(
+                    _clamp_u8(valor, 0), _AUDIO_TETOS[pos]
+                )
+        if preamp is not None:
+            self._preamp_audio = int(preamp) & rep.SP_PREAMP_GAIN_MASK
 
     def release_audio_volumes(self) -> None:
-        """Devolve a posse de common[4..7] (volta ao neutro). Idempotente."""
+        """Devolve a posse dos bytes de áudio (volta ao neutro). Idempotente.
+
+        SOM-ROTA-01: o pré-amplificador (`common[37]`) entra na devolução
+        junto com os quatro de `common[4..7]`. Deixá-lo de fora faria
+        "Devolver" devolver metade — e o pré-amp é justamente o campo que
+        muda o alcance do controle deslizante.
+
+        O que a devolução NÃO faz, e nunca fez: restaurar o valor anterior. O
+        DualSense não devolve o volume — não há report de entrada nem feature
+        que o leia. "Devolver" devolve o CONTROLE, nunca o número.
+        """
         self._volumes_audio = [None, None, None, None]
+        self._preamp_audio = None
 
     def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 - nome do upstream
         super().setLeftMotor(intensity)
@@ -646,13 +705,21 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
                 | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
             )
-        common[0] = flag0
-        common[1] = flag1
         common[2] = int(self.rightMotor) & 0xFF
         common[3] = int(self.leftMotor) & 0xFF
         for offset, valor in zip(_AUDIO_COMMON_OFFSETS, volumes, strict=False):
             if valor is not None:
                 common[offset] = int(valor) & 0xFF
+        # SOM-ROTA-01: o pré-amplificador, com o MESMO contrato dos quatro de
+        # cima — o bit de autorização só liga quando alguém escreveu um valor.
+        preamp = getattr(self, "_preamp_audio", None)
+        if preamp is None:
+            flag1 &= ~rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+        else:
+            flag1 |= rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+            common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
+        common[0] = flag0
+        common[1] = flag1
         common[8] = int(self.audio.microphone_led) & 0xFF
         # `audio.microphone_mute` da pydualsense continua sendo o valor de
         # fato mandado — mas só quando temos a posse (ver AUDIO-OWNER-01).
@@ -2203,6 +2270,7 @@ class PyDualSenseController(IController):
         *,
         muted: bool | None = None,
         uniq: str | None = None,
+        rota: int | None = None,
     ) -> bool:
         """Assume a posse do volume de alto-falante/fone e o aplica.
 
@@ -2217,9 +2285,18 @@ class PyDualSenseController(IController):
         Aplica o MESMO valor ao alto-falante interno e ao fone: para quem usa o
         controle é UM volume só, e qual dos dois toca depende do headset estar
         plugado (que é o `fone_plugado` do `audio_status_for`). O volume de
-        MICROFONE (common[6]) não é tocado, e o byte de ROTEAMENTO (common[7])
-        também não — não sabemos o valor neutro dele e chutar mudaria o caminho
-        do áudio.
+        MICROFONE (common[6]) não é tocado.
+
+        SOM-ROTA-01: o `rota` é opcional e, quando omitido, o `common[7]`
+        continua intocado — pela razão de sempre, que agora está escrita: o
+        byte carrega a rota de SAÍDA nos bits 4-5 e o caminho do MICROFONE no
+        resto, e escrever o byte inteiro com um número de rota apagaria o
+        caminho do mic sem ninguém notar. Quando `rota` vem, só os dois bits
+        dela mudam.
+
+        E o PRÉ-AMPLIFICADOR (`common[37]`) passa a ir junto do volume — ver o
+        bloco de comentário no laço, é ele que destrava os 60% de curso que ela
+        mediu como inertes.
 
         Retorna True se algum handle recebeu o pedido.
         """
@@ -2252,7 +2329,32 @@ class PyDualSenseController(IController):
                     pref = 0
                 handle._speaker_volume_pref = pref
                 efetivo = 0 if muted else pref
-                handle.set_audio_volumes(headphone=efetivo, speaker=efetivo)
+                # SOM-ROTA-01/E1 — o PRÉ-AMPLIFICADOR vai junto, e é ele que
+                # destrava o curso do controle deslizante.
+                #
+                # Ela mediu a curva em 01/08: mudo até 38, satura em 102 — 60%
+                # do curso inerte. A causa não é o usuário quebrando nada: é o
+                # registrador de volume lutando contra um ganho de entrada no
+                # valor padrão. O kernel 6.18, para fazer o alto-falante soar
+                # quando o fone sai, escreve TRÊS campos (rota, volume e
+                # pré-amp); esta árvore escrevia só o volume, e 64 passos úteis
+                # é a assinatura de mexer em um de três botões.
+                #
+                # O `SP_PREAMP_GAIN_PADRAO` é o mesmo `0x2` que o kernel
+                # escolhe. Ele entra na MESMA posse do volume: quem assume um
+                # assume o outro, e o `release` devolve os dois — meio
+                # devolvido seria pior que nada.
+                #
+                # `rota` fica em `None` por omissão e o `common[7]` NÃO é
+                # tocado: aquele byte carrega a rota (bits 4-5) E o caminho do
+                # microfone (o resto), e escrevê-lo pela metade muda a outra
+                # metade em silêncio.
+                handle.set_audio_volumes(
+                    headphone=efetivo,
+                    speaker=efetivo,
+                    preamp=rep.SP_PREAMP_GAIN_PADRAO,
+                    audio_path=_byte_da_rota(handle, rota),
+                )
                 ok = True
             except Exception as exc:
                 logger.warning(
