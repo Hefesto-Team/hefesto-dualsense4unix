@@ -20,6 +20,9 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GObject, Gtk
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.home_actions import (
+    texto_do_custo_da_mascara,
+)
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
     active_profile_name,
@@ -533,6 +536,20 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         flavor_sel.set_tooltip_text(
             "Quais desenhos de botão o jogo mostra na tela"
         )
+        # ESCOLHA-DELA-VENCE-01/E4, pedido dela: *"ao deixar o mouse sobre a
+        # opção Xbox, ele falaria que o Xbox não tem tais features"*.
+        #
+        # O texto do preço JÁ EXISTIA e vivia só na aba Início — que não é
+        # onde ela escolhe por jogo. Ele é REUSADO da função pura, e não
+        # reescrito: dois donos da mesma frase derivam, e esta casa tem a
+        # regra escrita.
+        flavor_sel.set_tooltips(
+            {
+                sabor: texto_do_custo_da_mascara(sabor)
+                for sabor, _rotulo in _MODE_FLAVOR_ITEMS
+                if texto_do_custo_da_mascara(sabor)
+            }
+        )
         self._mode_flavor_selector = flavor_sel
         mask_row.pack_start(flavor_sel, True, True, 0)
         opts.pack_start(mask_row, False, False, 0)
@@ -602,10 +619,26 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if kind_sel is None:
             return
         kind = mode.kind if mode is not None else "none"
-        flavor = (mode.gamepad_flavor if mode is not None else None) or "xbox"
+        # ESCOLHA-DELA-VENCE-01/E1 — o `or "xbox"` SAIU daqui, e ele era um
+        # defeito ativo sem teste nenhum que o pegasse.
+        #
+        # Um perfil pode dizer `{"kind": "gamepad", "gamepad_flavor": null}`, e
+        # `null` significa, no applier, "MANTÉM a máscara atual". O editor
+        # convertia isso em "xbox" nas DUAS pontas: ela abria um perfil sem
+        # opinião sobre máscara, salvava qualquer outra coisa nele, e o perfil
+        # passava a EXIGIR Xbox — apagando giroscópio e touchpad naquele jogo.
+        # Ela nunca pediu isso.
+        #
+        # Com `None`, o seletor fica SEM NENHUM ativo (das duas saídas da
+        # sprint, a recomendada): mostrar um dos dois botões marcado seria a
+        # tela afirmando uma escolha que ninguém fez.
+        flavor = mode.gamepad_flavor if mode is not None else None
         kind_sel.set_active_id(kind)
         if self._mode_flavor_selector is not None:
-            self._mode_flavor_selector.set_active_id(flavor)
+            if flavor is None:
+                self._mode_flavor_selector.limpar_ativo()
+            else:
+                self._mode_flavor_selector.set_active_id(flavor)
         # set_active_id só emite quando o id muda — sincroniza explicitamente
         # para a visibilidade ficar certa mesmo sem emissão.
         self._sync_mode_options_visibility(kind)
@@ -634,10 +667,12 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             return None
         flavor: str | None = None
         if kind == "gamepad":
+            # ESCOLHA-DELA-VENCE-01/E1: sem botão marcado, grava `None` — que
+            # é "mantém a máscara atual", e é o que estava no disco. O
+            # `or "xbox"` que estava aqui era a segunda ponta do mesmo defeito:
+            # bastava salvar o perfil para ele passar a exigir Xbox.
             flavor_sel = self._mode_flavor_selector
-            flavor = (
-                flavor_sel.get_active_id() if flavor_sel is not None else None
-            ) or "xbox"
+            flavor = flavor_sel.get_active_id() if flavor_sel is not None else None
         return {"kind": kind, "gamepad_flavor": flavor}
 
     def _sync_selection_with_active_profile(self) -> None:
