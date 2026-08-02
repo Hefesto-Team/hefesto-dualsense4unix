@@ -261,23 +261,46 @@ A tabela desta árvore herdou a nomenclatura opaca de uma engenharia reversa de
 
 | `TriggerMode` daqui | valor | o firmware entende |
 |---|---|---|
-| `RIGID_A` | 0x21 | Feedback (oficial) — nenhum preset usa |
-| `RIGID_B` | **0x05** | **OFF** |
+| `RIGID_A` | 0x21 | Feedback (oficial) — hoje é o `FEEDBACK`, e sete presets o usam |
+| `RIGID_B` | **0x05** | **OFF** — nenhum preset o manda mais |
 | `RIGID_AB` | 0x25 | Weapon |
 | `PULSE_A` | 0x22 | Bow |
 | `PULSE_B` | 0x06 | Simple_Vibration |
-| `PULSE_AB` | 0x26 | Vibration |
-| `CALIBRATION` | 0xFC | **Debug — corrompe o estado** |
+| `PULSE_AB` | 0x26 | Vibration — os cinco presets que ela aprovou |
+| `CALIBRATION` | 0xFC | **Debug — REMOVIDO da enum em 01/08; o `custom()` recusa 0xFC-0xFE** |
+
+Desde a TRIGGER-CANON-01 os nomes da coluna 1 são **alias** dos canônicos
+(`FEEDBACK`, `WEAPON`, `VIBRATION`, `BOW`, `GALLOPING`, `MACHINE`) — eles
+ficam porque estão em perfis no disco dela.
 
 Consequência, se a decodificação estiver certa: `rigid()`, `simple_rigid()` e
 `feedback()` mandam **OFF** — não fazem nada; `weapon()` **vibra** em vez de
 resistir; e por aí.
 
-**Isto ainda NÃO foi medido no hardware desta casa.** É triangulação de três
-fontes com a enum da Sony. O experimento que decide está na sprint
-`TRIGGER-VERIFY-00` e leva minutos.
+**MEDIDO E CURADO em 01/08/2026 — TRIGGER-CANON-01.** Ela testou pela aba
+Gatilhos e a decodificação se confirmou: *"rígido e desligado sem diferença"*,
+*"resistência nada também"*, *"arco, galope e pulso e metralhadora funcionam"*.
 
-**E refuta um bug registrado:** o `BUG-TRIGGER-MULTIPOS-FORCA8-01` concluiu
+E a medição trouxe DUAS correções ao que estava escrito aqui:
+
+1. **a previsão de que os cinco presets de `0x26` seriam idênticos ERROU.**
+   Ela: *"eles são bem diferentes viu"*. O motivo é instrutivo — os
+   `forces[0]`/`forces[1]` desta árvore caíam em cima do bitmask de zonas, e
+   cada preset produzia um bitmask ACIDENTAL diferente. Os parâmetros chegam e
+   surtem efeito nos modos não oficiais;
+2. **o empacotamento errado é um defeito INDEPENDENTE do modo errado**, e a
+   prova é o `0x25`: ele é o Weapon OFICIAL, estava com o número certo, e não
+   fez nada. Os modos oficiais VALIDAM os parâmetros; os legados e os não
+   oficiais não.
+
+E o aceite de produto dela mudou o objetivo da correção: *"as duas temos nomes
+perfeitos, pq essa é a sensação de usar ambas"*. Os cinco que funcionam **não
+foram tocados** — os bytes deles viraram dado, travados em
+`tests/unit/test_trigger_canon_01.py`. Os sete que não faziam nada passaram a
+mandar o modo oficial correto COM o bitmask de zonas.
+
+**E refutou um bug registrado** (feito em 01/08, ver `trigger_effects.py`): o
+`BUG-TRIGGER-MULTIPOS-FORCA8-01` concluiu
 *"o campo tem 3 bits, logo o máximo é 7 e a força 8 satura"*. A codificação real
 é `(strength − 1) & 0x07` com `strength` em 1..8, e `strength == 0` significa
 **zona inativa** — expresso no bitmask que esta árvore não escreve. Os 8 níveis
