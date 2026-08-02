@@ -82,6 +82,14 @@ logger = get_logger(__name__)
 #: número da página (EST-10).
 ABA_STATUS = "tab_status_box"
 
+#: A coluna e a altura do botão da rota de som NO BERÇO (o `status_grid` do
+#: frame Estado). Elas repetem o empacotamento do Glade porque a devolução
+#: acontece em código — o botão sai do berço para o card e pode voltar, e
+#: voltar para uma linha própria faria o grid ganhar altura que ele não tem
+#: (é o que `test_o_botao_ocupa_o_vao_horizontal_que_ja_existia` reprova).
+COLUNA_BERCO_DA_ROTA = 4
+ALTURA_BERCO_DA_ROTA = 2
+
 
 #: Número de exibição de um controle. A regra vive em `base.numero_do_controle`
 #: para as telas não divergirem; o nome antigo segue como alias do módulo.
@@ -450,6 +458,17 @@ class StatusActionsMixin(WidgetAccessMixin):
     #: Sink do controle resolvido pelo `mic_monitor` no último tique rápido.
     #: "" = não dá para saber, e é o que deixa o botão parado.
     _rota_sink: str = ""
+    #: CARD-ÚNICO-01 — o último "Perfil ativo"/"Hefesto" escrito, por id de
+    #: widget. Ele existe para o card que NASCE depois da escrita receber o
+    #: valor certo já na primeira pintura (ver
+    #: `_espelhar_estado_global_nos_cards`).
+    #:
+    #: Ele é REATRIBUÍDO, nunca mutado no lugar: `self._d[k] = v` num
+    #: atributo de CLASSE escreve no dicionário da classe, que é o mesmo
+    #: objeto para toda instância — duas janelas (ou dois testes na mesma
+    #: sessão) veriam o estado uma da outra. A reatribuição cria o de
+    #: instância na primeira escrita, que é o comportamento pretendido.
+    _ultimo_estado_global: dict[str, str] = {}  # noqa: RUF012
 
     def _set_battery_text(self, texto: str) -> None:
         """Escreve o número da bateria na barra E no rótulo ao lado dela.
@@ -708,6 +727,13 @@ class StatusActionsMixin(WidgetAccessMixin):
             slot.attach(card, pos % colunas, pos // colunas, 1, 1)
             card.show_all()
         self._alojar_botao_da_rota()
+        # CARD-ÚNICO-01: quem manda no frame "Estado" é a existência de um
+        # card ÚNICO. Com um controle só ele some inteiro (o card diz tudo o
+        # que ele dizia); com nenhum, ou com 2+, ele volta — no primeiro caso
+        # porque é a única voz da aba, no segundo porque perfil e daemon são
+        # fatos globais e não cabem repetidos num card por controle.
+        self._set_frame_estado_visivel(compact or not keys)
+        self._espelhar_estado_global_nos_cards()
 
     def _alojar_botao_da_rota(self) -> None:
         """Muda o botão da rota de som para o bloco Alto-falante do 1º card.
@@ -736,7 +762,16 @@ class StatusActionsMixin(WidgetAccessMixin):
         primeiro = next(iter(self._status_cards.values()), None)
         destino = getattr(primeiro, "_speaker_rota_slot", None)
         if destino is None:
-            return  # card compacto ou sem bloco de som: o botão fica onde está
+            # ROTA-ORFA-01 — sem destino, o botão VOLTA para o berço, e isto
+            # não é zelo: medido em 01/08/2026 nesta árvore, com GTK 3.24 e o
+            # glade real. Plugar um segundo controle recria os cards, e o
+            # `child.destroy()` do card antigo deixava o botão ÓRFÃO
+            # (`get_parent() is None`) — vivo, porque o Builder o referência,
+            # mas fora da tela e sem casa. Ela perdia o "desfazer" da rota de
+            # som exatamente no co-op, e só o recuperava despligando um
+            # controle. O berço tem lugar para ele: é de onde ele saiu.
+            self._devolver_botao_da_rota_ao_berco(botao)
+            return
         pai = botao.get_parent()
         if pai is destino:
             return
@@ -745,6 +780,27 @@ class StatusActionsMixin(WidgetAccessMixin):
                 pai.remove(botao)
             destino.pack_start(botao, True, True, 0)
             destino.show_all()
+
+    def _devolver_botao_da_rota_ao_berco(self, botao: Any) -> None:
+        """Recoloca o botão da rota no grid do frame Estado, se ele saiu.
+
+        O berço é o `status_grid`, coluna 4 — o lugar que o glade lhe dá e o
+        vão horizontal que ele já pagava. Idempotente: sai cedo se ele já
+        está lá, e não faz nada se o grid não existe (builder dublado).
+        """
+        berco = self._get("status_grid")
+        if berco is None or not hasattr(berco, "attach"):
+            return
+        pai = botao.get_parent()
+        if pai is berco:
+            return
+        with contextlib.suppress(Exception):
+            if pai is not None:
+                pai.remove(botao)
+            berco.attach(
+                botao, COLUNA_BERCO_DA_ROTA, 0, 1, ALTURA_BERCO_DA_ROTA
+            )
+            botao.show()
 
     def _clear_status_cards(self) -> None:
         """Remove todos os cards (daemon offline — nenhum controle conhecido)."""
@@ -755,6 +811,11 @@ class StatusActionsMixin(WidgetAccessMixin):
                 child.destroy()
         self._status_cards = {}
         self._status_card_keys = []
+        # Sem card nenhum, o frame Estado é a ÚNICA voz da aba — é ele que diz
+        # que o daemon não responde, e é onde o botão da rota de som volta a
+        # morar. Esconder aqui deixaria a aba Status em branco no exato
+        # momento em que ela mais precisa explicar o que houve.
+        self._set_frame_estado_visivel(True)
 
     # ------------------------------------------------------------------
     # Seletor de controle-alvo (FEAT-DSX-CONTROLLER-SELECTOR-01)
@@ -1708,10 +1769,10 @@ class StatusActionsMixin(WidgetAccessMixin):
                 "&#9675; Desconectado — abra a aba Sistema e clique em \"Ligar o Hefesto\""
                 "</span>"
             )
-        self._set_label("status_daemon", "Sem resposta (ligue na aba Sistema)")
+        self._set_estado_global("status_daemon", "Sem resposta (ligue na aba Sistema)")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
-        self._set_label("status_active_profile", "—")
+        self._set_estado_global("status_active_profile", "—")
         battery = self._get("status_battery_bar")
         if battery is not None:
             battery.set_fraction(0.0)
@@ -1843,7 +1904,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 header.set_markup(
                     '<span foreground="#ff5555">&#9675; Controle Desconectado</span>'
                 )
-        self._set_label("status_daemon", "Ligado")
+        self._set_estado_global("status_daemon", "Ligado")
 
     def _render_reconnecting(self) -> None:
         """Header intermediário — U+25D0 laranja + "tentando reconectar...".
@@ -1856,7 +1917,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             header.set_markup(
                 '<span foreground="#ffb86c">&#9680; Tentando Reconectar...</span>'
             )
-        self._set_label("status_daemon", "Reconectando")
+        self._set_estado_global("status_daemon", "Reconectando")
 
     def _render_offline(self) -> None:
         header = self._get("header_connection")
@@ -1867,10 +1928,10 @@ class StatusActionsMixin(WidgetAccessMixin):
                 "\"Ligar o Hefesto\""
                 "</span>"
             )
-        self._set_label("status_daemon", "Desligado")
+        self._set_estado_global("status_daemon", "Desligado")
         self._set_label("status_connection", "—")
         self._set_label("status_transport", "—")
-        self._set_label("status_active_profile", "—")
+        self._set_estado_global("status_active_profile", "—")
         # STATUS-02: offline volta ao layout single — a linha de bateria do
         # frame Estado reaparece (os cards vão embora junto com o daemon).
         self._set_battery_row_visible(True)
@@ -1961,8 +2022,8 @@ class StatusActionsMixin(WidgetAccessMixin):
             self._set_label(
                 "status_transport", transport.upper() if transport != "—" else "—"
             )
-        self._set_label("status_active_profile", active_profile)
-        self._set_label("status_daemon", "Ligado")
+        self._set_estado_global("status_active_profile", active_profile)
+        self._set_estado_global("status_daemon", "Ligado")
 
         # STATUS-02: com 2+ controles cada card tem a PRÓPRIA bateria — a
         # linha do frame Estado (que só sabia falar do primário, com o
@@ -1998,6 +2059,70 @@ class StatusActionsMixin(WidgetAccessMixin):
         # com a aba Status fora de foco o tick rápido pausa, e sem isto a
         # troca de aba mostraria cards do conjunto antigo por até 100 ms.
         self._sync_status_cards(state)
+
+    def _set_estado_global(self, widget_id: str, texto: str) -> None:
+        """Escreve "Perfil ativo"/"Hefesto" nos DOIS lugares que os mostram.
+
+        CARD-ÚNICO-01. Desde esta leva o par tem duas casas, e elas nunca
+        aparecem juntas: o card do controle único (onde ela pediu que ficasse)
+        e o frame "Estado" do glade, que responde quando não há card único —
+        com nenhum controle, e com 2+, em que perfil e daemon são fatos
+        GLOBAIS e apareceriam repetidos num card por controle.
+
+        O ponto de escrita é UM só de propósito. A alternativa — cada caminho
+        (offline, reconectando, desligado, ligado) lembrar de escrever nos dois
+        — é exatamente a forma como esta casa já produziu o defeito de *"a
+        config que eu deixo nunca é respeitada"*: escritores sem dono.
+        """
+        self._set_label(widget_id, texto)
+        self._ultimo_estado_global = {
+            **self._ultimo_estado_global,
+            widget_id: texto,
+        }
+        self._espelhar_estado_global_nos_cards()
+
+    def _espelhar_estado_global_nos_cards(self) -> None:
+        """Repassa o último par conhecido aos cards que existem AGORA.
+
+        Chamado também logo depois de os cards nascerem, e é o que evita o
+        card aparecer com "Nenhum / Consultando..." por um tique: o
+        `_render_state` escreve o par ANTES de sincronizar os cards, então o
+        card recém-criado perderia essa escrita e só a receberia no ciclo
+        seguinte — 100 ms de texto errado a cada troca de controle.
+        """
+        perfil = self._ultimo_estado_global.get("status_active_profile", "")
+        daemon = self._ultimo_estado_global.get("status_daemon", "")
+        # `getattr` e não `self._status_cards`: os cards nascem no primeiro
+        # `_sync_status_cards`, e há caminhos que escrevem o par ANTES disso —
+        # o de reconexão é o principal, e ele roda em janelas dubladas que
+        # nunca montam card nenhum.
+        for card in getattr(self, "_status_cards", {}).values():
+            definir = getattr(card, "definir_estado_global", None)
+            if definir is not None:
+                with contextlib.suppress(Exception):
+                    definir(perfil, daemon)
+
+    def _set_frame_estado_visivel(self, visivel: bool) -> None:
+        """Mostra/esconde o frame "Estado" inteiro.
+
+        CARD-ÚNICO-01, pedido dela: *"apaga estado"*. Ele não foi apagado do
+        glade, e a razão é medida: sem controle nenhum não existe card, e a
+        aba Status ficaria MUDA — sem dizer que o daemon está parado nem
+        oferecer o botão da rota de som. O frame virou o que ele sempre foi na
+        prática, e agora só isso: o fallback.
+
+        Quem some junto é a `CaixaDeTetoElastico` que o `app.py` põe em volta
+        dele na montagem — esconder só o frame deixaria a caixa ocupando a
+        altura do espaçamento da aba, e ela veria o vão sem enxergar a causa.
+        """
+        frame = self._get("frame_status_estado")
+        if frame is None or not hasattr(frame, "set_visible"):
+            return
+        with contextlib.suppress(Exception):
+            frame.set_visible(visivel)
+            pai = frame.get_parent()
+            if pai is not None and type(pai).__name__ == "CaixaDeTetoElastico":
+                pai.set_visible(visivel)
 
     def _set_battery_row_visible(self, visible: bool) -> None:
         """Mostra/esconde a linha de bateria do frame Estado.

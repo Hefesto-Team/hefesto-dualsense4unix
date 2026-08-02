@@ -748,10 +748,20 @@ def test_as_duas_legendas_de_analogico_tem_o_mesmo_numero_de_linhas(
         card._stick_left_title.get_allocated_height()
         == card._stick_right_title.get_allocated_height()
     )
-    # E a lateral não sumiu do card: ela desceu para a linha dos números, que
-    # é onde ela cabe sem inventar uma terceira linha para ninguém.
-    assert card._stick_left_xy.get_text().startswith(ROTULO_STICK_ESQ)
-    assert card._stick_right_xy.get_text().startswith(ROTULO_STICK_DIR)
+    # E a lateral não sumiu do card. Ela já esteve no título (onde mandava na
+    # quebra de linha e criou o defeito acima) e depois na linha dos números;
+    # desde a CARD-ÚNICO-01 ela é a MARCA D'ÁGUA desenhada dentro do círculo,
+    # a pedido dela: *"L3 e R3 saem do X: e vão ficar no centro do desenho do
+    # analógico com transparência 70% e grande ao fundo"*.
+    #
+    # O que este par de asserções trava é o COMPORTAMENTO, não o lugar: a
+    # lateral existe em algum lugar do bloco, e não em DOIS. Repetir "L3" na
+    # marca d'água e no número seria o mesmo defeito de duplicação que a
+    # bateria teve.
+    assert card._stick_left._label == ROTULO_STICK_ESQ
+    assert card._stick_right._label == ROTULO_STICK_DIR
+    assert ROTULO_STICK_ESQ not in card._stick_left_xy.get_text()
+    assert ROTULO_STICK_DIR not in card._stick_right_xy.get_text()
 
 
 def test_ordem_da_faixa_poe_o_microfone_a_direita_dos_analogicos() -> None:

@@ -319,6 +319,28 @@
                     <property name="halign">fill</property>
                     <property name="hexpand">True</property>
                     <property name="width-request">1040</property>
+                    <!-- CARD-ÚNICO-01: quem manda na visibilidade deste frame
+                         é a `status_actions._set_frame_estado_visivel`. Ela
+                         pediu *"apaga estado"*, e com UM controle ele some
+                         inteiro — o card passou a dizer tudo o que ele dizia.
+
+                         Ele NÃO foi apagado do glade porque continua sendo a
+                         única voz da aba em dois casos: com nenhum controle
+                         (não há card para falar, e é justamente quando a aba
+                         precisa dizer que o daemon não responde) e com 2+
+                         (perfil ativo e daemon são fatos GLOBAIS, e num card
+                         por controle apareceriam repetidos).
+
+                         E NÃO tem `no-show-all`, de propósito. Seria o
+                         reflexo óbvio para o frame não voltar num `show_all`,
+                         e é armadilha: o `no-show-all` também impede o
+                         `show_all` de marcar os FILHOS, e o frame voltaria
+                         VAZIO — é a mesma pegadinha que o
+                         `ControllerCard._esconder_modulo` documenta, onde a
+                         cura é `show_all()` ANTES do `no_show_all`. Aqui não
+                         é preciso nenhum dos dois: depois da montagem, quem
+                         chama `show_all` são os cards e o slot da rota, e
+                         nenhum deles sobe até este frame. -->
                     <child>
                       <!-- ESTADO-TRES-LINHAS-01: entre o frame e o grid entrou
                            uma caixa VERTICAL, e a razão é geométrica: a linha

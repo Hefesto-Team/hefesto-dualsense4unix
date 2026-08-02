@@ -1011,7 +1011,24 @@ def test_a_coluna_do_som_nao_e_a_mais_alta_da_faixa(
     #: A faixa que a aba Status entrega aos cards, medida com a janela no
     #: tamanho de projeto. Mesmo número de `test_status_som_04_som_de_
     #: confirmacao.py`, que é o outro teste que o cobra.
-    faixa_dos_cards_px = 467
+    #:
+    #: **467 CADUCOU em 01/08/2026 (noite), e o número não foi afrouxado para
+    #: caber — foi remedido.** Remedição, com a janela em 1180x830 e a escala
+    #: de fonte da sessão (+3), com `status_players_scroll.get_allocated_height()`:
+    #:
+    #: * frame "Estado" VISÍVEL: a faixa dá **550px**;
+    #: * frame "Estado" escondido: **708px**.
+    #:
+    #: Ou seja, 467 já estava defasado ANTES desta leva — ele é anterior à
+    #: ESTADO-TRES-LINHAS-01, que levou o frame de cinco linhas para três e
+    #: devolveu essa altura aos cards, e ninguém remediu.
+    #:
+    #: Fica o número do PIOR caso (550, com o frame na tela), e não o dos 708,
+    #: de propósito: a CARD-ÚNICO-01 esconde o frame quando há um controle só,
+    #: mas um teto que dependa dessa regra quebraria no dia em que ela mudar.
+    #: O dono absoluto continua sendo `test_layout_orcamento_altura.py`, que
+    #: MEDE a faixa em vez de repetir o número.
+    faixa_dos_cards_px = 550
 
     assert som <= maior_vizinha + folga_da_rota_no_card, (
         f"a coluna do som pede {som}px e a maior coluna vizinha da faixa "

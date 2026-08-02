@@ -71,6 +71,13 @@ class _VpadDeBancada(uhid.UhidDualSense):
         self._rumble_visto_em = None
         self._rumble_count = 0
         self._output_count = 0
+        # PAINEL-DA-VERDADE-01: os carimbos de recência. A bancada lista o
+        # estado que usa em vez de chamar o `__init__` do dataclass (ela
+        # precisa do fd de pipe), então campo novo entra aqui — e é de
+        # propósito que o `_carimbar` NÃO tolere a ausência com um `getattr`:
+        # um vpad de produção sem este dicionário é defeito, não um caso a
+        # contornar em silêncio.
+        self._visto_em = {}
 
     def fechar(self) -> None:
         for fd in (self._leitura, self._escrita):

@@ -286,7 +286,9 @@ STICK_SIZE_COMPACT: Final[int] = 70
 _TITULO_STICK_ESQ: Final[str] = "Analógico\nesquerdo"
 _TITULO_STICK_DIR: Final[str] = "Analógico\ndireito"
 
-#: A lateral de cada analógico, agora ao lado do X/Y (ver `_markup_xy`).
+#: A lateral de cada analógico. CARD-ÚNICO-01: ela é a MARCA D'ÁGUA desenhada
+#: no centro do círculo (`StickPreviewGtk`), e não mais um prefixo da linha de
+#: valores — quem a recebe é o construtor do desenho.
 ROTULO_STICK_ESQ: Final[str] = "L3"
 ROTULO_STICK_DIR: Final[str] = "R3"
 
@@ -311,6 +313,27 @@ ROTULO_STICK_DIR: Final[str] = "R3"
 #: ~1030px, e um piso ABAIXO do que o conteúdo pede não é piso nenhum — seria
 #: um número decorativo que o card ignora.
 LARGURA_CARD_UNICO: Final[int] = 1040
+
+#: Largura da barra de bateria DENTRO do card único, em px.
+#:
+#: CARD-ÚNICO-01. Ela é PEDIDA e não expandida, e a razão é a mesma que tirou
+#: o `show-text` da barra: uma barra que estica pela faixa toda transforma o
+#: número num ponto perdido no meio do vazio. Aqui a barra tem um tamanho de
+#: leitura e quem expande é o vão à esquerda dela, onde mora a linha do
+#: giroscópio. 300px é o número que o frame Estado já usava no glade.
+LARGURA_BARRA_BATERIA_CARD: Final[int] = 300
+
+#: O que o card mostra antes de a janela dizer qual perfil está ativo.
+#:
+#: Ele é o MESMO texto que o `status_actions` escreve quando o daemon responde
+#: sem perfil (`state.get("active_profile") or "Nenhum"`) — o card nasce
+#: dizendo o que a aba diria, e não um "—" que some meio segundo depois.
+TEXTO_PERFIL_SEM_DADO: Final[str] = "Nenhum"
+
+#: Idem para o daemon. "Consultando..." é o que o Glade já dizia no
+#: `status_daemon`, e a palavra importa: o card nasce antes da primeira
+#: resposta do IPC, e "Desligado" ali seria afirmar o que ninguém apurou.
+TEXTO_DAEMON_SEM_DADO: Final[str] = "Consultando..."
 
 #: Teto ELÁSTICO do card de um controle, em px.
 #:
@@ -486,6 +509,13 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
 #: alto-falante.
 TEXTO_SPEAKER_SEM_DADO: Final[str] = "não ajustado"
 
+#: O nome do bloco, sozinho. CARD-ÚNICO-01: ele é o título INTEIRO quando não
+#: há volume conhecido — a moldura deixou de anunciar "não ajustado" ao lado
+#: do nome. Constante e não literal porque agora dois lugares o escrevem (a
+#: montagem da moldura e `_escrever_valor_do_speaker`), e um teste de faixa
+#: casa o prefixo do rótulo da moldura com este nome.
+TITULO_SPEAKER: Final[str] = "Alto-falante"
+
 #: Rótulos dos DOIS botões do alto-falante (SOM-02, entregas 2 e 3). Cada um
 #: diz o que o CLIQUE faz, no mesmo desenho do botão do microfone.
 #:
@@ -621,15 +651,24 @@ _ESPACO_FAIXA_UNICO: Final[int] = 16
 #:
 #: STATUS-SIMETRIA-02 — a lateral (``L3``/``R3``) mudou do título para cá. No
 #: título ela era a terceira palavra e mandava na quebra de linha (3 linhas de
-#: um lado, 2 do outro); aqui ela entra num campo que já é mono e de largura
-#: fixa, e a segunda linha recebe espaços do mesmo tamanho para o ``X`` e o
+#: um lado, 2 do outro); aqui ela entrou num campo que já é mono e de largura
+#: fixa, e a segunda linha recebia espaços do mesmo tamanho para o ``X`` e o
 #: ``Y`` continuarem alinhados um sob o outro.
-_XY_MARKUP: Final[str] = "{rot} X:{x:>3}\n{pad} Y:{y:>3}"
+#:
+#: CARD-ÚNICO-01, entrega 3 — e agora ela saiu daqui também, para dentro do
+#: desenho: *"L3 e R3 saem do X: e vão ficar no centro do desenho do analógico
+#: com transparência 70% e grande ao fundo"*. Sem o prefixo, some junto o
+#: `pad` de espaços que só existia para alinhar o ``Y`` sob o ``X``.
+_XY_MARKUP: Final[str] = "X:{x:>3}\nY:{y:>3}"
 
 
-def _markup_xy(rotulo: str, x: int, y: int) -> str:
-    """``"L3 X:128" / "   Y:128"`` — a lateral e o par de eixos, em mono."""
-    return _XY_MARKUP.format(rot=rotulo, pad=" " * len(rotulo), x=x, y=y)
+def _markup_xy(x: int, y: int) -> str:
+    """``"X:128" / "Y:128"`` — o par de eixos, em mono, sem a lateral.
+
+    Quem diz de qual analógico são os números é a marca d'água desenhada
+    dentro do círculo, logo acima (``StickPreviewGtk``).
+    """
+    return _XY_MARKUP.format(x=x, y=y)
 
 # ---------------------------------------------------------------------------
 # BT-03 — motivos de degradação em palavras leigas
@@ -766,7 +805,27 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
     co-op ``resolve_player_numbers`` numera TODOS os conectados como jogador
     1 (é o que o jogo vê), mas o espelho do vpad P1 lê só o hidraw do
     PRIMÁRIO; exibir a linha num secundário seria telemetria mentindo.
+
+    PAINEL-DA-VERDADE-01 acrescentou DOIS casos em que o silêncio deixa de
+    ser a resposta certa, e só dois. A decisão medida acima continua inteira
+    — a ausência da linha não é alarme, e "sem giroscópio" em todo card seria
+    ruído crônico. O que mudou é que há duas situações em que o silêncio faz
+    a tela parecer QUEBRADA quando ela está certa:
+
+    * **máscara Xbox 360** — o jogo não recebe giroscópio, e o motivo não é
+      defeito nosso: a API do controle de Xbox não tem esse sensor. Sem a
+      frase, ela vê um card com giroscópio desenhado e nenhum sinal de que o
+      dado não sai dali;
+    * **Modo Nativo** — não existe gamepad virtual, e perguntar se o dado
+      "chegou ao vpad" não faz sentido. O jogo abre o hidraw do controle
+      físico e recebe tudo, inclusive o giroscópio.
+
+    Nos dois casos a frase EXPLICA; nos demais o silêncio continua.
     """
+    if bool(state_global.get("native_mode")):
+        return f"Giroscópio: {_FRASE_NATIVO}"
+    if _mascara_e_xbox(state_global):
+        return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
     rumble_ff = state_global.get("rumble_ff")
     per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
     if not isinstance(per_vpad, list):
@@ -791,6 +850,301 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
             return f"Giroscópio: fluindo para o jogo (~{hz:.0f} Hz)"
         return "Giroscópio: fluindo para o jogo"
     return None
+
+
+# ---------------------------------------------------------------------------
+# PAINEL-DA-VERDADE-01 — o que CHEGA ao jogo, e não o que existe
+# ---------------------------------------------------------------------------
+#
+# O pedido dela, literal: *"naquela aba de Status podemos ver o funcionamento
+# de tudo, e o funcionamento de lá obviamente impacta o funcionamento real do
+# controle na hora de jogar"*.
+#
+# Hoje a aba mostra que o sensor EXISTE. Ela quer saber se ele CHEGA. São
+# perguntas diferentes, e a diferença já produziu um diagnóstico errado nesta
+# casa em 01/08.
+#
+# **A honestidade que estas frases têm de manter.** Nenhuma delas afirma que o
+# JOGO consumiu o dado — isso é medição de fora, e depende de qual biblioteca
+# o jogo carregou (medido em 01/08: a `libSDL2` do Ubuntu não enumera o gamepad
+# virtual; a SDL3 que a Steam distribui enumera). O que estas frases afirmam é
+# o que o daemon PODE saber: o dado saiu daqui, e alguém escreveu de volta.
+
+#: Quanto tempo sem evento até a tela parar de dizer "chegando", em segundos.
+#:
+#: 3,0 s é o mesmo teto do `_RUMBLE_STALE_SEC` do vpad, e não por comodidade:
+#: as categorias são eventos ESPARSOS (um jogo manda um efeito de gatilho
+#: quando a arma muda, não a cada quadro), e um teto curto faria a tela piscar
+#: entre "chegando" e "parado" no meio de uma partida. O giroscópio, que é
+#: fluxo contínuo, não passa por aqui — ele tem `motion_hz`, com morte por
+#: inatividade própria (`_HZ_STALE_S`, 1,0 s).
+ATIVIDADE_FRESCA_S: Final[float] = 3.0
+
+#: Teto de largura da linha da verdade, em CARACTERES.
+#:
+#: Ele existe porque a linha é a única do card que pode ficar longa (cinco
+#: recursos, três situações), e um parágrafo de uma linha só esticaria o
+#: mínimo do card — que sobe intacto até a janela, numa aba sem rolagem
+#: horizontal. Com o teto, ele quebra em duas linhas antes de empurrar
+#: qualquer coisa.
+#:
+#: `max_width_chars` NÃO basta sozinho, e isto foi medido aqui em 01/08: ele
+#: limita a largura NATURAL (o que o widget PEDE) e o pai continua livre para
+#: alocar mais — um parágrafo de 1869px ficou intacto. Precisa de
+#: `halign=start` junto, e é assim que ele é usado.
+_VERDADE_MAX_CHARS: Final[int] = 110
+
+#: As quatro situações que um recurso pode estar, e o que cada uma significa.
+#: `NUNCA` e `PARADO` são separadas de propósito: "o jogo ainda não pediu" e
+#: "o jogo pediu e parou" levam a ações diferentes de quem lê.
+SITUACAO_CHEGANDO: Final[str] = "chegando"
+SITUACAO_PARADO: Final[str] = "parado"
+SITUACAO_NUNCA: Final[str] = "nunca"
+SITUACAO_IMPOSSIVEL: Final[str] = "impossivel"
+SITUACAO_NATIVO: Final[str] = "nativo"
+
+
+class EstadoDoRecurso(NamedTuple):
+    """A situação de um recurso e a frase que a diz, em português leigo."""
+
+    situacao: str
+    frase: str
+
+
+#: Os recursos que a máscara Xbox 360 APAGA, e a razão. Ela não é do Hefesto:
+#: a API do controle de Xbox declara 8 eixos e 11 botões, e não há onde pôr
+#: IMU nem dedo. O `virtual_pad` recusa o backend uhid para todo sabor que não
+#: seja `dualsense`, então nem o caminho existe.
+RECURSOS_SEM_MASCARA_XBOX: Final[frozenset[str]] = frozenset(
+    {"giroscopio", "touchpad"}
+)
+
+#: Recurso → a categoria de atividade que o vpad carimba por ele
+#: (`uhid_gamepad.ATIVIDADE_*`). Recurso fora deste mapa não tem carimbo e
+#: responde por outra via (o giroscópio, por `motion_hz`).
+_CATEGORIA_DO_RECURSO: Final[dict[str, str]] = {
+    "touchpad": "touchpad_click",
+    "lightbar": "lightbar",
+    "gatilho": "trigger",
+    "vibracao": "rumble",
+}
+
+#: O nome de cada recurso na frase, e a ORDEM em que eles aparecem nela.
+#:
+#: **Por que uma frase só, e não um selo em cada bloco.** O desenho óbvio —
+#: e o que a sprint sugeria — era um indicador dentro de cada moldura. Ele foi
+#: descartado por medida, não por gosto: as colunas do Touchpad e da Lightbar
+#: têm ~180px na tela dela, e o próprio comentário do `_montar_touchpad`
+#: registra que um "sem toque" ao lado do título já fazia a coluna pedir 105px
+#: para desenhar um painel de 76. Cinco frases explicativas espalhadas custam
+#: largura onde não há, e altura em quatro lugares.
+#:
+#: A linha única custa UMA altura, mora na faixa larga do topo do card (onde
+#: sobra vão) e responde a pergunta dela de uma vez — que era uma pergunta
+#: sobre o conjunto, não sobre cada peça: *"não sei se o alto-falante,
+#: giroscópio, microfone e touchpad — todas as features — na hora de jogar um
+#: jogo na Steam se elas vão estar funcionando"*.
+_NOME_NA_FRASE: Final[tuple[tuple[str, str], ...]] = (
+    ("giroscopio", "giroscópio"),
+    ("vibracao", "vibração"),
+    ("gatilho", "gatilho"),
+    ("lightbar", "luz"),
+    ("touchpad", "clique do touchpad"),
+)
+
+#: A frase do estado IMPOSSÍVEL, por recurso. Ela é a mais valiosa das quatro
+#: e é a que hoje não existe: com máscara Xbox o card mostra um sensor apagado
+#: como se estivesse quebrado, quando o que houve é que a API escolhida não
+#: tem aquele sensor. O texto longo e explicativo continua sendo o
+#: `home_actions.TEXTO_CUSTO_MASCARA_XBOX` — este é a versão de uma linha, para
+#: caber dentro do bloco.
+_FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
+    "giroscopio": "a máscara Xbox 360 não tem giroscópio",
+    "touchpad": "a máscara Xbox 360 não tem touchpad",
+}
+
+#: E a do Modo Nativo, em que não há gamepad virtual nenhum: o jogo abre o
+#: hidraw do controle FÍSICO e fala com ele direto. Tudo chega — não porque
+#: nós entregamos, mas porque não há intermediário.
+_FRASE_NATIVO: Final[str] = "o jogo fala direto com o controle"
+
+
+def _item_do_vpad(
+    entry: dict[str, Any], state_global: dict[str, Any]
+) -> dict[str, Any] | None:
+    """O bloco `rumble_ff.per_vpad` do vpad DESTE controle; ``None`` = não há.
+
+    O casamento controle→vpad é o MESMO do `texto_motion`, e as regras dele
+    estão documentadas lá — inclusive o guarda do GYRO-03-FIX (jogador 1 sem
+    `is_primary` nunca casa: fora do co-op todos os conectados vêm como
+    jogador 1, mas só o primário tem reader).
+
+    Este é o dono único do casamento. Dois jeitos de responder "qual vpad é o
+    deste controle" divergiriam na primeira mudança do co-op, e esta casa tem
+    defeito registrado com essa forma exata.
+    """
+    rumble_ff = state_global.get("rumble_ff")
+    per_vpad = rumble_ff.get("per_vpad") if isinstance(rumble_ff, dict) else None
+    if not isinstance(per_vpad, list):
+        return None
+    player = _int_ou_none(entry.get("player"))
+    if player == 1 and not bool(entry.get("is_primary")):
+        return None
+    if player is None:
+        if not bool(entry.get("is_primary")):
+            return None
+        player = 1
+    for item in per_vpad:
+        if isinstance(item, dict) and _int_ou_none(item.get("player")) == player:
+            return item
+    return None
+
+
+def _visto_ha_s_do_vpad(entry: dict[str, Any], state_global: dict[str, Any]) -> Any:
+    """O bloco `visto_ha_s` do vpad deste controle; ``None`` se não há vpad.
+
+    ``None`` distingue "não há vpad" de "há vpad e nada aconteceu" (que é
+    `{}`) — a tela diz coisas diferentes nos dois casos.
+    """
+    item = _item_do_vpad(entry, state_global)
+    if item is None:
+        return None
+    visto = item.get("visto_ha_s")
+    return visto if isinstance(visto, dict) else {}
+
+
+def estado_do_recurso(
+    recurso: str, entry: dict[str, Any], state_global: dict[str, Any]
+) -> EstadoDoRecurso | None:
+    """A situação de um recurso AGORA; ``None`` = não há o que afirmar.
+
+    PAINEL-DA-VERDADE-01/E2. A ordem das perguntas é a ordem da verdade, e
+    não pode ser trocada:
+
+    1. **Modo Nativo?** Não há gamepad virtual — o jogo fala direto com o
+       hidraw do controle. Perguntar "chegou ao vpad?" não faria sentido, e
+       responder "não" seria mentira;
+    2. **A máscara apaga este recurso?** Então ele não chega, não vai chegar,
+       e o motivo não é defeito nosso: o controle de Xbox não tem giroscópio
+       nem touchpad. É o estado que hoje não existe e que faz a tela parecer
+       quebrada quando ela está certa;
+    3. **Há vpad?** Sem vpad não há caminho, e ``None`` deixa o card mudo em
+       vez de acusar;
+    4. **Só então** o carimbo decide entre chegando, parado e nunca.
+
+    ``None`` também para recurso desconhecido: inventar frase a partir de
+    payload incompleto é a família de erro que esta casa já removeu do
+    `texto_do_custo_da_mascara`.
+    """
+    if bool(state_global.get("native_mode")):
+        return EstadoDoRecurso(SITUACAO_NATIVO, _FRASE_NATIVO)
+
+    if recurso in RECURSOS_SEM_MASCARA_XBOX and _mascara_e_xbox(state_global):
+        frase = _FRASE_MASCARA_XBOX.get(recurso)
+        return EstadoDoRecurso(SITUACAO_IMPOSSIVEL, frase) if frase else None
+
+    visto = _visto_ha_s_do_vpad(entry, state_global)
+    if visto is None:
+        return None
+
+    if recurso == "giroscopio":
+        # O giroscópio não passa por carimbo: ele é fluxo CONTÍNUO e já tem
+        # medida própria de recência (`motion_hz`, com morte por inatividade
+        # em 1,0 s no `physical_report_reader`). Reaproveitar o carimbo aqui
+        # seria um segundo jeito de dizer "agora" no mesmo payload — e o
+        # `motion_hz` é melhor: ele traz o número que ela vê na tela.
+        item = _item_do_vpad(entry, state_global)
+        if not isinstance(item, dict) or item.get("motion_streaming") is not True:
+            return EstadoDoRecurso(SITUACAO_NUNCA, "giroscópio")
+        hz = item.get("motion_hz")
+        if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
+            return EstadoDoRecurso(
+                SITUACAO_CHEGANDO, f"giroscópio (~{hz:.0f} Hz)"
+            )
+        return EstadoDoRecurso(SITUACAO_CHEGANDO, "giroscópio")
+
+    categoria = _CATEGORIA_DO_RECURSO.get(recurso)
+    if categoria is None:
+        return None
+    idade = visto.get(categoria)
+    if not isinstance(idade, (int, float)) or isinstance(idade, bool):
+        situacao = SITUACAO_NUNCA
+    elif idade <= ATIVIDADE_FRESCA_S:
+        situacao = SITUACAO_CHEGANDO
+    else:
+        situacao = SITUACAO_PARADO
+    return EstadoDoRecurso(situacao, dict(_NOME_NA_FRASE)[recurso])
+
+
+def resumo_do_que_chega_ao_jogo(
+    entry: dict[str, Any], state_global: dict[str, Any]
+) -> str | None:
+    """A linha que responde *"vai funcionar na hora de jogar?"*; ``None`` = some.
+
+    PAINEL-DA-VERDADE-01/E2 — a entrega central da sprint, em uma frase.
+
+    **O que ela afirma, e o que ela cuidadosamente NÃO afirma.** Ela diz que o
+    dado saiu do daemon e que alguém escreveu de volta no gamepad virtual. Ela
+    NÃO diz que o jogo consumiu — isso depende de qual biblioteca o jogo
+    carregou, e essa medição é de fora: em 01/08 a `libSDL2` 2.30.0 do Ubuntu
+    não enumerava o gamepad virtual e a SDL3 3.4.10 que a Steam distribui
+    enumerava por completo. Uma tela que dissesse "o jogo está recebendo" sem
+    saber qual das duas está carregada estaria adivinhando, e foi exatamente
+    esse tipo de afirmação que produziu um diagnóstico errado nesta casa.
+
+    Por isso o vocabulário é "no jogo agora" (o caminho está com tráfego) e
+    "sem pedido ainda" (o caminho existe e ninguém usou) — e nunca "o jogo
+    recebeu".
+    """
+    if bool(state_global.get("native_mode")):
+        return "Modo Nativo: o jogo fala direto com o controle — tudo chega."
+    if _mascara_e_xbox(state_global):
+        return (
+            "Máscara Xbox 360: giroscópio e touchpad não chegam ao jogo — o "
+            "controle de Xbox não tem esses dois. Vibração, luz e gatilho vão."
+        )
+    if _visto_ha_s_do_vpad(entry, state_global) is None:
+        return None
+
+    por_situacao: dict[str, list[str]] = {}
+    for recurso, _nome in _NOME_NA_FRASE:
+        estado = estado_do_recurso(recurso, entry, state_global)
+        if estado is None:
+            continue
+        por_situacao.setdefault(estado.situacao, []).append(estado.frase)
+
+    partes = []
+    if por_situacao.get(SITUACAO_CHEGANDO):
+        partes.append(
+            "No jogo agora: " + ", ".join(por_situacao[SITUACAO_CHEGANDO])
+        )
+    if por_situacao.get(SITUACAO_PARADO):
+        partes.append("pararam: " + ", ".join(por_situacao[SITUACAO_PARADO]))
+    if por_situacao.get(SITUACAO_NUNCA):
+        partes.append(
+            "sem pedido ainda: " + ", ".join(por_situacao[SITUACAO_NUNCA])
+        )
+    if not partes:
+        return None
+    # A frase começa por "No jogo agora" quando há tráfego; quando não há, a
+    # primeira parte é "pararam"/"sem pedido ainda" e precisa da maiúscula.
+    # `capitalize()` não serve: ele rebaixa o resto da frase, e há nomes com
+    # maiúscula no meio dela.
+    texto = " · ".join(partes) + "."
+    return texto[0].upper() + texto[1:]
+
+
+def _mascara_e_xbox(state_global: dict[str, Any]) -> bool:
+    """True quando o gamepad virtual está com a máscara de Xbox 360.
+
+    Lê `gamepad_emulation.flavor`, e só afirma no valor EXATO "xbox" — a
+    mesma regra do `home_actions.texto_do_custo_da_mascara`, pelo mesmo
+    motivo: valor ausente ou desconhecido não autoriza aviso nenhum.
+    """
+    gamepad = state_global.get("gamepad_emulation")
+    if not isinstance(gamepad, dict):
+        return False
+    return gamepad.get("flavor") == "xbox"
 
 
 def gyro_do_inputs(inputs: Any) -> tuple[float, float, float] | None:
@@ -1127,6 +1481,7 @@ if _GTK_DISPONIVEL:
             self._last_lightbar: Any = _SENTINELA
             self._last_degradacao: Any = _SENTINELA
             self._last_motion: Any = _SENTINELA
+            self._last_verdade: Any = _SENTINELA
             self._accent: RGB | None = None
             self._accent_hex: str = rgb_para_hex(
                 ensure_min_contrast(ACCENT_NEUTRO)
@@ -1217,6 +1572,7 @@ if _GTK_DISPONIVEL:
             self._update_lightbar(entry, state_global)
             self._update_degradacao(entry)
             self._update_motion(entry, state_global)
+            self._update_verdade(entry, state_global)
             self._update_inputs(entry.get("inputs"))
             self._update_gyro(entry.get("inputs"))
             self._update_touchpad(entry.get("inputs"))
@@ -1289,6 +1645,7 @@ if _GTK_DISPONIVEL:
             corpo.set_margin_end(12)
             corpo.get_style_context().add_class("hefesto-dualsense4unix-card")
             self.add(corpo)
+            self._montar_estado_global(corpo)
 
             # Bateria DESTE controle (a barra do frame Estado só fala pelo
             # primário e some com 2+ controles — cada card tem a sua).
@@ -1301,6 +1658,11 @@ if _GTK_DISPONIVEL:
             # linha do CARD é a que sai no caso de um controle só — a do frame
             # Estado fica, porque é a que responde também quando não há
             # controle nenhum, e o card nem existe.
+            # CARD-ÚNICO-01, entrega 1 — a bateria do card único DEIXOU de se
+            # esconder, porque o frame "Estado" que a mostrava não existe mais
+            # na tela dela. A regra antiga ("aparece uma vez só") continua
+            # inteira; o que inverteu foi qual das duas sai. Ver
+            # `_montar_estado_global`, logo abaixo, para o par que a acompanha.
             linha_bateria = Gtk.Box(
                 orientation=Gtk.Orientation.HORIZONTAL, spacing=12
             )
@@ -1308,15 +1670,36 @@ if _GTK_DISPONIVEL:
             cap_bateria.set_xalign(1.0)
             linha_bateria.pack_start(cap_bateria, False, False, 0)
             bateria = Gtk.ProgressBar()
-            bateria.set_show_text(True)
-            bateria.set_text("— %")
-            bateria.set_hexpand(True)
             self._battery_bar = bateria
-            linha_bateria.pack_start(bateria, True, True, 0)
+            self._battery_pct_label = None
+            if self._compact:
+                # Card compacto: a barra é estreita e o texto centrado dela
+                # cabe. Nada muda aqui — 2+ controles seguem como estavam.
+                bateria.set_show_text(True)
+                bateria.set_text("— %")
+                bateria.set_hexpand(True)
+                linha_bateria.pack_start(bateria, True, True, 0)
+            else:
+                # Card único: `show-text` DESLIGADO e o número num rótulo ao
+                # lado. O GtkProgressBar desenha o próprio texto CENTRADO, e
+                # numa barra larga o "85 %" fica a centenas de pixels de cada
+                # borda — é o defeito que ela apontou nas barras de L2/R2, e o
+                # mesmo motivo pelo qual a barra do frame Estado já tinha
+                # `show-text=False`. O `set_text` continua sendo chamado por
+                # `_update_bateria`: ele é o dono do valor e é o que os testes
+                # leem.
+                bateria.set_show_text(False)
+                bateria.set_text("— %")
+                bateria.set_valign(Gtk.Align.CENTER)
+                bateria.set_size_request(LARGURA_BARRA_BATERIA_CARD, -1)
+                linha_bateria.pack_start(bateria, False, False, 0)
+                pct = Gtk.Label(label="— %")
+                pct.set_xalign(0.0)
+                self._battery_pct_label = pct
+                linha_bateria.pack_start(pct, False, False, 0)
             self._battery_row = linha_bateria
-            corpo.pack_start(linha_bateria, False, False, 0)
-            if not self._compact:
-                self._esconder_modulo(linha_bateria)
+            if self._compact:
+                corpo.pack_start(linha_bateria, False, False, 0)
 
             # Rótulo do estado da lightbar (apagada/desconhecida/nativo).
             rotulo = Gtk.Label()
@@ -1348,7 +1731,45 @@ if _GTK_DISPONIVEL:
             motion.set_no_show_all(True)
             motion.hide()
             self._motion_label = motion
-            corpo.pack_start(motion, False, False, 0)
+            if self._compact:
+                corpo.pack_start(motion, False, False, 0)
+            else:
+                # CARD-ÚNICO-01, anotação 1 do print dela: *"a bateria fica ao
+                # lado do hertz do giroscópio até o final"*.
+                #
+                # **Quem mora aqui é a linha da VERDADE, e não o rótulo do
+                # giroscópio** — e isso não contraria o pedido dela, cumpre-o:
+                # desde a PAINEL-DA-VERDADE-01 é a linha da verdade que traz o
+                # hertz do giroscópio ("No jogo agora: giroscópio (~194 Hz),
+                # vibração, luz"). Com os dois na tela, o card dizia a mesma
+                # coisa duas vezes, uma embaixo da outra — a duplicação que
+                # esta aba já corrigiu na bateria.
+                #
+                # O `_motion_label` continua existindo e continua sendo o dono
+                # do texto no card COMPACTO, onde não há linha da verdade.
+                #
+                # O slot fica SEMPRE visível e é ele quem expande; quem se
+                # esconde é o rótulo dentro dele. Um widget oculto não ocupa
+                # espaço, e sem o slot a bateria saltaria da direita para a
+                # esquerda no instante em que a linha ficasse sem o que
+                # afirmar. É o mesmo mecanismo do `_gyro_slot` da linha de
+                # cima, e pelo mesmo motivo.
+                faixa = Gtk.Box(
+                    orientation=Gtk.Orientation.HORIZONTAL, spacing=12
+                )
+                slot_motion = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+                slot_motion.set_valign(Gtk.Align.CENTER)
+                slot_motion.pack_start(self._verdade_label, False, False, 0)
+                faixa.pack_start(slot_motion, True, True, 0)
+                faixa.pack_start(linha_bateria, False, False, 0)
+                corpo.pack_start(faixa, False, False, 0)
+                self._faixa_gyro_bateria = faixa
+                # As duas linhas novas são as duas PRIMEIRAS do corpo (o
+                # desenho que ela aprovou). O `lightbar_label` e o badge de
+                # degradação foram empacotados antes por ordem de código e
+                # nascem ocultos — sem esta reordenação, no dia em que um
+                # deles acendesse ele apareceria ENTRE as duas linhas.
+                corpo.reorder_child(faixa, 1)
 
             # "—": sem leitor de inputs para este controle agora.
             sem_leitor = Gtk.Label(label="—")
@@ -1376,6 +1797,103 @@ if _GTK_DISPONIVEL:
             # faixa só deles gastava a largura que falta para a fonte crescer.
             area.pack_start(self._montar_gatilhos_e_gyro(), False, False, 0)
             area.pack_start(self._montar_linha_inferior(), False, False, 0)
+
+        def _montar_estado_global(self, corpo: Any) -> None:
+            """A linha ``Perfil ativo: <v>    Hefesto: <v>``, no topo do card.
+
+            CARD-ÚNICO-01, entrega 1. Ela é o que sobrou do frame "Estado",
+            que ela mandou apagar: *"apaga estado, a bateria fica ao lado do
+            hertz do giroscópio até o final e adicionamos as duas linhas"*.
+
+            `Conexão:` e `Transporte:` NÃO vêm junto, e não é economia de
+            espaço: cada um já é dito noutro lugar da mesma tela — a conexão
+            no cabeçalho ("Conectado Via USB") e o transporte no título deste
+            card ("Controle 1 — USB"). Repetir os dois era o frame Estado
+            dizendo o que o resto da aba já dizia.
+
+            **Só no card único.** Perfil ativo e daemon são fatos GLOBAIS, não
+            deste controle: com dois cards lado a lado eles apareceriam duas
+            vezes na tela, e é justamente o defeito que a bateria tinha. Com
+            2+ controles quem responde por eles volta a ser o frame Estado —
+            a mesma regra da bateria, invertida.
+
+            Caixa horizontal e não `Gtk.Grid`: numa grade, o `hexpand` que
+            afasta os dois pares expandiria a COLUNA inteira, e esta casa já
+            pagou por isso duas vezes (LARGURA-01/E2 e ESTADO-TRES-LINHAS-01).
+            """
+            self._perfil_ativo_label = None
+            self._daemon_label = None
+            self._linha_estado_global = None
+            self._verdade_label = None
+            if self._compact:
+                return
+            linha = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL, spacing=6
+            )
+            cap_perfil = Gtk.Label(label="Perfil ativo:")
+            cap_perfil.set_xalign(1.0)
+            linha.pack_start(cap_perfil, False, False, 0)
+            perfil = Gtk.Label(label=TEXTO_PERFIL_SEM_DADO)
+            perfil.set_xalign(0.0)
+            self._perfil_ativo_label = perfil
+            linha.pack_start(perfil, False, False, 0)
+
+            # O vão que separa os dois pares mora AQUI, numa caixa vazia que
+            # expande — e não num `hexpand` do rótulo de valor. Com o hexpand
+            # no valor, o texto do perfil ficaria colado no rótulo e o espaço
+            # cresceria DEPOIS dele; com um separador próprio, cada par fica
+            # inteiro e a distância entre os dois é o que respira.
+            vao = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            linha.pack_start(vao, True, True, 0)
+
+            cap_daemon = Gtk.Label(label="Hefesto:")
+            cap_daemon.set_xalign(1.0)
+            linha.pack_start(cap_daemon, False, False, 0)
+            daemon = Gtk.Label(label=TEXTO_DAEMON_SEM_DADO)
+            daemon.set_xalign(0.0)
+            self._daemon_label = daemon
+            linha.pack_start(daemon, False, False, 0)
+
+            self._linha_estado_global = linha
+            corpo.pack_start(linha, False, False, 0)
+
+            # PAINEL-DA-VERDADE-01/E2 — a linha que responde *"vai funcionar
+            # na hora de jogar?"*. Ela nasce OCULTA: sem vpad não há o que
+            # afirmar, e uma linha vazia reservando altura é pior que nenhuma.
+            #
+            # `line_wrap` LIGADO com `max_width_chars` e `halign=start`: os
+            # três juntos, e não um deles. Medido nesta casa em 01/08 — o
+            # `max-width-chars` sozinho limita a largura NATURAL (o que o
+            # widget pede) e o pai continua livre para alocar mais; um
+            # parágrafo de 1869px ficou intacto até o `halign=start` entrar.
+            verdade = Gtk.Label()
+            verdade.set_xalign(0.0)
+            verdade.set_halign(Gtk.Align.START)
+            verdade.set_line_wrap(True)
+            verdade.set_max_width_chars(_VERDADE_MAX_CHARS)
+            verdade.get_style_context().add_class("dim-label")
+            verdade.set_no_show_all(True)
+            verdade.hide()
+            self._verdade_label = verdade
+            # Ela NÃO é empacotada aqui: o lugar dela é a faixa da linha 2, ao
+            # lado da bateria, e quem a empacota é o bloco do motion logo
+            # abaixo. Criá-la aqui é o que permite aquele bloco encontrá-la
+            # pronta — a ordem de montagem do corpo é a ordem do desenho.
+
+        def definir_estado_global(self, perfil: str, daemon: str) -> None:
+            """Escreve o par ``Perfil ativo``/``Hefesto`` — chamada pela aba.
+
+            Quem calcula os dois textos é a `status_actions`, que já os
+            calculava para o frame Estado: os mesmos valores, da mesma
+            fonte, no mesmo tique. Este método só os PINTA — nenhuma regra de
+            negócio entra aqui, e no card compacto ele é inerte de propósito.
+            """
+            for rotulo, texto in (
+                (self._perfil_ativo_label, perfil),
+                (self._daemon_label, daemon),
+            ):
+                if rotulo is not None and texto and rotulo.get_text() != texto:
+                    rotulo.set_text(texto)
 
         def _montar_gatilhos_e_gyro(self) -> Any:
             """Linha 1: gatilhos à esquerda, giroscópio à direita.
@@ -1908,7 +2426,7 @@ if _GTK_DISPONIVEL:
             a largura da aba — os números estão no bloco de comentários do
             empacotamento, mais abaixo.
             """
-            caixa, miolo = self._bloco("Alto-falante")
+            caixa, miolo = self._bloco(TITULO_SPEAKER)
             # O rótulo da moldura vira o lugar do número (card único).
             self._speaker_titulo = (
                 caixa.get_label_widget() if not self._compact else None
@@ -2451,7 +2969,7 @@ if _GTK_DISPONIVEL:
             slot.pack_start(preview, False, False, 0)
             caps.pack_start(slot, False, False, 0)
             label_xy = Gtk.Label()
-            label_xy.set_markup(_markup_xy(rotulo_stick, 128, 128))
+            label_xy.set_markup(_markup_xy(128, 128))
             label_xy.set_xalign(0.5)
             label_xy.set_justify(Gtk.Justification.CENTER)
             # O degrau de tamanho e a família mono saem da escala do CSS, não
@@ -2552,12 +3070,21 @@ if _GTK_DISPONIVEL:
             self._last_battery = bateria
             if bateria is None:
                 self._battery_bar.set_fraction(0.0)
-                self._battery_bar.set_text("— %")
+                texto = "— %"
             else:
                 self._battery_bar.set_fraction(
                     max(0, min(100, bateria)) / 100
                 )
-                self._battery_bar.set_text(f"{bateria} %")
+                texto = f"{bateria} %"
+            # O `set_text` da barra é chamado SEMPRE, inclusive no card único
+            # onde ela não desenha texto nenhum: ele é o dono do valor e é o
+            # que `get_text()` — e os testes — leem. Este método é o único
+            # lugar que espelha esse valor no rótulo ao lado, pelo mesmo
+            # motivo que a `status_actions._set_battery_text` é único lá:
+            # dois escritores derivam, e esta casa já pagou por isso.
+            self._battery_bar.set_text(texto)
+            if self._battery_pct_label is not None:
+                self._battery_pct_label.set_text(texto)
 
         def _update_lightbar(
             self, entry: dict[str, Any], state_global: dict[str, Any]
@@ -2629,11 +3156,35 @@ if _GTK_DISPONIVEL:
             if texto == self._last_motion:
                 return
             self._last_motion = texto
+            # O texto é ESCRITO sempre — ele é o dono do valor e é o que os
+            # testes leem. Quem só aparece no card compacto é o widget: no
+            # card único o giroscópio é dito pela linha da verdade, que o
+            # contém e amplia (ver `_montar_ui`), e mostrar os dois seria o
+            # card falando duas vezes a mesma coisa.
             if texto:
                 self._motion_label.set_text(texto)
+            if self._motion_label.get_parent() is None:
+                return
+            if texto:
                 self._motion_label.show()
             else:
                 self._motion_label.hide()
+
+        def _update_verdade(
+            self, entry: dict[str, Any], state_global: dict[str, Any]
+        ) -> None:
+            """PAINEL-DA-VERDADE-01: a linha do que chega ao jogo agora."""
+            if self._verdade_label is None:
+                return  # card compacto: a linha é do card único
+            texto = resumo_do_que_chega_ao_jogo(entry, state_global)
+            if texto == self._last_verdade:
+                return
+            self._last_verdade = texto
+            if texto:
+                self._verdade_label.set_text(texto)
+                self._verdade_label.show()
+            else:
+                self._verdade_label.hide()
 
         # ------------------------------------------------------------------
         # Sensores (S2) — cada um some inteiro quando não há dado
@@ -2791,11 +3342,27 @@ if _GTK_DISPONIVEL:
             O título é montado aqui, e não guardado pronto, porque
             "Alto-falante" é o nome do bloco e tem de sobreviver a qualquer
             valor — inclusive a `None`, que é como o card nasce.
+
+            CARD-ÚNICO-01, entrega 2 — *"remover o não ajustado"*. O sufixo
+            some no estado SEM DADO e continua no estado com valor
+            (`Alto-falante · 71 %`). É a leitura literal do pedido, e a que
+            custa zero: das duas opções escritas na sprint, a outra (tirar o
+            sufixo sempre) obrigaria o valor a achar um terceiro lugar, e os
+            três candidatos já foram medidos e todos cobram pixel — o rótulo
+            de valor deste bloco foi justamente quem cedeu o lugar para o
+            botão da rota, na leva anterior.
+
+            O `_speaker_label` continua recebendo o texto CRU, sem exceção:
+            ele é o dono do valor e é o que os testes leem. Quem decide o que
+            aparece na moldura é só a linha de baixo.
             """
             self._speaker_label.set_text(texto)
             titulo = getattr(self, "_speaker_titulo", None)
             if titulo is not None and hasattr(titulo, "set_text"):
-                titulo.set_text(f"Alto-falante · {texto}")
+                sem_dado = texto == TEXTO_SPEAKER_SEM_DADO
+                titulo.set_text(
+                    TITULO_SPEAKER if sem_dado else f"{TITULO_SPEAKER} · {texto}"
+                )
 
         def _pintar_escala_do_speaker(self, percentual: int) -> None:
             """Move o cursor SEM disparar pedido (e nunca durante o arrasto)."""
@@ -2862,14 +3429,14 @@ if _GTK_DISPONIVEL:
             if lx != self._last_lx or ly != self._last_ly:
                 self._stick_left.update(lx, ly)
                 self._stick_left_xy.set_markup(
-                    _markup_xy(ROTULO_STICK_ESQ, lx, ly)
+                    _markup_xy(lx, ly)
                 )
                 self._last_lx = lx
                 self._last_ly = ly
             if rx != self._last_rx or ry != self._last_ry:
                 self._stick_right.update(rx, ry)
                 self._stick_right_xy.set_markup(
-                    _markup_xy(ROTULO_STICK_DIR, rx, ry)
+                    _markup_xy(rx, ry)
                 )
                 self._last_rx = rx
                 self._last_ry = ry
@@ -2958,10 +3525,10 @@ if _GTK_DISPONIVEL:
             self._stick_right.update(128, 128)
             self._stick_right.set_l3_pressed(False)
             self._stick_left_xy.set_markup(
-                _markup_xy(ROTULO_STICK_ESQ, 128, 128)
+                _markup_xy(128, 128)
             )
             self._stick_right_xy.set_markup(
-                _markup_xy(ROTULO_STICK_DIR, 128, 128)
+                _markup_xy(128, 128)
             )
             for glyph in self._glyphs.values():
                 glyph.set_pressed(False)
@@ -3084,6 +3651,8 @@ else:
             self.accent: RGB | None = None
             self.degradacao: str | None = None
             self.motion: str | None = None
+            #: PAINEL-DA-VERDADE-01: a linha do que chega ao jogo agora.
+            self.verdade: str | None = None
             self.sem_leitor: bool = False
             # S2 — None em qualquer um deles = o módulo não apareceria.
             self.gyro: tuple[float, float, float] | None = None
@@ -3096,6 +3665,23 @@ else:
             self.speaker_acao_mudo: AcaoSpeaker = acao_speaker_mudo(None)
             self.speaker_acao_devolucao: AcaoSpeaker = acao_speaker_devolucao(None)
             self.speaker_saida_muda: bool | None = None
+            # CARD-ÚNICO-01 — o par global que o frame "Estado" deixou. No
+            # stub eles são o que o widget real mostra ao nascer, e o card
+            # compacto não os recebe (com 2+ controles quem responde por eles
+            # é o frame Estado, que volta a aparecer).
+            self.perfil_ativo: str | None = (
+                None if compact else TEXTO_PERFIL_SEM_DADO
+            )
+            self.daemon: str | None = None if compact else TEXTO_DAEMON_SEM_DADO
+
+        def definir_estado_global(self, perfil: str, daemon: str) -> None:
+            """Guarda o par global (mesmo contrato do widget real)."""
+            if self._compact:
+                return
+            if perfil:
+                self.perfil_ativo = perfil
+            if daemon:
+                self.daemon = daemon
 
         def update(
             self,
@@ -3109,6 +3695,7 @@ else:
             self.accent = accent_do_card(entry, state_global)
             self.degradacao = texto_degradacao(entry)
             self.motion = texto_motion(entry, state_global)
+            self.verdade = resumo_do_que_chega_ao_jogo(entry, state_global)
             self.sem_leitor = not isinstance(entry.get("inputs"), dict)
             self.gyro = gyro_do_inputs(entry.get("inputs"))
             self.touchpad = touchpad_do_inputs(entry.get("inputs"))

@@ -45,12 +45,24 @@ EXCLUDE_PATHSPECS=(
 # Usa git grep se estivermos em repo (respeita .gitignore + pathspec).
 # Cai pra grep manual se repo ainda não inicializado (W0.1 pré-git init).
 if git rev-parse --git-dir >/dev/null 2>&1; then
-    HITS=$(git grep -niE "$FORBIDDEN" -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null || true)
+    # ANONIMATO-BINARIO-FALSO-POSITIVO-01 (01/08/2026): o `-I` NÃO é opcional.
+    # Sem ele o `git grep` varre os PNGs de `docs/usage/assets/` e um deles
+    # casou o regex POR ACASO, nos bytes comprimidos — a saída era um
+    # "Binary file docs/usage/assets/readme_lightbar.png matches" que reprovava
+    # o repositório inteiro e não tinha como ser "corrigido", porque não havia
+    # texto nenhum ali. E a imagem MUDA a cada `retratar_abas.py`, então o
+    # falso positivo é intermitente: aparece e some conforme o desenho da aba.
+    #
+    # Isto não afrouxa o portão. Ele nunca soube ler imagem: o `README.md` já
+    # avisa que os portões de anonimato NÃO varrem imagens, e que a foto da
+    # aba Sistema teve de ser borrada à mão. O `-I` só faz o script parar de
+    # fingir que varre.
+    HITS=$(git grep -nIE "$FORBIDDEN" -- "${EXCLUDE_PATHSPECS[@]}" 2>/dev/null || true)
 else
     # Fallback: grep -r. Limitação: --exclude-dir só aceita basename, então
     # dirs com nome 'process'/'history'/'fixtures' em qualquer nível são excluídos.
     # Recomenda-se git init pra usar o pathspec rico do git grep.
-    HITS=$(grep -rniE "$FORBIDDEN" . \
+    HITS=$(grep -rnIiE "$FORBIDDEN" . \
         --include="*.py" --include="*.md" --include="*.toml" \
         --include="*.sh" --include="*.yaml" --include="*.yml" \
         --include="*.service" --include="*.rules" \

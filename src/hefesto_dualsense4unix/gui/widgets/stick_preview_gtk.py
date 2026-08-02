@@ -38,6 +38,27 @@ BORDA_COLOR = (0.6, 0.6, 0.6)      # cinza claro
 FUNDO_COLOR = (0.157, 0.165, 0.212)  # fundo Drácula #282a36
 PONTO_NORMAL = (0.973, 0.973, 0.898)  # branco Drácula #f8f8e5
 
+# ---------------------------------------------------------------------------
+# CARD-ÚNICO-01, entrega 3 — o rótulo vira marca d'água
+# ---------------------------------------------------------------------------
+#
+# Pedido dela, literal, com o print anotado: *"L3 e R3 saem do X: e vão ficar
+# no centro do desenho do analógico com transparência 70% e grande ao fundo"*.
+#
+# "Transparência 70%" é OPACIDADE 30% — é assim que ela descreve o efeito, e é
+# o alpha que entra no `set_source_rgba`.
+MARCA_DAGUA_ALPHA: float = 0.3
+
+#: O corpo da letra, como FRAÇÃO do raio do círculo — nunca um literal em px.
+#:
+#: O card inteiro obedece `theme.escala_fonte()`, e o desenho do analógico
+#: recebe seu tamanho do card (`STICK_SIZE_SINGLE`/`STICK_SIZE_COMPACT`, e o
+#: card único é maior que o compacto). Um `set_font_size(28)` ficaria certo num
+#: dos dois e errado no outro, e quebraria na primeira vez que ela mudasse a
+#: escala. Derivando do raio ALOCADO, a marca acompanha os dois eixos de
+#: variação de graça.
+MARCA_DAGUA_FRACAO_DO_RAIO: float = 0.95
+
 
 if _GTK_DISPONIVEL:
 
@@ -106,6 +127,38 @@ if _GTK_DISPONIVEL:
         # Interno
         # ------------------------------------------------------------------
 
+        def _desenhar_marca_dagua(
+            self,
+            ctx: object,
+            cx: float,
+            cy: float,
+            raio: float,
+            cor: tuple[float, float, float],
+        ) -> None:
+            """Pinta o rótulo ("L3"/"R3") grande e apagado, centrado.
+
+            CARD-ÚNICO-01, entrega 3. O rótulo JÁ chegava aqui pelo
+            construtor e não era desenhado — ele só existia para o `repr` e
+            para o stub. Agora ele é o desenho de fundo, e a linha de valores
+            do card perdeu o prefixo que o repetia.
+
+            Centrar texto em Cairo não é `xalign`: mede-se o traçado com
+            `text_extents` e desloca-se pela metade dele. Usar só a largura,
+            ou ignorar o `x_bearing`, deixa a letra visivelmente fora do
+            centro — e num desenho com uma cruz no meio, o erro salta.
+            """
+            if not self._label:
+                return
+            ctx.select_font_face("sans")  # type: ignore[attr-defined]
+            ctx.set_font_size(raio * MARCA_DAGUA_FRACAO_DO_RAIO)  # type: ignore[attr-defined]
+            ext = ctx.text_extents(self._label)  # type: ignore[attr-defined]
+            ctx.set_source_rgba(*cor, MARCA_DAGUA_ALPHA)  # type: ignore[attr-defined]
+            ctx.move_to(  # type: ignore[attr-defined]
+                cx - ext.width / 2 - ext.x_bearing,
+                cy - ext.height / 2 - ext.y_bearing,
+            )
+            ctx.show_text(self._label)  # type: ignore[attr-defined]
+
         def _on_draw(self, _widget: Gtk.DrawingArea, ctx: object) -> bool:
             """Callback de desenho cairo."""
             w = self.get_allocated_width()
@@ -127,6 +180,13 @@ if _GTK_DISPONIVEL:
             else:
                 borda = PONTO_NORMAL if self._l3_pressed else self._accent
                 cor_ponto = borda
+
+            # A marca d'água ("L3"/"R3"), grande e apagada, ATRÁS de tudo.
+            #
+            # A ordem de pintura é a entrega: ela é FUNDO. Desenhada depois da
+            # cruz ou do ponto, cobriria justamente o que o widget existe para
+            # mostrar — e num alpha de 0,3 o resultado não é "atrás", é "sujo".
+            self._desenhar_marca_dagua(ctx, cx, cy, raio_externo, borda)
 
             # Circulo externo (borda)
             ctx.set_source_rgb(*borda)  # type: ignore[attr-defined]
