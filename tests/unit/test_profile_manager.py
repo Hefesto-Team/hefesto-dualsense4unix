@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from hefesto_dualsense4unix.core.trigger_effects import rigid
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -61,9 +62,16 @@ def test_activate_aplica_trigger_e_led(isolated_profiles_dir: Path):
 
     triggers = [c for c in fc.commands if c.kind == "set_trigger"]
     assert len(triggers) == 2
-    # Right = Rigid (RIGID_B = 5 bits), forces[1] = 200 (force cru)
+    # Right = Rigid.
+    #
+    # TRIGGER-CANON-01: o comentário que estava aqui dizia "RIGID_B = 5 bits,
+    # forces[1] = 200 (force cru)" — e `RIGID_B` é `0x05`, o OFF do bloco de
+    # gatilho. O preset mandava o controle DESLIGAR o gatilho, e ela mediu
+    # isso pelo tato: *"rígido e desligado sem diferença"*. Os bytes vêm da
+    # factory em vez de literais porque quem os trava é o
+    # `test_trigger_effects.py`, num lugar só.
     right_call = next(c for c in triggers if c.payload[0] == "right")
-    assert right_call.payload[1].forces == (5, 200, 0, 0, 0, 0, 0)
+    assert right_call.payload[1].forces == rigid(5, 200).forces
 
     leds = [c for c in fc.commands if c.kind == "set_led"]
     assert len(leds) == 1
@@ -418,13 +426,13 @@ def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
     # Left: feedback — compara byte a byte com a factory direta.
     left_call = next(c for c in triggers if c.payload[0] == "left")
     expected_left = multi_position_feedback([0, 1, 2, 3, 4, 5, 6, 7, 8, 8])
-    assert left_call.payload[1].mode == TriggerMode.RIGID_AB
+    assert left_call.payload[1].mode == TriggerMode.FEEDBACK
     assert left_call.payload[1].forces == expected_left.forces
 
     # Right: vibration com frequency=0 (default do formato aninhado).
     right_call = next(c for c in triggers if c.payload[0] == "right")
     expected_right = multi_position_vibration(0, [0, 0, 2, 2, 4, 5, 6, 7, 8, 8])
-    assert right_call.payload[1].mode == TriggerMode.PULSE_A
+    assert right_call.payload[1].mode == TriggerMode.VIBRATION
     assert right_call.payload[1].forces == expected_right.forces
 
 
@@ -548,7 +556,7 @@ def test_activate_manual_com_alvo_selecionado_atinge_todos(
 
     for h in (h1, h2):
         assert h.light.colors[-1] == (10, 20, 30)
-        assert h.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+        assert h.triggerR.forces == list(rigid(5, 200).forces)
     # O seletor da usuária segue como estava (estado de UI preservado).
     assert backend.get_output_target_index() == 1
 
@@ -570,7 +578,7 @@ def test_activate_via_autoswitch_com_alvo_selecionado_atinge_todos(
 
     for h in (h1, h2):
         assert h.light.colors[-1] == (10, 20, 30)
-        assert h.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+        assert h.triggerR.forces == list(rigid(5, 200).forces)
 
 
 def test_activate_substitui_o_mapa_de_overrides(isolated_profiles_dir: Path):
@@ -759,6 +767,6 @@ def test_activate_override_parcial_de_gatilho_nao_desliga_o_outro_lado(
     manager.activate("vitoria")
 
     # O lado escrito aplicou; o NÃO escrito manteve o global (Rigid 5,200).
-    assert h2.triggerL.forces == [1, 100, 0, 0, 0, 0, 0]
-    assert h2.triggerR.forces == [5, 200, 0, 0, 0, 0, 0]
+    assert h2.triggerL.forces == list(rigid(1, 100).forces)
+    assert h2.triggerR.forces == list(rigid(5, 200).forces)
     assert backend._desired_by_uniq[UNIQ_2].trigger_right is None

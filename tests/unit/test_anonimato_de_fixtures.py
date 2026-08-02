@@ -59,7 +59,16 @@ _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
 )
 
 _MAC_COM_DOIS_PONTOS = re.compile(r"\b[0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5}\b")
-_MAC_12_HEX = re.compile(r"\b[0-9a-fA-F]{12}\b")
+#: ANONIMATO-BINARIO-FALSO-POSITIVO-02 (01/08/2026): o `(?!0[bBxX])` NÃO é
+#: enfeite. Um literal BINÁRIO de Python de dez dígitos tem DOZE caracteres
+#: contando o prefixo, e todos eles são hex válidos (`0`, `b`, `1`) — então a
+#: regex de "12 hex seguidos" casava o literal inteiro. O portão reprovou dez
+#: linhas do `test_trigger_effects.py` que são bitmasks de zonas de gatilho, e
+#: acusou identidade real onde havia aritmética.
+#:
+#: O lookahead recusa o que começa com prefixo de literal numérico. Um MAC de
+#: verdade nunca vem escrito com `0b` ou `0x` na frente.
+_MAC_12_HEX = re.compile(r"\b(?!0[bBxX])[0-9a-fA-F]{12}\b")
 
 
 def _permitido(mac_12hex: str) -> bool:

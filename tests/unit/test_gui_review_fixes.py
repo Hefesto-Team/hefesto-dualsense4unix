@@ -56,8 +56,18 @@ class TestBuildFromNameFlatMultiPos:
 
     def test_preset_posicional_normal_intacto(self) -> None:
         # Presets de assinatura posicional comum não são afetados.
+        #
+        # TRIGGER-CANON-01: o literal `5` que estava aqui era o valor do modo
+        # `RIGID_B` — e `0x05` é o OFF do bloco de gatilho, o que este teste
+        # travava sem saber. O `Rigid` passou a mandar o `FEEDBACK` oficial.
+        # O que ele afere continua sendo o CAMINHO (lista posicional funciona),
+        # e por isso a asserção passou a ser contra a factory: quem trava os
+        # bytes do `Rigid` é o `test_trigger_effects.py`, num lugar só.
+        from hefesto_dualsense4unix.core.trigger_effects import rigid
+
         eff = build_from_name("Rigid", [5, 200])
-        assert eff.mode == 5
+        assert eff.mode == rigid(5, 200).mode
+        assert eff.forces == rigid(5, 200).forces
 
 
 class TestDraftMultiPosRoundTrip:

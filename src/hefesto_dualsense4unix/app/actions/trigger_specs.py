@@ -54,6 +54,12 @@ def _strength(default: int = 4) -> TriggerParamSpec:
     return TriggerParamSpec("strength", "Intensidade", 0, 8, default)
 
 
+#: A curva padrão dos presets por posição: firmeza crescente do solto ao
+#: fundo. TRIGGER-CANON-01 — antes eram dez zeros, e dez zeros é "nenhuma zona
+#: ativa": o preset existia na tela e não fazia nada ao ser aplicado.
+_RAMPA_PADRAO: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8, 8)
+
+
 def _frequency(default: int = 10) -> TriggerParamSpec:
     return TriggerParamSpec("frequency", "Frequência", 0, 255, default)
 
@@ -138,8 +144,14 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "AutoGun", "Arma automática",
+        # TRIGGER-CANON-01: era `_pos(2)`, cujo `name` é "position" — e a
+        # factory `auto_gun` recebe `start`. Pelo caminho POSICIONAL ninguém
+        # notava (a posição batia); pelo NOMEADO ele levantava
+        # `TypeError: auto_gun() got an unexpected keyword argument 'position'`.
+        # O `name` do PRESET é contrato e não mudou; o do parâmetro tinha de
+        # ser o kwarg da factory desde sempre.
         params=(
-            _pos(2),
+            _start(0, 9, 2),
             _strength(6),
             _frequency(60),
         ),
@@ -184,9 +196,14 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
     TriggerPresetSpec(
         "MultiPositionFeedback", "Curva de força",
+        # TRIGGER-CANON-01: os defaults eram TODOS zero, e zero é ZONA
+        # INATIVA — escolher este preset na tela e aplicar mandava "nenhuma
+        # zona ativa", que o firmware honra fazendo nada. A rampa 0..8 é o
+        # exemplo canônico do próprio `_flatten_multi_position`, e é o que
+        # "curva de força" quer dizer: firmeza crescente ao longo do curso.
         params=tuple(
             TriggerParamSpec(
-                f"pos_{i}", f"Posição {i}", 0, 8, 0
+                f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
             )
             for i in range(10)
         ),
@@ -196,9 +213,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         "MultiPositionVibration", "Vibração por posição",
         params=(
             _frequency(40),
+            # Idem: zero em todas as posições é nenhuma zona ativa.
             *(
                 TriggerParamSpec(
-                    f"pos_{i}", f"Posição {i}", 0, 8, 0
+                    f"pos_{i}", f"Posição {i}", 0, 8, _RAMPA_PADRAO[i]
                 )
                 for i in range(10)
             ),
