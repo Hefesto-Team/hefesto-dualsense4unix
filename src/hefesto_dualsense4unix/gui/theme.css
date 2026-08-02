@@ -1154,3 +1154,22 @@ textview.hefesto-dualsense4unix-log text selection,
     color: #fff;
     opacity: 1;
 }
+
+/* SOM-CANAL-01 — o seletor de canal do bloco "Alto-falante", compacto.
+ *
+ * MEDIDO em 02/08/2026: o `SegmentedSelector` pede 67px de altura contra os
+ * 34px do botão que ele substituiu no bloco. A diferença é o padding que o
+ * tema dá a um `GtkRadioButton` em modo toggle, e ela sozinha estourava o
+ * orçamento de ALTURA da coluna do som (284px contra um teto de 258) — a
+ * linha mais apertada do card, como ela avisou na sprint.
+ *
+ * O corte vai no padding, e não na fonte: encolher a letra faria o rótulo
+ * deste seletor divergir do resto da faixa, que é o defeito de simetria que a
+ * STATUS-SIMETRIA-02 veio curar. */
+.hefesto-seletor-compacto button {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    min-height: 0;
+}
