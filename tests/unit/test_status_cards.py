@@ -708,27 +708,72 @@ def test_gate_timers_nenhuma_ocorrencia_nova_vs_baseline() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_sticks_encolhem_com_dois_cards(host: _Host) -> None:
-    """O número exato vem das constantes — travá-lo aqui só travaria o ajuste
-    de altura da aba, que é justamente o que elas existem para permitir. O que
-    o teste garante é a REGRA: 2+ cards usam o tamanho compacto, e ele é menor.
+def test_os_sticks_nao_encolhem_mais_com_dois_cards(host: _Host) -> None:
+    """EMPILHA-02 (02/08/2026): com UMA coluna, todo card tem largura inteira.
+
+    **A regra anterior estava certa para o desenho anterior**, e fica
+    registrada: com dois cards LADO A LADO, cada um recebia metade da janela,
+    e o stick de 120px empurrava a coluna. O compacto existia para isso.
+
+    Empilhados numa coluna (decisão dela, EMPILHA-01), cada card recebe a
+    largura INTEIRA — e continuar desenhando para meia deixava o conteúdo
+    espremido à esquerda com um vazio à direita. Foi o que ela apontou no
+    print de 02/08: *"layout quebrou, e piorou algumas coisas. antes ele tava
+    bem distribuido"*.
+
+    O `compact` controlava DUAS coisas misturadas — o tamanho dos desenhos e a
+    presença do par global "Perfil ativo / Hefesto" — e elas andavam juntas
+    por acidente. Agora são parâmetros separados: o tamanho é sempre o grande,
+    e o par global só aparece quando NÃO há frame Estado para mostrá-lo.
+
+    Mordida: voltar `ControllerCard(compact=compact)` no `_rebuild_status_cards`.
     """
-    assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE
+    assert STICK_SIZE_COMPACT < STICK_SIZE_SINGLE, (
+        "as duas constantes continuam existindo — o card compacto ainda é "
+        "construível, e é o que um chamador avulso pede"
+    )
 
     host._render_live_state(_state(_entry()))
     card_solo = host.cards()[0]
-    largura, altura = card_solo._stick_left.get_size_request()
-    assert (largura, altura) == (STICK_SIZE_SINGLE, STICK_SIZE_SINGLE)
+    assert card_solo._stick_left.get_size_request() == (
+        STICK_SIZE_SINGLE,
+        STICK_SIZE_SINGLE,
+    )
 
     host._render_live_state(
         _state(
             _entry(),
-            _entry(index=1, uniq="aa:bb:cc:00:00:02", is_primary=False),
+            _entry(index=1, uniq="aa:bb:cc:00:00:02"),
         )
     )
     for card in host.cards():
-        largura, altura = card._stick_left.get_size_request()
-        assert (largura, altura) == (STICK_SIZE_COMPACT, STICK_SIZE_COMPACT)
+        assert card._stick_left.get_size_request() == (
+            STICK_SIZE_SINGLE,
+            STICK_SIZE_SINGLE,
+        ), "empilhados, os dois cards têm a largura inteira e o desenho grande"
+
+
+def test_o_par_global_aparece_uma_vez_so_na_tela(host: _Host) -> None:
+    """E o que a quantidade de controles DECIDE agora é outra coisa.
+
+    Com um controle, o frame "Estado" sai da tela e o card responde por perfil
+    e daemon. Com dois, o frame volta — e nenhum dos cards os mostra, senão a
+    mesma informação apareceria três vezes.
+
+    Mordida: passar `mostrar_estado_global=True` fixo no `_rebuild_status_cards`.
+    """
+    host._render_live_state(_state(_entry()))
+    assert host.cards()[0]._linha_estado_global is not None
+
+    host._render_live_state(
+        _state(_entry(), _entry(index=1, uniq="aa:bb:cc:00:00:02"))
+    )
+    for card in host.cards():
+        assert card._linha_estado_global is None, (
+            "com 2+ controles quem responde por perfil e daemon é o frame "
+            "Estado; repetir em cada card é a duplicação que a "
+            "STATUS-SIMETRIA-02 curou na bateria"
+        )
 
 
 def test_swatch_guarda_a_cor_crua_nao_a_ajustada(host: _Host) -> None:
