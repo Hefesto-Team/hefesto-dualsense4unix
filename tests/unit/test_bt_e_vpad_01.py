@@ -237,6 +237,21 @@ def _vpad_mudo() -> Any:
     return pad
 
 
+def _vpad_em_jogo() -> Any:
+    """Um vpad com a sessão de jogo ABERTA e a graça pós-bind vencida.
+
+    Os testes que medem as OUTRAS condições do carimbo (o keepalive, os bits
+    de autorização) precisam deste estado, senão passam por acidente: sem
+    sessão de jogo o carimbo não sai de jeito nenhum, e a asserção fica
+    verdadeira pelo motivo errado. Foi o que aconteceu na primeira versão
+    deles, e o laço de mordidas pegou.
+    """
+    pad = _vpad_mudo()
+    pad._game_open = True
+    pad._bound_at = pad.time_fn() - 3600
+    return pad
+
+
 def test_o_jogo_que_pede_audio_deixa_carimbo() -> None:
     """O portão de medição da PARIDADE-SONY-01, como instrumento PERMANENTE.
 
@@ -251,13 +266,54 @@ def test_o_jogo_que_pede_audio_deixa_carimbo() -> None:
 
     Mordida: apagar o bloco do carimbo do `_handle_output`.
     """
-    pad = _vpad_mudo()
+    # SESSÃO DE JOGO ABERTA — sem ela o carimbo não sai, e a razão é a
+    # primeira leitura do instrumento (02/08): ele apareceu com 8 segundos de
+    # idade num daemon recém-reiniciado, SEM jogo nenhum. O driver
+    # `hid-playstation` do kernel escreve os campos de áudio no PROBE do
+    # device. Ver `test_o_probe_do_kernel_nao_conta_como_jogo`, abaixo.
+    pad = _vpad_em_jogo()
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s
 
     # Jogo pedindo volume de alto-falante: bit 0x20 ligado, byte 5 não-nulo.
     pad._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
 
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO in pad.visto_ha_s
+
+
+def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
+    """A correção que a PRIMEIRA leitura do instrumento exigiu.
+
+    **Medido em 02/08/2026**, com o daemon recém-reiniciado e nenhum jogo
+    aberto: `audio_do_jogo` apareceu com **8,3 segundos** de idade nos dois
+    gamepads virtuais. A causa é o driver `hid-playstation` do kernel, que
+    escreve os campos de áudio no PROBE do device — o kernel 6.18 manda rota,
+    volume e pré-amp para fazer o alto-falante soar.
+
+    Um instrumento que carimba na adoção pelo kernel responde *"sim, alguém
+    escreve áudio"* **toda vez**, e a pergunta da sprint é outra: *"algum
+    JOGO escreve esses bytes?"*. Sem esta correção, o portão da
+    PARIDADE-SONY-01 daria um falso "sim" e a E2 seria construída sobre ele.
+
+    É a mesma família da lição de 01/08 (*"medir contra a ferramenta errada
+    produz um alarme convincente e falso"*), com outra roupa: aqui o
+    instrumento estava certo e a PERGUNTA que ele respondia era outra.
+
+    Mordida: tirar o `self._replicating()` da condição do carimbo.
+    """
+    pad = _vpad_mudo()
+    # Sem sessão de jogo: é exatamente o estado do probe do kernel.
+    pad._game_open = False
+    pad._bound_at = pad.time_fn() - 3600
+
+    pad._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
+
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s, (
+        "escrita de áudio FORA de uma sessão de jogo é o kernel adotando o "
+        "device — carimbar isso faria o portão da sprint dar um falso 'sim'"
+    )
+    # E o carimbo de OUTPUT continua saindo: ele mede outra coisa (alguém
+    # está escrevendo no hidraw deste vpad), e essa resposta é verdadeira.
+    assert uhid.ATIVIDADE_OUTPUT in pad.visto_ha_s
 
 
 def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
@@ -271,7 +327,7 @@ def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
 
     Mordida: tirar o `any(...)` da condição.
     """
-    pad = _vpad_mudo()
+    pad = _vpad_em_jogo()
 
     pad._handle_output(_corpo_de_audio(0xF0, (0, 0, 0, 0)))
 
@@ -289,7 +345,7 @@ def test_report_sem_os_bits_de_audio_nao_conta() -> None:
 
     Mordida: tirar o teste de `_AUDIO_FLAGS_DO_JOGO` da condição.
     """
-    pad = _vpad_mudo()
+    pad = _vpad_em_jogo()
 
     pad._handle_output(_corpo_de_audio(0x01, (99, 99, 99, 99)))
 
