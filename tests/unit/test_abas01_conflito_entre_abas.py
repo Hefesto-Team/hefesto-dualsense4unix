@@ -251,6 +251,14 @@ class _FakeSelector:
     def get_active_id(self) -> str | None:
         return self._active_id
 
+    def limpar_ativo(self) -> None:
+        """ESCOLHA-DELA-VENCE-01: "sem opinião" não marca botão nenhum."""
+        self._active_id = None
+
+    def set_tooltips(self, dicas: dict[str, str]) -> None:
+        """Dica por botão (E4). O dublê só precisa aceitar."""
+        self._dicas = dict(dicas)
+
     def set_active_id(self, the_id: str) -> None:
         if the_id == self._active_id:
             return
