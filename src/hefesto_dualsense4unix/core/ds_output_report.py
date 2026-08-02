@@ -94,6 +94,45 @@ COMMON_HEADPHONE_VOLUME = 4
 COMMON_SPEAKER_VOLUME = 5
 COMMON_MIC_VOLUME = 6
 COMMON_AUDIO_PATH = 7
+#: SOM-ROTA-01: o `audio_control2`, longe dos outros quatro no report.
+COMMON_AUDIO_CONTROL2 = 37
+
+#: Os valores do campo `OUTPUT_PATH_SEL` (bits 4-5 de `common[7]`), nomeados
+#: pela CONSEQUÊNCIA e não pelo número — é assim que eles aparecem na tela.
+#:
+#: O caso que ela descreveu com o Zelda (*"o speaker do controle faz os
+#: barulhos da espada do Link enquanto na tela tem o som normal do jogo"*) é o
+#: valor **2**: canal esquerdo para o fone/TV, canal direito para o
+#: alto-falante do controle. Um byte.
+SAIDA_ESTEREO_NO_FONE = 0
+SAIDA_MONO_NO_FONE = 1
+SAIDA_L_FONE_R_ALTO_FALANTE = 2
+SAIDA_SO_NO_ALTO_FALANTE = 3
+
+#: O deslocamento do `OUTPUT_PATH_SEL` dentro de `common[7]`.
+#:
+#: Ele existe porque o byte 7 carrega DUAS coisas — a rota de saída (bits 4-5)
+#: e o caminho do microfone (bits 0-3 e 6-7). Escrever o byte inteiro com o
+#: número da rota apagaria o caminho do mic em silêncio, e é por isso que a
+#: sprint proíbe "mexer no common[7] sem o OUTPUT_PATH_SEL inteiro".
+OUTPUT_PATH_SEL_SHIFT = 4
+OUTPUT_PATH_SEL_MASK = 0x30
+
+#: O ganho do pré-amplificador do alto-falante, nos bits 0-2 de `common[37]`.
+#: `0x2` é o valor que o kernel 6.18 escolhe, e é o que a E1 da SOM-ROTA-01
+#: passou a escrever.
+SP_PREAMP_GAIN_MASK = 0x07
+SP_PREAMP_GAIN_PADRAO = 0x02
+
+#: Os TETOS reais de cada volume, que não são 255.
+#:
+#: SOM-ROTA-01: a árvore tratava os quatro bytes como 0-255. O fone vai até
+#: `0x7F` e o microfone até `0x40` — mandar mais é mandar lixo num campo que o
+#: firmware interpreta. Fonte: kernel 6.18 (patches do jack de áudio,
+#: Collabora) e `dualsensectl`, que concordam.
+TETO_HEADPHONE_VOLUME = 0x7F
+TETO_MIC_VOLUME = 0x40
+TETO_SPEAKER_VOLUME = 0xFF
 
 #: Bit de MUDO do microfone dentro de `common[9]` (power_save_control) —
 #: `DS_OUTPUT_POWER_SAVE_CONTROL_MIC_MUTE` do `hid-playstation`.
@@ -106,6 +145,17 @@ VALID_FLAG1_LIGHTBAR_CONTROL_ENABLE = 0x04
 VALID_FLAG1_RELEASE_LEDS = 0x08
 VALID_FLAG1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10
 VALID_FLAG1_MOTOR_POWER = 0x40
+#: SOM-ROTA-01 — bit7 do flag1: autoriza o firmware a adotar `common[37]`
+#: (`audio_control2`), que carrega o GANHO DO PRÉ-AMPLIFICADOR do alto-falante
+#: nos bits 0-2 e o beam forming do microfone no bit4.
+#:
+#: **Ele é a peça que faltava para o controle deslizante de volume valer o
+#: curso inteiro.** Ela mediu em 01/08: mudo até 38, satura em 102 — 60% do
+#: curso inerte. O kernel 6.18, para fazer o alto-falante soar quando o fone
+#: sai, escreve TRÊS campos (a rota em `common[7]`, o volume em `common[5]` e
+#: o pré-amp aqui); esta árvore escrevia só o volume, e os 64 passos úteis são
+#: a assinatura de mexer em um de três botões.
+VALID_FLAG1_AUDIO_CONTROL2_ENABLE = 0x80
 
 # --- bits de valid_flag2 (common[38]) --------------------------------------
 #: bit0 (pydualsense `LedOptions.PlayerLedBrightness`): habilita o controle de
