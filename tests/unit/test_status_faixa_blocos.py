@@ -556,26 +556,39 @@ def test_o_alto_falante_aparece_mesmo_sem_ninguem_ter_ajustado() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_a_bateria_do_card_sai_quando_o_frame_estado_ja_a_mostra() -> None:
+def test_a_bateria_aparece_uma_vez_so_na_tela_em_qualquer_modo() -> None:
     """Com UM controle, a bateria aparecia duas vezes na mesma tela.
 
-    As duas regras já eram complementares e ninguém as tinha juntado: a linha
-    do frame "Estado" só fica visível com 0 ou 1 controle
-    (`_set_battery_row_visible`), e o card só é compacto com 2+. Quem sai no
-    caso de um controle é a linha do CARD — a do frame Estado responde também
-    quando não há controle nenhum, e aí não existe card.
+    **A regra que este teste trava nunca mudou: a bateria aparece UMA vez.**
+    O que mudou, na CARD-ÚNICO-01, foi qual das duas sai — e por isso o
+    teste passou a medir o comportamento em vez do mecanismo (ele exigia,
+    literalmente, que a linha do card estivesse invisível).
 
-    A mordida: tirar o `_esconder_modulo(linha_bateria)` do card único faz a
-    repetição voltar e este teste cai.
+    Antes: o frame "Estado" mostrava a bateria com 0 ou 1 controle, e a linha
+    do card único se escondia para não repetir. Agora o frame Estado inteiro
+    some quando há um controle só — ela pediu, *"apaga estado"* — e quem
+    mostra a bateria passou a ser o card, nos DOIS modos.
+
+    A mordida: devolver o `_esconder_modulo(linha_bateria)` ao card único faz
+    a bateria sumir da tela dela por inteiro (o frame que a mostrava não está
+    mais lá), e a primeira asserção cai.
     """
     unico = _card_na_tela_dela()
     dois = _card_na_tela_dela(compact=True, largura=600)
 
-    assert unico._battery_row.get_visible() is False
+    assert unico._battery_row.get_visible() is True
     assert dois._battery_row.get_visible() is True
-    # E o valor continua sendo calculado nos dois — o card compacto é o que
-    # responde pela bateria quando há 2+ controles.
+    # E o valor continua sendo calculado nos dois.
     assert dois._battery_bar.get_text() == "80 %"
+    assert unico._battery_bar.get_text() == "80 %"
+    # No card único quem MOSTRA o número é o rótulo ao lado, e não a barra: o
+    # GtkProgressBar centra o próprio texto, e centrado numa barra larga o
+    # "80 %" fica no meio do vazio — o defeito que ela apontou nas barras de
+    # L2/R2, na mesma tela. Mordida: religar o `show-text` da barra do card
+    # único e apagar o rótulo.
+    assert unico._battery_bar.get_show_text() is False
+    assert unico._battery_pct_label is not None
+    assert unico._battery_pct_label.get_text() == "80 %"
 
 
 def test_o_frame_estado_e_o_card_param_no_mesmo_numero_com_a_janela_larga() -> None:

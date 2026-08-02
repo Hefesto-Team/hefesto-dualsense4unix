@@ -127,6 +127,15 @@ _ESTADO: dict[str, Any] = {"native_mode": False}
 #: dentro da faixa audível, e não o 180 da escala linear de antes.
 POSSE: dict[str, Any] = {"volume": 90, "muted": False}
 
+#: A faixa vertical que a aba Status entrega aos cards, em px.
+#:
+#: Remedido em 01/08/2026 (noite) — ver o docstring de
+#: `test_o_selo_com_recado_cabe_na_faixa_dos_cards`. O mesmo número está em
+#: `test_status_som_02_controle_de_volume.py`, e o dono absoluto do orçamento
+#: continua sendo `test_layout_orcamento_altura.py`, que MEDE a faixa em vez
+#: de repetir o número.
+FAIXA_DOS_CARDS_PX = 550
+
 _janelas_vivas: list[Any] = []
 
 
@@ -541,13 +550,23 @@ def test_o_recado_do_som_nao_gasta_um_pixel_de_largura(pedidos: _Pedidos) -> Non
 def test_o_selo_com_recado_cabe_na_faixa_dos_cards(pedidos: _Pedidos) -> None:
     """A altura: o selo é a única peça do bloco que entra e sai em execução.
 
-    A faixa dos cards da aba entrega 467px (medido com a janela no tamanho de
-    projeto). O selo aceso custa 21px e o card mais alto vai a 463 — 4px de
-    folga, a mais fina da aba, e é por isso que ela está escrita aqui.
+    A faixa dos cards da aba entrega **550px**, remedido em 01/08/2026 (noite)
+    com a janela no tamanho de projeto (1180x830) e a escala de fonte da
+    sessão, por `status_players_scroll.get_allocated_height()`.
+
+    **O número anterior era 467 e caducou** — ele é anterior à
+    ESTADO-TRES-LINHAS-01, que levou o frame "Estado" de cinco linhas para
+    três e devolveu essa altura aos cards sem que ninguém remedisse. Com o
+    frame ESCONDIDO (CARD-ÚNICO-01, um controle só) a faixa chega a 708px,
+    mas o teto fica no pior caso de propósito: um limite que dependa da regra
+    de visibilidade quebra no dia em que ela mudar.
+
+    O selo aceso custa 21px, e é a peça mais fina da aba — é por isso que ela
+    está escrita aqui.
 
     Mordida: dar ao selo uma linha própria a mais, ou pôr o recado num rótulo
-    NOVO em vez de reusar o selo. O card passa dos 467 e os botões caem abaixo
-    da dobra da janela de projeto.
+    NOVO em vez de reusar o selo. O card passa da faixa e os botões caem
+    abaixo da dobra da janela de projeto.
     """
     pedidos.resultado = ResultadoDoSom.de(MOTIVO_SEM_TOCADOR, SINK_CONTROLE)
     for compact in (False, True):
@@ -557,7 +576,7 @@ def test_o_selo_com_recado_cabe_na_faixa_dos_cards(pedidos: _Pedidos) -> None:
         while Gtk.events_pending():
             Gtk.main_iteration()
         altura = card.get_preferred_height()[1]
-        assert altura <= 467, (
+        assert altura <= FAIXA_DOS_CARDS_PX, (
             f"o card {'compacto' if compact else 'de um controle'} com o "
-            f"recado aceso pede {altura}px da faixa de 467"
+            f"recado aceso pede {altura}px da faixa de {FAIXA_DOS_CARDS_PX}"
         )

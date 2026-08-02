@@ -102,6 +102,28 @@ class _NumeroForaDaMesaError(Exception):
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
 
+def _visto_ha_s(vp: Any) -> dict[str, float]:
+    """O ``visto_ha_s`` do vpad, saneado para o payload de IPC.
+
+    PAINEL-DA-VERDADE-01/E1. O `getattr` com default existe pelo motivo de
+    sempre neste arquivo: o vpad pode ser um `uinput` (que não tem hidraw e
+    portanto não tem o que carimbar) ou um dublê de teste — e o `state_full`
+    nunca pode morrer por causa de um campo de telemetria.
+
+    Os valores são forçados a `float` e os não-numéricos caem fora: o payload
+    vira JSON, e um valor exótico aqui derrubaria a serialização inteira por
+    causa da linha menos importante dela.
+    """
+    cru = getattr(vp, "visto_ha_s", None)
+    if not isinstance(cru, dict):
+        return {}
+    return {
+        str(k): float(v)
+        for k, v in cru.items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    }
+
+
 def _norm_uniq(value: Any) -> str | None:
     """MAC 12-hex normalizado de uma key/serial do backend, ou None.
 
@@ -1762,6 +1784,15 @@ class IpcHandlersMixin:
                             "touchpad_clicks": int(
                                 getattr(vp, "touchpad_click_count", 0) or 0
                             ),
+                            # PAINEL-DA-VERDADE-01/E1 — o campo que faz a aba
+                            # Status parar de confundir "já funcionou uma vez"
+                            # com "está funcionando". Todos os contadores acima
+                            # são CUMULATIVOS (zeram só no `start()`); este diz
+                            # há quantos segundos cada categoria aconteceu pela
+                            # última vez, e OMITE a categoria que nunca
+                            # aconteceu — a tela diz frases diferentes para
+                            # "parou" e para "nunca começou".
+                            "visto_ha_s": _visto_ha_s(vp),
                         }
                     )
             result["rumble_ff"] = {

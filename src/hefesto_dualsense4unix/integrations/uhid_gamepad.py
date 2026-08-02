@@ -198,6 +198,43 @@ _RUMBLE_STALE_SEC = 3.0
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
 
+# --- PAINEL-DA-VERDADE-01: recência, e não só contagem ---------------------
+#
+#: As categorias que o vpad carimba quando ALGO de fato passou por ele. Elas
+#: são as chaves de :attr:`visto_ha_s`, e o nome de cada uma é contrato com a
+#: aba Status — trocá-lo sem trocar o consumidor deixa a tela muda.
+#:
+#: **Por que carimbo, e não mais um contador.** Os contadores que já existem
+#: (`trigger_replicas`, `touchpad_clicks`, `lightbar_replicas`, ...) são
+#: CUMULATIVOS: zeram só no `start()`. Um painel construído sobre eles diria
+#: "já funcionou uma vez" e ficaria verde para sempre depois do primeiro
+#: acerto — que é a mentira mais confortável que uma tela de diagnóstico pode
+#: contar. O que ela perguntou foi outra coisa: *"na hora de jogar um jogo na
+#: Steam elas vão estar funcionando?"*, e isso é uma pergunta sobre AGORA.
+#:
+#: O molde é o `emit_hz` do `physical_report_reader`, que já resolve o mesmo
+#: problema para o giroscópio (média móvel com morte por inatividade). Aqui
+#: basta o carimbo: as categorias são eventos esparsos por natureza — um jogo
+#: manda um gatilho quando a arma muda, não 250 vezes por segundo —, e uma
+#: taxa sobre evento esparso mediria o silêncio entre dois acertos, não o
+#: acerto. Quem decide o que é "recente" é o consumidor.
+ATIVIDADE_TRIGGER = "trigger"
+ATIVIDADE_LIGHTBAR = "lightbar"
+ATIVIDADE_PLAYER_LEDS = "player_leds"
+ATIVIDADE_RUMBLE = "rumble"
+ATIVIDADE_TOUCHPAD_CLICK = "touchpad_click"
+ATIVIDADE_OUTPUT = "output"
+
+#: Categoria de réplica (o vocabulário interno do `_forward_replica`, que
+#: separa gatilho esquerdo do direito) → categoria de ATIVIDADE (o vocabulário
+#: da tela, que não separa: para ela, "o gatilho adaptativo está chegando").
+_ATIVIDADE_POR_CATEGORIA: dict[str, str] = {
+    "trigger_left": ATIVIDADE_TRIGGER,
+    "trigger_right": ATIVIDADE_TRIGGER,
+    "lightbar": ATIVIDADE_LIGHTBAR,
+    "player_leds": ATIVIDADE_PLAYER_LEDS,
+}
+
 # --- REPLICA-03: replicação do output do jogo (gatilhos/lightbar/player) ----
 #
 #: Offsets DENTRO do payload do report 0x02 (após o report id). Fontes, que
@@ -594,6 +631,11 @@ class UhidDualSense:
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
+    #: PAINEL-DA-VERDADE-01: instante (relógio de `time_fn`) do último evento
+    #: de cada categoria. Categoria ausente = NUNCA aconteceu nesta sessão, e
+    #: isso é diferente de "aconteceu há muito tempo" — a tela diz coisas
+    #: diferentes nos dois casos.
+    _visto_em: dict[str, float] = field(default_factory=dict)
     _lock: threading.RLock = field(default_factory=threading.RLock)
     #: Estado do controle físico que o encoder transforma em report 0x01.
     _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
@@ -735,6 +777,40 @@ class UhidDualSense:
         """Nº de padrões de player-LED do jogo REPLICADOS ao físico (REPLICA-03)."""
         return self._player_led_replicas
 
+    def _carimbar(self, categoria: str) -> None:
+        """Marca AGORA como o último instante em que ``categoria`` aconteceu.
+
+        PAINEL-DA-VERDADE-01. Reatribui o dicionário em vez de mutá-lo: as
+        leituras vêm da thread do IPC e as escritas do pump, e uma
+        reatribuição de nome é atômica sob o GIL — um `dict` mutado durante um
+        `items()` levanta `RuntimeError` no meio do `state_full`. É barato:
+        são seis chaves.
+        """
+        self._visto_em = {**self._visto_em, categoria: self.time_fn()}
+
+    @property
+    def visto_ha_s(self) -> dict[str, float]:
+        """Há quantos segundos cada categoria aconteceu pela última vez.
+
+        PAINEL-DA-VERDADE-01 / E1 — o campo que faltava para a aba Status
+        responder *"está chegando ao jogo AGORA?"* em vez de *"já chegou
+        alguma vez desde que o vpad subiu?"*.
+
+        Categoria AUSENTE do dicionário = nunca aconteceu nesta sessão, e a
+        tela diz uma frase diferente para esse caso ("pronto — nenhum jogo
+        pediu ainda") e para "aconteceu e parou". Publicar 0.0, ou um número
+        gigante, apagaria essa diferença.
+
+        O relógio é o `time_fn` do próprio vpad (monotônico), e o valor sai
+        daqui já resolvido em SEGUNDOS DE IDADE justamente para não obrigar o
+        consumidor a ter o mesmo relógio: quem lê é a GUI, noutro processo.
+        """
+        agora = self.time_fn()
+        return {
+            categoria: round(max(0.0, agora - quando), 1)
+            for categoria, quando in self._visto_em.items()
+        }
+
     @property
     def ff_supported(self) -> bool:
         """No caminho uhid o rumble sempre existe — é hidraw de verdade."""
@@ -861,6 +937,10 @@ class UhidDualSense:
             self._trigger_replicas = 0
             self._lightbar_replicas = 0
             self._player_led_replicas = 0
+            # Os carimbos morrem com o device, junto com os contadores que eles
+            # acompanham: um "o gatilho chegou há 2 s" herdado da vida anterior
+            # do vpad seria telemetria de um device que não existe mais.
+            self._visto_em = {}
             self._axes = _AXES_NEUTRAL
             self._buttons = frozenset()
             self._last_body = None
@@ -985,6 +1065,7 @@ class UhidDualSense:
             self._touchpad_click = alvo
             if self._emit_if_changed(from_reader=True) and alvo:
                 self._touchpad_click_count += 1
+                self._carimbar(ATIVIDADE_TOUCHPAD_CLICK)
 
     @property
     def touchpad_click(self) -> bool:
@@ -1268,6 +1349,13 @@ class UhidDualSense:
         if len(report) < 2 or report[0] != _OUTPUT_REPORT_USB:
             return
         self._output_count += 1
+        # O carimbo do OUTPUT é o mais bruto e o mais valioso dos seis: ele diz
+        # que ALGUÉM está escrevendo no hidraw deste vpad agora — ou seja, que
+        # o jogo enxergou o gamepad virtual. Ele acontece mesmo quando nenhuma
+        # categoria é replicada (sink ausente, dedup, rate-limit), e é por isso
+        # que a tela pode distinguir "o jogo não viu o controle" de "o jogo viu
+        # e não pediu nada".
+        self._carimbar(ATIVIDADE_OUTPUT)
         body = report[1:]
         if len(body) > _VALID_FLAG1_OFFSET:
             self._replicate_from_output(body)
@@ -1288,6 +1376,11 @@ class UhidDualSense:
         # dizendo "ainda quero vibrar", e isso tem de adiar o teto de silêncio
         # mesmo sem haver o que reenviar ao hardware.
         self._rumble_visto_em = self.time_fn() if (weak or strong) else None
+        # A vibração carimba inclusive na PARADA (weak == strong == 0): o jogo
+        # mandar "pare de vibrar" é prova de que a vibração está chegando nele.
+        # O `_rumble_visto_em` acima é outra coisa e não serve aqui — ele é o
+        # relógio do teto de silêncio e vira `None` justamente na parada.
+        self._carimbar(ATIVIDADE_RUMBLE)
         if (weak, strong) == self._last_sent:
             return
         self._last_sent = (weak, strong)
@@ -1421,28 +1514,36 @@ class UhidDualSense:
             logger.info(
                 "uhid_replica_ativa", categoria=categoria, player=self.player
             )
+        # O carimbo vem DEPOIS do sink responder, dentro de cada ramo, e não
+        # aqui em cima: uma categoria sem sink não foi replicada a lugar
+        # nenhum, e carimbá-la faria a tela dizer "chegando" para um caminho
+        # que termina em `return`.
         try:
             if categoria == "trigger_right":
                 if self.trigger_sink is None:
                     return
+                self._carimbar(_ATIVIDADE_POR_CATEGORIA[categoria])
                 self._trigger_replicas += 1
                 self._game_dirty = True
                 self.trigger_sink("right", valor)
             elif categoria == "trigger_left":
                 if self.trigger_sink is None:
                     return
+                self._carimbar(_ATIVIDADE_POR_CATEGORIA[categoria])
                 self._trigger_replicas += 1
                 self._game_dirty = True
                 self.trigger_sink("left", valor)
             elif categoria == "lightbar":
                 if self.lightbar_sink is None:
                     return
+                self._carimbar(_ATIVIDADE_POR_CATEGORIA[categoria])
                 self._lightbar_replicas += 1
                 self._game_dirty = True
                 self.lightbar_sink(valor[0], valor[1], valor[2])
             elif categoria == "player_leds":
                 if self.player_led_sink is None:
                     return
+                self._carimbar(_ATIVIDADE_POR_CATEGORIA[categoria])
                 self._player_led_replicas += 1
                 self._game_dirty = True
                 self.player_led_sink(valor)

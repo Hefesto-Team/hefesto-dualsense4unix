@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Retrata as NOVE abas da janela, com o card do controle vivo dentro.
 
-É o script que a documentação e o Claude Code usam. Uma execução, nenhum
+É o script que a documentação e quem for trabalhar na interface usam —
+pessoa ou assistente. Uma execução, nenhum
 clique, nenhuma janela na frente: ele monta a interface numa janela offscreen
 do tamanho da tela maximizada dela e salva um PNG por aba.
 
@@ -145,6 +146,34 @@ def _aplicar_tema(janela) -> str:  # type: ignore[no-untyped-def]
     return "tema não aplicado"
 
 
+def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untyped-def]
+    """Roda, sobre a janela fotografada, o que a aba Status faz ao vivo.
+
+    O host é mínimo de propósito — a `StatusActionsMixin` precisa de duas
+    coisas para estes dois métodos: um `_get` que resolva ids do builder e o
+    dicionário de cards. Nada de IPC, nada de tique.
+    """
+    from hefesto_dualsense4unix.app.actions.status_actions import (
+        StatusActionsMixin,
+    )
+
+    class _Host(StatusActionsMixin):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.builder = builder
+            self._status_cards = {("card",): card}
+            self._status_card_keys = [("card",)]
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+    host = _Host()
+    host._alojar_botao_da_rota()
+    # Um controle só: o frame "Estado" sai da tela e o card responde por
+    # perfil e daemon. Os textos são os que o daemon dela publica hoje.
+    host._set_frame_estado_visivel(False)
+    card.definir_estado_global("Nenhum", "Ligado")
+
+
 def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe um card de controle vivo na aba Status.
 
@@ -175,24 +204,41 @@ def _injetar_card(builder) -> str:  # type: ignore[no-untyped-def]
     slot.attach(card, 0, 0, 1, 1)
     card.show_all()
 
-    # O botão da rota de som é REPARENTADO em tempo de execução pela
-    # `status_actions._alojar_botao_da_rota`; sem repetir isso aqui, a foto
-    # mostraria o botão no berço dele (o frame Estado) e não na casa.
-    botao = builder.get_object("btn_som_no_controle")
-    destino = getattr(card, "_speaker_rota_slot", None)
-    if botao is not None and destino is not None:
-        pai = botao.get_parent()
-        if pai is not None:
-            pai.remove(botao)
-        destino.pack_start(botao, True, True, 0)
-        destino.show_all()
+    # Duas coisas que a aba Status faz em TEMPO DE EXECUÇÃO e que nenhuma
+    # leitura do glade mostra: o botão da rota de som muda de casa para o
+    # bloco "Alto-falante" do card, e o frame "Estado" some quando há um
+    # controle só (CARD-ÚNICO-01).
+    #
+    # As duas regras são CHAMADAS aqui, e não repetidas: uma cópia delas neste
+    # script seria um segundo dono das regras, e a foto passaria a mentir no
+    # dia em que a `status_actions` mudasse — que é exatamente o defeito que
+    # este script existe para não deixar acontecer.
+    _aplicar_regras_de_runtime(builder, card)
 
-    card.update(_ENTRY, _ESTADO, LeituraMic(nivel=0.6, muted=False))
+    # O estado global com o vpad VIVO. Sem o bloco `rumble_ff.per_vpad` a
+    # linha do PAINEL-DA-VERDADE-01 não teria o que afirmar e sairia da foto —
+    # e ela é justamente a linha que responde à pergunta que abriu a leva
+    # ("na hora de jogar, isso vai funcionar?"). Os números são os de um
+    # controle no cabo com o gamepad virtual espelhando, que é o caso dela.
+    estado = {
+        **_ESTADO,
+        "rumble_ff": {
+            "per_vpad": [
+                {
+                    "player": 1,
+                    "motion_streaming": True,
+                    "motion_hz": 194.0,
+                    "visto_ha_s": {"rumble": 0.4, "lightbar": 1.2},
+                }
+            ]
+        },
+    }
+    card.update(_ENTRY, estado, LeituraMic(nivel=0.6, muted=False))
     # Um volume conhecido, para o bloco do alto-falante não sair no estado
     # "sem dado" — que é o menos informativo dos possíveis.
     card.update(
         {**_ENTRY, "audio": {"speaker": {"volume": 180, "muted": False}}},
-        _ESTADO,
+        estado,
         LeituraMic(nivel=0.6, muted=False),
     )
     return "card do controle injetado na aba Status"
