@@ -24,6 +24,30 @@
        primeira <release> é agora conferida contra a seção correspondente do
        CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
   <releases>
+    <release version="0.8.0" date="2026-08-02">
+      <description>
+        <p>
+          Sete presets de gatilho nao faziam nada, e ela mediu pelo tato:
+          "rigido e desligado sem diferenca". Tres deles mandavam o modo que
+          vale OFF no firmware. Os seis que ela aprovou nao mudaram um byte.
+        </p>
+        <p>
+          A aba Status passou a dizer o que CHEGA ao jogo, e nao so o que
+          existe: cada recurso carimba quando aconteceu pela ultima vez, e o
+          card mostra numa linha o que esta chegando agora. Com mascara Xbox
+          ela explica em vez de parecer quebrada.
+        </p>
+        <p>
+          O "tremendo sem parar" ganhou cura, e nao so mitigacao: o report de
+          parada do SDL vem com todos os flags zerados, e era descartado.
+        </p>
+        <p>
+          O alto-falante ganhou o pre-amplificador e a rota de saida — os 60%
+          do controle deslizante que estavam inertes. E o botao do microfone
+          parou de mutar o microfone de outro aparelho no Bluetooth.
+        </p>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-08-01">
       <description>
         <p>

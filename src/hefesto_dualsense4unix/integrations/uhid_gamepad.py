@@ -59,6 +59,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -257,6 +258,30 @@ ATIVIDADE_PLAYER_LEDS = "player_leds"
 ATIVIDADE_RUMBLE = "rumble"
 ATIVIDADE_TOUCHPAD_CLICK = "touchpad_click"
 ATIVIDADE_OUTPUT = "output"
+#: PARIDADE-SONY-01/E1 — o INSTRUMENTO do portão de medição da sprint.
+#:
+#: A pergunta que ela abre é: *"algum jogo que ela joga escreve os bytes de
+#: áudio (`common[4..7]`) no gamepad virtual?"*. A sprint pedia um log
+#: temporário aqui dentro; ele virou um carimbo PERMANENTE, e é melhor por
+#: dois motivos:
+#:
+#: 1. um log temporário depende de alguém lembrar de ligá-lo antes de jogar, e
+#:    de ela jogar o jogo certo naquele dia. O carimbo já está lá quando ela
+#:    joga;
+#: 2. ele responde as TRÊS saídas que a sprint prevê, e não uma. A categoria
+#:    ausente no `visto_ha_s` significa "nenhum jogo pediu áudio nunca" — que
+#:    é a resposta que fecha a sprint como cicatriz.
+#:
+#: **O carimbo NÃO replica nada.** Ele mede. A replicação dos bytes de áudio
+#: continua não existindo, e é isso que a E2 da sprint decide, depois da
+#: medição — como está escrito lá: *"um código escrito contra uma premissa
+#: não medida é dívida"*.
+ATIVIDADE_AUDIO_DO_JOGO = "audio_do_jogo"
+
+#: Os quatro bits de `valid_flag0` que autorizam os bytes de áudio: fone
+#: (0x10), alto-falante (0x20), microfone (0x40) e roteamento (0x80). O jogo
+#: ligar qualquer um deles é a intenção que a E1 procura.
+_AUDIO_FLAGS_DO_JOGO = 0xF0
 
 #: Categoria de réplica (o vocabulário interno do `_forward_replica`, que
 #: separa gatilho esquerdo do direito) → categoria de ATIVIDADE (o vocabulário
@@ -1491,6 +1516,19 @@ class UhidDualSense:
         # e não pediu nada".
         self._carimbar(ATIVIDADE_OUTPUT)
         body = report[1:]
+        # PARIDADE-SONY-01/E1: o portão de medição, sem log temporário.
+        #
+        # O carimbo só sai quando o jogo liga um dos quatro bits de áudio E
+        # manda byte não-nulo. A distinção é a armadilha 10 da sprint: bits
+        # ligados com bytes zerados é KEEPALIVE, não intenção — replicar isso
+        # mandaria "volume zero" ao controle dela a 60 Hz, que é a mesma
+        # classe de defeito que o AUDIO-OWNER-01 curou noutro lugar.
+        if (
+            len(body) > rep.COMMON_AUDIO_PATH
+            and body[_VALID_FLAG0_OFFSET] & _AUDIO_FLAGS_DO_JOGO
+            and any(body[rep.COMMON_HEADPHONE_VOLUME : rep.COMMON_AUDIO_PATH + 1])
+        ):
+            self._carimbar(ATIVIDADE_AUDIO_DO_JOGO)
         if len(body) > _VALID_FLAG1_OFFSET:
             self._replicate_from_output(body)
         if len(body) <= _RUMBLE_STRONG_OFFSET:

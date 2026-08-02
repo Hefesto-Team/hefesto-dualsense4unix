@@ -39,7 +39,7 @@ flatpak install --user br.andrefarias.Hefesto.flatpak
 # 29/07/2026; aquela branch parou dois lançamentos atrás.
 git clone https://github.com/[REDACTED]/hefesto-dualsense4unix.git
 cd hefesto-dualsense4unix
-git checkout v0.7.0
+git checkout v0.8.0
 
 # Construir o Flatpak (requer flatpak-builder)
 ./scripts/build_flatpak.sh --install

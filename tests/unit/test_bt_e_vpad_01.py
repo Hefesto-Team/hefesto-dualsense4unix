@@ -207,3 +207,90 @@ def test_so_os_tres_bits_conhecidos_do_byte_53_sao_encaminhados() -> None:
     pad.forward_jack(0xFF)
 
     assert pad._encode_body()[uhid._STATUS1_OFFSET] == 0b111
+
+
+# ---------------------------------------------------------------------------
+# PARIDADE-SONY-01/E1 — o INSTRUMENTO do portão de medição
+# ---------------------------------------------------------------------------
+
+
+def _corpo_de_audio(flag0: int, bytes_de_audio: tuple[int, int, int, int]) -> bytes:
+    """Um report 0x02 com os quatro bytes de áudio (`common[4..7]`)."""
+    import struct
+
+    corpo = bytearray(48)
+    corpo[uhid._VALID_FLAG0_OFFSET] = flag0
+    corpo[4:8] = bytes(bytes_de_audio)
+    report = bytes([uhid._OUTPUT_REPORT_USB]) + bytes(corpo)
+    dados = bytearray(4 + uhid.HID_MAX_DESCRIPTOR_SIZE + 2 + 1)
+    dados[4 : 4 + len(report)] = report
+    struct.pack_into("<H", dados, 4 + uhid.HID_MAX_DESCRIPTOR_SIZE, len(report))
+    return bytes(dados)
+
+
+def _vpad_mudo() -> Any:
+    """Um vpad sem fd, só para exercitar o `_handle_output`."""
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+
+    pad = UhidDualSense(player=1, blueprint=None)
+    pad.time_fn = lambda: 1000.0
+    return pad
+
+
+def test_o_jogo_que_pede_audio_deixa_carimbo() -> None:
+    """O portão de medição da PARIDADE-SONY-01, como instrumento PERMANENTE.
+
+    A pergunta da sprint: *"algum jogo que ela joga escreve `common[4]`, `[5]`,
+    `[6]` ou `[7]` no gamepad virtual?"*. Ela pedia um log temporário; um
+    carimbo permanente responde melhor, porque não depende de alguém lembrar
+    de ligá-lo antes de jogar — ele já está lá quando ela joga.
+
+    **Ele NÃO replica nada.** Mede. A replicação é a E2, e só acontece se esta
+    medição disser que sim — como está escrito na sprint: *"um código escrito
+    contra uma premissa não medida é dívida"*.
+
+    Mordida: apagar o bloco do carimbo do `_handle_output`.
+    """
+    pad = _vpad_mudo()
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s
+
+    # Jogo pedindo volume de alto-falante: bit 0x20 ligado, byte 5 não-nulo.
+    pad._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
+
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO in pad.visto_ha_s
+
+
+def test_bits_de_audio_ligados_com_bytes_zerados_nao_contam() -> None:
+    """A armadilha 10 da sprint: keepalive não é intenção.
+
+    Bits ligados com os quatro bytes em zero é o jogo mantendo a autoridade
+    sobre o bloco, não pedindo volume. Contar isso como "o jogo quer áudio"
+    levaria a replicar "volume zero" ao controle dela a 60 Hz — a mesma classe
+    de defeito que o `AUDIO-OWNER-01` curou noutro lugar deste projeto, e que
+    o keepalive de vibração do `GUERRA-01` já produziu de verdade.
+
+    Mordida: tirar o `any(...)` da condição.
+    """
+    pad = _vpad_mudo()
+
+    pad._handle_output(_corpo_de_audio(0xF0, (0, 0, 0, 0)))
+
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s, (
+        "bits ligados com bytes zerados é KEEPALIVE — replicar isso mandaria "
+        "volume zero ao controle dela"
+    )
+
+
+def test_report_sem_os_bits_de_audio_nao_conta() -> None:
+    """E um report de vibração com lixo nos bytes 4-7 também não.
+
+    Sem os bits de autorização, aqueles bytes não são áudio: o firmware os
+    ignora, e nós também temos de ignorar.
+
+    Mordida: tirar o teste de `_AUDIO_FLAGS_DO_JOGO` da condição.
+    """
+    pad = _vpad_mudo()
+
+    pad._handle_output(_corpo_de_audio(0x01, (99, 99, 99, 99)))
+
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s
