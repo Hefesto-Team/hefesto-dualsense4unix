@@ -714,7 +714,20 @@ class StatusActionsMixin(WidgetAccessMixin):
         # 2+ cards → sticks de 90px (compact); card único mantém o layout
         # equivalente ao da aba antiga (sticks 120px).
         compact = len(keys) >= 2
-        colunas = 2 if compact else 1
+        # EMPILHA-01 (02/08/2026) — decisão DELA, olhando a tela com dois
+        # controles: *"os dois blocos não deveriam estar lado a lado mas um em
+        # cima do outro de forma que o scroll surgisse pra comportar os
+        # diferentes controles"*.
+        #
+        # Isto REVISA a STATUS-GRID-2COL-01, e a decisão antiga não é apagada:
+        # ela dizia que "empilhado, cada card somava a própria altura e dois já
+        # estouravam a janela — a aba só respondia com rolagem, justamente o
+        # que as sprints S3/S5 tiraram das outras abas". A observação
+        # continua correta; o que mudou foi o julgamento sobre ela, e é dela: a
+        # rolagem vertical aqui é ACEITÁVEL, e ler dois controles lado a lado
+        # não é. Um card por linha também é o que escala para os quatro
+        # jogadores do co-op sem espremer nada.
+        colunas = 1
         for pos, key in enumerate(keys):
             card = ControllerCard(compact=compact)
             self._status_cards[key] = card
@@ -1271,7 +1284,7 @@ class StatusActionsMixin(WidgetAccessMixin):
         if not uniq:
             self._status_toast(
                 "numero",
-                "escolha um controle no cabeçalho antes de trocar o número",
+                "Escolha um controle no cabeçalho antes de trocar o número",
             )
             return
 
@@ -1285,7 +1298,7 @@ class StatusActionsMixin(WidgetAccessMixin):
                 self._status_toast(
                     "numero",
                     motivo
-                    or "não consegui trocar o número — o Hefesto pode estar "
+                    or "Não consegui trocar o número — o Hefesto pode estar "
                     "desligado (ligue na aba Sistema)",
                 )
             return False
@@ -1459,9 +1472,9 @@ class StatusActionsMixin(WidgetAccessMixin):
             badge.hide()
             return
         if tuple(ativo) == (0, 0):
-            texto = "vibração em silêncio"
+            texto = "Vibração em silêncio"
         else:
-            texto = f"vibração fixa em {ativo[0]}/{ativo[1]}"
+            texto = f"Vibração fixa em {ativo[0]}/{ativo[1]}"
         badge.set_markup(
             f'<span foreground="#ffb86c">{texto}</span>'
         )

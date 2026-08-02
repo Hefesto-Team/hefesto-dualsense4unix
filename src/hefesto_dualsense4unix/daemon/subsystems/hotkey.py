@@ -260,6 +260,27 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             if audio is None:
                 continue
             try:
+                # BT-E-VPAD-01, defeito 1 — o botão do microfone do CONTROLE
+                # não pode mutar o microfone de OUTRO dispositivo.
+                #
+                # Medido em 01/08/2026: no Bluetooth o DualSense não tem placa
+                # de som nenhuma (o áudio vai dentro dos reports HID), então a
+                # fonte padrão do sistema é outra coisa — nesta máquina, o
+                # microfone da placa-mãe. O botão alternava aquele, e o LED do
+                # controle acendia para refletir um estado que não era dele.
+                #
+                # Das três saídas que a sprint desenhou, esta é a (a): o botão
+                # só age quando a fonte padrão É o controle. É a mais honesta
+                # e a mais barata. A (b) — mutar o registrador do firmware —
+                # foi recusada porque TOMA A POSSE e faz o botão físico parar
+                # de valer, que é o oposto do que se espera de um botão
+                # físico.
+                pertence = await daemon._run_blocking(
+                    audio.fonte_padrao_e_o_controle
+                )
+                if not pertence:
+                    logger.info("mic_hotkey_fonte_nao_e_o_controle")
+                    continue
                 muted = await daemon._run_blocking(audio.toggle_default_source_mute)
                 await daemon._run_blocking(daemon.controller.set_mic_led, muted)
                 logger.info("mic_hotkey_toggle", muted=muted)

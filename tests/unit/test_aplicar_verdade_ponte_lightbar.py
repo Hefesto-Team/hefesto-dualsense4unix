@@ -6,7 +6,7 @@ de fora, e por um motivo de uma linha só: ela não usa o ``call_async`` (que
 entrega o dicionário do daemon) — usa ``ipc_bridge.apply_draft()``, que
 devolvia ``bool``. Com um ``False`` na mão, as duas chamadas da aba diziam:
 
-- "não consegui aplicar a cor — o Hefesto pode estar desligado (ligue na aba
+- "Não consegui aplicar a cor — o Hefesto pode estar desligado (ligue na aba
   Sistema)";
 - "Falha (daemon offline?)".
 
@@ -57,7 +57,7 @@ from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
 #: As frases de HOJE, que a segunda metade do aceite obriga a preservar ao pé
 #: da letra quando o daemon está mesmo desligado.
 FRASE_APLICAR_OFFLINE = (
-    "não consegui aplicar a cor — o Hefesto pode estar desligado "
+    "Não consegui aplicar a cor — o Hefesto pode estar desligado "
     "(ligue na aba Sistema)"
 )
 FRASE_APAGAR_OFFLINE = "Falha (daemon offline?)"

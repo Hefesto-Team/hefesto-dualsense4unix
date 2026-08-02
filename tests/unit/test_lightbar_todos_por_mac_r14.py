@@ -261,7 +261,7 @@ def test_falha_em_um_controle_nao_vira_sucesso(
     host = _host()
     host.on_lightbar_apply(None)
     assert vistos == [UNIQ_1, UNIQ_2]
-    assert any("não consegui aplicar" in t for t in host._toasts)
+    assert any("Não consegui aplicar" in t for t in host._toasts)
 
 
 def _gdk_rgba_ok() -> bool:

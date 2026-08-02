@@ -447,8 +447,8 @@ _DESENHO_NATURAL_PX_UNICO: Final[int] = 360
 #: cards lado a lado somam direto no mínimo da janela, sem rolagem horizontal
 #: para absorver). Quem diz "microfone" é a moldura do bloco; estas dizem só o
 #: estado, e é assim que a linha inteira se lê: "Microfone / sem sinal".
-TEXTO_MIC_AUSENTE: Final[str] = "sem sinal"
-TEXTO_MIC_SEM_MUTE: Final[str] = "captando"
+TEXTO_MIC_AUSENTE: Final[str] = "Sem sinal"
+TEXTO_MIC_SEM_MUTE: Final[str] = "Captando"
 
 #: Campo fixo do rótulo de estado do microfone, em caracteres: é o que impede
 #: a faixa de mudar de largura quando o texto troca de "sem sinal" para
@@ -507,7 +507,7 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
 #: bloco existe sempre, e diz que ninguém ajustou nada: um "0 %" ali seria
 #: volume inventado, e esconder o bloco seria dizer que o controle não tem
 #: alto-falante.
-TEXTO_SPEAKER_SEM_DADO: Final[str] = "não ajustado"
+TEXTO_SPEAKER_SEM_DADO: Final[str] = "Não ajustado"
 
 #: O nome do bloco, sozinho. CARD-ÚNICO-01: ele é o título INTEIRO quando não
 #: há volume conhecido — a moldura deixou de anunciar "não ajustado" ao lado
@@ -574,7 +574,7 @@ DICA_SPEAKER_ATIVAR: Final[str] = (
     "de antes do mudo."
 )
 DICA_SPEAKER_SEM_DADO: Final[str] = (
-    "ainda não há volume conhecido — use o controle deslizante primeiro"
+    "Ainda não há volume conhecido — use o controle deslizante primeiro"
 )
 DICA_SPEAKER_DEVOLVER: Final[str] = (
     "Soltar faz o hefesto parar de mandar o volume, e o botão do controle volta "
@@ -582,13 +582,13 @@ DICA_SPEAKER_DEVOLVER: Final[str] = (
     "o DualSense não devolve o volume anterior."
 )
 DICA_SPEAKER_DEVOLVER_SEM_POSSE: Final[str] = (
-    "não há o que soltar: o volume ainda é do firmware do controle"
+    "Não há o que soltar: o volume ainda é do firmware do controle"
 )
 
 #: A linha de explicação no lugar do silêncio (SOM-02/E5), na dica do BLOCO.
 #: É a diferença entre "a janela não sabe" e "a janela está quebrada".
 DICA_BLOCO_SPEAKER: Final[str] = (
-    "o volume é do firmware do controle e ele não o devolve; mover o controle "
+    "O volume é do firmware do controle e ele não o devolve; mover o controle "
     "deslizante passa a mandá-lo"
 )
 
@@ -597,7 +597,7 @@ DICA_BLOCO_SPEAKER: Final[str] = (
 #: o que impede o bloco de parecer mentiroso — e ele só aparece quando a
 #: leitura da camada 1 DIZ isso. Sem leitura, nada: inventar "saída muda" a
 #: partir de ausência seria a mesma mentira, do outro lado.
-TEXTO_SELO_SAIDA_MUDA: Final[str] = "saída muda"
+TEXTO_SELO_SAIDA_MUDA: Final[str] = "Saída muda"
 
 #: Selo do SOM DE CONFIRMAÇÃO que não saiu (SOM-04, entrega 1, regra 4). Ele é
 #: CURTO por medição, não por estilo: o rótulo do selo não tem teto de largura
@@ -612,7 +612,7 @@ TEXTO_SELO_SAIDA_MUDA: Final[str] = "saída muda"
 #: confirmação, e a dica do bloco diz POR QUÊ. Sete caracteres cabem dentro dos
 #: dez de ``saída muda``, que já passava no orçamento — o selo continua
 #: custando ZERO largura.
-TEXTO_SELO_SEM_SOM: Final[str] = "sem som"
+TEXTO_SELO_SEM_SOM: Final[str] = "Sem som"
 
 #: Teto de largura do selo, em caracteres, medido pelo mais longo dos dois
 #: textos acima. Sem ele, um texto novo amanhã volta a decidir a largura do
@@ -761,7 +761,7 @@ def rotulo_lightbar(
     """
     rgb = _rgb3(entry.get("lightbar_rgb"))
     if bool(state_global.get("native_mode")):
-        return ("em Nativo o jogo é dono do LED", rgb)
+        return ("Em Nativo o jogo é dono do LED", rgb)
     fonte = str(entry.get("lightbar_source") or "desconhecida")
     if fonte == "desconhecida" or rgb is None:
         return ("Lightbar: cor desconhecida", None)
@@ -785,7 +785,7 @@ def texto_degradacao(entry: dict[str, Any]) -> str | None:
     if not isinstance(motivo, str) or not motivo:
         return None
     legivel = MOTIVOS_DEGRADACAO_LEIGOS.get(motivo, motivo.replace("_", " "))
-    return f"emulação degradada (uinput): {legivel}"
+    return f"Emulação degradada (uinput): {legivel}"
 
 
 def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | None:
@@ -1607,7 +1607,13 @@ if _GTK_DISPONIVEL:
             corte vai numa CÓPIA (`.copy()` do próprio retângulo, que já é um
             `Gdk.Rectangle` — sem import novo neste módulo).
             """
-            if not self._compact and allocation.width > LARGURA_CARD_ELASTICA:
+            # EMPILHA-01: o teto vale para os DOIS modos desde que os cards
+            # passaram a ser empilhados numa coluna só. Antes o compacto
+            # dividia a largura com o vizinho e nunca chegava perto do teto;
+            # com uma coluna ele recebe a janela inteira, e sem o corte um
+            # card de dois controles esticaria por 1900px com ~900 de
+            # conteúdo — o buraco que o teto do card único veio curar.
+            if allocation.width > LARGURA_CARD_ELASTICA:
                 sobra = allocation.width - LARGURA_CARD_ELASTICA
                 cortado = allocation.copy()
                 cortado.x = allocation.x + sobra // 2
@@ -1671,32 +1677,30 @@ if _GTK_DISPONIVEL:
             linha_bateria.pack_start(cap_bateria, False, False, 0)
             bateria = Gtk.ProgressBar()
             self._battery_bar = bateria
-            self._battery_pct_label = None
-            if self._compact:
-                # Card compacto: a barra é estreita e o texto centrado dela
-                # cabe. Nada muda aqui — 2+ controles seguem como estavam.
-                bateria.set_show_text(True)
-                bateria.set_text("— %")
-                bateria.set_hexpand(True)
-                linha_bateria.pack_start(bateria, True, True, 0)
-            else:
-                # Card único: `show-text` DESLIGADO e o número num rótulo ao
-                # lado. O GtkProgressBar desenha o próprio texto CENTRADO, e
-                # numa barra larga o "85 %" fica a centenas de pixels de cada
-                # borda — é o defeito que ela apontou nas barras de L2/R2, e o
-                # mesmo motivo pelo qual a barra do frame Estado já tinha
-                # `show-text=False`. O `set_text` continua sendo chamado por
-                # `_update_bateria`: ele é o dono do valor e é o que os testes
-                # leem.
-                bateria.set_show_text(False)
-                bateria.set_text("— %")
-                bateria.set_valign(Gtk.Align.CENTER)
-                bateria.set_size_request(LARGURA_BARRA_BATERIA_CARD, -1)
-                linha_bateria.pack_start(bateria, False, False, 0)
-                pct = Gtk.Label(label="— %")
-                pct.set_xalign(0.0)
-                self._battery_pct_label = pct
-                linha_bateria.pack_start(pct, False, False, 0)
+            # `show-text` DESLIGADO e o número num rótulo ao lado, nos DOIS
+            # modos. O GtkProgressBar desenha o próprio texto CENTRADO, e numa
+            # barra larga o "85 %" fica a centenas de pixels de cada borda — é
+            # o defeito que ela apontou nas barras de L2/R2, e o mesmo motivo
+            # pelo qual a barra do frame Estado já tinha `show-text=False`.
+            #
+            # EMPILHA-01 (02/08): o card COMPACTO passou por aqui também. Ele
+            # ficava de fora com a justificativa de que "a barra é estreita e o
+            # texto centrado cabe" — o que era verdade enquanto dois cards
+            # dividiam a largura em duas colunas. Empilhados numa coluna só,
+            # cada card recebe a janela inteira, a barra ficou larga e o número
+            # voltou a flutuar no vazio. O desenho é um só agora.
+            #
+            # O `set_text` continua sendo chamado por `_update_bateria`: ele é
+            # o dono do valor e é o que os testes leem.
+            bateria.set_show_text(False)
+            bateria.set_text("— %")
+            bateria.set_valign(Gtk.Align.CENTER)
+            bateria.set_size_request(LARGURA_BARRA_BATERIA_CARD, -1)
+            linha_bateria.pack_start(bateria, False, False, 0)
+            pct = Gtk.Label(label="— %")
+            pct.set_xalign(0.0)
+            self._battery_pct_label = pct
+            linha_bateria.pack_start(pct, False, False, 0)
             self._battery_row = linha_bateria
             if self._compact:
                 corpo.pack_start(linha_bateria, False, False, 0)

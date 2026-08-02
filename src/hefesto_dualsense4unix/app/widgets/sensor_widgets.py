@@ -162,20 +162,20 @@ from hefesto_dualsense4unix.core.speaker_scale import (  # noqa: E402
 
 
 def texto_volume(volume: int, muted: bool | None) -> str:
-    """Rótulo do alto-falante: "mudo" ou a porcentagem do volume.
+    """Rótulo do alto-falante: "Mudo" ou a porcentagem do volume.
 
     ``muted`` None = o daemon mandou volume mas não mandou mute; o rótulo
     mostra só a porcentagem em vez de cravar que o som está saindo.
     """
     if muted:
-        return "mudo"
+        return "Mudo"
     return f"{percentual_do_volume(volume)} %"
 
 
 def texto_toques(quantidade: int) -> str:
-    """Rótulo do touchpad: "sem toque" ou "N toque"/"N toques"."""
+    """Rótulo do touchpad: "Sem toque" ou "N toque"/"N toques"."""
     if quantidade <= 0:
-        return "sem toque"
+        return "Sem toque"
     if quantidade == 1:
         return "1 toque"
     return f"{quantidade} toques"

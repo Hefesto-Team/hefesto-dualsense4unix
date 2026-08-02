@@ -133,8 +133,24 @@ class TestMacProprio:
         assert pad._features[0x09][1:7] != _FEATURE_09_FISICO[1:7]
 
     def test_nome_e_mac_identificam_o_jogador(self) -> None:
+        """O nome carrega a substring que os jogos procuram — e o jogador.
+
+        BT-E-VPAD-01, furo 1: ele era `Hefesto Virtual DualSense P3`. Sob
+        Proton o nome vira o `FriendlyName` do lado Windows, e **jogos casam
+        pela substring "Wireless Controller"** para achar o controle e o
+        device de áudio dele. O fallback uinput já acertava; o uhid, que é o
+        caminho bom, não.
+
+        A distinção humana continua — é o que separa este device do físico na
+        lista do sistema. E o discriminador do daemon nunca foi o nome: é o
+        `phys` e o `uniq`.
+
+        Mordida: tirar "Wireless Controller" do nome.
+        """
         pad = UhidDualSense(player=3, blueprint=_blueprint())
-        assert pad.name == "Hefesto Virtual DualSense P3"
+        assert "Wireless Controller" in pad.name
+        assert "Hefesto" in pad.name, "a distinção humana não pode sumir"
+        assert "P3" in pad.name, "o jogador continua identificável no nome"
         assert pad.mac == "02:fe:00:00:00:03"
 
 

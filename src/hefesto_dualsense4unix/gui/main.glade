@@ -621,7 +621,21 @@
                              respondia com rolagem, justamente o que as
                              sprints S3/S5 tiraram das outras abas. Em duas
                              colunas os 2 controles dividem a MESMA faixa
-                             vertical (4 viram 2x2). Grid e não FlowBox: o
+                             vertical (4 viram 2x2).
+
+                             EMPILHA-01 (02/08/2026): a decisão acima foi
+                             REVISTA por ela, olhando a tela com dois
+                             controles — *"os dois blocos não deveriam estar
+                             lado a lado mas um em cima do outro de forma que
+                             o scroll surgisse"*. O grid continua sendo grid
+                             (a geometria explícita é o que evita o
+                             "Negative content width" do FlowBox), mas o
+                             número de colunas passou a ser 1 no
+                             `_rebuild_status_cards`. A rolagem vertical desta
+                             aba deixou de ser defeito e passou a ser o
+                             desenho.
+
+                             Grid e não FlowBox: o
                              FlowBox é quem dropou 3 dos 4 botões do rodapé
                              com "Negative content width"
                              (FIX-GUI-COSMIC-REMEDIATION-01) — aqui a
