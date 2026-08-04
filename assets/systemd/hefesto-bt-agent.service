@@ -45,6 +45,30 @@ RestartSec=5
 # falha do mesmo jeito, porque o bluetoothd que o serve já morreu.
 TimeoutStopSec=3s
 SendSIGKILL=yes
+# BT-AGENT-MORTO-FICA-MORTO-01, 04/08/2026 — MEDIDO com ela, e é o defeito que a
+# linha acima INTRODUZIU.
+#
+# Com `SendSIGKILL=yes`, o systemd mata o agente ao fim dos 3 s — e então marca a
+# unit `failed (Result: timeout)`, porque morrer de SIGKILL não é saída limpa. Com
+# `Restart=on-failure` isso deveria trazê-la de volta, mas NÃO traz: `on-failure`
+# não cobre a morte durante um `stop` pedido por outro serviço (o
+# `bluetooth.service` reiniciando), e a unit fica parada em `failed`.
+#
+# Medido na máquina dela: `failed` desde 02:32:41, e o efeito é grave e silencioso
+# — SEM o agente de pareamento, conexão ENTRANTE de controle é recusada:
+#
+#     profiles/input/server.c:confirm_event_cb() Refusing connection from <MAC>
+#
+# ...que ela viu como "o 8BitDo fica conectando sozinho (e morre)". A cura de um
+# defeito (90 s de Bluetooth fora do ar) tinha criado outro, pior: o Bluetooth
+# volta rápido e não aceita mais ninguém.
+#
+# `SIGKILL` na lista de saídas bem-sucedidas diz ao systemd o que é verdade: para
+# ESTE serviço, ser morto no desligamento é o desfecho ESPERADO — ele é um agente
+# sem estado em disco, e nós escolhemos matá-lo de propósito. Assim a unit para
+# `inactive` (não `failed`), e o `Wants=`/`After=` do drop-in do BlueZ a religa
+# junto com o bluetoothd, como sempre fez.
+SuccessExitStatus=SIGKILL
 
 # --- hardening LEVE (espelha um subconjunto do broker root do repo em
 #     docs/process/future-broker/systemd/hefesto-hidraw-broker.service; aqui
