@@ -1749,6 +1749,21 @@ check_bt_radio() {
         if [[ "${trusted}" == "false" ]]; then
             warn "${alias:-controle} (${mac}) pareado mas SEM confiança (Trusted: no) — a reconexão pelo botão PS pode depender de autorização; o watchdog corrige no próximo tick; na mão: busctl set-property org.bluez ${p} org.bluez.Device1 Trusted b true"
         fi
+        # BT-SDP-VAZIO-01 (02/08): bond SEM registro de serviços SDP. O
+        # `profiles/input/server.c` do BlueZ recusa conexão ENTRANTE de quem
+        # não tem o perfil HID (0x1124) registrado — "Refusing connection:
+        # unknown device" — e o device entra num laço: o rádio sobe, o perfil
+        # não, o link cai. Nenhum dos checks acima enxergava isso: Paired,
+        # Bonded e Trusted ficam todos `true` o tempo todo.
+        #
+        # Sem este aviso o defeito se parece com regressão do Hefesto, e foi
+        # exatamente assim que ele chegou (a queixa dela: "conecta sozinho e
+        # algo apaga a conexão"). Vale para device pareado, conectado ou não.
+        if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
+                && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
+                    | grep -q '00001124-0000-1000-8000-00805f9b34fb'; then
+            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto (SDP-CACHE-01), senão o pareamento novo nasce igual"
+        fi
     done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
     # a tela de Bluetooth do cosmic-settings aberta mantém Discovering=yes).

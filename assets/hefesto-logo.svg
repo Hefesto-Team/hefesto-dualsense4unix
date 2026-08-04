@@ -1,43 +1,50 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf-8"?>
 <svg width="512" height="512" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hefesto - DualSense4Unix">
   <defs>
     <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8be9fd"></stop>
-      <stop offset="0.5" stop-color="#bd93f9"></stop>
-      <stop offset="1" stop-color="#ff79c6"></stop>
+      <stop offset="0" stop-color="#8be9fd"/>
+      <stop offset="0.5" stop-color="#bd93f9"/>
+      <stop offset="1" stop-color="#ff79c6"/>
     </linearGradient>
     <linearGradient id="flameOut" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#bd93f9"></stop>
-      <stop offset="1" stop-color="#ff79c6"></stop>
+      <stop offset="0" stop-color="#bd93f9"/>
+      <stop offset="1" stop-color="#ff79c6"/>
     </linearGradient>
     <linearGradient id="flameIn" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#ffb86c"></stop>
-      <stop offset="1" stop-color="#f1fa8c"></stop>
+      <stop offset="0" stop-color="#ffb86c"/>
+      <stop offset="1" stop-color="#f1fa8c"/>
     </linearGradient>
   </defs>
-  <circle cx="96.72" cy="99.838" r="94" fill="#282a36"></circle>
-  <g transform="matrix(1.379977, 0, 0, 1.333431, -34.042732, -34.915073)" style="opacity: 0.2775;">
+  <circle cx="101.72" cy="99.838" r="94" fill="#282a36">
+    <title>Background</title>
+  </circle>
+  <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round">
+    <title>Borda</title>
+  </path>
+  <circle cx="43" cy="25" r="5" fill="#ff79c6">
+    <title>bolinha-rosa</title>
+  </circle>
+  <circle cx="100" cy="6" r="5" fill="#8be9fd">
+    <title>bolinha-azul</title>
+  </circle>
+  <g transform="matrix(1.379977, 0, 0, 1.333431, -34.042732, -34.915073)" style="opacity: 0.43;">
     <title>Fogo</title>
-    <path d="M100 34 C126 62 138 82 138 108 C138 138 122 158 100 158 C78 158 62 138 62 108 C62 92 70 76 84 68 C82 90 92 98 100 98 C108 90 100 62 100 34 Z" fill="url(#flameOut)"></path>
-    <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#flameIn)"></path>
+    <path d="M100 34 C126 62 138 82 138 108 C138 138 122 158 100 158 C78 158 62 138 62 108 C62 92 70 76 84 68 C82 90 92 98 100 98 C108 90 100 62 100 34 Z" fill="url(#flameOut)">
+      <title>chama-vermelha</title>
+    </path>
+    <path d="M100 74 C116 92 122 104 122 118 C122 136 112 148 100 148 C88 148 78 136 78 118 C78 108 83 100 90 95 C90 108 96 112 100 112 C104 104 100 90 100 74 Z" fill="url(#flameIn)">
+      <title>chama-amarela</title>
+    </path>
   </g>
-  <path d="M100 6 A94 94 0 1 1 43 25" fill="none" stroke="url(#ring)" stroke-width="6" stroke-linecap="round"></path>
-  <circle cx="100" cy="6" r="5" fill="#8be9fd"></circle>
-  <circle cx="43" cy="25" r="5" fill="#ff79c6"></circle>
-  <g transform="matrix(1, 0, 0, 1, 2.090252, -2.225192)">
+  <g transform="matrix(1.171298, 0, 0, 1.34795, -11.18995, -58.396698)" style="">
     <title>Bigorna</title>
-    <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2"></path>
-    <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9" style=""></path>
-    <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4" style=""></path>
+    <path d="M 56 132 L 128 132 L 148 142 L 128 152 L 119 152 L 119 156 L 73 156 L 73 142 L 56 142 L 56 132 Z" fill="#f8f8f2"/>
+    <path d="M 72.98 156.035 L 119.044 156.035 L 110.984 170.38 L 81.043 170.38 L 72.98 156.035 Z" fill="#bd93f9" style=""/>
+    <path d="M 73.242 165.913 L 116.795 165.913 L 124.054 179.913 L 65.983 179.913 L 73.242 165.913 Z" fill="#6272a4" style=""/>
   </g>
-  <!-- O martelo girava com `transform-origin: 101px 88px` (CSS SVG2). Navegadores
-       honram; o librsvg — que e o renderizador do GTK e do GdkPixbuf — nao, e o
-       grupo ia parar fora do viewBox (logo sem martelo dentro do app). A matriz
-       abaixo ja traz a origem embutida: P' = O + M(P-O), com o centro do martelo
-       caindo em (133.74, 101.72), identico ao desenho original. -->
-  <g transform="matrix(0.156434, -0.987688, -0.987688, -0.156434, 204.856529, 215.239476)">
+  <g transform="matrix(0.160053, -1.162946, -1.05701, -0.192662, 221.837906, 222.25946)" style="">
     <title>Martelo</title>
-    <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"></rect>
-    <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144);"></rect>
+    <rect x="95" y="44" width="10" height="78" rx="5" fill="#ffb86c"/>
+    <rect x="70" y="108" width="60" height="24" rx="6" style="fill: rgb(144, 144, 144); paint-order: stroke markers;"/>
   </g>
 </svg>

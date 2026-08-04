@@ -322,6 +322,50 @@ def argv_do_tocador(
     return []
 
 
+def garantir_saida_audivel(
+    sink: str, *, runner: Callable[[list[str]], str] | None = None
+) -> bool:
+    """Tira o mute do sink do controle. Devolve True se havia o que tirar.
+
+    SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela. Ela clicou nos dois
+    estados do seletor, o `pactl` obedeceu, e não saiu som nenhum: o sink do
+    DualSense estava `MUTED` no PipeWire, por estado que o WirePlumber
+    PERSISTE por rota (``~/.local/state/wireplumber/default-routes``) e
+    restaura a cada conexão **sem escrever nada em log nenhum**.
+
+    A casa já tinha a doutrina escrita, no próprio card:
+
+        *"A camada 1 vence a camada 2: volume e rota perfeitos num sink mudo
+        é trabalho invisível."*
+
+    ...e já cobria o espelho disto do lado da CAPTURA — a "camada 1" do
+    microfone mudo, que o ``doctor.sh`` confere e cura. O que faltava era
+    alguém AGIR sobre a saída, e não só saber.
+
+    **Por que desmutar não atropela escolha dela.** Quem chega aqui é um gesto
+    que pede som NO CONTROLE — trocar o canal, mandar o som do PC para lá. Um
+    mute herdado de outra sessão não é opinião sobre este pedido. E o desfazer
+    continua ao alcance: o mute do sistema é dela, e o próximo gesto dela
+    vence este.
+
+    **Por que não bastava recusar.** O ``tocar_confirmacao`` já recusa com
+    recado quando o mute foi lido (``MOTIVO_SAIDA_MUDA``), mas o mapa de mudos
+    só guarda o que foi lido COM CERTEZA: ausência é "não sei". E "não sei"
+    seguia para o tocador, que gastava um processo para produzir silêncio e
+    devolvia sucesso. Recusar bem é metade; a outra metade é o sink audível.
+    """
+    if not sink:
+        return False
+    from hefesto_dualsense4unix.app.mic_monitor import muted_de_saida
+
+    rodar = runner if runner is not None else rodar_leitura
+    # `None` = ilegível. Desmuta-se do mesmo jeito (o pedido dela é o mesmo) e
+    # devolve-se False, porque "não sei se estava mudo" não é "estava".
+    antes = muted_de_saida(rodar(["pactl", "get-sink-mute", sink]))
+    rodar(["pactl", "set-sink-mute", sink, "0"])
+    return antes is True
+
+
 #: Trava de UM som por vez. É a segunda camada do antirrajada: a primeira é o
 #: repouso de 250ms do controle deslizante, no card. Esta existe porque o
 #: repouso é por WIDGET e o tocador leva ~0,35s — sem ela, um gesto longo
@@ -611,6 +655,29 @@ class RotaDeSaida:
         atual = sink_padrao_da_saida(self._runner(["pactl", "get-default-sink"]))
         if atual and atual != sink_do_controle:
             self._gravar_memoria(atual)
+        # SOM-SAIDA-MUDA-01, 04/08/2026 — MEDIDO com ela: o seletor mandava o
+        # som para o controle, o `pactl` obedecia, e NÃO SAÍA NADA.
+        #
+        # O sink do DualSense estava `MUTED` no PipeWire, por estado que o
+        # WirePlumber PERSISTE por rota (`~/.local/state/wireplumber/
+        # default-routes`) e restaura a cada conexão sem escrever nada em log
+        # nenhum. Era a saída padrão do sistema, muda, e a tela dizia que o som
+        # tinha ido para o controle — porque tinha mesmo.
+        #
+        # A casa já conhecia este mecanismo do lado da CAPTURA: é a "camada 1"
+        # do microfone mudo, que o `doctor.sh` confere e cura. Faltava o
+        # espelho na SAÍDA, e é o furo que este bloco fecha.
+        #
+        # Desmutar aqui não atropela escolha dela: o gesto que chega até esta
+        # linha é ela pedindo o som NO CONTROLE. Um mute herdado de outra
+        # sessão não é uma opinião sobre este pedido — e deixá-lo de pé faria
+        # o produto obedecer pela metade, que foi exatamente o sintoma.
+        #
+        # Best-effort, e nesta ordem: se o `set-mute` falhar, a troca de sink
+        # ainda vale (o som pode estar audível por outro caminho), e é o
+        # `_trocar` que decide o retorno — não queremos que "não consegui
+        # desmutar" vire "não troquei".
+        garantir_saida_audivel(sink_do_controle, runner=self._runner)
         return self._trocar(sink_do_controle)
 
     def voltar_ao_anterior(self) -> bool:

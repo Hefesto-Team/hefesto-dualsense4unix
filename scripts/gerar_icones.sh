@@ -7,7 +7,22 @@
 #    que faça uso dele"
 #
 #   uso:  scripts/gerar_icones.sh            # gera e sobrescreve
-#         scripts/gerar_icones.sh --check    # só confere (é o que o CI roda)
+#         scripts/gerar_icones.sh --check    # só confere (não escreve nada)
+#
+# QUEM RODA O `--check` (corrigido em 03/08/2026 — ÍCONE-VIVO-01)
+# ---------------------------------------------------------------
+# Esta linha afirmava "é o que o CI roda", e era FALSO: `grep gerar_icones` em
+# `.github/workflows/` não devolvia nada. A proteção existia só de lado, pelo
+# `tests/unit/test_icones_refletem_o_svg.py`, que chama este script de dentro
+# do pytest — funcionava, mas por um caminho diferente do declarado, e só
+# avisava minutos depois do commit. É a família do PORTÃO-VIVO-01: o gate que
+# se anuncia e não roda.
+#
+# Hoje rodam, de verdade, três:
+#   1. o hook `icones-refletem-o-svg` do `.pre-commit-config.yaml` (avisa ANTES
+#      do commit, que é onde o gesto acontece);
+#   2. o job `icones` do `.github/workflows/ci.yml`;
+#   3. o teste da suíte, que continua como rede.
 #
 # A FONTE CANÔNICA É UMA SÓ: assets/hefesto-logo.svg
 # Mexeu no desenho? Rode isto. Todos os derivados nascem dele.

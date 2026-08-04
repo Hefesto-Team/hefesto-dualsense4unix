@@ -135,6 +135,27 @@ jobs:
       - name: Varredura em severidade error
         run: shellcheck -S error scripts/*.sh install.sh uninstall.sh
 
+  icones:
+    name: Ícones derivados do SVG canônico
+    runs-on: ubuntu-latest
+    # ÍCONE-VIVO-01 (03/08): o `scripts/gerar_icones.sh` dizia no cabeçalho que
+    # o `--check` "é o que o CI roda" — e NENHUM job o chamava. A divergência
+    # entre o SVG e os PNGs só aparecia pelo `test_icones_refletem_o_svg` da
+    # suíte, que é uma rede legítima mas tardia e indireta.
+    #
+    # Este job é barato (um `rsvg-convert` por tamanho) e responde a pergunta
+    # que a suíte responde de lado: "os derivados refletem a fonte canônica?".
+    # `librsvg2-bin` é a única dependência — o mesmo `rsvg-convert` que o
+    # `gtk-real` já instala por outro motivo.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar rsvg-convert
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+      - name: Conferir que os PNGs refletem o SVG
+        run: bash scripts/gerar_icones.sh --check
+
   packaging-parity:
     name: Paridade de empacotamento
     runs-on: ubuntu-latest

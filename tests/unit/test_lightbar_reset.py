@@ -223,11 +223,28 @@ class TestReset01AdocaoSobModoNativo:
             "adoção sob _output_mute escreveu report cru no hidraw do jogo"
         )
 
-    def test_sem_mute_o_0x08_continua_saindo(self) -> None:
-        # Não-regressão da cura original (adoção derrubava o claim BT): sem
-        # Modo Nativo o Reset LED state precisa continuar sendo enviado.
+    def test_a_adocao_bt_nao_envia_mais_o_0x08(self) -> None:
+        """LIGHTBAR-BT-CULPADO-01 (03/08/2026): o `0x08` SAIU da adoção.
+
+        Este teste era o inverso — exigia que o Reset LED state CONTINUASSE
+        saindo, como "não-regressão da cura original". **A medição de 03/08 no
+        hardware dela provou que aquela cura é a CAUSA**: o `0x08` enviado
+        dentro da janela de ~3,4 s pós-conexão trava a lightbar até o
+        power-off, com correlação perfeita em 7 eventos (dois controles no
+        mesmo rádio; o único que não recebeu o report é o único que obedeceu).
+
+        Fora da janela ele não trava a barra — mas **apaga os player-LEDs**,
+        sempre, e o daemon o mandava em toda adoção de handle novo.
+
+        Mordida: devolver a chamada de `send_release_leds` ao
+        `_adopt_new_handles` faz este teste reprovar.
+        """
         handle = self._connect_um_bt_novo(mute=False)
-        assert build_bt_release_leds_report() in handle.device.reports
+        assert build_bt_release_leds_report() not in handle.device.reports, (
+            "o 0x08 voltou à adoção — ele TRAVA a lightbar dentro da janela de "
+            "3,4 s e apaga os player-LEDs fora dela "
+            "(ver LIGHTBAR-BT-CULPADO-01)"
+        )
 
 
 class _FakeNode:
@@ -287,9 +304,21 @@ class TestReset02WakeSobModoNativo:
             "reclaim de wake sob _output_mute escreveu por baixo do jogo"
         )
 
-    def test_wake_sem_mute_reenvia_o_0x08(self) -> None:
+    def test_o_wake_nao_reenvia_mais_o_0x08(self) -> None:
+        """LIGHTBAR-BT-CULPADO-01: o `0x08` saiu do reclaim de wake também.
+
+        O gate (`should_reclaim_on_wake`) FICA, com a instrumentação em DEBUG —
+        ele já era código morto em regime, e a medição de 03/08 explicou por
+        quê de verdade: ele exige `current_sysfs_rgb == KERNEL_DEFAULT_BLUE`, e
+        o `multi_intensity` mostra o valor PEDIDO, nunca o ACESO. Provado nesse
+        dia, quando o nó de LED nasceu `0 0 0` com a barra **acesa em azul**.
+
+        Mordida: devolver `send_release_leds` ao ramo do reclaim faz reprovar.
+        """
         handle = self._connect_com_wake(mute=False)
-        assert build_bt_release_leds_report() in handle.device.reports
+        assert build_bt_release_leds_report() not in handle.device.reports, (
+            "o 0x08 voltou ao reclaim de wake (ver LIGHTBAR-BT-CULPADO-01)"
+        )
 
 
 class TestResetViaWriteReport:

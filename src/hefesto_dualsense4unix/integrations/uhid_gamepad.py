@@ -770,6 +770,10 @@ class UhidDualSense:
     #: isso é diferente de "aconteceu há muito tempo" — a tela diz coisas
     #: diferentes nos dois casos.
     _visto_em: dict[str, float] = field(default_factory=dict)
+    #: PARIDADE-SONY-01, o que faltava para a E2 poder começar: os VALORES da
+    #: última escrita de áudio do jogo, não só o instante dela. Ver
+    #: :attr:`audio_do_jogo_amostra`. `None` = nenhuma escrita nesta sessão.
+    _audio_do_jogo_amostra: tuple[int, int, int, int, int] | None = None
     _lock: threading.RLock = field(default_factory=threading.RLock)
     #: Estado do controle físico que o encoder transforma em report 0x01.
     _axes: tuple[int, int, int, int, int, int] = _AXES_NEUTRAL
@@ -964,6 +968,48 @@ class UhidDualSense:
         }
 
     @property
+    def audio_do_jogo_amostra(self) -> dict[str, int] | None:
+        """Os VALORES da última escrita de áudio do jogo, ou ``None``.
+
+        PARIDADE-SONY-01. O carimbo `audio_do_jogo` responde *"algum software
+        escreveu os bytes de áudio durante uma sessão?"* — e o veredito do
+        portão, em 02/08, respondeu que **sim**. Mas a própria sprint trancou a
+        E2 na pergunta seguinte, e com razão:
+
+            *"Ainda não medido: o que exatamente foi escrito (quais dos quatro
+            bytes, com que valores). (...) A E2 não deve começar antes disso.
+            Replicar sem saber QUAL byte o jogo escreve é o mesmo erro de
+            sempre, com o carimbo dando falsa confiança."*
+
+        Esta property é essa medição. Guarda a ÚLTIMA amostra — não um
+        histórico: o que a E2 precisa saber é o formato do pedido (qual campo,
+        que ordem de grandeza), e para isso uma amostra viva basta. Guardar
+        série temporal seria construir um log de sessão de jogo dela dentro do
+        daemon, que é dado que este projeto deliberadamente não retém.
+
+        As chaves são os nomes de `core/ds_output_report.py`, e o `flag0` vem
+        junto porque é ele que diz **quais** dos quatro campos o escritor
+        declarou válidos — um byte não-nulo com o bit apagado é lixo de
+        struct, não intenção.
+
+        Vale a mesma disciplina do carimbo: só amostra o que passou pelo gate
+        de sessão (`_replicating()`) e pelo filtro de keepalive (armadilha 10
+        da sprint). O que o probe do kernel escreve no nascimento do vpad
+        **não** entra aqui.
+        """
+        amostra = self._audio_do_jogo_amostra
+        if amostra is None:
+            return None
+        flag0, fone, alto_falante, microfone, rota = amostra
+        return {
+            "flag0": flag0,
+            "fone": fone,
+            "alto_falante": alto_falante,
+            "microfone": microfone,
+            "rota": rota,
+        }
+
+    @property
     def ff_supported(self) -> bool:
         """No caminho uhid o rumble sempre existe — é hidraw de verdade."""
         return True
@@ -1093,6 +1139,10 @@ class UhidDualSense:
             # acompanham: um "o gatilho chegou há 2 s" herdado da vida anterior
             # do vpad seria telemetria de um device que não existe mais.
             self._visto_em = {}
+            # PARIDADE-SONY-01: a amostra de áudio segue o carimbo que a
+            # acompanha. Herdá-la da vida anterior do vpad faria a E2 ser
+            # decidida sobre bytes que outro device recebeu.
+            self._audio_do_jogo_amostra = None
             self._axes = _AXES_NEUTRAL
             self._buttons = frozenset()
             self._last_body = None
@@ -1547,6 +1597,16 @@ class UhidDualSense:
             and self._replicating()
         ):
             self._carimbar(ATIVIDADE_AUDIO_DO_JOGO)
+            # E o que a E2 exige saber ANTES de replicar: quais dos quatro
+            # bytes, com que valores. O carimbo diz que houve pedido; sem
+            # isto, a E2 escolheria o que replicar no escuro.
+            self._audio_do_jogo_amostra = (
+                body[_VALID_FLAG0_OFFSET] & _AUDIO_FLAGS_DO_JOGO,
+                body[rep.COMMON_HEADPHONE_VOLUME],
+                body[rep.COMMON_SPEAKER_VOLUME],
+                body[rep.COMMON_MIC_VOLUME],
+                body[rep.COMMON_AUDIO_PATH],
+            )
         if len(body) > _VALID_FLAG1_OFFSET:
             self._replicate_from_output(body)
         if len(body) <= _RUMBLE_STRONG_OFFSET:

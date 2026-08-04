@@ -3005,9 +3005,43 @@ if _GTK_DISPONIVEL:
             # (há um default sink só), e deixar cada card mexer nele
             # diretamente é como ter dois botões para um interruptor.
             pedir_rota_do_sistema = self._pedir_rota_do_sistema
+            # SOM-CANAL-01, CURADO em 04/08/2026 — MEDIDO com ela: clicar aqui
+            # SILENCIAVA o alto-falante.
+            #
+            # A chamada era `speaker_set(rota=rota)`, sem volume e sem uniq, e
+            # os dois faltavam por motivos diferentes:
+            #
+            # 1. **sem volume**: o daemon faz `pref = None -> pref = 0` e
+            #    escreve ZERO nos dois registradores, tomando a posse
+            #    (`core/backend_pydualsense.py`, `set_speaker_volume`). É a
+            #    "Armadilha 1" que a SOM-02 escreveu por extenso — *"speaker.set
+            #    {} toma a posse e manda ZERO"* — e que os três irmãos deste
+            #    mesmo widget respeitam (`:2963`, `:3036`, `:3049`). O
+            #    `profiles/schema.py` chega a RECUSAR perfil sem volume pela
+            #    mesma razão; só este chamador escapava;
+            # 2. **sem uniq**: o daemon cai no controle PRIMÁRIO. Com dois cards
+            #    na tela, clicar no card do Controle 2 escrevia no Controle 1.
+            #
+            # O volume vem do controle deslizante ao lado, que é o que ela
+            # enxerga — reafirmá-lo aqui é dizer ao firmware o mesmo que a tela
+            # mostra, em vez de deixá-lo adivinhar.
+            uniq = self._uniq
+            volume = volume_do_percentual(self._speaker_escala.get_value())
+
+            sink = self._speaker_sink
 
             def _pedir() -> Any:
-                ok = ipc_bridge.speaker_set(rota=rota)
+                ok = ipc_bridge.speaker_set(rota=rota, volume=volume, uniq=uniq)
+                # SOM-SAIDA-MUDA-01: os DOIS estados prometem som no controle,
+                # então os dois precisam da camada 1 audível — e só "Todo o som
+                # do PC" a tocava, por ser o único que mexe no sink padrão.
+                #
+                # Com o sink do controle mudo, "Sons do jogo" escrevia o byte
+                # certo, devolvia o sink certo e produzia silêncio, sem recado:
+                # o `MOTIVO_SAIDA_MUDA` do tocador só dispara quando o mute foi
+                # LIDO com certeza, e ausência de leitura é "não sei" — que
+                # seguia direto para o tocador.
+                audio_saida.garantir_saida_audivel(sink)
                 if pedir_rota_do_sistema is not None:
                     pedir_rota_do_sistema(canal == CANAL_TODO_O_PC)
                 return self._confirmar_com_som() if ok else None
