@@ -1,0 +1,149 @@
+# Paridade Bluetooth × cabo — o que funciona em cada transporte
+
+- **Levantado em:** 03/08/2026, por quatro agentes com verificação adversarial,
+  e **medido no hardware dela** na mesma sessão
+- **Por que existe:** ela definiu o requisito em uma frase — *"deixar o projeto
+  robusto de tal forma que eu não note que estou no bt ou cabo, a ideia é termos
+  tudo funcionando via bt principalmente"*. Este documento é a régua desse
+  requisito
+- **Regra de uso:** quando este documento e outro discordarem sobre o que
+  funciona por Bluetooth, **este vence nas linhas MEDIDO AO VIVO** — as outras
+  são leitura de código e estão marcadas como tal
+
+---
+
+## A distinção que este documento existe para impedir
+
+Em 03/08 o assistente afirmou à mantenedora:
+
+> *"no BT o DualSense não tem placa de som, logo mic e alto-falante não
+> funcionam."*
+
+**A premissa é verdadeira e está medida duas vezes nesta casa. A conclusão é
+falsa, e o erro está no "logo".**
+
+Por Bluetooth o áudio **não passa por placa de som — passa dentro do HID**
+(Opus, 48 kHz, quadros de 10 ms no report `0x31`). O microfone funciona porque
+alguém escreveu esse túnel neste projeto.
+
+**Três perguntas diferentes, que precisam de três respostas:**
+
+| pergunta | exemplo em que as respostas divergem |
+|---|---|
+| **(a) o hardware suporta?** | o alto-falante por BT: provavelmente sim |
+| **(b) o projeto implementa?** | o alto-falante por BT: **não** — `BLOCO_SPEAKER` declarado e sem uso |
+| **(c) está ligado por padrão?** | o microfone por BT: implementado, **opt-in**, não sobe sozinho |
+
+Confundir (b) com (a) transforma *trabalho não feito* em *impossibilidade*.
+Confundir (c) com (b) faz sumir um recurso que existe.
+
+---
+
+## A tabela
+
+| recurso | hardware suporta? | projeto implementa? | ligado por padrão? | grau |
+|---|---|---|---|---|
+| **Lightbar** | sim (via kernel/sysfs) | sim — a cor sai por `core/sysfs_leds.py`; por BT a escrita da pydualsense é suprimida (`LIGHTBAR-BT-NEVER-01`) | sim | **MEDIDO AO VIVO** (03/08) |
+| **Player-LEDs** | sim | sim, pelo mesmo caminho | sim | **MEDIDO AO VIVO** |
+| **Gatilhos adaptativos** | sim | sim, **sem ramo de transporte** — o `common` é idêntico nos dois envelopes | com preset aplicado | **MEDIDO AO VIVO** (*"l2 funciona"*, 03/08) |
+| **Rumble** | sim (kernel implementa rumble + CRC-32 do BT) | sim, **zero gate de transporte** | exige o vpad | **MEDIDO AO VIVO** (03/08 — vibrou e parou) |
+| **Giroscópio / acelerômetro** | sim | sim, cópia byte a byte da janela de motion | sim, com o vpad uhid | dado a ~300 Hz no rádio: **MEDIDO**. Chegada ao **jogo**: não medida em transporte nenhum |
+| **Touchpad (dedo e clique)** | sim | sim, mesma janela + `payload[9] & 0x02` | sim | **IMPLEMENTADO, NÃO MEDIDO** em jogo |
+| **Microfone** | **sim** — Opus em HID | **sim, inteiro** (`integrations/dualsense_bt_audio.py`) | **não** — opt-in por privacidade e banda | **MEDIDO AO VIVO** (WAV em 25/07 e em 03/08) |
+| **Alto-falante — volume/rota/pré-amp** | sim (são registradores no `common`) | sim, sem gate de transporte | só depois do primeiro `speaker.set` | **IMPLEMENTADO, NÃO MEDIDO** |
+| **Alto-falante — som saindo** | não confirmado | **NÃO** — `BLOCO_SPEAKER = 0x13` declarado e **sem uso** | — | **NÃO IMPLEMENTADO** |
+| **Áudio de sistema (card/sink no PipeWire)** | **impossível** — sem A2DP/HFP/HSP | — | — | **MEDIDO**: zero cards com o controle no rádio |
+
+---
+
+## As três diferenças reais entre os transportes
+
+Tudo o mais é paridade. Estas três não são:
+
+### 1. O canal de áudio é outro — não é o mesmo degradado
+
+| | cabo (USB) | rádio (Bluetooth) |
+|---|---|---|
+| o que é | placa USB Audio de **4 canais** | **nenhum áudio nativo** |
+| canais | 1-2 fone/alto-falante · 3-4 os motores voice-coil | — |
+| como o som anda | ALSA/PipeWire, como qualquer placa | **tunelado no HID** (`0x31` entrada, saída não implementada) |
+| quem entrega | o sistema | **este projeto**, decodificando na mão |
+
+É por isso que no cabo o DualSense aparece em `pactl list sources` e por rádio
+não aparece nada.
+
+### 2. O silêncio do rádio
+
+Por Bluetooth o firmware pode emudecer, e o projeto trata isso com um teto de
+silêncio **por transporte**: 30 s no rádio contra 1 s no cabo
+(`core/physical_report_reader.py`, `GYRO-BT-SILENCIO-01`). Quando o teto vence,
+o reader solta o fd, zera a janela de motion e **solta o clique do touchpad** no
+vpad, depois reabre.
+
+> **Ressalva de honestidade, medida em 03/08:** com os controles **parados na
+> mesa**, os dois emitiram **~300 Hz** (1.402.128 bytes em 60 s). O rádio **não**
+> emudeceu nesta medição. O teto continua justificado pelo defeito que o
+> originou, mas a premissa merece ser remedida.
+
+### 3. A contenção com múltiplos controles
+
+Com 2+ controles no mesmo rádio o link degrada
+(`BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01`). A assinatura aparece no `dmesg`:
+
+```
+playstation 0005:054C:0CE6.0007: DualSense input CRC's check failed
+```
+
+Por isso o throttle do report thread escala com o número de controles.
+
+---
+
+## O que falta para "não notar se estou no BT ou cabo"
+
+Ordenado por (impacto ÷ custo):
+
+1. **o desmute do microfone com dono** — o mic BT funciona, mas o firmware retém
+   o mudo e ninguém o limpa no ciclo de vida da ponte. Custo: baixo.
+   Ver [a noite em que o microfone do Bluetooth voltou](../process/estudos/2026-08-03-a-noite-em-que-o-microfone-do-bluetooth-voltou.md);
+2. **ligar a ponte de mic pela interface** — hoje só por CLI (`mic bt`), sem
+   widget, e o daemon publica campo morto no status. Custo: baixo;
+3. **o filtro do bit de áudio no espelho de motion** —
+   `core/physical_report_reader.py` aceita qualquer `0x31` de 78 bytes com CRC
+   bom, e o pacote de Opus **passa pelo mesmo CRC**. Enquanto isso não for
+   filtrado, mic por BT e giroscópio **não coexistem**. Custo: uma condição.
+   É pré-requisito duro dos itens 1 e 2;
+4. **o rumble na borda de queda do rádio** — o motor fica preso quando o link
+   cai; a primitiva existe (`force_rumble_stop`) e não é chamada ali.
+   Custo: baixo;
+5. **a ponte de SAÍDA de áudio (alto-falante) por BT** — o único recurso que
+   **não existe** no rádio. Custo: **sprint inteira**, e antes da primeira linha
+   é preciso resolver uma contradição interna: `dualsense_bt_audio.py` diz report
+   `0x39`, a referência canônica diz `0x32`. Nenhuma das duas foi medida aqui;
+6. **o slider do alto-falante por BT promete som que não sai** — enquanto o item
+   5 não vier, a tela precisa dizer isso. Custo: baixo.
+
+---
+
+## O que só medição no hardware responde
+
+- **o alto-falante por BT existe, e por qual report?** As duas fontes internas
+  divergem e nenhuma foi medida aqui;
+- **o dado de sensor chega ao JOGO?** Nunca validado — em transporte nenhum;
+- **a taxa declarada do vpad** — o gamepad virtual se anuncia DualSense Edge, e
+  o SDL atribui 1000 Hz a um Edge por USB enquanto o espelho entrega ~300. Um
+  jogo que integre velocidade angular pela taxa declarada teria escala errada.
+  Não medido, e **só medível contra a SDL3 que a Steam distribui** — medir
+  contra a `libSDL2` do sistema já produziu um alarme falso inteiro nesta casa.
+
+---
+
+## Documentos que contradizem esta tabela (dívida aberta)
+
+- **`docs/usage/bluetooth.md`** afirma que o áudio por BT *"(fone e microfone)
+  continua fora de escopo"* — **falso desde 25/07**, e contradiz o `README.md`
+  e o `docs/usage/cli.md` no mesmo repositório. **Foi a fonte do erro de 03/08
+  registrado no topo deste documento**;
+- **`README.md`** publica *"~40% do sinal, causa em aberto"* para o mic por BT —
+  número medido sob uma condição que deixou de existir quatro minutos depois;
+- **`cli/cmd_mic.py`** afirma que o install instala os drop-ins 52/53 — não
+  instala (`install.sh` os deixa em opt-in, desligados).

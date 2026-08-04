@@ -141,6 +141,9 @@
 #   --keep-dualsense-mic  NÃO rebaixa o DualSense (deixa-o elegível como mic padrão).
 #   --with-wireplumber-fix  redundante (já é o default); mantida para compat.
 #   --with-wireplumber-disable-mic  DESABILITA de vez a source (mic) do DualSense
+#   --no-doctor           pula a CONFERÊNCIA final. Por padrão o install roda o
+#                         doctor no fim e mostra o veredito: uma instalação que
+#                         termina com cura desarmada tem de DIZER isso.
 #                         (node.disabled; controle vira só-HID). Vence até escassez
 #                         de fonte. Mutuamente exclusiva com --with-wireplumber-fix.
 #   --keep-steam-input    preserva Steam Input PSSupport (default: desliga).
@@ -206,6 +209,8 @@ SKIP_KERNEL_WATCH=0
 NO_PROTON_PIN=0
 SKIP_SND_QUIRK=0
 KEEP_STEAM_INPUT=0
+# CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
+RUN_DOCTOR=1
 FORCE_XWAYLAND=0
 # W2 (corretor final, achado #5): a flag documentada no asset e no desenho da
 # Onda W nunca tinha sido implementada — o parser só avisava "argumento
@@ -228,6 +233,7 @@ for arg in "$@"; do
         --no-fonts)           NO_FONTS=1 ;;
         --with-wireplumber-fix) WITH_WIREPLUMBER_FIX=1 ;;  # já é default; mantida p/ compat
         --keep-dualsense-mic) WITH_WIREPLUMBER_FIX=0 ;;
+        --no-doctor) RUN_DOCTOR=0 ;;
         --with-wireplumber-disable-mic) WITH_WIREPLUMBER_DISABLE_MIC=1 ;;
         --with-usb-quirk)     WITH_USB_QUIRK=1 ;;
         --no-dkms)            NO_DKMS=1 ;;
@@ -2430,6 +2436,50 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 11b-bis. Launch Options: APLICAR o wrapper a TODOS os jogos — DEFAULT, sem flag
+# ---------------------------------------------------------------------------
+# JOGO-COMPLETO-01 entrega E4, pedido literal dela: "isso deveria estar no
+# install sem flag". O passo 11b só MIGRA veneno legado — numa instalação
+# limpa não existe veneno, então ele não põe nada e NENHUM jogo fica com o
+# wrapper. Medido em 02/08 nesta máquina: `--status` dizia "veneno estático: 0
+# / chamadas do wrapper: 0" e o doctor avisava "NENHUM jogo com o wrapper".
+# Sem a chamada do wrapper, as envs que o projeto materializa
+# (SDL_GAMECONTROLLER_IGNORE_DEVICES, PROTON_DISABLE_HIDRAW) nunca são
+# exportadas e todo jogo enxerga DOIS DualSense — o defeito do controle
+# duplicado voltando pela porta dos fundos.
+#
+# Idempotente por construção (requisito dela): jogo que já chama o wrapper é
+# PULADO, nada é duplicado, e um vdf sem nada a fazer não é sequer reescrito —
+# rodar o install N vezes é igual a rodar uma. Steam Flatpak/Snap é pulada
+# inteira (o wrapper do host é invisível dentro da sandbox, DEDUP-04).
+#
+# ORDEM — armadilha 1 da sprint, "não ligar o broker antes do wrapper": o
+# broker hide-hidraw é instalado lá atrás, no passo 3h, e este passo vem só
+# aqui. É seguro, e o motivo é que o 3h NÃO esconde nada: ele instala o
+# binário e habilita o .socket; o .service só sobe na primeira conexão do
+# daemon e o hide do hidraw FÍSICO acontece em tempo de JOGO, com vpad vivo
+# confirmado (`coop._broker_hide_player`). Entre o 3h e este passo nenhum nó é
+# escondido — e este passo RECUSA rodar com um jogo aberto (rc=3, nada é
+# tocado), de modo que o primeiro jogo a subir depois do install já encontra o
+# wrapper posto. A rede de segurança nunca fica no ar sozinha.
+#
+# Falha aqui é best-effort, como nos vizinhos: o wrapper degrada por desenho
+# (`[ -x "$W" ] && exec "$W" "$@"; exec env "$@"`), logo o pior caso continua
+# sendo o controle duplicado de hoje — nunca um jogo que não abre.
+step "11b-bis" "Steam: aplicar o wrapper hefesto-launch a todos os jogos"
+if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    printf '      sem isto, as opções de inicialização ficam vazias e o jogo\n'
+    printf '      enxerga dois DualSense (jogos que já têm o wrapper são pulados).\n'
+    if python3 "${LAUNCH_MIGRATE_PY}" --apply --stop-steam; then
+        printf '      wrapper hefesto-launch nas Launch Options de todos os jogos\n'
+    else
+        warn "aplicação do wrapper adiada — rode com a Steam fechada (e sem jogo aberto): python3 ${LAUNCH_MIGRATE_PY} --apply"
+    fi
+else
+    warn "steam_launch_options.py ausente ou sem python3 — wrapper NÃO aplicado; rode depois: python3 ${LAUNCH_MIGRATE_PY} --apply"
+fi
+
+# ---------------------------------------------------------------------------
 # 11c. Proton PINADO (PLAT-01) — DEFAULT, opt-out --no-proton-pin
 # ---------------------------------------------------------------------------
 # A semântica do winebus MUDOU entre Proton 9→10 (PROTON_ENABLE_HIDRAW morreu
@@ -2470,6 +2520,56 @@ else
             warn "  (ou use o botão 'Travar Proton validado' na aba Sistema da GUI)"
         else
             warn "trava do Proton falhou — rode manualmente: python3 ${PROTON_PIN_PY} --lock"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Conferência final: o doctor
+# ---------------------------------------------------------------------------
+# CONFERENCIA-FINAL-01, 04/08/2026 — pedido dela, e nascido de um defeito real:
+#
+#   *"nosso install não deveria rodar o doctor por default sem flag? pra
+#   garantir tudo tudo real mesmo?"*
+#
+# Na noite de 03→04/08 a máquina dela estava SEM o drop-in
+# `51-hefesto-dualsense-no-default-source.conf`. Sem ele o WirePlumber promoveu
+# o DualSense a microfone padrão do sistema, o mic ficou mudo por estado
+# persistido por rota, e o alto-falante do controle ficou MUTED — os três
+# sintomas que ela reportou como "não funciona nem mic, nem os botões de som".
+#
+# O install TINHA o passo que arma o drop-in (passo 10) e o uninstall TEM a
+# linha que o remove. O que não havia era alguém CONFERINDO no fim: uma
+# instalação podia terminar imprimindo "instalado" com cura desarmada, e o
+# único jeito de descobrir era ela sentir o defeito jogando.
+#
+# Por que CONFERIR e não `--fix`: os passos acima já são as curas, e cada um
+# reporta o que fez. Este passo existe para dizer a VERDADE sobre o resultado
+# — se ele precisasse curar, o defeito seria do passo, e escondê-lo com um
+# `--fix` no fim tiraria justamente o sinal que aponta para o passo furado.
+#
+# Por que não derruba a instalação: sem controle plugado o doctor emite muitos
+# avisos legítimos (nada a medir), e um `exit 1` aqui transformaria "instalei
+# sem o controle na mão" em "a instalação falhou". FALHA aparece na tela, em
+# destaque, com o comando para investigar — e a decisão é dela.
+if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
+    printf '\n'
+    printf '─────────────────────────────────────────\n'
+    printf ' Conferência final (doctor)\n'
+    printf '─────────────────────────────────────────\n'
+    if [[ ! -r "${ROOT_DIR}/scripts/doctor.sh" ]]; then
+        warn "scripts/doctor.sh ausente — conferência final pulada"
+    else
+        doctor_saida="$(bash "${ROOT_DIR}/scripts/doctor.sh" 2>&1 || true)"
+        printf '%s\n' "${doctor_saida}" | grep -E '^\[FAIL\]| Diagnóstico:' || true
+        if printf '%s' "${doctor_saida}" | grep -q '^\[FAIL\]'; then
+            printf '\n'
+            warn "a instalação terminou com FALHA(s) acima — veja tudo com:"
+            warn "  bash scripts/doctor.sh"
+            warn "e tente a cura automática com:"
+            warn "  bash scripts/doctor.sh --fix"
+        else
+            printf '      nenhuma FALHA — as curas desta casa estão armadas\n'
         fi
     fi
 fi

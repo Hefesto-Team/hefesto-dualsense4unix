@@ -40,8 +40,27 @@ máquina em 2026-07-16), **HIPÓTESE** (plausível, não provada) ou
 modo é **pergunta em aberto** — ninguém mediu.
 
 **Por Bluetooth, use o modo DirectInput/PS4.** Por cabo, o modo Switch é o
-provadamente estável. Para entrar em X-input, liga-se o controle segurando
-`X+Start` (modo Switch: `Y+Start`, segundo o manual da 8BitDo).
+provadamente estável.
+
+### Os combos, e a correção de 03/08/2026
+
+| modo | combo ao ligar | origem |
+|---|---|---|
+| **DirectInput/PS4** (o recomendado por BT) | **`Start + A`** | **MEDIDO com ela**, 03/08/2026, no controle dela |
+| X-input | `X+Start` | manual da 8BitDo |
+| Switch | `Y+Start` | manual da 8BitDo |
+
+> **O que esta tabela corrige.** Até 03/08 este parágrafo recomendava o modo
+> **DirectInput/PS4** e, na frase seguinte, ensinava o combo do **X-input** —
+> dois modos diferentes. Quem seguisse a página ia para o modo errado. E o combo
+> do modo recomendado **não estava documentado em lugar nenhum do repositório**:
+> `grep` por `Start` nos combos devolvia só as duas linhas do manual.
+>
+> O `Start + A` é o que ela usa e **não** vem do manual — vem da mão dela. Os
+> outros dois seguem marcados como "segundo o manual", que é o grau que têm.
+>
+> **Combos variam por modelo de 8BitDo.** Esta linha vale para o controle desta
+> casa; não a generalize sem medir outro.
 
 ---
 

@@ -298,6 +298,31 @@ def test_o_probe_do_kernel_nao_conta_como_jogo() -> None:
     produz um alarme convincente e falso"*), com outra roupa: aqui o
     instrumento estava certo e a PERGUNTA que ele respondia era outra.
 
+    ---- O QUE ESTE TESTE **NÃO** PROVA — nota de 02/08/2026, à tarde ----
+
+    Ele passa, e a mordida dele morde. Mas o nome promete mais do que ele
+    entrega, e a diferença custou meio dia:
+
+    **No hardware, `_game_open = False` depois do probe NÃO ACONTECE.** O
+    `hid-playstation` chama `hid_hw_open()` ao adotar o device, e isso dispara
+    o `UHID_OPEN` que liga `_game_open` (`uhid_gamepad.py:1542-1545`). O estado
+    que este teste monta à mão é justamente o que a máquina nunca apresenta.
+
+    Some-se a graça de `_GAME_REPLICA_GRACE_S` = **0,5 s**, dimensionada para o
+    player-LED do probe (que é imediato), e a escrita de áudio do kernel — que
+    chega ~10 s depois do bind — passa pelos dois filtros. Foi medido: dois
+    reinícios do daemon, com a Steam FECHADA, carimbaram `audio_do_jogo` com a
+    MESMA amostra (`flag0 0xA0 · alto-falante 100 · rota 0x30`).
+
+    Ou seja: este teste prova que o carimbo respeita o gate — **não** que o
+    gate separa jogo de kernel. Ele não separa. Ver "A REFUTAÇÃO DO VEREDITO"
+    em `docs/process/sprints/2026-08-01-PARIDADE-SONY-01-*.md`.
+
+    Fica como está, de propósito: o gate segue sendo o certo a exigir (é o
+    mesmo da REPLICA-03, e dois gates divergiriam), e a mordida segue válida.
+    O que muda é o que se pode CONCLUIR daqui — e é a terceira encarnação da
+    lição da casa: **um teste que passa não prova que a pergunta é a certa.**
+
     Mordida: tirar o `self._replicating()` da condição do carimbo.
     """
     pad = _vpad_mudo()
@@ -349,4 +374,103 @@ def test_report_sem_os_bits_de_audio_nao_conta() -> None:
 
     pad._handle_output(_corpo_de_audio(0x01, (99, 99, 99, 99)))
 
+    assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s
+
+
+def test_a_amostra_diz_quais_bytes_o_jogo_escreveu() -> None:
+    """PARIDADE-SONY-01 — o dado que DESTRANCA a E2.
+
+    O veredito do portão, em 02/08, foi "sim, alguém escreve áudio durante uma
+    sessão". E a sprint trancou a E2 na pergunta seguinte, com todas as letras:
+
+        *"Ainda não medido: o que exatamente foi escrito (quais dos quatro
+        bytes, com que valores). (...) A E2 não deve começar antes disso.
+        Replicar sem saber QUAL byte o jogo escreve é o mesmo erro de sempre,
+        com o carimbo dando falsa confiança."*
+
+    O carimbo responde QUANDO; esta amostra responde O QUÊ. Sem ela a E2
+    escolheria no escuro qual dos quatro campos replicar — e o `common[7]`
+    (roteamento) tem VETO escrito na sprint, porque ninguém sabe o valor
+    neutro dele. Uma amostra distingue "o jogo pediu volume" de "o jogo mudou
+    a rota do áudio", e são coisas muito diferentes de replicar.
+
+    Mordida: apagar a atribuição de `_audio_do_jogo_amostra` do
+    `_handle_output`, ou trocar a ordem de dois dos quatro bytes.
+    """
+    pad = _vpad_em_jogo()
+    assert pad.audio_do_jogo_amostra is None, (
+        "sem escrita nenhuma, a amostra tem de ser ausente — publicar zeros "
+        "faria a E2 ler 'o jogo pediu volume 0', que é mandar MUDO"
+    )
+
+    # Fone 10, alto-falante 180, mic 0, rota 2 — os quatro valores distintos
+    # de propósito: uma amostra que troque dois campos de lugar reprova aqui.
+    pad._handle_output(_corpo_de_audio(0x20, (10, 180, 0, 2)))
+
+    assert pad.audio_do_jogo_amostra == {
+        "flag0": 0x20,
+        "fone": 10,
+        "alto_falante": 180,
+        "microfone": 0,
+        "rota": 2,
+    }
+
+
+def test_a_amostra_obedece_as_mesmas_guardas_do_carimbo() -> None:
+    """Keepalive e probe do kernel não entram na amostra — nem no carimbo.
+
+    Se a amostra tivesse guarda própria, ela e o carimbo divergiriam sobre o
+    que é "durante um jogo" — que é exatamente o erro que o veredito do portão
+    documenta ter cometido uma vez, e cuja cura foi *reusar* o `_replicating()`
+    da REPLICA-03 em vez de escrever um segundo gate.
+
+    Uma amostra que sobrevive ao keepalive é pior que amostra nenhuma: ela diz
+    "o jogo pediu volume 0" quando o jogo não pediu nada, e mandar 0 ao
+    controle é mandar MUDO (armadilha 10 da sprint).
+
+    Mordida: tirar a atribuição da amostra de dentro do `if` do carimbo.
+    """
+    # (a) keepalive: bits ligados, bytes zerados.
+    keepalive = _vpad_em_jogo()
+    keepalive._handle_output(_corpo_de_audio(0xF0, (0, 0, 0, 0)))
+    assert keepalive.audio_do_jogo_amostra is None
+
+    # (b) probe do kernel: valores de verdade, mas fora de sessão de jogo.
+    probe = _vpad_mudo()
+    probe._game_open = False
+    probe._bound_at = probe.time_fn() - 3600
+    probe._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
+    assert probe.audio_do_jogo_amostra is None, (
+        "o que o kernel escreve no probe não é pedido de jogo — amostrar isso "
+        "faria a E2 replicar a INICIALIZAÇÃO do kernel ao controle físico"
+    )
+
+
+def test_a_amostra_nao_sobrevive_ao_stop(tmp_path: Any) -> None:
+    """A amostra morre com o device, como os carimbos que ela acompanha.
+
+    Um `alto_falante=180` herdado da vida anterior do vpad seria medição de um
+    device que não existe mais — e a E2 seria decidida sobre bytes que outro
+    gamepad virtual recebeu.
+
+    O `stop()` é chamado DE VERDADE (com um fd de arquivo no lugar do
+    `/dev/uhid`, que o `contextlib.suppress(OSError)` do próprio método
+    absorve): um teste que repetisse o bloco de reset à mão passaria com a
+    linha arrancada do produto, que é a definição de teste que não morde.
+
+    Mordida: apagar a linha que zera `_audio_do_jogo_amostra` no `stop()`.
+    """
+    import os
+
+    pad = _vpad_em_jogo()
+    pad._handle_output(_corpo_de_audio(0x20, (0, 180, 0, 0)))
+    assert pad.audio_do_jogo_amostra is not None
+
+    pad._fd = os.open(tmp_path / "uhid-falso", os.O_RDWR | os.O_CREAT)
+    pad.stop()
+
+    assert pad.audio_do_jogo_amostra is None
+    # E o carimbo que ela acompanha morreu junto — os dois são a mesma
+    # medição, e um sobreviver ao outro seria a divergência que o veredito do
+    # portão já documenta ter custado uma leitura errada.
     assert uhid.ATIVIDADE_AUDIO_DO_JOGO not in pad.visto_ha_s

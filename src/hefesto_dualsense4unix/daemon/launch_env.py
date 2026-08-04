@@ -601,6 +601,7 @@ def compose_env(
     emulation_enabled: bool,
     flavor: str,
     backends: Sequence[str],
+    fisicos: int = 0,
 ) -> dict[str, str]:
     """Envs de launch para UM estado do daemon. Pura e testável.
 
@@ -626,16 +627,54 @@ def compose_env(
     "carregamento completo" que o botão da GUI sempre prometeu.
     """
     env: dict[str, str] = {}
+    # WRAPPER-EM-TODOS-01 (03/08/2026) — A COBERTURA, e por que ela é o portão.
+    #
+    # O `SDL_GAMECONTROLLER_IGNORE_DEVICES` esconde o DualSense físico do SDL
+    # **por VID/PID** (`_IGNORE_VALUE`, um par cravado): ele some para TODOS os
+    # controles daquele par de uma vez. Quem devolve cada um ao jogo é o vpad
+    # correspondente. Logo, emitir o IGNORE sem haver um vpad por físico é
+    # afirmar ao SDL algo falso — e o jogo fica com MENOS controles do que a
+    # mesa tem.
+    #
+    # A decisão era pelo TIPO (`all(b == "uhid")`), nunca pela CONTAGEM. E o
+    # `_snapshot` só listava vpads que EXISTEM: um jogador de co-op pendente
+    # (aguardando o `EVIOCGRAB`, `vpad is None`) não entrava, e o `all(...)`
+    # passava trivialmente sobre uma lista incompleta. Com 2 DualSense físicos
+    # e 1 vpad vivo — exatamente o que o `EBUSY` de 02/08 produzia o tempo
+    # todo — o IGNORE escondia os dois e só um voltava.
+    #
+    # Sem cobertura, cai no comportamento de sempre: o controle DUPLICADO, que
+    # é o pior caso que a doutrina desta casa aceita por escrito
+    # (`assets/hefesto-launch.sh`, `install.sh`) — nunca um jogo sem controle.
+    # O `PROTON_DISABLE_HIDRAW` NÃO sai junto: ele impede o winebus de entregar
+    # o hidraw do físico, e não esconde nada do SDL.
+    # `fisicos == 0` significa "NÃO SEI", não "nenhum": o `_fisicos_na_mesa`
+    # devolve 0 quando o backend não expõe `describe_controllers`
+    # (`FakeController`, dublê de teste, backend legado) e nos prognósticos de
+    # perfil, que montam env ANTES de haver controle na mão. Nesse caso mantém-se
+    # o comportamento histórico (decidir pelo TIPO do vpad) — apertar sem
+    # informação removeria o dedup de quem sempre o teve, que é regressão, não
+    # cura. Só se exige cobertura quando se SABE quantos físicos há.
+    cobertura_total = fisicos <= 0 or len(backends) >= fisicos
     # Modo Nativo: expõe o físico — sem DISABLE, sem IGNORE (whitelist default).
     if not native_mode and emulation_enabled and backends:
         if flavor == "xbox":
             env["SDL_JOYSTICK_HIDAPI"] = "0"
-            env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
+            if cobertura_total:
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         elif flavor == "dualsense" and all(b == "uhid" for b in backends):
             env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
-            env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
+            if cobertura_total:
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         # dualsense degradado (algum uinput) => sem IGNORE, de propósito.
+        if not cobertura_total:
+            logger.info(
+                "launch_env_ignore_omitido_sem_cobertura",
+                fisicos=fisicos,
+                vpads=len(backends),
+                motivo="um vpad por DualSense físico é requisito do IGNORE",
+            )
     env["__GL_SHADER_DISK_CACHE"] = "1"
     env["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1"
     # 8BIT-03: controles Nintendo (Pro/8BitDo modo Switch) mapeados por
@@ -646,8 +685,43 @@ def compose_env(
     return env
 
 
-def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str]]:
-    """(native, emulation_enabled, flavor, backends REAIS de todos os vpads)."""
+def _fisicos_na_mesa(daemon: DaemonProtocol) -> int:
+    """Quantos DualSense FÍSICOS estão conectados agora (0 se não der para saber).
+
+    WRAPPER-EM-TODOS-01 (03/08/2026). O `_snapshot` abaixo sempre soube quantos
+    VPADS existem e nunca soube quantos FÍSICOS há — e é a comparação entre os
+    dois que decide se o `SDL_GAMECONTROLLER_IGNORE_DEVICES` pode sair.
+
+    Zero na dúvida, e isso é deliberado: com zero, `compose_env` não emite o
+    IGNORE, e o pior caso volta a ser o controle DUPLICADO, que é o que a
+    doutrina desta casa aceita (`assets/hefesto-launch.sh`, `install.sh`).
+    Nunca o contrário — um número otimista aqui esconde controle do jogo.
+    """
+    describe = getattr(getattr(daemon, "controller", None), "describe_controllers", None)
+    if not callable(describe):
+        return 0
+    try:
+        entradas = describe()
+    except Exception:
+        logger.debug("launch_env_fisicos_indisponiveis", exc_info=True)
+        return 0
+    if not isinstance(entradas, list):
+        return 0
+    return sum(
+        1 for e in entradas if isinstance(e, dict) and e.get("connected")
+    )
+
+
+def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
+    """(native, emulation_enabled, flavor, backends dos vpads, físicos na mesa).
+
+    WRAPPER-EM-TODOS-01: o quinto campo é novo. Sem ele, `compose_env` decidia
+    pelo TIPO dos vpads (`all(b == "uhid")`) e nunca pela COBERTURA — e um
+    jogador de co-op PENDENTE (aguardando o `EVIOCGRAB`, com `vpad is None`)
+    simplesmente não entrava na lista, fazendo o `all(...)` passar
+    trivialmente. Com 2 DualSense físicos e 1 vpad, o IGNORE escondia os DOIS
+    por VID/PID e só UM voltava.
+    """
     native = False
     with contextlib.suppress(Exception):
         native = bool(daemon.is_native_mode())
@@ -666,7 +740,7 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str]]:
             vpad = getattr(player, "vpad", None)
             if vpad is not None:
                 backends.append(str(getattr(vpad, "backend", "") or ""))
-    return native, enabled, flavor, backends
+    return native, enabled, flavor, backends, _fisicos_na_mesa(daemon)
 
 
 def _load_profiles(daemon: DaemonProtocol) -> list[Any]:
@@ -856,7 +930,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
     """
     try:
         target = launch_env_dir(ensure=True)
-        native, enabled, flavor, backends = _snapshot(daemon)
+        native, enabled, flavor, backends, fisicos = _snapshot(daemon)
         estado = (
             f"native={native} emulacao={enabled} mascara={flavor} "
             f"backends={backends or '[]'}"
@@ -877,6 +951,11 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
             emulation_enabled=enabled,
             flavor=flavor,
             backends=backends,
+            # WRAPPER-EM-TODOS-01: este é o ÚNICO chamador com o estado real da
+            # mesa; os demais montam prognóstico de perfil (backends
+            # antecipados, sem controle na mão) e ficam no default 0, que é
+            # o conservador — sem cobertura provada, sem IGNORE.
+            fisicos=fisicos,
         )
         if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
             arriscados = _nativos_fora_da_antecipacao(_load_profiles(daemon))

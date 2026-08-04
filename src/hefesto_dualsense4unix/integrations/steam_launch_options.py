@@ -18,6 +18,13 @@ Este módulo concentra:
    vivo). `--migrate` troca as linhas envenenadas pela chamada do wrapper;
    `--strip` (uninstall) remove o nosso trecho — novo E legado — deixando o
    resto intacto.
+3. A APLICAÇÃO em massa (`--apply`, `apply_wrapper_to_all_games`): põe a
+   chamada do wrapper em TODOS os jogos do bloco `apps`, inclusive nos que
+   nunca tiveram LaunchOptions. É o que o botão "Aplicar aos jogos da Steam"
+   da GUI faz e — desde a JOGO-COMPLETO-01/E4 — o que o `install.sh` faz sem
+   flag: a migração sozinha não põe NADA numa instalação limpa (não há veneno
+   legado a migrar), e sem o wrapper as envs que o projeto materializa nunca
+   são exportadas — todo jogo enxerga dois DualSense.
 
 Decisões herdadas da revisão adversarial (não relaxar):
 
@@ -962,12 +969,95 @@ def _warn_extended(vdf: Path, text: str) -> None:
         )
 
 
+#: Motivos de RECUSA do `apply_wrapper_to_all_games` (nada foi tocado) e a
+#: frase honesta de cada um. Espelham palavra por palavra as recusas do
+#: migrate/strip no `main` — é o MESMO fato, dito do mesmo jeito.
+_APPLY_RECUSAS = {
+    "jogo_da_steam_aberto": (
+        "há um JOGO da Steam em execução — fechar a Steam agora MATARIA o jogo "
+        "(progresso não salvo perdido). Feche o jogo e rode de novo."
+    ),
+    "steam_aberta": (
+        "a Steam está aberta — feche-a e rode de novo (ou use --stop-steam). "
+        "Não vou editar o vdf agora porque a Steam regrava o arquivo ao sair e "
+        "a edição seria perdida (ou pior, corrompida)."
+    ),
+}
+
+
+def _report_apply(
+    resultado: dict[str, list[dict[str, str]]], *, dry_run: bool
+) -> int:
+    """Imprime o relatório do `--apply` (estilo do `_report_status`) e dá o rc.
+
+    Os códigos de saída são os MESMOS do migrate/strip, porque o `install.sh`
+    trata os três do mesmo jeito:
+
+    - **3** — recusa de porta (Steam ou jogo aberto): NADA foi tocado;
+    - **1** — houve erro POR-VDF (vdf ilegível/não-UTF-8); os demais seguiram;
+    - **0** — sucesso, inclusive quando não havia nada a fazer. Rodar duas
+      vezes é sucesso, não falha: o passo do install roda sem flag e a
+      idempotência é requisito dela.
+    """
+    for erro in resultado["errors"]:
+        motivo = _APPLY_RECUSAS.get(erro["reason"])
+        if motivo is not None:
+            print(f"[launch-options] ERRO: {motivo}")
+            return 3
+
+    aplicados_por_vdf: dict[str, list[str]] = {}
+    for item in resultado["applied"]:
+        aplicados_por_vdf.setdefault(item["vdf"], []).append(item["appid"])
+    pulados_por_vdf: dict[str, list[tuple[str, str]]] = {}
+    for item in resultado["skipped"]:
+        pulados_por_vdf.setdefault(item["vdf"], []).append(
+            (item["appid"], item["reason"])
+        )
+
+    for vdf in dict.fromkeys([*aplicados_por_vdf, *pulados_por_vdf]):
+        aplicados = aplicados_por_vdf.get(vdf, [])
+        pulados = pulados_por_vdf.get(vdf, [])
+        print(f"[launch-options] {vdf}")
+        verbo = "receberiam" if dry_run else "receberam"
+        detalhe = f" ({', '.join(aplicados)})" if aplicados else ""
+        print(f"    jogos que {verbo} o wrapper: {len(aplicados)}{detalhe}")
+        if pulados:
+            # `appid` vazio = o vdf INTEIRO foi pulado (sandbox Flatpak/Snap).
+            dito = ", ".join(
+                f"{appid or 'vdf inteiro'}: {motivo}" for appid, motivo in pulados
+            )
+            print(f"    pulados: {len(pulados)} ({dito})")
+
+    total = len(resultado["applied"])
+    if not total:
+        print(
+            "[launch-options] nada a fazer: nenhum jogo sem a chamada do wrapper"
+        )
+    elif dry_run:
+        print(
+            f"[launch-options] --dry-run: {total} jogos receberiam o wrapper "
+            "(nada foi escrito)"
+        )
+    else:
+        print(
+            f"[launch-options] wrapper aplicado a {total} jogos "
+            "(backup .bak.hefesto-launch-<ts> ao lado de cada vdf)"
+        )
+
+    rc = 0
+    for erro in resultado["errors"]:
+        print(f"[launch-options] ERRO em {erro['vdf']}: {erro['reason']}")
+        rc = 1
+    return rc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="steam_launch_options",
         description=(
-            "Migra/remove as Launch Options do Hefesto nos localconfig.vdf "
-            "(DEDUP-05/UX-04). Sem argumentos, --status."
+            "Aplica/migra/remove as Launch Options do Hefesto nos "
+            "localconfig.vdf (DEDUP-05/UX-04, JOGO-COMPLETO-01/E4). Sem "
+            "argumentos, --status."
         ),
     )
     group = parser.add_mutually_exclusive_group()
@@ -978,6 +1068,15 @@ def main(argv: list[str] | None = None) -> int:
         "--migrate",
         action="store_true",
         help="troca o veneno estático pela chamada do wrapper (exige Steam fechada)",
+    )
+    group.add_argument(
+        "--apply",
+        action="store_true",
+        help=(
+            "põe a chamada do wrapper em TODOS os jogos da Steam nativa, "
+            "inclusive nos que nunca tiveram Launch Options (idempotente; "
+            "exige Steam fechada)"
+        ),
     )
     group.add_argument(
         "--strip",
@@ -1013,6 +1112,8 @@ def main(argv: list[str] | None = None) -> int:
         mode = "migrate"
     elif args.strip:
         mode = "strip"
+    elif args.apply:
+        mode = "apply"
     else:
         return _report_status(vdfs)
 
@@ -1045,6 +1146,25 @@ def main(argv: list[str] | None = None) -> int:
                 "sair e a edição seria perdida (ou pior, corrompida)."
             )
             return 3
+
+    if mode == "apply":
+        # A via em-massa tem função PRÓPRIA (parse por bloco de app, para
+        # alcançar também o jogo que nunca teve LaunchOptions) — o loop de
+        # migrate/strip abaixo é por LINHA e não saberia onde inserir. O gate
+        # de Steam/jogo aberto de `apply_wrapper_to_all_games` é a segunda
+        # muralha: o `--stop-steam` acima pode ter dito que fechou sem ter
+        # fechado, e aí nada é tocado.
+        try:
+            return _report_apply(
+                apply_wrapper_to_all_games(vdfs=vdfs, dry_run=args.dry_run),
+                dry_run=args.dry_run,
+            )
+        finally:
+            # Espelho do rodapé do migrate/strip: quem fechou a Steam a reabre
+            # — e reabre mesmo se o relatório levantar, para nunca deixá-la
+            # sem Steam por causa de um erro nosso.
+            if args.stop_steam and was_running and not args.dry_run:
+                reopen_steam()
 
     rc = 0
     total = 0

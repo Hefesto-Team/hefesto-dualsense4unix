@@ -124,6 +124,27 @@ def _visto_ha_s(vp: Any) -> dict[str, float]:
     }
 
 
+def _audio_do_jogo_amostra(vp: Any) -> dict[str, int] | None:
+    """A amostra de áudio do vpad, saneada para o payload de IPC.
+
+    PARIDADE-SONY-01 — o dado que destranca a E2: quais dos quatro bytes de
+    `common[4..7]` o jogo escreveu, e com que valores.
+
+    Mesmas duas defesas do `_visto_ha_s` logo acima, e pelos mesmos motivos: o
+    vpad pode ser um `uinput` (sem hidraw, nada a amostrar) ou um dublê de
+    teste, e o `state_full` não pode morrer pela linha menos importante dele.
+    Valores exóticos caem fora antes de virarem JSON.
+    """
+    cru = getattr(vp, "audio_do_jogo_amostra", None)
+    if not isinstance(cru, dict):
+        return None
+    return {
+        str(k): int(v)
+        for k, v in cru.items()
+        if isinstance(v, (int, float)) and not isinstance(v, bool)
+    }
+
+
 def _norm_uniq(value: Any) -> str | None:
     """MAC 12-hex normalizado de uma key/serial do backend, ou None.
 
@@ -500,6 +521,100 @@ class IpcHandlersMixin:
         apply_for(alvo, OutputSpec(**campos))
         return True
 
+    def _uniqs_conectados(self) -> list[str]:
+        """MACs dos controles CONECTADOS, na ordem do backend.
+
+        Fonte: ``describe_controllers`` — só getattrs baratos, sem HID I/O (a
+        mesma que o ``controller.list`` usa). Lista VAZIA quando o backend não
+        sabe dizer quem está na mesa (``FakeController``, backend legado) ou
+        quando não há ninguém: o chamador segue pelo caminho clássico, intacto.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return []
+        try:
+            entradas = describe()
+        except Exception as exc:  # observabilidade > silêncio
+            logger.debug("uniqs_conectados_falhou", err=str(exc))
+            return []
+        if not isinstance(entradas, list):
+            return []
+        alvos: list[str] = []
+        for entrada in entradas:
+            if not isinstance(entrada, dict) or not entrada.get("connected"):
+                continue
+            uniq = entrada.get("uniq")
+            if isinstance(uniq, str) and uniq and uniq not in alvos:
+                alvos.append(uniq)
+        return alvos
+
+    def _registrar_em_todos(self, **campos: Any) -> list[str]:
+        """Registra ``campos`` na camada da USUÁRIA de CADA controle conectado.
+
+        BROADCAST-QUE-NAO-MENTE-01 (02/08), medido na máquina dela: ``led.set``
+        SEM ``uniq`` respondia ``{"status": "ok"}`` e o sysfs NÃO mudava — os
+        dois controles continuavam com a cor da paleta (azul do slot 1,
+        vermelho do slot 2). Com ``uniq``, a mesma cor pegava e ficava.
+
+        A causa é a ORDEM DAS CAMADAS do merge, não a escrita. ``set_led``
+        escreve no hardware E grava o valor em ``_desired_default``
+        (``_record_desired_locked`` com alvo ``None``,
+        ``core/backend_pydualsense.py:1335``); o ``reassert_resolved_outputs``
+        logo abaixo re-resolve por controle, e o ``_merged_desired_for_key``
+        (``core/backend_pydualsense.py:1222``) põe a camada AUTOMÁTICA do slot
+        (COR-03) EM CIMA do default — a paleta repinta por cima da cor que
+        acabou de sair. O caminho por-``uniq`` SEMPRE funcionou pelo mesmo
+        motivo, ao contrário: ``apply_output_for`` grava em ``_desired_by_uniq``,
+        que no mesmo merge fica ACIMA da automática. E não adiantaria arrancar
+        o reassert imediato: a defesa de exibição (NUMA-03, ``defend_display``)
+        e o próximo hotplug re-resolvem pelo MESMO merge — a cor voltaria
+        segundos depois em vez de instantes.
+
+        A camada não é nova: é exatamente o que a GUI já faz desde a R-14
+        (``app/actions/lightbar_actions.py:828`` ``_enviar_led_em_todos`` —
+        "Todos" vira um pedido POR MAC, "sem desligar o automático"). O que
+        faltava era o DAEMON fazer o mesmo para quem não é a GUI: a CLI
+        (``hefesto test lightbar``) e qualquer chamada IPC direta continuavam
+        caindo no broadcast cru e recebendo um "ok" que não valia nada.
+
+        Roda DEPOIS da escrita clássica de propósito, nesta ordem: o broadcast
+        grava o default (é ele que pinta quem chegar DEPOIS, no hotplug — a
+        decisão "mudei todos para azul, repluguei e um voltou verde") e limpa o
+        campo dos overrides; só então cada conectado recebe de volta o MESMO
+        valor, agora na camada que sobrevive ao reassert. Inverter a ordem
+        apagaria o que acabamos de registrar.
+
+        O que NÃO muda: a camada GAME continua acima desta (o fix cross-cutting
+        U x N segue valendo — sob ``display_authority=='game'`` o jogo vence no
+        reassert), e a camada do CO-OP continua acima para ``player_leds``.
+
+        Devolve os MACs em que o registro entrou — lista vazia quando o backend
+        não expõe ``apply_output_for``/``describe_controllers`` ou a mesa está
+        vazia. É essa lista que a resposta publica em ``aplicado_em``.
+        """
+        apply_for = getattr(self.controller, "apply_output_for", None)
+        if not callable(apply_for):
+            return []
+        alvos = self._uniqs_conectados()
+        if not alvos:
+            return []
+        from hefesto_dualsense4unix.core.controller import OutputSpec
+
+        spec = OutputSpec(**campos)
+        aplicados: list[str] = []
+        for alvo in alvos:
+            try:
+                apply_for(alvo, spec)
+            except Exception as exc:
+                # Um controle que recusa não pode calar os outros (mesma
+                # disciplina do fan-out de `_for_each` no backend).
+                logger.warning(
+                    "registrar_em_todos_falhou", uniq=alvo, err=str(exc)
+                )
+                continue
+            aplicados.append(alvo)
+        return aplicados
+
     async def _handle_trigger_set(self, params: dict[str, Any]) -> dict[str, Any]:
         side = params.get("side")
         mode = params.get("mode")
@@ -590,8 +705,16 @@ class IpcHandlersMixin:
         # a hotplug) e escreve SÓ naquele controle. Antes, o caminho vivo por
         # índice (`_output_target_key`) caía em BROADCAST quando o alvo
         # desalinhava — "configurei o controle 2 e mudou todos".
-        if not self._apply_por_uniq(params, led=(r, g, b)):
+        if self._apply_por_uniq(params, led=(r, g, b)):
+            aplicado_em = [str(params["uniq"])]
+        else:
             self.controller.set_led((r, g, b))
+            # BROADCAST-QUE-NAO-MENTE-01 (02/08): a escrita acima grava o
+            # default e pinta o hardware, mas o default fica ABAIXO da paleta
+            # automática no merge — sem a linha seguinte, o reassert logo
+            # abaixo repinta a cor do slot por cima e o handler responderia
+            # "ok" para uma cor que nunca ficou. Ver `_registrar_em_todos`.
+            aplicado_em = self._registrar_em_todos(led=(r, g, b))
         # Fix cross-cutting U x N (2026-07-20, HIGH): `set_led` escreve CRU via
         # `_for_each_led` (gate só `_output_mute`, nunca `_game_wins`) — sem
         # isto a cor do JOGO ficava sobrescrita na hora, e a trava manual
@@ -610,7 +733,14 @@ class IpcHandlersMixin:
         # ("perfil eterno", U9). Categoria "led" (F1): o fim do "Testar
         # motores" limpa só "rumble" e esta cor sobrevive.
         self.store.mark_manual_trigger_active("led")
-        return {"status": "ok"}
+        # APLICAR-VERDADE-01: `status` segue sempre "ok" (applet, CLI e TUI
+        # decidem por ele e passariam a dizer "daemon offline"); a verdade nova
+        # é ADITIVA. `aplicado_em` diz em QUE controles a intenção ficou
+        # registrada na camada que sobrevive ao reassert — vazio significa
+        # "escrita global sem registro por controle" (backend sem a API
+        # por-uniq, ou mesa vazia), que era justamente o caso em que o "ok"
+        # mentia.
+        return {"status": "ok", "aplicado_em": aplicado_em}
 
     async def _handle_led_player_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica bitmask de 5 LEDs de player no controle.
@@ -629,8 +759,19 @@ class IpcHandlersMixin:
         )
         # PERFIL-05: mesmo contrato do led.set — `uniq` presente = escrita
         # por-MAC via apply_output_for (só naquele controle).
-        if not self._apply_por_uniq(params, player_leds=bits):
+        if self._apply_por_uniq(params, player_leds=bits):
+            aplicado_em = [str(params["uniq"])]
+        else:
             self.controller.set_player_leds(bits)
+            # BROADCAST-QUE-NAO-MENTE-01: MESMO defeito do `led.set` e pela
+            # MESMA razão — a numeração automática (COR-03/D7) também entra no
+            # merge acima do default, então o broadcast cru era desfeito pelo
+            # reassert. É o "sucesso mentiroso" que a PLAYER-01 (entrega 6) já
+            # tinha diagnosticado e que a GUI resolvia RECUSANDO o pedido
+            # quando não sabia quem estava conectado; aqui o daemon, que SABE,
+            # registra por MAC em vez de recusar. A camada do co-op continua
+            # acima desta (R-13) — ligado o co-op, o número dele segue vencendo.
+            aplicado_em = self._registrar_em_todos(player_leds=bits)
         # Fix cross-cutting U x N (2026-07-20, HIGH) — mesmo raciocínio de
         # `_handle_led_set`: reassert imediato para o merge de N (jogo vence
         # sob `display_authority=='game'`) corrigir a escrita crua acima
@@ -640,7 +781,9 @@ class IpcHandlersMixin:
             reassert()
         # ONDA-U (Causa A): mesma trava de trigger.set (U9), categoria "led".
         self.store.mark_manual_trigger_active("led")
-        return {"status": "ok", "bits": list(bits)}
+        # APLICAR-VERDADE-01, mesma decisão do `led.set`: `aplicado_em` é
+        # aditivo e `bits` (contrato de quem já lê a resposta) fica intacto.
+        return {"status": "ok", "bits": list(bits), "aplicado_em": aplicado_em}
 
     # --- identidade (numeração) -------------------------------------------
 
@@ -1793,6 +1936,12 @@ class IpcHandlersMixin:
                             # aconteceu — a tela diz frases diferentes para
                             # "parou" e para "nunca começou".
                             "visto_ha_s": _visto_ha_s(vp),
+                            # PARIDADE-SONY-01 — o carimbo acima diz QUANDO o
+                            # jogo pediu áudio; este diz O QUÊ. É a medição
+                            # que a sprint exige antes de a E2 escrever uma
+                            # linha de replicação, e sai do daemon pronta:
+                            # basta ela jogar e olhar.
+                            "audio_do_jogo_amostra": _audio_do_jogo_amostra(vp),
                         }
                     )
             result["rumble_ff"] = {

@@ -23,6 +23,28 @@ Type=simple
 ExecStart=/usr/bin/bt-agent --capability=NoInputNoOutput
 Restart=on-failure
 RestartSec=5
+# BT-AGENT-TRAVA-O-RESTART-01 (04/08/2026) — MEDIDO no crash de 03/08.
+#
+# O `bt-agent` do bluez-tools NÃO responde ao SIGTERM quando o bluetoothd morre
+# (fica preso numa chamada D-Bus que nunca volta). Com o `TimeoutStopSec` padrão
+# do systemd (90 s), ele segurava o restart do PRÓPRIO bluetooth.service, que
+# depende dele pela ordenação — e o Bluetooth dela ficava fora do ar por um
+# minuto e meio a cada crash do BlueZ:
+#
+#   23:58:10  Scheduled restart job, restart counter is at 1
+#   23:58:10  Stopping hefesto-bt-agent.service
+#   23:58:10  Stopped phomemo-m835-rfcomm.service      <- o vizinho parou NA HORA
+#   23:59:40  Stopped hefesto-bt-agent.service         <- 90 s = TimeoutStopSec
+#   23:59:40  Starting bluetooth.service               <- só então o BlueZ voltou
+#
+# Ela viu isso como "o BT caiu e está pedindo senha": o serviço demorou tanto
+# que ela clicou em "Ativar" na tela do sistema, e esse botão passa pelo polkit.
+#
+# 3 s e SIGKILL. É seguro: o `bt-agent` é um agente de pareamento sem estado em
+# disco — matá-lo não corrompe bond nenhum, e o pareamento em curso (se houver)
+# falha do mesmo jeito, porque o bluetoothd que o serve já morreu.
+TimeoutStopSec=3s
+SendSIGKILL=yes
 
 # --- hardening LEVE (espelha um subconjunto do broker root do repo em
 #     docs/process/future-broker/systemd/hefesto-hidraw-broker.service; aqui

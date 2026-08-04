@@ -66,3 +66,25 @@ repos:
         entry: ruff check
         language: system
         types: [python]
+      # ÍCONE-VIVO-01 (03/08): o `scripts/gerar_icones.sh` declara, no próprio
+      # cabeçalho, que `--check` "é o que o CI roda" — e NENHUM workflow o
+      # chamava. É a família do PORTÃO-VIVO-01 (o gate que se anuncia e não
+      # roda). A divergência só aparecia no `pytest`
+      # (`test_icones_refletem_o_svg`), minutos depois do commit e longe do
+      # gesto que a causou: mexer no `assets/hefesto-logo.svg`.
+      #
+      # Este hook CONFERE, nunca gera. Regenerar automaticamente poria PNG
+      # binário no commit sem ninguém ver — e esta casa já pagou por ferramenta
+      # que edita arquivo sozinha (o higienizador que apagava glifo permitido).
+      # Os quatro hooks acima também são validadores; nenhum escreve.
+      #
+      # `pass_filenames: false` porque o script varre o par SVG→PNGs inteiro, e
+      # `always_run: true` porque a divergência nasce de um arquivo (o SVG) e se
+      # manifesta em outros (os PNGs) — filtrar por arquivo staged deixaria
+      # passar exatamente o caso que motivou o hook.
+      - id: icones-refletem-o-svg
+        name: Ícones derivados do SVG (rode scripts/gerar_icones.sh)
+        entry: bash scripts/gerar_icones.sh --check
+        language: system
+        pass_filenames: false
+        always_run: true

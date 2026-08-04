@@ -227,6 +227,11 @@ REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 #: cobre perda de report e glitch de link sem martelar o USB.
 OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 
+# QUEDA-QUE-PENDURA-01: teto do join da report_thread no `close()`. Meio
+# segundo é uma eternidade para um laço que gira a ~100 Hz e ainda assim
+# é imperceptível no desligamento — contra os 90 s do SIGKILL do systemd.
+CLOSE_JOIN_TIMEOUT_SEC = 0.5
+
 #: AUDIO-STATUS-01: índice do byte de estado de áudio dentro do `states`
 #: NORMALIZADO da pydualsense (o mesmo em USB e BT — ver
 #: `_PinnedPyDualSense._captura_status_audio`). Um a mais que o índice de
@@ -542,6 +547,62 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             except AttributeError:
                 self.connected = False
                 break
+
+    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
+    #
+    # O `close()` do upstream é, literalmente:
+    #
+    #     self.ds_thread = False
+    #     self.report_thread.join()     <- SEM TETO
+    #     self.device.close()
+    #
+    # e o topo do laço acima é `self.device.read(...)`, que BLOQUEIA. Enquanto
+    # o controle responde, o `ds_thread = False` é visto no ciclo seguinte e o
+    # join volta em milissegundos. **Quando o controle some do rádio sem
+    # despedida** — 8BitDo que se desliga sozinho, link Bluetooth que cai —
+    # o `read` fica pendurado num fd que nunca mais entrega nada, o join espera
+    # para sempre, e a espera sobe inteira pela pilha:
+    #
+    #     read (nunca volta)
+    #       -> report_thread.join()          (upstream, sem teto)
+    #         -> handle.close()
+    #           -> disconnect()              SEGURANDO o `_io_lock`
+    #             -> shutdown() do daemon
+    #               -> systemd: 90 s e SIGKILL
+    #
+    # O journal de 04/08 tem a coisa inteira: `gamepad_emulation_stopped` às
+    # 00:20:19.601, o `daemon_stopped` NUNCA, e às 00:21:49
+    # *"State 'stop-sigterm' timed out. Killing."*. Custo real: 90 segundos em
+    # que o serviço não volta, os vpads não renascem e a mesa fica sem
+    # controle nenhum.
+    #
+    # A cura é fechar o fd MESMO ASSIM. O laço acima já trata `OSError` como
+    # fim de vida (`connected = False; break`) — fechar o dispositivo faz o
+    # `read` pendurado retornar erro e a thread sair sozinha, que é a ordem
+    # inversa da do upstream e a única que funciona com o fd morto.
+    #
+    # Uma thread que ainda assim não morra NÃO segura o processo: é o mesmo
+    # trade-off que o `HANG-01` já escreveu por extenso nos dois executores do
+    # `shutdown` (`wait=False`) — *"uma thread wedged não impede o processo de
+    # encerrar"*. Aqui ela vale para o handle, que era o furo que faltava.
+    def close(self) -> None:
+        """Igual ao upstream, mas o join tem TETO e o fd fecha de todo jeito."""
+        self.ds_thread = False
+        thread = getattr(self, "report_thread", None)
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=CLOSE_JOIN_TIMEOUT_SEC)
+        with contextlib.suppress(Exception):
+            self.device.close()
+        if thread is not None and thread.is_alive():
+            # O fd acabou de fechar; dá-se à thread a última chance de ver o
+            # OSError e sair. Se nem assim, seguimos — ela não escreve mais em
+            # dispositivo nenhum, e o processo precisa poder morrer.
+            thread.join(timeout=CLOSE_JOIN_TIMEOUT_SEC)
+            if thread.is_alive():
+                logger.warning(
+                    "report_thread_nao_encerrou",
+                    detalhe="fd fechado e thread ainda viva — controle sumiu do rádio",
+                )
 
     # --- AUDIO-STATUS-01 / AUDIO-OWNER-01 --------------------------------
 
@@ -1521,29 +1582,47 @@ class PyDualSenseController(IController):
         # RESET-02 abaixo). Sem isso, um drop+reconnect BT com jogo em foco
         # (handle reaberto → cai em new_handles, a key/MAC é estável) escrevia
         # um report cru por baixo do jogo, violando o contrato de zero write.
-        with self._io_lock:
-            adopt_candidates = [] if self._output_mute else list(new_handles)
-        for _key, handle in adopt_candidates:
-            with contextlib.suppress(Exception):
-                if self._detect_transport(handle) == "bt":
-                    from hefesto_dualsense4unix.core.lightbar_reset import (
-                        send_release_leds,
-                    )
-
-                    if send_release_leds(handle):
-                        logger.info("lightbar_reset_enviado", key=_key)
-                        # LIGHTBAR-BT-RESET-03: o 0x08 zera o estado de LED do
-                        # FIRMWARE — se o cache do nó sysfs ainda acredita na
-                        # última cor, o reassert seguinte seria PULADO
-                        # (skip_cache 2ms após o reset, journal 22/07) e a
-                        # barra ficaria apagada até a cor MUDAR. Reset enviado
-                        # ⇒ cache esquecido ⇒ o reassert do fim do connect()
-                        # reescreve de verdade.
-                        with self._io_lock:
-                            node = self._sysfs.get(_key)
-                        if node is not None:
-                            with contextlib.suppress(Exception):
-                                node.invalidate_cache()
+        # LIGHTBAR-BT-CULPADO-01 (03/08/2026) — O 0x08 SAIU DAQUI, E ELE ERA A
+        # CAUSA DO DEFEITO QUE VEIO CURAR.
+        #
+        # Este bloco enviava `send_release_leds` (o `0x08`,
+        # VALID_FLAG1_RELEASE_LEDS) a todo handle BT recém-adotado. Ele entrou
+        # em 18/07 (`bbfe74d`) como a CURA da lightbar por Bluetooth. **Medido
+        # no hardware dela em 03/08, com 7 eventos de correlação PERFEITA: o
+        # `0x08` enviado DENTRO da janela de ~3,4 s pós-conexão TRAVA a
+        # lightbar até o power-off físico do controle.**
+        #
+        #   | evento                | 0x08 após conectar | barra    |
+        #   | branco  17:48:24.266  | mesmo milissegundo | travou   |
+        #   | roxo    17:48:36.709  | 53 ms              | travou   |
+        #   | roxo    19:56:08.022  | 695 ms             | travou   |
+        #   | roxo    20:03:56      | NÃO (handle reusado)| OBEDECE |
+        #   | branco  20:04:20.989  | 515 ms             | travou   |
+        #
+        # Os dois controles no MESMO rádio, no mesmo minuto — e o único que não
+        # recebeu o report é o único que obedeceu. Controle negativo: o `0x08`
+        # isolado, num controle conectado havia dez minutos (FORA da janela),
+        # NÃO travou a barra. É essa assimetria que enganou duas sprints.
+        #
+        # E a intermitência que ela descrevia como *"sempre arrumamos mas
+        # sempre volta"* é este bloco: `adopt_candidates` sai de `new_handles`,
+        # então às vezes o report sai e às vezes não — o produto acertava ou
+        # errava um sorteio a cada conexão.
+        #
+        # POR QUE REMOVER E NÃO ADIAR:
+        #   1. ele NÃO cura — sem o `0x08` a barra obedece (evento 20:03:56);
+        #   2. ele CAUSA o latch dentro da janela (7/7);
+        #   3. ele APAGA os player-LEDs SEMPRE (medido isolado: `--x--` antes,
+        #      tudo escuro depois) — todo reconnect BT apagava o número do
+        #      jogador;
+        #   4. o kernel DEFINE `DS_OUTPUT_VALID_FLAG1_RELEASE_LEDS` e NUNCA o
+        #      envia (grep no hid-playstation.c: só a definição).
+        #
+        # O `build_bt_release_leds_report`/`send_release_leds` FICAM em
+        # `core/lightbar_reset.py` — não se apaga decisão medida, e o layout do
+        # report BT que eles documentam continua correto e validado. O que
+        # caducou é MANDÁ-LO. Ver a sprint LIGHTBAR-BT-CULPADO-01 e o estudo
+        # `2026-08-03-a-noite-em-que-medimos-a-lightbar-do-bluetooth.md`.
 
         # LIGHTBAR-BT-RESET-02 (Onda L): o 0x08 acima só cobre handles NOVOS. Um
         # wake/resume BT que NÃO reabre o handle também derruba o claim do
@@ -1574,10 +1653,12 @@ class PyDualSenseController(IController):
                     if key not in new_keys
                 ]
             )
-        for key, handle, node, desired, transport in reclaim_candidates:
+        # `_handle` deixou de ser usado com a saída do `send_release_leds`
+        # (LIGHTBAR-BT-CULPADO-01). Fica na tupla porque o snapshot sob lock é
+        # compartilhado com o resto do bloco e reduzi-lo aqui não paga.
+        for key, _handle, node, desired, transport in reclaim_candidates:
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.core.lightbar_reset import (
-                    send_release_leds,
                     should_reclaim_on_wake,
                 )
 
@@ -1604,14 +1685,28 @@ class PyDualSenseController(IController):
                     kernel_default=KERNEL_DEFAULT_BLUE,
                     reclamar=reclamar,
                 )
-                if reclamar and send_release_leds(handle):
-                    logger.info("lightbar_reset_reenviado_wake", key=key)
-                    # LIGHTBAR-BT-RESET-03: mesmo racional do RESET-01 — sem
-                    # esquecer o cache, o reassert pós-wake seria pulado e o
-                    # 0x08 do wake devolveria o claim para ninguém escrever.
-                    if node is not None:
-                        with contextlib.suppress(Exception):
-                            node.invalidate_cache()
+                # LIGHTBAR-BT-CULPADO-01 (03/08/2026): o `send_release_leds`
+                # SAIU daqui também, pelo mesmo motivo do irmão acima — o
+                # `0x08` trava a barra dentro da janela e apaga os player-LEDs
+                # fora dela.
+                #
+                # Este gate (RESET-02) já era CÓDIGO MORTO EM REGIME, e agora
+                # sabemos por quê de verdade: ele exige
+                # `current_sysfs_rgb == KERNEL_DEFAULT_BLUE`, e o
+                # `multi_intensity` mostra o valor PEDIDO, nunca o ACESO —
+                # provado em 03/08, quando o nó nasceu `0 0 0` com a barra
+                # acesa em azul. A condição está certa e é medida no lugar
+                # errado. O `L-01` da auditoria de 21/07 já suspeitava
+                # ("a assinatura pode nunca casar"); casou nunca.
+                #
+                # O DEBUG abaixo FICA: ele é a instrumentação que prova que o
+                # gatilho não dispara, e é barato. Quando alguém aposentar o
+                # RESET-02 de vez, `tests/unit/test_lightbar_reset.py:122-129`
+                # é um teste-MURALHA (lê o texto-fonte deste arquivo e exige as
+                # strings `should_reclaim_on_wake` e
+                # `lightbar_reset_reenviado_wake`) e tem de ser encarado antes.
+                if reclamar:
+                    logger.debug("lightbar_reclaim_gatilho_disparou_sem_acao", key=key)
 
         # FEAT-DSX-LIGHTBAR-SYSFS-01: (re)mapeia os nós LED do kernel a cada tick
         # de hotplug — cobre controle novo E o nó LED que o kernel às vezes
@@ -2335,7 +2430,23 @@ class PyDualSenseController(IController):
                     )
                     continue
                 if pref is None:
-                    pref = 0
+                    # SOM-CANAL-01, GUARDA DE RAIZ (04/08/2026). "Não me
+                    # disseram" e "me disseram zero" eram o mesmo valor aqui, e
+                    # a diferença é a de um alto-falante mudo.
+                    #
+                    # Medido com ela: o seletor de canal do card chamava
+                    # `speaker_set(rota=...)` sem volume, caía nesta linha e
+                    # TRANCAVA o alto-falante em zero — enquanto tomava a posse
+                    # do registrador, de modo que nem o firmware o recuperava.
+                    # A regra já estava escrita na SOM-02 ("Armadilha 1") e num
+                    # validador de perfil (`profiles/schema.py` RECUSA seção de
+                    # alto-falante sem volume); faltava valer no caminho vivo.
+                    #
+                    # Sem volume pedido, herda-se o que JÁ está em vigor neste
+                    # handle. Só quando não há nada em vigor é que o zero
+                    # aparece — e aí ele é o estado real, não uma suposição.
+                    vigente = getattr(handle, "_speaker_volume_pref", None)
+                    pref = int(vigente) if isinstance(vigente, int) else 0
                 handle._speaker_volume_pref = pref
                 efetivo = 0 if muted else pref
                 # SOM-ROTA-01/E1 — o PRÉ-AMPLIFICADOR vai junto, e é ele que
