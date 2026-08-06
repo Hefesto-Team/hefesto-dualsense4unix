@@ -877,9 +877,19 @@ class _FakeSelector:
 class _FakeBox:
     def __init__(self) -> None:
         self.visible = True
+        self.no_show_all = True
+        self.filhos_visiveis = False
 
     def show(self) -> None:
         self.visible = True
+
+    def show_all(self) -> None:
+        # CAMPO-QUE-NAO-NASCIA-01: doutrina do GTK — com o `no_show_all` armado
+        # o `show_all()` IGNORA o widget (e, por não descer nele, os filhos).
+        if self.no_show_all:
+            return
+        self.visible = True
+        self.filhos_visiveis = True
 
     def hide(self) -> None:
         self.visible = False
@@ -887,8 +897,8 @@ class _FakeBox:
     def set_visible(self, value: bool) -> None:
         self.visible = bool(value)
 
-    def set_no_show_all(self, _value: bool) -> None:
-        return None
+    def set_no_show_all(self, value: bool) -> None:
+        self.no_show_all = bool(value)
 
     def set_sensitive(self, _value: bool) -> None:
         return None

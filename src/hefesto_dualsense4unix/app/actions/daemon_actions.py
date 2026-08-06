@@ -20,6 +20,7 @@ import os
 import re
 import signal
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -31,6 +32,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor
 from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL, ServiceInstaller
+from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -298,13 +300,30 @@ def format_steam_janela_recusa(janela: object) -> str | None:
     )
 
 
-def _frase_steam_input(rc: int, tag: str | None) -> str:
+def _frase_steam_input(
+    rc: int, tag: str | None, jogos: Sequence[str] | None = None
+) -> str:
     """Meia-frase sobre o desligar do Steam Input, a partir de rc + tag.
 
     Fonte da tag: a linha `[steam-input] resultado=<tag>` que o
     `disable_steam_input.sh` passou a emitir (HONESTIDADE-STEAM-01). Sem ela
     (script de instalação antiga) o texto DIZ que não houve confirmação, em
     vez de fingir que houve.
+
+    `jogos` são os rótulos (`rotulo_do_jogo`) dos jogos que estavam com Steam
+    Input ligado FORA da allowlist ANTES da execução — medidos por quem chama,
+    porque o script não relata appid nenhum na saída. `None` = ninguém mediu.
+
+    D-33 (05/08/2026): o ramo `aplicado` dizia *"a Steam não sequestra mais o
+    seu controle"*. Duas mentiras numa frase de sete palavras: nada dizia QUAL
+    jogo tinha sido mexido, e "sequestra" descreve como roubo o gesto que ela
+    mesma fez na janela da Steam. O que aconteceu de fato é que o Hefesto
+    desligou a entrada da Steam num jogo — e a frase agora diz isso, com nome.
+
+    MODO-SIMPLES (mantido): nenhuma destas meias-frases pronuncia o jargão
+    "Steam Input". Elas são coladas depois de ``"Controle: "`` no botão
+    "Deixar tudo pronto", cujo ponto inteiro é a usuária não precisar aprender
+    o vocabulário da Steam para usar o controle dela.
     """
     if tag == "recusado-jogo-aberto":
         return "NÃO mudou — havia um jogo aberto."
@@ -317,7 +336,24 @@ def _frase_steam_input(rc: int, tag: str | None) -> str:
     if tag == "nada-a-fazer":
         return "já estava do jeito certo."
     if tag == "aplicado":
-        return "a Steam não sequestra mais o seu controle."
+        if jogos:
+            sujeito = "esse jogo não está" if len(jogos) == 1 else "esses jogos não estão"
+            return (
+                f"o controle de {juntar_rotulos(jogos)} voltou a ser entregue "
+                f"pelo Hefesto, porque {sujeito} na sua lista de exceções."
+            )
+        if jogos is not None:
+            # Medido e vazio: só a chave GLOBAL da Steam foi desligada — não
+            # havia jogo fora da lista de exceções, e dizer o contrário seria
+            # inventar um jogo.
+            return (
+                "desliguei o ajuste geral da Steam que assume o controle em "
+                "todo jogo; nenhum jogo da sua lista de exceções foi tocado."
+            )
+        return (
+            "o controle voltou a ser entregue pelo Hefesto nos jogos fora da "
+            "sua lista de exceções."
+        )
     return "a correção rodou sem erro (versão antiga do script, sem confirmação)."
 
 
@@ -355,7 +391,14 @@ def format_steam_ready_result(
             rc, saida = bruto
         else:
             rc, saida = 1, ""
-        partes.append("Controle: " + _frase_steam_input(int(rc), _tag_do_script(saida)))
+        partes.append(
+            "Controle: "
+            + _frase_steam_input(
+                int(rc),
+                _tag_do_script(saida),
+                _jogos_do_relatorio(dados.get("steam_input_jogos")),
+            )
+        )
     else:
         partes.append(
             "Controle: não encontrei o script desta correção nesta "
@@ -380,6 +423,45 @@ def _tag_do_script(saida: object) -> str | None:
     return steam_input_result_tag(saida if isinstance(saida, str) else "")
 
 
+def _jogos_do_relatorio(bruto: object) -> list[str] | None:
+    """Rótulos de jogo guardados no relatório do worker, ou `None`.
+
+    `None` significa "ninguém mediu" (relatório antigo, medição falhou) — e o
+    formatter então evita nomear jogo nenhum em vez de chutar.
+    """
+    if isinstance(bruto, list) and all(isinstance(x, str) for x in bruto):
+        return list(bruto)
+    return None
+
+
+def medir_jogos_com_steam_input() -> list[str] | None:
+    """Rótulos dos jogos com Steam Input ligado FORA da allowlist, AGORA.
+
+    D-33: o `disable_steam_input.sh` não diz na saída QUAIS appids mexeu — ele
+    só emite `resultado=<tag>`. Quem sabe é o `localconfig.vdf`, e só ANTES da
+    execução (depois já foi zerado). Por isso os dois workers medem primeiro e
+    guardam o resultado no relatório.
+
+    `None` = não deu para medir; lista vazia = medido, e não havia jogo fora da
+    lista de exceções (o caso da chave GLOBAL da Steam).
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.emulation_actions import (
+            EmulationActionsMixin,
+        )
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            rotulo_do_jogo,
+        )
+
+        return [
+            rotulo_do_jogo(appid)
+            for appid in EmulationActionsMixin._steam_input_appids_ligados()
+        ]
+    except Exception as exc:  # pragma: no cover - defesa; nunca derruba o botão
+        logger.warning("steam_input_medicao_falhou", erro=str(exc))
+        return None
+
+
 def format_fix_safe_result(relatorio: object) -> str:
     """Toast do botão "Aplicar correções" (sem senha) — pura, testável.
 
@@ -401,15 +483,16 @@ def format_fix_safe_result(relatorio: object) -> str:
     if isinstance(bruto, tuple) and len(bruto) == 2:
         rc, saida = bruto
         tag = _tag_do_script(saida)
+        jogos = _jogos_do_relatorio(relatorio.get("steam_input_jogos"))
         if tag in ("adiado-steam-aberta", "recusado-jogo-aberto"):
             partes.append(
                 "Só o Steam Input NÃO foi desligado: "
-                + _frase_steam_input(int(rc), tag)
+                + _frase_steam_input(int(rc), tag, jogos)
                 + " Use o botão 'Deixar tudo pronto' — ele pede sua permissão "
                 "para fechar a Steam e faz o resto sozinho."
             )
         else:
-            partes.append("Steam Input: " + _frase_steam_input(int(rc), tag))
+            partes.append("Steam Input: " + _frase_steam_input(int(rc), tag, jogos))
     partes.append(
         "A cura anti-storm do áudio já é persistente (install) — reconecte o "
         "controle para ela pegar nesta sessão."
@@ -671,7 +754,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
         self._toast_daemon("Aplicando correções (não pede senha)…")
 
         def _worker() -> None:
-            relatorio: dict[str, Any] = {"ran": 0, "missing": 0, "steam_input": None}
+            relatorio: dict[str, Any] = {
+                "ran": 0,
+                "missing": 0,
+                "steam_input": None,
+                # D-33: medido ANTES de rodar — depois os appids já foram
+                # zerados no vdf e não haveria mais como nomear o jogo.
+                "steam_input_jogos": medir_jogos_com_steam_input(),
+            }
             for relpath, args in (
                 ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
                 ("scripts/fix_wireplumber_default_source.sh", ["--install"]),
@@ -1076,7 +1166,14 @@ class DaemonActionsMixin(WidgetAccessMixin):
                 apply_fn = getattr(slo, "apply_wrapper_to_all_games", None)
 
                 def _acao() -> dict[str, Any]:
-                    saida: dict[str, Any] = {"script": None, "wrapper": None}
+                    saida: dict[str, Any] = {
+                        "script": None,
+                        "wrapper": None,
+                        # D-33: a medição acontece DENTRO da janela de Steam
+                        # fechada e ANTES do script — é o último instante em
+                        # que o vdf ainda diz de qual jogo estamos falando.
+                        "steam_input_jogos": medir_jogos_com_steam_input(),
+                    }
                     if script is not None:
                         proc = subprocess.run(
                             ["bash", str(script), "--apply-quiet"],

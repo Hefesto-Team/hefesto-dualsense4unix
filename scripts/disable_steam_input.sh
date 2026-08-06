@@ -413,9 +413,17 @@ case "${MODE}" in
             exit 4
         fi
         # Pré-flight: alguém precisa fix? Se ninguém, evita fechar Steam à toa.
+        #
+        # D-32 (05/08/2026): este pré-voo usava o `needs_fix`, que casa também
+        # o opt-in per-app da allowlist. Com SÓ appids da allowlist ligados ele
+        # dizia "sim, precisa" — e o `--apply` FECHAVA E REABRIA a Steam dela
+        # para não mudar byte nenhum, terminando em `resultado=aplicado`, que a
+        # janela traduzia para "a Steam não sequestra mais o seu controle".
+        # Quem decide aqui é o `needs_real_fix`: precisa = a transformação
+        # MUDARIA o arquivo. Mesmo critério do `--status`.
         any_needs=0
         for vdf in "${VDFS[@]}"; do
-            needs_fix "$vdf" && any_needs=1
+            needs_real_fix "$vdf" && any_needs=1
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
@@ -447,9 +455,14 @@ case "${MODE}" in
             resultado "adiado-steam-aberta"
             exit 0
         fi
+        # D-32, mesma cura do `--apply` acima: este é o modo que o guarda de
+        # 30 em 30 minutos roda, e é dele que saiu o `resultado=aplicado` das
+        # 02:13:13 de 05/08 sobre um arquivo que ninguém tocou. O `--apply-quiet`
+        # não fecha a Steam, mas a tag mentirosa chega igual à janela (o botão
+        # "Aplicar correções" e o "Deixar tudo pronto" leem esta linha).
         any_needs=0
         for vdf in "${VDFS[@]}"; do
-            needs_fix "$vdf" && any_needs=1
+            needs_real_fix "$vdf" && any_needs=1
         done
         if [[ "${any_needs}" -eq 0 ]]; then
             log "nada a fazer — Steam Input já está OFF em todos os ${#VDFS[@]} vdf(s)"
