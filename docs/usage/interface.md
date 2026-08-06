@@ -88,10 +88,36 @@ Lista de perfis salvos com **Novo**, **Duplicar**, **Remover**, **Ativar** e
 **Avançado** (`window_class`, `title_regex`, `process_name` — AND entre os campos
 preenchidos, OR dentro de cada lista).
 
-Cada perfil tem prioridade de 0 a 100 e pode carregar um **modo** — o que ele
-liga ao ser ativado.
+Cada perfil tem prioridade de 0 a 200 e pode carregar um **modo** — o que ele
+liga ao ser ativado. A prioridade é o **segundo** critério, não o primeiro: um
+perfil com regra de janela sempre vence um perfil "Sempre", por mais alta que
+seja a prioridade deste. A faixa tem fonte única em `profiles/schema.py`, e há
+portão que reprova se o controle deslizante e o verificador discordarem.
 
 Como escrever um perfil do zero: [`creating-profiles.md`](creating-profiles.md).
+
+## Os avisos que a janela dá antes de estragar um perfil
+
+Três perguntas existem para que um gesto distraído não custe configuração. Em
+todas, o botão pré-selecionado é o que **não** mexe em nada — um Enter distraído
+nunca destrói.
+
+Salvar um perfil com prioridade menor do que ele tinha:
+
+![Aviso de queda de prioridade](assets/dialogos/dialogo_rebaixa_prioridade.png)
+
+Salvar um perfil que valia só em certos programas de um jeito que o faz valer
+para tudo. O texto diz o que o perfil é **hoje**, porque avisar "vale só em
+programas específicos" para um perfil que é "Só manual" seria o aviso mentindo:
+
+![Aviso de virar Sempre](assets/dialogos/dialogo_vira_sempre_de_programa_especifico.png)
+
+![Aviso de virar Sempre, vindo de Só manual](assets/dialogos/dialogo_vira_sempre_de_so_manual.png)
+
+Ativar um perfil com alterações não salvas nas abas. Manter as alterações é o
+padrão, e nesse caso as abas seguem mostrando o que você ainda não salvou:
+
+![Aviso de edição pendente](assets/dialogos/dialogo_descarta_edicao_pendente.png)
 
 ## Sistema
 
