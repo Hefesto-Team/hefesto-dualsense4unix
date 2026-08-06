@@ -880,7 +880,23 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if box is None:
             return
         if active_id in _IDS_COM_CAMPO_LIVRE:
-            box.show()
+            # CAMPO-QUE-NAO-NASCE-01 (05/08/2026, relatado por ela: "quando eu
+            # clico em jogo da steam não aparece nenhum campo pra digitar").
+            #
+            # O box do glade nasce com `no-show-all=True` — de propósito, para
+            # que o `show_all()` da janela não o revele antes da hora. O efeito
+            # colateral é que esse mesmo `show_all()` **não desce nos filhos**:
+            # o rótulo e o `GtkEntry` nunca são mostrados. Um `box.show()` aqui
+            # revela a CAIXA e mais nada, e ela vê um vão vazio no lugar do
+            # campo — sem erro, sem log, sem jeito de digitar o appid.
+            #
+            # `show_all()` direto também não resolve: a doutrina do GTK é que
+            # `no_show_all` faz o `show_all()` ignorar o widget, inclusive
+            # quando chamado NELE. Por isso a ordem é desarmar e só então
+            # mostrar; o `no_show_all` é redundante depois que o box passa a ser
+            # gerido por este handler, que o esconde de volta no `else`.
+            box.set_no_show_all(False)
+            box.show_all()
         else:
             box.hide()
         # MODO-01/B1: escolher "jogo"/"jogo da Steam" num perfil NOVO já

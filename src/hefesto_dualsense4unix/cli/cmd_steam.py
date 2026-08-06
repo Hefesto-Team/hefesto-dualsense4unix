@@ -34,12 +34,17 @@ virtual do Hefesto ou o Steam Input.
 from __future__ import annotations
 
 import contextlib
-import re
-from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.markup import escape
+
+# D-33 (05/08/2026): a leitura do `appmanifest_<appid>.acf` morava AQUI, e por
+# isso só a linha de comando sabia dizer o nome do jogo — o doctor e a janela
+# não podem importar este módulo (typer/rich no topo). A função mudou de casa
+# para `integrations/steam_launch_options`, que já é o dono da allowlist e é
+# stdlib puro; aqui fica o reexport, para não quebrar quem já a importava.
+from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
 
 app = typer.Typer(
     name="steam-input",
@@ -47,57 +52,6 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
-
-#: Linha `"chave"<tab>"valor"` de .acf/.vdf. O valor pode conter espaço.
-_PAR_VDF = re.compile(r'^\s*"(?P<chave>[^"]+)"\s+"(?P<valor>.*)"\s*$')
-
-
-def _desescapar(valor: str) -> str:
-    """Desfaz o escape de VDF (`\\\\` e `\\"`) — mesmo critério do proton_pin."""
-    return valor.replace('\\\\', '\\').replace('\\"', '"')
-
-
-def _pastas_steamapps(home: Path | None = None) -> list[Path]:
-    """A `steamapps` padrão mais as bibliotecas extras do `libraryfolders.vdf`.
-
-    Best-effort e read-only: biblioteca ilegível ou ausente é pulada em
-    silêncio — listar jogo é conveniência, não pode derrubar o comando.
-    """
-    from hefesto_dualsense4unix.integrations.proton_pin import default_steam_root
-
-    raiz = default_steam_root(home) / "steamapps"
-    pastas = [raiz]
-    with contextlib.suppress(OSError):
-        texto = (raiz / "libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
-        for linha in texto.splitlines():
-            par = _PAR_VDF.match(linha)
-            if par is None or par.group("chave").lower() != "path":
-                continue
-            candidata = Path(_desescapar(par.group("valor"))) / "steamapps"
-            if candidata.is_dir() and candidata not in pastas:
-                pastas.append(candidata)
-    return pastas
-
-
-def nome_do_appid(appid: str, home: Path | None = None) -> str | None:
-    """Nome do jogo pelo `appmanifest_<appid>.acf`. `None` = não instalado.
-
-    Sem rede e sem cache: o manifest é a fonte que a própria Steam mantém em
-    disco. Se o jogo foi desinstalado, devolver `None` é a resposta honesta.
-    """
-    for steamapps in _pastas_steamapps(home):
-        manifesto = steamapps / f"appmanifest_{appid}.acf"
-        try:
-            texto = manifesto.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
-        for linha in texto.splitlines():
-            par = _PAR_VDF.match(linha)
-            if par is not None and par.group("chave").lower() == "name":
-                nome = _desescapar(par.group("valor")).strip()
-                if nome:
-                    return nome
-    return None
 
 
 def _entradas() -> list[tuple[str, str | None]]:

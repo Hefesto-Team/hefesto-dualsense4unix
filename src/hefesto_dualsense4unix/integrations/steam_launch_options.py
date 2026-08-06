@@ -61,7 +61,7 @@ import shutil
 import subprocess
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -767,6 +767,93 @@ def parse_steam_input_allowlist(text: str) -> list[str]:
         if token and token not in out:
             out.append(token)
     return out
+
+
+# --- appid -> nome do jogo (D-33, 05/08/2026) -------------------------------
+# A tradução existia, mas SÓ dentro da CLI (`cli/cmd_steam.py`), que importa
+# typer e rich no topo — inimportável de dentro do doctor ou da janela. Por
+# isso as três mensagens do Steam Input falavam em "1 perfil(is)" e em "Ligado"
+# sem dizer DE QUAL JOGO. A leitura mudou de casa para cá (o módulo que já é o
+# dono da allowlist), e a CLI passou a importá-la daqui.
+#
+# Sem rede e sem cache: a fonte é o `appmanifest_<appid>.acf` que a própria
+# Steam mantém em disco. Jogo desinstalado não tem manifest — nesse caso o
+# appid CRU é a resposta honesta, e inventar nome não é.
+
+#: Linha `"chave"<tab>"valor"` de .acf/.vdf. O valor pode conter espaço.
+_PAR_ACF = re.compile(r'^\s*"(?P<chave>[^"]+)"\s+"(?P<valor>.*)"\s*$')
+
+
+def _desescapar_acf(valor: str) -> str:
+    """Desfaz o escape de VDF (`\\\\` e `\\"`) — mesmo critério do proton_pin."""
+    return valor.replace('\\\\', '\\').replace('\\"', '"')
+
+
+def pastas_steamapps(home: Path | None = None) -> list[Path]:
+    """A `steamapps` padrão mais as bibliotecas extras do `libraryfolders.vdf`.
+
+    Best-effort e read-only: biblioteca ilegível ou ausente é pulada em
+    silêncio — traduzir appid em nome é conveniência, não pode derrubar nada.
+    """
+    from hefesto_dualsense4unix.integrations.proton_pin import default_steam_root
+
+    raiz = default_steam_root(home) / "steamapps"
+    pastas = [raiz]
+    with contextlib.suppress(OSError):
+        texto = (raiz / "libraryfolders.vdf").read_text(encoding="utf-8", errors="replace")
+        for linha in texto.splitlines():
+            par = _PAR_ACF.match(linha)
+            if par is None or par.group("chave").lower() != "path":
+                continue
+            candidata = Path(_desescapar_acf(par.group("valor"))) / "steamapps"
+            if candidata.is_dir() and candidata not in pastas:
+                pastas.append(candidata)
+    return pastas
+
+
+def nome_do_appid(appid: str, home: Path | None = None) -> str | None:
+    """Nome do jogo pelo `appmanifest_<appid>.acf`. `None` = não instalado."""
+    for steamapps in pastas_steamapps(home):
+        manifesto = steamapps / f"appmanifest_{appid}.acf"
+        try:
+            texto = manifesto.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for linha in texto.splitlines():
+            par = _PAR_ACF.match(linha)
+            if par is not None and par.group("chave").lower() == "name":
+                nome = _desescapar_acf(par.group("valor")).strip()
+                if nome:
+                    return nome
+    return None
+
+
+def rotulo_do_jogo(appid: object, home: Path | None = None) -> str:
+    """Como o jogo aparece numa frase de tela: nome quando dá, appid sempre.
+
+    ``"Mullet Mad Jack (appid 2111190)"`` quando o manifest existe; o cru
+    ``"appid 2111190"`` quando não. O appid NUNCA some da frase: é o número
+    que ela precisa para conferir na Steam e o único identificador que os três
+    cadastros do projeto (vdf, allowlist, env materializado) compartilham.
+    """
+    bruto = str(appid).strip()
+    nome = nome_do_appid(bruto, home) if bruto else None
+    return f"{nome} (appid {bruto})" if nome else f"appid {bruto}"
+
+
+def juntar_rotulos(rotulos: Sequence[str]) -> str:
+    """`["A", "B", "C"]` -> ``"A, B e C"``. Vazio -> ``""``. Pura (sem disco)."""
+    lista = list(rotulos)
+    if not lista:
+        return ""
+    if len(lista) == 1:
+        return lista[0]
+    return f"{', '.join(lista[:-1])} e {lista[-1]}"
+
+
+def lista_de_jogos(appids: Sequence[object], home: Path | None = None) -> str:
+    """`[a, b, c]` -> ``"Jogo A (appid a), Jogo B (appid b) e ..."``."""
+    return juntar_rotulos([rotulo_do_jogo(a, home) for a in appids])
 
 
 def add_appid_to_steam_input_allowlist(

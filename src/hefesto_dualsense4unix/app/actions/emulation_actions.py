@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import glob
+import html
 import os
 import re
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -29,6 +31,7 @@ from hefesto_dualsense4unix.app.constants import ROOT_DIR
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.app.ipc_bridge import _get_executor, call_async, run_in_thread
 from hefesto_dualsense4unix.integrations.hotkey_daemon import DEFAULT_BUFFER_MS
+from hefesto_dualsense4unix.integrations.steam_launch_options import juntar_rotulos
 from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     DEVICE_NAME,
     DUALSENSE_EDGE_NAME,
@@ -302,6 +305,61 @@ def format_steam_input_result(
         "O script rodou sem erro, mas não consegui conferir o resultado "
         "(não achei os arquivos da Steam)."
     )
+
+
+def markup_status_steam_input(
+    on: bool | None,
+    jogos: Sequence[str],
+    excecoes: Sequence[int],
+    efetiva: bool | None,
+) -> str:
+    """Markup da linha "Steam Input" da aba Emulação — pura, testável sem GTK.
+
+    D-33 (05/08/2026): a linha dizia ``"Ligado — conflita com o Hefesto"``.
+    Ela não dizia de qual JOGO falava, e chamava de *conflito* uma escolha que
+    a usuária tinha tomado na janela da própria Steam ("não faço ideia de
+    quando é pra ativar os controles Steam e quando não"). O texto agora nomeia
+    o jogo e diz o que o Hefesto VAI fazer, e por quê — a palavra "conflito"
+    saiu porque não é conflito nenhum: é uma regra do Hefesto contra uma
+    escolha dela, e quem perde é sempre a escolha dela.
+
+    `jogos` são rótulos JÁ traduzidos (`rotulo_do_jogo`), porque traduzir lê o
+    disco e isto aqui roda no laço da interface. Lista vazia com ``on`` verdade
+    = a chave GLOBAL da Steam, que não pertence a jogo nenhum.
+    """
+    if on is None:
+        markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
+    elif on:
+        if jogos:
+            sujeito = (
+                "esse jogo não está" if len(jogos) == 1 else "esses jogos não estão"
+            )
+            corpo = (
+                f"Ligado para {juntar_rotulos(jogos)} — o Hefesto desliga no "
+                f"próximo ciclo, porque {sujeito} na sua lista de exceções"
+            )
+        else:
+            corpo = (
+                "Ligado no ajuste global da Steam — vale para todo jogo, e o "
+                "Hefesto desliga no próximo ciclo"
+            )
+        markup = f'<span foreground="#ffb86c">{html.escape(corpo)}</span>'
+    else:
+        markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
+    if excecoes:
+        # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
+        # só se está escrito no arquivo.
+        if efetiva is None:
+            extra = "sem controle físico visível"
+        elif efetiva:
+            extra = "controle liberado agora"
+        else:
+            extra = "só valendo durante o jogo"
+        markup += (
+            f' <span foreground="#8b8fa8">· Exceção por jogo: '
+            f'{len(excecoes)} jogo(s) — {extra}</span>'
+        )
+    return markup
 
 
 #: EMULACAO-NO-JOGO-01/E1(c): tradução do vocabulário FECHADO de ``bloqueio``,
@@ -1214,6 +1272,36 @@ class EmulationActionsMixin(WidgetAccessMixin):
         return False
 
     @staticmethod
+    def _steam_input_appids_ligados() -> list[str]:
+        """AppIDs com Steam Input per-app ligado FORA da allowlist, sem repetir.
+
+        D-33 (05/08/2026): o `_steam_input_is_on` responde SIM/NÃO, e era com
+        esse SIM que a aba escrevia "Ligado — conflita com o Hefesto". Ela
+        precisa saber DE QUAL JOGO se fala — o appid é o mínimo honesto, e o
+        nome vem junto quando a Steam tem o `appmanifest` em disco.
+
+        Só os JOGOS: a chave global (PSSupport/SwitchSupport) não pertence a
+        jogo nenhum e por isso não entra aqui.
+        """
+        from hefesto_dualsense4unix.integrations.storm_doctor import (
+            steam_input_allowlist,
+            steam_input_fora_da_allowlist,
+        )
+
+        vdfs = glob.glob(
+            str(Path.home() / ".steam" / "steam" / "userdata" / "*" / "config" / "localconfig.vdf")
+        )
+        allow = steam_input_allowlist()
+        achados: list[str] = []
+        for vdf in vdfs:
+            with contextlib.suppress(OSError):
+                texto = Path(vdf).read_text(encoding="utf-8", errors="ignore")
+                for appid in steam_input_fora_da_allowlist(texto, allow)[0]:
+                    if appid not in achados:
+                        achados.append(appid)
+        return achados
+
+    @staticmethod
     def _steam_input_excecao_status() -> tuple[list[int], bool | None]:
         """(appids da allowlist, exceção EFETIVA agora) — R-06 item 3.
 
@@ -1246,33 +1334,25 @@ class EmulationActionsMixin(WidgetAccessMixin):
         if label is None:
             return
 
-        def _check() -> tuple[bool | None, list[int], bool | None]:
-            return (self._steam_input_is_on(), *self._steam_input_excecao_status())
+        def _check() -> tuple[bool | None, list[str], list[int], bool | None]:
+            from hefesto_dualsense4unix.integrations.steam_launch_options import (
+                rotulo_do_jogo,
+            )
 
-        def _on_ok(dados: tuple[bool | None, list[int], bool | None]) -> bool:
-            on, appids, efetiva = dados
-            if on is None:
-                markup = '<span foreground="#8b8fa8">Steam não encontrado</span>'
-            elif on:
-                markup = (
-                    '<span foreground="#ffb86c">Ligado — conflita com o Hefesto</span>'
-                )
-            else:
-                markup = '<span foreground="#50fa7b">Desligado — tudo certo</span>'
-            if appids:
-                # R-06: a usuária precisa ver se o opt-in dela está VALENDO, não
-                # só se está escrito no arquivo.
-                if efetiva is None:
-                    extra = "sem controle físico visível"
-                elif efetiva:
-                    extra = "controle liberado agora"
-                else:
-                    extra = "só valendo durante o jogo"
-                markup += (
-                    f' <span foreground="#8b8fa8">· Exceção por jogo: '
-                    f'{len(appids)} jogo(s) — {extra}</span>'
-                )
-            label.set_markup(markup)
+            on = self._steam_input_is_on()
+            # A tradução appid -> nome LÊ O DISCO (appmanifest da Steam), e por
+            # isso acontece aqui, na thread — nunca no `_on_ok`, que roda no
+            # laço da interface. Só quando há algo ligado: sem isso, todo
+            # refresh pagaria a varredura das bibliotecas da Steam à toa.
+            jogos = (
+                [rotulo_do_jogo(a) for a in self._steam_input_appids_ligados()]
+                if on
+                else []
+            )
+            return (on, jogos, *self._steam_input_excecao_status())
+
+        def _on_ok(dados: tuple[bool | None, list[str], list[int], bool | None]) -> bool:
+            label.set_markup(markup_status_steam_input(*dados))
             return False
 
         run_in_thread(_check, on_success=_on_ok)

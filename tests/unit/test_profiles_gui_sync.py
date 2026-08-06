@@ -345,11 +345,28 @@ class _FakeCombo:
 
 
 class _FakeBox:
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
+
+    CAMPO-QUE-NAO-NASCIA-01: nasce com ``no_show_all`` armado como no glade;
+    ``show()`` para na caixa e só ``show_all()`` desarmado desce nos filhos.
+    """
+
     def __init__(self) -> None:
         self.visible = True
+        self.no_show_all = True
+        self.filhos_visiveis = False
 
     def show(self) -> None:
         self.visible = True
+
+    def show_all(self) -> None:
+        if self.no_show_all:
+            return
+        self.visible = True
+        self.filhos_visiveis = True
+
+    def set_no_show_all(self, valor: bool) -> None:
+        self.no_show_all = bool(valor)
 
     def hide(self) -> None:
         self.visible = False

@@ -127,11 +127,32 @@ class _FakeSwitch:
 
 
 class _FakeBox:
+    """Dublê da linha "Nome do jogo:" com a doutrina de visibilidade do GTK.
+
+    CAMPO-QUE-NAO-NASCIA-01: o box nasce no glade com ``no-show-all=True``, e o
+    dublê nasce igual — senão ele responde "mostrei" a um ``show_all()`` que o
+    GTK de verdade ignoraria. ``show()`` para NA CAIXA (`filhos_visiveis`
+    continua falso); só ``show_all()`` com o ``no_show_all`` desarmado desce nos
+    filhos. Quem quiser afirmar que ela tem ONDE DIGITAR mede com GTK real em
+    ``test_campo_que_nao_nascia_01_o_jogo_da_steam_sem_onde_digitar.py``.
+    """
+
     def __init__(self) -> None:
         self.visivel = False
+        self.no_show_all = True
+        self.filhos_visiveis = False
 
     def show(self) -> None:
         self.visivel = True
+
+    def show_all(self) -> None:
+        if self.no_show_all:
+            return
+        self.visivel = True
+        self.filhos_visiveis = True
+
+    def set_no_show_all(self, valor: bool) -> None:
+        self.no_show_all = bool(valor)
 
     def hide(self) -> None:
         self.visivel = False

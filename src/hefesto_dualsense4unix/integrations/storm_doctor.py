@@ -69,14 +69,22 @@ def steam_input_allowlist(path: Path | None = None) -> set[str]:
     return out
 
 
-def steam_input_on_fora_da_allowlist(text: str, allow: set[str]) -> bool:
-    """True se alguma chave de Steam Input em "1"/"2" está FORA da allowlist.
+def steam_input_fora_da_allowlist(text: str, allow: set[str]) -> tuple[list[str], bool]:
+    """`(appids per-app ligados fora da allowlist, chave GLOBAL ligada?)`.
 
     Anda a pilha de blocos do VDF (linha `"nome"` seguida de `{` abre bloco):
     `UseSteamControllerConfig` dentro de `apps/<appid>` da allowlist é opt-in
-    deliberado e não conta; qualquer outra ocorrência (inclusive as chaves
-    GLOBAIS PSSupport/SwitchSupport) conta como ligado-conflitante.
+    deliberado e não conta; qualquer outro `UseSteamControllerConfig` é um
+    JOGO, e o appid dele volta na lista. As chaves GLOBAIS
+    (PSSupport/SwitchSupport) não pertencem a jogo nenhum — elas voltam no
+    segundo termo, e por isso a mensagem pode falar delas sem inventar jogo.
+
+    D-33 (05/08/2026): quem chamava sabia só que "havia algo ligado"; a
+    mensagem então contava ARQUIVOS `vdf`. Aqui nasce o dado que faltava para
+    a tela poder dizer o NOME do jogo.
     """
+    appids: list[str] = []
+    global_ligado = False
     stack: list[str] = []
     pending = ""
     for line in text.splitlines():
@@ -96,14 +104,26 @@ def steam_input_on_fora_da_allowlist(text: str, allow: set[str]) -> bool:
         km = _SI_KEY_RE.search(line)
         if km is None:
             continue
-        if (
-            km.group(1) == "UseSteamControllerConfig"
-            and stack
-            and stack[-1] in allow
-        ):
+        if km.group(1) != "UseSteamControllerConfig":
+            global_ligado = True
             continue
-        return True
-    return False
+        appid = stack[-1] if stack else ""
+        if appid in allow:
+            continue
+        if appid and appid not in appids:
+            appids.append(appid)
+        elif not appid:
+            # `UseSteamControllerConfig` fora de qualquer bloco `apps/<id>`:
+            # não dá para atribuir a jogo nenhum — entra como global em vez de
+            # virar um jogo de appid vazio.
+            global_ligado = True
+    return appids, global_ligado
+
+
+def steam_input_on_fora_da_allowlist(text: str, allow: set[str]) -> bool:
+    """True se alguma chave de Steam Input em "1"/"2" está FORA da allowlist."""
+    appids, global_ligado = steam_input_fora_da_allowlist(text, allow)
+    return bool(appids) or global_ligado
 
 
 def check_quirk(quirks_text: str | None = None) -> tuple[str, str]:
@@ -144,6 +164,10 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
 
     ON é RUIM neste contexto (incompatível no Linux p/ Grim; e o storm/duplo-input).
     """
+    from hefesto_dualsense4unix.integrations.steam_launch_options import (
+        lista_de_jogos,
+    )
+
     home = home or Path.home()
     vdfs = find_localconfig_vdfs(home)
     if not vdfs:
@@ -151,22 +175,46 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
     # STEAM-INPUT-ALLOWLIST-01: opt-in per-app deliberado (ex.: MMJ) não é
     # conflito — só acusa o que a transformação do guard corrigiria.
     allow = steam_input_allowlist()
-    on = [
-        v
-        for v in vdfs
-        if steam_input_on_fora_da_allowlist(_safe_read(v), allow)
-    ]
-    if on:
+    appids: list[str] = []
+    global_ligado = False
+    for v in vdfs:
+        ids, glob_on = steam_input_fora_da_allowlist(_safe_read(v), allow)
+        for appid in ids:
+            if appid not in appids:
+                appids.append(appid)
+        global_ligado = global_ligado or glob_on
+    if appids or global_ligado:
         # STEAM-INPUT-01 (entrega 9): o rótulo citado aqui era 'Reaplicar fixes
         # seguros', que não é o nome de widget nenhum. O botão que de fato roda
         # o `disable_steam_input.sh --apply-quiet` chama-se "Aplicar correções"
         # e mora na aba Sistema (`gui/main.glade`, id `btn_storm_fix_safe`,
         # handler `on_storm_fix_safe` em `app/actions/daemon_actions.py`).
-        return (
-            WARN,
-            f"Steam Input LIGADO em {len(on)} perfil(is) fora da allowlist — "
-            "clique 'Aplicar correções' na aba Sistema para desligar",
-        )
+        #
+        # D-33 (05/08/2026): a frase era "Steam Input LIGADO em N perfil(is)
+        # fora da allowlist — clique 'Aplicar correções'". Três defeitos num
+        # fôlego: o N contava ARQUIVOS `vdf` e não JOGOS; ela não dizia DE QUAL
+        # jogo falava; e mandava clicar no botão que APAGA exatamente a escolha
+        # que a usuária tomou na janela da Steam. Agora o jogo é nomeado, o que
+        # vai acontecer é dito antes de acontecer, e o botão apontado é o que
+        # PRESERVA a escolha. O ajuste GLOBAL da Steam continua sendo caso do
+        # 'Aplicar correções' — ele não é escolha por jogo, é chave geral.
+        partes: list[str] = []
+        if appids:
+            jogos = lista_de_jogos(appids, home)
+            sujeito = "esse jogo não está" if len(appids) == 1 else "esses jogos não estão"
+            partes.append(
+                f"Steam Input ligado para {jogos} — o Hefesto vai desligá-lo no "
+                f"próximo ciclo do guarda, porque {sujeito} na sua lista de "
+                "exceções. Para manter a sua escolha, abra o jogo e clique "
+                "'Este jogo não funciona' na aba Sistema."
+            )
+        if global_ligado:
+            partes.append(
+                "Steam Input LIGADO no ajuste GLOBAL da Steam (vale para todo "
+                "jogo, não é escolha por jogo) — clique 'Aplicar correções' na "
+                "aba Sistema para desligar."
+            )
+        return WARN, " ".join(partes)
     excecoes = [
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
     ]
@@ -294,5 +342,8 @@ __all__ = [
     "check_steam_input",
     "check_wireplumber",
     "find_localconfig_vdfs",
+    "steam_input_allowlist",
+    "steam_input_fora_da_allowlist",
+    "steam_input_on_fora_da_allowlist",
     "storm_report",
 ]
