@@ -140,9 +140,24 @@ class DaemonConfig:
     gamepad_flavor: str = "dualsense"
     # FEAT-DSX-COOP-LOCAL-01 — co-op local: cada controle físico vira um jogador
     # (P1, P2, …) com seu próprio gamepad virtual, em vez do modo "N controles, 1
-    # player" (broadcast). OFF por default (preserva o uso de reserva/troca de
-    # controle). Só tem efeito com a emulação de gamepad ligada + 2+ controles.
-    coop_enabled: bool = False
+    # player" (broadcast). Só tem efeito com a emulação de gamepad ligada + 2+
+    # controles.
+    #
+    # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA. O default era `False`,
+    # e o motivo escrito aqui era *"preserva o uso de reserva/troca de
+    # controle"*. Esse motivo CADUCOU POR DECISÃO DELA, tomada mais de uma vez:
+    # *"todos e tudo no Hefesto tem que tá com o permitir co-op ligado (…) se eu
+    # conecto 4 controles no PC eu espero, com 4 pessoas jogando, que cada um
+    # controle o próprio personagem. Ninguém esperaria controlar o mesmo
+    # personagem com cada controle."* Quem quer um controle de reserva o deixa
+    # DESCONECTADO — não precisa de flag para isso, e a flag custava um co-op
+    # que não subia sozinho na máquina de quem nunca ouviu falar dela.
+    #
+    # Este dataclass é o ÚNICO piso desde 06/08: o boot deixou de reler o
+    # opt-out (`utils/session.load_coop_enabled` virou lápide) justamente para
+    # que arrancar este `True` REPROVE — antes, `run()` forçava `True` logo
+    # adiante e um teste de boot passava com a cura arrancada.
+    coop_enabled: bool = True
     # FEAT-KEYBOARD-EMULATOR-01 — emula teclado virtual a partir de botões
     # do DualSense.
     #
@@ -641,19 +656,18 @@ class Daemon:
         kbd_pref = load_keyboard_preference()
         if kbd_pref is not None:
             self.config.keyboard_emulation_enabled = kbd_pref
-        # FEAT-DSX-COOP-LOCAL-01: restaura o co-op local se a sessão anterior o
-        # deixou ligado (só tem efeito com gamepad + 2+ controles; o poll loop
-        # reconcilia via CoopManager.sync).
-        # LEIGO-01: a migração vem ANTES da leitura — o checkbox saiu da UI, e o
-        # opt-out gravado por uma versão antiga deixaria o co-op desligado sem
-        # nenhum caminho de volta na interface.
-        from hefesto_dualsense4unix.utils.session import (
-            load_coop_enabled,
-            migrate_coop_optout,
-        )
+        # FEAT-DSX-COOP-LOCAL-01 / LEIGO-01: apaga o opt-out gravado por versão
+        # antiga (`coop_disabled.flag`) — one-shot, com marker próprio.
+        #
+        # COOP-SEM-INTERRUPTOR-01 (06/08/2026): aqui havia também
+        # `if load_coop_enabled(): self.config.coop_enabled = True`. Saiu, e a
+        # remoção é a entrega, não faxina: com ela, o piso do co-op passa a ter
+        # UM dono só (`DaemonConfig.coop_enabled`, agora `True`). Enquanto o
+        # boot forçava `True` aqui, arrancar o default do dataclass não reprovava
+        # teste nenhum — a cura tinha um sósia.
+        from hefesto_dualsense4unix.utils.session import migrate_coop_optout
+
         migrate_coop_optout()
-        if load_coop_enabled():
-            self.config.coop_enabled = True
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
@@ -1342,11 +1356,22 @@ class Daemon:
         *,
         origin: Literal["manual", "profile"] = "manual",
     ) -> bool:
-        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
+        """Liga o co-op local (FEAT-DSX-COOP-LOCAL-01). Usado pelo IPC.
 
-        Persiste o toggle (sobrevive reboot) e reconcilia na hora: ligar sobe os
-        jogadores secundários (se gamepad on + 2+ controles); desligar desmonta
-        todos (solta grab/uinput). Retorna o estado efetivo de `coop_enabled`.
+        Reconcilia na hora: ligar sobe os jogadores secundários (se gamepad on +
+        2+ controles). Retorna o estado efetivo de `coop_enabled`.
+
+        COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o ramo `False` desta
+        função ficou INALCANÇÁVEL pelas superfícies de comando. `coop.set` recusa
+        `enabled:false` antes de chegar aqui (é lá que mora a política, com a
+        razão legível), o perfil parou de governar o campo e a CLI explica em vez
+        de desligar. O ramo continua escrito porque o setter é o mecanismo — e
+        porque a suspensão legítima do co-op (Steam Input) NÃO passa por ele:
+        ela chama `CoopManager.disable()` direto, sem tocar na flag, e é isso que
+        faz o co-op voltar sozinho quando o jogo fecha.
+
+        A persistência virou lápide junto: `save_coop_enabled` não grava mais
+        opt-out nenhum (só apaga o que versão antiga deixou).
         """
         self.config.coop_enabled = bool(enabled)
         if origin == "manual":
@@ -1413,8 +1438,9 @@ class Daemon:
         A queixa que isto cura: numa instalação nova, quatro DualSense plugados
         alimentam **um cursor só**. `DaemonConfig.gamepad_emulation_enabled`
         nasce `False`, o gate do co-op (`CoopManager.should_be_active`) exige o
-        vpad do P1 de pé, e por isso o `coop_enabled=True` do boot era
-        decorativo: sem emulação não existe jogador 2. O caminho para os quatro
+        vpad do P1 de pé, e por isso o `coop_enabled=True` (o piso do
+        `DaemonConfig`, desde 06/08) é decorativo sozinho: sem emulação não
+        existe jogador 2. O caminho para os quatro
         jogadores passava por abrir um terminal ou caçar a aba certa.
 
         Um segundo controle na mesa é a declaração de intenção mais clara que
@@ -2079,12 +2105,21 @@ class Daemon:
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             if not gamepad_on or (flavor is not None and flavor != flavor_atual):
                 self.set_gamepad_emulation(True, flavor, origin="profile")
-            # LEIGO-01: o default do campo é True (esquema) — o fallback do
-            # getattr acompanha, senão um `mode` dublado sem o campo voltaria a
-            # significar "desliga o co-op".
-            want_coop = bool(getattr(mode, "coop", True))
-            if want_coop != bool(self.config.coop_enabled):
-                self.set_coop_enabled(want_coop, origin="profile")
+            # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo
+            # `mode.coop` do perfil deixou de GOVERNAR. Ele continua sendo LIDO
+            # (e o esquema continua aceitando-o — ver `profiles/schema.py`:
+            # tirá-lo do modelo faria todo perfil dela que traz `"coop"` falhar
+            # na validação, inclusive dois presets de fábrica), mas nenhum perfil
+            # liga nem desliga o co-op: cada controle é um jogador, sempre.
+            # Antes daqui saía `set_coop_enabled(want_coop, origin="profile")`,
+            # e um perfil antigo com `"coop": false` desligava o co-op dela ao
+            # ativar — pelas costas de quem nunca pediu isso.
+            _coop_do_perfil_ignorado = bool(getattr(mode, "coop", True))
+            if not _coop_do_perfil_ignorado:
+                logger.info(
+                    "perfil_pediu_coop_off_ignorado",
+                    motivo="coop_sempre_ligado",
+                )
             self._mode_from_profile = "gamepad"
             return APLICADO
 
@@ -2155,7 +2190,7 @@ class Daemon:
             return self._log_modo_jogo_padrao(
                 ADIADO_LOCK_MANUAL, "gesto_manual_recente", wm_class
             )
-        # Modo Nativo MANUAL ("Jogar direto (Sony)") já É a resposta dela para
+        # Modo Nativo MANUAL ("Conexão Nativa (Sony)") já É a resposta dela para
         # "como quero jogar": o controle está SOLTO para o jogo, de propósito.
         # Sem esta guarda, o modo jogo padrão o derrubaria assim que o lock de
         # 30 s vencesse — trocando a escolha explícita dela por um default. É a

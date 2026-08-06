@@ -149,7 +149,7 @@ faz agora*.
 |---|---|
 | **Controlar o PC** | o controle vira mouse e teclado |
 | **Jogar pelo Hefesto** | o jogo enxerga um controle virtual — é o padrão para jogar, e o único modo com co-op local |
-| **Jogar direto (Sony)** | o Hefesto solta o controle e o jogo fala direto com ele |
+| **Conexão Nativa (Sony)** | o Hefesto solta o controle e o jogo fala direto com ele |
 
 As outras oito abas — Status, Gatilhos, Lightbar, Rumble, Perfis, Sistema,
 Emulação e Navegação DSX — estão descritas uma a uma em

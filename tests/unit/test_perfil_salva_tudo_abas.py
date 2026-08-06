@@ -386,7 +386,7 @@ class TestModoDaAbaEmulacaoNaoEvapora:
         """A mordida do outro lado: FEAT-PROFILE-MODE-GUI-01 intacto.
 
         Se a cura fosse "o rascunho sempre vence", o seletor de modo da aba
-        Perfis viraria enfeite — ela escolheria "Jogar direto (Sony)" e o
+        Perfis viraria enfeite — ela escolheria "Conexão Nativa (Sony)" e o
         arquivo nasceria com o gamepad da outra aba.
         """
         perfil = _perfil("Pragmata")

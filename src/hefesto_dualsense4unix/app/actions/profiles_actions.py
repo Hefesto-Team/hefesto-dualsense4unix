@@ -121,6 +121,9 @@ _APLICA_A_ITEMS: list[tuple[str, str]] = [
 # "none" = perfil SEM a seção `mode` (ativar não mexe no modo do sistema);
 # os demais ids espelham ProfileModeConfig.kind.
 # UX-MODE-TERMS-01: mesmos rótulos da aba Início (ação da usuária, sem jargão).
+# UX-MODE-TERMS-02 (06/08/2026): "Jogar direto (Sony)" virou "Conexão Nativa
+# (Sony)" por decisão dela — a nota completa está na frase-dona, em
+# `home_actions._MODE_ITEMS`. O id `native` NÃO muda: é chave de perfil.
 _MODE_KIND_ITEMS: list[tuple[str, str]] = [
     # LEIGO-06: "Sem opinião" é o programa se descrevendo por dentro (o perfil
     # sem a seção `mode`). O rótulo diz o que ATIVAR o perfil faz — ou melhor,
@@ -128,7 +131,7 @@ _MODE_KIND_ITEMS: list[tuple[str, str]] = [
     ("none", "Não mexer no modo"),
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
-    ("native", "Jogar direto (Sony)"),
+    ("native", "Conexão Nativa (Sony)"),
 ]
 
 # Máscara do gamepad virtual (só faz sentido com kind == "gamepad").
@@ -495,6 +498,18 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     # DISCO. Seria o SALVAR-NAO-REBAIXA-01 de novo, na seção `mode`: ela liga o
     # modo jogo na aba Emulação, salva pela aba Perfis e o modo evapora.
     _modo_tocado: bool = False
+    # NUNCA-TROCA-O-ALVO-01 (06/08/2026): a seleção da lista está sendo movida
+    # pelo CÓDIGO, e não pelo dedo dela. Mesmo padrão (e mesma razão) do
+    # `_suppress_advanced_toggle`: o sinal `changed` do GtkTreeSelection não
+    # sabe distinguir quem o emitiu, e o handler repopulava o editor nos dois
+    # casos. Ver `_ha_trabalho_no_editor` para a história inteira.
+    _selecao_programatica: bool = False
+    # NUNCA-TROCA-O-ALVO-01: o perfil do DISCO que o editor está editando — o
+    # ALVO do botão "Salvar este perfil". Escrito só por `_populate_editor`
+    # (que só roda por gesto dela ou com o editor limpo) e pelo próprio Salvar.
+    # `None` = o editor não mira arquivo nenhum (perfil novo, cópia, dublê de
+    # teste), e aí quem responde volta a ser a linha selecionada.
+    _alvo_do_salvar: str | None = None
 
     def install_profiles_tab(self) -> None:
         """Inicializa a aba Perfis: lista, colunas, handlers e estado inicial do toggle."""
@@ -609,7 +624,7 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         kind_sel.set_items(_MODE_KIND_ITEMS)
         kind_sel.set_tooltip_text(
             "O que ativar este perfil liga: controlar o PC, jogar pelo "
-            "Hefesto ou jogar direto (Sony)"
+            "Hefesto ou a conexão nativa (Sony)"
         )
         slot.pack_start(kind_sel, False, False, 0)
         self._mode_kind_selector = kind_sel
@@ -815,18 +830,162 @@ class ProfilesActionsMixin(WidgetAccessMixin):
 
         Retorna True se encontrou e selecionou; False caso contrário (perfil não
         existe no store — ex.: deletado entre refresh e resposta IPC).
+
+        NUNCA-TROCA-O-ALVO-01: com trabalho não salvo no editor, este caminho
+        NÃO mexe na seleção. Ele não é chamado por gesto dela — é o daemon
+        dizendo qual perfil está ativo agora —, e a lista já responde a isso do
+        jeito certo: o NEGRITO de `_mark_active_profile_row`, que é chamado
+        logo antes e não depende da seleção. Mover a barra azul além disso
+        arrastaria junto o editor, o "Ativar", o "Duplicar" e o "Remover", que
+        leem a linha selecionada. Recusar é o menor espanto possível: a lista
+        continua dizendo quem está ativo, e o que ela estava editando continua
+        aberto e apontado para o mesmo arquivo.
         """
+        if not self._selecao_pode_se_mover_sozinha(name):
+            logger.info(
+                "perfis_selecao_automatica_recusada",
+                pedido=name,
+                editando=getattr(self, "_alvo_do_salvar", None),
+            )
+            return False
         store = self._profiles_store
         tree: Gtk.TreeView = self._get("profiles_tree")
         tree_iter = store.get_iter_first()
         while tree_iter is not None:
             if str(store.get_value(tree_iter, 0)) == name:
-                tree.get_selection().select_iter(tree_iter)
+                self._mover_selecao_sem_gesto(tree_iter)
                 path = store.get_path(tree_iter)
                 tree.scroll_to_cell(path, None, False, 0.0, 0.0)
                 return True
             tree_iter = store.iter_next(tree_iter)
         return False
+
+    def _selecao_pode_se_mover_sozinha(self, destino: str) -> bool:
+        """A seleção pode pular para ``destino`` sem que ela tenha pedido?
+
+        Pode quando o editor está limpo — ou quando o destino JÁ é o perfil
+        aberto no editor, caso em que "pular" não muda alvo nenhum.
+        """
+        alvo = getattr(self, "_alvo_do_salvar", None)
+        if alvo and (destino == alvo or mesmo_slug(destino, alvo)):
+            return True
+        return not self._ha_trabalho_no_editor()
+
+    def _mover_selecao_sem_gesto(self, linha: Any) -> None:
+        """Seleciona ``linha`` marcando que quem mexeu foi o CÓDIGO.
+
+        NUNCA-TROCA-O-ALVO-01. ``select_iter`` emite `changed` na hora, e o
+        handler não tem como saber quem o emitiu — a marca é lida por
+        `on_profile_selection_changed`. Mesmo `try/finally` do
+        `_suppress_advanced_toggle`, pelo mesmo motivo: uma exceção no meio
+        deixaria a janela inteira achando que todo clique dela é do código.
+
+        Restaura o valor ANTERIOR em vez de baixar a marca: a repintura de
+        `_populate_profiles_store` já corre marcada e chama isto por dentro —
+        zerar aqui desmarcaria o resto dela pela metade.
+        """
+        tree: Gtk.TreeView = self._get("profiles_tree")
+        anterior = self._selecao_programatica
+        self._selecao_programatica = True
+        try:
+            tree.get_selection().select_iter(linha)
+        finally:
+            self._selecao_programatica = anterior
+
+    def _ha_trabalho_no_editor(self) -> bool:
+        """Há trabalho NÃO SALVO que uma repintura do editor destruiria?
+
+        NUNCA-TROCA-O-ALVO-01 (06/08/2026). A queixa dela: *"clico em salvar e
+        ele salva com um nome aleatório ou de outro perfil"*. Medido: o campo
+        Nome trocava sozinho porque `_populate_editor` reescreve o editor
+        inteiro e é disparado pelo sinal `changed` da SELEÇÃO — que a própria
+        janela emite em três caminhos sem ela encostar na lista (o sync com o
+        perfil ativo ao voltar para a aba, o "Recarregar lista" e o
+        `install_profiles_tab`). O Salvar seguinte gravava no perfil que a
+        janela pôs no campo, e o trabalho dela evaporava.
+
+        Respondem "sim" aqui, nesta ordem de custo:
+
+        - ``_new_profile`` / ``_duplicate_source``: o editor descreve um perfil
+          que ainda NÃO existe em disco. Repintar é apagar o que ela digitou.
+        - as marcas de gesto do SALVAR-NAO-REBAIXA-01/02 e da
+          PERFIL-SALVA-TUDO-01 (regra, prioridade, modo): elas existem porque
+          "ela mexeu nisto" já era uma pergunta que a aba precisava responder.
+        - o campo Nome divergindo do perfil aberto: ela está renomeando.
+        - ``_tem_edicao_pendente`` (R-08): as OUTRAS abas têm alteração por
+          salvar. É o caminho 1 da queixa — ela mexe na cor, o jogo abre, o
+          autoswitch troca o perfil ativo e a volta para a aba Perfis reescreve
+          o campo Nome. O Salvar da aba Perfis emite o rascunho inteiro
+          (`_edita_o_perfil_do_rascunho`), então a cor dela é trabalho que este
+          botão grava — e trocar o alvo por baixo dele é perdê-la.
+
+        Por que a resposta é esta e não uma flag de supressão sozinha: suprimir
+        só o `changed` deixaria a barra azul numa linha e o editor em outra, e o
+        `on_profile_save` lê AS DUAS (a linha responde "quem estou editando?" e
+        o campo responde "com que nome vou gravar?"). Divergentes, elas viram um
+        RENAME aos olhos do R-10 — a janela perguntaria "renomear 'sackboy' para
+        'vitoria'?" por causa de um sinal que ninguém emitiu. Por isso a cura é
+        em três peças que se sustentam: a lista não se move sozinha, o editor
+        não é repintado por seleção que não é dela, e o Salvar mira o alvo
+        MEMORIZADO (`_alvo_do_salvar`) em vez do widget.
+        """
+        if getattr(self, "_new_profile", False):
+            return True
+        if getattr(self, "_duplicate_source", None) is not None:
+            return True
+        if (
+            getattr(self, "_regra_tocada", False)
+            or getattr(self, "_prioridade_tocada", False)
+            or getattr(self, "_modo_tocado", False)
+        ):
+            return True
+        alvo = getattr(self, "_alvo_do_salvar", None)
+        if alvo:
+            try:
+                digitado = (self._get("profile_name_entry").get_text() or "").strip()
+            except Exception:
+                digitado = ""
+            if digitado and not mesmo_slug(digitado, alvo):
+                return True
+        checar = getattr(self, "_tem_edicao_pendente", None)
+        if callable(checar):
+            try:
+                if bool(checar()):
+                    return True
+            except Exception as exc:
+                # NUNCA-TROCA-O-ALVO-01/M2 (06/08/2026): este portão FECHA no
+                # escuro. "Não sei responder" não pode virar "não há trabalho a
+                # proteger" — foi medido: forçando `_tem_edicao_pendente` a
+                # estourar, o defeito INTEIRO volta (o editor pula para o perfil
+                # do jogo, o Salvar grava lá, e a cor dela some sem diálogo). Um
+                # falso "sim" custa uma seleção que não acompanha o perfil ativo
+                # até ela clicar; um falso "não" custa o trabalho dela. Não há
+                # gatilho conhecido em produção (`self.draft != baseline` são
+                # dois pydantic), e é por isso mesmo que a resposta é barata.
+                logger.warning("perfis_edicao_pendente_indeterminada", err=str(exc))
+                return True
+        return False
+
+    def _alvo_do_salvar_do_editor(self) -> str | None:
+        """Qual perfil do disco o "Salvar este perfil" vai gravar por cima.
+
+        NUNCA-TROCA-O-ALVO-01: a pergunta era feita ao WIDGET
+        (`_selected_profile_name`), e por isso a resposta mudava sempre que a
+        janela mexia na lista por conta própria. Passa a ser o alvo memorizado
+        no gesto — o perfil que `_populate_editor` de fato abriu.
+
+        O fallback para a linha selecionada não é preguiça: sem nenhum
+        `_populate_editor` na história (dublê de teste, glade degradado, uma
+        aba montada sozinha) o widget é a única fonte que existe, e era o
+        comportamento de sempre.
+        """
+        alvo = getattr(self, "_alvo_do_salvar", None)
+        if alvo:
+            return str(alvo)
+        try:
+            return self._selected_profile_name()
+        except Exception:
+            return None
 
     # --- handlers de toggle e radio ---
 
@@ -1044,6 +1203,18 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         profile = self._find_cached_profile(name)
         if profile is None:
             return
+        # NUNCA-TROCA-O-ALVO-01: a janela nunca troca o alvo do Salvar sem gesto
+        # dela. Seleção que o CÓDIGO moveu (repintura da lista depois de
+        # `store.clear()`, sync com o perfil ativo) atualiza a LISTA e para por
+        # aí enquanto houver trabalho não salvo — repintar aqui é apagar o que
+        # ela ainda não gravou e mirar o Salvar noutro arquivo.
+        if self._selecao_programatica and self._ha_trabalho_no_editor():
+            logger.info(
+                "perfis_editor_preservado_em_selecao_automatica",
+                linha=name,
+                editando=getattr(self, "_alvo_do_salvar", None),
+            )
+            return
         self._populate_editor(profile)
 
     # ONDA-U (U3-B): `on_profile_row_activated` foi REMOVIDO junto com o
@@ -1063,6 +1234,8 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # `unselect_all()` seria o caminho óbvio e está DESCARTADO: dispara
         # repopulação do editor e apagaria o que ela acabou de digitar.
         self._new_profile = True
+        # NUNCA-TROCA-O-ALVO-01: um perfil novo não mira arquivo nenhum ainda.
+        self._alvo_do_salvar = None
         self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
@@ -1191,6 +1364,9 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._duplicate_source = self._find_cached_profile(name)
         # R-09: duplicar É partir de uma fonte — sai do estado "perfil novo".
         self._new_profile = False
+        # NUNCA-TROCA-O-ALVO-01: a cópia vai para um arquivo NOVO — o Salvar
+        # deixa de mirar o perfil-fonte no mesmo instante em que ela clica aqui.
+        self._alvo_do_salvar = None
         current = self._get("profile_name_entry").get_text()
         self._get("profile_name_entry").set_text(f"{current} (cópia)")
         self._toast_profile("Editor preenchido com cópia completa; ajuste o nome e Salvar")
@@ -1213,6 +1389,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         except (FileNotFoundError, OSError) as exc:
             self._toast_profile(f"Falha ao remover: {exc}")
             return
+        # NUNCA-TROCA-O-ALVO-01: aqui NÃO se zera `_alvo_do_salvar`, e a razão
+        # foi medida ao arrancar a cura para ver o teste morder. Zerar faz o
+        # alvo cair no fallback (a linha selecionada), que depois da recarga é
+        # OUTRO perfil — e um Salvar em seguida viraria um RENAME dele, com o
+        # diálogo do R-10 se oferecendo para apagá-lo. Mantido apontado para o
+        # arquivo que morreu, todas as guardas degradam sozinhas: o
+        # `find_by_slug` no cache novo devolve `None` e nenhum perfil vivo é
+        # posto em risco. A repintura logo abaixo reaponta o editor sempre que
+        # ele estiver limpo, que é o caso normal.
         self._reload_profiles_store()
         self._toast_profile(f"Perfil removido: {name}")
         # DEDUP-04: o daemon rematerializa o launch_env (o steam_app_<id>.env
@@ -1338,7 +1523,11 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             # para uma frase que o usuário entende e sabe o que fazer.
             self._toast_profile(self._humanize_profile_error(exc))
             return
-        selected = self._selected_profile_name()
+        # NUNCA-TROCA-O-ALVO-01: quem responde "que perfil eu estou editando?" é
+        # o alvo MEMORIZADO na abertura do editor, não a linha que estiver
+        # selecionada agora — a lista se move sozinha (sync com o perfil ativo,
+        # repintura depois de recarregar) e arrastava o Salvar junto.
+        selected = self._alvo_do_salvar_do_editor()
         # R-10 (auditoria 23/07): a identidade do arquivo é o SLUG
         # (`save_profile` grava `<slugify(name)>.json`), e as duas guardas
         # comparavam NOME DE EXIBIÇÃO. Com "Navegação" no disco, salvar
@@ -1467,6 +1656,15 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # R-09: salvo em disco, o perfil deixa de ser "novo" — o próximo Salvar
         # sobre ele é edição normal e deve reusar a config gravada.
         self._new_profile = False
+        # NUNCA-TROCA-O-ALVO-01: o que estava no editor VIROU disco. O alvo
+        # passa a ser o arquivo gravado (é o gesto dela que o move, e este é o
+        # gesto), e as marcas de "ela mexeu" caem — sem isso o editor seguiria
+        # dado como sujo pelo resto da sessão e a repintura logo abaixo não
+        # poderia mais mostrar a ele o que acabou de ser gravado.
+        self._alvo_do_salvar = profile.name
+        self._regra_tocada = False
+        self._prioridade_tocada = False
+        self._modo_tocado = False
         # ABAS-01: o disco mudou; o rascunho tem de saber. Sem esta linha, o
         # "Salvar Perfil" do rodapé reemitia a fotografia do BOOT e apagava a
         # seção `mode` (e a regra, e a prioridade) recém-gravada aqui.
@@ -1606,35 +1804,65 @@ class ProfilesActionsMixin(WidgetAccessMixin):
     def _populate_profiles_store(
         self, profiles: list[Profile], select_name: str | None
     ) -> None:
-        """Popula o ListStore a partir da lista de perfis (thread GTK)."""
+        """Popula o ListStore a partir da lista de perfis (thread GTK).
+
+        NUNCA-TROCA-O-ALVO-01: sem ``select_name``, a linha que volta a ficar
+        selecionada é A MESMA de antes — e o primeiro da lista é fallback só
+        quando não havia nada selecionado (o boot) ou quando o que estava
+        selecionado sumiu do disco (a remoção). Era daqui que saía o "nome
+        aleatório" da queixa: `on_profile_remove`, `on_profile_reload` (o botão
+        "Recarregar lista") e `install_profiles_tab` chamam
+        `_reload_profiles_store()` SEM alvo, e o editor pulava para o PRIMEIRO
+        arquivo em ordem de carga — no disco dela, "Ação". O Salvar seguinte
+        gravava lá.
+
+        A repintura INTEIRA corre marcada como programática, e não só a
+        reseleção do fim. Medido em 06/08: `store.clear()` apaga as linhas uma a
+        uma e o GtkTreeView emite `changed` no meio disso, com a seleção ainda
+        resolvendo para uma linha viva — o editor era repintado ANTES de a
+        função chegar a selecionar coisa alguma. Marcar só o `select_iter`
+        curava o caminho errado e deixava o mesmo defeito entrar pela porta do
+        `clear`.
+        """
         store = self._profiles_store
-        store.clear()
-        select_iter = None
-        first_iter = None
-        active = getattr(self, "_active_profile_hint", None)
-        for profile in profiles:
-            weight = 700 if profile.name == active else 400
-            row_iter = store.append(
-                [
-                    profile.name,
-                    profile.priority,
-                    # R-12: o OBJETO, não o discriminador — só ele distingue
-                    # "criteria com alvo" de "criteria vazio" (só manual).
-                    # EMPATE-01/E2: `profiles` chega na ORDEM DE CARGA do
-                    # loader, e é dela que sai o terceiro termo do desempate —
-                    # reordenar esta lista mudaria o vencedor anunciado.
-                    rotulo_quando_usar(profile, profiles, active),
-                    weight,
-                    explicacao_da_disputa(profile, profiles, active),
-                ]
-            )
-            if first_iter is None:
-                first_iter = row_iter
-            if profile.name == select_name:
-                select_iter = row_iter
-        target = select_iter if select_iter is not None else first_iter
-        if target is not None:
-            self._get("profiles_tree").get_selection().select_iter(target)
+        # Lido ANTES do `clear()`: depois dele não há mais linha selecionada.
+        atual: str | None = None
+        if select_name is None:
+            with contextlib.suppress(Exception):
+                atual = self._selected_profile_name()
+        anterior = self._selecao_programatica
+        self._selecao_programatica = True
+        try:
+            store.clear()
+            select_iter = None
+            first_iter = None
+            active = getattr(self, "_active_profile_hint", None)
+            for profile in profiles:
+                weight = 700 if profile.name == active else 400
+                row_iter = store.append(
+                    [
+                        profile.name,
+                        profile.priority,
+                        # R-12: o OBJETO, não o discriminador — só ele distingue
+                        # "criteria com alvo" de "criteria vazio" (só manual).
+                        # EMPATE-01/E2: `profiles` chega na ORDEM DE CARGA do
+                        # loader, e é dela que sai o terceiro termo do desempate
+                        # — reordenar esta lista mudaria o vencedor anunciado.
+                        rotulo_quando_usar(profile, profiles, active),
+                        weight,
+                        explicacao_da_disputa(profile, profiles, active),
+                    ]
+                )
+                if first_iter is None:
+                    first_iter = row_iter
+                desejado = select_name if select_name is not None else atual
+                if desejado is not None and profile.name == desejado:
+                    select_iter = row_iter
+            target = select_iter if select_iter is not None else first_iter
+            if target is not None:
+                self._mover_selecao_sem_gesto(target)
+        finally:
+            self._selecao_programatica = anterior
 
     def _mark_active_profile_row(self, active: str | None) -> None:
         """Realça (negrito) a linha do perfil ATIVO no ListStore, in-place.
@@ -1679,12 +1907,21 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         Detecta automaticamente se o match bate com um preset simples:
         - bate → modo simples, seleciona radio correspondente.
         - não bate → força modo avançado para não perder informação.
+
+        NUNCA-TROCA-O-ALVO-01: esta é a linha em que a janela decide o que ela
+        está editando, e ela SÓ é chamada por gesto dela (clique na lista) ou
+        com o editor limpo — quem faz esse portão é
+        `on_profile_selection_changed`, e a razão inteira está em
+        `_ha_trabalho_no_editor`. Aqui só se registra a decisão:
+        `_alvo_do_salvar` passa a ser este perfil, e é ele — não a linha
+        selecionada — que o `on_profile_save` vai gravar por cima.
         """
         # Selecionar um perfil existente cancela qualquer duplicação em curso.
         self._duplicate_source = None
         # R-09: e também cancela o estado "perfil novo" — o editor passou a
         # mostrar um perfil que existe.
         self._new_profile = False
+        self._alvo_do_salvar = profile.name
         self._get("profile_name_entry").set_text(profile.name)
         prio = max(0, min(PRIORIDADE_MAXIMA, profile.priority))
         self._get("profile_priority_scale").set_value(prio)
@@ -1893,8 +2130,13 @@ class ProfilesActionsMixin(WidgetAccessMixin):
           por SLUG, a lição do R-10: "Navegacao" e "Navegação" são o mesmo
           `navegacao.json`, e comparar nome de exibição deixava a edição do
           próprio perfil ativo cair no ramo do disco; ou
-        - a LINHA SELECIONADA na lista é o perfil ativo e este save não é
-          "Novo perfil" nem duplicação — ou seja, é o rename dele.
+        - o PERFIL ABERTO NO EDITOR é o perfil ativo e este save não é "Novo
+          perfil" nem duplicação — ou seja, é o rename dele.
+
+        NUNCA-TROCA-O-ALVO-01: "o perfil aberto no editor" era lido da linha
+        selecionada, e a lista se move sozinha — o rename do perfil ativo caía
+        no ramo do disco assim que o autoswitch pulava a seleção para outra
+        linha, que é o mesmo estrago que esta guarda existe para impedir.
 
         As duas exclusões são as mesmas do R-09: "Novo perfil" parte de
         defaults (não pode clonar overrides por-MAC de quem estava
@@ -1910,10 +2152,10 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         if getattr(self, "_duplicate_source", None) is not None:
             return False
         try:
-            selecionado = self._selected_profile_name() or ""
+            no_editor = self._alvo_do_salvar_do_editor() or ""
         except Exception:
             return False
-        return bool(selecionado) and mesmo_slug(selecionado, ativo)
+        return bool(no_editor) and mesmo_slug(no_editor, ativo)
 
     def _reconciliar_rascunho_com_perfil_salvo(
         self, profile: Profile, renomeando_de: str | None

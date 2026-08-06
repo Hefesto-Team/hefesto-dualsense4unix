@@ -875,6 +875,19 @@ class HefestoApp(
             de=self._active_profile_name or None,
             para=ativo,
         )
+        # NUNCA-TROCA-O-ALVO-01 (06/08/2026): esta troca é LEGÍTIMA — não havia
+        # nada a perder no instante do tique — mas ela move o alvo dos dois
+        # botões de salvar sem que ela tenha encostado em nada, e era isso que
+        # fazia o diálogo do rodapé nascer perguntando "substituir
+        # 'sackboy_nativo'?" logo depois de ela ter ativado 'vitoria' na mão.
+        # O silêncio aqui era a metade não medida do defeito: recarregar em
+        # silêncio é seguro para os DADOS e enganoso para ELA. A janela passa a
+        # dizer, no vocabulário do outro ramo, para onde o Salvar aponta agora.
+        self._status_toast(
+            "draft-reload",
+            f"O perfil ativo virou '{ativo}' — as abas passaram a mostrar "
+            f"esse perfil, e é nele que 'Salvar Perfil' grava agora.",
+        )
         self._bootstrap_draft_async()
 
     #: Id do Glade da aba Status. Consumido aqui pelo gate da captura de

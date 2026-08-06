@@ -272,7 +272,7 @@ class TestModoJogoPadrao:
     def test_modo_nativo_manual_vence_o_default(
         self, daemon: Daemon, relogio: _Relogio, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Jogar direto (Sony)" já É a resposta dela para "como quero jogar" —
+        """"Conexão Nativa (Sony)" já É a resposta dela para "como quero jogar" —
         o controle está SOLTO para o jogo, de propósito. Um default não troca uma
         escolha explícita quando o lock de 30 s vence."""
         setters = _Setters(daemon)

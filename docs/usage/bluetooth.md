@@ -92,8 +92,8 @@ assume e conecta de primeira — validado em 25/07/2026 com **quatro controles p
 Bluetooth ao mesmo tempo**, um por jogador.
 
 Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
-hefesto registra os dois como controles diferentes — use "Renumerar agora" na
-aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
+hefesto registra os dois como controles diferentes — use "Reconciliar jogadores"
+na aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
 porque o DualShock 4 usa a lightbar no lugar deles.
 
 Detalhes, medições e a tabela completa de modos em

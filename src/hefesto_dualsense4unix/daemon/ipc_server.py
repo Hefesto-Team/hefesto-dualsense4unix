@@ -24,6 +24,9 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
+    coop.set             {enabled: bool}       -> {status, enabled, players}
+                         `enabled:false` é RECUSADO ({status: "recusado", motivo})
+    coop.sync            {}                    -> {status, players, active}
     speaker.set          {volume?: 0-255, muted?: bool, release?: bool, uniq?}
                          -> {status, speaker}
     mic.set              {muted: bool|null, uniq?} -> {status, audio, mic_mudo_desejado}
@@ -142,6 +145,10 @@ class IpcServer(IpcHandlersMixin):
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             "coop.set": self._handle_coop_set,
+            # COOP-SEM-INTERRUPTOR-01 (06/08): o ciclo cheio de reconciliação
+            # ganhou dono próprio — é o gesto de recuperação do jogador que
+            # nasce e morre em dois segundos, e ele NÃO liga nem desliga nada.
+            "coop.sync": self._handle_coop_sync,
             "daemon.emulation.suppress": self._handle_emulation_suppress,
             "led.player_set": self._handle_led_player_set,
             # ONDA-U (U2/U10): renumeração explícita gated por sessão vazia.

@@ -3,8 +3,17 @@
 Cobre a reconciliação (sync) com fakes de EvdevReader/UinputGamepad: cria um
 jogador por controle físico ALÉM do primário (keyed por IDENTIDADE/MAC, cada um
 com reader+grab+vpad próprios), repassa o input ao vpad certo (forward_all),
-desmonta no hotplug-out / ao desligar o co-op / sem gamepad virtual e recria
-quando o node evdev do MESMO controle muda (re-enumeração). Sem hardware real.
+desmonta no hotplug-out / na SUSPENSÃO (`disable()`) / sem gamepad virtual e
+recria quando o node evdev do MESMO controle muda (re-enumeração). Sem hardware
+real.
+
+NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: os testes de teardown deste
+arquivo desligavam `config.coop_enabled` para chegar ao caminho. Nenhuma
+superfície de comando faz mais isso (o co-op deixou de ser opção, por decisão
+dela), então eles passaram a entrar pelo caminho que SOBREVIVEU e que sempre foi
+o real na máquina dela: `CoopManager.disable()`, a suspensão por Steam Input —
+que não toca a flag, e é por isso que o co-op volta sozinho quando o jogo fecha.
+O MECANISMO não mudou uma linha; mudou por onde o teste entra nele.
 
 BUG-COOP-GRAB-PENDING-VPAD-01: o vpad NUNCA nasce sem grab CONFIRMADO ("held").
 Grab "pending" registra o jogador sem vpad (promovido no tick quando o grab
@@ -473,22 +482,43 @@ def test_sync_remove_no_hotplug_out(
     assert player.vpad is not None and player.vpad.stopped is True
 
 
-def test_desligar_coop_desmonta_tudo(
+def test_disable_desmonta_tudo_e_o_coop_volta_no_ciclo_seguinte(
     patched: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A suspensão desmonta os secundários — e NÃO é um desligamento.
+
+    NOTA DATADA (06/08/2026): era ``test_desligar_coop_desmonta_tudo``, e
+    chegava aqui zerando `config.coop_enabled`. O caminho vivo é o
+    `disable()` da exceção de Steam Input. A segunda metade é o que aquela
+    versão não podia medir e é o coração da diferença: a flag continua ligada,
+    então o ciclo seguinte traz os jogadores de volta sozinho.
+    """
     _set_evdevs(monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"})
     daemon = _make_daemon(coop=True)
     mgr = CoopManager(daemon)
     mgr.sync()
     assert mgr.player_count() == 2
 
-    daemon.config.coop_enabled = False
-    mgr.sync()  # should_be_active=False → desmonta
+    mgr.disable()  # o que `suspend_vpads_for_steam_input` chama
+
     assert mgr.player_count() == 1
     assert mgr._players == {}
+    assert daemon.config.coop_enabled is True, "a suspensão desligou a flag"
+
+    mgr.sync(force=True)
+
+    assert mgr.player_count() == 2, "o co-op não voltou quando o jogo saiu de cena"
 
 
 def test_should_be_active_gates(patched: None) -> None:
+    """Os dois gates do mecanismo, intocados.
+
+    NOTA DATADA (06/08/2026): o ramo `coop=False` continua sendo medido porque
+    continua sendo MECANISMO — mas nenhuma superfície de comando chega mais a
+    esse estado (o `coop.set` recusa desligar, o perfil parou de governar e a
+    CLI explica). Quem tira o co-op de cena em produção é o gate do gamepad,
+    logo abaixo: sem vpad do P1 não há jogador 2.
+    """
     assert CoopManager(_make_daemon(coop=True, gamepad=True)).should_be_active() is True
     assert CoopManager(_make_daemon(coop=False, gamepad=True)).should_be_active() is False
     assert CoopManager(_make_daemon(coop=True, gamepad=False)).should_be_active() is False
@@ -667,8 +697,11 @@ def test_desligar_coop_reverte_player_leds_do_perfil(
     mgr.sync()
     assert daemon.led_calls == []  # co-op ativo: nada de broadcast
 
-    daemon.config.coop_enabled = False
-    mgr.sync()
+    # NOTA DATADA (06/08/2026): a entrada era `config.coop_enabled = False`;
+    # agora é a exceção de Steam Input ao pé da letra — `disable()` primeiro,
+    # e o vpad do P1 cai em seguida (`stop_gamepad_emulation`).
+    mgr.disable()
+    daemon._gamepad_device = None
 
     # Reversão = re-emitir o padrão do perfil pelo caminho público broadcast.
     assert daemon.led_calls == [PROFILE_LEDS]
@@ -688,7 +721,8 @@ def test_desligar_coop_sem_padrao_do_perfil_nao_emite_nada(
     mgr = CoopManager(daemon)
     mgr.sync()
 
-    daemon.config.coop_enabled = False
+    mgr.disable()  # a suspensão por Steam Input (06/08: era o flag zerado)
+    daemon._gamepad_device = None
     mgr.sync()
     assert daemon.led_calls == []
 

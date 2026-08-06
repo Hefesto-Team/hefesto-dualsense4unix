@@ -532,22 +532,29 @@ _COOP_ENABLED_FLAG_FILE_LEGACY = "coop_enabled.flag"
 
 
 def save_coop_enabled(enabled: bool) -> None:
-    """Persiste a escolha da usuária sobre o co-op local.
+    """Faxina dos flags de co-op — NUNCA grava opt-out (lápide, 06/08/2026).
 
-    FEAT-COOP-DEFAULT-ON-01: com 2+ controles, "cada controle = um jogador" é
-    o comportamento esperado por padrão; grava-se apenas o opt-out
-    (`coop_disabled.flag` existe = desligado de propósito). Migra o flag
-    legado `coop_enabled.flag` apagando-o. Best-effort: nunca propaga exceção.
+    FEAT-COOP-DEFAULT-ON-01 gravava o opt-out aqui: `coop_disabled.flag`
+    presente = desligado de propósito.
+
+    COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o opt-out deixou de
+    existir por decisão dela (*"todos e tudo no Hefesto tem que tá com o
+    permitir co-op ligado"*), então este escritor virou **lápide**, não
+    borracha: continua APAGANDO o que versões antigas deixaram (o flag legado e
+    o de opt-out), e não escreve mais nada — nem com ``enabled=False``. É de
+    propósito que o parâmetro sobreviva: a assinatura é contrato público, e um
+    chamador antigo pedindo "desliga" não pode virar `TypeError` no boot.
+
+    Deliberadamente NÃO há varredura nova de disco: o arquivo não existe na
+    máquina dela, e a única remoção que precisa acontecer já tem dono one-shot
+    (`migrate_coop_optout`, chamada no boot). Best-effort: nunca propaga
+    exceção.
     """
     try:
         cfg = config_dir(ensure=True)
         (cfg / _COOP_ENABLED_FLAG_FILE_LEGACY).unlink(missing_ok=True)
-        flag = cfg / _COOP_DISABLED_FLAG_FILE
-        if enabled:
-            flag.unlink(missing_ok=True)
-        else:
-            flag.write_text("1\n", encoding="utf-8")
-        logger.debug("coop_enabled_state_saved", enabled=enabled)
+        (cfg / _COOP_DISABLED_FLAG_FILE).unlink(missing_ok=True)
+        logger.debug("coop_enabled_state_saved", enabled=True, pedido=bool(enabled))
     except Exception as exc:
         logger.debug("coop_enabled_state_save_failed", err=str(exc))
 
@@ -590,11 +597,17 @@ def migrate_coop_optout() -> bool:
 
 
 def load_coop_enabled() -> bool:
-    """True (padrão) salvo se a usuária desligou o co-op (opt-out persistido)."""
-    try:
-        return not (config_dir() / _COOP_DISABLED_FLAG_FILE).exists()
-    except Exception:
-        return True
+    """Sempre True — o co-op local não tem mais opt-out (lápide, 06/08/2026).
+
+    COOP-SEM-INTERRUPTOR-01 — NOTA DATADA. Até 06/08/2026 esta função lia
+    `coop_disabled.flag` e um `True` gravado por versão antiga podia deixar a
+    máquina dela sem co-op. O disco deixou de governar: quem manda é o piso do
+    `DaemonConfig.coop_enabled`, e o flag em si é apagado no boot por
+    `migrate_coop_optout`. A função fica de pé porque a assinatura é contrato
+    público (CLI, applet e testes a importam) — e porque uma lápide legível vale
+    mais que um `ImportError` para quem for reabrir esta decisão.
+    """
+    return True
 
 
 __all__ = [

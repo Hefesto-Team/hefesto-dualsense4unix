@@ -40,9 +40,7 @@ NOMES_QUE_APLICAM = frozenset(
     {
         "call_async",
         "apply_mode",
-        "apply_coop_prep",
         "plan_mode_transition",
-        "plan_coop_prep",
         "run_in_thread",
         "_get_executor",
         "idle_add",
@@ -133,7 +131,6 @@ def test_cada_gesto_continua_chamando_o_escritor() -> None:
         (EMULACAO_PY, "_set_suppress"): "registrar_modo_jogo_no_rascunho",
         (INICIO_PY, "_on_home_mode_changed"): "registrar_modo_no_rascunho",
         (INICIO_PY, "_on_home_flavor_changed"): "registrar_modo_no_rascunho",
-        (INICIO_PY, "_on_home_coop_prep_clicked"): "registrar_modo_no_rascunho",
     }
     for (caminho, gesto), escritor in esperado.items():
         chamados = _nomes_chamados(_funcao(caminho, gesto))

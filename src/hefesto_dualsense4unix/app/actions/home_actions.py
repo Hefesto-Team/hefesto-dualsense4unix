@@ -35,7 +35,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_IPC_TIMEOUT_S,
     MODES,
     STATE_IPC_TIMEOUT_S,
-    apply_coop_prep,
     apply_mode,
     mode_of_state,
 )
@@ -120,10 +119,25 @@ _STATE_IPC_TIMEOUT_S = STATE_IPC_TIMEOUT_S
 
 # UX-MODE-TERMS-01: rótulos pela AÇÃO da usuária ("o que o controle faz
 # agora"), não pela tecnologia — "gamepad virtual"/"nativo" viravam jargão.
+#
+# UX-MODE-TERMS-02 (06/08/2026, decisão dela, literal: *"Jogar direto é péssimo
+# também. Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"*): o terceiro
+# rótulo era "Jogar direto (Sony)" e CADUCOU. Ele dizia o gesto ("jogar") e não
+# a coisa — os outros dois já dizem para ONDE o controle fala ("o PC", "o
+# Hefesto"), e "direto" não completava a frase. "Conexão Nativa (Sony)" nomeia
+# o que de fato acontece: o Hefesto solta o controle e o jogo fala com o
+# DualSense físico, sem intermediário (docs/usage/modos.md).
+#
+# É SÓ o rótulo: o id `native` continua sendo chave de perfil, do IPC e da CLI
+# (`native on`) — renomeá-lo quebraria perfil salvo em disco. Esta lista é a
+# frase-dona; a aba Perfis (`profiles_actions._MODE_KIND_ITEMS`) e o applet
+# COSMIC (`packaging/cosmic-applet/src/app.rs`, `let entries`) repetem os mesmos
+# rótulos, e o `test_vocabulario_das_quatro_superficies.py` reprova quem mudar
+# um lado só.
 _MODE_ITEMS = [
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
-    ("native", "Jogar direto (Sony)"),
+    ("native", "Conexão Nativa (Sony)"),
 ]
 
 # LEIGO-02: "(vibra)"/"(sem vibrar)" eram verdade enquanto a máscara DualSense
@@ -161,7 +175,7 @@ _MODE_DESCRIPTIONS = {
 }
 
 # LEIGO-02: o glossário enfileirava 4 conceitos, dois deles mortos — "Pausar"
-# não é mais botão de lugar nenhum e "Jogar direto" já é um dos três botões
+# não é mais botão de lugar nenhum e "Conexão Nativa (Sony)" já é um dos botões
 # logo acima (com descrição própria). Sobram os dois que a aba NÃO explica por
 # si: o "Modo jogo" (que mora em outra aba) e o desligar de verdade.
 # ONDA-U (U1): o "ligar de novo" deixou de mandar pra aba Sistema — o mesmo
@@ -358,24 +372,37 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     return None
 
 
-# ONDA-U (U2/U10): texto do "Renumerar agora" quando bloqueado por sessão de
-# jogo aberta — mesmo gate do IPC (`identity.renumber`), pra usuária ver o
-# "porquê" ANTES de clicar, em vez de levar um {ok: false} sem explicação.
-RENUMBER_GAME_OPEN_TEXT = (
-    "Feche o jogo para renumerar — evita repintar o controle em uso no meio "
-    "da partida."
+#: COOP-SEM-INTERRUPTOR-01 (06/08/2026): rótulo do botão que era "Renumerar
+#: agora". Ele deixou de ser só faxina de numeração: agora RECONCILIA os
+#: jogadores primeiro (`coop.sync`) e compacta a numeração depois
+#: (`identity.renumber`). A troca de nome é a entrega 5 do roteiro — sem ela,
+#: tirar "Preparar co-op" da tela tiraria dela o único gesto capaz de trazer de
+#: volta o jogador que nasce e morre em dois segundos.
+RECONCILIAR_LABEL = "Reconciliar jogadores"
+
+# ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): texto exibido quando há
+# jogo aberto. NOTA DATADA — até 06/08/2026 este aviso DESABILITAVA o botão,
+# porque o gesto era só `identity.renumber` e o daemon o recusa com jogo aberto
+# (repintar o LED do controle em uso no meio da partida é o erro que a NUMA-03
+# fechou). Com a reconciliação dos jogadores no mesmo botão, desabilitar
+# passaria a esconder o gesto EXATAMENTE quando ela mais precisa dele — o P2 cai
+# DURANTE a partida. Então o aviso vira o que sempre deveria ter sido: uma
+# explicação do que NÃO vai acontecer, com o botão de pé.
+RECONCILIAR_JOGO_ABERTO_TEXT = (
+    "Com o jogo aberto os jogadores voltam, mas a numeração não muda — "
+    "evita repintar o controle em uso no meio da partida."
 )
 
 
-def _renumber_gate_text(state: dict[str, Any] | None) -> str | None:
-    """Aviso do "Renumerar agora" bloqueado; ``None`` = liberado — função pura
+def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
+    """Aviso do "Reconciliar jogadores"; ``None`` = nada a dizer — função pura
     (padrão ``vpad_degradation_text``/``wrapper_banner_text``).
 
     Espelha o MESMO critério do handler de ``identity.renumber``
     (``display_authority == 'game'`` via ``state_full.game_signal.
     authority``) — nunca uma segunda fonte da verdade; se o daemon ainda não
-    fiou o sinal (``game_signal`` ausente/authority desconhecida), o botão
-    fica liberado (sem alarme falso).
+    fiou o sinal (``game_signal`` ausente/authority desconhecida), não há aviso
+    (sem alarme falso).
     """
     if not isinstance(state, dict):
         return None
@@ -383,8 +410,40 @@ def _renumber_gate_text(state: dict[str, Any] | None) -> str | None:
     if not isinstance(game_signal, dict):
         return None
     if game_signal.get("authority") == "game":
-        return RENUMBER_GAME_OPEN_TEXT
+        return RECONCILIAR_JOGO_ABERTO_TEXT
     return None
+
+
+def reconciliar_toast(jogadores: object, resultado_renumber: object) -> str:
+    """Frase única do "Reconciliar jogadores" — função pura (06/08/2026).
+
+    Um clique, dois passos, UM toast: anunciar duas vezes o mesmo gesto seria
+    ruído, e anunciar só um deles esconderia metade do que aconteceu. A ordem
+    da frase é a ordem dos passos — jogadores primeiro (é o que ela veio
+    buscar), numeração depois (é acabamento).
+
+    ``resultado_renumber`` é o retorno cru do ``identity.renumber`` (ou ``None``
+    quando o IPC do acabamento falhou): a recusa por jogo aberto NÃO vira falha
+    do gesto, pela mesma razão do ``reported_step_index`` — com os jogadores já de
+    pé, um toast de erro seria a interface mentindo.
+    """
+    n = jogadores if isinstance(jogadores, int) and not isinstance(jogadores, bool) else None
+    cabeca = (
+        f"Jogadores reconciliados — {n} jogador(es)."
+        if n is not None
+        else "Jogadores reconciliados."
+    )
+    if not isinstance(resultado_renumber, dict):
+        return f"{cabeca} Não consegui conferir a numeração."
+    if not resultado_renumber.get("ok"):
+        if resultado_renumber.get("reason") == "sessao_de_jogo_aberta":
+            return f"{cabeca} A numeração só muda com o jogo fechado."
+        return f"{cabeca} Não consegui compactar a numeração."
+    renumerados = resultado_renumber.get("renumbered")
+    quantos = len(renumerados) if isinstance(renumerados, dict) else 0
+    if quantos:
+        return f"{cabeca} Numeração compactada em {quantos} controle(s)."
+    return f"{cabeca} A numeração já estava compacta."
 
 
 def _format_controller_subtitle(
@@ -425,67 +484,15 @@ def _format_players_hint(controllers: list[dict[str, Any]]) -> str:
     return f"{len(controllers)} controles = {len(players)} jogadores"
 
 
-# AUTO-01.2: rótulo base do botão de co-op. Sem contagem enquanto não há dois
-# controles — prometer "(2 jogadores)" com um controle na mesa seria a interface
-# afirmando o que o jogo não vai confirmar (mesma regra do `_format_players_hint`).
-COOP_PREP_LABEL_BASE = "Preparar co-op"
-
-# AUTO-01.2: as três frases do botão. Elas existem porque o co-op tinha efeito
-# visível e caminho invisível: a única forma de ligá-lo era `coop on` no
-# terminal. Cada uma responde "o que acontece se eu clicar agora?".
-COOP_PREP_HINT_UM_CONTROLE = (
-    "Ligue o segundo controle (cabo ou Bluetooth) para jogar acompanhada — "
-    "cada controle vira um jogador."
-)
-COOP_PREP_HINT_PRONTO = (
-    "Tudo pronto: cada controle já é um jogador. Clique de novo se algum "
-    "controle entrou depois."
-)
-COOP_PREP_HINT_CONVITE = (
-    "Um clique faz tudo: entra no modo de jogo, dá um jogador para cada "
-    "controle e arruma a numeração."
-)
-
-
-def coop_prep_label(controllers: list[dict[str, Any]]) -> str:
-    """Rótulo do botão "Preparar co-op" — função pura (AUTO-01.2).
-
-    A contagem sai dos controles CONECTADOS (é quantos jogadores o co-op vai
-    criar), não dos jogadores que já existem: o botão promete o depois, não
-    descreve o agora. Com menos de dois, some a contagem — ver
-    `COOP_PREP_LABEL_BASE`.
-    """
-    n = len(controllers)
-    if n < 2:
-        return COOP_PREP_LABEL_BASE
-    return f"{COOP_PREP_LABEL_BASE} ({n} jogadores)"
-
-
-def coop_prep_hint(state: dict[str, Any] | None, controllers: list[dict[str, Any]]) -> str:
-    """Frase abaixo do botão de co-op — função pura (AUTO-01.2).
-
-    Três estados, na ordem em que a usuária os encontra: falta um segundo
-    controle; já está tudo de pé (o botão vira "conferir/reaplicar", que é o
-    gesto certo quando alguém entra no meio da partida); e o convite, que é o
-    caso da instalação nova. Offline devolve vazio — sem daemon não há nada a
-    afirmar (mesma regra do `autoswitch_lock_text`).
-    """
-    if not isinstance(state, dict):
-        return ""
-    if len(controllers) < 2:
-        return COOP_PREP_HINT_UM_CONTROLE
-    coop = state.get("coop")
-    jogadores = coop.get("players") if isinstance(coop, dict) else None
-    ligado = bool(coop.get("enabled")) if isinstance(coop, dict) else False
-    if (
-        ligado
-        and mode_of_state(state) == MODE_GAMEPAD
-        and isinstance(jogadores, int)
-        and not isinstance(jogadores, bool)
-        and jogadores >= 2
-    ):
-        return COOP_PREP_HINT_PRONTO
-    return COOP_PREP_HINT_CONVITE
+# LÁPIDE — COOP-SEM-INTERRUPTOR-01 (06/08/2026). Aqui moravam o rótulo
+# (`COOP_PREP_LABEL_BASE`), as três frases (`COOP_PREP_HINT_*`) e as duas
+# funções puras (`coop_prep_label`/`coop_prep_hint`) do botão "Preparar co-op"
+# da AUTO-01.2. Todas descreviam a mesma pergunta — *"o que acontece se eu
+# clicar agora?"* — e a pergunta deixou de existir: cada controle conectado já
+# é um jogador, sempre. Quem conta os jogadores hoje é `_format_players_hint`,
+# acima, e a contagem vem do `daemon.state_full` (campo `player` por controle,
+# resolvido por `subsystems/coop.resolve_player_numbers`) — nunca de um cache
+# de outra aba.
 
 
 def _format_controller_title(entry: dict[str, Any]) -> str:
@@ -566,7 +573,6 @@ def rascunho_com_modo(
     *,
     kind: str,
     flavor: object = None,
-    coop: bool | None = None,
 ) -> DraftConfig | None:
     """Rascunho com o MODO dela registrado. Pura: NÃO aplica nada (E3).
 
@@ -580,7 +586,12 @@ def rascunho_com_modo(
     ``flavor`` só vale no modo gamepad e atravessa `normalizar_gamepad_flavor`
     (MODO-01): máscara desconhecida vira ``None``, que no applier significa
     "mantém a atual" — nunca recriar o vpad por causa de um id que ninguém
-    reconhece. ``coop=None`` preserva o que o perfil de origem dizia.
+    O ``coop`` do perfil de origem é SEMPRE preservado (`_coop_do_rascunho`) —
+    a janela nunca o edita. COOP-SEM-INTERRUPTOR-01 (06/08/2026): havia aqui um
+    parâmetro ``coop`` para o único gesto que o escrevia na mão, o botão
+    "Preparar co-op". O botão saiu (o co-op deixou de ser opção) e o parâmetro
+    foi junto: um argumento que ninguém mais passa é a mesma dívida que esta
+    casa persegue — código que ficou depois de o motivo morrer.
     """
     if draft is None or kind not in MODES:
         return draft
@@ -592,14 +603,14 @@ def rascunho_com_modo(
     secao: dict[str, Any] = {"kind": kind}
     if kind == MODE_GAMEPAD:
         secao["gamepad_flavor"] = normalizar_gamepad_flavor(flavor)
-    efetivo = coop if coop is not None else _coop_do_rascunho(draft)
+    efetivo = _coop_do_rascunho(draft)
     if efetivo is not None:
         secao["coop"] = efetivo
     return draft.with_mode(ProfileModeConfig.model_validate(secao))
 
 
 def registrar_modo_no_rascunho(
-    janela: Any, kind: str, flavor: object = None, *, coop: bool | None = None
+    janela: Any, kind: str, flavor: object = None
 ) -> None:
     """Anota na janela o modo que ela acabou de aplicar. Único ponto de escrita.
 
@@ -620,7 +631,7 @@ def registrar_modo_no_rascunho(
     draft = getattr(janela, "draft", None)
     if draft is None:
         return
-    novo = rascunho_com_modo(draft, kind=kind, flavor=flavor, coop=coop)
+    novo = rascunho_com_modo(draft, kind=kind, flavor=flavor)
     if novo is not None:
         janela.draft = novo
 
@@ -677,23 +688,11 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_wrapper_banner = wrapper_banner
         box.pack_start(wrapper_banner, False, False, 0)
 
-        # --- AUTO-01.2: "Preparar co-op" (o único widget vindo do Glade) ----
-        # O co-op local — quatro jogadores, a funcionalidade central do projeto
-        # — só existia por linha de comando. O botão vive no `main.glade` (é
-        # conteúdo fixo, não um card gerado por controle) e aqui ele é
-        # RE-POSICIONADO: no arquivo ele precede tudo, mas na tela tem de ficar
-        # abaixo dos dois banners (aviso primeiro, ação depois). Tolerante a
-        # ausência: Glade antigo/dublê de teste sem os widgets não quebra a aba.
-        self._home_coop_prep_btn = self._get("home_coop_prep_btn")
-        self._home_coop_prep_hint = self._get("home_coop_prep_hint")
-        coop_frame = self._get("home_coop_frame")
-        if self._home_coop_prep_btn is not None:
-            self._home_coop_prep_btn.connect(
-                "clicked", self._on_home_coop_prep_clicked
-            )
-        if coop_frame is not None:
-            with contextlib.suppress(Exception):
-                box.reorder_child(coop_frame, 2)
+        # LÁPIDE — COOP-SEM-INTERRUPTOR-01 (06/08/2026): aqui morava a fiação do
+        # "Preparar co-op" (o único widget que vinha do Glade nesta aba, e que
+        # este trecho re-posicionava abaixo dos banners). Ver a lápide do
+        # `main.glade`: preparar o co-op deixou de ser gesto porque o co-op
+        # deixou de ser opção. Com isto a aba Início passa a ser 100% código.
 
         # --- Frame: modo do sistema ---------------------------------------
         from hefesto_dualsense4unix.app.widgets.segmented_selector import (
@@ -835,25 +834,32 @@ class HomeActionsMixin(WidgetAccessMixin):
         self._home_controllers_box = ctrl_box
         ctrl_frame_box.pack_start(ctrl_box, False, False, 0)
 
-        # ONDA-U (U2/U10): "Renumerar agora" — compacta a numeração de
-        # exibição (DualSense + externos, IPC `identity.renumber`) para 1..N
-        # preservando a ordem relativa. Fica junto dos cards: é aqui que a
-        # numeração aparece ("sony 1 / sony 4" com só 2 controles).
-        renumber_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        renumber_row.set_margin_start(12)
-        renumber_row.set_margin_end(12)
-        renumber_row.set_margin_bottom(10)
-        renumber_btn = Gtk.Button(label="Renumerar agora")
-        renumber_btn.connect("clicked", self._on_home_renumber_clicked)
-        self._home_renumber_btn = renumber_btn
-        renumber_row.pack_start(renumber_btn, False, False, 0)
-        renumber_hint = Gtk.Label(label="")
-        renumber_hint.set_xalign(0.0)
-        renumber_hint.set_line_wrap(True)
-        renumber_hint.get_style_context().add_class("dim-label")
-        self._home_renumber_hint = renumber_hint
-        renumber_row.pack_start(renumber_hint, False, False, 0)
-        ctrl_frame_box.pack_start(renumber_row, False, False, 0)
+        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): "Reconciliar
+        # jogadores" — reconcilia o co-op (`coop.sync`, ciclo cheio) e depois
+        # compacta a numeração de exibição (DualSense + externos,
+        # `identity.renumber`) para 1..N preservando a ordem relativa. Fica
+        # junto dos cards: é aqui que jogador e numeração aparecem ("sony 1 /
+        # sony 4" com só 2 controles, ou o P2 que sumiu no meio da partida).
+        reconciliar_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        reconciliar_row.set_margin_start(12)
+        reconciliar_row.set_margin_end(12)
+        reconciliar_row.set_margin_bottom(10)
+        reconciliar_btn = Gtk.Button(label=RECONCILIAR_LABEL)
+        reconciliar_btn.set_tooltip_text(
+            "Confere os jogadores do co-op e traz de volta quem caiu (grab "
+            "recusado, controle re-enumerado), e depois arruma a numeração "
+            "1..N. Pode clicar com o jogo aberto: só a numeração espera."
+        )
+        reconciliar_btn.connect("clicked", self._on_home_reconciliar_clicked)
+        self._home_reconciliar_btn = reconciliar_btn
+        reconciliar_row.pack_start(reconciliar_btn, False, False, 0)
+        reconciliar_hint = Gtk.Label(label="")
+        reconciliar_hint.set_xalign(0.0)
+        reconciliar_hint.set_line_wrap(True)
+        reconciliar_hint.get_style_context().add_class("dim-label")
+        self._home_reconciliar_hint = reconciliar_hint
+        reconciliar_row.pack_start(reconciliar_hint, False, False, 0)
+        ctrl_frame_box.pack_start(reconciliar_row, False, False, 0)
 
         frame_ctrl.add(ctrl_frame_box)
         box.pack_start(frame_ctrl, False, False, 0)
@@ -998,13 +1004,10 @@ class HomeActionsMixin(WidgetAccessMixin):
                 self._home_shutdown_btn.get_style_context().add_class(
                     "suggested-action"
                 )
-                # ONDA-U (U2/U10): sem daemon, "Renumerar agora" não tem quem
-                # atenda o IPC.
-                self._home_renumber_btn.set_sensitive(False)
-                self._home_renumber_hint.set_text("")
-                # AUTO-01.2: idem para "Preparar co-op" — os três passos são
-                # IPC, e sem daemon nenhum deles chega a lugar nenhum.
-                self._render_coop_prep(None, [])
+                # ONDA-U (U2/U10): sem daemon, "Reconciliar jogadores" não tem
+                # quem atenda o IPC.
+                self._home_reconciliar_btn.set_sensitive(False)
+                self._home_reconciliar_hint.set_text("")
                 # FEAT-AUTOSWITCH-LOCK-01: sem daemon, o cadeado não tem estado.
                 _lock = getattr(self, "_home_autoswitch_lock", None)
                 if _lock is not None:
@@ -1041,11 +1044,14 @@ class HomeActionsMixin(WidgetAccessMixin):
             self._home_shutdown_btn.get_style_context().add_class(
                 "destructive-action"
             )
-            # ONDA-U (U2/U10): gate do botão espelha o do IPC — jogo aberto
-            # desabilita e explica o porquê ANTES do clique.
-            aviso_renumerar = _renumber_gate_text(state)
-            self._home_renumber_btn.set_sensitive(aviso_renumerar is None)
-            self._home_renumber_hint.set_text(aviso_renumerar or "")
+            # COOP-SEM-INTERRUPTOR-01 (06/08): com daemon vivo o botão fica
+            # SEMPRE de pé — jogo aberto só ganha a frase que diz o que não vai
+            # acontecer (a numeração). Ver `RECONCILIAR_JOGO_ABERTO_TEXT`: o
+            # gesto de trazer o jogador de volta é justamente o de partida
+            # aberta, e desabilitá-lo ali o esconderia na hora exata do defeito.
+            aviso_reconciliar = _reconciliar_gate_text(state)
+            self._home_reconciliar_btn.set_sensitive(True)
+            self._home_reconciliar_hint.set_text(aviso_reconciliar or "")
 
             gamepad = state.get("gamepad_emulation") or {}
             # HARM-01: a leitura do modo também tem um dono só — a Emulação
@@ -1111,10 +1117,11 @@ class HomeActionsMixin(WidgetAccessMixin):
                 for c in (state.get("controllers") or [])
                 if isinstance(c, dict) and c.get("connected")
             ]
+            # COOP-SEM-INTERRUPTOR-01 (06/08): esta frase é o que ficou no
+            # lugar do botão "Preparar co-op" — e a contagem sai dos MESMOS
+            # controles conectados que os cards mostram (`state_full`), uma
+            # fonte só, nunca o cache assíncrono de outra aba.
             self._home_players_hint.set_text(_format_players_hint(connected))
-            # AUTO-01.2: o botão de co-op fala a partir dos MESMOS controles
-            # conectados que os cards mostram — uma fonte só para a contagem.
-            self._render_coop_prep(state, connected)
             self._render_home_controllers(
                 connected,
                 grab_state=state.get("primary_grab_state"),
@@ -1125,24 +1132,6 @@ class HomeActionsMixin(WidgetAccessMixin):
             _ = Gtk
         finally:
             self._home_guard = False
-
-    def _render_coop_prep(
-        self, state: dict[str, Any] | None, controllers: list[dict[str, Any]]
-    ) -> None:
-        """Reconcilia o botão "Preparar co-op" com o estado vivo (AUTO-01.2).
-
-        Rótulo e frase saem das funções puras (`coop_prep_label`/
-        `coop_prep_hint`); aqui só há widget. `getattr` defensivo pelo mesmo
-        motivo do cadeado de autoswitch: os dublês de teste do `_render_home` e
-        um Glade sem os widgets novos não podem derrubar a aba inteira.
-        """
-        btn = getattr(self, "_home_coop_prep_btn", None)
-        hint = getattr(self, "_home_coop_prep_hint", None)
-        if btn is not None:
-            btn.set_label(coop_prep_label(controllers))
-            btn.set_sensitive(state is not None)
-        if hint is not None:
-            hint.set_text(coop_prep_hint(state, controllers))
 
     def _render_home_controllers(
         self,
@@ -1278,58 +1267,6 @@ class HomeActionsMixin(WidgetAccessMixin):
             timeout_s=_MODE_IPC_TIMEOUT_S,
         )
 
-    def _on_home_coop_prep_clicked(self, _button: object) -> None:
-        """AUTO-01.2: um clique prepara o co-op inteiro.
-
-        O que ela fazia até aqui para jogar acompanhada: escolher "Jogar pelo
-        Hefesto" na Início, abrir um terminal para `coop on` (o co-op não tinha
-        botão nenhum) e voltar para renumerar os controles. Agora é um botão, e
-        a sequência tem dono único (`mode_transition.plan_coop_prep`) — a mesma
-        regra do HARM-01 para a troca de modo.
-
-        Só o passo do co-op reporta (ver `apply_coop_prep`): a renumeração é
-        recusada pelo daemon com jogo aberto e não pode virar "falha ao
-        preparar o co-op" quando os jogadores já subiram. O refresh no fim é o
-        que faz os cards e a frase contarem a verdade sem esperar o poller.
-        """
-
-        def _done(resultado: Any) -> bool:
-            # PERFIL-SALVA-TUDO-01/E3: "Preparar co-op" é o ÚNICO gesto da janela
-            # que diz `coop` — os outros preservam o que o perfil já dizia. Aqui
-            # ela pediu co-op na mão, então o `True` é dela, não default do
-            # esquema (a distinção que o LEIGO-01 pagou para aprender).
-            registrar_modo_no_rascunho(
-                self,
-                MODE_GAMEPAD,
-                self._home_flavor_selector.get_active_id(),
-                coop=True,
-            )
-            jogadores = (
-                resultado.get("players") if isinstance(resultado, dict) else None
-            )
-            if isinstance(jogadores, int) and not isinstance(jogadores, bool):
-                self._status_toast(
-                    "home", f"Co-op pronto — {jogadores} jogador(es)."
-                )
-            else:
-                self._status_toast("home", "Co-op pronto.")
-            self._refresh_home_tab()
-            return False
-
-        def _fail(_exc: Exception) -> bool:
-            self._status_toast(
-                "home",
-                "Não consegui preparar o co-op — o Hefesto pode estar desligado.",
-            )
-            self._refresh_home_tab()
-            return False
-
-        apply_coop_prep(
-            flavor=self._home_flavor_selector.get_active_id(),
-            on_done=_done,
-            on_fail=_fail,
-        )
-
     def _on_home_autoswitch_lock_toggled(self, check: Any) -> None:
         """FEAT-AUTOSWITCH-LOCK-01: liga/desliga o cadeado da troca automática.
 
@@ -1363,47 +1300,63 @@ class HomeActionsMixin(WidgetAccessMixin):
             lambda: ipc_bridge.autoswitch_lock_set(desejado), on_success=_fim
         )
 
-    def _on_home_renumber_clicked(self, _button: object) -> None:
-        """U2/U10: dispara ``identity.renumber`` e traduz o resultado em toast.
+    def _on_home_reconciliar_clicked(self, _button: object) -> None:
+        """"Reconciliar jogadores": ``coop.sync`` e, em seguida, ``identity.renumber``.
 
-        Contrato fixado com o daemon (sprint ONDA-U): método
-        ``identity.renumber``, args ``{}``. Retorno
-        ``{ok: true, renumbered: {uniq: slot}}`` ou ``{ok: false, reason}``.
-        O gate visual (``_render_home``/``_renumber_gate_text``) já desabilita
-        o botão com jogo aberto, mas o handler NÃO confia só nisso — o
-        daemon decide de verdade (o estado do poll pode estar defasado em
-        até ``HOME_POLL_INTERVAL_MS``); aqui só se traduz a resposta.
+        COOP-SEM-INTERRUPTOR-01, entrega 5 (06/08/2026). NOTA DATADA: até aqui
+        este botão se chamava "Renumerar agora" e disparava um método só. Ele
+        herdou o gesto de recuperação que morreu com o botão "Preparar co-op" —
+        o ciclo FORÇADO do co-op, que é o único capaz de trazer de volta o
+        jogador cujo grab foi recusado ou cujo vpad morreu sem que /dev/input
+        mudasse (COOP-QUE-NÃO-DESMONTA-01).
+
+        Os dois passos são ENCADEADOS, não paralelos, e a ordem é a entrega:
+        renumerar antes de reconciliar compactaria uma mesa que ainda não está
+        completa. O `coop.sync` é quem reporta a falha de IPC (é o passo que
+        responde "meus jogadores voltaram?"); a recusa do `identity.renumber`
+        com jogo aberto NÃO vira erro — com os jogadores já de pé seria a
+        interface mentindo, a mesma regra do ``reported_step_index``.
+
+        Contrato fixado com o daemon: ``coop.sync {}`` ->
+        ``{status, players, active}``; ``identity.renumber {}`` ->
+        ``{ok: true, renumbered: {uniq: slot}}`` | ``{ok: false, reason}``.
         """
 
-        def _ok(result: Any) -> bool:
-            if not isinstance(result, dict) or not result.get("ok"):
-                reason = result.get("reason") if isinstance(result, dict) else None
-                if reason == "sessao_de_jogo_aberta":
-                    msg = "Feche o jogo antes de renumerar."
-                else:
-                    msg = "Não consegui renumerar — tente de novo."
-                self._status_toast("home", msg)
-                return False
-            renumerados = result.get("renumbered")
-            n = len(renumerados) if isinstance(renumerados, dict) else 0
-            if n:
-                self._status_toast(
-                    "home",
-                    f"Numeração compactada — {n} controle(s) renumerado(s).",
-                )
-            else:
-                self._status_toast("home", "Numeração já estava compacta.")
-            self._refresh_home_tab()
-            return False
+        def _sync_ok(resultado_sync: Any) -> bool:
+            jogadores = (
+                resultado_sync.get("players")
+                if isinstance(resultado_sync, dict)
+                else None
+            )
 
-        def _fail(_exc: Exception) -> bool:
-            self._status_toast(
-                "home",
-                "Não consegui renumerar — o Hefesto pode estar desligado.",
+            def _renumber_ok(resultado: Any) -> bool:
+                self._status_toast("home", reconciliar_toast(jogadores, resultado))
+                self._refresh_home_tab()
+                return False
+
+            def _renumber_fail(_exc: Exception) -> bool:
+                # O acabamento falhou, a reconciliação não: o toast diz os dois.
+                self._status_toast("home", reconciliar_toast(jogadores, None))
+                self._refresh_home_tab()
+                return False
+
+            call_async(
+                "identity.renumber",
+                {},
+                _renumber_ok,
+                _renumber_fail,
+                timeout_s=_MODE_IPC_TIMEOUT_S,
             )
             return False
 
-        call_async("identity.renumber", {}, _ok, _fail, timeout_s=_MODE_IPC_TIMEOUT_S)
+        def _sync_fail(_exc: Exception) -> bool:
+            self._status_toast(
+                "home",
+                "Não consegui reconciliar — o Hefesto pode estar desligado.",
+            )
+            return False
+
+        call_async("coop.sync", {}, _sync_ok, _sync_fail, timeout_s=_MODE_IPC_TIMEOUT_S)
 
     def _on_home_power_clicked(self, button: object) -> None:
         """Dispatcher do botão único de energia da aba Início (ONDA-U, U1).
@@ -1502,19 +1455,15 @@ class HomeActionsMixin(WidgetAccessMixin):
 
 __all__ = [
     "ABA_INICIO",
-    "COOP_PREP_HINT_CONVITE",
-    "COOP_PREP_HINT_PRONTO",
-    "COOP_PREP_HINT_UM_CONTROLE",
-    "COOP_PREP_LABEL_BASE",
     "HOME_POLL_INTERVAL_MS",
-    "RENUMBER_GAME_OPEN_TEXT",
+    "RECONCILIAR_JOGO_ABERTO_TEXT",
+    "RECONCILIAR_LABEL",
     "VPAD_DEGRADED_TEXT",
     "WRAPPER_MISSING_TEXT",
     "HomeActionsMixin",
-    "coop_prep_hint",
-    "coop_prep_label",
     "id_da_pagina",
     "id_da_pagina_corrente",
+    "reconciliar_toast",
     "vpad_degradation_text",
     "wrapper_banner_text",
 ]
