@@ -270,17 +270,23 @@ def test_manager_repassa_politica_ao_applier() -> None:
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
     received: list[tuple[str | None, float | None]] = []
+    quem_mandou: list[str | None] = []
 
     def applier(
         policy: str | None,
         custom_mult: float | None,
         *,
+        profile: object | None = None,
         origin: str = "autoswitch",
     ) -> None:
         # R-03 (auditoria 23/07): o applier passou a receber a ORIGEM da
         # ativação — "manual" (profile.switch/hotkey) fura o lock de gesto
         # manual em vez de descartar a seção em silêncio.
+        # PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): e o PERFIL, como os appliers
+        # de supressão e de modo já recebiam — é com ele que o daemon recusa a
+        # reversão pedida por um catch-all (R-02).
         received.append((policy, custom_mult))
+        quem_mandou.append(getattr(profile, "name", None))
 
     mgr = ProfileManager(
         controller=FakeController(),
@@ -293,6 +299,9 @@ def test_manager_repassa_politica_ao_applier() -> None:
     # O applier recebe SEMPRE o par — inclusive (None, None) do perfil sem
     # opinião, que é o gatilho da reversão no daemon.
     assert received == [("custom", 0.5), (None, None)]
+    # E SEMPRE junto de quem mandou (sem isso o daemon não distingue "o perfil
+    # deste jogo não quer política" de "caiu num catch-all").
+    assert quem_mandou == ["teste_rumble", "teste_rumble"]
 
 
 # ---------------------------------------------------------------------------

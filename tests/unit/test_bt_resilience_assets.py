@@ -71,7 +71,10 @@ class TestBlocoUnificadoMainConf:
         headers = re.findall(r"^\[General\]$", text, re.M)
         assert len(headers) == 1, "o bloco unificado deve ter UMA seção [General]"
         assert re.search(r"^FastConnectable=true$", text, re.M)
-        assert re.search(r"^JustWorksRepairing=always$", text, re.M)
+        # RADIO-ABERTO-01 (05/08/2026): era `always`. O `always` remove a última
+        # recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond —
+        # ver tests/unit/test_radio_aberto_01.py, que é o portão da regra.
+        assert re.search(r"^JustWorksRepairing=confirm$", text, re.M)
         assert "# >>> hefesto bluetooth >>>" in text
         assert "# <<< hefesto bluetooth <<<" in text
 

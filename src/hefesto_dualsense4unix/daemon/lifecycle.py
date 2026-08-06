@@ -961,13 +961,64 @@ class Daemon:
             keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
             mouse_applier=self.apply_profile_mouse,
             suppression_applier=self.apply_profile_suppression,
-            # FEAT-PROFILE-MODE-01: SEM mode_applier aqui de propósito — este
-            # caminho roda ao SAIR do Modo Nativo; se o last_profile tiver
-            # `mode.kind=native`, o applier o religaria na hora (loop). O gesto
-            # de sair é soberano; o próximo autoswitch/switch re-avalia o modo.
+            # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 6: as três
+            # seções que faltavam. Esta rota era a única das quatro que montava
+            # o manager sem elas, e o efeito é o que ela sente ao desligar o
+            # Modo Nativo: gatilhos e LEDs voltam, mas a máscara do vpad, a
+            # política de rumble e o volume do alto-falante do perfil ficam
+            # como o jogo os deixou.
+            #
+            # O `mode_applier` vai EMBRULHADO, e o embrulho é a nota datada da
+            # decisão que estava aqui: a FEAT-PROFILE-MODE-01 tirou o applier
+            # inteiro porque um `last_profile` com `mode.kind=native` seria
+            # religado na hora (o `_native_mode` já é False quando chegamos
+            # aqui — `set_native_mode` o zera antes do reapply), e sair do
+            # nativo viraria um laço. Aquilo continua verdade e continua
+            # barrado; o que não se justifica é o preço colateral — perder
+            # `gamepad`/`desktop` e a reversão do modo por causa do caso
+            # `native`. O embrulho barra SÓ o `native`.
+            #
+            # `getattr` nos três pelo mesmo motivo das outras rotas
+            # (`subsystems/autoswitch.py`, `subsystems/ipc.py`): este método é
+            # chamado desligado da instância por dublês da suíte, e um atributo
+            # ausente não pode derrubar a saída do Modo Nativo — sem o applier,
+            # a seção volta a ser ignorada, que é o comportamento histórico.
+            mode_applier=getattr(self, "_mode_applier_ao_sair_do_nativo", None),
+            rumble_policy_applier=getattr(self, "apply_profile_rumble_policy", None),
+            speaker_applier=getattr(self, "apply_profile_speaker", None),
         )
         with contextlib.suppress(Exception):
             manager.activate(name, origin="system")
+
+    def _mode_applier_ao_sair_do_nativo(
+        self,
+        mode: Any | None,
+        *,
+        profile: Any | None = None,
+        origin: str = "system",
+    ) -> str:
+        """`apply_profile_mode` menos o `kind="native"` (item 6 da leva de 05/08).
+
+        Usado SÓ pelo `_reapply_last_profile`, que roda ao DESLIGAR o Modo
+        Nativo. Religar o nativo aqui seria desfazer o gesto que acabou de
+        acontecer — `set_native_mode(False)` já zerou `_native_mode`, então o
+        applier veria "nativo desligado, o perfil pede nativo" e o ligaria de
+        volta no mesmo instante. É a razão pela qual a FEAT-PROFILE-MODE-01
+        tirou o applier inteiro desta rota; a diferença é que agora só o caso
+        `native` paga.
+
+        As demais seções de `mode` seguem: `gamepad` devolve a máscara/co-op do
+        perfil, `desktop` limpa, e `mode=None` reverte o que outro perfil tinha
+        ligado. `IGNORADO_GESTO_DELA` é o estado certo do vocabulário — a
+        decisão já é dela, e é mais específica que o que o perfil pede.
+        """
+        if getattr(mode, "kind", None) == "native":
+            logger.info(
+                "profile_mode_skipped_saida_do_nativo",
+                profile=getattr(profile, "name", None),
+            )
+            return IGNORADO_GESTO_DELA
+        return self.apply_profile_mode(mode, profile=profile, origin=origin)
 
     def _zero_rumble_motors(self) -> None:
         """Zera os motores ao SAIR de um modo (HARM-16). Thin wrapper."""
@@ -1525,6 +1576,11 @@ class Daemon:
            ligada por gesto manual ANTIGO (lock expirado), o perfil a ADOTA:
            ao sair do jogo, o perfil do desktop libera — é a UX esperada do
            autoswitch dono do estado após a janela de respeito.
+           PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): **catch-all não liga**, pela
+           mesma razão pela qual ele não libera (item 3) — ver o comentário no
+           corpo. Sem essa metade, um catch-all com `suppress: true` (o
+           `sackboy_nativo` do disco dela) criava um estado do qual nenhum
+           outro catch-all conseguia sair.
         3. **desired=False** — LIBERA a supressão apenas se ela veio de perfil
            (`_suppress_from_profile`). Supressão de origem manual (lock já
            expirado, sem perfil que a adotasse) permanece intocada: quem ligou
@@ -1562,6 +1618,28 @@ class Daemon:
             )
             return ADIADO_LOCK_MANUAL
         if desired:
+            # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 2: a
+            # supressão era uma armadilha de MÃO ÚNICA. Só o ramo que LIBERA
+            # tinha o gate de catch-all (logo abaixo, R-02); o ramo que LIGA
+            # aceitava a ordem de qualquer perfil — inclusive de um catch-all,
+            # que por definição chegou porque NENHUMA regra casou.
+            #
+            # O resultado está no disco dela hoje: `sackboy_nativo` é catch-all
+            # e tem `suppress_desktop_emulation: true`. Ele LIGA a supressão de
+            # mouse/teclado; e como nenhum outro catch-all tem autoridade para
+            # liberar, o estado não sai mais — a emulação de desktop fica morta
+            # até um gesto manual dela ou um perfil ESPECÍFICO aparecer.
+            #
+            # A cura é a simetria, e ela vale nas duas leituras: se ausência de
+            # regra não é ordem para LIBERAR, também não é ordem para LIGAR.
+            if self._perfil_e_catch_all(profile):
+                logger.info(
+                    "profile_suppression_skipped",
+                    motivo="catch_all_sem_opiniao",
+                    desired=True,
+                    profile=getattr(profile, "name", None),
+                )
+                return IGNORADO_CATCH_ALL
             if not self._emulation_suppressed:
                 self.set_emulation_suppressed(True, origin="profile")
             self._suppress_from_profile = True
@@ -1701,6 +1779,30 @@ class Daemon:
         if e_catch_all is None:
             return False
         return not e_catch_all
+
+    @staticmethod
+    def _perfil_e_catch_all(profile: Any | None) -> bool:
+        """True SÓ com evidência POSITIVA de que o perfil é catch-all.
+
+        PERFIL-REESCRITO-NA-PARTIDA-01, item 2. É o irmão de
+        `_perfil_tem_opiniao`, e a diferença entre os dois É a resposta na
+        DÚVIDA — por isso são dois predicados e não uma negação:
+
+        - ao reverter `mode`/supressão, a dúvida vale "sem opinião"
+          (`_perfil_tem_opiniao`): aquelas guardas são antigas, todos os seus
+          chamadores já passam `profile=`, e não reverter é o fail-safe;
+        - aqui a dúvida NÃO bloqueia. Perfil ausente é o chamador direto
+          (dublês da suíte, CLI) e `e_catch_all` ausente é um objeto parcial —
+          nos dois casos a leitura honesta é "não sei se chegou por acidente",
+          e uma guarda NOVA não pode transformar esse silêncio em recusa para
+          quem nunca teve guarda nenhuma.
+
+        Para um `Profile` de verdade os dois predicados coincidem, e em
+        produção o perfil SEMPRE chega: `ProfileManager.apply_emulation` passa
+        `profile=` a cada ativação. Usado ao LIGAR a supressão (item 2 da leva)
+        e ao reverter a política de rumble (item 3).
+        """
+        return getattr(profile, "e_catch_all", None) is True
 
     def _janela_de_jogo_em_foco(self) -> bool:
         """True quando a janela em foco AGORA é de um jogo Steam.
@@ -2298,6 +2400,7 @@ class Daemon:
         policy: str | None,
         custom_mult: float | None = None,
         *,
+        profile: Any | None = None,
         origin: str = "autoswitch",
     ) -> str:
         """Aplica a política de rumble de um perfil recém-ativado
@@ -2317,6 +2420,14 @@ class Daemon:
            outro PERFIL aplicou: volta ao par (policy, custom_mult) vigente
            ANTES de o 1º perfil-com-opinião mexer. Política de origem manual
            fica intocada.
+           PERFIL-REESCRITO-NA-PARTIDA-01 (05/08), item 3: e a reversão passa
+           pelas MESMAS DUAS guardas do `mode` e da supressão —
+           `catch_all_sem_opiniao` e `janela_de_jogo_em_foco`. Este applier era
+           o único irmão sem nenhuma delas, e o preço apareceu no journal dela:
+           um `profile_rumble_policy_reverted` DENTRO da sessão de jogo, com a
+           vibração do jogo mudando por causa de um perfil que só passou por
+           ali. A doutrina R-02 não tem por que valer para dois eixos e não
+           para o terceiro: ausência de regra não é ordem, em nenhum deles.
         3. **policy preenchida** — guarda a política anterior (1ª intervenção
            de perfil), grava no `DaemonConfig` e re-aplica o rumble ATIVO via
            `apply_rumble_policy` para efeito imediato. Se a política vigente
@@ -2350,6 +2461,37 @@ class Daemon:
         if policy is None:
             # Perfil sem opinião: reverte só política que veio de perfil.
             if self._rumble_policy_from_profile:
+                # PERFIL-REESCRITO-NA-PARTIDA-01, item 3: as duas guardas que o
+                # `mode` (`apply_profile_mode`) e a supressão
+                # (`apply_profile_suppression`) já tinham, e que faltavam aqui.
+                # Ficam DENTRO do `if` de propósito: sem política de perfil de
+                # pé não há reversão nenhuma a barrar, e devolver
+                # `ignorado_*` para um no-op encheria o relatório da GUI de
+                # recusa onde nada seria feito de todo jeito.
+                #
+                # A guarda de catch-all usa a forma de evidência POSITIVA
+                # (`_perfil_e_catch_all`) e não a negação de
+                # `_perfil_tem_opiniao`: para um `Profile` de verdade as duas
+                # são idênticas — que é o caso de TODA ativação, porque
+                # `apply_emulation` sempre passa `profile=` —, e diferem só
+                # quando ninguém disse quem mandou. Aqui a guarda é NOVA, e
+                # tomar o silêncio de um chamador direto (CLI, dublê) como
+                # recusa mudaria o comportamento de quem nunca teve guarda
+                # nenhuma, sem uma medição que peça isso.
+                if self._perfil_e_catch_all(profile):
+                    logger.info(
+                        "profile_rumble_policy_revert_skipped",
+                        motivo="catch_all_sem_opiniao",
+                        profile=getattr(profile, "name", None),
+                    )
+                    return IGNORADO_CATCH_ALL
+                if self._janela_de_jogo_em_foco():
+                    logger.info(
+                        "profile_rumble_policy_revert_skipped",
+                        motivo="janela_de_jogo_em_foco",
+                        profile=getattr(profile, "name", None),
+                    )
+                    return IGNORADO_JANELA_DE_JOGO
                 before = self._rumble_policy_before_profile
                 if before is not None:
                     self.config.rumble_policy = before[0]

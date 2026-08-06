@@ -61,6 +61,22 @@ MOTIVO_SELECIONADO = "selecionado"
 MOTIVO_SEM_CANDIDATO = "sem_candidato"
 MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
 
+#: SOM-02/E4: a seção não entrou porque a usuária mexeu NAQUELA categoria na mão
+#: e a trava (`StateStore.manual_override_categories`) está armada. Vocabulário
+#: `ignorado_*` de `daemon.lifecycle`, escrito aqui porque quem o produz é o
+#: manager, não o daemon (e importar o lifecycle no topo deste módulo fecharia
+#: um ciclo). Era literal solto em `apply_speaker`; virou constante quando a
+#: PERFIL-REESCRITO-NA-PARTIDA-01 passou a usá-lo também em `apply`.
+IGNORADO_TRAVA_MANUAL = "ignorado_trava_manual"
+
+#: PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 4: as categorias de
+#: trava manual que `ProfileManager.apply` de fato SILENCIA — são as que viram
+#: `None` no `OutputSpec` logo abaixo. As outras duas categorias existem e são
+#: consumidas noutros pontos ("audio" em `apply_speaker`, "rumble" fora da
+#: ativação), e reportá-las aqui seria inventar um silêncio que este método não
+#: produziu. O relatório só pode afirmar o que este código fez.
+_CATEGORIAS_SILENCIADAS_NO_APPLY = frozenset({"trigger", "led"})
+
 
 @dataclass
 class ProfileManager:
@@ -106,6 +122,9 @@ class ProfileManager:
     # só política aplicada por OUTRO perfil; política manual fica), mais o
     # `origin=` por keyword (R-03). None = seção ignorada (CLI/testes sem
     # daemon).
+    # PERFIL-REESCRITO-NA-PARTIDA-01 (05/08): e o `profile=` por keyword, como
+    # `suppression_applier`/`mode_applier` — é o que permite ao applier recusar
+    # a reversão pedida por um catch-all (R-02), a guarda que faltava só neste.
     rumble_policy_applier: Callable[..., object] | None = None
     # SPRINT-GAME-RUMBLE-01: applier da seção `rumble.passthrough` do perfil.
     # Os callsites injetam `daemon.apply_profile_rumble_passthrough` — recebe o
@@ -218,7 +237,9 @@ class ProfileManager:
         poderia ser lido como se fosse o de outra.
         """
         profile = load_profile(name)
-        self.apply(profile, origin=origin)
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
+        # `apply` para as categorias travadas na mão entrarem nele — ver lá.
+        self.apply(profile, origin=origin, relatorio=relatorio)
         self.apply_keyboard(profile)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
@@ -243,7 +264,13 @@ class ProfileManager:
             pass
         return profile
 
-    def apply(self, profile: Profile, *, origin: str = "auto") -> None:
+    def apply(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "auto",
+        relatorio: dict[str, str] | None = None,
+    ) -> None:
         """Aplica triggers e LEDs do perfil em TODOS os controles (sem marcar ativo).
 
         PERFIL-01 (4P-01): a seção global vai por `apply_output_defaults` —
@@ -330,6 +357,18 @@ class ProfileManager:
                 profile=profile.name,
                 categorias=sorted(travadas),
             )
+            # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o que a trava silencia
+            # entra no RELATÓRIO, e não só no journal. Este método já sabia
+            # quais categorias iria pular — emitia `None` no `OutputSpec` e
+            # seguia — e nada disso chegava a quem pergunta pelo resultado da
+            # ativação: o `profile.switch` respondia "ativado" e a janela não
+            # tinha como dizer à usuária que o gatilho/a cor do perfil não
+            # entraram porque o ajuste de mão dela venceu. Mesmo vocabulário
+            # que o `apply_speaker` já usava para a categoria "audio", agora
+            # numa constante só.
+            if relatorio is not None:
+                for categoria in travadas & _CATEGORIAS_SILENCIADAS_NO_APPLY:
+                    relatorio[categoria] = IGNORADO_TRAVA_MANUAL
 
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
@@ -540,10 +579,17 @@ class ProfileManager:
         if self.rumble_policy_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
+                # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 3: junto
+                # com o par vai QUEM mandou, como já ia para `suppression` e
+                # `mode` (R-02). Sem isso o applier não conseguia distinguir "o
+                # perfil deste jogo não quer política" de "caiu num catch-all
+                # porque nenhuma regra casou" — e a segunda hipótese revertia a
+                # política de rumble DENTRO da partida dela.
                 resultado["rumble_policy"] = _estado_da_secao(
                     self.rumble_policy_applier(
                         getattr(rumble_cfg, "policy", None),
                         getattr(rumble_cfg, "custom_mult", None),
+                        profile=profile,
                         origin=origin,
                     )
                 )
@@ -619,7 +665,7 @@ class ProfileManager:
         if self.speaker_applier is None or secao is None:
             return None
         if "audio" in self._categorias_travadas():
-            resultado["speaker"] = "ignorado_trava_manual"
+            resultado["speaker"] = IGNORADO_TRAVA_MANUAL
             logger.info(
                 "profile_speaker_ignorado_trava_manual",
                 profile=profile.name,

@@ -9,6 +9,7 @@ interface reportam PASSED contra um GTK de mentira. Cobertura falsa é pior do
 que cobertura ausente. Ver ``exigir_gi_real`` e ``pytest_collectstart`` abaixo.
 """
 
+import hashlib
 import os
 import sys
 import types
@@ -328,10 +329,198 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
         )
 
 
+# ---------------------------------------------------------------------------
+# CANARIO-FS-01 — a suíte escreveu no ~/.config DELA?
+# ---------------------------------------------------------------------------
+# O PORQUÊ, medido em 04/08/2026: os perfis dela foram encontrados corrompidos
+# e a pergunta que ficou sem resposta foi "como sabemos se algum TESTE corrompeu
+# algo?". A fixture `_hefesto_fake_env` isola os diretórios XDG — mas NÃO isola
+# o ``HOME``, e há constantes de módulo avaliadas na IMPORTAÇÃO que apontam para
+# arquivos reais dela por ``Path.home()``:
+#
+#   - `integrations/storm_doctor.py` (_ALLOWLIST_PATH, leitura);
+#   - `app/actions/emulation_actions.py` (_WP_DROPIN_DIR, e este é dir de
+#     ESCRITA em produção — o toggle do microfone cria e apaga drop-ins ali).
+#
+# Constante de módulo é avaliada ANTES de qualquer monkeypatch de ``HOME``, então
+# nenhuma fixture consegue desviá-la depois.
+#
+# ATUALIZAÇÃO 05/08/2026 (decisão dela: *"preciso que as constantes apontem
+# pros arquivos reais"*): as DUAS viraram função — `storm_doctor._allowlist_path`
+# e `EmulationActionsMixin._wp_dropin_dir`. `Path.home()` dentro de função lê o
+# ``HOME`` na hora da chamada, então o isolamento da suíte volta a valer e o
+# comportamento em produção não muda. O canário CONTINUA, e não por desconfiança
+# destas duas: ele cobre o que ninguém mapeou — subprocessos, `systemctl`,
+# `uinput` e a próxima constante que alguém escrever sem pensar nisso.
+#
+# O canário fotografa (mtime_ns, tamanho, sha256) dos diretórios de verdade no
+# início e no fim da sessão e REPROVA listando o que mudou. O hash não é zelo:
+# a primeira versão comparava só (mtime_ns, size) e acusou 15 arquivos `.lock`
+# na estreia — tocados pelo daemon e pela janela DELA, vivos ao lado da suíte.
+# Um portão que grita no primeiro dia é um portão que alguém desliga no segundo.
+#
+# Isto não é hipótese: é medição. Se a suíte não escreve nada, o canário é
+# invisível; se escreve, ele diz exatamente qual arquivo.
+
+#: Diretórios REAIS que a suíte não pode tocar. Relativos ao ``HOME``.
+_CANARIO_ALVOS: tuple[str, ...] = (
+    ".config/hefesto-dualsense4unix",
+    ".config/wireplumber",
+    ".local/share/hefesto-dualsense4unix",
+)
+
+#: Escotilha de saída, para quem PRECISA rodar a suíte contra o HOME real
+#: (nunca deveria ser preciso — existe para não obrigar ninguém a comentar
+#: código quando o daemon está de pé e mexendo no session.json ao lado).
+_CANARIO_DESLIGADO_ENV = "HEFESTO_SEM_CANARIO_FS"
+
+#: Fotografia do início da sessão: {caminho: (mtime_ns, tamanho, resumo)}.
+_CANARIO_FOTO_INICIAL: dict[str, tuple[int, int, str]] = {}
+
+#: True só depois que a foto inicial foi tirada. Sem este selo, uma sessão que
+#: começou com o canário desligado e terminou com ele ligado compararia contra
+#: um dicionário vazio e acusaria TODO arquivo do ``$HOME`` de ter nascido
+#: durante a suíte — o alarme mais falso que existe.
+_CANARIO_ARMADO = False
+
+#: Acima disto o arquivo não é resumido (só mtime+tamanho). Nada nos diretórios
+#: vigiados chega perto — medido em 05/08: 93 arquivos, 356 KB no total.
+_CANARIO_LIMITE_RESUMO = 4 * 1024 * 1024
+
+
+def _canario_ligado() -> bool:
+    return os.environ.get(_CANARIO_DESLIGADO_ENV) != "1"
+
+
+def _canario_raizes() -> list[Path]:
+    """Os alvos resolvidos contra o ``HOME`` REAL do processo.
+
+    Lido de ``os.environ`` no momento da chamada de propósito: se um teste
+    trocar o ``HOME``, as duas fotos ainda comparam a MESMA árvore, porque os
+    dois hooks rodam fora de qualquer fixture.
+    """
+    lar = Path(os.path.expanduser("~"))
+    return [lar / alvo for alvo in _CANARIO_ALVOS]
+
+
+def _resumo_do_arquivo(caminho: Path, tamanho: int) -> str:
+    """sha256 do conteúdo — vazio para diretórios, ilegíveis e arquivos enormes.
+
+    O resumo existe por uma medição de 05/08: com o daemon e a janela DELA de
+    pé ao lado da suíte, os `*.json.lock` do diretório de perfis mudam de mtime
+    a cada poucos segundos (o `filelock` toca o arquivo a cada aquisição). Um
+    canário que reprovasse por mtime acusaria a suíte do que o daemon fez, e
+    seria desligado na primeira semana. Conteúdo não mente: comparar o resumo
+    reprova toda ESCRITA de verdade e ignora o vaivém dos locks.
+    """
+    if tamanho > _CANARIO_LIMITE_RESUMO:
+        return ""
+    try:
+        return hashlib.sha256(caminho.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _fotografar_arvore(raiz: Path) -> dict[str, tuple[int, int, str]]:
+    """{caminho: (mtime_ns, tamanho, resumo)} sob `raiz`. Ausente = dict vazio.
+
+    Diretórios entram na foto para que um subdiretório novo (ou sumido) apareça
+    como delta. Erros de permissão são pulados em silêncio: o canário mede o que
+    consegue ver, e ver menos nunca pode derrubar a suíte por si só.
+    """
+    foto: dict[str, tuple[int, int, str]] = {}
+    if not raiz.exists():
+        return foto
+    for caminho in [raiz, *raiz.rglob("*")]:
+        try:
+            st = caminho.stat()
+            e_arquivo = caminho.is_file()
+        except OSError:
+            continue
+        resumo = _resumo_do_arquivo(caminho, st.st_size) if e_arquivo else ""
+        foto[str(caminho)] = (st.st_mtime_ns, st.st_size, resumo)
+    return foto
+
+
+def _fotografar_tudo() -> dict[str, tuple[int, int, str]]:
+    foto: dict[str, tuple[int, int, str]] = {}
+    for raiz in _canario_raizes():
+        foto.update(_fotografar_arvore(raiz))
+    return foto
+
+
+def _deltas_do_canario(
+    antes: dict[str, tuple[int, int, str]], depois: dict[str, tuple[int, int, str]]
+) -> list[str]:
+    """Lista legível do que mudou entre as duas fotos (vazia = nada mudou).
+
+    Delta de arquivo é MUDANÇA DE CONTEÚDO (tamanho ou resumo) — mtime sozinho
+    não conta, pelo motivo medido em `_resumo_do_arquivo`.
+    """
+    deltas: list[str] = []
+    deltas.extend(f"CRIADO   {c}" for c in sorted(set(depois) - set(antes)))
+    deltas.extend(f"APAGADO  {c}" for c in sorted(set(antes) - set(depois)))
+    for caminho in sorted(set(antes) & set(depois)):
+        (_mt_a, tam_a, resumo_a) = antes[caminho]
+        (_mt_d, tam_d, resumo_d) = depois[caminho]
+        if (tam_a, resumo_a) == (tam_d, resumo_d):
+            continue
+        detalhe = f"tamanho {tam_a}->{tam_d}" if tam_a != tam_d else "conteúdo"
+        deltas.append(f"MUDADO   {caminho} ({detalhe})")
+    return deltas
+
+
+def pytest_sessionstart(session: Any) -> None:
+    """CANARIO-FS-01: primeira fotografia dos diretórios REAIS da usuária."""
+    global _CANARIO_ARMADO
+    if not _canario_ligado():
+        return
+    _CANARIO_FOTO_INICIAL.update(_fotografar_tudo())
+    _CANARIO_ARMADO = True
+
+
+def _escrever_no_terminal(session: Any, linhas: list[str]) -> None:
+    """Imprime pelo terminalreporter quando ele existe; senão, no stdout."""
+    relator = None
+    config = getattr(session, "config", None)
+    gerenciador = getattr(config, "pluginmanager", None)
+    if gerenciador is not None:
+        relator = gerenciador.get_plugin("terminalreporter")
+    for linha in linhas:
+        if relator is not None:
+            relator.write_line(linha)
+        else:  # pragma: no cover — pytest sempre tem terminalreporter
+            print(linha)
+
+
 def pytest_sessionfinish(session: Any, exitstatus: int) -> None:
-    """Sob ``HEFESTO_EXIGE_GTK_REAL=1``, pulo por falta de GTK reprova o run."""
+    """Sob ``HEFESTO_EXIGE_GTK_REAL=1``, pulo por falta de GTK reprova o run.
+
+    E, sempre, o CANARIO-FS-01: se a suíte mexeu em qualquer arquivo dos
+    diretórios REAIS da usuária, o run REPROVA com a lista do que mudou. Um
+    teste hermético não deixa rastro nenhum em ``$HOME``.
+    """
     if EXIGE_GTK_REAL and _MODULOS_PULADOS_SEM_GI:
         session.exitstatus = 1
+
+    if not _canario_ligado() or not _CANARIO_ARMADO:
+        return
+    deltas = _deltas_do_canario(_CANARIO_FOTO_INICIAL, _fotografar_tudo())
+    if not deltas:
+        return
+    linhas = [
+        "",
+        "CANARIO-FS-01: a suíte ESCREVEU nos diretórios reais da usuária "
+        f"({len(deltas)} mudança(s)):",
+        *[f"  - {d}" for d in deltas],
+        "  Um teste hermético não deixa rastro em $HOME. Procure constante de",
+        "  módulo com Path.home() avaliada no import (monkeypatch de HOME não a",
+        "  alcança) — mova para função e injete o caminho.",
+        f"  Se o daemon/GUI estava rodando ao lado, {_CANARIO_DESLIGADO_ENV}=1 "
+        "desliga este canário.",
+    ]
+    _escrever_no_terminal(session, linhas)
+    session.exitstatus = 1
 
 
 # NOTA: a sonda antiga `_gtk_response_type_ausente()` foi fundida em

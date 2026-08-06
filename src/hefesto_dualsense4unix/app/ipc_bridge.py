@@ -31,6 +31,23 @@ _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
     OSError,
 )
 
+#: ATIVAR-NAO-MENTE-01 (leva 2, 05/08): quanto esperar por um `profile.switch`.
+#:
+#: O default de 250 ms desta ponte é o timeout de LEITURA — cabe num
+#: `daemon.state_full`, e é curto de propósito para a janela não pendurar
+#: esperando um daemon morto. Só que `profile.switch` não é leitura: o handler
+#: faz `activate` + `save_active_marker` + `materialize_launch_env` e levou
+#: ~1,2 s MEDIDOS no journal dela. Resultado: TODA ativação estourava o
+#: timeout, a janela dizia "Falha (daemon offline?)" com o perfil JÁ ativo, e
+#: ela clicava de novo — cada clique uma ativação real.
+#:
+#: Mesma família (e mesma cura) do `MODE_IPC_TIMEOUT_S` de
+#: `app/actions/mode_transition.py`: a chamada que MUDA o mundo ganha a folga
+#: que a leitura não pode ter. O applet COSMIC espelha este número em
+#: `packaging/cosmic-applet/src/ipc.rs` (`SWITCH_IPC_TIMEOUT`) — os dois falam
+#: com o MESMO daemon, e divergir aqui é reabrir o defeito de um lado só.
+PROFILE_SWITCH_TIMEOUT_S: float = 3.0
+
 
 def _get_executor() -> concurrent.futures.ThreadPoolExecutor:
     """Retorna (criando se necessário) o executor IPC compartilhado."""
@@ -252,7 +269,17 @@ def active_profile_name() -> str | None:
 
 
 def profile_switch(name: str) -> bool:
-    ok, _ = _safe_call("profile.switch", {"name": name})
+    """Ativa um perfil no daemon; ``False`` quando ele não confirmou.
+
+    ATIVAR-NAO-MENTE-01: com o timeout de leitura (250 ms) esta função devolvia
+    ``False`` para uma ativação que o daemon estava CUMPRINDO — os ~1,2 s do
+    handler não cabiam. Quem lê o ``False`` são a CLI (`cmd_profile`), o
+    ciclador de perfil e o Salvar da aba Perfis, e os três passaram a anunciar
+    falha de uma troca que aconteceu. Ver `PROFILE_SWITCH_TIMEOUT_S`.
+    """
+    ok, _ = _safe_call(
+        "profile.switch", {"name": name}, timeout=PROFILE_SWITCH_TIMEOUT_S
+    )
     return ok
 
 
@@ -701,6 +728,7 @@ def mouse_emulation_set(
 
 
 __all__ = [
+    "PROFILE_SWITCH_TIMEOUT_S",
     "active_profile_name",
     "aplicacao_confirmada",
     "apply_draft",

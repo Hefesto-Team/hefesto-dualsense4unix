@@ -28,6 +28,7 @@ from hefesto_dualsense4unix.profiles.manager import (
     MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
     MOTIVO_SEM_CANDIDATO,
     ProfileManager,
+    _estado_da_secao,
 )
 from hefesto_dualsense4unix.profiles.schema import (
     Profile,
@@ -136,6 +137,14 @@ class AutoSwitcher:
     # cadeado. Mesmo motivo do `_suppress_log_key` — o cadeado é avaliado a
     # 2 Hz e ficou LIGADO por 90 min na máquina dela.
     _cadeado_log_key: tuple[str, str] | None = None
+    # PERFIL-REESCRITO-NA-PARTIDA-01 (leva de 05/08), item 4: último estado
+    # devolvido pelo par do MODO JOGO PADRÃO (`aplicar_modo_jogo_padrao` /
+    # `reverter_modo_jogo_padrao`), no vocabulário `aplicado`/`adiado_*`/
+    # `ignorado_*` dos outros appliers. O retorno era DESCARTADO: o eixo mexia
+    # (ou recusava mexer) no gamepad da usuária a cada tique e nada disso
+    # entrava no relatório da ativação — a janela não tinha como lhe dizer o que
+    # não entrou. Vazio = o par não foi chamado nesta instância.
+    _estado_modo_jogo_padrao: str = ""
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -188,6 +197,85 @@ class AutoSwitcher:
         store = self.store
         return store is not None and bool(getattr(store, "autoswitch_locked", False))
 
+    def _store_de_estado(self) -> Any | None:
+        """O store onde mora o perfil REALMENTE ativo (nunca `None` em produção).
+
+        PERFIL-REESCRITO-NA-PARTIDA-01, item 1. Prefere o store injetado pelo
+        daemon; cai no store do próprio `ProfileManager` (que é o MESMO objeto
+        em produção — as duas rotas de subida do autoswitch injetam `ctx.store`
+        nos dois) para que a sincronização também valha nas construções legadas
+        `AutoSwitcher(manager=..., window_reader=...)` sem `store`, usadas por
+        boa parte da suíte. Sem esse fallback a cura ficaria sem cobertura
+        justamente onde ela é mais fácil de testar.
+        """
+        if self.store is not None:
+            return self.store
+        return getattr(self.manager, "store", None)
+
+    def _perfil_corrente(self) -> str | None:
+        """Nome do perfil ATIVO de verdade, sincronizando a crença do autoswitch.
+
+        PERFIL-REESCRITO-NA-PARTIDA-01, item 1 (o de maior alcance da leva).
+        `_current_profile` era escrito num único lugar — o commit do próprio
+        `_activate` — e NADA o sincronizava com `store.active_profile`. Um
+        `profile.switch` dela (janela, CLI, PS+D-pad) trocava o perfil de
+        verdade e o autoswitch seguia acreditando no que ELE tinha ativado por
+        último. A prova está no journal dela: `profile_autoswitch from_=None
+        to=sackboy_nativo` com outro perfil ativo havia horas — o autoswitch
+        "entrando" num perfil que já era o ativo, reescrevendo gatilhos, LEDs,
+        modo e política de rumble por cima do que ela tinha escolhido na mão.
+
+        A decisão passa a ser tomada contra o estado REAL: `ProfileManager
+        .activate` publica `store.set_active_profile(...)` em TODA ativação, de
+        qualquer origem, então o store já era a única fonte honesta — faltava
+        lê-lo.
+
+        Quando a crença diverge, a especificidade (`_current_especifico`, que
+        arma o lado lento do debounce assimétrico UX-04) vira `True` —
+        "trate como perfil específico" — porque um nome novo com a
+        especificidade do perfil ANTIGO seria uma terceira crença errada.
+        `True` é o palpite seguro e o único gratuito: ele apenas torna mais
+        CARO sair do perfil rumo a um genérico (12 s em vez de 0,5 s), e depois
+        de um gesto explícito dela ficar tem custo zero, enquanto sair rápido
+        reabre o flap que a UX-04 fechou. Nada de reler o disco aqui: o
+        `ProfileManager.get` varre o diretório de perfis, e a docstring do
+        `_current_especifico` já proíbe I/O nesta decisão. O palpite é
+        corrigido de graça no próprio tique — ver `_tick`, quando o candidato
+        selecionado é o perfil corrente.
+
+        `active_profile` vazio/ausente/não-string (store parcial, dublê
+        `MagicMock`) NÃO derruba a crença: sem evidência positiva, vale o
+        comportamento histórico.
+
+        O EFEITO COLATERAL, declarado porque é real: o restore de boot também
+        publica em `store.active_profile`, então o autoswitch deixa de "entrar"
+        no perfil que o boot acabou de restaurar (antes, a crença `None` fazia
+        o primeiro tique re-ativá-lo ~1 s depois). Isso não é perda — é o
+        `BUG-BOOT-RESTORE-FLIPS-EMULATION-01` sendo respeitado: o restore de
+        boot monta o manager com `mouse_applier=None` e `mode_applier=None` de
+        propósito, porque no boot quem governa a emulação são os FLAGS
+        PERSISTIDOS, não o perfil (com o applier ligado, um `point_and_click`
+        como last_profile matava o gamepad restaurado e invertia a escolha dela
+        a cada boot). A re-ativação pelo autoswitch reintroduzia por acidente
+        exatamente o que aquela cura removeu.
+        """
+        store = self._store_de_estado()
+        if store is None:
+            return self._current_profile
+        ativo = getattr(store, "active_profile", None)
+        if not isinstance(ativo, str) or not ativo:
+            return self._current_profile
+        if ativo != self._current_profile:
+            anterior = self._current_profile
+            self._current_profile = ativo
+            self._current_especifico = True
+            logger.info(
+                "autoswitch_crenca_sincronizada",
+                de=anterior or "",
+                para=ativo,
+            )
+        return self._current_profile
+
     def _tick(self, info: dict[str, Any], now: float) -> None:
         """Um ciclo de decisão do autoswitch (leitura já feita pelo caller).
 
@@ -195,6 +283,12 @@ class AutoSwitcher:
         wall-time e o buraco-do-debounce da UX-01 só é testável com `now`
         controlado.
         """
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: a PRIMEIRA coisa do tique é
+        # adotar o perfil realmente ativo. Tem de vir antes de tudo — antes da
+        # histerese (que loga `current=`), antes do select, antes do debounce —
+        # senão o resto do tique decide contra uma crença que pode estar horas
+        # atrasada em relação ao que ela escolheu na mão.
+        self._perfil_corrente()
         # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
         # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
         # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,
@@ -229,6 +323,13 @@ class AutoSwitcher:
 
         profile, motivo = self._selecionar_com_motivo(info)
         candidate = profile.name if profile else None
+
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: quando o candidato É o perfil
+        # corrente, a especificidade sai de GRAÇA do objeto recém-selecionado —
+        # sem disco e sem custo a 2 Hz. É o que corrige o palpite conservador
+        # que a sincronização acima deixa após uma troca manual dela.
+        if candidate is not None and candidate == self._current_profile:
+            self._current_especifico = not bool(getattr(profile, "e_catch_all", True))
 
         # MODO-01/B3: ANTES do cadeado, de propósito — o cadeado congela a
         # decisão de PERFIL, não a de MODO. Ela deixou `autoswitch_locked.flag`
@@ -357,6 +458,12 @@ class AutoSwitcher:
           possível.
 
         Best-effort dos dois lados: falha do daemon vira log e o tick segue.
+
+        PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o estado devolvido pelo par
+        deixa de ser descartado — fica em `_estado_modo_jogo_padrao` e entra no
+        relatório da ativação seguinte. O daemon já respondia no vocabulário dos
+        outros appliers (`aplicado`, `adiado_lock_manual`, `ignorado_sem_jogo`,
+        `ignorado_gesto_dela`); era o autoswitch que jogava a resposta fora.
         """
         wm_class = str(info.get("wm_class") or "")
         if motivo == MOTIVO_JOGO_SEM_PERFIL_PROPRIO:
@@ -364,16 +471,22 @@ class AutoSwitcher:
             if applier is None:
                 return
             try:
-                applier(wm_class=wm_class)
+                self._estado_modo_jogo_padrao = _estado_da_secao(
+                    applier(wm_class=wm_class)
+                )
             except Exception as exc:
+                self._estado_modo_jogo_padrao = "falhou"
                 logger.warning("modo_jogo_padrao_falhou", err=str(exc))
             return
         reverter = self.modo_jogo_padrao_reverter
         if reverter is None:
             return
         try:
-            reverter(wm_class=wm_class)
+            self._estado_modo_jogo_padrao = _estado_da_secao(
+                reverter(wm_class=wm_class)
+            )
         except Exception as exc:
+            self._estado_modo_jogo_padrao = "falhou"
             logger.warning("modo_jogo_padrao_revert_falhou", err=str(exc))
 
     def _saida_para_catch_all(self, profile: Profile | None) -> bool:
@@ -470,6 +583,12 @@ class AutoSwitcher:
     def _activate(
         self, name: str, info: dict[str, Any], profile: Profile | None = None
     ) -> None:
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: sincroniza a crença também
+        # aqui — `_tick` já o faz, mas `_activate` é chamado direto por outros
+        # caminhos (e pela suíte), e `from_=` no journal mentia exatamente
+        # quando mais importava: `from_=None to=sackboy_nativo` com outro perfil
+        # ativo havia horas. Custa um `getattr` quando não há divergência.
+        self._perfil_corrente()
         # FEAT-NATIVE-MODE-01: em Modo Nativo MANUAL o controle está SOLTO para
         # o jogo — o autoswitch NÃO ativa perfil (que re-escreveria gatilhos por
         # cima) até a usuária desligar. Silencioso (estado estável).
@@ -554,6 +673,12 @@ class AutoSwitcher:
         self._current_especifico = profile is not None and not bool(
             getattr(profile, "e_catch_all", True)
         )
+        # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o MODO JOGO PADRÃO é o único
+        # eixo que o tique mexe FORA do `ProfileManager` (o daemon liga o vpad
+        # quando é jogo e ninguém opina). Entra no relatório como seção própria,
+        # com o mesmo vocabulário, para a janela poder contar essa metade também.
+        if self._estado_modo_jogo_padrao:
+            relatorio["modo_jogo_padrao"] = self._estado_modo_jogo_padrao
         logger.info(
             "profile_autoswitch",
             from_=from_profile,
@@ -566,6 +691,16 @@ class AutoSwitcher:
                 secao
                 for secao, estado in relatorio.items()
                 if estado.startswith("adiado")
+            ),
+            # PERFIL-REESCRITO-NA-PARTIDA-01, item 5: o filtro acima escondia
+            # METADE do relatório. `ignorado_catch_all`, `ignorado_janela_de_jogo`,
+            # `ignorado_trava_manual` e `falhou` NUNCA apareciam no journal — e
+            # são justamente os estados em que a ativação "deu certo" sem aplicar
+            # a seção. `adiado=` fica onde estava (é o campo que a leitura do
+            # journal já procura); `secoes=` diz a verdade INTEIRA, uma entrada
+            # por seção, ordenada para o diff entre dois tiques ser legível.
+            secoes=sorted(
+                f"{secao}={estado}" for secao, estado in relatorio.items()
             ),
         )
 

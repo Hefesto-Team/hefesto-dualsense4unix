@@ -715,7 +715,18 @@ class EmulationActionsMixin(WidgetAccessMixin):
     # (scripts/fix_wireplumber_default_source.sh). Mic ON = sem os drop-ins de
     # supressão 52/53; OFF = com eles. O quirk segura o storm com o mic ligado.
 
-    _WP_DROPIN_DIR = Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+    #: CANARIO-FS-01 (05/08/2026, decisão dela): isto ERA
+    #: `_WP_DROPIN_DIR = Path.home() / ...`, atributo de classe avaliado no
+    #: IMPORT — e este é DIRETÓRIO DE ESCRITA em produção. Congelado no import,
+    #: nenhum `monkeypatch` de `HOME` o alcançava, e um teste que exercitasse
+    #: este caminho escreveria na configuração real do WirePlumber da máquina.
+    #: Em método, `Path.home()` resolve na hora da chamada: a suíte volta a ser
+    #: isolável e produção não muda. Irmão de `storm_doctor._allowlist_path`.
+    @staticmethod
+    def _wp_dropin_dir() -> Path:
+        """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada."""
+        return Path.home() / ".config" / "wireplumber" / "wireplumber.conf.d"
+
     _WP_DISABLE_DROPINS = (
         "52-hefesto-dualsense-disable-source.conf",
         "53-hefesto-dualsense-disable-output.conf",
@@ -737,7 +748,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _mic_is_on(self) -> bool:
         """Mic ON quando nenhum drop-in de supressão (52/53) está presente."""
         return not any(
-            (self._WP_DROPIN_DIR / name).exists() for name in self._WP_DISABLE_DROPINS
+            (self._wp_dropin_dir() / name).exists() for name in self._WP_DISABLE_DROPINS
         )
 
     # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB

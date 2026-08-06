@@ -16,6 +16,10 @@
 # causa deste bloco (derrubaria os controles BT conectados; provado ao vivo em
 # 2026-07-17). A ÚNICA exceção documentada é o postinst do próprio pacote
 # bluez quando o backport ONDA-R troca a versão instalada.
+# RADIO-ABERTO-01 (05/08/2026): ERA `always`, passou a `confirm` — o `always`
+# remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já
+# tem bond, e a composição com o agente NoInputNoOutput termina em injeção de
+# teclas. Ver a sprint e assets/bluetooth/hefesto-bt.block.
 [General]
-JustWorksRepairing = always
+JustWorksRepairing = confirm
 # <<< hefesto JustWorksRepairing <<<

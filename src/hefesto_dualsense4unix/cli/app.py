@@ -87,11 +87,16 @@ def doctor(
         "--fix-safe",
         help="Anti-storm SEGURO (sem sudo): Steam Input OFF + WirePlumber + cura de raiz.",
     ),
+    perfis: bool = typer.Option(
+        False,
+        "--perfis",
+        help="SÓ a coerência dos perfis entre si (rápido, sem daemon). Sai 1 se houver erro.",
+    ),
 ) -> None:
     """Diagnóstico de saúde: daemon, udev, applet, áudio, anti-storm + checks via IPC."""
     from hefesto_dualsense4unix.cli.cmd_doctor import doctor_cmd
 
-    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe)
+    doctor_cmd(fix=fix, quiet=quiet, fix_safe=fix_safe, perfis=perfis)
 
 
 @app.command()

@@ -401,25 +401,59 @@ class IpcHandlersMixin:
         if not isinstance(name, str) or not name:
             raise ValueError("profile.switch exige 'name' string")
         relatorio: dict[str, str] = {}
-        profile = self.profile_manager.activate(
-            name, origin="manual", relatorio=relatorio
-        )
-        # Bug B: paridade do marker da CLI legada com session.json.
-        from hefesto_dualsense4unix.utils.session import save_active_marker
-        save_active_marker(profile.name)
-        # Usuário escolheu perfil explícito: libera autoswitch de novo
-        # (BUG-MOUSE-TRIGGERS-01).
-        self.store.clear_manual_trigger_active()
-        # Bug C: arma lock manual; autoswitch suprime por
-        # MANUAL_PROFILE_LOCK_SEC segundos.
+        # TRAVA-QUE-SOLTA-TARDE-01 (medido ao vivo, 05/08): o clear e o lock
+        # vêm ANTES do `activate`. Até aqui eles vinham depois, e a ativação
+        # inteira rodava com a trava ainda armada — `manager.apply` pulava as
+        # categorias travadas (emitindo `None` no `OutputSpec`) e o handler
+        # respondia "ativado". A trava era limpa tarde demais para a ativação
+        # que a limpou: valia só para a PRÓXIMA. No journal dela, duas
+        # ativações idênticas do mesmo perfil davam resultados diferentes.
+        # O caminho automático (`autoswitch.py:505-518`) sempre fez assim —
+        # limpa e SÓ ENTÃO aplica; eram os dois gestos EXPLÍCITOS que estavam
+        # invertidos. Ver `tests/unit/test_trava_que_solta_tarde_01.py`.
+        #
+        # O lock sobe junto e pelo mesmo motivo: entre soltar a trava e
+        # terminar o `activate` não pode existir janela em que nem a trava nem
+        # o lock suprimam o autoswitch (Bug C).
         import time as _time
 
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
         )
+        # `getattr` pelo mesmo motivo que `ProfileManager._categorias_travadas`
+        # (`profiles/manager.py:384-387`): dublês de teste e stores parciais
+        # continuam funcionando, e "não sei listar" vira "nada a restaurar".
+        travadas_antes = getattr(self.store, "manual_override_categories", ()) or ()
+        lock_antes = getattr(self.store, "_manual_profile_lock_until", 0.0)
+        # Usuário escolheu perfil explícito: libera autoswitch de novo
+        # (BUG-MOUSE-TRIGGERS-01).
+        self.store.clear_manual_trigger_active()
+        # Bug C: arma lock manual; autoswitch suprime por
+        # MANUAL_PROFILE_LOCK_SEC segundos.
         self.store.mark_manual_profile_lock(
             _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
         )
+        try:
+            profile = self.profile_manager.activate(
+                name, origin="manual", relatorio=relatorio
+            )
+        except Exception:
+            # Atomicidade (a mesma que a docstring já promete ao marker): uma
+            # ativação que FALHOU não é gesto cumprido, e não pode custar a ela
+            # a trava que ela tinha armado — `profile.switch` com nome
+            # inexistente apagaria a configuração feita na mão.
+            #
+            # E o LOCK volta junto: sem isto, um nome errado congelava a troca
+            # automática por MANUAL_PROFILE_LOCK_SEC (30 s) sem que gesto nenhum
+            # tivesse sido cumprido. Borda aberta pela própria subida do lock
+            # (TRAVA-QUE-SOLTA-TARDE-01) e apontada na revisão.
+            for categoria in travadas_antes:
+                self.store.mark_manual_trigger_active(categoria)
+            self.store.mark_manual_profile_lock(lock_antes)
+            raise
+        # Bug B: paridade do marker da CLI legada com session.json.
+        from hefesto_dualsense4unix.utils.session import save_active_marker
+        save_active_marker(profile.name)
         # DEDUP-04: gatilho "mudança de perfil" — perfis com `steam_app_<id>`
         # no match materializam arquivo de env próprio; a troca manual também
         # pode ter mudado modo/máscara via apply do perfil.

@@ -96,6 +96,10 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import footer_actions as fa
+# GRAVA-POR-UM-FUNIL-01: quem chama `save_profile` pelo rodapé é o funil
+# (`profile_writer`), não mais o `footer_actions` — o dublê de disco tem de
+# ser plantado onde a gravação acontece de verdade.
+from hefesto_dualsense4unix.app.actions import profile_writer as pw
 from hefesto_dualsense4unix.app.actions import lightbar_actions as la
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.app.actions import rumble_actions as ra
@@ -171,7 +175,8 @@ class _Disco:
         self.por_slug: dict[str, Profile] = {slugify(p.name): p for p in perfis}
         self.gravacoes: list[Profile] = []
 
-    def salvar(self, profile: Profile) -> Path:
+    def salvar(self, profile: Profile, *, origem: str | None = None) -> Path:
+        # `origem` espelha a assinatura real de `save_profile` (loader.py:787).
         self.por_slug[slugify(profile.name)] = profile
         self.gravacoes.append(profile)
         return Path(f"/perfis/{slugify(profile.name)}.json")
@@ -398,10 +403,18 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
         lambda parent, name: janela.resposta_overwrite,
         raising=False,
     )
+    # SALVAR-NAO-REBAIXA-02: os dois avisos de rebaixamento (regra e
+    # PRIORIDADE) — `**_kw` acompanha o `regra_atual` novo do primeiro.
     monkeypatch.setattr(
         gd,
         "confirm_downgrade_match_to_any",
-        lambda parent, name: janela.resposta_downgrade,
+        lambda parent, name, **_kw: janela.resposta_downgrade,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        gd,
+        "confirm_downgrade_priority",
+        lambda parent, name, **_kw: True,
         raising=False,
     )
     monkeypatch.setattr(
@@ -419,7 +432,7 @@ def _ligar(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(pa, "call_async", lambda *_a, **_kw: None)
     # Rodapé.
-    monkeypatch.setattr(fa, "save_profile", janela._disco.salvar)
+    monkeypatch.setattr(pw, "save_profile", janela._disco.salvar)
     monkeypatch.setattr(fa, "load_all_profiles", janela._disco.todos)
     monkeypatch.setattr(fa.ipc_bridge, "run_in_thread", _sync_run_in_thread)
     monkeypatch.setattr(fa.ipc_bridge, "call_async", lambda *_a, **_kw: None)

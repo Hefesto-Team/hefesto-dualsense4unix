@@ -31,9 +31,23 @@ _STEAM_INPUT_RE = re.compile(
 # SetDualSenseTriggerEffect, que só funciona com o Steam Input do jogo LIGADO).
 # O opt-in per-app desses títulos é deliberado — os checks não devem acusá-lo
 # de conflito. Mesma allowlist do disable_steam_input.sh.
-_ALLOWLIST_PATH = (
-    Path.home() / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
-)
+def _allowlist_path() -> Path:
+    """Caminho da allowlist, resolvido A CADA CHAMADA.
+
+    CANARIO-FS-01 (05/08/2026, decisão dela): isto ERA uma constante de módulo
+    — ``Path.home() / ...`` avaliada no IMPORT. Em produção funcionava; em
+    teste, não: o valor congelava antes de qualquer ``monkeypatch`` de ``HOME``,
+    e a suíte passava a LER o arquivo real da mantenedora. O resultado de três
+    arquivos de teste dependia, sem ninguém saber, do conteúdo do disco dela.
+
+    ``Path.home()`` lê ``HOME`` no momento da chamada. Dentro de uma função,
+    portanto, o isolamento da suíte volta a valer — e o comportamento em
+    produção não muda em nada, porque lá o ``HOME`` é o mesmo do começo ao fim.
+
+    O irmão desta cura é ``EmulationActionsMixin._wp_dropin_dir``, que tinha a
+    mesma forma e é DIRETÓRIO DE ESCRITA.
+    """
+    return Path.home() / ".config" / "hefesto-dualsense4unix" / "steam_input_apps.txt"
 _SI_KEY_RE = re.compile(
     r'"(SteamController_PSSupport|SteamController_SwitchSupport|'
     r'UseSteamControllerConfig)"\s+"[12]"'
@@ -43,7 +57,7 @@ _VDF_BLOCK_NAME_RE = re.compile(r'^\s*"([^"]*)"\s*$')
 
 def steam_input_allowlist(path: Path | None = None) -> set[str]:
     """AppIDs com Steam Input per-app deliberado (uma linha por id; # comenta)."""
-    caminho = path or _ALLOWLIST_PATH
+    caminho = path or _allowlist_path()
     out: set[str] = set()
     try:
         for linha in caminho.read_text(encoding="utf-8").splitlines():
