@@ -11,6 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
 #: Teto do multiplicador de rumble da política "custom". Acima de 1.0 AMPLIFICA o
 #: que o jogo pediu — é a razão de existir da faixa (BUG-RUMBLE-CUSTOM-MULT-CAP-01).
 #:
@@ -717,7 +719,16 @@ def perfil_e_regra_de_jogo(profile: Profile | None, window_info: dict[str, Any])
     if not isinstance(match, MatchCriteria) or not match.window_class:
         return False
     wm_class = str(window_info.get("wm_class") or "")
-    if not wm_class.startswith("steam_app_"):
+    # UNIFICA-PREDICADO-01 (05/08/2026): era `wm_class.startswith("steam_app_")`
+    # — SENSÍVEL a caixa, uma linha acima de uma comparação INSENSÍVEL. A
+    # incoerência estava denunciada no próprio comentário abaixo e mesmo assim
+    # valia: com a janela se anunciando `STEAM_APP_2111190` (a `wm_class` chega
+    # com a grafia do toolkit e muda entre backends, ver `_casa_sem_caixa`), o
+    # perfil do jogo casava pelo matcher e saía daqui como "não é regra de
+    # jogo". Agora as duas linhas usam a MESMA noção de caixa. Portão:
+    # `tests/unit/test_match_sem_caixa_e_sentinel_manual.py::
+    # TestComparacaoSemCaixa::test_regra_de_jogo_com_a_janela_em_caixa_alta`.
+    if steam_appid_from_wm_class(wm_class) is None:
         return False
     # Mesma comparação de `MatchCriteria.matches` (R-12): sem ela, um
     # `steam_app_` digitado com maiúscula faria o perfil CASAR pelo matcher e

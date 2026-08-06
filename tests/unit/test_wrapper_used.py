@@ -97,6 +97,30 @@ def test_steam_appid_from_wm_class() -> None:
     assert steam_appid_from_wm_class(None) is None
 
 
+def test_steam_appid_from_wm_class_ignora_caixa_e_espaco() -> None:
+    """UNIFICA-PREDICADO-01: a fonte ÚNICA é insensível a caixa e tolera espaço.
+
+    A `wm_class` chega do X/XWayland com a caixa que o toolkit escolheu e MUDA
+    DE GRAFIA ENTRE BACKENDS de detecção — é o que `schema._casa_sem_caixa`
+    documenta e o que o matcher de perfil já respeitava. Um predicado
+    CASE-SENSITIVE aqui embaixo faria as cinco cópias do mesmo teste
+    divergirem de novo, e a divergência entre predicados é o buraco de sempre
+    (R-01/R-21). O `.strip()` entra pelo mesmo motivo: dois dos cinco lugares
+    que este módulo unifica já limpavam espaço acidental, e a fonte não —
+    absorver isso em silêncio seria mudar comportamento em silêncio.
+    """
+    assert steam_appid_from_wm_class(f"STEAM_APP_{APPID}") == APPID
+    assert steam_appid_from_wm_class(f"Steam_App_{APPID}") == APPID
+    assert steam_appid_from_wm_class(f"  steam_app_{APPID}  ") == APPID
+    assert steam_appid_from_wm_class(f"\tSTEAM_APP_{APPID}\n") == APPID
+    # O alargamento é SÓ de caixa e espaço: o que não era appid continua não
+    # sendo, em qualquer grafia.
+    assert steam_appid_from_wm_class("STEAM_APP_") is None
+    assert steam_appid_from_wm_class("Steam_App_abc") is None
+    assert steam_appid_from_wm_class("steam_app_12x") is None
+    assert steam_appid_from_wm_class("xsteam_app_42") is None
+
+
 # --- parse do marker ----------------------------------------------------------
 
 

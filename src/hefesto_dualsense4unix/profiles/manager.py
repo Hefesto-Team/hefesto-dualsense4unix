@@ -11,7 +11,6 @@ Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch
 """
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -31,16 +30,23 @@ from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     Profile,
 )
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: R-21 (auditoria 24/07): a wm_class que a Steam dá a TODA janela de jogo
-#: lançado por ela. Mesma forma reconhecida por `perfil_e_regra_de_jogo`
-#: (schema) e por `lifecycle._janela_de_jogo_em_foco` — a doutrina do
-#: "catch_all_sem_opiniao" precisa da MESMA noção de "isto é um jogo" nos três
-#: lugares, senão a divergência entre os predicados vira o buraco de sempre.
-_STEAM_APP_WM_CLASS_RE = re.compile(r"^steam_app_\d+$", re.IGNORECASE)
+#: R-21 (auditoria 24/07): a doutrina do "catch_all_sem_opiniao" precisa da
+#: MESMA noção de "isto é um jogo" em todo lugar que a usa, senão a divergência
+#: entre os predicados vira o buraco de sempre.
+#:
+#: NOTA DE 05/08/2026 (UNIFICA-PREDICADO-01). Até aqui a regex era cópia local,
+#: e a comparação era a única das cinco cópias com `re.IGNORECASE` — o que a
+#: fazia CERTA e as outras erradas. Agora ela vem de `profiles/steam_app.py`,
+#: que herdou a insensibilidade a caixa (mais o `.strip()`) justamente para
+#: esta linha não perder nada na mudança: uma fonte sensível a caixa revogaria
+#: o veto para uma janela `Steam_App_2111190` e devolveria o catch-all ao jogo.
+#: Portão: `tests/unit/test_profile_manager.py::
+#: test_veto_r21_vale_com_wm_class_em_caixa_alta`.
 
 #: MODO-01 (B3, sprint 25/07): vocabulário do MOTIVO devolvido por
 #: `select_for_window_ex`. Até aqui a seleção respondia só `Profile | None`, e o
@@ -797,7 +803,7 @@ class ProfileManager:
         """
         candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
         wm_class = str(window_info.get("wm_class") or "")
-        e_janela_de_jogo = bool(_STEAM_APP_WM_CLASS_RE.match(wm_class))
+        e_janela_de_jogo = steam_appid_from_wm_class(wm_class) is not None
         if not candidates:
             if e_janela_de_jogo:
                 return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
