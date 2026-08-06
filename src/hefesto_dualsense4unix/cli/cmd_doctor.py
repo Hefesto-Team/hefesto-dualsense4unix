@@ -80,10 +80,41 @@ def _print_storm_block() -> None:
         console.print(f"{tag} {message}")
 
 
+def _linhas_perfis() -> tuple[list[tuple[str, str]], bool]:
+    """Verificação SEMÂNTICA dos perfis. Devolve (linhas, houve_erro).
+
+    PERFIL-NASCE-CERTO-01/E4 — o detector de armadilha que a sprint desenhou e
+    ninguém escreveu. Read-only e sem daemon: lê o diretório de perfis e
+    compara os perfis ENTRE SI (catch-all vencendo perfil de jogo, prioridade
+    fora da faixa da janela, empates). Ver `profiles/sanidade.py`.
+    """
+    from hefesto_dualsense4unix.profiles import sanidade
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+    try:
+        perfis = load_all_profiles()
+    except OSError as exc:
+        return ([("[WARN]", f"não deu para ler os perfis: {exc}")], False)
+    achados = sanidade.verificar_perfis(perfis)
+    linhas = sanidade.linhas_de_relatorio(achados, total_perfis=len(perfis))
+    houve_erro = any(a.gravidade == "erro" for a in achados)
+    return (linhas, houve_erro)
+
+
+def _print_bloco_perfis() -> bool:
+    """Imprime o bloco de perfis. True quando há achado GRAVE (exit != 0)."""
+    linhas, houve_erro = _linhas_perfis()
+    console.print("\n== perfis (coerência entre eles) ==")
+    for tag, mensagem in linhas:
+        console.print(f"{tag} {mensagem}")
+    return houve_erro
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
     fix_safe: bool = False,
+    perfis: bool = False,
 ) -> None:
     """Roda `scripts/doctor.sh` (infra) + diagnóstico storm + checks do daemon.
 
@@ -95,7 +126,15 @@ def doctor_cmd(
     O antigo `--reapply-all` (que invocava o dsx.sh) foi REMOVIDO: o dsx.sh era
     baseado na teoria de HW já refutada (I/O die / power). A cura real é o quirk
     do snd_usb_audio, instalado por padrão e aplicável por `--fix-safe`.
+
+    PERFIL-NASCE-CERTO-01/E4:
+    - `--perfis`: SÓ a coerência dos perfis entre si, sem doctor.sh, sem storm
+      e sem IPC. É o caminho rápido para responder "meus perfis estão sãos?" —
+      e sai com código 1 quando há achado grave, para poder virar portão.
     """
+    if perfis:
+        raise typer.Exit(code=1 if _print_bloco_perfis() else 0)
+
     rc = 0
     sh = _find_doctor_sh()
     if sh is not None:
@@ -111,6 +150,12 @@ def doctor_cmd(
         )
 
     _print_storm_block()
+
+    # PERFIL-NASCE-CERTO-01/E4: o detector também roda no doctor COMPLETO — a
+    # armadilha de perfil não avisa sozinha, e quem só roda `doctor` uma vez
+    # por mês precisa ouvir dela ali. Não mexe no `rc` (mesma política do bloco
+    # de storm): quem quiser portão usa `doctor --perfis`.
+    _print_bloco_perfis()
 
     console.print("\n== daemon (via IPC) ==")
     for tag, message in asyncio.run(_daemon_checks()):

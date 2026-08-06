@@ -105,6 +105,7 @@ def prompt_overwrite_existing(
 def confirm_downgrade_match_to_any(
     parent: Gtk.Window,
     name: str,
+    regra_atual: str | None = None,
 ) -> bool:
     """Confirma transformar um perfil de programa específico em "Sempre".
 
@@ -112,14 +113,27 @@ def confirm_downgrade_match_to_any(
     (window_class/título) por MatchAny em SILÊNCIO — o perfil que valia só num
     jogo passava a valer para TUDO, sem aviso e com o toast "Perfil salvo".
     Retorna True se o usuário confirmou a mudança, False se cancelou.
+
+    SALVAR-NAO-REBAIXA-02 (leva 2, 05/08): ``regra_atual`` é o rótulo do que o
+    perfil É HOJE, na língua da lista ("Quando usar"). Sem ele o diálogo
+    continua dizendo a frase da COR-A, que só é verdade para o perfil de
+    programa específico — e o chamador passou a avisar também no perfil
+    *"Só manual (nunca ativa sozinho)"*, onde afirmar "vale só em programas
+    específicos" seria o aviso mentindo sobre o que ela está prestes a perder.
     """
+    titulo = (
+        _("O perfil '%s' vale só em programas específicos.") % name
+        if regra_atual is None
+        else _("O perfil '%s' não vale para tudo hoje — hoje ele é: %s.")
+        % (name, regra_atual)
+    )
     dialog = Gtk.MessageDialog(
         parent=parent,
         modal=True,
         destroy_with_parent=True,
         message_type=Gtk.MessageType.WARNING,
         buttons=Gtk.ButtonsType.NONE,
-        text=_("O perfil '%s' vale só em programas específicos.") % name,
+        text=titulo,
     )
     _apply_app_theme(dialog)
     dialog.format_secondary_text(
@@ -130,6 +144,95 @@ def confirm_downgrade_match_to_any(
     )
     dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
     dialog.add_button(_("Valer para tudo"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+    response = dialog.run()
+    dialog.destroy()
+    return bool(response == Gtk.ResponseType.OK)
+
+
+def confirm_downgrade_priority(
+    parent: Gtk.Window,
+    name: str,
+    de: int,
+    para: int,
+) -> bool:
+    """Confirma REBAIXAR a prioridade de um perfil que já existe em disco.
+
+    SALVAR-NAO-REBAIXA-02 (leva 2, 05/08). O aviso de rebaixamento que esta
+    casa tinha (``confirm_downgrade_match_to_any``) só dispara quando o match
+    ORIGINAL é específico — e os perfis dela JÁ ESTÃO em ``MatchAny``, rebaixados
+    por defeito anterior. Para esses perfis a janela não tinha uma única palavra
+    a dizer: o que ainda podia sumir calado era a PRIORIDADE, que é justamente o
+    que decide qual dos "Sempre" vence (ver `explicacao_da_disputa`). Medido:
+    salvar por cima levava ``prio=200`` para ``prio=0``.
+
+    Retorna True se ela confirmou a queda, False se cancelou.
+    """
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.NONE,
+        text=_("O perfil '%s' vai perder prioridade: de %d para %d.")
+        % (name, de, para),
+    )
+    _apply_app_theme(dialog)
+    dialog.format_secondary_text(
+        _(
+            "Quem tem prioridade maior vence a disputa por uma janela. Com a "
+            "prioridade menor, este perfil pode deixar de entrar onde entrava. "
+            "Tem certeza?"
+        )
+    )
+    dialog.add_button(_("Cancelar"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Baixar a prioridade"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+    response = dialog.run()
+    dialog.destroy()
+    return bool(response == Gtk.ResponseType.OK)
+
+
+def confirm_discard_pending_edits(
+    parent: Gtk.Window,
+    ativado: str,
+    editando: str | None = None,
+) -> bool:
+    """Ativar um perfil com edição não salva na tela: descartar o que está lá?
+
+    ATIVAR-NAO-MENTE-01 (leva 2, 05/08). Ativar um perfil passou a refazer as
+    abas na hora — era a queixa literal dela, *"o perfil que eu ativei não
+    aplica imediatamente as features das abas"*. Só que refazer as abas
+    RECARREGA o rascunho do disco, e com edição pendente isso apaga o que ela
+    ajustou e ainda não salvou. Ignorar em silêncio (o que o tique de 2 Hz faz)
+    deixaria as abas mentindo; recarregar em silêncio perderia trabalho dela.
+    A decisão é DELA, então é uma pergunta.
+
+    Retorna True para descartar e mostrar o perfil ativado, False para manter
+    o que está na tela. O default é MANTER: um Enter distraído nunca pode
+    custar edição não salva.
+    """
+    dialog = Gtk.MessageDialog(
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        text=_("Perfil ativado: '%s'. E as suas alterações não salvas?")
+        % ativado,
+    )
+    _apply_app_theme(dialog)
+    dialog.format_secondary_text(
+        _(
+            "As abas mostram alterações de '%s' que você ainda não salvou. "
+            "Mostrar o perfil ativado descarta essas alterações."
+        )
+        % (editando or "—")
+    )
+    dialog.add_button(_("Manter minhas alterações"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Descartar e mostrar o ativado"), Gtk.ResponseType.OK)
     dialog.set_default_response(Gtk.ResponseType.CANCEL)
 
     response = dialog.run()
@@ -402,7 +505,9 @@ def show_external_controller(
 
 __all__ = [
     "confirm_delete_profile",
+    "confirm_discard_pending_edits",
     "confirm_downgrade_match_to_any",
+    "confirm_downgrade_priority",
     "confirm_restore_default",
     "prompt_import_conflict",
     "prompt_overwrite_existing",

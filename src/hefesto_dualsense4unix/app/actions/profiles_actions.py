@@ -25,12 +25,14 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 )
 from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs, set_pref
 from hefesto_dualsense4unix.app.ipc_bridge import (
+    PROFILE_SWITCH_TIMEOUT_S,
     active_profile_name,
     call_async,
     profile_switch,
     run_in_thread,
 )
 from hefesto_dualsense4unix.app.widgets import SegmentedSelector
+from hefesto_dualsense4unix.profiles import schema as _schema
 from hefesto_dualsense4unix.profiles.loader import (
     delete_profile,
     load_all_profiles,
@@ -67,14 +69,16 @@ _RADIO_IDS = ("any", "steam", "browser", "terminal", "editor", "game", "steam_ga
 #: R-12: ids do seletor que exigem o campo livre preenchido.
 _IDS_COM_CAMPO_LIVRE = ("game", "steam_game")
 
-#: PERFIL-NASCE-CERTO-01 (entrega 2, item 1): teto da escala de prioridade.
-#: Era 100 aqui e no `profile_priority_adj` do glade — e o catch-all do disco
-#: dela está EXATAMENTE em 100. Não existia número escolhível pela janela que
-#: fizesse o perfil de um jogo vencer o dela; o conserto de 26/07 exigiu
-#: escrever 110 direto no JSON, um valor que a janela não aceitava digitar.
-#: Subir o teto não mexe em perfil nenhum já salvo: é só a faixa que a escala
-#: oferece. O glade tem de acompanhar (`upper` do adjustment).
-PRIORIDADE_MAXIMA = 200
+#: Teto da escala de prioridade, com dono em `profiles/schema.py` — é lá que se
+#: muda, e é lá que está a história do número (PERFIL-NASCE-CERTO-01, entrega
+#: 2, item 1: 100 -> 200). O glade tem de acompanhar na mão (`upper` do
+#: `profile_priority_adj`), e há portão que reprova a divergência.
+#:
+#: UNIFICA-CONSTANTE-01 (05/08/2026): era um `200` escrito aqui, e este módulo
+#: era a "fonte" que `profiles/sanidade.py` e o comentário do glade citavam —
+#: sem nenhum portão ligando os dois primeiros. Vira reexport em vez de sumir
+#: porque `pa.PRIORIDADE_MAXIMA` é o nome que os testes da aba Perfis usam.
+PRIORIDADE_MAXIMA = _schema.PRIORIDADE_MAXIMA
 
 #: PERFIL-NASCE-CERTO-01 (entrega 1): folga com que um perfil recém-nascido de
 #: JOGO passa por cima do catch-all mais alto do disco. Dez pontos deixam
@@ -291,6 +295,99 @@ def explicacao_da_disputa(
         "Dentro de um jogo nenhum destes entra sozinho: com o jogo em foco o "
         "Hefesto só troca de perfil por uma regra do próprio jogo."
     )
+
+
+# --- SALVAR-NAO-REBAIXA-02: a prioridade também cai calada ------------------
+# O aviso de rebaixamento desta casa (`confirm_downgrade_match_to_any`) só
+# dispara quando o match ORIGINAL é específico. Os perfis dela JÁ ESTÃO em
+# `MatchAny` — foram rebaixados pelo defeito de 27/07 — e para esses a janela
+# não tinha uma palavra a dizer: o que ainda podia sumir calado era a
+# PRIORIDADE, que é exatamente o termo que decide qual dos "Sempre" vence
+# (ver `explicacao_da_disputa`). Medido em 05/08: salvar por cima levava
+# `prio=200, criteria` para `prio=0, any`.
+
+#: Queda de prioridade a partir da qual a janela PERGUNTA. Dez pontos é a mesma
+#: folga com que um perfil de jogo nasce acima do catch-all
+#: (`_FOLGA_ACIMA_DO_CATCH_ALL`): abaixo disso a queda não muda quem vence
+#: nenhuma disputa desta casa, e um diálogo por ponto perdido viraria o ruído
+#: que se aprende a clicar sem ler — o que mataria também o aviso que importa.
+QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO = 10
+
+
+def queda_de_prioridade_pede_aviso(antes: int, depois: int) -> bool:
+    """Esta queda de prioridade precisa de confirmação? (função pura)."""
+    return int(depois) < int(antes) and (
+        int(antes) - int(depois)
+    ) >= QUEDA_DE_PRIORIDADE_QUE_PEDE_AVISO
+
+
+# --- ATIVAR-NAO-MENTE-01: a janela passa a LER o relatório do daemon --------
+# `profile.switch` responde a verdade desde a R-03 (`secoes`, `mode_aplicado`,
+# `motivo`) e a janela descartava o resultado inteiro (`lambda _result:`) —
+# os únicos leitores no repositório eram testes. O toast dizia "Perfil ativado"
+# mesmo quando o lock de gesto manual fizera os appliers descartarem a seção
+# que ela SENTE, que é o mecanismo direto da queixa "às vezes pega".
+#
+# `mode_aplicado` e `motivo` NÃO são lidos aqui de propósito: os dois derivam
+# de `secoes["mode"]` (daemon/ipc_handlers.py:470-477), e ler a fonte em vez
+# dos derivados é o que impede as duas leituras de divergirem.
+
+#: Nomes das seções que só o `profile.switch` relata. O mapa do rodapé
+#: (`footer_actions._NOMES_DE_SECAO`) nasceu para o `profile.apply_draft`, que
+#: não tem `mode`/`suppression`/`rumble_policy`/`speaker`. Este dicionário
+#: COMPLEMENTA aquele, nunca o substitui: as seções comuns continuam saindo de
+#: lá, dona única da frase (a lição do `texto_do_custo_da_mascara`).
+_NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
+    "mode": "modo",
+    "suppression": "modo jogo",
+    "rumble_policy": "vibração",
+    "speaker": "alto-falante",
+}
+
+
+def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
+    """O relatório do ``profile.switch`` no vocabulário que o rodapé já fala.
+
+    O daemon responde ``{"secoes": {seção: estado}}`` com o vocabulário do
+    `lifecycle` (``"aplicado"``, ``"adiado_lock_manual"``, ``"ignorado_*"``,
+    ``"falhou"``); o rodapé fala ``applied``/``failed`` (APLICAR-VERDADE-01/02).
+    São a MESMA informação em dois formatos, então esta função TRADUZ e deixa a
+    frase com quem já a tem.
+
+    Devolve ``None`` quando não há relatório (daemon antigo, ou o ``True`` cru
+    da ponte): sem informação não há do que desconfiar — a mesma regra do irmão.
+    """
+    if not isinstance(result, dict):
+        return None
+    secoes = result.get("secoes")
+    if not isinstance(secoes, dict) or not secoes:
+        return None
+    aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
+    nao_entraram = {
+        _NOMES_DAS_SECOES_DA_ATIVACAO.get(str(s), str(s)): str(estado)
+        for s, estado in secoes.items()
+        if str(estado) != "aplicado"
+    }
+    return {"applied": aplicadas, "failed": nao_entraram}
+
+
+def mensagem_de_ativacao(name: str, result: Any = None) -> str:
+    """O que o rodapé diz depois de um ``profile.switch`` ACEITO.
+
+    Tudo aplicado (ou daemon sem relatório) mantém a frase de sempre. Com seção
+    de fora, o texto do que NÃO entrou é o do rodapé — reusado, não reescrito:
+    dois donos da mesma frase derivam, e esta casa tem a regra escrita.
+    """
+    relato = relato_da_ativacao(result)
+    if relato is None or not relato["failed"]:
+        return f"Perfil ativado: {name}"
+    # Import adiado: o módulo do rodapé sobe `gui_dialogs`, e a aba Perfis é
+    # importada por testes que montam `gi` falso antes de qualquer diálogo.
+    from hefesto_dualsense4unix.app.actions.footer_actions import (
+        _mensagem_de_aplicacao,
+    )
+
+    return f"Perfil ativado: {name} — {_mensagem_de_aplicacao(relato)}"
 
 
 #: R-10: respostas do diálogo de rename (ids positivos não colidem com os
@@ -950,9 +1047,6 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # `unselect_all()` seria o caminho óbvio e está DESCARTADO: dispara
         # repopulação do editor e apagaria o que ela acabou de digitar.
         self._new_profile = True
-        # SALVAR-NAO-REBAIXA-01: não há valor de disco a preservar num perfil
-        # que ainda não existe — os widgets voltam a ser a única fonte.
-        self._esquecer_a_fotografia_do_editor()
         self._get("profile_name_entry").set_text("Novo perfil")
         self._get("profile_priority_scale").set_value(0)
         self._select_radio("any")
@@ -978,6 +1072,19 @@ class ProfilesActionsMixin(WidgetAccessMixin):
                 switch.set_active(False)
             finally:
                 self._suppress_advanced_toggle = False
+        # SALVAR-NAO-REBAIXA-01: não há valor de disco a preservar num perfil
+        # que ainda não existe — os widgets voltam a ser a única fonte.
+        #
+        # SALVAR-NAO-REBAIXA-02: e vem POR ÚLTIMO, depois de posicionar os
+        # widgets, exatamente como em `_populate_editor`. Chamado antes (como
+        # estava), o `set_value(0)` e o `set_active_id("any")` logo acima
+        # levantavam as marcas de gesto — e "Novo perfil" nascia dizendo que ela
+        # tinha escolhido prioridade 0 e "Qualquer". Num Salvar por cima de um
+        # arquivo EXISTENTE, essa mentira virava rebaixamento: as guardas
+        # reabilitadas em `_build_profile_from_editor` acreditavam nas marcas.
+        # O prefill do jogo em foco (assíncrono, logo abaixo) marca de verdade,
+        # e continua vencendo — ali a escolha É do editor.
+        self._esquecer_a_fotografia_do_editor()
         self._toast_profile("Novo perfil: edite e clique Salvar")
         # PERFIL-NASCE-CERTO-01: com um jogo em foco, criar um perfil JÁ É a
         # declaração de intenção "quero que isto valha neste jogo".
@@ -1104,22 +1211,97 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # T4: profile.switch é I/O do daemon (asyncio.run no _safe_call síncrono
         # travava a thread GTK até o timeout). call_async despacha ao worker e
         # devolve o toast/refresh via GLib.idle_add — mesmo padrão async da aba.
+        #
+        # ATIVAR-NAO-MENTE-01: o `timeout_s` era o default de LEITURA da ponte
+        # (250 ms) e o handler `profile.switch` levou ~1,2 s MEDIDOS no journal
+        # dela. Toda ativação caía no `_on_profile_switch_failure` — "Falha
+        # (daemon offline?)" com o perfil JÁ ativo —, o caminho de sucesso nunca
+        # rodava, e ela clicava de novo: cada clique uma ativação real.
+        #
+        # ATIVAR-NAO-MENTE-01: e o `_result` deixou de ser descartado. A
+        # resposta traz o relatório da R-03 (`secoes`), que é a diferença entre
+        # "ativado" e "ativado, menos o que o lock manual descartou".
         call_async(
             method="profile.switch",
             params={"name": name},
-            on_success=lambda _result: self._on_profile_switch_success(name),
+            on_success=lambda result: self._on_profile_switch_success(name, result),
             on_failure=self._on_profile_switch_failure,
+            timeout_s=PROFILE_SWITCH_TIMEOUT_S,
         )
 
-    def _on_profile_switch_success(self, name: str) -> bool:
+    def _on_profile_switch_success(self, name: str, result: Any = None) -> bool:
         """Callback GTK do switch de perfil: toast + re-sincroniza a seleção."""
-        self._toast_profile(f"Perfil ativado: {name}")
+        # ATIVAR-NAO-MENTE-01: o toast diz o que NÃO entrou, no vocabulário do
+        # rodapé (`_mensagem_de_aplicacao`) — nunca um segundo vocabulário.
+        self._toast_profile(mensagem_de_ativacao(name, result))
         # UX-PROFILES-ACTIVE-HIGHLIGHT-01: negrito imediato na linha ativada.
         self._mark_active_profile_row(name)
         # Preserva o comportamento visível: seleção acompanha o perfil ativo
         # reportado pelo daemon após o switch.
         self._sync_selection_with_active_profile()
+        # ATIVAR-NAO-MENTE-01: e as abas passam a mostrar o perfil ativado AGORA.
+        self._refazer_as_abas_apos_ativar(name)
         return False  # GLib.idle_add: não repetir
+
+    def _refazer_as_abas_apos_ativar(self, name: str) -> None:
+        """As abas passam a mostrar o perfil ATIVADO, na hora.
+
+        ATIVAR-NAO-MENTE-01 (leva 2, 05/08). Queixa literal dela: *"o perfil
+        que eu ativei não aplica imediatamente as features das abas"*. E era
+        verdade — `on_profile_activate` não refazia aba nenhuma. As abas só
+        acompanhavam pelo tique de 2 Hz, e esse caminho
+        (`_reconciliar_draft_com_perfil_ativo`) tem um portão que DESISTE
+        quando há edição pendente: com uma cor mexida e não salva, a ativação
+        explícita dela não mudava a tela nunca.
+
+        Recarregar em silêncio seria trocar um jeito de perder trabalho por
+        outro (é o que a R-08 já tinha decidido para o tique). Ignorar em
+        silêncio deixa as abas mentindo. Então a decisão é DELA, por diálogo —
+        e o default do diálogo é MANTER o que ela não salvou.
+        """
+        pendente = False
+        checar = getattr(self, "_tem_edicao_pendente", None)
+        if callable(checar):
+            with contextlib.suppress(Exception):
+                pendente = bool(checar())
+        if pendente:
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            editando = getattr(self, "_active_profile_name", "") or None
+            if not gui_dialogs.confirm_discard_pending_edits(
+                parent=self._get("main_window"), ativado=name, editando=editando
+            ):
+                self._toast_profile(
+                    f"Perfil ativado: {name}. As abas seguem mostrando as suas "
+                    f"alterações não salvas de '{editando or '—'}'."
+                )
+                return
+        self._recarregar_as_abas_do_perfil_ativo()
+
+    def _recarregar_as_abas_do_perfil_ativo(self) -> None:
+        """Relê o perfil ativo do disco e repinta TODAS as abas.
+
+        O caminho canônico é o `_bootstrap_draft_async` da janela: ele carrega
+        o rascunho do perfil ativo em worker (nada de disco na thread do GTK) e
+        chama `_refresh_all_tabs` no callback. Sem ele (dublê de teste, mixin
+        montado sozinho), o refresh direto ainda repinta o que já está em
+        memória — melhor que não repintar nada.
+        """
+        recarregar = getattr(self, "_bootstrap_draft_async", None)
+        if callable(recarregar):
+            try:
+                recarregar()
+                return
+            except Exception as exc:
+                logger.warning("ativar_recarregar_rascunho_falhou", err=str(exc))
+        from hefesto_dualsense4unix.app.actions.footer_actions import (
+            _refresh_all_tabs,
+        )
+
+        try:
+            _refresh_all_tabs(self)
+        except Exception as exc:
+            logger.warning("ativar_refazer_abas_falhou", err=str(exc))
 
     def _on_profile_switch_failure(self, exc: Exception) -> bool:
         """Callback GTK de falha do switch (daemon offline / erro de transporte)."""
@@ -1197,17 +1379,45 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # 'Qualquer'/Sempre) e clicar Salvar sem perceber. Confirma a perda.
         # R-10: num rename, o "antes" é o perfil sendo RENOMEADO, não quem
         # ocupa o slug de destino.
+        # SALVAR-NAO-REBAIXA-02: a guarda era `isinstance(original.match,
+        # MatchCriteria)` e deixava de fora o perfil "Só manual (nunca ativa
+        # sozinho)" — tanto o `MatchManual` de propósito quanto o `criteria`
+        # vazio. Virar "vale para TUDO" é, nesses dois, a mudança mais violenta
+        # que a aba sabe fazer, e era a única que passava calada. Agora a
+        # pergunta é a certa: o perfil deixa de ter alvo? Então avisa.
         original = selecionado if renomeando_de is not None else alvo
         if (
             isinstance(profile.match, MatchAny)
             and original is not None
-            and isinstance(original.match, MatchCriteria)
+            and not isinstance(original.match, MatchAny)
         ):
             from hefesto_dualsense4unix.app import gui_dialogs
 
             window = self._get("main_window")
+            # O rótulo do que ele É HOJE é o MESMO da coluna "Quando usar" —
+            # o diálogo não pode chamar de "programas específicos" um perfil
+            # que a lista chama de "Só manual".
             if not gui_dialogs.confirm_downgrade_match_to_any(
-                parent=window, name=original.name
+                parent=window,
+                name=original.name,
+                regra_atual=_match_label(original.match),
+            ):
+                self._toast_profile("Operação cancelada.")
+                return
+        # SALVAR-NAO-REBAIXA-02: e a PRIORIDADE, que nos perfis dela (já em
+        # `MatchAny` desde o defeito de 27/07) é a única coisa que ainda podia
+        # cair calada — e é o termo que decide qual dos "Sempre" vence.
+        if original is not None and queda_de_prioridade_pede_aviso(
+            original.priority, profile.priority
+        ):
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            window = self._get("main_window")
+            if not gui_dialogs.confirm_downgrade_priority(
+                parent=window,
+                name=original.name,
+                de=int(original.priority),
+                para=int(profile.priority),
             ):
                 self._toast_profile("Operação cancelada.")
                 return
@@ -1604,11 +1814,28 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         except Exception:
             return True
 
+    def _perfil_que_o_salvar_sobrescreve(self, name: str) -> Profile | None:
+        """O perfil JÁ EM DISCO que este Salvar vai gravar por cima, ou ``None``.
+
+        SALVAR-NAO-REBAIXA-02: quem responde "quem vou sobrescrever?" é o SLUG,
+        nunca o nome de exibição — a lição do R-10, e a mesma pergunta que
+        `on_profile_save` já faz com `find_by_slug` para decidir o diálogo de
+        sobrescrita. Lê o cache em memória, nunca o disco: este caminho roda na
+        thread do GTK (PERF-GUI-PROFILE-LOAD-NONBLOCKING-01).
+        """
+        cache: list[Profile] = getattr(self, "_profiles_cache", None) or []
+        try:
+            return find_by_slug(name, cache)
+        except Exception:
+            return None
+
     def _esquecer_a_fotografia_do_editor(self) -> None:
         """Zera as fotografias — o editor deixou de mostrar um perfil do disco.
 
         Chamado por "Novo perfil": ali não há valor de disco a preservar, e o
-        que está nos widgets É a intenção dela.
+        que está nos widgets É a intenção dela. O que EXISTE em disco continua
+        protegido na hora de salvar, por ``_perfil_que_o_salvar_sobrescreve``
+        (SALVAR-NAO-REBAIXA-02) — esquecer aqui não pode virar rebaixar lá.
         """
         self._regra_do_disco = None
         self._assinatura_da_regra_ao_abrir = None
@@ -1877,13 +2104,43 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         # Agora regra e prioridade só são reescritas quando ela MEXEU nelas
         # nesta edição. Mexer continua valendo na hora, e num perfil novo (sem
         # fotografia) nada muda: os widgets seguem sendo a fonte.
-        prioridade_final = priority
+        #   — nota de 05/08: essa última frase CADUCOU pela metade. Vale quando
+        #   o perfil novo estreia um arquivo; quando o Salvar vai por cima de um
+        #   que EXISTE, a fotografia é relida logo abaixo e as guardas voltam a
+        #   valer. Ver SALVAR-NAO-REBAIXA-02, a seguir.
+        #
+        # SALVAR-NAO-REBAIXA-02 (leva 2, 05/08): as guardas acima DESLIGAVAM
+        # sozinhas. `on_profile_new` chama `_esquecer_a_fotografia_do_editor`, e
+        # com as duas fotografias em `None` os dois `if` eram pulados e os
+        # widgets venciam — inclusive quando o Salvar ia por cima de um arquivo
+        # que EXISTE. Medido em 05/08: um perfil `prio=200, criteria` no disco
+        # virava `prio=0, any`, que é o defeito de 27/07 de volta por outra
+        # porta.
+        #
+        # A cura é de ESCOPO, não de remoção: esquecer a fotografia continua
+        # certo (perfil que não existe não tem valor de disco a preservar), e o
+        # que faltava era reler a fotografia NA HORA DE SALVAR, quando o alvo já
+        # existe. Aí a única evidência de intenção é o GESTO dela — não há
+        # assinatura de abertura para comparar, porque o editor nunca mostrou
+        # este perfil.
         prioridade_do_disco = self._prioridade_do_disco
-        if prioridade_do_disco is not None and not self._prioridade_foi_mexida():
+        regra_do_disco = self._regra_do_disco
+        prioridade_mexida = self._prioridade_foi_mexida()
+        regra_mexida = self._regra_foi_mexida()
+        if prioridade_do_disco is None or regra_do_disco is None:
+            alvo_no_disco = self._perfil_que_o_salvar_sobrescreve(name)
+            if alvo_no_disco is not None:
+                if prioridade_do_disco is None:
+                    prioridade_do_disco = alvo_no_disco.priority
+                    prioridade_mexida = self._prioridade_tocada
+                if regra_do_disco is None:
+                    regra_do_disco = alvo_no_disco.match
+                    regra_mexida = self._regra_tocada
+        prioridade_final = priority
+        if prioridade_do_disco is not None and not prioridade_mexida:
             prioridade_final = int(prioridade_do_disco)
         regra_final = match
-        regra_do_disco = self._regra_do_disco
-        if regra_do_disco is not None and not self._regra_foi_mexida():
+        if regra_do_disco is not None and not regra_mexida:
             regra_final = regra_do_disco
 
         base.update(

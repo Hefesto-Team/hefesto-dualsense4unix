@@ -190,7 +190,7 @@ def _warn_steam_input(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     vdf.parent.mkdir(parents=True)
     vdf.write_text('\t\t\t\t"SteamController_PSSupport"\t\t"2"\n', encoding="utf-8")
     # A allowlist real da máquina não pode decidir o resultado do teste.
-    monkeypatch.setattr(sd, "_ALLOWLIST_PATH", tmp_path / "allowlist-vazia.txt")
+    monkeypatch.setattr(sd, "_allowlist_path", lambda: tmp_path / "allowlist-vazia.txt")
     tag, msg = sd.check_steam_input(tmp_path)
     assert tag == sd.WARN
     return msg

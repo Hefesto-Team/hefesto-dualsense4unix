@@ -11,6 +11,13 @@ Padrão de thread:
   para um worker via ``ipc_bridge.run_in_thread`` e renderizado no callback
   (``GLib.idle_add``) — PERF-FOOTER-ASYNC-IO-01.
 
+GRAVA-POR-UM-FUNIL-01 (04/08/2026): os TRÊS botões que gravam perfil (Salvar,
+Importar, Restaurar Padrão) não chamam ``save_profile`` — eles montam o
+``Profile`` e entregam ao ``_gravar_perfil_async`` do ``ProfileWriterMixin``,
+que grava e deixa o rascunho apontando para o que ficou em disco. Ver
+``actions/profile_writer.py`` para a invariante e o porquê dela; o portão que
+impede a recaída é ``tests/unit/test_gravacao_de_perfil_passa_pelo_funil.py``.
+
 Importações de topo para permitir patch nos testes:
 - ``ipc_bridge`` exposto como variável de módulo.
 - ``gui_dialogs`` exposto como variável de módulo.
@@ -23,18 +30,16 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.app import gui_dialogs, ipc_bridge
-from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
+from hefesto_dualsense4unix.app.actions.profile_writer import ProfileWriterMixin
 from hefesto_dualsense4unix.profiles.loader import (
     _seed_source_file,
     load_all_profiles,
     load_profile,
-    save_profile,
 )
-from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.schema import Match, MatchManual, Profile
 from hefesto_dualsense4unix.profiles.slug import find_by_slug
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 logger = get_logger(__name__)
 
@@ -105,8 +110,15 @@ FROZEN_WIDGET_IDS: tuple[str, ...] = (
 )
 
 
-class FooterActionsMixin(WidgetAccessMixin):
-    """Handlers dos 4 botões do rodapé global da GUI."""
+class FooterActionsMixin(ProfileWriterMixin):
+    """Handlers dos 4 botões do rodapé global da GUI.
+
+    GRAVA-POR-UM-FUNIL-01: a base é o ``ProfileWriterMixin`` porque os TRÊS
+    botões que gravam perfil (Salvar, Importar, Restaurar Padrão) passam pelo
+    mesmo funil — nenhum deles chama ``save_profile`` por conta própria. Herdar
+    (em vez de importar uma função) é o que dá ao funil o ``self.draft`` e o
+    ``_active_profile_name`` que ele precisa manter coerentes com o disco.
+    """
 
     # Referência ao draft central (definida em HefestoApp.__init__).
     draft: Any  # DraftConfig — evita import circular; validado em runtime
@@ -310,29 +322,40 @@ class FooterActionsMixin(WidgetAccessMixin):
             ):
                 self._footer_toast(_("Operação cancelada."))
                 return False
-            self._persist_profile_async(nome)
+            # GRAVA-POR-UM-FUNIL-01: `alvo` viaja junto porque é a resposta à
+            # pergunta "este perfil JÁ existe em disco?" — quem existe herda a
+            # prioridade do próprio arquivo em vez de receber um número novo
+            # (ver `_prioridade_do_save`).
+            self._persist_profile_async(nome, existente=alvo)
             return False
 
         ipc_bridge.run_in_thread(_perfis_em_disco, on_success=_on_checked)
 
-    def _persist_profile_async(self, nome: str) -> None:
-        """Grava o DraftConfig como perfil ``nome`` em worker (I/O fora da thread GTK).
+    def _prioridade_do_save(self, existente: Profile | None) -> int:
+        """Número que o perfil recebe ao ser gravado pelo rodapé.
 
-        PERFIL-NASCE-CERTO-01, meia-entrega que faltava a este caminho: a
-        prioridade é CALCULADA e não herdada de default nenhum. O `to_profile`
-        passou a delegar ao default do esquema quando o chamador "não tem
-        opinião", e o default do esquema é ``0`` (``profiles/schema.py``) — o que
-        fazia um perfil novo salvo por aqui nascer ABAIXO dos "vale sempre" que
-        ela já tem em disco (medido em 30/07: ``fallback`` 0, ``vitoria`` 0,
-        ``meu_perfil`` 1, ``Pragmata`` 5, ``Pragmata2`` 5). Ou seja: o perfil que
-        ela acabou de salvar perdia para o Pragmata, que é exatamente a queixa
-        crônica dela — "a config que eu deixo nunca é respeitada".
+        GRAVA-POR-UM-FUNIL-01 (04/08/2026): a prioridade só é CALCULADA para
+        perfil que NÃO existe em disco. Quem já existe herda a do próprio
+        arquivo — recalcular era o segundo dente da catraca medida no rodapé
+        (1º save prioridade 10, 2º save 20, 3º 30): um perfil que ela salva
+        três vezes subia sozinho até atropelar as regras de jogo dela.
 
-        O número sai de ``_prioridade_acima_dos_catch_all`` (o mesmo que a aba
+        O ``to_profile`` já protege o caso mais comum — salvar por cima do
+        MESMO perfil de onde o rascunho veio preserva ``source_priority``. Mas
+        essa guarda depende da fotografia estar fresca, e é exatamente ela que
+        envelhecia; e não cobre salvar por cima de um perfil DIFERENTE do
+        ativo, onde o número calculado entrava por cima do dela do mesmo jeito.
+        Perguntar ao DISCO fecha os dois, sem depender da fotografia.
+
+        PERFIL-NASCE-CERTO-01, que continua valendo para o perfil NOVO: o
+        número sai de ``_prioridade_acima_dos_catch_all`` (o mesmo que a aba
         Perfis usa, ``profiles_actions.py``): ``max(prioridade dos catch-all) +
-        folga``. Com o disco dela hoje isso dá 15, acima de todos. O cálculo é
-        lido do cache em memória — nunca do disco — porque este método corre na
-        thread do GTK.
+        folga``. Com o disco dela hoje isso dá 15, acima de todos os "vale
+        sempre" que ela tem (medido em 30/07: ``fallback`` 0, ``vitoria`` 0,
+        ``meu_perfil`` 1, ``Pragmata`` 5, ``Pragmata2`` 5). Sem ele o perfil
+        recém-salvo nasceria no default do ESQUEMA (``0``) e perderia para o
+        Pragmata — a queixa crônica dela, "a config que eu deixo nunca é
+        respeitada".
 
         O acesso é por `getattr` e não direto, pelo mesmo motivo que o resto
         desta base usa `getattr` para falar com irmão de mixin: dublê de teste
@@ -340,39 +363,138 @@ class FooterActionsMixin(WidgetAccessMixin):
         direta viraria `AttributeError` no gesto de salvar. O piso do fallback
         não é 0 de propósito — 0 é justamente o valor que reabria o defeito.
         """
-        draft = self.draft
+        if existente is not None:
+            return int(existente.priority)
         calcula = getattr(self, "_prioridade_acima_dos_catch_all", None)
-        prioridade = (
-            int(calcula()) if callable(calcula) else self._PISO_ACIMA_DOS_CATCH_ALL
+        return int(calcula()) if callable(calcula) else self._PISO_ACIMA_DOS_CATCH_ALL
+
+    def _regra_do_save(self, existente: Profile | None, draft: Any) -> Match:
+        """Regra de casamento que o perfil recebe ao ser gravado pelo rodapé.
+
+        REGRA-NAO-SE-PERDE-02 (05/08/2026, decisão dela). Irmão de
+        ``_prioridade_do_save``, e pela mesma razão: o diálogo do rodapé não
+        tem campo de regra, então a regra tem de VIR de algum lugar. Cada
+        degrau desta escada é uma fonte, da mais autoritária para a menos.
+
+        Degrau 1 — ``existente.match``, o DISCO. REGRA-NAO-SE-PERDE-01
+        (05/08): quem já existe tem regra, e regra não se perde por um gesto
+        que a tela nem sabe nomear. Foi o que transformou o ``sackboy_nativo``
+        dela — regra ``steam_app_1599660`` — num catch-all no meio da sessão
+        de jogo. A herança sai do disco, não da fotografia do rascunho, pelo
+        mesmo motivo do ``_prioridade_do_save``: a fotografia envelhece.
+
+        Degrau 2 — ``draft.source_match``, a regra do perfil de ORIGEM. É a
+        herança NOVA, e é a revogação medida da frase *"nome NOVO pelo rodapé
+        nasce ``MatchAny()``"* (``draft_config.py``, 23/07): ela nasceu para
+        impedir que um perfil novo herdasse o regex de OUTRO jogo, mas o que
+        entregava no lugar era um catch-all — e catch-all, dentro do jogo, é
+        pior que a regra errada (ver o degrau 3). Quando ela está com o jogo em
+        foco e salva "MadJack", a regra de origem É a regra do jogo, e é ela
+        que faz o perfil recém-salvo valer dentro da partida.
+
+        O predicado do degrau 2 é ESTRUTURAL, não de tipo: constrói-se o
+        candidato e pergunta-se ``e_catch_all``. Isso cobre de uma vez o
+        ``MatchAny`` e o ``MatchCriteria`` de campos vazios (as DUAS formas de
+        catch-all, R-01) sem inventar predicado novo — herdar "vale sempre" não
+        é herdar regra nenhuma.
+
+        Degrau 3 — órfão, sem disco e sem origem: ``MatchManual()``, e **não**
+        ``MatchAny()``. ``MatchAny`` não é neutro, é catch-all:
+
+        - perde para QUALQUER regra na chave de seleção
+          (``profiles/manager.py``, ``(não é catch-all, prioridade)``);
+        - dispara o veto R-21 — janela ``steam_app_*`` com só catch-all
+          candidato devolve ``MOTIVO_JOGO_SEM_PERFIL_PROPRIO``, ou seja, o
+          perfil NUNCA ativa dentro do jogo;
+        - e, ao mesmo tempo, nasce com ``max(catch-all) + folga`` de prioridade
+          e ganha o desktop INTEIRO, carregando junto o
+          ``suppress_desktop_emulation``.
+
+        É exatamente a forma do ``sackboy_nativo`` de 05/08: invisível onde
+        deveria valer, soberano onde não deveria. ``MatchManual`` não tem nada
+        disso — ``matches()`` é sempre ``False`` (nunca vira candidato),
+        ``e_catch_all`` é ``False`` para ele (não dispara o veto nem a
+        reversão de modo), a ``profiles/sanidade.py`` o isenta, e ele é a
+        tradução literal do que o diálogo do rodapé significa: *"guarde o que
+        eu tenho agora; quando usar, eu digo"*.
+
+        RESSALVA de downgrade, a mesma do ``MatchManual`` no esquema
+        (``profiles/schema.py``): perfil gravado com ``{"type": "manual"}`` é
+        rejeitado por binário ANTIGO, que não conhece o discriminador.
+        """
+        if existente is not None:
+            return existente.match
+        origem = getattr(draft, "source_match", None)
+        if origem is not None:
+            candidato = Profile(name="sonda", match=origem)
+            if candidato.e_catch_all is False:
+                return candidato.match
+        return MatchManual()
+
+    def _persist_profile_async(
+        self, nome: str, existente: Profile | None = None
+    ) -> None:
+        """Grava o DraftConfig como perfil ``nome`` pelo funil único.
+
+        GRAVA-POR-UM-FUNIL-01: aqui só se monta o ``Profile``; gravar,
+        reapontar o rascunho (``with_profile_identity``), zerar a linha de base,
+        recarregar a lista e avisar o daemon é trabalho do
+        ``_gravar_perfil_async`` — o mesmo para os três botões que gravam.
+
+        ``adotar_como_ativo=True`` porque este gesto É trocar o que a janela
+        edita: depois de "Salvar Perfil" como "MadJack", o rascunho descreve o
+        MadJack. Era a linha que faltava — sem ela o ``source_name`` continuava
+        no perfil anterior e o SEGUNDO save do mesmo nome caía no ramo "nome
+        novo" do ``to_profile``, gravando ``MatchAny()`` por cima da regra de
+        janela que ela acabara de criar.
+
+        REGRA-NAO-SE-PERDE-01 (05/08/2026, decisão dela) — **quem já existe em
+        disco herda o próprio ``match``**, exatamente como já herdava a
+        prioridade. Era o rodapé aplicando o ramo "nome novo" a **nome que JÁ
+        EXISTE**: ali ele não estava "nascendo" coisa nenhuma, estava apagando
+        a regra de um perfil que já tinha uma. Foi o que transformou o
+        ``sackboy_nativo`` dela — regra ``steam_app_1599660`` — num catch-all,
+        no meio da sessão de jogo, e o que fez o perfil do jogo perder DENTRO
+        do jogo (a chave de seleção é ``(não é catch-all, prioridade)``:
+        catch-all perde para qualquer regra, e por isso a prioridade 191 não a
+        salvava).
+
+        REGRA-NAO-SE-PERDE-02 (05/08/2026, mesma decisão dela, um degrau
+        adiante) — o ``model_copy`` do ``match`` deixou de ser condicional. Até
+        aqui ele só valia para quem existia em disco, e o nome NOVO caía no
+        ``MatchAny()`` do ``to_profile``; a nota deste dia em
+        ``draft_config.py`` conta por que aquela frase caducou. Agora a regra
+        de TODO save do rodapé sai de ``_regra_do_save`` — disco, depois a
+        origem do rascunho, e ``MatchManual()`` para o órfão. O ``to_profile``
+        não foi tocado de propósito: ele tem dois chamadores, e o gate
+        ``mesmo_perfil`` governa quatro campos com a mesma regra.
+
+        Por que ``model_copy`` e não ``model_validate``: o ``model_dump`` do
+        segundo DENSIFICA os ``controllers`` parciais (defaults do esquema
+        viram campos explícitos) e reabriria a resolução-por-objeto refutada —
+        a guarda está escrita no fim do ``DraftConfig.to_profile``.
+        """
+        draft = self.draft
+        prioridade = self._prioridade_do_save(existente)
+        regra = self._regra_do_save(existente, draft)
+
+        def _construir() -> Profile:
+            # A anotação é o que dá tipo ao retorno: `self.draft` é `Any` no
+            # mixin (o `DraftConfig` viria por import circular).
+            perfil: Profile = draft.to_profile(nome, priority=prioridade)
+            return perfil.model_copy(update={"match": regra})
+
+        self._gravar_perfil_async(
+            _construir,
+            adotar_como_ativo=True,
+            mensagem_ok=lambda _perfil, caminho: _(
+                "Perfil salvo em {caminho}"
+            ).format(caminho=caminho),
+            mensagem_erro=lambda exc: _("Falha ao salvar perfil: {erro}").format(
+                erro=exc
+            ),
+            evento="footer_save_profile",
         )
-
-        def _save() -> Path:
-            return save_profile(draft.to_profile(nome, priority=prioridade))
-
-        def _on_saved(path: Path) -> bool:
-            self._footer_toast(_("Perfil salvo em {caminho}").format(caminho=path))
-            logger.info("footer_save_profile_ok", nome=nome, path=str(path))
-            # mantém o pré-preenchimento coerente nos próximos "Salvar Perfil".
-            self._active_profile_name = nome
-            # R-08: o que estava em memória virou o que está em disco — a
-            # edição deixa de ser "pendente". Sem zerar a linha de base aqui, o
-            # draft ficaria sujo para sempre e a reconciliação com o perfil
-            # ativo nunca mais voltaria a rodar nesta sessão.
-            self._draft_baseline = draft
-            refresh = getattr(self, "_reload_profiles_store", None)
-            if refresh is not None:
-                refresh(select_name=nome)
-            # DEDUP-04: o daemon rematerializa o launch_env (perfil novo pode
-            # ter steam_app_<id> no match — a antecipação por appid).
-            self._notify_launch_env_refresh()
-            return False
-
-        def _on_err(exc: Exception) -> bool:
-            self._footer_toast(_("Falha ao salvar perfil: {erro}").format(erro=exc))
-            logger.warning("footer_save_profile_falhou", nome=nome, erro=str(exc))
-            return False
-
-        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
 
     # ------------------------------------------------------------------
     # Handler: Importar
@@ -457,30 +579,28 @@ class FooterActionsMixin(WidgetAccessMixin):
         ipc_bridge.run_in_thread(_read, on_success=_on_read, on_failure=_on_read_err)
 
     def _import_save_async(self, profile: Any) -> None:
-        """Grava o perfil importado em worker (I/O fora da thread GTK)."""
-        def _save() -> Path:
-            return save_profile(profile)
+        """Grava o perfil importado pelo funil único (GRAVA-POR-UM-FUNIL-01).
 
-        def _on_saved(path: Path) -> bool:
-            self._footer_toast(
-                _("Perfil importado: {nome} -> {caminho}").format(
-                    nome=profile.name, caminho=path
-                )
-            )
-            logger.info("footer_import_ok", nome=profile.name, path=str(path))
-            refresh = getattr(self, "_reload_profiles_store", None)
-            if refresh is not None:
-                refresh(select_name=profile.name)
-            # DEDUP-04: perfil importado também muda o conjunto de perfis.
-            self._notify_launch_env_refresh()
-            return False
+        ``adotar_como_ativo=False``: importar um arquivo NÃO é dizer "passei a
+        editar este perfil" — as abas continuam com o que estava aberto, e
+        roubar o rascunho aqui deixaria a janela mostrando uma configuração e
+        o nome de outra.
 
-        def _on_err(exc: Exception) -> bool:
-            self._footer_toast(_("Falha ao importar: {erro}").format(erro=exc))
-            logger.warning("footer_import_falhou", nome=profile.name, erro=str(exc))
-            return False
-
-        ipc_bridge.run_in_thread(_save, on_success=_on_saved, on_failure=_on_err)
+        O funil ainda reaponta o rascunho quando o arquivo importado é o do
+        perfil ATIVO (mesmo slug): nesse caso o disco mudou debaixo dele, e
+        manter a fotografia velha reabriria o mesmo defeito por outra porta —
+        o "Salvar Perfil" seguinte gravaria ``MatchAny()`` por cima da regra
+        que acabou de ser importada.
+        """
+        self._gravar_perfil_async(
+            lambda: profile,
+            adotar_como_ativo=False,
+            mensagem_ok=lambda perfil, caminho: _(
+                "Perfil importado: {nome} -> {caminho}"
+            ).format(nome=perfil.name, caminho=caminho),
+            mensagem_erro=lambda exc: _("Falha ao importar: {erro}").format(erro=exc),
+            evento="footer_import",
+        )
 
     # ------------------------------------------------------------------
     # Handler: Restaurar Default
@@ -514,49 +634,55 @@ class FooterActionsMixin(WidgetAccessMixin):
         # PERF-FOOTER-ASYNC-IO-01: a confirmação roda na thread GTK, mas ler o
         # asset, gravar o perfil e recarregar o DraftConfig é I/O de disco — vai
         # para um worker; o resultado é aplicado no callback (GLib.idle_add).
-        def _restore() -> Any:
+        # GRAVA-POR-UM-FUNIL-01: quem grava é o funil; aqui ficam só as duas
+        # partes que são DESTE botão — ler o asset e recarregar o rascunho.
+        def _construir() -> Profile:
             raw = json.loads(asset.read_text(encoding="utf-8"))
-            profile = Profile.model_validate(raw)
-            save_profile(profile)
-            # Recarrega DraftConfig a partir do perfil restaurado (best-effort:
-            # falha aqui não invalida o restore em disco, só mantém o draft antigo).
+            return Profile.model_validate(raw)
+
+        def _rascunho_restaurado(profile: Profile) -> Any:
+            """Rascunho inteiro relido do disco — roda no WORKER, pós-gravação."""
             try:
                 return DraftConfig.from_profile(load_profile(_MEU_PERFIL_NOME))
             except Exception as exc:
                 logger.warning("footer_restore_default_draft_falhou", erro=str(exc))
-                return None
+                # O perfil que acabou de ser gravado é a melhor verdade
+                # disponível. Devolver ``None`` aqui (o que este caminho fazia)
+                # deixava o rascunho com a IDENTIDADE do meu_perfil — o funil
+                # já a reaponta — e o CONTEÚDO antigo: o "Salvar Perfil"
+                # seguinte desfaria a restauração em silêncio.
+                return DraftConfig.from_profile(profile)
 
-        def _on_restored(novo_draft: Any) -> bool:
+        def _aplicar_rascunho(
+            _profile: Profile, _caminho: Path, novo_draft: Any
+        ) -> None:
             if novo_draft is not None:
+                # R-08/C9: draft e NOME trocam como unidade — o nome é
+                # responsabilidade do funil (`adotar_como_ativo=True`), o
+                # CONTEÚDO é deste botão. Sem os dois, o "Salvar Perfil" ao
+                # lado (mesmo rodapé) vinha pré-preenchido com o perfil
+                # ANTERIOR e gravava o conteúdo inteiro de meu_perfil por cima
+                # dele — destruindo o perfil ativo sem que nada tivesse dito
+                # "você trocou de perfil".
                 self.draft = novo_draft
-                # R-08/C9: draft e NOME trocam como unidade. Sem isto, o
-                # "Salvar Perfil" ao lado (mesmo rodapé) vinha pré-preenchido
-                # com o perfil ANTERIOR e gravava o conteúdo INTEIRO de
-                # meu_perfil por cima dele — destruindo o perfil ativo sem que
-                # nada tivesse dito "você trocou de perfil".
-                # A atribuição fica DENTRO do `if`: quando o reload falha, o
-                # draft antigo continua válido e o nome antigo continua certo.
-                self._active_profile_name = _MEU_PERFIL_NOME
                 self._draft_baseline = novo_draft
                 logger.info(
                     "footer_restore_default_draft_recarregado",
                     perfil_ativo_agora=_MEU_PERFIL_NOME,
                 )
-            destino = profiles_dir() / f"{_MEU_PERFIL_NOME}.json"
-            self._footer_toast(
-                _("meu_perfil restaurado para {destino}").format(destino=destino)
-            )
             _refresh_all_tabs(self)
-            # DEDUP-04: restaurar o default também muda o conjunto de perfis.
-            self._notify_launch_env_refresh()
-            return False
 
-        def _on_err(exc: Exception) -> bool:
-            self._footer_toast(_("Falha ao restaurar: {erro}").format(erro=exc))
-            logger.warning("footer_restore_default_falhou", erro=str(exc))
-            return False
-
-        ipc_bridge.run_in_thread(_restore, on_success=_on_restored, on_failure=_on_err)
+        self._gravar_perfil_async(
+            _construir,
+            adotar_como_ativo=True,
+            mensagem_ok=lambda _perfil, caminho: _(
+                "meu_perfil restaurado para {destino}"
+            ).format(destino=caminho),
+            mensagem_erro=lambda exc: _("Falha ao restaurar: {erro}").format(erro=exc),
+            evento="footer_restore_default",
+            depois_no_worker=_rascunho_restaurado,
+            depois_na_janela=_aplicar_rascunho,
+        )
 
     # ------------------------------------------------------------------
     # Instalação

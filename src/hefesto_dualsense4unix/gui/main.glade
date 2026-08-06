@@ -44,8 +44,14 @@
 
   <!-- PERFIL-NASCE-CERTO-01: teto 100 -> 200. Com o teto em 100 e um perfil
        "vale sempre" exatamente em 100, não existia número escolhível pela
-       janela que fizesse o perfil de um jogo vencer. Espelha
-       profiles_actions.PRIORIDADE_MAXIMA. -->
+       janela que fizesse o perfil de um jogo vencer.
+
+       UNIFICA-CONSTANTE-01 (05/08/2026): a fonte agora é
+       profiles/schema.py (PRIORIDADE_MINIMA / PRIORIDADE_MAXIMA), a mesma
+       que profiles/sanidade.py e app/actions/profiles_actions.py importam.
+       Este XML não importa nada de ninguém — os dois números abaixo são
+       cópia, e quem os segura é o portão
+       tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py. -->
   <object class="GtkAdjustment" id="profile_priority_adj">
     <property name="lower">0</property>
     <property name="upper">200</property>

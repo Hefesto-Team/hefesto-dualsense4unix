@@ -548,10 +548,28 @@ class DraftConfig(BaseModel):
         # "Salvar Perfil" como "MadJack" produzia um perfil com o regex de
         # título do FPS e prioridade 60 — e nenhuma regra para o jogo dela.
         #
-        # `MatchAny()` para nome novo é deliberado e casa com o contrato do
-        # diálogo do rodapé, que não tem campo de regra: o perfil nasce
-        # "sempre", e a regra específica é definida na aba Perfis. Não nasce
-        # com a regra ERRADA, que é o ponto.
+        # `MatchAny()` para nome novo era deliberado e casava com o contrato do
+        # diálogo do rodapé, que não tem campo de regra: o perfil nascia
+        # "sempre", e a regra específica seria definida na aba Perfis. Não
+        # nascia com a regra ERRADA, que era o ponto.
+        #
+        # NOTA DATADA — 05/08/2026, REGRA-NAO-SE-PERDE-02 (decisão dela): esse
+        # parágrafo CADUCOU como contrato e sobrevive como DEFAULT DE
+        # CONVERSÃO. Medido no mesmo dia: `MatchAny` não é neutro, é catch-all
+        # — perde para qualquer regra na chave de seleção do
+        # `profiles/manager.py`, dispara o veto R-21 (janela `steam_app_*` só
+        # com catch-all candidato = nenhum perfil) e por isso NUNCA ativa
+        # dentro do jogo, ao mesmo tempo em que nasce com `max(catch-all) +
+        # folga` e ganha o desktop inteiro carregando a supressão. Um perfil
+        # que ela acabou de salvar com o jogo em foco não valia no jogo.
+        #
+        # A decisão de qual regra o perfil recebe MUDOU DE LUGAR: agora ela é
+        # do RODAPÉ (`app/actions/footer_actions._regra_do_save`), que herda a
+        # regra da origem quando ela é regra de verdade e usa `MatchManual()`
+        # para o órfão. Aqui não se mexeu de propósito — `to_profile` tem outro
+        # chamador, e este gate governa quatro campos com a mesma regra. Quem
+        # chama `to_profile` direto continua recebendo `MatchAny()`, e é isso
+        # que as testemunhas deste ramo ainda medem.
         # R-10: a identidade de um perfil em disco é o SLUG, não o nome de
         # exibição — `save_profile` grava `<slugify(name)>.json`. Comparar
         # string crua aqui fazia "Navegação" (no disco) e "Navegacao" (digitado

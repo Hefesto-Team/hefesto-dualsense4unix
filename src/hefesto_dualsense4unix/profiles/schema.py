@@ -456,6 +456,34 @@ class ControllerOverrides(BaseModel):
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
 
 
+#: Faixa de `Profile.priority` que a JANELA oferece — o piso e o teto do
+#: `profile_priority_adj` do glade, e a faixa que o verificador semântico usa
+#: para dizer "este número NÃO veio do controle de prioridade".
+#:
+#: UNIFICA-CONSTANTE-01 (decisão dela, 05/08/2026: *"preciso que as constantes
+#: apontem pros arquivos reais do import"*). O 200 morava em três lugares —
+#: `app/actions/profiles_actions.py`, `profiles/sanidade.py` e o `upper` do
+#: glade — e só UM par tinha portão. Mora AQUI, na camada mais baixa, por dois
+#: motivos: é de onde `app/draft_config.py` já lê o DEFAULT de `priority`
+#: (`Profile.model_fields["priority"].default`), então quem manda na faixa e
+#: quem manda no default passam a morar juntos; e este módulo importa só
+#: stdlib + pydantic, o que permite `profiles/`, `app/` e o CLI lerem a faixa
+#: sem nenhum deles puxar GTK.
+#:
+#: Quem mudar o teto muda AQUI. O glade tem de acompanhar na mão (XML não
+#: importa nada), e há portão que reprova a divergência:
+#: `tests/unit/test_teto_da_prioridade_tem_uma_fonte_so.py`.
+#:
+#: Histórico do número: era 100 até PERFIL-NASCE-CERTO-01 (entrega 2, item 1),
+#: e o catch-all do disco dela estava EXATAMENTE em 100 — não existia número
+#: escolhível pela janela que fizesse o perfil de um jogo vencer o dela. O
+#: conserto de 26/07 exigiu escrever 110 direto no JSON, um valor que a janela
+#: não aceitava digitar. Subir o teto não mexe em perfil nenhum já salvo: é só
+#: a faixa que a escala oferece.
+PRIORIDADE_MINIMA = 0
+PRIORIDADE_MAXIMA = 200
+
+
 class Profile(BaseModel):
     """Perfil v1 (ADR-005)."""
 
@@ -759,6 +787,8 @@ def perfil_declara_modo_de_jogo(profile: Profile | None) -> bool:
 
 
 __all__ = [
+    "PRIORIDADE_MAXIMA",
+    "PRIORIDADE_MINIMA",
     "ControllerOverrides",
     "LedsConfig",
     "Match",
