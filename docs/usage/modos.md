@@ -13,10 +13,19 @@ para a Sony e a sua configuração de luzes não vale.
 |---|---|---|
 | **Controlar o PC** | O controle move o cursor e digita: stick e touchpad viram mouse, botões viram teclas. | Navegar no sofá, Big Picture, escolher jogo. |
 | **Jogar pelo Hefesto** | O Hefesto cria um **controle virtual** e é ele que o jogo enxerga. | O padrão para jogar. É o único modo com co-op local. |
-| **Jogar direto (Sony)** | O Hefesto solta o controle. O jogo fala com o DualSense físico, sem intermediário. | Jogos que já falam DualSense nativamente e fazem tudo sozinhos. |
+| **Conexão Nativa (Sony)** | O Hefesto solta o controle. O jogo fala com o DualSense físico, sem intermediário. | Jogos que já falam DualSense nativamente e fazem tudo sozinhos. |
 
 Pela linha de comando os mesmos três estados são `mouse on`, `gamepad on` e
 `native on`.
+
+> **Mudou de nome em 06/08/2026.** O terceiro modo se chamava
+> **"Jogar direto (Sony)"**. O nome caducou por decisão dela — *"Jogar direto é
+> péssimo também. Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"* — e o
+> motivo está na própria tabela acima: os outros dois rótulos dizem para ONDE o
+> controle fala (o PC, o Hefesto), e "direto" não dizia o que a coisa é. O que
+> acontece de fato é o Hefesto **soltar a conexão** e o jogo falar com o
+> DualSense físico. Só o rótulo mudou: na linha de comando continua `native on`,
+> e perfis salvos com `"kind": "native"` seguem valendo.
 
 ## Jogar pelo Hefesto: a máscara
 

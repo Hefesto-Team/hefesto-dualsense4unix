@@ -174,6 +174,71 @@ def _aplicar_regras_de_runtime(builder, card) -> None:  # type: ignore[no-untype
     card.definir_estado_global("Nenhum", "Ligado")
 
 
+def _montar_aba_inicio(builder) -> str:  # type: ignore[no-untyped-def]
+    """Monta a aba Início e a preenche com um estado plausível do daemon.
+
+    COOP-SEM-INTERRUPTOR-01 (06/08/2026) — a cura que a `PEDIDOS-DELA-01`
+    nomeou como pré-requisito da prova de tela. A aba Início é **100% código**
+    (`install_home_tab`): o glade só reserva o `tab_home_box`. Enquanto sobrou
+    ali um frame de glade — a seção "Jogar acompanhada" — a foto documentava
+    aquele frame e mais nada, e passava por retrato da aba. Com o frame fora, a
+    foto virou um retângulo vazio: honesta e inútil.
+
+    Mesmo desenho do card do Status e dos modos de gatilho: host mínimo com um
+    `_get` que resolve ids do builder, nada de IPC e nada de tique. O
+    `_render_home` recebe um `state_full` de mesa cheia — dois controles, dois
+    jogadores — porque é ele que a aba existe para responder.
+    """
+    try:
+        from hefesto_dualsense4unix.app.actions.home_actions import (
+            HomeActionsMixin,
+        )
+    except Exception as exc:
+        return f"aba Início não montada ({exc})"
+
+    class _Host(HomeActionsMixin):  # type: ignore[misc]
+        def __init__(self) -> None:
+            self.builder = builder
+
+        def _get(self, nome: str):  # type: ignore[no-untyped-def]
+            return self.builder.get_object(nome)
+
+        def _status_toast(self, _contexto: str, _msg: str) -> None:
+            return None
+
+        def _refresh_home_tab(self) -> None:
+            return None
+
+    def _controle(indice: int, jogador: int, *, primario: bool) -> dict:
+        return {
+            "index": indice,
+            "connected": True,
+            "transport": "usb" if primario else "bt",
+            "is_primary": primario,
+            "player": jogador,
+            "battery_pct": 87 if primario else 64,
+        }
+
+    estado = {
+        "connected": True,
+        "native_mode": False,
+        "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
+        "coop": {"enabled": True, "players": 2},
+        "controllers": [_controle(0, 1, primario=True), _controle(1, 2, primario=False)],
+        "active_profile": "coop_local",
+    }
+    try:
+        host = _Host()
+        host.install_home_tab()
+        host._render_home(estado)
+    except Exception as exc:
+        return f"aba Início não montada ({exc})"
+    caixa = builder.get_object("tab_home_box")
+    if caixa is not None:
+        caixa.show_all()
+    return "aba Início montada (2 controles = 2 jogadores)"
+
+
 def _injetar_modos_de_gatilho(builder) -> str:  # type: ignore[no-untyped-def]
     """Põe os 19 modos de gatilho na aba Gatilhos.
 
@@ -302,6 +367,7 @@ def main(destino: str | None = None) -> int:
     _assentar()
     print(f"  {_injetar_card(builder)}")
     print(f"  {_injetar_modos_de_gatilho(builder)}")
+    print(f"  {_montar_aba_inicio(builder)}")
     _assentar()
 
     total = notebook.get_n_pages()

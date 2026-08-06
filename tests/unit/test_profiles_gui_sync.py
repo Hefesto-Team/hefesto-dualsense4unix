@@ -152,6 +152,22 @@ def _stub_with(rows, tree) -> Any:
     stub._select_profile_by_name = lambda name: (  # type: ignore[attr-defined]
         ProfilesActionsMixin._select_profile_by_name(stub, name)
     )
+    # NUNCA-TROCA-O-ALVO-01 (06/08/2026): o sync deixou de mover a barra azul
+    # cegamente — ele pergunta antes se há trabalho não salvo no editor, e
+    # marca a mexida como PROGRAMÁTICA para o handler de seleção não repintar
+    # o editor. Os três ajudantes vêm do mixin REAL: com dublês aqui, este
+    # arquivo passaria a testar o dublê em vez da recusa que ele mede.
+    stub._selecao_programatica = False  # type: ignore[attr-defined]
+    stub._alvo_do_salvar = None  # type: ignore[attr-defined]
+    stub._ha_trabalho_no_editor = lambda: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._ha_trabalho_no_editor(stub)
+    )
+    stub._selecao_pode_se_mover_sozinha = lambda destino: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._selecao_pode_se_mover_sozinha(stub, destino)
+    )
+    stub._mover_selecao_sem_gesto = lambda linha: (  # type: ignore[attr-defined]
+        ProfilesActionsMixin._mover_selecao_sem_gesto(stub, linha)
+    )
     # UX-PROFILES-ACTIVE-HIGHLIGHT-01: o sync também realça a linha ativa; o
     # store fake destes testes tem 3 colunas (sem a de peso), então o stub só
     # registra a intenção.
@@ -506,7 +522,9 @@ class TestProfilesCacheNonBlocking:
 
         alvo = SimpleNamespace(name="meu_perfil")
         populados: list = []
-        stub = SimpleNamespace(_profiles_cache=[alvo])
+        # NUNCA-TROCA-O-ALVO-01: sem seleção programática em curso, o handler
+        # repinta o editor como sempre repintou — que é o que este teste mede.
+        stub = SimpleNamespace(_profiles_cache=[alvo], _selecao_programatica=False)
         stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
         stub._find_cached_profile = (  # type: ignore[attr-defined]
             lambda name: ProfilesActionsMixin._find_cached_profile(stub, name)

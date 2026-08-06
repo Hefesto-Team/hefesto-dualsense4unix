@@ -3,7 +3,7 @@
 HARM-01: a aba Emulação chamava ``gamepad.emulation.set`` cru, sem sair do Modo
 Nativo antes. Nativo + gamepad ligados juntos = controle físico grabado pelo
 jogo + vpad congelado, ou seja JOGO SEM CONTROLE NENHUM — e a Início ainda
-exibia "Jogar direto (Sony)" (o nativo vence no `_render_home`), escondendo o
+exibia "Conexão Nativa (Sony)" (o nativo vence no `_render_home`), escondendo o
 estado real. Estes testes travam a paridade: as duas abas emitem exatamente a
 mesma sequência de IPC, com a mesma folga de timeout.
 

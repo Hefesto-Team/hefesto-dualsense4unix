@@ -911,7 +911,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         """HARM-03/EMU-07: "Modo jogo" só faz sentido "jogando pelo Hefesto".
 
         Em "Controlar o PC" o controle SÓ faz mouse/teclado — suspendê-los
-        deixava o controle sem função nenhuma. Em "Jogar direto (Sony)" o jogo
+        deixava o controle sem função nenhuma. Em "Conexão Nativa (Sony)" o jogo
         fala direto com o controle: não há mouse/teclado nem gamepad virtual
         para suspender, e o toast ainda afirmava "gamepad ativo". Nos dois casos
         o botão fica desabilitado com a razão em texto simples ao lado.
@@ -933,7 +933,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
             )
         elif mode == MODE_NATIVE:
             hint.set_text(
-                "Em \"Jogar direto (Sony)\" o jogo fala direto com o controle — "
+                "Em \"Conexão Nativa (Sony)\" o jogo fala direto com o controle — "
                 "não há mouse/teclado para suspender."
             )
         else:
@@ -947,13 +947,13 @@ class EmulationActionsMixin(WidgetAccessMixin):
             gp_label = self._get("emulation_gamepad_status_label")
             # HARM-01: no Modo Nativo o vpad está desligado, mas dizer só
             # "desligado" (e realçar "Desligado") fazia esta aba contradizer a
-            # Início, que mostra "Jogar direto (Sony)". Nenhum dos três botões
+            # Início, que mostra "Conexão Nativa (Sony)". Nenhum dos três botões
             # é a verdade aqui — o realce sai e o label conta o modo real.
             if mode == MODE_NATIVE:
                 active_key = None
                 if gp_label is not None:
                     gp_label.set_markup(
-                        '<span foreground="#ffb86c">Jogar direto (Sony) — o jogo '
+                        '<span foreground="#ffb86c">Conexão Nativa (Sony) — o jogo '
                         'fala direto com o controle</span>'
                     )
             elif isinstance(gp, dict) and gp.get("enabled"):
@@ -1029,7 +1029,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
         Antes esta aba chamava `gamepad.emulation.set` cru, sem sair do Modo
         Nativo: nativo + gamepad ligados juntos = físico grabado pelo jogo +
         vpad congelado, ou seja, JOGO SEM CONTROLE NENHUM — e a Início ainda
-        exibia "Jogar direto (Sony)", escondendo o estado real. Delegar a
+        exibia "Conexão Nativa (Sony)", escondendo o estado real. Delegar a
         `mode_transition` mantém um dono só para a sequência e o timeout.
         """
         def _on_ok(_res: Any) -> bool:

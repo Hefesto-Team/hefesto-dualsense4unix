@@ -60,6 +60,18 @@ _LIGHTBAR_READ_TTL_SEC = 1.0
 #: conter. `asyncio.wait_for` devolve erro ao IPC em vez de pendurar o loop.
 _IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
 
+#: COOP-SEM-INTERRUPTOR-01 (06/08/2026): a razão que o `coop.set` devolve a
+#: quem pede para DESLIGAR o co-op. Texto único, e é dela: *"se eu conecto 4
+#: controles no PC eu espero, com 4 pessoas jogando, que cada um controle o
+#: próprio personagem. Ninguém esperaria controlar o mesmo personagem com cada
+#: controle."* Fica aqui, e não em `subsystems/coop.py`, porque é POLÍTICA da
+#: superfície de comando — o mecanismo (grab, vpad por jogador, player-LED)
+#: não mudou uma linha.
+COOP_SEMPRE_LIGADO_MOTIVO = (
+    "o co-op local é sempre ligado: cada controle conectado é um jogador. "
+    "Para um controle de reserva, deixe-o desconectado."
+)
+
 
 class _RenumberAuthorityChangedError(Exception):
     """F3: um jogo abriu enquanto o renumber esperava os locks — abortar.
@@ -3216,10 +3228,21 @@ class IpcHandlersMixin:
         }
 
     async def _handle_coop_set(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Liga/desliga o co-op local (FEAT-DSX-COOP-LOCAL-01).
+        """Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01).
 
-        Params: enabled: bool (obrigatório). Com o co-op ligado + gamepad virtual
-        ativo + 2+ controles, cada controle vira um jogador (P1, P2, …).
+        Params: enabled: bool (obrigatório). Com o gamepad virtual ativo + 2+
+        controles, cada controle é um jogador (P1, P2, …).
+
+        COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora): *"todos e
+        tudo no Hefesto tem que tá com o permitir co-op ligado (…) se eu conecto
+        4 controles no PC eu espero, com 4 pessoas jogando, que cada um controle
+        o próprio personagem"*. O método SOBREVIVE porque a forma é contrato
+        vivo (a CLI lê ``result["players"]``, e o "ligar" continua sendo o ciclo
+        que reconcilia os jogadores), mas ``enabled: false`` passa a ser
+        recusado EM VOZ ALTA — ``status: "recusado"`` com motivo legível, nunca
+        um "ok" mentiroso. Quem quer um controle de reserva o deixa
+        desconectado; quem quer suspender o co-op por Steam Input usa
+        ``CoopManager.disable()``, que não depende desta flag.
 
         Achado Onda S #6: mesma decisão do `_handle_gamepad_emulation_set` —
         o hide/restore por jogador (`_broker_hide_player`/`_broker_restore_
@@ -3232,10 +3255,66 @@ class IpcHandlersMixin:
             raise ValueError("coop.set exige 'enabled' boolean")
         if self.daemon is None:
             raise ValueError("daemon não disponível para alterar o co-op")
+        if not enabled:
+            # A forma do retorno é a MESMA (`players` continua lá): quem chama
+            # não quebra, mas também não é enganado — `status` diz "recusado" e
+            # `enabled` diz a verdade sobre o estado que ficou.
+            coop_recusa = getattr(self.daemon, "_coop_manager", None)
+            players_recusa = (
+                coop_recusa.player_count() if coop_recusa is not None else 1
+            )
+            logger.warning(
+                "coop_set_desligar_recusado",
+                motivo="coop_sempre_ligado",
+                players=players_recusa,
+            )
+            return {
+                "status": "recusado",
+                "enabled": True,
+                "players": players_recusa,
+                "motivo": COOP_SEMPRE_LIGADO_MOTIVO,
+            }
         effective = self.daemon.set_coop_enabled(enabled)
         coop = getattr(self.daemon, "_coop_manager", None)
         players = coop.player_count() if coop is not None else 1
         return {"status": "ok", "enabled": bool(effective), "players": players}
+
+    async def _handle_coop_sync(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`).
+
+        COOP-SEM-INTERRUPTOR-01, entrega 5 (06/08/2026). Antes desta entrega o
+        ciclo FORÇADO só existia em dois lugares automáticos (a troca de máscara
+        em `set_gamepad_emulation` e a volta da exceção de Steam Input em
+        `resume_vpads_after_steam_input`) e num gesto que ia sair da tela — o
+        botão "Preparar co-op", que o disparava de carona no `coop.set`. Sem
+        dono próprio, tirar o botão tiraria dela o ÚNICO gesto de recuperação do
+        jogador que nasce e morre em dois segundos
+        (COOP-QUE-NÃO-DESMONTA-01): o ciclo normal do poll loop só reenumera
+        quando /dev/input muda, e um grab recusado ou um vpad morto podem
+        esperar o próximo hotplug para sempre.
+
+        Não liga nem desliga nada: não toca `config.coop_enabled`, não persiste
+        preferência e não toma a posse do eixo `mode` (ao contrário do
+        `coop.set`, que é gesto manual). Com o co-op inativo — sem gamepad
+        virtual, ou dentro da exceção de Steam Input — `should_be_active()` é
+        False e o ciclo apenas desmonta o que sobrou, que é o comportamento
+        correto: reconciliar nunca ressuscita o que o jogo suspendeu.
+
+        Retorno: ``{status: "ok", players: N, active: bool}``.
+        """
+        del params  # sem parâmetros: o gesto é "reconcilie agora".
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para reconciliar o co-op")
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        coop = get_coop_manager(self.daemon)
+        coop.sync(force=True)
+        players = coop.player_count()
+        return {
+            "status": "ok",
+            "players": players if isinstance(players, int) else 1,
+            "active": bool(coop.should_be_active()),
+        }
 
     async def _handle_emulation_suppress(
         self, params: dict[str, Any]

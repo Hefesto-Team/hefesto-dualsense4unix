@@ -653,10 +653,13 @@ impl HefestoApplet {
 
         // 3 modos mutuamente exclusivos; o ativo fica marcado e não re-dispara.
         // UX-MODE-TERMS-01: rótulos pela ação, em paridade com a GUI.
+        // UX-MODE-TERMS-02 (06/08/2026): "Jogar direto (Sony)" virou "Conexão
+        // Nativa (Sony)" na janela; o painel acompanha no mesmo passo (a nota
+        // mora em `app/actions/home_actions.py::_MODE_ITEMS`).
         let entries = [
             (SystemMode::Desktop, "Controlar o PC"),
             (SystemMode::Gamepad, "Jogar pelo Hefesto"),
-            (SystemMode::Native, "Jogar direto (Sony)"),
+            (SystemMode::Native, "Conexão Nativa (Sony)"),
         ];
         for (entry, label) in entries {
             let is_active = mode == entry;

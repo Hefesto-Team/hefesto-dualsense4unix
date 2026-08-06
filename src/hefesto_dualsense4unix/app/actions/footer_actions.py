@@ -295,10 +295,7 @@ class FooterActionsMixin(ProfileWriterMixin):
         worker (nunca no cache em memória), evitando decisão com estado stale.
         """
         window = self._get("main_window")
-        # BUG-FOOTER-ACTIVE-NAME-01: DraftConfig é frozen e nunca teve `_active_name`
-        # (getattr morto -> default sempre vazio). O nome do perfil ativo agora vive
-        # em HefestoApp._active_profile_name (populado por _bootstrap_draft_async).
-        active_name: str = getattr(self, "_active_profile_name", "") or ""
+        active_name: str = self._perfil_que_as_abas_editam()
         nome = gui_dialogs.prompt_profile_name(parent=window, default_name=active_name)
         if nome is None:
             return  # usuário cancelou
@@ -330,6 +327,39 @@ class FooterActionsMixin(ProfileWriterMixin):
             return False
 
         ipc_bridge.run_in_thread(_perfis_em_disco, on_success=_on_checked)
+
+    def _perfil_que_as_abas_editam(self) -> str:
+        """Nome com que o diálogo do rodapé nasce pré-preenchido.
+
+        NUNCA-TROCA-O-ALVO-01 (06/08/2026), terceiro caminho da queixa *"clico
+        em salvar e ele salva com um nome aleatório ou de outro perfil"*.
+
+        A fonte era `_active_profile_name` — uma segunda variável, escrita pela
+        janela com a resposta do DAEMON, e que por isso descreve o perfil que
+        está TOCANDO no controle, não o que as abas estão mostrando. As duas
+        divergem, e foi medido: com o jogo abrindo, a reconciliação do tique de
+        2 Hz movia `_active_profile_name` sozinha e o diálogo nascia perguntando
+        "substituir 'sackboy_nativo'?" — um nome que ela nunca digitou nem
+        escolheu. Pior: o "Salvar este perfil" da aba Perfis e o "Salvar Perfil"
+        do rodapé, na MESMA janela e no mesmo instante, miravam arquivos
+        diferentes.
+
+        A fonte passa a ser a fotografia que o próprio rascunho carrega
+        (``draft.source_name``, gravada por ``from_profile`` /
+        ``with_profile_identity``). É a única resposta honesta para este botão:
+        ele emite o RASCUNHO, então o perfil que ele quer sobrescrever é aquele
+        de onde o rascunho veio. Uma fonte só, e ela viaja junto do dado que vai
+        para o disco em vez de ao lado dele.
+
+        `_active_profile_name` continua como degrau de trás: o rascunho pode não
+        ter fotografia (defaults seguros no boot sem daemon), e nesse caso o
+        nome do perfil ativo ainda é melhor do que campo vazio.
+        """
+        draft = getattr(self, "draft", None)
+        origem = getattr(draft, "source_name", None) if draft is not None else None
+        if isinstance(origem, str) and origem:
+            return origem
+        return str(getattr(self, "_active_profile_name", "") or "")
 
     def _prioridade_do_save(self, existente: Profile | None) -> int:
         """Número que o perfil recebe ao ser gravado pelo rodapé.
@@ -540,26 +570,49 @@ class FooterActionsMixin(ProfileWriterMixin):
         # ler/validar o arquivo e listar os perfis existentes (p/ checar conflito)
         # é I/O de disco — vai para um worker. A checagem de conflito é feita no
         # disco (não no cache) e o diálogo de conflito decide no callback GTK.
-        def _read() -> tuple[Profile, list[str]]:
+        def _read() -> tuple[Profile, list[Profile]]:
             raw = json.loads(Path(filename).read_text(encoding="utf-8"))
             profile = Profile.model_validate(raw)
-            existentes = [p.name for p in load_all_profiles()]
+            existentes = list(load_all_profiles())
             return profile, existentes
 
-        def _on_read(payload: tuple[Profile, list[str]]) -> bool:
+        def _on_read(payload: tuple[Profile, list[Profile]]) -> bool:
             profile, existentes = payload
-            nome = profile.name
-            if nome in existentes:
-                escolha = gui_dialogs.prompt_import_conflict(parent=window, name=nome)
+            # I-1 (06/08/2026): este gate comparava NOME CRU (`nome in
+            # existentes`) enquanto os DOIS botões de salvar já perguntam por
+            # SLUG (`on_save_profile` e `on_profile_save`) — o importar era o
+            # último que ainda comparava outra coisa. Medido: importar um
+            # `Navegacao.json` destruía a "Navegação" dela sem uma palavra na
+            # tela, porque o arquivo de destino é o mesmo `navegacao.json` e o
+            # diálogo de conflito nunca abria. Vale igual para "AÇÃO" → "Ação"
+            # e "fps" → "FPS". Quem responde "quem eu apago?" é `find_by_slug`,
+            # e o diálogo cita o perfil REALMENTE afetado (`alvo.name`), não o
+            # nome que veio no arquivo.
+            alvo = find_by_slug(profile.name, existentes)
+            if alvo is not None:
+                escolha = gui_dialogs.prompt_import_conflict(
+                    parent=window, name=alvo.name
+                )
                 if escolha is None:
                     self._footer_toast(_("Importação cancelada."))
                     return False
                 if escolha == "renomear":
                     novo_nome = gui_dialogs.prompt_profile_name(
-                        parent=window, default_name=nome
+                        parent=window, default_name=profile.name
                     )
                     if not novo_nome:
                         self._footer_toast(_("Importação cancelada."))
+                        return False
+                    # E o nome NOVO responde à mesma pergunta: renomear
+                    # "Navegacao" para "AÇÃO" cairia em cima de `acao.json`
+                    # pela porta dos fundos.
+                    if find_by_slug(novo_nome, existentes) is not None:
+                        self._footer_toast(
+                            _(
+                                "'{nome}' ocupa o mesmo arquivo de um perfil que "
+                                "já existe — escolha outro nome."
+                            ).format(nome=novo_nome)
+                        )
                         return False
                     dados = profile.model_dump(mode="python")
                     dados["name"] = novo_nome

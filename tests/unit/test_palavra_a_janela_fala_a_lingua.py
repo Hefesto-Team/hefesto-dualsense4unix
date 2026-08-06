@@ -166,7 +166,7 @@ def test_os_estados_de_hoje_estao_escritos_como_frase() -> None:
     assert "O Hefesto está em pausa" in emulacao
     assert "O Hefesto está desligado" in emulacao
     assert any(t.startswith("Desligado — emulação normal") for t in emulacao)
-    assert any(t.startswith("Jogar direto (Sony)") for t in emulacao)
+    assert any(t.startswith("Conexão Nativa (Sony)") for t in emulacao)
     assert any(t.startswith("Ligado —") for t in emulacao)
 
     assert "Pronto para usar como mouse" in mouse

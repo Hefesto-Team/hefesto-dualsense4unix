@@ -293,8 +293,6 @@ class _FakeWidget:
 class _HomeStub:
     _render_home = HomeActionsMixin._render_home
     _render_home_controllers = HomeActionsMixin._render_home_controllers
-    # AUTO-01.2: o `_render_home` também reconcilia o botão "Preparar co-op".
-    _render_coop_prep = HomeActionsMixin._render_coop_prep
 
     def __init__(self) -> None:
         self._home_installed = True
@@ -314,12 +312,10 @@ class _HomeStub:
         # ONDA-U (U1): botão único de energia (toggle in-place).
         self._home_shutdown_btn = _FakeWidget()
         self._home_offline = False
-        # ONDA-U (U2/U10): botão "Renumerar agora" + aviso de gate.
-        self._home_renumber_btn = _FakeWidget()
-        self._home_renumber_hint = _FakeWidget()
-        # AUTO-01.2: botão "Preparar co-op" + frase (vêm do Glade).
-        self._home_coop_prep_btn = _FakeWidget()
-        self._home_coop_prep_hint = _FakeWidget()
+        # ONDA-U (U2/U10) + COOP-SEM-INTERRUPTOR-01 (06/08): botão
+        # "Reconciliar jogadores" + aviso de jogo aberto.
+        self._home_reconciliar_btn = _FakeWidget()
+        self._home_reconciliar_hint = _FakeWidget()
         # Estado inicial do widget real: invisível até o render decidir.
         self._home_vpad_banner.visible = False
 

@@ -189,8 +189,10 @@ absoluto: o número que a janela mostra é a *colocação desse lugar entre quem
 presente agora*. É por isso que um controle sozinho na mesa é sempre o 1.
 
 - `identity.renumber` **compacta todo mundo** para 1..N preservando a ordem
-  relativa, e empurra quem está ausente para o fim da fila. É o "Renumerar
-  agora" da aba Início — um gesto de faxina.
+  relativa, e empurra quem está ausente para o fim da fila. É o acabamento do
+  botão **"Reconciliar jogadores"** da aba Início — um gesto de faxina.
+  (Até 06/08/2026 o botão se chamava *"Renumerar agora"* e disparava só este
+  método; ver `coop.sync`, abaixo.)
 - `identity.number.set` (PLAYER-01, 25/07) atribui o número de **UM** controle:
   permuta entre si os lugares que os PRESENTES já ocupam, pondo o alvo na
   posição pedida. Os lugares de quem está ausente ficam intocados — este gesto
@@ -211,6 +213,37 @@ com este (`app/actions/base.py:26` adverte não confundir os dois).
 
 `changed` traz apenas os endereços cujo lugar MUDOU — a mesma disciplina do R-15
 no renumber, para a interface não anunciar sucesso de um no-op.
+
+### `coop.set` / `coop.sync` — o co-op local
+
+| Método      | Parâmetros        | Retorno                                          |
+|-------------|-------------------|--------------------------------------------------|
+| `coop.set`  | `{enabled: bool}` | `{status: "ok", enabled: true, players}` \| `{status: "recusado", enabled: true, players, motivo}` |
+| `coop.sync` | `{}`              | `{status: "ok", players, active}`                 |
+
+**COOP-SEM-INTERRUPTOR-01 (06/08/2026, decisão da mantenedora):** o co-op local
+não é mais uma opção — cada controle conectado é um jogador, sempre. Palavra
+dela: *"se eu conecto 4 controles no PC eu espero, com 4 pessoas jogando, que
+cada um controle o próprio personagem"*.
+
+- `coop.set {enabled: true}` continua ligando/reconciliando e **persiste** o
+  gesto manual (é gesto DELA: toma a posse do eixo `mode`).
+- `coop.set {enabled: false}` é **recusado em voz alta** — `status: "recusado"`,
+  com `motivo` legível. A FORMA do retorno é preservada de propósito
+  (`players` continua lá): quem lê o contrato não quebra, e quem esperava o
+  desligamento não é enganado por um `"ok"`.
+- `coop.sync {}` roda **um ciclo cheio** de reconciliação
+  (`CoopManager.sync(force=True)`): recria o jogador cujo grab foi recusado ou
+  cujo vpad morreu, sem esperar o próximo hotplug. Não liga nem desliga nada,
+  não persiste preferência e não toma a posse do eixo `mode`. É o botão
+  **"Reconciliar jogadores"** da aba Início, e é o gesto de recuperação do
+  jogador que nasce e morre em dois segundos.
+
+`active` no retorno de `coop.sync` é o `should_be_active()` do gate — `false`
+quando não há gamepad virtual de pé (modo desktop/nativo) ou quando a exceção
+de Steam Input suspendeu os vpads. Nesse estado o ciclo apenas desmonta o que
+sobrou: reconciliar **nunca** ressuscita o que o jogo suspendeu (a suspensão é
+`CoopManager.disable()`, que não depende da flag).
 
 ### `native.mode.set` — Modo Nativo (FEAT-NATIVE-MODE-01)
 

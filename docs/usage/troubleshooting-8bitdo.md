@@ -100,7 +100,8 @@ Consequências práticas:
   é preciso parear de novo, e o bond do outro modo continua no BlueZ.
 - **O hefesto registra os dois como controles diferentes.** No teste, o 8BitDo
   em PS4 entrou no **slot 5** porque a identidade do modo Switch ainda ocupava o
-  4. Curou com `identity.renumber` (o botão **"Renumerar agora"** da aba Início),
+  4. Curou com `identity.renumber` (o botão **"Reconciliar jogadores"** da aba
+     Início — chamava-se *"Renumerar agora"* até 06/08/2026),
   mas a identidade fantasma do outro modo segue no `controllers.json`.
 
 ### O que este modo custa

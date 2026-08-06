@@ -205,45 +205,23 @@
                 <property name="spacing">12</property>
                 <property name="margin">12</property>
 
-                <!-- AUTO-01.2: o co-op local (quatro jogadores) e a
-                     funcionalidade central do projeto e ate aqui NAO existia na
-                     janela - so por linha de comando (`coop on`). Este e o
-                     unico widget da aba montado em Glade: ele e o atalho de um
-                     clique para o que antes eram varias abas, e por isso vem
-                     ANTES do resto no arquivo. O install_home_tab() o reposiciona
-                     logo abaixo dos dois banners (que sao montados em codigo) e
-                     conecta o clique; rotulo e dica sao reescritos a cada
-                     _render_home com o numero de jogadores que o daemon reporta. -->
-                <child>
-                  <object class="GtkFrame" id="home_coop_frame">
-                    <property name="label" translatable="yes">Jogar acompanhada</property>
-                    <child>
-                      <object class="GtkBox" id="home_coop_box">
-                        <property name="orientation">vertical</property>
-                        <property name="spacing">6</property>
-                        <property name="margin">10</property>
-                        <child>
-                          <object class="GtkButton" id="home_coop_prep_btn">
-                            <property name="label" translatable="yes">Preparar co-op</property>
-                            <property name="halign">start</property>
-                            <property name="tooltip-text" translatable="yes">Deixa tudo pronto para jogar em dupla (ou em quatro): entra no modo de jogo, dá um jogador para cada controle e arruma a numeração. Um clique no lugar de várias abas.</property>
-                            <style><class name="suggested-action"/></style>
-                          </object>
-                          <packing><property name="expand">False</property></packing>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="home_coop_prep_hint">
-                            <property name="wrap">True</property>
-                            <property name="xalign">0</property>
-                            <style><class name="dim-label"/></style>
-                          </object>
-                          <packing><property name="expand">False</property></packing>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                  <packing><property name="expand">False</property></packing>
-                </child>
+                <!-- LAPIDE - COOP-SEM-INTERRUPTOR-01 (06/08/2026). Aqui morava
+                     o frame "Jogar acompanhada", com o botao "Preparar co-op"
+                     (home_coop_frame / home_coop_box / home_coop_prep_btn /
+                     home_coop_prep_hint), entregue pela AUTO-01.2 em 25/07 - o
+                     UNICO conteudo Glade desta aba. Saiu por decisao dela,
+                     tomada duas vezes: "todos e tudo no Hefesto tem que ta com
+                     o permitir co-op ligado (...) se eu conecto 4 controles no
+                     PC eu espero, com 4 pessoas jogando, que cada um controle o
+                     proprio personagem". Preparar o co-op deixou de ser um
+                     gesto porque o co-op deixou de ser uma opcao: o piso do
+                     daemon nasce ligado (DaemonConfig.coop_enabled) e o
+                     `coop.set {enabled:false}` recusa em voz alta.
+                     O gesto de RECUPERACAO que este botao carregava de carona
+                     (o ciclo forcado `coop.sync(force=True)`) nao evaporou: foi
+                     entregue ANTES da remocao ao botao "Reconciliar jogadores"
+                     da mesma aba (home_actions.py, IPC `coop.sync`).
+                     A aba agora e 100% montada em codigo (install_home_tab). -->
               </object>
             </child>
             <child type="tab">
@@ -2813,7 +2791,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <!-- VAO-01/E2: o `wrap` FICA. Os textos reais deste
                            rotulo sao multi-palavra ("ligado — DualSense (PS)",
-                           "jogar direto (Sony) — o jogo fala direto com o
+                           "Conexão Nativa (Sony) — o jogo fala direto com o
                            controle"), e sem quebra a largura MINIMA da aba
                            sobe — largura e a restricao dura desta janela, com
                            rolagem horizontal `never`.
@@ -2841,7 +2819,7 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                     <child>
                       <object class="GtkButton" id="emulation_gamepad_off_button">
                         <property name="label" translatable="yes">Desligado</property>
-                        <property name="tooltip-text" translatable="yes">Volta o controle a controlar o PC (mouse/teclado) — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai do "Jogar direto (Sony)".</property>
+                        <property name="tooltip-text" translatable="yes">Volta o controle a controlar o PC (mouse/teclado) — o mesmo que "Controlar o PC" na aba Início. Desliga o gamepad virtual e também sai da "Conexão Nativa (Sony)".</property>
                         <signal name="clicked" handler="on_emulation_gamepad_off"/>
                       </object>
                     </child>

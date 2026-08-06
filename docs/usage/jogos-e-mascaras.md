@@ -14,7 +14,7 @@ aba Início?"*
 | Opção | O que faz |
 |---|---|
 | **Jogar pelo Hefesto** | o jogo vê um controle virtual criado pelo Hefesto — é o único modo com co-op local |
-| **Jogar direto (Sony)** | o Hefesto solta o controle e o jogo fala direto com o hardware |
+| **Conexão Nativa (Sony)** | o Hefesto solta o controle e o jogo fala direto com o hardware |
 | **Controlar o PC** | o controle vira mouse e teclado (fora do jogo) |
 
 Dentro de "Jogar pelo Hefesto", a máscara diz **o que o jogo enxerga**:

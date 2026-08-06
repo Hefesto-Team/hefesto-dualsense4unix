@@ -12,8 +12,17 @@ Este arquivo trava os três itens que impediam **os quatro jogadores**:
     gesto manual dela nem a decisão persistida em disco;
   - **AUTO-01.2** — o co-op não existia na janela (``grep -ci coop main.glade``
     devolvia ZERO): a funcionalidade central do projeto só tinha caminho pela
-    linha de comando. Agora é um botão que encadeia modo de jogo + co-op +
-    renumeração;
+    linha de comando. Virou um botão, "Preparar co-op", que encadeava modo de
+    jogo + co-op + renumeração.
+    **NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01:** esse botão SAIU, e a
+    entrega da AUTO-01.2 não foi desfeita: ela foi ao limite. Decisão dela,
+    tomada mais de uma vez: *"todos e tudo no Hefesto tem que tá com o permitir
+    co-op ligado (…) se eu conecto 4 controles no PC eu espero, com 4 pessoas
+    jogando, que cada um controle o próprio personagem"*. Preparar o co-op
+    deixou de ser gesto porque o co-op deixou de ser opção — o piso do daemon
+    nasce ligado. O que a AUTO-01.2 tinha de insubstituível (o ciclo FORÇADO,
+    que alcançava de carona no ``coop.set``) mudou de dono ANTES da remoção:
+    virou o IPC ``coop.sync``, no botão "Reconciliar jogadores";
   - **AUTO-01.3** — a máscara tinha DOIS donos: `gamepad on` pela linha de
     comando preservava a do daemon e "Jogar pelo Hefesto" impunha `xbox`. O
     mesmo gesto entregava máscaras diferentes, e a máscara decide se o jogo
@@ -273,7 +282,7 @@ class TestDoisControlesLigamAEmulacao:
     def test_modo_nativo_manual_vence_a_automacao(
         self, config_isolado: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """"Jogar direto (Sony)" é o controle SOLTO para o jogo, de propósito."""
+        """"Conexão Nativa (Sony)" é o controle SOLTO para o jogo, de propósito."""
         d = _daemon(controles=2)
         espiao = _EspiaoDeEmulacao(d)
         espiao.bind(monkeypatch)
@@ -464,138 +473,70 @@ class _FakeWidget:
         self._active_id = value
 
 
-class _HomeStub:
-    """Instância mínima com o que os caminhos de co-op/máscara tocam."""
+class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
+    """COOP-SEM-INTERRUPTOR-01 (06/08/2026) — LÁPIDE de ``TestCoopExisteNaJanela``.
 
-    _on_home_coop_prep_clicked = home_actions.HomeActionsMixin._on_home_coop_prep_clicked
-    _render_coop_prep = home_actions.HomeActionsMixin._render_coop_prep
+    A classe antiga travava a EXISTÊNCIA do botão "Preparar co-op": o id no
+    Glade, o plano de três IPCs, o rótulo com a contagem e as três frases. Tudo
+    isso mediu a mesma pergunta — *"como eu ligo o co-op?"* — e a pergunta
+    morreu com a decisão dela. O que fica no lugar mede que a decisão FOI
+    cumprida, e que o gesto de recuperação não foi junto.
+    """
 
-    def __init__(self, flavor: str | None = None) -> None:
-        self._home_flavor_selector = _FakeWidget(flavor)
-        self._home_coop_prep_btn = _FakeWidget()
-        self._home_coop_prep_hint = _FakeWidget()
-        self.toasts: list[str] = []
-        self.refreshed = 0
-
-    def _status_toast(self, _origem: str, mensagem: str) -> None:
-        self.toasts.append(mensagem)
-
-    def _refresh_home_tab(self) -> None:
-        self.refreshed += 1
-
-
-class TestCoopExisteNaJanela:
-    def test_o_glade_declara_o_botao_de_coop(self) -> None:
-        """A medida da queixa: ``grep -ci coop main.glade`` devolvia ZERO."""
+    def test_o_glade_nao_declara_mais_o_botao_de_coop(self) -> None:
+        """O aceite da sprint, ao pé da letra — e ele NÃO é ``grep -ci coop == 0``:
+        a lápide fala de co-op de propósito, e proibi-la proibiria explicar."""
         fonte = _GLADE.read_text(encoding="utf-8")
 
-        assert 'id="home_coop_prep_btn"' in fonte
-        assert re.search(r"coop", fonte, re.IGNORECASE)
+        assert 'id="home_coop_prep_btn"' not in fonte
+        assert 'id="home_coop_frame"' not in fonte
+        # O rótulo VIVO, não a palavra: a lápide nomeia o botão de propósito,
+        # e proibir a palavra proibiria explicar por que ele saiu.
+        assert "Preparar co-op</property>" not in fonte
 
-    def test_plano_encadeia_modo_coop_e_renumeracao(self) -> None:
-        """Um clique no lugar de: aba Início, terminal, e voltar pra renumerar."""
-        assert mode_transition.plan_coop_prep("xbox") == [
-            ("native.mode.set", {"enabled": False}),
-            ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox"}),
-            ("coop.set", {"enabled": True}),
-            ("identity.renumber", {}),
-        ]
+    def test_a_aba_inicio_virou_100_por_cento_codigo(self) -> None:
+        """O frame de co-op era o ÚNICO conteúdo Glade da aba."""
+        fonte = _GLADE.read_text(encoding="utf-8")
+        ini = fonte.index('<object class="GtkBox" id="tab_home_box">')
+        fim = fonte.index("<child type=\"tab\">", ini)
 
-    def test_o_botao_dispara_a_sequencia_inteira(self, ipc: list[Chamada]) -> None:
-        _HomeStub("xbox")._on_home_coop_prep_clicked(None)
+        assert "<object class=" not in fonte[ini + 40 : fim]
 
-        assert [m for m, _p, _t in ipc] == [
-            "native.mode.set",
-            "gamepad.emulation.set",
-            "coop.set",
-            "identity.renumber",
-        ]
-        # Cada passo cria/desmonta uinput e grab: nenhum cabe nos 0,25 s default.
-        assert all(t == mode_transition.MODE_IPC_TIMEOUT_S for _m, _p, t in ipc)
+    def test_o_plano_de_tres_ipcs_nao_existe_mais(self) -> None:
+        assert not hasattr(mode_transition, "plan_coop_prep")
+        assert not hasattr(mode_transition, "apply_coop_prep")
+        assert not hasattr(mode_transition, "COOP_PREP_REPORTED_METHOD")
 
-    def test_a_renumeracao_recusada_nao_vira_falha_do_coop(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O daemon recusa renumerar com jogo aberto. Com os jogadores JÁ de pé,
-        um toast de falha seria a interface mentindo."""
-        callbacks: dict[str, Any] = {}
+    def test_os_rotulos_do_botao_sairam_com_ele(self) -> None:
+        for nome in (
+            "coop_prep_label",
+            "coop_prep_hint",
+            "COOP_PREP_LABEL_BASE",
+            "COOP_PREP_HINT_CONVITE",
+            "COOP_PREP_HINT_PRONTO",
+            "COOP_PREP_HINT_UM_CONTROLE",
+        ):
+            assert not hasattr(home_actions, nome), f"{nome} sobreviveu ao botão"
 
-        def _fake(
-            method: str,
-            _params: dict[str, Any] | None,
-            ok: Any = None,
-            err: Any = None,
-            timeout_s: float = 0.25,
-        ) -> None:
-            callbacks[method] = (ok, err)
+    def test_o_gesto_de_recuperacao_ganhou_dono_antes_de_o_botao_sair(self) -> None:
+        """A armadilha nomeada pela sprint (linhas 72-75 do roteiro).
 
-        monkeypatch.setattr(mode_transition, "call_async", _fake)
-        stub = _HomeStub("xbox")
-        stub._on_home_coop_prep_clicked(None)
+        Tirar o botão sem isto tiraria dela o único ciclo FORÇADO ao alcance da
+        mão — e o P2 que dura dois segundos ficaria sem gesto de recuperação.
+        """
+        import inspect
 
-        _ok_renumber, err_renumber = callbacks["identity.renumber"]
-        err_renumber(RuntimeError("sessao_de_jogo_aberta"))
-        assert stub.toasts == []
+        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+        from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 
-        ok_coop, _err_coop = callbacks["coop.set"]
-        ok_coop({"status": "ok", "enabled": True, "players": 4})
-        assert stub.toasts == ["Co-op pronto — 4 jogador(es)."]
-
-    def test_rotulo_conta_os_jogadores_que_vao_existir(self) -> None:
-        assert home_actions.coop_prep_label([]) == "Preparar co-op"
-        assert home_actions.coop_prep_label([{"a": 1}]) == "Preparar co-op"
-        assert (
-            home_actions.coop_prep_label([{"a": 1}, {"b": 2}, {"c": 3}])
-            == "Preparar co-op (3 jogadores)"
-        )
-
-    def test_frase_convida_quando_ha_dois_controles_e_o_coop_esta_frio(self) -> None:
-        estado = {
-            "gamepad_emulation": {"enabled": False, "flavor": "xbox"},
-            "coop": {"enabled": True, "players": 1},
-        }
-
-        assert home_actions.coop_prep_hint(estado, [{"a": 1}, {"b": 2}]) == (
-            home_actions.COOP_PREP_HINT_CONVITE
-        )
-
-    def test_frase_avisa_que_falta_o_segundo_controle(self) -> None:
-        estado = {"gamepad_emulation": {"enabled": True, "flavor": "xbox"}}
-
-        assert home_actions.coop_prep_hint(estado, [{"a": 1}]) == (
-            home_actions.COOP_PREP_HINT_UM_CONTROLE
-        )
-
-    def test_frase_reconhece_o_coop_ja_de_pe(self) -> None:
-        estado = {
-            "gamepad_emulation": {"enabled": True, "flavor": "xbox"},
-            "coop": {"enabled": True, "players": 2},
-        }
-
-        assert home_actions.coop_prep_hint(estado, [{"a": 1}, {"b": 2}]) == (
-            home_actions.COOP_PREP_HINT_PRONTO
-        )
-
-    def test_offline_desabilita_o_botao_e_cala_a_frase(self) -> None:
-        """Sem daemon os três passos são IPC que não chega a lugar nenhum."""
-        stub = _HomeStub()
-
-        stub._render_coop_prep(None, [])
-
-        assert stub._home_coop_prep_btn.sensitive is False
-        assert stub._home_coop_prep_hint.text == ""
-
-    def test_render_com_daemon_vivo_habilita_e_conta(self) -> None:
-        stub = _HomeStub()
-        estado = {
-            "gamepad_emulation": {"enabled": True, "flavor": "xbox"},
-            "coop": {"enabled": True, "players": 1},
-        }
-
-        stub._render_coop_prep(estado, [{"a": 1}, {"b": 2}])
-
-        assert stub._home_coop_prep_btn.sensitive is True
-        assert stub._home_coop_prep_btn.label == "Preparar co-op (2 jogadores)"
+        assert hasattr(home_actions.HomeActionsMixin, "_on_home_reconciliar_clicked")
+        assert home_actions.RECONCILIAR_LABEL == "Reconciliar jogadores"
+        assert hasattr(IpcHandlersMixin, "_handle_coop_sync")
+        # A FIAÇÃO, não só a existência: um handler fora do registro é código
+        # que ninguém alcança (a mesma classe de defeito que a sprint
+        # "o código que existe e ninguém chama" denunciou).
+        registro = inspect.getsource(IpcServer.__post_init__)
+        assert '"coop.sync": self._handle_coop_sync' in registro
 
 
 class TestUmDonoSoParaAMascara:
@@ -638,19 +579,22 @@ class TestUmDonoSoParaAMascara:
 
         assert params_cli == pela_janela
 
-    def test_o_clique_manda_a_mascara_que_ela_escolheu(
-        self, ipc: list[Chamada]
-    ) -> None:
+    def test_o_plano_manda_a_mascara_que_ela_escolheu(self) -> None:
         """O outro lado da regra: escolha explícita dela chega intacta ao daemon.
+
+        NOTA DATADA (06/08/2026): esta medida entrava pelo clique em "Preparar
+        co-op", que carregava o `flavor` do seletor até o `gamepad.emulation.set`.
+        Com o botão fora (COOP-SEM-INTERRUPTOR-01), o mesmo invariante é medido
+        no plano de transição de modo — que é quem sempre teve o `flavor` e
+        continua sendo o caminho do comutador da aba.
 
         (O guard do `_render_home` — payload sem máscara não reescreve o
         seletor — é travado em `test_home_render_state.py`, onde vive o dublê
         completo da aba.)
         """
-        _HomeStub("dualsense")._on_home_coop_prep_clicked(None)
+        passo = mode_transition.plan_mode_transition("gamepad", "dualsense")[-1]
 
-        passo = [(m, p) for m, p, _t in ipc if m == "gamepad.emulation.set"]
-        assert passo == [("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense"})]
+        assert passo == ("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense"})
 
 
 # ---------------------------------------------------------------------------

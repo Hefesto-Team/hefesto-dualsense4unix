@@ -426,6 +426,16 @@ class ProfileModeConfig(BaseModel):
     # carregar `coop: false` e desligar o co-op ao ativar, pelas costas de quem
     # nunca pediu isso. Perfis já gravados são migrados em
     # `loader.migrate_profiles_coop_default`.
+    #
+    # COOP-SEM-INTERRUPTOR-01 (06/08/2026) — NOTA DATADA: o campo passou a ser
+    # ACEITO E IGNORADO. Nenhum perfil liga nem desliga o co-op
+    # (`lifecycle._apply_profile_mode` só o LÊ, e loga quando um perfil antigo
+    # pede `false`). Ele NÃO sai do modelo de propósito: `model_config` acima é
+    # `extra="forbid"`, então tirá-lo faria **todo perfil dela que traz `"coop"`
+    # falhar na validação** — inclusive dois presets de fábrica
+    # (`assets/profiles_default/coop_local.json` e `sackboy_nativo.json`).
+    # Remover o campo seria trocar um interruptor inútil por um perfil que não
+    # abre; a lápide é mais barata que a migração.
     coop: bool = True
 
 

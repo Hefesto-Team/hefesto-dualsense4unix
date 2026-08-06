@@ -149,9 +149,18 @@ def test_perfil_sem_opiniao_reverte_so_modo_de_perfil(
     assert calls.native == []
 
 
-def test_kind_gamepad_liga_flavor_e_coop(
+def test_kind_gamepad_liga_o_flavor_e_nao_mexe_no_coop(
     daemon: Daemon, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: era
+    ``test_kind_gamepad_liga_flavor_e_coop``.
+
+    O perfil deixou de GOVERNAR o co-op. Ele nunca mais o liga (não precisa: o
+    piso do daemon já nasce ligado) nem o desliga — a chamada
+    ``set_coop_enabled(..., origin="profile")`` saiu do
+    ``apply_profile_mode``. A máscara continua sendo do perfil, e é isso que
+    este teste guarda.
+    """
     calls = _Calls(daemon)
     calls.bind(monkeypatch)
 
@@ -160,12 +169,12 @@ def test_kind_gamepad_liga_flavor_e_coop(
     )
 
     assert calls.gamepad == [(True, "dualsense", "profile")]
-    assert calls.coop == [(True, "profile")]
+    assert calls.coop == []
+    assert daemon.config.coop_enabled is True
     assert daemon._mode_from_profile == "gamepad"
 
     # Re-ativação do MESMO perfil (tick do autoswitch) é idempotente.
     calls.gamepad.clear()
-    calls.coop.clear()
     daemon.apply_profile_mode(
         _profile({"kind": "gamepad", "gamepad_flavor": "dualsense", "coop": True}).mode
     )
@@ -179,13 +188,39 @@ class TestCoopDefaultOn:
     O checkbox saiu da tela: se um perfil ainda conseguisse zerar
     `coop_enabled`, os dois controles viravam o mesmo jogador SEM caminho de
     volta. Cada teste aqui é uma porta que precisa continuar fechada.
+
+    NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: a porta foi TAPADA, não
+    só fechada. O campo `mode.coop` continua sendo aceito e lido (tirá-lo do
+    esquema faria todo perfil dela que o traz falhar na validação — inclusive
+    dois presets de fábrica), mas nenhum perfil liga nem desliga o co-op.
     """
+
+    def test_perfil_com_coop_false_e_aceito_e_ignorado(
+        self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O caso que a decisão dela existe para fechar, medido de ponta a ponta.
+
+        Um perfil antigo com ``"coop": false`` continua ABRINDO (o esquema é
+        `extra="forbid"`: recusá-lo seria trocar um interruptor inútil por um
+        perfil que não carrega) — e ativá-lo NÃO desliga mais o co-op dela.
+        """
+        calls = _Calls(daemon)
+        calls.bind(monkeypatch)
+
+        mode = _profile(
+            {"kind": "gamepad", "gamepad_flavor": "xbox", "coop": False}
+        ).mode
+        assert mode is not None and mode.coop is False  # aceito
+
+        daemon.apply_profile_mode(mode)
+
+        assert calls.coop == [], "o perfil ainda governa o co-op"
+        assert daemon.config.coop_enabled is True
 
     def test_perfil_sem_campo_coop_nao_desliga_o_coop(
         self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # O default do esquema é True: um perfil de gamepad que não fala de
-        # co-op LIGA o co-op (antes, o mesmo JSON o desligava).
+        # O default do esquema é True; e desde 06/08 nem o True governa.
         calls = _Calls(daemon)
         calls.bind(monkeypatch)
 
@@ -194,7 +229,8 @@ class TestCoopDefaultOn:
         assert mode.coop is True
 
         daemon.apply_profile_mode(mode)
-        assert calls.coop == [(True, "profile")]
+        assert calls.coop == []
+        assert daemon.config.coop_enabled is True
 
     def test_sair_do_gamepad_por_perfil_sem_opiniao_preserva_a_preferencia(
         self, daemon: Daemon, monkeypatch: pytest.MonkeyPatch

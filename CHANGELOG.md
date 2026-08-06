@@ -5,6 +5,116 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### "Jogar direto (Sony)" virou "Conexão Nativa (Sony)"
+
+Pedido dela mais de uma vez, e cumprido em 06/08/2026: *"Jogar direto é péssimo
+também. Já tinha pedido pra deixarmos: Conexão Nativa (Sony)"*. O rótulo antigo
+dizia o **gesto** e não a **coisa** — os outros dois dizem para onde o controle
+fala ("Controlar o PC", "Jogar pelo Hefesto"), e "direto" não completava a
+frase. O nome novo diz o que acontece: o Hefesto solta a conexão e o jogo fala
+com o DualSense físico, sem intermediário.
+
+Os quatro itens do editor de perfis agora leem como uma lista só: **Não mexer no
+modo · Controlar o PC · Jogar pelo Hefesto · Conexão Nativa (Sony)**. A troca
+alcançou as duas abas (Início e Perfis), o applet do painel COSMIC, os avisos da
+aba Emulação, os tooltips do `main.glade` e a documentação.
+
+**Só o rótulo mudou.** O id `native` continua sendo chave de perfil, método de
+IPC e comando de CLI (`native on`) — nenhum perfil salvo em disco muda de
+sentido. A decisão que caducou (`UX-MODE-TERMS-01`, que batizou o modo de
+"Jogar direto (Sony)") ganhou nota datada onde ela mora: o comentário de
+`home_actions._MODE_ITEMS` e a `docs/usage/modos.md`.
+
+### A janela trocava o nome do perfil sozinha, e o Salvar ia para o arquivo errado
+
+Queixa dela, e a terceira frase era a mais difícil de acreditar: *"clico em
+salvar e ele salva com um nome aleatório ou de outro perfil"*. Reproduzida por
+**três caminhos independentes**, todos com a mesma raiz — `_populate_editor`
+reescreve o campo Nome, e quem o dispara é o sinal `changed` da SELEÇÃO da
+lista, que **a própria janela emite** sem ela encostar em nada.
+
+O "nome aleatório" não era aleatório: era o **primeiro arquivo em ordem de
+carga** do diretório de perfis, que no disco dela é `acao.json` — "Ação". Um
+clique em "Recarregar lista" bastava. Os outros dois caminhos eram o autoswitch
+(abrir o jogo e voltar para a aba Perfis) e o diálogo do rodapé, que nascia
+pré-preenchido com o perfil do **daemon** em vez do que as abas mostram — a
+ponto de os DOIS botões de salvar, na mesma janela e no mesmo instante, mirarem
+arquivos diferentes.
+
+E o estrago **se auto-sustentava**: o save no perfil errado reapontava o
+rascunho e zerava o baseline, então `_tem_edicao_pendente` passava a responder
+"não" e **todos os saves seguintes** iam para lá.
+
+A cura escreve um princípio: **a janela nunca troca o alvo do Salvar sem gesto
+dela.** Seleção programática atualiza a lista e para por aí. São três camadas
+que só funcionam juntas — a lista não se move sozinha, o editor não é repintado
+por seleção que não é dela, e o Salvar mira um alvo **memorizado** em vez do
+widget. Suprimir só o sinal deixaria a barra azul numa linha e o editor em
+outra, e a janela perguntaria *"renomear 'sackboy' para 'vitoria'?"* por causa
+de um sinal que ninguém emitiu.
+
+Junto, dois defeitos que a mesma medição encontrou:
+
+- **importar um perfil comparava NOME CRU** enquanto os dois botões de salvar já
+  perguntavam por SLUG. Importar um `Navegacao.json` **destruía a "Navegação"
+  dela sem uma palavra na tela** — os dois ocupam o mesmo arquivo. Agora quem
+  responde "quem eu apago?" é o slug, o diálogo cita o perfil realmente afetado,
+  e o nome novo do "renomear" responde à mesma pergunta (senão a colisão entrava
+  pela porta dos fundos);
+- **a guarda da própria cura falhava ABERTO.** O `except` de "há edição
+  pendente?" lia *"não sei"* como *"não há trabalho a proteger"*, e com ele o
+  defeito inteiro ressuscitava. Para uma guarda cujo único trabalho é proteger
+  trabalho não salvo, o default é FECHAR: um falso "sim" custa um clique, um
+  falso "não" custa o trabalho dela.
+
+**A janela também passou a falar.** Quando o tique de 2 Hz reconcilia o rascunho
+com o perfil ativo — troca legítima, não havia nada a perder —, ela diz para
+onde o Salvar aponta agora. O silêncio era a metade não medida do defeito:
+recarregar calado é seguro para os dados e enganoso para ela.
+
+### O co-op deixou de ser uma opção — e o botão que sobreviveu à decisão saiu
+
+Ela pediu, e não foi a primeira vez: *"Independente do que escolhermos, todos e
+tudo no Hefesto tem que tá com o permitir co-op ligado. Eu já havia pedido pra
+removermos até o botão da aba Início e tirar essa seção de lá também, já que
+isso não faz sentido — afinal, se eu conecto 4 controles no PC eu espero, com 4
+pessoas jogando, que cada um controle o próprio personagem. Ninguém esperaria
+controlar o mesmo personagem com cada controle."*
+
+O pedido virou sprint em 03/08 e **o artefato sobreviveu à decisão** — a mesma
+família do `0x08` e do `common[8]`. Agora:
+
+- **o piso nasce ligado.** `DaemonConfig.coop_enabled` era `False` "para
+  preservar o uso de reserva/troca de controle"; esse motivo caducou por decisão
+  dela (quem quer um controle de reserva o deixa desconectado). O boot deixou de
+  reler o opt-out do disco: o piso tem UM dono, e por isso arrancá-lo agora
+  reprova — antes, o `run()` forçava `True` e a cura tinha um sósia;
+- **`coop.set {enabled:false}` recusa em voz alta**, preservando a FORMA do
+  retorno (`players` continua lá — a CLI o lê). `coop off` explica em vez de
+  desligar, e sai com código 2: um `0` silencioso faria um script achar que
+  desligou;
+- **o perfil parou de governar.** O campo `mode.coop` continua **aceito e
+  ignorado** — tirá-lo do esquema faria todo perfil que o traz falhar na
+  validação, inclusive dois presets de fábrica;
+- **o botão "Preparar co-op" saiu da aba Início**, com a seção "Jogar
+  acompanhada" inteira. Era o único conteúdo Glade daquela aba, que agora é 100%
+  código. No lugar fica a frase que conta os jogadores, com a contagem vindo do
+  `state_full` — e externos nunca viram jogador de co-op.
+
+**O gesto de recuperação ganhou dono ANTES de o botão sair**, e essa ordem é a
+entrega: "Renumerar agora" virou **"Reconciliar jogadores"** e passou a rodar o
+ciclo forçado do co-op (IPC novo `coop.sync`) antes de compactar a numeração.
+Sem isso, tirar o botão tiraria dela o único gesto capaz de trazer de volta o
+jogador cujo grab foi recusado ou cujo vpad morreu sem que `/dev/input` mudasse.
+O botão também **deixou de ser desabilitado com o jogo aberto** — é justamente
+em partida que o jogador cai; agora ele fica de pé e a frase explica que só a
+numeração espera o jogo fechar.
+
+**O que NÃO mudou uma linha:** o mecanismo. Grab por jogador, vpad por jogador,
+player-LEDs, numeração — e a suspensão por Steam Input (`CoopManager.disable()`),
+que nunca dependeu da flag e é por isso que o co-op volta sozinho quando o jogo
+fecha.
+
 ## [0.8.0] — 2026-08-02
 
 ### Sete presets de gatilho que não faziam absolutamente nada

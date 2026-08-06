@@ -294,7 +294,12 @@ hefesto-dualsense4unix gamepad status
   camada: o sink do controle no PipeWire pode estar mudo (`scripts/doctor.sh`
   reporta), e por Bluetooth não existe fluxo de áudio de saída nenhum.
 - `hefesto-dualsense4unix native on|off|status` — Modo Nativo (solta o controle para o jogo).
-- `hefesto-dualsense4unix coop on|off|status` — co-op local (cada controle = um jogador).
+- `hefesto-dualsense4unix coop on|status` — co-op local (cada controle = um
+  jogador). O `on` reconcilia os jogadores agora; o `status` conta quantos há.
+  **`coop off` não desliga mais** (06/08/2026): ele explica por quê e sai com
+  código 2. Cada controle conectado é um jogador, sempre — quem quer um controle
+  de reserva o deixa desconectado. O co-op ainda sai de cena sozinho nos jogos
+  com exceção de Steam Input, e volta quando o jogo fecha.
 - `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
 - `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.

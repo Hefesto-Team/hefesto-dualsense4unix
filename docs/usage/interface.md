@@ -16,7 +16,7 @@ ajusta nela.
 ![Aba Início](assets/readme_inicio.png)
 
 A aba de decisão. Tem o seletor **"O que o controle faz agora"** com os três
-modos (Controlar o PC · Jogar pelo Hefesto · Jogar direto (Sony)), o seletor de
+modos (Controlar o PC · Jogar pelo Hefesto · Conexão Nativa (Sony)), o seletor de
 máscara **"O jogo vê o controle como:"**, o cadeado **"Não trocar de perfil
 sozinho ao abrir um jogo"**, e um card por controle conectado com o número de
 jogador. Os avisos de degradação (controle virtual em modo reduzido, jogo aberto

@@ -188,7 +188,6 @@ def _ipc_envenenado(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ha, "call_async", _bomba)
     monkeypatch.setattr(mt, "call_async", _bomba)
     monkeypatch.setattr(mt, "apply_mode", _bomba)
-    monkeypatch.setattr(mt, "apply_coop_prep", _bomba)
 
 
 # ---------------------------------------------------------------------------
@@ -287,9 +286,20 @@ class TestAAbaInicioEscreveNoRascunho:
 
         assert janela.draft.mode_dirty is False
 
-    def test_preparar_coop_e_o_unico_gesto_que_liga_o_coop(
+    def test_nenhum_gesto_da_janela_escreve_coop_no_perfil(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """NOTA DATADA (06/08/2026) — COOP-SEM-INTERRUPTOR-01: era
+        ``test_preparar_coop_e_o_unico_gesto_que_liga_o_coop``.
+
+        Aquele gesto (o botão "Preparar co-op") era o ÚNICO que dizia ``coop``
+        na mão, e saiu com a decisão dela. Agora a janela não tem gesto nenhum
+        que escreva o campo — e a regra que sobra é mais forte: o que ela não
+        edita, ela não reescreve, nem para ligar. Um perfil que diz
+        ``coop: false`` continua dizendo ``coop: false`` no disco (o campo é
+        aceito e ignorado pelo daemon; reescrevê-lo seria mudar o arquivo dela
+        sem pedido).
+        """
         janela = _Janela(
             _perfil(
                 "Co-op",
@@ -299,10 +309,11 @@ class TestAAbaInicioEscreveNoRascunho:
         )
         _ipc_que_confirma(monkeypatch)
 
-        janela._on_home_coop_prep_clicked(None)
+        janela._home_mode_selector.set_active_id("gamepad")
+        janela._home_flavor_selector.set_active_id("dualsense")
 
         salvo = janela.draft.to_profile("Co-op")
-        assert salvo.mode is not None and salvo.mode.coop is True
+        assert salvo.mode is not None and salvo.mode.coop is False
 
     def test_trocar_a_mascara_nao_liga_o_coop_de_quem_dizia_nao(
         self, monkeypatch: pytest.MonkeyPatch
@@ -404,9 +415,8 @@ class TestAsQuatroCoisasNoMesmoSalvar:
         janela = _Janela(_perfil("Pragmata", com_regra=True, priority=100))
         _ipc_que_confirma(monkeypatch)
 
-        # Aba Início: "Jogar pelo Hefesto" e depois "Preparar co-op".
+        # Aba Início: "Jogar pelo Hefesto".
         janela._home_mode_selector.set_active_id("gamepad")
-        janela._on_home_coop_prep_clicked(None)
         # Aba Emulação: máscara PlayStation e "Modo jogo".
         janela.on_emulation_gamepad_dualsense(None)
         janela.on_emulation_pause(None)
@@ -415,7 +425,6 @@ class TestAsQuatroCoisasNoMesmoSalvar:
         assert salvo.mode is not None
         assert salvo.mode.kind == "gamepad"
         assert salvo.mode.gamepad_flavor == "dualsense"
-        assert salvo.mode.coop is True
         assert salvo.suppress_desktop_emulation is True
         # E nada do que já funcionava se perdeu no caminho.
         assert salvo.priority == 100
@@ -441,13 +450,12 @@ class TestRegistrarNaoEAplicar:
         _ipc_envenenado(monkeypatch)
 
         ha.registrar_modo_no_rascunho(janela, "gamepad", "dualsense")
-        ha.registrar_modo_no_rascunho(janela, "gamepad", "xbox", coop=True)
+        ha.registrar_modo_no_rascunho(janela, "gamepad", "xbox")
         guardado = ea.registrar_modo_jogo_no_rascunho(janela, True)
 
         assert guardado is True
         salvo = janela.draft.to_profile("Sackboy")
         assert salvo.mode is not None and salvo.mode.gamepad_flavor == "xbox"
-        assert salvo.mode.coop is True
         assert salvo.suppress_desktop_emulation is True
 
     def test_o_aplicar_do_rodape_continua_sem_levar_modo_nem_modo_jogo(

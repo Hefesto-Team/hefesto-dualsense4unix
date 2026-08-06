@@ -89,7 +89,7 @@ Na aba **Início**, o seletor "O que o controle faz agora" tem três modos:
 - **Controlar o PC** — o controle vira mouse e teclado.
 - **Jogar pelo Hefesto** — o jogo vê um controle virtual (co-op local, vibração
   e perfis passam pelo Hefesto).
-- **Jogar direto (Sony)** — o Hefesto solta o controle e o jogo fala direto com
+- **Conexão Nativa (Sony)** — o Hefesto solta o controle e o jogo fala direto com
   o hardware (gatilhos adaptativos nativos, giroscópio, touchpad).
 
 Comparação completa e quando usar cada um: [`modos.md`](modos.md).
