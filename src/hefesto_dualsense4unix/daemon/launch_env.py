@@ -53,12 +53,12 @@ from __future__ import annotations
 import contextlib
 import datetime as _dt
 import os
-import re
 import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
 
@@ -90,7 +90,13 @@ _IGNORE_VALUE = "0x054c/0x0ce6"
 #: Proton 10 e foi aposentada (só AMPLIAVA exposição).
 _DISABLE_HIDRAW_VALUE = "0x054C/0x0CE6"
 
-_STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$")
+#: UNIFICA-PREDICADO-01: o predicado "isto é janela de jogo da Steam?" DESCEU
+#: para `profiles/steam_app.py` (stdlib pura, sem import do projeto) e é
+#: REEXPORTADO daqui — os oito callsites históricos e os testes que importam
+#: `daemon.launch_env.steam_appid_from_wm_class` continuam valendo sem tocar em
+#: nada. A fonte desceu em vez de subir porque `profiles/simple_match.py` é
+#: `profiles/` puro e importar `daemon.launch_env` de lá deixaria o ciclo
+#: `profiles -> daemon -> profiles` a um commit de distância.
 
 #: GUI-05 item 3 (honestidade do dedup): idade MÁXIMA, em segundos, do marker
 #: `last_run` (gravado pelo wrapper no LAUNCH) em relação à PRIMEIRA detecção
@@ -124,14 +130,6 @@ LAUNCH_ARM_WINDOW_SEC = 60.0
 #: valer, porque este arquivo é a primeira coisa que se lê ao diagnosticar um
 #: jogo que "enxerga quatro controles onde existe um".
 ESTADO_ALLOWLIST_STEAM_INPUT = "allowlist Steam Input (físico é o único dispositivo)"
-
-
-def steam_appid_from_wm_class(wm_class: str | None) -> int | None:
-    """Appid do jogo a partir da wm_class (`steam_app_N`), ou None."""
-    if not isinstance(wm_class, str):
-        return None
-    m = _STEAM_APP_WC_RE.match(wm_class)
-    return int(m.group(1)) if m is not None else None
 
 
 def _read_kv_int_fields(path: Path) -> dict[str, int]:
@@ -760,9 +758,9 @@ def _steam_profiles(daemon: DaemonProtocol) -> list[tuple[int, Any]]:
     for profile in _load_profiles(daemon):
         match = getattr(profile, "match", None)
         for wc in getattr(match, "window_class", None) or []:
-            m = _STEAM_APP_WC_RE.match(str(wc))
-            if m is not None:
-                out.append((int(m.group(1)), profile))
+            appid = steam_appid_from_wm_class(str(wc))
+            if appid is not None:
+                out.append((appid, profile))
     return out
 
 
@@ -791,7 +789,7 @@ def _nativos_fora_da_antecipacao(profiles: Sequence[Any]) -> list[str]:
         wcs = [str(wc) for wc in getattr(match, "window_class", None) or []]
         coberto = (
             bool(wcs)
-            and all(_STEAM_APP_WC_RE.match(wc) is not None for wc in wcs)
+            and all(steam_appid_from_wm_class(wc) is not None for wc in wcs)
             and not getattr(match, "window_title_regex", None)
             and not (getattr(match, "process_name", None) or [])
         )

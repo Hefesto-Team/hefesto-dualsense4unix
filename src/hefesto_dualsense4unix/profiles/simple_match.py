@@ -15,10 +15,7 @@ from __future__ import annotations
 import re
 
 from hefesto_dualsense4unix.profiles.schema import Match, MatchAny, MatchCriteria
-
-#: R-12: ``wm_class`` de jogo Steam (Proton ou nativo). Mesmo formato que
-#: `app.actions.launch_wrapper_dialog._STEAM_APP_RE` reconhece no state_full.
-_STEAM_APP_RE = re.compile(r"^steam_app_(\d+)$")
+from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 
 #: Aceita o que a usuária tem em mãos: o número puro da URL da loja
 #: (``1599660``) ou a wm_class inteira, copiada de um doctor/journal.
@@ -187,13 +184,21 @@ def _detect_steam_appid(match: Match) -> str | None:
     ``MatchCriteria.matches`` é AND entre campos preenchidos, então um regex de
     título junto mudaria o significado e o editor simples estaria mentindo
     sobre o que o perfil faz.
+
+    UNIFICA-PREDICADO-01: o reconhecimento vem da fonte única
+    (`profiles/steam_app.py`), que já absorveu o ``.strip()`` daqui. O
+    alargamento para caixa é a cura de uma mentira do editor: um perfil salvo
+    com ``Steam_App_2111190`` CASA com o jogo (o matcher compara sem caixa) e
+    abria no editor AVANÇADO, como se não fosse perfil de jogo da Steam — e
+    ``simple_extra`` devolvia "" no campo que pede o número. A conversão para
+    `str` é do callsite: a fonte devolve `int` e a GUI escreve texto no campo.
     """
     if not isinstance(match, MatchCriteria):
         return None
     if len(match.window_class) != 1 or match.window_title_regex or match.process_name:
         return None
-    m = _STEAM_APP_RE.match(match.window_class[0].strip())
-    return m.group(1) if m else None
+    appid = steam_appid_from_wm_class(match.window_class[0])
+    return None if appid is None else str(appid)
 
 
 def _criteria_equal(a: MatchCriteria, b: MatchCriteria) -> bool:

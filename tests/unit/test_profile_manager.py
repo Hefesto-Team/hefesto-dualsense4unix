@@ -9,7 +9,10 @@ from hefesto_dualsense4unix.core.trigger_effects import rigid
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
-from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.manager import (
+    MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
+    ProfileManager,
+)
 from hefesto_dualsense4unix.profiles.schema import (
     LedsConfig,
     MatchAny,
@@ -212,6 +215,57 @@ def test_janela_de_jogo_sem_regra_propria_nao_cai_no_catch_all(
     fc.connect()
     manager = ProfileManager(controller=fc)
     assert manager.select_for_window({"wm_class": "steam_app_2111190"}) is None
+
+
+@pytest.mark.parametrize(
+    "wm_class",
+    ["STEAM_APP_2111190", "Steam_App_2111190", "  steam_app_2111190  "],
+)
+def test_veto_r21_vale_com_wm_class_em_caixa_alta(
+    isolated_profiles_dir: Path, wm_class: str
+):
+    """UNIFICA-PREDICADO-01: o veto R-21 não pode depender da CAIXA da janela.
+
+    O buraco que ninguém cobria. A suíte inteira exercitava o veto só com
+    ``steam_app_...`` em minúscula, então a IGNORECASE de `manager.py` era uma
+    linha sem testemunha — e a "limpeza" que unifica o predicado numa fonte
+    CASE-SENSITIVE revogaria o veto sem uma reprovação sequer. Com a janela se
+    anunciando ``Steam_App_2111190`` (o X/XWayland escolhe a grafia, e ela
+    muda entre backends de detecção), o catch-all voltaria a entrar por cima
+    do jogo: exatamente o ping-pong de 22-23/07 que o R-21 fechou.
+
+    Arranque a `re.IGNORECASE` da fonte (`profiles/steam_app.py`) e este teste
+    reprova nos três casos.
+    """
+    save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=1))
+
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    assert manager.select_for_window({"wm_class": wm_class}) is None
+    # E o MOTIVO tem de ser "jogo sem perfil próprio", não "nada casou": é ele
+    # que faz o daemon ligar o modo jogo padrão em vez de reter em silêncio.
+    assert manager.select_for_window_ex({"wm_class": wm_class}) == (
+        None,
+        MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
+    )
+
+
+def test_veto_r21_em_caixa_alta_sem_candidato_nenhum(isolated_profiles_dir: Path):
+    """O ramo vizinho do veto (ZERO candidatos no disco) pelo mesmo predicado.
+
+    `select_for_window_ex` decide o motivo ANTES de olhar candidatos; se o
+    predicado for sensível a caixa, esta janela vira `MOTIVO_SEM_CANDIDATO` e
+    o modo jogo padrão nunca liga.
+    """
+    fc = FakeController()
+    fc.connect()
+    manager = ProfileManager(controller=fc)
+    assert manager.select_for_window_ex({"wm_class": "STEAM_APP_2111190"}) == (
+        None,
+        MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
+    )
 
 
 def test_regra_propria_do_jogo_continua_vencendo(isolated_profiles_dir: Path):
