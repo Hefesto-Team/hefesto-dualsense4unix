@@ -221,6 +221,7 @@ concordam: gist do Nielk1, `dualsensectl`, wiki do Game Controller Collective).
 
 | byte | nome | status |
 |---|---|---|
+| `0x00` | **Off** | **MEDIDO AQUI** — ver a nota abaixo |
 | `0x05` | **Off** | oficial |
 | `0x21` | **Feedback** | oficial |
 | `0x25` | **Weapon** | oficial |
@@ -235,6 +236,23 @@ concordam: gist do Nielk1, `dualsensectl`, wiki do Game Controller Collective).
 `MultiplePositionFeedback` e `SlopeFeedback` **não têm byte próprio**: são
 `0x21` com o array de zonas. `MultiplePositionVibration` é `0x26`. Isso fecha
 exatamente com os 7 modos da enum da Sony.
+
+### O `0x00` também desliga — MEDIDO AQUI em 05/08/2026
+
+Esta tabela listava só o `0x05` como Off, e essa omissão sustentou uma suspeita
+inteira (`ENTREGA-QUE-NÃO-LIGOU-01`, defeito 2): como **todo** caminho de
+desligar desta árvore manda `0x00` — `off()`, `trigger.reset`, o release do
+Modo Nativo, o fim de sessão de jogo — e a tabela não o reconhecia, concluiu-se
+que *"Desligar" podia não desfazer*.
+
+**Medido com a mão dela**, pelo IPC, com o daemon vivo: `Rigid` (`0x21` com as
+dez zonas ativas, força 255) endurece o L2 — *"duro"*; `Off` (`0x00`) o solta —
+*"soltou"*.
+
+**Os dois bytes desligam.** O `0x05` é o que a enum da Sony chama de
+`MODE_OFF`; o `0x00` é honrado pelo firmware do mesmo jeito, e é o que esta
+árvore usa em produção desde sempre. Quem for unificar num só: é troca de
+higiene, **não** correção de defeito — e a decisão está medida, não suposta.
 
 ### O empacotamento dos 11 bytes — e o erro que ele revela
 
