@@ -1828,6 +1828,42 @@ check_bluez_justworks_repairing() {
     case "${valor}" in
         confirm)
             pass "JustWorksRepairing=confirm no main.conf — re-pareamento de quem já tem bond passa pelo agente (RADIO-ABERTO-01)"
+            # SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026, achado de verificação
+            # adversarial): dizer só "confirm no main.conf" carimbava VERDE um
+            # rádio ainda ABERTO. O `bluez_config.sh` grava e NÃO reinicia o
+            # bluetoothd de propósito (derrubaria os controles conectados), e diz
+            # isso por escrito: "VALEM NO PRÓXIMO BOOT". Entre a cura e o próximo
+            # start, o daemon VIVO segue com `always` — e quem lesse este `[ OK ]`
+            # fecharia o terminal achando que a janela de Just Works fechou.
+            #
+            # Em vez de só ressalvar, MEDIMOS: se o main.conf é mais novo que o
+            # start do bluetoothd, o disco ainda não é o que o daemon carregou.
+            # O irmão FastConnectable já dizia "vale desde o último start" — a
+            # ressalva existia no arquivo e faltava logo na chave de segurança.
+            _t_conf="$(stat -c %Y "${etc_bt}/main.conf" 2>/dev/null || echo 0)"
+            # `HEFESTO_BT_ATIVO_DESDE` existe para a bancada morder os DOIS
+            # ramos (o `systemctl` de mentira dela não tem relógio). Em produção
+            # nunca vem definida, e o valor sai do systemd logo abaixo.
+            _t_bluez="${HEFESTO_BT_ATIVO_DESDE:-}"
+            if [[ -z "${_t_bluez}" ]]; then
+                _ts_bluez="$(systemctl show bluetooth.service \
+                    -p ActiveEnterTimestamp --value 2>/dev/null || true)"
+                # `date -d ""` NÃO falha: o GNU date devolve MEIA-NOITE DE HOJE
+                # (medido em 06/08/2026). Sem esta guarda, toda máquina em que o
+                # `bluetooth.service` não reporta — inativo, mascarado, container
+                # sem systemd — comparava o `main.conf` contra meia-noite, e o
+                # aviso saía em falso para qualquer arquivo tocado no dia. O
+                # `|| echo 0` original não protegia nada, porque não havia erro.
+                if [[ -n "${_ts_bluez//[[:space:]]/}" ]]; then
+                    _t_bluez="$(date -d "${_ts_bluez}" +%s 2>/dev/null || echo 0)"
+                else
+                    _t_bluez=0
+                fi
+            fi
+            if [[ "${_t_conf}" -gt 0 && "${_t_bluez}" -gt 0 \
+                  && "${_t_conf}" -gt "${_t_bluez}" ]]; then
+                warn "o main.conf mudou DEPOIS do último start do bluetoothd — o daemon VIVO ainda roda com o valor anterior, e o rádio só fecha no próximo boot (ou com 'sudo systemctl restart bluetooth', que derruba os controles conectados agora)"
+            fi
             state="$(systemctl is-active hefesto-bt-agent.service 2>/dev/null || true)"
             if [[ "${state}" != "active" ]]; then
                 warn "JustWorksRepairing=confirm depende de um agente registrado, e o hefesto-bt-agent.service está ${state:-ausente} — re-pareamento legítimo pode ser RECUSADO ('Refusing connection from ...'); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
@@ -2963,7 +2999,41 @@ check_perms_soft() {
             [[ -n "${linha}" ]] && info "    ${linha}"
         done
         info "  este arquivo NÃO é do Hefesto — a decisão de mantê-lo é de quem o instalou."
-        info "  os aparelhos do Hefesto não são afetados: a 70-ps5-controller.rules roda depois e os devolve a 0660+uaccess."
+        # AFIRMACAO-SO-NO-ESTADO-DELA-01 (06/08/2026, achado de verificação
+        # adversarial): esta linha afirmava, sem condição, que "os aparelhos do
+        # Hefesto não são afetados". É verdade só quando o culpado está numerado
+        # ABAIXO das nossas regras — que é o estado desta bancada (culpado em 60,
+        # nós em 70+). É FALSA em três estados plausíveis, e um deles é o mais
+        # provável de todos: a receita de internet mais copiada para hidraw é
+        # `99-hidraw-permissions.rules`, que roda DEPOIS de nós e vence. Os
+        # outros dois: `MODE:=` (atribuição final, que ninguém desfaz) e a
+        # máquina sem as nossas regras instaladas — que é justamente quando se
+        # roda o doctor.
+        #
+        # Então a frase passa a ser MEDIDA em vez de afirmada: só sai quando o
+        # menor número de regra nossa é maior que o do culpado, e nenhum culpado
+        # usa `:=`.
+        # `causas` vem como "arquivo:linha:conteúdo", uma por linha.
+        _rules_nossas="$(ls /etc/udev/rules.d/7*-ps5-controller.rules 2>/dev/null | head -1)"
+        _culpado_tardio=0
+        while IFS= read -r _entrada; do
+            [[ -z "${_entrada}" ]] && continue
+            _arq="${_entrada%%:*}"
+            _num="$(basename "${_arq}" | sed -n 's/^\([0-9]\{1,3\}\).*/\1/p')"
+            if [[ -n "${_num}" ]] && [[ "${_num}" -ge 70 ]]; then
+                _culpado_tardio=1
+            fi
+            case "${_entrada}" in
+                *MODE\ :=*|*MODE:=*) _culpado_tardio=1 ;;
+            esac
+        done <<< "${causas}"
+        if [[ -z "${_rules_nossas}" ]]; then
+            info "  as regras do Hefesto NÃO estão instaladas aqui — então nada devolve esses nós ao esperado; rode ./install.sh."
+        elif [[ "${_culpado_tardio}" -eq 1 ]]; then
+            info "  ATENÇÃO: a regra acima roda DEPOIS das do Hefesto (ou usa 'MODE:='), então ela vence — os nós dos controles também ficam abertos."
+        else
+            info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve a 0660+uaccess."
+        fi
     fi
 }
 

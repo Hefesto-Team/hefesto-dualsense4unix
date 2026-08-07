@@ -39,6 +39,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 
+
+def _funcao_inteira(nome: str) -> str:
+    """O corpo da função shell, do cabeçalho à chave que fecha na coluna 0.
+
+    Substitui a janela fixa de 2600 caracteres que estes testes usavam. A janela
+    era mais curta que a função (3581 bytes em 06/08/2026), então tudo que
+    entrasse no FIM ficava fora da medição: uma asserção ``not in`` passava por
+    não enxergar, e uma ``in`` reprovava por corte. Foi assim que a cura do
+    AFIRMACAO-SO-NO-ESTADO-DELA-01 derrubou um teste sem nada ter quebrado.
+    """
+    texto = DOCTOR.read_text(encoding="utf-8")
+    i = texto.index(f"{nome}() {{")
+    fim = texto.index("\n}\n", i)
+    return texto[i : fim + 3]
+
 # A linha exata que estava em /etc/udev/rules.d/60-openrgb.rules até 06/08/2026.
 BLANKET = 'KERNEL=="hidraw*", MODE="0666"'
 
@@ -173,9 +188,7 @@ class TestOAvisoDeixouDeAcusarAPessoa:
     """O texto é o defeito inteiro: o grau [WARN] estava certo, a frase não."""
 
     def test_a_frase_provavel_ajuste_manual_saiu_do_caminho_com_causa(self) -> None:
-        texto = DOCTOR.read_text(encoding="utf-8")
-        i = texto.index("check_perms_soft()")
-        corpo = texto[i : i + 2600]
+        corpo = _funcao_inteira("check_perms_soft")
         assert "provável ajuste manual" not in corpo.split('warn "${#abertos[@]}')[0], (
             "o aviso ainda acusa antes de olhar a causa"
         )
@@ -190,17 +203,40 @@ class TestOAvisoDeixouDeAcusarAPessoa:
         configuração de um programa de TERCEIRO reprovar o portão de saúde do
         Hefesto seria dizer "estou doente" por algo que não é nosso.
         """
-        texto = DOCTOR.read_text(encoding="utf-8")
-        i = texto.index("check_perms_soft()")
-        corpo = texto[i : i + 2600]
+        corpo = _funcao_inteira("check_perms_soft")
         assert 'fail "' not in corpo, "o check virou reprovação de exit code"
         assert 'warn "' in corpo
 
     def test_o_texto_diz_o_que_esta_aberto_e_de_quem_e_o_arquivo(self) -> None:
-        texto = DOCTOR.read_text(encoding="utf-8")
-        i = texto.index("check_perms_soft()")
-        corpo = texto[i : i + 2600]
+        """NOTA DATADA — 06/08/2026, AFIRMACAO-SO-NO-ESTADO-DELA-01.
+
+        Este teste cobrava a frase ``70-ps5-controller.rules``, que inocentava
+        os aparelhos do Hefesto **sem condição**: "a 70 roda depois e os devolve
+        a 0660+uaccess". A verificação adversarial da noite mediu que a frase é
+        verdadeira só quando o culpado está numerado ABAIXO das nossas regras —
+        que é o estado desta bancada (culpado em 60, nós em 70+) — e FALSA em
+        três estados plausíveis, um deles o mais provável de todos:
+
+        1. ``99-hidraw-permissions.rules``, a receita de internet mais copiada
+           para hidraw, roda DEPOIS de nós e vence;
+        2. ``MODE:=`` é atribuição final, que regra nenhuma desfaz;
+        3. a máquina sem as nossas regras instaladas — que é justamente quando
+           se roda o doctor.
+
+        A asserção antiga caducou porque cobrava a AFIRMAÇÃO. O que se cobra
+        agora é a MEDIÇÃO: o texto só inocenta depois de comparar a numeração e
+        procurar ``:=``, e existe um ramo que ATENÇÃO quando o culpado vence.
+        """
+        corpo = _funcao_inteira("check_perms_soft")
         assert "NÃO é do Hefesto" in corpo, "o aviso não diz de quem é o arquivo"
-        assert "70-ps5-controller.rules" in corpo, (
-            "o aviso não inocenta os aparelhos do Hefesto com prova"
+        assert "_culpado_tardio" in corpo, (
+            "a inocência dos aparelhos do Hefesto voltou a ser afirmada em vez "
+            "de medida — ver AFIRMACAO-SO-NO-ESTADO-DELA-01"
+        )
+        assert "ATENÇÃO: a regra acima roda DEPOIS" in corpo, (
+            "sumiu o ramo que avisa quando o culpado VENCE as nossas regras"
+        )
+        assert "NÃO estão instaladas aqui" in corpo, (
+            "sumiu o ramo da máquina sem as regras do Hefesto — que é "
+            "exatamente a máquina em que alguém roda o doctor"
         )
