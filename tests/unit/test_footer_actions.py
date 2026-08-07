@@ -281,6 +281,12 @@ class TestSaveProfileConflitoPorSlug:
     AUTOMATISMO-MORTO-01. Cinco dos quinze perfis dela colidem por acento ou
     por caixa.
 
+    NOTA DATADA — 06/08/2026: o número caducou; a frase, não. São 13 arquivos
+    hoje e nove nomes cujo slug difere. E "colidir" aqui nunca significou perfil
+    contra perfil — significa que uma variante digitada cai em cima do arquivo
+    que já existe. A conta está na JANELA-FIEL-01. O que este teste mede não
+    mudou: o gate compara nome cru, e é isso que ele morde.
+
     MORDIDA: os testes de hoje só exercitavam nome IDÊNTICO ("existente" contra
     "existente"), que passa com a cura arrancada. Aqui o par é acentuado contra
     sem acento (e maiúscula contra minúscula): com `nome in existentes` de
