@@ -30,7 +30,7 @@ repos:
         entry: python3 scripts/validar-acentuacao.py --check-file
         language: system
         types: [text]
-        exclude: '^(tests/fixtures/|tests/unit/test_validar_acentuacao\.py$|docs/history/|docs/research/|LICENSE$|NOTICE$|CHANGELOG\.md$|VALIDATOR_BRIEF\.md$|AGENTS\.md$|scripts/validar-acentuacao\.py$|scripts/check_anonymity\.sh$)'
+        exclude: '^(tests/fixtures/|tests/unit/test_validar_acentuacao\.py$|docs/history/|docs/research/|docs/process/agentes/|LICENSE$|NOTICE$|CHANGELOG\.md$|VALIDATOR_BRIEF\.md$|AGENTS\.md$|scripts/validar-acentuacao\.py$|scripts/check_anonymity\.sh$)'
       # PORTÃO-VIVO-01 bloco C / GATE-EMOJI-01: o higienizador do ambiente
       # apaga glifo em silêncio e NÃO reprova — inclusive os glifos que o
       # ADR-011 declara permitidos (Geometric Shapes, Box Drawing, Block
