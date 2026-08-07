@@ -93,7 +93,8 @@ Nintendo Pro   e0:f6:b5:...   event2     -    slot 3   (Switch por BT, driver ni
 ###  O MAC MUDA com o modo — e isso tem consequência
 
 O mesmo controle físico usa **endereços Bluetooth diferentes em cada modo**
-(medido: `...:1c:66:1a` em Switch, `...:1c:99:83` em PS4 — mesmo OUI `E4:17:D8`).
+(medido nesta bancada: dois endereços que só diferem no fim, ambos com o OUI
+`E4:17:D8`, que é o prefixo público da 8BitDo — um em Switch, outro em PS4).
 Consequências práticas:
 
 - **São dois pareamentos distintos.** Trocar de modo não reaproveita o bond:
