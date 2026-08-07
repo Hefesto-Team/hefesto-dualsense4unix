@@ -77,6 +77,41 @@ DirectInput/PS4 por Bluetooth — ver
 [`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md)) entram na contagem como
 jogadores e recebem número de LED próprio, acima da faixa reservada aos DualSense.
 
+> **NOTA DATADA — 06/08/2026: metade da frase acima caducou. A luz é verdade; a
+> contagem, não.** Os dois parágrafos desta seção ficam registrados porque
+> decisão medida não se apaga — e o *"cada controle vira um jogador"* de cima
+> vale para **DualSense**, não para controle de outra marca.
+>
+> **O que continua verdade:** o externo **recebe número e luz próprios**. O
+> daemon escreve isso de fato — no journal de 06/08 às 21h08,
+> `external_led_written slot=2` no Pro Controller e `slot=3` no 8BitDo.
+>
+> **O que caducou:** *"entram na contagem como jogadores"*. **GRAU: MEDIDO** em
+> 06/08/2026 às 22h40, com um DualSense, um Nintendo Pro e um 8BitDo ligados:
+>
+> ```
+> $ hefesto-dualsense4unix coop status
+> jogadores ativos: 1
+>
+> $ hefesto-dualsense4unix controller list
+>   Controle 1 — BT
+> ```
+>
+> Três controles na mesa, **um** jogador contado e **um** controle listado. O
+> co-op só conta DualSense; o externo não ganha controle virtual próprio e chega
+> ao jogo como o gamepad nativo que já era.
+>
+> **Duas ressalvas sobre a luz, medidas na mesma noite:** o número escrito pelo
+> Hefesto **não é** o número que o jogo usa, e o plástico pode mostrar outra
+> coisa — o Pro Controller acendeu **jogador 1 e jogador 2 juntos** (é o padrão
+> do `hid-nintendo` para "não numerado"), e o controle virtual e o DualSense
+> físico acenderam **o mesmo jogador 3** ao mesmo tempo.
+>
+> **GRAU: SEM PROVA** — que o jogo veja os três como jogador 1; é o relato dela,
+> e o caminho até o jogo não foi instrumentado. A cura são as entregas E3 e E4 da
+> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
+> autorizadas por ela em 07/08/2026 **só depois da MÁSCARA-01**.
+
 Uma função continua sendo exclusiva do jogador 1: o **botão de microfone**. Ele é
 lido só do controle primário e o sistema tem um microfone só — o botão Mute dos
 jogadores 2 em diante não muta nada.

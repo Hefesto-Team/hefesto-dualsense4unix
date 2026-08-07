@@ -11,6 +11,35 @@ carrega material de terceiros sob outras licenças, preservadas intactas. Este
 arquivo diz exatamente o quê, de onde, e sob que licença — para que um leitor
 externo reconstrua a cadeia de proveniência sem abrir o histórico do git.
 
+EXCEÇÃO, e é a que mais importa: os arquivos sob `assets/dkms/` NÃO são MIT. São
+módulos de kernel derivados do Linux, distribuídos como fonte separada e
+compilados no destino, cada um sob a licença declarada no seu próprio cabeçalho
+SPDX:
+
+  - assets/dkms/hid-nintendo/     GPL-2.0-or-later
+  - assets/dkms/hid-playstation/  GPL-2.0-or-later
+  - assets/dkms/rtw88-usb/        GPL-2.0 OR BSD-3-Clause (licença dupla)
+
+Os cabeçalhos SPDX desses arquivos são a licença que vale para eles e não podem
+ser removidos. A origem, os patches próprios e o porquê de as duas licenças
+conviverem sem contaminar uma à outra estão nas seções abaixo. Os textos
+completos das duas licenças de terceiros viajam em LICENSES/ (ver
+LICENSES/README.md), porque a GPL-2.0, seção 1, exige que a cópia da licença
+acompanhe o fonte.
+
+Nota datada de 2026-07-31: esta ressalva nasceu no topo do LICENSE, antes do
+texto MIT, pelo motivo de que ressalva depois do juridiquês é ressalva que
+ninguém lê.
+
+Nota datada de 2026-08-07 — grau: DECISÃO DELA. A ressalva SAIU do LICENSE e
+este arquivo passou a ser o dono dela. O motivo é medido e só aparece
+fora da máquina: um LICENSE com texto antes do MIT faz o detector de licença do
+GitHub rotular o repositório como "View license" em vez de "MIT". O LICENSE fica
+com o texto MIT canônico e nada antes dele; o que ele dizia está integralmente
+acima, palavra por palavra, mais o ponteiro para LICENSES/. Nada foi perdido na
+mudança — o que mudou foi o endereço. O registro da decisão está em
+docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md (resposta 4).
+
 Auditoria de 2026-07-31 (sprint CR-05). Cada afirmação abaixo tem arquivo e
 linha; quem revisar pode conferir uma a uma.
 
@@ -112,6 +141,31 @@ Redistribuir estes fontes é **permitido** — é exatamente o que a GPL-2.0
 autoriza. O que ela exige em troca é o que está feito acima: preservar os avisos
 de licença intactos e declarar a origem. Os fontes seguem exatamente como
 vieram, mais os patches, com o SPDX no lugar.
+
+O texto das licenças viaja junto — a metade que faltava
+--------------------------------------------------------
+
+A GPL-2.0, na seção 1, pede que quem distribui o fonte *"dê a qualquer outro
+destinatário do Programa uma cópia desta Licença junto com o Programa"*. Em
+2026-07-31 a CR-05 mediu que **nenhuma cópia do texto acompanhava os fontes**:
+uma busca por COPYING ou *GPL* na árvore só achava resultado dentro do .venv,
+que não é distribuído. Os avisos SPDX estavam preservados, que é a outra metade
+da exigência; a cópia do texto, não.
+
+Fechado em 2026-08-07. Os textos moram em LICENSES/, sem modificação:
+
+  - LICENSES/GPL-2.0.txt — cópia byte a byte de /usr/share/common-licenses/GPL-2
+    (pacote base-files), SHA-256
+    8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643;
+  - LICENSES/BSD-3-Clause.txt — a outra metade da licença dupla do rtw88-usb,
+    extraída literalmente da estrofe DEP-5 de /usr/share/doc/libbpf1/copyright.
+    Ela existe porque o rtw88-usb é GPL-2.0 **OR** BSD-3-Clause: enviar só o
+    texto da GPL deixaria metade da escolha sem o texto que a sustenta.
+
+A procedência de cada um, com o SHA-256 e o comando que confere, está em
+LICENSES/README.md. Os cinco alvos de empacotamento que carregam assets/dkms/
+carregam LICENSES/ junto, e quem cobra essa simetria é
+tests/unit/test_cr05_licencas_de_terceiros_viajam.py.
 
 ---
 
@@ -218,3 +272,35 @@ O caminho escolhido para fechar essa lacuna é a criação de efeitos **próprio
 medidos no hardware, sob processo de sala limpa descrito em
 docs/process/CLEAN-ROOM.md. Os efeitos resultantes têm nomes próprios e
 proveniência registrada em docs/protocol/curvas-proprias.md.
+
+A LICENÇA DAS CURVAS PRÓPRIAS — decidida antes de a primeira existir
+====================================================================
+
+**MIT no código, CC0-1.0 nas curvas.** Decidido em 2026-08-07, grau: DECISÃO
+DELA (resposta 2 em
+docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md).
+
+O código próprio do Hefesto continua MIT, e é o que o LICENSE diz. As curvas de
+gatilho medidas na bancada — as que a CR-04 vai criar e a CR-06 vai publicar —
+saem sob **CC0-1.0**, separadas da licença do código.
+
+O motivo é o problema que abriu esta série inteira: as tabelas de curva com nome
+que existem hoje moram num repositório sem licença, e quem quer implementar
+gatilho adaptativo no Linux fica sem saída lícita. Publicar as nossas sob dado
+restritivo seria reproduzir a parede com outro tijolo. CC0 elimina qualquer
+dúvida sobre atribuição de dado factual — é o que faz a curva ser usável por
+qualquer projeto, sem advogado no meio.
+
+Onde as curvas vivem, e onde isso está escrito:
+
+  - docs/protocol/curvas-proprias.md — o registro de proveniência de cada valor
+    (quem mediu, em que controle, com que nota). Hoje sem nenhuma curva, por
+    construção;
+  - o catálogo em disco, no formato de src/hefesto_dualsense4unix/profiles/
+    curva_propria.py, que recusa efeito sem proveniência completa;
+  - o artefato publicado da CR-06 — arquivo de dados independente do nosso
+    esquema de perfil, com a licença CC0-1.0 declarada DENTRO dele. Quando esse
+    artefato existir, o texto da CC0-1.0 entra em LICENSES/CC0-1.0.txt.
+
+Enquanto não houver curva medida, não há o que licenciar: a decisão está tomada,
+o artefato é que ainda não existe.

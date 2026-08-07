@@ -169,6 +169,13 @@ cp -a assets/dkms/hid-playstation/. \
 mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb
 cp -a assets/dkms/rtw88-usb/. \
     %{buildroot}%{_datadir}/%{app_id}/dkms/rtw88-usb/
+# CR-05 (07/08/2026): a GPL-2.0, secao 1, exige que a copia do texto da licenca
+# viaje JUNTO com o fonte. Os tres diretorios acima sao GPL (o rtw88-usb e
+# GPL-2.0 OR BSD-3-Clause, licenca dupla), e ate 07/08 nenhum texto os
+# acompanhava. Procedencia em LICENSES/README.md.
+mkdir -p %{buildroot}%{_datadir}/%{app_id}/dkms/LICENSES
+cp -a LICENSES/. \
+    %{buildroot}%{_datadir}/%{app_id}/dkms/LICENSES/
 install -Dm644 assets/hefesto-dualsense4unix.conf \
     %{buildroot}%{_modulesloaddir}/hefesto-dualsense4unix.conf
 

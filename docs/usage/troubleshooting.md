@@ -343,8 +343,21 @@ Se já está em v3.2.0+ e o problema persiste, abra issue com o output de
 
 ## 11. Interface em inglês não aparece (i18n) no Flatpak
 
+> **Antes dos sintomas, o alcance real.** A língua do Hefesto é o **português
+> do Brasil** — decisão de 07/08/2026. O catálogo EN existe e funciona, mas
+> alcança só o **esqueleto fixo** da janela (os 308 `translatable="yes"` de
+> `gui/main.glade`). O texto que as abas escrevem enquanto rodam continua em
+> português mesmo com `LANG=en_US.UTF-8`. **Medido em 07/08/2026:** dos 18
+> módulos de `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a
+> função de tradução e carregam 561 literais acentuados em português.
+> Se você chegou aqui esperando uma janela inteiramente em inglês, o problema
+> não é a sua instalação — é a promessa antiga, e ela foi retirada. Registro em
+> `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+
 A partir da v3.4.0 o Hefesto - Dualsense4Unix tem catálogo EN baseline
-(`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Sintomas comuns:
+(`po/en.po`) e PT-BR identidade (`po/pt_BR.po`). Os sintomas abaixo são
+defeitos **de carregamento do catálogo** — reais, medidos e curados — e
+continuam valendo:
 
 ### Sintoma A — labels continuam em PT-BR mesmo com `LANG=en_US.UTF-8`
 
@@ -410,16 +423,18 @@ ls ~/.local/share/locale/en/LC_MESSAGES/hefesto-dualsense4unix.mo
 bash scripts/i18n_compile.sh && ./install.sh --yes
 ```
 
-### Adicionar idioma novo (comunidade)
+### O que saiu daqui em 07/08/2026, e por quê
 
-```bash
-bash scripts/i18n_extract.sh --add fr_FR  # cria po/fr_FR.po vazio
-$EDITOR po/fr_FR.po                        # preencher msgstr
-bash scripts/i18n_compile.sh               # gera .mo
-```
+Esta seção terminava com uma receita de três linhas ensinando a comunidade a
+acrescentar um idioma. Ela **saiu**: o que ela entregaria não é o que ela
+prometia, pela medição do quadro no início desta seção.
 
-Ver `.github/CONTRIBUTING.md` → "Contribuir traduções" para convenções
-de tom + glossário PT-BR  EN.
+O encanamento de i18n **não** foi removido junto — ele está correto, e
+arrancá-lo destruiria trabalho bom para provar um ponto. Catálogos, scripts e o
+esqueleto marcado continuam funcionando, e os três sintomas acima continuam
+sendo defeitos de verdade, com cura de verdade.
+
+Contexto completo em `.github/CONTRIBUTING.md`, seção "A língua do produto".
 
 ---
 

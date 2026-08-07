@@ -261,6 +261,11 @@ modules:
       # port reset — cura de raiz do fantasma USB do dongle WiFi). Mesma rota
       # da Onda T: o dkms roda a partir do HOST via install-host-udev.sh.
       - cp -a assets/dkms/rtw88-usb /app/share/hefesto-dualsense4unix/dkms/
+      # CR-05 (07/08/2026): a GPL-2.0, seção 1, exige que a cópia do texto da
+      # licença viaje JUNTO com o fonte. Os três diretórios acima são GPL (o
+      # rtw88-usb é GPL-2.0 OR BSD-3-Clause, licença dupla), e até 07/08 nenhum
+      # texto os acompanhava. Procedência em LICENSES/README.md.
+      - cp -a LICENSES /app/share/hefesto-dualsense4unix/dkms/
 
       # BROKER-01 (Onda S — fd-injection): binário standalone + units-
       # template do broker root hide-hidraw. O sandbox NÃO instala unit de

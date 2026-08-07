@@ -1,22 +1,3 @@
-ESCOPO — leia antes do texto da licença
-=======================================
-
-O código próprio do Hefesto é MIT, nos termos abaixo.
-
-EXCEÇÃO: os arquivos sob `assets/dkms/` NÃO são MIT. São módulos de kernel
-derivados do Linux, distribuídos como fonte separada e compilados no destino,
-cada um sob a licença declarada no seu próprio cabeçalho SPDX:
-
-  - assets/dkms/hid-nintendo/     GPL-2.0-or-later
-  - assets/dkms/hid-playstation/  GPL-2.0-or-later
-  - assets/dkms/rtw88-usb/        GPL-2.0 OR BSD-3-Clause (licença dupla)
-
-Os cabeçalhos SPDX desses arquivos são a licença que vale para eles e não podem
-ser removidos. A origem, os patches próprios e o porquê de as duas licenças
-conviverem sem contaminar uma à outra estão no arquivo NOTICE.
-
----
-
 MIT License
 
 Copyright (c) 2026 Hefesto Contributors
