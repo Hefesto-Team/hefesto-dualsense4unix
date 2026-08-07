@@ -5,6 +5,170 @@ Segue [SemVer](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### A janela morria num aviso que ela não conseguia ver
+
+**MEDIDO em 06/08/2026 às 20h22, com ela na frente da tela.** Baixando a
+prioridade do perfil "Vitória" de 78 para 0 — o gesto que o verificador desta
+casa recomenda por escrito — a janela inteira parou de responder: *"interface
+travou legal aqui. nem consigo fazer nada nem fechar"*. O `py-spy` pegou a
+thread principal parada dentro de `dialog.run()`, num diálogo de confirmação
+que **não estava visível para ela**: processo vivo, laço do GTK rodando, e
+nenhum clique aceito, porque o `modal=True` põe um grab que não tinha dono
+alcançável. O aviso nasceu no dia anterior, para impedir que ela perdesse
+configuração em silêncio — e acabou custando a sessão inteira.
+
+**Não eram um diálogo, eram onze.** Todos os avisos de `app/` (mais o seletor de
+arquivo do Importar) abriam pelo mesmo caminho e podiam matar a janela do mesmo
+jeito. Agora **todos** passam por um envelope único que (1) MOSTRA o diálogo de
+verdade — `gtk_dialog_run()` nunca pediu levantamento nem foco ao compositor —
+e (2) vigia: se em 1,5 s o diálogo continua inalcançável, tenta o resgate; se em
+mais 2 s ainda está, solta a modalidade e responde CANCELAR por ela. Cancelar é,
+nos onze, o lado que não muda nada — **o aviso continua existindo**, e a barra
+diz *"O aviso não conseguiu aparecer na tela — nada foi alterado"*. O
+`SIGUSR1` (que já levantava a janela) passou a levantar também o diálogo em
+curso, como segunda saída. Há portão por AST: nenhum `.run()` bloqueante novo
+em `app/` fora do envelope, com lista de autorizados que só encolhe. Sprint:
+`DIALOGO-QUE-MATA-A-JANELA-01`.
+
+### O experimento do controle da Sony rodou, e ele corrige metade da doutrina da casa
+
+**MEDIDO em 06/08/2026, das 19:34 às 19:56**, com ela, um DualSense físico por
+Bluetooth, a Steam aberta e três jogos abertos de verdade. **O M-04 — a suspeita
+de que a exceção de Steam Input por jogo fosse decorativa — fecha POSITIVO e está
+refutado:** com o global `SteamController_PSSupport` em `"0"`, o gamepad virtual
+do Steam Input nasceu **só** no jogo da allowlist (Mullet Mad Jack, `2111190`) e
+**não existiu** no jogo fora dela (Sackboy, `1599660`), na mesma máquina e no
+mesmo intervalo de dez minutos. O botão *"Este jogo não funciona"* entrega o que
+promete, e o portão zero aberto desde 26/07 está pago.
+
+**A frase que este projeto repete em 25 linhas de `src/` e `docs/usage/` — *"o
+Hefesto sai da frente"*, e as irmãs *"sai de cena"* e *"fora do caminho"* —
+descreve só metade do mecanismo.** Durante a exceção o Hefesto abre mão da
+**entrada** (solta o grab e derruba o gamepad virtual) e **mantém a saída
+inteira**: com o jogo da allowlist aberto, os gatilhos que ela aplicou seguraram
+e o vermelho dela ficou na lightbar. É estrutural, não sorte — nenhum dos oito
+chamadores de `steam_input_excecao_ativa` mora em `core/`.
+
+E a inversão que ninguém tinha escrito: **na** lista o Hefesto perde a entrada e
+**ganha** a saída (os ajustes dela vencem); **fora** dela ganha a entrada e
+**perde** a saída — o Sackboy devolveu a lightbar ao azul da Sony e amoleceu os
+gatilhos dela, porque a camada do jogo é o topo da precedência declarada. **No
+rumble a política é a inversa e a usuária vence.** Logo a allowlist não é *"os
+jogos com DualSense nativo"*: é *"os jogos cujo DualSense passa pela Steam"* — o
+Sackboy tem suporte nativo e funcionou **sem** a lista.
+
+Nenhuma linha de código mudou nesta leva: a entrega é o registro, e ele está na
+sprint `CONTROLE-SONY-MEDIDO-01`. Ganharam nota datada de 06/08 a
+`STEAM-QUE-DECIDE-01` (o grau da E1 e duas frases), o estudo dos dezessete
+agentes (o M-04 e a seção 1.5), `docs/usage/modos.md`,
+`docs/usage/jogos-e-mascaras.md` e o desenho da caixinha do jogo — cujo tooltip
+proposto foi corrigido: o critério deixou de ser *"o controle duplicado"* e
+passou a ser *"o jogo só reconhece o controle com o Steam Input dele ligado"*.
+**Fica declarado o que não foi medido:** a versão do cliente Steam do dia (a
+MORDIDA a pedia, e ela é a variável que invalida o resultado um dia), a
+atribuição Steamworks contra HID direto (SUSPEITA COM MECANISMO até alguém ler
+os símbolos dos binários) e a pergunta de se a Steam aceitaria o **gamepad
+virtual** como o DualSense que ela entrega — que continua SEM PROVA e é outro
+experimento.
+
+### SEGURANÇA: a cura do Bluetooth estava escrita e não chegava à máquina
+
+Achado dela em 06/08/2026, e a frase foi *"isso é importante arrumarmos e
+integrarmos no install e uninstall, ótima descoberta"*. **MEDIDO:**
+`/etc/bluetooth/main.conf` da máquina dela tinha `JustWorksRepairing=always`
+**dentro do bloco `# >>> hefesto bluetooth >>>`** — escrito por uma versão
+anterior deste próprio projeto. O repositório dizia `confirm` desde 05/08
+(sprint RADIO-ABERTO-01), e o valor perigoso viveu quatro dias no disco porque
+a única coisa que reescreve aquele arquivo é uma execução do `install.sh`, e não
+houve nenhuma entre 02/08 e 06/08. `always` remove a última recusa do BlueZ ao
+re-pareamento por Just Works de quem já tem bond — com o agente
+`NoInputNoOutput`, quem clonar o endereço de um controle bondado sobrescreve a
+chave sem interação humana, e o aparelho que sobe escolhe o próprio descritor
+HID (pode ser um teclado).
+
+A configuração do BlueZ ganhou **dono único**, `scripts/bluez_config.sh`, com
+`aplicar`, `remover` e `verificar`. O `install.sh` agora **reconhece e corrige**
+um bloco antigo do próprio Hefesto em vez de só acrescentar o novo, e trata
+também a chave ativa **fora** das sentinelas — neutralizando-a com a marca
+`#hefesto-desativou# ` em vez de apagá-la, para que o `uninstall.sh` possa
+devolvê-la. Os dois caminhos de escrita deixaram de ser alternativos: o
+`main.conf` é sempre normalizado, e o drop-in em `main.conf.d` entra **por
+cima** quando o diretório existe. Antes, com o diretório presente, o instalador
+anunciava `confirm` sem nunca abrir o arquivo que este BlueZ lê de fato.
+
+Nada disso reinicia o `bluetoothd` — isso derrubaria os controles conectados —,
+e o instalador passou a dizer **com todas as letras** que a mudança vale no
+próximo boot. O `uninstall.sh` deixou de espalhar três backups por execução e o
+`sed` que podia apagar até o fim do arquivo virou uma **recusa**.
+
+A reescrita do `main.conf` é **atômica**: temporário no mesmo diretório e
+`mv`. Antes era `install` em cima do arquivo vivo — queda no meio deixaria o
+conffile **dela** truncado no meio do nosso bloco, e a partir daí `aplicar` e
+`remover` recusariam para sempre. **Nenhum backup é apagado automaticamente:**
+`aplicar` e `remover` só contam e reportam, e a poda virou o subcomando
+explícito `bluez_config.sh podar`, que **simula por padrão**, nunca apaga o mais
+antigo, nunca deixa um **estado** do `main.conf` sumir do disco (de cada conteúdo
+distinto fica ao menos uma cópia, mesmo que todas estejam fora da retenção), e é
+cega a backup que não seja nosso.
+A primeira versão desta entrega podava sozinha e apagaria, na primeira execução,
+27 dos 37 backups da máquina dela — inclusive os dois pontos de medição de um
+colapso ainda **sem explicação**. Nota datada na sprint RADIO-ABERTO-01.
+
+Três silêncios acabaram: `./install.sh --no-udev` pulava a cura do BlueZ inteira
+**sem dizer uma palavra** (agora anuncia o pulo, o comando que falta e o estado
+atual do disco); o `remover` devolvia `JustWorksRepairing=always` ao estado ativo
+sem avisar; e o que alguém tivesse escrito **dentro** do nosso bloco (um
+`ControllerMode` de fone, por exemplo) sumia sem uma linha na tela.
+
+O `doctor.sh` ganhou o detector que faltava: **reprova** com `always` no disco e
+avisa quando `confirm` está ativo com o `hefesto-bt-agent.service` fora do ar
+(`confirm` depende de um agente registrado; `always` não dependia de ninguém).
+E parou de atribuir a um terceiro o bloco que este projeto escreveu. O valor ele
+lê pelo **dono único**, e não por um parser próprio: duas fontes para a mesma
+regra é a classe de defeito que esta leva veio fechar.
+
+A bancada nova (`tests/unit/test_bluez_config_sh.py`) roda o mecanismo de
+verdade contra uma **raiz falsa** — nada em `/etc` é tocado, e a suíte não pede
+root. Nota datada e a dívida do empacotamento (`assets/bluetooth/` não viaja no
+`.deb`/`.rpm`/`PKGBUILD`/flatpak) estão na sprint RADIO-ABERTO-01.
+
+**Quatro curas da verificação adversarial de 06/08 (fim do dia).** A proteção da
+poda era por **arquivo** e a frase impressa prometia **estado**: com um conteúdo
+repetido em N cópias e todas fora da retenção, as N saíam juntas e aquele estado
+do `main.conf` dela sumia inteiro — hoje cada conteúdo distinto guarda um
+guardião, e é a cópia mais antiga dele que fica. O caminho dos **drop-ins**
+violava as invariantes que o próprio arquivo enuncia: gravava com
+`install -Dm644` e removia com `rm -f`, sem `cmp`, sem backup e sem aviso, e um
+`main.conf.d/hefesto-justworks.conf` editado à mão era destruído sem cópia
+nenhuma — hoje obedece às mesmas regras do `main.conf`, com a exceção do
+conteúdo idêntico ao asset **declarada** no cabeçalho. Um **backup de zero
+byte** (um `kill -9` entre criar e copiar, e `SIGKILL` não tem `trap`) contava
+como backup no `verificar` e na frase do `aplicar`: hoje não conta, e é
+reportado como suspeito, com o nome. E o portão de paridade do **Flatpak**
+olhava `scripts/build_flatpak.sh`, que é um invólucro que não lista arquivo
+nenhum — hoje olha o manifesto `flatpak/br.andrefarias.Hefesto.yml`, que é quem
+declara o conteúdo do pacote.
+
+Junto, o detector do `doctor.sh` parou de ficar **cego e silencioso** dentro de
+um sandbox: sem `--filesystem=host`, `/etc/bluetooth` não existe no Flatpak, e a
+função caía em `info ... pulo o check` — nem WARN nem FAIL — numa máquina cujo
+host tinha `always`. Hoje ela distingue "não existe" de "não consigo ver" e diz
+**NÃO SEI** em voz alta. E o dono único deixou de discordar do GKeyFile em três
+pontos medidos: arquivo que o parser **recusa inteiro** por uma linha malformada
+não ganha mais `veredito: OK` (o BlueZ descarta a config toda, inclusive a
+nossa); `CRLF` deixou de virar valor diferente (e de embaralhar a mensagem no
+terminal); e `JustWorksRepairing=` vazio deixou de ser relatado como `ausente`,
+porque para o GKeyFile a chave **existe**.
+
+**As bancadas deixaram de medir a árvore de trabalho.** Um diagnóstico mediu que
+as rodadas anteriores rodaram com outros processos editando
+`scripts/bluez_config.sh` e `scripts/doctor.sh` ao vivo, e falha assim é
+sorteada: 5 em 10 execuções, testes diferentes a cada vez. As bancadas passaram
+a ler uma cópia congelada no início da sessão (`ARVORE-CONGELADA-01`), e uma
+sonda **reprova o run** quando o produto muda no meio. As nove mordidas medidas
+na janela contaminada foram refeitas em série e todas mordem; uma afirmação da
+rodada anterior **não reproduziu** e virou bancada nova em vez de frase apagada.
+
 ### "Jogar direto (Sony)" virou "Conexão Nativa (Sony)"
 
 Pedido dela mais de uma vez, e cumprido em 06/08/2026: *"Jogar direto é péssimo

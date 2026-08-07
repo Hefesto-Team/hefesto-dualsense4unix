@@ -43,6 +43,20 @@ controle (efeito de gatilho, cor da lightbar, LEDs de jogador) é **replicado no
 controle físico**. O movimento do giroscópio segue no sentido inverso: é lido do
 físico e espelhado no virtual, para o jogo receber a mira por movimento.
 
+> **NOTA DATADA — 06/08/2026: essa replicação SOBRESCREVE o que você escolheu, e
+> este texto não dizia.** Medido com o Sackboy aberto: a lightbar voltou ao
+> **azul da Sony** (aplicar a sua cor muda por um instante e o jogo devolve) e os
+> gatilhos ficaram **moles** apesar da Resistência aplicada. Quando o jogo pede
+> luz ou gatilho, **é o pedido do jogo que chega ao seu controle** — o Hefesto
+> repassa fiel, sem escalar e sem trocar, porque mexer nisso seria mentir sobre o
+> que o jogo pediu. Você recupera a sua cor e os seus gatilhos quando o jogo
+> fecha.
+>
+> **A vibração é a exceção, e nela você vence:** com uma vibração fixada por
+> você, o Hefesto **ignora** a do jogo; sem ela, a do jogo passa pelo seu
+> controle deslizante de intensidade. Registro em
+> [CONTROLE-SONY-MEDIDO-01](../process/sprints/2026-08-06-CONTROLE-SONY-MEDIDO-01-o-experimento-que-decide-metade-da-doutrina.md).
+
 A máscara Xbox 360 é o piso de compatibilidade — para jogos que só aceitam
 gamepad da Microsoft. Ela é evdev, então só carrega botões, eixos e vibração:
 nada de gatilho adaptativo, luz ou giroscópio.
@@ -82,6 +96,16 @@ Se um jogo novo aparecer com o controle duplicado:
 
 O `hefesto-launch` decide na hora o que cada jogo precisa. Com o Hefesto desligado
 ele sai do caminho: o pior caso é o controle duplicado, nunca zero controles.
+
+> **NOTA DATADA — 06/08/2026, para evitar uma confusão que esta página convida.**
+> A frase acima — *"com o Hefesto desligado ele sai do caminho"* — fala do
+> lançador com o **serviço parado**, e **não** da lista de exceções de Steam
+> Input. São coisas diferentes, e esta página nunca mencionou a segunda. Quem
+> procura *"marquei um jogo e ele mudou de comportamento"* está em
+> [jogos-e-mascaras.md](jogos-e-mascaras.md), na seção *"suporte a DualSense pela
+> Steam"*. E o que foi medido em 06/08 vale registrar aqui também: **na lista de
+> exceções o Hefesto continua escrevendo no seu controle** — a sua cor fica, os
+> seus gatilhos seguram; o que ele entrega ao jogo é a **entrada**.
 
 Recomendado também: Propriedades → Controlador → **Desativar Steam Input**. O
 instalador já faz isso por padrão em todos os jogos; `--keep-steam-input` preserva.
