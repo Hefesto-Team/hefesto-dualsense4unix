@@ -31,13 +31,33 @@ pub enum SystemMode {
     Native,
 }
 
-/// Ícone do painel: a MESMA logo do app usada no `.desktop`
-/// (`Icon=hefesto-dualsense4unix`, PNG multi-tamanho em hicolor). Usado SEMPRE,
-/// em qualquer estado — assim a logo nunca "some" do painel em transições
-/// (onlineoffline). Antes o applet trocava o glifo para um SVG symbolic que
-/// não renderizava de forma confiável no tema (parecia sumir). O estado real
-/// (offline, bateria, perfil) é mostrado DENTRO do popover, não no ícone.
-const ICON_APP: &str = "hefesto-dualsense4unix";
+/// Ícone do painel: o SIMBÓLICO, monocromático, recolorido pelo tema. Usado
+/// SEMPRE, em qualquer estado — assim o glifo nunca "some" do painel em
+/// transições (online→offline). O estado real (offline, bateria, perfil) é
+/// mostrado DENTRO do popover, não no ícone.
+///
+/// HISTÓRIA, e ela importa para não voltar atrás por engano
+/// -------------------------------------------------------
+/// Até 27/06/2026 esta constante era `com.vitoriamaria.HefestoDualsense4Unix-symbolic`.
+/// O commit `13898ca` trocou pelo nome do PNG colorido, com esta justificativa:
+/// *"Antes o applet trocava o glifo para um SVG symbolic que não renderizava de
+/// forma confiável no tema (parecia sumir)."*
+///
+/// NOTA DE 07/08/2026 (APPLET-MONOCROMÁTICO-01). A decisão de 27/06 continua
+/// válida como registro do que se viu; o que caducou é a explicação. O arquivo
+/// existia e era instalado naquela data — logo, "não existia o ícone" nunca foi
+/// a causa. Em 07/08 a causa foi REPRODUZIDA: aquele arquivo usava
+/// `fill="currentColor"`, e `currentColor` sem contexto de cor resolve para
+/// PRETO — `rsvg-convert` devolve `srgb(0,0,0)`, o que dá 1,59:1 sobre o
+/// `#2F2F3A` do painel escuro dela. O glifo não "sumia" por bug de tema: ele
+/// era desenhado preto sobre preto.
+///
+/// O arquivo de hoje crava `#bebebe` (a escola do vizinho Flatpak, o único
+/// ícone de origem colorida da barra dela que aparece branco) e não usa
+/// `currentColor` em lugar nenhum. Dentro do painel a cor é substituída de
+/// qualquer forma; fora dele, é a diferença entre ver e não ver.
+/// Quem quiser desfazer isto de novo: reproduza primeiro, como 07/08 fez.
+const ICON_APP: &str = "com.vitoriamaria.HefestoDualsense4Unix-symbolic";
 /// Período de refresh do estado enquanto o popover está aberto (~1.5 Hz).
 const REFRESH_MS: u64 = 700;
 /// Binário da GUI a abrir no "Abrir painel".

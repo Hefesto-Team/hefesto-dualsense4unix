@@ -130,22 +130,63 @@ if [[ "${#code_icons[@]}" -eq 0 ]]; then
     echo "[WARN] não achei nome de ícone pedido pelo código — o padrão de busca envelheceu?"
 else
     # Ordena e deduplica sem depender de associative array (bash 4.0+ basta).
+    #
+    # A EXCEÇÃO DO `-symbolic` — APPLET-MONOCROMÁTICO-01, 07/08/2026.
+    # Nome terminado em `-symbolic` NÃO se satisfaz com PNG, e cobrar
+    # `apps/<nome>.png` dele seria o gate exigindo exatamente o arquivo que não
+    # se deve criar: PNG nunca é recolorido pelo tema (o desvio do libcosmic
+    # manda `Data::Image` por um caminho sem cor), e foi por isso que o ícone
+    # dela era o único cromático da barra. Para esses nomes o contrato é outro
+    # arquivo, não nenhum arquivo: `symbolic/apps/<nome>.svg`.
+    # O caso que este gate nasceu para pegar continua pego — nome pedido pelo
+    # código sem arquivo instalado reprova igual, só muda QUAL arquivo se cobra.
     while IFS= read -r icon; do
         [[ -n "${icon}" ]] || continue
+        if [[ "${icon}" == *-symbolic ]]; then
+            esperado="symbolic/apps/${icon}.svg"
+        else
+            esperado="apps/${icon}.png"
+        fi
         missing=()
         for inst in "${ICON_INSTALLERS[@]}"; do
             [[ -f "${inst}" ]] || continue
-            grep -qF "apps/${icon}.png" "${inst}" 2>/dev/null || missing+=("${inst}")
+            grep -qF "${esperado}" "${inst}" 2>/dev/null || missing+=("${inst}")
         done
         if [[ "${#missing[@]}" -eq 0 ]]; then
-            echo "[ OK ] código pede ${icon} e todos os formatos instalam apps/${icon}.png"
+            echo "[ OK ] código pede ${icon} e todos os formatos instalam ${esperado}"
         else
-            echo "[FAIL] código pede ${icon} e falta apps/${icon}.png em: ${missing[*]}"
+            echo "[FAIL] código pede ${icon} e falta ${esperado} em: ${missing[*]}"
             echo "       a JANELA e a BANDEJA caem no fallback genérico nesses formatos."
             echo "       Instale os DOIS nomes (o do .desktop e o do código)."
             rc=1
         fi
     done < <(printf '%s\n' "${code_icons[@]}" | sort -u)
+fi
+
+# APPLET-MONOCROMÁTICO-01: o simbólico pedido pelo código tem de EXISTIR nesta
+# árvore, e ser o mesmo desenho que o applet COSMIC instala. São dois arquivos
+# com nomes diferentes (a bandeja pede `hefesto-dualsense4unix-symbolic`, o
+# applet pede `com.vitoriamaria.HefestoDualsense4Unix-symbolic`) e um desenho
+# só: se um mudar sem o outro, a barra fica com dois ícones diferentes para o
+# mesmo aplicativo conforme a superfície — que é a família de defeito desta
+# sprint inteira.
+echo "== simbólico da bandeja × simbólico do applet (mesmo desenho) =="
+SIMB_CANONICO="assets/simbolico/hefesto-dualsense4unix-symbolic.svg"
+SIMB_APPLET="packaging/cosmic-applet/data/icons/hicolor/symbolic/apps/com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
+if [[ ! -f "${SIMB_CANONICO}" ]]; then
+    echo "[FAIL] ${SIMB_CANONICO} não existe — a bandeja cai no ícone colorido"
+    rc=1
+elif [[ ! -f "${SIMB_APPLET}" ]]; then
+    echo "[FAIL] ${SIMB_APPLET} não existe — o applet fica sem glifo simbólico"
+    rc=1
+elif cmp -s "${SIMB_CANONICO}" "${SIMB_APPLET}"; then
+    echo "[ OK ] bandeja e applet servem o mesmo desenho simbólico"
+else
+    echo "[FAIL] o simbólico da bandeja e o do applet DIVERGIRAM"
+    echo "       ${SIMB_CANONICO}"
+    echo "       ${SIMB_APPLET}"
+    echo "       copie um sobre o outro — o desenho é um só."
+    rc=1
 fi
 
 echo "== X-HostWaylandDisplay nos .desktop de applet COSMIC (packaging/) =="

@@ -505,7 +505,19 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
 
     Deliberadamente SEM os termos "Steam Input" e "opção de inicialização": a
     usuária só declara que o jogo falhou, e o app troca de estratégia (o jogo
-    passa a ser entregue pela Steam e o Hefesto sai da frente dele).
+    passa a receber a ENTRADA pela Steam, e some o controle dobrado).
+
+    NOTA DATADA — 07/08/2026. Este toast dizia *"o Hefesto sai da frente
+    dele"*, e a frase está **refutada pela metade** pela medição dela de
+    06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, grau MEDIDO): com o
+    jogo marcado o Hefesto entrega a **entrada** (solta o grab e derruba o
+    gamepad virtual, o que acaba com o dobrado) e **mantém a saída inteira** —
+    os gatilhos dela seguraram duros e o vermelho dela ficou na lightbar, com
+    o Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
+    gatilho, que é o contrário do que acontece; e o que de fato se perde ali
+    é o co-op (os secundários caem junto com os vpads), que o toast não
+    escondia e continua não escondendo — ver o badge da aba Status
+    (`app/actions/status_actions.tooltip_do_coop_derrubado`).
     """
     if status == "sem_jogo":
         return (
@@ -529,10 +541,13 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
     # allowlist, e o guarda (`scripts/disable_steam_input.sh`) zera o per-app de
     # quem está fora dela. O texto novo responde à mesma pergunta legítima ("e
     # se não funcionar?") sem mandar ninguém à Steam e sem prometer o que o
-    # clique não faz: ele NÃO liga a entrada da Steam em lugar nenhum — só tira
-    # o Hefesto da frente (ungrab + restore do broker + vpad suspenso, em
-    # `daemon/subsystems/gamepad.py`), e é isso que faz o jogo enxergar o
-    # DualSense físico direto.
+    # clique não faz: ele NÃO liga a entrada da Steam em lugar nenhum — só
+    # entrega a ENTRADA daquele jogo (ungrab + restore do broker + vpad
+    # suspenso, em `daemon/subsystems/gamepad.py`), e é isso que faz o jogo
+    # enxergar o DualSense físico direto. A saída — cor, gatilhos, vibração —
+    # não passa por nenhum desses portões: os oito chamadores de
+    # `steam_input_excecao_ativa` estão todos em `gamepad.py`, nenhum em
+    # `core/` (MEDIDO por grep, 06/08).
     resto = (
         " Feche e abra o jogo de novo: ele passa a enxergar o controle "
         "físico direto e você não precisa configurar nada na Steam — a marca "
@@ -540,10 +555,14 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
         "jogo não responder, o guia é docs/usage/jogos-e-mascaras.md."
     )
     if status == "ja_estava":
-        return f"O jogo {appid} já estava marcado — o Hefesto já sai da frente dele.{resto}"
+        return (
+            f"O jogo {appid} já estava marcado — ele já recebe o controle "
+            f"direto pela Steam, sem o controle dobrado.{resto}"
+        )
     return (
-        f"Anotei: o jogo {appid} passa a ser entregue direto pela Steam e o "
-        f"Hefesto sai da frente dele.{resto}"
+        f"Anotei: o jogo {appid} passa a receber o controle direto pela "
+        f"Steam, sem o controle dobrado — e a sua cor e os seus gatilhos "
+        f"continuam valendo.{resto}"
     )
 
 
@@ -1105,7 +1124,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
     #   "Deixar tudo pronto"     -> encadeia disable_steam_input + wrapper em
     #                               todos os jogos, com UM consentimento só.
     #   "Este jogo não funciona" -> marca o jogo ativo na allowlist do Steam
-    #                               Input: o Hefesto sai da frente DELE.
+    #                               Input: o Hefesto entrega a ENTRADA DELE
+    #                               (e só ela — ver `format_game_broken_result`).
     #
     # Nenhum dos dois pronuncia "Steam Input" nem "opção de inicialização".
 
@@ -1256,9 +1276,12 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """Botão "Este jogo não funciona" — troca a estratégia DESTE jogo.
 
         Sem diálogo de confirmação de propósito: a ação não fecha nada, não
-        edita arquivo da Steam e é reversível (uma linha num txt nosso). O
-        que ela custa é o Hefesto sair da frente do jogo — que é justamente o
-        que a usuária está pedindo ao clicar.
+        edita arquivo da Steam e é reversível (uma linha num txt nosso, e
+        desde 07/08 a caixinha do editor de perfil também a desfaz). O que
+        ela custa é o Hefesto entregar a ENTRADA daquele jogo — que é
+        justamente o que a usuária está pedindo ao clicar. A saída fica: em
+        06/08 os gatilhos dela seguraram e a cor dela ficou com o jogo
+        marcado aberto (`CONTROLE-SONY-MEDIDO-01`, *A INVERSÃO*).
         """
         self._toast_daemon("Procurando qual jogo é…")
 
@@ -1308,8 +1331,8 @@ class DaemonActionsMixin(WidgetAccessMixin):
         A allowlist é relida do disco a cada consulta (guard em bash,
         `storm_doctor`, `launch_env.steam_input_appids`) — nada a invalidar
         ali. O que NÃO é relido é a materialização das envs de launch: o
-        `steam_app_<appid>.env` que faz o Hefesto sair da frente do jogo só
-        nasce quando `materialize_launch_env` roda. `launch_env.refresh` é o
+        `steam_app_<appid>.env` que entrega a entrada daquele jogo ao físico
+        só nasce quando `materialize_launch_env` roda. `launch_env.refresh` é o
         mesmo aviso best-effort que a aba Perfis manda ao salvar um perfil
         (daemon offline é normal — ele rematerializa sozinho no boot).
         """

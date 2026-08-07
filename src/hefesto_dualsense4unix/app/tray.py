@@ -41,7 +41,28 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 TRAY_APP_ID = "hefesto-dualsense4unix"
-TRAY_ICON_NAME = "hefesto-dualsense4unix"
+
+#: Nome pedido ao tema de ícones. **Tem de terminar em `-symbolic`**, e isso é
+#: contrato, não estética — APPLET-MONOCROMÁTICO-01, pedido dela de 07/08/2026:
+#: "o applet do hefesto deve ficar em preto e branco (...) no cosmic todos os
+#: applet são assim". Ela estava certa: dez dos treze applets do System76
+#: declaram `-symbolic`, e o Hefesto era o único de glifo fixo que não.
+#:
+#: O sufixo é o que muda o resultado, e foi MEDIDO em 07/08 com um item de
+#: bandeja de prova na barra dela: o `cosmic-applet-status-area` RECOLORE o que
+#: tem nome `-symbolic` (o mesmo desenho, servido em magenta saturado, saiu com
+#: saturação máxima 30,6 — a mesma do vizinho Spotify, que é só o azulado do
+#: fundo do painel). Sem o sufixo, o painel desenha o arquivo como ele é: o PNG
+#: (ou, no caso dela, a cópia colorida da logo que o tema ativo serve sob o
+#: mesmo nome) — e o ícone fica o único cromático da barra.
+TRAY_ICON_NAME = "hefesto-dualsense4unix-symbolic"
+
+#: Nome antigo (a logo colorida, sem sufixo). Continua sendo pedido como
+#: PRIMEIRO degrau de queda: numa instalação anterior a 07/08 o simbólico não
+#: existe no tema, e cair direto no joystick genérico seria trocar um ícone
+#: certo por um errado. Ver `_preferred_icon`.
+TRAY_ICON_NAME_LEGADO = "hefesto-dualsense4unix"
+
 TRAY_ICON_FALLBACK = "input-gaming"
 PROFILE_REFRESH_SEC = 3
 ACTIVE_MARKER = "> "
@@ -439,9 +460,25 @@ class AppTray:
 
     @staticmethod
     def _preferred_icon() -> str:
+        """Nome do ícone a pedir ao painel, em ordem de preferência.
+
+        Três degraus, e o do meio é novo em 07/08 (APPLET-MONOCROMÁTICO-01):
+
+        1. `hefesto-dualsense4unix-symbolic` — o desenho monocromático, que o
+           painel recolore com a cor do tema dela;
+        2. `hefesto-dualsense4unix` — a logo colorida. É o que uma instalação
+           anterior a 07/08 tem no disco. Sem este degrau, quem atualizasse só
+           o código veria um **joystick genérico** na barra, não um ícone feio:
+           o sintoma seria "sumiu o Hefesto", e a causa (arquivo não instalado)
+           ficaria escondida;
+        3. `input-gaming` — o joystick genérico, último recurso.
+        """
         theme = Gtk.IconTheme.get_default()
-        if theme is not None and theme.has_icon(TRAY_ICON_NAME):
-            return TRAY_ICON_NAME
+        if theme is None:
+            return TRAY_ICON_FALLBACK
+        for nome in (TRAY_ICON_NAME, TRAY_ICON_NAME_LEGADO):
+            if theme.has_icon(nome):
+                return nome
         return TRAY_ICON_FALLBACK
 
     @staticmethod

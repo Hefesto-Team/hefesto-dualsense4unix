@@ -11,7 +11,24 @@ prática o opt-in era irreversível para quem não mexe em arquivo de configura�
 — e o preço de um jogo marcado por engano é alto: ele deixa de ter cor,
 gatilhos e co-op do Hefesto até ser desmarcado.
 
-Este módulo é a primeira porta de saída, pela linha de comando:
+NOTA DATADA — 07/08/2026: os DOIS parágrafos acima caducaram, cada um por um
+motivo diferente, e ficam porque decisão medida não se apaga.
+
+- **"tirar exigia abrir num editor de texto"** deixou de ser verdade hoje: por
+  decisão dela (resposta 1 do painel de 07/08,
+  `docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md`) o
+  desmarcar nasceu na **aba Perfis**, na caixinha `profile_steam_input_check`
+  do editor do perfil, logo abaixo do jogo escolhido. Este módulo deixou de ser
+  a única porta de saída — continua sendo a porta da linha de comando, e o
+  motivo de existir não muda.
+- **"ele deixa de ter cor, gatilhos e co-op"** está **refutado pela metade**
+  pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*,
+  grau MEDIDO): com o jogo marcado, **cor e gatilhos continuam valendo** (os
+  gatilhos dela seguraram duros e o vermelho dela ficou, com o Mullet Mad Jack
+  aberto). O **co-op**, esse sim, cai — os gamepads virtuais dos secundários
+  são recolhidos. O preço de marcar por engano existe, mas é menor e é outro.
+
+Este módulo é a porta de saída da linha de comando:
 
     hefesto-dualsense4unix gamepad steam-input list
     hefesto-dualsense4unix gamepad steam-input remove 2111190
@@ -48,7 +65,7 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_app
 
 app = typer.Typer(
     name="steam-input",
-    help="Exceção do Steam Input — os jogos em que o Hefesto sai da frente.",
+    help="Exceção do Steam Input — os jogos em que a Steam entrega o controle.",
     no_args_is_help=True,
 )
 console = Console()
@@ -138,12 +155,16 @@ def cmd_list() -> None:
         )
         return
 
-    console.print("Jogos em que o Hefesto sai da frente (o controle vem da Steam):")
+    console.print("Jogos em que a Steam entrega o controle (a entrada vem dela):")
     for appid, nome in entradas:
-        console.print(f"  {_rotulo(appid, nome)} — controle entregue pela Steam, sem co-op")
+        console.print(
+            f"  {_rotulo(appid, nome)} — entrada pela Steam, sem co-op; "
+            "cor e gatilhos continuam do Hefesto"
+        )
     console.print(f"\n[dim]arquivo: {caminho}[/dim]")
     console.print(
-        "[dim]para desfazer: 'gamepad steam-input remove <nome ou appid>'.[/dim]"
+        "[dim]para desfazer: 'gamepad steam-input remove <nome ou appid>', "
+        "ou a caixinha no editor do perfil, na aba Perfis.[/dim]"
     )
 
 

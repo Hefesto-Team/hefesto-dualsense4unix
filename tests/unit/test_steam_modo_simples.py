@@ -194,6 +194,22 @@ class TestFormatGameBroken:
             assert "Steam Input" not in msg
             assert "inicialização" not in msg
 
+    def test_nao_promete_o_que_ela_mediu_ao_contrario(self) -> None:
+        """NOTA DATADA — 07/08/2026: o toast dizia "o Hefesto sai da frente".
+
+        `CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*, 06/08, grau MEDIDO: com
+        o jogo marcado o Hefesto entrega a ENTRADA (acaba o controle dobrado) e
+        MANTÉM A SAÍDA — os gatilhos dela seguraram e a cor dela ficou, com o
+        Mullet Mad Jack aberto. Quem lia "sai da frente" esperava perder cor e
+        gatilho, que é o que acontece **fora** da lista.
+        """
+        for status in ("adicionado", "ja_estava"):
+            msg = format_game_broken_result(status=status, appid=2111190)
+            assert "sai da frente" not in msg
+            assert "dobrado" in msg, "o defeito que a marca cura é o dobrado"
+        adicionado = format_game_broken_result(status="adicionado", appid=2111190)
+        assert "gatilhos continuam valendo" in adicionado
+
 
 # ---------------------------------------------------------------------------
 # Fluxo dos handlers

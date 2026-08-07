@@ -108,6 +108,13 @@ package() {
     install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
         "$pkgdir/usr/share/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png"
 
+    # APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O
+    # código pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome
+    # NÃO se satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone
+    # ficaria o único cromático do painel. Destino `symbolic/apps/`.
+    install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+        "$pkgdir/usr/share/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg"
+
     # Udev rules — conjunto CANÔNICO (M13): 70/71/72/76..84, alinhado a
     # scripts/install_udev.sh + install-host-udev.sh + build_deb.sh. As regras
     # 73/74 (GUI auto-spawn no hotplug) foram DESCONTINUADAS 2026-06-23 — abriam

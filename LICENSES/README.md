@@ -96,6 +96,23 @@ diretório sem linha correspondente nos alvos reprova a suíte.
 | `.flatpak` | `flatpak/br.andrefarias.Hefesto.yml` |
 | Arch | `packaging/arch/PKGBUILD` |
 | Fedora | `packaging/fedora/hefesto-dualsense4unix.spec` |
+| **a instalação nativa** (`./install.sh`) | `scripts/dkms_lib.sh` — copia para `/usr/src/<pkg>-<ver>/LICENSES/` |
+| **o helper dos pacotes** (`scripts/install-host-udev.sh`) | idem: os dois chamam a mesma `dkms_install_patched_module` |
+
+### Nota datada — 07/08/2026: as duas últimas linhas entraram depois
+
+Esta tabela nasceu com **seis** linhas, e elas estavam certas para a pergunta
+que a CR-05 fazia: *quais artefatos PUBLICADOS carregam os fontes GPL*. As duas
+últimas respondem outra pergunta, que ficou sem dono no mesmo dia: **quais
+caminhos põem os fontes GPL no disco de uma máquina.** São os dois
+instaladores, e nenhum dos dois levava o texto junto — `grep -rn LICENSES
+install.sh scripts/*.sh` devolvia zero. GRAU: **MEDIDO**.
+
+Quem cobra estas duas é `tests/unit/test_licenca_viaja_com_o_fonte_dkms.py`, e
+ele morde por EXECUÇÃO da biblioteca, não por busca de trecho. O motivo de ser
+outro arquivo, e não mais um caso no
+`test_cr05_licencas_de_terceiros_viajam.py`: aquele lê texto de empacotador;
+este roda `bash` com raízes em `tmp` e confere o arquivo que aparece no destino.
 
 Não carregam, e está certo: o wheel e o AppImage não levam `assets/dkms/`, então
 não têm o que licenciar aqui.

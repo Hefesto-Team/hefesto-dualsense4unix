@@ -369,8 +369,16 @@ def markup_status_steam_input(
 #:
 #: Invariante que o daemon deixou por escrito e que estas frases respeitam: nos
 #: dois casos de PAUSA (``modo_jogo`` e ``vpad_suspenso_pelo_steam_input``) o
-#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele saiu da
-#: frente. Nenhuma dessas duas frases pode dizer "desligado".
+#: ``enabled`` continua TRUE. O teclado dela não foi desligado — ele está em
+#: pausa. Nenhuma dessas duas frases pode dizer "desligado".
+#:
+#: NOTA DATADA — 07/08/2026, sobre a frase do ``vpad_suspenso_pelo_steam_input``.
+#: Ela abria com *"o jogo assumiu o controle"*, e isso está **refutado** para
+#: este caso pela medição dela de 06/08 (``CONTROLE-SONY-MEDIDO-01``, seção
+#: *A INVERSÃO*, grau MEDIDO): num jogo da lista de exceções o jogo assume a
+#: **entrada** — a luz e os gatilhos continuam dela. Quem "assume o controle"
+#: inteiro é o jogo que está **fora** da lista, e é justo o contrário do que a
+#: frase antiga fazia a pessoa concluir.
 BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "desligada": (
         "Desligado: o controle não digita mais nada — nem os atalhos da lista "
@@ -385,8 +393,9 @@ BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
         "Ligado, em pausa agora: o modo jogo está suspendendo mouse e teclado."
     ),
     "vpad_suspenso_pelo_steam_input": (
-        "Ligado, em pausa agora: o jogo assumiu o controle. Não foi desligado — "
-        "volta sozinho quando você fechar o jogo."
+        "Ligado, em pausa agora: neste jogo quem entrega o controle é a Steam, "
+        "e o controle virtual foi recolhido. Não foi desligado — volta sozinho "
+        "quando você fechar o jogo."
     ),
 }
 

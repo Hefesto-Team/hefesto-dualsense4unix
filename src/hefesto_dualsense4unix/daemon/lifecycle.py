@@ -29,6 +29,11 @@ from typing import Any, Literal, cast, get_args
 
 from hefesto_dualsense4unix.core.controller import ControllerState, IController
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.daemon.battery_journal import (
+    INTERVALO_SONDA_S,
+    diario_da_bateria,
+    registrar_queda_da_bateria,
+)
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 # ---------------------------------------------------------------------------
@@ -558,6 +563,10 @@ class Daemon:
     # anterior ainda não tinha terminado (guard de reentrância) — só
     # observabilidade, nunca lido por lógica de gate.
     _external_tick_skipped: int = 0
+    # PROTOCOLO-QUEDA-01 (07/08): `battery_journal.DiarioDaBateria` — quem
+    # escreve a carga no journal. Criado no 1º uso por `diario_da_bateria`
+    # (espelho do `get_coop_manager`); None até a primeira sonda.
+    _diario_bateria: Any = None
     # HANG-01: watch barato de /dev/input (mesma classe do EVDEV_WATCHDOG)
     # usado só para destravar a degradação; criado sob demanda.
     _external_tick_watch: Any = None
@@ -3138,6 +3147,35 @@ class Daemon:
         except Exception as exc:  # nunca derrubar o poll loop
             logger.debug("identity_sync_falhou", err=str(exc))
 
+    def _amostrar_bateria(self, agora: float) -> None:
+        """Sonda a carga de cada controle e deixa no journal o que valer linha.
+
+        PROTOCOLO-QUEDA-01 (07/08/2026), entrega 1: até aqui o daemon LIA a
+        bateria a cada tique e não escrevia uma linha — a hipótese mais forte
+        para as nove quedas de link (a carga acabando) era indecidível por falta
+        de instrumento. Quem decide a cadência e a máscara do endereço é o
+        `battery_journal`; aqui só entregamos a leitura barata do backend
+        (`describe_controllers`, os mesmos getattrs do tique lento) e o relógio
+        do tique.
+
+        Roda ANTES do gate de conexão do poll loop, pelo mesmo motivo do
+        `_sync_identity_registry`: é a transição para ZERO controles que mais
+        interessa, e depois do gate ela nunca seria vista.
+
+        Nunca derruba o poll loop: leitura de sysfs falha por corrida (o nó some
+        entre o `exists` e o `read`) e isso é rotina, não defeito.
+        """
+        describe = getattr(self.controller, "describe_controllers", None)
+        if not callable(describe):
+            return
+        try:
+            infos = describe()
+            if not isinstance(infos, list):
+                return
+            diario_da_bateria(self).observar(infos, agora)
+        except Exception as exc:  # nunca derrubar o poll loop
+            logger.debug("bateria_amostra_falhou", err=str(exc))
+
     # ------------------------------------------------------------------
     # Identidade + LED dos controles EXTERNOS (EXT-04)
     # ------------------------------------------------------------------
@@ -3552,6 +3590,11 @@ class Daemon:
         # antes do gate de conexão — o marker do wrapper e a janela do jogo
         # independem do controle estar plugado neste instante.
         game_signal_next_at: float = 0.0
+        # PROTOCOLO-QUEDA-01: sonda da bateria, no MESMO intervalo do diário
+        # (`INTERVALO_SONDA_S`, 30 s) — pedir mais vezes não adiantaria nada: o
+        # `DiarioDaBateria.observar` se gateia pelo próprio relógio e devolveria
+        # sem ler. Custo por tick sem sonda: uma comparação de float.
+        battery_journal_next_at: float = 0.0
         # R-03: dreno da pendência de `mode` adiada pelo lock de gesto manual.
         # ~1 Hz (o lock é de 30 s — precisão de segundo basta) e TAMBÉM antes do
         # gate de conexão: um blip de link BT não pode fazer o modo do perfil
@@ -3580,6 +3623,9 @@ class Daemon:
                 # estado neste instante. Nunca derruba o poll loop.
                 with contextlib.suppress(Exception):
                     self.aplicar_gamepad_para_multiplos_controles()
+            if tick_started >= battery_journal_next_at:
+                battery_journal_next_at = tick_started + INTERVALO_SONDA_S
+                self._amostrar_bateria(tick_started)
             if tick_started >= external_led_next_at:
                 external_led_next_at = tick_started + 2.0
                 # HANG-01: nunca mais `await` inline — só AGENDA a task (o
@@ -3615,6 +3661,11 @@ class Daemon:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:
                 logger.warning("poll_read_failed", err=str(exc), exc_info=True)
+                # PROTOCOLO-QUEDA-01: a última carga conhecida ANTES de qualquer
+                # reconexão. É o dado que transforma o próximo "desligou sozinho"
+                # em resposta — e este caminho (erro de leitura) é o irmão do
+                # `probe_offline` de `daemon/connection.py`.
+                registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
                     from hefesto_dualsense4unix.daemon.connection import reconnect

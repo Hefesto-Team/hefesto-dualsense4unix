@@ -717,9 +717,15 @@ def with_steam_closed(
 # --- allowlist do Steam Input per-app (STEAM-INPUT-ALLOWLIST-01) ------------
 # O arquivo existia e era LIDO por três lados (disable_steam_input.sh,
 # integrations/storm_doctor, daemon/launch_env) — e por NINGUÉM escrito. Editar
-# `~/.config/.../steam_input_apps.txt` na mão era a única via de "este jogo é
-# entregue pela Steam, sai da frente", o que na prática significa que a
-# usuária final nunca a tinha. O botão "Este jogo não funciona" escreve aqui.
+# `~/.config/.../steam_input_apps.txt` na mão era a única via de "a entrada
+# deste jogo vem da Steam", o que na prática significa que a usuária final
+# nunca a tinha. O botão "Este jogo não funciona" escreve aqui.
+#
+# NOTA DATADA — 07/08/2026: este comentário dizia "este jogo é entregue pela
+# Steam, sai da frente". A segunda metade caiu com a medição dela de 06/08
+# (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO, grau MEDIDO): o que a lista
+# entrega à Steam é a ENTRADA; a saída (cor, gatilhos, vibração) continua do
+# Hefesto durante a exceção inteira.
 
 #: Caminho relativo ao diretório de config XDG (mesma convenção do
 #: `disable_steam_input.sh`, que resolve `${XDG_CONFIG_HOME:-$HOME/.config}`).

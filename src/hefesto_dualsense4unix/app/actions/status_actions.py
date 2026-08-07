@@ -232,21 +232,36 @@ def texto_do_coop_derrubado(bloco_coop: object) -> str:
 
 
 def tooltip_do_coop_derrubado(bloco_coop: object) -> str:
-    """O preço por extenso, para o tooltip do badge — ``""`` sem queda."""
+    """O preço por extenso, para o tooltip do badge — ``""`` sem queda.
+
+    NOTA DATADA — 07/08/2026. Este tooltip abria com *"O jogo assumiu o
+    controle: o Hefesto saiu da frente dele"*, e a segunda metade da frase
+    está **refutada** pela medição dela de 06/08 (`CONTROLE-SONY-MEDIDO-01`,
+    seção *A INVERSÃO*, grau MEDIDO): num jogo desta lista o Hefesto entrega
+    a **entrada** e **mantém a saída** — os gatilhos dela seguraram e a cor
+    dela ficou. Pior: quem lia "o jogo assumiu o controle" concluía que a luz
+    e os gatilhos tinham virado do jogo, que é exatamente o que acontece
+    **fora** da lista, não dentro. O que de fato cai aqui é o co-op, e cai
+    porque os gamepads virtuais dos secundários são recolhidos
+    (`gamepad.suspend_vpads_for_steam_input`) — a queda é da ENTRADA, e o
+    texto agora nomeia isso.
+    """
     if not isinstance(bloco_coop, dict) or not texto_do_coop_derrubado(bloco_coop):
         return ""
     quantos = int(bloco_coop["secundarios_derrubados"])
     quem = _lista_de_jogadores(quantos)
     if quantos == 1:
         return _(
-            "O jogo assumiu o controle: o Hefesto saiu da frente dele, e por "
-            "isso {quem} saiu do co-op.\n\n"
+            "Neste jogo quem entrega o controle é a Steam: os controles "
+            "virtuais foram recolhidos, e por isso {quem} saiu do co-op. A "
+            "sua cor e os seus gatilhos continuam valendo.\n\n"
             "Você não desligou nada — ele volta sozinho quando você fechar o "
             "jogo."
         ).format(quem=quem)
     return _(
-        "O jogo assumiu o controle: o Hefesto saiu da frente dele, e por isso "
-        "{quem} saíram do co-op.\n\n"
+        "Neste jogo quem entrega o controle é a Steam: os controles virtuais "
+        "foram recolhidos, e por isso {quem} saíram do co-op. A sua cor e os "
+        "seus gatilhos continuam valendo.\n\n"
         "Você não desligou nada — os {n} voltam sozinhos quando você fechar o "
         "jogo."
     ).format(quem=quem, n=quantos)

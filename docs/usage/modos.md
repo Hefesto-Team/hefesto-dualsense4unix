@@ -132,7 +132,8 @@ Se um jogo novo aparecer com o controle duplicado:
 O `hefesto-launch` decide na hora o que cada jogo precisa. Com o Hefesto desligado
 ele sai do caminho: o pior caso é o controle duplicado, nunca zero controles.
 
-> **NOTA DATADA — 06/08/2026, para evitar uma confusão que esta página convida.**
+> **NOTA DATADA — 06/08/2026, para evitar uma confusão que esta página convida
+> (e que a `CONTROLE-SONY-MEDIDO-01` **refuta** do outro lado).**
 > A frase acima — *"com o Hefesto desligado ele sai do caminho"* — fala do
 > lançador com o **serviço parado**, e **não** da lista de exceções de Steam
 > Input. São coisas diferentes, e esta página nunca mencionou a segunda. Quem
@@ -140,7 +141,10 @@ ele sai do caminho: o pior caso é o controle duplicado, nunca zero controles.
 > [jogos-e-mascaras.md](jogos-e-mascaras.md), na seção *"suporte a DualSense pela
 > Steam"*. E o que foi medido em 06/08 vale registrar aqui também: **na lista de
 > exceções o Hefesto continua escrevendo no seu controle** — a sua cor fica, os
-> seus gatilhos seguram; o que ele entrega ao jogo é a **entrada**.
+> seus gatilhos seguram; o que ele entrega ao jogo é a **entrada**. O registro
+> da medição, com journal e carimbo, é a sprint `CONTROLE-SONY-MEDIDO-01`
+> (seção *A INVERSÃO*), e é ela que **refuta** a leitura antiga da casa, que
+> descrevia a lista como "o Hefesto sai da frente".
 
 Recomendado também: Propriedades → Controlador → **Desativar Steam Input**. O
 instalador já faz isso por padrão em todos os jogos; `--keep-steam-input` preserva.

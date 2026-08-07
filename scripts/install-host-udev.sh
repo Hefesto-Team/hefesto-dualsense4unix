@@ -305,6 +305,30 @@ _build_install_cmd() {
         cmd+="'${SNDQUIRK_DEST}/hefesto-hid-nintendo.conf'; "
         cmd+="printf '3' > /sys/module/hid_nintendo/parameters/bt_probe_retries 2>/dev/null || true; "
         cmd+="printf '1' > /sys/module/hid_nintendo/parameters/skip_tx_on_rate_exceeded 2>/dev/null || true; "
+        # PARIDADE-QUENTE-01 (07/08/2026) — a simetria da AUTO-01.7 tinha sido
+        # paga em UM sentido só. O achado de 25/07
+        # (docs/process/sprints/2026-07-25-AUTO-01-um-clique-em-vez-de-dez.md:114)
+        # dizia que ERA ESTE script que escrevia os params a quente e o
+        # install.sh não; a cura veio, o install.sh alcançou — e os TRÊS params
+        # do patch 0003 (clone USB 057E:2009) nasceram depois, só no
+        # install.sh:642-645. Aqui nunca chegaram. GRAU: MEDIDO (comparação dos
+        # dois conjuntos de `/sys/module/hid_nintendo/parameters/*` escritos).
+        #
+        # O que quebra sem estas três linhas, no caminho de PACOTE: o
+        # uninstall.sh:874-876 devolve os três a 0 de propósito; a reinstalação
+        # por pacote recoloca a conf do modprobe.d (que os traz), mas a conf só
+        # é lida quando o MÓDULO CARREGA — e recarregar é proibido aqui
+        # (derrubaria Pro/8BitDo em uso). Resultado: o 8BitDo Pro clone no cabo
+        # volta a morrer na probe ("Failed to get joycon info; ret=-110" — sem
+        # driver, sem hidraw, sem LEDs) até o próximo BOOT. Os três são lidos NA
+        # PROBE, então escrever agora faz a cura valer no próximo PLUG.
+        #
+        # Portão implícito: o módulo patchado ANTIGO não tem estes params, e o
+        # redirect falha calado — que é o desejado (mesma decisão do bloco
+        # hid-playstation abaixo, e do install.sh:642).
+        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_cmd_pad_to_report 2>/dev/null || true; "
+        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_send_conn_status 2>/dev/null || true; "
+        cmd+="printf '1' > /sys/module/hid_nintendo/parameters/usb_probe_degrade 2>/dev/null || true; "
     fi
     # Contenção BT: conf persistente do hid-playstation patchado + parâmetros a
     # quente. Todos são lidos A CADA probe, então escrever aqui já vale na
@@ -511,6 +535,23 @@ if [[ -n "${RTW88_DKMS_SRC}" && -n "${DKMS_LIB_SH}" ]]; then
         source "${DKMS_LIB_SH}"
         dkms_install_patched_module hefesto-rtw88-usb "${RTW88_DKMS_VER}" \
             "${RTW88_DKMS_SRC}" rtw88_usb
+        # PARIDADE-QUENTE-01 (07/08/2026), segunda metade. O `hang_reset` é o
+        # ÚNICO param desta casa sem conf de modprobe.d: `ls assets/modprobe.d/`
+        # traz btusb, hid-nintendo e hid-playstation, e nenhum rtw88. Ou seja, o
+        # valor só vem do default compilado (Y) ou de uma escrita a quente.
+        # O uninstall.sh:913 o devolve a 0 de propósito; o install.sh:821 o
+        # rearma; este script — o caminho de PACOTE, que instala o MESMO módulo
+        # logo acima — nunca o rearmava. GRAU: MEDIDO (comparação dos dois
+        # conjuntos de params escritos a quente).
+        # Consequência: depois de uninstall + reinstalação por pacote, o reset
+        # de porta do fantasma do dongle fica DESLIGADO até o próximo boot, com
+        # o módulo patchado instalado e a detecção rodando sem a cura.
+        # Best-effort, mesma forma do install.sh: o portão é de EXISTÊNCIA
+        # (`-e`) porque `hang_reset` só existe no módulo PATCHADO carregado.
+        if [[ -e /sys/module/rtw88_usb/parameters/hang_reset ]]; then
+            printf 'Y' | sudo tee /sys/module/rtw88_usb/parameters/hang_reset >/dev/null 2>&1 || true
+            echo "  hang_reset rearmado a quente (vale já; sem reload, sem reboot)"
+        fi
         if dkms_module_from_updates rtw88_usb; then
             echo "  módulo patchado staged (vence o in-tree no próximo boot — NUNCA recarregamos com WiFi em uso)"
         else

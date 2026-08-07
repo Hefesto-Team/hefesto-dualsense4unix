@@ -118,6 +118,13 @@ install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
 install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png \
     %{buildroot}%{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
 
+# APPLET-MONOCROMÁTICO-01 (07/08/2026): o ícone SIMBÓLICO da bandeja. O código
+# pede `hefesto-dualsense4unix-symbolic` (app/tray.py), e esse nome NÃO se
+# satisfaz com PNG: PNG nunca é recolorido pelo tema, e o ícone ficaria o único
+# cromático do painel. Destino `symbolic/apps/`.
+install -Dm644 assets/simbolico/hefesto-dualsense4unix-symbolic.svg \
+    %{buildroot}%{_datadir}/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
+
 # Udev rules — conjunto canônico (paridade com scripts/install_udev.sh).
 # 73/74 (hotplug-GUI) descontinuadas e removidas do repo em 2026-07-18.
 # As 82/83/84 (no-sniff do Pro, snapshot de bond, variante do clone 8BitDo)
@@ -332,6 +339,7 @@ fi
 %{_datadir}/applications/%{app_id}.desktop
 %{_datadir}/icons/hicolor/256x256/apps/hefesto.png
 %{_datadir}/icons/hicolor/256x256/apps/hefesto-dualsense4unix.png
+%{_datadir}/icons/hicolor/symbolic/apps/hefesto-dualsense4unix-symbolic.svg
 %{_udevrulesdir}/70-ps5-controller.rules
 %{_udevrulesdir}/71-uhid.rules
 %{_udevrulesdir}/71-uinput.rules
