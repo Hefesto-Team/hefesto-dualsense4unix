@@ -434,6 +434,66 @@ def test_empacotamento_leva_o_dono_do_bluez() -> None:
     )
 
 
+class TestOSeloVerdeNaoSaiAntesDoDaemonCarregar:
+    """SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026).
+
+    O `[ OK ]` de `confirm` carimbava VERDE um rádio ainda ABERTO: o
+    `bluez_config.sh` grava e NÃO reinicia o `bluetoothd` de propósito — diz por
+    escrito que os valores "VALEM NO PRÓXIMO BOOT" —, então entre a cura e o
+    próximo start o daemon VIVO continua com `always`. Quem lesse o verde
+    fecharia o terminal achando que a janela de Just Works tinha fechado.
+
+    A medida é a comparação de relógios: `main.conf` mais novo que o start do
+    `bluetoothd` significa que o disco ainda não é o que o daemon carregou.
+    """
+
+    def test_config_mais_nova_que_o_daemon_avisa(self, tmp_path: Path) -> None:
+        """O ramo que fecha o defeito: o disco já mudou, o daemon não sabe."""
+        proc = _rodar(
+            tmp_path,
+            _MAIN_CONF["confirm"],
+            extra={"HEFESTO_BT_ATIVO_DESDE": "1"},  # daemon de 1970: tudo é mais novo
+        )
+
+        assert "[ OK ]" in proc.stdout, "o valor no disco continua certo"
+        assert "daemon VIVO ainda roda com o valor anterior" in proc.stdout
+        assert "RESUMO fails=0 warns=1" in proc.stdout
+
+    def test_daemon_mais_novo_que_a_config_nao_avisa(self, tmp_path: Path) -> None:
+        """A contraprova: com o daemon reiniciado DEPOIS, o aviso é ruído."""
+        proc = _rodar(
+            tmp_path,
+            _MAIN_CONF["confirm"],
+            extra={"HEFESTO_BT_ATIVO_DESDE": "9999999999"},  # daemon do futuro
+        )
+
+        assert "[ OK ]" in proc.stdout
+        assert "daemon VIVO ainda roda" not in proc.stdout
+        assert "RESUMO fails=0 warns=0" in proc.stdout
+
+    def test_sem_systemd_que_responda_o_aviso_se_cala(self, tmp_path: Path) -> None:
+        """O defeito que a cura da cura fechou, e que era de PRODUÇÃO.
+
+        `date -d ""` **não falha**: o GNU date devolve meia-noite de hoje
+        (MEDIDO em 06/08/2026). A primeira escrita desta guarda confiava num
+        `|| echo 0` que nunca disparava, então em toda máquina onde o
+        `bluetooth.service` não reporta `ActiveEnterTimestamp` — inativo,
+        mascarado, container sem systemd — o `main.conf` era comparado contra
+        meia-noite, e o aviso saía em FALSO para qualquer arquivo tocado no dia.
+
+        O `systemctl` da bancada é exatamente esse caso: responde `is-active` e
+        cala no resto.
+        """
+        proc = _rodar(tmp_path, _MAIN_CONF["confirm"])
+
+        assert "[ OK ] " in proc.stdout
+        assert "daemon VIVO ainda roda" not in proc.stdout, (
+            "o aviso voltou a sair sem saber a hora do daemon — é o falso "
+            "positivo do `date -d ''`, que devolve meia-noite em vez de falhar"
+        )
+        assert "RESUMO fails=0 warns=0" in proc.stdout
+
+
 def test_o_detector_le_so_pelo_dono_unico() -> None:
     """Duas fontes para a mesma regra é a classe de defeito desta leva."""
     doctor = DOCTOR.read_text(encoding="utf-8")
