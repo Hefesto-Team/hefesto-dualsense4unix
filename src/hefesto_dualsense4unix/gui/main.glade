@@ -2070,6 +2070,60 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                               <packing><property name="expand">False</property></packing>
                             </child>
 
+                            <!-- A caixinha que TIRA um jogo do Steam Input.
+                                 DECISÃO DELA, 07/08/2026 (resposta 1 do painel):
+                                 "no editor do perfil, logo abaixo do jogo
+                                 escolhido" — e é por isso que ela mora AQUI, e
+                                 não na aba Sistema, onde o botão que MARCA
+                                 sempre esteve. Aparece só com "Jogo da Steam"
+                                 escolhido, porque a marca é por appid.
+
+                                 O texto NÃO diz "o Hefesto sai da frente": ela
+                                 mediu o contrário em 06/08
+                                 (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO) —
+                                 com o jogo na lista, os gatilhos dela seguraram
+                                 e a cor dela FICOU. O que a marca entrega é a
+                                 ENTRADA; a SAÍDA continua sendo do Hefesto.
+
+                                 Nasce `visible=False` + `no-show-all=True` pelo
+                                 mesmo motivo do box do jogo, e o código a
+                                 revela na ordem que a CAMPO-QUE-NAO-NASCIA-01
+                                 provou ser a única que funciona: desarmar o
+                                 `no_show_all` ANTES do `show_all()`. -->
+                            <child>
+                              <object class="GtkBox" id="profile_steam_input_box">
+                                <property name="orientation">vertical</property>
+                                <property name="spacing">2</property>
+                                <property name="visible">False</property>
+                                <property name="no-show-all">True</property>
+                                <child>
+                                  <object class="GtkCheckButton" id="profile_steam_input_check">
+                                    <property name="label" translatable="yes">Deixar a Steam entregar o controle neste jogo</property>
+                                    <property name="tooltip-text" translatable="yes">Para jogos que já falam DualSense pela Steam e por isso mostram o controle DOBRADO (um Xbox e um Sony). Marcado: o jogo passa a ver o controle de verdade e lista UM só — e a sua cor, os seus gatilhos e a sua vibração continuam valendo (medido em 06/08 com o Mullet Mad Jack). Desmarcado: o jogo vê o controle virtual do Hefesto, e quem manda na luz e nos gatilhos passa a ser o jogo. Vale na hora, sem esperar o Salvar.</property>
+                                  <child internal-child="accessible">
+                                    <object class="AtkObject">
+                                      <property name="AtkObject::accessible-name" translatable="yes">Deixar a Steam entregar o controle neste jogo</property>
+                                      <property name="AtkObject::accessible-description" translatable="yes">Marca ou desmarca este jogo na lista de exceções do Steam Input. Marcado, o jogo lista um controle só e os seus ajustes continuam valendo; desmarcado, quem manda na luz e nos gatilhos é o jogo. Vale na hora, sem esperar o Salvar</property>
+                                    </object>
+                                  </child>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="profile_steam_input_hint">
+                                    <property name="label" translatable="yes">&lt;i&gt;Marque quando o jogo mostrar dois controles. A marca vale para o jogo inteiro, não só para este perfil.&lt;/i&gt;</property>
+                                    <property name="use-markup">True</property>
+                                    <property name="xalign">0</property>
+                                    <property name="wrap">True</property>
+                                    <property name="halign">start</property>
+                                    <property name="max-width-chars">70</property>
+                                  </object>
+                                  <packing><property name="expand">False</property></packing>
+                                </child>
+                              </object>
+                              <packing><property name="expand">False</property></packing>
+                            </child>
+
                           </object>
                           <packing>
                             <property name="name">simples</property>
@@ -2413,25 +2467,35 @@ Transições com debounce de 5 segundos para evitar oscilação.</property>
                         </child>
                         <child>
                           <!-- BOTÃO-QUE-NÃO-MENTE-01 (entrega 4): o tooltip
-                               terminava com "e dá para desfazer". NÃO DÁ. A
-                               função que desmarca existe
-                               (`remove_appid_from_steam_input_allowlist`,
-                               integrations/steam_launch_options.py:821) e tem
-                               ZERO chamadores em `src/` — nove em `tests/`.
-                               Não há superfície de remoção nenhuma: nem aqui,
-                               nem na linha de comando. Enquanto o desfazer não
-                               existir, o texto para de prometer e passa a
-                               dizer o custo, que está escrito no próprio
-                               código: o jogo marcado fica sem cor, gatilhos e
-                               co-op do Hefesto. Mentira na tela é pior que
-                               falta. -->
+                               terminava com "e dá para desfazer". NÃO DAVA — a
+                               função que desmarca
+                               (`remove_appid_from_steam_input_allowlist`)
+                               tinha ZERO chamadores em `src/`. O texto passou
+                               então a AVISAR que não havia como desmarcar.
+
+                               NOTA DATADA — 07/08/2026: o aviso CADUCOU, e por
+                               decisão dela (resposta 1 do painel de 07/08) o
+                               desmarcar nasceu no editor do perfil, logo
+                               abaixo do jogo escolhido — a caixinha
+                               `profile_steam_input_check` da aba Perfis. O
+                               aviso sai porque deixou de ser verdade; o texto
+                               agora diz ONDE se desmarca.
+
+                               O custo também foi remedido e mudou: a frase
+                               antiga ("fica sem cor, gatilhos e co-op") está
+                               REFUTADA pela medição dela de 06/08
+                               (CONTROLE-SONY-MEDIDO-01, seção A INVERSÃO): com
+                               o jogo marcado, os gatilhos dela seguraram e a
+                               cor dela ficou. O que a marca entrega é a
+                               ENTRADA (fim do controle dobrado); a SAÍDA
+                               continua sendo do Hefesto. -->
                           <object class="GtkButton" id="btn_steam_game_broken">
                             <property name="label" translatable="yes">Este jogo não funciona</property>
-                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue direto pela Steam e o Hefesto sai da frente. Use quando um jogo específico ignora o controle. Não fecha a Steam. Atenção: ainda não existe um botão para desmarcar — enquanto a marca estiver lá, esse jogo fica sem cor, gatilhos e co-op do Hefesto.</property>
+                            <property name="tooltip-text" translatable="yes">Marca o jogo que você acabou de abrir: nele o controle passa a ser entregue pela Steam, o jogo deixa de mostrar o controle dobrado e a sua cor e os seus gatilhos continuam valendo (medido em 06/08). Use quando um jogo específico ignora o controle. Não fecha a Steam. Para tirar a marca: aba Perfis, no editor do perfil, logo abaixo do jogo escolhido.</property>
                           <child internal-child="accessible">
                             <object class="AtkObject">
                               <property name="AtkObject::accessible-name" translatable="yes">Este jogo não funciona</property>
-                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam. Ainda não existe um botão para desmarcar</property>
+                              <property name="AtkObject::accessible-description" translatable="yes">Troca a estratégia do último jogo aberto: o controle passa a ser entregue pela Steam. Para tirar a marca, use a caixinha no editor do perfil, na aba Perfis</property>
                             </object>
                           </child>
                           </object>

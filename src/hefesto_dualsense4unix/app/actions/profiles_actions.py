@@ -393,6 +393,39 @@ def mensagem_de_ativacao(name: str, result: Any = None) -> str:
     return f"Perfil ativado: {name} — {_mensagem_de_aplicacao(relato)}"
 
 
+def texto_da_marca_do_steam_input(status: str, appid: object = None) -> str:
+    """Toast da caixinha do Steam Input — pura, testável sem GTK.
+
+    O texto obedece ao que ELA mediu em 06/08/2026
+    (`CONTROLE-SONY-MEDIDO-01`, seção *A INVERSÃO*), e não à frase antiga da
+    casa: com o jogo marcado, o Hefesto entrega a **entrada** (solta o grab e
+    derruba o gamepad virtual, o que acaba com o controle dobrado) e **mantém a
+    saída** — os gatilhos dela seguraram e a cor dela ficou, com o jogo aberto.
+    Fora da lista é que os ajustes dela perdem para o jogo.
+
+    Por isso aqui não se escreve "o Hefesto sai da frente": é meia verdade
+    medida, e a metade que falta é justamente a que ela usa.
+    """
+    if status == "appid_invalido":
+        return "Esse não é um número de jogo da Steam — nada foi mudado."
+    if status == "erro":
+        return "Não consegui gravar a marca deste jogo — nada foi mudado."
+    if status == "ja_estava":
+        return f"O jogo {appid} já estava marcado."
+    if status == "nao_estava":
+        return f"O jogo {appid} não estava marcado."
+    if status == "removido":
+        return (
+            f"Tirei a marca do jogo {appid}: ele volta a ver o controle "
+            "virtual do Hefesto. Feche e abra o jogo para valer."
+        )
+    return (
+        f"Marquei o jogo {appid}: ele passa a ver o controle de verdade, sem "
+        "o controle dobrado, e a sua cor e os seus gatilhos continuam valendo. "
+        "Feche e abra o jogo para valer."
+    )
+
+
 #: R-10: respostas do diálogo de rename (ids positivos não colidem com os
 #: `Gtk.ResponseType` nativos, que são negativos — mesmo padrão do
 #: `launch_wrapper_dialog`).
@@ -601,6 +634,23 @@ class ProfilesActionsMixin(WidgetAccessMixin):
         self._aplica_a = sel
         sel.connect("changed", self._on_aplica_a_changed)
         sel.set_active_id("any")
+
+        # A caixinha que TIRA um jogo do Steam Input (decisão dela, 07/08).
+        # Ligada em código, e não por `<signal>` no glade, pelo mesmo motivo dos
+        # botões da aba Sistema: o app conecta sinais por dict literal em
+        # `_signal_handlers()`, e um handler declarado no glade que não esteja
+        # naquele dicionário faz o `connect_signals` reclamar.
+        self._suppress_steam_input_toggle = False
+        check = self._get("profile_steam_input_check")
+        if check is not None:
+            with contextlib.suppress(Exception):
+                check.connect("toggled", self.on_profile_steam_input_toggled)
+        campo_do_jogo = self._get("profile_simple_custom_name")
+        if campo_do_jogo is not None:
+            # Trocar o número do jogo troca o jogo de que a caixinha fala; sem
+            # isto ela continuaria mostrando a marca do appid ANTERIOR.
+            with contextlib.suppress(Exception):
+                campo_do_jogo.connect("changed", self._on_campo_do_jogo_mudou)
 
         # SALVAR-NAO-REBAIXA-01: o gesto dela sobre a escala de prioridade. O
         # `_populate_editor` zera a marca DEPOIS de posicionar os widgets, então
@@ -1091,6 +1141,170 @@ class ProfilesActionsMixin(WidgetAccessMixin):
             self._prefill_modo_de_jogo()
         if active_id == "steam_game":
             self._prefill_steam_appid()
+        self._mostrar_caixa_do_steam_input(active_id == "steam_game")
+
+    # --- A caixinha que TIRA um jogo do Steam Input ------------------------
+    # DECISÃO DELA, 07/08/2026: "no editor do perfil, logo abaixo do jogo
+    # escolhido". O que faltava era só o gatilho: `add_appid_to_steam_input_
+    # allowlist` já tinha o botão da aba Sistema, e o gêmeo `remove_...` tinha
+    # nove testes, uma linha de comando e ZERO chamadores na janela — pôr um
+    # jogo na lista era um clique, tirar exigia editor de texto.
+    #
+    # A marca é do JOGO (uma linha de appid num txt nosso), não do perfil: ela
+    # vale na hora e não espera o "Salvar este perfil". Por isso a caixa não
+    # entra em `_build_profile_from_editor` nem no `Profile` do disco — o que
+    # entraria ali seria um segundo dono do mesmo fato.
+
+    def _mostrar_caixa_do_steam_input(self, mostrar: bool) -> None:
+        """Revela (ou esconde) a caixinha, e sincroniza o estado dela.
+
+        A ordem `set_no_show_all(False)` ANTES do `show_all()` não é ornamento:
+        é a cura da CAMPO-QUE-NAO-NASCIA-01 — `no_show_all` faz o `show_all()`
+        ignorar o widget INCLUSIVE quando chamado nele mesmo, e um `show()` seco
+        revelaria a caixa sem descer nos filhos (ela veria um vão vazio).
+        """
+        box = self._get("profile_steam_input_box")
+        if box is None:
+            return
+        if mostrar:
+            self._sincronizar_caixa_do_steam_input()
+            with contextlib.suppress(Exception):
+                box.set_no_show_all(False)
+            box.show_all()
+        else:
+            box.hide()
+
+    @staticmethod
+    def _appids_do_steam_input() -> set[str]:
+        """AppIDs marcados hoje, lidos do arquivo dela. Erro = conjunto vazio.
+
+        Fonte única: o mesmo módulo que escreve (`steam_launch_options`), com o
+        mesmo caminho XDG que o guard em bash e o daemon leem. Uma segunda
+        leitura do formato aqui viraria um segundo dono do arquivo.
+        """
+        try:
+            from hefesto_dualsense4unix.integrations.steam_launch_options import (
+                parse_steam_input_allowlist,
+                steam_input_allowlist_path,
+            )
+
+            caminho = steam_input_allowlist_path()
+            return set(parse_steam_input_allowlist(caminho.read_text(encoding="utf-8")))
+        except Exception:
+            # Arquivo ausente é allowlist vazia — é o mesmo critério do
+            # `remove_appid_from_steam_input_allowlist`, que devolve
+            # "nao_estava" sem criar nada.
+            return set()
+
+    def _sincronizar_caixa_do_steam_input(self) -> None:
+        """Põe a caixinha no estado do DISCO, sem disparar o handler.
+
+        O guard existe porque `set_active` emite "toggled" igual a um clique: sem
+        ele, abrir um perfil de jogo já marcado reescreveria a allowlist dela.
+        """
+        check = self._get("profile_steam_input_check")
+        if check is None:
+            return
+        appid = self._appid_do_editor()
+        marcado = appid is not None and appid in self._appids_do_steam_input()
+        self._suppress_steam_input_toggle = True
+        try:
+            with contextlib.suppress(Exception):
+                check.set_active(marcado)
+            with contextlib.suppress(Exception):
+                # Sem appid não há o que marcar — e uma caixa clicável que não
+                # sabe sobre qual jogo age é pior que uma caixa apagada.
+                check.set_sensitive(appid is not None)
+        finally:
+            self._suppress_steam_input_toggle = False
+
+    def _appid_do_editor(self) -> str | None:
+        """O appid digitado no campo do jogo, ou None se não houver um válido."""
+        if self._selected_simple_choice() != "steam_game":
+            return None
+        entry = self._get("profile_simple_custom_name")
+        if entry is None:
+            return None
+        try:
+            texto = (entry.get_text() or "").strip()
+        except Exception:
+            return None
+        return texto if texto.isdigit() else None
+
+    def _on_campo_do_jogo_mudou(self, _entry: object = None) -> None:
+        """Digitar outro appid muda de qual jogo a caixinha está falando."""
+        if self._selected_simple_choice() == "steam_game":
+            self._sincronizar_caixa_do_steam_input()
+
+    def on_profile_steam_input_toggled(self, check: Any = None) -> None:
+        """Marca/desmarca ESTE jogo na allowlist do Steam Input.
+
+        Sem diálogo, pelo mesmo motivo do botão "Este jogo não funciona": a ação
+        não fecha nada, não edita arquivo da Steam, e agora tem volta — a volta
+        é desmarcar a própria caixa, que é o que esta entrega existe para dar.
+
+        Escrita síncrona de propósito: é um txt de poucas linhas no `~/.config`
+        dela, e o `add`/`remove` já fazem escrita atômica (o guard pode estar
+        lendo o arquivo neste instante). O que vai para segundo plano é só o
+        aviso ao daemon, que é best-effort.
+        """
+        if getattr(self, "_suppress_steam_input_toggle", False):
+            return
+        if check is None:
+            check = self._get("profile_steam_input_check")
+        try:
+            marcar = bool(check.get_active())
+        except Exception:
+            return
+        appid = self._appid_do_editor()
+        if appid is None:
+            self._toast_profile(
+                "Escreva o número do jogo da Steam antes de marcar."
+            )
+            self._sincronizar_caixa_do_steam_input()
+            return
+        try:
+            from hefesto_dualsense4unix.integrations import (
+                steam_launch_options as slo,
+            )
+
+            if marcar:
+                status = slo.add_appid_to_steam_input_allowlist(
+                    appid, nota="marcado no editor de perfil"
+                )
+            else:
+                status = slo.remove_appid_from_steam_input_allowlist(appid)
+        except Exception as exc:
+            logger.warning("steam_input_do_perfil_falhou", err=str(exc))
+            status = "erro"
+        self._toast_profile(texto_da_marca_do_steam_input(status, appid))
+        if status in ("adicionado", "removido"):
+            self._avisar_o_daemon_da_allowlist()
+        # O disco é a verdade: se a escrita não valeu, a caixa volta ao que o
+        # arquivo diz em vez de mentir que valeu.
+        self._sincronizar_caixa_do_steam_input()
+
+    def _avisar_o_daemon_da_allowlist(self) -> None:
+        """Faz a marca VALER agora, sem reiniciar nada.
+
+        A allowlist é relida do disco a cada consulta; o que NÃO é relido é a
+        materialização do `steam_app_<appid>.env`. É o mesmo aviso best-effort
+        que `daemon_actions._recarregar_apos_allowlist` manda depois do botão da
+        aba Sistema — reusado quando a janela real tem os dois mixins, e
+        substituído pelo IPC nu quando não tem (host de teste).
+        """
+        recarregar = getattr(self, "_recarregar_apos_allowlist", None)
+        if callable(recarregar):
+            with contextlib.suppress(Exception):
+                recarregar()
+            return
+        with contextlib.suppress(Exception):
+            call_async(
+                method="launch_env.refresh",
+                params={},
+                on_success=lambda _r: False,
+                on_failure=lambda _e: False,
+            )
 
     def _prefill_modo_de_jogo(self) -> None:
         """Perfil NOVO de jogo nasce com o modo jogo pré-selecionado (MODO-01/B1).

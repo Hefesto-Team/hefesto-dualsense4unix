@@ -153,6 +153,46 @@ VOLATILE_ABSENCE_LIMIT = 2
 #: matou o 8BitDo ao vivo.
 LED_MIN_INTERVAL_SEC = 2.0
 
+#: LUGAR-À-MESA-01 / E0 — **DECISÃO DELA, 07/08/2026: "calar a luz até a
+#: entrega existir"** (resposta 12 do painel, em
+#: ``docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md``).
+#: Enquanto o controle externo NÃO for jogador de verdade dentro do jogo, o
+#: Hefesto **não acende número de jogador nele**.
+#:
+#: **O que "calar" é, e por que não é "apagar".** Com este interruptor em
+#: ``False`` o tick faz ZERO escritas — não apaga a barra do Pro nem a lightbar
+#: do 8BitDo. O critério dela é *"o produto não pode AFIRMAR jogador"*, e apagar
+#: também é afirmar: seria a nossa mão, no mesmo nó, dizendo "este controle não
+#: tem jogador", destruindo o padrão que o firmware/kernel põe ali sozinho (na
+#: lightbar do 8BitDo em modo DS4, acesa é o sinal de "ligado"; apagá-la trocaria
+#: uma mentira por outra, "sem bateria"). Zero escritas deixa o plástico
+#: EXATAMENTE como ficaria com o Hefesto desinstalado — e isso é falseável:
+#: pare o daemon e a luz não muda. Três razões a mais: o rádio fica sem tráfego
+#: de LED na direção do firmware mais frágil da mesa (o clone do 8BitDo morre
+#: sob bombardeio — `daemon/ipc_handlers.py:286-291`); o precedente MEDIDO desta
+#: casa já traduz "parar de afirmar" como *"zero escritas, sem apagar
+#: ativamente"* (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
+#: doutrinas para a mesma frase é como se perde uma; e o custo de voltar é uma
+#: linha.
+#:
+#: **O caminho de volta é UMA LINHA: trocar para ``True``.** A capacidade não
+#: foi enterrada — ``core/external_leds.py`` continua inteiro e testado, e o
+#: gate limpa os caches ao passar, então o primeiro tick com a luz de volta
+#: reescreve todos os slots. A ATRIBUIÇÃO de slot NÃO é afetada (numerar é
+#: identidade; este interruptor governa só a APARÊNCIA).
+#:
+#: **Condição de volta, objetiva:** quando o externo virar jogador de verdade —
+#: a `E3` da LUGAR-À-MESA-01, que ela autorizou **só depois da MASCARA-01**.
+#: Não é "quando alguém achar que já dá".
+#:
+#: **Custo declarado (GRAU: SUSPEITA COM MECANISMO).** O nó de LED guarda o
+#: último valor escrito enquanto o device segue vinculado: num daemon que
+#: REINICIA com o controle já conectado, o número que a versão anterior acendeu
+#: FICA aceso — resíduo nosso, não afirmação nova. Reconectar o controle (ou
+#: religá-lo) devolve o padrão do firmware. Apagar uma vez na transição foi
+#: recusado de propósito: é exatamente a escrita que o critério dela proíbe.
+EXTERNAL_PLAYER_LED_ENABLED = False
+
 #: GYRO-02: OUI (6 hex, sem ``:``) do Nintendo Pro Controller GENUÍNO — o
 #: ÚNICO gatilho do enable-IMU. NÃO confundir com o 8BitDo em modo Switch
 #: (mesmo VID/PID 057e:2009, IMU nativa já viva — nada a fazer nele); a OUI
@@ -902,6 +942,15 @@ class ExternalImuEnabler:
 class ExternalLedSync:
     """Aplica o LED de posição dos externos no TICK do daemon (EXT-04, item 3).
 
+    **CALADO desde 07/08/2026** (E0 da LUGAR-À-MESA-01, DECISÃO DELA): o
+    interruptor de módulo :data:`EXTERNAL_PLAYER_LED_ENABLED` está ``False``, e
+    com ele o tick faz ZERO escritas de LED — enquanto o externo não for
+    jogador de verdade no jogo, o produto não acende número nele. **Tudo o que
+    esta docstring descreve abaixo continua implementado, testado e intacto**,
+    esperando a `E3`; é o gate que muda, e voltar é trocar aquela constante para
+    ``True``. A ATRIBUIÇÃO de slot, a reconciliação do registro e o enable-IMU
+    seguem rodando normalmente.
+
     ``tick()`` é BLOQUEANTE (enumeração evdev de 10-40 ms + sysfs) — o
     lifecycle a despacha via ``_run_blocking`` (executor), nunca no event
     loop. Disciplina de escrita, na ordem:
@@ -1168,6 +1217,26 @@ class ExternalLedSync:
                 self._last_write_at.clear()
             self._last_authority = autoridade
 
+            if not EXTERNAL_PLAYER_LED_ENABLED:
+                # E0 da LUGAR-À-MESA-01 — DECISÃO DELA de 07/08/2026: "calar a
+                # luz até a entrega existir". Enquanto o externo não for jogador
+                # dentro do jogo, o Hefesto não acende número nele: ZERO
+                # escritas, sem apagar (ver a docstring de
+                # `EXTERNAL_PLAYER_LED_ENABLED`, que diz por que apagar também
+                # seria afirmar). O caminho de volta é aquela constante.
+                #
+                # A leitura da constante mora AQUI, e não em `apply_player_number`,
+                # de propósito: a capacidade tem de continuar viva e testável no
+                # `core/external_leds.py` esperando a E3 — um "calar" que apagasse
+                # o código custaria a leva inteira para desfazer.
+                #
+                # Cache limpo pelo mesmo motivo do gate de automático abaixo:
+                # OFF→ON reescreve tudo no primeiro tick seguinte.
+                if self._last_value or self._last_write_at:
+                    self._last_value.clear()
+                    self._last_write_at.clear()
+                return
+
             if not self._auto_numbers_enabled():
                 # NUMA-03c: automático OFF ⇒ PARA DE AFIRMAR (zero escritas,
                 # sem apagar ativamente) + cache limpo — OFF->ON reescreve tudo
@@ -1234,6 +1303,7 @@ class ExternalLedSync:
 
 __all__ = [
     "EXTERNAL_IDENTITY_FIELD",
+    "EXTERNAL_PLAYER_LED_ENABLED",
     "IMU_ENABLE_BACKOFF_SEC",
     "IMU_ENABLE_MAX_ATTEMPTS",
     "LED_MIN_INTERVAL_SEC",

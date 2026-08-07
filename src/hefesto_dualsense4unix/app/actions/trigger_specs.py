@@ -113,7 +113,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Resistência constante a partir de uma posição.",
     ),
     TriggerPresetSpec(
-        "Bow", "Arco (Bow)",
+        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arco" sozinho é ambíguo em
+        # português (arco de círculo, arco elétrico). O `name` em inglês fica —
+        # ele é contrato de disco, IPC e DSX, e o perfil dela o lê.
+        "Bow", "Arco de flecha (Bow)",
         params=(
             TriggerParamSpec("start", "Início", 0, 8, 1),
             TriggerParamSpec("end", "Fim", 1, 9, 7),
@@ -175,7 +178,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Barreira a partir de uma posição, com força de 0 a 8.",
     ),
     TriggerPresetSpec(
-        "Weapon", "Arma (Weapon)",
+        # DECISÃO DELA, 07/08/2026 (resposta 6): "Arma" não separava este modo
+        # de "Arma automática" nem de "Arma semi-automática" — três botões da
+        # mesma grade começavam pela mesma palavra.
+        "Weapon", "Disparo (Weapon)",
         params=(_start(0, 9, 2), _end(1, 9, 5), _force(0, 255, 200)),
         description="Disparo de arma padrão.",
     ),
@@ -224,7 +230,12 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
         description="Vibração com perfil de amplitude por posição.",
     ),
     TriggerPresetSpec(
-        "Custom", "Personalizado (avançado)",
+        # DECISÃO DELA, 07/08/2026 (resposta 5): "Personalizado (avançado)" tem
+        # 24 caracteres e era o rótulo mais comprido da grade — quebrava a linha
+        # no piso da janela e subia a altura mínima. "Montar do zero" (14) cabe,
+        # é verbo do vocabulário dela e diz o que o modo faz. O aviso "avançado"
+        # desceu para a descrição, que é onde há espaço para ele.
+        "Custom", "Montar do zero",
         params=(
             TriggerParamSpec("mode", "Modo (byte cru)", 0, 255, 0),
             *(
@@ -234,7 +245,10 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
                 for i in range(7)
             ),
         ),
-        description="Envia os valores crus para o controle: 1 modo e 7 forças.",
+        description=(
+            "Avançado: envia os valores crus para o controle — 1 modo e 7 "
+            "forças."
+        ),
     ),
 )
 
