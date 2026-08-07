@@ -25,13 +25,20 @@
 # Saída PASS/FAIL/WARN por item.
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
-# Uso: scripts/doctor.sh [--fix] [--fix-mic] [--quiet] [--watch-dropout] [--suggest-port]
+# Uso: scripts/doctor.sh [--fix] [--fix-mic] [--restaurar-hidraw-uaccess]
+#                        [--quiet] [--watch-dropout] [--suggest-port]
 #   --fix             aplica correções seguras: reaplica udev, instala/reseta o
 #                     fix de áudio do WirePlumber e cura as camadas 1 e 2 do
 #                     microfone mudo (MIC-USB-01: mute persistido por rota e
 #                     perfil da placa preso na entrada digital sem sinal).
 #   --fix-mic         SÓ o microfone (camadas 1 e 2) — cura, mostra o veredito
 #                     das duas e sai. Rota curta de quem quer o mic de volta.
+#   --restaurar-hidraw-uaccess
+#                     tira o bit de OUTROS dos nós /dev/hidraw* que estão
+#                     abertos a qualquer usuário local E que NENHUMA regra udev
+#                     explica (0666 -> 0660). Nunca roda sozinho: NÃO entra no
+#                     --fix e NÃO entra no install. Decisão dela, 07/08/2026
+#                     (resposta 16 do painel). Ver RESTAURO-SO-COM-SINTOMA-01.
 #   --quiet           só mostra FAIL/WARN.
 #   --watch-dropout   vigia o journal do kernel e bloqueia até o primeiro sintoma
 #                     de dropout USB (-71); imprime a linha e sai. (Ctrl-C para sair.)
@@ -56,10 +63,12 @@ QUIET=0
 WATCH_DROPOUT=0
 SUGGEST_PORT=0
 FIX_MIC=0
+RESTAURAR_HIDRAW=0
 for arg in "$@"; do
     case "$arg" in
         --fix)            DO_FIX=1 ;;
         --fix-mic)        FIX_MIC=1 ;;
+        --restaurar-hidraw-uaccess) RESTAURAR_HIDRAW=1 ;;
         --quiet)          QUIET=1 ;;
         --watch-dropout)  WATCH_DROPOUT=1 ;;
         --suggest-port)   SUGGEST_PORT=1 ;;
@@ -2900,7 +2909,28 @@ check_controller() {
 #
 # SOMBRA: arquivo de mesmo nome em `/etc` anula o de `/usr/lib` (é assim que o
 # udev resolve), então o primeiro diretório em que o nome aparece é o que vale.
-_udev_hidraw_rw_global() {
+#
+# RESTAURO-SO-COM-SINTOMA-01 (07/08/2026): a varredura ganhou uma SEGUNDA vista,
+# e o corpo virou `_udev_hidraw_scan <manta|estreita>` para as duas nascerem do
+# MESMO awk. O motivo é a lição da RECEITA-ERRADA-01: enquanto o critério for
+# escrito duas vezes, ele diverge — e o pior lugar para a divergência aparecer é
+# a tela, porque é ali que ela vira instrução.
+#
+#   manta    = a regra abre TODO hidraw (a de ACUSA-O-CULPADO-01, acima);
+#   estreita = a regra abre hidraw MAS estreita por aparelho. Essa NUNCA é
+#              acusada — e agora precisa ser ENUMERADA, porque é ela que
+#              distingue "nó aberto por decisão de terceiro" (mexer é atropelo,
+#              e o próximo evento de udev desfaz) de "nó aberto sem explicação"
+#              (é aí, e só aí, que o restauro vale). CONTROLE POSITIVO vivo
+#              nesta máquina em 07/08: `71-pdp-controllers.rules:8` abre um
+#              controle PDP com MODE="0666" estreitando por idVendor 0e6f.
+#
+# Na vista `estreita` a saída ganha um campo: `arquivo:linha:ids:conteúdo`, onde
+# `ids` são os identificadores de 4 hex citados pela regra (minúsculos, com
+# vírgula no fim de cada um). O casamento com o nó é DELIBERADAMENTE frouxo — um
+# id em comum basta — porque todo erro dele tem de cair para o lado de NÃO agir.
+_udev_hidraw_scan() {
+    local vista="$1"; shift
     local dirs=("$@")
     [[ ${#dirs[@]} -gt 0 ]] || dirs=(/etc/udev/rules.d /usr/lib/udev/rules.d)
     local d f base v sombreado vistos=()
@@ -2915,7 +2945,7 @@ _udev_hidraw_rw_global() {
             done
             vistos+=("${base}")
             [[ "${sombreado}" -eq 1 ]] && continue
-            awk -v arq="${f}" '
+            awk -v arq="${f}" -v vista="${vista}" '
                 {
                     linha = $0
                     sub(/^[[:space:]]+/, "", linha)
@@ -2923,21 +2953,150 @@ _udev_hidraw_rw_global() {
                 }
                 linha == "" || linha ~ /^#/ { next }
                 linha !~ /KERNEL=="hidraw/ && linha !~ /SUBSYSTEM=="hidraw"/ { next }
-                # Estreitamento por aparelho: a regra é de quem a escreveu.
-                linha ~ /ATTRS?\{id(Vendor|Product)\}/ { next }
-                linha ~ /KERNELS[[:space:]]*==/ { next }
-                linha ~ /ENV\{ID_(VENDOR|MODEL)_ID\}/ { next }
                 {
                     if (match(linha, /MODE[[:space:]]*:?=[[:space:]]*"[0-7]+"/) == 0) next
                     modo = substr(linha, RSTART, RLENGTH)
+                    # O valor do MODE sai do texto ANTES da colheita de ids:
+                    # "0666" é quatro dígitos hexadecimais válidos e viraria um
+                    # identificador fantasma em toda regra estreitada.
+                    resto = substr(linha, 1, RSTART - 1) substr(linha, RSTART + RLENGTH)
                     gsub(/[^0-7]/, "", modo)
                     if (modo == "") next
                     outros = substr(modo, length(modo), 1)
                     if (outros == "0") next
-                    print arq ":" FNR ":" linha
+
+                    # Estreitamento por aparelho: a regra é de quem a escreveu.
+                    estreita = 0
+                    if (linha ~ /ATTRS?\{id(Vendor|Product)\}/) estreita = 1
+                    if (linha ~ /KERNELS[[:space:]]*==/)        estreita = 1
+                    if (linha ~ /ENV\{ID_(VENDOR|MODEL)_ID\}/)  estreita = 1
+
+                    if (vista == "manta"    && estreita == 1) next
+                    if (vista == "estreita" && estreita == 0) next
+                    if (vista != "estreita") { print arq ":" FNR ":" linha; next }
+
+                    # Colhe todo bloco de exatamente 4 hex delimitado por
+                    # não-hex. Pega `ATTRS{idVendor}=="0e6f"` e também o
+                    # `KERNELS=="*045e:02ea*"` das regras de distro, que embutem
+                    # vendor:produto dentro de um curinga.
+                    ids = ""
+                    tmp = resto
+                    while (match(tmp, /[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]/)) {
+                        tok    = substr(tmp, RSTART, 4)
+                        antes  = (RSTART == 1) ? "" : substr(tmp, RSTART - 1, 1)
+                        depois = substr(tmp, RSTART + 4, 1)
+                        tmp    = substr(tmp, RSTART + 4)
+                        if (antes ~ /[0-9a-fA-F]/ || depois ~ /[0-9a-fA-F]/) continue
+                        ids = ids tolower(tok) ","
+                    }
+                    print arq ":" FNR ":" ids ":" linha
                 }
             ' "${f}"
         done
+    done
+}
+
+# A vista de ACUSA-O-CULPADO-01, intocada no nome, na assinatura e na saída:
+# `arquivo:linha:conteúdo` de toda regra que abre TODO nó hidraw.
+_udev_hidraw_rw_global() { _udev_hidraw_scan manta "$@"; }
+
+# A vista nova: `arquivo:linha:ids:conteúdo` de toda regra que abre hidraw
+# ESTREITANDO por aparelho. Não é acusação — é o inventário de decisões alheias
+# que o restauro tem de respeitar.
+_udev_hidraw_rw_estreitas() { _udev_hidraw_scan estreita "$@"; }
+
+# Os identificadores 4-hex do aparelho por trás do nó, como `vendor,produto`
+# minúsculos, lidos do uevent do sysfs:
+#
+#   HID_ID=0003:0000054C:00000CE6  ->  054c,0ce6
+#
+# Sem uevent legível devolve VAZIO — e quem chama trata "não sei" como "não
+# mexo", nunca como "está livre".
+_hidraw_ids_do_no() {
+    local no="${1##*/}" sysroot="${2:-/sys/class/hidraw}" ue hid vend prod
+    for ue in "${sysroot}/${no}/device/uevent" "${sysroot}/${no}/uevent"; do
+        [[ -r "${ue}" ]] || continue
+        hid="$(sed -n 's/^HID_ID=//p' "${ue}" 2>/dev/null | head -n1)"
+        [[ -n "${hid}" ]] || continue
+        prod="${hid##*:}"
+        vend="${hid%:*}"; vend="${vend##*:}"
+        [[ ${#vend} -ge 4 ]] && vend="${vend: -4}"
+        [[ ${#prod} -ge 4 ]] && prod="${prod: -4}"
+        printf '%s,%s' "${vend,,}" "${prod,,}"
+        return 0
+    done
+    return 0
+}
+
+# O CRITÉRIO DE "HÁ SINTOMA", num lugar só — RESTAURO-SO-COM-SINTOMA-01.
+#
+# É esta função que o CHECK consulta para decidir se OFERECE o conserto, e é a
+# mesma que a CURA consulta para decidir em que tocar. Um cano só, porque dois
+# critérios com o mesmo nome divergem (RECEITA-ERRADA-01) e a tela passa a
+# prometer o que a cura não faz.
+#
+# Imprime uma linha por nó ABERTO A OUTROS (os fechados não são sintoma nenhum):
+#
+#   alvo <nó> <modo>                 -> nenhuma regra udev explica: restaurar VALE
+#   pulo <nó> manta    <arq:linha>   -> uma regra abre TODO hidraw
+#   pulo <nó> estreita <arq:linha>   -> uma regra abre ESTE aparelho, de propósito
+#   pulo <nó> incerta  <arq:linha>   -> abre hidraw estreitando por chave que não
+#                                       sei avaliar, ou o nó não tem ids legíveis
+#
+# Por que os três `pulo` são recusa, e não preguiça — as DUAS metades importam:
+#
+#   1. ATROPELO: quem escreveu a regra escolheu abrir aquilo. Um projeto de
+#      gamepad reescrevendo permissão de aparelho alheio é invasão de
+#      configuração, mesmo com a intenção certa;
+#   2. INUTILIDADE: a regra continua lá. No próximo evento de udev (add/change)
+#      ela reabre o nó, e o conserto nem dura até o replug.
+#
+# Uma das duas já bastaria para não agir. As duas juntas fazem do `pulo` a única
+# resposta honesta — e é por isso que o texto diz as duas.
+_hidraw_alvos_do_restauro() {
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local mantas estreitas h mode ids linha end idlista casou incerta id
+    mantas="$(_udev_hidraw_rw_global ${dirs[@]+"${dirs[@]}"})"
+    estreitas="$(_udev_hidraw_rw_estreitas ${dirs[@]+"${dirs[@]}"})"
+    for h in "${devdir}"/hidraw*; do
+        [[ -e "${h}" ]] || continue
+        mode="$(stat -c '%a' "${h}" 2>/dev/null || echo '?')"
+        # Mesmo teste do check_perms_soft: último octeto != 0 = algum bit para
+        # "outros". 4 (leitura) já basta — é a leitura que vaza a tecla.
+        [[ "${mode}" =~ ^[0-7]*[1-7]$ ]] || continue
+        if [[ -n "${mantas}" ]]; then
+            printf 'pulo %s manta %s\n' "${h}" \
+                   "$(printf '%s\n' "${mantas}" | head -n1 | cut -d: -f1,2)"
+            continue
+        fi
+        ids="$(_hidraw_ids_do_no "${h}" "${sysroot}")"
+        casou=""; incerta=""
+        while IFS= read -r linha; do
+            [[ -n "${linha}" ]] || continue
+            end="$(printf '%s' "${linha}" | cut -d: -f1,2)"
+            idlista="$(printf '%s' "${linha}" | cut -d: -f3)"
+            if [[ -z "${idlista}" || -z "${ids}" ]]; then
+                [[ -n "${incerta}" ]] || incerta="incerta ${end}"
+                continue
+            fi
+            for id in ${ids//,/ }; do
+                [[ -n "${id}" ]] || continue
+                case ",${idlista}" in
+                    *",${id},"*) casou="estreita ${end}" ;;
+                esac
+            done
+            [[ -n "${casou}" ]] && break
+        done <<< "${estreitas}"
+        if [[ -n "${casou}" ]]; then
+            printf 'pulo %s %s\n' "${h}" "${casou}"
+        elif [[ -n "${incerta}" ]]; then
+            printf 'pulo %s %s\n' "${h}" "${incerta}"
+        else
+            printf 'alvo %s %s\n' "${h}" "${mode}"
+        fi
     done
 }
 
@@ -2945,7 +3104,7 @@ _udev_hidraw_rw_global() {
 # aberto em vez de só o caminho. Sem udevadm, devolve vazio (e o aviso degrada
 # para o nome do nó, que é melhor que nada).
 _hidraw_classe_humana() {
-    local no="${1##*/}" sys="/sys/class/hidraw/${1##*/}/device" nome="" props="" classe=""
+    local no="${1##*/}" sys="${2:-/sys/class/hidraw}/${1##*/}/device" nome="" props="" classe=""
     command -v udevadm >/dev/null 2>&1 || return 0
     [[ -d "${sys}" ]] || return 0
     nome="$(udevadm info -q property -p "${sys}" 2>/dev/null \
@@ -2974,8 +3133,13 @@ _hidraw_classe_humana() {
 # desinstalar o vizinho para o nosso relatório ficar verde. A gravidade vai no
 # TEXTO, que é onde ela sempre deveria ter estado.
 check_perms_soft() {
-    local h mode abertos=() classes="" causas=""
-    for h in /dev/hidraw*; do
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local h mode abertos=() classes="" causas="" plano="" tipo no campo3 campo4
+    local alvos=() pulo_no=() pulo_motivo=() pulo_end=()
+    for h in "${devdir}"/hidraw*; do
         [[ -e "$h" ]] || continue
         mode="$(stat -c '%a' "$h" 2>/dev/null || echo '?')"
         # Último octeto != 0 = algum bit para "outros". 4 (leitura) já basta:
@@ -2983,14 +3147,36 @@ check_perms_soft() {
         # quem lê o nó do receptor do teclado lê o que está sendo digitado.
         [[ "${mode}" =~ ^[0-7]*[1-7]$ ]] || continue
         abertos+=("${h}")
-        classes+="  ${h} (${mode}): $(_hidraw_classe_humana "${h}")"$'\n'
+        classes+="  ${h} (${mode}): $(_hidraw_classe_humana "${h}" "${sysroot}")"$'\n'
     done
     [[ ${#abertos[@]} -eq 0 ]] && return 0
-    causas="$(_udev_hidraw_rw_global)"
+    causas="$(_udev_hidraw_rw_global ${dirs[@]+"${dirs[@]}"})"
+    # O MESMO cano que a cura usa. Se o check calculasse por conta própria, a
+    # tela ofereceria o que a cura recusaria — foi exatamente esse o defeito da
+    # RECEITA-ERRADA-01, e é o único jeito de ele não voltar.
+    plano="$(_hidraw_alvos_do_restauro "${devdir}" "${sysroot}" ${dirs[@]+"${dirs[@]}"})"
+    while read -r tipo no campo3 campo4; do
+        case "${tipo}" in
+            alvo) alvos+=("${no}") ;;
+            pulo) pulo_no+=("${no}"); pulo_motivo+=("${campo3}"); pulo_end+=("${campo4}") ;;
+        esac
+    done <<< "${plano}"
     if [[ -n "${causas}" ]]; then
         warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local — QUALQUER processo, sem privilégio, lê o que esses aparelhos reportam"
-    else
+    elif [[ ${#alvos[@]} -gt 0 ]]; then
         warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local, e NENHUMA regra udev explica — aí sim, ajuste manual é hipótese (esperado é 0660+uaccess)"
+    else
+        # RESTAURO-SO-COM-SINTOMA-01, nota datada de 07/08/2026: até aqui esta
+        # linha era a de cima, e ela AFIRMAVA "NENHUMA regra udev explica" sempre
+        # que a varredura de manta voltava vazia. Isso é falso quando a regra
+        # estreita por aparelho — que é justamente o caso que a varredura de
+        # manta se recusa a acusar, por decisão medida de ACUSA-O-CULPADO-01.
+        # CONTROLE POSITIVO vivo nesta máquina em 07/08:
+        # `/usr/lib/udev/rules.d/71-pdp-controllers.rules:8` abre um controle PDP
+        # com MODE="0666" estreitando por `ATTRS{idVendor}=="0e6f"`. Com esse
+        # controle no cabo, o doctor dizia "ninguém explica" sobre um nó que a
+        # distribuição abriu de propósito.
+        warn "${#abertos[@]} nó(s) hidraw abertos a qualquer usuário local, e uma regra udev ESTREITADA por aparelho explica cada um — é decisão de quem escreveu a regra, não defeito do Hefesto"
     fi
     printf '%s' "${classes}"
     if [[ -n "${causas}" ]]; then
@@ -3035,6 +3221,146 @@ check_perms_soft() {
             info "  os aparelhos do Hefesto não são afetados: a regra deles roda depois e os devolve a 0660+uaccess."
         fi
     fi
+    # A OFERTA — decisão dela de 07/08/2026, resposta 16 do painel: o restauro
+    # mora no doctor e só aparece quando há sintoma. O diagnóstico NÃO age: ele
+    # diz que o conserto existe, o que ele vai fazer antes de fazer, e o que ele
+    # não resolve. Diagnóstico que conserta sozinho é o oposto de diagnóstico.
+    if [[ ${#alvos[@]} -gt 0 ]]; then
+        info "  o conserto EXISTE e não roda sozinho: scripts/doctor.sh --restaurar-hidraw-uaccess"
+        info "  o que ele VAI fazer, e nada além disso: tirar o bit de OUTROS de ${#alvos[@]} nó(s) — ${alvos[*]}"
+        info "  o que ele NÃO faz: não cria regra udev, não escreve em /etc, não concede acesso a ninguém e não toca em nó que alguma regra explique."
+        info "  o que ele NÃO resolve: ele não IMPEDE o nó de reabrir. Se o nó voltar a abrir depois, existe regra que este diagnóstico não lê (ENV{...}, GOTO, ou programa fora do udev) — e aí o conserto não dura."
+    elif [[ ${#pulo_no[@]} -gt 0 ]]; then
+        # RECEITA-ERRADA-01: citar o comando para dizer que ele NÃO serve é
+        # honestidade; mandar rodá-lo é que era o defeito.
+        info "  o --restaurar-hidraw-uaccess NÃO resolve este caso, e por isso ele não é oferecido aqui:"
+        local i
+        for i in "${!pulo_no[@]}"; do
+            case "${pulo_motivo[$i]}" in
+                manta)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre TODO hidraw — fechar agora desfaria o que esse arquivo manda de propósito, e o nó reabriria no próximo evento de udev"
+                    ;;
+                estreita)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre ESTE aparelho, estreitando por ele — a decisão é de quem escreveu a regra, e o nó reabriria no próximo evento de udev"
+                    ;;
+                *)
+                    info "    ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre hidraw estreitando por chave que não sei avaliar — não mexo no que não consigo provar que está órfão"
+                    ;;
+            esac
+        done
+    fi
+}
+
+# A CURA de RESTAURO-SO-COM-SINTOMA-01 — decisão dela, 07/08/2026, resposta 16
+# do painel: *"o `--restaurar-hidraw-uaccess`: só no `doctor`, quando houver
+# sintoma"*.
+#
+# POR QUE NÃO ENTRA NO INSTALL, na palavra dela: o install roda SEMPRE, e
+# reescreveria permissão que outro programa pôs de propósito. O caso concreto
+# desta casa é o OpenRGB (ACUSA-O-CULPADO-01). Pelo mesmo motivo isto NÃO entra
+# no `--fix`: o `--fix` é o laço que roda tudo de uma vez, e roda ANTES dos
+# checks — agiria sem sintoma nenhum. Há teste que cobra as duas ausências.
+#
+# O QUE ELE FAZ, por inteiro: `chmod o=` nos nós que o critério aprovou. Só
+# isso. Não instala regra, não escreve em /etc, não concede acesso a ninguém.
+#
+# Por que o mecanismo é `chmod o=` e não `chmod 0660` nem `setfacl`:
+#
+#   - `chmod o=` tira SÓ o bit de outros: mexe na entrada `other::` e não toca
+#     no `mask::` nem nas entradas nomeadas. `chmod 0660` escreveria a classe de
+#     GRUPO, que num nó com ACL é a MÁSCARA — e o efeito medido não é fechar, é
+#     ABRIR. MEDIDO nesta bancada em 07/08/2026, num nó com
+#     `user:nobody:rwx` sob `mask::r--`:
+#
+#         chmod 0660  ->  mask::rw-   e nobody sai de #effective:r-- para rw-
+#         chmod o=    ->  mask::r--   intacta, nobody continua em r--
+#
+#     Ou seja: o `chmod 0660` CONCEDE, no meio de uma operação que se chama
+#     restauro, uma escrita que alguém tinha mascarado de propósito. GRAU:
+#     MEDIDO (o teste `test_a_cura_nao_alarga_a_mascara_da_acl` reprova com a
+#     troca feita — e a primeira versão dele NÃO reprovava, porque olhava um nó
+#     cuja máscara já era `rw-`: nesse nó os dois comandos dão no mesmo);
+#   - CONCEDER acesso não é RESTAURAR. Um `setfacl` nosso num nó alheio daria à
+#     sessão acesso que ela não tinha — que é precisamente o que a casa recusou
+#     por escrito (2026-08-06-RECOMENDACAO-A-ELA, "o que o Hefesto NÃO vai
+#     fazer"): projeto de gamepad não legisla a política de segurança da máquina
+#     inteira. Quem CONCEDE o uaccess aos nós do Hefesto é a regra udev — o
+#     `./install.sh` e o `scripts/doctor.sh --fix`, que a reaplicam.
+#
+# O nome da opção é o DELA (resposta 16) e não foi trocado; a metade "uaccess"
+# do nome descreve o estado a que os nós do Hefesto voltam, não uma concessão
+# que este comando faça.
+restaurar_hidraw_uaccess() {
+    local devdir="${1:-/dev}" sysroot="${2:-/sys/class/hidraw}"
+    [[ $# -gt 0 ]] && shift
+    [[ $# -gt 0 ]] && shift
+    local dirs=("$@")
+    local plano tipo no campo3 campo4 i alvo modo depois
+    local alvos=() modos=() pulo_no=() pulo_motivo=() pulo_end=()
+
+    # AGIR CALADO É O QUE NÃO PODE ACONTECER. O `--quiet` existe para o
+    # diagnóstico caber numa linha de log; aqui ele apagaria justamente o texto
+    # que diz o que vai ser feito ANTES de ser feito. Neste modo ele não vale.
+    QUIET=0
+
+    plano="$(_hidraw_alvos_do_restauro "${devdir}" "${sysroot}" ${dirs[@]+"${dirs[@]}"})"
+    while read -r tipo no campo3 campo4; do
+        case "${tipo}" in
+            alvo) alvos+=("${no}"); modos+=("${campo3}") ;;
+            pulo) pulo_no+=("${no}"); pulo_motivo+=("${campo3}"); pulo_end+=("${campo4}") ;;
+        esac
+    done <<< "${plano}"
+
+    if [[ ${#alvos[@]} -eq 0 ]]; then
+        if [[ ${#pulo_no[@]} -eq 0 ]]; then
+            pass "nenhum nó hidraw aberto a outros — não há o que restaurar (é este o estado esperado)"
+            return 0
+        fi
+        info "não vou tocar em nada, e o motivo é este — em cada caso, mexer seria ao mesmo tempo atropelo e inútil:"
+        for i in "${!pulo_no[@]}"; do
+            case "${pulo_motivo[$i]}" in
+                manta)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre TODO hidraw — fechar agora desfaria o que esse arquivo manda de propósito, e o nó reabriria no próximo evento de udev"
+                    ;;
+                estreita)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre ESTE aparelho, estreitando por ele — a decisão é de quem escreveu a regra, e o nó reabriria no próximo evento de udev"
+                    ;;
+                *)
+                    info "  ${pulo_no[$i]}: a regra ${pulo_end[$i]} abre hidraw estreitando por chave que não sei avaliar — não mexo no que não consigo provar que está órfão"
+                    ;;
+            esac
+        done
+        info "se a permissão desse arquivo estiver errada, o conserto é no arquivo, não no nó: edite a regra e rode 'sudo udevadm control --reload-rules'."
+        return 0
+    fi
+
+    # O TEXTO ANTES DA AÇÃO (RECEITA-ERRADA-01): quem lê tem de saber o que vai
+    # acontecer enquanto ainda dá para desistir.
+    info "vou tirar o bit de OUTROS destes ${#alvos[@]} nó(s), e nada além disso:"
+    for i in "${!alvos[@]}"; do
+        info "  ${alvos[$i]}: ${modos[$i]} -> ${modos[$i]%?}0   ($(_hidraw_classe_humana "${alvos[$i]}" "${sysroot}"))"
+    done
+    info "nenhuma regra udev é criada, nada é escrito em /etc, e nenhum acesso é concedido a ninguém."
+    info "o que isto NÃO resolve: não IMPEDE o nó de reabrir. Se ele voltar a abrir, existe regra que este diagnóstico não lê (ENV{...}, GOTO, ou programa fora do udev) — e aí o conserto não dura."
+    info "quem CONCEDE o uaccess aos nós do Hefesto é a regra udev, não este comando: ./install.sh ou scripts/doctor.sh --fix."
+
+    for i in "${!alvos[@]}"; do
+        alvo="${alvos[$i]}"
+        # Sem sudo primeiro: quem já pode (root, ou dono do nó) não gasta
+        # elevação, e a suíte exercita a cura DE VERDADE sem privilégio nenhum.
+        if ! chmod o= "${alvo}" 2>/dev/null; then
+            if command -v sudo >/dev/null 2>&1; then
+                sudo chmod o= "${alvo}" 2>/dev/null || true
+            fi
+        fi
+        depois="$(stat -c '%a' "${alvo}" 2>/dev/null || echo '?')"
+        modo="${modos[$i]}"
+        if [[ "${depois}" =~ ^[0-7]*[1-7]$ ]]; then
+            fail "${alvo} continua aberto a outros (${modo} -> ${depois}) — o chmod não pegou; confira quem é o dono do nó (ls -l ${alvo})"
+        else
+            pass "${alvo} restaurado (${modo} -> ${depois})"
+        fi
+    done
 }
 
 # 8BIT-03: assinatura de morte por Bluetooth do 8BitDo SN30 Pro (firmware
@@ -3560,11 +3886,26 @@ apply_fixes() {
     # que pode reinstalar o drop-in e reiniciar o WirePlumber — o perfil da placa
     # e o mute da source precisam ser conferidos com o serviço já de pé.
     fix_mic_dualsense
+    # AUSÊNCIA DELIBERADA — RESTAURO-SO-COM-SINTOMA-01, decisão dela de
+    # 07/08/2026: `restaurar_hidraw_uaccess` NÃO é chamado aqui. O `--fix` roda
+    # tudo de uma vez e roda ANTES dos checks, então chamá-lo daqui seria agir
+    # sem sintoma — exatamente o motivo pelo qual ela recusou pôr isto no
+    # install. O restauro só existe atrás da opção própria. Há teste que cobra
+    # esta ausência, porque uma linha a mais aqui a desfaz em silêncio.
 }
 
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
+    # RESTAURO-SO-COM-SINTOMA-01 (decisão dela, 07/08/2026): rota própria, pedida
+    # a dedo. Ela não é alcançável por nenhum outro modo do doctor — nem pelo
+    # --fix, nem pelo install.
+    if [[ "${RESTAURAR_HIDRAW}" -eq 1 ]]; then
+        hdr "restauro de permissão dos nós hidraw (--restaurar-hidraw-uaccess)"
+        restaurar_hidraw_uaccess
+        [[ "${FAILS}" -eq 0 ]]
+        exit $?
+    fi
     # MIC-USB-01: rota curta para quem só quer o microfone de volta agora —
     # cura as camadas 1 e 2, mostra o veredito das duas e sai. É também o que o
     # `fix_wireplumber_default_source.sh --promote-source` chama, para a cura

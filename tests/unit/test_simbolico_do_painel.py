@@ -19,6 +19,16 @@ importam, porque as três já quebraram o ícone de verdade:
    sempre `fill-rule="evenodd"` com dois subcaminhos;
 3. **PNG nunca é recolorido.** Por isso o nome pedido pelo código TEM de
    terminar em `-symbolic` e o arquivo TEM de ser SVG.
+
+**Nota de 07/08/2026, à tarde — o redesenho da DECISÃO 14.** O símbolo foi
+redesenhado para ficar mais parecido com a logo: o aro virou o ARCO ABERTO da
+logo, com a falha de 232 a 269 graus e as duas contas nas pontas, e a cabeça do
+martelo virou CHEIA, com canto arredondado, como a logo desenha. Com isso o
+desenho deixou de ter furo, e a asserção antiga `fill-rule="evenodd"` deixou de
+ter o que travar: ela foi substituída por `test_o_aro_e_faixa_e_nao_disco`, que
+mede os raios do arco e reprova quem transformar o aro num disco. A cura contra
+o `stroke` continua asserida, palavra por palavra, porque é ela que impede a
+regressão medida em 07/08 pela manhã.
 """
 
 from __future__ import annotations
@@ -43,6 +53,7 @@ SIMBOLICO_APPLET = (
     / "apps"
     / "com.vitoriamaria.HefestoDualsense4Unix-symbolic.svg"
 )
+OPCOES = sorted((RAIZ / "assets" / "simbolico").glob("opcao-*-symbolic.svg"))
 TRAY_PY = RAIZ / "src" / "hefesto_dualsense4unix" / "app" / "tray.py"
 APPLET_RS = RAIZ / "packaging" / "cosmic-applet" / "src" / "app.rs"
 APPLET_DESKTOP = (
@@ -84,10 +95,16 @@ def test_o_simbolico_e_xml_valido():
     INVISÍVEL na tela e só apareceria em quem usa librsvg — que é a pilha da
     bandeja GTK. Nenhum dos outros testes daqui pegava: todos leem o SVG como
     TEXTO.
+
+    Desde 07/08 à tarde as OPÇÕES entram nesta verificação junto com o
+    instalado. O motivo é o mesmo defeito, adiado: um arquivo de opção só é
+    lido no dia em que ela escolher, e um `--` esquecido lá dentro só apareceria
+    nesse dia, com a barra dela já mexida. Válido hoje, válido na troca.
     """
     import xml.etree.ElementTree as ET
 
-    for arq in (SIMBOLICO, SIMBOLICO_APPLET):
+    assert OPCOES, "as opções de desenho sumiram de assets/simbolico/"
+    for arq in (SIMBOLICO, SIMBOLICO_APPLET, *OPCOES):
         try:
             ET.parse(arq)
         except ET.ParseError as erro:  # pragma: no cover - só quando quebra
@@ -125,8 +142,37 @@ def test_contorno_e_preenchimento_nunca_stroke(svg: str):
         "o GTK recolore (CSS `fill: ... !important`) — reproduzido em 07/08"
     )
     assert 'fill="none"' not in corpo
-    assert 'fill-rule="evenodd"' in corpo, (
-        "o furo do aro e o vazado da cabeça do martelo são feitos com evenodd"
+
+
+def _raios_de_arco(d: str) -> list[float]:
+    """Os raios de cada comando `A` do caminho."""
+    return [
+        float(achado.group(1))
+        for achado in re.finditer(r"A\s*([0-9]*\.?[0-9]+)\s*,", d)
+    ]
+
+
+def test_o_aro_e_faixa_e_nao_disco(svg: str):
+    """O aro tem de ser uma FAIXA de arco, com raio de fora e raio de dentro.
+
+    Substitui a asserção do `fill-rule="evenodd"`, que caducou no redesenho de
+    07/08 à tarde: o aro aberto é um caminho fechado simples e não precisa de
+    regra de preenchimento nenhuma. O que precisa continuar travado é o defeito
+    de verdade — o aro virar DISCO CHAPADO, que foi o que o `stroke` produziu
+    quando o GTK recoloriu. Um disco tem um raio só; a faixa tem dois.
+    """
+    caminhos = re.findall(r'<path[^>]*\bd="([^"]+)"', _corpo(svg))
+    assert caminhos, "o simbólico perdeu os caminhos"
+    aro = max(caminhos, key=lambda d: max(_raios_de_arco(d), default=0.0))
+    raios = sorted({round(r, 3) for r in _raios_de_arco(aro)})
+    assert len(raios) >= 2, (
+        f"o aro tem um raio só ({raios}) — isso é um DISCO, não uma faixa, e é "
+        "exatamente o que o GTK produziu quando o contorno era `stroke`"
+    )
+    dentro, fora = raios[0], raios[-1]
+    assert dentro >= 0.6 * fora, (
+        f"o furo do aro (raio {dentro}) é pequeno demais para o aro (raio "
+        f"{fora}): a essa espessura o aro se fecha e vira mancha no painel dela"
     )
 
 
