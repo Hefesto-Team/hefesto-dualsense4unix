@@ -274,6 +274,14 @@ echo "Copiando fontes DKMS do rtw88-usb patchado (Onda W) ..."
 mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb"
 cp -a assets/dkms/rtw88-usb/. \
     "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/rtw88-usb/"
+# CR-05 (07/08/2026): a GPL-2.0, seção 1, exige que a cópia do texto da licença
+# viaje JUNTO com o fonte. Os três diretórios acima são GPL (o rtw88-usb é
+# GPL-2.0 OR BSD-3-Clause, licença dupla), e até 07/08 nenhum texto os
+# acompanhava — só o cabeçalho SPDX, que é a outra metade da exigência.
+# Procedência de cada texto em LICENSES/README.md.
+mkdir -p "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/LICENSES"
+cp -a LICENSES/. \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/dkms/LICENSES/"
 # Idem para udev-rules (cópia espelhada — o /usr/lib/udev/rules.d/ já tem
 # as regras vivas, mas o helper procura em /usr/share/.../udev-rules/ E a
 # PREFERE como origem: o espelho tem de carregar a lista INTEIRA, senão o

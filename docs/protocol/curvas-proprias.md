@@ -43,6 +43,23 @@ da tabela inteira, pela regra que o próprio processo escreveu.
 
 _(nenhum ainda — ver CR-04)_
 
+## Sob que licença estas curvas saem
+
+**CC0-1.0** — domínio público, sem exigência de crédito.
+
+**Grau: DECISÃO DELA**, 07/08/2026. A pergunta estava aberta desde 25/07 na
+[CR-06](../process/sprints/2026-07-25-CR-06-devolver-ao-ecossistema.md), e a
+resposta separa as duas coisas de propósito: o **código** é MIT, os **dados
+medidos** são CC0.
+
+O motivo é o objetivo declarado da própria CR-06 — que a curva seja **adotada**.
+Exigir crédito num número medido cria uma dúvida ("dado factual tem autoria?")
+que só serve para fazer o outro projeto reescrever a medição em vez de usar a
+nossa. O registro de procedência continua aqui, e é ele que responde a pergunta
+de onde o número veio; a licença não precisa carregar esse peso.
+
+Ver o `NOTICE`, seção "A LICENÇA DAS CURVAS PRÓPRIAS".
+
 ## O que NÃO está aqui
 
 As curvas dos doze modos "prontos" do DSX. Elas não foram copiadas, e a razão

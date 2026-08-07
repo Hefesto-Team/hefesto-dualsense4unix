@@ -28,6 +28,28 @@ FORBIDDEN='(\b(claude|anthropic|openai|chatgpt|sonnet|haiku|gemini|copilot|mistr
 EXCLUDE_PATHSPECS=(
     ':!LICENSE'
     ':!NOTICE'
+    # ANONIMATO-TEXTO-DE-LICENCA-01 (07/08/2026): a CR-05 trouxe para a árvore o
+    # texto CANÔNICO da GPL-2.0 (LICENSES/GPL-2.0.txt), porque a GPL, seção 1,
+    # exige que a cópia da licença acompanhe o fonte — e cinco alvos de
+    # empacotamento distribuem os fontes GPL de assets/dkms/. O texto da FSF
+    # casa o regex em TRÊS linhas, todas falso positivo do padrão `made by`:
+    #
+    #   :76  "...independent of having been made by running the Program)."
+    #   :166 "If distribution of executable or object code is made by offering"
+    #   :330 "`Gnomovision' (which makes passes at compilers) written by James
+    #         Hacker."  (o exemplo de aviso de copyright que a própria GPL dá)
+    #
+    # Não há correção possível do lado do arquivo: licença editada é licença
+    # outra, e a regra da casa é que não se inventa nem se ajusta texto de
+    # licença. A exclusão é a mesma classe da do LICENSE e da do NOTICE logo
+    # acima — texto jurídico de terceiro, não código nosso.
+    #
+    # A exclusão é ESTREITA de propósito: só os `.txt`, que são os textos
+    # canônicos. O `LICENSES/README.md`, que é prosa NOSSA, continua dentro do
+    # portão. E os `.txt` não viram esconderijo porque
+    # tests/unit/test_cr05_licencas_de_terceiros_viajam.py fixa o
+    # `LICENSES/GPL-2.0.txt` por SHA-256: qualquer byte a mais reprova a suíte.
+    ':!LICENSES/*.txt'
     ':!CHANGELOG.md'
     ':!VALIDATOR_BRIEF.md'
     ':!.gitignore'

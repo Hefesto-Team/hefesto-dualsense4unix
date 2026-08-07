@@ -98,6 +98,68 @@ def cmd_off() -> None:
     raise typer.Exit(code=2)
 
 
+#: LUGAR-À-MESA-01/E0a (06/08/2026) — o travessão que substitui o zero.
+#:
+#: Daemon ANTIGO não publica `coop.externals` (a chave nasceu no EXT-COUNT-01,
+#: 25/07). Imprimir `0 controles externos` ali seria trocar uma mentira velha
+#: ("jogadores ativos: 1" com três na mesa) por uma mentira NOVA e mais
+#: convincente, porque ela tem número. Ausência de dado é `—`, a mesma regra
+#: que `slot_label` já aplica na GUI (`app/actions/external_controllers.py`).
+SEM_DADO = "—"
+
+#: A ressalva que a LUGAR-À-MESA-01 tornou OBRIGATÓRIA em qualquer boca que
+#: emita número de jogador: o Hefesto numera a LUZ, e quem numera o jogador
+#: DENTRO do jogo é o jogo (ele escolhe o índice pela ordem em que abre os
+#: dispositivos). Prometer "o número aceso é o mesmo do jogo" está proibido
+#: por aquela sprint — ver a seção "O que fica ABERTO", item 1.
+NOTA_QUEM_NUMERA = "(dentro do jogo, quem numera é o jogo)"
+
+
+def _plural_externos(n: int) -> str:
+    """`1 externo` / `2 externos` — o rótulo concorda com o número."""
+    return "1 externo" if n == 1 else f"{n} externos"
+
+
+def linhas_de_contagem(players: Any, externals: Any) -> list[str]:
+    """As DUAS contagens do co-op, nomeadas — LUGAR-À-MESA-01/E0a.
+
+    Função pura (sem IPC, sem `console`) porque o que se testa aqui é a
+    HONESTIDADE do texto, não o encanamento.
+
+    A queixa medida em 06/08/2026, com três controles ligados: o `coop status`
+    respondia `jogadores ativos: 1` — verdade que engana, porque "jogadores"
+    ali significa "quem tem controle virtual do Hefesto", e não "quem está com
+    um controle na mão". São duas perguntas e agora são duas linhas, cada uma
+    com o nome do que conta:
+
+    - ``jogadores pelo Hefesto`` — quem tem vpad do Hefesto (`coop.players`);
+    - ``controles na mesa`` — todo aparelho conectado, externo inclusive
+      (`coop.players` + `coop.externals`, publicado desde 25/07 e sem um único
+      leitor até aqui).
+
+    Ausência de dado vira ``—`` e NUNCA ``0`` (ver :data:`SEM_DADO`).
+    """
+    jogadores = players if isinstance(players, int) and not isinstance(players, bool) else None
+    ext = (
+        externals
+        if isinstance(externals, int) and not isinstance(externals, bool) and externals >= 0
+        else None
+    )
+    linhas = [
+        f"jogadores pelo Hefesto: {jogadores if jogadores is not None else SEM_DADO}"
+    ]
+    if jogadores is None or ext is None:
+        linhas.append(f"controles na mesa: {SEM_DADO}")
+        linhas.append("(este daemon não sabe dizer — atualize o daemon)")
+        return linhas
+    if ext == 0:
+        linhas.append(f"controles na mesa: {jogadores} (nenhum externo)")
+        return linhas
+    linhas.append(f"controles na mesa: {jogadores + ext}, sendo {_plural_externos(ext)}")
+    linhas.append(NOTA_QUEM_NUMERA)
+    return linhas
+
+
 @app.command("status")
 def cmd_status(
     as_json: bool = typer.Option(False, "--json", help="Saída como JSON (scripts)."),
@@ -122,8 +184,19 @@ def cmd_status(
 
     label = "[green]ligado[/green]" if enabled else "[dim]desligado[/dim]"
     console.print(f"co-op local: {label}")
-    if isinstance(players, int):
-        console.print(f"jogadores ativos: {players}")
+    # LUGAR-À-MESA-01/E0a: `coop["externals"]` está publicado desde 25/07
+    # (`daemon/ipc_handlers.py`, EXT-COUNT-01) e nunca teve leitor — doze dias
+    # de campo mudo enquanto a CLI dizia "jogadores ativos: 1" com três
+    # controles na mesa dela. `.get` sem default: daemon antigo devolve None,
+    # que `linhas_de_contagem` traduz em `—`, jamais em `0`.
+    for linha in linhas_de_contagem(players, coop.get("externals")):
+        console.print(linha, highlight=False)
 
 
-__all__ = ["COOP_OFF_RECUSA", "app"]
+__all__ = [
+    "COOP_OFF_RECUSA",
+    "NOTA_QUEM_NUMERA",
+    "SEM_DADO",
+    "app",
+    "linhas_de_contagem",
+]

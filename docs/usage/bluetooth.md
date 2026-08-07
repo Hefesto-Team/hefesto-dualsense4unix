@@ -91,6 +91,16 @@ verdade e continua sem cura.
 assume e conecta de primeira — validado em 25/07/2026 com **quatro controles por
 Bluetooth ao mesmo tempo**, um por jogador.
 
+> **NOTA DATADA — 06/08/2026: "um por jogador" aqui é um lugar na fila, não um
+> jogador na partida.** O que 25/07 provou continua de pé — os quatro
+> **conectam** ao mesmo tempo, e cada um ganha o seu lugar. O que caducou é a
+> leitura de que são quatro jogadores. **GRAU: MEDIDO** em 06/08/2026 às 22h40,
+> com um DualSense, um Nintendo Pro e um 8BitDo ligados: `coop status` respondeu
+> **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. O co-op
+> só conta DualSense; o externo entra na fila e recebe luz, e nada mais. Medição
+> inteira na
+> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
 Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
 hefesto registra os dois como controles diferentes — use "Reconciliar jogadores"
 na aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,

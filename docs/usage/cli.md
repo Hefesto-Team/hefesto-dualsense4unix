@@ -300,6 +300,16 @@ hefesto-dualsense4unix gamepad status
   código 2. Cada controle conectado é um jogador, sempre — quem quer um controle
   de reserva o deixa desconectado. O co-op ainda sai de cena sozinho nos jogos
   com exceção de Steam Input, e volta quando o jogo fecha.
+
+  > **NOTA DATADA — 06/08/2026: "cada controle = um jogador" vale para
+  > DualSense.** A frase fica registrada porque decisão medida não se apaga.
+  > **GRAU: MEDIDO** em 06/08/2026 às 22h40, com um DualSense, um Nintendo Pro e
+  > um 8BitDo ligados: `coop status` respondeu **"jogadores ativos: 1"** e
+  > `controller list` mostrou **um** controle. O número que o `status` conta vem
+  > só dos DualSense descobertos; controle de outra marca aparece em
+  > `controller list --external`, recebe número e luz, e **não entra nessa
+  > conta**. Medição inteira na
+  > [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
 - `hefesto-dualsense4unix controller list|target` — mira as ações num controle específico.
 - `hefesto-dualsense4unix plugin list|reload` — plugins do daemon.
 - `hefesto-dualsense4unix tui` — abre a TUI Textual.

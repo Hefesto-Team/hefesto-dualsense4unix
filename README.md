@@ -44,6 +44,27 @@ interface de terminal e uma linha de comando. Controles de outras marcas
 (Nintendo Pro, 8BitDo em modo Switch no cabo ou em modo DirectInput/PS4 por
 Bluetooth) entram como jogadores adicionais.
 
+> **NOTA DATADA — 06/08/2026: "cada um vira um jogador" vale para os DualSense;
+> para os controles de outras marcas, NÃO.** As duas frases acima ficam onde
+> estão porque decisão medida não se apaga — esta nota diz o que caducou nelas.
+>
+> **GRAU: MEDIDO**, na máquina dela em 06/08/2026 às 22h40, com um DualSense, um
+> Nintendo Pro e um 8BitDo ligados ao mesmo tempo: `coop status` respondeu
+> **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. Controle
+> de outra marca **não entra na contagem de jogadores e não ganha controle
+> virtual próprio** — ele recebe **número e luz**, e chega ao jogo como o gamepad
+> nativo que já era.
+>
+> **GRAU: SEM PROVA** — que o jogo veja os três como jogador 1. É o relato dela
+> (*"os 3 controles conectados e com os 3 como player 1"*); o caminho até o jogo
+> não foi instrumentado nessa medição.
+>
+> **O que é verdade hoje:** cada **DualSense** vira um jogador, com controle
+> virtual próprio; controle de outra marca entra na **lista de externos**, com
+> número e luz próprios. A cura tem dona e ordem — as entregas E3 e E4 da
+> [LUGAR-À-MESA-01](docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md),
+> que ela autorizou em 07/08/2026 **só depois da MÁSCARA-01**.
+
 ### O que ele entrega
 
 - **Gatilhos adaptativos** — 19 modos (Rigid, Pulse, Galloping, Machine, Bow,
@@ -257,6 +278,15 @@ cabo, o modo Switch continua sendo o provadamente estável. Tabela de modos,
 identidades e níveis de prova em
 [docs/usage/troubleshooting-8bitdo.md](docs/usage/troubleshooting-8bitdo.md).
 
+> **NOTA DATADA — 06/08/2026: o "um por jogador" desta linha é um lugar na fila,
+> não um jogador na partida.** O que foi validado em 25/07 continua valendo: os
+> quatro **conectam** por Bluetooth ao mesmo tempo, e cada um ganha o seu lugar
+> na fila do Hefesto. O que caducou é a leitura de que isso são quatro jogadores.
+> **GRAU: MEDIDO** em 06/08/2026 às 22h40, com três ligados: `coop status`
+> respondeu **"jogadores ativos: 1"**. Os dois externos entram na fila e recebem
+> luz; **na contagem de jogadores, não**. Detalhe na
+> [LUGAR-À-MESA-01](docs/process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
 **A validação em hardware é de uma máquina só.** Pop!\_OS 24.04 com COSMIC é o
 ambiente onde tudo é medido. Ubuntu tem cobertura de integração contínua, sem
 hardware. Fedora, Arch, Debian e Mint têm pacotes mantidos, mas **nenhum foi
@@ -367,7 +397,8 @@ Relato de uso em distro fora da lista é especialmente bem-vindo: rode
 
 ## Licença
 
-**MIT, exceto `assets/dkms/*`** — veja [`LICENSE`](LICENSE).
+**MIT, exceto `assets/dkms/*`** — o texto MIT está em [`LICENSE`](LICENSE) e a
+exceção, com a auditoria arquivo por arquivo, no [`NOTICE`](NOTICE).
 
 Os três módulos de kernel vendorados em `assets/dkms/` são derivados do Linux e
 mantêm a licença própria declarada no cabeçalho SPDX de cada arquivo:

@@ -139,12 +139,22 @@ ao autostart do ambiente gráfico.
 
 ## Localização (i18n)
 
+> **A língua do Hefesto é o português do Brasil — decisão de 07/08/2026.**
+> Esta seção descreve o que o bundle embarca e como forçar o catálogo EN. Ela
+> **não** é convite a acrescentar idiomas: o catálogo alcança o esqueleto fixo
+> da janela, e não alcança o texto que as abas escrevem enquanto rodam.
+> **Medido em 07/08/2026:** dos 18 módulos de
+> `src/hefesto_dualsense4unix/app/actions/`, **15** não importam a função de
+> tradução e carregam 561 literais acentuados em português. Motivo e registro em
+> `docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
+
 A partir da v3.4.0 o bundle Flatpak embarca **EN baseline** + **PT-BR
 identidade** em `/app/share/hefesto-dualsense4unix/locale/{en,pt_BR}/
 LC_MESSAGES/hefesto-dualsense4unix.mo`. O default é PT-BR (source
 language).
 
-Para rodar a GUI em inglês:
+Para forçar o catálogo EN (lembrando o alcance dito acima — a janela **não**
+fica em inglês, só os rótulos do esqueleto fixo):
 
 ```bash
 flatpak run --env=LANG=en_US.UTF-8 --env=LANGUAGE=en \
@@ -171,8 +181,11 @@ sobrescrevendo `/app/share/locale/<lang>/` para vários idiomas
 `/app/share/hefesto-dualsense4unix/locale/`, que o runtime não toca.
 Detalhe técnico em `arquivo/processo-pre-1.0:docs/process/sprints/BUG-FLATPAK-LOCALE-SYMLINK-01.md`.
 
-Para adicionar um novo idioma (ES, FR, DE, etc.), ver
-`.github/CONTRIBUTING.md` seção "Contribuir traduções".
+O encanamento de i18n **continua vivo e correto** — catálogos, scripts e os 308
+`translatable="yes"` de `gui/main.glade` estão onde sempre estiveram. O que
+mudou em 07/08/2026 é que o projeto parou de prometer que traduzi-los entrega
+uma janela em outro idioma. Ver `.github/CONTRIBUTING.md`, seção "A língua do
+produto".
 
 ---
 

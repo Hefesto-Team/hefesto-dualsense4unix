@@ -90,6 +90,17 @@ Nintendo Pro   e0:f6:b5:...   event2     -    slot 3   (Switch por BT, driver ni
 8BitDo Pro     e4:17:d8:...   event259  js8   slot 4   (PS4 por BT, driver playstation)
 ```
 
+> **NOTA DATADA — 06/08/2026: o `slot` deste placar é lugar na fila, não jogador
+> na partida.** O placar fica como está: os quatro **conectaram** por Bluetooth
+> ao mesmo tempo, e é isso que ele mediu. O que caducou é o *"um por jogador"* da
+> linha acima. **GRAU: MEDIDO** em 06/08/2026 às 22h40, com um DualSense, um
+> Nintendo Pro e um 8BitDo ligados: `coop status` respondeu **"jogadores ativos:
+> 1"** e `controller list` mostrou **um** controle. Coerente com o que esta
+> página já diz na abertura — o 8BitDo entra na lista de **externos** e **nunca é
+> adotado**; o `slot` que ele recebe serve à luz e à ordem, não à contagem de
+> jogadores. Medição inteira na
+> [LUGAR-À-MESA-01](../process/sprints/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
+
 ###  O MAC MUDA com o modo — e isso tem consequência
 
 O mesmo controle físico usa **endereços Bluetooth diferentes em cada modo**

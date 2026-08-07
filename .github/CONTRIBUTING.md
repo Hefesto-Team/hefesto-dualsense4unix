@@ -144,69 +144,65 @@ Se sua PR expõe dados pessoais de terceiros por engano, avise imediatamente par
 
 ---
 
-## Contribuir traduções
+## A língua do produto
 
-A partir de v3.4.0 o projeto tem i18n baseline com EN + PT-BR. Para
-adicionar um idioma novo (ex.: `fr_FR`, `es_ES`, `de_DE`):
+**Decisão de 07/08/2026: o português do Brasil é a língua do Hefesto.** Ele não
+é a língua de partida de um produto multilíngue à espera de tradutores; é a
+língua em que o produto está escrito, e é assim que ele é entregue.
 
-```bash
-# 1. Cria o catálogo .po do novo idioma com base no .pot atual.
-bash scripts/i18n_extract.sh --add fr_FR
-# Vai criar po/fr_FR.po com msgstr vazios para todas as ~230 entradas.
+Até esta data, esta página trazia uma receita completa de como um voluntário
+acrescentaria o francês ou o espanhol. **O convite era falso**, e o motivo é
+medido: dos **18** módulos de
+`src/hefesto_dualsense4unix/app/actions/` — que são os que escrevem o texto vivo
+das abas, o que a janela diz enquanto roda —, **15** não importam a função de
+tradução e carregam, juntos, **561** literais com acentuação portuguesa. Quem
+traduzisse os catálogos inteiros veria o esqueleto fixo mudar de idioma e o
+recado da janela continuar em português.
 
-# 2. Edita po/fr_FR.po, preenchendo cada msgstr.
-#    Preserve format specifiers (%s, %d) e markup Pango (<span>, <b>, <i>).
-$EDITOR po/fr_FR.po
+**Grau: MEDIDO** em 07/08/2026, por leitura de AST dos 18 arquivos: conta-se
+quem importa `_` de `hefesto_dualsense4unix.utils.i18n` (ou `gettext`) e quem
+tem literal com caractere acentuado. Só `footer_actions.py`,
+`lightbar_actions.py` e `status_actions.py` importam. O portão que guarda esta
+decisão refaz essa mesma contagem a cada rodada — ver abaixo.
 
-# 3. Compila os .mo:
-bash scripts/i18n_compile.sh
+### O encanamento de i18n continua vivo, e de propósito
 
-# 4. Valida localmente:
-LANG=fr_FR.UTF-8 LANGUAGE=fr ./run.sh --gui
-# (ou hefesto-dualsense4unix version)
+Nada de i18n foi removido: `po/en.po`, `po/pt_BR.po`, `scripts/i18n_extract.sh`,
+`scripts/i18n_compile.sh`, `src/hefesto_dualsense4unix/utils/i18n.py` e os 308
+`translatable="yes"` de `gui/main.glade` continuam onde estavam, funcionando. O
+encanamento está **correto**; o que não existe é o texto passando por ele.
 
-# 5. Commit + PR.
-git add po/fr_FR.po
-git commit -m "i18n: adiciona traducao fr_FR (v3.4.0)"
-```
+Removê-lo para "ficar coerente" seria destruir trabalho bom para provar um
+ponto — e é exatamente o que esta casa não faz. Quem for mexer em i18n mexe
+para **ligar** o encanamento às telas, não para arrancá-lo.
 
-### Convenções de tradução
+### Quando o convite pode voltar
 
-- **Unidades**: preservar SI (s, ms, %). Não converter "segundos" para
-  "seconds" em strings que mostram número (ex.: "5 s" continua "5 s",
-  não "5 seconds").
-- **Formalidade**: usar tom técnico-neutro. EN: imperativo direto
-  ("Apply", "Save"). PT-BR: idem ("Aplicar", "Salvar"). Evitar tu/você
-  ambíguo.
-- **Glossário curto**:
+Quando a contagem acima chegar a zero, ou seja: quando nenhum módulo de
+`app/actions/` escrever prosa em português fora da função de tradução. Aí o
+convite passa a ser verdadeiro, e o portão para de reprová-lo sozinho — sem que
+ninguém precise editar o teste.
 
-  | PT-BR | EN | Observação |
-  |---|---|---|
-  | gatilho adaptativo | adaptive trigger | mesma feature da Sony |
-  | perfil | profile | nunca "profile" parcial |
-  | atalho | shortcut | não "atalho global" → "global shortcut" |
-  | controle | controller | gamepad também aceito |
-  | bateria | battery | ASCII |
-  | lightbar | lightbar | termo Sony; não traduzir |
-  | rumble | rumble | termo Sony; não traduzir |
-  | daemon | daemon | termo técnico Unix; não traduzir |
+Enquanto isso, **nenhuma página que ensina** (`README.md`, `docs/usage/`,
+`docs/adr/`, `docs/protocol/` e esta) pode trazer a receita de volta. Há
+portão: `tests/unit/test_lingua_do_produto_01_o_convite_a_traduzir.py`.
 
-- **Markup Pango**: as strings em `main.glade` usam `<span ...>`,
-  `<b>`, `<i>`. Manter literal — o GTK renderiza markup só se a string
-  contém tags.
+### O vocabulário que fica em inglês dentro do português
 
-### Atualizar uma tradução existente
+Isto é decisão de produto, não convenção de tradutor, e continua valendo:
 
-Quando alguém marcar uma nova string via `_()` ou `translatable="yes"`:
+| termo | por quê |
+|---|---|
+| `lightbar` | nome Sony do componente; não tem tradução consagrada |
+| `rumble` | nome Sony da vibração; idem |
+| `daemon` | termo técnico Unix, e é como o próprio serviço se chama |
 
-```bash
-bash scripts/i18n_extract.sh         # gera .pot novo + msgmerge nos .po
-$EDITOR po/<lang>.po                  # preencher entries marcadas fuzzy/vazias
-bash scripts/i18n_compile.sh         # re-compila .mo
-```
+Fora esses, a regra é a da casa: **português do Brasil, com acentuação
+correta**, em código, comentário, documentação e mensagem de commit. Há portão
+(`scripts/validar-acentuacao.py`).
 
-`msgmerge` preserva traduções existentes; só strings realmente novas
-ficam com `msgstr ""` ou `#, fuzzy`.
+Registro completo desta decisão, com o que foi medido e o que ficou aberto:
+`docs/process/sprints/2026-08-07-LINGUA-DO-PRODUTO-01-o-convite-a-traduzir-era-falso.md`.
 
 ---
 
