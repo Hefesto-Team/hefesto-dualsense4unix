@@ -1450,7 +1450,15 @@ class HomeActionsMixin(WidgetAccessMixin):
             run_in_thread(_stop, _worker_ok, lambda _e: False)
 
         dialog.connect("response", _on_response)
-        dialog.show()
+        # DIALOGO-QUE-MATA-A-JANELA-01, segunda metade (06/08/2026): um
+        # `dialog.show()` cru num diálogo `modal=True` instala o grab do GTK e,
+        # se a janela não chegar ao servidor, prende a janela dela inteira —
+        # clique, tecla e o "X" do gerenciador, os três. MEDIDO por verificação
+        # adversarial (0/0/0 contra 2/1/1 no controle). Não bloquear NÃO salva:
+        # quem prende é a modalidade, não o laço.
+        from hefesto_dualsense4unix.app import gui_dialogs as _gd
+
+        _gd.mostrar_dialogo_assincrono(dialog, nome="home_desligar_hefesto")
 
 
 __all__ = [

@@ -621,6 +621,20 @@ class HefestoApp(
                                capture_output=True, timeout=2, check=False)
 
     def show_window(self) -> None:
+        """Traz a janela para a frente (SIGUSR1, tray, notificação).
+
+        DIÁLOGO-QUE-MATA-A-JANELA-01 (06/08/2026): levantar SÓ a janela
+        principal não bastava — se há um diálogo modal bloqueante aberto, a
+        principal é justamente a que está sob o grab, e presenteá-la não
+        devolve nada a ela. MEDIDO em 06/08: `GLib.idle_add` (por onde este
+        método chega, vindo do handler de SIGUSR1) **roda dentro do laço
+        aninhado do `dialog.run()`**, então este é o caminho externo que
+        alcança um diálogo perdido: `kill -USR1 <pid da GUI>`.
+        """
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.app import gui_dialogs
+
+            gui_dialogs.presentar_dialogos_em_curso()
         self.window.show_all()
         self.window.present()
 
